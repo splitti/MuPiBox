@@ -1,0 +1,13 @@
+{
+    "spotify": {
+        "clientId": "",
+        "clientSecret": "",
+        "accessToken": "",
+        "refreshToken": "",
+        "redirectUri": ""
+    },
+    "server": {
+        "port": "5005",
+        "logLevel": "error"
+    }
+}
