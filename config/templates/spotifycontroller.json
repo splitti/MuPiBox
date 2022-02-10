@@ -4,7 +4,8 @@
         "clientSecret": "",
         "accessToken": "",
         "refreshToken": "",
-        "redirectUri": ""
+        "redirectUri": "",
+        "deviceId": ""
     },
     "server": {
         "port": "5005",
