@@ -1,0 +1,8 @@
+[Unit]
+Description=Simple Boot Splash
+
+[Service]
+ExecStart=/usr/bin/fbv /boot/splash.png
+
+[Install]
+WantedBy=basic.target
