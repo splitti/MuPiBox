@@ -1,0 +1,17 @@
+{
+    "mupibox": {
+        "host": "MuPiBox",
+        "theme": "dark"
+    },
+    "spotify": {
+        "deviceId": "",                   #Sonos node-sonos-http-api.rooms
+        "clientId": "",                   #Sonos Spotify
+        "clientSecret": "",               #Sonos Spotify
+        "accessToken": "",                #Spotify
+        "refreshToken": ""                #Spotify
+    },
+    "timeout": {
+        "idlePiShutdown": "10",
+        "idleDisplayOff": "30"
+    }
+}
