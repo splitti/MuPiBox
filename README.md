@@ -8,3 +8,5 @@ Based on
 - Spotifyd (https://github.com/Spotifyd/spotifyd)
 - mplayer-wrapper (https://github.com/derhuerst/mplayer-wrapper)
 - google-tts (https://github.com/zlargon/google-tts)
+- Font conthrax-sb.ttf (https://typodermicfonts.com/)
+- Image (https://pixabay.com/de/vectors/katze-gehen-h%c3%b6ren-musik-kopfh%c3%b6rer-5775898/)
