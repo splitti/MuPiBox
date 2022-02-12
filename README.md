@@ -1,5 +1,6 @@
 # MuPiBox
- 
+![Caption](media/images/splash.png "Caption") 
+
 Based on
 - DietPi (https://dietpi.com/)
 - fbv (https://github.com/godspeed1989/fbv)
