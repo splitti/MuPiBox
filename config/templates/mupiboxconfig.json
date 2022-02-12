@@ -21,7 +21,7 @@
     },
     "timeout": {
         "idlePiShutdown": "10",           # Minutes
-        "idleDisplayOff": "30",
+        "idleDisplayOff": "10",
         "pressDelay": "2"
     },
     "shim": {
