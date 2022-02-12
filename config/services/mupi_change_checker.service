@@ -1,0 +1,8 @@
+[Unit]
+Description=Check for changes in media directory
+
+[Service]
+ExecStart=/usr/local/bin/mupibox/./change_checker.sh
+
+[Install]
+WantedBy=basic.target

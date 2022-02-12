@@ -1,9 +1,18 @@
 {
     "mupibox": {
         "host": "MuPiBox",
-        "theme": "dark"
+        "theme": "dark",
+		"startSound": "/home/dietpi/MuPiBox/sysmedia/sound/startup.wav",
+		"shutSound": "/home/dietpi/MuPiBox/sysmedia/sound/shutdown.wav",
+		"startVolume": "40",
+		"startSplash": "/home/dietpi/MuPiBox/sysmedia/images/goodbye.png",
+		"shutSplash": "/boot/splash.png",
+		"audioDevice": "Master",
+		"mediaCheckTimer": "300"          # Time to check media Directory and update Playlists
     },
     "spotify": {
+		"username": "",                   #spotifyd
+		"password": "",                   #spotifyd
         "deviceId": "",                   #Sonos node-sonos-http-api.rooms
         "clientId": "",                   #Sonos Spotify
         "clientSecret": "",               #Sonos Spotify
@@ -11,7 +20,14 @@
         "refreshToken": ""                #Spotify
     },
     "timeout": {
-        "idlePiShutdown": "10",
-        "idleDisplayOff": "30"
-    }
+        "idlePiShutdown": "10",           # Minutes
+        "idleDisplayOff": "30",
+        "pressDelay": "2"
+    },
+    "shim": {
+		"poweroffPin": "4",
+		"triggerPin": "17",
+		"cutPin": "27"
+	}
 }
+

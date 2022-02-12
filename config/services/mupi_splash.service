@@ -2,7 +2,7 @@
 Description=Simple Boot Splash
 
 [Service]
-ExecStart=/usr/bin/fbv /boot/splash.png
+ExecStart=/usr/local/bin/mupibox/./splash_screen.sh
 
 [Install]
 WantedBy=basic.target

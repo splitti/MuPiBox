@@ -1,0 +1,8 @@
+[Unit]
+Description=Idle Shutdown Timer
+
+[Service]
+ExecStart=/usr/local/bin/mupibox/./idle_shutdown.sh
+
+[Install]
+WantedBy=basic.target
