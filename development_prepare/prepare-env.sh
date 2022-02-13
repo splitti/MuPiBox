@@ -208,7 +208,7 @@ printf "SYSTEM IS PREPARED                                        \n          "
 percentBar 95 59 bar
 printf ${FORMAT} "$bar"
 # ENV
-(echo "mupibox"; echo "mupibox") | smbpasswd -s -a dietpi
+(echo "mupibox"; echo "mupibox") | sudo smbpasswd -s -a dietpi
 sudo env PATH=$PATH:/usr/local/bin/mupibox >> ${LOG} 2>>${LOG}
 sleep 1
 
