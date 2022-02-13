@@ -36,7 +36,7 @@ sudo apt-get update >> ${LOG} 2>>${LOG}
 sudo apt-get install git libasound2 jq samba -y >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
-printf "Install nodeJS 16 / ionic / pm2 \n          "
+printf "Install nodeJS 16 / ionic / pm2                             \n          "
 #tput cup $PY $X
 percentBar 10 59 bar
 printf ${FORMAT} "$bar"
