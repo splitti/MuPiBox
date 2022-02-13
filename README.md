@@ -1,7 +1,12 @@
 # MuPiBox
+MuPiBox is an easy to use music player, controlled via touch display. There could be local music, or also spotify. Also streams are possible.
 ![Caption](media/images/splash.png "Caption") 
 
-Based on
+## Spend a coffee via paypal to
+- <a href="https://paypal.me/EGerhardt" target="_blank">nero</a>
+- <a href="https://paypal.me/splittscheid" target="_blank">splitti</a>
+
+## Based on
 - DietPi (https://dietpi.com/)
 - fbv by godsüeed (https://github.com/godspeed1989/fbv)
 - Initramfs Splash by DarkElevenAngel (https://gitlab.com/DarkElvenAngel/initramfs-splash)
