@@ -51,7 +51,7 @@ sudo npm install pm2 -g  >> ${LOG} 2>>${LOG}
 tput cup $Y $X
 printf "Create directorys                                        \n          "
 #tput cup $PY $X
-percentBar 20 59 bar
+percentBar 40 59 bar
 printf ${FORMAT} "$bar"
 
 
@@ -68,13 +68,19 @@ sudo mkdir /etc/mupibox >> ${LOG} 2>>${LOG}
 sudo mkdir /var/log/mupibox/ >> ${LOG} 2>>${LOG}v
 sleep 1
 
+tput cup $Y $X
+printf "Create hushlogin                                        \n          "
+#tput cup $PY $X
+percentBar 43 59 bar
+printf ${FORMAT} "$bar"
 # Boot
 touch ~/.hushlogin
+sleep 1
 
 tput cup $Y $X
 printf "Clone sources                                        \n          "
 #tput cup $PY $X
-percentBar 30 59 bar
+percentBar 45 59 bar
 printf ${FORMAT} "$bar"
 
 # Sources
@@ -108,17 +114,18 @@ npm install
 
 tput cup $Y $X
 printf "Copy binaries                                        \n          "
-percentBar 50 59 bar
+percentBar 65 59 bar
 printf ${FORMAT} "$bar"
 
 # Binaries
 sudo wget https://github.com/splitti/MuPiBox/raw/main/bin/fbv/fbv -O /usr/bin/fbv  >> ${LOG} 2>>${LOG}
 sudo wget https://github.com/splitti/MuPiBox/raw/main/bin/spotifyd/0.3.3/dietpi8_64bit/spotifyd -O /usr/bin/spotifyd  >> ${LOG} 2>>${LOG}
 sudo chmod 755 /usr/bin/fbv /usr/bin/spotifyd >> ${LOG} 2>>${LOG}
+sleep 1
 
 tput cup $Y $X
 printf "Copy Services                                        \n          "
-percentBar 55 59 bar
+percentBar 70 59 bar
 printf ${FORMAT} "$bar"
 
 # Services
@@ -126,30 +133,33 @@ sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/services
 sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/services/mupi_idle_shutdown.service -O /etc/systemd/system/mupi_idle_shutdown.service >> ${LOG} 2>>${LOG}
 sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/services/mupi_splash.service -O /etc/systemd/system/mupi_splash.service >> ${LOG} 2>>${LOG}
 sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/services/spotifyd.service -O /etc/systemd/system/spotifyd.service >> ${LOG} 2>>${LOG}
+sleep 1
 
 tput cup $Y $X
 printf "Copy dietpi-configs                                        \n          "
-percentBar 60 59 bar
+percentBar 73 59 bar
 printf ${FORMAT} "$bar"
 
 # DietPi-Configs
 sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/98-dietpi-disable_dpms.conf -O /etc/X11/xorg.conf.d/98-dietpi-disable_dpms.conf >> ${LOG} 2>>${LOG}
 sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/asound.conf -O /etc/asound.conf >> ${LOG} 2>>${LOG}
 sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/smb.conf -O /etc/samba/smb.conf >> ${LOG} 2>>${LOG}
+sleep 1
 
 tput cup $Y $X
 printf "Copy spotify-configs                                        \n          "
-percentBar 65 59 bar
+percentBar 76 59 bar
 printf ${FORMAT} "$bar"
 
 # Spotify-Configs
 wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/www.json -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >> ${LOG} 2>>${LOG}
 wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/spotifycontroller.json -O /home/dietpi/.mupibox/spotifycontroller-main/config/config.json >> ${LOG} 2>>${LOG}
 sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/spotifyd.conf -O /etc/spotifyd/spotifyd.conf >> ${LOG} 2>>${LOG}
+sleep 1
 
 tput cup $Y $X
 printf "Copy media-files                                        \n          "
-percentBar 70 59 bar
+percentBar 80 59 bar
 printf ${FORMAT} "$bar"
 
 # Splash and Media
@@ -159,10 +169,11 @@ wget https://github.com/splitti/MuPiBox/raw/main/media/images/goodbye.png -O /ho
 sudo wget https://github.com/splitti/MuPiBox/raw/main/media/images/splash.png -O /boot/splash.png >> ${LOG} 2>>${LOG}
 wget https://github.com/splitti/MuPiBox/raw/main/media/sound/shutdown.wav -O /home/dietpi/MuPiBox/sysmedia/sound/shutdown.wav >> ${LOG} 2>>${LOG}
 wget https://github.com/splitti/MuPiBox/raw/main/media/sound/startup.wav -O /home/dietpi/MuPiBox/sysmedia/sound/startup.wav >> ${LOG} 2>>${LOG}
+sleep 1
 
 tput cup $Y $X
 printf "Copy mupibox-files                                        \n          "
-percentBar 75 59 bar
+percentBar 83 59 bar
 printf ${FORMAT} "$bar"
 
 # MuPiBox
@@ -174,20 +185,22 @@ sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox
 sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/software_shutdown.sh -O /usr/local/bin/mupibox/software_shutdown.sh >> ${LOG} 2>>${LOG}
 sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/splash_screen.sh -O /usr/local/bin/mupibox/splash_screen.sh >> ${LOG} 2>>${LOG}
 sudo chmod 755 /usr/local/bin/mupibox/change_checker.sh /usr/local/bin/mupibox/idle_shutdown.sh /usr/local/bin/mupibox/m3u_generator.sh /usr/local/bin/mupibox/setting_update.sh /usr/local/bin/mupibox/software_shutdown.sh /usr/local/bin/mupibox/splash_screen.sh >> ${LOG} 2>>${LOG}
+sleep 1
 
 tput cup $Y $X
 printf "Copy onoffshim-scripts                                        \n          "
-percentBar 80 59 bar
+percentBar 86 59 bar
 printf ${FORMAT} "$bar"
 
-# OnOffShim
+# OnOffShim & hifiberry
 sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/OnOffShim/off_trigger.sh -O /var/lib/dietpi/postboot.d/off_trigger.sh >> ${LOG} 2>>${LOG}
 sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/OnOffShim/poweroff.sh -O /usr/lib/systemd/system-shutdown/poweroff.sh >> ${LOG} 2>>${LOG}
 sudo chmod 775 /usr/lib/systemd/system-shutdown/poweroff.sh /var/lib/dietpi/postboot.d/off_trigger.sh >> ${LOG} 2>>${LOG}
+sleep 1
 
 tput cup $Y $X
 printf "Enable services                                        \n          "
-percentBar 80 59 bar
+percentBar 90 59 bar
 printf ${FORMAT} "$bar"
 
 # Enable Services
@@ -204,18 +217,17 @@ sudo systemctl enable smbd.service >> ${LOG} 2>>${LOG}
 sudo systemctl start smbd.service >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
-printf "SYSTEM IS PREPARED                                        \n          "
-percentBar 95 59 bar
+printf "Set environment                                        \n          "
+percentBar 98 59 bar
 printf ${FORMAT} "$bar"
 # ENV
-(echo "mupibox"; echo "mupibox") | sudo smbpasswd -s -a dietpi
+(echo "mupibox"; echo "mupibox") | sudo smbpasswd -s -a dietpi >> ${LOG} 2>>${LOG}
 sudo env PATH=$PATH:/usr/local/bin/mupibox >> ${LOG} 2>>${LOG}
 sleep 1
 
 tput cup $Y $X
-printf "Set environment-variable                                        \n          "
+printf "SYSTEM IS PREPARED                                        \n          "
 percentBar 100 59 bar
 printf ${FORMAT} "$bar"
-echo " "
-echo "    Logfile: ${LOG}"
+printf "\n\n          Logfile: ${LOG}"
 
