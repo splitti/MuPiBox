@@ -1,7 +1,12 @@
 # MuPiBox
 MuPiBox is an easy to use music player, controlled via touch display. There could be local music, or also spotify. Also streams are possible.
 ![Caption](media/images/splash.png "Caption") 
-
+## Requierments
+coming soon
+## Known compatible Hardware
+coming soon
+## How to install
+coming soon
 ## Spend a coffee via paypal to
 - <a href="https://paypal.me/EGerhardt" target="_blank">nero</a>
 - <a href="https://paypal.me/splittscheid" target="_blank">splitti</a>
