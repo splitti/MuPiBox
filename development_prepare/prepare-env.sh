@@ -35,7 +35,7 @@ printf ${FORMAT} "$bar"
 sudo apt-get install git libasound2 jq samba -y >> ${LOG} 2>>&1
 
 tput cup $Y $X
-printf "Install nodeJS 16 \n    "
+printf "Install nodeJS 16 / ionic / pm2 \n    "
 #tput cup $PY $X
 percentBar 10 60 bar
 printf ${FORMAT} "$bar"
@@ -44,6 +44,7 @@ printf ${FORMAT} "$bar"
 curl -sL https://deb.nodesource.com/setup_16.x | sudo -E bash - >> ${LOG} 2>>&1
 sudo apt-get install -y nodejs >> ${LOG} 2>>&1
 sudo npm install -g @ionic/cli >> ${LOG} 2>>&1
+sudo npm install pm2 -g  >> ${LOG} 2>>&1
 
 
 tput cup $Y $X
@@ -80,11 +81,12 @@ cd ~/.mupibox >> /tmp/prepare.log
 git clone https://github.com/derhuerst/mplayer-wrapper >> ${LOG} 2>>&1
 cd mplayer-wrapper >> ${LOG} 2>>&1
 npm install >> ${LOG} 2>>&1
-cd ~ >> ${LOG} 2>>&1
+cd ~/.mupibox >> ${LOG} 2>>&1
 git clone https://github.com/zlargon/google-tts >> ${LOG} 2>>&1
 cd google-tts/ >> ${LOG} 2>>&1
 npm install --save >> ${LOG} 2>>&1
 npm audit fix >> ${LOG} 2>>&1
+cd ~/.mupibox
 wget https://github.com/Thyraz/Sonos-Kids-Controller/archive/refs/tags/V1.6.zip >> ${LOG} 2>>&1
 unzip V1.6.zip >> ${LOG} 2>>&1
 rm V1.6.zip >> ${LOG} 2>>&1
@@ -93,13 +95,15 @@ npm install  >> ${LOG} 2>>&1
 npm audit fix  >> ${LOG} 2>>&1
 ionic build --prod --verbose  >> ${LOG} 2>>&1
 mkdir -p ~/.mupibox/Sonos-Kids-Controller-master/www/cover >> ${LOG} 2>>&1
-sudo npm install pm2 -g  >> ${LOG} 2>>&1
 sudo apt-get remove git  >> ${LOG} 2>>&1
-#pm2 startup  >> ${LOG} 2>>&1
-# ENVIRONMENT VAR
-#cd ~/.mupibox/Sonos-Kids-Controller-master/
-#pm2 start server.js
-#pm2 save
+cd ~/.mupibox
+wget https://github.com/amueller-tech/spotifycontroller/archive/main.zip
+unzip main.zip
+rm main.zip
+cd spotifycontroller-main
+npm install
+
+
 
 tput cup $Y $X
 printf "Copy binaries \n    "
@@ -203,6 +207,7 @@ printf "SYSTEM IS PREPARED \n    "
 percentBar 95 60 bar
 printf ${FORMAT} "$bar"
 # ENV
+(echo "mupibox"; echo "mupibox") | smbpasswd -s -a dietpi
 sudo env PATH=$PATH:/usr/local/bin/mupibox >> ${LOG} 2>>&1
 sleep 1
 
