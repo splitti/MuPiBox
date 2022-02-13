@@ -16,7 +16,7 @@ percentBar ()  {
 }
 
 Y=15
-X=4
+X=7
 LOG="/tmp/prepage.log"
 
 FORMAT="\e[48;5;23;38;5;41m%s\e[0m"
@@ -36,7 +36,7 @@ sudo apt-get update >> ${LOG} 2>>${LOG}
 sudo apt-get install git libasound2 jq samba -y >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
-printf "Install nodeJS 16 / ionic / pm2 \n    "
+printf "Install nodeJS 16 / ionic / pm2 \n       "
 #tput cup $PY $X
 percentBar 10 90 bar
 printf ${FORMAT} "$bar"
@@ -49,7 +49,7 @@ sudo npm install pm2 -g  >> ${LOG} 2>>${LOG}
 
 
 tput cup $Y $X
-printf "Create directorys \n    "
+printf "Create directorys \n       "
 #tput cup $PY $X
 percentBar 20 90 bar
 printf ${FORMAT} "$bar"
@@ -72,7 +72,7 @@ sleep 1
 touch ~/.hushlogin
 
 tput cup $Y $X
-printf "Clone sources \n    "
+printf "Clone sources \n       "
 #tput cup $PY $X
 percentBar 30 90 bar
 printf ${FORMAT} "$bar"
@@ -107,7 +107,7 @@ npm install
 
 
 tput cup $Y $X
-printf "Copy binaries \n    "
+printf "Copy binaries \n       "
 percentBar 50 90 bar
 printf ${FORMAT} "$bar"
 
@@ -117,7 +117,7 @@ sudo wget https://github.com/splitti/MuPiBox/raw/main/bin/spotifyd/0.3.3/dietpi8
 sudo chmod 755 /usr/bin/fbv /usr/bin/spotifyd >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
-printf "Copy Services \n    "
+printf "Copy Services \n       "
 percentBar 55 90 bar
 printf ${FORMAT} "$bar"
 
@@ -128,7 +128,7 @@ sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/services
 sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/services/spotifyd.service -O /etc/systemd/system/spotifyd.service >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
-printf "Copy dietpi-configs \n    "
+printf "Copy dietpi-configs \n       "
 percentBar 60 90 bar
 printf ${FORMAT} "$bar"
 
@@ -138,7 +138,7 @@ sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/template
 sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/smb.conf -O /etc/samba/smb.conf >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
-printf "Copy spotify-configs \n    "
+printf "Copy spotify-configs \n       "
 percentBar 65 90 bar
 printf ${FORMAT} "$bar"
 
@@ -148,7 +148,7 @@ wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/spo
 sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/spotifyd.conf -O /etc/spotifyd/spotifyd.conf >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
-printf "Copy media-files \n    "
+printf "Copy media-files \n       "
 percentBar 70 90 bar
 printf ${FORMAT} "$bar"
 
@@ -161,7 +161,7 @@ wget https://github.com/splitti/MuPiBox/raw/main/media/sound/shutdown.wav -O /ho
 wget https://github.com/splitti/MuPiBox/raw/main/media/sound/startup.wav -O /home/dietpi/MuPiBox/sysmedia/sound/startup.wav >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
-printf "Copy mupibox-files \n    "
+printf "Copy mupibox-files \n       "
 percentBar 75 90 bar
 printf ${FORMAT} "$bar"
 
@@ -176,7 +176,7 @@ sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox
 sudo chmod 755 /usr/local/bin/mupibox/change_checker.sh /usr/local/bin/mupibox/idle_shutdown.sh /usr/local/bin/mupibox/m3u_generator.sh /usr/local/bin/mupibox/setting_update.sh /usr/local/bin/mupibox/software_shutdown.sh /usr/local/bin/mupibox/splash_screen.sh >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
-printf "Copy onoffshim-scripts \n    "
+printf "Copy onoffshim-scripts \n       "
 percentBar 80 90 bar
 printf ${FORMAT} "$bar"
 
@@ -186,7 +186,7 @@ sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/OnOffSh
 sudo chmod 775 /usr/lib/systemd/system-shutdown/poweroff.sh /var/lib/dietpi/postboot.d/off_trigger.sh >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
-printf "Enable services \n    "
+printf "Enable services \n       "
 percentBar 80 90 bar
 printf ${FORMAT} "$bar"
 
@@ -204,7 +204,7 @@ sudo systemctl enable smbd.service >> ${LOG} 2>>${LOG}
 sudo systemctl start smbd.service >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
-printf "SYSTEM IS PREPARED \n    "
+printf "SYSTEM IS PREPARED \n       "
 percentBar 95 90 bar
 printf ${FORMAT} "$bar"
 # ENV
@@ -213,7 +213,7 @@ sudo env PATH=$PATH:/usr/local/bin/mupibox >> ${LOG} 2>>${LOG}
 sleep 1
 
 tput cup $Y $X
-printf "Set environment-variable \n    "
+printf "Set environment-variable \n       "
 percentBar 100 90 bar
 printf ${FORMAT} "$bar"
 echo " "
