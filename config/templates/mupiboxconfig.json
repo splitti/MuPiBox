@@ -1,7 +1,7 @@
 {
-    "mupibox": {
-        "host": "MuPiBox",
-        "theme": "dark",
+	"mupibox": {
+        	"host": "MuPiBox",
+	        "theme": "dark",
 		"startSound": "/home/dietpi/MuPiBox/sysmedia/sound/startup.wav",
 		"shutSound": "/home/dietpi/MuPiBox/sysmedia/sound/shutdown.wav",
 		"startVolume": "40",
@@ -9,22 +9,22 @@
 		"shutSplash": "/boot/splash.png",
 		"audioDevice": "Master",
 		"mediaCheckTimer": "300"          # Time to check media Directory and update Playlists
-    },
-    "spotify": {
+	},
+	"spotify": {
 		"username": "",                   #spotifyd
 		"password": "",                   #spotifyd
-        "deviceId": "",                   #Sonos node-sonos-http-api.rooms
-        "clientId": "",                   #Sonos Spotify
-        "clientSecret": "",               #Sonos Spotify
-        "accessToken": "",                #Spotify
-        "refreshToken": ""                #Spotify
-    },
-    "timeout": {
-        "idlePiShutdown": "10",           # Minutes
-        "idleDisplayOff": "10",
-        "pressDelay": "2"
-    },
-    "shim": {
+		"deviceId": "",                   #Sonos node-sonos-http-api.rooms
+		"clientId": "",                   #Sonos Spotify
+		"clientSecret": "",               #Sonos Spotify
+		"accessToken": "",                #Spotify
+		"refreshToken": ""                #Spotify
+	},
+	"timeout": {
+		"idlePiShutdown": "10",           # Minutes
+		"idleDisplayOff": "10",
+		"pressDelay": "2"
+	    },
+	"shim": {
 		"poweroffPin": "4",
 		"triggerPin": "17",
 		"cutPin": "27"
