@@ -86,16 +86,20 @@ ${PM2_ENV}  >> ${LOG} 2>>${LOG}
 ###############################################################################################
 
 echo "###################################################" >> ${LOG} 2>>${LOG}
-echo "Create directorys" >> ${LOG} 2>>${LOG}
+echo "Clean and create Directorys" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
-printf "Create directorys                                        \n          "
+printf "Clean and create Directorys                                        \n          "
 #tput cup $PY $X
 percentBar 40 59 bar
 printf ${FORMAT} "$bar"
 
 
-# Create Directorys
+# Clean and create Directorys
+sudo rm -R ~/.mupibox/Sonos-Kids-Controller-master >> ${LOG} 2>>${LOG}
+sudo rm -R ~/.mupibox/google-tts/ >> ${LOG} 2>>${LOG}
+sudo rm -R ~/.mupibox/spotifycontroller-main >> ${LOG} 2>>${LOG}
+
 mkdir -p ~/.mupibox >> ${LOG} 2>>${LOG}
 mkdir -p ~/MuPiBox/media >> ${LOG} 2>>${LOG}
 mkdir ~/MuPiBox/tts_files >> ${LOG} 2>>${LOG}
@@ -151,7 +155,6 @@ printf "Install google-tts                                        \n          "
 percentBar 50 59 bar
 printf ${FORMAT} "$bar"
 
-sudo rm -R ~/.mupibox/google-tts/ >> ${LOG} 2>>${LOG}
 cd ~/.mupibox >> ${LOG} 2>>${LOG}
 git clone https://github.com/zlargon/google-tts >> ${LOG} 2>>${LOG}
 cd google-tts/ >> ${LOG} 2>>${LOG}
@@ -169,23 +172,7 @@ printf "Install Sonos-Kids-Controller-master                                    
 percentBar 55 59 bar
 printf ${FORMAT} "$bar"
 
-sudo rm -R ~/.mupibox/Sonos-Kids-Controller-master >> ${LOG} 2>>${LOG}
-mkdir -p ~/.mupibox/Sonos-Kids-Controller-master >> ${LOG} 2>>${LOG}
 cd ~/.mupibox/Sonos-Kids-Controller-master >> ${LOG} 2>>${LOG}
-#wget https://github.com/Thyraz/Sonos-Kids-Controller/archive/refs/tags/V1.6.zip >> ${LOG} 2>>${LOG}
-#unzip V1.6.zip >> ${LOG} 2>>${LOG}
-#rm V1.6.zip >> ${LOG} 2>>${LOG}
-#rm -R Sonos-Kids-Controller-master/ >> ${LOG} 2>>${LOG}
-#mv Sonos-Kids-Controller-1.6/ Sonos-Kids-Controller-master/ >> ${LOG} 2>>${LOG}
-#cd Sonos-Kids-Controller-master >> ${LOG} 2>>${LOG}
-#npm install  >> ${LOG} 2>>${LOG}
-#npm audit fix  >> ${LOG} 2>>${LOG}
-#ionic build --prod --verbose  >> ${LOG} 2>>${LOG}
-#pm2 start server.js
-#pm2 save
-#mkdir -p ~/.mupibox/Sonos-Kids-Controller-master/www/cover >> ${LOG} 2>>${LOG}
-#sudo apt-get remove git  >> ${LOG} 2>>${LOG}
-
 wget http://192.168.2.5/sonos-kids-controller.zip  >> ${LOG} 2>>${LOG}
 unzip sonos-kids-controller.zip  >> ${LOG} 2>>${LOG}
 rm sonos-kids-controller.zip  >> ${LOG} 2>>${LOG}
@@ -204,7 +191,6 @@ printf "Install Spotify Controller                                        \n    
 percentBar 60 59 bar
 printf ${FORMAT} "$bar"
 
-sudo rm -R ~/.mupibox/spotifycontroller-main >> ${LOG} 2>>${LOG}
 cd ~/.mupibox  >> ${LOG} 2>>${LOG}
 wget https://github.com/amueller-tech/spotifycontroller/archive/main.zip  >> ${LOG} 2>>${LOG}
 unzip main.zip  >> ${LOG} 2>>${LOG}
