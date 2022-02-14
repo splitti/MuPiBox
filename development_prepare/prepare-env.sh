@@ -22,6 +22,7 @@ LOG="/tmp/prepage.log"
 FORMAT="\e[48;5;23;38;5;41m%s\e[0m"
  
 # Make it nice
+printf "Please wait..."
 rm ${LOG} >> ${LOG} 2>>${LOG}
 sudo apt-get install figlet lolcat -y >> ${LOG} 2>>${LOG}
 
@@ -75,13 +76,14 @@ echo "Install pm2" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
 printf "Install pm2                             \n          "
-#tput cup $PY $X
 percentBar 10 59 bar
 printf ${FORMAT} "$bar"
 
 cd ~
 sudo npm install pm2 -g  >> ${LOG} 2>>${LOG}
-pm2 startup >> ${LOG} 2>>${LOG}
+#pm2 startup >> ${LOG} 2>>${LOG}
+PM2_ENV=$(sudo cat /tmp/prepage.log | sudo grep "sudo env")  >> ${LOG} 2>>${LOG}
+${PM2_ENV}  >> ${LOG} 2>>${LOG}
 
 ###############################################################################################
 
@@ -126,10 +128,10 @@ sleep 1
 ###############################################################################################
 
 echo "###################################################" >> ${LOG} 2>>${LOG}
-echo "mplayer-wrapper" >> ${LOG} 2>>${LOG}
+echo "Install mplayer-wrapper" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
-printf "mplayer-wrapper                                        \n          "
+printf "Install mplayer-wrapper                                        \n          "
 #tput cup $PY $X
 percentBar 45 59 bar
 printf ${FORMAT} "$bar"
@@ -143,14 +145,15 @@ npm install >> ${LOG} 2>>${LOG}
 ###############################################################################################
 
 echo "###################################################" >> ${LOG} 2>>${LOG}
-echo "google-tts" >> ${LOG} 2>>${LOG}
+echo "Install google-tts" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
-printf "google-tts                                        \n          "
+printf "Install google-tts                                        \n          "
 #tput cup $PY $X
 percentBar 50 59 bar
 printf ${FORMAT} "$bar"
 
+sudo rm -R ~/.mupibox/google-tts/ >> ${LOG} 2>>${LOG}
 cd ~/.mupibox >> ${LOG} 2>>${LOG}
 git clone https://github.com/zlargon/google-tts >> ${LOG} 2>>${LOG}
 cd google-tts/ >> ${LOG} 2>>${LOG}
@@ -160,15 +163,17 @@ npm audit fix >> ${LOG} 2>>${LOG}
 ###############################################################################################
 
 echo "###################################################" >> ${LOG} 2>>${LOG}
-echo "Sonos-Kids-Controller-master" >> ${LOG} 2>>${LOG}
+echo "Install Sonos-Kids-Controller-master" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
-printf "Sonos-Kids-Controller-master                                        \n          "
+printf "Install Sonos-Kids-Controller-master                                        \n          "
 #tput cup $PY $X
 percentBar 55 59 bar
 printf ${FORMAT} "$bar"
 
-cd ~/.mupibox/Sonos-Kids-Controller-master
+sudo rm -R ~/.mupibox/Sonos-Kids-Controller-master >> ${LOG} 2>>${LOG}
+mkdir -p ~/.mupibox/Sonos-Kids-Controller-master >> ${LOG} 2>>${LOG}
+cd ~/.mupibox/Sonos-Kids-Controller-master >> ${LOG} 2>>${LOG}
 #wget https://github.com/Thyraz/Sonos-Kids-Controller/archive/refs/tags/V1.6.zip >> ${LOG} 2>>${LOG}
 #unzip V1.6.zip >> ${LOG} 2>>${LOG}
 #rm V1.6.zip >> ${LOG} 2>>${LOG}
@@ -193,14 +198,15 @@ pm2 save  >> ${LOG} 2>>${LOG}
 ###############################################################################################
 
 echo "###################################################" >> ${LOG} 2>>${LOG}
-echo "Spotify Controller" >> ${LOG} 2>>${LOG}
+echo "Install Spotify Controller" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
-printf "Spotify Controller                                        \n          "
+printf "Install Spotify Controller                                        \n          "
 #tput cup $PY $X
 percentBar 60 59 bar
 printf ${FORMAT} "$bar"
 
+sudo rm -R ~/.mupibox spotifycontroller-main >> ${LOG} 2>>${LOG}
 cd ~/.mupibox  >> ${LOG} 2>>${LOG}
 wget https://github.com/amueller-tech/spotifycontroller/archive/main.zip  >> ${LOG} 2>>${LOG}
 unzip main.zip  >> ${LOG} 2>>${LOG}
@@ -210,7 +216,6 @@ npm install  >> ${LOG} 2>>${LOG}
 npm start  >> ${LOG} 2>>${LOG}
 pm2 start spotify-control.js  >> ${LOG} 2>>${LOG}
 pm2 save  >> ${LOG} 2>>${LOG}
-
 
 ###############################################################################################
 
@@ -256,7 +261,7 @@ percentBar 73 59 bar
 printf ${FORMAT} "$bar"
 
 # DietPi-Configs
-sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/98-dietpi-disable_dpms.conf -O /etc/X11/xorg.conf.d/98-dietpi-disable_dpms.conf >> ${LOG} 2>>${LOG}
+#sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/98-dietpi-disable_dpms.conf -O /etc/X11/xorg.conf.d/98-dietpi-disable_dpms.conf >> ${LOG} 2>>${LOG}
 sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/asound.conf -O /etc/asound.conf >> ${LOG} 2>>${LOG}
 sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/smb.conf -O /etc/samba/smb.conf >> ${LOG} 2>>${LOG}
 sleep 1
@@ -345,14 +350,14 @@ printf ${FORMAT} "$bar"
 
 # Enable Services
 sudo systemctl daemon-reload >> ${LOG} 2>>${LOG}
-#sudo systemctl enable mupi_change_checker.service >> ${LOG} 2>>${LOG}
-#sudo systemctl start mupi_change_checker.service >> ${LOG} 2>>${LOG}
-#sudo systemctl enable mupi_idle_shutdown.service >> ${LOG} 2>>${LOG}
-#sudo systemctl start mupi_idle_shutdown.service >> ${LOG} 2>>${LOG}
-#sudo systemctl enable mupi_splash.service >> ${LOG} 2>>${LOG}
-#sudo systemctl start mupi_splash.service >> ${LOG} 2>>${LOG}
-#sudo systemctl enable spotifyd.service >> ${LOG} 2>>${LOG}
-#sudo systemctl start spotifyd.service >> ${LOG} 2>>${LOG}
+sudo systemctl enable mupi_change_checker.service >> ${LOG} 2>>${LOG}
+sudo systemctl start mupi_change_checker.service >> ${LOG} 2>>${LOG}
+sudo systemctl enable mupi_idle_shutdown.service >> ${LOG} 2>>${LOG}
+sudo systemctl start mupi_idle_shutdown.service >> ${LOG} 2>>${LOG}
+sudo systemctl enable mupi_splash.service >> ${LOG} 2>>${LOG}
+sudo systemctl start mupi_splash.service >> ${LOG} 2>>${LOG}
+sudo systemctl enable spotifyd.service >> ${LOG} 2>>${LOG}
+sudo systemctl start spotifyd.service >> ${LOG} 2>>${LOG}
 sudo systemctl enable smbd.service >> ${LOG} 2>>${LOG}
 sudo systemctl start smbd.service >> ${LOG} 2>>${LOG}
 
@@ -374,5 +379,5 @@ tput cup $Y $X
 printf "SYSTEM IS PREPARED                                        \n          "
 percentBar 100 59 bar
 printf ${FORMAT} "$bar"
-printf "\n\n          Logfile: ${LOG}"
+printf "\n\n          Logfile: ${LOG}\n\n          Have a nice day!\n\n"
 
