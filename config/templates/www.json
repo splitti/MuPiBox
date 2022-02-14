@@ -2,9 +2,7 @@
     "node-sonos-http-api": {
         "server": "127.0.0.1",
         "port": "5005",
-        "rooms": [
-            ""
-        ],
+        "rooms": [""],
         "tts": {
             "enabled": true,
             "language": "de-de",
