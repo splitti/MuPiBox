@@ -8,19 +8,19 @@
 		"startSplash": "/home/dietpi/MuPiBox/sysmedia/images/goodbye.png",
 		"shutSplash": "/boot/splash.png",
 		"audioDevice": "Master",
-		"mediaCheckTimer": "300"          # Time to check media Directory and update Playlists
+		"mediaCheckTimer": "300"
 	},
 	"spotify": {
-		"username": "",                   #spotifyd
-		"password": "",                   #spotifyd
-		"deviceId": "",                   #Sonos node-sonos-http-api.rooms
-		"clientId": "",                   #Sonos Spotify
-		"clientSecret": "",               #Sonos Spotify
-		"accessToken": "",                #Spotify
-		"refreshToken": ""                #Spotify
+		"username": "",
+		"password": "",
+		"deviceId": "",
+		"clientId": "",
+		"clientSecret": "",
+		"accessToken": "",
+		"refreshToken": ""
 	},
 	"timeout": {
-		"idlePiShutdown": "10",           # Minutes
+		"idlePiShutdown": "10",
 		"idleDisplayOff": "10",
 		"pressDelay": "2"
 	    },
