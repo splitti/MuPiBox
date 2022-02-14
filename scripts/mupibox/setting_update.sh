@@ -28,9 +28,9 @@ refreshToken=$(/usr/bin/jq -r .spotify.refreshToken ${MUPIBOX_CONFIG})
 /usr/bin/cat <<< $(/usr/bin/jq --arg v "$refreshToken" '.spotify.refreshToken = $v' ${SPOTIFYCONTROLLER_CONFIG}) >  ${SPOTIFYCONTROLLER_CONFIG}
 
 username=$(/usr/bin/jq -r .spotify.username ${MUPIBOX_CONFIG})
-/usr/bin/sed 's/.*username.*/  username = '\"${username}\"'/g' ${SPOTIFYD_CONFIG}
+/usr/bin/sed -i 's/.*username.*/  username = '\"${username}\"'/g' ${SPOTIFYD_CONFIG}
 password=$(/usr/bin/jq -r .spotify.password ${MUPIBOX_CONFIG})
-/usr/bin/sed 's/.*password.*/  password = '\"${password}\"'/g' ${SPOTIFYD_CONFIG}
+/usr/bin/sed -i 's/.*password.*/  password = '\"${password}\"'/g' ${SPOTIFYD_CONFIG}
 
 timeout=$(/usr/bin/jq -r .timeout.idleDisplayOff ${MUPIBOX_CONFIG})
-/usr/bin/sed 's/.*Option \"BlankTime\".*/    Option \"BlankTime\" '\"${timeout}\"'/g' ${DISPLAY_STANDBY}
+/usr/bin/sed -i 's/.*Option \"BlankTime\".*/    Option \"BlankTime\" '\"${timeout}\"'/g' ${DISPLAY_STANDBY}

@@ -38,7 +38,7 @@ printf ${FORMAT} "$bar"
 
 # Get missing packages
 sudo apt-get update >> ${LOG} 2>>${LOG}
-sudo apt-get install git libasound2 jq samba -y >> ${LOG} 2>>${LOG}
+sudo apt-get install git libasound2 jq samba mplayer -y >> ${LOG} 2>>${LOG}
 
 ###############################################################################################
 
