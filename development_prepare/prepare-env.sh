@@ -204,7 +204,7 @@ printf "Install Spotify Controller                                        \n    
 percentBar 60 59 bar
 printf ${FORMAT} "$bar"
 
-sudo rm -R ~/.mupibox spotifycontroller-main >> ${LOG} 2>>${LOG}
+sudo rm -R ~/.mupibox/spotifycontroller-main >> ${LOG} 2>>${LOG}
 cd ~/.mupibox  >> ${LOG} 2>>${LOG}
 wget https://github.com/amueller-tech/spotifycontroller/archive/main.zip  >> ${LOG} 2>>${LOG}
 unzip main.zip  >> ${LOG} 2>>${LOG}
