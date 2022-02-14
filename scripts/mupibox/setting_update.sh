@@ -10,8 +10,8 @@ SPOTIFYD_CONFIG="/etc/spotifyd/spotifyd.conf"
 DISPLAY_STANDBY="/etc/X11/xorg.conf.d/98-dietpi-disable_dpms.conf"
 
 deviceId=$(/usr/bin/jq -r .spotify.deviceId ${MUPIBOX_CONFIG})
-/usr/bin/cat <<< $(/usr/bin/jq --arg v "${deviceId}" '.node-sonos-http-api.rooms = $v' ${SONOS_CONFIG}) >  ${SONOS_CONFIG}
-/usr/bin/cat <<< $(/usr/bin/jq --arg v "${deviceId}" '.node-sonos-http-api.rooms = $v' $SPOTIFYCONTROLLER_CONFIG) >  ${SPOTIFYCONTROLLER_CONFIG}
+/usr/bin/cat <<< $(/usr/bin/jq --arg v "${deviceId}" '.["node-sonos-http-api.rooms"] = $v' ${SONOS_CONFIG}) >  ${SONOS_CONFIG}
+/usr/bin/cat <<< $(/usr/bin/jq --arg v "${deviceId}" '.spotify.deviceId = $v' ${SPOTIFYCONTROLLER_CONFIG}) >  ${SPOTIFYCONTROLLER_CONFIG}
 
 clientId=$(/usr/bin/jq -r .spotify.clientId ${MUPIBOX_CONFIG})
 /usr/bin/cat <<< $(/usr/bin/jq --arg v "${clientId}" '.spotify.clientId = $v' ${SONOS_CONFIG}) >  ${SONOS_CONFIG}
