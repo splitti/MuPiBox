@@ -4,9 +4,9 @@
 # This is mandatory for proper SHIM shutdown!
 
 CONFIG="/etc/mupibox/mupiboxconfig.json"
-LED_PIN=`/usr/bin/jq -r .shim.triggerPin ${CONFIG}`
-POWEROFF_PIN=`/usr/bin/jq -r .shim.poweroffPin ${CONFIG}`
-CUT_PIN=`/usr/bin/jq -r .shim.cutPin ${CONFIG}`
+LED_PIN=$(/usr/bin/jq -r .shim.triggerPin ${CONFIG})
+POWEROFF_PIN=$(/usr/bin/jq -r .shim.poweroffPin ${CONFIG})
+CUT_PIN=$(/usr/bin/jq -r .shim.cutPin ${CONFIG})
 
 if [ "$1" = "poweroff" ]; then
     # added by schlizbäda:

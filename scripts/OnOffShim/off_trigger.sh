@@ -5,13 +5,13 @@
 # See this as a working example
 
 CONFIG="/etc/mupibox/mupiboxconfig.json"
-TRIGGER_PIN=`/usr/bin/jq -r .timeout.triggerPin ${CONFIG}`
+TRIGGER_PIN=$(/usr/bin/jq -r .shim.triggerPin ${CONFIG})
 
-START_SOUND=`/usr/bin/jq -r .mupibox.startSound ${CONFIG}`
-SHUT_SOUND=`/usr/bin/jq -r .mupibox.shutSound ${CONFIG}`
-START_VOLUME=`/usr/bin/jq -r .mupibox.startVolume ${CONFIG}`
-SHUT_SPLASH=`/usr/bin/jq -r .mupibox.shutSplash ${CONFIG}`
-AUDIO_DEVICE=`/usr/bin/jq -r .mupibox.audioDevice ${CONFIG}`
+START_SOUND=$(/usr/bin/jq -r .mupibox.startSound ${CONFIG})
+SHUT_SOUND=$(/usr/bin/jq -r .mupibox.shutSound ${CONFIG})
+START_VOLUME=$(/usr/bin/jq -r .mupibox.startVolume ${CONFIG})
+SHUT_SPLASH=$(/usr/bin/jq -r .mupibox.shutSplash ${CONFIG})
+AUDIO_DEVICE=$(/usr/bin/jq -r .mupibox.audioDevice ${CONFIG})
 
 
 /usr/bin/amixer sset '${AUDIO_DEVICE}' ${START_VOLUME}%

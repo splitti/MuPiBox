@@ -22,8 +22,6 @@ LOG="/tmp/prepage.log"
 FORMAT="\e[48;5;23;38;5;41m%s\e[0m"
  
 # Make it nice
-printf "\n\n\nPlease wait..."
-sudo rm ${LOG} >> ${LOG} 2>>${LOG}
 sudo apt-get install figlet lolcat -y >> ${LOG} 2>>${LOG}
 
 ###############################################################################################
@@ -333,9 +331,9 @@ percentBar 86 59 bar
 printf ${FORMAT} "$bar"
 
 # OnOffShim & hifiberry
-#sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/OnOffShim/off_trigger.sh -O /var/lib/dietpi/postboot.d/off_trigger.sh >> ${LOG} 2>>${LOG}
+sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/OnOffShim/off_trigger.sh -O /var/lib/dietpi/postboot.d/off_trigger.sh >> ${LOG} 2>>${LOG}
 sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/OnOffShim/poweroff.sh -O /usr/lib/systemd/system-shutdown/poweroff.sh >> ${LOG} 2>>${LOG}
-#sudo chmod 775 /usr/lib/systemd/system-shutdown/poweroff.sh /var/lib/dietpi/postboot.d/off_trigger.sh >> ${LOG} 2>>${LOG}
+sudo chmod 775 /usr/lib/systemd/system-shutdown/poweroff.sh /var/lib/dietpi/postboot.d/off_trigger.sh >> ${LOG} 2>>${LOG}
 sleep 1
 
 ###############################################################################################
