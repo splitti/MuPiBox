@@ -22,7 +22,13 @@ LOG="/tmp/prepage.log"
 FORMAT="\e[48;5;23;38;5;41m%s\e[0m"
  
 # Make it nice
+rm ${LOG} >> ${LOG} 2>>${LOG}
 sudo apt-get install figlet lolcat -y >> ${LOG} 2>>${LOG}
+
+###############################################################################################
+echo "###################################################" >> ${LOG} 2>>${LOG}
+echo "MuPiBox Preperation" >> ${LOG} 2>>${LOG}
+
 clear
 figlet -f standard -c -m 1  " MuPiBox Preperation" | lolcat
 tput cup $Y $X
@@ -35,18 +41,52 @@ printf ${FORMAT} "$bar"
 sudo apt-get update >> ${LOG} 2>>${LOG}
 sudo apt-get install git libasound2 jq samba -y >> ${LOG} 2>>${LOG}
 
+###############################################################################################
+
+echo "###################################################" >> ${LOG} 2>>${LOG}
+echo "Install nodeJS" >> ${LOG} 2>>${LOG}
+
 tput cup $Y $X
-printf "Install nodeJS 16 / ionic / pm2                             \n          "
+printf "Install nodeJS 16                             \n          "
 #tput cup $PY $X
 percentBar 10 59 bar
 printf ${FORMAT} "$bar"
 
-
 curl -sL https://deb.nodesource.com/setup_16.x | sudo -E bash - >> ${LOG} 2>>${LOG}
 sudo apt-get install -y nodejs >> ${LOG} 2>>${LOG}
-sudo npm install -g @ionic/cli >> ${LOG} 2>>${LOG}
-sudo npm install pm2 -g  >> ${LOG} 2>>${LOG}
 
+###############################################################################################
+
+echo "###################################################" >> ${LOG} 2>>${LOG}
+echo "Install ionic" >> ${LOG} 2>>${LOG}
+
+tput cup $Y $X
+printf "Install ionic                           \n          "
+#tput cup $PY $X
+percentBar 10 59 bar
+printf ${FORMAT} "$bar"
+
+sudo npm install -g @ionic/cli >> ${LOG} 2>>${LOG}
+
+###############################################################################################
+
+echo "###################################################" >> ${LOG} 2>>${LOG}
+echo "Install pm2" >> ${LOG} 2>>${LOG}
+
+tput cup $Y $X
+printf "Install pm2                             \n          "
+#tput cup $PY $X
+percentBar 10 59 bar
+printf ${FORMAT} "$bar"
+
+cd ~
+sudo npm install pm2 -g  >> ${LOG} 2>>${LOG}
+pm2 startup >> ${LOG} 2>>${LOG}
+
+###############################################################################################
+
+echo "###################################################" >> ${LOG} 2>>${LOG}
+echo "Create directorys" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
 printf "Create directorys                                        \n          "
@@ -61,12 +101,18 @@ mkdir -p ~/MuPiBox/media >> ${LOG} 2>>${LOG}
 mkdir ~/MuPiBox/tts_files >> ${LOG} 2>>${LOG}
 mkdir -p ~/MuPiBox/sysmedia/sound >> ${LOG} 2>>${LOG}
 mkdir ~/MuPiBox/sysmedia/images >> ${LOG} 2>>${LOG}
-mkdir ~/MuPiBox/media >> ${LOG} 2>>${LOG}
+mkdir ~/MuPiBox/media >> ${LOG} 2>>${LOG} ${LOG} 2>>${LOG}
+mkdir ~/.mupibox/Sonos-Kids-Controller-master
 sudo mkdir /usr/local/bin/mupibox >> ${LOG} 2>>${LOG}
 sudo mkdir /etc/spotifyd >> ${LOG} 2>>${LOG}
 sudo mkdir /etc/mupibox >> ${LOG} 2>>${LOG}
 sudo mkdir /var/log/mupibox/ >> ${LOG} 2>>${LOG}v
 sleep 1
+
+###############################################################################################
+
+echo "###################################################" >> ${LOG} 2>>${LOG}
+echo "Create hushlogin" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
 printf "Create hushlogin                                        \n          "
@@ -77,8 +123,13 @@ printf ${FORMAT} "$bar"
 touch ~/.hushlogin
 sleep 1
 
+###############################################################################################
+
+echo "###################################################" >> ${LOG} 2>>${LOG}
+echo "mplayer-wrapper" >> ${LOG} 2>>${LOG}
+
 tput cup $Y $X
-printf "Clone sources                                        \n          "
+printf "mplayer-wrapper                                        \n          "
 #tput cup $PY $X
 percentBar 45 59 bar
 printf ${FORMAT} "$bar"
@@ -88,29 +139,83 @@ cd ~/.mupibox >> /tmp/prepare.log
 git clone https://github.com/derhuerst/mplayer-wrapper >> ${LOG} 2>>${LOG}
 cd mplayer-wrapper >> ${LOG} 2>>${LOG}
 npm install >> ${LOG} 2>>${LOG}
+
+###############################################################################################
+
+echo "###################################################" >> ${LOG} 2>>${LOG}
+echo "google-tts" >> ${LOG} 2>>${LOG}
+
+tput cup $Y $X
+printf "google-tts                                        \n          "
+#tput cup $PY $X
+percentBar 50 59 bar
+printf ${FORMAT} "$bar"
+
 cd ~/.mupibox >> ${LOG} 2>>${LOG}
 git clone https://github.com/zlargon/google-tts >> ${LOG} 2>>${LOG}
 cd google-tts/ >> ${LOG} 2>>${LOG}
 npm install --save >> ${LOG} 2>>${LOG}
 npm audit fix >> ${LOG} 2>>${LOG}
-cd ~/.mupibox
-wget https://github.com/Thyraz/Sonos-Kids-Controller/archive/refs/tags/V1.6.zip >> ${LOG} 2>>${LOG}
-unzip V1.6.zip >> ${LOG} 2>>${LOG}
-rm V1.6.zip >> ${LOG} 2>>${LOG}
-mv Sonos-Kids-Controller-1.6/ Sonos-Kids-Controller-master >> ${LOG} 2>>${LOG}
+
+###############################################################################################
+
+echo "###################################################" >> ${LOG} 2>>${LOG}
+echo "Sonos-Kids-Controller-master" >> ${LOG} 2>>${LOG}
+
+tput cup $Y $X
+printf "Sonos-Kids-Controller-master                                        \n          "
+#tput cup $PY $X
+percentBar 55 59 bar
+printf ${FORMAT} "$bar"
+
+cd ~/.mupibox/Sonos-Kids-Controller-master
+#wget https://github.com/Thyraz/Sonos-Kids-Controller/archive/refs/tags/V1.6.zip >> ${LOG} 2>>${LOG}
+#unzip V1.6.zip >> ${LOG} 2>>${LOG}
+#rm V1.6.zip >> ${LOG} 2>>${LOG}
+#rm -R Sonos-Kids-Controller-master/ >> ${LOG} 2>>${LOG}
+#mv Sonos-Kids-Controller-1.6/ Sonos-Kids-Controller-master/ >> ${LOG} 2>>${LOG}
+#cd Sonos-Kids-Controller-master >> ${LOG} 2>>${LOG}
+#npm install  >> ${LOG} 2>>${LOG}
+#npm audit fix  >> ${LOG} 2>>${LOG}
+#ionic build --prod --verbose  >> ${LOG} 2>>${LOG}
+#pm2 start server.js
+#pm2 save
+#mkdir -p ~/.mupibox/Sonos-Kids-Controller-master/www/cover >> ${LOG} 2>>${LOG}
+#sudo apt-get remove git  >> ${LOG} 2>>${LOG}
+
+wget http://192.168.2.5/sonos-kids-controller.zip  >> ${LOG} 2>>${LOG}
+unzip sonos-kids-controller.zip  >> ${LOG} 2>>${LOG}
+rm sonos-kids-controller.zip  >> ${LOG} 2>>${LOG}
 npm install  >> ${LOG} 2>>${LOG}
-npm audit fix  >> ${LOG} 2>>${LOG}
-ionic build --prod --verbose  >> ${LOG} 2>>${LOG}
-mkdir -p ~/.mupibox/Sonos-Kids-Controller-master/www/cover >> ${LOG} 2>>${LOG}
-sudo apt-get remove git  >> ${LOG} 2>>${LOG}
-cd ~/.mupibox
-wget https://github.com/amueller-tech/spotifycontroller/archive/main.zip
-unzip main.zip
-rm main.zip
-cd spotifycontroller-main
-npm install
+pm2 start server.js  >> ${LOG} 2>>${LOG}
+pm2 save  >> ${LOG} 2>>${LOG}
+
+###############################################################################################
+
+echo "###################################################" >> ${LOG} 2>>${LOG}
+echo "Spotify Controller" >> ${LOG} 2>>${LOG}
+
+tput cup $Y $X
+printf "Spotify Controller                                        \n          "
+#tput cup $PY $X
+percentBar 60 59 bar
+printf ${FORMAT} "$bar"
+
+cd ~/.mupibox  >> ${LOG} 2>>${LOG}
+wget https://github.com/amueller-tech/spotifycontroller/archive/main.zip  >> ${LOG} 2>>${LOG}
+unzip main.zip  >> ${LOG} 2>>${LOG}
+rm main.zip  >> ${LOG} 2>>${LOG}
+cd spotifycontroller-main  >> ${LOG} 2>>${LOG}
+npm install  >> ${LOG} 2>>${LOG}
+npm start  >> ${LOG} 2>>${LOG}
+pm2 start spotify-control.js  >> ${LOG} 2>>${LOG}
+pm2 save  >> ${LOG} 2>>${LOG}
 
 
+###############################################################################################
+
+echo "###################################################" >> ${LOG} 2>>${LOG}
+echo "Copy binaries" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
 printf "Copy binaries                                        \n          "
@@ -122,6 +227,11 @@ sudo wget https://github.com/splitti/MuPiBox/raw/main/bin/fbv/fbv -O /usr/bin/fb
 sudo wget https://github.com/splitti/MuPiBox/raw/main/bin/spotifyd/0.3.3/dietpi8_64bit/spotifyd -O /usr/bin/spotifyd  >> ${LOG} 2>>${LOG}
 sudo chmod 755 /usr/bin/fbv /usr/bin/spotifyd >> ${LOG} 2>>${LOG}
 sleep 1
+
+###############################################################################################
+
+echo "###################################################" >> ${LOG} 2>>${LOG}
+echo "Copy Services" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
 printf "Copy Services                                        \n          "
@@ -135,6 +245,11 @@ sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/services
 sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/services/spotifyd.service -O /etc/systemd/system/spotifyd.service >> ${LOG} 2>>${LOG}
 sleep 1
 
+###############################################################################################
+
+echo "###################################################" >> ${LOG} 2>>${LOG}
+echo "Copy dietpi-config" >> ${LOG} 2>>${LOG}
+
 tput cup $Y $X
 printf "Copy dietpi-configs                                        \n          "
 percentBar 73 59 bar
@@ -146,6 +261,11 @@ sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/template
 sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/smb.conf -O /etc/samba/smb.conf >> ${LOG} 2>>${LOG}
 sleep 1
 
+###############################################################################################
+
+echo "###################################################" >> ${LOG} 2>>${LOG}
+echo "Copy spotify-configs" >> ${LOG} 2>>${LOG}
+
 tput cup $Y $X
 printf "Copy spotify-configs                                        \n          "
 percentBar 76 59 bar
@@ -156,6 +276,11 @@ wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/www
 wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/spotifycontroller.json -O /home/dietpi/.mupibox/spotifycontroller-main/config/config.json >> ${LOG} 2>>${LOG}
 sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/spotifyd.conf -O /etc/spotifyd/spotifyd.conf >> ${LOG} 2>>${LOG}
 sleep 1
+
+###############################################################################################
+
+echo "###################################################" >> ${LOG} 2>>${LOG}
+echo "Copy media-files" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
 printf "Copy media-files                                        \n          "
@@ -170,6 +295,11 @@ sudo wget https://github.com/splitti/MuPiBox/raw/main/media/images/splash.png -O
 wget https://github.com/splitti/MuPiBox/raw/main/media/sound/shutdown.wav -O /home/dietpi/MuPiBox/sysmedia/sound/shutdown.wav >> ${LOG} 2>>${LOG}
 wget https://github.com/splitti/MuPiBox/raw/main/media/sound/startup.wav -O /home/dietpi/MuPiBox/sysmedia/sound/startup.wav >> ${LOG} 2>>${LOG}
 sleep 1
+
+###############################################################################################
+
+echo "###################################################" >> ${LOG} 2>>${LOG}
+echo "Copy mupibox-files" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
 printf "Copy mupibox-files                                        \n          "
@@ -187,6 +317,11 @@ sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox
 sudo chmod 755 /usr/local/bin/mupibox/change_checker.sh /usr/local/bin/mupibox/idle_shutdown.sh /usr/local/bin/mupibox/m3u_generator.sh /usr/local/bin/mupibox/setting_update.sh /usr/local/bin/mupibox/software_shutdown.sh /usr/local/bin/mupibox/splash_screen.sh >> ${LOG} 2>>${LOG}
 sleep 1
 
+###############################################################################################
+
+echo "###################################################" >> ${LOG} 2>>${LOG}
+echo "Copy OnOffShim-scripts" >> ${LOG} 2>>${LOG}
+
 tput cup $Y $X
 printf "Copy onoffshim-scripts                                        \n          "
 percentBar 86 59 bar
@@ -197,6 +332,11 @@ sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/OnOffSh
 sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/OnOffShim/poweroff.sh -O /usr/lib/systemd/system-shutdown/poweroff.sh >> ${LOG} 2>>${LOG}
 sudo chmod 775 /usr/lib/systemd/system-shutdown/poweroff.sh /var/lib/dietpi/postboot.d/off_trigger.sh >> ${LOG} 2>>${LOG}
 sleep 1
+
+###############################################################################################
+
+echo "###################################################" >> ${LOG} 2>>${LOG}
+echo "Enable services" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
 printf "Enable services                                        \n          "
@@ -215,6 +355,11 @@ sudo systemctl daemon-reload >> ${LOG} 2>>${LOG}
 #sudo systemctl start spotifyd.service >> ${LOG} 2>>${LOG}
 sudo systemctl enable smbd.service >> ${LOG} 2>>${LOG}
 sudo systemctl start smbd.service >> ${LOG} 2>>${LOG}
+
+###############################################################################################
+
+echo "###################################################" >> ${LOG} 2>>${LOG}
+echo "Set environment" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
 printf "Set environment                                        \n          "
