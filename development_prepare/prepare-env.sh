@@ -159,6 +159,7 @@ git clone https://github.com/zlargon/google-tts >> ${LOG} 2>>${LOG}
 cd google-tts/ >> ${LOG} 2>>${LOG}
 npm install --save >> ${LOG} 2>>${LOG}
 npm audit fix >> ${LOG} 2>>${LOG}
+npm test >> ${LOG} 2>>${LOG}
 
 ###############################################################################################
 
@@ -176,6 +177,7 @@ wget http://192.168.2.5/sonos-kids-controller.zip  >> ${LOG} 2>>${LOG}
 unzip sonos-kids-controller.zip  >> ${LOG} 2>>${LOG}
 rm sonos-kids-controller.zip  >> ${LOG} 2>>${LOG}
 npm install  >> ${LOG} 2>>${LOG}
+npm start  >> ${LOG} 2>>${LOG}
 pm2 start server.js  >> ${LOG} 2>>${LOG}
 pm2 save  >> ${LOG} 2>>${LOG}
 
