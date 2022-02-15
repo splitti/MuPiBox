@@ -173,7 +173,7 @@ percentBar 55 59 bar
 printf ${FORMAT} "$bar"
 
 cd ~/.mupibox/Sonos-Kids-Controller-master >> ${LOG} 2>>${LOG}
-wget http://192.168.2.5/sonos-kids-controller.zip  >> ${LOG} 2>>${LOG}
+wget https://github.com/Thyraz/Sonos-Kids-Controller/releases/download/V1.6/sonos-kids-controller.zip  >> ${LOG} 2>>${LOG}
 unzip sonos-kids-controller.zip  >> ${LOG} 2>>${LOG}
 rm sonos-kids-controller.zip  >> ${LOG} 2>>${LOG}
 npm install  >> ${LOG} 2>>${LOG}
