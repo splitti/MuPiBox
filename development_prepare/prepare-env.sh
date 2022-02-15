@@ -96,9 +96,8 @@ printf ${FORMAT} "$bar"
 
 
 # Clean and create Directorys
-sudo rm -R ~/.mupibox/Sonos-Kids-Controller-master >> ${LOG} 2>>${LOG}
-sudo rm -R ~/.mupibox/google-tts/ >> ${LOG} 2>>${LOG}
-sudo rm -R ~/.mupibox/spotifycontroller-main >> ${LOG} 2>>${LOG}
+sudo rm -R ~/.mupibox >> ${LOG} 2>>${LOG}
+sudo rm -R ~/MuPiBox/  >> ${LOG} 2>>${LOG}
 
 mkdir -p ~/.mupibox >> ${LOG} 2>>${LOG}
 mkdir -p ~/MuPiBox/media >> ${LOG} 2>>${LOG}
