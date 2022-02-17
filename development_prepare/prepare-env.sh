@@ -188,7 +188,10 @@ wget https://github.com/Thyraz/Sonos-Kids-Controller/releases/download/V1.6/sono
 unzip sonos-kids-controller.zip  >> ${LOG} 2>>${LOG}
 rm sonos-kids-controller.zip  >> ${LOG} 2>>${LOG}
 npm install  >> ${LOG} 2>>${LOG}
-npm start  >> ${LOG} 2>>${LOG}
+npm start & >> ${LOG} 2>>${LOG}
+sleep 5  >> ${LOG} 2>>${LOG}
+npm stop  >> ${LOG} 2>>${LOG}
+sleep 1  >> ${LOG} 2>>${LOG}
 pm2 start server.js  >> ${LOG} 2>>${LOG}
 pm2 save  >> ${LOG} 2>>${LOG}
 
@@ -209,7 +212,10 @@ unzip main.zip  >> ${LOG} 2>>${LOG}
 rm main.zip  >> ${LOG} 2>>${LOG}
 cd spotifycontroller-main  >> ${LOG} 2>>${LOG}
 npm install  >> ${LOG} 2>>${LOG}
-npm start  >> ${LOG} 2>>${LOG}
+npm start & >> ${LOG} 2>>${LOG}
+sleep 5  >> ${LOG} 2>>${LOG}
+npm stop  >> ${LOG} 2>>${LOG}
+sleep 1  >> ${LOG} 2>>${LOG}
 pm2 start spotify-control.js  >> ${LOG} 2>>${LOG}
 pm2 save  >> ${LOG} 2>>${LOG}
 
