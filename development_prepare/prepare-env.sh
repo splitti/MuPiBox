@@ -16,6 +16,7 @@ percentBar ()  {
 }
 
 Y=15
+UE=16
 X=10
 LOG="/tmp/prepage.log"
 
@@ -32,7 +33,7 @@ clear
 figlet -f standard -w 80 -c -m 1 "  MuPiBox Preperation" | lolcat
 tput cup $Y $X
 printf "Get missing packages \n          "
-#tput cup $PY $X
+tput cup $UE $X
 percentBar 0 59 bar
 printf ${FORMAT} "$bar"
 
