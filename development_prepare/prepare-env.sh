@@ -31,7 +31,7 @@ echo "MuPiBox Preperation" >> ${LOG} 2>>${LOG}
 clear
 figlet -f standard -w 80 -c -m 1 "  MuPiBox Preperation" | lolcat
 tput cup $Y $X
-printf "Get missing packages \n            "
+printf "Get missing packages \n          "
 #tput cup $PY $X
 percentBar 0 59 bar
 printf ${FORMAT} "$bar"
@@ -44,7 +44,7 @@ sudo apt-get install git libasound2 jq samba mplayer -y >> ${LOG} 2>>${LOG}
 echo "###################################################" >> ${LOG} 2>>${LOG}
 echo "Set user permissons" >> ${LOG} 2>>${LOG}
 tput cup $Y $X
-printf "Set user permissons                                                      \n                  "
+printf "Set user permissons                                                      \n                "
 
 percentBar 8 59 bar
 printf ${FORMAT} "$bar"
@@ -57,7 +57,7 @@ echo "###################################################" >> ${LOG} 2>>${LOG}
 echo "Install nodeJS" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
-printf "Install nodeJS 16                             \n                  "
+printf "Install nodeJS 16                             \n                "
 
 percentBar 10 59 bar
 printf ${FORMAT} "$bar"
@@ -71,7 +71,7 @@ echo "###################################################" >> ${LOG} 2>>${LOG}
 echo "Install ionic" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
-printf "Install ionic                           \n                  "
+printf "Install ionic                           \n                "
 
 percentBar 10 59 bar
 printf ${FORMAT} "$bar"
@@ -84,7 +84,7 @@ echo "###################################################" >> ${LOG} 2>>${LOG}
 echo "Install pm2" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
-printf "Install pm2                             \n                  "
+printf "Install pm2                             \n                "
 percentBar 10 59 bar
 printf ${FORMAT} "$bar"
 
@@ -100,7 +100,7 @@ echo "###################################################" >> ${LOG} 2>>${LOG}
 echo "Clean and create Directorys" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
-printf "Clean and create Directorys                                        \n                  "
+printf "Clean and create Directorys                                        \n                "
 
 percentBar 40 59 bar
 printf ${FORMAT} "$bar"
@@ -129,7 +129,7 @@ echo "###################################################" >> ${LOG} 2>>${LOG}
 echo "Create hushlogin" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
-printf "Create hushlogin                                        \n                  "
+printf "Create hushlogin                                        \n                "
 
 percentBar 43 59 bar
 printf ${FORMAT} "$bar"
@@ -143,7 +143,7 @@ echo "###################################################" >> ${LOG} 2>>${LOG}
 echo "Install mplayer-wrapper" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
-printf "Install mplayer-wrapper                                        \n                  "
+printf "Install mplayer-wrapper                                        \n                "
 
 percentBar 45 59 bar
 printf ${FORMAT} "$bar"
@@ -160,7 +160,7 @@ echo "###################################################" >> ${LOG} 2>>${LOG}
 echo "Install google-tts" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
-printf "Install google-tts                                        \n                  "
+printf "Install google-tts                                        \n                "
 
 percentBar 50 59 bar
 printf ${FORMAT} "$bar"
@@ -178,7 +178,7 @@ echo "###################################################" >> ${LOG} 2>>${LOG}
 echo "Install Sonos-Kids-Controller-master" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
-printf "Install Sonos-Kids-Controller-master                                        \n                  "
+printf "Install Sonos-Kids-Controller-master                                        \n                "
 
 percentBar 55 59 bar
 printf ${FORMAT} "$bar"
@@ -202,7 +202,7 @@ echo "###################################################" >> ${LOG} 2>>${LOG}
 echo "Install Spotify Controller" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
-printf "Install Spotify Controller                                        \n                  "
+printf "Install Spotify Controller                                        \n                "
 
 percentBar 60 59 bar
 printf ${FORMAT} "$bar"
@@ -227,7 +227,7 @@ echo "###################################################" >> ${LOG} 2>>${LOG}
 echo "Copy binaries" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
-printf "Copy binaries                                        \n                  "
+printf "Copy binaries                                        \n                "
 percentBar 65 59 bar
 printf ${FORMAT} "$bar"
 
@@ -243,7 +243,7 @@ echo "###################################################" >> ${LOG} 2>>${LOG}
 echo "Copy Services" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
-printf "Copy Services                                        \n                  "
+printf "Copy Services                                        \n                "
 percentBar 70 59 bar
 printf ${FORMAT} "$bar"
 
@@ -260,7 +260,7 @@ echo "###################################################" >> ${LOG} 2>>${LOG}
 echo "Copy dietpi-config" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
-printf "Copy dietpi-configs                                        \n                  "
+printf "Copy dietpi-configs                                        \n                "
 percentBar 73 59 bar
 printf ${FORMAT} "$bar"
 
@@ -276,7 +276,7 @@ echo "###################################################" >> ${LOG} 2>>${LOG}
 echo "Copy spotify-configs" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
-printf "Copy spotify-configs                                        \n                  "
+printf "Copy spotify-configs                                        \n                "
 percentBar 76 59 bar
 printf ${FORMAT} "$bar"
 
@@ -292,7 +292,7 @@ echo "###################################################" >> ${LOG} 2>>${LOG}
 echo "Copy media-files" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
-printf "Copy media-files                                        \n                  "
+printf "Copy media-files                                        \n                "
 percentBar 80 59 bar
 printf ${FORMAT} "$bar"
 
@@ -311,7 +311,7 @@ echo "###################################################" >> ${LOG} 2>>${LOG}
 echo "Copy mupibox-files" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
-printf "Copy mupibox-files                                        \n                  "
+printf "Copy mupibox-files                                        \n                "
 percentBar 83 59 bar
 printf ${FORMAT} "$bar"
 
@@ -332,7 +332,7 @@ echo "###################################################" >> ${LOG} 2>>${LOG}
 echo "Copy OnOffShim-scripts" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
-printf "Copy onoffshim-scripts                                        \n                  "
+printf "Copy onoffshim-scripts                                        \n                "
 percentBar 86 59 bar
 printf ${FORMAT} "$bar"
 
@@ -348,7 +348,7 @@ echo "###################################################" >> ${LOG} 2>>${LOG}
 echo "Enable services" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
-printf "Enable services                                        \n                  "
+printf "Enable services                                        \n                "
 percentBar 90 59 bar
 printf ${FORMAT} "$bar"
 
@@ -371,7 +371,7 @@ echo "###################################################" >> ${LOG} 2>>${LOG}
 echo "Set environment" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
-printf "Set environment                                        \n                  "
+printf "Set environment                                        \n                "
 percentBar 98 59 bar
 printf ${FORMAT} "$bar"
 # ENV
@@ -384,10 +384,10 @@ sudo usermod -a -G tty dietpi
 #sudo usermod -a -G bluetooth dietpi
 
 tput cup $Y $X
-printf "SYSTEM IS PREPARED                                        \n                  "
+printf "SYSTEM IS PREPARED                                        \n                "
 percentBar 100 59 bar
 printf ${FORMAT} "$bar"
-printf "\n\n            Logfile: ${LOG}\n\n            Have a nice day!\n\n"
+printf "\n\n          Logfile: ${LOG}\n\n          Have a nice day!\n\n"
 
 
 #/boot/dietpi/func/dietpi-set_hardware bluetooth on
