@@ -29,9 +29,9 @@ echo "###################################################" >> ${LOG} 2>>${LOG}
 echo "MuPiBox Preperation" >> ${LOG} 2>>${LOG}
 
 clear
-figlet -f standard -c -m 1  " MuPiBox Preperation" | lolcat
+figlet -f standard -m 1  "  MuPiBox Preperation" | lolcat
 tput cup $Y $X
-printf "Get missing packages \n          "
+printf "Get missing packages \n  "
 #tput cup $PY $X
 percentBar 0 59 bar
 printf ${FORMAT} "$bar"
@@ -386,7 +386,7 @@ tput cup $Y $X
 printf "SYSTEM IS PREPARED                                        \n          "
 percentBar 100 59 bar
 printf ${FORMAT} "$bar"
-printf "\n\n          Logfile: ${LOG}\n\n          Have a nice day!\n\n"
+printf "\n\n  Logfile: ${LOG}\n\n  Have a nice day!\n\n"
 
 
 #/boot/dietpi/func/dietpi-set_hardware bluetooth on
