@@ -211,6 +211,7 @@ wget https://github.com/amueller-tech/spotifycontroller/archive/main.zip  >> ${L
 unzip main.zip  >> ${LOG} 2>>${LOG}
 rm main.zip  >> ${LOG} 2>>${LOG}
 cd spotifycontroller-main  >> ${LOG} 2>>${LOG}
+wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/www.json -O ~/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >> ${LOG} 2>>${LOG}
 npm install  >> ${LOG} 2>>${LOG}
 npm start & >> ${LOG} 2>>${LOG}
 sleep 5  >> ${LOG} 2>>${LOG}
@@ -279,8 +280,8 @@ percentBar 76 59 bar
 printf ${FORMAT} "$bar"
 
 # Spotify-Configs
-wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/www.json -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >> ${LOG} 2>>${LOG}
-wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/spotifycontroller.json -O /home/dietpi/.mupibox/spotifycontroller-main/config/config.json >> ${LOG} 2>>${LOG}
+wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/www.json -O ~/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >> ${LOG} 2>>${LOG}
+wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/spotifycontroller.json -O ~/.mupibox/spotifycontroller-main/config/config.json >> ${LOG} 2>>${LOG}
 sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/spotifyd.conf -O /etc/spotifyd/spotifyd.conf >> ${LOG} 2>>${LOG}
 sleep 1
 
@@ -297,10 +298,10 @@ printf ${FORMAT} "$bar"
 # Splash and Media
 sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/splash.txt -O /boot/splash.txt >> ${LOG} 2>>${LOG}
 sudo wget https://gitlab.com/DarkElvenAngel/initramfs-splash/-/raw/master/boot/initramfs.img -O /boot/initramfs.img >> ${LOG} 2>>${LOG}
-wget https://github.com/splitti/MuPiBox/raw/main/media/images/goodbye.png -O /home/dietpi/MuPiBox/sysmedia/images/goodbye.png >> ${LOG} 2>>${LOG}
+wget https://github.com/splitti/MuPiBox/raw/main/media/images/goodbye.png -O ~/MuPiBox/sysmedia/images/goodbye.png >> ${LOG} 2>>${LOG}
 sudo wget https://github.com/splitti/MuPiBox/raw/main/media/images/splash.png -O /boot/splash.png >> ${LOG} 2>>${LOG}
-wget https://github.com/splitti/MuPiBox/raw/main/media/sound/shutdown.wav -O /home/dietpi/MuPiBox/sysmedia/sound/shutdown.wav >> ${LOG} 2>>${LOG}
-wget https://github.com/splitti/MuPiBox/raw/main/media/sound/startup.wav -O /home/dietpi/MuPiBox/sysmedia/sound/startup.wav >> ${LOG} 2>>${LOG}
+wget https://github.com/splitti/MuPiBox/raw/main/media/sound/shutdown.wav -O ~/MuPiBox/sysmedia/sound/shutdown.wav >> ${LOG} 2>>${LOG}
+wget https://github.com/splitti/MuPiBox/raw/main/media/sound/startup.wav -O ~/MuPiBox/sysmedia/sound/startup.wav >> ${LOG} 2>>${LOG}
 sleep 1
 
 ###############################################################################################
