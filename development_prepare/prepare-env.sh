@@ -34,8 +34,8 @@ clear
 figlet -f standard -w 80 -c -m 1 "  MuPiBox Preperation" | lolcat
 tput cup $Y $X
 printf "Get missing packages"
-tput cup $UE $ICKS
 percentBar 0 59 bar
+tput cup $UE $ICKS
 printf ${FORMAT} "$bar"
 
 # Get missing packages
@@ -47,8 +47,8 @@ echo "###################################################" >> ${LOG} 2>>${LOG}
 echo "Set user permissons" >> ${LOG} 2>>${LOG}
 tput cup $Y $X
 printf "Set user permissons                                                      "
-tput cup $UE $ICKS
 percentBar 8 59 bar
+tput cup $UE $ICKS
 printf ${FORMAT} "$bar"
 
  2>>${LOG}
