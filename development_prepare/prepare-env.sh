@@ -18,6 +18,7 @@ percentBar ()  {
 Y=15
 UE=16
 X=10
+ICKS=4
 LOG="/tmp/prepage.log"
 
 FORMAT="\e[48;5;23;38;5;41m%s\e[0m"
@@ -33,7 +34,7 @@ clear
 figlet -f standard -w 80 -c -m 1 "  MuPiBox Preperation" | lolcat
 tput cup $Y $X
 printf "Get missing packages"
-tput cup $UE $X
+tput cup $UE $ICKS
 percentBar 0 59 bar
 printf ${FORMAT} "$bar"
 
@@ -46,7 +47,7 @@ echo "###################################################" >> ${LOG} 2>>${LOG}
 echo "Set user permissons" >> ${LOG} 2>>${LOG}
 tput cup $Y $X
 printf "Set user permissons                                                      "
-tput cup $UE $X
+tput cup $UE $ICKS
 percentBar 8 59 bar
 printf ${FORMAT} "$bar"
 
@@ -59,7 +60,7 @@ echo "Install nodeJS" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
 printf "Install nodeJS 16                             "
-tput cup $UE $X
+tput cup $UE $ICKS
 percentBar 10 59 bar
 printf ${FORMAT} "$bar"
 
@@ -73,7 +74,7 @@ echo "Install ionic" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
 printf "Install ionic                           "
-tput cup $UE $X
+tput cup $UE $ICKS
 percentBar 10 59 bar
 printf ${FORMAT} "$bar"
 
@@ -86,7 +87,7 @@ echo "Install pm2" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
 printf "Install pm2                             "
-tput cup $UE $X
+tput cup $UE $ICKS
 percentBar 10 59 bar
 printf ${FORMAT} "$bar"
 
@@ -103,7 +104,7 @@ echo "Clean and create Directorys" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
 printf "Clean and create Directorys                                        "
-tput cup $UE $X
+tput cup $UE $ICKS
 percentBar 40 59 bar
 printf ${FORMAT} "$bar"
 
@@ -132,7 +133,7 @@ echo "Create hushlogin" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
 printf "Create hushlogin                                        "
-tput cup $UE $X
+tput cup $UE $ICKS
 percentBar 43 59 bar
 printf ${FORMAT} "$bar"
 # Boot
@@ -146,7 +147,7 @@ echo "Install mplayer-wrapper" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
 printf "Install mplayer-wrapper                                        "
-tput cup $UE $X
+tput cup $UE $ICKS
 percentBar 45 59 bar
 printf ${FORMAT} "$bar"
 
@@ -163,7 +164,7 @@ echo "Install google-tts" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
 printf "Install google-tts                                        "
-tput cup $UE $X
+tput cup $UE $ICKS
 percentBar 50 59 bar
 printf ${FORMAT} "$bar"
 
@@ -181,7 +182,7 @@ echo "Install Sonos-Kids-Controller-master" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
 printf "Install Sonos-Kids-Controller-master                                        "
-tput cup $UE $X
+tput cup $UE $ICKS
 percentBar 55 59 bar
 printf ${FORMAT} "$bar"
 
@@ -205,7 +206,7 @@ echo "Install Spotify Controller" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
 printf "Install Spotify Controller                                        "
-tput cup $UE $X
+tput cup $UE $ICKS
 percentBar 60 59 bar
 printf ${FORMAT} "$bar"
 
@@ -230,7 +231,7 @@ echo "Copy binaries" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
 printf "Copy binaries                                        "
-tput cup $UE $X
+tput cup $UE $ICKS
 percentBar 65 59 bar
 printf ${FORMAT} "$bar"
 
@@ -247,7 +248,7 @@ echo "Copy Services" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
 printf "Copy Services                                        "
-tput cup $UE $X
+tput cup $UE $ICKS
 percentBar 70 59 bar
 printf ${FORMAT} "$bar"
 
@@ -265,7 +266,7 @@ echo "Copy dietpi-config" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
 printf "Copy dietpi-configs                                        "
-tput cup $UE $X
+tput cup $UE $ICKS
 percentBar 73 59 bar
 printf ${FORMAT} "$bar"
 
@@ -282,7 +283,7 @@ echo "Copy spotify-configs" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
 printf "Copy spotify-configs                                        "
-tput cup $UE $X
+tput cup $UE $ICKS
 percentBar 76 59 bar
 printf ${FORMAT} "$bar"
 
@@ -299,7 +300,7 @@ echo "Copy media-files" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
 printf "Copy media-files                                        "
-tput cup $UE $X
+tput cup $UE $ICKS
 percentBar 80 59 bar
 printf ${FORMAT} "$bar"
 
@@ -319,7 +320,7 @@ echo "Copy mupibox-files" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
 printf "Copy mupibox-files                                        "
-tput cup $UE $X
+tput cup $UE $ICKS
 percentBar 83 59 bar
 printf ${FORMAT} "$bar"
 
@@ -341,7 +342,7 @@ echo "Copy OnOffShim-scripts" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
 printf "Copy onoffshim-scripts                                        "
-tput cup $UE $X
+tput cup $UE $ICKS
 percentBar 86 59 bar
 printf ${FORMAT} "$bar"
 
@@ -358,7 +359,7 @@ echo "Enable services" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
 printf "Enable services                                        "
-tput cup $UE $X
+tput cup $UE $ICKS
 percentBar 90 59 bar
 printf ${FORMAT} "$bar"
 
@@ -382,7 +383,7 @@ echo "Set environment" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
 printf "Set environment                                        "
-tput cup $UE $X
+tput cup $UE $ICKS
 percentBar 98 59 bar
 printf ${FORMAT} "$bar"
 # ENV
@@ -396,7 +397,7 @@ sudo usermod -a -G tty dietpi
 
 tput cup $Y $X
 printf "SYSTEM IS PREPARED                                        "
-tput cup $UE $X
+tput cup $UE $ICKS
 percentBar 100 59 bar
 printf ${FORMAT} "$bar"
 printf "\n\n          Logfile: ${LOG}\n\n          Have a nice day!\n\n"
