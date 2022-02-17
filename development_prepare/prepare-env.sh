@@ -18,7 +18,7 @@ percentBar ()  {
 Y=15
 UE=16
 X=10
-ICKS=4
+ICKS=8
 LOG="/tmp/prepage.log"
 
 FORMAT="\e[48;5;23;38;5;41m%s\e[0m"
