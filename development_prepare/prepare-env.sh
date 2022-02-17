@@ -16,7 +16,7 @@ percentBar ()  {
 }
 
 Y=15
-X=10
+X=2
 LOG="/tmp/prepage.log"
 
 FORMAT="\e[48;5;23;38;5;41m%s\e[0m"
@@ -29,7 +29,7 @@ echo "###################################################" >> ${LOG} 2>>${LOG}
 echo "MuPiBox Preperation" >> ${LOG} 2>>${LOG}
 
 clear
-figlet -f standard -m 1  "  MuPiBox Preperation" | lolcat
+figlet -f standard -m 1 "  MuPiBox Preperation" | lolcat
 tput cup $Y $X
 printf "Get missing packages \n  "
 #tput cup $PY $X
