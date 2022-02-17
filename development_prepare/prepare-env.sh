@@ -187,6 +187,7 @@ cd ~/.mupibox/Sonos-Kids-Controller-master >> ${LOG} 2>>${LOG}
 wget https://github.com/Thyraz/Sonos-Kids-Controller/releases/download/V1.6/sonos-kids-controller.zip  >> ${LOG} 2>>${LOG}
 unzip sonos-kids-controller.zip  >> ${LOG} 2>>${LOG}
 rm sonos-kids-controller.zip  >> ${LOG} 2>>${LOG}
+wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/www.json -O ~/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >> ${LOG} 2>>${LOG}
 npm install  >> ${LOG} 2>>${LOG}
 npm start & >> ${LOG} 2>>${LOG}
 sleep 5  >> ${LOG} 2>>${LOG}
@@ -211,7 +212,7 @@ wget https://github.com/amueller-tech/spotifycontroller/archive/main.zip  >> ${L
 unzip main.zip  >> ${LOG} 2>>${LOG}
 rm main.zip  >> ${LOG} 2>>${LOG}
 cd spotifycontroller-main  >> ${LOG} 2>>${LOG}
-wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/www.json -O ~/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >> ${LOG} 2>>${LOG}
+wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/spotifycontroller.json -O ~/.mupibox/spotifycontroller-main/config/config.json >> ${LOG} 2>>${LOG}
 npm install  >> ${LOG} 2>>${LOG}
 npm start & >> ${LOG} 2>>${LOG}
 sleep 5  >> ${LOG} 2>>${LOG}
@@ -280,8 +281,8 @@ percentBar 76 59 bar
 printf ${FORMAT} "$bar"
 
 # Spotify-Configs
-wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/www.json -O ~/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >> ${LOG} 2>>${LOG}
-wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/spotifycontroller.json -O ~/.mupibox/spotifycontroller-main/config/config.json >> ${LOG} 2>>${LOG}
+#wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/www.json -O ~/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >> ${LOG} 2>>${LOG}
+#wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/spotifycontroller.json -O ~/.mupibox/spotifycontroller-main/config/config.json >> ${LOG} 2>>${LOG}
 sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/spotifyd.conf -O /etc/spotifyd/spotifyd.conf >> ${LOG} 2>>${LOG}
 sleep 1
 
