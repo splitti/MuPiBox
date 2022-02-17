@@ -41,13 +41,24 @@ sudo apt-get update >> ${LOG} 2>>${LOG}
 sudo apt-get install git libasound2 jq samba mplayer -y >> ${LOG} 2>>${LOG}
 
 ###############################################################################################
+echo "###################################################" >> ${LOG} 2>>${LOG}
+echo "Set user permissons" >> ${LOG} 2>>${LOG}
+tput cup $Y $X
+printf "Set user permissons                                                      \n          "
+
+percentBar 8 59 bar
+printf ${FORMAT} "$bar"
+
+ 2>>${LOG}
+
+###############################################################################################
 
 echo "###################################################" >> ${LOG} 2>>${LOG}
 echo "Install nodeJS" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
 printf "Install nodeJS 16                             \n          "
-#tput cup $PY $X
+
 percentBar 10 59 bar
 printf ${FORMAT} "$bar"
 
@@ -61,7 +72,7 @@ echo "Install ionic" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
 printf "Install ionic                           \n          "
-#tput cup $PY $X
+
 percentBar 10 59 bar
 printf ${FORMAT} "$bar"
 
@@ -90,7 +101,7 @@ echo "Clean and create Directorys" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
 printf "Clean and create Directorys                                        \n          "
-#tput cup $PY $X
+
 percentBar 40 59 bar
 printf ${FORMAT} "$bar"
 
@@ -119,7 +130,7 @@ echo "Create hushlogin" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
 printf "Create hushlogin                                        \n          "
-#tput cup $PY $X
+
 percentBar 43 59 bar
 printf ${FORMAT} "$bar"
 # Boot
@@ -133,7 +144,7 @@ echo "Install mplayer-wrapper" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
 printf "Install mplayer-wrapper                                        \n          "
-#tput cup $PY $X
+
 percentBar 45 59 bar
 printf ${FORMAT} "$bar"
 
@@ -150,7 +161,7 @@ echo "Install google-tts" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
 printf "Install google-tts                                        \n          "
-#tput cup $PY $X
+
 percentBar 50 59 bar
 printf ${FORMAT} "$bar"
 
@@ -168,7 +179,7 @@ echo "Install Sonos-Kids-Controller-master" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
 printf "Install Sonos-Kids-Controller-master                                        \n          "
-#tput cup $PY $X
+
 percentBar 55 59 bar
 printf ${FORMAT} "$bar"
 
@@ -188,7 +199,7 @@ echo "Install Spotify Controller" >> ${LOG} 2>>${LOG}
 
 tput cup $Y $X
 printf "Install Spotify Controller                                        \n          "
-#tput cup $PY $X
+
 percentBar 60 59 bar
 printf ${FORMAT} "$bar"
 
@@ -360,9 +371,27 @@ printf ${FORMAT} "$bar"
 sudo env PATH=$PATH:/usr/local/bin/mupibox >> ${LOG} 2>>${LOG}
 sleep 1
 
+sudo usermod -a -G bluetooth dietpi
+sudo usermod -a -G tty dietpi
+#sudo usermod -a -G bluetooth dietpi
+
 tput cup $Y $X
 printf "SYSTEM IS PREPARED                                        \n          "
 percentBar 100 59 bar
 printf ${FORMAT} "$bar"
 printf "\n\n          Logfile: ${LOG}\n\n          Have a nice day!\n\n"
 
+
+#/boot/dietpi/func/dietpi-set_hardware bluetooth on
+#rm /etc/modprobe.d/dietpi-disable_bluetooth.conf
+#sed -i /^[[:blank:]]*dtoverlay=disable-bt/d /boot/config.txt
+#apt install pi-bluetooth
+#[ INFO ] DietPi-Set_hardware | APT update, please wait...
+
+
+#sudo nano /etc/bluetooth/main.conf
+#sudo apt-get install pulseaudio pulseaudio-module-bluetooth
+
+#adduser root pulse-access
+#adduser dietpi pulse-access
+#sudo usermod -a -G bluetooth pi
