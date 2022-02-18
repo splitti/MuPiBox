@@ -118,7 +118,6 @@ mkdir ~/MuPiBox/tts_files &>> ${LOG} 2>>${LOG}
 mkdir -p ~/MuPiBox/sysmedia/sound &>> ${LOG} 2>>${LOG}
 mkdir ~/MuPiBox/sysmedia/images &>> ${LOG} 2>>${LOG}
 mkdir ~/MuPiBox/media &>> ${LOG} 2>>${LOG} ${LOG} 2>>${LOG}
-mkdir ~/.mupibox/Sonos-Kids-Controller-master
 sudo mkdir /usr/local/bin/mupibox &>> ${LOG} 2>>${LOG}
 sudo mkdir /etc/spotifyd &>> ${LOG} 2>>${LOG}
 sudo mkdir /etc/mupibox &>> ${LOG} 2>>${LOG}
@@ -153,7 +152,8 @@ printf ${FORMAT} "$bar"
 # Sources
 cd ~/.mupibox >> ${LOG}
 git clone https://github.com/derhuerst/mplayer-wrapper &>> ${LOG} 2>>${LOG}
-cd mplayer-wrapper &>> ${LOG} 2>>${LOG}
+wget https://github.com/splitti/MuPiBox/raw/main/development_prepare/customize/mplayer-wrapper/index.js -O ~/.mupibox/mplayer-wrapper/index.js &>> ${LOG} 2>>${LOG}
+cd ~/.mupibox/mplayer-wrapper &>> ${LOG} 2>>${LOG}
 npm install &>> ${LOG} 2>>${LOG}
 
 ###############################################################################################
@@ -185,11 +185,20 @@ printf "$ORIENTATION"
 percentBar 55 59 bar
 printf ${FORMAT} "$bar"
 
+cd ~/.mupibox/ &>> ${LOG} 2>>${LOG}
+wget https://github.com/Thyraz/Sonos-Kids-Controller/archive/refs/tags/V1.6.zip &>> ${LOG} 2>>${LOG}
+unzip V1.6.zip &>> ${LOG} 2>>${LOG}
+rm V1.6.zip &>> ${LOG} 2>>${LOG}
+mv Sonos-Kids-Controller-1.6 Sonos-Kids-Controller-master &>> ${LOG} 2>>${LOG}
 cd ~/.mupibox/Sonos-Kids-Controller-master &>> ${LOG} 2>>${LOG}
-wget https://github.com/Thyraz/Sonos-Kids-Controller/releases/download/V1.6/sonos-kids-controller.zip  &>> ${LOG} 2>>${LOG}
-unzip sonos-kids-controller.zip  &>> ${LOG} 2>>${LOG}
-rm sonos-kids-controller.zip  &>> ${LOG} 2>>${LOG}
 wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/www.json -O ~/.mupibox/Sonos-Kids-Controller-master/server/config/config.json &>> ${LOG} 2>>${LOG}
+wget https://github.com/splitti/MuPiBox/raw/main/development_prepare/customize/Sonos-Kids-Controller-master/server.js -O ~/.mupibox/Sonos-Kids-Controller-master/server.js  &>> ${LOG} 2>>${LOG}
+wget https://github.com/splitti/MuPiBox/raw/main/development_prepare/customize/Sonos-Kids-Controller-master/angular.json -O ~/.mupibox/Sonos-Kids-Controller-master/angular.json &>> ${LOG} 2>>${LOG}
+wget https://github.com/splitti/MuPiBox/raw/main/development_prepare/customize/Sonos-Kids-Controller-master/src/app/player.service.ts -O ~/.mupibox/Sonos-Kids-Controller-master/src/app/player.service.ts &>> ${LOG} 2>>${LOG}
+wget https://github.com/splitti/MuPiBox/raw/main/development_prepare/customize/Sonos-Kids-Controller-master/src/app/player/player.page.html -O ~/.mupibox/Sonos-Kids-Controller-master/src/app/player/player.page.html &>> ${LOG} 2>>${LOG}
+wget https://github.com/splitti/MuPiBox/raw/main/development_prepare/customize/Sonos-Kids-Controller-master/src/app/player/player.page.scss -O ~/.mupibox/Sonos-Kids-Controller-master/src/app/player/player.page.scss &>> ${LOG} 2>>${LOG}
+wget https://github.com/splitti/MuPiBox/raw/main/development_prepare/customize/Sonos-Kids-Controller-master/src/app/player/player.page.ts -O ~/.mupibox/Sonos-Kids-Controller-master/src/app/player/player.page.ts &>> ${LOG} 2>>${LOG}
+ionic build --prod &>> ${LOG} 2>>${LOG}
 npm install  &>> ${LOG} 2>>${LOG}
 npm start & &>> ${LOG} 2>>${LOG}
 sleep 10  &>> ${LOG} 2>>${LOG}
@@ -211,8 +220,9 @@ cd ~/.mupibox  &>> ${LOG} 2>>${LOG}
 wget https://github.com/amueller-tech/spotifycontroller/archive/main.zip  &>> ${LOG} 2>>${LOG}
 unzip main.zip  &>> ${LOG} 2>>${LOG}
 rm main.zip  &>> ${LOG} 2>>${LOG}
-cd spotifycontroller-main  &>> ${LOG} 2>>${LOG}
+cd ~/.mupibox/spotifycontroller-main  &>> ${LOG} 2>>${LOG}
 wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/spotifycontroller.json -O ~/.mupibox/spotifycontroller-main/config/config.json &>> ${LOG} 2>>${LOG}
+wget https://github.com/splitti/MuPiBox/raw/main/development_prepare/customize/spotiycontroller-main/spotify-control.js -O ~/.mupibox/spotifycontroller-main/spotify-control.js  &>> ${LOG} 2>>${LOG}
 npm install  &>> ${LOG} 2>>${LOG}
 npm start & &>> ${LOG} 2>>${LOG}
 sleep 10  &>> ${LOG} 2>>${LOG}

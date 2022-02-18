@@ -7,7 +7,7 @@
 		"startVolume": "40",
 		"startSplash": "/boot/splash.png",
 		"shutSplash": "/home/dietpi/MuPiBox/sysmedia/images/goodbye.png",
-		"audioDevice": "Master",
+		"audioDevice": "default",
 		"mediaCheckTimer": "300"
 	},
 	"spotify": {
