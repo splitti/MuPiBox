@@ -1,0 +1,14 @@
+{
+    "spotify": {
+        "clientId": "ef1d4cdd195047598d3c915b434475d7",
+        "clientSecret": "10bf3e065a0e4959adce0426bd29ec91",
+        "accessToken": "BQCIEcEJSb53moDRy-s0UfItPffT6Gcocc_88Lg13PVaR66SL7u6zuSnCNrlHjDTBj1VmHDhK-oxQOChpuYW9PC75isx-iJlfrA1XbF8iUCwXlRn22-Lf65h6Sp0Yp_BeWMpO6bBX9ZdxQnSqbHU6PHo7n_6WATTloEw4bToRWTNEWE8aA",
+        "refreshToken": "AQCcF5wVL8K1qvYX8daTBdffICvwQHhm65GJfLnnBWINIY0UIPhw3Fd9oUQ1YOerINNwE2CMotCNmm4K6yE9tbtT9uKK5n62NOMIhg9efnIrTqLxp0Pj2OQxpDBnlMJrh8w",
+        "redirectUri": "http://localhost:8888/callback",
+		"deviceID": ""
+    },
+    "server": {
+        "port": "5005",
+        "logLevel": "debug"
+    }
+}

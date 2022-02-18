@@ -18,7 +18,7 @@ percentBar ()  {
 Y=15
 X=10
 ORIENTATION="\n          "
-LOG="/tmp/prepage.log"
+LOG="/tmp/prepare.log"
 
 FORMAT="\e[48;5;23;38;5;41m%s\e[0m"
  
@@ -122,7 +122,7 @@ mkdir ~/.mupibox/Sonos-Kids-Controller-master
 sudo mkdir /usr/local/bin/mupibox &>> ${LOG} 2>>${LOG}
 sudo mkdir /etc/spotifyd &>> ${LOG} 2>>${LOG}
 sudo mkdir /etc/mupibox &>> ${LOG} 2>>${LOG}
-sudo mkdir /var/log/mupibox/ &>> ${LOG} 2>>${LOG}v
+sudo mkdir /var/log/mupibox/ &>> ${LOG} 2>>${LOG}
 sleep 1
 
 ###############################################################################################
@@ -151,7 +151,7 @@ percentBar 45 59 bar
 printf ${FORMAT} "$bar"
 
 # Sources
-cd ~/.mupibox >> /tmp/prepare.log
+cd ~/.mupibox >> ${LOG}
 git clone https://github.com/derhuerst/mplayer-wrapper &>> ${LOG} 2>>${LOG}
 cd mplayer-wrapper &>> ${LOG} 2>>${LOG}
 npm install &>> ${LOG} 2>>${LOG}
@@ -193,9 +193,7 @@ wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/www
 npm install  &>> ${LOG} 2>>${LOG}
 npm start & &>> ${LOG} 2>>${LOG}
 sleep 10  &>> ${LOG} 2>>${LOG}
-npm stop  &>> ${LOG} 2>>${LOG}
-sleep 5  &>> ${LOG} 2>>${LOG}
-pm2 start server.js  &>> ${LOG} 2>>${LOG}
+m2 start server.js  &>> ${LOG} 2>>${LOG}
 pm2 save  &>> ${LOG} 2>>${LOG}
 
 ###############################################################################################
@@ -218,8 +216,6 @@ wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/spo
 npm install  &>> ${LOG} 2>>${LOG}
 npm start & &>> ${LOG} 2>>${LOG}
 sleep 10  &>> ${LOG} 2>>${LOG}
-npm stop  &>> ${LOG} 2>>${LOG}
-sleep 5  &>> ${LOG} 2>>${LOG}
 pm2 start spotify-control.js  &>> ${LOG} 2>>${LOG}
 pm2 save  &>> ${LOG} 2>>${LOG}
 
@@ -390,7 +386,7 @@ printf ${FORMAT} "$bar"
 sudo env PATH=$PATH:/usr/local/bin/mupibox &>> ${LOG} 2>>${LOG}
 sleep 1
 
-sudo usermod -a -G bluetooth dietpi
+#sudo usermod -a -G bluetooth dietpi
 sudo usermod -a -G tty dietpi
 #sudo usermod -a -G bluetooth dietpi
 
