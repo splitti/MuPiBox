@@ -93,8 +93,9 @@ printf ${FORMAT} "$bar"
 cd ~
 sudo npm install pm2 -g  &>> ${LOG} 2>>${LOG}
 #pm2 startup &>> ${LOG} 2>>${LOG}
-PM2_ENV=$(sudo cat /tmp/prepage.log | sudo grep "sudo env")  &>> ${LOG} 2>>${LOG}
-${PM2_ENV}  &>> ${LOG} 2>>${LOG}
+PM2_ENV=$(sudo cat ${LOG} | sudo grep "sudo env")  &>> ${LOG} 2>>${LOG}
+echo ${PM2} &>> ${LOG} 2>>${LOG}
+${PM2_ENV} &>> ${LOG} 2>>${LOG}
 
 ###############################################################################################
 
