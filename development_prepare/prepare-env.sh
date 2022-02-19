@@ -39,18 +39,7 @@ printf ${FORMAT} "$bar"
 
 # Get missing packages
 sudo apt-get update &>> ${LOG} 2>>${LOG}
-sudo apt-get install git libasound2 jq samba mplayer -y &>> ${LOG} 2>>${LOG}
-
-###############################################################################################
-echo "###################################################" &>> ${LOG} 2>>${LOG}
-echo "Set user permissons" &>> ${LOG} 2>>${LOG}
-tput cup $Y $X
-printf "Set user permissons                                                      "
-printf "$ORIENTATION"
-percentBar 8 59 bar
-printf ${FORMAT} "$bar"
-
- 2>>${LOG}
+sudo apt-get install git libasound2 jq samba mplayer pulseaudio-module-bluetooth bluez -y &>> ${LOG} 2>>${LOG}
 
 ###############################################################################################
 
@@ -74,7 +63,7 @@ echo "Install ionic" &>> ${LOG} 2>>${LOG}
 tput cup $Y $X
 printf "Install ionic                           "
 printf "$ORIENTATION"
-percentBar 10 59 bar
+percentBar 20 59 bar
 printf ${FORMAT} "$bar"
 
 sudo npm install -g @ionic/cli &>> ${LOG} 2>>${LOG}
@@ -87,7 +76,7 @@ echo "Install pm2" &>> ${LOG} 2>>${LOG}
 tput cup $Y $X
 printf "Install pm2                             "
 printf "$ORIENTATION"
-percentBar 10 59 bar
+percentBar 25 59 bar
 printf ${FORMAT} "$bar"
 
 cd ~
@@ -105,7 +94,7 @@ echo "Clean and create Directorys" &>> ${LOG} 2>>${LOG}
 tput cup $Y $X
 printf "Clean and create Directorys                                        "
 printf "$ORIENTATION"
-percentBar 40 59 bar
+percentBar 26 59 bar
 printf ${FORMAT} "$bar"
 
 
@@ -133,7 +122,7 @@ echo "Create hushlogin" &>> ${LOG} 2>>${LOG}
 tput cup $Y $X
 printf "Create hushlogin                                        "
 printf "$ORIENTATION"
-percentBar 43 59 bar
+percentBar 27 59 bar
 printf ${FORMAT} "$bar"
 # Boot
 touch ~/.hushlogin
@@ -147,7 +136,7 @@ echo "Install mplayer-wrapper" &>> ${LOG} 2>>${LOG}
 tput cup $Y $X
 printf "Install mplayer-wrapper                                        "
 printf "$ORIENTATION"
-percentBar 45 59 bar
+percentBar 30 59 bar
 printf ${FORMAT} "$bar"
 
 # Sources
@@ -165,7 +154,7 @@ echo "Install google-tts" &>> ${LOG} 2>>${LOG}
 tput cup $Y $X
 printf "Install google-tts                                        "
 printf "$ORIENTATION"
-percentBar 50 59 bar
+percentBar 35 59 bar
 printf ${FORMAT} "$bar"
 
 cd ~/.mupibox &>> ${LOG} 2>>${LOG}
@@ -183,7 +172,7 @@ echo "Install Sonos-Kids-Controller-master" &>> ${LOG} 2>>${LOG}
 tput cup $Y $X
 printf "Install Sonos-Kids-Controller-master                                        "
 printf "$ORIENTATION"
-percentBar 55 59 bar
+percentBar 45 59 bar
 printf ${FORMAT} "$bar"
 
 cd ~/.mupibox/ &>> ${LOG} 2>>${LOG}
@@ -238,31 +227,13 @@ echo "Copy binaries" &>> ${LOG} 2>>${LOG}
 tput cup $Y $X
 printf "Copy binaries                                        "
 printf "$ORIENTATION"
-percentBar 65 59 bar
+percentBar 70 59 bar
 printf ${FORMAT} "$bar"
 
 # Binaries
 sudo wget https://github.com/splitti/MuPiBox/raw/main/bin/fbv/fbv -O /usr/bin/fbv  &>> ${LOG} 2>>${LOG}
 sudo wget https://github.com/splitti/MuPiBox/raw/main/bin/spotifyd/0.3.3/dietpi8_64bit/spotifyd -O /usr/bin/spotifyd  &>> ${LOG} 2>>${LOG}
 sudo chmod 755 /usr/bin/fbv /usr/bin/spotifyd &>> ${LOG} 2>>${LOG}
-sleep 1
-
-###############################################################################################
-
-echo "###################################################" &>> ${LOG} 2>>${LOG}
-echo "Copy Services" &>> ${LOG} 2>>${LOG}
-
-tput cup $Y $X
-printf "Copy Services                                        "
-printf "$ORIENTATION"
-percentBar 70 59 bar
-printf ${FORMAT} "$bar"
-
-# Services
-sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/services/mupi_change_checker.service -O /etc/systemd/system/mupi_change_checker.service &>> ${LOG} 2>>${LOG}
-sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/services/mupi_idle_shutdown.service -O /etc/systemd/system/mupi_idle_shutdown.service &>> ${LOG} 2>>${LOG}
-sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/services/mupi_splash.service -O /etc/systemd/system/mupi_splash.service &>> ${LOG} 2>>${LOG}
-sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/services/spotifyd.service -O /etc/systemd/system/spotifyd.service &>> ${LOG} 2>>${LOG}
 sleep 1
 
 ###############################################################################################
@@ -290,7 +261,7 @@ echo "Copy spotify-configs" &>> ${LOG} 2>>${LOG}
 tput cup $Y $X
 printf "Copy spotify-configs                                        "
 printf "$ORIENTATION"
-percentBar 76 59 bar
+percentBar 75 59 bar
 printf ${FORMAT} "$bar"
 
 # Spotify-Configs
@@ -307,7 +278,7 @@ echo "Copy media-files" &>> ${LOG} 2>>${LOG}
 tput cup $Y $X
 printf "Copy media-files                                        "
 printf "$ORIENTATION"
-percentBar 80 59 bar
+percentBar 76 59 bar
 printf ${FORMAT} "$bar"
 
 # Splash and Media
@@ -327,7 +298,7 @@ echo "Copy mupibox-files" &>> ${LOG} 2>>${LOG}
 tput cup $Y $X
 printf "Copy mupibox-files                                        "
 printf "$ORIENTATION"
-percentBar 83 59 bar
+percentBar 78 59 bar
 printf ${FORMAT} "$bar"
 
 # MuPiBox
@@ -343,71 +314,47 @@ sleep 1
 
 ###############################################################################################
 
-echo "###################################################" &>> ${LOG} 2>>${LOG}
-echo "Copy OnOffShim-scripts" &>> ${LOG} 2>>${LOG}
+#echo "###################################################" &>> ${LOG} 2>>${LOG}
+#echo "Copy OnOffShim-scripts" &>> ${LOG} 2>>${LOG}
 
-tput cup $Y $X
-printf "Copy onoffshim-scripts                                        "
-printf "$ORIENTATION"
-percentBar 86 59 bar
-printf ${FORMAT} "$bar"
+#tput cup $Y $X
+#printf "Copy onoffshim-scripts                                        "
+#printf "$ORIENTATION"
+#percentBar 86 59 bar
+#printf ${FORMAT} "$bar"
 
 # OnOffShim & hifiberry
-sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/OnOffShim/off_trigger.sh -O /var/lib/dietpi/postboot.d/off_trigger.sh &>> ${LOG} 2>>${LOG}
-sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/OnOffShim/poweroff.sh -O /usr/lib/systemd/system-shutdown/poweroff.sh &>> ${LOG} 2>>${LOG}
-sudo chmod 775 /usr/lib/systemd/system-shutdown/poweroff.sh /var/lib/dietpi/postboot.d/off_trigger.sh &>> ${LOG} 2>>${LOG}
-sleep 1
+#sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/OnOffShim/off_trigger.sh -O /var/lib/dietpi/postboot.d/off_trigger.sh &>> ${LOG} 2>>${LOG}
+#sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/OnOffShim/poweroff.sh -O /usr/lib/systemd/system-shutdown/poweroff.sh &>> ${LOG} 2>>${LOG}
+#sudo chmod 775 /usr/lib/systemd/system-shutdown/poweroff.sh /var/lib/dietpi/postboot.d/off_trigger.sh &>> ${LOG} 2>>${LOG}
+#sleep 1
 
 ###############################################################################################
 
-echo "###################################################" &>> ${LOG} 2>>${LOG}
-echo "Enable services" &>> ${LOG} 2>>${LOG}
+#echo "###################################################" &>> ${LOG} 2>>${LOG}
+#echo "Enable services" &>> ${LOG} 2>>${LOG}
 
-tput cup $Y $X
-printf "Enable services                                        "
-printf "$ORIENTATION"
-percentBar 90 59 bar
-printf ${FORMAT} "$bar"
+#tput cup $Y $X
+#printf "Enable services                                        "
+#printf "$ORIENTATION"
+#percentBar 90 59 bar
+#printf ${FORMAT} "$bar"
 
 # Enable Services
-sudo systemctl daemon-reload &>> ${LOG} 2>>${LOG}
-sudo systemctl enable mupi_change_checker.service &>> ${LOG} 2>>${LOG}
-sudo systemctl start mupi_change_checker.service &>> ${LOG} 2>>${LOG}
-sudo systemctl enable mupi_idle_shutdown.service &>> ${LOG} 2>>${LOG}
-sudo systemctl start mupi_idle_shutdown.service &>> ${LOG} 2>>${LOG}
-sudo systemctl enable mupi_splash.service &>> ${LOG} 2>>${LOG}
-sudo systemctl start mupi_splash.service &>> ${LOG} 2>>${LOG}
-sudo systemctl enable spotifyd.service &>> ${LOG} 2>>${LOG}
-sudo systemctl start spotifyd.service &>> ${LOG} 2>>${LOG}
-sudo systemctl enable smbd.service &>> ${LOG} 2>>${LOG}
-sudo systemctl start smbd.service &>> ${LOG} 2>>${LOG}
-sudo systemctl disable nmbd.service &>> ${LOG} 2>>${LOG}
+#sudo systemctl daemon-reload &>> ${LOG} 2>>${LOG}
+#sudo systemctl enable mupi_change_checker.service &>> ${LOG} 2>>${LOG}
+#sudo systemctl start mupi_change_checker.service &>> ${LOG} 2>>${LOG}
+#sudo systemctl enable mupi_idle_shutdown.service &>> ${LOG} 2>>${LOG}
+#sudo systemctl start mupi_idle_shutdown.service &>> ${LOG} 2>>${LOG}
+#sudo systemctl enable mupi_splash.service &>> ${LOG} 2>>${LOG}
+#sudo systemctl start mupi_splash.service &>> ${LOG} 2>>${LOG}
+#sudo systemctl enable spotifyd.service &>> ${LOG} 2>>${LOG}
+#sudo systemctl start spotifyd.service &>> ${LOG} 2>>${LOG}
+#sudo systemctl enable smbd.service &>> ${LOG} 2>>${LOG}
+#sudo systemctl start smbd.service &>> ${LOG} 2>>${LOG}
+#sudo systemctl disable nmbd.service &>> ${LOG} 2>>${LOG}
 
 ###############################################################################################
-
-echo "###################################################" &>> ${LOG} 2>>${LOG}
-echo "Set environment" &>> ${LOG} 2>>${LOG}
-
-tput cup $Y $X
-printf "Set environment                                        "
-printf "$ORIENTATION"
-percentBar 98 59 bar
-printf ${FORMAT} "$bar"
-# ENV
-(echo "mupibox"; echo "mupibox") | sudo smbpasswd -s -a dietpi &>> ${LOG} 2>>${LOG}
-sudo env PATH=$PATH:/usr/local/bin/mupibox &>> ${LOG} 2>>${LOG}
-sleep 1
-
-#sudo usermod -a -G bluetooth dietpi
-sudo usermod -a -G tty dietpi
-#sudo usermod -a -G bluetooth dietpi
-
-tput cup $Y $X
-printf "SYSTEM IS PREPARED                                        "
-printf "$ORIENTATION"
-percentBar 100 59 bar
-printf ${FORMAT} "$bar"
-printf "\n${ORIENTATION}Logfile: ${LOG}\n${ORIENTATION}Have a nice day!\n\n"
 
 echo "###################################################" &>> ${LOG} 2>>${LOG}
 echo "Install Bluetooth support" &>> ${LOG} 2>>${LOG}
@@ -415,13 +362,12 @@ echo "Install Bluetooth support" &>> ${LOG} 2>>${LOG}
 tput cup $Y $X
 printf "Install Hifiberrey-MiniAmp and Bluetooth support                                        "
 printf "$ORIENTATION"
-percentBar 98 59 bar
+percentBar 80 59 bar
 printf ${FORMAT} "$bar"
 
 sudo /boot/dietpi/func/dietpi-set_hardware bluetooth enable &>> ${LOG} 2>>${LOG}
 sudo /boot/dietpi/func/dietpi-set_hardware soundcard "hifiberry-dac"  &>> ${LOG} 2>>${LOG}
 sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/asound.conf -O /etc/asound.conf  &>> ${LOG} 2>>${LOG}
-sudo apt install pulseaudio-module-bluetooth bluez  -y &>> ${LOG} 2>>${LOG}
 sudo usermod -g pulse -G audio,lp --home /var/run/pulse pulse &>> ${LOG} 2>>${LOG}
 sudo usermod -a -G audio dietpi &>> ${LOG} 2>>${LOG}
 sudo usermod -a -G bluetooth dietpi &>> ${LOG} 2>>${LOG}
@@ -430,7 +376,7 @@ sudo usermod -a -G pulse-access dietpi &>> ${LOG} 2>>${LOG}
 sudo usermod -a -G pulse root &>> ${LOG} 2>>${LOG}
 sudo usermod -a -G pulse-access root &>> ${LOG} 2>>${LOG}
 sudo /usr/bin/sed -i 's/; system-instance = no/system-instance = yes/g' /etc/pulse/daemon.conf &>> ${LOG} 2>>${LOG}
-sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/services/pulseaudio.servicec -O /etc/systemd/system/pulseaudio.service  &>> ${LOG} 2>>${LOG}
+sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/services/pulseaudio.service -O /etc/systemd/system/pulseaudio.service  &>> ${LOG} 2>>${LOG}
 
 if grep -q '^load-module module-bluetooth-discover' /etc/pulse/system.pa; then
   echo -e "load-module module-bluetooth-discover already set" &>> ${LOG} 2>>${LOG}
@@ -450,6 +396,32 @@ sudo /usr/bin/sed -i 's/; autospawn = yes/autospawn = no/g' /etc/pulse/client.co
 
 sudo systemctl enable pulseaudio &>> ${LOG} 2>>${LOG}
 sudo systemctl start pulseaudio &>> ${LOG} 2>>${LOG}
+###############################################################################################
+
+echo "###################################################" &>> ${LOG} 2>>${LOG}
+echo "Set environment" &>> ${LOG} 2>>${LOG}
+
+tput cup $Y $X
+printf "Set environment                                        "
+printf "$ORIENTATION"
+percentBar 98 59 bar
+printf ${FORMAT} "$bar"
+# ENV
+(echo "mupibox"; echo "mupibox") | sudo smbpasswd -s -a dietpi &>> ${LOG} 2>>${LOG}
+sudo env PATH=$PATH:/usr/local/bin/mupibox &>> ${LOG} 2>>${LOG}
+sleep 1
+
+
+sudo usermod -a -G tty dietpi
+
+tput cup $Y $X
+printf "SYSTEM IS PREPARED                                        "
+printf "$ORIENTATION"
+percentBar 100 59 bar
+printf ${FORMAT} "$bar"
+printf "\n${ORIENTATION}Logfile: ${LOG}\n${ORIENTATION}Please reboot and start prepare_after_reboot.sh!\n\n"
+
+
 
 # discoverable on
 #pairable on
