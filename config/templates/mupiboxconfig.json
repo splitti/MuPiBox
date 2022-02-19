@@ -29,5 +29,9 @@
 		"triggerPin": "17",
 		"cutPin": "27"
 	}
+	"chromium": {
+		"resX": "800",
+		"resY": "480"
+	}
 }
 
