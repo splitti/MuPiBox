@@ -92,7 +92,7 @@ printf ${FORMAT} "$bar"
 
 cd ~
 sudo npm install pm2 -g  &>> ${LOG} 2>>${LOG}
-#pm2 startup &>> ${LOG} 2>>${LOG}
+pm2 startup &>> ${LOG} 2>>${LOG}
 PM2_ENV=$(sudo cat ${LOG} | sudo grep "sudo env")  &>> ${LOG} 2>>${LOG}
 echo ${PM2} &>> ${LOG} 2>>${LOG}
 ${PM2_ENV} &>> ${LOG} 2>>${LOG}
@@ -203,7 +203,7 @@ ionic build --prod &>> ${LOG} 2>>${LOG}
 npm install  &>> ${LOG} 2>>${LOG}
 npm start & &>> ${LOG} 2>>${LOG}
 sleep 10  &>> ${LOG} 2>>${LOG}
-m2 start server.js  &>> ${LOG} 2>>${LOG}
+pm2 start server.js  &>> ${LOG} 2>>${LOG}
 pm2 save  &>> ${LOG} 2>>${LOG}
 
 ###############################################################################################
@@ -381,6 +381,7 @@ sudo systemctl enable spotifyd.service &>> ${LOG} 2>>${LOG}
 sudo systemctl start spotifyd.service &>> ${LOG} 2>>${LOG}
 sudo systemctl enable smbd.service &>> ${LOG} 2>>${LOG}
 sudo systemctl start smbd.service &>> ${LOG} 2>>${LOG}
+sudo systemctl disable nmbd.service &>> ${LOG} 2>>${LOG}
 
 ###############################################################################################
 
@@ -408,7 +409,61 @@ percentBar 100 59 bar
 printf ${FORMAT} "$bar"
 printf "\n${ORIENTATION}Logfile: ${LOG}\n${ORIENTATION}Have a nice day!\n\n"
 
+echo "###################################################" &>> ${LOG} 2>>${LOG}
+echo "Install Bluetooth support" &>> ${LOG} 2>>${LOG}
 
+tput cup $Y $X
+printf "Install Hifiberrey-MiniAmp and Bluetooth support                                        "
+printf "$ORIENTATION"
+percentBar 98 59 bar
+printf ${FORMAT} "$bar"
+
+sudo /boot/dietpi/func/dietpi-set_hardware bluetooth enable &>> ${LOG} 2>>${LOG}
+sudo /boot/dietpi/func/dietpi-set_hardware soundcard "hifiberry-dac"  &>> ${LOG} 2>>${LOG}
+sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/asound.conf -O /etc/asound.conf  &>> ${LOG} 2>>${LOG}
+sudo apt install pulseaudio-module-bluetooth bluez  -y &>> ${LOG} 2>>${LOG}
+sudo usermod -g pulse -G audio,lp --home /var/run/pulse pulse &>> ${LOG} 2>>${LOG}
+sudo usermod -a -G audio dietpi &>> ${LOG} 2>>${LOG}
+sudo usermod -a -G bluetooth dietpi &>> ${LOG} 2>>${LOG}
+sudo usermod -a -G pulse dietpi &>> ${LOG} 2>>${LOG}
+sudo usermod -a -G pulse-access dietpi &>> ${LOG} 2>>${LOG}
+sudo usermod -a -G pulse root &>> ${LOG} 2>>${LOG}
+sudo usermod -a -G pulse-access root &>> ${LOG} 2>>${LOG}
+sudo /usr/bin/sed -i 's/; system-instance = no/system-instance = yes/g' /etc/pulse/daemon.conf &>> ${LOG} 2>>${LOG}
+sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/services/pulseaudio.servicec -O /etc/systemd/system/pulseaudio.service  &>> ${LOG} 2>>${LOG}
+
+if grep -q '^load-module module-bluetooth-discover' /etc/pulse/system.pa; then
+  echo -e "load-module module-bluetooth-discover already set" &>> ${LOG} 2>>${LOG}
+else
+  echo '' | sudo tee -a /etc/pulse/system.pa &>> ${LOG} 2>>${LOG}
+  echo 'load-module module-bluetooth-discover' | sudo tee -a /etc/pulse/system.pa &>> ${LOG} 2>>${LOG}
+fi
+if grep -q '^load-module module-bluetooth-policy' /etc/pulse/system.pa; then
+  echo -e "load-module module-bluetooth-policy already set" &>> ${LOG} 2>>${LOG}
+else
+  echo '' | sudo tee -a /etc/pulse/system.pa &>> ${LOG} 2>>${LOG}
+  echo 'load-module module-bluetooth-policy' | sudo tee -a /etc/pulse/system.pa &>> ${LOG} 2>>${LOG}
+fi
+
+sudo /usr/bin/sed -i 's/; default-server =/default-server = \/var\/run\/pulse\/native/g' /etc/pulse/client.conf &>> ${LOG} 2>>${LOG}
+sudo /usr/bin/sed -i 's/; autospawn = yes/autospawn = no/g' /etc/pulse/client.conf &>> ${LOG} 2>>${LOG}
+
+sudo systemctl enable pulseaudio &>> ${LOG} 2>>${LOG}
+sudo systemctl start pulseaudio &>> ${LOG} 2>>${LOG}
+
+# discoverable on
+#pairable on
+#agent on
+#default-agent
+#scan on
+
+#sudo usermod -a -G bluetooth dietpi &>> ${LOG} 2>>${LOG}
+#sudo usermod -a -G lp dietpi
+
+#apt install autoconf libtool automake python3-pip libasound2-dev libbluetooth-dev libdbus-glib-1-dev libfdk-aac-dev make
+#pip3 install pkg-config m4 macros
+#pkg-config m4 macros
+#https://github.com/oweitman/squeezelite-bluetooth
 #/boot/dietpi/func/dietpi-set_hardware bluetooth on
 #rm /etc/modprobe.d/dietpi-disable_bluetooth.conf
 #sed -i /^[[:blank:]]*dtoverlay=disable-bt/d /boot/config.txt
@@ -422,3 +477,11 @@ printf "\n${ORIENTATION}Logfile: ${LOG}\n${ORIENTATION}Have a nice day!\n\n"
 #adduser root pulse-access
 #adduser dietpi pulse-access
 #sudo usermod -a -G bluetooth pi
+
+#sudo usermod -a -G bluetooth dietpi
+#dietpi@MuPiBox:~/MuPiBox/sysmedia/sound$ sudo usermod -a -G audio dietpi    
+#dietpi@MuPiBox:~/MuPiBox/sysmedia/sound$ sudo usermod -a -G pulse-access dietpi
+
+
+
+#https://gist.github.com/yejun/2c1a070a839b3a7b146ede8a998b5495    !!!!!

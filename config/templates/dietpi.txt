@@ -129,7 +129,7 @@ AUTO_SETUP_GLOBAL_PASSWORD=mupibox
 # - Add as many entries as you wish, one each line.
 # - DietPi will automatically install all pre-reqs (e.g. ALSA/X11 for desktops etc)
 # - E.g. the following (without the leading "#") will install the LXDE desktop automatically on first boot:
-AUTO_SETUP_INSTALL_SOFTWARE_ID=5
+#AUTO_SETUP_INSTALL_SOFTWARE_ID=5
 
 #------------------------------------------------------------------------------------------------------
 ##### Misc DietPi program settings #####
@@ -245,8 +245,8 @@ SOFTWARE_XORG_DPI=96
 
 # Chromium
 SOFTWARE_CHROMIUM_RES_X=800
-SOFTWARE_CHROMIUM_RES_Y=400
-SOFTWARE_CHROMIUM_AUTOSTART_URL=https://dietpi.com/
+SOFTWARE_CHROMIUM_RES_Y=480
+SOFTWARE_CHROMIUM_AUTOSTART_URL=http://MuPiBox:8200
 
 # Home Assistant
 # - Optional Python build dependencies and modules, possibly required for certain HA components
