@@ -15,6 +15,7 @@ CHROMIUM_OPTS="--kiosk --test-type --window-size=${RES_X:-1280},${RES_Y:-720} --
 # If you want tablet mode, uncomment the next line.
 #CHROMIUM_OPTS+=' --force-tablet-mode --tablet-ui'
 # Home page
+
 URL="http://$(/usr/bin/jq -r .mupibox.host ${CONFIG}):8200"
 
 # RPi or Debian Chromium package
