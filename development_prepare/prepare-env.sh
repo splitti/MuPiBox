@@ -21,7 +21,8 @@ ORIENTATION="\n          "
 LOG="/tmp/prepare.log"
 
 FORMAT="\e[48;5;23;38;5;41m%s\e[0m"
- 
+
+printf "Please wait, this takes a while... \n\n"
 # Make it nice
 sudo apt-get install figlet lolcat -y >> ${LOG} 2>>${LOG}
 
