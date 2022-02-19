@@ -11,8 +11,6 @@ CONFIG="/etc/mupibox/mupiboxconfig.json"
 RES_X=$(/usr/bin/jq -r .chromium.resX ${CONFIG})
 RES_Y=$(/usr/bin/jq -r .chromium.resY ${CONFIG})
 
-RES_X=$(sed -n '/^[[:blank:]]*SOFTWARE_CHROMIUM_RES_X=/{s/^[^=]*=//p;q}' /boot/dietpi.txt)
-RES_Y=$(sed -n '/^[[:blank:]]*SOFTWARE_CHROMIUM_RES_Y=/{s/^[^=]*=//p;q}' /boot/dietpi.txt)
 CHROMIUM_OPTS="--kiosk --test-type --window-size=${RES_X:-1280},${RES_Y:-720} --start-fullscreen --start-maximized --window-position=0,0"
 # If you want tablet mode, uncomment the next line.
 #CHROMIUM_OPTS+=' --force-tablet-mode --tablet-ui'
