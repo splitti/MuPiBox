@@ -7,4 +7,4 @@ WantedBy=multi-user.target
 [Service]
 Type=notify
 PrivateTmp=true
-ExecStart=/usr/bin/pulseaudio --system --realtime --disallow-exit --log-target=/var/log/pulseaudio.log
+ExecStart=/usr/bin/pulseaudio --system --realtime --disallow-exit --log-target=file:/var/log/pulseaudio.log
