@@ -213,6 +213,8 @@ pm2 save  &>> ${LOG} 2>>${LOG}
 echo "###################################################" &>> ${LOG} 2>>${LOG}
 echo "Install Spotify Controller" &>> ${LOG} 2>>${LOG}
 
+clear &>> ${LOG} 2>>${LOG}
+figlet -f standard -w 80 -c -m 1 "  MuPiBox Preperation" | lolcat
 tput cup $Y $X
 printf "Install Spotify Controller                                        "
 printf "$ORIENTATION"
