@@ -521,6 +521,7 @@ sudo systemctl start spotifyd.service &>> ${LOG} 2>>${LOG}
 sudo systemctl enable smbd.service &>> ${LOG} 2>>${LOG}
 sudo systemctl start smbd.service &>> ${LOG} 2>>${LOG}
 sudo systemctl disable nmbd.service &>> ${LOG} 2>>${LOG}
+sudo rm /var/lib/dietpi/postboot.d/prepare-env.sh  &>> ${LOG} 2>>${LOG}
 
 ###############################################################################################
 
