@@ -19,7 +19,7 @@ BARLENGTH=59
 Y=22
 X=10
 ORIENTATION="\n          "
-LOG="/tmp/prepare.log"
+LOG="/tmp/autosetup.log"
 
 FORMAT="\e[48;5;23;38;5;41m%s\e[0m"
 sleep 2
@@ -34,7 +34,7 @@ echo "###################################################" >> ${LOG} 2>>${LOG}
 echo "MuPiBox Preperation" >> ${LOG} 2>>${LOG}
 
 clear
-tput cup 6 0 && figlet -f standard -w 80 -c -m 1 "  MuPiBox Preperation" | lolcat
+tput cup 6 0 && figlet -f standard -w 80 -c -m 1 "  MuPiBox Installer" | lolcat
 tput cup $Y $X
 
 printf "Get missing packages"
@@ -52,7 +52,7 @@ echo "###################################################" &>> ${LOG} 2>>${LOG}
 echo "Install nodeJS" &>> ${LOG} 2>>${LOG}
 
 clear
-tput cup 6 0 && figlet -f standard -w 80 -c -m 1 "  MuPiBox Preperation" | lolcat
+tput cup 6 0 && figlet -f standard -w 80 -c -m 1 "  MuPiBox Installer" | lolcat
 tput cup $Y $X
 
 printf "Install nodeJS 16                             "
@@ -69,7 +69,7 @@ echo "###################################################" &>> ${LOG} 2>>${LOG}
 echo "Install ionic" &>> ${LOG} 2>>${LOG}
 
 clear
-tput cup 6 0 && figlet -f standard -w 80 -c -m 1 "  MuPiBox Preperation" | lolcat
+tput cup 6 0 && figlet -f standard -w 80 -c -m 1 "  MuPiBox Installer" | lolcat
 tput cup $Y $X
 
 printf "Install ionic                           "
@@ -85,7 +85,7 @@ echo "###################################################" &>> ${LOG} 2>>${LOG}
 echo "Install pm2" &>> ${LOG} 2>>${LOG}
 
 clear
-tput cup 6 0 && figlet -f standard -w 80 -c -m 1 "  MuPiBox Preperation" | lolcat
+tput cup 6 0 && figlet -f standard -w 80 -c -m 1 "  MuPiBox Installer" | lolcat
 tput cup $Y $X
 
 printf "Install pm2                             "
@@ -106,7 +106,7 @@ echo "###################################################" &>> ${LOG} 2>>${LOG}
 echo "Clean and create Directorys" &>> ${LOG} 2>>${LOG}
 
 clear
-tput cup 6 0 && figlet -f standard -w 80 -c -m 1 "  MuPiBox Preperation" | lolcat
+tput cup 6 0 && figlet -f standard -w 80 -c -m 1 "  MuPiBox Installer" | lolcat
 tput cup $Y $X
 
 printf "Clean and create Directorys                                        "
@@ -137,7 +137,7 @@ echo "###################################################" &>> ${LOG} 2>>${LOG}
 echo "Create hushlogin" &>> ${LOG} 2>>${LOG}
 
 clear
-tput cup 6 0 && figlet -f standard -w 80 -c -m 1 "  MuPiBox Preperation" | lolcat
+tput cup 6 0 && figlet -f standard -w 80 -c -m 1 "  MuPiBox Installer" | lolcat
 tput cup $Y $X
 
 printf "Create hushlogin                                        "
@@ -154,7 +154,7 @@ echo "###################################################" &>> ${LOG} 2>>${LOG}
 echo "Install mplayer-wrapper" &>> ${LOG} 2>>${LOG}
 
 clear
-tput cup 6 0 && figlet -f standard -w 80 -c -m 1 "  MuPiBox Preperation" | lolcat
+tput cup 6 0 && figlet -f standard -w 80 -c -m 1 "  MuPiBox Installer" | lolcat
 tput cup $Y $X
 
 printf "Install mplayer-wrapper                                        "
@@ -175,7 +175,7 @@ echo "###################################################" &>> ${LOG} 2>>${LOG}
 echo "Install google-tts" &>> ${LOG} 2>>${LOG}
 
 clear
-tput cup 6 0 && figlet -f standard -w 80 -c -m 1 "  MuPiBox Preperation" | lolcat
+tput cup 6 0 && figlet -f standard -w 80 -c -m 1 "  MuPiBox Installer" | lolcat
 tput cup $Y $X
 
 printf "Install google-tts                                        "
@@ -196,7 +196,7 @@ echo "###################################################" &>> ${LOG} 2>>${LOG}
 echo "Install Sonos-Kids-Controller-master" &>> ${LOG} 2>>${LOG}
 
 clear
-tput cup 6 0 && figlet -f standard -w 80 -c -m 1 "  MuPiBox Preperation" | lolcat
+tput cup 6 0 && figlet -f standard -w 80 -c -m 1 "  MuPiBox Installer" | lolcat
 tput cup $Y $X
 
 printf "Install Sonos-Kids-Controller-master                                        "
@@ -222,7 +222,7 @@ echo "###################################################" &>> ${LOG} 2>>${LOG}
 echo "Install Spotify Controller" &>> ${LOG} 2>>${LOG}
 
 clear
-tput cup 6 0 && figlet -f standard -w 80 -c -m 1 "  MuPiBox Preperation" | lolcat
+tput cup 6 0 && figlet -f standard -w 80 -c -m 1 "  MuPiBox Installer" | lolcat
 tput cup $Y $X
 
 printf "Install Spotify Controller                                        "
@@ -249,7 +249,7 @@ echo "###################################################" &>> ${LOG} 2>>${LOG}
 echo "Copy binaries" &>> ${LOG} 2>>${LOG}
 
 clear
-tput cup 6 0 && figlet -f standard -w 80 -c -m 1 "  MuPiBox Preperation" | lolcat
+tput cup 6 0 && figlet -f standard -w 80 -c -m 1 "  MuPiBox Installer" | lolcat
 tput cup $Y $X
 
 printf "Copy binaries                                        "
@@ -269,7 +269,7 @@ echo "###################################################" &>> ${LOG} 2>>${LOG}
 echo "Copy dietpi-config" &>> ${LOG} 2>>${LOG}
 
 clear
-tput cup 6 0 && figlet -f standard -w 80 -c -m 1 "  MuPiBox Preperation" | lolcat
+tput cup 6 0 && figlet -f standard -w 80 -c -m 1 "  MuPiBox Installer" | lolcat
 tput cup $Y $X
 
 printf "Copy dietpi-configs                                        "
@@ -289,7 +289,7 @@ echo "###################################################" &>> ${LOG} 2>>${LOG}
 echo "Copy spotify-configs" &>> ${LOG} 2>>${LOG}
 
 clear
-tput cup 6 0 && figlet -f standard -w 80 -c -m 1 "  MuPiBox Preperation" | lolcat
+tput cup 6 0 && figlet -f standard -w 80 -c -m 1 "  MuPiBox Installer" | lolcat
 tput cup $Y $X
 
 printf "Copy spotify-configs                                        "
@@ -309,7 +309,7 @@ echo "###################################################" &>> ${LOG} 2>>${LOG}
 echo "Copy media-files" &>> ${LOG} 2>>${LOG}
 
 clear
-tput cup 6 0 && figlet -f standard -w 80 -c -m 1 "  MuPiBox Preperation" | lolcat
+tput cup 6 0 && figlet -f standard -w 80 -c -m 1 "  MuPiBox Installer" | lolcat
 tput cup $Y $X
 
 printf "Copy media-files                                        "
@@ -332,7 +332,7 @@ echo "###################################################" &>> ${LOG} 2>>${LOG}
 echo "Copy mupibox-files" &>> ${LOG} 2>>${LOG}
 
 clear
-tput cup 6 0 && figlet -f standard -w 80 -c -m 1 "  MuPiBox Preperation" | lolcat
+tput cup 6 0 && figlet -f standard -w 80 -c -m 1 "  MuPiBox Installer" | lolcat
 tput cup $Y $X
 
 printf "Copy mupibox-files                                        "
@@ -357,7 +357,7 @@ echo "###################################################" &>> ${LOG} 2>>${LOG}
 echo "Install Hifiberry-MiniAmp and Bluetooth support" &>> ${LOG} 2>>${LOG}
 
 clear
-tput cup 6 0 && figlet -f standard -w 80 -c -m 1 "  MuPiBox Preperation" | lolcat
+tput cup 6 0 && figlet -f standard -w 80 -c -m 1 "  MuPiBox Installer" | lolcat
 tput cup $Y $X
 
 printf "Install Hifiberry-MiniAmp and Bluetooth support                                        "
@@ -402,7 +402,7 @@ echo "###################################################" &>> ${LOG} 2>>${LOG}
 echo "Set environment" &>> ${LOG} 2>>${LOG}
 
 clear
-tput cup 6 0 && figlet -f standard -w 80 -c -m 1 "  MuPiBox Preperation" | lolcat
+tput cup 6 0 && figlet -f standard -w 80 -c -m 1 "  MuPiBox Installer" | lolcat
 tput cup $Y $X
 
 printf "Set environment                                        "
@@ -419,7 +419,7 @@ echo "###################################################" &>> ${LOG} 2>>${LOG}
 echo "Copy OnOffShim-scripts" &>> ${LOG} 2>>${LOG}
 
 clear
-tput cup 6 0 && figlet -f standard -w 80 -c -m 1 "  MuPiBox Preperation" | lolcat
+tput cup 6 0 && figlet -f standard -w 80 -c -m 1 "  MuPiBox Installer" | lolcat
 tput cup $Y $X
 
 printf "Copy onoffshim-scripts                                        "
@@ -439,7 +439,7 @@ echo "###################################################" &>> ${LOG} 2>>${LOG}
 echo "Configure Chromium" &>> ${LOG} 2>>${LOG}
 
 clear
-tput cup 6 0 && figlet -f standard -w 80 -c -m 1 "  MuPiBox Preperation" | lolcat
+tput cup 6 0 && figlet -f standard -w 80 -c -m 1 "  MuPiBox Installer" | lolcat
 tput cup $Y $X
 
 printf "Configure Chromium                                        "
@@ -479,7 +479,7 @@ echo "###################################################" &>> ${LOG} 2>>${LOG}
 echo "Enable services" &>> ${LOG} 2>>${LOG}
 
 clear
-tput cup 6 0 && figlet -f standard -w 80 -c -m 1 "  MuPiBox Preperation" | lolcat
+tput cup 6 0 && figlet -f standard -w 80 -c -m 1 "  MuPiBox Installer" | lolcat
 tput cup $Y $X
 
 printf "Enable services                                        "
@@ -500,12 +500,13 @@ sudo systemctl start spotifyd.service &>> ${LOG} 2>>${LOG}
 sudo systemctl enable smbd.service &>> ${LOG} 2>>${LOG}
 sudo systemctl start smbd.service &>> ${LOG} 2>>${LOG}
 sudo /usr/bin/sed -i 's/cd; curl https:\/\/raw.githubusercontent.com\/splitti\/MuPiBox\/main\/autosetup\/autosetup.sh \| bash/ /g' ~/.bashrc &>> ${LOG} 2>>${LOG}
+sudo /usr/bin/sed -i 's/sleep 10/ /g' ~/.bashrc &>> ${LOG} 2>>${LOG}
 
 
 ###############################################################################################
 
 clear
-tput cup 6 0 && figlet -f standard -w 80 -c -m 1 "  MuPiBox Preperation" | lolcat
+tput cup 6 0 && figlet -f standard -w 80 -c -m 1 "  MuPiBox Installer" | lolcat
 tput cup $Y $X
 
 printf "SYSTEM IS PREPARED                                        "
