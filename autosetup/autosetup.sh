@@ -294,5 +294,4 @@ exec 3>${LOG}
 #    echo "Don't forget to reboot..."
 #fi
 mv ${LOG} ~/.mupibox/autosetup.log
-exit
 sudo reboot
