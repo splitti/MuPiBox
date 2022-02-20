@@ -1,6 +1,7 @@
 #!/bin/bash
 #
 # Script for MuPiBox preperation
+# http://MuPiBox.de
 # Start with: cd; curl https://raw.githubusercontent.com/splitti/MuPiBox/main/development_prepare/prepare-env.sh | bash
 
 percentBar ()  { 
