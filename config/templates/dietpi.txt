@@ -72,7 +72,7 @@ AUTO_UNMASK_LOGIND=0
 # - Option 0 = Copy your script to /boot/Automation_Custom_Script.sh and it will be executed automatically.
 # - Option 1 = Host your script online, then use e.g. AUTO_SETUP_CUSTOM_SCRIPT_EXEC=https://myweb.com/myscript.sh and it will be downloaded and executed automatically.
 # - Executed script log: /var/tmp/dietpi/logs/dietpi-automation_custom_script.log
-AUTO_SETUP_CUSTOM_SCRIPT_EXEC=https://raw.githubusercontent.com/splitti/MuPiBox/main/development_prepare/autostart.sh
+AUTO_SETUP_CUSTOM_SCRIPT_EXEC=https://raw.githubusercontent.com/splitti/MuPiBox/main/autosetup/autostart.sh
 
 # Restore a DietPi-Backup on first boot: 0 => disable | 1 => interactive restore (show list of found backups) | 2 => non-interactive restore (restore first found backup)
 # - Simply attach the drive/disk/stick with contains the backup. All attached drives will be mounted temporarily and searched automatically.
@@ -105,7 +105,7 @@ AUTO_SETUP_BROWSER_INDEX=-2
 # DietPi-Autostart: 0=Console | 7=Console autologin | 1=Kodi | 2=Desktop autologin | 16=Desktop | 4=OpenTyrian | 5=DietPi-CloudShell | 6=Amiberry fast boot | 8=Amiberry standard boot | 9=DDX-Rebirth | 10=CAVA Spectrum | 11=Chromium kiosk | 14=Custom script (background) | 17=Custom script (foreground)
 # - This will be effective on 2nd boot, after firstrun update and installs have been done.
 # - Related software titles must be installed either on firstrun installs or via AUTO_SETUP_AUTOMATED=1 + AUTO_SETUP_INSTALL_SOFTWARE_ID (see below).
-AUTO_SETUP_AUTOSTART_TARGET_INDEX=0
+AUTO_SETUP_AUTOSTART_TARGET_INDEX=7
 # Autologin user name
 # - This user must exist before firstrun installs, otherwise it will be reverted to root.
 # - Applies to all autostart options but: 0, 6, 14 and 16
