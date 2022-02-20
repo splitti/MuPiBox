@@ -16,6 +16,7 @@ coming soon
 - fbv by godsüeed (https://github.com/godspeed1989/fbv)
 - Initramfs Splash by DarkElevenAngel (https://gitlab.com/DarkElvenAngel/initramfs-splash)
 - Sonos Kids Controller by Thyraz (https://github.com/Thyraz/Sonos-Kids-Controller)
+- SpotifyController (https://github.com/amueller-tech/spotifycontroller)
 - Spotifyd (https://github.com/Spotifyd/spotifyd)
 - mplayer-wrapper by derhuerst (https://github.com/derhuerst/mplayer-wrapper)
 - google-tts by zlargon (https://github.com/zlargon/google-tts)
