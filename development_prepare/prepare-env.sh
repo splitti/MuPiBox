@@ -15,12 +15,6 @@ percentBar ()  {
     printf -v "$3" '%s%s' "$barstring" "$blankstring"
 }
 
-headLine () {
-    clear
-	figlet -f standard -w 80 -c -m 1 "  MuPiBox Preperation" | lolcat
-	tput cup $Y $X
-}
-
 Y=15
 X=10
 ORIENTATION="\n          "
@@ -31,6 +25,12 @@ FORMAT="\e[48;5;23;38;5;41m%s\e[0m"
 printf "Please wait, this takes a while... \n\n"
 # Make it nice
 sudo apt-get install figlet lolcat -y >> ${LOG} 2>>${LOG}
+
+headLine () {
+    clear
+	figlet -f standard -w 80 -c -m 1 "  MuPiBox Preperation" | lolcat
+	tput cup $Y $X
+}
 
 ###############################################################################################
 echo "###################################################" >> ${LOG} 2>>${LOG}
