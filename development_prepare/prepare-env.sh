@@ -28,8 +28,8 @@ sudo apt-get install figlet lolcat -y >> ${LOG} 2>>${LOG}
 
 headLine () {
     clear
-	figlet -f standard -w 80 -c -m 1 "  MuPiBox Preperation" | lolcat
-	tput cup $Y $X
+	/usr/bin/figlet -f standard -w 80 -c -m 1 "  MuPiBox Preperation" | /usr/bin/lolcat
+	/usr/bin/tput cup $Y $X
 }
 
 ###############################################################################################
@@ -423,7 +423,7 @@ sudo /boot/dietpi/dietpi-autostart 11 &>> ${LOG} 2>>${LOG}
 sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/chromium-autostart.sh -O /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh &>> ${LOG} 2>>${LOG}
 sudo chmod +x /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh &>> ${LOG} 2>>${LOG}
 sudo usermod -a -G tty dietpi &>> ${LOG} 2>>${LOG}
-sudo apt install xserver-xorg-legacy &>> ${LOG} 2>>${LOG}
+sudo apt install xserver-xorg-legacy -y &>> ${LOG} 2>>${LOG}
 sudo /usr/bin/sed -i 's/allowed_users\=console/allowed_users\=anybody/g' /etc/X11/Xwrapper.config &>> ${LOG} 2>>${LOG}
 sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/98-dietpi-disable_dpms.conf -O /etc/X11/xorg.conf.d/98-dietpi-disable_dpms.conf &>> ${LOG} 2>>${LOG}
 sudo /usr/bin/sed -i 's/tty1/tty3 vt.global_cursor_default\=0 fastboot noatime nodiratime noram splash silent loglevel\=0 vt.default_red\=68,68,68,68,68,68,68,68 vt.default_grn\=175,175,175,175,175,175,175,175 vt.default_blu\=226,226,226,226,226,226,226,226/g' /boot/cmdline.txt &>> ${LOG} 2>>${LOG}
