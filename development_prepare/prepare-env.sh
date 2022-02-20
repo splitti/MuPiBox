@@ -1,7 +1,6 @@
 #!/bin/bash
 #
 # Script for MuPiBox preperation
-# http://MuPiBox.de
 # Start with: cd; curl https://raw.githubusercontent.com/splitti/MuPiBox/main/development_prepare/prepare-env.sh | bash
 
 percentBar ()  { 
@@ -16,13 +15,13 @@ percentBar ()  {
     printf -v "$3" '%s%s' "$barstring" "$blankstring"
 }
 
-BARLENGTH=54
+BARLENGTH=59
 Y=15
 X=10
 ORIENTATION="\n          "
 LOG="/tmp/prepare.log"
 
-FORMAT="\e[48;5;23;38;5;41m%s\e[0m%4.0f%%%b"
+FORMAT="\e[48;5;23;38;5;41m%s\e[0m"
 sleep 2
 printf "\n\nPlease wait, this takes a while... \n\n"
 # Make it nice
