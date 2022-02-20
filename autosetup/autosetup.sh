@@ -3,6 +3,8 @@
 # Script for MuPiBox preperation
 # Start with: cd; curl https://raw.githubusercontent.com/splitti/MuPiBox/main/autosetup/autosetup.sh | bash
 
+LOG="~/.mupibox/autosetup.log"
+
 {
 	###############################################################################################
 	echo -e "XXX\n0\nInstall some packeges... \nXXX"	
