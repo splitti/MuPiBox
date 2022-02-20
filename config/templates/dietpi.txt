@@ -48,7 +48,7 @@ AUTO_SETUP_DHCP_TO_STATIC=0
 AUTO_SETUP_NET_HOSTNAME=MuPiBox
 
 # Delay service starts at boot until network is established: 0=disabled | 1=enabled
-AUTO_SETUP_BOOT_WAIT_FOR_NETWORK=0
+AUTO_SETUP_BOOT_WAIT_FOR_NETWORK=1
 
 ##### Misc Options #####
 # Swap space size to generate: 0 => disable | 1 => auto | 2 and up => size in MiB
@@ -129,7 +129,7 @@ AUTO_SETUP_GLOBAL_PASSWORD=mupibox
 # - Add as many entries as you wish, one each line.
 # - DietPi will automatically install all pre-reqs (e.g. ALSA/X11 for desktops etc)
 # - E.g. the following (without the leading "#") will install the LXDE desktop automatically on first boot:
-#AUTO_SETUP_INSTALL_SOFTWARE_ID=5
+#AUTO_SETUP_INSTALL_SOFTWARE_ID=23
 
 #------------------------------------------------------------------------------------------------------
 ##### Misc DietPi program settings #####
@@ -182,7 +182,7 @@ CONFIG_CHECK_DNS_DOMAIN=dns9.quad9.net
 
 # Daily check for DietPi updates: 0=disable | 1=enable
 # - Checks are done by downloading a file of only 7 bytes.
-CONFIG_CHECK_DIETPI_UPDATES=0
+CONFIG_CHECK_DIETPI_UPDATES=1
 
 # Daily check for APT package updates: 0=disable | 1=check only | 2=check and upgrade automatically
 # - Upgrade logs can be found at: /var/tmp/dietpi/logs/dietpi-update_apt.log
@@ -195,7 +195,7 @@ CONFIG_NTP_MODE=4
 CONFIG_SERIAL_CONSOLE_ENABLE=1
 
 # Sound card
-CONFIG_SOUNDCARD=hifiberry-dac
+CONFIG_SOUNDCARD=none
 
 # LCD Panel addon
 # - Do not modify, you must use dietpi-config to configure/set options
@@ -244,9 +244,9 @@ SOFTWARE_WIFI_HOTSPOT_CHANNEL=3
 SOFTWARE_XORG_DPI=96
 
 # Chromium
-SOFTWARE_CHROMIUM_RES_X=800
-SOFTWARE_CHROMIUM_RES_Y=480
-SOFTWARE_CHROMIUM_AUTOSTART_URL=http://MuPiBox:8200
+SOFTWARE_CHROMIUM_RES_X=1280
+SOFTWARE_CHROMIUM_RES_Y=720
+SOFTWARE_CHROMIUM_AUTOSTART_URL=https://dietpi.com/
 
 # Home Assistant
 # - Optional Python build dependencies and modules, possibly required for certain HA components
