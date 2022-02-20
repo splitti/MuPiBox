@@ -3,22 +3,6 @@
 # Script for MuPiBox preperation
 # Start with: cd; curl https://raw.githubusercontent.com/splitti/MuPiBox/main/autosetup/autosetup.sh | bash
 
-echo "Check online State "
-
-while true ; do
-    echo -n "."
-    wget -q --spider http://google.com
-    if [ $? -eq 0 ]; then
-        onlineState="Online"
-		break
-    else
-        onlineState="Offline"
-    fi
-done
-
-#FORMAT="\e[48;5;23;38;5;41m%s\e[0m"
-FORMAT="\e[48;5;23;38;5;41m%s\e[0m%5.f%%"
-
 {
 	###############################################################################################
 	echo -e "XXX\n0\nInstall some packeges... \nXXX"	
