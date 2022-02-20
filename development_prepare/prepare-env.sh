@@ -15,12 +15,13 @@ percentBar ()  {
     printf -v "$3" '%s%s' "$barstring" "$blankstring"
 }
 
+BARLENGTH=59
 Y=15
 X=10
 ORIENTATION="\n          "
 LOG="/tmp/prepare.log"
 
-FORMAT="\e[48;5;23;38;5;41m%s\e[0m"
+FORMAT="\e[48;5;23;38;5;41m%s\e[0m%6.0f%%%b"
 sleep 2
 printf "\n\nPlease wait, this takes a while... \n\n"
 # Make it nice
@@ -38,7 +39,7 @@ tput cup $Y $X
 
 printf "Get missing packages"
 printf "$ORIENTATION"
-percentBar 0 59 bar
+percentBar 0 ${BARLENGTH} bar
 printf ${FORMAT} "$bar"
 
 # Get missing packages
@@ -56,7 +57,7 @@ tput cup $Y $X
 
 printf "Install nodeJS 16                             "
 printf "$ORIENTATION"
-percentBar 5 59 bar
+percentBar 5 ${BARLENGTH} bar
 printf ${FORMAT} "$bar"
 
 curl -sL https://deb.nodesource.com/setup_16.x | sudo -E bash - &>> ${LOG} 2>>${LOG}
@@ -73,7 +74,7 @@ tput cup $Y $X
 
 printf "Install ionic                           "
 printf "$ORIENTATION"
-percentBar 10 59 bar
+percentBar 10 ${BARLENGTH} bar
 printf ${FORMAT} "$bar"
 
 sudo npm install -g @ionic/cli &>> ${LOG} 2>>${LOG}
@@ -89,7 +90,7 @@ tput cup $Y $X
 
 printf "Install pm2                             "
 printf "$ORIENTATION"
-percentBar 15 59 bar
+percentBar 15 ${BARLENGTH} bar
 printf ${FORMAT} "$bar"
 
 cd ~
@@ -110,7 +111,7 @@ tput cup $Y $X
 
 printf "Clean and create Directorys                                        "
 printf "$ORIENTATION"
-percentBar 20 59 bar
+percentBar 20 ${BARLENGTH} bar
 printf ${FORMAT} "$bar"
 
 
@@ -141,7 +142,7 @@ tput cup $Y $X
 
 printf "Create hushlogin                                        "
 printf "$ORIENTATION"
-percentBar 21 59 bar
+percentBar 21 ${BARLENGTH} bar
 printf ${FORMAT} "$bar"
 # Boot
 touch ~/.hushlogin
@@ -158,7 +159,7 @@ tput cup $Y $X
 
 printf "Install mplayer-wrapper                                        "
 printf "$ORIENTATION"
-percentBar 22 59 bar
+percentBar 22 ${BARLENGTH} bar
 printf ${FORMAT} "$bar"
 
 # Sources
@@ -179,7 +180,7 @@ tput cup $Y $X
 
 printf "Install google-tts                                        "
 printf "$ORIENTATION"
-percentBar 27 59 bar
+percentBar 27 ${BARLENGTH} bar
 printf ${FORMAT} "$bar"
 
 cd ~/.mupibox &>> ${LOG} 2>>${LOG}
@@ -200,7 +201,7 @@ tput cup $Y $X
 
 printf "Install Sonos-Kids-Controller-master                                        "
 printf "$ORIENTATION"
-percentBar 32 59 bar
+percentBar 32 ${BARLENGTH} bar
 printf ${FORMAT} "$bar"
 
 cd ~/.mupibox/ &>> ${LOG} 2>>${LOG}
@@ -247,7 +248,7 @@ tput cup $Y $X
 
 printf "Install Spotify Controller                                        "
 printf "$ORIENTATION"
-percentBar 53 59 bar
+percentBar 53 ${BARLENGTH} bar
 printf ${FORMAT} "$bar"
 
 cd ~/.mupibox  &>> ${LOG} 2>>${LOG}
@@ -274,7 +275,7 @@ tput cup $Y $X
 
 printf "Copy binaries                                        "
 printf "$ORIENTATION"
-percentBar 63 59 bar
+percentBar 63 ${BARLENGTH} bar
 printf ${FORMAT} "$bar"
 
 # Binaries
@@ -294,7 +295,7 @@ tput cup $Y $X
 
 printf "Copy dietpi-configs                                        "
 printf "$ORIENTATION"
-percentBar 68 59 bar
+percentBar 68 ${BARLENGTH} bar
 printf ${FORMAT} "$bar"
 
 # DietPi-Configs
@@ -314,7 +315,7 @@ tput cup $Y $X
 
 printf "Copy spotify-configs                                        "
 printf "$ORIENTATION"
-percentBar 69 59 bar
+percentBar 69 ${BARLENGTH} bar
 printf ${FORMAT} "$bar"
 
 # Spotify-Configs
@@ -334,7 +335,7 @@ tput cup $Y $X
 
 printf "Copy media-files                                        "
 printf "$ORIENTATION"
-percentBar 70 59 bar
+percentBar 70 ${BARLENGTH} bar
 printf ${FORMAT} "$bar"
 
 # Splash and Media
@@ -357,7 +358,7 @@ tput cup $Y $X
 
 printf "Copy mupibox-files                                        "
 printf "$ORIENTATION"
-percentBar 75 59 bar
+percentBar 75 ${BARLENGTH} bar
 printf ${FORMAT} "$bar"
 
 # MuPiBox
@@ -382,7 +383,7 @@ tput cup $Y $X
 
 printf "Install Hifiberry-MiniAmp and Bluetooth support                                        "
 printf "$ORIENTATION"
-percentBar 77 59 bar
+percentBar 77 ${BARLENGTH} bar
 printf ${FORMAT} "$bar"
 
 sudo /boot/dietpi/func/dietpi-set_hardware bluetooth enable &>> ${LOG} 2>>${LOG}
@@ -427,7 +428,7 @@ tput cup $Y $X
 
 printf "Set environment                                        "
 printf "$ORIENTATION"
-percentBar 82 59 bar
+percentBar 82 ${BARLENGTH} bar
 printf ${FORMAT} "$bar"
 # ENV
 (echo "mupibox"; echo "mupibox") | sudo smbpasswd -s -a dietpi &>> ${LOG} 2>>${LOG}
@@ -444,7 +445,7 @@ tput cup $Y $X
 
 printf "Copy onoffshim-scripts                                        "
 printf "$ORIENTATION"
-percentBar 83 59 bar
+percentBar 83 ${BARLENGTH} bar
 printf ${FORMAT} "$bar"
 
 # OnOffShim & hifiberry
@@ -464,7 +465,7 @@ tput cup $Y $X
 
 printf "Configure Chromium                                        "
 printf "$ORIENTATION"
-percentBar 85 59 bar
+percentBar 85 ${BARLENGTH} bar
 printf ${FORMAT} "$bar"
 
 suggest_gpu_mem=76 &>> ${LOG} 2>>${LOG}
@@ -504,7 +505,7 @@ tput cup $Y $X
 
 printf "Enable services                                        "
 printf "$ORIENTATION"
-percentBar 95 59 bar
+percentBar 95 ${BARLENGTH} bar
 printf ${FORMAT} "$bar"
 
 # Enable Services
@@ -529,7 +530,7 @@ tput cup $Y $X
 
 printf "SYSTEM IS PREPARED                                        "
 printf "$ORIENTATION"
-percentBar 100 59 bar
+percentBar 100 ${BARLENGTH} bar
 printf ${FORMAT} "$bar"
 printf "\n${ORIENTATION}Logfile: ${LOG}\n${ORIENTATION}Please reboot and have a nice day!\n\n"
 
