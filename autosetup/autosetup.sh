@@ -499,7 +499,8 @@ sudo systemctl enable spotifyd.service &>> ${LOG} 2>>${LOG}
 sudo systemctl start spotifyd.service &>> ${LOG} 2>>${LOG}
 sudo systemctl enable smbd.service &>> ${LOG} 2>>${LOG}
 sudo systemctl start smbd.service &>> ${LOG} 2>>${LOG}
-sudo rm /var/lib/dietpi/dietpi-autostart/  &>> ${LOG} 2>>${LOG}
+sudo /usr/bin/sed -i 's/cd; curl https:\/\/raw.githubusercontent.com\/splitti\/MuPiBox\/main\/autosetup\/autosetup.sh \| bash/ /g' ~/.bashrc &>> ${LOG} 2>>${LOG}
+
 
 ###############################################################################################
 
