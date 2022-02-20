@@ -1,9 +1,9 @@
 #!/bin/bash
 #
-# Script for MuPiBox preperation
+# Script for MuPiBox Autosetup
 # Start with: cd; curl https://raw.githubusercontent.com/splitti/MuPiBox/main/autosetup/autosetup.sh | bash
 
-LOG="/tmp/autosetup.log"
+LOG="~/.mupibox/autosetup.log"
 exec 3>${LOG}
 
 {
@@ -106,16 +106,15 @@ exec 3>${LOG}
 
 	echo -e "XXX\n32\nInstall Kids-Controller-master... \nXXX"	
 
-	cd ~/.mupibox/Sonos-Kids-Controller-master
-	wget https://github.com/splitti/MuPiBox/raw/main/bin/nodejs/sonos-kids-controller.zip >&3 2>&3
-	unzip sonos-kids-controller.zip >&3 2>&3
-	rm sonos-kids-controller.zip >&3 2>&3
+	wget https://github.com/splitti/MuPiBox/raw/main/bin/nodejs/sonos-kids-controller.zip -O ~/.mupibox/Sonos-Kids-Controller-master/sonos-kids-controller.zip >&3 2>&3
+	unzip ~/.mupibox/Sonos-Kids-Controller-master/sonos-kids-controller.zip -d ~/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
+	rm ~/.mupibox/Sonos-Kids-Controller-master/sonos-kids-controller.zip >&3 2>&3
 	wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/www.json -O ~/.mupibox/Sonos-Kids-Controller-master/server/config/config.json 2>>${LOG}
-	npm install  >&3 2>&3
+	cd ~/.mupibox/Sonos-Kids-Controller-master && npm install  >&3 2>&3
 	#npm start & >&3 2>&3
 	#sleep 10  >&3 2>&3
-	pm2 start server.js  >&3 2>&3
-	pm2 save  >&3 2>&3
+	cd ~/.mupibox/Sonos-Kids-Controller-master && pm2 start server.js  >&3 2>&3
+	cd ~/.mupibox/Sonos-Kids-Controller-master && pm2 save  >&3 2>&3
 
 	###############################################################################################
 
