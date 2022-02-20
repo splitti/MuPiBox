@@ -15,13 +15,13 @@ percentBar ()  {
     printf -v "$3" '%s%s' "$barstring" "$blankstring"
 }
 
-BARLENGTH=52
+BARLENGTH=54
 Y=15
 X=10
 ORIENTATION="\n          "
 LOG="/tmp/prepare.log"
 
-FORMAT="\e[48;5;23;38;5;41m%s\e[0m%6.0f%%%b"
+FORMAT="\e[48;5;23;38;5;41m%s\e[0m%4.0f%%%b"
 sleep 2
 printf "\n\nPlease wait, this takes a while... \n\n"
 # Make it nice
