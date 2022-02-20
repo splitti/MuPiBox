@@ -15,7 +15,7 @@ percentBar ()  {
     printf -v "$3" '%s%s' "$barstring" "$blankstring"
 }
 
-BARLENGTH=59
+BARLENGTH=52
 Y=15
 X=10
 ORIENTATION="\n          "
