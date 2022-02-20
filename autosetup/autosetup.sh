@@ -287,9 +287,11 @@ exec 3>${LOG}
 
 } | whiptail --title "MuPiBox Autosetup" --gauge "Please wait while installing" 6 60 0
 
-if (whiptail --title "MuPiBox Autosetup" --yesno "Finally, a restart is necessary! Do you want to reboot the system now?" 8 78); then
-    sudo reboot
-else
-    #echo "Logfile:  ${LOG}\n\n"
-    echo "Don't forget to reboot..."
-fi
+#if (whiptail --title "MuPiBox Autosetup" --yesno "Finally, a restart is necessary! Do you want to reboot the system now?" 8 78); then
+#    sudo reboot
+#else
+#    #echo "Logfile:  ${LOG}\n\n"
+#    echo "Don't forget to reboot..."
+#fi
+mv ${LOG} ~/.mupibox/autosetup.log
+sudo reboot
