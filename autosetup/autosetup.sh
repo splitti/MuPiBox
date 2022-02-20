@@ -125,6 +125,7 @@ mkdir ~/MuPiBox/tts_files &>> ${LOG} 2>>${LOG}
 mkdir -p ~/MuPiBox/sysmedia/sound &>> ${LOG} 2>>${LOG}
 mkdir ~/MuPiBox/sysmedia/images &>> ${LOG} 2>>${LOG}
 mkdir ~/MuPiBox/media &>> ${LOG} 2>>${LOG} ${LOG} 2>>${LOG}
+mkdir -p ~/MuPiBox/Sonos-Kids-Controller-master/config &>> ${LOG} 2>>${LOG}
 sudo mkdir /usr/local/bin/mupibox &>> ${LOG} 2>>${LOG}
 sudo mkdir /etc/spotifyd &>> ${LOG} 2>>${LOG}
 sudo mkdir /etc/mupibox &>> ${LOG} 2>>${LOG}
@@ -204,12 +205,11 @@ printf "$ORIENTATION"
 percentBar 32 ${BARLENGTH} bar
 printf ${FORMAT} "$bar"
 
-cd ~/.mupibox/ &>> ${LOG} 2>>${LOG}
-mkdir Sonos-Kids-Controller-master
 cd ~/.mupibox/Sonos-Kids-Controller-master
 wget https://github.com/splitti/MuPiBox/raw/main/bin/nodejs/sonos-kids-controller.zip &>> ${LOG} 2>>${LOG}
 unzip sonos-kids-controller.zip &>> ${LOG} 2>>${LOG}
 rm sonos-kids-controller.zip &>> ${LOG} 2>>${LOG}
+wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/www.json -O -O ~/.mupibox/Sonos-Kids-Controller-master/server/config/config.json 2>>${LOG}
 npm install  &>> ${LOG} 2>>${LOG}
 #npm start & &>> ${LOG} 2>>${LOG}
 #sleep 10  &>> ${LOG} 2>>${LOG}
@@ -238,8 +238,8 @@ cd ~/.mupibox/spotifycontroller-main  &>> ${LOG} 2>>${LOG}
 wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/spotifycontroller.json -O ~/.mupibox/spotifycontroller-main/config/config.json &>> ${LOG} 2>>${LOG}
 wget https://github.com/splitti/MuPiBox/raw/main/development_prepare/customize/spotiycontroller-main/spotify-control.js -O ~/.mupibox/spotifycontroller-main/spotify-control.js  &>> ${LOG} 2>>${LOG}
 npm install  &>> ${LOG} 2>>${LOG}
-npm start & &>> ${LOG} 2>>${LOG}
-sleep 10  &>> ${LOG} 2>>${LOG}
+#npm start & &>> ${LOG} 2>>${LOG}
+#sleep 10  &>> ${LOG} 2>>${LOG}
 pm2 start spotify-control.js  &>> ${LOG} 2>>${LOG}
 pm2 save  &>> ${LOG} 2>>${LOG}
 
@@ -428,7 +428,7 @@ percentBar 83 ${BARLENGTH} bar
 printf ${FORMAT} "$bar"
 
 # OnOffShim & hifiberry
-sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/OnOffShim/off_trigger.sh -O /var/lib/dietpi/postboot.d/off_trigger.sh &>> ${LOG} 2>>${LOG}
+#sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/OnOffShim/off_trigger.sh -O /var/lib/dietpi/postboot.d/off_trigger.sh &>> ${LOG} 2>>${LOG}
 sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/OnOffShim/poweroff.sh -O /usr/lib/systemd/system-shutdown/poweroff.sh &>> ${LOG} 2>>${LOG}
 sudo chmod 775 /usr/lib/systemd/system-shutdown/poweroff.sh /var/lib/dietpi/postboot.d/off_trigger.sh &>> ${LOG} 2>>${LOG}
 sleep 1
@@ -493,8 +493,8 @@ sudo systemctl enable mupi_change_checker.service &>> ${LOG} 2>>${LOG}
 sudo systemctl start mupi_change_checker.service &>> ${LOG} 2>>${LOG}
 sudo systemctl enable mupi_idle_shutdown.service &>> ${LOG} 2>>${LOG}
 sudo systemctl start mupi_idle_shutdown.service &>> ${LOG} 2>>${LOG}
-#sudo systemctl enable mupi_splash.service &>> ${LOG} 2>>${LOG}
-#sudo systemctl start mupi_splash.service &>> ${LOG} 2>>${LOG}
+sudo systemctl enable mupi_splash.service &>> ${LOG} 2>>${LOG}
+sudo systemctl start mupi_splash.service &>> ${LOG} 2>>${LOG}
 sudo systemctl enable spotifyd.service &>> ${LOG} 2>>${LOG}
 sudo systemctl start spotifyd.service &>> ${LOG} 2>>${LOG}
 sudo systemctl enable smbd.service &>> ${LOG} 2>>${LOG}
