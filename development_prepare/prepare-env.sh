@@ -15,6 +15,12 @@ percentBar ()  {
     printf -v "$3" '%s%s' "$barstring" "$blankstring"
 }
 
+headLine () {
+    clear
+	figlet -f standard -w 80 -c -m 1 "  MuPiBox Preperation" | lolcat
+	tput cup $Y $X
+}
+
 Y=15
 X=10
 ORIENTATION="\n          "
@@ -31,8 +37,7 @@ echo "###################################################" >> ${LOG} 2>>${LOG}
 echo "MuPiBox Preperation" >> ${LOG} 2>>${LOG}
 
 clear
-figlet -f standard -w 80 -c -m 1 "  MuPiBox Preperation" | lolcat
-tput cup $Y $X
+headLine
 printf "Get missing packages"
 printf "$ORIENTATION"
 percentBar 0 59 bar
@@ -47,7 +52,7 @@ sudo apt-get install git libasound2 jq samba mplayer pulseaudio-module-bluetooth
 echo "###################################################" &>> ${LOG} 2>>${LOG}
 echo "Install nodeJS" &>> ${LOG} 2>>${LOG}
 
-tput cup $Y $X
+headLine
 printf "Install nodeJS 16                             "
 printf "$ORIENTATION"
 percentBar 5 59 bar
@@ -61,7 +66,7 @@ sudo apt-get install -y nodejs &>> ${LOG} 2>>${LOG}
 echo "###################################################" &>> ${LOG} 2>>${LOG}
 echo "Install ionic" &>> ${LOG} 2>>${LOG}
 
-tput cup $Y $X
+headLine
 printf "Install ionic                           "
 printf "$ORIENTATION"
 percentBar 10 59 bar
@@ -74,7 +79,7 @@ sudo npm install -g @ionic/cli &>> ${LOG} 2>>${LOG}
 echo "###################################################" &>> ${LOG} 2>>${LOG}
 echo "Install pm2" &>> ${LOG} 2>>${LOG}
 
-tput cup $Y $X
+headLine
 printf "Install pm2                             "
 printf "$ORIENTATION"
 percentBar 15 59 bar
@@ -92,7 +97,7 @@ ${PM2_ENV} &>> ${LOG} 2>>${LOG}
 echo "###################################################" &>> ${LOG} 2>>${LOG}
 echo "Clean and create Directorys" &>> ${LOG} 2>>${LOG}
 
-tput cup $Y $X
+headLine
 printf "Clean and create Directorys                                        "
 printf "$ORIENTATION"
 percentBar 20 59 bar
@@ -120,7 +125,7 @@ sleep 1
 echo "###################################################" &>> ${LOG} 2>>${LOG}
 echo "Create hushlogin" &>> ${LOG} 2>>${LOG}
 
-tput cup $Y $X
+headLine
 printf "Create hushlogin                                        "
 printf "$ORIENTATION"
 percentBar 21 59 bar
@@ -134,7 +139,7 @@ sleep 1
 echo "###################################################" &>> ${LOG} 2>>${LOG}
 echo "Install mplayer-wrapper" &>> ${LOG} 2>>${LOG}
 
-tput cup $Y $X
+headLine
 printf "Install mplayer-wrapper                                        "
 printf "$ORIENTATION"
 percentBar 22 59 bar
@@ -152,7 +157,7 @@ npm install &>> ${LOG} 2>>${LOG}
 echo "###################################################" &>> ${LOG} 2>>${LOG}
 echo "Install google-tts" &>> ${LOG} 2>>${LOG}
 
-tput cup $Y $X
+headLine
 printf "Install google-tts                                        "
 printf "$ORIENTATION"
 percentBar 27 59 bar
@@ -170,7 +175,7 @@ npm test &>> ${LOG} 2>>${LOG}
 echo "###################################################" &>> ${LOG} 2>>${LOG}
 echo "Install Sonos-Kids-Controller-master" &>> ${LOG} 2>>${LOG}
 
-tput cup $Y $X
+headLine
 printf "Install Sonos-Kids-Controller-master                                        "
 printf "$ORIENTATION"
 percentBar 32 59 bar
@@ -214,9 +219,7 @@ pm2 save  &>> ${LOG} 2>>${LOG}
 echo "###################################################" &>> ${LOG} 2>>${LOG}
 echo "Install Spotify Controller" &>> ${LOG} 2>>${LOG}
 
-clear &>> ${LOG} 2>>${LOG}
-figlet -f standard -w 80 -c -m 1 "  MuPiBox Preperation" | lolcat
-tput cup $Y $X
+headLine
 printf "Install Spotify Controller                                        "
 printf "$ORIENTATION"
 percentBar 53 59 bar
@@ -240,7 +243,7 @@ pm2 save  &>> ${LOG} 2>>${LOG}
 echo "###################################################" &>> ${LOG} 2>>${LOG}
 echo "Copy binaries" &>> ${LOG} 2>>${LOG}
 
-tput cup $Y $X
+headLine
 printf "Copy binaries                                        "
 printf "$ORIENTATION"
 percentBar 63 59 bar
@@ -257,7 +260,7 @@ sleep 1
 echo "###################################################" &>> ${LOG} 2>>${LOG}
 echo "Copy dietpi-config" &>> ${LOG} 2>>${LOG}
 
-tput cup $Y $X
+headLine
 printf "Copy dietpi-configs                                        "
 printf "$ORIENTATION"
 percentBar 68 59 bar
@@ -274,7 +277,7 @@ sleep 1
 echo "###################################################" &>> ${LOG} 2>>${LOG}
 echo "Copy spotify-configs" &>> ${LOG} 2>>${LOG}
 
-tput cup $Y $X
+headLine
 printf "Copy spotify-configs                                        "
 printf "$ORIENTATION"
 percentBar 69 59 bar
@@ -291,7 +294,7 @@ sleep 1
 echo "###################################################" &>> ${LOG} 2>>${LOG}
 echo "Copy media-files" &>> ${LOG} 2>>${LOG}
 
-tput cup $Y $X
+headLine
 printf "Copy media-files                                        "
 printf "$ORIENTATION"
 percentBar 70 59 bar
@@ -311,7 +314,7 @@ sleep 1
 echo "###################################################" &>> ${LOG} 2>>${LOG}
 echo "Copy mupibox-files" &>> ${LOG} 2>>${LOG}
 
-tput cup $Y $X
+headLine
 printf "Copy mupibox-files                                        "
 printf "$ORIENTATION"
 percentBar 75 59 bar
@@ -333,7 +336,7 @@ sleep 1
 echo "###################################################" &>> ${LOG} 2>>${LOG}
 echo "Install Hifiberry-MiniAmp and Bluetooth support" &>> ${LOG} 2>>${LOG}
 
-tput cup $Y $X
+headLine
 printf "Install Hifiberry-MiniAmp and Bluetooth support                                        "
 printf "$ORIENTATION"
 percentBar 77 59 bar
@@ -375,7 +378,7 @@ sudo systemctl start pulseaudio &>> ${LOG} 2>>${LOG}
 echo "###################################################" &>> ${LOG} 2>>${LOG}
 echo "Set environment" &>> ${LOG} 2>>${LOG}
 
-tput cup $Y $X
+headLine
 printf "Set environment                                        "
 printf "$ORIENTATION"
 percentBar 82 59 bar
@@ -389,7 +392,7 @@ sleep 1
 echo "###################################################" &>> ${LOG} 2>>${LOG}
 echo "Copy OnOffShim-scripts" &>> ${LOG} 2>>${LOG}
 
-tput cup $Y $X
+headLine
 printf "Copy onoffshim-scripts                                        "
 printf "$ORIENTATION"
 percentBar 83 59 bar
@@ -406,7 +409,7 @@ sleep 1
 echo "###################################################" &>> ${LOG} 2>>${LOG}
 echo "Configure Chromium" &>> ${LOG} 2>>${LOG}
 
-tput cup $Y $X
+headLine
 printf "Configure Chromium                                        "
 printf "$ORIENTATION"
 percentBar 85 59 bar
@@ -443,7 +446,7 @@ fi
 echo "###################################################" &>> ${LOG} 2>>${LOG}
 echo "Enable services" &>> ${LOG} 2>>${LOG}
 
-tput cup $Y $X
+headLine
 printf "Enable services                                        "
 printf "$ORIENTATION"
 percentBar 95 59 bar
@@ -465,7 +468,7 @@ sudo systemctl disable nmbd.service &>> ${LOG} 2>>${LOG}
 
 ###############################################################################################
 
-tput cup $Y $X
+headLine
 printf "SYSTEM IS PREPARED                                        "
 printf "$ORIENTATION"
 percentBar 100 59 bar
