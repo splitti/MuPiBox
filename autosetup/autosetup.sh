@@ -41,14 +41,14 @@ exec 3>${LOG}
 	echo -e "XXX\n20\nClean and create directories... \nXXX"	
 	# Clean and create Directorys
 	sudo rm -R ~/.mupibox >&3 2>&3
-	sudo rm -R ~/MuPiBox/ >&3 2>&3
+	sudo rm -R ~/MuPiBox >&3 2>&3
 	mkdir -p ~/.mupibox >&3 2>&3
 	mkdir -p ~/MuPiBox/media >&3 2>&3
 	mkdir ~/MuPiBox/tts_files >&3 2>&3
 	mkdir -p ~/MuPiBox/sysmedia/sound >&3 2>&3
 	mkdir ~/MuPiBox/sysmedia/images >&3 2>&3
 	mkdir ~/MuPiBox/media >&3 2>&3
-	mkdir -p ~/MuPiBox/Sonos-Kids-Controller-master/config >&3 2>&3
+	mkdir -p ~/.mupibox/Sonos-Kids-Controller-master/config >&3 2>&3
 	sudo mkdir /usr/local/bin/mupibox >&3 2>&3
 	sudo mkdir /etc/spotifyd >&3 2>&3
 	sudo mkdir /etc/mupibox >&3 2>&3
@@ -294,4 +294,5 @@ exec 3>${LOG}
 #    echo "Don't forget to reboot..."
 #fi
 mv ${LOG} ~/.mupibox/autosetup.log
+exit
 sudo reboot
