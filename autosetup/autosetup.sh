@@ -10,7 +10,7 @@ exec 3>${LOG}
 	echo -e "XXX\n0\nCreate Logfile... \nXXX"	
 	
 	###############################################################################################
-	echo -e "XXX\n1\nInstall some packeges... \nXXX"	
+	echo -e "XXX\n1\nInstall some packages... \nXXX"	
 	echo "###################################################" >&3 2>&3
 	echo "Install some packages" >&3 2>&3
 	# Get missing packages
