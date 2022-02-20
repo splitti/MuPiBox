@@ -218,6 +218,7 @@ exec 3>${LOG}
 	echo -e "XXX\n77\nInstall Hifiberry-MiniAmp and Bluetooth support... \nXXX"	
 
 	sudo /boot/dietpi/func/dietpi-set_hardware bluetooth enable >&3 2>&3
+	sudo dietpi-software install 5 >&3 2>&3
 	sudo /boot/dietpi/func/dietpi-set_hardware soundcard "hifiberry-dac"  >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/asound.conf -O /etc/asound.conf  >&3 2>&3
 	sudo usermod -g pulse -G audio --home /var/run/pulse pulse >&3 2>&3
