@@ -5,7 +5,7 @@
 
 #exec {tracefd}>~/.mupibox/autosetup.log; BASH_XTRACEFD=$tracefd; PS4=':$LINENO+'; set -x
 
-LOG="~/autosetup.log"
+LOG="/tmp/autosetup.log"
 exec 3>${LOG}
 
 {
