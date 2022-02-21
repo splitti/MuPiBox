@@ -485,7 +485,7 @@ sudo /usr/bin/sed -i 's/session    optional   pam_motd.so motd\=\/run\/motd.dyna
 sudo /usr/bin/sed -i 's/session    optional   pam_motd.so noupdate/#session    optional   pam_motd.so noupdate/g' /etc/pam.d/login &>> ${LOG} 2>>${LOG}
 sudo /usr/bin/sed -i 's/session    optional   pam_lastlog.so/session    optional   pam_lastlog.so/g' /etc/pam.d/login &>> ${LOG} 2>>${LOG}
 
-sudo /usr/bin/sed -i 's/ExecStart\=-\/sbin\/agetty -a dietpi -J \%I \$TERM/ExecStart\=-\/sbin\/agetty --skip-login --noclear --noissue --login-options \"-f pi\" \%I \$TERM/g' /etc/systemd/system/getty@tty1.service.d/dietpi-autologin.conf &>> ${LOG} 2>>${LOG}
+sudo /usr/bin/sed -i 's/ExecStart\=-\/sbin\/agetty -a dietpi -J \%I \$TERM/ExecStart\=-\/sbin\/agetty --skip-login --noclear --noissue --login-options \"-f dietpi\" \%I \$TERM/g' /etc/systemd/system/getty@tty1.service.d/dietpi-autologin.conf &>> ${LOG} 2>>${LOG}
 
 if grep -q '^initramfs initramfs.img' /boot/config.txt; then
   echo -e "initramfs initramfs.img already set" &>> ${LOG} 2>>${LOG}
