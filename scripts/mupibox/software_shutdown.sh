@@ -3,6 +3,7 @@
 # Simulate the shutdown with OnOffShim
 # Trigger is PIN 17
 
+CONFIG="/etc/mupibox/mupiboxconfig.json"
 TRIGGER_PIN=`/usr/bin/jq -r .shim.triggerPin ${CONFIG}` 
  
 sudo sh -c 'echo "${TRIGGER_PIN}" > /sys/class/gpio/export'
