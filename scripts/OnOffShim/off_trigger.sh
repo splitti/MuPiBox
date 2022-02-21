@@ -14,7 +14,7 @@ SHUT_SPLASH=$(/usr/bin/jq -r .mupibox.shutSplash ${CONFIG})
 AUDIO_DEVICE=$(/usr/bin/jq -r .mupibox.audioDevice ${CONFIG})
 
 
-/usr/bin/amixer sset '${AUDIO_DEVICE}' ${START_VOLUME}%
+/usr/bin/amixer sset ${AUDIO_DEVICE} ${START_VOLUME}%
 /usr/bin/mplayer ${START_SOUND}
 
 /bin/echo ${TRIGGER_PIN} > /sys/class/gpio/export

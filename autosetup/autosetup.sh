@@ -14,7 +14,7 @@ exec 3>${LOG}
 	echo -e "XXX\n0\nInstall some packages... \nXXX"	
 	# Get missing packages
 	sudo apt-get update >&3 2>&3
-	sudo apt-get install git libasound2 jq samba mplayer pulseaudio-module-bluetooth bluez zip -y >&3 2>&3
+	sudo apt-get install git libasound2 jq samba mplayer pulseaudio-module-bluetooth bluez zip xinit chromium-browser xserver-xorg-legacy xorg -y >&3 2>&3
 
 	###############################################################################################
 	
@@ -220,7 +220,7 @@ exec 3>${LOG}
 	echo -e "XXX\n83\nDownload OnOffShim-Scripts... \nXXX"	
 
 	# OnOffShim & hifiberry
-	#sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/OnOffShim/off_trigger.sh -O /var/lib/dietpi/postboot.d/off_trigger.sh
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/OnOffShim/off_trigger.sh -O /var/lib/dietpi/postboot.d/off_trigger.sh >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/OnOffShim/poweroff.sh -O /usr/lib/systemd/system-shutdown/poweroff.sh >&3 2>&3
 	sudo chmod 775 /usr/lib/systemd/system-shutdown/poweroff.sh /var/lib/dietpi/postboot.d/off_trigger.sh >&3 2>&3
 	sleep 1
@@ -231,20 +231,27 @@ exec 3>${LOG}
 
 	suggest_gpu_mem=76 >&3 2>&3
 	sudo /boot/dietpi/func/dietpi-set_hardware gpumemsplit $suggest_gpu_mem >&3 2>&3
-	sudo /boot/dietpi/dietpi-autostart 11 >&3 2>&3
-	echo -ne '\n' | sudo dietpi-software install 113 >&3 2>&3
-	sudo /boot/dietpi/dietpi-autostart 11 >&3 2>&3
+	echo -ne '\n' | sudo dietpi-software install 113
+	sudo /boot/dietpi/dietpi-autostart 11
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/chromium-autostart.sh -O /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
 	sudo chmod +x /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
 	sudo usermod -a -G tty dietpi >&3 2>&3
-	sudo apt install xserver-xorg-legacy -y >&3 2>&3
 	sudo /usr/bin/sed -i 's/allowed_users\=console/allowed_users\=anybody/g' /etc/X11/Xwrapper.config >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/98-dietpi-disable_dpms.conf -O /etc/X11/xorg.conf.d/98-dietpi-disable_dpms.conf >&3 2>&3
 	sudo /usr/bin/sed -i 's/tty1/tty3 vt.global_cursor_default\=0 fastboot noatime nodiratime noram splash silent loglevel\=0 vt.default_red\=68,68,68,68,68,68,68,68 vt.default_grn\=175,175,175,175,175,175,175,175 vt.default_blu\=226,226,226,226,226,226,226,226/g' /boot/cmdline.txt >&3 2>&3
 	sudo /usr/bin/sed -i 's/session    optional   pam_motd.so motd\=\/run\/motd.dynamic/#session    optional   pam_motd.so motd\=\/run\/motd.dynamic/g' /etc/pam.d/login >&3 2>&3
 	sudo /usr/bin/sed -i 's/session    optional   pam_motd.so noupdate/#session    optional   pam_motd.so noupdate/g' /etc/pam.d/login >&3 2>&3
 	sudo /usr/bin/sed -i 's/session    optional   pam_lastlog.so/session    optional   pam_lastlog.so/g' /etc/pam.d/login >&3 2>&3
-	sudo /usr/bin/sed -i 's/ExecStart\=-\/sbin\/agetty -a dietpi -J \%I \$TERM/ExecStart\=-\/sbin\/agetty --skip-login --noclear --noissue --login-options \"-f pi\" \%I \$TERM/g' /etc/systemd/system/getty@tty1.service.d/dietpi-autologin.conf >&3 2>&3
+	sudo /usr/bin/sed -i 's/ExecStart\=-\/sbin\/agetty -a dietpi -J \%I \$TERM/ExecStart\=-\/sbin\/agetty --skip-login --noclear --noissue --login-options \"-f dietpi\" \%I \$TERM/g' /etc/systemd/system/getty@tty1.service.d/dietpi-autologin.conf >&3 2>&3
+
+
+#	if grep -q '^/var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh &' ~/.bashrc; then
+#	  echo -e "chromium autostart already set"
+#	else
+#	  echo '' | sudo tee -a /boot/config.txt >&3 2>&3
+#	  echo '/var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh &' | sudo tee -a /boot/config.txt >&3 2>&3
+#	fi
+
 
 	if grep -q '^initramfs initramfs.img' /boot/config.txt; then
 	  echo -e "initramfs initramfs.img already set"
