@@ -189,7 +189,6 @@ exec 3>${LOG}
 	sudo usermod -a -G pulse root >&3 2>&3
 	sudo usermod -a -G pulse-access root >&3 2>&3
 	sudo /usr/bin/sed -i 's/; system-instance = no/system-instance = yes/g' /etc/pulse/daemon.conf >&3 2>&3
-	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/services/pulseaudio.service -O /etc/systemd/system/pulseaudio.service >&3 2>&3
 
 	if grep -q '^load-module module-bluetooth-discover' /etc/pulse/system.pa; then
 	  echo -e "load-module module-bluetooth-discover already set"
@@ -259,6 +258,11 @@ exec 3>${LOG}
 	echo -e "XXX\n95\nEnable and start services... \nXXX"	
 
 	# Enable Services
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/services/mupi_change_checker.service -O /etc/systemd/system/mupi_change_checker.service >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/services/mupi_idle_shutdown.service -O /etc/systemd/system/mupi_idle_shutdown.service >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/services/mupi_splash.service -O /etc/systemd/system/mupi_splash.service >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/services/spotifyd.service -O /etc/systemd/system/spotifyd.service >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/services/pulseaudio.service -O /etc/systemd/system/pulseaudio.service >&3 2>&3
 	sudo systemctl daemon-reload >&3 2>&3
 	sudo systemctl enable mupi_change_checker.service >&3 2>&3
 	sudo systemctl start mupi_change_checker.service >&3 2>&3
