@@ -6,6 +6,7 @@
 
 CONFIG="/etc/mupibox/mupiboxconfig.json"
 TRIGGER_PIN=$(/usr/bin/jq -r .shim.triggerPin ${CONFIG})
+LED_PIN=$(/usr/bin/jq -r .shim.ledPin ${CONFIG})
 
 START_SOUND=$(/usr/bin/jq -r .mupibox.startSound ${CONFIG})
 SHUT_SOUND=$(/usr/bin/jq -r .mupibox.shutSound ${CONFIG})
@@ -13,10 +14,16 @@ START_VOLUME=$(/usr/bin/jq -r .mupibox.startVolume ${CONFIG})
 SHUT_SPLASH=$(/usr/bin/jq -r .mupibox.shutSplash ${CONFIG})
 AUDIO_DEVICE=$(/usr/bin/jq -r .mupibox.audioDevice ${CONFIG})
 
+# Turn OnOffShim LED On
+/bin/echo ${LED_PIN} > /sys/class/gpio/export
+/bin/echo out > /sys/class/gpio/gpio${LED_PIN}/direction
+/bin/echo 1 > /sys/class/gpio/gpio${LED_PIN}/value
 
+# Set default Volume and play start sound
 /usr/bin/amixer sset ${AUDIO_DEVICE} ${START_VOLUME}%
 /usr/bin/mplayer ${START_SOUND}
 
+# Check if OnOff-Button is pressed
 /bin/echo ${TRIGGER_PIN} > /sys/class/gpio/export
 /bin/echo in > /sys/class/gpio/gpio${TRIGGER_PIN}/direction
 

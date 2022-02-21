@@ -162,9 +162,9 @@ exec 3>${LOG}
 	echo -e "XXX\n75\nDownload MuPiBox-Files... \nXXX"	
 
 	# MuPiBox
-	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/black.css -O ~/MuPiBox/themes/ >&3 2>&3
-	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/blue.css -O ~/MuPiBox/themes/ >&3 2>&3
-	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/purple.css -O ~/MuPiBox/themes/ >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/black.css -O ~/MuPiBox/themes/black.css >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/blue.css -O ~/MuPiBox/themes/blue.css >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/purple.css -O ~/MuPiBox/themes/purple.css >&3 2>&3
 
 
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/mupiboxconfig.json -O /etc/mupibox/mupiboxconfig.json >&3 2>&3

@@ -27,7 +27,8 @@
 	"shim": {
 		"poweroffPin": "4",
 		"triggerPin": "17",
-		"cutPin": "27"
+		"cutPin": "27",
+		"ledPin": "25"
 	},
 	"chromium": {
 		"resX": "800",
