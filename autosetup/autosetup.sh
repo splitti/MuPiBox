@@ -48,6 +48,7 @@ exec 3>${LOG}
 	mkdir -p ~/MuPiBox/sysmedia/sound >&3 2>&3
 	mkdir ~/MuPiBox/sysmedia/images >&3 2>&3
 	mkdir ~/MuPiBox/media >&3 2>&3
+	mkdir ~/MuPiBox/themes >&3 2>&3
 	mkdir -p ~/.mupibox/Sonos-Kids-Controller-master/config >&3 2>&3
 	sudo mkdir /usr/local/bin/mupibox >&3 2>&3
 	sudo mkdir /etc/spotifyd >&3 2>&3
@@ -108,7 +109,7 @@ exec 3>${LOG}
 	rm main.zip >&3 2>&3
 	cd ~/.mupibox/spotifycontroller-main >&3 2>&3
 	wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/spotifycontroller.json -O ~/.mupibox/spotifycontroller-main/config/config.json >&3 2>&3
-	wget https://github.com/splitti/MuPiBox/raw/main/development_prepare/customize/spotiycontroller-main/spotify-control.js -O ~/.mupibox/spotifycontroller-main/spotify-control.js >&3 2>&3
+	wget https://raw.githubusercontent.com/splitti/MuPiBox/main/bin/nodejs/spotify-control.js -O ~/.mupibox/spotifycontroller-main/spotify-control.js >&3 2>&3
 	npm install >&3 2>&3
 	#npm start &
 	#sleep 10 
@@ -137,12 +138,10 @@ exec 3>${LOG}
 
 	###############################################################################################
 
-	echo -e "XXX\n69\nDownload Spotify-Config... \nXXX"	
+	echo -e "XXX\n69\nDownload spotifyd-Config... \nXXX"	
 
 
-	# Spotify-Configs
-	#wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/www.json -O ~/.mupibox/Sonos-Kids-Controller-master/server/config/config.json
-	#wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/spotifycontroller.json -O ~/.mupibox/spotifycontroller-main/config/config.json
+	# spotifyd-Config
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/spotifyd.conf -O /etc/spotifyd/spotifyd.conf >&3 2>&3
 	sleep 1
 
@@ -163,6 +162,11 @@ exec 3>${LOG}
 	echo -e "XXX\n75\nDownload MuPiBox-Files... \nXXX"	
 
 	# MuPiBox
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/black.css -O ~/MuPiBox/themes/ >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/blue.css -O ~/MuPiBox/themes/ >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/purple.css -O ~/MuPiBox/themes/ >&3 2>&3
+
+
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/mupiboxconfig.json -O /etc/mupibox/mupiboxconfig.json >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/change_checker.sh -O /usr/local/bin/mupibox/change_checker.sh >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/idle_shutdown.sh -O /usr/local/bin/mupibox/idle_shutdown.sh >&3 2>&3
