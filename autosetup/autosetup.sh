@@ -121,7 +121,7 @@ exec 3>${LOG}
 
 	# Binaries
 	sudo wget https://github.com/splitti/MuPiBox/raw/main/bin/fbv/fbv -O /usr/bin/fbv >&3 2>&3
-	sudo wget https://github.com/splitti/MuPiBox/raw/main/bin/spotifyd/0.3.3/dietpi8_64bit/spotifyd -O /usr/bin/spotifyd >&3 2>&3
+	sudo wget https://github.com/splitti/MuPiBox/raw/main/bin/spotifyd/0.3.3/spotifyd -O /usr/bin/spotifyd >&3 2>&3
 	sudo chmod 755 /usr/bin/fbv /usr/bin/spotifyd >&3 2>&3
 	sleep 1
 
