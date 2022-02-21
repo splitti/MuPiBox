@@ -4,8 +4,8 @@
 # Trigger is PIN 17
 
 CONFIG="/etc/mupibox/mupiboxconfig.json"
-TRIGGER_PIN=`/usr/bin/jq -r .shim.triggerPin ${CONFIG}` 
- 
-sudo sh -c 'echo "${TRIGGER_PIN}" > /sys/class/gpio/export'
-sudo sh -c 'echo "out" > /sys/class/gpio/gpio${TRIGGER_PIN}/direction'
-sudo sh -c 'echo "1" > /sys/class/gpio/gpio${TRIGGER_PIN}/value'
+TRIGGER_PIN=$(/usr/bin/jq -r .shim.triggerPin ${CONFIG})
+
+sudo sh -c '${TRIGGER_PIN} > /sys/class/gpio/export'
+sudo sh -c "echo 'out' > /sys/class/gpio/gpio${TRIGGER_PIN}/direction"
+sudo sh -c "echo '1' > /sys/class/gpio/gpio${TRIGGER_PIN}/value"
