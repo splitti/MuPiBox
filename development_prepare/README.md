@@ -2,7 +2,7 @@
 ![Caption](./preparation.jpg "Caption") 
 
 ## What is it for?
-This scripts prepares the MuPiBox.
+This scripts prepares and compiles software for the Autosetup.
 
 ## How to start?
 Login with dietpi and start this command:

@@ -274,7 +274,7 @@ exec 3>${LOG}
 
 	###############################################################################################
 
-	echo -e "XXX\n95\nEnable Admin-Webservice... \nXXX"	
+	echo -e "XXX\n90\nEnable Admin-Webservice... \nXXX"	
 	
 	sudo dietpi-software install 84 89 >&3 2>&3
 
@@ -302,8 +302,8 @@ exec 3>${LOG}
 	sudo systemctl start smbd.service >&3 2>&3
 	sudo systemctl enable mupi_startstop.service >&3 2>&3
 	sudo systemctl start mupi_startstop.service >&3 2>&3
-	sudo systemctl enable pulseaudio >&3 2>&3
-	sudo systemctl start pulseaudio >&3 2>&3
+	sudo systemctl enable pulseaudio.service >&3 2>&3
+	sudo systemctl start pulseaudio.service >&3 2>&3
 	head -n -2 ~/.bashrc > /tmp/.bashrc && mv /tmp/.bashrc ~/.bashrc
 
 	###############################################################################################
