@@ -14,56 +14,6 @@
                 </div>
                         <ul >
 
-                                        <li id="li_1" >
-                <label class="description" for="hostname">Hostname </label>
-                <div>
-                        <input id="hostname" name="hostname" class="element text medium" type="text" maxlength="255" value="<?php
-                        print $data["mupibox"]["host"];
-?>"/>
-                </div><p class="guidelines" id="guide_1"><small>Please insert the hostname of the MuPiBox. Don't use Spaces or other special charachters! Default: MuPiBox</small></p>
-                </li>
-                 <li id="li_1" >
-                <label class="description" for="theme">Theme </label>
-                <div>
-                        <select id="theme" name="theme" class="element text medium">
-<?php
-						$Themes = $data["mupibox"]["installedThemes"];                    
-						foreach($Themes as $key) {
-							if( $key == $data["mupibox"]["theme"] )
-								{
-								$selected = " selected=\"selected\"";
-								}
-							else
-								{
-								$selected = "";
-								}
-							print "<option value=\"". $key . "\"" . $selected  . ">" . $key . "</option>";
-						}
-?>
-"</select>
-                </div><p class="guidelines" id="guide_1"><small>Please insert the hostname of the MuPiBox. Default: MuPiBox</small></p>
-                </li>
-				<li id="li_1" >
-                <label class="description" for="volume">Volume after power on </label>
-                <div>
-                        <select id="volume" name="volume" class="element text medium">
-<?php
-						$volume = $data["mupibox"]["startVolume"];     
-						for($i=0; $i <= 100; $i=$i+10) {
-							if( $i == $data["mupibox"]["startVolume"] )
-								{
-								$selected = " selected=\"selected\"";
-								}
-							else
-								{
-								$selected = "";
-								}
-							print "<option value=\"". $i . "\"" . $selected  . ">" . $i . "</option>";
-						}
-?>
-"</select>
-                </div><p class="guidelines" id="guide_1"><small>Please insert the hostname of the MuPiBox. Default: MuPiBox</small></p>
-                </li>
 				 <li id="li_1" >
                 <label class="description" for="spotify_user">Spotify Username </label>
                 <div>
