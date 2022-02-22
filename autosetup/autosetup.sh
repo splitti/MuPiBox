@@ -212,11 +212,16 @@ exec 3>${LOG}
 
 	###############################################################################################
 
-	echo -e "XXX\n82\nSet environment variable... \nXXX"	
+	echo -e "XXX\n82\nSet environment... \nXXX"	
 
 	# ENV
 	(echo "mupibox"; echo "mupibox") | sudo smbpasswd -s -a dietpi >&3 2>&3
 	sudo env PATH=$PATH:/usr/local/bin/mupibox >&3 2>&3
+	THEME_FILE="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/styles.242c97d50a9a860d.css"
+	NEW_THEME=$(/usr/bin/jq -r .mupibox.theme ${MUPIBOX_CONFIG})
+
+	rm ${THEME_FILE} >&3 2>&3
+	ln -s /home/dietpi/MuPiBox/themes/${NEW_THEME}.css ${THEME_FILE} >&3 2>&3
 	sleep 1
 
 	###############################################################################################

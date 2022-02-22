@@ -1,7 +1,13 @@
 {
 	"mupibox": {
 		"host": "MuPiBox",
-		"theme": "dark",
+		"theme": "blue",
+		"installedThemes": [
+			"dark",
+			"light",
+			"blue",
+			"purple"
+			]
 		"startSound": "/home/dietpi/MuPiBox/sysmedia/sound/startup.wav",
 		"shutSound": "/home/dietpi/MuPiBox/sysmedia/sound/shutdown.wav",
 		"startVolume": "40",

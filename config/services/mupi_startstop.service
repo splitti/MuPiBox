@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Scripts at Start and Stop
+
+[Service]
+Type=oneshot
+RemainAfterExit=true
+ExecStart=/usr/local/bin/mupibox/mupi_startup.sh
+ExecStop=/usr/local/bin/mupibox/mupi_shutdown.sh
+
+[Install]
+WantedBy=multi-user.target
