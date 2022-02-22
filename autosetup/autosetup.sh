@@ -166,6 +166,9 @@ exec 3>${LOG}
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/blue.css -O ~/MuPiBox/themes/blue.css >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/purple.css -O ~/MuPiBox/themes/purple.css >&3 2>&3
 
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/mupi_shutdown.sh -O /usr/local/bin/mupibox/mupi_shutdown.sh >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/mupi_shutdown.sh -O /usr/local/bin/mupibox/mupi_startup.sh >&3 2>&3
+
 
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/mupiboxconfig.json -O /etc/mupibox/mupiboxconfig.json >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/change_checker.sh -O /usr/local/bin/mupibox/change_checker.sh >&3 2>&3
@@ -271,6 +274,12 @@ exec 3>${LOG}
 
 	###############################################################################################
 
+	echo -e "XXX\n95\nEnable Admin-Webservice... \nXXX"	
+	
+	sudo dietpi-software install 84 89 >&3 2>&3
+
+	###############################################################################################
+
 	echo -e "XXX\n95\nEnable and start services... \nXXX"	
 
 	# Enable Services
@@ -279,6 +288,7 @@ exec 3>${LOG}
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/services/mupi_splash.service -O /etc/systemd/system/mupi_splash.service >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/services/spotifyd.service -O /etc/systemd/system/spotifyd.service >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/services/pulseaudio.service -O /etc/systemd/system/pulseaudio.service >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/services/mupi_startstop.service -O /etc/systemd/system/mupi_startstop.service >&3 2>&3
 	sudo systemctl daemon-reload >&3 2>&3
 	sudo systemctl enable mupi_change_checker.service >&3 2>&3
 	sudo systemctl start mupi_change_checker.service >&3 2>&3
@@ -290,6 +300,8 @@ exec 3>${LOG}
 	sudo systemctl start spotifyd.service >&3 2>&3
 	sudo systemctl enable smbd.service >&3 2>&3
 	sudo systemctl start smbd.service >&3 2>&3
+	sudo systemctl enable mupi_startstop.service >&3 2>&3
+	sudo systemctl start mupi_startstop.service >&3 2>&3
 	sudo systemctl enable pulseaudio >&3 2>&3
 	sudo systemctl start pulseaudio >&3 2>&3
 	head -n -2 ~/.bashrc > /tmp/.bashrc && mv /tmp/.bashrc ~/.bashrc
