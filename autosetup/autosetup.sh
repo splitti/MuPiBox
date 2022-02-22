@@ -110,6 +110,7 @@ exec 3>${LOG}
 	cd ~/.mupibox/spotifycontroller-main >&3 2>&3
 	wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/spotifycontroller.json -O ~/.mupibox/spotifycontroller-main/config/config.json >&3 2>&3
 	wget https://raw.githubusercontent.com/splitti/MuPiBox/main/bin/nodejs/spotify-control.js -O ~/.mupibox/spotifycontroller-main/spotify-control.js >&3 2>&3
+	ln -s /etc/mupibox/mupiboxconfig.json ~/.mupibox/spotifycontroller-main/config/mupiboxconfig.json >&3 2>&3
 	npm install >&3 2>&3
 	#npm start &
 	#sleep 10 

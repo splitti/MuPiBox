@@ -8,6 +8,8 @@ const SpotifyWebApi = require('spotify-web-api-node');
 const createPlayer = require('./../mplayer-wrapper');
 const googleTTS = require('./../google-tts');
 const fs = require('fs');
+const childProcess = require("child_process");
+const muPiBoxConfig = require('./config/mupiboxconfig.json');
 
   /*set up express router and set headers for cross origin requests*/
 const app = express();
@@ -40,10 +42,8 @@ setInterval(refreshToken, 1000 * 60 * 60);
 let activeDevice = "";
 var currentPlayer = '';
 var playing = false;
-var volumemplayer = 80;
+var volumeStart = 99;
 var	playerstate;
-
-
 
 function writeplayerstatePlay(){
 	playerstate = 'play';
@@ -101,12 +101,14 @@ function handleSpotifyError(err, activePlaylistId){
 async function getActiveDevice(){
   await spotifyApi.getMyCurrentPlaybackState().
   then(function(data) {
-    if (data.body.device.id){
+    log.debug("[Spotify Control]Type:" + typeof(data.body.device.id));
+    if (typeof(data.body.device.id) !== 'undefined'){
       activeDevice = "";
-      log.debug("[Spotify Control]Current active device is 'undefined");
+      log.debug("[Spotify Control]Current active device is undefined");
     } else {
       activeDevice = data.body.device.id;
     }
+    activeDevice = data.body.device.id;
     log.debug("[Spotify Control]Current active device is " + activeDevice);
   }, function(err) {
     handleSpotifyError(err,"0");
@@ -211,6 +213,11 @@ function playMe(activePlaylistId){
       log.debug("[Spotify Control] Playback error" + err);
       handleSpotifyError(err, activePlaylistId);
     });
+    spotifyApi.setVolume(volumeStart).then(function () {
+      log.debug('[Spotify Control] Setting volume to '+ 99);
+      }, function(err) {
+      handleSpotifyError(err,"0");
+    });
 }
 
 function playList(playedList){
@@ -221,6 +228,7 @@ function playList(playedList){
   playing = true;
   writeplayerstatePlay();
   player.playList('/home/dietpi/MuPiBox/media/' + playedTitelmod + '/playlist.m3u');
+  player.setVolume(volumeStart);
   log.debug('/home/dietpi/MuPiBox/media/' + playedTitelmod + '/playlist.m3u');
 }
 
@@ -230,6 +238,7 @@ function playFile(playedFile){
   playing = true;
   writeplayerstatePlay();
   player.play('/home/dietpi/MuPiBox/tts_files/' + playedTitel);
+  player.setVolume(volumeStart);
   log.debug('/home/dietpi/MuPiBox/tts_files/' + playedTitel);
 }
 
@@ -260,44 +269,32 @@ function seek(progress){
   }
 }
 
+function cmdCall(cmd){
+  return new Promise(function (resolve, reject){
+    childProcess.exec(cmd, function(error, standardOutput, standardError) {
+      if (error) {
+        log.debug("[Spotify Control]error " + error);
+        reject();
+        return;
+      }
+      if (standardError) {
+        log.debug("[Spotify Control]StandardError " + standardError);
+        reject(standardError);
+        return;
+      }
+      log.debug("[Spotify Control]StandardOutput " + standardOutput);
+      resolve(standardOutput);
+    });
+  });
+}
+
   /*gets available devices, searches for the active one and returns its volume*/
-function setVolume(volume){
-  let targetVolume = 0;
-  let currentVolume = 0;
-  if (currentPlayer == "spotify"){
-    spotifyApi.getMyDevices().
-      then(function(data) {
-        let availableDevices = data.body.devices;
-        availableDevices.forEach(item => {
-        if (item.is_active){
-          currentVolume = item.volume_percent;
-          log.debug("[Spotify Control]Current volume for active device is " + currentVolume);
-        }
-        });
-        if (volume) targetVolume = currentVolume+5;
-        else targetVolume = currentVolume-5;
-        })
-        .then(function(){
-          spotifyApi.setVolume(targetVolume).then(function () {
-            log.debug('[Spotify Control] Setting volume to '+ targetVolume);
-            }, function(err) {
-            handleSpotifyError(err,"0");
-          });
-        }, function(err) {
-          handleSpotifyError(err,"0");
-      });
-  } else if (currentPlayer == "mplayer") {
-    if (volume) targetVolume = volumemplayer+5;
-    else targetVolume = volumemplayer-5;
-    if (targetVolume <= 0){
-      targetVolume = 0;
-    }else if (targetVolume >= 100){
-      targetVolume = 100;
-    }
-    log.debug('[Spotify Control] Setting volume to '+ targetVolume);
-    player.setVolume(targetVolume);
-    volumemplayer = targetVolume;
-  }
+async function setVolume(volume){
+  let volumeUp = "/usr/bin/amixer sset Master 5%+";
+  let volumeDown = "/usr/bin/amixer sset Master 5%-";
+
+  if (volume) await cmdCall(volumeUp);
+  else await cmdCall(volumeDown);
 }
 
 async function transferPlayback(id){
@@ -330,16 +327,15 @@ async function useSpotify(command){
   currentPlayer = "spotify";
     let dir = command.dir;
     let newdevice = dir.split('/')[1];
-    await getActiveDevice();
+    /*await getActiveDevice();*/
+    /*setActiveDevice();*/
     log.debug("[Spotify Control] device is " + activeDevice + " and new is " + newdevice);
       /*active device has changed, transfer playback*/
     if (newdevice != activeDevice){
       log.debug("[Spotify Control] device changed from " + activeDevice + " to " + newdevice);
-
-        log.debug("[Spotify Control] device is " + activeDevice);
-        await transferPlayback(newdevice);
-        activeDevice = newdevice;
-        log.debug("[Spotify Control] device is " + activeDevice);
+      await transferPlayback(newdevice);
+      activeDevice = newdevice;
+      log.debug("[Spotify Control] device is " + activeDevice);
     }
     else {
       log.debug("[Spotify Control] still same device, won't change: " + activeDevice);
