@@ -216,7 +216,13 @@ exec 3>${LOG}
 
 	###############################################################################################
 
-	echo -e "XXX\n82\nSet environment... \nXXX"	
+	echo -e "XXX\n82\nEnable Admin-Webservice... \nXXX"	
+	
+	sudo dietpi-software install 84 89 >&3 2>&3
+
+	###############################################################################################
+
+	echo -e "XXX\n87\nSet environment... \nXXX"	
 
 	# ENV
 	(echo "mupibox"; echo "mupibox") | sudo smbpasswd -s -a dietpi >&3 2>&3
@@ -226,11 +232,14 @@ exec 3>${LOG}
 
 	rm ${THEME_FILE} >&3 2>&3
 	ln -s /home/dietpi/MuPiBox/themes/${NEW_THEME}.css ${THEME_FILE} >&3 2>&3
+	sudo chown root:www-data /etc/mupibox/mupiboxconfig.json >&3 2>&3
+	sudo chmod 775 /etc/mupibox/mupiboxconfig.json >&3 2>&3
+	sudo echo "www-data ALL=(ALL:ALL) NOPASSWD: ALL" | sudo tee /etc/sudoers.d/www-data  >&3 2>&3
 	sleep 1
 
 	###############################################################################################
 
-	echo -e "XXX\n83\nDownload OnOffShim-Scripts... \nXXX"	
+	echo -e "XXX\n88\nDownload OnOffShim-Scripts... \nXXX"	
 
 	# OnOffShim & hifiberry
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/OnOffShim/off_trigger.sh -O /var/lib/dietpi/postboot.d/off_trigger.sh >&3 2>&3
@@ -240,7 +249,7 @@ exec 3>${LOG}
 
 	###############################################################################################
 
-	echo -e "XXX\n85\nInstall Chromium-Kiosk... \nXXX"	
+	echo -e "XXX\n90\nInstall Chromium-Kiosk... \nXXX"	
 
 	suggest_gpu_mem=76 >&3 2>&3
 	sudo /boot/dietpi/func/dietpi-set_hardware gpumemsplit $suggest_gpu_mem >&3 2>&3
@@ -272,12 +281,6 @@ exec 3>${LOG}
 	  echo '' | sudo tee -a /boot/config.txt >&3 2>&3
 	  echo 'initramfs initramfs.img' | sudo tee -a /boot/config.txt >&3 2>&3
 	fi
-
-	###############################################################################################
-
-	echo -e "XXX\n90\nEnable Admin-Webservice... \nXXX"	
-	
-	sudo dietpi-software install 84 89 >&3 2>&3
 
 	###############################################################################################
 

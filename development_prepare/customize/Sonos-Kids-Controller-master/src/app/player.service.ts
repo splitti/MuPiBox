@@ -85,7 +85,7 @@ export class PlayerService {
       }
       case 'spotify': {
         if (media.category === 'playlist') {
-          url = 'spotify/now/spotify:user:spotify:playlist:' + encodeURIComponent(media.id);
+          url = 'spotify/now/spotify:playlist:' + encodeURIComponent(media.id);
         } else {
           if (media.id) {
             url = 'spotify/now/spotify:album:' + encodeURIComponent(media.id);

@@ -11,10 +11,11 @@ DISPLAY_STANDBY="/etc/X11/xorg.conf.d/98-dietpi-disable_dpms.conf"
 THEME_FILE="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/styles.242c97d50a9a860d.css"
 NEW_THEME=$(/usr/bin/jq -r .mupibox.theme ${MUPIBOX_CONFIG})
 
-if [ -z $(ls -l ${THEME_FILE} | grep ${NEW_THEME}) ]
+newTheme=$(ls -l ${THEME_FILE} | grep ${NEW_THEME})
+if (( ${#newTheme} == 0 ))
 then
-	xargs rm <<< ${THEME_FILE}
-	ln -s /home/dietpi/MuPiBox/themes/${NEW_THEME}.css ${THEME_FILE}
+ xargs rm <<< ${THEME_FILE}
+ ln -s /home/dietpi/MuPiBox/themes/${NEW_THEME}.css ${THEME_FILE}
 fi
 
 deviceId=$(/usr/bin/jq -r .spotify.deviceId ${MUPIBOX_CONFIG})

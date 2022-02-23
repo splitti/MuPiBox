@@ -1,17 +1,17 @@
 body
 {
-	background:#336699;
+	background:#054b61;
 	font-family:"Lucida Grande", Tahoma, Arial, Verdana, sans-serif;
 	font-size:small;
 	margin:8px 0 16px;
 	text-align:center;
 }
 
-#form_container
+#container
 {
 	background:#fff;
-	
 	margin:0 auto;
+	padding: 0px;
 	text-align:left;
 	width:640px;
 }
@@ -49,6 +49,29 @@ body
 	width:650px;
 }
 
+div.main
+{
+	margin:20px 20px 0;
+	padding:0 0 20px;
+}
+
+.main h2
+{
+	clear:left;
+	font-size:160%;
+	font-weight:bold;
+	font-weight:400;
+	margin:0 0 3px;
+}
+
+div.main p
+{
+	font-size:95%;
+	line-height:130%;
+	margin:0 0 12px;
+}
+
+
 form.appnitro
 {
 	margin:20px 20px 0;
@@ -56,33 +79,71 @@ form.appnitro
 }
 
 /**** Logo Section  *****/
-h1
+/*h1
 {
-	background-color:#6699CC;
+	background-color:#44afe2;
 	margin:0;
-	min-height:0;
+	min-height:60px;
+	height:60px;
 	padding:0;
+/*	text-decoration:none;
+	text-indent:-8000px;*/
+	
+}*/
+
+#savestatebad p
+{
+	color:red;
+	font-weight:bold;
+}
+
+#savestategood p
+{
+	color:green;
+	font-weight:bold;
+}
+
+
+#navbar
+{
+	background-color:#44afe2;
+	width:100%;
+	height:30px;
+	padding-top:10px;
+/*	vertical-align:middle;
+	margin:0;
+	padding:0;
+	padding-top:10px;
+	width:100%;
+	height:50px;
+	min-height:50px;*/
+}
+
+
+#navbar a
+{
+	font-weight: bold;
+/*	margin-top: 25px;*/
+	margin-left: 15px;
+	font-size: 11pt;
+	color: #ffffff;
 	text-decoration:none;
-	text-indent:-8000px;
-	
-}
-
-h1 a
-{
-	
-	display:block;
-	height:100%;
-	min-height:40px;
+/*	height:40%;
+	min-height:16px;
 	#overflow:hidden;
+	display:block;*/
 }
-
-
-img
+#navbar a:hover
 {
-	behavior:url(css/iepngfix.htc);
-	border:none;
+	color: #690101;
+	text-decoration: underline;
 }
 
+#navbar a:active
+{
+	color: red;
+	text-decoration: underline;
+}
 
 /**** Form Section ****/
 .appnitro
@@ -229,7 +290,7 @@ form li .datepicker
 	width:16px;
 }
 
-.form_description
+.description
 {
 	border-bottom:1px dotted #ccc;
 	clear:both;
@@ -237,20 +298,21 @@ form li .datepicker
 	margin:0 0 1em;
 }
 
-.form_description[class]
+.description[class]
 {
 	display:block;
 }
 
-.form_description h2
+.description h2
 {
 	clear:left;
 	font-size:160%;
+	font-weight:bold;
 	font-weight:400;
 	margin:0 0 3px;
 }
 
-.form_description p
+.description p
 {
 	font-size:95%;
 	line-height:130%;
@@ -328,7 +390,7 @@ span.symbol
 
 input.text
 {
-	background:#fff url(../../../images/shadow.gif) repeat-x top;
+	background:#fff url(images/shadow.gif) repeat-x top;
 	border-bottom:1px solid #ddd;
 	border-left:1px solid #c3c3c3;
 	border-right:1px solid #c3c3c3;
@@ -349,7 +411,7 @@ input.file
 
 textarea.textarea
 {
-	background:#fff url(../../../images/shadow.gif) repeat-x top;
+	background:#fff url(images/shadow.gif) repeat-x top;
 	border-bottom:1px solid #ddd;
 	border-left:1px solid #c3c3c3;
 	border-right:1px solid #c3c3c3;
@@ -367,7 +429,7 @@ select.select
 	font-size:100%;
 	margin:1px 0;
 	padding:1px 0 0;
-	background:#fff url(../../../images/shadow.gif) repeat-x top;
+	background:#fff url(images/shadow.gif) repeat-x top;
 	border-bottom:1px solid #ddd;
 	border-left:1px solid #c3c3c3;
 	border-right:1px solid #c3c3c3;
@@ -667,199 +729,4 @@ ul.password{
 	
 }
 
-
-
-/*** Calendar **********************/
-div.calendar { position: relative; }
-
-.calendar table {
-cursor:pointer;
-border:1px solid #ccc;
-font-size: 11px;
-color: #000;
-background: #fff;
-font-family:"Lucida Grande", Tahoma, Arial, Verdana, sans-serif;
-}
-
-.calendar .button { 
-text-align: center;    
-padding: 2px;          
-}
-
-.calendar .nav {
-background:#f5f5f5;
-}
-
-.calendar thead .title { 
-font-weight: bold;      
-text-align: center;
-background: #dedede;
-color: #000;
-padding: 2px 0 3px 0;
-}
-
-.calendar thead .headrow { 
-background: #f5f5f5;
-color: #444;
-font-weight:bold;
-}
-
-.calendar thead .daynames { 
-background: #fff;
-color:#333;
-font-weight:bold;
-}
-
-.calendar thead .name { 
-border-bottom: 1px dotted #ccc;
-padding: 2px;
-text-align: center;
-color: #000;
-}
-
-.calendar thead .weekend { 
-color: #666;
-}
-
-.calendar thead .hilite { 
-background-color: #444;
-color: #fff;
-padding: 1px;
-}
-
-.calendar thead .active { 
-background-color: #d12f19;
-color:#fff;
-padding: 2px 0px 0px 2px;
-}
-
-
-.calendar tbody .day { 
-width:1.8em;
-color: #222;
-text-align: right;
-padding: 2px 2px 2px 2px;
-}
-.calendar tbody .day.othermonth {
-font-size: 80%;
-color: #bbb;
-}
-.calendar tbody .day.othermonth.oweekend {
-color: #fbb;
-}
-
-.calendar table .wn {
-padding: 2px 2px 2px 2px;
-border-right: 1px solid #000;
-background: #666;
-}
-
-.calendar tbody .rowhilite td {
-background: #FFF1AF;
-}
-
-.calendar tbody .rowhilite td.wn {
-background: #FFF1AF;
-}
-
-.calendar tbody td.hilite { 
-padding: 1px 1px 1px 1px;
-background:#444 !important;
-color:#fff !important;
-}
-
-.calendar tbody td.active { 
-color:#fff;
-background: #529214 !important;
-padding: 2px 2px 0px 2px;
-}
-
-.calendar tbody td.selected { 
-font-weight: bold;
-border: 1px solid #888;
-padding: 1px 1px 1px 1px;
-background: #f5f5f5 !important;
-color: #222 !important;
-}
-
-.calendar tbody td.weekend { 
-color: #666;
-}
-
-.calendar tbody td.today { 
-font-weight: bold;
-color: #529214;
-background:#D9EFC2;
-}
-
-.calendar tbody .disabled { color: #999; }
-
-.calendar tbody .emptycell { 
-visibility: hidden;
-}
-
-.calendar tbody .emptyrow { 
-display: none;
-}
-
-.calendar tfoot .footrow { 
-text-align: center;
-background: #556;
-color: #fff;
-}
-
-.calendar tfoot .ttip { 
-background: #222;
-color: #fff;
-font-size:10px;
-border-top: 1px solid #dedede;
-padding: 3px;
-}
-
-.calendar tfoot .hilite { 
-background: #aaf;
-border: 1px solid #04f;
-color: #000;
-padding: 1px;
-}
-
-.calendar tfoot .active { 
-background: #77c;
-padding: 2px 0px 0px 2px;
-}
-
-.calendar .combo {
-position: absolute;
-display: none;
-top: 0px;
-left: 0px;
-width: 4em;
-border: 1px solid #ccc;
-background: #f5f5f5;
-color: #222;
-font-size: 90%;
-z-index: 100;
-}
-
-.calendar .combo .label,
-.calendar .combo .label-IEfix {
-text-align: center;
-padding: 1px;
-}
-
-.calendar .combo .label-IEfix {
-width: 4em;
-}
-
-.calendar .combo .hilite {
-background: #444;
-color:#fff;
-}
-
-.calendar .combo .active {
-border-top: 1px solid #999;
-border-bottom: 1px solid #999;
-background: #dedede;
-font-weight: bold;
-}
 
