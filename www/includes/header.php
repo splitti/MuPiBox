@@ -14,6 +14,6 @@
 <body id="main_body" >
         <img id="top" src="images/top.png" alt="">
 		    <div id="container">
-                <div id="navbar"><a href="index.php">Information</a><a href="http://<?php 
+                <div id="navbar"><a href="index.php">Information</a><a href="mupi.php">MuPiBox-Config</a><a href="spotify.php">Spotify-Config</a><a href=network.php">Network-Config</a><a href="service.php">Services</a><a href="http://<?php 
 				print $data["mupibox"]["host"];
-				?>:8200">MuPiBox</a><a href="mupi.php">MuPiBox-Config</a><a href="spotify.php">Spotify-Config</a><a href="service.php">Services</a></div>
+				?>:8200">MuPiBox</a></div>
