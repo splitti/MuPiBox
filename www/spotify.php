@@ -1,13 +1,66 @@
 
 <?php
+	$change=0;
 	include ('includes/header.php');
+	if( $data["spotify"]["username"]!=$_POST['spotify_user'] && $_POST['spotify_user'])
+		{
+		$data["spotify"]["username"]=$_POST['spotify_user'];
+		$change=1;
+		}
+	if( $data["spotify"]["password"]!=$_POST['spotify_pwd'] && $_POST['spotify_pwd'])
+		{
+		$data["spotify"]["password"]=$_POST['spotify_pwd'];
+		$change=1;
+		}
+	if( $data["spotify"]["clientId"]!=$_POST['spotify_clientid'] && $_POST['spotify_clientid'])
+		{
+		$data["spotify"]["clientId"]=$_POST['spotify_clientid'];
+		$change=1;
+		}
+	if( $data["spotify"]["clientSecret"]!=$_POST['spotify_clientsecret'] && $_POST['spotify_clientsecret'])
+		{
+		$data["spotify"]["clientSecret"]=$_POST['spotify_clientsecret'];
+		$change=1;
+		}
+	if( $data["spotify"]["accessToken"]!=$_POST['spotify_accesstoken'] && $_POST['spotify_accesstoken'])
+		{
+		$data["spotify"]["accessToken"]=$_POST['spotify_accesstoken'];
+		$change=1;
+		}
+	if( $data["spotify"]["refreshToken"]!=$_POST['spotify_refreshtoken'] && $_POST['spotify_refreshtoken'])
+		{
+		$data["spotify"]["refreshToken"]=$_POST['spotify_refreshtoken'];
+		$change=1;
+		}
+	if( !($data["spotify"]["deviceId"]) && $data["spotify"]["username"] && $data["spotify"]["password"] )
+		{
+		#$data["spotify"]["deviceId"]="NA KLAE";
+		
+//		$getDeviceURL="http://".$data["mupibox"]["host"].":5005/getDevices";
+//		$deviceJSON=file_get_contents($getDeviceURL);
+//		$deviceData=json_decode(deviceJSON);
+
+
+		$command = "sudo /usr/local/bin/mupibox/./set_deviceid.sh";
+		//exec($command, $output, $result);
+		//$data["spotify"]["deviceId"]=$output;
+		$change=1;
+		}
+	
+	if( $change )
+		{
+			$json_object = json_encode($data);
+			$save_rc = file_put_contents('/etc/mupibox/mupiboxconfig.json', $json_object);
+//			$command = "sudo /usr/local/bin/mupibox/./setting_update.sh";
+//			exec($command, $output, $result );
+		}
 ?>
 
 
-                <form class="appnitro"  method="post" action="">
+                <form class="appnitro"  method="post" action="spotify.php">
                                         <div class="description">
                         <h2>Spotify settings</h2>
-                        <p>This is the central configuration of your MuPiBox...</p>
+                        <p>Specify your Spotify-Account-Settings...</p>
                 </div>
                         <ul >
 
@@ -32,7 +85,7 @@
 				 <li id="li_1" >
                 <label class="description" for="spotify_deviceid">Spotify Device ID </label>
                 <div>
-                        <input id="spotify_user" name="spotify_user" class="element text large" type="text" maxlength="255" value="<?php
+                        <input id="spotify_user" name="spotify_deviceid" class="element text large" type="text" maxlength="255" value="<?php
                         print $data["spotify"]["deviceId"];
 ?>" readonly />
                 </div><p class="guidelines" id="guide_1"><small>Please insert the hostname of the MuPiBox. Don't use Spaces or other special charachters! Default: MuPiBox</small></p>
@@ -88,6 +141,24 @@
 
                         </ul>
                 </form>
+								<?php
+							if( $change )
+								{
+								if( $save_rc )
+									{
+										print "<div id='savestategood'><p>Data succesfully saved!</p></div>";
+										if( $change == 2 )
+											{
+											print "<p>Settings updated...</p>";
+											}
+										print "</div>";
+									}
+								else
+									{
+										print "<div id='savestatebad'><p>Error while saving!</p></div>";
+									}
+								} 
+				?>
         </div>
 <?php
 	include ('includes/footer.html');

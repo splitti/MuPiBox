@@ -173,7 +173,13 @@
                             <input type="hidden" name="form_id" value="37271" />
 
                                 <input id="saveForm" class="button_text" type="submit" name="submit" value="Submit" />
-														<?php
+														
+                </li>
+
+
+                        </ul>
+                </form><p>
+				<?php
 							if( $change )
 								{
 								if( $save_rc )
@@ -184,14 +190,8 @@
 									{
 										print "<div id='savestatebad'><p>Error while saving!</p></div>";
 									}
-								print "</p>";
-								}
-						?>
-                </li>
-
-
-                        </ul>
-                </form>
+								} 
+				?>
         </div>
 <?php
 	include ('includes/footer.html');
