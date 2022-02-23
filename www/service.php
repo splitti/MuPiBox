@@ -1,10 +1,12 @@
 
 <?php
 	$change=0;
+	$onlinejson = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
+	$dataonline = json_decode($onlinejson, true);
 	include ('includes/header.php');
 	if( $_POST['update'] )
 		{
-		$command = "sudo /usr/local/bin/mupibox/./system_update.sh";
+		$command = "cd; curl https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_update.sh | bash";
 		$change_hostname = exec($command, $output, $result );
 		$change=1;
 		}
@@ -40,14 +42,17 @@
                         <h2>MupiBox settings</h2>
                         <p>Some little helpers...</p>
                 </div>
-                        <ul >
-                                        <li class="buttons">
-								<input id="saveForm" class="button_text" type="submit" name="update" value="Update system" />
-								<input id="saveForm" class="button_text" type="submit" name="m3u" value="Generate Playlists" />
-								<input id="saveForm" class="button_text" type="submit" name="update" value="Update settings" />
-                                <input id="saveForm" class="button_text" type="submit" name="reboot" value="Reboot MuPiBox" />
-                                <input id="saveForm" class="button_text" type="submit" name="shutdown" value="Shutdown MuPiBox" />
-														<?php
+                        <ul ><li id="li_1" >
+                                        
+								<li class="li_1"><h2>MuPiBox Update</h2>
+								<p><table><tr><td>Current Version:</td><td><?php print $data["mupibox"]["version"]; ?></td></tr>
+								<tr><td>Latest Version:</td><td <?php print $dataonline["mupibox"]["version"]; ?></td></tr></table>
+								</p><input id="saveForm" class="button_text" type="submit" name="update" value="Update system" /></li>
+								<li class="li_1"><input id="saveForm" class="button_text" type="submit" name="m3u" value="Generate Playlists" /></li>
+								<li class="li_1"><input id="saveForm" class="button_text" type="submit" name="update" value="Update settings" /></li>
+                                <li class="li_1"><input id="saveForm" class="button_text" type="submit" name="reboot" value="Reboot MuPiBox" /></li>
+                               <li class="li_1"> <input id="saveForm" class="button_text" type="submit" name="shutdown" value="Shutdown MuPiBox" /></li>
+								<li class="li_1">						<?php
 							if( $change )
 								{
 								print "<div id='savestategood'><p>" . $rc . "</p></div>";
