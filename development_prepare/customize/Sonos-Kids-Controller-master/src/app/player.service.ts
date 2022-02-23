@@ -96,7 +96,7 @@ export class PlayerService {
         break;
       }
       case 'tunein': {
-        url = 'tunein/play/' + encodeURIComponent(media.id);
+        url = 'tunein/' + encodeURIComponent(media.id) + '/radio';
         break;
       }
     }

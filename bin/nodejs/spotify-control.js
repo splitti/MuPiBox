@@ -242,6 +242,15 @@ function playFile(playedFile){
   log.debug('/home/dietpi/MuPiBox/tts_files/' + playedTitel);
 }
 
+function playURL(playedURL){
+  log.debug("[Spotify Control] Starting playing:" + playedURL);
+  playing = true;
+  writeplayerstatePlay();
+  player.play(playedURL);
+  player.setVolume(volumeStart);
+  log.debug(playedURL);
+}
+
   /*seek 30 secends back or forward*/
 function seek(progress){
   let currentProgress = 0;
@@ -333,9 +342,11 @@ async function useSpotify(command){
       /*active device has changed, transfer playback*/
     if (newdevice != activeDevice){
       log.debug("[Spotify Control] device changed from " + activeDevice + " to " + newdevice);
-      await transferPlayback(newdevice);
-      activeDevice = newdevice;
-      log.debug("[Spotify Control] device is " + activeDevice);
+
+        log.debug("[Spotify Control] device is " + activeDevice);
+        await transferPlayback(newdevice);
+        activeDevice = newdevice;
+        log.debug("[Spotify Control] device is " + activeDevice);
     }
     else {
       log.debug("[Spotify Control] still same device, won't change: " + activeDevice);
@@ -409,6 +420,14 @@ app.use(function(req, res){
   if(command.dir.includes("library") ){
     currentPlayer = "mplayer";
     playList(command.name);
+  }
+
+  if(command.dir.includes("tunein") ){
+    currentPlayer = "mplayer";
+    let dir = command.dir;
+    let radioURL = dir.split('tunein/').pop();
+    radioURL = decodeURIComponent(radioURL);
+    playURL(radioURL);
   }
 
   if(command.dir.includes("say/") ){
