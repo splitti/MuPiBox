@@ -50,3 +50,4 @@ currentIP=$(hostname -I)
 currentHost=$(hostname)
 /usr/bin/cat <<< $(/usr/bin/jq --arg v "${currentHost}" '.hostname = $v' ${SONOS_NETWORK}) >  ${SONOS_NETWORK}
 
+echo "Setting Update finished"
