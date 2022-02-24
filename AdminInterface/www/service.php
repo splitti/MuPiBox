@@ -18,7 +18,7 @@
 		}
 	if( $_POST['os_update'] )
 		{
-		$command = "cd; curl https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_os_update.sh | bash";
+		$command = "sudo apt-get update -y && sudo apt-get update -y && echo 'Operating System updated!'";
 		exec($command, $output, $result );
 		$change=1;
 		}

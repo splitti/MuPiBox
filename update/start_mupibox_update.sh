@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 
-VERSION="0.0.2"
+VERSION="0.0.1"
 CONFIG="/etc/mupibox/mupiboxconfig.json"
 TMPCONFIG="/tmp/mupiboxconfig.json"
 LOG="/tmp/autosetup.log"
