@@ -306,9 +306,13 @@ exec 3>${LOG}
 	sudo systemctl start mupi_startstop.service >&3 2>&3
 	sudo systemctl enable pulseaudio.service >&3 2>&3
 	sudo systemctl start pulseaudio.service >&3 2>&3
-	if( $(cat ~/.bashrc | grep autosetup ) ); then
-		head -n -2 ~/.bashrc > /tmp/.bashrc && mv /tmp/.bashrc ~/.bashrc
+	autosetup="$(cat ~/.bashrc | grep autosetup)"
+
+	if(( ${#autosetup} > 0 ))
+	then
+	  head -n -2 ~/.bashrc > /tmp/.bashrc && mv /tmp/.bashrc ~/.bashrc
 	fi
+
 
 	###############################################################################################
 
