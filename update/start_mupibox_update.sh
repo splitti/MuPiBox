@@ -20,8 +20,8 @@ exec 3>${LOG}
 	cd ~/.mupibox/Sonos-Kids-Controller-master >&3 2>&3
 	sudo chown -R dietpi:dietpi ~/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
 	sudo sh -c 'su - dietpi -s npm install' >&3 2>&3
-	sudo sh -c 'su - dietpi -s pm2 start server.js' >&3 2>&3
-	sudo sh -c 'su - dietpi -s pm2 save' >&3 2>&3
+	sudo sh -c 'su - dietpi -s pm2 -f start server.js' >&3 2>&3
+	sudo sh -c 'su - dietpi -s pm2 -f save' >&3 2>&3
 
 	echo -e "XXX\n10\nRestore Userdata... \nXXX"	
 	cp /tmp/data.json ~/.mupibox/Sonos-Kids-Controller-master/server/config/data.json  >&3 2>&3
