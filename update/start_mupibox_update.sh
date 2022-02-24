@@ -45,7 +45,9 @@ sudo cp ${CONFIG} ${CONFIG}_backup  >&3 2>&3
 
 #sudo cp ${CONFIG} ${TMPCONFIG}  >&3 2>&3
 #sudo chown www-data:www-data ${TMPCONFIG} >&3 2>&3
+sudo chmod 777 ${CONFIG}
 /usr/bin/cat <<< $(/usr/bin/jq --arg v "${VERSION}" '.mupibox.version = [$v]' ${CONFIG}) >  ${CONFIG}
+sudo chmod 775 ${CONFIG}
 #sudo mv ${CONFIG} ${CONFIG}_backup  >&3 2>&3
 #mv ${TMPCONFIG} ${CONFIG} >&3 2>&3
 mv ${LOG} ~/.mupibox/last_update.log >&3 2>&3
