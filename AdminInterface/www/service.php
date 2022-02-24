@@ -4,6 +4,12 @@
 	$onlinejson = file_get_contents('https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/mupiboxconfig.json');
 	$dataonline = json_decode($onlinejson, true);
 	include ('includes/header.php');
+	if( $_POST['restart_kiosk'] )
+		{
+		$command = "/usr/local/bin/mupibox/./restart_kiosk.sh";
+		exec($command, $output, $result );
+		$change=1;
+		}
 	if( $_POST['mupibox_update'] )
 		{
 		$command = "cd; curl https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh | bash";
@@ -79,7 +85,8 @@
 								<li class="li_1"><h2>Update MuPiBox settings</h2>
 								<p>The box only updates some settings after a reboot. Some of these settings can be activated with this operation without reboot. </p>
 								<input id="saveForm" class="button_text" type="submit" name="update" value="Update settings" />
-								<input id="saveForm" class="button_text" type="submit" name="spotify_restart" value="Restart services" /></li>
+								<input id="saveForm" class="button_text" type="submit" name="spotify_restart" value="Restart services" />
+								<input id="saveForm" class="button_text" type="submit" name="restart_kiosk" value="Restart Chromium-Kiosk" /></li>
                                 
 								<li class="li_1"><h2>Reboot MuPiBox</h2>
 								<p>Sometimes only a restart helps...</p>

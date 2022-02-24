@@ -8,40 +8,10 @@
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <title>MuPiBox Admin Interface</title>
 <link rel="stylesheet" type="text/css" href="view.css" media="all">
-<link rel="stylesheet" type="text/css" href="animation.scss" media="all">
 <script type="text/javascript" src="view.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
-
 <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
 </head>
 <body id="main_body" >
-
-<div class='loader'>
-  <div class='loader_overlay'></div>
-  <div class='loader_cogs'>
-    <div class='loader_cogs__top'>
-      <div class='top_part'></div>
-      <div class='top_part'></div>
-      <div class='top_part'></div>
-      <div class='top_hole'></div>
-    </div>
-    <div class='loader_cogs__left'>
-      <div class='left_part'></div>
-      <div class='left_part'></div>
-      <div class='left_part'></div>
-      <div class='left_hole'></div>
-    </div>
-    <div class='loader_cogs__bottom'>
-      <div class='bottom_part'></div>
-      <div class='bottom_part'></div>
-      <div class='bottom_part'></div>
-      <div class='bottom_hole'><!-- lol --></div>
-    </div>
-    <p>loading</p>
-  </div>
-  <h1>Cog loader</h1>
-  <h2>Created in pure css</h2>
-</div>
 
         <img id="top" src="images/top.png" alt="">
 		    <div id="container">
