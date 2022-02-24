@@ -27,7 +27,7 @@
 		"refreshToken": ""
 	},
 	"timeout": {
-		"idlePiShutdown": "10",
+		"idlePiShutdown": "0",
 		"idleDisplayOff": "10",
 		"pressDelay": "2"
 	    },

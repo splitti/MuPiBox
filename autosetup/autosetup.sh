@@ -15,6 +15,8 @@ exec 3>${LOG}
 	# Get missing packages
 	sudo apt-get update >&3 2>&3
 	sudo apt-get install git libasound2 jq samba mplayer pulseaudio-module-bluetooth bluez zip xinit chromium-browser xserver-xorg-legacy xorg -y >&3 2>&3
+	sudo dietpi-software install 5 84 89 >&3 2>&3
+	echo -ne '\n' | sudo dietpi-software install 113 >&3 2>&3
 
 	###############################################################################################
 	
@@ -184,7 +186,7 @@ exec 3>${LOG}
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/spotify_restart.sh -O /usr/local/bin/mupibox/spotify_restart.sh >&3 2>&3
 	
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/splash_screen.sh -O /usr/local/bin/mupibox/splash_screen.sh >&3 2>&3
-	sudo chmod 755 /usr/local/bin/mupibox/change_checker.sh /usr/local/bin/mupibox/idle_shutdown.sh /usr/local/bin/mupibox/m3u_generator.sh /usr/local/bin/mupibox/setting_update.sh /usr/local/bin/mupibox/software_shutdown.sh /usr/local/bin/mupibox/splash_screen.sh >&3 2>&3
+	sudo chmod 755 /usr/local/bin/mupibox/* /usr/local/bin/mupibox/software_shutdown.sh /usr/local/bin/mupibox/splash_screen.sh >&3 2>&3
 	sleep 1
 
 	###############################################################################################
@@ -192,7 +194,6 @@ exec 3>${LOG}
 	echo -e "XXX\n77\nInstall Hifiberry-MiniAmp and Bluetooth support... \nXXX"	
 
 	sudo /boot/dietpi/func/dietpi-set_hardware bluetooth enable >&3 2>&3
-	sudo dietpi-software install 5 >&3 2>&3
 	sudo /boot/dietpi/func/dietpi-set_hardware soundcard "hifiberry-dac"  >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/asound.conf -O /etc/asound.conf  >&3 2>&3
 	sudo usermod -g pulse -G audio --home /var/run/pulse pulse >&3 2>&3
@@ -224,7 +225,6 @@ exec 3>${LOG}
 
 	echo -e "XXX\n82\nEnable Admin-Webservice... \nXXX"	
 	
-	sudo dietpi-software install 84 89 >&3 2>&3
 	sudo rm -R /var/www/* >&3 2>&3
 	sudo wget https://github.com/splitti/MuPiBox/raw/main/AdminInterface/release/www.zip -O /var/www/www.zip >&3 2>&3
 	sudo unzip /var/www/www.zip -d /var/www/ >&3 2>&3
@@ -265,8 +265,8 @@ exec 3>${LOG}
 
 	suggest_gpu_mem=76 >&3 2>&3
 	sudo /boot/dietpi/func/dietpi-set_hardware gpumemsplit $suggest_gpu_mem >&3 2>&3
-	echo -ne '\n' | sudo dietpi-software install 113
-	sudo /boot/dietpi/dietpi-autostart 11
+	echo -ne '\n' | sudo dietpi-software install 113 >&3 2>&3
+	sudo /boot/dietpi/dietpi-autostart 11 >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/chromium-autostart.sh -O /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
 	sudo chmod +x /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
 	sudo usermod -a -G tty dietpi >&3 2>&3
@@ -277,15 +277,6 @@ exec 3>${LOG}
 	sudo /usr/bin/sed -i 's/session    optional   pam_motd.so noupdate/#session    optional   pam_motd.so noupdate/g' /etc/pam.d/login >&3 2>&3
 	sudo /usr/bin/sed -i 's/session    optional   pam_lastlog.so/session    optional   pam_lastlog.so/g' /etc/pam.d/login >&3 2>&3
 	sudo /usr/bin/sed -i 's/ExecStart\=-\/sbin\/agetty -a dietpi -J \%I \$TERM/ExecStart\=-\/sbin\/agetty --skip-login --noclear --noissue --login-options \"-f dietpi\" \%I \$TERM/g' /etc/systemd/system/getty@tty1.service.d/dietpi-autologin.conf >&3 2>&3
-
-
-#	if grep -q '^/var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh &' ~/.bashrc; then
-#	  echo -e "chromium autostart already set"
-#	else
-#	  echo '' | sudo tee -a /boot/config.txt >&3 2>&3
-#	  echo '/var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh &' | sudo tee -a /boot/config.txt >&3 2>&3
-#	fi
-
 
 	if grep -q '^initramfs initramfs.img' /boot/config.txt; then
 	  echo -e "initramfs initramfs.img already set"
@@ -320,7 +311,9 @@ exec 3>${LOG}
 	sudo systemctl start mupi_startstop.service >&3 2>&3
 	sudo systemctl enable pulseaudio.service >&3 2>&3
 	sudo systemctl start pulseaudio.service >&3 2>&3
-	head -n -2 ~/.bashrc > /tmp/.bashrc && mv /tmp/.bashrc ~/.bashrc
+	if( $(cat ~/.bashrc | grep autosetup ) ); then
+		head -n -2 ~/.bashrc > /tmp/.bashrc && mv /tmp/.bashrc ~/.bashrc
+	fi
 
 	###############################################################################################
 
@@ -335,11 +328,5 @@ exec 3>${LOG}
 
 } | whiptail --title "MuPiBox Autosetup" --gauge "Please wait while installing" 6 60 0
 
-#if (whiptail --title "MuPiBox Autosetup" --yesno "Finally, a restart is necessary! Do you want to reboot the system now?" 8 78); then
-#    sudo reboot
-#else
-#    #echo "Logfile:  ${LOG}\n\n"
-#    echo "Don't forget to reboot..."
-#fi
 mv ${LOG} ~/.mupibox/autosetup.log
 sudo reboot
