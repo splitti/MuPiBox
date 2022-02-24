@@ -1,0 +1,103 @@
+<ion-header>
+    <ion-toolbar color="light">
+        <ion-buttons slot="start">
+            <ion-back-button icon="arrow-back-outline" defaultHref="/edit"></ion-back-button>
+        </ion-buttons>
+        <ion-segment #segment value="{{this.source}}" (ionChange)="segmentChanged($event)">
+            <ion-segment-button #network_segment value="network">
+                <ion-label>Network</ion-label>
+            </ion-segment-button>
+            <ion-segment-button #wlan_segment value="wlan">
+                <ion-label>WLAN</ion-label>
+            </ion-segment-button>
+        </ion-segment>
+    </ion-toolbar>
+</ion-header>
+
+<ion-content>
+    <div [ngSwitch]="source">
+        <div *ngSwitchCase="'network'" class="top">
+            <form #libraryForm="ngForm" (ngSubmit)="submit(libraryForm)">
+                <ion-grid>
+                    <ion-row>
+                        <ion-col size="4">
+                            <div>
+                                <ion-item>
+                                    <ion-label>IP</ion-label>
+                                </ion-item>
+                            </div>
+                        </ion-col>
+                        <ion-col size="8">
+                            <div>
+                                <ion-item>
+                                    <ion-label>{{ip}}</ion-label>
+                                </ion-item>
+                            </div>
+                        </ion-col>
+                    </ion-row>
+                    <ion-row>
+                        <ion-col size="4">
+                            <div>
+                                <ion-item>
+                                    <ion-label>Host</ion-label>
+                                </ion-item>
+                            </div>
+                        </ion-col>
+                        <ion-col size="8">
+                            <div>
+                                <ion-item>
+                                    <ion-label>{{host}}</ion-label>
+                                </ion-item>
+                            </div>
+                        </ion-col>
+                    </ion-row>
+                </ion-grid>
+            </form>
+        </div>
+
+        <div *ngSwitchCase="'wlan'" class="top">
+            <form #libraryForm="ngForm" (ngSubmit)="submit(libraryForm)">
+                <ion-grid>
+                    <ion-row>
+                        <ion-col size="12">
+                            <div>
+                                <ion-item>
+                                    <ion-input #wlan_ssid name="wlan_ssid" type="text" placeholder="WLAN-SSID" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
+                                </ion-item>
+                            </div>
+                        </ion-col>
+                    </ion-row>
+                    <ion-row>
+                        <ion-col size="12">
+                            <div>
+                                <ion-item>
+                                    <ion-input #wlan_pw name="wlan_pw" type="text" placeholder="WLAN-Key" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
+                                </ion-item>
+                            </div>
+                        </ion-col>
+                    </ion-row>
+                    <ion-row>
+                        <ion-col size="6">
+                            <div>
+                                <div class="add-button">
+                                    <ion-button size="large" type="submit" expand="block" [disabled]="!valid">Set new WLAN</ion-button>
+                                </div>
+                            </div>
+                        </ion-col>
+                        <ion-col size="6">
+                            <div>
+                                <div class="cancel-button">
+                                    <ion-button size="large" color="danger" (click)="cancelButtonPressed()" expand="block">Cancel</ion-button>
+                                </div>
+                            </div>
+                        </ion-col>
+                    </ion-row>
+                </ion-grid>
+            </form>
+        </div>
+    </div>
+
+    <div class="bottom">
+        <div class="simple-keyboard"></div>
+    </div>
+</ion-content>
