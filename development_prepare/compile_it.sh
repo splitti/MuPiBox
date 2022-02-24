@@ -19,11 +19,28 @@ cd ${COMPPATH}Sonos-Kids-Controller-master &>> ${LOG} 2>>${LOG}
 wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/www.json -O ${COMPPATH}Sonos-Kids-Controller-master/server/config/config.json &>> ${LOG} 2>>${LOG}
 wget https://github.com/splitti/MuPiBox/raw/main/development_prepare/customize/Sonos-Kids-Controller-master/server.js -O ${COMPPATH}Sonos-Kids-Controller-master/server.js  &>> ${LOG} 2>>${LOG}
 wget https://github.com/splitti/MuPiBox/raw/main/development_prepare/customize/Sonos-Kids-Controller-master/angular.json -O ${COMPPATH}Sonos-Kids-Controller-master/angular.json &>> ${LOG} 2>>${LOG}
+wget https://github.com/splitti/MuPiBox/raw/main/development_prepare/customize/Sonos-Kids-Controller-master/tsconfig.json -O ${COMPPATH}Sonos-Kids-Controller-master/tsconfig.json &>> ${LOG} 2>>${LOG}
+mkdir ${COMPPATH}Sonos-Kids-Controller-master/src/assets/json &>> ${LOG} 2>>${LOG}
+wget https://github.com/splitti/MuPiBox/raw/main/development_prepare/customize/Sonos-Kids-Controller-master/src/assets/json/network.json -O ${COMPPATH}Sonos-Kids-Controller-master/src/assets/json/network.json  &>> ${LOG} 2>>${LOG}
 wget https://github.com/splitti/MuPiBox/raw/main/development_prepare/customize/Sonos-Kids-Controller-master/src/app/player.service.ts -O ${COMPPATH}Sonos-Kids-Controller-master/src/app/player.service.ts &>> ${LOG} 2>>${LOG}
+wget https://github.com/splitti/MuPiBox/raw/main/development_prepare/customize/Sonos-Kids-Controller-master/src/app/app-routing.module.ts -O ${COMPPATH}Sonos-Kids-Controller-master/src/app/app-routing.module.ts &>> ${LOG} 2>>${LOG}
+wget https://github.com/splitti/MuPiBox/raw/main/development_prepare/customize/Sonos-Kids-Controller-master/src/app/wlan.service.ts -O ${COMPPATH}Sonos-Kids-Controller-master/src/app/wlan.service.ts &>> ${LOG} 2>>${LOG}
+wget https://github.com/splitti/MuPiBox/raw/main/development_prepare/customize/Sonos-Kids-Controller-master/src/app/wlan.ts -O ${COMPPATH}Sonos-Kids-Controller-master/src/app/wlan.ts &>> ${LOG} 2>>${LOG}
 wget https://github.com/splitti/MuPiBox/raw/main/development_prepare/customize/Sonos-Kids-Controller-master/src/app/player/player.page.html -O ${COMPPATH}Sonos-Kids-Controller-master/src/app/player/player.page.html &>> ${LOG} 2>>${LOG}
 wget https://github.com/splitti/MuPiBox/raw/main/development_prepare/customize/Sonos-Kids-Controller-master/src/app/player/player.page.scss -O ${COMPPATH}Sonos-Kids-Controller-master/src/app/player/player.page.scss &>> ${LOG} 2>>${LOG}
 wget https://github.com/splitti/MuPiBox/raw/main/development_prepare/customize/Sonos-Kids-Controller-master/src/app/player/player.page.ts -O ${COMPPATH}Sonos-Kids-Controller-master/src/app/player/player.page.ts &>> ${LOG} 2>>${LOG}
 wget https://raw.githubusercontent.com/splitti/MuPiBox/main/development_prepare/customize/Sonos-Kids-Controller-master/src/app/add/add.page.html -O ${COMPPATH}Sonos-Kids-Controller-master/src/app/add/add.page.html &>> ${LOG} 2>>${LOG}
+wget https://raw.githubusercontent.com/splitti/MuPiBox/main/development_prepare/customize/Sonos-Kids-Controller-master/src/app/edit/edit.page.html -O ${COMPPATH}Sonos-Kids-Controller-master/src/app/edit/edit.page.html &>> ${LOG} 2>>${LOG}
+wget https://raw.githubusercontent.com/splitti/MuPiBox/main/development_prepare/customize/Sonos-Kids-Controller-master/src/app/edit/edit.page.scss -O ${COMPPATH}Sonos-Kids-Controller-master/src/app/edit/edit.page.scss &>> ${LOG} 2>>${LOG}
+wget https://raw.githubusercontent.com/splitti/MuPiBox/main/development_prepare/customize/Sonos-Kids-Controller-master/src/app/edit/edit.page.ts -O ${COMPPATH}Sonos-Kids-Controller-master/src/app/edit/edit.page.ts &>> ${LOG} 2>>${LOG}
+mkdir ${COMPPATH}Sonos-Kids-Controller-master/src/app/admin &>> ${LOG} 2>>${LOG}
+wget https://raw.githubusercontent.com/splitti/MuPiBox/main/development_prepare/customize/Sonos-Kids-Controller-master/src/app/admin/admin.page.html -O ${COMPPATH}Sonos-Kids-Controller-master/src/app/admin/admin.page.html &>> ${LOG} 2>>${LOG}
+wget https://raw.githubusercontent.com/splitti/MuPiBox/main/development_prepare/customize/Sonos-Kids-Controller-master/src/app/admin/admin.page.scss -O ${COMPPATH}Sonos-Kids-Controller-master/src/app/admin/admin.page.scss &>> ${LOG} 2>>${LOG}
+wget https://raw.githubusercontent.com/splitti/MuPiBox/main/development_prepare/customize/Sonos-Kids-Controller-master/src/app/admin/admin.page.ts -O ${COMPPATH}Sonos-Kids-Controller-master/src/app/admin/admin.page.ts &>> ${LOG} 2>>${LOG}
+wget https://raw.githubusercontent.com/splitti/MuPiBox/main/development_prepare/customize/Sonos-Kids-Controller-master/src/app/admin/admin-routing.module.ts -O ${COMPPATH}Sonos-Kids-Controller-master/src/app/admin/admin-routing.module.ts &>> ${LOG} 2>>${LOG}
+wget https://raw.githubusercontent.com/splitti/MuPiBox/main/development_prepare/customize/Sonos-Kids-Controller-master/src/app/admin/admin.module.ts -O ${COMPPATH}Sonos-Kids-Controller-master/src/app/admin/admin.module.ts &>> ${LOG} 2>>${LOG}
+wget https://raw.githubusercontent.com/splitti/MuPiBox/main/development_prepare/customize/Sonos-Kids-Controller-master/src/app/admin/admin.page.spec.ts -O ${COMPPATH}Sonos-Kids-Controller-master/src/app/admin/admin.page.spec.ts &>> ${LOG} 2>>${LOG}
+
 #npm i -D -E @angular/cli
 npm install @angular/cli
 sudo ionic build --prod &>> ${LOG} 2>>${LOG}
