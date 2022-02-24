@@ -41,7 +41,7 @@ exec 3>${LOG}
 } | whiptail --title "MuPiBox Autosetup" --gauge "Please wait while installing" 6 60 0
 
 
-/usr/bin/cat <<< $(/usr/bin/jq --arg v "${VERSION}" '.["mupibox"].version = [$v]' ${CONFIG}) >  ${CONFIG}
+/usr/bin/cat <<< $(/usr/bin/jq --arg v "${VERSION}" '.mupibox.version = [$v]' ${CONFIG}) >  ${CONFIG}
 mv ${LOG} ~/.mupibox/last_update.log  >&3 2>&3
 
 echo "Update finished"
