@@ -31,7 +31,7 @@ export class AdminPage implements OnInit, AfterViewInit {
   public ip = muPiBoxNetwork.ip;
   public host = muPiBoxNetwork.hostname;
 
-  source = 'network';
+  source = 'wlan';
   category = 'WLAN';
   keyboard: Keyboard;
   selectedInputElem: any;

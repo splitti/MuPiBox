@@ -4,9 +4,11 @@
             <ion-back-button icon="arrow-back-outline" defaultHref="/edit"></ion-back-button>
         </ion-buttons>
         <ion-segment #segment value="{{this.source}}" (ionChange)="segmentChanged($event)">
+            <!-- 
             <ion-segment-button #network_segment value="network">
                 <ion-label>Network</ion-label>
             </ion-segment-button>
+            -->
             <ion-segment-button #wlan_segment value="wlan">
                 <ion-label>WLAN</ion-label>
             </ion-segment-button>
@@ -16,6 +18,7 @@
 
 <ion-content>
     <div [ngSwitch]="source">
+        <!--
         <div *ngSwitchCase="'network'" class="top">
             <form #libraryForm="ngForm" (ngSubmit)="submit(libraryForm)">
                 <ion-grid>
@@ -54,7 +57,7 @@
                 </ion-grid>
             </form>
         </div>
-
+        -->
         <div *ngSwitchCase="'wlan'" class="top">
             <form #libraryForm="ngForm" (ngSubmit)="submit(libraryForm)">
                 <ion-grid>
