@@ -225,7 +225,12 @@ exec 3>${LOG}
 	echo -e "XXX\n82\nEnable Admin-Webservice... \nXXX"	
 	
 	sudo dietpi-software install 84 89 >&3 2>&3
-	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/OnOffShim/off_trigger.sh -O /var/lib/dietpi/postboot.d/off_trigger.sh >&3 2>&3
+	sudo rm -R /var/www/* >&3 2>&3
+	sudo wget https://github.com/splitti/MuPiBox/raw/main/AdminInterface/release/www.zip -O /var/www/www.zip >&3 2>&3
+	sudo unzip /var/www/www.zip -d /var/www/ >&3 2>&3
+	sudo rm /var/www/www.zip >&3 2>&3
+	sudo chown -R www-data:www-data /var/www/ >&3 2>&3
+	sudo chmod -R 755 /var/www/ >&3 2>&3
 
 	###############################################################################################
 
