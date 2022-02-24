@@ -41,10 +41,13 @@ exec 3>${LOG}
 	echo -e "XXX\n100\nInstallation complete, please reboot the system... \nXXX"	
 } | whiptail --title "MuPiBox Autosetup" --gauge "Please wait while installing" 6 60 0
 
-sudo cp ${CONFIG} ${TMPCONFIG}  >&3 2>&3
-sudo chown www-data:www-data ${TMPCONFIG} >&3 2>&3
-/usr/bin/cat <<< $(/usr/bin/jq --arg v "${VERSION}" '.mupibox.version = [$v]' ${TMPCONFIG}) >  ${TMPCONFIG} >&3 2>&3
-mv ${TMPCONFIG} ${CONFIG} >&3 2>&3
+sudo cp ${CONFIG} ${CONFIG}_backup  >&3 2>&3
+
+#sudo cp ${CONFIG} ${TMPCONFIG}  >&3 2>&3
+#sudo chown www-data:www-data ${TMPCONFIG} >&3 2>&3
+/usr/bin/cat <<< $(/usr/bin/jq --arg v "${VERSION}" '.mupibox.version = [$v]' ${CONFIG}) >  ${CONFIG}
+#sudo mv ${CONFIG} ${CONFIG}_backup  >&3 2>&3
+#mv ${TMPCONFIG} ${CONFIG} >&3 2>&3
 mv ${LOG} ~/.mupibox/last_update.log >&3 2>&3
 
 echo "Update finished"
