@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 
-VERSION="0.0.1"
+VERSION="0.0.2"
 CONFIG="/etc/mupibox/mupiboxconfig.json"
 LOG="/tmp/autosetup.log"
 exec 3>${LOG}
