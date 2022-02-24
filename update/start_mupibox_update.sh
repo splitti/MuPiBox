@@ -1,6 +1,8 @@
 #!/bin/bash
 #
 
+VERSION="0.0.1"
+CONFIG="/etc/mupibox/mupiboxconfig.json"
 LOG="/tmp/autosetup.log"
 exec 3>${LOG}
 
@@ -37,7 +39,9 @@ exec 3>${LOG}
 	
 	echo -e "XXX\n100\nInstallation complete, please reboot the system... \nXXX"	
 } | whiptail --title "MuPiBox Autosetup" --gauge "Please wait while installing" 6 60 0
-	
+
+
+/usr/bin/cat <<< $(/usr/bin/jq --arg v "${VERSION}" '.["mupibox"].version = [$v]' ${CONFIG}) >  ${CONFIG}
 mv ${LOG} ~/.mupibox/last_update.log  >&3 2>&3
 
 echo "Update finished"
