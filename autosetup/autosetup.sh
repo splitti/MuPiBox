@@ -15,8 +15,7 @@ exec 3>${LOG}
 	# Get missing packages
 	sudo apt-get update >&3 2>&3
 	sudo apt-get install git libasound2 jq samba mplayer pulseaudio-module-bluetooth bluez zip xinit chromium-browser xserver-xorg-legacy xorg -y >&3 2>&3
-	sudo dietpi-software install 5 84 89 >&3 2>&3
-	echo -ne '\n' | sudo dietpi-software install 113 >&3 2>&3
+	sudo /boot/dietpi/dietpi-software install 5 84 89 >&3 2>&3
 
 	###############################################################################################
 	
@@ -96,8 +95,6 @@ exec 3>${LOG}
 	wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/www.json -O ~/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >&3 2>&3
 	cd ~/.mupibox/Sonos-Kids-Controller-master  >&3 2>&3
 	npm install >&3 2>&3
-	#npm start &
-	#sleep 10 
 	pm2 start server.js >&3 2>&3
 	pm2 save >&3 2>&3
 
@@ -113,9 +110,7 @@ exec 3>${LOG}
 	wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/spotifycontroller.json -O ~/.mupibox/spotifycontroller-main/config/config.json >&3 2>&3
 	wget https://raw.githubusercontent.com/splitti/MuPiBox/main/bin/nodejs/spotify-control.js -O ~/.mupibox/spotifycontroller-main/spotify-control.js >&3 2>&3
 	ln -s /etc/mupibox/mupiboxconfig.json ~/.mupibox/spotifycontroller-main/config/mupiboxconfig.json >&3 2>&3
-	npm install >&3 2>&3
-	#npm start &
-	#sleep 10 
+	npm install >&3 2>&3 
 	pm2 start spotify-control.js >&3 2>&3
 	pm2 save >&3 2>&3
 
@@ -165,7 +160,7 @@ exec 3>${LOG}
 	echo -e "XXX\n75\nDownload MuPiBox-Files... \nXXX"	
 
 	# MuPiBox
-	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/black.css -O ~/MuPiBox/themes/black.css >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/dark.css -O ~/MuPiBox/themes/dark.css >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/blue.css -O ~/MuPiBox/themes/blue.css >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/purple.css -O ~/MuPiBox/themes/purple.css >&3 2>&3
 
