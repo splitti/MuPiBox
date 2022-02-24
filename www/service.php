@@ -4,9 +4,15 @@
 	$onlinejson = file_get_contents('https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/mupiboxconfig.json');
 	$dataonline = json_decode($onlinejson, true);
 	include ('includes/header.php');
-	if( $_POST['update'] )
+	if( $_POST['mupibox_update'] )
 		{
-		$command = "cd; curl https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_update.sh | bash";
+		$command = "cd; curl https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh | bash";
+		exec($command, $output, $result );
+		$change=1;
+		}
+	if( $_POST['os_update'] )
+		{
+		$command = "cd; curl https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_os_update.sh | bash";
 		exec($command, $output, $result );
 		$change=1;
 		}
@@ -34,6 +40,13 @@
 		exec($command, $output, $result );
 		$change=1;
 		}
+	if( $_POST['spotify_restart'] )
+		{
+		$command = "sudo /usr/local/bin/mupibox/./spotify_restart.sh";
+		exec($command, $output, $result );
+		$change=1;
+		}
+
 	$rc = $output[count($output)-1];
 ?>
 
@@ -54,8 +67,10 @@
 											<td>Latest Version:</td><td><?php print $dataonline["mupibox"]["version"]; ?></td>
 										</tr>
 									</table>
+									Please notice: The update procedure takes a long time. Don't close the browser and wait for the status message!
 								</p>
-								<input id="saveForm" class="button_text" type="submit" name="update" value="Update system" /></li>
+								<input id="saveForm" class="button_text" type="submit" name="os_update" value="Update OS" />
+								<input id="saveForm" class="button_text" type="submit" name="mupibox_update" value="Update MuPiBox" /></li>
 								
 								<li class="li_1"><h2>Generate Playlists</h2>
 								<p>The Job for generating Playlists runs every <?php print $data["mupibox"]["mediaCheckTimer"];  ?> seconds. If you need the data as soon as possible, start this job...</p>
@@ -63,7 +78,8 @@
 								
 								<li class="li_1"><h2>Update MuPiBox settings</h2>
 								<p>The box only updates some settings after a reboot. Some of these settings can be activated with this operation without reboot. </p>
-								<input id="saveForm" class="button_text" type="submit" name="update" value="Update settings" /></li>
+								<input id="saveForm" class="button_text" type="submit" name="update" value="Update settings" />
+								<input id="saveForm" class="button_text" type="submit" name="spotify_restart" value="Restart services" /></li>
                                 
 								<li class="li_1"><h2>Reboot MuPiBox</h2>
 								<p>Sometimes only a restart helps...</p>
