@@ -9,6 +9,7 @@ PLAYERSTATE="/tmp/playerstate"
 
 touch ${PLAYERSTATE}
 echo "$(date +'%d/%m/%Y %H:%M:%S')  # SERVICE STARTED" >> ${LOG}
+chown dietpi:dietpi ${PLAYERSTATE}
 
 while true
 do
