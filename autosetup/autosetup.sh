@@ -305,8 +305,8 @@ exec 3>${LOG}
 	sudo systemctl start spotifyd.service >&3 2>&3
 	sudo systemctl enable smbd.service >&3 2>&3
 	sudo systemctl start smbd.service >&3 2>&3
-	sudo systemctl enable mupi_startstop.service >&3 2>&3
-	sudo systemctl start mupi_startstop.service >&3 2>&3
+	#sudo systemctl enable mupi_startstop.service >&3 2>&3
+	#sudo systemctl start mupi_startstop.service >&3 2>&3
 	sudo systemctl enable pulseaudio.service >&3 2>&3
 	sudo systemctl start pulseaudio.service >&3 2>&3
 	autosetup="$(cat ~/.bashrc | grep autosetup)"
