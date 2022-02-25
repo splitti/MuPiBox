@@ -260,7 +260,7 @@ exec 3>${LOG}
 
 	suggest_gpu_mem=76 >&3 2>&3
 	sudo /boot/dietpi/func/dietpi-set_hardware gpumemsplit $suggest_gpu_mem >&3 2>&3
-	echo -ne '\n' | sudo dietpi-software install 113 >&3 2>&3
+	echo -ne '\n' | sudo /boot/dietpi/dietpi-software install 113 >&3 2>&3
 	sudo /boot/dietpi/dietpi-autostart 11 >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/chromium-autostart.sh -O /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
 	sudo chmod +x /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
