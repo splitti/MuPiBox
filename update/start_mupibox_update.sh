@@ -23,9 +23,9 @@ sudo exec 3>${LOG}
 	sudo sh -c 'wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/www.json -O ~/.mupibox/Sonos-Kids-Controller-master/server/config/config.json' >&3 2>&3
 	cd ~/.mupibox/Sonos-Kids-Controller-master >&3 2>&3
 	sudo chown -R dietpi:dietpi ~/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
-	sudo sh -c 'su - dietpi -s "npm install"' >&3 2>&3
-	sudo sh -c 'su - dietpi -s "pm2 -f start server.js"' >&3 2>&3
-	sudo sh -c 'su - dietpi -s "pm2 -f save"' >&3 2>&3
+	sudo sh -c 'su - dietpi -s "cd ~/.mupibox/Sonos-Kids-Controller-master && npm install"' >&3 2>&3
+	sudo sh -c 'su - dietpi -s "cd ~/.mupibox/Sonos-Kids-Controller-master && pm2 -f start server.js"' >&3 2>&3
+	sudo sh -c 'su - dietpi -s "cd ~/.mupibox/Sonos-Kids-Controller-master && pm2 -f save"' >&3 2>&3
 
 	echo -e "XXX\n10\nRestore Userdata... \nXXX"	
 	cp /tmp/data.json ~/.mupibox/Sonos-Kids-Controller-master/server/config/data.json  >&3 2>&3
