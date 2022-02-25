@@ -8,8 +8,9 @@ current_idle_time=0
 PLAYERSTATE="/tmp/playerstate"
 
 touch ${PLAYERSTATE}
-echo "$(date +'%d/%m/%Y %H:%M:%S')  # SERVICE STARTED" >> ${LOG}
 chown dietpi:dietpi ${PLAYERSTATE}
+touch ${LOG}
+echo "$(date +'%d/%m/%Y %H:%M:%S')  # SERVICE STARTED" >> ${LOG}
 
 while true
 do
