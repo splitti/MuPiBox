@@ -7,15 +7,16 @@ TMPCONFIG="/tmp/mupiboxconfig.json"
 LOG="/tmp/autosetup.log"
 exec 3>${LOG}
 
+
 {
 	echo -e "XXX\n0\nBackup Userdata... \nXXX"	 >&3 2>&3
 	cp ~/.mupibox/Sonos-Kids-Controller-master/server/config/data.json /tmp/data.json >&3 2>&3
 
 	echo -e "XXX\n2\nUpdate Kids-Controller... \nXXX"	
-	sudo sh -c 'su - dietpi -s pm2 stop server.js' >&3 2>&3
-	sudo sh -c 'su - dietpi -s pm2 save' >&3 2>&3
+	sudo sh -c 'su - dietpi -s "pm2 stop server.js"' >&3 2>&3
+	sudo sh -c 'su - dietpi -s "pm2 save"' >&3 2>&3
 	sudo rm -R ~/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
-	mkdir ~/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
+	sudo sh -c 'su - dietpi -s "mkdir ~/.mupibox/Sonos-Kids-Controller-master/"' >&3 2>&3
 	wget https://github.com/splitti/MuPiBox/raw/main/bin/nodejs/sonos-kids-controller.zip -O ~/.mupibox/Sonos-Kids-Controller-master/sonos-kids-controller.zip >&3 2>&3
 	unzip ~/.mupibox/Sonos-Kids-Controller-master/sonos-kids-controller.zip -d ~/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
 	rm ~/.mupibox/Sonos-Kids-Controller-master/sonos-kids-controller.zip >&3 2>&3
