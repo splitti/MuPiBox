@@ -11,7 +11,7 @@ exec 3>${LOG}
 {
 	###############################################################################################
 
-	echo -e "XXX\n0\nInstall some packages...\ngit\nlibasound2\njq\nsamba \nXXX"	
+	echo -e "XXX\n0\nInstall some packages...\nXXX"	
 	# Get missing packages
 	sudo apt-get update >&3 2>&3
 	sudo apt-get install git libasound2 jq samba mplayer pulseaudio-module-bluetooth bluez zip xinit chromium-browser xserver-xorg-legacy xorg -y >&3 2>&3
@@ -242,6 +242,8 @@ exec 3>${LOG}
 	sudo chown root:www-data /etc/mupibox/mupiboxconfig.json >&3 2>&3
 	sudo chmod 775 /etc/mupibox/mupiboxconfig.json >&3 2>&3
 	sudo echo "www-data ALL=(ALL:ALL) NOPASSWD: ALL" | sudo tee /etc/sudoers.d/www-data  >&3 2>&3
+	sudo usermod -a -G gpio dietpi >&3 2>&3
+	sudo usermod -a -G gpio root >&3 2>&3
 	sleep 1
 
 	###############################################################################################
@@ -265,6 +267,7 @@ exec 3>${LOG}
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/chromium-autostart.sh -O /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
 	sudo chmod +x /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
 	sudo usermod -a -G tty dietpi >&3 2>&3
+	sudo usermod -a -G gpio dietpi
 	sudo /usr/bin/sed -i 's/allowed_users\=console/allowed_users\=anybody/g' /etc/X11/Xwrapper.config >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/98-dietpi-disable_dpms.conf -O /etc/X11/xorg.conf.d/98-dietpi-disable_dpms.conf >&3 2>&3
 	sudo /usr/bin/sed -i 's/tty1/tty3 vt.global_cursor_default\=0 fastboot noatime nodiratime noram splash silent loglevel\=0 vt.default_red\=68,68,68,68,68,68,68,68 vt.default_grn\=175,175,175,175,175,175,175,175 vt.default_blu\=226,226,226,226,226,226,226,226/g' /boot/cmdline.txt >&3 2>&3
