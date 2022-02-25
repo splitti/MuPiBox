@@ -11,7 +11,7 @@ exec 3>${LOG}
 {
 	###############################################################################################
 
-	echo -e "XXX\n0\nInstall some packages... \nXXX"	
+	echo -e "XXX\n0\nInstall some packages...\ngit\nlibasound2\njq\nsamba \nXXX"	
 	# Get missing packages
 	sudo apt-get update >&3 2>&3
 	sudo apt-get install git libasound2 jq samba mplayer pulseaudio-module-bluetooth bluez zip xinit chromium-browser xserver-xorg-legacy xorg -y >&3 2>&3
@@ -258,8 +258,8 @@ exec 3>${LOG}
 
 	echo -e "XXX\n90\nInstall Chromium-Kiosk... \nXXX"	
 
-	suggest_gpu_mem=76 >&3 2>&3
-	sudo /boot/dietpi/func/dietpi-set_hardware gpumemsplit $suggest_gpu_mem >&3 2>&3
+	#suggest_gpu_mem=76 >&3 2>&3
+	sudo /boot/dietpi/func/dietpi-set_hardware gpumemsplit 76 >&3 2>&3
 	echo -ne '\n' | sudo /boot/dietpi/dietpi-software install 113 >&3 2>&3
 	sudo /boot/dietpi/dietpi-autostart 11 >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/chromium-autostart.sh -O /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
