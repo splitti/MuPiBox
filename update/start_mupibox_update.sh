@@ -7,6 +7,7 @@ TMPCONFIG="/tmp/mupiboxconfig.json"
 LOG="/tmp/autosetup.log"
 exec 3>${LOG}
 
+
 {
 	echo -e "XXX\n0\nBackup Userdata... \nXXX"	 >&3 2>&3
 	cp ~/.mupibox/Sonos-Kids-Controller-master/server/config/data.json /tmp/data.json >&3 2>&3
