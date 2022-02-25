@@ -5,7 +5,7 @@
 
 MUPIBOX_CONFIG="/etc/mupibox/mupiboxconfig.json"
 SONOS_CONFIG="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json"
-SONOS_NETWORK="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/assets/json/network.json"
+SONOS_NETWORK="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/network.json"
 SPOTIFYCONTROLLER_CONFIG="/home/dietpi/.mupibox/spotifycontroller-main/config/config.json"
 SPOTIFYD_CONFIG="/etc/spotifyd/spotifyd.conf"
 DISPLAY_STANDBY="/etc/X11/xorg.conf.d/98-dietpi-disable_dpms.conf"
