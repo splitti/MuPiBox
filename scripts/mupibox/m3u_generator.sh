@@ -13,3 +13,4 @@ for i in /home/dietpi/MuPiBox/media/* ; do
 done
 /usr/bin/chown -R dietpi:dietpi /home/dietpi/MuPiBox/media/
 /usr/bin/chown -R dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover/
+echo "Playlists generated"
