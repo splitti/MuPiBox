@@ -4,7 +4,7 @@
 VERSION="0.0.1"
 CONFIG="/etc/mupibox/mupiboxconfig.json"
 TMPCONFIG="/tmp/mupiboxconfig.json"
-LOG="/tmp/autosetup.log"
+LOG="/tmp/mupibox_update.log"
 sudo exec 3>${LOG}
 
 
@@ -13,19 +13,17 @@ sudo exec 3>${LOG}
 	cp ~/.mupibox/Sonos-Kids-Controller-master/server/config/data.json /tmp/data.json >&3 2>&3
 
 	echo -e "XXX\n2\nUpdate Kids-Controller... \nXXX"	
-	sudo sh -c 'su - dietpi -s "pm2 stop server.js"' >&3 2>&3
-	sudo sh -c 'su - dietpi -s "pm2 save"' >&3 2>&3
+	sudo sh -c 'su - dietpi -c "pm2 stop server.js"' >&3 2>&3
+	sudo sh -c 'su - dietpi -c "pm2 save"' >&3 2>&3
 	sudo rm -R ~/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
-	sudo sh -c 'su - dietpi -s "mkdir ~/.mupibox/Sonos-Kids-Controller-master/"' >&3 2>&3
-	sudo sh -c 'wget https://github.com/splitti/MuPiBox/raw/main/bin/nodejs/sonos-kids-controller.zip -O ~/.mupibox/Sonos-Kids-Controller-master/sonos-kids-controller.zip' >&3 2>&3
-	sudo sh -c 'unzip ~/.mupibox/Sonos-Kids-Controller-master/sonos-kids-controller.zip -d ~/.mupibox/Sonos-Kids-Controller-master/' >&3 2>&3
+	sudo sh -c 'su - dietpi -c "mkdir ~/.mupibox/Sonos-Kids-Controller-master/"' >&3 2>&3
+	sudo sh -c 'su - dietpi -c "wget https://github.com/splitti/MuPiBox/raw/main/bin/nodejs/sonos-kids-controller.zip -O ~/.mupibox/Sonos-Kids-Controller-master/sonos-kids-controller.zip"' >&3 2>&3
+	sudo sh -c 'su - dietpi -c "unzip ~/.mupibox/Sonos-Kids-Controller-master/sonos-kids-controller.zip -d ~/.mupibox/Sonos-Kids-Controller-master/"' >&3 2>&3
 	sudo rm ~/.mupibox/Sonos-Kids-Controller-master/sonos-kids-controller.zip >&3 2>&3
-	sudo sh -c 'wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/www.json -O ~/.mupibox/Sonos-Kids-Controller-master/server/config/config.json' >&3 2>&3
-	cd ~/.mupibox/Sonos-Kids-Controller-master >&3 2>&3
-	sudo chown -R dietpi:dietpi ~/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
-	sudo sh -c 'su - dietpi -s "cd ~/.mupibox/Sonos-Kids-Controller-master && npm install"' >&3 2>&3
-	sudo sh -c 'su - dietpi -s "cd ~/.mupibox/Sonos-Kids-Controller-master && pm2 -f start server.js"' >&3 2>&3
-	sudo sh -c 'su - dietpi -s "cd ~/.mupibox/Sonos-Kids-Controller-master && pm2 -f save"' >&3 2>&3
+	sudo sh -c 'su - dietpi -c "wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/www.json -O ~/.mupibox/Sonos-Kids-Controller-master/server/config/config.json"' >&3 2>&3
+	sudo sh -c 'su - dietpi -c "cd ~/.mupibox/Sonos-Kids-Controller-master && npm install"' >&3 2>&3
+	sudo sh -c 'su - dietpi -c "cd ~/.mupibox/Sonos-Kids-Controller-master && pm2 -f start server.js"' >&3 2>&3
+	sudo sh -c 'su - dietpi -c "cd ~/.mupibox/Sonos-Kids-Controller-master && pm2 -f save"' >&3 2>&3
 
 	echo -e "XXX\n10\nRestore Userdata... \nXXX"	
 	cp /tmp/data.json ~/.mupibox/Sonos-Kids-Controller-master/server/config/data.json  >&3 2>&3
