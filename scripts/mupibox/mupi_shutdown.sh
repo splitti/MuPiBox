@@ -10,5 +10,5 @@ SHUT_SPLASH=$(/usr/bin/jq -r .mupibox.shutSplash ${CONFIG})
 AUDIO_DEVICE=$(/usr/bin/jq -r .mupibox.audioDevice ${CONFIG})
 
 /usr/bin/fbv ${SHUT_SPLASH}
-/usr/local/bin/mupibox/./setting_update.sh
+sudo /usr/local/bin/mupibox/./setting_update.sh
 /usr/bin/mplayer ${SHUT_SOUND}

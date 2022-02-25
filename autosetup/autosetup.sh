@@ -181,7 +181,7 @@ exec 3>${LOG}
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/spotify_restart.sh -O /usr/local/bin/mupibox/spotify_restart.sh >&3 2>&3
 	
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/splash_screen.sh -O /usr/local/bin/mupibox/splash_screen.sh >&3 2>&3
-	sudo chmod 755 /usr/local/bin/mupibox/* /usr/local/bin/mupibox/software_shutdown.sh /usr/local/bin/mupibox/splash_screen.sh >&3 2>&3
+	sudo chmod 755 /usr/local/bin/mupibox/* >&3 2>&3
 	sleep 1
 
 	###############################################################################################
