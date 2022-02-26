@@ -250,6 +250,7 @@ exec 3>${LOG}
 	sudo usermod -a -G gpio dietpi >&3 2>&3
 	sudo usermod -a -G gpio root >&3 2>&3
 	sudo /boot/dietpi/func/dietpi-set_swapfile 1 zram >&3 2>&3
+	/boot/dietpi/func/dietpi-set_software boot_wait_for_network 0 >&3 2>&3
 	sleep 1
 
 	###############################################################################################
