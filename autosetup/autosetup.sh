@@ -164,6 +164,15 @@ exec 3>${LOG}
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/dark.css -O ~/MuPiBox/themes/dark.css >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/blue.css -O ~/MuPiBox/themes/blue.css >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/purple.css -O ~/MuPiBox/themes/purple.css >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/red.css -O ~/MuPiBox/themes/red.css >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/chocolate.css -O ~/MuPiBox/themes/chocolate.css >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/vintage.css -O ~/MuPiBox/themes/vintage.css >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/orange.css -O ~/MuPiBox/themes/orange.css >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/green.css -O ~/MuPiBox/themes/green.css >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/light.css -O ~/MuPiBox/themes/light.css >&3 2>&3
+
+
+
 
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/mupi_shutdown.sh -O /usr/local/bin/mupibox/mupi_shutdown.sh >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/mupi_startup.sh -O /usr/local/bin/mupibox/mupi_startup.sh >&3 2>&3
