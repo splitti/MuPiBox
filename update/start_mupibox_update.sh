@@ -13,8 +13,8 @@ exec 3>${LOG}
 	sudo cp /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json /tmp/data.json >&3 2>&3
 
 	echo -e "XXX\n2\nUpdate Kids-Controller... \nXXX"	
-	sudo sh -c 'su - dietpi -c "pm2 stop server.js"' >&3 2>&3
-	sudo sh -c 'su - dietpi -c "pm2 save"' >&3 2>&3
+	sudo su - dietpi -c "pm2 stop server.js" >&3 2>&3
+	sudo su - dietpi -c "pm2 save" >&3 2>&3
 	sudo rm -R /home/dietpi/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
 	sudo mkdir /home/dietpi/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
 	sudo wget https://github.com/splitti/MuPiBox/raw/main/bin/nodejs/sonos-kids-controller.zip -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/sonos-kids-controller.zip >&3 2>&3
@@ -29,9 +29,9 @@ exec 3>${LOG}
 
 	echo -e "XXX\n15\nRestarting Services... \nXXX"	
 
-	sudo sh -c 'su - dietpi -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && npm install"' >&3 2>&3
-	sudo sh -c 'su - dietpi -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && pm2 -f start server.js"' >&3 2>&3
-	sudo sh -c 'su - dietpi -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && pm2 -f save"' >&3 2>&3
+	sudo su - dietpi -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && npm install" >&3 2>&3
+	sudo su - dietpi -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && pm2 -f start server.js" >&3 2>&3
+	sudo su - dietpi -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && pm2 -f save" >&3 2>&3
 
 
 
