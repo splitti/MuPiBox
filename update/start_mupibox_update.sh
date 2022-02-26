@@ -10,7 +10,7 @@ sudo exec 3>${LOG}
 
 {
 	echo -e "XXX\n0\nBackup Userdata... \nXXX"	 >&3 2>&3
-	cp ~/.mupibox/Sonos-Kids-Controller-master/server/config/data.json /tmp/data.json >&3 2>&3
+	sudo cp ~/.mupibox/Sonos-Kids-Controller-master/server/config/data.json /tmp/data.json >&3 2>&3
 
 	echo -e "XXX\n2\nUpdate Kids-Controller... \nXXX"	
 	sudo sh -c 'su - dietpi -c "pm2 stop server.js"' >&3 2>&3
@@ -26,7 +26,7 @@ sudo exec 3>${LOG}
 	sudo sh -c 'su - dietpi -c "cd ~/.mupibox/Sonos-Kids-Controller-master && pm2 -f save"' >&3 2>&3
 
 	echo -e "XXX\n10\nRestore Userdata... \nXXX"	
-	cp /tmp/data.json ~/.mupibox/Sonos-Kids-Controller-master/server/config/data.json  >&3 2>&3
+	sudo cp /tmp/data.json ~/.mupibox/Sonos-Kids-Controller-master/server/config/data.json  >&3 2>&3
 	sudo chown dietpi:dietpi ~/.mupibox/Sonos-Kids-Controller-master/server/config/data.json >&3 2>&3
 
 	echo -e "XXX\n90\nUpdate Admin-Interface... \nXXX"	

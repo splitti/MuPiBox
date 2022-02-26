@@ -14,8 +14,8 @@ exec 3>${LOG}
 	echo -e "XXX\n0\nInstall some packages...\nXXX"	
 	# Get missing packages
 	sudo apt-get update >&3 2>&3
-	sudo apt-get install git libasound2 jq samba mplayer pulseaudio-module-bluetooth bluez zip xinit chromium-browser xserver-xorg-legacy xorg -y >&3 2>&3
-	sudo /boot/dietpi/dietpi-software install 5 84 89 >&3 2>&3
+	sudo apt-get install git libasound2 jq samba mplayer pulseaudio-module-bluetooth bluez zip -y >&3 2>&3
+	sudo /boot/dietpi/dietpi-software install 5 84 89 >&3 2>&37
 
 	###############################################################################################
 	
@@ -94,7 +94,9 @@ exec 3>${LOG}
 	rm ~/.mupibox/Sonos-Kids-Controller-master/sonos-kids-controller.zip >&3 2>&3
 	wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/www.json -O ~/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >&3 2>&3
 	cd ~/.mupibox/Sonos-Kids-Controller-master  >&3 2>&3
+	sudo /boot/dietpi/func/dietpi-set_swapfile 2048 >&3 2>&3
 	npm install >&3 2>&3
+	sudo /boot/dietpi/func/dietpi-set_swapfile 0
 	pm2 start server.js >&3 2>&3
 	pm2 save >&3 2>&3
 
@@ -234,8 +236,9 @@ exec 3>${LOG}
 	# ENV
 	(echo "mupibox"; echo "mupibox") | sudo smbpasswd -s -a dietpi >&3 2>&3
 	sudo env PATH=$PATH:/usr/local/bin/mupibox >&3 2>&3
-	THEME_FILE="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/styles.242c97d50a9a860d.css"
-	NEW_THEME=$(/usr/bin/jq -r .mupibox.theme ${MUPIBOX_CONFIG})
+	MUPIBOX_CONFIG="/etc/mupibox/mupiboxconfig.json" >&3 2>&3
+	THEME_FILE="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/styles.242c97d50a9a860d.css" >&3 2>&3
+	NEW_THEME=$(/usr/bin/jq -r .mupibox.theme ${MUPIBOX_CONFIG}) >&3 2>&3
 
 	rm ${THEME_FILE} >&3 2>&3
 	ln -s /home/dietpi/MuPiBox/themes/${NEW_THEME}.css ${THEME_FILE} >&3 2>&3
@@ -262,12 +265,14 @@ exec 3>${LOG}
 
 	#suggest_gpu_mem=76 >&3 2>&3
 	sudo /boot/dietpi/func/dietpi-set_hardware gpumemsplit 76 >&3 2>&3
-	echo -ne '\n' | sudo /boot/dietpi/dietpi-software install 113 >&3 2>&3
+	echo -ne '\n' | sudo /boot/dietpi/dietpi-software install 113
 	sudo /boot/dietpi/dietpi-autostart 11 >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/chromium-autostart.sh -O /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
 	sudo chmod +x /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
 	sudo usermod -a -G tty dietpi >&3 2>&3
 	sudo usermod -a -G gpio dietpi
+	#xinit chromium-browser xserver-xorg-legacy xorg
+	sudo apt install xserver-xorg-legacy
 	sudo /usr/bin/sed -i 's/allowed_users\=console/allowed_users\=anybody/g' /etc/X11/Xwrapper.config >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/98-dietpi-disable_dpms.conf -O /etc/X11/xorg.conf.d/98-dietpi-disable_dpms.conf >&3 2>&3
 	sudo /usr/bin/sed -i 's/tty1/tty3 vt.global_cursor_default\=0 fastboot noatime nodiratime noram splash silent loglevel\=0 vt.default_red\=68,68,68,68,68,68,68,68 vt.default_grn\=175,175,175,175,175,175,175,175 vt.default_blu\=226,226,226,226,226,226,226,226/g' /boot/cmdline.txt >&3 2>&3
@@ -320,7 +325,8 @@ exec 3>${LOG}
 	###############################################################################################
 
 	echo -e "XXX\n100\nInstallation complete, please reboot the system... \nXXX"	
-
+	sudo mv ${LOG} ~/.mupibox/autosetup.log
+	sudo reboot
 	#https://gist.github.com/yejun/2c1a070a839b3a7b146ede8a998b5495    !!!!!
 	#discoverable on
 	#pairable on
@@ -330,5 +336,4 @@ exec 3>${LOG}
 
 } | whiptail --title "MuPiBox Autosetup" --gauge "Please wait while installing" 6 60 0
 
-mv ${LOG} ~/.mupibox/autosetup.log
-sudo reboot
+
