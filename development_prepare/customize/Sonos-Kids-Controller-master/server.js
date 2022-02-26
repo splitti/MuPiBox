@@ -15,7 +15,9 @@ var spotifyApi = new SpotifyWebApi({
 });
 
 // Configuration
-const dataFile = './server/config/data.json'
+const dataFile = './server/config/data.json';
+const networkFile = './server/config/network.json';
+const wlanFile = './server/config/wlan.json';
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -28,6 +30,32 @@ app.get('/api/data', (req, res) => {
     jsonfile.readFile(dataFile, (error, data) => {
         if (error) data = [];
         res.json(data);
+    });
+});
+
+app.get('/api/network', (req, res) => {
+    jsonfile.readFile(networkFile, (error, data) => {
+        if (error) data = [];
+        res.json(data);
+    });
+});
+
+app.get('/api/wlan', (req, res) => {
+    jsonfile.readFile(wlanFile, (error, data) => {
+        if (error) data = [];
+        res.json(data);
+    });
+});
+
+app.post('/api/addwlan', (req, res) => {
+    jsonfile.readFile(wlanFile, (error, data) => {
+        if (error) data = [];
+        data.push(req.body);
+
+        jsonfile.writeFile(wlanFile, data, { spaces: 4 }, (error) => {
+            if (error) throw err;
+            res.status(200).send();
+        });
     });
 });
 
