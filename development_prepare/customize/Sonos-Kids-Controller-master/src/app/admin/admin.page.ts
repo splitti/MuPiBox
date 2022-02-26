@@ -1,10 +1,9 @@
 import { Component, OnInit, ViewEncapsulation, AfterViewInit, ViewChild } from '@angular/core';
 import { NavController, IonSelect, IonInput, IonSegment } from '@ionic/angular';
-import { WlanService } from '../wlan.service';
+import { MediaService } from '../media.service';
 import { WLAN } from '../wlan';
 import Keyboard from 'simple-keyboard';
 import { NgForm } from '@angular/forms';
-import muPiBoxNetwork from '../../assets/json/network.json';
 
 @Component({
   selector: 'app-admin',
@@ -19,18 +18,11 @@ export class AdminPage implements OnInit, AfterViewInit {
   @ViewChild('segment', { static: false }) segment: IonSegment;
   @ViewChild('select', { static: false }) select: IonSelect;
 
-  @ViewChild('network_segment', { static: false }) networkSegment: IonSelect;
   @ViewChild('wlan_segment', { static: false }) wlanSegment: IonSelect;
 
-
-  @ViewChild('network_ip', { static: false }) networkIp: IonInput;
-  @ViewChild('network_host', { static: false }) networkHost: IonInput;
   @ViewChild('wlan_ssid', { static: false }) wlanSsid: IonInput;
   @ViewChild('wlan_pw', { static: false }) wlanPw: IonInput;
   
-  public ip = muPiBoxNetwork.ip;
-  public host = muPiBoxNetwork.hostname;
-
   source = 'wlan';
   category = 'WLAN';
   keyboard: Keyboard;
@@ -40,7 +32,7 @@ export class AdminPage implements OnInit, AfterViewInit {
 
 
   constructor(
-    private wlanService: WlanService,
+    private mediaService: MediaService,
     private navController: NavController
   ) { }
 
@@ -160,7 +152,7 @@ export class AdminPage implements OnInit, AfterViewInit {
       if (form.form.value.wlan_pw?.length) { wlan.pw = form.form.value.wlan_pw; }
     }
 
-    this.wlanService.addRawMedia(wlan);
+    this.mediaService.addWLAN(wlan);
 
     form.reset();
 
