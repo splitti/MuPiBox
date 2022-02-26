@@ -11,11 +11,10 @@ exec 3>${LOG}
 {
 	###############################################################################################
 
-	echo -e "XXX\n0\nInstall some packages...\nXXX"	
+	echo -e "XXX\n0\nInstall some packages... This will take a long time, please wait!\nXXX"	
 	# Get missing packages
 	sudo apt-get update >&3 2>&3
 	sudo apt-get install git libasound2 jq samba mplayer pulseaudio-module-bluetooth bluez zip -y >&3 2>&3
-	sudo /boot/dietpi/dietpi-software install 5 84 89 >&3 2>&37
 
 	###############################################################################################
 	
@@ -96,7 +95,7 @@ exec 3>${LOG}
 	cd ~/.mupibox/Sonos-Kids-Controller-master  >&3 2>&3
 	sudo /boot/dietpi/func/dietpi-set_swapfile 2048 >&3 2>&3
 	npm install >&3 2>&3
-	sudo /boot/dietpi/func/dietpi-set_swapfile 0
+	sudo /boot/dietpi/func/dietpi-set_swapfile 0 >&3 2>&3
 	pm2 start server.js >&3 2>&3
 	pm2 save >&3 2>&3
 
@@ -190,6 +189,7 @@ exec 3>${LOG}
 
 	echo -e "XXX\n77\nInstall Hifiberry-MiniAmp and Bluetooth support... \nXXX"	
 
+	sudo /boot/dietpi/dietpi-software install 5 >&3 2>&3
 	sudo /boot/dietpi/func/dietpi-set_hardware bluetooth enable >&3 2>&3
 	sudo /boot/dietpi/func/dietpi-set_hardware soundcard "hifiberry-dac"  >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/asound.conf -O /etc/asound.conf  >&3 2>&3
@@ -221,7 +221,9 @@ exec 3>${LOG}
 	###############################################################################################
 
 	echo -e "XXX\n82\nEnable Admin-Webservice... \nXXX"	
-	
+
+	sudo /boot/dietpi/dietpi-software install 5 84 89 >&3 2>&3
+
 	sudo rm -R /var/www/* >&3 2>&3
 	sudo wget https://github.com/splitti/MuPiBox/raw/main/AdminInterface/release/www.zip -O /var/www/www.zip >&3 2>&3
 	sudo unzip /var/www/www.zip -d /var/www/ >&3 2>&3
@@ -247,6 +249,7 @@ exec 3>${LOG}
 	sudo echo "www-data ALL=(ALL:ALL) NOPASSWD: ALL" | sudo tee /etc/sudoers.d/www-data  >&3 2>&3
 	sudo usermod -a -G gpio dietpi >&3 2>&3
 	sudo usermod -a -G gpio root >&3 2>&3
+	sudo /boot/dietpi/func/dietpi-set_swapfile 1 zram >&3 2>&3
 	sleep 1
 
 	###############################################################################################
@@ -270,9 +273,8 @@ exec 3>${LOG}
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/chromium-autostart.sh -O /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
 	sudo chmod +x /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
 	sudo usermod -a -G tty dietpi >&3 2>&3
-	sudo usermod -a -G gpio dietpi
 	#xinit chromium-browser xserver-xorg-legacy xorg
-	sudo apt install xserver-xorg-legacy
+	sudo apt-get install xserver-xorg-legacy >&3 2>&3
 	sudo /usr/bin/sed -i 's/allowed_users\=console/allowed_users\=anybody/g' /etc/X11/Xwrapper.config >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/98-dietpi-disable_dpms.conf -O /etc/X11/xorg.conf.d/98-dietpi-disable_dpms.conf >&3 2>&3
 	sudo /usr/bin/sed -i 's/tty1/tty3 vt.global_cursor_default\=0 fastboot noatime nodiratime noram splash silent loglevel\=0 vt.default_red\=68,68,68,68,68,68,68,68 vt.default_grn\=175,175,175,175,175,175,175,175 vt.default_blu\=226,226,226,226,226,226,226,226/g' /boot/cmdline.txt >&3 2>&3
@@ -310,8 +312,8 @@ exec 3>${LOG}
 	sudo systemctl start spotifyd.service >&3 2>&3
 	sudo systemctl enable smbd.service >&3 2>&3
 	sudo systemctl start smbd.service >&3 2>&3
-	#sudo systemctl enable mupi_startstop.service >&3 2>&3
-	#sudo systemctl start mupi_startstop.service >&3 2>&3
+	sudo systemctl enable mupi_startstop.service >&3 2>&3
+	sudo systemctl start mupi_startstop.service >&3 2>&3
 	sudo systemctl enable pulseaudio.service >&3 2>&3
 	sudo systemctl start pulseaudio.service >&3 2>&3
 	autosetup="$(cat ~/.bashrc | grep autosetup)"
