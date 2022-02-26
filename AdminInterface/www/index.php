@@ -90,6 +90,8 @@
         ", \"hdd_free\":" . $stat['hdd_free'] . ", \"hdd_total\":" . $stat['hdd_total'] . ", \"hdd_used\":" . $stat['hdd_used'] . ", \"hdd_percent\":" . $stat['hdd_percent'] . ", " . //hdd stats
         "\"network_rx\":" . $stat['network_rx'] . ", \"network_tx\":" . $stat['network_tx'] . //network stats
         "}";*/
+		echo "<p>Temperatur: " . $rpi_temp . "</p>";
+		echo "<p>Throttle: " . $rpi_throttle . "</p>";
         ?>
 
 <?php
