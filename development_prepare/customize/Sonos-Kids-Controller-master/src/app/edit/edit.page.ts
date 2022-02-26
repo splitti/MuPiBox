@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 import { AlertController } from '@ionic/angular';
 import { MediaService } from '../media.service';
 import { Media } from '../media';
-import muPiBoxNetwork from '../../assets/json/network.json';
+import { Network } from "../network";
 
 @Component({
   selector: 'app-edit',
@@ -13,9 +13,7 @@ import muPiBoxNetwork from '../../assets/json/network.json';
 export class EditPage implements OnInit {
 
   media: Media[] = [];
-
-  public ip = muPiBoxNetwork.ip;
-  public host = muPiBoxNetwork.hostname;
+  network: Network[] = [];
 
   constructor(
     private mediaService: MediaService,
@@ -25,11 +23,15 @@ export class EditPage implements OnInit {
 
   ngOnInit() {
     // Subscribe
+    this.mediaService.getNetworkObservable().subscribe(network => {
+      this.network = network;
+    });
     this.mediaService.getRawMediaObservable().subscribe(media => {
       this.media = media;
     });
 
     // Retreive data through subscription above
+    this.mediaService.updateNetwork();
     this.mediaService.updateRawMedia();
   }
 
