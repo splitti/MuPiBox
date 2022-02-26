@@ -3,10 +3,15 @@
 		"host": "MuPiBox",
 		"theme": "blue",
 		"installedThemes": [
-			"dark",
-			"light",
 			"blue",
 			"purple"
+			"green",
+			"red",
+			"orange",
+			"chocolate",
+			"vintage",
+			"dark",
+			"light"
 			],
 		"startSound": "/home/dietpi/MuPiBox/sysmedia/sound/startup.wav",
 		"shutSound": "/home/dietpi/MuPiBox/sysmedia/sound/shutdown.wav",
