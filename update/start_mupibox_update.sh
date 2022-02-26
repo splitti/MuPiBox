@@ -16,7 +16,7 @@ exec 3>${LOG}
 	sudo su - dietpi -c "pm2 stop server.js" >&3 2>&3
 	sudo su - dietpi -c "pm2 save" >&3 2>&3
 	sudo rm -R /home/dietpi/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
-	sudo mkdir /home/dietpi/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
+	sudo mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/ >&3 2>&3
 	sudo wget https://github.com/splitti/MuPiBox/raw/main/bin/nodejs/sonos-kids-controller.zip -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/sonos-kids-controller.zip >&3 2>&3
 	sudo unzip /home/dietpi/.mupibox/Sonos-Kids-Controller-master/sonos-kids-controller.zip -d /home/dietpi/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
 	sudo rm /home/dietpi/.mupibox/Sonos-Kids-Controller-master/sonos-kids-controller.zip >&3 2>&3
