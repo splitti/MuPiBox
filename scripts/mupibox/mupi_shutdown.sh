@@ -12,5 +12,5 @@ START_VOLUME=$(/usr/bin/jq -r .mupibox.startVolume ${CONFIG})
 
 /usr/bin/fbv ${SHUT_SPLASH}
 sudo /usr/local/bin/mupibox/./setting_update.sh
-su - dietpi -c '/usr/bin/amixer sset ${AUDIO_DEVICE} ${START_VOLUME}%'
-su - dietpi -c '/usr/bin/mplayer ${SHUT_SOUND}'
+/usr/bin/amixer sset ${AUDIO_DEVICE} ${START_VOLUME}%
+/usr/bin/mplayer ${SHUT_SOUND}
