@@ -48,7 +48,7 @@ exec 3>${LOG}
 	mkdir ~/MuPiBox/sysmedia/images >&3 2>&3
 	mkdir ~/MuPiBox/media >&3 2>&3
 	mkdir ~/MuPiBox/themes >&3 2>&3
-	mkdir -p ~/.mupibox/Sonos-Kids-Controller-master/server/config >&3 2>&3
+	mkdir -p ~/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
 	sudo mkdir /usr/local/bin/mupibox >&3 2>&3
 	sudo mkdir /etc/spotifyd >&3 2>&3
 	sudo mkdir /etc/mupibox >&3 2>&3
@@ -87,10 +87,10 @@ exec 3>${LOG}
 
 	echo -e "XXX\n32\nInstall Kids-Controller-master... \nXXX"	
 
-
-	wget https://github.com/Thyraz/Sonos-Kids-Controller/archive/master.zip -O ~/.mupibox/Sonos-Kids-Controller-master/sonos-kids-controller.zip >&3 2>&3
-	unzip ~/.mupibox/Sonos-Kids-Controller-master/sonos-kids-controller.zip -d ~/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
-	rm ~/.mupibox/Sonos-Kids-Controller-master/sonos-kids-controller.zip >&3 2>&3
+	wget https://splittscheid.de/Sonos-Kids-Controller-master.zip -O ~/.mupibox/sonos-kids-controller.zip >&3 2>&3
+	cd ~/.mupibox/ >&3 2>&3
+	unzip ~/.mupibox/sonos-kids-controller.zip >&3 2>&3
+	rm ~/.mupibox/sonos-kids-controller.zip >&3 2>&3
 	wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/www.json -O ~/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >&3 2>&3
 	cd ~/.mupibox/Sonos-Kids-Controller-master  >&3 2>&3
 	ionic build --prod &>> ${LOG} 2>>${LOG}
@@ -262,7 +262,7 @@ exec 3>${LOG}
 	sudo echo "www-data ALL=(ALL:ALL) NOPASSWD: ALL" | sudo tee /etc/sudoers.d/www-data  >&3 2>&3
 	sudo usermod -a -G gpio dietpi >&3 2>&3
 	sudo usermod -a -G gpio root >&3 2>&3
-	sudo /boot/dietpi/func/dietpi-set_swapfile 1 zram >&3 2>&3
+	#sudo /boot/dietpi/func/dietpi-set_swapfile 1 zram >&3 2>&3
 	sudo /boot/dietpi/func/dietpi-set_software boot_wait_for_network 0 >&3 2>&3
 	sleep 1
 
@@ -270,7 +270,7 @@ exec 3>${LOG}
 
 	echo -e "XXX\n88\nDownload OnOffShim-Scripts... \nXXX"	
 
-	# OnOffShim & hifiberry
+	# OnOffShim
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/OnOffShim/off_trigger.sh -O /var/lib/dietpi/postboot.d/off_trigger.sh >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/OnOffShim/poweroff.sh -O /usr/lib/systemd/system-shutdown/poweroff.sh >&3 2>&3
 	sudo chmod 775 /usr/lib/systemd/system-shutdown/poweroff.sh /var/lib/dietpi/postboot.d/off_trigger.sh >&3 2>&3
@@ -321,7 +321,7 @@ exec 3>${LOG}
 	sudo systemctl enable mupi_idle_shutdown.service >&3 2>&3
 	sudo systemctl start mupi_idle_shutdown.service >&3 2>&3
 	sudo systemctl enable mupi_splash.service >&3 2>&3
-	sudo systemctl start mupi_splash.service >&3 2>&3
+	#sudo systemctl start mupi_splash.service >&3 2>&3
 	sudo systemctl enable spotifyd.service >&3 2>&3
 	sudo systemctl start spotifyd.service >&3 2>&3
 	sudo systemctl enable smbd.service >&3 2>&3
@@ -342,7 +342,6 @@ exec 3>${LOG}
 
 	echo -e "XXX\n100\nInstallation complete, please reboot the system... \nXXX"	
 	sudo mv ${LOG} ~/.mupibox/autosetup.log
-	sudo reboot
 	#https://gist.github.com/yejun/2c1a070a839b3a7b146ede8a998b5495    !!!!!
 	#discoverable on
 	#pairable on
@@ -351,5 +350,7 @@ exec 3>${LOG}
 	#scan on
 
 } | whiptail --title "MuPiBox Autosetup" --gauge "Please wait while installing" 6 60 0
+
+sudo reboot
 
 
