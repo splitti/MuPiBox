@@ -95,26 +95,26 @@ exec 3>${LOG}
 
 	echo -e "XXX\n32\nInstall Kids-Controller-master... \nXXX"	
 
-	wget https://splittscheid.de/Sonos-Kids-Controller-master.zip -O ~/.mupibox/sonos-kids-controller.zip >&3 2>&3
-	cd ~/.mupibox/ >&3 2>&3
-	unzip ~/.mupibox/sonos-kids-controller.zip >&3 2>&3
-	rm ~/.mupibox/sonos-kids-controller.zip >&3 2>&3
-	wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/www.json -O ~/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >&3 2>&3
-	cd ~/.mupibox/Sonos-Kids-Controller-master  >&3 2>&3
-	npm install >&3 2>&3
-	ionic build --prod &>> ${LOG} 2>>${LOG}
-	pm2 start server.js >&3 2>&3
-	pm2 save >&3 2>&3
-#	wget https://github.com/splitti/MuPiBox/raw/main/bin/nodejs/sonos-kids-controller.zip -O ~/.mupibox/Sonos-Kids-Controller-master/sonos-kids-controller.zip >&3 2>&3
-#	unzip ~/.mupibox/Sonos-Kids-Controller-master/sonos-kids-controller.zip -d ~/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
-#	rm ~/.mupibox/Sonos-Kids-Controller-master/sonos-kids-controller.zip >&3 2>&3
+#	wget https://splittscheid.de/Sonos-Kids-Controller-master.zip -O ~/.mupibox/sonos-kids-controller.zip >&3 2>&3
+#	cd ~/.mupibox/ >&3 2>&3
+#	unzip ~/.mupibox/sonos-kids-controller.zip >&3 2>&3
+#	rm ~/.mupibox/sonos-kids-controller.zip >&3 2>&3
 #	wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/www.json -O ~/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >&3 2>&3
 #	cd ~/.mupibox/Sonos-Kids-Controller-master  >&3 2>&3
-#	sudo /boot/dietpi/func/dietpi-set_swapfile 2048 >&3 2>&3
 #	npm install >&3 2>&3
-#	sudo /boot/dietpi/func/dietpi-set_swapfile 0 >&3 2>&3
+#	ionic build --prod &>> ${LOG} 2>>${LOG}
 #	pm2 start server.js >&3 2>&3
 #	pm2 save >&3 2>&3
+	wget https://github.com/splitti/MuPiBox/raw/main/bin/nodejs/deploy.zip -O ~/.mupibox/Sonos-Kids-Controller-master/sonos-kids-controller.zip >&3 2>&3
+	unzip ~/.mupibox/Sonos-Kids-Controller-master/sonos-kids-controller.zip -d ~/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
+	rm ~/.mupibox/Sonos-Kids-Controller-master/sonos-kids-controller.zip >&3 2>&3
+	wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/www.json -O ~/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >&3 2>&3
+	cd ~/.mupibox/Sonos-Kids-Controller-master  >&3 2>&3
+#	sudo /boot/dietpi/func/dietpi-set_swapfile 2048 >&3 2>&3
+	npm install >&3 2>&3
+#	sudo /boot/dietpi/func/dietpi-set_swapfile 0 >&3 2>&3
+	pm2 start server.js >&3 2>&3
+	pm2 save >&3 2>&3
 
 	###############################################################################################
 
