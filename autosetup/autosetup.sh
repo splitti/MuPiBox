@@ -101,8 +101,8 @@ exec 3>${LOG}
 	rm ~/.mupibox/sonos-kids-controller.zip >&3 2>&3
 	wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/www.json -O ~/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >&3 2>&3
 	cd ~/.mupibox/Sonos-Kids-Controller-master  >&3 2>&3
-	ionic build --prod &>> ${LOG} 2>>${LOG}
 	npm install >&3 2>&3
+	ionic build --prod &>> ${LOG} 2>>${LOG}
 	pm2 start server.js >&3 2>&3
 	pm2 save >&3 2>&3
 #	wget https://github.com/splitti/MuPiBox/raw/main/bin/nodejs/sonos-kids-controller.zip -O ~/.mupibox/Sonos-Kids-Controller-master/sonos-kids-controller.zip >&3 2>&3

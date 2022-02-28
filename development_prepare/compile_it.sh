@@ -42,7 +42,7 @@ wget https://raw.githubusercontent.com/splitti/MuPiBox/main/development_prepare/
 wget https://raw.githubusercontent.com/splitti/MuPiBox/main/development_prepare/customize/Sonos-Kids-Controller-master/src/app/admin/admin.page.spec.ts -O ${COMPPATH}Sonos-Kids-Controller-master/src/app/admin/admin.page.spec.ts &>> ${LOG} 2>>${LOG}
 
 #npm i -D -E @angular/cli
-npm install @angular/cli
+npm install #@angular/cli
 sudo ionic build --prod &>> ${LOG} 2>>${LOG}
 mkdir deploy &>> ${LOG} 2>>${LOG}
 cp -Rp www deploy/ &>> ${LOG} 2>>${LOG}
