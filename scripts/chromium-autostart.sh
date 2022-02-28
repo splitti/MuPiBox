@@ -18,9 +18,11 @@ CHROMIUM_OPTS="--use-gl=egl --kiosk --test-type --window-size=${RES_X:-1280},${R
 
 URL="http://$(/usr/bin/jq -r .mupibox.host ${CONFIG}):8200"
 
+START_SOUND=$(/usr/bin/jq -r .mupibox.startSound ${CONFIG})
 START_VOLUME=$(/usr/bin/jq -r .mupibox.startVolume ${CONFIG})
 AUDIO_DEVICE=$(/usr/bin/jq -r .mupibox.audioDevice ${CONFIG})
 /usr/bin/amixer sset ${AUDIO_DEVICE} ${START_VOLUME}%
+/usr/bin/mplayer ${START_SOUND} &
 
 # RPi or Debian Chromium package
 FP_CHROMIUM=$(command -v chromium-browser)

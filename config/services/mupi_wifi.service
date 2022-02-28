@@ -1,0 +1,8 @@
+[Unit]
+Description=Add Wifi from Display Dialog
+
+[Service]
+ExecStart=/usr/local/bin/mupibox/./add_wifi.sh
+
+[Install]
+WantedBy=basic.target
