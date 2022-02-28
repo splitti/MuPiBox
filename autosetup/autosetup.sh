@@ -198,7 +198,7 @@ exec 3>${LOG}
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/setting_update.sh -O /usr/local/bin/mupibox/setting_update.sh >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/software_shutdown.sh -O /usr/local/bin/mupibox/software_shutdown.sh >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/add_wifi.sh -O /usr/local/bin/mupibox/add_wifi.sh >&3 2>&3
-	
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/shutdown_sound.sh -O /usr/local/bin/mupibox/shutdown_sound.sh >&3 2>&3
 		
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/restart_kiosk.sh -O /usr/local/bin/mupibox/restart_kiosk.sh >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/set_deviceid.sh -O /usr/local/bin/mupibox/set_deviceid.sh >&3 2>&3
