@@ -325,7 +325,7 @@ exec 3>${LOG}
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/services/spotifyd.service -O /etc/systemd/system/spotifyd.service >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/services/pulseaudio.service -O /etc/systemd/system/pulseaudio.service >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/services/mupi_startstop.service -O /etc/systemd/system/mupi_startstop.service >&3 2>&3
-	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/services/mupi_wifi.service -O /etc/systemd/system/mupi_startstop.service >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/services/mupi_wifi.service -O /etc/systemd/system/mupi_wifi.service  >&3 2>&3
 	sudo systemctl daemon-reload >&3 2>&3
 	sudo systemctl enable mupi_wifi.service >&3 2>&3
 	sudo systemctl start mupi_wifi.service >&3 2>&3
