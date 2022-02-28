@@ -20,6 +20,7 @@ CHROMIUM_OPTS="--use-gl=egl --kiosk --test-type --window-size=${RES_X:-1280},${R
 URL="http://$(/usr/bin/jq -r .mupibox.host ${CONFIG}):8200"
 
 START_VOLUME=$(/usr/bin/jq -r .mupibox.startVolume ${CONFIG})
+AUDIO_DEVICE=$(/usr/bin/jq -r .mupibox.audioDevice ${CONFIG})
 /usr/bin/amixer sset ${AUDIO_DEVICE} ${START_VOLUME}%
 
 currentIP=$(hostname -I)
