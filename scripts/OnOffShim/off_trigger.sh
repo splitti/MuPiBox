@@ -20,11 +20,4 @@ until [ $power = $switchtype ]; do
     sleep 1
 done
 
-SHUT_SOUND=$(/usr/bin/jq -r .mupibox.shutSound ${CONFIG})
-AUDIO_DEVICE=$(/usr/bin/jq -r .mupibox.audioDevice ${CONFIG})
-START_VOLUME=$(/usr/bin/jq -r .mupibox.startVolume ${CONFIG})
-
-/usr/bin/amixer sset ${AUDIO_DEVICE} ${START_VOLUME}%
-/usr/bin/mplayer ${SHUT_SOUND}
-
 poweroff
