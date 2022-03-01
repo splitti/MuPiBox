@@ -28,7 +28,7 @@ exec 3>${LOG}
 	sudo chown dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json >&3 2>&3
 
 
-	echo -e "XXX\n75\nDownload MuPiBox-Files... \nXXX"	
+	echo -e "XXX\n15\nDownload MuPiBox-Files... \nXXX"	
 
 	# MuPiBox
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/dark.css -O ~/MuPiBox/themes/dark.css >&3 2>&3
@@ -65,6 +65,12 @@ exec 3>${LOG}
 	sudo su - dietpi -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && pm2 -f start server.js" >&3 2>&3
 	sudo su - dietpi -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && pm2 -f save" >&3 2>&3
 
+	echo -e "XXX\n85\nDownload OnOffShim-Scripts... \nXXX"	
+
+	# OnOffShim
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/OnOffShim/off_trigger.sh -O /var/lib/dietpi/postboot.d/off_trigger.sh >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/OnOffShim/poweroff.sh -O /usr/lib/systemd/system-shutdown/poweroff.sh >&3 2>&3
+	sudo chmod 775 /usr/lib/systemd/system-shutdown/poweroff.sh /var/lib/dietpi/postboot.d/off_trigger.sh >&3 2>&3
 
 
 	echo -e "XXX\n90\nUpdate Admin-Interface... \nXXX"	
