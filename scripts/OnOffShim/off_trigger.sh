@@ -20,6 +20,8 @@ until [ $power = $switchtype ]; do
     sleep 1
 done
 
+SHUT_SOUND=$(/usr/bin/jq -r .mupibox.shutSound ${CONFIG})
+START_VOLUME=$(/usr/bin/jq -r .mupibox.startVolume ${CONFIG})
 /usr/bin/mplayer -volume ${START_VOLUME} ${SHUT_SOUND}
 
 poweroff
