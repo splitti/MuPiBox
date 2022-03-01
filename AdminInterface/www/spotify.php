@@ -27,33 +27,26 @@
 		$data["spotify"]["accessToken"]=$_POST['spotify_accesstoken'];
 		$change=1;
 		}
-	if( $data["spotify"]["refreshToken"]!=$_POST['spotify_refreshtoken'] && $_POST['spotify_refreshtoken'])
+	if( $data["spotify"]["refreshToken"]!=$_POST['spotify_refreshtoken'] && $_POST['spotify_refreshtoken'] )
 		{
 		$data["spotify"]["refreshToken"]=$_POST['spotify_refreshtoken'];
 		$change=1;
 		}
-	if( !($data["spotify"]["deviceId"]) && $data["spotify"]["username"] && $data["spotify"]["password"] )
-		{
-		#$data["spotify"]["deviceId"]="NA KLAE";
-		
-//		$getDeviceURL="http://".$data["mupibox"]["host"].":5005/getDevices";
-//		$deviceJSON=file_get_contents($getDeviceURL);
-//		$deviceData=json_decode(deviceJSON);
-
-
-		$command = "sudo /usr/local/bin/mupibox/./set_deviceid.sh";
-		//exec($command, $output, $result);
-		//$data["spotify"]["deviceId"]=$output;
-		$change=1;
-		}
-	
 	if( $change )
 		{
 			$json_object = json_encode($data);
 			$save_rc = file_put_contents('/etc/mupibox/mupiboxconfig.json', $json_object);
-//			$command = "sudo /usr/local/bin/mupibox/./setting_update.sh";
-//			exec($command, $output, $result );
+			$command = "sudo /usr/local/bin/mupibox/./setting_update.sh && /usr/local/bin/mupibox/./spotify_restart.sh";
+			exec($command, $output, $result );
 		}
+	if( !($data["spotify"]["deviceId"]) && $data["spotify"]["username"] && $data["spotify"]["password"] && $_POST['spotify_clientid'] && $_POST['spotify_clientsecret'] && $_POST['spotify_accesstoken'] && $_POST['spotify_refreshtoken'] )
+		{
+		$command = "sudo /usr/local/bin/mupibox/./set_deviceid.sh";
+		exec($command, $devIDoutput, $result);
+		$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
+		$data = json_decode($string, true);
+		}
+	
 ?>
 
 

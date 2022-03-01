@@ -20,4 +20,6 @@ until [ $power = $switchtype ]; do
     sleep 1
 done
 
+/usr/bin/mplayer -volume ${START_VOLUME} ${SHUT_SOUND}
+
 poweroff
