@@ -27,7 +27,39 @@ exec 3>${LOG}
 	sudo cp /tmp/data.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json  >&3 2>&3
 	sudo chown dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json >&3 2>&3
 
-	echo -e "XXX\n15\nRestarting Services... \nXXX"	
+
+	echo -e "XXX\n75\nDownload MuPiBox-Files... \nXXX"	
+
+	# MuPiBox
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/dark.css -O ~/MuPiBox/themes/dark.css >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/blue.css -O ~/MuPiBox/themes/blue.css >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/purple.css -O ~/MuPiBox/themes/purple.css >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/red.css -O ~/MuPiBox/themes/red.css >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/chocolate.css -O ~/MuPiBox/themes/chocolate.css >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/vintage.css -O ~/MuPiBox/themes/vintage.css >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/orange.css -O ~/MuPiBox/themes/orange.css >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/green.css -O ~/MuPiBox/themes/green.css >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/light.css -O ~/MuPiBox/themes/light.css >&3 2>&3
+
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/mupi_shutdown.sh -O /usr/local/bin/mupibox/mupi_shutdown.sh >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/mupi_startup.sh -O /usr/local/bin/mupibox/mupi_startup.sh >&3 2>&3
+
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/change_checker.sh -O /usr/local/bin/mupibox/change_checker.sh >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/idle_shutdown.sh -O /usr/local/bin/mupibox/idle_shutdown.sh >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/m3u_generator.sh -O /usr/local/bin/mupibox/m3u_generator.sh >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/setting_update.sh -O /usr/local/bin/mupibox/setting_update.sh >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/software_shutdown.sh -O /usr/local/bin/mupibox/software_shutdown.sh >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/add_wifi.sh -O /usr/local/bin/mupibox/add_wifi.sh >&3 2>&3
+		
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/restart_kiosk.sh -O /usr/local/bin/mupibox/restart_kiosk.sh >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/set_deviceid.sh -O /usr/local/bin/mupibox/set_deviceid.sh >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/spotify_restart.sh -O /usr/local/bin/mupibox/spotify_restart.sh >&3 2>&3
+	
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/splash_screen.sh -O /usr/local/bin/mupibox/splash_screen.sh >&3 2>&3
+	sudo chmod 755 /usr/local/bin/mupibox/* >&3 2>&3
+
+
+	echo -e "XXX\n25\nRestarting Services... \nXXX"	
 
 	sudo su - dietpi -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && npm install" >&3 2>&3
 	sudo su - dietpi -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && pm2 -f start server.js" >&3 2>&3
