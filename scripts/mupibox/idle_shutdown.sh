@@ -24,11 +24,11 @@ do
 		idle=$(( current_idle_time / 6 ))
 		if ((${idle} > ${max_idle_time}))
 		then
-			echo "$(date +'%d/%m/%Y %H:%M:%S')  # CURRENT IDLE TIME = ${current_idle_time}" >> ${LOG}
+			echo "$(date +'%d/%m/%Y %H:%M:%S')  # CURRENT IDLE TIME = ${idle}" >> ${LOG}
 			echo "$(date +'%d/%m/%Y %H:%M:%S')  # MAX IDLE TIME REACHED - SHUTDOWN NOW" >> ${LOG}
 
 			# OnOffShim controlled shutdown
-			/usr/local/bin/mupibox/./software_shutdown.sh
+			sudo /usr/local/bin/mupibox/./software_shutdown.sh
 		  fi
     else
 		current_idle_time=0
@@ -37,5 +37,5 @@ do
   else
 		current_idle_time=0
   fi
-  echo "$(date +'%d/%m/%Y %H:%M:%S')  # CURRENT IDLE TIME = ${current_idle_time}" >> ${LOG}
+  echo "$(date +'%d/%m/%Y %H:%M:%S')  # CURRENT IDLE TIME = ${idle}" >> ${LOG}
 done
