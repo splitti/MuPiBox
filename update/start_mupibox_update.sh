@@ -99,7 +99,7 @@ exec 3>${LOG}
 	sudo chmod 775 ${CONFIG}
 	sudo systemctl start mupi_idle_shutdown.service >&3 2>&3
 
-	mv ${LOG} /home/dietpi/.mupibox/last_update.log >&3 2>&3
+	sudo mv ${LOG} /home/dietpi/.mupibox/last_update.log >&3 2>&3
 
 } | whiptail --title "MuPiBox Autosetup" --gauge "Please wait while installing" 6 60 0
 
