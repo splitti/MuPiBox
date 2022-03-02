@@ -14,7 +14,7 @@ echo "$(date +'%d/%m/%Y %H:%M:%S')  # SERVICE STARTED" >> ${LOG}
 
 while true
 do
-  sleep 60
+  sleep 10
   max_idle_time=`/usr/bin/jq -r .timeout.idlePiShutdown ${CONFIG}` 
   if (($max_idle_time > 0))
   then
