@@ -8,13 +8,17 @@ exec 3>${LOG}
 
 
 {
-	echo -e "XXX\n0\nBackup Userdata... \nXXX"	 >&3 2>&3
+	echo -e "XXX\n0\nPrepare Update... \nXXX"	 >&3 2>&3
+	sudo service mupi_idle_shutdown stop >&3 2>&3
+	sleep 1 >&3 2>&3
+
+	echo -e "XXX\n5\nBackup Userdata... \nXXX"	 >&3 2>&3
 	sudo cp /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json /tmp/data.json >&3 2>&3
 	sudo cp /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json /tmp/config.json >&3 2>&3
 	sudo cp /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/styles.242c97d50a9a860d.css /tmp/styles.242c97d50a9a860d.css >&3 2>&3
 	sleep 1 >&3 2>&3
 
-	echo -e "XXX\n2\nUpdate Kids-Controller... \nXXX"	
+	echo -e "XXX\n7\nUpdate Kids-Controller... \nXXX"	
 	sudo su - dietpi -c "pm2 stop server" >&3 2>&3
 	#sudo su - dietpi -c "pm2 save" >&3 2>&3
 	sudo rm -R /home/dietpi/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
@@ -25,7 +29,7 @@ exec 3>${LOG}
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/www.json -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >&3 2>&3
 	sudo chown -R dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master
 
-	echo -e "XXX\n10\nRestore Userdata... \nXXX"
+	echo -e "XXX\n20\nRestore Userdata... \nXXX"
 	sudo mv /tmp/data.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json  >&3 2>&3
 	sudo mv /tmp/config.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json  >&3 2>&3
 	sudo mv /tmp/styles.242c97d50a9a860d.css /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/styles.242c97d50a9a860d.css >&3 2>&3
@@ -35,7 +39,7 @@ exec 3>${LOG}
 	sleep 1 >&3 2>&3
 
 
-	echo -e "XXX\n15\nDownload MuPiBox-Files... \nXXX"	
+	echo -e "XXX\n22\nDownload MuPiBox-Files... \nXXX"	
 
 	# MuPiBox
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/dark.css -O ~/MuPiBox/themes/dark.css >&3 2>&3
@@ -66,7 +70,7 @@ exec 3>${LOG}
 	sudo chmod 755 /usr/local/bin/mupibox/* >&3 2>&3
 
 
-	echo -e "XXX\n25\nRestarting Services... \nXXX"	
+	echo -e "XXX\n30\nRestarting Services... \nXXX"	
 
 	sudo su - dietpi -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && npm install" >&3 2>&3
 	#sudo su - dietpi -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && pm2 -f start server.js" >&3 2>&3
@@ -94,6 +98,7 @@ exec 3>${LOG}
 	sudo chmod 777 ${CONFIG}
 	/usr/bin/cat <<< $(/usr/bin/jq --arg v "${VERSION}" '.mupibox.version = $v' ${CONFIG}) >  ${CONFIG}
 	sudo chmod 775 ${CONFIG}
+	sudo service mupi_idle_shutdown start >&3 2>&3
 
 	mv ${LOG} /home/dietpi/.mupibox/last_update.log >&3 2>&3
 

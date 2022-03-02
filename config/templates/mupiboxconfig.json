@@ -20,7 +20,7 @@
 		"shutSplash": "/home/dietpi/MuPiBox/sysmedia/images/goodbye.png",
 		"audioDevice": "Master",
 		"mediaCheckTimer": "300",
-		"version": "0.0.1"
+		"version": ""
 	},
 	"spotify": {
 		"username": "",
