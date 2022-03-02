@@ -22,6 +22,9 @@ done
 
 SHUT_SOUND=$(/usr/bin/jq -r .mupibox.shutSound ${CONFIG})
 START_VOLUME=$(/usr/bin/jq -r .mupibox.startVolume ${CONFIG})
-/usr/bin/mplayer -volume ${START_VOLUME} ${SHUT_SOUND}
+AUDIO_DEVICE=$(/usr/bin/jq -r .mupibox.audioDevice ${CONFIG})
+/usr/bin/amixer sset ${AUDIO_DEVICE} ${START_VOLUME}%
+
+/usr/bin/mplayer -volume 100 ${SHUT_SOUND}
 
 poweroff

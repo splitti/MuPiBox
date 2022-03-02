@@ -22,7 +22,7 @@ START_SOUND=$(/usr/bin/jq -r .mupibox.startSound ${CONFIG})
 START_VOLUME=$(/usr/bin/jq -r .mupibox.startVolume ${CONFIG})
 AUDIO_DEVICE=$(/usr/bin/jq -r .mupibox.audioDevice ${CONFIG})
 /usr/bin/amixer sset ${AUDIO_DEVICE} ${START_VOLUME}%
-/usr/bin/mplayer ${START_SOUND} &
+/usr/bin/mplayer -volume 100 ${START_SOUND} &
 
 # RPi or Debian Chromium package
 FP_CHROMIUM=$(command -v chromium-browser)
