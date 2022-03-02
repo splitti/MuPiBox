@@ -1,9 +1,8 @@
 #!/bin/bash
 #
 
-VERSION="0.0.2"
+VERSION=$(curl https://raw.githubusercontent.com/splitti/MuPiBox/main/version.json | /usr/bin/jq -r .version)
 CONFIG="/etc/mupibox/mupiboxconfig.json"
-TMPCONFIG="/tmp/mupiboxconfig.json"
 LOG="/tmp/mupibox_update.log"
 exec 3>${LOG}
 
