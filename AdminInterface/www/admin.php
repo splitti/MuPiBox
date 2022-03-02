@@ -12,7 +12,7 @@
 		}
 	if( $_POST['mupibox_update'] )
 		{
-		$command = "cd; curl https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh | bash";
+		$command = "cd; curl https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh | sudo bash";
 		exec($command, $output, $result );
 		$change=1;
 		}
