@@ -34,12 +34,12 @@
 		}
 	if( $change )
 		{
-			$json_object = json_encode($data);
-			$save_rc = file_put_contents('/etc/mupibox/mupiboxconfig.json', $json_object);
-			$command = "sudo /usr/local/bin/mupibox/./setting_update.sh && /usr/local/bin/mupibox/./spotify_restart.sh";
-			exec($command, $output, $result );
+		$json_object = json_encode($data);
+		$save_rc = file_put_contents('/etc/mupibox/mupiboxconfig.json', $json_object);
+		$command = "sudo /usr/local/bin/mupibox/./setting_update.sh && /usr/local/bin/mupibox/./spotify_restart.sh";
+		exec($command, $output, $result );
 		}
-	if( !($data["spotify"]["deviceId"]) && $data["spotify"]["username"] && $data["spotify"]["password"] && $_POST['spotify_clientid'] && $_POST['spotify_clientsecret'] && $_POST['spotify_accesstoken'] && $_POST['spotify_refreshtoken'] )
+	if( !($data["spotify"]["deviceId"]) && $data["spotify"]["username"] && $data["spotify"]["password"] && $data["spotify"]["clientSecret"] && $data["spotify"]["accessToken"] && $data["spotify"]["refreshToken"] )
 		{
 		$command = "sudo /usr/local/bin/mupibox/./set_deviceid.sh";
 		exec($command, $devIDoutput, $result);
