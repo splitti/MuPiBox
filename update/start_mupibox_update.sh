@@ -4,7 +4,7 @@
 VERSION=$(curl https://raw.githubusercontent.com/splitti/MuPiBox/main/version.json | /usr/bin/jq -r .version)
 CONFIG="/etc/mupibox/mupiboxconfig.json"
 LOG="/tmp/mupibox_update.log"
-sudo exec 3>${LOG}
+exec 3>${LOG}
 
 
 {
@@ -100,6 +100,7 @@ sudo exec 3>${LOG}
 	sudo systemctl start mupi_idle_shutdown.service >&3 2>&3
 
 	sudo mv ${LOG} /home/dietpi/.mupibox/last_update.log >&3 2>&3
+	sudo chown -R dietpi:dietpi /home/dietpi/.mupibox/last_update.log >&3 2>&3
 
 } | whiptail --title "MuPiBox Autosetup" --gauge "Please wait while installing" 6 60 0
 
