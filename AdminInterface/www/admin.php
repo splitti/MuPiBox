@@ -1,7 +1,7 @@
 
 <?php
 	$change=0;
-	$onlinejson = file_get_contents('https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/mupiboxconfig.json');
+	$onlinejson = file_get_contents('https://raw.githubusercontent.com/splitti/MuPiBox/main/version.json');
 	$dataonline = json_decode($onlinejson, true);
 	include ('includes/header.php');
 	if( $_POST['restart_kiosk'] )
@@ -70,7 +70,7 @@
 											<td><?php print $data["mupibox"]["version"]; ?></td>
 										</tr>
 										<tr>
-											<td>Latest Version:</td><td><?php print $dataonline["mupibox"]["version"]; ?></td>
+											<td>Latest Version:</td><td><?php print $dataonline["version"]; ?></td>
 										</tr>
 									</table>
 									Please notice: The update procedure takes a long time. Don't close the browser and wait for the status message!

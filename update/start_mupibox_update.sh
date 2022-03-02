@@ -9,7 +9,7 @@ exec 3>${LOG}
 
 {
 	echo -e "XXX\n0\nPrepare Update... \nXXX"	 >&3 2>&3
-	sudo service mupi_idle_shutdown stop >&3 2>&3
+	sudo systemctl stop mupi_idle_shutdown.service >&3 2>&3
 	sleep 1 >&3 2>&3
 
 	echo -e "XXX\n5\nBackup Userdata... \nXXX"	 >&3 2>&3
@@ -98,7 +98,7 @@ exec 3>${LOG}
 	sudo chmod 777 ${CONFIG}
 	/usr/bin/cat <<< $(/usr/bin/jq --arg v "${VERSION}" '.mupibox.version = $v' ${CONFIG}) >  ${CONFIG}
 	sudo chmod 775 ${CONFIG}
-	sudo service mupi_idle_shutdown start >&3 2>&3
+	sudo systemctl start mupi_idle_shutdown.service >&3 2>&3
 
 	mv ${LOG} /home/dietpi/.mupibox/last_update.log >&3 2>&3
 
