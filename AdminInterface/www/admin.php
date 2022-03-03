@@ -60,8 +60,8 @@
 
                 <form class="appnitro" id="myform" method="post" action="admin.php">
                                         <div class="description">
-                        <h2>MupiBox settings</h2>
-                        <p>Some little helpers...</p>
+                        <h2>MupiBox Administration</h2>
+                        <p>Please be sure what you do...</p>
                 </div>
                         <ul ><li id="li_1" >
                                         
@@ -91,13 +91,9 @@
 								<input id="saveForm" class="button_text" type="submit" name="restart_kiosk" value="Restart Chromium-Kiosk" /></li>
                                 
 								<li class="li_1"><h2>Reboot MuPiBox</h2>
-								<p>Sometimes only a restart helps...</p>
-								<li class="li_1"><input id="saveForm" class="button_text" type="submit" name="reboot" value="Reboot MuPiBox" /></li>
-                                
-								<li class="li_1"><h2>Shutdown MuPiBox</h2>
-								<p>Turn the box off... See you later!</p>
-								<input id="saveForm" class="button_text" type="submit" name="shutdown" value="Shutdown MuPiBox" /></li>
-								
+								<p>Restart or shutdown the boxs...</p>
+								<li class="li_1"><input id="saveForm" class="button_text" type="submit" name="reboot" value="Reboot MuPiBox" /></li><input id="saveForm" class="button_text" type="submit" name="shutdown" value="Shutdown MuPiBox" /></li>
+                                					
 								<li class="li_1">						<?php
 							if( $change )
 								{
