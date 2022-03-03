@@ -27,5 +27,5 @@ AUDIO_DEVICE=$(/usr/bin/jq -r .mupibox.audioDevice ${CONFIG})
 
 /usr/bin/mplayer -volume 100 ${SHUT_SOUND}
 
-sudo shutdown -h now
-#poweroff
+#sudo shutdown -h now
+poweroff
