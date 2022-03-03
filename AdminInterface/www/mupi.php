@@ -24,6 +24,11 @@
 		$data["timeout"]["idlePiShutdown"]=$_POST['idlePiShutdown'];
 		$change=1;
 		}
+	else
+		{	
+		$data["timeout"]["idlePiShutdown"]=0;
+		$change=1;
+		}
 	if( $data["timeout"]["idleDisplayOff"]!==$_POST['idleDisplayOff'] )
 		{
 		$data["timeout"]["idleDisplayOff"]=$_POST['idleDisplayOff'];
