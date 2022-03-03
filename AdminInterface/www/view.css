@@ -374,6 +374,7 @@ input.button_text
 {
 	font-size:120%;
 	margin-right:5px;
+	background-color:#44afe2;
 }
 
 /**** Inputs and Labels ****/
@@ -704,15 +705,6 @@ ul.password{
    font-size:120% !important;
    padding-top:10px;
    font-weight:bold;
-}
-
-#li_captcha{
-   padding-left: 5px;
-}
-
-
-#li_captcha span{
-	float:none;
 }
 
 /** Embedded Form **/
