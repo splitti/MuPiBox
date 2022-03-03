@@ -198,6 +198,7 @@ exec 3>${LOG}
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/setting_update.sh -O /usr/local/bin/mupibox/setting_update.sh >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/software_shutdown.sh -O /usr/local/bin/mupibox/software_shutdown.sh >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/add_wifi.sh -O /usr/local/bin/mupibox/add_wifi.sh >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/add_cover.sh -O /usr/local/bin/mupibox/add_cover.sh >&3 2>&3
 		
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/restart_kiosk.sh -O /usr/local/bin/mupibox/restart_kiosk.sh >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/set_deviceid.sh -O /usr/local/bin/mupibox/set_deviceid.sh >&3 2>&3
@@ -267,14 +268,15 @@ exec 3>${LOG}
 	rm ${THEME_FILE} >&3 2>&3
 	ln -s /home/dietpi/MuPiBox/themes/${NEW_THEME}.css ${THEME_FILE} >&3 2>&3
 	sudo chown root:www-data /etc/mupibox/mupiboxconfig.json >&3 2>&3
-	sudo chmod 775 /etc/mupibox/mupiboxconfig.json >&3 2>&3
+	sudo chmod 777 /etc/mupibox/mupiboxconfig.json >&3 2>&3
 	sudo echo "www-data ALL=(ALL:ALL) NOPASSWD: ALL" | sudo tee /etc/sudoers.d/www-data  >&3 2>&3
 	sudo usermod -a -G gpio dietpi >&3 2>&3
 	sudo usermod -a -G gpio root >&3 2>&3
 	#sudo /boot/dietpi/func/dietpi-set_swapfile 1 zram >&3 2>&3
 	sudo /boot/dietpi/func/dietpi-set_software boot_wait_for_network 0 >&3 2>&3
 	VERSION=$(curl https://raw.githubusercontent.com/splitti/MuPiBox/main/version.json | /usr/bin/jq -r .version) >&3 2>&3
-	/usr/bin/cat <<< $(/usr/bin/jq --arg v "${VERSION}" '.mupibox.version = $v' ${MUPIBOX_CONFIG}) >  ${MUPIBOX_CONFIG} >&3 2>&3
+	sudo /usr/bin/cat <<< $(/usr/bin/jq --arg v "${VERSION}" '.mupibox.version = $v' ${MUPIBOX_CONFIG}) >  ${MUPIBOX_CONFIG} >&3 2>&3
+	sudo chmod 775 /etc/mupibox/mupiboxconfig.json >&3 2>&3
 	sleep 1
 
 	###############################################################################################
