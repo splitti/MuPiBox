@@ -365,16 +365,23 @@ form .section_break p
 /**** Buttons ****/
 input.button_text
 {
-	overflow:visible;
-	padding:0 7px;
-	width:auto;
+        overflow:visible;
+        color:#ffffff;
+        padding:5px;
+        width:auto;
+        background-color:#44afe2;
+        border:1px solid #054b61;
 }
+input.button_text:hover
+{
+        background-color:#000000;
+}
+
 
 .buttons input
 {
 	font-size:120%;
 	margin-right:5px;
-	background-color:#44afe2;
 }
 
 /**** Inputs and Labels ****/
