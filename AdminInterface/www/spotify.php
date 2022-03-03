@@ -78,7 +78,7 @@
 				 <li id="li_1" >
                 <label class="description" for="spotify_deviceid">Spotify Device ID </label>
                 <div>
-                        <input id="spotify_user" name="spotify_deviceid" class="element text large" type="text" maxlength="255" value="<?php
+                        <input id="readonly" name="spotify_deviceid" class="element readonly large" type="text" maxlength="255" value="<?php
                         print $data["spotify"]["deviceId"];
 ?>" readonly />
                 </div><p class="guidelines" id="guide_1"><small>Please insert the hostname of the MuPiBox. Don't use Spaces or other special charachters! Default: MuPiBox</small></p>

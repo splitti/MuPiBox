@@ -396,16 +396,26 @@ span.symbol
 
 input.text
 {
-	background:#fff url(images/shadow.gif) repeat-x top;
-	border-bottom:1px solid #ddd;
-	border-left:1px solid #c3c3c3;
-	border-right:1px solid #c3c3c3;
-	border-top:1px solid #7c7c7c;
-	color:#333;
-	font-size:100%;
-	margin:0;
-	padding:2px 0;
+        background-color:#efefef;
+        border: 0px;
+        border-bottom:1px solid #000;
+        color:#000;
+        font-size:100%;
+        margin:0;
+        padding:2px 0;
 }
+
+input.readonly
+{
+        background-color:#cccccc;
+        border: 0px;
+        border-bottom:1px solid #000;
+        color:#000;
+        font-size:100%;
+        margin:0;
+        padding:2px 0;
+}
+
 
 input.file
 {

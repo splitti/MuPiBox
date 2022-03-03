@@ -19,17 +19,12 @@
 		$data["mupibox"]["startVolume"]=$_POST['volume'];
 		$change=1;
 		}
-	if( $_POST['idlePiShutdown'] )
+	if(isset($_POST['idlePiShutdown']) && $_POST['idlePiShutdown'] >= 0)
 		{
 		$data["timeout"]["idlePiShutdown"]=$_POST['idlePiShutdown'];
 		$change=1;
 		}
-	else
-		{	
-		$data["timeout"]["idlePiShutdown"]=0;
-		$change=1;
-		}
-	if( $data["timeout"]["idleDisplayOff"]!==$_POST['idleDisplayOff'] )
+	if(isset($_POST['idleDisplayOff']) && $_POST['idleDisplayOff'] >= 0)
 		{
 		$data["timeout"]["idleDisplayOff"]=$_POST['idleDisplayOff'];
 		$change=1;
