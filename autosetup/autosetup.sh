@@ -218,11 +218,13 @@ exec 3>${LOG}
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/asound.conf -O /etc/asound.conf  >&3 2>&3
 	sudo usermod -g pulse -G audio --home /var/run/pulse pulse >&3 2>&3
 	sudo usermod -a -G audio dietpi >&3 2>&3
+	sudo usermod -a -G gpio dietpi >&3 2>&3
 	sudo usermod -a -G bluetooth dietpi >&3 2>&3
 	sudo usermod -a -G pulse dietpi >&3 2>&3
 	sudo usermod -a -G pulse-access dietpi >&3 2>&3
 	sudo usermod -a -G pulse root >&3 2>&3
 	sudo usermod -a -G pulse-access root >&3 2>&3
+	sudo usermod -a -G gpio root >&3 2>&3
 	sudo /usr/bin/sed -i 's/; system-instance = no/system-instance = yes/g' /etc/pulse/daemon.conf >&3 2>&3
 
 	if grep -q '^load-module module-bluetooth-discover' /etc/pulse/system.pa; then
