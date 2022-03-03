@@ -58,7 +58,7 @@
 	$rc = $output[count($output)-1];
 ?>
 
-                <form class="appnitro" id="myform" method="post" action="admin.php">
+                <form class="appnitro" method="post" action="admin.php">
                                         <div class="description">
                         <h2>MupiBox Administration</h2>
                         <p>Please be sure what you do...</p>
@@ -90,9 +90,13 @@
 								<input id="saveForm" class="button_text" type="submit" name="spotify_restart" value="Restart services" />
 								<input id="saveForm" class="button_text" type="submit" name="restart_kiosk" value="Restart Chromium-Kiosk" /></li>
                                 
-								<li class="li_1"><h2>Reboot MuPiBox</h2>
+								<li class="li_1"><h2>Control MuPiBox</h2>
 								<p>Restart or shutdown the boxs...</p>
-								<li class="li_1"><input id="saveForm" class="button_text" type="submit" name="reboot" value="Reboot MuPiBox" /></li><input id="saveForm" class="button_text" type="submit" name="shutdown" value="Shutdown MuPiBox" /></li>
+								<input id="saveForm" class="button_text" type="submit" name="reboot" value="Reboot MuPiBox" />
+								<input id="saveForm" class="button_text" type="submit" name="shutdown" value="Shutdown MuPiBox" /></li>
+
+								<li class="li_1"><h2>Backup and restore MuPiBox-settings</h2>
+								<p>Coming soon...</p></li>
                                 					
 								<li class="li_1">						<?php
 							if( $change )

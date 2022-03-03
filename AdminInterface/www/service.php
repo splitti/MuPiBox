@@ -1,4 +1,3 @@
-
 <?php
 	$change=0;
 	$onlinejson = file_get_contents('https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/mupiboxconfig.json');
