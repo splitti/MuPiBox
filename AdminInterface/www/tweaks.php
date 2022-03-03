@@ -12,7 +12,7 @@
                 }
         else if( $_POST['change_sd'] == "disable" )
                 {
-                $command = "sudo sed -i -e 's/dtoverlay=sdtweak,overclock_50=100//g' /boot/config.txt && sudo head -n -1 /boot/config.txt > /tmp/config.txt && sudo m>
+                $command = "sudo sed -i -e 's/dtoverlay=sdtweak,overclock_50=100//g' /boot/config.txt && sudo head -n -1 /boot/config.txt > /tmp/config.txt && sudo mv /tmp/config.txt /boot/config.txt";
                 exec($command, $output, $result );
                 $change=1;
                 }
@@ -47,7 +47,7 @@
                                                                 echo "Overclocking state: <b>".$sd_state."</b>";
                                                                 ?>
                                                                 </p>
-                                                                <input id="saveForm" class="button_text" type="submit" name="change_sd" value="<?php print $change_sd>
+                                                                <input id="saveForm" class="button_text" type="submit" name="change_sd" value="<?php print $change_sd; ?>" />
                                                         </li>
 
 
