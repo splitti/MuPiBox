@@ -95,24 +95,12 @@ exec 3>${LOG}
 
 	echo -e "XXX\n32\nInstall Kids-Controller-master... \nXXX"	
 
-#	wget https://splittscheid.de/Sonos-Kids-Controller-master.zip -O ~/.mupibox/sonos-kids-controller.zip >&3 2>&3
-#	cd ~/.mupibox/ >&3 2>&3
-#	unzip ~/.mupibox/sonos-kids-controller.zip >&3 2>&3
-#	rm ~/.mupibox/sonos-kids-controller.zip >&3 2>&3
-#	wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/www.json -O ~/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >&3 2>&3
-#	cd ~/.mupibox/Sonos-Kids-Controller-master  >&3 2>&3
-#	npm install >&3 2>&3
-#	ionic build --prod &>> ${LOG} 2>>${LOG}
-#	pm2 start server.js >&3 2>&3
-#	pm2 save >&3 2>&3
 	wget https://github.com/splitti/MuPiBox/raw/main/bin/nodejs/deploy.zip -O ~/.mupibox/Sonos-Kids-Controller-master/sonos-kids-controller.zip >&3 2>&3
 	unzip ~/.mupibox/Sonos-Kids-Controller-master/sonos-kids-controller.zip -d ~/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
 	rm ~/.mupibox/Sonos-Kids-Controller-master/sonos-kids-controller.zip >&3 2>&3
 	wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/www.json -O ~/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >&3 2>&3
 	cd ~/.mupibox/Sonos-Kids-Controller-master  >&3 2>&3
-#	sudo /boot/dietpi/func/dietpi-set_swapfile 2048 >&3 2>&3
 	npm install >&3 2>&3
-#	sudo /boot/dietpi/func/dietpi-set_swapfile 0 >&3 2>&3
 	pm2 start server.js >&3 2>&3
 	pm2 save >&3 2>&3
 
@@ -187,6 +175,8 @@ exec 3>${LOG}
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/orange.css -O ~/MuPiBox/themes/orange.css >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/green.css -O ~/MuPiBox/themes/green.css >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/light.css -O ~/MuPiBox/themes/light.css >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/deepblue.css -O ~/MuPiBox/themes/deepblue.css >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/pink.css -O ~/MuPiBox/themes/pink.css >&3 2>&3
 
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/mupi_shutdown.sh -O /usr/local/bin/mupibox/mupi_shutdown.sh >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/mupi_startup.sh -O /usr/local/bin/mupibox/mupi_startup.sh >&3 2>&3
@@ -217,23 +207,21 @@ exec 3>${LOG}
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/asound.conf -O /etc/asound.conf  >&3 2>&3
 	sudo usermod -g pulse -G audio --home /var/run/pulse pulse >&3 2>&3
 	sudo usermod -a -G audio dietpi >&3 2>&3
-	sudo usermod -a -G gpio dietpi >&3 2>&3
 	sudo usermod -a -G bluetooth dietpi >&3 2>&3
 	sudo usermod -a -G pulse dietpi >&3 2>&3
 	sudo usermod -a -G pulse-access dietpi >&3 2>&3
 	sudo usermod -a -G pulse root >&3 2>&3
 	sudo usermod -a -G pulse-access root >&3 2>&3
-	sudo usermod -a -G gpio root >&3 2>&3
 	sudo /usr/bin/sed -i 's/; system-instance = no/system-instance = yes/g' /etc/pulse/daemon.conf >&3 2>&3
 
 	if grep -q '^load-module module-bluetooth-discover' /etc/pulse/system.pa; then
-	  echo -e "load-module module-bluetooth-discover already set"
+	  echo -e "load-module module-bluetooth-discover already set" >&3 2>&3
 	else
 	  echo '' | sudo tee -a /etc/pulse/system.pa >&3 2>&3
 	  echo 'load-module module-bluetooth-discover' | sudo tee -a /etc/pulse/system.pa >&3 2>&3
 	fi
 	if grep -q '^load-module module-bluetooth-policy' /etc/pulse/system.pa; then
-	  echo -e "load-module module-bluetooth-policy already set"
+	  echo -e "load-module module-bluetooth-policy already set" >&3 2>&3
 	else
 	  echo '' | sudo tee -a /etc/pulse/system.pa >&3 2>&3
 	  echo 'load-module module-bluetooth-policy' | sudo tee -a /etc/pulse/system.pa >&3 2>&3
@@ -271,12 +259,12 @@ exec 3>${LOG}
 	sudo chown root:www-data /etc/mupibox/mupiboxconfig.json >&3 2>&3
 	sudo chmod 777 /etc/mupibox/mupiboxconfig.json >&3 2>&3
 	sudo echo "www-data ALL=(ALL:ALL) NOPASSWD: ALL" | sudo tee /etc/sudoers.d/www-data  >&3 2>&3
-	sudo usermod -a -G gpio dietpi >&3 2>&3
-	sudo usermod -a -G gpio root >&3 2>&3
+	#sudo usermod -a -G gpio dietpi >&3 2>&3
+	#sudo usermod -a -G gpio root >&3 2>&3
 	#sudo /boot/dietpi/func/dietpi-set_swapfile 1 zram >&3 2>&3
 	sudo /boot/dietpi/func/dietpi-set_software boot_wait_for_network 0 >&3 2>&3
-	VERSION=$(curl https://raw.githubusercontent.com/splitti/MuPiBox/main/version.json | /usr/bin/jq -r .version) >&3 2>&3
-	sudo /usr/bin/cat <<< $(/usr/bin/jq --arg v "${VERSION}" '.mupibox.version = $v' ${MUPIBOX_CONFIG}) >  ${MUPIBOX_CONFIG} >&3 2>&3
+	VERSION=$(curl https://raw.githubusercontent.com/splitti/MuPiBox/main/version.json | /usr/bin/jq -r .version  >&3 2>&3)
+	sudo /usr/bin/cat <<< $(/usr/bin/jq --arg v "${VERSION}" '.mupibox.version = $v' ${MUPIBOX_CONFIG}) > ${MUPIBOX_CONFIG} >&3 2>&3
 	sudo chmod 775 /etc/mupibox/mupiboxconfig.json >&3 2>&3
 	sleep 1
 
@@ -337,8 +325,6 @@ exec 3>${LOG}
 	sudo systemctl start mupi_change_checker.service >&3 2>&3
 	sudo systemctl enable mupi_idle_shutdown.service >&3 2>&3
 	sudo systemctl start mupi_idle_shutdown.service >&3 2>&3
-	sudo systemctl enable mupi_splash.service >&3 2>&3
-	#sudo systemctl start mupi_splash.service >&3 2>&3
 	sudo systemctl enable spotifyd.service >&3 2>&3
 	sudo systemctl start spotifyd.service >&3 2>&3
 	sudo systemctl enable smbd.service >&3 2>&3
@@ -347,8 +333,8 @@ exec 3>${LOG}
 	sudo systemctl start mupi_startstop.service >&3 2>&3
 	sudo systemctl enable pulseaudio.service >&3 2>&3
 	sudo systemctl start pulseaudio.service >&3 2>&3
-
-
+	sudo systemctl enable mupi_splash.service >&3 2>&3
+	sudo systemctl start mupi_splash.service >&3 2>&3
 
 	###############################################################################################
 

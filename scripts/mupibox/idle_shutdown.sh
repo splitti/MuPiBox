@@ -16,7 +16,7 @@ while true
 do
   sleep 10
   max_idle_time=$(/usr/bin/jq -r .timeout.idlePiShutdown ${CONFIG})
-  if (($max_idle_time > 0))
+  if (( $max_idle_time > 0 ))
   then
     if [[ $(head -n1 ${PLAYERSTATE}) != "play" ]]
     then
