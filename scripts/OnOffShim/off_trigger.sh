@@ -4,6 +4,8 @@
 # This is optional as you can use any button trigger script as you like
 # See this as a working example
 
+sleep 10
+
 CONFIG="/etc/mupibox/mupiboxconfig.json"
 TRIGGER_PIN=$(/usr/bin/jq -r .shim.triggerPin ${CONFIG})
 
