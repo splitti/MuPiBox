@@ -14,6 +14,7 @@ exec 3>${LOG}
 
 	echo -e "XXX\n5\nBackup Userdata... \nXXX"	 >&3 2>&3
 	sudo cp /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json /tmp/data.json >&3 2>&3
+	sudo cp -r /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover /tmp/cover >&3 2>&3
 	sudo cp /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json /tmp/config.json >&3 2>&3
 	sudo cp /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/styles.242c97d50a9a860d.css /tmp/styles.242c97d50a9a860d.css >&3 2>&3
 	sleep 1 >&3 2>&3
@@ -31,6 +32,7 @@ exec 3>${LOG}
 
 	echo -e "XXX\n20\nRestore Userdata... \nXXX"
 	sudo mv /tmp/data.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json  >&3 2>&3
+	sudo mv -r /tmp/cover /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover  >&3 2>&3
 	sudo mv /tmp/config.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json  >&3 2>&3
 	sudo mv /tmp/styles.242c97d50a9a860d.css /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/styles.242c97d50a9a860d.css >&3 2>&3
 	sudo chown dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json >&3 2>&3
