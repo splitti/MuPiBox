@@ -26,9 +26,7 @@ do
 		then
 			echo "$(date +'%d/%m/%Y %H:%M:%S')  # CURRENT IDLE TIME = ${idle}" >> ${LOG}
 			echo "$(date +'%d/%m/%Y %H:%M:%S')  # MAX IDLE TIME REACHED - SHUTDOWN NOW" >> ${LOG}
-
-			# OnOffShim controlled shutdown
-			sudo /usr/local/bin/mupibox/./software_shutdown.sh
+			sudo poweroff
 		  fi
     else
 		current_idle_time=0

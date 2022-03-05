@@ -249,7 +249,7 @@ exec 3>${LOG}
 
 	# ENV
 	(echo "mupibox"; echo "mupibox") | sudo smbpasswd -s -a dietpi >&3 2>&3
-	#sudo env PATH=$PATH:/usr/local/bin/mupibox >&3 2>&3
+	sudo env PATH=$PATH:/usr/local/bin/mupibox >&3 2>&3
 	MUPIBOX_CONFIG="/etc/mupibox/mupiboxconfig.json" >&3 2>&3
 	THEME_FILE="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/styles.242c97d50a9a860d.css" >&3 2>&3
 	NEW_THEME=$(/usr/bin/jq -r .mupibox.theme ${MUPIBOX_CONFIG}) >&3 2>&3
