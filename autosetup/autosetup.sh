@@ -101,7 +101,6 @@ exec 3>${LOG}
 	wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/www.json -O ~/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >&3 2>&3
 	cd ~/.mupibox/Sonos-Kids-Controller-master  >&3 2>&3
 	npm install >&3 2>&3
-	mkdir .mupibox/Sonos-Kids-Controller-master/www/cover
 	pm2 start server.js >&3 2>&3
 	pm2 save >&3 2>&3
 
