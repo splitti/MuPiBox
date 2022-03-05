@@ -18,7 +18,7 @@ sudo /bin/echo 1 > /sys/class/gpio/gpio${LED_PIN}/value
 while [ "$(/usr/bin/hostname -I)" = "" ]; do
 	# Waiting for network...
 	echo "Wait for network"
-	sleep 0.1
+	sleep 1
 done
 
 HOSTN=$(/usr/bin/hostname)
