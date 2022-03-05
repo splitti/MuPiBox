@@ -22,7 +22,7 @@ do
     then
 		((current_idle_time++))
 		idle=$(( current_idle_time / 6 ))
-		if ((${idle} > ${max_idle_time}))
+		if ((${idle} >= ${max_idle_time}))
 		then
 			echo "$(date +'%d/%m/%Y %H:%M:%S')  # CURRENT IDLE TIME = ${idle}" >> ${LOG}
 			echo "$(date +'%d/%m/%Y %H:%M:%S')  # MAX IDLE TIME REACHED - SHUTDOWN NOW" >> ${LOG}
