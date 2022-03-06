@@ -32,7 +32,7 @@
 		}
 	if( $_POST['shutdown'] )
 		{
-		$command = "sudo /usr/local/bin/mupibox/./software_shutdown.sh";
+		$command = "sudo poweroff";
 		exec($command, $output, $result );
 		$change=1;
 		}
