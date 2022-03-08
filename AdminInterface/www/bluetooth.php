@@ -15,13 +15,13 @@
 
 	if( $_POST['change_bt'] == "" )
 		{
-		$command = "sudo bluetoothctl power on; sudo discoverable on; sudo bluetoothctl pairable on; sudo bluetoothctl agent on; sudo bluetoothctl default-agent";
+		$command = "sudo bluetoothctl power on && sudo bluetoothctl discoverable on && sudo bluetoothctl pairable on && sudo bluetoothctl agent on && sudo bluetoothctl default-agent && sleep 2";
 		exec($command, $output, $result );
 		$change=1;
 		}
 	else if( $_POST['change_bt'] == "turn off" )
 		{
-		$command = "sudo bluetoothctl power off";
+		$command = "sudo bluetoothctl power off && sleep 2";
 		exec($command, $output, $result );
 		$change=1;
 		}
