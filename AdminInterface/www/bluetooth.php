@@ -48,7 +48,7 @@
                 $change_bt = "turn off";
 				
 				$command = "sudo bluetoothctl paired-devices";
-				exec($command, $btoutput, $btresult );
+				exec($command, $devoutput, $devresult );
                 }
         else
                 {
@@ -76,7 +76,7 @@
 
                  <li id="li_1" >
                 <div>
-                     <input id="saveForm" class="button_text" type="submit" name="scan_new" value="Scan for devices" />
+                     <input id="saveForm" class="button_text" type="submit" name="scan_new" value="Scan for devices" /><br/>
                         <select id="bt_device" name="bt_device" class="element text medium">
 <?php
         if( $_POST['scan_new'] )
@@ -98,9 +98,15 @@
 </div>
                 </li>
 				<li>
-				<p><?php 
-				print $btoutput[0];
-				?>
+				<div class="description">
+                        <h2>Paired Devices</h2>
+                        <p><?php 
+				foreach($devoutput as $device)
+				{
+					print $device."<br />";
+				}
+				?></p>
+                </div>
 				</li>
                         </ul>
                 </form>
