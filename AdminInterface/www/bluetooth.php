@@ -13,22 +13,22 @@
 	$dataonline = json_decode($onlinejson, true);
 	include ('includes/header.php');
 
-	if( $_POST['scan_new']
+	if( $_POST['scan_new'] )
 		{
-		$command = "/usr/local/bin/mupibox/start_bt.sh";
+		$command = "sudo /usr/local/bin/mupibox/./start_bt.sh";
 		exec($command, $output, $result );
 		$change=1;		
 		}
 
 	if( $_POST['change_bt'] == "turn on" )
 		{
-		$command = "/usr/local/bin/mupibox/start_bt.sh";
+		$command = "sudo /usr/local/bin/mupibox/./start_bt.sh";
 		exec($command, $output, $result );
 		$change=1;
 		}
 	else if( $_POST['change_bt'] == "turn off" )
 		{
-		$command = "/usr/local/bin/mupibox/stop_bt.sh";
+		$command = "sudo /usr/local/bin/mupibox/./stop_bt.sh";
 		exec($command, $output, $result );
 		$change=1;
 		}
