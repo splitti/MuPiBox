@@ -15,7 +15,7 @@
 
 	if( $_POST['change_bt'] == "" )
 		{
-		$command = "sudo bluetoothctl power on && sudo bluetoothctl discoverable on && sudo bluetoothctl pairable on && sudo bluetoothctl agent on && sudo bluetoothctl default-agent && sleep 2";
+		$command = "sudo bluetoothctl power on && sudo bluetoothctl pairable on && sudo bluetoothctl agent on && sudo bluetoothctl default-agent && sleep 2 && sudo bluetoothctl discoverable on";
 		exec($command, $output, $result );
 		$change=1;
 		}
