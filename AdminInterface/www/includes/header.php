@@ -17,7 +17,6 @@
         <img id="top" src="images/top.png" alt="">
 		    <div id="container">
 
-                <div id="navbar"><a href="index.php">Information</a><a href="mupi.php">MuPiBox-Conf</a><a href="spotify.php">Spotify-Conf</a><a href="network.php">Network-Conf</a><a href="service.php">Services</a><a href="tweaks.php">Tweaks</a><a href="admin.php">Admin</a></div>
-				<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+                <div id="navbar"><a href="index.php">Information</a><a href="mupi.php">MuPiBox-Conf</a><a href="bluetooth.php">Bluetooth</a><a href="spotify.php">Spotify-Conf</a><a href="network.php">Network-Conf</a><a href="service.php">Services</a><a href="tweaks.php">Tweaks</a><a href="admin.php">Admin</a></div>
 
 	
