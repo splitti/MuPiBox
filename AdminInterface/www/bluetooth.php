@@ -1,12 +1,21 @@
 <?php
+	/*
+	'https://gist.github.com/yejun/2c1a070a839b3a7b146ede8a998b5495    !!!!!
+	discoverable on
+	pairable on
+	agent on
+	default-agent
+	scan on
+	*/
+
 	$change=0;
 	$onlinejson = file_get_contents('https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/mupiboxconfig.json');
 	$dataonline = json_decode($onlinejson, true);
 	include ('includes/header.php');
 
-	if( $_POST['change_bt'] == "sudo bluetoothctl power on" )
+	if( $_POST['change_bt'] == "" )
 		{
-		$command = "sudo apt-get install samba -y && sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/smb.conf -O /etc/samba/smb.conf && sudo systemctl enable smbd.service && sudo systemctl start smbd.service";
+		$command = "sudo bluetoothctl power on; sudo discoverable on; sudo bluetoothctl pairable on; sudo bluetoothctl agent on; sudo bluetoothctl default-agent";
 		exec($command, $output, $result );
 		$change=1;
 		}
@@ -16,7 +25,6 @@
 		exec($command, $output, $result );
 		$change=1;
 		}
-
 
 	$rc = $output[count($output)-1];
 	$command = "sudo bluetoothctl show | grep 'Powered: yes'";
@@ -33,7 +41,7 @@
 		}
 ?>
 
-                <form class="appnitro"  method="post" action="blueetooth.php">
+                <form class="appnitro"  method="post" action="bluetooth.php">
                                         <div class="description">
                         <h2>MupiBox bluetooth settings</h2>
                         <p> Set up bluetooth connections...</p>

@@ -340,12 +340,6 @@ exec 3>${LOG}
 
 	echo -e "XXX\n100\nInstallation complete, please reboot the system... \nXXX"	
 	sudo mv ${LOG} ~/.mupibox/autosetup.log
-	#https://gist.github.com/yejun/2c1a070a839b3a7b146ede8a998b5495    !!!!!
-	#discoverable on
-	#pairable on
-	#agent on
-	#default-agent
-	#scan on
 
 } | whiptail --title "MuPiBox Autosetup" --gauge "Please wait while installing" 6 60 0
 
