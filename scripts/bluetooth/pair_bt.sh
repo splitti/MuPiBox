@@ -2,14 +2,13 @@
 #
 
 sudo pkill -f bluetoothctl
-timeout 10s bluetoothctl scan on
+sudo -u dietpi timeout 10s bluetoothctl scan on
 
 device=$1
-bluetoothctl trust ${device}
+sudo -u dietpi bluetoothctl trust ${device}
 sleep 1
-bluetoothctl pair ${device}
+sudo -u dietpi bluetoothctl pair ${device}
 sleep 1
-bluetoothctl scan off
+sudo -u dietpi bluetoothctl scan off
 sleep 1
-bluetoothctl connect ${device}
-
+sudo -u dietpi bluetoothctl connect ${device}
