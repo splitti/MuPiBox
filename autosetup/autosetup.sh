@@ -192,6 +192,7 @@ exec 3>${LOG}
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/bluetooth/start_bt.sh -O /usr/local/bin/mupibox/start_bt.sh >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/bluetooth/stop_bt.sh -O /usr/local/bin/mupibox/stop_bt.sh >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/bluetooth/scan_bt.sh -O /usr/local/bin/mupibox/scan_bt.sh >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/bluetooth/pair_bt.sh -O /usr/local/bin/mupibox/pair_bt.sh >&3 2>&3
 	
 		
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/restart_kiosk.sh -O /usr/local/bin/mupibox/restart_kiosk.sh >&3 2>&3
