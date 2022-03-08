@@ -13,15 +13,22 @@
 	$dataonline = json_decode($onlinejson, true);
 	include ('includes/header.php');
 
-	if( $_POST['change_bt'] == "" )
+	if( $_POST['scan_new']
 		{
-		$command = "sudo bluetoothctl power on && sudo bluetoothctl pairable on && sudo bluetoothctl agent on && sudo bluetoothctl default-agent && sleep 2 && sudo bluetoothctl discoverable on";
+		$command = "/usr/local/bin/mupibox/start_bt.sh";
+		exec($command, $output, $result );
+		$change=1;		
+		}
+
+	if( $_POST['change_bt'] == "turn on" )
+		{
+		$command = "/usr/local/bin/mupibox/start_bt.sh";
 		exec($command, $output, $result );
 		$change=1;
 		}
 	else if( $_POST['change_bt'] == "turn off" )
 		{
-		$command = "sudo bluetoothctl power off && sleep 2";
+		$command = "/usr/local/bin/mupibox/stop_bt.sh";
 		exec($command, $output, $result );
 		$change=1;
 		}
@@ -56,6 +63,23 @@
 								</p>
 								<input id="saveForm" class="button_text" type="submit" name="change_bt" value="<?php print $change_bt; ?>" /></li>
 
+
+
+                 <li id="li_1" >
+                <label class="description" for="theme">Scanned Bluetooth Devices </label>
+                <div>
+                        <select id="bt_device" name="bt_device" class="element text medium">
+<?php
+						$string = file_get_contents('/tmp/bt_scan', true);
+						while (($line = fgetcsv($string, 0, "\t")) !== false) {
+							print "<option value=\"". $line[1] . "\">" . $line[2] . "</option>";
+						}
+?>
+"</select>
+                </div><p class="guidelines" id="guide_1"><small>Please insert the hostname of the MuPiBox. Default: MuPiBox</small></p>
+				<input id="saveForm" class="button_text" type="submit" name="scan_new" value="Scan for devices" />
+				<input id="saveForm" class="button_text" type="submit" name="pair_selected" value="Pair selected device" />
+                </li>
 
                         </ul>
                 </form>
