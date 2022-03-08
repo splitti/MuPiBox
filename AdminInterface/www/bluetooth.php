@@ -4,22 +4,22 @@
 	$dataonline = json_decode($onlinejson, true);
 	include ('includes/header.php');
 
-	if( $_POST['change_bt'] == "enable & start" )
+	if( $_POST['change_bt'] == "sudo bluetoothctl power on" )
 		{
 		$command = "sudo apt-get install samba -y && sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/smb.conf -O /etc/samba/smb.conf && sudo systemctl enable smbd.service && sudo systemctl start smbd.service";
 		exec($command, $output, $result );
 		$change=1;
 		}
-	else if( $_POST['change_bt'] == "stop & disable" )
+	else if( $_POST['change_bt'] == "turn off" )
 		{
-		$command = "sudo systemctl stop smbd.service && sudo systemctl disable smbd.service && sudo apt-get remove samba -y";
+		$command = "sudo bluetoothctl power off";
 		exec($command, $output, $result );
 		$change=1;
 		}
 
 
 	$rc = $output[count($output)-1];
-	$command = "sudo bluetoothctl show | grep -q 'Powered: yes'";
+	$command = "sudo bluetoothctl show | grep 'Powered: yes'";
 	exec($command, $smboutput, $smbresult );
 	if( $smboutput[0] )
 		{
@@ -33,7 +33,7 @@
 		}
 ?>
 
-                <form class="appnitro"  method="post" action="service.php">
+                <form class="appnitro"  method="post" action="blueetooth.php">
                                         <div class="description">
                         <h2>MupiBox bluetooth settings</h2>
                         <p> Set up bluetooth connections...</p>
