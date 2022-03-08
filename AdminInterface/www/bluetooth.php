@@ -66,7 +66,6 @@
 
 
                  <li id="li_1" >
-                <label class="description" for="theme">Scanned Bluetooth Devices </label>
                 <div>
                         <select id="bt_device" name="bt_device" class="element text medium">
 <?php
@@ -75,7 +74,7 @@
 							print "<option value=\"". $line[1] . "\">" . $line[2] . "</option>";
 						}
 ?>
-"</select>
+</select>
                 </div><p class="guidelines" id="guide_1"><small>Please insert the hostname of the MuPiBox. Default: MuPiBox</small></p>
 				<input id="saveForm" class="button_text" type="submit" name="scan_new" value="Scan for devices" />
 				<input id="saveForm" class="button_text" type="submit" name="pair_selected" value="Pair selected device" />
