@@ -15,7 +15,7 @@
 
 	if( $_POST['scan_new'] )
 		{
-		$command = "sudo /usr/local/bin/mupibox/./start_bt.sh";
+		$command = "sudo /usr/local/bin/mupibox/./scan_bt.sh";
 		exec($command, $output, $result );
 		$change=1;		
 		}
@@ -69,15 +69,17 @@
                 <div>
                         <select id="bt_device" name="bt_device" class="element text medium">
 <?php
-						$string = file_get_contents('/tmp/bt_scan', true);
-						while (($line = fgetcsv($string, 0, "\t")) !== false) {
-							print "<option value=\"". $line[1] . "\">" . $line[2] . "</option>";
+						if( $_POST['scan_new'] ){
+							$string = file_get_contents('/tmp/bt_scan', true);
+							while (($line = fgetcsv($string, 0, "\t")) !== false) {
+								print "<option value=\"". $line[1] . "\">" . $line[2] . "</option>";
+							}
 						}
 ?>
 </select>
-                </div><p class="guidelines" id="guide_1"><small>Please insert the hostname of the MuPiBox. Default: MuPiBox</small></p>
 				<input id="saveForm" class="button_text" type="submit" name="scan_new" value="Scan for devices" />
 				<input id="saveForm" class="button_text" type="submit" name="pair_selected" value="Pair selected device" />
+                </div>
                 </li>
 
                         </ul>
