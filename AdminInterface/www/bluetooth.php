@@ -12,7 +12,9 @@
         include ('includes/header.php');
 		
         if( $_POST['pair_selected'] )
-			{
+			{	
+			$command = "sudo echo ".$_POST['bt_device']." > /tmp/last_bt_device";
+			exec($command, $output, $result );
 			$command = "sudo /usr/local/bin/mupibox/./pair_bt.sh ".$_POST['bt_device'];
 			exec($command, $output, $result );
 			$change=1;			
@@ -22,32 +24,32 @@
         if( $_POST['scan_new'] )
                 {
                 /*$command = "sudo hcitool scan > /tmp/bt_scan";*/
-                $command = "sudo -u dietpi /usr/local/bin/mupibox/./scan_bt.sh";
+                $command = "sudo /usr/local/bin/mupibox/./scan_bt.sh";
                 exec($command, $output, $result );
                 $change=1;
                 }
 
         if( $_POST['change_bt'] == "turn on" )
                 {
-                $command = "sudo -u dietpi /usr/local/bin/mupibox/./start_bt.sh";
+                $command = "sudo /usr/local/bin/mupibox/./start_bt.sh";
                 exec($command, $output, $result );
                 $change=1;
                 }
         if( $_POST['change_bt'] == "turn off" )
                 {
-                $command = "sudo -u dietpi /usr/local/bin/mupibox/./stop_bt.sh";
+                $command = "sudo /usr/local/bin/mupibox/./stop_bt.sh";
                 exec($command, $output, $result );
                 $change=1;
                 }
 
-        $command = "sudo -u dietpi bluetoothctl show | grep 'Powered: yes'";
+        $command = "sudo bluetoothctl show | grep 'Powered: yes'";
         exec($command, $btoutput, $btresult );
         if( $btoutput[0] )
                 {
                 $bt_state = "ON";
                 $change_bt = "turn off";
 				
-				$command = "sudo -u dietpi bluetoothctl devices";
+				$command = "sudo bluetoothctl devices";
 				exec($command, $devoutput, $devresult );
                 }
         else
