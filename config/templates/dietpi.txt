@@ -48,7 +48,7 @@ AUTO_SETUP_DHCP_TO_STATIC=0
 AUTO_SETUP_NET_HOSTNAME=MuPiBox
 
 # Delay service starts at boot until network is established: 0=disabled | 1=enabled
-AUTO_SETUP_BOOT_WAIT_FOR_NETWORK=0
+AUTO_SETUP_BOOT_WAIT_FOR_NETWORK=1
 
 ##### Misc Options #####
 # Swap space size to generate: 0 => disable | 1 => auto | 2 and up => size in MiB
@@ -189,7 +189,7 @@ CONFIG_CHECK_DIETPI_UPDATES=1
 CONFIG_CHECK_APT_UPDATES=1
 
 # Network time sync: 0=disabled | 1=boot only | 2=boot + daily | 3=boot + hourly | 4=Daemon + Drift
-CONFIG_NTP_MODE=4
+CONFIG_NTP_MODE=1
 
 # Serial Console: Set to 0 if you do not require serial console.
 CONFIG_SERIAL_CONSOLE_ENABLE=1
@@ -271,6 +271,7 @@ SOFTWARE_K3S_EXEC=
 # - Stable = Use release version of DietPi-Dashboard.
 # - Nightly = Use unstable version DietPi-Dashboard. Might have bugs, but will probably have more features.
 SOFTWARE_DIETPI_DASHBOARD_VERSION=Stable
+SOFTWARE_DIETPI_DASHBOARD_BACKEND=0
 
 #------------------------------------------------------------------------------------------------------
 ##### Dev settings #####
