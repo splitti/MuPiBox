@@ -1,4 +1,4 @@
-<h1 align="center"><img src="https://raw.githubusercontent.com/splitti/MuPiBox/main/media/images/splash.png" alt="MuPiBox logo" width="180" height="180" loading="lazy"></h1>
+<h1 align="center"><img src="https://raw.githubusercontent.com/splitti/MuPiBox/main/media/images/splash.png" alt="MuPiBox logo" height="250" loading="lazy"></h1>
 # MuPiBox
 MuPiBox is an easy to use music player, controlled via touch display. There could be local music, or also spotify. Also streams are possible.
 ## Requierments
