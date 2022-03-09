@@ -48,7 +48,8 @@
                 {
                 $bt_state = "ON";
                 $change_bt = "turn off";
-				
+				$command = "sudo bluetoothctl paired-devices";
+				exec($command, $pairoutput, $pairresult );				
 				$command = "sudo bluetoothctl devices";
 				exec($command, $devoutput, $devresult );
                 }
@@ -69,7 +70,9 @@
                                                                 <li class="li_1"><h2>Bluetooth power state</h2>
                                                                 <p>
                                                                 <?php 
-                                                                echo "Bluetooth power state: <b>".$bt_state."</b>".$smboutput[0];
+                                                                echo "Bluetooth power state: <b>".$bt_state."</b>";
+																echo "<br/>";
+																echo "Bluetooth power state: <b>".$pairoutput[0]."</b>";
                                                                 ?>
                                                                 </p>
                                                                 <input id="saveForm" class="button_text" type="submit" name="change_bt" value="<?php print $change_bt; ?>" /></li>
