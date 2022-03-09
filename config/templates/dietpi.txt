@@ -170,10 +170,10 @@ CONFIG_PROXY_PASSWORD=
 # Connection timeout in seconds, before G_CHECK_URL assumes the URL is dead. Increase if you have a "flaky" connection or slow DNS resolver.
 # - Set this to "0" to allow unlimited time, however this is not recommended to avoid unlimited hanging background scripts, e.g. daily DietPi update check.
 # - A negative or non-integer value will result in the default of 10 seconds.
-CONFIG_G_CHECK_URL_TIMEOUT=15
+CONFIG_G_CHECK_URL_TIMEOUT=10
 # Connection attempts with above timeout each, before G_CHECK_URL is giving up and prompts an error.
 # - Any value below "1" or a non-integer value will result in the default of 2 attempts.
-CONFIG_G_CHECK_URL_ATTEMPTS=4
+CONFIG_G_CHECK_URL_ATTEMPTS=2
 # General connection and DNS testing
 # - IP to ping when checking network connectivity. Default: 9.9.9.9 (Quad9 DNS IP)
 CONFIG_CHECK_CONNECTION_IP=9.9.9.9
@@ -189,7 +189,7 @@ CONFIG_CHECK_DIETPI_UPDATES=1
 CONFIG_CHECK_APT_UPDATES=1
 
 # Network time sync: 0=disabled | 1=boot only | 2=boot + daily | 3=boot + hourly | 4=Daemon + Drift
-CONFIG_NTP_MODE=1
+CONFIG_NTP_MODE=4
 
 # Serial Console: Set to 0 if you do not require serial console.
 CONFIG_SERIAL_CONSOLE_ENABLE=1
