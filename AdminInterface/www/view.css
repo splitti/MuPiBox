@@ -29,14 +29,19 @@ body
 
 #footer
 {
+	position:absolute;
+	bottom:0;
 	width:800px;
 	clear:both;
-	color:#999999;
-	text-align:center;
+	background-color:#44afe2;
+	text-align:right;
 	width:100%;
 	max-width:800px;
-	padding-bottom: 15px;
+	margin-left: auto;
+	margin-right: auto;
+	padding: 0px 10px 0px 0px;
 	font-size: 85%;
+	height:120px;
 }
 
 #footer a{
@@ -173,7 +178,6 @@ form.appnitro
     float: none;
     display: block;
     text-align: left;
-	width:80%;
   }
 }
 
