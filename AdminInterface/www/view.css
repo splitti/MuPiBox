@@ -29,19 +29,29 @@ body
 
 #footer
 {
-	position:absolute;
-	bottom:0;
 	width:800px;
 	clear:both;
 	background-color:#44afe2;
-	text-align:right;
 	width:100%;
 	max-width:800px;
-	margin-left: auto;
-	margin-right: auto;
-	padding: 0px 10px 0px 0px;
+	padding: 0px;
 	font-size: 85%;
 	height:120px;
+}
+
+#footerright
+{
+	color:#ffffff;
+	text-align:left;
+	padding:0;
+	margin:20;
+}
+
+#footerright
+{
+	text-align:right;
+	padding:0;
+	margin-right:20;
 }
 
 #footer a{
