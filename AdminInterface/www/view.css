@@ -35,23 +35,36 @@ body
 	width:100%;
 	max-width:800px;
 	padding: 0px;
-	font-size: 85%;
 	height:120px;
+	display:flex;
 }
 
-#footerright
+#mupi
+{
+	padding:0;
+	margin:0;
+}
+
+#footerleft
+{
+	padding:0;
+	margin:20px;
+	width:70%;
+}
+
+#footerleft a
 {
 	color:#ffffff;
+	font-size: 90%;
 	text-align:left;
-	padding:0;
-	margin:20;
 }
 
 #footerright
 {
 	text-align:right;
 	padding:0;
-	margin-right:20;
+	margin:0px 20px 0px 0px;
+	width:30%;
 }
 
 #footer a{

@@ -1,5 +1,5 @@
 			<div id="footer">
-				<div id="footerleft">www.mupibox.de</div>
+				<div id="footerleft"><ul><li><a href="https://mupibox.de/>MuPiBox.de</a></li><li><a href="https://github.com/splitti/MuPiBox">Visit MupiBox on Github</a></li></ul></div>
 				<div id="footerright">
 					<img id="mupi" src="images/mupi.png" alt="">
 				</div>
