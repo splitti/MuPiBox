@@ -11,11 +11,16 @@
         $change=0;
         include ('includes/header.php');
 		
+        if( $_POST['remove_selected'] )
+			{	
+			$command = "sudo -i -u dietpi /usr/local/bin/mupibox/./remove_bt.sh ".$_POST['remove_mac'];
+			exec($command, $output, $result );
+			$change=1;			
+			}		
+					
         if( $_POST['pair_selected'] )
 			{	
-			$command = "sudo echo ".$_POST['bt_device']." > /tmp/last_bt_device";
-			exec($command, $output, $result );
-			$command = "sudo /usr/local/bin/mupibox/./pair_bt.sh ".$_POST['bt_device'];
+			$command = "sudo -i -u dietpi /usr/local/bin/mupibox/./pair_bt.sh ".$_POST['bt_device'];
 			exec($command, $output, $result );
 			$change=1;			
 			}
@@ -24,34 +29,34 @@
         if( $_POST['scan_new'] )
                 {
                 /*$command = "sudo hcitool scan > /tmp/bt_scan";*/
-                $command = "sudo /usr/local/bin/mupibox/./scan_bt.sh";
+                $command = "sudo -i -u dietpi /usr/local/bin/mupibox/./scan_bt.sh";
                 exec($command, $output, $result );
                 $change=1;
                 }
 
         if( $_POST['change_bt'] == "turn on" )
                 {
-                $command = "sudo /usr/local/bin/mupibox/./start_bt.sh";
+                $command = "sudo -i -u dietpi /usr/local/bin/mupibox/./start_bt.sh";
                 exec($command, $output, $result );
                 $change=1;
                 }
         if( $_POST['change_bt'] == "turn off" )
                 {
-                $command = "sudo /usr/local/bin/mupibox/./stop_bt.sh";
+                $command = "sudo -i -u dietpi /usr/local/bin/mupibox/./stop_bt.sh";
                 exec($command, $output, $result );
                 $change=1;
                 }
 
-        $command = "sudo bluetoothctl show | grep 'Powered: yes'";
+        $command = "sudo -i -u dietpi bluetoothctl show | grep 'Powered: yes'";
         exec($command, $btoutput, $btresult );
         if( $btoutput[0] )
                 {
                 $bt_state = "ON";
                 $change_bt = "turn off";
-				$command = "sudo bluetoothctl paired-devices";
+				$command = "sudo -i -u dietpi bluetoothctl paired-devices";
 				exec($command, $pairoutput, $pairresult );				
-				$command = "sudo bluetoothctl devices";
-				exec($command, $devoutput, $devresult );
+				$command = "sudo -i -u dietpi bluetoothctl list";
+				exec($command, $listoutput, $listresult );
                 }
         else
                 {
@@ -65,23 +70,23 @@
                         <h2>MupiBox bluetooth settings</h2>
                         <p> Set up bluetooth connections...</p>
                 </div>
-                        <ul ><li id="li_1" >
-                                        
-                                                                <li class="li_1"><h2>Bluetooth power state</h2>
-                                                                <p>
-                                                                <?php 
-                                                                echo "Bluetooth power state: <b>".$bt_state."</b>";
-																echo "<br/>";
-																echo "Bluetooth power state: <b>".$pairoutput[0]."</b>";
-                                                                ?>
-                                                                </p>
-                                                                <input id="saveForm" class="button_text" type="submit" name="change_bt" value="<?php print $change_bt; ?>" /></li>
+                        <ul >                                        
+						<li class="li_1"><h2>Bluetooth power state</h2>
+						<p>
+						<?php 
+						echo "Bluetooth power state: <b>".$bt_state."</b>";
+						echo "<br/>";
+						$split_controller=explode(" ", $listoutput[0]);
+						echo "Bluetooth Controller: <b>".$split_controller[2]." [".$split_controller[1]."]</b>";
+						?>
+						</p>
+						<input id="saveForm" class="button_text" type="submit" name="change_bt" value="<?php print $change_bt; ?>" /></li>
 
 
 
                  <li id="li_1" >
                 <div>
-                     <input id="saveForm" class="button_text" type="submit" name="scan_new" value="Scan for devices" /><br/>
+                     <input id="saveForm" class="button_text" type="submit" name="scan_new" value="Scan new devices" /><br/>
                         <select id="bt_device" name="bt_device" class="element text medium">
 <?php
         if( $_POST['scan_new'] )
@@ -100,21 +105,33 @@
 </select>
                
                                 <input id="saveForm" class="button_text" type="submit" name="pair_selected" value="Pair selected device" />
-</div>
+</div></form>
                 </li>
 				<li>
 				<div class="description">
                         <h2>Paired Devices</h2>
                         <p><?php 
-				foreach($devoutput as $device)
+				foreach($pairoutput as $device)
 				{
-					print $device."<br />";
+					$split_device=explode(" ", $device);
+					print "<form class='appnitro'  method='post' action='bluetooth.php'>";
+					print "<input type='hidden' name='remove_mac' value='".$split_device[1]."'>";
+					print "<input id='saveForm' class='button_text' type='submit' name='remove_selected' value='Remove' />&ensp;";
+					print $split_device[2]." [".$split_device[1]."]";
+					$command = "sudo -i -u dietpi bluetoothctl info ".$split_device[1]." | grep 'Connected: yes'";
+					unset($connoutput);
+					exec($command, $connoutput, $connresult );
+					if( $connoutput[0] )
+						{
+						print " <b>CONNECTED</b>";
+						}
+					print "</form>";
 				}
 				?></p>
                 </div>
 				</li>
                         </ul>
-                </form>
+                
         </div>
 <?php
         include ('includes/footer.html');

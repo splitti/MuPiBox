@@ -1,5 +1,8 @@
 #!/bin/bash
 #
 
-sudo bluetoothctl power off
-sleep 1
+coproc bluetoothctl
+echo -e "power off\n" >&${COPROC[1]}
+echo -e 'exit' >&${COPROC[1]}
+ouput=$(cat <&${COPROC[0]})
+echo $output

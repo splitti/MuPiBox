@@ -1,20 +1,19 @@
 #!/bin/bash
 #
 
-pkill -f bluetoothctl
-bluetoothctl pairable on 
-bluetoothctl agent on 
-bluetoothctl default-agent 
-sleep 0.4 
-bluetoothctl discoverable on
-timeout 10s bluetoothctl scan on
-sleep 0.5
-device=$1
-dietpi bluetoothctl scan off
-sleep 0.5
-bluetoothctl trust ${device}
-sleep 0.5
-dietpi bluetoothctl pair ${device}
-sleep 1
-bluetoothctl connect ${device}
+coproc bluetoothctl
+echo -e "power on\n" >&${COPROC[1]}
+echo -e "agent on\n" >&${COPROC[1]}
+echo -e "defaut-agent\n" >&${COPROC[1]}
+echo -e "scan on\n" >&${COPROC[1]}
+sleep 10
+echo -e "scan off\n" >&${COPROC[1]}
+echo -e "trust $1\n" >&${COPROC[1]}
 sleep 2
+echo -e "pair $1\nyes\n" >&${COPROC[1]}
+sleep 2
+echo -e "connect $1\n" >&${COPROC[1]}
+sleep 2
+echo -e 'exit' >&${COPROC[1]}
+ouput=$(cat <&${COPROC[0]})
+echo $output
