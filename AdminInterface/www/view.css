@@ -35,7 +35,7 @@ body
 	width:100%;
 	max-width:800px;
 	padding: 0px;
-	height:120px;
+	height:80px;
 	display:flex;
 }
 
@@ -52,11 +52,22 @@ body
 	width:70%;
 }
 
-#footerleft a
+
+#footerleft ul
 {
+	font-size:90%;
 	color:#ffffff;
-	font-size: 90%;
-	text-align:left;
+	list-style-type: disc;
+	margin:0 0 0 20px;
+	padding:0;
+	width:100%;
+}
+
+#footerleft li
+{
+	margin:0;
+	padding:2px 5px ;
+	position:relative;
 }
 
 #footerright
@@ -68,9 +79,13 @@ body
 }
 
 #footer a{
-	color:#999999;
+	color:#ffffff;
+	text-align:left;
 	text-decoration: none;
-	border-bottom: 1px dotted #999999;
+}
+
+#footer a:hover{
+	color:#054b61;
 }
 
 #bottom
