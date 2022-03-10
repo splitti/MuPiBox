@@ -7,3 +7,10 @@ function myFunction() {
     x.className = "topnav";
   }
 }
+
+$(document).ready(function(){
+  $("#form").on("submit", function(){
+    $("#loading-circle").fadeIn();
+    $("#lock-modal").fadeIn('slow');
+  });//submit
+});//document ready

@@ -50,7 +50,7 @@
 ?>
 
 
-                <form class="appnitro"  method="post" action="spotify.php">
+                <form class="appnitro"  method="post" action="spotify.php" id="form">
                                         <div class="description">
                         <h2>Spotify settings</h2>
                         <p>Specify your Spotify-Account-Settings...</p>

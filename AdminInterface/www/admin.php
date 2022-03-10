@@ -58,7 +58,7 @@
 	$rc = $output[count($output)-1];
 ?>
 
-                <form class="appnitro" method="post" action="admin.php">
+                <form class="appnitro" method="post" action="admin.php" id="form">
                                         <div class="description">
                         <h2>MupiBox Administration</h2>
                         <p>Please be sure what you do...</p>

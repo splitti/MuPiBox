@@ -31,7 +31,7 @@
                 }
 ?>
 
-               <form class="appnitro"  method="post" action="tweaks.php">
+               <form class="appnitro"  method="post" action="tweaks.php" id="form">
                                         <div class="description">
                         <h2>MupiBox tweaks</h2>
                         <p>Make your box smarter and faster...</p>

@@ -33,7 +33,7 @@
 		}
 ?>
 
-                <form class="appnitro"  method="post" action="service.php">
+                <form class="appnitro"  method="post" action="service.php" id="form">
                                         <div class="description">
                         <h2>MupiBox settings</h2>
                         <p>De/Activate some helpfull services...</p>

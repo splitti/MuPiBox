@@ -65,7 +65,7 @@
                 }
 ?>
 
-                <form class="appnitro"  method="post" action="bluetooth.php">
+                <form class="appnitro"  method="post" action="bluetooth.php" id="form">
                                         <div class="description">
                         <h2>MupiBox bluetooth settings</h2>
                         <p> Set up bluetooth connections...</p>
