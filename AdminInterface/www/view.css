@@ -13,7 +13,8 @@ body
 	margin:0 auto;
 	padding: 0px;
 	text-align:left;
-	width:800px;
+	width:98%;
+	max-width:800px;
 }
 
 #top
@@ -21,7 +22,9 @@ body
 	display:block;
 	height:10px;
 	margin:10px auto 0;
-	width:810px;
+	width:90%;
+	max-width:800px;
+
 }
 
 #footer
@@ -110,12 +113,52 @@ form.appnitro
 }
 
 
+/* Add a black background color to the top navigation */
+.topnav {
+  background-color: #44afe2;
+  overflow: hidden;
+  padding: 0px 14px 0px 14px;
+}
+
+/* Style the links inside the navigation bar */
+.topnav a {
+  float: left;
+  display: block;
+  color: #ffffff;
+  text-align: center;
+  padding: 14px 10px;
+  text-decoration: none;
+  font-size: 110%;
+  font-weight: bold;
+font: Helvetica;
+}
+
+/* Change the color of links on hover */
+.topnav a:hover {
+  background-color: #cccccc;
+  color: #054b61;
+}
+
+/* Add an active class to highlight the current page */
+.topnav a.active {
+  background-color: #04AA6D;
+  color: white;
+}
+
+/* Hide the link that should open and close the topnav on small screens */
+.topnav .icon {
+  display: none;
+}
+
+
+
 #navbar
 {
 	background-color:#44afe2;
 	width:100%;
-	height:30px;
-	padding-top:10px;
+	min-height:36px;
+	padding:10px 10px 10px 10px;
+
 /*	vertical-align:middle;
 	margin:0;
 	padding:0;
@@ -131,7 +174,7 @@ form.appnitro
 	font-weight: bold;
 /*	margin-top: 25px;*/
 	margin-left: 15px;
-	font-size: 11pt;
+	font-size: 100%;
 	color: #ffffff;
 	text-decoration:none;
 /*	height:40%;
@@ -141,7 +184,7 @@ form.appnitro
 }
 #navbar a:hover
 {
-	color: #690101;
+	color: #054b61;
 	text-decoration: underline;
 }
 
