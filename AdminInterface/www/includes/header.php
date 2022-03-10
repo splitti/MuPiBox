@@ -8,7 +8,7 @@
 		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
 		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 		<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
-		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+		<link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.0.0/css/all.css">
 		<script type="text/javascript" src="view.js"></script>
 		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 		<title>MuPiBox Web Interface</title>
@@ -26,7 +26,7 @@
 				<a href="spotify.php"><i class="fa-brands fa-spotify"></i> Spotify</a>
 				<a href="network.php"><i class="fa-solid fa-wifi"></i> Network</a>
 				<a href="service.php"><i class="fa-solid fa-gear"></i> Services</a>
-				<a href="tweaks.php"><i class="<i class="fa-solid fa-rocket"></i>"></i> Performance</a>
+				<a href="tweaks.php"><i class="fa-solid fa-rocket"></i> Performance</a>
 				<a href="admin.php"><i class="fa-solid fa-screwdriver-wrench"></i> Admin</a>
 				<a href="javascript:void(0);" class="icon" onclick="myFunction()"><i class="fa fa-bars"></i></a>
 			</div>
