@@ -52,9 +52,9 @@ AUTO_SETUP_BOOT_WAIT_FOR_NETWORK=1
 
 ##### Misc Options #####
 # Swap space size to generate: 0 => disable | 1 => auto | 2 and up => size in MiB
-AUTO_SETUP_SWAPFILE_SIZE=0	
+AUTO_SETUP_SWAPFILE_SIZE=1
 # Swap space location: "zram" => swap space on /dev/zram0 (auto-size = 50% of RAM size) | /path/to/file => swap file at location (auto-size = 2 GiB minus RAM size)
-AUTO_SETUP_SWAPFILE_LOCATION=/var/swap
+AUTO_SETUP_SWAPFILE_LOCATION=zram
 
 # Set to "1" to disable HDMI/video output and framebuffers on Raspberry Pi, to reduce power consumption and memory usage: Works on RPi only!
 AUTO_SETUP_HEADLESS=0
@@ -74,10 +74,6 @@ AUTO_UNMASK_LOGIND=0
 # - Executed script log: /var/tmp/dietpi/logs/dietpi-automation_custom_script.log
 AUTO_SETUP_CUSTOM_SCRIPT_EXEC=https://raw.githubusercontent.com/splitti/MuPiBox/main/autosetup/autostart.sh
 
-# Restore a DietPi-Backup on first boot: 0 => disable | 1 => interactive restore (show list of found backups) | 2 => non-interactive restore (restore first found backup)
-# - Simply attach the drive/disk/stick with contains the backup. All attached drives will be mounted temporarily and searched automatically.
-AUTO_SETUP_BACKUP_RESTORE=0
-
 ##### Software Options #####
 # SSH server choice: 0=none/custom | -1=Dropbear | -2=OpenSSH
 AUTO_SETUP_SSH_SERVER_INDEX=-1
@@ -86,21 +82,6 @@ AUTO_SETUP_SSH_SERVER_INDEX=-1
 AUTO_SETUP_LOGGING_INDEX=-1
 # RAMlog max tmpfs size (MB). 50MB should be fine for single use. 200MB+ for heavy webserver and access log etc.
 AUTO_SETUP_RAMLOG_MAXSIZE=50
-
-# Webserver preference: 0=Apache | -1=Nginx | -2=Lighttpd
-# - This defines the webserver to install (only) when another selected software requires one.
-# - It won't be installed if no other software requires a webserver and a manual webserver stack selection will override it.
-AUTO_SETUP_WEB_SERVER_INDEX=-2
-
-# Desktop preference: 0=LXDE | -1=Xfce | -2=MATE | -3=LXQt | -4=GNUstep
-# - This defines the desktop to install (only) when another selected software requires one.
-# - It won't be installed if no other software requires a desktop and a manual desktop selection will override it.
-AUTO_SETUP_DESKTOP_INDEX=0
-
-# Browser preference: 0=None | -1=Firefox | -2=Chromium
-# - This defines the browser to install (only) when a desktop is installed.
-# - It won't be installed if no desktop is installed and a manual browser selection will override it.
-AUTO_SETUP_BROWSER_INDEX=-2
 
 # DietPi-Autostart: 0=Console | 7=Console autologin | 1=Kodi | 2=Desktop autologin | 16=Desktop | 4=OpenTyrian | 5=DietPi-CloudShell | 6=Amiberry fast boot | 8=Amiberry standard boot | 9=DDX-Rebirth | 10=CAVA Spectrum | 11=Chromium kiosk | 14=Custom script (background) | 17=Custom script (foreground)
 # - This will be effective on 2nd boot, after firstrun update and installs have been done.
@@ -124,13 +105,6 @@ AUTO_SETUP_AUTOMATED=1
 # - WARN: We cannot guarantee that all software options can handle special characters like \"$.
 AUTO_SETUP_GLOBAL_PASSWORD=mupibox
 
-# Software to automatically install
-# - List of available software IDs: https://github.com/MichaIng/DietPi/wiki/DietPi-Software-list
-# - Add as many entries as you wish, one each line.
-# - DietPi will automatically install all pre-reqs (e.g. ALSA/X11 for desktops etc)
-# - E.g. the following (without the leading "#") will install the LXDE desktop automatically on first boot:
-#AUTO_SETUP_INSTALL_SOFTWARE_ID=23
-
 #------------------------------------------------------------------------------------------------------
 ##### Misc DietPi program settings #####
 #------------------------------------------------------------------------------------------------------
@@ -150,23 +124,6 @@ CONFIG_CPU_ONDEMAND_SAMPLE_DOWNFACTOR=40
 # Throttle Up Percentage: Percentage of average CPU usage during sampling rate at which CPU will be throttled up/down
 CONFIG_CPU_USAGE_THROTTLE_UP=50
 
-# CPU Frequency Limits: Disabled=disabled
-# - Intel CPUs use a percentage value (%) from 0-100, eg: 55
-# - All other devices must use a specific MHz value, eg: 1600
-# - Has no effect on RPi, please set "arm_freq" and "arm_freq_min" in config.txt instead.
-CONFIG_CPU_MAX_FREQ=Disabled
-CONFIG_CPU_MIN_FREQ=Disabled
-
-# Disable Intel-based turbo/boost stepping. This flag should not be required, setting <100% MAX frequency should disable Turbo on Intel CPUs.
-CONFIG_CPU_DISABLE_TURBO=0
-
-# System-wide proxy settings
-# - Do not modify, you must use dietpi-config > "Network Options: Adapters" to apply
-CONFIG_PROXY_ADDRESS=MyProxyServer.com
-CONFIG_PROXY_PORT=8080
-CONFIG_PROXY_USERNAME=
-CONFIG_PROXY_PASSWORD=
-
 # Connection timeout in seconds, before G_CHECK_URL assumes the URL is dead. Increase if you have a "flaky" connection or slow DNS resolver.
 # - Set this to "0" to allow unlimited time, however this is not recommended to avoid unlimited hanging background scripts, e.g. daily DietPi update check.
 # - A negative or non-integer value will result in the default of 10 seconds.
@@ -176,9 +133,9 @@ CONFIG_G_CHECK_URL_TIMEOUT=10
 CONFIG_G_CHECK_URL_ATTEMPTS=2
 # General connection and DNS testing
 # - IP to ping when checking network connectivity. Default: 9.9.9.9 (Quad9 DNS IP)
-CONFIG_CHECK_CONNECTION_IP=9.9.9.9
+CONFIG_CHECK_CONNECTION_IP=1.1.1.1
 # - Domain to ping when checking DNS resolver. Default: dns9.quad9.net (Quad9 DNS domain)
-CONFIG_CHECK_DNS_DOMAIN=dns9.quad9.net
+CONFIG_CHECK_DNS_DOMAIN=mupibox.de
 
 # Daily check for DietPi updates: 0=disable | 1=enable
 # - Checks are done by downloading a file of only 7 bytes.
@@ -213,72 +170,4 @@ CONFIG_APT_DEBIAN_MIRROR=https://deb.debian.org/debian/
 # NTP mirror, applied to /etc/ntp.conf
 # - For a full list, please see: https://www.ntppool.org/zone/@
 # - Please remove the initial integer and full stop from the value (removing "0."), eg: debian.pool.ntp.org
-CONFIG_NTP_MIRROR=debian.pool.ntp.org
-
-#------------------------------------------------------------------------------------------------------
-##### DietPi-Software settings #####
-#------------------------------------------------------------------------------------------------------
-# VNC Server
-SOFTWARE_VNCSERVER_WIDTH=1280
-SOFTWARE_VNCSERVER_HEIGHT=720
-SOFTWARE_VNCSERVER_DEPTH=16
-SOFTWARE_VNCSERVER_DISPLAY_INDEX=1
-SOFTWARE_VNCSERVER_SHARE_DESKTOP=0
-
-# ownCloud/Nextcloud
-# - Optional username for admin account, the default is 'admin', applied during install
-SOFTWARE_OWNCLOUD_NEXTCLOUD_USERNAME=admin
-# - Optional data directory, default is "/mnt/dietpi_userdata/owncloud_data" respectively "/mnt/dietpi_userdata/nextcloud_data", applied during install
-#	NB: This option is for advanced users. For full compatibility, please keep this options defaults, and, use dietpi-drive_manager to move the DietPi user data location.
-SOFTWARE_OWNCLOUD_DATADIR=/mnt/dietpi_userdata/owncloud_data
-SOFTWARE_NEXTCLOUD_DATADIR=/mnt/dietpi_userdata/nextcloud_data
-
-# WiFi Hotspot
-SOFTWARE_WIFI_HOTSPOT_SSID=DietPi-HotSpot
-# - Key requires a minimum of 8 characters
-SOFTWARE_WIFI_HOTSPOT_KEY=dietpihotspot
-SOFTWARE_WIFI_HOTSPOT_CHANNEL=3
-
-# X.org
-# - DPI 96(default) 120(+25%) 144(+50%) 168(+75%) 192(+100%)
-SOFTWARE_XORG_DPI=96
-
-# Chromium
-SOFTWARE_CHROMIUM_RES_X=1280
-SOFTWARE_CHROMIUM_RES_Y=720
-SOFTWARE_CHROMIUM_AUTOSTART_URL=https://dietpi.com/
-
-# Home Assistant
-# - Optional Python build dependencies and modules, possibly required for certain HA components
-#	Space separated list (no quotation!), will be installed together with Home Assistant automatically, if present
-SOFTWARE_HOMEASSISTANT_APT_DEPS=
-#	Add Python modules with version string at best, e.g.: firstModule==1.2.3 secondModule==4.5.6
-SOFTWARE_HOMEASSISTANT_PIP_DEPS=
-
-# K3s
-# Command with flags to use for launching K3s in the service
-# The value of this variable is copied directly into the INSTALL_K3S_EXEC environment variable before
-# running the K3s installer.
-# https://rancher.com/docs/k3s/latest/en/installation/install-options/#options-for-installation-with-script
-#
-# Optionally, you can add a configuration file named /boot/dietpi-k3s.yaml,
-# which will copied into place during installation
-# https://rancher.com/docs/k3s/latest/en/installation/install-options/#configuration-file
-SOFTWARE_K3S_EXEC=
-
-# DietPi-Dashboard
-# Version to use
-# - Stable = Use release version of DietPi-Dashboard.
-# - Nightly = Use unstable version DietPi-Dashboard. Might have bugs, but will probably have more features.
-SOFTWARE_DIETPI_DASHBOARD_VERSION=Stable
-SOFTWARE_DIETPI_DASHBOARD_BACKEND=0
-
-#------------------------------------------------------------------------------------------------------
-##### Dev settings #####
-#------------------------------------------------------------------------------------------------------
-DEV_GITBRANCH=master
-DEV_GITOWNER=MichaIng
-
-#------------------------------------------------------------------------------------------------------
-##### Settings, automatically added by dietpi-update #####
-#------------------------------------------------------------------------------------------------------
+CONFIG_NTP_MIRROR=europe.pool.ntp.org
