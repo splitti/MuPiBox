@@ -1,8 +1,14 @@
 			<div id="footer">
 				<div id="footerleft">
 					<ul>
-						<li><a href="https://mupibox.de/">MuPiBox.de</a></li>
-						<li><a href="https://github.com/splitti/MuPiBox">Visit MupiBox on Github</a></li>
+						<li><a href="https://mupibox.de/" target="_blank">MuPiBox.de</a></li>
+						<li><a href="https://discord.gg/4EjCgpCbbe" target="_blank">Support on Discord</a></li>
+					</ul>
+				</div>
+				<div id="footercenter">
+					<ul>
+						<li><a href="https://github.com/splitti/MuPiBox" target="_blank">Visit MupiBox on Github</a></li>
+						<li><a href="https://github.com/splitti/MuPiBox/blob/main/LICENSE.md" target="_blank">License / Copyright</a></li>						
 					</ul>
 				</div>
 				<div id="footerright">

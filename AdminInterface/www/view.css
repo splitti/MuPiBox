@@ -48,12 +48,18 @@ body
 #footerleft
 {
 	padding:0;
-	margin:20px;
-	width:70%;
+	margin:15px 20px;
+	width:35%;
 }
 
+#footercenter
+{
+	padding:0;
+	margin:15px 20px;
+	width:35%;
+}
 
-#footerleft ul
+#footer ul
 {
 	font-size:90%;
 	color:#ffffff;
@@ -63,10 +69,9 @@ body
 	width:100%;
 }
 
-#footerleft li
+#footer li
 {
 	margin:0;
-	padding:2px 5px ;
 	position:relative;
 }
 
