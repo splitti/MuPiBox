@@ -132,7 +132,7 @@
 				</li>
                         </ul>
                 
-        </div>
+
 <?php
         include ('includes/footer.html');
 ?>

@@ -109,7 +109,6 @@
 
                         </ul>
                 </form>
-        </div>
 <?php
 	include ('includes/footer.html');
 ?>

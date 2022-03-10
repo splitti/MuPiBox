@@ -21,13 +21,13 @@
 		<div id="container">
 			<div class="topnav" id="myTopnav">
 				<a href="index.php"><i class="fa fa-fw fa-home"></i> Home</a>
-				<a href="mupi.php"><i class="fa-solid fa-speaker"></i> MuPi-Conf</a>
+				<a href="mupi.php"><i class="fa-solid fa-headphones"></i> MuPi-Conf</a>
 				<a href="bluetooth.php"><i class="fa-brands fa-bluetooth"></i> Bluetooth</a>
 				<a href="spotify.php"><i class="fa-brands fa-spotify"></i> Spotify</a>
 				<a href="network.php"><i class="fa-solid fa-wifi"></i> Network</a>
 				<a href="service.php"><i class="fa-solid fa-gear"></i> Services</a>
-				<a href="tweaks.php"><i class="fa-regular fa-rocket-launch"></i> Performance</a>
-				<a href="admin.php"><i class="fa-regular fa-screwdriver-wrench"></i> Admin</a>
+				<a href="tweaks.php"><i class="<i class="fa-solid fa-rocket"></i>"></i> Performance</a>
+				<a href="admin.php"><i class="fa-solid fa-screwdriver-wrench"></i> Admin</a>
 				<a href="javascript:void(0);" class="icon" onclick="myFunction()"><i class="fa fa-bars"></i></a>
 			</div>
 
