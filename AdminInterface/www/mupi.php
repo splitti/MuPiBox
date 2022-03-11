@@ -54,6 +54,8 @@
 		{
 			$json_object = json_encode($data);
 			$save_rc = file_put_contents('/etc/mupibox/mupiboxconfig.json', $json_object);
+			exec("sudo /usr/local/bin/mupibox/./setting_update.sh");
+			exec("sudo -i -u dietpi /usr/local/bin/mupibox/./restart_kiosk.sh");
 		}
 ?>
 

@@ -1,4 +1,3 @@
-
 <?php
 	$change=0;
 	$onlinejson = file_get_contents('https://raw.githubusercontent.com/splitti/MuPiBox/main/version.json');
@@ -13,8 +12,6 @@
 	if( $_POST['mupibox_update'] )
 		{
 		$command = "cd; curl https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh | sudo bash";
-		exec($command, $output, $result );
-		$command = "sudo /usr/local/bin/mupibox/./m3u_generator.sh";
 		exec($command, $output, $result );
 		$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
 		$data = json_decode($string, true);

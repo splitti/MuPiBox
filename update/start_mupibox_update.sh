@@ -15,7 +15,7 @@ exec 3>${LOG}
 	echo -e "XXX\n1\nInstall some packages... Please wait!\nXXX"
 	# Get missing packages
 	sudo apt-get update >&3 2>&3
-	sudo apt-get install git libasound2 jq samba mplayer pulseaudio-module-bluetooth bluez zip rrdtools -y >&3 2>&3
+	sudo apt-get install git libasound2 jq samba mplayer pulseaudio-module-bluetooth bluez zip rrdtools scrot -y >&3 2>&3
 
 	echo -e "XXX\n5\nBackup Userdata... \nXXX"	 >&3 2>&3
 	sudo cp /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json /tmp/data.json >&3 2>&3
@@ -108,6 +108,9 @@ exec 3>${LOG}
 	sudo rm /var/www/www.zip >&3 2>&3
 	sudo chown -R www-data:www-data /var/www/ >&3 2>&3
 	sudo chmod -R 755 /var/www/ >&3 2>&3
+	
+	echo -e "XXX\n95\nGenerate Playlists and Covers... \nXXX"	
+	sudo /usr/local/bin/mupibox/./m3u_generator.sh >&3 2>&3
 	
 	echo -e "XXX\n100\nFinalizing setup... \nXXX"
 	sudo cp ${CONFIG} ${CONFIG}_backup  >&3 2>&3
