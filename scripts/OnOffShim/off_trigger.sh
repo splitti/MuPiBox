@@ -4,6 +4,10 @@
 # This is optional as you can use any button trigger script as you like
 # See this as a working example
 
+sudo mkdir /tmp/.rrd
+sudo rrdtool create /tmp/.rrd/cputemp.rrd  --start now  --step 60  --no-overwrite  DS:cpu_temp:GAUGE:120:U:U  RRA:AVERAGE:0.5:1:120
+sudo chmod 777 /tmp/.rrd/cputemp.rrd
+
 sleep 10
 
 CONFIG="/etc/mupibox/mupiboxconfig.json"
