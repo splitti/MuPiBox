@@ -49,19 +49,19 @@
                 <form class="appnitro"  method="post" action="spotify.php" id="form">
                                         <div class="description">
                         <h2>Spotify settings</h2>
-                        <p>Specify your Spotify-Account-Settings...</p>
+                        <p>Specify your Spotify-Account-Settings and connect to Spotify...</p>
                 </div>
 				<h2>STEP 1</h2>
-                <p>Please enter spotify username and passwod. Please save...</p>
+                <p>Please enter Spotify Username and Password. Please notice, spotify premium or family is required!</p>
                         <ul >
 
 				 <li id="li_1" >
-                <label class="description" for="spotify_user">Spotify Username </label>
+                <label class="description" for="spotify_user">Spotify Username</label>
                 <div>
                         <input id="spotify_user" name="spotify_user" class="element text medium" type="text" maxlength="255" value="<?php
                         print $data["spotify"]["username"];
 ?>"/>
-                </div><p class="guidelines" id="guide_1"><small>Please enter your Spotify Username. Please notice, spotify premium or family is required!</small></p>
+                </div><p class="guidelines" id="guide_1"><small>Please enter your Spotify Username.</small></p>
                 </li>
 				 <li id="li_1" >
                 <label class="description" for="spotify_pwd">Spotify Password </label>
@@ -69,7 +69,7 @@
                         <input id="spotify_pwd" name="spotify_pwd" class="element text medium" type="password" maxlength="255" value="<?php
                         print $data["spotify"]["password"];
 ?>"/>
-                </div><p class="guidelines" id="guide_1"><small>Please enter the Spotify Password.</small></p>
+                </div><p class="guidelines" id="guide_1"><small>Please enter your Spotify Password. The Password will be saved as plain text.</small></p>
                 </li>
 				<li class="buttons"><input id="saveForm" class="button_text" type="submit" name="saveLogin" value="Save Login Data" /></li>
 				</ul>

@@ -22,7 +22,7 @@ exec 3>${LOG}
 	echo -e "XXX\n0\nInstall some packages... Please wait!\nXXX"
 	# Get missing packages
 	sudo apt-get update >&3 2>&3
-	sudo apt-get install git libasound2 jq samba mplayer pulseaudio-module-bluetooth bluez zip -y >&3 2>&3
+	sudo apt-get install git libasound2 jq samba mplayer pulseaudio-module-bluetooth bluez zip rrdtools -y >&3 2>&3
 
 	###############################################################################################
 	

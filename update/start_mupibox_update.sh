@@ -12,6 +12,11 @@ exec 3>${LOG}
 	sudo systemctl stop mupi_idle_shutdown.service >&3 2>&3
 	sleep 1 >&3 2>&3
 
+	echo -e "XXX\n1\nInstall some packages... Please wait!\nXXX"
+	# Get missing packages
+	sudo apt-get update >&3 2>&3
+	sudo apt-get install git libasound2 jq samba mplayer pulseaudio-module-bluetooth bluez zip rrdtools -y >&3 2>&3
+
 	echo -e "XXX\n5\nBackup Userdata... \nXXX"	 >&3 2>&3
 	sudo cp /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json /tmp/data.json >&3 2>&3
 	sudo cp -r /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover /tmp/cover >&3 2>&3
