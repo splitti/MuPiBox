@@ -41,6 +41,8 @@ username=$(/usr/bin/jq -r .spotify.username ${MUPIBOX_CONFIG})
 /usr/bin/sed -i 's/.*username.*/  username = '\"${username}\"'/g' ${SPOTIFYD_CONFIG}
 password=$(/usr/bin/jq -r .spotify.password ${MUPIBOX_CONFIG})
 /usr/bin/sed -i 's/.*password.*/  password = '\"${password}\"'/g' ${SPOTIFYD_CONFIG}
+hostname=$(/usr/bin/jq -r .mupibox.host ${MUPIBOX_CONFIG})
+/usr/bin/sed -i 's/.*device_name.*/  device_name = '\"${hostname}\"'/g' ${SPOTIFYD_CONFIG}
 
 timeout=$(/usr/bin/jq -r .timeout.idleDisplayOff ${MUPIBOX_CONFIG})
 /usr/bin/sed -i 's/.*Option \"BlankTime\".*/    Option \"BlankTime\" '\"${timeout}\"'/g' ${DISPLAY_STANDBY}
