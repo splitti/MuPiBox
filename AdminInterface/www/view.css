@@ -14,7 +14,7 @@ body
 	padding: 0px;
 	text-align:left;
 	width:100%;
-	max-width:800px;
+	max-width:810px;
 }
 
 #top
@@ -23,7 +23,7 @@ body
 	height:10px;
 	margin:10px auto 0;
 	width:100%;
-	max-width:800px;
+	max-width:810px;
 
 }
 
@@ -33,7 +33,7 @@ body
 	clear:both;
 	background-color:#44afe2;
 	width:100%;
-	max-width:800px;
+	max-width:810px;
 	padding: 0px;
 	height:80px;
 	display:flex;
@@ -202,7 +202,7 @@ form.appnitro
 }
 
 /* When the screen is less than 600 pixels wide, hide all links, except for the first one ("Home"). Show the link that contains should open and close the topnav (.icon) */
-@media screen and (max-width: 800px) {
+@media screen and (max-width: 810px) {
   .topnav a:not(:first-child) {display: none;}
   .topnav a.icon {
     float: right;
@@ -211,7 +211,7 @@ form.appnitro
 }
 
 /* The "responsive" class is added to the topnav with JavaScript when the user clicks on the icon. This class makes the topnav look good on small screens (display the links vertically instead of horizontally) */
-@media screen and (max-width: 800px) {
+@media screen and (max-width: 810px) {
   .topnav.responsive {position: relative;}
   .topnav.responsive a.icon {
     position: absolute;

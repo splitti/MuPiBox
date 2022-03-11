@@ -6,7 +6,7 @@
 	include ('includes/header.php');
 	if( $_POST['restart_kiosk'] )
 		{
-		$command = "sudo /usr/local/bin/mupibox/./restart_kiosk.sh &";
+		$command = "sudo -i -u dietpi /usr/local/bin/mupibox/./restart_kiosk.sh";
 		exec($command, $output, $result );
 		$change=1;
 		}
