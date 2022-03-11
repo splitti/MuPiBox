@@ -22,7 +22,6 @@
 		<div id="container">
 			<div class="topnav" id="myTopnav">
 				<a href="index.php"><i class="fa fa-fw fa-home"></i> Home</a>
-
 				<a href="content.php"><i class="fa-solid fa-music"></i> Content</a>		
 				<a href="mupi.php"><i class="fa-solid fa-headphones"></i> MuPi-Conf</a>
 				<a href="bluetooth.php"><i class="fa-brands fa-bluetooth"></i> Bluetooth</a>
