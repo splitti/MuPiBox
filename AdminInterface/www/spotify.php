@@ -1,35 +1,32 @@
-
 <?php
 	$change=0;
 	include ('includes/header.php');
-	if( $data["spotify"]["username"]!=$_POST['spotify_user'] && $_POST['spotify_user'])
+	
+	$REDIRECT_URI="http://".$data["mupibox"]["host"]."/spotify.php";
+	$SCOPELIST="streaming user-read-currently-playing user-modify-playback-state user-read-playback-state";
+	$SCOPE=urlencode($SCOPELIST);
+
+	if($_GET['code'])
 		{
-		$data["spotify"]["username"]=$_POST['spotify_user'];
+		exec($command, $Tokenoutput, $result);
+		$command="curl -d client_id=".$data["spotify"]["clientId"]." -d client_secret=".$data["spotify"]["clientSecret"]." -d grant_type=authorization_code -d code=".$_GET['code']." -d redirect_uri=".$REDIRECT_URI." https://accounts.spotify.com/api/token";
+		exec($command, $Tokenoutput, $result);
+		$tokendata = json_decode($Tokenoutput[0], true);
+		$data["spotify"]["accessToken"]=$tokendata["access_token"];
+		$data["spotify"]["refreshToken"]=$tokendata["refresh_token"];
 		$change=1;
 		}
-	if( $data["spotify"]["password"]!=$_POST['spotify_pwd'] && $_POST['spotify_pwd'])
+
+	if($_POST['saveLogin'])
 		{
+		$data["spotify"]["username"]=$_POST['spotify_user'];
 		$data["spotify"]["password"]=$_POST['spotify_pwd'];
 		$change=1;
 		}
-	if( $data["spotify"]["clientId"]!=$_POST['spotify_clientid'] && $_POST['spotify_clientid'])
+	if( $_POST['saveIDs'] )
 		{
 		$data["spotify"]["clientId"]=$_POST['spotify_clientid'];
-		$change=1;
-		}
-	if( $data["spotify"]["clientSecret"]!=$_POST['spotify_clientsecret'] && $_POST['spotify_clientsecret'])
-		{
 		$data["spotify"]["clientSecret"]=$_POST['spotify_clientsecret'];
-		$change=1;
-		}
-	if( $data["spotify"]["accessToken"]!=$_POST['spotify_accesstoken'] && $_POST['spotify_accesstoken'])
-		{
-		$data["spotify"]["accessToken"]=$_POST['spotify_accesstoken'];
-		$change=1;
-		}
-	if( $data["spotify"]["refreshToken"]!=$_POST['spotify_refreshtoken'] && $_POST['spotify_refreshtoken'] )
-		{
-		$data["spotify"]["refreshToken"]=$_POST['spotify_refreshtoken'];
 		$change=1;
 		}
 	if( $change )
@@ -39,22 +36,23 @@
 		$command = "sudo /usr/local/bin/mupibox/./setting_update.sh && /usr/local/bin/mupibox/./spotify_restart.sh";
 		exec($command, $output, $result );
 		}
-	if( !($data["spotify"]["deviceId"]) && $data["spotify"]["username"] && $data["spotify"]["password"] && $data["spotify"]["clientSecret"] && $data["spotify"]["accessToken"] && $data["spotify"]["refreshToken"] )
+	if( $_POST['generateDevID'] )
 		{
 		$command = "sudo /usr/local/bin/mupibox/./set_deviceid.sh";
 		exec($command, $devIDoutput, $result);
 		$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
 		$data = json_decode($string, true);
 		}
+
 	
 ?>
-
-
                 <form class="appnitro"  method="post" action="spotify.php" id="form">
                                         <div class="description">
                         <h2>Spotify settings</h2>
                         <p>Specify your Spotify-Account-Settings...</p>
                 </div>
+				<h2>STEP 1</h2>
+                <p>Please enter spotify username and passwod. Please save...</p>
                         <ul >
 
 				 <li id="li_1" >
@@ -63,7 +61,7 @@
                         <input id="spotify_user" name="spotify_user" class="element text medium" type="text" maxlength="255" value="<?php
                         print $data["spotify"]["username"];
 ?>"/>
-                </div><p class="guidelines" id="guide_1"><small>Please insert the hostname of the MuPiBox. Don't use Spaces or other special charachters! Default: MuPiBox</small></p>
+                </div><p class="guidelines" id="guide_1"><small>Please enter your Spotify Username. Please notice, spotify premium or family is required!</small></p>
                 </li>
 				 <li id="li_1" >
                 <label class="description" for="spotify_pwd">Spotify Password </label>
@@ -71,87 +69,77 @@
                         <input id="spotify_pwd" name="spotify_pwd" class="element text medium" type="password" maxlength="255" value="<?php
                         print $data["spotify"]["password"];
 ?>"/>
-                </div><p class="guidelines" id="guide_1"><small>Please insert the hostname of the MuPiBox. Don't use Spaces or other special charachters! Default: MuPiBox</small></p>
+                </div><p class="guidelines" id="guide_1"><small>Please enter the Spotify Password.</small></p>
                 </li>
-
-                                      
-				 <li id="li_1" >
-                <label class="description" for="spotify_deviceid">Spotify Device ID </label>
-                <div>
-                        <input id="readonly" name="spotify_deviceid" class="element readonly large" type="text" maxlength="255" value="<?php
-                        print $data["spotify"]["deviceId"];
-?>" readonly />
-                </div><p class="guidelines" id="guide_1"><small>Please insert the hostname of the MuPiBox. Don't use Spaces or other special charachters! Default: MuPiBox</small></p>
-                </li>
-				
+				<li class="buttons"><input id="saveForm" class="button_text" type="submit" name="saveLogin" value="Save Login Data" /></li>
+				</ul>
+   				<h2>STEP 2</h2>
+                <p>Please login to <a href="https://developer.spotify.com/dashboard/login" target="_blank">Spotify Developer Dashboard</a> and create a new App. You can choose the App-Name or Description, or take "MuPiBox" easily.</p>
+                <p>You will be redireted to the dashboard for the new created app. Copy and paste the Client ID and Client Secret of your app.</p>
+                <p>Edit the settings and add the following URL to Redirect URIs:</p>
+				<?php print "<p><b>".$REDIRECT_URI."</b></p>"; ?>
+				<ul>                      
 				 <li id="li_1" >
                 <label class="description" for="spotify_clientid">Spotify Client ID </label>
                 <div>
                         <input id="spotify_clientid" name="spotify_clientid" class="element text large" type="text" maxlength="255" value="<?php
                         print $data["spotify"]["clientId"];
 ?>"/>
-                </div><p class="guidelines" id="guide_1"><small>Please insert the hostname of the MuPiBox. Don't use Spaces or other special charachters! Default: MuPiBox</small></p>
+                </div><p class="guidelines" id="guide_1"><small>Please insert the Client ID from your app in the Spotify Developer Dashboard.</small></p>
                 </li>
-
-
 				 <li id="li_1" >
                 <label class="description" for="spotify_clientsecret">Spotify Client Secret </label>
                 <div>
                         <input id="spotify_clientsecret" name="spotify_clientsecret" class="element text large" type="text" maxlength="255" value="<?php
                         print $data["spotify"]["clientSecret"];
 ?>"/>
-                </div><p class="guidelines" id="guide_1"><small>Please insert the hostname of the MuPiBox. Don't use Spaces or other special charachters! Default: MuPiBox</small></p>
+                </div><p class="guidelines" id="guide_1"><small>Please insert the Client Secret from your app in the Spotify Developer Dashboard.</small></p>
                 </li>
 
+				<li class="buttons"><input id="saveForm" class="button_text" type="submit" name="saveIDs" value="Save IDs" /></li>
 
-
+				</ul>
+   				<h2>STEP 3</h2>
+                <p>Please press the following URL to generate Access and Refresh Token. A login may be necessary.</p>
+				<p><b>
+				<?php 
+					print '<a href=https://accounts.spotify.com/authorize?response_type=code&client_id='.$data["spotify"]["clientId"].'&redirect_uri='.$REDIRECT_URI.'&scope='.$SCOPE.'>Login and generate Refresh & Access Token</a>'; 
+				?>
+				</b></p>
+				<ul> 
 				 <li id="li_1" >
                 <label class="description" for="spotify_accesstoken">Spotify Access Token </label>
                 <div>
-                        <input id="spotify_accesstoken" name="spotify_accesstoken" class="element text large" type="text" maxlength="255" value="<?php
+                        <input id="readonly" name="spotify_accesstoken" class="element text large" type="text" maxlength="255" value="<?php
                         print $data["spotify"]["accessToken"];
-?>"/>
-                </div><p class="guidelines" id="guide_1"><small>Please insert the hostname of the MuPiBox. Don't use Spaces or other special charachters! Default: MuPiBox</small></p>
-                </li>
+?>" readonly />
+                </div></li>
 			
 				 <li id="li_1" >
                 <label class="description" for="spotify_refreshtoken">Spotify Refresh Token </label>
                 <div>
-                        <input id="spotify_refreshtoken" name="spotify_refreshtoken" class="element text large" type="text" maxlength="255" value="<?php
+                        <input id="readonly" name="spotify_refreshtoken" class="element text large" type="text" maxlength="255" value="<?php
                         print $data["spotify"]["refreshToken"];
-?>"/>
-                </div><p class="guidelines" id="guide_1"><small>Please insert the hostname of the MuPiBox. Don't use Spaces or other special charachters! Default: MuPiBox</small></p>
-                </li>				
-				
-				
+?>" readonly />
+                </div>
+				</li>	
 
-                                        <li class="buttons">
-                            <input type="hidden" name="form_id" value="37271" />
+</ul>
+   				<h2>STEP 4</h2>
+                <p>In this last step, you easliy press the button to generate the Device ID...</p>
+				<ul> 
+				<li class="buttons"><input id="saveForm" class="button_text" type="submit" name="generateDevID" value="Generate DeviceID" /></li>
 
-                                <input id="saveForm" class="button_text" type="submit" name="submit" value="Submit" />
-                </li>
-
-
+				<li id="li_1" >
+                <label class="description" for="spotify_deviceid">Spotify Device ID </label>
+                <div>
+                        <input id="readonly" name="spotify_deviceid" class="element readonly large" type="text" maxlength="255" value="<?php
+                        print $data["spotify"]["deviceId"];
+?>" readonly />
+                </div></li>
                         </ul>
                 </form>
-								<?php
-							if( $change )
-								{
-								if( $save_rc )
-									{
-										print "<div id='savestategood'><p>Data succesfully saved!</p></div>";
-										if( $change == 2 )
-											{
-											print "<p>Settings updated...</p>";
-											}
-										print "</div>";
-									}
-								else
-									{
-										print "<div id='savestatebad'><p>Error while saving!</p></div>";
-									}
-								} 
-				?>
+			<p></p>
 <?php
 	include ('includes/footer.php');
 ?>
