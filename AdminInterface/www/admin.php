@@ -34,13 +34,13 @@
 		}
 	if( $_POST['shutdown'] )
 		{
-		$command = "sudo poweroff";
+		$command = "sudo poweroff &";
 		exec($command, $output, $result );
 		$change=1;
 		}
 	if( $_POST['reboot'] )
 		{
-		$command = "sudo reboot";
+		$command = "sudo reboot &";
 		exec($command, $output, $result );
 		$change=1;
 		}
