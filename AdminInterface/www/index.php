@@ -6,7 +6,7 @@
 	exec("sudo DISPLAY=:0 scrot /var/www/images/screenshot.png");
 	exec("sudo chown www-data:www-data /var/www/images/screenshot.png");
 	exec("sudo rm /val/www/images/temp.png");
-	exec('sudo rrdtool graph /val/www/images/temp.png  --start -15m  --title "CPU Temperature Log"  --vertical-label "Temperature ºC"  --width 600  --height 200  --color GRID#C2C2D6  --color MGRID#E2E2E6  --dynamic-labels  --grid-dash 1:1  --font TITLE:10  --font UNIT:9  --font LEGEND:8  --font AXIS:8  --lazy  --watermark "$(date -R)"  DEF:cpu_temp=/tmp/.rrd/cputemp.rrd:cpu_temp:AVERAGE  AREA:cpu_temp#FF0000AA:"RPi CPU"  LINE2:cpu_temp#FF0000');
+	exec('sudo rrdtool graph /var/www/images/temp.png  --start -15m  --title "CPU Temperature Log"  --vertical-label "Temperature ºC"  --width 600  --height 200  --color GRID#C2C2D6  --color MGRID#E2E2E6  --dynamic-labels  --grid-dash 1:1  --font TITLE:10  --font UNIT:9  --font LEGEND:8  --font AXIS:8  --lazy  --watermark "$(date -R)"  DEF:cpu_temp=/tmp/.rrd/cputemp.rrd:cpu_temp:AVERAGE  AREA:cpu_temp#FF0000AA:"RPi CPU"  LINE2:cpu_temp#FF0000');
 	exec("sudo chown www-data:www-data /val/www/images/temp.png");
 
 	$rpi_temp = explode("=", exec("sudo vcgencmd measure_temp"))[1];
