@@ -110,7 +110,7 @@
 				 <li id="li_1" >
                 <label class="description" for="spotify_accesstoken">Spotify Access Token </label>
                 <div>
-                        <input id="readonly" name="spotify_accesstoken" class="element text large" type="text" maxlength="255" value="<?php
+                        <input id="readonly" name="spotify_accesstoken" class="element readonly large" type="text" maxlength="255" value="<?php
                         print $data["spotify"]["accessToken"];
 ?>" readonly />
                 </div></li>
@@ -118,7 +118,7 @@
 				 <li id="li_1" >
                 <label class="description" for="spotify_refreshtoken">Spotify Refresh Token </label>
                 <div>
-                        <input id="readonly" name="spotify_refreshtoken" class="element text large" type="text" maxlength="255" value="<?php
+                        <input id="spotify_refreshtoken" name="spotify_refreshtoken" class="element readonly large" type="text" maxlength="255" value="<?php
                         print $data["spotify"]["refreshToken"];
 ?>" readonly />
                 </div>
@@ -133,7 +133,7 @@
 				<li id="li_1" >
                 <label class="description" for="spotify_deviceid">Spotify Device ID </label>
                 <div>
-                        <input id="readonly" name="spotify_deviceid" class="element readonly large" type="text" maxlength="255" value="<?php
+                        <input id="spotify_deviceid" name="spotify_deviceid" class="element readonly large" type="text" maxlength="255" value="<?php
                         print $data["spotify"]["deviceId"];
 ?>" readonly />
                 </div></li>
