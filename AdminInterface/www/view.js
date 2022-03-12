@@ -17,31 +17,31 @@ $(document).ready(function(){
 
 // This is the code to preload the images
 var imageList = Array();
-imageList[blue] = new Image(150, 250);
-imageList[blue].src = "/images/blue.png";
-imageList[deepblue] = new Image(150, 250);
-imageList[deepblue].src = "images/deepblue.png";
-imageList[red] = new Image(150, 250);
-imageList[red].src = "images/red.png";
-imageList[3] = new Image(150, 250);
-imageList[3].src = "images/blue.png";
-imageList[4] = new Image(150, 250);
-imageList[4].src = "images/blue.png";
-imageList[5] = new Image(150, 250);
-imageList[5].src = "images/blue.png";
-imageList[6] = new Image(150, 250);
-imageList[6].src = "images/blue.png";
-imageList[7] = new Image(150, 250);
-imageList[7].src = "images/blue.png";
-imageList[8] = new Image(150, 250);
-imageList[8].src = "images/blue.png";
-imageList[9] = new Image(150, 250);
-imageList[9].src = "images/blue.png";
-imageList[10] = new Image(150, 250);
-imageList[10].src = "images/blue.png";
+imageList['blue'] = new Image(150, 250);
+imageList['blue'].src = "images/blue.png";
+imageList['deepblue'] = new Image(150, 250);
+imageList['deepblue'].src = "images/deepblue.png";
+imageList['purple'] = new Image(150, 250);
+imageList['purple'].src = "images/purple.png";
+imageList['pink'] = new Image(150, 250);
+imageList['pink'].src = "images/pink.png";
+imageList['green'] = new Image(150, 250);
+imageList['green'].src = "images/green.png";
+imageList['red'] = new Image(150, 250);
+imageList['red'].src = "images/red.png";
+imageList['orange'] = new Image(150, 250);
+imageList['orange'].src = "images/orange.png";
+imageList['chocolate'] = new Image(150, 250);
+imageList['chocolate'].src = "images/chocolate.png";
+imageList['vintage'] = new Image(150, 250);
+imageList['vintage'].src = "images/vintage.png";
+imageList['dark'] = new Image(150, 250);
+imageList['dark'].src = "images/dark.png";
+imageList['light'] = new Image(150, 250);
+imageList['light'].src = "images/light.png";
 
 
 function switchImage() {
     var selectedImage = document.mupi.theme.options[document.mupi.theme.selectedIndex].value;
-    document.selectedTheme.src = imageList[selectedImage].src;;
+    document.selectedTheme.src = imageList[selectedImage].src;
 }

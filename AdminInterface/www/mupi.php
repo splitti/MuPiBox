@@ -93,7 +93,9 @@
 						}
 ?>
 "</select>
-				<img src="images/placeholder.png" width="250" height="150" name="selectedTheme" />
+				<p><img src="images/blue.png" width="250" height="150" name="selectedTheme" />
+<p>
+
                 </div><p class="guidelines" id="guide_1"><small>Please insert the hostname of the MuPiBox. Default: MuPiBox</small></p>
                 </li>
 				<li id="li_1" >
