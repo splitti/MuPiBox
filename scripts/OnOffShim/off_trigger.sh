@@ -6,7 +6,8 @@
 
 sudo mkdir /tmp/.rrd
 sudo rrdtool create /tmp/.rrd/cputemp.rrd  --start now  --step 60  --no-overwrite  DS:cpu_temp:GAUGE:120:U:U  RRA:AVERAGE:0.5:1:120
-sudo chmod 777 /tmp/.rrd/cputemp.rrd
+sudo rrdtool create /tmp/.rrd/cpuusage.rrd --start now  --step 60  --no-overwrite  DS:load1:GAUGE:120:0:U  DS:load5:GAUGE:120:0:U  DS:load15:GAUGE:120:0:U  RRA:AVERAGE:0.5:1:120  RRA:AVERAGE:0.5:5:120  RRA:AVERAGE:0.5:15:120  RRA:AVERAGE:0.5:60:120
+sudo chmod 777 /tmp/.rrd/*.rrd
 
 sleep 10
 
