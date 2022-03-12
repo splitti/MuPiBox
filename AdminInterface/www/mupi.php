@@ -93,10 +93,9 @@
 						}
 ?>
 "</select>
-				<p><img src="images/blue.png" width="250" height="150" name="selectedTheme" />
-<p>
+                </div>
+				<div class="themePrev"><img src="images/<?php print $data["mupibox"]["theme"]; ?>.png" width="250" height="150" name="selectedTheme" /></div>
 
-                </div><p class="guidelines" id="guide_1"><small>Please insert the hostname of the MuPiBox. Default: MuPiBox</small></p>
                 </li>
 				<li id="li_1" >
                 <label class="description" for="volume">Volume after power on </label>
