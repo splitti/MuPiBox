@@ -59,7 +59,7 @@
 		}
 ?>
 
-                <form class="appnitro"  method="post" action="mupi.php" id="form">
+                <form class="appnitro" name="mupi" method="post" action="mupi.php" id="form">
                                         <div class="description">
                         <h2>MupiBox settings</h2>
                         <p>This is the central configuration of your MuPiBox...</p>

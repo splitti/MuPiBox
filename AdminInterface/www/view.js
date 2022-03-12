@@ -18,7 +18,7 @@ $(document).ready(function(){
 // This is the code to preload the images
 var imageList = Array();
 imageList[blue] = new Image(150, 250);
-imageList[blue].src = "images/blue.png";
+imageList[blue].src = "/images/blue.png";
 imageList[deepblue] = new Image(150, 250);
 imageList[deepblue].src = "images/deepblue.png";
 imageList[red] = new Image(150, 250);
@@ -42,6 +42,6 @@ imageList[10].src = "images/blue.png";
 
 
 function switchImage() {
-    var selectedImage = document.theme.switch.options[document.theme.switch.selectedIndex].value;
+    var selectedImage = document.mupi.theme.options[document.mupi.theme.selectedIndex].value;
     document.selectedTheme.src = imageList[selectedImage].src;;
 }
