@@ -17,12 +17,12 @@ $(document).ready(function(){
 
 // This is the code to preload the images
 var imageList = Array();
-imageList[0] = new Image(150, 250);
-imageList[0].src = "images/blue.png";
-imageList[1] = new Image(150, 250);
-imageList[1].src = "images/deepblue.png";
-imageList[2] = new Image(150, 250);
-imageList[2].src = "images/blue.png";
+imageList[blue] = new Image(150, 250);
+imageList[blue].src = "images/blue.png";
+imageList[deepblue] = new Image(150, 250);
+imageList[deepblue].src = "images/deepblue.png";
+imageList[red] = new Image(150, 250);
+imageList[red].src = "images/red.png";
 imageList[3] = new Image(150, 250);
 imageList[3].src = "images/blue.png";
 imageList[4] = new Image(150, 250);
