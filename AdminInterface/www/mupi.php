@@ -77,7 +77,7 @@
                  <li id="li_1" >
                 <label class="description" for="theme">Theme </label>
                 <div>
-                        <select id="theme" name="theme" class="element text medium">
+                        <select id="theme" name="theme" class="element text medium" onchange="switchImage();>
 <?php
 						$Themes = $data["mupibox"]["installedThemes"];                    
 						foreach($Themes as $key) {
@@ -93,6 +93,7 @@
 						}
 ?>
 "</select>
+				<img src="images/blue.png" width="250" height="150" name="selectedTheme" />
                 </div><p class="guidelines" id="guide_1"><small>Please insert the hostname of the MuPiBox. Default: MuPiBox</small></p>
                 </li>
 				<li id="li_1" >

@@ -14,3 +14,34 @@ $(document).ready(function(){
     $("#lock-modal").fadeIn('slow');
   });//submit
 });//document ready
+
+// This is the code to preload the images
+var imageList = Array();
+imageList[0] = new Image(150, 250);
+imageList[0].src = "images/blue.png";
+imageList[1] = new Image(150, 250);
+imageList[1].src = "images/deepblue.png";
+imageList[2] = new Image(150, 250);
+imageList[2].src = "images/blue.png";
+imageList[3] = new Image(150, 250);
+imageList[3].src = "images/blue.png";
+imageList[4] = new Image(150, 250);
+imageList[4].src = "images/blue.png";
+imageList[5] = new Image(150, 250);
+imageList[5].src = "images/blue.png";
+imageList[6] = new Image(150, 250);
+imageList[6].src = "images/blue.png";
+imageList[7] = new Image(150, 250);
+imageList[7].src = "images/blue.png";
+imageList[8] = new Image(150, 250);
+imageList[8].src = "images/blue.png";
+imageList[9] = new Image(150, 250);
+imageList[9].src = "images/blue.png";
+imageList[10] = new Image(150, 250);
+imageList[10].src = "images/blue.png";
+
+
+function switchImage() {
+    var selectedImage = document.theme.switch.options[document.theme.switch.selectedIndex].value;
+    document.selectedTheme.src = imageList[selectedImage].src;;
+}
