@@ -22,4 +22,7 @@
 # 
 # m h  dom mon dow   command
 * * * * *       /usr/local/bin/mupibox/./save_rrd.sh
+* * * * *       sleep 15; /usr/local/bin/mupibox/./save_rrd.sh
+* * * * *       sleep 30; /usr/local/bin/mupibox/./save_rrd.sh
+* * * * *       sleep 45; /usr/local/bin/mupibox/./save_rrd.sh
 
