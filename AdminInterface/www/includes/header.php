@@ -15,6 +15,7 @@
 		<title>MuPiBox Web Interface</title>
 		<link rel="stylesheet" type="text/css" href="view.css" media="all">
 		<script type="text/javascript" src="view.js"></script>
+		<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 		<link rel="icon" type="image/x-icon" href="/images/favicon.ico">
 	</head>
 	<body id="main_body" >
