@@ -101,27 +101,29 @@
 <h2>System Information</h2>
 <?php
 	$root_free_bytes = disk_free_space("/");
-	$root_free_gb = round($root_free_bytes / 1024 / 1024 / 1024, 1);
+	$root_free_gb = round($root_free_bytes / 1024 / 1024 / 1024, 2);
 	$root_free = $root_free_gb . "GB";
 	$root_total_bytes = disk_total_space("/") - $root_free_bytes;
-	$root_total_gb = round($root_total_bytes / 1024 / 1024 / 1024, 1);
+	$root_total_gb = round($root_total_bytes / 1024 / 1024 / 1024, 2);
 	$root_total = $root_total_gb . "GB";
 
-	$boot_free_bytes = disk_free_space("/");
-	$boot_free_gb = round($boot_free_bytes / 1024 / 1024 / 1024, 1);
-	$boot_free = $boot_free_gb . "GB";
-	$boot_total_bytes = disk_total_space("/") - $boot_free_bytes;
-	$boot_total_gb = round($boot_total_bytes / 1024 / 1024 / 1024, 1);
-	$boot_total = $boot_total_gb . "GB";
+	$boot_free_bytes = disk_free_space("/boot");
+	$boot_free_mb = round($boot_free_bytes / 1024 / 1024, 2);
+	$boot_free = $boot_free_mb . "MB";
+	$boot_total_bytes = disk_total_space("/boot") - $boot_free_bytes;
+	$boot_total_mb = round($boot_total_bytes / 1024 / 1024, 2);
+	$boot_total = $boot_total_mb . "MB";
 ?>
 
 <script type="text/javascript">
 	// Load google charts
 	google.charts.load('current', {'packages':['corechart']});
-	google.charts.setOnLoadCallback(drawChart);
+	google.charts.setOnLoadCallback(drawChartroot);
+	google.charts.setOnLoadCallback(drawChartboot);
+
 
 	// Draw the chart and set the chart values
-	function drawChart() {
+	function drawChartroot() {
 	  var data = google.visualization.arrayToDataTable([
 	  ['Spacetype', 'Size'],
 	  [<?php print "'/ free [". $root_free ."]'" ?>, <?php print $root_free_gb; ?>],
@@ -134,26 +136,28 @@
 	  // Display the chart inside the <div> element with id="piechart"
 	  var chart = new google.visualization.PieChart(document.getElementById('rootchart'));
 	  chart.draw(data, options);
+	}
 
 	// Draw the chart and set the chart values
-	function drawChart() {
+	function drawChartboot() {
 	  var data = google.visualization.arrayToDataTable([
 	  ['Spacetype', 'Size'],
-	  [<?php print "'/ free [". $boot_free ."]'" ?>, <?php print $boot_free_gb; ?>],
-	  [<?php print "'/ used [". $boot_total ."]'" ?>, <?php print $boot_total_gb; ?>]
+	  [<?php print "'/boot free [". $boot_free ."]'" ?>, <?php print $boot_free_mb; ?>],
+	  [<?php print "'/boot used [". $boot_total ."]'" ?>, <?php print $boot_total_mb; ?>]
 	]);
 
 	  // Optional; add a title and set the width and height of the chart
-	  var options = {'title':'Disc Space - /boot in Gigabytes', 'width':350, 'height':200};
+	  var options = {'title':'Disc Space - / in Gigabytes', 'width':350, 'height':200};
 
 	  // Display the chart inside the <div> element with id="piechart"
 	  var chart = new google.visualization.PieChart(document.getElementById('bootchart'));
 	  chart.draw(data, options);
-
 	}
 </script>
-<div id="rootchart"></div>
-<div id="bootchart"></div>
+<div id=spacecharts">
+	<div id="rootchart"></div>
+	<div id="bootchart"></div>
+</div>
 
 <p>	
 <?php
