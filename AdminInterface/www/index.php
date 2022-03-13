@@ -147,7 +147,7 @@
 	]);
 
 	  // Optional; add a title and set the width and height of the chart
-	  var options = {'title':'Disc Space - / in Gigabytes', 'width':350, 'height':200};
+	  var options = {'title':'Disc Space - /boot in Megabytes', 'width':350, 'height':200};
 
 	  // Display the chart inside the <div> element with id="piechart"
 	  var chart = new google.visualization.PieChart(document.getElementById('bootchart'));
