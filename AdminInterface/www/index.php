@@ -4,8 +4,10 @@
 
 	exec("sudo rm /var/www/images/screenshot.png /val/www/images/temp.png /var/www/images/cpuload.png");
 	exec("sudo DISPLAY=:0 scrot /var/www/images/screenshot.png");
-	exec('sudo rrdtool graph /var/www/images/temp.png  --start -15m  --title "CPU Temperature Log"  --vertical-label "Temperature ºC"  --width 600  --height 100  --color GRID#C2C2D6  --color MGRID#E2E2E6  --dynamic-labels  --grid-dash 1:1  --font TITLE:10  --font UNIT:9  --font LEGEND:8  --font AXIS:8  --lazy  --watermark "$(date -R)"  DEF:cpu_temp=/tmp/.rrd/cputemp.rrd:cpu_temp:AVERAGE  LINE1:cpu_temp#FF0000:"Raspberry Pi Temperature"');
-	exec('sudo rrdtool graph /var/www/images/cpuload.png  --start -15m -a PNG -t "Load Average" --vertical-label "Average Load" -w 600 -h 100 DEF:load1=/tmp/.rrd/cpuusage.rrd:load1:AVERAGE DEF:load5=/tmp/.rrd/cpuusage.rrd:load5:AVERAGE DEF:load15=/tmp/.rrd/cpuusage.rrd:load15:AVERAGE VDEF:load1l=load1,LAST VDEF:load5l=load5,LAST VDEF:load15l=load15,LAST AREA:load1#ff0000:"1 Minute,   last\:" GPRINT:load1l:"%5.2lf" AREA:load5#ff9900:"5 Minutes,  last\:" GPRINT:load5l:"%5.2lf " AREA:load15#ffff00:"15 Minutes, last\:" GPRINT:load15l:"%5.2lf " LINE1:load5#ff9900:"" LINE1:load1#ff0000:"" > /dev/null');
+	exec('sudo rrdtool graph /var/www/images/temp.png --start -15m -z -a PNG -t "CPU Temperature" --vertical-label "Temperature ºC" -w 700 -h 100 DEF:cpu_temp=/tmp/.rrd/cputemp.rrd:cpu_temp:AVERAGE VDEF:cpu_templ=cpu_temp,LAST LINE1:cpu_temp#ff0000:"Raspberry Pi Temperature,   last\:" GPRINT:cpu_templ:"%7.2lf °C \t\t\t\t\t\t\t\t"');
+	exec('sudo rrdtool graph /var/www/images/cpuload.png  --start -15m -a PNG -t "Load Average" --vertical-label "Average Load" -w 750 -h 100 DEF:load1=/tmp/.rrd/cpuusage.rrd:load1:AVERAGE DEF:load5=/tmp/.rrd/cpuusage.rrd:load5:AVERAGE DEF:load15=/tmp/.rrd/cpuusage.rrd:load15:AVERAGE VDEF:load1l=load1,LAST VDEF:load5l=load5,LAST VDEF:load15l=load15,LAST AREA:load1#ff0000:"1 Minute,   last\:" GPRINT:load1l:"%5.2lf \t" AREA:load5#ff9900:"5 Minutes,  last\:" GPRINT:load5l:"%5.2lf \t" AREA:load15#ffff00:"15 Minutes, last\:" GPRINT:load15l:"%5.2lf \t" LINE1:load5#ff9900:"" LINE1:load1#ff0000:"" > /dev/null');
+	exec('sudo rrdtool graph /var/www/images/ram.png  --start -15m -a PNG -t "Memory Usage" --vertical-label "Usage in %" --lower-limit 0 --upper-limit 100 -w 750 -h 100 DEF:ram=/tmp/.rrd/ram.rrd:ram:AVERAGE DEF:swap=/tmp/.rrd/ram.rrd:swap:AVERAGE VDEF:raml=ram,LAST VDEF:swapl=swap,LAST AREA:ram#ff0000:"RAM USAGE,   last\:" GPRINT:raml:"%5.2lf " AREA:swap#ff9900:"SWAP USAGE,  last\:" GPRINT:swapl:"%5.2lf " LINE1:ram#ff0000:""  > /dev/null');
+
 	exec("sudo chown www-data:www-data /var/www/images/temp.png /var/www/images/cpuload.png /var/www/images/screenshot.png");
 
 	$rpi_temp = explode("=", exec("sudo vcgencmd measure_temp"))[1];
@@ -93,21 +95,23 @@
         ?>
 
 <div class="main">
+<h2>Current Screen</h2>
+<p><img src="images/screenshot.png" id="screenshot" /></p>
+
 <h2>System Information</h2>
 <p>	
 <?php
 	echo "<p>Throttle: " . $rpi_throttle . "</p>";
 ?>
-<img src="images/cpuload.png" />
+<img src="images/cpuload.png" width="100%" />
 </p>
 <p>
-<?php
-	echo "Temperatur: " . $rpi_temp;
-?>
-<img src="images/temp.png" />
+<img src="images/temp.png"  width="100%" />
 </p>
-<h2>Current Screen</h2>
-<p><img src="images/screenshot.png" id="screenshot" /></p>
+<p>
+<img src="images/ram.png"  width="100%" />
+</p>
+
 </div>
 
 
