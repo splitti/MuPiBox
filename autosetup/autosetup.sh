@@ -241,19 +241,6 @@ exec 3>${LOG}
 	sudo usermod -a -G pulse-access root >&3 2>&3
 	sudo /usr/bin/sed -i 's/; system-instance = no/system-instance = yes/g' /etc/pulse/daemon.conf >&3 2>&3
 
-	if grep -q '^load-module module-bluetooth-discover' /etc/pulse/system.pa; then
-	  echo -e "load-module module-bluetooth-discover already set" >&3 2>&3
-	else
-	  echo '' | sudo tee -a /etc/pulse/system.pa >&3 2>&3
-	  echo 'load-module module-bluetooth-discover' | sudo tee -a /etc/pulse/system.pa >&3 2>&3
-	fi
-	if grep -q '^load-module module-bluetooth-policy' /etc/pulse/system.pa; then
-	  echo -e "load-module module-bluetooth-policy already set" >&3 2>&3
-	else
-	  echo '' | sudo tee -a /etc/pulse/system.pa >&3 2>&3
-	  echo 'load-module module-bluetooth-policy' | sudo tee -a /etc/pulse/system.pa >&3 2>&3
-	fi
-
 	sudo /usr/bin/sed -i 's/; default-server =/default-server = \/var\/run\/pulse\/native/g' /etc/pulse/client.conf >&3 2>&3
 	sudo /usr/bin/sed -i 's/; autospawn = yes/autospawn = no/g' /etc/pulse/client.conf >&3 2>&3
 	sudo /usr/bin/sed -i 's/ExecStart=\/usr\/libexec\/bluetooth\/bluetoothd/ExecStart=\/usr\/libexec\/bluetooth\/bluetoothd --noplugin=sap/g' /lib/systemd/system/bluetooth.service >&3 2>&3
