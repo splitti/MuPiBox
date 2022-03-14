@@ -21,7 +21,21 @@ exec 3>${LOG}
 
 	###############################################################################################
 
-	echo -e "XXX\n23\nInstall mplayer-wrapper... \nXXX"	
+	echo -e "XXX\n23\nChecking installed packages... \nXXX"	
+
+	packages2install="git libasound2 jq samba mplayer pulseaudio-module-bluetooth bluez zip rrdtools scrot"
+
+	for thispackage in `echo ${packages2install}`; do
+		PKG_OK=$(dpkg -l ${thispackage} 2>/dev/null | egrep '^ii' | wc -l) >&3 2>&3
+		if [ ${PKG_OK} -eq 1 ]; then
+		  sudo apt-get --yes install ${thispackage} >&3 2>&3
+		fi
+	done
+
+	###############################################################################################
+
+
+	echo -e "XXX\n24\nInstall mplayer-wrapper... \nXXX"	
 	# Sources
 	cd ~/.mupibox >&3 2>&3
 	git clone https://github.com/derhuerst/mplayer-wrapper >&3 2>&3
@@ -178,18 +192,18 @@ exec 3>${LOG}
 	sudo /usr/bin/sed -i 's/; autospawn = yes/autospawn = no/g' /etc/pulse/client.conf >&3 2>&3
 	sudo /usr/bin/sed -i 's/ExecStart=\/usr\/libexec\/bluetooth\/bluetoothd/ExecStart=\/usr\/libexec\/bluetooth\/bluetoothd --noplugin=sap/g' /lib/systemd/system/bluetooth.service >&3 2>&3
 
-	if grep -q '^load-module module-bluetooth-discover' /etc/pulse/system.pa; then
-	  echo -e "load-module module-bluetooth-discover already set" >&3 2>&3
-	else
-	  echo '' | sudo tee -a /etc/pulse/system.pa >&3 2>&3
-	  echo 'load-module module-bluetooth-discover' | sudo tee -a /etc/pulse/system.pa >/dev/null >&3 2>&3
-	fi
-	if grep -q '^load-module module-bluetooth-policy' /etc/pulse/system.pa; then
-	  echo -e "load-module module-bluetooth-policy already set" >&3 2>&3
-	else
-	  echo '' | sudo tee -a /etc/pulse/system.pa >&3 2>&3
-	  echo 'load-module module-bluetooth-policy' | sudo tee -a /etc/pulse/system.pa >&3 2>&3   
-	fi
+	#if grep -q '^load-module module-bluetooth-discover' /etc/pulse/system.pa; then
+	#  echo -e "load-module module-bluetooth-discover already set" >&3 2>&3
+	#else
+	echo '' | sudo tee -a /etc/pulse/system.pa >&3 2>&3
+	echo 'load-module module-bluetooth-discover' | sudo tee -a /etc/pulse/system.pa >/dev/null >&3 2>&3
+	#fi
+	#if grep -q '^load-module module-bluetooth-policy' /etc/pulse/system.pa; then
+	#  echo -e "load-module module-bluetooth-policy already set" >&3 2>&3
+	#else
+	echo '' | sudo tee -a /etc/pulse/system.pa >&3 2>&3
+	echo 'load-module module-bluetooth-policy' | sudo tee -a /etc/pulse/system.pa >&3 2>&3   
+	#fi
 
 	###############################################################################################
 
