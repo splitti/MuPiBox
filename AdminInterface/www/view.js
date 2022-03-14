@@ -9,6 +9,14 @@ function myFunction() {
 }
 
 $(document).ready(function(){
+	$('a').click(function(){
+        $("#loading-circle").fadeIn();
+		$("#lock-modal").fadeIn('slow');
+	});
+});
+
+
+$(document).ready(function(){
   $("#form").on("submit", function(){
     $("#loading-circle").fadeIn();
     $("#lock-modal").fadeIn('slow');

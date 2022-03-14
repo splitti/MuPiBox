@@ -861,20 +861,21 @@ ul.password{
 }
 
 #loading-circle {
-  display: none;
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  margin: auto;
-  width: 100px;
-  height: 100px;
-  border: 8px solid #f3f3f3;
-  border-top: 8px solid #3498db;
-  border-radius: 50%;
-  animation: spin 0.6s ease-in infinite;
+	display: none;
+	position: fixed;
+    left: 50%;
+    top: 50%;
+	z-index: 100;
+	margin-top:-50px;
+	margin-left:-50px;
+	width: 100px;
+	height: 100px;
+	border: 8px solid #f3f3f3;
+	border-top: 8px solid #3498db;
+	border-radius: 50%;
+	animation: spin 0.6s ease-in infinite;
 }
+
 @keyframes spin {
   0% {
     transform: rotate(0deg);
@@ -884,13 +885,16 @@ ul.password{
   }
 }
 #lock-modal {
- display: none;
-  background-color: black;
-  opacity: 0.6;
-  position: absolute;
-  top: 0;
+  display: none; /* Hidden by default */
+  position: fixed; /* Stay in place */
+  z-index: 1; /* Sit on top */
+  padding-top: 50%; /* Location of the box */
   left: 0;
-  right: 0;
-  bottom: 0;
-  border-radius: inherit;
+  top: 0;
+  width: 100%; /* Full width */
+  height: 100%; /* Full height */
+  overflow: auto; /* Enable scroll if needed */
+  background-color: rgb(0,0,0); /* Fallback color */
+  background-color: rgba(0,0,0,0.6); /* Black w/ opacity */
 }
+

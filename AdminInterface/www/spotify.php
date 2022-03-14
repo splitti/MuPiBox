@@ -104,7 +104,7 @@
 				<p><b>
 				<?php 
 					print '<a href=https://accounts.spotify.com/authorize?response_type=code&client_id='.$data["spotify"]["clientId"].'&redirect_uri='.$REDIRECT_URI.'&scope='.$SCOPE.'>Login and generate Refresh & Access Token</a>'; 
-				?>
+				?> 
 				</b></p>
 				<ul> 
 				 <li id="li_1" >

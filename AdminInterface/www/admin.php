@@ -31,14 +31,14 @@
 		}
 	if( $_POST['shutdown'] )
 		{
-		$command = "sudo poweroff &";
-		exec($command, $output, $result );
+		$command = 'bash -c "exec nohup setsid /usr/local/bin/mupibox/./shutdown.sh > /dev/null 2>&1 &"';
+		exec($command);
 		$change=1;
 		}
 	if( $_POST['reboot'] )
 		{
-		$command = "sudo reboot &";
-		exec($command, $output, $result );
+		$command = 'bash -c "exec nohup setsid /usr/local/bin/mupibox/./restart.sh > /dev/null 2>&1 &"';
+		exec($command);
 		$change=1;
 		}
 	if( $_POST['update'] )
