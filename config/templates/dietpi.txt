@@ -12,7 +12,7 @@ AUTO_SETUP_ACCEPT_LICENSE=1
 
 ##### Language/Regional Options #####
 # Locale: eg: "en_GB.UTF-8" / "de_DE.UTF-8" | One entry and UTF-8 ONLY!
-AUTO_SETUP_LOCALE=de.UTF-8
+AUTO_SETUP_LOCALE=de_DE.UTF-8
 
 # Keyboard Layout eg: "gb" / "us" / "de" / "fr"
 AUTO_SETUP_KEYBOARD_LAYOUT=de
