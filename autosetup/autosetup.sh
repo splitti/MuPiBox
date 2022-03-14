@@ -73,9 +73,14 @@ exec 3>${LOG}
 
 	###############################################################################################
 
-	echo -e "XXX\n21\nCreate hushlogin... \nXXX"	
+	echo -e "XXX\n21\nCreate hushlogin and load MuPiBox-Config... \nXXX"	
 	# Boot
 	touch ~/.hushlogin >&3 2>&3
+	if [ -f "/boot/mupiboxconfig.json" ]; then
+		sudo mv /boot/mupiboxconfig.json /etc/mupibox/mupiboxconfig.json >&3 2>&3
+	else 
+		sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/mupiboxconfig.json -O /etc/mupibox/mupiboxconfig.json >&3 2>&3
+	fi
 	sleep 1
 
 	###############################################################################################
@@ -188,12 +193,6 @@ exec 3>${LOG}
 
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/mupi_shutdown.sh -O /usr/local/bin/mupibox/mupi_shutdown.sh >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/mupi_startup.sh -O /usr/local/bin/mupibox/mupi_startup.sh >&3 2>&3
-
-	if [ -f "/boot/mupiboxconfig.json" ]; then
-		sudo mv /boot/mupiboxconfig.json /etc/mupibox/mupiboxconfig.json >&3 2>&3
-	else 
-		sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/mupiboxconfig.json -O /etc/mupibox/mupiboxconfig.json >&3 2>&3
-	fi
 
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/shutdown.sh -O /usr/local/bin/mupibox/shutdown.sh >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/restart.sh -O /usr/local/bin/mupibox/restart.sh >&3 2>&3
