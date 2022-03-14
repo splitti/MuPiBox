@@ -27,7 +27,7 @@ exec 3>${LOG}
 	packages2install="git jq mplayer"
 	sudo apt-get install ${packages2install} -y >&3 2>&3
 
-	packages2install="samba zip rrdtools scrot"
+	packages2install="samba zip rrdtool scrot"
 	sudo apt-get install ${packages2install} -y >&3 2>&3
 	
 	###############################################################################################
