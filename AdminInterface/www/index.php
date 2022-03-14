@@ -104,7 +104,7 @@
 	  chart.draw(data, options);
 	}
 </script>
-<div id=spacecharts">
+<div id="spacecharts">
 	<div id="rootchart"></div>
 	<div id="bootchart"></div>
 </div>
