@@ -5,7 +5,7 @@
 
 #exec {tracefd}>~/.mupibox/autosetup.log; BASH_XTRACEFD=$tracefd; PS4=':$LINENO+'; set -x
 
-LOG="/boot/autosetup1.log"
+LOG="/tmp/autosetup.log"
 
 autosetup="$(cat ~/.bashrc | grep autosetup)"
 
@@ -92,6 +92,7 @@ exec 3>${LOG}
 
 	sudo echo "echo '' && echo '' && echo 'Please wait, MuPiBox-Installer starts soon...' && sleep 10" >> /home/dietpi/.bashrc
 	sudo echo "cd; curl https://raw.githubusercontent.com/splitti/MuPiBox/main/autosetup/autosetup2.sh | bash" >> /home/dietpi/.bashrc
+	sudo mv ${LOG} /boot/autosetup1.log
 	sleep 10
 	sudo reboot
 

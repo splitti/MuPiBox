@@ -1,11 +1,11 @@
 #!/bin/bash
 #
 # Script for MuPiBox Autosetup
-# Start with: cd; curl https://raw.githubusercontent.com/splitti/MuPiBox/main/autosetup/autosetup.sh | bash
+# Start with: cd; curl https://raw.githubusercontent.com/splitti/MuPiBox/main/autosetup/autosetup2.sh | bash
 
 #exec {tracefd}>~/.mupibox/autosetup.log; BASH_XTRACEFD=$tracefd; PS4=':$LINENO+'; set -x
 
-LOG="/boot/autosetup2.log"
+LOG="/tmp/autosetup.log"
 
 autosetup="$(cat ~/.bashrc | grep autosetup)"
 
@@ -295,7 +295,7 @@ exec 3>${LOG}
 	###############################################################################################
 
 	echo -e "XXX\n100\nInstallation complete, please reboot the system... \nXXX"	
-	sudo mv ${LOG} /boot/autosetup.log
+	sudo mv ${LOG} /boot/autosetup2.log
 
 } | whiptail --title "MuPiBox Autosetup" --gauge "Please wait while installing" 6 60 0
 
