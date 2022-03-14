@@ -23,11 +23,12 @@ exec 3>${LOG}
 
 	echo -e "XXX\n23\nChecking installed packages... \nXXX"	
 
-	packages2install="git libasound2 jq samba mplayer pulseaudio-module-bluetooth bluez zip rrdtools scrot"
+	packages2install="pulseaudio bluez pulseaudio-module-bluetooth git libasound2 jq samba mplayer zip rrdtools scrot"
 
 	for thispackage in `echo ${packages2install}`; do
 		PKG_OK=$(dpkg -l ${thispackage} 2>/dev/null | egrep '^ii' | wc -l) >&3 2>&3
 		if [ ${PKG_OK} -eq 1 ]; then
+		  echo "INSTALL: " ${thispackage} >&3 2>&3
 		  sudo apt-get --yes install ${thispackage} >&3 2>&3
 		fi
 	done
@@ -38,7 +39,7 @@ exec 3>${LOG}
 	echo -e "XXX\n24\nInstall mplayer-wrapper... \nXXX"	
 	# Sources
 	cd ~/.mupibox >&3 2>&3
-	git clone https://github.com/derhuerst/mplayer-wrapper >&3 2>&3
+	/usr/bin/git clone https://github.com/derhuerst/mplayer-wrapper >&3 2>&3
 	wget https://github.com/splitti/MuPiBox/raw/main/development_prepare/customize/mplayer-wrapper/index.js -O ~/.mupibox/mplayer-wrapper/index.js >&3 2>&3
 	cd ~/.mupibox/mplayer-wrapper >&3 2>&3
 	npm install >&3 2>&3
@@ -48,7 +49,7 @@ exec 3>${LOG}
 	echo -e "XXX\n27\nInstall google-tts... \nXXX"	
 
 	cd ~/.mupibox >&3 2>&3
-	git clone https://github.com/zlargon/google-tts >&3 2>&3
+	/usr/bin/git clone https://github.com/zlargon/google-tts >&3 2>&3
 	cd google-tts/ >&3 2>&3
 	npm install --save >&3 2>&3
 	npm audit fix >&3 2>&3

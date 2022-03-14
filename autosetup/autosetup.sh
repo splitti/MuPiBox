@@ -21,16 +21,14 @@ exec 3>${LOG}
 
 	echo -e "XXX\n0\nInstall some packages... Please wait!\nXXX"
 	# Get missing packages
-	sudo apt-get update >&3 2>&3
-	packages2install="git libasound2 jq samba mplayer pulseaudio-module-bluetooth bluez zip rrdtools scrot"
+	packages2install="pulseaudio bluez pulseaudio-module-bluetooth libasound2"
 	sudo apt-get install ${packages2install} -y >&3 2>&3
 
-	for thispackage in `echo ${packages2install}`; do
-		PKG_OK=$(dpkg -l ${thispackage} 2>/dev/null | egrep '^ii' | wc -l) >&3 2>&3
-		if [ ${PKG_OK} -eq 1 ]; then
-		  sudo apt-get --yes install ${thispackage} >&3 2>&3
-		fi
-	done
+	packages2install="git jq mplayer"
+	sudo apt-get install ${packages2install} -y >&3 2>&3
+
+	packages2install="samba zip rrdtools scrot"
+	sudo apt-get install ${packages2install} -y >&3 2>&3
 	
 	###############################################################################################
 	
