@@ -21,14 +21,16 @@ exec 3>${LOG}
 
 	echo -e "XXX\n0\nInstall some packages... Please wait!\nXXX"
 	# Get missing packages
-	packages2install="pulseaudio bluez pulseaudio-module-bluetooth libasound2"
+	sudo apt-get update >&3 2>&3
+	packages2install="git libasound2 jq samba mplayer pulseaudio-module-bluetooth bluez zip rrdtool scrot"
 	sudo apt-get install ${packages2install} -y >&3 2>&3
 
-	packages2install="git jq mplayer"
-	sudo apt-get install ${packages2install} -y >&3 2>&3
-
-	packages2install="samba zip rrdtool scrot"
-	sudo apt-get install ${packages2install} -y >&3 2>&3
+	for thispackage in `echo ${packages2install}`; do
+		PKG_OK=$(dpkg -l ${thispackage} 2>/dev/null | egrep '^ii' | wc -l) >&3 2>&3
+		if [ ${PKG_OK} -eq 1 ]; then
+		  sudo apt-get --yes install ${thispackage} >&3 2>&3
+		fi
+	done
 	
 	###############################################################################################
 	
@@ -71,17 +73,17 @@ exec 3>${LOG}
 
 	###############################################################################################
 
-	echo -e "XXX\n21\nCreate hushlogin... \nXXX"	
+	echo -e "XXX\n21\nCreate hushlogin and load MuPiBox-Config... \nXXX"	
 	# Boot
 	touch ~/.hushlogin >&3 2>&3
-<<<<<<< HEAD
 	MUPIBOX_CONFIG="/etc/mupibox/mupiboxconfig.json" >&3 2>&3
 	if [ -f "/boot/mupiboxconfig.json" ]; then
 		sudo mv /boot/mupiboxconfig.json ${MUPIBOX_CONFIG} >&3 2>&3
 	else 
 		sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/mupiboxconfig.json -O /etc/mupibox/mupiboxconfig.json >&3 2>&3
 	fi
-=======
+	sudo chown root:www-data /etc/mupibox/mupiboxconfig.json >&3 2>&3
+	sudo chmod 777 /etc/mupibox/mupiboxconfig.json >&3 2>&3
 	sleep 1
 
 	###############################################################################################
@@ -195,12 +197,6 @@ exec 3>${LOG}
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/mupi_shutdown.sh -O /usr/local/bin/mupibox/mupi_shutdown.sh >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/mupi_startup.sh -O /usr/local/bin/mupibox/mupi_startup.sh >&3 2>&3
 
-	if [ -f "/boot/mupiboxconfig.json" ]; then
-		sudo mv /boot/mupiboxconfig.json /etc/mupibox/mupiboxconfig.json >&3 2>&3
-	else 
-		sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/mupiboxconfig.json -O /etc/mupibox/mupiboxconfig.json >&3 2>&3
-	fi
-
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/shutdown.sh -O /usr/local/bin/mupibox/shutdown.sh >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/restart.sh -O /usr/local/bin/mupibox/restart.sh >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/change_checker.sh -O /usr/local/bin/mupibox/change_checker.sh >&3 2>&3
@@ -282,27 +278,93 @@ exec 3>${LOG}
 	# ENV
 	(echo "mupibox"; echo "mupibox") | sudo smbpasswd -s -a dietpi >&3 2>&3
 	sudo env PATH=$PATH:/usr/local/bin/mupibox >&3 2>&3
-	MUPIBOX_CONFIG="/etc/mupibox/mupiboxconfig.json" >&3 2>&3
 	THEME_FILE="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/styles.242c97d50a9a860d.css" >&3 2>&3
-	NEW_THEME=$(/usr/bin/jq -r .mupibox.theme ${MUPIBOX_CONFIG}) >&3 2>&3
-
-	rm ${THEME_FILE} >&3 2>&3
-	ln -s /home/dietpi/MuPiBox/themes/${NEW_THEME}.css ${THEME_FILE} >&3 2>&3
->>>>>>> parent of 2dcd077 (Update autosetup.sh)
-	sudo chown root:www-data /etc/mupibox/mupiboxconfig.json >&3 2>&3
-	sudo chmod 777 /etc/mupibox/mupiboxconfig.json >&3 2>&3
+	ln -s /home/dietpi/MuPiBox/themes/blue.css ${THEME_FILE} >&3 2>&3
+	sudo echo "www-data ALL=(ALL:ALL) NOPASSWD: ALL" | sudo tee /etc/sudoers.d/www-data  >&3 2>&3
+	sudo usermod -a -G gpio dietpi >&3 2>&3
+	sudo usermod -a -G gpio root >&3 2>&3
+	sudo crontab /tmp/crontab.template >&3 2>&3
+	#sudo /boot/dietpi/func/dietpi-set_swapfile 1 zram >&3 2>&3
+	#sudo /boot/dietpi/func/dietpi-set_software boot_wait_for_network 0 >&3 2>&3
+	#VERSION=$(curl -s https://raw.githubusercontent.com/splitti/MuPiBox/main/version.json | /usr/bin/jq -r .version) >&3 2>&3
+	#sudo /usr/bin/cat <<< $(/usr/bin/jq --arg v "${VERSION}" '.mupibox.version = $v' ${MUPIBOX_CONFIG}) > ${MUPIBOX_CONFIG} >&3 2>&3
+	sudo chmod 775 /etc/mupibox/mupiboxconfig.json >&3 2>&3
 	sleep 1
 
 	###############################################################################################
 
-	echo -e "XXX\n22\nSystem will reboot in a few seconds... \nXXX"
+	echo -e "XXX\n88\nDownload OnOffShim-Scripts... \nXXX"	
 
-	sudo echo "echo '' && echo '' && echo 'Please wait, MuPiBox-Installer starts soon...' && sleep 10" >> /home/dietpi/.bashrc
-	sudo echo "cd; curl https://raw.githubusercontent.com/splitti/MuPiBox/main/autosetup/autosetup2.sh | bash" >> /home/dietpi/.bashrc
-	sudo mv ${LOG} /boot/autosetup1.log
-	sleep 10
-	sudo reboot
+	# OnOffShim
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/OnOffShim/off_trigger.sh -O /var/lib/dietpi/postboot.d/off_trigger.sh >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/OnOffShim/poweroff.sh -O /usr/lib/systemd/system-shutdown/poweroff.sh >&3 2>&3
+	sudo chmod 775 /usr/lib/systemd/system-shutdown/poweroff.sh /var/lib/dietpi/postboot.d/off_trigger.sh >&3 2>&3
+	sleep 1
+
+	###############################################################################################
+
+	echo -e "XXX\n90\nInstall Chromium-Kiosk... \nXXX"	
+
+	#suggest_gpu_mem=76 >&3 2>&3
+	sudo /boot/dietpi/func/dietpi-set_hardware gpumemsplit 76 >&3 2>&3
+	echo -ne '\n' | sudo /boot/dietpi/dietpi-software install 113 >&3 2>&3
+	sudo /boot/dietpi/dietpi-autostart 11 >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/chromium-autostart.sh -O /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
+	sudo chmod +x /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
+	sudo usermod -a -G tty dietpi >&3 2>&3
+	#xinit chromium-browser xserver-xorg-legacy xorg
+	sudo apt-get install xserver-xorg-legacy >&3 2>&3
+	sudo /usr/bin/sed -i 's/allowed_users\=console/allowed_users\=anybody/g' /etc/X11/Xwrapper.config >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/98-dietpi-disable_dpms.conf -O /etc/X11/xorg.conf.d/98-dietpi-disable_dpms.conf >&3 2>&3
+	sudo /usr/bin/sed -i 's/tty1/tty3 vt.global_cursor_default\=0 fastboot noatime nodiratime noram splash silent loglevel\=0 vt.default_red\=68,68,68,68,68,68,68,68 vt.default_grn\=175,175,175,175,175,175,175,175 vt.default_blu\=226,226,226,226,226,226,226,226/g' /boot/cmdline.txt >&3 2>&3
+	sudo /usr/bin/sed -i 's/session    optional   pam_motd.so motd\=\/run\/motd.dynamic/#session    optional   pam_motd.so motd\=\/run\/motd.dynamic/g' /etc/pam.d/login >&3 2>&3
+	sudo /usr/bin/sed -i 's/session    optional   pam_motd.so noupdate/#session    optional   pam_motd.so noupdate/g' /etc/pam.d/login >&3 2>&3
+	sudo /usr/bin/sed -i 's/session    optional   pam_lastlog.so/session    optional   pam_lastlog.so/g' /etc/pam.d/login >&3 2>&3
+	sudo /usr/bin/sed -i 's/ExecStart\=-\/sbin\/agetty -a dietpi -J \%I \$TERM/ExecStart\=-\/sbin\/agetty --skip-login --noclear --noissue --login-options \"-f dietpi\" \%I \$TERM/g' /etc/systemd/system/getty@tty1.service.d/dietpi-autologin.conf >&3 2>&3
+
+	if grep -q '^initramfs initramfs.img' /boot/config.txt; then
+	  echo -e "initramfs initramfs.img already set"
+	else
+	  echo '' | sudo tee -a /boot/config.txt >&3 2>&3
+	  echo 'initramfs initramfs.img' | sudo tee -a /boot/config.txt >&3 2>&3
+	fi
+
+	###############################################################################################
+
+	echo -e "XXX\n95\nEnable and start services... \nXXX"	
+
+	# Enable Services
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/services/mupi_change_checker.service -O /etc/systemd/system/mupi_change_checker.service >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/services/mupi_idle_shutdown.service -O /etc/systemd/system/mupi_idle_shutdown.service >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/services/mupi_splash.service -O /etc/systemd/system/mupi_splash.service >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/services/spotifyd.service -O /etc/systemd/system/spotifyd.service >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/services/pulseaudio.service -O /etc/systemd/system/pulseaudio.service >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/services/mupi_startstop.service -O /etc/systemd/system/mupi_startstop.service >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/services/mupi_wifi.service -O /etc/systemd/system/mupi_wifi.service  >&3 2>&3
+	sudo systemctl daemon-reload >&3 2>&3
+	sudo systemctl enable mupi_wifi.service >&3 2>&3
+	sudo systemctl start mupi_wifi.service >&3 2>&3
+	sudo systemctl enable mupi_change_checker.service >&3 2>&3
+	sudo systemctl start mupi_change_checker.service >&3 2>&3
+	sudo systemctl enable mupi_idle_shutdown.service >&3 2>&3
+	sudo systemctl start mupi_idle_shutdown.service >&3 2>&3
+	sudo systemctl enable spotifyd.service >&3 2>&3
+	sudo systemctl start spotifyd.service >&3 2>&3
+	sudo systemctl enable smbd.service >&3 2>&3
+	sudo systemctl start smbd.service >&3 2>&3
+	sudo systemctl enable mupi_startstop.service >&3 2>&3
+	sudo systemctl start mupi_startstop.service >&3 2>&3
+	sudo systemctl enable pulseaudio.service >&3 2>&3
+	sudo systemctl start pulseaudio.service >&3 2>&3
+	sudo systemctl enable mupi_splash.service >&3 2>&3
+	sudo systemctl start mupi_splash.service >&3 2>&3
+
+	###############################################################################################
+
+	echo -e "XXX\n100\nInstallation complete, please reboot the system... \nXXX"	
+	sudo mv ${LOG} /boot/autosetup.log
 
 } | whiptail --title "MuPiBox Autosetup" --gauge "Please wait while installing" 6 60 0
 
+sudo reboot
 
