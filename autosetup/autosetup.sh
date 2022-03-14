@@ -76,11 +76,14 @@ exec 3>${LOG}
 	echo -e "XXX\n21\nCreate hushlogin and load MuPiBox-Config... \nXXX"	
 	# Boot
 	touch ~/.hushlogin >&3 2>&3
+	MUPIBOX_CONFIG="/etc/mupibox/mupiboxconfig.json" >&3 2>&3
 	if [ -f "/boot/mupiboxconfig.json" ]; then
-		sudo mv /boot/mupiboxconfig.json /etc/mupibox/mupiboxconfig.json >&3 2>&3
+		sudo mv /boot/mupiboxconfig.json ${MUPIBOX_CONFIG} >&3 2>&3
 	else 
 		sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/mupiboxconfig.json -O /etc/mupibox/mupiboxconfig.json >&3 2>&3
 	fi
+	sudo chown root:www-data /etc/mupibox/mupiboxconfig.json >&3 2>&3
+	sudo chmod 777 /etc/mupibox/mupiboxconfig.json >&3 2>&3
 	sleep 1
 
 	###############################################################################################
@@ -275,14 +278,8 @@ exec 3>${LOG}
 	# ENV
 	(echo "mupibox"; echo "mupibox") | sudo smbpasswd -s -a dietpi >&3 2>&3
 	sudo env PATH=$PATH:/usr/local/bin/mupibox >&3 2>&3
-	MUPIBOX_CONFIG="/etc/mupibox/mupiboxconfig.json" >&3 2>&3
 	THEME_FILE="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/styles.242c97d50a9a860d.css" >&3 2>&3
-	NEW_THEME=$(/usr/bin/jq -r .mupibox.theme ${MUPIBOX_CONFIG}) >&3 2>&3
-
-	rm ${THEME_FILE} >&3 2>&3
-	ln -s /home/dietpi/MuPiBox/themes/${NEW_THEME}.css ${THEME_FILE} >&3 2>&3
-	sudo chown root:www-data /etc/mupibox/mupiboxconfig.json >&3 2>&3
-	sudo chmod 777 /etc/mupibox/mupiboxconfig.json >&3 2>&3
+	ln -s /home/dietpi/MuPiBox/themes/blue.css ${THEME_FILE} >&3 2>&3
 	sudo echo "www-data ALL=(ALL:ALL) NOPASSWD: ALL" | sudo tee /etc/sudoers.d/www-data  >&3 2>&3
 	sudo usermod -a -G gpio dietpi >&3 2>&3
 	sudo usermod -a -G gpio root >&3 2>&3
@@ -365,7 +362,7 @@ exec 3>${LOG}
 	###############################################################################################
 
 	echo -e "XXX\n100\nInstallation complete, please reboot the system... \nXXX"	
-	sudo mv ${LOG} ~/.mupibox/autosetup.log
+	sudo mv ${LOG} /boot/autosetup.log
 
 } | whiptail --title "MuPiBox Autosetup" --gauge "Please wait while installing" 6 60 0
 
