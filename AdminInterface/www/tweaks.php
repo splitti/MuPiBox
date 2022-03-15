@@ -1,20 +1,25 @@
 <?php
-        $change=0;
         $onlinejson = file_get_contents('https://raw.githubusercontent.com/splitti/MuPiBox/main/version.json');
         $dataonline = json_decode($onlinejson, true);
         include ('includes/header.php');
+
+        $change=0;
+        $CHANGE_TXT="<div id='lbinfo'><ul id='lbinfo'>";
+
 
         if( $_POST['change_sd'] == "activate for next boot" )
                 {
                 $command = "echo 'dtoverlay=sdtweak,overclock_50=100' | sudo tee -a /boot/config.txt";
                 exec($command, $output, $result );
                 $change=1;
+                $CHANGE_TXT=$CHANGE_TXT."<li>SD Overclocking activated [restart necessary]</li>";
                 }
         else if( $_POST['change_sd'] == "disable" )
                 {
                 $command = "sudo sed -i -e 's/dtoverlay=sdtweak,overclock_50=100//g' /boot/config.txt && sudo head -n -1 /boot/config.txt > /tmp/config.txt && sudo mv /tmp/config.txt /boot/config.txt";
                 exec($command, $output, $result );
                 $change=1;
+                $CHANGE_TXT=$CHANGE_TXT."<li>SD Overclocking disabled [restart necessary]</li>";
                 }
 
         $command = "sudo /usr/bin/cat /boot/config.txt | /usr/bin/grep 'dtoverlay=sdtweak,overclock_50=100'";
@@ -29,6 +34,7 @@
                 $sd_state = "disabled";
                 $change_sd = "activate for next boot";
                 }
+        $CHANGE_TXT=$CHANGE_TXT."</ul>";
 ?>
 
                <form class="appnitro"  method="post" action="tweaks.php" id="form">

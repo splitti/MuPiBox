@@ -13,6 +13,13 @@ body
 	max-height:200px;
 }
 
+#remotecontrol
+{
+        width:100%;
+        min-width:540px;
+        min-height:480px;
+}
+
 
 #container
 {
@@ -130,7 +137,6 @@ div.main
 	clear:left;
 	font-size:140%;
 	font-weight:bold;
-	font-weight:400;
 	margin:0 0 3px;
 }
 
@@ -248,7 +254,7 @@ form.appnitro
 /**** Form Section ****/
 .appnitro
 {
-	font-family:Lucida Grande, Tahoma, Arial, Verdana, sans-serif;
+	font-family:Helvetica, Arial, Verdana, sans-serif;
 	font-size:small;
 }
 
@@ -539,7 +545,7 @@ textarea.textarea
 	border-right:1px solid #c3c3c3;
 	border-top:1px solid #7c7c7c;
 	color:#333;
-	font-family:"Lucida Grande", Tahoma, Arial, Verdana, sans-serif;
+	font-family:Helvetica, Arial, Verdana, sans-serif;
 	font-size:100%;
 	margin:0;
 	width:99%;
@@ -887,3 +893,48 @@ ul.password{
   background-color: rgba(0,0,0,0.6); /* Black w/ opacity */
 }
 
+.lightbox {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, .6)
+}
+.toolbarLB {
+  text-align: right;
+  padding: 0px;
+}
+.closeLB {
+  color: #054b61;
+  background-color:#bbbbbb;
+  padding:0px 6px;
+  border:1px solid #000000;
+  font-weight:bold;
+  font-size:80%;
+
+  cursor: pointer;
+}
+.lightbox .iframeContainer {
+  vertical-align: middle;
+  background: #44afe2;
+  padding:5px 15px;
+  font-weight:bold;
+  color:#ffffff;
+  font-size:180%;
+}
+.lightbox.closed {
+  display: none;
+}
+
+#lbinfo ul{
+  vertical-align: left !important;
+  text-align: start;
+  font-weight:bold;
+  color:#ffffff;
+  font-size:60%;
+
+}

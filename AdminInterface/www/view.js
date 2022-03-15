@@ -1,3 +1,7 @@
+lightBoxClose = function() {
+  document.querySelector(".lightbox").classList.add("closed");
+}
+
 /* Toggle between adding and removing the "responsive" class to topnav when the user clicks on the icon */
 function myFunction() {
   var x = document.getElementById("myTopnav");
@@ -9,10 +13,18 @@ function myFunction() {
 }
 
 $(document).ready(function(){
-	$('a').click(function(){
+        $('#remform').on("submit", function(){
         $("#loading-circle").fadeIn();
-		$("#lock-modal").fadeIn('slow');
-	});
+                $("#lock-modal").fadeIn('slow');
+        });
+});
+
+
+$(document).ready(function(){
+        $('#loading').click(function(){
+        $("#loading-circle").fadeIn();
+                $("#lock-modal").fadeIn('slow');
+        });
 });
 
 

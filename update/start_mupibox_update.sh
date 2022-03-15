@@ -98,7 +98,7 @@ exec 3>${LOG}
 	sudo su - dietpi -c "pm2 start server"
 
 	echo -e "XXX\n83\nSet environment...  \nXXX"	
-	sudo crontab /tmp/crontab.template >&3 2>&3
+	crontab /tmp/crontab.template >&3 2>&3
 	
 	echo -e "XXX\n85\nDownload OnOffShim-Scripts... \nXXX"	
 	# OnOffShim

@@ -1,3 +1,4 @@
+
 			<div id="footer">
 				<div id="footerleft">
 					<ul>
@@ -20,17 +21,11 @@
 			<div id="loading-circle"></div>
 		</div>
 		<img id="bottom" src="images/bottom.png" alt="">
-	</body>
 <?php
-	if (!isset($_SESSION)) {
-		session_start();
-	}
-
-	if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-		$_SESSION['postdata'] = $_POST;
-		unset($_POST);
-		header("Location: ".$_SERVER['PHP_SELF']);
-		exit;
-	}
+	if( $change )
+		{
+		print '<div class="lightbox"><div class="iframeContainer"><div class="toolbarLB"><span class="closeLB" onclick="lightBoxClose()">x</span></div><p>'.$CHANGE_TXT.'Data succesfully saved!</p></div></div>';
+		} 
 ?>
+	</body>
 </html>
