@@ -46,26 +46,15 @@ body
 	display:flex;
 }
 
-#spacecharts
-{
-	width:100%;
-	padding: 0px;
-	display:flex;
-}
-
 #rootchart
 {
-	padding:0;
-	margin:2px;
-	width:50%;
+  width: 100%;
 }
-
 #bootchart
 {
-	padding:0;
-	margin:2px;
-	width:50%;
+  width: 100%;
 }
+
 
 #mupi
 {

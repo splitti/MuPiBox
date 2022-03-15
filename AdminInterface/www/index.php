@@ -50,6 +50,9 @@
 
 <h2>System Information</h2>
 <?php
+	echo "<p>Throttle: " . $rpi_throttle . "</p>";
+?>
+<?php
 	$root_free_bytes = disk_free_space("/");
 	$root_free_gb = round($root_free_bytes / 1024 / 1024 / 1024, 2);
 	$root_free = $root_free_gb . "GB";
@@ -81,7 +84,7 @@
 	]);
 
 	  // Optional; add a title and set the width and height of the chart
-	  var options = {'title':'Disc Space - / in Gigabytes', 'width':350, 'height':200};
+	  var options = {'title':'Disc Space - /boot in Megabytes','width':'auto','height':'auto','is3D':'true'};
 
 	  // Display the chart inside the <div> element with id="piechart"
 	  var chart = new google.visualization.PieChart(document.getElementById('rootchart'));
@@ -97,22 +100,23 @@
 	]);
 
 	  // Optional; add a title and set the width and height of the chart
-	  var options = {'title':'Disc Space - /boot in Megabytes', 'width':350, 'height':200};
-
+	  var options = {'title':'Disc Space - /boot in Megabytes','width':'auto','height':'auto','is3D':'true'};
+	  
 	  // Display the chart inside the <div> element with id="piechart"
 	  var chart = new google.visualization.PieChart(document.getElementById('bootchart'));
 	  chart.draw(data, options);
 	}
 </script>
-<div id="spacecharts">
-	<div id="rootchart"></div>
-	<div id="bootchart"></div>
+
+<div class="col-md-6">
+	<div id="rootchart" class="chart"></div>
+</div>
+<div class="col-md-6">
+	<div id="bootchart" class="chart"></div>
 </div>
 
+
 <p>	
-<?php
-	echo "<p>Throttle: " . $rpi_throttle . "</p>";
-?>
 <img src="images/cpuload.png" width="100%" />
 </p>
 <p>
