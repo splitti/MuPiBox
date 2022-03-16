@@ -13,7 +13,7 @@
 					</ul>
 				</div>
 				<div id="footerright">
-					<img id="mupi" src="images/mupi_round.png" alt="I am Mupi...">
+					<img id="mupi" src="images/mupi.png" alt="I am Mupi and i like audiobooks..." title="I am Mupi and i like audiobooks...">
 				</div>
 
 			</div>
