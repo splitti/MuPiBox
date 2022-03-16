@@ -16,15 +16,16 @@
 					<img id="mupi" src="images/mupi.png" alt="">
 				</div>
 
+			</div>
 			<div id="lock-modal"></div>
 			<div id="loading-circle"></div>
 			<div id="mupif"><img src="images/mupif.png" /></div>
-
+		</div>
 		<img id="bottom" src="images/bottom.png" alt="">
 <?php
 	if( $change )
 		{
-		print '<div class="lightbox"><div class="iframeContainer"><div class="toolbarLB"><span class="closeLB" onclick="lightBoxClose()">x</span></div><p>'.$CHANGE_TXT.'Data succesfully saved!</p></div></div>';
+		print '<div class="lightbox"><div class="iframeContainer"><div class="toolbarLB"><span class="closeLB" onclick="lightBoxClose()">x</span></div><p>'.$CHANGE_TXT.'DONE</p></div></div>';
 		} 
 ?>
 	</body>

@@ -16,14 +16,6 @@
         $SIGNAL=exec($commandS);
         $commandB="sudo iwconfig wlan0 | awk '/Bit Rate/{split($2,a,\"=|/\");print a[2]\" Mb/s\"}'";
         $BITRATE=exec($commandB);
-
-        $MAC1="";
-        $filename = '/sys/class/net/wlan1/address';
-
-        if (file_exists($filename)) {
-                $commandM1="cat /sys/class/net/wlan1/address";
-                $MAC1=exec($commandM1);
-                }
 ?>
 <div class="main">
         <h2>Network</h2>
@@ -39,13 +31,7 @@
         <tr><td id="netl">Wifi Signal Level:</td><td id="netr"><?php print $SIGNAL; ?></td></tr>
         <tr><td id="netl">Bitrate:</td><td id="netr"><?php print $BITRATE ?></td></tr>
         </table>
-        <?php
-        if($MAC1) {
-                print "<p>MAC-Address [wlan1]: ".$MAC1."</p>";
-                }
-        ?>
 </div>
-
 <?php
         include ('includes/footer.php');
 ?>

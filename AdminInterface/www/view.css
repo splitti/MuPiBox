@@ -7,11 +7,6 @@ body
 	text-align:center;
 }
 
-#netr
-{
-        width:130px;
-        text-align:right;
-}
 
 #screenshot
 {
@@ -871,26 +866,22 @@ ul.password{
         margin-top:-40px;
         margin-left:-40px;
 }
-
-
 #loading-circle {
-	display: none;
-	position: fixed;
-	left: 50%;
-	top: 50%;
-	z-index: 100;
-	margin-top:-50px;
-	margin-left:-50px;
-	width: 170px;
-	height: 170px;
-	border: 11px solid #f3f3f3;
-	border-top: 8px solid #3498db;
-	border-radius: 50%;
-	animation: spin 0.6s ease-in infinite;
-	background-color:#054b61;
+ display: none;
+ position: fixed;
+ left: 50%;
+ top: 50%;
+ z-index: 100;
+ margin-top:-50px;
+ margin-left:-50px;
+ width: 170px;
+ height: 170px;
+ border: 11px solid #f3f3f3;
+ border-top: 8px solid #3498db;
+ border-radius: 50%;
+ animation: spin 0.6s ease-in infinite;
+ background-color:#054b61;
 }
-
-
 @keyframes spin {
   0% {
     transform: rotate(0deg);
@@ -957,4 +948,10 @@ ul.password{
   color:#ffffff;
   font-size:60%;
 
+}
+
+#netr
+{
+        width:130px;
+        text-align:right;
 }

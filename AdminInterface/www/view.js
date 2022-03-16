@@ -14,24 +14,27 @@ function myFunction() {
 
 $(document).ready(function(){
         $('#remform').on("submit", function(){
+        $("#mupif").fadeIn();
         $("#loading-circle").fadeIn();
-                $("#lock-modal").fadeIn('slow');
+	$("#lock-modal").fadeIn('slow');
         });
 });
 
 
 $(document).ready(function(){
         $('#loading').click(function(){
+        $("#mupif").fadeIn();
         $("#loading-circle").fadeIn();
-                $("#lock-modal").fadeIn('slow');
+	$("#lock-modal").fadeIn('slow');
         });
 });
 
 
 $(document).ready(function(){
-  $("#form").on("submit", function(){
-    $("#loading-circle").fadeIn();
-    $("#lock-modal").fadeIn('slow');
+	$("#form").on("submit", function(){
+	$("#mupif").fadeIn();
+	$("#loading-circle").fadeIn();
+	$("#lock-modal").fadeIn('slow');
   });//submit
 });//document ready
 
