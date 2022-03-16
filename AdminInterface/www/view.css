@@ -7,6 +7,11 @@ body
 	text-align:center;
 }
 
+#netr
+{
+        width:130px;
+        text-align:right;
+}
 
 #screenshot
 {
@@ -855,21 +860,36 @@ ul.password{
 	
 }
 
+#mupif {
+        display: none;
+        position: fixed;
+        left: 50%;
+        top: 50%;
+        z-index: 200;
+        height: 150px;
+        width: 150px;
+        margin-top:-40px;
+        margin-left:-40px;
+}
+
+
 #loading-circle {
 	display: none;
 	position: fixed;
-    left: 50%;
-    top: 50%;
+	left: 50%;
+	top: 50%;
 	z-index: 100;
 	margin-top:-50px;
 	margin-left:-50px;
-	width: 100px;
-	height: 100px;
-	border: 8px solid #f3f3f3;
+	width: 170px;
+	height: 170px;
+	border: 11px solid #f3f3f3;
 	border-top: 8px solid #3498db;
 	border-radius: 50%;
 	animation: spin 0.6s ease-in infinite;
+	background-color:#054b61;
 }
+
 
 @keyframes spin {
   0% {
