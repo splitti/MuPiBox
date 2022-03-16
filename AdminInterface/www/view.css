@@ -855,6 +855,7 @@ ul.password{
 	
 }
 
+
 #mupif {
         display: none;
         position: fixed;
@@ -863,8 +864,8 @@ ul.password{
         z-index: 200;
         height: 150px;
         width: 150px;
-        margin-top:-40px;
-        margin-left:-40px;
+        margin-top:-75px;
+        margin-left:-75px;
 }
 #loading-circle {
  display: none;
@@ -872,8 +873,8 @@ ul.password{
  left: 50%;
  top: 50%;
  z-index: 100;
- margin-top:-50px;
- margin-left:-50px;
+ margin-top:-85px;
+ margin-left:-85px;
  width: 170px;
  height: 170px;
  border: 11px solid #f3f3f3;
@@ -882,6 +883,7 @@ ul.password{
  animation: spin 0.6s ease-in infinite;
  background-color:#054b61;
 }
+
 @keyframes spin {
   0% {
     transform: rotate(0deg);
