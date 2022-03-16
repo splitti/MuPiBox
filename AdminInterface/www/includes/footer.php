@@ -16,10 +16,10 @@
 					<img id="mupi" src="images/mupi.png" alt="">
 				</div>
 
-			</div>
 			<div id="lock-modal"></div>
 			<div id="loading-circle"></div>
-		</div>
+			<div id="mupif"><img src="images/mupif.png" /></div>
+
 		<img id="bottom" src="images/bottom.png" alt="">
 <?php
 	if( $change )
