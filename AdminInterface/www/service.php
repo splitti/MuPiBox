@@ -76,10 +76,10 @@
 								?>
 								</p>
 								<input id="saveForm" class="button_text" type="submit" name="change_samba" value="<?php print $change_samba; ?>" /></li>
-								<li class="li_1"><h2>Samba</h2>
+								<li class="li_1"><h2>FTP-Server</h2>
 								<p>
 								<?php 
-								echo "FTP Status: <b>".$ftp_state."</b>";
+								echo "FTP-Server Status: <b>".$ftp_state."</b>";
 								?>
 								</p>
 								<input id="saveForm" class="button_text" type="submit" name="change_ftp" value="<?php print $change_ftp; ?>" /></li>

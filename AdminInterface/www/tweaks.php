@@ -6,6 +6,20 @@
         $change=0;
         $CHANGE_TXT="<div id='lbinfo'><ul id='lbinfo'>";
 
+        if( $_POST['change_netboot'] == "activate for next boot" )
+                {
+                $command = "sudo /boot/dietpi/func/dietpi-set_software boot_wait_for_network 1";
+                exec($command, $output, $result );
+                $change=1;
+                $CHANGE_TXT=$CHANGE_TXT."<li>Wait for Network on boot is enabled</li>";
+                }
+        else if( $_POST['change_netboot'] == "disable" )
+                {
+                $command = "sudo /boot/dietpi/func/dietpi-set_software boot_wait_for_network 0";
+                exec($command, $output, $result );
+                $change=1;
+                $CHANGE_TXT=$CHANGE_TXT."<li>Wait for Network on boot is disabled</li>";
+                }
 
         if( $_POST['change_sd'] == "activate for next boot" )
                 {
@@ -21,6 +35,20 @@
                 $change=1;
                 $CHANGE_TXT=$CHANGE_TXT."<li>SD Overclocking disabled [restart necessary]</li>";
                 }
+
+        $command = "[[ ! -f '/etc/systemd/system/dietpi-postboot.service.d/dietpi.conf' ]] || echo '1'";
+        exec($command, $sdoutput, $sdresult );
+        if( $sdoutput[0] )
+                {
+                $netboot_state = "active";
+                $change_netboot = "disable";
+                }
+        else
+                {
+                $netboot_state = "disabled";
+                $change_netboot = "activate for next boot";
+                }
+
 
         $command = "sudo /usr/bin/cat /boot/config.txt | /usr/bin/grep 'dtoverlay=sdtweak,overclock_50=100'";
         exec($command, $sdoutput, $sdresult );
@@ -42,7 +70,7 @@
                         <h2>MupiBox tweaks</h2>
                         <p>Make your box smarter and faster...</p>
                 </div>
-                        <ul ><li id="li_1" >
+                        <ul >
 
                                                                 <li class="li_1"><h2>Overclock SD Card</h2>
                                                                 <p>
@@ -54,6 +82,18 @@
                                                                 ?>
                                                                 </p>
                                                                 <input id="saveForm" class="button_text" type="submit" name="change_sd" value="<?php print $change_sd; ?>" />
+                                                        </li>
+
+                                                                <li class="li_1"><h2>Wait for Network on boot</h2>
+                                                                <p>
+                                                                Speeds up the boot time, but sometimes the boot process is to fast... Try it!
+                                                                </p>
+                                                                <p>
+                                                                <?php
+                                                                echo "Wait for Network on boot: <b>".$sd_state."</b>";
+                                                                ?>
+                                                                </p>
+                                                                <input id="saveForm" class="button_text" type="submit" name="change_netboot" value="<?php print $change_netboot; ?>" />
                                                         </li>
 
 
