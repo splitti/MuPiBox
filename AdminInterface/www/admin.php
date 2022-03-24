@@ -10,7 +10,7 @@
                 $command = "sudo -i -u dietpi /usr/local/bin/mupibox/./restart_kiosk.sh";
                 exec($command, $output, $result );
                 $change=1;
-                $CHANGE_TXT=$CHANGE_TXT."<li>Chromium KIOSK restarted</li>";
+                $CHANGE_TXT=$CHANGE_TXT."<li>Chromium Kiosk restarted</li>";
                 }
         if( $_POST['mupibox_update'] )
                 {

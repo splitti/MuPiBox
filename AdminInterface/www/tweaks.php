@@ -36,9 +36,9 @@
                 $CHANGE_TXT=$CHANGE_TXT."<li>SD Overclocking disabled [restart necessary]</li>";
                 }
 
-        $command = "[[ ! -f '/etc/systemd/system/dietpi-postboot.service.d/dietpi.conf' ]] || echo '1'";
-        exec($command, $sdoutput, $sdresult );
-        if( $sdoutput[0] )
+        $command = "sudo bash -c \"[[ ! -f '/etc/systemd/system/dietpi-postboot.service.d/dietpi.conf' ]] || echo 1\"";
+        exec($command, $netbootoutput, $netbootresult );
+        if( $netbootoutput[0] )
                 {
                 $netboot_state = "active";
                 $change_netboot = "disable";
@@ -90,7 +90,7 @@
                                                                 </p>
                                                                 <p>
                                                                 <?php
-                                                                echo "Wait for Network on boot: <b>".$sd_state."</b>";
+                                                                echo "Wait for Network on boot: <b>".$netboot_state."</b>";
                                                                 ?>
                                                                 </p>
                                                                 <input id="saveForm" class="button_text" type="submit" name="change_netboot" value="<?php print $change_netboot; ?>" />
