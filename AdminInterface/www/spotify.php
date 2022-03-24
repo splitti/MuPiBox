@@ -3,10 +3,7 @@
         $CHANGE_TXT="<div id='lbinfo'><ul id='lbinfo'>";
 
         include ('includes/header.php');
-        $command="sudo hostname -I";
-        $IP=exec($command, $Tokenoutput, $result);
-
-        $REDIRECT_URI="http://".$IP."/spotify.php";
+        $REDIRECT_URI="http://".$_SERVER['HTTP_HOST']."/spotify.php";
         $SCOPELIST="streaming user-read-currently-playing user-modify-playback-state user-read-playback-state";
         $SCOPE=urlencode($SCOPELIST);
 
