@@ -17,13 +17,28 @@
 		$change=1;
 		}
 
+	if( $_POST['change_ftp'] == "enable & start" )
+		{
+		$command = " sudo apt-get install proftpd -y && sudo apt-get install samba -y && sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/proftpd.conf -O /etc/proftpd/proftpd.conf && sudo systemctl restart proftpd";
+		exec($command, $output, $result );
+		$change=1;
+		}
+	else if( $_POST['change_ftp'] == "stop & disable" )
+		{
+		$command = "sudo systemctl stop proftpd.service && sudo systemctl disable proftpd.service && sudo apt-get remove proftpd -y";
+		exec($command, $output, $result );
+		$change=1;
+		}
+
 
 	$rc = $output[count($output)-1];
 	$command = "sudo service smbd status | grep running";
 	exec($command, $smboutput, $smbresult );
 	if( $smboutput[0] )
 		{
-		$samba_state = "started";
+		$command="/usr/bin/hostname -I | awk '{print $1}'";
+		$IP=exec($command);
+		$samba_state = "started&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;&nbsp;UNC-Path: \\\\".$IP."\\mupibox\\&nbsp;&nbsp;]";
 		$change_samba = "stop & disable";
 		}
 	else
@@ -31,6 +46,20 @@
 		$samba_state = "disabled";
 		$change_samba = "enable & start";
 		}
+
+	$command = "sudo service proftpd status | grep running";
+	exec($command, $ftpoutput, $ftpresult );
+	if( $ftpoutput[0] )
+		{
+		$ftp_state = "started";
+		$change_ftp = "stop & disable";
+		}
+	else
+		{
+		$ftp_state = "disabled";
+		$change_ftp = "enable & start";
+		}
+
 ?>
 
                 <form class="appnitro"  method="post" action="service.php" id="form">
@@ -38,7 +67,7 @@
                         <h2>MupiBox settings</h2>
                         <p>De/Activate some helpfull services...</p>
                 </div>
-                        <ul ><li id="li_1" >
+                        <ul >
                                         
 								<li class="li_1"><h2>Samba</h2>
 								<p>
@@ -47,7 +76,13 @@
 								?>
 								</p>
 								<input id="saveForm" class="button_text" type="submit" name="change_samba" value="<?php print $change_samba; ?>" /></li>
-
+								<li class="li_1"><h2>Samba</h2>
+								<p>
+								<?php 
+								echo "FTP Status: <b>".$ftp_state."</b>";
+								?>
+								</p>
+								<input id="saveForm" class="button_text" type="submit" name="change_ftp" value="<?php print $change_ftp; ?>" /></li>
 
                         </ul>
                 </form>
