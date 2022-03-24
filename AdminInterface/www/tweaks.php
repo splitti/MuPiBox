@@ -86,7 +86,7 @@
 
                                                                 <li class="li_1"><h2>Wait for Network on boot</h2>
                                                                 <p>
-                                                                Speeds up the boot time, but sometimes the boot process is to fast... Try it!
+                                                                Speeds up the boot time, but sometimes the boot process is to fast and you have to wait for the network to be ready... Try it, if disabling this option works for you!
                                                                 </p>
                                                                 <p>
                                                                 <?php
