@@ -20,7 +20,7 @@ coming soon
 - Spotifyd (https://github.com/Spotifyd/spotifyd)
 - mplayer-wrapper by derhuerst (https://github.com/derhuerst/mplayer-wrapper)
 - google-tts by zlargon (https://github.com/zlargon/google-tts)
-- Font Pan Pizza by Mark Lohner (https://www.dafont.com/de/pan-pizza.font?l[]=10&l[]=1&text=MuPiBox)
+- Font Pan Pizza by Mark Lohner (https://www.marc-lohner.com/)
 - Image by kirillslov (https://pixabay.com/de/vectors/katze-gehen-h%c3%b6ren-musik-kopfh%c3%b6rer-5775898/)
 - Startup-Sound by Zeraora (https://freesound.org/people/Zeraora/sounds/572773/)
 - Shutdown-Sound by Leszek_Szary (https://freesound.org/people/Leszek_Szary/sounds/133283/)
