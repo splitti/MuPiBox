@@ -160,6 +160,22 @@ function pause(){
   }
 }
 
+function stop(){
+  if (currentPlayer == "spotify"){
+    spotifyApi.pause()
+      .then(function() {
+        log.debug('[Spotify Control] Playback paused');
+		writeplayerstatePause();
+      }, function(err) {
+        handleSpotifyError(err,"0");
+      });
+  } else if (currentPlayer == "mplayer") {
+    player.close();
+    playing = false;
+	  writeplayerstatePause();
+  }
+}
+
 function play(){
   if (currentPlayer == "spotify"){
     spotifyApi.play()
@@ -455,6 +471,9 @@ app.use(function(req, res){
 
   else if (command.name == "play")
     play();
+
+  else if (command.name == "stop")
+    stop();
 
   else if (command.name == "next")
     next();

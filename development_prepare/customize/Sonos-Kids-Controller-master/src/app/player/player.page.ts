@@ -36,17 +36,17 @@ export class PlayerPage implements OnInit {
   }
 
   ionViewWillEnter() {
-    if (this.media) {
-      this.playerService.sendCmd(PlayerCmds.CLEARQUEUE);
+    // if (this.media) {
+    //   this.playerService.sendCmd(PlayerCmds.CLEARQUEUE);
 
-      window.setTimeout(() => {
-        this.playerService.playMedia(this.media);
-      }, 1000);
-    }
+    //   window.setTimeout(() => {
+    //     this.playerService.playMedia(this.media);
+    //   }, 1000);
+    // }
   }
 
   ionViewWillLeave() {
-    this.playerService.sendCmd(PlayerCmds.PAUSE);
+    this.playerService.sendCmd(PlayerCmds.STOP);
   }
 
   volUp() {
@@ -58,11 +58,21 @@ export class PlayerPage implements OnInit {
   }
 
   skipPrev() {
-    this.playerService.sendCmd(PlayerCmds.PREVIOUS);
+    if (this.playing) {
+      this.playerService.sendCmd(PlayerCmds.PREVIOUS);
+    } else {
+      this.playing = true;
+      this.playerService.sendCmd(PlayerCmds.PREVIOUS);
+    }
   }
 
   skipNext() {
-    this.playerService.sendCmd(PlayerCmds.NEXT);
+    if (this.playing) {
+      this.playerService.sendCmd(PlayerCmds.NEXT);
+    } else {
+      this.playing = true;
+      this.playerService.sendCmd(PlayerCmds.NEXT);
+    }
   }
 
   playPause() {

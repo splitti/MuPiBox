@@ -9,6 +9,7 @@ import { publishReplay, refCount } from 'rxjs/operators';
 export enum PlayerCmds {
   PLAY = 'play',
   PAUSE = 'pause',
+  STOP = 'stop',
   PLAYPAUSE = 'playpause',
   PREVIOUS = 'previous',
   NEXT = 'next',
