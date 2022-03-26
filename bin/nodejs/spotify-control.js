@@ -164,15 +164,16 @@ function stop(){
   if (currentPlayer == "spotify"){
     spotifyApi.pause()
       .then(function() {
-        log.debug('[Spotify Control] Playback paused');
+        log.debug('[Spotify Control] Playback stopped');
 		writeplayerstatePause();
       }, function(err) {
         handleSpotifyError(err,"0");
       });
   } else if (currentPlayer == "mplayer") {
-    player.close();
+    player.stop();
     playing = false;
 	  writeplayerstatePause();
+    log.debug('[Spotify Control] Playback stopped');
   }
 }
 
