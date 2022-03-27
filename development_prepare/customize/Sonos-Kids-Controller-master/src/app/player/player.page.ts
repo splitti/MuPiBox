@@ -40,7 +40,7 @@ export class PlayerPage implements OnInit {
     //   this.playerService.sendCmd(PlayerCmds.CLEARQUEUE);
 
     //   window.setTimeout(() => {
-    //     this.playerService.playMedia(this.media);
+         this.playerService.playMedia(this.media);
     //   }, 1000);
     // }
   }

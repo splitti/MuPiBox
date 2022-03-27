@@ -91,6 +91,7 @@ function handleSpotifyError(err, activePlaylistId){
 
   else if (err.toString().includes("NO_ACTIVE_DEVICE")) {
     log.debug("no active device, setting the first one found to active");
+    activeDevice = "";
     setActiveDevice(activePlaylistId);
   }
   else {
@@ -117,7 +118,6 @@ async function getActiveDevice(){
 
   /*queries all devices and transfers playback to the first one discovered*/
 function setActiveDevice(activePlaylistId) {
-  let activeDevice;
     /*find devices first and choose first one available*/
   spotifyApi.getMyDevices()
     .then(function(data) {
@@ -128,10 +128,10 @@ function setActiveDevice(activePlaylistId) {
       handleSpotifyError(err,"0");
     })
     .then(function(){       /*transfer to active device*/
-      activeDevice.id = config.spotify.deviceId;
-      spotifyApi.transferMyPlayback([activeDevice.id])
+      activeDevice = config.spotify.deviceId;
+      spotifyApi.transferMyPlayback([activeDevice])
         .then(function() {
-          log.debug('[Spotify Control] Transfering playback to ' + activeDevice.id);
+          log.debug('[Spotify Control] Transfering playback to ' + activeDevice);
           if (activePlaylistId.includes("spotify:")){
             playMe(activePlaylistId);
           }
