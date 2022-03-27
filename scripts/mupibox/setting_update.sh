@@ -48,8 +48,8 @@ timeout=$(/usr/bin/jq -r .timeout.idleDisplayOff ${MUPIBOX_CONFIG})
 /usr/bin/sed -i 's/.*Option \"BlankTime\".*/    Option \"BlankTime\" '\"${timeout}\"'/g' ${DISPLAY_STANDBY}
 
 currentIP=$(hostname -I)
-/usr/bin/cat <<< $(/usr/bin/jq --arg v "${currentIP}" '.[].ip = $v' ${SONOS_NETWORK}) >  ${SONOS_NETWORK}
+/usr/bin/cat <<< $(/usr/bin/jq --arg v "${currentIP}" '.ip = $v' ${SONOS_NETWORK}) >  ${SONOS_NETWORK}
 currentHost=$(hostname)
-/usr/bin/cat <<< $(/usr/bin/jq --arg v "${currentHost}" '.[].host = $v' ${SONOS_NETWORK}) >  ${SONOS_NETWORK}
+/usr/bin/cat <<< $(/usr/bin/jq --arg v "${currentHost}" '.host = $v' ${SONOS_NETWORK}) >  ${SONOS_NETWORK}
 
 echo "Setting Update finished"
