@@ -1,0 +1,18 @@
+{
+    "currentTrack": "01",
+    "queryTracks": "10",
+    "query": [
+        "Track 01",
+        "Track 02",
+        "Track 03",
+        "Track 04",
+        "Track 05",
+        "Track 06",
+        "Track 07",
+        "Track 08",
+        "Track 09",
+        "Track 10"
+    ],
+    "progressTime": "360",
+    "volume": "75"
+}

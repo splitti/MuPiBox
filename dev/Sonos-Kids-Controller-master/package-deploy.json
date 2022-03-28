@@ -1,0 +1,25 @@
+{
+    "name": "Sonos-Kids-Controller",
+    "version": "1.6.0",
+    "author": "Tobias Wiedenmann",
+    "homepage": "https://github.com/Thyraz/Sonos-Kids-Controller",
+    "scripts": {
+      "start": "node server.js"
+    },
+    "private": true,
+    "dependencies": {
+      "rxjs": "~6.6.0",
+      "cors": "^2.8.5",
+      "express": "^4.17.2",
+      "jsonfile": "^6.1.0",
+      "simple-keyboard": "^3.4.46",
+      "spotify-web-api-js": "^1.5.2",
+      "spotify-web-api-node": "^5.0.2",
+      "tslib": "^2.2.0",
+      "zone.js": "~0.11.4"
+    },
+    "devDependencies": {
+    },
+    "description": "Software for self made touchscreen jukeboxes for kids"
+  }
+  
