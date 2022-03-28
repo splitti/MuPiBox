@@ -19,19 +19,24 @@ export class EditPage implements OnInit {
     private mediaService: MediaService,
     public alertController: AlertController,
     private router: Router
-  ) { }
-
-  ngOnInit() {
-    // Subscribe
+  ) {
     this.mediaService.getNetworkObservable().subscribe(network => {
       this.network = network;
     });
+    this.mediaService.updateNetwork();
+   }
+
+  ngOnInit() {
+    // Subscribe
+    // this.mediaService.getNetworkObservable().subscribe(network => {
+    //   this.network = network;
+    // });
     this.mediaService.getRawMediaObservable().subscribe(media => {
       this.media = media;
     });
 
     // Retreive data through subscription above
-    this.mediaService.updateNetwork();
+    // this.mediaService.updateNetwork();
     this.mediaService.updateRawMedia();
   }
 

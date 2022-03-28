@@ -12,6 +12,10 @@ ion-toolbar {
     }
 }
 
+ion-content {
+    --min-height: 399px;
+}
+
 ion-item {
     --border-color: #2e2e2e;
     --inner-padding-top: 10px;
