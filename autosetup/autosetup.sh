@@ -285,6 +285,8 @@ exec 3>${LOG}
 	sudo usermod -a -G gpio dietpi >&3 2>&3
 	sudo usermod -a -G gpio root >&3 2>&3
 	crontab /tmp/crontab.template >&3 2>&3
+	sudo rm /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/network.json
+	ls -l /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/network.json /tmp/network.json
 	#sudo /boot/dietpi/func/dietpi-set_swapfile 1 zram >&3 2>&3
 	#sudo /boot/dietpi/func/dietpi-set_software boot_wait_for_network 0 >&3 2>&3
 	#VERSION=$(curl -s https://raw.githubusercontent.com/splitti/MuPiBox/main/version.json | /usr/bin/jq -r .version) >&3 2>&3

@@ -129,6 +129,8 @@ exec 3>${LOG}
 	/usr/bin/cat <<< $(/usr/bin/jq --arg v "${VERSION}" '.mupibox.version = $v' ${CONFIG}) >  ${CONFIG}
 	sudo chmod 775 ${CONFIG}
 	sudo systemctl start mupi_idle_shutdown.service >&3 2>&3
+	sudo rm /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/network.json
+	ls -l /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/network.json /tmp/network.json
 
 	sudo mv ${LOG} /home/dietpi/.mupibox/last_update.log >&3 2>&3
 	sudo chown -R dietpi:dietpi /home/dietpi/.mupibox/last_update.log >&3 2>&3
