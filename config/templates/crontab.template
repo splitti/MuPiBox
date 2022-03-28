@@ -25,4 +25,4 @@
 * * * * *       sleep 15; /usr/local/bin/mupibox/./save_rrd.sh
 * * * * *       sleep 30; /usr/local/bin/mupibox/./save_rrd.sh
 * * * * *       sleep 45; /usr/local/bin/mupibox/./save_rrd.sh
-* * * * *       sudo /usr/local/bin/mupibox/./get_network.sh
+* * * * *       /usr/local/bin/mupibox/./get_network.sh

@@ -103,7 +103,7 @@ exec 3>${LOG}
 	sudo su - dietpi -c "pm2 start server"
 
 	echo -e "XXX\n83\nSet environment...  \nXXX"	
-	crontab /tmp/crontab.template >&3 2>&3
+	sudo /bin/su dietpi -c "crontab /tmp/crontab.template"  >&3 2>&3
 	
 	echo -e "XXX\n85\nDownload OnOffShim-Scripts... \nXXX"	
 	# OnOffShim
@@ -130,7 +130,7 @@ exec 3>${LOG}
 	sudo chmod 775 ${CONFIG}
 	sudo systemctl start mupi_idle_shutdown.service >&3 2>&3
 	sudo rm /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/network.json
-	ls -l /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/network.json /tmp/network.json
+	ln -s /tmp/network.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/network.json
 
 	sudo mv ${LOG} /home/dietpi/.mupibox/last_update.log >&3 2>&3
 	sudo chown -R dietpi:dietpi /home/dietpi/.mupibox/last_update.log >&3 2>&3
