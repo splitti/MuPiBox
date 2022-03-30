@@ -48,16 +48,22 @@ export class HomePage implements OnInit {
     private playerService: PlayerService,
     private activityIndicatorService: ActivityIndicatorService,
     private router: Router
-  ) {}
-
-  ngOnInit() {
-    this.mediaService.setCategory('audiobook');
-
+  ) {
     this.mediaService.getNetworkObservable().subscribe(network => {
       this.network = network;
     });
     
     this.mediaService.updateNetwork();
+  }
+
+  ngOnInit() {
+    this.mediaService.setCategory('audiobook');
+
+    // this.mediaService.getNetworkObservable().subscribe(network => {
+    //   this.network = network;
+    // });
+    
+    // this.mediaService.updateNetwork();
     
     // Subscribe
     this.mediaService.getMedia().subscribe(media => {
@@ -119,11 +125,11 @@ export class HomePage implements OnInit {
   }
 
   updateConnection() {
-    // if(this.network.ip.length >= 7){
-    //   this.mediaService.setConnection('true');
-    // }else{
-    //   this.mediaService.setConnection('false');
-    // }
+    if(this.network.ip.length >= 7){
+      this.mediaService.setConnection('true');
+    }else{
+      this.mediaService.setConnection('false');
+    }
   }
 
   update() {
