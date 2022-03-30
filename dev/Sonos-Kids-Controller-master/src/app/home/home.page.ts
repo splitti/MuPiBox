@@ -50,14 +50,14 @@ export class HomePage implements OnInit {
     private router: Router
   ) {}
 
-  async ngOnInit() {
+  ngOnInit() {
     this.mediaService.setCategory('audiobook');
 
     this.mediaService.getNetworkObservable().subscribe(network => {
       this.network = network;
     });
     
-    await this.mediaService.updateNetwork();
+    this.mediaService.updateNetwork();
     
     // Subscribe
     this.mediaService.getMedia().subscribe(media => {
@@ -127,7 +127,9 @@ export class HomePage implements OnInit {
   }
 
   update() {
-    this.updateConnection();
+    window.setTimeout(() => {
+      this.updateConnection();
+    }, 1000);
     if (this.category === 'audiobook' || this.category === 'music') {
       this.mediaService.publishArtists();
     } else {
