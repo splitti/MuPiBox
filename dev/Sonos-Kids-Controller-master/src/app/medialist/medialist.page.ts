@@ -6,6 +6,7 @@ import { ArtworkService } from '../artwork.service';
 import { PlayerService } from '../player.service';
 import { Media } from '../media';
 import { Artist } from '../artist';
+import { Network } from "../network";
 
 @Component({
   selector: 'app-medialist',
@@ -17,6 +18,7 @@ export class MedialistPage implements OnInit {
 
   artist: Artist;
   media: Media[] = [];
+  network: Network;
   covers = {};
 
   slideOptions = {
@@ -47,6 +49,12 @@ export class MedialistPage implements OnInit {
 
   ngOnInit() {
     // Subscribe
+    this.mediaService.getNetworkObservable().subscribe(network => {
+      this.network = network;
+    });
+    
+    this.mediaService.updateNetwork();
+    
     this.mediaService.getMediaFromArtist(this.artist).subscribe(media => {
       this.media = media;
 
@@ -64,6 +72,14 @@ export class MedialistPage implements OnInit {
         this.slider.update();
       }, 1000);
     });
+
+    window.setTimeout(() => {
+      if(this.network.ip.length >= 7){
+        this.mediaService.setConnection('true');
+      }else{
+        this.mediaService.setConnection('false');
+      }
+    }, 1000);
 
     // Retreive data through subscription above
     this.mediaService.publishArtistMedia();

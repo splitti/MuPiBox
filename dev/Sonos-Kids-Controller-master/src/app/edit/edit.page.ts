@@ -33,6 +33,9 @@ export class EditPage implements OnInit {
     // Retreive data through subscription above
     this.mediaService.updateNetwork();
     this.mediaService.updateRawMedia();
+
+    window.setTimeout(() => {
+    }, 1000);
   }
 
   async deleteButtonPressed(index: number) {
