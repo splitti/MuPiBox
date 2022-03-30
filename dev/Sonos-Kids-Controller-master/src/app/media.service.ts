@@ -39,10 +39,12 @@ export class MediaService {
     return this.networkSubject;
   }
 
-  async updateNetwork() {
-    const url = (environment.production) ? '../api/network' : 'http://localhost:8200/api/network';
-    this.http.get<Network>(url).subscribe(network => {
-        this.networkSubject.next(network);
+  updateNetwork() {
+    return new Promise((resolve, reject) => {
+      const url = (environment.production) ? '../api/network' : 'http://localhost:8200/api/network';
+      this.http.get<Network>(url).subscribe(network => {
+          this.networkSubject.next(network);
+      });
     });
   }
 
