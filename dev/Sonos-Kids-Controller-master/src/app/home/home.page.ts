@@ -50,15 +50,14 @@ export class HomePage implements OnInit {
     private router: Router
   ) {}
 
-  ngOnInit() {
+  async ngOnInit() {
     this.mediaService.setCategory('audiobook');
 
     this.mediaService.getNetworkObservable().subscribe(network => {
       this.network = network;
-      this.mediaService.updateNetwork();
     });
     
-    //this.mediaService.updateNetwork();
+    await this.mediaService.updateNetwork();
     
     // Subscribe
     this.mediaService.getMedia().subscribe(media => {
