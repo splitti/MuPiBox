@@ -132,17 +132,9 @@ export class HomePage implements OnInit {
   }
 
   update() {
-    // window.setTimeout(() => {
-    //   this.updateConnection();
-    // }, 1000);
-    console.log(this.network);
-    if(this.network?.ip.length >= 7){
-      console.log("online");
-      this.mediaService.setConnection('true');
-    }else{
-      console.log("offline");
-      this.mediaService.setConnection('false');
-    }
+    window.setTimeout(() => {
+      this.updateConnection();
+    }, 1000);
     if (this.category === 'audiobook' || this.category === 'music') {
       this.mediaService.publishArtists();
     } else {
