@@ -1,9 +1,10 @@
 import { Component, OnInit } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { Router } from '@angular/router';
 import { AlertController } from '@ionic/angular';
 import { MediaService } from '../media.service';
 import { Media } from '../media';
 import { Network } from "../network";
+import {Observable} from "rxjs";
 
 @Component({
   selector: 'app-edit',
@@ -12,34 +13,28 @@ import { Network } from "../network";
 })
 export class EditPage implements OnInit {
 
-  media: Media[] = [];
-  network: Network;
+  media: Observable<Record<any, any>[]>;
+  network: Observable<Network>;
 
   constructor(
     private mediaService: MediaService,
     public alertController: AlertController,
-    private route: ActivatedRoute,
     private router: Router
-  ) { 
-    this.route.queryParams.subscribe(params => {
-      if (this.router.getCurrentNavigation().extras.state) {
-        this.network = this.router.getCurrentNavigation().extras.state.network;
-      }
-    });
+  ) {
+
   }
 
   ngOnInit() {
     // Subscribe
-    this.mediaService.getNetworkObservable().subscribe(network => {
-      this.network = network;
-    });
-    this.mediaService.getRawMediaObservable().subscribe(media => {
-      this.media = media;
-    });
+    this.network = this.mediaService.getNetworkObservable();
+    this.media = this.mediaService.getRawMediaObservable();
 
     // Retreive data through subscription above
     this.mediaService.updateNetwork();
     this.mediaService.updateRawMedia();
+
+    window.setTimeout(() => {
+    }, 1000);
   }
 
   async deleteButtonPressed(index: number) {

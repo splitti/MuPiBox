@@ -4,7 +4,7 @@
             <ion-back-button icon="arrow-back-outline" defaultHref="/home"></ion-back-button>
         </ion-buttons>
         <ion-title>
-            {{network.host}} - {{network.ip}}
+            {{(network | async)?.host}} - {{( network | async)?.ip}}
         </ion-title>
         <ion-buttons slot="end">
             <ion-button (click)="addButtonPressed()">
@@ -20,8 +20,8 @@
 </ion-header>
 
 <ion-content>
-<!--     <ion-list mode="ios">
-        <ion-item *ngFor="let item of network; let i = index" lines="inset">
+     <!--<ion-list mode="ios">
+        <ion-item *ngFor="let item of (network | async); let i = index" lines="inset">
             <ion-grid>
                 <ion-row>
                     <ion-col size="2">
@@ -41,7 +41,7 @@
         </ion-item>
     </ion-list> -->
     <ion-list mode="ios">
-        <ion-item *ngFor="let item of media; let i = index" lines="inset">
+        <ion-item *ngFor="let item of (media | async); let i = index" lines="inset">
             <ion-grid>
                 <ion-row>
                     <ion-col size="2">

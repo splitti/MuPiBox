@@ -35,8 +35,9 @@ export class MediaService {
   // Handling of RAW media entries from data.json
   // --------------------------------------------
 
-  getNetworkObservable() {
-    return this.networkSubject;
+  getNetworkObservable = (): Observable<Network> =>  {
+      const url = (environment.production) ? '../api/network' : 'http://localhost:8200/api/network';
+      return this.http.get<Network>(url);
   }
 
   updateNetwork() {
@@ -46,8 +47,9 @@ export class MediaService {
     });
   }
 
-  getRawMediaObservable() {
-    return this.rawMediaSubject;
+  getRawMediaObservable = ():Observable<Record<any, any>[]> => {
+      const url = (environment.production) ? '../api/data' : 'http://localhost:8200/api/data';
+      return this.http.get<Record<any, any>[]>(url);
   }
 
   updateRawMedia() {
