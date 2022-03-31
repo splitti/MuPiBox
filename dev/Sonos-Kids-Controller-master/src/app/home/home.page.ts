@@ -54,8 +54,9 @@ export class HomePage implements OnInit {
   ngOnInit() {
     this.mediaService.setCategory('audiobook');
 
-    this.mediaService.getNetworkObservable()
-        .subscribe((network) => this.network = network);
+    this.mediaService.getNetworkObservable().subscribe(network => {
+      this.network = network;
+    });
     
     this.mediaService.updateNetwork();
     
@@ -121,7 +122,7 @@ export class HomePage implements OnInit {
   }
 
   updateConnection() {
-    if(this.network.ip.length >= 7){
+    if(this.network?.ip.length >= 7){
       this.mediaService.setConnection('true');
     }else{
       this.mediaService.setConnection('false');
