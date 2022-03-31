@@ -4,8 +4,9 @@
 
 CONFIG="/etc/mupibox/mupiboxconfig.json"
 NETWORKCONFIG="/tmp/network.json"
+PLAYERSTATE=$(cat /tmp/playerstate)
 
-if [[! -f ${NETWORKCONFIG} ]]; then
+if [[ ! -f ${NETWORKCONFIG} ]]; then
         sudo touch ${NETWORKCONFIG}
         sudo chown dietpi:dietpi ${NETWORKCONFIG}
         sudo chmod 777 ${NETWORKCONFIG}
@@ -30,3 +31,14 @@ SUBNET=$(/sbin/ifconfig wlan0 | awk '/netmask/{split($4,a,":"); print a[1]}')
 /usr/bin/cat <<< $(/usr/bin/jq --arg v "${GW}" '.gateway = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
 /usr/bin/cat <<< $(/usr/bin/jq --arg v "${DNS}" '.dns = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
 /usr/bin/cat <<< $(/usr/bin/jq --arg v "${SUBNET}" '.subnet = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
+
+if [[ ${PLAYERSTATE} != "play" ]]; then
+        if [[ ! $(ping -c3 -4 -w 4 1.1.1.1) ]]; then
+                ONLINESTATE="online"
+        else
+                ONLINESTATE="offline"
+        fi
+else
+        ONLINESTATE="playing"
+fi
+/usr/bin/cat <<< $(/usr/bin/jq --arg v "${ONLINESTATE}" '.onlinestate = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
