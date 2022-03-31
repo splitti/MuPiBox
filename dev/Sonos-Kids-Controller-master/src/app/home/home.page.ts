@@ -121,6 +121,7 @@ export class HomePage implements OnInit {
   }
 
   updateConnection() {
+    console.log(this.network);
     if(this.network?.ip.length >= 7){
       this.mediaService.setConnection('true');
     }else{
