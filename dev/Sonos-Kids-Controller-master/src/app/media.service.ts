@@ -97,6 +97,8 @@ export class MediaService {
   private updateMedia() {
     const url = (environment.production) ? '../api/data' : 'http://localhost:8200/api/data';
 
+    console.log(this.connection);
+
     return this.http.get<Media[]>(url).pipe(
       map(items => { // Filter to get only items for the chosen category
         items.forEach(item => item.category = (item.category === undefined) ? 'audiobook' : item.category); // default category
