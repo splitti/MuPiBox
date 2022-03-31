@@ -124,10 +124,10 @@ export class HomePage implements OnInit {
     console.log(this.network);
     if(this.network?.ip.length >= 7){
       console.log("online");
-      this.mediaService.setConnection('true');
+      this.mediaService.setConnection('false');
     }else{
       console.log("offline");
-      this.mediaService.setConnection('false');
+      this.mediaService.setConnection('true');
     }
   }
 
