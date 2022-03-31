@@ -32,13 +32,13 @@ SUBNET=$(/sbin/ifconfig wlan0 | awk '/netmask/{split($4,a,":"); print a[1]}')
 /usr/bin/cat <<< $(/usr/bin/jq --arg v "${DNS}" '.dns = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
 /usr/bin/cat <<< $(/usr/bin/jq --arg v "${SUBNET}" '.subnet = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
 
-if [[ ${PLAYERSTATE} != "play" ]]; then
+#if [[ ${PLAYERSTATE} != "play" ]]; then
         if [[ ! $(ping -c3 -4 -w 4 1.1.1.1) ]]; then
                 ONLINESTATE="online"
         else
                 ONLINESTATE="offline"
         fi
-else
-        ONLINESTATE="playing"
-fi
+#else
+#        ONLINESTATE="playing"
+#fi
 /usr/bin/cat <<< $(/usr/bin/jq --arg v "${ONLINESTATE}" '.onlinestate = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
