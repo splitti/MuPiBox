@@ -57,7 +57,7 @@
     </ng-template>
     
     <ng-template #mediaBlock>
-        <ion-slides [options]="slideOptions" scrollbar="true" #media_slider>
+        <ion-slides *ngIf="media" [options]="slideOptions" scrollbar="true" #media_slider>
             <ion-slide *ngFor="let currentMedia of media">
                 <ion-grid>
                     <ion-row class="media-card">

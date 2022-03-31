@@ -8,6 +8,7 @@ import { ActivityIndicatorService } from '../activity-indicator.service';
 import { Artist } from '../artist';
 import { Media } from '../media';
 import { Network } from "../network";
+import {Observable} from "rxjs";
 
 @Component({
   selector: 'app-home',
@@ -53,9 +54,8 @@ export class HomePage implements OnInit {
   ngOnInit() {
     this.mediaService.setCategory('audiobook');
 
-    this.mediaService.getNetworkObservable().subscribe(network => {
-      this.network = network;
-    });
+    this.mediaService.getNetworkObservable()
+        .subscribe((network) => this.network = network);
     
     this.mediaService.updateNetwork();
     
@@ -67,15 +67,17 @@ export class HomePage implements OnInit {
         this.artworkService.getArtwork(currentMedia).subscribe(url => {
           this.covers[currentMedia.title] = url;
         });
+
+        this.mediaSlider.update().then(null);
       });
-      this.mediaSlider?.update();
+
 
       // Workaround as the scrollbar handle isn't visible after the immediate update
       // Seems like a size calculation issue, as resizing the browser window helps
-      // Better fix for this? 
-      window.setTimeout(() => {
-        this.mediaSlider?.update();
-      }, 1000);
+      // Better fix for this?
+      // window.setTimeout(() => {
+      //   this.mediaSlider?.update();
+      // }, 1000);
     });
 
     this.mediaService.getArtists().subscribe(artists => {
@@ -119,7 +121,7 @@ export class HomePage implements OnInit {
   }
 
   updateConnection() {
-    if(this.network.ip.length >= 7){
+    if(this.network?.ip.length >= 7){
       this.mediaService.setConnection('true');
     }else{
       this.mediaService.setConnection('false');
@@ -189,12 +191,7 @@ export class HomePage implements OnInit {
     } else {
       this.editButtonclickCount = 0;
       this.needsUpdate = true;
-      const navigationExtras: NavigationExtras = {
-        state: {
-          network: this.network
-        }
-      };
-      this.router.navigate(['/edit'], navigationExtras);
+      this.router.navigate(['/edit']);
     }
   }
 }
