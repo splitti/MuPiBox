@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AlertController } from '@ionic/angular';
 import { MediaService } from '../media.service';
 import { Media } from '../media';
@@ -18,8 +18,15 @@ export class EditPage implements OnInit {
   constructor(
     private mediaService: MediaService,
     public alertController: AlertController,
+    private route: ActivatedRoute,
     private router: Router
-  ) { }
+  ) { 
+    this.route.queryParams.subscribe(params => {
+      if (this.router.getCurrentNavigation().extras.state) {
+        this.network = this.router.getCurrentNavigation().extras.state.network;
+      }
+    });
+  }
 
   ngOnInit() {
     // Subscribe
@@ -33,9 +40,6 @@ export class EditPage implements OnInit {
     // Retreive data through subscription above
     this.mediaService.updateNetwork();
     this.mediaService.updateRawMedia();
-
-    window.setTimeout(() => {
-    }, 1000);
   }
 
   async deleteButtonPressed(index: number) {

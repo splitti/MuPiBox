@@ -189,7 +189,12 @@ export class HomePage implements OnInit {
     } else {
       this.editButtonclickCount = 0;
       this.needsUpdate = true;
-      this.router.navigate(['/edit']);
+      const navigationExtras: NavigationExtras = {
+        state: {
+          network: this.network
+        }
+      };
+      this.router.navigate(['/edit'], navigationExtras);
     }
   }
 }
