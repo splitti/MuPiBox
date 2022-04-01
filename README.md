@@ -13,7 +13,7 @@ coming soon
 
 ## Based on
 - DietPi (https://dietpi.com/)
-- fbv by godsüeed (https://github.com/godspeed1989/fbv)
+- fbv by godspeed (https://github.com/godspeed1989/fbv)
 - Initramfs Splash by DarkElevenAngel (https://gitlab.com/DarkElvenAngel/initramfs-splash)
 - Sonos Kids Controller by Thyraz (https://github.com/Thyraz/Sonos-Kids-Controller)
 - SpotifyController (https://github.com/amueller-tech/spotifycontroller)
