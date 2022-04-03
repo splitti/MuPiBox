@@ -21,7 +21,7 @@
         "@ionic-native/status-bar": "^5.36.0",
         "@ionic/angular": "^6.0.0",
         "rxjs": "~6.6.0",
-        "simple-keyboard": "^3.4.46",
+        "simple-keyboard": "^2.32.131",
         "spotify-web-api-js": "^1.5.2",
         "spotify-web-api-node": "^5.0.2",
         "tslib": "^2.2.0",
