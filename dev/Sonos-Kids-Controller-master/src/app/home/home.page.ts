@@ -137,9 +137,9 @@ export class HomePage implements OnInit {
   }
 
   update() {
-    window.setTimeout(() => {
+    //window.setTimeout(() => {
       this.updateConnection();
-    }, 1000);
+    //}, 1000);
     if (this.category === 'audiobook' || this.category === 'music') {
       this.mediaService.publishArtists();
     } else {
