@@ -62,8 +62,9 @@ exec 3>${LOG}
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/pink.css -O ~/MuPiBox/themes/pink.css >&3 2>&3
 	
 	sudo wget https://github.com/splitti/MuPiBox/raw/main/media/images/goodbye.png -O /home/dietpi/MuPiBox/sysmedia/images/goodbye.png >&3 2>&3
-	sudo chown dietpi:dietpi /home/dietpi/MuPiBox/sysmedia/images/goodbye.png
+	sudo chown dietpi:dietpi /home/dietpi/MuPiBox/sysmedia/images/goodbye.png >&3 2>&3
 	sudo wget https://github.com/splitti/MuPiBox/raw/main/media/images/splash.png -O /boot/splash.png >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/chromium-autostart.sh -O /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
 
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/mupi_shutdown.sh -O /usr/local/bin/mupibox/mupi_shutdown.sh >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/mupi_startup.sh -O /usr/local/bin/mupibox/mupi_startup.sh >&3 2>&3
