@@ -49,20 +49,15 @@ export class HomePage implements OnInit {
     private playerService: PlayerService,
     private activityIndicatorService: ActivityIndicatorService,
     private router: Router
-  ) {
-    this.mediaService.getNetworkObservable()
-        .subscribe((network) => this.network = network);
-    
-    this.mediaService.updateNetwork();
-  }
+  ) {}
 
   ngOnInit() {
     this.mediaService.setCategory('audiobook');
 
-    // this.mediaService.getNetworkObservable()
-    //     .subscribe((network) => this.network = network);
+    this.mediaService.getNetworkObservable()
+        .subscribe((network) => this.network = network);
     
-    // this.mediaService.updateNetwork();
+    this.mediaService.updateNetwork();
     
     // Subscribe
     this.mediaService.getMedia().subscribe(media => {
