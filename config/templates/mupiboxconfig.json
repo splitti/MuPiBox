@@ -45,6 +45,7 @@
 		"ledPin": "25"
 	},
 	"chromium": {
+		"debug": "0",
 		"resX": "800",
 		"resY": "480"
 	}

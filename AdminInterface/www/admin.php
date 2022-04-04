@@ -5,6 +5,19 @@
         $change=0;
         $CHANGE_TXT="<div id='lbinfo'><ul id='lbinfo'>";
 
+        if( $_POST['debug'] == "Off - turn on" )
+                {
+				$data["chromium"]["debug"]=1;
+				$CHANGE_TXT=$CHANGE_TXT."<li>Chromium Debuggung activated</li>";
+				$change=1;
+				}
+        if( $_POST['debug'] == "Active - turn off" )
+                {
+				$data["chromium"]["debug"]=1;
+				$CHANGE_TXT=$CHANGE_TXT."<li>Chromium Debuggung deactivated</li>";
+				$change=1;
+				}
+
         if( $_POST['restart_kiosk'] )
                 {
                 $command = "sudo -i -u dietpi /usr/local/bin/mupibox/./restart_kiosk.sh";
@@ -63,7 +76,13 @@
                 $change=1;
                 $CHANGE_TXT=$CHANGE_TXT."<li>Spotify Services are restarted</li>";
                 }
-
+		if( $change )
+		  {
+		   $json_object = json_encode($data);
+		   $save_rc = file_put_contents('/etc/mupibox/mupiboxconfig.json', $json_object);
+		   exec("sudo /usr/local/bin/mupibox/./setting_update.sh");
+		   exec("sudo -i -u dietpi /usr/local/bin/mupibox/./restart_kiosk.sh");
+		  }
         $rc = $output[count($output)-1];
 
         $CHANGE_TXT=$CHANGE_TXT."</ul>";
@@ -99,6 +118,17 @@
                                                                 <p>The box only updates some settings after a reboot. Some of these settings can be activated with this operation without reboot. </p>
                                                                 <input id="saveForm" class="button_text" type="submit" name="update" value="Update settings" />
                                                                 <input id="saveForm" class="button_text" type="submit" name="spotify_restart" value="Restart services" />
+                                                                <input id="saveForm" class="button_text" type="submit" name="debug" value="<?php 
+							
+																if( $data["chromium"]["debug"] == 1)
+																  {
+																	print "Active - turn off"; 
+																  }
+																else
+																  {
+																	print "Off - turn on"; 
+																  }
+																?>" /></li>
                                                                 <input id="saveForm" class="button_text" type="submit" name="restart_kiosk" value="Restart Chromium-Kiosk" /></li>
                                 
                                                                 <li class="li_1"><h2>Control MuPiBox</h2>
