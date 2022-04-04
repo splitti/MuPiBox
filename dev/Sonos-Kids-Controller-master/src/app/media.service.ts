@@ -16,7 +16,7 @@ export class MediaService {
 
   private category = 'audiobook';
   private type = 'library';
-  private connection = 'true';
+  private connection = 'false';
 
   private rawMediaSubject = new Subject<Media[]>();
   private wlanSubject = new Subject<WLAN[]>();
