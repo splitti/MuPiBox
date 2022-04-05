@@ -15,10 +15,10 @@ RES_Y=$(/usr/bin/jq -r .chromium.resY ${CONFIG})
 DEBUG=$(/usr/bin/jq -r .chromium.debug ${CONFIG})
 
 CHROMIUM_OPTS="--use-gl=egl --kiosk --test-type --window-size=${RES_X:-1280},${RES_Y:-720} --start-fullscreen --start-maximized --window-position=0,0"
-if(( ${DEBUG} == 1 ))
-then
-	CHROMIUM_OPTS+=" --enable-logging --v=1"
+if [ "${DEBUG}" = "1" ]; then
+ CHROMIUM_OPTS=${CHROMIUM_OPTS}" --enable-logging --v=1"
 fi
+
 
 # If you want tablet mode, uncomment the next line.
 #CHROMIUM_OPTS+=' --force-tablet-mode --tablet-ui'

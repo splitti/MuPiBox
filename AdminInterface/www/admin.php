@@ -5,18 +5,18 @@
         $change=0;
         $CHANGE_TXT="<div id='lbinfo'><ul id='lbinfo'>";
 
-        if( $_POST['debug'] == "Off - turn on" )
+        if( $_POST['debug'] == "Chrome Debugging Off - turn on" )
                 {
-				$data["chromium"]["debug"]=1;
-				$CHANGE_TXT=$CHANGE_TXT."<li>Chromium Debuggung activated</li>";
-				$change=1;
-				}
-        if( $_POST['debug'] == "Active - turn off" )
+          $data["chromium"]["debug"]=1;
+            $CHANGE_TXT=$CHANGE_TXT."<li>Chromium Debuggung activated</li>";
+            $change=1;
+    }
+        if( $_POST['debug'] == "Chrome Debugging Active - turn off" )
                 {
-				$data["chromium"]["debug"]=1;
-				$CHANGE_TXT=$CHANGE_TXT."<li>Chromium Debuggung deactivated</li>";
-				$change=1;
-				}
+    $data["chromium"]["debug"]=0;
+    $CHANGE_TXT=$CHANGE_TXT."<li>Chromium Debuggung deactivated</li>";
+    $change=1;
+    }
 
         if( $_POST['restart_kiosk'] )
                 {
@@ -76,13 +76,13 @@
                 $change=1;
                 $CHANGE_TXT=$CHANGE_TXT."<li>Spotify Services are restarted</li>";
                 }
-		if( $change )
-		  {
-		   $json_object = json_encode($data);
-		   $save_rc = file_put_contents('/etc/mupibox/mupiboxconfig.json', $json_object);
-		   exec("sudo /usr/local/bin/mupibox/./setting_update.sh");
-		   exec("sudo -i -u dietpi /usr/local/bin/mupibox/./restart_kiosk.sh");
-		  }
+  if( $change )
+    {
+     $json_object = json_encode($data);
+     $save_rc = file_put_contents('/etc/mupibox/mupiboxconfig.json', $json_object);
+     exec("sudo /usr/local/bin/mupibox/./setting_update.sh");
+     exec("sudo -i -u dietpi /usr/local/bin/mupibox/./restart_kiosk.sh");
+    }
         $rc = $output[count($output)-1];
 
         $CHANGE_TXT=$CHANGE_TXT."</ul>";
@@ -94,8 +94,8 @@
                         <p>Please be sure what you do...</p>
                 </div>
                         <ul ><li id="li_1" >
-                                        
-                                                                <li class="li_1"><h2>MuPiBox Update</h2>
+
+                                                                <li class="li_norm"><h2>MuPiBox Update</h2>
                                                                 <p>
                                                                         <table>
                                                                                 <tr><td>Current Version:</td>
@@ -110,36 +110,48 @@
                                                                 <input id="saveForm" class="button_text" type="submit" name="os_update" value="Update OS" />
                                                                 <input id="saveForm" class="button_text" type="submit" name="mupibox_update" value="Update MuPiBox" /></li>
 
-                                                                <li class="li_1"><h2>Generate Playlists</h2>
+                                                                <li class="li_norm"><h2>Generate Playlists</h2>
                                                                 <p>The Job for generating Playlists runs every <?php print $data["mupibox"]["mediaCheckTimer"];  ?> seconds. If you need the data as soon as possible, start this job...</p>
                                                                 <input id="saveForm" class="button_text" type="submit" name="m3u" value="Generate Playlists" /></li>
 
-                                                                <li class="li_1"><h2>Update MuPiBox settings</h2>
+                                                                <li class="li_norm"><h2>Update MuPiBox settings</h2>
                                                                 <p>The box only updates some settings after a reboot. Some of these settings can be activated with this operation without reboot. </p>
                                                                 <input id="saveForm" class="button_text" type="submit" name="update" value="Update settings" />
                                                                 <input id="saveForm" class="button_text" type="submit" name="spotify_restart" value="Restart services" />
-                                                                <input id="saveForm" class="button_text" type="submit" name="debug" value="<?php 
-							
-																if( $data["chromium"]["debug"] == 1)
-																  {
-																	print "Active - turn off"; 
-																  }
-																else
-																  {
-																	print "Off - turn on"; 
-																  }
-																?>" /></li>
-                                                                <input id="saveForm" class="button_text" type="submit" name="restart_kiosk" value="Restart Chromium-Kiosk" /></li>
-                                
-                                                                <li class="li_1"><h2>Control MuPiBox</h2>
+                <input id="saveForm" class="button_text" type="submit" name="restart_kiosk" value="Restart Chromium-Kiosk" />
+                                                                <input id="saveForm" class="button_text" type="submit" name="debug" value="<?php
+
+                if( $data["chromium"]["debug"] == 1)
+                  {
+                 print "Chrome Debugging Active - turn off";
+                  }
+                else
+                  {
+                 print "Chrome Debugging Off - turn on";
+                  }
+                ?>" />
+                <?php
+                if( $data["chromium"]["debug"] == 1)
+                  {
+                print '<input id="saveForm" class="button_text" type="submit" name="debugdownload" value="Download Debug-Log" onclick="window.open(\'./debug.php\', \'_blank\');" />';
+                  }
+                                                                ?>
+                                                                </li>
+
+
+                                                                <li class="li_norm"><h2>Control MuPiBox</h2>
                                                                 <p>Restart or shutdown the boxs...</p>
                                                                 <input id="saveForm" class="button_text" type="submit" name="reboot" value="Reboot MuPiBox" />
                                                                 <input id="saveForm" class="button_text" type="submit" name="shutdown" value="Shutdown MuPiBox" /></li>
 
-                                                                <li class="li_1"><h2>Backup and restore MuPiBox-settings</h2>
-                                                                <p>Coming soon...</p></li>
-                                
-                                                                <li class="li_1">                                               <?php
+                                                                <li class="li_norm"><h2>Backup and restore MuPiBox-settings</h2>
+                                                                <p>Coming soon...</p>
+
+<input id="saveForm" class="button_text" type="submit" name="backupdownload" value="Download Backup" onclick="window.open('./backup.php', '_blank');" />
+
+</li>
+
+                                                                <li class="li_norm">                                               <?php
                                                         if( $change )
                                                                 {
                                                                 print "<div id='savestategood'><p>" . $rc . "</p></div>";
