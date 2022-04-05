@@ -24,7 +24,6 @@ export class HomePage implements OnInit {
   artists: Artist[] = [];
   media: Media[] = [];
   network: Network;
-  networkLoaded: Promise<boolean>;
   covers = {};
   activityIndicatorVisible = false;
   editButtonclickCount = 0;
@@ -123,7 +122,7 @@ export class HomePage implements OnInit {
 
   updateConnection() {
     console.log(this.network);
-    if(this.network?.ip.length >= 7){
+    if(this.network?.onlinestate === "online"){
       console.log("online");
       this.mediaService.setConnection('true');
     }else{
@@ -133,9 +132,9 @@ export class HomePage implements OnInit {
   }
 
   update() {
-    //window.setTimeout(() => {
+    window.setTimeout(() => {
       this.updateConnection();
-    //}, 1000);
+    }, 1000);
     if (this.category === 'audiobook' || this.category === 'music') {
       this.mediaService.publishArtists();
     } else {
