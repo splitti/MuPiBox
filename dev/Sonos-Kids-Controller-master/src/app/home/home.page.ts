@@ -54,10 +54,10 @@ export class HomePage implements OnInit {
   ngOnInit() {
     this.mediaService.setCategory('audiobook');
 
-    //this.activatedRoute.data.subscribe((data) => this.network = data);
+    this.activatedRoute.data.subscribe((data) => this.network = data.network);
 
-    this.mediaService.getNetworkObservable()
-        .subscribe((network) => this.network = network);
+    // this.mediaService.getNetworkObservable()
+    //     .subscribe((network) => this.network = network);
     
     // Subscribe
     this.mediaService.getMedia().subscribe(media => {
