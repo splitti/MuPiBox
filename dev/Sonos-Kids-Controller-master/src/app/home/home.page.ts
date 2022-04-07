@@ -55,13 +55,8 @@ export class HomePage implements OnInit {
     this.mediaService.setCategory('audiobook');
 
     this.activatedRoute.data.subscribe((data) => {
-      console.log(data);
       this.network = data.data;
-      console.log(this.network);
     });
-
-    // this.mediaService.getNetworkObservable()
-    //     .subscribe((network) => this.network = network);
     
     // Subscribe
     this.mediaService.getMedia().subscribe(media => {
@@ -125,7 +120,6 @@ export class HomePage implements OnInit {
   }
 
   updateConnection() {
-    console.log(this.network);
     if(this.network?.onlinestate == "online"){
       console.log("online");
       this.mediaService.setConnection('true');
