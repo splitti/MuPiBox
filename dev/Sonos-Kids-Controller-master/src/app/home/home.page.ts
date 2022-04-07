@@ -8,7 +8,6 @@ import { ActivityIndicatorService } from '../activity-indicator.service';
 import { Artist } from '../artist';
 import { Media } from '../media';
 import { Network } from "../network";
-import {Observable} from "rxjs";
 
 @Component({
   selector: 'app-home',
@@ -56,11 +55,6 @@ export class HomePage implements OnInit {
     this.mediaService.setCategory('audiobook');
 
     this.activatedRoute.data.subscribe((data) => this.network = data);
-
-    // this.mediaService.getNetworkObservable()
-    //     .subscribe((network) => this.network = network);
-    
-    //this.mediaService.updateNetwork();
     
     // Subscribe
     this.mediaService.getMedia().subscribe(media => {
@@ -125,7 +119,7 @@ export class HomePage implements OnInit {
 
   updateConnection() {
     console.log(this.network);
-    if(this.network?.onlinestate === "online"){
+    if(this.network?.onlinestate == "online"){
       console.log("online");
       this.mediaService.setConnection('true');
     }else{
@@ -135,9 +129,7 @@ export class HomePage implements OnInit {
   }
 
   update() {
-    window.setTimeout(() => {
-      this.updateConnection();
-    }, 1000);
+    this.updateConnection();
     if (this.category === 'audiobook' || this.category === 'music') {
       this.mediaService.publishArtists();
     } else {
