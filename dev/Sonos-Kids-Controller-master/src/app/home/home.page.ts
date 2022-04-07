@@ -1,6 +1,6 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
 import { IonSlides } from '@ionic/angular';
-import { Router, NavigationExtras } from '@angular/router';
+import { Router, NavigationExtras, ActivatedRoute } from '@angular/router';
 import { MediaService } from '../media.service';
 import { ArtworkService } from '../artwork.service';
 import { PlayerService } from '../player.service';
@@ -48,14 +48,17 @@ export class HomePage implements OnInit {
     private artworkService: ArtworkService,
     private playerService: PlayerService,
     private activityIndicatorService: ActivityIndicatorService,
-    private router: Router
+    private router: Router,
+    private activatedRoute: ActivatedRoute
   ) {}
 
   ngOnInit() {
     this.mediaService.setCategory('audiobook');
 
-    this.mediaService.getNetworkObservable()
-        .subscribe((network) => this.network = network);
+    this.activatedRoute.data.subscribe((network) => this.network = network);
+
+    // this.mediaService.getNetworkObservable()
+    //     .subscribe((network) => this.network = network);
     
     //this.mediaService.updateNetwork();
     
