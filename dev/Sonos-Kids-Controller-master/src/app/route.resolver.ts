@@ -9,9 +9,10 @@ export class RouteResolver implements Resolve<any> {
     constructor(
         private mediaService: MediaService
     ) {}
-    
+
     resolve() {
         console.log('Route Resolve');
+        console.log(this.mediaService.getNetworkObservable());
         return this.mediaService.getNetworkObservable();
     }
 }
