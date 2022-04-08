@@ -42,7 +42,7 @@ export class MediaService {
   }
 
   getCurrentSpotify = (): Observable<CURRENTSPOTIFY> =>  {
-    const url = (environment.production) ? 'http://192.168.20.52:5005/state' : 'http://localhost:5005/state';
+    const url = (environment.production) ? 'http://192.168.20.52:5005/state' : 'http://192.168.20.52:5005/state';
     return this.http.get<CURRENTSPOTIFY>(url);
 }
 
