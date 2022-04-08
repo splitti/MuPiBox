@@ -322,8 +322,11 @@ exec 3>${LOG}
 	sudo /usr/bin/sed -i 's/session    optional   pam_lastlog.so/session    optional   pam_lastlog.so/g' /etc/pam.d/login >&3 2>&3
 	sudo /usr/bin/sed -i 's/ExecStart\=-\/sbin\/agetty -a dietpi -J \%I \$TERM/ExecStart\=-\/sbin\/agetty --skip-login --noclear --noissue --login-options \"-f dietpi\" \%I \$TERM/g' /etc/systemd/system/getty@tty1.service.d/dietpi-autologin.conf >&3 2>&3
 	#suggest_gpu_mem=76 >&3 2>&3
-	sudo /boot/dietpi/func/dietpi-set_hardware gpumemsplit 64 >&3 2>&3
+	sudo /boot/dietpi/func/dietpi-set_hardware gpumemsplit 128 >&3 2>&3
 	sudo /boot/dietpi/func/dietpi-set_hardware headless 0 >&3 2>&3
+	sudo /boot/dietpi/func/dietpi-set_hardware rpi-opengl disable >&3 2>&3
+	sudo su - -c ". /boot/dietpi/func/dietpi-globals && G_CHECK_ROOT_USER && G_CHECK_ROOTFS_RW && G_INIT && G_CONFIG_INJECT 'framebuffer_width=' \"framebuffer_width=800\" /boot/config.txt" >&3 2>&3
+	sudo su - -c ". /boot/dietpi/func/dietpi-globals && G_CHECK_ROOT_USER && G_CHECK_ROOTFS_RW && G_INIT && G_CONFIG_INJECT 'framebuffer_height=' \"framebuffer_height=480\" /boot/config.txt" >&3 2>&3
 
 	if grep -q '^initramfs initramfs.img' /boot/config.txt; then
 	  echo -e "initramfs initramfs.img already set"
