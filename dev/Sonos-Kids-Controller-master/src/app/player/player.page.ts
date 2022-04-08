@@ -4,6 +4,9 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { ArtworkService } from '../artwork.service';
 import { PlayerService, PlayerCmds } from '../player.service';
 import { Media } from '../media';
+import { MediaService } from '../media.service';
+import { CURRENTSPOTIFY } from '../current.spotify';
+import { Observable } from 'rxjs';
 
 @Component({
   selector: 'app-player',
@@ -15,8 +18,11 @@ export class PlayerPage implements OnInit {
   media: Media;
   cover = '';
   playing = true;
+  currentPlayedSpotify: Observable<CURRENTSPOTIFY>;
+  //currentPlayedLocal: Observable<Network>;
 
   constructor(
+    private mediaService: MediaService,
     private route: ActivatedRoute,
     private router: Router,
     private artworkService: ArtworkService,
@@ -30,22 +36,20 @@ export class PlayerPage implements OnInit {
   }
 
   ngOnInit() {
+    this.currentPlayedSpotify = this.mediaService.getCurrentSpotify();
     this.artworkService.getArtwork(this.media).subscribe(url => {
       this.cover = url;
     });
+    console.log(this.currentPlayedSpotify);
   }
 
   ionViewWillEnter() {
-    // if (this.media) {
-    //   this.playerService.sendCmd(PlayerCmds.CLEARQUEUE);
-
-    //   window.setTimeout(() => {
-         this.playerService.playMedia(this.media);
-    //   }, 1000);
-    // }
+    this.playerService.playMedia(this.media);
+    console.log(this.currentPlayedSpotify);
   }
 
   ionViewWillLeave() {
+    console.log(this.currentPlayedSpotify);
     this.playerService.sendCmd(PlayerCmds.STOP);
   }
 
@@ -64,6 +68,7 @@ export class PlayerPage implements OnInit {
       this.playing = true;
       this.playerService.sendCmd(PlayerCmds.PREVIOUS);
     }
+    console.log(this.currentPlayedSpotify);
   }
 
   skipNext() {
@@ -73,6 +78,7 @@ export class PlayerPage implements OnInit {
       this.playing = true;
       this.playerService.sendCmd(PlayerCmds.NEXT);
     }
+    console.log(this.currentPlayedSpotify);
   }
 
   playPause() {
@@ -87,9 +93,11 @@ export class PlayerPage implements OnInit {
 
   seekForward() {
     this.playerService.sendCmd(PlayerCmds.SEEKFORWARD);
+    console.log(this.currentPlayedSpotify);
   }
 
   seekBack() {
     this.playerService.sendCmd(PlayerCmds.SEEKBACK);
+    console.log(this.currentPlayedSpotify);
   }
 }

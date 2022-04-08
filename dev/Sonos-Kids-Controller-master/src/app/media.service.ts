@@ -8,6 +8,7 @@ import { Media } from './media';
 import { Artist } from './artist';
 import { Network } from "./network";
 import { WLAN } from './wlan';
+import { CURRENTSPOTIFY } from './current.spotify';
 
 @Injectable({
   providedIn: 'root'
@@ -39,6 +40,11 @@ export class MediaService {
       const url = (environment.production) ? '../api/network' : 'http://localhost:8200/api/network';
       return this.http.get<Network>(url);
   }
+
+  getCurrentSpotify = (): Observable<CURRENTSPOTIFY> =>  {
+    const url = (environment.production) ? '../state' : 'http://localhost:5005/state';
+    return this.http.get<CURRENTSPOTIFY>(url);
+}
 
   updateNetwork() {
     const url = (environment.production) ? '../api/network' : 'http://localhost:8200/api/network';

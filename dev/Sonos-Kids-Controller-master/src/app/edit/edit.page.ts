@@ -4,7 +4,7 @@ import { AlertController } from '@ionic/angular';
 import { MediaService } from '../media.service';
 import { Media } from '../media';
 import { Network } from "../network";
-import {Observable} from "rxjs";
+import { Observable } from "rxjs";
 
 @Component({
   selector: 'app-edit',

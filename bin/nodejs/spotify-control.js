@@ -9,7 +9,8 @@ const createPlayer = require('./../mplayer-wrapper');
 const googleTTS = require('./../google-tts');
 const fs = require('fs');
 const childProcess = require("child_process");
-const muPiBoxConfig = require('./config/mupiboxconfig.json');
+const muPiBoxConfig = require('./config/mupiboxconfig.json'); //not sure it is needed
+const currentMetaFile = require('./../Sonos-Kids-Controller-master/server/config/currentmeta.json');
 
   /*set up express router and set headers for cross origin requests*/
 const app = express();
@@ -44,6 +45,17 @@ var currentPlayer = '';
 var playing = false;
 var volumeStart = 99;
 var	playerstate;
+var currentMeta = {
+  player: "spotify/local",
+  queryName: "",
+  currentTrack: "",
+  queryTrackNr: "",
+  query: [
+    ""
+  ],
+  progressTime: "",
+  volume: ""
+};
 
 function writeplayerstatePlay(){
 	playerstate = 'play';
@@ -64,6 +76,17 @@ function writeplayerstatePause(){
 			return
 		}
 		log.debug("[Spotify Control] Write play to /tmp/playerstate");
+	})
+}
+
+function writecurrentMeta(){
+	var json = JSON.stringify(currentMeta);
+	fs.writeFile(currentMetaFile, json, err => {
+		if (err) {
+			console.error(err)
+			return
+		}
+		log.debug("[Spotify Control] Write currentMeta to " + currentMetaFile);
 	})
 }
 

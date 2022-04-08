@@ -1,6 +1,9 @@
 export interface CURRENTMETA {
+    player?: string;
     currentTrack?: string;
-    queryTracks?: string;
+    queryName?: string;
+    queryTrackNr?: string;
+    query?: string[];
     progressTime?: string;
     volume?: string;
 }
