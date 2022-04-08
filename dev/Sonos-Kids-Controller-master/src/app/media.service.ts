@@ -8,6 +8,7 @@ import { Media } from './media';
 import { Artist } from './artist';
 import { Network } from "./network";
 import { WLAN } from './wlan';
+import { CURRENTSPOTIFY } from './current.spotify';
 
 @Injectable({
   providedIn: 'root'
@@ -21,6 +22,7 @@ export class MediaService {
   private rawMediaSubject = new Subject<Media[]>();
   private wlanSubject = new Subject<WLAN[]>();
   private networkSubject = new Subject<Network>();
+  private CURRENTSPOTIFYSubject = new Subject<CURRENTSPOTIFY>();
 
   private artistSubject = new Subject<Media[]>();
   private mediaSubject = new Subject<Media[]>();
@@ -44,6 +46,18 @@ export class MediaService {
     const url = (environment.production) ? '../api/network' : 'http://localhost:8200/api/network';
     this.http.get<Network>(url).subscribe(network => {
         this.networkSubject.next(network);
+    });
+  }
+
+  getCurrentSpotify = (): Observable<CURRENTSPOTIFY> =>  {
+    const url = 'http://192.168.20.52:5005/state';//Should be changed after testing
+    return this.http.get<CURRENTSPOTIFY>(url);
+  }
+
+  updateCurrentSpotify() {
+    const url = 'http://192.168.20.52:5005/state';//Should be changed after testing
+    this.http.get<CURRENTSPOTIFY>(url).subscribe(spotify => {
+        this.CURRENTSPOTIFYSubject.next(spotify);
     });
   }
 
@@ -96,8 +110,6 @@ export class MediaService {
   // Get the media data for the current category from the server
   private updateMedia() {
     const url = (environment.production) ? '../api/data' : 'http://localhost:8200/api/data';
-
-    console.log(this.connection);
 
     return this.http.get<Media[]>(url).pipe(
       map(items => { // Filter to get only items for the chosen category

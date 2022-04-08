@@ -1,6 +1,8 @@
 {
-    "currentTrack": "01",
-    "queryTracks": "10",
+    "player": "spotify/local",
+    "currentTrack": "01_Tracl",
+    "queryName": "Playlist",
+    "queryTrackNr": "10",
     "query": [
         "Track 01",
         "Track 02",
