@@ -11,7 +11,6 @@ export class RouteResolver implements Resolve<any> {
     ) {}
 
     resolve() {
-        console.log(this.mediaService.getNetworkObservable());
         return this.mediaService.getNetworkObservable();
     }
 }
