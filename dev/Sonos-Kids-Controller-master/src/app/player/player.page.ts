@@ -71,7 +71,8 @@ export class PlayerPage implements OnInit {
       this.playing = true;
       this.playerService.sendCmd(PlayerCmds.PREVIOUS);
     }
-    console.log(this.currentPlayedSpotify);
+    console.log(this.currentPlayedSpotify.item.name);
+    console.log(this.currentPlayedSpotify.item.track_number);
   }
 
   skipNext() {

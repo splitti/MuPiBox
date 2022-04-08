@@ -1,7 +1,7 @@
 export interface CURRENTSPOTIFY {
     progress_ms?: number;
-    item: {
-        album: {
+    item?: {
+        album?: {
             id?: string;
             name?: string;
             total_tracks?: number;
