@@ -5,7 +5,7 @@
 
 MUPIBOX_CONFIG="/etc/mupibox/mupiboxconfig.json"
 SONOS_CONFIG="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json"
-SONOS_NETWORK="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/network.json"
+#SONOS_NETWORK="/tmp/network.json"
 SPOTIFYCONTROLLER_CONFIG="/home/dietpi/.mupibox/spotifycontroller-main/config/config.json"
 SPOTIFYD_CONFIG="/etc/spotifyd/spotifyd.conf"
 DISPLAY_STANDBY="/etc/X11/xorg.conf.d/98-dietpi-disable_dpms.conf"
@@ -47,9 +47,9 @@ hostname=$(/usr/bin/jq -r .mupibox.host ${MUPIBOX_CONFIG})
 timeout=$(/usr/bin/jq -r .timeout.idleDisplayOff ${MUPIBOX_CONFIG})
 /usr/bin/sed -i 's/.*Option \"BlankTime\".*/    Option \"BlankTime\" '\"${timeout}\"'/g' ${DISPLAY_STANDBY}
 
-currentIP=$(hostname -I)
-/usr/bin/cat <<< $(/usr/bin/jq --arg v "${currentIP}" '.ip = $v' ${SONOS_NETWORK}) >  ${SONOS_NETWORK}
-currentHost=$(hostname)
-/usr/bin/cat <<< $(/usr/bin/jq --arg v "${currentHost}" '.host = $v' ${SONOS_NETWORK}) >  ${SONOS_NETWORK}
+#currentIP=$(hostname -I)
+#/usr/bin/cat <<< $(/usr/bin/jq --arg v "${currentIP}" '.ip = $v' ${SONOS_NETWORK}) >  ${SONOS_NETWORK}
+#currentHost=$(hostname)
+#/usr/bin/cat <<< $(/usr/bin/jq --arg v "${currentHost}" '.host = $v' ${SONOS_NETWORK}) >  ${SONOS_NETWORK}
 
 echo "Setting Update finished"
