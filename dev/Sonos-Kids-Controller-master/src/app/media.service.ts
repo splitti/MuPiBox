@@ -22,6 +22,7 @@ export class MediaService {
   private rawMediaSubject = new Subject<Media[]>();
   private wlanSubject = new Subject<WLAN[]>();
   private networkSubject = new Subject<Network>();
+  private CURRENTSPOTIFYSubject = new Subject<CURRENTSPOTIFY>();
 
   private artistSubject = new Subject<Media[]>();
   private mediaSubject = new Subject<Media[]>();
@@ -41,15 +42,22 @@ export class MediaService {
       return this.http.get<Network>(url);
   }
 
-  getCurrentSpotify = (): Observable<CURRENTSPOTIFY> =>  {
-    const url = 'http://192.168.20.52:5005/state';
-    return this.http.get<CURRENTSPOTIFY>(url);
-}
-
   updateNetwork() {
     const url = (environment.production) ? '../api/network' : 'http://localhost:8200/api/network';
     this.http.get<Network>(url).subscribe(network => {
         this.networkSubject.next(network);
+    });
+  }
+
+  getCurrentSpotify = (): Observable<CURRENTSPOTIFY> =>  {
+    const url = 'http://192.168.20.52:5005/state';//Should be changed after testing
+    return this.http.get<CURRENTSPOTIFY>(url);
+  }
+
+  updateCurrentSpotify() {
+    const url = 'http://192.168.20.52:5005/state';//Should be changed after testing
+    this.http.get<CURRENTSPOTIFY>(url).subscribe(spotify => {
+        this.CURRENTSPOTIFYSubject.next(spotify);
     });
   }
 
