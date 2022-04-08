@@ -21,4 +21,4 @@ sudo /bin/echo 1 > /sys/class/gpio/gpio${LED_PIN}/value
 #	sleep 1
 #done
 
-sudo /usr/local/bin/mupibox/./get_network.sh
+#sudo /usr/local/bin/mupibox/./get_network.sh

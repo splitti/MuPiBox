@@ -1,0 +1,20 @@
+pcm.hifiberry {
+type softvol
+slave.pcm "plughw:1"
+control.name "Master"
+control.card 1
+}
+
+pcm.!default {
+type plug
+slave {
+pcm "hifiberry"
+channels 2
+}
+# Copy both input channels to output channel 0 (Left) but half power.
+ttable.0.0 0.5
+ttable.1.0 0.5
+# Send everything to output channel 1 (Right) with full power (experimental).
+ttable.0.1 1
+ttable.1.1 1
+}

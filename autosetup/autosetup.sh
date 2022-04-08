@@ -307,8 +307,6 @@ exec 3>${LOG}
 
 	echo -e "XXX\n90\nInstall Chromium-Kiosk... \nXXX"	
 
-	#suggest_gpu_mem=76 >&3 2>&3
-	sudo /boot/dietpi/func/dietpi-set_hardware gpumemsplit 76 >&3 2>&3
 	echo -ne '\n' | sudo /boot/dietpi/dietpi-software install 113 >&3 2>&3
 	sudo /boot/dietpi/dietpi-autostart 11 >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/chromium-autostart.sh -O /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
@@ -323,6 +321,9 @@ exec 3>${LOG}
 	sudo /usr/bin/sed -i 's/session    optional   pam_motd.so noupdate/#session    optional   pam_motd.so noupdate/g' /etc/pam.d/login >&3 2>&3
 	sudo /usr/bin/sed -i 's/session    optional   pam_lastlog.so/session    optional   pam_lastlog.so/g' /etc/pam.d/login >&3 2>&3
 	sudo /usr/bin/sed -i 's/ExecStart\=-\/sbin\/agetty -a dietpi -J \%I \$TERM/ExecStart\=-\/sbin\/agetty --skip-login --noclear --noissue --login-options \"-f dietpi\" \%I \$TERM/g' /etc/systemd/system/getty@tty1.service.d/dietpi-autologin.conf >&3 2>&3
+	#suggest_gpu_mem=76 >&3 2>&3
+	sudo /boot/dietpi/func/dietpi-set_hardware gpumemsplit 64 >&3 2>&3
+	sudo /boot/dietpi/func/dietpi-set_hardware headless 0 >&3 2>&3
 
 	if grep -q '^initramfs initramfs.img' /boot/config.txt; then
 	  echo -e "initramfs initramfs.img already set"
