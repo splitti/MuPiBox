@@ -14,6 +14,7 @@ sleep 10
 
 CONFIG="/etc/mupibox/mupiboxconfig.json"
 TRIGGER_PIN=$(/usr/bin/jq -r .shim.triggerPin ${CONFIG})
+PRESS_DELAY=$(/usr/bin/jq -r .timeout.pressDelay ${CONFIG})
 
 # Check if OnOff-Button is pressed
 /bin/echo ${TRIGGER_PIN} > /sys/class/gpio/export
@@ -25,6 +26,10 @@ power=$(cat /sys/class/gpio/gpio${TRIGGER_PIN}/value)
 
 until [ $power = $switchtype ]; do
     power=$(cat /sys/class/gpio/gpio${TRIGGER_PIN}/value)
+	if [ $power = $switchtype ]; then
+		sleep ${PRESS_DELAY}
+		power=$(cat /sys/class/gpio/gpio${TRIGGER_PIN}/value)
+	fi
     sleep 1
 done
 
