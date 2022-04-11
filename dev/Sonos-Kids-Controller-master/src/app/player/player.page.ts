@@ -6,7 +6,6 @@ import { PlayerService, PlayerCmds } from '../player.service';
 import { Media } from '../media';
 import { MediaService } from '../media.service';
 import { CURRENTSPOTIFY } from '../current.spotify';
-import { Observable } from 'rxjs';
 
 @Component({
   selector: 'app-player',
@@ -36,23 +35,19 @@ export class PlayerPage implements OnInit {
   }
 
   ngOnInit() {
-    //this.currentPlayedSpotify = this.mediaService.getCurrentSpotify();
     this.mediaService.getCurrentSpotify().subscribe(spotify => {
       this.currentPlayedSpotify = spotify;
     });
     this.artworkService.getArtwork(this.media).subscribe(url => {
       this.cover = url;
     });
-    console.log(this.currentPlayedSpotify);
   }
 
   ionViewWillEnter() {
     this.playerService.playMedia(this.media);
-    console.log(this.currentPlayedSpotify);
   }
 
   ionViewWillLeave() {
-    console.log(this.currentPlayedSpotify);
     this.playerService.sendCmd(PlayerCmds.STOP);
   }
 
@@ -71,9 +66,6 @@ export class PlayerPage implements OnInit {
       this.playing = true;
       this.playerService.sendCmd(PlayerCmds.PREVIOUS);
     }
-    this.mediaService.updateCurrentSpotify();
-    console.log(this.currentPlayedSpotify.item.name);
-    console.log(this.currentPlayedSpotify.item.track_number);
   }
 
   skipNext() {
@@ -83,7 +75,6 @@ export class PlayerPage implements OnInit {
       this.playing = true;
       this.playerService.sendCmd(PlayerCmds.NEXT);
     }
-    console.log(this.currentPlayedSpotify);
   }
 
   playPause() {
@@ -98,11 +89,9 @@ export class PlayerPage implements OnInit {
 
   seekForward() {
     this.playerService.sendCmd(PlayerCmds.SEEKFORWARD);
-    console.log(this.currentPlayedSpotify);
   }
 
   seekBack() {
     this.playerService.sendCmd(PlayerCmds.SEEKBACK);
-    console.log(this.currentPlayedSpotify);
   }
 }

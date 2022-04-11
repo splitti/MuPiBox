@@ -6,9 +6,9 @@ const routes: Routes = [
   {
     path: 'home',
     loadChildren: () => import('./home/home.module').then( m => m.HomePageModule),
-    resolve: {
-      data: RouteResolver
-    }
+    // resolve: {
+    //   data: RouteResolver
+    // }
   },
   {
     path: '',
