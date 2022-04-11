@@ -92,7 +92,7 @@ exec 3>${LOG}
 	# Sources
 	cd ~/.mupibox >&3 2>&3
 	git clone https://github.com/derhuerst/mplayer-wrapper >&3 2>&3
-	wget https://github.com/splitti/MuPiBox/raw/main/development_prepare/customize/mplayer-wrapper/index.js -O ~/.mupibox/mplayer-wrapper/index.js >&3 2>&3
+	wget https://github.com/splitti/MuPiBox/raw/main/dev/customize/mplayer-wrapper/index.js -O ~/.mupibox/mplayer-wrapper/index.js >&3 2>&3
 	cd ~/.mupibox/mplayer-wrapper >&3 2>&3
 	npm install >&3 2>&3
 
