@@ -7,7 +7,7 @@ import { PlayerService } from '../player.service';
 import { ActivityIndicatorService } from '../activity-indicator.service';
 import { Artist } from '../artist';
 import { Media } from '../media';
-import { Network } from "../network";
+//import { Network } from "../network";
 
 @Component({
   selector: 'app-home',
@@ -22,7 +22,7 @@ export class HomePage implements OnInit {
 
   artists: Artist[] = [];
   media: Media[] = [];
-  network: Network;
+  //network: Network;
   covers = {};
   activityIndicatorVisible = false;
   editButtonclickCount = 0;
@@ -54,9 +54,9 @@ export class HomePage implements OnInit {
   ngOnInit() {
     this.mediaService.setCategory('audiobook');
 
-    this.activatedRoute.data.subscribe((data) => {
-      this.network = data.data;
-    });
+    // this.activatedRoute.data.subscribe((data) => {
+    //   this.network = data.data;
+    // });
     
     // Subscribe
     this.mediaService.getMedia().subscribe(media => {
@@ -119,18 +119,18 @@ export class HomePage implements OnInit {
     this.update();
   }
 
-  updateConnection() {
-    if(this.network?.onlinestate == "online"){
-      console.log("online");
-      this.mediaService.setConnection('true');
-    }else{
-      console.log("offline");
-      this.mediaService.setConnection('false');
-    }
-  }
+  // updateConnection() {
+  //   if(this.network?.onlinestate == "online"){
+  //     console.log("online");
+  //     this.mediaService.setConnection('true');
+  //   }else{
+  //     console.log("offline");
+  //     this.mediaService.setConnection('false');
+  //   }
+  // }
 
   update() {
-    this.updateConnection();
+    //this.updateConnection();
     if (this.category === 'audiobook' || this.category === 'music') {
       this.mediaService.publishArtists();
     } else {
