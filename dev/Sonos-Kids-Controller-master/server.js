@@ -16,6 +16,7 @@ var spotifyApi = new SpotifyWebApi({
 
 // Configuration
 const dataFile = './server/config/data.json';
+const activedataFile = './server/config/active_data.json';
 const networkFile = './server/config/network.json';
 const wlanFile = './server/config/wlan.json';
 
@@ -27,7 +28,7 @@ app.use(express.static(path.join(__dirname, 'www'))); // Static path to compiled
 
 // Routes
 app.get('/api/data', (req, res) => {
-    jsonfile.readFile(dataFile, (error, data) => {
+    jsonfile.readFile(activedataFile, (error, data) => {
         if (error) data = [];
         res.json(data);
     });
