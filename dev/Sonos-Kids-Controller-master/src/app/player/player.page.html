@@ -6,6 +6,9 @@
         <ion-title>
             {{media.title}}
         </ion-title>
+        <ion-title>
+            {{(currentPlayedSpotify | async)?.progress_ms}}
+        </ion-title>
     </ion-toolbar>
 </ion-header>
 
