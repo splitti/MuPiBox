@@ -1,4 +1,4 @@
-export interface CURRENTSPOTIFY {
+export interface CurrentSpotify {
     progress_ms?: number;
     item?: {
         album?: {

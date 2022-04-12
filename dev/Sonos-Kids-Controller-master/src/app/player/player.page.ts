@@ -5,7 +5,7 @@ import { ArtworkService } from '../artwork.service';
 import { PlayerService, PlayerCmds } from '../player.service';
 import { Media } from '../media';
 import { MediaService } from '../media.service';
-import { CURRENTSPOTIFY } from '../current.spotify';
+import { CurrentSpotify } from '../current.spotify';
 import { Observable } from 'rxjs';
 
 @Component({
@@ -18,7 +18,8 @@ export class PlayerPage implements OnInit {
   media: Media;
   cover = '';
   playing = true;
-  currentPlayedSpotify: Observable<CURRENTSPOTIFY>;
+  public readonly spotify$: Observable<CurrentSpotify>;
+  //currentPlayedSpotify: Observable<CURRENTSPOTIFY>;
   //currentPlayedLocal: Observable<Network>;
 
   constructor(
@@ -28,6 +29,7 @@ export class PlayerPage implements OnInit {
     private artworkService: ArtworkService,
     private playerService: PlayerService
   ) {
+    this.spotify$ = this.mediaService.current$;
     this.route.queryParams.subscribe(params => {
       if (this.router.getCurrentNavigation().extras.state) {
         this.media = this.router.getCurrentNavigation().extras.state.media;
@@ -39,16 +41,16 @@ export class PlayerPage implements OnInit {
     // this.mediaService.getCurrentSpotify().subscribe(spotify: CURRENTSPOTIFY => {
     //   this.currentPlayedSpotify = spotify;
     // });
-    setInterval(this.subscribtion, 1000);
+    //setInterval(this.subscribtion, 1000);
     
     this.artworkService.getArtwork(this.media).subscribe(url => {
       this.cover = url;
     });
   }
 
-  subscribtion(){
-    this.currentPlayedSpotify = this.mediaService.getCurrentSpotify();
-  }
+  // subscribtion(){
+  //   this.currentPlayedSpotify = this.mediaService.getCurrentSpotify();
+  // }
 
   ionViewWillEnter() {
     this.playerService.playMedia(this.media);

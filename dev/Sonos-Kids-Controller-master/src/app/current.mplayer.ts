@@ -1,4 +1,4 @@
-export interface CURRENTMETA {
+export interface CurrentMPlayer {
     player?: string;
     currentTrack?: string;
     queryName?: string;

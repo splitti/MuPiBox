@@ -1,14 +1,14 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, from, of, iif, Subject } from 'rxjs';
-import { map, mergeMap, tap, toArray, mergeAll } from 'rxjs/operators';
+import { Observable, from, of, iif, Subject, interval } from 'rxjs';
+import { map, mergeMap, tap, toArray, mergeAll, switchMap, shareReplay } from 'rxjs/operators';
 import { environment } from '../environments/environment';
 import { SpotifyService } from './spotify.service';
 import { Media } from './media';
 import { Artist } from './artist';
 import { Network } from "./network";
 import { WLAN } from './wlan';
-import { CURRENTSPOTIFY } from './current.spotify';
+import { CurrentSpotify } from './current.spotify';
 
 @Injectable({
   providedIn: 'root'
@@ -16,6 +16,7 @@ import { CURRENTSPOTIFY } from './current.spotify';
 export class MediaService {
 
   private category = 'audiobook';
+  public readonly current$: Observable<CurrentSpotify>;
   // private type = 'library';
   // private connection = 'false';
 
@@ -30,7 +31,14 @@ export class MediaService {
   constructor(
     private http: HttpClient,
     private spotifyService: SpotifyService,
-  ) { }
+  ) {
+    this.current$ = interval(1000).pipe( // Once a second after subscribe, way too frequent!
+      switchMap((): Observable<CurrentSpotify> => this.http.get<CurrentSpotify>('http://192.168.20.52:5005/state')),
+      // Replay the most recent (bufferSize) emission on each subscription
+      // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
+      shareReplay({ bufferSize: 1, refCount: false }),
+    );
+   }
 
   // --------------------------------------------
   // Handling of RAW media entries from data.json
@@ -48,9 +56,9 @@ export class MediaService {
     });
   }
 
-  getCurrentSpotify = (): Observable<CURRENTSPOTIFY> =>  {
+  getCurrentSpotify = (): Observable<CurrentSpotify> =>  {
     const url = 'http://192.168.20.52:5005/state';//Should be changed after testing
-    return this.http.get<CURRENTSPOTIFY>(url);
+    return this.http.get<CurrentSpotify>(url);
   }
 
   getRawMediaObservable = ():Observable<Record<any, any>[]> => {
