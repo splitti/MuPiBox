@@ -1,4 +1,3 @@
-
 #!/bin/bash
 #
 # Get Network-Data and create Online / Offline Data.json for showing Media in MuPiBox
@@ -10,21 +9,32 @@ CONFIG="/etc/mupibox/mupiboxconfig.json"
 NETWORKCONFIG="/tmp/network.json"
 #PLAYERSTATE=$(cat /tmp/playerstate)
 
-if [[ ! -f ${NETWORKCONFIG} ]]; then
-        sudo echo "{}" > ${NETWORKCONFIG}
-        sudo chown dietpi:dietpi ${NETWORKCONFIG}
-        sudo chmod 777 ${NETWORKCONFIG}
+if [ ! -f ${DATA_FILE} ]; then
+        echo -n "[]" > ${DATA_FILE}
+        chown dietpi:dietpi ${DATA_FILE}
+fi
+
+if [ ! -f ${NETWORKCONFIG} ]; then
+        echo -n "[]" ${NETWORKCONFIG}
+        chown dietpi:dietpi ${NETWORKCONFIG}
+        chmod 777 ${NETWORKCONFIG}
         OLD_ONLINESTATE="starting"
+        /usr/bin/cat <<< $(/usr/bin/jq -n --arg v "starting" '.onlinestate = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
 else
         OLD_ONLINESTATE=$(/usr/bin/jq -r .onlinestate ${NETWORKCONFIG})
 fi
 
-if [[ ! -f ${OFFLINE_FILE} ]]; then
-        sudo echo "{}" > ${OFFLINE_FILE}
-        sudo chown dietpi:dietpi ${OFFLINE_FILE}
-        echo $(jq '.[] | select(.type != "spotify") | select(.type != "tunein")' < ${DATA_FILE}) > ${OFFLINE_FILE}
+if [ ! -f ${OFFLINE_FILE} ]; then
+        echo -n "[" > ${OFFLINE_FILE}
+        echo -n $(jq '.[] | select(.type != "spotify") | select(.type != "tunein")' < ${DATA_FILE}) >> ${OFFLINE_FILE}
+        echo -n "]" >> ${OFFLINE_FILE}
+        sed -i 's/} {/}, {/g' ${OFFLINE_FILE}
+        chown dietpi:dietpi ${OFFLINE_FILE}
 elif [ $(stat --format='%Y' "${DATA_FILE}") -gt $(stat --format='%Y' "${OFFLINE_FILE}") ]; then
-        echo $(jq '.[] | select(.type != "spotify") | select(.type != "tunein")' < ${DATA_FILE}) > ${OFFLINE_FILE}
+        echo -n "[" > ${OFFLINE_FILE}
+        echo -n $(jq '.[] | select(.type != "spotify") | select(.type != "tunein")' < ${DATA_FILE}) >> ${OFFLINE_FILE}
+        echo -n "]" >> ${OFFLINE_FILE}
+        sed -i 's/} {/}, {/g' ${OFFLINE_FILE}
 fi
 
 GW=$(ip route show 0.0.0.0/0 dev wlan0 | cut -d\  -f3)
@@ -52,16 +62,16 @@ wget -q --spider http://google.com
 if [ $? -eq 0 ]; then
                 ONLINESTATE="online"
                 if [[ ${OLD_ONLINESTATE} != "online" ]]; then
-                        sudo rm ${ACTIVE_FILE}
-                        sudo ln -s ${DATA_FILE} ${ACTIVE_FILE}
-                        sudo chown dietpi:dietpi ${ACTIVE_FILE}
+                        rm ${ACTIVE_FILE}
+                        ln -s ${DATA_FILE} ${ACTIVE_FILE}
+                        chown dietpi:dietpi ${ACTIVE_FILE}
                 fi
         else
                 ONLINESTATE="offline"
                 if [[ ${OLD_ONLINESTATE} != "offline" ]]; then
-                        sudo rm ${ACTIVE_FILE}
-                        sudo ln -s ${OFFLINE_FILE} ${ACTIVE_FILE}
-                        sudo chown dietpi:dietpi ${ACTIVE_FILE}
+                        rm ${ACTIVE_FILE}
+                        ln -s ${OFFLINE_FILE} ${ACTIVE_FILE}
+                        chown dietpi:dietpi ${ACTIVE_FILE}
                 fi
 fi
 
