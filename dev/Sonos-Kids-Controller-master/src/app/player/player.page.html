@@ -6,9 +6,9 @@
         <ion-title>
             {{media.title}}
         </ion-title>
-        <!-- <ion-title>
+        <ion-title>
             {{(currentPlayedSpotify | async)?.item.track_number}}
-        </ion-title> -->
+        </ion-title>
     </ion-toolbar>
 </ion-header>
 
@@ -23,12 +23,6 @@
 
             <ion-col size="6">
                 <ion-grid>
-                    <ion-row class="play-controls">
-                        <ion-col size="12" class="ion-text-center">
-                            {{(currentPlayedSpotify | async)?.item.track_number}}
-                        </ion-col>
-                    </ion-row>
-
                     <ion-row class="play-controls">
                         <ion-col size="4" class="ion-text-center">
                             <ion-button (click)="volDown()" color="light">
