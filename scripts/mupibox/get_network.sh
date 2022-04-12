@@ -1,4 +1,3 @@
-
 #!/bin/bash
 #
 # Get Network-Data and create Online / Offline Data.json for showing Media in MuPiBox
@@ -16,7 +15,7 @@ if [ ! -f ${DATA_FILE} ]; then
 fi
 
 if [ ! -f ${NETWORKCONFIG} ]; then
-        echo -n "[]" ${NETWORKCONFIG}
+        sudo echo -n "[]" ${NETWORKCONFIG}
         chown dietpi:dietpi ${NETWORKCONFIG}
         chmod 777 ${NETWORKCONFIG}
         OLD_ONLINESTATE="starting"
