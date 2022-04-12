@@ -18,8 +18,8 @@ export class PlayerPage implements OnInit {
   media: Media;
   cover = '';
   playing = true;
-  currentPlayedSpotify: Observable<CURRENTSPOTIFY>;
-  //currentPlayedLocal: Observable<Network>;
+  currentPlayedSpotify: CURRENTSPOTIFY;
+  //currentPlayedLocal: Observable<CURRENTSPOTIFY>;
 
   constructor(
     private mediaService: MediaService,
@@ -36,10 +36,10 @@ export class PlayerPage implements OnInit {
   }
 
   ngOnInit() {
-    // this.mediaService.getCurrentSpotify().subscribe(spotify: CURRENTSPOTIFY => {
-    //   this.currentPlayedSpotify = spotify;
-    // });
-    this.currentPlayedSpotify = this.mediaService.getCurrentSpotify();
+    this.mediaService.getCurrentSpotify().subscribe((spotify: CURRENTSPOTIFY) => {
+      this.currentPlayedSpotify = spotify;
+    });
+    //this.currentPlayedSpotify = this.mediaService.getCurrentSpotify();
     this.artworkService.getArtwork(this.media).subscribe(url => {
       this.cover = url;
     });
