@@ -16,8 +16,8 @@ import { CURRENTSPOTIFY } from './current.spotify';
 export class MediaService {
 
   private category = 'audiobook';
-  private type = 'library';
-  private connection = 'false';
+  // private type = 'library';
+  // private connection = 'false';
 
   private rawMediaSubject = new Subject<Media[]>();
   private wlanSubject = new Subject<WLAN[]>();
@@ -107,9 +107,9 @@ export class MediaService {
       map(items => { // Filter to get only items for the chosen category
         items.forEach(item => item.category = (item.category === undefined) ? 'audiobook' : item.category); // default category
         items = items.filter(item => item.category === this.category);
-        if(this.connection === 'false'){
-          items = items.filter(item => item.type === this.type);
-        }
+        // if(this.connection === 'false'){
+        //   items = items.filter(item => item.type === this.type);
+        // }
         return items;
       }),
       mergeMap(items => from(items)), // parallel calls for each item
@@ -258,7 +258,7 @@ export class MediaService {
     this.category = category;
   }
 
-  setConnection(connection: string) {
-    this.connection = connection;
-  }
+  // setConnection(connection: string) {
+  //   this.connection = connection;
+  // }
 }
