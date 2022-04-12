@@ -36,7 +36,7 @@ export class PlayerPage implements OnInit {
   }
 
   ngOnInit() {
-    // this.mediaService.getCurrentSpotify().subscribe(spotify => {
+    // this.mediaService.getCurrentSpotify().subscribe(spotify: CURRENTSPOTIFY => {
     //   this.currentPlayedSpotify = spotify;
     // });
     this.currentPlayedSpotify = this.mediaService.getCurrentSpotify();
