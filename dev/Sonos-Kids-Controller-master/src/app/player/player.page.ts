@@ -29,16 +29,12 @@ export class PlayerPage implements OnInit {
     private artworkService: ArtworkService,
     private playerService: PlayerService
   ) {
+    this.spotify$ = this.mediaService.current$;
     this.route.queryParams.subscribe(params => {
       if (this.router.getCurrentNavigation().extras.state) {
         this.media = this.router.getCurrentNavigation().extras.state.media;
       }
     });
-    if(this.media.type === 'spotify'){
-      this.spotify$ = this.mediaService.current$;
-    }else if(this.media.type === 'library'){
-
-    }
   }
 
   ngOnInit() {
