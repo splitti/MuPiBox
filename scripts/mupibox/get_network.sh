@@ -1,3 +1,4 @@
+
 #!/bin/bash
 #
 # Get Network-Data and create Online / Offline Data.json for showing Media in MuPiBox
@@ -61,14 +62,20 @@ wget -q --spider http://google.com
 
 if [ $? -eq 0 ]; then
                 ONLINESTATE="online"
-                if [[ ${OLD_ONLINESTATE} != "online" ]]; then
+                if [ ! -f ${ACTIVE_FILE} ]; then
+                        ln -s ${DATA_FILE} ${ACTIVE_FILE}
+                        chown dietpi:dietpi ${ACTIVE_FILE}
+                elif [[ ${OLD_ONLINESTATE} != "online" ]]; then
                         rm ${ACTIVE_FILE}
                         ln -s ${DATA_FILE} ${ACTIVE_FILE}
                         chown dietpi:dietpi ${ACTIVE_FILE}
                 fi
         else
                 ONLINESTATE="offline"
-                if [[ ${OLD_ONLINESTATE} != "offline" ]]; then
+                if [ ! -f ${ACTIVE_FILE} ]; then
+                        ln -s ${OFFLINE_FILE} ${ACTIVE_FILE}
+                        chown dietpi:dietpi ${ACTIVE_FILE}
+                elif [[ ${OLD_ONLINESTATE} != "offline" ]]; then
                         rm ${ACTIVE_FILE}
                         ln -s ${OFFLINE_FILE} ${ACTIVE_FILE}
                         chown dietpi:dietpi ${ACTIVE_FILE}
