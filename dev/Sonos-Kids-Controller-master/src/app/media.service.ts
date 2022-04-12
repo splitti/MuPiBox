@@ -33,7 +33,7 @@ export class MediaService {
     private spotifyService: SpotifyService,
   ) {
     this.current$ = interval(1000).pipe( // Once a second after subscribe, way too frequent!
-      switchMap((): Observable<CurrentSpotify> => this.http.get<CurrentSpotify>('http://192.168.20.52:5005/state')),
+      switchMap((): Observable<CurrentSpotify> => this.http.get<CurrentSpotify>('http://localhost:5005/state')),
       // Replay the most recent (bufferSize) emission on each subscription
       // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
       shareReplay({ bufferSize: 1, refCount: false }),
