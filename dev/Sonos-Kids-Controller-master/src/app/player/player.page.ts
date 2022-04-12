@@ -6,8 +6,7 @@ import { PlayerService, PlayerCmds } from '../player.service';
 import { Media } from '../media';
 import { MediaService } from '../media.service';
 import { CURRENTSPOTIFY } from '../current.spotify';
-import { interval, Observable } from 'rxjs';
-import { takeWhile } from 'rxjs/operators';
+import { Observable } from 'rxjs';
 
 @Component({
   selector: 'app-player',
@@ -40,15 +39,15 @@ export class PlayerPage implements OnInit {
     // this.mediaService.getCurrentSpotify().subscribe(spotify: CURRENTSPOTIFY => {
     //   this.currentPlayedSpotify = spotify;
     // });
-    interval(100)
-    .pipe(takeWhile(() => !stop))
-    .subscribe(() => {
-      this.currentPlayedSpotify = this.mediaService.getCurrentSpotify();
-    });
-    //this.currentPlayedSpotify = this.mediaService.getCurrentSpotify();
+    setInterval(this.subscribtion, 1000);
+    
     this.artworkService.getArtwork(this.media).subscribe(url => {
       this.cover = url;
     });
+  }
+
+  subscribtion(){
+    this.currentPlayedSpotify = this.mediaService.getCurrentSpotify();
   }
 
   ionViewWillEnter() {
