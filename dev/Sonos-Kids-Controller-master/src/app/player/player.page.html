@@ -4,7 +4,10 @@
             <ion-back-button icon="arrow-back-outline" defaultHref="/medialist"></ion-back-button>
         </ion-buttons>
         <ion-title>
-            {{media.title}}
+            <div *ngIf="media.type ==='spotify'">{{(spotify$ | async)?.item.album.name}}</div>
+        </ion-title>
+        <ion-title>
+            <div *ngIf="media.type ==='spotify'">{{(spotify$ | async)?.item.name}}</div>
         </ion-title>
         <ion-title slot="end">
             <div *ngIf="media.type ==='spotify'">{{(spotify$ | async)?.item.track_number}}/{{(spotify$ | async)?.item.album.total_tracks}}</div>
