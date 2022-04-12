@@ -6,8 +6,8 @@
         <ion-title>
             {{media.title}}
         </ion-title>
-        <ion-title>
-            {{(spotify$ | async)?.item.track_number}}
+        <ion-title slot="end">
+            {{(spotify$ | async)?.item.track_number}}/{{(spotify$ | async)?.item.album.total_tracks}}
         </ion-title>
     </ion-toolbar>
 </ion-header>
