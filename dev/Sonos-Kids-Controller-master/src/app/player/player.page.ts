@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 
 import { ArtworkService } from '../artwork.service';
@@ -7,6 +7,7 @@ import { Media } from '../media';
 import { MediaService } from '../media.service';
 import { CurrentSpotify } from '../current.spotify';
 import { Observable } from 'rxjs';
+import { IonRange } from '@ionic/angular';
 
 @Component({
   selector: 'app-player',
@@ -14,13 +15,19 @@ import { Observable } from 'rxjs';
   styleUrls: ['./player.page.scss'],
 })
 export class PlayerPage implements OnInit {
+  @ViewChild("range", {static: false}) range: IonRange;
 
   media: Media;
   cover = '';
   playing = true;
+  currentPlayedSpotify: CurrentSpotify;
+  progress = 0;
+  // isTouched = false;
+  // currSecsText;
+  // durationText;
+  // currRangeTime;
+  // maxRangeValue;
   public readonly spotify$: Observable<CurrentSpotify>;
-  //currentPlayedSpotify: Observable<CURRENTSPOTIFY>;
-  //currentPlayedLocal: Observable<Network>;
 
   constructor(
     private mediaService: MediaService,
@@ -38,19 +45,46 @@ export class PlayerPage implements OnInit {
   }
 
   ngOnInit() {
-    // this.mediaService.getCurrentSpotify().subscribe(spotify: CURRENTSPOTIFY => {
-    //   this.currentPlayedSpotify = spotify;
-    // });
-    //setInterval(this.subscribtion, 1000);
+    this.mediaService.current$.subscribe(spotify => {
+      this.currentPlayedSpotify = spotify;
+    });
     
     this.artworkService.getArtwork(this.media).subscribe(url => {
       this.cover = url;
     });
   }
 
-  // subscribtion(){
-  //   this.currentPlayedSpotify = this.mediaService.getCurrentSpotify();
+  // sToTime(t){
+  //   return this.padZero(parseInt(String((t / (60)) % 60))) + ":" +
+  //     this.padZero(parseInt(String((t) % 60)));
   // }
+
+  // padZero(v){
+  //   return (v < 10) ? "0" + v : v;
+  // }
+
+  // playSong(){
+  //   this.currSong.play().then(() => {
+  //     this.durationText = this.sToTime(this.currentPlayedSpotify.item.duration_ms);
+  //     this.maxRangeValue = Number(this.currentPlayedSpotify.item.duration_ms.toFixed(2).toString().substring(0,5));
+  //   })
+
+  //   this.currSong.addEv
+  // }
+
+  // seek(){
+  //   let newValue = this.range.value;
+  //   let duration = this.currentPlayedSpotify.item.duration_ms;
+  //   this.playerService.sendCmd(PlayerCmds.SEEKFORWARD);//seek(duration * (newValue / 100))add playerservice and spotifycontroll
+  // }
+
+  updateProgress(){
+    let seek = this.currentPlayedSpotify.progress_ms;
+    this.progress = (seek / this.currentPlayedSpotify.item.duration_ms * 100 || 0);
+    setTimeout(() => {
+      this.updateProgress();
+    }, 100)
+  }
 
   ionViewWillEnter() {
     this.playerService.playMedia(this.media);
