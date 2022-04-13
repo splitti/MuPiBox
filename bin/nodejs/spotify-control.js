@@ -9,8 +9,6 @@ const createPlayer = require('./../mplayer-wrapper');
 const googleTTS = require('./../google-tts');
 const fs = require('fs');
 const childProcess = require("child_process");
-const muPiBoxConfig = require('./config/mupiboxconfig.json'); //not sure it is needed
-const currentMetaFile = require('./../Sonos-Kids-Controller-master/server/config/currentmeta.json');
 const { stderr } = require('process');
 
   /*set up express router and set headers for cross origin requests*/
@@ -412,7 +410,7 @@ function seek(progress){
     }
   } else if (currentMeta.currentPlayer == "mplayer") {
     if (progress > 1){
-      play.seekPercent("prozentwert");//noch zu ermitteln
+      play.seekPercent(progress);
     } else {
       if (progress) player.seek(+30);
       else player.seek(-30);

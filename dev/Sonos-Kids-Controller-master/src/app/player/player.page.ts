@@ -9,6 +9,7 @@ import { CurrentSpotify } from '../current.spotify';
 import { CurrentMPlayer } from '../current.mplayer';
 import { Observable } from 'rxjs';
 import { IonRange } from '@ionic/angular';
+import { stdin } from 'process';
 
 @Component({
   selector: 'app-player',
@@ -44,10 +45,16 @@ export class PlayerPage implements OnInit {
   }
 
   ngOnInit() {
-    this.mediaService.current$.subscribe(spotify => {
-      this.currentPlayedSpotify = spotify;
-    });
-    
+    if(this.media.type === 'spotify'){
+      this.mediaService.current$.subscribe(spotify => {
+        this.currentPlayedSpotify = spotify;
+      });
+    } else if (this.media.type === 'library'){
+      this.mediaService.local$.subscribe(local => {
+        this.currentPlayedLocal = local;
+      });
+    }
+
     this.artworkService.getArtwork(this.media).subscribe(url => {
       this.cover = url;
     });
@@ -55,20 +62,37 @@ export class PlayerPage implements OnInit {
 
   seek(){
     let newValue = +this.range.value;
-    let duration = this.currentPlayedSpotify.item.duration_ms;
-    this.playerService.seekPosition(duration * (newValue / 100));
+    if(this.media.type === 'spotify'){
+      let duration = this.currentPlayedSpotify.item.duration_ms;
+      this.playerService.seekPosition(duration * (newValue / 100));
+    } else if (this.media.type === 'library'){
+      this.playerService.seekPosition(newValue);
+    }
+    
   }
 
   updateProgress(){
-    this.mediaService.current$.subscribe(spotify => {
-      this.currentPlayedSpotify = spotify;
-    });
-    let seek = this.currentPlayedSpotify?.progress_ms || 0;
-    console.log(seek);
-    this.progress = (seek / this.currentPlayedSpotify?.item.duration_ms) * 100 || 0;
-    setTimeout(() => {
-      this.updateProgress();
-    }, 1000)
+    if(this.media.type === 'spotify'){
+      this.mediaService.current$.subscribe(spotify => {
+        this.currentPlayedSpotify = spotify;
+      });
+      let seek = this.currentPlayedSpotify?.progress_ms || 0;
+      console.log(seek);
+      this.progress = (seek / this.currentPlayedSpotify?.item.duration_ms) * 100 || 0;
+      setTimeout(() => {
+        this.updateProgress();
+      }, 1000)
+    } else if (this.media.type === 'library'){
+      this.mediaService.local$.subscribe(local => {
+        this.currentPlayedLocal = local;
+      });
+      let seek = this.currentPlayedLocal?.progressTime || 0;
+      console.log(seek);
+      this.progress = seek || 0;
+      setTimeout(() => {
+        this.updateProgress();
+      }, 1000)
+    }
   }
 
   ionViewWillEnter() {

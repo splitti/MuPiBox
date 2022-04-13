@@ -1,11 +1,10 @@
 export interface CurrentMPlayer {
     player?: string;
-    playing?: string;
+    playing?: boolean;
     album?: string;
     currentTrackname?: string;
-    currentTracknr?: string;
-    totalTracks?: string;
-    progressTime?: string;
-    path?: string;
-    volume?: string;
+    currentTracknr?: number;
+    totalTracks?: number;
+    progressTime?: number;
+    volume?: number;
 }
