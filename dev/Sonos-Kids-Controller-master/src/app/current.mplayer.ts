@@ -1,9 +1,11 @@
 export interface CurrentMPlayer {
     player?: string;
-    currentTrack?: string;
-    queryName?: string;
-    queryTrackNr?: string;
-    query?: string[];
+    playing?: string;
+    album?: string;
+    currentTrackname?: string;
+    currentTracknr?: string;
+    totalTracks?: string;
     progressTime?: string;
+    path?: string;
     volume?: string;
 }
