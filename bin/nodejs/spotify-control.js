@@ -295,6 +295,7 @@ function playURL(playedURL){
 function seek(progress){
   let currentProgress = 0;
   let targetProgress = 0;
+  log.debug('[Spotify Control] Setting progress is '+ progress);
   if (currentPlayer == "spotify"){
     if (progress > 1) {
       spotifyApi.seek(progress).then(function () {

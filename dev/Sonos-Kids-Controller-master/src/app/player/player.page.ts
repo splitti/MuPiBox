@@ -82,7 +82,7 @@ export class PlayerPage implements OnInit {
     this.mediaService.current$.subscribe(spotify => {
       this.currentPlayedSpotify = spotify;
     });
-    let seek = this.currentPlayedSpotify.progress_ms;
+    let seek = this.currentPlayedSpotify?.progress_ms || 0;
     console.log(this.seek);
     this.progress = (seek / this.currentPlayedSpotify.item.duration_ms) * 100 || 0;
     setTimeout(() => {
