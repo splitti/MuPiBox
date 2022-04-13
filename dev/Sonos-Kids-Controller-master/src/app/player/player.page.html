@@ -4,9 +4,9 @@
             <ion-back-button icon="arrow-back-outline" defaultHref="/medialist"></ion-back-button>
         </ion-buttons>
         <ion-title>
-            {{media.title}}
-            <!-- <div *ngIf="media.type ==='spotify'; else elseBlock">{{(spotify$ | async)?.item.album.name}}</div>
-            <ng-template #elseBlock>{{media.title}}</ng-template> -->
+            <!-- {{media.title}} -->
+            <div *ngIf="media.type ==='spotify'; else elseBlock">{{(spotify$ | async)?.item.album.name}}</div>
+            <ng-template #elseBlock>{{media.title}}</ng-template>
         </ion-title>
         <ion-title>
             <div *ngIf="media.type ==='spotify'; else elseBlock">{{(spotify$ | async)?.item.name}}</div>
@@ -19,6 +19,7 @@
 </ion-header>
 
 <ion-content>
+    <ion-progress-bar></ion-progress-bar>
     <ion-grid>
         <ion-row>
             <ion-col size="6">
