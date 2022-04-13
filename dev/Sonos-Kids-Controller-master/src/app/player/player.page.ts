@@ -81,7 +81,7 @@ export class PlayerPage implements OnInit {
   updateProgress(){
     let seek = this.currentPlayedSpotify.progress_ms;
     console.log(this.seek);
-    this.progress = (seek / this.currentPlayedSpotify.item.duration_ms * 100 || 0);
+    this.progress = (seek / this.currentPlayedSpotify.item.duration_ms) * 100 || 0;
     setTimeout(() => {
       this.updateProgress();
     }, 100)
