@@ -19,7 +19,7 @@
 
 <ion-content>
     <ion-item lines="none">
-        <ion-range #range [(ngModel)]="progress" max="100"></ion-range>
+        <ion-range #range [(ngModel)]="progress" max="100" (touchend)="seek()" (mouseup)="seek()"></ion-range>
     </ion-item>
     
     <ion-grid>

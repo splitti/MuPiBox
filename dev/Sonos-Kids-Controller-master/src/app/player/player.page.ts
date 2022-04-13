@@ -72,14 +72,15 @@ export class PlayerPage implements OnInit {
   //   this.currSong.addEv
   // }
 
-  // seek(){
-  //   let newValue = this.range.value;
-  //   let duration = this.currentPlayedSpotify.item.duration_ms;
-  //   this.playerService.sendCmd(PlayerCmds.SEEKFORWARD);//seek(duration * (newValue / 100))add playerservice and spotifycontroll
-  // }
+  seek(){
+    let newValue = this.range.value;
+    let duration = this.currentPlayedSpotify.item.duration_ms;
+    this.playerService.sendCmd(PlayerCmds.SEEKFORWARD);//seek(duration * (newValue / 100))add playerservice and spotifycontroll
+  }
 
   updateProgress(){
     let seek = this.currentPlayedSpotify.progress_ms;
+    console.log(this.seek);
     this.progress = (seek / this.currentPlayedSpotify.item.duration_ms * 100 || 0);
     setTimeout(() => {
       this.updateProgress();
