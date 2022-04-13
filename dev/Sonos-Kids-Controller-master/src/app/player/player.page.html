@@ -5,12 +5,12 @@
         </ion-buttons>
         <ion-title>
             <!-- {{media.title}} -->
-            <div *ngIf="media.type ==='spotify'; else elseBlock">{{(spotify$ | async)?.item.album.name}}</div>
-            <ng-template #elseBlock>{{media.title}}</ng-template>
+            <div *ngIf="media.type ==='spotify'; else elseBlockAlbum">{{(spotify$ | async)?.item.album.name}}</div>
+            <ng-template #elseBlockAlbum>{{media.title}}</ng-template>
         </ion-title>
         <ion-title>
-            <div *ngIf="media.type ==='spotify'; else elseBlock">{{(spotify$ | async)?.item.name}}</div>
-            <ng-template #elseBlock></ng-template>
+            <div *ngIf="media.type ==='spotify'; else elseBlockTitel">{{(spotify$ | async)?.item.name}}</div>
+            <ng-template #elseBlockTitel></ng-template>
         </ion-title>
         <ion-title slot="end">
             <div *ngIf="media.type ==='spotify'">{{(spotify$ | async)?.item.track_number}}/{{(spotify$ | async)?.item.album.total_tracks}}</div>
