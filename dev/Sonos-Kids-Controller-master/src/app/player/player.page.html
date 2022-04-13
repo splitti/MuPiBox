@@ -18,10 +18,6 @@
 </ion-header>
 
 <ion-content>
-    <ion-item lines="none">
-        <ion-range #range [(ngModel)]="progress" max="100" (touchend)="seek()" (mouseup)="seek()"></ion-range>
-    </ion-item>
-    
     <ion-grid>
         <ion-row>
             <ion-col size="6">
@@ -31,6 +27,9 @@
             </ion-col>
 
             <ion-col size="6">
+                <ion-item lines="none">
+                    <ion-range #range [(ngModel)]="progress" max="100" (touchend)="seek()" (mouseup)="seek()"></ion-range>
+                </ion-item>
                 <ion-grid>
                     <ion-row class="play-controls">
                         <ion-col size="4" class="ion-text-center">

@@ -53,6 +53,11 @@ export class PlayerService {
     this.sendRequest(cmd);
   }
 
+  seekPosition(pos){
+    let seekpos = 'seekpos:' + pos;
+    this.sendRequest(seekpos);
+  }
+
   playMedia(media: Media) {
     let url: string;
 

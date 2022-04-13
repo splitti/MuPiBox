@@ -296,7 +296,14 @@ function seek(progress){
   let currentProgress = 0;
   let targetProgress = 0;
   if (currentPlayer == "spotify"){
-    spotifyApi.getMyCurrentPlaybackState().
+    if (progress > 1) {
+      spotifyApi.seek(progress).then(function () {
+        log.debug('[Spotify Control] Setting progress to '+ progress);
+        }, function(err) {
+        handleSpotifyError(err,"0");
+      });
+    } else {
+      spotifyApi.getMyCurrentPlaybackState().
       then(function(data) {
         currentProgress = data.body.progress_ms;
         log.debug("[Spotify Control]Current progress for active device is " + currentProgress);
@@ -312,9 +319,14 @@ function seek(progress){
       }, function(err) {
         handleSpotifyError(err,"0");
       });
+    }
   } else if (currentPlayer == "mplayer") {
-    if (progress) player.seek(+30);
-    else player.seek(-30);
+    if (progress > 1){
+      play.seekPercent("prozentwert");//noch zu ermitteln
+    } else {
+      if (progress) player.seek(+30);
+      else player.seek(-30);
+    }
   }
 }
 
@@ -420,7 +432,7 @@ app.get("/state", function(req, res){
   spotifyApi.getMyCurrentPlaybackState()
   .then(function(data) {
     let state = data.body;
-    log.debug("[Spotify Control] Getting available state...");
+    //log.debug("[Spotify Control] Getting available state...");
     res.send(state);
   }, function(err) {
     handleSpotifyError(err,"0");
@@ -516,6 +528,12 @@ app.use(function(req, res){
 
   else if (command.name == "seek-30")
     seek(0);
+
+  else if (command.name.includes("seekpos:")){
+    let pos = command.name.split(':')[1];
+    seek(pos);
+  }
+    
 
   let resp = {"status":"ok","error":"none"};
   res.send(resp);
