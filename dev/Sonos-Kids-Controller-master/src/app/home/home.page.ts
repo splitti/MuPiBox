@@ -74,9 +74,9 @@ export class HomePage implements OnInit {
       // Workaround as the scrollbar handle isn't visible after the immediate update
       // Seems like a size calculation issue, as resizing the browser window helps
       // Better fix for this?
-      // window.setTimeout(() => {
-      //   this.mediaSlider?.update();
-      // }, 1000);
+      window.setTimeout(() => {
+        this.mediaSlider?.update();
+      }, 1000);
     });
 
     this.mediaService.getArtists().subscribe(artists => {
@@ -162,12 +162,17 @@ export class HomePage implements OnInit {
   }
 
   mediaCoverClicked(clickedMedia: Media) {
-    const navigationExtras: NavigationExtras = {
-      state: {
-        media: clickedMedia
-      }
-    };
-    this.router.navigate(['/player'], navigationExtras);
+    this.activityIndicatorService.create().then(indicator => {
+      this.activityIndicatorVisible = true;
+      indicator.present().then(() => {
+        const navigationExtras: NavigationExtras = {
+          state: {
+            media: clickedMedia
+          }
+        };
+        this.router.navigate(['/player'], navigationExtras);
+      });
+    });
   }
 
   mediaNameClicked(clickedMedia: Media) {
@@ -190,7 +195,13 @@ export class HomePage implements OnInit {
     } else {
       this.editButtonclickCount = 0;
       this.needsUpdate = true;
-      this.router.navigate(['/edit']);
+
+      this.activityIndicatorService.create().then(indicator => {
+        this.activityIndicatorVisible = true;
+        indicator.present().then(() => {
+          this.router.navigate(['/edit']);
+        });
+      });
     }
   }
 }

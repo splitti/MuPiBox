@@ -4,6 +4,7 @@ import { ActivatedRoute, Router, NavigationExtras } from '@angular/router';
 import { MediaService } from '../media.service';
 import { ArtworkService } from '../artwork.service';
 import { PlayerService } from '../player.service';
+import { ActivityIndicatorService } from '../activity-indicator.service';
 import { Media } from '../media';
 import { Artist } from '../artist';
 
@@ -18,6 +19,7 @@ export class MedialistPage implements OnInit {
   artist: Artist;
   media: Media[] = [];
   covers = {};
+  activityIndicatorVisible = false;
 
   slideOptions = {
     initialSlide: 0,
@@ -36,7 +38,8 @@ export class MedialistPage implements OnInit {
     private router: Router,
     private mediaService: MediaService,
     private artworkService: ArtworkService,
-    private playerService: PlayerService
+    private playerService: PlayerService,
+    private activityIndicatorService: ActivityIndicatorService
   ) {
     this.route.queryParams.subscribe(params => {
       if (this.router.getCurrentNavigation().extras.state) {
@@ -69,13 +72,25 @@ export class MedialistPage implements OnInit {
     this.mediaService.publishArtistMedia();
   }
 
+  ionViewDidLeave() {
+    if (this.activityIndicatorVisible) {
+      this.activityIndicatorService.dismiss();
+      this.activityIndicatorVisible = false;
+    }
+  }
+
   coverClicked(clickedMedia: Media) {
-    const navigationExtras: NavigationExtras = {
-      state: {
-        media: clickedMedia
-      }
-    };
-    this.router.navigate(['/player'], navigationExtras);
+    this.activityIndicatorService.create().then(indicator => {
+      this.activityIndicatorVisible = true;
+      indicator.present().then(() => {
+        const navigationExtras: NavigationExtras = {
+          state: {
+            media: clickedMedia
+          }
+        };
+        this.router.navigate(['/player'], navigationExtras);
+      });
+    });
   }
 
   mediaNameClicked(clickedMedia: Media) {
