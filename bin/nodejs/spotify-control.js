@@ -11,6 +11,7 @@ const fs = require('fs');
 const childProcess = require("child_process");
 const muPiBoxConfig = require('./config/mupiboxconfig.json'); //not sure it is needed
 const currentMetaFile = require('./../Sonos-Kids-Controller-master/server/config/currentmeta.json');
+const { stderr } = require('process');
 
   /*set up express router and set headers for cross origin requests*/
 const app = express();
@@ -26,7 +27,7 @@ app.use(function(req, res, next) {
 });
 
   /*init spotify API */
-let scopes = ['streaming', 'user-read-currently-playing', 'user-modify-playback-state', 'user-read-playback-state'];
+let scopes = ['streaming', 'user-read-currently-currentMeta.playing', 'user-modify-playback-state', 'user-read-playback-state'];
 
 let spotifyApi = new SpotifyWebApi({
     clientId: config.spotify.clientId,
@@ -39,20 +40,46 @@ spotifyApi.setAccessToken(config.spotify.accessToken);
 refreshToken("0");
 setInterval(refreshToken, 1000 * 60 * 60);
 
+player.on('percent_pos', (val) => {
+  console.log('track progress is', val);
+  currentMeta.progressTime = val;
+})
+setInterval(() => {
+  player.getProps(['percent_pos'])
+}, 1000)
+
+player.on('metadata', (val) => {
+  console.log('track metadata is', val);
+  currentMeta.currentTracknr = val.Comment.split(',').pop();
+})
+player.on('track-change', () => player.getProps(['metadata']))
+
+//player.on('length', console.log)
+//player.on('track-change', () => player.getProps(['length']))
+
+player.on('filename', (val) => {
+  console.log('track name is', val);
+  currentMeta.currentTrackname = val.split('.mp3')[0];
+})
+player.on('track-change', () => player.getProps(['filename']))
+
+player.on('path', (val) => {
+  console.log('track path is', val);
+  currentMeta.album = val.split('/')[5];
+})
+player.on('track-change', () => player.getProps(['path']))
+
   /*store device to be played back*/
 let activeDevice = "";
-var currentPlayer = '';
-var playing = false;
 var volumeStart = 99;
 var	playerstate;
 var currentMeta = {
-  player: "spotify/local",
-  queryName: "",
-  currentTrack: "",
-  queryTrackNr: "",
-  query: [
-    ""
-  ],
+  currentPlayer: "",
+  playing: false,
+  album: "",
+  currentTrackname: "",
+  currentTracknr: "",
+  totalTracks: "",
   progressTime: "",
   volume: ""
 };
@@ -79,16 +106,16 @@ function writeplayerstatePause(){
 	})
 }
 
-function writecurrentMeta(){
-	var json = JSON.stringify(currentMeta);
-	fs.writeFile(currentMetaFile, json, err => {
-		if (err) {
-			console.error(err)
-			return
-		}
-		log.debug("[Spotify Control] Write currentMeta to " + currentMetaFile);
-	})
-}
+// function writecurrentMeta(){
+// 	var json = JSON.stringify(currentMeta);
+// 	fs.writeFile(currentMetaFile, json, err => {
+// 		if (err) {
+// 			console.error(err)
+// 			return
+// 		}
+// 		log.debug("[Spotify Control] Write currentMeta to " + currentMetaFile);
+// 	})
+// }
 
 function refreshToken(activePlaylistId){
   spotifyApi.refreshAccessToken()
@@ -166,7 +193,7 @@ function setActiveDevice(activePlaylistId) {
 }
 
 function pause(){
-  if (currentPlayer == "spotify"){
+  if (currentMeta.currentPlayer == "spotify"){
     spotifyApi.pause()
       .then(function() {
         log.debug('[Spotify Control] Playback paused');
@@ -174,17 +201,17 @@ function pause(){
       }, function(err) {
         handleSpotifyError(err,"0");
       });
-  } else if (currentPlayer == "mplayer") {
-    if (playing){
+  } else if (currentMeta.currentPlayer == "mplayer") {
+    if (currentMeta.playing){
       player.playPause();
-      playing = false;
+      currentMeta.playing = false;
 	  writeplayerstatePause();
     }
   }
 }
 
 function stop(){
-  if (currentPlayer == "spotify"){
+  if (currentMeta.currentPlayer == "spotify"){
     spotifyApi.pause()
       .then(function() {
         log.debug('[Spotify Control] Playback stopped');
@@ -192,16 +219,21 @@ function stop(){
       }, function(err) {
         handleSpotifyError(err,"0");
       });
-  } else if (currentPlayer == "mplayer") {
+  } else if (currentMeta.currentPlayer == "mplayer") {
     player.stop();
-    playing = false;
+    currentMeta.playing = false;
 	  writeplayerstatePause();
+    currentMeta.currentTrackname = "";
+    currentMeta.progressTime = "";
+    currentMeta.album = "";
+    currentMeta.currentTracknr = "";
+    currentMeta.totalTracks = "";
     log.debug('[Spotify Control] Playback stopped');
   }
 }
 
 function play(){
-  if (currentPlayer == "spotify"){
+  if (currentMeta.currentPlayer == "spotify"){
     spotifyApi.play()
       .then(function() {
         log.debug('[Spotify Control] Playback started');
@@ -209,37 +241,37 @@ function play(){
       }, function(err) {
         handleSpotifyError(err,"0");
       });
-  } else if (currentPlayer == "mplayer") {
-    if (!(playing)){
+  } else if (currentMeta.currentPlayer == "mplayer") {
+    if (!(currentMeta.playing)){
       player.playPause();
-      playing = true;
+      currentMeta.playing = true;
 	  writeplayerstatePlay();
     }
   }
 }
 
 function next(){
-  if (currentPlayer == "spotify"){
+  if (currentMeta.currentPlayer == "spotify"){
     spotifyApi.skipToNext()
       .then(function() {
         log.debug('[Spotify Control] Skip to next');
       }, function(err) {
         handleSpotifyError(err,"0");
       });
-  } else if (currentPlayer == "mplayer") {
+  } else if (currentMeta.currentPlayer == "mplayer") {
     player.next();
   }
 }
 
 function previous(){
-  if (currentPlayer == "spotify"){
+  if (currentMeta.currentPlayer == "spotify"){
     spotifyApi.skipToPrevious()
       .then(function() {
         log.debug('[Spotify Control] Skip to previous');
       }, function(err) {
         handleSpotifyError(err,"0");
       });
-  } else if (currentPlayer == "mplayer") {
+  } else if (currentMeta.currentPlayer == "mplayer") {
     player.previous();
   }
 }
@@ -264,18 +296,75 @@ function playList(playedList){
   let playedTitel = playedList.split('album:').pop();
   playedTitelmod = decodeURI(playedTitel);
   //playedTitelmod = playedTitel.replace(/%20/g," ");
-  log.debug("[Spotify Control] Starting playing:" + playedTitelmod);
-  playing = true;
+  log.debug("[Spotify Control] Starting currentMeta.playing:" + playedTitelmod);
+  currentMeta.playing = true;
   writeplayerstatePlay();
   player.playList('/home/dietpi/MuPiBox/media/' + playedTitelmod + '/playlist.m3u');
   player.setVolume(volumeStart);
   log.debug('/home/dietpi/MuPiBox/media/' + playedTitelmod + '/playlist.m3u');
+  //collect mplayer meta
+  // player.on('percent_pos', (val) => {
+  //   console.log('track progress is', val);
+  //   currentMeta.progressTime = val;
+  // })
+  // setInterval(() => {
+  //   player.getProps(['percent_pos'])
+  // }, 1000)
+  
+  // player.on('metadata', (val) => {
+  //   console.log('track metadata is', val);
+  //   currentMeta.currentTracknr = val.Comment.split(',').pop();
+  // })
+  // player.on('track-change', () => player.getProps(['metadata']))
+
+  // //player.on('length', console.log)
+  // //player.on('track-change', () => player.getProps(['length']))
+
+  // player.on('filename', (val) => {
+  //   console.log('track name is', val);
+  //   currentMeta.currentTrackname = val.split('.mp3')[0];
+  // })
+  // player.on('track-change', () => player.getProps(['filename']))
+
+  // player.on('path', (val) => {
+  //   console.log('track path is', val);
+  //   currentMeta.album = val.split('/')[5];
+  // })
+  // player.on('track-change', () => player.getProps(['path']))
+
+  setTimeout(function(){
+    let cmdtotalTracks = "find /home/dietpi/MuPiBox/media/\"" + currentMeta.album + "\" -type f -name \"*.mp3\"| wc -l";
+    console.log(cmdtotalTracks);
+    const exec = require ('child_process').exec;
+    exec(cmdtotalTracks, (e, stdout, stderr) => {
+      if (e instanceof Error){
+        console.error(e);
+        throw e;
+      }
+      currentMeta.totalTracks = stdout.split(/\r?\n/)[0];
+      console.log('stdout', stdout);
+      console.log('stderr', stderr);
+    });
+  },500)
+
+  let cmdtotalTracks = "/usr/bin/amixer sget Master | grep 'Right:'";
+  console.log(cmdtotalTracks);
+  const exec = require ('child_process').exec;
+  exec(cmdtotalTracks, (e, stdout, stderr) => {
+    if (e instanceof Error){
+      console.error(e);
+      throw e;
+    }
+    currentMeta.volume = stdout.split('[')[1].split('%')[0];
+    console.log('stdout', stdout);
+    console.log('stderr', stderr);
+  });
 }
 
 function playFile(playedFile){
   let playedTitel = playedFile + '.mp3';
-  log.debug("[Spotify Control] Starting playing:" + playedTitel);
-  playing = true;
+  log.debug("[Spotify Control] Starting currentMeta.playing:" + playedTitel);
+  currentMeta.playing = true;
   writeplayerstatePlay();
   player.play('/home/dietpi/MuPiBox/tts_files/' + playedTitel);
   player.setVolume(volumeStart);
@@ -283,8 +372,8 @@ function playFile(playedFile){
 }
 
 function playURL(playedURL){
-  log.debug("[Spotify Control] Starting playing:" + playedURL);
-  playing = true;
+  log.debug("[Spotify Control] Starting currentMeta.playing:" + playedURL);
+  currentMeta.playing = true;
   writeplayerstatePlay();
   player.play(playedURL);
   player.setVolume(volumeStart);
@@ -296,7 +385,7 @@ function seek(progress){
   let currentProgress = 0;
   let targetProgress = 0;
   log.debug('[Spotify Control] Setting progress is '+ progress);
-  if (currentPlayer == "spotify"){
+  if (currentMeta.currentPlayer == "spotify"){
     if (progress > 1) {
       spotifyApi.seek(progress).then(function () {
         log.debug('[Spotify Control] Setting progress to '+ progress);
@@ -321,7 +410,7 @@ function seek(progress){
         handleSpotifyError(err,"0");
       });
     }
-  } else if (currentPlayer == "mplayer") {
+  } else if (currentMeta.currentPlayer == "mplayer") {
     if (progress > 1){
       play.seekPercent("prozentwert");//noch zu ermitteln
     } else {
@@ -386,7 +475,7 @@ function downloadTTS(name){
 }
 
 async function useSpotify(command){
-  currentPlayer = "spotify";
+  currentMeta.currentPlayer = "spotify";
     let dir = command.dir;
     let newdevice = dir.split('/')[1];
     /*await getActiveDevice();*/
@@ -440,13 +529,19 @@ app.get("/state", function(req, res){
   });
 });
 
+/*endpoint to return all local metainformation*/
+/*only used if sonos-kids-player is modified*/
+app.get("/local", function(req, res){
+  res.send(currentMeta);
+});
+
 /*endpoint to return all spotify connect devices on the network*/
 /*only used if sonos-kids-player is modified*/
-app.get("/currentlyPlaying", function(req, res){
-  spotifyApi.getMyCurrentPlayingTrack()
+app.get("/currentlycurrentMeta.Playing", function(req, res){
+  spotifyApi.getMyCurrentcurrentMeta.PlayingTrack()
     .then(function(data) {
       if (data.body.item != undefined){
-        log.debug("[Spotify Control] Currently playing: " + data.body.item.name);
+        log.debug("[Spotify Control] Currently currentMeta.playing: " + data.body.item.name);
         res.send(data.body.item);
       }
       else {
@@ -471,12 +566,12 @@ app.use(function(req, res){
   }
 
   if(command.dir.includes("library") ){
-    currentPlayer = "mplayer";
+    currentMeta.currentPlayer = "mplayer";
     playList(command.name);
   }
 
   if(command.dir.includes("tunein") ){
-    currentPlayer = "mplayer";
+    currentMeta.currentPlayer = "mplayer";
     let dir = command.dir;
     let radioURL = dir.split('tunein/').pop();
     radioURL = decodeURIComponent(radioURL);

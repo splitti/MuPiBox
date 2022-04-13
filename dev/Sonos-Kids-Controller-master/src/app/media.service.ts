@@ -9,6 +9,7 @@ import { Artist } from './artist';
 import { Network } from "./network";
 import { WLAN } from './wlan';
 import { CurrentSpotify } from './current.spotify';
+import { CurrentMPlayer } from './current.mplayer';
 
 @Injectable({
   providedIn: 'root'
@@ -17,6 +18,7 @@ export class MediaService {
 
   private category = 'audiobook';
   public readonly current$: Observable<CurrentSpotify>;
+  public readonly local$: Observable<CurrentMPlayer>;
   // private type = 'library';
   // private connection = 'false';
 
@@ -34,6 +36,12 @@ export class MediaService {
   ) {
     this.current$ = interval(1000).pipe( // Once a second after subscribe, way too frequent!
       switchMap((): Observable<CurrentSpotify> => this.http.get<CurrentSpotify>('http://localhost:5005/state')),
+      // Replay the most recent (bufferSize) emission on each subscription
+      // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
+      shareReplay({ bufferSize: 1, refCount: false }),
+    );
+    this.local$ = interval(1000).pipe( // Once a second after subscribe, way too frequent!
+      switchMap((): Observable<CurrentMPlayer> => this.http.get<CurrentMPlayer>('http://localhost:5005/local')),
       // Replay the most recent (bufferSize) emission on each subscription
       // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
       shareReplay({ bufferSize: 1, refCount: false }),

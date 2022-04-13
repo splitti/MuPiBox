@@ -6,6 +6,7 @@ import { PlayerService, PlayerCmds } from '../player.service';
 import { Media } from '../media';
 import { MediaService } from '../media.service';
 import { CurrentSpotify } from '../current.spotify';
+import { CurrentMPlayer } from '../current.mplayer';
 import { Observable } from 'rxjs';
 import { IonRange } from '@ionic/angular';
 
@@ -21,13 +22,10 @@ export class PlayerPage implements OnInit {
   cover = '';
   playing = true;
   currentPlayedSpotify: CurrentSpotify;
+  currentPlayedLocal: CurrentMPlayer;
   progress = 0;
-  // isTouched = false;
-  // currSecsText;
-  // durationText;
-  // currRangeTime;
-  // maxRangeValue;
   public readonly spotify$: Observable<CurrentSpotify>;
+  public readonly local$: Observable<CurrentMPlayer>;
 
   constructor(
     private mediaService: MediaService,
@@ -37,6 +35,7 @@ export class PlayerPage implements OnInit {
     private playerService: PlayerService
   ) {
     this.spotify$ = this.mediaService.current$;
+    this.local$ = this.mediaService.local$;
     this.route.queryParams.subscribe(params => {
       if (this.router.getCurrentNavigation().extras.state) {
         this.media = this.router.getCurrentNavigation().extras.state.media;
@@ -54,28 +53,10 @@ export class PlayerPage implements OnInit {
     });
   }
 
-  // sToTime(t){
-  //   return this.padZero(parseInt(String((t / (60)) % 60))) + ":" +
-  //     this.padZero(parseInt(String((t) % 60)));
-  // }
-
-  // padZero(v){
-  //   return (v < 10) ? "0" + v : v;
-  // }
-
-  // playSong(){
-  //   this.currSong.play().then(() => {
-  //     this.durationText = this.sToTime(this.currentPlayedSpotify.item.duration_ms);
-  //     this.maxRangeValue = Number(this.currentPlayedSpotify.item.duration_ms.toFixed(2).toString().substring(0,5));
-  //   })
-
-  //   this.currSong.addEv
-  // }
-
   seek(){
     let newValue = +this.range.value;
     let duration = this.currentPlayedSpotify.item.duration_ms;
-    this.playerService.seekPosition(duration * (newValue / 100));//seek(duration * (newValue / 100))add playerservice and spotifycontroll
+    this.playerService.seekPosition(duration * (newValue / 100));
   }
 
   updateProgress(){
