@@ -89,6 +89,7 @@ export class PlayerPage implements OnInit {
 
   ionViewWillEnter() {
     this.playerService.playMedia(this.media);
+    this.updateProgress();
   }
 
   ionViewWillLeave() {
