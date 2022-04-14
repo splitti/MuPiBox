@@ -21,11 +21,13 @@ export class PlayerPage implements OnInit {
 
   media: Media;
   resume: Resume;
+  resumePlay = false;
   resumeFile: Resume = {
     spotify:{
       id: "",
       track_number: 0,
       progress_ms: 0,
+      duration_ms: 0,
     },
     local: {
       album: "",
@@ -58,6 +60,7 @@ export class PlayerPage implements OnInit {
     this.route.queryParams.subscribe(params => {
       if (this.router.getCurrentNavigation().extras.state.resume) {
         this.resume = this.router.getCurrentNavigation().extras.state.resume;
+        this.resumePlay = true;
       }
     });
   }
@@ -117,11 +120,29 @@ export class PlayerPage implements OnInit {
     console.log(this.media);
     this.playerService.playMedia(this.media);
     this.updateProgress();
+    if (this.resumePlay){
+      this.resumePlayback();
+    }
   }
 
   ionViewWillLeave() {
     this.saveResumeFiles();
     this.playerService.sendCmd(PlayerCmds.STOP);
+    this.resumePlay = false;
+  }
+
+  resumePlayback(){
+    if(this.media.type === 'spotify'){
+      for(let i = 0; i < this.resume.spotify.track_number; i++){
+        this.skipNext();
+      }
+      this.playerService.seekPosition(this.resume.spotify.duration_ms * (this.resume.spotify.progress_ms / 100));
+    } else if (this.media.type === 'library'){
+      for(let i = 0; i < this.resume.local.currentTracknr; i++){
+        this.skipNext();
+      }
+      this.playerService.seekPosition(this.resume.local.progressTime);
+    }
   }
 
   saveResumeFiles(){
@@ -135,6 +156,7 @@ export class PlayerPage implements OnInit {
       this.resumeFile.spotify.id = this.currentPlayedSpotify.item.album.id || "";
       this.resumeFile.spotify.track_number = this.currentPlayedSpotify.item.track_number  || 0;
       this.resumeFile.spotify.progress_ms = this.currentPlayedSpotify.progress_ms  || 0;
+      this.resumeFile.spotify.duration_ms = this.currentPlayedSpotify.item.duration_ms || 0;
     } else if (this.media.type === 'library'){
       this.resumeFile.local.album = this.currentPlayedLocal.album || "";
       this.resumeFile.local.currentTracknr = this.currentPlayedLocal.currentTracknr  || 0;
