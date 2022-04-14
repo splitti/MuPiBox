@@ -70,11 +70,11 @@ app.get('/api/media', (req, res) => {
 });
 
 app.post('/api/addmedia', (req, res) => {
-     jsonfile.readFile(mediaFile, (error, data) => {
-         if (error) data = [];
-         data.push(req.body);
+    jsonfile.readFile(mediaFile, (error, data) => {
+        if (error) data = [];
+        data = req.body;
 
-        jsonfile.writeFile(mediaFile, req.body, { spaces: 4 }, (error) => {
+        jsonfile.writeFile(mediaFile, data, { spaces: 4 }, (error) => {
             if (error) throw err;
             res.status(200).send();
         });
@@ -93,7 +93,7 @@ app.post('/api/addresume', (req, res) => {
         if (error) data = [];
         data.push(req.body);
 
-        jsonfile.writeFile(resumeFile, req.body, { spaces: 4 }, (error) => {
+        jsonfile.writeFile(resumeFile, data, { spaces: 4 }, (error) => {
             if (error) throw err;
             res.status(200).send();
         });
