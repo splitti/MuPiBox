@@ -45,3 +45,10 @@ ion-button {
 .volume-button {
     --background: #262626;
 }
+
+ion-range {
+    --bar-background: rgba(220,160,140,0.5);
+    --bar-background-active: rgba(220, 40, 100, 0.25);
+    --bar-height: 40px;
+    --height: 20px;
+}
