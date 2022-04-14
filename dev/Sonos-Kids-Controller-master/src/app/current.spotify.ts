@@ -10,5 +10,4 @@ export interface CurrentSpotify {
         name?: string;
         track_number?: number;
     };
-    currently_playing_type?: string;
 }
