@@ -36,7 +36,7 @@ exec 3>${LOG}
 	sudo chown -R dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master
 
 	echo -e "XXX\n19\nUpdate Spotify Control... \nXXX"	
-	wget https://raw.githubusercontent.com/splitti/MuPiBox/main/bin/nodejs/spotify-control.js -O ~/.mupibox/spotifycontroller-main/spotify-control.js >&3 2>&3
+	wget https://raw.githubusercontent.com/splitti/MuPiBox/main/bin/nodejs/spotify-control.js -O /home/dietpi/.mupibox/spotifycontroller-main/spotify-control.js >&3 2>&3
 
 	echo -e "XXX\n20\nRestore Userdata... \nXXX"
 	sudo mv /tmp/data.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json  >&3 2>&3
