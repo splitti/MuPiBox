@@ -7,7 +7,7 @@
             </ion-button>
         </ion-buttons> -->
         <ion-buttons slot="start">
-            <ion-button (click)="resume()">
+            <ion-button (click)="resume()" *ngIf="resumePossible">
                 <ion-icon slot="icon-only" name="return-down-forward-outline"></ion-icon>
             </ion-button>
         </ion-buttons>
