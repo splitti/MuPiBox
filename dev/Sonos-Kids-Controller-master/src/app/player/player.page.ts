@@ -142,6 +142,8 @@ export class PlayerPage implements OnInit {
     }
     console.log(this.media);
     console.log(this.resumeFile);
+    console.log(this.currentPlayedLocal);
+    console.log(this.currentPlayedSpotify);
     this.mediaService.saveMedia(this.media);
     this.mediaService.saveResume(this.resumeFile);
   }

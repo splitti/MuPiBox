@@ -91,7 +91,7 @@ app.get('/api/resume', (req, res) => {
 app.post('/api/addresume', (req, res) => {
     jsonfile.readFile(resumeFile, (error, data) => {
         if (error) data = [];
-        data.push(req.body);
+        data = req.body;
 
         jsonfile.writeFile(resumeFile, data, { spaces: 4 }, (error) => {
             if (error) throw err;
