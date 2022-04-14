@@ -48,7 +48,7 @@ setInterval(() => {
 
 player.on('metadata', (val) => {
   console.log('track metadata is', val);
-  currentMeta.currentTracknr = parseInt(val.Comment.split(',').pop(), 10);
+  currentMeta.currentTracknr = parseInt(val.Comment?.split(',').pop(), 10);
 })
 player.on('track-change', () => player.getProps(['metadata']))
 
@@ -313,35 +313,6 @@ function playList(playedList){
   player.playList('/home/dietpi/MuPiBox/media/' + playedTitelmod + '/playlist.m3u');
   player.setVolume(volumeStart);
   log.debug('/home/dietpi/MuPiBox/media/' + playedTitelmod + '/playlist.m3u');
-  //collect mplayer meta
-  // player.on('percent_pos', (val) => {
-  //   console.log('track progress is', val);
-  //   currentMeta.progressTime = val;
-  // })
-  // setInterval(() => {
-  //   player.getProps(['percent_pos'])
-  // }, 1000)
-  
-  // player.on('metadata', (val) => {
-  //   console.log('track metadata is', val);
-  //   currentMeta.currentTracknr = val.Comment.split(',').pop();
-  // })
-  // player.on('track-change', () => player.getProps(['metadata']))
-
-  // //player.on('length', console.log)
-  // //player.on('track-change', () => player.getProps(['length']))
-
-  // player.on('filename', (val) => {
-  //   console.log('track name is', val);
-  //   currentMeta.currentTrackname = val.split('.mp3')[0];
-  // })
-  // player.on('track-change', () => player.getProps(['filename']))
-
-  // player.on('path', (val) => {
-  //   console.log('track path is', val);
-  //   currentMeta.album = val.split('/')[5];
-  // })
-  // player.on('track-change', () => player.getProps(['path']))
 
   setTimeout(function(){
     let cmdtotalTracks = "find /home/dietpi/MuPiBox/media/\"" + currentMeta.album + "\" -type f -name \"*.mp3\"| wc -l";
@@ -532,6 +503,32 @@ app.get("/state", function(req, res){
   });
 });
 
+/*endpoint to return playlist information*/
+/*only used if sonos-kids-player is modified*/
+app.get("/playlist", function(req, res){
+  spotifyApi.getPlaylist(activePlaylistId)
+  .then(function(data) {
+    let state = data.body;
+    //log.debug("[Spotify Control] Getting available state...");
+    res.send(state);
+  }, function(err) {
+    handleSpotifyError(err,"0");
+  });
+});
+  
+/*endpoint to return playlist information*/
+/*only used if sonos-kids-player is modified*/
+app.get("/playlisttracks", function(req, res){
+  spotifyApi.getPlaylistTracks(activePlaylistId)
+  .then(function(data) {
+    let state = data.body;
+    //log.debug("[Spotify Control] Getting available state...");
+    res.send(state);
+  }, function(err) {
+    handleSpotifyError(err,"0");
+  });
+});
+
 /*endpoint to return all local metainformation*/
 /*only used if sonos-kids-player is modified*/
 app.get("/local", function(req, res){
@@ -540,8 +537,8 @@ app.get("/local", function(req, res){
 
 /*endpoint to return all spotify connect devices on the network*/
 /*only used if sonos-kids-player is modified*/
-app.get("/currentlycurrentMeta.Playing", function(req, res){
-  spotifyApi.getMyCurrentcurrentMeta.PlayingTrack()
+app.get("/currentPlaying", function(req, res){
+  spotifyApi.getMyCurrentPlayingTrack()
     .then(function(data) {
       if (data.body.item != undefined){
         log.debug("[Spotify Control] Currently currentMeta.playing: " + data.body.item.name);

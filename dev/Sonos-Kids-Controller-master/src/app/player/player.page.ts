@@ -129,8 +129,8 @@ export class PlayerPage implements OnInit {
     if(this.media.type === 'spotify' || this.media.type === 'library'){
       this.saveResumeFiles();
     }
-    this.playerService.sendCmd(PlayerCmds.STOP);
     this.resumePlay = false;
+    this.playerService.sendCmd(PlayerCmds.STOP);
   }
 
   resumePlayback(){
