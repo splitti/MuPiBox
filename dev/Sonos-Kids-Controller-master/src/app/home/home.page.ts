@@ -216,6 +216,8 @@ export class HomePage implements OnInit {
   }
 
   resume() {
+    console.log(this.mediaFile);
+    console.log(this.resumeFile);
     this.activityIndicatorService.create().then(indicator => {
       this.activityIndicatorVisible = true;
       indicator.present().then(() => {

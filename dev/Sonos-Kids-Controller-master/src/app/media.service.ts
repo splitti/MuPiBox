@@ -26,6 +26,8 @@ export class MediaService {
   private rawMediaSubject = new Subject<Media[]>();
   private wlanSubject = new Subject<WLAN[]>();
   private networkSubject = new Subject<Network>();
+  private resumeSubject = new Subject<Resume>();
+  private mediaFileSubject = new Subject<Media>();
 
   private artistSubject = new Subject<Media[]>();
   private mediaSubject = new Subject<Media[]>();
@@ -116,11 +118,18 @@ export class MediaService {
     });
   }
 
+  updateMediaFile() {
+    const url = (environment.production) ? '../api/media' : 'http://localhost:8200/api/media';
+    this.http.get<Media>(url).subscribe(media => {
+        this.mediaFileSubject.next(media);
+    });
+  }
+
   saveMedia(media: Media) {
     const url = (environment.production) ? '../api/addmedia' : 'http://localhost:8200/api/addmedia';
 
     this.http.post(url, media).subscribe(response => {
-      this.updateWLAN();
+      this.updateMediaFile();
     });
   }
 
@@ -129,11 +138,18 @@ export class MediaService {
     return this.http.get<Media>(url);
   }
 
+  updateResume() {
+    const url = (environment.production) ? '../api/resume' : 'http://localhost:8200/api/resume';
+    this.http.get<Resume>(url).subscribe(resume => {
+        this.resumeSubject.next(resume);
+    });
+  }
+
   saveResume(resume: Resume) {
     const url = (environment.production) ? '../api/addresume' : 'http://localhost:8200/api/addresume';
 
     this.http.post(url, resume).subscribe(response => {
-      this.updateWLAN();
+      this.updateResume();
     });
   }
 
