@@ -100,7 +100,6 @@ export class PlayerPage implements OnInit {
         this.updateProgress();
       }, 1000)
     }
-    //this.saveResumeFiles();
   }
 
   ionViewWillEnter() {
@@ -121,15 +120,17 @@ export class PlayerPage implements OnInit {
     this.mediaService.local$.subscribe(local => {
       this.currentPlayedLocal = local;
     });
-    this.resumeFile.player = this.currentPlayedLocal?.player;
+    console.log(this.currentPlayedLocal?.player);
+    console.log(this.resumeFile.player);
+    this.resumeFile.player = this.currentPlayedLocal?.player || "";
     if(this.media.type === 'spotify'){
-      this.resumeFile.spotify.id = this.currentPlayedSpotify?.item.album.id;
-      this.resumeFile.spotify.track_number = this.currentPlayedSpotify?.item.track_number;
-      this.resumeFile.spotify.progress_ms = this.currentPlayedSpotify?.progress_ms;
+      this.resumeFile.spotify.id = this.currentPlayedSpotify?.item.album.id || "";
+      this.resumeFile.spotify.track_number = this.currentPlayedSpotify?.item.track_number  || 0;
+      this.resumeFile.spotify.progress_ms = this.currentPlayedSpotify?.progress_ms  || 0;
     } else if (this.media.type === 'library'){
-      this.resumeFile.local.album = this.currentPlayedLocal?.album;
-      this.resumeFile.local.currentTracknr = this.currentPlayedLocal?.currentTracknr;
-      this.resumeFile.local.progressTime = this.currentPlayedLocal?.progressTime;
+      this.resumeFile.local.album = this.currentPlayedLocal?.album || "";
+      this.resumeFile.local.currentTracknr = this.currentPlayedLocal?.currentTracknr  || 0;
+      this.resumeFile.local.progressTime = this.currentPlayedLocal?.progressTime  || 0;
     }
     console.log(this.media);
     console.log(this.resumeFile);
