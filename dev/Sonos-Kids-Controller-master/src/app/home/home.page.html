@@ -7,9 +7,14 @@
             </ion-button>
         </ion-buttons> -->
         <ion-buttons slot="start">
-            <ion-button (click)="resume()" *ngIf="resumePossible">
+            <ion-button (click)="resume()" *ngIf="resumePossible; then hideBlock">
                 <ion-icon slot="icon-only" name="return-down-forward-outline"></ion-icon>
             </ion-button>
+            <ng-template #hideBlock>
+                <ion-button disabled="true">
+                    <ion-icon slot="icon-only" name=""></ion-icon>
+                </ion-button>
+            </ng-template>
         </ion-buttons>
         <ion-segment value="{{this.category}}" (ionChange)="categoryChanged($event)">
             <ion-segment-button value="audiobook">
