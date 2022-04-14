@@ -24,7 +24,6 @@ export class PlayerPage implements OnInit {
   resumePlay = false;
   resumeFile: Resume = {
     spotify:{
-      id: "",
       track_number: 0,
       progress_ms: 0,
       duration_ms: 0,
@@ -82,7 +81,7 @@ export class PlayerPage implements OnInit {
   seek(){
     console.log(this.media.type);
     let newValue = +this.range.value;
-    if(this.media.type === 'spotify' && this.currentPlayedSpotify.currently_playing_type !=='episode'){
+    if(this.media.type === 'spotify' && this.media.category !=='playlist'){
       let duration = this.currentPlayedSpotify.item.duration_ms;
       this.playerService.seekPosition(duration * (newValue / 100));
     } else if (this.media.type === 'library'){
@@ -99,7 +98,7 @@ export class PlayerPage implements OnInit {
     this.mediaService.local$.subscribe(local => {
       this.currentPlayedLocal = local;
     });
-    if(this.media.type === 'spotify' && this.currentPlayedSpotify.currently_playing_type !=='episode'){
+    if(this.media.type === 'spotify' && this.media.category !=='playlist'){
       let seek = this.currentPlayedSpotify?.progress_ms || 0;
       console.log(seek);
       this.progress = (seek / this.currentPlayedSpotify?.item.duration_ms) * 100 || 0;
@@ -163,7 +162,6 @@ export class PlayerPage implements OnInit {
       this.currentPlayedLocal = local;
     });
     if(this.media.type === 'spotify' && this.currentPlayedSpotify.currently_playing_type !=='episode'){
-      this.resumeFile.spotify.id = /* this.currentPlayedSpotify.item.album.id || */ "";
       this.resumeFile.spotify.track_number = this.currentPlayedSpotify.item.track_number  || 0;
       this.resumeFile.spotify.progress_ms = this.currentPlayedSpotify.progress_ms  || 0;
       this.resumeFile.spotify.duration_ms = this.currentPlayedSpotify.item.duration_ms || 0;

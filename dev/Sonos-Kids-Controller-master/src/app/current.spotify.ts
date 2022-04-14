@@ -2,7 +2,6 @@ export interface CurrentSpotify {
     progress_ms?: number;
     item?: {
         album?: {
-            id?: string;
             name?: string;
             total_tracks?: number;
         };

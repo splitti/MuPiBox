@@ -17,7 +17,7 @@
             <div>{{(local$ | async)?.volume}}%</div>
         </ion-title>
         <ion-title slot="end">
-            <div *ngIf="this.media.type === 'spotify' && this.media.category !=='playlist'; else elseBlockAlbumLocal">{{(spotify$ | async)?.item.track_number}}/{{(spotify$ | async)?.item.album.total_tracks}}</div>
+            <div *ngIf="this.media.type === 'spotify' && this.media.category !=='playlist'; else elseBlockTrackLocal">{{(spotify$ | async)?.item.track_number}}/{{(spotify$ | async)?.item.album.total_tracks}}</div>
             <ng-template #elseBlockTrackLocal><div *ngIf="media.type ==='library'; else elseBlockTrackRadio">{{(local$ | async)?.currentTracknr}}/{{(local$ | async)?.totalTracks}}</div></ng-template>
             <ng-template #elseBlockTrackRadio><div></div></ng-template>
         </ion-title>
