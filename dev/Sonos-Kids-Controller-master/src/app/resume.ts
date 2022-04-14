@@ -4,7 +4,7 @@ export interface Resume {
         track_number?: number;
         progress_ms?: number;
     }
-    local: {
+    local?: {
         album?: string;
         currentTracknr?: number;
         progressTime?: number;
