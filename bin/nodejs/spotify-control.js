@@ -85,6 +85,7 @@ let activeDevice = "";
 var volumeStart = 99;
 var	playerstate;
 var currentMeta = {
+  //activePlaylist: '',
   currentPlayer: "",
   playing: false,
   album: "",
@@ -145,7 +146,7 @@ function refreshToken(activePlaylistId){
 /*called in all error cases*/
 /*token expired and no_device error are handled explicitly*/
 function handleSpotifyError(err, activePlaylistId){
-  if (err.body.error.status == 401){
+  if (err.body.error?.status == 401){
     log.debug("access token expired, refreshing...");
     refreshToken(activePlaylistId);
   }
@@ -467,7 +468,7 @@ async function useSpotify(command){
     else {
       log.debug("[Spotify Control] still same device, won't change: " + activeDevice);
     }
-
+    //currentMeta.activePlaylist = command.name.split(':')[2];
     playMe(command.name);
 }
 
@@ -505,29 +506,16 @@ app.get("/state", function(req, res){
 
 /*endpoint to return playlist information*/
 /*only used if sonos-kids-player is modified*/
-app.get("/playlist", function(req, res){
-  spotifyApi.getPlaylist(activePlaylistId)
-  .then(function(data) {
-    let state = data.body;
-    //log.debug("[Spotify Control] Getting available state...");
-    res.send(state);
-  }, function(err) {
-    handleSpotifyError(err,"0");
-  });
-});
-  
-/*endpoint to return playlist information*/
-/*only used if sonos-kids-player is modified*/
-app.get("/playlisttracks", function(req, res){
-  spotifyApi.getPlaylistTracks(activePlaylistId)
-  .then(function(data) {
-    let state = data.body;
-    //log.debug("[Spotify Control] Getting available state...");
-    res.send(state);
-  }, function(err) {
-    handleSpotifyError(err,"0");
-  });
-});
+// app.get("/playlist", function(req, res){
+//   spotifyApi.getPlaylist(currentMeta.activePlaylist)
+//   .then(function(data) {
+//     let state = data.body;
+//     //log.debug("[Spotify Control] Getting available state...");
+//     res.send(state);
+//   }, function(err) {
+//     handleSpotifyError(err,"0");
+//   });
+// });
 
 /*endpoint to return all local metainformation*/
 /*only used if sonos-kids-player is modified*/

@@ -82,7 +82,7 @@ export class PlayerPage implements OnInit {
   seek(){
     console.log(this.media.type);
     let newValue = +this.range.value;
-    if(this.media.type === 'spotify'){
+    if(this.media.type === 'spotify' && this.currentPlayedSpotify.currently_playing_type !=='episode'){
       let duration = this.currentPlayedSpotify.item.duration_ms;
       this.playerService.seekPosition(duration * (newValue / 100));
     } else if (this.media.type === 'library'){
@@ -99,7 +99,7 @@ export class PlayerPage implements OnInit {
     this.mediaService.local$.subscribe(local => {
       this.currentPlayedLocal = local;
     });
-    if(this.media.type === 'spotify'){
+    if(this.media.type === 'spotify' && this.currentPlayedSpotify.currently_playing_type !=='episode'){
       let seek = this.currentPlayedSpotify?.progress_ms || 0;
       console.log(seek);
       this.progress = (seek / this.currentPlayedSpotify?.item.duration_ms) * 100 || 0;
@@ -126,7 +126,7 @@ export class PlayerPage implements OnInit {
   }
 
   ionViewWillLeave() {
-    if(this.media.type === 'spotify' || this.media.type === 'library'){
+    if((this.media.type === 'spotify' && this.currentPlayedSpotify.currently_playing_type !=='episode') || this.media.type === 'library'){
       this.saveResumeFiles();
     }
     this.resumePlay = false;
@@ -162,7 +162,7 @@ export class PlayerPage implements OnInit {
     this.mediaService.local$.subscribe(local => {
       this.currentPlayedLocal = local;
     });
-    if(this.media.type === 'spotify'){
+    if(this.media.type === 'spotify' && this.currentPlayedSpotify.currently_playing_type !=='episode'){
       this.resumeFile.spotify.id = this.currentPlayedSpotify.item.album.id || "";
       this.resumeFile.spotify.track_number = this.currentPlayedSpotify.item.track_number  || 0;
       this.resumeFile.spotify.progress_ms = this.currentPlayedSpotify.progress_ms  || 0;
