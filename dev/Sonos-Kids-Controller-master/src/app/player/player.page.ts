@@ -132,15 +132,15 @@ export class PlayerPage implements OnInit {
       this.currentPlayedLocal = local;
     });
     if(this.media.type === 'spotify'){
-      //this.resumeFile.spotify.id = this.currentPlayedSpotify?.item.album.id || "";
-      //this.resumeFile.spotify.track_number = this.currentPlayedSpotify?.item.track_number  || 0;
-      //this.resumeFile.spotify.progress_ms = this.currentPlayedSpotify?.progress_ms  || 0;
+      this.resumeFile.spotify.id = this.currentPlayedSpotify.item.album.id || "";
+      this.resumeFile.spotify.track_number = this.currentPlayedSpotify.item.track_number  || 0;
+      this.resumeFile.spotify.progress_ms = this.currentPlayedSpotify.progress_ms  || 0;
     } else if (this.media.type === 'library'){
-      //this.resumeFile.local.album = this.currentPlayedLocal?.album || "";
-      //this.resumeFile.local.currentTracknr = this.currentPlayedLocal?.currentTracknr  || 0;
-      //this.resumeFile.local.progressTime = this.currentPlayedLocal?.progressTime  || 0;
+      this.resumeFile.local.album = this.currentPlayedLocal.album || "";
+      this.resumeFile.local.currentTracknr = this.currentPlayedLocal.currentTracknr  || 0;
+      this.resumeFile.local.progressTime = this.currentPlayedLocal.progressTime  || 0;
     }
-    this.resumeFile.spotify.progress_ms = this.currentPlayedSpotify.progress_ms;
+    //this.resumeFile.spotify.progress_ms = this.currentPlayedSpotify.progress_ms;
     console.log(this.media);
     console.log(this.resumeFile);
     console.log(this.currentPlayedLocal);
