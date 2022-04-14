@@ -410,7 +410,7 @@ function seek(progress){
     }
   } else if (currentMeta.currentPlayer == "mplayer") {
     if (progress > 1){
-      play.seekPercent(progress);
+      player.seekPercent(progress);
     } else {
       if (progress) player.seek(+30);
       else player.seek(-30);
