@@ -110,11 +110,17 @@ export class PlayerPage implements OnInit {
   }
 
   ionViewWillLeave() {
-    this.playerService.sendCmd(PlayerCmds.STOP);
     this.saveResumeFiles();
+    this.playerService.sendCmd(PlayerCmds.STOP);
   }
 
   saveResumeFiles(){
+    this.mediaService.current$.subscribe(spotify => {
+      this.currentPlayedSpotify = spotify;
+    });
+    this.mediaService.local$.subscribe(local => {
+      this.currentPlayedLocal = local;
+    });
     this.resumeFile.player = this.currentPlayedLocal?.player;
     if(this.media.type === 'spotify'){
       this.resumeFile.spotify.id = this.currentPlayedSpotify?.item.album.id;
