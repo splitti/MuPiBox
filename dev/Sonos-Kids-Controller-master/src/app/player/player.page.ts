@@ -9,6 +9,7 @@ import { CurrentSpotify } from '../current.spotify';
 import { CurrentMPlayer } from '../current.mplayer';
 import { Observable } from 'rxjs';
 import { IonRange } from '@ionic/angular';
+import { Resume } from '../resume';
 
 @Component({
   selector: 'app-player',
@@ -19,6 +20,7 @@ export class PlayerPage implements OnInit {
   @ViewChild("range", {static: false}) range: IonRange;
 
   media: Media;
+  resume: Resume;
   cover = '';
   playing = true;
   currentPlayedSpotify: CurrentSpotify;
@@ -37,23 +39,25 @@ export class PlayerPage implements OnInit {
     this.spotify$ = this.mediaService.current$;
     this.local$ = this.mediaService.local$;
     this.route.queryParams.subscribe(params => {
-      if (this.router.getCurrentNavigation().extras.state) {
+      if (this.router.getCurrentNavigation().extras.state.media) {
         this.media = this.router.getCurrentNavigation().extras.state.media;
+      }
+    });
+    this.route.queryParams.subscribe(params => {
+      if (this.router.getCurrentNavigation().extras.state.resume) {
+        this.resume = this.router.getCurrentNavigation().extras.state.resume;
       }
     });
   }
 
   ngOnInit() {
     console.log(this.media.type);
-    if(this.media.type === 'spotify'){
-      this.mediaService.current$.subscribe(spotify => {
-        this.currentPlayedSpotify = spotify;
-      });
-    } else if (this.media.type === 'library'){
-      this.mediaService.local$.subscribe(local => {
-        this.currentPlayedLocal = local;
-      });
-    }
+    this.mediaService.current$.subscribe(spotify => {
+      this.currentPlayedSpotify = spotify;
+    });
+    this.mediaService.local$.subscribe(local => {
+      this.currentPlayedLocal = local;
+    });
 
     this.artworkService.getArtwork(this.media).subscribe(url => {
       this.cover = url;
@@ -74,27 +78,25 @@ export class PlayerPage implements OnInit {
 
   updateProgress(){
     console.log(this.media.type);
+    this.mediaService.current$.subscribe(spotify => {
+      this.currentPlayedSpotify = spotify;
+    });
+    this.mediaService.local$.subscribe(local => {
+      this.currentPlayedLocal = local;
+    });
     if(this.media.type === 'spotify'){
-      this.mediaService.current$.subscribe(spotify => {
-        this.currentPlayedSpotify = spotify;
-      });
       let seek = this.currentPlayedSpotify?.progress_ms || 0;
       console.log(seek);
       this.progress = (seek / this.currentPlayedSpotify?.item.duration_ms) * 100 || 0;
-      setTimeout(() => {
-        this.updateProgress();
-      }, 1000)
     } else if (this.media.type === 'library'){
-      this.mediaService.local$.subscribe(local => {
-        this.currentPlayedLocal = local;
-      });
       let seek = this.currentPlayedLocal?.progressTime || 0;
       console.log(seek);
       this.progress = seek || 0;
-      setTimeout(() => {
-        this.updateProgress();
-      }, 1000)
     }
+    this.saveResumeFiles();
+    setTimeout(() => {
+      this.updateProgress();
+    }, 1000)
   }
 
   ionViewWillEnter() {
@@ -104,6 +106,22 @@ export class PlayerPage implements OnInit {
 
   ionViewWillLeave() {
     this.playerService.sendCmd(PlayerCmds.STOP);
+    this.saveResumeFiles();
+  }
+
+  saveResumeFiles(){
+    this.resume.player = this.currentPlayedLocal?.player;
+    if(this.media.type === 'spotify'){
+      this.resume.spotify.id = this.currentPlayedSpotify?.item.album.id;
+      this.resume.spotify.track_number = this.currentPlayedSpotify?.item.track_number;
+      this.resume.spotify.progress_ms = this.currentPlayedSpotify?.progress_ms;
+    } else if (this.media.type === 'library'){
+      this.resume.local.album = this.currentPlayedLocal?.album;
+      this.resume.local.currentTracknr = this.currentPlayedLocal?.currentTracknr;
+      this.resume.local.progressTime = this.currentPlayedLocal?.progressTime;
+    }
+    this.mediaService.saveMedia(this.media);
+    this.mediaService.saveResume(this.resume);
   }
 
   volUp() {

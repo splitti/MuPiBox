@@ -10,6 +10,7 @@ import { Network } from "./network";
 import { WLAN } from './wlan';
 import { CurrentSpotify } from './current.spotify';
 import { CurrentMPlayer } from './current.mplayer';
+import { Resume } from './resume';
 
 @Injectable({
   providedIn: 'root'
@@ -113,6 +114,32 @@ export class MediaService {
     this.http.post(url, wlan).subscribe(response => {
       this.updateWLAN();
     });
+  }
+
+  saveMedia(media: Media) {
+    const url = (environment.production) ? '../api/addmedia' : 'http://localhost:8200/api/addmedia';
+
+    this.http.post(url, media).subscribe(response => {
+      this.updateWLAN();
+    });
+  }
+
+  getMediaObservable = (): Observable<Media> =>  {
+    const url = (environment.production) ? '../api/media' : 'http://localhost:8200/api/media';
+    return this.http.get<Media>(url);
+  }
+
+  saveResume(resume: Resume) {
+    const url = (environment.production) ? '../api/addresume' : 'http://localhost:8200/api/addresume';
+
+    this.http.post(url, resume).subscribe(response => {
+      this.updateWLAN();
+    });
+  }
+
+  getResumeObservable = (): Observable<Resume> =>  {
+    const url = (environment.production) ? '../api/resume' : 'http://localhost:8200/api/resume';
+    return this.http.get<Resume>(url);
   }
 
   // Get the media data for the current category from the server

@@ -7,6 +7,7 @@ import { PlayerService } from '../player.service';
 import { ActivityIndicatorService } from '../activity-indicator.service';
 import { Artist } from '../artist';
 import { Media } from '../media';
+import { Resume } from '../resume';
 //import { Network } from "../network";
 
 @Component({
@@ -22,6 +23,8 @@ export class HomePage implements OnInit {
 
   artists: Artist[] = [];
   media: Media[] = [];
+  mediaFile: Media;
+  resumeFile: Resume;
   //network: Network;
   covers = {};
   activityIndicatorVisible = false;
@@ -95,6 +98,13 @@ export class HomePage implements OnInit {
       window.setTimeout(() => {
         this.artistSlider?.update();
       }, 1000);
+    });
+
+    this.mediaService.getMediaObservable().subscribe(mediaFile => {
+      this.mediaFile = mediaFile;
+    });
+    this.mediaService.getResumeObservable().subscribe(resumeFile => {
+      this.resumeFile = resumeFile;
     });
 
     this.update();
@@ -203,5 +213,20 @@ export class HomePage implements OnInit {
         });
       });
     }
+  }
+
+  resume() {
+    this.activityIndicatorService.create().then(indicator => {
+      this.activityIndicatorVisible = true;
+      indicator.present().then(() => {
+        const navigationExtras: NavigationExtras = {
+          state: {
+            media: this.mediaFile,
+            resume: this.resumeFile
+          }
+        };
+        this.router.navigate(['/player'], navigationExtras);
+      });
+    });
   }
 }

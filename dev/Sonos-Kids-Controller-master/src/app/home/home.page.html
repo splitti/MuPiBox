@@ -1,9 +1,14 @@
 <ion-header>
     <ion-toolbar color="light">
-        <ion-buttons slot="start">
+        <!-- <ion-buttons slot="start">
             <ion-button disabled="true">
                 <ion-icon slot="icon-only" name=""></ion-icon>
-                <!-- Dummy button to center ion-segment -->
+                Dummy button to center ion-segment
+            </ion-button>
+        </ion-buttons> -->
+        <ion-buttons slot="start">
+            <ion-button (click)="resume()">
+                <ion-icon slot="icon-only" name="settings-outline"></ion-icon>
             </ion-button>
         </ion-buttons>
         <ion-segment value="{{this.category}}" (ionChange)="categoryChanged($event)">

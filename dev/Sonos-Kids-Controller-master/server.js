@@ -19,6 +19,8 @@ const dataFile = './server/config/data.json';
 const activedataFile = './server/config/active_data.json';
 const networkFile = './server/config/network.json';
 const wlanFile = './server/config/wlan.json';
+const mediaFile = './server/config/media.json';
+const resumeFile = './server/config/resume.json';
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -54,6 +56,44 @@ app.post('/api/addwlan', (req, res) => {
         data.push(req.body);
 
         jsonfile.writeFile(wlanFile, data, { spaces: 4 }, (error) => {
+            if (error) throw err;
+            res.status(200).send();
+        });
+    });
+});
+
+app.get('/api/media', (req, res) => {
+    jsonfile.readFile(mediaFile, (error, data) => {
+        if (error) data = [];
+        res.json(data);
+    });
+});
+
+app.post('/api/addmedia', (req, res) => {
+    jsonfile.readFile(mediaFile, (error, data) => {
+        if (error) data = [];
+        data.push(req.body);
+
+        jsonfile.writeFile(mediaFile, data, { spaces: 4 }, (error) => {
+            if (error) throw err;
+            res.status(200).send();
+        });
+    });
+});
+
+app.get('/api/resume', (req, res) => {
+    jsonfile.readFile(resumeFile, (error, data) => {
+        if (error) data = [];
+        res.json(data);
+    });
+});
+
+app.post('/api/addresume', (req, res) => {
+    jsonfile.readFile(resumeFile, (error, data) => {
+        if (error) data = [];
+        data.push(req.body);
+
+        jsonfile.writeFile(resumeFile, data, { spaces: 4 }, (error) => {
             if (error) throw err;
             res.status(200).send();
         });
