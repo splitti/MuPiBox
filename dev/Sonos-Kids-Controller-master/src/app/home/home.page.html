@@ -1,21 +1,16 @@
 <ion-header>
     <ion-toolbar color="light">
-        <div *ngIf="resumePossible; then resumeBlock else hideBlock"></div>
-        <ng-template #hideBlock>
-            <ion-buttons slot="start">
-                <ion-button disabled="true">
-                    <ion-icon slot="icon-only" name=""></ion-icon>
-                    <!-- Dummy button to center ion-segment -->
-                </ion-button>
-            </ion-buttons>
-        </ng-template>
-        <ng-template #resumeBlock>
-            <ion-buttons slot="start">
-                <ion-button (click)="resume()">
-                    <ion-icon slot="icon-only" name="return-down-forward-outline"></ion-icon>
-                </ion-button>
-            </ion-buttons>
-        </ng-template>
+        <!-- <ion-buttons slot="start">
+            <ion-button disabled="true">
+                <ion-icon slot="icon-only" name=""></ion-icon>
+                Dummy button to center ion-segment
+            </ion-button>
+        </ion-buttons> -->
+        <ion-buttons slot="start">
+            <ion-button (click)="resume()">
+                <ion-icon slot="icon-only" name="return-down-forward-outline"></ion-icon>
+            </ion-button>
+        </ion-buttons>
         <ion-segment value="{{this.category}}" (ionChange)="categoryChanged($event)">
             <ion-segment-button value="audiobook">
                 <ion-icon name="book-outline"></ion-icon>

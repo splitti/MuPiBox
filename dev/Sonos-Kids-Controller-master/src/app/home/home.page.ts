@@ -25,7 +25,6 @@ export class HomePage implements OnInit {
   media: Media[] = [];
   mediaFile: Media;
   resumeFile: Resume;
-  resumePossible = false;
   //network: Network;
   covers = {};
   activityIndicatorVisible = false;
@@ -114,10 +113,6 @@ export class HomePage implements OnInit {
     this.mediaService.getResumeObservable().subscribe(resumeFile => {
       this.resumeFile = resumeFile;
     });
-    if (this.mediaFile.type === 'spotify' || this.mediaFile.type === 'library') {
-      this.resumePossible = true;
-      console.log(this.resumePossible);
-    }
   }
 
   ionViewDidLeave() {
@@ -125,7 +120,6 @@ export class HomePage implements OnInit {
       this.activityIndicatorService.dismiss();
       this.activityIndicatorVisible = false;
     }
-    this.resumePossible = false;
   }
 
   categoryChanged(event: any) {
