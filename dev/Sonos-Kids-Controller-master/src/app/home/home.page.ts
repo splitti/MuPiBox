@@ -113,6 +113,9 @@ export class HomePage implements OnInit {
     this.mediaService.getResumeObservable().subscribe(resumeFile => {
       this.resumeFile = resumeFile;
     });
+    if (this.mediaFile.type === 'spotify' || this.mediaFile.type === 'library') {
+
+    }
   }
 
   ionViewDidLeave() {

@@ -120,9 +120,9 @@ export class PlayerPage implements OnInit {
     console.log(this.media);
     this.playerService.playMedia(this.media);
     this.updateProgress();
-    if (this.resumePlay){
-      this.resumePlayback();
-    }
+    // if (this.resumePlay){
+    //   this.resumePlayback();
+    // }
   }
 
   ionViewWillLeave() {
