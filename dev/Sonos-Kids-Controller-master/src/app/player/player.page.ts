@@ -133,12 +133,14 @@ export class PlayerPage implements OnInit {
 
   resumePlayback(){
     if(this.media.type === 'spotify'){
-      for(let i = 0; i < this.resume.spotify.track_number; i++){
+      for(let i = 1; i < this.resume.spotify.track_number; i++){
         setTimeout(() => {
           this.skipNext();
         }, 1000)
       }
-      this.playerService.seekPosition(this.resume.spotify.duration_ms * (this.resume.spotify.progress_ms / 100));
+      setTimeout(() => {
+        this.playerService.seekPosition(this.resume.spotify.duration_ms * (this.resume.spotify.progress_ms / 100));
+      }, 1000)
     } else if (this.media.type === 'library'){
       for(let i = 0; i < this.resume.local.currentTracknr; i++){
         this.skipNext();
