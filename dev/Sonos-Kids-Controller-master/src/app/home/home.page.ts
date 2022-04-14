@@ -116,6 +116,7 @@ export class HomePage implements OnInit {
     });
     if (this.mediaFile.type === 'spotify' || this.mediaFile.type === 'library') {
       this.resumePossible = true;
+      console.log(this.resumePossible);
     }
   }
 
