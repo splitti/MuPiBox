@@ -89,15 +89,18 @@ export class PlayerPage implements OnInit {
       let seek = this.currentPlayedSpotify?.progress_ms || 0;
       console.log(seek);
       this.progress = (seek / this.currentPlayedSpotify?.item.duration_ms) * 100 || 0;
+      setTimeout(() => {
+        this.updateProgress();
+      }, 1000)
     } else if (this.media.type === 'library'){
       let seek = this.currentPlayedLocal?.progressTime || 0;
       console.log(seek);
       this.progress = seek || 0;
+      setTimeout(() => {
+        this.updateProgress();
+      }, 1000)
     }
-    this.saveResumeFiles();
-    setTimeout(() => {
-      this.updateProgress();
-    }, 1000)
+    //this.saveResumeFiles();
   }
 
   ionViewWillEnter() {
