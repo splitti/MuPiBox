@@ -48,7 +48,7 @@ setInterval(() => {
 
 player.on('metadata', (val) => {
   console.log('track metadata is', val);
-  currentMeta.currentTracknr = val.Comment.split(',').pop();
+  currentMeta.currentTracknr = parseInt(val.Comment.split(',').pop(), 10);
 })
 player.on('track-change', () => player.getProps(['metadata']))
 
@@ -339,7 +339,7 @@ function playList(playedList){
         console.error(e);
         throw e;
       }
-      currentMeta.totalTracks = stdout.split(/\r?\n/)[0];
+      currentMeta.totalTracks = parseInt(stdout.split(/\r?\n/)[0], 10);
       console.log('stdout', stdout);
       console.log('stderr', stderr);
     });
@@ -353,7 +353,7 @@ function playList(playedList){
       console.error(e);
       throw e;
     }
-    currentMeta.volume = stdout.split('[')[1].split('%')[0];
+    currentMeta.volume = parseInt(stdout.split('[')[1].split('%')[0], 10);
     console.log('stdout', stdout);
     console.log('stderr', stderr);
   });
@@ -442,8 +442,13 @@ async function setVolume(volume){
   let volumeUp = "/usr/bin/amixer sset Master 5%+";
   let volumeDown = "/usr/bin/amixer sset Master 5%-";
 
-  if (volume) await cmdCall(volumeUp);
-  else await cmdCall(volumeDown);
+  if (volume) {
+    await cmdCall(volumeUp);
+    currentMeta.volume = parseInt(currentMeta.volume, 10) + 5;
+  } else {
+    await cmdCall(volumeDown);
+    currentMeta.volume = parseInt(currentMeta.volume, 10) - 5;
+  } 
 }
 
 async function transferPlayback(id){

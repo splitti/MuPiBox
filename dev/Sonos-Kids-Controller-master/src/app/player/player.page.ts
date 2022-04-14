@@ -9,7 +9,6 @@ import { CurrentSpotify } from '../current.spotify';
 import { CurrentMPlayer } from '../current.mplayer';
 import { Observable } from 'rxjs';
 import { IonRange } from '@ionic/angular';
-import { stdin } from 'process';
 
 @Component({
   selector: 'app-player',
@@ -45,6 +44,7 @@ export class PlayerPage implements OnInit {
   }
 
   ngOnInit() {
+    console.log(this.media.type);
     if(this.media.type === 'spotify'){
       this.mediaService.current$.subscribe(spotify => {
         this.currentPlayedSpotify = spotify;
@@ -61,6 +61,7 @@ export class PlayerPage implements OnInit {
   }
 
   seek(){
+    console.log(this.media.type);
     let newValue = +this.range.value;
     if(this.media.type === 'spotify'){
       let duration = this.currentPlayedSpotify.item.duration_ms;
@@ -72,6 +73,7 @@ export class PlayerPage implements OnInit {
   }
 
   updateProgress(){
+    console.log(this.media.type);
     if(this.media.type === 'spotify'){
       this.mediaService.current$.subscribe(spotify => {
         this.currentPlayedSpotify = spotify;
