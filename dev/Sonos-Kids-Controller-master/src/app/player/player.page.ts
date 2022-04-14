@@ -100,6 +100,7 @@ export class PlayerPage implements OnInit {
   }
 
   ionViewWillEnter() {
+    console.log(this.media);
     this.playerService.playMedia(this.media);
     this.updateProgress();
   }
@@ -120,6 +121,8 @@ export class PlayerPage implements OnInit {
       this.resume.local.currentTracknr = this.currentPlayedLocal?.currentTracknr;
       this.resume.local.progressTime = this.currentPlayedLocal?.progressTime;
     }
+    console.log(this.media);
+    console.log(this.resume);
     this.mediaService.saveMedia(this.media);
     this.mediaService.saveResume(this.resume);
   }

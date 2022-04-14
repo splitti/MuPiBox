@@ -67,6 +67,19 @@ player.on('path', (val) => {
 })
 player.on('track-change', () => player.getProps(['path']))
 
+let cmdtotalTracks = "/usr/bin/amixer sget Master | grep 'Right:'";
+  console.log(cmdtotalTracks);
+  const exec = require ('child_process').exec;
+  exec(cmdtotalTracks, (e, stdout, stderr) => {
+    if (e instanceof Error){
+      console.error(e);
+      throw e;
+    }
+    currentMeta.volume = parseInt(stdout.split('[')[1].split('%')[0], 10);
+    console.log('stdout', stdout);
+    console.log('stderr', stderr);
+  });
+
   /*store device to be played back*/
 let activeDevice = "";
 var volumeStart = 99;
@@ -344,19 +357,6 @@ function playList(playedList){
       console.log('stderr', stderr);
     });
   },500)
-
-  let cmdtotalTracks = "/usr/bin/amixer sget Master | grep 'Right:'";
-  console.log(cmdtotalTracks);
-  const exec = require ('child_process').exec;
-  exec(cmdtotalTracks, (e, stdout, stderr) => {
-    if (e instanceof Error){
-      console.error(e);
-      throw e;
-    }
-    currentMeta.volume = parseInt(stdout.split('[')[1].split('%')[0], 10);
-    console.log('stdout', stdout);
-    console.log('stderr', stderr);
-  });
 }
 
 function playFile(playedFile){
