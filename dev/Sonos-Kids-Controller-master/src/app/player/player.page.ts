@@ -126,7 +126,9 @@ export class PlayerPage implements OnInit {
   }
 
   ionViewWillLeave() {
-    this.saveResumeFiles();
+    if(this.media.type === 'spotify' || this.media.type === 'library'){
+      this.saveResumeFiles();
+    }
     this.playerService.sendCmd(PlayerCmds.STOP);
     this.resumePlay = false;
   }
