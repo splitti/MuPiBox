@@ -163,7 +163,7 @@ export class PlayerPage implements OnInit {
       this.currentPlayedLocal = local;
     });
     if(this.media.type === 'spotify' && this.currentPlayedSpotify.currently_playing_type !=='episode'){
-      this.resumeFile.spotify.id = this.currentPlayedSpotify.item.album?.id || "";
+      this.resumeFile.spotify.id = /* this.currentPlayedSpotify.item.album.id || */ "";
       this.resumeFile.spotify.track_number = this.currentPlayedSpotify.item.track_number  || 0;
       this.resumeFile.spotify.progress_ms = this.currentPlayedSpotify.progress_ms  || 0;
       this.resumeFile.spotify.duration_ms = this.currentPlayedSpotify.item.duration_ms || 0;
