@@ -21,6 +21,7 @@ export class PlayerPage implements OnInit {
 
   media: Media;
   resume: Resume;
+  resumeFile: Resume;
   cover = '';
   playing = true;
   currentPlayedSpotify: CurrentSpotify;
@@ -111,20 +112,20 @@ export class PlayerPage implements OnInit {
   }
 
   saveResumeFiles(){
-    this.resume.player = this.currentPlayedLocal?.player;
+    this.resumeFile.player = this.currentPlayedLocal?.player;
     if(this.media.type === 'spotify'){
-      this.resume.spotify.id = this.currentPlayedSpotify?.item.album.id;
-      this.resume.spotify.track_number = this.currentPlayedSpotify?.item.track_number;
-      this.resume.spotify.progress_ms = this.currentPlayedSpotify?.progress_ms;
+      this.resumeFile.spotify.id = this.currentPlayedSpotify?.item.album.id;
+      this.resumeFile.spotify.track_number = this.currentPlayedSpotify?.item.track_number;
+      this.resumeFile.spotify.progress_ms = this.currentPlayedSpotify?.progress_ms;
     } else if (this.media.type === 'library'){
-      this.resume.local.album = this.currentPlayedLocal?.album;
-      this.resume.local.currentTracknr = this.currentPlayedLocal?.currentTracknr;
-      this.resume.local.progressTime = this.currentPlayedLocal?.progressTime;
+      this.resumeFile.local.album = this.currentPlayedLocal?.album;
+      this.resumeFile.local.currentTracknr = this.currentPlayedLocal?.currentTracknr;
+      this.resumeFile.local.progressTime = this.currentPlayedLocal?.progressTime;
     }
     console.log(this.media);
-    console.log(this.resume);
+    console.log(this.resumeFile);
     this.mediaService.saveMedia(this.media);
-    this.mediaService.saveResume(this.resume);
+    this.mediaService.saveResume(this.resumeFile);
   }
 
   volUp() {
