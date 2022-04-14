@@ -100,13 +100,6 @@ export class HomePage implements OnInit {
       }, 1000);
     });
 
-    this.mediaService.getMediaObservable().subscribe(mediaFile => {
-      this.mediaFile = mediaFile;
-    });
-    this.mediaService.getResumeObservable().subscribe(resumeFile => {
-      this.resumeFile = resumeFile;
-    });
-
     this.update();
   }
 
@@ -114,6 +107,12 @@ export class HomePage implements OnInit {
     if (this.needsUpdate) {
       this.update();
     }
+    this.mediaService.getMediaObservable().subscribe(mediaFile => {
+      this.mediaFile = mediaFile;
+    });
+    this.mediaService.getResumeObservable().subscribe(resumeFile => {
+      this.resumeFile = resumeFile;
+    });
   }
 
   ionViewDidLeave() {

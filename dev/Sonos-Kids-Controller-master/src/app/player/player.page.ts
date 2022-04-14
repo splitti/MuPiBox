@@ -140,11 +140,6 @@ export class PlayerPage implements OnInit {
       this.resumeFile.local.currentTracknr = this.currentPlayedLocal.currentTracknr  || 0;
       this.resumeFile.local.progressTime = this.currentPlayedLocal.progressTime  || 0;
     }
-    //this.resumeFile.spotify.progress_ms = this.currentPlayedSpotify.progress_ms;
-    console.log(this.media);
-    console.log(this.resumeFile);
-    console.log(this.currentPlayedLocal);
-    console.log(this.currentPlayedSpotify);
     this.mediaService.saveMedia(this.media);
     this.mediaService.saveResume(this.resumeFile);
   }
