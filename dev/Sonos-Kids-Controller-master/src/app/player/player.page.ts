@@ -120,9 +120,6 @@ export class PlayerPage implements OnInit {
     this.mediaService.local$.subscribe(local => {
       this.currentPlayedLocal = local;
     });
-    console.log(this.currentPlayedLocal?.player);
-    console.log(this.resumeFile.player);
-    this.resumeFile.player = this.currentPlayedLocal?.player || "";
     if(this.media.type === 'spotify'){
       this.resumeFile.spotify.id = this.currentPlayedSpotify?.item.album.id || "";
       this.resumeFile.spotify.track_number = this.currentPlayedSpotify?.item.track_number  || 0;

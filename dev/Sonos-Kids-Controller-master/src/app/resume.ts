@@ -1,5 +1,4 @@
 export interface Resume {
-    player?: string;
     spotify?:{
         id?: string;
         track_number?: number;
