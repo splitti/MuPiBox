@@ -134,7 +134,7 @@ export class PlayerPage implements OnInit {
 
   resumePlayback(){
     if(this.media.type === 'spotify'){
-      let j = 0;
+      let j = 1;
       for(let i = 1; i < this.resume.spotify.track_number; i++){
         setTimeout(() => {
           this.skipNext();
@@ -146,17 +146,27 @@ export class PlayerPage implements OnInit {
           }
         }, 2000)
       }
+      if (this.resume.spotify.track_number === 1){
+        setTimeout(() => {
+          this.playerService.seekPosition(this.resume.spotify.duration_ms * (this.resume.spotify.progress_ms / 100));
+        }, 2000)
+      }
     } else if (this.media.type === 'library'){
-      let j = 0;
+      let j = 1;
       for(let i = 1; i < this.resume.local.currentTracknr; i++){
         setTimeout(() => {
           this.skipNext();
           j = i + 1;
-          if(j === this.resume.spotify.track_number){
+          if(j === this.resume.local.currentTracknr){
             setTimeout(() => {
               this.playerService.seekPosition(this.resume.local.progressTime);
             }, 2000) 
           }
+        }, 2000)
+      }
+      if (this.resume.local.currentTracknr === 1){
+        setTimeout(() => {
+          this.playerService.seekPosition(this.resume.local.progressTime);
         }, 2000)
       }
     }
@@ -215,6 +225,9 @@ export class PlayerPage implements OnInit {
     } else {
       this.playing = true;
       this.playerService.sendCmd(PlayerCmds.PLAY);
+    }
+    if((this.media.type === 'spotify' && this.currentPlayedSpotify.currently_playing_type !== 'episode') || this.media.type === 'library'){
+      this.saveResumeFiles();
     }
   }
 
