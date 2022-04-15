@@ -125,7 +125,7 @@ export class PlayerPage implements OnInit {
   }
 
   ionViewWillLeave() {
-    if(this.media.type === 'spotify' || this.media.type === 'library'){
+    if((this.media.type === 'spotify' && this.currentPlayedSpotify.currently_playing_type !== 'episode') || this.media.type === 'library'){
       this.saveResumeFiles();
     }
     this.resumePlay = false;
