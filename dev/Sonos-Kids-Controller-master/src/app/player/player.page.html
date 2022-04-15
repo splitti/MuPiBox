@@ -3,36 +3,21 @@
         <ion-buttons slot="start">
             <ion-back-button icon="arrow-back-outline" defaultHref="/medialist"></ion-back-button>
         </ion-buttons>
-        <div *ngIf="media.type === 'spotify' && media.category !=='playlist'; else elseBlockAlbumLocal">
-            <ion-title>{{(spotify$ | async)?.item.album.name}}</ion-title>
-            <ion-title>{{(spotify$ | async)?.item.name}}</ion-title>
-        </div>
-        <ng-template #elseBlockAlbumLocal>
-            <div *ngIf="media.type ==='library'; else elseBlockAlbumRadio">
-                <ion-title>{{(local$ | async)?.album}}</ion-title>
-                <ion-title>{{(local$ | async)?.currentTrackname}}</ion-title>
-            </div>
-        </ng-template>
-        <ng-template #elseBlockAlbumRadio>
-            <div>
-                <ion-title>{{media.title}}</ion-title>
-            </div>
-        </ng-template>
-        <!-- <ion-title>
-            <div *ngIf="media.type === 'spotify' && media.category !=='playlist'; else elseBlockAlbumLocal">{{(spotify$ | async)?.item.album.name}}</div>
+        <ion-title>
+            <div *ngIf="media.type ==='spotify' && media.category !=='playlist'; else elseBlockAlbumLocal">{{(spotify$ | async)?.item.album.name}}</div>
             <ng-template #elseBlockAlbumLocal><div *ngIf="media.type ==='library'; else elseBlockAlbumRadio">{{(local$ | async)?.album}}</div></ng-template>
             <ng-template #elseBlockAlbumRadio><div>{{media.title}}</div></ng-template>
         </ion-title>
         <ion-title>
-            <div *ngIf="media.type === 'spotify' && media.category !=='playlist'; else elseBlockTitelLocal">{{(spotify$ | async)?.item.name}}</div>
+            <div *ngIf="media.type ==='spotify'; else elseBlockTitelLocal">{{(spotify$ | async)?.item.name}}</div>
             <ng-template #elseBlockTitelLocal><div *ngIf="media.type ==='library'; else elseBlockTitelRadio">{{(local$ | async)?.currentTrackname}}</div></ng-template>
             <ng-template #elseBlockTitelRadio><div></div></ng-template>
-        </ion-title> -->
+        </ion-title>
         <ion-title slot="end">
             <div>{{(local$ | async)?.volume}}%</div>
         </ion-title>
         <ion-title slot="end">
-            <div *ngIf="media.type === 'spotify' && media.category !=='playlist'; else elseBlockTrackLocal">{{(spotify$ | async)?.item.track_number}}/{{(spotify$ | async)?.item.album.total_tracks}}</div>
+            <div *ngIf="media.type ==='spotify' && media.category !=='playlist'; else elseBlockTrackLocal">{{(spotify$ | async)?.item.track_number}}/{{(spotify$ | async)?.item.album.total_tracks}}</div>
             <ng-template #elseBlockTrackLocal><div *ngIf="media.type ==='library'; else elseBlockTrackRadio">{{(local$ | async)?.currentTracknr}}/{{(local$ | async)?.totalTracks}}</div></ng-template>
             <ng-template #elseBlockTrackRadio><div></div></ng-template>
         </ion-title>
