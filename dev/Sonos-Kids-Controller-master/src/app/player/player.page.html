@@ -9,7 +9,7 @@
             <ng-template #elseBlockAlbumRadio><div>{{media.title}}</div></ng-template>
         </ion-title>
         <ion-title>
-            <div *ngIf="media.type ==='spotify'; else elseBlockTitelLocal">{{(spotify$ | async)?.item.name}}</div>
+            <div *ngIf="media.type ==='spotify' && media.category !=='playlist'; else elseBlockTitelLocal">{{(spotify$ | async)?.item.name}}</div>
             <ng-template #elseBlockTitelLocal><div *ngIf="media.type ==='library'; else elseBlockTitelRadio">{{(local$ | async)?.currentTrackname}}</div></ng-template>
             <ng-template #elseBlockTitelRadio><div></div></ng-template>
         </ion-title>
