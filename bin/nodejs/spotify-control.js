@@ -93,7 +93,7 @@ var currentMeta = {
   currentTracknr: "",
   totalTracks: "",
   progressTime: "",
-  volume: ""
+  volume: 0
 };
 
 function writeplayerstatePlay(){
@@ -416,10 +416,18 @@ async function setVolume(volume){
 
   if (volume) {
     await cmdCall(volumeUp);
-    currentMeta.volume = parseInt(currentMeta.volume, 10) + 5;
+    if(currentMeta.volume < 100){
+      currentMeta.volume = parseInt(currentMeta.volume, 10) + 5;
+    } else {
+      currentMeta.volume = 100
+    }
   } else {
     await cmdCall(volumeDown);
-    currentMeta.volume = parseInt(currentMeta.volume, 10) - 5;
+    if(currentMeta.volume > 0){
+      currentMeta.volume = parseInt(currentMeta.volume, 10) - 5;
+    } else {
+      currentMeta.volume = 0
+    }
   } 
 }
 
