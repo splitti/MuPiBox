@@ -10,6 +10,10 @@ exec 3>${LOG}
 {
 	echo -e "XXX\n0\nPrepare Update... \nXXX"	 >&3 2>&3
 	sudo systemctl stop mupi_idle_shutdown.service >&3 2>&3
+	sudo mkdir /home/dietpi/MuPiBox/media/audiobook >&3 2>&3
+	sudo mkdir /home/dietpi/MuPiBox/media/music >&3 2>&3
+	sudo chown dietpi:dietpi /home/dietpi/MuPiBox/media/audiobook >&3 2>&3
+	sudo chown dietpi:dietpi /home/dietpi/MuPiBox/media/music >&3 2>&3
 	sleep 1 >&3 2>&3
 
 	echo -e "XXX\n1\nInstall some packages... Please wait!\nXXX"

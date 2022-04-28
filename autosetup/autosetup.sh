@@ -63,6 +63,8 @@ exec 3>${LOG}
 	mkdir -p ~/MuPiBox/sysmedia/sound >&3 2>&3
 	mkdir ~/MuPiBox/sysmedia/images >&3 2>&3
 	mkdir ~/MuPiBox/media >&3 2>&3
+	mkdir ~/MuPiBox/media/audiobook >&3 2>&3
+	mkdir ~/MuPiBox/media/music >&3 2>&3
 	mkdir ~/MuPiBox/themes >&3 2>&3
 	mkdir -p ~/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
 	sudo mkdir /usr/local/bin/mupibox >&3 2>&3
