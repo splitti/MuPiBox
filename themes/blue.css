@@ -2,6 +2,26 @@ html {
   touch-action:none;
 }
 
+/*
+BG body{--ion-background-color: #44afe2;
+FG --ion-color-light: #054b61;
+*/
+
+ion-range{
+    --knob-background: #054b61;
+    --bar-background-active: #054b61;
+    --bar-background: #054b61;
+    --bar-height: 6px;
+    --knob-size: 25px;
+    --knob-border-radius: 50%;
+    --bar-border-radius: 20px;
+    --knob-box-shadow: 0px 0px 0px 2px #fff;
+}
+
+.play-controls{
+        margin-top:0px !important;
+}
+
 :root{--ion-color-primary: #3880ff;
 --ion-color-primary-rgb: 56, 128, 255;
 --ion-color-primary-contrast: #ffffff;

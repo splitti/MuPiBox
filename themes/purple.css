@@ -2,6 +2,26 @@ html {
   touch-action:none;
 }
 
+/*
+BG body{--ion-background-color: #ba6ccf;
+FG --ion-color-light: #4f0d61;
+*/
+
+ion-range{
+    --knob-background: #4f0d61;
+    --bar-background-active: #4f0d61;
+    --bar-background: #4f0d61;
+    --bar-height: 6px;
+    --knob-size: 25px;
+    --knob-border-radius: 50%;
+    --bar-border-radius: 20px;
+    --knob-box-shadow: 0px 0px 0px 2px #fff;
+}
+
+.play-controls{
+        margin-top:0px !important;
+}
+
 :root{--ion-color-primary: #3880ff;
 --ion-color-primary-rgb: 56, 128, 255;
 --ion-color-primary-contrast: #ffffff;
@@ -156,7 +176,7 @@ html {
 --ion-color-step-850: #dbdbdb;
 --ion-color-step-900: #e7e7e7;
 --ion-color-step-950: #f3f3f3;
---ion-item-background: #1e1e1e;
+--ion-item-background: transparent;
 --ion-toolbar-background: #1f1f1f;
 --ion-tab-bar-background: #1f1f1f}html.ios{--ion-default-font: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Roboto", sans-serif}html.md{--ion-default-font: "Roboto", "Helvetica Neue", sans-serif}html{--ion-font-family: var(--ion-default-font)}body{background:var(--ion-background-color)}body.backdrop-no-scroll{overflow:hidden}html.ios ion-modal.modal-card ion-header ion-toolbar:first-of-type,html.ios ion-modal.modal-sheet ion-header ion-toolbar:first-of-type,html.ios ion-modal ion-footer ion-toolbar:first-of-type{padding-top:6px}html.ios ion-modal.modal-card ion-header ion-toolbar:last-of-type,html.ios ion-modal.modal-sheet ion-header ion-toolbar:last-of-type{padding-bottom:6px}html.ios ion-modal ion-toolbar{padding-right:calc(var(--ion-safe-area-right) + 8px);
 padding-left:calc(var(--ion-safe-area-left) + 8px)}@media screen and (min-width: 768px){html.ios ion-modal.modal-card:first-of-type{--backdrop-opacity: .18}}ion-modal.modal-default:not(.overlay-hidden)~ion-modal.modal-default{--backdrop-opacity: 0;
