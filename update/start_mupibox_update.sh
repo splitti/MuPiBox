@@ -49,24 +49,23 @@ exec 3>${LOG}
 	sudo mv /tmp/active_theme.css /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/active_theme.css >&3 2>&3
 	sudo chown dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json >&3 2>&3
 	sudo chown dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >&3 2>&3
-	sudo chown dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/active_theme >&3 2>&3
 	sleep 1 >&3 2>&3
 
 
 	echo -e "XXX\n22\nDownload MuPiBox-Files... \nXXX"	
 
 	# MuPiBox
-	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/dark.css -O ~/MuPiBox/themes/dark.css >&3 2>&3
-	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/blue.css -O ~/MuPiBox/themes/blue.css >&3 2>&3
-	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/purple.css -O ~/MuPiBox/themes/purple.css >&3 2>&3
-	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/red.css -O ~/MuPiBox/themes/red.css >&3 2>&3
-	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/chocolate.css -O ~/MuPiBox/themes/chocolate.css >&3 2>&3
-	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/vintage.css -O ~/MuPiBox/themes/vintage.css >&3 2>&3
-	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/orange.css -O ~/MuPiBox/themes/orange.css >&3 2>&3
-	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/green.css -O ~/MuPiBox/themes/green.css >&3 2>&3
-	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/light.css -O ~/MuPiBox/themes/light.css >&3 2>&3
-	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/deepblue.css -O ~/MuPiBox/themes/deepblue.css >&3 2>&3
-	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/pink.css -O ~/MuPiBox/themes/pink.css >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/dark.css -O /home/dietpi/MuPiBox/themes/dark.css >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/blue.css -O /home/dietpi/MuPiBox/themes/blue.css >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/purple.css -O /home/dietpi/MuPiBox/themes/purple.css >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/red.css -O /home/dietpi/MuPiBox/themes/red.css >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/chocolate.css -O /home/dietpi/MuPiBox/themes/chocolate.css >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/vintage.css -O /home/dietpi/MuPiBox/themes/vintage.css >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/orange.css -O /home/dietpi/MuPiBox/themes/orange.css >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/green.css -O /home/dietpi/MuPiBox/themes/green.css >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/light.css -O /home/dietpi/MuPiBox/themes/light.css >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/deepblue.css -O /home/dietpi/MuPiBox/themes/deepblue.css >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/pink.css -O /home/dietpi/MuPiBox/themes/pink.css >&3 2>&3
 	
 	sudo wget https://github.com/splitti/MuPiBox/raw/main/media/images/goodbye.png -O /home/dietpi/MuPiBox/sysmedia/images/goodbye.png >&3 2>&3
 	sudo chown dietpi:dietpi /home/dietpi/MuPiBox/sysmedia/images/goodbye.png >&3 2>&3
