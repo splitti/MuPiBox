@@ -7,11 +7,6 @@ ion-range{
     --knob-background: #ff5900;
     --bar-background-active: #ff5900;
     --bar-background: #ff5900;
-    --bar-height: 6px;
-    --knob-size: 25px;
-    --knob-border-radius: 50%;
-    --bar-border-radius: 20px;
-    --knob-box-shadow: 0px 0px 0px 2px #fff;
 }
 
 body{
