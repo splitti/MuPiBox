@@ -51,10 +51,6 @@ br {
     cursor: default;
 }
 
-html {
-  touch-action:none;
-}
-
 .slides-md {
     --bullet-background: #ffffff;
 }
@@ -77,4 +73,12 @@ ion-toolbar {
 
 .alert-message {
     font-size: 18px !important;
+}
+
+/*
+Global MuPiBox-Edit
+*/
+
+html {
+  touch-action:none;
 }

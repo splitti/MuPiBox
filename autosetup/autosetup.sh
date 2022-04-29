@@ -281,7 +281,7 @@ exec 3>${LOG}
 	# ENV
 	(echo "mupibox"; echo "mupibox") | sudo smbpasswd -s -a dietpi >&3 2>&3
 	sudo env PATH=$PATH:/usr/local/bin/mupibox >&3 2>&3
-	THEME_FILE="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/styles.242c97d50a9a860d.css" >&3 2>&3
+	THEME_FILE="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/active_theme.css" >&3 2>&3
 	ln -s /home/dietpi/MuPiBox/themes/blue.css ${THEME_FILE} >&3 2>&3
 	sudo echo "www-data ALL=(ALL:ALL) NOPASSWD: ALL" | sudo tee /etc/sudoers.d/www-data  >&3 2>&3
 	sudo usermod -a -G gpio dietpi >&3 2>&3

@@ -9,7 +9,7 @@ SONOS_CONFIG="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/c
 SPOTIFYCONTROLLER_CONFIG="/home/dietpi/.mupibox/spotifycontroller-main/config/config.json"
 SPOTIFYD_CONFIG="/etc/spotifyd/spotifyd.conf"
 DISPLAY_STANDBY="/etc/X11/xorg.conf.d/98-dietpi-disable_dpms.conf"
-THEME_FILE="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/styles.242c97d50a9a860d.css"
+THEME_FILE="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/active_theme.css"
 NEW_THEME=$(/usr/bin/jq -r .mupibox.theme ${MUPIBOX_CONFIG})
 
 newTheme=$(ls -l ${THEME_FILE} | grep ${NEW_THEME})
