@@ -51,6 +51,10 @@ br {
     cursor: default;
 }
 
+html {
+  touch-action:none;
+}
+
 .slides-md {
     --bullet-background: #ffffff;
 }

@@ -13,24 +13,27 @@ ion-back-button {
 }
 
 .toolbar-album {
-
+	width: 650px;
 }
 
 .toolbar-tracktitle {
-
+	width: 650px;
 }
 
 .toolbar-volume {
-
+	min-width: 80px;
+	max-width: 150px;
 }
 
 .toolbar-tracknumber {
-
+	min-width: 80px;
+	max-width: 150px;
 }
 
-.play-controls {
-    margin-top: 60px;
+.play-controls{
+        margin-top:0px;
 }
+
 
 .indicator-button {
     opacity: 0.35;
