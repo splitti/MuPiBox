@@ -36,6 +36,7 @@ export class PlayerPage implements OnInit {
   };
   cover = '';
   playing = true;
+  updateProgression = false;
   currentPlayedSpotify: CurrentSpotify;
   currentPlayedLocal: CurrentMPlayer;
   progress = 0;
@@ -103,20 +104,25 @@ export class PlayerPage implements OnInit {
       console.log(seek);
       this.progress = (seek / this.currentPlayedSpotify?.item.duration_ms) * 100 || 0;
       setTimeout(() => {
-        this.updateProgress();
+        if(this.updateProgression){
+          this.updateProgress();
+        }
       }, 1000)
     } else if (this.media.type === 'library'){
       let seek = this.currentPlayedLocal?.progressTime || 0;
       console.log(seek);
       this.progress = seek || 0;
       setTimeout(() => {
-        this.updateProgress();
+        if(this.updateProgression){
+          this.updateProgress();
+        }
       }, 1000)
     }
   }
 
   ionViewWillEnter() {
     console.log(this.media);
+    this.updateProgression = true;
     this.playerService.playMedia(this.media);
     this.updateProgress();
     if (this.resumePlay){
@@ -129,6 +135,7 @@ export class PlayerPage implements OnInit {
       this.saveResumeFiles();
     }
     this.resumePlay = false;
+    this.updateProgression = false;
     this.playerService.sendCmd(PlayerCmds.STOP);
   }
 
