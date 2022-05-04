@@ -48,7 +48,9 @@ setInterval(() => {
 
 player.on('metadata', (val) => {
   console.log('track metadata is', val);
-  currentMeta.currentTracknr = parseInt(val.Comment?.split(',').pop(), 10);
+  //currentMeta.currentTracknr = parseInt(val.Comment?.split(',').pop(), 10);
+  currentMeta.currentTracknr = currentMeta.currentTracknr + 1;
+  log.debug('[Spotify Control] Current Tracknr: ' + currentMeta.currentTracknr);
   currentMeta.currentTrackname = val.Title;
 })
 player.on('track-change', () => player.getProps(['metadata']))
@@ -58,7 +60,9 @@ player.on('track-change', () => player.getProps(['metadata']))
 
 player.on('filename', (val) => {
   console.log('track name is', val);
-  //currentMeta.currentTrackname = val.split('.mp3')[0];
+  if (!currentMeta.currentTrackname){
+    currentMeta.currentTrackname = val.split('.mp3')[0].split('.flac')[0].split('.wma')[0].split('.wav')[0];
+  }
 })
 player.on('track-change', () => player.getProps(['filename']))
 
@@ -91,7 +95,7 @@ var currentMeta = {
   playing: false,
   album: "",
   currentTrackname: "",
-  currentTracknr: "",
+  currentTracknr: 0,
   totalTracks: "",
   progressTime: "",
   volume: 0
@@ -272,6 +276,8 @@ function next(){
         handleSpotifyError(err,"0");
       });
   } else if (currentMeta.currentPlayer == "mplayer") {
+    //currentMeta.currentTracknr = currentMeta.currentTracknr + 1;
+    //log.debug('[Spotify Control] Current Tracknr: ' + currentMeta.currentTracknr);
     player.next();
   }
 }
@@ -285,6 +291,10 @@ function previous(){
         handleSpotifyError(err,"0");
       });
   } else if (currentMeta.currentPlayer == "mplayer") {
+    if (currentMeta.currentTracknr > 1){
+      currentMeta.currentTracknr = currentMeta.currentTracknr - 2;
+    }
+    log.debug('[Spotify Control] Current Tracknr: ' + currentMeta.currentTracknr);
     player.previous();
   }
 }
@@ -315,6 +325,7 @@ function playList(playedList){
   player.playList('/home/dietpi/MuPiBox/media/' + playedTitelmod + '/playlist.m3u');
   player.setVolume(volumeStart);
   log.debug('/home/dietpi/MuPiBox/media/' + playedTitelmod + '/playlist.m3u');
+  currentMeta.currentTracknr = 0;
 
   setTimeout(function(){
     let cmdtotalTracks = "find /home/dietpi/MuPiBox/media/\"" + currentMeta.album + "\" -type f -name \"*.mp3\" -or -name \"*.flac\" -or -name \"*.wma\" -or -name \"*.wav\"| wc -l";
