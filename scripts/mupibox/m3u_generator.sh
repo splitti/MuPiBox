@@ -8,7 +8,7 @@ LENGTH=$(cat $DATA | jq '. | length')
 element=0
 
 for i in /home/dietpi/MuPiBox/media/* ; do
-    ls -1v "${i}" | grep '.mp3\|.flac\|.wma' > /tmp/playlist.m3u && mv /tmp/playlist.m3u "${i}"
+    ls -1v "${i}" | grep '.mp3\|.flac\|.wav\|.wma' > /tmp/playlist.m3u && mv /tmp/playlist.m3u "${i}"
     if [ -f "${i}"/*.jp*g ]
     then
 		dirname=$(/usr/bin/basename "${i}")

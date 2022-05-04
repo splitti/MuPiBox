@@ -49,6 +49,7 @@ setInterval(() => {
 player.on('metadata', (val) => {
   console.log('track metadata is', val);
   currentMeta.currentTracknr = parseInt(val.Comment?.split(',').pop(), 10);
+  currentMeta.currentTrackname = val.Title;
 })
 player.on('track-change', () => player.getProps(['metadata']))
 
@@ -57,7 +58,7 @@ player.on('track-change', () => player.getProps(['metadata']))
 
 player.on('filename', (val) => {
   console.log('track name is', val);
-  currentMeta.currentTrackname = val.split('.mp3')[0];
+  //currentMeta.currentTrackname = val.split('.mp3')[0];
 })
 player.on('track-change', () => player.getProps(['filename']))
 
@@ -316,7 +317,7 @@ function playList(playedList){
   log.debug('/home/dietpi/MuPiBox/media/' + playedTitelmod + '/playlist.m3u');
 
   setTimeout(function(){
-    let cmdtotalTracks = "find /home/dietpi/MuPiBox/media/\"" + currentMeta.album + "\" -type f -name \"*.mp3\"| wc -l";
+    let cmdtotalTracks = "find /home/dietpi/MuPiBox/media/\"" + currentMeta.album + "\" -type f -name \"*.mp3\" -or -name \"*.flac\" -or -name \"*.wma\" -or -name \"*.wav\"| wc -l";
     console.log(cmdtotalTracks);
     const exec = require ('child_process').exec;
     exec(cmdtotalTracks, (e, stdout, stderr) => {
@@ -506,7 +507,7 @@ app.get("/state", function(req, res){
   .then(function(data) {
     let state = data.body;
     if (Object.keys(state).length === 0) {
-      console.log("state is empty!");
+      //console.log("state is empty!");
       state = {
         item: {
           album: {
