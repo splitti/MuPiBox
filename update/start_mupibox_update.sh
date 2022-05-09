@@ -58,6 +58,7 @@ exec 3>${LOG}
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/dark.css -O /home/dietpi/MuPiBox/themes/dark.css >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/blue.css -O /home/dietpi/MuPiBox/themes/blue.css >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/purple.css -O /home/dietpi/MuPiBox/themes/purple.css >&3 2>&3
+	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/darkred.css -O /home/dietpi/MuPiBox/themes/darkred.css >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/red.css -O /home/dietpi/MuPiBox/themes/red.css >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/chocolate.css -O /home/dietpi/MuPiBox/themes/chocolate.css >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/themes/vintage.css -O /home/dietpi/MuPiBox/themes/vintage.css >&3 2>&3
