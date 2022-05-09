@@ -457,7 +457,7 @@ function downloadTTS(name){
   let namedl = name;
   log.debug('[Spotify Control] TTS Name: ' + namedl);
   googleTTS
-  .getAudioBase64(namedl, { lang: 'de', slow: false })
+  .getAudioBase64(namedl, { lang: config.ttsLanguage, slow: false })
   .then((base64) => {
     console.log({ base64 });
     const buffer = Buffer.from(base64, 'base64');

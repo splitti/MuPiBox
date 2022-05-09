@@ -10,5 +10,6 @@
 	"server": {
 		"port": "5005",
 		"logLevel": "error"
-	}
+	},
+	"ttsLanguage": ""
 }

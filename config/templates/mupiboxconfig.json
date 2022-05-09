@@ -23,6 +23,7 @@
 		"shutSplash": "/home/dietpi/MuPiBox/sysmedia/images/goodbye.png",
 		"audioDevice": "Master",
 		"mediaCheckTimer": "300",
+		"ttsLanguage": "de",
 		"version": ""
 	},
 	"spotify": {
