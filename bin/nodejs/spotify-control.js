@@ -455,7 +455,7 @@ async function transferPlayback(id){
 
 function downloadTTS(name){
   let namedl = name;
-  log.debug('[Spotify Control] TTS Name: ' + namedl);
+  log.debug('[Spotify Control] TTS Name: ' + namedl + ' in ' + config.ttsLanguage);
   googleTTS
   .getAudioBase64(namedl, { lang: config.ttsLanguage, slow: false })
   .then((base64) => {
