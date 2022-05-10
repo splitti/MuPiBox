@@ -16,6 +16,15 @@
   $CHANGE_TXT=$CHANGE_TXT."<li>New Theme  ".$data["mupibox"]["theme"]."  is active</li>";
   $change=1;
   }
+ if( $_POST['tts'] != $data["mupibox"]["ttsLanguage"] && $_POST['tts'] )
+  {
+  $data["mupibox"]["ttsLanguage"]=$_POST['tts'];
+  $CHANGE_TXT=$CHANGE_TXT."<li>New TTS Language  ".$data["mupibox"]["ttsLanguage"]."  - Please restart box or services</li>";
+  $command = "sudo rm /home/dietpi/MuPiBox/tts_files/*.mp3";
+  exec($command, $output, $result );
+  $change=1;
+  }
+
  if( $data["mupibox"]["startVolume"]!=$_POST['volume'] && $_POST['volume'] )
   {
   $data["mupibox"]["startVolume"]=$_POST['volume'];
@@ -111,6 +120,28 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
     <div class="themePrev"><img src="images/<?php print $data["mupibox"]["theme"]; ?>.png" width="250" height="150" name="selectedTheme" /></div>
 
                 </li>
+                 <li id="li_1" >
+                <label class="description" for="theme">TTS Language </label>
+                <div>
+                        <select id="tts" name="tts" class="element text medium">
+<?php
+      $language = $data["mupibox"]["googlettslanguages"];
+      foreach($language as $key) {
+       if( $key == $data["mupibox"]["ttsLanguage"] )
+        {
+        $selected = " selected=\"selected\"";
+        }
+       else
+        {
+        $selected = "";
+        }
+       print "<option value=\"". $key . "\"" . $selected  . ">" . $key . "</option>";
+      }
+?>
+"</select>
+                </div>
+                </li>
+
     <li id="li_1" >
                 <label class="description" for="volume">Volume after power on </label>
                 <div>
