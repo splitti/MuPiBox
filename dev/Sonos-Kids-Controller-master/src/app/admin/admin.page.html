@@ -11,7 +11,7 @@
     </ion-toolbar>
 </ion-header>
 
-<ion-content>
+<ion-content class="admin-content">
     <div [ngSwitch]="source">
         <div *ngSwitchCase="'wlan'" class="top">
             <form #libraryForm="ngForm" (ngSubmit)="submit(libraryForm)">

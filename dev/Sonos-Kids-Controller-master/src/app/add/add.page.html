@@ -25,7 +25,7 @@
     </ion-toolbar>
 </ion-header>
 
-<ion-content>
+<ion-content class="add-content">
     <div [ngSwitch]="source">
         <div *ngSwitchCase="'library'" class="top">
             <form #libraryForm="ngForm" (ngSubmit)="submit(libraryForm)">
