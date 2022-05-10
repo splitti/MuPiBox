@@ -13,7 +13,7 @@ ion-toolbar {
 }
 
 ion-item {
-    --border-color: #2e2e2e;
+    --border-color: #c0c0c0;
     --inner-padding-top: 10px;
     --inner-padding-bottom: 10px;
 }
@@ -23,6 +23,7 @@ ion-grid {
 }
 
 p {
+    color: #ffffff;
     font-size: 18px;
     padding-top: 1px;
     padding-bottom: 1px;
@@ -48,4 +49,8 @@ p {
 
 .larger {
     font-size: 20px;
+}
+
+.edit-content {
+    --ion-background-color: #000000 !important;
 }
