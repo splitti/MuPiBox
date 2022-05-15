@@ -85,7 +85,7 @@ export class PlayerService {
         if (media.category === 'playlist') {
           url = 'playlist/' + encodeURIComponent(media.id);
         } else {
-          url = 'musicsearch/library/album/artist:' + encodeURIComponent(media.artist) + 'album:' + encodeURIComponent(media.title);
+          url = 'musicsearch/library/album/' + encodeURIComponent(media.category) + ':' + encodeURIComponent(media.artist) + ':' + encodeURIComponent(media.title);
         }
         break;
       }

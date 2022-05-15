@@ -316,8 +316,8 @@ function playMe(activePlaylistId){
 }
 
 function playList(playedList){
-  let playedTitel = playedList.split('album:').pop();
-  playedTitelmod = decodeURI(playedTitel);
+  //let playedTitel = playedList.split('album:').pop();
+  playedTitelmod = decodeURI(playedList).replace(/:/,"/");
   //playedTitelmod = playedTitel.replace(/%20/g," ");
   log.debug("[Spotify Control] Starting currentMeta.playing:" + playedTitelmod);
   currentMeta.playing = true;
