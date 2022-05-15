@@ -289,10 +289,11 @@ exec 3>${LOG}
 	sudo usermod -a -G gpio root >&3 2>&3
 	crontab /tmp/crontab.template >&3 2>&3
 	sudo rm /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/network.json
-	ln -s /tmp/network.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/network.json	#sudo /boot/dietpi/func/dietpi-set_swapfile 1 zram >&3 2>&3
+	ln -s /tmp/network.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/network.json	
+	#sudo /boot/dietpi/func/dietpi-set_swapfile 1 zram >&3 2>&3
 	#sudo /boot/dietpi/func/dietpi-set_software boot_wait_for_network 0 >&3 2>&3
-	#VERSION=$(curl -s https://raw.githubusercontent.com/splitti/MuPiBox/main/version.json | /usr/bin/jq -r .version) >&3 2>&3
-	#sudo /usr/bin/cat <<< $(/usr/bin/jq --arg v "${VERSION}" '.mupibox.version = $v' ${MUPIBOX_CONFIG}) > ${MUPIBOX_CONFIG} >&3 2>&3
+	VERSION=$(curl -s https://raw.githubusercontent.com/splitti/MuPiBox/main/version.json | /usr/bin/jq -r .version) >&3 2>&3
+	sudo /usr/bin/cat <<< $(/usr/bin/jq --arg v "${VERSION}" '.mupibox.version = $v' ${MUPIBOX_CONFIG}) > ${MUPIBOX_CONFIG} >&3 2>&3
 	sudo chmod 775 /etc/mupibox/mupiboxconfig.json >&3 2>&3
 	sleep 1
 
