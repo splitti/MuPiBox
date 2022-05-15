@@ -94,6 +94,7 @@ var currentMeta = {
   currentPlayer: "",
   playing: false,
   album: "",
+  path: "",
   currentTrackname: "",
   currentTracknr: 0,
   totalTracks: "",
@@ -243,6 +244,7 @@ function stop(){
     currentMeta.currentTrackname = "";
     currentMeta.progressTime = "";
     currentMeta.album = "";
+    currentMeta.path = "";
     currentMeta.currentTracknr = "";
     currentMeta.totalTracks = "";
     log.debug('[Spotify Control] Playback stopped');
@@ -317,7 +319,7 @@ function playMe(activePlaylistId){
 
 function playList(playedList){
   //let playedTitel = playedList.split('album:').pop();
-  playedTitelmod = decodeURI(playedList).replace(/:/,"/");
+  playedTitelmod = decodeURI(playedList).replace(/:/g,"/");
   //playedTitelmod = playedTitel.replace(/%20/g," ");
   log.debug("[Spotify Control] Starting currentMeta.playing:" + playedTitelmod);
   currentMeta.playing = true;
@@ -326,9 +328,10 @@ function playList(playedList){
   player.setVolume(volumeStart);
   log.debug('/home/dietpi/MuPiBox/media/' + playedTitelmod + '/playlist.m3u');
   currentMeta.currentTracknr = 0;
+  currentMeta.path = playedTitelmod;
 
   setTimeout(function(){
-    let cmdtotalTracks = "find /home/dietpi/MuPiBox/media/\"" + currentMeta.album + "\" -type f -name \"*.mp3\" -or -name \"*.flac\" -or -name \"*.wma\" -or -name \"*.wav\"| wc -l";
+    let cmdtotalTracks = "find /home/dietpi/MuPiBox/media/\"" + currentMeta.path + "\" -type f -name \"*.mp3\" -or -name \"*.flac\" -or -name \"*.wma\" -or -name \"*.wav\"| wc -l";
     console.log(cmdtotalTracks);
     const exec = require ('child_process').exec;
     exec(cmdtotalTracks, (e, stdout, stderr) => {
