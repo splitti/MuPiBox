@@ -1,6 +1,7 @@
 #!/bin/bash
 #
 
+#https://raw.githubusercontent.com/splitti/MuPiBox/main
 SRC="https://mupibox.de/version/latest"
 VERSION=$(curl -L ${SRC}/version.json | /usr/bin/jq -r .version)
 CONFIG="/etc/mupibox/mupiboxconfig.json"
