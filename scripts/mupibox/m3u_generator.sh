@@ -3,7 +3,10 @@
 # Generate M3U Playlist and Covers
 
 DATA="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json"
-TYPE="library"
+
+if [ ! -f "$DATA" ]; then
+	echo "[]" > ${DATA}
+fi
 
 for topFolder in "/home/dietpi/MuPiBox/media/audiobook/"* ; do
         artist=$(/usr/bin/basename "${topFolder}")
