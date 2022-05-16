@@ -18,7 +18,7 @@ AUTO_SETUP_LOCALE=de_DE.UTF-8
 AUTO_SETUP_KEYBOARD_LAYOUT=de
 
 # Timezone eg: "Europe/London" / "America/New_York" | Full list (TZ*): https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
-AUTO_SETUP_TIMEZONE=Europe/London
+AUTO_SETUP_TIMEZONE=Europe/Berlin
 
 ##### Network Options #####
 # Enable Ethernet or WiFi adapter: 1=enable | 0=disable
@@ -72,7 +72,7 @@ AUTO_UNMASK_LOGIND=0
 # - Option 0 = Copy your script to /boot/Automation_Custom_Script.sh and it will be executed automatically.
 # - Option 1 = Host your script online, then use e.g. AUTO_SETUP_CUSTOM_SCRIPT_EXEC=https://myweb.com/myscript.sh and it will be downloaded and executed automatically.
 # - Executed script log: /var/tmp/dietpi/logs/dietpi-automation_custom_script.log
-AUTO_SETUP_CUSTOM_SCRIPT_EXEC=https://raw.githubusercontent.com/splitti/MuPiBox/main/autosetup/autostart.sh
+AUTO_SETUP_CUSTOM_SCRIPT_EXEC=https://mupibox.de/version/latest/autosetup/autostart.sh
 
 # Restore a DietPi-Backup on first boot: 0 => disable | 1 => interactive restore (show list of found backups) | 2 => non-interactive restore (restore first found backup)
 # - Simply attach the drive/disk/stick with contains the backup. All attached drives will be mounted temporarily and searched automatically.
@@ -177,9 +177,9 @@ CONFIG_G_CHECK_URL_TIMEOUT=10
 CONFIG_G_CHECK_URL_ATTEMPTS=2
 # General connection and DNS testing
 # - IP to ping when checking network connectivity. Default: 9.9.9.9 (Quad9 DNS IP)
-CONFIG_CHECK_CONNECTION_IP=1.1.1.1
+CONFIG_CHECK_CONNECTION_IP=9.9.9.9
 # - Domain to ping when checking DNS resolver. Default: dns9.quad9.net (Quad9 DNS domain)
-CONFIG_CHECK_DNS_DOMAIN=one.one.one.one
+CONFIG_CHECK_DNS_DOMAIN=dns9.quad9.net
 
 # Daily check for DietPi updates: 0=disable | 1=enable
 # - Checks are done by downloading a file of only 7 bytes.
@@ -203,7 +203,7 @@ CONFIG_SOUNDCARD=none
 CONFIG_LCDPANEL=none
 
 # IPv6
-CONFIG_ENABLE_IPV6=0
+CONFIG_ENABLE_IPV6=1
 
 # APT mirrors which are applied to /etc/apt/sources.list | Values here will also be applied during 1st run setup
 # - Raspbian: https://www.raspbian.org/RaspbianMirrors
@@ -230,7 +230,7 @@ SOFTWARE_VNCSERVER_SHARE_DESKTOP=0
 # - Optional username for admin account, the default is 'admin', applied during install
 SOFTWARE_OWNCLOUD_NEXTCLOUD_USERNAME=admin
 # - Optional data directory, default is "/mnt/dietpi_userdata/owncloud_data" respectively "/mnt/dietpi_userdata/nextcloud_data", applied during install
-#	NB: This option is for advanced users. For full compatibility, please keep this options defaults, and, use dietpi-drive_manager to move the DietPi user data location.
+# NB: This option is for advanced users. For full compatibility, please keep this options defaults, and, use dietpi-drive_manager to move the DietPi user data location.
 SOFTWARE_OWNCLOUD_DATADIR=/mnt/dietpi_userdata/owncloud_data
 SOFTWARE_NEXTCLOUD_DATADIR=/mnt/dietpi_userdata/nextcloud_data
 
@@ -251,9 +251,9 @@ SOFTWARE_CHROMIUM_AUTOSTART_URL=https://dietpi.com/
 
 # Home Assistant
 # - Optional Python build dependencies and modules, possibly required for certain HA components
-#	Space separated list (no quotation!), will be installed together with Home Assistant automatically, if present
+# Space separated list (no quotation!), will be installed together with Home Assistant automatically, if present
 SOFTWARE_HOMEASSISTANT_APT_DEPS=
-#	Add Python modules with version string at best, e.g.: firstModule==1.2.3 secondModule==4.5.6
+# Add Python modules with version string at best, e.g.: firstModule==1.2.3 secondModule==4.5.6
 SOFTWARE_HOMEASSISTANT_PIP_DEPS=
 
 # K3s
