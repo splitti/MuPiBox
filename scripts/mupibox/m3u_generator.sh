@@ -2,6 +2,9 @@
 #
 # Generate M3U Playlist and Covers
 
+SAVEIFS=$IFS
+IFS=$(echo -en "\n\b")
+
 DATA="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json"
 TYPE="library"
 element=0
@@ -12,7 +15,7 @@ for topFolder in /home/dietpi/MuPiBox/media/audiobook/* ; do
 		if [ ${#i} -gt 40 ]
 		then
 			dirname=$(/usr/bin/basename "${i}")
-			if [ ${#dirname} -gt 0 ]
+			if [ ${#dirname} -gt 0 ] && [ ${#i} -gt ${#topFolder} ]
 			then
 				setCover=0
 				ls -1v "${i}" | grep '.mp3\|.flac\|.wav\|.wma' > /tmp/playlist.m3u && mv /tmp/playlist.m3u "${i}"
@@ -42,8 +45,8 @@ for topFolder in /home/dietpi/MuPiBox/media/music/* ; do
 	for i in ${topFolder}/* ; do
 		if [ ${#i} -gt 37 ]
 		then
-			dirname=$(/usr/bin/basename "${i}")
-			if [ ${#dirname} -gt 0 ]
+			dirname=$(/usr/bin/basename "${i/${topFolder}/}")
+			if [ ${#dirname} -gt 0 ] && [ ${#i} -gt ${#topFolder} ]
 			then
 				setCover=0
 				ls -1v "${i}" | grep '.mp3\|.flac\|.wav\|.wma' > /tmp/playlist.m3u && mv /tmp/playlist.m3u "${i}"
@@ -71,3 +74,5 @@ done
 /usr/bin/chown -R dietpi:dietpi /home/dietpi/MuPiBox/media/
 /usr/bin/chown -R dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover/
 echo "Cover & Playlists generated"
+
+IFS=${SAVEIFS}
