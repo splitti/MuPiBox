@@ -2,7 +2,7 @@
 #
 
 SRC="https://mupibox.de/version/latest"
-VERSION=$(curl ${SRC}/version.json | /usr/bin/jq -r .version)
+VERSION=$(curl -L ${SRC}/version.json | /usr/bin/jq -r .version)
 CONFIG="/etc/mupibox/mupiboxconfig.json"
 LOG="/tmp/mupibox_update.log"
 exec 3>${LOG}

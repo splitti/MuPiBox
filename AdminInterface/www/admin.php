@@ -27,7 +27,7 @@
                 }
         if( $_POST['mupibox_update'] )
                 {
-                $command = "cd; curl https://mupibox.de/version/latest/update/start_mupibox_update.sh | sudo bash";
+                $command = "cd; curl -L https://mupibox.de/version/latest/update/start_mupibox_update.sh | sudo bash";
                 exec($command, $output, $result );
                 $string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
                 $data = json_decode($string, true);
