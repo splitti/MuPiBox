@@ -139,6 +139,9 @@ exec 3>${LOG}
 	sudo systemctl start mupi_idle_shutdown.service >&3 2>&3
 	sudo rm /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/network.json
 	ln -s /tmp/network.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/network.json
+	sudo systemctl stop mupi_change_checker.service >&3 2>&3
+	sudo systemctl disable mupi_change_checker.service >&3 2>&3
+	sudo rm /etc/systemd/system/mupi_change_checker.service >&3 2>&3
 
 	sudo mv ${LOG} /home/dietpi/.mupibox/last_update.log >&3 2>&3
 	sudo chown -R dietpi:dietpi /home/dietpi/.mupibox/last_update.log >&3 2>&3

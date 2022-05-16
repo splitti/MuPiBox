@@ -344,7 +344,7 @@ exec 3>${LOG}
 	echo -e "XXX\n95\nEnable and start services... \nXXX"	
 
 	# Enable Services
-	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/services/mupi_change_checker.service -O /etc/systemd/system/mupi_change_checker.service >&3 2>&3
+	#sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/services/mupi_change_checker.service -O /etc/systemd/system/mupi_change_checker.service >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/services/mupi_idle_shutdown.service -O /etc/systemd/system/mupi_idle_shutdown.service >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/services/mupi_splash.service -O /etc/systemd/system/mupi_splash.service >&3 2>&3
 	sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/services/spotifyd.service -O /etc/systemd/system/spotifyd.service >&3 2>&3
@@ -354,8 +354,8 @@ exec 3>${LOG}
 	sudo systemctl daemon-reload >&3 2>&3
 	sudo systemctl enable mupi_wifi.service >&3 2>&3
 	sudo systemctl start mupi_wifi.service >&3 2>&3
-	sudo systemctl enable mupi_change_checker.service >&3 2>&3
-	sudo systemctl start mupi_change_checker.service >&3 2>&3
+	#sudo systemctl enable mupi_change_checker.service >&3 2>&3
+	#sudo systemctl start mupi_change_checker.service >&3 2>&3
 	sudo systemctl enable mupi_idle_shutdown.service >&3 2>&3
 	sudo systemctl start mupi_idle_shutdown.service >&3 2>&3
 	sudo systemctl enable spotifyd.service >&3 2>&3
