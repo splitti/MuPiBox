@@ -208,7 +208,7 @@ exec 3>${LOG}
 	sudo wget ${SRC}/scripts/mupibox/idle_shutdown.sh -O /usr/local/bin/mupibox/idle_shutdown.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/mupibox/m3u_generator.sh -O /usr/local/bin/mupibox/m3u_generator.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/mupibox/setting_update.sh -O /usr/local/bin/mupibox/setting_update.sh >&3 2>&3
-	sudo wget ${SRC}/scripts/mupibox/software_shutdown.sh -O /usr/local/bin/mupibox/software_shutdown.sh >&3 2>&3
+	#sudo wget ${SRC}/scripts/mupibox/software_shutdown.sh -O /usr/local/bin/mupibox/software_shutdown.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/mupibox/add_wifi.sh -O /usr/local/bin/mupibox/add_wifi.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/mupibox/save_rrd.sh -O /usr/local/bin/mupibox/save_rrd.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/mupibox/get_network.sh -O /usr/local/bin/mupibox/get_network.sh >&3 2>&3

@@ -54,7 +54,7 @@ AUTO_SETUP_BOOT_WAIT_FOR_NETWORK=1
 # Swap space size to generate: 0 => disable | 1 => auto | 2 and up => size in MiB
 AUTO_SETUP_SWAPFILE_SIZE=1
 # Swap space location: "zram" => swap space on /dev/zram0 (auto-size = 50% of RAM size) | /path/to/file => swap file at location (auto-size = 2 GiB minus RAM size)
-AUTO_SETUP_SWAPFILE_LOCATION=zram
+AUTO_SETUP_SWAPFILE_LOCATION=/var/swap
 
 # Set to "1" to disable HDMI/video output and framebuffers on Raspberry Pi, to reduce power consumption and memory usage: Works on RPi only!
 AUTO_SETUP_HEADLESS=0
