@@ -105,13 +105,13 @@
                                                                                         <td>Latest Version:</td><td><?php print $dataonline["version"]; ?></td>
                                                                                 </tr>
                                                                         </table>
-                                                                        Please notice: The update procedure takes a long time. Don't close the browser and wait for the status message!
+                                                                        Please notice: The update procedure takes a long time (on older Raspberry Pi's up to one hour). Don't close the browser and wait for the status message!
                                                                 </p>
                                                                 <input id="saveForm" class="button_text" type="submit" name="os_update" value="Update OS" />
                                                                 <input id="saveForm" class="button_text" type="submit" name="mupibox_update" value="Update MuPiBox" /></li>
 
                                                                 <li class="li_norm"><h2>Generate Playlists</h2>
-                                                                <p>The Job for generating Playlists runs every <?php print $data["mupibox"]["mediaCheckTimer"];  ?> seconds. If you need the data as soon as possible, start this job...</p>
+                                                                <p>The Job for generating local Playlists. Run this job after adding local media.</p>
                                                                 <input id="saveForm" class="button_text" type="submit" name="m3u" value="Generate Playlists" /></li>
 
                                                                 <li class="li_norm"><h2>Update MuPiBox settings</h2>
@@ -150,15 +150,6 @@
 <input id="saveForm" class="button_text" type="submit" name="backupdownload" value="Download Backup" onclick="window.open('./backup.php', '_blank');" />
 
 </li>
-
-                                                                <li class="li_norm">                                               <?php
-                                                        if( $change )
-                                                                {
-                                                                print "<div id='savestategood'><p>" . $rc . "</p></div>";
-                                                                }
-                                                ?>
-                </li>
-
 
                         </ul>
                 </form>

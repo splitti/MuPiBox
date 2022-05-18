@@ -76,12 +76,6 @@
   }
 $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 ?>
-    <?php
-       if( $change )
-        {
-         print "<div id='savestategood'><p>Data succesfully saved!</p></div>";
-        }
-    ?>
                 <form class="appnitro" name="mupi" method="post" action="mupi.php" id="form">
                                         <div class="description">
                         <h2>MupiBox settings</h2>

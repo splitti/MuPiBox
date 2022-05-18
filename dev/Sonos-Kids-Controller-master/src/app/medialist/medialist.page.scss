@@ -7,7 +7,13 @@ ion-back-button {
 ion-card {
     width: 230px;
     margin: 0 auto !important;
-    --background: #262626;
+    --background: #e4f20a;
+}
+
+.media-card img {
+    width: 230px;
+    max-width: 230px !important;
+    min-width: 230px !important;
 }
 
 ion-card-title {
