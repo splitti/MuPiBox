@@ -15,3 +15,8 @@ body{
 }
 .md body{--ion-background-color: #FF0000 !important;
 }
+
+
+ion-card {
+    --background: #a12830 !important;
+}
