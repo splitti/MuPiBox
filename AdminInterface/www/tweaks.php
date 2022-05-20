@@ -162,7 +162,7 @@
 
 					<li class="li_1"><h2>CPU Governor</h2>
 					<p>
-					Limits CPU frequency to 600 MHz. Helps to avoid throtteling.
+					Try powersave (Limits CPU frequency to 600 MHz - Helps to avoid throtteling).
 					</p>
 					<p>
                                 <div>
