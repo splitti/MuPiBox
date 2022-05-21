@@ -55,7 +55,14 @@ export class EditPage implements OnInit {
       ]
     });
 
+    this.mediaService.updateNetwork();
+    this.mediaService.updateRawMedia();
     await alert.present();
+  }
+
+  ionViewWillEnter() {
+    this.mediaService.updateNetwork();
+    this.mediaService.updateRawMedia();
   }
 
   addButtonPressed() {
