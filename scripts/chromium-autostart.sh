@@ -14,7 +14,7 @@ RES_X=$(/usr/bin/jq -r .chromium.resX ${CONFIG})
 RES_Y=$(/usr/bin/jq -r .chromium.resY ${CONFIG})
 DEBUG=$(/usr/bin/jq -r .chromium.debug ${CONFIG})
 
-CHROMIUM_OPTS="--use-gl=egl --kiosk --test-type --window-size=${RES_X:-1280},${RES_Y:-720} --start-fullscreen --start-maximized --window-position=0,0"
+CHROMIUM_OPTS="--use-gl=egl --kiosk --test-type --window-size=${RES_X:-1280},${RES_Y:-720} --start-fullscreen --start-maximized --window-position=0,0 --disk-cache-dir=/dev/null --disk-cache-size=1"
 if [ "${DEBUG}" = "1" ]; then
  CHROMIUM_OPTS=${CHROMIUM_OPTS}" --enable-logging --v=1 --disable-pinch"
 fi
