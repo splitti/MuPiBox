@@ -1,7 +1,7 @@
 <ion-header>
     <ion-toolbar color="light">
         <ion-select #select interface="popover" [(ngModel)]="category" (ionChange)="categoryChanged()" cancelText="Cancel" okText="Ok">
-            <ion-select-option value="audiobook">Radio Play / Audio Book</ion-select-option>
+            <ion-select-option value="audiobook">Audiobook</ion-select-option>
             <ion-select-option value="music">Music</ion-select-option>
             <ion-select-option value="playlist">Playlist</ion-select-option>
             <ion-select-option value="radio">Radio</ion-select-option>
@@ -12,9 +12,6 @@
             </ion-button>
         </ion-buttons>
         <ion-segment #segment value="{{this.source}}" (ionChange)="segmentChanged($event)">
-            <ion-segment-button #library_segment value="library">
-                <ion-label>Local</ion-label>
-            </ion-segment-button>
             <ion-segment-button #spotify_segment value="spotify">
                 <ion-label>Spotify</ion-label>
             </ion-segment-button>
@@ -77,9 +74,9 @@
                                 <ion-item>
                                     <ion-label class="dimmed-text">Media search type</ion-label>
                                     <ion-select #searchTypeSelect interface="popover" [(ngModel)]="searchType" name="searchType" (ionChange)="searchTypeChanged()">
-                                        <ion-select-option value="artist_id">Artist ID</ion-select-option>
-                                        <ion-select-option value="media_id">Media ID</ion-select-option>
-                                        <ion-select-option value="query">Search Query</ion-select-option>
+                                        <ion-select-option value="artist_id">Artist ID from Spotify</ion-select-option>
+                                        <ion-select-option value="media_id">Media ID from Spotify</ion-select-option>
+                                        <ion-select-option value="query">Search Query for Spotify</ion-select-option>
                                       </ion-select>
                                 </ion-item>
                             </div>
