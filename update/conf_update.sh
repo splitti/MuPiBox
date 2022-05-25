@@ -15,7 +15,7 @@ exec 3>${LOG}
 	/usr/bin/cat <<< $(/usr/bin/jq --arg v "${VERSION}" '.mupibox.version = $v' ${CONFIG}) >  ${CONFIG}
 	
 	echo -e "XXX\n5\nAdd languages for google tts... \nXXX"	 >&3 2>&3
-	/usr/bin/cat <<< $(/usr/bin/jq --arg v "ar" --arg w "Arabic" '.mupibox.googlettslanguages.iso639-1 = $v' '.mupibox.googlettslanguages.Language = $w' ${SPOTIFYCONTROLLER_CONFIG}) >  ${SPOTIFYCONTROLLER_CONFIG}
+	/usr/bin/cat <<< $(/usr/bin/jq --arg v "ar" --arg w "Arabic" '.mupibox.googlettslanguages.iso639-1 = $v'  ${SPOTIFYCONTROLLER_CONFIG}) >  ${SPOTIFYCONTROLLER_CONFIG}
 	
 	
 	
