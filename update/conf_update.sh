@@ -1,4 +1,3 @@
-
 #!/bin/bash
 #
 
@@ -13,6 +12,13 @@ exec 3>${LOG}
 	echo -e "XXX\n0\nRemove old values... \nXXX"	 >&3 2>&3
 
 	/usr/bin/cat <<< $(/usr/bin/jq 'del(.mupibox.googlettslanguages)' ${CONFIG}) > ${CONFIG}
+	/usr/bin/cat <<< $(/usr/bin/jq --arg v "${VERSION}" '.mupibox.version = $v' ${CONFIG}) >  ${CONFIG}
+	
+	echo -e "XXX\n5\nAdd languages for google tts... \nXXX"	 >&3 2>&3
+	/usr/bin/cat <<< $(/usr/bin/jq --arg v "ar" --arg w "Arabic" '.mupibox.googlettslanguages.iso639-1 = $v' '.mupibox.googlettslanguages.Language = $w' ${SPOTIFYCONTROLLER_CONFIG}) >  ${SPOTIFYCONTROLLER_CONFIG}
+	
+	
+	
 	mv ${LOG} /home/dietpi/.mupibox/last_update.log >&3 2>&3
 	chown -R dietpi:dietpi /home/dietpi/.mupibox/last_update.log >&3 2>&3
 
