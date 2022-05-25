@@ -11,9 +11,9 @@ exec 3>${LOG}
 {
 	echo -e "XXX\n0\nRemove old values... \nXXX"	 >&3 2>&3
 	# 1.0.8
-	/usr/bin/cat <<< $(/usr/bin/jq 'del(.mupibox.googlettslanguages)' ${CONFIG}) > ${CONFIG}
-	/usr/bin/cat <<< $(/usr/bin/jq 'del(.mupibox.mediaCheckTimer)' ${CONFIG}) > ${CONFIG}
-	/usr/bin/cat <<< $(/usr/bin/jq 'del(.mupibox.AudioDevices)' ${CONFIG}) > ${CONFIG}
+	/usr/bin/cat <<< $(/usr/bin/jq 'del(.mupibox.googlettslanguages)' ${CONFIG}) > ${CONFIG} >&3 2>&3
+	/usr/bin/cat <<< $(/usr/bin/jq 'del(.mupibox.mediaCheckTimer)' ${CONFIG}) > ${CONFIG} >&3 2>&3
+	/usr/bin/cat <<< $(/usr/bin/jq 'del(.mupibox.AudioDevices)' ${CONFIG}) > ${CONFIG} >&3 2>&3
 	
 	echo -e "XXX\n50\nAddding new parameters... \nXXX"	 >&3 2>&3
 	# 1.0.8
