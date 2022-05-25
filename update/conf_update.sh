@@ -20,7 +20,7 @@ exec 3>${LOG}
 	AudioDevices=$(/usr/bin/jq -r .mupibox.AudioDevices ${CONFIG})  >&3 2>&3
 	echo $AudioDevices  >&3 2>&3
 	echo "UND?" >&3 2>&3
-	#/usr/bin/cat <<< $(/usr/bin/jq '.mupibox.AudioDevices += [{"tname": "rpi-bcm2835-3.5mm","ufname": "Onboard 3.5mm output"},{"tname": "rpi-bcm2835-hdmi","ufname": "Onboard HDMI output"},{"tname": "hifiberry-amp","ufname": "HifiBerry AMP / AMP+"},{"tname": "hifiberry-dac","ufname": "HifiBerry DAC / MiniAmp"},{"tname": "hifiberry-dacplus","ufname": "HifiBerry DAC+ / DAC+ Pro / AMP2"},{"tname": "usb-dac","ufname": "Any USB Audio DAC (Auto detection)"}]' ${CONFIG}) >  ${CONFIG}
+	/usr/bin/cat <<< $(/usr/bin/jq '.mupibox.AudioDevices += [{"tname": "rpi-bcm2835-3.5mm","ufname": "Onboard 3.5mm output"},{"tname": "rpi-bcm2835-hdmi","ufname": "Onboard HDMI output"},{"tname": "hifiberry-amp","ufname": "HifiBerry AMP / AMP+"},{"tname": "hifiberry-dac","ufname": "HifiBerry DAC / MiniAmp"},{"tname": "hifiberry-dacplus","ufname": "HifiBerry DAC+ / DAC+ Pro / AMP2"},{"tname": "usb-dac","ufname": "Any USB Audio DAC (Auto detection)"}]' ${CONFIG}) >  ${CONFIG}
 		
 	mv ${LOG} /home/dietpi/.mupibox/last_mupibox_conf_update.log >&3 2>&3
 	chown -R dietpi:dietpi /home/dietpi/.mupibox/last_mupibox_conf_update.log >&3 2>&3
