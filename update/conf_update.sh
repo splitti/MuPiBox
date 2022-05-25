@@ -22,4 +22,4 @@ exec 3>${LOG}
 	mv ${LOG} /home/dietpi/last_update.log >&3 2>&3
 	#chown -R dietpi:dietpi /home/dietpi/.mupibox/last_update.log >&3 2>&3
 
-} | whiptail --title "MuPiBox-Conf Update" --gauge "Please wait while installing" 6 60 0
+} | whiptail --title "MuPiBox-Conf Update" --gauge "Please wait while updating" 6 60 0
