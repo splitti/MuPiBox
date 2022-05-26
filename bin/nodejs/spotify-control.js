@@ -9,6 +9,7 @@ const createPlayer = require('./../mplayer-wrapper');
 const googleTTS = require('./../google-tts');
 const fs = require('fs');
 const childProcess = require("child_process");
+const muPiBoxConfig = require('./config/mupiboxconfig.json');
 const { stderr } = require('process');
 
   /*set up express router and set headers for cross origin requests*/
@@ -431,10 +432,10 @@ async function setVolume(volume){
 
   if (volume) {
     await cmdCall(volumeUp);
-    if(currentMeta.volume < 100){
+    if(currentMeta.volume < muPiBoxConfig.mupibox.maxVolume){
       currentMeta.volume = parseInt(currentMeta.volume, 10) + 5;
     } else {
-      currentMeta.volume = 100
+      currentMeta.volume = muPiBoxConfig.mupibox.maxVolume
     }
   } else {
     await cmdCall(volumeDown);
