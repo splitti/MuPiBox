@@ -475,6 +475,23 @@ input.button_text
 		font-weight:bold;
 
 }
+
+input.button_text_red
+{
+        overflow:visible;
+        color:#ffffff;
+        padding:1px 5px;
+        width:auto;
+        background-color:#FF0000;
+        border:1px solid #000000;
+		font-size:85%;
+		font-weight:bold;
+
+}
+input.button_text_red:hover
+{
+        background-color:#000000;
+}
 input.button_text:hover
 {
         background-color:#000000;

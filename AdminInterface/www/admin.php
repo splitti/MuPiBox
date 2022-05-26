@@ -140,7 +140,7 @@
 
 
                                                                 <li class="li_norm"><h2>Control MuPiBox</h2>
-                                                                <p>Restart or shutdown the boxs...</p>
+                                                                <p>Restart or shutdown the box...</p>
                                                                 <input id="saveForm" class="button_text" type="submit" name="reboot" value="Reboot MuPiBox" />
                                                                 <input id="saveForm" class="button_text" type="submit" name="shutdown" value="Shutdown MuPiBox" /></li>
 

@@ -20,6 +20,23 @@
                 $change=1;
                 $CHANGE_TXT=$CHANGE_TXT."<li>Wait for Network on boot is disabled</li>";
                 }
+				
+  if( $_POST['change_wifi'] == "disable" )
+        {
+        $command = "echo 'dtoverlay=disable-wifi' | sudo tee -a /boot/config.txt";
+        exec($command, $output, $result );
+        $change=1;
+        $CHANGE_TXT=$CHANGE_TXT."<li>OnBoard Wifi disabled [restart necessary]</li>";
+        }
+  else if( $_POST['change_wifi'] == "enable" )
+        {
+        $command = "sudo sed -i -e 's/dtoverlay=disable-wifi//g' /boot/config.txt && sudo head -n -1 /boot/config.txt > /tmp/config.txt && sudo mv /tmp/config.txt /boot/config.txt";
+        exec($command, $output, $result );
+        $change=1;
+        $CHANGE_TXT=$CHANGE_TXT."<li>OnBoard Wifi enabled [restart necessary]</li>";
+        }
+				
+				
   if( $_POST['change_turbo'] == "disable" )
         {
         $command = "sudo su - dietpi -c \". /boot/dietpi/func/dietpi-globals && G_SUDO G_CONFIG_INJECT 'initial_turbo' 'initial_turbo=0' /boot/config.txt\"";
@@ -213,6 +230,28 @@
                                                                 </p>
                                                                 <input id="saveForm" class="button_text" type="submit" name="change_swap" value="<?php print $change_swap; ?>" />
                                                         </li>
+
+				<li class="li_1"><h2>Enable/Disable OnBoad Wifi</h2>
+				<p>
+				Enables or disables OnBoard Wifi! Please be sure what you do!
+				</p>
+				<p>
+				<?php
+                $command = "cat /boot/config.txt | grep 'dtoverlay=disable-wifi'";
+                $wifionoff = exec($command, $output);
+                if($wifionoff == "")
+                {
+                        $change_wifi="disable";
+                }
+                else
+                {
+                        $change_wifi="enable";
+                }
+                                                                ?>
+                                                                </p>
+                                                                <input id="saveForm" class="button_text" type="submit" name="change_wifi" value="<?php print $change_wifi; ?>" />
+                                                        </li>
+
 
                         </ul>
                 </form>

@@ -32,6 +32,18 @@
                 $CHANGE_TXT=$CHANGE_TXT."<li>Client-Data saved</li>";
                 $change=1;
                 }
+        if( $_POST['resetData'] )
+                {
+                $data["spotify"]["deviceId"]="";
+                $data["spotify"]["accessToken"]="";
+                $data["spotify"]["refreshToken"]="";
+                $data["spotify"]["username"]="";
+                $data["spotify"]["password"]="";
+                $data["spotify"]["clientId"]="";
+				$data["spotify"]["clientSecret"]="";
+                $CHANGE_TXT=$CHANGE_TXT."<li>All Spotify Data resettet!</li>";
+                $change=1;
+                }
         if( $change )
                 {
                 $json_object = json_encode($data);
@@ -48,6 +60,7 @@
                 $CHANGE_TXT=$CHANGE_TXT."<li>Device-ID generated and saved</li>";
                 $change=1;
                 }
+
 $CHANGE_TXT=$CHANGE_TXT."</ul>";
 
 ?>
@@ -56,6 +69,11 @@ $CHANGE_TXT=$CHANGE_TXT."</ul>";
                         <h2>Spotify settings</h2>
                         <p>Specify your Spotify-Account-Settings and connect to Spotify...</p>
                 </div>
+                                <h2>RESET ALL DATA</h2>
+                <p>Click this Button, to reset all saved spotify data!!!</p>
+                              <ul ><li class="buttons"><input id="saveForm" class="button_text_red" type="submit" name="resetData" value="RESET ALL SPOTIFY DATA" /></li>
+                                </ul>
+
                                 <h2>STEP 1</h2>
                 <p>Please enter Spotify Username and Password. Please notice, spotify premium or family is required!</p>
                         <ul >

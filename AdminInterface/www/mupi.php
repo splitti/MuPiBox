@@ -2,6 +2,15 @@
  $change=0;
  $CHANGE_TXT="<div id='lbinfo'><ul id='lbinfo'>";
  include ('includes/header.php');
+# sudo /boot/dietpi/func/dietpi-set_hardware soundcard "hifiberry-dac"
+ if( $data["mupibox"]["physicalDevice"]!=$_POST['audio'] && $_POST['audio'])
+  {
+  $data["mupibox"]["physicalDevice"]=$_POST['audio'];
+  $command = "sudo /boot/dietpi/func/dietpi-set_hardware soundcard '" . $_POST['audio'] . "'";
+  $change_soundcard = exec($command, $output, $change_soundcard );
+  $CHANGE_TXT=$CHANGE_TXT."<li>Soundcard changed to  ".$data["mupibox"]["physicalDevice"]." [reboot is necessary]</li>";
+  $change=1;
+  }
  if( $data["mupibox"]["host"]!=$_POST['hostname'] && $_POST['hostname'])
   {
   $data["mupibox"]["host"]=$_POST['hostname'];
@@ -121,7 +130,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 <?php
       $language = $data["mupibox"]["googlettslanguages"];
       foreach($language as $key) {
-       if( $key == $data["mupibox"]["ttsLanguage"] )
+       if( $key['iso639-1'] == $data["mupibox"]["ttsLanguage"] )
         {
         $selected = " selected=\"selected\"";
         }
@@ -129,7 +138,28 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
         {
         $selected = "";
         }
-       print "<option value=\"". $key . "\"" . $selected  . ">" . $key . "</option>";
+       print "<option value=\"". $key['iso639-1'] . "\"" . $selected  . ">" . $key['Language'] . "</option>";
+      }
+?>
+"</select>
+                </div>
+                </li>
+<li id="li_1" >
+                <label class="description" for="theme">Audio Device / Soundcard </label>
+                <div>
+                        <select id="audio" name="audio" class="element text medium">
+<?php
+      $audio = $data["mupibox"]["AudioDevices"];
+      foreach($audio as $key) {
+       if( $key['tname'] == $data["mupibox"]["physicalDevice"] )
+        {
+        $selected = " selected=\"selected\"";
+        }
+       else
+        {
+        $selected = "";
+        }
+       print "<option value=\"". $key['tname'] . "\"" . $selected  . ">" . $key['ufname'] . "</option>";
       }
 ?>
 "</select>
