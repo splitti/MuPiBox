@@ -2,7 +2,7 @@
 #
 
 #https://raw.githubusercontent.com/splitti/MuPiBox/main
-SRC="https://mupibox.de/version/latest"
+#SRC="https://mupibox.de/version/latest"
 CONFIG="/etc/mupibox/mupiboxconfig.json"
 
 # 1.0.8
@@ -15,8 +15,14 @@ CONFIG="/etc/mupibox/mupiboxconfig.json"
 sleep 1
 /usr/bin/cat <<< $(/usr/bin/jq '.mupibox.AudioDevices += [{"tname": "rpi-bcm2835-3.5mm","ufname": "Onboard 3.5mm output"},{"tname": "rpi-bcm2835-hdmi","ufname": "Onboard HDMI output"},{"tname": "hifiberry-amp","ufname": "HifiBerry AMP / AMP+"},{"tname": "hifiberry-dac","ufname": "HifiBerry DAC / MiniAmp"},{"tname": "hifiberry-dacplus","ufname": "HifiBerry DAC+ / DAC+ Pro / AMP2"},{"tname": "usb-dac","ufname": "Any USB Audio DAC (Auto detection)"}]' ${CONFIG}) >  ${CONFIG}
 
+# 1.0.8
 DEVICE=$(/usr/bin/jq -r .spotify.physicalDevice ${CONFIG})
-
 if [ "$DEVICE" == "null" ]; then 
 		/usr/bin/cat <<< $(/usr/bin/jq --arg v "hifiberry-dac" '.mupibox.physicalDevice = $v' ${CONFIG}) >  ${CONFIG}
+fi
+
+# 1.0.8
+MAXVOL=$(/usr/bin/jq -r .spotify.maxVolume ${CONFIG})
+if [ "$MAXVOL" == "null" ]; then 
+		/usr/bin/cat <<< $(/usr/bin/jq --arg v "100" '.mupibox.maxVolume = $v' ${CONFIG}) >  ${CONFIG}
 fi
