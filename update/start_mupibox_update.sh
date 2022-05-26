@@ -88,6 +88,8 @@ exec 3>${LOG}
 	sudo wget ${SRC}/scripts/mupibox/add_wifi.sh -O /usr/local/bin/mupibox/add_wifi.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/mupibox/save_rrd.sh -O /usr/local/bin/mupibox/save_rrd.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/mupibox/get_network.sh -O /usr/local/bin/mupibox/get_network.sh >&3 2>&3
+	sudo wget ${SRC}/scripts/mupibox/check_network.sh -O /usr/local/bin/mupibox/check_network.sh >&3 2>&3
+	sudo wget ${SRC}/scripts/mupibox/check_network.py -O /usr/local/bin/mupibox/check_network.py >&3 2>&3
 	sudo wget ${SRC}/config/templates/crontab.template -O /tmp/crontab.template >&3 2>&3
 
 	sudo wget ${SRC}/scripts/bluetooth/start_bt.sh -O /usr/local/bin/mupibox/start_bt.sh >&3 2>&3
@@ -129,6 +131,9 @@ exec 3>${LOG}
 	sudo rm /var/www/www.zip >&3 2>&3
 	sudo chown -R www-data:www-data /var/www/ >&3 2>&3
 	sudo chmod -R 755 /var/www/ >&3 2>&3
+
+	echo -e "XXX\n95\nUpdate Config-File... \nXXX"	
+	sudo /bin/su - -c 'cd; curl -L ${SRC}/update/conf_update.sh | bash' >&3 2>&3
 	
 	echo -e "XXX\n98\nFinalizing setup... \nXXX"
 	sudo cp ${CONFIG} ${CONFIG}_backup  >&3 2>&3

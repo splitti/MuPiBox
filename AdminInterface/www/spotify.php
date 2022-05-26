@@ -67,7 +67,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul>";
                 <form class="appnitro"  method="post" action="spotify.php" id="form">
                                         <div class="description">
                         <h2>Spotify settings</h2>
-                        <p>Specify your Spotify-Account-Settings and connect to Spotify...</p>
+                        <p>Specify your Spotify-Account-Settings and connect to Spotify... Please notice: all data will be saved as plain text (not encrypted).</p>
                 </div>
                                 <h2>RESET ALL DATA</h2>
                 <p>Click this Button, to reset all saved spotify data!!!</p>
@@ -149,7 +149,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul>";
 
 </ul>
                                 <h2>STEP 4</h2>
-                <p>In this last step, you easliy press the button to generate the Device ID...</p>
+                <p>In this last step, you easliy press the button to generate the Device ID... Please notice: sometimes it is necessary to play music on the MuPiBox via app so that the device ID can be generated</p>
                                 <ul> 
                                 <li class="buttons"><input id="saveForm" class="button_text" type="submit" name="generateDevID" value="Generate DeviceID" /></li>
                                 <li id="li_1" >

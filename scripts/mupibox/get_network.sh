@@ -57,28 +57,3 @@ SUBNET=$(/sbin/ifconfig wlan0 | awk '/netmask/{split($4,a,":"); print a[1]}')
 /usr/bin/cat <<< $(/usr/bin/jq --arg v "${DNS}" '.dns = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
 /usr/bin/cat <<< $(/usr/bin/jq --arg v "${SUBNET}" '.subnet = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
 
-wget -q --spider http://google.com
-
-if [ $? -eq 0 ]; then
-                ONLINESTATE="online"
-                if [ ! -f ${ACTIVE_FILE} ]; then
-                        ln -s ${DATA_FILE} ${ACTIVE_FILE}
-                        chown dietpi:dietpi ${ACTIVE_FILE}
-                elif [[ ${OLD_ONLINESTATE} != "online" ]]; then
-                        rm ${ACTIVE_FILE}
-                        ln -s ${DATA_FILE} ${ACTIVE_FILE}
-                        chown dietpi:dietpi ${ACTIVE_FILE}
-                fi
-        else
-                ONLINESTATE="offline"
-                if [ ! -f ${ACTIVE_FILE} ]; then
-                        ln -s ${OFFLINE_FILE} ${ACTIVE_FILE}
-                        chown dietpi:dietpi ${ACTIVE_FILE}
-                elif [[ ${OLD_ONLINESTATE} != "offline" ]]; then
-                        rm ${ACTIVE_FILE}
-                        ln -s ${OFFLINE_FILE} ${ACTIVE_FILE}
-                        chown dietpi:dietpi ${ACTIVE_FILE}
-                fi
-fi
-
-/usr/bin/cat <<< $(/usr/bin/jq --arg v "${ONLINESTATE}" '.onlinestate = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}

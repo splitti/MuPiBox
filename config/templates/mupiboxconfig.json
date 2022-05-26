@@ -19,6 +19,7 @@
 		"startSound": "/home/dietpi/MuPiBox/sysmedia/sound/startup.wav",
 		"shutSound": "/home/dietpi/MuPiBox/sysmedia/sound/shutdown.wav",
 		"startVolume": "40",
+		"maxVolume": "100",
 		"startSplash": "/boot/splash.png",
 		"shutSplash": "/home/dietpi/MuPiBox/sysmedia/images/goodbye.png",
 		"audioDevice": "Master",
