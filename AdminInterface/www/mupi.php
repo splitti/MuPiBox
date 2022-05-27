@@ -43,7 +43,7 @@
  if( $data["mupibox"]["startVolume"]!=$_POST['volume'] && $_POST['volume'] )
   {
   $data["mupibox"]["startVolume"]=$_POST['volume'];
-  $CHANGE_TXT=$CHANGE_TXT."<li>Volume is set to ".$data["mupibox"]["startVolume"]."</li>";
+  $CHANGE_TXT=$CHANGE_TXT."<li>Start Volume is set to ".$data["mupibox"]["startVolume"]."</li>";
   $change=1;
   }
  if(isset($_POST['idlePiShutdown']) && $_POST['idlePiShutdown'] >= 0)
@@ -84,7 +84,7 @@
   if( $data["mupibox"]["maxVolume"] < $data["mupibox"]["startVolume"] )
 	{
 	$data["mupibox"]["startVolume"]=$data["mupibox"]["maxVolume"];
-	$CHANGE_TXT=$CHANGE_TXT."<li>Start Volume is set to ".$data["mupibox"]["maxVolume"]."</li>";
+	$CHANGE_TXT=$CHANGE_TXT."<li>Start Volume is set to ".$data["mupibox"]["maxVolume"]." because of Max Volume</li>";
 	$change=1;
 	}
  if( $change )
