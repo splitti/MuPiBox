@@ -21,7 +21,7 @@
         </ion-segment>
         <ion-buttons slot="end">
             <ion-button class="admin-button" (click)="editButtonPressed()">
-                <ion-icon slot="icon-only" [name]="(network$ | async).onlinestate ? 'cloud-outline' : 'cloud-offline-outline'"></ion-icon>
+                <ion-icon slot="icon-only" [name]="((network$ | async)?.onlinestate) ? 'cloud-outline' : 'cloud-offline-outline'"></ion-icon>
                 {{(network$ | async)?.onlinestate}}
             </ion-button>
         </ion-buttons>
