@@ -17,7 +17,41 @@
     $CHANGE_TXT=$CHANGE_TXT."<li>Chromium Debuggung deactivated</li>";
     $change=1;
     }
-
+	if( $_POST['submitfile'] )
+		{
+		$target_dir = "/tmp/";
+		$target_file = $target_dir . basename($_FILES["fileToUpload"]["name"]);
+		$uploadOk = 1;
+		$FileType = strtolower(pathinfo($target_file,PATHINFO_EXTENSION));
+		// Allow zip file format
+		if($FileType != "zip" ) 
+			{
+			$uploadOk = 0;
+			}
+		// Check if $uploadOk is set to 0 by an error
+		if ($uploadOk == 0)
+			{
+			$CHANGE_TXT=$CHANGE_TXT."<li>WARNING: Please upload a ZIP-File!</li>";
+			$change=1;
+			} 
+		else 
+			{
+			if (move_uploaded_file($_FILES["fileToUpload"]["tmp_name"], $target_file))
+				{
+                $command = "sudo unzip -o -a '".$target_file."' -d /";
+                exec($command, $output, $result );
+                $command = "sudo rm '".$target_file."'";
+                exec($command, $output, $result );
+                $change=1;
+                $CHANGE_TXT=$CHANGE_TXT."<li>Backup-File restored. NOTICE: A restored Hostname will not work, please change and save the Hostname!</li>";
+				}
+			else
+				{
+				$CHANGE_TXT=$CHANGE_TXT."<li>ERROR: Error on uploading Backup-File!</li>";
+				}
+			}
+		}
+		
         if( $_POST['restart_kiosk'] )
                 {
                 $command = "sudo -i -u dietpi /usr/local/bin/mupibox/./restart_kiosk.sh";
@@ -148,7 +182,7 @@
 </li>
 
 <li class="li_norm"><h2>Backup and restore MuPiBox-settings</h2>
-	<p>Backup MuPiBox-Data:</p>
+	<p>Backup MuPiBox-Data (mupiboxconfig.json and data.json):</p>
 
 	<input id="saveForm" class="button_text" type="submit" name="backupdownload" value="Download Backup" onclick="window.open('./backup.php', '_blank');" />
 	<p>Restore Backup-File:</p>
