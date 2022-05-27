@@ -23,7 +23,7 @@
             <ion-button *ngIf="(network$ | async)?.onlinestate" class="admin-button" (click)="editButtonPressed()">
                 <ion-icon slot="icon-only" name="cloud-outline"></ion-icon>
             </ion-button>
-            <ion-button *ngIf="!(network$ | async)?.onlinestate" class="admin-button" (click)="editButtonPressed()">
+            <ion-button *ngIf="!((network$ | async)?.onlinestate)" class="admin-button" (click)="editButtonPressed()">
                 <ion-icon slot="icon-only" name="cloud-offline-outline"></ion-icon>
             </ion-button>
         </ion-buttons>
