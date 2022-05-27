@@ -88,7 +88,7 @@
         $CHANGE_TXT=$CHANGE_TXT."</ul>";
 ?>
 
-                <form class="appnitro" method="post" action="admin.php" id="form">
+                <form class="appnitro" method="post" action="admin.php" id="form"enctype="multipart/form-data">
                                         <div class="description">
                         <h2>MupiBox Administration</h2>
                         <p>Please be sure what you do...</p>
@@ -135,22 +135,24 @@
                   {
                 print '<input id="saveForm" class="button_text" type="submit" name="debugdownload" value="Download Debug-Log" onclick="window.open(\'./debug.php\', \'_blank\');" />';
                   }
-                                                                ?>
-                                                                </li>
-
-
-                                                                <li class="li_norm"><h2>Control MuPiBox</h2>
-                                                                <p>Restart or shutdown the box...</p>
-                                                                <input id="saveForm" class="button_text" type="submit" name="reboot" value="Reboot MuPiBox" />
-                                                                <input id="saveForm" class="button_text" type="submit" name="shutdown" value="Shutdown MuPiBox" /></li>
-
-                                                                <li class="li_norm"><h2>Backup and restore MuPiBox-settings</h2>
-                                                                <p>Coming soon...</p>
-
-<input id="saveForm" class="button_text" type="submit" name="backupdownload" value="Download Backup" onclick="window.open('./backup.php', '_blank');" />
-
+?>
 </li>
 
+
+<li class="li_norm"><h2>Control MuPiBox</h2>
+<p>Restart or shutdown the box...</p>
+<input id="saveForm" class="button_text" type="submit" name="reboot" value="Reboot MuPiBox" />
+<input id="saveForm" class="button_text" type="submit" name="shutdown" value="Shutdown MuPiBox" /></li>
+
+<li class="li_norm"><h2>Backup and restore MuPiBox-settings</h2>
+<p>Backup MuPiBox-Data:</p>
+
+<input id="saveForm" class="button_text" type="submit" name="backupdownload" value="Download Backup" onclick="window.open('./backup.php', '_blank');" />
+<p>Restore Backup-File:</p
+<input type="file" name="fileToUpload" id="fileToUpload">
+<input type="submit" value="Upload Backup File" name="submitfile">
+
+</li>
                         </ul>
                 </form>
 <?php

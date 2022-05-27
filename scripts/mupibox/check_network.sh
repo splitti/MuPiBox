@@ -41,7 +41,7 @@ fi
 while true
 do
 	if ( $(/usr/bin/python3 /usr/local/bin/mupibox/check_network.py) == "true" ); then
-		ONLINESTATE="online"
+		ONLINESTATE="true"
 		if [ "${ONLINESTATE}" != "${OLDSTATE}" ]; then
 			if [ ! -f ${ACTIVE_FILE} ]; then
 				ln -s ${DATA_FILE} ${ACTIVE_FILE}
@@ -53,7 +53,7 @@ do
 			fi
 		fi
 	else
-		ONLINESTATE="offline"
+		ONLINESTATE="false"
 		if [ "${ONLINESTATE}" != "${OLDSTATE}" ]; then
 			if [ ! -f ${ACTIVE_FILE} ]; then
 				ln -s ${OFFLINE_FILE} ${ACTIVE_FILE}
