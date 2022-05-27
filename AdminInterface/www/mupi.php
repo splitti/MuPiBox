@@ -40,7 +40,7 @@
   $CHANGE_TXT=$CHANGE_TXT."<li>Max Volume is set to ".$data["mupibox"]["maxVolume"]."</li>";
   if( $data["mupibox"]["maxVolume"] < $data["mupibox"]["startVolume"] )
 	{
-	$data["mupibox"]["startVolume"]= $data["mupibox"]["maxVolume"];
+	$data["mupibox"]["startVolume"]=$data["mupibox"]["maxVolume"];
 	$CHANGE_TXT=$CHANGE_TXT."<li>Start Volume is set to ".$data["mupibox"]["maxVolume"]."</li>";
 	}
   $change=1;
