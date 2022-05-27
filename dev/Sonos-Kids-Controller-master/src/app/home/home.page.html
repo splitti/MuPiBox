@@ -1,11 +1,5 @@
 <ion-header>
     <ion-toolbar color="light">
-        <!-- <ion-buttons slot="start">
-            <ion-button disabled="true">
-                <ion-icon slot="icon-only" name=""></ion-icon>
-                Dummy button to center ion-segment
-            </ion-button>
-        </ion-buttons> -->
         <ion-buttons slot="start">
             <ion-button (click)="resume()">
                 <ion-icon slot="icon-only" name="return-down-forward-outline"></ion-icon>
@@ -27,7 +21,7 @@
         </ion-segment>
         <ion-buttons slot="end">
             <ion-button (click)="editButtonPressed()">
-                <ion-icon slot="icon-only" name=""></ion-icon>
+                <ion-icon slot="icon-only" name="((network$ | async)?.onlinestate) ? 'cloud-outline' : 'cloud-offline-outline'"></ion-icon>
             </ion-button>
         </ion-buttons>
     </ion-toolbar>

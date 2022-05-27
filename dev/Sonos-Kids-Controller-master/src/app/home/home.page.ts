@@ -8,7 +8,8 @@ import { ActivityIndicatorService } from '../activity-indicator.service';
 import { Artist } from '../artist';
 import { Media } from '../media';
 import { Resume } from '../resume';
-//import { Network } from "../network";
+import { Network } from "../network";
+import { Observable } from 'rxjs';
 
 @Component({
   selector: 'app-home',
@@ -25,11 +26,12 @@ export class HomePage implements OnInit {
   media: Media[] = [];
   mediaFile: Media;
   resumeFile: Resume;
-  //network: Network;
+  network: Network;
   covers = {};
   activityIndicatorVisible = false;
   editButtonclickCount = 0;
   editClickTimer = 0;
+  public readonly network$: Observable<Network>;
 
   needsUpdate = false;
 
@@ -52,15 +54,17 @@ export class HomePage implements OnInit {
     private activityIndicatorService: ActivityIndicatorService,
     private router: Router,
     private activatedRoute: ActivatedRoute
-  ) {}
+  ) {
+    this.network$ = this.mediaService.network$;
+  }
 
   ngOnInit() {
     this.mediaService.setCategory('audiobook');
 
-    // this.activatedRoute.data.subscribe((data) => {
-    //   this.network = data.data;
-    // });
-    
+    this.mediaService.network$.subscribe(network => {
+      this.network = network;
+    });
+
     // Subscribe
     this.mediaService.getMedia().subscribe(media => {
       this.media = media;
@@ -128,18 +132,7 @@ export class HomePage implements OnInit {
     this.update();
   }
 
-  // updateConnection() {
-  //   if(this.network?.onlinestate == "online"){
-  //     console.log("online");
-  //     this.mediaService.setConnection('true');
-  //   }else{
-  //     console.log("offline");
-  //     this.mediaService.setConnection('false');
-  //   }
-  // }
-
   update() {
-    //this.updateConnection();
     if (this.category === 'audiobook' || this.category === 'music') {
       this.mediaService.publishArtists();
     } else {
