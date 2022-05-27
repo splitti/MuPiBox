@@ -38,12 +38,6 @@
   {
   $data["mupibox"]["maxVolume"]=$_POST['maxVolume'];
   $CHANGE_TXT=$CHANGE_TXT."<li>Max Volume is set to ".$data["mupibox"]["maxVolume"]."</li>";
-  if( $data["mupibox"]["maxVolume"] < $data["mupibox"]["startVolume"] )
-	{
-	$data["mupibox"]["startVolume"]=$data["mupibox"]["maxVolume"];
-	$CHANGE_TXT=$CHANGE_TXT."<li>Start Volume is set to ".$data["mupibox"]["maxVolume"]."</li>";
-	}
-  $change=1;
   }
 
  if( $data["mupibox"]["startVolume"]!=$_POST['volume'] && $_POST['volume'] )
@@ -87,7 +81,12 @@
   $CHANGE_TXT=$CHANGE_TXT."<li>Y-Resolution set to ".$data["chromium"]["resY"]."</li>";
   $change=1;
   }
-
+  if( $data["mupibox"]["maxVolume"] < $data["mupibox"]["startVolume"] )
+	{
+	$data["mupibox"]["startVolume"]=$data["mupibox"]["maxVolume"];
+	$CHANGE_TXT=$CHANGE_TXT."<li>Start Volume is set to ".$data["mupibox"]["maxVolume"]."</li>";
+	$change=1;
+	}
  if( $change )
   {
    $json_object = json_encode($data);
