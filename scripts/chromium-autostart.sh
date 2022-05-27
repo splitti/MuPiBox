@@ -26,13 +26,13 @@ fi
 
 URL="http://$(/usr/bin/jq -r .mupibox.host ${CONFIG}):8200"
 
+# RPi or Debian Chromium package
+FP_CHROMIUM=$(command -v chromium-browser)
+[ "$FP_CHROMIUM" ] || FP_CHROMIUM=$(command -v chromium)
+sudo nice -n -19 sudo -u dietpi xinit "$FP_CHROMIUM" $CHROMIUM_OPTS --homepage "${URL:-http://MuPiBox:8200}" -- -nocursor tty2 &
+
 START_SOUND=$(/usr/bin/jq -r .mupibox.startSound ${CONFIG})
 START_VOLUME=$(/usr/bin/jq -r .mupibox.startVolume ${CONFIG})
 AUDIO_DEVICE=$(/usr/bin/jq -r .mupibox.audioDevice ${CONFIG})
 /usr/bin/amixer sset ${AUDIO_DEVICE} ${START_VOLUME}%
 /usr/bin/mplayer -volume 100 ${START_SOUND} &
-
-# RPi or Debian Chromium package
-FP_CHROMIUM=$(command -v chromium-browser)
-[ "$FP_CHROMIUM" ] || FP_CHROMIUM=$(command -v chromium)
-sudo nice -n -19 sudo -u dietpi xinit "$FP_CHROMIUM" $CHROMIUM_OPTS --homepage "${URL:-http://MuPiBox:8200}" -- -nocursor tty2 &
