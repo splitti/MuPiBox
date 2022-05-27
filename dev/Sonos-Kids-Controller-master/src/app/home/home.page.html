@@ -20,10 +20,10 @@
             </ion-segment-button>
         </ion-segment>
         <ion-buttons slot="end" *ngIf="(network$ | async) as network">
-            <ion-button *ngIf="network.onlinestate == 'TRUE'" class="admin-button" (click)="editButtonPressed()">
+            <ion-button *ngIf="network.onlinestate == true" class="admin-button" (click)="editButtonPressed()">
                 <ion-icon slot="icon-only" name="cloud-outline"></ion-icon>
             </ion-button>
-            <ion-button *ngIf="network.onlinestate  == 'FALSE'" class="admin-button" (click)="editButtonPressed()">
+            <ion-button *ngIf="network.onlinestate == false" class="admin-button" (click)="editButtonPressed()">
                 <ion-icon slot="icon-only" name="cloud-offline-outline"></ion-icon>
             </ion-button>
         </ion-buttons>
