@@ -88,69 +88,72 @@
         $CHANGE_TXT=$CHANGE_TXT."</ul>";
 ?>
 
-                <form class="appnitro" method="post" action="admin.php" id="form"enctype="multipart/form-data">
-                                        <div class="description">
-                        <h2>MupiBox Administration</h2>
-                        <p>Please be sure what you do...</p>
-                </div>
-                        <ul ><li id="li_1" >
+<form class="appnitro" method="post" action="admin.php" id="form"enctype="multipart/form-data">
+<div class="description">
+<h2>MupiBox Administration</h2>
+<p>Please be sure what you do...</p>
+</div>
+<ul ><li id="li_1" >
 
-                                                                <li class="li_norm"><h2>MuPiBox Update</h2>
-                                                                <p>
-                                                                        <table>
-                                                                                <tr><td>Current Version:</td>
-                                                                                        <td><?php print $data["mupibox"]["version"]; ?></td>
-                                                                                </tr>
-                                                                                <tr>
-                                                                                        <td>Latest Version:</td><td><?php print $dataonline["version"]; ?></td>
-                                                                                </tr>
-                                                                        </table>
-                                                                        Please notice: The update procedure takes a long time (on older Raspberry Pi's up to one hour). Don't close the browser and wait for the status message!
-                                                                </p>
-                                                                <input id="saveForm" class="button_text" type="submit" name="os_update" value="Update OS" />
-                                                                <input id="saveForm" class="button_text" type="submit" name="mupibox_update" value="Update MuPiBox" /></li>
+<li class="li_norm"><h2>MuPiBox Update</h2>
+	<p>
+	<table>
+	<tr><td>Current Version:</td>
+			<td><?php print $data["mupibox"]["version"]; ?></td>
+	</tr>
+	<tr>
+			<td>Latest Version:</td><td><?php print $dataonline["version"]; ?></td>
+	</tr>
+	</table>
+	Please notice: The update procedure takes a long time (on older Raspberry Pi's up to one hour). Don't close the browser and wait for the status message!
+	</p>
+	<input id="saveForm" class="button_text" type="submit" name="os_update" value="Update OS" />
+	<input id="saveForm" class="button_text" type="submit" name="mupibox_update" value="Update MuPiBox" />
+</li>
 
-                                                                <li class="li_norm"><h2>Generate Playlists</h2>
-                                                                <p>The Job for generating local Playlists. Run this job after adding local media.</p>
-                                                                <input id="saveForm" class="button_text" type="submit" name="m3u" value="Generate Playlists" /></li>
+<li class="li_norm"><h2>Generate Playlists</h2>
+	<p>The Job for generating local Playlists. Run this job after adding local media.</p>
+	<input id="saveForm" class="button_text" type="submit" name="m3u" value="Generate Playlists" />
+</li>
 
-                                                                <li class="li_norm"><h2>Update MuPiBox settings</h2>
-                                                                <p>The box only updates some settings after a reboot. Some of these settings can be activated with this operation without reboot. </p>
-                                                                <input id="saveForm" class="button_text" type="submit" name="update" value="Update settings" />
-                                                                <input id="saveForm" class="button_text" type="submit" name="spotify_restart" value="Restart services" />
-                <input id="saveForm" class="button_text" type="submit" name="restart_kiosk" value="Restart Chromium-Kiosk" />
-                                                                <input id="saveForm" class="button_text" type="submit" name="debug" value="<?php
+<li class="li_norm"><h2>Update MuPiBox settings</h2>
+	<p>The box only updates some settings after a reboot. Some of these settings can be activated with this operation without reboot. </p>
+	<input id="saveForm" class="button_text" type="submit" name="update" value="Update settings" />
+	<input id="saveForm" class="button_text" type="submit" name="spotify_restart" value="Restart services" />
+	<input id="saveForm" class="button_text" type="submit" name="restart_kiosk" value="Restart Chromium-Kiosk" />
+	<input id="saveForm" class="button_text" type="submit" name="debug" value="<?php
 
-                if( $data["chromium"]["debug"] == 1)
-                  {
-                 print "Chrome Debugging Active - turn off";
-                  }
-                else
-                  {
-                 print "Chrome Debugging Off - turn on";
-                  }
-                ?>" />
-                <?php
-                if( $data["chromium"]["debug"] == 1)
-                  {
-                print '<input id="saveForm" class="button_text" type="submit" name="debugdownload" value="Download Debug-Log" onclick="window.open(\'./debug.php\', \'_blank\');" />';
-                  }
-?>
+	if( $data["chromium"]["debug"] == 1)
+	{
+	print "Chrome Debugging Active - turn off";
+	}
+	else
+	{
+	print "Chrome Debugging Off - turn on";
+	}
+	?>" />
+	<?php
+	if( $data["chromium"]["debug"] == 1)
+	{
+	print '<input id="saveForm" class="button_text" type="submit" name="debugdownload" value="Download Debug-Log" onclick="window.open(\'./debug.php\', \'_blank\');" />';
+	}
+	?>
 </li>
 
 
 <li class="li_norm"><h2>Control MuPiBox</h2>
-<p>Restart or shutdown the box...</p>
-<input id="saveForm" class="button_text" type="submit" name="reboot" value="Reboot MuPiBox" />
-<input id="saveForm" class="button_text" type="submit" name="shutdown" value="Shutdown MuPiBox" /></li>
+	<p>Restart or shutdown the box...</p>
+	<input id="saveForm" class="button_text" type="submit" name="reboot" value="Reboot MuPiBox" />
+	<input id="saveForm" class="button_text" type="submit" name="shutdown" value="Shutdown MuPiBox" />
+</li>
 
 <li class="li_norm"><h2>Backup and restore MuPiBox-settings</h2>
-<p>Backup MuPiBox-Data:</p>
+	<p>Backup MuPiBox-Data:</p>
 
-<input id="saveForm" class="button_text" type="submit" name="backupdownload" value="Download Backup" onclick="window.open('./backup.php', '_blank');" />
-<p>Restore Backup-File:</p
-<input type="file" name="fileToUpload" id="fileToUpload">
-<input type="submit" value="Upload Backup File" name="submitfile">
+	<input id="saveForm" class="button_text" type="submit" name="backupdownload" value="Download Backup" onclick="window.open('./backup.php', '_blank');" />
+	<p>Restore Backup-File:</p>
+	<input type="file" class="button_text" name="fileToUpload" id="fileToUpload">
+	<input type="submit" class="button_text" value="Upload Backup File" name="submitfile">
 
 </li>
                         </ul>
