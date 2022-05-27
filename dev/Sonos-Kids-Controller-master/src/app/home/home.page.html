@@ -19,14 +19,10 @@
                 <ion-icon name="radio-outline"></ion-icon>
             </ion-segment-button>
         </ion-segment>
-        <ion-buttons slot="end" *ngIf="(network$ | async) as network">
-            <ion-button *ngIf="network.onlinestate" class="admin-button" (click)="editButtonPressed()">
-                <ion-icon slot="icon-only" name="cloud-outline"></ion-icon>
-                <div>&bullet;</div>
-            </ion-button>
-            <ion-button *ngIf="!network.onlinestate" class="admin-button" (click)="editButtonPressed()">
-                <ion-icon slot="icon-only" name="cloud-offline-outline"></ion-icon>
-                <div>{{(network$ | async)?.onlinestate}}</div>
+        <ion-buttons slot="end">
+            <div>{{(network$ | async)?.onlinestate}}</div>
+            <ion-button (click)="editButtonPressed()">
+                <ion-icon slot="icon-only" name=""></ion-icon>
             </ion-button>
         </ion-buttons>
     </ion-toolbar>
