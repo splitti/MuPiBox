@@ -35,4 +35,4 @@ AUDIO_DEVICE=$(/usr/bin/jq -r .mupibox.audioDevice ${CONFIG})
 # RPi or Debian Chromium package
 FP_CHROMIUM=$(command -v chromium-browser)
 [ "$FP_CHROMIUM" ] || FP_CHROMIUM=$(command -v chromium)
-exec nice --5 xinit "$FP_CHROMIUM" $CHROMIUM_OPTS --homepage "${URL:-http://MuPiBox:8200}" -- -nocursor tty2
+sudo nice -n -19 sudo -u dietpi xinit "$FP_CHROMIUM" $CHROMIUM_OPTS --homepage "${URL:-http://MuPiBox:8200}" -- -nocursor tty2 &
