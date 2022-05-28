@@ -6,9 +6,9 @@ DATA_FILE="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data
 ACTIVE_FILE="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/active_data.json"
 OFFLINE_FILE="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/offline_data.json"
 NETWORKCONFIG="/tmp/network.json"
-OLDSTATE="SCRIPTINIT"
-TRUESTATE="&bullet;"
-FALSESTATE="&cross;"
+OLDSTATE="unchecked"
+TRUESTATE="online"
+FALSESTATE="offline"
 
 if [ ! -f ${DATA_FILE} ]; then
         echo -n "[]" > ${DATA_FILE}
