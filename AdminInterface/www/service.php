@@ -30,13 +30,13 @@
 		$change=1;
 		}
 
-	if( $_POST['change_autoconnectbt'] == "enable & start" )
+	if( $_POST['change_btac'] == "enable & start" )
 		{
 		$command = "sudo systemctl enable mupi_autoconnect_bt; sudo systemctl start mupi_autoconnect_bt";
 		exec($command, $output, $result );
 		$change=1;
 		}
-	else if( $_POST['change_autoconnectbt'] == "stop & disable" )
+	else if( $_POST['change_btac'] == "stop & disable" )
 		{
 		$command = "sudo systemctl stop mupi_autoconnect_bt; sudo systemctl disable mupi_autoconnect_bt";
 		exec($command, $output, $result );

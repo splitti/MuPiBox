@@ -49,7 +49,11 @@
 
 <h2>System Information</h2>
 <?php
+		$command = "/usr/bin/cat /sys/firmware/devicetree/base/model";
+		exec($command, $output, $result );
+		echo "<p>Model:    " . $result . "</p>";
         echo "<p>Throttle: " . $rpi_throttle . "</p>";
+
 ?>
 <?php
         $root_free_bytes = disk_free_space("/");
