@@ -20,9 +20,11 @@
             </ion-segment-button>
         </ion-segment>
         <ion-buttons slot="end">
-            <div class="OnlineState">{{(network$ | async)?.onlinestate}}</div>
-            <ion-button (click)="editButtonPressed()">
-                <ion-icon slot="icon-only" name=""></ion-icon>
+            <ion-button *ngIf="(network$ | async)?.onlinestate ==='online'" class="admin-button" (click)="editButtonPressed()">
+                <ion-icon slot="icon-only" name="cloud-outline"></ion-icon>
+            </ion-button>
+            <ion-button *ngIf="(network$ | async)?.onlinestate ==='offline'" class="admin-button" (click)="editButtonPressed()">
+                <ion-icon slot="icon-only" name="cloud-offline-outline"></ion-icon>
             </ion-button>
         </ion-buttons>
     </ion-toolbar>
