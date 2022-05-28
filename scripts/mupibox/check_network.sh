@@ -7,8 +7,8 @@ ACTIVE_FILE="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/ac
 OFFLINE_FILE="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/offline_data.json"
 NETWORKCONFIG="/tmp/network.json"
 OLDSTATE="SCRIPTINIT"
-TRUESTATE='<ion-icon src="http://127.0.0.1/images/wifi.svg" size="large"></ion-icon>'
-FALSESTATE='<ion-icon src="http://127.0.0.1/images/wifi-off.svg" size="large"></ion-icon>'
+TRUESTATE='<img src="http://127.0.0.1/images/wifi.svg">'
+FALSESTATE='<img src="http://127.0.0.1/images/wifi-off.svg">'
 
 if [ ! -f ${DATA_FILE} ]; then
         echo -n "[]" > ${DATA_FILE}
