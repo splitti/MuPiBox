@@ -64,3 +64,15 @@ ion-row.media-card {
 .swiper-slide {
     touch-action: none;
 }
+
+.OnlineState ion-icon {
+        height:60% !important;
+        max-height:60% !important;
+        color:rgb(255,255,255);opacity:0.6;
+}
+
+.OfflineState ion-icon {
+        height:60% !important;
+        max-height:60% !important;
+        color:rgb(255,255,255);opacity:0.6;
+}
