@@ -1,0 +1,10 @@
+[Unit]
+Description=Autoconnect to Bluetooth Devices
+
+[Service]
+User=dietpi
+Group=dietpi
+ExecStart=/usr/local/bin/mupibox/./autoconnect_bt.sh
+
+[Install]
+WantedBy=multi-user.target

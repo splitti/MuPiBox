@@ -92,13 +92,15 @@ exec 3>${LOG}
 	sudo wget ${SRC}/scripts/mupibox/check_network.py -O /usr/local/bin/mupibox/check_network.py >&3 2>&3
 	sudo wget ${SRC}/config/templates/crontab.template -O /tmp/crontab.template >&3 2>&3
 	sudo wget ${SRC}/config/services/mupi_check_internet.service -O /etc/systemd/system/mupi_check_internet.service  >&3 2>&3
+	sudo wget ${SRC}/config/services/mupi_check_internet.service -O /etc/systemd/system/mupi_check_internet.service  >&3 2>&3
 
 	sudo wget ${SRC}/scripts/bluetooth/start_bt.sh -O /usr/local/bin/mupibox/start_bt.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/bluetooth/stop_bt.sh -O /usr/local/bin/mupibox/stop_bt.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/bluetooth/scan_bt.sh -O /usr/local/bin/mupibox/scan_bt.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/bluetooth/pair_bt.sh -O /usr/local/bin/mupibox/pair_bt.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/bluetooth/remove_bt.sh -O /usr/local/bin/mupibox/remove_bt.sh >&3 2>&3
-
+	sudo wget ${SRC}/scripts/bluetooth/autoconnect_bt.sh -O /usr/local/bin/mupibox/autoconnect_bt.sh >&3 2>&3
+	sudo wget ${SRC}/config/services/mupi_autoconnect_bt.service -O /etc/systemd/system/mupi_autoconnect_bt.service  >&3 2>&3
 		
 	sudo wget ${SRC}/scripts/mupibox/restart_kiosk.sh -O /usr/local/bin/mupibox/restart_kiosk.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/mupibox/set_deviceid.sh -O /usr/local/bin/mupibox/set_deviceid.sh >&3 2>&3
