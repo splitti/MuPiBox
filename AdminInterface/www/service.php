@@ -30,6 +30,19 @@
 		$change=1;
 		}
 
+	if( $_POST['change_autoconnectbt'] == "enable & start" )
+		{
+		$command = "sudo systemctl enable mupi_autoconnect_bt; sudo systemctl start mupi_autoconnect_bt";
+		exec($command, $output, $result );
+		$change=1;
+		}
+	else if( $_POST['change_autoconnectbt'] == "stop & disable" )
+		{
+		$command = "sudo systemctl stop mupi_autoconnect_bt; sudo systemctl disable mupi_autoconnect_bt";
+		exec($command, $output, $result );
+		$change=1;
+		}
+
 
 	$rc = $output[count($output)-1];
 	$command = "sudo service smbd status | grep running";
@@ -60,6 +73,19 @@
 		$change_ftp = "enable & start";
 		}
 
+	$command = "sudo service mupi_autoconnect_bt status | grep running";
+	exec($command, $btacoutput, $btacresult );
+	if( $btacoutput[0] )
+		{
+		$btac_state = "started";
+		$change_btac = "stop & disable";
+		}
+	else
+		{
+		$btac_state = "disabled";
+		$change_btac = "enable & start";
+		}
+
 ?>
 
                 <form class="appnitro"  method="post" action="service.php" id="form">
@@ -82,7 +108,14 @@
 								echo "FTP-Server Status: <b>".$ftp_state."</b>";
 								?>
 								</p>
-								<input id="saveForm" class="button_text" type="submit" name="change_ftp" value="<?php print $change_ftp; ?>" /></li>
+								<input id="saveForm" class="button_text" type="submit" name="change_btac" value="<?php print $change_btac; ?>" /></li>
+								<li class="li_1"><h2>Bluetooth Autoconnect Helper (Just if automatic reconnect won't work)</h2>
+								<p>
+								<?php 
+								echo "BT Autoconnect Status: <b>".$btac_state."</b>";
+								?>
+								</p>
+								<input id="saveForm" class="button_text" type="submit" name="change_btac" value="<?php print $change_btac; ?>" /></li>
 
                         </ul>
                 </form>
