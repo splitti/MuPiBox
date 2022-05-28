@@ -209,7 +209,6 @@ export class HomePage implements OnInit {
   editButtonPressed() {
     window.clearTimeout(this.editClickTimer);
 
-    this.update();
     if (this.editButtonclickCount < 9) {
       this.editButtonclickCount++;
 
