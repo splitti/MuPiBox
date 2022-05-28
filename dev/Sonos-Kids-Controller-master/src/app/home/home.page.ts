@@ -123,14 +123,16 @@ export class HomePage implements OnInit {
 
 
   checkNetwork(){
+    console.log(this.network.onlinestate);
+    console.log(this.currentNetwork);
     if(this.network.onlinestate !== this.currentNetwork){
       this.currentNetwork = this.network.onlinestate;
+      console.log("Network changed");
       this.update();
     }
     setTimeout(() => {
       this.checkNetwork(); 
     }, 2000)
-    
   }
 
   ionViewDidLeave() {
