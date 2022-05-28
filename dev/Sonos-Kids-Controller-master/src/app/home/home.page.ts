@@ -125,10 +125,10 @@ export class HomePage implements OnInit {
 
 
   checkNetwork(){
-    console.log("Onlinestate:" + this.network.onlinestate);
+    console.log("Onlinestate:" + this.network?.onlinestate);
     console.log("CurrentNetwork:" + this.currentNetwork);
     if(this.network?.onlinestate !== this.currentNetwork){
-      this.currentNetwork = this.network.onlinestate;
+      this.currentNetwork = this.network?.onlinestate;
       console.log("Network changed");
       this.update();
     }
@@ -209,6 +209,7 @@ export class HomePage implements OnInit {
   editButtonPressed() {
     window.clearTimeout(this.editClickTimer);
 
+    this.update();
     if (this.editButtonclickCount < 9) {
       this.editButtonclickCount++;
 
