@@ -28,6 +28,7 @@ export class HomePage implements OnInit {
   resumeFile: Resume;
   network: Network;
   currentNetwork = "";
+  updateNetwork = false;
   covers = {};
   activityIndicatorVisible = false;
   editButtonclickCount = 0;
@@ -112,6 +113,7 @@ export class HomePage implements OnInit {
     if (this.needsUpdate) {
       this.update();
     }
+    this.updateNetwork = true;
     this.mediaService.getMediaObservable().subscribe(mediaFile => {
       this.mediaFile = mediaFile;
     });
@@ -131,11 +133,14 @@ export class HomePage implements OnInit {
       this.update();
     }
     setTimeout(() => {
-      this.checkNetwork(); 
+      if(this.updateNetwork){
+        this.checkNetwork();
+      }
     }, 2000)
   }
 
   ionViewDidLeave() {
+    this.updateNetwork = false;
     if (this.activityIndicatorVisible) {
       this.activityIndicatorService.dismiss();
       this.activityIndicatorVisible = false;
