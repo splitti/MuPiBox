@@ -51,8 +51,8 @@
 <?php
 		$command = "/usr/bin/cat /sys/firmware/devicetree/base/model";
 		exec($command, $output, $result );
-		echo "<p>Model:    " . $result . "</p>";
-        echo "<p>Throttle: " . $rpi_throttle . "</p>";
+		echo "<p><table class='sysinfotbl'><tr><td>Model:</td><td>" . $output . "</td></tr>";
+        echo "<tr><td>Throttle:</td><td>" . $rpi_throttle . "</td></tr></table></p>";
 
 ?>
 <?php
