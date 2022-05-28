@@ -20,16 +20,16 @@
             </ion-segment-button>
         </ion-segment>
         <ion-buttons slot="end">
-            <ion-button *ngIf="(network$ | async)?.onlinestate ==='online'; else elseBlockOffline" class="admin-button" (click)="editButtonPressed()">
+            <ion-button *ngIf="(network$ | async)?.onlinestate ==='online'; else elseBlockOffline" class="OnlineState" (click)="editButtonPressed()">
                 <ion-icon slot="icon-only" name="cloud-outline"></ion-icon>
             </ion-button>
             <ng-template #elseBlockOffline>
-                <ion-button *ngIf="(network$ | async)?.onlinestate ==='offline'; else elseBlockEmpty" class="admin-button" (click)="editButtonPressed()">
+                <ion-button *ngIf="(network$ | async)?.onlinestate ==='offline'; else elseBlockEmpty" class="OfflineState" (click)="editButtonPressed()">
                     <ion-icon slot="icon-only" name="cloud-offline-outline"></ion-icon>
                 </ion-button>
             </ng-template>
             <ng-template #elseBlockEmpty>
-                <ion-button class="admin-button" (click)="editButtonPressed()">
+                <ion-button (click)="editButtonPressed()">
                     <ion-icon slot="icon-only" name=""></ion-icon>
                 </ion-button>
             </ng-template>
