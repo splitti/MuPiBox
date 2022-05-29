@@ -124,7 +124,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 	<input name="brightness" type="range" min="0" max="255" step="1.0" value="<?php 
 		$command = "cat /sys/class/backlight/rpi_backlight/brightness";
 		$thisbrightness = exec($command, $output);
-		echo $output;
+		echo $output[0];
 	?>">
 	</div>
 
