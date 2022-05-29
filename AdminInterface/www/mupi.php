@@ -127,7 +127,7 @@ $('.slider').on('input change', function(){
 	<div>
 	<input id="hostname" name="hostname" class="element text medium" type="text" maxlength="255" value="<?php
 	print $data["mupibox"]["host"];
-	?>"/><span  class="slider_label"></span>
+	?>"/>
 	</div><p class="guidelines" id="guide_1"><small>Please insert the hostname of the MuPiBox. Don't use Spaces or other special charachters! Default: MuPiBox</small></p>
 </li>
 <li id="li_1" >
@@ -137,7 +137,7 @@ $('.slider').on('input change', function(){
 		$command = "cat /sys/class/backlight/rpi_backlight/brightness";
 		$thisbrightness = exec($command, $boutput);
 		echo $boutput[0];
-	?>">
+	?>"><span  class="slider_label"></span>
 	</div>
 
 </li>
