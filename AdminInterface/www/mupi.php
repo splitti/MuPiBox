@@ -141,7 +141,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 
 
 <li id="li_1" >
-	<label class="description" for="thisvolume">Volume</label>
+	<label class="description" for="thisvolume">Volume (in 5% Steps)</label>
 	<div>
 	<input class="element text medium" name="thisvolume" type="range" min="0" max="100" step="5.0" value="<?php 
 		$command = "sudo su dietpi -c '/usr/bin/amixer sget Master | grep \"Right:\" | cut -d\" \" -f7 | sed \"s/\\[//g\" | sed \"s/\\]//g\" | sed \"s/\%//g\"'";
@@ -182,8 +182,8 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 		$tbcommand = "cat /sys/class/backlight/rpi_backlight/brightness";
 		$tbrightness = exec($tbcommand, $boutput);
 		echo $boutput[0];
-	?>" list="steplist" oninput="this.nextElementSibling.value = this.value"><output></output>
-<datalist id="steplist">
+	?>" list="steplist2" oninput="this.nextElementSibling.value = this.value"><output></output>
+<datalist id="steplist2">
     <option>0</option>
     <option>51</option>
     <option>102</option>
