@@ -62,7 +62,7 @@ player.on('track-change', () => player.getProps(['metadata']))
 player.on('filename', (val) => {
   console.log('track name is', val);
   if (!currentMeta.currentTrackname){
-    currentMeta.currentTrackname = val.split('.mp3')[0].split('.flac')[0].split('.wma')[0].split('.wav')[0];
+    currentMeta.currentTrackname = val.split('.mp3')[0].split('.flac')[0].split('.wma')[0].split('.wav')[0].split('.m4a')[0];
   }
 })
 player.on('track-change', () => player.getProps(['filename']))
@@ -332,7 +332,7 @@ function playList(playedList){
   currentMeta.path = playedTitelmod;
 
   setTimeout(function(){
-    let cmdtotalTracks = "find \"/home/dietpi/MuPiBox/media/" + currentMeta.path + "\" -type f -name \"*.mp3\" -or -name \"*.flac\" -or -name \"*.wma\" -or -name \"*.wav\"| wc -l";
+    let cmdtotalTracks = "find \"/home/dietpi/MuPiBox/media/" + currentMeta.path + "\" -type f -name \"*.mp3\" -or -name \"*.flac\" -or -name \"*.m4a\" -or -name \"*.wma\" -or -name \"*.wav\"| wc -l";
     console.log(cmdtotalTracks);
     const exec = require ('child_process').exec;
     exec(cmdtotalTracks, (e, stdout, stderr) => {
