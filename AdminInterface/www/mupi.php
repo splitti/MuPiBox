@@ -57,13 +57,13 @@
   $CHANGE_TXT=$CHANGE_TXT."<li>Start Volume is set to ".$data["mupibox"]["startVolume"]."</li>";
   $change=1;
   }
- if(isset($data["timeout"]["idlePiShutdown"]!=$_POST['idlePiShutdown'] && $_POST['idlePiShutdown']) && $_POST['idlePiShutdown'] >= 0)
+ if($data["timeout"]["idlePiShutdown"]!=$_POST['idlePiShutdown'] && isset($_POST['idlePiShutdown']) && $_POST['idlePiShutdown'] >= 0)
   {
   $data["timeout"]["idlePiShutdown"]=$_POST['idlePiShutdown'];
   $CHANGE_TXT=$CHANGE_TXT."<li>Idle Shutdown Time is set to ".$data["timeout"]["idlePiShutdown"]."</li>";
   $change=1;
   }
- if(isset($data["timeout"]["idleDisplayOff"]!=$_POST['idleDisplayOff'] && $_POST['idleDisplayOff']) && $_POST['idleDisplayOff'] >= 0)
+ if($data["timeout"]["idleDisplayOff"]!=$_POST['idleDisplayOff'] && isset($_POST['idleDisplayOff']) && $_POST['idleDisplayOff'] >= 0)
   {
   $data["timeout"]["idleDisplayOff"]=$_POST['idleDisplayOff'];
   $CHANGE_TXT=$CHANGE_TXT."<li>Idle Time for Display is set to ".$data["timeout"]["idleDisplayOff"]."</li>";
