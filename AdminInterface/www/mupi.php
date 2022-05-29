@@ -103,18 +103,6 @@
   }
 $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 ?>
-<script>$(function()
-{
-$('.slider').on('input change', function(){
-          $(this).next($('.slider_label')).html(this.value);
-        });
-      $('.slider_label').each(function(){
-          var value = $(this).prev().attr('value');
-          $(this).html(value);
-        });  
-  
-  
-})</script>
 <form class="appnitro" name="mupi" method="post" action="mupi.php" id="form">
 <div class="description">
 <h2>MupiBox settings</h2>
@@ -130,6 +118,19 @@ $('.slider').on('input change', function(){
 	?>"/>
 	</div><p class="guidelines" id="guide_1"><small>Please insert the hostname of the MuPiBox. Don't use Spaces or other special charachters! Default: MuPiBox</small></p>
 </li>
+
+
+<li id="li_1" >
+	<label class="description" for="theme">Volume</label>
+	<div>
+	<input name="volume" type="range" min="0" max="100" step="5.0" value="<?php 
+		$command = "/usr/bin/amixer sget Master | grep 'Right:' | cut -d\" \" -f7 | sed 's/\[//g' | sed 's/\]//g' | sed 's/\%//g'";
+		$thisbrightness = exec($command, $voutput);
+		echo $voutput[0];
+	?>">
+	</div>
+
+</li>
 <li id="li_1" >
 	<label class="description" for="theme">Brightness</label>
 	<div>
@@ -137,7 +138,7 @@ $('.slider').on('input change', function(){
 		$command = "cat /sys/class/backlight/rpi_backlight/brightness";
 		$thisbrightness = exec($command, $boutput);
 		echo $boutput[0];
-	?>"><span  class="slider_label"></span>
+	?>">
 	</div>
 
 </li>
