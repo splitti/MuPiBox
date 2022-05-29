@@ -160,7 +160,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 		$command = "cat /sys/class/backlight/rpi_backlight/brightness";
 		$thisbrightness = exec($command, $boutput);
 		echo $boutput[0];
-	?>" list="steplist" class="range">
+	?>" list="steplist" oninput="this.nextElementSibling.value = this.value">
   <output class="bubble"></output>
 <datalist id="steplist">
     <option>0</option>
