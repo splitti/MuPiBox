@@ -22,7 +22,7 @@ if [ "$DEVICE" == "null" ]; then
 fi
 
 # 1.0.8
-MAXVOL=$(/usr/bin/jq -r .spotify.maxVolume ${CONFIG})
+MAXVOL=$(/usr/bin/jq -r .mupibox.maxVolume ${CONFIG})
 if [ "$MAXVOL" == "null" ]; then 
 		/usr/bin/cat <<< $(/usr/bin/jq --arg v "100" '.mupibox.maxVolume = $v' ${CONFIG}) >  ${CONFIG}
 fi

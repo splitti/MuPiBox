@@ -5,14 +5,15 @@
 
  if( $_POST['volume'])
   {
-	$command="sudo su - -c 'sudo su dietpi -c \"/usr/bin/amixer sset Master " . $_POST['volume'] . "%\"";
-	$set_brightness = exec($command, $output );
+	$command="sudo su - -c 'sudo su dietpi -c '/usr/bin/amixer sset Master " . $_POST['volume'] . "%'";
+	$set_volume = exec($command, $output );
+    $CHANGE_TXT=$CHANGE_TXT."<li>Volume: " . $_POST['volume'] . "%</li>";
   }
  if( $_POST['brightness'])
   {
 	switch ($_POST['brightness']) {
     case 0:
-		$setBrightness="1";
+		$setBrightness="0";
         break;
     case 25:
 		$setBrightness="64";
@@ -26,9 +27,10 @@
     case 100:
 		$setBrightness="255";
         break;
-}
-	$command="sudo su - -c 'echo \"" . $_POST['brightness'] . "\" > /sys/class/backlight/rpi_backlight/brightness'";
+	}
+	$command="sudo su - -c 'echo " . $_POST['brightness'] . " > /sys/class/backlight/rpi_backlight/brightness'";
 	$set_brightness = exec($command, $output );
+    $CHANGE_TXT=$CHANGE_TXT."<li>Brightness: " . $_POST['brightness'] . "%</li>";
   }
 
  if( $data["mupibox"]["physicalDevice"]!=$_POST['audio'] && $_POST['audio'])
@@ -66,6 +68,7 @@
   {
   $data["mupibox"]["maxVolume"]=$_POST['maxVolume'];
   $CHANGE_TXT=$CHANGE_TXT."<li>Max Volume is set to ".$data["mupibox"]["maxVolume"]."</li>";
+  $change=1;
   }
 
  if( $data["mupibox"]["startVolume"]!=$_POST['volume'] && $_POST['volume'] )
@@ -118,8 +121,8 @@
  if( $change )
   {
    $json_object = json_encode($data);
-   $save_rc = file_put_contents('/tmp/mupiboxconfig.json', $json_object);
-   exec("sudo mv /tmp/mupiboxconfig.json /etc/mupibox/mupiboxconfig.json");
+   $save_rc = file_put_contents('/tmp/.mupiboxconfig.json', $json_object);
+   exec("sudo mv /tmp/.mupiboxconfig.json /etc/mupibox/mupiboxconfig.json");
    exec("sudo /usr/local/bin/mupibox/./setting_update.sh");
    exec("sudo -i -u dietpi /usr/local/bin/mupibox/./restart_kiosk.sh");
   }
@@ -159,7 +162,25 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 	<input name="brightness" id="brightness" type="range" min="0" max="100" step="25.0" value="<?php 
 		$command = "cat /sys/class/backlight/rpi_backlight/brightness";
 		$thisbrightness = exec($command, $boutput);
-		echo $boutput[0];
+		switch ($boutput) {
+		case 0:
+			$thisBrightness="0";
+			break;
+		case 64:
+			$thisBrightness="25";
+			break;
+		case 128:
+			$thisBrightness="50";
+			break;
+		case 192:
+			$thisBrightness="75";
+			break;
+		case 255:
+			$thisBrightness="100";
+			break;
+		}
+
+		echo $thisBrightness;
 	?>" list="steplist" oninput="this.nextElementSibling.value = this.value">
 <datalist id="steplist">
     <option>0</option>
@@ -259,7 +280,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 </li>
 
 <li id="li_1" >
-	<label class="description" for="volume">Set max volume</label>
+	<label class="description" for="maxvolume">Set max volume</label>
 	<div>
 	<select id="maxVolume" name="maxVolume" class="element text medium">
 	<?php
