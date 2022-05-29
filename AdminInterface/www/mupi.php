@@ -5,7 +5,7 @@
 
  if( $_POST['brightness'])
   {
-	$command="sudo su - -c 'echo \"255\" > /sys/class/backlight/rpi_backlight/brightness'";
+	$command="sudo su - -c 'echo \"" . $_POST['brightness'] . "\" > /sys/class/backlight/rpi_backlight/brightness'";
 	$set_brightness = exec($command, $output );
   }
 
