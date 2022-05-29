@@ -431,8 +431,8 @@ async function setVolume(volume){
   let volumeDown = "/usr/bin/amixer sset Master 5%-";
 
   if (volume) {
-    await cmdCall(volumeUp);
     if(currentMeta.volume < muPiBoxConfig.mupibox.maxVolume){
+      await cmdCall(volumeUp);
       currentMeta.volume = parseInt(currentMeta.volume, 10) + 5;
     } else {
       currentMeta.volume = muPiBoxConfig.mupibox.maxVolume
