@@ -10,6 +10,23 @@
   }
  if( $_POST['brightness'])
   {
+	switch ($_POST['brightness']) {
+    case 0:
+		$setBrightness="1";
+        break;
+    case 25:
+		$setBrightness="64";
+        break;
+    case 50:
+		$setBrightness="128";
+        break;
+    case 75:
+		$setBrightness="192";
+        break;
+    case 100:
+		$setBrightness="255";
+        break;
+}
 	$command="sudo su - -c 'echo \"" . $_POST['brightness'] . "\" > /sys/class/backlight/rpi_backlight/brightness'";
 	$set_brightness = exec($command, $output );
   }
@@ -139,11 +156,19 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 <li id="li_1" >
 	<label class="description" for="theme">Brightness</label>
 	<div>
-	<input name="brightness" id="brightness" type="range" min="1" max="255" step="51.0" value="<?php 
+	<input name="brightness" id="brightness" type="range" min="0" max="100" step="25.0" value="<?php 
 		$command = "cat /sys/class/backlight/rpi_backlight/brightness";
 		$thisbrightness = exec($command, $boutput);
 		echo $boutput[0];
-	?>">
+	?>" list="steplist" class="range">
+  <output class="bubble"></output>
+<datalist id="steplist">
+    <option>0</option>
+    <option>25</option>
+    <option>50</option>
+    <option>75</option>
+    <option>100</option>
+</datalist>
 	</div>
 </li>
 <li id="li_1" >
