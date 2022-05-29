@@ -126,7 +126,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 	<input name="volume" type="range" min="0" max="100" step="5.0" value="<?php 
 		$command = "/usr/bin/amixer sget Master | grep 'Right:' | cut -d' ' -f7 | sed 's/\[//g' | sed 's/\]//g' | sed 's/\%//g'";
 		$thisbrightness = exec($command, $voutput);
-		echo $voutput;
+		echo $voutput[0]s;
 	?>">
 	</div>
 

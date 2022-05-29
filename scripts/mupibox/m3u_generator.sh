@@ -24,7 +24,7 @@ else
 							if [ "${title}" != "*" ] # && [ ${#i} -gt ${#topFolder} ]
 							then
 									setCover=0
-									ls -1v "${i}" | grep '.mp3\|.flac\|.wav\|.wma' > /tmp/playlist.m3u && mv /tmp/playlist.m3u "${i}"
+									ls -1v "${i}" | grep '.mp3\|.flac\|.wav\|.wma|.m4a' > /tmp/playlist.m3u && mv /tmp/playlist.m3u "${i}"
 									if [ -f "${i}"/*.jp*g ]
 									then
 											/usr/bin/mkdir -p "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover/audiobook/${artist}/${title}/" > /dev/null
@@ -55,7 +55,7 @@ else
 							if [ "${title}" != "*" ] # && [ ${#i} -gt ${#topFolder} ]
 							then
 									setCover=0
-									ls -1v "${i}" | grep '.mp3\|.flac\|.wav\|.wma' > /tmp/playlist.m3u && mv /tmp/playlist.m3u "${i}"
+									ls -1v "${i}" | grep '.mp3\|.flac\|.wav\|.wma|.m4a' > /tmp/playlist.m3u && mv /tmp/playlist.m3u "${i}"
 									if [ -f "${i}"/*.jp*g ]
 									then
 											/usr/bin/mkdir -p "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover/music/${artist}/${title}/" > /dev/null
