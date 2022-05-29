@@ -52,13 +52,13 @@
   $CHANGE_TXT=$CHANGE_TXT."<li>Start Volume is set to ".$data["mupibox"]["startVolume"]."</li>";
   $change=1;
   }
- if(isset($_POST['idlePiShutdown']) && $_POST['idlePiShutdown'] >= 0)
+ if(isset($data["timeout"]["idlePiShutdown"]!=$_POST['idlePiShutdown'] && $_POST['idlePiShutdown']) && $_POST['idlePiShutdown'] >= 0)
   {
   $data["timeout"]["idlePiShutdown"]=$_POST['idlePiShutdown'];
   $CHANGE_TXT=$CHANGE_TXT."<li>Idle Shutdown Time is set to ".$data["timeout"]["idlePiShutdown"]."</li>";
   $change=1;
   }
- if(isset($_POST['idleDisplayOff']) && $_POST['idleDisplayOff'] >= 0)
+ if(isset($data["timeout"]["idleDisplayOff"]!=$_POST['idleDisplayOff'] && $_POST['idleDisplayOff']) && $_POST['idleDisplayOff'] >= 0)
   {
   $data["timeout"]["idleDisplayOff"]=$_POST['idleDisplayOff'];
   $CHANGE_TXT=$CHANGE_TXT."<li>Idle Time for Display is set to ".$data["timeout"]["idleDisplayOff"]."</li>";
@@ -124,9 +124,9 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 	<label class="description" for="theme">Volume</label>
 	<div>
 	<input name="volume" type="range" min="0" max="100" step="5.0" value="<?php 
-		$command = "sudo /usr/bin/amixer sget Master | grep 'Right:' | cut -d\" \" -f7 | sed 's/\[//g' | sed 's/\]//g' | sed 's/\%//g'";
+		$command = "/usr/bin/amixer sget Master | grep 'Right:' | cut -d\" \" -f7 | sed 's/\\[//g' | sed 's/\\]//g' | sed 's/\%//g'";
 		$thisbrightness = exec($command, $voutput);
-		echo $voutput[0]s;
+		echo $voutput[0];
 	?>">
 	</div>
 
@@ -134,13 +134,12 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 <li id="li_1" >
 	<label class="description" for="theme">Brightness</label>
 	<div>
-	<input name="brightness" type="range" min="0" max="255" step="1.0" value="<?php 
+	<input name="brightness" id="brightness" type="range" min="0" max="255" step="51.0" value="<?php 
 		$command = "cat /sys/class/backlight/rpi_backlight/brightness";
 		$thisbrightness = exec($command, $boutput);
 		echo $boutput[0];
 	?>">
 	</div>
-
 </li>
 <li id="li_1" >
 	<label class="description" for="theme">Theme </label>
