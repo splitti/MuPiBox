@@ -3,6 +3,11 @@
  $CHANGE_TXT="<div id='lbinfo'><ul id='lbinfo'>";
  include ('includes/header.php');
 
+ if( $_POST['volume'])
+  {
+	$command="sudo su - -c 'sudo su dietpi -c \"/usr/bin/amixer sset Master " . $_POST['volume'] . "%\"";
+	$set_brightness = exec($command, $output );
+  }
  if( $_POST['brightness'])
   {
 	$command="sudo su - -c 'echo \"" . $_POST['brightness'] . "\" > /sys/class/backlight/rpi_backlight/brightness'";
@@ -134,7 +139,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 <li id="li_1" >
 	<label class="description" for="theme">Brightness</label>
 	<div>
-	<input name="brightness" id="brightness" type="range" min="0" max="255" step="51.0" value="<?php 
+	<input name="brightness" id="brightness" type="range" min="1" max="255" step="51.0" value="<?php 
 		$command = "cat /sys/class/backlight/rpi_backlight/brightness";
 		$thisbrightness = exec($command, $boutput);
 		echo $boutput[0];
