@@ -3,6 +3,12 @@
  $CHANGE_TXT="<div id='lbinfo'><ul id='lbinfo'>";
  include ('includes/header.php');
 
+ if( $_POST['brightness'])
+  {
+	$command="sudo su - -c 'echo \"255\" > /sys/class/backlight/rpi_backlight/brightness'";
+	$set_brightness = exec($command, $output );
+  }
+
  if( $data["mupibox"]["physicalDevice"]!=$_POST['audio'] && $_POST['audio'])
   {
   $data["mupibox"]["physicalDevice"]=$_POST['audio'];
@@ -111,6 +117,17 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 	print $data["mupibox"]["host"];
 	?>"/>
 	</div><p class="guidelines" id="guide_1"><small>Please insert the hostname of the MuPiBox. Don't use Spaces or other special charachters! Default: MuPiBox</small></p>
+</li>
+<li id="li_1" >
+	<label class="description" for="theme">Brightness</label>
+	<div>
+	<input name="brightness" type="range" min="0" max="255" step="1.0" value="<?php 
+		$command = "cat /sys/class/backlight/rpi_backlight/brightness";
+		$thisbrightness = exec($command, $output);
+		echo $output;
+	?>">
+	</div>
+
 </li>
 <li id="li_1" >
 	<label class="description" for="theme">Theme </label>

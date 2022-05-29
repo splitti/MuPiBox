@@ -51,11 +51,11 @@
 <?php
 		$command = "/usr/bin/cat /sys/firmware/devicetree/base/model";
 		exec($command, $output, $result );
-		echo "<p><table class='sysinfotbl'><tr><td>Model:</td><td>" . $output[0] . "</td></tr>";
+		echo "<p><table class='sysinfotbl'><tr><td width=120px>Model:</td><td>" . $output[0] . "</td></tr>";
         echo "<tr><td>Throttle:</td><td>" . $rpi_throttle . "</td></tr></table>";
 		$command = "/usr/bin/systemd-analyze time";
-		exec($command, $output, $result );
-		echo $output[0]. "</p>";
+		exec($command, $outputt, $result );
+		echo $outputt[0]. "</p>";
 
 
 ?>
