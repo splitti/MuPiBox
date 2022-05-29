@@ -52,10 +52,10 @@
 		$command = "/usr/bin/cat /sys/firmware/devicetree/base/model";
 		exec($command, $output, $result );
 		echo "<p><table class='sysinfotbl'><tr><td width=120px>Model:</td><td>" . $output[0] . "</td></tr>";
-        echo "<tr><td>Throttle:</td><td>" . $rpi_throttle . "</td></tr></table>";
+        echo "<tr><td>Throttle:</td><td>" . $rpi_throttle . "</td></tr></table></p>";
 		$command = "/usr/bin/systemd-analyze time";
 		exec($command, $outputt, $result );
-		echo $outputt[0]. "</p>";
+		echo "<p>$outputt[0]. "</p>";
 
 
 ?>
