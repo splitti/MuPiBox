@@ -8,6 +8,7 @@
 	$command="sudo su - -c 'sudo su dietpi -c '/usr/bin/amixer sset Master " . $_POST['volume'] . "%'";
 	$set_volume = exec($command, $output );
     $CHANGE_TXT=$CHANGE_TXT."<li>Volume: " . $_POST['volume'] . "%</li>";
+	$change=2;
   }
  if( $_POST['brightness'])
   {
@@ -31,6 +32,7 @@
 	$command="sudo su - -c 'echo " . $_POST['brightness'] . " > /sys/class/backlight/rpi_backlight/brightness'";
 	$set_brightness = exec($command, $output );
     $CHANGE_TXT=$CHANGE_TXT."<li>Brightness: " . $_POST['brightness'] . "%</li>";
+	$change=2;
   }
 
  if( $data["mupibox"]["physicalDevice"]!=$_POST['audio'] && $_POST['audio'])
@@ -118,7 +120,7 @@
 	$CHANGE_TXT=$CHANGE_TXT."<li>Start Volume is set to ".$data["mupibox"]["maxVolume"]." because of Max Volume</li>";
 	$change=1;
 	}
- if( $change )
+ if( $change == 1 )
   {
    $json_object = json_encode($data);
    $save_rc = file_put_contents('/tmp/.mupiboxconfig.json', $json_object);
@@ -149,33 +151,35 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 	<label class="description" for="theme">Volume</label>
 	<div>
 	<input name="volume" type="range" min="0" max="100" step="5.0" value="<?php 
-		$command = "/usr/bin/amixer sget Master | grep 'Right:' | cut -d\" \" -f7 | sed 's/\\[//g' | sed 's/\\]//g' | sed 's/\%//g'";
+		$command = "sudo su -dietpi -c '/usr/bin/amixer sget Master | grep \"Right:\" | cut -d\" \" -f7 | sed \"s/\\[//g\" | sed \"s/\\]//g\" | sed \"s/\%//g\"'";
 		$thisbrightness = exec($command, $voutput);
 		echo $voutput[0];
 	?>">
+	<?php echo $command; ?>
 	</div>
 
 </li>
 <li id="li_1" >
 	<label class="description" for="theme">Brightness</label>
 	<div>
+  <output class="bubble"></output>
 	<input name="brightness" id="brightness" type="range" min="0" max="100" step="25.0" value="<?php 
 		$command = "cat /sys/class/backlight/rpi_backlight/brightness";
 		$thisbrightness = exec($command, $boutput);
 		switch ($boutput) {
-		case 0:
+		case "0":
 			$thisBrightness="0";
 			break;
-		case 64:
+		case "64":
 			$thisBrightness="25";
 			break;
-		case 128:
+		case "128":
 			$thisBrightness="50";
 			break;
-		case 192:
+		case "192":
 			$thisBrightness="75";
 			break;
-		case 255:
+		case "255":
 			$thisBrightness="100";
 			break;
 		}
@@ -189,7 +193,6 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
     <option>75</option>
     <option>100</option>
 </datalist>
-  <output class="bubble"></output>
 	</div>
 </li>
 <li id="li_1" >
