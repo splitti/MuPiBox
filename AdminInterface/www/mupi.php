@@ -161,7 +161,6 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 		$thisbrightness = exec($command, $boutput);
 		echo $boutput[0];
 	?>" list="steplist" oninput="this.nextElementSibling.value = this.value">
-  <output class="bubble"></output>
 <datalist id="steplist">
     <option>0</option>
     <option>25</option>
@@ -169,6 +168,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
     <option>75</option>
     <option>100</option>
 </datalist>
+  <output class="bubble"></output>
 	</div>
 </li>
 <li id="li_1" >
