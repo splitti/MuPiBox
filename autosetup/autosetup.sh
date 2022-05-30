@@ -214,7 +214,6 @@ exec 3>${LOG}
 	sudo wget ${SRC}/scripts/mupibox/get_network.sh -O /usr/local/bin/mupibox/get_network.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/mupibox/check_network.sh -O /usr/local/bin/mupibox/check_network.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/mupibox/check_network.py -O /usr/local/bin/mupibox/check_network.py >&3 2>&3
-	sudo wget ${SRC}/config/templates/crontab.template -O /tmp/crontab.template >&3 2>&3
 
 
 	sudo wget ${SRC}/scripts/bluetooth/start_bt.sh -O /usr/local/bin/mupibox/start_bt.sh >&3 2>&3
@@ -291,7 +290,10 @@ exec 3>${LOG}
 	sudo echo "www-data ALL=(ALL:ALL) NOPASSWD: ALL" | sudo tee /etc/sudoers.d/www-data  >&3 2>&3
 	sudo usermod -a -G gpio dietpi >&3 2>&3
 	sudo usermod -a -G gpio root >&3 2>&3
-	crontab /tmp/crontab.template >&3 2>&3
+	sudo wget ${SRC}/config/templates/crontab.template -O /tmp/crontab.template >&3 2>&3
+	sudo /usr/bin/chmod 755 /tmp/crontab.template >&3 2>&3
+	sudo /usr/bin/chown dietpi:dietpi /tmp/crontab.template >&3 2>&3
+	sudo /bin/su dietpi -c "/usr/bin/crontab /tmp/crontab.template"  >&3 2>&3
 	sudo rm /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/network.json
 	ln -s /tmp/network.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/network.json	
 	#sudo /boot/dietpi/func/dietpi-set_swapfile 1 zram >&3 2>&3

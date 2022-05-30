@@ -90,7 +90,6 @@ exec 3>${LOG}
 	sudo wget ${SRC}/scripts/mupibox/get_network.sh -O /usr/local/bin/mupibox/get_network.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/mupibox/check_network.sh -O /usr/local/bin/mupibox/check_network.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/mupibox/check_network.py -O /usr/local/bin/mupibox/check_network.py >&3 2>&3
-	sudo wget ${SRC}/config/templates/crontab.template -O /tmp/crontab.template >&3 2>&3
 	sudo wget ${SRC}/config/services/mupi_check_internet.service -O /etc/systemd/system/mupi_check_internet.service  >&3 2>&3
 
 	sudo wget ${SRC}/scripts/bluetooth/start_bt.sh -O /usr/local/bin/mupibox/start_bt.sh >&3 2>&3
@@ -121,7 +120,10 @@ exec 3>${LOG}
 	sudo systemctl start mupi_check_internet.service >&3 2>&3
 
 	echo -e "XXX\n83\nSet environment...  \nXXX"	
-	sudo /bin/su dietpi -c "crontab /tmp/crontab.template"  >&3 2>&3
+	sudo wget ${SRC}/config/templates/crontab.template -O /tmp/crontab.template >&3 2>&3
+	sudo /usr/bin/chmod 755 /tmp/crontab.template >&3 2>&3
+	sudo /usr/bin/chown dietpi:dietpi /tmp/crontab.template >&3 2>&3
+	sudo /bin/su dietpi -c "/usr/bin/crontab /tmp/crontab.template"  >&3 2>&3
 	
 	echo -e "XXX\n85\nDownload OnOffShim-Scripts... \nXXX"	
 	# OnOffShim
