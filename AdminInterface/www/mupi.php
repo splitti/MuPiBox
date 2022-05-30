@@ -34,7 +34,7 @@
   $command = "sudo /boot/dietpi/func/dietpi-set_hardware soundcard '" . $_POST['audio'] . "'";
   $change_soundcard = exec($command, $output, $change_soundcard );
   $CHANGE_TXT=$CHANGE_TXT."<li>Soundcard changed to  ".$data["mupibox"]["physicalDevice"]." [reboot is necessary]</li>";
-  $change=1;
+  $change=2;
   }
  if( $data["mupibox"]["host"]!=$_POST['hostname'] && $_POST['hostname'])
   {
@@ -53,47 +53,47 @@
  if( $_POST['tts'] != $data["mupibox"]["ttsLanguage"] && $_POST['tts'] )
   {
   $data["mupibox"]["ttsLanguage"]=$_POST['tts'];
-  $CHANGE_TXT=$CHANGE_TXT."<li>New TTS Language  ".$data["mupibox"]["ttsLanguage"]."  - Please restart box or services</li>";
+  $CHANGE_TXT=$CHANGE_TXT."<li>New TTS Language  ".$data["mupibox"]["ttsLanguage"]." [reboot is necessary]</li>";
   $command = "sudo rm /home/dietpi/MuPiBox/tts_files/*.mp3";
   exec($command, $output, $result );
-  $change=1;
+  $change=2;
   }
 
  if( $data["mupibox"]["maxVolume"]!=$_POST['maxVolume'] && $_POST['maxVolume'] )
   {
   $data["mupibox"]["maxVolume"]=$_POST['maxVolume'];
-  $CHANGE_TXT=$CHANGE_TXT."<li>Max Volume is set to ".$data["mupibox"]["maxVolume"]."</li>";
-  $change=1;
+  $CHANGE_TXT=$CHANGE_TXT."<li>Max Volume is set to ".$data["mupibox"]["maxVolume"]." [reboot is necessary]</li>";
+  $change=2;
   }
 
  if( $data["mupibox"]["startVolume"]!=$_POST['volume'] && $_POST['volume'] )
   {
   $data["mupibox"]["startVolume"]=$_POST['volume'];
   $CHANGE_TXT=$CHANGE_TXT."<li>Start Volume is set to ".$data["mupibox"]["startVolume"]."</li>";
-  $change=1;
+  $change=2;
   }
  if($data["timeout"]["idlePiShutdown"]!=$_POST['idlePiShutdown'] && isset($_POST['idlePiShutdown']) && $_POST['idlePiShutdown'] >= 0)
   {
   $data["timeout"]["idlePiShutdown"]=$_POST['idlePiShutdown'];
   $CHANGE_TXT=$CHANGE_TXT."<li>Idle Shutdown Time is set to ".$data["timeout"]["idlePiShutdown"]."</li>";
-  $change=1;
+  $change=2;
   }
  if($data["timeout"]["idleDisplayOff"]!=$_POST['idleDisplayOff'] && isset($_POST['idleDisplayOff']) && $_POST['idleDisplayOff'] >= 0)
   {
   $data["timeout"]["idleDisplayOff"]=$_POST['idleDisplayOff'];
   $CHANGE_TXT=$CHANGE_TXT."<li>Idle Time for Display is set to ".$data["timeout"]["idleDisplayOff"]."</li>";
-  $change=1;
+  $change=2;
   }
  if( $data["timeout"]["pressDelay"]!=$_POST['pressDelay'] && $_POST['pressDelay'] )
   {
   $data["timeout"]["pressDelay"]=$_POST['pressDelay'];
-  $change=1;
+  $change=2;
   }
  if( $data["shim"]["ledPin"]!=$_POST['ledPin'] && $_POST['ledPin'])
   {
   $data["shim"]["ledPin"]=$_POST['ledPin'];
-  $CHANGE_TXT=$CHANGE_TXT."<li>New GPIO for Power-LED set to ".$data["shim"]["ledPin"]."</li>";
-  $change=1;
+  $CHANGE_TXT=$CHANGE_TXT."<li>New GPIO for Power-LED set to ".$data["shim"]["ledPin"]. "  [reboot is necessary]</li>";
+  $change=2;
   }
  if( $data["chromium"]["resX"]!=$_POST['resX'] && $_POST['resX'])
   {
@@ -111,7 +111,7 @@
 	{
 	$data["mupibox"]["startVolume"]=$data["mupibox"]["maxVolume"];
 	$CHANGE_TXT=$CHANGE_TXT."<li>Start Volume is set to ".$data["mupibox"]["maxVolume"]." because of Max Volume</li>";
-	$change=1;
+	$change=2;
 	}
  if( $change == 1 )
   {
@@ -143,6 +143,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 <li id="li_1" >
 	<label class="description" for="thisvolume">Volume (in 5% Steps)</label>
 	<div>
+	<p><b>PLEASE NOTE:</b> If you adjust the volume here, the volume indicator on the display will not be updated!</p>
 	<input class="element text medium" name="thisvolume" type="range" min="0" max="100" step="5.0" value="<?php 
 		$command = "sudo su dietpi -c '/usr/bin/amixer sget Master | grep \"Right:\" | cut -d\" \" -f7 | sed \"s/\\[//g\" | sed \"s/\\]//g\" | sed \"s/\%//g\"'";
 		$VolumeNow = exec($command, $voutput);
