@@ -32,6 +32,8 @@ const createPlayer = () => {
 				if (arg.includes(' ')) str += `"`
 			} else str += arg
 		}
+		console.log(str)
+		str = decodeURIComponent(str)
 		debug('exec: ' + str)
 		proc.stdin.write(str + '\n')
 		console.log(str)
