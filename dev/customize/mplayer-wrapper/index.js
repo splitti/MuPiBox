@@ -32,11 +32,9 @@ const createPlayer = () => {
 				if (arg.includes(' ')) str += `"`
 			} else str += arg
 		}
-		console.log(str)
 		str = decodeURIComponent(str)
 		debug('exec: ' + str)
 		proc.stdin.write(str + '\n')
-		console.log(str)
 	}
 	const getProps = (props) => {
 		for (let prop of props) exec('pausing_keep_force get_property', [prop])
