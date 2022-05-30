@@ -41,6 +41,10 @@ exec 3>${LOG}
 	sudo wget ${SRC}/config/templates/www.json -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >&3 2>&3
 	sudo chown -R dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master
 
+	echo -e "XXX\n18\nUpdate MPlayer Wrapper... \nXXX"	
+	wget ${SRC}/dev/customize/mplayer-wrapper/index.js -O /home/dietpi/.mupibox/mplayer-wrapper/index.js >&3 2>&3
+
+
 	echo -e "XXX\n19\nUpdate Spotify Control... \nXXX"	
 	wget ${SRC}/bin/nodejs/spotify-control.js -O /home/dietpi/.mupibox/spotifycontroller-main/spotify-control.js >&3 2>&3
 
