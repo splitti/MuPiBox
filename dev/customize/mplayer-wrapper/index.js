@@ -27,13 +27,14 @@ const createPlayer = () => {
 		for (let arg of args) {
 			str += ' '
 			if ('string' === typeof arg) {
-				if (arg.includes(' ')) str += `'`
+				if (arg.includes(' ')) str += `"`
 				str += escape(arg)
-				if (arg.includes(' ')) str += `'`
+				if (arg.includes(' ')) str += `"`
 			} else str += arg
 		}
 		debug('exec: ' + str)
 		proc.stdin.write(str + '\n')
+		console.log(str)
 	}
 	const getProps = (props) => {
 		for (let prop of props) exec('pausing_keep_force get_property', [prop])
