@@ -121,7 +121,9 @@ exec 3>${LOG}
 	sudo systemctl start mupi_check_internet.service >&3 2>&3
 
 	echo -e "XXX\n83\nSet environment...  \nXXX"	
-	sudo /bin/su dietpi -c "crontab /tmp/crontab.template"  >&3 2>&3
+	sudo /usr/bin/chmod 755 /tmp/crontab.template >&3 2>&3
+	sudo /usr/bin/chown dietpi:dietpi /tmp/crontab.template >&3 2>&3
+	sudo /bin/su dietpi -c "/usr/bin/crontab /tmp/crontab.template"  >&3 2>&3
 	
 	echo -e "XXX\n85\nDownload OnOffShim-Scripts... \nXXX"	
 	# OnOffShim

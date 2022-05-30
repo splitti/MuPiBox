@@ -160,4 +160,6 @@ exec 3>${LOG}
 
 } | whiptail --title "MuPiBox Update" --gauge "Please wait while installing" 6 60 0
 
-echo "Update finished - please reboot system now!"
+echo "Update finished - System will reboot in 3 seconds!"
+sleep 3
+sudo reboot

@@ -139,7 +139,7 @@
 			<td>Latest Version:</td><td><?php print $dataonline["version"]; ?></td>
 	</tr>
 	</table>
-	Please notice: The update procedure takes a long time (on older Raspberry Pi's up to one hour). Don't close the browser and wait for the status message!
+	Please notice: Always create a backup before updating!!!<br>The update procedure takes a long time (on older Raspberry Pi's up to 15 minutes). Do not close the browser and wait for the MuPiBox to restart! The restart completes the update.
 	</p>
 	<input id="saveForm" class="button_text" type="submit" name="os_update" value="Update OS" />
 	<input id="saveForm" class="button_text" type="submit" name="mupibox_update" value="Update MuPiBox" />
