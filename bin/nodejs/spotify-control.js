@@ -332,7 +332,7 @@ function playList(playedList){
   currentMeta.path = playedTitelmod;
 
   setTimeout(function(){
-    let cmdtotalTracks = "find \"/home/dietpi/MuPiBox/media/" + currentMeta.path + "\" -type f -name \"*.mp3\" -or -name \"*.flac\" -or -name \"*.m4a\" -or -name \"*.wma\" -or -name \"*.wav\"| wc -l";
+    let cmdtotalTracks = "find \"/home/dietpi/MuPiBox/media/" + decodeURIComponent(currentMeta.path) + "\" -type f -name \"*.mp3\" -or -name \"*.flac\" -or -name \"*.m4a\" -or -name \"*.wma\" -or -name \"*.wav\"| wc -l";
     console.log(cmdtotalTracks);
     const exec = require ('child_process').exec;
     exec(cmdtotalTracks, (e, stdout, stderr) => {
