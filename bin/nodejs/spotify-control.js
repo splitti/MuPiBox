@@ -325,7 +325,7 @@ function playList(playedList){
   log.debug("[Spotify Control] Starting currentMeta.playing:" + playedTitelmod);
   currentMeta.playing = true;
   writeplayerstatePlay();
-  player.playList('"/home/dietpi/MuPiBox/media/' + playedTitelmod + '/playlist.m3u"');
+  player.playList('\"/home/dietpi/MuPiBox/media/' + playedTitelmod + '/playlist.m3u\"');
   player.setVolume(volumeStart);
   log.debug('/home/dietpi/MuPiBox/media/' + playedTitelmod + '/playlist.m3u');
   currentMeta.currentTracknr = 0;
