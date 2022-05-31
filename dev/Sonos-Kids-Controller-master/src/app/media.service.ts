@@ -171,9 +171,6 @@ export class MediaService {
       map(items => { // Filter to get only items for the chosen category
         items.forEach(item => item.category = (item.category === undefined) ? 'audiobook' : item.category); // default category
         items = items.filter(item => item.category === this.category);
-        // if(this.connection === 'false'){
-        //   items = items.filter(item => item.type === this.type);
-        // }
         return items;
       }),
       mergeMap(items => from(items)), // parallel calls for each item
@@ -264,6 +261,8 @@ export class MediaService {
 
         // Create temporary object with artists as keys and covers (first media cover) as values
         const covers = media.sort((a, b) => a.title <= b.title ? -1 : 1).reduce((tempCovers, currentMedia) => {
+            console.log(tempCovers);
+            console.log(currentMedia);
             if (currentMedia.type === 'library' && currentMedia.artistcover) {
               if (!tempCovers[currentMedia.artist]) { tempCovers[currentMedia.artist] = currentMedia.artistcover; }
             } else {
