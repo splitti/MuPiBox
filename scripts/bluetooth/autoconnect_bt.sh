@@ -1,7 +1,12 @@
 #!/bin/bash
 #
 
+
 until pids=$(pgrep -f "chromium-browser")
+do
+	sleep 1
+done
+until pids=$(pgrep -f "bluetoothd")
 do
 	sleep 1
 done
