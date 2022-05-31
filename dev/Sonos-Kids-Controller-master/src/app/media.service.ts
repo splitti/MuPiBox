@@ -11,6 +11,7 @@ import { WLAN } from './wlan';
 import { CurrentSpotify } from './current.spotify';
 import { CurrentMPlayer } from './current.mplayer';
 import { Resume } from './resume';
+import { Mupiboxconfig } from './mupiboxconfig';
 
 @Injectable({
   providedIn: 'root'
@@ -24,6 +25,7 @@ export class MediaService {
 
   private rawMediaSubject = new Subject<Media[]>();
   private wlanSubject = new Subject<WLAN[]>();
+  private mupiboxconfigSubject = new Subject<Mupiboxconfig[]>();
   private networkSubject = new Subject<Network>();
   private resumeSubject = new Subject<Resume>();
   private mediaFileSubject = new Subject<Media>();
@@ -93,6 +95,18 @@ export class MediaService {
     const url = (environment.production) ? '../api/wlan' : 'http://localhost:8200/api/wlan';
     this.http.get<WLAN[]>(url).subscribe(wlan => {
         this.wlanSubject.next(wlan);
+    });
+  }
+
+  getMupiboxConfigObservable = (): Observable<Mupiboxconfig> =>  {
+    const url = (environment.production) ? '../api/mupiboxconfig' : 'http://localhost:8200/api/mupiboxconfig';
+    return this.http.get<Mupiboxconfig>(url);
+  }
+
+  updateMupiboxConfig() {
+    const url = (environment.production) ? '../api/mupiboxconfig' : 'http://localhost:8200/api/mupiboxconfig';
+    this.http.get<Mupiboxconfig[]>(url).subscribe(mupiboxconfig => {
+        this.mupiboxconfigSubject.next(mupiboxconfig);
     });
   }
 
@@ -261,15 +275,11 @@ export class MediaService {
 
         // Create temporary object with artists as keys and covers (first media cover) as values
         const covers = media.sort((a, b) => a.title <= b.title ? -1 : 1).reduce((tempCovers, currentMedia) => {
-            console.log(tempCovers);
-            console.log(currentMedia);
             if (currentMedia.type === 'library' && currentMedia.artistcover) {
               if (!tempCovers[currentMedia.artist]) { tempCovers[currentMedia.artist] = currentMedia.artistcover; }
             } else {
               if (!tempCovers[currentMedia.artist]) { tempCovers[currentMedia.artist] = currentMedia.cover; }
             }
-            console.log(tempCovers);
-            console.log(currentMedia);
             return tempCovers;
         }, {});
 

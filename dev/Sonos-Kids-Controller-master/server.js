@@ -21,6 +21,7 @@ const networkFile = './server/config/network.json';
 const wlanFile = './server/config/wlan.json';
 const mediaFile = './server/config/media.json';
 const resumeFile = './server/config/resume.json';
+const mupiboxconfigFile = './server/config/mupiboxconfig.json';
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -31,6 +32,13 @@ app.use(express.static(path.join(__dirname, 'www'))); // Static path to compiled
 // Routes
 app.get('/api/data', (req, res) => {
     jsonfile.readFile(activedataFile, (error, data) => {
+        if (error) data = [];
+        res.json(data);
+    });
+});
+
+app.get('/api/mupiboxconfig', (req, res) => {
+    jsonfile.readFile(mupiboxconfigFile, (error, data) => {
         if (error) data = [];
         res.json(data);
     });

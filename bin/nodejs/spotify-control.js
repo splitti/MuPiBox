@@ -302,6 +302,24 @@ function previous(){
   }
 }
 
+function shuffleon(){
+  spotifyApi.setShuffle(true)
+    .then(function() {
+      log.debug('[Spotify Control] Toggle Shuffle');
+    }, function(err) {
+      handleSpotifyError(err,"0");
+    });
+}
+
+function shuffleoff(){
+  spotifyApi.setShuffle(false)
+    .then(function() {
+      log.debug('[Spotify Control] Toggle Shuffle');
+    }, function(err) {
+      handleSpotifyError(err,"0");
+    });
+}
+
 function playMe(activePlaylistId){
   spotifyApi.play({ context_uri: activePlaylistId })
     .then(function(data){
@@ -646,6 +664,12 @@ app.use(function(req, res){
   else if (command.name == "-5")
     setVolume(0);
 
+  else if (command.name == "shuffleon")
+    shuffleon();
+
+  else if (command.name == "shuffleoff")
+    shuffleoff();
+    
   else if (command.name == "seek+30")
     seek(1);
 

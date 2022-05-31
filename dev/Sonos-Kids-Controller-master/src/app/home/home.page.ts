@@ -92,7 +92,7 @@ export class HomePage implements OnInit {
       this.artists = artists;
 
       this.artists.forEach(artist => {
-        this.artworkService.getArtwork(artist.coverMedia).subscribe(url => {
+        this.artworkService.getArtistArtwork(artist.coverMedia).subscribe(url => {
           this.covers[artist.name] = url;
         });
       });

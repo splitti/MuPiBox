@@ -147,7 +147,8 @@
 		"clientId": "",
 		"clientSecret": "",
 		"accessToken": "",
-		"refreshToken": ""
+		"refreshToken": "",
+		"shuffle": ""
 	},
 	"timeout": {
 		"idlePiShutdown": "0",

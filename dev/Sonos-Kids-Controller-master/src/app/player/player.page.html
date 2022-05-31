@@ -69,12 +69,20 @@
                     </ion-row>
 
                     <ion-row class="volume-controls">
-                        <ion-col size="6" class="ion-text-center">
+                        <ion-col size="4" class="ion-text-center">
                             <ion-button (click)="seekBack()" color="light">
                                 <ion-icon slot="icon-only" name="play-back" class="small-icon"></ion-icon>
                             </ion-button>
                         </ion-col>
-                        <ion-col size="6" class="ion-text-center">
+                        <ion-col size="4" class="ion-text-center">
+                            <ion-button *ngIf="!shuffle" (click)="toggleshuffle()" color="light">
+                                <ion-icon slot="icon-only" name="shuffle-outline" class="small-icon"></ion-icon>
+                            </ion-button>
+                            <ion-button *ngIf="shuffle" (click)="toggleshuffle()" color="dark">
+                                <ion-icon slot="icon-only" name="shuffle-outline" class="small-icon"></ion-icon>
+                            </ion-button>
+                        </ion-col>
+                        <ion-col size="4" class="ion-text-center">
                             <ion-button (click)="seekForward()" color="light">
                                 <ion-icon slot="icon-only" name="play-forward" class="small-icon"></ion-icon>
                             </ion-button>

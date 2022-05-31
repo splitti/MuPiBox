@@ -18,6 +18,20 @@ export class ArtworkService {
     if (media.type === 'spotify' && !media.cover) {
       artwork = this.spotifyService.getAlbumArtwork(media.artist, media.title);
     } else {
+      artwork = new Observable((observer) => {
+        observer.next(media.cover);
+      });
+    }
+
+    return artwork;
+  }
+
+  getArtistArtwork(media: Media): Observable<string> {
+    let artwork: Observable<string>;
+
+    if (media.type === 'spotify' && !media.cover) {
+      artwork = this.spotifyService.getAlbumArtwork(media.artist, media.title);
+    } else {
       if (media.type === 'library' && media.artistcover) {
         artwork = new Observable((observer) => {
           observer.next(media.artistcover);
