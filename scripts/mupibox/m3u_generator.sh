@@ -44,7 +44,7 @@ else
 							fi
 
 
-							if [ (-z "${searchStrTitleCover}") ]
+							if [ -z "${searchStrTitleCover}" ]
 							then
 								if [ $setTitleCover == 1 ]
 								then
@@ -97,7 +97,7 @@ else
 							fi
 
 
-							if [ (-z "${searchStrTitleCover}") ]
+							if [ -z "${searchStrTitleCover}" ]
 							then
 								if [ $setTitleCover == 1 ]
 								then
