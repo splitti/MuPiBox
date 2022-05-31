@@ -17,99 +17,107 @@ else
 
 	for topFolder in "/home/dietpi/MuPiBox/media/audiobook/"* ; do
 			artist=$(/usr/bin/basename "${topFolder}")
+			setArtistCover=0
+			
+			if [ -f "${topFolder}"/*.jp*g ]
+			then
+				/usr/bin/mkdir -p "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover/audiobook/${artist}/" > /dev/null
+				/usr/bin/cp --update "${topFolder}"/*.jp*g "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover/audiobook/${artist}/cover.jpg"
+				setArtistCover=1
+			fi	
+
 			for i in "${topFolder}/"* ; do
 					if [ ${#i} -gt 36 ]
 					then
-							title=$(/usr/bin/basename "${i}")
-							if [ "${title}" != "*" ] # && [ ${#i} -gt ${#topFolder} ]
+						searchStrTitleCover=""
+						title=$(/usr/bin/basename "${i}")
+						if [ "${title}" != "*" ] # && [ ${#i} -gt ${#topFolder} ]
+						then
+							setTitleCover=0
+							ls -1v "${i}" | grep '.mp3\|.flac\|.wav\|.wma\|.m4a' > /tmp/playlist.m3u && mv /tmp/playlist.m3u "${i}"
+							if [ -f "${i}"/*.jp*g ]
 							then
-									setCover=0
-									setArtistCover=0
-									ls -1v "${i}" | grep '.mp3\|.flac\|.wav\|.wma\|.m4a' > /tmp/playlist.m3u && mv /tmp/playlist.m3u "${i}"
-									if [ -f "${i}"/*.jp*g ]
-									then
-											/usr/bin/mkdir -p "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover/audiobook/${artist}/${title}/" > /dev/null
-											/usr/bin/cp --update "${i}"/*.jp*g "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover/audiobook/${artist}/${title}/cover.jpg"
-											setCover=1
-									fi
-									if [ -f "${topFolder}"/*.jp*g ]
-									then
-											/usr/bin/mkdir -p "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover/audiobook/${artist}/" > /dev/null
-											/usr/bin/cp --update "${topFolder}"/*.jp*g "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover/audiobook/${artist}/cover.jpg"
-											setArtistCover=1
-									fi
-									searchStr1=`/usr/bin/cat ${DATA} | grep 'audiobook/'"${artist}"'/'"${title}"'/cover.jpg'`
-									searchStr2=`/usr/bin/cat ${DATA} | grep 'audiobook/'"${artist}"'/cover.jpg'`
-									if [ (-z "${searchStr1}") || (-z "${searchStr2}") ]
-									then
-										if [ $setCover == 1 ]
-										then
-											if [ $setArtistCover == 1 ]
-											then
-											/usr/bin/cat <<< $(/usr/bin/cat ${DATA} | /usr/bin/jq '. += [{"type": "library", "category": "audiobook", "artist": "'"${artist}"'", "title": "'"${title}"'", "cover": "http://127.0.0.1:8200/cover/audiobook/'"${artist}"'/'"${title}"'/cover.jpg", "artistcover": "http://127.0.0.1:8200/cover/audiobook/'"${artist}"'/cover.jpg"}]') > ${DATA}
-											else
-											/usr/bin/cat <<< $(/usr/bin/cat ${DATA} | /usr/bin/jq '. += [{"type": "library", "category": "audiobook", "artist": "'"${artist}"'", "title": "'"${title}"'", "cover": "http://127.0.0.1:8200/cover/audiobook/'"${artist}"'/'"${title}"'/cover.jpg"}]') > ${DATA}
-											fi
-										else
-											if [ $setArtistCover == 1 ]
-											then
-											/usr/bin/cat <<< $(/usr/bin/cat ${DATA} | /usr/bin/jq '. += [{"type": "library", "category": "audiobook", "artist": "'"${artist}"'", "title": "'"${title}"'", "artistcover": "http://127.0.0.1:8200/cover/audiobook/'"${artist}"'/cover.jpg"}]') > ${DATA}
-											else
-											/usr/bin/cat <<< $(/usr/bin/cat ${DATA} | /usr/bin/jq '. += [{"type": "library", "category": "audiobook", "artist": "'"${artist}"'", "title": "'"${title}"'"}]') > ${DATA}
-											fi
-										fi
-									fi
+								/usr/bin/mkdir -p "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover/audiobook/${artist}/${title}/" > /dev/null
+								/usr/bin/cp --update "${i}"/*.jp*g "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover/audiobook/${artist}/${title}/cover.jpg"
+								setTitleCover=1
+								searchStrTitleCover=`/usr/bin/cat ${DATA} | grep 'audiobook/'"${artist}"'/'"${title}"'/cover.jpg'`
 							fi
-					fi
+
+
+							if [ (-z "${searchStrTitleCover}") ]
+							then
+								if [ $setTitleCover == 1 ]
+								then
+									if [ $setArtistCover == 1 ]
+									then
+										/usr/bin/cat <<< $(/usr/bin/cat ${DATA} | /usr/bin/jq '. += [{"type": "library", "category": "audiobook", "artist": "'"${artist}"'", "title": "'"${title}"'", "cover": "http://127.0.0.1:8200/cover/audiobook/'"${artist}"'/'"${title}"'/cover.jpg", "artistcover": "http://127.0.0.1:8200/cover/audiobook/'"${artist}"'/cover.jpg"}]') > ${DATA}
+									else
+										/usr/bin/cat <<< $(/usr/bin/cat ${DATA} | /usr/bin/jq '. += [{"type": "library", "category": "audiobook", "artist": "'"${artist}"'", "title": "'"${title}"'", "cover": "http://127.0.0.1:8200/cover/audiobook/'"${artist}"'/'"${title}"'/cover.jpg"}]') > ${DATA}
+									fi
+								else
+									if [ $setArtistCover == 1 ]
+									then
+										/usr/bin/cat <<< $(/usr/bin/cat ${DATA} | /usr/bin/jq '. += [{"type": "library", "category": "audiobook", "artist": "'"${artist}"'", "title": "'"${title}"'", "cover": "http://127.0.0.1:8200/cover/audiobook/'"${artist}"'/cover.jpg", "artistcover": "http://127.0.0.1:8200/cover/audiobook/'"${artist}"'/cover.jpg"}]') > ${DATA}
+									else
+										/usr/bin/cat <<< $(/usr/bin/cat ${DATA} | /usr/bin/jq '. += [{"type": "library", "category": "audiobook", "artist": "'"${artist}"'", "title": "'"${title}"'"}]') > ${DATA}
+									fi
+								fi
+							fi
+						fi
+				fi
 			done
 	done
 
 	for topFolder in "/home/dietpi/MuPiBox/media/music/"* ; do
 			artist=$(/usr/bin/basename "${topFolder}")
+			setArtistCover=0
+			
+			if [ -f "${topFolder}"/*.jp*g ]
+			then
+				/usr/bin/mkdir -p "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover/music/${artist}/" > /dev/null
+				/usr/bin/cp --update "${topFolder}"/*.jp*g "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover/music/${artist}/cover.jpg"
+				setArtistCover=1
+			fi	
+
 			for i in "${topFolder}/"* ; do
 					if [ ${#i} -gt 36 ]
 					then
-							title=$(/usr/bin/basename "${i}")
-							if [ "${title}" != "*" ] # && [ ${#i} -gt ${#topFolder} ]
+						searchStrTitleCover=""
+						title=$(/usr/bin/basename "${i}")
+						if [ "${title}" != "*" ] # && [ ${#i} -gt ${#topFolder} ]
+						then
+							setTitleCover=0
+							ls -1v "${i}" | grep '.mp3\|.flac\|.wav\|.wma\|.m4a' > /tmp/playlist.m3u && mv /tmp/playlist.m3u "${i}"
+							if [ -f "${i}"/*.jp*g ]
 							then
-									setCover=0
-									setArtistCover=0
-									ls -1v "${i}" | grep '.mp3\|.flac\|.wav\|.wma\|.m4a' > /tmp/playlist.m3u && mv /tmp/playlist.m3u "${i}"
-									if [ -f "${i}"/*.jp*g ]
-									then
-											/usr/bin/mkdir -p "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover/music/${artist}/${title}/" > /dev/null
-											/usr/bin/cp --update "${i}"/*.jp*g "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover/music/${artist}/${title}/cover.jpg"
-											setCover=1
-									fi
-									if [ -f "${topFolder}"/*.jp*g ]
-									then
-											/usr/bin/mkdir -p "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover/music/${artist}/" > /dev/null
-											/usr/bin/cp --update "${topFolder}"/*.jp*g "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover/music/${artist}/cover.jpg"
-											setArtistCover=1
-									fi
-									searchStr1=`/usr/bin/cat ${DATA} | grep 'music/'"${artist}"'/'"${title}"'/cover.jpg'`
-									searchStr2=`/usr/bin/cat ${DATA} | grep 'music/'"${artist}"'/cover.jpg'`
-									if [ (-z "${searchStr1}") || (-z "${searchStr2}") ]
-									then
-										if [ $setCover == 1 ]
-										then
-											if [ $setArtistCover == 1 ]
-											then
-											/usr/bin/cat <<< $(/usr/bin/cat ${DATA} | /usr/bin/jq '. += [{"type": "library", "category": "music", "artist": "'"${artist}"'", "title": "'"${title}"'", "cover": "http://127.0.0.1:8200/cover/music/'"${artist}"'/'"${title}"'/cover.jpg", "artistcover": "http://127.0.0.1:8200/cover/music/'"${artist}"'/cover.jpg"}]') > ${DATA}
-											else
-											/usr/bin/cat <<< $(/usr/bin/cat ${DATA} | /usr/bin/jq '. += [{"type": "library", "category": "music", "artist": "'"${artist}"'", "title": "'"${title}"'", "cover": "http://127.0.0.1:8200/cover/music/'"${artist}"'/'"${title}"'/cover.jpg"}]') > ${DATA}
-											fi
-										else
-											if [ $setArtistCover == 1 ]
-											then
-											/usr/bin/cat <<< $(/usr/bin/cat ${DATA} | /usr/bin/jq '. += [{"type": "library", "category": "music", "artist": "'"${artist}"'", "title": "'"${title}"'", "artistcover": "http://127.0.0.1:8200/cover/music/'"${artist}"'/cover.jpg"}]') > ${DATA}
-											else
-											/usr/bin/cat <<< $(/usr/bin/cat ${DATA} | /usr/bin/jq '. += [{"type": "library", "category": "music", "artist": "'"${artist}"'", "title": "'"${title}"'"}]') > ${DATA}
-											fi
-										fi
-									fi
+								/usr/bin/mkdir -p "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover/music/${artist}/${title}/" > /dev/null
+								/usr/bin/cp --update "${i}"/*.jp*g "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover/music/${artist}/${title}/cover.jpg"
+								setTitleCover=1
+								searchStrTitleCover=`/usr/bin/cat ${DATA} | grep 'music/'"${artist}"'/'"${title}"'/cover.jpg'`
 							fi
-					fi
+
+
+							if [ (-z "${searchStrTitleCover}") ]
+							then
+								if [ $setTitleCover == 1 ]
+								then
+									if [ $setArtistCover == 1 ]
+									then
+										/usr/bin/cat <<< $(/usr/bin/cat ${DATA} | /usr/bin/jq '. += [{"type": "library", "category": "music", "artist": "'"${artist}"'", "title": "'"${title}"'", "cover": "http://127.0.0.1:8200/cover/music/'"${artist}"'/'"${title}"'/cover.jpg", "artistcover": "http://127.0.0.1:8200/cover/music/'"${artist}"'/cover.jpg"}]') > ${DATA}
+									else
+										/usr/bin/cat <<< $(/usr/bin/cat ${DATA} | /usr/bin/jq '. += [{"type": "library", "category": "music", "artist": "'"${artist}"'", "title": "'"${title}"'", "cover": "http://127.0.0.1:8200/cover/music/'"${artist}"'/'"${title}"'/cover.jpg"}]') > ${DATA}
+									fi
+								else
+									if [ $setArtistCover == 1 ]
+									then
+										/usr/bin/cat <<< $(/usr/bin/cat ${DATA} | /usr/bin/jq '. += [{"type": "library", "category": "music", "artist": "'"${artist}"'", "title": "'"${title}"'", "cover": "http://127.0.0.1:8200/cover/music/'"${artist}"'/cover.jpg", "artistcover": "http://127.0.0.1:8200/cover/music/'"${artist}"'/cover.jpg"}]') > ${DATA}
+									else
+										/usr/bin/cat <<< $(/usr/bin/cat ${DATA} | /usr/bin/jq '. += [{"type": "library", "category": "music", "artist": "'"${artist}"'", "title": "'"${title}"'"}]') > ${DATA}
+									fi
+								fi
+							fi
+						fi
+				fi
 			done
 	done
 
