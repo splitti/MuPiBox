@@ -268,6 +268,8 @@ export class MediaService {
             } else {
               if (!tempCovers[currentMedia.artist]) { tempCovers[currentMedia.artist] = currentMedia.cover; }
             }
+            console.log(tempCovers);
+            console.log(currentMedia);
             return tempCovers;
         }, {});
 
