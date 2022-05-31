@@ -7,4 +7,6 @@ export interface Media {
     cover?: string;
     type: string;
     category: string;
+    artistcover?: string;
+    shuffle?: string;
 }
