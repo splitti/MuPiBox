@@ -142,6 +142,7 @@ export class PlayerPage implements OnInit {
     }
     this.resumePlay = false;
     this.updateProgression = false;
+    this.playerService.sendCmd(PlayerCmds.SHUFFLEOFF);
     this.playerService.sendCmd(PlayerCmds.STOP);
   }
 
