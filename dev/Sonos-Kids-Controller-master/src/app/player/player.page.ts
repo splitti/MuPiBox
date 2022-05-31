@@ -10,7 +10,6 @@ import { CurrentMPlayer } from '../current.mplayer';
 import { Observable } from 'rxjs';
 import { IonRange } from '@ionic/angular';
 import { Resume } from '../resume';
-import { Mupiboxconfig } from '../mupiboxconfig';
 
 @Component({
   selector: 'app-player',
@@ -42,7 +41,6 @@ export class PlayerPage implements OnInit {
   currentPlayedLocal: CurrentMPlayer;
   progress = 0;
   shuffle = false;
-  shuffleObservable: Observable<Mupiboxconfig>;
   public readonly spotify$: Observable<CurrentSpotify>;
   public readonly local$: Observable<CurrentMPlayer>;
 
@@ -80,9 +78,6 @@ export class PlayerPage implements OnInit {
     this.artworkService.getArtwork(this.media).subscribe(url => {
       this.cover = url;
     });
-
-    this.shuffleObservable = this.mediaService.getMupiboxConfigObservable();
-    this.mediaService.updateMupiboxConfig();
   }
 
   seek(){
