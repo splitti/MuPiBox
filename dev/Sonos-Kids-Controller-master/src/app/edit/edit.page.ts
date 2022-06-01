@@ -48,8 +48,10 @@ export class EditPage implements OnInit {
           handler: () => {
             this.mediaService.deleteRawMediaAtIndex(index);
             setTimeout(() => {
+              this.network = this.mediaService.getNetworkObservable();
               this.media = this.mediaService.getRawMediaObservable();
               this.mediaService.updateRawMedia();
+              this.mediaService.updateNetwork();
             }, 1000)
           }
         },
