@@ -47,6 +47,7 @@ export class EditPage implements OnInit {
           text: 'Ok',
           handler: () => {
             this.mediaService.deleteRawMediaAtIndex(index);
+            this.media = this.mediaService.getRawMediaObservable();
             this.mediaService.updateRawMedia();
           }
         },
@@ -60,6 +61,9 @@ export class EditPage implements OnInit {
   }
 
   ionViewWillEnter() {
+    this.network = this.mediaService.getNetworkObservable();
+    this.media = this.mediaService.getRawMediaObservable();
+
     this.mediaService.updateNetwork();
     this.mediaService.updateRawMedia();
   }
