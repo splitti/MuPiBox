@@ -14,6 +14,7 @@ const createPlayer = () => {
 	const proc = spawn('mplayer', [
 		'-slave', // 😔
 		'-idle',
+		'-novideo',
 		'-quiet',
 		'-msglevel', 'all=1:global=4:cplayer=4'
 	], {
