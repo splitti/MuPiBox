@@ -47,6 +47,8 @@ export class EditPage implements OnInit {
           text: 'Ok',
           handler: () => {
             this.mediaService.deleteRawMediaAtIndex(index);
+            window.setTimeout(() => {
+            }, 1000);
             this.media = this.mediaService.getRawMediaObservable();
             this.mediaService.updateRawMedia();
           }
