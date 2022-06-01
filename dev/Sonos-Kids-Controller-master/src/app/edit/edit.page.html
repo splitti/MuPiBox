@@ -28,7 +28,7 @@
                         <ion-label color="dark" class="transparent">
                             <p>Type:</p>
                             <p>Category:</p>
-                            <p *ngIf="item.artist !==''">Artist:</p>
+                            <p *ngIf="item.artist">Artist:</p>
                             <p>Title:</p>
                             <p>Query:</p>
                             <p>ID:</p>
@@ -41,7 +41,7 @@
                         <ion-label color="dark">
                             <p class="transparent">{{item.category || 'audiobook'}}</p>
                             <p class="transparent">{{item.type || '-'}}</p>
-                            <p *ngIf="item.artist !==''">{{item.artist || '-'}}</p>
+                            <p *ngIf="item.artist">{{item.artist || '-'}}</p>
                             <p>{{item.title || '-'}}</p>
                             <p>{{item.query || '-'}}</p>
                             <p>{{item.id || '-'}}</p>
