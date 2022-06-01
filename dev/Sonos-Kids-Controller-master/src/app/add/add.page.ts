@@ -20,28 +20,14 @@ export class AddPage implements OnInit, AfterViewInit {
   @ViewChild('select', { static: false }) select: IonSelect;
   @ViewChild('searchTypeSelect', { static: false }) searchTypeSelect: IonSelect;
 
-  @ViewChild('library_segment', { static: false }) librarySegment: IonSelect;
   @ViewChild('spotify_segment', { static: false }) spotifySegment: IonSelect;
-  @ViewChild('amazonmusic_segment', { static: false }) amazonmusicSegment: IonSelect;
-  @ViewChild('applemusic_segment', { static: false }) applemusicSegment: IonSelect;
   @ViewChild('tunein_segment', { static: false }) tuneinSegment: IonSelect;
 
-  @ViewChild('library_artist', { static: false }) libraryArtist: IonInput;
-  @ViewChild('library_title', { static: false }) libraryTitle: IonInput;
-  @ViewChild('library_cover', { static: false }) libraryCover: IonInput;
   @ViewChild('spotify_artist', { static: false }) spotifyArtist: IonInput;
   @ViewChild('spotify_id', { static: false }) spotifyID: IonInput;
   @ViewChild('spotify_artistid', { static: false }) spotifyArtistID: IonInput;
   @ViewChild('spotify_title', { static: false }) spotifyTitle: IonInput;
   @ViewChild('spotify_query', { static: false }) spotifyQuery: IonInput;
-  @ViewChild('amazonmusic_artist', { static: false }) amazonmusicArtist: IonInput;
-  @ViewChild('amazonmusic_id', { static: false }) amazonmusicID: IonInput;
-  @ViewChild('amazonmusic_title', { static: false }) amazonmusicTitle: IonInput;
-  @ViewChild('amazonmusic_cover', { static: false }) amazonmusicCover: IonInput;
-  @ViewChild('applemusic_artist', { static: false }) applemusicArtist: IonInput;
-  @ViewChild('applemusic_id', { static: false }) applemusicID: IonInput;
-  @ViewChild('applemusic_title', { static: false }) applemusicTitle: IonInput;
-  @ViewChild('applemusic_cover', { static: false }) applemusicCover: IonInput;
   @ViewChild('tunein_title', { static: false }) tuneinTitle: IonInput;
   @ViewChild('tunein_id', { static: false }) tuneinID: IonInput;
   @ViewChild('tunein_cover', { static: false }) tuneinCover: IonInput;
@@ -203,23 +189,6 @@ export class AddPage implements OnInit, AfterViewInit {
       if (form.form.value.spotify_artistid?.length) { media.artistid = form.form.value.spotify_artistid; }
       //if (this.shuffle) { media.shuffle = this.shuffle; }
 
-    } else if (this.source === 'library') {
-      if (form.form.value.library_artist?.length) { media.artist = form.form.value.library_artist; }
-      if (form.form.value.library_title?.length) { media.title = form.form.value.library_title; }
-      if (form.form.value.library_cover?.length) { media.cover = form.form.value.library_cover; }
-
-    } else if (this.source === 'amazonmusic') {
-      if (form.form.value.amazonmusic_artist?.length) { media.artist = form.form.value.amazonmusic_artist; }
-      if (form.form.value.amazonmusic_title?.length) { media.title = form.form.value.amazonmusic_title; }
-      if (form.form.value.amazonmusic_cover?.length) { media.cover = form.form.value.amazonmusic_cover; }
-      if (form.form.value.amazonmusic_id?.length) { media.id = form.form.value.amazonmusic_id; }
-
-    } else if (this.source === 'applemusic') {
-      if (form.form.value.applemusic_artist?.length) { media.artist = form.form.value.applemusic_artist; }
-      if (form.form.value.applemusic_title?.length) { media.title = form.form.value.applemusic_title; }
-      if (form.form.value.applemusic_cover?.length) { media.cover = form.form.value.applemusic_cover; }
-      if (form.form.value.applemusic_id?.length) { media.id = form.form.value.applemusic_id; }
-
     } else if (this.source === 'tunein') {
       if (form.form.value.tunein_title?.length) { media.title = form.form.value.tunein_title; }
       if (form.form.value.tunein_cover?.length) { media.cover = form.form.value.tunein_cover; }
@@ -236,20 +205,6 @@ export class AddPage implements OnInit, AfterViewInit {
     this.keyboard.clearInput('spotify_artistid');
     this.keyboard.clearInput('spotify_query');
 
-    this.keyboard.clearInput('library_artist');
-    this.keyboard.clearInput('library_title');
-    this.keyboard.clearInput('library_cover');
-
-    this.keyboard.clearInput('amazonmusic_artist');
-    this.keyboard.clearInput('amazonmusic_title');
-    this.keyboard.clearInput('amazonmusic_id');
-    this.keyboard.clearInput('amazonmusic_cover');
-
-    this.keyboard.clearInput('applemusic_artist');
-    this.keyboard.clearInput('applemusic_title');
-    this.keyboard.clearInput('applemusic_id');
-    this.keyboard.clearInput('applemusic_cover');
-
     this.keyboard.clearInput('tunein_title');
     this.keyboard.clearInput('tunein_id');
     this.keyboard.clearInput('tunein_cover');
@@ -260,17 +215,11 @@ export class AddPage implements OnInit, AfterViewInit {
   }
 
   validate() {
-    if (this.librarySegment) { this.librarySegment.disabled = false; }
     if (this.spotifySegment) { this.spotifySegment.disabled = false; }
-    if (this.amazonmusicSegment) { this.amazonmusicSegment.disabled = false; }
-    if (this.applemusicSegment) { this.applemusicSegment.disabled = false; }
     if (this.tuneinSegment) { this.tuneinSegment.disabled = false; }
 
-    if (this.libraryArtist) { this.libraryArtist.disabled = false; }
     if (this.spotifyArtist) { this.spotifyArtist.disabled = false; }
     if (this.spotifyQuery) { this.spotifyQuery.disabled = false; }
-    if (this.amazonmusicArtist) { this.amazonmusicArtist.disabled = false; }
-    if (this.applemusicArtist) { this.applemusicArtist.disabled = false; }
 
     if (this.searchTypeSelect) {
       if (this.category === 'playlist') {
@@ -288,17 +237,11 @@ export class AddPage implements OnInit, AfterViewInit {
         break;
       case 'playlist':
         if (this.tuneinSegment) { this.tuneinSegment.disabled = true; }
-        if (this.libraryArtist) { this.libraryArtist.disabled = true; }
         if (this.spotifyArtist) { this.spotifyArtist.disabled = true; }
         if (this.spotifyQuery) { this.spotifyQuery.disabled = true; }
-        if (this.amazonmusicArtist) { this.amazonmusicArtist.disabled = true; }
-        if (this.applemusicArtist) { this.applemusicArtist.disabled = true; }
         break;
       case 'radio':
-        if (this.librarySegment) { this.librarySegment.disabled = true; }
         if (this.spotifySegment) { this.spotifySegment.disabled = true; }
-        if (this.amazonmusicSegment) { this.amazonmusicSegment.disabled = true; }
-        if (this.applemusicSegment) { this.applemusicSegment.disabled = true; }
     }
 
     if (this.source === 'spotify') {
@@ -320,37 +263,6 @@ export class AddPage implements OnInit, AfterViewInit {
         )
         ||
         this.category === 'playlist' && id?.length > 0
-      );
-    } else if (this.source === 'library') {
-      const artist = this.keyboard.getInput('library_artist');
-      const title = this.keyboard.getInput('library_title');
-
-      this.valid = (
-        title?.length > 0 && artist?.length > 0
-      );
-    } else if (this.source === 'amazonmusic') {
-      const artist = this.keyboard.getInput('amazonmusic_artist');
-      const title = this.keyboard.getInput('amazonmusic_title');
-      const id = this.keyboard.getInput('amazonmusic_id');
-
-      this.valid = (
-        (this.category === 'audiobook' || this.category === 'music') && (
-          artist?.length > 0 && title?.length > 0 && id?.length > 0
-        )
-        ||
-        this.category === 'playlist' && title?.length > 0 && id?.length > 0
-      );
-    } else if (this.source === 'applemusic') {
-      const artist = this.keyboard.getInput('applemusic_artist');
-      const title = this.keyboard.getInput('applemusic_title');
-      const id = this.keyboard.getInput('applemusic_id');
-
-      this.valid = (
-        (this.category === 'audiobook' || this.category === 'music') && (
-          artist?.length > 0 && title?.length > 0 && id?.length > 0
-        )
-        ||
-        this.category === 'playlist' && title?.length > 0 && id?.length > 0
       );
     } else if (this.source === 'tunein') {
       const artist = this.keyboard.getInput('tunein_artist');

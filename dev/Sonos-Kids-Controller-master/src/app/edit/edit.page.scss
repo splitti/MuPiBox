@@ -1,3 +1,10 @@
+ion-content {
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+}
+
 ion-toolbar {
     --padding-end: 80px;
     ion-back-button {
