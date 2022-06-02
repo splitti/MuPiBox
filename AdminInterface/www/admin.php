@@ -155,6 +155,11 @@
 	<input id="saveForm" class="button_text" type="submit" name="update" value="Update settings" />
 	<input id="saveForm" class="button_text" type="submit" name="spotify_restart" value="Restart services" />
 	<input id="saveForm" class="button_text" type="submit" name="restart_kiosk" value="Restart Chromium-Kiosk" />
+</li>
+
+<li class="li_norm"><h2>MuPiBox Debugging</h2>
+	<p>Some important options to load necessary logs.</p>
+
 	<input id="saveForm" class="button_text" type="submit" name="debug" value="<?php
 
 	if( $data["chromium"]["debug"] == 1)
@@ -165,13 +170,15 @@
 	{
 	print "Chrome Debugging Off - turn on";
 	}
-	?>" />
+	?>" />	
 	<?php
 	if( $data["chromium"]["debug"] == 1)
 	{
 	print '<input id="saveForm" class="button_text" type="submit" name="debugdownload" value="Download Debug-Log" onclick="window.open(\'./debug.php\', \'_blank\');" />';
 	}
 	?>
+	<input id="saveForm" class="button_text" type="submit" name="pm2download" value="Download PM2-Log" onclick="window.open(\'./pm2.php\', \'_blank\');" />
+
 </li>
 
 
