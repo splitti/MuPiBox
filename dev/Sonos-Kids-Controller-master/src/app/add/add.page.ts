@@ -125,6 +125,10 @@ export class AddPage implements OnInit, AfterViewInit {
     this.selectedInputElem = document.querySelector('ion-input:first-child');
   }
 
+  ionViewWillLeave() {
+    this.edit = false;
+  }
+
   cancelButtonPressed() {
     this.navController.back();
   }
