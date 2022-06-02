@@ -1,10 +1,11 @@
 import { Component, OnInit } from '@angular/core';
-import { Router } from '@angular/router';
+import { NavigationExtras, Router } from '@angular/router';
 import { AlertController } from '@ionic/angular';
 import { MediaService } from '../media.service';
 import { Media } from '../media';
 import { Network } from "../network";
 import { Observable } from "rxjs";
+import { ActivityIndicatorService } from '../activity-indicator.service';
 
 @Component({
   selector: 'app-edit',
@@ -15,11 +16,14 @@ export class EditPage implements OnInit {
 
   media: Observable<Record<any, any>[]>;
   network: Observable<Network>;
+  clickedEdit: Media;
+  activityIndicatorVisible = false;
 
   constructor(
     private mediaService: MediaService,
     public alertController: AlertController,
-    private router: Router
+    private router: Router,
+    private activityIndicatorService: ActivityIndicatorService
   ) {
 
   }
@@ -64,12 +68,36 @@ export class EditPage implements OnInit {
     await alert.present();
   }
 
+  editButtonPreddes(index: number) {
+    console.log(this.media[index]);
+    
+    //this.mediaService.deleteRawMediaAtIndex(index);
+    // this.activityIndicatorService.create().then(indicator => {
+    //   this.activityIndicatorVisible = true;
+    //   indicator.present().then(() => {
+    //     const navigationExtras: NavigationExtras = {
+    //       state: {
+    //         media: this.clickedEdit
+    //       }
+    //     };
+    //     this.router.navigate(['/add'], navigationExtras);
+    //   });
+    // });
+  }
+  
   ionViewWillEnter() {
     this.network = this.mediaService.getNetworkObservable();
     this.media = this.mediaService.getRawMediaObservable();
 
     this.mediaService.updateNetwork();
     this.mediaService.updateRawMedia();
+  }
+
+  ionViewDidLeave() {
+    if (this.activityIndicatorVisible) {
+      this.activityIndicatorService.dismiss();
+      this.activityIndicatorVisible = false;
+    }
   }
 
   addButtonPressed() {
