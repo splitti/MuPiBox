@@ -103,8 +103,8 @@ export class PlayerService {
         }
         break;
       }
-      case 'tunein': {
-        url = 'tunein/' + encodeURIComponent(media.id) + '/radio';
+      case 'radio': {
+        url = 'radio/' + encodeURIComponent(media.id) + '/radio';
         break;
       }
     }

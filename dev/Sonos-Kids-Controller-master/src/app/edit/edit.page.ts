@@ -16,7 +16,6 @@ export class EditPage implements OnInit {
 
   media: Observable<Record<any, any>[]>;
   network: Observable<Network>;
-  clickedEdit: Media;
   activityIndicatorVisible = false;
 
   constructor(
@@ -68,20 +67,18 @@ export class EditPage implements OnInit {
   }
 
   editButtonPreddes(index: number, item: Media) {
-    console.log(item);
-    
-    //this.mediaService.deleteRawMediaAtIndex(index);
-    // this.activityIndicatorService.create().then(indicator => {
-    //   this.activityIndicatorVisible = true;
-    //   indicator.present().then(() => {
-    //     const navigationExtras: NavigationExtras = {
-    //       state: {
-    //         media: this.clickedEdit
-    //       }
-    //     };
-    //     this.router.navigate(['/add'], navigationExtras);
-    //   });
-    // });
+    this.activityIndicatorService.create().then(indicator => {
+      this.activityIndicatorVisible = true;
+      indicator.present().then(() => {
+        const navigationExtras: NavigationExtras = {
+          state: {
+            media: item,
+            index: index
+          }
+        };
+        this.router.navigate(['/add'], navigationExtras);
+      });
+    });
   }
   
   ionViewWillEnter() {

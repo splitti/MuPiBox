@@ -15,7 +15,7 @@
             <ion-segment-button #spotify_segment value="spotify">
                 <ion-label>Spotify</ion-label>
             </ion-segment-button>
-            <ion-segment-button #tunein_segment value="tunein">
+            <ion-segment-button #radio_segment value="radio">
                 <ion-label>Radio</ion-label>
             </ion-segment-button>
         </ion-segment>
@@ -91,21 +91,21 @@
             </form>
         </div>
 
-        <div *ngSwitchCase="'tunein'" class="top">
+        <div *ngSwitchCase="'radio'" class="top">
             <form #libraryForm="ngForm" (ngSubmit)="submit(libraryForm)">
                 <ion-grid>
                     <ion-row>
                         <ion-col size="6">
                             <div>
                                 <ion-item>
-                                    <ion-input #tunein_title name="tunein_title" type="text" placeholder="Title" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
+                                    <ion-input #radio_title name="radio_title" type="text" placeholder="Title" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
                                 </ion-item>
                             </div>
                         </ion-col>
                         <ion-col size="6">
                             <div>
                                 <ion-item>
-                                    <ion-input #tunein_id name="tunein_id" type="text" placeholder="Unique ID" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
+                                    <ion-input #radio_id name="radio_id" type="text" placeholder="Unique ID" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
                                 </ion-item>
                             </div>
                         </ion-col>
@@ -114,7 +114,7 @@
                         <ion-col size="12">
                             <div>
                                 <ion-item>
-                                    <ion-input #tunein_cover name="tunein_cover" type="text" placeholder="Cover Artwork URL" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
+                                    <ion-input #radio_cover name="radio_cover" type="text" placeholder="Cover Artwork URL" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
                                 </ion-item>
                             </div>
                         </ion-col>

@@ -107,6 +107,18 @@ export class MediaService {
     });
   }
 
+  editRawMediaAtIndex(index: number, data: Media) {
+    const url = (environment.production) ? '../api/edit' : 'http://localhost:8200/api/edit';
+    const body = {
+      index,
+      data
+    };
+
+    this.http.post(url, body).subscribe(response => {
+      this.updateRawMedia();
+    });
+  }
+
   addRawMedia(media: Media) {
     const url = (environment.production) ? '../api/add' : 'http://localhost:8200/api/add';
 

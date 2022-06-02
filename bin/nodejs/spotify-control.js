@@ -615,10 +615,10 @@ app.use(function(req, res){
     playList(command.name);
   }
 
-  if(command.dir.includes("tunein") ){
+  if(command.dir.includes("radio") ){
     currentMeta.currentPlayer = "mplayer";
     let dir = command.dir;
-    let radioURL = dir.split('tunein/').pop();
+    let radioURL = dir.split('radio/').pop();
     radioURL = decodeURIComponent(radioURL);
     playURL(radioURL);
   }

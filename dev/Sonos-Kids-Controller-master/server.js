@@ -125,6 +125,18 @@ app.post('/api/delete', (req, res) => {
     });
 });
 
+app.post('/api/edit', (req, res) => {
+    jsonfile.readFile(dataFile, (error, data) => {
+        if (error) data = [];
+        data.splice(req.body.index, 0, req.body.data);
+
+        jsonfile.writeFile(dataFile, data, { spaces: 4 }, (error) => {
+            if (error) throw err;
+            res.status(200).send();
+        });
+    });
+});
+
 app.get('/api/token', (req, res) => {
     // Retrieve an access token from Spotify
     spotifyApi.clientCredentialsGrant().then(
