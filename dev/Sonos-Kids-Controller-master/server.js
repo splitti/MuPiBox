@@ -128,7 +128,7 @@ app.post('/api/delete', (req, res) => {
 app.post('/api/edit', (req, res) => {
     jsonfile.readFile(dataFile, (error, data) => {
         if (error) data = [];
-        data.splice(req.body.index, 0, req.body.data);
+        data.splice(req.body.index, 1, req.body.data);
 
         jsonfile.writeFile(dataFile, data, { spaces: 4 }, (error) => {
             if (error) throw err;
