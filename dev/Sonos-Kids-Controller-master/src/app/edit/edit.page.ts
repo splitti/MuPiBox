@@ -16,9 +16,9 @@ export class EditPage implements OnInit {
 
   media: Observable<Record<any, any>[]>;
   network: Observable<Network>;
-  clickedEdit: Media[];
+  clickedEdit: Media;
   activityIndicatorVisible = false;
-  public readonly data$: Observable<Media[]>;
+  public readonly data$: Observable<Media>;
 
   constructor(
     private mediaService: MediaService,

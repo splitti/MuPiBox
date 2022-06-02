@@ -21,7 +21,7 @@ export class MediaService {
   public readonly current$: Observable<CurrentSpotify>;
   public readonly local$: Observable<CurrentMPlayer>;
   public readonly network$: Observable<Network>;
-  public readonly data$: Observable<Media[]>;
+  public readonly data$: Observable<Media>;
 
   private rawMediaSubject = new Subject<Media[]>();
   private wlanSubject = new Subject<WLAN[]>();
@@ -56,7 +56,7 @@ export class MediaService {
       shareReplay({ bufferSize: 1, refCount: false }),
     );
     this.data$ = interval(1000).pipe( // Once a second after subscribe, way too frequent!
-      switchMap((): Observable<Media[]> => this.http.get<Media[]>('http://localhost:8200/api/getdata')),
+      switchMap((): Observable<Media> => this.http.get<Media>('http://localhost:8200/api/getdata')),
       // Replay the most recent (bufferSize) emission on each subscription
       // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
       shareReplay({ bufferSize: 1, refCount: false }),
