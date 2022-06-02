@@ -40,17 +40,18 @@ export class AddPage implements OnInit, AfterViewInit {
   selectedInputElem: any;
   valid = false;
   editindex: number;
-  editMedia: Media = {
-    type: "",
-    category: "",
-    artist: "",
-    title: "",
-    query: "",
-    id: "",
-    artistid: "",
-    cover: "",
-    artistcover: "",
-  }
+  editMedia: Media; 
+  // = {
+  //   type: "",
+  //   category: "",
+  //   artist: "",
+  //   title: "",
+  //   query: "",
+  //   id: "",
+  //   artistid: "",
+  //   cover: "",
+  //   artistcover: "",
+  // }
   edit = false;
 
   categoryIcons = {
@@ -88,7 +89,6 @@ export class AddPage implements OnInit, AfterViewInit {
       }else if(this.source === 'spotify' && this.editMedia?.id) {
         this.searchType = 'media_id';
       }
-      this.validate();
     }
 
   }
