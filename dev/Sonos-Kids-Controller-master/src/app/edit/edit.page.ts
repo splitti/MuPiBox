@@ -69,7 +69,7 @@ export class EditPage implements OnInit {
   }
 
   editButtonPreddes(index: number) {
-    console.log(this.media[index]);
+    console.log(this.media);
     
     //this.mediaService.deleteRawMediaAtIndex(index);
     // this.activityIndicatorService.create().then(indicator => {
