@@ -37,13 +37,6 @@ app.get('/api/data', (req, res) => {
     });
 });
 
-app.get('/api/getdata', (req, res) => {
-    jsonfile.readFile(dataFile, (error, data) => {
-        if (error) data = [];
-        res.json(data);
-    });
-});
-
 app.get('/api/network', (req, res) => {
     jsonfile.readFile(networkFile, (error, data) => {
         if (error) data = [];
