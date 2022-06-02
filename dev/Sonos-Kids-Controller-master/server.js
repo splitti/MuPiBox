@@ -37,8 +37,8 @@ app.get('/api/data', (req, res) => {
     });
 });
 
-app.get('/api/mupiboxconfig', (req, res) => {
-    jsonfile.readFile(mupiboxconfigFile, (error, data) => {
+app.get('/api/getdata', (req, res) => {
+    jsonfile.readFile(dataFile, (error, data) => {
         if (error) data = [];
         res.json(data);
     });

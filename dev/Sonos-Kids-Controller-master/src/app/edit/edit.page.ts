@@ -18,6 +18,7 @@ export class EditPage implements OnInit {
   network: Observable<Network>;
   clickedEdit: Media;
   activityIndicatorVisible = false;
+  public readonly data$: Observable<Media[]>;
 
   constructor(
     private mediaService: MediaService,
@@ -25,7 +26,7 @@ export class EditPage implements OnInit {
     private router: Router,
     private activityIndicatorService: ActivityIndicatorService
   ) {
-
+    this.data$ = this.mediaService.data$;
   }
 
   ngOnInit() {
@@ -69,7 +70,7 @@ export class EditPage implements OnInit {
   }
 
   editButtonPreddes(index: number) {
-    console.log(this.media);
+    console.log(this.data$);
     
     //this.mediaService.deleteRawMediaAtIndex(index);
     // this.activityIndicatorService.create().then(indicator => {
