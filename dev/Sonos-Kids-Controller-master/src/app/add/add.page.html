@@ -63,7 +63,7 @@
                             <div>
                                 <ion-item [ngSwitch]="searchType">
                                     <ion-input *ngSwitchCase="'artist_title'" #spotify_title name="spotify_title" type="text" placeholder="Title" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
-                                    <ion-input *ngSwitchCase="'media_id'" #spotify_id name="spotify_id" type="text" placeholder="Media ID" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
+                                    <ion-input *ngSwitchCase="'media_id'" #spotify_id [(ngModel)]="editMedia.id" name="spotify_id" type="text" placeholder="Media ID" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
                                     <ion-input *ngSwitchCase="'query'" #spotify_query name="spotify_query" type="text" placeholder="Search Query" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
                                     <ion-input *ngSwitchCase="'artist_id'" #spotify_artistid name="spotify_artistid" type="text" placeholder="Unique Artist ID" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
                                 </ion-item>

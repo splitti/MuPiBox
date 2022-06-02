@@ -69,6 +69,8 @@ export class AddPage implements OnInit, AfterViewInit {
     if(this.edit){
       console.log(this.editindex);
       console.log(this.editMedia);
+      this.source = this.editMedia.type;
+      this.category = this.editMedia.category;
     }
 
   }
@@ -205,7 +207,6 @@ export class AddPage implements OnInit, AfterViewInit {
       if (form.form.value.spotify_query?.length) { media.query = form.form.value.spotify_query; }
       if (form.form.value.spotify_id?.length) { media.id = form.form.value.spotify_id; }
       if (form.form.value.spotify_artistid?.length) { media.artistid = form.form.value.spotify_artistid; }
-      //if (this.shuffle) { media.shuffle = this.shuffle; }
 
     } else if (this.source === 'radio') {
       if (form.form.value.radio_title?.length) { media.title = form.form.value.radio_title; }
