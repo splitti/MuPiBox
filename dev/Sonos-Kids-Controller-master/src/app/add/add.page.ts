@@ -4,6 +4,7 @@ import { MediaService } from '../media.service';
 import { Media } from '../media';
 import Keyboard from 'simple-keyboard';
 import { NgForm } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
 
 
 @Component({
@@ -38,7 +39,9 @@ export class AddPage implements OnInit, AfterViewInit {
   keyboard: Keyboard;
   selectedInputElem: any;
   valid = false;
-  //shuffle = false;
+  editindex: number;
+  editMedia: Media;
+  edit = false;
 
   categoryIcons = {
     audiobook: 'book-outline',
@@ -49,10 +52,25 @@ export class AddPage implements OnInit, AfterViewInit {
 
   constructor(
     private mediaService: MediaService,
-    private navController: NavController
-  ) { }
+    private navController: NavController,
+    private route: ActivatedRoute,
+    private router: Router
+  ) {
+    this.route.queryParams.subscribe(params => {
+      if (this.router.getCurrentNavigation().extras.state) {
+        this.editMedia = this.router.getCurrentNavigation().extras.state.media;
+        this.editindex = this.router.getCurrentNavigation().extras.state.index;
+        this.edit = true;
+      }
+    });
+  }
 
   ngOnInit() {
+    if(this.edit){
+      console.log(this.editindex);
+      console.log(this.editMedia);
+    }
+
   }
 
   ngAfterViewInit() {

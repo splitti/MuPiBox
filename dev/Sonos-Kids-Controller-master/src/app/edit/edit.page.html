@@ -39,8 +39,8 @@
                     </ion-col>
                     <ion-col size="8" class="edit-col">
                         <ion-label color="dark">
-                            <p class="transparent">{{item.category || 'audiobook'}}</p>
                             <p class="transparent">{{item.type}}</p>
+                            <p class="transparent">{{item.category || 'audiobook'}}</p>
                             <p *ngIf="item.artist">{{item.artist}}</p>
                             <p *ngIf="item.title">{{item.title}}</p>
                             <p *ngIf="item.query">{{item.query}}</p>
@@ -51,7 +51,7 @@
                         </ion-label>
                     </ion-col>
                     <ion-col size="1" class="vertical-center-content edit-col">
-                        <ion-button *ngIf="item.category === 'spotify' || item.category === 'radio' " color="danger" slots="icon-only" class="round edit-button" (click)="editButtonPreddes(i, item)">
+                        <ion-button *ngIf="item.type === 'spotify' || item.type === 'radio' " color="danger" slots="icon-only" class="round edit-button" (click)="editButtonPreddes(i, item)">
                             <ion-icon name="brush-outline" class="larger"></ion-icon>
                         </ion-button>
                     </ion-col>
