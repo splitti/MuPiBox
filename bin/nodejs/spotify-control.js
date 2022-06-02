@@ -627,6 +627,7 @@ app.use(function(req, res){
    let dir = command.dir;
    let nameTTS = dir.split('say/').pop();
    nameTTS = decodeURIComponent(nameTTS);
+   nameTTS = nameTTS.replace(/\//g,' ');
    log.debug("[Spotify Control] Say: " + nameTTS);
    let filename = '/home/dietpi/MuPiBox/tts_files/' + nameTTS +'.mp3';
    try {
