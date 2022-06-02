@@ -71,6 +71,14 @@ export class AddPage implements OnInit, AfterViewInit {
       console.log(this.editMedia);
       this.source = this.editMedia.type;
       this.category = this.editMedia.category;
+      if(this.source === 'spotify' && this.editMedia?.query) {
+        this.searchType = 'query';
+      }else if(this.source === 'spotify' && this.editMedia?.artistid) {
+        this.searchType = 'artist_id';
+      }else if(this.source === 'spotify' && this.editMedia?.id) {
+        this.searchType = 'media_id';
+      }
+      this.validate();
     }
 
   }
