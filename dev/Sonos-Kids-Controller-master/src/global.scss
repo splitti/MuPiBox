@@ -31,25 +31,25 @@
 
 /* no text selection in firefox */
 
-html,
-body,
-div,
-a,
-i,
-button,
-select,
-option,
-optgroup,
-hr,
-br {
-    -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    -khtml-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-    cursor: default;
-}
+// html,
+// body,
+// div,
+// a,
+// i,
+// button,
+// select,
+// option,
+// optgroup,
+// hr,
+// br {
+//     -webkit-touch-callout: none;
+//     -webkit-user-select: none;
+//     -khtml-user-select: none;
+//     -moz-user-select: none;
+//     -ms-user-select: none;
+//     user-select: none;
+//     cursor: default;
+// }
 
 .slides-md {
     --bullet-background: #ffffff;
