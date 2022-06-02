@@ -114,6 +114,8 @@ export class MediaService {
       data
     };
 
+    console.log(body);
+    
     this.http.post(url, body).subscribe(response => {
       this.updateRawMedia();
     });

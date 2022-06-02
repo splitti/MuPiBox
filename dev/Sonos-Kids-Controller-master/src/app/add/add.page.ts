@@ -237,6 +237,10 @@ export class AddPage implements OnInit, AfterViewInit {
     }
 
     this.mediaService.editRawMediaAtIndex(this.editindex, media);
+    console.log(this.editindex);
+    console.log(media);
+    console.log("Data are saved.");
+    
 
     form.reset();
 
