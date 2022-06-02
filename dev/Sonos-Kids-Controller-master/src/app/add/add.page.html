@@ -74,7 +74,8 @@
                         <ion-col size="6">
                             <div>
                                 <div class="add-button">
-                                    <ion-button size="large" type="submit" expand="block" [disabled]="!valid">Add</ion-button>
+                                    <ion-button *ngIf="edit; else elseBlock" size="large" type="saveedit" expand="block" [disabled]="!valid">Edit</ion-button>
+                                    <ng-template #elseBlock><ion-button *ngIf="!edit" size="large" type="submit" expand="block" [disabled]="!valid">Add</ion-button></ng-template>
                                 </div>
                             </div>
                         </ion-col>
@@ -122,8 +123,8 @@
                         <ion-col size="6">
                             <div>
                                 <div class="add-button">
-                                    <ion-button *ngIf="edit" size="large" type="saveedit" expand="block" [disabled]="!valid">Edit</ion-button>
-                                    <ion-button *ngIf="!edit" size="large" type="submit" expand="block" [disabled]="!valid">Add</ion-button>
+                                    <ion-button *ngIf="edit; else elseBlock" size="large" type="saveedit" expand="block" [disabled]="!valid">Edit</ion-button>
+                                    <ng-template #elseBlock><ion-button *ngIf="!edit" size="large" type="submit" expand="block" [disabled]="!valid">Add</ion-button></ng-template>
                                 </div>
                             </div>
                         </ion-col>

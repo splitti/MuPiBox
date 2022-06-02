@@ -318,6 +318,7 @@ export class AddPage implements OnInit, AfterViewInit {
         if (this.radioSegment) { this.radioSegment.disabled = true; }
         if (this.spotifyArtist) { this.spotifyArtist.disabled = true; }
         if (this.spotifyQuery) { this.spotifyQuery.disabled = true; }
+        if (this.searchTypeSelect) { this.searchTypeSelect.disabled = true; }
         break;
       case 'radio':
         if (this.spotifySegment) { this.spotifySegment.disabled = true; }
