@@ -54,8 +54,8 @@
                         <ion-col size="6">
                             <div>
                                 <ion-item>
-                                    <ion-input *ngIf="category === 'playlist'; else elseBlock" #spotify_title name="spotify_title" type="text" placeholder="Title" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
-                                    <ng-template #elseBlock><ion-input #spotify_artist name="spotify_artist" type="text" placeholder="Artist" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input></ng-template>
+                                    <ion-input *ngIf="category === 'playlist'; else elseBlock" #spotify_title [(ngModel)]="editMedia.title" name="spotify_title" type="text" placeholder="Title" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
+                                    <ng-template #elseBlock><ion-input #spotify_artist [(ngModel)]="editMedia.artist" name="spotify_artist" type="text" placeholder="Artist" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input></ng-template>
                                 </ion-item>
                             </div>
                         </ion-col>
@@ -64,8 +64,8 @@
                                 <ion-item [ngSwitch]="searchType">
                                     <ion-input *ngSwitchCase="'artist_title'" #spotify_title name="spotify_title" type="text" placeholder="Title" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
                                     <ion-input *ngSwitchCase="'media_id'" #spotify_id [(ngModel)]="editMedia.id" name="spotify_id" type="text" placeholder="Media ID" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
-                                    <ion-input *ngSwitchCase="'query'" #spotify_query name="spotify_query" type="text" placeholder="Search Query" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
-                                    <ion-input *ngSwitchCase="'artist_id'" #spotify_artistid name="spotify_artistid" type="text" placeholder="Unique Artist ID" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
+                                    <ion-input *ngSwitchCase="'query'" #spotify_query [(ngModel)]="editMedia.query" name="spotify_query" type="text" placeholder="Search Query" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
+                                    <ion-input *ngSwitchCase="'artist_id'" #spotify_artistid [(ngModel)]="editMedia.artistid" name="spotify_artistid" type="text" placeholder="Unique Artist ID" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
                                 </ion-item>
                             </div>
                         </ion-col>
@@ -98,14 +98,14 @@
                         <ion-col size="6">
                             <div>
                                 <ion-item>
-                                    <ion-input #radio_title name="radio_title" type="text" placeholder="Title" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
+                                    <ion-input #radio_title [(ngModel)]="editMedia.title" name="radio_title" type="text" placeholder="Title" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
                                 </ion-item>
                             </div>
                         </ion-col>
                         <ion-col size="6">
                             <div>
                                 <ion-item>
-                                    <ion-input #radio_id name="radio_id" type="text" placeholder="Unique ID" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
+                                    <ion-input #radio_id [(ngModel)]="editMedia.id" name="radio_id" type="text" placeholder="Radio Stream URL" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
                                 </ion-item>
                             </div>
                         </ion-col>
@@ -114,7 +114,7 @@
                         <ion-col size="12">
                             <div>
                                 <ion-item>
-                                    <ion-input #radio_cover name="radio_cover" type="text" placeholder="Cover Artwork URL" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
+                                    <ion-input #radio_cover [(ngModel)]="editMedia.cover" name="radio_cover" type="text" placeholder="Cover Artwork URL" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
                                 </ion-item>
                             </div>
                         </ion-col>
@@ -123,7 +123,8 @@
                         <ion-col size="6">
                             <div>
                                 <div class="add-button">
-                                    <ion-button size="large" type="submit" expand="block" [disabled]="!valid">Add</ion-button>
+                                    <ion-button *ngIf="edit; else elseBlock" size="large" type="saveedit" expand="block" [disabled]="!valid">Add</ion-button>
+                                    <ng-template #elseBlock><ion-button size="large" type="edit" expand="block" [disabled]="!valid">Add</ion-button></ng-template>
                                 </div>
                             </div>
                         </ion-col>

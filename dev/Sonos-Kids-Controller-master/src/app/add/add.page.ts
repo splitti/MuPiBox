@@ -195,6 +195,44 @@ export class AddPage implements OnInit, AfterViewInit {
     }, 10);
   }
 
+  saveedit(form: NgForm) {
+    const media: Media = {
+      type: this.source,
+      category: this.category
+    };
+
+    if (this.source === 'spotify') {
+      if (form.form.value.spotify_artist?.length) { media.artist = form.form.value.spotify_artist; }
+      if (form.form.value.spotify_title?.length) { media.title = form.form.value.spotify_title; }
+      if (form.form.value.spotify_query?.length) { media.query = form.form.value.spotify_query; }
+      if (form.form.value.spotify_id?.length) { media.id = form.form.value.spotify_id; }
+      if (form.form.value.spotify_artistid?.length) { media.artistid = form.form.value.spotify_artistid; }
+
+    } else if (this.source === 'radio') {
+      if (form.form.value.radio_title?.length) { media.title = form.form.value.radio_title; }
+      if (form.form.value.radio_cover?.length) { media.cover = form.form.value.radio_cover; }
+      if (form.form.value.radio_id?.length) { media.id = form.form.value.radio_id; }
+    }
+
+    this.mediaService.editRawMediaAtIndex(this.editindex, media);
+
+    form.reset();
+
+    this.keyboard.clearInput('spotify_artist');
+    this.keyboard.clearInput('spotify_title');
+    this.keyboard.clearInput('spotify_id');
+    this.keyboard.clearInput('spotify_artistid');
+    this.keyboard.clearInput('spotify_query');
+
+    this.keyboard.clearInput('radio_title');
+    this.keyboard.clearInput('radio_id');
+    this.keyboard.clearInput('radio_cover');
+
+    this.validate();
+
+    this.navController.back();
+  }
+
   submit(form: NgForm) {
     const media: Media = {
       type: this.source,
