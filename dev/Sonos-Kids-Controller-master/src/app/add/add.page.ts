@@ -40,7 +40,17 @@ export class AddPage implements OnInit, AfterViewInit {
   selectedInputElem: any;
   valid = false;
   editindex: number;
-  editMedia: Media;
+  editMedia: Media = {
+    type: "",
+    category: "",
+    artist: "",
+    title: "",
+    query: "",
+    id: "",
+    artistid: "",
+    cover: "",
+    artistcover: "",
+  }
   edit = false;
 
   categoryIcons = {
