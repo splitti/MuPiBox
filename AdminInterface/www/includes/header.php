@@ -34,4 +34,24 @@
 				<a href="javascript:void(0);" class="icon" onclick="myFunction()"><i class="fa fa-bars"></i></a>
 			</div>
 
-		
+<div class="modal fade" id="ModalCenter" tabindex="-1" role="dialog" aria-labelledby="ModalCenterTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title" id="exampleModalCenterTitle">Please Donate</h3>
+      </div>
+      <div class="modal-body">
+       <p>The MuPiBox is an open source project and it should stay that way. Erik (nero) and Olaf (splitti) are constantly developing the box, putting a lot of love and energy into the project. The two also offer you support in the Discord.</p>
+
+       <p>Please honor the work and donate a small amount:</p>
+       <ul>
+         <li><a href="https://paypal.me/EGerhardt" target="_blank">Paypal to Erik (nero)</a></li>
+         <li><a href="https://paypal.me/splittscheid" target="_blank">Paypal to Olaf (splitti)</a></li>
+      </ul>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>

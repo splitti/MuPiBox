@@ -1,3 +1,37 @@
+$(document).ready(function(){
+    if (window.location.hash && ~modals.indexOf(window.location.hash)) {
+        $(window.location.hash).modal();
+    }
+    $(".modal:not(.noclose)").on("click","a",function(){
+        $(this).closest(".modal").modal("hide");
+    });
+
+    var currentTimestamp = Date.now();
+
+    $("#ModalCenter").on("hidden.bs.modal", function () {
+        localStorage.setItem("last-showed-at", currentTimestamp);
+    });
+
+    // Check for modal eligibility
+    var showAgainInMs = 1800000;
+    var lastTimestamp = Number(localStorage.getItem("last-showed-at"));
+
+    if ((currentTimestamp - lastTimestamp) >= showAgainInMs) {
+        setTimeout(function() {
+            localStorage.setItem("last-showed-at", currentTimestamp);
+            $("#ModalCenter").modal("show");
+        }, 1500);
+    }
+
+});
+
+
+$('#reset-session').on('click',function(){
+  localStorage.clear();
+});
+
+
+
 lightBoxClose = function() {
   document.querySelector(".lightbox").classList.add("closed");
 }
