@@ -41,7 +41,7 @@
         <h3 class="modal-title" id="exampleModalCenterTitle">Please Donate</h3>
       </div>
       <div class="modal-body">
-       <p>The MuPiBox is an open source project and it should stay that way. Erik (nero) and Olaf (splitti) are constantly developing the box, putting a lot of love and energy into the project. The two also offer you support in the Discord.</p>
+       <p>The MuPiBox is an open source project and it should stay that way. Erik (nero) and Olaf (splitti) are constantly developing the box, putting a lot of love and energy into the project. The two also offer you support in Discord.</p>
 
        <p>Please honor the work and donate a small amount:</p>
        <ul>

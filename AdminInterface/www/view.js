@@ -25,7 +25,6 @@ $(document).ready(function(){
 
 });
 
-
 $('#reset-session').on('click',function(){
   localStorage.clear();
 });

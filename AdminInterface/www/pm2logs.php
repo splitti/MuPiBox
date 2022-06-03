@@ -1,5 +1,8 @@
 <?php
-$command = "/usr/bin/zip /tmp/pm2_logs.zip /home/dietpi/.pm2/logs/*";
+$zcommand = "sudo /usr/bin/zip /tmp/pm2_logs.zip /home/dietpi/.pm2/logs/*";
+exec($zcommand, $zoutput, $zresult );
+
+$command = "sudo cat /tmp/pm2_logs.zip";
 exec($command, $output, $result );
 //Define header information
 header('Content-Description: File Transfer');
