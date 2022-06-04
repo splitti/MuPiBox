@@ -161,7 +161,7 @@
 		</p>
 		<input id="saveForm" class="button_text" type="submit" name="os_update" value="Update OS"  onclick="return confirm('Do really want to update the Operating System?');" />
 		<input id="saveForm" class="button_text" type="submit" name="mupibox_update" value="Update MuPiBox"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
-		<input id="saveForm" class="button_text" type="submit" name="mupibox_devupdate" value="Update MuPiBox Development"  onclick="return confirm('Do really want to Update the MuPiBox to unstable version?');" />
+		<input id="saveForm" class="button_text_red" type="submit" name="mupibox_devupdate" value="Update MuPiBox Development"  onclick="return confirm('Do really want to Update the MuPiBox to unstable version?');" />
 	</li>
 
 	<li class="li_norm"><h2>Generate Playlists</h2>
