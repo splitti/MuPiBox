@@ -177,7 +177,7 @@
 	print '<input id="saveForm" class="button_text" type="submit" name="debugdownload" value="Download Debug-Log" onclick="window.open(\'./debug.php\', \'_blank\');" />';
 	}
 	?>
-	<input id="saveForm" class="button_text" type="submit" name="pm2download" value="Download PM2-Log" onclick="window.open(\'./pm2logs.php\', \'_blank\');" />
+	<input id="saveForm" class="button_text" type="submit" name="pm2download" value="Download PM2-Log" onclick="window.open('./pm2logs.php', '_blank');" />
 
 </li>
 
