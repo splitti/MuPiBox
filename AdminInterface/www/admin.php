@@ -70,7 +70,7 @@
 		{
 		$command = "sudo -i -u dietpi /usr/local/bin/mupibox/./restart_kiosk.sh";
 		exec($command, $output, $result );
-		$change=1;
+		$change=3;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Chromium Kiosk restarted</li>";
 		}
 	if( $_POST['mupibox_update'] )
@@ -79,7 +79,7 @@
 		exec($command, $output, $result );
 		$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
 		$data = json_decode($string, true);
-		$change=1;
+		$change=3;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Update complete to Version ".$data["mupibox"]["version"]."</li>";
 		}
 	if( $_POST['mupibox_devupdate'] )
@@ -88,69 +88,83 @@
 		exec($command, $output, $result );
 		$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
 		$data = json_decode($string, true);
-		$change=1;
+		$change=3;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Update complete to Development-Version ".$data["mupibox"]["version"]."</li>";
 		}
 	if( $_POST['os_update'] )
 		{
 		$command = "sudo apt-get update -y && sudo apt-get update -y && echo 'Operating System updated!'";
 		exec($command, $output, $result );
-		$change=1;
+		$change=3;
 		$CHANGE_TXT=$CHANGE_TXT."<li>OS is up to date</li>";
 		}
 	if( $_POST['m3u'] )
 		{
 		$command = "sudo /usr/local/bin/mupibox/./m3u_generator.sh";
 		exec($command, $output, $result );
-		$change=1;
+		$change=3;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Playlists generated</li>";
 		}
 	if( $_POST['shutdown'] )
 		{
-		$command = 'bash -c "exec nohup setsid /usr/local/bin/mupibox/./shutdown.sh > /dev/null 2>&1 &"';
+		$command = 'bash -c "sleep 2; exec nohup setsid /usr/local/bin/mupibox/./shutdown.sh > /dev/null 2>&1" &';
 		exec($command);
-		$change=1;
+		$change=3;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Shutdown initiated</li>";
 		}
 	if( $_POST['reboot'] )
 		{
-		$command = 'bash -c "exec nohup setsid /usr/local/bin/mupibox/./restart.sh > /dev/null 2>&1 &"';
+		$command = 'bash -c "sleep 2;exec nohup setsid /usr/local/bin/mupibox/./restart.sh > /dev/null 2>&1" &';
 		exec($command);
-		$change=1;
+		$change=3;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Restart initiated</li>";
 		}
 	if( $_POST['update'] )
 		{
 		$command = "sudo /usr/local/bin/mupibox/./setting_update.sh";
 		exec($command, $output, $result );
-		$change=1;
+		$change=3;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Update complete</li>";
 		}
 	if( $_POST['spotify_restart'] )
 		{
 		$command = "sudo /usr/local/bin/mupibox/./spotify_restart.sh";
 		exec($command, $output, $result );
-		$change=1;
+		$change=3;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Spotify Services are restarted</li>";
 		}
 	if( $_POST['resetMupiConf'] )
 		{
 		$command = "sudo su - -c 'rm /etc/mupibox/mupiboxconfig.json;wget https://mupibox.de/version/latest/config/templates/mupiboxconfig.json -O /etc/mupibox/mupiboxconfig.json;chown root:www-data /etc/mupibox/mupiboxconfig.json;chmod 777 /etc/mupibox/mupiboxconfig.json'";
 		exec($command, $output, $result );
-		$change=1;
+		$change=3;
 		$CHANGE_TXT=$CHANGE_TXT."<li>MuPiBox-Conf is set to initial</li>";
 		}
 	if( $_POST['resetDataJson'] )
 		{
 		$command = "sudo rm /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/*data.json";
 		exec($command, $output, $result );
-		$change=1;
+		$change=3;
 		$CHANGE_TXT=$CHANGE_TXT."<li>data.json deleted</li>";
 		}
-
-
+	if( $change == 1 )
+		{
+		$json_object = json_encode($data);
+		$save_rc = file_put_contents('/tmp/.mupiboxconfig.json', $json_object);
+		exec("sudo chmod 755 /etc/mupibox/mupiboxconfig.json");
+		exec("sudo mv /tmp/.mupiboxconfig.json /etc/mupibox/mupiboxconfig.json");
+		exec("sudo /usr/local/bin/mupibox/./setting_update.sh");
+		exec("sudo -i -u dietpi /usr/local/bin/mupibox/./restart_kiosk.sh");
+		}
+	if( $change == 2 )
+		{
+		$json_object = json_encode($data);
+		$save_rc = file_put_contents('/tmp/.mupiboxconfig.json', $json_object);
+		exec("sudo mv /tmp/.mupiboxconfig.json /etc/mupibox/mupiboxconfig.json");
+		exec("sudo /usr/local/bin/mupibox/./setting_update.sh");
+		}
 	$rc = $output[count($output)-1];
-	$CHANGE_TXT=$CHANGE_TXT."</ul>";
+	$CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 ?>
 
 <form class="appnitro" method="post" action="admin.php" id="form"enctype="multipart/form-data">
@@ -210,7 +224,7 @@
 						{
 						print '<input id="saveForm" class="button_text" type="submit" name="debugdownload" value="Download Debug-Log" onclick="window.open(\'./debug.php\', \'_blank\');" />';
 						}
-				?>
+				?><br />
 				<?php
 					$sdcommand = "sudo cat /home/dietpi/.mupibox/spotifycontroller-main/config/config.json | grep '\"logLevel\": \"error\"'";
 					exec($sdcommand, $sdoutput, $sdresult );
