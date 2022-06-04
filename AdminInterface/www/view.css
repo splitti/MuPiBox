@@ -263,6 +263,11 @@ form.appnitro
 	width:61%;
 }
 
+.appnitro li .li_norm
+{
+	width:100%;
+}
+
 form ul
 {
 	font-size:100%;
@@ -473,7 +478,7 @@ input.button_text
 		height:25px;
         background-color:#44afe2;
         border:1px solid #054b61;
-		font-size:85%;
+		font-size:100%;
 		font-weight:bold;
 		margin-bottom:5px;
 
@@ -488,13 +493,47 @@ input.button_text_red
 		min-width: 140px;
         background-color:#FF0000;
         border:1px solid #000000;
-		font-size:85%;
+		font-size:100%;
 		font-weight:bold;
 		height:25px;
 		margin-bottom:5px;
 
 }
+input.button_text_green
+{
+        overflow:visible;
+        color:#ffffff;
+        padding:1px 5px;
+        width:auto;
+		min-width: 140px;
+        background-color:#008000;
+        border:1px solid #000000;
+		font-size:100%;
+		font-weight:bold;
+		height:25px;
+		margin-bottom:5px;
+
+}
+input.button_text_upload
+{
+        overflow:visible;
+        color:#000000;
+        padding:1px 5px;
+        width:auto;
+		min-width: 140px;
+        #background-color:#FF0000;
+        #border:1px solid #000000;
+		font-size:100%;
+		font-weight:bold;
+		height:25px;
+		margin-bottom:5px;
+}
+
 input.button_text_red:hover
+{
+        background-color:#000000;
+}
+input.button_text_green:hover
 {
         background-color:#000000;
 }

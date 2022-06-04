@@ -236,7 +236,7 @@
 
 			<input id="saveForm" class="button_text" type="submit" name="backupdownload" value="Download Backup" onclick="window.open('./backup.php', '_blank');" />
 			<p>Restore Backup-File:</p>
-			<input type="file" class="button_text" name="fileToUpload" id="fileToUpload">
+			<input type="file" class="button_text_upload" name="fileToUpload" id="fileToUpload">
 			<input type="submit" class="button_text" value="Upload Backup File" name="submitfile"  onclick="return confirm('Do really want to restore the settings?');" >
 		</li>
 		<li class="li_norm"><h2>Reset MuPiBox-settings</h2>
