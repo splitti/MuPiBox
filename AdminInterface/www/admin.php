@@ -88,7 +88,8 @@
 		exec($command, $output, $result );
 		$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
 		$data = json_decode($string, true);
-		$change=3;
+		$change=1;
+		$data["mupibox"]["version"]=$data["mupibox"]["version"]." DEVELOPMENT";
 		$CHANGE_TXT=$CHANGE_TXT."<li>Update complete to Development-Version ".$data["mupibox"]["version"]."</li>";
 		}
 	if( $_POST['os_update'] )
@@ -191,7 +192,7 @@
 			</p>
 			<input id="saveForm" class="button_text" type="submit" name="os_update" value="Update OS"  onclick="return confirm('Do really want to update the Operating System?');" />
 			<input id="saveForm" class="button_text" type="submit" name="mupibox_update" value="Update MuPiBox"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
-			<input id="saveForm" class="button_text_red" type="submit" name="mupibox_devupdate" value="Update MuPiBox Development"  onclick="return confirm('Do really want to Update the MuPiBox to unstable version?');" />
+			<input id="saveForm" class="button_text_red" type="submit" name="mupibox_devupdate" value="Update MuPiBox Development Version"  onclick="return confirm('Do really want to Update the MuPiBox to unstable version? Notice: This is an untested Development-Version!');" />
 		</li>
 
 		<li class="li_norm"><h2>Generate Playlists</h2>
