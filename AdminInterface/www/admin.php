@@ -195,14 +195,14 @@
 		<li class="li_norm"><h2>MuPiBox Debugging</h2>
 			<p>Some important options to load necessary logs.</p>
 
-			<input id="saveForm" class="button_text" type="submit" name="debug" value="<?php
+				<?php
 					if( $data["chromium"]["debug"] == 1)
 						{
-						print "Chrome Debugging Active - turn off";
+						print '<input id="saveForm" class="button_text_red" type="submit" name="debug" value="Chrome Debugging Active - turn off';
 						}
 					else
 						{
-						print "Chrome Debugging Off - turn on";
+						print '<input id="saveForm" class="button_text_green" type="submit" name="debug" value="Chrome Debugging Off - turn on"';
 						}
 				?>" />	
 				<?php
@@ -211,16 +211,16 @@
 						print '<input id="saveForm" class="button_text" type="submit" name="debugdownload" value="Download Debug-Log" onclick="window.open(\'./debug.php\', \'_blank\');" />';
 						}
 				?>
-			<input id="saveForm" class="button_text" type="submit" name="spotifydebug" value="<?php
+				<?php
 					$sdcommand = "sudo cat /home/dietpi/.mupibox/spotifycontroller-main/config/config.json | grep '\"logLevel\": \"error\"'";
 					exec($sdcommand, $sdoutput, $sdresult );
 					if( $sdoutput )
 						{
-						print "Controller Debugging Off - turn on";
+						print '<input id="saveForm" class="button_text_green" type="submit" name="spotifydebug" value="Controller Debugging Off - turn on';
 						}
 					else
 						{
-						print "Controller Debugging Active - turn off";
+						print '<input id="saveForm" class="button_text_green" type="submit" name="spotifydebug" value="Controller Debugging Active - turn off';
 						}
 				?>" />
 			<input id="saveForm" class="button_text" type="submit" name="pm2download" value="Download PM2-Log" onclick="window.open('./pm2logs.php', '_blank');" />
