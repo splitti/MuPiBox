@@ -220,7 +220,7 @@
 						}
 					else
 						{
-						print '<input id="saveForm" class="button_text_green" type="submit" name="spotifydebug" value="Controller Debugging Active - turn off';
+						print '<input id="saveForm" class="button_text_red" type="submit" name="spotifydebug" value="Controller Debugging Active - turn off';
 						}
 				?>" />
 			<input id="saveForm" class="button_text" type="submit" name="pm2download" value="Download PM2-Log" onclick="window.open('./pm2logs.php', '_blank');" />
@@ -230,17 +230,18 @@
 			<input id="saveForm" class="button_text" type="submit" name="reboot" value="Reboot MuPiBox" onclick="return confirm('Do really want to reboot?');" />
 			<input id="saveForm" class="button_text" type="submit" name="shutdown" value="Shutdown MuPiBox"  onclick="return confirm('Do really want to shutdown?');" />
 		</li>
-
-		<li class="li_norm"><h2>Backup and restore MuPiBox-settings</h2>
+		<li class="li_norm"><h2>Backup MuPiBox-settings</h2>
 			<p>Backup MuPiBox-Data (mupiboxconfig.json and data.json):</p>
 
 			<input id="saveForm" class="button_text" type="submit" name="backupdownload" value="Download Backup" onclick="window.open('./backup.php', '_blank');" />
+		</li>
+		<li class="li_norm"><h2>Restore MuPiBox-settings</h2>
 			<p>Restore Backup-File:</p>
 			<input type="file" class="button_text_upload" name="fileToUpload" id="fileToUpload">
 			<input type="submit" class="button_text" value="Upload Backup File" name="submitfile"  onclick="return confirm('Do really want to restore the settings?');" >
 		</li>
 		<li class="li_norm"><h2>Reset MuPiBox-settings</h2>
-			<p>This will delete all configurations, including the Spotify-Connectio:</p>
+			<p>This will delete all configurations, including the Spotify-Connection:</p>
 			<input id="saveForm" class="button_text_red" type="submit" name="resetMupiConf" value="RESET mupiboxconf.json" onclick="return confirm('Do really want to reset to default mupiboxconf.json?');" />
 			<p>Delete all Media-Data in data.json:</p>
 			<input id="saveForm" class="button_text_red" type="submit" name="resetDataJson" value="RESET data.json" onclick="return confirm('Do really want to delete data.json?');" />
