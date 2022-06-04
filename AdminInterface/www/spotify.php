@@ -71,8 +71,11 @@ $CHANGE_TXT=$CHANGE_TXT."</ul>";
                 </div>
                                 <h2>RESET ALL DATA</h2>
                 <p>Click this Button, to reset all saved spotify data!!!</p>
-                              <ul ><li class="buttons"><input id="saveForm" class="button_text_red" type="submit" name="resetData" value="RESET ALL SPOTIFY DATA" /></li>
-                                </ul>
+				<ul>
+					<li class="buttons">
+						<input id="saveForm" class="button_text_red" type="submit" name="resetData" value="RESET ALL SPOTIFY DATA" onclick="return confirm('Do really want to reset all Connection-Data to Spotify?');" />
+					</li>
+				</ul>
 
                                 <h2>STEP 1</h2>
                 <p>Please enter Spotify Username and Password. Please notice, spotify premium or family is required!</p>
