@@ -48,7 +48,7 @@
          <li><a href="https://paypal.me/EGerhardt" target="_blank">Paypal to Erik (nero)</a></li>
          <li><a href="https://paypal.me/splittscheid" target="_blank">Paypal to Olaf (splitti)</a></li>
       </ul>
-	  <p><img src=/images/thank-you.jpg' /></p>
+	  <p><img src='/images/thank-you.jpg' width='300px' /></p>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>

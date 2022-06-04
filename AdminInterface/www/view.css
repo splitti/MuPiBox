@@ -469,10 +469,13 @@ input.button_text
         color:#ffffff;
         padding:1px 5px;
         width:auto;
+		min-width: 140px;
+		height:25px;
         background-color:#44afe2;
         border:1px solid #054b61;
 		font-size:85%;
 		font-weight:bold;
+		margin-bottom:5px;
 
 }
 
@@ -482,10 +485,13 @@ input.button_text_red
         color:#ffffff;
         padding:1px 5px;
         width:auto;
+		min-width: 140px;
         background-color:#FF0000;
         border:1px solid #000000;
 		font-size:85%;
 		font-weight:bold;
+		height:25px;
+		margin-bottom:5px;
 
 }
 input.button_text_red:hover

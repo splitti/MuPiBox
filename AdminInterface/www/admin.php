@@ -66,7 +66,16 @@
 					$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
 					$data = json_decode($string, true);
 					$change=1;
-					$CHANGE_TXT=$CHANGE_TXT."<li>Update complete to version ".$data["mupibox"]["version"]."</li>";
+					$CHANGE_TXT=$CHANGE_TXT."<li>Update complete to Version ".$data["mupibox"]["version"]."</li>";
+					}
+			if( $_POST['mupibox_devupdate'] )
+					{
+					$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update-developer.sh | sudo bash";
+					exec($command, $output, $result );
+					$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
+					$data = json_decode($string, true);
+					$change=1;
+					$CHANGE_TXT=$CHANGE_TXT."<li>Update complete to Development-Version ".$data["mupibox"]["version"]."</li>";
 					}
 			if( $_POST['os_update'] )
 					{
@@ -148,10 +157,11 @@
 				<td>Latest Version:</td><td><?php print $dataonline["version"]; ?></td>
 		</tr>
 		</table>
-		Please notice: Always create a backup before updating!!!<br>The update procedure takes a long time (on older Raspberry Pi's up to 15 minutes). Do not close the browser and wait for the MuPiBox to restart! The restart completes the update.
+		</p><p><b>Please notice: </b>Always create a backup before updating!!!<br>The update procedure takes a long time (on older Raspberry Pi's up to 15 minutes). Do not close the browser and wait for the MuPiBox to restart! The restart completes the update.
 		</p>
 		<input id="saveForm" class="button_text" type="submit" name="os_update" value="Update OS"  onclick="return confirm('Do really want to update the Operating System?');" />
 		<input id="saveForm" class="button_text" type="submit" name="mupibox_update" value="Update MuPiBox"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
+		<input id="saveForm" class="button_text" type="submit" name="mupibox_devupdate" value="Update MuPiBox Development"  onclick="return confirm('Do really want to Update the MuPiBox to unstable version?');" />
 	</li>
 
 	<li class="li_norm"><h2>Generate Playlists</h2>
