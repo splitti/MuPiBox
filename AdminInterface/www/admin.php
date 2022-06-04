@@ -211,18 +211,16 @@
 						print '<input id="saveForm" class="button_text" type="submit" name="debugdownload" value="Download Debug-Log" onclick="window.open(\'./debug.php\', \'_blank\');" />';
 						}
 				?>
-			<input id="saveForm" class="button_text" type="submit" name="spotifydebug" value="
-				<?php
-
+			<input id="saveForm" class="button_text" type="submit" name="spotifydebug" value="<?php
 					$sdcommand = "sudo cat /home/dietpi/.mupibox/spotifycontroller-main/config/config.json | grep '\"logLevel\": \"error\"'";
 					exec($sdcommand, $sdoutput, $sdresult );
 					if( $sdoutput )
 						{
-						print 'Controller Debugging Off - turn on';
+						print "Controller Debugging Off - turn on";
 						}
 					else
 						{
-						print 'Controller Debugging Active - turn off';
+						print "Controller Debugging Active - turn off";
 						}
 				?>" />
 			<input id="saveForm" class="button_text" type="submit" name="pm2download" value="Download PM2-Log" onclick="window.open('./pm2logs.php', '_blank');" />
