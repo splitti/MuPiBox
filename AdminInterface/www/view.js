@@ -13,16 +13,15 @@ $(document).ready(function(){
     });
 
     // Check for modal eligibility
-    var showAgainInMs = 1800000;
+    var showAgainInMs = 86400000;
     var lastTimestamp = Number(localStorage.getItem("last-showed-at"));
 
     if ((currentTimestamp - lastTimestamp) >= showAgainInMs) {
         setTimeout(function() {
             localStorage.setItem("last-showed-at", currentTimestamp);
             $("#ModalCenter").modal("show");
-        }, 1500);
+        }, 3000);
     }
-
 });
 
 $('#reset-session').on('click',function(){
@@ -58,7 +57,7 @@ $(document).ready(function(){
         $('#loading').click(function(){
         $("#mupif").fadeIn();
         $("#loading-circle").fadeIn();
-	$("#lock-modal").fadeIn('slow');
+		$("#lock-modal").fadeIn('slow');
         });
 });
 
