@@ -424,6 +424,11 @@ function seek(progress){
   }
 }
 
+function shutoff(){
+  var shutoff = 'bash /usr/local/bin/mupibox/shutdown.sh';
+  cmdCall(shutoff);
+}
+
 function cmdCall(cmd){
   return new Promise(function (resolve, reject){
     childProcess.exec(cmd, function(error, standardOutput, standardError) {
@@ -670,6 +675,9 @@ app.use(function(req, res){
 
   else if (command.name == "shuffleoff")
     shuffleoff();
+
+  else if (command.name == "shutoff")
+    shutoff();
     
   else if (command.name == "seek+30")
     seek(1);

@@ -6,6 +6,7 @@ import { Media } from '../media';
 import { Network } from "../network";
 import { Observable } from "rxjs";
 import { ActivityIndicatorService } from '../activity-indicator.service';
+import { PlayerCmds, PlayerService } from '../player.service';
 
 @Component({
   selector: 'app-edit',
@@ -17,10 +18,13 @@ export class EditPage implements OnInit {
   media: Observable<Record<any, any>[]>;
   network: Observable<Network>;
   activityIndicatorVisible = false;
+  editButtonclickCount = 0;
+  editClickTimer = 0;
 
   constructor(
     private mediaService: MediaService,
     public alertController: AlertController,
+    private playerService: PlayerService,
     private router: Router,
     private activityIndicatorService: ActivityIndicatorService
   ) {
@@ -102,5 +106,41 @@ export class EditPage implements OnInit {
 
   adminButtonPressed() {
     this.router.navigate(['/admin']);
+  }
+
+  async shutdownMessage() {
+    const alert = await this.alertController.create({
+      cssClass: 'alert',
+      header: 'Warning',
+      message: 'Do you want to shutdown the MuPiBox?',
+      buttons: [
+        {
+          text: 'Shutdown',
+          handler: () => {
+            this.playerService.sendCmd(PlayerCmds.SHUTOFF);
+          }
+        },
+        {
+          text: 'Cancel'
+        }
+      ]
+    });
+
+    await alert.present();
+  }
+
+  shutdown() {
+    window.clearTimeout(this.editClickTimer);
+
+    if (this.editButtonclickCount < 9) {
+      this.editButtonclickCount++;
+
+      this.editClickTimer = window.setTimeout(() => {
+        this.editButtonclickCount = 0;
+      }, 500);
+    } else {
+      this.editButtonclickCount = 0;
+      this.shutdownMessage();
+    }
   }
 }

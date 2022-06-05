@@ -19,7 +19,8 @@ export enum PlayerCmds {
   SEEKFORWARD = 'seek+30',
   SEEKBACK = 'seek-30',
   SHUFFLEON = 'shuffleon',
-  SHUFFLEOFF = 'shuffleoff'
+  SHUFFLEOFF = 'shuffleoff',
+  SHUTOFF = 'shutoff'
 }
 
 @Injectable({
