@@ -103,7 +103,6 @@ exec 3>${LOG}
 	sudo wget ${SRC}/scripts/bluetooth/autoconnect_bt.sh -O /usr/local/bin/mupibox/autoconnect_bt.sh >&3 2>&3
 	sudo wget ${SRC}/config/services/mupi_autoconnect_bt.service -O /etc/systemd/system/mupi_autoconnect_bt.service  >&3 2>&3
 
-		
 	sudo wget ${SRC}/scripts/mupibox/restart_kiosk.sh -O /usr/local/bin/mupibox/restart_kiosk.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/mupibox/set_deviceid.sh -O /usr/local/bin/mupibox/set_deviceid.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/mupibox/spotify_restart.sh -O /usr/local/bin/mupibox/spotify_restart.sh >&3 2>&3
@@ -166,5 +165,3 @@ exec 3>${LOG}
 } | whiptail --title "MuPiBox Update" --gauge "Please wait while installing" 6 60 0
 
 echo "Update finished - System will reboot in 3 seconds!"
-sleep 3
-sudo reboot

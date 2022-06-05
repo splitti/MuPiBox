@@ -30,3 +30,10 @@
 ?>
 	</body>
 </html>
+<?php
+	if( $reboot == 1 )
+		{
+		$command='sudo su - -c "sleep 2;reboot" &';
+		exec($command);
+		}
+?>
