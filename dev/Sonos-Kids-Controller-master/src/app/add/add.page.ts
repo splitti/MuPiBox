@@ -5,6 +5,7 @@ import { Media } from '../media';
 import Keyboard from 'simple-keyboard';
 import { NgForm } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { PlayerCmds, PlayerService } from '../player.service';
 
 
 @Component({
@@ -65,7 +66,8 @@ export class AddPage implements OnInit, AfterViewInit {
     private mediaService: MediaService,
     private navController: NavController,
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    private playerService: PlayerService
   ) {
     this.route.queryParams.subscribe(params => {
       if (this.router.getCurrentNavigation().extras.state) {
@@ -253,6 +255,8 @@ export class AddPage implements OnInit, AfterViewInit {
     this.keyboard.clearInput('radio_cover');
 
     this.validate();
+
+    this.playerService.sendCmd(PlayerCmds.INDEX);
 
     this.navController.back();
   }

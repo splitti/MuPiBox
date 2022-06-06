@@ -87,11 +87,9 @@ export class PlayerPage implements OnInit {
     this.artworkService.getArtwork(this.media).subscribe(url => {
       this.cover = url;
     });
-    console.log(this.currentPlaylist);
   }
 
   seek(){
-    console.log(this.media.type);
     let newValue = +this.range.value;
     if(this.media.type === 'spotify'){
       let duration = this.currentPlayedSpotify.item.duration_ms;
@@ -103,7 +101,6 @@ export class PlayerPage implements OnInit {
   }
 
   updateProgress(){
-    console.log(this.media.type);
     this.mediaService.current$.subscribe(spotify => {
       this.currentPlayedSpotify = spotify;
     });
@@ -112,7 +109,6 @@ export class PlayerPage implements OnInit {
     });
     if(this.media.type === 'spotify'){
       let seek = this.currentPlayedSpotify?.progress_ms || 0;
-      console.log(seek);
       this.progress = (seek / this.currentPlayedSpotify?.item.duration_ms) * 100 || 0;
       setTimeout(() => {
         if(this.updateProgression){
@@ -121,7 +117,6 @@ export class PlayerPage implements OnInit {
       }, 1000)
     } else if (this.media.type === 'library'){
       let seek = this.currentPlayedLocal?.progressTime || 0;
-      console.log(seek);
       this.progress = seek || 0;
       setTimeout(() => {
         if(this.updateProgression){
@@ -133,6 +128,7 @@ export class PlayerPage implements OnInit {
 
   ionViewWillEnter() {
     console.log(this.media);
+    console.log(this.currentPlaylist);
     this.updateProgression = true;
     this.playerService.playMedia(this.media);
     this.updateProgress();
