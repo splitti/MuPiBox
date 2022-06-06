@@ -1,4 +1,5 @@
 export interface Media {
+    index?: number;
     artist?: string;
     title?: string;
     query?: string;
@@ -8,4 +9,5 @@ export interface Media {
     type: string;
     category: string;
     artistcover?: string;
+    shuffle?: boolean;
 }

@@ -67,14 +67,16 @@ export class PlayerPage implements OnInit {
   }
 
   ngOnInit() {
-    console.log(this.media.type);
     this.mediaService.current$.subscribe(spotify => {
       this.currentPlayedSpotify = spotify;
     });
     this.mediaService.local$.subscribe(local => {
       this.currentPlayedLocal = local;
     });
-
+    if(this.media?.shuffle){
+      this.toggleshuffle();
+      this.skipNext();
+    }
     this.artworkService.getArtwork(this.media).subscribe(url => {
       this.cover = url;
     });
@@ -139,6 +141,12 @@ export class PlayerPage implements OnInit {
     this.updateProgression = false;
     this.playerService.sendCmd(PlayerCmds.SHUFFLEOFF);
     this.playerService.sendCmd(PlayerCmds.STOP);
+    if(this.media.type === 'spotify' && (this.media.category === 'playlist' || this.media.category === 'music')) {
+      if(this.shuffle && !this.media?.shuffle || !this.shuffle && this.media?.shuffle){
+        this.media.shuffle = this.shuffle;
+        this.mediaService.editRawMediaAtIndex(this.media.index, this.media);
+      }
+    } 
   }
 
   resumePlayback(){
