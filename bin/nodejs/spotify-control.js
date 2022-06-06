@@ -588,6 +588,27 @@ app.get("/playlistTracks", function(req, res){
   });
 });
 
+/*endpoint to return playlist information*/
+/*only used if sonos-kids-player is modified*/
+app.get("/episode", function(req, res){
+  spotifyApi.getEpisode(currentMeta.activePlaylist)
+  .then(function(data) {
+    let state = data.body;
+    if (Object.keys(state).length === 0) {
+      //console.log("state is empty!");
+      state = {
+        total: ""
+      };
+    } else {
+      console.log("state is not empty !");
+    } 
+    //log.debug("[Spotify Control] Getting available state...");
+    res.send(state);
+  }, function(err) {
+    handleSpotifyError(err,"0");
+  });
+});
+
 /*endpoint to return all local metainformation*/
 /*only used if sonos-kids-player is modified*/
 app.get("/local", function(req, res){
