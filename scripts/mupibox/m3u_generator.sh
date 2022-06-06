@@ -119,6 +119,8 @@ else
 	/usr/bin/chown -R dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover/
 	/usr/bin/chown dietpi:dietpi ${DATA}
 
+	bash /usr/local/bin/mupibox/add_index.sh
+
 	echo "Cover & Playlists generated"
 	rm ${M3ULOCK}
 fi
