@@ -87,6 +87,7 @@ export class PlayerPage implements OnInit {
     this.artworkService.getArtwork(this.media).subscribe(url => {
       this.cover = url;
     });
+    console.log(this.currentPlaylist);
   }
 
   seek(){
