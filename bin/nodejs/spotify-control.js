@@ -102,6 +102,7 @@ var currentMeta = {
   progressTime: "",
   volume: 0
 };
+var playlist = [];
 
 function writeplayerstatePlay(){
 	playerstate = 'play';
@@ -591,7 +592,7 @@ app.get("/playlistTracks", function(req, res){
 /*endpoint to return playlist information*/
 /*only used if sonos-kids-player is modified*/
 app.get("/episode", function(req, res){
-  spotifyApi.getEpisode(currentMeta.activePlaylist)
+  spotifyApi.getEpisode('3cLAolLFZqdpTXiEEbEshA')
   .then(function(data) {
     let state = data.body;
     if (Object.keys(state).length === 0) {
