@@ -10,6 +10,7 @@ import { CurrentMPlayer } from '../current.mplayer';
 import { Observable } from 'rxjs';
 import { IonRange } from '@ionic/angular';
 import { Resume } from '../resume';
+import { CurrentPlaylist } from '../current.playlist';
 
 @Component({
   selector: 'app-player',
@@ -39,10 +40,12 @@ export class PlayerPage implements OnInit {
   updateProgression = false;
   currentPlayedSpotify: CurrentSpotify;
   currentPlayedLocal: CurrentMPlayer;
+  currentPlaylist: CurrentPlaylist;
   progress = 0;
   shuffle = false;
   public readonly spotify$: Observable<CurrentSpotify>;
   public readonly local$: Observable<CurrentMPlayer>;
+  public readonly playlist$: Observable<CurrentPlaylist>;
 
   constructor(
     private mediaService: MediaService,
@@ -53,6 +56,7 @@ export class PlayerPage implements OnInit {
   ) {
     this.spotify$ = this.mediaService.current$;
     this.local$ = this.mediaService.local$;
+    this.playlist$ = this.mediaService.playlist$;
     this.route.queryParams.subscribe(params => {
       if (this.router.getCurrentNavigation().extras.state.media) {
         this.media = this.router.getCurrentNavigation().extras.state.media;
@@ -72,6 +76,9 @@ export class PlayerPage implements OnInit {
     });
     this.mediaService.local$.subscribe(local => {
       this.currentPlayedLocal = local;
+    });
+    this.mediaService.playlist$.subscribe(playlist => {
+      this.currentPlaylist = playlist;
     });
     if(this.media?.shuffle){
       this.toggleshuffle();

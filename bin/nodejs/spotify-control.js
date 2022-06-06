@@ -573,6 +573,14 @@ app.get("/playlistTracks", function(req, res){
   spotifyApi.getPlaylistTracks(currentMeta.activePlaylist)
   .then(function(data) {
     let state = data.body;
+    if (Object.keys(state).length === 0) {
+      //console.log("state is empty!");
+      state = {
+        total: ""
+      };
+    } else {
+      console.log("state is not empty !");
+    } 
     //log.debug("[Spotify Control] Getting available state...");
     res.send(state);
   }, function(err) {
