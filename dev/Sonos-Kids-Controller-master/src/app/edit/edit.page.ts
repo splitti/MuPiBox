@@ -56,6 +56,7 @@ export class EditPage implements OnInit {
               this.media = this.mediaService.getRawMediaObservable();
               this.mediaService.updateRawMedia();
               this.mediaService.updateNetwork();
+              this.playerService.sendCmd(PlayerCmds.INDEX);
             }, 1000)
           }
         },
