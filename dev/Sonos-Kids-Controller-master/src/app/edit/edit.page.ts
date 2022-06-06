@@ -18,8 +18,6 @@ export class EditPage implements OnInit {
   media: Observable<Record<any, any>[]>;
   network: Observable<Network>;
   activityIndicatorVisible = false;
-  editButtonclickCount = 0;
-  editClickTimer = 0;
 
   constructor(
     private mediaService: MediaService,
@@ -127,20 +125,5 @@ export class EditPage implements OnInit {
     });
 
     await alert.present();
-  }
-
-  shutdown() {
-    window.clearTimeout(this.editClickTimer);
-
-    if (this.editButtonclickCount < 9) {
-      this.editButtonclickCount++;
-
-      this.editClickTimer = window.setTimeout(() => {
-        this.editButtonclickCount = 0;
-      }, 500);
-    } else {
-      this.editButtonclickCount = 0;
-      this.shutdownMessage();
-    }
   }
 }
