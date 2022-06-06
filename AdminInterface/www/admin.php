@@ -194,8 +194,8 @@
 			<p><b>Please notice: </b>Always create a backup before updating!!!<br>The update procedure takes a long time (on older Raspberry Pi's up to 15 minutes). Do not close the browser and wait for the reboot.
 			</p>
 			<input id="saveForm" class="button_text" type="submit" name="os_update" value="Update OS"  onclick="return confirm('Do really want to update the Operating System?');" />
-			<input id="saveForm" class="button_text" type="submit" name="mupibox_update" value="Update MuPiBox"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
-			<input id="saveForm" class="button_text_red" type="submit" name="mupibox_devupdate" value="Update MuPiBox Development Version"  onclick="return confirm('Do really want to Update the MuPiBox to unstable version? Notice: This is an untested Development-Version!');" />
+			<input id="saveForm" class="button_text" type="submit" name="mupibox_update" value="Update MuPiBox (Stable Version)"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
+			<input id="saveForm" class="button_text_red" type="submit" name="mupibox_devupdate" value="Update MuPiBox (Development Version)"  onclick="return confirm('Do really want to Update the MuPiBox to unstable version? Notice: This is an untested Development-Version!');" />
 		</li>
 
 		<li class="li_norm"><h2>Generate Playlists</h2>
