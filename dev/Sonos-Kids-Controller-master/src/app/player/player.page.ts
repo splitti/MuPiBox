@@ -150,14 +150,13 @@ export class PlayerPage implements OnInit {
     this.playerService.sendCmd(PlayerCmds.STOP);
     if(this.media.type === 'spotify' && (this.media.category === 'playlist' || this.media.category === 'music')) {
       if(this.shuffle && !this.media?.shuffle || !this.shuffle && this.media?.shuffle){
-        // this.saveMedia.shuffle = this.shuffle;
-        // this.saveMedia.index = this.media.index;
-        // this.saveMedia.id = this.media.id;
-        // this.saveMedia.title = this.media.title;
-        // this.saveMedia.type = this.media.type;
-        // this.saveMedia.category = this.media.category;
-        // console.log(this.saveMedia);
-        this.mediaService.editRawMediaAtIndex(2, this.media);
+        this.saveMedia.shuffle = this.shuffle;
+        this.saveMedia.index = this.media?.index;
+        this.saveMedia.id = this.media?.id;
+        this.saveMedia.title = this.media?.title;
+        this.saveMedia.type = this.media?.type;
+        this.saveMedia.category = this.media?.category;
+        this.mediaService.editRawMediaAtIndex(1, this.saveMedia);
       }
     } 
   }
