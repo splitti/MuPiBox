@@ -8,7 +8,7 @@ import { MediaService } from '../media.service';
 import { CurrentSpotify } from '../current.spotify';
 import { CurrentMPlayer } from '../current.mplayer';
 import { Observable } from 'rxjs';
-import { IonRange } from '@ionic/angular';
+import { IonRange, NavController } from '@ionic/angular';
 import { Resume } from '../resume';
 import { CurrentPlaylist } from '../current.playlist';
 
@@ -60,6 +60,7 @@ export class PlayerPage implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private artworkService: ArtworkService,
+    private navController: NavController,
     private playerService: PlayerService
   ) {
     this.spotify$ = this.mediaService.current$;
@@ -114,6 +115,9 @@ export class PlayerPage implements OnInit {
     this.mediaService.playlist$.subscribe(playlist => {
       this.currentPlaylist = playlist;
     });
+    if(this.playing && !this.currentPlayedSpotify.is_playing && !this.currentPlayedLocal.playing){
+      this.navController.back();
+    }
     if(this.media.type === 'spotify'){
       let seek = this.currentPlayedSpotify?.progress_ms || 0;
       this.progress = (seek / this.currentPlayedSpotify?.item.duration_ms) * 100 || 0;

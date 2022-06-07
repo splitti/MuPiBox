@@ -11,4 +11,5 @@ export interface CurrentSpotify {
         track_number?: number;
     };
     currently_playing_type?: string;
+    is_playing?: boolean;
 }
