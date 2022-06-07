@@ -115,6 +115,14 @@ export class PlayerPage implements OnInit {
     this.mediaService.playlist$.subscribe(playlist => {
       this.currentPlaylist = playlist;
     });
+
+    if(this.currentPlaylist?.total>1){
+      console.log(this.currentPlaylist?.total);
+      this.currentPlaylist?.items.forEach(element => {
+        console.log(element.track?.name);
+      });
+    }
+
     if(this.progress > 1){
       if(this.playing && !this.currentPlayedSpotify.is_playing && !this.currentPlayedLocal.playing){
         this.navController.back();
@@ -141,11 +149,6 @@ export class PlayerPage implements OnInit {
 
   ionViewWillEnter() {
     console.log(this.media);
-    if(this.currentPlaylist?.total>1){
-      this.currentPlaylist?.items.forEach(element => {
-        console.log(element.track?.name);
-      });
-    }
     this.updateProgression = true;
     this.playerService.playMedia(this.media);
     this.updateProgress();
