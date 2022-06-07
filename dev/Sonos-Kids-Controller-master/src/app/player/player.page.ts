@@ -88,10 +88,6 @@ export class PlayerPage implements OnInit {
     this.mediaService.playlist$.subscribe(playlist => {
       this.currentPlaylist = playlist;
     });
-    if(this.media?.shuffle){
-      this.toggleshuffle();
-      this.skipNext();
-    }
     this.artworkService.getArtwork(this.media).subscribe(url => {
       this.cover = url;
     });
@@ -145,6 +141,10 @@ export class PlayerPage implements OnInit {
     if (this.resumePlay){
       this.resumePlayback();
     }
+    if(this.media?.shuffle){
+      this.toggleshuffle();
+      this.skipNext();
+    }
   }
 
   ionViewWillLeave() {
@@ -157,14 +157,13 @@ export class PlayerPage implements OnInit {
     this.playerService.sendCmd(PlayerCmds.STOP);
     if(this.media.type === 'spotify' && (this.media.category === 'playlist' || this.media.category === 'music')) {
       if(this.shuffle && !this.media?.shuffle || !this.shuffle && this.media?.shuffle){
-        this.media.shuffle = this.shuffle;
-        // this.saveMedia.index = this.media?.index;
-        // this.saveMedia.id = this.media?.id;
-        // this.saveMedia.title = this.media?.title;
-        // this.saveMedia.type = this.media?.type;
-        // this.saveMedia.category = this.media?.category;
-        console.log(this.media.index);
-        this.mediaService.editRawMediaAtIndex(this.media.index, this.media);
+        this.saveMedia.shuffle = this.shuffle;
+        this.saveMedia.index = this.media?.index;
+        this.saveMedia.id = this.media?.id;
+        this.saveMedia.title = this.media?.title;
+        this.saveMedia.type = this.media?.type;
+        this.saveMedia.category = this.media?.category;
+        this.mediaService.editRawMediaAtIndex(this.saveMedia.index, this.saveMedia);
       }
     } 
   }
