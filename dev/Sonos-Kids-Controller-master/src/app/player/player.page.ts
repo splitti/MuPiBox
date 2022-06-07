@@ -49,6 +49,7 @@ export class PlayerPage implements OnInit {
   currentPlayedSpotify: CurrentSpotify;
   currentPlayedLocal: CurrentMPlayer;
   currentPlaylist: CurrentPlaylist;
+  playlistTrackNr = 0;
   progress = 0;
   shufflechanged = 0;
   public readonly spotify$: Observable<CurrentSpotify>;
@@ -118,7 +119,10 @@ export class PlayerPage implements OnInit {
 
     if(this.currentPlaylist?.total>1){
       console.log(this.currentPlaylist?.total);
-      this.currentPlaylist?.items.forEach(element => {
+      this.currentPlaylist?.items.forEach((element, index) => {
+        if(this.currentPlayedSpotify?.item.id === element.track?.id){
+          this.playlistTrackNr = ++index;
+        }
         console.log(element.track?.name);
       });
     }

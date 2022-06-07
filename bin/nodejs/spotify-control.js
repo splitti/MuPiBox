@@ -586,8 +586,8 @@ app.get("/playlistTracks", function(req, res){
     state = {
       total: 0
     };
+    res.send(state);
   }
-  
 });
 
 /*endpoint to return playlist information*/

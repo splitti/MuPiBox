@@ -6,7 +6,7 @@ export interface CurrentPlaylist {
 export interface Item {
     track:{
         duration_ms?: number;
-        id?: number;
+        id?: string;
         name?: string;
         type?: string;
     }
