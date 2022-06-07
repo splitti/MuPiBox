@@ -43,6 +43,7 @@ export class AddPage implements OnInit, AfterViewInit {
   editindex: number;
   editMedia: Media; 
   edit = false;
+  shuffle = false;
 
   categoryIcons = {
     audiobook: 'book-outline',
@@ -219,6 +220,7 @@ export class AddPage implements OnInit, AfterViewInit {
       if (form.form.value.spotify_query?.length) { media.query = form.form.value.spotify_query; }
       if (form.form.value.spotify_id?.length) { media.id = form.form.value.spotify_id; }
       if (form.form.value.spotify_artistid?.length) { media.artistid = form.form.value.spotify_artistid; }
+      media.shuffle = this.shuffle;
 
     } else if (this.source === 'radio') {
       if (form.form.value.radio_title?.length) { media.title = form.form.value.radio_title; }
