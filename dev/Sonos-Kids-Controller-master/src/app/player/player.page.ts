@@ -141,9 +141,11 @@ export class PlayerPage implements OnInit {
 
   ionViewWillEnter() {
     console.log(this.media);
-    this.currentPlaylist?.items.forEach(element => {
-      console.log(element.track?.name);
-    });
+    if(this.currentPlaylist?.total>1){
+      this.currentPlaylist?.items.forEach(element => {
+        console.log(element.track?.name);
+      });
+    }
     this.updateProgression = true;
     this.playerService.playMedia(this.media);
     this.updateProgress();
