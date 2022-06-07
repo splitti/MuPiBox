@@ -147,7 +147,7 @@ export class PlayerPage implements OnInit {
       }, 500)
       setTimeout(() => {
         this.skipNext();
-      }, 500) 
+      }, 1000) 
     }
   }
 
@@ -173,7 +173,7 @@ export class PlayerPage implements OnInit {
   }
 
   resumePlayback(){
-    if(this.media.type === 'spotify'){
+    if(this.media.type === 'spotify' && !this.media.shuffle){
       let j = 1;
       for(let i = 1; i < this.resume.spotify.track_number; i++){
         setTimeout(() => {
