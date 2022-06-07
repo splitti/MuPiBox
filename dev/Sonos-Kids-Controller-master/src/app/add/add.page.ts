@@ -212,7 +212,7 @@ export class AddPage implements OnInit, AfterViewInit {
     const media: Media = {
       type: this.source,
       category: this.category,
-      shuffle: false,
+      shuffle: this.shuffle
     };
 
     if (this.source === 'spotify') {
@@ -221,8 +221,6 @@ export class AddPage implements OnInit, AfterViewInit {
       if (form.form.value.spotify_query?.length) { media.query = form.form.value.spotify_query; }
       if (form.form.value.spotify_id?.length) { media.id = form.form.value.spotify_id; }
       if (form.form.value.spotify_artistid?.length) { media.artistid = form.form.value.spotify_artistid; }
-      media.shuffle = this.shuffle;
-
     } else if (this.source === 'radio') {
       if (form.form.value.radio_title?.length) { media.title = form.form.value.radio_title; }
       if (form.form.value.radio_cover?.length) { media.cover = form.form.value.radio_cover; }
@@ -303,7 +301,9 @@ export class AddPage implements OnInit, AfterViewInit {
           (artistid?.length > 0 && !(query?.length > 0))
         )
         ||
-        this.category === 'playlist' && id?.length > 0
+        (this.category === 'playlist' && id?.length > 0)
+        ||
+        (this.category === 'playlist' && this.shuffle !== this.editMedia.shuffle)
       );
     } else if (this.source === 'radio') {
       const artist = this.keyboard.getInput('radio_artist');
