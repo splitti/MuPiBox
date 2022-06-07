@@ -50,7 +50,7 @@ export class PlayerPage implements OnInit {
   currentPlayedLocal: CurrentMPlayer;
   currentPlaylist: CurrentPlaylist;
   progress = 0;
-  shufflechanged = false;
+  shufflechanged = 0;
   public readonly spotify$: Observable<CurrentSpotify>;
   public readonly local$: Observable<CurrentMPlayer>;
   public readonly playlist$: Observable<CurrentPlaylist>;
@@ -142,8 +142,10 @@ export class PlayerPage implements OnInit {
       this.resumePlayback();
     }
     if(this.media.shuffle){
-      this.playerService.sendCmd(PlayerCmds.SHUFFLEON);
-      this.skipNext();
+      setTimeout(() => {
+        this.playerService.sendCmd(PlayerCmds.SHUFFLEON);
+        this.skipNext();
+      }, 1000) 
     }
   }
 
@@ -156,7 +158,7 @@ export class PlayerPage implements OnInit {
     this.playerService.sendCmd(PlayerCmds.SHUFFLEOFF);
     this.playerService.sendCmd(PlayerCmds.STOP);
     if(this.media.type === 'spotify' && (this.media.category === 'playlist' || this.media.category === 'music')) {
-      if(this.shufflechanged){
+      if(this.shufflechanged % 2 === 1){
         this.saveMedia.shuffle = this.media?.shuffle;
         this.saveMedia.index = this.media?.index;
         this.saveMedia.id = this.media?.id;
@@ -256,11 +258,11 @@ export class PlayerPage implements OnInit {
 
   toggleshuffle(){
     if (this.media.shuffle) {
-      this.shufflechanged = true;
+      this.shufflechanged++;
       this.media.shuffle = false;
       this.playerService.sendCmd(PlayerCmds.SHUFFLEOFF);
     } else {
-      this.shufflechanged = true;
+      this.shufflechanged++;
       this.media.shuffle = true;
       this.playerService.sendCmd(PlayerCmds.SHUFFLEON);
     }
