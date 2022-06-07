@@ -510,7 +510,10 @@ async function useSpotify(command){
     else {
       log.debug("[Spotify Control] still same device, won't change: " + activeDevice);
     }
-    currentMeta.activePlaylist = command.name.split(':')[2];
+    if(command.name.split(':')[1] === 'playlist'){
+      currentMeta.activePlaylist = command.name.split(':')[2];
+    }
+    //command.name = 'spotify:show:6LuAZxNcc4sjMoJRhfZI4L';
     playMe(command.name);
 }
 
@@ -580,6 +583,10 @@ app.get("/playlistTracks", function(req, res){
       //log.debug("[Spotify Control] Getting available state...");
       res.send(state);
     }, function(err) {
+      state = {
+        total: 0
+      };
+      res.send(state);
       handleSpotifyError(err,"0");
     });
   } else {
