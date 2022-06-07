@@ -115,8 +115,10 @@ export class PlayerPage implements OnInit {
     this.mediaService.playlist$.subscribe(playlist => {
       this.currentPlaylist = playlist;
     });
-    if(this.playing && !this.currentPlayedSpotify.is_playing && !this.currentPlayedLocal.playing){
-      this.navController.back();
+    if(this.progress > 1){
+      if(this.playing && !this.currentPlayedSpotify.is_playing && !this.currentPlayedLocal.playing){
+        this.navController.back();
+      }
     }
     if(this.media.type === 'spotify'){
       let seek = this.currentPlayedSpotify?.progress_ms || 0;
