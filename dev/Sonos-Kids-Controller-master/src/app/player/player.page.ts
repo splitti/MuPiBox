@@ -111,8 +111,6 @@ export class PlayerPage implements OnInit {
     this.mediaService.playlist$.subscribe(playlist => {
       this.currentPlaylist = playlist;
     });
-    console.log(this.currentPlaylist.total);
-    console.log(this.currentPlaylist);
     if(this.media.type === 'spotify'){
       let seek = this.currentPlayedSpotify?.progress_ms || 0;
       this.progress = (seek / this.currentPlayedSpotify?.item.duration_ms) * 100 || 0;
@@ -158,7 +156,8 @@ export class PlayerPage implements OnInit {
         this.saveMedia.title = this.media.title;
         this.saveMedia.type = this.media.type;
         this.saveMedia.category = this.media.category;
-        this.mediaService.editRawMediaAtIndex(this.saveMedia.index, this.saveMedia);
+        console.log(this.saveMedia);
+        this.mediaService.editRawMediaAtIndex(2, this.saveMedia);
       }
     } 
   }
