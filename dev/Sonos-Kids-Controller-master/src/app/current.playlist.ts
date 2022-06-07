@@ -9,5 +9,12 @@ export interface Item {
         id?: string;
         name?: string;
         type?: string;
+        album?:{
+            images?: Image[];
+        }
     }
+}
+
+export interface Image {
+    url?: string;
 }

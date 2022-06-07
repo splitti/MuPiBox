@@ -44,7 +44,7 @@
                             <div>
                                 <ion-item>
                                     <ion-label>Shuffle Mode</ion-label>
-                                    <ion-checkbox #spotify_shuffle name="spotify_shuffle" [(ngModel)]="shuffle"></ion-checkbox>
+                                    <ion-checkbox #spotify_shuffle name="spotify_shuffle" [(ngModel)]="shuffle" (ionChange)="validate()"></ion-checkbox>
                                 </ion-item>
                             </div>
                         </ion-col>

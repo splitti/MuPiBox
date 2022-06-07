@@ -118,11 +118,12 @@ export class PlayerPage implements OnInit {
       this.currentPlaylist = playlist;
     });
 
-    if(this.currentPlaylist?.total>1){
+    if(this.media.category === 'playlist'){
       console.log(this.currentPlaylist?.total);
       this.currentPlaylist?.items.forEach((element, index) => {
         if(this.currentPlayedSpotify?.item.id === element.track?.id){
           this.playlistTrackNr = ++index;
+          this.cover = element.track.album.images[1].url;
         }
         console.log(element.track?.name);
       });

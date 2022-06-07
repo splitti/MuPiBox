@@ -91,10 +91,6 @@ export class AddPage implements OnInit, AfterViewInit {
     this.keyboard = new Keyboard({
       onChange: input => {
         this.selectedInputElem.value = input;
-        console.log("Focus");
-        console.log(this.selectedInputElem);
-        console.log("Focus");
-        console.log(this.selectedInputElem.value);
         this.validate();
       },
       onKeyPress: button => {
@@ -167,10 +163,6 @@ export class AddPage implements OnInit, AfterViewInit {
 
   focusChanged(event: any) {
     this.selectedInputElem = event.target;
-    console.log("Focus");
-    console.log(this.selectedInputElem);
-    console.log("Focus");
-    console.log(this.selectedInputElem.value);
 
     this.keyboard.setOptions({
       inputName: event.target.name
