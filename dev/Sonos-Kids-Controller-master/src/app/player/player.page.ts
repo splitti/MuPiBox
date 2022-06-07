@@ -22,7 +22,14 @@ export class PlayerPage implements OnInit {
 
   media: Media;
   resume: Resume;
-  saveMedia: Media;
+  saveMedia: Media = {
+    index: 0,
+    type: "spotify",
+    category: "playlist",
+    id: "",
+    title: "",
+    shuffle: true,
+  }
   resumePlay = false;
   resumeFile: Resume = {
     spotify:{
@@ -156,6 +163,7 @@ export class PlayerPage implements OnInit {
         // this.saveMedia.title = this.media?.title;
         // this.saveMedia.type = this.media?.type;
         // this.saveMedia.category = this.media?.category;
+        console.log(this.media.index);
         this.mediaService.editRawMediaAtIndex(this.media.index, this.media);
       }
     } 
