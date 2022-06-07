@@ -22,6 +22,7 @@ export class PlayerPage implements OnInit {
 
   media: Media;
   resume: Resume;
+  saveMedia: Media;
   resumePlay = false;
   resumeFile: Resume = {
     spotify:{
@@ -107,6 +108,11 @@ export class PlayerPage implements OnInit {
     this.mediaService.local$.subscribe(local => {
       this.currentPlayedLocal = local;
     });
+    this.mediaService.playlist$.subscribe(playlist => {
+      this.currentPlaylist = playlist;
+    });
+    console.log(this.currentPlaylist.total);
+    console.log(this.currentPlaylist);
     if(this.media.type === 'spotify'){
       let seek = this.currentPlayedSpotify?.progress_ms || 0;
       this.progress = (seek / this.currentPlayedSpotify?.item.duration_ms) * 100 || 0;
@@ -128,7 +134,6 @@ export class PlayerPage implements OnInit {
 
   ionViewWillEnter() {
     console.log(this.media);
-    console.log(this.currentPlaylist);
     this.updateProgression = true;
     this.playerService.playMedia(this.media);
     this.updateProgress();
@@ -147,8 +152,13 @@ export class PlayerPage implements OnInit {
     this.playerService.sendCmd(PlayerCmds.STOP);
     if(this.media.type === 'spotify' && (this.media.category === 'playlist' || this.media.category === 'music')) {
       if(this.shuffle && !this.media?.shuffle || !this.shuffle && this.media?.shuffle){
-        this.media.shuffle = this.shuffle;
-        this.mediaService.editRawMediaAtIndex(this.media.index, this.media);
+        this.saveMedia.shuffle = this.shuffle;
+        this.saveMedia.index = this.media.index;
+        this.saveMedia.id = this.media.id;
+        this.saveMedia.title = this.media.title;
+        this.saveMedia.type = this.media.type;
+        this.saveMedia.category = this.media.category;
+        this.mediaService.editRawMediaAtIndex(this.saveMedia.index, this.saveMedia);
       }
     } 
   }
