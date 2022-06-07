@@ -42,17 +42,6 @@ export class AddPage implements OnInit, AfterViewInit {
   valid = false;
   editindex: number;
   editMedia: Media; 
-  // = {
-  //   type: "",
-  //   category: "",
-  //   artist: "",
-  //   title: "",
-  //   query: "",
-  //   id: "",
-  //   artistid: "",
-  //   cover: "",
-  //   artistcover: "",
-  // }
   edit = false;
 
   categoryIcons = {
@@ -220,7 +209,8 @@ export class AddPage implements OnInit, AfterViewInit {
   submit(form: NgForm) {
     const media: Media = {
       type: this.source,
-      category: this.category
+      category: this.category,
+      shuffle: false,
     };
 
     if (this.source === 'spotify') {
