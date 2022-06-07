@@ -301,9 +301,7 @@ export class AddPage implements OnInit, AfterViewInit {
           (artistid?.length > 0 && !(query?.length > 0))
         )
         ||
-        (this.category === 'playlist' && id?.length > 0)
-        ||
-        (this.category === 'playlist' && this.shuffle !== this.editMedia.shuffle)
+        this.category === 'playlist' && (id?.length > 0 || this.shuffle !== this.editMedia.shuffle)
       );
     } else if (this.source === 'radio') {
       const artist = this.keyboard.getInput('radio_artist');
