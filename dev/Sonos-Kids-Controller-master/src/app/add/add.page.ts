@@ -72,6 +72,7 @@ export class AddPage implements OnInit, AfterViewInit {
     if(this.edit){
       this.source = this.editMedia.type;
       this.category = this.editMedia.category;
+      this.shuffle = this.editMedia.shuffle;
       if(this.source === 'spotify' && this.editMedia?.query) {
         this.searchType = 'query';
       }else if(this.source === 'spotify' && this.editMedia?.artistid) {
