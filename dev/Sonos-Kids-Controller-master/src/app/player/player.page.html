@@ -76,10 +76,10 @@
                             </ion-button>
                         </ion-col>
                         <ion-col size="4" class="ion-text-center">
-                            <ion-button *ngIf="!shuffle" (click)="toggleshuffle()" color="light">
+                            <ion-button *ngIf="!media.shuffle" (click)="toggleshuffle()" color="light">
                                 <ion-icon slot="icon-only" name="shuffle-outline" class="small-icon"></ion-icon>
                             </ion-button>
-                            <ion-button *ngIf="shuffle" (click)="toggleshuffle()" color="dark">
+                            <ion-button *ngIf="media.shuffle" (click)="toggleshuffle()" color="dark">
                                 <ion-icon slot="icon-only" name="shuffle-outline" class="small-icon"></ion-icon>
                             </ion-button>
                         </ion-col>
