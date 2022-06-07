@@ -1,13 +1,13 @@
 export interface CurrentPlaylist {
     total?: number;
-    items: items[];
+    items?: Item[];
 }
 
-export interface items {
+export interface Item {
     track:{
-        duration_ms: number;
-        id: number;
-        name: string;
-        type: string;
+        duration_ms?: number;
+        id?: number;
+        name?: string;
+        type?: string;
     }
 }
