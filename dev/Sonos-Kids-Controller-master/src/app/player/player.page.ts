@@ -50,6 +50,7 @@ export class PlayerPage implements OnInit {
   currentPlayedLocal: CurrentMPlayer;
   currentPlaylist: CurrentPlaylist;
   playlistTrackNr = 0;
+  goBackTimer = 0;
   progress = 0;
   shufflechanged = 0;
   public readonly spotify$: Observable<CurrentSpotify>;
@@ -129,7 +130,10 @@ export class PlayerPage implements OnInit {
 
     if(this.progress > 1){
       if(this.playing && !this.currentPlayedSpotify.is_playing && !this.currentPlayedLocal.playing){
-        this.navController.back();
+        this.goBackTimer++;
+        if(this.goBackTimer > 5){
+          this.navController.back();
+        }
       }
     }
     if(this.media.type === 'spotify'){
