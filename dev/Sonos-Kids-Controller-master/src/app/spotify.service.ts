@@ -21,7 +21,7 @@ export class SpotifyService {
     this.spotifyApi = new SpotifyWebApi();
   }
 
-  getMediaByQuery(query: string, category: string): Observable<Media[]> {
+  getMediaByQuery(query: string, category: string, index: number): Observable<Media[]> {
     const albums = defer(() => this.spotifyApi.searchAlbums(query, { limit: 1, offset: 0, market: 'DE' })).pipe(
       retryWhen(errors => {
         return this.errorHandler(errors);
@@ -40,7 +40,8 @@ export class SpotifyService {
               title: item.name,
               cover: item.images[0].url,
               type: 'spotify',
-              category
+              category,
+              index
             };
             return media;
           });
@@ -53,7 +54,7 @@ export class SpotifyService {
     return albums;
   }
 
-  getMediaByArtistID(id: string, category: string): Observable<Media[]> {
+  getMediaByArtistID(id: string, category: string, index: number): Observable<Media[]> {
     const albums = defer(() => this.spotifyApi.getArtistAlbums(id, { include_groups: 'album', limit: 1, offset: 0, market: 'DE' })).pipe(
       retryWhen(errors => {
         return this.errorHandler(errors);
@@ -72,7 +73,8 @@ export class SpotifyService {
               title: item.name,
               cover: item.images[0].url,
               type: 'spotify',
-              category
+              category,
+              index
             };
             return media;
           });
@@ -85,7 +87,7 @@ export class SpotifyService {
     return albums;
   }
 
-  getMediaByID(id: string, category: string): Observable<Media> {
+  getMediaByID(id: string, category: string, index: number): Observable<Media> {
     let fetch: any;
 
     switch (category) {
@@ -107,7 +109,8 @@ export class SpotifyService {
           title: response.name,
           cover: response?.images[0]?.url,
           type: 'spotify',
-          category
+          category,
+          index
         };
         return media;
       })
