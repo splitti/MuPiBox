@@ -21,7 +21,7 @@ export class SpotifyService {
     this.spotifyApi = new SpotifyWebApi();
   }
 
-  getMediaByQuery(query: string, category: string, index: number): Observable<Media[]> {
+  getMediaByQuery(query: string, category: string, index: number, shuffle: boolean): Observable<Media[]> {
     const albums = defer(() => this.spotifyApi.searchAlbums(query, { limit: 1, offset: 0, market: 'DE' })).pipe(
       retryWhen(errors => {
         return this.errorHandler(errors);
@@ -41,7 +41,8 @@ export class SpotifyService {
               cover: item.images[0].url,
               type: 'spotify',
               category,
-              index
+              index,
+              shuffle
             };
             return media;
           });
@@ -54,7 +55,7 @@ export class SpotifyService {
     return albums;
   }
 
-  getMediaByArtistID(id: string, category: string, index: number): Observable<Media[]> {
+  getMediaByArtistID(id: string, category: string, index: number, shuffle: boolean): Observable<Media[]> {
     const albums = defer(() => this.spotifyApi.getArtistAlbums(id, { include_groups: 'album', limit: 1, offset: 0, market: 'DE' })).pipe(
       retryWhen(errors => {
         return this.errorHandler(errors);
@@ -74,7 +75,8 @@ export class SpotifyService {
               cover: item.images[0].url,
               type: 'spotify',
               category,
-              index
+              index,
+              shuffle
             };
             return media;
           });
@@ -87,7 +89,7 @@ export class SpotifyService {
     return albums;
   }
 
-  getMediaByID(id: string, category: string, index: number): Observable<Media> {
+  getMediaByID(id: string, category: string, index: number, shuffle: boolean): Observable<Media> {
     let fetch: any;
 
     switch (category) {
@@ -110,7 +112,8 @@ export class SpotifyService {
           cover: response?.images[0]?.url,
           type: 'spotify',
           category,
-          index
+          index,
+          shuffle
         };
         return media;
       })
