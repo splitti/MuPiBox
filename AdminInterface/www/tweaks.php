@@ -119,33 +119,6 @@
 		$change_sd = "activate for next boot";
 		}
 
-	if( $_POST['change_vnc'] == "disable" )
-		{
-		exec("sudo apt-get remove x11vnc websockify");
-		exec("sudo rm -R /usr/share/novnc");
-		exec("sudo systemctl stop mupi_vnc.service");
-		exec("sudo systemctl stop mupi_novnc.service");
-		exec("sudo systemctl disable mupi_vnc.service");
-		exec("sudo systemctl disable mupi_novnc.service");
-		exec("sudo su - -c \"/usr/bin/cat <<< $(/usr/bin/jq --arg v \"0\" '.tweaks.vnc = $v' /etc/mupibox/mupiboxconfig.json) >  /etc/mupibox/mupiboxconfig.json\"");
-		$change=1;
-		$CHANGE_TXT=$CHANGE_TXT."<li>VNC-Services disabled</li>";
-		}
-	else if( $_POST['change_vnc'] == "enable" )
-		{
-		exec("sudo apt-get install x11vnc websockify");
-		exec("sudo git clone https://github.com/novnc/noVNC.git /usr/share/novnc");
-		exec("sudo chown -R dietpi:dietpi /usr/share/novnc");
-		exec("sudo systemctl enable mupi_vnc.service");
-		exec("sudo systemctl enable mupi_novnc.service");
-		exec("sudo systemctl start mupi_vnc.service");
-		exec("sudo systemctl start mupi_novnc.service");		
-		exec("sudo su - -c \"/usr/bin/cat <<< $(/usr/bin/jq --arg v \"1\" '.tweaks.vnc = $v' /etc/mupibox/mupiboxconfig.json) >  /etc/mupibox/mupiboxconfig.json\"");
-		
-		$change=1;
-		$CHANGE_TXT=$CHANGE_TXT."<li>VNC-Services activated</li>";
-		}
-
 	$CHANGE_TXT=$CHANGE_TXT."</ul>";
 ?>
 
@@ -277,26 +250,6 @@
 			?>
 			</p>
 			<input id="saveForm" class="button_text" type="submit" name="change_wifi" value="<?php print $change_wifi; ?>" />
-		</li>
-		<li class="li_1"><h2>Enable/Disable VNC</h2>
-			<p>
-			Enables or disables OnBoard Wifi! Please be sure what you do!
-			</p>
-			<p>
-			<?php
-			$command = "/usr/bin/jq -r .tweaks.vnc /etc/mupibox/mupiboxconfig.json";
-			$vncoff = exec($command, $output);
-			if($vncoff == "1")
-				{
-				$change_vnc="disable";
-				}
-			else
-				{
-				$change_vnc="enable";
-				}
-			?>
-			</p>
-			<input id="saveForm" class="button_text" type="submit" name="change_vnc" value="<?php print $change_vnc; ?>" />
 		</li>
 	</ul>
 </form>

@@ -26,9 +26,3 @@ MAXVOL=$(/usr/bin/jq -r .mupibox.maxVolume ${CONFIG})
 if [ "$MAXVOL" == "null" ]; then 
 		/usr/bin/cat <<< $(/usr/bin/jq --arg v "100" '.mupibox.maxVolume = $v' ${CONFIG}) >  ${CONFIG}
 fi
-
-# 1.0.10
-VNC=$(/usr/bin/jq -r .tweaks.vnc ${CONFIG})
-if [ "$VNC" == "null" ]; then 
-		/usr/bin/cat <<< $(/usr/bin/jq --arg v "0" '.tweaks.vnc = $v' ${CONFIG}) >  ${CONFIG}
-fi

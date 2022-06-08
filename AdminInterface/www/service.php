@@ -85,40 +85,87 @@
 		$btac_state = "disabled";
 		$change_btac = "enable & start";
 		}
+		
+	if( $_POST['change_vnc'] == "disable" )
+		{
+		exec("sudo apt-get remove x11vnc websockify -y");
+		exec("sudo rm -R /usr/share/novnc");
+		exec("sudo systemctl stop mupi_vnc.service");
+		exec("sudo systemctl stop mupi_novnc.service");
+		exec("sudo systemctl disable mupi_vnc.service");
+		exec("sudo systemctl disable mupi_novnc.service");
+		exec("sudo su - -c \"/usr/bin/cat <<< $(/usr/bin/jq --arg v \"0\" '.tweaks.vnc = $v' /etc/mupibox/mupiboxconfig.json) >  /etc/mupibox/mupiboxconfig.json\"");
+		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>VNC-Services disabled</li>";
+		}
+	else if( $_POST['change_vnc'] == "enable" )
+		{
+		exec("sudo apt-get install x11vnc websockify -y");
+		exec("sudo git clone https://github.com/novnc/noVNC.git /usr/share/novnc");
+		exec("sudo chown -R dietpi:dietpi /usr/share/novnc");
+		exec("sudo systemctl enable mupi_vnc.service");
+		exec("sudo systemctl enable mupi_novnc.service");
+		exec("sudo systemctl start mupi_vnc.service");
+		exec("sudo systemctl start mupi_novnc.service");		
+		exec("sudo su - -c \"/usr/bin/cat <<< $(/usr/bin/jq --arg v \"1\" '.tweaks.vnc = $v' /etc/mupibox/mupiboxconfig.json) >  /etc/mupibox/mupiboxconfig.json\"");
+		
+		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>VNC-Services activated</li>";
+		}
 
 ?>
 
-                <form class="appnitro"  method="post" action="service.php" id="form">
-                                        <div class="description">
-                        <h2>MupiBox settings</h2>
-                        <p>De/Activate some helpfull services...</p>
-                </div>
-                        <ul >
-                                        
-								<li class="li_1"><h2>Samba</h2>
-								<p>
-								<?php 
-								echo "Samba Status: <b>".$samba_state."</b>";
-								?>
-								</p>
-								<input id="saveForm" class="button_text" type="submit" name="change_samba" value="<?php print $change_samba; ?>" /></li>
-								<li class="li_1"><h2>FTP-Server</h2>
-								<p>
-								<?php 
-								echo "FTP-Server Status: <b>".$ftp_state."</b>";
-								?>
-								</p>
-								<input id="saveForm" class="button_text" type="submit" name="change_btac" value="<?php print $change_btac; ?>" /></li>
-								<li class="li_1"><h2>Bluetooth Autoconnect Helper (Just if automatic reconnect won't work)</h2>
-								<p>
-								<?php 
-								echo "BT Autoconnect Status: <b>".$btac_state."</b>";
-								?>
-								</p>
-								<input id="saveForm" class="button_text" type="submit" name="change_btac" value="<?php print $change_btac; ?>" /></li>
-
-                        </ul>
-                </form>
+<form class="appnitro"  method="post" action="service.php" id="form">
+	<div class="description">
+		<h2>MupiBox settings</h2>
+		<p>De/Activate some helpfull services...</p>
+	</div>
+	<ul >
+		<li class="li_1"><h2>Samba</h2>
+			<p>
+			<?php 
+			echo "Samba Status: <b>".$samba_state."</b>";
+			?>
+			</p>
+			<input id="saveForm" class="button_text" type="submit" name="change_samba" value="<?php print $change_samba; ?>" />
+		</li>
+		<li class="li_1"><h2>FTP-Server</h2>
+			<p>
+			<?php 
+			echo "FTP-Server Status: <b>".$ftp_state."</b>";
+			?>
+			</p>
+			<input id="saveForm" class="button_text" type="submit" name="change_btac" value="<?php print $change_btac; ?>" />
+		</li>
+		<li class="li_1"><h2>Bluetooth Autoconnect Helper (Just if automatic reconnect won't work)</h2>
+			<p>
+			<?php 
+			echo "BT Autoconnect Status: <b>".$btac_state."</b>";
+			?>
+			</p>
+			<input id="saveForm" class="button_text" type="submit" name="change_btac" value="<?php print $change_btac; ?>" />
+		</li>
+		<li class="li_1"><h2>Enable/Disable VNC</h2>
+			<p>
+			Enables or disables VNC Services!
+			</p>
+			<p>
+			<?php
+			exec("ps -ef | grep websockify | grep -v grep",$vnc_run);
+			if($vnc_run)
+				{
+				$change_vnc="disable";
+				}
+			else
+				{
+				$change_vnc="enable";
+				}
+			?>
+			</p>
+			<input id="saveForm" class="button_text" type="submit" name="change_vnc" value="<?php print $change_vnc; ?>" />
+		</li>
+	</ul>
+</form>
 <?php
 	include ('includes/footer.php');
 ?>
