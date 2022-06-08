@@ -4,6 +4,29 @@
 	$dataonline = json_decode($onlinejson, true);
 	include ('includes/header.php');
 
+	if( $_POST['change_vnc'] == "stop & disable" )
+		{
+		exec("sudo apt-get remove x11vnc websockify -y");
+		exec("sudo rm -R /usr/share/novnc");
+		exec("sudo systemctl stop mupi_vnc.service");
+		exec("sudo systemctl stop mupi_novnc.service");
+		exec("sudo systemctl disable mupi_vnc.service");
+		exec("sudo systemctl disable mupi_novnc.service");
+		exec("sudo su - -c \"/usr/bin/cat <<< $(/usr/bin/jq --arg v \"0\" '.tweaks.vnc = $v' /etc/mupibox/mupiboxconfig.json) >  /etc/mupibox/mupiboxconfig.json\"");
+		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>VNC-Services disabled</li>";
+		}
+	else if( $_POST['change_vnc'] == "enable & start" )
+		{
+		exec("sudo apt-get install x11vnc websockify -y");
+		exec("sudo git clone https://github.com/novnc/noVNC.git /usr/share/novnc");
+		exec("sudo chown -R dietpi:dietpi /usr/share/novnc");
+		exec("sudo systemctl enable mupi_vnc.service");
+		exec("sudo systemctl enable mupi_novnc.service");
+		exec("sudo systemctl start mupi_vnc.service");
+		exec("sudo systemctl start mupi_novnc.service");		
+		exec("sudo su - -c \"/usr/bin/cat <<< $(/usr/bin/jq --arg v \"1\" '.tweaks.vnc = $v' /etc/mupibox/mupiboxconfig.json) >  /etc/mupibox/mupiboxconfig.json\"");
+
 	if( $_POST['change_samba'] == "enable & start" )
 		{
 		$command = "sudo apt-get install samba -y && sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/smb.conf -O /etc/samba/smb.conf && sudo systemctl enable smbd.service && sudo systemctl start smbd.service";
@@ -42,7 +65,6 @@
 		exec($command, $output, $result );
 		$change=1;
 		}
-
 
 	$rc = $output[count($output)-1];
 	$command = "sudo service smbd status | grep running";
@@ -86,28 +108,19 @@
 		$change_btac = "enable & start";
 		}
 		
-	if( $_POST['change_vnc'] == "disable" )
+	$command = "ps -ef | grep websockify | grep -v grep";
+	exec($command, $vncoutput, $vncresult );
+	if( $vncoutput[0] )
 		{
-		exec("sudo apt-get remove x11vnc websockify -y");
-		exec("sudo rm -R /usr/share/novnc");
-		exec("sudo systemctl stop mupi_vnc.service");
-		exec("sudo systemctl stop mupi_novnc.service");
-		exec("sudo systemctl disable mupi_vnc.service");
-		exec("sudo systemctl disable mupi_novnc.service");
-		exec("sudo su - -c \"/usr/bin/cat <<< $(/usr/bin/jq --arg v \"0\" '.tweaks.vnc = $v' /etc/mupibox/mupiboxconfig.json) >  /etc/mupibox/mupiboxconfig.json\"");
-		$change=1;
-		$CHANGE_TXT=$CHANGE_TXT."<li>VNC-Services disabled</li>";
+		$vnc_state = "started";
+		$change_vnc = "stop & disable";
 		}
-	else if( $_POST['change_vnc'] == "enable" )
+	else
 		{
-		exec("sudo apt-get install x11vnc websockify -y");
-		exec("sudo git clone https://github.com/novnc/noVNC.git /usr/share/novnc");
-		exec("sudo chown -R dietpi:dietpi /usr/share/novnc");
-		exec("sudo systemctl enable mupi_vnc.service");
-		exec("sudo systemctl enable mupi_novnc.service");
-		exec("sudo systemctl start mupi_vnc.service");
-		exec("sudo systemctl start mupi_novnc.service");		
-		exec("sudo su - -c \"/usr/bin/cat <<< $(/usr/bin/jq --arg v \"1\" '.tweaks.vnc = $v' /etc/mupibox/mupiboxconfig.json) >  /etc/mupibox/mupiboxconfig.json\"");
+		$vnc_state = "disabled";
+		$change_vnc = "enable & start";
+		}
+
 		
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>VNC-Services activated</li>";
@@ -150,16 +163,8 @@
 			Enables or disables VNC Services!
 			</p>
 			<p>
-			<?php
-			exec("ps -ef | grep websockify | grep -v grep",$vnc_run);
-			if($vnc_run)
-				{
-				$change_vnc="disable";
-				}
-			else
-				{
-				$change_vnc="enable";
-				}
+			<?php 
+			echo "VNC Status: <b>".$vnc_state."</b>";
 			?>
 			</p>
 			<input id="saveForm" class="button_text" type="submit" name="change_vnc" value="<?php print $change_vnc; ?>" />

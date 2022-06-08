@@ -44,6 +44,16 @@
 ?>
 
 <div class="main">
+<?php
+	$command = "ps -ef | grep websockify | grep -v grep";
+	exec($command, $vncoutput, $vncresult );
+	if( $vncoutput[0] )
+	{
+		echo "<h2>Live Screen</h2>";
+        $ip=exec("hostname -I | awk '{print $1}'");
+        print "<p><embed src='http://".$ip.":6080/vnc_lite.html' id='remotecontrol'></p>";
+	}
+?>
 <h2>Current Screen</h2>
 <p><a href="images/screenshot.png" target="_blank"><img src="images/screenshot.png" id="screenshot" /></a></p>
 

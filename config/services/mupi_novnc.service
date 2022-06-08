@@ -1,11 +1,16 @@
 [Unit]
 Description=MuPiBox noVNC Service
+After=syslog.target network.target
 
 [Install]
 WantedBy=multi-user.target
 
 [Service]
-User=dietpi
-Group=dietpi
-ExecStart=/usr/bin/websockify -D --web=/usr/share/novnc 6080 localhost:5900
-ExecStop=sudo /usr/bin/kill $(/usr/bin/pgrep websockify)
+User=root
+Type=simple
+TimeoutStopSec=20
+KillMode=process
+Restart=always
+RestartSec=2
+ExecStart=/usr/bin/python3 /usr/bin/websockify --web=/usr/share/novnc 6080 localhost:5900
+ExecStop=/usr/bin/kill $(/usr/bin/pgrep websockify)
