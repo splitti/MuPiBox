@@ -114,18 +114,16 @@ export class PlayerPage implements OnInit {
     this.mediaService.local$.subscribe(local => {
       this.currentPlayedLocal = local;
     });
-    this.mediaService.playlist$.subscribe(playlist => {
-      this.currentPlaylist = playlist;
-    });
+    // this.mediaService.playlist$.subscribe(playlist => {
+    //   this.currentPlaylist = playlist;
+    // });
 
     if(this.media.category === 'playlist'){
-      console.log(this.currentPlaylist?.total);
       this.currentPlaylist?.items.forEach((element, index) => {
         if(this.currentPlayedSpotify?.item.id === element.track?.id){
           this.playlistTrackNr = ++index;
           this.cover = element.track.album.images[1].url;
         }
-        console.log(element.track?.name);
       });
     }
 
@@ -172,6 +170,9 @@ export class PlayerPage implements OnInit {
         this.skipNext();
       }, 1000) 
     }
+    this.mediaService.playlist$.subscribe(playlist => {
+      this.currentPlaylist = playlist;
+    });
   }
 
   ionViewWillLeave() {
