@@ -106,13 +106,16 @@ exec 3>${LOG}
 	sudo wget ${SRC}/scripts/mupibox/restart_kiosk.sh -O /usr/local/bin/mupibox/restart_kiosk.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/mupibox/set_deviceid.sh -O /usr/local/bin/mupibox/set_deviceid.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/mupibox/spotify_restart.sh -O /usr/local/bin/mupibox/spotify_restart.sh >&3 2>&3
+
+	sudo wget ${SRC}/config/services/mupi_vnc.service -O /etc/systemd/system/mupi_vnc.service  >&3 2>&3
+	sudo wget ${SRC}/config/services/mupi_novnc.service -O /etc/systemd/system/mupi_novnc.service  >&3 2>&3
+	sudo wget ${SRC}/config/services/mupi_check_internet.service -O /etc/systemd/system/mupi_check_internet.service  >&3 2>&3
 	
 	sudo wget ${SRC}/scripts/mupibox/splash_screen.sh -O /usr/local/bin/mupibox/splash_screen.sh >&3 2>&3
 	sudo chmod 755 /usr/local/bin/mupibox/* >&3 2>&3
 
 
-	echo -e "XXX\n30\nRestarting Services... \nXXX"	
-	sudo wget ${SRC}/config/services/mupi_check_internet.service -O /etc/systemd/system/mupi_check_internet.service  >&3 2>&3
+	echo -e "XXX\n30\nRestarting Services... \nXXX"
 	sudo su - dietpi -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && npm install" >&3 2>&3
 	#sudo su - dietpi -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && pm2 -f start server.js" >&3 2>&3
 	#sudo su - dietpi -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && pm2 -f save" >&3 2>&3
