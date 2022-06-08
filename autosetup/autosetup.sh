@@ -24,7 +24,7 @@ exec 3>${LOG}
 	echo -e "XXX\n0\nInstall some packages... Please wait!\nXXX"
 	# Get missing packages
 	sudo apt-get update >&3 2>&3
-	packages2install="git x11vnc libasound2 jq samba mplayer pulseaudio-module-bluetooth bluez zip rrdtool scrot net-tools wireless-tools "
+	packages2install="git libasound2 jq samba mplayer pulseaudio-module-bluetooth bluez zip rrdtool scrot net-tools wireless-tools "
 	sudo apt-get install ${packages2install} -y >&3 2>&3
 
 	for thispackage in `echo ${packages2install}`; do
@@ -360,6 +360,8 @@ exec 3>${LOG}
 	sudo wget ${SRC}/config/services/mupi_wifi.service -O /etc/systemd/system/mupi_wifi.service  >&3 2>&3
 	sudo wget ${SRC}/config/services/mupi_check_internet.service -O /etc/systemd/system/mupi_check_internet.service  >&3 2>&3
 	sudo wget ${SRC}/config/services/mupi_autoconnect_bt.service -O /etc/systemd/system/mupi_autoconnect_bt.service  >&3 2>&3
+	sudo wget ${SRC}/config/services/mupi_vnc.service -O /etc/systemd/system/mupi_vnc.service  >&3 2>&3
+	sudo wget ${SRC}/config/services/mupi_novnc.service -O /etc/systemd/system/mupi_novnc.service  >&3 2>&3
 
 	sudo systemctl daemon-reload >&3 2>&3
 	sudo systemctl enable mupi_wifi.service >&3 2>&3
