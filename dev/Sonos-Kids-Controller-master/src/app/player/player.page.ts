@@ -114,9 +114,9 @@ export class PlayerPage implements OnInit {
     this.mediaService.local$.subscribe(local => {
       this.currentPlayedLocal = local;
     });
-    // this.mediaService.playlist$.subscribe(playlist => {
-    //   this.currentPlaylist = playlist;
-    // });
+    this.mediaService.playlist$.subscribe(playlist => {
+      this.currentPlaylist = playlist;
+    });
 
     if(this.media.category === 'playlist'){
       this.currentPlaylist?.items.forEach((element, index) => {
@@ -170,9 +170,6 @@ export class PlayerPage implements OnInit {
         this.skipNext();
       }, 1000) 
     }
-    this.mediaService.playlist$.subscribe(playlist => {
-      this.currentPlaylist = playlist;
-    });
   }
 
   ionViewWillLeave() {

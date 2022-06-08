@@ -90,6 +90,7 @@ let cmdtotalTracks = "/usr/bin/amixer sget Master | grep 'Right:'";
 let activeDevice = "";
 var volumeStart = 99;
 var	playerstate;
+var playlist;
 var currentMeta = {
   activePlaylist: '',
   currentPlayer: "",
@@ -512,6 +513,20 @@ async function useSpotify(command){
     }
     if(command.name.split(':')[1] === 'playlist'){
       currentMeta.activePlaylist = command.name.split(':')[2];
+      spotifyApi.getPlaylistTracks(currentMeta.activePlaylist)
+        .then(function(data) {
+          if (data.body != undefined){
+            log.debug("[Spotify Control] Currently currentMeta.playing: " + data.body);
+            playlist = data.body;
+          }
+          else {
+            playlist = {
+              total: 0
+            };
+          }
+        }, function(err) {
+          handleSpotifyError(err,"0");
+        });
     }
     //command.name = 'spotify:show:6LuAZxNcc4sjMoJRhfZI4L';
     playMe(command.name);
@@ -568,33 +583,7 @@ app.get("/state", function(req, res){
 /*endpoint to return playlist information*/
 /*only used if sonos-kids-player is modified*/
 app.get("/playlistTracks", function(req, res){
-  if(currentMeta.activePlaylist.length > 1){
-    spotifyApi.getPlaylistTracks(currentMeta.activePlaylist)
-    .then(function(data) {
-      let state = data.body;
-      if (Object.keys(state).length === 0) {
-        //console.log("state is empty!");
-        state = {
-          total: ""
-        };
-      } else {
-        console.log("state is not empty !");
-      } 
-      //log.debug("[Spotify Control] Getting available state...");
-      res.send(state);
-    }, function(err) {
-      state = {
-        total: 0
-      };
-      res.send(state);
-      handleSpotifyError(err,"0");
-    });
-  } else {
-    state = {
-      total: 0
-    };
-    res.send(state);
-  }
+  res.send(playlist);
 });
 
 /*endpoint to return playlist information*/
