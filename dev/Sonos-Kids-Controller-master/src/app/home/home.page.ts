@@ -171,6 +171,9 @@ export class HomePage implements OnInit {
             artist: clickedArtist
           }
         };
+        
+        console.log(navigationExtras);
+        
         this.router.navigate(['/medialist'], navigationExtras);
       });
     });
