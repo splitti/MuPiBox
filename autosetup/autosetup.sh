@@ -61,6 +61,7 @@ exec 3>${LOG}
 	sudo rm -R ~/.mupibox >&3 2>&3
 	sudo rm -R ~/MuPiBox >&3 2>&3
 	mkdir -p ~/.mupibox >&3 2>&3
+	mkdir -p ~/.mupibox/chromium_cache >&3 2>&3
 	mkdir -p ~/MuPiBox/tts_files >&3 2>&3
 	mkdir -p ~/MuPiBox/sysmedia/sound >&3 2>&3
 	mkdir ~/MuPiBox/sysmedia/images >&3 2>&3
