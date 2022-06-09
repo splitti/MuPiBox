@@ -25,3 +25,17 @@ export interface SpotifyArtistsAlbumsResponse {
       total: number;
       items: SpotifyAlbumsResponseItem[];
 }
+
+export interface SpotifyShowResponse {
+    name: string;
+    episodes: {
+        total: number;
+        items: SpotifyShowResponseItem[];
+    };
+}
+
+export interface SpotifyShowResponseItem {
+    images: SpotifyAlbumsResponseImage[];
+    name: string;
+    id: string;
+}

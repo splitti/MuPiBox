@@ -537,20 +537,20 @@ async function useSpotify(command){
       }
       playlist = playlisttemp;
     }
-    if(command.name.split(':')[1] === 'show'){
+    if(truecommand.name.split(':')[1] === 'show'){
       currentMeta.activeShow = command.name.split(':')[2];
       let offset = 0;
       let showtemp;
       currentMeta.totalShows = 1;
       while (offset < currentMeta.totalShows) {
-        await spotifyApi.getShowEpisodes(currentMeta.activeShow, {limit: 50, offset: offset})
+        await spotifyApi.getShow/* Episodes */(currentMeta.activeShow, {limit: 50, offset: offset})
         .then(function(data) {
           if(offset > 0 ){
-            showtemp = showtemp.concat(data.body.items);
+            showtemp.items = showtemp.items.concat(data.body.items);
           } else {
-            showtemp = data.body.items;
+            showtemp = data.body/* .items */;
           }
-          currentMeta.totalShows = data.body.total;
+          currentMeta.totalShows = data.body.total_episodes;
         }, function(err) {
           handleSpotifyError(err,"0");
         });

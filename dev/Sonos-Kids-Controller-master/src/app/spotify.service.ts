@@ -3,7 +3,7 @@ import { Observable, defer, throwError, of, range } from 'rxjs';
 import { retryWhen, flatMap, tap, delay, take, map, mergeMap, mergeAll, toArray } from 'rxjs/operators';
 import { environment } from 'src/environments/environment';
 import { HttpClient } from '@angular/common/http';
-import { SpotifyAlbumsResponse, SpotifyAlbumsResponseItem, SpotifyArtistsAlbumsResponse } from './spotify';
+import { SpotifyAlbumsResponse, SpotifyAlbumsResponseItem, SpotifyArtistsAlbumsResponse, SpotifyShowResponse } from './spotify';
 import { Media } from './media';
 
 declare const require: any;
@@ -78,6 +78,41 @@ export class SpotifyService {
               index,
               shuffle
             };
+            return media;
+          });
+        })
+      )),
+      mergeAll(),
+      toArray()
+    );
+
+    return albums;
+  }
+
+  getMediaByShowID(id: string, category: string, index: number, shuffle: boolean): Observable<Media[]> {
+    const albums = defer(() => this.spotifyApi.getShowEpisodes(id, { limit: 1, offset: 0, market: 'DE' })).pipe(
+      retryWhen(errors => {
+        return this.errorHandler(errors);
+      }),
+      map((response: SpotifyShowResponse) => response.episodes.total),
+      mergeMap(count => range(0, Math.ceil(count / 50))),
+      mergeMap(multiplier => defer(() => this.spotifyApi.getShowEpisodes(id, { limit: 50, offset: 50 * multiplier, market: 'DE' })).pipe(
+        retryWhen(errors => {
+          return this.errorHandler(errors);
+        }),
+        map((response: SpotifyShowResponse) => {
+          return response.episodes.items.map(item => {
+            const media: Media = {
+              id: item.id,
+              artist: item.name,
+              title: item.name,
+              cover: item.images[0].url,
+              type: 'spotify',
+              category,
+              index,
+              shuffle
+            };
+            media.artist = response.name;
             return media;
           });
         })
