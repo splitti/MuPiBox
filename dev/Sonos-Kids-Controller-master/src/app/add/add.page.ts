@@ -27,6 +27,7 @@ export class AddPage implements OnInit, AfterViewInit {
 
   @ViewChild('spotify_artist', { static: false }) spotifyArtist: IonInput;
   @ViewChild('spotify_id', { static: false }) spotifyID: IonInput;
+  @ViewChild('spotify_showid', { static: false }) spotifyShowID: IonInput;
   @ViewChild('spotify_artistid', { static: false }) spotifyArtistID: IonInput;
   @ViewChild('spotify_title', { static: false }) spotifyTitle: IonInput;
   @ViewChild('spotify_query', { static: false }) spotifyQuery: IonInput;
@@ -80,6 +81,8 @@ export class AddPage implements OnInit, AfterViewInit {
         this.searchType = 'artist_id';
       }else if(this.source === 'spotify' && this.editMedia?.id) {
         this.searchType = 'media_id';
+      }else if(this.source === 'spotify' && this.editMedia?.showid) {
+        this.searchType = 'show_id';
       }
     }
 
@@ -221,6 +224,7 @@ export class AddPage implements OnInit, AfterViewInit {
       if (form.form.value.spotify_title?.length) { media.title = form.form.value.spotify_title; }
       if (form.form.value.spotify_query?.length) { media.query = form.form.value.spotify_query; }
       if (form.form.value.spotify_id?.length) { media.id = form.form.value.spotify_id; }
+      if (form.form.value.spotify_showid?.length) { media.id = form.form.value.spotify_showid; }
       if (form.form.value.spotify_artistid?.length) { media.artistid = form.form.value.spotify_artistid; }
     } else if (this.source === 'radio') {
       if (form.form.value.radio_title?.length) { media.title = form.form.value.radio_title; }
@@ -239,6 +243,7 @@ export class AddPage implements OnInit, AfterViewInit {
     this.keyboard.clearInput('spotify_artist');
     this.keyboard.clearInput('spotify_title');
     this.keyboard.clearInput('spotify_id');
+    this.keyboard.clearInput('spotify_showid');
     this.keyboard.clearInput('spotify_artistid');
     this.keyboard.clearInput('spotify_query');
 
@@ -259,6 +264,7 @@ export class AddPage implements OnInit, AfterViewInit {
 
     if (this.spotifyArtist) { this.spotifyArtist.disabled = false; }
     if (this.spotifyQuery) { this.spotifyQuery.disabled = false; }
+    if (this.spotifyShowID) { this.spotifyShowID.disabled = false; }
 
     if (this.searchTypeSelect) {
       if (this.category === 'playlist') {
@@ -273,12 +279,14 @@ export class AddPage implements OnInit, AfterViewInit {
       case 'audiobook':
       case 'music':
         if (this.radioSegment) { this.radioSegment.disabled = true; }
+        if (this.spotifyShowID) { this.spotifyShowID.disabled = true; }
         break;
       case 'playlist':
         if (this.radioSegment) { this.radioSegment.disabled = true; }
         if (this.spotifyArtist) { this.spotifyArtist.disabled = true; }
         if (this.spotifyQuery) { this.spotifyQuery.disabled = true; }
         if (this.searchTypeSelect) { this.searchTypeSelect.disabled = true; }
+        if (this.spotifyShowID) { this.spotifyShowID.disabled = true; }
         break;
       case 'radio':
         if (this.spotifySegment) { this.spotifySegment.disabled = true; }
@@ -290,6 +298,7 @@ export class AddPage implements OnInit, AfterViewInit {
       const id = this.keyboard.getInput('spotify_id');
       const artistid = this.keyboard.getInput('spotify_artistid');
       const query = this.keyboard.getInput('spotify_query');
+      const show = this.keyboard.getInput('spotify_showid');
 
       this.valid = (
         (this.category === 'audiobook' || this.category === 'music') && (
@@ -300,6 +309,8 @@ export class AddPage implements OnInit, AfterViewInit {
           (id?.length > 0 && !(query?.length > 0))
           ||
           (artistid?.length > 0 && !(query?.length > 0))
+          ||
+          (show?.length > 0 && !(query?.length > 0))
         )
         ||
         ((this.category === 'playlist') && (id?.length > 0))
