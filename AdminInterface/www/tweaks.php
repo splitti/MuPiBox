@@ -21,6 +21,21 @@
 		$CHANGE_TXT=$CHANGE_TXT."<li>Wait for Network on boot is disabled</li>";
 		}
 
+	if( $_POST['change_warnings'] == "disable" )
+		{
+		$command = "sudo sed -i -e 's/avoid_warnings=1//g' /boot/config.txt && sudo head -n -1 /boot/config.txt > /tmp/config.txt && sudo mv /tmp/config.txt /boot/config.txt";
+		exec($command, $output, $result );
+		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>Warning Icons disabled [restart necessary]</li>";
+		}
+	else if( $_POST['change_warnings'] == "enable" )
+		{
+		$command = "echo 'avoid_warnings=1' | sudo tee -a /boot/config.txt";
+		exec($command, $output, $result );
+		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>Warning Icons enabled [restart necessary]</li>";
+		}
+
 	if( $_POST['change_wifi'] == "disable" )
 		{
 		$command = "echo 'dtoverlay=disable-wifi' | sudo tee -a /boot/config.txt";
@@ -206,6 +221,27 @@
 			</div>
 			</p>
 			<input id="saveForm" class="button_text" type="submit" name="change_cpug" value="Save CPU Governor" />
+		</li>
+
+		<li class="li_1"><h2>Disable Warnings (Throtteling Warning)</h2>
+			<p>
+			Enables or disables the lightning icon (warning)! In worst case, this option can cause you loose all your data.
+			</p>
+			<p>
+			<?php
+			$command = "cat /boot/config.txt | grep 'avoid_warnings=1'";
+			$warnings = exec($command, $output);
+			if($warnings == "")
+				{
+				$change_warnings="enable";
+				}
+			else
+				{
+				$change_warnings="disable";
+				}
+			?>
+			</p>
+			<input id="saveForm" class="button_text" type="submit" name="change_warnings" value="<?php print $change_warnings; ?>" />
 		</li>
 
 		<li class="li_1"><h2>SWAP</h2>

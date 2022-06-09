@@ -3,6 +3,7 @@
 	$dataonline = json_decode($onlinejson, true);
 	include ('includes/header.php');
 	$change=0;
+	$shutdown=0;
 	$reboot=0;
 	$CHANGE_TXT="<div id='lbinfo'><ul id='lbinfo'>";
 
@@ -111,15 +112,17 @@
 		}
 	if( $_POST['shutdown'] )
 		{
-		$command = 'bash -c "sleep 2; exec nohup setsid /usr/local/bin/mupibox/./shutdown.sh > /dev/null 2>&1" &';
-		exec($command);
+		#$command = 'bash -c "sleep 2; exec nohup setsid /usr/local/bin/mupibox/./shutdown.sh > /dev/null 2>&1" &';
+		#exec($command);
+		$shutdown=1;
 		$change=3;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Shutdown initiated</li>";
 		}
 	if( $_POST['reboot'] )
 		{
-		$command = 'bash -c "sleep 2;exec nohup setsid /usr/local/bin/mupibox/./restart.sh > /dev/null 2>&1" &';
-		exec($command);
+		#$command = 'bash -c "sleep 2;exec nohup setsid /usr/local/bin/mupibox/./restart.sh > /dev/null 2>&1" &';
+		#exec($command);
+		$reboot=1;
 		$change=3;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Restart initiated</li>";
 		}
