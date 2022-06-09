@@ -165,10 +165,10 @@ export class PlayerPage implements OnInit {
     if(this.media.shuffle){
       setTimeout(() => {
         this.playerService.sendCmd(PlayerCmds.SHUFFLEON);
-      }, 500)
-      setTimeout(() => {
-        this.skipNext();
-      }, 1000) 
+        setTimeout(() => {
+          this.skipNext();
+        }, 1000) 
+      }, 750)
     }
   }
 
@@ -178,7 +178,6 @@ export class PlayerPage implements OnInit {
     }
     this.resumePlay = false;
     this.updateProgression = false;
-    this.playerService.sendCmd(PlayerCmds.SHUFFLEON);
     this.playerService.sendCmd(PlayerCmds.SHUFFLEOFF);
     this.playerService.sendCmd(PlayerCmds.STOP);
     if(this.media.type === 'spotify' && (this.media.category === 'playlist' || this.media.category === 'music')) {
