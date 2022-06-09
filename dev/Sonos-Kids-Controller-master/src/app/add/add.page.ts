@@ -224,7 +224,7 @@ export class AddPage implements OnInit, AfterViewInit {
       if (form.form.value.spotify_title?.length) { media.title = form.form.value.spotify_title; }
       if (form.form.value.spotify_query?.length) { media.query = form.form.value.spotify_query; }
       if (form.form.value.spotify_id?.length) { media.id = form.form.value.spotify_id; }
-      if (form.form.value.spotify_showid?.length) { media.id = form.form.value.spotify_showid; }
+      if (form.form.value.spotify_showid?.length) { media.showid = form.form.value.spotify_showid; }
       if (form.form.value.spotify_artistid?.length) { media.artistid = form.form.value.spotify_artistid; }
     } else if (this.source === 'radio') {
       if (form.form.value.radio_title?.length) { media.title = form.form.value.radio_title; }
@@ -279,7 +279,6 @@ export class AddPage implements OnInit, AfterViewInit {
       case 'audiobook':
       case 'music':
         if (this.radioSegment) { this.radioSegment.disabled = true; }
-        if (this.spotifyShowID) { this.spotifyShowID.disabled = true; }
         break;
       case 'playlist':
         if (this.radioSegment) { this.radioSegment.disabled = true; }
