@@ -233,11 +233,11 @@
 			$warnings = exec($command, $output);
 			if($warnings == "")
 				{
-				$change_warnings="disable";
+				$change_warnings="enable";
 				}
 			else
 				{
-				$change_warnings="enable";
+				$change_warnings="disable";
 				}
 			?>
 			</p>
