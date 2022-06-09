@@ -33,12 +33,12 @@
 <?php
 	if( $reboot == 1 )
 		{
-		$command='sudo su - -c "sleep 2;/usr/local/bin/mupibox/./restart.sh" &';
+		$command='sudo su - -c "sleep 5; /usr/local/bin/mupibox/./restart.sh" &';
 		exec($command);
 		}
 	if( $shutdown == 1 )
 		{
-		$command='sudo su - -c "sleep 2;/usr/local/bin/mupibox/./shutdown.sh" &';
+		$command='sudo su - -c "sleep 5; /usr/local/bin/mupibox/./shutdown.sh" &';
 		exec($command);
 		}
 ?>
