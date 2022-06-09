@@ -26,7 +26,8 @@
 		exec("sudo systemctl start mupi_vnc.service");
 		exec("sudo systemctl start mupi_novnc.service");		
 		exec("sudo su - -c \"/usr/bin/cat <<< $(/usr/bin/jq --arg v \"1\" '.tweaks.vnc = $v' /etc/mupibox/mupiboxconfig.json) >  /etc/mupibox/mupiboxconfig.json\"");
-
+		}
+		
 	if( $_POST['change_samba'] == "enable & start" )
 		{
 		$command = "sudo apt-get install samba -y && sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/smb.conf -O /etc/samba/smb.conf && sudo systemctl enable smbd.service && sudo systemctl start smbd.service";
@@ -120,12 +121,6 @@
 		$vnc_state = "disabled";
 		$change_vnc = "enable & start";
 		}
-
-		
-		$change=1;
-		$CHANGE_TXT=$CHANGE_TXT."<li>VNC-Services activated</li>";
-		}
-
 ?>
 
 <form class="appnitro"  method="post" action="service.php" id="form">
