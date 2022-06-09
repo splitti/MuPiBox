@@ -1,5 +1,9 @@
 export interface CurrentMPlayer {
-    player?: string;
+    activePlaylist?: string,
+    totalPlaylist?: number,
+    activeShow?: string,
+    totalShows?: number,
+    currentPlayer?: string;
     playing?: boolean;
     album?: string;
     currentTrackname?: string;

@@ -91,8 +91,12 @@ let activeDevice = "";
 var volumeStart = 99;
 var	playerstate;
 var playlist;
+var show;
 var currentMeta = {
   activePlaylist: '',
+  totalPlaylist: '',
+  activeShow: '',
+  totalShows: '',
   currentPlayer: "",
   playing: false,
   album: "",
@@ -511,24 +515,49 @@ async function useSpotify(command){
     else {
       log.debug("[Spotify Control] still same device, won't change: " + activeDevice);
     }
+
     if(command.name.split(':')[1] === 'playlist'){
       currentMeta.activePlaylist = command.name.split(':')[2];
-      spotifyApi.getPlaylistTracks(currentMeta.activePlaylist)
+      let offset = 0;
+      let playlisttemp;
+      currentMeta.totalPlaylist = 1;
+      while (offset < currentMeta.totalPlaylist) {
+        await spotifyApi.getPlaylistTracks(currentMeta.activePlaylist, {limit: 50, offset: offset})
         .then(function(data) {
-          if (data.body != undefined){
-            log.debug("[Spotify Control] Currently currentMeta.playing: " + data.body);
-            playlist = data.body;
+          if(offset > 0 ){
+            playlisttemp.items = playlisttemp.items.concat(data.body.items);
+          } else {
+            playlisttemp = data.body;
           }
-          else {
-            playlist = {
-              total: 0
-            };
-          }
+          currentMeta.totalPlaylist = data.body.total;
         }, function(err) {
           handleSpotifyError(err,"0");
         });
+        offset = offset + 50;
+      }
+      playlist = playlisttemp;
     }
-    //command.name = 'spotify:show:6LuAZxNcc4sjMoJRhfZI4L';
+    if(command.name.split(':')[1] === 'show'){
+      currentMeta.activeShow = command.name.split(':')[2];
+      let offset = 0;
+      let showtemp;
+      currentMeta.totalShows = 1;
+      while (offset < currentMeta.totalShows) {
+        await spotifyApi.getShowEpisodes(currentMeta.activeShow, {limit: 50, offset: offset})
+        .then(function(data) {
+          if(offset > 0 ){
+            showtemp = showtemp.concat(data.body.items);
+          } else {
+            showtemp = data.body.items;
+          }
+          currentMeta.totalShows = data.body.total;
+        }, function(err) {
+          handleSpotifyError(err,"0");
+        });
+        offset = offset + 50;
+      }
+      show = showtemp;
+    } 
     playMe(command.name);
 }
 
@@ -558,7 +587,6 @@ app.get("/state", function(req, res){
   .then(function(data) {
     let state = data.body;
     if (Object.keys(state).length === 0) {
-      //console.log("state is empty!");
       state = {
         item: {
           album: {
@@ -570,10 +598,7 @@ app.get("/state", function(req, res){
         },
         currently_playing_type: ""
       };
-    } else {
-      console.log("state is not empty !");
-    } 
-    //log.debug("[Spotify Control] Getting available state...");
+    }
     res.send(state);
   }, function(err) {
     handleSpotifyError(err,"0");
@@ -607,27 +632,16 @@ app.get("/episode", function(req, res){
   });
 });
 
+/*endpoint to return playlist information*/
+/*only used if sonos-kids-player is modified*/
+app.get("/show", function(req, res){
+  res.send(show);
+});
+
 /*endpoint to return all local metainformation*/
 /*only used if sonos-kids-player is modified*/
 app.get("/local", function(req, res){
   res.send(currentMeta);
-});
-
-/*endpoint to return all spotify connect devices on the network*/
-/*only used if sonos-kids-player is modified*/
-app.get("/currentPlaying", function(req, res){
-  spotifyApi.getMyCurrentPlayingTrack()
-    .then(function(data) {
-      if (data.body.item != undefined){
-        log.debug("[Spotify Control] Currently currentMeta.playing: " + data.body.item.name);
-        res.send(data.body.item);
-      }
-      else {
-        res.send({"status":"paused","error":"none"});
-      }
-    }, function(err) {
-      handleSpotifyError(err,"0");
-    });
 });
 
 
