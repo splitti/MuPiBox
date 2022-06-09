@@ -66,22 +66,6 @@ export class PlayerService {
     let url: string;
 
     switch (media.type) {
-      case 'applemusic': {
-        if (media.category === 'playlist') {
-          url = 'applemusic/now/playlist:' + encodeURIComponent(media.id);
-        } else {
-          url = 'applemusic/now/album:' + encodeURIComponent(media.id);
-        }
-        break;
-      }
-      case 'amazonmusic': {
-        if (media.category === 'playlist') {
-          url = 'amazonmusic/now/playlist:' + encodeURIComponent(media.id);
-        } else {
-          url = 'amazonmusic/now/album:' + encodeURIComponent(media.id);
-        }
-        break;
-      }
       case 'library': {
         if (!media.id) {
           media.id = media.title;

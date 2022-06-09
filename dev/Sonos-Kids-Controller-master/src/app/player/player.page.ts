@@ -165,10 +165,10 @@ export class PlayerPage implements OnInit {
     if(this.media.shuffle){
       setTimeout(() => {
         this.playerService.sendCmd(PlayerCmds.SHUFFLEON);
-      }, 500)
-      setTimeout(() => {
-        this.skipNext();
-      }, 1000) 
+        setTimeout(() => {
+          this.skipNext();
+        }, 1000) 
+      }, 750)
     }
   }
 
