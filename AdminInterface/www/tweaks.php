@@ -26,14 +26,14 @@
 		$command = "sudo sed -i -e 's/avoid_warnings=1//g' /boot/config.txt && sudo head -n -1 /boot/config.txt > /tmp/config.txt && sudo mv /tmp/config.txt /boot/config.txt";
 		exec($command, $output, $result );
 		$change=1;
-		$CHANGE_TXT=$CHANGE_TXT."<li>OnBoard Wifi disabled [restart necessary]</li>";
+		$CHANGE_TXT=$CHANGE_TXT."<li>Warning Icons disabled [restart necessary]</li>";
 		}
 	else if( $_POST['change_warnings'] == "enable" )
 		{
 		$command = "echo 'avoid_warnings=1' | sudo tee -a /boot/config.txt";
 		exec($command, $output, $result );
 		$change=1;
-		$CHANGE_TXT=$CHANGE_TXT."<li>OnBoard Wifi enabled [restart necessary]</li>";
+		$CHANGE_TXT=$CHANGE_TXT."<li>Warning Icons enabled [restart necessary]</li>";
 		}
 
 	if( $_POST['change_wifi'] == "disable" )
