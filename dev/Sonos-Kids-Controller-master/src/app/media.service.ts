@@ -230,8 +230,6 @@ export class MediaService {
                         currentItem.artist = item.artist;
                       });
                     }
-                    console.log(items);
-                    
                     return items;
                   })
                 ),

@@ -326,7 +326,8 @@ function shuffleoff(){
 }
 
 function playMe(activePlaylistId){
-  spotifyApi.play({ context_uri: activePlaylistId })
+  if(command.name.split(':')[1] === 'episode'){
+    spotifyApi.play({ uris: [activePlaylistId] })
     .then(function(data){
       log.debug("[Spotify Control] Playback started");
 	  writeplayerstatePlay();
@@ -339,6 +340,21 @@ function playMe(activePlaylistId){
       }, function(err) {
       handleSpotifyError(err,"0");
     });
+  } else {
+    spotifyApi.play({ context_uri: activePlaylistId })
+    .then(function(data){
+      log.debug("[Spotify Control] Playback started");
+	  writeplayerstatePlay();
+    }, function(err){
+      log.debug("[Spotify Control] Playback error" + err);
+      handleSpotifyError(err, activePlaylistId);
+    });
+    spotifyApi.setVolume(volumeStart).then(function () {
+      log.debug('[Spotify Control] Setting volume to '+ 99);
+      }, function(err) {
+      handleSpotifyError(err,"0");
+    });
+  }
 }
 
 function playList(playedList){
@@ -536,8 +552,7 @@ async function useSpotify(command){
         offset = offset + 50;
       }
       playlist = playlisttemp;
-    }
-    if(command.name.split(':')[1] === 'show'){
+    } else if(command.name.split(':')[1] === 'show'){
       currentMeta.activeShow = command.name.split(':')[2];
       let offset = 0;
       let showtemp;

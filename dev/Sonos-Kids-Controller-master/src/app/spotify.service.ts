@@ -95,7 +95,7 @@ export class SpotifyService {
         return this.errorHandler(errors);
       }),
       map((response: SpotifyShowResponse) => response.episodes.total),
-      mergeMap(count => range(0, Math.ceil(count / 50))),
+      mergeMap(count => range(0, Math.floor(count / 50))),
       mergeMap(multiplier => defer(() => this.spotifyApi.getShow(id, { limit: 50, offset: 50 * multiplier, market: 'DE' })).pipe(
         retryWhen(errors => {
           return this.errorHandler(errors);
@@ -104,7 +104,7 @@ export class SpotifyService {
           return response.episodes.items.map(item => {
             const media: Media = {
               showid: item.id,
-              artist: item.name,
+              artist: response.name,
               title: item.name,
               cover: item.images[0].url,
               type: 'spotify',
@@ -112,7 +112,6 @@ export class SpotifyService {
               index,
               shuffle
             };
-            media.artist = response.name;
             return media;
           });
         })
