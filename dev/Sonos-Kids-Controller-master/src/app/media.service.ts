@@ -341,6 +341,17 @@ export class MediaService {
     );
   }
 
+  // Collect albums from a given artist in the current category
+  getMediaFromShow(artist: Artist): Observable<Media[]> {
+    return this.artistMediaSubject.pipe(
+      map((media: Media[]) => {
+        return media
+          .filter(currentMedia => currentMedia.artist === artist.name)
+          .sort((a, b) => (new Date(b.release_date)).getTime() - (new Date(a.release_date)).getTime());
+      })
+    );
+  }
+
   // Get all media entries for the current category
   getMedia(): Observable<Media[]> {
     return this.mediaSubject.pipe(

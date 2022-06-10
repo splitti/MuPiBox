@@ -38,4 +38,5 @@ export interface SpotifyShowResponseItem {
     images: SpotifyAlbumsResponseImage[];
     name: string;
     id: string;
+    release_date: string;
 }

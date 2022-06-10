@@ -109,6 +109,7 @@ export class SpotifyService {
               cover: item.images[0].url,
               type: 'spotify',
               category,
+              release_date: item.release_date,
               index,
               shuffle
             };

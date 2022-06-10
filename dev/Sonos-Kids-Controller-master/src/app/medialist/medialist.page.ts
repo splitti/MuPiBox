@@ -53,23 +53,43 @@ export class MedialistPage implements OnInit {
 
     console.log(this.artist);
     
-    this.mediaService.getMediaFromArtist(this.artist).subscribe(media => {
-      this.media = media;
-
-      this.media.forEach(currentMedia => {
-        this.artworkService.getArtwork(currentMedia).subscribe(url => {
-          this.covers[currentMedia.title] = url;
+    if(this.artist.coverMedia.showid && this.artist.coverMedia.showid.length > 0){
+      this.mediaService.getMediaFromShow(this.artist).subscribe(media => {
+        this.media = media;
+  
+        this.media.forEach(currentMedia => {
+          this.artworkService.getArtwork(currentMedia).subscribe(url => {
+            this.covers[currentMedia.title] = url;
+          });
         });
-      });
-      this.slider.update();
-
-      // Workaround as the scrollbar handle isn't visible after the immediate update
-      // Seems like a size calculation issue, as resizing the browser window helps
-      // Better fix for this? 
-      window.setTimeout(() => {
         this.slider.update();
-      }, 1000);
-    });
+  
+        // Workaround as the scrollbar handle isn't visible after the immediate update
+        // Seems like a size calculation issue, as resizing the browser window helps
+        // Better fix for this? 
+        window.setTimeout(() => {
+          this.slider.update();
+        }, 1000);
+      });
+    } else {
+      this.mediaService.getMediaFromArtist(this.artist).subscribe(media => {
+        this.media = media;
+  
+        this.media.forEach(currentMedia => {
+          this.artworkService.getArtwork(currentMedia).subscribe(url => {
+            this.covers[currentMedia.title] = url;
+          });
+        });
+        this.slider.update();
+  
+        // Workaround as the scrollbar handle isn't visible after the immediate update
+        // Seems like a size calculation issue, as resizing the browser window helps
+        // Better fix for this? 
+        window.setTimeout(() => {
+          this.slider.update();
+        }, 1000);
+      });
+    }
 
     // Retreive data through subscription above
     this.mediaService.publishArtistMedia();
