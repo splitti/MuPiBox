@@ -50,6 +50,9 @@ export class MedialistPage implements OnInit {
 
   ngOnInit() {
     // Subscribe
+
+    console.log(this.artist);
+    
     this.mediaService.getMediaFromArtist(this.artist).subscribe(media => {
       this.media = media;
 

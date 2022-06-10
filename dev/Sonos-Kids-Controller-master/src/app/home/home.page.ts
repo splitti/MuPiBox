@@ -163,6 +163,8 @@ export class HomePage implements OnInit {
   }
 
   artistCoverClicked(clickedArtist: Artist) {
+    console.log(clickedArtist);
+    
     this.activityIndicatorService.create().then(indicator => {
       this.activityIndicatorVisible = true;
       indicator.present().then(() => {
@@ -171,9 +173,6 @@ export class HomePage implements OnInit {
             artist: clickedArtist
           }
         };
-        
-        console.log(navigationExtras);
-        
         this.router.navigate(['/medialist'], navigationExtras);
       });
     });
