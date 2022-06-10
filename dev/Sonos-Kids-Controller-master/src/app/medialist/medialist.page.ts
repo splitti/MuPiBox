@@ -56,9 +56,12 @@ export class MedialistPage implements OnInit {
     this.mediaService.getMediaFromArtist(this.artist).subscribe(media => {
       this.media = media;
 
+      console.log(this.media);
+
       this.media.forEach(currentMedia => {
         this.artworkService.getArtwork(currentMedia).subscribe(url => {
           this.covers[currentMedia.title] = url;
+          console.log(currentMedia);
         });
       });
       this.slider.update();
