@@ -347,7 +347,7 @@ export class MediaService {
       map((media: Media[]) => {
         return media
           .filter(currentMedia => currentMedia.artist === artist.name)
-          .sort((a, b) => (new Date(b.release_date)).getTime() - (new Date(a.release_date)).getTime());
+          .sort((a, b) => (new Date(a.release_date)).getTime() - (new Date(b.release_date)).getTime());
       })
     );
   }
