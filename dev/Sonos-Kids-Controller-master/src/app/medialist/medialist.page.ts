@@ -52,9 +52,8 @@ export class MedialistPage implements OnInit {
     // Subscribe
 
     console.log(this.artist);
-    /* this.mediaService.getMediaFromArtist(this.artist).subscribe(media => {
-      this.media = media; */
-    this.mediaService.getMediaFromShow().subscribe(media => {
+    
+    this.mediaService.getMediaFromArtist(this.artist).subscribe(media => {
       this.media = media;
 
       console.log(this.media);

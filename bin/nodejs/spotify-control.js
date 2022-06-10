@@ -537,7 +537,7 @@ async function useSpotify(command){
       }
       playlist = playlisttemp;
     }
-    if(truecommand.name.split(':')[1] === 'show'){
+    if(command.name.split(':')[1] === 'show'){
       currentMeta.activeShow = command.name.split(':')[2];
       let offset = 0;
       let showtemp;

@@ -230,6 +230,8 @@ export class MediaService {
                         currentItem.artist = item.artist;
                       });
                     }
+                    console.log(items);
+                    
                     return items;
                   })
                 ),
@@ -260,6 +262,7 @@ export class MediaService {
           if (!currentMedia.cover) {
             currentMedia.cover = '../assets/images/nocover.png';
           }
+          console.log(currentMedia);
           return currentMedia;
         });
       })
@@ -332,18 +335,6 @@ export class MediaService {
       map((media: Media[]) => {
         return media
           .filter(currentMedia => currentMedia.artist === artist.name)
-          .sort((a, b) => a.title.localeCompare(b.title, undefined, {
-            numeric: true,
-            sensitivity: 'base'
-          }));
-      })
-    );
-  }
-
-  getMediaFromShow(): Observable<Media[]> {
-    return this.artistMediaSubject.pipe(
-      map((media: Media[]) => {
-        return media
           .sort((a, b) => a.title.localeCompare(b.title, undefined, {
             numeric: true,
             sensitivity: 'base'
