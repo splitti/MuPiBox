@@ -95,7 +95,7 @@ export class SpotifyService {
         return this.errorHandler(errors);
       }),
       map((response: SpotifyShowResponse) => response.episodes.total),
-      mergeMap(count => range(0, Math.floor(count / 50))),
+      mergeMap(count => range(0, Math.ceil(count / 50))),
       mergeMap(multiplier => defer(() => this.spotifyApi.getShow(id, { limit: 50, offset: 50 * multiplier, market: 'DE' })).pipe(
         retryWhen(errors => {
           return this.errorHandler(errors);
