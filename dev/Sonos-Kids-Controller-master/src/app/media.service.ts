@@ -340,11 +340,10 @@ export class MediaService {
     );
   }
 
-  getMediaFromShow(artist: Artist): Observable<Media[]> {
+  getMediaFromShow(): Observable<Media[]> {
     return this.artistMediaSubject.pipe(
       map((media: Media[]) => {
         return media
-          .filter(currentMedia => currentMedia.artist === artist.name)
           .sort((a, b) => a.title.localeCompare(b.title, undefined, {
             numeric: true,
             sensitivity: 'base'
