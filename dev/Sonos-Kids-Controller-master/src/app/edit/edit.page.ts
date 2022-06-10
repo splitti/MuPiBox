@@ -90,6 +90,8 @@ export class EditPage implements OnInit {
 
     this.mediaService.updateNetwork();
     this.mediaService.updateRawMedia();
+
+    this.playerService.sendCmd(PlayerCmds.INDEX);
   }
 
   ionViewDidLeave() {

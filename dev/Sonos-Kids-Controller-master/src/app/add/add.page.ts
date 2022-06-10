@@ -58,8 +58,7 @@ export class AddPage implements OnInit, AfterViewInit {
     private mediaService: MediaService,
     private navController: NavController,
     private route: ActivatedRoute,
-    private router: Router,
-    private playerService: PlayerService
+    private router: Router
   ) {
     this.route.queryParams.subscribe(params => {
       if (this.router.getCurrentNavigation().extras.state) {
@@ -250,8 +249,6 @@ export class AddPage implements OnInit, AfterViewInit {
     this.keyboard.clearInput('radio_title');
     this.keyboard.clearInput('radio_id');
     this.keyboard.clearInput('radio_cover');
-
-    this.playerService.sendCmd(PlayerCmds.INDEX);
 
     this.validate();
 

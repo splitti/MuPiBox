@@ -56,6 +56,8 @@ export class MedialistPage implements OnInit {
     if(this.artist.coverMedia.showid && this.artist.coverMedia.showid.length > 0){
       this.mediaService.getMediaFromShow(this.artist).subscribe(media => {
         this.media = media;
+
+        console.log(this.media);
   
         this.media.forEach(currentMedia => {
           this.artworkService.getArtwork(currentMedia).subscribe(url => {
