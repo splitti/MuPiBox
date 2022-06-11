@@ -326,7 +326,7 @@ function shuffleoff(){
 }
 
 function playMe(activePlaylistId){
-  if(command.name.split(':')[1] === 'episode'){
+  if(activePlaylistId.split(':')[1] === 'episode'){
     spotifyApi.play({ uris: [activePlaylistId] })
     .then(function(data){
       log.debug("[Spotify Control] Playback started");
