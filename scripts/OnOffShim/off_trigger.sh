@@ -30,7 +30,7 @@ until [ $power = $switchtype ]; do
 		sleep ${PRESS_DELAY}
 		power=$(cat /sys/class/gpio/gpio${TRIGGER_PIN}/value)
 	fi
-    sleep 1
+    sleep 0.1
 done
 
 SHUT_SOUND=$(/usr/bin/jq -r .mupibox.shutSound ${CONFIG})
