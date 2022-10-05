@@ -17,7 +17,9 @@ import { NgForm } from '@angular/forms';
 export class AdminPage implements OnInit, AfterViewInit {
   @ViewChild('segment', { static: false }) segment: IonSegment;
   @ViewChild('select', { static: false }) select: IonSelect;
+
   @ViewChild('wlan_segment', { static: false }) wlanSegment: IonSelect;
+
   @ViewChild('wlan_ssid', { static: false }) wlanSsid: IonInput;
   @ViewChild('wlan_pw', { static: false }) wlanPw: IonInput;
   
@@ -52,19 +54,19 @@ export class AdminPage implements OnInit, AfterViewInit {
           'q w e r t z u i o p ü',
           'a s d f g h j k l ö ä',
           '{shift} y x c v b n m {shift}',
-          '{alt} {space} . {bksp}'
+          '{alt} , {space} . {bksp}'
         ],
         shift: [
           'Q W E R T Z U I O P Ü',
           'A S D F G H J K L Ö Ä',
           '{shiftactivated} Y X C V B N M {shift}',
-          '{alt} {space} . {bksp}'
+          '{alt} , {space} . {bksp}'
         ],
         alt: [
           '1 2 3 4 5 6 7 8 9 0 =',
-          `% @ # $ & * / ( ) ' "`,
-          '{shift} , - + ; : ! ? {shift}',
-          '{default} {space} . {bksp}'
+          `% @ # $ § & * ° ^ / \\ ' "`,
+          '_ ~ - + ; : { } [ ] ( )',
+          '{default} ! {space} ? {bksp}'
         ]
       },
       display: {
