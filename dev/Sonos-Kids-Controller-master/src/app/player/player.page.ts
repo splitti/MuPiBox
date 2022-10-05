@@ -118,26 +118,23 @@ export class PlayerPage implements OnInit {
       this.currentPlaylist = playlist;
     });
 
-    if(this.media.category === 'playlist'){
-      this.currentPlaylist?.items.forEach((element, index) => {
-        if(this.currentPlayedSpotify?.item.id === element.track?.id){
-          this.playlistTrackNr = ++index;
-          this.cover = element.track.album.images[1].url;
-        }
-      });
-    }
-
-    if(this.progress > 1){
-      if(this.playing && !this.currentPlayedSpotify.is_playing && !this.currentPlayedLocal.playing){
+    if(this.media.type === 'spotify'){
+      let seek = this.currentPlayedSpotify?.progress_ms || 0;
+      this.progress = (seek / this.currentPlayedSpotify?.item.duration_ms) * 100 || 0;
+      if(this.media.category === 'playlist'){
+        this.currentPlaylist?.items.forEach((element, index) => {
+          if(this.currentPlayedSpotify?.item.id === element.track?.id){
+            this.playlistTrackNr = ++index;
+            this.cover = element.track.album.images[1].url;
+          }
+        });
+      }
+      if(this.playing && !this.currentPlayedSpotify.is_playing){
         this.goBackTimer++;
         if(this.goBackTimer > 5){
           this.navController.back();
         }
       }
-    }
-    if(this.media.type === 'spotify'){
-      let seek = this.currentPlayedSpotify?.progress_ms || 0;
-      this.progress = (seek / this.currentPlayedSpotify?.item.duration_ms) * 100 || 0;
       setTimeout(() => {
         if(this.updateProgression){
           this.updateProgress();
@@ -146,6 +143,12 @@ export class PlayerPage implements OnInit {
     } else if (this.media.type === 'library'){
       let seek = this.currentPlayedLocal?.progressTime || 0;
       this.progress = seek || 0;
+      if(this.playing && !this.currentPlayedLocal.playing){
+        this.goBackTimer++;
+        if(this.goBackTimer > 5){
+          this.navController.back();
+        }
+      }
       setTimeout(() => {
         if(this.updateProgression){
           this.updateProgress();

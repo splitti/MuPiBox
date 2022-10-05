@@ -154,7 +154,6 @@ export class AddPage implements OnInit, AfterViewInit {
     } else if (this.category !== 'radio' && this.source === 'radio') {
       this.source = 'spotify';
     }
-
     this.validate();
   }
 
@@ -306,13 +305,19 @@ export class AddPage implements OnInit, AfterViewInit {
           (artistid?.length > 0 && !(query?.length > 0))
           ||
           (show?.length > 0 && !(query?.length > 0))
+          ||
+          (this.edit && (title?.length > 0))
+          ||
+          (this.edit && (this.shuffle !== this.editMedia?.shuffle))
         )
         ||
-        ((this.category === 'playlist') && (id?.length > 0))
-        ||
-        ((this.edit) && (this.shuffle !== this.editMedia?.shuffle))
-        ||
-        ((this.edit) && (title?.length > 0))
+        (this.category === 'playlist') && (
+          (id?.length > 0)
+          ||
+          (this.edit && (this.shuffle !== this.editMedia?.shuffle))
+          ||
+          (this.edit && (title?.length > 0))
+        )
       );
     } else if (this.source === 'radio') {
       const artist = this.keyboard.getInput('radio_artist');
@@ -320,7 +325,9 @@ export class AddPage implements OnInit, AfterViewInit {
       const id = this.keyboard.getInput('radio_id');
 
       this.valid = (
-        title?.length > 0 && id?.length > 0
+        (title?.length > 0 && id?.length > 0)
+        ||
+        (this.edit && ((title?.length > 0) || (id?.length > 0) || (artist?.length > 0)))
       );
     }
   }

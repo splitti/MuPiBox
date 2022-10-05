@@ -28,7 +28,16 @@
             <form #spotifyForm="ngForm" (ngSubmit)="submit(spotifyForm)">
                 <ion-grid>
                     <ion-row>
-                        <ion-col *ngIf="category === 'playlist'" size="8">
+                        <ion-col *ngIf="category === 'playlist'" size="12">
+                            <div>
+                                <ion-item>
+                                    <ion-label>Shuffle Mode</ion-label>
+                                    <ion-checkbox #spotify_shuffle name="spotify_shuffle" [(ngModel)]="shuffle" (ionChange)="validate()"></ion-checkbox>
+                                </ion-item>
+                            </div>
+                        </ion-col>
+
+                        <ion-col *ngIf="category == 'audiobook'" size="12">
                             <div>
                                 <ion-item>
                                     <ion-label class="dimmed-text">Media search type</ion-label>
@@ -41,24 +50,24 @@
                                 </ion-item>
                             </div>
                         </ion-col>
-                        <ion-col *ngIf="category === 'playlist'" size="4">
-                            <div>
-                                <ion-item>
-                                    <ion-label>Shuffle Mode</ion-label>
-                                    <ion-checkbox #spotify_shuffle name="spotify_shuffle" [(ngModel)]="shuffle" (ionChange)="validate()"></ion-checkbox>
-                                </ion-item>
-                            </div>
-                        </ion-col>
-                        <ion-col *ngIf="category !== 'playlist'" size="12">
+                        
+                        <ion-col *ngIf="category == 'music'" size="8">
                             <div>
                                 <ion-item>
                                     <ion-label class="dimmed-text">Media search type</ion-label>
                                     <ion-select #searchTypeSelect interface="popover" [(ngModel)]="searchType" name="searchType" (ionChange)="searchTypeChanged()">
                                         <ion-select-option value="artist_id">Artist ID from Spotify</ion-select-option>
                                         <ion-select-option value="media_id">Media ID from Spotify</ion-select-option>
-                                        <ion-select-option *ngIf="category !== 'music'" value="show_id">Show ID from Spotify</ion-select-option>
                                         <ion-select-option value="query">Search Query for Spotify</ion-select-option>
                                       </ion-select>
+                                </ion-item>
+                            </div>
+                        </ion-col>
+                        <ion-col *ngIf="category === 'music'" size="4">
+                            <div>
+                                <ion-item>
+                                    <ion-label>Shuffle Mode</ion-label>
+                                    <ion-checkbox #spotify_shuffle name="spotify_shuffle" [(ngModel)]="shuffle" (ionChange)="validate()"></ion-checkbox>
                                 </ion-item>
                             </div>
                         </ion-col>
