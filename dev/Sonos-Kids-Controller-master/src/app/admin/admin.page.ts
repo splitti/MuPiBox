@@ -17,9 +17,7 @@ import { NgForm } from '@angular/forms';
 export class AdminPage implements OnInit, AfterViewInit {
   @ViewChild('segment', { static: false }) segment: IonSegment;
   @ViewChild('select', { static: false }) select: IonSelect;
-
   @ViewChild('wlan_segment', { static: false }) wlanSegment: IonSelect;
-
   @ViewChild('wlan_ssid', { static: false }) wlanSsid: IonInput;
   @ViewChild('wlan_pw', { static: false }) wlanPw: IonInput;
   

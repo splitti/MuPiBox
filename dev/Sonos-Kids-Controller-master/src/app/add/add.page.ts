@@ -7,7 +7,6 @@ import { NgForm } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { PlayerCmds, PlayerService } from '../player.service';
 
-
 @Component({
   selector: 'app-add',
   encapsulation: ViewEncapsulation.None,
