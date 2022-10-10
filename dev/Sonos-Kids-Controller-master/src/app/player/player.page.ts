@@ -162,21 +162,16 @@ export class PlayerPage implements OnInit {
       if(this.playing && this.currentPlayedLocal.playing && (this.currentPlayedLocal.currentTracknr == this.currentPlayedLocal.totalTracks) && (this.currentPlayedLocal.progressTime > 90)){
         if(this.goBackTimer = 0){
           this.tmpProgressTime = this.currentPlayedLocal.progressTime;
-          console.log("Einmaliger Aufruf Anfang");
         }
-        
-        console.log(this.currentPlayedLocal.progressTime);
-        
         if(this.tmpProgressTime === this.currentPlayedLocal.progressTime){
           this.goBackTimer++;
-          console.log("Prozess ist gleich");
         }else{
           this.tmpProgressTime = this.currentPlayedLocal.progressTime;
-          console.log("Prozess verändert sich");
         }
         if(this.goBackTimer > 10){
           this.navController.back();
         }
+        this.navController.back();
       }
       setTimeout(() => {
         if(this.updateProgression){

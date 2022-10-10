@@ -774,8 +774,8 @@ app.use(function(req, res){
 
   if(command.name.includes("validate/") ){
     let validate = dir.split('validate/').pop();
-    validateMedia.validateType = validate.split(':')[0];
-    validateMedia.validateId = validate.split(':')[1];
+    currentMeta.validateType = validate.split(':')[0];
+    currentMeta.validateId = validate.split(':')[1];
   }
 
   if(command.dir.includes("say/") ){
