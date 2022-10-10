@@ -640,7 +640,7 @@ app.get("/episode", function(req, res){
         total: ""
       };
     } else {
-      console.log("state is not empty !");
+      //console.log("state is not empty !");
     } 
     //log.debug("[Spotify Control] Getting available state...");
     res.send(state);
@@ -776,6 +776,8 @@ app.use(function(req, res){
     let validate = dir.split('validate/').pop();
     currentMeta.validateType = validate.split(':')[0];
     currentMeta.validateId = validate.split(':')[1];
+    console.log(currentMeta.validateType);
+    console.log(currentMeta.validateId);
   }
 
   if(command.dir.includes("say/") ){
