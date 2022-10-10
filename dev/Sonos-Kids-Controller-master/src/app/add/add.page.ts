@@ -91,6 +91,7 @@ export class AddPage implements OnInit, AfterViewInit {
         this.searchType = 'show_id';
       }
     }
+    this.categoryChanged();
     this.mediaService.validate$.subscribe(validate => {
       this.validateState = validate;
     });
