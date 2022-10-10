@@ -776,8 +776,9 @@ app.use(function(req, res){
     let validate = dir.split('validate/').pop();
     currentMeta.validateType = validate.split(':')[0];
     currentMeta.validateId = validate.split(':')[1];
-    console.log(currentMeta.validateType);
-    console.log(currentMeta.validateId);
+    log.debug(validate);
+    log.debug(currentMeta.validateType);
+    log.debug(currentMeta.validateId);
   }
 
   if(command.dir.includes("say/") ){
