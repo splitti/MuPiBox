@@ -56,6 +56,7 @@ export class PlayerPage implements OnInit {
   goBackTimer = 0;
   progress = 0;
   shufflechanged = 0;
+  tmpProgressTime = 0;
   public readonly spotify$: Observable<CurrentSpotify>;
   public readonly local$: Observable<CurrentMPlayer>;
   public readonly playlist$: Observable<CurrentPlaylist>;
@@ -146,7 +147,7 @@ export class PlayerPage implements OnInit {
       }
       if(this.playing && !this.currentPlayedSpotify.is_playing){
         this.goBackTimer++;
-        if(this.goBackTimer > 5){
+        if(this.goBackTimer > 10){
           this.navController.back();
         }
       }
@@ -158,9 +159,16 @@ export class PlayerPage implements OnInit {
     } else if (this.media.type === 'library'){
       let seek = this.currentPlayedLocal?.progressTime || 0;
       this.progress = seek || 0;
-      if(this.playing && this.currentPlayedLocal.playing && (this.currentPlayedLocal.currentTracknr === this.currentPlayedLocal.totalTracks) && (this.currentPlayedLocal.progressTime === 100)){
-        this.goBackTimer++;
-        if(this.goBackTimer > 5){
+      if(this.playing && this.currentPlayedLocal.playing && (this.currentPlayedLocal.currentTracknr === this.currentPlayedLocal.totalTracks) && (this.currentPlayedLocal.progressTime > 90)){
+        if(this.goBackTimer = 0){
+          this.tmpProgressTime = this.currentPlayedLocal.progressTime;
+        }
+        if(this.tmpProgressTime === this.currentPlayedLocal.progressTime){
+          this.goBackTimer++;
+        }else{
+          this.tmpProgressTime = this.currentPlayedLocal.progressTime;
+        }
+        if(this.goBackTimer > 10){
           this.navController.back();
         }
       }
