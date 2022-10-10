@@ -175,9 +175,9 @@ export class PlayerPage implements OnInit {
   ionViewWillEnter() {
     console.log(this.media);
     this.updateProgression = true;
-    if(this.media?.showid.length > 0){
-      this.show = true;
-    }
+    // if(this.media?.showid.length > 0){
+    //   this.show = true;
+    // }
     this.playerService.playMedia(this.media);
     this.updateProgress();
     if (this.resumePlay){
