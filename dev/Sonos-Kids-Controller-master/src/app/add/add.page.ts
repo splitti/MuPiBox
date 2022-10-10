@@ -256,7 +256,7 @@ export class AddPage implements OnInit, AfterViewInit {
       this.validateState = validate;
     });
 
-    if(!this.validateState.validate){
+    if(!this.validateState?.validate){
       const alert = await this.alertController.create({
         cssClass: 'alert',
         header: 'Warning',
@@ -348,7 +348,7 @@ export class AddPage implements OnInit, AfterViewInit {
           ||
           (show?.length > 0 && !(query?.length > 0))
           ||
-          (this.edit && (title?.length > 0))
+          (this.edit && (artist?.length > 0))
           ||
           (this.edit && (this.shuffle !== this.editMedia?.shuffle))
         )

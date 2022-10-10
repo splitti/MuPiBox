@@ -158,7 +158,7 @@ export class PlayerPage implements OnInit {
     } else if (this.media.type === 'library'){
       let seek = this.currentPlayedLocal?.progressTime || 0;
       this.progress = seek || 0;
-      if(this.playing && !this.currentPlayedLocal.playing){
+      if(this.playing && this.currentPlayedLocal.playing && (this.currentPlayedLocal.currentTracknr === this.currentPlayedLocal.totalTracks) && (this.currentPlayedLocal.progressTime === 100)){
         this.goBackTimer++;
         if(this.goBackTimer > 5){
           this.navController.back();
@@ -175,9 +175,9 @@ export class PlayerPage implements OnInit {
   ionViewWillEnter() {
     console.log(this.media);
     this.updateProgression = true;
-    // if(this.media?.showid.length > 0){
-    //   this.show = true;
-    // }
+    if(this.media.showid?.length > 0){
+      this.show = true;
+    }
     this.playerService.playMedia(this.media);
     this.updateProgress();
     if (this.resumePlay){
