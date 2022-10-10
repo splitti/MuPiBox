@@ -1,11 +1,13 @@
 import { Component, OnInit, ViewEncapsulation, AfterViewInit, ViewChild } from '@angular/core';
-import { NavController, IonSelect, IonInput, IonSegment } from '@ionic/angular';
+import { NavController, IonSelect, IonInput, IonSegment, AlertController } from '@ionic/angular';
 import { MediaService } from '../media.service';
 import { Media } from '../media';
 import Keyboard from 'simple-keyboard';
 import { NgForm } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { PlayerCmds, PlayerService } from '../player.service';
+import { PlayerService } from '../player.service';
+import { Observable } from 'rxjs';
+import { Validate } from '../validate';
 
 @Component({
   selector: 'app-add',
@@ -45,6 +47,7 @@ export class AddPage implements OnInit, AfterViewInit {
   edit = false;
   shuffle = false;
   firstInput = true;
+  validateState: Validate;
 
   categoryIcons = {
     audiobook: 'book-outline',
@@ -53,12 +56,17 @@ export class AddPage implements OnInit, AfterViewInit {
     radio: 'radio-outline'
   };
 
+  public readonly validate$: Observable<Validate>;
+
   constructor(
     private mediaService: MediaService,
     private navController: NavController,
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    private playerService: PlayerService,
+    public alertController: AlertController,
   ) {
+    this.validate$ = this.mediaService.validate$;
     this.route.queryParams.subscribe(params => {
       if (this.router.getCurrentNavigation().extras.state) {
         this.editMedia = this.router.getCurrentNavigation().extras.state.media;
@@ -83,7 +91,9 @@ export class AddPage implements OnInit, AfterViewInit {
         this.searchType = 'show_id';
       }
     }
-
+    this.mediaService.validate$.subscribe(validate => {
+      this.validateState = validate;
+    });
   }
 
   ngAfterViewInit() {
@@ -209,7 +219,7 @@ export class AddPage implements OnInit, AfterViewInit {
     }, 10);
   }
 
-  submit(form: NgForm) {
+  async submit(form: NgForm) {
     const media: Media = {
       type: this.source,
       category: this.category,
@@ -220,37 +230,69 @@ export class AddPage implements OnInit, AfterViewInit {
       if (form.form.value.spotify_artist?.length) { media.artist = form.form.value.spotify_artist; }
       if (form.form.value.spotify_title?.length) { media.title = form.form.value.spotify_title; }
       if (form.form.value.spotify_query?.length) { media.query = form.form.value.spotify_query; }
-      if (form.form.value.spotify_id?.length) { media.id = form.form.value.spotify_id; }
-      if (form.form.value.spotify_showid?.length) { media.showid = form.form.value.spotify_showid; }
-      if (form.form.value.spotify_artistid?.length) { media.artistid = form.form.value.spotify_artistid; }
+      if (form.form.value.spotify_id?.length) {
+        media.id = form.form.value.spotify_id;
+        if(media.category === 'playlist'){
+          this.playerService.validateId(media.id, "spotify_playlistid");
+        }else{
+          this.playerService.validateId(media.id, "spotify_id");
+        }
+      }
+      if (form.form.value.spotify_showid?.length) {
+        media.showid = form.form.value.spotify_showid;
+        this.playerService.validateId(media.showid, "spotify_showid");
+      }
+      if (form.form.value.spotify_artistid?.length) {
+        media.artistid = form.form.value.spotify_artistid;
+        this.playerService.validateId(media.artistid, "spotify_artistid");
+      }
     } else if (this.source === 'radio') {
       if (form.form.value.radio_title?.length) { media.title = form.form.value.radio_title; }
       if (form.form.value.radio_cover?.length) { media.cover = form.form.value.radio_cover; }
       if (form.form.value.radio_id?.length) { media.id = form.form.value.radio_id; }
     }
 
-    if(this.edit){
-      this.mediaService.editRawMediaAtIndex(this.editindex, media);
+    this.mediaService.validate$.subscribe(validate => {
+      this.validateState = validate;
+    });
+
+    if(!this.validateState.validate){
+      const alert = await this.alertController.create({
+        cssClass: 'alert',
+        header: 'Warning',
+        message: 'The id is not valide!',
+        buttons: [
+          {
+            text: 'Okay'
+          }
+        ]
+      });
+  
+      await alert.present();
     }else{
-      this.mediaService.addRawMedia(media);
+      if(this.edit){
+        this.mediaService.editRawMediaAtIndex(this.editindex, media);
+      }else{
+        this.mediaService.addRawMedia(media);
+      }
+  
+      form.reset();
+  
+      this.keyboard.clearInput('spotify_artist');
+      this.keyboard.clearInput('spotify_title');
+      this.keyboard.clearInput('spotify_id');
+      this.keyboard.clearInput('spotify_showid');
+      this.keyboard.clearInput('spotify_artistid');
+      this.keyboard.clearInput('spotify_query');
+  
+      this.keyboard.clearInput('radio_title');
+      this.keyboard.clearInput('radio_id');
+      this.keyboard.clearInput('radio_cover');
+  
+      this.validate();
+  
+      this.navController.back();
     }
-
-    form.reset();
-
-    this.keyboard.clearInput('spotify_artist');
-    this.keyboard.clearInput('spotify_title');
-    this.keyboard.clearInput('spotify_id');
-    this.keyboard.clearInput('spotify_showid');
-    this.keyboard.clearInput('spotify_artistid');
-    this.keyboard.clearInput('spotify_query');
-
-    this.keyboard.clearInput('radio_title');
-    this.keyboard.clearInput('radio_id');
-    this.keyboard.clearInput('radio_cover');
-
-    this.validate();
-
-    this.navController.back();
   }
 
   validate() {

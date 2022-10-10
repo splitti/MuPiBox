@@ -7,7 +7,7 @@ import { Media } from '../media';
 import { MediaService } from '../media.service';
 import { CurrentSpotify } from '../current.spotify';
 import { CurrentMPlayer } from '../current.mplayer';
-import { empty, Observable } from 'rxjs';
+import { Observable } from 'rxjs';
 import { IonRange, NavController } from '@ionic/angular';
 import { Resume } from '../resume';
 import { CurrentPlaylist } from '../current.playlist';

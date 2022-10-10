@@ -107,6 +107,10 @@ var currentMeta = {
   progressTime: "",
   volume: 0
 };
+var validateMedia = {
+  validateId: '',
+  validateType: ''
+};
 
 function writeplayerstatePlay(){
 	playerstate = 'play';
@@ -649,6 +653,91 @@ app.get("/episode", function(req, res){
 
 /*endpoint to return playlist information*/
 /*only used if sonos-kids-player is modified*/
+app.get("/validate", function(req, res){
+  if(validateMedia.validateType == "id"){
+    spotifyApi.getAlbum(validateMedia.validateId)
+    .then(function(data) {
+      let validate;
+      if (data.body.id != undefined){
+        validate = {
+          valide: true
+        };
+        res.send(validate);
+      }
+      else {
+        validate = {
+          valide: false
+        };
+        res.send(validate);
+      }
+    }, function(err) {
+      handleSpotifyError(err,"0");
+    });
+  }
+  if(validateMedia.validateType == "showid"){
+    spotifyApi.getShow(validateMedia.validateId)
+    .then(function(data) {
+      let validate;
+      if (data.body.id != undefined){
+        validate = {
+          valide: true
+        };
+        res.send(validate);
+      }
+      else {
+        validate = {
+          valide: false
+        };
+        res.send(validate);
+      }
+    }, function(err) {
+      handleSpotifyError(err,"0");
+    });
+  }
+  if(validateMedia.validateType == "artistid"){
+    spotifyApi.getArtist(validateMedia.validateId)
+    .then(function(data) {
+      let validate;
+      if (data.body.id != undefined){
+        validate = {
+          valide: true
+        };
+        res.send(validate);
+      }
+      else {
+        validate = {
+          valide: false
+        };
+        res.send(validate);
+      }
+    }, function(err) {
+      handleSpotifyError(err,"0");
+    });
+  }
+  if(validateMedia.validateType == "playlistid"){
+    spotifyApi.getPlaylist(validateMedia.validateId)
+    .then(function(data) {
+      let validate;
+      if (data.body.id != undefined){
+        validate = {
+          valide: true
+        };
+        res.send(validate);
+      }
+      else {
+        validate = {
+          valide: false
+        };
+        res.send(validate);
+      }
+    }, function(err) {
+      handleSpotifyError(err,"0");
+    });
+  }
+});
+
+/*endpoint to return playlist information*/
+/*only used if sonos-kids-player is modified*/
 app.get("/show", function(req, res){
   res.send(show);
 });
@@ -683,6 +772,12 @@ app.use(function(req, res){
     let radioURL = dir.split('radio/').pop();
     radioURL = decodeURIComponent(radioURL);
     playURL(radioURL);
+  }
+
+  if(command.name.includes("validate/") ){
+    let validate = dir.split('validate/').pop();
+    validateMedia.validateType = validate.split(':')[0];
+    validateMedia.validateId = validate.split(':')[1];
   }
 
   if(command.dir.includes("say/") ){

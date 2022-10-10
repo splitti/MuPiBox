@@ -13,6 +13,7 @@ import { CurrentMPlayer } from './current.mplayer';
 import { Resume } from './resume';
 import { CurrentPlaylist } from './current.playlist';
 import { CurrentEpisode } from './current.episode';
+import { Validate } from './validate';
 
 @Injectable({
   providedIn: 'root'
@@ -25,6 +26,7 @@ export class MediaService {
   public readonly network$: Observable<Network>;
   public readonly playlist$: Observable<CurrentPlaylist>;
   public readonly episode$: Observable<CurrentEpisode>;
+  public readonly validate$: Observable<Validate>;
 
   private rawMediaSubject = new Subject<Media[]>();
   private wlanSubject = new Subject<WLAN[]>();
@@ -66,6 +68,12 @@ export class MediaService {
     );
     this.episode$ = interval(1000).pipe( // Once a second after subscribe, way too frequent!
       switchMap((): Observable<CurrentEpisode> => this.http.get<CurrentEpisode>('http://localhost:5005/episode')),
+      // Replay the most recent (bufferSize) emission on each subscription
+      // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
+      shareReplay({ bufferSize: 1, refCount: false }),
+    );
+    this.validate$ = interval(1000).pipe( // Once a second after subscribe, way too frequent!
+      switchMap((): Observable<Validate> => this.http.get<Validate>('http://localhost:5005/validate')),
       // Replay the most recent (bufferSize) emission on each subscription
       // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
       shareReplay({ bufferSize: 1, refCount: false }),
