@@ -163,6 +163,9 @@ export class PlayerPage implements OnInit {
         if(this.goBackTimer = 0){
           this.tmpProgressTime = this.currentPlayedLocal.progressTime;
         }
+        console.log(this.tmpProgressTime);
+        console.log(this.currentPlayedLocal.progressTime);
+        console.log(this.goBackTimer);
         if(this.tmpProgressTime === this.currentPlayedLocal.progressTime){
           this.goBackTimer++;
         }else{
