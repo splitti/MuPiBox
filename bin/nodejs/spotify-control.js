@@ -105,9 +105,7 @@ var currentMeta = {
   currentTracknr: 0,
   totalTracks: "",
   progressTime: "",
-  volume: 0
-};
-var validateMedia = {
+  volume: 0,
   validateId: '',
   validateType: ''
 };
@@ -654,8 +652,8 @@ app.get("/episode", function(req, res){
 /*endpoint to return playlist information*/
 /*only used if sonos-kids-player is modified*/
 app.get("/validate", function(req, res){
-  if(validateMedia.validateType == "id"){
-    spotifyApi.getAlbum(validateMedia.validateId)
+  if(currentMeta.validateType == "id"){
+    spotifyApi.getAlbum(currentMeta.validateId)
     .then(function(data) {
       let validate;
       if (data.body.id != undefined){
@@ -674,8 +672,8 @@ app.get("/validate", function(req, res){
       handleSpotifyError(err,"0");
     });
   }
-  if(validateMedia.validateType == "showid"){
-    spotifyApi.getShow(validateMedia.validateId)
+  if(currentMeta.validateType == "showid"){
+    spotifyApi.getShow(currentMeta.validateId)
     .then(function(data) {
       let validate;
       if (data.body.id != undefined){
@@ -694,8 +692,8 @@ app.get("/validate", function(req, res){
       handleSpotifyError(err,"0");
     });
   }
-  if(validateMedia.validateType == "artistid"){
-    spotifyApi.getArtist(validateMedia.validateId)
+  if(currentMeta.validateType == "artistid"){
+    spotifyApi.getArtist(currentMeta.validateId)
     .then(function(data) {
       let validate;
       if (data.body.id != undefined){
@@ -714,8 +712,8 @@ app.get("/validate", function(req, res){
       handleSpotifyError(err,"0");
     });
   }
-  if(validateMedia.validateType == "playlistid"){
-    spotifyApi.getPlaylist(validateMedia.validateId)
+  if(currentMeta.validateType == "playlistid"){
+    spotifyApi.getPlaylist(currentMeta.validateId)
     .then(function(data) {
       let validate;
       if (data.body.id != undefined){
