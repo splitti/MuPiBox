@@ -171,7 +171,6 @@ export class PlayerPage implements OnInit {
         if(this.goBackTimer > 10){
           this.navController.back();
         }
-        this.navController.back();
       }
       setTimeout(() => {
         if(this.updateProgression){

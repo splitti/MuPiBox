@@ -772,7 +772,7 @@ app.use(function(req, res){
     playURL(radioURL);
   }
 
-  if(command.name.includes("validate/") ){
+  if(command.dir.includes("validate/") ){
     let validate = dir.split('validate/').pop();
     currentMeta.validateType = validate.split(':')[0];
     currentMeta.validateId = validate.split(':')[1];
