@@ -254,10 +254,12 @@ export class AddPage implements OnInit, AfterViewInit {
       if (form.form.value.radio_id?.length) { media.id = form.form.value.radio_id; }
     }
 
-    this.mediaService.validate$.subscribe(validate => {
-      this.validateState = validate;
-    });
-
+    setTimeout(() => {
+      this.mediaService.validate$.subscribe(validate => {
+        this.validateState = validate;
+      });
+    }, 1000)
+ 
     if(!this.validateState?.validate){
       const alert = await this.alertController.create({
         cssClass: 'alert',
