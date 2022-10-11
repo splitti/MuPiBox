@@ -221,7 +221,7 @@ export class AddPage implements OnInit, AfterViewInit {
     }, 10);
   }
 
-  async submit(form: NgForm) {
+  submit(form: NgForm) {
     const media: Media = {
       type: this.source,
       category: this.category,
@@ -255,11 +255,16 @@ export class AddPage implements OnInit, AfterViewInit {
     }
 
     setTimeout(() => {
-      this.mediaService.validate$.subscribe(validate => {
-        this.validateState = validate;
-      });
-    }, 1000)
- 
+      this.save(media);
+      form.reset();
+    }, 2500)
+  }
+
+  async save(media: Media){
+    this.mediaService.validate$.subscribe(validate => {
+      this.validateState = validate;
+    });
+
     if(!this.validateState?.validate){
       const alert = await this.alertController.create({
         cssClass: 'alert',
@@ -280,7 +285,7 @@ export class AddPage implements OnInit, AfterViewInit {
         this.mediaService.addRawMedia(media);
       }
   
-      form.reset();
+      
   
       this.keyboard.clearInput('spotify_artist');
       this.keyboard.clearInput('spotify_title');
