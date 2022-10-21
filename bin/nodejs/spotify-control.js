@@ -617,7 +617,13 @@ async function useSpotify(command){
       currentMeta.activeEpisode = command.name.split(':')[2];
       let offset = 0;
       let showtemp;
-      currentMeta.totalShows = 1;
+      spotifyApi.getEpisode(currentMeta.activeEpisode)
+      .then(function(data) {
+        currentMeta.activeShow = data.body.show.id;
+        currentMeta.totalShows = data.body.show.total_episodes;
+      }, function(err) {
+        handleSpotifyError(err,"0");
+      });
       while (offset < currentMeta.totalShows) {
         await spotifyApi.getShowEpisodes(currentMeta.activeShow, {limit: 50, offset: offset})
         .then(function(data) {
@@ -626,7 +632,6 @@ async function useSpotify(command){
           } else {
             showtemp = data.body.items;
           }
-          currentMeta.totalShows = data.body.total_episodes;
         }, function(err) {
           handleSpotifyError(err,"0");
         });
