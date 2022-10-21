@@ -18,9 +18,9 @@
         <ion-title class="toolbar-tracknumber" slot="end">
             <div>{{(local$ | async)?.volume}}%</div>
             <div *ngIf="media.type ==='library'; else elseBlockTrackSpotify">{{(local$ | async)?.currentTracknr}}/{{(local$ | async)?.totalTracks}}</div>
-            <ng-template #elseBlockTrackSpotify><div *ngIf="media.type ==='spotify' && media.category !=='playlist' && currentPlayedSpotify?.currently_playing_type !== 'episode'; else elseBlockPlaylist">{{(spotify$ | async)?.item.track_number}}/{{(spotify$ | async)?.item.album.total_tracks}}</div></ng-template>
-            <ng-template #elseBlockPlaylist><div *ngIf="media.type ==='spotify'; else elseBlockShow">{{playlistTrackNr}}/{{(local$ | async)?.totalPlaylist}}</div></ng-template>
-            <ng-template #elseBlockShow><div *ngIf="show; else elseBlockTrackRadio">?/{{(episode$ | async)?.show.total_episodes}}</div></ng-template>
+            <ng-template #elseBlockTrackSpotify><div *ngIf="media.type ==='spotify' && media.category !=='playlist' && currentPlayedSpotify?.currently_playing_type !== 'episode'; else elseBlockShow">{{(spotify$ | async)?.item.track_number}}/{{(spotify$ | async)?.item.album.total_tracks}}</div></ng-template>
+            <ng-template #elseBlockShow><div *ngIf="show; else elseBlockPlaylist">?/{{(episode$ | async)?.show.total_episodes}}</div></ng-template>
+            <ng-template #elseBlockPlaylist><div *ngIf="media.type ==='spotify'; else elseBlockTrackRadio">{{playlistTrackNr}}/{{(local$ | async)?.totalPlaylist}}</div></ng-template>
             <ng-template #elseBlockTrackRadio><div></div></ng-template>
         </ion-title>
     </ion-toolbar>

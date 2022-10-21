@@ -3,6 +3,7 @@ export interface CurrentEpisode {
     id?: string;
     name?: string;
     show?: {
+        id?: string;
         name?: string;
         total_episodes?: number;
     };

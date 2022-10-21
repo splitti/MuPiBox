@@ -100,6 +100,7 @@ var show;
 var currentMeta = {
   activePlaylist: '',
   totalPlaylist: '',
+  activeEpisode: '',
   activeShow: '',
   totalShows: '',
   currentPlayer: "",
@@ -612,18 +613,18 @@ async function useSpotify(command){
         offset = offset + 50;
       }
       playlist = playlisttemp;
-    } else if(command.name.split(':')[1] === 'show'){
-      currentMeta.activeShow = command.name.split(':')[2];
+    } else if(command.name.split(':')[1] === 'episode'){
+      currentMeta.activeEpisode = command.name.split(':')[2];
       let offset = 0;
       let showtemp;
       currentMeta.totalShows = 1;
       while (offset < currentMeta.totalShows) {
-        await spotifyApi.getShow/* Episodes */(currentMeta.activeShow, {limit: 50, offset: offset})
+        await spotifyApi.getShowEpisodes(currentMeta.activeShow, {limit: 50, offset: offset})
         .then(function(data) {
           if(offset > 0 ){
             showtemp.items = showtemp.items.concat(data.body.items);
           } else {
-            showtemp = data.body/* .items */;
+            showtemp = data.body.items;
           }
           currentMeta.totalShows = data.body.total_episodes;
         }, function(err) {
@@ -689,7 +690,7 @@ app.get("/playlistTracks", function(req, res){
 /*endpoint to return playlist information*/
 /*only used if sonos-kids-player is modified*/
 app.get("/episode", function(req, res){
-  spotifyApi.getEpisode('3cLAolLFZqdpTXiEEbEshA')
+  spotifyApi.getEpisode(currentMeta.activeEpisode)
   .then(function(data) {
     let state = data.body;
     if (Object.keys(state).length === 0) {
