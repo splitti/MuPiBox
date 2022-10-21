@@ -6,8 +6,8 @@ import Keyboard from 'simple-keyboard';
 import { NgForm } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { PlayerService } from '../player.service';
-import { Observable } from 'rxjs';
-import { Validate } from '../validate';
+//import { Observable } from 'rxjs';
+//import { Validate } from '../validate';
 
 @Component({
   selector: 'app-add',
@@ -47,7 +47,7 @@ export class AddPage implements OnInit, AfterViewInit {
   edit = false;
   shuffle = false;
   firstInput = true;
-  validateState: Validate;
+  //validateState: Validate;
 
   categoryIcons = {
     audiobook: 'book-outline',
@@ -56,7 +56,7 @@ export class AddPage implements OnInit, AfterViewInit {
     radio: 'radio-outline'
   };
 
-  public readonly validate$: Observable<Validate>;
+  //public readonly validate$: Observable<Validate>;
 
   constructor(
     private mediaService: MediaService,
@@ -66,7 +66,7 @@ export class AddPage implements OnInit, AfterViewInit {
     private playerService: PlayerService,
     public alertController: AlertController,
   ) {
-    this.validate$ = this.mediaService.validate$;
+    //this.validate$ = this.mediaService.validate$;
     this.route.queryParams.subscribe(params => {
       if (this.router.getCurrentNavigation().extras.state) {
         this.editMedia = this.router.getCurrentNavigation().extras.state.media;
@@ -91,9 +91,9 @@ export class AddPage implements OnInit, AfterViewInit {
         this.searchType = 'show_id';
       }
     }
-    this.mediaService.validate$.subscribe(validate => {
-      this.validateState = validate;
-    });
+    // this.mediaService.validate$.subscribe(validate => {
+    //   this.validateState = validate;
+    // });
   }
 
   ngAfterViewInit() {
@@ -234,19 +234,19 @@ export class AddPage implements OnInit, AfterViewInit {
       if (form.form.value.spotify_query?.length) { media.query = form.form.value.spotify_query; }
       if (form.form.value.spotify_id?.length) {
         media.id = form.form.value.spotify_id;
-        if(media.category === 'playlist'){
-          this.playerService.validateId(media.id, "spotify_playlistid");
-        }else{
-          this.playerService.validateId(media.id, "spotify_id");
-        }
+        // if(media.category === 'playlist'){
+        //   this.playerService.validateId(media.id, "spotify_playlistid");
+        // }else{
+        //   this.playerService.validateId(media.id, "spotify_id");
+        // }
       }
       if (form.form.value.spotify_showid?.length) {
         media.showid = form.form.value.spotify_showid;
-        this.playerService.validateId(media.showid, "spotify_showid");
+        // this.playerService.validateId(media.showid, "spotify_showid");
       }
       if (form.form.value.spotify_artistid?.length) {
         media.artistid = form.form.value.spotify_artistid;
-        this.playerService.validateId(media.artistid, "spotify_artistid");
+        // this.playerService.validateId(media.artistid, "spotify_artistid");
       }
     } else if (this.source === 'radio') {
       if (form.form.value.radio_title?.length) { media.title = form.form.value.radio_title; }
@@ -254,55 +254,78 @@ export class AddPage implements OnInit, AfterViewInit {
       if (form.form.value.radio_id?.length) { media.id = form.form.value.radio_id; }
     }
 
-    setTimeout(() => {
-      this.save(media);
-      form.reset();
-    }, 2500)
+    if(this.edit){
+      this.mediaService.editRawMediaAtIndex(this.editindex, media);
+    }else{
+      this.mediaService.addRawMedia(media);
+    }
+
+    form.reset();
+
+    this.keyboard.clearInput('spotify_artist');
+    this.keyboard.clearInput('spotify_title');
+    this.keyboard.clearInput('spotify_id');
+    this.keyboard.clearInput('spotify_showid');
+    this.keyboard.clearInput('spotify_artistid');
+    this.keyboard.clearInput('spotify_query');
+
+    this.keyboard.clearInput('radio_title');
+    this.keyboard.clearInput('radio_id');
+    this.keyboard.clearInput('radio_cover');
+
+    this.validate();
+
+    this.navController.back();
+
+    // setTimeout(() => {
+    //   this.save(media);
+    //   form.reset();
+    // }, 2500)
   }
 
-  async save(media: Media){
-    this.mediaService.validate$.subscribe(validate => {
-      this.validateState = validate;
-    });
+  // async save(media: Media){
+  //   this.mediaService.validate$.subscribe(validate => {
+  //     this.validateState = validate;
+  //   });
 
-    if(!this.validateState?.validate){
-      const alert = await this.alertController.create({
-        cssClass: 'alert',
-        header: 'Warning',
-        message: 'The id is not valide!',
-        buttons: [
-          {
-            text: 'Okay'
-          }
-        ]
-      });
+  //   if(!this.validateState?.validate){
+  //     const alert = await this.alertController.create({
+  //       cssClass: 'alert',
+  //       header: 'Warning',
+  //       message: 'The id is not valide!',
+  //       buttons: [
+  //         {
+  //           text: 'Okay'
+  //         }
+  //       ]
+  //     });
   
-      await alert.present();
-    }else{
-      if(this.edit){
-        this.mediaService.editRawMediaAtIndex(this.editindex, media);
-      }else{
-        this.mediaService.addRawMedia(media);
-      }
+  //     await alert.present();
+  //   }else{
+  //     if(this.edit){
+  //       this.mediaService.editRawMediaAtIndex(this.editindex, media);
+  //     }else{
+  //       this.mediaService.addRawMedia(media);
+  //     }
   
       
   
-      this.keyboard.clearInput('spotify_artist');
-      this.keyboard.clearInput('spotify_title');
-      this.keyboard.clearInput('spotify_id');
-      this.keyboard.clearInput('spotify_showid');
-      this.keyboard.clearInput('spotify_artistid');
-      this.keyboard.clearInput('spotify_query');
+  //     this.keyboard.clearInput('spotify_artist');
+  //     this.keyboard.clearInput('spotify_title');
+  //     this.keyboard.clearInput('spotify_id');
+  //     this.keyboard.clearInput('spotify_showid');
+  //     this.keyboard.clearInput('spotify_artistid');
+  //     this.keyboard.clearInput('spotify_query');
   
-      this.keyboard.clearInput('radio_title');
-      this.keyboard.clearInput('radio_id');
-      this.keyboard.clearInput('radio_cover');
+  //     this.keyboard.clearInput('radio_title');
+  //     this.keyboard.clearInput('radio_id');
+  //     this.keyboard.clearInput('radio_cover');
   
-      this.validate();
+  //     this.validate();
   
-      this.navController.back();
-    }
-  }
+  //     this.navController.back();
+  //   }
+  // }
 
   validate() {
     if (this.spotifySegment) { this.spotifySegment.disabled = false; }
