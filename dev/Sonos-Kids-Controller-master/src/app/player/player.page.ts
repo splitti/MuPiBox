@@ -108,8 +108,13 @@ export class PlayerPage implements OnInit {
   seek(){
     let newValue = +this.range.value;
     if(this.media.type === 'spotify'){
-      let duration = this.currentPlayedSpotify.item.duration_ms;
-      this.playerService.seekPosition(duration * (newValue / 100));
+      if(this.show){
+        let duration = this.currentEpisode?.duration_ms;
+        this.playerService.seekPosition(duration * (newValue / 100));
+      }else{
+        let duration = this.currentPlayedSpotify.item.duration_ms;
+        this.playerService.seekPosition(duration * (newValue / 100));
+      }
     } else if (this.media.type === 'library'){
       this.playerService.seekPosition(newValue);
     }
