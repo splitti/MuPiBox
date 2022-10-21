@@ -159,18 +159,10 @@ export class PlayerPage implements OnInit {
     } else if (this.media.type === 'library'){
       let seek = this.currentPlayedLocal?.progressTime || 0;
       this.progress = seek || 0;
-      if(this.playing && this.currentPlayedLocal?.playing && this.currentPlayedLocal?.currentTracknr === this.currentPlayedLocal?.totalTracks && seek > 90){
-        this.navController.back();
-        if(this.goBackTimer = 0){
-          this.tmpProgressTime = this.currentPlayedLocal?.progressTime;
-        }
-        if(this.tmpProgressTime === this.currentPlayedLocal?.progressTime){
-          this.goBackTimer++;
-        }else{
-          this.tmpProgressTime = this.currentPlayedLocal?.progressTime;
-        }
+      if(this.playing && this.currentPlayedLocal?.playing && this.currentPlayedLocal?.currentTracknr === this.currentPlayedLocal?.totalTracks && seek > 99){
+        this.goBackTimer++;
         if(this.goBackTimer > 10){
-          //this.navController.back();
+          this.navController.back();
         }
       }
       setTimeout(() => {
