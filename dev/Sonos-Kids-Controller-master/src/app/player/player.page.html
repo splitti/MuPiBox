@@ -37,7 +37,7 @@
 
             <ion-col size="6">
                 <ion-item lines="none">
-                    <ion-range *ngIf="currentPlayedSpotify?.currently_playing_type !== 'episode' || media.type !=='radio'" #range [(ngModel)]="progress" max="100" (touchend)="seek()" (mouseup)="seek()"></ion-range>
+                    <ion-range *ngIf="media.type !=='radio'" #range [(ngModel)]="progress" max="100" (touchend)="seek()" (mouseup)="seek()"></ion-range>
                 </ion-item>
                 <ion-grid>
                     <ion-row class="play-controls">
