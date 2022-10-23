@@ -241,7 +241,7 @@ export class MediaService {
               })
             ),
             iif(
-              () => (item.showid && item.showid.length > 0 && !item.title) ? true : false, // Get media by show
+              () => (item.showid && item.showid.length > 0) ? true : false, // Get media by show
                 this.spotifyService.getMediaByShowID(item.showid, item.category, item.index, item.shuffle).pipe(
                   map(items => {  // If the user entered an user-defined artist name in addition to a query, overwrite orignal artist from spotify
                     if (item.artist?.length > 0) {
@@ -253,32 +253,19 @@ export class MediaService {
                   })
                 ),
                 iif(
-                  () => (item.showid && item.showid.length > 0) ? true : false, // Get media by show
-                    this.spotifyService.getMediaByEpisodeID(item.showid, item.category, item.index, item.shuffle).pipe(
-                      map(items => {  // If the user entered an user-defined artist name in addition to a query, overwrite orignal artist from spotify
+                  () => (item.type === 'spotify' && item.id && item.id.length > 0) ? true : false, // Get media by album
+                    this.spotifyService.getMediaByID(item.id, item.category, item.index, item.shuffle).pipe(
+                      map(currentItem => {  // If the user entered an user-defined artist or album name, overwrite values from spotify
                         if (item.artist?.length > 0) {
-                          items.forEach(currentItem => {
-                            currentItem.artist = item.artist;
-                          });
+                          currentItem.artist = item.artist;
                         }
-                        return items;
+                        if (item.title?.length > 0) {
+                          currentItem.title = item.title;
+                        }
+                        return [currentItem];
                       })
                     ),
-                    iif(
-                      () => (item.type === 'spotify' && item.id && item.id.length > 0) ? true : false, // Get media by album
-                        this.spotifyService.getMediaByID(item.id, item.category, item.index, item.shuffle).pipe(
-                          map(currentItem => {  // If the user entered an user-defined artist or album name, overwrite values from spotify
-                            if (item.artist?.length > 0) {
-                              currentItem.artist = item.artist;
-                            }
-                            if (item.title?.length > 0) {
-                              currentItem.title = item.title;
-                            }
-                            return [currentItem];
-                          })
-                        ),
-                        of([item]) // Single album. Also return as array, so we always have the same data type
-                )
+                    of([item]) // Single album. Also return as array, so we always have the same data type
               )
             )
           )
