@@ -104,7 +104,7 @@ export class SpotifyService {
           return response.items.map(item => {
             const media: Media = {
               showid: item.id,
-              artist: item.show.name,
+              artist: item.show?.name,
               title: item.name,
               cover: item.images[0].url,
               type: 'spotify',
