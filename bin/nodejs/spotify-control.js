@@ -320,13 +320,6 @@ function shuffleon(){
     }, function(err) {
       handleSpotifyError(err,"0");
     });
-
-  spotifyApi.setShuffle(true)
-    .then(function() {
-      log.debug('[Spotify Control] Toggle Shuffle');
-    }, function(err) {
-      handleSpotifyError(err,"0");
-    });
 }
 
 function shuffleoff(){
