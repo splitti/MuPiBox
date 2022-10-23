@@ -96,15 +96,15 @@ export class SpotifyService {
       }),
       map((response: SpotifyShowResponse) => response.episodes.total),
       mergeMap(count => range(0, Math.ceil(count / 50))),
-      mergeMap(multiplier => defer(() => this.spotifyApi.getShowEpisodes(id, { limit: 50, offset: 50 * multiplier, market: 'DE' })).pipe(
+      mergeMap(multiplier => defer(() => this.spotifyApi.getShow(id, { limit: 50, offset: 50 * multiplier, market: 'DE' })).pipe(
         retryWhen(errors => {
           return this.errorHandler(errors);
         }),
-        map((response: SpotifyEpisodeResponse) => {
-          return response.items.map(item => {
+        map((response: SpotifyShowResponse) => {
+          return response.episodes.items.map(item => {
             const media: Media = {
               showid: item.id,
-              artist: item.show?.name,
+              artist: response.name,
               title: item.name,
               cover: item.images[0].url,
               type: 'spotify',
