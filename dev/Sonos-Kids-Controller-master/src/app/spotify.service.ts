@@ -90,21 +90,21 @@ export class SpotifyService {
   }
 
   getMediaByShowID(id: string, category: string, index: number, shuffle: boolean): Observable<Media[]> {
-    const albums = defer(() => this.spotifyApi.getShow(id, { limit: 1, offset: 0, market: 'DE' })).pipe(
+    const albums = defer(() => this.spotifyApi.getShows(id, { limit: 1, offset: 0, market: 'DE' })).pipe(
       retryWhen(errors => {
         return this.errorHandler(errors);
       }),
-      map((response: SpotifyShowResponse) => response.episodes.total),
+      map((response: SpotifyShowResponse) => response.total),
       mergeMap(count => range(0, Math.ceil(count / 50))),
-      mergeMap(multiplier => defer(() => this.spotifyApi.getShow(id, { limit: 50, offset: 50 * multiplier, market: 'DE' })).pipe(
+      mergeMap(multiplier => defer(() => this.spotifyApi.getShows(id, { limit: 50, offset: 50 * multiplier, market: 'DE' })).pipe(
         retryWhen(errors => {
           return this.errorHandler(errors);
         }),
         map((response: SpotifyShowResponse) => {
-          return response.episodes.items.map(item => {
+          return response.items.map(item => {
             const media: Media = {
               showid: item.id,
-              artist: response.name,
+              artist: item.show.name,
               title: item.name,
               cover: item.images[0].url,
               type: 'spotify',

@@ -22,16 +22,13 @@ export interface SpotifyAlbumsResponse {
 }
 
 export interface SpotifyArtistsAlbumsResponse {
-      total?: number;
-      items?: SpotifyAlbumsResponseItem[];
+    total?: number;
+    items?: SpotifyAlbumsResponseItem[];
 }
 
 export interface SpotifyShowResponse {
-    name?: string;
-    episodes?: {
-        total?: number;
-        items?: SpotifyShowResponseItem[];
-    };
+    total?: number;
+    items?: SpotifyShowResponseItem[];
 }
 
 export interface SpotifyShowResponseItem {
@@ -39,4 +36,7 @@ export interface SpotifyShowResponseItem {
     name: string;
     id: string;
     release_date: string;
+    show: {
+        name: string;
+    };
 }
