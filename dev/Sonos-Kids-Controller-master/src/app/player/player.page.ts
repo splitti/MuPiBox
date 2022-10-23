@@ -213,7 +213,7 @@ export class PlayerPage implements OnInit {
         this.playerService.sendCmd(PlayerCmds.SHUFFLEON);
         setTimeout(() => {
           this.skipNext();
-        }, 5000) 
+        }, 1000) 
       }, 5000)
     }
   }
