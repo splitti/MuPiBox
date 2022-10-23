@@ -12,6 +12,7 @@ import { IonRange, NavController } from '@ionic/angular';
 import { Resume } from '../resume';
 import { CurrentPlaylist } from '../current.playlist';
 import { CurrentEpisode } from '../current.episode';
+import { CurrentShow } from '../current.show';
 
 @Component({
   selector: 'app-player',
@@ -52,7 +53,9 @@ export class PlayerPage implements OnInit {
   currentPlayedLocal: CurrentMPlayer;
   currentPlaylist: CurrentPlaylist;
   currentEpisode: CurrentEpisode;
+  currentShow: CurrentShow;
   playlistTrackNr = 0;
+  showTrackNr = 0;
   goBackTimer = 0;
   progress = 0;
   shufflechanged = 0;
@@ -61,6 +64,7 @@ export class PlayerPage implements OnInit {
   public readonly local$: Observable<CurrentMPlayer>;
   public readonly playlist$: Observable<CurrentPlaylist>;
   public readonly episode$: Observable<CurrentEpisode>;
+  public readonly show$: Observable<CurrentShow>;
 
   constructor(
     private mediaService: MediaService,
@@ -74,6 +78,7 @@ export class PlayerPage implements OnInit {
     this.local$ = this.mediaService.local$;
     this.playlist$ = this.mediaService.playlist$;
     this.episode$ = this.mediaService.episode$;
+    this.show$ = this.mediaService.show$;
     this.route.queryParams.subscribe(params => {
       if (this.router.getCurrentNavigation().extras.state.media) {
         this.media = this.router.getCurrentNavigation().extras.state.media;
@@ -99,6 +104,9 @@ export class PlayerPage implements OnInit {
     });
     this.mediaService.episode$.subscribe(episode => {
       this.currentEpisode = episode;
+    });
+    this.mediaService.show$.subscribe(show => {
+      this.currentShow = show;
     });
     this.artworkService.getArtwork(this.media).subscribe(url => {
       this.cover = url;
@@ -134,6 +142,9 @@ export class PlayerPage implements OnInit {
     this.mediaService.episode$.subscribe(episode => {
       this.currentEpisode = episode;
     });
+    this.mediaService.show$.subscribe(show => {
+      this.currentShow = show;
+    });
 
     if(this.media.type === 'spotify'){
       let seek = this.currentPlayedSpotify?.progress_ms || 0;
@@ -147,6 +158,14 @@ export class PlayerPage implements OnInit {
           if(this.currentPlayedSpotify?.item.id === element.track?.id){
             this.playlistTrackNr = ++index;
             this.cover = element.track.album.images[1].url;
+          }
+        });
+      }
+      if(this.media.showid){
+        this.currentShow?.items.forEach((element, index) => {
+          if(this.currentPlayedLocal?.activeEpisode === element?.id){
+            this.showTrackNr = ++index;
+            this.cover = element.images[1].url;
           }
         });
       }

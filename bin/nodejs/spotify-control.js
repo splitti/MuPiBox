@@ -617,7 +617,7 @@ async function useSpotify(command){
       currentMeta.activeEpisode = command.name.split(':')[2];
       let offset = 0;
       let showtemp;
-      spotifyApi.getEpisode(currentMeta.activeEpisode)
+      await spotifyApi.getEpisode(currentMeta.activeEpisode)
       .then(function(data) {
         currentMeta.activeShow = data.body.show.id;
         currentMeta.totalShows = data.body.show.total_episodes;
@@ -630,7 +630,7 @@ async function useSpotify(command){
           if(offset > 0 ){
             showtemp.items = showtemp.items.concat(data.body.items);
           } else {
-            showtemp = data.body.items;
+            showtemp = data.body;
           }
         }, function(err) {
           handleSpotifyError(err,"0");
