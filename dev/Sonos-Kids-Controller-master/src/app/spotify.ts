@@ -22,16 +22,31 @@ export interface SpotifyAlbumsResponse {
 }
 
 export interface SpotifyArtistsAlbumsResponse {
-    total?: number;
-    items?: SpotifyAlbumsResponseItem[];
+      total?: number;
+      items?: SpotifyAlbumsResponseItem[];
 }
 
 export interface SpotifyShowResponse {
-    total?: number;
-    items?: SpotifyShowResponseItem[];
+    name?: string;
+    episodes?: {
+        total?: number;
+        items?: SpotifyShowResponseItem[];
+    };
 }
 
 export interface SpotifyShowResponseItem {
+    images: SpotifyAlbumsResponseImage[];
+    name: string;
+    id: string;
+    release_date: string;
+}
+
+export interface SpotifyEpisodeResponse {
+    total?: number;
+    items?: SpotifyEpisodeResponseItem[];
+}
+
+export interface SpotifyEpisodeResponseItem {
     images?: SpotifyAlbumsResponseImage[];
     name?: string;
     id?: string;
