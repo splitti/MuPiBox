@@ -32,11 +32,11 @@ export interface SpotifyShowResponse {
 }
 
 export interface SpotifyShowResponseItem {
-    images: SpotifyAlbumsResponseImage[];
-    name: string;
-    id: string;
-    release_date: string;
-    show: {
-        name: string;
+    images?: SpotifyAlbumsResponseImage[];
+    name?: string;
+    id?: string;
+    release_date?: string;
+    show?: {
+        name?: string;
     };
 }
