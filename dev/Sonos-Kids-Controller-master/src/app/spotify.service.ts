@@ -96,7 +96,7 @@ export class SpotifyService {
       }),
       map((response: SpotifyShowResponse) => response.episodes.total),
       mergeMap(count => range(0, Math.ceil(count / 50))),
-      mergeMap(multiplier => defer(() => this.spotifyApi.getShow(id, { limit: 50, offset: 50 * multiplier, market: 'DE' })).pipe(
+      mergeMap(multiplier => defer(() => this.spotifyApi.getShow(id, { limit: 50, offset: 0, market: 'DE' })).pipe(
         retryWhen(errors => {
           return this.errorHandler(errors);
         }),
@@ -131,7 +131,7 @@ export class SpotifyService {
       }),
       map((response: SpotifyEpisodeResponse) => response.total),
       mergeMap(count => range(0, Math.ceil(count / 50))),
-      mergeMap(multiplier => defer(() => this.spotifyApi.getShowEpisodes(id, { limit: 50, offset: 0, market: 'DE' })).pipe(
+      mergeMap(multiplier => defer(() => this.spotifyApi.getShowEpisodes(id, { limit: 50, offset: 50 * multiplier, market: 'DE' })).pipe(
         retryWhen(errors => {
           return this.errorHandler(errors);
         }),
