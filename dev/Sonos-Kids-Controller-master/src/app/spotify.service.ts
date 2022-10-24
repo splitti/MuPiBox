@@ -95,7 +95,7 @@ export class SpotifyService {
         return this.errorHandler(errors);
       }),
       map((response: SpotifyShowResponse) => {return response.name})
-    )
+    );
     
     const albums = defer(() => this.spotifyApi.getShow(id, { limit: 1, offset: 0, market: 'DE' })).pipe(
       retryWhen(errors => {
