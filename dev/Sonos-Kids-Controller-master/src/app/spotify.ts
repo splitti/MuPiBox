@@ -51,7 +51,4 @@ export interface SpotifyEpisodeResponseItem {
     name?: string;
     id?: string;
     release_date?: string;
-    show?: {
-        publisher?: string;
-    };
 }

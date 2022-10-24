@@ -90,6 +90,13 @@ export class SpotifyService {
   }
 
   getMediaByShowID(id: string, category: string, index: number, shuffle: boolean): Observable<Media[]> {
+    const showname = this.spotifyApi.getShow(id, { limit: 1, offset: 0, market: 'DE' }).pipe(
+      retryWhen(errors => {
+        return this.errorHandler(errors);
+      }),
+      map((response: SpotifyShowResponse) => {return response.name})
+    )
+    
     const albums = defer(() => this.spotifyApi.getShow(id, { limit: 1, offset: 0, market: 'DE' })).pipe(
       retryWhen(errors => {
         return this.errorHandler(errors);
@@ -104,7 +111,7 @@ export class SpotifyService {
           return response.items.map(item => {
             const media: Media = {
               showid: item.id,
-              artist: item.show?.publisher,
+              artist: showname, //Showname noch definieren
               title: item.name,
               cover: item.images[0].url,
               type: 'spotify',
