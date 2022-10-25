@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Observable, defer, throwError, of, range } from 'rxjs';
+import { Observable, defer, throwError, of, range, combineLatest } from 'rxjs';
 import { retryWhen, flatMap, tap, delay, take, map, mergeMap, mergeAll, toArray } from 'rxjs/operators';
 import { environment } from 'src/environments/environment';
 import { HttpClient } from '@angular/common/http';
@@ -90,20 +90,18 @@ export class SpotifyService {
   }
 
   getMediaByShowID(id: string, category: string, index: number, shuffle: boolean): Observable<Media[]> {
-    const showname = defer(() => this.spotifyApi.getShow(id, { limit: 1, offset: 0, market: 'DE' })).pipe(
-      retryWhen(errors => {
-        return this.errorHandler(errors);
-      }),
-      map((response: SpotifyShowResponse) => {return response.name}),
-      toArray()
-    );
     const albums = defer(() => this.spotifyApi.getShow(id, { limit: 1, offset: 0, market: 'DE' })).pipe(
       retryWhen(errors => {
         return this.errorHandler(errors);
       }),
-      map((response: SpotifyShowResponse) => response.episodes.total),
-      mergeMap(count => range(0, Math.ceil(count / 50))),
-      mergeMap(multiplier => defer(() => this.spotifyApi.getShowEpisodes(id, { limit: 50, offset: 50 * multiplier, market: 'DE' })).pipe(
+      map((response: SpotifyShowResponse) => ({count: response.episodes.total, name: response.name})),
+      mergeMap(obj => range(0, Math.ceil(obj.count / 50)).pipe(
+        map((index) => ({
+          range: index,
+          ...obj,
+        }))
+      )),
+      mergeMap(multiplier => defer(() => this.spotifyApi.getShowEpisodes(id, { limit: 50, offset: 50 * multiplier.range, market: 'DE' })).pipe(
         retryWhen(errors => {
           return this.errorHandler(errors);
         }),
@@ -111,7 +109,7 @@ export class SpotifyService {
           return response.items.map(item => {
             const media: Media = {
               showid: item.id,
-              artist: showname.subscribe.name, //Showname noch definieren
+              artist: multiplier.name,
               title: item.name,
               cover: item.images[0].url,
               type: 'spotify',
