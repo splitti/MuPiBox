@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Observable, defer, throwError, of, range, combineLatest } from 'rxjs';
+import { Observable, defer, throwError, of, range } from 'rxjs';
 import { retryWhen, flatMap, tap, delay, take, map, mergeMap, mergeAll, toArray } from 'rxjs/operators';
 import { environment } from 'src/environments/environment';
 import { HttpClient } from '@angular/common/http';
