@@ -278,12 +278,12 @@ export class AddPage implements OnInit, AfterViewInit {
     // this.navController.back();
 
     setTimeout(() => {
-      this.save(media);
-      form.reset();
+      this.save(media, form);
+      //form.reset();
     }, 2500)
   }
 
-  async save(media: Media){
+  async save(media: Media, form: NgForm){
     this.mediaService.validate$.subscribe(validate => {
       this.validateState = validate;
     });
@@ -307,9 +307,9 @@ export class AddPage implements OnInit, AfterViewInit {
       }else{
         this.mediaService.addRawMedia(media);
       }
-  
-      
-  
+
+      form.reset();
+
       this.keyboard.clearInput('spotify_artist');
       this.keyboard.clearInput('spotify_title');
       this.keyboard.clearInput('spotify_id');

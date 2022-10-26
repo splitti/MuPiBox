@@ -523,13 +523,13 @@ function validateSpotify(){
     spotifyApi.getAlbum(valideMedia.validateId)
     .then(function(data) {
       if (data.body.id != undefined){
+        log.debug("[Spotify Control]ValidationId " + valideMedia.validateId);
+        log.debug("[Spotify Control]ValidationCompareId " + data.body.id);
         valideMedia.validate = true;
-      }
-      else {
-        valideMedia.validate = false;
       }
     }, function(err) {
       handleSpotifyError(err,"0");
+      valideMedia.validate = false;
     });
   }
   if(valideMedia.validateType == "showid"){
@@ -538,11 +538,9 @@ function validateSpotify(){
       if (data.body.id != undefined){
         valideMedia.validate = true;
       }
-      else {
-        valideMedia.validate = false;
-      }
     }, function(err) {
       handleSpotifyError(err,"0");
+      valideMedia.validate = false;
     });
   }
   if(valideMedia.validateType == "artistid"){
@@ -551,11 +549,9 @@ function validateSpotify(){
       if (data.body.id != undefined){
         valideMedia.validate = true;
       }
-      else {
-        valideMedia.validate = false;
-      }
     }, function(err) {
       handleSpotifyError(err,"0");
+      valideMedia.validate = false;
     });
   }
   if(valideMedia.validateType == "playlistid"){
@@ -564,11 +560,9 @@ function validateSpotify(){
       if (data.body.id != undefined){
         valideMedia.validate = true;
       }
-      else {
-        valideMedia.validate = false;
-      }
     }, function(err) {
       handleSpotifyError(err,"0");
+      valideMedia.validate = false;
     });
   }
 }
