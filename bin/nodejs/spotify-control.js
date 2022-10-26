@@ -166,13 +166,17 @@ function refreshToken(activePlaylistId){
 function handleSpotifyError(err, activePlaylistId){
   if (err.body.error?.status == 401){
     log.debug("access token expired, refreshing...");
-    refreshToken(activePlaylistId);
+    if(activePlaylistId !== "0"){
+      refreshToken(activePlaylistId);
+    }
   }
 
   else if (err.toString().includes("NO_ACTIVE_DEVICE")) {
     log.debug("no active device, setting the first one found to active");
     activeDevice = "";
-    setActiveDevice(activePlaylistId);
+    if(activePlaylistId !== "0"){
+      setActiveDevice(activePlaylistId);
+    }
   }
   else {
     log.debug("an error occured: " + err)
