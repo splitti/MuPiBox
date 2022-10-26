@@ -288,7 +288,7 @@ export class AddPage implements OnInit, AfterViewInit {
       this.validateState = validate;
     });
 
-    if(!this.validateState?.validate){
+    if(!this.validateState?.validate && this.source === 'spotify'){
       const alert = await this.alertController.create({
         cssClass: 'alert',
         header: 'Warning',

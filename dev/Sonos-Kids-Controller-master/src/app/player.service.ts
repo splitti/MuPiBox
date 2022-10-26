@@ -34,7 +34,6 @@ export class PlayerService {
   private config: Observable<SonosApiConfig> = null;
   network: Network;
   currentNetwork = "";
-  updateNetwork = false;
 
   constructor(
     private mediaService: MediaService,
@@ -45,17 +44,25 @@ export class PlayerService {
     // Observable with caching:
     // publishReplay(1) tells rxjs to cache the last response of the request
     // refCount() keeps the observable alive until all subscribers unsubscribed
-    this.mediaService.getNetworkObservable().subscribe(network => {
-      this.network = network;
-    });
-    if((this.network?.onlinestate !== this.currentNetwork) || !this.config){
-      this.currentNetwork = this.network?.onlinestate;
-      let url: string;
-      if(this.network.onlinestate == 'online'){
-        url = (environment.production) ? '../api/sonos' : 'http://' + this.network.ip + ':8200/api/sonos';
-      }else{
-        url = (environment.production) ? '../api/sonos' : 'http://localhost:8200/api/sonos';
-      }
+    // this.mediaService.getNetworkObservable().subscribe(network => {
+    //   this.network = network;
+    // });
+    // if((this.network?.onlinestate !== this.currentNetwork) || !this.config){
+    //   this.currentNetwork = this.network?.onlinestate;
+    //   let url: string;
+    //   if(this.network.onlinestate == 'online'){
+    //     url = (environment.production) ? '../api/sonos' : 'http://' + this.network.ip + ':8200/api/sonos';
+    //   }else{
+    //     url = (environment.production) ? '../api/sonos' : 'http://localhost:8200/api/sonos';
+    //   }
+    //   this.config = this.http.get<SonosApiConfig>(url).pipe(
+    //     publishReplay(1), // cache result
+    //     refCount()
+    //   );
+    // }
+    if (!this.config) {
+      const url = (environment.production) ? '../api/sonos' : 'http://localhost:8200/api/sonos';
+
       this.config = this.http.get<SonosApiConfig>(url).pipe(
         publishReplay(1), // cache result
         refCount()
@@ -118,6 +125,9 @@ export class PlayerService {
 
   validateId(id: string, category: string) {
     let url: string;
+    this.mediaService.getNetworkObservable().subscribe(network => {
+      this.network = network;
+    });
 
     switch (category) {
       case 'spotify_id': {

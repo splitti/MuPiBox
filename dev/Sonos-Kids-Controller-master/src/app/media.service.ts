@@ -49,73 +49,37 @@ export class MediaService {
       this.network = network;
     });
     this.current$ = interval(1000).pipe( // Once a second after subscribe, way too frequent!
-      switchMap((): Observable<CurrentSpotify> => {
-        if(this.network.onlinestate == 'online'){
-          return this.http.get<CurrentSpotify>('http://' + this.network.ip + ':5005/state')
-        }else{
-          return this.http.get<CurrentSpotify>('http://localhost:5005/state')
-        }
-      }),
+      switchMap((): Observable<CurrentSpotify> => this.http.get<CurrentSpotify>('http://localhost:5005/state')),
       // Replay the most recent (bufferSize) emission on each subscription
       // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
       shareReplay({ bufferSize: 1, refCount: false }),
     );
     this.local$ = interval(1000).pipe( // Once a second after subscribe, way too frequent!
-      switchMap((): Observable<CurrentMPlayer> => {
-        if(this.network.onlinestate == 'online'){
-          return this.http.get<CurrentMPlayer>('http://' + this.network.ip + ':5005/local')
-        }else{
-          return this.http.get<CurrentMPlayer>('http://localhost:5005/local')
-        }
-      }),
+      switchMap((): Observable<CurrentMPlayer> => this.http.get<CurrentMPlayer>('http://localhost:5005/local')),
       // Replay the most recent (bufferSize) emission on each subscription
       // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
       shareReplay({ bufferSize: 1, refCount: false }),
     );
     this.network$ = interval(1000).pipe( // Once a second after subscribe, way too frequent!
-      switchMap((): Observable<Network> => {
-        if(this.network.onlinestate == 'online'){
-          return this.http.get<Network>('http://' + this.network.ip + ':8200/api/network')
-        }else{
-          return this.http.get<Network>('http://localhost:8200/api/network')
-        }
-      }),
+      switchMap((): Observable<Network> => this.http.get<Network>('http://localhost:8200/api/network')),
       // Replay the most recent (bufferSize) emission on each subscription
       // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
       shareReplay({ bufferSize: 1, refCount: false }),
     );
     this.playlist$ = interval(1000).pipe( // Once a second after subscribe, way too frequent!
-      switchMap((): Observable<CurrentPlaylist> => {
-        if(this.network.onlinestate == 'online'){
-          return this.http.get<CurrentPlaylist>('http://' + this.network.ip + ':5005/playlistTracks')
-        }else{
-          return this.http.get<CurrentPlaylist>('http://localhost:5005/playlistTracks')
-        }
-      }),
+      switchMap((): Observable<CurrentPlaylist> => this.http.get<CurrentPlaylist>('http://localhost:5005/playlistTracks')),
       // Replay the most recent (bufferSize) emission on each subscription
       // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
       shareReplay({ bufferSize: 1, refCount: false }),
     );
     this.episode$ = interval(1000).pipe( // Once a second after subscribe, way too frequent!
-      switchMap((): Observable<CurrentEpisode> => {
-        if(this.network.onlinestate == 'online'){
-          return this.http.get<CurrentEpisode>('http://' + this.network.ip + ':5005/episode')
-        }else{
-          return this.http.get<CurrentEpisode>('http://localhost:5005/episode')
-        }
-      }),
+      switchMap((): Observable<CurrentEpisode> => this.http.get<CurrentEpisode>('http://localhost:5005/episode')),
       // Replay the most recent (bufferSize) emission on each subscription
       // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
       shareReplay({ bufferSize: 1, refCount: false }),
     );
     this.show$ = interval(1000).pipe( // Once a second after subscribe, way too frequent!
-      switchMap((): Observable<CurrentShow> => {
-        if(this.network.onlinestate == 'online'){
-          return this.http.get<CurrentShow>('http://' + this.network.ip + ':5005/show')
-        }else{
-          return this.http.get<CurrentShow>('http://localhost:5005/show')
-        }
-      }),
+      switchMap((): Observable<CurrentShow> => this.http.get<CurrentShow>('http://localhost:5005/show')),
       // Replay the most recent (bufferSize) emission on each subscription
       // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
       shareReplay({ bufferSize: 1, refCount: false }),
