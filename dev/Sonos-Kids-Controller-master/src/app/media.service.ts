@@ -14,7 +14,7 @@ import { Resume } from './resume';
 import { CurrentPlaylist } from './current.playlist';
 import { CurrentEpisode } from './current.episode';
 import { CurrentShow } from './current.show';
-//import { Validate } from './validate';
+import { Validate } from './validate';
 
 @Injectable({
   providedIn: 'root'
@@ -29,7 +29,7 @@ export class MediaService {
   public readonly playlist$: Observable<CurrentPlaylist>;
   public readonly episode$: Observable<CurrentEpisode>;
   public readonly show$: Observable<CurrentShow>;
-  //public readonly validate$: Observable<Validate>;
+  public readonly validate$: Observable<Validate>;
 
   private rawMediaSubject = new Subject<Media[]>();
   private wlanSubject = new Subject<WLAN[]>();
@@ -120,12 +120,18 @@ export class MediaService {
       // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
       shareReplay({ bufferSize: 1, refCount: false }),
     );
-    // this.validate$ = interval(1000).pipe( // Once a second after subscribe, way too frequent!
-    //   switchMap((): Observable<Validate> => this.http.get<Validate>('http://localhost:5005/validate')),
-    //   // Replay the most recent (bufferSize) emission on each subscription
-    //   // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
-    //   shareReplay({ bufferSize: 1, refCount: false }),
-    // );
+    this.validate$ = interval(1000).pipe( // Once a second after subscribe, way too frequent!
+      switchMap((): Observable<Validate> => {
+        if(this.network.onlinestate == 'online'){
+          return this.http.get<Validate>('http://' + this.network.ip + ':5005/validate')
+        }else{
+          return this.http.get<Validate>('http://localhost:5005/validate')
+        }
+      }),
+      // Replay the most recent (bufferSize) emission on each subscription
+      // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
+      shareReplay({ bufferSize: 1, refCount: false }),
+    );
    }
 
   // --------------------------------------------

@@ -92,11 +92,11 @@ var volumeStart = 99;
 var	playerstate;
 var playlist;
 var show;
-// var valideMedia = {
-//   validateId: "",
-//   validateType: "",
-//   validate: false
-// };
+var valideMedia = {
+  validateId: "",
+  validateType: "",
+  validate: false
+};
 var currentMeta = {
   activePlaylist: '',
   totalPlaylist: '',
@@ -518,60 +518,60 @@ function downloadTTS(name){
   .catch(console.error);
 }
 
-// function validateSpotify(){
-//   if(valideMedia.validateType == "id"){
-//     spotifyApi.getAlbum(valideMedia.validateId)
-//     .then(function(data) {
-//       if (data.body.id != undefined){
-//         valideMedia.validate = true;
-//       }
-//       else {
-//         valideMedia.validate = false;
-//       }
-//     }, function(err) {
-//       handleSpotifyError(err,"0");
-//     });
-//   }
-//   if(valideMedia.validateType == "showid"){
-//     spotifyApi.getShow(valideMedia.validateId)
-//     .then(function(data) {
-//       if (data.body.id != undefined){
-//         valideMedia.validate = true;
-//       }
-//       else {
-//         valideMedia.validate = false;
-//       }
-//     }, function(err) {
-//       handleSpotifyError(err,"0");
-//     });
-//   }
-//   if(valideMedia.validateType == "artistid"){
-//     spotifyApi.getArtist(valideMedia.validateId)
-//     .then(function(data) {
-//       if (data.body.id != undefined){
-//         valideMedia.validate = true;
-//       }
-//       else {
-//         valideMedia.validate = false;
-//       }
-//     }, function(err) {
-//       handleSpotifyError(err,"0");
-//     });
-//   }
-//   if(valideMedia.validateType == "playlistid"){
-//     spotifyApi.getPlaylist(valideMedia.validateId)
-//     .then(function(data) {
-//       if (data.body.id != undefined){
-//         valideMedia.validate = true;
-//       }
-//       else {
-//         valideMedia.validate = false;
-//       }
-//     }, function(err) {
-//       handleSpotifyError(err,"0");
-//     });
-//   }
-// }
+function validateSpotify(){
+  if(valideMedia.validateType == "id"){
+    spotifyApi.getAlbum(valideMedia.validateId)
+    .then(function(data) {
+      if (data.body.id != undefined){
+        valideMedia.validate = true;
+      }
+      else {
+        valideMedia.validate = false;
+      }
+    }, function(err) {
+      handleSpotifyError(err,"0");
+    });
+  }
+  if(valideMedia.validateType == "showid"){
+    spotifyApi.getShow(valideMedia.validateId)
+    .then(function(data) {
+      if (data.body.id != undefined){
+        valideMedia.validate = true;
+      }
+      else {
+        valideMedia.validate = false;
+      }
+    }, function(err) {
+      handleSpotifyError(err,"0");
+    });
+  }
+  if(valideMedia.validateType == "artistid"){
+    spotifyApi.getArtist(valideMedia.validateId)
+    .then(function(data) {
+      if (data.body.id != undefined){
+        valideMedia.validate = true;
+      }
+      else {
+        valideMedia.validate = false;
+      }
+    }, function(err) {
+      handleSpotifyError(err,"0");
+    });
+  }
+  if(valideMedia.validateType == "playlistid"){
+    spotifyApi.getPlaylist(valideMedia.validateId)
+    .then(function(data) {
+      if (data.body.id != undefined){
+        valideMedia.validate = true;
+      }
+      else {
+        valideMedia.validate = false;
+      }
+    }, function(err) {
+      handleSpotifyError(err,"0");
+    });
+  }
+}
 
 async function useSpotify(command){
   currentMeta.currentPlayer = "spotify";
@@ -715,9 +715,9 @@ app.get("/episode", function(req, res){
 
 /*endpoint to return playlist information*/
 /*only used if sonos-kids-player is modified*/
-// app.get("/validate", function(req, res){
-//   res.send(valideMedia);
-// });
+app.get("/validate", function(req, res){
+  res.send(valideMedia);
+});
 
 /*endpoint to return playlist information*/
 /*only used if sonos-kids-player is modified*/
@@ -757,11 +757,11 @@ app.use(function(req, res){
     playURL(radioURL);
   }
 
-  // if(command.dir.includes("validate") ){
-  //   valideMedia.validateType = command.name.split(':')[0];
-  //   valideMedia.validateId = command.name.split(':')[1];
-  //   validateSpotify();
-  // }
+  if(command.dir.includes("validate") ){
+    valideMedia.validateType = command.name.split(':')[0];
+    valideMedia.validateId = command.name.split(':')[1];
+    validateSpotify();
+  }
 
   if(command.dir.includes("say/") ){
    let dir = command.dir;

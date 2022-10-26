@@ -116,29 +116,32 @@ export class PlayerService {
     this.sendRequest(url);
   }
 
-  // validateId(id: string, category: string) {
-  //   let url: string;
+  validateId(id: string, category: string) {
+    let url: string;
 
-  //   switch (category) {
-  //     case 'spotify_id': {
-  //       url = 'validate/id:' + encodeURIComponent(id);
-  //       break;
-  //     }
-  //     case 'spotify_showid': {
-  //       url = 'validate/showid:' + encodeURIComponent(id);
-  //       break;
-  //     }
-  //     case 'spotify_artistid': {
-  //       url = 'validate/artistid:' + encodeURIComponent(id);
-  //       break;
-  //     }
-  //     case 'spotify_playlistid': {
-  //       url = 'validate/playlistid:' + encodeURIComponent(id);
-  //       break;
-  //     }
-  //   }
-  //   this.sendRequest(url);
-  // }
+    switch (category) {
+      case 'spotify_id': {
+        url = 'validate/id:' + encodeURIComponent(id);
+        break;
+      }
+      case 'spotify_showid': {
+        url = 'validate/showid:' + encodeURIComponent(id);
+        break;
+      }
+      case 'spotify_artistid': {
+        url = 'validate/artistid:' + encodeURIComponent(id);
+        break;
+      }
+      case 'spotify_playlistid': {
+        url = 'validate/playlistid:' + encodeURIComponent(id);
+        break;
+      }
+    }
+    this.getConfig().subscribe(config => {
+      const baseUrl = 'http://' + this.network.ip + ':' + config.port + '/' + config.rooms[0] + '/';
+      this.http.get(baseUrl + url).subscribe();
+    });
+  }
 
   say(text: string) {
     this.getConfig().subscribe(config => {
