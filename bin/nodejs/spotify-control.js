@@ -167,7 +167,7 @@ function writeCounter(){
     date = (now.getFullYear()) + "_" + ((now.getMonth()) + 1) + "_" + (now.getDate()) + "_" + (now.getHours()) + "_" + (now.getMinutes()) + "_" + (now.getSeconds());
   }
   let pathCounter = '/home/dietpi/.pm2/logs/' + date + '_counter';
-	fs.writeFile(pathCounter, counter, err => { // Verzecihnis prüfen & mit Datum versehen
+	fs.writeFile(pathCounter, JSON.stringify(counter), err => {
 		if (err) {
 			console.error(err)
 			return
