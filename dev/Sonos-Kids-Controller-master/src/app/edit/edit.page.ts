@@ -45,7 +45,7 @@ export class EditPage implements OnInit {
     const alert = await this.alertController.create({
       cssClass: 'alert',
       header: 'Warning',
-      message: 'Do you want to delete the selected item from your library?',
+      message: 'Do you want to delete the selected item from your library and local storage?',
       buttons: [
         {
           text: 'Ok',

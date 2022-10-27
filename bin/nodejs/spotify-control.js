@@ -457,8 +457,8 @@ function seek(progress){
 
 function deleteLocal(deleteFile){
   let deleteFilePath = decodeURI(deleteFile).replace(/:/g,"/");
-  //cmdCall('bash rm -dr /home/dietpi/MuPiBox/media/' + deleteFilePath);
-  log.debug('bash rm -dr /home/dietpi/MuPiBox/media/' + deleteFilePath);
+  cmdCall("rm -r \"/home/dietpi/MuPiBox/media/" + decodeURIComponent(deleteFilePath) + "\"");
+  log.debug("rm -r \"/home/dietpi/MuPiBox/media/" + decodeURIComponent(deleteFilePath) + "\"");
 }
 
 function cmdCall(cmd){
