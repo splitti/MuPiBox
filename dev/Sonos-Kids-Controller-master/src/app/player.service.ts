@@ -33,12 +33,15 @@ export class PlayerService {
 
   private config: Observable<SonosApiConfig> = null;
   network: Network;
-  currentNetwork = "";
+  //currentNetwork = "";
+  public readonly network$: Observable<Network>;
 
   constructor(
     private mediaService: MediaService,
     private http: HttpClient
-    ) {}
+    ) {
+      this.network$ = this.mediaService.network$;
+    }
 
   getConfig() {
     // Observable with caching:
@@ -125,7 +128,7 @@ export class PlayerService {
 
   validateId(id: string, category: string) {
     let url: string;
-    this.mediaService.getNetworkObservable().subscribe(network => {
+    this.mediaService.network$.subscribe(network => {
       this.network = network;
     });
 
@@ -148,7 +151,7 @@ export class PlayerService {
       }
     }
     this.getConfig().subscribe(config => {
-      const baseUrl = 'http://' + this.network.ip + ':' + config.port + '/' + config.rooms[0] + '/';
+      const baseUrl = 'http://' + this.network?.ip + ':' + config.port + '/' + config.rooms[0] + '/';
       this.http.get(baseUrl + url).subscribe();
     });
   }
