@@ -48,6 +48,8 @@ export class MediaService {
     this.getNetworkObservable().subscribe(network => {
       this.network = network;
     });
+    console.log("MediaService IP:" + this.network.ip);
+    console.log("MediaService Status:" + this.network.onlinestate);
     this.current$ = interval(1000).pipe( // Once a second after subscribe, way too frequent!
       switchMap((): Observable<CurrentSpotify> => this.http.get<CurrentSpotify>('http://localhost:5005/state')),
       // Replay the most recent (bufferSize) emission on each subscription
@@ -63,6 +65,8 @@ export class MediaService {
     this.network$ = interval(1000).pipe( // Once a second after subscribe, way too frequent!
       switchMap((): Observable<Network> => {
         if(this.network.onlinestate == 'online'){
+          console.log("MediaService network IP:" + this.network.ip);
+          console.log("MediaService network Status:" + this.network.onlinestate);
           return this.http.get<Network>('http://' + this.network.ip + ':8200/api/network')
         }else{
           return this.http.get<Network>('http://localhost:8200/api/network')
