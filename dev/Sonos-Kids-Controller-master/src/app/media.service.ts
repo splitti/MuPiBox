@@ -82,6 +82,8 @@ export class MediaService {
     );
     this.network$ = interval(1000).pipe( // Once a second after subscribe, way too frequent!
       switchMap((): Observable<Network> => {
+        console.log("MediaService network start IP:" + this.network?.ip);
+        console.log("MediaService network start Status:" + this.network?.onlinestate);
         if(this.network?.ip === undefined){
           this.getNetworkObservable().subscribe(network => {
             this.network = network;
@@ -103,9 +105,12 @@ export class MediaService {
     );
     this.validate$ = interval(1000).pipe( // Once a second after subscribe, way too frequent!
       switchMap((): Observable<Validate> => {
-        if(this.network?.ip !== undefined){
+        console.log("MediaService validate start IP:" + this.network?.ip);
+        console.log("MediaService validate start Status:" + this.network?.onlinestate);
+        if(this.network?.ip === undefined){
           this.getNetworkObservable().subscribe(network => {
             this.network = network;
+            console.log("MediaService validate undfined, try new.");
           });
         }
         if(this.network?.onlinestate == 'online' && this.network?.ip !== undefined){
@@ -113,6 +118,7 @@ export class MediaService {
           console.log("MediaService validate Status:" + this.network?.onlinestate);
           return this.http.get<Validate>('http://' + this.network?.ip + ':5005/validate')
         }else{
+          console.log("MediaService validate undfined, set local.");
           return this.http.get<Validate>('http://localhost:5005/validate')
         }
       }),
