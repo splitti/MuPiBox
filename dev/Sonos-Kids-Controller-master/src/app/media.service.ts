@@ -64,7 +64,7 @@ export class MediaService {
     );
     this.network$ = interval(1000).pipe( // Once a second after subscribe, way too frequent!
       switchMap((): Observable<Network> => {
-        if(this.network?.onlinestate == 'online'){
+        if(this.network?.onlinestate == 'online' && this.network?.ip !== undefined){
           console.log("MediaService network IP:" + this.network?.ip);
           console.log("MediaService network Status:" + this.network?.onlinestate);
           return this.http.get<Network>('http://' + this.network.ip + ':8200/api/network')
