@@ -88,6 +88,12 @@ export class PlayerService {
     this.sendRequest(seekpos);
   }
 
+  deleteLocal(media: Media) {
+    let url: string;
+    url = 'deletelocal/' + encodeURIComponent(media.category) + ':' + encodeURIComponent(media.artist) + ':' + encodeURIComponent(media.title);
+    this.sendRequest(url);
+  }
+
   playMedia(media: Media) {
     let url: string;
 

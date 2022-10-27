@@ -41,7 +41,7 @@ export class EditPage implements OnInit {
     }, 1000);
   }
 
-  async deleteButtonPressed(index: number) {
+  async deleteButtonPressed(index: number, item: Media) {
     const alert = await this.alertController.create({
       cssClass: 'alert',
       header: 'Warning',
@@ -51,6 +51,9 @@ export class EditPage implements OnInit {
           text: 'Ok',
           handler: () => {
             this.mediaService.deleteRawMediaAtIndex(index);
+            if(item.type === 'library'){
+              this.playerService.deleteLocal(item);
+            }
             setTimeout(() => {
               this.network = this.mediaService.getNetworkObservable();
               this.media = this.mediaService.getRawMediaObservable();
