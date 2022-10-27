@@ -125,12 +125,12 @@ export class HomePage implements OnInit {
 
 
   checkNetwork(){
-    console.log("Onlinestate:" + this.network?.onlinestate);
-    console.log("CurrentNetwork:" + this.currentNetwork);
+    //console.log("Onlinestate:" + this.network?.onlinestate);
+    // console.log("CurrentNetwork:" + this.currentNetwork);
     if(this.network?.ip !== undefined){
       if(this.network?.onlinestate !== this.currentNetwork){
         this.currentNetwork = this.network?.onlinestate;
-        console.log("Network changed");
+        // console.log("Network changed");
         this.update();
       }
     }else{
