@@ -82,7 +82,7 @@ export class MediaService {
     );
     this.network$ = interval(1000).pipe( // Once a second after subscribe, way too frequent!
       switchMap((): Observable<Network> => {
-        if(this.network?.ip !== undefined){
+        if(this.network?.ip === undefined){
           this.getNetworkObservable().subscribe(network => {
             this.network = network;
             console.log("MediaService network undfined, try new.");
