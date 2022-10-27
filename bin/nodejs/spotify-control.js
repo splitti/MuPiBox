@@ -163,9 +163,10 @@ function writeplayerstatePause(){
 
 function writeCounter(){
   if(date === ""){
-    date = new Date();
+    let now = new Date();
+    date = (now.getFullYear()) + "_" + ((now.getMonth()) + 1) + "_" + (now.getDate()) + "_" + (now.getHours()) + "_" + (now.getMinutes()) + "_" + (now.getSeconds());
   }
-  let pathCounter = '/home/dietpi/.pm2/logs/counter' + date;
+  let pathCounter = '/home/dietpi/.pm2/logs/' + date + '_counter';
 	fs.writeFile(pathCounter, counter, err => { // Verzecihnis prüfen & mit Datum versehen
 		if (err) {
 			console.error(err)
