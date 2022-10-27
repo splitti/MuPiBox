@@ -456,7 +456,7 @@ function seek(progress){
 }
 
 function deleteLocal(deleteFile){
-  deleteFilePath = decodeURI(deleteFile).replace(/:/g,"/");
+  let deleteFilePath = decodeURI(deleteFile).replace(/:/g,"/");
   //cmdCall('bash rm -dr /home/dietpi/MuPiBox/media/' + deleteFilePath);
   log.debug('bash rm -dr /home/dietpi/MuPiBox/media/' + deleteFilePath);
 }
@@ -787,7 +787,7 @@ app.use(function(req, res){
     }
   }
 
-  if(command.dir.includes("deletelocal/") ){
+  if(command.dir.includes("deletelocal") ){
     deleteLocal(command.name);
   }
 
