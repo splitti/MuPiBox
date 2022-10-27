@@ -457,11 +457,22 @@ function seek(progress){
 
 function deleteLocal(deleteFile){
   let deleteFilePath = decodeURI(deleteFile).replace(/:/g,"/");
-  cmdCall("rm -r \"/home/dietpi/MuPiBox/media/" + decodeURIComponent(deleteFilePath) + "\"");
+  let deleteCMD = "rm -r \"/home/dietpi/MuPiBox/media/" + decodeURIComponent(deleteFilePath) + "\"";
+  //cmdCall(deleteCMD);
   log.debug("rm -r \"/home/dietpi/MuPiBox/media/" + decodeURIComponent(deleteFilePath) + "\"");
+  const exec = require ('child_process').exec;
+  exec(deleteCMD, (e, stdout, stderr) => {
+    if (e instanceof Error){
+      console.error(e);
+      throw e;
+    }
+    console.log('stdout', stdout);
+    console.log('stderr', stderr);
+  });
 }
 
 function cmdCall(cmd){
+  log.debug(cmd);
   return new Promise(function (resolve, reject){
     childProcess.exec(cmd, function(error, standardOutput, standardError) {
       if (error) {
