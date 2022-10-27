@@ -33,7 +33,7 @@ export class PlayerService {
 
   private config: Observable<SonosApiConfig> = null;
   network: Network;
-  currentNetwork = "";
+  //currentNetwork = "";
   public readonly network$: Observable<Network>;
 
   constructor(
@@ -47,30 +47,30 @@ export class PlayerService {
     // Observable with caching:
     // publishReplay(1) tells rxjs to cache the last response of the request
     // refCount() keeps the observable alive until all subscribers unsubscribed
-    this.mediaService.network$.subscribe(network => {
-      this.network = network;
-    });
-    if((this.network?.onlinestate !== this.currentNetwork) || !this.config){
-      this.currentNetwork = this.network?.onlinestate;
-      let url: string;
-      if(this.network?.onlinestate == 'online' && this.network?.ip !== undefined){
-        url = (environment.production) ? '../api/sonos' : 'http://' + this.network.ip + ':8200/api/sonos';
-      }else{
-        url = (environment.production) ? '../api/sonos' : 'http://localhost:8200/api/sonos';
-      }
-      this.config = this.http.get<SonosApiConfig>(url).pipe(
-        publishReplay(1), // cache result
-        refCount()
-      );
-    }
-    // if (!this.config) {
-    //   const url = (environment.production) ? '../api/sonos' : 'http://localhost:8200/api/sonos';
-
+    // this.mediaService.getNetworkObservable().subscribe(network => {
+    //   this.network = network;
+    // });
+    // if((this.network?.onlinestate !== this.currentNetwork) || !this.config){
+    //   this.currentNetwork = this.network?.onlinestate;
+    //   let url: string;
+    //   if(this.network.onlinestate == 'online'){
+    //     url = (environment.production) ? '../api/sonos' : 'http://' + this.network.ip + ':8200/api/sonos';
+    //   }else{
+    //     url = (environment.production) ? '../api/sonos' : 'http://localhost:8200/api/sonos';
+    //   }
     //   this.config = this.http.get<SonosApiConfig>(url).pipe(
     //     publishReplay(1), // cache result
     //     refCount()
     //   );
     // }
+    if (!this.config) {
+      const url = (environment.production) ? '../api/sonos' : 'http://localhost:8200/api/sonos';
+
+      this.config = this.http.get<SonosApiConfig>(url).pipe(
+        publishReplay(1), // cache result
+        refCount()
+      );
+    }
 
     return this.config;
   }
@@ -90,8 +90,14 @@ export class PlayerService {
 
   deleteLocal(media: Media) {
     let url: string;
+    this.mediaService.network$.subscribe(network => {
+      this.network = network;
+    });
     url = 'deletelocal/' + encodeURIComponent(media.category) + ':' + encodeURIComponent(media.artist) + ':' + encodeURIComponent(media.title);
-    this.sendRequest(url);
+    this.getConfig().subscribe(config => {
+      const baseUrl = 'http://' + this.network?.ip + ':' + config.port + '/' + config.rooms[0] + '/';
+      this.http.get(baseUrl + url).subscribe();
+    });
   }
 
   playMedia(media: Media) {
