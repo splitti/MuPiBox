@@ -85,6 +85,7 @@ export class MediaService {
         if(this.network?.ip !== undefined){
           this.getNetworkObservable().subscribe(network => {
             this.network = network;
+            console.log("MediaService network undfined, try new.");
           });
         }
         if(this.network?.onlinestate == 'online' && this.network?.ip !== undefined){
@@ -92,6 +93,7 @@ export class MediaService {
           console.log("MediaService network Status:" + this.network?.onlinestate);
           return this.http.get<Network>('http://' + this.network?.ip + ':8200/api/network')
         }else{
+          console.log("MediaService network undfined, set local.");
           return this.http.get<Network>('http://localhost:8200/api/network')
         }
       }),
