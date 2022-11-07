@@ -54,6 +54,7 @@ export class EditPage implements OnInit {
             console.log("Index: " + item.index);
             if(item.type === 'library'){
               this.playerService.deleteLocal(item);
+              this.playerService.sendCmd(PlayerCmds.DELETEOFFLINEDATA);
             }
             setTimeout(() => {
               this.network = this.mediaService.getNetworkObservable();
@@ -79,8 +80,7 @@ export class EditPage implements OnInit {
       indicator.present().then(() => {
         const navigationExtras: NavigationExtras = {
           state: {
-            media: item,
-            index: item.index
+            media: item
           }
         };
         this.router.navigate(['/add'], navigationExtras);

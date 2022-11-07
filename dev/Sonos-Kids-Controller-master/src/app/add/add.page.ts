@@ -42,7 +42,6 @@ export class AddPage implements OnInit, AfterViewInit {
   keyboard: Keyboard;
   selectedInputElem: any;
   valid = false;
-  editindex: number;
   editMedia: Media; 
   edit = false;
   shuffle = false;
@@ -70,7 +69,6 @@ export class AddPage implements OnInit, AfterViewInit {
     this.route.queryParams.subscribe(params => {
       if (this.router.getCurrentNavigation().extras.state) {
         this.editMedia = this.router.getCurrentNavigation().extras.state.media;
-        this.editindex = this.router.getCurrentNavigation().extras.state.index;
         this.edit = true;
       }
     });
@@ -303,7 +301,7 @@ export class AddPage implements OnInit, AfterViewInit {
       await alert.present();
     }else{
       if(this.edit){
-        this.mediaService.editRawMediaAtIndex(this.editindex, media);
+        this.mediaService.editRawMediaAtIndex(this.editMedia.index, media);
       }else{
         this.mediaService.addRawMedia(media);
       }

@@ -23,7 +23,8 @@ export enum PlayerCmds {
   SHUFFLEON = 'shuffleon',
   SHUFFLEOFF = 'shuffleoff',
   SHUTOFF = 'shutoff',
-  INDEX = 'index'
+  INDEX = 'index',
+  DELETEOFFLINEDATA = 'deleteofflinedate'
 }
 
 @Injectable({
