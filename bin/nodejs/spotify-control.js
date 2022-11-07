@@ -74,17 +74,17 @@ player.on('path', (val) => {
 player.on('track-change', () => player.getProps(['path']))
 
 let cmdtotalTracks = "/usr/bin/amixer sget Master | grep 'Right:'";
-  console.log(cmdtotalTracks);
-  const exec = require ('child_process').exec;
-  exec(cmdtotalTracks, (e, stdout, stderr) => {
-    if (e instanceof Error){
-      console.error(e);
-      throw e;
-    }
-    currentMeta.volume = parseInt(stdout.split('[')[1].split('%')[0], 10);
-    console.log('stdout', stdout);
-    console.log('stderr', stderr);
-  });
+console.log(cmdtotalTracks);
+const exec = require ('child_process').exec;
+exec(cmdtotalTracks, (e, stdout, stderr) => {
+  if (e instanceof Error){
+    console.error(e);
+    throw e;
+  }
+  currentMeta.volume = parseInt(stdout.split('[')[1].split('%')[0], 10);
+  console.log('stdout', stdout);
+  console.log('stderr', stderr);
+});
 
   /*store device to be played back*/
 let activeDevice = "";
@@ -581,6 +581,18 @@ function cmdCall(cmd){
 async function setVolume(volume){
   let volumeUp = "/usr/bin/amixer sset Master 5%+";
   let volumeDown = "/usr/bin/amixer sset Master 5%-";
+  let cmdtotalTracks = "/usr/bin/amixer sget Master | grep 'Right:'";
+
+  const exec = require ('child_process').exec;
+  exec(cmdtotalTracks, (e, stdout, stderr) => {
+    if (e instanceof Error){
+      console.error(e);
+      throw e;
+    }
+    currentMeta.volume = parseInt(stdout.split('[')[1].split('%')[0], 10);
+    console.log('stdout', stdout);
+    console.log('stderr', stderr);
+  });
 
   if (volume) {
     if(currentMeta.volume < muPiBoxConfig.mupibox.maxVolume){
