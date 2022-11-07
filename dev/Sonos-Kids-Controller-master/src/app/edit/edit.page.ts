@@ -41,7 +41,7 @@ export class EditPage implements OnInit {
     }, 1000);
   }
 
-  async deleteButtonPressed(index: number, item: Media) {
+  async deleteButtonPressed(item: Media) {
     const alert = await this.alertController.create({
       cssClass: 'alert',
       header: 'Warning',
@@ -50,7 +50,7 @@ export class EditPage implements OnInit {
         {
           text: 'Ok',
           handler: () => {
-            this.mediaService.deleteRawMediaAtIndex(index);
+            this.mediaService.deleteRawMediaAtIndex(item.index);
             if(item.type === 'library'){
               this.playerService.deleteLocal(item);
             }
@@ -72,14 +72,14 @@ export class EditPage implements OnInit {
     await alert.present();
   }
 
-  editButtonPreddes(index: number, item: Media) {
+  editButtonPreddes(item: Media) {
     this.activityIndicatorService.create().then(indicator => {
       this.activityIndicatorVisible = true;
       indicator.present().then(() => {
         const navigationExtras: NavigationExtras = {
           state: {
             media: item,
-            index: index
+            index: item.index
           }
         };
         this.router.navigate(['/add'], navigationExtras);

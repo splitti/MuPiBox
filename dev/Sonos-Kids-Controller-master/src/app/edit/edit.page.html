@@ -60,12 +60,12 @@
                         </ion-label>
                     </ion-col>
                     <ion-col size="1" class="vertical-center-content edit-col">
-                        <ion-button *ngIf="item.type === 'spotify' || item.category === 'radio' " color="danger" slots="icon-only" class="round edit-button" (click)="editButtonPreddes(i, item)">
+                        <ion-button *ngIf="item.type === 'spotify' || item.category === 'radio' " color="danger" slots="icon-only" class="round edit-button" (click)="editButtonPreddes(item)">
                             <ion-icon name="brush-outline" class="larger"></ion-icon>
                         </ion-button>
                     </ion-col>
                     <ion-col size="1" class="vertical-center-content edit-col">
-                        <ion-button color="danger" slots="icon-only" class="round edit-button" (click)="deleteButtonPressed(i, item)">
+                        <ion-button color="danger" slots="icon-only" class="round edit-button" (click)="deleteButtonPressed(item)">
                             <ion-icon name="close" class="larger"></ion-icon>
                         </ion-button>
                     </ion-col>
