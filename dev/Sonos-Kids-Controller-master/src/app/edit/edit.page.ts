@@ -51,6 +51,7 @@ export class EditPage implements OnInit {
           text: 'Ok',
           handler: () => {
             this.mediaService.deleteRawMediaAtIndex(item.index);
+            console.log("Index: " + item.index);
             if(item.type === 'library'){
               this.playerService.deleteLocal(item);
             }
