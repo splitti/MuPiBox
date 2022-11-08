@@ -101,6 +101,7 @@ export class AddPage implements OnInit, AfterViewInit {
       onChange: input => {
         this.selectedInputElem.value = input;
         console.log(this.selectedInputElem);
+        console.log(this.selectedInputElem.value);
         this.validate();
       },
       onKeyPress: button => {
