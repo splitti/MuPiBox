@@ -326,7 +326,7 @@ export class AddPage implements OnInit, AfterViewInit {
       const alert = await this.alertController.create({
         cssClass: 'alert',
         header: 'Warning',
-        message: 'The id is not valide!',
+        message: 'The id is not valide or you have no internet connection!',
         buttons: [
           {
             text: 'Okay'

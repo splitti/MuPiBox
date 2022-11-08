@@ -319,7 +319,6 @@ export class MediaService {
           if (!currentMedia.cover) {
             currentMedia.cover = '../assets/images/nocover.png';
           }
-          console.log(currentMedia);
           return currentMedia;
         });
       })
