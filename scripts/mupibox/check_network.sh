@@ -33,7 +33,7 @@ if [ ! -f ${OFFLINE_FILE} ]; then
         chown dietpi:dietpi ${OFFLINE_FILE}
 elif [ $(stat --format='%Y' "${DATA_FILE}") -gt $(stat --format='%Y' "${OFFLINE_FILE}") ]; then
         echo -n "[" > ${OFFLINE_FILE}
-        echo -n $(jq '.[] | select(.type != "spotify") | select(.type != "tunein")' < ${DATA_FILE}) >> ${OFFLINE_FILE}
+        echo -n $(jq '.[] | select(.type != "spotify") | select(.type != "radio")' < ${DATA_FILE}) >> ${OFFLINE_FILE}
         echo -n "]" >> ${OFFLINE_FILE}
         sed -i 's/} {/}, {/g' ${OFFLINE_FILE}
 fi
