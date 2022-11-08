@@ -66,6 +66,7 @@ do
 				chown dietpi:dietpi ${ACTIVE_FILE}
 			fi
 		fi
+		sudo ifconfig wlan0 down && sleep 2 && sudo ifconfig wlan0 up
 	fi
 
 	if [ "${ONLINESTATE}" != "${OLDSTATE}" ]; then
