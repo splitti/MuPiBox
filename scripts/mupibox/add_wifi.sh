@@ -26,11 +26,10 @@ _EOF_
 		fi
 
 		rm ${MUPIWIFI}
-		sudo service ifup@wlan0 restart
-		sudo systemctl restart dhcpcd
 		sudo dhclient -r
+		sudo service ifup@wlan0 stop
+		sudo service ifup@wlan0 start
 		sudo dhclient
-		sleep 5
 	fi
 	sleep 2
 done
