@@ -33,7 +33,7 @@ if [ ! -f ${OFFLINE_FILE} ]; then
         chown dietpi:dietpi ${OFFLINE_FILE}
 elif [ $(stat --format='%Y' "${DATA_FILE}") -gt $(stat --format='%Y' "${OFFLINE_FILE}") ]; then
         echo -n "[" > ${OFFLINE_FILE}
-        echo -n $(jq '.[] | select(.type != "spotify") | select(.type != "tunein")' < ${DATA_FILE}) >> ${OFFLINE_FILE}
+        echo -n $(jq '.[] | select(.type != "spotify") | select(.type != "show") | select(.type != "radio")' < ${DATA_FILE}) >> ${OFFLINE_FILE}
         echo -n "]" >> ${OFFLINE_FILE}
         sed -i 's/} {/}, {/g' ${OFFLINE_FILE}
 fi
@@ -66,11 +66,13 @@ do
 				chown dietpi:dietpi ${ACTIVE_FILE}
 			fi
 		fi
-		sudo ifconfig wlan0 down && sleep 2 && sudo ifconfig wlan0 up
 	fi
 
 	if [ "${ONLINESTATE}" != "${OLDSTATE}" ]; then
 		/usr/bin/cat <<< $(/usr/bin/jq --arg v "${ONLINESTATE}" '.onlinestate = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
+		if [ "${ONLINESTATE}" != "${FALSESTATE}" ]; then
+			sudo systemctl restart networking.service && sudo systemctl restart dhcpcd && sudo dhclient -r && sudo dhclient && sleep 5
+		fi
 	fi
 	OLDSTATE=${ONLINESTATE}
 	
