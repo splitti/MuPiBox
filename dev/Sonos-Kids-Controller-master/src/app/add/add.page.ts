@@ -97,40 +97,6 @@ export class AddPage implements OnInit, AfterViewInit {
   ngAfterViewInit() {
     this.radioSegment.disabled = true;
 
-    if(this.edit){
-      this.keyboard.setInput(this.editMedia.artistid, 'spotify_artistid');
-      // switch (this.selectedInputElem.name) {
-      //   case 'spotify_artist':
-      //     this.selectedInputElem.value = this.editMedia.artist;
-      //     break;
-      //   case 'spotify_title':
-      //     this.selectedInputElem.value = this.editMedia.title;
-      //     break;
-      //   case 'spotify_id':
-      //     this.selectedInputElem.value = this.editMedia.id;
-      //     break;
-      //   case 'spotify_showid':
-      //     this.selectedInputElem.value = this.editMedia.showid;
-      //     break;
-      //   case 'spotify_artistid':
-      //     console.log('Switch');
-      //     this.keyboard.setInput(this.editMedia.artistid, this.selectedInputElem.name);
-      //     break;
-      //   case 'spotify_query':
-      //     this.selectedInputElem.value = this.editMedia.query;
-      //     break;
-      //   case 'radio_title':
-      //     this.selectedInputElem.value = this.editMedia.title;
-      //     break;
-      //   case 'radio_id':
-      //     this.selectedInputElem.value = this.editMedia.id;
-      //     break;
-      //   case 'radio_cover':
-      //     this.selectedInputElem.value = this.editMedia.cover;
-      //     break;
-      // }
-    }
-
     this.keyboard = new Keyboard({
       onChange: input => {
         this.selectedInputElem.value = input;
@@ -178,6 +144,40 @@ export class AddPage implements OnInit, AfterViewInit {
         '{back}': '⇦'
       }
     });
+
+    if(this.edit){
+      this.keyboard.setInput(this.editMedia.artistid, 'spotify_artistid');
+      // switch (this.selectedInputElem.name) {
+      //   case 'spotify_artist':
+      //     this.selectedInputElem.value = this.editMedia.artist;
+      //     break;
+      //   case 'spotify_title':
+      //     this.selectedInputElem.value = this.editMedia.title;
+      //     break;
+      //   case 'spotify_id':
+      //     this.selectedInputElem.value = this.editMedia.id;
+      //     break;
+      //   case 'spotify_showid':
+      //     this.selectedInputElem.value = this.editMedia.showid;
+      //     break;
+      //   case 'spotify_artistid':
+      //     console.log('Switch');
+      //     this.keyboard.setInput(this.editMedia.artistid, this.selectedInputElem.name);
+      //     break;
+      //   case 'spotify_query':
+      //     this.selectedInputElem.value = this.editMedia.query;
+      //     break;
+      //   case 'radio_title':
+      //     this.selectedInputElem.value = this.editMedia.title;
+      //     break;
+      //   case 'radio_id':
+      //     this.selectedInputElem.value = this.editMedia.id;
+      //     break;
+      //   case 'radio_cover':
+      //     this.selectedInputElem.value = this.editMedia.cover;
+      //     break;
+      // }
+    }
 
     this.selectedInputElem = document.querySelector('ion-input:first-child');
 
