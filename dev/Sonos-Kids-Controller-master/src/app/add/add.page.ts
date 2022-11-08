@@ -99,9 +99,43 @@ export class AddPage implements OnInit, AfterViewInit {
 
     this.keyboard = new Keyboard({
       onChange: input => {
+        if(this.edit && input.length <= 1){
+          switch (this.selectedInputElem.name) {
+            case 'spotify_artist':
+              this.selectedInputElem.value = this.editMedia.artist;
+              break;
+            case 'spotify_title':
+              this.selectedInputElem.value = this.editMedia.title;
+              break;
+            case 'spotify_id':
+              this.selectedInputElem.value = this.editMedia.id;
+              break;
+            case 'spotify_showid':
+              this.selectedInputElem.value = this.editMedia.showid;
+              break;
+            case 'spotify_artistid':
+              this.selectedInputElem.value = this.editMedia.artistid;
+              break;
+            case 'spotify_query':
+              this.selectedInputElem.value = this.editMedia.query;
+              break;
+            case 'radio_title':
+              this.selectedInputElem.value = this.editMedia.title;
+              break;
+            case 'radio_id':
+              this.selectedInputElem.value = this.editMedia.id;
+              break;
+            case 'radio_cover':
+              this.selectedInputElem.value = this.editMedia.cover;
+              break;
+          }
+        }
+
         this.selectedInputElem.value = input;
+
         console.log(this.selectedInputElem);
         console.log(this.selectedInputElem.value);
+
         this.validate();
       },
       onKeyPress: button => {
