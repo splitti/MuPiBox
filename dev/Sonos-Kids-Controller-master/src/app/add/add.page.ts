@@ -115,7 +115,7 @@ export class AddPage implements OnInit, AfterViewInit {
               break;
             case 'spotify_artistid':
               console.log('Switch');
-              this.selectedInputElem.value = this.editMedia.artistid;
+              this.keyboard.setInput(this.editMedia.artistid, this.selectedInputElem.name);
               break;
             case 'spotify_query':
               this.selectedInputElem.value = this.editMedia.query;
