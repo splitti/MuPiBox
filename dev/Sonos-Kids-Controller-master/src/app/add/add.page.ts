@@ -99,7 +99,7 @@ export class AddPage implements OnInit, AfterViewInit {
 
     this.keyboard = new Keyboard({
       onChange: input => {
-        if(this.edit && input.length <= 1){
+        if(this.edit /* && input.length <= 1 */){
           switch (this.selectedInputElem.name) {
             case 'spotify_artist':
               this.selectedInputElem.value = this.editMedia.artist;
@@ -114,6 +114,7 @@ export class AddPage implements OnInit, AfterViewInit {
               this.selectedInputElem.value = this.editMedia.showid;
               break;
             case 'spotify_artistid':
+              console.log('Switch');
               this.selectedInputElem.value = this.editMedia.artistid;
               break;
             case 'spotify_query':
