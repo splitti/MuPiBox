@@ -175,6 +175,8 @@ export class AddPage implements OnInit, AfterViewInit {
   focusChanged(event: any) {
     this.selectedInputElem = event.target;
 
+    console.log(event);
+
     this.keyboard.setOptions({
       inputName: event.target.name
     });
@@ -213,6 +215,8 @@ export class AddPage implements OnInit, AfterViewInit {
       }
       this.firstInputEdit = false;
     }
+
+    console.log(event);
 
     this.keyboard.setInput(event.target.value, event.target.name);
     this.validate();
