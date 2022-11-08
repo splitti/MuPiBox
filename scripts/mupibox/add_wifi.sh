@@ -28,8 +28,11 @@ _EOF_
 		rm ${MUPIWIFI}
 		sudo dhclient -r
 		sudo service ifup@wlan0 stop
+		sleep 1
 		sudo service ifup@wlan0 start
+		sleep 1
 		sudo dhclient
+		sleep 1
 	fi
 	sleep 2
 done

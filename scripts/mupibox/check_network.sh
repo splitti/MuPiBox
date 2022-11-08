@@ -70,11 +70,14 @@ do
 
 	if [ "${ONLINESTATE}" != "${OLDSTATE}" ]; then
 		/usr/bin/cat <<< $(/usr/bin/jq --arg v "${ONLINESTATE}" '.onlinestate = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
-		if [ "${ONLINESTATE}" != "${TRUESTATE}" ]; then
+		if [ "${ONLINESTATE}" == "${FALSESTATE}" ]; then
 			sudo dhclient -r
 			sudo service ifup@wlan0 stop
+			sleep 1
 			sudo service ifup@wlan0 start
+			sleep 1
 			sudo dhclient
+			sleep 1
 			touch /tmp/hanswurst
 		fi
 	fi
