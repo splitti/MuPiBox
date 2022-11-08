@@ -6,7 +6,7 @@ DATA_FILE="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data
 ACTIVE_FILE="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/active_data.json"
 OFFLINE_FILE="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/offline_data.json"
 NETWORKCONFIG="/tmp/network.json"
-OLDSTATE="unchecked"
+OLDSTATE="starting"
 TRUESTATE="online"
 FALSESTATE="offline"
 
@@ -19,7 +19,6 @@ if [ ! -f ${NETWORKCONFIG} ]; then
         sudo echo -n "[]" ${NETWORKCONFIG}
         chown dietpi:dietpi ${NETWORKCONFIG}
         chmod 777 ${NETWORKCONFIG}
-        OLD_ONLINESTATE="starting"
         /usr/bin/cat <<< $(/usr/bin/jq -n --arg v "starting" '.onlinestate = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
 else
         OLD_ONLINESTATE=$(/usr/bin/jq -r .onlinestate ${NETWORKCONFIG})
@@ -70,15 +69,14 @@ do
 
 	if [ "${ONLINESTATE}" != "${OLDSTATE}" ]; then
 		/usr/bin/cat <<< $(/usr/bin/jq --arg v "${ONLINESTATE}" '.onlinestate = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
-		if [ "${ONLINESTATE}" == "${FALSESTATE}" ]; then
+		if [ "${ONLINESTATE}" == "${FALSESTATE}" ] && [ "${OLDSTATE}" != "starting" ]; then
 			sudo dhclient -r
 			sudo service ifup@wlan0 stop
 			sleep 1
 			sudo service ifup@wlan0 start
 			sleep 1
 			sudo dhclient
-			sleep 1
-			touch /tmp/hanswurst
+			sleep 5
 		fi
 	fi
 	OLDSTATE=${ONLINESTATE}
