@@ -47,7 +47,6 @@ export class AddPage implements OnInit, AfterViewInit {
   shuffle = false;
   firstInput = true;
   validateState: Validate;
-  firstInputEdit = true;
 
   categoryIcons = {
     audiobook: 'book-outline',
@@ -101,6 +100,7 @@ export class AddPage implements OnInit, AfterViewInit {
     this.keyboard = new Keyboard({
       onChange: input => {
         this.selectedInputElem.value = input;
+        console.log(this.selectedInputElem);
         this.validate();
       },
       onKeyPress: button => {
@@ -175,55 +175,12 @@ export class AddPage implements OnInit, AfterViewInit {
   focusChanged(event: any) {
     this.selectedInputElem = event.target;
 
-    console.log(event);
-
     this.keyboard.setOptions({
       inputName: event.target.name
     });
   }
 
   inputChanged(event: any) {
-    // if(this.edit && this.firstInputEdit){
-    //   switch (event.target.name) {
-    //     case 'spotify_artist':
-    //       this.keyboard.setInput(this.editMedia.artist, event.target.name);
-    //       break;
-    //     case 'spotify_title':
-    //       this.keyboard.setInput(this.editMedia.title, event.target.name);
-    //       break;
-    //     case 'spotify_id':
-    //       this.keyboard.setInput(this.editMedia.id, event.target.name);
-    //       break;
-    //     case 'spotify_showid':
-    //       this.keyboard.setInput(this.editMedia.showid, event.target.name);
-    //       break;
-    //     case 'spotify_artistid':
-    //       this.keyboard.setInput(this.editMedia.artistid, event.target.name);
-    //       break;
-    //     case 'spotify_query':
-    //       this.keyboard.setInput(this.editMedia.query, event.target.name);
-    //       break;
-    //     case 'radio_title':
-    //       this.keyboard.setInput(this.editMedia.title, event.target.name);
-    //       break;
-    //     case 'radio_id':
-    //       this.keyboard.setInput(this.editMedia.id, event.target.name);
-    //       break;
-    //     case 'radio_cover':
-    //       this.keyboard.setInput(this.editMedia.cover, event.target.name);
-    //       break;
-    //   }
-    //   this.firstInputEdit = false;
-    // }
-
-    if(event.target.name == 'spotify_artistid'){
-      this.keyboard.setInput(this.editMedia.artistid, event.target.name);
-
-    }
-
-    console.log(event.target.name);
-    console.log(event.target.value);
-
     this.keyboard.setInput(event.target.value, event.target.name);
     this.validate();
   }
