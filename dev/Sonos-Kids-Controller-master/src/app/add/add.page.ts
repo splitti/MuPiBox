@@ -216,6 +216,11 @@ export class AddPage implements OnInit, AfterViewInit {
     //   this.firstInputEdit = false;
     // }
 
+    if(event.target.name == 'spotify_artistid'){
+      this.keyboard.setInput(this.editMedia.artistid, event.target.name);
+
+    }
+
     console.log(event.target.name);
     console.log(event.target.value);
 
