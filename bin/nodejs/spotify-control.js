@@ -952,6 +952,9 @@ app.use(function(req, res){
   else if (command.name == "shutoff")
     cmdCall('bash /usr/local/bin/mupibox/shutdown.sh');
 
+  else if (command.name == "reboot")
+    cmdCall('sudo reboot');
+
   else if (command.name == "index")
     cmdCall('bash /usr/local/bin/mupibox/add_index.sh');
 

@@ -34,6 +34,7 @@ export class HomePage implements OnInit {
   editButtonclickCount = 0;
   editClickTimer = 0;
   public readonly network$: Observable<Network>;
+  public readonly networkLocal$: Observable<Network>;
 
   needsUpdate = false;
 
@@ -57,13 +58,13 @@ export class HomePage implements OnInit {
     private router: Router,
     private activatedRoute: ActivatedRoute
   ) {
-    this.network$ = this.mediaService.network$;
+    this.networkLocal$ = this.mediaService.networkLocal$;
   }
 
   ngOnInit() {
     this.mediaService.setCategory('audiobook');
 
-    this.mediaService.network$.subscribe(network => {
+    this.mediaService.networkLocal$.subscribe(network => {
       this.network = network;
     });
 
@@ -134,7 +135,7 @@ export class HomePage implements OnInit {
         this.update();
       }
     }else{
-      this.mediaService.network$.subscribe(network => {
+      this.mediaService.networkLocal$.subscribe(network => {
         this.network = network;
       });
     }

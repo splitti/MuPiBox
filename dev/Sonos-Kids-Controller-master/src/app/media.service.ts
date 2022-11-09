@@ -26,6 +26,7 @@ export class MediaService {
   public readonly current$: Observable<CurrentSpotify>;
   public readonly local$: Observable<CurrentMPlayer>;
   public readonly network$: Observable<Network>;
+  public readonly networkLocal$: Observable<Network>;
   public readonly playlist$: Observable<CurrentPlaylist>;
   public readonly episode$: Observable<CurrentEpisode>;
   public readonly show$: Observable<CurrentShow>;
@@ -76,6 +77,12 @@ export class MediaService {
     );
     this.show$ = interval(1000).pipe( // Once a second after subscribe, way too frequent!
       switchMap((): Observable<CurrentShow> => this.http.get<CurrentShow>('http://localhost:5005/show')),
+      // Replay the most recent (bufferSize) emission on each subscription
+      // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
+      shareReplay({ bufferSize: 1, refCount: false }),
+    );
+    this.networkLocal$ = interval(1000).pipe( // Once a second after subscribe, way too frequent!
+      switchMap((): Observable<Network> => this.http.get<Network>('http://localhost:8200/api/network')),
       // Replay the most recent (bufferSize) emission on each subscription
       // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
       shareReplay({ bufferSize: 1, refCount: false }),

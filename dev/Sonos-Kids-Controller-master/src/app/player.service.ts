@@ -23,6 +23,7 @@ export enum PlayerCmds {
   SHUFFLEON = 'shuffleon',
   SHUFFLEOFF = 'shuffleoff',
   SHUTOFF = 'shutoff',
+  REBOOT = 'reboot',
   INDEX = 'index',
   DELETEOFFLINEDATA = 'deleteofflinedate'
 }

@@ -126,6 +126,12 @@ export class EditPage implements OnInit {
           }
         },
         {
+          text: 'Reboot',
+          handler: () => {
+            this.playerService.sendCmd(PlayerCmds.REBOOT);
+          }
+        },
+        {
           text: 'Cancel'
         }
       ]
