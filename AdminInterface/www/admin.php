@@ -54,7 +54,8 @@
 			{
 			if (move_uploaded_file($_FILES["fileToUpload"]["tmp_name"], $target_file))
 				{
-				$command = "sudo unzip -o -a '".$target_file."' -d /";
+				$command1 = "unzip -o -a '".$target_file."' -d /";
+				$command = "sudo su -c \'".$command1."\'";
 				exec($command, $output, $result );
 				$command = "sudo rm '".$target_file."'";
 				exec($command, $output, $result );
