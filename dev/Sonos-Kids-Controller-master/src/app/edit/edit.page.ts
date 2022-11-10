@@ -113,6 +113,27 @@ export class EditPage implements OnInit {
     this.router.navigate(['/admin']);
   }
 
+  async networkButtonPressed() {
+    const alert = await this.alertController.create({
+      cssClass: 'alert',
+      header: 'Warning',
+      message: 'Do you want to restart the wifi network?',
+      buttons: [
+        {
+          text: 'Restart',
+          handler: () => {
+            this.playerService.sendCmd(PlayerCmds.NETWORKRESTART);
+          }
+        },
+        {
+          text: 'Cancel'
+        }
+      ]
+    });
+
+    await alert.present();
+  }
+
   async shutdownMessage() {
     const alert = await this.alertController.create({
       cssClass: 'alert',
