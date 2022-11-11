@@ -72,9 +72,9 @@ do
 		if [ "${ONLINESTATE}" == "${FALSESTATE}" ] && [ "${OLDSTATE}" != "starting" ]; then
 			#sudo dhclient -r
 			sudo service ifup@wlan0 stop
+			sleep 5
 			sudo service ifup@wlan0 start
 			#sudo dhclient
-			sleep 5
 		fi
 	fi
 	OLDSTATE=${ONLINESTATE}

@@ -3,6 +3,8 @@
 
 MUPIWIFI="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/wlan.json"
 WPACONF="/etc/wpa_supplicant/wpa_supplicant.conf"
+NETWORKCONFIG="/tmp/network.json"
+ONLINESTATE=$(/usr/bin/jq -r .onlinestate ${NETWORKCONFIG})
 
 while true
 do
@@ -26,10 +28,12 @@ _EOF_
 		fi
 
 		rm ${MUPIWIFI}
-		sudo dhclient -r
-		sudo service ifup@wlan0 stop
-		sudo service ifup@wlan0 start
-		sudo dhclient
+		if [ ${ONLINESTATE} != "online" ]; then
+			#sudo dhclient -r
+			sudo service ifup@wlan0 stop
+			sudo service ifup@wlan0 start
+			#sudo dhclient
+		fi
 	fi
 	sleep 2
 done
