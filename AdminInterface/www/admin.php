@@ -32,7 +32,7 @@
 		$data["chromium"]["debug"]=0;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Chromium Debuggung deactivated</li>";
 		$change=1;
-		}
+		}-
 	if( $_POST['submitfile'] )
 		{
 		$target_dir = "/tmp/";
@@ -54,7 +54,8 @@
 			{
 			if (move_uploaded_file($_FILES["fileToUpload"]["tmp_name"], $target_file))
 				{
-				$command = "sudo unzip -o -a '".$target_file."' -d / >> /tmp/restore.log";
+				#$command = "sudo unzip -o -a '".$target_file."' -d / >> /tmp/restore.log";
+				$command = "sudo unzip -o '".$target_file."' -d / >> /tmp/restore.log";
 				exec($command, $output, $result );
 				$command = "sudo rm '".$target_file."'";
 				exec($command, $output, $result );
