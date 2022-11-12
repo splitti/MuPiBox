@@ -12,7 +12,7 @@
 		$uploadOk = 1;
 		$FileType = strtolower(pathinfo($target_file,PATHINFO_EXTENSION));
 		// Allow zip file format
-		if($FileType != "zip" ) 
+		if($FileType != "zip" )
 			{
 			$uploadOk = 0;
 			}
@@ -21,8 +21,8 @@
 			{
 			$CHANGE_TXT=$CHANGE_TXT."<li>WARNING: Please upload a .zip-File!</li>";
 			$change=0;
-			} 
-		else 
+			}
+		else
 			{
 			if (move_uploaded_file($_FILES["fileToUpload"]["tmp_name"], $target_file))
 				{
@@ -31,14 +31,6 @@
 				#$command = "sudo su - -c 'tar xvzf ".$target_file." >> /tmp/restore.log'";
 				exec($command, $output, $result );
 				$command = "sudo rm '".$target_file."'";
-				exec($command, $output, $result );
-				$command = "echo -n "[" > /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/offline_data.json";
-				exec($command, $output, $result );
-				$command = "echo -n $(jq '.[] | select(.type != "spotify") | select(.type != "show") | select(.type != "radio")' < /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json) >> /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/offline_data.json";
-				exec($command, $output, $result );
-				$command = "echo -n "]" >> /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/offline_data.json";
-				exec($command, $output, $result );
-				$command = "sed -i 's/} {/}, {/g' /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/offline_data.json";
 				exec($command, $output, $result );
 				$change=1;
 				$CHANGE_TXT=$CHANGE_TXT."<li>Backup-File restored. NOTICE: A restored Hostname will not work, please change and save the Hostname!</li>";
@@ -246,7 +238,7 @@
 						{
 						print '<input id="saveForm" class="button_text_green" type="submit" name="debug" value="Chrome Debugging Off - turn on"';
 						}
-				?>" />	
+				?>" />
 				<?php
 					if( $data["chromium"]["debug"] == 1)
 						{
