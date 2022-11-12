@@ -25,6 +25,7 @@
 				<a href="index.php"><i class="fa fa-fw fa-home"></i> Home</a>
 				<a href="content.php"><i class="fa-solid fa-music"></i> MuPiBox</a>
 				<a href="mupi.php"><i class="fa-solid fa-headphones"></i> MuPi-Conf</a>
+				<a href="media.php"><i class="fa-solid fa-list-music"></i></i> Media</a>
 				<a href="images.php"><i class="fa-regular fa-image"></i> Images</a>
 				<a href="bluetooth.php"><i class="fa-brands fa-bluetooth"></i> Bluetooth</a>
 				<a href="spotify.php"><i class="fa-brands fa-spotify"></i> Spotify</a>
