@@ -32,6 +32,14 @@
 				exec($command, $output, $result );
 				$command = "sudo rm '".$target_file."'";
 				exec($command, $output, $result );
+				$command = "echo -n "[" > /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/offline_data.json";
+				exec($command, $output, $result );
+				$command = "echo -n $(jq '.[] | select(.type != "spotify") | select(.type != "show") | select(.type != "radio")' < /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json) >> /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/offline_data.json";
+				exec($command, $output, $result );
+				$command = "echo -n "]" >> /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/offline_data.json";
+				exec($command, $output, $result );
+				$command = "sed -i 's/} {/}, {/g' /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/offline_data.json";
+				exec($command, $output, $result );
 				$change=1;
 				$CHANGE_TXT=$CHANGE_TXT."<li>Backup-File restored. NOTICE: A restored Hostname will not work, please change and save the Hostname!</li>";
 				}
