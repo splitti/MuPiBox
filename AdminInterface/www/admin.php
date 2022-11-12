@@ -1,10 +1,50 @@
 <?php
-	$onlinejson = file_get_contents('https://mupibox.de/version/latest/version.json');
-	$dataonline = json_decode($onlinejson, true);
-	include ('includes/header.php');
+
 	$change=0;
 	$shutdown=0;
 	$reboot=0;
+
+	if( $_POST['submitfile'] )
+		{
+		$target_dir = "/tmp/";
+		$target_file = $target_dir . basename($_FILES["fileToUpload"]["name"]);
+		$uploadOk = 1;
+		$FileType = strtolower(pathinfo($target_file,PATHINFO_EXTENSION));
+		// Allow zip file format
+		if($FileType != "gz" ) 
+			{
+			$uploadOk = 0;
+			}
+		// Check if $uploadOk is set to 0 by an error
+		if ($uploadOk == 0)
+			{
+			$CHANGE_TXT=$CHANGE_TXT."<li>WARNING: Please upload a .tar.gz-File!</li>";
+			$change=0;
+			} 
+		else 
+			{
+			if (move_uploaded_file($_FILES["fileToUpload"]["tmp_name"], $target_file))
+				{
+				#$command = "sudo unzip -o -a '".$target_file."' -d / >> /tmp/restore.log";
+				#$command = "sudo su - -c \"unzip -o -a '".$target_file."' -d / >> /tmp/restore.log && sleep 1\"";
+				$command = "sudo su - -c 'tar xvzf ".$target_file." >> /tmp/restore.log'";
+				exec($command, $output, $result );
+				$command = "sudo rm '".$target_file."'";
+				exec($command, $output, $result );
+				$change=1;
+				$CHANGE_TXT=$CHANGE_TXT."<li>Backup-File restored. NOTICE: A restored Hostname will not work, please change and save the Hostname!</li>";
+				}
+			else
+				{
+				$CHANGE_TXT=$CHANGE_TXT."<li>ERROR: Error on uploading Backup-File!</li>";
+				}
+			}
+		}
+
+
+	$onlinejson = file_get_contents('https://mupibox.de/version/latest/version.json');
+	$dataonline = json_decode($onlinejson, true);
+	include ('includes/header.php');
 	$CHANGE_TXT="<div id='lbinfo'><ul id='lbinfo'>";
 
 	if( $_POST['spotifydebug'] == "Controller Debugging Off - turn on" )
@@ -32,42 +72,6 @@
 		$data["chromium"]["debug"]=0;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Chromium Debuggung deactivated</li>";
 		$change=1;
-		}
-	if( $_POST['submitfile'] )
-		{
-		$target_dir = "/tmp/";
-		$target_file = $target_dir . basename($_FILES["fileToUpload"]["name"]);
-		$uploadOk = 1;
-		$FileType = strtolower(pathinfo($target_file,PATHINFO_EXTENSION));
-		// Allow zip file format
-		if($FileType != "gz" ) 
-			{
-			$uploadOk = 0;
-			}
-		// Check if $uploadOk is set to 0 by an error
-		if ($uploadOk == 0)
-			{
-			$CHANGE_TXT=$CHANGE_TXT."<li>WARNING: Please upload a .tar.gz-File!</li>";
-			$change=1;
-			} 
-		else 
-			{
-			if (move_uploaded_file($_FILES["fileToUpload"]["tmp_name"], $target_file))
-				{
-				#$command = "sudo unzip -o -a '".$target_file."' -d / >> /tmp/restore.log";
-				#$command = "sudo su - -c \"unzip -o -a '".$target_file."' -d / >> /tmp/restore.log && sleep 1\"";
-				$command = "sudo tar xvzf ".$target_file." >> /tmp/restore.log";
-				exec($command, $output, $result );
-				$command = "sudo rm '".$target_file."'";
-				exec($command, $output, $result );
-				$change=1;
-				$CHANGE_TXT=$CHANGE_TXT."<li>Backup-File restored. NOTICE: A restored Hostname will not work, please change and save the Hostname!</li>";
-				}
-			else
-				{
-				$CHANGE_TXT=$CHANGE_TXT."<li>ERROR: Error on uploading Backup-File!</li>";
-				}
-			}
 		}
 
 	if( $_POST['restart_kiosk'] )
@@ -158,10 +162,10 @@
 		}
 	if( $change == 1 )
 		{
-		//$json_object = json_encode($data);
-		//$save_rc = file_put_contents('/tmp/.mupiboxconfig.json', $json_object);
-		//exec("sudo chmod 755 /etc/mupibox/mupiboxconfig.json");
-		//exec("sudo mv /tmp/.mupiboxconfig.json /etc/mupibox/mupiboxconfig.json");
+		$json_object = json_encode($data);
+		$save_rc = file_put_contents('/tmp/.mupiboxconfig.json', $json_object);
+		exec("sudo chmod 755 /etc/mupibox/mupiboxconfig.json");
+		exec("sudo mv /tmp/.mupiboxconfig.json /etc/mupibox/mupiboxconfig.json");
 		exec("sudo /usr/local/bin/mupibox/./setting_update.sh");
 		exec("sudo -i -u dietpi /usr/local/bin/mupibox/./restart_kiosk.sh");
 		}
@@ -170,6 +174,13 @@
 		$json_object = json_encode($data);
 		$save_rc = file_put_contents('/tmp/.mupiboxconfig.json', $json_object);
 		exec("sudo mv /tmp/.mupiboxconfig.json /etc/mupibox/mupiboxconfig.json");
+		exec("sudo /usr/local/bin/mupibox/./setting_update.sh");
+		}
+	if( $change == 3 )
+		{
+		//$json_object = json_encode($data);
+		//$save_rc = file_put_contents('/tmp/.mupiboxconfig.json', $json_object);
+		//exec("sudo mv /tmp/.mupiboxconfig.json /etc/mupibox/mupiboxconfig.json");
 		exec("sudo /usr/local/bin/mupibox/./setting_update.sh");
 		}
 	$rc = $output[count($output)-1];
