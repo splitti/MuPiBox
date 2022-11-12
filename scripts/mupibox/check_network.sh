@@ -24,19 +24,6 @@ else
         OLD_ONLINESTATE=$(/usr/bin/jq -r .onlinestate ${NETWORKCONFIG})
 fi
 
-if [ ! -f ${OFFLINE_FILE} ]; then
-        echo -n "[" > ${OFFLINE_FILE}
-        echo -n $(jq '.[] | select(.type != "spotify") | select(.type != "show") | select(.type != "radio")' < ${DATA_FILE}) >> ${OFFLINE_FILE}
-        echo -n "]" >> ${OFFLINE_FILE}
-        sed -i 's/} {/}, {/g' ${OFFLINE_FILE}
-        chown dietpi:dietpi ${OFFLINE_FILE}
-elif [ $(stat --format='%Y' "${DATA_FILE}") -gt $(stat --format='%Y' "${OFFLINE_FILE}") ]; then
-        echo -n "[" > ${OFFLINE_FILE}
-        echo -n $(jq '.[] | select(.type != "spotify") | select(.type != "show") | select(.type != "radio")' < ${DATA_FILE}) >> ${OFFLINE_FILE}
-        echo -n "]" >> ${OFFLINE_FILE}
-        sed -i 's/} {/}, {/g' ${OFFLINE_FILE}
-fi
-
 #wget -q --spider http://google.com
 
 while true
@@ -54,7 +41,26 @@ do
 			fi
 		fi
 	else
-		ONLINESTATE=${FALSESTATE}	
+		ONLINESTATE=${FALSESTATE}
+		if [ ! -f ${OFFLINE_FILE} ]; then
+			echo -n "[" > ${OFFLINE_FILE}
+			echo -n $(jq '.[] | select(.type != "spotify") | select(.type != "show") | select(.type != "radio")' < ${DATA_FILE}) >> ${OFFLINE_FILE}
+			echo -n "]" >> ${OFFLINE_FILE}
+			sed -i 's/} {/}, {/g' ${OFFLINE_FILE}
+			chown dietpi:dietpi ${OFFLINE_FILE}
+		elif [ ! -s ${OFFLINE_FILE} ]; then
+			rm ${OFFLINE_FILE}
+			echo -n "[" > ${OFFLINE_FILE}
+			echo -n $(jq '.[] | select(.type != "spotify") | select(.type != "show") | select(.type != "radio")' < ${DATA_FILE}) >> ${OFFLINE_FILE}
+			echo -n "]" >> ${OFFLINE_FILE}
+			sed -i 's/} {/}, {/g' ${OFFLINE_FILE}
+			chown dietpi:dietpi ${OFFLINE_FILE}
+		elif [ $(stat --format='%Y' "${DATA_FILE}") -gt $(stat --format='%Y' "${OFFLINE_FILE}") ]; then
+			echo -n "[" > ${OFFLINE_FILE}
+			echo -n $(jq '.[] | select(.type != "spotify") | select(.type != "show") | select(.type != "radio")' < ${DATA_FILE}) >> ${OFFLINE_FILE}
+			echo -n "]" >> ${OFFLINE_FILE}
+			sed -i 's/} {/}, {/g' ${OFFLINE_FILE}
+		fi
 		if [ "${ONLINESTATE}" != "${OLDSTATE}" ]; then
 			if [ ! -f ${ACTIVE_FILE} ]; then
 				ln -s ${OFFLINE_FILE} ${ACTIVE_FILE}
@@ -67,16 +73,16 @@ do
 		fi
 	fi
 
-	if [ "${ONLINESTATE}" != "${OLDSTATE}" ]; then
-		/usr/bin/cat <<< $(/usr/bin/jq --arg v "${ONLINESTATE}" '.onlinestate = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
-		if [ "${ONLINESTATE}" == "${FALSESTATE}" ] && [ "${OLDSTATE}" != "starting" ]; then
-			#sudo dhclient -r
-			sudo service ifup@wlan0 stop
-			sleep 5
-			sudo service ifup@wlan0 start
-			#sudo dhclient
-		fi
-	fi
+	#if [ "${ONLINESTATE}" != "${OLDSTATE}" ]; then
+	#	/usr/bin/cat <<< $(/usr/bin/jq --arg v "${ONLINESTATE}" '.onlinestate = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
+	#	if [ "${ONLINESTATE}" == "${FALSESTATE}" ] && [ "${OLDSTATE}" != "starting" ]; then
+	#		#sudo dhclient -r
+	#		sudo service ifup@wlan0 stop
+	#		sleep 5
+	#		sudo service ifup@wlan0 start
+	#		#sudo dhclient
+	#	fi
+	#fi
 	OLDSTATE=${ONLINESTATE}
 	
 	sleep 2
