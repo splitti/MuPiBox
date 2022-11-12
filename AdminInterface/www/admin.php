@@ -40,14 +40,14 @@
 		$uploadOk = 1;
 		$FileType = strtolower(pathinfo($target_file,PATHINFO_EXTENSION));
 		// Allow zip file format
-		if($FileType != "zip" ) 
+		if($FileType != "gz" ) 
 			{
 			$uploadOk = 0;
 			}
 		// Check if $uploadOk is set to 0 by an error
 		if ($uploadOk == 0)
 			{
-			$CHANGE_TXT=$CHANGE_TXT."<li>WARNING: Please upload a ZIP-File!</li>";
+			$CHANGE_TXT=$CHANGE_TXT."<li>WARNING: Please upload a .tar.gz-File!</li>";
 			$change=1;
 			} 
 		else 
@@ -55,7 +55,8 @@
 			if (move_uploaded_file($_FILES["fileToUpload"]["tmp_name"], $target_file))
 				{
 				#$command = "sudo unzip -o -a '".$target_file."' -d / >> /tmp/restore.log";
-				$command = "sudo unzip -o -K -a '".$target_file."' -d / >> /tmp/restore.log";
+				#$command = "sudo su - -c \"unzip -o -a '".$target_file."' -d / >> /tmp/restore.log && sleep 1\"";
+				$command = "sudo tar xvzf ".$target_file." >> /tmp/restore.log";
 				exec($command, $output, $result );
 				$command = "sudo rm '".$target_file."'";
 				exec($command, $output, $result );
