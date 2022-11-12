@@ -3,6 +3,7 @@
 	$change=0;
 	$shutdown=0;
 	$reboot=0;
+	$CHANGE_TXT="<div id='lbinfo'><ul id='lbinfo'>";
 
 	if( $_POST['submitfile'] )
 		{
@@ -11,23 +12,23 @@
 		$uploadOk = 1;
 		$FileType = strtolower(pathinfo($target_file,PATHINFO_EXTENSION));
 		// Allow zip file format
-		if($FileType != "gz" ) 
+		if($FileType != "zip" ) 
 			{
 			$uploadOk = 0;
 			}
 		// Check if $uploadOk is set to 0 by an error
 		if ($uploadOk == 0)
 			{
-			$CHANGE_TXT=$CHANGE_TXT."<li>WARNING: Please upload a .tar.gz-File!</li>";
+			$CHANGE_TXT=$CHANGE_TXT."<li>WARNING: Please upload a .zip-File!</li>";
 			$change=0;
 			} 
 		else 
 			{
 			if (move_uploaded_file($_FILES["fileToUpload"]["tmp_name"], $target_file))
 				{
-				#$command = "sudo unzip -o -a '".$target_file."' -d / >> /tmp/restore.log";
+				$command = "sudo unzip -o -a '".$target_file."' -d / >> /tmp/restore.log";
 				#$command = "sudo su - -c \"unzip -o -a '".$target_file."' -d / >> /tmp/restore.log && sleep 1\"";
-				$command = "sudo su - -c 'tar xvzf ".$target_file." >> /tmp/restore.log'";
+				#$command = "sudo su - -c 'tar xvzf ".$target_file." >> /tmp/restore.log'";
 				exec($command, $output, $result );
 				$command = "sudo rm '".$target_file."'";
 				exec($command, $output, $result );
@@ -45,7 +46,6 @@
 	$onlinejson = file_get_contents('https://mupibox.de/version/latest/version.json');
 	$dataonline = json_decode($onlinejson, true);
 	include ('includes/header.php');
-	$CHANGE_TXT="<div id='lbinfo'><ul id='lbinfo'>";
 
 	if( $_POST['spotifydebug'] == "Controller Debugging Off - turn on" )
 		{
