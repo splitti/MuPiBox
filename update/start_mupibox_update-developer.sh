@@ -15,6 +15,7 @@ exec 3>${LOG}
 	sudo mkdir /home/dietpi/MuPiBox/media/audiobook >&3 2>&3	
 	sudo mkdir /home/dietpi/.mupibox/chromium_cache >&3 2>&3	
 	sudo mkdir /home/dietpi/MuPiBox/media/music >&3 2>&3
+	sudo mkdir /home/dietpi/MuPiBox/media/cover >&3 2>&3
 	sudo chown dietpi:dietpi /home/dietpi/MuPiBox/media/audiobook >&3 2>&3
 	sudo chown dietpi:dietpi /home/dietpi/MuPiBox/media/music >&3 2>&3
 	sleep 1 >&3 2>&3
@@ -145,6 +146,8 @@ exec 3>${LOG}
 	sudo rm /var/www/www.zip >&3 2>&3
 	sudo chown -R www-data:www-data /var/www/ >&3 2>&3
 	sudo chmod -R 755 /var/www/ >&3 2>&3
+	sudo ln -s /home/dietpi/MuPiBox/media/cover /var/www/cover >&3 2>&3
+	sudo chown -R dietpi:www-data /home/dietpi/MuPiBox/media/cover >&3 2>&3
 
 	echo -e "XXX\n95\nUpdate Config-File... \nXXX"	
 	sudo cd; curl -L ${SRC}/update/conf_update.sh | sudo bash >&3 2>&3

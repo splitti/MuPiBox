@@ -30,6 +30,13 @@
 				#$command = "sudo su - -c \"unzip -o -a '".$target_file."' -d / >> /tmp/restore.log && sleep 1\"";
 				#$command = "sudo su - -c 'tar xvzf ".$target_file." >> /tmp/restore.log'";
 				exec($command, $output, $result );
+				
+				exec("sudo chown root:www-data /etc/mupibox/mupiboxconfig.json");
+				exec("sudo chmod 644 /etc/mupibox/mupiboxconfig.json");
+				exec("sudo chown dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json");
+				exec("sudo chmod 644 /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json");
+				
+				
 				$command = "sudo rm '".$target_file."'";
 				exec($command, $output, $result );
 				$change=1;
