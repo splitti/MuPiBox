@@ -8,10 +8,12 @@
 		$target_dir = "/var/www/cover/";
 		#$target_file = $target_dir . basename($_FILES["fileToUpload"]["name"]);
 		$uploadOk = 1;
-		$FileType = strtolower(pathinfo($target_file,PATHINFO_EXTENSION));
+		//$FileType = strtolower(pathinfo($target_file,PATHINFO_EXTENSION));
+
 		// never assume the upload succeeded
 		if ($_FILES["fileToUpload"]["error"] !== UPLOAD_ERR_OK) {
-		   die("Upload failed with error code " . $_FILES["fileToUpload"]["tmp_name"]);
+			$CHANGE_TXT=$CHANGE_TXT."<li>Upload failed with error code " . $_FILES["fileToUpload"]["tmp_name"] . "</li>";
+			$uploadOk = 0;
 		}
 
 		$info = getimagesize($_FILES["fileToUpload"]["tmp_name"]);
@@ -55,6 +57,7 @@
 				}
 			}
 		}
+	$CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 ?>
 <form class="appnitro" method="post" action="images.php" id="form"enctype="multipart/form-data">
 	<div class="description">
