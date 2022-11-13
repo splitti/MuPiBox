@@ -6,9 +6,13 @@
 	if( $_POST['submitfile'] )
 		{
 		$target_dir = "/var/www/cover/";
-		#$target_file = $target_dir . basename($_FILES["fileToUpload"]["name"]);
+		$target_file = $target_dir . basename($_FILES["fileToUpload"]["name"]);
 		$uploadOk = 1;
 		//$FileType = strtolower(pathinfo($target_file,PATHINFO_EXTENSION));
+
+		if (is_file($target_file)) {
+			$CHANGE_TXT=$CHANGE_TXT."<li>There is already an image with this name! This file will be overwritten!</li>";
+		}
 
 		// never assume the upload succeeded
 		if ($_FILES["fileToUpload"]["error"] !== UPLOAD_ERR_OK) {
@@ -25,30 +29,18 @@
 		if (($info[2] !== IMAGETYPE_GIF) && ($info[2] !== IMAGETYPE_JPEG) && ($info[2] !== IMAGETYPE_PNG)) {
 			$CHANGE_TXT=$CHANGE_TXT."<li>Wrong file-type. Please upload an image of type jpeg, png, gif or svg.</li>";
 			$uploadOk = 0;
-
-		}
+			}
 		// Allow zip file format
 		/*if($FileType != "jpg" )
 			{
 			$uploadOk = 0;
 			}*/
 		// Check if $uploadOk is set to 0 by an error
-		if ($uploadOk == 0)
-			{
-			$CHANGE_TXT=$CHANGE_TXT."<li>The upload was aborted!</li>";
-			$change=0;
-			}
-		else
+		if ($uploadOk != 0)
 			{
 			if (move_uploaded_file($_FILES["fileToUpload"]["tmp_name"], $target_file))
 				{
-				#$command = "sudo unzip -o -a '".$target_file."' -d / >> /tmp/restore.log";
-				#$command = "sudo su - -c \"unzip -o -a '".$target_file."' -d / >> /tmp/restore.log && sleep 1\"";
-				#$command = "sudo su - -c 'tar xvzf ".$target_file." >> /tmp/restore.log'";
-				#exec($command, $output, $result );
-				#$command = "sudo rm '".$target_file."'";
-				#exec($command, $output, $result );
-				#$change=1;
+				$change=1;
 				$CHANGE_TXT=$CHANGE_TXT."<li>Image upload completed!</li>";
 				}
 			else
@@ -73,6 +65,16 @@
 	</ul>
 </form>
 
+<?php
+
+	$files = glob('/var/www/cover/*.{jpeg,jpg,png,gif}', GLOB_BRACE);
+	foreach($files as $file) {
+		print "<img src='/cover/".basename($file)."' style='max-width:300px;'>";
+		print "<br>";
+		print "<p>URL: http://".$data["mupibox"]["host"]."/".basename($file)."</p>";
+	}
+
+?>
 <?php
  include ('includes/footer.php');
 ?>

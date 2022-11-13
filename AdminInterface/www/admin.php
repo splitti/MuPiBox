@@ -35,12 +35,16 @@
 				exec("sudo chmod 644 /etc/mupibox/mupiboxconfig.json");
 				exec("sudo chown dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json");
 				exec("sudo chmod 644 /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json");
-				
+
+				$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
+				$data = json_decode($string, true);	
+				$command = "sudo /boot/dietpi/func/change_hostname " . $data["mupibox"]["host"];
+				$change_hostname = exec($command, $output, $change_hostname );
 				
 				$command = "sudo rm '".$target_file."'";
 				exec($command, $output, $result );
 				$change=1;
-				$CHANGE_TXT=$CHANGE_TXT."<li>Backup-File restored. NOTICE: A restored Hostname will not work, please change and save the Hostname!</li>";
+				$CHANGE_TXT=$CHANGE_TXT."<li>Backup-File restored!</li>";
 				}
 			else
 				{

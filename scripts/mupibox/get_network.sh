@@ -7,6 +7,7 @@ ACTIVE_FILE="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/ac
 OFFLINE_FILE="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/offline_data.json"
 CONFIG="/etc/mupibox/mupiboxconfig.json"
 NETWORKCONFIG="/tmp/network.json"
+FRONTENDCONFIG="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json"
 #PLAYERSTATE=$(cat /tmp/playerstate)
 
 if [ ! -f ${DATA_FILE} ]; then
@@ -56,4 +57,4 @@ SUBNET=$(/sbin/ifconfig wlan0 | awk '/netmask/{split($4,a,":"); print a[1]}')
 /usr/bin/cat <<< $(/usr/bin/jq --arg v "${GW}" '.gateway = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
 /usr/bin/cat <<< $(/usr/bin/jq --arg v "${DNS}" '.dns = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
 /usr/bin/cat <<< $(/usr/bin/jq --arg v "${SUBNET}" '.subnet = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
-
+/usr/bin/cat <<< $(/usr/bin/jq --arg v "${HOSTN}" '."node-sonos-http-api".server = $v' ${FRONTENDCONFIG}) >  ${FRONTENDCONFIG}
