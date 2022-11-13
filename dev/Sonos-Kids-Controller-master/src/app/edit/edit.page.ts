@@ -96,6 +96,10 @@ export class EditPage implements OnInit {
     this.mediaService.updateNetwork();
     this.mediaService.updateRawMedia();
 
+    this.playerService.sendCmd(PlayerCmds.INDEX);
+  }
+
+  ionViewDidEnter() {
     this.network.subscribe(network => {
       this.networkparameter.ip = network.ip;
       this.networkparameter.onlinestate = network.onlinestate;
@@ -103,10 +107,6 @@ export class EditPage implements OnInit {
 
     console.log("IP: " + this.networkparameter?.ip);
     console.log("Online: " + this.networkparameter?.onlinestate);
-    
-    
-
-    this.playerService.sendCmd(PlayerCmds.INDEX);
   }
 
   ionViewDidLeave() {
