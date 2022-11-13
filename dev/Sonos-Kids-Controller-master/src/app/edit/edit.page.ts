@@ -17,6 +17,7 @@ export class EditPage implements OnInit {
 
   media: Observable<Record<any, any>[]>;
   network: Observable<Network>;
+  networkparameter: Network;
   activityIndicatorVisible = false;
 
   constructor(
@@ -54,7 +55,7 @@ export class EditPage implements OnInit {
             console.log("Index: " + item.index);
             if(item.type === 'library'){
               this.playerService.deleteLocal(item);
-              this.playerService.sendCmd(PlayerCmds.DELETEOFFLINEDATA);
+              //this.playerService.sendCmd(PlayerCmds.DELETEOFFLINEDATA);
             }
             setTimeout(() => {
               this.network = this.mediaService.getNetworkObservable();
@@ -62,7 +63,7 @@ export class EditPage implements OnInit {
               this.mediaService.updateRawMedia();
               this.mediaService.updateNetwork();
               this.playerService.sendCmd(PlayerCmds.INDEX);
-            }, 1000)
+            }, 2000)
           }
         },
         {
@@ -96,6 +97,22 @@ export class EditPage implements OnInit {
     this.mediaService.updateRawMedia();
 
     this.playerService.sendCmd(PlayerCmds.INDEX);
+  }
+
+  ionViewDidEnter() {
+    this.network = this.mediaService.getNetworkObservable();
+    this.media = this.mediaService.getRawMediaObservable();
+
+    this.mediaService.updateNetwork();
+    this.mediaService.updateRawMedia();
+
+    this.network.subscribe(network => {
+      this.networkparameter.ip = network.ip;
+      this.networkparameter.onlinestate = network.onlinestate;
+    })
+
+    console.log("IP: " + this.networkparameter?.ip);
+    console.log("Online: " + this.networkparameter?.onlinestate);
   }
 
   ionViewDidLeave() {
