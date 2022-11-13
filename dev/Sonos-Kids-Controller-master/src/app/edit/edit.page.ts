@@ -100,6 +100,12 @@ export class EditPage implements OnInit {
   }
 
   ionViewDidEnter() {
+    this.network = this.mediaService.getNetworkObservable();
+    this.media = this.mediaService.getRawMediaObservable();
+
+    this.mediaService.updateNetwork();
+    this.mediaService.updateRawMedia();
+
     this.network.subscribe(network => {
       this.networkparameter.ip = network.ip;
       this.networkparameter.onlinestate = network.onlinestate;
