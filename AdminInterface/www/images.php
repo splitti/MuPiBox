@@ -1,10 +1,12 @@
 <?php
- include ('includes/header.php');
+	$CHANGE_TXT="<div id='lbinfo'><ul id='lbinfo'>";
+
+	include ('includes/header.php');
  
 	if( $_POST['submitfile'] )
 		{
 		$target_dir = "/var/www/cover/";
-		$target_file = $target_dir . basename($_FILES["fileToUpload"]["name"]);
+		#$target_file = $target_dir . basename($_FILES["fileToUpload"]["name"]);
 		$uploadOk = 1;
 		$FileType = strtolower(pathinfo($target_file,PATHINFO_EXTENSION));
 		// never assume the upload succeeded
@@ -14,21 +16,24 @@
 
 		$info = getimagesize($_FILES["fileToUpload"]["tmp_name"]);
 		if ($info === FALSE) {
-		   die("Unable to determine image type of uploaded file");
+			$CHANGE_TXT=$CHANGE_TXT."<li>Unable to determine image type of uploaded file. Please upload an image of type jpeg, png, gif or svg.</li>";
+			$uploadOk = 0;
 		}
 
 		if (($info[2] !== IMAGETYPE_GIF) && ($info[2] !== IMAGETYPE_JPEG) && ($info[2] !== IMAGETYPE_PNG)) {
-		   die("Not a gif/jpeg/png");
+			$CHANGE_TXT=$CHANGE_TXT."<li>Wrong file-type. Please upload an image of type jpeg, png, gif or svg.</li>";
+			$uploadOk = 0;
+
 		}
 		// Allow zip file format
-		if($FileType != "jpg" )
+		/*if($FileType != "jpg" )
 			{
 			$uploadOk = 0;
-			}
+			}*/
 		// Check if $uploadOk is set to 0 by an error
 		if ($uploadOk == 0)
 			{
-			$CHANGE_TXT=$CHANGE_TXT."<li>WARNING: Please upload an image!</li>";
+			$CHANGE_TXT=$CHANGE_TXT."<li>The upload was aborted!</li>";
 			$change=0;
 			}
 		else
