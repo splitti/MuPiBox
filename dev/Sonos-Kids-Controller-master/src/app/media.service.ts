@@ -89,47 +89,13 @@ export class MediaService {
       shareReplay({ bufferSize: 1, refCount: false }),
     );
     this.network$ = interval(1000).pipe( // Once a second after subscribe, way too frequent!
-      switchMap((): Observable<Network> => {
-        // console.log("MediaService network start IP:" + this.network?.ip);
-        // console.log("MediaService network start Status:" + this.network?.onlinestate);
-        if(this.network?.ip === undefined){
-          this.getNetworkObservable().subscribe(network => {
-            this.network = network;
-            // console.log("MediaService network undfined, try new.");
-          });
-        }
-        if(this.network?.onlinestate == 'online' && this.network?.ip !== undefined){
-          // console.log("MediaService network IP:" + this.network?.ip);
-          // console.log("MediaService network Status:" + this.network?.onlinestate);
-          return this.http.get<Network>('http://' + this.network?.ip + ':8200/api/network')
-        }else{
-          // console.log("MediaService network undfined, set local.");
-          return this.http.get<Network>('http://' + this.hostname + ':8200/api/network')
-        }
-      }),
+      switchMap((): Observable<Network> => this.http.get<Network>('http://' + this.hostname + ':8200/api/network')),
       // Replay the most recent (bufferSize) emission on each subscription
       // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
       shareReplay({ bufferSize: 1, refCount: false }),
     );
     this.validate$ = interval(1000).pipe( // Once a second after subscribe, way too frequent!
-      switchMap((): Observable<Validate> => {
-        // console.log("MediaService validate start IP:" + this.network?.ip);
-        // console.log("MediaService validate start Status:" + this.network?.onlinestate);
-        if(this.network?.ip === undefined){
-          this.getNetworkObservable().subscribe(network => {
-            this.network = network;
-            // console.log("MediaService validate undfined, try new.");
-          });
-        }
-        if(this.network?.onlinestate == 'online' && this.network?.ip !== undefined){
-          // console.log("MediaService validate IP:" + this.network?.ip);
-          // console.log("MediaService validate Status:" + this.network?.onlinestate);
-          return this.http.get<Validate>('http://' + this.network?.ip + ':5005/validate')
-        }else{
-          // console.log("MediaService validate undfined, set local.");
-          return this.http.get<Validate>('http://' + this.hostname + ':5005/validate')
-        }
-      }),
+      switchMap((): Observable<Validate> => this.http.get<Validate>('http://' + this.hostname + ':5005/validate')),
       // Replay the most recent (bufferSize) emission on each subscription
       // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
       shareReplay({ bufferSize: 1, refCount: false }),
