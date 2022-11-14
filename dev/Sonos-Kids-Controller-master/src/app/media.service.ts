@@ -15,6 +15,7 @@ import { CurrentPlaylist } from './current.playlist';
 import { CurrentEpisode } from './current.episode';
 import { CurrentShow } from './current.show';
 import { Validate } from './validate';
+import { PlayerService } from './player.service';
 
 @Injectable({
   providedIn: 'root'
@@ -22,6 +23,7 @@ import { Validate } from './validate';
 export class MediaService {
 
   network: Network;
+  hostname: String;
   private category = 'audiobook';
   public readonly current$: Observable<CurrentSpotify>;
   public readonly local$: Observable<CurrentMPlayer>;
@@ -45,90 +47,55 @@ export class MediaService {
   constructor(
     private http: HttpClient,
     private spotifyService: SpotifyService,
+    private playerService: PlayerService,
   ) {
-    this.getNetworkObservable().subscribe(network => {
-      this.network = network;
+    this.playerService.getConfig().subscribe(config => {
+      this.hostname = config.server;
     });
-    // console.log("MediaService IP:" + this.network?.ip);
-    // console.log("MediaService Status:" + this.network?.onlinestate);
     this.current$ = interval(1000).pipe( // Once a second after subscribe, way too frequent!
-      switchMap((): Observable<CurrentSpotify> => this.http.get<CurrentSpotify>('http://localhost:5005/state')),
+      switchMap((): Observable<CurrentSpotify> => this.http.get<CurrentSpotify>('http://' + this.hostname + ':5005/state')),
       // Replay the most recent (bufferSize) emission on each subscription
       // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
       shareReplay({ bufferSize: 1, refCount: false }),
     );
     this.local$ = interval(1000).pipe( // Once a second after subscribe, way too frequent!
-      switchMap((): Observable<CurrentMPlayer> => this.http.get<CurrentMPlayer>('http://localhost:5005/local')),
+      switchMap((): Observable<CurrentMPlayer> => this.http.get<CurrentMPlayer>('http://' + this.hostname + ':5005/local')),
       // Replay the most recent (bufferSize) emission on each subscription
       // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
       shareReplay({ bufferSize: 1, refCount: false }),
     );
     this.playlist$ = interval(1000).pipe( // Once a second after subscribe, way too frequent!
-      switchMap((): Observable<CurrentPlaylist> => this.http.get<CurrentPlaylist>('http://localhost:5005/playlistTracks')),
+      switchMap((): Observable<CurrentPlaylist> => this.http.get<CurrentPlaylist>('http://' + this.hostname + ':5005/playlistTracks')),
       // Replay the most recent (bufferSize) emission on each subscription
       // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
       shareReplay({ bufferSize: 1, refCount: false }),
     );
     this.episode$ = interval(1000).pipe( // Once a second after subscribe, way too frequent!
-      switchMap((): Observable<CurrentEpisode> => this.http.get<CurrentEpisode>('http://localhost:5005/episode')),
+      switchMap((): Observable<CurrentEpisode> => this.http.get<CurrentEpisode>('http://' + this.hostname + ':5005/episode')),
       // Replay the most recent (bufferSize) emission on each subscription
       // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
       shareReplay({ bufferSize: 1, refCount: false }),
     );
     this.show$ = interval(1000).pipe( // Once a second after subscribe, way too frequent!
-      switchMap((): Observable<CurrentShow> => this.http.get<CurrentShow>('http://localhost:5005/show')),
+      switchMap((): Observable<CurrentShow> => this.http.get<CurrentShow>('http://' + this.hostname + ':5005/show')),
       // Replay the most recent (bufferSize) emission on each subscription
       // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
       shareReplay({ bufferSize: 1, refCount: false }),
     );
     this.networkLocal$ = interval(1000).pipe( // Once a second after subscribe, way too frequent!
-      switchMap((): Observable<Network> => this.http.get<Network>('http://localhost:8200/api/network')),
+      switchMap((): Observable<Network> => this.http.get<Network>('http://' + this.hostname + ':8200/api/network')),
       // Replay the most recent (bufferSize) emission on each subscription
       // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
       shareReplay({ bufferSize: 1, refCount: false }),
     );
     this.network$ = interval(1000).pipe( // Once a second after subscribe, way too frequent!
-      switchMap((): Observable<Network> => {
-        // console.log("MediaService network start IP:" + this.network?.ip);
-        // console.log("MediaService network start Status:" + this.network?.onlinestate);
-        if(this.network?.ip === undefined){
-          this.getNetworkObservable().subscribe(network => {
-            this.network = network;
-            // console.log("MediaService network undfined, try new.");
-          });
-        }
-        if(this.network?.onlinestate == 'online' && this.network?.ip !== undefined){
-          // console.log("MediaService network IP:" + this.network?.ip);
-          // console.log("MediaService network Status:" + this.network?.onlinestate);
-          return this.http.get<Network>('http://' + this.network?.ip + ':8200/api/network')
-        }else{
-          // console.log("MediaService network undfined, set local.");
-          return this.http.get<Network>('http://localhost:8200/api/network')
-        }
-      }),
+      switchMap((): Observable<Network> => this.http.get<Network>('http://' + this.hostname + ':8200/api/network')),
       // Replay the most recent (bufferSize) emission on each subscription
       // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
       shareReplay({ bufferSize: 1, refCount: false }),
     );
     this.validate$ = interval(1000).pipe( // Once a second after subscribe, way too frequent!
-      switchMap((): Observable<Validate> => {
-        // console.log("MediaService validate start IP:" + this.network?.ip);
-        // console.log("MediaService validate start Status:" + this.network?.onlinestate);
-        if(this.network?.ip === undefined){
-          this.getNetworkObservable().subscribe(network => {
-            this.network = network;
-            // console.log("MediaService validate undfined, try new.");
-          });
-        }
-        if(this.network?.onlinestate == 'online' && this.network?.ip !== undefined){
-          // console.log("MediaService validate IP:" + this.network?.ip);
-          // console.log("MediaService validate Status:" + this.network?.onlinestate);
-          return this.http.get<Validate>('http://' + this.network?.ip + ':5005/validate')
-        }else{
-          // console.log("MediaService validate undfined, set local.");
-          return this.http.get<Validate>('http://localhost:5005/validate')
-        }
-      }),
+      switchMap((): Observable<Validate> => this.http.get<Validate>('http://' + this.hostname + ':5005/validate')),
       // Replay the most recent (bufferSize) emission on each subscription
       // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
       shareReplay({ bufferSize: 1, refCount: false }),
@@ -140,38 +107,38 @@ export class MediaService {
   // --------------------------------------------
 
   getNetworkObservable = (): Observable<Network> =>  {
-      const url = (environment.production) ? '../api/network' : 'http://localhost:8200/api/network';
+      const url = (environment.production) ? '../api/network' : 'http://' + this.hostname + ':8200/api/network';
       return this.http.get<Network>(url);
   }
 
   updateNetwork() {
-    const url = (environment.production) ? '../api/network' : 'http://localhost:8200/api/network';
+    const url = (environment.production) ? '../api/network' : 'http://' + this.hostname + ':8200/api/network';
     this.http.get<Network>(url).subscribe(network => {
         this.networkSubject.next(network);
     });
   }
 
   getRawMediaObservable = ():Observable<Record<any, any>[]> => {
-      const url = (environment.production) ? '../api/data' : 'http://localhost:8200/api/data';
+      const url = (environment.production) ? '../api/data' : 'http://' + this.hostname + ':8200/api/data';
       return this.http.get<Record<any, any>[]>(url);
   }
 
   updateRawMedia() {
-    const url = (environment.production) ? '../api/data' : 'http://localhost:8200/api/data';
+    const url = (environment.production) ? '../api/data' : 'http://' + this.hostname + ':8200/api/data';
     this.http.get<Media[]>(url).subscribe(media => {
         this.rawMediaSubject.next(media);
     });
   }
 
   updateWLAN() {
-    const url = (environment.production) ? '../api/wlan' : 'http://localhost:8200/api/wlan';
+    const url = (environment.production) ? '../api/wlan' : 'http://' + this.hostname + ':8200/api/wlan';
     this.http.get<WLAN[]>(url).subscribe(wlan => {
         this.wlanSubject.next(wlan);
     });
   }
 
   deleteRawMediaAtIndex(index: number) {
-    const url = (environment.production) ? '../api/delete' : 'http://localhost:8200/api/delete';
+    const url = (environment.production) ? '../api/delete' : 'http://' + this.hostname + ':8200/api/delete';
     const body = {
       index
     };
@@ -182,7 +149,7 @@ export class MediaService {
   }
 
   editRawMediaAtIndex(index: number, data: Media) {
-    const url = (environment.production) ? '../api/edit' : 'http://localhost:8200/api/edit';
+    const url = (environment.production) ? '../api/edit' : 'http://' + this.hostname + ':8200/api/edit';
     const body = {
       index,
       data
@@ -196,7 +163,7 @@ export class MediaService {
   }
 
   addRawMedia(media: Media) {
-    const url = (environment.production) ? '../api/add' : 'http://localhost:8200/api/add';
+    const url = (environment.production) ? '../api/add' : 'http://' + this.hostname + ':8200/api/add';
 
     this.http.post(url, media).subscribe(response => {
       this.updateRawMedia();
@@ -204,7 +171,7 @@ export class MediaService {
   }
 
   addWLAN(wlan: WLAN) {
-    const url = (environment.production) ? '../api/addwlan' : 'http://localhost:8200/api/addwlan';
+    const url = (environment.production) ? '../api/addwlan' : 'http://' + this.hostname + ':8200/api/addwlan';
 
     this.http.post(url, wlan).subscribe(response => {
       this.updateWLAN();
@@ -212,14 +179,14 @@ export class MediaService {
   }
 
   updateMediaFile() {
-    const url = (environment.production) ? '../api/media' : 'http://localhost:8200/api/media';
+    const url = (environment.production) ? '../api/media' : 'http://' + this.hostname + ':8200/api/media';
     this.http.get<Media>(url).subscribe(media => {
         this.mediaFileSubject.next(media);
     });
   }
 
   saveMedia(media: Media) {
-    const url = (environment.production) ? '../api/addmedia' : 'http://localhost:8200/api/addmedia';
+    const url = (environment.production) ? '../api/addmedia' : 'http://' + this.hostname + ':8200/api/addmedia';
 
     this.http.post(url, media).subscribe(response => {
       this.updateMediaFile();
@@ -227,19 +194,19 @@ export class MediaService {
   }
 
   getMediaObservable = (): Observable<Media> =>  {
-    const url = (environment.production) ? '../api/media' : 'http://localhost:8200/api/media';
+    const url = (environment.production) ? '../api/media' : 'http://' + this.hostname + ':8200/api/media';
     return this.http.get<Media>(url);
   }
 
   updateResume() {
-    const url = (environment.production) ? '../api/resume' : 'http://localhost:8200/api/resume';
+    const url = (environment.production) ? '../api/resume' : 'http://' + this.hostname + ':8200/api/resume';
     this.http.get<Resume>(url).subscribe(resume => {
         this.resumeSubject.next(resume);
     });
   }
 
   saveResume(resume: Resume) {
-    const url = (environment.production) ? '../api/addresume' : 'http://localhost:8200/api/addresume';
+    const url = (environment.production) ? '../api/addresume' : 'http://' + this.hostname + ':8200/api/addresume';
 
     this.http.post(url, resume).subscribe(response => {
       this.updateResume();
@@ -247,13 +214,13 @@ export class MediaService {
   }
 
   getResumeObservable = (): Observable<Resume> =>  {
-    const url = (environment.production) ? '../api/resume' : 'http://localhost:8200/api/resume';
+    const url = (environment.production) ? '../api/resume' : 'http://' + this.hostname + ':8200/api/resume';
     return this.http.get<Resume>(url);
   }
 
   // Get the media data for the current category from the server
   private updateMedia() {
-    const url = (environment.production) ? '../api/data' : 'http://localhost:8200/api/data';
+    const url = (environment.production) ? '../api/data' : 'http://' + this.hostname + ':8200/api/data';
 
     return this.http.get<Media[]>(url).pipe(
       map(items => { // Filter to get only items for the chosen category
