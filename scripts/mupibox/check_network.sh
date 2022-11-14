@@ -73,8 +73,8 @@ do
 		fi
 	fi
 
-	#if [ "${ONLINESTATE}" != "${OLDSTATE}" ]; then
-	#	/usr/bin/cat <<< $(/usr/bin/jq --arg v "${ONLINESTATE}" '.onlinestate = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
+	if [ "${ONLINESTATE}" != "${OLDSTATE}" ]; then
+		/usr/bin/cat <<< $(/usr/bin/jq --arg v "${ONLINESTATE}" '.onlinestate = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
 	#	if [ "${ONLINESTATE}" == "${FALSESTATE}" ] && [ "${OLDSTATE}" != "starting" ]; then
 	#		#sudo dhclient -r
 	#		sudo service ifup@wlan0 stop
@@ -82,7 +82,7 @@ do
 	#		sudo service ifup@wlan0 start
 	#		#sudo dhclient
 	#	fi
-	#fi
+	fi
 	OLDSTATE=${ONLINESTATE}
 	
 	sleep 2
