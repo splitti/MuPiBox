@@ -44,7 +44,8 @@
 				$command = "sudo rm '".$target_file."'";
 				exec($command, $output, $result );
 				$change=1;
-				$CHANGE_TXT=$CHANGE_TXT."<li>Backup-File restored!</li>";
+				$CHANGE_TXT=$CHANGE_TXT."<li>Backup-File restored! The MuPiBox will reboot now!</li>";
+				$reboot=1;
 				}
 			else
 				{
