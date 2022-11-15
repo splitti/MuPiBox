@@ -1,6 +1,5 @@
 <?php
 	$CHANGE_TXT="<div id='lbinfo'><ul id='lbinfo'>";
-
 	include ('includes/header.php');
  
 	if( $_POST['submitfile'] )
@@ -10,9 +9,9 @@
 		$uploadOk = 1;
 		//$FileType = strtolower(pathinfo($target_file,PATHINFO_EXTENSION));
 
-		//if (is_file($target_file)) {
-		//	$CHANGE_TXT=$CHANGE_TXT."<li>There is already an image with this name! This file will be overwritten!</li>";
-		//}
+		if (is_file($target_file)) {
+			$CHANGE_TXT=$CHANGE_TXT."<li>There is already an image with this name! This file will be overwritten!</li>";
+		}
 
 		// never assume the upload succeeded
 		if ($_FILES["fileToUpload"]["error"] !== UPLOAD_ERR_OK) {
@@ -32,7 +31,7 @@
 			}
 
 		// Check if $uploadOk is set to 0 by an error
-		/*if ($uploadOk != 0)
+		if ($uploadOk != 0)
 			{
 			if (move_uploaded_file($_FILES["fileToUpload"]["tmp_name"], $target_file))
 				{
@@ -43,11 +42,11 @@
 				{
 				$CHANGE_TXT=$CHANGE_TXT."<li>ERROR: Error on uploading image!</li>";
 				}
-			}*/
+			}
 		}
-	$CHANGE_TXT=$CHANGE_TXT."</ul></div>";
+	$CHANGE_TXT = $CHANGE_TXT . "</ul></div>";
 ?>
-<form class="appnitro" method="post" action="cover.php" id="form"enctype="multipart/form-data">
+<form class="appnitro" method="post" action="cover.php" id="form" enctype="multipart/form-data">
 	<div class="description">
 	<h2>Cover</h2>
 	<p>Coming soon...</p>
@@ -68,7 +67,7 @@
 		print "<br>";
 		print "<p>URL: <a href='http://".$data["mupibox"]["host"]."/cover/".basename($file)."' target='_blank'>http://".$data["mupibox"]["host"]."/cover/".basename($file)."</a></p></div>";
 	}
-
+	
 ?>
 	</ul>
 </form>

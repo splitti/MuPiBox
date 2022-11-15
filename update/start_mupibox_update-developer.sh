@@ -148,6 +148,7 @@ exec 3>${LOG}
 	sudo chmod -R 755 /var/www/ >&3 2>&3
 	sudo ln -s /home/dietpi/MuPiBox/media/cover /var/www/cover >&3 2>&3
 	sudo chown -R dietpi:www-data /home/dietpi/MuPiBox/media/cover >&3 2>&3
+	sudo chown -R www-data:www-data /var/www/cover >&3 2>&3
 
 	echo -e "XXX\n95\nUpdate Config-File... \nXXX"	
 	sudo cd; curl -L ${SRC}/update/conf_update.sh | sudo bash >&3 2>&3
