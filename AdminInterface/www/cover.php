@@ -47,9 +47,9 @@
 		}
 	$CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 ?>
-<form class="appnitro" method="post" action="images.php" id="form"enctype="multipart/form-data">
+<form class="appnitro" method="post" action="cover.php" id="form"enctype="multipart/form-data">
 	<div class="description">
-	<h2>Cover-Images</h2>
+	<h2>Cover</h2>
 	<p>Coming soon...</p>
 	</div>
 	<ul>
