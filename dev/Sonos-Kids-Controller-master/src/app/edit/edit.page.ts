@@ -57,12 +57,12 @@ export class EditPage implements OnInit {
               this.playerService.deleteLocal(item);
               //this.playerService.sendCmd(PlayerCmds.DELETEOFFLINEDATA);
             }
+            this.playerService.sendCmd(PlayerCmds.INDEX);
             setTimeout(() => {
               this.network = this.mediaService.getNetworkObservable();
               this.media = this.mediaService.getRawMediaObservable();
               this.mediaService.updateRawMedia();
               this.mediaService.updateNetwork();
-              this.playerService.sendCmd(PlayerCmds.INDEX);
             }, 2000)
           }
         },
