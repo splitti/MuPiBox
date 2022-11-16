@@ -165,7 +165,7 @@ export class PlayerPage implements OnInit {
         this.currentShow?.items.forEach((element, index) => {
           if(this.currentPlayedLocal?.activeEpisode === element?.id){
             //this.showTrackNr = ++index;
-            this.showTrackNr = ++this.currentEpisode.show.total_episodes - index;
+            this.showTrackNr = this.currentEpisode.show.total_episodes - index;
             this.cover = element.images[1].url;
           }
         });

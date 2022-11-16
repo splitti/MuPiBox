@@ -100,6 +100,7 @@ var valideMedia = {
 };
 var counter = {
   countgetMyCurrentPlaybackState: 0,
+  countgetMyCurrentPlaybackStateHTTP: 0,
   countfreshAccessToken: 0,
   countsetAccessToken: 0,
   counterror: 0,
@@ -809,7 +810,7 @@ app.get("/setDevice", function(req, res){
 app.get("/state", function(req, res){
   spotifyApi.getMyCurrentPlaybackState()
   .then(function(data) {
-    counter.countgetMyCurrentPlaybackState++;
+    counter.countgetMyCurrentPlaybackStateHTTP++;
     writeCounter();
     let state = data.body;
     if (Object.keys(state).length === 0) {
