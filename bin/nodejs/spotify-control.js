@@ -194,10 +194,10 @@ function refreshToken(activePlaylistId){
     .then(function(data) {
       log.debug('The access token has been refreshed!');
       counter.countfreshAccessToken++;
-      writeCounter();
+      if (config.server.logLevel === 'debug'){writeCounter();}
       spotifyApi.setAccessToken(data.body['access_token']);
       counter.countsetAccessToken++;
-      writeCounter();
+      if (config.server.logLevel === 'debug'){writeCounter();}
       if (activePlaylistId.includes("spotify:") ){
         playMe(activePlaylistId);
       }
@@ -214,7 +214,7 @@ function handleSpotifyError(err, activePlaylistId, from){
     log.debug("access token expired, refreshing...");
     log.debug("Error from: " + from);
     counter.counterrorAccessToken++;
-    writeCounter();
+    if (config.server.logLevel === 'debug'){writeCounter();}
     if(activePlaylistId !== "0"){
       refreshToken(activePlaylistId);
     }
@@ -222,7 +222,7 @@ function handleSpotifyError(err, activePlaylistId, from){
     log.debug("invalid id");
     log.debug("Error from: " + from);
     counter.counterrorInvalidID++;
-    writeCounter();
+    if (config.server.logLevel === 'debug'){writeCounter();}
     activeDevice = "";
     if(activePlaylistId !== "0"){
       setActiveDevice(activePlaylistId);
@@ -231,7 +231,7 @@ function handleSpotifyError(err, activePlaylistId, from){
     log.debug("no active device, setting the first one found to active");
     log.debug("Error from: " + from);
     counter.counterrorNoActivDevice++;
-    writeCounter();
+    if (config.server.logLevel === 'debug'){writeCounter();}
     activeDevice = "";
     if(activePlaylistId !== "0"){
       setActiveDevice(activePlaylistId);
@@ -241,7 +241,7 @@ function handleSpotifyError(err, activePlaylistId, from){
     log.debug(err)
     log.debug("Error from: " + from);
     counter.counterror++;
-    writeCounter();
+    if (config.server.logLevel === 'debug'){writeCounter();}
   }
 }
 
@@ -250,7 +250,7 @@ function handleSpotifyError(err, activePlaylistId, from){
 //   then(function(data) {
 //     log.debug("[Spotify Control]Type:" + typeof(data.body.device.id));
 //     counter.countgetMyCurrentPlaybackState++;
-//     writeCounter();
+//     if (config.server.logLevel === 'debug'){writeCounter();}
 //     if (typeof(data.body.device.id) !== 'undefined'){
 //       activeDevice = "";
 //       log.debug("[Spotify Control]Current active device is undefined");
@@ -270,7 +270,7 @@ function setActiveDevice(activePlaylistId) {
   spotifyApi.getMyDevices()
     .then(function(data) {
       counter.countgetMyDevices++;
-      writeCounter();
+      if (config.server.logLevel === 'debug'){writeCounter();}
       let availableDevices = data.body.devices;
       activeDevice = availableDevices[0];
     }, function(err) {
@@ -282,7 +282,7 @@ function setActiveDevice(activePlaylistId) {
       spotifyApi.transferMyPlayback([activeDevice])
         .then(function() {
           counter.counttransferMyPlayback++;
-          writeCounter();
+          if (config.server.logLevel === 'debug'){writeCounter();}
           log.debug('[Spotify Control] Transfering playback to ' + activeDevice);
           if (activePlaylistId.includes("spotify:")){
             playMe(activePlaylistId);
@@ -299,7 +299,7 @@ function pause(){
     spotifyApi.pause()
       .then(function() {
         counter.countpause++;
-        writeCounter();
+        if (config.server.logLevel === 'debug'){writeCounter();}
         log.debug('[Spotify Control] Playback paused');
 		writeplayerstatePause();
       }, function(err) {
@@ -319,7 +319,7 @@ function stop(){
     spotifyApi.pause()
       .then(function() {
         counter.countpause++;
-        writeCounter();
+        if (config.server.logLevel === 'debug'){writeCounter();}
         log.debug('[Spotify Control] Playback stopped');
 		    writeplayerstatePause();
       }, function(err) {
@@ -347,7 +347,7 @@ function play(){
     spotifyApi.play()
       .then(function() {
         counter.countplay++;
-        writeCounter();
+        if (config.server.logLevel === 'debug'){writeCounter();}
         log.debug('[Spotify Control] Playback started');
 		writeplayerstatePlay();
       }, function(err) {
@@ -367,7 +367,7 @@ function next(){
     spotifyApi.skipToNext()
       .then(function() {
         counter.countskipToNext++;
-        writeCounter();
+        if (config.server.logLevel === 'debug'){writeCounter();}
         log.debug('[Spotify Control] Skip to next');
       }, function(err) {
         handleSpotifyError(err,"0","next");
@@ -384,7 +384,7 @@ function previous(){
     spotifyApi.skipToPrevious()
       .then(function() {
         counter.countskipToPrevious++;
-        writeCounter();
+        if (config.server.logLevel === 'debug'){writeCounter();}
         log.debug('[Spotify Control] Skip to previous');
       }, function(err) {
         handleSpotifyError(err,"0","previous");
@@ -402,7 +402,7 @@ function shuffleon(){
   spotifyApi.setShuffle(true)
     .then(function() {
       counter.countsetShuffle++;
-      writeCounter();
+      if (config.server.logLevel === 'debug'){writeCounter();}
       log.debug('[Spotify Control] Toggle Shuffle');
     }, function(err) {
       handleSpotifyError(err,"0","shuffleon");
@@ -413,7 +413,7 @@ function shuffleoff(){
   spotifyApi.setShuffle(false)
     .then(function() {
       counter.countsetShuffle++;
-      writeCounter();
+      if (config.server.logLevel === 'debug'){writeCounter();}
       log.debug('[Spotify Control] Toggle Shuffle');
     }, function(err) {
       handleSpotifyError(err,"0","shuffleoff");
@@ -425,7 +425,7 @@ function playMe(activePlaylistId){
     spotifyApi.play({ uris: [activePlaylistId] })
     .then(function(data){
       counter.countplay++;
-      writeCounter();
+      if (config.server.logLevel === 'debug'){writeCounter();}
       log.debug("[Spotify Control] Playback started");
 	  writeplayerstatePlay();
     }, function(err){
@@ -435,7 +435,7 @@ function playMe(activePlaylistId){
     spotifyApi.setVolume(volumeStart).then(function () {
       log.debug('[Spotify Control] Setting volume to '+ 99);
       counter.countsetVolume++;
-      writeCounter();
+      if (config.server.logLevel === 'debug'){writeCounter();}
       }, function(err) {
       handleSpotifyError(err,"0","setVolume");
     });
@@ -444,7 +444,7 @@ function playMe(activePlaylistId){
     .then(function(data){
       log.debug("[Spotify Control] Playback started");
       counter.countplay++;
-      writeCounter();
+      if (config.server.logLevel === 'debug'){writeCounter();}
 	  writeplayerstatePlay();
     }, function(err){
       log.debug("[Spotify Control] Playback error" + err);
@@ -452,7 +452,7 @@ function playMe(activePlaylistId){
     });
     spotifyApi.setVolume(volumeStart).then(function () {
       counter.countsetVolume++;
-      writeCounter();
+      if (config.server.logLevel === 'debug'){writeCounter();}
       log.debug('[Spotify Control] Setting volume to '+ 99);
       }, function(err) {
       handleSpotifyError(err,"0","setVolume");
@@ -517,7 +517,7 @@ function seek(progress){
     if (progress > 1) {
       spotifyApi.seek(progress).then(function () {
         counter.countseek++;
-        writeCounter();
+        if (config.server.logLevel === 'debug'){writeCounter();}
         log.debug('[Spotify Control] Setting progress to '+ progress);
         }, function(err) {
         handleSpotifyError(err,"0","seek");
@@ -526,7 +526,7 @@ function seek(progress){
       spotifyApi.getMyCurrentPlaybackState().
       then(function(data) {
         counter.countgetMyCurrentPlaybackState++;
-        writeCounter();
+        if (config.server.logLevel === 'debug'){writeCounter();}
         currentProgress = data.body.progress_ms;
         log.debug("[Spotify Control]Current progress for active device is " + currentProgress);
         if (progress) targetProgress = currentProgress+30000;
@@ -535,7 +535,7 @@ function seek(progress){
       .then(function(){
         spotifyApi.seek(targetProgress).then(function () {
             counter.countseek++;
-            writeCounter();
+            if (config.server.logLevel === 'debug'){writeCounter();}
             log.debug('[Spotify Control] Setting progress to '+ targetProgress);
             }, function(err) {
             handleSpotifyError(err,"0","seek");
@@ -628,7 +628,7 @@ async function transferPlayback(id){
   await spotifyApi.transferMyPlayback([id], {"play": false})
     .then(function() {
       counter.counttransferMyPlayback++;
-      writeCounter();
+      if (config.server.logLevel === 'debug'){writeCounter();}
       log.debug('[Spotify Control] Transfering playback to ' + id);
     }, function(err) {
       log.debug('[Spotify Control] Transfering playback error.');
@@ -657,7 +657,7 @@ function validateSpotify(){
     spotifyApi.getAlbum(valideMedia.validateId)
     .then(function(data) {
       counter.countgetAlbum++;
-      writeCounter();
+      if (config.server.logLevel === 'debug'){writeCounter();}
       if (data.body.id != undefined){
         log.debug("[Spotify Control]ValidationId " + valideMedia.validateId);
         log.debug("[Spotify Control]ValidationCompareId " + data.body.id);
@@ -672,7 +672,7 @@ function validateSpotify(){
     spotifyApi.getShow(valideMedia.validateId)
     .then(function(data) {
       counter.countgetShow++;
-      writeCounter();
+      if (config.server.logLevel === 'debug'){writeCounter();}
       if (data.body.id != undefined){
         valideMedia.validate = true;
       }
@@ -685,7 +685,7 @@ function validateSpotify(){
     spotifyApi.getArtist(valideMedia.validateId)
     .then(function(data) {
       counter.countgetArtist++;
-      writeCounter();
+      if (config.server.logLevel === 'debug'){writeCounter();}
       if (data.body.id != undefined){
         valideMedia.validate = true;
       }
@@ -698,7 +698,7 @@ function validateSpotify(){
     spotifyApi.getPlaylist(valideMedia.validateId)
     .then(function(data) {
       counter.countgetPlaylist++;
-      writeCounter();
+      if (config.server.logLevel === 'debug'){writeCounter();}
       if (data.body.id != undefined){
         valideMedia.validate = true;
       }
@@ -738,7 +738,7 @@ async function useSpotify(command){
         await spotifyApi.getPlaylistTracks(currentMeta.activePlaylist, {limit: 50, offset: offset})
         .then(function(data) {
           counter.countgetPlaylistTracks++;
-          writeCounter();
+          if (config.server.logLevel === 'debug'){writeCounter();}
           if(offset > 0 ){
             playlisttemp.items = playlisttemp.items.concat(data.body.items);
           } else {
@@ -758,7 +758,7 @@ async function useSpotify(command){
       await spotifyApi.getEpisode(currentMeta.activeEpisode)
       .then(function(data) {
         counter.countgetEpisode++;
-        writeCounter();
+        if (config.server.logLevel === 'debug'){writeCounter();}
         currentMeta.activeShow = data.body.show.id;
         currentMeta.totalShows = data.body.show.total_episodes;
       }, function(err) {
@@ -768,7 +768,7 @@ async function useSpotify(command){
         await spotifyApi.getShowEpisodes(currentMeta.activeShow, {limit: 50, offset: offset})
         .then(function(data) {
           counter.countgetShowEpisodes++;
-          writeCounter();
+          if (config.server.logLevel === 'debug'){writeCounter();}
           if(offset > 0 ){
             showtemp.items = showtemp.items.concat(data.body.items);
           } else {
@@ -790,7 +790,7 @@ app.get("/getDevices", function(req, res){
   spotifyApi.getMyDevices()
     .then(function(data) {
       counter.countgetMyDevices++;
-      writeCounter();
+      if (config.server.logLevel === 'debug'){writeCounter();}
       let availableDevices = data.body.devices;
       log.debug("[Spotify Control] Getting available devices...");
       res.send(availableDevices);
@@ -811,7 +811,7 @@ app.get("/state", function(req, res){
   spotifyApi.getMyCurrentPlaybackState()
   .then(function(data) {
     counter.countgetMyCurrentPlaybackStateHTTP++;
-    writeCounter();
+    if (config.server.logLevel === 'debug'){writeCounter();}
     let state = data.body;
     if (Object.keys(state).length === 0) {
       state = {
@@ -845,7 +845,7 @@ app.get("/episode", function(req, res){
     spotifyApi.getEpisode(currentMeta.activeEpisode)
     .then(function(data) {
       counter.countgetEpisode++;
-      writeCounter();
+      if (config.server.logLevel === 'debug'){writeCounter();}
       let state = data.body;
       if (Object.keys(state).length === 0) {
         //console.log("state is empty!");
