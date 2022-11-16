@@ -19,7 +19,7 @@ else
 		artist=$(/usr/bin/basename "${topFolder}")
 		setArtistCover=0
 		
-		if [ -f "${topFolder}"/*.jp*g ]
+		if [ $(ls -1v "${topFolder}" | grep .jp*g) ]
 		then
 			/usr/bin/mkdir -p "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover/audiobook/${artist}/" > /dev/null
 			for i in "${topFolder}"/*.jp*g; do cp "$i" "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover/audiobook/${artist}/cover.jpg"; break; done
@@ -34,7 +34,7 @@ else
 				title=$(/usr/bin/basename "${i}")
 				setTitleCover=0
 				ls -1v "${i}" | grep '.mp3\|.flac\|.wav\|.wma\|.m4a' > /tmp/playlist.m3u && mv /tmp/playlist.m3u "${i}"
-				if [ -f "${i}"/*.jp*g ]
+				if [ $(ls -1v "${i}" | grep .jp*g) ]
 				then
 					/usr/bin/mkdir -p "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover/audiobook/${artist}/${title}/" > /dev/null
 					for j in "${i}"/*.jp*g; do cp "$j" "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover/audiobook/${artist}/${title}/cover.jpg"; break; done
@@ -71,7 +71,7 @@ else
 		artist=$(/usr/bin/basename "${topFolder}")
 		setArtistCover=0
 		
-		if [ -f "${topFolder}"/*.jp*g ]
+		if [ $(ls -1v "${topFolder}" | grep .jp*g) ]
 		then
 			/usr/bin/mkdir -p "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover/music/${artist}/" > /dev/null
 			for i in "${topFolder}"/*.jp*g; do cp "$i" "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover/music/${artist}/cover.jpg"; break; done
@@ -87,7 +87,7 @@ else
 				title=$(/usr/bin/basename "${i}")
 				setTitleCover=0
 				ls -1v "${i}" | grep '.mp3\|.flac\|.wav\|.wma\|.m4a' > /tmp/playlist.m3u && mv /tmp/playlist.m3u "${i}"
-				if [ -f "${i}"/*.jp*g ]
+				if [ $(ls -1v "${i}" | grep .jp*g) ]
 				then
 					/usr/bin/mkdir -p "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover/music/${artist}/${title}/" > /dev/null
 					for j in "${i}"/*.jp*g; do cp "$j" "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover/music/${artist}/${title}/cover.jpg"; break; done
