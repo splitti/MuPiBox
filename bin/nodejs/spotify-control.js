@@ -103,7 +103,8 @@ var counter = {
   countfreshAccessToken: 0,
   countsetAccessToken: 0,
   counterror: 0,
-  counterror401: 0,
+  counterrorAccessToken: 0,
+  counterrorInvalidID: 0,
   counterrorNoActivDevice: 0,
   countgetAlbum: 0,
   countgetArtist: 0,
@@ -211,10 +212,19 @@ function handleSpotifyError(err, activePlaylistId, from){
   if (err.body.error?.status == 401){
     log.debug("access token expired, refreshing...");
     log.debug("Error from: " + from);
-    counter.counterror401++;
+    counter.counterrorAccessToken++;
     writeCounter();
     if(activePlaylistId !== "0"){
       refreshToken(activePlaylistId);
+    }
+  } else if (err.body.error?.status == 400) {
+    log.debug("invalid id");
+    log.debug("Error from: " + from);
+    counter.counterrorInvalidID++;
+    writeCounter();
+    activeDevice = "";
+    if(activePlaylistId !== "0"){
+      setActiveDevice(activePlaylistId);
     }
   } else if (err.toString().includes("NO_ACTIVE_DEVICE")) {
     log.debug("no active device, setting the first one found to active");
@@ -225,8 +235,7 @@ function handleSpotifyError(err, activePlaylistId, from){
     if(activePlaylistId !== "0"){
       setActiveDevice(activePlaylistId);
     }
-  }
-  else {
+  } else {
     log.debug("an error occured: " + err)
     log.debug(err)
     log.debug("Error from: " + from);
@@ -235,24 +244,24 @@ function handleSpotifyError(err, activePlaylistId, from){
   }
 }
 
-async function getActiveDevice(){
-  await spotifyApi.getMyCurrentPlaybackState().
-  then(function(data) {
-    log.debug("[Spotify Control]Type:" + typeof(data.body.device.id));
-    counter.countgetMyCurrentPlaybackState++;
-    writeCounter();
-    if (typeof(data.body.device.id) !== 'undefined'){
-      activeDevice = "";
-      log.debug("[Spotify Control]Current active device is undefined");
-    } else {
-      activeDevice = data.body.device.id;
-    }
-    activeDevice = data.body.device.id;
-    log.debug("[Spotify Control]Current active device is " + activeDevice);
-  }, function(err) {
-    handleSpotifyError(err,"0","getActiveDevice");
-  });
-}
+// async function getActiveDevice(){
+//   await spotifyApi.getMyCurrentPlaybackState().
+//   then(function(data) {
+//     log.debug("[Spotify Control]Type:" + typeof(data.body.device.id));
+//     counter.countgetMyCurrentPlaybackState++;
+//     writeCounter();
+//     if (typeof(data.body.device.id) !== 'undefined'){
+//       activeDevice = "";
+//       log.debug("[Spotify Control]Current active device is undefined");
+//     } else {
+//       activeDevice = data.body.device.id;
+//     }
+//     activeDevice = data.body.device.id;
+//     log.debug("[Spotify Control]Current active device is " + activeDevice);
+//   }, function(err) {
+//     handleSpotifyError(err,"0","getActiveDevice");
+//   });
+// }
 
   /*queries all devices and transfers playback to the first one discovered*/
 function setActiveDevice(activePlaylistId) {
@@ -311,10 +320,13 @@ function stop(){
         counter.countpause++;
         writeCounter();
         log.debug('[Spotify Control] Playback stopped');
-		writeplayerstatePause();
+		    writeplayerstatePause();
       }, function(err) {
         handleSpotifyError(err,"0","stop");
       });
+    currentMeta.totalShows = "";
+    currentMeta.activeEpisode = "";
+    currentMeta.activeShow = "";
   } else if (currentMeta.currentPlayer == "mplayer") {
     player.stop();
     currentMeta.playing = false;
@@ -828,24 +840,28 @@ app.get("/playlistTracks", function(req, res){
 /*endpoint to return playlist information*/
 /*only used if sonos-kids-player is modified*/
 app.get("/episode", function(req, res){
-  spotifyApi.getEpisode(currentMeta.activeEpisode)
-  .then(function(data) {
-    counter.countgetEpisode++;
-    writeCounter();
-    let state = data.body;
-    if (Object.keys(state).length === 0) {
-      //console.log("state is empty!");
-      state = {
-        total: ""
-      };
-    } else {
-      //console.log("state is not empty !");
-    } 
-    //log.debug("[Spotify Control] Getting available state...");
-    res.send(state);
-  }, function(err) {
-    handleSpotifyError(err,"0","episodeHTTP");
-  });
+  if (currentMeta.activeEpisode.length > 1){
+    spotifyApi.getEpisode(currentMeta.activeEpisode)
+    .then(function(data) {
+      counter.countgetEpisode++;
+      writeCounter();
+      let state = data.body;
+      if (Object.keys(state).length === 0) {
+        //console.log("state is empty!");
+        state = {
+          total: ""
+        };
+      } else {
+        //console.log("state is not empty !");
+      } 
+      //log.debug("[Spotify Control] Getting available state...");
+      res.send(state);
+    }, function(err) {
+      handleSpotifyError(err,"0","episodeHTTP");
+    });
+  } else {
+    res.send({"status":"paused","error":"none"});
+  }
 });
 
 /*endpoint to return playlist information*/
