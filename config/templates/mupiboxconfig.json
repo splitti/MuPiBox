@@ -14,7 +14,8 @@
 			"chocolate",
 			"vintage",
 			"dark",
-			"light"
+			"light",
+			"xmas"
 			],
 		"startSound": "/home/dietpi/MuPiBox/sysmedia/sound/startup.wav",
 		"shutSound": "/home/dietpi/MuPiBox/sysmedia/sound/shutdown.wav",
