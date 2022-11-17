@@ -179,6 +179,7 @@ exec 3>${LOG}
 	sudo wget https://gitlab.com/DarkElvenAngel/initramfs-splash/-/raw/master/boot/initramfs.img -O /boot/initramfs.img >&3 2>&3
 	wget ${SRC}/media/images/goodbye.png -O ~/MuPiBox/sysmedia/images/goodbye.png >&3 2>&3
 	sudo wget ${SRC}/media/images/splash.png -O /boot/splash.png >&3 2>&3
+	wget ${SRC}/media/images/MuPiLogo.jpg -O ~/MuPiBox/sysmedia/images/MuPiLogo.jpg >&3 2>&3
 	wget ${SRC}/media/sound/shutdown.wav -O ~/MuPiBox/sysmedia/sound/shutdown.wav >&3 2>&3
 	wget ${SRC}/media/sound/startup.wav -O ~/MuPiBox/sysmedia/sound/startup.wav >&3 2>&3
 	sleep 1
