@@ -114,10 +114,6 @@ export class EditPage implements OnInit {
     this.router.navigate(['/admin']);
   }
 
-  reloadWindow() {
-    window.location.reload();
-  }
-
   async networkButtonPressed() {
     const alert = await this.alertController.create({
       cssClass: 'alert',
