@@ -130,6 +130,7 @@ export class PlayerPage implements OnInit {
   }
 
   updateProgress(){
+    console.log("updateProgress");
     this.mediaService.current$.subscribe(spotify => {
       this.currentPlayedSpotify = spotify;
     });
