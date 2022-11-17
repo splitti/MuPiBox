@@ -79,10 +79,6 @@ else
 			for i in "${topFolder}"/*.jp*g; do cp "$i" "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover/music/${artist}/cover.jpg"; break; done
 			#/usr/bin/cp --update "${topFolder}"/*.jp*g "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover/music/${artist}/cover.jpg"
 			setArtistCover=1
-		else
-			/usr/bin/mkdir -p "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover/music/${artist}/" > /dev/null
-			/usr/bin/cp /home/dietpi/MuPiBox/sysmedia/images/MuPiLogo.jpg "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover/music/${artist}/cover.jpg"
-			setArtistCover=1
 		fi	
 
 		for i in "${topFolder}/"* ; do
