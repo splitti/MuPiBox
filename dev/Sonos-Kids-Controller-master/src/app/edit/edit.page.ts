@@ -55,7 +55,6 @@ export class EditPage implements OnInit {
             console.log("Index: " + item.index);
             if(item.type === 'library'){
               this.playerService.deleteLocal(item);
-              //this.playerService.sendCmd(PlayerCmds.DELETEOFFLINEDATA);
             }
             this.playerService.sendCmd(PlayerCmds.INDEX);
             setTimeout(() => {

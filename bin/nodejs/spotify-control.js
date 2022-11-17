@@ -328,6 +328,7 @@ function stop(){
     currentMeta.totalShows = "";
     currentMeta.activeEpisode = "";
     currentMeta.activeShow = "";
+    currentMeta.currentPlayer = "";
   } else if (currentMeta.currentPlayer == "mplayer") {
     player.stop();
     currentMeta.playing = false;
@@ -338,6 +339,7 @@ function stop(){
     currentMeta.path = "";
     currentMeta.currentTracknr = "";
     currentMeta.totalTracks = "";
+    currentMeta.currentPlayer = "";
     log.debug('[Spotify Control] Playback stopped');
   }
 }
@@ -808,28 +810,43 @@ app.get("/setDevice", function(req, res){
   /*endpoint to return all state information*/
   /*only used if sonos-kids-player is modified*/
 app.get("/state", function(req, res){
-  spotifyApi.getMyCurrentPlaybackState()
-  .then(function(data) {
-    counter.countgetMyCurrentPlaybackStateHTTP++;
-    if (config.server.logLevel === 'debug'){writeCounter();}
-    let state = data.body;
-    if (Object.keys(state).length === 0) {
-      state = {
-        item: {
-          album: {
+  if(currentMeta.currentPlayer == "spotify"){
+    spotifyApi.getMyCurrentPlaybackState()
+    .then(function(data) {
+      counter.countgetMyCurrentPlaybackStateHTTP++;
+      if (config.server.logLevel === 'debug'){writeCounter();}
+      let state = data.body;
+      if (Object.keys(state).length === 0) {
+        state = {
+          item: {
+            album: {
+              name: "",
+              total_tracks: ""
+            },
             name: "",
-            total_tracks: ""
+            track_number: ""
           },
+          currently_playing_type: ""
+        };
+      }
+      res.send(state);
+    }, function(err) {
+      handleSpotifyError(err,"0","stateHTTP");
+    });
+  } else {
+    let state = {
+      item: {
+        album: {
           name: "",
-          track_number: ""
+          total_tracks: ""
         },
-        currently_playing_type: ""
-      };
-    }
+        name: "",
+        track_number: ""
+      },
+      currently_playing_type: ""
+    };
     res.send(state);
-  }, function(err) {
-    handleSpotifyError(err,"0","stateHTTP");
-  });
+  }
 });
 
 /*endpoint to return playlist information*/
@@ -977,9 +994,6 @@ app.use(function(req, res){
 
   else if (command.name == "index")
     cmdCall('bash /usr/local/bin/mupibox/add_index.sh');
-
-  // else if (command.name == "deleteofflinedate")
-  //   cmdCall('rm .mupibox/Sonos-Kids-Controller-master/server/config/offline_data.json');
     
   else if (command.name == "seek+30")
     seek(1);

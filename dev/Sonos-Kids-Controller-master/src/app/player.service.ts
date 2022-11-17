@@ -25,7 +25,6 @@ export enum PlayerCmds {
   SHUTOFF = 'shutoff',
   REBOOT = 'reboot',
   INDEX = 'index',
-  //DELETEOFFLINEDATA = 'deleteofflinedate',
   NETWORKRESTART = 'networkrestart'
 }
 

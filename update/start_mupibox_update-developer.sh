@@ -77,6 +77,8 @@ exec 3>${LOG}
 	
 	sudo wget ${SRC}/media/images/goodbye.png -O /home/dietpi/MuPiBox/sysmedia/images/goodbye.png >&3 2>&3
 	sudo chown dietpi:dietpi /home/dietpi/MuPiBox/sysmedia/images/goodbye.png >&3 2>&3
+	sudo wget ${SRC}/media/images/MuPiLogo.jpg -O /home/dietpi/MuPiBox/sysmedia/images/MuPiLogo.jpg >&3 2>&3
+	sudo chown dietpi:dietpi /home/dietpi/MuPiBox/sysmedia/images/MuPiLogo.jpg >&3 2>&3
 	sudo wget ${SRC}/media/images/splash.png -O /boot/splash.png >&3 2>&3
 	sudo wget ${SRC}/scripts/chromium-autostart.sh -O /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
 
