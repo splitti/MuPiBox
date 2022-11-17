@@ -328,6 +328,7 @@ function stop(){
     currentMeta.totalShows = "";
     currentMeta.activeEpisode = "";
     currentMeta.activeShow = "";
+    currentMeta.currentPlayer = "";
   } else if (currentMeta.currentPlayer == "mplayer") {
     player.stop();
     currentMeta.playing = false;
@@ -338,6 +339,7 @@ function stop(){
     currentMeta.path = "";
     currentMeta.currentTracknr = "";
     currentMeta.totalTracks = "";
+    currentMeta.currentPlayer = "";
     log.debug('[Spotify Control] Playback stopped');
   }
 }
@@ -808,7 +810,7 @@ app.get("/setDevice", function(req, res){
   /*endpoint to return all state information*/
   /*only used if sonos-kids-player is modified*/
 app.get("/state", function(req, res){
-  if(currentMeta.playing && currentMeta.currentPlayer == "spotify"){
+  if(currentMeta.currentPlayer == "spotify"){
     spotifyApi.getMyCurrentPlaybackState()
     .then(function(data) {
       counter.countgetMyCurrentPlaybackStateHTTP++;
