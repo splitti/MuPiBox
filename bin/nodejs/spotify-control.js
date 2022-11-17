@@ -994,9 +994,6 @@ app.use(function(req, res){
 
   else if (command.name == "index")
     cmdCall('bash /usr/local/bin/mupibox/add_index.sh');
-
-  // else if (command.name == "deleteofflinedate")
-  //   cmdCall('rm .mupibox/Sonos-Kids-Controller-master/server/config/offline_data.json');
     
   else if (command.name == "seek+30")
     seek(1);
