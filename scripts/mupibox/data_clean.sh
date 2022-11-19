@@ -29,9 +29,32 @@ else
 			echo "[OK]    ${artist}"
 			for j in "${i}/"* ; do
 				album=$(/usr/bin/basename "${j}")
-				if [[ ${album} != "cover.jpg" ]]
+				if [[ ! -f ${j} ]]
 				then
 					if [[ -d "/home/dietpi/MuPiBox/media/audiobook/${artist}/${album}/" ]]
+					then
+						echo "[OK]    ${artist}/${album}/"
+					else
+						echo "[DEL]   ${artist}/${album}/"
+						rm -R "${j}"
+					fi
+				fi
+			done
+		else
+			echo "[DEL]   ${i}"
+			rm -R "${i}" 
+		fi
+	done
+	for i in "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover/music/"* ; do
+		artist=$(/usr/bin/basename "${i}")
+		if [[ -d "${i}" ]]
+		then
+			echo "[OK]    ${artist}"
+			for j in "${i}/"* ; do
+				album=$(/usr/bin/basename "${j}")
+				if [[ ! -f ${j} ]]
+				then
+					if [[ -d "/home/dietpi/MuPiBox/media/music/${artist}/${album}/" ]]
 					then
 						echo "[OK]    ${artist}/${album}/"
 					else
