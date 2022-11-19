@@ -29,12 +29,15 @@ else
 			echo "[OK]    ${artist}"
 			for j in "${i}/"* ; do
 				album=$(/usr/bin/basename "${j}")
-				if [[ -d "/home/dietpi/MuPiBox/media/audiobook/${artist}/${album}/" ]]
+				if [[ ${album} != "cover.jpg" ]]
 				then
-					echo "[OK]    ${artist}/${album}/"
-				else
-					echo "[DEL]   ${artist}/${album}/"
-					rm -R "${j}"
+					if [[ -d "/home/dietpi/MuPiBox/media/audiobook/${artist}/${album}/" ]]
+					then
+						echo "[OK]    ${artist}/${album}/"
+					else
+						echo "[DEL]   ${artist}/${album}/"
+						rm -R "${j}"
+					fi
 				fi
 			done
 		else
