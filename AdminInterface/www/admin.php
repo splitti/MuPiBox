@@ -64,6 +64,7 @@
 		$command = "sudo /usr/local/bin/mupibox/./id3tag_converter.sh";
 		exec($command);
 		$CHANGE_TXT=$CHANGE_TXT."<li>ID3-Tags converted</li>";
+		$change=4;
 		}
 
 	if( $_POST['spotifydebug'] == "Controller Debugging Off - turn on" )
@@ -133,7 +134,7 @@
 		$command = "sudo /usr/local/bin/mupibox/./m3u_generator.sh";
 		exec($command, $output, $result );
 		$change=3;
-		$CHANGE_TXT=$CHANGE_TXT."<li>Playlists generated</li>";
+		$CHANGE_TXT=$CHANGE_TXT."<li>Cleaning and updating the data is complete</li>";
 		}
 	if( $_POST['shutdown'] )
 		{
