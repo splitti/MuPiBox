@@ -5,6 +5,11 @@
 DATA="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json"
 M3ULOCK="/tmp/.m3u.lock"
 
+if [ "$EUID" -ne 0 ]
+  then echo "Please run as root"
+  exit
+fi
+
 if [ -f "${M3ULOCK}" ]; then
 	echo "Process already running."
     exit
@@ -14,6 +19,8 @@ else
 	if [ ! -f "$DATA" ]; then
 		echo "[]" > ${DATA}
 	fi
+
+	bash /usr/local/bin/mupibox/data_clean.sh	
 
 	for topFolder in "/home/dietpi/MuPiBox/media/audiobook/"* ; do
 		artist=$(/usr/bin/basename "${topFolder}")

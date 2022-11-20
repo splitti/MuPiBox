@@ -59,6 +59,13 @@
 	$dataonline = json_decode($onlinejson, true);
 	include ('includes/header.php');
 
+	if( $_POST['id3tags'] )
+		{
+		$command = "sudo /usr/local/bin/mupibox/./id3tag_converter.sh";
+		exec($command);
+		$CHANGE_TXT=$CHANGE_TXT."<li>ID3-Tags converted</li>";
+		}
+
 	if( $_POST['spotifydebug'] == "Controller Debugging Off - turn on" )
 		{
 		$sdcommand='sudo su -c \'sed -i "s/\"logLevel\": \"error\"/\"logLevel\": \"debug\"/g" /home/dietpi/.mupibox/spotifycontroller-main/config/config.json\'';
@@ -116,10 +123,10 @@
 		}
 	if( $_POST['os_update'] )
 		{
-		$command = "sudo apt-get update -y && sudo apt-get update -y && echo 'Operating System updated!'";
+		$command = "sudo apt-get -y --install-recommends -o Dpkg::Options::=\"--force-confdef\" -o Dpkg::Options::=\"--force-confold\" update && sudo apt-get -y --install-recommends -o Dpkg::Options::=\"--force-confdef\" -o Dpkg::Options::=\"--force-confold\" upgrade";
 		exec($command, $output, $result );
 		$change=3;
-		$CHANGE_TXT=$CHANGE_TXT."<li>OS is up to date</li>";
+		$CHANGE_TXT=$CHANGE_TXT."<li>OS is up to date.</li>";
 		}
 	if( $_POST['m3u'] )
 		{
@@ -226,9 +233,14 @@
 			<input id="saveForm" class="button_text_red" type="submit" name="mupibox_devupdate" value="Update MuPiBox (Development Version)"  onclick="return confirm('Do really want to Update the MuPiBox to unstable version? Notice: This is an untested Development-Version!');" />
 		</li>
 
-		<li class="li_norm"><h2>Generate Playlists</h2>
-			<p>The Job for generating local Playlists. Run this job after adding local media.</p>
-			<input id="saveForm" class="button_text" type="submit" name="m3u" value="Generate Playlists" />
+		<li class="li_norm"><h2>Clean and update mediadata</h2>
+			<p>This job generates playlists, cleans up old data and links local covers to the playlists. Run this job after adding local media.</p>
+			<input id="saveForm" class="button_text" type="submit" name="m3u" value="Update mediadata" />
+		</li>
+
+		<li class="li_norm"><h2>Convert ID3-Tags</h2>
+			<p>Sometimes the ID3 tags, for example the German umlauts, are not displayed correctly. This converter can help display the characters correctly.</p>
+			<input id="saveForm" class="button_text" type="submit" name="id3tags" value="Update ID3-Tags" />
 		</li>
 
 		<li class="li_norm"><h2>Update MuPiBox settings</h2>
@@ -277,9 +289,12 @@
 			<input id="saveForm" class="button_text" type="submit" name="shutdown" value="Shutdown MuPiBox"  onclick="return confirm('Do really want to shutdown?');" />
 		</li>
 		<li class="li_norm"><h2>Backup MuPiBox-settings</h2>
-			<p>Backup MuPiBox-Data (mupiboxconfig.json and data.json):</p>
+			<p>Backup MuPiBox-Data (cover, mupiboxconfig.json and data.json):</p>
 
-			<input id="saveForm" class="button_text" type="submit" name="backupdownload" value="Download Backup" onclick="window.open('./backup.php', '_blank');" />
+			<input id="saveForm" class="button_text" type="submit" name="backupdownload" value="Download Configuration-Backup" onclick="window.open('./backup.php', '_blank');" />
+			<p>Backup all MuPiBox-Data (media-files, cover, mupiboxconfig.json and data.json):</p>
+
+			<input id="saveForm" class="button_text" type="submit" name="fullbackupdownload" value="Download Full-Backup" onclick="window.open('./fullbackup.php', '_blank');" />
 		</li>
 		<li class="li_norm"><h2>Restore MuPiBox-settings</h2>
 			<p>Restore Backup-File:</p>

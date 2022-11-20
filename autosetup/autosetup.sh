@@ -24,7 +24,7 @@ exec 3>${LOG}
 	echo -e "XXX\n0\nInstall some packages... Please wait!\nXXX"
 	# Get missing packages
 	sudo apt-get update >&3 2>&3
-	packages2install="git libasound2 jq samba mplayer pulseaudio-module-bluetooth bluez zip rrdtool scrot net-tools wireless-tools "
+	packages2install="git libasound2 jq samba mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools "
 	sudo apt-get install ${packages2install} -y >&3 2>&3
 
 	for thispackage in `echo ${packages2install}`; do
@@ -33,6 +33,7 @@ exec 3>${LOG}
 		  sudo apt-get --yes install ${thispackage} >&3 2>&3
 		fi
 	done
+	sudo pip install mutagen  >&3 2>&3
 	
 	###############################################################################################
 	
@@ -218,6 +219,7 @@ exec 3>${LOG}
 	sudo wget ${SRC}/scripts/mupibox/check_network.sh -O /usr/local/bin/mupibox/check_network.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/mupibox/check_network.py -O /usr/local/bin/mupibox/check_network.py >&3 2>&3
 	sudo wget ${SRC}/scripts/mupibox/add_index.sh -O /usr/local/bin/mupibox/add_index.sh >&3 2>&3
+	sudo wget ${SRC}/scripts/mupibox/id3tag_converter.sh -O /usr/local/bin/mupibox/id3tag_converter.sh  >&3 2>&3
 
 	sudo wget ${SRC}/scripts/bluetooth/start_bt.sh -O /usr/local/bin/mupibox/start_bt.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/bluetooth/stop_bt.sh -O /usr/local/bin/mupibox/stop_bt.sh >&3 2>&3
