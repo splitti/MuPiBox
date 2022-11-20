@@ -35,6 +35,22 @@
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>OnBoard Wifi enabled [restart necessary]</li>";
 		}
+	if( $_POST['restart_wifi'] )
+		{
+		$command = "sudo service ifup@wlan0 stop && sudo service ifup@wlan0 start";
+		exec($command);
+		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>Wifi-Device was restarted</li>";
+		}
+	if( $_POST['renew_dhcp'] )
+		{
+		$command = "sudo dhclient -r && sudo service ifup@wlan0 stop && sudo service ifup@wlan0 start && sudo dhclient";
+		exec($command);
+		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>DHCP-Lease is released. Try to renew the Lease...</li>";
+		}
+
+		restart_wifi
 	$CHANGE_TXT=$CHANGE_TXT."</ul>";
 
 ?>
@@ -74,6 +90,18 @@
 			?>
 			</p>
 			<input id="saveForm" class="button_text" type="submit" name="change_wifi" value="<?php print $change_wifi; ?>" />
+		</li>
+		<li class="li_1"><h2>Restart Wifi-Device</h2>
+			<p>
+			Restarts the wlan0-Device.
+			</p>
+			<input id="saveForm" class="button_text" type="submit" name="restart_wifi" value="Restart Wifi-Device" />
+		</li>
+		<li class="li_1"><h2>Renew DHCP-Lease</h2>
+			<p>
+			Releases the DHCP-Lease and also restarting the Wifi-Device. Helps sometimes if there is a missing gateway...
+			</p>
+			<input id="saveForm" class="button_text" type="submit" name="renew_dhcp" value="Renew DHCP-Lease" />
 		</li>
 	</ul>
 </form>
