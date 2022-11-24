@@ -212,6 +212,19 @@ export class SpotifyService {
     return artwork;
   }
 
+  getShowArtwork(showid: string): Observable<string> {
+    const artwork = defer(() => this.spotifyApi.getShow(showid, { limit: 1, offset: 0, market: 'DE' })).pipe(
+      retryWhen(errors => {
+        return this.errorHandler(errors);
+      }),
+      map((response: SpotifyShowResponse) => {
+        return response?.images?.[0]?.url || '';
+      })
+    );
+
+    return artwork;
+  }
+
   refreshToken() {
     const tokenUrl = (environment.production) ? '../api/token' : 'http://localhost:8200/api/token';
 

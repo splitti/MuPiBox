@@ -32,6 +32,7 @@ export interface SpotifyShowResponse {
         total?: number;
         items?: SpotifyShowResponseItem[];
     };
+    images: SpotifyAlbumsResponseImage[];
 }
 
 export interface SpotifyShowResponseItem {
