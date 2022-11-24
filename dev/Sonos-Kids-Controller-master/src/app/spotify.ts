@@ -42,12 +42,12 @@ export interface SpotifyShowResponseItem {
     release_date: string;
 }
 
-export interface SpotifyEpisodeResponse {
+export interface SpotifyEpisodesResponse {
     total?: number;
-    items?: SpotifyEpisodeResponseItem[];
+    items?: SpotifyEpisodesResponseItem[];
 }
 
-export interface SpotifyEpisodeResponseItem {
+export interface SpotifyEpisodesResponseItem {
     images?: SpotifyAlbumsResponseImage[];
     name?: string;
     id?: string;
@@ -57,4 +57,8 @@ export interface SpotifyEpisodeResponseItem {
 export interface SpotifyArtistResponse {
     name?: string;
     images: SpotifyAlbumsResponseImage[];
+}
+
+export interface SpotifyEpisodeResponse {
+    show: SpotifyShowResponse;
 }
