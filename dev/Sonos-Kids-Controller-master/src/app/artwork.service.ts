@@ -16,7 +16,8 @@ export class ArtworkService {
     let artwork: Observable<string>;
 
     if (media.type === 'spotify' && !media.cover) {
-      console.log("getArtwork: Ich bin Spotify und habe kein cover: " + media);
+      console.log("getArtwork: Ich bin Spotify und habe kein cover: ");
+      console.log(media);
       artwork = this.spotifyService.getAlbumArtwork(media.artist, media.title);
     } else {
       artwork = new Observable((observer) => {
@@ -36,7 +37,8 @@ export class ArtworkService {
     //   artwork = this.spotifyService.getArtistArtwork(media.artistid);
     // } else 
     if (media.type === 'spotify' && !media.cover) {
-      console.log("getArtistArtwork: Ich bin Spotify und habe kein cover: " + media);
+      console.log("getArtistArtwork: Ich bin Spotify und habe kein cover: ");
+      console.log(media);
       artwork = this.spotifyService.getAlbumArtwork(media.artist, media.title);
     } else {
       if (media.type === 'library' && media.artistcover) {
