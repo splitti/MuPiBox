@@ -20,6 +20,8 @@ export class ArtworkService {
       console.log(media);
       artwork = this.spotifyService.getAlbumArtwork(media.artist, media.title);
     } else {
+      console.log("getArtwork: Ich bin Spotify und habe ein cover: ");
+      console.log(media);
       artwork = new Observable((observer) => {
         observer.next(media.cover);
       });
@@ -46,6 +48,8 @@ export class ArtworkService {
           observer.next(media.artistcover);
         });
       } else {
+        console.log("getArtistArtwork: Ich bin Spotify und habe ein cover: ");
+        console.log(media);
         artwork = new Observable((observer) => {
           observer.next(media.cover);
         });
