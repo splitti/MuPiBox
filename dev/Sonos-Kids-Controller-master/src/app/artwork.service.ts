@@ -31,6 +31,8 @@ export class ArtworkService {
 
     if (media.showid !== undefined) {
       artwork = this.spotifyService.getShowArtwork(media.showid);
+    } else if (media.artistid !== undefined) {
+      artwork = this.spotifyService.getArtistArtwork(media.artistid);
     } else if (media.type === 'spotify' && !media.cover) {
       artwork = this.spotifyService.getAlbumArtwork(media.artist, media.title);
     } else {

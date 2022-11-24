@@ -53,3 +53,8 @@ export interface SpotifyEpisodeResponseItem {
     id?: string;
     release_date?: string;
 }
+
+export interface SpotifyArtistResponse {
+    name?: string;
+    images: SpotifyAlbumsResponseImage[];
+}

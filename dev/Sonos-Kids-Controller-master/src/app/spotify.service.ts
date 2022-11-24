@@ -3,7 +3,7 @@ import { Observable, defer, throwError, of, range } from 'rxjs';
 import { retryWhen, flatMap, tap, delay, take, map, mergeMap, mergeAll, toArray } from 'rxjs/operators';
 import { environment } from 'src/environments/environment';
 import { HttpClient } from '@angular/common/http';
-import { SpotifyAlbumsResponse, SpotifyAlbumsResponseItem, SpotifyArtistsAlbumsResponse, SpotifyEpisodeResponse, SpotifyShowResponse } from './spotify';
+import { SpotifyAlbumsResponse, SpotifyAlbumsResponseItem, SpotifyArtistResponse, SpotifyArtistsAlbumsResponse, SpotifyEpisodeResponse, SpotifyShowResponse } from './spotify';
 import { Media } from './media';
 
 declare const require: any;
@@ -218,6 +218,19 @@ export class SpotifyService {
         return this.errorHandler(errors);
       }),
       map((response: SpotifyShowResponse) => {
+        return response?.images?.[0]?.url || '';
+      })
+    );
+
+    return artwork;
+  }
+
+  getArtistArtwork(artistid: string): Observable<string> {
+    const artwork = defer(() => this.spotifyApi.getArtist(artistid)).pipe(
+      retryWhen(errors => {
+        return this.errorHandler(errors);
+      }),
+      map((response: SpotifyArtistResponse) => {
         return response?.images?.[0]?.url || '';
       })
     );
