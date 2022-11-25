@@ -76,6 +76,14 @@ exec 3>${LOG}
 	sudo wget ${SRC}/themes/light.css -O /home/dietpi/MuPiBox/themes/light.css >&3 2>&3
 	sudo wget ${SRC}/themes/deepblue.css -O /home/dietpi/MuPiBox/themes/deepblue.css >&3 2>&3
 	sudo wget ${SRC}/themes/pink.css -O /home/dietpi/MuPiBox/themes/pink.css >&3 2>&3
+	sudo wget ${SRC}/themes/xmas.css -O /home/dietpi/MuPiBox/themes/xmas.css >&3 2>&3
+	sudo wget ${SRC}/themes/wood.css -O /home/dietpi/MuPiBox/themes/wood.css >&3 2>&3
+	sudo wget ${SRC}/themes/matrix.css -O /home/dietpi/MuPiBox/themes/matrix.css >&3 2>&3
+	sudo wget ${SRC}/themes/ironman.css -O /home/dietpi/MuPiBox/themes/ironman.css >&3 2>&3
+	sudo wget ${SRC}/themes/captainamerica.css -O /home/dietpi/MuPiBox/themes/captainamerica.css >&3 2>&3
+	sudo wget ${SRC}/themes/xmas.css -O /home/dietpi/MuPiBox/themes/xmas.css >&3 2>&3
+	sudo wget ${SRC}/themes/danger.css -O /home/dietpi/MuPiBox/themes/danger.css >&3 2>&3
+	sudo wget ${SRC}/themes/mint.css -O /home/dietpi/MuPiBox/themes/mint.css >&3 2>&3
 	
 	sudo wget ${SRC}/media/images/goodbye.png -O /home/dietpi/MuPiBox/sysmedia/images/goodbye.png >&3 2>&3
 	sudo chown dietpi:dietpi /home/dietpi/MuPiBox/sysmedia/images/goodbye.png >&3 2>&3
@@ -102,7 +110,6 @@ exec 3>${LOG}
 	sudo wget ${SRC}/scripts/mupibox/add_index.sh -O /usr/local/bin/mupibox/add_index.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/mupibox/data_clean.sh -O /usr/local/bin/mupibox/data_clean.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/mupibox/id3tag_converter.sh -O /usr/local/bin/mupibox/id3tag_converter.sh  >&3 2>&3
-
 
 	sudo wget ${SRC}/scripts/bluetooth/start_bt.sh -O /usr/local/bin/mupibox/start_bt.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/bluetooth/stop_bt.sh -O /usr/local/bin/mupibox/stop_bt.sh >&3 2>&3

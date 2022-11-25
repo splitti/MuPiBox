@@ -1,0 +1,21 @@
+/*
+BG body{--ion-background-color: #008E21;
+FG --ion-color-light: #DE0000;
+*/
+
+ion-range{
+    --knob-background: #101820;
+    --bar-background-active: #101820;
+    --bar-background:	#101820;
+}
+
+body{
+--ion-color-light: #FEE715 !important;
+--ion-item-background: transparent !important;
+}
+.md body{--ion-background-color: #101820 !important;
+}
+
+ion-card {
+    --background: #FEE715 !important;
+}

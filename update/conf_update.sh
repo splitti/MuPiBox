@@ -26,3 +26,33 @@ MAXVOL=$(/usr/bin/jq -r .mupibox.maxVolume ${CONFIG})
 if [ "$MAXVOL" == "null" ]; then 
 		/usr/bin/cat <<< $(/usr/bin/jq --arg v "100" '.mupibox.maxVolume = $v' ${CONFIG}) >  ${CONFIG}
 fi
+
+# 2.0.0
+XMAS=$(/usr/bin/cat ${CONFIG} | grep xmas)
+if [[ -z ${XMAS} ]]; then 
+		/usr/bin/cat <<< $(/usr/bin/jq --arg v "xmas" '.mupibox.installedThemes? += [$v]' ${CONFIG}) >  ${CONFIG}
+fi
+IMAN=$(/usr/bin/cat ${CONFIG} | grep ironman)
+if [[ -z ${IMAN} ]]; then 
+		/usr/bin/cat <<< $(/usr/bin/jq --arg v "ironman" '.mupibox.installedThemes? += [$v]' ${CONFIG}) >  ${CONFIG}
+fi
+CAP=$(/usr/bin/cat ${CONFIG} | grep captainamerica)
+if [[ -z ${CAP} ]]; then 
+		/usr/bin/cat <<< $(/usr/bin/jq --arg v "captainamerica" '.mupibox.installedThemes? += [$v]' ${CONFIG}) >  ${CONFIG}
+fi
+WOOD=$(/usr/bin/cat ${CONFIG} | grep wood)
+if [[ -z ${WOOD} ]]; then 
+		/usr/bin/cat <<< $(/usr/bin/jq --arg v "wood" '.mupibox.installedThemes? += [$v]' ${CONFIG}) >  ${CONFIG}
+fi
+MATRIX=$(/usr/bin/cat ${CONFIG} | grep matrix)
+if [[ -z ${MATRIX} ]]; then 
+		/usr/bin/cat <<< $(/usr/bin/jq --arg v "matrix" '.mupibox.installedThemes? += [$v]' ${CONFIG}) >  ${CONFIG}
+fi
+MINT=$(/usr/bin/cat ${CONFIG} | grep mint)
+if [[ -z ${MINT} ]]; then 
+		/usr/bin/cat <<< $(/usr/bin/jq --arg v "mint" '.mupibox.installedThemes? += [$v]' ${CONFIG}) >  ${CONFIG}
+fi
+DANGER=$(/usr/bin/cat ${CONFIG} | grep danger)
+if [[ -z ${DANGER} ]]; then 
+		/usr/bin/cat <<< $(/usr/bin/jq --arg v "danger" '.mupibox.installedThemes? += [$v]' ${CONFIG}) >  ${CONFIG}
+fi
