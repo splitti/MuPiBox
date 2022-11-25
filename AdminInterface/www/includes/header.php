@@ -12,7 +12,7 @@
 		<link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.0.0/css/all.css">
 		<script type="text/javascript" src="view.js?v1.1"></script>
 		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-		<title>MuPiBox Web Interface</title>
+		<title>MuPiBox Admin-Interface</title>
 		<link rel="stylesheet" type="text/css" href="view.css" media="all">
 		<script type="text/javascript" src="view.js"></script>
 		<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
