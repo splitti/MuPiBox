@@ -8,7 +8,7 @@
 	$MAC0=exec($commandM0);
 	$commandS0="/sbin/ifconfig wlan0 | awk '/netmask/{split($4,a,\":\"); print a[1]}'";
 	$SUBNET0=exec($commandS0);
-	$commandG0="ip route show 0.0.0.0/0 dev wlan0 | cut -d\  -f3";
+	$commandG0="sudo route -n | grep 'UG[ \t]' | awk '{print $2}'";
 	$GATEWAY0=exec($commandG0);
 	$commandD="echo $(sudo cat /etc/resolv.conf | grep 'nameserver ') | sed 's/nameserver //g'";
 	$DNS=exec($commandD);
@@ -50,7 +50,6 @@
 		$CHANGE_TXT=$CHANGE_TXT."<li>DHCP-Lease is released. Try to renew the Lease...</li>";
 		}
 
-		restart_wifi
 	$CHANGE_TXT=$CHANGE_TXT."</ul>";
 
 ?>
@@ -69,7 +68,7 @@
         <tr><td id="netl">Bitrate:</td><td id="netr"><?php print $BITRATE ?></td></tr>
         </table>
 </div>
-<form class="appnitro"  method="post" action="tweaks.php" id="form">
+<form class="appnitro"  method="post" action="network.php" id="form">
 	<ul>
 		<li class="li_1"><h2>Enable/Disable OnBoad Wifi</h2>
 			<p>
@@ -99,7 +98,7 @@
 		</li>
 		<li class="li_1"><h2>Renew DHCP-Lease</h2>
 			<p>
-			Releases the DHCP-Lease and also restarting the Wifi-Device. Helps sometimes if there is a missing gateway...
+			Releases the DHCP-Lease and also restarting the Wifi-Device. Important: A new IP address may be assigned!
 			</p>
 			<input id="saveForm" class="button_text" type="submit" name="renew_dhcp" value="Renew DHCP-Lease" />
 		</li>

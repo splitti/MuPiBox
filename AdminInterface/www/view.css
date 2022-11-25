@@ -1019,3 +1019,34 @@ ul.password{
         width:130px;
         text-align:right;
 }
+
+#flex-container {
+   display: -webkit-flex;
+   display: -ms-flex;
+   display: flex;
+   -webkit-flex-wrap: wrap;
+   -ms-flex-wrap: wrap;
+   flex-wrap: wrap;
+}
+
+.media_img {
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+
+  width: 150px;
+  padding: 0px;
+  float: left;
+  margin: 10px 0px 10px 30px;
+}
+
+.media_txt {
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+
+  width: 60%;
+  padding: 0px;
+  float: left;
+  margin: 10px 30px 10px 30px;
+}
