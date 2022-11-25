@@ -3,7 +3,7 @@ import { Observable, defer, throwError, of, range } from 'rxjs';
 import { retryWhen, flatMap, tap, delay, take, map, mergeMap, mergeAll, toArray } from 'rxjs/operators';
 import { environment } from 'src/environments/environment';
 import { HttpClient } from '@angular/common/http';
-import { SpotifyAlbumsResponse, SpotifyAlbumsResponseItem, SpotifyArtistsAlbumsResponse, SpotifyEpisodesResponse, SpotifyShowResponse } from './spotify';
+import { SpotifyAlbumsResponse, SpotifyAlbumsResponseItem, SpotifyArtistResponse, SpotifyArtistsAlbumsResponse, SpotifyEpisodesResponse, SpotifyShowResponse } from './spotify';
 import { Media } from './media';
 
 declare const require: any;
@@ -60,9 +60,23 @@ export class SpotifyService {
       retryWhen(errors => {
         return this.errorHandler(errors);
       }),
-      map((response: SpotifyArtistsAlbumsResponse) => response.total),
-      mergeMap(count => range(0, Math.ceil(count / 50))),
-      mergeMap(multiplier => defer(() => this.spotifyApi.getArtistAlbums(id, { include_groups: 'album', limit: 50, offset: 50 * multiplier, market: 'DE' })).pipe(
+      map((response: SpotifyArtistsAlbumsResponse) => ({counter: response.total})),
+      mergeMap(count => range(0, Math.ceil(count.counter / 50)).pipe(
+        map(index => ({
+          range: index,
+          ...count,
+        }))
+      )),
+      mergeMap(counter => defer(() => this.spotifyApi.getArtist(id)).pipe(
+        retryWhen(errors => {
+          return this.errorHandler(errors);
+        }),
+        map((response: SpotifyArtistResponse) => ({
+          range: counter.range,
+          artistcover: response.images[0].url,
+        }))
+      )),
+      mergeMap(multiplier => defer(() => this.spotifyApi.getArtistAlbums(id, { include_groups: 'album', limit: 50, offset: 50 * multiplier.range, market: 'DE' })).pipe(
         retryWhen(errors => {
           return this.errorHandler(errors);
         }),
@@ -73,6 +87,7 @@ export class SpotifyService {
               artist: item.artists[0].name,
               title: item.name,
               cover: item.images[0].url,
+              artistcover: multiplier.artistcover,
               type: 'spotify',
               category,
               index,
@@ -119,7 +134,6 @@ export class SpotifyService {
               index,
               shuffle
             };
-            console.log(media);
             return media;
           });
         })
@@ -129,41 +143,6 @@ export class SpotifyService {
     );
     return albums;
   }
-
-  // getMediaByEpisodeID(id: string, category: string, index: number, shuffle: boolean): Observable<Media[]> {
-  //   const albums = defer(() => this.spotifyApi.getShowEpisodes(id, { limit: 1, offset: 0, market: 'DE' })).pipe(
-  //     retryWhen(errors => {
-  //       return this.errorHandler(errors);
-  //     }),
-  //     map((response: SpotifyEpisodesResponse) => response.total),
-  //     mergeMap(count => range(0, Math.ceil(count / 50))),
-  //     mergeMap(multiplier => defer(() => this.spotifyApi.getShowEpisodes(id, { limit: 50, offset: 50 * multiplier, market: 'DE' })).pipe(
-  //       retryWhen(errors => {
-  //         return this.errorHandler(errors);
-  //       }),
-  //       map((response: SpotifyEpisodesResponse) => {
-  //         return response.items.map(item => {
-  //           const media: Media = {
-  //             showid: item.id,
-  //             //artist: item.show.name,
-  //             title: item.name,
-  //             cover: item.images[0].url,
-  //             type: 'spotify',
-  //             category,
-  //             release_date: item.release_date,
-  //             index,
-  //             shuffle
-  //           };
-  //           return media;
-  //         });
-  //       })
-  //     )),
-  //     mergeAll(),
-  //     toArray()
-  //   );
-
-  //   return albums;
-  // }
 
   getMediaByID(id: string, category: string, index: number, shuffle: boolean): Observable<Media> {
     let fetch: any;
@@ -213,35 +192,8 @@ export class SpotifyService {
     return artwork;
   }
 
-  // getShowArtwork(showid: string): Observable<string> {
-  //   const artwork = defer(() => this.spotifyApi.getEpisode(showid)).pipe(
-  //     retryWhen(errors => {
-  //       return this.errorHandler(errors);
-  //     }),
-  //     map((response: SpotifyEpisodeResponse) => {
-  //       return response?.show?.images?.[0]?.url || '';
-  //     })
-  //   );
-
-  //   return artwork;
-  // }
-
-  // getArtistArtwork(artistid: string): Observable<string> {
-  //   const artwork = defer(() => this.spotifyApi.getArtist(artistid)).pipe(
-  //     retryWhen(errors => {
-  //       return this.errorHandler(errors);
-  //     }),
-  //     map((response: SpotifyArtistResponse) => {
-  //       return response?.images?.[0]?.url || '';
-  //     })
-  //   );
-
-  //   return artwork;
-  // }
-
   refreshToken() {
     const tokenUrl = (environment.production) ? '../api/token' : 'http://localhost:8200/api/token';
-    console.log("Refresh Token");
     this.http.get(tokenUrl, {responseType: 'text'}).subscribe(token => {
       this.spotifyApi.setAccessToken(token);
       this.refreshingToken = false;
