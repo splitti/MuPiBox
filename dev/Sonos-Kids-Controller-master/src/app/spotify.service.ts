@@ -90,6 +90,7 @@ export class SpotifyService {
   }
 
   getMediaByShowID(id: string, category: string, index: number, shuffle: boolean): Observable<Media[]> {
+    console.log("getMediaByShowID");
     const albums = defer(() => this.spotifyApi.getShow(id, { limit: 1, offset: 0, market: 'DE' })).pipe(
       retryWhen(errors => {
         return this.errorHandler(errors);
@@ -126,7 +127,7 @@ export class SpotifyService {
       mergeAll(),
       toArray()
     );
-
+    console.log(albums);
     return albums;
   }
 
@@ -201,6 +202,7 @@ export class SpotifyService {
   // Only used for single "artist + title" entries with "type: spotify" in the database.
   // Artwork for spotify search queries are already fetched together with the initial searchAlbums request
   getAlbumArtwork(artist: string, title: string): Observable<string> {
+    console.log("getAlbumArtwork");
     const artwork = defer(() => this.spotifyApi.searchAlbums('album:' + title + ' artist:' + artist, { market: 'DE' })).pipe(
       retryWhen(errors => {
         return this.errorHandler(errors);
@@ -241,14 +243,14 @@ export class SpotifyService {
 
   refreshToken() {
     const tokenUrl = (environment.production) ? '../api/token' : 'http://localhost:8200/api/token';
-
+    console.log("Refresh Token");
     this.http.get(tokenUrl, {responseType: 'text'}).subscribe(token => {
       this.spotifyApi.setAccessToken(token);
       this.refreshingToken = false;
     });
   }
 
-  errorHandler(errors: Observable<any>) {
+  errorHandler(errors: Observable<any>) {    
     return errors.pipe(
       flatMap((error) => (error.status !== 401 && error.status !== 429) ? throwError(error) : of(error)),
       tap(_ => {
