@@ -54,11 +54,11 @@ export interface SpotifyEpisodesResponseItem {
     release_date?: string;
 }
 
-export interface SpotifyArtistResponse {
-    name?: string;
-    images: SpotifyAlbumsResponseImage[];
-}
+// export interface SpotifyArtistResponse {
+//     name?: string;
+//     images: SpotifyAlbumsResponseImage[];
+// }
 
-export interface SpotifyEpisodeResponse {
-    show: SpotifyShowResponse;
-}
+// export interface SpotifyEpisodeResponse {
+//     show: SpotifyShowResponse;
+// }

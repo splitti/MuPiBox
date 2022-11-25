@@ -323,7 +323,7 @@ export class MediaService {
 
         // Create temporary object with artists as keys and covers (first media cover) as values
         const covers = media.sort((a, b) => a.title <= b.title ? -1 : 1).reduce((tempCovers, currentMedia) => {
-            if (currentMedia.type === 'library' && currentMedia.artistcover) {
+            if (/* currentMedia.type === 'library' &&  */currentMedia.artistcover) {
               if (!tempCovers[currentMedia.artist]) { tempCovers[currentMedia.artist] = currentMedia.artistcover; }
             } else {
               if (!tempCovers[currentMedia.artist]) { tempCovers[currentMedia.artist] = currentMedia.cover; }
