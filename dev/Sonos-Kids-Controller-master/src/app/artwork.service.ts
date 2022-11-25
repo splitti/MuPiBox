@@ -37,7 +37,7 @@ export class ArtworkService {
     if (media.type === 'spotify' && !media.cover) {
       artwork = this.spotifyService.getAlbumArtwork(media.artist, media.title);
     } else {
-      if (media.type === 'library' && media.artistcover) {
+      if (/* media.type === 'library' &&  */media.artistcover) {
         artwork = new Observable((observer) => {
           observer.next(media.artistcover);
         });

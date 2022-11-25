@@ -90,7 +90,6 @@ export class SpotifyService {
   }
 
   getMediaByShowID(id: string, category: string, index: number, shuffle: boolean): Observable<Media[]> {
-    console.log("getMediaByShowID");
     const albums = defer(() => this.spotifyApi.getShow(id, { limit: 1, offset: 0, market: 'DE' })).pipe(
       retryWhen(errors => {
         return this.errorHandler(errors);
@@ -120,6 +119,7 @@ export class SpotifyService {
               index,
               shuffle
             };
+            console.log(media);
             return media;
           });
         })
@@ -127,7 +127,6 @@ export class SpotifyService {
       mergeAll(),
       toArray()
     );
-    console.log(albums);
     return albums;
   }
 
@@ -202,7 +201,6 @@ export class SpotifyService {
   // Only used for single "artist + title" entries with "type: spotify" in the database.
   // Artwork for spotify search queries are already fetched together with the initial searchAlbums request
   getAlbumArtwork(artist: string, title: string): Observable<string> {
-    console.log("getAlbumArtwork");
     const artwork = defer(() => this.spotifyApi.searchAlbums('album:' + title + ' artist:' + artist, { market: 'DE' })).pipe(
       retryWhen(errors => {
         return this.errorHandler(errors);
