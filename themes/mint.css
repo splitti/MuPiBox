@@ -4,18 +4,18 @@ FG --ion-color-light: #DE0000;
 */
 
 ion-range{
-    --knob-background: #00203F;
-    --bar-background-active: #00203F;
-    --bar-background:	#00203F;
+    --knob-background: #ADEFD1;
+    --bar-background-active: #ADEFD1;
+    --bar-background:	#ADEFD1;
 }
 
 body{
---ion-color-light: #ADEFD1 !important;
+--ion-color-light: #00203F !important;
 --ion-item-background: transparent !important;
 }
-.md body{--ion-background-color: #00203F !important;
+.md body{--ion-background-color: #ADEFD1 !important;
 }
 
 ion-card {
-    --background: #ADEFD1 !important;
+    --background: #00203F !important;
 }
