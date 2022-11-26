@@ -84,6 +84,7 @@ exec 3>${LOG}
 	sudo wget ${SRC}/themes/xmas.css -O /home/dietpi/MuPiBox/themes/xmas.css >&3 2>&3
 	sudo wget ${SRC}/themes/danger.css -O /home/dietpi/MuPiBox/themes/danger.css >&3 2>&3
 	sudo wget ${SRC}/themes/mint.css -O /home/dietpi/MuPiBox/themes/mint.css >&3 2>&3
+	sudo wget ${SRC}/themes/cinema.css -O /home/dietpi/MuPiBox/themes/cinema.css >&3 2>&3
 	
 	sudo wget ${SRC}/media/images/goodbye.png -O /home/dietpi/MuPiBox/sysmedia/images/goodbye.png >&3 2>&3
 	sudo chown dietpi:dietpi /home/dietpi/MuPiBox/sysmedia/images/goodbye.png >&3 2>&3

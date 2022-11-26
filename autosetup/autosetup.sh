@@ -202,6 +202,15 @@ exec 3>${LOG}
 	sudo wget ${SRC}/themes/light.css -O ~/MuPiBox/themes/light.css >&3 2>&3
 	sudo wget ${SRC}/themes/deepblue.css -O ~/MuPiBox/themes/deepblue.css >&3 2>&3
 	sudo wget ${SRC}/themes/pink.css -O ~/MuPiBox/themes/pink.css >&3 2>&3
+	sudo wget ${SRC}/themes/xmas.css -O /home/dietpi/MuPiBox/themes/xmas.css >&3 2>&3
+	sudo wget ${SRC}/themes/wood.css -O /home/dietpi/MuPiBox/themes/wood.css >&3 2>&3
+	sudo wget ${SRC}/themes/matrix.css -O /home/dietpi/MuPiBox/themes/matrix.css >&3 2>&3
+	sudo wget ${SRC}/themes/ironman.css -O /home/dietpi/MuPiBox/themes/ironman.css >&3 2>&3
+	sudo wget ${SRC}/themes/captainamerica.css -O /home/dietpi/MuPiBox/themes/captainamerica.css >&3 2>&3
+	sudo wget ${SRC}/themes/xmas.css -O /home/dietpi/MuPiBox/themes/xmas.css >&3 2>&3
+	sudo wget ${SRC}/themes/danger.css -O /home/dietpi/MuPiBox/themes/danger.css >&3 2>&3
+	sudo wget ${SRC}/themes/mint.css -O /home/dietpi/MuPiBox/themes/mint.css >&3 2>&3
+	sudo wget ${SRC}/themes/cinema.css -O /home/dietpi/MuPiBox/themes/cinema.css >&3 2>&3
 
 	sudo wget ${SRC}/scripts/mupibox/mupi_shutdown.sh -O /usr/local/bin/mupibox/mupi_shutdown.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/mupibox/mupi_startup.sh -O /usr/local/bin/mupibox/mupi_startup.sh >&3 2>&3
