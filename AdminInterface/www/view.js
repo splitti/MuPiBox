@@ -73,29 +73,29 @@ $(document).ready(function(){
 // This is the code to preload the images
 var imageList = Array();
 imageList['blue'] = new Image(150, 250);
-imageList['blue'].src = "images/blue.png";
+imageList['blue'].src = "images/blue_2.0.0.png";
 imageList['deepblue'] = new Image(150, 250);
-imageList['deepblue'].src = "images/deepblue.png";
+imageList['deepblue'].src = "images/deepblue_2.0.0.png";
 imageList['purple'] = new Image(150, 250);
-imageList['purple'].src = "images/purple.png";
+imageList['purple'].src = "images/purple_2.0.0.png";
 imageList['pink'] = new Image(150, 250);
-imageList['pink'].src = "images/pink.png";
+imageList['pink'].src = "images/pink_2.0.0.png";
 imageList['green'] = new Image(150, 250);
-imageList['green'].src = "images/green.png";
+imageList['green'].src = "images/green_2.0.0.png";
 imageList['darkred'] = new Image(150, 250);
-imageList['darkred'].src = "images/darkred.png";
+imageList['darkred'].src = "images/darkred_2.0.0.png";
 imageList['red'] = new Image(150, 250);
-imageList['red'].src = "images/red.png";
+imageList['red'].src = "images/red_2.0.0.png";
 imageList['orange'] = new Image(150, 250);
-imageList['orange'].src = "images/orange.png";
+imageList['orange'].src = "images/orange_2.0.0.png";
 imageList['chocolate'] = new Image(150, 250);
-imageList['chocolate'].src = "images/chocolate.png";
+imageList['chocolate'].src = "images/chocolate_2.0.0.png";
 imageList['vintage'] = new Image(150, 250);
-imageList['vintage'].src = "images/vintage.png";
+imageList['vintage'].src = "images/vintage_2.0.0.png";
 imageList['dark'] = new Image(150, 250);
-imageList['dark'].src = "images/dark.png";
+imageList['dark'].src = "images/dark_2.0.0.png";
 imageList['light'] = new Image(150, 250);
-imageList['light'].src = "images/light.png";
+imageList['light'].src = "images/light_2.0.0.png";
 
 
 function switchImage() {

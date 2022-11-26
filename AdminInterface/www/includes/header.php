@@ -14,7 +14,7 @@
 		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 		<title>MuPiBox Admin-Interface</title>
 		<link rel="stylesheet" type="text/css" href="view.css" media="all">
-		<script type="text/javascript" src="view.js"></script>
+		<script type="text/javascript" src="view.js?v=2.0.0"></script>
 		<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 		<link rel="icon" type="image/x-icon" href="/images/favicon.ico">
 	</head>
