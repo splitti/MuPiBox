@@ -56,3 +56,7 @@ DANGER=$(/usr/bin/cat ${CONFIG} | grep danger)
 if [[ -z ${DANGER} ]]; then 
 		/usr/bin/cat <<< $(/usr/bin/jq --arg v "danger" '.mupibox.installedThemes? += [$v]' ${CONFIG}) >  ${CONFIG}
 fi
+CINEMA=$(/usr/bin/cat ${CONFIG} | grep cinema)
+if [[ -z ${CINEMA} ]]; then 
+		/usr/bin/cat <<< $(/usr/bin/jq --arg v "cinema" '.mupibox.installedThemes? += [$v]' ${CONFIG}) >  ${CONFIG}
+fi

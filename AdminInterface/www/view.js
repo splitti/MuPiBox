@@ -96,6 +96,22 @@ imageList['dark'] = new Image(150, 250);
 imageList['dark'].src = "images/dark_2.0.0.png";
 imageList['light'] = new Image(150, 250);
 imageList['light'].src = "images/light_2.0.0.png";
+imageList['xmas'] = new Image(150, 250);
+imageList['xmas'].src = "images/xmas_2.0.0.png";
+imageList['matrix'] = new Image(150, 250);
+imageList['matrix'].src = "images/matrix_2.0.0.png";
+imageList['wood'] = new Image(150, 250);
+imageList['wood'].src = "images/wood_2.0.0.png";
+imageList['mint'] = new Image(150, 250);
+imageList['mint'].src = "images/mint_2.0.0.png";
+imageList['danger'] = new Image(150, 250);
+imageList['danger'].src = "images/danger_2.0.0.png";
+imageList['ironman'] = new Image(150, 250);
+imageList['ironman'].src = "images/ironman_2.0.0.png";
+imageList['captainamerica'] = new Image(150, 250);
+imageList['captainamerica'].src = "images/captainamerica_2.0.0.png";
+imageList['cinema'] = new Image(150, 250);
+imageList['cinema'].src = "images/cinema_2.0.0.png";
 
 
 function switchImage() {
