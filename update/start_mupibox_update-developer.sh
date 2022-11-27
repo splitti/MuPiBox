@@ -12,8 +12,8 @@ exec 3>${LOG}
 {
 	echo -e "XXX\n0\nPrepare Update... \nXXX"	 >&3 2>&3
 	sudo systemctl stop mupi_idle_shutdown.service >&3 2>&3
-	sudo mkdir /home/dietpi/MuPiBox/media/audiobook >&3 2>&3	
 	sudo mkdir /home/dietpi/.mupibox/chromium_cache >&3 2>&3	
+	sudo mkdir /home/dietpi/MuPiBox/media/audiobook >&3 2>&3	
 	sudo mkdir /home/dietpi/MuPiBox/media/music >&3 2>&3
 	sudo mkdir /home/dietpi/MuPiBox/media/cover >&3 2>&3
 	sudo chown dietpi:dietpi /home/dietpi/MuPiBox/media/audiobook >&3 2>&3
@@ -25,7 +25,6 @@ exec 3>${LOG}
 	sudo apt-get update >&3 2>&3
 	sudo apt-get -y --install-recommends -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" install x11vnc git libasound2 jq samba mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools >&3 2>&3
 	sudo pip install mutagen  >&3 2>&3
-
 
 	echo -e "XXX\n5\nBackup Userdata... \nXXX"	 >&3 2>&3
 	sudo cp /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json /tmp/data.json >&3 2>&3
