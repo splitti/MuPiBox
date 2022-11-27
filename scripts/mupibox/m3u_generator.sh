@@ -4,6 +4,7 @@
 
 DATA="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json"
 M3ULOCK="/tmp/.m3u.lock"
+HN=`hostname`
 
 if [ "$EUID" -ne 0 ]
   then echo "Please run as root"
@@ -66,9 +67,9 @@ else
 				then
 					if [ $setArtistCover == 1 ]
 					then
-						/usr/bin/cat <<< $(/usr/bin/cat ${DATA} | /usr/bin/jq '. += [{"type": "library", "category": "audiobook", "artist": "'"${artist}"'", "title": "'"${title}"'", "cover": "http://127.0.0.1:8200/cover/audiobook/'"${artist}"'/'"${title}"'/cover.jpg", "artistcover": "http://127.0.0.1:8200/cover/audiobook/'"${artist}"'/cover.jpg"}]') > ${DATA}
+						/usr/bin/cat <<< $(/usr/bin/cat ${DATA} | /usr/bin/jq '. += [{"type": "library", "category": "audiobook", "artist": "'"${artist}"'", "title": "'"${title}"'", "cover": "http://'${HN}':8200/cover/audiobook/'"${artist}"'/'"${title}"'/cover.jpg", "artistcover": "http://'${HN}':8200/cover/audiobook/'"${artist}"'/cover.jpg"}]') > ${DATA}
 					else
-						/usr/bin/cat <<< $(/usr/bin/cat ${DATA} | /usr/bin/jq '. += [{"type": "library", "category": "audiobook", "artist": "'"${artist}"'", "title": "'"${title}"'", "cover": "http://127.0.0.1:8200/cover/audiobook/'"${artist}"'/'"${title}"'/cover.jpg"}]') > ${DATA}
+						/usr/bin/cat <<< $(/usr/bin/cat ${DATA} | /usr/bin/jq '. += [{"type": "library", "category": "audiobook", "artist": "'"${artist}"'", "title": "'"${title}"'", "cover": "http://'${HN}':8200/cover/audiobook/'"${artist}"'/'"${title}"'/cover.jpg"}]') > ${DATA}
 					fi
 				fi
 			fi
@@ -119,9 +120,9 @@ else
 				then
 					if [ $setArtistCover == 1 ]
 					then
-						/usr/bin/cat <<< $(/usr/bin/cat ${DATA} | /usr/bin/jq '. += [{"type": "library", "category": "music", "artist": "'"${artist}"'", "title": "'"${title}"'", "cover": "http://127.0.0.1:8200/cover/music/'"${artist}"'/'"${title}"'/cover.jpg", "artistcover": "http://127.0.0.1:8200/cover/music/'"${artist}"'/cover.jpg"}]') > ${DATA}
+						/usr/bin/cat <<< $(/usr/bin/cat ${DATA} | /usr/bin/jq '. += [{"type": "library", "category": "music", "artist": "'"${artist}"'", "title": "'"${title}"'", "cover": "http://'$[HN}':8200/cover/music/'"${artist}"'/'"${title}"'/cover.jpg", "artistcover": "http://'$[HN}':8200/cover/music/'"${artist}"'/cover.jpg"}]') > ${DATA}
 					else
-						/usr/bin/cat <<< $(/usr/bin/cat ${DATA} | /usr/bin/jq '. += [{"type": "library", "category": "music", "artist": "'"${artist}"'", "title": "'"${title}"'", "cover": "http://127.0.0.1:8200/cover/music/'"${artist}"'/'"${title}"'/cover.jpg"}]') > ${DATA}
+						/usr/bin/cat <<< $(/usr/bin/cat ${DATA} | /usr/bin/jq '. += [{"type": "library", "category": "music", "artist": "'"${artist}"'", "title": "'"${title}"'", "cover": "http://'$[HN}':8200/cover/music/'"${artist}"'/'"${title}"'/cover.jpg"}]') > ${DATA}
 					fi
 				fi
 			fi
