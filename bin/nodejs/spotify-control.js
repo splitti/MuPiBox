@@ -993,7 +993,7 @@ app.use(function(req, res){
     cmdCall('sudo reboot');
 
   else if (command.name == "index")
-    cmdCall('bash /usr/local/bin/mupibox/add_index.sh');
+    cmdCall('sudo bash /usr/local/bin/mupibox/add_index.sh');
     
   else if (command.name == "seek+30")
     seek(1);
