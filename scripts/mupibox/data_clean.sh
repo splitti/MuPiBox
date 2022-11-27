@@ -65,13 +65,12 @@ for item in "${my_array[@]}"; do
 	title=$(jq '.title' <<< "$item")
 	if [[ ${type:1:-1} == "library" ]]
 	then
-		if [[ -d "/home/dietpi/MuPiBox/media/${category:1:-1}/${artist:1:-1}/${title:1:-1}" ]]
-		then
-			add_item=1
-		else
+		#if [[ -d "/home/dietpi/MuPiBox/media/${category:1:-1}/${artist:1:-1}/${title:1:-1}" ]]
+		#then
+		#	add_item=1
+		#else
 			add_item=0
-
-		fi
+		#fi
 	else
 		add_item=1
 	fi
