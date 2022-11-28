@@ -132,6 +132,7 @@ exec 3>${LOG}
 
 
 	echo -e "XXX\n30\nRestarting Services... \nXXX"
+	sudo wget ${SRC}/config/services/mupi_check_internet.service -O /etc/systemd/system/mupi_check_internet.service  >&3 2>&3
 	sudo su - dietpi -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && npm install" >&3 2>&3
 	#sudo su - dietpi -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && pm2 -f start server.js" >&3 2>&3
 	#sudo su - dietpi -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && pm2 -f save" >&3 2>&3

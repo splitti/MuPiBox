@@ -180,7 +180,6 @@ exec 3>${LOG}
 	sudo rm /etc/systemd/system/mupi_change_checker.service >&3 2>&3
 	sudo /usr/local/bin/mupibox/./m3u_generator.sh >&3 2>&3
 
-
 	sudo mv ${LOG} /home/dietpi/.mupibox/last_update.log >&3 2>&3
 	sudo chown -R dietpi:dietpi /home/dietpi/.mupibox/last_update.log >&3 2>&3
 

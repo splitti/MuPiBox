@@ -122,6 +122,13 @@
 		$data["mupibox"]["version"]=$data["mupibox"]["version"]." DEVELOPMENT";
 		$CHANGE_TXT=$CHANGE_TXT."<li>Update complete to Development-Version ".$data["mupibox"]["version"]."</li>";
 		}
+	if( $_POST['config_update'] )
+		{
+		$command = "cd; curl -L https://mupibox.de/version/latest/update/conf_update.sh | sudo bash";
+		exec($command, $output, $result );
+		$change=3;
+		$CHANGE_TXT=$CHANGE_TXT."<li>Config is up to date.</li>";
+		}
 	if( $_POST['os_update'] )
 		{
 		$command = "sudo apt-get -y --install-recommends -o Dpkg::Options::=\"--force-confdef\" -o Dpkg::Options::=\"--force-confold\" update && sudo apt-get -y --install-recommends -o Dpkg::Options::=\"--force-confdef\" -o Dpkg::Options::=\"--force-confold\" upgrade";
@@ -232,6 +239,8 @@
 			<input id="saveForm" class="button_text" type="submit" name="os_update" value="Update OS"  onclick="return confirm('Do really want to update the Operating System?');" />
 			<input id="saveForm" class="button_text" type="submit" name="mupibox_update" value="Update MuPiBox (Stable Version)"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
 			<input id="saveForm" class="button_text_red" type="submit" name="mupibox_devupdate" value="Update MuPiBox (Development Version)"  onclick="return confirm('Do really want to Update the MuPiBox to unstable version? Notice: This is an untested Development-Version!');" />
+			<p>If an old backup is imported, this script must be executed.</p>
+			<input id="saveForm" class="button_text" type="submit" name="config_update" value="Update Config"  onclick="return confirm('Do really want to update the Configuration?');" />
 		</li>
 
 		<li class="li_norm"><h2>Clean and update mediadata</h2>
