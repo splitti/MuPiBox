@@ -26,18 +26,24 @@
 			{
 			if (move_uploaded_file($_FILES["fileToUpload"]["tmp_name"], $target_file))
 				{
+				$old_version = $data["mupibox"]["version"];
+
 				$command = "sudo unzip -o -a '".$target_file."' -d / >> /tmp/restore.log";
 				#$command = "sudo su - -c \"unzip -o -a '".$target_file."' -d / >> /tmp/restore.log && sleep 1\"";
 				#$command = "sudo su - -c 'tar xvzf ".$target_file." >> /tmp/restore.log'";
 				exec($command, $output, $result );
-				
+				$data["mupibox"]["version"]
 				exec("sudo chown root:www-data /etc/mupibox/mupiboxconfig.json");
 				exec("sudo chmod 644 /etc/mupibox/mupiboxconfig.json");
 				exec("sudo chown dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json");
 				exec("sudo chmod 644 /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json");
 
+				$command = "cd; curl -L https://mupibox.de/version/latest/update/conf_update.sh | sudo bash";
+				exec($command, $output, $result );
+
 				$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
-				$data = json_decode($string, true);	
+				$data = json_decode($string, true);
+				$data["mupibox"]["version"] = $old_version;
 				$command = "sudo /boot/dietpi/func/change_hostname " . $data["mupibox"]["host"];
 				$change_hostname = exec($command, $output, $change_hostname );
 				
