@@ -376,8 +376,10 @@ export class AddPage implements OnInit, AfterViewInit {
       this.keyboard.clearInput('radio_cover');
   
       this.validate();
-  
-      this.navController.back();
+
+      setTimeout(() => {
+        this.navController.back();
+      }, 2000)
     }
   }
 

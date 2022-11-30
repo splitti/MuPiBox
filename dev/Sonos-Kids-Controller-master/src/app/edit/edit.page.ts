@@ -89,13 +89,13 @@ export class EditPage implements OnInit {
   }
   
   ionViewWillEnter() {
+    this.playerService.sendCmd(PlayerCmds.INDEX);
+    
     this.network = this.mediaService.getNetworkObservable();
     this.media = this.mediaService.getRawMediaObservable();
 
     this.mediaService.updateNetwork();
     this.mediaService.updateRawMedia();
-
-    this.playerService.sendCmd(PlayerCmds.INDEX);
   }
 
   ionViewDidLeave() {
