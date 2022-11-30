@@ -1,5 +1,15 @@
 <?php
 
+	function write_json($data)
+		{
+		$json_object = json_encode($data);
+		$save_rc = file_put_contents('/tmp/.mupiboxconfig.json', $json_object);
+		exec("sudo chmod 755 /etc/mupibox/mupiboxconfig.json");
+		exec("sudo mv /tmp/.mupiboxconfig.json /etc/mupibox/mupiboxconfig.json");
+		exec("sudo /usr/local/bin/mupibox/./setting_update.sh");
+		exec("sudo -i -u dietpi /usr/local/bin/mupibox/./restart_kiosk.sh");
+		}
+
 	$change=0;
 	$shutdown=0;
 	$reboot=0;
@@ -26,13 +36,14 @@
 			{
 			if (move_uploaded_file($_FILES["fileToUpload"]["tmp_name"], $target_file))
 				{
+				$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
+				$data = json_decode($string, true);
 				$old_version = $data["mupibox"]["version"];
 
 				$command = "sudo unzip -o -a '".$target_file."' -d / >> /tmp/restore.log";
 				#$command = "sudo su - -c \"unzip -o -a '".$target_file."' -d / >> /tmp/restore.log && sleep 1\"";
 				#$command = "sudo su - -c 'tar xvzf ".$target_file." >> /tmp/restore.log'";
 				exec($command, $output, $result );
-				$data["mupibox"]["version"]
 				exec("sudo chown root:www-data /etc/mupibox/mupiboxconfig.json");
 				exec("sudo chmod 644 /etc/mupibox/mupiboxconfig.json");
 				exec("sudo chown dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json");
@@ -44,12 +55,14 @@
 				$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
 				$data = json_decode($string, true);
 				$data["mupibox"]["version"] = $old_version;
+				write_json($data);
+
 				$command = "sudo /boot/dietpi/func/change_hostname " . $data["mupibox"]["host"];
 				$change_hostname = exec($command, $output, $change_hostname );
 				
 				$command = "sudo rm '".$target_file."'";
 				exec($command, $output, $result );
-				$change=1;
+				$change=99;
 				$CHANGE_TXT=$CHANGE_TXT."<li>Backup-File restored! The MuPiBox will reboot now!</li>";
 				$reboot=1;
 				}
@@ -59,7 +72,6 @@
 				}
 			}
 		}
-
 
 	$onlinejson = file_get_contents('https://mupibox.de/version/latest/version.json');
 	$dataonline = json_decode($onlinejson, true);
@@ -128,13 +140,14 @@
 		$data["mupibox"]["version"]=$data["mupibox"]["version"]." DEVELOPMENT";
 		$CHANGE_TXT=$CHANGE_TXT."<li>Update complete to Development-Version ".$data["mupibox"]["version"]."</li>";
 		}
-	if( $_POST['config_update'] )
+/*	if( $_POST['config_update'] )
 		{
 		$command = "cd; curl -L https://mupibox.de/version/latest/update/conf_update.sh | sudo bash";
 		exec($command, $output, $result );
 		$change=3;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Config is up to date.</li>";
 		}
+*/
 	if( $_POST['os_update'] )
 		{
 		$command = "sudo apt-get -y --install-recommends -o Dpkg::Options::=\"--force-confdef\" -o Dpkg::Options::=\"--force-confold\" update && sudo apt-get -y --install-recommends -o Dpkg::Options::=\"--force-confdef\" -o Dpkg::Options::=\"--force-confold\" upgrade";
@@ -195,12 +208,7 @@
 		}
 	if( $change == 1 )
 		{
-		$json_object = json_encode($data);
-		$save_rc = file_put_contents('/tmp/.mupiboxconfig.json', $json_object);
-		exec("sudo chmod 755 /etc/mupibox/mupiboxconfig.json");
-		exec("sudo mv /tmp/.mupiboxconfig.json /etc/mupibox/mupiboxconfig.json");
-		exec("sudo /usr/local/bin/mupibox/./setting_update.sh");
-		exec("sudo -i -u dietpi /usr/local/bin/mupibox/./restart_kiosk.sh");
+		write_json($data);
 		}
 	if( $change == 2 )
 		{
@@ -245,8 +253,6 @@
 			<input id="saveForm" class="button_text" type="submit" name="os_update" value="Update OS"  onclick="return confirm('Do really want to update the Operating System?');" />
 			<input id="saveForm" class="button_text" type="submit" name="mupibox_update" value="Update MuPiBox (Stable Version)"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
 			<input id="saveForm" class="button_text_red" type="submit" name="mupibox_devupdate" value="Update MuPiBox (Development Version)"  onclick="return confirm('Do really want to Update the MuPiBox to unstable version? Notice: This is an untested Development-Version!');" />
-			<p>If an old backup is imported, this script must be executed.</p>
-			<input id="saveForm" class="button_text" type="submit" name="config_update" value="Update Config"  onclick="return confirm('Do really want to update the Configuration?');" />
 		</li>
 
 		<li class="li_norm"><h2>Clean and update mediadata</h2>
