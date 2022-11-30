@@ -47,6 +47,13 @@ setInterval(() => {
   player.getProps(['percent_pos'])
 }, 1000)
 
+player.on('pause', (val) => {
+  currentMeta.playing = !val;
+})
+setInterval(() => {
+  player.getProps(['pause'])
+}, 1000)
+
 player.on('metadata', (val) => {
   console.log('track metadata is', val);
   //currentMeta.currentTracknr = parseInt(val.Comment?.split(',').pop(), 10);
@@ -308,7 +315,7 @@ function pause(){
   } else if (currentMeta.currentPlayer == "mplayer") {
     if (currentMeta.playing){
       player.playPause();
-      currentMeta.playing = false;
+      //currentMeta.playing = false;
 	  writeplayerstatePause();
     }
   }
@@ -331,7 +338,7 @@ function stop(){
     currentMeta.currentPlayer = "";
   } else if (currentMeta.currentPlayer == "mplayer") {
     player.stop();
-    currentMeta.playing = false;
+    //currentMeta.playing = false;
 	  writeplayerstatePause();
     currentMeta.currentTrackname = "";
     currentMeta.progressTime = "";
@@ -358,7 +365,7 @@ function play(){
   } else if (currentMeta.currentPlayer == "mplayer") {
     if (!(currentMeta.playing)){
       player.playPause();
-      currentMeta.playing = true;
+      //currentMeta.playing = true;
 	  writeplayerstatePlay();
     }
   }
@@ -467,7 +474,7 @@ function playList(playedList){
   playedTitelmod = decodeURI(playedList).replace(/:/g,"/");
   //playedTitelmod = playedTitel.replace(/%20/g," ");
   log.debug("[Spotify Control] Starting currentMeta.playing:" + playedTitelmod);
-  currentMeta.playing = true;
+  //currentMeta.playing = true;
   writeplayerstatePlay();
   player.playList('/home/dietpi/MuPiBox/media/' + playedTitelmod + '/playlist.m3u');
   player.setVolume(volumeStart);
@@ -494,7 +501,7 @@ function playList(playedList){
 function playFile(playedFile){
   let playedTitel = playedFile + '.mp3';
   log.debug("[Spotify Control] Starting currentMeta.playing:" + playedTitel);
-  currentMeta.playing = true;
+  //currentMeta.playing = true;
   writeplayerstatePlay();
   player.play('/home/dietpi/MuPiBox/tts_files/' + playedTitel);
   player.setVolume(volumeStart);
@@ -503,7 +510,7 @@ function playFile(playedFile){
 
 function playURL(playedURL){
   log.debug("[Spotify Control] Starting currentMeta.playing:" + playedURL);
-  currentMeta.playing = true;
+  //currentMeta.playing = true;
   writeplayerstatePlay();
   player.play(playedURL);
   player.setVolume(volumeStart);

@@ -168,10 +168,30 @@ export class AddPage implements OnInit, AfterViewInit {
     } else if (this.category !== 'radio' && this.source === 'radio') {
       this.source = 'spotify';
     }
+    this.keyboard.clearInput('spotify_artist');
+    this.keyboard.clearInput('spotify_title');
+    this.keyboard.clearInput('spotify_id');
+    this.keyboard.clearInput('spotify_showid');
+    this.keyboard.clearInput('spotify_artistid');
+    this.keyboard.clearInput('spotify_query');
+
+    this.keyboard.clearInput('radio_title');
+    this.keyboard.clearInput('radio_id');
+    this.keyboard.clearInput('radio_cover');
     this.validate();
   }
 
   searchTypeChanged() {
+    this.keyboard.clearInput('spotify_artist');
+    this.keyboard.clearInput('spotify_title');
+    this.keyboard.clearInput('spotify_id');
+    this.keyboard.clearInput('spotify_showid');
+    this.keyboard.clearInput('spotify_artistid');
+    this.keyboard.clearInput('spotify_query');
+
+    this.keyboard.clearInput('radio_title');
+    this.keyboard.clearInput('radio_id');
+    this.keyboard.clearInput('radio_cover');
     this.validate();
   }
 
@@ -322,7 +342,7 @@ export class AddPage implements OnInit, AfterViewInit {
       this.validateState = validate;
     });
 
-    if(!this.validateState?.validate && this.source === 'spotify'){
+    if(!this.validateState?.validate && this.source === 'spotify' && (media.query?.length == 0)){
       const alert = await this.alertController.create({
         cssClass: 'alert',
         header: 'Warning',
@@ -431,11 +451,12 @@ export class AddPage implements OnInit, AfterViewInit {
       const artist = this.keyboard.getInput('radio_artist');
       const title = this.keyboard.getInput('radio_title');
       const id = this.keyboard.getInput('radio_id');
+      const cover = this.keyboard.getInput('radio_cover');
 
       this.valid = (
         (title?.length > 0 && id?.length > 0)
         ||
-        (this.edit && ((title?.length > 0) || (id?.length > 0) || (artist?.length > 0)))
+        (this.edit && ((title?.length > 0) || (id?.length > 0) || (artist?.length > 0) || (cover?.length > 0)))
       );
     }
   }
