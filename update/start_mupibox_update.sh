@@ -182,6 +182,7 @@ exec 3>${LOG}
 
 	sudo mv ${LOG} /home/dietpi/.mupibox/last_update.log >&3 2>&3
 	sudo chown -R dietpi:dietpi /home/dietpi/.mupibox/last_update.log >&3 2>&3
+	sudo chown dietpi:dietpi ${CONFIG}
 
 } | whiptail --title "MuPiBox Update" --gauge "Please wait while installing" 6 60 0
 

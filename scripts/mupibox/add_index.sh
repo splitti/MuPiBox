@@ -10,4 +10,4 @@ CONFIG_TMP="/tmp/data_tmp.json"
 /usr/bin/rm ${CONFIG_TMP}
 /usr/bin/echo $(/usr/bin/jq -c . ${CONFIG}) | /usr/bin/jq . > ${CONFIG_TMP}
 /usr/bin/mv ${CONFIG_TMP} ${CONFIG}
-/ust/bin/chown dietpi:dietpi ${CONFIG}
+/usr/bin/chown dietpi:dietpi ${CONFIG}
