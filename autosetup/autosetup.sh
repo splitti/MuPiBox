@@ -229,6 +229,7 @@ exec 3>${LOG}
 	sudo wget ${SRC}/scripts/mupibox/check_network.py -O /usr/local/bin/mupibox/check_network.py >&3 2>&3
 	sudo wget ${SRC}/scripts/mupibox/add_index.sh -O /usr/local/bin/mupibox/add_index.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/mupibox/id3tag_converter.sh -O /usr/local/bin/mupibox/id3tag_converter.sh  >&3 2>&3
+	sudo wget ${SRC}/scripts/mupibox/set_hostname.sh -O /usr/local/bin/mupibox/set_hostname.sh  >&3 2>&3
 
 	sudo wget ${SRC}/scripts/bluetooth/start_bt.sh -O /usr/local/bin/mupibox/start_bt.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/bluetooth/stop_bt.sh -O /usr/local/bin/mupibox/stop_bt.sh >&3 2>&3

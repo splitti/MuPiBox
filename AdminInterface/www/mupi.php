@@ -41,6 +41,8 @@
   $data["mupibox"]["host"]=$_POST['hostname'];
   $command = "sudo /boot/dietpi/func/change_hostname " . $_POST['hostname'];
   $change_hostname = exec($command, $output, $change_hostname );
+  $command = "sudo su dietpi -c '/usr/local/bin/mupibox/./set_hostname.sh'";
+  exec($command);
   $CHANGE_TXT=$CHANGE_TXT."<li>Hostname changed to  ".$data["mupibox"]["host"]." [reboot is necessary]</li>";
   $change=1;
   }

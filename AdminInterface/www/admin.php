@@ -59,6 +59,8 @@
 
 				$command = "sudo /boot/dietpi/func/change_hostname " . $data["mupibox"]["host"];
 				$change_hostname = exec($command, $output, $change_hostname );
+				$command = "sudo su dietpi -c '/usr/local/bin/mupibox/./set_hostname.sh'";
+				exec($command);
 				
 				$command = "sudo rm '".$target_file."'";
 				exec($command, $output, $result );
