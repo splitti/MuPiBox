@@ -6,7 +6,8 @@ FRONTENDCONFIG="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config
 SRC="https://mupibox.de/version/latest"
 HOSTN=$(/usr/bin/hostname)
 
-wget ${SRC}/config/templates/www.json -O ~/.mupibox/Sonos-Kids-Controller-master/server/config/config.json
+rm ${FRONTENDCONFIG}
+wget ${SRC}/config/templates/www.json -O ${FRONTENDCONFIG}
 
 /usr/local/bin/mupibox/./set_hostname.sh
 /usr/bin/cat <<< $(/usr/bin/jq --arg v "${HOSTN}" '."node-sonos-http-api".server = $v' ${FRONTENDCONFIG}) >  ${FRONTENDCONFIG}

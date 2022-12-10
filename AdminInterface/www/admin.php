@@ -208,6 +208,13 @@
 		$change=3;
 		$CHANGE_TXT=$CHANGE_TXT."<li>data.json deleted</li>";
 		}
+	if( $_POST['resetConfigJson'] )
+		{
+		$command = "sudo su - -c '/usr/local/bin/mupibox/./repair_config.sh'";
+		exec($command, $output, $result );
+		$change=3;
+		$CHANGE_TXT=$CHANGE_TXT."<li>config.json repaired</li>";
+		}
 	if( $change == 1 )
 		{
 		write_json($data);
@@ -225,6 +232,7 @@
 		//$save_rc = file_put_contents('/tmp/.mupiboxconfig.json', $json_object);
 		//exec("sudo mv /tmp/.mupiboxconfig.json /etc/mupibox/mupiboxconfig.json");
 		exec("sudo /usr/local/bin/mupibox/./setting_update.sh");
+		exec("sudo /usr/local/bin/mupibox/./set_hostname.sh");
 		}
 	$rc = $output[count($output)-1];
 	$CHANGE_TXT=$CHANGE_TXT."</ul></div>";
@@ -330,6 +338,8 @@
 			<input id="saveForm" class="button_text_red" type="submit" name="resetMupiConf" value="RESET mupiboxconf.json" onclick="return confirm('Do really want to reset to default mupiboxconf.json?');" />
 			<p>Delete all Media-Data in data.json:</p>
 			<input id="saveForm" class="button_text_red" type="submit" name="resetDataJson" value="RESET data.json" onclick="return confirm('Do really want to delete data.json?');" />
+			<p>Repair config.json (Helps for "This site can't be reached"-Error):</p>
+			<input id="saveForm" class="button_text_red" type="submit" name="resetConfigJson" value="RESET config.json" onclick="return confirm('Do really want to repair config.json?');" />
 		</li>
 	</ul>
 </form>
