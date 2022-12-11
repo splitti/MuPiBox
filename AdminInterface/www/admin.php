@@ -233,6 +233,7 @@
 		//exec("sudo mv /tmp/.mupiboxconfig.json /etc/mupibox/mupiboxconfig.json");
 		exec("sudo /usr/local/bin/mupibox/./setting_update.sh");
 		exec("sudo /usr/local/bin/mupibox/./set_hostname.sh");
+		exec("sudo -i -u dietpi /usr/local/bin/mupibox/./restart_kiosk.sh");
 		}
 	$rc = $output[count($output)-1];
 	$CHANGE_TXT=$CHANGE_TXT."</ul></div>";
@@ -243,10 +244,13 @@
 		<h2>MupiBox Administration</h2>
 		<p>Please be sure what you do...</p>
 	</div>
+	<details>
+		<summary><img src="./images/refresh-icon.svg" width="40" height="40" > MuPiBox Update</summary>
+
 	<ul>
 		<li id="li_1" >
 
-			<li class="li_norm"><h2>MuPiBox Update</h2>
+			<li class="li_norm">
 				<p>
 				<table>
 					<tr>
@@ -264,6 +268,10 @@
 			<input id="saveForm" class="button_text" type="submit" name="mupibox_update" value="Update MuPiBox (Stable Version)"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
 			<input id="saveForm" class="button_text_red" type="submit" name="mupibox_devupdate" value="Update MuPiBox (Development Version)"  onclick="return confirm('Do really want to Update the MuPiBox to unstable version? Notice: This is an untested Development-Version!');" />
 		</li>
+	</ul>
+	</details>
+	<ul>
+		<li id="li_1" >
 
 		<li class="li_norm"><h2>Clean and update mediadata</h2>
 			<p>This job generates playlists, cleans up old data and links local covers to the playlists. Run this job after adding local media.</p>
