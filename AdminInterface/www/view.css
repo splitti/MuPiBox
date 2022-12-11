@@ -1050,3 +1050,49 @@ ul.password{
   float: left;
   margin: 10px 30px 10px 30px;
 }
+
+summary {
+   position: relative;  
+   }
+
+summary::marker {
+   color: transparent;
+}
+
+summary::after {
+   content:  "+"; 
+   position: absolute;
+   color: #65FF65;
+   font-size: 2em;
+   font-weight: bold; 
+   right: 1em;
+   top: -0.2em;
+   transition: all 0.5s;
+} 
+
+details {
+        margin-bottom:20px;
+}
+
+details[open] summary::after {
+ color: #FF2D2D;
+ transform: translate(5px,0) rotate(45deg);
+}
+
+details > summary {
+  background-color: #44afe2;
+  cursor: pointer;
+  padding: .5rem 1rem;
+  color:#ffffff;
+  font-size:1.2em;
+}
+
+details > summary > * {
+  display: inline;
+}
+
+details > ul {
+  border: 2px solid #44afe2;
+  margin-top: 0;
+  padding: 1rem;
+}
