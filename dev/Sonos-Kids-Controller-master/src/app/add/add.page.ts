@@ -5,7 +5,7 @@ import { Media } from '../media';
 import Keyboard from 'simple-keyboard';
 import { NgForm } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { PlayerService } from '../player.service';
+import { PlayerCmds, PlayerService } from '../player.service';
 import { Observable } from 'rxjs';
 import { Validate } from '../validate';
 
@@ -376,6 +376,8 @@ export class AddPage implements OnInit, AfterViewInit {
       this.keyboard.clearInput('radio_cover');
   
       this.validate();
+
+      this.playerService.sendCmd(PlayerCmds.CLEARVALIDATE);
 
       setTimeout(() => {
         this.navController.back();

@@ -718,6 +718,12 @@ function validateSpotify(){
   }
 }
 
+function clearValidate(){
+  valideMedia.validate = false;
+  valideMedia.validateId = "";
+  valideMedia.validateType = "";
+}
+
 async function useSpotify(command){
   currentMeta.currentPlayer = "spotify";
     let dir = command.dir;
@@ -989,6 +995,9 @@ app.use(function(req, res){
 
   else if (command.name == "shuffleoff")
     shuffleoff();
+
+  else if (command.name == "clearval")
+    clearValidate();
 
   else if (command.name == "shutoff")
     cmdCall('bash /usr/local/bin/mupibox/shutdown.sh');
