@@ -3,6 +3,119 @@
  $CHANGE_TXT="<div id='lbinfo'><ul id='lbinfo'>";
  include ('includes/header.php');
 
+	if( $_POST['change_netboot'] == "activate for next boot" )
+		{
+		$command = "sudo /boot/dietpi/func/dietpi-set_software boot_wait_for_network 1";
+		exec($command, $output, $result );
+		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>Wait for Network on boot is enabled</li>";
+		}
+	else if( $_POST['change_netboot'] == "disable" )
+		{
+		$command = "sudo /boot/dietpi/func/dietpi-set_software boot_wait_for_network 0";
+		exec($command, $output, $result );
+		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>Wait for Network on boot is disabled</li>";
+		}
+
+	if( $_POST['change_warnings'] == "disable" )
+		{
+		$command = "sudo sed -i -e 's/avoid_warnings=1//g' /boot/config.txt && sudo head -n -1 /boot/config.txt > /tmp/config.txt && sudo mv /tmp/config.txt /boot/config.txt";
+		exec($command, $output, $result );
+		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>Warning Icons disabled [restart necessary]</li>";
+		}
+	else if( $_POST['change_warnings'] == "enable" )
+		{
+		$command = "echo 'avoid_warnings=1' | sudo tee -a /boot/config.txt";
+		exec($command, $output, $result );
+		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>Warning Icons enabled [restart necessary]</li>";
+		}
+
+	if( $_POST['change_turbo'] == "disable" )
+		{
+		$command = "sudo su - dietpi -c \". /boot/dietpi/func/dietpi-globals && G_SUDO G_CONFIG_INJECT 'initial_turbo' 'initial_turbo=0' /boot/config.txt\"";
+		exec($command, $output, $result );
+		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>Inital Turbo disabled</li>";
+		}
+	else if( $_POST['change_turbo'] == "enable" )
+		{
+		$command = "sudo su - dietpi -c \". /boot/dietpi/func/dietpi-globals && G_SUDO G_CONFIG_INJECT 'initial_turbo' 'initial_turbo=30' /boot/config.txt\"";
+		exec($command, $output, $result );
+		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>Inital Turbo enabled</li>";
+		}
+
+	if( $_POST['change_swap'] == "disable" )
+		{
+		$command = "sudo /boot/dietpi/func/dietpi-set_swapfile 0";
+		exec($command, $output, $result );
+		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>SWAP disabled</li>";
+		}
+	else if( $_POST['change_swap'] == "enable" )
+		{
+		$command = "sudo /boot/dietpi/func/dietpi-set_swapfile 1";
+		exec($command, $output, $result );
+		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>SWAP enabled</li>";
+		}
+
+	if ($_POST['change_cpug'])
+		{
+		$command = "sudo su - dietpi -c \". /boot/dietpi/func/dietpi-globals && G_SUDO G_CONFIG_INJECT 'CONFIG_CPU_GOVERNOR=' 'CONFIG_CPU_GOVERNOR=".$_POST['cpugovernor']."' /boot/dietpi.txt\"";
+		$test=exec($command, $output, $result );
+		$command = "sudo /boot/dietpi/func/dietpi-set_cpu";
+		exec($command, $output, $result );
+		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>CPU Governor changet to  ".$_POST['cpugovernor']."</li>";
+		}
+
+	if( $_POST['change_sd'] == "activate for next boot" )
+		{
+		$command = "echo 'dtoverlay=sdtweak,overclock_50=100' | sudo tee -a /boot/config.txt";
+		exec($command, $output, $result );
+		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>SD Overclocking activated [restart necessary]</li>";
+		}
+	else if( $_POST['change_sd'] == "disable" )
+		{
+		$command = "sudo sed -i -e 's/dtoverlay=sdtweak,overclock_50=100//g' /boot/config.txt && sudo head -n -1 /boot/config.txt > /tmp/config.txt && sudo mv /tmp/config.txt /boot/config.txt";
+		exec($command, $output, $result );
+		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>SD Overclocking disabled [restart necessary]</li>";
+		}
+
+	$command = "sudo bash -c \"[[ ! -f '/etc/systemd/system/dietpi-postboot.service.d/dietpi.conf' ]] || echo 1\"";
+	exec($command, $netbootoutput, $netbootresult );
+
+	if( $netbootoutput[0] )
+		{
+		$netboot_state = "active";
+		$change_netboot = "disable";
+		}
+	else
+		{
+		$netboot_state = "disabled";
+		$change_netboot = "activate for next boot";
+		}
+
+	$command = "sudo /usr/bin/cat /boot/config.txt | /usr/bin/grep 'dtoverlay=sdtweak,overclock_50=100'";
+	exec($command, $sdoutput, $sdresult );
+
+	if( $sdoutput[0] )
+		{
+		$sd_state = "active";
+		$change_sd = "disable";
+		}
+	else
+		{
+		$sd_state = "disabled";
+		$change_sd = "activate for next boot";
+		}
+		
  if( isset($_POST['thisvolume']) )
   {
 	$tvcommand = "sudo su dietpi -c '/usr/bin/amixer sget Master | grep \"Right:\" | cut -d\" \" -f7 | sed \"s/\\[//g\" | sed \"s/\\]//g\" | sed \"s/\%//g\"'";
@@ -138,245 +251,420 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 <h2>MupiBox settings</h2>
 <p>This is the central configuration of your MuPiBox...</p>
 </div>
-<ul >
 
-<li id="li_1" >
-	<label class="description" for="hostname">Hostname </label>
-	<div>
-	<input id="hostname" name="hostname" class="element text medium" type="text" maxlength="255" value="<?php
-	print $data["mupibox"]["host"];
-	?>"/>
-	</div><p class="guidelines" id="guide_1"><small>Please insert the hostname of the MuPiBox. Don't use Spaces or other special charachters! Default: MuPiBox</small></p>
-</li>
+	<details>
+		<summary><i class="fa-solid fa-screwdriver-wrench"></i> System settings</summary>
+		<ul>
+			<li id="li_1" >
+				<label class="description" for="hostname">Hostname </label>
+				<div>
+				<input id="hostname" name="hostname" class="element text medium" type="text" maxlength="255" value="<?php
+				print $data["mupibox"]["host"];
+				?>"/>
+				</div><p class="guidelines" id="guide_1"><small>Please insert the hostname of the MuPiBox. Don't use Spaces or other special charachters! Default: MuPiBox</small></p>
+			</li>
+			
+			<li class="li_1"><h2>Overclock SD Card</h2>
+				<p>
+				Just for highspeed SD Cards. You can damage data or the microSD itself!
+				</p>
+				<p>
+				<?php
+				echo "Overclocking state: <b>".$sd_state."</b>";
+				?>
+				</p>
+				<input id="saveForm" class="button_text" type="submit" name="change_sd" value="<?php print $change_sd; ?>" />
+			</li>
 
+			<li class="li_1"><h2>Wait for Network on boot</h2>
+				<p>
+				Speeds up the boot time, but sometimes the boot process is to fast and you have to wait for the network to be ready... Try it, if disabling this option works for you!
+				</p>
+				<p>
+				<?php
+				echo "Wait for Network on boot: <b>".$netboot_state."</b>";
+				?>
+				</p>
+				<input id="saveForm" class="button_text" type="submit" name="change_netboot" value="<?php print $change_netboot; ?>" />
+			</li>
 
-<li id="li_1" >
-	<label class="description" for="thisvolume">Volume (in 5% Steps)</label>
-	<div>
-	<p><b>PLEASE NOTE:</b> If you adjust the volume here, the volume indicator on the display will not be updated!</p>
-	<input class="element text medium" name="thisvolume" type="range" min="0" max="100" step="5.0" value="<?php 
-		$command = "sudo su dietpi -c '/usr/bin/amixer sget Master | grep \"Right:\" | cut -d\" \" -f7 | sed \"s/\\[//g\" | sed \"s/\\]//g\" | sed \"s/\%//g\"'";
-		$VolumeNow = exec($command, $voutput);
-		echo $voutput[0];
-	?>"list="steplist" oninput="this.nextElementSibling.value = this.value"><output></output>
-<datalist id="steplist">
-    <option>0</option>
-    <option>5</option>
-    <option>10</option>
-    <option>15</option>
-    <option>20</option>
-    <option>25</option>
-    <option>30</option>
-    <option>35</option>
-    <option>40</option>
-    <option>45</option>
-    <option>50</option>
-    <option>55</option>
-    <option>60</option>
-    <option>65</option>
-    <option>70</option>
-    <option>75</option>
-    <option>80</option>
-    <option>85</option>
-    <option>90</option>
-    <option>95</option>
-    <option>100</option>
-</datalist>
+			<li class="li_1"><h2>Initial Turbo</h2>
+				<p>
+				Initial Turbo avoids throtteling sometimes...
+				</p>
+				<p>
+				<?php
+				$command = "cat /boot/config.txt | grep initial_turbo | cut -d '=' -f 2";
+				$turbo = exec($command, $output);
+				echo "Turbo seconds: <b>".$turbo."</b>";
+				if($turbo == 0)
+					{
+					$change_turbo="enable";
+					}
+				else
+					{
+					$change_turbo="disable";
+					}
 
-	</div><p class="guidelines" id="guide_1"><small>Set the volume (here you can override the MaxVolume-Definition!</small></p>
+				?>
+				</p>
+				<input id="saveForm" class="button_text" type="submit" name="change_turbo" value="<?php print $change_turbo; ?>" />
+			</li>
 
-</li>
-<li id="li_1" >
-	<label class="description" for="theme">Brightness (from 0 to 255)</label>
-	<div>
-	<input class="element text medium" name="newbrightness" type="range" min="0" max="255" step="51.0" value="<?php 
-		$tbcommand = "cat /sys/class/backlight/rpi_backlight/brightness";
-		$tbrightness = exec($tbcommand, $boutput);
-		echo $boutput[0];
-	?>" list="steplist2" oninput="this.nextElementSibling.value = this.value"><output></output>
-<datalist id="steplist2">
-    <option>0</option>
-    <option>51</option>
-    <option>102</option>
-    <option>153</option>
-    <option>204</option>
-    <option>255</option>
-</datalist><output></output>
-	</div><p class="guidelines" id="guide_1"><small>Set Display Brightness!</small></p>
+			<li class="li_1"><h2>CPU Governor</h2>
+				<p>
+				Try powersave (Limits CPU frequency to 600 MHz - Helps to avoid throtteling).
+				</p>
+				<p>
+				<div>
+				<select id="cpugovernor" name="cpugovernor" class="element text medium">
+				<?php
+				$command = "cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors";
+				$governors = exec($command, $output);
+				$cpug = explode(" ", $governors);
+				$command = "cat /boot/dietpi.txt | grep CONFIG_CPU_GOVERNOR | cut -d '=' -f 2";
+				$current_governor = exec($command, $output);
 
-</li>
-<li id="li_1" >
-	<label class="description" for="theme">Theme </label>
-	<div>
-	<select id="theme" name="theme" class="element text medium" onchange="switchImage();">
-	<?php
-	$Themes = $data["mupibox"]["installedThemes"];
-	foreach($Themes as $key) {
-	if( $key == $data["mupibox"]["theme"] )
-	{
-	$selected = " selected=\"selected\"";
-	}
-	else
-	{
-	$selected = "";
-	}
-	print "<option value=\"". $key . "\"" . $selected  . ">" . $key . "</option>";
-	}
-	?>
-	"</select>
-	</div>
-	<div class="themePrev"><img src="images/<?php print $data["mupibox"]["theme"]; ?>_2.0.0.png" width="250" height="150" name="selectedTheme" /></div>
+				foreach($cpug as $key) {
+				if( $key == $current_governor )
+					{
+					$selected = " selected=\"selected\"";
+					}
+				else
+					{
+					$selected = "";
+					}
+				print "<option value=\"". $key . "\"" . $selected  . ">" . $key . "</option>";
+				}
+				?>
+				"</select>
+				</div>
+				</p>
+				<input id="saveForm" class="button_text" type="submit" name="change_cpug" value="Save CPU Governor" />
+			</li>
 
-</li>
-<li id="li_1" >
-	<label class="description" for="theme">TTS Language </label>
-	<div>
-	<select id="tts" name="tts" class="element text medium">
-	<?php
-	$language = $data["mupibox"]["googlettslanguages"];
-	foreach($language as $key) {
-	if( $key['iso639-1'] == $data["mupibox"]["ttsLanguage"] )
-	{
-	$selected = " selected=\"selected\"";
-	}
-	else
-	{
-	$selected = "";
-	}
-	print "<option value=\"". $key['iso639-1'] . "\"" . $selected  . ">" . $key['Language'] . "</option>";
-	}
-	?>
-	"</select>
-	</div>
-</li>
-<li id="li_1" >
-	<label class="description" for="theme">Audio Device / Soundcard </label>
-	<div>
-	<select id="audio" name="audio" class="element text medium">
-	<?php
-	$audio = $data["mupibox"]["AudioDevices"];
-	foreach($audio as $key) {
-	if( $key['tname'] == $data["mupibox"]["physicalDevice"] )
-	{
-	$selected = " selected=\"selected\"";
-	}
-	else
-	{
-	$selected = "";
-	}
-	print "<option value=\"". $key['tname'] . "\"" . $selected  . ">" . $key['ufname'] . "</option>";
-	}
-	?>
-	"</select>
-	</div>
-</li>
-<li id="li_1" >
-	<label class="description" for="volume">Volume after power on </label>
-	<div>
-	<select id="volume" name="volume" class="element text medium">
-	<?php
-	$volume = $data["mupibox"]["startVolume"];
-	for($i=0; $i <= 100; $i=$i+10) {
-	if( $i == $data["mupibox"]["startVolume"] )
-	{
-	$selected = " selected=\"selected\"";
-	}
-	else
-	{
-	$selected = "";
-	}
-	print "<option value=\"". $i . "\"" . $selected  . ">" . $i . "</option>";
-	}
-	?>
-	"</select>
-	</div><p class="guidelines" id="guide_1"><small>Set the volume after booting...</small></p>
-</li>
+			<li class="li_1"><h2>Disable Warnings (Throtteling Warning)</h2>
+				<p>
+				Enables or disables the lightning icon (warning)! In worst case, this option can cause you loose all your data.
+				</p>
+				<p>
+				<?php
+				$command = "cat /boot/config.txt | grep 'avoid_warnings=1'";
+				$warnings = exec($command, $output);
+				if($warnings == "")
+					{
+					$change_warnings="enable";
+					}
+				else
+					{
+					$change_warnings="disable";
+					}
+				?>
+				</p>
+				<input id="saveForm" class="button_text" type="submit" name="change_warnings" value="<?php print $change_warnings; ?>" />
+			</li>
 
-<li id="li_1" >
-	<label class="description" for="maxvolume">Set max volume</label>
-	<div>
-	<select id="maxVolume" name="maxVolume" class="element text medium">
-	<?php
-	$volume = $data["mupibox"]["maxVolume"];
-	for($i=0; $i <= 100; $i=$i+10) {
-	if( $i == $data["mupibox"]["maxVolume"] )
-	{
-	$selected = " selected=\"selected\"";
-	}
-	else
-	{
-	$selected = "";
-	}
-	print "<option value=\"". $i . "\"" . $selected  . ">" . $i . "</option>";
-	}
-	?>
-	"</select>
-	</div><p class="guidelines" id="guide_1"><small>Set the maximum volume...</small></p>
-</li>
+			<li class="li_1"><h2>SWAP</h2>
+				<p>
+				Enables or disables SWAP!
+				</p>
+				<p>
+				<?php
+				$command = "cat /boot/dietpi.txt | grep AUTO_SETUP_SWAPFILE_SIZE= | cut -d '=' -f 2";
+				$currentswapsize = exec($command, $output);
+				if($currentswapsize == 0)
+					{
+					$change_swap="enable";
+					}
+				else
+					{
+					$change_swap="disable";
+					}
 
+				echo "SWAP Size: <b>".$currentswapsize." MB</b>";
+				?>
+				</p>
+				<input id="saveForm" class="button_text" type="submit" name="change_swap" value="<?php print $change_swap; ?>" />
+			</li>
+			<li class="buttons">
+				<input type="hidden" name="form_id" value="37271" />
 
-<li id="li_1" >
-	<label class="description" for="idlePiShutdown">Idle Time to Shutdown </label>
-	<div>
-	<input id="idlePiShutdown" name="idlePiShutdown" class="element text medium" type="number" maxlength="255" value="<?php
-	print $data["timeout"]["idlePiShutdown"];
-	?>"/>
-	</div><p class="guidelines" id="guide_1"><small>Set the idle time (idle = nothing played) to shutdown.</small></p>
-</li>
+				<input id="saveForm" class="button_text" type="submit" name="submit" value="Submit" />
+			</li>
+		</ul>
+	</details>
 
+	<details>
+		<summary><i class="fa-solid fa-radio"></i> MuPiBox settings</summary>
+		<ul>
+			<li id="li_1" >
+				<label class="description" for="theme">Theme </label>
+				<div>
+				<select id="theme" name="theme" class="element text medium" onchange="switchImage();">
+				<?php
+				$Themes = $data["mupibox"]["installedThemes"];
+				foreach($Themes as $key) {
+				if( $key == $data["mupibox"]["theme"] )
+				{
+				$selected = " selected=\"selected\"";
+				}
+				else
+				{
+				$selected = "";
+				}
+				print "<option value=\"". $key . "\"" . $selected  . ">" . $key . "</option>";
+				}
+				?>
+				"</select>
+				</div>
+				<div class="themePrev"><img src="images/<?php print $data["mupibox"]["theme"]; ?>_2.0.0.png" width="250" height="150" name="selectedTheme" /></div>
 
-<li id="li_1" >
-	<label class="description" for="idleDisplayOff">Idle Display Off Timeout </label>
-	<div>
-	<input id="idleDisplayOff" name="idleDisplayOff" class="element text medium" type="number" maxlength="255" value="<?php
-	print $data["timeout"]["idleDisplayOff"];
-	?>"/>
-	</div><p class="guidelines" id="guide_1"><small>Set the idle time to standby the display (powersaving).</small></p>
-</li>
+			</li>
+			<li id="li_1" >
+				<label class="description" for="theme">TTS Language </label>
+				<div>
+				<select id="tts" name="tts" class="element text medium">
+				<?php
+				$language = $data["mupibox"]["googlettslanguages"];
+				foreach($language as $key) {
+				if( $key['iso639-1'] == $data["mupibox"]["ttsLanguage"] )
+				{
+				$selected = " selected=\"selected\"";
+				}
+				else
+				{
+				$selected = "";
+				}
+				print "<option value=\"". $key['iso639-1'] . "\"" . $selected  . ">" . $key['Language'] . "</option>";
+				}
+				?>
+				"</select>
+				</div>
+			</li>
+			<li class="buttons">
+				<input type="hidden" name="form_id" value="37271" />
 
-<li id="li_1" >
-	<label class="description" for="pressDelay">Power Off Button Delay </label>
-	<div>
-	<input id="pressDelay" name="pressDelay" class="element text medium" type="number" maxlength="255" value="<?php
-	print $data["timeout"]["pressDelay"];
-	?>"/>
-	</div><p class="guidelines" id="guide_1"><small>Currently UNUSED!</small></p>
-</li>
-
-<li id="li_1" >
-	<label class="description" for="ledPin">LED GPIO OnOffShim </label>
-	<div>
-	<input id="ledPin" name="ledPin" class="element text medium" type="number" maxlength="255" value="<?php
-	print $data["shim"]["ledPin"];
-	?>"/>
-	</div><p class="guidelines" id="guide_1"><small>Please insert the GPIO Number (not PIN!!!) of the connect LED. Default: 25</small></p>
-</li>
-
-<li id="li_1" >
-	<label class="description" for="resX">Display Resolution X </label>
-	<div>
-	<input id="resX" name="resX" class="element text medium" type="number" maxlength="255" value="<?php
-	print $data["chromium"]["resX"];
-	?>"/>
-	</div><p class="guidelines" id="guide_1"><small>Set the X-width (horizontal) in px. Please just enter Numbers.</small></p>
-</li>
-
-<li id="li_1" >
-	<label class="description" for="resY">Display Resolution Y </label>
-	<div>
-	<input id="resY" name="resY" class="element text medium" type="number" maxlength="255" value="<?php
-	print $data["chromium"]["resY"];
-	?>"/>
-	</div><p class="guidelines" id="guide_1"><small>Set the y-width (vertical) in px. Please just enter Numbers.</small></p>
-</li>
-<li class="buttons">
-	<input type="hidden" name="form_id" value="37271" />
-
-	<input id="saveForm" class="button_text" type="submit" name="submit" value="Submit" />
-</li>
+				<input id="saveForm" class="button_text" type="submit" name="submit" value="Submit" />
+			</li>
+		</ul>
+	</details>
 
 
-</ul>
+	<details>
+		<summary><i class="fa-solid fa-display"></i> Display settings</summary>
+		<ul>
+			<li id="li_1" >
+				<label class="description" for="theme">Brightness (from 0 to 255)</label>
+				<div>
+				<input class="element text medium" name="newbrightness" type="range" min="0" max="255" step="51.0" value="<?php 
+					$tbcommand = "cat /sys/class/backlight/rpi_backlight/brightness";
+					$tbrightness = exec($tbcommand, $boutput);
+					echo $boutput[0];
+				?>" list="steplist2" oninput="this.nextElementSibling.value = this.value"><output></output>
+			<datalist id="steplist2">
+				<option>0</option>
+				<option>51</option>
+				<option>102</option>
+				<option>153</option>
+				<option>204</option>
+				<option>255</option>
+			</datalist><output></output>
+				</div><p class="guidelines" id="guide_1"><small>Set Display Brightness!</small></p>
+
+			</li>
+			<li id="li_1" >
+				<label class="description" for="idleDisplayOff">Idle Display Off Timeout </label>
+				<div>
+				<input id="idleDisplayOff" name="idleDisplayOff" class="element text medium" type="number" maxlength="255" value="<?php
+				print $data["timeout"]["idleDisplayOff"];
+				?>"/>
+				</div><p class="guidelines" id="guide_1"><small>Set the idle time to standby the display (powersaving).</small></p>
+			</li>
+			<li id="li_1" >
+				<label class="description" for="resX">Display Resolution X </label>
+				<div>
+				<input id="resX" name="resX" class="element text medium" type="number" maxlength="255" value="<?php
+				print $data["chromium"]["resX"];
+				?>"/>
+				</div><p class="guidelines" id="guide_1"><small>Set the X-width (horizontal) in px. Please just enter Numbers.</small></p>
+			</li>
+			<li id="li_1" >
+				<label class="description" for="resY">Display Resolution Y </label>
+				<div>
+				<input id="resY" name="resY" class="element text medium" type="number" maxlength="255" value="<?php
+				print $data["chromium"]["resY"];
+				?>"/>
+				</div><p class="guidelines" id="guide_1"><small>Set the y-width (vertical) in px. Please just enter Numbers.</small></p>
+			</li>
+
+			<li class="buttons">
+				<input type="hidden" name="form_id" value="37271" />
+
+				<input id="saveForm" class="button_text" type="submit" name="submit" value="Submit" />
+			</li>
+		</ul>
+	</details>
+	<details>
+		<summary><i class="fa-solid fa-volume-high"></i> Audio settings</summary>
+		<ul>
+			<li id="li_1" >
+				<label class="description" for="theme">Audio device / Soundcard </label>
+				<div>
+				<select id="audio" name="audio" class="element text medium">
+				<?php
+				$audio = $data["mupibox"]["AudioDevices"];
+				foreach($audio as $key) {
+				if( $key['tname'] == $data["mupibox"]["physicalDevice"] )
+				{
+				$selected = " selected=\"selected\"";
+				}
+				else
+				{
+				$selected = "";
+				}
+				print "<option value=\"". $key['tname'] . "\"" . $selected  . ">" . $key['ufname'] . "</option>";
+				}
+				?>
+				"</select>
+				</div>
+			</li>
+			<li id="li_1" >
+				<label class="description" for="thisvolume">Volume (in 5% Steps)</label>
+				<div>
+				<p><b>PLEASE NOTE:</b> If you adjust the volume here, the volume indicator on the display will not be updated!</p>
+				<input class="element text medium" name="thisvolume" type="range" min="0" max="100" step="5.0" value="<?php 
+					$command = "sudo su dietpi -c '/usr/bin/amixer sget Master | grep \"Right:\" | cut -d\" \" -f7 | sed \"s/\\[//g\" | sed \"s/\\]//g\" | sed \"s/\%//g\"'";
+					$VolumeNow = exec($command, $voutput);
+					echo $voutput[0];
+				?>"list="steplist" oninput="this.nextElementSibling.value = this.value"><output></output>
+			<datalist id="steplist">
+				<option>0</option>
+				<option>5</option>
+				<option>10</option>
+				<option>15</option>
+				<option>20</option>
+				<option>25</option>
+				<option>30</option>
+				<option>35</option>
+				<option>40</option>
+				<option>45</option>
+				<option>50</option>
+				<option>55</option>
+				<option>60</option>
+				<option>65</option>
+				<option>70</option>
+				<option>75</option>
+				<option>80</option>
+				<option>85</option>
+				<option>90</option>
+				<option>95</option>
+				<option>100</option>
+			</datalist>
+
+				</div><p class="guidelines" id="guide_1"><small>Set the volume (here you can override the MaxVolume-Definition!</small></p>
+
+			</li>
+			<li id="li_1" >
+				<label class="description" for="volume">Volume after power on </label>
+				<div>
+				<select id="volume" name="volume" class="element text medium">
+				<?php
+				$volume = $data["mupibox"]["startVolume"];
+				for($i=0; $i <= 100; $i=$i+10) {
+				if( $i == $data["mupibox"]["startVolume"] )
+				{
+				$selected = " selected=\"selected\"";
+				}
+				else
+				{
+				$selected = "";
+				}
+				print "<option value=\"". $i . "\"" . $selected  . ">" . $i . "</option>";
+				}
+				?>
+				"</select>
+				</div><p class="guidelines" id="guide_1"><small>Set the volume after booting...</small></p>
+			</li>
+
+			<li id="li_1" >
+				<label class="description" for="maxvolume">Set max volume</label>
+				<div>
+				<select id="maxVolume" name="maxVolume" class="element text medium">
+				<?php
+				$volume = $data["mupibox"]["maxVolume"];
+				for($i=0; $i <= 100; $i=$i+10) {
+				if( $i == $data["mupibox"]["maxVolume"] )
+				{
+				$selected = " selected=\"selected\"";
+				}
+				else
+				{
+				$selected = "";
+				}
+				print "<option value=\"". $i . "\"" . $selected  . ">" . $i . "</option>";
+				}
+				?>
+				"</select>
+				</div><p class="guidelines" id="guide_1"><small>Set the maximum volume...</small></p>
+			</li>			
+			
+
+			<li class="buttons">
+				<input type="hidden" name="form_id" value="37271" />
+
+				<input id="saveForm" class="button_text" type="submit" name="submit" value="Submit" />
+			</li>
+		</ul>
+	</details>
+	<details>
+		<summary><i class="fa-solid fa-power-off"></i> Power-on settings</summary>
+		<ul>
+			<li id="li_1" >
+				<label class="description" for="pressDelay">Power Off Button Delay </label>
+				<div>
+				<input id="pressDelay" name="pressDelay" class="element text medium" type="number" maxlength="255" value="<?php
+				print $data["timeout"]["pressDelay"];
+				?>"/>
+				</div><p class="guidelines" id="guide_1"><small>Currently UNUSED!</small></p>
+			</li>
+
+			<li id="li_1" >
+				<label class="description" for="ledPin">LED GPIO OnOffShim </label>
+				<div>
+				<input id="ledPin" name="ledPin" class="element text medium" type="number" maxlength="255" value="<?php
+				print $data["shim"]["ledPin"];
+				?>"/>
+				</div><p class="guidelines" id="guide_1"><small>Please insert the GPIO Number (not PIN!!!) of the connect LED. Default: 25</small></p>
+			</li>
+
+			<li id="li_1" >
+				<label class="description" for="idlePiShutdown">Idle Time to Shutdown </label>
+				<div>
+				<input id="idlePiShutdown" name="idlePiShutdown" class="element text medium" type="number" maxlength="255" value="<?php
+				print $data["timeout"]["idlePiShutdown"];
+				?>"/>
+				</div><p class="guidelines" id="guide_1"><small>Set the idle time (idle = nothing played) to shutdown.</small></p>
+			</li>
+
+			<li class="buttons">
+				<input type="hidden" name="form_id" value="37271" />
+
+				<input id="saveForm" class="button_text" type="submit" name="submit" value="Submit" />
+			</li>
+		</ul>
+	</details>
+	<details>
+		<summary><i class="far fa-file-alt"></i> Reset configuration</summary>
+		<ul>
+
+			<li class="buttons">
+				<input type="hidden" name="form_id" value="37271" />
+
+				<input id="saveForm" class="button_text" type="submit" name="submit" value="Submit" />
+			</li>
+		</ul>
+	</details>
+
 </form><p>
 
 

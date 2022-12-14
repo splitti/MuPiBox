@@ -60,3 +60,14 @@ CINEMA=$(/usr/bin/cat ${CONFIG} | grep cinema)
 if [[ -z ${CINEMA} ]]; then 
 		/usr/bin/cat <<< $(/usr/bin/jq --arg v "cinema" '.mupibox.installedThemes? += [$v]' ${CONFIG}) >  ${CONFIG}
 fi
+
+#2.1.0
+LEDMAX=$(/usr/bin/jq -r .shim.ledBrightnessMax ${CONFIG})
+if [ "$LEDMAX" == "null" ]; then 
+		/usr/bin/cat <<< $(/usr/bin/jq --arg v "100" '.shim.ledBrightnessMax = $v' ${CONFIG}) >  ${CONFIG}
+fi
+
+LEDMIN=$(/usr/bin/jq -r .shim.ledBrightnessMin ${CONFIG})
+if [ "$LEDMIN" == "null" ]; then 
+		/usr/bin/cat <<< $(/usr/bin/jq --arg v "10" '.shim.ledBrightnessMin = $v' ${CONFIG}) >  ${CONFIG}
+fi

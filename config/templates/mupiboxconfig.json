@@ -159,7 +159,9 @@
 		"poweroffPin": "4",
 		"triggerPin": "17",
 		"cutPin": "27",
-		"ledPin": "25"
+		"ledPin": "25",
+		"ledBrightnessMax": "100",
+		"ledBrightnessMin": "10"
 	},
 	"chromium": {
 		"debug": "0",

@@ -112,6 +112,8 @@ exec 3>${LOG}
 	sudo wget ${SRC}/scripts/mupibox/id3tag_converter.sh -O /usr/local/bin/mupibox/id3tag_converter.sh  >&3 2>&3
 	sudo wget ${SRC}/scripts/mupibox/set_hostname.sh -O /usr/local/bin/mupibox/set_hostname.sh  >&3 2>&3
 	sudo wget ${SRC}/scripts/mupibox/repair_config.sh -O /usr/local/bin/mupibox/repair_config.sh  >&3 2>&3
+	sudo wget ${SRC}/scripts/mupibox/mupi_start_led.sh -O /usr/local/bin/mupibox/mupi_start_led.sh  >&3 2>&3
+	sudo wget ${SRC}/scripts/mupibox/mupi_stop_led.sh -O /usr/local/bin/mupibox/mupi_stop_led.sh  >&3 2>&3
 
 	sudo wget ${SRC}/scripts/bluetooth/start_bt.sh -O /usr/local/bin/mupibox/start_bt.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/bluetooth/stop_bt.sh -O /usr/local/bin/mupibox/stop_bt.sh >&3 2>&3
@@ -120,7 +122,8 @@ exec 3>${LOG}
 	sudo wget ${SRC}/scripts/bluetooth/remove_bt.sh -O /usr/local/bin/mupibox/remove_bt.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/bluetooth/autoconnect_bt.sh -O /usr/local/bin/mupibox/autoconnect_bt.sh >&3 2>&3
 	sudo wget ${SRC}/config/services/mupi_autoconnect_bt.service -O /etc/systemd/system/mupi_autoconnect_bt.service  >&3 2>&3
-		
+	sudo wget ${SRC}/config/services/mupi_powerled.service -O /etc/systemd/system/mupi_powerled.service  >&3 2>&3
+
 	sudo wget ${SRC}/scripts/mupibox/restart_kiosk.sh -O /usr/local/bin/mupibox/restart_kiosk.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/mupibox/set_deviceid.sh -O /usr/local/bin/mupibox/set_deviceid.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/mupibox/spotify_restart.sh -O /usr/local/bin/mupibox/spotify_restart.sh >&3 2>&3
