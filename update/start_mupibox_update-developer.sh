@@ -122,7 +122,6 @@ exec 3>${LOG}
 	sudo wget ${SRC}/scripts/bluetooth/remove_bt.sh -O /usr/local/bin/mupibox/remove_bt.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/bluetooth/autoconnect_bt.sh -O /usr/local/bin/mupibox/autoconnect_bt.sh >&3 2>&3
 	sudo wget ${SRC}/config/services/mupi_autoconnect_bt.service -O /etc/systemd/system/mupi_autoconnect_bt.service  >&3 2>&3
-	sudo wget ${SRC}/config/services/mupi_powerled.service -O /etc/systemd/system/mupi_powerled.service  >&3 2>&3
 
 	sudo wget ${SRC}/scripts/mupibox/restart_kiosk.sh -O /usr/local/bin/mupibox/restart_kiosk.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/mupibox/set_deviceid.sh -O /usr/local/bin/mupibox/set_deviceid.sh >&3 2>&3
@@ -138,6 +137,7 @@ exec 3>${LOG}
 
 	echo -e "XXX\n30\nRestarting Services... \nXXX"
 	sudo wget ${SRC}/config/services/mupi_check_internet.service -O /etc/systemd/system/mupi_check_internet.service  >&3 2>&3
+	sudo wget ${SRC}/config/services/mupi_powerled.service -O /etc/systemd/system/mupi_powerled.service  >&3 2>&3
 	sudo su - dietpi -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && npm install" >&3 2>&3
 	#sudo su - dietpi -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && pm2 -f start server.js" >&3 2>&3
 	#sudo su - dietpi -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && pm2 -f save" >&3 2>&3
@@ -145,6 +145,8 @@ exec 3>${LOG}
 	sudo systemctl daemon-reload >&3 2>&3
 	sudo systemctl enable mupi_check_internet.service >&3 2>&3
 	sudo systemctl start mupi_check_internet.service >&3 2>&3
+	sudo systemctl enable mupi_powerled.service >&3 2>&3
+	sudo systemctl start mupi_powerled.service >&3 2>&3
 
 	echo -e "XXX\n83\nSet environment...  \nXXX"	
 	sudo wget ${SRC}/config/templates/crontab.template -O /tmp/crontab.template >&3 2>&3

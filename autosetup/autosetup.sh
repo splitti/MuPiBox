@@ -361,7 +361,7 @@ exec 3>${LOG}
 
 	if grep -q '^initramfs initramfs.img' /boot/config.txt; then
 	  echo -e "initramfs initramfs.img already set"
-	else
+	  
 	  echo '' | sudo tee -a /boot/config.txt >&3 2>&3
 	  echo 'initramfs initramfs.img' | sudo tee -a /boot/config.txt >&3 2>&3
 	fi
@@ -403,6 +403,8 @@ exec 3>${LOG}
 	sudo systemctl start pulseaudio.service >&3 2>&3
 	sudo systemctl enable mupi_splash.service >&3 2>&3
 	sudo systemctl start mupi_splash.service >&3 2>&3
+	sudo systemctl enable mupi_powerled.service >&3 2>&3
+	sudo systemctl start mupi_powerled.service >&3 2>&3
 
 	###############################################################################################
 
