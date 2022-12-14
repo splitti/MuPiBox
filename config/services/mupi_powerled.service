@@ -4,8 +4,8 @@ Description=Power LED Control
 [Service]
 Type=oneshot
 RemainAfterExit=true
-ExecStart=/usr/local/bin/mupibox/./start_led.sh
-ExecStop=/usr/local/bin/mupibox/./stop_led.sh
+ExecStart=/usr/local/bin/mupibox/./mupi_start_led.sh
+ExecStop=/usr/local/bin/mupibox/./mupi_stop_led.sh
 
 [Install]
 WantedBy=basic.target
