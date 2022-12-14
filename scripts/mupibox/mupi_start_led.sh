@@ -4,6 +4,6 @@
 MUPIBOX_CONFIG="/etc/mupibox/mupiboxconfig.json"
 
 ledPin=$(/usr/bin/jq -r .shim.ledPin ${MUPIBOX_CONFIG})
-ledMax=$(/usr/bin/jq -r .shim.ledBrightnessMax ${MUPIBOX_CONFIG})
+ledMax=$(($(/usr/bin/jq -r .shim.ledBrightnessMax ${MUPIBOX_CONFIG})/100))
 
 echo "${ledPin}=${ledMax}" > /dev/pi-blaster
