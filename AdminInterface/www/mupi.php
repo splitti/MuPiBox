@@ -174,6 +174,20 @@
   $change=2;
   }
 
+ if( $data["shim"]["ledBrightnessMax"]!=$_POST['ledmaxbrightness'] && $_POST['ledmaxbrightness'] )
+  {
+  $data["shim"]["ledBrightnessMax"]=$_POST['ledmaxbrightness'];
+  $CHANGE_TXT=$CHANGE_TXT."<li>LED standard brightness set to ".$data["shim"]["ledBrightnessMax"]."</li>";
+  $change=2;
+  }
+
+ if( $data["shim"]["ledBrightnessMin"]!=$_POST['ledminbrightness'] && $_POST['ledminbrightness'] )
+  {
+  $data["shim"]["ledBrightnessMin"]=$_POST['ledminbrightness'];
+  $CHANGE_TXT=$CHANGE_TXT."<li>LED standard brightness set to ".$data["shim"]["ledBrightnessMin"]."</li>";
+  $change=2;
+  }
+
  if( $data["mupibox"]["maxVolume"]!=$_POST['maxVolume'] && $_POST['maxVolume'] )
   {
   $data["mupibox"]["maxVolume"]=$_POST['maxVolume'];
@@ -646,6 +660,28 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				</div><p class="guidelines" id="guide_1"><small>Set the idle time (idle = nothing played) to shutdown.</small></p>
 			</li>
 
+			<li id="li_1" >
+				<label class="description" for="theme">LED Brightness normal (from 0 to 100%)</label>
+				<div>
+				<input class="element text medium" name="ledmaxbrightness" type="range" min="0" max="100" step="1.0" value="<?php 
+					$command = "/usr/bin/jq -r .shim.ledBrightnessMax /etc/mupibox/mupiboxconfig.json";
+					$tbrightness = exec($tbcommand, $boutput);
+					echo $boutput;
+				?>" >
+				</div>
+			</li>
+
+			<li id="li_1" >
+				<label class="description" for="theme">LED Brightness dimmed (from 0 to 100%)</label>
+				<div>
+				<input class="element text medium" name="ledminbrightness" type="range" min="0" max="100" step="1.0" value="<?php 
+					$tbcommand = "/usr/bin/jq -r .shim.ledBrightnessMin /etc/mupibox/mupiboxconfig.json";
+					$tbrightness = exec($tbcommand, $boutput);
+					echo $boutput;
+				?>" >
+				</div>
+			</li>
+
 			<li class="buttons">
 				<input type="hidden" name="form_id" value="37271" />
 
@@ -654,7 +690,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 		</ul>
 	</details>
 	<details>
-		<summary><i class="far fa-file-alt"></i> Reset configuration</summary>
+		<summary><i class="far fa-file-alt"></i> Some new features in the future...</summary>
 		<ul>
 
 			<li class="buttons">
