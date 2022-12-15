@@ -4,8 +4,6 @@
 # 2. Update settings
 # 3. Plays shutdown sound
 
-nohup /usr/local/bin/mupibox/./mupi_stop_led.sh &
-
 CONFIG="/etc/mupibox/mupiboxconfig.json"
 SHUT_SPLASH=$(/usr/bin/jq -r .mupibox.shutSplash ${CONFIG})
 

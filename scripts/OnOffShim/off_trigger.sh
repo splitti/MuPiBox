@@ -33,6 +33,9 @@ until [ $power = $switchtype ]; do
     sleep 0.1
 done
 
+sudo su - -c 'nohup /usr/local/bin/mupibox/./mupi_stop_led.sh > /dev/null 2>&1 &'
+sudo systemctl stop mupi_powerled.service 
+
 SHUT_SOUND=$(/usr/bin/jq -r .mupibox.shutSound ${CONFIG})
 START_VOLUME=$(/usr/bin/jq -r .mupibox.startVolume ${CONFIG})
 AUDIO_DEVICE=$(/usr/bin/jq -r .mupibox.audioDevice ${CONFIG})
