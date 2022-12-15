@@ -23,7 +23,7 @@ exec 3>${LOG}
 	echo -e "XXX\n1\nInstall some packages... Please wait!\nXXX"
 	# Get missing packages
 	sudo apt-get update >&3 2>&3
-	sudo apt-get -y --install-recommends -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" install x11vnc git libasound2 jq samba mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools >&3 2>&3
+	sudo apt-get -y --install-recommends -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" install x11vnc git libasound2 jq samba mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential >&3 2>&3
 	sudo pip install mutagen  >&3 2>&3
 
 	echo -e "XXX\n5\nBackup Userdata... \nXXX"	 >&3 2>&3
@@ -147,6 +147,11 @@ exec 3>${LOG}
 	sudo systemctl start mupi_check_internet.service >&3 2>&3
 	sudo systemctl enable mupi_powerled.service >&3 2>&3
 	sudo systemctl start mupi_powerled.service >&3 2>&3
+
+	echo -e "XXX\n78\nInstall Pi-Blaster... \nXXX"	
+	sudo rm -R /home/dietpi/pi-blaster >&3 2>&3
+	sudo su dietpi -c 'cd /home/dietpi/; git clone https://github.com/sarfata/pi-blaster.git' >&3 2>&3
+	sudo su - -c 'cd /home/dietpi/pi-blaster; ./autogen.sh; ./configure; make; make install' >&3 2>&3
 
 	echo -e "XXX\n83\nSet environment...  \nXXX"	
 	sudo wget ${SRC}/config/templates/crontab.template -O /tmp/crontab.template >&3 2>&3

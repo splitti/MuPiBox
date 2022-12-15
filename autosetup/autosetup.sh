@@ -24,7 +24,7 @@ exec 3>${LOG}
 	echo -e "XXX\n0\nInstall some packages... Please wait!\nXXX"
 	# Get missing packages
 	sudo apt-get update >&3 2>&3
-	packages2install="git libasound2 jq samba mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools "
+	packages2install="git libasound2 jq samba mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential"
 	sudo apt-get install ${packages2install} -y >&3 2>&3
 
 	for thispackage in `echo ${packages2install}`; do
@@ -54,6 +54,13 @@ exec 3>${LOG}
 	PM2_ENV=$(sudo cat ${LOG} | sudo grep "sudo env") >&3 2>&3
 	echo ${PM2_ENV} >&3 2>&3
 	${PM2_ENV} >&3 2>&3
+
+	###############################################################################################
+
+	echo -e "XXX\n17\nInstall Pi-Blaster... \nXXX"	
+	sudo rm -R /home/dietpi/pi-blaster >&3 2>&3
+	sudo su dietpi -c 'cd /home/dietpi/; git clone https://github.com/sarfata/pi-blaster.git' >&3 2>&3
+	sudo su - -c 'cd /home/dietpi/pi-blaster; ./autogen.sh; ./configure; make; make install' >&3 2>&3
 
 	###############################################################################################
 
