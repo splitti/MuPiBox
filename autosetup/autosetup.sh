@@ -240,6 +240,7 @@ exec 3>${LOG}
 	sudo wget ${SRC}/scripts/mupibox/repair_config.sh -O /usr/local/bin/mupibox/repair_config.sh  >&3 2>&3
 	sudo wget ${SRC}/scripts/mupibox/mupi_start_led.sh -O /usr/local/bin/mupibox/mupi_start_led.sh  >&3 2>&3
 	sudo wget ${SRC}/scripts/mupibox/mupi_stop_led.sh -O /usr/local/bin/mupibox/mupi_stop_led.sh  >&3 2>&3
+	sudo wget ${SRC}/scripts/mupibox/sleep_timer.sh -O /usr/local/bin/mupibox/sleep_timer.sh  >&3 2>&3
 
 	sudo wget ${SRC}/scripts/bluetooth/start_bt.sh -O /usr/local/bin/mupibox/start_bt.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/bluetooth/stop_bt.sh -O /usr/local/bin/mupibox/stop_bt.sh >&3 2>&3

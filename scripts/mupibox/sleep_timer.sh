@@ -2,5 +2,5 @@
 #
 # Sleep timer script
 
-sleep $1
+sleep $(($1*60))
 poweroff
