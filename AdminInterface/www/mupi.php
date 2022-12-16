@@ -664,10 +664,8 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				<label class="description" for="theme">LED Brightness normal (from 0 to 100%)</label>
 				<div>
 				<input class="element text medium" name="ledmaxbrightness" type="range" min="0" max="100" step="1.0" value="<?php 
-					$command = "/usr/bin/jq -r .shim.ledBrightnessMax /etc/mupibox/mupiboxconfig.json";
-					$tbrightness = exec($tbcommand, $boutput);
-					echo $boutput;
-				?>" >
+					echo $data["shim"]["ledBrightnessMax"]
+				?>" oninput="this.nextElementSibling.value = this.value"><output></output>
 				</div>
 			</li>
 
@@ -675,10 +673,8 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				<label class="description" for="theme">LED Brightness dimmed (from 0 to 100%)</label>
 				<div>
 				<input class="element text medium" name="ledminbrightness" type="range" min="0" max="100" step="1.0" value="<?php 
-					$tbcommand = "/usr/bin/jq -r .shim.ledBrightnessMin /etc/mupibox/mupiboxconfig.json";
-					$tbrightness = exec($tbcommand, $boutput);
-					echo $boutput;
-				?>" >
+					echo $data["shim"]["ledBrightnessMin"]
+				?>" oninput="this.nextElementSibling.value = this.value"><output></output>
 				</div>
 			</li>
 

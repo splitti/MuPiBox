@@ -9,6 +9,7 @@ ledMax=$(echo "scale=2; $ledMax/100" | bc)
 touch /tmp/.power_led
 
 echo "${ledPin}=${ledMax}" > /dev/pi-blaster
+sleep 30
 
 while [ -f /tmp/.power_led ]
 do
