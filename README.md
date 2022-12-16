@@ -1,5 +1,5 @@
 # MuPiBox
-MuPiBox is an easy to use music player, controlled via touch display. There could be local music, or also spotify. Also streams are possible.
+MuPiBox is an easy to use music player, controlled via touch display. There could be local music, spotify and also streams.
 ![Caption](media/images/splash.png "Caption") 
 ## Webside & Support
 For more informations visit https://mupibox.de or use our Discord-Channel https://discord.gg/4EjCgpCbbe
@@ -21,6 +21,7 @@ Please visit official Webside  https://mupibox.de/anleitungen/installationsanlei
 - SpotifyController (https://github.com/amueller-tech/spotifycontroller)
 - Spotifyd (https://github.com/Spotifyd/spotifyd)
 - mplayer-wrapper by derhuerst (https://github.com/derhuerst/mplayer-wrapper)
+- pi-blaster by sarfata (https://github.com/sarfata/pi-blaster)
 - google-tts by zlargon (https://github.com/zlargon/google-tts)
 - Font Pan Pizza by Mark Lohner (https://www.marc-lohner.com/)
 - Image by kirillslov (https://pixabay.com/de/vectors/katze-gehen-h%c3%b6ren-musik-kopfh%c3%b6rer-5775898/)
