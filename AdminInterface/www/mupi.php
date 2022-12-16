@@ -266,6 +266,23 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 <h2>MupiBox settings</h2>
 <p>This is the central configuration of your MuPiBox...</p>
 </div>
+	<details>
+		<summary><i class="fa-solid fa-clock"></i> Power-Off Timer</summary>
+		<ul>
+			<li id="li_1" >
+				<label class="description" for="theme">Sleeptimer</label>
+				<div>
+				<input class="element text medium" name="powerofftimer" type="range" min="15" max="360" step="15.0" value="60" oninput="this.nextElementSibling.value = this.value"><output></output>
+				</div>
+			</li>
+
+			<li class="buttons">
+				<input type="hidden" name="form_id" value="37271" />
+
+				<input id="saveForm" class="button_text" type="submit" name="submit" value="Start Power-Off Timer" />
+			</li>
+		</ul>
+	</details>
 
 	<details>
 		<summary><i class="fa-solid fa-screwdriver-wrench"></i> System settings</summary>
@@ -456,6 +473,17 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				"</select>
 				</div>
 			</li>
+
+			<li id="li_1" >
+				<label class="description" for="idlePiShutdown">Idle Time to Shutdown </label>
+				<div>
+				<input id="idlePiShutdown" name="idlePiShutdown" class="element text medium" type="number" maxlength="255" value="<?php
+				print $data["timeout"]["idlePiShutdown"];
+				?>"/>
+				</div><p class="guidelines" id="guide_1"><small>Set the idle time (idle = nothing played) to shutdown.</small></p>
+			</li>
+
+
 			<li class="buttons">
 				<input type="hidden" name="form_id" value="37271" />
 
@@ -656,15 +684,6 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 			</li>
 
 			<li id="li_1" >
-				<label class="description" for="idlePiShutdown">Idle Time to Shutdown </label>
-				<div>
-				<input id="idlePiShutdown" name="idlePiShutdown" class="element text medium" type="number" maxlength="255" value="<?php
-				print $data["timeout"]["idlePiShutdown"];
-				?>"/>
-				</div><p class="guidelines" id="guide_1"><small>Set the idle time (idle = nothing played) to shutdown.</small></p>
-			</li>
-
-			<li id="li_1" >
 				<label class="description" for="theme">LED Brightness normal (from 0 to 100%)</label>
 				<div>
 				<input class="element text medium" name="ledmaxbrightness" type="range" min="0" max="100" step="1.0" value="<?php 
@@ -689,18 +708,6 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 			</li>
 		</ul>
 	</details>
-	<details>
-		<summary><i class="far fa-file-alt"></i> Some new features in the future...</summary>
-		<ul>
-
-			<li class="buttons">
-				<input type="hidden" name="form_id" value="37271" />
-
-				<input id="saveForm" class="button_text" type="submit" name="submit" value="Submit" />
-			</li>
-		</ul>
-	</details>
-
 </form><p>
 
 
