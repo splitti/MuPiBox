@@ -174,14 +174,14 @@
   $change=2;
   }
 
- if( $data["shim"]["ledBrightnessMax"]!=$_POST['ledmaxbrightness'] && $_POST['ledmaxbrightness'] )
+ if( $data["shim"]["ledBrightnessMax"]!=$_POST['ledmaxbrightness'] && $_POST['ledmaxbrightness']!= "" )
   {
   $data["shim"]["ledBrightnessMax"]=$_POST['ledmaxbrightness'];
   $CHANGE_TXT=$CHANGE_TXT."<li>LED standard brightness set to ".$data["shim"]["ledBrightnessMax"]."</li>";
   $change=2;
   }
 
- if( $data["shim"]["ledBrightnessMin"]!=$_POST['ledminbrightness'] && $_POST['ledminbrightness'] )
+ if( $data["shim"]["ledBrightnessMin"]!=$_POST['ledminbrightness'] && $_POST['ledminbrightness']!= "" )
   {
   $data["shim"]["ledBrightnessMin"]=$_POST['ledminbrightness'];
   $CHANGE_TXT=$CHANGE_TXT."<li>LED standard brightness set to ".$data["shim"]["ledBrightnessMin"]."</li>";
@@ -213,9 +213,10 @@
   $CHANGE_TXT=$CHANGE_TXT."<li>Idle Time for Display is set to ".$data["timeout"]["idleDisplayOff"]."</li>";
   $change=2;
   }
- if( $data["timeout"]["pressDelay"]!=$_POST['pressDelay'] && $_POST['pressDelay'] )
+ if( $data["timeout"]["pressDelay"]!=$_POST['pressDelay'] && $_POST['pressDelay'] != "" )
   {
   $data["timeout"]["pressDelay"]=$_POST['pressDelay'];
+  $CHANGE_TXT=$CHANGE_TXT."<li>Press Button delay set to ".$data["shim"]["ledPin"]. "</li>";
   $change=2;
   }
  if( $data["shim"]["ledPin"]!=$_POST['ledPin'] && $_POST['ledPin'])
@@ -486,14 +487,16 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				</div><p class="guidelines" id="guide_1"><small>Set Display Brightness!</small></p>
 
 			</li>
+			
 			<li id="li_1" >
 				<label class="description" for="idleDisplayOff">Idle Display Off Timeout </label>
 				<div>
-				<input id="idleDisplayOff" name="idleDisplayOff" class="element text medium" type="number" maxlength="255" value="<?php
-				print $data["timeout"]["idleDisplayOff"];
-				?>"/>
-				</div><p class="guidelines" id="guide_1"><small>Set the idle time to standby the display (powersaving).</small></p>
+				<input class="element text medium" name="idleDisplayOff" type="range" min="0" max="120" step="1.0" value="<?php 
+					echo $data["timeout"]["idleDisplayOff"]
+				?>" oninput="this.nextElementSibling.value = this.value"><output></output>
+				</div>
 			</li>
+
 			<li id="li_1" >
 				<label class="description" for="resX">Display Resolution X </label>
 				<div>
@@ -633,13 +636,14 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 	<details>
 		<summary><i class="fa-solid fa-power-off"></i> Power-on settings</summary>
 		<ul>
+		
 			<li id="li_1" >
-				<label class="description" for="pressDelay">Power Off Button Delay </label>
+				<label class="description" for="pressDelay">Power-Off Button delay </label>
 				<div>
-				<input id="pressDelay" name="pressDelay" class="element text medium" type="number" maxlength="255" value="<?php
-				print $data["timeout"]["pressDelay"];
-				?>"/>
-				</div><p class="guidelines" id="guide_1"><small>Currently UNUSED!</small></p>
+				<input class="element text medium" name="pressDelay" type="range" min="0" max="5" step="1.0" value="<?php 
+					echo $data["timeout"]["pressDelay"]
+				?>" oninput="this.nextElementSibling.value = this.value"><output></output>
+				</div>
 			</li>
 
 			<li id="li_1" >
