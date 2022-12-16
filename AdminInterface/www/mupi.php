@@ -278,6 +278,11 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				?>"/>
 				</div><p class="guidelines" id="guide_1"><small>Please insert the hostname of the MuPiBox. Don't use Spaces or other special charachters! Default: MuPiBox</small></p>
 			</li>
+			<li class="buttons">
+				<input type="hidden" name="form_id" value="37271" />
+
+				<input id="saveForm" class="button_text" type="submit" name="submit" value="Submit" />
+			</li>
 			
 			<li class="li_1"><h2>Overclock SD Card</h2>
 				<p>
@@ -400,11 +405,6 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				?>
 				</p>
 				<input id="saveForm" class="button_text" type="submit" name="change_swap" value="<?php print $change_swap; ?>" />
-			</li>
-			<li class="buttons">
-				<input type="hidden" name="form_id" value="37271" />
-
-				<input id="saveForm" class="button_text" type="submit" name="submit" value="Submit" />
 			</li>
 		</ul>
 	</details>
