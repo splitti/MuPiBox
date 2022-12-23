@@ -143,7 +143,7 @@
 			echo "FTP-Server Status: <b>".$ftp_state."</b>";
 			?>
 			</p>
-			<input id="saveForm" class="button_text" type="submit" name="change_btac" value="<?php print $change_btac; ?>" />
+			<input id="saveForm" class="button_text" type="submit" name="change_ftp" value="<?php print $change_btac; ?>" />
 		</li>
 		<li class="li_1"><h2>Bluetooth Autoconnect Helper (Just if automatic reconnect won't work)</h2>
 			<p>
@@ -151,7 +151,7 @@
 			echo "BT Autoconnect Status: <b>".$btac_state."</b>";
 			?>
 			</p>
-			<input id="saveForm" class="button_text" type="submit" name="change_btac" value="<?php print $change_btac; ?>" />
+			<input id="saveForm" class="button_text" type="submit" name="change_btac" value="<?php print $change_ftp; ?>" />
 		</li>
 		<li class="li_1"><h2>Enable/Disable VNC</h2>
 			<p>

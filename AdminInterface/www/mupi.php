@@ -3,6 +3,19 @@
  $CHANGE_TXT="<div id='lbinfo'><ul id='lbinfo'>";
  include ('includes/header.php');
 
+	if($_POST['powerofftimer'])
+		{
+		$timersOpen="open";
+		$command = "sudo /usr/local/bin/mupibox/./sleep_timer.sh ".$_POST['powerofftimer'];
+
+		
+		if (file_exists("/tmp/.time2sleep")) {
+			echo "The file $filename exists";
+		} else {
+			echo "The file $filename does not exist";
+		}
+		}
+
 	if( $_POST['change_netboot'] == "activate for next boot" )
 		{
 		$command = "sudo /boot/dietpi/func/dietpi-set_software boot_wait_for_network 1";
@@ -266,13 +279,13 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 <h2>MupiBox settings</h2>
 <p>This is the central configuration of your MuPiBox...</p>
 </div>
-	<details>
-		<summary><i class="fa-solid fa-clock"></i> Power-Off Timer</summary>
+	<details <?php echo $timersOpen;?>>
+		<summary><i class="fa-solid fa-clock"></i> Timer settings</summary>
 		<ul>
 			<li id="li_1" >
 				<label class="description" for="theme">Sleeptimer</label>
 				<div>
-				<input class="element text medium" name="powerofftimer" type="range" min="15" max="360" step="15.0" value="60" oninput="this.nextElementSibling.value = this.value"><output></output>
+				<input class="element text large" name="powerofftimer" type="range" min="15" max="360" step="15.0" value="60" oninput="this.nextElementSibling.value = this.value"><output></output>
 				</div>
 			</li>
 
@@ -293,7 +306,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				<input id="hostname" name="hostname" class="element text medium" type="text" maxlength="255" value="<?php
 				print $data["mupibox"]["host"];
 				?>"/>
-				</div><p class="guidelines" id="guide_1"><small>Please insert the hostname of the MuPiBox. Don't use Spaces or other special charachters! Default: MuPiBox</small></p>
+				</div>
 			</li>
 			<li class="buttons">
 				<input type="hidden" name="form_id" value="37271" />
@@ -480,7 +493,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				<input id="idlePiShutdown" name="idlePiShutdown" class="element text medium" type="number" maxlength="255" value="<?php
 				print $data["timeout"]["idlePiShutdown"];
 				?>"/>
-				</div><p class="guidelines" id="guide_1"><small>Set the idle time (idle = nothing played) to shutdown.</small></p>
+				</div>
 			</li>
 
 
@@ -512,7 +525,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				<option>204</option>
 				<option>255</option>
 			</datalist><output></output>
-				</div><p class="guidelines" id="guide_1"><small>Set Display Brightness!</small></p>
+				</div>
 
 			</li>
 			
@@ -531,7 +544,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				<input id="resX" name="resX" class="element text medium" type="number" maxlength="255" value="<?php
 				print $data["chromium"]["resX"];
 				?>"/>
-				</div><p class="guidelines" id="guide_1"><small>Set the X-width (horizontal) in px. Please just enter Numbers.</small></p>
+				</div>
 			</li>
 			<li id="li_1" >
 				<label class="description" for="resY">Display Resolution Y </label>
@@ -539,7 +552,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				<input id="resY" name="resY" class="element text medium" type="number" maxlength="255" value="<?php
 				print $data["chromium"]["resY"];
 				?>"/>
-				</div><p class="guidelines" id="guide_1"><small>Set the y-width (vertical) in px. Please just enter Numbers.</small></p>
+				</div>
 			</li>
 
 			<li class="buttons">
@@ -606,7 +619,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				<option>100</option>
 			</datalist>
 
-				</div><p class="guidelines" id="guide_1"><small>Set the volume (here you can override the MaxVolume-Definition!</small></p>
+				</div>
 
 			</li>
 			<li id="li_1" >
@@ -628,7 +641,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				}
 				?>
 				"</select>
-				</div><p class="guidelines" id="guide_1"><small>Set the volume after booting...</small></p>
+				</div>
 			</li>
 
 			<li id="li_1" >
@@ -650,7 +663,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				}
 				?>
 				"</select>
-				</div><p class="guidelines" id="guide_1"><small>Set the maximum volume...</small></p>
+				</div>
 			</li>			
 			
 
@@ -680,7 +693,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				<input id="ledPin" name="ledPin" class="element text medium" type="number" maxlength="255" value="<?php
 				print $data["shim"]["ledPin"];
 				?>"/>
-				</div><p class="guidelines" id="guide_1"><small>Please insert the GPIO Number (not PIN!!!) of the connect LED. Default: 25</small></p>
+				</div>
 			</li>
 
 			<li id="li_1" >

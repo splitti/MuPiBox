@@ -9,7 +9,7 @@
 		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
 		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 		<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
-		<link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.2.0/css/all.css">
+		<link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.2.1/css/all.css">
 		<script type="text/javascript" src="view.js?v1.1"></script>
 		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 		<title>MuPiBox Admin-Interface</title>
@@ -17,6 +17,7 @@
 		<script type="text/javascript" src="view.js?v=4.0.0"></script>
 		<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 		<link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+
 	</head>
 	<body id="main_body" >
 		<img id="top" src="images/top.png" alt="">
