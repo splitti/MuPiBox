@@ -315,10 +315,11 @@
 		<summary><i class="fa-solid fa-rotate"></i> Updates</summary>
 		<ul>
 			<li class="li_norm"><h2>MuPiBox updates</h2>
+				<p>You can update MuPiBox at any time to stable or development version. The development-version may be buggy.</p>
 				<p>
 					<table>
 						<tr>
-							<td>Current Version:</td>
+							<td>Installed Version:</td>
 							<td><?php print $data["mupibox"]["version"]; ?></td>
 						</tr>
 						<tr>
@@ -328,10 +329,11 @@
 				</p>
 				<p><b>Please notice: </b>Always create a backup before updating!!!<br>The update procedure takes a long time (on older Raspberry Pi's up to 15 minutes). Do not close the browser and wait for the reboot.
 				</p>
-				<input id="saveForm" class="button_text" type="submit" name="mupibox_update" value="Update MuPiBox (Stable Version)"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
+				<input id="saveForm" class="button_text" type="submit" name="mupibox_update" value="Update MuPiBox (Latest Stable Version)"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
 				<input id="saveForm" class="button_text_red" type="submit" name="mupibox_devupdate" value="Update MuPiBox (Development Version)"  onclick="return confirm('Do really want to Update the MuPiBox to unstable version? Notice: This is an untested Development-Version!');" />
 			</li>
-			<li class="li_norm"><h2>Operating system updates</h2>
+			<li class="li_norm"><h2>Update OS (Operating System)</h2>
+				Updating OS packages (apt-get update and apt-get upgrade):<br/>
 				<input id="saveForm" class="button_text" type="submit" name="os_update" value="Update OS"  onclick="return confirm('Do really want to update the Operating System?');" />
 			</li>
 		</ul>
@@ -339,7 +341,7 @@
 
 
 	<details>
-		<summary><i class="fas fa-stream"></i> Logging</summary>
+		<summary><i class="fas fa-stream"></i> Logging / Debug</summary>
 		<ul>
 			<li class="li_norm">
 				<p>Some important options to load necessary logs.</p>
