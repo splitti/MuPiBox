@@ -3,17 +3,24 @@
  $CHANGE_TXT="<div id='lbinfo'><ul id='lbinfo'>";
  include ('includes/header.php');
 
+	if($_POST['stop_sleeptimer'])
+		{
+		$command = "sudo pkill -f \"sleep_timer.sh\"";
+		exec($command);
+		$command = "sudo rm /tmp/.time2sleep";
+		exec($command);
+		$change=3;
+		$CHANGE_TXT=$CHANGE_TXT."<li>Sleeptimer stopped</li>";
+		}
+
 	if($_POST['powerofftimer'])
 		{
-		$timersOpen="open";
-		$command = "sudo /usr/local/bin/mupibox/./sleep_timer.sh ".$_POST['powerofftimer'];
-
-		
-		if (file_exists("/tmp/.time2sleep")) {
-			echo "The file $filename exists";
-		} else {
-			echo "The file $filename does not exist";
-		}
+		$timerSleepingTime=$_POST['powerofftimer']*60;
+		$command = "sudo nohup /usr/local/bin/mupibox/./sleep_timer.sh ".$timerSleepingTime."  > /dev/null 2>&1 &";
+		exec($command);
+		$change=3;
+		$CHANGE_TXT=$CHANGE_TXT."<li>".$_POST['powerofftimer']." minutes sleeptimer started</li>";
+		//sudo pkill -f "sleep_timer.sh"
 		}
 
 	if( $_POST['change_netboot'] == "activate for next boot" )
@@ -274,18 +281,36 @@
   }
 $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 ?>
+
 <form class="appnitro" name="mupi" method="post" action="mupi.php" id="form">
 <div class="description">
 <h2>MupiBox settings</h2>
 <p>This is the central configuration of your MuPiBox...</p>
 </div>
-	<details <?php echo $timersOpen;?>>
+
+	<details>
 		<summary><i class="fa-solid fa-clock"></i> Timer settings</summary>
 		<ul>
 			<li id="li_1" >
-				<label class="description" for="theme">Sleeptimer</label>
+				<h2>Sleeptimer</h2>
+				<?php
+				if (file_exists("/tmp/.time2sleep")) {
+						?>
+					MuPiBox will shut down  after (hh:mm:ss):</br>
+					<div id="app"></div>
+				</li>
+				<li class="buttons">
+				<input type="hidden" name="form_id" value="37271" />
+
+				<input id="saveForm" class="button_text_red" type="submit" name="stop_sleeptimer" value="Stop running timer" />
+			</li>
+
+						<?php
+				} else { ?>
+				How many minutes to shut down MuPiBox (default 60 minutes):
+				<br/>
 				<div>
-				<input class="element text large" name="powerofftimer" type="range" min="15" max="360" step="15.0" value="60" oninput="this.nextElementSibling.value = this.value"><output></output>
+				<input class="element text large" name="powerofftimer" type="range" min="15" max="360" step="15.0" value="60" oninput="this.nextElementSibling.value = this.value"><output></output> minutes
 				</div>
 			</li>
 
@@ -294,6 +319,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 
 				<input id="saveForm" class="button_text" type="submit" name="submit" value="Start Power-Off Timer" />
 			</li>
+				<?php } ?>
 		</ul>
 	</details>
 
@@ -301,7 +327,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 		<summary><i class="fa-solid fa-screwdriver-wrench"></i> System settings</summary>
 		<ul>
 			<li id="li_1" >
-				<label class="description" for="hostname">Hostname </label>
+				<h2>Hostname </h2>
 				<div>
 				<input id="hostname" name="hostname" class="element text medium" type="text" maxlength="255" value="<?php
 				print $data["mupibox"]["host"];
@@ -443,7 +469,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 		<summary><i class="fa-solid fa-radio"></i> MuPiBox settings</summary>
 		<ul>
 			<li id="li_1" >
-				<label class="description" for="theme">Theme </label>
+				<h2>Theme </h2>
 				<div>
 				<select id="theme" name="theme" class="element text medium" onchange="switchImage();">
 				<?php
@@ -466,7 +492,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 
 			</li>
 			<li id="li_1" >
-				<label class="description" for="theme">TTS Language </label>
+				<h2>TTS Language </h2>
 				<div>
 				<select id="tts" name="tts" class="element text medium">
 				<?php
@@ -488,7 +514,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 			</li>
 
 			<li id="li_1" >
-				<label class="description" for="idlePiShutdown">Idle Time to Shutdown </label>
+				<h2>Idle Time to Shutdown </h2>
 				<div>
 				<input id="idlePiShutdown" name="idlePiShutdown" class="element text medium" type="number" maxlength="255" value="<?php
 				print $data["timeout"]["idlePiShutdown"];
@@ -510,7 +536,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 		<summary><i class="fa-solid fa-display"></i> Display settings</summary>
 		<ul>
 			<li id="li_1" >
-				<label class="description" for="theme">Brightness (from 0 to 255)</label>
+				<h2>Brightness (from 0 to 255)</h2>
 				<div>
 				<input class="element text medium" name="newbrightness" type="range" min="0" max="255" step="51.0" value="<?php 
 					$tbcommand = "cat /sys/class/backlight/rpi_backlight/brightness";
@@ -530,7 +556,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 			</li>
 			
 			<li id="li_1" >
-				<label class="description" for="idleDisplayOff">Idle Display Off Timeout </label>
+				<h2>Idle Display Off Timeout </h2>
 				<div>
 				<input class="element text medium" name="idleDisplayOff" type="range" min="0" max="120" step="1.0" value="<?php 
 					echo $data["timeout"]["idleDisplayOff"]
@@ -539,7 +565,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 			</li>
 
 			<li id="li_1" >
-				<label class="description" for="resX">Display Resolution X </label>
+				<h2>Display Resolution X </h2>
 				<div>
 				<input id="resX" name="resX" class="element text medium" type="number" maxlength="255" value="<?php
 				print $data["chromium"]["resX"];
@@ -547,7 +573,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				</div>
 			</li>
 			<li id="li_1" >
-				<label class="description" for="resY">Display Resolution Y </label>
+				<h2>Display Resolution Y </h2>
 				<div>
 				<input id="resY" name="resY" class="element text medium" type="number" maxlength="255" value="<?php
 				print $data["chromium"]["resY"];
@@ -566,7 +592,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 		<summary><i class="fa-solid fa-volume-high"></i> Audio settings</summary>
 		<ul>
 			<li id="li_1" >
-				<label class="description" for="theme">Audio device / Soundcard </label>
+				<h2>Audio device / Soundcard </h2>
 				<div>
 				<select id="audio" name="audio" class="element text medium">
 				<?php
@@ -587,7 +613,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				</div>
 			</li>
 			<li id="li_1" >
-				<label class="description" for="thisvolume">Volume (in 5% Steps)</label>
+				<h2>Volume (in 5% Steps)</h2>
 				<div>
 				<p><b>PLEASE NOTE:</b> If you adjust the volume here, the volume indicator on the display will not be updated!</p>
 				<input class="element text medium" name="thisvolume" type="range" min="0" max="100" step="5.0" value="<?php 
@@ -623,7 +649,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 
 			</li>
 			<li id="li_1" >
-				<label class="description" for="volume">Volume after power on </label>
+				<h2>Volume after power on </h2>
 				<div>
 				<select id="volume" name="volume" class="element text medium">
 				<?php
@@ -645,7 +671,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 			</li>
 
 			<li id="li_1" >
-				<label class="description" for="maxvolume">Set max volume</label>
+				<h2>Set max volume</h2>
 				<div>
 				<select id="maxVolume" name="maxVolume" class="element text medium">
 				<?php
@@ -679,7 +705,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 		<ul>
 		
 			<li id="li_1" >
-				<label class="description" for="pressDelay">Power-Off Button delay </label>
+				<h2>Power-Off Button delay </h2>
 				<div>
 				<input class="element text medium" name="pressDelay" type="range" min="0" max="5" step="1.0" value="<?php 
 					echo $data["timeout"]["pressDelay"]
@@ -688,7 +714,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 			</li>
 
 			<li id="li_1" >
-				<label class="description" for="ledPin">LED GPIO OnOffShim </label>
+				<h2>LED GPIO OnOffShim </h2>
 				<div>
 				<input id="ledPin" name="ledPin" class="element text medium" type="number" maxlength="255" value="<?php
 				print $data["shim"]["ledPin"];
@@ -697,7 +723,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 			</li>
 
 			<li id="li_1" >
-				<label class="description" for="theme">LED Brightness normal (from 0 to 100%)</label>
+				<h2>LED Brightness normal (from 0 to 100%)</h2>
 				<div>
 				<input class="element text medium" name="ledmaxbrightness" type="range" min="0" max="100" step="1.0" value="<?php 
 					echo $data["shim"]["ledBrightnessMax"]
@@ -706,7 +732,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 			</li>
 
 			<li id="li_1" >
-				<label class="description" for="theme">LED Brightness dimmed (from 0 to 100%)</label>
+				<h2>LED Brightness dimmed (from 0 to 100%)</h2>
 				<div>
 				<input class="element text medium" name="ledminbrightness" type="range" min="0" max="100" step="1.0" value="<?php 
 					echo $data["shim"]["ledBrightnessMin"]
@@ -723,7 +749,134 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 	</details>
 </form><p>
 
+<?php
+        //$time2sleep=readfile("/tmp/.time2sleep");
+        $time2sleep=fgets(fopen("/tmp/.time2sleep", 'r'));
+?>
 
+
+<script>
+// Credit: Mateusz Rybczonec
+
+const FULL_DASH_ARRAY = 283;
+const WARNING_THRESHOLD = 10;
+const ALERT_THRESHOLD = 5;
+
+const COLOR_CODES = {
+  info: {
+    color: "green"
+  },
+  warning: {
+    color: "orange",
+    threshold: WARNING_THRESHOLD
+  },
+  alert: {
+    color: "red",
+    threshold: ALERT_THRESHOLD
+  }
+};
+
+const TIME_LIMIT = <?php echo $time2sleep; ?>;
+let timePassed = 0;
+let timeLeft = TIME_LIMIT;
+let timerInterval = null;
+let remainingPathColor = COLOR_CODES.info.color;
+
+document.getElementById("app").innerHTML = `
+<div class="base-timer">
+  <svg class="base-timer__svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <g class="base-timer__circle">
+      <circle class="base-timer__path-elapsed" cx="50" cy="50" r="45"></circle>
+      <path
+        id="base-timer-path-remaining"
+        stroke-dasharray="283"
+        class="base-timer__path-remaining ${remainingPathColor}"
+        d="
+          M 50, 50
+          m -45, 0
+          a 45,45 0 1,0 90,0
+          a 45,45 0 1,0 -90,0
+        "
+      ></path>
+    </g>
+  </svg>
+  <span id="base-timer-label" class="base-timer__label">${formatTime(
+    timeLeft
+  )}</span>
+</div>
+`;
+
+startTimer();
+
+function onTimesUp() {
+  clearInterval(timerInterval);
+}
+
+function startTimer() {
+  timerInterval = setInterval(() => {
+    timePassed = timePassed += 1;
+    timeLeft = TIME_LIMIT - timePassed;
+    document.getElementById("base-timer-label").innerHTML = formatTime(
+      timeLeft
+    );
+    setCircleDasharray();
+    setRemainingPathColor(timeLeft);
+
+    if (timeLeft === 0) {
+      onTimesUp();
+    }
+  }, 1000);
+}
+
+function formatTime(time) {
+  const hours = Math.floor(time / 60 / 60);
+  minutes = Math.floor(time / 60 - hours * 60);
+  let seconds = time % 60;
+
+  if (seconds < 10) {
+    seconds = `0${seconds}`;
+  }
+  if (minutes < 10) {
+    minutes = `0${minutes}`;
+  }
+
+
+  return `${hours}:${minutes}:${seconds}`;
+}
+
+function setRemainingPathColor(timeLeft) {
+  const { alert, warning, info } = COLOR_CODES;
+  if (timeLeft <= alert.threshold) {
+    document
+      .getElementById("base-timer-path-remaining")
+      .classList.remove(warning.color);
+    document
+      .getElementById("base-timer-path-remaining")
+      .classList.add(alert.color);
+  } else if (timeLeft <= warning.threshold) {
+    document
+      .getElementById("base-timer-path-remaining")
+      .classList.remove(info.color);
+    document
+      .getElementById("base-timer-path-remaining")
+      .classList.add(warning.color);
+  }
+}
+
+function calculateTimeFraction() {
+  const rawTimeFraction = timeLeft / TIME_LIMIT;
+  return rawTimeFraction - (1 / TIME_LIMIT) * (1 - rawTimeFraction);
+}
+
+function setCircleDasharray() {
+  const circleDasharray = `${(
+    calculateTimeFraction() * FULL_DASH_ARRAY
+  ).toFixed(0)} 283`;
+  document
+    .getElementById("base-timer-path-remaining")
+    .setAttribute("stroke-dasharray", circleDasharray);
+}
+</script>
 <?php
  include ('includes/footer.php');
 ?>

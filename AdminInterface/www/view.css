@@ -560,7 +560,7 @@ span.symbol
 
 input.text
 {
-        background-color:#efefef;
+        background-color:#ffffff;
         border: 0px;
         border-bottom:1px solid #000;
         color:#000;
@@ -1067,10 +1067,11 @@ details[open] summary::after {
 }
 
 details > summary {
-	background-image: linear-gradient(144deg,#024364, #00689C 50%,#44afe2);
+	background-image: linear-gradient(144deg,#054b61,#44afe2 70%);
 	cursor: pointer;
 	padding: .5rem 1rem;
 	color:#ffffff;
+	font-weight:bold;
 	font-size:1.2em;
 }
 
@@ -1087,4 +1088,58 @@ details > ul {
 
 output {
 	font-size: 190%;
+}
+
+.base-timer {
+  position: relative;
+  width: 150px;
+  height: 150px;
+}
+
+.base-timer__svg {
+  transform: scaleX(-1);
+}
+
+.base-timer__circle {
+  fill: none;
+  stroke: none;
+}
+
+.base-timer__path-elapsed {
+  stroke-width: 7px;
+  stroke: grey;
+}
+
+.base-timer__path-remaining {
+  stroke-width: 7px;
+  stroke-linecap: round;
+  transform: rotate(90deg);
+  transform-origin: center;
+  transition: 1s linear all;
+  fill-rule: nonzero;
+  stroke: currentColor;
+}
+
+.base-timer__path-remaining.green {
+  color: rgb(65, 184, 131);
+}
+
+.base-timer__path-remaining.orange {
+  color: orange;
+}
+
+.base-timer__path-remaining.red {
+  color: red;
+}
+
+.base-timer__label {
+  position: absolute;
+  width: 150px;
+  height: 160px;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 220%;
+  font-weight: bold;
 }
