@@ -1,7 +1,7 @@
 <?php
 	$change=0;
 	$CHANGE_TXT="<div id='lbinfo'><ul id='lbinfo'>";
-
+	$wifiopen="";
 
 	include ('includes/header.php');
 	$commandM0="cat /sys/class/net/wlan0/address";
@@ -21,6 +21,21 @@
 	$commandB="sudo iwconfig wlan0 | awk '/Bit Rate/{split($2,a,\"=|/\");print a[2]\" Mb/s\"}'";
 	$BITRATE=exec($commandB);
 
+
+	if( $_POST['scan_wifi'] )
+		{
+		$command = "sudo bash -c 'wpa_cli scan > /dev/null && sleep 10 && wpa_cli scan_results | tail -n +3'";
+		exec($command, $wifi_networks, $result );
+		$wifiopen=" open";
+		}
+
+	if( $_POST['delete_wifi'] )
+		{
+		$command = "sudo wpa_cli remove_network ".$_POST['wifinr']." && sudo wpa_cli save_config";
+		exec($command, $output, $result );
+		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>OnBoard Wifi disabled [restart necessary]</li>";
+		}
 	if( $_POST['change_wifi'] == "disable" )
 		{
 		$command = "echo 'dtoverlay=disable-wifi' | sudo tee -a /boot/config.txt";
@@ -53,8 +68,18 @@
 	$CHANGE_TXT=$CHANGE_TXT."</ul>";
 
 ?>
-<div class="main">
-        <h2>Network</h2>
+<form class="appnitro"  method="post" action="network.php" id="form">
+<div class="description">
+	<h2>Network</h2>
+	<p>Network informations, options and so on...</p>
+</div>
+
+	<details>
+		<summary><i class="fa-solid fa-wifi"></i> Network Information</summary>
+		<ul>
+			<li class="li_norm">
+
+        <h2>Network Information</h2>
         <p>Just a little bit network data. Maybe also configuration in the future...</p>
         <table id="network">
         <tr><td id="netl">IP-Address:</td><td id="netr"><?php print $_SERVER['SERVER_ADDR']; ?></td></tr>
@@ -67,8 +92,85 @@
         <tr><td id="netl">Wifi Signal Level:</td><td id="netr"><?php print $SIGNAL; ?></td></tr>
         <tr><td id="netl">Bitrate:</td><td id="netr"><?php print $BITRATE ?></td></tr>
         </table>
-</div>
-<form class="appnitro"  method="post" action="network.php" id="form">
+		</li></ul></details>
+
+
+		
+		
+	<details>
+		<summary><i class="fa-regular fa-trash-can"></i> Delete Wifi-Network</summary>
+	<ul>
+		<li class="li_1"><h2>Delete Wifi-Network</h2>
+			<p>
+			Delete the selected network:
+			</p>
+		</li>
+		<li class="li_1">
+  <fieldset>
+<?php
+	$command = "sudo wpa_cli list_networks | tail -n +3";
+	exec($command, $wifis, $result );
+	foreach ($wifis as $thiswifi) {
+		$wifidetails = explode("\t", $thiswifi);
+		if( $wifidetails[3] )
+			{
+				$connection=" [connected]";
+			}
+		else 
+			{
+				$connection="";
+			}
+			echo "<input type=\"radio\" id=\"wifinr\" name=\"wifinr\" value=\"".$wifidetails[0]."\"> ";
+		echo "<label for=\"wifinr\"> ".$wifidetails[1].$connection."</label><br/>";
+		}
+
+?>
+</fieldset>
+</li>
+		<li class="li_1">
+				<input id="saveForm" class="button_text_red" type="submit" name="delete_wifi" value="Delete selected Wifi"  onclick="return confirm('Do really want to delete selected Wifi-Network?');" />
+		</li>
+	</ul>
+	</details>
+		
+		
+		
+	<details <?php echo $wifiopen;  ?>>
+	<summary><i class="fa-solid fa-tower-broadcast"></i> Add Wifi-Network</summary>
+	<ul>
+	<li class="li_1"><h2>Search and Add Wifi</h2>
+		<p>You can search for WLAN or enter it manually</p>
+	</li>
+	<?php
+	if ( $wifi_networks )
+		{
+		echo $wifi_networks;
+		}
+	else
+		{
+	?>
+		<li class="li_1">
+			<h2>SSID-Name</h2>
+			<input id="wifi_name" name="wifi_name" class="element text medium" type="text" maxlength="255" value=""/>
+        </li>
+        <li id="li_1" >
+			<h2>Wifi-Password</h2>
+			<input id="wifi_pwd" name="wifi_pwd" class="element text medium" type="password" maxlength="255" value="">
+
+		</li>
+		<li class="li_1">
+		<input id="saveForm" class="button_text" type="submit" name="save_wifi" value="Save Wifi" />
+		<input id="saveForm" class="button_text" type="submit" name="scan_wifi" value="Scan Wifi-Networks" />
+		</li>
+	<?php
+		}
+	?>
+	</ul>
+	</details>
+
+
+	<details>
+		<summary><i class="fa-solid fa-toggle-off"></i> Misc Options</summary>
 	<ul>
 		<li class="li_1"><h2>Enable/Disable OnBoad Wifi</h2>
 			<p>
@@ -103,6 +205,8 @@
 			<input id="saveForm" class="button_text" type="submit" name="renew_dhcp" value="Renew DHCP-Lease" />
 		</li>
 	</ul>
+	</details>
+
 </form>
 
 <?php

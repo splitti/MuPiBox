@@ -69,17 +69,16 @@ $CHANGE_TXT=$CHANGE_TXT."</ul>";
                         <h2>Spotify settings</h2>
                         <p>Specify your Spotify-Account-Settings and connect to Spotify... Please notice: all data will be saved as plain text (not encrypted).</p>
                 </div>
-                                <h2>RESET ALL DATA</h2>
-                <p>Click this Button, to reset all saved spotify data!!!</p>
-				<ul>
-					<li class="buttons">
-						<input id="saveForm" class="button_text_red" type="submit" name="resetData" value="RESET ALL SPOTIFY DATA" onclick="return confirm('Do really want to reset all Connection-Data to Spotify?');" />
-					</li>
-				</ul>
+ 
 
-                                <h2>STEP 1</h2>
+	<details>
+		<summary><i class="fa-regular fa-circle-check"></i> STEP 1 - Login-Data</summary>
+				<ul>
+			<li id="li_1" >
+
+                <h2>Spotify user and password</h2>
                 <p>Please enter Spotify Username and Password. Please notice, spotify premium or family is required!</p>
-                        <ul >
+                        </li>
 
                                  <li id="li_1" >
                 <label class="description" for="spotify_user">Spotify Username</label>
@@ -98,13 +97,22 @@ $CHANGE_TXT=$CHANGE_TXT."</ul>";
                 </div><p class="guidelines" id="guide_1"><small>Please enter your Spotify Password. The Password will be saved as plain text.</small></p>
                 </li>
                                 <li class="buttons"><input id="saveForm" class="button_text" type="submit" name="saveLogin" value="Save Login Data" /></li>
-                                </ul>
-                                <h2>STEP 2</h2>
+
+		</ul>
+	</details>	
+
+	<details>
+		<summary><i class="fa-regular fa-circle-check"></i> STEP 2 - Developer Client-Connection</summary>
+		<ul>
+			<li id="li_1" >
+
+                                <h2>Create Developer-App and Client-Connection</h2>
+
                 <p>Please login to <a href="https://developer.spotify.com/dashboard/login" target="_blank">Spotify Developer Dashboard</a> and create a new App. You can choose the App-Name or Description, or take "MuPiBox" easily.</p>
                 <p>You will be redireted to the dashboard for the new created app. Copy and paste the Client ID and Client Secret of your app.</p>
                 <p>Edit the settings and add the following URL to Redirect URIs:</p>
                                 <?php print "<p><b>".$REDIRECT_URI."</b></p>"; ?>
-                                <ul>                      
+                                </li>
                                  <li id="li_1" >
                 <label class="description" for="spotify_clientid">Spotify Client ID </label>
                 <div>
@@ -124,15 +132,23 @@ $CHANGE_TXT=$CHANGE_TXT."</ul>";
 
                                 <li class="buttons"><input id="saveForm" class="button_text" type="submit" name="saveIDs" value="Save IDs" /></li>
 
-                                </ul>
-                                <h2>STEP 3</h2>
+		</ul>
+	</details>	
+
+	<details>
+		<summary><i class="fa-regular fa-circle-check"></i> STEP 3 - Access- and Refresh-Token</summary>
+		<ul>
+			<li id="li_1" >
+
+                                <h2>Create Developer-App and Client-Connection</h2>
+
                 <p>Please press the following URL to generate Access and Refresh Token. A login may be necessary.</p>
                                 <p><b>
                                 <?php 
                                         print '<a href=https://accounts.spotify.com/authorize?response_type=code&client_id='.$data["spotify"]["clientId"].'&redirect_uri='.$REDIRECT_URI.'&scope='.$SCOPE.' id="loading">Login and generate Refresh & Access Token</a>'; 
                                 ?> 
                                 </b></p>
-                                <ul> 
+                                </li> 
                                  <li id="li_1" >
                 <label class="description" for="spotify_accesstoken">Spotify Access Token </label>
                 <div>
@@ -150,19 +166,42 @@ $CHANGE_TXT=$CHANGE_TXT."</ul>";
                 </div>
                                 </li>
 
-</ul>
-                                <h2>STEP 4</h2>
-                <p>In this last step, you easliy press the button to generate the Device ID... Please notice: sometimes it is necessary to play music on the MuPiBox via app so that the device ID can be generated</p>
-                                <ul> 
-                                <li class="buttons"><input id="saveForm" class="button_text" type="submit" name="generateDevID" value="Generate DeviceID" /></li>
-                                <li id="li_1" >
+		</ul>
+	</details>	
+
+	<details>
+		<summary><i class="fa-regular fa-circle-check"></i> STEP 4 - Device-ID</summary>
+		<ul>
+			<li id="li_1" >
+
+			<h2>Generate Device-ID</h2>
+            <p>In this last step, you easliy press the button to generate the Device ID... Please notice: sometimes it is necessary to play music on the MuPiBox via app so that the device ID can be generated</p>
+            </li> 
+				<li class="buttons"><input id="saveForm" class="button_text" type="submit" name="generateDevID" value="Generate DeviceID" /></li>
+                <li id="li_1" >
                 <label class="description" for="spotify_deviceid">Spotify Device ID </label>
                 <div>
-                        <input id="spotify_deviceid" name="spotify_deviceid" class="element readonly large" type="text" maxlength="255" value="<?php
-                        print $data["spotify"]["deviceId"];
+                <input id="spotify_deviceid" name="spotify_deviceid" class="element readonly large" type="text" maxlength="255" value="<?php
+                print $data["spotify"]["deviceId"];
 ?>" readonly />
                 </div></li>
-                        </ul>
+		</ul>
+	</details>	
+
+	<details>
+		<summary><i class="fa-solid fa-eraser"></i> Reset Spotify-Connection</summary>
+		<ul>
+			<li id="li_1" >
+				<h2>RESET ALL DATA</h2>
+
+                <p>Click this Button, to reset all saved spotify data!!!</p>
+				</li>
+					<li class="buttons">
+						<input id="saveForm" class="button_text_red" type="submit" name="resetData" value="RESET SPOTIFY-CONNECTION" onclick="return confirm('Do really want to reset all Connection-Data to Spotify?');" />
+					</li>
+		</ul>
+	</details>	
+
                 </form>
                         <p></p>
 <?php
