@@ -31,10 +31,13 @@
 
 	if( $_POST['delete_wifi'] )
 		{
-		$command = "sudo wpa_cli remove_network ".$_POST['wifinr']." && sudo wpa_cli save_config";
-		exec($command, $output, $result );
-		$change=1;
-		$CHANGE_TXT=$CHANGE_TXT."<li>OnBoard Wifi disabled [restart necessary]</li>";
+		if( $_POST['wifinr'] )
+			{
+			$command = "sudo wpa_cli remove_network ".$_POST['wifinr']." && sudo wpa_cli save_config";
+			exec($command, $output, $result );
+			$change=1;
+			$CHANGE_TXT=$CHANGE_TXT."<li>OnBoard Wifi disabled [restart necessary]</li>";
+			}
 		}
 	if( $_POST['change_wifi'] == "disable" )
 		{

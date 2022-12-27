@@ -282,6 +282,7 @@
 $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 ?>
 
+
 <form class="appnitro" name="mupi" method="post" action="mupi.php" id="form">
 <div class="description">
 <h2>MupiBox settings</h2>
@@ -298,7 +299,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 						?>
 					MuPiBox will shut down  after (hh:mm:ss):</br>
 					<div id="app"></div>
-				</li>
+									</li>
 				<li class="buttons">
 				<input type="hidden" name="form_id" value="37271" />
 
@@ -310,7 +311,35 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				How many minutes to shut down MuPiBox (default 60 minutes):
 				<br/>
 				<div>
-				<input class="element text large" name="powerofftimer" type="range" min="15" max="360" step="15.0" value="60" oninput="this.nextElementSibling.value = this.value"><output></output> minutes
+					<output id="rangeval" class="rangeval">60 min</output>
+					<input class="range slider-progress" list="steplist_po" name="powerofftimer" type="range" min="15" max="360" step="15.0" value="60" oninput="this.previousElementSibling.value = this.value + ' min'">
+					<datalist id="steplist_po">
+				<option>15</option>
+				<option>30</option>
+				<option>45</option>
+				<option>60</option>
+				<option>75</option>
+				<option>90</option>
+				<option>105</option>
+				<option>120</option>
+				<option>135</option>
+				<option>150</option>
+				<option>165</option>
+				<option>180</option>
+				<option>195</option>
+				<option>210</option>
+				<option>225</option>
+				<option>240</option>
+				<option>255</option>
+				<option>270</option>
+				<option>285</option>
+				<option>300</option>
+				<option>315</option>
+				<option>330</option>
+				<option>345</option>
+				<option>360</option>
+			</datalist>
+
 				</div>
 			</li>
 
@@ -538,11 +567,14 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 			<li id="li_1" >
 				<h2>Brightness (from 0 to 255)</h2>
 				<div>
-				<input class="element text medium" name="newbrightness" type="range" min="0" max="255" step="51.0" value="<?php 
+					<output id="rangeval" class="rangeval"><?php 
 					$tbcommand = "cat /sys/class/backlight/rpi_backlight/brightness";
 					$tbrightness = exec($tbcommand, $boutput);
 					echo $boutput[0];
-				?>" list="steplist2" oninput="this.nextElementSibling.value = this.value"><output></output>
+				?></output>				
+				<input class="range slider-progress" data-tick-step="51" name="newbrightness" type="range" min="0" max="255" step="51.0" value="<?php
+					echo $boutput[0];
+				?>" list="steplist2" oninput="this.previousElementSibling.value = this.value"><output></output>
 			<datalist id="steplist2">
 				<option>0</option>
 				<option>51</option>
@@ -550,7 +582,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				<option>153</option>
 				<option>204</option>
 				<option>255</option>
-			</datalist><output></output>
+			</datalist>
 				</div>
 
 			</li>
@@ -558,9 +590,12 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 			<li id="li_1" >
 				<h2>Idle Display Off Timeout </h2>
 				<div>
-				<input class="element text medium" name="idleDisplayOff" type="range" min="0" max="120" step="1.0" value="<?php 
+					<output id="rangeval" class="rangeval"><?php 
+						echo $data["timeout"]["idleDisplayOff"]
+				?></output>				
+				<input class="range slider-progress" name="idleDisplayOff" type="range" min="0" max="120" step="1.0" value="<?php 
 					echo $data["timeout"]["idleDisplayOff"]
-				?>" oninput="this.nextElementSibling.value = this.value"><output></output>
+				?>" oninput="this.previousElementSibling.value = this.value">
 				</div>
 			</li>
 
@@ -616,11 +651,15 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				<h2>Volume (in 5% Steps)</h2>
 				<div>
 				<p><b>PLEASE NOTE:</b> If you adjust the volume here, the volume indicator on the display will not be updated!</p>
-				<input class="element text medium" name="thisvolume" type="range" min="0" max="100" step="5.0" value="<?php 
+					<output id="rangeval" class="rangeval"><?php 
 					$command = "sudo su dietpi -c '/usr/bin/amixer sget Master | grep \"Right:\" | cut -d\" \" -f7 | sed \"s/\\[//g\" | sed \"s/\\]//g\" | sed \"s/\%//g\"'";
 					$VolumeNow = exec($command, $voutput);
 					echo $voutput[0];
-				?>"list="steplist" oninput="this.nextElementSibling.value = this.value"><output></output>
+				?></output>				
+
+				<input class="range slider-progress" name="thisvolume" type="range" min="0" max="100" step="5.0" value="<?php 
+					echo $voutput[0];
+				?>"list="steplist" oninput="this.previousElementSibling.value = this.value">
 			<datalist id="steplist">
 				<option>0</option>
 				<option>5</option>
@@ -707,9 +746,13 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 			<li id="li_1" >
 				<h2>Power-Off Button delay </h2>
 				<div>
-				<input class="element text medium" name="pressDelay" type="range" min="0" max="5" step="1.0" value="<?php 
+					<output id="rangeval" class="rangeval"><?php 
 					echo $data["timeout"]["pressDelay"]
-				?>" oninput="this.nextElementSibling.value = this.value"><output></output>
+				?></output>				
+
+				<input class="range slider-progress" name="pressDelay" type="range" min="0" max="5" step="1.0" value="<?php 
+					echo $data["timeout"]["pressDelay"]
+				?>" oninput="this.previousElementSibling.value = this.value"><output></output>
 				</div>
 			</li>
 
@@ -725,18 +768,25 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 			<li id="li_1" >
 				<h2>LED Brightness normal (from 0 to 100%)</h2>
 				<div>
-				<input class="element text medium" name="ledmaxbrightness" type="range" min="0" max="100" step="1.0" value="<?php 
+					<output id="rangeval" class="rangeval"><?php 
 					echo $data["shim"]["ledBrightnessMax"]
-				?>" oninput="this.nextElementSibling.value = this.value"><output></output>
+				?></output>				
+				
+				<input class="range slider-progress" name="ledmaxbrightness" type="range" min="0" max="100" step="1.0" value="<?php 
+					echo $data["shim"]["ledBrightnessMax"]
+				?>" oninput="this.previousElementSibling.value = this.value">
 				</div>
 			</li>
 
 			<li id="li_1" >
 				<h2>LED Brightness dimmed (from 0 to 100%)</h2>
 				<div>
-				<input class="element text medium" name="ledminbrightness" type="range" min="0" max="100" step="1.0" value="<?php 
+					<output id="rangeval" class="rangeval"><?php 
 					echo $data["shim"]["ledBrightnessMin"]
-				?>" oninput="this.nextElementSibling.value = this.value"><output></output>
+				?></output>				
+				<input class="range slider-progress" name="ledminbrightness" type="range" min="0" max="100" step="1.0" value="<?php 
+					echo $data["shim"]["ledBrightnessMin"]
+				?>" oninput="this.previousElementSibling.value = this.value">
 				</div>
 			</li>
 
@@ -756,6 +806,14 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 
 
 <script>
+
+for (let e of document.querySelectorAll('input[type="range"].slider-progress')) {
+  e.style.setProperty('--value', e.value);
+  e.style.setProperty('--min', e.min == '' ? '0' : e.min);
+  e.style.setProperty('--max', e.max == '' ? '100' : e.max);
+  e.addEventListener('input', () => e.style.setProperty('--value', e.value));
+}
+
 // Credit: Mateusz Rybczonec
 
 const FULL_DASH_ARRAY = 283;
@@ -776,7 +834,16 @@ const COLOR_CODES = {
   }
 };
 
-const TIME_LIMIT = <?php echo $time2sleep; ?>;
+const TIME_LIMIT = <?php 
+if( $time2sleep )
+	{
+	echo $time2sleep;
+	}
+else
+	{
+	echo "0";
+	}
+?>;
 let timePassed = 0;
 let timeLeft = TIME_LIMIT;
 let timerInterval = null;
@@ -876,6 +943,7 @@ function setCircleDasharray() {
     .getElementById("base-timer-path-remaining")
     .setAttribute("stroke-dasharray", circleDasharray);
 }
+
 </script>
 <?php
  include ('includes/footer.php');

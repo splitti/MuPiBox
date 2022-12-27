@@ -569,6 +569,147 @@ input.text
         padding:2px 0;
 }
 
+#rangeval {
+	position: relative;
+	display: block;
+	text-align: center;
+	font-size: 2em;
+	color: #054b61;
+	margin-bottom: 5px;
+	font-weight: 300;
+}
+/*generated with Input range slider CSS style generator (version 20211225)
+https://toughengineer.github.io/demo/slider-styler*/
+input[type=range].range {
+  height: 2.2em;
+  -webkit-appearance: none;
+  background-color: #44afe2;
+}
+
+/*progress support*/
+input[type=range].range.slider-progress {
+  --range: calc(var(--max) - var(--min));
+  --ratio: calc((var(--value) - var(--min)) / var(--range));
+  --sx: calc(0.5 * 2em + var(--ratio) * (100% - 2em));
+}
+
+input[type=range].range:focus {
+  outline: none;
+}
+
+/*webkit*/
+input[type=range].range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 2em;
+  height: 2em;
+  border-radius: 1em;
+  background: #054B61;
+  border: none;
+  box-shadow: 0 0 2px black;
+  margin-top: calc(max((1em - 1px - 1px) * 0.5,0px) - 2em * 0.5);
+}
+
+input[type=range].range::-webkit-slider-runnable-track {
+  height: 1em;
+  border: 1px solid #b2b2b2;
+  border-radius: 0.5em;
+  background: #efefef;
+  box-shadow: none;
+}
+
+input[type=range].range.slider-progress::-webkit-slider-runnable-track {
+  background: linear-gradient(#054b61,#054b61) 0/var(--sx) 100% no-repeat, #efefef;
+}
+
+input[type=range].range.slider-progress:hover::-webkit-slider-runnable-track {
+  background: linear-gradient(#0061C3,#0061C3) 0/var(--sx) 100% no-repeat, #efefef;
+}
+
+input[type=range].range.slider-progress:active::-webkit-slider-runnable-track {
+  background: linear-gradient(#2F98F9,#2F98F9) 0/var(--sx) 100% no-repeat, #efefef;
+}
+
+/*mozilla*/
+input[type=range].range::-moz-range-thumb {
+  width: 2em;
+  height: 2em;
+  border-radius: 1em;
+  background: #054B61;
+  border: none;
+  box-shadow: 0 0 2px black;
+}
+
+input[type=range].range::-moz-range-track {
+  height: max(calc(1em - 1px - 1px),0px);
+  border: 1px solid #b2b2b2;
+  border-radius: 0.5em;
+  background: #efefef;
+  box-shadow: none;
+}
+
+input[type=range].range.slider-progress::-moz-range-track {
+  background: linear-gradient(#054b61,#054b61) 0/var(--sx) 100% no-repeat, #efefef;
+}
+
+input[type=range].range.slider-progress:hover::-moz-range-track {
+  background: linear-gradient(#0061C3,#0061C3) 0/var(--sx) 100% no-repeat, #efefef;
+}
+
+input[type=range].range.slider-progress:active::-moz-range-track {
+  background: linear-gradient(#2F98F9,#2F98F9) 0/var(--sx) 100% no-repeat, #efefef;
+}
+
+/*ms*/
+input[type=range].range::-ms-fill-upper {
+  background: transparent;
+  border-color: transparent;
+}
+
+input[type=range].range::-ms-fill-lower {
+  background: transparent;
+  border-color: transparent;
+}
+
+input[type=range].range::-ms-thumb {
+  width: 2em;
+  height: 2em;
+  border-radius: 1em;
+  background: #054B61;
+  border: none;
+  box-shadow: 0 0 2px black;
+  margin-top: 0;
+  box-sizing: border-box;
+}
+
+input[type=range].range::-ms-track {
+  height: 1em;
+  border-radius: 0.5em;
+  background: #efefef;
+  border: 1px solid #b2b2b2;
+  box-shadow: none;
+  box-sizing: border-box;
+}
+
+input[type=range].range.slider-progress::-ms-fill-lower {
+  height: max(calc(1em - 1px - 1px),0px);
+  border-radius: 0.5em 0 0 0.5em;
+  margin: -1px 0 -1px -1px;
+  background: #054b61;
+  border: 1px solid #b2b2b2;
+  border-right-width: 0;
+}
+
+input[type=range].range.slider-progress:hover::-ms-fill-lower {
+  background: #0061C3;
+}
+
+input[type=range].range.slider-progress:active::-ms-fill-lower {
+  background: #2F98F9;
+}
+
+
+
+
 input.readonly
 {
         background-color:#cccccc;
@@ -1143,3 +1284,6 @@ output {
   font-size: 220%;
   font-weight: bold;
 }
+
+
+
