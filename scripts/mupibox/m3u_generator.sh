@@ -40,7 +40,7 @@ else
 			then
 				searchStrTitleCover=""
 				title=$(/usr/bin/basename "${i}")
-				ls -1v "${i}" | grep '.mp3\|.flac\|.wav\|.wma\|.m4a' > /tmp/playlist.m3u
+				ls -1v "${i}" | grep '.mp3\|.flac\|.wav\|.wma\|.ogg\|.m4a' > /tmp/playlist.m3u
 				mv /tmp/playlist.m3u "${i}"
 				test4images=$(ls -1v "${i}" | grep .jp*g)
 				if [ ${#test4images} != 0 ]
@@ -93,7 +93,7 @@ else
 			then
 				searchStrTitleCover=""
 				title=$(/usr/bin/basename "${i}")
-				ls -1v "${i}" | grep '.mp3\|.flac\|.wav\|.wma\|.m4a' > /tmp/playlist.m3u
+				ls -1v "${i}" | grep '.mp3\|.flac\|.wav\|.wma\|.ogg\|.m4a' > /tmp/playlist.m3u
 				mv /tmp/playlist.m3u "${i}"
 				test4images=$(ls -1v "${i}" | grep .jp*g)
 				if [ ${#test4images} != 0 ]
