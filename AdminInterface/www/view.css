@@ -583,7 +583,7 @@ https://toughengineer.github.io/demo/slider-styler*/
 input[type=range].range {
   height: 2.2em;
   -webkit-appearance: none;
-  background-color: #44afe2;
+  background-color: #C1EBFF;
 }
 
 /*progress support*/
@@ -613,7 +613,7 @@ input[type=range].range::-webkit-slider-runnable-track {
   height: 1em;
   border: 1px solid #b2b2b2;
   border-radius: 0.5em;
-  background: #efefef;
+  background: #44afe2;
   box-shadow: none;
 }
 
@@ -643,7 +643,7 @@ input[type=range].range::-moz-range-track {
   height: max(calc(1em - 1px - 1px),0px);
   border: 1px solid #b2b2b2;
   border-radius: 0.5em;
-  background: #efefef;
+  background: #44afe2;
   box-shadow: none;
 }
 
@@ -684,7 +684,7 @@ input[type=range].range::-ms-thumb {
 input[type=range].range::-ms-track {
   height: 1em;
   border-radius: 0.5em;
-  background: #efefef;
+  background: #44afe2;
   border: 1px solid #b2b2b2;
   box-shadow: none;
   box-sizing: border-box;
@@ -1225,10 +1225,6 @@ details > ul {
 	border: 0px solid #44afe2;
 	margin-top: 0;
 	padding: 1rem;
-}
-
-output {
-	font-size: 190%;
 }
 
 .base-timer {
