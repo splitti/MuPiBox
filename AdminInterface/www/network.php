@@ -22,6 +22,22 @@
 	$BITRATE=exec($commandB);
 
 
+	if( $_POST['save_wifi'] )
+		{
+		$wifi_data[0]['category']="WLAN";
+		$wifi_data[0]['ssid']=$_POST['wifi_name'];
+		$wifi_data[0]['pw']=$_POST['wifi_pwd'];
+		$json_object = json_encode($wifi_data, JSON_PRETTY_PRINT);
+		$save_rc = file_put_contents('/tmp/.add-wifi.json', $json_object);
+		exec("sudo chmod 755 /tmp/.add-wifi.json");
+		exec("sudo mv /tmp/.add-wifi.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/wlan.json");
+		sleep(5);
+		exec("sudo wpa_cli -i wlan0 reconfigure");
+		$CHANGE_TXT=$CHANGE_TXT."<li>Wifi ".$_POST['wifi_name']." added</li>";
+		$change=1;
+
+		}
+
 	if( $_POST['scan_wifi'] )
 		{
 		$command = "sudo bash -c 'wpa_cli scan > /dev/null && sleep 10 && wpa_cli scan_results | tail -n +3'";
@@ -36,7 +52,7 @@
 			$command = "sudo wpa_cli remove_network ".$_POST['wifinr']." && sudo wpa_cli save_config";
 			exec($command, $output, $result );
 			$change=1;
-			$CHANGE_TXT=$CHANGE_TXT."<li>OnBoard Wifi disabled [restart necessary]</li>";
+			$CHANGE_TXT=$CHANGE_TXT."<li>Wifi deleted</li>";
 			}
 		}
 	if( $_POST['change_wifi'] == "disable" )
@@ -71,7 +87,7 @@
 	$CHANGE_TXT=$CHANGE_TXT."</ul>";
 
 ?>
-<form class="appnitro"  method="post" action="network.php" id="form">
+<form class="appnitro" name="network" method="post" action="network.php" id="form">
 <div class="description">
 	<h2>Network</h2>
 	<p>Network informations, options and so on...</p>
@@ -83,7 +99,6 @@
 			<li class="li_norm">
 
         <h2>Network Information</h2>
-        <p>Just a little bit network data. Maybe also configuration in the future...</p>
         <table id="network">
         <tr><td id="netl">IP-Address:</td><td id="netr"><?php print $_SERVER['SERVER_ADDR']; ?></td></tr>
         <tr><td id="netl">MAC-Address:</td><td id="netr"><?php print $MAC0; ?></td></tr>
@@ -96,12 +111,10 @@
         <tr><td id="netl">Bitrate:</td><td id="netr"><?php print $BITRATE ?></td></tr>
         </table>
 		</li></ul></details>
-
-
-		
 		
 	<details>
 		<summary><i class="fa-regular fa-trash-can"></i> Delete Wifi-Network</summary>
+
 	<ul>
 		<li class="li_1"><h2>Delete Wifi-Network</h2>
 			<p>
@@ -123,8 +136,8 @@
 			{
 				$connection="";
 			}
-			echo "<input type=\"radio\" id=\"wifinr\" name=\"wifinr\" value=\"".$wifidetails[0]."\"> ";
-		echo "<label for=\"wifinr\"> ".$wifidetails[1].$connection."</label><br/>";
+			echo "<input type=\"radio\" id=\"".$wifidetails[0]."\" name=\"wifinr\" value=\"".$wifidetails[0]."\"> ";
+		echo "<label for=\"".$wifidetails[0]."\"> ".$wifidetails[1].$connection."</label></input><br/>";
 		}
 
 ?>
@@ -144,10 +157,25 @@
 	<li class="li_1"><h2>Search and Add Wifi</h2>
 		<p>You can search for WLAN or enter it manually</p>
 	</li>
+
 	<?php
 	if ( $wifi_networks )
-		{
-		echo $wifi_networks;
+		{	
+				?>
+				<li class="li_1">
+				<h2>SSID-Name</h2>
+
+				<div><select id="wifi_name" name="wifi_name" class="element text small">
+				
+				<?php
+				foreach($wifi_networks as $wifiname) {
+					$wifidetails = explode("\t", $wifiname);
+					print "<option value=\"". $wifidetails[4] . "\">" . $wifidetails[4] . "</option>";
+				}
+				?>
+				"</select></li>
+
+	<?php	
 		}
 	else
 		{
@@ -156,24 +184,24 @@
 			<h2>SSID-Name</h2>
 			<input id="wifi_name" name="wifi_name" class="element text medium" type="text" maxlength="255" value=""/>
         </li>
-        <li id="li_1" >
+	<?php
+		}
+	?>
+        <li class="li_1" >
 			<h2>Wifi-Password</h2>
-			<input id="wifi_pwd" name="wifi_pwd" class="element text medium" type="password" maxlength="255" value="">
-
+			<input id="wifi_pwd" name="wifi_pwd" class="element text medium" type="password" maxlength="255" value="" minlength="8">
 		</li>
 		<li class="li_1">
 		<input id="saveForm" class="button_text" type="submit" name="save_wifi" value="Save Wifi" />
 		<input id="saveForm" class="button_text" type="submit" name="scan_wifi" value="Scan Wifi-Networks" />
 		</li>
-	<?php
-		}
-	?>
 	</ul>
 	</details>
 
 
 	<details>
 		<summary><i class="fa-solid fa-toggle-off"></i> Misc Options</summary>
+
 	<ul>
 		<li class="li_1"><h2>Enable/Disable OnBoad Wifi</h2>
 			<p>
@@ -209,7 +237,6 @@
 		</li>
 	</ul>
 	</details>
-
 </form>
 
 <?php

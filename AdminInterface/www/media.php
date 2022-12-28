@@ -229,7 +229,7 @@
 <p>The Spotify content is always loaded up-to-date. Loading can take some time.</p>
 </div>
 <form class="appnitro" name="mupi" method="post" action="media.php" id="form">
-	<select id="category" name="category" class="element text medium" >
+	<select id="category" name="category" class="element text small" >
 		<option value="audiobook">Audiobook</option>
 		<option value="music">Music</option>
 		<option value="playlist">Playlist</option>

@@ -3,7 +3,7 @@
  $CHANGE_TXT="<div id='lbinfo'><ul id='lbinfo'>";
  include ('includes/header.php');
 
-	if($_POST['stop_sleeptimer'])
+	if($_POST['stop_sleeptimer'] == "Stop running timer")
 		{
 		$command = "sudo pkill -f \"sleep_timer.sh\"";
 		exec($command);
@@ -13,7 +13,7 @@
 		$CHANGE_TXT=$CHANGE_TXT."<li>Sleeptimer stopped</li>";
 		}
 
-	if($_POST['powerofftimer'])
+	if($_POST['potimer'])
 		{
 		$timerSleepingTime=$_POST['powerofftimer']*60;
 		$command = "sudo nohup /usr/local/bin/mupibox/./sleep_timer.sh ".$timerSleepingTime."  > /dev/null 2>&1 &";
@@ -136,7 +136,7 @@
 		$change_sd = "activate for next boot";
 		}
 		
- if( isset($_POST['thisvolume']) )
+ if( $_POST['audioset'] )
   {
 	$tvcommand = "sudo su dietpi -c '/usr/bin/amixer sget Master | grep \"Right:\" | cut -d\" \" -f7 | sed \"s/\\[//g\" | sed \"s/\\]//g\" | sed \"s/\%//g\"'";
 	$tvresult = exec($tvcommand, $tvoutput);
@@ -148,7 +148,7 @@
 		$change=2;
 		}
   }
- if( isset($_POST['newbrightness']) )
+ if( $_POST['displayset'] )
   {
 	$command = "cat /sys/class/backlight/rpi_backlight/brightness";
 	$thisbrightness = exec($command, $tboutput);
@@ -161,7 +161,7 @@
 		$change=2;
 		}
   }
- if( $data["mupibox"]["physicalDevice"]!=$_POST['audio'] && $_POST['audio'])
+ if( $data["mupibox"]["physicalDevice"]!=$_POST['audio'] && $_POST['audioset'])
   {
   $data["mupibox"]["physicalDevice"]=$_POST['audio'];
   $command = "sudo /boot/dietpi/func/dietpi-set_hardware soundcard '" . $_POST['audio'] . "'";
@@ -169,7 +169,7 @@
   $CHANGE_TXT=$CHANGE_TXT."<li>Soundcard changed to  ".$data["mupibox"]["physicalDevice"]." [reboot is necessary]</li>";
   $change=2;
   }
- if( $data["mupibox"]["host"]!=$_POST['hostname'] && $_POST['hostname'])
+ if( $data["mupibox"]["host"]!=$_POST['hostname'] && $_POST['submithn'])
   {
   $data["mupibox"]["host"]=$_POST['hostname'];
   $command = "sudo /boot/dietpi/func/change_hostname " . $_POST['hostname'];
@@ -179,13 +179,13 @@
   $CHANGE_TXT=$CHANGE_TXT."<li>Hostname changed to  ".$data["mupibox"]["host"]." [reboot is necessary]</li>";
   $change=1;
   }
- if( $_POST['theme'] != $data["mupibox"]["theme"] && $_POST['theme'] )
+ if( $_POST['theme'] != $data["mupibox"]["theme"] && $_POST['mupiset'] )
   {
   $data["mupibox"]["theme"]=$_POST['theme'];
   $CHANGE_TXT=$CHANGE_TXT."<li>New Theme  ".$data["mupibox"]["theme"]."  is active</li>";
   $change=1;
   }
- if( $_POST['tts'] != $data["mupibox"]["ttsLanguage"] && $_POST['tts'] )
+ if( $_POST['tts'] != $data["mupibox"]["ttsLanguage"] && $_POST['mupiset'] )
   {
   $data["mupibox"]["ttsLanguage"]=$_POST['tts'];
   $CHANGE_TXT=$CHANGE_TXT."<li>New TTS Language  ".$data["mupibox"]["ttsLanguage"]." [reboot is necessary]</li>";
@@ -194,49 +194,49 @@
   $change=2;
   }
 
- if( $data["shim"]["ledBrightnessMax"]!=$_POST['ledmaxbrightness'] && $_POST['ledmaxbrightness']!= "" )
+ if( $data["shim"]["ledBrightnessMax"]!=$_POST['ledmaxbrightness'] && $_POST['powerset'] )
   {
   $data["shim"]["ledBrightnessMax"]=$_POST['ledmaxbrightness'];
-  $CHANGE_TXT=$CHANGE_TXT."<li>LED standard brightness set to ".$data["shim"]["ledBrightnessMax"]."</li>";
+  $CHANGE_TXT=$CHANGE_TXT."<li>LED standard brightness set to ".$data["shim"]["ledBrightnessMax"]."%</li>";
   $change=2;
   }
 
- if( $data["shim"]["ledBrightnessMin"]!=$_POST['ledminbrightness'] && $_POST['ledminbrightness']!= "" )
+ if( $data["shim"]["ledBrightnessMin"]!=$_POST['ledminbrightness'] && $_POST['powerset'] )
   {
   $data["shim"]["ledBrightnessMin"]=$_POST['ledminbrightness'];
-  $CHANGE_TXT=$CHANGE_TXT."<li>LED standard brightness set to ".$data["shim"]["ledBrightnessMin"]."</li>";
+  $CHANGE_TXT=$CHANGE_TXT."<li>LED standard brightness set to ".$data["shim"]["ledBrightnessMin"]."%</li>";
   $change=2;
   }
 
- if( $data["mupibox"]["maxVolume"]!=$_POST['maxVolume'] && $_POST['maxVolume'] )
+ if( $data["mupibox"]["maxVolume"]!=$_POST['maxVolume'] && $_POST['audioset'] )
   {
   $data["mupibox"]["maxVolume"]=$_POST['maxVolume'];
-  $CHANGE_TXT=$CHANGE_TXT."<li>Max Volume is set to ".$data["mupibox"]["maxVolume"]." [reboot is necessary]</li>";
+  $CHANGE_TXT=$CHANGE_TXT."<li>Max Volume is set to ".$data["mupibox"]["maxVolume"]."% [reboot is necessary]</li>";
   $change=2;
   }
 
- if( $data["mupibox"]["startVolume"]!=$_POST['volume'] && $_POST['volume'] )
+ if( $data["mupibox"]["startVolume"]!=$_POST['volume'] && $_POST['audioset'] )
   {
   $data["mupibox"]["startVolume"]=$_POST['volume'];
-  $CHANGE_TXT=$CHANGE_TXT."<li>Start Volume is set to ".$data["mupibox"]["startVolume"]."</li>";
+  $CHANGE_TXT=$CHANGE_TXT."<li>Start Volume is set to ".$data["mupibox"]["startVolume"]."%</li>";
   $change=2;
   }
- if($data["timeout"]["idlePiShutdown"]!=$_POST['idlePiShutdown'] && isset($_POST['idlePiShutdown']) && $_POST['idlePiShutdown'] >= 0)
+ if($_POST['idletime'])
   {
   $data["timeout"]["idlePiShutdown"]=$_POST['idlePiShutdown'];
-  $CHANGE_TXT=$CHANGE_TXT."<li>Idle Shutdown Time is set to ".$data["timeout"]["idlePiShutdown"]."</li>";
+  $CHANGE_TXT=$CHANGE_TXT."<li>Idle Shutdown Time is set to ".$data["timeout"]["idlePiShutdown"]." minutes</li>";
   $change=2;
   }
- if($data["timeout"]["idleDisplayOff"]!=$_POST['idleDisplayOff'] && isset($_POST['idleDisplayOff']) && $_POST['idleDisplayOff'] >= 0)
+ if($data["timeout"]["idleDisplayOff"]!=$_POST['idleDisplayOff'] && isset($_POST['displayset']) && $_POST['idleDisplayOff'] >= 0)
   {
   $data["timeout"]["idleDisplayOff"]=$_POST['idleDisplayOff'];
-  $CHANGE_TXT=$CHANGE_TXT."<li>Idle Time for Display is set to ".$data["timeout"]["idleDisplayOff"]."</li>";
+  $CHANGE_TXT=$CHANGE_TXT."<li>Idle Time for Display is set to ".$data["timeout"]["idleDisplayOff"]." minutes</li>";
   $change=2;
   }
- if( $data["timeout"]["pressDelay"]!=$_POST['pressDelay'] && $_POST['pressDelay'] != "" )
+ if( $data["timeout"]["pressDelay"]!=$_POST['pressDelay'] && $_POST['powerset'] )
   {
   $data["timeout"]["pressDelay"]=$_POST['pressDelay'];
-  $CHANGE_TXT=$CHANGE_TXT."<li>Press Button delay set to ".$data["shim"]["ledPin"]. "</li>";
+  $CHANGE_TXT=$CHANGE_TXT."<li>Press Button delay set to ".$data["shim"]["ledPin"]. " seconds</li>";
   $change=2;
   }
  if( $data["shim"]["ledPin"]!=$_POST['ledPin'] && $_POST['ledPin'])
@@ -245,22 +245,22 @@
   $CHANGE_TXT=$CHANGE_TXT."<li>New GPIO for Power-LED set to ".$data["shim"]["ledPin"]. "  [reboot is necessary]</li>";
   $change=2;
   }
- if( $data["chromium"]["resX"]!=$_POST['resX'] && $_POST['resX'])
+ if( $data["chromium"]["resX"]!=$_POST['resX'] && $_POST['displayset'])
   {
   $data["chromium"]["resX"]=$_POST['resX'];
-  $CHANGE_TXT=$CHANGE_TXT."<li>X-Resolution set to ".$data["chromium"]["resX"]."</li>";
+  $CHANGE_TXT=$CHANGE_TXT."<li>X-Resolution set to ".$data["chromium"]["resX"]." pixel</li>";
   $change=1;
   }
- if( $data["chromium"]["resY"]!=$_POST['resY'] && $_POST['resY'])
+ if( $data["chromium"]["resY"]!=$_POST['resY'] && $_POST['displayset'])
   {
   $data["chromium"]["resY"]=$_POST['resY'];
-  $CHANGE_TXT=$CHANGE_TXT."<li>Y-Resolution set to ".$data["chromium"]["resY"]."</li>";
+  $CHANGE_TXT=$CHANGE_TXT."<li>Y-Resolution set to ".$data["chromium"]["resY"]." pixel</li>";
   $change=1;
   }
   if( $data["mupibox"]["maxVolume"] < $data["mupibox"]["startVolume"] )
 	{
 	$data["mupibox"]["startVolume"]=$data["mupibox"]["maxVolume"];
-	$CHANGE_TXT=$CHANGE_TXT."<li>Start Volume is set to ".$data["mupibox"]["maxVolume"]." because of Max Volume</li>";
+	$CHANGE_TXT=$CHANGE_TXT."<li>Start Volume is set to ".$data["mupibox"]["maxVolume"]."% because of max volume setting</li>";
 	$change=2;
 	}
  if( $change == 1 )
@@ -342,13 +342,26 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 
 				</div>
 			</li>
-
 			<li class="buttons">
 				<input type="hidden" name="form_id" value="37271" />
 
-				<input id="saveForm" class="button_text" type="submit" name="submit" value="Start Power-Off Timer" />
+				<input id="saveForm" class="button_text" type="submit" name="potimer" value="Start Power-Off Timer" />
 			</li>
 				<?php } ?>
+			<li id="li_1" >
+				<h2>Idle time to shutdown </h2>
+				<p>Idle time (in minutes) without playback until the box turns off:</p>
+				<div>
+					<output id="rangeval" class="rangeval"><?php echo $data["timeout"]["idlePiShutdown"]; ?> min</output>
+					<input class="range slider-progress" list="steplist_po" name="idlePiShutdown" type="range" min="15" max="300" step="15.0" value="<?php echo $data["timeout"]["idlePiShutdown"]; ?>" oninput="this.previousElementSibling.value = this.value + ' min'">
+				</div>
+
+			</li>
+			<li class="buttons">
+				<input type="hidden" name="form_id" value="37271" />
+
+				<input id="saveForm" class="button_text" type="submit" name="idletime" value="Submit idle time" />
+			</li>
 		</ul>
 	</details>
 
@@ -366,7 +379,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 			<li class="buttons">
 				<input type="hidden" name="form_id" value="37271" />
 
-				<input id="saveForm" class="button_text" type="submit" name="submit" value="Submit" />
+				<input id="saveForm" class="button_text" type="submit" name="submithn" value="Submit" />
 			</li>
 			
 			<li class="li_1"><h2>Overclock SD Card</h2>
@@ -459,10 +472,12 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				if($warnings == "")
 					{
 					$change_warnings="enable";
+					echo "Warnings: <b>disabled</b>";
 					}
 				else
 					{
 					$change_warnings="disable";
+					echo "Warnings: <b>enabled</b>";
 					}
 				?>
 				</p>
@@ -541,21 +556,10 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				"</select>
 				</div>
 			</li>
-
-			<li id="li_1" >
-				<h2>Idle Time to Shutdown </h2>
-				<div>
-				<input id="idlePiShutdown" name="idlePiShutdown" class="element text medium" type="number" maxlength="255" value="<?php
-				print $data["timeout"]["idlePiShutdown"];
-				?>"/>
-				</div>
-			</li>
-
-
 			<li class="buttons">
 				<input type="hidden" name="form_id" value="37271" />
 
-				<input id="saveForm" class="button_text" type="submit" name="submit" value="Submit" />
+				<input id="saveForm" class="button_text" type="submit" name="mupiset" value="Submit" />
 			</li>
 		</ul>
 	</details>
@@ -588,19 +592,22 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 			</li>
 			
 			<li id="li_1" >
-				<h2>Idle Display Off Timeout </h2>
+				<h2>Turn off display after ... minutes</h2>
+				<p>
+				Please note: Depending on the display, the screen goes black but the backlight remains on.
+				</p>
 				<div>
 					<output id="rangeval" class="rangeval"><?php 
 						echo $data["timeout"]["idleDisplayOff"]
-				?></output>				
+				?> min</output>				
 				<input class="range slider-progress" name="idleDisplayOff" type="range" min="0" max="120" step="1.0" value="<?php 
 					echo $data["timeout"]["idleDisplayOff"]
-				?>" oninput="this.previousElementSibling.value = this.value">
+				?>" oninput="this.previousElementSibling.value = this.value + ' min'">
 				</div>
 			</li>
 
 			<li id="li_1" >
-				<h2>Display Resolution X </h2>
+				<h2>Display resolution X in pixel</h2>
 				<div>
 				<input id="resX" name="resX" class="element text medium" type="number" maxlength="255" value="<?php
 				print $data["chromium"]["resX"];
@@ -608,7 +615,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				</div>
 			</li>
 			<li id="li_1" >
-				<h2>Display Resolution Y </h2>
+				<h2>Display resolution Y in pixel</h2>
 				<div>
 				<input id="resY" name="resY" class="element text medium" type="number" maxlength="255" value="<?php
 				print $data["chromium"]["resY"];
@@ -619,7 +626,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 			<li class="buttons">
 				<input type="hidden" name="form_id" value="37271" />
 
-				<input id="saveForm" class="button_text" type="submit" name="submit" value="Submit" />
+				<input id="saveForm" class="button_text" type="submit" name="displayset" value="Submit" />
 			</li>
 		</ul>
 	</details>
@@ -655,79 +662,37 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 					$command = "sudo su dietpi -c '/usr/bin/amixer sget Master | grep \"Right:\" | cut -d\" \" -f7 | sed \"s/\\[//g\" | sed \"s/\\]//g\" | sed \"s/\%//g\"'";
 					$VolumeNow = exec($command, $voutput);
 					echo $voutput[0];
-				?></output>				
+				?>%</output>				
 
 				<input class="range slider-progress" name="thisvolume" type="range" min="0" max="100" step="5.0" value="<?php 
 					echo $voutput[0];
-				?>"list="steplist" oninput="this.previousElementSibling.value = this.value">
-			<datalist id="steplist">
-				<option>0</option>
-				<option>5</option>
-				<option>10</option>
-				<option>15</option>
-				<option>20</option>
-				<option>25</option>
-				<option>30</option>
-				<option>35</option>
-				<option>40</option>
-				<option>45</option>
-				<option>50</option>
-				<option>55</option>
-				<option>60</option>
-				<option>65</option>
-				<option>70</option>
-				<option>75</option>
-				<option>80</option>
-				<option>85</option>
-				<option>90</option>
-				<option>95</option>
-				<option>100</option>
-			</datalist>
-
+				?>"list="steplist" oninput="this.previousElementSibling.value = this.value + '%'">
 				</div>
 
 			</li>
 			<li id="li_1" >
 				<h2>Volume after power on </h2>
 				<div>
-				<select id="volume" name="volume" class="element text medium">
-				<?php
-				$volume = $data["mupibox"]["startVolume"];
-				for($i=0; $i <= 100; $i=$i+10) {
-				if( $i == $data["mupibox"]["startVolume"] )
-				{
-				$selected = " selected=\"selected\"";
-				}
-				else
-				{
-				$selected = "";
-				}
-				print "<option value=\"". $i . "\"" . $selected  . ">" . $i . "</option>";
-				}
-				?>
-				"</select>
+				<output id="rangeval" class="rangeval"><?php 
+					echo $data["mupibox"]["startVolume"];
+				?>%</output>
+				<input class="range slider-progress" name="volume" type="range" min="0" max="100" step="5.0" value="<?php 
+					echo $data["mupibox"]["startVolume"];
+				?>"list="steplist" oninput="this.previousElementSibling.value = this.value + '%'">
 				</div>
 			</li>
 
 			<li id="li_1" >
 				<h2>Set max volume</h2>
 				<div>
-				<select id="maxVolume" name="maxVolume" class="element text medium">
-				<?php
-				$volume = $data["mupibox"]["maxVolume"];
-				for($i=0; $i <= 100; $i=$i+10) {
-				if( $i == $data["mupibox"]["maxVolume"] )
-				{
-				$selected = " selected=\"selected\"";
-				}
-				else
-				{
-				$selected = "";
-				}
-				print "<option value=\"". $i . "\"" . $selected  . ">" . $i . "</option>";
-				}
-				?>
-				"</select>
+
+				<output id="rangeval" class="rangeval"><?php 
+					echo $data["mupibox"]["maxVolume"];
+				?>%</output>
+				<input class="range slider-progress" name="maxVolume" type="range" min="0" max="100" step="5.0" value="<?php 
+					echo $data["mupibox"]["maxVolume"];
+				?>"list="steplist" oninput="this.previousElementSibling.value = this.value + '%'">
+
 				</div>
 			</li>			
 			
@@ -735,7 +700,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 			<li class="buttons">
 				<input type="hidden" name="form_id" value="37271" />
 
-				<input id="saveForm" class="button_text" type="submit" name="submit" value="Submit" />
+				<input id="saveForm" class="button_text" type="submit" name="audioset" value="Submit" />
 			</li>
 		</ul>
 	</details>
@@ -745,23 +710,39 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 		
 			<li id="li_1" >
 				<h2>Power-Off Button delay </h2>
+				<p>Waiting time (in seconds) until the button is pressed as a shutdown indicator
+				</p>
 				<div>
 					<output id="rangeval" class="rangeval"><?php 
-					echo $data["timeout"]["pressDelay"]
-				?></output>				
+					echo $data["timeout"]["pressDelay"];
+				?> sec</output>				
 
 				<input class="range slider-progress" name="pressDelay" type="range" min="0" max="5" step="1.0" value="<?php 
-					echo $data["timeout"]["pressDelay"]
-				?>" oninput="this.previousElementSibling.value = this.value"><output></output>
+					echo $data["timeout"]["pressDelay"];
+				?> sec" oninput="this.previousElementSibling.value = this.value + ' sec'"><output></output>
 				</div>
 			</li>
 
 			<li id="li_1" >
 				<h2>LED GPIO OnOffShim </h2>
-				<div>
-				<input id="ledPin" name="ledPin" class="element text medium" type="number" maxlength="255" value="<?php
-				print $data["shim"]["ledPin"];
-				?>"/>
+				<p>Possible standard GPIO-Pins are 4, 17, 18, 21, 22, 23, 24, 25 (default PIN) and 27. GPIOs 4 and 17 are used by OnOffShim. GPIOs 18 and 21 are used by HifiBerry MiniAmp. Just use free GPIOs to avoid system errors.</p>
+				<div><select id="ledPin" name="ledPin" class="element text small">
+				
+				<?php
+				$leds = array( "4", "17", "18", "21", "22", "23", "24", "25", "27" );
+				foreach($leds as $pin) {
+				if( $pin == $data["shim"]["ledPin"] )
+				{
+				$selected = " selected=\"selected\"";
+				}
+				else
+				{
+				$selected = "";
+				}
+				print "<option value=\"". $pin . "\"" . $selected  . ">" . $pin . "</option>";
+				}
+				?>
+				"</select>	
 				</div>
 			</li>
 
@@ -793,7 +774,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 			<li class="buttons">
 				<input type="hidden" name="form_id" value="37271" />
 
-				<input id="saveForm" class="button_text" type="submit" name="submit" value="Submit" />
+				<input id="saveForm" class="button_text" type="submit" name="powerset" value="Submit" />
 			</li>
 		</ul>
 	</details>

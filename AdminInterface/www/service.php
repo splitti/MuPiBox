@@ -128,11 +128,13 @@
 		<h2>MupiBox settings</h2>
 		<p>De/Activate some helpfull services...</p>
 	</div>
-	<ul >
+	<details>
+		<summary><i class="fa-solid fa-network-wired"></i> Network</summary>
+	<ul>
 		<li class="li_1"><h2>Samba</h2>
 			<p>
 			<?php 
-			echo "Samba Status: <b>".$samba_state."</b>";
+			echo "Samba-Service Status: <b>".$samba_state."</b>";
 			?>
 			</p>
 			<input id="saveForm" class="button_text" type="submit" name="change_samba" value="<?php print $change_samba; ?>" />
@@ -140,31 +142,37 @@
 		<li class="li_1"><h2>FTP-Server</h2>
 			<p>
 			<?php 
-			echo "FTP-Server Status: <b>".$ftp_state."</b>";
+			echo "FTP-Service Status: <b>".$ftp_state."</b>";
 			?>
 			</p>
 			<input id="saveForm" class="button_text" type="submit" name="change_ftp" value="<?php print $change_btac; ?>" />
 		</li>
-		<li class="li_1"><h2>Bluetooth Autoconnect Helper (Just if automatic reconnect won't work)</h2>
-			<p>
-			<?php 
-			echo "BT Autoconnect Status: <b>".$btac_state."</b>";
-			?>
-			</p>
-			<input id="saveForm" class="button_text" type="submit" name="change_btac" value="<?php print $change_ftp; ?>" />
-		</li>
 		<li class="li_1"><h2>Enable/Disable VNC</h2>
 			<p>
-			Enables or disables VNC Services!
+			Enables or disables VNC-Service! The service allows remote access to the browser (Display).
 			</p>
 			<p>
 			<?php 
-			echo "VNC Status: <b>".$vnc_state."</b>";
+			echo "VNC-Service Status: <b>".$vnc_state."</b>";
 			?>
 			</p>
 			<input id="saveForm" class="button_text" type="submit" name="change_vnc" value="<?php print $change_vnc; ?>" />
 		</li>
 	</ul>
+	</details>
+	<details>
+		<summary><i class="fa-brands fa-bluetooth"></i> Bluetooth</summary>
+	<ul>
+		<li class="li_1"><h2>Bluetooth-Autoconnect-Helper (Just if automatic reconnect won't work)</h2>
+			<p>
+			<?php 
+			echo "BT-Autoconnect-Service Status: <b>".$btac_state."</b>";
+			?>
+			</p>
+			<input id="saveForm" class="button_text" type="submit" name="change_btac" value="<?php print $change_ftp; ?>" />
+		</li>
+	</ul>
+	</details>
 </form>
 <?php
 	include ('includes/footer.php');
