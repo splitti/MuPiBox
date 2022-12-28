@@ -125,7 +125,7 @@
 
 <form class="appnitro"  method="post" action="service.php" id="form">
 	<div class="description">
-		<h2>MupiBox settings</h2>
+		<h2>MupiBox services</h2>
 		<p>De/Activate some helpfull services...</p>
 	</div>
 	<details>
@@ -145,7 +145,7 @@
 			echo "FTP-Service Status: <b>".$ftp_state."</b>";
 			?>
 			</p>
-			<input id="saveForm" class="button_text" type="submit" name="change_ftp" value="<?php print $change_btac; ?>" />
+			<input id="saveForm" class="button_text" type="submit" name="change_ftp" value="<?php print $change_ftp; ?>" />
 		</li>
 		<li class="li_1"><h2>Enable/Disable VNC</h2>
 			<p>
