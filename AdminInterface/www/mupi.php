@@ -1,11 +1,41 @@
 <?php
- $change=0;
- $CHANGE_TXT="<div id='lbinfo'><ul id='lbinfo'>";
- include ('includes/header.php');
+	$change=0;
+	$CHANGE_TXT="<div id='lbinfo'><ul id='lbinfo'>";
+	include ('includes/header.php');
 
-	"#display_hdmi_rotate=0"
-	"#lcd_rotate=0"
+	$hdmi_rotate_option[0][0]="0";
+	$hdmi_rotate_option[0][1]="Disabled (default)";
+	$hdmi_rotate_option[1][0]="1";
+	$hdmi_rotate_option[1][1]="90 degrees";
+	$hdmi_rotate_option[2][0]="2";
+	$hdmi_rotate_option[2][1]="180 degrees";
+	$hdmi_rotate_option[3][0]="3";
+	$hdmi_rotate_option[3][1]="270 degrees";
+	$hdmi_rotate_option[4][0]="0x10000";
+	$hdmi_rotate_option[4][1]="Horizontal flip";
+	$hdmi_rotate_option[5][0]="0x20000";
+	$hdmi_rotate_option[5][1]="Vertical flip";
+	$lcd_rotate_option[0][0]="0";
+	$lcd_rotate_option[0][1]="Disabled (default)";
+	$lcd_rotate_option[1][0]="2";
+	$lcd_rotate_option[1][1]="180 degrees";
+	$lcd_rotation_state=`sed -n '/^[[:blank:]]*lcd_rotate=/{s/^[^=]*=//p;q}' /boot/config.txt`;
+	$hdmi_rotation_state=`sed -n '/^[[:blank:]]*display_hdmi_rotate=/{s/^[^=]*=//p;q}' /boot/config.txt`;
 
+	if(isset($_POST['hdmi_rotation']) && $_POST['hdmi_rotation'] != substr($hdmi_rotation_state,0,-1))
+		{
+		exec("sudo su - dietpi -c \". /boot/dietpi/func/dietpi-globals && G_SUDO G_CONFIG_INJECT 'display_hdmi_rotate=' 'display_hdmi_rotate=" . $_POST['hdmi_rotation'] . "' /boot/config.txt\"");
+		$hdmi_rotation_state=`sed -n '/^[[:blank:]]*display_hdmi_rotate=/{s/^[^=]*=//p;q}' /boot/config.txt`;
+		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>Set HDMI-Rotation [reboot is necessary]</li>";
+		}
+	if(isset($_POST['lcd_rotation']) && $_POST['lcd_rotation'] != substr($lcd_rotation_state,0,-1))
+		{
+		exec("sudo su - dietpi -c \". /boot/dietpi/func/dietpi-globals && G_SUDO G_CONFIG_INJECT 'lcd_rotate=' 'lcd_rotate=" . $_POST['lcd_rotation'] . "' /boot/config.txt\"");
+		$lcd_rotation_state=`sed -n '/^[[:blank:]]*lcd_rotate=/{s/^[^=]*=//p;q}' /boot/config.txt`;
+		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>Set LCD-Rotation [reboot is necessary]</li>";
+		}
 
 	if($_POST['stop_sleeptimer'] == "Stop running timer")
 		{
@@ -170,7 +200,7 @@
   $data["mupibox"]["physicalDevice"]=$_POST['audio'];
   $command = "sudo /boot/dietpi/func/dietpi-set_hardware soundcard '" . $_POST['audio'] . "'";
   $change_soundcard = exec($command, $output, $change_soundcard );
-  $CHANGE_TXT=$CHANGE_TXT."<li>Soundcard changed to  ".$data["mupibox"]["physicalDevice"]." [reboot is necessary]</li>";
+  $CHANGE_TXT=$CHANGE_TXT."<li>Soundcard changed to  ".$data["mupibox"]["physicalDevice"]." ---</li>";
   $change=2;
   }
  if( $data["mupibox"]["host"]!=$_POST['hostname'] && $_POST['submithn'])
@@ -592,8 +622,54 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				<option>255</option>
 			</datalist>
 				</div>
-
 			</li>
+			<li id="li_1" >
+				<h2>HDMI-Rotation</h2>
+				<div>
+				<select id="hdmi_rotation" name="hdmi_rotation" class="element text medium">
+				<?php
+				foreach($hdmi_rotate_option as $this_option) {
+					if( $this_option[0] == substr($hdmi_rotation_state, 0, -1) )
+					{
+					$selected = " selected=\"selected\"";
+					}
+					else
+					{
+					$selected = "";
+					}
+					print "<option value=\"". $this_option[0] . "\"" . $selected  . ">" . $this_option[1] . "</option>";
+				}
+				?>
+				"</select>
+				</div>
+			</li>
+
+			<li id="li_1" >
+				<h2>LCD-Rotation</h2>
+				<div>
+				<select id="lcd_rotation" name="lcd_rotation" class="element text medium">
+				<?php
+				foreach( $lcd_rotate_option as $this_option ) {
+					if( $this_option[0] == substr($lcd_rotation_state,0,-1) )
+					{
+					$selected = " selected=\"selected\"";
+					}
+					else
+					{
+					$selected = "";
+					}
+					print "<option value=\"". $this_option[0] . "\"" . $selected  . ">" . $this_option[1] . "</option>";
+				}
+				?>
+				"</select>
+
+
+
+
+				</div>
+			</li>
+
+
 			
 			<li id="li_1" >
 				<h2>Turn off display after ... minutes</h2>
