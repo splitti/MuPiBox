@@ -42,6 +42,13 @@
 		{
 		$command = "sudo bash -c 'wpa_cli scan > /dev/null && sleep 10 && wpa_cli scan_results | tail -n +3'";
 		exec($command, $wifi_networks, $result );
+		$wifiarray = array();
+		foreach($wifi_networks as $wifiname) {
+			$wifidetails = explode("\t", $wifiname);
+			$wifiarray[] = $wifidetails[4];
+		}
+		$wifi_cleaned = array_unique($wifiarray);
+
 		$wifiopen=" open";
 		}
 
@@ -136,7 +143,8 @@
 			{
 				$connection="";
 			}
-			echo "<input type=\"radio\" id=\"".$wifidetails[0]."\" name=\"wifinr\" value=\"".$wifidetails[0]."\"> ";
+		
+		echo "<input type=\"radio\" id=\"".$wifidetails[0]."\" name=\"wifinr\" value=\"".$wifidetails[0]."\"> ";
 		echo "<label for=\"".$wifidetails[0]."\"> ".$wifidetails[1].$connection."</label></input><br/>";
 		}
 
@@ -168,9 +176,8 @@
 				<div><select id="wifi_name" name="wifi_name" class="element text small">
 				
 				<?php
-				foreach($wifi_networks as $wifiname) {
-					$wifidetails = explode("\t", $wifiname);
-					print "<option value=\"". $wifidetails[4] . "\">" . $wifidetails[4] . "</option>";
+				foreach($wifi_cleaned as $wifiname) {
+					print "<option value=\"". $wifiname . "\">" . $wifiname . "</option>";
 				}
 				?>
 				"</select></li>

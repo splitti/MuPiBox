@@ -43,7 +43,21 @@
         $rpi_throttle = checkRpiThrottle();
 ?>
 
-<div class="main">
+<form class="appnitro" name="network" method="post" action="index.php" id="form">
+
+	<details open>
+		<summary><i class="fa-solid fa-circle-info"></i> MuPiBox-News</summary>
+		<ul>
+			<li class="li_norm"><?php
+				$onlinejson = file_get_contents('https://mupibox.de/version/latest/version.json');
+				$dataonline = json_decode($onlinejson, true);
+				print "<p><h2>MuPiBox Version</h2><table><tr><td>Installed version:</td><td>".$data["mupibox"]["version"]."</td></tr><tr><td>Latest stable version:</td><td>".$dataonline["version"]."</td></tr></table></p>";
+				$news = file_get_contents("https://raw.githubusercontent.com/splitti/MuPiBox/main/news.txt");
+				print "<p><h2>MuPiBox-News</h2>".$news."</p>"; ?>
+			</li>
+		</ul>
+	</details>
+
 <?php
 	$command = "ps -ef | grep websockify | grep -v grep";
 	exec($command, $vncoutput, $vncresult );
@@ -54,10 +68,20 @@
         print "<p><embed src='http://".$ip.":6080/vnc_lite.html' id='remotecontrol'></p>";
 	}
 ?>
-<h2>Current Screen</h2>
-<p><a href="images/screenshot.png" target="_blank"><img src="images/screenshot.png" id="screenshot" /></a></p>
+	<details>
+		<summary><i class="fa-solid fa-display"></i> Current Screen</summary>
+		<ul>
+			<li class="li_norm">
+			<p><a href="images/screenshot.png" target="_blank"><img src="images/screenshot.png" id="screenshot" /></a></p>
+			</li>
+		</ul>
+	</details>
+	<details>
+		<summary><i class="fa-brands fa-raspberry-pi"></i> Raspberry Information</summary>
+		<ul>
+			<li class="li_norm"><h2>System Information</h2></li>
+			<li class="li_norm">
 
-<h2>System Information</h2>
 <?php
 		$command = "/usr/bin/cat /sys/firmware/devicetree/base/model";
 		exec($command, $moutput, $result );
@@ -65,10 +89,30 @@
         echo "<tr><td>Throttle:</td><td>" . $rpi_throttle . "</td></tr></table></p>";
 		$command = "/usr/bin/systemd-analyze time";
 		exec($command, $toutput, $result );
-		echo "<p>" . $toutput[0] . "</p>";
+		echo "<p>" . $toutput[0] . "</p></li><li class=\"li_norm\">";
 
 
 ?>
+
+<li class="li_norm"><p>
+<img src="images/cpuload.png" width="100%" />
+</p>
+</li><li class="li_norm">
+<p>
+<img src="images/temp.png"  width="100%" />
+</p>
+</li><li class="li_norm">
+<p>
+<img src="images/ram.png"  width="100%" />
+</p>
+</li></ul></details>
+
+
+	<details>
+		<summary><i class="fa-solid fa-sd-card"></i> SD-Card</summary>
+		<ul>
+			<li class="li_norm">
+
 <?php
         $root_free_bytes = disk_free_space("/");
         $root_free_gb = round($root_free_bytes / 1024 / 1024 / 1024, 2);
@@ -124,26 +168,19 @@
           chart.draw(data, options);
         }
 </script>
-
+</li><li class="li_norm">
 <div class="col-md-6">
         <div id="rootchart" class="chart"></div>
 </div>
+</li><li class="li_norm">
 <div class="col-md-6">
         <div id="bootchart" class="chart"></div>
 </div>
+</li>
+</ul></details>
 
 
-<p>
-<img src="images/cpuload.png" width="100%" />
-</p>
-<p>
-<img src="images/temp.png"  width="100%" />
-</p>
-<p>
-<img src="images/ram.png"  width="100%" />
-</p>
-
-</div>
+</form>
 
 
 

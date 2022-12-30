@@ -3,6 +3,10 @@
  $CHANGE_TXT="<div id='lbinfo'><ul id='lbinfo'>";
  include ('includes/header.php');
 
+	"#display_hdmi_rotate=0"
+	"#lcd_rotate=0"
+
+
 	if($_POST['stop_sleeptimer'] == "Stop running timer")
 		{
 		$command = "sudo pkill -f \"sleep_timer.sh\"";
