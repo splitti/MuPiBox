@@ -1,3 +1,3 @@
 We wish you a happy new year...<br />
-Your MuPiBox-Team<br />
-<img src='https://cdn.pixabay.com/photo/2022/12/21/06/49/sylvester-7669293_1280.jpg' width='250px' />
+Your MuPiBox-Team<br /><br />
+<img src='https://cdn.pixabay.com/photo/2022/12/21/06/49/sylvester-7669293_1280.jpg' width='250' />
