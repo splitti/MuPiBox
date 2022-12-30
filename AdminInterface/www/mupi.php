@@ -19,22 +19,32 @@
 	$lcd_rotate_option[0][1]="Disabled (default)";
 	$lcd_rotate_option[1][0]="2";
 	$lcd_rotate_option[1][1]="180 degrees";
+	$dlcd_rotate_option[0][0]="0";
+	$dlcd_rotate_option[0][1]="Disabled (default)";
+	$dlcd_rotate_option[1][0]="2";
+	$dlcd_rotate_option[1][1]="180 degrees";
+
 	$lcd_rotation_state=`sed -n '/^[[:blank:]]*lcd_rotate=/{s/^[^=]*=//p;q}' /boot/config.txt`;
+	$dlcd_rotation_state=`sed -n '/^[[:blank:]]*display_lcd_rotate=/{s/^[^=]*=//p;q}' /boot/config.txt`;
 	$hdmi_rotation_state=`sed -n '/^[[:blank:]]*display_hdmi_rotate=/{s/^[^=]*=//p;q}' /boot/config.txt`;
 
 	if(isset($_POST['hdmi_rotation']) && $_POST['hdmi_rotation'] != substr($hdmi_rotation_state,0,-1))
 		{
 		exec("sudo su - dietpi -c \". /boot/dietpi/func/dietpi-globals && G_SUDO G_CONFIG_INJECT 'display_hdmi_rotate=' 'display_hdmi_rotate=" . $_POST['hdmi_rotation'] . "' /boot/config.txt\"");
-		$hdmi_rotation_state=`sed -n '/^[[:blank:]]*display_hdmi_rotate=/{s/^[^=]*=//p;q}' /boot/config.txt`;
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Set HDMI-Rotation [reboot is necessary]</li>";
 		}
 	if(isset($_POST['lcd_rotation']) && $_POST['lcd_rotation'] != substr($lcd_rotation_state,0,-1))
 		{
 		exec("sudo su - dietpi -c \". /boot/dietpi/func/dietpi-globals && G_SUDO G_CONFIG_INJECT 'lcd_rotate=' 'lcd_rotate=" . $_POST['lcd_rotation'] . "' /boot/config.txt\"");
-		$lcd_rotation_state=`sed -n '/^[[:blank:]]*lcd_rotate=/{s/^[^=]*=//p;q}' /boot/config.txt`;
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Set LCD-Rotation [reboot is necessary]</li>";
+		}
+	if(isset($_POST['dlcd_rotation']) && $_POST['dlcd_rotation'] != substr($dlcd_rotation_state,0,-1))
+		{
+		exec("sudo su - dietpi -c \". /boot/dietpi/func/dietpi-globals && G_SUDO G_CONFIG_INJECT 'display_lcd_rotate=' 'display_lcd_rotate=" . $_POST['dlcd_rotation'] . "' /boot/config.txt\"");
+		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>Set Display-LCD-Rotation [reboot is necessary]</li>";
 		}
 
 	if($_POST['stop_sleeptimer'] == "Stop running timer")
@@ -623,6 +633,12 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 			</datalist>
 				</div>
 			</li>
+
+			<?php
+				$lcd_rotation_state=`sed -n '/^[[:blank:]]*lcd_rotate=/{s/^[^=]*=//p;q}' /boot/config.txt`;
+				$dlcd_rotation_state=`sed -n '/^[[:blank:]]*display_lcd_rotate=/{s/^[^=]*=//p;q}' /boot/config.txt`;
+				$hdmi_rotation_state=`sed -n '/^[[:blank:]]*display_hdmi_rotate=/{s/^[^=]*=//p;q}' /boot/config.txt`;
+			?>
 			<li id="li_1" >
 				<h2>HDMI-Rotation</h2>
 				<div>
@@ -663,9 +679,26 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				?>
 				"</select>
 
-
-
-
+				</div>
+			</li>
+			<li id="li_1" >
+				<h2>Display-LCD-Rotation</h2>
+				<div>
+				<select id="dlcd_rotation" name="dlcd_rotation" class="element text medium">
+				<?php
+				foreach( $dlcd_rotate_option as $this_option ) {
+					if( $this_option[0] == substr($dlcd_rotation_state,0,-1) )
+					{
+					$selected = " selected=\"selected\"";
+					}
+					else
+					{
+					$selected = "";
+					}
+					print "<option value=\"". $this_option[0] . "\"" . $selected  . ">" . $this_option[1] . "</option>";
+				}
+				?>
+				"</select>
 				</div>
 			</li>
 
