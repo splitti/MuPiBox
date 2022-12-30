@@ -7,7 +7,7 @@ VERSION=$(curl -L ${SRC}/version.json | /usr/bin/jq -r .version)
 CONFIG="/etc/mupibox/mupiboxconfig.json"
 LOG="/tmp/mupibox_update.log"
 exec 3>${LOG}
-
+sudo service mupi_idle_shutdown stop
 
 {
 	echo -e "XXX\n0\nPrepare Update... \nXXX"	 >&3 2>&3
