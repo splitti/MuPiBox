@@ -1,5 +1,6 @@
 <h3>Last updates</h3>
 <ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Dim Power-LED</li>
 <li id='linews' class='linews'>Regesign of structure in the admin interface</li>
 <li id='linews' class='linews'>Adding sleep-timer</li>
 <li id='linews' class='linews'>Adding disyplay-rotation</li>
