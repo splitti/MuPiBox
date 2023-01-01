@@ -1,6 +1,6 @@
 <h3>Last updates</h3>
-<ul>
-<li>Regesign of structure in the admin interface</li>
+<ul id='news'>
+<li id='news'>Regesign of structure in the admin interface</li>
 <li>Adding sleep-timer</li>
 <li>Adding disyplay-rotation</li>
 <li>Adding and deleting Wifi in admin-interface</li>
