@@ -1,13 +1,13 @@
 <h3>Last updates</h3>
-<ul id='news'>
-<li id='news'>Regesign of structure in the admin interface</li>
-<li>Adding sleep-timer</li>
-<li>Adding disyplay-rotation</li>
-<li>Adding and deleting Wifi in admin-interface</li>
-<li>Restriction of the PIN selection for the power LED (due to PWM restrictions)</li>
-<li>Better touch control (sliders)</li>
-<li>News and announcements in the admin interface</li>
-<li>ogg-support</li>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Regesign of structure in the admin interface</li>
+<li id='linews' class='linews'>Adding sleep-timer</li>
+<li id='linews' class='linews'>Adding disyplay-rotation</li>
+<li id='linews' class='linews'>Adding and deleting Wifi in admin-interface</li>
+<li id='linews' class='linews'>Restriction of the PIN selection for the power LED (due to PWM restrictions)</li>
+<li id='linews' class='linews'>Better touch control (sliders)</li>
+<li id='linews' class='linews'>News and announcements in the admin interface</li>
+<li id='linews' class='linews'>ogg-support</li>
 </ul>
 <h3>Happy new year</h3>We wish you a happy new year...<br />
 Your MuPiBox-Team<br /><br />
