@@ -255,6 +255,15 @@ form.appnitro, div.appnitro
 {
 	width:100%;
 }
+form ul.ulnews, #ulnews, .ulnews, ulnews
+{
+	font-size:100%;
+	list-style-type:circle !important;
+	margin:0;
+	padding:0;
+	width:100%;
+	padding-left:20px;
+}
 
 form ul
 {
@@ -265,13 +274,7 @@ form ul
 	width:100%;
 }
 
-form li
-{
-	display:block;
-	margin:0;
-	padding:4px 5px 2px 9px;
-	position:relative;
-}
+
 
 form li:after
 {
