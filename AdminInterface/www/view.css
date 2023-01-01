@@ -28,7 +28,7 @@ body
 	padding: 0px;
 	text-align:left;
 	width:100%;
-	max-width:950px;
+	max-width:850px;
 }
 
 #top
@@ -37,7 +37,7 @@ body
 	height:10px;
 	margin:10px auto 0;
 	width:100%;
-	max-width:950px;
+	max-width:850px;
 
 }
 
@@ -47,7 +47,7 @@ body
 	clear:both;
 	background-color:#44afe2;
 	width:100%;
-	max-width:950px;
+	max-width:850px;
 	padding: 0px;
 	height:80px;
 	display:flex;
@@ -123,7 +123,7 @@ body
 	height:10px;
 	margin:0 auto;
 	width:100%;
-	max-width:800px;
+	max-width:850px;
 }
 
 div.main
