@@ -1,3 +1,14 @@
-We wish you a happy new year...<br />
+<h3>Last updates</h3>
+<ul>
+<li>Regesign of structure in the admin interface</li>
+<li>Adding sleep-timer</li>
+<li>Adding disyplay-rotation</li>
+<li>Adding and deleting Wifi in admin-interface</li>
+<li>Restriction of the PIN selection for the power LED (due to PWM restrictions)</li>
+<li>Better touch control (sliders)</li>
+<li>News and announcements in the admin interface</li>
+<li>ogg-support</li>
+</ul>
+<h3>Happy new year</h3>We wish you a happy new year...<br />
 Your MuPiBox-Team<br /><br />
 <img src='https://cdn.pixabay.com/photo/2022/12/21/06/49/sylvester-7669293_1280.jpg' width='350' />
