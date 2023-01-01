@@ -303,7 +303,7 @@
  if( $data["timeout"]["pressDelay"]!=$_POST['pressDelay'] && $_POST['powerset'] )
   {
   $data["timeout"]["pressDelay"]=$_POST['pressDelay'];
-  $CHANGE_TXT=$CHANGE_TXT."<li>Press Button delay set to ".$data["shim"]["ledPin"]. " seconds</li>";
+  $CHANGE_TXT=$CHANGE_TXT."<li>Press Button delay set to ".$_POST['pressDelay']. " seconds</li>";
   $change=2;
   }
  if( $data["shim"]["ledPin"]!=$_POST['ledPin'] && $_POST['ledPin'])
