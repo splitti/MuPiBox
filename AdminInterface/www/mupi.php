@@ -197,11 +197,34 @@
 	$command = "cat /sys/class/backlight/rpi_backlight/brightness";
 	$thisbrightness = exec($command, $tboutput);
 
-	if( $_POST['newbrightness'] != $tboutput[0] )
+	switch ($_POST['newbrightness']) {
+    case "0":
+        $new_bn=0;
+        break;
+    case "20":
+        $new_bn=51;
+        break;
+    case "40":
+        $new_bn=102;
+        break;
+    case "60":
+        $new_bn=153;
+        break;
+    case "80":
+        $new_bn=204;
+        break;
+    case "100":
+        $new_bn=255;
+        break;
+	default:
+        $new_bn=255;
+	}
+
+	if( $new_bn != $tboutput[0] )
 		{
-		$brcommand="sudo su - -c 'echo " . $_POST['newbrightness'] . " > /sys/class/backlight/rpi_backlight/brightness'";
+		$brcommand="sudo su - -c 'echo " . $new_bn . " > /sys/class/backlight/rpi_backlight/brightness'";
 		$set_brightness = exec($brcommand, $broutput );
-		$CHANGE_TXT=$CHANGE_TXT."<li>Brightness: " . $_POST['newbrightness'] . "</li>";
+		$CHANGE_TXT=$CHANGE_TXT."<li>Brightness: " . $new_bn . "</li>";
 		$change=2;
 		}
   }
@@ -356,7 +379,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				<br/>
 				<div>
 					<output id="rangeval" class="rangeval">60 min</output>
-					<input class="range slider-progress" list="steplist_po" name="powerofftimer" type="range" min="15" max="360" step="15.0" value="60" oninput="this.previousElementSibling.value = this.value + ' min'">
+					<input class="range slider-progress" list="steplist_po" data-tick-step="60" name="powerofftimer" type="range" min="15" max="360" step="15.0" value="60" oninput="this.previousElementSibling.value = this.value + ' min'">
 					<datalist id="steplist_po">
 				<option>15</option>
 				<option>30</option>
@@ -397,7 +420,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				<p>Idle time (in minutes) without playback until the box turns off:</p>
 				<div>
 					<output id="rangeval" class="rangeval"><?php echo $data["timeout"]["idlePiShutdown"]; ?> min</output>
-					<input class="range slider-progress" list="steplist_po" name="idlePiShutdown" type="range" min="15" max="300" step="15.0" value="<?php echo $data["timeout"]["idlePiShutdown"]; ?>" oninput="this.previousElementSibling.value = this.value + ' min'">
+					<input class="range slider-progress" list="steplist_po" data-tick-step="60" name="idlePiShutdown" type="range" min="15" max="300" step="15.0" value="<?php echo $data["timeout"]["idlePiShutdown"]; ?>" oninput="this.previousElementSibling.value = this.value + ' min'">
 				</div>
 
 			</li>
@@ -613,24 +636,38 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 		<summary><i class="fa-solid fa-display"></i> Display settings</summary>
 		<ul>
 			<li id="li_1" >
-				<h2>Brightness (from 0 to 255)</h2>
+				<h2>Brightness</h2>
 				<div>
 					<output id="rangeval" class="rangeval"><?php 
 					$tbcommand = "cat /sys/class/backlight/rpi_backlight/brightness";
 					$tbrightness = exec($tbcommand, $boutput);
+					switch ($boutput[0]) {
+					case "0":
+						$new_bn=0;
+						break;
+					case "51":
+						$new_bn=20;
+						break;
+					case "102":
+						$new_bn=40;
+						break;
+					case "153":
+						$new_bn=60;
+						break;
+					case "204":
+						$new_bn=80;
+						break;
+					case "255":
+						$new_bn=100;
+						break;
+					default:
+						$new_bn=100;
+					}
+					echo $new_bn;
+				?>%</output>				
+				<input class="range slider-progress" data-tick-step="20" name="newbrightness" type="range" min="0" max="100" step="20.0" value="<?php
 					echo $boutput[0];
-				?></output>				
-				<input class="range slider-progress" data-tick-step="51" name="newbrightness" type="range" min="0" max="255" step="51.0" value="<?php
-					echo $boutput[0];
-				?>" list="steplist2" oninput="this.previousElementSibling.value = this.value"><output></output>
-			<datalist id="steplist2">
-				<option>0</option>
-				<option>51</option>
-				<option>102</option>
-				<option>153</option>
-				<option>204</option>
-				<option>255</option>
-			</datalist>
+				?>" oninput="this.previousElementSibling.value = this.value + '%'">
 				</div>
 			</li>
 
@@ -640,7 +677,9 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				$hdmi_rotation_state=`sed -n '/^[[:blank:]]*display_hdmi_rotate=/{s/^[^=]*=//p;q}' /boot/config.txt`;
 			?>
 			<li id="li_1" >
-				<h2>HDMI-Rotation</h2>
+				<h2>Display Rotation Settings</h2>
+				<p>These three settings can rotate the display in different constellations. A restart is necessary after saving.</p>
+				<h3>HDMI-Rotation</h3>
 				<div>
 				<select id="hdmi_rotation" name="hdmi_rotation" class="element text medium">
 				<?php
@@ -661,7 +700,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 			</li>
 
 			<li id="li_1" >
-				<h2>LCD-Rotation</h2>
+				<h3>LCD-Rotation</h3>
 				<div>
 				<select id="lcd_rotation" name="lcd_rotation" class="element text medium">
 				<?php
@@ -682,7 +721,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				</div>
 			</li>
 			<li id="li_1" >
-				<h2>Display-LCD-Rotation</h2>
+				<h3>Display-LCD-Rotation</h3>
 				<div>
 				<select id="dlcd_rotation" name="dlcd_rotation" class="element text medium">
 				<?php

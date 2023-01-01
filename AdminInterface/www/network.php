@@ -221,13 +221,16 @@
 			if($wifionoff == "")
 				{
 				$change_wifi="disable";
+				$onboard_wifi="enabled";
 				}
 			else
 				{
 				$change_wifi="enable";
+				$onboard_wifi="disabled";
 				}
+			print "Onboard-Wifi: <b>".$onboard_wifi;
 			?>
-			</p>
+			</b></p>
 			<input id="saveForm" class="button_text" type="submit" name="change_wifi" value="<?php print $change_wifi; ?>" />
 		</li>
 		<li class="li_1"><h2>Restart Wifi-Device</h2>

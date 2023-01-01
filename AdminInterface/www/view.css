@@ -894,6 +894,11 @@ form h2
 	font-size:140%;
 	font-weight:bold;
 }
+form h3
+{
+	font-size:120%;
+	font-weight:bold;
+}
 
 
 form li.error
