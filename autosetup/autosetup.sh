@@ -61,6 +61,7 @@ exec 3>${LOG}
 	sudo rm -R /home/dietpi/pi-blaster >&3 2>&3
 	sudo su dietpi -c 'cd /home/dietpi/; git clone https://github.com/sarfata/pi-blaster.git' >&3 2>&3
 	sudo su - -c 'cd /home/dietpi/pi-blaster; ./autogen.sh; ./configure; make; make install' >&3 2>&3
+	sudo /usr/bin/sed -i 's/DAEMON_ARGS=""/DAEMON_ARGS="--pcm"/g' /etc/init.d/pi-blaster.boot.sh >&3 2>&3
 
 	###############################################################################################
 

@@ -10,6 +10,10 @@
 <li id='linews' class='linews'>News and announcements in the admin interface</li>
 <li id='linews' class='linews'>ogg-support</li>
 </ul>
+<h3>DEVELOPMENT: Last updates</h3>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Bugfix: Hissing noise on audio jack</li>
+</ul>
 <h3>Happy new year</h3>We wish you a happy new year...<br />
 Your MuPiBox-Team<br /><br />
 <img src='https://cdn.pixabay.com/photo/2022/12/21/06/49/sylvester-7669293_1280.jpg' width='350' />
