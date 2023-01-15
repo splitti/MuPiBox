@@ -13,7 +13,7 @@ sleep 30
 
 while [ -f /tmp/.power_led ]
 do
-        sleep 1
+        sleep 4
         ledPin=$(/usr/bin/jq -r .shim.ledPin ${MUPIBOX_CONFIG})
         ledMax=$(/usr/bin/jq -r .shim.ledBrightnessMax ${MUPIBOX_CONFIG})
         ledMin=$(/usr/bin/jq -r .shim.ledBrightnessMin ${MUPIBOX_CONFIG})

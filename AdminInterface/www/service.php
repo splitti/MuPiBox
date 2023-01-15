@@ -33,12 +33,14 @@
 		$command = "sudo apt-get install samba -y && sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/smb.conf -O /etc/samba/smb.conf && sudo systemctl enable smbd.service && sudo systemctl start smbd.service";
 		exec($command, $output, $result );
 		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>Samba enabled</li>";
 		}
 	else if( $_POST['change_samba'] == "stop & disable" )
 		{
 		$command = "sudo systemctl stop smbd.service && sudo systemctl disable smbd.service && sudo apt-get remove samba -y";
 		exec($command, $output, $result );
 		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>Samba disabled</li>";
 		}
 
 	if( $_POST['change_ftp'] == "enable & start" )
@@ -46,12 +48,14 @@
 		$command = " sudo apt-get install proftpd -y && sudo apt-get install samba -y && sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/proftpd.conf -O /etc/proftpd/proftpd.conf && sudo systemctl restart proftpd";
 		exec($command, $output, $result );
 		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>FTP enabled</li>";
 		}
 	else if( $_POST['change_ftp'] == "stop & disable" )
 		{
 		$command = "sudo systemctl stop proftpd.service && sudo systemctl disable proftpd.service && sudo apt-get remove proftpd -y";
 		exec($command, $output, $result );
 		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>FTP disabled</li>";
 		}
 
 	if( $_POST['change_btac'] == "enable & start" )
@@ -59,12 +63,14 @@
 		$command = "sudo systemctl enable mupi_autoconnect_bt; sudo systemctl start mupi_autoconnect_bt";
 		exec($command, $output, $result );
 		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>BT-Autoconnect-Service enabled</li>";
 		}
 	else if( $_POST['change_btac'] == "stop & disable" )
 		{
 		$command = "sudo systemctl stop mupi_autoconnect_bt; sudo systemctl disable mupi_autoconnect_bt";
 		exec($command, $output, $result );
 		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>BT-Autoconnect-Service disabled</li>";
 		}
 
 	$rc = $output[count($output)-1];

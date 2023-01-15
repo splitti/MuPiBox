@@ -30,7 +30,7 @@ until [ $power = $switchtype ]; do
 		sleep ${PRESS_DELAY}
 		power=$(cat /sys/class/gpio/gpio${TRIGGER_PIN}/value)
 	fi
-    sleep 0.01
+    sleep 0.05
 done
 
 sudo su - -c 'nohup /usr/local/bin/mupibox/./mupi_stop_led.sh > /dev/null 2>&1 &'

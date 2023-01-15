@@ -871,7 +871,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 
 				<input class="range slider-progress" name="pressDelay" type="range" min="0" max="5" step="1.0" value="<?php 
 					echo $data["timeout"]["pressDelay"];
-				?> sec" oninput="this.previousElementSibling.value = this.value + ' sec'"><output></output>
+				?>" oninput="this.previousElementSibling.value = this.value + ' sec'"><output></output>
 				</div>
 			</li>
 
