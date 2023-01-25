@@ -19,12 +19,14 @@ import { Validate } from '../validate';
   ]
 })
 export class AddPage implements OnInit, AfterViewInit {
-  @ViewChild('segment', { static: false }) segment: IonSegment;
-  @ViewChild('select', { static: false }) select: IonSelect;
+  //@ViewChild('segment', { static: false }) segment: IonSegment;
+  //@ViewChild('select', { static: false }) select: IonSelect;
   @ViewChild('searchTypeSelect', { static: false }) searchTypeSelect: IonSelect;
 
-  @ViewChild('spotify_segment', { static: false }) spotifySegment: IonSelect;
-  @ViewChild('radio_segment', { static: false }) radioSegment: IonSelect;
+  //@ViewChild('audiobook_segment', { static: false }) audiobookSegment: IonSelect;
+  //@ViewChild('music_segment', { static: false }) musicSegment: IonSelect;
+  //@ViewChild('playlist_segment', { static: false }) playlistSegment: IonSelect;
+  //@ViewChild('radio_segment', { static: false }) radioSegment: IonSelect;
 
   @ViewChild('spotify_artist', { static: false }) spotifyArtist: IonInput;
   @ViewChild('spotify_id', { static: false }) spotifyID: IonInput;
@@ -95,7 +97,7 @@ export class AddPage implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit() {
-    this.radioSegment.disabled = true;
+    //this.radioSegment.disabled = true;
 
     this.keyboard = new Keyboard({
       onChange: input => {
@@ -147,7 +149,8 @@ export class AddPage implements OnInit, AfterViewInit {
 
     this.selectedInputElem = document.querySelector('ion-input:first-child');
 
-    this.categoryChanged();
+    this.validate();
+    //this.categoryChanged();
   }
 
   ionViewWillLeave() {
@@ -158,11 +161,11 @@ export class AddPage implements OnInit, AfterViewInit {
     this.navController.back();
   }
 
-  categoryButtonPressed(event: any) {
+  /* categoryButtonPressed(event: any) {
     this.select.open(event);
-  }
+  } */
 
-  categoryChanged() {
+  /* categoryChanged() {
     if (this.category === 'radio' && this.source !== 'radio') {
       this.source = 'radio';
     } else if (this.category !== 'radio' && this.source === 'radio') {
@@ -179,7 +182,7 @@ export class AddPage implements OnInit, AfterViewInit {
     this.keyboard.clearInput('radio_id');
     this.keyboard.clearInput('radio_cover');
     this.validate();
-  }
+  } */
 
   searchTypeChanged() {
     this.keyboard.clearInput('spotify_artist');
@@ -269,8 +272,23 @@ export class AddPage implements OnInit, AfterViewInit {
   }
 
   segmentChanged(event: any) {
-    this.source = event.detail.value;
+    this.category = event.detail.value;
+    if (event.detail.value === 'radio'){
+      this.source = 'radio';
+    }else{
+      this.source = 'spotify';
+    }
     window.setTimeout(() => { // wait for new elements to be visible before altering them
+      this.keyboard.clearInput('spotify_artist');
+      this.keyboard.clearInput('spotify_title');
+      this.keyboard.clearInput('spotify_id');
+      this.keyboard.clearInput('spotify_showid');
+      this.keyboard.clearInput('spotify_artistid');
+      this.keyboard.clearInput('spotify_query');
+
+      this.keyboard.clearInput('radio_title');
+      this.keyboard.clearInput('radio_id');
+      this.keyboard.clearInput('radio_cover');
       this.validate();
     }, 10);
   }
@@ -308,32 +326,8 @@ export class AddPage implements OnInit, AfterViewInit {
       if (form.form.value.radio_id?.length) { media.id = form.form.value.radio_id; }
     }
 
-    // if(this.edit){
-    //   this.mediaService.editRawMediaAtIndex(this.editindex, media);
-    // }else{
-    //   this.mediaService.addRawMedia(media);
-    // }
-
-    // form.reset();
-
-    // this.keyboard.clearInput('spotify_artist');
-    // this.keyboard.clearInput('spotify_title');
-    // this.keyboard.clearInput('spotify_id');
-    // this.keyboard.clearInput('spotify_showid');
-    // this.keyboard.clearInput('spotify_artistid');
-    // this.keyboard.clearInput('spotify_query');
-
-    // this.keyboard.clearInput('radio_title');
-    // this.keyboard.clearInput('radio_id');
-    // this.keyboard.clearInput('radio_cover');
-
-    // this.validate();
-
-    // this.navController.back();
-
     setTimeout(() => {
       this.save(media, form);
-      //form.reset();
     }, 2500)
   }
 
@@ -386,8 +380,8 @@ export class AddPage implements OnInit, AfterViewInit {
   }
 
   validate() {
-    if (this.spotifySegment) { this.spotifySegment.disabled = false; }
-    if (this.radioSegment) { this.radioSegment.disabled = false; }
+    //if (this.spotifySegment) { this.spotifySegment.disabled = false; }
+    //if (this.radioSegment) { this.radioSegment.disabled = false; }
 
     if (this.spotifyArtist) { this.spotifyArtist.disabled = false; }
     if (this.spotifyQuery) { this.spotifyQuery.disabled = false; }
@@ -405,17 +399,17 @@ export class AddPage implements OnInit, AfterViewInit {
     switch (this.category) {
       case 'audiobook':
       case 'music':
-        if (this.radioSegment) { this.radioSegment.disabled = true; }
-        break;
+        //if (this.radioSegment) { this.radioSegment.disabled = true; }
+        //break;
       case 'playlist':
-        if (this.radioSegment) { this.radioSegment.disabled = true; }
+        //if (this.radioSegment) { this.radioSegment.disabled = true; }
         if (this.spotifyArtist) { this.spotifyArtist.disabled = true; }
         if (this.spotifyQuery) { this.spotifyQuery.disabled = true; }
         if (this.searchTypeSelect) { this.searchTypeSelect.disabled = true; }
         if (this.spotifyShowID) { this.spotifyShowID.disabled = true; }
         break;
       case 'radio':
-        if (this.spotifySegment) { this.spotifySegment.disabled = true; }
+        //if (this.spotifySegment) { this.spotifySegment.disabled = true; }
     }
 
     if (this.source === 'spotify') {
