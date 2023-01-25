@@ -19,24 +19,6 @@ import { Validate } from '../validate';
   ]
 })
 export class AddPage implements OnInit, AfterViewInit {
-  //@ViewChild('segment', { static: false }) segment: IonSegment;
-  //@ViewChild('select', { static: false }) select: IonSelect;
-  //@ViewChild('searchTypeSelect', { static: false }) searchTypeSelect: IonSelect;
-
-  //@ViewChild('audiobook_segment', { static: false }) audiobookSegment: IonSelect;
-  //@ViewChild('music_segment', { static: false }) musicSegment: IonSelect;
-  //@ViewChild('playlist_segment', { static: false }) playlistSegment: IonSelect;
-  //@ViewChild('radio_segment', { static: false }) radioSegment: IonSelect;
-
-/*   @ViewChild('spotify_artist', { static: false }) spotifyArtist: IonInput;
-  @ViewChild('spotify_id', { static: false }) spotifyID: IonInput;
-  @ViewChild('spotify_showid', { static: false }) spotifyShowID: IonInput;
-  @ViewChild('spotify_artistid', { static: false }) spotifyArtistID: IonInput;
-  @ViewChild('spotify_title', { static: false }) spotifyTitle: IonInput;
-  @ViewChild('spotify_query', { static: false }) spotifyQuery: IonInput;
-  @ViewChild('radio_title', { static: false }) radioTitle: IonInput;
-  @ViewChild('radio_id', { static: false }) radioID: IonInput;
-  @ViewChild('radio_cover', { static: false }) radioCover: IonInput; */
 
   source = 'spotify';
   category = 'audiobook';
@@ -97,8 +79,6 @@ export class AddPage implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit() {
-    //this.radioSegment.disabled = true;
-
     this.keyboard = new Keyboard({
       onChange: input => {
         this.selectedInputElem.value = input;
@@ -150,7 +130,6 @@ export class AddPage implements OnInit, AfterViewInit {
     this.selectedInputElem = document.querySelector('ion-input:first-child');
 
     this.validate();
-    //this.categoryChanged();
   }
 
   ionViewWillLeave() {
@@ -160,29 +139,6 @@ export class AddPage implements OnInit, AfterViewInit {
   cancelButtonPressed() {
     this.navController.back();
   }
-
-  /* categoryButtonPressed(event: any) {
-    this.select.open(event);
-  } */
-
-  /* categoryChanged() {
-    if (this.category === 'radio' && this.source !== 'radio') {
-      this.source = 'radio';
-    } else if (this.category !== 'radio' && this.source === 'radio') {
-      this.source = 'spotify';
-    }
-    this.keyboard.clearInput('spotify_artist');
-    this.keyboard.clearInput('spotify_title');
-    this.keyboard.clearInput('spotify_id');
-    this.keyboard.clearInput('spotify_showid');
-    this.keyboard.clearInput('spotify_artistid');
-    this.keyboard.clearInput('spotify_query');
-
-    this.keyboard.clearInput('radio_title');
-    this.keyboard.clearInput('radio_id');
-    this.keyboard.clearInput('radio_cover');
-    this.validate();
-  } */
 
   searchTypeChanged() {
     this.keyboard.clearInput('spotify_artist');
@@ -380,38 +336,6 @@ export class AddPage implements OnInit, AfterViewInit {
   }
 
   validate() {
-    //if (this.spotifySegment) { this.spotifySegment.disabled = false; }
-    //if (this.radioSegment) { this.radioSegment.disabled = false; }
-
-    /* if (this.spotifyArtist) { this.spotifyArtist.disabled = false; }
-    if (this.spotifyQuery) { this.spotifyQuery.disabled = false; }
-    if (this.spotifyShowID) { this.spotifyShowID.disabled = false; } */
-
-    /* if (this.searchTypeSelect) {
-      if (this.category === 'playlist') {
-        this.searchTypeSelect.disabled = true;
-        this.searchType = 'media_id';
-      } else {
-        this.searchTypeSelect.disabled = false;
-      }
-    } */
-
-    /* switch (this.category) {
-      case 'audiobook':
-      case 'music':
-        //if (this.radioSegment) { this.radioSegment.disabled = true; }
-        //break;
-      case 'playlist':
-        //if (this.radioSegment) { this.radioSegment.disabled = true; }
-        //if (this.spotifyArtist) { this.spotifyArtist.disabled = true; }
-        //if (this.spotifyQuery) { this.spotifyQuery.disabled = true; }
-        //if (this.searchTypeSelect) { this.searchTypeSelect.disabled = true; }
-        //if (this.spotifyShowID) { this.spotifyShowID.disabled = true; }
-        break;
-      case 'radio':
-        //if (this.spotifySegment) { this.spotifySegment.disabled = true; }
-    } */
-
     if (this.source === 'spotify') {
       const artist = this.keyboard.getInput('spotify_artist');
       const title = this.keyboard.getInput('spotify_title');
