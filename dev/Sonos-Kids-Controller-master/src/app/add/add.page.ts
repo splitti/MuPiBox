@@ -71,6 +71,8 @@ export class AddPage implements OnInit, AfterViewInit {
       this.category = this.editMedia.category;
       this.shuffle = this.editMedia.shuffle;
       this.aPartOfAll = this.editMedia.aPartOfAll;
+      this.aPartOfAllMin = this.editMedia.aPartOfAllMin;
+      this.aPartOfAllMax = this.editMedia.aPartOfAllMax;
       if(this.source === 'spotify' && this.editMedia?.query) {
         this.searchType = 'query';
       }else if(this.source === 'spotify' && this.editMedia?.artistid) {
@@ -404,9 +406,9 @@ export class AddPage implements OnInit, AfterViewInit {
           ||
           (this.edit && (this.aPartOfAll !== this.editMedia?.aPartOfAll))
           ||
-          (this.edit && (parseInt(aPartOfAllMin) !== this.editMedia?.aPartOfAllMin))
+          (this.edit && (this.aPartOfAllMin !== this.editMedia?.aPartOfAllMin))
           ||
-          (this.edit && (parseInt(aPartOfAllMax) !== this.editMedia?.aPartOfAllMax))
+          (this.edit && (this.aPartOfAllMax !== this.editMedia?.aPartOfAllMax))
         )
         ||
         (this.category === 'playlist') && (
