@@ -57,7 +57,7 @@ export class MedialistPage implements OnInit {
 
   ngOnInit() {
     // Subscribe
-
+    console.log("this.artist");
     console.log(this.artist);
     
     if(this.artist.coverMedia.showid && this.artist.coverMedia.showid.length > 0){
@@ -90,6 +90,7 @@ export class MedialistPage implements OnInit {
 
         this.slider.update();
 
+        console.log("if ShowID this.media");
         console.log(this.media);
   
         // Workaround as the scrollbar handle isn't visible after the immediate update
@@ -121,6 +122,7 @@ export class MedialistPage implements OnInit {
 
         this.slider.update();
 
+        console.log("getMediaFromArtist this.media");
         console.log(this.media);
   
         // Workaround as the scrollbar handle isn't visible after the immediate update
