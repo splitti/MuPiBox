@@ -44,7 +44,7 @@
             <form #audiobookForm="ngForm" (ngSubmit)="submit(audiobookForm)">
                 <ion-grid>
                     <ion-row>
-                        <ion-col size="12">
+                        <ion-col size="6">
                             <div>
                                 <ion-item>
                                     <ion-label class="dimmed-text">Media search type</ion-label>
@@ -54,6 +54,28 @@
                                         <ion-select-option value="show_id">Show ID from Spotify</ion-select-option>
                                         <ion-select-option value="query">Search Query for Spotify</ion-select-option>
                                       </ion-select>
+                                </ion-item>
+                            </div>
+                        </ion-col>
+                        <ion-col size="2">
+                            <div>
+                                <ion-item>
+                                    <ion-label>A part of all Media</ion-label>
+                                    <ion-checkbox #spotify_aPartOfAll name="spotify_aPartOfAll" [(ngModel)]="aPartOfAll" (ionChange)="validate()"></ion-checkbox>
+                                </ion-item>
+                            </div>
+                        </ion-col>
+                        <ion-col size="2">
+                            <div>
+                                <ion-item>
+                                    <ion-input #spotify_aPartOfAllMin [ngModel]="editMedia?.aPartOfAllMin" name="spotify_aPartOfAllMin" type="text" placeholder="Min" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
+                                </ion-item>
+                            </div>
+                        </ion-col>
+                        <ion-col size="2">
+                            <div>
+                                <ion-item>
+                                    <ion-input #spotify_aPartOfAllMax [ngModel]="editMedia?.aPartOfAllMax" name="spotify_aPartOfAllMax" type="text" placeholder="Max" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
                                 </ion-item>
                             </div>
                         </ion-col>
@@ -104,7 +126,7 @@
             <form #musicForm="ngForm" (ngSubmit)="submit(musicForm)">
                 <ion-grid>
                     <ion-row>
-                        <ion-col size="8">
+                        <ion-col size="4">
                             <div>
                                 <ion-item>
                                     <ion-label class="dimmed-text">Media search type</ion-label>
@@ -116,11 +138,33 @@
                                 </ion-item>
                             </div>
                         </ion-col>
-                        <ion-col size="4">
+                        <ion-col size="2">
                             <div>
                                 <ion-item>
                                     <ion-label>Shuffle Mode</ion-label>
                                     <ion-checkbox #spotify_shuffle name="spotify_shuffle" [(ngModel)]="shuffle" (ionChange)="validate()"></ion-checkbox>
+                                </ion-item>
+                            </div>
+                        </ion-col>
+                        <ion-col size="2">
+                            <div>
+                                <ion-item>
+                                    <ion-label>A part of all Media</ion-label>
+                                    <ion-checkbox #spotify_aPartOfAll name="spotify_aPartOfAll" [(ngModel)]="aPartOfAll" (ionChange)="validate()"></ion-checkbox>
+                                </ion-item>
+                            </div>
+                        </ion-col>
+                        <ion-col size="2">
+                            <div>
+                                <ion-item>
+                                    <ion-input #spotify_aPartOfAllMin [ngModel]="editMedia?.aPartOfAllMin" name="spotify_aPartOfAllMin" type="text" placeholder="Min" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
+                                </ion-item>
+                            </div>
+                        </ion-col>
+                        <ion-col size="2">
+                            <div>
+                                <ion-item>
+                                    <ion-input #spotify_aPartOfAllMax [ngModel]="editMedia?.aPartOfAllMax" name="spotify_aPartOfAllMax" type="text" placeholder="Max" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
                                 </ion-item>
                             </div>
                         </ion-col>

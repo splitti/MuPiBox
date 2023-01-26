@@ -20,6 +20,10 @@ import { Validate } from '../validate';
 })
 export class AddPage implements OnInit, AfterViewInit {
 
+  @ViewChild('spotify_aPartOfAll', { static: false }) spotifyaPartOfAll: IonInput;
+  @ViewChild('spotify_aPartOfAllMin', { static: false }) spotifyaPartOfAllMin: IonInput;
+  @ViewChild('spotify_aPartOfAllMax', { static: false }) spotifyaPartOfAllMax: IonInput;
+
   source = 'spotify';
   category = 'audiobook';
   searchType = 'media_id';
@@ -31,6 +35,9 @@ export class AddPage implements OnInit, AfterViewInit {
   shuffle = false;
   firstInput = true;
   validateState: Validate;
+  aPartOfAll = false;
+  aPartOfAllMin: number;
+  aPartOfAllMax: number;
 
   categoryIcons = {
     audiobook: 'book-outline',
@@ -63,6 +70,7 @@ export class AddPage implements OnInit, AfterViewInit {
       this.source = this.editMedia.type;
       this.category = this.editMedia.category;
       this.shuffle = this.editMedia.shuffle;
+      this.aPartOfAll = this.editMedia.aPartOfAll;
       if(this.source === 'spotify' && this.editMedia?.query) {
         this.searchType = 'query';
       }else if(this.source === 'spotify' && this.editMedia?.artistid) {
@@ -147,10 +155,15 @@ export class AddPage implements OnInit, AfterViewInit {
     this.keyboard.clearInput('spotify_showid');
     this.keyboard.clearInput('spotify_artistid');
     this.keyboard.clearInput('spotify_query');
+    this.keyboard.clearInput('spotify_aPartOfAllMin');
+    this.keyboard.clearInput('spotify_aPartOfAllMax');
 
     this.keyboard.clearInput('radio_title');
     this.keyboard.clearInput('radio_id');
     this.keyboard.clearInput('radio_cover');
+    this.aPartOfAll = false;
+    this.shuffle = false;
+
     this.validate();
   }
 
@@ -179,6 +192,12 @@ export class AddPage implements OnInit, AfterViewInit {
           this.keyboard.setInput(this.editMedia.artistid, event.target.name);
           break;
         case 'spotify_query':
+          this.keyboard.setInput(this.editMedia.query, event.target.name);
+          break;
+        case 'spotify_aPartOfAllMin':
+          this.keyboard.setInput(this.editMedia.query, event.target.name);
+          break;
+        case 'spotify_aPartOfAllMax':
           this.keyboard.setInput(this.editMedia.query, event.target.name);
           break;
         case 'radio_title':
@@ -241,6 +260,8 @@ export class AddPage implements OnInit, AfterViewInit {
       this.keyboard.clearInput('spotify_showid');
       this.keyboard.clearInput('spotify_artistid');
       this.keyboard.clearInput('spotify_query');
+      this.keyboard.clearInput('spotify_aPartOfAllMin');
+      this.keyboard.clearInput('spotify_aPartOfAllMax');
 
       this.keyboard.clearInput('radio_title');
       this.keyboard.clearInput('radio_id');
@@ -254,6 +275,7 @@ export class AddPage implements OnInit, AfterViewInit {
       type: this.source,
       category: this.category,
       shuffle: this.shuffle,
+      aPartOfAll: this.aPartOfAll,
     };
 
     if (this.source === 'spotify') {
@@ -276,6 +298,8 @@ export class AddPage implements OnInit, AfterViewInit {
         media.artistid = form.form.value.spotify_artistid;
         this.playerService.validateId(media.artistid, "spotify_artistid");
       }
+      if (form.form.value.spotify_aPartOfAllMin?.length && this.aPartOfAll) { media.aPartOfAllMin = form.form.value.spotify_aPartOfAllMin; }
+      if (form.form.value.spotify_aPartOfAllMax?.length && this.aPartOfAll) { media.aPartOfAllMax = form.form.value.spotify_aPartOfAllMax; }
     } else if (this.source === 'radio') {
       if (form.form.value.radio_title?.length) { media.title = form.form.value.radio_title; }
       if (form.form.value.radio_cover?.length) { media.cover = form.form.value.radio_cover; }
@@ -320,6 +344,8 @@ export class AddPage implements OnInit, AfterViewInit {
       this.keyboard.clearInput('spotify_showid');
       this.keyboard.clearInput('spotify_artistid');
       this.keyboard.clearInput('spotify_query');
+      this.keyboard.clearInput('spotify_aPartOfAllMin');
+      this.keyboard.clearInput('spotify_aPartOfAllMax');
   
       this.keyboard.clearInput('radio_title');
       this.keyboard.clearInput('radio_id');
@@ -336,6 +362,20 @@ export class AddPage implements OnInit, AfterViewInit {
   }
 
   validate() {
+    if(this.aPartOfAll){
+      this.spotifyaPartOfAllMin.disabled = false;
+      this.spotifyaPartOfAllMax.disabled = false;
+    }else{
+      this.spotifyaPartOfAllMin.disabled = true;
+      this.spotifyaPartOfAllMax.disabled = true;
+    }
+    
+    if(this.searchType === "artist_id" || this.searchType === "show_id" || this.searchType === "query"){
+      this.spotifyaPartOfAll.disabled = false;
+    }else{
+      this.spotifyaPartOfAll.disabled = true;
+    }
+    
     if (this.source === 'spotify') {
       const artist = this.keyboard.getInput('spotify_artist');
       const title = this.keyboard.getInput('spotify_title');
@@ -343,6 +383,8 @@ export class AddPage implements OnInit, AfterViewInit {
       const artistid = this.keyboard.getInput('spotify_artistid');
       const query = this.keyboard.getInput('spotify_query');
       const show = this.keyboard.getInput('spotify_showid');
+      const aPartOfAllMin = this.keyboard.getInput('spotify_aPartOfAllMin');
+      const aPartOfAllMax = this.keyboard.getInput('spotify_aPartOfAllMax');
 
       this.valid = (
         (this.category === 'audiobook' || this.category === 'music') && (
@@ -359,6 +401,12 @@ export class AddPage implements OnInit, AfterViewInit {
           (this.edit && (artist?.length > 0))
           ||
           (this.edit && (this.shuffle !== this.editMedia?.shuffle))
+          ||
+          (this.edit && (this.aPartOfAll !== this.editMedia?.aPartOfAll))
+          ||
+          (this.edit && (aPartOfAllMin !== this.editMedia?.aPartOfAllMin))
+          ||
+          (this.edit && (aPartOfAllMax !== this.editMedia?.aPartOfAllMax))
         )
         ||
         (this.category === 'playlist') && (

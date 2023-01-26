@@ -76,10 +76,13 @@ export class MedialistPage implements OnInit {
             if(rev >= this.min && rev <= this.max){
               this.aPartOfAllMedia.push(this.media[rev]);
             }
-            console.log("rev: " + rev + " i: " + i);
-            console.log("media[rev]:" + this.media[rev]);
+            //console.log("rev: " + rev);
+            console.log("i: " + i);
+            ///console.log("media[rev]:" + this.media[rev]);
             console.log("media[i]:" + this.media[i]);
+            console.log(this.media[i]);
             console.log("aPartOfAllMedia:" + this.aPartOfAllMedia);
+            console.log(this.aPartOfAllMedia);
           }
           this.media = this.aPartOfAllMedia;
           console.log(this.media);
