@@ -13,6 +13,6 @@ export interface Media {
     artistcover?: string;
     shuffle?: boolean;
     aPartOfAll?: boolean;
-    aPartOfAllMin?: string;
-    aPartOfAllMax?: string;
+    aPartOfAllMin?: number;
+    aPartOfAllMax?: number;
 }

@@ -20,12 +20,12 @@ export class MedialistPage implements OnInit {
   media: Media[] = [];
   covers = {};
   activityIndicatorVisible = false;
+  aPartOfAllMedia: Media[] = [];
 
   //##Test##
   min = 2;
   max = 5;
   aPartOfAll = true;
-  aPartOfAllMedia: Media[] = [];
   //########
 
   slideOptions = {
@@ -70,22 +70,25 @@ export class MedialistPage implements OnInit {
           });
         });
 
-        if(this.aPartOfAll){
+        console.log("ShowID this.media all");
+        console.log(this.media);
+
+        if(this.artist.coverMedia?.aPartOfAll){
           for (let i = 0; i < this.media.length; i++){
-            let rev = --this.media.length - i;
-            if(rev >= this.min && rev <= this.max){
-              this.aPartOfAllMedia.push(this.media[rev]);
+            let rev = this.media.length - i;
+            if(rev >= (this.artist.coverMedia?.aPartOfAllMin + 1) && rev <= (this.artist.coverMedia?.aPartOfAllMax + 1)){
+              this.aPartOfAllMedia.push(this.media[i]);
             }
-            //console.log("rev: " + rev);
+            console.log("rev: " + rev);
             console.log("i: " + i);
-            ///console.log("media[rev]:" + this.media[rev]);
-            console.log("media[i]:" + this.media[i]);
+            console.log("media[rev]:");
+            console.log(this.media[rev]);
+            console.log("media[i]:");
             console.log(this.media[i]);
-            console.log("aPartOfAllMedia:" + this.aPartOfAllMedia);
+            console.log("aPartOfAllMedia:");
             console.log(this.aPartOfAllMedia);
           }
           this.media = this.aPartOfAllMedia;
-          console.log(this.media);
         }
 
         this.slider.update();
@@ -110,14 +113,13 @@ export class MedialistPage implements OnInit {
           });
         });
 
-        if(this.aPartOfAll){
+        if(this.artist.coverMedia?.aPartOfAll){
           for (let i = 0; i < this.media.length; i++){
-            if(i >= this.min && i <= this.max){
+            if(i >= this.artist.coverMedia?.aPartOfAllMin && i <= this.artist.coverMedia?.aPartOfAllMax){
               this.aPartOfAllMedia.push(this.media[i]);
             }
           }
           this.media = this.aPartOfAllMedia;
-          console.log(this.media);
         }
 
         this.slider.update();
@@ -144,6 +146,7 @@ export class MedialistPage implements OnInit {
       this.activityIndicatorService.dismiss();
       this.activityIndicatorVisible = false;
     }
+    this.aPartOfAllMedia = [];
   }
 
   coverClicked(clickedMedia: Media) {

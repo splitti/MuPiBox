@@ -298,8 +298,8 @@ export class AddPage implements OnInit, AfterViewInit {
         media.artistid = form.form.value.spotify_artistid;
         this.playerService.validateId(media.artistid, "spotify_artistid");
       }
-      if (form.form.value.spotify_aPartOfAllMin?.length && this.aPartOfAll) { media.aPartOfAllMin = (form.form.value.spotify_aPartOfAllMin - 1).toString(); }
-      if (form.form.value.spotify_aPartOfAllMax?.length && this.aPartOfAll) { media.aPartOfAllMax = (form.form.value.spotify_aPartOfAllMax - 1).toString(); }
+      if (form.form.value.spotify_aPartOfAllMin?.length && this.aPartOfAll) { media.aPartOfAllMin = form.form.value.spotify_aPartOfAllMin - 1; }
+      if (form.form.value.spotify_aPartOfAllMax?.length && this.aPartOfAll) { media.aPartOfAllMax = form.form.value.spotify_aPartOfAllMax - 1; }
     } else if (this.source === 'radio') {
       if (form.form.value.radio_title?.length) { media.title = form.form.value.radio_title; }
       if (form.form.value.radio_cover?.length) { media.cover = form.form.value.radio_cover; }
@@ -404,9 +404,9 @@ export class AddPage implements OnInit, AfterViewInit {
           ||
           (this.edit && (this.aPartOfAll !== this.editMedia?.aPartOfAll))
           ||
-          (this.edit && (aPartOfAllMin !== this.editMedia?.aPartOfAllMin))
+          (this.edit && (parseInt(aPartOfAllMin) !== this.editMedia?.aPartOfAllMin))
           ||
-          (this.edit && (aPartOfAllMax !== this.editMedia?.aPartOfAllMax))
+          (this.edit && (parseInt(aPartOfAllMax) !== this.editMedia?.aPartOfAllMax))
         )
         ||
         (this.category === 'playlist') && (
