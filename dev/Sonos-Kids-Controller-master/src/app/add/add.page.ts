@@ -195,10 +195,10 @@ export class AddPage implements OnInit, AfterViewInit {
           this.keyboard.setInput(this.editMedia.query, event.target.name);
           break;
         case 'spotify_aPartOfAllMin':
-          this.keyboard.setInput(this.editMedia.query, event.target.name);
+          this.keyboard.setInput(this.editMedia.aPartOfAllMin.toString(), event.target.name);
           break;
         case 'spotify_aPartOfAllMax':
-          this.keyboard.setInput(this.editMedia.query, event.target.name);
+          this.keyboard.setInput(this.editMedia.aPartOfAllMax.toString(), event.target.name);
           break;
         case 'radio_title':
           this.keyboard.setInput(this.editMedia.title, event.target.name);
