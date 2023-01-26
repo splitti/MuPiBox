@@ -108,8 +108,18 @@ export class MedialistPage implements OnInit {
         });
 
         if(this.artist.coverMedia?.aPartOfAll){
-          let min = this.artist.coverMedia?.aPartOfAllMin -1;
-          let max = this.artist.coverMedia?.aPartOfAllMax -1;
+          let min: number;
+          let max: number;
+          if(this.artist.coverMedia?.aPartOfAllMin == null){
+            min = 0
+          }else{
+            min = this.artist.coverMedia?.aPartOfAllMin -1;
+          }
+          if(this.artist.coverMedia?.aPartOfAllMax == null){
+            max = parseInt(this.artist.albumCount) -1;
+          }else{
+            max = this.artist.coverMedia?.aPartOfAllMax -1;
+          }
           for (let i = 0; i < this.media.length; i++){
             if(i >= min && i <= max){
               this.aPartOfAllMedia.push(this.media[i]);
