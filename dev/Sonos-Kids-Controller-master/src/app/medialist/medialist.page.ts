@@ -69,6 +69,8 @@ export class MedialistPage implements OnInit {
           });
         });
         this.slider.update();
+
+        console.log(this.media);
   
         // Workaround as the scrollbar handle isn't visible after the immediate update
         // Seems like a size calculation issue, as resizing the browser window helps
@@ -87,6 +89,8 @@ export class MedialistPage implements OnInit {
           });
         });
         this.slider.update();
+
+        console.log(this.media);
   
         // Workaround as the scrollbar handle isn't visible after the immediate update
         // Seems like a size calculation issue, as resizing the browser window helps
@@ -96,7 +100,6 @@ export class MedialistPage implements OnInit {
         }, 1000);
       });
 
-      console.log(this.media);
     }
 
     // Retreive data through subscription above
