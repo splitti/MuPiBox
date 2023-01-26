@@ -413,10 +413,6 @@ export class AddPage implements OnInit, AfterViewInit {
           ||
           (this.edit && (this.aPartOfAll !== this.editMedia?.aPartOfAll))
           ||
-          (this.edit && (aPartOfAllMin?.length >= 0))
-          ||
-          (this.edit && (aPartOfAllMax?.length >= 0))
-          ||
           (this.edit && (this.aPartOfAllMin !== this.editMedia?.aPartOfAllMin))
           ||
           (this.edit && (this.aPartOfAllMax !== this.editMedia?.aPartOfAllMax))
