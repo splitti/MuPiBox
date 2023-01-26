@@ -72,11 +72,10 @@ export class MedialistPage implements OnInit {
 
         if(this.aPartOfAll){
           for (let i = 0; i < this.media.length; i++){
-            if(i >= this.min && i <= this.max){
-              this.aPartOfAllMedia.push(this.media[i]);
+            let rev = --this.media.length - i;
+            if(rev >= this.min && rev <= this.max){
+              this.aPartOfAllMedia.push(this.media[rev]);
             }
-            //let media = this.media[i];
-            console.log(this.aPartOfAllMedia);
           }
           this.media = this.aPartOfAllMedia;
           console.log(this.media);
@@ -102,6 +101,17 @@ export class MedialistPage implements OnInit {
             this.covers[currentMedia.title] = url;
           });
         });
+
+        if(this.aPartOfAll){
+          for (let i = 0; i < this.media.length; i++){
+            if(i >= this.min && i <= this.max){
+              this.aPartOfAllMedia.push(this.media[i]);
+            }
+          }
+          this.media = this.aPartOfAllMedia;
+          console.log(this.media);
+        }
+
         this.slider.update();
 
         console.log(this.media);
