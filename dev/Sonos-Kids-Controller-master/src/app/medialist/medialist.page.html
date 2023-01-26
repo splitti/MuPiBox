@@ -11,8 +11,8 @@
 
 <ion-content>
     <ion-slides [options]="slideOptions" scrollbar="true" #slider (ionSlideDidChange)="slideDidChange()">
-        <ion-slide *ngFor="let currentMedia of media">
-            <ion-grid>
+        <ion-slide *ngFor="let currentMedia of media; let indexOfMedia=index">
+            <ion-grid *ngIf="indexOfMedia >= min && indexOfMedia <= max && aPartOfAll || !aPartOfAll" >
                 <ion-row class="media-card">
                     <ion-col size="12">
                         <ion-card>

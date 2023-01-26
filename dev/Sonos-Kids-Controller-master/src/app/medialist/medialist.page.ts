@@ -21,6 +21,12 @@ export class MedialistPage implements OnInit {
   covers = {};
   activityIndicatorVisible = false;
 
+  //##Test##
+  min = 2;
+  max = 5;
+  aPartOfAll = true;
+  //########
+
   slideOptions = {
     initialSlide: 0,
     slidesPerView: 3,
@@ -56,8 +62,6 @@ export class MedialistPage implements OnInit {
     if(this.artist.coverMedia.showid && this.artist.coverMedia.showid.length > 0){
       this.mediaService.getMediaFromShow(this.artist).subscribe(media => {
         this.media = media;
-
-        console.log(this.media);
   
         this.media.forEach(currentMedia => {
           this.artworkService.getArtwork(currentMedia).subscribe(url => {
@@ -91,6 +95,8 @@ export class MedialistPage implements OnInit {
           this.slider.update();
         }, 1000);
       });
+
+      console.log(this.media);
     }
 
     // Retreive data through subscription above
