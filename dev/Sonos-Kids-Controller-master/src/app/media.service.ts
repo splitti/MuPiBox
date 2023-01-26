@@ -319,6 +319,9 @@ export class MediaService {
         // Create temporary object with artists as keys and albumCounts as values
         const mediaCounts = media.reduce((tempCounts, currentMedia) => {
           tempCounts[currentMedia.artist] = (tempCounts[currentMedia.artist] || 0) + 1;
+          console.log(currentMedia.artist);
+          console.log(tempCounts);
+          console.log(tempCounts[currentMedia.artist]);
           return tempCounts;
         }, {});
 

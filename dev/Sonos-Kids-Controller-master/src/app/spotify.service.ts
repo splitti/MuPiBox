@@ -65,7 +65,7 @@ export class SpotifyService {
       }),
       map((response: SpotifyArtistsAlbumsResponse) => ({counter: response.total})),
       mergeMap(count => range(0, Math.ceil(count.counter / 50)).pipe(
-        map(index => ({
+        map((index) => ({
           range: index,
           ...count,
         }))

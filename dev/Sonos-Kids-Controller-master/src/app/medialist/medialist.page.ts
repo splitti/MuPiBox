@@ -73,14 +73,6 @@ export class MedialistPage implements OnInit {
             if(rev >= (this.artist.coverMedia?.aPartOfAllMin) && rev <= (this.artist.coverMedia?.aPartOfAllMax)){
               this.aPartOfAllMedia.push(this.media[i]);
             }
-            console.log("rev: " + rev);
-            console.log("i: " + i);
-            console.log("media[rev]:");
-            console.log(this.media[rev]);
-            console.log("media[i]:");
-            console.log(this.media[i]);
-            console.log("aPartOfAllMedia:");
-            console.log(this.aPartOfAllMedia);
           }
           this.media = this.aPartOfAllMedia;
         }
