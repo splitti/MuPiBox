@@ -226,7 +226,7 @@ export class MediaService {
       map((item) => // get media for the current item
         iif(
           () => (item.query && item.query.length > 0) ? true : false, // Get media by query
-          this.spotifyService.getMediaByQuery(item.query, item.category, item.index, item.shuffle).pipe(
+          this.spotifyService.getMediaByQuery(item.query, item.category, item.index, item.shuffle, item.aPartOfAll, item.aPartOfAllMin, item.aPartOfAllMax).pipe(
             map(items => {  // If the user entered an user-defined artist name in addition to a query, overwrite orignal artist from spotify
               if (item.artist?.length > 0) {
                 items.forEach(currentItem => {
@@ -238,7 +238,7 @@ export class MediaService {
           ),
           iif(
             () => (item.artistid && item.artistid.length > 0) ? true : false, // Get media by artist
-            this.spotifyService.getMediaByArtistID(item.artistid, item.category, item.index, item.shuffle).pipe(
+            this.spotifyService.getMediaByArtistID(item.artistid, item.category, item.index, item.shuffle, item.aPartOfAll, item.aPartOfAllMin, item.aPartOfAllMax).pipe(
               map(items => {  // If the user entered an user-defined artist name in addition to a query, overwrite orignal artist from spotify
                 if (item.artist?.length > 0) {
                   items.forEach(currentItem => {
@@ -250,7 +250,7 @@ export class MediaService {
             ),
             iif(
               () => (item.showid && item.showid.length > 0) ? true : false, // Get media by show
-                this.spotifyService.getMediaByShowID(item.showid, item.category, item.index, item.shuffle).pipe(
+                this.spotifyService.getMediaByShowID(item.showid, item.category, item.index, item.shuffle, item.aPartOfAll, item.aPartOfAllMin, item.aPartOfAllMax).pipe(
                   map(items => {  // If the user entered an user-defined artist name in addition to a query, overwrite orignal artist from spotify
                     if (item.artist?.length > 0) {
                       items.forEach(currentItem => {
@@ -262,7 +262,7 @@ export class MediaService {
                 ),
                 iif(
                   () => (item.type === 'spotify' && item.id && item.id.length > 0) ? true : false, // Get media by album
-                    this.spotifyService.getMediaByID(item.id, item.category, item.index, item.shuffle).pipe(
+                    this.spotifyService.getMediaByID(item.id, item.category, item.index, item.shuffle, item.aPartOfAll, item.aPartOfAllMin, item.aPartOfAllMax).pipe(
                       map(currentItem => {  // If the user entered an user-defined artist or album name, overwrite values from spotify
                         if (item.artist?.length > 0) {
                           currentItem.artist = item.artist;

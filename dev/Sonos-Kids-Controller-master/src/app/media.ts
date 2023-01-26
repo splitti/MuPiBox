@@ -12,4 +12,7 @@ export interface Media {
     category: string;
     artistcover?: string;
     shuffle?: boolean;
+    aPartOfAll?: boolean;
+    aPartOfAllMin?: number;
+    aPartOfAllMax?: number;
 }

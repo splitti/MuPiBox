@@ -47,6 +47,9 @@
                             <p *ngIf="item.cover">AlbumCover:</p>
                             <p *ngIf="item.artistcover">ArtistCover:</p>
                             <p *ngIf="item.shuffle">Shuffle:</p>
+                            <p *ngIf="item.aPartOfAll">a part of all Media:</p>
+                            <p *ngIf="item.aPartOfAll">Start:</p>
+                            <p *ngIf="item.aPartOfAll">End:</p>
                         </ion-label>
                     </ion-col>
                     <ion-col size="8" class="edit-col">
@@ -62,6 +65,9 @@
                             <p *ngIf="item.cover" class="transparent">{{item.cover}}</p>
                             <p *ngIf="item.artistcover" class="transparent">{{item.artistcover}}</p>
                             <p *ngIf="item.shuffle">{{item.shuffle}}</p>
+                            <p *ngIf="item.aPartOfAll">{{item.aPartOfAll}}</p>
+                            <p *ngIf="item.aPartOfAll">{{item.aPartOfAllMin}}</p>
+                            <p *ngIf="item.aPartOfAll">{{item.aPartOfAllMax}}</p>
                         </ion-label>
                     </ion-col>
                     <ion-col size="1" class="vertical-center-content edit-col">
