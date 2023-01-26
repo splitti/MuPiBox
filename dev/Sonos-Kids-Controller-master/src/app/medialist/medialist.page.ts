@@ -78,6 +78,8 @@ export class MedialistPage implements OnInit {
             //let media = this.media[i];
             console.log(this.aPartOfAllMedia);
           }
+          this.media = this.aPartOfAllMedia;
+          console.log(this.media);
         }
 
         this.slider.update();
