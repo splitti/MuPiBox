@@ -153,7 +153,10 @@ sudo service mupi_idle_shutdown stop
 	sudo rm -R /home/dietpi/pi-blaster >&3 2>&3
 	sudo su dietpi -c 'cd /home/dietpi/; git clone https://github.com/sarfata/pi-blaster.git' >&3 2>&3
 	sudo su - -c 'cd /home/dietpi/pi-blaster; ./autogen.sh; ./configure; make; make install' >&3 2>&3
-	sudo /usr/bin/sed -i 's/DAEMON_ARGS=""/DAEMON_ARGS="--pcm"/g' /etc/init.d/pi-blaster.boot.sh >&3 2>&3
+	LEDPIN=`cat ${CONFIG} | jq -r '.shim.ledPin'`
+	DAEMON_ARGS='DAEMON_ARGS="--gpio '${LEDPIN}'"'
+	sudo /usr/bin/sed -i 's|DAEMON_ARGS=".*"|'"${DAEMON_ARGS}"'|g' /etc/init.d/pi-blaster.boot.sh >&3 2>&3
+
 
 	echo -e "XXX\n83\nSet environment...  \nXXX"	
 	sudo wget ${SRC}/config/templates/crontab.template -O /tmp/crontab.template >&3 2>&3
