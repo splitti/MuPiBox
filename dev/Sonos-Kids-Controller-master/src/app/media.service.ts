@@ -220,6 +220,7 @@ export class MediaService {
       map(items => { // Filter to get only items for the chosen category
         items.forEach(item => item.category = (item.category === undefined) ? 'audiobook' : item.category); // default category
         items = items.filter(item => item.category === this.category);
+        console.log(items);
         return items;
       }),
       mergeMap(items => from(items)), // parallel calls for each item

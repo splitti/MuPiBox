@@ -22,12 +22,6 @@ export class MedialistPage implements OnInit {
   activityIndicatorVisible = false;
   aPartOfAllMedia: Media[] = [];
 
-  //##Test##
-  min = 2;
-  max = 5;
-  aPartOfAll = true;
-  //########
-
   slideOptions = {
     initialSlide: 0,
     slidesPerView: 3,
@@ -76,7 +70,7 @@ export class MedialistPage implements OnInit {
         if(this.artist.coverMedia?.aPartOfAll){
           for (let i = 0; i < this.media.length; i++){
             let rev = this.media.length - i;
-            if(rev >= (this.artist.coverMedia?.aPartOfAllMin + 1) && rev <= (this.artist.coverMedia?.aPartOfAllMax + 1)){
+            if(rev >= (this.artist.coverMedia?.aPartOfAllMin) && rev <= (this.artist.coverMedia?.aPartOfAllMax)){
               this.aPartOfAllMedia.push(this.media[i]);
             }
             console.log("rev: " + rev);
@@ -114,8 +108,10 @@ export class MedialistPage implements OnInit {
         });
 
         if(this.artist.coverMedia?.aPartOfAll){
+          let min = this.artist.coverMedia?.aPartOfAllMin -1;
+          let max = this.artist.coverMedia?.aPartOfAllMax -1;
           for (let i = 0; i < this.media.length; i++){
-            if(i >= this.artist.coverMedia?.aPartOfAllMin && i <= this.artist.coverMedia?.aPartOfAllMax){
+            if(i >= min && i <= max){
               this.aPartOfAllMedia.push(this.media[i]);
             }
           }

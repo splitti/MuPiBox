@@ -55,8 +55,6 @@ export class SpotifyService {
       mergeAll(),
       toArray()
     );
-    console.log(albums);
-    
 
     return albums;
   }
