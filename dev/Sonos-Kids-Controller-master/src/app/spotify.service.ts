@@ -22,6 +22,7 @@ export class SpotifyService {
   }
 
   getMediaByQuery(query: string, category: string, index: number, shuffle: boolean , aPartOfAll: boolean, aPartOfAllMin: number, aPartOfAllMax: number): Observable<Media[]> {
+    console.log(aPartOfAllMin);
     const albums = defer(() => this.spotifyApi.searchAlbums(query, { limit: 1, offset: 0, market: 'DE' })).pipe(
       retryWhen(errors => {
         return this.errorHandler(errors);
@@ -54,6 +55,8 @@ export class SpotifyService {
       mergeAll(),
       toArray()
     );
+    console.log(albums);
+    
 
     return albums;
   }
