@@ -69,9 +69,14 @@ export class MedialistPage implements OnInit {
           });
         });
 
-        for (let i = 0; i < this.media.length; i++){
-          let media = this.media[i];
-          console.log(media);
+        if(this.aPartOfAll){
+          for (let i = 0; i < this.media.length; i++){
+            if(i < this.min && i > this.max){
+              this.media.splice(i, 1);
+            }
+            //let media = this.media[i];
+            //console.log(media);
+          }
         }
 
         this.slider.update();
