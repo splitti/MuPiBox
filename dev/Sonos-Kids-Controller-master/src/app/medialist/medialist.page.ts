@@ -25,6 +25,7 @@ export class MedialistPage implements OnInit {
   min = 2;
   max = 5;
   aPartOfAll = true;
+  aPartOfAllMedia: Media[] = [];
   //########
 
   slideOptions = {
@@ -71,11 +72,11 @@ export class MedialistPage implements OnInit {
 
         if(this.aPartOfAll){
           for (let i = 0; i < this.media.length; i++){
-            if(i < this.min && i > this.max){
-              this.media.splice(i, 1);
+            if(i >= this.min && i <= this.max){
+              this.aPartOfAllMedia.push(this.media[i]);
             }
             //let media = this.media[i];
-            //console.log(media);
+            console.log(this.aPartOfAllMedia);
           }
         }
 
