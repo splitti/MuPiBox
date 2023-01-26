@@ -73,9 +73,12 @@ export class MedialistPage implements OnInit {
         if(this.aPartOfAll){
           for (let i = 0; i < this.media.length; i++){
             let rev = --this.media.length - i;
-            if(rev >= this.min && rev <= this.max){
+            if(rev >= --this.min && rev <= --this.max){
               this.aPartOfAllMedia.push(this.media[rev]);
             }
+            console.log(this.media[rev]);
+            console.log(this.media[i]);
+            console.log(this.aPartOfAllMedia);
           }
           this.media = this.aPartOfAllMedia;
           console.log(this.media);
@@ -104,7 +107,7 @@ export class MedialistPage implements OnInit {
 
         if(this.aPartOfAll){
           for (let i = 0; i < this.media.length; i++){
-            if(i >= this.min && i <= this.max){
+            if(i >= --this.min && i <= --this.max){
               this.aPartOfAllMedia.push(this.media[i]);
             }
           }
