@@ -311,7 +311,7 @@
   $data["shim"]["ledPin"]=$_POST['ledPin'];
   $CHANGE_TXT=$CHANGE_TXT."<li>New GPIO for Power-LED set to ".$data["shim"]["ledPin"]. "  [reboot is necessary]</li>";
   $DAEMON_ARGS='DAEMON_ARGS="--gpio '.$data["shim"]["ledPin"].'"';
-  exec("sudo /usr/bin/sed -i 's|DAEMON_ARGS=".*"|".$DAEMON_ARGS."|g' /etc/init.d/pi-blaster.boot.sh");
+  exec("sudo /usr/bin/sed -i 's|DAEMON_ARGS=\".*\"|".$DAEMON_ARGS."|g' /etc/init.d/pi-blaster.boot.sh");
 
   $change=2;
   }
@@ -423,7 +423,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				<p>Idle time (in minutes) without playback until the box turns off:</p>
 				<div>
 					<output id="rangeval" class="rangeval"><?php echo $data["timeout"]["idlePiShutdown"]; ?> min</output>
-					<input class="range slider-progress" list="steplist_po" data-tick-step="60" name="idlePiShutdown" type="range" min="15" max="300" step="15.0" value="<?php echo $data["timeout"]["idlePiShutdown"]; ?>" oninput="this.previousElementSibling.value = this.value + ' min'">
+					<input class="range slider-progress" list="steplist_po" data-tick-step="60" name="idlePiShutdown" type="range" min="0" max="300" step="15.0" value="<?php echo $data["timeout"]["idlePiShutdown"]; ?>" oninput="this.previousElementSibling.value = this.value + ' min'">
 				</div>
 
 			</li>

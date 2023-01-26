@@ -195,7 +195,7 @@
 				}
 			if($all_media['showid'])
 				{
-				print "<tr><td>ID:</td><td>" . $all_media['ShowID'] . "</td></tr>";
+				print "<tr><td>ID:</td><td>" . $all_media['showid'] . "</td></tr>";
 				}
 			if($all_media['query'])
 				{

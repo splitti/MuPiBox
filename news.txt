@@ -12,7 +12,12 @@
 </ul>
 <h3>DEVELOPMENT: Last updates</h3>
 <ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Adding offset and limit</li>
+<li id='linews' class='linews'>Adding artist as search criteria</li>
+<li id='linews' class='linews'>Adding media has been redesigned</li>
 <li id='linews' class='linews'>Bugfix: Hissing noise on audio jack</li>
+<li id='linews' class='linews'>Bugfix: Show-ID in admin-interface will be shown</li>
+<li id='linews' class='linews'>Bugfix: Chance to set some timers back to 0</li>
 </ul>
 <h3>Happy new year</h3>We wish you a happy new year...<br />
 Your MuPiBox-Team<br /><br />
