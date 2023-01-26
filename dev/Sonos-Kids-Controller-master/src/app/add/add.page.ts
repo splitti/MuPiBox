@@ -38,6 +38,7 @@ export class AddPage implements OnInit, AfterViewInit {
   aPartOfAll = false;
   aPartOfAllMin: number;
   aPartOfAllMax: number;
+  index: number;
 
   categoryIcons = {
     audiobook: 'book-outline',
@@ -67,6 +68,7 @@ export class AddPage implements OnInit, AfterViewInit {
 
   ngOnInit() {
     if(this.edit){
+      this.index = this.editMedia.index;
       this.source = this.editMedia.type;
       this.category = this.editMedia.category;
       this.shuffle = this.editMedia.shuffle;
@@ -197,10 +199,10 @@ export class AddPage implements OnInit, AfterViewInit {
           this.keyboard.setInput(this.editMedia.query, event.target.name);
           break;
         case 'spotify_aPartOfAllMin':
-          this.keyboard.setInput(this.editMedia.aPartOfAllMin.toString(), event.target.name);
+          this.keyboard.setInput(this.editMedia.aPartOfAllMin?.toString(), event.target.name);
           break;
         case 'spotify_aPartOfAllMax':
-          this.keyboard.setInput(this.editMedia.aPartOfAllMax.toString(), event.target.name);
+          this.keyboard.setInput(this.editMedia.aPartOfAllMax?.toString(), event.target.name);
           break;
         case 'radio_title':
           this.keyboard.setInput(this.editMedia.title, event.target.name);
@@ -274,6 +276,7 @@ export class AddPage implements OnInit, AfterViewInit {
 
   submit(form: NgForm) {
     const media: Media = {
+      index: this.index,
       type: this.source,
       category: this.category,
       shuffle: this.shuffle,
