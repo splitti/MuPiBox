@@ -68,6 +68,12 @@ export class MedialistPage implements OnInit {
             this.covers[currentMedia.title] = url;
           });
         });
+
+        for (let i = 0; i < this.media.length; i++){
+          let media = this.media[i];
+          console.log(media);
+        }
+
         this.slider.update();
 
         console.log(this.media);
