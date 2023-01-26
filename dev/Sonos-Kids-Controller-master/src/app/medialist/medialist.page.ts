@@ -113,7 +113,7 @@ export class MedialistPage implements OnInit {
           if(this.artist.coverMedia?.aPartOfAllMin == null){
             min = 0
           }else{
-            min = this.artist.coverMedia?.aPartOfAllMin -1;
+            min = this.artist.coverMedia?.aPartOfAllMin;
           }
           if(this.artist.coverMedia?.aPartOfAllMax == null){
             max = parseInt(this.artist.albumCount) -1;
