@@ -278,6 +278,8 @@ export class AddPage implements OnInit, AfterViewInit {
       category: this.category,
       shuffle: this.shuffle,
       aPartOfAll: this.aPartOfAll,
+      aPartOfAllMin: this.aPartOfAllMin,
+      aPartOfAllMax: this.aPartOfAllMax,
     };
 
     if (this.source === 'spotify') {
@@ -405,6 +407,10 @@ export class AddPage implements OnInit, AfterViewInit {
           (this.edit && (this.shuffle !== this.editMedia?.shuffle))
           ||
           (this.edit && (this.aPartOfAll !== this.editMedia?.aPartOfAll))
+          ||
+          (this.edit && (aPartOfAllMin?.length > 0))
+          ||
+          (this.edit && (aPartOfAllMax?.length > 0))
           ||
           (this.edit && (this.aPartOfAllMin !== this.editMedia?.aPartOfAllMin))
           ||
