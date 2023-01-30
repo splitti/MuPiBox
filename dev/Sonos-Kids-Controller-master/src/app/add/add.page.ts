@@ -8,6 +8,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { PlayerCmds, PlayerService } from '../player.service';
 import { Observable } from 'rxjs';
 import { Validate } from '../validate';
+import { ActivityIndicatorService } from '../activity-indicator.service';
 
 @Component({
   selector: 'app-add',
@@ -39,6 +40,7 @@ export class AddPage implements OnInit, AfterViewInit {
   aPartOfAllMin: number;
   aPartOfAllMax: number;
   index: number;
+  activityIndicatorVisible = false;
 
   categoryIcons = {
     audiobook: 'book-outline',
@@ -56,6 +58,7 @@ export class AddPage implements OnInit, AfterViewInit {
     private router: Router,
     private playerService: PlayerService,
     public alertController: AlertController,
+    private activityIndicatorService: ActivityIndicatorService
   ) {
     this.validate$ = this.mediaService.validate$;
     this.route.queryParams.subscribe(params => {
@@ -142,6 +145,13 @@ export class AddPage implements OnInit, AfterViewInit {
     this.selectedInputElem = document.querySelector('ion-input:first-child');
 
     this.validate();
+  }
+
+  ionViewDidLeave() {
+    if (this.activityIndicatorVisible) {
+      this.activityIndicatorService.dismiss();
+      this.activityIndicatorVisible = false;
+    }
   }
 
   ionViewWillLeave() {
@@ -280,50 +290,55 @@ export class AddPage implements OnInit, AfterViewInit {
   }
 
   submit(form: NgForm) {
-    const media: Media = {
-      index: this.index,
-      type: this.source,
-      category: this.category,
-      shuffle: this.shuffle,
-      aPartOfAll: this.aPartOfAll,
-      aPartOfAllMin: this.aPartOfAllMin,
-      aPartOfAllMax: this.aPartOfAllMax,
-    };
-
-    if (this.source === 'spotify') {
-      if (form.form.value.spotify_artist?.length) { media.artist = form.form.value.spotify_artist; }
-      if (form.form.value.spotify_artistcover?.length) { media.artistcover = form.form.value.spotify_artistcover; }
-      if (form.form.value.spotify_title?.length) { media.title = form.form.value.spotify_title; }
-      if (form.form.value.spotify_query?.length) { media.query = form.form.value.spotify_query; }
-      if (form.form.value.spotify_id?.length) {
-        media.id = form.form.value.spotify_id;
-        if(media.category === 'playlist'){
-          this.playerService.validateId(media.id, "spotify_playlistid");
-        }else{
-          this.playerService.validateId(media.id, "spotify_id");
+    this.activityIndicatorService.create().then(indicator => {
+      this.activityIndicatorVisible = true;
+      indicator.present().then(() => {
+        const media: Media = {
+          index: this.index,
+          type: this.source,
+          category: this.category,
+          shuffle: this.shuffle,
+          aPartOfAll: this.aPartOfAll,
+          aPartOfAllMin: this.aPartOfAllMin,
+          aPartOfAllMax: this.aPartOfAllMax,
+        };
+    
+        if (this.source === 'spotify') {
+          if (form.form.value.spotify_artist?.length) { media.artist = form.form.value.spotify_artist; }
+          if (form.form.value.spotify_artistcover?.length) { media.artistcover = form.form.value.spotify_artistcover; }
+          if (form.form.value.spotify_title?.length) { media.title = form.form.value.spotify_title; }
+          if (form.form.value.spotify_query?.length) { media.query = form.form.value.spotify_query; }
+          if (form.form.value.spotify_id?.length) {
+            media.id = form.form.value.spotify_id;
+            if(media.category === 'playlist'){
+              this.playerService.validateId(media.id, "spotify_playlistid");
+            }else{
+              this.playerService.validateId(media.id, "spotify_id");
+            }
+          }
+          if (form.form.value.spotify_showid?.length) {
+            media.showid = form.form.value.spotify_showid;
+            this.playerService.validateId(media.showid, "spotify_showid");
+          }
+          if (form.form.value.spotify_artistid?.length) {
+            media.artistid = form.form.value.spotify_artistid;
+            this.playerService.validateId(media.artistid, "spotify_artistid");
+          }
+          if (this.aPartOfAll) { 
+            media.aPartOfAllMin = parseInt(form.form.value.spotify_aPartOfAllMin);
+            media.aPartOfAllMax = parseInt(form.form.value.spotify_aPartOfAllMax);
+          }
+        } else if (this.source === 'radio') {
+          if (form.form.value.radio_title?.length) { media.title = form.form.value.radio_title; }
+          if (form.form.value.radio_cover?.length) { media.cover = form.form.value.radio_cover; }
+          if (form.form.value.radio_id?.length) { media.id = form.form.value.radio_id; }
         }
-      }
-      if (form.form.value.spotify_showid?.length) {
-        media.showid = form.form.value.spotify_showid;
-        this.playerService.validateId(media.showid, "spotify_showid");
-      }
-      if (form.form.value.spotify_artistid?.length) {
-        media.artistid = form.form.value.spotify_artistid;
-        this.playerService.validateId(media.artistid, "spotify_artistid");
-      }
-      if (this.aPartOfAll) { 
-        media.aPartOfAllMin = parseInt(form.form.value.spotify_aPartOfAllMin);
-        media.aPartOfAllMax = parseInt(form.form.value.spotify_aPartOfAllMax);
-      }
-    } else if (this.source === 'radio') {
-      if (form.form.value.radio_title?.length) { media.title = form.form.value.radio_title; }
-      if (form.form.value.radio_cover?.length) { media.cover = form.form.value.radio_cover; }
-      if (form.form.value.radio_id?.length) { media.id = form.form.value.radio_id; }
-    }
-
-    setTimeout(() => {
-      this.save(media, form);
-    }, 2500)
+    
+        setTimeout(() => {
+          this.save(media, form);
+        }, 2500)
+      });
+    });
   }
 
   async save(media: Media, form: NgForm){
@@ -332,6 +347,7 @@ export class AddPage implements OnInit, AfterViewInit {
     });
 
     if(!this.validateState?.validate && this.source === 'spotify' && (media.query?.length == 0)){
+      this.activityIndicatorVisible = false;
       const alert = await this.alertController.create({
         cssClass: 'alert',
         header: 'Warning',
@@ -349,7 +365,9 @@ export class AddPage implements OnInit, AfterViewInit {
         this.mediaService.editRawMediaAtIndex(this.editMedia.index, media);
         setTimeout(async () => {
           let check = this.mediaService.getResponse();
+          console.log("write check: " + check);
           if(check === 'error'){
+            this.activityIndicatorVisible = false;
             const alert = await this.alertController.create({
               cssClass: 'alert',
               header: 'Warning',
@@ -387,12 +405,14 @@ export class AddPage implements OnInit, AfterViewInit {
               this.navController.back();
             }, 2000)
           }
-        }, 5000)
+        }, 2000)
       }else{
         this.mediaService.addRawMedia(media);
         setTimeout(async () => {
           let check = this.mediaService.getResponse();
+          console.log("write check: " + check);
           if(check === 'error'){
+            this.activityIndicatorVisible = false;
             const alert = await this.alertController.create({
               cssClass: 'alert',
               header: 'Warning',
@@ -430,7 +450,7 @@ export class AddPage implements OnInit, AfterViewInit {
               this.navController.back();
             }, 2000)
           }
-        }, 5000)
+        }, 2000)
       }
     }
   }
