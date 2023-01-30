@@ -162,7 +162,7 @@ export class MediaService {
     });
   }
 
-  addRawMedia(media: Media): any {
+  addRawMedia(media: Media) {
     const url = (environment.production) ? '../api/add' : 'http://' + this.hostname + ':8200/api/add';
 
     this.http.post(url, media, { responseType: 'text' }).subscribe(response => {
@@ -171,6 +171,7 @@ export class MediaService {
       }
       this.updateRawMedia();
     });
+    return 'go';
   }
 
   addWLAN(wlan: WLAN) {
