@@ -3,7 +3,7 @@
 # Generate M3U Playlist and Covers
 
 DATA="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json"
-M3ULOCK="/tmp/.m3u.lock"
+DATA_LOCK="/tmp/.data.lock"
 HN=`hostname`
 
 if [ "$EUID" -ne 0 ]
@@ -11,11 +11,11 @@ if [ "$EUID" -ne 0 ]
   exit
 fi
 
-if [ -f "${M3ULOCK}" ]; then
-	echo "Process already running."
+if [ -f "${DATA_LOCK}" ]; then
+	echo "Data-file locked."
     exit
 else
-	touch ${M3ULOCK}
+	touch ${DATA_LOCK}
 
 	if [ ! -f "$DATA" ]; then
 		echo "[]" > ${DATA}
@@ -136,5 +136,5 @@ else
 	bash /usr/local/bin/mupibox/add_index.sh
 
 	echo "Cover & Playlists generated"
-	rm ${M3ULOCK}
+	rm ${DATA_LOCK}
 fi

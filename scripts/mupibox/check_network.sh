@@ -9,10 +9,18 @@ NETWORKCONFIG="/tmp/network.json"
 OLDSTATE="starting"
 TRUESTATE="online"
 FALSESTATE="offline"
+DATA_LOCK="/tmp/.data.lock"
 
 if [ ! -f ${DATA_FILE} ]; then
+	if [ -f "${DATA_LOCK}" ]; then
+		echo "Data-file locked."
+		exit
+	else
+		touch ${DATA_LOCK}
         echo -n "[]" > ${DATA_FILE}
         chown dietpi:dietpi ${DATA_FILE}
+		rm ${DATA_LOCK}
+	fi
 fi
 
 if [ ! -f ${NETWORKCONFIG} ]; then
