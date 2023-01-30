@@ -347,36 +347,91 @@ export class AddPage implements OnInit, AfterViewInit {
     }else{
       if(this.edit){
         this.mediaService.editRawMediaAtIndex(this.editMedia.index, media);
+        setTimeout(async () => {
+          let check = this.mediaService.getResponse();
+          if(check === 'error'){
+            const alert = await this.alertController.create({
+              cssClass: 'alert',
+              header: 'Warning',
+              message: 'Error to write edit entry.',
+              buttons: [
+                {
+                  text: 'Okay'
+                }
+              ]
+            });
+        
+            await alert.present();
+          } else {
+            form.reset();
+
+            this.keyboard.clearInput('spotify_artist');
+            this.keyboard.clearInput('spotify_title');
+            this.keyboard.clearInput('spotify_id');
+            this.keyboard.clearInput('spotify_showid');
+            this.keyboard.clearInput('spotify_artistid');
+            this.keyboard.clearInput('spotify_artistcover');
+            this.keyboard.clearInput('spotify_query');
+            this.keyboard.clearInput('spotify_aPartOfAllMin');
+            this.keyboard.clearInput('spotify_aPartOfAllMax');
+        
+            this.keyboard.clearInput('radio_title');
+            this.keyboard.clearInput('radio_id');
+            this.keyboard.clearInput('radio_cover');
+        
+            this.validate();
+      
+            this.playerService.sendCmd(PlayerCmds.CLEARVALIDATE);
+      
+            setTimeout(() => {
+              this.navController.back();
+            }, 2000)
+          }
+        }, 5000)
       }else{
         this.mediaService.addRawMedia(media);
-        setTimeout(() => {
-          console.log(this.mediaService.getResponse());
+        setTimeout(async () => {
+          let check = this.mediaService.getResponse();
+          if(check === 'error'){
+            const alert = await this.alertController.create({
+              cssClass: 'alert',
+              header: 'Warning',
+              message: 'Error to write new entry.',
+              buttons: [
+                {
+                  text: 'Okay'
+                }
+              ]
+            });
+        
+            await alert.present();
+          } else {
+            form.reset();
+
+            this.keyboard.clearInput('spotify_artist');
+            this.keyboard.clearInput('spotify_title');
+            this.keyboard.clearInput('spotify_id');
+            this.keyboard.clearInput('spotify_showid');
+            this.keyboard.clearInput('spotify_artistid');
+            this.keyboard.clearInput('spotify_artistcover');
+            this.keyboard.clearInput('spotify_query');
+            this.keyboard.clearInput('spotify_aPartOfAllMin');
+            this.keyboard.clearInput('spotify_aPartOfAllMax');
+        
+            this.keyboard.clearInput('radio_title');
+            this.keyboard.clearInput('radio_id');
+            this.keyboard.clearInput('radio_cover');
+        
+            this.validate();
+      
+            this.playerService.sendCmd(PlayerCmds.CLEARVALIDATE);
+      
+            setTimeout(() => {
+              this.navController.back();
+            }, 2000)
+          }
         }, 5000)
       }
-
-      form.reset();
-
-      this.keyboard.clearInput('spotify_artist');
-      this.keyboard.clearInput('spotify_title');
-      this.keyboard.clearInput('spotify_id');
-      this.keyboard.clearInput('spotify_showid');
-      this.keyboard.clearInput('spotify_artistid');
-      this.keyboard.clearInput('spotify_artistcover');
-      this.keyboard.clearInput('spotify_query');
-      this.keyboard.clearInput('spotify_aPartOfAllMin');
-      this.keyboard.clearInput('spotify_aPartOfAllMax');
-  
-      this.keyboard.clearInput('radio_title');
-      this.keyboard.clearInput('radio_id');
-      this.keyboard.clearInput('radio_cover');
-  
-      this.validate();
-
-      this.playerService.sendCmd(PlayerCmds.CLEARVALIDATE);
-
-      setTimeout(() => {
-        this.navController.back();
-      }, 2000)
     }
   }
 

@@ -138,7 +138,8 @@ export class MediaService {
       index
     };
 
-    this.http.post(url, body).subscribe(response => {
+    this.http.post(url, body, { responseType: 'text' }).subscribe(response => {
+      this.response = response;
       this.updateRawMedia();
     });
   }
@@ -152,7 +153,8 @@ export class MediaService {
 
     console.log(body);
     
-    this.http.post(url, body).subscribe(response => {
+    this.http.post(url, body, { responseType: 'text' }).subscribe(response => {
+      this.response = response;
       this.updateRawMedia();
     });
   }
@@ -161,11 +163,7 @@ export class MediaService {
     const url = (environment.production) ? '../api/add' : 'http://' + this.hostname + ':8200/api/add';
 
     this.http.post(url, media, { responseType: 'text' }).subscribe(response => {
-      console.log("http:" + response);
-      if(response === 'Test'){
-        this.response = response;
-        console.log("http:" + response);
-      }
+      this.response = response;
       this.updateRawMedia();
     });
   }
@@ -188,7 +186,8 @@ export class MediaService {
   saveMedia(media: Media) {
     const url = (environment.production) ? '../api/addmedia' : 'http://' + this.hostname + ':8200/api/addmedia';
 
-    this.http.post(url, media).subscribe(response => {
+    this.http.post(url, media, { responseType: 'text' }).subscribe(response => {
+      this.response = response;
       this.updateMediaFile();
     });
   }
@@ -208,7 +207,8 @@ export class MediaService {
   saveResume(resume: Resume) {
     const url = (environment.production) ? '../api/addresume' : 'http://' + this.hostname + ':8200/api/addresume';
 
-    this.http.post(url, resume).subscribe(response => {
+    this.http.post(url, resume, { responseType: 'text' }).subscribe(response => {
+      this.response = response;
       this.updateResume();
     });
   }
@@ -400,7 +400,6 @@ export class MediaService {
 
   // Get all media entries for the current category
   getResponse() {
-    console.log("getResponse:" + this.response);
     let tmpResponse = this.response;
     this.response = ''
 

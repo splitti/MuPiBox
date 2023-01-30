@@ -71,7 +71,7 @@ app.post('/api/addwlan', (req, res) => {
 
         jsonfile.writeFile(wlanFile, data, { spaces: 4 }, (error) => {
             if (error) throw err;
-            res.status(200).send();
+            res.status(200).send('ok');
         });
     });
 });
@@ -98,7 +98,7 @@ app.post('/api/addmedia', (req, res) => {
 
             jsonfile.writeFile(mediaFile, data, { spaces: 4 }, (error) => {
                 if (error) throw err;
-                res.status(200).send();
+                res.status(200).send('ok');
             });
         }
     });
@@ -126,7 +126,7 @@ app.post('/api/addresume', (req, res) => {
 
             jsonfile.writeFile(resumeFile, data, { spaces: 4 }, (error) => {
                 if (error) throw err;
-                res.status(200).send();
+                res.status(200).send('ok');
             });
         }
     });
@@ -144,7 +144,7 @@ app.post('/api/add', (req, res) => {
 
             jsonfile.writeFile(dataFile, data, { spaces: 4 }, (error) => {
                 if (error) throw err;
-                res.status(200).send('Test');
+                res.status(200).send('error');
             });
         }
     });
@@ -162,7 +162,7 @@ app.post('/api/delete', (req, res) => {
 
             jsonfile.writeFile(dataFile, data, { spaces: 4 }, (error) => {
                 if (error) throw err;
-                res.status(200).send();
+                res.status(200).send('ok');
             });
         }
     });
@@ -180,7 +180,7 @@ app.post('/api/edit', (req, res) => {
 
             jsonfile.writeFile(dataFile, data, { spaces: 4 }, (error) => {
                 if (error) throw err;
-                res.status(200).send();
+                res.status(200).send('ok');
             });
         }
     });
