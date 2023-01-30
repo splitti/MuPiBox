@@ -43,17 +43,17 @@ export class EditPage implements OnInit {
   }
 
   async deleteButtonPressed(item: Media) {
-    this.activityIndicatorService.create().then(indicator => {
-      this.activityIndicatorVisible = true;
-      indicator.present().then(async () => {
-        const alert = await this.alertController.create({
-          cssClass: 'alert',
-          header: 'Warning',
-          message: 'Do you want to delete the selected item from your library and local storage?',
-          buttons: [
-            {
-              text: 'Ok',
-              handler: () => {
+    const alert = await this.alertController.create({
+      cssClass: 'alert',
+      header: 'Warning',
+      message: 'Do you want to delete the selected item from your library and local storage?',
+      buttons: [
+        {
+          text: 'Ok',
+          handler: () => {
+            this.activityIndicatorService.create().then(indicator => {
+              this.activityIndicatorVisible = true;
+              indicator.present().then(() => {
                 this.mediaService.deleteRawMediaAtIndex(item.index);
                 setTimeout(async () => {
                   let check = this.mediaService.getResponse();
@@ -71,7 +71,7 @@ export class EditPage implements OnInit {
                         }
                       ]
                     });
-                
+                  
                     await alert.present();
                   } else {
                     console.log("Index: " + item.index);
@@ -84,20 +84,22 @@ export class EditPage implements OnInit {
                       this.media = this.mediaService.getRawMediaObservable();
                       this.mediaService.updateRawMedia();
                       this.mediaService.updateNetwork();
+                      this.activityIndicatorService.dismiss();
+                      this.activityIndicatorVisible = false;
                     }, 2000)
                   }
                 }, 2000)
-              }
-            },
-            {
-              text: 'Cancel'
-            }
-          ]
-        });
-    
-        await alert.present();
-      });
+              });
+            });
+          }
+        },
+        {
+          text: 'Cancel'
+        }
+      ]
     });
+
+    await alert.present();
   }
 
   editButtonPreddes(item: Media) {
