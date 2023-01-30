@@ -138,6 +138,9 @@ export class MediaService {
     };
 
     this.http.post(url, body).subscribe(response => {
+      if(response === 'error'){
+        return response;
+      }
       this.updateRawMedia();
     });
   }
@@ -152,16 +155,20 @@ export class MediaService {
     console.log(body);
     
     this.http.post(url, body).subscribe(response => {
+      if(response === 'error'){
+        return response;
+      }
       this.updateRawMedia();
     });
   }
 
-  addRawMedia(media: Media) {
+  addRawMedia(media: Media): any {
     const url = (environment.production) ? '../api/add' : 'http://' + this.hostname + ':8200/api/add';
 
     this.http.post(url, media, { responseType: 'text' }).subscribe(response => {
-      console.log("Hallo");
-      console.log(response);
+      if(response === 'error'){
+        return response;
+      }
       this.updateRawMedia();
     });
   }
@@ -185,6 +192,9 @@ export class MediaService {
     const url = (environment.production) ? '../api/addmedia' : 'http://' + this.hostname + ':8200/api/addmedia';
 
     this.http.post(url, media).subscribe(response => {
+      if(response === 'error'){
+        return response;
+      }
       this.updateMediaFile();
     });
   }
@@ -205,6 +215,9 @@ export class MediaService {
     const url = (environment.production) ? '../api/addresume' : 'http://' + this.hostname + ':8200/api/addresume';
 
     this.http.post(url, resume).subscribe(response => {
+      if(response === 'error'){
+        return response;
+      }
       this.updateResume();
     });
   }

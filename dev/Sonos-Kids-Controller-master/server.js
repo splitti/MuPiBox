@@ -90,7 +90,7 @@ app.post('/api/addmedia', (req, res) => {
         if (error) {
             data = [];
             console.log(error);
-            res.status(404).send();
+            res.status(200).send('error');
         } else {
             data = req.body;
 
@@ -117,7 +117,7 @@ app.post('/api/addresume', (req, res) => {
         if (error) {
             data = [];
             console.log(error);
-            res.status(404).send();
+            res.status(200).send('error');
         } else {
             data = req.body;
 
@@ -134,13 +134,13 @@ app.post('/api/add', (req, res) => {
         if (error) {
             data = [];
             console.log(error);
-            res.status(404).send();
+            res.status(200).send('error');
         } else {
             data.push(req.body);
 
             jsonfile.writeFile(dataFile, data, { spaces: 4 }, (error) => {
                 if (error) throw err;
-                res.status(200).send('Problem');
+                res.status(200).send('error');
             });
         }
     });
@@ -151,7 +151,7 @@ app.post('/api/delete', (req, res) => {
         if (error) {
             data = [];
             console.log(error);
-            res.status(404).send();
+            res.status(200).send('error');
         } else {
             data.splice(req.body.index, 1);
 
@@ -168,7 +168,7 @@ app.post('/api/edit', (req, res) => {
         if (error) {
             data = [];
             console.log(error);
-            res.status(404).send();
+            res.status(200).send('error');
         } else {
             data.splice(req.body.index, 1, req.body.data);
 
