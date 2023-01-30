@@ -140,7 +140,7 @@ app.post('/api/add', (req, res) => {
 
             jsonfile.writeFile(dataFile, data, { spaces: 4 }, (error) => {
                 if (error) throw err;
-                res.status(200).send();
+                res.status(200).send('Problem');
             });
         }
     });
