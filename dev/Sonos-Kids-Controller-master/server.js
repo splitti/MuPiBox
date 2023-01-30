@@ -6,6 +6,7 @@ const path = require('path');
 const jsonfile = require('jsonfile');
 var SpotifyWebApi = require('spotify-web-api-node');
 const config = require('./server/config/config.json');
+const fs = require('fs');
 
 app.use(cors());
 
@@ -21,7 +22,7 @@ const networkFile = './server/config/network.json';
 const wlanFile = './server/config/wlan.json';
 const mediaFile = './server/config/media.json';
 const resumeFile = './server/config/resume.json';
-const mupiboxconfigFile = './server/config/mupiboxconfig.json';
+const dataLock = '/tmp/.data.lock';
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -31,13 +32,21 @@ app.use(express.static(path.join(__dirname, 'www'))); // Static path to compiled
 
 // Routes
 app.get('/api/data', (req, res) => {
-    jsonfile.readFile(activedataFile, (error, data) => {
-        if (error) {
-            data = [];
-            console.log(error);
+    try {
+        while(!fs.existsSync(dataLock)){
+            jsonfile.readFile(activedataFile, (error, data) => {
+                if (error) {
+                    data = [];
+                    console.log(error);
+                }
+                res.json(data);
+            });
+            break;
         }
-        res.json(data);
-    });
+    } catch(err) {
+      console.error(err)
+    }
+    
 });
 
 app.get('/api/network', (req, res) => {
@@ -133,57 +142,99 @@ app.post('/api/addresume', (req, res) => {
 });
 
 app.post('/api/add', (req, res) => {
-    jsonfile.readFile(dataFile, (error, data) => {
-        if (error) {
-            data = [];
+    try {
+        if (fs.existsSync(dataLock)) {
             console.log("error: /api/add");
-            console.log(error);
-            res.status(200).send('error');
+            res.status(200).send('locked');
         } else {
-            data.push(req.body);
-
-            jsonfile.writeFile(dataFile, data, { spaces: 4 }, (error) => {
-                if (error) throw err;
-                res.status(200).send('ok');
+            fs.openSync(dataLock, 'w');
+            jsonfile.readFile(dataFile, (error, data) => {
+                if (error) {
+                    data = [];
+                    console.log("error: /api/add");
+                    console.log(error);
+                    res.status(200).send('error');
+                } else {
+                    data.push(req.body);
+        
+                    jsonfile.writeFile(dataFile, data, { spaces: 4 }, (error) => {
+                        if (error) throw err;
+                        res.status(200).send('ok');
+                    });
+                }
             });
+            fs.unlink(dataLock, function (err) {
+                if (err) throw err;
+                console.log('File deleted!');
+              });
         }
-    });
+    } catch(err) {
+      console.error(err)
+    }
 });
 
 app.post('/api/delete', (req, res) => {
-    jsonfile.readFile(dataFile, (error, data) => {
-        if (error) {
-            data = [];
+    try {
+        if (fs.existsSync(dataLock)) {
             console.log("error: /api/delete");
-            console.log(error);
-            res.status(200).send('error');
+            res.status(200).send('locked');
         } else {
-            data.splice(req.body.index, 1);
-
-            jsonfile.writeFile(dataFile, data, { spaces: 4 }, (error) => {
-                if (error) throw err;
-                res.status(200).send('error');
+            fs.openSync(dataLock, 'w');
+            jsonfile.readFile(dataFile, (error, data) => {
+                if (error) {
+                    data = [];
+                    console.log("error: /api/delete");
+                    console.log(error);
+                    res.status(200).send('error');
+                } else {
+                    data.splice(req.body.index, 1);
+        
+                    jsonfile.writeFile(dataFile, data, { spaces: 4 }, (error) => {
+                        if (error) throw err;
+                        res.status(200).send('ok');
+                    });
+                }
             });
+            fs.unlink(dataLock, function (err) {
+                if (err) throw err;
+                console.log('File deleted!');
+              });
         }
-    });
+    } catch(err) {
+      console.error(err)
+    }
 });
 
 app.post('/api/edit', (req, res) => {
-    jsonfile.readFile(dataFile, (error, data) => {
-        if (error) {
-            data = [];
+    try {
+        if (fs.existsSync(dataLock)) {
             console.log("error: /api/edit");
-            console.log(error);
-            res.status(200).send('error');
+            res.status(200).send('locked');
         } else {
-            data.splice(req.body.index, 1, req.body.data);
-
-            jsonfile.writeFile(dataFile, data, { spaces: 4 }, (error) => {
-                if (error) throw err;
-                res.status(200).send('ok');
+            fs.openSync(dataLock, 'w');
+            jsonfile.readFile(dataFile, (error, data) => {
+                if (error) {
+                    data = [];
+                    console.log("error: /api/edit");
+                    console.log(error);
+                    res.status(200).send('error');
+                } else {
+                    data.splice(req.body.index, 1, req.body.data);
+        
+                    jsonfile.writeFile(dataFile, data, { spaces: 4 }, (error) => {
+                        if (error) throw err;
+                        res.status(200).send('ok');
+                    });
+                }
             });
+            fs.unlink(dataLock, function (err) {
+                if (err) throw err;
+                console.log('File deleted!');
+              });
         }
-    });
+    } catch(err) {
+      console.error(err)
+    }
 });
 
 app.get('/api/token', (req, res) => {

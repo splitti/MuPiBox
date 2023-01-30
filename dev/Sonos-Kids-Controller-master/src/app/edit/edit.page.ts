@@ -58,21 +58,34 @@ export class EditPage implements OnInit {
                 setTimeout(async () => {
                   let check = this.mediaService.getResponse();
                   console.log("write check: " + check);
-                  if(check === 'error'){
+                  if(check === 'error' || check === 'locked'){
                     this.activityIndicatorService.dismiss();
                     this.activityIndicatorVisible = false;
-                    const alert = await this.alertController.create({
-                      cssClass: 'alert',
-                      header: 'Warning',
-                      message: 'Error to delet the entry.',
-                      buttons: [
-                        {
-                          text: 'Okay'
-                        }
-                      ]
-                    });
-                  
-                    await alert.present();
+                    if (check === 'error') {
+                      const alert = await this.alertController.create({
+                        cssClass: 'alert',
+                        header: 'Warning',
+                        message: 'Error to delet the entry.',
+                        buttons: [
+                          {
+                            text: 'Okay'
+                          }
+                        ]
+                      });
+                      await alert.present();
+                    } else if (check === 'locked') {
+                      const alert = await this.alertController.create({
+                        cssClass: 'alert',
+                        header: 'Warning',
+                        message: 'File locked, please try in a moment again.',
+                        buttons: [
+                          {
+                            text: 'Okay'
+                          }
+                        ]
+                      });
+                      await alert.present();
+                    }
                   } else {
                     console.log("Index: " + item.index);
                     if(item.type === 'library'){
