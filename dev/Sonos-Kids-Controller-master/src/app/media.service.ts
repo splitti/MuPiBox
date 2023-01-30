@@ -161,7 +161,7 @@ export class MediaService {
 
     this.http.post(url, media).subscribe(response => {
       console.log("Hallo");
-      console.log(response);
+      console.log(response.toString);
       this.updateRawMedia();
     });
   }
