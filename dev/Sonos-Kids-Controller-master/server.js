@@ -32,28 +32,40 @@ app.use(express.static(path.join(__dirname, 'www'))); // Static path to compiled
 // Routes
 app.get('/api/data', (req, res) => {
     jsonfile.readFile(activedataFile, (error, data) => {
-        if (error) data = [];
+        if (error) {
+            data = [];
+            console.log(error);
+        }
         res.json(data);
     });
 });
 
 app.get('/api/network', (req, res) => {
     jsonfile.readFile(networkFile, (error, data) => {
-        if (error) data = [];
+        if (error) {
+            data = [];
+            console.log(error);
+        }
         res.json(data);
     });
 });
 
 app.get('/api/wlan', (req, res) => {
     jsonfile.readFile(wlanFile, (error, data) => {
-        if (error) data = [];
+        if (error) {
+            data = [];
+            console.log(error);
+        }
         res.json(data);
     });
 });
 
 app.post('/api/addwlan', (req, res) => {
     jsonfile.readFile(wlanFile, (error, data) => {
-        if (error) data = [];
+        if (error) {
+            data = [];
+            console.log(error);
+        }
         data.push(req.body);
 
         jsonfile.writeFile(wlanFile, data, { spaces: 4 }, (error) => {
@@ -65,75 +77,106 @@ app.post('/api/addwlan', (req, res) => {
 
 app.get('/api/media', (req, res) => {
     jsonfile.readFile(mediaFile, (error, data) => {
-        if (error) data = [];
+        if (error) {
+            data = [];
+            console.log(error);
+        }
         res.json(data);
     });
 });
 
 app.post('/api/addmedia', (req, res) => {
     jsonfile.readFile(mediaFile, (error, data) => {
-        if (error) data = [];
-        data = req.body;
+        if (error) {
+            data = [];
+            console.log(error);
+            res.status(404).send();
+        } else {
+            data = req.body;
 
-        jsonfile.writeFile(mediaFile, data, { spaces: 4 }, (error) => {
-            if (error) throw err;
-            res.status(200).send();
-        });
+            jsonfile.writeFile(mediaFile, data, { spaces: 4 }, (error) => {
+                if (error) throw err;
+                res.status(200).send();
+            });
+        }
     });
 });
 
 app.get('/api/resume', (req, res) => {
     jsonfile.readFile(resumeFile, (error, data) => {
-        if (error) data = [];
+        if (error) {
+            data = [];
+            console.log(error);
+        }
         res.json(data);
     });
 });
 
 app.post('/api/addresume', (req, res) => {
     jsonfile.readFile(resumeFile, (error, data) => {
-        if (error) data = [];
-        data = req.body;
+        if (error) {
+            data = [];
+            console.log(error);
+            res.status(404).send();
+        } else {
+            data = req.body;
 
-        jsonfile.writeFile(resumeFile, data, { spaces: 4 }, (error) => {
-            if (error) throw err;
-            res.status(200).send();
-        });
+            jsonfile.writeFile(resumeFile, data, { spaces: 4 }, (error) => {
+                if (error) throw err;
+                res.status(200).send();
+            });
+        }
     });
 });
 
 app.post('/api/add', (req, res) => {
     jsonfile.readFile(dataFile, (error, data) => {
-        if (error) data = [];
-        data.push(req.body);
+        if (error) {
+            data = [];
+            console.log(error);
+            res.status(404).send();
+        } else {
+            data.push(req.body);
 
-        jsonfile.writeFile(dataFile, data, { spaces: 4 }, (error) => {
-            if (error) throw err;
-            res.status(200).send();
-        });
+            jsonfile.writeFile(dataFile, data, { spaces: 4 }, (error) => {
+                if (error) throw err;
+                res.status(200).send();
+            });
+        }
     });
 });
 
 app.post('/api/delete', (req, res) => {
     jsonfile.readFile(dataFile, (error, data) => {
-        if (error) data = [];
-        data.splice(req.body.index, 1);
+        if (error) {
+            data = [];
+            console.log(error);
+            res.status(404).send();
+        } else {
+            data.splice(req.body.index, 1);
 
-        jsonfile.writeFile(dataFile, data, { spaces: 4 }, (error) => {
-            if (error) throw err;
-            res.status(200).send();
-        });
+            jsonfile.writeFile(dataFile, data, { spaces: 4 }, (error) => {
+                if (error) throw err;
+                res.status(200).send();
+            });
+        }
     });
 });
 
 app.post('/api/edit', (req, res) => {
     jsonfile.readFile(dataFile, (error, data) => {
-        if (error) data = [];
-        data.splice(req.body.index, 1, req.body.data);
+        if (error) {
+            data = [];
+            console.log(error);
+            res.status(404).send();
+        } else {
+            data.splice(req.body.index, 1, req.body.data);
 
-        jsonfile.writeFile(dataFile, data, { spaces: 4 }, (error) => {
-            if (error) throw err;
-            res.status(200).send();
-        });
+            jsonfile.writeFile(dataFile, data, { spaces: 4 }, (error) => {
+                if (error) throw err;
+                res.status(200).send();
+            });
+        }
     });
 });
 

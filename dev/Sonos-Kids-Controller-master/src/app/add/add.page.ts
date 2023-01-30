@@ -158,6 +158,7 @@ export class AddPage implements OnInit, AfterViewInit {
     this.keyboard.clearInput('spotify_id');
     this.keyboard.clearInput('spotify_showid');
     this.keyboard.clearInput('spotify_artistid');
+    this.keyboard.clearInput('spotify_artistcover');
     this.keyboard.clearInput('spotify_query');
     this.keyboard.clearInput('spotify_aPartOfAllMin');
     this.keyboard.clearInput('spotify_aPartOfAllMax');
@@ -194,6 +195,9 @@ export class AddPage implements OnInit, AfterViewInit {
           break;
         case 'spotify_artistid':
           this.keyboard.setInput(this.editMedia.artistid, event.target.name);
+          break;
+        case 'spotify_artistcover':
+          this.keyboard.setInput(this.editMedia.artistcover, event.target.name);
           break;
         case 'spotify_query':
           this.keyboard.setInput(this.editMedia.query, event.target.name);
@@ -263,6 +267,7 @@ export class AddPage implements OnInit, AfterViewInit {
       this.keyboard.clearInput('spotify_id');
       this.keyboard.clearInput('spotify_showid');
       this.keyboard.clearInput('spotify_artistid');
+      this.keyboard.clearInput('spotify_artistcover');
       this.keyboard.clearInput('spotify_query');
       this.keyboard.clearInput('spotify_aPartOfAllMin');
       this.keyboard.clearInput('spotify_aPartOfAllMax');
@@ -287,6 +292,7 @@ export class AddPage implements OnInit, AfterViewInit {
 
     if (this.source === 'spotify') {
       if (form.form.value.spotify_artist?.length) { media.artist = form.form.value.spotify_artist; }
+      if (form.form.value.spotify_artistcover?.length) { media.artistcover = form.form.value.spotify_artistcover; }
       if (form.form.value.spotify_title?.length) { media.title = form.form.value.spotify_title; }
       if (form.form.value.spotify_query?.length) { media.query = form.form.value.spotify_query; }
       if (form.form.value.spotify_id?.length) {
@@ -352,6 +358,7 @@ export class AddPage implements OnInit, AfterViewInit {
       this.keyboard.clearInput('spotify_id');
       this.keyboard.clearInput('spotify_showid');
       this.keyboard.clearInput('spotify_artistid');
+      this.keyboard.clearInput('spotify_artistcover');
       this.keyboard.clearInput('spotify_query');
       this.keyboard.clearInput('spotify_aPartOfAllMin');
       this.keyboard.clearInput('spotify_aPartOfAllMax');
@@ -371,18 +378,20 @@ export class AddPage implements OnInit, AfterViewInit {
   }
 
   validate() {
-    if(this.aPartOfAll){
-      this.spotifyaPartOfAllMin.disabled = false;
-      this.spotifyaPartOfAllMax.disabled = false;
-    }else{
-      this.spotifyaPartOfAllMin.disabled = true;
-      this.spotifyaPartOfAllMax.disabled = true;
-    }
-    
-    if(this.searchType === "artist_id" || this.searchType === "show_id" || this.searchType === "query"){
-      this.spotifyaPartOfAll.disabled = false;
-    }else{
-      this.spotifyaPartOfAll.disabled = true;
+    if(this.category === 'audiobook' || this.category === 'music'){
+      if(this.aPartOfAll){
+        this.spotifyaPartOfAllMin.disabled = false;
+        this.spotifyaPartOfAllMax.disabled = false;
+      }else{
+        this.spotifyaPartOfAllMin.disabled = true;
+        this.spotifyaPartOfAllMax.disabled = true;
+      }
+      
+      if(this.searchType === "artist_id" || this.searchType === "show_id" || this.searchType === "query"){
+        this.spotifyaPartOfAll.disabled = false;
+      }else{
+        this.spotifyaPartOfAll.disabled = true;
+      }
     }
     
     if (this.source === 'spotify') {
@@ -392,8 +401,6 @@ export class AddPage implements OnInit, AfterViewInit {
       const artistid = this.keyboard.getInput('spotify_artistid');
       const query = this.keyboard.getInput('spotify_query');
       const show = this.keyboard.getInput('spotify_showid');
-      const aPartOfAllMin = this.keyboard.getInput('spotify_aPartOfAllMin');
-      const aPartOfAllMax = this.keyboard.getInput('spotify_aPartOfAllMax');
 
       this.valid = (
         (this.category === 'audiobook' || this.category === 'music') && (

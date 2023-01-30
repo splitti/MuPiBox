@@ -1,20 +1,6 @@
 <ion-header>
     <ion-toolbar color="light">
-        <!-- <ion-select #select interface="popover" [(ngModel)]="category" (ionChange)="categoryChanged()" cancelText="Cancel" okText="Ok">
-            <ion-select-option value="audiobook">Audiobook</ion-select-option>
-            <ion-select-option value="music">Music</ion-select-option>
-            <ion-select-option value="playlist">Playlist</ion-select-option>
-            <ion-select-option value="radio">Radio</ion-select-option>
-        </ion-select> -->
-        <!-- <ion-buttons slot="start">
-            <ion-button (click)="categoryButtonPressed($event)">
-                <ion-icon slot="start" name="{{this.categoryIcons[this.category]}}" color="primary"></ion-icon>
-            </ion-button>
-        </ion-buttons> -->
         <ion-segment #segment [(ngModel)]="category" value="{{this.source}}" (ionChange)="segmentChanged($event)">
-            <!-- <ion-segment-button #spotify_segment value="spotify">
-                <ion-label>Spotify</ion-label>
-            </ion-segment-button> -->
             <ion-segment-button #audiobook_segment value="audiobook" layout="icon-start">
                 <ion-icon name="{{this.categoryIcons.audiobook}}" color="primary"></ion-icon>
                 <ion-label>audiobook</ion-label>
@@ -31,9 +17,6 @@
                 <ion-icon name="{{this.categoryIcons.radio}}" color="primary"></ion-icon>
                 <ion-label>radio</ion-label>
             </ion-segment-button>
-            <!-- <ion-segment-button #radio_segment value="radio">
-                <ion-label>Radio</ion-label>
-            </ion-segment-button> -->
         </ion-segment>
     </ion-toolbar>
 </ion-header>
@@ -49,10 +32,10 @@
                                 <ion-item>
                                     <ion-label class="dimmed-text">Media search type</ion-label>
                                     <ion-select #searchTypeSelect interface="popover" [(ngModel)]="searchType" name="searchType" (ionChange)="searchTypeChanged()">
-                                        <ion-select-option value="artist_id">Artist ID from Spotify</ion-select-option>
-                                        <ion-select-option value="media_id">Media ID from Spotify</ion-select-option>
-                                        <ion-select-option value="show_id">Show ID from Spotify</ion-select-option>
-                                        <ion-select-option value="query">Search Query for Spotify</ion-select-option>
+                                        <ion-select-option value="artist_id">Artist ID</ion-select-option>
+                                        <ion-select-option value="media_id">Media ID</ion-select-option>
+                                        <ion-select-option value="show_id">Show ID</ion-select-option>
+                                        <ion-select-option value="query">Search Query</ion-select-option>
                                       </ion-select>
                                 </ion-item>
                             </div>
@@ -82,20 +65,27 @@
                     </ion-row>
 
                     <ion-row>
-                        <ion-col size="6">
+                        <ion-col size="4">
                             <div>
                                 <ion-item>
                                     <ion-input #spotify_artist [ngModel]="editMedia?.artist" name="spotify_artist" type="text" placeholder="Artist" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
                                 </ion-item>
                             </div>
                         </ion-col>
-                        <ion-col size="6">
+                        <ion-col size="4">
                             <div>
                                 <ion-item [ngSwitch]="searchType">
                                     <ion-input *ngSwitchCase="'media_id'" #spotify_id [ngModel]="editMedia?.id" name="spotify_id" type="text" placeholder="Media ID" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
                                     <ion-input *ngSwitchCase="'show_id'" #spotify_showid [ngModel]="editMedia?.showid" name="spotify_showid" type="text" placeholder="Show ID" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
                                     <ion-input *ngSwitchCase="'query'" #spotify_query [ngModel]="editMedia?.query" name="spotify_query" type="text" placeholder="Search Query" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
                                     <ion-input *ngSwitchCase="'artist_id'" #spotify_artistid [ngModel]="editMedia?.artistid" name="spotify_artistid" type="text" placeholder="Unique Artist ID" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
+                                </ion-item>
+                            </div>
+                        </ion-col>
+                        <ion-col size="4">
+                            <div>
+                                <ion-item>
+                                    <ion-input #spotify_artistcover [ngModel]="editMedia?.artistcover" name="spotify_artistcover" type="text" placeholder="opt. Artist Cover" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
                                 </ion-item>
                             </div>
                         </ion-col>
@@ -131,9 +121,9 @@
                                 <ion-item>
                                     <ion-label class="dimmed-text">Media search type</ion-label>
                                     <ion-select #searchTypeSelect interface="popover" [(ngModel)]="searchType" name="searchType" (ionChange)="searchTypeChanged()">
-                                        <ion-select-option value="artist_id">Artist ID from Spotify</ion-select-option>
-                                        <ion-select-option value="media_id">Media ID from Spotify</ion-select-option>
-                                        <ion-select-option value="query">Search Query for Spotify</ion-select-option>
+                                        <ion-select-option value="artist_id">Artist ID</ion-select-option>
+                                        <ion-select-option value="media_id">Media ID</ion-select-option>
+                                        <ion-select-option value="query">Search Query</ion-select-option>
                                       </ion-select>
                                 </ion-item>
                             </div>
@@ -171,20 +161,27 @@
                     </ion-row>
 
                     <ion-row>
-                        <ion-col size="6">
+                        <ion-col size="4">
                             <div>
                                 <ion-item>
                                     <ion-input #spotify_artist [ngModel]="editMedia?.artist" name="spotify_artist" type="text" placeholder="Artist" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
                                 </ion-item>
                             </div>
                         </ion-col>
-                        <ion-col size="6">
+                        <ion-col size="4">
                             <div>
                                 <ion-item [ngSwitch]="searchType">
                                     <ion-input *ngSwitchCase="'media_id'" #spotify_id [ngModel]="editMedia?.id" name="spotify_id" type="text" placeholder="Media ID" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
                                     <ion-input *ngSwitchCase="'show_id'" #spotify_showid [ngModel]="editMedia?.showid" name="spotify_showid" type="text" placeholder="Show ID" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
                                     <ion-input *ngSwitchCase="'query'" #spotify_query [ngModel]="editMedia?.query" name="spotify_query" type="text" placeholder="Search Query" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
                                     <ion-input *ngSwitchCase="'artist_id'" #spotify_artistid [ngModel]="editMedia?.artistid" name="spotify_artistid" type="text" placeholder="Unique Artist ID" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
+                                </ion-item>
+                            </div>
+                        </ion-col>
+                        <ion-col size="4">
+                            <div>
+                                <ion-item>
+                                    <ion-input #spotify_artistcover [ngModel]="editMedia?.artistcover" name="spotify_artistcover" type="text" placeholder="opt. Artist Cover" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
                                 </ion-item>
                             </div>
                         </ion-col>
@@ -215,11 +212,18 @@
             <form #playlistForm="ngForm" (ngSubmit)="submit(playlistForm)">
                 <ion-grid>
                     <ion-row>
-                        <ion-col *ngIf="category === 'playlist'" size="12">
+                        <ion-col size="6">
                             <div>
                                 <ion-item>
                                     <ion-label>Shuffle Mode</ion-label>
                                     <ion-checkbox #spotify_shuffle name="spotify_shuffle" [(ngModel)]="shuffle" (ionChange)="validate()"></ion-checkbox>
+                                </ion-item>
+                            </div>
+                        </ion-col>
+                        <ion-col size="6">
+                            <div>
+                                <ion-item>
+                                    <ion-input #spotify_artistcover [ngModel]="editMedia?.artistcover" name="spotify_artistcover" type="text" placeholder="opt. Artist Cover" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
                                 </ion-item>
                             </div>
                         </ion-col>
@@ -235,11 +239,8 @@
                         </ion-col>
                         <ion-col size="6">
                             <div>
-                                <ion-item [ngSwitch]="searchType">
-                                    <ion-input *ngSwitchCase="'media_id'" #spotify_id [ngModel]="editMedia?.id" name="spotify_id" type="text" placeholder="Media ID" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
-                                    <ion-input *ngSwitchCase="'show_id'" #spotify_showid [ngModel]="editMedia?.showid" name="spotify_showid" type="text" placeholder="Show ID" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
-                                    <ion-input *ngSwitchCase="'query'" #spotify_query [ngModel]="editMedia?.query" name="spotify_query" type="text" placeholder="Search Query" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
-                                    <ion-input *ngSwitchCase="'artist_id'" #spotify_artistid [ngModel]="editMedia?.artistid" name="spotify_artistid" type="text" placeholder="Unique Artist ID" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
+                                <ion-item>
+                                    <ion-input #spotify_id [ngModel]="editMedia?.id" name="spotify_id" type="text" placeholder="Media ID" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
                                 </ion-item>
                             </div>
                         </ion-col>

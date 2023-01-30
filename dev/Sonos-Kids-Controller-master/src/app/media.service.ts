@@ -160,6 +160,8 @@ export class MediaService {
     const url = (environment.production) ? '../api/add' : 'http://' + this.hostname + ':8200/api/add';
 
     this.http.post(url, media).subscribe(response => {
+      console.log("Hallo");
+      console.log(response);
       this.updateRawMedia();
     });
   }
