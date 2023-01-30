@@ -159,9 +159,9 @@ export class MediaService {
   addRawMedia(media: Media) {
     const url = (environment.production) ? '../api/add' : 'http://' + this.hostname + ':8200/api/add';
 
-    this.http.post(url, media).subscribe(response => {
+    this.http.post(url, media, { responseType: 'text' }).subscribe(response => {
       console.log("Hallo");
-      console.log(response.toString);
+      console.log(response);
       this.updateRawMedia();
     });
   }
