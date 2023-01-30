@@ -348,8 +348,9 @@ export class AddPage implements OnInit, AfterViewInit {
       if(this.edit){
         this.mediaService.editRawMediaAtIndex(this.editMedia.index, media);
       }else{
-        let check = this.mediaService.addRawMedia(media);
-        console.log(check);
+        this.mediaService.addRawMedia(media);
+        console.log(this.mediaService.getResponse);
+        
       }
 
       form.reset();

@@ -24,6 +24,7 @@ export class MediaService {
 
   network: Network;
   hostname: String;
+  response: String;
   private category = 'audiobook';
   public readonly current$: Observable<CurrentSpotify>;
   public readonly local$: Observable<CurrentMPlayer>;
@@ -164,12 +165,10 @@ export class MediaService {
 
   addRawMedia(media: Media) {
     const url = (environment.production) ? '../api/add' : 'http://' + this.hostname + ':8200/api/add';
-    let tmpResp = '';
 
     this.http.post(url, media, { responseType: 'text' }).subscribe(response => {
-      console.log(response);
       if(response === 'error'){
-        return response;
+        this.response = response;
       }
       this.updateRawMedia();
     });
@@ -407,6 +406,14 @@ export class MediaService {
           }));
       })
     );
+  }
+
+  // Get all media entries for the current category
+  getResponse() {
+    let tmpResponse = this.response;
+    this.response = ''
+
+    return tmpResponse;
   }
 
     // Choose which media category should be displayed in the app
