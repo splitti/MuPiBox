@@ -169,11 +169,10 @@ export class MediaService {
     this.http.post(url, media, { responseType: 'text' }).subscribe(response => {
       console.log(response);
       if(response === 'error'){
-        tmpResp = response;
+        return response;
       }
       this.updateRawMedia();
     });
-    return tmpResp;
   }
 
   addWLAN(wlan: WLAN) {
