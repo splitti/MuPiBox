@@ -167,6 +167,7 @@ export class MediaService {
     let tmpResp = '';
 
     this.http.post(url, media, { responseType: 'text' }).subscribe(response => {
+      console.log(response);
       if(response === 'error'){
         tmpResp = response;
       }
