@@ -161,8 +161,10 @@ export class MediaService {
     const url = (environment.production) ? '../api/add' : 'http://' + this.hostname + ':8200/api/add';
 
     this.http.post(url, media, { responseType: 'text' }).subscribe(response => {
+      console.log("http:" + response);
       if(response === 'error'){
         this.response = response;
+        console.log("http:" + response);
       }
       this.updateRawMedia();
     });
@@ -398,6 +400,7 @@ export class MediaService {
 
   // Get all media entries for the current category
   getResponse() {
+    console.log("getResponse:" + this.response);
     let tmpResponse = this.response;
     this.response = ''
 
