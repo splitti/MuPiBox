@@ -43,35 +43,61 @@ export class EditPage implements OnInit {
   }
 
   async deleteButtonPressed(item: Media) {
-    const alert = await this.alertController.create({
-      cssClass: 'alert',
-      header: 'Warning',
-      message: 'Do you want to delete the selected item from your library and local storage?',
-      buttons: [
-        {
-          text: 'Ok',
-          handler: () => {
-            this.mediaService.deleteRawMediaAtIndex(item.index);
-            console.log("Index: " + item.index);
-            if(item.type === 'library'){
-              this.playerService.deleteLocal(item);
+    this.activityIndicatorService.create().then(indicator => {
+      this.activityIndicatorVisible = true;
+      indicator.present().then(async () => {
+        const alert = await this.alertController.create({
+          cssClass: 'alert',
+          header: 'Warning',
+          message: 'Do you want to delete the selected item from your library and local storage?',
+          buttons: [
+            {
+              text: 'Ok',
+              handler: () => {
+                this.mediaService.deleteRawMediaAtIndex(item.index);
+                setTimeout(async () => {
+                  let check = this.mediaService.getResponse();
+                  console.log("write check: " + check);
+                  if(check === 'error'){
+                    this.activityIndicatorService.dismiss();
+                    this.activityIndicatorVisible = false;
+                    const alert = await this.alertController.create({
+                      cssClass: 'alert',
+                      header: 'Warning',
+                      message: 'Error to delet the entry.',
+                      buttons: [
+                        {
+                          text: 'Okay'
+                        }
+                      ]
+                    });
+                
+                    await alert.present();
+                  } else {
+                    console.log("Index: " + item.index);
+                    if(item.type === 'library'){
+                      this.playerService.deleteLocal(item);
+                    }
+                    this.playerService.sendCmd(PlayerCmds.INDEX);
+                    setTimeout(() => {
+                      this.network = this.mediaService.getNetworkObservable();
+                      this.media = this.mediaService.getRawMediaObservable();
+                      this.mediaService.updateRawMedia();
+                      this.mediaService.updateNetwork();
+                    }, 2000)
+                  }
+                }, 2000)
+              }
+            },
+            {
+              text: 'Cancel'
             }
-            this.playerService.sendCmd(PlayerCmds.INDEX);
-            setTimeout(() => {
-              this.network = this.mediaService.getNetworkObservable();
-              this.media = this.mediaService.getRawMediaObservable();
-              this.mediaService.updateRawMedia();
-              this.mediaService.updateNetwork();
-            }, 2000)
-          }
-        },
-        {
-          text: 'Cancel'
-        }
-      ]
+          ]
+        });
+    
+        await alert.present();
+      });
     });
-
-    await alert.present();
   }
 
   editButtonPreddes(item: Media) {

@@ -144,7 +144,7 @@ app.post('/api/add', (req, res) => {
 
             jsonfile.writeFile(dataFile, data, { spaces: 4 }, (error) => {
                 if (error) throw err;
-                res.status(200).send('error');
+                res.status(200).send('ok');
             });
         }
     });
@@ -162,7 +162,7 @@ app.post('/api/delete', (req, res) => {
 
             jsonfile.writeFile(dataFile, data, { spaces: 4 }, (error) => {
                 if (error) throw err;
-                res.status(200).send('ok');
+                res.status(200).send('error');
             });
         }
     });

@@ -347,6 +347,7 @@ export class AddPage implements OnInit, AfterViewInit {
     });
 
     if(!this.validateState?.validate && this.source === 'spotify' && (media.query?.length == 0)){
+      this.activityIndicatorService.dismiss();
       this.activityIndicatorVisible = false;
       const alert = await this.alertController.create({
         cssClass: 'alert',
@@ -367,6 +368,7 @@ export class AddPage implements OnInit, AfterViewInit {
           let check = this.mediaService.getResponse();
           console.log("write check: " + check);
           if(check === 'error'){
+            this.activityIndicatorService.dismiss();
             this.activityIndicatorVisible = false;
             const alert = await this.alertController.create({
               cssClass: 'alert',
@@ -412,6 +414,7 @@ export class AddPage implements OnInit, AfterViewInit {
           let check = this.mediaService.getResponse();
           console.log("write check: " + check);
           if(check === 'error'){
+            this.activityIndicatorService.dismiss();
             this.activityIndicatorVisible = false;
             const alert = await this.alertController.create({
               cssClass: 'alert',

@@ -172,6 +172,7 @@ export class MediaService {
     const url = (environment.production) ? '../api/addwlan' : 'http://' + this.hostname + ':8200/api/addwlan';
 
     this.http.post(url, wlan).subscribe(response => {
+      //this.response = response;
       this.updateWLAN();
     });
   }
@@ -187,7 +188,7 @@ export class MediaService {
     const url = (environment.production) ? '../api/addmedia' : 'http://' + this.hostname + ':8200/api/addmedia';
 
     this.http.post(url, media, { responseType: 'text' }).subscribe(response => {
-      this.response = response;
+      //this.response = response;
       this.updateMediaFile();
     });
   }
@@ -208,7 +209,7 @@ export class MediaService {
     const url = (environment.production) ? '../api/addresume' : 'http://' + this.hostname + ':8200/api/addresume';
 
     this.http.post(url, resume, { responseType: 'text' }).subscribe(response => {
-      this.response = response;
+      //this.response = response;
       this.updateResume();
     });
   }
