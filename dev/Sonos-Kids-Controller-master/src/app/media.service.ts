@@ -164,14 +164,15 @@ export class MediaService {
 
   addRawMedia(media: Media) {
     const url = (environment.production) ? '../api/add' : 'http://' + this.hostname + ':8200/api/add';
+    let tmpResp = '';
 
     this.http.post(url, media, { responseType: 'text' }).subscribe(response => {
       if(response === 'error'){
-        return response;
+        tmpResp = response;
       }
       this.updateRawMedia();
     });
-    return 'go';
+    return tmpResp;
   }
 
   addWLAN(wlan: WLAN) {
