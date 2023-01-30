@@ -64,6 +64,7 @@ app.post('/api/addwlan', (req, res) => {
     jsonfile.readFile(wlanFile, (error, data) => {
         if (error) {
             data = [];
+            console.log("error: /api/addwlan");
             console.log(error);
         }
         data.push(req.body);
@@ -89,6 +90,7 @@ app.post('/api/addmedia', (req, res) => {
     jsonfile.readFile(mediaFile, (error, data) => {
         if (error) {
             data = [];
+            console.log("error: /api/addmedia");
             console.log(error);
             res.status(200).send('error');
         } else {
@@ -116,6 +118,7 @@ app.post('/api/addresume', (req, res) => {
     jsonfile.readFile(resumeFile, (error, data) => {
         if (error) {
             data = [];
+            console.log("error: /api/addresume");
             console.log(error);
             res.status(200).send('error');
         } else {
@@ -133,6 +136,7 @@ app.post('/api/add', (req, res) => {
     jsonfile.readFile(dataFile, (error, data) => {
         if (error) {
             data = [];
+            console.log("error: /api/add");
             console.log(error);
             res.status(200).send('error');
         } else {
@@ -140,7 +144,7 @@ app.post('/api/add', (req, res) => {
 
             jsonfile.writeFile(dataFile, data, { spaces: 4 }, (error) => {
                 if (error) throw err;
-                res.status(200).send('error');
+                res.status(200).send('Test');
             });
         }
     });
@@ -150,6 +154,7 @@ app.post('/api/delete', (req, res) => {
     jsonfile.readFile(dataFile, (error, data) => {
         if (error) {
             data = [];
+            console.log("error: /api/delete");
             console.log(error);
             res.status(200).send('error');
         } else {
@@ -167,6 +172,7 @@ app.post('/api/edit', (req, res) => {
     jsonfile.readFile(dataFile, (error, data) => {
         if (error) {
             data = [];
+            console.log("error: /api/edit");
             console.log(error);
             res.status(200).send('error');
         } else {

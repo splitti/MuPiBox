@@ -349,8 +349,9 @@ export class AddPage implements OnInit, AfterViewInit {
         this.mediaService.editRawMediaAtIndex(this.editMedia.index, media);
       }else{
         this.mediaService.addRawMedia(media);
-        console.log(this.mediaService.getResponse());
-        
+        setTimeout(() => {
+          console.log(this.mediaService.getResponse());
+        }, 5000)
       }
 
       form.reset();
