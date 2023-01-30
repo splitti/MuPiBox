@@ -130,8 +130,6 @@ export class EditPage implements OnInit {
   }
   
   ionViewWillEnter() {
-    this.playerService.sendCmd(PlayerCmds.INDEX);
-    
     this.network = this.mediaService.getNetworkObservable();
     this.media = this.mediaService.getRawMediaObservable();
 

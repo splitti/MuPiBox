@@ -472,7 +472,8 @@ export class AddPage implements OnInit, AfterViewInit {
             this.keyboard.clearInput('radio_cover');
         
             this.validate();
-      
+            
+            this.playerService.sendCmd(PlayerCmds.INDEX);
             this.playerService.sendCmd(PlayerCmds.CLEARVALIDATE);
       
             setTimeout(() => {
