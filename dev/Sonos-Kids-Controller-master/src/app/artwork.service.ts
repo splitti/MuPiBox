@@ -30,7 +30,7 @@ export class ArtworkService {
     let artwork: Observable<string>;
 
 
-    if (media.type === 'spotify' && !media.cover) {
+    if (media.type === 'spotify' && !media.cover && !media.artistcover) {
       artwork = this.spotifyService.getAlbumArtwork(media.artist, media.title);
     } else {
       if (media.artistcover) {
