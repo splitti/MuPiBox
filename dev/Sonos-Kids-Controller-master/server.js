@@ -37,6 +37,7 @@ app.get('/api/data', (req, res) => {
             jsonfile.readFile(activedataFile, (error, data) => {
                 if (error) {
                     data = [];
+                    console.log("[Sonos-Server] Error /api/data read active_data.json");
                     console.log(error);
                 }
                 res.json(data);
@@ -53,6 +54,7 @@ app.get('/api/network', (req, res) => {
     jsonfile.readFile(networkFile, (error, data) => {
         if (error) {
             data = [];
+            console.log("[Sonos-Server] Error /api/network read network.json");
             console.log(error);
         }
         res.json(data);
@@ -63,6 +65,7 @@ app.get('/api/wlan', (req, res) => {
     jsonfile.readFile(wlanFile, (error, data) => {
         if (error) {
             data = [];
+            console.log("[Sonos-Server] Error /api/wlan read wlan.json");
             console.log(error);
         }
         res.json(data);
@@ -73,7 +76,7 @@ app.post('/api/addwlan', (req, res) => {
     jsonfile.readFile(wlanFile, (error, data) => {
         if (error) {
             data = [];
-            console.log("error: /api/addwlan");
+            console.log("[Sonos-Server] Error /api/addwlan add in wlan.json");
             console.log(error);
         }
         data.push(req.body);
@@ -89,6 +92,7 @@ app.get('/api/media', (req, res) => {
     jsonfile.readFile(mediaFile, (error, data) => {
         if (error) {
             data = [];
+            console.log("[Sonos-Server] Error /api/media read media.json");
             console.log(error);
         }
         res.json(data);
@@ -99,7 +103,7 @@ app.post('/api/addmedia', (req, res) => {
     jsonfile.readFile(mediaFile, (error, data) => {
         if (error) {
             data = [];
-            console.log("error: /api/addmedia");
+            console.log("[Sonos-Server] Error /api/addmedia write media.json");
             console.log(error);
             res.status(200).send('error');
         } else {
@@ -117,6 +121,7 @@ app.get('/api/resume', (req, res) => {
     jsonfile.readFile(resumeFile, (error, data) => {
         if (error) {
             data = [];
+            console.log("[Sonos-Server] Error /api/addmedia read resume.json");
             console.log(error);
         }
         res.json(data);
@@ -127,7 +132,7 @@ app.post('/api/addresume', (req, res) => {
     jsonfile.readFile(resumeFile, (error, data) => {
         if (error) {
             data = [];
-            console.log("error: /api/addresume");
+            console.log("[Sonos-Server] Error /api/addresume write resume.json");
             console.log(error);
             res.status(200).send('error');
         } else {
@@ -144,14 +149,14 @@ app.post('/api/addresume', (req, res) => {
 app.post('/api/add', (req, res) => {
     try {
         if (fs.existsSync(dataLock)) {
-            console.log("error: /api/add");
+            console.log("[Sonos-Server] /api/add data.json locked");
             res.status(200).send('locked');
         } else {
             fs.openSync(dataLock, 'w');
             jsonfile.readFile(dataFile, (error, data) => {
                 if (error) {
                     data = [];
-                    console.log("error: /api/add");
+                    console.log("[Sonos-Server] Error /api/add read data.json");
                     console.log(error);
                     res.status(200).send('error');
                 } else {
@@ -165,7 +170,7 @@ app.post('/api/add', (req, res) => {
             });
             fs.unlink(dataLock, function (err) {
                 if (err) throw err;
-                console.log('File deleted!');
+                console.log('[Sonos-Server] data.json unlocked, locked file deleted!');
               });
         }
     } catch(err) {
@@ -176,14 +181,14 @@ app.post('/api/add', (req, res) => {
 app.post('/api/delete', (req, res) => {
     try {
         if (fs.existsSync(dataLock)) {
-            console.log("error: /api/delete");
+            console.log("[Sonos-Server] /api/delete data.json locked");
             res.status(200).send('locked');
         } else {
             fs.openSync(dataLock, 'w');
             jsonfile.readFile(dataFile, (error, data) => {
                 if (error) {
                     data = [];
-                    console.log("error: /api/delete");
+                    console.log("[Sonos-Server] Error /api/delete read data.json");
                     console.log(error);
                     res.status(200).send('error');
                 } else {
@@ -197,7 +202,7 @@ app.post('/api/delete', (req, res) => {
             });
             fs.unlink(dataLock, function (err) {
                 if (err) throw err;
-                console.log('File deleted!');
+                console.log('[Sonos-Server] data.json unlocked, locked file deleted!');
               });
         }
     } catch(err) {
@@ -208,14 +213,14 @@ app.post('/api/delete', (req, res) => {
 app.post('/api/edit', (req, res) => {
     try {
         if (fs.existsSync(dataLock)) {
-            console.log("error: /api/edit");
+            console.log("[Sonos-Server] /api/edit data.json locked");
             res.status(200).send('locked');
         } else {
             fs.openSync(dataLock, 'w');
             jsonfile.readFile(dataFile, (error, data) => {
                 if (error) {
                     data = [];
-                    console.log("error: /api/edit");
+                    console.log("[Sonos-Server] Error /api/edit read data.json");
                     console.log(error);
                     res.status(200).send('error');
                 } else {
@@ -229,7 +234,7 @@ app.post('/api/edit', (req, res) => {
             });
             fs.unlink(dataLock, function (err) {
                 if (err) throw err;
-                console.log('File deleted!');
+                console.log('[Sonos-Server] data.json unlocked, locked file deleted!');
               });
         }
     } catch(err) {
