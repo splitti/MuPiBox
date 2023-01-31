@@ -124,7 +124,7 @@ app.post('/api/addmedia', (req, res) => {
 });
 
 app.get('/api/resume', (req, res) => {
-    if (fs.existsSync(mediaFile)){
+    if (fs.existsSync(resumeFile)){
         jsonfile.readFile(resumeFile, (error, data) => {
             if (error) {
                 data = [];
