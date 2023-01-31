@@ -243,6 +243,22 @@ function handleSpotifyError(err, activePlaylistId, from){
     if(activePlaylistId !== "0"){
       setActiveDevice(activePlaylistId);
     }
+  } else if (err.toString().includes("Device not found")) {
+    log.debug("Device not found: " + err)
+    log.debug(err)
+    log.debug("Error from: " + from);
+    counter.counterror++;
+    if (config.server.logLevel === 'debug'){writeCounter();}
+    spotifyApi.play({ device_id: activePlaylistId })
+    .then(function(){
+      counter.countplay++;
+      if (config.server.logLevel === 'debug'){writeCounter();}
+      log.debug("[Spotify Control] Transfering playback play deviceID");
+      writeplayerstatePlay();
+    }, function(err){
+      log.debug("[Spotify Control] Playback error" + err);
+      handleSpotifyError(err,"0","transferPlayback");
+    });
   } else {
     log.debug("an error occured: " + err)
     log.debug(err)
@@ -358,7 +374,7 @@ function play(){
         counter.countplay++;
         if (config.server.logLevel === 'debug'){writeCounter();}
         log.debug('[Spotify Control] Playback started');
-		writeplayerstatePlay();
+		    writeplayerstatePlay();
       }, function(err) {
         handleSpotifyError(err,"0","play");
       });
@@ -366,7 +382,7 @@ function play(){
     if (!(currentMeta.playing)){
       player.playPause();
       //currentMeta.playing = true;
-	  writeplayerstatePlay();
+	    writeplayerstatePlay();
     }
   }
 }
@@ -641,7 +657,7 @@ async function transferPlayback(id){
       log.debug('[Spotify Control] Transfering playback to ' + id);
     }, function(err) {
       log.debug('[Spotify Control] Transfering playback error.');
-      handleSpotifyError(err,"0","transferPlayback");
+      handleSpotifyError(err,id,"transferPlayback");
     });
 }
 
@@ -726,77 +742,75 @@ function clearValidate(){
 
 async function useSpotify(command){
   currentMeta.currentPlayer = "spotify";
-    let dir = command.dir;
-    let newdevice = dir.split('/')[1];
-    /*await getActiveDevice();*/
-    /*setActiveDevice();*/
-    log.debug("[Spotify Control] device is " + activeDevice + " and new is " + newdevice);
-      /*active device has changed, transfer playback*/
-    if (newdevice != activeDevice){
-      log.debug("[Spotify Control] device changed from " + activeDevice + " to " + newdevice);
-
-        log.debug("[Spotify Control] device is " + activeDevice);
-        await transferPlayback(newdevice);
-        activeDevice = newdevice;
-        log.debug("[Spotify Control] device is " + activeDevice);
-    }
-    else {
-      log.debug("[Spotify Control] still same device, won't change: " + activeDevice);
-    }
-
-    if(command.name.split(':')[1] === 'playlist'){
-      currentMeta.activePlaylist = command.name.split(':')[2];
-      let offset = 0;
-      let playlisttemp;
-      currentMeta.totalPlaylist = 1;
-      while (offset < currentMeta.totalPlaylist) {
-        await spotifyApi.getPlaylistTracks(currentMeta.activePlaylist, {limit: 50, offset: offset})
-        .then(function(data) {
-          counter.countgetPlaylistTracks++;
-          if (config.server.logLevel === 'debug'){writeCounter();}
-          if(offset > 0 ){
-            playlisttemp.items = playlisttemp.items.concat(data.body.items);
-          } else {
-            playlisttemp = data.body;
-          }
-          currentMeta.totalPlaylist = data.body.total;
-        }, function(err) {
-          handleSpotifyError(err,"0","getPlaylist");
-        });
-        offset = offset + 50;
-      }
-      playlist = playlisttemp;
-    } else if(command.name.split(':')[1] === 'episode'){
-      currentMeta.activeEpisode = command.name.split(':')[2];
-      let offset = 0;
-      let showtemp;
-      await spotifyApi.getEpisode(currentMeta.activeEpisode)
+  let dir = command.dir;
+  let newdevice = dir.split('/')[1];
+  /*await getActiveDevice();*/
+  /*setActiveDevice();*/
+  log.debug("[Spotify Control] device is " + activeDevice + " and new is " + newdevice);
+    /*active device has changed, transfer playback*/
+  if (newdevice != activeDevice){
+    log.debug("[Spotify Control] device changed from " + activeDevice + " to " + newdevice);
+      log.debug("[Spotify Control] device is " + activeDevice);
+      await transferPlayback(newdevice);
+      activeDevice = newdevice;
+      log.debug("[Spotify Control] device is " + activeDevice);
+  }
+  else {
+    log.debug("[Spotify Control] still same device, won't change: " + activeDevice);
+  }
+  if(command.name.split(':')[1] === 'playlist'){
+    currentMeta.activePlaylist = command.name.split(':')[2];
+    let offset = 0;
+    let playlisttemp;
+    currentMeta.totalPlaylist = 1;
+    while (offset < currentMeta.totalPlaylist) {
+      await spotifyApi.getPlaylistTracks(currentMeta.activePlaylist, {limit: 50, offset: offset})
       .then(function(data) {
-        counter.countgetEpisode++;
+        counter.countgetPlaylistTracks++;
         if (config.server.logLevel === 'debug'){writeCounter();}
-        currentMeta.activeShow = data.body.show.id;
-        currentMeta.totalShows = data.body.show.total_episodes;
+        if(offset > 0 ){
+          playlisttemp.items = playlisttemp.items.concat(data.body.items);
+        } else {
+          playlisttemp = data.body;
+        }
+        currentMeta.totalPlaylist = data.body.total;
       }, function(err) {
-        handleSpotifyError(err,"0","getEpisode");
+        handleSpotifyError(err,"0","getPlaylist");
       });
-      while (offset < currentMeta.totalShows) {
-        await spotifyApi.getShowEpisodes(currentMeta.activeShow, {limit: 50, offset: offset})
-        .then(function(data) {
-          counter.countgetShowEpisodes++;
-          if (config.server.logLevel === 'debug'){writeCounter();}
-          if(offset > 0 ){
-            showtemp.items = showtemp.items.concat(data.body.items);
-          } else {
-            showtemp = data.body;
-          }
-        }, function(err) {
-          handleSpotifyError(err,"0","getShowEpisodes");
-        });
-        offset = offset + 50;
-      }
-      show = showtemp;
-    } 
-    playMe(command.name);
+      offset = offset + 50;
+    }
+    playlist = playlisttemp;
+  } else if(command.name.split(':')[1] === 'episode'){
+    currentMeta.activeEpisode = command.name.split(':')[2];
+    let offset = 0;
+    let showtemp;
+    await spotifyApi.getEpisode(currentMeta.activeEpisode)
+    .then(function(data) {
+      counter.countgetEpisode++;
+      if (config.server.logLevel === 'debug'){writeCounter();}
+      currentMeta.activeShow = data.body.show.id;
+      currentMeta.totalShows = data.body.show.total_episodes;
+    }, function(err) {
+      handleSpotifyError(err,"0","getEpisode");
+    });
+    while (offset < currentMeta.totalShows) {
+      await spotifyApi.getShowEpisodes(currentMeta.activeShow, {limit: 50, offset: offset})
+      .then(function(data) {
+        counter.countgetShowEpisodes++;
+        if (config.server.logLevel === 'debug'){writeCounter();}
+        if(offset > 0 ){
+          showtemp.items = showtemp.items.concat(data.body.items);
+        } else {
+          showtemp = data.body;
+        }
+      }, function(err) {
+        handleSpotifyError(err,"0","getShowEpisodes");
+      });
+      offset = offset + 50;
+    }
+    show = showtemp;
+  } 
+  playMe(command.name);
 }
 
   /*endpoint to return all spotify connect devices on the network*/
