@@ -99,6 +99,9 @@ export class MedialistPage implements OnInit {
           });
         });
 
+        console.log("getMediaFromArtist this.media all");
+        console.log(this.media);
+
         if(this.artist.coverMedia?.aPartOfAll){
           let min: number;
           let max: number;
@@ -112,6 +115,9 @@ export class MedialistPage implements OnInit {
           }else{
             max = this.artist.coverMedia?.aPartOfAllMax -1;
           }
+          console.log("Min: " + min);
+          console.log("Max: " + max);
+          console.log("media.length: " + this.media.length);
           for (let i = 0; i < this.media.length; i++){
             if(i >= min && i <= max){
               this.aPartOfAllMedia.push(this.media[i]);
