@@ -51,25 +51,29 @@ app.get('/api/data', (req, res) => {
 });
 
 app.get('/api/network', (req, res) => {
-    jsonfile.readFile(networkFile, (error, data) => {
-        if (error) {
-            data = [];
-            console.log("[Sonos-Server] Error /api/network read network.json");
-            console.log(error);
-        }
-        res.json(data);
-    });
+    if (fs.existsSync(networkFile)){
+        jsonfile.readFile(networkFile, (error, data) => {
+            if (error) {
+                data = [];
+                console.log("[Sonos-Server] Error /api/network read network.json");
+                console.log(error);
+            }
+            res.json(data);
+        });
+    }
 });
 
 app.get('/api/wlan', (req, res) => {
-    jsonfile.readFile(wlanFile, (error, data) => {
-        if (error) {
-            data = [];
-            console.log("[Sonos-Server] Error /api/wlan read wlan.json");
-            console.log(error);
-        }
-        res.json(data);
-    });
+    if (fs.existsSync(wlanFile)){
+        jsonfile.readFile(wlanFile, (error, data) => {
+            if (error) {
+                data = [];
+                console.log("[Sonos-Server] Error /api/wlan read wlan.json");
+                console.log(error);
+            }
+            res.json(data);
+        });
+    }
 });
 
 app.post('/api/addwlan', (req, res) => {
@@ -89,14 +93,16 @@ app.post('/api/addwlan', (req, res) => {
 });
 
 app.get('/api/media', (req, res) => {
-    jsonfile.readFile(mediaFile, (error, data) => {
-        if (error) {
-            data = [];
-            console.log("[Sonos-Server] Error /api/media read media.json");
-            console.log(error);
-        }
-        res.json(data);
-    });
+    if (fs.existsSync(mediaFile)){
+        jsonfile.readFile(mediaFile, (error, data) => {
+            if (error) {
+                data = [];
+                console.log("[Sonos-Server] Error /api/media read media.json");
+                console.log(error);
+            }
+            res.json(data);
+        });
+    }
 });
 
 app.post('/api/addmedia', (req, res) => {
@@ -118,14 +124,16 @@ app.post('/api/addmedia', (req, res) => {
 });
 
 app.get('/api/resume', (req, res) => {
-    jsonfile.readFile(resumeFile, (error, data) => {
-        if (error) {
-            data = [];
-            console.log("[Sonos-Server] Error /api/addmedia read resume.json");
-            console.log(error);
-        }
-        res.json(data);
-    });
+    if (fs.existsSync(mediaFile)){
+        jsonfile.readFile(resumeFile, (error, data) => {
+            if (error) {
+                data = [];
+                console.log("[Sonos-Server] Error /api/addmedia read resume.json");
+                console.log(error);
+            }
+            res.json(data);
+        });
+    }
 });
 
 app.post('/api/addresume', (req, res) => {
