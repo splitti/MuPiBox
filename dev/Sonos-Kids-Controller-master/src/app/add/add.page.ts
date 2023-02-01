@@ -507,6 +507,7 @@ export class AddPage implements OnInit, AfterViewInit {
       const title = this.keyboard.getInput('spotify_title');
       const id = this.keyboard.getInput('spotify_id');
       const artistid = this.keyboard.getInput('spotify_artistid');
+      const artistcover = this.keyboard.getInput('spotify_artistcover');
       const query = this.keyboard.getInput('spotify_query');
       const show = this.keyboard.getInput('spotify_showid');
 
@@ -523,6 +524,8 @@ export class AddPage implements OnInit, AfterViewInit {
           (show?.length > 0 && !(query?.length > 0))
           ||
           (this.edit && (artist?.length > 0))
+          ||
+          (this.edit && (artistcover?.length > 0))
           ||
           (this.edit && (this.shuffle !== this.editMedia?.shuffle))
           ||
