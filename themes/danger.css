@@ -10,12 +10,17 @@ ion-range{
 }
 
 body{
---ion-color-light: #101820 !important;
---ion-item-background: transparent !important;
+	--ion-color-light: #101820 !important;
+	--ion-item-background: transparent !important;
 }
-.md body{--ion-background-color: #FEE715 !important;
+.md body{
+	--ion-background-color: #FEE715 !important;
 }
 
 ion-card {
     --background: #101820 !important;
+}
+
+ion-card-title.ion-text-nowrap.truncate-text {
+/*	color: #000000 !important;*/
 }
