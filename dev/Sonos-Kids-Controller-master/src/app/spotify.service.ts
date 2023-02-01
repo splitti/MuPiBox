@@ -100,7 +100,7 @@ export class SpotifyService {
               aPartOfAllMin,
               aPartOfAllMax,
             };
-            if(manualArtistcover !== null) {
+            if(manualArtistcover) {
               media.artistcover = manualArtistcover;
             }
             return media;
@@ -147,7 +147,7 @@ export class SpotifyService {
               aPartOfAllMin,
               aPartOfAllMax
             };
-            if(manualArtistcover !== null) {
+            if(manualArtistcover) {
               media.artistcover = manualArtistcover;
             }
             return media;
