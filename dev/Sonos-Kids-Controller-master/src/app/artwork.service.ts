@@ -31,7 +31,7 @@ export class ArtworkService {
 
     console.log(media);
 
-    if (media.type === 'spotify' && !media.cover && !media.artistcover) {
+    if (media.type === 'spotify' && !media.cover) {
       artwork = this.spotifyService.getAlbumArtwork(media.artist, media.title);
     } else {
       if (media.artistcover) {

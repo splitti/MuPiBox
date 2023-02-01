@@ -21,7 +21,7 @@ export class SpotifyService {
     this.spotifyApi = new SpotifyWebApi();
   }
 
-  getMediaByQuery(query: string, category: string, index: number, shuffle: boolean, aPartOfAll: boolean, aPartOfAllMin: number, aPartOfAllMax: number): Observable<Media[]> {
+  getMediaByQuery(query: string, category: string, index: number, shuffle: boolean, aPartOfAll: boolean, aPartOfAllMin: number, aPartOfAllMax: number, artistcover: string): Observable<Media[]> {
     const albums = defer(() => this.spotifyApi.searchAlbums(query, { limit: 1, offset: 0, market: 'DE' })).pipe(
       retryWhen(errors => {
         return this.errorHandler(errors);
@@ -45,7 +45,8 @@ export class SpotifyService {
               shuffle,
               aPartOfAll,
               aPartOfAllMin,
-              aPartOfAllMax
+              aPartOfAllMax,
+              artistcover
             };
             return media;
           });
@@ -58,7 +59,7 @@ export class SpotifyService {
     return albums;
   }
 
-  getMediaByArtistID(id: string, category: string, index: number, shuffle: boolean, aPartOfAll: boolean, aPartOfAllMin: number, aPartOfAllMax: number): Observable<Media[]> {
+  getMediaByArtistID(id: string, category: string, index: number, shuffle: boolean, aPartOfAll: boolean, aPartOfAllMin: number, aPartOfAllMax: number, manualArtistcover: string): Observable<Media[]> {
     const albums = defer(() => this.spotifyApi.getArtistAlbums(id, { limit: 1, offset: 0, market: 'DE' })).pipe(
       retryWhen(errors => {
         return this.errorHandler(errors);
@@ -97,8 +98,11 @@ export class SpotifyService {
               shuffle,
               aPartOfAll,
               aPartOfAllMin,
-              aPartOfAllMax
+              aPartOfAllMax,
             };
+            if(manualArtistcover !== null) {
+              media.artistcover = manualArtistcover;
+            }
             return media;
           });
         })
@@ -110,7 +114,7 @@ export class SpotifyService {
     return albums;
   }
 
-  getMediaByShowID(id: string, category: string, index: number, shuffle: boolean, aPartOfAll: boolean, aPartOfAllMin: number, aPartOfAllMax: number): Observable<Media[]> {
+  getMediaByShowID(id: string, category: string, index: number, shuffle: boolean, aPartOfAll: boolean, aPartOfAllMin: number, aPartOfAllMax: number, manualArtistcover: string): Observable<Media[]> {
     const albums = defer(() => this.spotifyApi.getShow(id, { limit: 1, offset: 0, market: 'DE' })).pipe(
       retryWhen(errors => {
         return this.errorHandler(errors);
@@ -143,6 +147,9 @@ export class SpotifyService {
               aPartOfAllMin,
               aPartOfAllMax
             };
+            if(manualArtistcover !== null) {
+              media.artistcover = manualArtistcover;
+            }
             return media;
           });
         })
@@ -153,7 +160,7 @@ export class SpotifyService {
     return albums;
   }
 
-  getMediaByID(id: string, category: string, index: number, shuffle: boolean, aPartOfAll: boolean, aPartOfAllMin: number, aPartOfAllMax: number): Observable<Media> {
+  getMediaByID(id: string, category: string, index: number, shuffle: boolean, aPartOfAll: boolean, aPartOfAllMin: number, aPartOfAllMax: number, artistcover: string): Observable<Media> {
     let fetch: any;
 
     switch (category) {
