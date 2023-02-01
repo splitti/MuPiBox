@@ -24,7 +24,7 @@ ion-card {
 .title-card {
     margin-top: 20px;
     ion-card {
-        width: 200px;
+        width: 240px;
         height: 56px;
         --background: #262626;
     }
@@ -75,4 +75,9 @@ ion-row.media-card {
         height:60% !important;
         max-height:60% !important;
         color:rgb(255,255,255);opacity:0.6;
+}
+
+/* MuPiBox manual edit */
+ion-card-header.ion-inherit-color.md.hydrated {
+    padding-inline: 10px; 
 }
