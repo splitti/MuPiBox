@@ -41,13 +41,23 @@ export class SpotifyService {
               cover: item.images[0].url,
               type: 'spotify',
               category,
-              index,
-              shuffle,
-              aPartOfAll,
-              aPartOfAllMin,
-              aPartOfAllMax,
-              artistcover
+              index
             };
+            if(artistcover) {
+              media.artistcover = artistcover;
+            }
+            if(shuffle) {
+              media.shuffle = shuffle;
+            }
+            if(aPartOfAll) {
+              media.aPartOfAll = aPartOfAll;
+            }
+            if(aPartOfAllMin) {
+              media.aPartOfAllMin = aPartOfAllMin;
+            }
+            if(aPartOfAllMax) {
+              media.aPartOfAllMax = aPartOfAllMax;
+            }
             return media;
           });
         })
@@ -94,14 +104,22 @@ export class SpotifyService {
               artistcover: multiplier.artistcover,
               type: 'spotify',
               category,
-              index,
-              shuffle,
-              aPartOfAll,
-              aPartOfAllMin,
-              aPartOfAllMax,
+              index
             };
             if(manualArtistcover) {
               media.artistcover = manualArtistcover;
+            }
+            if(shuffle) {
+              media.shuffle = shuffle;
+            }
+            if(aPartOfAll) {
+              media.aPartOfAll = aPartOfAll;
+            }
+            if(aPartOfAllMin) {
+              media.aPartOfAllMin = aPartOfAllMin;
+            }
+            if(aPartOfAllMax) {
+              media.aPartOfAllMax = aPartOfAllMax;
             }
             return media;
           });
@@ -141,14 +159,22 @@ export class SpotifyService {
               type: 'spotify',
               category,
               release_date: item.release_date,
-              index,
-              shuffle,
-              aPartOfAll,
-              aPartOfAllMin,
-              aPartOfAllMax
+              index
             };
             if(manualArtistcover) {
               media.artistcover = manualArtistcover;
+            }
+            if(shuffle) {
+              media.shuffle = shuffle;
+            }
+            if(aPartOfAll) {
+              media.aPartOfAll = aPartOfAll;
+            }
+            if(aPartOfAllMin) {
+              media.aPartOfAllMin = aPartOfAllMin;
+            }
+            if(aPartOfAllMax) {
+              media.aPartOfAllMax = aPartOfAllMax;
             }
             return media;
           });
@@ -160,18 +186,8 @@ export class SpotifyService {
     return albums;
   }
 
-  getMediaByID(id: string, category: string, index: number, shuffle: boolean, aPartOfAll: boolean, aPartOfAllMin: number, aPartOfAllMax: number, artistcover: string): Observable<Media> {
-    let fetch: any;
-
-    switch (category) {
-      case 'playlist':
-        fetch = this.spotifyApi.getPlaylist;
-        break;
-      default:
-        fetch = this.spotifyApi.getAlbum;
-    }
-
-    const album = defer(() => fetch(id, { limit: 1, offset: 0, market: 'DE' })).pipe(
+  getMediaByID(id: string, category: string, index: number, shuffle: boolean, artistcover: string): Observable<Media> {
+    const album = defer(() => this.spotifyApi.getAlbum(id, { limit: 1, offset: 0, market: 'DE' })).pipe(
       retryWhen(errors => {
         return this.errorHandler(errors);
       }),
@@ -183,16 +199,44 @@ export class SpotifyService {
           cover: response?.images[0]?.url,
           type: 'spotify',
           category,
-          index,
-          shuffle,
-          aPartOfAll,
-          aPartOfAllMin,
-          aPartOfAllMax
+          index
         };
+        if(artistcover) {
+          media.artistcover = artistcover;
+        }
+        if(shuffle) {
+          media.shuffle = shuffle;
+        }
         return media;
       })
     );
+    return album;
+  }
 
+  getMediaByPlaylistID(id: string, category: string, index: number, shuffle: boolean, artistcover: string): Observable<Media> {
+    const album = defer(() => this.spotifyApi.getPlaylist(id, { limit: 1, offset: 0, market: 'DE' })).pipe(
+      retryWhen(errors => {
+        return this.errorHandler(errors);
+      }),
+      map((response: SpotifyAlbumsResponseItem) => {
+        const media: Media = {
+          id: response.id,
+          artist: response.artists?.[0]?.name,
+          title: response.name,
+          cover: response?.images[0]?.url,
+          type: 'spotify',
+          category,
+          index
+        };
+        if(artistcover) {
+          media.artistcover = artistcover;
+        }
+        if(shuffle) {
+          media.shuffle = shuffle;
+        }
+        return media;
+      })
+    );
     return album;
   }
 

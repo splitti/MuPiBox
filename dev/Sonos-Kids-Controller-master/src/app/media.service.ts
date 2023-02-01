@@ -269,19 +269,27 @@ export class MediaService {
                   })
                 ),
                 iif(
-                  () => (item.type === 'spotify' && item.id && item.id.length > 0) ? true : false, // Get media by album
-                    this.spotifyService.getMediaByID(item.id, item.category, item.index, item.shuffle, item.aPartOfAll, item.aPartOfAllMin, item.aPartOfAllMax, item.artistcover).pipe(
+                  () => (item.type === 'spotify' && item.playlistid && item.playlistid.length > 0) ? true : false, // Get media by show
+                    this.spotifyService.getMediaByPlaylistID(item.id, item.category, item.index, item.shuffle, item.artistcover).pipe(
                       map(currentItem => {  // If the user entered an user-defined artist or album name, overwrite values from spotify
                         if (item.artist?.length > 0) {
                           currentItem.artist = item.artist;
                         }
-                        if (item.title?.length > 0) {
-                          currentItem.title = item.title;
-                        }
                         return [currentItem];
                       })
                     ),
-                    of([item]) // Single album. Also return as array, so we always have the same data type
+                    iif(
+                      () => (item.type === 'spotify' && item.id && item.id.length > 0) ? true : false, // Get media by album
+                        this.spotifyService.getMediaByID(item.id, item.category, item.index, item.shuffle, item.artistcover).pipe(
+                          map(currentItem => {  // If the user entered an user-defined artist or album name, overwrite values from spotify
+                            if (item.artist?.length > 0) {
+                              currentItem.artist = item.artist;
+                            }
+                            return [currentItem];
+                          })
+                        ),
+                        of([item]) // Single album. Also return as array, so we always have the same data type
+                )
               )
             )
           )
