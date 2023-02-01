@@ -86,6 +86,8 @@ export class AddPage implements OnInit, AfterViewInit {
         this.searchType = 'media_id';
       }else if(this.source === 'spotify' && this.editMedia?.showid) {
         this.searchType = 'show_id';
+      }else if(this.source === 'spotify' && this.editMedia?.playlistid) {
+        this.searchType = 'playlist_id';
       }
     }
     this.mediaService.validate$.subscribe(validate => {
@@ -167,6 +169,7 @@ export class AddPage implements OnInit, AfterViewInit {
     this.keyboard.clearInput('spotify_title');
     this.keyboard.clearInput('spotify_id');
     this.keyboard.clearInput('spotify_showid');
+    this.keyboard.clearInput('spotify_playlistid');
     this.keyboard.clearInput('spotify_artistid');
     this.keyboard.clearInput('spotify_artistcover');
     this.keyboard.clearInput('spotify_query');
@@ -203,6 +206,9 @@ export class AddPage implements OnInit, AfterViewInit {
         case 'spotify_showid':
           this.keyboard.setInput(this.editMedia.showid, event.target.name);
           break;
+        case 'spotify_playlistid':
+            this.keyboard.setInput(this.editMedia.playlistid, event.target.name);
+            break;
         case 'spotify_artistid':
           this.keyboard.setInput(this.editMedia.artistid, event.target.name);
           break;
@@ -276,6 +282,7 @@ export class AddPage implements OnInit, AfterViewInit {
       this.keyboard.clearInput('spotify_title');
       this.keyboard.clearInput('spotify_id');
       this.keyboard.clearInput('spotify_showid');
+      this.keyboard.clearInput('spotify_playlistid');
       this.keyboard.clearInput('spotify_artistid');
       this.keyboard.clearInput('spotify_artistcover');
       this.keyboard.clearInput('spotify_query');
@@ -310,11 +317,11 @@ export class AddPage implements OnInit, AfterViewInit {
           if (form.form.value.spotify_query?.length) { media.query = form.form.value.spotify_query; }
           if (form.form.value.spotify_id?.length) {
             media.id = form.form.value.spotify_id;
-            if(media.category === 'playlist'){
-              this.playerService.validateId(media.id, "spotify_playlistid");
-            }else{
-              this.playerService.validateId(media.id, "spotify_id");
-            }
+            this.playerService.validateId(media.id, "spotify_id");
+          }
+          if (form.form.value.spotify_playlistid?.length) {
+            media.playlistid = form.form.value.spotify_playlistid;
+            this.playerService.validateId(media.playlistid, "spotify_playlistid");
           }
           if (form.form.value.spotify_showid?.length) {
             media.showid = form.form.value.spotify_showid;
@@ -402,6 +409,7 @@ export class AddPage implements OnInit, AfterViewInit {
             this.keyboard.clearInput('spotify_title');
             this.keyboard.clearInput('spotify_id');
             this.keyboard.clearInput('spotify_showid');
+            this.keyboard.clearInput('spotify_playlistid');
             this.keyboard.clearInput('spotify_artistid');
             this.keyboard.clearInput('spotify_artistcover');
             this.keyboard.clearInput('spotify_query');
@@ -461,6 +469,7 @@ export class AddPage implements OnInit, AfterViewInit {
             this.keyboard.clearInput('spotify_title');
             this.keyboard.clearInput('spotify_id');
             this.keyboard.clearInput('spotify_showid');
+            this.keyboard.clearInput('spotify_playlistid');
             this.keyboard.clearInput('spotify_artistid');
             this.keyboard.clearInput('spotify_artistcover');
             this.keyboard.clearInput('spotify_query');
@@ -510,6 +519,7 @@ export class AddPage implements OnInit, AfterViewInit {
       const artistcover = this.keyboard.getInput('spotify_artistcover');
       const query = this.keyboard.getInput('spotify_query');
       const show = this.keyboard.getInput('spotify_showid');
+      const playlist = this.keyboard.getInput('spotify_playlistid');
 
       this.valid = (
         (this.category === 'audiobook' || this.category === 'music') && (
@@ -523,6 +533,8 @@ export class AddPage implements OnInit, AfterViewInit {
           ||
           (show?.length > 0 && !(query?.length > 0))
           ||
+          (playlist?.length > 0 && !(query?.length > 0))
+          ||
           (this.edit && (artist?.length > 0))
           ||
           (this.edit && (artistcover?.length > 0))
@@ -534,14 +546,6 @@ export class AddPage implements OnInit, AfterViewInit {
           (this.edit && (this.aPartOfAllMin !== this.editMedia?.aPartOfAllMin))
           ||
           (this.edit && (this.aPartOfAllMax !== this.editMedia?.aPartOfAllMax))
-        )
-        ||
-        (this.category === 'playlist') && (
-          (id?.length > 0)
-          ||
-          (this.edit && (this.shuffle !== this.editMedia?.shuffle))
-          ||
-          (this.edit && (title?.length > 0))
         )
       );
     } else if (this.source === 'radio') {
