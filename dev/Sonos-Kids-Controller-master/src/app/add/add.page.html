@@ -125,6 +125,7 @@
                                     <ion-select #searchTypeSelect interface="popover" [(ngModel)]="searchType" name="searchType" (ionChange)="searchTypeChanged()">
                                         <ion-select-option value="artist_id">Artist ID</ion-select-option>
                                         <ion-select-option value="media_id">Media ID</ion-select-option>
+                                        <ion-select-option value="playlist_id">Playlist ID</ion-select-option>
                                         <ion-select-option value="query">Search Query</ion-select-option>
                                       </ion-select>
                                 </ion-item>
@@ -174,7 +175,7 @@
                             <div>
                                 <ion-item [ngSwitch]="searchType">
                                     <ion-input *ngSwitchCase="'media_id'" #spotify_id [ngModel]="editMedia?.id" name="spotify_id" type="text" placeholder="Media ID" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
-                                    <ion-input *ngSwitchCase="'show_id'" #spotify_showid [ngModel]="editMedia?.showid" name="spotify_showid" type="text" placeholder="Show ID" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
+                                    <ion-input *ngSwitchCase="'playlist_id'" #spotify_playlistid [ngModel]="editMedia?.playlistid" name="spotify_playlistid" type="text" placeholder="Playlist ID" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
                                     <ion-input *ngSwitchCase="'query'" #spotify_query [ngModel]="editMedia?.query" name="spotify_query" type="text" placeholder="Search Query" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
                                     <ion-input *ngSwitchCase="'artist_id'" #spotify_artistid [ngModel]="editMedia?.artistid" name="spotify_artistid" type="text" placeholder="Unique Artist ID" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
                                 </ion-item>
