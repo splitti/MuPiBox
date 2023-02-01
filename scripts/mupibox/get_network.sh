@@ -9,10 +9,19 @@ CONFIG="/etc/mupibox/mupiboxconfig.json"
 NETWORKCONFIG="/tmp/network.json"
 FRONTENDCONFIG="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json"
 #PLAYERSTATE=$(cat /tmp/playerstate)
+DATA_LOCK="/tmp/.data.lock"
 
-if [ ! -f ${DATA_FILE} ]; then
-        echo -n "[]" > ${DATA_FILE}
-        chown dietpi:dietpi ${DATA_FILE}
+
+if [ -f "${DATA_LOCK}" ]; then
+	echo "Data-file locked."
+    exit
+else
+	touch ${DATA_LOCK}
+	if [ ! -f ${DATA_FILE} ]; then
+			echo -n "[]" > ${DATA_FILE}
+			chown dietpi:dietpi ${DATA_FILE}
+	fi
+	rm ${DATA_LOCK}
 fi
 
 if [ ! -f ${NETWORKCONFIG} ]; then
