@@ -270,7 +270,7 @@ export class MediaService {
                 ),
                 iif(
                   () => (item.type === 'spotify' && item.playlistid && item.playlistid.length > 0) ? true : false, // Get media by show
-                    this.spotifyService.getMediaByPlaylistID(item.id, item.category, item.index, item.shuffle, item.artistcover).pipe(
+                    this.spotifyService.getMediaByPlaylistID(item.playlistid, item.category, item.index, item.shuffle, item.artistcover).pipe(
                       map(currentItem => {  // If the user entered an user-defined artist or album name, overwrite values from spotify
                         if (item.artist?.length > 0) {
                           currentItem.artist = item.artist;
