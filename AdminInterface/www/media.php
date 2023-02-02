@@ -211,7 +211,7 @@
 				}
 			if($url2media)
 				{
-				print "<tr><td>Spotify:</td><td><a href='" . $url2media . "' target='_blank'>" . $url2media .  "</a></td></tr>";
+				print "<tr><td>Spotify:</td><td><a href='" . $url2media . "' target='_blank'>View on Spotify</a></td></tr>";
 				}
 			print "</table></div>\n";
 			//print "URL: " . $all_media['type'] . "<br>";
