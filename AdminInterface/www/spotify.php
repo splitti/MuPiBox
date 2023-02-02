@@ -7,6 +7,9 @@
         $SCOPELIST="streaming user-read-currently-playing user-modify-playback-state user-read-playback-state";
         $SCOPE=urlencode($SCOPELIST);
 
+		$command = "sudo /usr/local/bin/mupibox/./get_deviceid.sh";
+		exec($command, $devIDoutput, $result);
+
 
         if($_GET['code'])
                 {
@@ -188,10 +191,14 @@ $CHANGE_TXT=$CHANGE_TXT."</ul>";
 ?>" readonly />
 
 <?php 
-		$command='curl -X "GET" "https://api.spotify.com/v1/me/player/devices" -H "Accept: application/json" -H "Content-Type: application/json" -H "Authorization: Bearer '.$data["spotify"]["refreshToken"].'"';
+		$command='curl -X "GET" "https://api.spotify.com/v1/me/player/devices" -H "Accept: application/json" -H "Content-Type: application/json" -H "Authorization: Bearer '.$bearertoken["access_token"].'"';
                 exec($command, $Tokenoutput, $result);
-                $tokendata = json_decode($Tokenoutput[0], true);
-				print json_decode($Tokenoutput[0], true);
+                $tokendata = json_decode($Tokenoutput, true);
+foreach($tokendata->data as $mydata)
+
+    {
+         echo $mydata->name . "\n";
+    } 
 		
 ?>
                 </div></li>
