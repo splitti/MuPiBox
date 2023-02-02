@@ -211,8 +211,6 @@ $CHANGE_TXT=$CHANGE_TXT."</ul>";
 					print "<option value=\"". $this_device["id"] . "\"" . $selected  . ">" . $this_device["name"] . " (".$this_device["id"].")</option>";
 					}
 				echo '</select>';
-
-
 				echo '</li><li class="buttons"><input id="saveForm" class="button_text" type="submit" name="setDevID" value="Set DeviceID" /></li><br><li id="li_1" >';
 				}
 ?>
