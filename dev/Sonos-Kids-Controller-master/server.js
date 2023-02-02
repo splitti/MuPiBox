@@ -32,22 +32,14 @@ app.use(express.static(path.join(__dirname, 'www'))); // Static path to compiled
 
 // Routes
 app.get('/api/data', (req, res) => {
-    try {
-        while(!fs.existsSync(dataLock)){
-            jsonfile.readFile(activedataFile, (error, data) => {
-                if (error) {
-                    data = [];
-                    console.log("[Sonos-Server] Error /api/data read active_data.json");
-                    console.log(error);
-                }
-                res.json(data);
-            });
-            break;
+    jsonfile.readFile(activedataFile, (error, data) => {
+        if (error) {
+            data = [];
+            console.log("[Sonos-Server] Error /api/data read active_data.json");
+            console.log(error);
         }
-    } catch(err) {
-      console.error(err)
-    }
-    
+        res.json(data);
+    });
 });
 
 app.get('/api/network', (req, res) => {
