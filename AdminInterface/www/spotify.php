@@ -7,11 +7,13 @@
         $SCOPELIST="streaming user-read-currently-playing user-modify-playback-state user-read-playback-state";
         $SCOPE=urlencode($SCOPELIST);
 
+
         if($_GET['code'])
                 {
                 $command="curl -d client_id=".$data["spotify"]["clientId"]." -d client_secret=".$data["spotify"]["clientSecret"]." -d grant_type=authorization_code -d code=".$_GET['code']." -d redirect_uri=".$REDIRECT_URI." https://accounts.spotify.com/api/token";
                 exec($command, $Tokenoutput, $result);
                 $tokendata = json_decode($Tokenoutput[0], true);
+				print json_decode($Tokenoutput[0], true);
                 $data["spotify"]["accessToken"]=$tokendata["access_token"];
                 $data["spotify"]["refreshToken"]=$tokendata["refresh_token"];
                 $CHANGE_TXT=$CHANGE_TXT."<li>Token-Data generated and saved</li>";
@@ -184,6 +186,14 @@ $CHANGE_TXT=$CHANGE_TXT."</ul>";
                 <input id="spotify_deviceid" name="spotify_deviceid" class="element readonly large" type="text" maxlength="255" value="<?php
                 print $data["spotify"]["deviceId"];
 ?>" readonly />
+
+<?php 
+		$command='curl -X "GET" "https://api.spotify.com/v1/me/player/devices" -H "Accept: application/json" -H "Content-Type: application/json" -H "Authorization: Bearer '.$data["spotify"]["refreshToken"].'"';
+                exec($command, $Tokenoutput, $result);
+                $tokendata = json_decode($Tokenoutput[0], true);
+				print json_decode($Tokenoutput[0], true);
+		
+?>
                 </div></li>
 		</ul>
 	</details>	
