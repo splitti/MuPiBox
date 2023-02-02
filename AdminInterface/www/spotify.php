@@ -7,10 +7,6 @@
         $SCOPELIST="streaming user-read-currently-playing user-modify-playback-state user-read-playback-state";
         $SCOPE=urlencode($SCOPELIST);
 
-		$command = "sudo /usr/local/bin/mupibox/./get_deviceid.sh";
-		exec($command, $devIDoutput, $result);
-
-
         if($_GET['code'])
                 {
                 $command="curl -d client_id=".$data["spotify"]["clientId"]." -d client_secret=".$data["spotify"]["clientSecret"]." -d grant_type=authorization_code -d code=".$_GET['code']." -d redirect_uri=".$REDIRECT_URI." https://accounts.spotify.com/api/token";
@@ -20,6 +16,14 @@
                 $data["spotify"]["accessToken"]=$tokendata["access_token"];
                 $data["spotify"]["refreshToken"]=$tokendata["refresh_token"];
                 $CHANGE_TXT=$CHANGE_TXT."<li>Token-Data generated and saved</li>";
+                $change=1;
+                }
+
+
+        if($_POST['setDevID'])
+                {
+                $data["spotify"]["deviceId"]=$_POST['spotdevice'];
+                $CHANGE_TXT=$CHANGE_TXT."<li>Spotify Device-ID saved</li>";
                 $change=1;
                 }
 
@@ -179,29 +183,50 @@ $CHANGE_TXT=$CHANGE_TXT."</ul>";
 		<ul>
 			<li id="li_1" >
 
-			<h2>Generate Device-ID</h2>
-            <p>In this last step, you easliy press the button to generate the Device ID... Please notice: sometimes it is necessary to play music on the MuPiBox via app so that the device ID can be generated</p>
-            </li> 
-				<li class="buttons"><input id="saveForm" class="button_text" type="submit" name="generateDevID" value="Generate DeviceID" /></li>
-                <li id="li_1" >
-                <label class="description" for="spotify_deviceid">Spotify Device ID </label>
+			<h2>Set Device-ID</h2>
+            <p>In this last step, you choose your Device... Please notice: sometimes it is necessary to play music on the MuPiBox via app so that the device ID is generated</p>
+            </li>
+			<li id="li_1" >
+			<label class="description" for="spotify_deviceid">Select Spotify Device ID </label>
+<?php
+			if( isset($data["spotify"]["accessToken"]) AND isset($data["spotify"]["refreshToken"]) )
+				{
+				echo '<select id="spotdevice" name="spotdevice" class="element text medium">';
+
+				$command = "sudo /usr/local/bin/mupibox/./get_deviceid.sh";
+				exec($command, $devIDoutput, $result);
+				$spotify_dev_json = file_get_contents('/tmp/.spotify_devices', true);
+				$devices = json_decode($spotify_dev_json, true);
+				foreach($devices as $this_device)
+					{
+					if( $this_device["id"] == $data["spotify"]["deviceId"] )
+						{
+						$selected = " selected=\"selected\"";
+						$activated_device_name = $this_device["name"];
+						}
+					else
+						{
+						$selected = "";
+						}
+					print "<option value=\"". $this_device["id"] . "\"" . $selected  . ">" . $this_device["name"] . " (".$this_device["id"].")</option>";
+					}
+				echo '</select>';
+
+
+				echo '</li><li class="buttons"><input id="saveForm" class="button_text" type="submit" name="setDevID" value="Set DeviceID" /></li><br><li id="li_1" >';
+				}
+?>
                 <div>
+                <label class="description" for="spotify_devicename">Activated Spotify Device Name:</label> 
+                <input id="spotify_deviceid" name="spotify_devicename" class="element readonly large" type="text" maxlength="255" value="<?php
+                print $activated_device_name;
+?>" readonly /></div>
+                <div><label class="description" for="spotify_deviceid">Activated Spotify Device ID:</label> 
                 <input id="spotify_deviceid" name="spotify_deviceid" class="element readonly large" type="text" maxlength="255" value="<?php
                 print $data["spotify"]["deviceId"];
-?>" readonly />
+?>" readonly /></div>
 
-<?php 
-		$command='curl -X "GET" "https://api.spotify.com/v1/me/player/devices" -H "Accept: application/json" -H "Content-Type: application/json" -H "Authorization: Bearer '.$bearertoken["access_token"].'"';
-                exec($command, $Tokenoutput, $result);
-                $tokendata = json_decode($Tokenoutput, true);
-foreach($tokendata->data as $mydata)
-
-    {
-         echo $mydata->name . "\n";
-    } 
-		
-?>
-                </div></li>
+                </li>
 		</ul>
 	</details>	
 
