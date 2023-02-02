@@ -52,7 +52,7 @@ sudo service mupi_idle_shutdown stop
 
 	echo -e "XXX\n20\nRestore Userdata... \nXXX"
 	sudo mv /tmp/data.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json  >&3 2>&3
-	sudo mv -r /tmp/cover /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover  >&3 2>&3
+	sudo mv /tmp/cover /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover  >&3 2>&3
 	sudo mv /tmp/config.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json  >&3 2>&3
 	sudo mv /tmp/active_theme.css /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/active_theme.css >&3 2>&3
 	sudo chown dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json >&3 2>&3
@@ -163,6 +163,12 @@ sudo service mupi_idle_shutdown stop
 	sudo /usr/bin/chmod 755 /tmp/crontab.template >&3 2>&3
 	sudo /usr/bin/chown dietpi:dietpi /tmp/crontab.template >&3 2>&3
 	sudo /bin/su dietpi -c "/usr/bin/crontab /tmp/crontab.template"  >&3 2>&3
+	CHECK_LOG_CONFIG=`cat /etc/fstab | grep ".pm2/logs"`  >&3 2>&3
+	if [ ${#CHECK_LOG_CONFIG} == 0 ];
+	then
+		sudo bash -c "sed '/^tmpfs \/var\/log.*/a tmpfs \/home\/dietpi\/.pm2\/logs tmpfs size=50M,noatime,lazytime,nodev,nosuid,mode=1777' /etc/fstab > /tmp/.fstab && mv /tmp/.fstab /etc/fstab"   >&3 2>&3
+	fi
+
 	
 	echo -e "XXX\n85\nDownload OnOffShim-Scripts... \nXXX"	
 	# OnOffShim

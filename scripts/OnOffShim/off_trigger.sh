@@ -33,6 +33,10 @@ until [ $power = $switchtype ]; do
     sleep 0.05
 done
 
+sudo service mupi_startstop stop
+sudo service mupi_check_internet stop
+sudo service mupi_wifi stop
+
 sudo su - -c 'nohup /usr/local/bin/mupibox/./mupi_stop_led.sh > /dev/null 2>&1 &'
 sudo systemctl stop mupi_powerled.service 
 
