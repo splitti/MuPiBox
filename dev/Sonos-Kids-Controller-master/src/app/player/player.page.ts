@@ -164,7 +164,6 @@ export class PlayerPage implements OnInit {
       if(this.media.showid){
         this.currentShow?.items.forEach((element, index) => {
           if(this.currentPlayedLocal?.activeEpisode === element?.id){
-            //this.showTrackNr = ++index;
             this.showTrackNr = this.currentEpisode.show.total_episodes - index;
             this.cover = element.images[1].url;
           }
@@ -220,7 +219,7 @@ export class PlayerPage implements OnInit {
   }
 
   ionViewWillLeave() {
-    if((this.media.type === 'spotify' && this.currentPlayedSpotify.currently_playing_type !== 'episode') || this.media.type === 'library'){
+    if(this.media.type === 'spotify' || this.media.type === 'library'){
       this.saveResumeFiles();
     }
     this.resumePlay = false;
@@ -287,10 +286,16 @@ export class PlayerPage implements OnInit {
     this.mediaService.local$.subscribe(local => {
       this.currentPlayedLocal = local;
     });
+    this.mediaService.episode$.subscribe(episode => {
+      this.currentEpisode = episode;
+    });
     if(this.media.type === 'spotify'){
       this.resumeFile.spotify.track_number = this.currentPlayedSpotify?.item.track_number  || 0;
       this.resumeFile.spotify.progress_ms = this.currentPlayedSpotify?.progress_ms  || 0;
       this.resumeFile.spotify.duration_ms = this.currentPlayedSpotify?.item.duration_ms || 0;
+    } else if(this.media.type === 'spotify' && this.media?.showid){
+      this.resumeFile.show.progress_ms = this.currentPlayedSpotify?.progress_ms  || 0;
+      this.resumeFile.show.duration_ms = this.currentEpisode?.duration_ms || 0;
     } else if (this.media.type === 'library'){
       this.resumeFile.local.album = this.currentPlayedLocal?.album || "";
       this.resumeFile.local.currentTracknr = this.currentPlayedLocal?.currentTracknr  || 0;
@@ -346,7 +351,7 @@ export class PlayerPage implements OnInit {
       this.playing = true;
       this.playerService.sendCmd(PlayerCmds.PLAY);
     }
-    if((this.media.type === 'spotify' && this.currentPlayedSpotify.currently_playing_type !== 'episode') || this.media.type === 'library'){
+    if(this.media.type === 'spotify' || this.media.type === 'library'){
       this.saveResumeFiles();
     }
   }

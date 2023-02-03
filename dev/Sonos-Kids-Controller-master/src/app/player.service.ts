@@ -78,22 +78,19 @@ export class PlayerService {
 
   playMedia(media: Media) {
     let url: string;
+    console.log(media);
 
     switch (media.type) {
       case 'library': {
         if (!media.id) {
           media.id = media.title;
         }
-        if (media.category === 'playlist') {
-          url = 'playlist/' + encodeURIComponent(media.id);
-        } else {
-          url = 'musicsearch/library/album/' + encodeURIComponent(media.category) + ':' + encodeURIComponent(media.artist) + ':' + encodeURIComponent(media.title);
-        }
+        url = 'musicsearch/library/album/' + encodeURIComponent(media.category) + ':' + encodeURIComponent(media.artist) + ':' + encodeURIComponent(media.title);
         break;
       }
       case 'spotify': {
-        if (media.category === 'playlist') {
-          url = 'spotify/now/spotify:playlist:' + encodeURIComponent(media.id);
+        if (media.playlistid) {
+          url = 'spotify/now/spotify:playlist:' + encodeURIComponent(media.playlistid);
         } else {
           if (media.id) {
             url = 'spotify/now/spotify:album:' + encodeURIComponent(media.id);
