@@ -70,16 +70,7 @@ app.get('/api/wlan', (req, res) => {
 
 app.post('/api/addwlan', (req, res) => {
     jsonfile.readFile(wlanFile, (error, data) => {
-        if (error == null){
-            error = 'not';
-        }
-        if (error.toString().includes("Unexpected end of JSON input")){
-            data = [];
-        }
-        if (!error.toString().includes("Unexpected end of JSON input") || error !== 'not') {
-            console.log("[Sonos-Server] Error /api/addwlan add in wlan.json");
-            console.log(error);
-        }
+        if (error) data = [];
         data.push(req.body);
 
         jsonfile.writeFile(wlanFile, data, { spaces: 4 }, (error) => {
@@ -104,24 +95,13 @@ app.get('/api/media', (req, res) => {
 
 app.post('/api/addmedia', (req, res) => {
     jsonfile.readFile(mediaFile, (error, data) => {
-        if (error == null){
-            error = 'not';
-        }
-        if (error.toString().includes("Unexpected end of JSON input")){
-            data = [];
-        }
-        if (!error.toString().includes("Unexpected end of JSON input") || error !== 'not') {
-            console.log("[Sonos-Server] Error /api/addmedia write media.json");
-            console.log(error);
-            res.status(200).send('error');
-        } else {
-            data = req.body;
+        if (error) data = [];
+        data = req.body;
 
-            jsonfile.writeFile(mediaFile, data, { spaces: 4 }, (error) => {
-                if (error) throw err;
-                res.status(200).send('ok');
-            });
-        }
+        jsonfile.writeFile(mediaFile, data, { spaces: 4 }, (error) => {
+            if (error) throw err;
+            res.status(200).send('ok');
+        });
     });
 });
 
@@ -140,24 +120,13 @@ app.get('/api/resume', (req, res) => {
 
 app.post('/api/addresume', (req, res) => {
     jsonfile.readFile(resumeFile, (error, data) => {
-        if (error == null){
-            error = 'not';
-        }
-        if (error.toString().includes("Unexpected end of JSON input")){
-            data = [];
-        }
-        if (!error.toString().includes("Unexpected end of JSON input") || error !== 'not') {
-            console.log("[Sonos-Server] Error /api/addresume write resume.json");
-            console.log(error);
-            res.status(200).send('error');
-        } else {
-            data = req.body;
+        if (error) data = [];
+        data = req.body;
 
-            jsonfile.writeFile(resumeFile, data, { spaces: 4 }, (error) => {
-                if (error) throw err;
-                res.status(200).send('ok');
-            });
-        }
+        jsonfile.writeFile(resumeFile, data, { spaces: 4 }, (error) => {
+            if (error) throw err;
+            res.status(200).send('ok');
+        });
     });
 });
 
