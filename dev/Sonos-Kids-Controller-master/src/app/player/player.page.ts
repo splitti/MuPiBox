@@ -214,7 +214,9 @@ export class PlayerPage implements OnInit {
     }
     this.resumePlay = false;
     this.updateProgression = false;
-    this.playerService.sendCmd(PlayerCmds.SHUFFLEOFF);
+    if(this.media.shuffle || this.shufflechanged){
+      this.playerService.sendCmd(PlayerCmds.SHUFFLEOFF);
+    }
     this.playerService.sendCmd(PlayerCmds.STOP);
     if(this.media.type === 'spotify' &&  this.media.category === 'music') {
       if(this.shufflechanged % 2 === 1){
