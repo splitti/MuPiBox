@@ -104,6 +104,7 @@ app.get('/api/media', (req, res) => {
 
 app.post('/api/addmedia', (req, res) => {
     jsonfile.readFile(mediaFile, (error, data) => {
+        console.log(error);
         if (error == null){
             error = '';
         }
@@ -140,6 +141,7 @@ app.get('/api/resume', (req, res) => {
 
 app.post('/api/addresume', (req, res) => {
     jsonfile.readFile(resumeFile, (error, data) => {
+        console.log(error);
         if (error == null){
             error = '';
         }

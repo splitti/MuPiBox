@@ -537,13 +537,13 @@ function playURL(playedURL){
 function seek(progress){
   let currentProgress = 0;
   let targetProgress = 0;
-  log.debug('[Spotify Control] Setting progress is '+ progress);
+  log.debug('[Spotify Control] Setting progress to '+ progress);
   if (currentMeta.currentPlayer == "spotify"){
     if (progress > 1) {
       spotifyApi.seek(progress).then(function () {
         counter.countseek++;
         if (config.server.logLevel === 'debug'){writeCounter();}
-        log.debug('[Spotify Control] Setting progress to '+ progress);
+        log.debug('[Spotify Control] Progress is '+ progress);
         }, function(err) {
         handleSpotifyError(err,"0","seek");
       });
