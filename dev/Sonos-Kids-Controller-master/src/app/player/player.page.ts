@@ -24,14 +24,6 @@ export class PlayerPage implements OnInit {
 
   media: Media;
   resume: Resume;
-  saveMedia: Media = {
-    index: 0,
-    type: "spotify",
-    category: "",
-    id: "",
-    title: "",
-    shuffle: true,
-  }
   resumePlay = false;
   resumeFile: Resume = {
     spotify:{
@@ -47,7 +39,6 @@ export class PlayerPage implements OnInit {
   };
   cover = '';
   playing = true;
-  show = false;
   updateProgression = false;
   currentPlayedSpotify: CurrentSpotify;
   currentPlayedLocal: CurrentMPlayer;
@@ -116,7 +107,7 @@ export class PlayerPage implements OnInit {
   seek(){
     let newValue = +this.range.value;
     if(this.media.type === 'spotify'){
-      if(this.show){
+      if(this.media.showid?.length > 0){
         let duration = this.currentEpisode?.duration_ms;
         this.playerService.seekPosition(duration * (newValue / 100));
       }else{
@@ -148,7 +139,7 @@ export class PlayerPage implements OnInit {
 
     if(this.media.type === 'spotify'){
       let seek = this.currentPlayedSpotify?.progress_ms || 0;
-      if (this.show) {
+      if (this.media.showid?.length > 0) {
         this.progress = (seek / this.currentEpisode?.duration_ms) * 100 || 0;
       }else{
         if(this.currentPlayedSpotify?.item != null){
@@ -202,9 +193,6 @@ export class PlayerPage implements OnInit {
   ionViewWillEnter() {
     console.log(this.media);
     this.updateProgression = true;
-    if(this.media.showid?.length > 0){
-      this.show = true;
-    }
     this.playerService.playMedia(this.media);
     this.updateProgress();
     if (this.resumePlay){
@@ -230,13 +218,7 @@ export class PlayerPage implements OnInit {
     this.playerService.sendCmd(PlayerCmds.STOP);
     if(this.media.type === 'spotify' &&  this.media.category === 'music') {
       if(this.shufflechanged % 2 === 1){
-        this.saveMedia.shuffle = this.media?.shuffle;
-        this.saveMedia.index = this.media?.index;
-        this.saveMedia.id = this.media?.id;
-        this.saveMedia.title = this.media?.title;
-        this.saveMedia.type = this.media?.type;
-        this.saveMedia.category = this.media?.category;
-        this.mediaService.editRawMediaAtIndex(this.saveMedia.index, this.saveMedia);
+        this.mediaService.editRawMediaAtIndex(this.media.index, this.media);
       }
     } 
   }
@@ -293,10 +275,15 @@ export class PlayerPage implements OnInit {
     });
     console.log(this.currentPlayedSpotify?.progress_ms);
     if(this.media.type === 'spotify' && this.media?.showid){
-      this.resumeFile.show.progress_ms = this.currentPlayedSpotify?.progress_ms  || 0;
-      this.resumeFile.show.duration_ms = this.currentEpisode?.duration_ms || 0;
+      this.resumeFile.spotify.track_number = 1;
+      this.resumeFile.spotify.progress_ms = this.currentPlayedSpotify?.progress_ms  || 0;
+      this.resumeFile.spotify.duration_ms = this.currentEpisode?.duration_ms || 0;
     } else if(this.media.type === 'spotify'){
-      this.resumeFile.spotify.track_number = this.currentPlayedSpotify?.item.track_number  || 0;
+      if(this.media.playlistid){
+        this.resumeFile.spotify.track_number = this.playlistTrackNr  || 0;
+      }else{
+        this.resumeFile.spotify.track_number = this.currentPlayedSpotify?.item.track_number  || 0;
+      }
       this.resumeFile.spotify.progress_ms = this.currentPlayedSpotify?.progress_ms  || 0;
       this.resumeFile.spotify.duration_ms = this.currentPlayedSpotify?.item.duration_ms || 0;
     } else if (this.media.type === 'library'){

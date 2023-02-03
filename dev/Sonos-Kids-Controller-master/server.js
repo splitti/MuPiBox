@@ -70,8 +70,10 @@ app.get('/api/wlan', (req, res) => {
 
 app.post('/api/addwlan', (req, res) => {
     jsonfile.readFile(wlanFile, (error, data) => {
-        if (error) {
+        if (error.includes("Unexpected end of JSON input")){
             data = [];
+        }
+        if (!error.includes("Unexpected end of JSON input")) {
             console.log("[Sonos-Server] Error /api/addwlan add in wlan.json");
             console.log(error);
         }
@@ -99,8 +101,10 @@ app.get('/api/media', (req, res) => {
 
 app.post('/api/addmedia', (req, res) => {
     jsonfile.readFile(mediaFile, (error, data) => {
-        if (error) {
+        if (error.includes("Unexpected end of JSON input")){
             data = [];
+        }
+        if (!error.includes("Unexpected end of JSON input")) {
             console.log("[Sonos-Server] Error /api/addmedia write media.json");
             console.log(error);
             res.status(200).send('error');
@@ -130,8 +134,10 @@ app.get('/api/resume', (req, res) => {
 
 app.post('/api/addresume', (req, res) => {
     jsonfile.readFile(resumeFile, (error, data) => {
-        if (error) {
+        if (error.includes("Unexpected end of JSON input")){
             data = [];
+        }
+        if (!error.includes("Unexpected end of JSON input")) {
             console.log("[Sonos-Server] Error /api/addresume write resume.json");
             console.log(error);
             res.status(200).send('error');

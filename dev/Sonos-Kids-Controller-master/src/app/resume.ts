@@ -9,9 +9,4 @@ export interface Resume {
         currentTracknr?: number;
         progressTime?: number;
     }
-    show?:{
-        album?: string;
-        progress_ms?: number;
-        duration_ms?: number;
-    }
 }
