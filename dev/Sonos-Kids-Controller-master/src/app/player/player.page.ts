@@ -233,7 +233,7 @@ export class PlayerPage implements OnInit {
           if(j === this.resume.spotify.track_number){
             setTimeout(() => {
               this.playerService.seekPosition(this.resume.spotify.duration_ms * (this.resume.spotify.progress_ms / 100));
-            }, 2000)
+            }, 3000)
           }
         }, 2000)
       }
