@@ -220,7 +220,7 @@ export class SpotifyService {
       }),
       map((response: SpotifyAlbumsResponseItem) => {
         const media: Media = {
-          id: response.id,
+          playlistid: response.id,
           artist: response.artists?.[0]?.name,
           title: response.name,
           cover: response?.images[0]?.url,
