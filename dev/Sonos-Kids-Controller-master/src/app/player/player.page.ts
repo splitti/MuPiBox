@@ -27,7 +27,7 @@ export class PlayerPage implements OnInit {
   saveMedia: Media = {
     index: 0,
     type: "spotify",
-    category: "playlist",
+    category: "",
     id: "",
     title: "",
     shuffle: true,
@@ -151,9 +151,11 @@ export class PlayerPage implements OnInit {
       if (this.show) {
         this.progress = (seek / this.currentEpisode?.duration_ms) * 100 || 0;
       }else{
-        this.progress = (seek / this.currentPlayedSpotify?.item.duration_ms) * 100 || 0;
+        if(this.currentPlayedSpotify?.item != null){
+          this.progress = (seek / this.currentPlayedSpotify?.item.duration_ms) * 100 || 0;
+        }
       }
-      if(this.media.category === 'playlist'){
+      if(this.media.playlistid){
         this.currentPlaylist?.items.forEach((element, index) => {
           if(this.currentPlayedSpotify?.item.id === element.track?.id){
             this.playlistTrackNr = ++index;
@@ -226,7 +228,7 @@ export class PlayerPage implements OnInit {
     this.updateProgression = false;
     this.playerService.sendCmd(PlayerCmds.SHUFFLEOFF);
     this.playerService.sendCmd(PlayerCmds.STOP);
-    if(this.media.type === 'spotify' && (this.media.category === 'playlist' || this.media.category === 'music')) {
+    if(this.media.type === 'spotify' &&  this.media.category === 'music') {
       if(this.shufflechanged % 2 === 1){
         this.saveMedia.shuffle = this.media?.shuffle;
         this.saveMedia.index = this.media?.index;
@@ -289,13 +291,13 @@ export class PlayerPage implements OnInit {
     this.mediaService.episode$.subscribe(episode => {
       this.currentEpisode = episode;
     });
-    if(this.media.type === 'spotify'){
+    if(this.media.type === 'spotify' && this.media?.showid){
+      this.resumeFile.show.progress_ms = this.currentPlayedSpotify?.progress_ms  || 0;
+      this.resumeFile.show.duration_ms = this.currentEpisode?.duration_ms || 0;
+    } else if(this.media.type === 'spotify'){
       this.resumeFile.spotify.track_number = this.currentPlayedSpotify?.item.track_number  || 0;
       this.resumeFile.spotify.progress_ms = this.currentPlayedSpotify?.progress_ms  || 0;
       this.resumeFile.spotify.duration_ms = this.currentPlayedSpotify?.item.duration_ms || 0;
-    } else if(this.media.type === 'spotify' && this.media?.showid){
-      this.resumeFile.show.progress_ms = this.currentPlayedSpotify?.progress_ms  || 0;
-      this.resumeFile.show.duration_ms = this.currentEpisode?.duration_ms || 0;
     } else if (this.media.type === 'library'){
       this.resumeFile.local.album = this.currentPlayedLocal?.album || "";
       this.resumeFile.local.currentTracknr = this.currentPlayedLocal?.currentTracknr  || 0;
