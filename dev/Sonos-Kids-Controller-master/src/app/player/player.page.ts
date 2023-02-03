@@ -291,6 +291,7 @@ export class PlayerPage implements OnInit {
     this.mediaService.episode$.subscribe(episode => {
       this.currentEpisode = episode;
     });
+    console.log(this.currentPlayedSpotify?.progress_ms);
     if(this.media.type === 'spotify' && this.media?.showid){
       this.resumeFile.show.progress_ms = this.currentPlayedSpotify?.progress_ms  || 0;
       this.resumeFile.show.duration_ms = this.currentEpisode?.duration_ms || 0;
