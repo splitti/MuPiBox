@@ -70,6 +70,9 @@ app.get('/api/wlan', (req, res) => {
 
 app.post('/api/addwlan', (req, res) => {
     jsonfile.readFile(wlanFile, (error, data) => {
+        if (error == null){
+            error = '';
+        }
         if (error.toString().includes("Unexpected end of JSON input")){
             data = [];
         }
@@ -101,6 +104,9 @@ app.get('/api/media', (req, res) => {
 
 app.post('/api/addmedia', (req, res) => {
     jsonfile.readFile(mediaFile, (error, data) => {
+        if (error == null){
+            error = '';
+        }
         if (error.toString().includes("Unexpected end of JSON input")){
             data = [];
         }
@@ -134,6 +140,9 @@ app.get('/api/resume', (req, res) => {
 
 app.post('/api/addresume', (req, res) => {
     jsonfile.readFile(resumeFile, (error, data) => {
+        if (error == null){
+            error = '';
+        }
         if (error.toString().includes("Unexpected end of JSON input")){
             data = [];
         }
