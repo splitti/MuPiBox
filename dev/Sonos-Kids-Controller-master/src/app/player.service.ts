@@ -7,6 +7,7 @@ import { Observable } from 'rxjs';
 import { publishReplay, refCount } from 'rxjs/operators';
 import { MediaService } from './media.service';
 import { Network } from './network';
+import { Resume } from './resume';
 
 export enum PlayerCmds {
   PLAY = 'play',
@@ -70,6 +71,11 @@ export class PlayerService {
     this.sendRequest(seekpos);
   }
 
+ /*  jumpTo(offset){
+    let offsetTrackNr = 'jumpto:' + offset;
+    this.sendRequest(offsetTrackNr);
+  } */
+
   deleteLocal(media: Media) {
     let url: string;
     url = 'deletelocal/' + encodeURIComponent(media.category) + ':' + encodeURIComponent(media.artist) + ':' + encodeURIComponent(media.title);
@@ -90,15 +96,11 @@ export class PlayerService {
       }
       case 'spotify': {
         if (media.playlistid) {
-          url = 'spotify/now/spotify:playlist:' + encodeURIComponent(media.playlistid);
-        } else {
-          if (media.id) {
-            url = 'spotify/now/spotify:album:' + encodeURIComponent(media.id);
-          } else if (media.showid) {
-            url = 'spotify/now/spotify:episode:' + encodeURIComponent(media.showid);
-          } else {
-            url = 'musicsearch/spotify/album/artist:"' + encodeURIComponent(media.artist) + '" album:"' + encodeURIComponent(media.title) + '"';
-          }
+          url = 'spotify/now/spotify:playlist:' + encodeURIComponent(media.playlistid) + ':0:0';
+        } else if (media.id) {
+          url = 'spotify/now/spotify:album:' + encodeURIComponent(media.id) + ':0:0';
+        } else if (media.showid) {
+          url = 'spotify/now/spotify:episode:' + encodeURIComponent(media.showid) + ':0:0';
         }
         break;
       }
@@ -106,6 +108,22 @@ export class PlayerService {
         url = 'radio/' + encodeURIComponent(media.id) + '/radio';
         break;
       }
+    }
+
+    this.sendRequest(url);
+  }
+
+  resumeMedia(media: Media, resume: Resume) {
+    let url: string;
+    console.log(media);
+    console.log(resume);
+
+    if (media.playlistid) {
+      url = 'spotify/now/spotify:playlist:' + encodeURIComponent(media.playlistid) + ':' + resume.spotify.track_number + ':' + resume.spotify.progress_ms;
+    } else if (media.id) {
+      url = 'spotify/now/spotify:album:' + encodeURIComponent(media.id) + ':' + resume.spotify.track_number + ':' + resume.spotify.progress_ms;
+    } else if (media.showid) {
+      url = 'spotify/now/spotify:episode:' + encodeURIComponent(media.showid) + ':' + resume.spotify.track_number + ':' + resume.spotify.progress_ms;
     }
 
     this.sendRequest(url);

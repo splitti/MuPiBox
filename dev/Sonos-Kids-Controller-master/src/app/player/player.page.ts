@@ -193,11 +193,13 @@ export class PlayerPage implements OnInit {
   ionViewWillEnter() {
     console.log(this.media);
     this.updateProgression = true;
-    this.playerService.playMedia(this.media);
-    this.updateProgress();
     if (this.resumePlay){
       this.resumePlayback();
+    } else{
+      this.playerService.playMedia(this.media);
     }
+    this.updateProgress();
+    
     if(this.media.shuffle){
       setTimeout(() => {
         this.playerService.sendCmd(PlayerCmds.SHUFFLEON);
@@ -214,7 +216,9 @@ export class PlayerPage implements OnInit {
     }
     this.resumePlay = false;
     this.updateProgression = false;
-    this.playerService.sendCmd(PlayerCmds.SHUFFLEOFF);
+    if(this.media.shuffle || this.shufflechanged){
+      this.playerService.sendCmd(PlayerCmds.SHUFFLEOFF);
+    }
     this.playerService.sendCmd(PlayerCmds.STOP);
     if(this.media.type === 'spotify' &&  this.media.category === 'music') {
       if(this.shufflechanged % 2 === 1){
@@ -225,24 +229,9 @@ export class PlayerPage implements OnInit {
 
   resumePlayback(){
     if(this.media.type === 'spotify' && !this.media.shuffle){
-      let j = 1;
-      for(let i = 1; i < this.resume.spotify.track_number; i++){
-        setTimeout(() => {
-          this.skipNext();
-          j = i + 1;
-          if(j === this.resume.spotify.track_number){
-            setTimeout(() => {
-              this.playerService.seekPosition(this.resume.spotify.duration_ms * (this.resume.spotify.progress_ms / 100));
-            }, 3000)
-          }
-        }, 2000)
-      }
-      if (this.resume.spotify.track_number === 1){
-        setTimeout(() => {
-          this.playerService.seekPosition(this.resume.spotify.duration_ms * (this.resume.spotify.progress_ms / 100));
-        }, 2000)
-      }
+      this.playerService.resumeMedia(this.media, this.resume);
     } else if (this.media.type === 'library'){
+      this.playerService.playMedia(this.media);
       let j = 1;
       for(let i = 1; i < this.resume.local.currentTracknr; i++){
         setTimeout(() => {
