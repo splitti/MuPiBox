@@ -227,7 +227,8 @@ export class PlayerPage implements OnInit {
 
   resumePlayback(){
     if(this.media.type === 'spotify' && !this.media.shuffle){
-      let j = 1;
+      this.playerService.jumpTo(this.resume.spotify.track_number);
+      /* let j = 1;
       for(let i = 1; i < this.resume.spotify.track_number; i++){
         setTimeout(() => {
           this.skipNext();
@@ -238,7 +239,7 @@ export class PlayerPage implements OnInit {
             }, 3000)
           }
         }, 2000)
-      }
+      } */
       if (this.resume.spotify.track_number === 1){
         setTimeout(() => {
           this.playerService.seekPosition(this.resume.spotify.duration_ms * (this.resume.spotify.progress_ms / 100));

@@ -124,6 +124,7 @@ var counter = {
   countgetShowEpisodes: 0,
   countpause: 0,
   countplay: 0,
+  countjumpto: 0,
   countseek: 0,
   countsetShuffle: 0,
   countsetVolume: 0,
@@ -385,6 +386,18 @@ function play(){
 	    writeplayerstatePlay();
     }
   }
+}
+
+function jumpTo(offsetTrackNr){
+  spotifyApi.play({ offset: {"position": offsetTrackNr}})
+    .then(function() {
+      counter.countjumpto++;
+      if (config.server.logLevel === 'debug'){writeCounter();}
+      log.debug('[Spotify Control] Jump to position ' + offsetTrackNr);
+		  writeplayerstatePlay();
+    }, function(err) {
+      handleSpotifyError(err,"0","jumpTo");
+    });
 }
 
 function next(){
@@ -1034,6 +1047,11 @@ app.use(function(req, res){
   else if (command.name.includes("seekpos:")){
     let pos = command.name.split(':')[1];
     seek(pos);
+  }
+
+  else if (command.name.includes("jumpto:")){
+    let offsetTrackNr = command.name.split(':')[1];
+    jumpTo(offsetTrackNr);
   }
     
 

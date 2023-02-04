@@ -70,6 +70,11 @@ export class PlayerService {
     this.sendRequest(seekpos);
   }
 
+  jumpTo(offset){
+    let offsetTrackNr = 'jumpto:' + offset;
+    this.sendRequest(offsetTrackNr);
+  }
+
   deleteLocal(media: Media) {
     let url: string;
     url = 'deletelocal/' + encodeURIComponent(media.category) + ':' + encodeURIComponent(media.artist) + ':' + encodeURIComponent(media.title);
