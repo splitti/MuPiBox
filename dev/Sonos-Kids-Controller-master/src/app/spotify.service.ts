@@ -70,7 +70,7 @@ export class SpotifyService {
   }
 
   getMediaByArtistID(id: string, category: string, index: number, shuffle: boolean, aPartOfAll: boolean, aPartOfAllMin: number, aPartOfAllMax: number, manualArtistcover: string): Observable<Media[]> {
-    const albums = defer(() => this.spotifyApi.getArtistAlbums(id, { limit: 1, offset: 0, market: 'DE' })).pipe(
+    const albums = defer(() => this.spotifyApi.getArtistAlbums(id, { include_groups: 'album,single,compilation', limit: 1, offset: 0, market: 'DE' })).pipe(
       retryWhen(errors => {
         return this.errorHandler(errors);
       }),
@@ -90,7 +90,7 @@ export class SpotifyService {
           artistcover: response.images[0].url,
         }))
       )),
-      mergeMap(multiplier => defer(() => this.spotifyApi.getArtistAlbums(id, { limit: 50, offset: 50 * multiplier.range, market: 'DE' })).pipe(
+      mergeMap(multiplier => defer(() => this.spotifyApi.getArtistAlbums(id, { include_groups: 'album,single,compilation', limit: 50, offset: 50 * multiplier.range, market: 'DE' })).pipe(
         retryWhen(errors => {
           return this.errorHandler(errors);
         }),
