@@ -124,7 +124,6 @@ var counter = {
   countgetShowEpisodes: 0,
   countpause: 0,
   countplay: 0,
-  countjumpto: 0,
   countseek: 0,
   countsetShuffle: 0,
   countsetVolume: 0,
@@ -389,7 +388,7 @@ function play(){
   }
 }
 
-function jumpTo(offsetTrackNr){
+/* function jumpTo(offsetTrackNr){
   console.log(offsetTrackNr);
   spotifyApi.play({ offset: {"position": offsetTrackNr}})
     .then(function() {
@@ -400,7 +399,7 @@ function jumpTo(offsetTrackNr){
     }, function(err) {
       handleSpotifyError(err,"0","jumpTo");
     });
-}
+} */
 
 function next(){
   if (currentMeta.currentPlayer == "spotify"){
@@ -461,7 +460,11 @@ function shuffleoff(){
 }
 
 function playMe(activePlaylistId){
+  log.debug("[Spotify Control] Spotify play " + activePlaylistId);
   resumeOffset = activePlaylistId.split(':')[3];
+  log.debug("[Spotify Control] Spotify resume " + resumeOffset);
+  if(resumeOffset > 0) resumeOffset--;
+  log.debug("[Spotify Control] Spotify offset " + resumeOffset);
   resumeProgess = activePlaylistId.split(':')[4];
   tmp = activePlaylistId.split(':');
   activePlaylistId = tmp[0] + ':' + tmp[1] + ':' + tmp[2];
