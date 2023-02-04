@@ -227,7 +227,7 @@ export class PlayerPage implements OnInit {
 
   resumePlayback(){
     if(this.media.type === 'spotify' && !this.media.shuffle){
-      this.playerService.jumpTo(this.resume.spotify.track_number);
+      this.playerService.resumeMedia(this.media, this.resume);
       /* let j = 1;
       for(let i = 1; i < this.resume.spotify.track_number; i++){
         setTimeout(() => {
@@ -240,11 +240,11 @@ export class PlayerPage implements OnInit {
           }
         }, 2000)
       } */
-      if (this.resume.spotify.track_number === 1){
+      /* if (this.resume.spotify.track_number === 1){
         setTimeout(() => {
           this.playerService.seekPosition(this.resume.spotify.duration_ms * (this.resume.spotify.progress_ms / 100));
         }, 2000)
-      }
+      } */
     } else if (this.media.type === 'library'){
       let j = 1;
       for(let i = 1; i < this.resume.local.currentTracknr; i++){

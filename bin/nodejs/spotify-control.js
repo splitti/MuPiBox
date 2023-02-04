@@ -229,6 +229,7 @@ function handleSpotifyError(err, activePlaylistId, from){
   } else if (err.body.error?.status == 400) {
     log.debug("invalid id");
     log.debug("Error from: " + from);
+    log.debug(err)
     counter.counterrorInvalidID++;
     if (config.server.logLevel === 'debug'){writeCounter();}
     activeDevice = "";
@@ -389,6 +390,7 @@ function play(){
 }
 
 function jumpTo(offsetTrackNr){
+  console.log(offsetTrackNr);
   spotifyApi.play({ offset: {"position": offsetTrackNr}})
     .then(function() {
       counter.countjumpto++;
@@ -459,8 +461,12 @@ function shuffleoff(){
 }
 
 function playMe(activePlaylistId){
+  resumeOffset = activePlaylistId.split(':')[3];
+  resumeProgess = activePlaylistId.split(':')[4];
+  tmp = activePlaylistId.split(':');
+  activePlaylistId = tmp[0] + ':' + tmp[1] + ':' + tmp[2];
   if(activePlaylistId.split(':')[1] === 'episode'){
-    spotifyApi.play({ uris: [activePlaylistId] })
+    spotifyApi.play({ uris: [activePlaylistId], offset: {"position": resumeOffset}, position_ms: resumeProgess})
     .then(function(data){
       counter.countplay++;
       if (config.server.logLevel === 'debug'){writeCounter();}
@@ -478,7 +484,7 @@ function playMe(activePlaylistId){
       handleSpotifyError(err,"0","setVolume");
     });
   } else {
-    spotifyApi.play({ context_uri: activePlaylistId })
+    spotifyApi.play({ context_uri: activePlaylistId, offset: {"position": resumeOffset}, position_ms: resumeProgess})
     .then(function(data){
       log.debug("[Spotify Control] Playback started");
       counter.countplay++;
@@ -1049,10 +1055,10 @@ app.use(function(req, res){
     seek(pos);
   }
 
-  else if (command.name.includes("jumpto:")){
+/*   else if (command.name.includes("jumpto:")){
     let offsetTrackNr = command.name.split(':')[1];
     jumpTo(offsetTrackNr);
-  }
+  } */
     
 
   let resp = {"status":"ok","error":"none"};
