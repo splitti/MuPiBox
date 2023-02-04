@@ -63,9 +63,9 @@
 	exec($command, $vncoutput, $vncresult );
 	if( $vncoutput[0] )
 	{
-		echo "<h2>Live Screen</h2>";
+		echo '<details><summary><i class="fa-solid fa-display"></i> Live Screen</summary><ul><li class="li_norm">';
         $ip=exec("hostname -I | awk '{print $1}'");
-        print "<p><embed src='http://".$ip.":6080/vnc_lite.html' id='remotecontrol'></p>";
+        print "<p><embed src='http://".$ip.":6080/vnc_lite.html' id='remotecontrol'></p></details>";
 	}
 ?>
 	<details>

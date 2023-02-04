@@ -57,6 +57,38 @@
 		$CHANGE_TXT=$CHANGE_TXT."<li>Sleeptimer stopped</li>";
 		}
 
+	if($_POST['change_pm2log'])
+		{
+			if($data["pm2"]["ramlog"])
+			{
+				exec("sudo bash -c \"sed '/\/home\/dietpi\/.pm2\/logs/d' /etc/fstab > /tmp/.fstab && mv /tmp/.fstab /etc/fstab\"");
+				$pm2_state = "disabled";
+				$change_pm2 = "enable";
+				$data["pm2"]["ramlog"]
+			}
+			else
+			{
+				exec("sudo bash -c \"sed '/^tmpfs \/var\/log.*/a tmpfs \/home\/dietpi\/.pm2\/logs tmpfs size=50M,noatime,lazytime,nodev,nosuid,mode=1777' /etc/fstab > /tmp/.fstab && mv /tmp/.fstab /etc/fstab\"");
+				$pm2_state = "active";
+				$change_pm2 = "disable";
+			}
+		$change=2;
+		$CHANGE_TXT=$CHANGE_TXT."<li>PM2-Logs to RAM ".$pm2_state." on next boot</li>";
+		}
+	else
+		{
+			if($data["pm2"]["ramlog"])
+			{
+				$pm2_state = "active";
+				$change_pm2 = "disable";
+			}
+			else
+			{
+				$pm2_state = "disabled";
+				$change_pm2 = "enable";
+			}
+		}
+			
 	if($_POST['potimer'])
 		{
 		$timerSleepingTime=$_POST['powerofftimer']*60;
@@ -462,6 +494,18 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				?>
 				</p>
 				<input id="saveForm" class="button_text" type="submit" name="change_sd" value="<?php print $change_sd; ?>" />
+			</li>
+
+			<li class="li_1"><h2>PM2-Logs to RAM</h2>
+				<p>
+				To protect the microSD, the logs can be swapped out to RAM. However, logs can no longer be evaluated after a restart.
+				</p>
+				<p>
+				<?php
+				echo "PM2-Logs to RAM: <b>".$pm2_state."</b>";
+				?>
+				</p>
+				<input id="saveForm" class="button_text" type="submit" name="change_pm2log" value="<?php print $change_pm2; ?>" />
 			</li>
 
 			<li class="li_1"><h2>Wait for Network on boot</h2>
