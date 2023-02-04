@@ -164,12 +164,6 @@ sudo service mupi_idle_shutdown stop
 	sudo /usr/bin/chmod 755 /tmp/crontab.template >&3 2>&3
 	sudo /usr/bin/chown dietpi:dietpi /tmp/crontab.template >&3 2>&3
 	sudo /bin/su dietpi -c "/usr/bin/crontab /tmp/crontab.template"  >&3 2>&3
-	CHECK_LOG_CONFIG=`cat /etc/fstab | grep ".pm2/logs"`  >&3 2>&3
-	if [ ${#CHECK_LOG_CONFIG} == 0 ];
-	then
-		sudo bash -c "sed '/^tmpfs \/var\/log.*/a tmpfs \/home\/dietpi\/.pm2\/logs tmpfs size=50M,noatime,lazytime,nodev,nosuid,mode=1777' /etc/fstab > /tmp/.fstab && mv /tmp/.fstab /etc/fstab"   >&3 2>&3
-	fi
-
 	
 	echo -e "XXX\n85\nDownload OnOffShim-Scripts... \nXXX"	
 	# OnOffShim

@@ -16,13 +16,13 @@
 		curl_setopt($ch, CURLOPT_URL,            'https://accounts.spotify.com/api/token' );
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1 );
 		curl_setopt($ch, CURLOPT_POST,           1 );
-		curl_setopt($ch, CURLOPT_POSTFIELDS,     'grant_type=client_credentials' ); 
+		curl_setopt($ch, CURLOPT_POSTFIELDS,     'grant_type=client_credentials&scope=user-read-private,user-read-email' ); 
 		curl_setopt($ch, CURLOPT_HTTPHEADER,     array('Authorization: Basic '.base64_encode($data["spotify"]["clientId"].':'.$data["spotify"]["clientSecret"]))); 
 
 		$result=curl_exec($ch);
 		curl_close($ch);
-		
 		$bearer_json = json_decode($result, true);
+
 
 	function load_dataset($all_media, $bearer_json)
 		{
@@ -32,8 +32,7 @@
 			if( $all_media['artistid'] != "" )
 				{
 				$url2media = "https://open.spotify.com/artist/".$all_media['artistid'];
-				$spotifyURL = "https://api.spotify.com/v1/artists/" . $all_media['artistid'] . "/top-tracks?market=DE";
-				$spotifyURL = "https://api.spotify.com/v1/artists/" . $all_media['artistid'];
+				$spotifyURL = "https://api.spotify.com/v1/artists/" . $all_media['artistid'] . "?market=DE";
 				$authorization = 'Authorization: Bearer '.$bearer_json['access_token'];
 				$ch = curl_init();
 				curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json' , $authorization ));
@@ -50,7 +49,7 @@
 				}
 			if( $all_media['id'] != "" )
 				{
-				if( $all_media['category'] == "playlist" )
+				/*if( $all_media['category'] == "playlist" )
 					{
 					$url2media = "https://open.spotify.com/playlist/".$all_media['id'];
 					$spotifyURL = "https://api.spotify.com/v1/playlists/" . $all_media['id'] . "/images";
@@ -66,11 +65,11 @@
 					$json = json_decode($json, true);
 					curl_close($ch);
 					$img_http=$json[0]['url'];
-					}
+					}*/
 				if( $all_media['category'] == "music" )
 					{
 					$url2media = "http://open.spotify.com/album/".$all_media['id'];
-					$spotifyURL = "https://api.spotify.com/v1/albums/" . $all_media['id'];
+					$spotifyURL = "https://api.spotify.com/v1/albums/" . $all_media['id'] . "?market=DE";
 					$authorization = 'Authorization: Bearer '.$bearer_json['access_token'];
 					$ch = curl_init();
 					curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json' , $authorization ));
@@ -87,7 +86,7 @@
 				if( $all_media['category'] == "audiobook" )
 					{
 					$url2media = "http://open.spotify.com/album/".$all_media['id'];
-					$spotifyURL = "https://api.spotify.com/v1/albums/" . $all_media['id'];
+					$spotifyURL = "https://api.spotify.com/v1/albums/" . $all_media['id'] ."?market=DE";
 					$authorization = 'Authorization: Bearer '.$bearer_json['access_token'];
 					$ch = curl_init();
 					curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json' , $authorization ));
@@ -123,7 +122,7 @@
 				{
 				$url2media = "https://open.spotify.com/search/" . rawurlencode($all_media['query']);
 				//Search Query
-				$spotifyURL = 'https://api.spotify.com/v1/search?q=' . rawurlencode($all_media['query']) . '&type=album&limit=1';
+				$spotifyURL = 'https://api.spotify.com/v1/search?q=' . rawurlencode($all_media['query']) . '&market=DE&type=album&limit=1';
 				$authorization = 'Authorization: Bearer '.$bearer_json['access_token'];
 				$ch = curl_init();
 				curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json' , $authorization ));
@@ -145,7 +144,7 @@
 
 			print "<div id='flex-container'>";
 			print "<div class='media_img'>";
-			print "<img width='150' style='width:150px;min-width:150px;max-width:150px;' src='";
+			print "<img width='200' src='";
 			if( $all_media['type'] == "library" )
 				{
 				 print $all_media['cover'];
@@ -156,7 +155,11 @@
 				}
 			if( $all_media['type'] == "spotify" )
 				{
-				if( $img_http )
+				if ( $all_media['artistcover'] )
+					{
+					print $all_media['artistcover'];
+					}
+				elseif( $img_http )
 					{
 					print $img_http;
 					$img_http = "";
@@ -167,7 +170,7 @@
 					}
 				}
 			print "'></div><div class='media_txt'>";
-			print "<table><tr><td width='80px'>Index:</td><td>" . $all_media['index'] . "</td></tr>";
+			print "<table><tr><td width='100px'>Index:</td><td>" . $all_media['index'] . "</td></tr>";
 			print "<tr><td>Type:</td><td>" . $all_media['type'] . "</td></tr>";
 			print "<tr><td>Category:</td><td>" . $all_media['category'] . "</td></tr>";
 			if($all_media['artist'])
@@ -207,11 +210,28 @@
 				}
 			if($all_media['cover'])
 				{
-				print "<tr><td>Cover-URL:</td><td><a href='" . $all_media['cover'] . "' target='_blank'>" . $all_media['cover'] . "</a></td></tr>";
+				print "<tr><td>Cover-URL:</td><td><a href='" . $all_media['cover'] . "' target='_blank'>" . substr($all_media['cover'],0,45) . "...</a></td></tr>";
 				}
+			if($all_media['artistcover'])
+				{
+				print "<tr><td style>Cover-URL:</td><td><a href='" . $all_media['artistcover'] . "' target='_blank'>" . substr($all_media['artistcover'],0,45) . "...</a></td></tr>";
+				}
+			if($all_media['aPartOfAll'])
+				{
+				print "<tr><td>Interval:</td><td>".($all_media['aPartOfAll']  ? 'true' : 'false')."</td></tr>";
+				}
+			if($all_media['aPartOfAllMin'])
+				{
+				print "<tr><td>Interval-Start:</td><td>".$all_media['aPartOfAllMin']."</td></tr>";
+				}
+			if($all_media['aPartOfAllMax'])
+				{
+				print "<tr><td>Interval-End:</td><td>".$all_media['aPartOfAllMax']."</td></tr>";
+				}
+			
 			if($url2media)
 				{
-				print "<tr><td>Spotify:</td><td><a href='" . $url2media . "' target='_blank'>View on Spotify</a></td></tr>";
+				print "<tr><td>Spotify:</td><td><a href='" . $url2media . "' target='_blank'>" . substr($url2media,0,45) . "...</a></td></tr>";
 				}
 			print "</table></div>\n";
 			//print "URL: " . $all_media['type'] . "<br>";
@@ -232,7 +252,6 @@
 	<select id="category" name="category" class="element text small" >
 		<option value="audiobook">Audiobook</option>
 		<option value="music">Music</option>
-		<option value="playlist">Playlist</option>
 		<option value="radio">Radio</option>
 		<option value="all_media">All media</option>
 	</select>
