@@ -1211,8 +1211,9 @@ details {
 }
 
 details[open] summary::after {
+	content:  "I"; 
 	color: #FF2D2D;
-	transform: translate(5px,0) rotate(45deg);
+	transform: translate(0px,0) rotate(90deg);
 }
 
 details > summary {

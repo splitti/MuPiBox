@@ -64,13 +64,14 @@
 				exec("sudo bash -c \"sed '/\/home\/dietpi\/.pm2\/logs/d' /etc/fstab > /tmp/.fstab && mv /tmp/.fstab /etc/fstab\"");
 				$pm2_state = "disabled";
 				$change_pm2 = "enable";
-				$data["pm2"]["ramlog"]
+				$data["pm2"]["ramlog"]=0;
 			}
 			else
 			{
 				exec("sudo bash -c \"sed '/^tmpfs \/var\/log.*/a tmpfs \/home\/dietpi\/.pm2\/logs tmpfs size=50M,noatime,lazytime,nodev,nosuid,mode=1777' /etc/fstab > /tmp/.fstab && mv /tmp/.fstab /etc/fstab\"");
 				$pm2_state = "active";
 				$change_pm2 = "disable";
+				$data["pm2"]["ramlog"]=1;
 			}
 		$change=2;
 		$CHANGE_TXT=$CHANGE_TXT."<li>PM2-Logs to RAM ".$pm2_state." on next boot</li>";
