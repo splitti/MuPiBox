@@ -7,5 +7,5 @@ WantedBy=multi-user.target
 [Service]
 User=dietpi
 Group=dietpi
-ExecStart=/usr/bin/x11vnc -multiptr -ncache 10 -forever -display :0
+ExecStart=/usr/bin/x11vnc -multiptr -ncache 10 -forever -scale 800x480 -display :0
 ExecStop=sudo /usr/bin/kill $(/usr/bin/pgrep x11vnc)

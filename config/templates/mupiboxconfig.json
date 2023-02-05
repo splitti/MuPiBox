@@ -15,7 +15,14 @@
 			"vintage",
 			"dark",
 			"light",
-			"xmas"
+			"xmas",
+			"ironman",
+			"captainamerica",
+			"wood",
+			"matrix",
+			"mint",
+			"danger",
+			"cinema"
 			],
 		"startSound": "/home/dietpi/MuPiBox/sysmedia/sound/startup.wav",
 		"shutSound": "/home/dietpi/MuPiBox/sysmedia/sound/shutdown.wav",
