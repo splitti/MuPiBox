@@ -4,6 +4,7 @@
 					<ul>
 						<li><a href="https://mupibox.de/" target="_blank">MuPiBox.de</a></li>
 						<li><a href="https://discord.gg/4EjCgpCbbe" target="_blank">Support on Discord</a></li>
+						<li><a href="https://www.youtube.com/@mupibox" target="_blank">MuPiBox on Youtube</a></li>
 					</ul>
 				</div>
 				<div id="footercenter">

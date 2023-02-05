@@ -189,7 +189,7 @@
 		}
 	if( $_POST['spotify_restart'] )
 		{
-		$command = "sudo /usr/local/bin/mupibox/./spotify_restart.sh";
+		$command = "sudo /usr/local/bin/mupibox/./spotify_restartspotify_restart.sh";
 		exec($command, $output, $result );
 		$change=3;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Spotify Services are restarted</li>";
@@ -300,11 +300,11 @@
 				<input id="saveForm" class="button_text" type="submit" name="update" value="Update settings" />
 			</li>
 			<li class="li_norm"><h2>Restart MuPiBox services</h2>
-				<p>A little bit more prosa. </p>
+				<p>Restart tbe MuPiBox frontend and the services to connect to spotify. </p>
 				<input id="saveForm" class="button_text" type="submit" name="spotify_restart" value="Restart services" />
 			</li>
 			<li class="li_norm"><h2>Restart MuPiBox kiosk</h2>
-				<p>A little bit more prosa. </p>
+				<p>Restart chromium browser. </p>
 				<input id="saveForm" class="button_text" type="submit" name="restart_kiosk" value="Restart Chromium-Kiosk" />
 			</li>
 		</ul>
