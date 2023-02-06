@@ -23,7 +23,17 @@
 		<div id="container">
 			<div class="topnav" id="myTopnav">
 				<a href="index.php"><i class="fa fa-fw fa-home"></i> Home</a>
-				<a href="content.php"><i class="fa-solid fa-music"></i> MuPiBox</a>
+				<a href="vnc.php"><i class="fa-solid fa-display"></i> MuPiBox</a>				
+<?php
+	$command = "ps -ef | grep websockify | grep -v grep";
+	exec($command, $vncoutput, $vncresult );
+	if( $vncoutput[0] )
+	{
+		echo '				<a href="content.php"><i class="fa-solid fa-music"></i> Remote</a>';
+        $ip=exec("hostname -I | awk '{print $1}'");
+        print "<p><embed src='http://".$ip.":6080/vnc_lite.html' id='remotecontrol'></p></details>";
+	}
+?>
 				<a href="mupi.php"><i class="fa-solid fa-headphones"></i> MuPi-Conf</a>
 				<a href="media.php"><i class="fa-solid fa-list"></i> Media</a>
 				<a href="cover.php"><i class="fa-regular fa-image"></i> Cover</a>

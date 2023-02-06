@@ -26,6 +26,8 @@
 		exec("sudo systemctl start mupi_vnc.service");
 		exec("sudo systemctl start mupi_novnc.service");		
 		exec("sudo su - -c \"/usr/bin/cat <<< $(/usr/bin/jq --arg v \"1\" '.tweaks.vnc = $v' /etc/mupibox/mupiboxconfig.json) >  /etc/mupibox/mupiboxconfig.json\"");
+		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>VNC-Services enabled and started</li>";
 		}
 		
 	if( $_POST['change_samba'] == "enable & start" )
@@ -155,7 +157,7 @@
 		</li>
 		<li class="li_1"><h2>Enable/Disable VNC</h2>
 			<p>
-			Enables or disables VNC-Service! The service allows remote access to the browser (Display).
+			Enables or disables VNC-Service! The service allows remote access to the browser (Display). Usage recommended for Pi version 3 and up.
 			</p>
 			<p>
 			<?php 

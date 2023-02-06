@@ -59,7 +59,7 @@
 	</details>
 
 <?php
-	$command = "ps -ef | grep websockify | grep -v grep";
+/*	$command = "ps -ef | grep websockify | grep -v grep";
 	exec($command, $vncoutput, $vncresult );
 	if( $vncoutput[0] )
 	{
@@ -67,6 +67,7 @@
         $ip=exec("hostname -I | awk '{print $1}'");
         print "<p><embed src='http://".$ip.":6080/vnc_lite.html' id='remotecontrol'></p></details>";
 	}
+*/
 ?>
 	<details>
 		<summary><i class="fa-solid fa-display"></i> Current Screen</summary>
