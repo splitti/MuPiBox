@@ -26,7 +26,7 @@
 <?php
 	if( $change )
 		{
-		print '<div class="lightbox"><div class="iframeContainer"><div class="toolbarLB"><span class="closeLB" onclick="lightBoxClose()">x</span></div><p>'.$CHANGE_TXT.'DONE</p></div></div>';
+		print '<div class="lightbox"><div class="iframeContainer"><div class="toolbarLB"><div class="closeLB" onclick="lightBoxClose()"><div class="closeLBSym">+</div></div></div><p>'.$CHANGE_TXT.'DONE</p></div></div>';
 		} 
 ?>
 	</body>
