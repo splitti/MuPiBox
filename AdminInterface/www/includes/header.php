@@ -12,7 +12,7 @@
 		<link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.2.1/css/all.css">
 		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 		<title>MuPiBox Admin-Interface</title>
-		<link rel="stylesheet" type="text/css" href="view.css?v=6.0.0" media="all">
+		<link rel="stylesheet" type="text/css" href="view.css?v=7.0.0" media="all">
 		<script type="text/javascript" src="view.js?v=6.0.0"></script>
 		<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 		<link rel="icon" type="image/x-icon" href="/images/favicon.ico">
@@ -23,15 +23,13 @@
 		<div id="container">
 			<div class="topnav" id="myTopnav">
 				<a href="index.php"><i class="fa fa-fw fa-home"></i> Home</a>
-				<a href="vnc.php"><i class="fa-solid fa-display"></i> MuPiBox</a>				
+				<a href="vnc.php"><i class="fa-solid fa-music"></i> MuPiBox</a>				
 <?php
 	$command = "ps -ef | grep websockify | grep -v grep";
 	exec($command, $vncoutput, $vncresult );
 	if( $vncoutput[0] )
 	{
-		echo '				<a href="content.php"><i class="fa-solid fa-music"></i> Remote</a>';
-        $ip=exec("hostname -I | awk '{print $1}'");
-        print "<p><embed src='http://".$ip.":6080/vnc_lite.html' id='remotecontrol'></p></details>";
+		echo '				<a href="vnc.php"><i class="fa-solid fa-display"></i> Remote</a>';
 	}
 ?>
 				<a href="mupi.php"><i class="fa-solid fa-headphones"></i> MuPi-Conf</a>
