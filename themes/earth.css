@@ -11,7 +11,7 @@ ion-item{
 
 .ion-page{
 	--ion-color-light: transparent !important;
-	background-image: url("/theme-data/earth/earth-bg.jpg") !important;
+	background-image: url("http://localhost/theme-data/earth/earth-bg.jpg") !important;
 }
 
 .md body{
@@ -25,7 +25,7 @@ ion-col ion-button {
 
 @font-face {
 	font-family: "Nasa21";
-	src: url("/theme-data/earth/Nasa21.ttf") format("truetype");
+	src: url("http://localhost/theme-data/earth/Nasa21.ttf") format("truetype");
 	font-weight: normal;
 	font-style: normal;
         }
