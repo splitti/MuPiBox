@@ -23,7 +23,7 @@
 		<div id="container">
 			<div class="topnav" id="myTopnav">
 				<a href="index.php"><i class="fa fa-fw fa-home"></i> Home</a>
-				<a href="vnc.php"><i class="fa-solid fa-music"></i> MuPiBox</a>				
+				<a href="content.php"><i class="fa-solid fa-music"></i> MuPiBox</a>				
 <?php
 	$command = "ps -ef | grep websockify | grep -v grep";
 	exec($command, $vncoutput, $vncresult );
