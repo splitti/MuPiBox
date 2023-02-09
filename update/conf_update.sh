@@ -72,8 +72,13 @@ if [ "$LEDMIN" == "null" ]; then
 		/usr/bin/cat <<< $(/usr/bin/jq --arg v "10" '.shim.ledBrightnessMin = $v' ${CONFIG}) >  ${CONFIG}
 fi
 
-#2.2.0
+#3.0.0
 PM2RAMLOG=$(/usr/bin/jq -r .pm2.ramlog ${CONFIG})
 if [ "$PM2RAMLOG" == "null" ]; then 
 		/usr/bin/cat <<< $(/usr/bin/jq --arg v "0" '.pm2.ramlog = $v' ${CONFIG}) >  ${CONFIG}
+fi
+
+EARTH=$(/usr/bin/cat ${CONFIG} | grep earth)
+if [[ -z ${EARTH} ]]; then 
+		/usr/bin/cat <<< $(/usr/bin/jq --arg v "earth" '.mupibox.installedThemes? += [$v]' ${CONFIG}) >  ${CONFIG}
 fi

@@ -112,6 +112,8 @@ imageList['captainamerica'] = new Image(150, 250);
 imageList['captainamerica'].src = "images/captainamerica_2.0.0.png";
 imageList['cinema'] = new Image(150, 250);
 imageList['cinema'].src = "images/cinema_2.0.0.png";
+imageList['earth'] = new Image(150, 250);
+imageList['earth'].src = "images/earth_2.0.0.png";
 
 
 function switchImage() {

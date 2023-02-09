@@ -22,7 +22,9 @@
 			"matrix",
 			"mint",
 			"danger",
-			"cinema"
+			"cinema",
+			"earth",
+			"steampunk"
 			],
 		"startSound": "/home/dietpi/MuPiBox/sysmedia/sound/startup.wav",
 		"shutSound": "/home/dietpi/MuPiBox/sysmedia/sound/shutdown.wav",

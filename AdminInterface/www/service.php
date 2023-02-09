@@ -3,15 +3,17 @@
 	$onlinejson = file_get_contents('https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/mupiboxconfig.json');
 	$dataonline = json_decode($onlinejson, true);
 	include ('includes/header.php');
+	$CHANGE_TXT="<div id='lbinfo'><ul id='lbinfo'>";
 
 	if( $_POST['change_vnc'] == "stop & disable" )
 		{
-		exec("sudo apt-get remove x11vnc websockify -y");
-		exec("sudo rm -R /usr/share/novnc");
 		exec("sudo systemctl stop mupi_vnc.service");
 		exec("sudo systemctl stop mupi_novnc.service");
 		exec("sudo systemctl disable mupi_vnc.service");
 		exec("sudo systemctl disable mupi_novnc.service");
+		exec("sudo apt-get remove x11vnc websockify -y");
+		exec("sudo pkill websockify");		
+		exec("sudo rm -R /usr/share/novnc");
 		exec("sudo su - -c \"/usr/bin/cat <<< $(/usr/bin/jq --arg v \"0\" '.tweaks.vnc = $v' /etc/mupibox/mupiboxconfig.json) >  /etc/mupibox/mupiboxconfig.json\"");
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>VNC-Services disabled</li>";

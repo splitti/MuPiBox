@@ -63,6 +63,11 @@ sudo service mupi_idle_shutdown stop
 	echo -e "XXX\n22\nDownload MuPiBox-Files... \nXXX"	
 
 	# MuPiBox
+	mkdir -p ~/.mupibox/Sonos-Kids-Controller-master/www/theme-data/earth >&3 2>&3
+	mkdir -p ~/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk >&3 2>&3
+	wget ${SRC}/themes/earth/earth-bg.jpg -O ~/.mupibox/Sonos-Kids-Controller-master/www/theme-data/earth/earth-bg.jpg >&3 2>&3
+	sudo wget ${SRC}/themes/earth.css -O ~/MuPiBox/themes/earth.css >&3 2>&3
+
 	sudo wget ${SRC}/themes/dark.css -O /home/dietpi/MuPiBox/themes/dark.css >&3 2>&3
 	sudo wget ${SRC}/themes/blue.css -O /home/dietpi/MuPiBox/themes/blue.css >&3 2>&3
 	sudo wget ${SRC}/themes/purple.css -O /home/dietpi/MuPiBox/themes/purple.css >&3 2>&3

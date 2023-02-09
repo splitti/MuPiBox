@@ -157,7 +157,11 @@ exec 3>${LOG}
 
 	# Binaries
 	sudo wget ${SRC}/bin/fbv/fbv -O /usr/bin/fbv >&3 2>&3
-	sudo wget ${SRC}/bin/spotifyd/0.3.3/spotifyd -O /usr/bin/spotifyd >&3 2>&3
+	if [ `getconf LONG_BIT` == 32 ]; then
+		sudo wget ${SRC}/bin/spotifyd/0.3.3/spotifyd -O /usr/bin/spotifyd >&3 2>&3
+	else
+		sudo wget ${SRC}/bin/spotifyd/0.3.3/spotifyd_64bit -O /usr/bin/spotifyd >&3 2>&3
+	fi
 	sudo chmod 755 /usr/bin/fbv /usr/bin/spotifyd >&3 2>&3
 	sleep 1
 
@@ -198,6 +202,12 @@ exec 3>${LOG}
 	echo -e "XXX\n75\nDownload MuPiBox-Files... \nXXX"	
 
 	# MuPiBox
+	mkdir -p ~/.mupibox/Sonos-Kids-Controller-master/www/theme-data/earth >&3 2>&3
+	mkdir -p ~/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk >&3 2>&3
+	wget ${SRC}/themes/earth/earth-bg.jpg -O ~/.mupibox/Sonos-Kids-Controller-master/www/theme-data/earth/earth-bg.jpg >&3 2>&3
+	sudo wget ${SRC}/themes/earth.css -O ~/MuPiBox/themes/earth.css >&3 2>&3
+
+	
 	sudo wget ${SRC}/themes/dark.css -O ~/MuPiBox/themes/dark.css >&3 2>&3
 	sudo wget ${SRC}/themes/blue.css -O ~/MuPiBox/themes/blue.css >&3 2>&3
 	sudo wget ${SRC}/themes/purple.css -O ~/MuPiBox/themes/purple.css >&3 2>&3
