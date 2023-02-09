@@ -63,11 +63,10 @@ sudo service mupi_idle_shutdown stop
 	echo -e "XXX\n22\nDownload MuPiBox-Files... \nXXX"	
 
 	# MuPiBox
-	mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/earth >&3 2>&3
-	mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk >&3 2>&3
 	wget ${SRC}/themes/earth/earth-bg.jpg -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/earth/earth-bg.jpg >&3 2>&3
-	sudo chown dietpi:dietpi -R /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www
-	sudo wget ${SRC}/themes/earth.css -O ~/MuPiBox/themes/earth.css >&3 2>&3
+	wget ${SRC}/themes/earth/Nasa21.ttf -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/earth/Nasa21.ttf >&3 2>&3
+	sudo chown dietpi:dietpi -R /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www >&3 2>&3
+	sudo wget ${SRC}/themes/earth.css -O /home/dietpi/MuPiBox/themes/earth.css >&3 2>&3
 
 	sudo wget ${SRC}/themes/dark.css -O /home/dietpi/MuPiBox/themes/dark.css >&3 2>&3
 	sudo wget ${SRC}/themes/blue.css -O /home/dietpi/MuPiBox/themes/blue.css >&3 2>&3
