@@ -202,9 +202,8 @@ exec 3>${LOG}
 	echo -e "XXX\n75\nDownload MuPiBox-Files... \nXXX"	
 
 	# MuPiBox
-	mkdir -p ~/.mupibox/Sonos-Kids-Controller-master/www/theme-data/earth >&3 2>&3
-	mkdir -p ~/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk >&3 2>&3
-	wget ${SRC}/themes/earth/earth-bg.jpg -O ~/.mupibox/Sonos-Kids-Controller-master/www/theme-data/earth/earth-bg.jpg >&3 2>&3
+	wget ${SRC}/themes/earth/earth-bg.jpg -O ~/.mupibox/Sonos-Kids-Controller-master/www/earth-bg.jpg >&3 2>&3
+	wget ${SRC}/themes/earth/Nasa21.ttf -O ~/.mupibox/Sonos-Kids-Controller-master/www/Nasa21.ttf >&3 2>&3
 	sudo wget ${SRC}/themes/earth.css -O ~/MuPiBox/themes/earth.css >&3 2>&3
 
 	
