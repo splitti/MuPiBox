@@ -72,6 +72,7 @@ sudo service mupi_idle_shutdown stop
 	sudo wget ${SRC}/themes/steampunk/steampunk-bg.jpg -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/steampunk-bg.jpg >&3 2>&3
 	sudo wget ${SRC}/themes/steampunk/SHAXIZOR.TTF -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/SHAXIZOR.TTF >&3 2>&3
 	sudo wget ${SRC}/themes/steampunk/steampunk-gear.png -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/steampunk-gear.png >&3 2>&3
+	sudo wget ${SRC}/themes/steampunk/header.jpg -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/header.jpg >&3 2>&3
 	sudo chown dietpi:dietpi -R /home/dietpi/.mupibox/Sonos-Kids-Controller-master/
 
 	sudo wget ${SRC}/themes/earth.css -O /home/dietpi/MuPiBox/themes/earth.css >&3 2>&3
