@@ -12,6 +12,7 @@ ion-item{
 .ion-page{
 	--ion-color-light: transparent !important;
 	background-image: url("/theme-data/earth/earth-bg.jpg") !important;
+	background-size: cover !important;
 }
 
 .md body{

@@ -1,0 +1,19 @@
+.ion-page{
+	--ion-color-light: transparent !important;
+	background-image: url("/theme-data/steampunk/steampunk-bg.jpg") !important;
+	background-size: cover !important;
+}
+
+@font-face {
+	font-family: "Shadow of Xizor";
+	src: url("/theme-data/steampunk/SHAXIZOR.TTF") format("truetype");
+	font-weight: normal;
+	font-style: normal;
+        }
+
+
+.ion-text-nowrap {
+	font-family: "Shadow of Xizor" !important;
+	font-size:160% !important;
+	color:#ffffff !important;
+  }
