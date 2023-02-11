@@ -24,7 +24,9 @@
 			"danger",
 			"cinema",
 			"earth",
-			"steampunk"
+			"steampunk",
+			"iron-spiderman",
+			"wall-e"
 			],
 		"startSound": "/home/dietpi/MuPiBox/sysmedia/sound/startup.wav",
 		"shutSound": "/home/dietpi/MuPiBox/sysmedia/sound/shutdown.wav",

@@ -19,8 +19,9 @@ ion-item{
 }
 
 ion-col ion-button {
-	height: 70px;
+	height: 70px !important;
 	background-color:rgba(255,255,255,.1) !important;
+	margin-bottom:-35px !important;
 }
 
 @font-face {
@@ -37,7 +38,6 @@ ion-col ion-button {
 	color:#ffffff !important;
   }
 
-
 ion-card-title.ion-text-nowrap.truncate-text {
 
 /*      color: #000000 !important;*/
@@ -50,7 +50,6 @@ ion-card {
 }
 
 .circle-card {
-	margin:0 !important;
 	border: 8px solid rgba(255,255,255,.2) !important;
 	background-color: #transparent !important;
 }

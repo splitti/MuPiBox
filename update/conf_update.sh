@@ -82,3 +82,8 @@ EARTH=$(/usr/bin/cat ${CONFIG} | grep earth)
 if [[ -z ${EARTH} ]]; then 
 		/usr/bin/cat <<< $(/usr/bin/jq --arg v "earth" '.mupibox.installedThemes? += [$v]' ${CONFIG}) >  ${CONFIG}
 fi
+
+STEAMPUNK=$(/usr/bin/cat ${CONFIG} | grep steampunk)
+if [[ -z ${STEAMPUNK} ]]; then 
+		/usr/bin/cat <<< $(/usr/bin/jq --arg v "steampunk" '.mupibox.installedThemes? += [$v]' ${CONFIG}) >  ${CONFIG}
+fi
