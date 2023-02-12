@@ -100,3 +100,16 @@ ion-title {
 ion-back-button {
 	color: #fd7f39 !important;
 }
+
+.item-lines-inset {
+        background-color: #000000 !important;
+        background-image: none !important;
+}
+
+.round {
+--border-radius: 0% !important;
+}
+
+.ion-color-danger {
+--ion-color-danger:#FFFF33 !important;
+}

@@ -87,3 +87,8 @@ STEAMPUNK=$(/usr/bin/cat ${CONFIG} | grep steampunk)
 if [[ -z ${STEAMPUNK} ]]; then 
 		/usr/bin/cat <<< $(/usr/bin/jq --arg v "steampunk" '.mupibox.installedThemes? += [$v]' ${CONFIG}) >  ${CONFIG}
 fi
+
+IRONSPIDER=$(/usr/bin/cat ${CONFIG} | grep iron-spiderman)
+if [[ -z ${IRONSPIDER} ]]; then 
+		/usr/bin/cat <<< $(/usr/bin/jq --arg v "iron-spiderman" '.mupibox.installedThemes? += [$v]' ${CONFIG}) >  ${CONFIG}
+fi
