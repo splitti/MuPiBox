@@ -6,14 +6,97 @@
 
 @font-face {
 	font-family: "Shadow of Xizor";
-	src: url("/theme-data/steampunk/SHAXIZOR.TTF") format("truetype");
-	font-weight: normal;
-	font-style: normal;
-        }
+	src: url("/theme-data/steampunk/akaPosse.ttf") format("truetype");
+}
 
 
 .ion-text-nowrap {
 	font-family: "Shadow of Xizor" !important;
-	font-size:160% !important;
-	color:#ffffff !important;
-  }
+	font-size:170% !important;
+	color:#fd7f39 !important;
+}
+
+ion-button {
+	color:#fd7f39 !important;
+}
+
+toolbar-container {
+	color:#fd7f39 !important;
+}
+
+.md body{
+	--ion-background-color: transparent !important;
+}
+
+.md .circle-card img{
+	margin:auto !important;
+	display:block !important;
+/*	width:78% !important;
+	height:78% !important;*/
+	border-radius:50% !important;
+}
+
+.md .circle-card {
+	border-radius: 0px !important;
+	border: 0px solid transparent !important;
+	padding: 19% !important;
+	background-color: transparent !important;
+	background-image: url("/theme-data/steampunk/steampunk-gear.png") !important;
+	background-size: 240px 240px !important;
+	display: flex;
+	justify-content: center;
+	box-shadow:0 0 0 0 !important;
+}
+
+.ion-color-light {
+	background-image: url("/theme-data/steampunk/steampunk-header.jpg") !important;
+}
+
+ion-card-header{
+	border: 0 !important;
+	background: transparent !important;
+	max-height:60px !important;
+	background-image: url("/theme-data/steampunk/steampunk-header.jpg") !important;
+}
+
+ion-card {
+	background: transparent !important;
+}
+
+ion-col ion-button {
+	height: 70px !important;
+	/* background-color:rgba(255,255,255,.1) !important;*/
+	margin-bottom:-35px !important;
+}
+
+ion-item{
+	background-image: url("/theme-data/steampunk/steampunk-header.jpg") !important;
+	--background: transparent !important;
+	box-shadow: 0 0 0 0 !imporant;
+}
+
+ion-range{
+	--knob-background: #C84700;
+	--bar-background-active: #C84700;
+	--bar-background: rgba(255,255,255,.3) !important;
+}
+
+ion-icon{
+	color: #fd7f39 !important;
+}
+
+.ion-activatable {
+	--background-hover-opacity: 0.3 !important;
+	--indicator-height: 4px !important;
+	--ion-color-contrast: #C84700 !important;
+}
+
+ion-title {
+	color: #fd7f39 !important;
+	font-family: "Shadow of Xizor" !important;
+	font-size:170% !important;
+}
+
+ion-back-button {
+	color: #fd7f39 !important;
+}
