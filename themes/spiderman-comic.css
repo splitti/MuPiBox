@@ -1,0 +1,90 @@
+ion-range{
+	--knob-background: #B11313;
+	--bar-background-active: #DF1F2D;
+	--bar-background: rgba(255,255,255,.4) !important;
+}
+
+ion-item{
+	--background: transparent !important;
+	box-shadow: 0 0 0 0 !imporant;
+}
+
+.ion-page{
+	--ion-color-light: transparent !important;
+	background-image: url("/theme-data/spiderman-comic/spiderman-comic-bg.png") !important;
+	background-size: cover !important;
+}
+
+.md body{
+	--ion-background-color: transparent !important;
+}
+
+ion-col ion-button {
+	height: 70px !important;
+	background-color:rgba(68,123,190,.1) !important;
+	margin-bottom:-35px !important;
+}
+
+@font-face {
+	font-family: "Nasa21";
+	src: url("/theme-data/spiderman-comic/Nasa21.ttf") format("truetype");
+	font-weight: normal;
+	font-style: normal;
+}
+
+
+.ion-text-nowrap {
+	font-family: "Nasa21" !important;
+	font-size:160% !important;
+	color:#ffffff !important;
+}
+
+ion-card {
+	background: transparent !important;
+	box-shadow: 0px 0px 0px 0px !important;
+}
+
+.circle-card {
+	background-size: 240px 240px !important;
+	padding:40px !important;
+	border: 0px solid rgba(68,123,190,.4) !important;
+	background-color: transparent !important;
+	background-image: url("/theme-data/spiderman-comic/spiderman-comic-web.png") !important;
+}
+
+.md .circle-card img{
+	margin:auto !important;
+	display:block !important;
+	border-radius:50% !important;
+}
+
+
+ion-card-header{
+	border: 0 !important;
+	background: rgba(68,123,190,.4) !important;
+	box-shadow: 10px 20px 0px 0px !important;
+}
+
+.ion-color-light {
+	background: #B11313 !important;
+}
+
+ion-icon{
+	color: #ffffff !important;
+}
+
+.ion-activatable {
+	--background-hover-opacity: 0.3 !important;
+	--indicator-height: 4px !important;
+	--ion-color-contrast: #ffffff !important;
+}
+
+ion-title {
+	color: #ffffff !important;
+	font-family: "Nasa21" !important;
+	font-size:170% !important;
+}
+
+ion-back-button {
+	color: #ffffff !important;
+}

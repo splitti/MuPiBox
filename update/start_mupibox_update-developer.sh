@@ -67,20 +67,33 @@ sudo service mupi_idle_shutdown stop
 	sudo mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk >&3 2>&3
 	sudo mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/iron-spiderman >&3 2>&3
 	sudo mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/wall-e >&3 2>&3
+	sudo mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/spiderman-comic >&3 2>&3
+	
+	#SPIDERMAN-COMIC
+	sudo wget ${SRC}/themes/spiderman-comic/Nasa21.ttf -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/spiderman-comic/Nasa21.ttf >&3 2>&3
+	sudo wget ${SRC}/themes/spiderman-comic/spiderman-comic-bg.png -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/spiderman-comic/spiderman-comic-bg.png >&3 2>&3
+	sudo wget ${SRC}/themes/spiderman-comic/spiderman-comic-web.png -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/spiderman-comic/spiderman-comic-web.png >&3 2>&3
+
+	#IRON-SPIDERMAN
 	sudo wget ${SRC}/themes/iron-spiderman/iron-spiderman-bg.jpg -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/iron-spiderman/iron-spiderman-bg.jpg >&3 2>&3
 	sudo wget ${SRC}/themes/iron-spiderman/Nasa21.ttf -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/iron-spiderman/Nasa21.ttf >&3 2>&3
+
+	#EARTH
 	sudo wget ${SRC}/themes/earth/earth-bg.jpg -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/earth/earth-bg.jpg >&3 2>&3
 	sudo wget ${SRC}/themes/earth/Nasa21.ttf -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/earth/Nasa21.ttf >&3 2>&3
+
+	#STEAMPUNK
 	sudo wget ${SRC}/themes/steampunk/steampunk-bg.jpg -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/steampunk-bg.jpg >&3 2>&3
 	sudo wget ${SRC}/themes/steampunk/akaPosse.ttf -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/akaPosse.ttf >&3 2>&3
 	sudo wget ${SRC}/themes/steampunk/steampunk-gear.png -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/steampunk-gear.png >&3 2>&3
 	sudo wget ${SRC}/themes/steampunk/steampunk-header.jpg -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/steampunk-header.jpg >&3 2>&3
+
 	sudo chown dietpi:dietpi -R /home/dietpi/.mupibox/Sonos-Kids-Controller-master/
 
+	sudo wget ${SRC}/themes/spiderman-comic.css -O /home/dietpi/MuPiBox/themes/spiderman-comic.css >&3 2>&3
 	sudo wget ${SRC}/themes/iron-spiderman.css -O /home/dietpi/MuPiBox/themes/iron-spiderman.css >&3 2>&3
 	sudo wget ${SRC}/themes/earth.css -O /home/dietpi/MuPiBox/themes/earth.css >&3 2>&3
 	sudo wget ${SRC}/themes/steampunk.css -O /home/dietpi/MuPiBox/themes/steampunk.css >&3 2>&3
-	sudo wget ${SRC}/themes/earth.css -O /home/dietpi/MuPiBox/themes/iron-spiderman.css >&3 2>&3
 	sudo wget ${SRC}/themes/earth.css -O /home/dietpi/MuPiBox/themes/wall-e.css >&3 2>&3
 	sudo wget ${SRC}/themes/dark.css -O /home/dietpi/MuPiBox/themes/dark.css >&3 2>&3
 	sudo wget ${SRC}/themes/blue.css -O /home/dietpi/MuPiBox/themes/blue.css >&3 2>&3
