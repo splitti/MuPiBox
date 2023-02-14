@@ -88,12 +88,3 @@ if [[ -z ${STEAMPUNK} ]]; then
 		/usr/bin/cat <<< $(/usr/bin/jq --arg v "steampunk" '.mupibox.installedThemes? += [$v]' ${CONFIG}) >  ${CONFIG}
 fi
 
-IRONSPIDER=$(/usr/bin/cat ${CONFIG} | grep iron-spiderman)
-if [[ -z ${IRONSPIDER} ]]; then 
-		/usr/bin/cat <<< $(/usr/bin/jq --arg v "iron-spiderman" '.mupibox.installedThemes? += [$v]' ${CONFIG}) >  ${CONFIG}
-fi
-
-SPIDERMANC=$(/usr/bin/cat ${CONFIG} | grep spiderman-comic)
-if [[ -z ${SPIDERMANC} ]]; then 
-		/usr/bin/cat <<< $(/usr/bin/jq --arg v "spiderman-comic" '.mupibox.installedThemes? += [$v]' ${CONFIG}) >  ${CONFIG}
-fi

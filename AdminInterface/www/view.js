@@ -116,12 +116,6 @@ imageList['earth'] = new Image(150, 250);
 imageList['earth'].src = "images/earth_2.0.0.png";
 imageList['steampunk'] = new Image(150, 250);
 imageList['steampunk'].src = "images/steampunk_2.0.0.png";
-imageList['iron-spiderman'] = new Image(150, 250);
-imageList['iron-spiderman'].src = "images/iron-spiderman_2.0.0.png";
-imageList['wall-e'] = new Image(150, 250);
-imageList['wall-e'].src = "images/wall-e_2.0.0.png";
-imageList['spiderman-comic'] = new Image(150, 250);
-imageList['spiderman-comic'].src = "images/spiderman-comic_2.0.0.png";
 
 
 function switchImage() {
