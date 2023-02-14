@@ -1,0 +1,33 @@
+.ion-page{
+	--ion-color-light: transparent !important;
+	background-image: url("/theme-data/fantasy-butterflies/fantasy-butterflies-bg.jpg") !important;
+	background-size: cover !important;
+}
+
+.md body{
+	--ion-background-color: transparent !important;
+}
+
+@font-face {
+	font-family: "Tangerine";
+	src: url("/theme-data/fantasy-butterflies/Tangerine_Regular.ttf") format("truetype");
+	font-weight: normal;
+	font-style: normal;
+        }
+
+
+.ion-text-nowrap {
+	font-family: "Tangerine" !important;
+	font-size:160% !important;
+	color:#ffffff !important;
+  }
+
+ion-range{
+	--knob-background: #4287f5;
+	--bar-background-active: #4287f5;
+	--bar-background: rgba(255,255,255,.2) !important;
+}
+
+ion-item{
+	--background: transparent !important;
+	box-shadow: 0 0 0 0 !imporant;

@@ -65,6 +65,11 @@ sudo service mupi_idle_shutdown stop
 	# MuPiBox
 	sudo mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/earth >&3 2>&3
 	sudo mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk >&3 2>&3
+	sudo mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/fantasy-butterflies >&3 2>&3
+	
+	#FANTASY-BUTTERFLIES
+	sudo wget ${SRC}/themes/fantasy-butterflies/Tangerine_Regular.ttf -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/fantasy-butterflies/Tangerine_Regular.ttf >&3 2>&3
+	sudo wget ${SRC}/themes/fantasy-butterflies/fantasy-butterflies-bg.jpg -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/fantasy-butterflies/fantasy-butterflies-bg.jpg >&3 2>&3
 	
 	#EARTH
 	sudo wget ${SRC}/themes/earth/earth-bg.jpg -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/earth/earth-bg.jpg >&3 2>&3
@@ -78,6 +83,7 @@ sudo service mupi_idle_shutdown stop
 
 	sudo chown dietpi:dietpi -R /home/dietpi/.mupibox/Sonos-Kids-Controller-master/
 
+	sudo wget ${SRC}/themes/earth.css -O /home/dietpi/MuPiBox/themes/fantasy-butterflies.css >&3 2>&3
 	sudo wget ${SRC}/themes/earth.css -O /home/dietpi/MuPiBox/themes/earth.css >&3 2>&3
 	sudo wget ${SRC}/themes/steampunk.css -O /home/dietpi/MuPiBox/themes/steampunk.css >&3 2>&3
 	sudo wget ${SRC}/themes/dark.css -O /home/dietpi/MuPiBox/themes/dark.css >&3 2>&3

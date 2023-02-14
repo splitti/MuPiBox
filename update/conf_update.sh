@@ -88,3 +88,7 @@ if [[ -z ${STEAMPUNK} ]]; then
 		/usr/bin/cat <<< $(/usr/bin/jq --arg v "steampunk" '.mupibox.installedThemes? += [$v]' ${CONFIG}) >  ${CONFIG}
 fi
 
+FANTASY_BUTTERFLIES=$(/usr/bin/cat ${CONFIG} | grep fantasy-butterflies)
+if [[ -z ${FANTASY_BUTTERFLIES} ]]; then 
+		/usr/bin/cat <<< $(/usr/bin/jq --arg v "fantasy-butterflies" '.mupibox.installedThemes? += [$v]' ${CONFIG}) >  ${CONFIG}
+fi
