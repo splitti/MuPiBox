@@ -533,7 +533,7 @@ export class AddPage implements OnInit, AfterViewInit {
           ||
           (show?.length > 0 && !(query?.length > 0))
           ||
-          (playlist?.length > 0 && !(query?.length > 0))
+          (playlist?.length > 0 && artist?.length > 0 && !(query?.length > 0))
           ||
           (this.edit && (artist?.length > 0))
           ||
