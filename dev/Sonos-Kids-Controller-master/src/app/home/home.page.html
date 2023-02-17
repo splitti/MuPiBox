@@ -37,7 +37,7 @@
     </ion-toolbar>
 </ion-header>
 
-<ion-content>
+<ion-content class="home-content">
     <div *ngIf="category === 'audiobook' || category === 'music'; then artistBlock else mediaBlock"></div>
 
     <ng-template #artistBlock>
