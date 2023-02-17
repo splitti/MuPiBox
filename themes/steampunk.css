@@ -39,7 +39,7 @@ toolbar-container {
 .md .circle-card {
 	border-radius: 0px !important;
 	border: 0px solid transparent !important;
-	padding: 19% !important;
+	padding: 2.85rem !important;
 	background-color: transparent !important;
 	background-image: url("/theme-data/steampunk/steampunk-gear.png") !important;
 	background-size: 240px 240px !important;
