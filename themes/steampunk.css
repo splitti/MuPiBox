@@ -54,6 +54,12 @@ body .home-content, body .medialist-content, body .player-content{
         background-size: cover !important;
 }
 
+
+.medialist-content ion-card-header, .medialist-content ion-card{
+        margin-top:2.1rem !important;
+        background: transparent !important;
+}
+
 .medialist-content ion-card-header, .home-content ion-card-header{
         border: 0 !important;
         background: transparent !important;
@@ -61,6 +67,10 @@ body .home-content, body .medialist-content, body .player-content{
         background-image: url("/theme-data/steampunk/steampunk-header.jpg") !important;
 }
 
+.medialist-content .media-card {
+        margin-bottom:0px !important;
+        padding-bottom:0px !important;
+}
 
 .player-content ion-col ion-button {
         height: 70px !important;
