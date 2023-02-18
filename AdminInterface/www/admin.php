@@ -182,6 +182,26 @@
 		}
 	if( $_POST['update'] )
 		{
+		/*UPDATE 3.0.0*/
+		$str_data = file_get_contents('/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json', true);
+		$data_json_playlistid = json_decode($str_data, true);
+		include ('includes/header.php');
+		$i = 0;
+		foreach($data_json_playlistid as $mydata)
+			{
+			if( $mydata['category'] == "playlist" )
+				{
+				$data_json_playlistid[$i]['category'] = "music";
+				$data_json_playlistid[$i]['playlistid'] = $mydata['id'];
+				unset($data_json_playlistid[$i]['id']);
+				}
+			$i++;
+			}
+		$json_changed = json_encode($data_json_playlistid);
+		file_put_contents('/tmp/data.json', $json_changed );
+		exec("sudo mv /tmp/data.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json");
+		exec("sudo chown dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json");
+		/*END OF UPDATE 3.0.0*/
 		$command = "sudo /usr/local/bin/mupibox/./setting_update.sh";
 		exec($command, $output, $result );
 		$change=3;
