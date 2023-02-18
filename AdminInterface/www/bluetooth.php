@@ -144,7 +144,7 @@
 </select>
                
                                 <input id="saveForm" class="button_text" type="submit" name="pair_selected" value="Pair selected device" />
-</div>
+</div></form>
                 </li>
                                 <li>
                                 <div class="description">
@@ -170,8 +170,9 @@
                 </div>
                                 </li>
                         </ul>
+	<form class='appnitro'  method='post' action='bluetooth.php' id='remform'>
 	<details>
-		<summary><i class="fa-brands fa-gear"></i> Bluetooth-Service</summary>
+		<summary><i class="fa-brands fa-bluetooth"></i> Bluetooth-Service</summary>
 	<ul>
 		<li class="li_1"><h2>Bluetooth-Autoconnect-Helper (Just if automatic reconnect won't work)</h2>
 			<p>
@@ -179,11 +180,12 @@
 			echo "BT-Autoconnect-Service Status: <b>".$btac_state."</b>";
 			?>
 			</p>
-			<input id="saveForm" class="button_text" type="submit" name="change_btac" value="<?php print $change_ftp; ?>" />
+			<input id="saveForm" class="button_text" type="submit" name="change_btac" value="<?php print $change_btac; ?>" />
 		</li>
 	</ul>
-	</details>  
-</form>
+	</details>
+	</form>
+
 <?php
         include ('includes/footer.php');
 ?>
