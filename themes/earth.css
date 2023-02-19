@@ -64,3 +64,7 @@ body .home-content, body .medialist-content, body .player-content{
 	background: rgba(0,0,0,.4) !important;
 	box-shadow: 10px 20px 0px 0px !important;
 }
+
+body .edit-header, body .add-header, body .admin-header {
+	--ion-color-light: #054b61 !important;
+}

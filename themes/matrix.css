@@ -1,26 +1,70 @@
-/*
-BG body{--ion-background-color: #008E21;
-FG --ion-color-light: #DE0000;
-*/
-
-ion-range{
-    --knob-background: #00FF41;
-    --bar-background-active: #00FF41;
-    --bar-background:	#00FF41;
+.player-content ion-range{
+	--knob-background: #4287f5;
+	--bar-background-active: #4287f5;
+	--bar-background: rgba(255,255,255,.2) !important;
 }
 
-body{
-	--ion-color-light: #0D0208 !important;
-	--ion-item-background: transparent !important;
-}
-.md body{
-	--ion-background-color: #00FF41 !important;
+.player-content ion-item{
+	--background: transparent !important;
+	box-shadow: 0 0 0 0 !imporant;
 }
 
-ion-card {
-    --background: #0D0208 !important;
+.ion-page .home-header, .ion-page .home-content, .ion-page .medialist-header, .ion-page .medialist-content, .ion-page .player-header, .ion-page .player-content{
+	--ion-color-light: transparent !important;
 }
 
-ion-card-title.ion-text-nowrap.truncate-text {
-/*	color: #000000 !important;*/
+.ion-page{
+	background-image: url("/theme-data/matrix/matrix-bg.png") !important;
+	background-size: cover !important;
+}
+
+body .home-content, body .medialist-content, body .player-content{
+	--ion-background-color: transparent !important;
+}
+
+/*ion-col ion-button {
+	height: 70px !important;
+	background-color:rgba(255,255,255,.1) !important;
+	margin-bottom:-35px !important;
+}*/
+
+@font-face {
+	font-family: "Pixolletta 8px";
+	src: url("/theme-data/matrix/Pixolletta8px.ttf") format("truetype");
+	font-weight: normal;
+	font-style: normal;
+        }
+
+
+.home-content .ion-text-nowrap, .medialist-content .ion-text-nowrap {
+	font-family: "Pixolletta 8px" !important;
+	font-size:160% !important;
+	color:#ffffff !important;
+  }
+  
+  .medialist-header ion-title, .player-header ion-title {
+	color: #ffffff !important;
+	font-family: "Pixolletta 8px" !important;
+	font-size:160% !important;
+}
+
+
+.medialist-content ion-card, .home-content ion-card {
+	background: transparent !important;
+	box-shadow: 0px 0px 0px 0px !important;	
+}
+
+.home-content .circle-card {
+	border: 8px solid rgba(255,255,255,.2) !important;
+	background-color: transparent !important;
+}
+
+.medialist-content ion-card-header, .home-content ion-card-header {
+	border: 0 !important;
+	background: rgba(0,0,0,.4) !important;
+	box-shadow: 10px 20px 0px 0px !important;
+}
+
+body .edit-header, body .add-header, body .admin-header {
+	--ion-color-light: #054b61 !important;
 }

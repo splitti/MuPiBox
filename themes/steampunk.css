@@ -19,14 +19,6 @@
         color:#fd7f39 !important;
 }
 
-/*.player-content ion-button {
-        color:#fd7f39 !important;
-}*/
-
-/*.player-content toolbar-container {
-        color: #fd7f39 !important;
-}*/
-
 body .home-content, body .medialist-content, body .player-content{
         --ion-background-color: transparent !important;
 }
@@ -107,4 +99,8 @@ body .home-content, body .medialist-content, body .player-content{
 
 .medialist-header ion-back-button, .player-header ion-back-button {
         color: #fd7f39 !important;
+}
+
+body .edit-header, body .add-header, body .admin-header {
+	--ion-color-light: #054b61 !important;
 }
