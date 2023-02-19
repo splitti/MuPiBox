@@ -56,7 +56,6 @@ body .home-content, body .medialist-content, body .player-content{
 
 
 .medialist-content ion-card-header, .medialist-content ion-card{
-        margin-top:2.1rem !important;
         background: transparent !important;
 }
 

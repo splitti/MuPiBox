@@ -1,5 +1,5 @@
 .ion-page .home-header, .ion-page .home-content, .ion-page .medialist-header, .ion-page .medialist-content, .ion-page .player-header, .ion-page .player-content{
-        --ion-color-light: rgba(0,0,0,.4) !important !important;
+        --ion-color-light: rgba(0,0,0,.4) !important;
 }
 
 
@@ -51,7 +51,7 @@ body .home-content, body .medialist-content, body .player-content{
 .home-content .circle-card {
 	border-radius: 0px !important;
 	border: 0px solid transparent !important;
-	padding: 15% !important;
+	padding: 2.2rem !important;
 	background-color: transparent !important;
 	background-image: url("/theme-data/fantasybutterflies/fantasy-circle-bg.png") !important;
 	background-size: 240px 240px !important;
@@ -60,11 +60,11 @@ body .home-content, body .medialist-content, body .player-content{
 	box-shadow:0 0 0 0 !important;
 }
 
-.medialist-content ion-card{
+.medialist-content ion-card, .home-content ion-card {
 	background: transparent !important;
 }
 
-.medialist-content ion-card-header {
+.medialist-content ion-card-header, .home-content ion-card-header {
 	border: 0 !important;
 	background: rgba(0,0,0,.4) !important;
 }
