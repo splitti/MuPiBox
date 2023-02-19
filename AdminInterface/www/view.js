@@ -116,8 +116,8 @@ imageList['earth'] = new Image(150, 250);
 imageList['earth'].src = "images/earth_2.0.0.png";
 imageList['steampunk'] = new Image(150, 250);
 imageList['steampunk'].src = "images/steampunk_2.0.0.png";
-imageList['fantasy-butterflies'] = new Image(150, 250);
-imageList['fantasy-butterflies'].src = "images/fantasy-butterflies_2.0.0.png";
+imageList['fantasybutterflies'] = new Image(150, 250);
+imageList['fantasybutterflies'].src = "images/fantasybutterflies_2.0.0.png";
 
 
 function switchImage() {

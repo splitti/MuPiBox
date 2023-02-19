@@ -65,12 +65,12 @@ sudo service mupi_idle_shutdown stop
 	# MuPiBox
 	sudo mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/earth >&3 2>&3
 	sudo mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk >&3 2>&3
-	sudo mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/fantasy-butterflies >&3 2>&3
+	sudo mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/fantasybutterflies >&3 2>&3
 	
 	#FANTASY-BUTTERFLIES
-	sudo wget ${SRC}/themes/fantasy-butterflies/odstemplikBold.otf -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/fantasy-butterflies/odstemplikBold.otf >&3 2>&3
-	sudo wget ${SRC}/themes/fantasy-butterflies/fantasy-butterflies-bg.jpg -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/fantasy-butterflies/fantasy-butterflies-bg.jpg >&3 2>&3
-	sudo wget ${SRC}/themes/fantasy-butterflies/fantasy-circle-bg.png -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/fantasy-butterflies/fantasy-circle-bg.png >&3 2>&3
+	sudo wget ${SRC}/themes/fantasybutterflies/odstemplikBold.otf -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/fantasybutterflies/odstemplikBold.otf >&3 2>&3
+	sudo wget ${SRC}/themes/fantasybutterflies/fantasy-butterflies-bg.jpg -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/fantasybutterflies/fantasy-butterflies-bg.jpg >&3 2>&3
+	sudo wget ${SRC}/themes/fantasybutterflies/fantasy-circle-bg.png -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/fantasybutterflies/fantasy-circle-bg.png >&3 2>&3
 
 	
 	#EARTH
