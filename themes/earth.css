@@ -9,8 +9,11 @@
 	box-shadow: 0 0 0 0 !imporant;
 }
 
-.ion-page{
+.ion-page .home-header, .ion-page .home-content, .ion-page .medialist-header, .ion-page .medialist-content, .ion-page .player-header, .ion-page .player-content{
 	--ion-color-light: transparent !important;
+}
+
+.ion-page{
 	background-image: url("/theme-data/earth/earth-bg.jpg") !important;
 	background-size: cover !important;
 }
