@@ -1,66 +1,70 @@
+.ion-page .home-header, .ion-page .home-content, .ion-page .medialist-header, .ion-page .medialist-content, .ion-page .player-header, .ion-page .player-content{
+        --ion-color-light: rgba(0,0,0,.4) !important !important;
+}
+
+
 .ion-page{
-	--ion-color-light: rgba(0,0,0,.4) !important;
-	background-image: url("/theme-data/fantasy-butterflies/fantasy-butterflies-bg.jpg") !important;
+	background-image: url("/theme-data/fantasybutterflies/fantasy-butterflies-bg.jpg") !important;
 	background-size: cover !important;
 }
 
-.md body{
-	--ion-background-color: transparent !important;
+body .home-content, body .medialist-content, body .player-content{
+        --ion-background-color: transparent !important;
 }
 
 @font-face {
 	font-family: "Odstemplik";
-	src: url("/theme-data/fantasy-butterflies/odstemplikBold.otf") format("opentype");
+	src: url("/theme-data/fantasybutterflies/odstemplikBold.otf") format("opentype");
 	font-weight: normal;
 	font-style: normal;
 }
 
-.ion-text-nowrap {
+.home-content .ion-text-nowrap, .medialist-content .ion-text-nowrap {
 	font-family: "Odstemplik" !important;
 	font-size:160% !important;
 	color:#ffffff !important;
 }
 
-ion-range{
+.player-content ion-range{
 	--knob-background: #4287f5;
 	--bar-background-active: #4287f5;
 	--bar-background: rgba(255,255,255,.2) !important;
 }
 
-ion-item{
+.player-content ion-item{
 	--background: transparent !important;
 }
 
-ion-title {
+.medialist-header ion-title, .player-header ion-title {
 	color: #ffffff !important;
 	font-family: "Odstemplik" !important;
 	font-size:160% !important;
 }
 
-.md .circle-card img{
+.home-content .circle-card img{
 	margin:auto !important;
 	display:block !important;
 	border-radius:50% !important;
 	border: 5px solid rgba(255,255,255,.5) !important;
 }
 
-.md .circle-card {
+.home-content .circle-card {
 	border-radius: 0px !important;
 	border: 0px solid transparent !important;
 	padding: 15% !important;
 	background-color: transparent !important;
-	background-image: url("/theme-data/fantasy-butterflies/fantasy-circle-bg.png") !important;
+	background-image: url("/theme-data/fantasybutterflies/fantasy-circle-bg.png") !important;
 	background-size: 240px 240px !important;
 	display: flex;
 	justify-content: center;
 	box-shadow:0 0 0 0 !important;
 }
 
-ion-card {
+.medialist-content ion-card{
 	background: transparent !important;
 }
 
-ion-card-header{
+.medialist-content ion-card-header {
 	border: 0 !important;
 	background: rgba(0,0,0,.4) !important;
 }
