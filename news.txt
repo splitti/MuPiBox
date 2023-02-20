@@ -1,16 +1,5 @@
 <h3>Last updates</h3>
-<ul id='ulnews' class='ulnews'>
-<li id='linews' class='linews'>Dim Power-LED</li>
-<li id='linews' class='linews'>Regesign of structure in the admin interface</li>
-<li id='linews' class='linews'>Adding sleep-timer</li>
-<li id='linews' class='linews'>Adding disyplay-rotation</li>
-<li id='linews' class='linews'>Adding and deleting Wifi in admin-interface</li>
-<li id='linews' class='linews'>Restriction of the PIN selection for the power LED (due to PWM restrictions)</li>
-<li id='linews' class='linews'>Better touch control (sliders)</li>
-<li id='linews' class='linews'>News and announcements in the admin interface</li>
-<li id='linews' class='linews'>ogg-support</li>
-</ul>
-<h3>DEVELOPMENT: Last updates</h3>
+<iframe width="560" height="315" src="https://www.youtube.com/embed/D7lRq-nNLHw" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>Adding offset and limit</li>
 <li id='linews' class='linews'>Adding artist as search criteria</li>
