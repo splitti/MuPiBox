@@ -76,7 +76,7 @@ sudo service mupi_idle_shutdown stop
 
 	#LINES
 	sudo wget ${SRC}/themes/lines/lines-bg.png -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/lines/lines-bg.png >&3 2>&3
-	sudo wget ${SRC}/themes/lines/BradBunR.ttf -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/lines/BradBunR.ttf >&3 2>&3
+	sudo wget ${SRC}/themes/lines/KOMIKND_.ttf -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/lines/KOMIKND_.ttf >&3 2>&3
 
 	#MATRIX
 	sudo wget ${SRC}/themes/matrix/matrix-bg.png -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/matrix/matrix-bg.png >&3 2>&3
@@ -94,6 +94,7 @@ sudo service mupi_idle_shutdown stop
 
 	sudo chown dietpi:dietpi -R /home/dietpi/.mupibox/Sonos-Kids-Controller-master/
 
+	sudo wget ${SRC}/themes/lines.css -O /home/dietpi/MuPiBox/themes/lines.css >&3 2>&3
 	sudo wget ${SRC}/themes/fantasybutterflies.css -O /home/dietpi/MuPiBox/themes/fantasybutterflies.css >&3 2>&3
 	sudo wget ${SRC}/themes/earth.css -O /home/dietpi/MuPiBox/themes/earth.css >&3 2>&3
 	sudo wget ${SRC}/themes/steampunk.css -O /home/dietpi/MuPiBox/themes/steampunk.css >&3 2>&3

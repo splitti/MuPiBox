@@ -6,11 +6,10 @@
 
 .player-content ion-item{
         --background: transparent !important;
-        box-shadow: 0 0 0 0 !imporant;
 }
 
 .ion-page .home-header, .ion-page .home-content, .ion-page .medialist-header, .ion-page .medialist-content, .ion-page .player-header, .ion-page .player-content{
-        --ion-color-light: rgba(0,0,0,.6) !important;
+        --ion-color-light: #fdcb01 !important;
 }
 
 .ion-page{
@@ -24,7 +23,7 @@ body .home-content, body .medialist-content, body .player-content{
 
 @font-face {
         font-family: "Brady Bunch Remastered";
-        src: url("/theme-data/lines/BradBunR.ttf") format("truetype");
+        src: url("/theme-data/lines/KOMIKND_.ttf") format("truetype");
         font-weight: normal;
         font-style: normal;
         }
@@ -33,27 +32,27 @@ body .home-content, body .medialist-content, body .player-content{
 .home-content .ion-text-nowrap, .medialist-content .ion-text-nowrap {
         font-family: "Brady Bunch Remastered" !important;
         font-size:150% !important;
-        color:#05fd00 !important;
+        color:#250448 !important;
         padding-top: 0.3rem !important;
         padding-bottom: 0px !important;
   }
 
 .player-header ion-icon, .player-content ion-icon, .home-header ion-icon, .medialist-header ion-icon {
-        color: #05fd00 !important;
+        color: #250448 !important;
 }
 
 .medialist-header ion-back-button, .player-header ion-back-button {
-        color: #05fd00 !important;
+        color: #250448 !important;
 }
 
 .player-header .ion-activatable, .home-header .ion-activatable, .medialist-header .ion-activatable {
         --background-hover-opacity: 0.3 !important;
         --indicator-height: 4px !important;
-        --ion-color-contrast: #05fd00 !important;
+        --ion-color-contrast: #f60261 !important;
 }
   
 .medialist-header ion-title, .player-header ion-title {
-        color: #05fd00 !important;
+        color: #250448 !important;
         font-family: "Brady Bunch Remastered" !important;
         font-size:180% !important;
         padding-top: 0.5rem !important;
@@ -65,7 +64,7 @@ body .home-content, body .medialist-content, body .player-content{
 }
 
 .home-content .circle-card {
-        border: 8px solid rgba(255,255,255,.4) !important;
+        border: 8px solid #f7d803 !important;
         background-color: transparent !important;
 }
 
