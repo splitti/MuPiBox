@@ -14,7 +14,7 @@
 }
 
 .ion-page{
-        background-image: url("/theme-data/matrix/matrix-bg.png") !important;
+        background-image: url("/theme-data/lines/lines-bg.png") !important;
         background-size: cover !important;
 }
 
@@ -23,15 +23,15 @@ body .home-content, body .medialist-content, body .player-content{
 }
 
 @font-face {
-        font-family: "Pixolletta 8px";
-        src: url("/theme-data/matrix/Pixolletta8px.ttf") format("truetype");
+        font-family: "Brady Bunch Remastered";
+        src: url("/theme-data/lines/BradBunR.ttf") format("truetype");
         font-weight: normal;
         font-style: normal;
         }
 
 
 .home-content .ion-text-nowrap, .medialist-content .ion-text-nowrap {
-        font-family: "Pixolletta 8px" !important;
+        font-family: "Brady Bunch Remastered" !important;
         font-size:150% !important;
         color:#05fd00 !important;
         padding-top: 0.3rem !important;
@@ -54,7 +54,7 @@ body .home-content, body .medialist-content, body .player-content{
   
 .medialist-header ion-title, .player-header ion-title {
         color: #05fd00 !important;
-        font-family: "Pixolletta 8px" !important;
+        font-family: "Brady Bunch Remastered" !important;
         font-size:180% !important;
         padding-top: 0.5rem !important;
 }

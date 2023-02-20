@@ -92,3 +92,8 @@ FANTASY_BUTTERFLIES=$(/usr/bin/cat ${CONFIG} | grep fantasybutterflies)
 if [[ -z ${FANTASY_BUTTERFLIES} ]]; then 
 		/usr/bin/cat <<< $(/usr/bin/jq --arg v "fantasybutterflies" '.mupibox.installedThemes? += [$v]' ${CONFIG}) >  ${CONFIG}
 fi
+
+LINES=$(/usr/bin/cat ${CONFIG} | grep lines)
+if [[ -z ${LINES} ]]; then 
+		/usr/bin/cat <<< $(/usr/bin/jq --arg v "lines" '.mupibox.installedThemes? += [$v]' ${CONFIG}) >  ${CONFIG}
+fi
