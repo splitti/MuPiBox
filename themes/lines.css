@@ -1,79 +1,85 @@
 .player-content ion-range{
-        --knob-background: #05fd00;
-        --bar-background-active: #05fd00;
-        --bar-background: rgba(0,0,0,.6) !important;
+	--knob-background: #00ebea;
+	--bar-background-active: #f50261;
+	--bar-background: rgba(255,255,255,.4) !important;
 }
 
 .player-content ion-item{
-        --background: transparent !important;
+	--background: transparent !important;
 }
 
-.ion-page .home-header, .ion-page .home-content, .ion-page .medialist-header, .ion-page .medialist-content, .ion-page .player-header, .ion-page .player-content{
-        --ion-color-light: #fdcb01 !important;
+.ion-page .home-header, .ion-page .home-content, .ion-page .medialist-header, .ion-page .medialist-content, .ion-page .player-header {
+	--ion-color-light: #fdcb01 !important;
+}
+
+.ion-page .player-content {
+	--ion-color-light: #00ebea !important;
 }
 
 .ion-page{
-        background-image: url("/theme-data/lines/lines-bg.png") !important;
-        background-size: cover !important;
+	background-image: url("/theme-data/lines/lines-bg.png") !important;
+	background-size: cover !important;
 }
 
 body .home-content, body .medialist-content, body .player-content{
-        --ion-background-color: transparent !important;
+	--ion-background-color: transparent !important;
 }
 
 @font-face {
-        font-family: "Brady Bunch Remastered";
-        src: url("/theme-data/lines/KOMIKND_.ttf") format("truetype");
-        font-weight: normal;
-        font-style: normal;
-        }
+	font-family: "Komikandy";
+	src: url("/theme-data/lines/KOMIKND_.ttf") format("truetype");
+	font-weight: normal;
+	font-style: normal;
+}
 
 
 .home-content .ion-text-nowrap, .medialist-content .ion-text-nowrap {
-        font-family: "Brady Bunch Remastered" !important;
-        font-size:150% !important;
-        color:#250448 !important;
-        padding-top: 0.3rem !important;
-        padding-bottom: 0px !important;
-  }
+	font-family: "Komikandy" !important;
+	font-size:120% !important;
+	color:#250448 !important;
+	padding-bottom: 0px !important;
+}
 
 .player-header ion-icon, .player-content ion-icon, .home-header ion-icon, .medialist-header ion-icon {
-        color: #250448 !important;
+	color: #250448 !important;
 }
 
 .medialist-header ion-back-button, .player-header ion-back-button {
-        color: #250448 !important;
+	color: #250448 !important;
 }
 
 .player-header .ion-activatable, .home-header .ion-activatable, .medialist-header .ion-activatable {
-        --background-hover-opacity: 0.3 !important;
-        --indicator-height: 4px !important;
-        --ion-color-contrast: #f60261 !important;
-}
-  
-.medialist-header ion-title, .player-header ion-title {
-        color: #250448 !important;
-        font-family: "Brady Bunch Remastered" !important;
-        font-size:180% !important;
-        padding-top: 0.5rem !important;
+	--background-hover-opacity: 0.3 !important;
+	--indicator-height: 8px !important;
+	--ion-color-contrast: #f60261 !important;
 }
 
+.medialist-header ion-title, .player-header ion-title {
+	color: #250448 !important;
+	font-family: "Komikandy" !important;
+	font-size:120% !important;
+}
+
+.medialist-content img, .player-content img {
+	border: 8px solid #f60261 !important;
+	background-color: transparent !important;
+}
 
 .medialist-content ion-card, .home-content ion-card {
-        background: transparent !important;
+	background: transparent !important;
 }
 
 .home-content .circle-card {
-        border: 8px solid #f7d803 !important;
-        background-color: transparent !important;
+	border: 8px solid #f60261 !important;
+	background-color: transparent !important;
 }
 
 .medialist-content ion-card-header, .home-content ion-card-header {
-        border: 0 !important;
-        background: rgba(0,0,0,.6) !important;
-        padding: 16px 10px !important;
+	border: 0 !important;
+	background: #00ebea !important;
+	padding: 16px 10px !important;
 }
 
 body .edit-header, body .add-header, body .admin-header {
-        --ion-color-light: #054b61 !important;
+	--ion-color-light: #054b61 !important;
 }
