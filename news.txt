@@ -15,7 +15,14 @@
 <li id='linews' class='linews'>Adding offset and limit</li>
 <li id='linews' class='linews'>Adding artist as search criteria</li>
 <li id='linews' class='linews'>Adding media has been redesigned</li>
+<li id='linews' class='linews'>Music can be added more intuitively</li>
+<li id='linews' class='linews'>Playlist tab removed (playlists will be moved to music automaticly)</li>
+<li id='linews' class='linews'>More security for the music database with lock files</li>
+<li id='linews' class='linews'>Choose connected devices for spotify output (spotify only!)</li>
+<li id='linews' class='linews'>Chance to move PM2-Logs to RAM</li>
+<li id='linews' class='linews'>Bugfix: Index 0 will be shown</li>
 <li id='linews' class='linews'>Bugfix: Hissing noise on audio jack</li>
 <li id='linews' class='linews'>Bugfix: Show-ID in admin-interface will be shown</li>
+<li id='linews' class='linews'>Bugfix: Cleanup setup errors</li>
 <li id='linews' class='linews'>Bugfix: Chance to set some timers back to 0</li>
 </ul>
