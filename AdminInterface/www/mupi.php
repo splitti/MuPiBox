@@ -633,6 +633,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				<select id="theme" name="theme" class="element text medium" onchange="switchImage();">
 				<?php
 				$Themes = $data["mupibox"]["installedThemes"];
+				asort($Themes);
 				foreach($Themes as $key) {
 				if( $key == $data["mupibox"]["theme"] )
 				{
@@ -645,9 +646,9 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				print "<option value=\"". $key . "\"" . $selected  . ">" . $key . "</option>";
 				}
 				?>
-				"</select>
+				</select>
 				</div>
-				<div class="themePrev"><img src="images/<?php print $data["mupibox"]["theme"]; ?>_2.0.0.png" width="250" height="150" name="selectedTheme" /></div>
+				<div class="themePrev"><img src="images/<?php print $data["mupibox"]["theme"]; ?>.png" width="250" height="150" name="selectedTheme" /></div>
 
 			</li>
 			<li id="li_1" >
