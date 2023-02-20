@@ -55,7 +55,7 @@ body .home-content, body .medialist-content, body .player-content{
 .medialist-header ion-title, .player-header ion-title {
         color: #05fd00 !important;
         font-family: "Pixolletta 8px" !important;
-        font-size:180% !important;
+        font-size:140% !important;
         padding-top: 0.5rem !important;
 }
 
