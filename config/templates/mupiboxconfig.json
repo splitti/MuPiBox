@@ -25,7 +25,8 @@
 			"cinema",
 			"earth",
 			"steampunk",
-			"fantasybutterflies"
+			"fantasybutterflies",
+			"lines"
 			],
 		"startSound": "/home/dietpi/MuPiBox/sysmedia/sound/startup.wav",
 		"shutSound": "/home/dietpi/MuPiBox/sysmedia/sound/shutdown.wav",

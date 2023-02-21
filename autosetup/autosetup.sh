@@ -200,13 +200,42 @@ exec 3>${LOG}
 	###############################################################################################
 
 	echo -e "XXX\n75\nDownload MuPiBox-Files... \nXXX"	
-
 	# MuPiBox
-	wget ${SRC}/themes/earth/earth-bg.jpg -O ~/.mupibox/Sonos-Kids-Controller-master/www/earth-bg.jpg >&3 2>&3
-	wget ${SRC}/themes/earth/Nasa21.ttf -O ~/.mupibox/Sonos-Kids-Controller-master/www/Nasa21.ttf >&3 2>&3
-	sudo wget ${SRC}/themes/earth.css -O ~/MuPiBox/themes/earth.css >&3 2>&3
-
+	sudo mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/earth >&3 2>&3
+	sudo mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk >&3 2>&3
+	sudo mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/fantasybutterflies >&3 2>&3
+	sudo mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/matrix >&3 2>&3
+	sudo mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/lines >&3 2>&3
 	
+	#FANTASY-BUTTERFLIES
+	sudo wget ${SRC}/themes/fantasybutterflies/odstemplikBold.otf -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/fantasybutterflies/odstemplikBold.otf >&3 2>&3
+	sudo wget ${SRC}/themes/fantasybutterflies/fantasy-butterflies-bg.jpg -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/fantasybutterflies/fantasy-butterflies-bg.jpg >&3 2>&3
+	sudo wget ${SRC}/themes/fantasybutterflies/fantasy-circle-bg.png -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/fantasybutterflies/fantasy-circle-bg.png >&3 2>&3
+
+	#LINES
+	sudo wget ${SRC}/themes/lines/lines-bg.png -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/lines/lines-bg.png >&3 2>&3
+	sudo wget ${SRC}/themes/lines/KOMIKND_.ttf -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/lines/KOMIKND_.ttf >&3 2>&3
+
+	#MATRIX
+	sudo wget ${SRC}/themes/matrix/matrix-bg.png -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/matrix/matrix-bg.png >&3 2>&3
+	sudo wget ${SRC}/themes/matrix/Pixolletta8px.ttf -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/matrix/Pixolletta8px.ttf >&3 2>&3
+	
+	#EARTH
+	sudo wget ${SRC}/themes/earth/earth-bg.jpg -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/earth/earth-bg.jpg >&3 2>&3
+	sudo wget ${SRC}/themes/earth/Nasa21.ttf -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/earth/Nasa21.ttf >&3 2>&3
+
+	#STEAMPUNK
+	sudo wget ${SRC}/themes/steampunk/steampunk-bg.jpg -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/steampunk-bg.jpg >&3 2>&3
+	sudo wget ${SRC}/themes/steampunk/akaPosse.ttf -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/akaPosse.ttf >&3 2>&3
+	sudo wget ${SRC}/themes/steampunk/steampunk-gear.png -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/steampunk-gear.png >&3 2>&3
+	sudo wget ${SRC}/themes/steampunk/steampunk-header.jpg -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/steampunk-header.jpg >&3 2>&3
+
+	sudo chown dietpi:dietpi -R /home/dietpi/.mupibox/Sonos-Kids-Controller-master/
+
+	sudo wget ${SRC}/themes/lines.css -O /home/dietpi/MuPiBox/themes/lines.css >&3 2>&3
+	sudo wget ${SRC}/themes/fantasybutterflies.css -O /home/dietpi/MuPiBox/themes/fantasybutterflies.css >&3 2>&3
+	sudo wget ${SRC}/themes/earth.css -O /home/dietpi/MuPiBox/themes/earth.css >&3 2>&3
+	sudo wget ${SRC}/themes/steampunk.css -O /home/dietpi/MuPiBox/themes/steampunk.css >&3 2>&3	
 	sudo wget ${SRC}/themes/dark.css -O ~/MuPiBox/themes/dark.css >&3 2>&3
 	sudo wget ${SRC}/themes/blue.css -O ~/MuPiBox/themes/blue.css >&3 2>&3
 	sudo wget ${SRC}/themes/purple.css -O ~/MuPiBox/themes/purple.css >&3 2>&3

@@ -13,7 +13,7 @@ sudo service mupi_idle_shutdown stop
 	echo -e "XXX\n0\nPrepare Update... \nXXX"	 >&3 2>&3
 	sudo systemctl stop mupi_idle_shutdown.service >&3 2>&3
 	sudo mkdir /home/dietpi/.mupibox/chromium_cache >&3 2>&3	
-	sudo mkdir /home/dietpi/MuPiBox/media/audiobook >&3 2>&3
+	sudo mkdir /home/dietpi/MuPiBox/media/audiobook >&3 2>&3	
 	sudo mkdir /home/dietpi/MuPiBox/media/music >&3 2>&3
 	sudo mkdir /home/dietpi/MuPiBox/media/cover >&3 2>&3
 	sudo chown dietpi:dietpi /home/dietpi/MuPiBox/media/audiobook >&3 2>&3
@@ -42,7 +42,7 @@ sudo service mupi_idle_shutdown stop
 	sudo unzip /home/dietpi/.mupibox/Sonos-Kids-Controller-master/deploy.zip -d /home/dietpi/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
 	sudo rm /home/dietpi/.mupibox/Sonos-Kids-Controller-master/deploy.zip >&3 2>&3
 	sudo wget ${SRC}/config/templates/www.json -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >&3 2>&3
-	sudo chown -R dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master
+	sudo chown dietpi:dietpi -R /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www >&3 2>&3
 
 	echo -e "XXX\n18\nUpdate MPlayer Wrapper... \nXXX"	
 	sudo wget ${SRC}/dev/customize/mplayer-wrapper/index.js -O /home/dietpi/.mupibox/mplayer-wrapper/index.js >&3 2>&3
@@ -63,6 +63,41 @@ sudo service mupi_idle_shutdown stop
 	echo -e "XXX\n22\nDownload MuPiBox-Files... \nXXX"	
 
 	# MuPiBox
+	sudo mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/earth >&3 2>&3
+	sudo mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk >&3 2>&3
+	sudo mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/fantasybutterflies >&3 2>&3
+	sudo mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/matrix >&3 2>&3
+	sudo mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/lines >&3 2>&3
+	
+	#FANTASY-BUTTERFLIES
+	sudo wget ${SRC}/themes/fantasybutterflies/odstemplikBold.otf -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/fantasybutterflies/odstemplikBold.otf >&3 2>&3
+	sudo wget ${SRC}/themes/fantasybutterflies/fantasy-butterflies-bg.jpg -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/fantasybutterflies/fantasy-butterflies-bg.jpg >&3 2>&3
+	sudo wget ${SRC}/themes/fantasybutterflies/fantasy-circle-bg.png -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/fantasybutterflies/fantasy-circle-bg.png >&3 2>&3
+
+	#LINES
+	sudo wget ${SRC}/themes/lines/lines-bg.png -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/lines/lines-bg.png >&3 2>&3
+	sudo wget ${SRC}/themes/lines/KOMIKND_.ttf -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/lines/KOMIKND_.ttf >&3 2>&3
+
+	#MATRIX
+	sudo wget ${SRC}/themes/matrix/matrix-bg.png -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/matrix/matrix-bg.png >&3 2>&3
+	sudo wget ${SRC}/themes/matrix/Pixolletta8px.ttf -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/matrix/Pixolletta8px.ttf >&3 2>&3
+	
+	#EARTH
+	sudo wget ${SRC}/themes/earth/earth-bg.jpg -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/earth/earth-bg.jpg >&3 2>&3
+	sudo wget ${SRC}/themes/earth/Nasa21.ttf -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/earth/Nasa21.ttf >&3 2>&3
+
+	#STEAMPUNK
+	sudo wget ${SRC}/themes/steampunk/steampunk-bg.jpg -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/steampunk-bg.jpg >&3 2>&3
+	sudo wget ${SRC}/themes/steampunk/akaPosse.ttf -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/akaPosse.ttf >&3 2>&3
+	sudo wget ${SRC}/themes/steampunk/steampunk-gear.png -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/steampunk-gear.png >&3 2>&3
+	sudo wget ${SRC}/themes/steampunk/steampunk-header.jpg -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/steampunk-header.jpg >&3 2>&3
+
+	sudo chown dietpi:dietpi -R /home/dietpi/.mupibox/Sonos-Kids-Controller-master/
+
+	sudo wget ${SRC}/themes/lines.css -O /home/dietpi/MuPiBox/themes/lines.css >&3 2>&3
+	sudo wget ${SRC}/themes/fantasybutterflies.css -O /home/dietpi/MuPiBox/themes/fantasybutterflies.css >&3 2>&3
+	sudo wget ${SRC}/themes/earth.css -O /home/dietpi/MuPiBox/themes/earth.css >&3 2>&3
+	sudo wget ${SRC}/themes/steampunk.css -O /home/dietpi/MuPiBox/themes/steampunk.css >&3 2>&3
 	sudo wget ${SRC}/themes/dark.css -O /home/dietpi/MuPiBox/themes/dark.css >&3 2>&3
 	sudo wget ${SRC}/themes/blue.css -O /home/dietpi/MuPiBox/themes/blue.css >&3 2>&3
 	sudo wget ${SRC}/themes/purple.css -O /home/dietpi/MuPiBox/themes/purple.css >&3 2>&3
@@ -123,9 +158,10 @@ sudo service mupi_idle_shutdown stop
 	sudo wget ${SRC}/scripts/bluetooth/remove_bt.sh -O /usr/local/bin/mupibox/remove_bt.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/bluetooth/autoconnect_bt.sh -O /usr/local/bin/mupibox/autoconnect_bt.sh >&3 2>&3
 	sudo wget ${SRC}/config/services/mupi_autoconnect_bt.service -O /etc/systemd/system/mupi_autoconnect_bt.service  >&3 2>&3
-	
+
 	sudo wget ${SRC}/scripts/mupibox/restart_kiosk.sh -O /usr/local/bin/mupibox/restart_kiosk.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/mupibox/set_deviceid.sh -O /usr/local/bin/mupibox/set_deviceid.sh >&3 2>&3
+	sudo wget ${SRC}/scripts/mupibox/get_deviceid.sh -O /usr/local/bin/mupibox/get_deviceid.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/mupibox/spotify_restart.sh -O /usr/local/bin/mupibox/spotify_restart.sh >&3 2>&3
 
 	sudo wget ${SRC}/config/services/mupi_vnc.service -O /etc/systemd/system/mupi_vnc.service  >&3 2>&3
@@ -136,9 +172,9 @@ sudo service mupi_idle_shutdown stop
 	sudo chmod 755 /usr/local/bin/mupibox/* >&3 2>&3
 
 
-	echo -e "XXX\n30\nRestarting Services... \nXXX"	
-	sudo wget ${SRC}/config/services/mupi_powerled.service -O /etc/systemd/system/mupi_powerled.service  >&3 2>&3
+	echo -e "XXX\n30\nRestarting Services... \nXXX"
 	sudo wget ${SRC}/config/services/mupi_check_internet.service -O /etc/systemd/system/mupi_check_internet.service  >&3 2>&3
+	sudo wget ${SRC}/config/services/mupi_powerled.service -O /etc/systemd/system/mupi_powerled.service  >&3 2>&3
 	sudo su - dietpi -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && npm install" >&3 2>&3
 	#sudo su - dietpi -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && pm2 -f start server.js" >&3 2>&3
 	#sudo su - dietpi -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && pm2 -f save" >&3 2>&3
@@ -148,7 +184,7 @@ sudo service mupi_idle_shutdown stop
 	sudo systemctl start mupi_check_internet.service >&3 2>&3
 	sudo systemctl enable mupi_powerled.service >&3 2>&3
 	sudo systemctl start mupi_powerled.service >&3 2>&3
-	
+
 	echo -e "XXX\n78\nInstall Pi-Blaster... \nXXX"	
 	sudo rm -R /home/dietpi/pi-blaster >&3 2>&3
 	sudo su dietpi -c 'cd /home/dietpi/; git clone https://github.com/sarfata/pi-blaster.git' >&3 2>&3
@@ -156,6 +192,7 @@ sudo service mupi_idle_shutdown stop
 	LEDPIN=`cat ${CONFIG} | jq -r '.shim.ledPin'`
 	DAEMON_ARGS='DAEMON_ARGS="--gpio '${LEDPIN}'"'
 	sudo /usr/bin/sed -i 's|DAEMON_ARGS=".*"|'"${DAEMON_ARGS}"'|g' /etc/init.d/pi-blaster.boot.sh >&3 2>&3
+
 
 	echo -e "XXX\n83\nSet environment...  \nXXX"	
 	sudo wget ${SRC}/config/templates/crontab.template -O /tmp/crontab.template >&3 2>&3
@@ -195,11 +232,11 @@ sudo service mupi_idle_shutdown stop
 	sudo systemctl disable mupi_change_checker.service >&3 2>&3
 	sudo rm /etc/systemd/system/mupi_change_checker.service >&3 2>&3
 	sudo /usr/local/bin/mupibox/./m3u_generator.sh >&3 2>&3
-
+	
 	sudo mv ${LOG} /home/dietpi/.mupibox/last_update.log >&3 2>&3
 	sudo chown -R dietpi:dietpi /home/dietpi/.mupibox/last_update.log >&3 2>&3
 	sudo chown dietpi:dietpi ${CONFIG}
 
 } | whiptail --title "MuPiBox Update" --gauge "Please wait while installing" 6 60 0
 
-echo "Update finished - System will reboot in 3 seconds!"
+echo "Update finished - please reboot system now!"
