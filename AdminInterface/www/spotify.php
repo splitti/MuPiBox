@@ -188,7 +188,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul>";
 			<li id="li_1" >
 			<label class="description" for="spotify_deviceid">Select Spotify Device ID </label>
 <?php
-			if( isset($data["spotify"]["accessToken"]) AND isset($data["spotify"]["refreshToken"]) )
+			if( $data["spotify"]["accessToken"] != "" AND $data["spotify"]["refreshToken"] != "" )
 				{
 				echo '<select id="spotdevice" name="spotdevice" class="element text medium">';
 
@@ -211,6 +211,10 @@ $CHANGE_TXT=$CHANGE_TXT."</ul>";
 					}
 				echo '</select>';
 				echo '</li><li class="buttons"><input id="saveForm" class="button_text" type="submit" name="setDevID" value="Set DeviceID" /></li><br><li id="li_1" >';
+				}
+			else
+				{
+				print "Please complete the previous steps.";
 				}
 ?>
                 <div>
