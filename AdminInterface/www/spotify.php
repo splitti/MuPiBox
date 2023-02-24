@@ -214,7 +214,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul>";
 				}
 			else
 				{
-				print "Please complete the previous steps.";
+				print '<p>Please complete the previous steps.</p></li><br><li id="li_1" >';
 				}
 ?>
                 <div>
