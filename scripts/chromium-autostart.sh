@@ -38,3 +38,4 @@ AUDIO_DEVICE=$(/usr/bin/jq -r .mupibox.audioDevice ${CONFIG})
 /usr/bin/amixer sset ${AUDIO_DEVICE} ${START_VOLUME}%
 /usr/bin/mplayer -volume 100 ${START_SOUND} &
 x11vnc -ncache 10 -forever -display :0 &
+pactl load-module module-bluetooth-discover
