@@ -459,14 +459,14 @@ function shuffleoff(){
     });
 }
 
-function playMe(activePlaylistId){
-  log.debug("[Spotify Control] Spotify play " + activePlaylistId);
-  resumeOffset = activePlaylistId.split(':')[3];
+function playMe(activePlaylist){
+  log.debug("[Spotify Control] Spotify play " + activePlaylist);
+  resumeOffset = activePlaylist.split(':')[3];
   log.debug("[Spotify Control] Spotify resume " + resumeOffset);
   if(resumeOffset > 0) resumeOffset--;
   log.debug("[Spotify Control] Spotify offset " + resumeOffset);
-  resumeProgess = activePlaylistId.split(':')[4];
-  tmp = activePlaylistId.split(':');
+  resumeProgess = activePlaylist.split(':')[4];
+  tmp = activePlaylist.split(':');
   activePlaylistId = tmp[0] + ':' + tmp[1] + ':' + tmp[2];
   if(activePlaylistId.split(':')[1] === 'episode'){
     spotifyApi.play({ uris: [activePlaylistId], offset: {"position": resumeOffset}, position_ms: resumeProgess})
@@ -477,7 +477,7 @@ function playMe(activePlaylistId){
 	  writeplayerstatePlay();
     }, function(err){
       log.debug("[Spotify Control] Playback error" + err);
-      handleSpotifyError(err, activePlaylistId,"playMe");
+      handleSpotifyError(err, activePlaylist,"playMe");
     });
     spotifyApi.setVolume(volumeStart).then(function () {
       log.debug('[Spotify Control] Setting volume to '+ 99);
@@ -495,7 +495,7 @@ function playMe(activePlaylistId){
 	  writeplayerstatePlay();
     }, function(err){
       log.debug("[Spotify Control] Playback error" + err);
-      handleSpotifyError(err, activePlaylistId,"playMe");
+      handleSpotifyError(err, activePlaylist,"playMe");
     });
     spotifyApi.setVolume(volumeStart).then(function () {
       counter.countsetVolume++;
