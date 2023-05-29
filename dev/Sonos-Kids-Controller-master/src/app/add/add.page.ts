@@ -189,6 +189,7 @@ export class AddPage implements OnInit, AfterViewInit {
     this.selectedInputElem = event.target;
 
     this.keyboard.setOptions({
+      disableCaretPositioning: false,
       inputName: event.target.name
     });
 
