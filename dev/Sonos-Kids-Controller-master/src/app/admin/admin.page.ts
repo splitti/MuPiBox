@@ -95,6 +95,7 @@ export class AdminPage implements OnInit, AfterViewInit {
     this.selectedInputElem = event.target;
 
     this.keyboard.setOptions({
+      disableCaretPositioning: false,
       inputName: event.target.name
     });
   }
