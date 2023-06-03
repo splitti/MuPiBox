@@ -10,6 +10,7 @@ import { Media } from '../media';
 import { Resume } from '../resume';
 import { Network } from "../network";
 import { Observable } from 'rxjs';
+import { Monitor } from '../monitor';
 
 @Component({
   selector: 'app-home',
@@ -27,6 +28,7 @@ export class HomePage implements OnInit {
   mediaFile: Media;
   resumeFile: Resume;
   network: Network;
+  monitor: Monitor;
   currentNetwork = "";
   updateNetwork = false;
   covers = {};
@@ -65,6 +67,9 @@ export class HomePage implements OnInit {
 
     this.mediaService.network$.subscribe(network => {
       this.network = network;
+    });
+    this.mediaService.monitor$.subscribe(monitor => {
+      this.monitor = monitor;
     });
 
     // Subscribe
@@ -232,19 +237,21 @@ export class HomePage implements OnInit {
   }
 
   resume() {
-    console.log(this.mediaFile);
-    console.log(this.resumeFile);
-    this.activityIndicatorService.create().then(indicator => {
-      this.activityIndicatorVisible = true;
-      indicator.present().then(() => {
-        const navigationExtras: NavigationExtras = {
-          state: {
-            media: this.mediaFile,
-            resume: this.resumeFile
-          }
-        };
-        this.router.navigate(['/player'], navigationExtras);
+    if(this.monitor){
+      console.log(this.mediaFile);
+      console.log(this.resumeFile);
+      this.activityIndicatorService.create().then(indicator => {
+        this.activityIndicatorVisible = true;
+        indicator.present().then(() => {
+          const navigationExtras: NavigationExtras = {
+            state: {
+              media: this.mediaFile,
+              resume: this.resumeFile
+            }
+          };
+          this.router.navigate(['/player'], navigationExtras);
+        });
       });
-    });
+    }
   }
 }

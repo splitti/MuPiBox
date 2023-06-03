@@ -20,6 +20,7 @@ const dataFile = './server/config/data.json';
 const activedataFile = './server/config/active_data.json';
 const networkFile = './server/config/network.json';
 const wlanFile = './server/config/wlan.json';
+const monitorFile = './server/config/monitor.json';
 const mediaFile = './server/config/media.json';
 const resumeFile = './server/config/resume.json';
 const dataLock = '/tmp/.data.lock';
@@ -48,6 +49,19 @@ app.get('/api/network', (req, res) => {
             if (error) {
                 data = [];
                 console.log("[Sonos-Server] Error /api/network read network.json");
+                console.log(error);
+            }
+            res.json(data);
+        });
+    }
+});
+
+app.get('/api/monitor', (req, res) => {
+    if (fs.existsSync(monitorFile)){
+        jsonfile.readFile(monitorFile, (error, data) => {
+            if (error) {
+                data = [];
+                console.log("[Sonos-Server] Error /api/monitor read monitor.json");
                 console.log(error);
             }
             res.json(data);
