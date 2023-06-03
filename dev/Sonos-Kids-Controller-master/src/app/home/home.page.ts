@@ -238,7 +238,7 @@ export class HomePage implements OnInit {
 
   resume() {
     console.log(this.monitor);
-    if(this.monitor){
+    if(!this.monitor.blank){
       console.log(this.mediaFile);
       console.log(this.resumeFile);
       this.activityIndicatorService.create().then(indicator => {
