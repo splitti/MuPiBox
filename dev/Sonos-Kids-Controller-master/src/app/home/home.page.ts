@@ -171,7 +171,7 @@ export class HomePage implements OnInit {
   }
 
   artistCoverClicked(clickedArtist: Artist) {
-    if(this.monitor?.blank == "On"){
+    if(this.monitor?.monitor == "On"){
       this.activityIndicatorService.create().then(indicator => {
         this.activityIndicatorVisible = true;
         indicator.present().then(() => {
@@ -187,7 +187,7 @@ export class HomePage implements OnInit {
   }
 
   artistNameClicked(clickedArtist: Artist) {
-    if(this.monitor?.blank == "On"){
+    if(this.monitor?.monitor == "On"){
       this.playerService.getConfig().subscribe(config => {
         if (config.tts == null || config.tts.enabled === true) {
           this.playerService.say(clickedArtist.name);
@@ -197,7 +197,7 @@ export class HomePage implements OnInit {
   }
 
   mediaCoverClicked(clickedMedia: Media) {
-    if(this.monitor?.blank == "On"){
+    if(this.monitor?.monitor == "On"){
       this.activityIndicatorService.create().then(indicator => {
         this.activityIndicatorVisible = true;
         indicator.present().then(() => {
@@ -213,7 +213,7 @@ export class HomePage implements OnInit {
   }
 
   mediaNameClicked(clickedMedia: Media) {
-    if(this.monitor?.blank == "On"){
+    if(this.monitor?.monitor == "On"){
       this.playerService.getConfig().subscribe(config => {
         if (config.tts == null || config.tts.enabled === true) {
           this.playerService.say(clickedMedia.title);
@@ -246,7 +246,7 @@ export class HomePage implements OnInit {
 
   resume() {
     console.log(this.monitor);
-    if(this.monitor?.blank == "On"){
+    if(this.monitor?.monitor == "On"){
       console.log(this.mediaFile);
       console.log(this.resumeFile);
       this.activityIndicatorService.create().then(indicator => {

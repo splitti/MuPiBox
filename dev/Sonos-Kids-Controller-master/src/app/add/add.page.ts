@@ -9,7 +9,6 @@ import { PlayerCmds, PlayerService } from '../player.service';
 import { Observable } from 'rxjs';
 import { Validate } from '../validate';
 import { ActivityIndicatorService } from '../activity-indicator.service';
-import { Monitor } from '../monitor';
 
 @Component({
   selector: 'app-add',
@@ -30,7 +29,6 @@ export class AddPage implements OnInit, AfterViewInit {
   category = 'audiobook';
   searchType = 'media_id';
   keyboard: Keyboard;
-  monitor: Monitor;
   selectedInputElem: any;
   valid = false;
   editMedia: Media; 
@@ -94,9 +92,6 @@ export class AddPage implements OnInit, AfterViewInit {
     }
     this.mediaService.validate$.subscribe(validate => {
       this.validateState = validate;
-    });
-    this.mediaService.monitor$.subscribe(monitor => {
-      this.monitor = monitor;
     });
   }
 
@@ -166,9 +161,7 @@ export class AddPage implements OnInit, AfterViewInit {
   }
 
   cancelButtonPressed() {
-    if(this.monitor?.blank == "On"){
-      this.navController.back();
-    }
+    this.navController.back();
   }
 
   searchTypeChanged() {
@@ -305,57 +298,55 @@ export class AddPage implements OnInit, AfterViewInit {
   }
 
   submit(form: NgForm) {
-    if(this.monitor?.blank == "On"){
-      this.activityIndicatorService.create().then(indicator => {
-        this.activityIndicatorVisible = true;
-        indicator.present().then(() => {
-          const media: Media = {
-            index: this.index,
-            type: this.source,
-            category: this.category,
-            shuffle: this.shuffle,
-            aPartOfAll: this.aPartOfAll,
-            aPartOfAllMin: this.aPartOfAllMin,
-            aPartOfAllMax: this.aPartOfAllMax,
-          };
-      
-          if (this.source === 'spotify') {
-            if (form.form.value.spotify_artist?.length) { media.artist = form.form.value.spotify_artist; }
-            if (form.form.value.spotify_artistcover?.length) { media.artistcover = form.form.value.spotify_artistcover; }
-            if (form.form.value.spotify_title?.length) { media.title = form.form.value.spotify_title; }
-            if (form.form.value.spotify_query?.length) { media.query = form.form.value.spotify_query; }
-            if (form.form.value.spotify_id?.length) {
-              media.id = form.form.value.spotify_id;
-              this.playerService.validateId(media.id, "spotify_id");
-            }
-            if (form.form.value.spotify_playlistid?.length) {
-              media.playlistid = form.form.value.spotify_playlistid;
-              this.playerService.validateId(media.playlistid, "spotify_playlistid");
-            }
-            if (form.form.value.spotify_showid?.length) {
-              media.showid = form.form.value.spotify_showid;
-              this.playerService.validateId(media.showid, "spotify_showid");
-            }
-            if (form.form.value.spotify_artistid?.length) {
-              media.artistid = form.form.value.spotify_artistid;
-              this.playerService.validateId(media.artistid, "spotify_artistid");
-            }
-            if (this.aPartOfAll) { 
-              media.aPartOfAllMin = parseInt(form.form.value.spotify_aPartOfAllMin);
-              media.aPartOfAllMax = parseInt(form.form.value.spotify_aPartOfAllMax);
-            }
-          } else if (this.source === 'radio') {
-            if (form.form.value.radio_title?.length) { media.title = form.form.value.radio_title; }
-            if (form.form.value.radio_cover?.length) { media.cover = form.form.value.radio_cover; }
-            if (form.form.value.radio_id?.length) { media.id = form.form.value.radio_id; }
+    this.activityIndicatorService.create().then(indicator => {
+      this.activityIndicatorVisible = true;
+      indicator.present().then(() => {
+        const media: Media = {
+          index: this.index,
+          type: this.source,
+          category: this.category,
+          shuffle: this.shuffle,
+          aPartOfAll: this.aPartOfAll,
+          aPartOfAllMin: this.aPartOfAllMin,
+          aPartOfAllMax: this.aPartOfAllMax,
+        };
+    
+        if (this.source === 'spotify') {
+          if (form.form.value.spotify_artist?.length) { media.artist = form.form.value.spotify_artist; }
+          if (form.form.value.spotify_artistcover?.length) { media.artistcover = form.form.value.spotify_artistcover; }
+          if (form.form.value.spotify_title?.length) { media.title = form.form.value.spotify_title; }
+          if (form.form.value.spotify_query?.length) { media.query = form.form.value.spotify_query; }
+          if (form.form.value.spotify_id?.length) {
+            media.id = form.form.value.spotify_id;
+            this.playerService.validateId(media.id, "spotify_id");
           }
-      
-          setTimeout(() => {
-            this.save(media, form);
-          }, 2500)
-        });
+          if (form.form.value.spotify_playlistid?.length) {
+            media.playlistid = form.form.value.spotify_playlistid;
+            this.playerService.validateId(media.playlistid, "spotify_playlistid");
+          }
+          if (form.form.value.spotify_showid?.length) {
+            media.showid = form.form.value.spotify_showid;
+            this.playerService.validateId(media.showid, "spotify_showid");
+          }
+          if (form.form.value.spotify_artistid?.length) {
+            media.artistid = form.form.value.spotify_artistid;
+            this.playerService.validateId(media.artistid, "spotify_artistid");
+          }
+          if (this.aPartOfAll) { 
+            media.aPartOfAllMin = parseInt(form.form.value.spotify_aPartOfAllMin);
+            media.aPartOfAllMax = parseInt(form.form.value.spotify_aPartOfAllMax);
+          }
+        } else if (this.source === 'radio') {
+          if (form.form.value.radio_title?.length) { media.title = form.form.value.radio_title; }
+          if (form.form.value.radio_cover?.length) { media.cover = form.form.value.radio_cover; }
+          if (form.form.value.radio_id?.length) { media.id = form.form.value.radio_id; }
+        }
+    
+        setTimeout(() => {
+          this.save(media, form);
+        }, 2500)
       });
-    }
+    });
   }
 
   async save(media: Media, form: NgForm){
