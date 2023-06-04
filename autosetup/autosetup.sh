@@ -430,6 +430,7 @@ exec 3>${LOG}
 	sudo wget ${SRC}/config/services/mupi_startstop.service -O /etc/systemd/system/mupi_startstop.service >&3 2>&3
 	sudo wget ${SRC}/config/services/mupi_wifi.service -O /etc/systemd/system/mupi_wifi.service  >&3 2>&3
 	sudo wget ${SRC}/config/services/mupi_check_internet.service -O /etc/systemd/system/mupi_check_internet.service  >&3 2>&3
+	sudo wget ${SRC}/config/services/mupi_check_monitor.service -O /etc/systemd/system/mupi_check_monitor.service  >&3 2>&3
 	sudo wget ${SRC}/config/services/mupi_autoconnect_bt.service -O /etc/systemd/system/mupi_autoconnect_bt.service  >&3 2>&3
 	sudo wget ${SRC}/config/services/mupi_vnc.service -O /etc/systemd/system/mupi_vnc.service  >&3 2>&3
 	sudo wget ${SRC}/config/services/mupi_novnc.service -O /etc/systemd/system/mupi_novnc.service  >&3 2>&3
@@ -440,6 +441,8 @@ exec 3>${LOG}
 	sudo systemctl start mupi_wifi.service >&3 2>&3
 	sudo systemctl enable mupi_check_internet.service >&3 2>&3
 	sudo systemctl start mupi_check_internet.service >&3 2>&3
+	sudo systemctl enable mupi_check_monitor.service >&3 2>&3
+	sudo systemctl start mupi_check_monitor.service >&3 2>&3
 	#sudo systemctl enable mupi_change_checker.service >&3 2>&3
 	#sudo systemctl start mupi_change_checker.service >&3 2>&3
 	sudo systemctl enable mupi_idle_shutdown.service >&3 2>&3

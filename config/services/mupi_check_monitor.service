@@ -1,0 +1,10 @@
+[Unit]
+Description=Checks Internet Connection
+
+[Service]
+User=dietpi
+Group=dietpi
+ExecStart=/usr/local/bin/mupibox/./get_monitor.sh
+
+[Install]
+WantedBy=multi-user.target

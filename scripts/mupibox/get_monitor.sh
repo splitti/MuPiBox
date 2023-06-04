@@ -11,12 +11,18 @@ if [ ! -f ${MONITOR_FILE} ]; then
         chmod 777 ${MONITOR_FILE}
 fi
 
-MONITOR=$(DISPLAY=:0 xset q | grep "Monitor" | awk '{print $3}')
+while true
+do
 
-if [ ${MONITOR} = 'Off' ]; then
-        BLANK="true"
-else
-        BLANK="false"
-fi
+        MONITOR=$(DISPLAY=:0 xset q | grep "Monitor" | awk '{print $3}')
+        
+        if [ ${MONITOR} = 'Off' ]; then
+                BLANK="true"
+        else
+                BLANK="false"
+        fi
+        
+        /usr/bin/cat <<< $(/usr/bin/jq --arg v "${BLANK}" '.blank = $v' ${MONITOR_FILE}) >  ${MONITOR_FILE}
 
-/usr/bin/cat <<< $(/usr/bin/jq --arg v "${BLANK}" '.blank = $v' ${MONITOR_FILE}) >  ${MONITOR_FILE}
+	sleep 2
+done
