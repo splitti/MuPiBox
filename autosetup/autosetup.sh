@@ -130,6 +130,7 @@ exec 3>${LOG}
 	unzip ~/.mupibox/Sonos-Kids-Controller-master/sonos-kids-controller.zip -d ~/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
 	rm ~/.mupibox/Sonos-Kids-Controller-master/sonos-kids-controller.zip >&3 2>&3
 	wget ${SRC}/config/templates/www.json -O ~/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >&3 2>&3
+	wget ${SRC}/config/templates/monitor.json -O ~/.mupibox/Sonos-Kids-Controller-master/server/config/monitor.json >&3 2>&3
 	cd ~/.mupibox/Sonos-Kids-Controller-master  >&3 2>&3
 	npm install >&3 2>&3
 	pm2 start server.js >&3 2>&3
@@ -271,6 +272,7 @@ exec 3>${LOG}
 	sudo wget ${SRC}/scripts/mupibox/add_wifi.sh -O /usr/local/bin/mupibox/add_wifi.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/mupibox/save_rrd.sh -O /usr/local/bin/mupibox/save_rrd.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/mupibox/get_network.sh -O /usr/local/bin/mupibox/get_network.sh >&3 2>&3
+	sudo wget ${SRC}/scripts/mupibox/get_monitor.sh -O /usr/local/bin/mupibox/get_monitor.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/mupibox/check_network.sh -O /usr/local/bin/mupibox/check_network.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/mupibox/check_network.py -O /usr/local/bin/mupibox/check_network.py >&3 2>&3
 	sudo wget ${SRC}/scripts/mupibox/add_index.sh -O /usr/local/bin/mupibox/add_index.sh >&3 2>&3

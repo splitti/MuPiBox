@@ -13,6 +13,7 @@ import { Resume } from '../resume';
 import { CurrentPlaylist } from '../current.playlist';
 import { CurrentEpisode } from '../current.episode';
 import { CurrentShow } from '../current.show';
+import { Monitor } from '../monitor';
 
 @Component({
   selector: 'app-player',
@@ -23,6 +24,7 @@ export class PlayerPage implements OnInit {
   @ViewChild("range", {static: false}) range: IonRange;
 
   media: Media;
+  monitor: Monitor;
   resume: Resume;
   resumePlay = false;
   resumeFile: Resume = {
@@ -102,22 +104,26 @@ export class PlayerPage implements OnInit {
     this.artworkService.getArtwork(this.media).subscribe(url => {
       this.cover = url;
     });
+    this.mediaService.monitor$.subscribe(monitor => {
+      this.monitor = monitor;
+    });
   }
 
   seek(){
-    let newValue = +this.range.value;
-    if(this.media.type === 'spotify'){
-      if(this.media.showid?.length > 0){
-        let duration = this.currentEpisode?.duration_ms;
-        this.playerService.seekPosition(duration * (newValue / 100));
-      }else{
-        let duration = this.currentPlayedSpotify?.item.duration_ms;
-        this.playerService.seekPosition(duration * (newValue / 100));
+    if(!this.monitor.blank){
+      let newValue = +this.range.value;
+      if(this.media.type === 'spotify'){
+        if(this.media.showid?.length > 0){
+          let duration = this.currentEpisode?.duration_ms;
+          this.playerService.seekPosition(duration * (newValue / 100));
+        }else{
+          let duration = this.currentPlayedSpotify?.item.duration_ms;
+          this.playerService.seekPosition(duration * (newValue / 100));
+        }
+      } else if (this.media.type === 'library'){
+        this.playerService.seekPosition(newValue);
       }
-    } else if (this.media.type === 'library'){
-      this.playerService.seekPosition(newValue);
     }
-    
   }
 
   updateProgress(){
@@ -285,61 +291,77 @@ export class PlayerPage implements OnInit {
   }
 
   volUp() {
-    this.playerService.sendCmd(PlayerCmds.VOLUMEUP);
+    if(!this.monitor.blank){
+      this.playerService.sendCmd(PlayerCmds.VOLUMEUP);
+    }
   }
 
   volDown() {
-    this.playerService.sendCmd(PlayerCmds.VOLUMEDOWN);
+    if(!this.monitor.blank){
+      this.playerService.sendCmd(PlayerCmds.VOLUMEDOWN);
+    }
   }
 
   skipPrev() {
-    if (this.playing) {
-      this.playerService.sendCmd(PlayerCmds.PREVIOUS);
-    } else {
-      this.playing = true;
-      this.playerService.sendCmd(PlayerCmds.PREVIOUS);
+    if(!this.monitor.blank){
+      if (this.playing) {
+        this.playerService.sendCmd(PlayerCmds.PREVIOUS);
+      } else {
+        this.playing = true;
+        this.playerService.sendCmd(PlayerCmds.PREVIOUS);
+      }
     }
   }
 
   skipNext() {
-    if (this.playing) {
-      this.playerService.sendCmd(PlayerCmds.NEXT);
-    } else {
-      this.playing = true;
-      this.playerService.sendCmd(PlayerCmds.NEXT);
+    if(!this.monitor.blank){
+      if (this.playing) {
+        this.playerService.sendCmd(PlayerCmds.NEXT);
+      } else {
+        this.playing = true;
+        this.playerService.sendCmd(PlayerCmds.NEXT);
+      }
     }
   }
 
   toggleshuffle(){
-    if (this.media.shuffle) {
-      this.shufflechanged++;
-      this.media.shuffle = false;
-      this.playerService.sendCmd(PlayerCmds.SHUFFLEOFF);
-    } else {
-      this.shufflechanged++;
-      this.media.shuffle = true;
-      this.playerService.sendCmd(PlayerCmds.SHUFFLEON);
+    if(!this.monitor.blank){
+      if (this.media.shuffle) {
+        this.shufflechanged++;
+        this.media.shuffle = false;
+        this.playerService.sendCmd(PlayerCmds.SHUFFLEOFF);
+      } else {
+        this.shufflechanged++;
+        this.media.shuffle = true;
+        this.playerService.sendCmd(PlayerCmds.SHUFFLEON);
+      }
     }
   }
 
   playPause() {
-    if (this.playing) {
-      this.playing = false;
-      this.playerService.sendCmd(PlayerCmds.PAUSE);
-    } else {
-      this.playing = true;
-      this.playerService.sendCmd(PlayerCmds.PLAY);
-    }
-    if(this.media.type === 'spotify' || this.media.type === 'library'){
-      this.saveResumeFiles();
+    if(!this.monitor.blank){
+      if (this.playing) {
+        this.playing = false;
+        this.playerService.sendCmd(PlayerCmds.PAUSE);
+      } else {
+        this.playing = true;
+        this.playerService.sendCmd(PlayerCmds.PLAY);
+      }
+      if(this.media.type === 'spotify' || this.media.type === 'library'){
+        this.saveResumeFiles();
+      }
     }
   }
 
   seekForward() {
-    this.playerService.sendCmd(PlayerCmds.SEEKFORWARD);
+    if(!this.monitor.blank){
+      this.playerService.sendCmd(PlayerCmds.SEEKFORWARD);
+    }
   }
 
   seekBack() {
-    this.playerService.sendCmd(PlayerCmds.SEEKBACK);
+    if(!this.monitor.blank){
+      this.playerService.sendCmd(PlayerCmds.SEEKBACK);
+    }
   }
 }

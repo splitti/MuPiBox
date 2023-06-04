@@ -4,6 +4,7 @@ import { MediaService } from '../media.service';
 import { WLAN } from '../wlan';
 import Keyboard from 'simple-keyboard';
 import { NgForm } from '@angular/forms';
+import { Monitor } from '../monitor';
 
 @Component({
   selector: 'app-admin',
@@ -26,6 +27,7 @@ export class AdminPage implements OnInit, AfterViewInit {
   source = 'wlan';
   category = 'WLAN';
   keyboard: Keyboard;
+  monitor: Monitor;
   selectedInputElem: any;
   valid = false;
 
@@ -37,6 +39,9 @@ export class AdminPage implements OnInit, AfterViewInit {
   ) { }
 
   ngOnInit() {
+    this.mediaService.monitor$.subscribe(monitor => {
+      this.monitor = monitor;
+    });
   }
 
   ngAfterViewInit() {
@@ -88,7 +93,9 @@ export class AdminPage implements OnInit, AfterViewInit {
   }
 
   cancelButtonPressed() {
-    this.navController.back();
+    if(!this.monitor.blank){
+      this.navController.back();
+    }
   }
 
   focusChanged(event: any) {
@@ -141,30 +148,32 @@ export class AdminPage implements OnInit, AfterViewInit {
   }
 
   submit(form: NgForm) {
-    const wlan: WLAN = {
-      category: this.category
-    };
-
-    if (this.source === 'network') {
-      //if (form.form.value.network_host?.length) { wlan.host = form.form.value.spotify_artist; }
-      //if (form.form.value.network_ip?.length) { wlan.title = form.form.value.spotify_title; }
-    } else if (this.source === 'wlan') {
-      if (form.form.value.wlan_ssid?.length) { wlan.ssid = form.form.value.wlan_ssid; }
-      if (form.form.value.wlan_pw?.length) { wlan.pw = form.form.value.wlan_pw; }
+    if(!this.monitor.blank){
+      const wlan: WLAN = {
+        category: this.category
+      };
+  
+      if (this.source === 'network') {
+        //if (form.form.value.network_host?.length) { wlan.host = form.form.value.spotify_artist; }
+        //if (form.form.value.network_ip?.length) { wlan.title = form.form.value.spotify_title; }
+      } else if (this.source === 'wlan') {
+        if (form.form.value.wlan_ssid?.length) { wlan.ssid = form.form.value.wlan_ssid; }
+        if (form.form.value.wlan_pw?.length) { wlan.pw = form.form.value.wlan_pw; }
+      }
+  
+      this.mediaService.addWLAN(wlan);
+  
+      form.reset();
+  
+      this.keyboard.clearInput('network_ip');
+      this.keyboard.clearInput('network_host');
+      this.keyboard.clearInput('wlan_ssid');
+      this.keyboard.clearInput('wlan_pw');
+  
+      this.validate();
+  
+      this.navController.back();
     }
-
-    this.mediaService.addWLAN(wlan);
-
-    form.reset();
-
-    this.keyboard.clearInput('network_ip');
-    this.keyboard.clearInput('network_host');
-    this.keyboard.clearInput('wlan_ssid');
-    this.keyboard.clearInput('wlan_pw');
-
-    this.validate();
-
-    this.navController.back();
   }
 
   validate() {

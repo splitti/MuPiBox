@@ -27,4 +27,5 @@
 * * * * *       sleep 45; /usr/local/bin/mupibox/./save_rrd.sh
 * * * * *       /usr/local/bin/mupibox/./get_network.sh
 * * * * *       sleep 30; /usr/local/bin/mupibox/./get_network.sh
+* * * * *       sleep 30; /usr/local/bin/mupibox/./get_monitor.sh
 

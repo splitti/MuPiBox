@@ -171,47 +171,55 @@ export class HomePage implements OnInit {
   }
 
   artistCoverClicked(clickedArtist: Artist) {
-    this.activityIndicatorService.create().then(indicator => {
-      this.activityIndicatorVisible = true;
-      indicator.present().then(() => {
-        const navigationExtras: NavigationExtras = {
-          state: {
-            artist: clickedArtist
-          }
-        };
-        this.router.navigate(['/medialist'], navigationExtras);
+    if(!this.monitor.blank){
+      this.activityIndicatorService.create().then(indicator => {
+        this.activityIndicatorVisible = true;
+        indicator.present().then(() => {
+          const navigationExtras: NavigationExtras = {
+            state: {
+              artist: clickedArtist
+            }
+          };
+          this.router.navigate(['/medialist'], navigationExtras);
+        });
       });
-    });
+    }
   }
 
   artistNameClicked(clickedArtist: Artist) {
-    this.playerService.getConfig().subscribe(config => {
-      if (config.tts == null || config.tts.enabled === true) {
-        this.playerService.say(clickedArtist.name);
-      }
-    });
+    if(!this.monitor.blank){
+      this.playerService.getConfig().subscribe(config => {
+        if (config.tts == null || config.tts.enabled === true) {
+          this.playerService.say(clickedArtist.name);
+        }
+      });
+    }
   }
 
   mediaCoverClicked(clickedMedia: Media) {
-    this.activityIndicatorService.create().then(indicator => {
-      this.activityIndicatorVisible = true;
-      indicator.present().then(() => {
-        const navigationExtras: NavigationExtras = {
-          state: {
-            media: clickedMedia
-          }
-        };
-        this.router.navigate(['/player'], navigationExtras);
+    if(!this.monitor.blank){
+      this.activityIndicatorService.create().then(indicator => {
+        this.activityIndicatorVisible = true;
+        indicator.present().then(() => {
+          const navigationExtras: NavigationExtras = {
+            state: {
+              media: clickedMedia
+            }
+          };
+          this.router.navigate(['/player'], navigationExtras);
+        });
       });
-    });
+    }
   }
 
   mediaNameClicked(clickedMedia: Media) {
-    this.playerService.getConfig().subscribe(config => {
-      if (config.tts == null || config.tts.enabled === true) {
-        this.playerService.say(clickedMedia.title);
-      }
-    });
+    if(!this.monitor.blank){
+      this.playerService.getConfig().subscribe(config => {
+        if (config.tts == null || config.tts.enabled === true) {
+          this.playerService.say(clickedMedia.title);
+        }
+      });
+    }
   }
 
   editButtonPressed() {
@@ -237,7 +245,6 @@ export class HomePage implements OnInit {
   }
 
   resume() {
-    console.log(this.monitor);
     if(!this.monitor.blank){
       console.log(this.mediaFile);
       console.log(this.resumeFile);
