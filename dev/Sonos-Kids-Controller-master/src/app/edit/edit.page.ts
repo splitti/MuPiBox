@@ -49,7 +49,7 @@ export class EditPage implements OnInit {
   }
 
   async deleteButtonPressed(item: Media) {
-    if(this.monitor?.blank == "Off"){
+    if(this.monitor?.blank == "On"){
       const alert = await this.alertController.create({
         cssClass: 'alert',
         header: 'Warning',
@@ -124,7 +124,7 @@ export class EditPage implements OnInit {
   }
 
   editButtonPreddes(item: Media) {
-    if(this.monitor?.blank == "Off"){
+    if(this.monitor?.blank == "On"){
       this.activityIndicatorService.create().then(indicator => {
         this.activityIndicatorVisible = true;
         indicator.present().then(() => {
@@ -155,19 +155,19 @@ export class EditPage implements OnInit {
   }
 
   addButtonPressed() {
-    if(this.monitor?.blank == "Off"){
+    if(this.monitor?.blank == "On"){
       this.router.navigate(['/add']);
     }
   }
 
   adminButtonPressed() {
-    if(this.monitor?.blank == "Off"){
+    if(this.monitor?.blank == "On"){
       this.router.navigate(['/admin']);
     }
   }
 
   async networkButtonPressed() {
-    if(this.monitor?.blank == "Off"){
+    if(this.monitor?.blank == "On"){
       const alert = await this.alertController.create({
         cssClass: 'alert',
         header: 'Warning',
@@ -190,7 +190,7 @@ export class EditPage implements OnInit {
   }
 
   async shutdownMessage() {
-    if(this.monitor?.blank == "Off"){
+    if(this.monitor?.blank == "On"){
       const alert = await this.alertController.create({
         cssClass: 'alert',
         header: 'Warning',

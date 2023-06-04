@@ -160,7 +160,7 @@ export class MedialistPage implements OnInit {
   }
 
   coverClicked(clickedMedia: Media) {
-    if(this.monitor?.blank == "Off"){
+    if(this.monitor?.blank == "On"){
       this.activityIndicatorService.create().then(indicator => {
         this.activityIndicatorVisible = true;
         indicator.present().then(() => {
@@ -176,7 +176,7 @@ export class MedialistPage implements OnInit {
   }
 
   mediaNameClicked(clickedMedia: Media) {
-    if(this.monitor?.blank == "Off"){
+    if(this.monitor?.blank == "On"){
       this.playerService.getConfig().subscribe(config => {
         if (config.tts == null || config.tts.enabled === true) {
           this.playerService.say(clickedMedia.title);

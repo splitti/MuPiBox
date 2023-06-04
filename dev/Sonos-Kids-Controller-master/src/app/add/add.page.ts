@@ -166,7 +166,7 @@ export class AddPage implements OnInit, AfterViewInit {
   }
 
   cancelButtonPressed() {
-    if(this.monitor?.blank == "Off"){
+    if(this.monitor?.blank == "On"){
       this.navController.back();
     }
   }
@@ -305,7 +305,7 @@ export class AddPage implements OnInit, AfterViewInit {
   }
 
   submit(form: NgForm) {
-    if(this.monitor?.blank == "Off"){
+    if(this.monitor?.blank == "On"){
       this.activityIndicatorService.create().then(indicator => {
         this.activityIndicatorVisible = true;
         indicator.present().then(() => {
