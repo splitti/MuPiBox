@@ -93,7 +93,7 @@ export class AdminPage implements OnInit, AfterViewInit {
   }
 
   cancelButtonPressed() {
-    if(!this.monitor.blank){
+    if(this.monitor?.blank == "Off"){
       this.navController.back();
     }
   }
@@ -148,7 +148,7 @@ export class AdminPage implements OnInit, AfterViewInit {
   }
 
   submit(form: NgForm) {
-    if(!this.monitor.blank){
+    if(this.monitor?.blank == "Off"){
       const wlan: WLAN = {
         category: this.category
       };

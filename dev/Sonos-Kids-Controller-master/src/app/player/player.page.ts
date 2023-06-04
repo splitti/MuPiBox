@@ -110,7 +110,7 @@ export class PlayerPage implements OnInit {
   }
 
   seek(){
-    if(!this.monitor.blank){
+    if(this.monitor?.blank == "Off"){
       let newValue = +this.range.value;
       if(this.media.type === 'spotify'){
         if(this.media.showid?.length > 0){
@@ -291,19 +291,19 @@ export class PlayerPage implements OnInit {
   }
 
   volUp() {
-    if(!this.monitor.blank){
+    if(this.monitor?.blank == "Off"){
       this.playerService.sendCmd(PlayerCmds.VOLUMEUP);
     }
   }
 
   volDown() {
-    if(!this.monitor.blank){
+    if(this.monitor?.blank == "Off"){
       this.playerService.sendCmd(PlayerCmds.VOLUMEDOWN);
     }
   }
 
   skipPrev() {
-    if(!this.monitor.blank){
+    if(this.monitor?.blank == "Off"){
       if (this.playing) {
         this.playerService.sendCmd(PlayerCmds.PREVIOUS);
       } else {
@@ -314,7 +314,7 @@ export class PlayerPage implements OnInit {
   }
 
   skipNext() {
-    if(!this.monitor.blank){
+    if(this.monitor?.blank == "Off"){
       if (this.playing) {
         this.playerService.sendCmd(PlayerCmds.NEXT);
       } else {
@@ -325,7 +325,7 @@ export class PlayerPage implements OnInit {
   }
 
   toggleshuffle(){
-    if(!this.monitor.blank){
+    if(this.monitor?.blank == "Off"){
       if (this.media.shuffle) {
         this.shufflechanged++;
         this.media.shuffle = false;
@@ -339,7 +339,7 @@ export class PlayerPage implements OnInit {
   }
 
   playPause() {
-    if(!this.monitor.blank){
+    if(this.monitor?.blank == "Off"){
       if (this.playing) {
         this.playing = false;
         this.playerService.sendCmd(PlayerCmds.PAUSE);
@@ -354,13 +354,13 @@ export class PlayerPage implements OnInit {
   }
 
   seekForward() {
-    if(!this.monitor.blank){
+    if(this.monitor?.blank == "Off"){
       this.playerService.sendCmd(PlayerCmds.SEEKFORWARD);
     }
   }
 
   seekBack() {
-    if(!this.monitor.blank){
+    if(this.monitor?.blank == "Off"){
       this.playerService.sendCmd(PlayerCmds.SEEKBACK);
     }
   }

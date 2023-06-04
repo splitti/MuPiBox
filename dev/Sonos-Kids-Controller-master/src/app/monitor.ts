@@ -1,3 +1,3 @@
 export interface Monitor {
-    blank?: boolean;
+    blank?: string;
 }
