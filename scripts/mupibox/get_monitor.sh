@@ -4,13 +4,6 @@
 
 MONITOR_FILE="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/monitor.json"
 
-
-if [ ! -f ${MONITOR_FILE} ]; then
-        sudo echo -n '{"monitor": "On"}' ${MONITOR_FILE}
-        chown dietpi:dietpi ${MONITOR_FILE}
-        chmod 777 ${MONITOR_FILE}
-fi
-
 while true
 do
 
