@@ -11,5 +11,5 @@ do
 
         /usr/bin/cat <<< $(/usr/bin/jq --arg v "${MONITOR}" '.monitor = $v' ${MONITOR_FILE}) >  ${MONITOR_FILE}
 
-	sleep 2
+	sleep 1
 done
