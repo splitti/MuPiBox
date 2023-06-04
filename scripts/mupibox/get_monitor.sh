@@ -13,7 +13,7 @@ fi
 
 MONITOR=$(DISPLAY=:0 xset q | grep "Monitor" | awk '{print $3}')
 
-if [${MONITOR} = 'Off']; then
+if [ ${MONITOR} = 'Off' ]; then
         BLANK="true"
 else
         BLANK="false"

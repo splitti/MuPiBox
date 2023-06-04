@@ -245,6 +245,7 @@ export class HomePage implements OnInit {
   }
 
   resume() {
+    console.log(this.monitor.blank);
     if(!this.monitor.blank){
       console.log(this.mediaFile);
       console.log(this.resumeFile);
