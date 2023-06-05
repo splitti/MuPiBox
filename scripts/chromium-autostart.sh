@@ -39,3 +39,8 @@ AUDIO_DEVICE=$(/usr/bin/jq -r .mupibox.audioDevice ${CONFIG})
 /usr/bin/mplayer -volume 100 ${START_SOUND} &
 x11vnc -ncache 10 -forever -display :0 &
 pactl load-module module-bluetooth-discover
+
+TELEGRAM=$(/usr/bin/jq -r .mupibox.telegram.active ${CONFIG})
+if [ "${TELEGRAM}" ]; then
+ /usr/bin/python3 /usr/local/bin/mupibox/telegram_start.py
+fi 

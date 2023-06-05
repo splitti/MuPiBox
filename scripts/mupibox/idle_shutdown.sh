@@ -24,7 +24,10 @@ do
 		idle=$(( current_idle_time / 6 ))
 		if ((${idle} >= ${max_idle_time}))
 		then
-			/usr/bin/python3 /usr/local/bin/mupibox/telegram_shutdown.py
+      TELEGRAM=$(/usr/bin/jq -r .mupibox.telegram.active ${CONFIG})
+      if [ "${TELEGRAM}" ]; then
+        /usr/bin/python3 /usr/local/bin/mupibox/telegram_shutdown.py
+      fi 
       echo "$(date +'%d/%m/%Y %H:%M:%S')  # CURRENT IDLE TIME = ${idle}" >> ${LOG}
 			echo "$(date +'%d/%m/%Y %H:%M:%S')  # MAX IDLE TIME REACHED - SHUTDOWN NOW" >> ${LOG}
 			sudo poweroff
