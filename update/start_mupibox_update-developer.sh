@@ -25,6 +25,8 @@ sudo service mupi_idle_shutdown stop
 	sudo apt-get update >&3 2>&3
 	sudo apt-get -y --install-recommends -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" install x11vnc git libasound2 jq samba mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential >&3 2>&3
 	sudo pip install mutagen  >&3 2>&3
+	sudo pip install telepot  >&3 2>&3
+	sudo pip install requests  >&3 2>&3
 
 	echo -e "XXX\n5\nBackup Userdata... \nXXX"	 >&3 2>&3
 	sudo cp /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json /tmp/data.json >&3 2>&3
