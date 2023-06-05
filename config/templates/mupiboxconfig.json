@@ -161,6 +161,11 @@
 		"accessToken": "",
 		"refreshToken": ""
 	},
+	"telegram": {
+		"token": "",
+		"active": false,
+		"chatId": ""
+	},
 	"timeout": {
 		"idlePiShutdown": "0",
 		"idleDisplayOff": "10",
