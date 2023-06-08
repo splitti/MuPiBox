@@ -281,7 +281,7 @@ form li:after
 	clear:both;
 	content:".";
 	display:block;
-	height:0;
+	height:10px;
 	visibility:hidden;
 }
 
@@ -397,7 +397,8 @@ form li .datepicker
 	border-bottom:1px dotted #ccc;
 	clear:both;
 	display:inline-block;
-	margin:0 0 1em;
+	margin:0;
+	/* 	margin:0 0 1em; */
 }
 
 .description[class]
@@ -764,6 +765,15 @@ select.select
 input.currency
 {
 	text-align:right;
+}
+
+.checklabel input:before{
+  content: '';
+  background: #fff;
+  display: block;
+  width: 10px;
+  height: 10px;
+  border: 1px solid #054b61;
 }
 
 input.checkbox

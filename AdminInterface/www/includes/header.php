@@ -38,6 +38,7 @@
 				<a href="bluetooth.php"><i class="fa-brands fa-bluetooth"></i> Bluetooth</a>
 				<a href="spotify.php"><i class="fa-brands fa-spotify"></i> Spotify</a>
 				<a href="network.php"><i class="fa-solid fa-wifi"></i> Network</a>
+				<a href="smart.php"><i class="fa-solid fa-share-nodes"></i> Smart</a>
 				<?php /*<a href="service.php"><i class="fa-solid fa-gear"></i> Services</a>
 				<a href="tweaks.php"><i class="fa-solid fa-rocket"></i> Performance</a>*/ ?>
 				<a href="admin.php"><i class="fa-solid fa-screwdriver-wrench"></i> Admin</a>
