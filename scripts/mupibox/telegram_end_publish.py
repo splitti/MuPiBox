@@ -12,4 +12,4 @@ TOKEN = config['telegram']['token']
 bot = telepot.Bot(TOKEN)
 chat_id = config['telegram']['chatId']
 
-bot.sendMessage(chat_id, 'MuPiBox is starting!')
+bot.sendMessage(chat_id, 'Sending data to telegram has been disabled!')

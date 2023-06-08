@@ -8,10 +8,13 @@
 		if($_POST['telegram_active'])
 			{
 			$data["telegram"]["active"]=true;
+			$pm2command="sudo su dietpi -c '/usr/bin/python3 /usr/local/bin/mupibox/telegram_start.py'";
+			exec($pm2command);			
 			}
 		else
 			{
 			$data["telegram"]["active"]=false;
+			$pm2command="sudo su dietpi -c '/usr/bin/python3 /usr/local/bin/mupibox/telegram_end_publish.py'";
 			}
 		$data["telegram"]["chatId"]=$_POST['telegram_chatId'];
 		$data["telegram"]["token"]=$_POST['telegram_token'];
@@ -38,9 +41,11 @@
   }
  if( $change == 3 )
   {
-   $json_object = json_encode($data);
-   $save_rc = file_put_contents('/tmp/.mupiboxconfig.json', $json_object);
-   exec("sudo mv /tmp/.mupiboxconfig.json /etc/mupibox/mupiboxconfig.json");
+	$json_object = json_encode($data);
+	$save_rc = file_put_contents('/tmp/.mupiboxconfig.json', $json_object);
+	exec("sudo mv /tmp/.mupiboxconfig.json /etc/mupibox/mupiboxconfig.json");
+	$pm2command="sudo su dietpi -c 'pm2 restart spotify-control'";
+	exec($pm2command);
   }
 $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 ?>

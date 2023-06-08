@@ -40,7 +40,10 @@ AUDIO_DEVICE=$(/usr/bin/jq -r .mupibox.audioDevice ${CONFIG})
 x11vnc -ncache 10 -forever -display :0 &
 pactl load-module module-bluetooth-discover
 
-TELEGRAM=$(/usr/bin/jq -r .mupibox.telegram.active ${CONFIG})
-if [ "${TELEGRAM}" ]; then
- /usr/bin/python3 /usr/local/bin/mupibox/telegram_start.py
-fi 
+CONFIG="/etc/mupibox/mupiboxconfig.json"
+TELEGRAM=$(/usr/bin/jq -r .telegram.active ${CONFIG})
+TELEGRAM_CHATID=$(/usr/bin/jq -r .telegram.chatId ${CONFIG})
+TELEGRAM_TOKEN=$(/usr/bin/jq -r .telegram.token ${CONFIG})
+if [ "${TELEGRAM}" ] && [[ ${#TELEGRAM_CHATID} -ge 1 ]] && [[ ${#TELEGRAM_TOKEN} -ge 1 ]]; then
+	/usr/bin/python3 /usr/local/bin/mupibox/telegram_start.py;
+fi
