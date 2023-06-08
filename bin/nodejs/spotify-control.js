@@ -319,7 +319,7 @@ function setActiveDevice(activePlaylistId) {
 }
 
 function pause(){
-  if (muPiBoxConfig.telegram.active) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_stop.py');
+  if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_stop.py');
   if (currentMeta.currentPlayer == "spotify"){
     spotifyApi.pause()
       .then(function() {
@@ -340,7 +340,7 @@ function pause(){
 }
 
 function stop(){
-  if (muPiBoxConfig.telegram.active) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_stop.py');
+  if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_stop.py');
   if (currentMeta.currentPlayer == "spotify"){
     spotifyApi.pause()
       .then(function() {
@@ -371,7 +371,7 @@ function stop(){
 }
 
 function play(){
-  if (muPiBoxConfig.telegram.active) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_playing.py');
+  if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_playing.py');
   if (currentMeta.currentPlayer == "spotify"){
     spotifyApi.play()
       .then(function() {
@@ -382,7 +382,7 @@ function play(){
       }, function(err) {
         handleSpotifyError(err,"0","play");
       });
-    if (muPiBoxConfig.telegram.active) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Spotify.py');
+    if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Spotify.py');
   } else if (currentMeta.currentPlayer == "mplayer") {
     if (!(currentMeta.playing)){
       player.playPause();
@@ -509,8 +509,8 @@ function playMe(activePlaylist){
       handleSpotifyError(err,"0","setVolume");
     });
   }
-  if (muPiBoxConfig.telegram.active) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_playing.py');
-  if (muPiBoxConfig.telegram.active) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Spotify.py');
+  if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_playing.py');
+  if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Spotify.py');
 }
 
 function playList(playedList){
@@ -540,8 +540,8 @@ function playList(playedList){
       console.log('stderr', stderr);
     });
   },500)
-  if (muPiBoxConfig.telegram.active) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_playing.py');
-  if (muPiBoxConfig.telegram.active) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Local.py');
+  if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_playing.py');
+  if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Local.py');
 }
 
 function playFile(playedFile){
@@ -552,8 +552,8 @@ function playFile(playedFile){
   player.play('/home/dietpi/MuPiBox/tts_files/' + playedTitel);
   player.setVolume(volumeStart);
   log.debug('/home/dietpi/MuPiBox/tts_files/' + playedTitel);
-  if (muPiBoxConfig.telegram.active) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_playing.py');
-  if (muPiBoxConfig.telegram.active) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Local.py');
+  if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_playing.py');
+  if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Local.py');
 }
 
 function playURL(playedURL){
@@ -563,8 +563,8 @@ function playURL(playedURL){
   player.play(playedURL);
   player.setVolume(volumeStart);
   log.debug(playedURL);
-  if (muPiBoxConfig.telegram.active) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_playing.py');
-  if (muPiBoxConfig.telegram.active) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Local.py');
+  if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_playing.py');
+  if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Local.py');
 }
 
   /*seek 30 secends back or forward*/
