@@ -146,12 +146,6 @@ sudo service mupi_idle_shutdown stop
 	sudo wget ${SRC}/scripts/mupibox/get_monitor.sh -O /usr/local/bin/mupibox/get_monitor.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/mupibox/check_network.sh -O /usr/local/bin/mupibox/check_network.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/mupibox/check_network.py -O /usr/local/bin/mupibox/check_network.py >&3 2>&3
-	sudo wget ${SRC}/scripts/mupibox/telegram_start.py -O /usr/local/bin/mupibox/telegram_start.py >&3 2>&3
-	sudo wget ${SRC}/scripts/mupibox/telegram_shutdown.py -O /usr/local/bin/mupibox/telegram_shutdown.py >&3 2>&3
-	sudo wget ${SRC}/scripts/mupibox/telegram_Track_Local.py -O /usr/local/bin/mupibox/telegram_Track_Local.py >&3 2>&3
-	sudo wget ${SRC}/scripts/mupibox/telegram_Track_Spotify.py -O /usr/local/bin/mupibox/telegram_Track_Spotify.py >&3 2>&3
-	sudo wget ${SRC}/scripts/mupibox/telegram_playing.py -O /usr/local/bin/mupibox/telegram_playing.py >&3 2>&3
-	sudo wget ${SRC}/scripts/mupibox/telegram_stop.py -O /usr/local/bin/mupibox/telegram_stop.py >&3 2>&3
 	sudo wget ${SRC}/scripts/mupibox/add_index.sh -O /usr/local/bin/mupibox/add_index.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/mupibox/data_clean.sh -O /usr/local/bin/mupibox/data_clean.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/mupibox/id3tag_converter.sh -O /usr/local/bin/mupibox/id3tag_converter.sh  >&3 2>&3
@@ -160,6 +154,13 @@ sudo service mupi_idle_shutdown stop
 	sudo wget ${SRC}/scripts/mupibox/mupi_start_led.sh -O /usr/local/bin/mupibox/mupi_start_led.sh  >&3 2>&3
 	sudo wget ${SRC}/scripts/mupibox/mupi_stop_led.sh -O /usr/local/bin/mupibox/mupi_stop_led.sh  >&3 2>&3
 	sudo wget ${SRC}/scripts/mupibox/sleep_timer.sh -O /usr/local/bin/mupibox/sleep_timer.sh  >&3 2>&3
+	sudo wget ${SRC}/scripts/mupibox/telegram_start.py -O /usr/local/bin/mupibox/telegram_start.py >&3 2>&3
+	sudo wget ${SRC}/scripts/mupibox/telegram_start.py -O /usr/local/bin/mupibox/telegram_start.py >&3 2>&3
+	sudo wget ${SRC}/scripts/mupibox/telegram_shutdown.py -O /usr/local/bin/mupibox/telegram_shutdown.py >&3 2>&3
+	sudo wget ${SRC}/scripts/mupibox/telegram_Track_Local.py -O /usr/local/bin/mupibox/telegram_Track_Local.py >&3 2>&3
+	sudo wget ${SRC}/scripts/mupibox/telegram_Track_Spotify.py -O /usr/local/bin/mupibox/telegram_Track_Spotify.py >&3 2>&3
+	sudo wget ${SRC}/scripts/mupibox/telegram_playing.py -O /usr/local/bin/mupibox/telegram_playing.py >&3 2>&3
+	sudo wget ${SRC}/scripts/mupibox/telegram_end_publish.py -O /usr/local/bin/mupibox/telegram_end_publish.py >&3 2>&3
 
 	sudo wget ${SRC}/scripts/bluetooth/start_bt.sh -O /usr/local/bin/mupibox/start_bt.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/bluetooth/stop_bt.sh -O /usr/local/bin/mupibox/stop_bt.sh >&3 2>&3
