@@ -8,13 +8,13 @@
 		if($_POST['telegram_active'])
 			{
 			$data["telegram"]["active"]=true;
-			$pm2command="sudo su dietpi -c '/usr/bin/python3 /usr/local/bin/mupibox/telegram_start.py'";
+			$pm2command="sudo su dietpi -c '/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py \"Telegram is activ\"'";
 			exec($pm2command);			
 			}
 		else
 			{
 			$data["telegram"]["active"]=false;
-			$pm2command="sudo su dietpi -c '/usr/bin/python3 /usr/local/bin/mupibox/telegram_end_publish.py'";
+			$pm2command="sudo su dietpi -c '/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py \"Telegram is inactiv\"'";
 			}
 		$data["telegram"]["chatId"]=$_POST['telegram_chatId'];
 		$data["telegram"]["token"]=$_POST['telegram_token'];

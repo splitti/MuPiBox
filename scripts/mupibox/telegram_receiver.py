@@ -19,8 +19,10 @@ def handle(msg):
 
     if command == '/shutdown':
         subprocess.run(["sudo", "bash", "/usr/local/bin/mupibox/shutdown.sh"])
-    elif command == '/help':
-        bot.sendMessage(chat_id, "There is no help.")
+    elif command == '/screen':
+        subprocess.run(["sudo", "rm", "/tmp/telegram_screen.png"])
+        subprocess.run(["sudo", "DISPLAY=:0", "scrot", "/tmp/telegram_screen.png"])
+        bot.sendPhoto(chat_id, open('/tmp/telegram_screen.png', 'rb'))
 
 
 TOKEN = config['telegram']['token']

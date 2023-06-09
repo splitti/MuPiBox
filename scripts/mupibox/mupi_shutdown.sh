@@ -10,7 +10,7 @@ TELEGRAM=$(/usr/bin/jq -r .telegram.active ${CONFIG})
 TELEGRAM_CHATID=$(/usr/bin/jq -r .telegram.chatId ${CONFIG})
 TELEGRAM_TOKEN=$(/usr/bin/jq -r .telegram.token ${CONFIG})
 if [ "${TELEGRAM}" ] && [ ${#TELEGRAM_CHATID} -ge 1 ] && [ ${#TELEGRAM_TOKEN} -ge 1 ]; then
-	/usr/bin/python3 /usr/local/bin/mupibox/telegram_shutdown.py
+	/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "MuPiBox shutdown manually"
 fi
 /usr/bin/fbv ${SHUT_SPLASH}
 sudo /usr/local/bin/mupibox/./setting_update.sh
