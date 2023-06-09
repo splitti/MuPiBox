@@ -6,8 +6,6 @@
 
 CONFIG="/etc/mupibox/mupiboxconfig.json"
 SHUT_SPLASH=$(/usr/bin/jq -r .mupibox.shutSplash ${CONFIG})
-
-CONFIG="/etc/mupibox/mupiboxconfig.json"
 TELEGRAM=$(/usr/bin/jq -r .telegram.active ${CONFIG})
 TELEGRAM_CHATID=$(/usr/bin/jq -r .telegram.chatId ${CONFIG})
 TELEGRAM_TOKEN=$(/usr/bin/jq -r .telegram.token ${CONFIG})

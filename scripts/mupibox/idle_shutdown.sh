@@ -24,7 +24,6 @@ do
 		idle=$(( current_idle_time / 6 ))
 		if ((${idle} >= ${max_idle_time}))
 		then
-      CONFIG="/etc/mupibox/mupiboxconfig.json"
       TELEGRAM=$(/usr/bin/jq -r .telegram.active ${CONFIG})
       TELEGRAM_CHATID=$(/usr/bin/jq -r .telegram.chatId ${CONFIG})
       TELEGRAM_TOKEN=$(/usr/bin/jq -r .telegram.token ${CONFIG})
