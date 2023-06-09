@@ -15,6 +15,7 @@
 			{
 			$data["telegram"]["active"]=false;
 			$pm2command="sudo su dietpi -c '/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py \"Telegram is inactiv\"'";
+      exec($pm2command);
 			}
 		$data["telegram"]["chatId"]=$_POST['telegram_chatId'];
 		$data["telegram"]["token"]=$_POST['telegram_token'];
