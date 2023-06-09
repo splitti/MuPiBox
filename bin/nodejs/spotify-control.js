@@ -388,6 +388,7 @@ function play(){
       player.playPause();
       //currentMeta.playing = true;
 	    writeplayerstatePlay();
+      if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Local.py');
     }
   }
 }
