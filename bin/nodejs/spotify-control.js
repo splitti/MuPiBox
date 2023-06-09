@@ -319,7 +319,7 @@ function setActiveDevice(activePlaylistId) {
 }
 
 function pause(){
-  if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_stop.py');
+  if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Pause"');
   if (currentMeta.currentPlayer == "spotify"){
     spotifyApi.pause()
       .then(function() {
