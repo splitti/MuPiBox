@@ -6,7 +6,7 @@
 
 	if( $_POST['generate_chatId'] )
 		{
-		$command="sudo /usr/local/bin/mupibox/./telegram_set_deviceid.sh";
+		$command="sudo bash -c '/usr/local/bin/mupibox/./telegram_set_deviceid.sh'";
 		exec($command);		
 		$change=9;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Telegram Chat ID generation finished...</li>";
