@@ -3,19 +3,27 @@
  $CHANGE_TXT="<div id='lbinfo'><ul id='lbinfo'>";
  include ('includes/header.php');
 
+
+	if( $_POST['generate_chatId'] )
+		{
+		$command="sudo /usr/local/bin/mupibox/telegram_set_deviceid.sh";
+		exec($command);		
+		$CHANGE_TXT=$CHANGE_TXT."<li>Telegram Chat ID generation finished...</li>";
+		}
+
 	if( $_POST['change_telegram'] )
 		{
 		if($_POST['telegram_active'])
 			{
 			$data["telegram"]["active"]=true;
-			$pm2command="sudo su dietpi -c '/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py \"Telegram is activ\"'";
-			exec($pm2command);			
+			$command="sudo su dietpi -c '/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py \"Telegram is activ\"'";
+			exec($command);			
 			}
 		else
 			{
 			$data["telegram"]["active"]=false;
-			$pm2command="sudo su dietpi -c '/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py \"Telegram is inactiv\"'";
-      exec($pm2command);
+			$command="sudo su dietpi -c '/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py \"Telegram is inactiv\"'";
+			exec($command);
 			}
 		$data["telegram"]["chatId"]=$_POST['telegram_chatId'];
 		$data["telegram"]["token"]=$_POST['telegram_token'];
@@ -97,6 +105,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 
    <li class="buttons">
     <input id="saveForm" class="button_text" type="submit" name="change_telegram" value="Save Telegram Configuration" />
+    <input id="saveForm" class="button_text" type="submit" name="generate_chatId" value="Generate Telegram Chat ID" />
    </li>
   </ul>
  </details>
