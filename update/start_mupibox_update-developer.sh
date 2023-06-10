@@ -165,7 +165,6 @@ sudo service mupi_idle_shutdown stop
 	sudo wget ${SRC}/scripts/mupibox/telegram_send_message.py -O /usr/local/bin/mupibox/telegram_send_message.py >&3 2>&3
 	sudo wget ${SRC}/scripts/mupibox/telegram_set_deviceid.sh -O /usr/local/bin/mupibox/telegram_set_deviceid.sh >&3 2>&3
 
-
 	sudo wget ${SRC}/scripts/bluetooth/start_bt.sh -O /usr/local/bin/mupibox/start_bt.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/bluetooth/stop_bt.sh -O /usr/local/bin/mupibox/stop_bt.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/bluetooth/scan_bt.sh -O /usr/local/bin/mupibox/scan_bt.sh >&3 2>&3
@@ -190,7 +189,7 @@ sudo service mupi_idle_shutdown stop
 	echo -e "XXX\n30\nRestarting Services... \nXXX"
 	sudo wget ${SRC}/config/services/mupi_check_internet.service -O /etc/systemd/system/mupi_check_internet.service  >&3 2>&3
 	sudo wget ${SRC}/config/services/mupi_check_monitor.service -O /etc/systemd/system/mupi_check_monitor.service  >&3 2>&3
-	sudo wget ${SRC}/config/services/mupi_telegram_receiver.service -O /etc/systemd/system/mupi_telegram_receiver.service  >&3 2>&3
+	sudo wget ${SRC}/config/services/mupi_telegram.service -O /etc/systemd/system/mupi_telegram.service  >&3 2>&3
 	sudo wget ${SRC}/config/services/mupi_powerled.service -O /etc/systemd/system/mupi_powerled.service  >&3 2>&3
 	sudo su - dietpi -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && npm install" >&3 2>&3
 	#sudo su - dietpi -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && pm2 -f start server.js" >&3 2>&3
@@ -201,8 +200,6 @@ sudo service mupi_idle_shutdown stop
 	sudo systemctl start mupi_check_internet.service >&3 2>&3
 	sudo systemctl enable mupi_check_monitor.service >&3 2>&3
 	sudo systemctl start mupi_check_monitor.service >&3 2>&3
-	sudo systemctl enable mupi_telegram_receiver.service >&3 2>&3
-	sudo systemctl start mupi_telegram_receiver.service >&3 2>&3
 	sudo systemctl enable mupi_powerled.service >&3 2>&3
 	sudo systemctl start mupi_powerled.service >&3 2>&3
 

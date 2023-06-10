@@ -6,8 +6,9 @@
 
 	if( $_POST['generate_chatId'] )
 		{
-		$command="sudo /usr/local/bin/mupibox/telegram_set_deviceid.sh";
+		$command="sudo /usr/local/bin/mupibox/./telegram_set_deviceid.sh";
 		exec($command);		
+		$change=9;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Telegram Chat ID generation finished...</li>";
 		}
 
@@ -16,13 +17,21 @@
 		if($_POST['telegram_active'])
 			{
 			$data["telegram"]["active"]=true;
-			$command="sudo su dietpi -c '/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py \"Telegram is activ\"'";
-			exec($command);			
+			$command="sudo su dietpi -c '/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py \"Telegram enabled\"'";
+			exec($command);
+			$command="sudo systemctl enable mupi_telegram.service";
+			exec($command);
+			$command="sudo systemctl start mupi_telegram.service";
+			exec($command);
 			}
 		else
 			{
 			$data["telegram"]["active"]=false;
-			$command="sudo su dietpi -c '/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py \"Telegram is inactiv\"'";
+			$command="sudo su dietpi -c '/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py \"Telegram disabled\"'";
+			exec($command);
+			$command="sudo systemctl stop mupi_telegram.service";
+			exec($command);
+			$command="sudo systemctl disable mupi_telegram.service";
 			exec($command);
 			}
 		$data["telegram"]["chatId"]=$_POST['telegram_chatId'];
@@ -53,8 +62,8 @@
 	$json_object = json_encode($data);
 	$save_rc = file_put_contents('/tmp/.mupiboxconfig.json', $json_object);
 	exec("sudo mv /tmp/.mupiboxconfig.json /etc/mupibox/mupiboxconfig.json");
-	$pm2command="sudo su dietpi -c 'pm2 restart spotify-control'";
-	exec($pm2command);
+	$command="sudo su dietpi -c 'pm2 restart spotify-control'";
+	exec($command);
   }
 $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 ?>

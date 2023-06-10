@@ -1,8 +1,0 @@
-[Unit]
-Description=Telegram receiver
-
-[Service]
-ExecStart=/usr/bin/python3 /usr/local/bin/mupibox/telegram_receiver.py
-
-[Install]
-WantedBy=default.target
