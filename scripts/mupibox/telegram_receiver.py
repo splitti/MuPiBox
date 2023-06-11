@@ -23,6 +23,10 @@ def handle(msg):
         subprocess.run(["sudo", "rm", "/tmp/telegram_screen.png"])
         subprocess.run(["sudo", "DISPLAY=:0", "scrot", "/tmp/telegram_screen.png"])
         bot.sendPhoto(chat_id, open('/tmp/telegram_screen.png', 'rb'))
+    elif command == '/reboot':
+        subprocess.run(["sudo", "reboot"])
+    elif command == '/help':
+        bot.sendMessage(chat_id, "<b><u>Possible commands:</u></b>\n\n<code><b>/help</b></code>\n<i>to get this help...</i>\n\n<code><b>/reboot</b></code>\n<i>to reboot</i>\n\n<code><b>/shutdown</b></code>\n<i>to shutdown the mupibox</i>\n\n<code><b>/screen</b></code>\n<i>to get a current screenshot</i>",parse_mode='HTML')
 
 
 TOKEN = config['telegram']['token']
