@@ -162,7 +162,7 @@
 		$command = "sudo /usr/local/bin/mupibox/./m3u_generator.sh";
 		exec($command, $output, $result );
 		$change=3;
-		$CHANGE_TXT=$CHANGE_TXT."<li>Cleaning and updating the data is complete</li>";
+		$CHANGE_TXT=$CHANGE_TXT."<li>Cleaning and updating media data complete</li>";
 		}
 	if( $_POST['shutdown'] )
 		{
