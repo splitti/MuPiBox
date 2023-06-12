@@ -186,6 +186,15 @@
 		"token": "",
 		"active": false,
 		"chatId": ""
+	},
+	"mqtt": {
+		"active": false,
+		"broker": "",
+		"port": "",
+		"topic": "",
+		"clientId": "",
+		"username": "",
+		"password": ""
 	}
 }
 
