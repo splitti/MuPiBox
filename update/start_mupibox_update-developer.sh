@@ -12,8 +12,8 @@ sudo service mupi_idle_shutdown stop
 {
 	echo -e "XXX\n0\nPrepare Update... \nXXX"	 >&3 2>&3
 	sudo systemctl stop mupi_idle_shutdown.service >&3 2>&3
-	sudo mkdir /home/dietpi/.mupibox/chromium_cache >&3 2>&3	
-	sudo mkdir /home/dietpi/MuPiBox/media/audiobook >&3 2>&3	
+	sudo mkdir /home/dietpi/.mupibox/chromium_cache >&3 2>&3
+	sudo mkdir /home/dietpi/MuPiBox/media/audiobook >&3 2>&3
 	sudo mkdir /home/dietpi/MuPiBox/media/music >&3 2>&3
 	sudo mkdir /home/dietpi/MuPiBox/media/cover >&3 2>&3
 	sudo chown dietpi:dietpi /home/dietpi/MuPiBox/media/audiobook >&3 2>&3
@@ -35,7 +35,7 @@ sudo service mupi_idle_shutdown stop
 	sudo cp /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/active_theme.css /tmp/active_theme.css >&3 2>&3
 	sleep 1 >&3 2>&3
 
-	echo -e "XXX\n7\nUpdate Kids-Controller... \nXXX"	
+	echo -e "XXX\n7\nUpdate Kids-Controller... \nXXX"
 	sudo su - dietpi -c "pm2 stop server" >&3 2>&3
 	#sudo su - dietpi -c "pm2 save" >&3 2>&3
 	sudo rm -R /home/dietpi/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
@@ -47,10 +47,10 @@ sudo service mupi_idle_shutdown stop
 	sudo wget ${SRC}/config/templates/monitor.json -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/monitor.json >&3 2>&3
 	sudo chown dietpi:dietpi -R /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www >&3 2>&3
 
-	echo -e "XXX\n18\nUpdate MPlayer Wrapper... \nXXX"	
+	echo -e "XXX\n18\nUpdate MPlayer Wrapper... \nXXX"
 	sudo wget ${SRC}/dev/customize/mplayer-wrapper/index.js -O /home/dietpi/.mupibox/mplayer-wrapper/index.js >&3 2>&3
 
-	echo -e "XXX\n19\nUpdate Spotify Control... \nXXX"	
+	echo -e "XXX\n19\nUpdate Spotify Control... \nXXX"
 	wget ${SRC}/bin/nodejs/spotify-control.js -O /home/dietpi/.mupibox/spotifycontroller-main/spotify-control.js >&3 2>&3
 
 	echo -e "XXX\n20\nRestore Userdata... \nXXX"
@@ -63,7 +63,7 @@ sudo service mupi_idle_shutdown stop
 	sleep 1 >&3 2>&3
 
 
-	echo -e "XXX\n22\nDownload MuPiBox-Files... \nXXX"	
+	echo -e "XXX\n22\nDownload MuPiBox-Files... \nXXX"
 
 	# MuPiBox
 	sudo mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/earth >&3 2>&3
@@ -71,7 +71,7 @@ sudo service mupi_idle_shutdown stop
 	sudo mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/fantasybutterflies >&3 2>&3
 	sudo mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/matrix >&3 2>&3
 	sudo mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/lines >&3 2>&3
-	
+
 	#FANTASY-BUTTERFLIES
 	sudo wget ${SRC}/themes/fantasybutterflies/odstemplikBold.otf -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/fantasybutterflies/odstemplikBold.otf >&3 2>&3
 	sudo wget ${SRC}/themes/fantasybutterflies/fantasy-butterflies-bg.jpg -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/fantasybutterflies/fantasy-butterflies-bg.jpg >&3 2>&3
@@ -84,7 +84,7 @@ sudo service mupi_idle_shutdown stop
 	#MATRIX
 	sudo wget ${SRC}/themes/matrix/matrix-bg.png -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/matrix/matrix-bg.png >&3 2>&3
 	sudo wget ${SRC}/themes/matrix/Pixolletta8px.ttf -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/matrix/Pixolletta8px.ttf >&3 2>&3
-	
+
 	#EARTH
 	sudo wget ${SRC}/themes/earth/earth-bg.jpg -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/earth/earth-bg.jpg >&3 2>&3
 	sudo wget ${SRC}/themes/earth/Nasa21.ttf -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/earth/Nasa21.ttf >&3 2>&3
@@ -122,7 +122,7 @@ sudo service mupi_idle_shutdown stop
 	sudo wget ${SRC}/themes/danger.css -O /home/dietpi/MuPiBox/themes/danger.css >&3 2>&3
 	sudo wget ${SRC}/themes/mint.css -O /home/dietpi/MuPiBox/themes/mint.css >&3 2>&3
 	sudo wget ${SRC}/themes/cinema.css -O /home/dietpi/MuPiBox/themes/cinema.css >&3 2>&3
-	
+
 	sudo wget ${SRC}/media/images/goodbye.png -O /home/dietpi/MuPiBox/sysmedia/images/goodbye.png >&3 2>&3
 	sudo chown dietpi:dietpi /home/dietpi/MuPiBox/sysmedia/images/goodbye.png >&3 2>&3
 	sudo wget ${SRC}/media/images/MuPiLogo.jpg -O /home/dietpi/MuPiBox/sysmedia/images/MuPiLogo.jpg >&3 2>&3
@@ -182,7 +182,7 @@ sudo service mupi_idle_shutdown stop
 	sudo wget ${SRC}/config/services/mupi_vnc.service -O /etc/systemd/system/mupi_vnc.service  >&3 2>&3
 	sudo wget ${SRC}/config/services/mupi_novnc.service -O /etc/systemd/system/mupi_novnc.service  >&3 2>&3
 	sudo wget ${SRC}/config/services/mupi_check_internet.service -O /etc/systemd/system/mupi_check_internet.service  >&3 2>&3
-	
+
 	sudo wget ${SRC}/scripts/mupibox/splash_screen.sh -O /usr/local/bin/mupibox/splash_screen.sh >&3 2>&3
 	sudo chmod 755 /usr/local/bin/mupibox/* >&3 2>&3
 
@@ -190,7 +190,7 @@ sudo service mupi_idle_shutdown stop
 	echo -e "XXX\n30\nRestarting Services... \nXXX"
 	sudo wget ${SRC}/config/services/mupi_check_internet.service -O /etc/systemd/system/mupi_check_internet.service  >&3 2>&3
 	sudo wget ${SRC}/config/services/mupi_check_monitor.service -O /etc/systemd/system/mupi_check_monitor.service  >&3 2>&3
-	sudo wget ${SRC}/config/services/mupi_telegram.service -O /etc/systemd/system/-  >&3 2>&3
+	sudo wget ${SRC}/config/services/mupi_telegram.service -O /etc/systemd/system/mupi_telegram.service  >&3 2>&3
 	sudo wget ${SRC}/config/services/mupi_powerled.service -O /etc/systemd/system/mupi_powerled.service  >&3 2>&3
 	sudo su - dietpi -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && npm install" >&3 2>&3
 	#sudo su - dietpi -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && pm2 -f start server.js" >&3 2>&3
@@ -204,7 +204,7 @@ sudo service mupi_idle_shutdown stop
 	sudo systemctl enable mupi_powerled.service >&3 2>&3
 	sudo systemctl start mupi_powerled.service >&3 2>&3
 
-	echo -e "XXX\n78\nInstall Pi-Blaster... \nXXX"	
+	echo -e "XXX\n78\nInstall Pi-Blaster... \nXXX"
 	sudo rm -R /home/dietpi/pi-blaster >&3 2>&3
 	sudo su dietpi -c 'cd /home/dietpi/; git clone https://github.com/sarfata/pi-blaster.git' >&3 2>&3
 	sudo su - -c 'cd /home/dietpi/pi-blaster; ./autogen.sh; ./configure; make; make install' >&3 2>&3
@@ -213,21 +213,21 @@ sudo service mupi_idle_shutdown stop
 	sudo /usr/bin/sed -i 's|DAEMON_ARGS=".*"|'"${DAEMON_ARGS}"'|g' /etc/init.d/pi-blaster.boot.sh >&3 2>&3
 
 
-	echo -e "XXX\n83\nSet environment...  \nXXX"	
+	echo -e "XXX\n83\nSet environment...  \nXXX"
 	sudo wget ${SRC}/config/templates/crontab.template -O /tmp/crontab.template >&3 2>&3
 	sudo /usr/bin/chmod 755 /tmp/crontab.template >&3 2>&3
 	sudo /usr/bin/chown dietpi:dietpi /tmp/crontab.template >&3 2>&3
 	sudo /bin/su dietpi -c "/usr/bin/crontab /tmp/crontab.template"  >&3 2>&3
-	
-	echo -e "XXX\n85\nDownload OnOffShim-Scripts... \nXXX"	
+
+	echo -e "XXX\n85\nDownload OnOffShim-Scripts... \nXXX"
 	# OnOffShim
 	sudo wget ${SRC}/scripts/OnOffShim/off_trigger.sh -O /var/lib/dietpi/postboot.d/off_trigger.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/OnOffShim/poweroff.sh -O /usr/lib/systemd/system-shutdown/poweroff.sh >&3 2>&3
 	sudo chmod 775 /usr/lib/systemd/system-shutdown/poweroff.sh /var/lib/dietpi/postboot.d/off_trigger.sh >&3 2>&3
 
 
-	echo -e "XXX\n90\nUpdate Admin-Interface... \nXXX"	
-	sudo rm -R /var/www/* >&3 2>&3 
+	echo -e "XXX\n90\nUpdate Admin-Interface... \nXXX"
+	sudo rm -R /var/www/* >&3 2>&3
 	sudo wget ${SRC}/AdminInterface/release/www.zip -O /var/www/www.zip >&3 2>&3
 	sudo unzip /var/www/www.zip -d /var/www/ >&3 2>&3
 	sudo rm /var/www/www.zip >&3 2>&3
@@ -236,9 +236,9 @@ sudo service mupi_idle_shutdown stop
 	sudo chmod -R 755 /var/www/ >&3 2>&3
 	sudo chown -R dietpi:www-data /home/dietpi/MuPiBox/media/cover >&3 2>&3
 
-	echo -e "XXX\n95\nUpdate Config-File... \nXXX"	
+	echo -e "XXX\n95\nUpdate Config-File... \nXXX"
 	sudo cd; curl -L ${SRC}/update/conf_update.sh | sudo bash >&3 2>&3
-	
+
 	echo -e "XXX\n98\nFinalizing setup... \nXXX"
 	sudo cp ${CONFIG} ${CONFIG}_backup  >&3 2>&3
 	sudo chmod 777 ${CONFIG}
@@ -251,7 +251,7 @@ sudo service mupi_idle_shutdown stop
 	sudo systemctl disable mupi_change_checker.service >&3 2>&3
 	sudo rm /etc/systemd/system/mupi_change_checker.service >&3 2>&3
 	sudo /usr/local/bin/mupibox/./m3u_generator.sh >&3 2>&3
-	
+
 	sudo mv ${LOG} /home/dietpi/.mupibox/last_update.log >&3 2>&3
 	sudo chown -R dietpi:dietpi /home/dietpi/.mupibox/last_update.log >&3 2>&3
 	sudo chown dietpi:dietpi ${CONFIG}
