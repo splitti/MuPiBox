@@ -25,13 +25,18 @@ def handle(msg):
         bot.sendPhoto(chat_id, open('/tmp/telegram_screen.png', 'rb'))
     elif command == '/reboot':
         subprocess.run(["sudo", "reboot"])
-    elif command[:3] == '/vol':
-        subprocess.run(["/usr/bin/amixer", "sset", "Master", command[6:], "%"])
-    elif command[:4] == '/sleep':
-        sleep = command[:6]*60
-        subprocess.run(["sudo", "nohup", "/usr/local/bin/mupibox/./sleep_timer.sh", sleep ])
+    elif command[:4] == '/vol':
+        split_cmd = command.split(" ")
+        volume = split_cmd[1]+"%"
+        subprocess.run(["/usr/bin/amixer", "sset", "Master", volume])
+        bot.sendMessage(chat_id, "Volume set to "+volume)
+    elif command[:6] == '/sleep':
+        split_cmd = command.split(" ")
+        sleep = int(split_cmd[1]) * 60
+        subprocess.run(["sudo", "nohup", "/usr/local/bin/mupibox/./sleep_timer.sh", str(sleep)])
+        bot.sendMessage(chat_id, "Sleep timer is set to "+str(sleep)+" minutes")
     elif command == '/help':
-        bot.sendMessage(chat_id, "<b><u>Possible commands:</u></b>\n\n<code><b>/help</b></code>\n<i>to get this help...</i>\n\n<code><b>/reboot</b></code>\n<i>to reboot</i>\n\n<code><b>/shutdown</b></code>\n<i>to shutdown the mupibox</i>\n\n<code><b>/screen</b></code>\n<i>to get a current screenshot</i>",parse_mode='HTML')
+        bot.sendMessage(chat_id, "<b><u>Possible commands:</u></b>\n\n<code><b>/help</b></code>\n<i>to get this help...</i>\n\n<code><b>/reboot</b></code>\n<i>to reboot</i>\n\n<code><b>/shutdown</b></code>\n<i>to shutdown the mupibox</i>\n\n<code><b>/screen</b></code>\n<i>to get a current screenshot</i>\n\n<code><b>/sleep <i>[No in minutes]</i></b></code>\n<i>to set a sleep timer in minutes\nExample: /sleep 30</i>\n\n<code><b>/vol <i>[No in percent (0-100)]</i></b></code>\n<i>to set a sleep timer in minutes\nExample: /vol 30</i>",parse_mode='HTML')
 
 
 TOKEN = config['telegram']['token']
