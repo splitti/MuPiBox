@@ -79,6 +79,10 @@ ion-toolbar {
     font-size: 18px !important;
 }
 
+ion-popover .popover-viewport {
+    display: contents;
+}
+
 /*
 Global MuPiBox-Edit
 */
