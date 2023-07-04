@@ -396,7 +396,7 @@ function stop(){
 }
 
 function play(){
-  if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Start playing"');
+  
   if (currentMeta.currentPlayer == "spotify"){
     spotifyApi.play()
       .then(function() {
@@ -408,13 +408,15 @@ function play(){
       }, function(err) {
         handleSpotifyError(err,"play");
       });
-    if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Spotify.py');
+      if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Start playing"');
+      if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Spotify.py');
   } else if (currentMeta.currentPlayer == "mplayer") {
     if (!(currentMeta.playing)){
       player.playPause();
       currentMeta.pause = false;
       //currentMeta.playing = true;
 	    writeplayerstatePlay();
+      if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Start playing"');
       if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Local.py');
     }
   }
@@ -506,7 +508,9 @@ function playMe(/*activePlaylist*/){
       counter.countplay++;
       if (config.server.logLevel === 'debug'){writeCounter();}
       log.debug("[Spotify Control] Playback started");
-	  writeplayerstatePlay();
+	    writeplayerstatePlay();
+      if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Start playing spotify"');
+      if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Spotify.py');
     }, function(err){
       log.debug("[Spotify Control] Playback error" + err);
       handleSpotifyError(err,"playMe");
@@ -524,7 +528,9 @@ function playMe(/*activePlaylist*/){
       log.debug("[Spotify Control] Playback started");
       counter.countplay++;
       if (config.server.logLevel === 'debug'){writeCounter();}
-	  writeplayerstatePlay();
+	    writeplayerstatePlay();
+      if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Start playing spotify"');
+      if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Spotify.py');
     }, function(err){
       log.debug("[Spotify Control] Playback error" + err);
       handleSpotifyError(err,"playMe");
@@ -537,8 +543,6 @@ function playMe(/*activePlaylist*/){
       handleSpotifyError(err,"setVolume");
     });
   }
-  if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Start playing spotify"');
-  if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Spotify.py');
 }
 
 function playList(playedList){
@@ -554,6 +558,9 @@ function playList(playedList){
   currentMeta.currentTracknr = 0;
   currentMeta.path = playedTitelmod;
 
+  if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Start playing local"');
+  if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Local.py');
+
   setTimeout(function(){
     let cmdtotalTracks = "find \"/home/dietpi/MuPiBox/media/" + decodeURIComponent(currentMeta.path) + "\" -type f -name \"*.mp3\" -or -name \"*.flac\" -or -name \"*.m4a\" -or -name \"*.wma\" -or -name \"*.wav\"| wc -l";
     console.log(cmdtotalTracks);
@@ -568,8 +575,6 @@ function playList(playedList){
       console.log('stderr', stderr);
     });
   },500)
-  if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Start playing local"');
-  if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Local.py');
 }
 
 function playFile(playedFile){
