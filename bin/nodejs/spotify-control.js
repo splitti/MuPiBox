@@ -154,6 +154,7 @@ var currentMeta = {
   totalShows: '',
   currentPlayer: "",
   playing: false,
+  pause: false,
   album: "",
   path: "",
   currentTrackname: "",
@@ -325,7 +326,11 @@ function setActiveDevice() {
           if (config.server.logLevel === 'debug'){writeCounter();}
           log.debug('[Spotify Control] Transfering playback to ' + activeDevice);
           if (currentMeta.activeSpotifyId.includes("spotify:")){
-            playMe();
+            if (currentMeta.pause){
+              play();
+            }else{
+              playMe();
+            }
           }
         }, function(err) {
           handleSpotifyError(err,"transferMyPlayback");
@@ -336,6 +341,7 @@ function setActiveDevice() {
 
 function pause(){
   if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Pause"');
+  currentMeta.pause = true;
   if (currentMeta.currentPlayer == "spotify"){
     spotifyApi.pause()
       .then(function() {
@@ -372,6 +378,7 @@ function stop(){
     currentMeta.activeShow = "";
     currentMeta.currentPlayer = "";
     currentMeta.activeSpotifyId = "";
+    currentMeta.pause = false;
   } else if (currentMeta.currentPlayer == "mplayer") {
     player.stop();
     //currentMeta.playing = false;
@@ -383,6 +390,7 @@ function stop(){
     currentMeta.currentTracknr = "";
     currentMeta.totalTracks = "";
     currentMeta.currentPlayer = "";
+    currentMeta.pause = false;
     log.debug('[Spotify Control] Playback stopped');
   }
 }
@@ -395,6 +403,7 @@ function play(){
         counter.countplay++;
         if (config.server.logLevel === 'debug'){writeCounter();}
         log.debug('[Spotify Control] Playback started');
+        currentMeta.pause = false;
 		    writeplayerstatePlay();
       }, function(err) {
         handleSpotifyError(err,"play");
@@ -403,6 +412,7 @@ function play(){
   } else if (currentMeta.currentPlayer == "mplayer") {
     if (!(currentMeta.playing)){
       player.playPause();
+      currentMeta.pause = false;
       //currentMeta.playing = true;
 	    writeplayerstatePlay();
       if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Local.py');
