@@ -147,6 +147,7 @@ var counter = {
 };
 var currentMeta = {
   activePlaylist: '',
+  activeSpotifyId: '',
   totalPlaylist: '',
   activeEpisode: '',
   activeShow: '',
@@ -195,7 +196,7 @@ function writeCounter(){
 			console.error(err)
 			return
 		}
-		log.debug("[Spotify Control] Write Counter to " + pathCounter);
+		//log.debug("[Spotify Control] Write Counter to " + pathCounter);
 	})
 }
 
@@ -210,7 +211,7 @@ function writeCounter(){
 // 	})
 // }
 
-function refreshToken(activePlaylistId){
+function refreshToken(){
   spotifyApi.refreshAccessToken()
     .then(function(data) {
       log.debug('The access token has been refreshed!');
@@ -219,8 +220,8 @@ function refreshToken(activePlaylistId){
       spotifyApi.setAccessToken(data.body['access_token']);
       counter.countsetAccessToken++;
       if (config.server.logLevel === 'debug'){writeCounter();}
-      if (activePlaylistId.includes("spotify:") ){
-        playMe(activePlaylistId);
+      if (currentMeta.activeSpotifyId.includes("spotify:") ){
+        playMe();
       }
     }, function(err) {
       log.debug('Could not refresh access token', err);
@@ -230,14 +231,14 @@ function refreshToken(activePlaylistId){
 
 /*called in all error cases*/
 /*token expired and no_device error are handled explicitly*/
-function handleSpotifyError(err, activePlaylistId, from){
+function handleSpotifyError(err, from){
   if (err.body.error?.status == 401){
     log.debug("access token expired, refreshing...");
     log.debug("Error from: " + from);
     counter.counterrorAccessToken++;
     if (config.server.logLevel === 'debug'){writeCounter();}
-    if(activePlaylistId !== "0"){
-      refreshToken(activePlaylistId);
+    if(currentMeta.activeSpotifyId !== "0"){
+      refreshToken();
     }
   } else if (err.body.error?.status == 400) {
     log.debug("invalid id");
@@ -246,18 +247,18 @@ function handleSpotifyError(err, activePlaylistId, from){
     counter.counterrorInvalidID++;
     if (config.server.logLevel === 'debug'){writeCounter();}
     activeDevice = "";
-    if(activePlaylistId !== "0"){
-      setActiveDevice(activePlaylistId);
+    if(currentMeta.activeSpotifyId !== "0"){
+      setActiveDevice();
     }
   } else if (err.toString().includes("NO_ACTIVE_DEVICE")) {
     log.debug("no active device, setting the first one found to active");
     log.debug("Error from: " + from);
-    log.debug("playID: " + activePlaylistId);
+    log.debug("playID: " + currentMeta.activeSpotifyId);
     counter.counterrorNoActivDevice++;
     if (config.server.logLevel === 'debug'){writeCounter();}
     activeDevice = "";
-    if(activePlaylistId !== "0"){
-      setActiveDevice(activePlaylistId);
+    if(currentMeta.activeSpotifyId !== "0"){
+      setActiveDevice();
     }
   } else if (err.toString().includes("Device not found")) {
     log.debug("Device not found: " + err)
@@ -265,7 +266,7 @@ function handleSpotifyError(err, activePlaylistId, from){
     log.debug("Error from: " + from);
     counter.counterror++;
     if (config.server.logLevel === 'debug'){writeCounter();}
-    spotifyApi.play({ device_id: activePlaylistId })
+    spotifyApi.play({ device_id: currentMeta.activeSpotifyId })
     .then(function(){
       counter.countplay++;
       if (config.server.logLevel === 'debug'){writeCounter();}
@@ -273,7 +274,7 @@ function handleSpotifyError(err, activePlaylistId, from){
       writeplayerstatePlay();
     }, function(err){
       log.debug("[Spotify Control] Playback error" + err);
-      handleSpotifyError(err,"0","transferPlayback");
+      handleSpotifyError(err,"transferPlayback");
     });
   } else {
     log.debug("an error occured: " + err)
@@ -299,12 +300,12 @@ function handleSpotifyError(err, activePlaylistId, from){
 //     activeDevice = data.body.device.id;
 //     log.debug("[Spotify Control]Current active device is " + activeDevice);
 //   }, function(err) {
-//     handleSpotifyError(err,"0","getActiveDevice");
+//     handleSpotifyError(err,"getActiveDevice");
 //   });
 // }
 
   /*queries all devices and transfers playback to the first one discovered*/
-function setActiveDevice(activePlaylistId) {
+function setActiveDevice() {
     /*find devices first and choose first one available*/
   spotifyApi.getMyDevices()
     .then(function(data) {
@@ -314,7 +315,7 @@ function setActiveDevice(activePlaylistId) {
       activeDevice = availableDevices[0];
     }, function(err) {
       log.debug('[Spotify Control] Transfering error: ' + err)
-      handleSpotifyError(err,"0","getMyDevices");
+      handleSpotifyError(err,"getMyDevices");
     })
     .then(function(){       /*transfer to active device*/
       activeDevice = config.spotify.deviceId;
@@ -323,11 +324,11 @@ function setActiveDevice(activePlaylistId) {
           counter.counttransferMyPlayback++;
           if (config.server.logLevel === 'debug'){writeCounter();}
           log.debug('[Spotify Control] Transfering playback to ' + activeDevice);
-          if (activePlaylistId.includes("spotify:")){
-            playMe(activePlaylistId);
+          if (currentMeta.activeSpotifyId.includes("spotify:")){
+            playMe();
           }
         }, function(err) {
-          handleSpotifyError(err,"0","transferMyPlayback");
+          handleSpotifyError(err,"transferMyPlayback");
         }
       );
     });
@@ -343,7 +344,7 @@ function pause(){
         log.debug('[Spotify Control] Playback paused');
 		writeplayerstatePause();
       }, function(err) {
-        handleSpotifyError(err,"0","pause");
+        handleSpotifyError(err,"pause");
       });
   } else if (currentMeta.currentPlayer == "mplayer") {
     if (currentMeta.playing){
@@ -364,12 +365,13 @@ function stop(){
         log.debug('[Spotify Control] Playback stopped');
 		    writeplayerstatePause();
       }, function(err) {
-        handleSpotifyError(err,"0","stop");
+        handleSpotifyError(err,"stop");
       });
     currentMeta.totalShows = "";
     currentMeta.activeEpisode = "";
     currentMeta.activeShow = "";
     currentMeta.currentPlayer = "";
+    currentMeta.activeSpotifyId = "";
   } else if (currentMeta.currentPlayer == "mplayer") {
     player.stop();
     //currentMeta.playing = false;
@@ -395,7 +397,7 @@ function play(){
         log.debug('[Spotify Control] Playback started');
 		    writeplayerstatePlay();
       }, function(err) {
-        handleSpotifyError(err,"0","play");
+        handleSpotifyError(err,"play");
       });
     if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Spotify.py');
   } else if (currentMeta.currentPlayer == "mplayer") {
@@ -417,7 +419,7 @@ function play(){
       log.debug('[Spotify Control] Jump to position ' + offsetTrackNr);
 		  writeplayerstatePlay();
     }, function(err) {
-      handleSpotifyError(err,"0","jumpTo");
+      handleSpotifyError(err,"jumpTo");
     });
 } */
 
@@ -429,7 +431,7 @@ function next(){
         if (config.server.logLevel === 'debug'){writeCounter();}
         log.debug('[Spotify Control] Skip to next');
       }, function(err) {
-        handleSpotifyError(err,"0","next");
+        handleSpotifyError(err,"next");
       });
   } else if (currentMeta.currentPlayer == "mplayer") {
     //currentMeta.currentTracknr = currentMeta.currentTracknr + 1;
@@ -446,7 +448,7 @@ function previous(){
         if (config.server.logLevel === 'debug'){writeCounter();}
         log.debug('[Spotify Control] Skip to previous');
       }, function(err) {
-        handleSpotifyError(err,"0","previous");
+        handleSpotifyError(err,"previous");
       });
   } else if (currentMeta.currentPlayer == "mplayer") {
     if (currentMeta.currentTracknr > 1){
@@ -464,7 +466,7 @@ function shuffleon(){
       if (config.server.logLevel === 'debug'){writeCounter();}
       log.debug('[Spotify Control] Toggle Shuffle');
     }, function(err) {
-      handleSpotifyError(err,"0","shuffleon");
+      handleSpotifyError(err,"shuffleon");
     });
 }
 
@@ -475,18 +477,18 @@ function shuffleoff(){
       if (config.server.logLevel === 'debug'){writeCounter();}
       log.debug('[Spotify Control] Toggle Shuffle');
     }, function(err) {
-      handleSpotifyError(err,"0","shuffleoff");
+      handleSpotifyError(err,"shuffleoff");
     });
 }
 
-function playMe(activePlaylist){
-  log.debug("[Spotify Control] Spotify play " + activePlaylist);
-  resumeOffset = activePlaylist.split(':')[3];
+function playMe(/*activePlaylist*/){
+  log.debug("[Spotify Control] Spotify play " + currentMeta.activeSpotifyId);
+  resumeOffset = currentMeta.activeSpotifyId.split(':')[3];
   log.debug("[Spotify Control] Spotify resume " + resumeOffset);
   if(resumeOffset > 0) resumeOffset--;
   log.debug("[Spotify Control] Spotify offset " + resumeOffset);
-  resumeProgess = activePlaylist.split(':')[4];
-  tmp = activePlaylist.split(':');
+  resumeProgess = currentMeta.activeSpotifyId.split(':')[4];
+  tmp = currentMeta.activeSpotifyId.split(':');
   activePlaylistId = tmp[0] + ':' + tmp[1] + ':' + tmp[2];
   if(activePlaylistId.split(':')[1] === 'episode'){
     spotifyApi.play({ uris: [activePlaylistId], offset: {"position": resumeOffset}, position_ms: resumeProgess})
@@ -497,14 +499,14 @@ function playMe(activePlaylist){
 	  writeplayerstatePlay();
     }, function(err){
       log.debug("[Spotify Control] Playback error" + err);
-      handleSpotifyError(err, activePlaylist,"playMe");
+      handleSpotifyError(err,"playMe");
     });
     spotifyApi.setVolume(volumeStart).then(function () {
       log.debug('[Spotify Control] Setting volume to '+ 99);
       counter.countsetVolume++;
       if (config.server.logLevel === 'debug'){writeCounter();}
       }, function(err) {
-      handleSpotifyError(err,"0","setVolume");
+      handleSpotifyError(err,"setVolume");
     });
   } else {
     spotifyApi.play({ context_uri: activePlaylistId, offset: {"position": resumeOffset}, position_ms: resumeProgess})
@@ -515,14 +517,14 @@ function playMe(activePlaylist){
 	  writeplayerstatePlay();
     }, function(err){
       log.debug("[Spotify Control] Playback error" + err);
-      handleSpotifyError(err, activePlaylist,"playMe");
+      handleSpotifyError(err,"playMe");
     });
     spotifyApi.setVolume(volumeStart).then(function () {
       counter.countsetVolume++;
       if (config.server.logLevel === 'debug'){writeCounter();}
       log.debug('[Spotify Control] Setting volume to '+ 99);
       }, function(err) {
-      handleSpotifyError(err,"0","setVolume");
+      handleSpotifyError(err,"setVolume");
     });
   }
   if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Start playing spotify"');
@@ -592,7 +594,7 @@ function seek(progress){
         if (config.server.logLevel === 'debug'){writeCounter();}
         log.debug('[Spotify Control] Progress is '+ progress);
         }, function(err) {
-        handleSpotifyError(err,"0","seek");
+        handleSpotifyError(err,"seek");
       });
     } else {
       spotifyApi.getMyCurrentPlaybackState().
@@ -610,10 +612,10 @@ function seek(progress){
             if (config.server.logLevel === 'debug'){writeCounter();}
             log.debug('[Spotify Control] Setting progress to '+ targetProgress);
             }, function(err) {
-            handleSpotifyError(err,"0","seek");
+            handleSpotifyError(err,"seek");
           });
       }, function(err) {
-        handleSpotifyError(err,"0","seek");
+        handleSpotifyError(err,"seek");
       });
     }
   } else if (currentMeta.currentPlayer == "mplayer") {
@@ -736,7 +738,7 @@ function validateSpotify(){
         valideMedia.validate = true;
       }
     }, function(err) {
-      handleSpotifyError(err,"0","validateId");
+      handleSpotifyError(err,"validateId");
       valideMedia.validate = false;
     });
   }
@@ -749,7 +751,7 @@ function validateSpotify(){
         valideMedia.validate = true;
       }
     }, function(err) {
-      handleSpotifyError(err,"0","validateShow");
+      handleSpotifyError(err,"validateShow");
       valideMedia.validate = false;
     });
   }
@@ -762,7 +764,7 @@ function validateSpotify(){
         valideMedia.validate = true;
       }
     }, function(err) {
-      handleSpotifyError(err,"0","validateArtist");
+      handleSpotifyError(err,"validateArtist");
       valideMedia.validate = false;
     });
   }
@@ -775,7 +777,7 @@ function validateSpotify(){
         valideMedia.validate = true;
       }
     }, function(err) {
-      handleSpotifyError(err,"0","validatePlaylist");
+      handleSpotifyError(err,"validatePlaylist");
       valideMedia.validate = false;
     });
   }
@@ -822,7 +824,7 @@ async function useSpotify(command){
         }
         currentMeta.totalPlaylist = data.body.total;
       }, function(err) {
-        handleSpotifyError(err,"0","getPlaylist");
+        handleSpotifyError(err,"getPlaylist");
       });
       offset = offset + 50;
     }
@@ -838,7 +840,7 @@ async function useSpotify(command){
       currentMeta.activeShow = data.body.show.id;
       currentMeta.totalShows = data.body.show.total_episodes;
     }, function(err) {
-      handleSpotifyError(err,"0","getEpisode");
+      handleSpotifyError(err,"getEpisode");
     });
     while (offset < currentMeta.totalShows) {
       await spotifyApi.getShowEpisodes(currentMeta.activeShow, {limit: 50, offset: offset})
@@ -851,13 +853,14 @@ async function useSpotify(command){
           showtemp = data.body;
         }
       }, function(err) {
-        handleSpotifyError(err,"0","getShowEpisodes");
+        handleSpotifyError(err,"getShowEpisodes");
       });
       offset = offset + 50;
     }
     show = showtemp;
   } 
-  playMe(command.name);
+  currentMeta.activeSpotifyId = command.name;
+  playMe();
 }
 
   /*endpoint to return all spotify connect devices on the network*/
@@ -871,7 +874,7 @@ app.get("/getDevices", function(req, res){
       log.debug("[Spotify Control] Getting available devices...");
       res.send(availableDevices);
     }, function(err) {
-      handleSpotifyError(err,"0","getMyDevicesHTTP");
+      handleSpotifyError(err,"getMyDevicesHTTP");
     });
 });
 
@@ -905,7 +908,7 @@ app.get("/state", function(req, res){
       }
       res.send(state);
     }, function(err) {
-      handleSpotifyError(err,"0","stateHTTP");
+      handleSpotifyError(err,"stateHTTP");
     });
   } else {
     let state = {
@@ -949,7 +952,7 @@ app.get("/episode", function(req, res){
       //log.debug("[Spotify Control] Getting available state...");
       res.send(state);
     }, function(err) {
-      handleSpotifyError(err,"0","episodeHTTP");
+      handleSpotifyError(err,"episodeHTTP");
     });
   } else {
     res.send({"status":"paused","error":"none"});
