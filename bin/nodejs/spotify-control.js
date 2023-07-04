@@ -89,8 +89,8 @@ setInterval(() => {
       throw e;
     }
     currentMeta.volume = parseInt(stdout.split('[')[1].split('%')[0], 10);
-    console.log('stdout', stdout);
-    console.log('stderr', stderr);
+    //console.log('stdout', stdout);
+    //console.log('stderr', stderr);
   });
 }, 1000)
 
