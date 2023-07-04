@@ -252,6 +252,7 @@ function handleSpotifyError(err, activePlaylistId, from){
   } else if (err.toString().includes("NO_ACTIVE_DEVICE")) {
     log.debug("no active device, setting the first one found to active");
     log.debug("Error from: " + from);
+    log.debug("playID: " + activePlaylistId);
     counter.counterrorNoActivDevice++;
     if (config.server.logLevel === 'debug'){writeCounter();}
     activeDevice = "";
