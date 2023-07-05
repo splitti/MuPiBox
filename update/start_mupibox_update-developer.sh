@@ -45,6 +45,7 @@ sudo service mupi_idle_shutdown stop
 	sudo rm /home/dietpi/.mupibox/Sonos-Kids-Controller-master/deploy.zip >&3 2>&3
 	sudo wget ${SRC}/config/templates/www.json -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >&3 2>&3
 	sudo wget ${SRC}/config/templates/monitor.json -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/monitor.json >&3 2>&3
+	sudo wget ${SRC}/config/templates/albumstop.json -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/albumstop.json >&3 2>&3
 	sudo chown dietpi:dietpi -R /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www >&3 2>&3
 
 	echo -e "XXX\n18\nUpdate MPlayer Wrapper... \nXXX"
