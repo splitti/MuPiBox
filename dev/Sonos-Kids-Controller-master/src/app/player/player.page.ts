@@ -14,6 +14,7 @@ import { CurrentPlaylist } from '../current.playlist';
 import { CurrentEpisode } from '../current.episode';
 import { CurrentShow } from '../current.show';
 import { Monitor } from '../monitor';
+import { AlbumStop } from '../albumstop';
 
 @Component({
   selector: 'app-player',
@@ -25,6 +26,7 @@ export class PlayerPage implements OnInit {
 
   media: Media;
   monitor: Monitor;
+  albumStop: AlbumStop;
   resume: Resume;
   resumePlay = false;
   resumeFile: Resume = {
@@ -106,6 +108,9 @@ export class PlayerPage implements OnInit {
     });
     this.mediaService.monitor$.subscribe(monitor => {
       this.monitor = monitor;
+    });
+    this.mediaService.albumStop$.subscribe(albumStop => {
+      this.albumStop = albumStop;
     });
   }
 
@@ -230,6 +235,9 @@ export class PlayerPage implements OnInit {
       if(this.shufflechanged % 2 === 1){
         this.mediaService.editRawMediaAtIndex(this.media.index, this.media);
       }
+    }
+    if(this.albumStop?.albumStop == "On"){
+      this.playerService.sendCmd(PlayerCmds.ALBUMSTOP);
     } 
   }
 

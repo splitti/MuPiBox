@@ -24,6 +24,7 @@ export enum PlayerCmds {
   SHUFFLEON = 'shuffleon',
   SHUFFLEOFF = 'shuffleoff',
   SHUTOFF = 'shutoff',
+  ALBUMSTOP = 'albumstop',
   REBOOT = 'reboot',
   INDEX = 'index',
   NETWORKRESTART = 'networkrestart',

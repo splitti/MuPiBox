@@ -1101,6 +1101,9 @@ app.use(function(req, res){
     seek(pos);
   }
 
+  else if (command.name == "albumstop")
+    cmdCall('bash /usr/local/bin/mupibox/albumstop.sh');
+
 /*   else if (command.name.includes("jumpto:")){
     let offsetTrackNr = command.name.split(':')[1];
     jumpTo(offsetTrackNr);

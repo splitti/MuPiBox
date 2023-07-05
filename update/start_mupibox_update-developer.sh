@@ -165,6 +165,8 @@ sudo service mupi_idle_shutdown stop
 	sudo wget ${SRC}/scripts/mupibox/telegram_send_message.py -O /usr/local/bin/mupibox/telegram_send_message.py >&3 2>&3
 	sudo wget ${SRC}/scripts/mupibox/telegram_set_deviceid.sh -O /usr/local/bin/mupibox/telegram_set_deviceid.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/mupibox/telegram_start.sh -O /usr/local/bin/mupibox/telegram_start.sh >&3 2>&3
+	sudo wget ${SRC}/scripts/mupibox/albumstop.sh -O /usr/local/bin/mupibox/albumstop.sh >&3 2>&3
+	sudo wget ${SRC}/scripts/mupibox/albumstop_activator.sh -O /usr/local/bin/mupibox/albumstop_activator.sh >&3 2>&3
 
 	sudo wget ${SRC}/scripts/bluetooth/start_bt.sh -O /usr/local/bin/mupibox/start_bt.sh >&3 2>&3
 	sudo wget ${SRC}/scripts/bluetooth/stop_bt.sh -O /usr/local/bin/mupibox/stop_bt.sh >&3 2>&3
