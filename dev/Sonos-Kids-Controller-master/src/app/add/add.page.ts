@@ -353,6 +353,9 @@ export class AddPage implements OnInit, AfterViewInit {
     this.mediaService.validate$.subscribe(validate => {
       this.validateState = validate;
     });
+    console.log(this.validateState);
+    console.log(this.source);
+    console.log(media.query?.length);
 
     if(!this.validateState?.validate && this.source === 'spotify' && (media.query?.length == 0)){
       this.activityIndicatorService.dismiss();
