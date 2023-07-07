@@ -63,6 +63,21 @@
 		$CHANGE_TXT=$CHANGE_TXT."<li>Samba disabled</li>";
 		}
 
+	if( $_POST['change_dietpi_monitor'] == "enable & start" )
+		{
+		$command = "sudo systemctl enable --now dietpi-wifi-monitor";
+		exec($command, $output, $result );
+		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>DietPi-WiFi-Monitor enabled</li>";
+		}
+	else if( $_POST['change_dietpi_monitor'] == "stop & disable" )
+		{
+		$command = "sudo systemctl disable --now dietpi-wifi-monitor";
+		exec($command, $output, $result );
+		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>DietPi-WiFi-Monitor disabled</li>";
+		}
+
 	if( $_POST['change_ftp'] == "enable & start" )
 		{
 		$command = " sudo apt-get install proftpd -y && sudo apt-get install samba -y && sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/proftpd.conf -O /etc/proftpd/proftpd.conf && sudo systemctl restart proftpd";
@@ -162,6 +177,19 @@
 		{
 		$samba_state = "disabled";
 		$change_samba = "enable & start";
+		}
+
+	$command = "sudo service dietpi-wifi-monitor status | grep running";
+	exec($command, $wifioutput, $wifiresult );
+	if( $wifioutput[0] )
+		{
+		$wifi_monitor_state = "started";
+		$change_wifi_monitor = "stop & disable";
+		}
+	else
+		{
+		$wifi_monitor_state = "disabled";
+		$change_wifi_monitor = "enable & start";
 		}
 
 	$command = "sudo service proftpd status | grep running";
@@ -348,6 +376,16 @@
 	<details>
 		<summary><i class="fa-solid fa-gear"></i> Services</summary>
 	<ul>
+		<li class="li_1"><h2>DietPi-WiFi-Monitor</h2>
+			<p>Automatic reconnection to wifi...</p>
+			<p>
+			<?php 
+			echo "DietPi-WiFi-Monitor Status: <b>".$wifi_monitor_state."</b>";
+			?>
+			</p>
+			<input id="saveForm" class="button_text" type="submit" name="change_wifi_monitor" value="<?php print $change_wifi_monitor; ?>" />
+		</li>
+
 		<li class="li_1"><h2>Samba</h2>
 			<p>
 			<?php 

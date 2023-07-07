@@ -7,8 +7,9 @@
 	if( $_POST['generate_chatId'] )
 		{
 		$command="sudo bash -c '/usr/local/bin/mupibox/./telegram_set_deviceid.sh'";
-		exec($command);		
-		$change=9;
+		exec($command, $output);		
+		$data["telegram"]["chatId"]=$output[0];
+		$change=3;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Telegram Chat ID generation finished...</li>";
 		}
 
@@ -21,7 +22,7 @@
 			exec($command);
 			$command="sudo systemctl enable mupi_telegram.service";
 			exec($command);
-			$command="sudo systemctl start mupi_telegram.service";
+			$command="sudo systemctl restart mupi_telegram.service";
 			exec($command);
 			}
 		else
@@ -39,7 +40,6 @@
 		$CHANGE_TXT=$CHANGE_TXT."<li>Telegram configuration saved...</li>";
 		$change=3;
 		}
-
 
  if( $change == 1 )
   {
@@ -64,7 +64,7 @@
 	exec("sudo mv /tmp/.mupiboxconfig.json /etc/mupibox/mupiboxconfig.json");
 	$command="sudo su dietpi -c 'pm2 restart spotify-control'";
 	exec($command);
-  }
+	}
 $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 ?>
 
