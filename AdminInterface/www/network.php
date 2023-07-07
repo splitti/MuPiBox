@@ -417,7 +417,7 @@
 		<summary><i class="fa-solid fa-gear"></i> Services</summary>
 	<ul>
 		<li class="li_1"><h2>DietPi-WiFi-Monitor</h2>
-			<p>Automatic reconnection to wifi. This service shortens the boot time in offline mode.</p>
+			<p>Automatic reconnection to wifi.</p>
 			<p>
 			<?php 
 			echo "DietPi-WiFi-Monitor Status: <b>".$wifi_monitor_state."</b>";
@@ -427,7 +427,7 @@
 		</li>
 
 		<li class="li_1"><h2>Samba</h2>
-			<p>
+			<p>Disabling this service will result in faster boot time.</p><p>
 			<?php 
 			echo "Samba-Service Status: <b>".$samba_state."</b>";
 			?>
