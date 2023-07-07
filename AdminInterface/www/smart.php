@@ -15,15 +15,29 @@
 
 	if( $_POST['change_telegram'] )
 		{
+		$data["telegram"]["chatId"]=$_POST['telegram_chatId'];
+		$data["telegram"]["token"]=$_POST['telegram_token'];
 		if($_POST['telegram_active'])
 			{
-			$data["telegram"]["active"]=true;
-			$command="sudo su dietpi -c '/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py \"Telegram enabled\"'";
-			exec($command);
-			$command="sudo systemctl enable mupi_telegram.service";
-			exec($command);
-			$command="sudo systemctl restart mupi_telegram.service";
-			exec($command);
+			if (empty($data["telegram"]["chatId"]) or empty($data["telegram"]["token"]))
+				{
+				$CHANGE_TXT=$CHANGE_TXT."<li>Chat ID and Token are needed for service activation!!!</li>";
+				$data["telegram"]["active"]=false;
+				$command="sudo systemctl stop mupi_telegram.service";
+				exec($command);
+				$command="sudo systemctl disable mupi_telegram.service";
+				exec($command);
+				}
+			else
+				{
+				$data["telegram"]["active"]=true;
+				$command="sudo su dietpi -c '/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py \"Telegram enabled\"'";
+				exec($command);
+				$command="sudo systemctl enable mupi_telegram.service";
+				exec($command);
+				$command="sudo systemctl restart mupi_telegram.service";
+				exec($command);
+				}
 			}
 		else
 			{
@@ -35,8 +49,6 @@
 			$command="sudo systemctl disable mupi_telegram.service";
 			exec($command);
 			}
-		$data["telegram"]["chatId"]=$_POST['telegram_chatId'];
-		$data["telegram"]["token"]=$_POST['telegram_token'];
 		$CHANGE_TXT=$CHANGE_TXT."<li>Telegram configuration saved...</li>";
 		$change=3;
 		}
@@ -81,7 +93,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
    <li id="li_1" >
 
                 <h2>Telegram configuration</h2>
-                <p>Coming soon...</p>
+                <p>Please check the documentation before activation...</p>
    </li>
 
    <li id="li_1" ><div>

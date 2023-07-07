@@ -47,6 +47,21 @@
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>VNC-Services enabled and started</li>";
 		}
+
+	if( $_POST['change_dhcp_timeout'] == "enable" )
+		{
+		$command = "sudo /usr/bin/sed -i 's/#timeout 60;/timeout 10;/g' /etc/dhcp/dhclient.conf";
+		exec($command, $output, $result );
+		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>DHCP-Timeout set to 10 seconds</li>";
+		}
+	else if( $_POST['change_dhcp_timeout'] == "disable" )
+		{
+		$command = "sudo /usr/bin/sed -i 's/timeout 10;/#timeout 60;/g' /etc/dhcp/dhclient.conf";
+		exec($command, $output, $result );
+		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>DHCP-Timeout set to default</li>";
+		}
 		
 	if( $_POST['change_samba'] == "enable & start" )
 		{
@@ -63,14 +78,14 @@
 		$CHANGE_TXT=$CHANGE_TXT."<li>Samba disabled</li>";
 		}
 
-	if( $_POST['change_dietpi_monitor'] == "enable & start" )
+	if( $_POST['change_wifi_monitor'] == "enable & start" )
 		{
 		$command = "sudo systemctl enable --now dietpi-wifi-monitor";
 		exec($command, $output, $result );
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>DietPi-WiFi-Monitor enabled</li>";
 		}
-	else if( $_POST['change_dietpi_monitor'] == "stop & disable" )
+	else if( $_POST['change_wifi_monitor'] == "stop & disable" )
 		{
 		$command = "sudo systemctl disable --now dietpi-wifi-monitor";
 		exec($command, $output, $result );
@@ -180,8 +195,8 @@
 		}
 
 	$command = "sudo service dietpi-wifi-monitor status | grep running";
-	exec($command, $wifioutput, $wifiresult );
-	if( $wifioutput[0] )
+	exec($command, $wifi_monitor_output, $wifi_monitor_result );
+	if( $wifi_monitor_output[0] )
 		{
 		$wifi_monitor_state = "started";
 		$change_wifi_monitor = "stop & disable";
@@ -358,6 +373,31 @@
 			</b></p>
 			<input id="saveForm" class="button_text" type="submit" name="change_wifi" value="<?php print $change_wifi; ?>" />
 		</li>
+
+		<li class="li_1"><h2>DHCP-Timeout</h2>
+			<p>
+			Set timeout to 10 seconds (Default 60 seconds)! This setting shortens the boot time in offline mode.
+			</p>
+			<p>
+			<?php
+			$command = "cat /etc/dhcp/dhclient.conf | grep 'timeout 10;'";
+			$dhcp_timeout = exec($command, $output);
+			if($dhcp_timeout == "")
+				{
+				$change_dhcp_timeout="enable";
+				$dhcp_timeout="Default or manual set";
+				}
+			else
+				{
+				$change_dhcp_timeout="disable";
+				$dhcp_timeout="10 seconds";
+				}
+			print "DHCP-Timeout: <b>".$dhcp_timeout;
+			?>
+			</b></p>
+			<input id="saveForm" class="button_text" type="submit" name="change_dhcp_timeout" value="<?php print $change_dhcp_timeout; ?>" />
+		</li>
+
 		<li class="li_1"><h2>Restart Wifi-Device</h2>
 			<p>
 			Restarts the wlan0-Device.
@@ -377,7 +417,7 @@
 		<summary><i class="fa-solid fa-gear"></i> Services</summary>
 	<ul>
 		<li class="li_1"><h2>DietPi-WiFi-Monitor</h2>
-			<p>Automatic reconnection to wifi...</p>
+			<p>Automatic reconnection to wifi. This service shortens the boot time in offline mode.</p>
 			<p>
 			<?php 
 			echo "DietPi-WiFi-Monitor Status: <b>".$wifi_monitor_state."</b>";
