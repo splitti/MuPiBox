@@ -396,7 +396,6 @@ function stop(){
 }
 
 function play(){
-  
   if (currentMeta.currentPlayer == "spotify"){
     spotifyApi.play()
       .then(function() {
