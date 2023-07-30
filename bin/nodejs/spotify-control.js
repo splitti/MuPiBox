@@ -112,6 +112,7 @@ let activeDevice = "";
 var volumeStart = 99;
 var	playerstate;
 var playlist;
+var setPause = false;
 var show;
 var date = "";
 var valideMedia = {
@@ -221,7 +222,7 @@ function refreshToken(){
       spotifyApi.setAccessToken(data.body['access_token']);
       counter.countsetAccessToken++;
       if (config.server.logLevel === 'debug'){writeCounter();}
-      if (currentMeta.activeSpotifyId.includes("spotify:") ){
+      if (currentMeta.activeSpotifyId.includes("spotify:") && !setPause){
         playMe();
       }
     }, function(err) {
@@ -348,7 +349,8 @@ function pause(){
         counter.countpause++;
         if (config.server.logLevel === 'debug'){writeCounter();}
         log.debug('[Spotify Control] Playback paused');
-		writeplayerstatePause();
+		    writeplayerstatePause();
+        setPause = true;
       }, function(err) {
         handleSpotifyError(err,"pause");
       });
@@ -379,6 +381,7 @@ function stop(){
     currentMeta.currentPlayer = "";
     currentMeta.activeSpotifyId = "";
     currentMeta.pause = false;
+    setPause = false;
   } else if (currentMeta.currentPlayer == "mplayer") {
     player.stop();
     //currentMeta.playing = false;
@@ -391,12 +394,14 @@ function stop(){
     currentMeta.totalTracks = "";
     currentMeta.currentPlayer = "";
     currentMeta.pause = false;
+    setPause = false;
     log.debug('[Spotify Control] Playback stopped');
   }
 }
 
 function play(){
   if (currentMeta.currentPlayer == "spotify"){
+    setPause = false;
     spotifyApi.play()
       .then(function() {
         counter.countplay++;

@@ -9,7 +9,12 @@ do
 
         if [ ! -f ${MONITOR_FILE} ]; then
                 sudo echo -n "{}" ${MONITOR_FILE}
-                chown dietpi:dietpi ${MONITOR_FILE}
+                sudo chown dietpi:dietpi ${MONITOR_FILE}
+                /usr/bin/cat <<< $(/usr/bin/jq -n --arg v "On" '.monitor = $v' ${MONITOR_FILE}) >  ${MONITOR_FILE}
+        elif [ -z ${MONITOR_FILE} ]; then
+                rm ${MONITOR_FILE}
+                sudo echo -n "{}" ${MONITOR_FILE}
+                sudo chown dietpi:dietpi ${MONITOR_FILE}
                 /usr/bin/cat <<< $(/usr/bin/jq -n --arg v "On" '.monitor = $v' ${MONITOR_FILE}) >  ${MONITOR_FILE}
         else
                 MONITOR=$(DISPLAY=:0 xset q | grep "Monitor" | awk '{print $3}')
