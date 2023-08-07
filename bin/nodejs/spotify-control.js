@@ -112,7 +112,7 @@ let activeDevice = "";
 var volumeStart = 99;
 var	playerstate;
 var playlist;
-var setPause = false;
+var spotifyRunning = false;
 var show;
 var date = "";
 var valideMedia = {
@@ -222,7 +222,7 @@ function refreshToken(){
       spotifyApi.setAccessToken(data.body['access_token']);
       counter.countsetAccessToken++;
       if (config.server.logLevel === 'debug'){writeCounter();}
-      if (currentMeta.activeSpotifyId.includes("spotify:") && !setPause){
+      if (currentMeta.activeSpotifyId.includes("spotify:") && !spotifyRunning){
         playMe();
       }
     }, function(err) {
@@ -350,7 +350,6 @@ function pause(){
         if (config.server.logLevel === 'debug'){writeCounter();}
         log.debug('[Spotify Control] Playback paused');
 		    writeplayerstatePause();
-        setPause = true;
       }, function(err) {
         handleSpotifyError(err,"pause");
       });
@@ -381,7 +380,7 @@ function stop(){
     currentMeta.currentPlayer = "";
     currentMeta.activeSpotifyId = "";
     currentMeta.pause = false;
-    setPause = false;
+    spotifyRunning = false;
   } else if (currentMeta.currentPlayer == "mplayer") {
     player.stop();
     //currentMeta.playing = false;
@@ -394,14 +393,13 @@ function stop(){
     currentMeta.totalTracks = "";
     currentMeta.currentPlayer = "";
     currentMeta.pause = false;
-    setPause = false;
+    spotifyRunning = false;
     log.debug('[Spotify Control] Playback stopped');
   }
 }
 
 function play(){
   if (currentMeta.currentPlayer == "spotify"){
-    setPause = false;
     spotifyApi.play()
       .then(function() {
         counter.countplay++;
@@ -513,6 +511,7 @@ function playMe(/*activePlaylist*/){
       if (config.server.logLevel === 'debug'){writeCounter();}
       log.debug("[Spotify Control] Playback started");
 	    writeplayerstatePlay();
+      spotifyRunning = true;
       if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Start playing spotify"');
       if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Spotify.py');
     }, function(err){
@@ -533,6 +532,7 @@ function playMe(/*activePlaylist*/){
       counter.countplay++;
       if (config.server.logLevel === 'debug'){writeCounter();}
 	    writeplayerstatePlay();
+      spotifyRunning = true;
       if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Start playing spotify"');
       if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Spotify.py');
     }, function(err){
