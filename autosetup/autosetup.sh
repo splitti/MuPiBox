@@ -24,7 +24,7 @@ exec 3>${LOG}
 	echo -e "XXX\n0\nInstall some packages... Please wait!\nXXX"
 	# Get missing packages
 	sudo apt-get update >&3 2>&3
-	packages2install="git libasound2 jq samba mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential"
+	packages2install="git libasound2 jq samba mplayer pulseaudio-module-bluetooth python3-mutagen pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential"
 	sudo apt-get install ${packages2install} -y >&3 2>&3
 
 	for thispackage in `echo ${packages2install}`; do
@@ -33,13 +33,12 @@ exec 3>${LOG}
 		  sudo apt-get --yes install ${thispackage} >&3 2>&3
 		fi
 	done
-	sudo pip install mutagen  >&3 2>&3
 	
 	###############################################################################################
 	
 	echo -e "XXX\n6\nInstall nodeJS 16... \nXXX"	
 	curl -sL https://deb.nodesource.com/setup_16.x | sudo -E bash - >&3 2>&3
-	sudo apt-get install -y nodejs >&3 2>&3
+	sudo apt-get install -y nodejs npm >&3 2>&3
 
 	###############################################################################################
 
@@ -157,11 +156,13 @@ exec 3>${LOG}
 	echo -e "XXX\n63\nDownload binaries... \nXXX"	
 
 	# Binaries
-	sudo wget ${SRC}/bin/fbv/fbv -O /usr/bin/fbv >&3 2>&3
 	if [ `getconf LONG_BIT` == 32 ]; then
 		sudo wget ${SRC}/bin/spotifyd/0.3.3/spotifyd -O /usr/bin/spotifyd >&3 2>&3
+		sudo wget ${SRC}/bin/fbv/fbv -O /usr/bin/fbv >&3 2>&3
 	else
 		sudo wget ${SRC}/bin/spotifyd/0.3.3/spotifyd_64bit -O /usr/bin/spotifyd >&3 2>&3
+		sudo wget ${SRC}/bin/fbv/fbv_64 -O /usr/bin/fbv >&3 2>&3
+
 	fi
 	sudo chmod 755 /usr/bin/fbv /usr/bin/spotifyd >&3 2>&3
 	sleep 1
