@@ -24,7 +24,7 @@ exec 3>${LOG}
 	echo -e "XXX\n0\nInstall some packages... Please wait!\nXXX"
 	# Get missing packages
 	sudo apt-get update >&3 2>&3
-	packages2install="git libasound2 jq samba mplayer pulseaudio-module-bluetooth python3-mutagen pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential"
+	packages2install="git libasound2 jq samba mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential"
 	sudo apt-get install ${packages2install} -y >&3 2>&3
 
 	for thispackage in `echo ${packages2install}`; do
@@ -33,13 +33,24 @@ exec 3>${LOG}
 		  sudo apt-get --yes install ${thispackage} >&3 2>&3
 		fi
 	done
+
+	if [ `getconf LONG_BIT` == 32 ]; then
+		sudo pip install mutagen >&3 2>&3
+	else
+		sudo apt-get install python3-mutagen -y >&3 2>&3
+	fi
 	
 	###############################################################################################
 	
 	echo -e "XXX\n6\nInstall nodeJS 16... \nXXX"	
 	curl -sL https://deb.nodesource.com/setup_16.x | sudo -E bash - >&3 2>&3
-	sudo apt-get install -y nodejs npm >&3 2>&3
 
+	if [ `getconf LONG_BIT` != 32 ]; then
+		sudo apt-get install -y nodejs >&3 2>&3
+	else
+		sudo apt-get install -y nodejs npm >&3 2>&3
+	fi
+	
 	###############################################################################################
 
 	echo -e "XXX\n10\nInstall ionic... \nXXX"	
