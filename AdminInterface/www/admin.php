@@ -255,7 +255,6 @@
 		exec("sudo /usr/local/bin/mupibox/./set_hostname.sh");
 		exec("sudo -i -u dietpi /usr/local/bin/mupibox/./restart_kiosk.sh");
 		}
-	$rc = $output[count($output)-1];
 	$CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 ?>
 
