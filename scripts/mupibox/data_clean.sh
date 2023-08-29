@@ -3,7 +3,6 @@
 # Generate M3U Playlist and Covers
 
 DATA="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json"
-M3ULOCK="/tmp/.m3u.lock"
 TMP_DATA="/tmp/cleaned_data.json"
 
 echo "####    CHECKING COVER IMAGES    ####"
@@ -93,4 +92,3 @@ echo "]" >> ${TMP_DATA}
 
 bash /usr/local/bin/mupibox/add_index.sh
 /usr/bin/chown dietpi:dietpi ${DATA}
-rm ${M3ULOCK}
