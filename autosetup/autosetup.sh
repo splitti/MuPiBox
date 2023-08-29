@@ -19,9 +19,15 @@ fi
 exec 3>${LOG}
 
 {
+	OS=$(grep -E '^(VERSION_CODENAME)=' /etc/os-release)  >&3 2>&3
+	OS=${OS:17}  >&3 2>&3
+
+
 	###############################################################################################
 
 	echo -e "XXX\n0\nInstall some packages... Please wait!\nXXX"
+
+
 	# Get missing packages
 	sudo apt-get update >&3 2>&3
 	packages2install="git libasound2 jq samba mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential"
@@ -34,11 +40,14 @@ exec 3>${LOG}
 		fi
 	done
 
-	if [ `getconf LONG_BIT` == 32 ]; then
+	if [ $OS == "bullseye" ]; then
 		sudo pip install mutagen >&3 2>&3
 	else
-		sudo apt-get install python3-mutagen -y >&3 2>&3
+		sudo apt-get install python3-mutagen python3-dev -y >&3 2>&3
 	fi
+	sudo pip install telepot --break-system-packages >&3 2>&3
+	sudo pip install requests --break-system-packages >&3 2>&3
+
 	
 	###############################################################################################
 	
