@@ -44,9 +44,9 @@ exec 3>${LOG}
 		sudo pip install mutagen >&3 2>&3
 	else
 		sudo apt-get install python3-mutagen python3-dev -y >&3 2>&3
+		sudo pip install telepot --break-system-packages >&3 2>&3
+		sudo pip install requests --break-system-packages >&3 2>&3
 	fi
-	sudo pip install telepot --break-system-packages >&3 2>&3
-	sudo pip install requests --break-system-packages >&3 2>&3
 
 	
 	###############################################################################################
@@ -54,7 +54,7 @@ exec 3>${LOG}
 	echo -e "XXX\n6\nInstall nodeJS 16... \nXXX"	
 	curl -sL https://deb.nodesource.com/setup_16.x | sudo -E bash - >&3 2>&3
 
-	if [ `getconf LONG_BIT` != 32 ]; then
+	if [ $OS == "bullseye" ]; then
 		sudo apt-get install -y nodejs >&3 2>&3
 	else
 		sudo apt-get install -y nodejs npm >&3 2>&3
