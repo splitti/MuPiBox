@@ -17,12 +17,12 @@
 		],
 		"stable": [
 			{
-			"version": "3.1.5",
+			"version": "3.1.0",
 			"url": "",
 			"releaseinfo": "Blabla"
 			},
 			{
-			"version": "3.1.2",
+			"version": "3.1.5",
 			"url": "Just a test",
 			"releaseinfo": "Just a test"
 			}
