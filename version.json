@@ -11,12 +11,12 @@
 		"prod": [
 			{
 			"version": "3.1.2",
-			"url": ""
+			"url": "",
 			"releaseinfo": "Blabla"
 			},
 			{
 			"version": "3.1.2",
-			"url": ""
+			"url": "",
 			"releaseinfo": "Blabla"
 			}
 		]
