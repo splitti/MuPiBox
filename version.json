@@ -3,28 +3,38 @@
 	"release": {
 		"dev": [
 			{
-			"version": "3.1.6",
-			"url": "",
+			"version": "3.1.4",
+			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.1.3.zip",
 			"releaseinfo": "Just a test"
 			}
 		],
 		"beta": [
 			{
-			"version": "3.1.6",
-			"url": "",
-			"releaseinfo": "Just a test"
+			"version": "3.1.4",
+			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.1.3.zip",
+			"releaseinfo": "Just a test, version 3.1.3 is linked..."
 			}
 		],
 		"stable": [
 			{
-			"version": "3.1.0",
-			"url": "",
-			"releaseinfo": "Blabla"
+			"version": "3.0.0",
+			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.0.0.zip",
+			"releaseinfo": "Adding offset"
 			},
 			{
-			"version": "3.1.5",
-			"url": "Just a test",
-			"releaseinfo": "Just a test"
+			"version": "3.0.1",
+			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.0.1.zip",
+			"releaseinfo": "Bugfix for endless loading spotify.php on fresh installations..."
+			},
+			{
+			"version": "3.1.2",
+			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.1.2.zip",
+			"releaseinfo": "Telegram Support, Bug fixes"
+			},
+			{
+			"version": "3.1.3",
+			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.1.3.zip",
+			"releaseinfo": "Bugfixes in setup"
 			}
 		]
 	}
