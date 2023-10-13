@@ -8,7 +8,14 @@
 			"releaseinfo": "Just a test"
 			}
 		],
-		"prod": [
+		"beta": [
+			{
+			"version": "3.1.6",
+			"url": "",
+			"releaseinfo": "Just a test"
+			}
+		],
+		"stable": [
 			{
 			"version": "3.1.5",
 			"url": "",
