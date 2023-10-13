@@ -3,21 +3,21 @@
 	"release": {
 		"dev": [
 			{
-			"version": "3.1.2",
+			"version": "3.1.6",
 			"url": "",
-			"releaseinfo": ""
+			"releaseinfo": "Just a test"
 			}
 		],
 		"prod": [
 			{
-			"version": "3.1.2",
+			"version": "3.1.5",
 			"url": "",
 			"releaseinfo": "Blabla"
 			},
 			{
 			"version": "3.1.2",
-			"url": "",
-			"releaseinfo": "Blabla"
+			"url": "Just a test",
+			"releaseinfo": "Just a test"
 			}
 		]
 	}
