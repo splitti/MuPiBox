@@ -75,7 +75,7 @@
 			}
 		}
 
-	$onlinejson = file_get_contents('https://mupibox.de/version/latest/version.json');
+	$onlinejson = file_get_contents('https://raw.githubusercontent.com/splitti/MuPiBox/main/version.json');
 	$dataonline = json_decode($onlinejson, true);
 	include ('includes/header.php');
 
@@ -329,7 +329,6 @@
 		</ul>
 	</details>
 
-
 	<details>
 		<summary><i class="fa-solid fa-rotate"></i> Updates</summary>
 		<ul>
@@ -338,12 +337,57 @@
 				<p>
 					<table>
 						<tr>
-							<td>Installed version:</td>
-							<td><?php print $data["mupibox"]["version"]; ?></td>
+								<td><b>Installed version</b></br>
+								<?php print $data["mupibox"]["version"]; ?></td>
+						</tr>
+					</table>
+					<br>
+					<table class="version">
+						<tr>
+								<th>Environment</th>
+								<th>Latest Version</th>
+								<th>Release-Infos</th>
+								<th>Installation-Button</th>
 						</tr>
 						<tr>
-							<td>Latest stable version:</td>
-							<td><?php print $dataonline["version"]; ?></td>
+							</form><form class="appnitro" method="post" action="admin.php" id="form"enctype="multipart/form-data">
+								<td>Stable</td>
+								<td><?php print $dataonline["release"]["stable"][count($dataonline["release"]["stable"])-1]["version"]; ?></td>
+								<td><?php print $dataonline["release"]["stable"][count($dataonline["release"]["stable"])-1]["releaseinfo"]; ?></td>
+								<td>
+								<input type="hidden" name="update_url" value="<?php print $dataonline["release"]["stable"][count($dataonline["release"]["stable"])-1]["url"]; ?>" />
+								<input type="hidden" name="update_env" value="stable" />
+								<input type="hidden" name="update_version" value="<?php print $dataonline["release"]["stable"][count($dataonline["release"]["stable"])-1]["version"]; ?>"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
+								<input id="saveForm" class="button_text" type="submit" name="mupibox_update" value="Update to version <?php print $dataonline["release"]["stable"][count($dataonline["release"]["stable"])-1]["version"]; ?>"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
+								</td>
+							</form>
+						</tr>
+						<tr>
+							<form class="appnitro" method="post" action="admin.php" id="form"enctype="multipart/form-data">
+								<td>Beta</td>
+								<td><?php print $dataonline["release"]["beta"][count($dataonline["release"]["beta"])-1]["version"]; ?></td>
+								<td><?php print $dataonline["release"]["beta"][count($dataonline["release"]["beta"])-1]["releaseinfo"]; ?></td>
+								<td>
+								<input type="hidden" name="update_url" value="<?php print $dataonline["release"]["beta"][count($dataonline["release"]["beta"])-1]["url"]; ?>" />
+								<input type="hidden" name="update_env" value="beta" />
+								<input type="hidden" name="update_version" value="<?php print $dataonline["release"]["beta"][count($dataonline["release"]["beta"])-1]["version"]; ?>"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
+								<input id="saveForm" class="button_text_red" type="submit" name="mupibox_update" value="Update to version <?php print $dataonline["release"]["beta"][count($dataonline["release"]["beta"])-1]["version"]; ?>"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
+								</td>
+							</form>
+						</tr>
+						<tr>
+							<form class="appnitro" method="post" action="admin.php" id="form"enctype="multipart/form-data">
+								<td>Development</td>
+								<td><?php print $dataonline["release"]["dev"][count($dataonline["release"]["dev"])-1]["version"]; ?></td>
+								<td><?php print $dataonline["release"]["dev"][count($dataonline["release"]["dev"])-1]["releaseinfo"]; ?></td>
+								<td>
+								<input type="hidden" name="update_url" value="<?php print $dataonline["release"]["dev"][count($dataonline["release"]["dev"])-1]["url"]; ?>" />
+								<input type="hidden" name="update_env" value="dev" />
+								<input type="hidden" name="update_version" value="<?php print $dataonline["release"]["dev"][count($dataonline["release"]["dev"])-1]["version"]; ?>"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
+								<input id="saveForm" class="button_text_red" type="submit" name="mupibox_update" value="Update to version <?php print $dataonline["release"]["dev"][count($dataonline["release"]["dev"])-1]["version"]; ?>"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
+								</td>
+							</form><form class="appnitro" method="post" action="admin.php" id="form"enctype="multipart/form-data">
+
 						</tr>
 					</table>
 				</p>
@@ -359,6 +403,7 @@
 		</ul>
 	</details>
 
+<form class="appnitro" method="post" action="admin.php" id="form"enctype="multipart/form-data">
 
 	<details>
 		<summary><i class="fas fa-stream"></i> Logging / Debug</summary>

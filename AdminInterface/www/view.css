@@ -1321,5 +1321,23 @@ details > ul {
   font-weight: bold;
 }
 
+.version table {
+ table-layout: auto;
+ max-width: 100%;
+ border-spacing: 16px 8px;
+}
+
+.version th {
+  background-color: #000;
+  color: #f1f3f4;
+  font-weight: 700;
+}
+.version th, .version td {
+  padding: .2em .5em;
+  border: thin solid #666;
+}
+.version td {
+  background-color: #f1f3f4;
+}
 
 
