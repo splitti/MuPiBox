@@ -9,6 +9,8 @@ LOG="/tmp/autosetup.log"
 #https://raw.githubusercontent.com/splitti/MuPiBox/main
 SRC="https://mupibox.de/version/latest"
 
+NODE_MAJOR=18
+
 autosetup="$(cat ~/.bashrc | grep autosetup)"
 
 if(( ${#autosetup} > 0 ))
@@ -22,15 +24,18 @@ exec 3>${LOG}
 	OS=$(grep -E '^(VERSION_CODENAME)=' /etc/os-release)  >&3 2>&3
 	OS=${OS:17}  >&3 2>&3
 
-
 	###############################################################################################
 
 	echo -e "XXX\n0\nInstall some packages... Please wait!\nXXX"
 
+	# Prepare NodeJS package repo before running apt update
+	sudo mkdir -p /etc/apt/keyrings
+	curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
+	echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list
 
 	# Get missing packages
 	sudo apt-get update >&3 2>&3
-	packages2install="git libasound2 jq samba mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential"
+	packages2install="git libasound2 jq samba mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential ca-certificates curl gnupg"
 	sudo apt-get install ${packages2install} -y >&3 2>&3
 
 	for thispackage in `echo ${packages2install}`; do
@@ -48,11 +53,10 @@ exec 3>${LOG}
 		sudo pip install requests --break-system-packages >&3 2>&3
 	fi
 
-	
 	###############################################################################################
-	
-	echo -e "XXX\n6\nInstall nodeJS 16... \nXXX"	
-	curl -sL https://deb.nodesource.com/setup_16.x | sudo -E bash - >&3 2>&3
+
+	# Install node JS, repo prepared above
+	echo -e "XXX\n6\nInstall nodeJS 18... \nXXX"	
 
 	if [ $OS == "bullseye" ]; then
 		sudo apt-get install -y nodejs >&3 2>&3
