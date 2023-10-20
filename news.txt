@@ -1,3 +1,8 @@
+<h3>We need you</h3>
+<p>We need your support. The MuPiBox development is currently stalling a bit, partly due to the complexity and time required, but also due to the missing appreciation from the community.
+We always receive new requests for features. On the other hand, there are not so much donations.
+If you would like to help, please donate a small amount to nero and splitti. A developer with experience in NodeJS/Angular would also help us.</p>
+
 <h3>Last updates</h3>
 <iframe width="560" height="315" src="https://www.youtube.com/embed/D7lRq-nNLHw" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
 <ul id='ulnews' class='ulnews'>
