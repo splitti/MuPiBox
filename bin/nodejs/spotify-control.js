@@ -144,6 +144,7 @@ var counter = {
   countsetVolume: 0,
   countskipToNext: 0,
   countskipToPrevious: 0,
+  counterrorToManyRequest: 0,
   counttransferMyPlayback: 0
 };
 var currentMeta = {
@@ -252,6 +253,16 @@ function handleSpotifyError(err, from){
     if(currentMeta.activeSpotifyId !== "0"){
       setActiveDevice();
     }
+  } else if (err.body.error?.status == 429) {
+    log.debug("To many requests on th spotify web api");
+    log.debug("Error from: " + from);
+    log.debug(err)
+    counter.counterrorToManyRequest++;
+    if (config.server.logLevel === 'debug'){writeCounter();}
+    //setTimeout(function(){
+    //  
+    //},2000)
+    
   } else if (err.toString().includes("NO_ACTIVE_DEVICE")) {
     log.debug("no active device, setting the first one found to active");
     log.debug("Error from: " + from);

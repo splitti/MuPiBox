@@ -11,6 +11,9 @@ import { Resume } from '../resume';
 import { Network } from "../network";
 import { Observable } from 'rxjs';
 import { Monitor } from '../monitor';
+import { xml2json } from 'xml-js';
+import { HttpClient } from '@angular/common/http';
+import { RssFeed } from '../rssfeed';
 
 @Component({
   selector: 'app-home',
@@ -29,6 +32,7 @@ export class HomePage implements OnInit {
   resumeFile: Resume;
   network: Network;
   monitor: Monitor;
+  jsonRSS: RssFeed;
   currentNetwork = "";
   updateNetwork = false;
   covers = {};
@@ -52,6 +56,7 @@ export class HomePage implements OnInit {
   };
 
   constructor(
+    private http: HttpClient,
     private mediaService: MediaService,
     private artworkService: ArtworkService,
     private playerService: PlayerService,
@@ -224,6 +229,17 @@ export class HomePage implements OnInit {
 
   editButtonPressed() {
     window.clearTimeout(this.editClickTimer);
+
+    // var url='https://www.antennebrandenburg.de/programm/hoeren/podcasts/Zappelduster_Podcast/podcast.xml/feed=podcast.xml';
+    // var response = '';
+    // this.http.get(url, { responseType: 'text' }).subscribe(httpresponse =>
+    //   response=httpresponse
+    //   );
+    //  setTimeout(() => {
+    //   this.jsonRSS = JSON.parse(xml2json(response, {compact: true, spaces: 0, ignoreDeclaration: true, trim: true}));
+    //   console.log(this.jsonRSS.rss.channel.title._text);
+    //   console.log(Object.keys(this.jsonRSS.rss.channel.item).length);
+    // }, 1000)
 
     if (this.editButtonclickCount < 9) {
       this.editButtonclickCount++;
