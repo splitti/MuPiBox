@@ -73,11 +73,14 @@ for item in "${my_array[@]}"; do
 	else
 		add_item=1
 	fi
-			if [[ ${i} > 0 ]] && [[ ${add_item} > 0 ]]
-			then
-				echo $(sed '${s/$/,/}' ${TMP_DATA}) > ${TMP_DATA}
-			fi
-	i=1
+	if [[ ${i} > 0 ]] && [[ ${add_item} > 0 ]]
+	then
+		echo $(sed '${s/$/,/}' ${TMP_DATA}) > ${TMP_DATA}
+	fi
+	if [[ ${i} = 0 ]] && [[ ${add_item} > 0 ]]
+	then
+			i=1
+	fi
 	if [[ ${add_item} > 0 ]]
 	then
 		/usr/bin/cat <<< $(/usr/bin/jq '.' <<< $item) >> ${TMP_DATA}
