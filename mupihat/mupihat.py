@@ -5,6 +5,12 @@ from datetime import datetime
 bus = smbus.SMBus(1)
 address = 0x6b
 
+busWS_ms = 20 # 20ms waitstate after each access
+# Flags
+scriptflag_print_fullstatus = 0
+scriptflag_print_reduced = 1
+
+
 #BQ25792 Register
 REG00_Minimal_System_Voltage = 0x0
 REG01_Charge_Voltage_Limit = 0x1
@@ -65,16 +71,20 @@ REG47_DPDM_Driver = 0x47
 REG48_Part_Information = 0x48
 
 def write(REG, value):
-        bus.write_byte_data(address, REG, value)
-        return -1
+    bus.write_byte_data(address, REG, value)
+    time.sleep(busWS_ms/1000)
+    return -1
 
 def read(REG):
     val = bus.read_byte_data(address, REG)
+    time.sleep(busWS_ms/1000)
     return val
 
 def read16(REG):
     val_lsb = bus.read_byte_data(address, REG+1)
+    time.sleep(busWS_ms/1000)
     val_msb = bus.read_byte_data(address, REG)
+    time.sleep(busWS_ms/1000)
     val = (val_msb << 8) + val_lsb
     return val
 
@@ -118,6 +128,11 @@ def bq25792_get_Minimal_System_Voltage():
 def bq25792_get_battery_charging_current():
     val = read(REG03_Charge_Current_Limit) * 10
     return val
+
+def bq25792_set_battery_charging_current(CHARGE_CUR_LIMIT):
+    write_val = CHARGE_CUR_LIMIT
+    return write(REG03_Charge_Current_Limit-1, write_val)
+
 
 #Battery Voltage Limit:
 #During POR, the device reads the resistance tie to
@@ -251,55 +266,73 @@ def bq25792_get_IBUS():
     val = read16(REG31_IBUS_ADC)
     return val
 
+# Enable ADC
+val, ADC_EN, ADC_RATE, ADC_SAMPLE, ADC_AVG, ADC_AVG_INIT = bq25792_get_ADC_Control()
+print ('*** BQ25792 - ADC Control (=' + str(hex(val)) + ')***')
+if ADC_EN == 0:
+    ADC_EN = 1
+    print('    Set ADC_EN to 1 ')
+    bq25792_set_ADC_Control(ADC_EN, ADC_RATE, ADC_SAMPLE, ADC_AVG, ADC_AVG_INIT)
+
+# Charign current limit to 3A
+bq25792_set_battery_charging_current(3000)
+
 while True:
     time_stamp = time.time()
     date_time = datetime.fromtimestamp(time_stamp)
-    print("Timestamp: ", date_time)
-    print ('*** BQ25792 - Status ***')
-    print('Minimal System Voltage [mV]  = ' +  str(bq25792_get_Minimal_System_Voltage()))
-    print('Battery Voltage Limit [mV]   = ' +  str(bq25792_get_battery_voltage_limit()))
-    print('Charge Current Limit [mA]    = ' + str(bq25792_get_battery_charging_current()))
-    val, CHG_STAT = bq25792_get_charger_status_bits()
-    print('Charger Status (' + str(hex(val)) + ') = ' + str(CHG_STAT))
-    val, EN_AUTO_IBATDIS, FORCE_IBATDIS, EN_CHG, EN_ICO, FORCE_ICO, EN_HIZ, EN_TERM = bq25792_get_charger_control_0()
-    print ('*** BQ25792 - Charger Control (=' + str(hex(val)) + ')***')
-    print('     EN_AUTO_IBATDIS = ' + str(EN_AUTO_IBATDIS))
-    print('     FORCE_IBATDIS   = ' + str(FORCE_IBATDIS))
-    print('     EN_CHGs         = ' + str(EN_CHG))
-    print('     EN_ICO          = ' + str(EN_ICO))
-    print('     FORCE_ICO       = ' + str(FORCE_ICO))
-    print('     EN_HIZ          = ' + str(EN_HIZ))
-    print('     EN_TERM         = ' + str(EN_TERM))
-    val, TS_COOL, TS_WARM, BHOT, BCOLD, TS_IGNORE = bq25792_get_NTC_Control_1()
-    print ('*** BQ25792 - NTC Control (=' + str(hex(val)) + ')***')
-    print('     TS_COOL     = ' + str(TS_COOL))
-    print('     TS_WARM     = ' + str(TS_WARM))
-    print('     BHOT        = ' + str(BHOT))
-    print('     BCOLD       = ' + str(BCOLD))
-    print('     TS_IGNORE   = ' + str(TS_IGNORE))
-    # Set Thermistor Ignore = 1
-    #if TS_IGNORE == 0:
-    #    TS_IGNORE = 1
-    #    print('    Set TS_IGNORE to 1 ')
-    #   bq25792_set_NTC_Control_1 (TS_COOL, TS_WARM, BHOT, BCOLD, TS_IGNORE)
+    if scriptflag_print_fullstatus:
+        print("Timestamp: ", date_time)
+        print ('*** BQ25792 - Status ***')
+        print('Minimal System Voltage [mV]  = ' +  str(bq25792_get_Minimal_System_Voltage()))
+        print('Battery Voltage Limit [mV]   = ' +  str(bq25792_get_battery_voltage_limit()))
+        print('Charge Current Limit [mA]    = ' + str(bq25792_get_battery_charging_current()))
+        val, CHG_STAT = bq25792_get_charger_status_bits()
+        print('Charger Status (' + str(hex(val)) + ') = ' + str(CHG_STAT))
+        val, EN_AUTO_IBATDIS, FORCE_IBATDIS, EN_CHG, EN_ICO, FORCE_ICO, EN_HIZ, EN_TERM = bq25792_get_charger_control_0()
+        print ('*** BQ25792 - Charger Control (=' + str(hex(val)) + ')***')
+        print('     EN_AUTO_IBATDIS = ' + str(EN_AUTO_IBATDIS))
+        print('     FORCE_IBATDIS   = ' + str(FORCE_IBATDIS))
+        print('     EN_CHGs         = ' + str(EN_CHG))
+        print('     EN_ICO          = ' + str(EN_ICO))
+        print('     FORCE_ICO       = ' + str(FORCE_ICO))
+        print('     EN_HIZ          = ' + str(EN_HIZ))
+        print('     EN_TERM         = ' + str(EN_TERM))
+        val, TS_COOL, TS_WARM, BHOT, BCOLD, TS_IGNORE = bq25792_get_NTC_Control_1()
+        print ('*** BQ25792 - NTC Control (=' + str(hex(val)) + ')***')
+        print('     TS_COOL     = ' + str(TS_COOL))
+        print('     TS_WARM     = ' + str(TS_WARM))
+        print('     BHOT        = ' + str(BHOT))
+        print('     BCOLD       = ' + str(BCOLD))
+        print('     TS_IGNORE   = ' + str(TS_IGNORE))
+        # set Thermistor Ignore = 1
+        if TS_IGNORE == 0:
+            TS_IGNORE = 1
+            print('    Set TS_IGNORE to 1 ')
+        bq25792_set_NTC_Control_1 (TS_COOL, TS_WARM, BHOT, BCOLD, TS_IGNORE)
 
-    val, ADC_EN, ADC_RATE, ADC_SAMPLE, ADC_AVG, ADC_AVG_INIT = bq25792_get_ADC_Control()
-    print ('*** BQ25792 - ADC Control (=' + str(hex(val)) + ')***')
-    if ADC_EN == 0:
-        ADC_EN = 1
-        print('    Set ADC_EN to 1 ')
-        bq25792_set_ADC_Control(ADC_EN, ADC_RATE, ADC_SAMPLE, ADC_AVG, ADC_AVG_INIT)
-    print('Battery Voltage  [mV]     = ' +  str(bq25792_get_VBAT()))
-    print('VBUS Voltage  [mV]        = ' +  str(bq25792_get_VBUS()))
-    print('VSYS Voltage  [mV]        = ' +  str(bq25792_get_VSYS()))
-    print('IBAT (Dis-)Charge [mA]    = ' +  str(bq25792_get_IBAT()))
-    print('IBUS Current [mA]         = ' +  str(bq25792_get_IBUS()))
+        
+        print('Battery Voltage  [mV]     = ' +  str(bq25792_get_VBAT()))
+        print('VBUS Voltage  [mV]        = ' +  str(bq25792_get_VBUS()))
+        print('VSYS Voltage  [mV]        = ' +  str(bq25792_get_VSYS()))
+        print('IBAT (Dis-)Charge [mA]    = ' +  str(bq25792_get_IBAT()))
+        print('IBUS Current [mA]         = ' +  str(bq25792_get_IBUS()))
 
-    val, SFET_PRESENT, EN_IBAT, IBAT_REG, EN_IINDPM, EN_EXTILIM, EN_BATOC = bq25792_get_REG14_Charger_Control_5()
-    print ('*** BQ25792 - bq25792_get_REG14_Charger_Control_5 (=' + str(hex(val)) + ')***')
-    if EN_IBAT == 0:
-        EN_IBAT = 1
-        print('    Set EN_IBAT to 1 ')
-        bq25792_set_REG14_Charger_Control_5(SFET_PRESENT, EN_IBAT, IBAT_REG, EN_IINDPM, EN_EXTILIM, EN_BATOC)
+        val, SFET_PRESENT, EN_IBAT, IBAT_REG, EN_IINDPM, EN_EXTILIM, EN_BATOC = bq25792_get_REG14_Charger_Control_5()
+        print ('*** BQ25792 - bq25792_get_REG14_Charger_Control_5 (=' + str(hex(val)) + ')***')
+        if EN_IBAT == 0:
+            EN_IBAT = 1
+            print('    Set EN_IBAT to 1 ')
+            bq25792_set_REG14_Charger_Control_5(SFET_PRESENT, EN_IBAT, IBAT_REG, EN_IINDPM, EN_EXTILIM, EN_BATOC)
+        # end if
+    if scriptflag_print_reduced:
+        print("Timestamp: ", date_time)
+        print('Battery Voltage  [mV]     = ' +  str(bq25792_get_VBAT()))
+        print('VBUS Voltage  [mV]        = ' +  str(bq25792_get_VBUS()))
+        print('VSYS Voltage  [mV]        = ' +  str(bq25792_get_VSYS()))
+        print('IBAT (Dis-)Charge [mA]    = ' +  str(bq25792_get_IBAT()))
+        print('IBUS Current [mA]         = ' +  str(bq25792_get_IBUS()))
+        print('Charge Current Limit      = ' +  str(bq25792_get_battery_charging_current()))
+
+
 
     time.sleep(2)
