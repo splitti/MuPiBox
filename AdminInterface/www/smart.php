@@ -84,8 +84,18 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 <form class="appnitro" name="mupi" method="post" action="smart.php" id="form">
 <div class="description">
 <h2>Smart settings</h2>
-<p>Share box information...</p>
+<p>Make your MuPiBox smart...</p>
 </div>
+ <details>
+  <summary><i class="fa-solid fa-house-signal"></i> MQTT</summary>
+    <ul>
+   <li id="li_1" >
+
+                <h2>MQTT configuration</h2>
+                <p>Coming soon...</p>
+   </li>
+  </ul>
+ </details>
 
  <details>
   <summary><i class="fa-brands fa-telegram"></i> Telegram</summary>
@@ -93,7 +103,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
    <li id="li_1" >
 
                 <h2>Telegram configuration</h2>
-                <p>Please check the documentation before activation...</p>
+                <p>Please check the tutorial before activation: <a href="https://mupibox.de/anleitungen/einstellungen/tutorial-telegram-control/" target='_blank_'>Tutorial</a></p>
    </li>
 
    <li id="li_1" ><div>
@@ -127,6 +137,16 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
    <li class="buttons">
     <input id="saveForm" class="button_text" type="submit" name="change_telegram" value="Save Telegram Configuration" />
     <input id="saveForm" class="button_text" type="submit" name="generate_chatId" value="Generate Telegram Chat ID" />
+   </li>
+  </ul>
+ </details>
+ <details>
+  <summary><i class="fa-solid fa-lightbulb"></i> WLED</summary>
+    <ul>
+   <li id="li_1" >
+
+                <h2>WLED configuration</h2>
+                <p>Coming soon...</p>
    </li>
   </ul>
  </details>

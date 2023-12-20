@@ -123,13 +123,24 @@
 		}
 	if( $_POST['mupibox_update'] )
 		{
-		$command = "cd; curl -L https://mupibox.de/version/latest/update/start_mupibox_update.sh | sudo bash";
+		$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update-stable.sh | sudo bash";
 		exec($command, $output, $result );
 		$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
 		$data = json_decode($string, true);
 		$change=3;
 		$reboot=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Update complete to Version ".$data["mupibox"]["version"]."</li>";
+		}
+	if( $_POST['mupibox_betaupdate'] )
+		{
+		$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update-beta.sh | sudo bash";
+		exec($command, $output, $result );
+		$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
+		$data = json_decode($string, true);
+		$change=1;
+		$reboot=1;
+		$data["mupibox"]["version"]=$data["mupibox"]["version"]." BETA";
+		$CHANGE_TXT=$CHANGE_TXT."<li>Update complete to Beta-Version ".$data["mupibox"]["version"]."</li>";
 		}
 	if( $_POST['mupibox_devupdate'] )
 		{
@@ -328,7 +339,6 @@
 			</li>
 		</ul>
 	</details>
-
 	<details>
 		<summary><i class="fa-solid fa-rotate"></i> Updates</summary>
 		<ul>
@@ -347,10 +357,9 @@
 								<th>Environment</th>
 								<th>Latest Version</th>
 								<th>Release-Infos</th>
-								<th>Installation-Button</th>
+								<th>Update-Button</th>
 						</tr>
 						<tr>
-							</form><form class="appnitro" method="post" action="admin.php" id="form"enctype="multipart/form-data">
 								<td>Stable</td>
 								<td><?php print $dataonline["release"]["stable"][count($dataonline["release"]["stable"])-1]["version"]; ?></td>
 								<td><?php print $dataonline["release"]["stable"][count($dataonline["release"]["stable"])-1]["releaseinfo"]; ?></td>
@@ -358,12 +367,10 @@
 								<input type="hidden" name="update_url" value="<?php print $dataonline["release"]["stable"][count($dataonline["release"]["stable"])-1]["url"]; ?>" />
 								<input type="hidden" name="update_env" value="stable" />
 								<input type="hidden" name="update_version" value="<?php print $dataonline["release"]["stable"][count($dataonline["release"]["stable"])-1]["version"]; ?>"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
-								<input id="saveForm" class="button_text" type="submit" name="mupibox_update" value="Update to version <?php print $dataonline["release"]["stable"][count($dataonline["release"]["stable"])-1]["version"]; ?>"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
+								<input id="saveForm" class="button_text_green" type="submit" name="mupibox_update" value="Update to version <?php print $dataonline["release"]["stable"][count($dataonline["release"]["stable"])-1]["version"]; ?>"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
 								</td>
-							</form>
 						</tr>
 						<tr>
-							<form class="appnitro" method="post" action="admin.php" id="form"enctype="multipart/form-data">
 								<td>Beta</td>
 								<td><?php print $dataonline["release"]["beta"][count($dataonline["release"]["beta"])-1]["version"]; ?></td>
 								<td><?php print $dataonline["release"]["beta"][count($dataonline["release"]["beta"])-1]["releaseinfo"]; ?></td>
@@ -371,12 +378,10 @@
 								<input type="hidden" name="update_url" value="<?php print $dataonline["release"]["beta"][count($dataonline["release"]["beta"])-1]["url"]; ?>" />
 								<input type="hidden" name="update_env" value="beta" />
 								<input type="hidden" name="update_version" value="<?php print $dataonline["release"]["beta"][count($dataonline["release"]["beta"])-1]["version"]; ?>"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
-								<input id="saveForm" class="button_text_red" type="submit" name="mupibox_update" value="Update to version <?php print $dataonline["release"]["beta"][count($dataonline["release"]["beta"])-1]["version"]; ?>"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
+								<input id="saveForm" class="button_text_orange" type="submit" name="mupibox_update" value="Update to version <?php print $dataonline["release"]["beta"][count($dataonline["release"]["beta"])-1]["version"]; ?>"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
 								</td>
-							</form>
 						</tr>
 						<tr>
-							<form class="appnitro" method="post" action="admin.php" id="form"enctype="multipart/form-data">
 								<td>Development</td>
 								<td><?php print $dataonline["release"]["dev"][count($dataonline["release"]["dev"])-1]["version"]; ?></td>
 								<td><?php print $dataonline["release"]["dev"][count($dataonline["release"]["dev"])-1]["releaseinfo"]; ?></td>
@@ -386,24 +391,22 @@
 								<input type="hidden" name="update_version" value="<?php print $dataonline["release"]["dev"][count($dataonline["release"]["dev"])-1]["version"]; ?>"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
 								<input id="saveForm" class="button_text_red" type="submit" name="mupibox_update" value="Update to version <?php print $dataonline["release"]["dev"][count($dataonline["release"]["dev"])-1]["version"]; ?>"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
 								</td>
-							</form><form class="appnitro" method="post" action="admin.php" id="form"enctype="multipart/form-data">
+
+
 
 						</tr>
 					</table>
 				</p>
-				<p><b>Please note: </b>Always create a backup before updating!!!<br>The update procedure takes a long time (on older Raspberry Pi's up to 15 minutes). Do not close the browser and wait for the reboot.
+				<li class="li_norm"><h2>Update OS (Operating System)</h2>
+				<p><b>Please note: </b>Always create a backup before updating!!!<br>The update procedure takes a long time (on older Raspberry Pi's up to 30 minutes). Do not close the browser and wait for the reboot.
 				</p>
-				<input id="saveForm" class="button_text" type="submit" name="mupibox_update" value="Update MuPiBox (Latest Stable Version)"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
-				<input id="saveForm" class="button_text_red" type="submit" name="mupibox_devupdate" value="Update MuPiBox (Development Version)"  onclick="return confirm('Do really want to Update the MuPiBox to unstable version? Notice: This is an untested Development-Version!');" />
 			</li>
-			<li class="li_norm"><h2>Update OS (Operating System)</h2>
 				Updating OS packages (apt-get update and apt-get upgrade):<br/>
 				<input id="saveForm" class="button_text" type="submit" name="os_update" value="Update OS"  onclick="return confirm('Do really want to update the Operating System?');" />
 			</li>
 		</ul>
 	</details>
 
-<form class="appnitro" method="post" action="admin.php" id="form"enctype="multipart/form-data">
 
 	<details>
 		<summary><i class="fas fa-stream"></i> Logging / Debug</summary>
@@ -440,6 +443,7 @@
 							}
 					?>" />
 				<input id="saveForm" class="button_text" type="submit" name="pm2download" value="Download PM2-Log" onclick="window.open('./pm2logs.php', '_blank');" />
+
 			</li>
 		</ul>
 	</details>	
@@ -447,6 +451,7 @@
 	<details>
 		<summary><i class="far fa-file-alt"></i> Reset configuration</summary>
 		<ul>
+
 			<li class="li_norm"><h2>Reset Spotify-Connection</h2>
 				<p>This will delete all configurations, including the Spotify-Connection:</p>
 				<input id="saveForm" class="button_text_red" type="submit" name="resetMupiConf" value="RESET mupiboxconf.json" onclick="return confirm('Do really want to reset to default mupiboxconf.json?');" />
@@ -459,6 +464,7 @@
 				<p>Repair config.json (Helps for "This site can't be reached"-Error):</p>
 				<input id="saveForm" class="button_text_red" type="submit" name="resetConfigJson" value="RESET config.json" onclick="return confirm('Do really want to repair config.json?');" />
 			</li>
+
 		</ul>
 	</details>
 </form>
