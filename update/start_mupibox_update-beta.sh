@@ -3,7 +3,7 @@
 
 #https://raw.githubusercontent.com/splitti/MuPiBox/main
 
-RELEASE="stable"
+RELEASE="beta"
 CONFIG="/etc/mupibox/mupiboxconfig.json"
 LOG="/tmp/mupibox_update.log"
 exec 3>${LOG}

@@ -1,23 +1,18 @@
-<h3>We need you</h3>
-<p>We need your support. The MuPiBox development is currently stalling a bit, partly due to the complexity and time required, but also due to the missing appreciation from the community.
-We always receive new requests for features. On the other hand, there are not so much donations.
-If you would like to help, please donate a small amount to nero and splitti. A developer with experience in NodeJS/Angular would also help us.</p>
+<h3>OS-Support</h3>
+We will focus on <b>bookworm</b> and recommend you to update, or reinstall. See also this dietpi-article: <a href=https://dietpi.com/blog/?p=3128>https://dietpi.com/blog/?p=3128</a>
 
-<h3>Last updates</h3>
-<iframe width="560" height="315" src="https://www.youtube.com/embed/D7lRq-nNLHw" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+<h3>Update 3.1.5</h3>
 <ul id='ulnews' class='ulnews'>
-<li id='linews' class='linews'>Adding offset and limit</li>
-<li id='linews' class='linews'>Adding artist as search criteria</li>
-<li id='linews' class='linews'>Adding media has been redesigned</li>
-<li id='linews' class='linews'>Music can be added more intuitively</li>
-<li id='linews' class='linews'>Playlist tab removed (playlists will be moved to music automaticly)</li>
-<li id='linews' class='linews'>More security for the music database with lock files</li>
-<li id='linews' class='linews'>Choose connected devices for spotify output (spotify only!)</li>
-<li id='linews' class='linews'>Chance to move PM2-Logs to RAM</li>
-<li id='linews' class='linews'>64-bit support</li>
-<li id='linews' class='linews'>Bugfix: Index 0 will be shown</li>
-<li id='linews' class='linews'>Bugfix: Hissing noise on audio jack</li>
-<li id='linews' class='linews'>Bugfix: Show-ID in admin-interface will be shown</li>
-<li id='linews' class='linews'>Bugfix: Cleanup setup errors</li>
-<li id='linews' class='linews'>Bugfix: Chance to set some timers back to 0</li>
+<li id='linews' class='linews'>New: Access over IP works</li>
+<li id='linews' class='linews'>New: Beta Version</li>
+<li id='linews' class='linews'>Adding: WLED-Support (thanks to ronbal for your support <3)</li>
+<li id='linews' class='linews'>Adding: RTL88X2BU-Drivers [https://github.com/fastoe/RTL8812BU_for_Raspbian]</li>
+<li id='linews' class='linews'>Bugfix: Refresh token spotify</li>
+<li id='linews' class='linews'>Bugfix: Version Bug</li>
+<li id='linews' class='linews'>Bugfix: Spotify Validation</li>
+<li id='linews' class='linews'>Bugfix: Monitor.json</li>
+<li id='linews' class='linews'>Bugfix: Media Database</li>
+<li id='linews' class='linews'>Bugfix: Version number comes back</li>
+<li id='linews' class='linews'>Preparation: MQTT / WLED</li>
+<li id='linews' class='linews'>and some points we forgot ;-)</li>
 </ul>

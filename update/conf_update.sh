@@ -105,3 +105,12 @@ if [[ -z ${TELEGRAM} ]]; then
 	/usr/bin/cat <<< $(/usr/bin/jq '.telegram.active = false' ${CONFIG}) >  ${CONFIG}
 	/usr/bin/cat <<< $(/usr/bin/jq --arg v "" '.telegram.chatId = $v' ${CONFIG}) >  ${CONFIG}                 
 fi
+
+#3.0.2
+WLED=$(/usr/bin/cat ${CONFIG} | grep wled)
+if [[ -z ${WLED} ]]; then
+	/usr/bin/cat <<< $(/usr/bin/jq --arg v "" '.wled.ip = $v' ${CONFIG}) >  ${CONFIG}
+	/usr/bin/cat <<< $(/usr/bin/jq '.wled.active = false' ${CONFIG}) >  ${CONFIG}
+	/usr/bin/cat <<< $(/usr/bin/jq --arg v "" '.wled.shutdown_id = $v' ${CONFIG}) >  ${CONFIG}                 
+	/usr/bin/cat <<< $(/usr/bin/jq --arg v "" '.wled.main_id = $v' ${CONFIG}) >  ${CONFIG}                 
+fi

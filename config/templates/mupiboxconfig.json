@@ -189,12 +189,18 @@
 	},
 	"mqtt": {
 		"active": false,
-		"broker": "",
-		"port": "",
+		"broker": "mqtt-example-broker.com",
+		"port": "1883",
 		"topic": "",
 		"clientId": "",
 		"username": "",
 		"password": ""
+	},
+	"wled": {
+		"active": false,
+		"ip": "",
+		"shutdown_id": "",
+		"main_id": ""
 	}
 }
 
