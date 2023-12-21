@@ -3,7 +3,7 @@
 # Script for MuPiBox Autosetup
 # Start with: cd; curl https://raw.githubusercontent.com/splitti/MuPiBox/main/autosetup/autosetup-stable.sh | bash
 
-#exec {tracefd}>~/.mupibox/autosetup.log; BASH_XTRACEFD=$tracefd; PS4=':$LINENO+'; set -x
+#exec {tracefd}>/home/dietpi/.mupibox/autosetup.log; BASH_XTRACEFD=$tracefd; PS4=':$LINENO+'; set -x
 
 RELEASE="stable"
 LOG="/tmp/autosetup.log"
@@ -11,13 +11,13 @@ VER_JSON="/tmp/version.json"
 
 
 
-autosetup="$(cat ~/.bashrc | grep autosetup)"
+autosetup="$(cat /home/dietpi/.bashrc | grep autosetup)"
 
 if(( ${#autosetup} > 0 ))
 then
-  head -n -2 ~/.bashrc > /tmp/.bashrc && mv /tmp/.bashrc ~/.bashrc
+  head -n -2 /home/dietpi/.bashrc > /tmp/.bashrc && mv /tmp/.bashrc /home/dietpi/.bashrc
 fi
-
+rm -R /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-*
 exec 3>${LOG}
 
 {
@@ -113,14 +113,14 @@ exec 3>${LOG}
 
 	echo -e "XXX\n${STEP}\nDownload MuPiBox Version ${VERSION}... \nXXX"	
 	before=$(date +%s)
-	wget -q -O ~/mupibox.zip ${MUPIBOX_URL} >&3 2>&3
+	wget -q -O /home/dietpi/mupibox.zip ${MUPIBOX_URL} >&3 2>&3
 	after=$(date +%s)
 	echo -e "## MuPiBox Download  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
 	echo -e "XXX\n${STEP}\nUnzip MuPiBox Version ${VERSION}... \nXXX"	
 	before=$(date +%s)
-	unzip -q -d ~/ ~/mupibox.zip >&3 2>&3
-	rm ~/mupibox.zip >&3 2>&3
+	unzip -q -d /home/dietpi/ /home/dietpi/mupibox.zip >&3 2>&3
+	rm /home/dietpi/mupibox.zip >&3 2>&3
 	MUPI_SRC="/home/dietpi/MuPiBox-${VERSION}"
 	after=$(date +%s)
 	echo -e "## Unzip MuPiBox Sources  ##  finished after $((after - $before)) seconds" >&3 2>&3
@@ -202,19 +202,19 @@ exec 3>${LOG}
 	echo -e "XXX\n${STEP}\nClean and create directories... \nXXX"	
 	before=$(date +%s)
 	# Clean and create Directorys
-	sudo rm -R ~/.mupibox >&3 2>&3
-	sudo rm -R ~/MuPiBox >&3 2>&3
-	mkdir -p ~/.mupibox >&3 2>&3
-	mkdir -p ~/.mupibox/chromium_cache >&3 2>&3
-	mkdir -p ~/MuPiBox/tts_files >&3 2>&3
-	mkdir -p ~/MuPiBox/sysmedia/sound >&3 2>&3
-	mkdir ~/MuPiBox/sysmedia/images >&3 2>&3
-	mkdir ~/MuPiBox/media >&3 2>&3
-	mkdir ~/MuPiBox/media/audiobook >&3 2>&3
-	mkdir ~/MuPiBox/media/music >&3 2>&3
-	mkdir ~/MuPiBox/media/cover >&3 2>&3
-	mkdir ~/MuPiBox/themes >&3 2>&3
-	mkdir -p ~/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
+	sudo rm -R /home/dietpi/.mupibox >&3 2>&3
+	sudo rm -R /home/dietpi/MuPiBox >&3 2>&3
+	mkdir -p /home/dietpi/.mupibox >&3 2>&3
+	mkdir -p /home/dietpi/.mupibox/chromium_cache >&3 2>&3
+	mkdir -p /home/dietpi/MuPiBox/tts_files >&3 2>&3
+	mkdir -p /home/dietpi/MuPiBox/sysmedia/sound >&3 2>&3
+	mkdir /home/dietpi/MuPiBox/sysmedia/images >&3 2>&3
+	mkdir /home/dietpi/MuPiBox/media >&3 2>&3
+	mkdir /home/dietpi/MuPiBox/media/audiobook >&3 2>&3
+	mkdir /home/dietpi/MuPiBox/media/music >&3 2>&3
+	mkdir /home/dietpi/MuPiBox/media/cover >&3 2>&3
+	mkdir /home/dietpi/MuPiBox/themes >&3 2>&3
+	mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
 	sudo mkdir /usr/local/bin/mupibox >&3 2>&3
 	sudo mkdir /etc/spotifyd >&3 2>&3
 	sudo mkdir /etc/mupibox >&3 2>&3
@@ -228,7 +228,7 @@ exec 3>${LOG}
 	echo -e "XXX\n${STEP}\nCreate hushlogin... \nXXX"	
 	# Boot
 	before=$(date +%s)
-	touch ~/.hushlogin >&3 2>&3
+	touch /home/dietpi/.hushlogin >&3 2>&3
 	after=$(date +%s)
 	echo -e "## Create hushlogin  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
@@ -236,13 +236,13 @@ exec 3>${LOG}
 	echo -e "XXX\n${STEP}\nCreate MuPiBox-Config... \nXXX"	
 	before=$(date +%s)
 	MUPIBOX_CONFIG="/etc/mupibox/mupiboxconfig.json" >&3 2>&3
+	sudo cp ${MUPI_SRC}/config/templates/mupiboxconfig.json /etc/mupibox/mupiboxconfig.json >&3 2>&3
 	if [ -f "/boot/mupiboxconfig.json" ]; then
 		sudo mv /boot/mupiboxconfig.json ${MUPIBOX_CONFIG} >&3 2>&3
-	else 
-		sudo cp ${MUPI_SRC}/config/templates/mupiboxconfig.json /etc/mupibox/mupiboxconfig.json >&3 2>&3
 	fi
 	sudo chown root:www-data /etc/mupibox/mupiboxconfig.json >&3 2>&3
 	sudo chmod 777 /etc/mupibox/mupiboxconfig.json >&3 2>&3
+	/usr/bin/cat <<< $(/usr/bin/jq --arg v "${VERSION}" '.mupibox.version = $v' ${CONFIG}) >  ${CONFIG}
 	after=$(date +%s)
 	echo -e "## Create MuPiBox-Config  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
@@ -252,10 +252,10 @@ exec 3>${LOG}
 	echo -e "XXX\n${STEP}\nInstall mplayer-wrapper... \nXXX"	
 	before=$(date +%s)
 	# Sources
-	cd ~/.mupibox >&3 2>&3
+	cd /home/dietpi/.mupibox >&3 2>&3
 	git clone https://github.com/derhuerst/mplayer-wrapper >&3 2>&3
-	cp ${MUPI_SRC}/dev/customize/mplayer-wrapper/index.js ~/.mupibox/mplayer-wrapper/index.js >&3 2>&3
-	cd ~/.mupibox/mplayer-wrapper >&3 2>&3
+	cp ${MUPI_SRC}/dev/customize/mplayer-wrapper/index.js /home/dietpi/.mupibox/mplayer-wrapper/index.js >&3 2>&3
+	cd /home/dietpi/.mupibox/mplayer-wrapper >&3 2>&3
 	npm install >&3 2>&3
 	after=$(date +%s)
 	echo -e "## Install mplayer-wrapper  ##  finished after $((after - $before)) seconds" >&3 2>&3
@@ -266,7 +266,7 @@ exec 3>${LOG}
 	echo -e "XXX\n${STEP}\nInstall google-tts... \nXXX"	
 	before=$(date +%s)
 
-	cd ~/.mupibox >&3 2>&3
+	cd /home/dietpi/.mupibox >&3 2>&3
 	git clone https://github.com/zlargon/google-tts >&3 2>&3
 	cd google-tts/ >&3 2>&3
 	npm install --save >&3 2>&3
@@ -281,12 +281,12 @@ exec 3>${LOG}
 	echo -e "XXX\n${STEP}\nInstall Kids-Controller-master... \nXXX"	
 	before=$(date +%s)
 
-	cp ${MUPI_SRC}/bin/nodejs/deploy.zip ~/.mupibox/Sonos-Kids-Controller-master/sonos-kids-controller.zip >&3 2>&3
-	unzip ~/.mupibox/Sonos-Kids-Controller-master/sonos-kids-controller.zip -d ~/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
-	rm ~/.mupibox/Sonos-Kids-Controller-master/sonos-kids-controller.zip >&3 2>&3
-	cp ${MUPI_SRC}/config/templates/www.json ~/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >&3 2>&3
-	cp ${MUPI_SRC}/config/templates/monitor.json ~/.mupibox/Sonos-Kids-Controller-master/server/config/monitor.json >&3 2>&3
-	cd ~/.mupibox/Sonos-Kids-Controller-master  >&3 2>&3
+	cp ${MUPI_SRC}/bin/nodejs/deploy.zip /home/dietpi/.mupibox/Sonos-Kids-Controller-master/sonos-kids-controller.zip >&3 2>&3
+	unzip /home/dietpi/.mupibox/Sonos-Kids-Controller-master/sonos-kids-controller.zip -d /home/dietpi/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
+	rm /home/dietpi/.mupibox/Sonos-Kids-Controller-master/sonos-kids-controller.zip >&3 2>&3
+	cp ${MUPI_SRC}/config/templates/www.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >&3 2>&3
+	cp ${MUPI_SRC}/config/templates/monitor.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/monitor.json >&3 2>&3
+	cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master  >&3 2>&3
 	npm install >&3 2>&3
 	pm2 start server.js >&3 2>&3
 	pm2 save >&3 2>&3
@@ -299,14 +299,14 @@ exec 3>${LOG}
 	echo -e "XXX\n${STEP}\nInstall Spotify Controller... \nXXX"	
 	before=$(date +%s)
 
-	cd ~/.mupibox >&3 2>&3
+	cd /home/dietpi/.mupibox >&3 2>&3
 	wget https://github.com/amueller-tech/spotifycontroller/archive/main.zip >&3 2>&3
 	unzip main.zip >&3 2>&3
 	rm main.zip >&3 2>&3
-	cd ~/.mupibox/spotifycontroller-main >&3 2>&3
-	cp ${MUPI_SRC}/config/templates/spotifycontroller.json ~/.mupibox/spotifycontroller-main/config/config.json >&3 2>&3
-	cp ${MUPI_SRC}/bin/nodejs/spotify-control.js ~/.mupibox/spotifycontroller-main/spotify-control.js >&3 2>&3
-	ln -s /etc/mupibox/mupiboxconfig.json ~/.mupibox/spotifycontroller-main/config/mupiboxconfig.json >&3 2>&3
+	cd /home/dietpi/.mupibox/spotifycontroller-main >&3 2>&3
+	cp ${MUPI_SRC}/config/templates/spotifycontroller.json /home/dietpi/.mupibox/spotifycontroller-main/config/config.json >&3 2>&3
+	cp ${MUPI_SRC}/bin/nodejs/spotify-control.js /home/dietpi/.mupibox/spotifycontroller-main/spotify-control.js >&3 2>&3
+	ln -s /etc/mupibox/mupiboxconfig.json /home/dietpi/.mupibox/spotifycontroller-main/config/mupiboxconfig.json >&3 2>&3
 	npm install >&3 2>&3 
 	pm2 start spotify-control.js >&3 2>&3
 	pm2 save >&3 2>&3
@@ -364,11 +364,11 @@ exec 3>${LOG}
 	before=$(date +%s)
 	sudo cp ${MUPI_SRC}/config/templates/splash.txt /boot/splash.txt >&3 2>&3
 	sudo wget https://gitlab.com/DarkElvenAngel/initramfs-splash/-/raw/master/boot/initramfs.img -O /boot/initramfs.img >&3 2>&3
-	cp ${MUPI_SRC}/media/images/goodbye.png ~/MuPiBox/sysmedia/images/goodbye.png >&3 2>&3
+	cp ${MUPI_SRC}/media/images/goodbye.png /home/dietpi/MuPiBox/sysmedia/images/goodbye.png >&3 2>&3
 	sudo cp ${MUPI_SRC}/media/images/splash.png /boot/splash.png >&3 2>&3
-	cp ${MUPI_SRC}/media/images/MuPiLogo.jpg ~/MuPiBox/sysmedia/images/MuPiLogo.jpg >&3 2>&3
-	cp ${MUPI_SRC}/media/sound/shutdown.wav ~/MuPiBox/sysmedia/sound/shutdown.wav >&3 2>&3
-	cp ${MUPI_SRC}/media/sound/startup.wav ~/MuPiBox/sysmedia/sound/startup.wav >&3 2>&3
+	cp ${MUPI_SRC}/media/images/MuPiLogo.jpg /home/dietpi/MuPiBox/sysmedia/images/MuPiLogo.jpg >&3 2>&3
+	cp ${MUPI_SRC}/media/sound/shutdown.wav /home/dietpi/MuPiBox/sysmedia/sound/shutdown.wav >&3 2>&3
+	cp ${MUPI_SRC}/media/sound/startup.wav /home/dietpi/MuPiBox/sysmedia/sound/startup.wav >&3 2>&3
 	after=$(date +%s)
 	echo -e "## Copy media files  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
@@ -608,19 +608,23 @@ exec 3>${LOG}
 	
 	echo -e "XXX\n${STEP}\nDownload network-driver [RTL88X2BU]... \nXXX"	
 	before=$(date +%s)
-	mkdir -p /home/dietpi/.driver/network/src >&3 2>&3
-	cd /home/dietpi/.driver/network/src >&3 2>&3
-	git clone https://github.com/morrownr/88x2bu-20210702.git >&3 2>&3
-	after=$(date +%s)
-	echo -e "## Download Network Driver  ##  finished after $((after - $before)) seconds" >&3 2>&3
-	STEP=$(($STEP + 1))
-	echo -e "XXX\n${STEP}\nInstall network-driver [RTL88X2BU]... \nXXX"	
-	before=$(date +%s)
-	cd /home/dietpi/.driver/network/src/88x2bu-20210702 >&3 2>&3
-	sudo chmod u+x install-driver.sh >&3 2>&3
-	sudo ./install-driver.sh NoPrompt >&3 2>&3
-	after=$(date +%s)
-	echo -e "## Install Network Driver  ##  finished after $((after - $before)) seconds" >&3 2>&3
+	if [ -d "/home/dietpi/.driver/network/src/88x2bu-20210702" ]; then
+		echo -e "Network driver RTL88X2BU already installed"  >&3 2>&3
+	else
+		mkdir -p /home/dietpi/.driver/network/src >&3 2>&3
+		cd /home/dietpi/.driver/network/src >&3 2>&3
+		git clone https://github.com/morrownr/88x2bu-20210702.git >&3 2>&3
+		after=$(date +%s)
+		echo -e "## Download Network Driver  ##  finished after $((after - $before)) seconds" >&3 2>&3
+		STEP=$(($STEP + 1))
+		echo -e "XXX\n${STEP}\nInstall network-driver [RTL88X2BU]... \nXXX"	
+		before=$(date +%s)
+		cd /home/dietpi/.driver/network/src/88x2bu-20210702 >&3 2>&3
+		sudo chmod u+x install-driver.sh >&3 2>&3
+		sudo ./install-driver.sh NoPrompt >&3 2>&3
+		after=$(date +%s)
+		echo -e "## Install Network Driver  ##  finished after $((after - $before)) seconds" >&3 2>&3
+	fi
 	STEP=$(($STEP + 1))
 	
 	###############################################################################################
