@@ -1,44 +1,6 @@
 #!/bin/bash
 #
 # Script for MuPiBox Autosetup
-# Start with: cd; curl https://raw.githubusercontent.com/splitti/MuPiBox/main/autosetup/autosetup.sh | bash
-
-#exec {tracefd}>~/.mupibox/autosetup.log; BASH_XTRACEFD=$tracefd; PS4=':$LINENO+'; set -x
-
-LOG="/tmp/autosetup.log"
-#https://raw.githubusercontent.com/splitti/MuPiBox/main
-SRC="https://mupibox.de/version/latest"
-
-autosetup="$(cat ~/.bashrc | grep autosetup)"
-
-if(( ${#autosetup} > 0 ))
-then
-  head -n -2 ~/.bashrc > /tmp/.bashrc && mv /tmp/.bashrc ~/.bashrc
-fi
-
-exec 3>${LOG}
-
-{
-	OS=$(grep -E '^(VERSION_CODENAME)=' /etc/os-release)  >&3 2>&3
-	OS=${OS:17}  >&3 2>&3
-
-
-	###############################################################################################
-
-	echo -e "XXX\n0\nInstall some packages... Please wait!\nXXX"
-
-
-	# Get missing packages
-	sudo apt-get update >&3 2>&3
-	packages2install="git libasound2 jq samba mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential"
-	sudo apt-get install ${packages2install} -y >&3 2>&3
-
-	for thispackage in `echo ${packages2install}`; do
-		PKG_OK=$(dpkg -l ${thispackage} 2>/dev/null | egrep '^ii' | wc -l) >&3 2>&3
-		if [ ${PKG_OK} -eq 1 ]; then
-		  sudo apt-get --yes install ${thispackage} >&3 2#!/bin/bash
-#
-# Script for MuPiBox Autosetup
 # Start with: cd; curl https://raw.githubusercontent.com/splitti/MuPiBox/main/autosetup/autosetup-stable.sh | bash
 
 #exec {tracefd}>~/.mupibox/autosetup.log; BASH_XTRACEFD=$tracefd; PS4=':$LINENO+'; set -x
@@ -537,8 +499,8 @@ exec 3>${LOG}
 	#sudo /boot/dietpi/func/dietpi-set_swapfile 1 zram >&3 2>&3
 	#sudo /boot/dietpi/func/dietpi-set_software boot_wait_for_network 0 >&3 2>&3
 	#VERSION=$(curl -sL ${SRC}/version.json | /usr/bin/jq -r .version) >&3 2>&3
-	sudo /usr/bin/sed -i 's/\"version\": \"\"/\"version\": \"'${VERSION}'\"/g' ${MUPIBOX_CONFIG} >&3 2>&3
-	#sudo /usr/bin/cat <<< $(/usr/bin/jq --arg v "${VERSION}" '.mupibox.version = $v' ${MUPIBOX_CONFIG}) > ${MUPIBOX_CONFIG} >&3 2>&3
+	#sudo /usr/bin/sed -i 's/\"version\": \"\"/\"version\": \"'${VERSION}'\"/g' ${MUPIBOX_CONFIG} >&3 2>&3
+	sudo /usr/bin/cat <<< $(/usr/bin/jq --arg v "${VERSION}" '.mupibox.version = $v' ${MUPIBOX_CONFIG}) > ${MUPIBOX_CONFIG} >&3 2>&3
 	sudo chmod 775 /etc/mupibox/mupiboxconfig.json >&3 2>&3
 	if grep -q '^initramfs initramfs.img' /boot/config.txt; then
 	  echo -e "initramfs initramfs.img already set"
