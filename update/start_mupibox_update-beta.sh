@@ -406,6 +406,8 @@ OS=${OS:17}  >&3 2>&3
 	DATE=$(date '+%Y-%m-%d')
 	sudo mv ${LOG} /boot/${DATE}_update_${VERSION}.log >&3 2>&3
 	sudo chown dietpi:dietpi ${CONFIG} >&3 2>&3
+	sudo /usr/bin/cat <<< $(/usr/bin/jq --arg v "${VERSION}" '.mupibox.version = $v' ${MUPIBOX_CONFIG}) > ${MUPIBOX_CONFIG} >&3 2>&3
+
 	CPU=$(cat /proc/cpuinfo | grep Serial | cut -d ":" -f2 | sed 's/^ //') >&3 2>&3
 
 	curl -X POST https://mupibox.de/mupi/ct.php -H "Content-Type: application/x-www-form-urlencoded" -d key1=${CPU} -d key2=Update -d key3="${VERSION} ${RELEASE}" >&3 2>&3
