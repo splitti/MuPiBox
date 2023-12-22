@@ -343,7 +343,7 @@
 		<summary><i class="fa-solid fa-rotate"></i> Updates</summary>
 		<ul>
 			<li class="li_norm"><h2>MuPiBox updates</h2>
-				<p>You can update MuPiBox at any time to stable or development version. The development-version may be buggy.</p>
+				<p>You can update MuPiBox at any time to stable, beta or development version. Please be careful, the development version could destroy your installation!</p>
 				<p>
 					<table>
 						<tr>
