@@ -502,7 +502,7 @@ exec 3>${LOG}
 	sudo chmod 775 /etc/mupibox/mupiboxconfig.json >&3 2>&3
 	if grep -q '^initramfs initramfs.img' /boot/config.txt; then
 	  echo -e "initramfs initramfs.img already set"
-#	else
+	else
 	  echo '' | sudo tee -a /boot/config.txt >&3 2>&3
 	  echo 'initramfs initramfs.img' | sudo tee -a /boot/config.txt >&3 2>&3
 	fi
