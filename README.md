@@ -28,3 +28,5 @@ Please visit official Webside  https://mupibox.de/anleitungen/installationsanlei
 - Image by kirillslov (https://pixabay.com/de/vectors/katze-gehen-h%c3%b6ren-musik-kopfh%c3%b6rer-5775898/)
 - Startup-Sound by Zeraora (https://freesound.org/people/Zeraora/sounds/572773/)
 - Shutdown-Sound by Leszek_Szary (https://freesound.org/people/Leszek_Szary/sounds/133283/)
+- WLED by Discord-User ronbal and ChatGPT
+  
