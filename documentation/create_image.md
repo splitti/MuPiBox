@@ -16,8 +16,8 @@
 #### Prepare Linux
 
 1. Get pishrink:
-```wget https://raw.githubusercontent.com/Drewsif/PiShrink/master/pishrink.sh
-chmod +x pishrink.sh```
+```wget https://raw.githubusercontent.com/Drewsif/PiShrink/master/pishrink.sh```
+```chmod +x pishrink.sh```
 1. Install gparted and pigz:
 ```sudo apt install gparted pigz```
 
