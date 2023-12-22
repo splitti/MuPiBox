@@ -410,7 +410,7 @@ exec 3>${LOG}
 	sudo mv -f ${MUPI_SRC}/scripts/bluetooth/* /usr/local/bin/mupibox/ >&3 2>&3
 	sudo mv -f ${MUPI_SRC}/scripts/wled/* /usr/local/bin/mupibox/ >&3 2>&3
 	
-	sudo mv -f ${MUPI_SRC}/config/templates/add_wifi.json /boot/add_wifi.json
+	sudo mv -f ${MUPI_SRC}/config/templates/add_wifi.json /boot/add_wifi.json >&3 2>&3
 	
 	sudo chmod 755 /usr/local/bin/mupibox/* >&3 2>&3
 
@@ -604,26 +604,26 @@ exec 3>${LOG}
 
 	###############################################################################################
 	
-	echo -e "XXX\n${STEP}\nDownload network-driver [RTL88X2BU]... \nXXX"	
-	before=$(date +%s)
-	if [ -d "/home/dietpi/.driver/network/src/88x2bu-20210702" ]; then
-		echo -e "Network driver RTL88X2BU already installed"  >&3 2>&3
-	else
-		mkdir -p /home/dietpi/.driver/network/src >&3 2>&3
-		cd /home/dietpi/.driver/network/src >&3 2>&3
-		git clone https://github.com/morrownr/88x2bu-20210702.git >&3 2>&3
-		after=$(date +%s)
-		echo -e "## Download Network Driver  ##  finished after $((after - $before)) seconds" >&3 2>&3
-		STEP=$(($STEP + 1))
-		echo -e "XXX\n${STEP}\nInstall network-driver [RTL88X2BU]... \nXXX"	
-		before=$(date +%s)
-		cd /home/dietpi/.driver/network/src/88x2bu-20210702 >&3 2>&3
-		sudo chmod u+x install-driver.sh >&3 2>&3
-		sudo ./install-driver.sh NoPrompt >&3 2>&3
-		after=$(date +%s)
-		echo -e "## Install Network Driver  ##  finished after $((after - $before)) seconds" >&3 2>&3
-	fi
-	STEP=$(($STEP + 1))
+#	echo -e "XXX\n${STEP}\nDownload network-driver [RTL88X2BU]... \nXXX"	
+#	before=$(date +%s)
+#	if [ -d "/home/dietpi/.driver/network/src/88x2bu-20210702" ]; then
+#		echo -e "Network driver RTL88X2BU already installed"  >&3 2>&3
+#	else
+#		mkdir -p /home/dietpi/.driver/network/src >&3 2>&3
+#		cd /home/dietpi/.driver/network/src >&3 2>&3
+#		git clone https://github.com/morrownr/88x2bu-20210702.git >&3 2>&3
+#		after=$(date +%s)
+#		echo -e "## Download Network Driver  ##  finished after $((after - $before)) seconds" >&3 2>&3
+#		STEP=$(($STEP + 1))
+#		echo -e "XXX\n${STEP}\nInstall network-driver [RTL88X2BU]... \nXXX"	
+#		before=$(date +%s)
+#		cd /home/dietpi/.driver/network/src/88x2bu-20210702 >&3 2>&3
+#		sudo chmod u+x install-driver.sh >&3 2>&3
+#		sudo ./install-driver.sh NoPrompt >&3 2>&3
+#		after=$(date +%s)
+#		echo -e "## Install Network Driver  ##  finished after $((after - $before)) seconds" >&3 2>&3
+#	fi
+#	STEP=$(($STEP + 1))
 	
 	###############################################################################################
 
@@ -634,5 +634,5 @@ exec 3>${LOG}
 
 } | whiptail --title "MuPiBox Autosetup" --gauge "Please wait while installing" 6 60 0
 
-sudo reboot
+#sudo reboot
 

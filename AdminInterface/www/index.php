@@ -71,14 +71,14 @@
 						</tr>
 						<tr>
 								<td>Beta</td>
-								<td><?php print $dataonline["release"]["beta"][count($dataonline["release"]["stable"])-1]["version"]; ?></td>
-								<td><?php print $dataonline["release"]["beta"][count($dataonline["release"]["stable"])-1]["releaseinfo"]; ?></td>
+								<td><?php print $dataonline["release"]["beta"][count($dataonline["release"]["beta"])-1]["version"]; ?></td>
+								<td><?php print $dataonline["release"]["beta"][count($dataonline["release"]["beta"])-1]["releaseinfo"]; ?></td>
 								</td>
 						</tr>
 						<tr>
 								<td>Development</td>
-								<td><?php print $dataonline["release"]["dev"][count($dataonline["release"]["stable"])-1]["version"]; ?></td>
-								<td><?php print $dataonline["release"]["dev"][count($dataonline["release"]["stable"])-1]["releaseinfo"]; ?></td>
+								<td><?php print $dataonline["release"]["dev"][count($dataonline["release"]["dev"])-1]["version"]; ?></td>
+								<td><?php print $dataonline["release"]["dev"][count($dataonline["release"]["dev"])-1]["releaseinfo"]; ?></td>
 								</td>
 						</tr>
 					</table></p>
