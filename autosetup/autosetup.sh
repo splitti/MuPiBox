@@ -236,10 +236,9 @@ exec 3>${LOG}
 	echo -e "XXX\n${STEP}\nCreate MuPiBox-Config... \nXXX"	
 	before=$(date +%s)
 	MUPIBOX_CONFIG="/etc/mupibox/mupiboxconfig.json" >&3 2>&3
-	sudo mv -f ${MUPI_SRC}/config/templates/mupiboxconfig.json /etc/mupibox/mupiboxconfig.json >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/config/templates/mupiboxconfig.json ${MUPIBOX_CONFIG} >&3 2>&3
 	sudo chown root:www-data /etc/mupibox/mupiboxconfig.json >&3 2>&3
 	sudo chmod 777 /etc/mupibox/mupiboxconfig.json >&3 2>&3
-	/usr/bin/cat <<< $(/usr/bin/jq --arg v "${VERSION}" '.mupibox.version = $v' ${CONFIG}) >  ${CONFIG}
 	after=$(date +%s)
 	echo -e "## Create MuPiBox-Config  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
