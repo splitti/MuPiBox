@@ -3,6 +3,7 @@
 ## Final setup steps
 
 1. Create File in boot: ```sudo touch /boot/mupi.install```
+1. Delete Windows directory: ```sudo rm -R /boot/System\ Volume\ Information/```
 1. Set Swap to auto: ```sudo /boot/dietpi/func/dietpi-set_swapfile 1```
 1. Delete autosetup.log: ```sudo rm autosetup.log```
 1. Delete Wifi: ```dietpi-config```
