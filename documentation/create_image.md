@@ -2,6 +2,8 @@
 
 ## Final setup steps
 
+1. Kill pm2 process list: ```pm2 stop all && pm2 kill && pm2 save --force```
+1. Remove pm2: ```sudo npm remove pm2 -g```
 1. Check crontab: ```crontab -l```
 1. Check pm2 status: ```pm2 status```
 1. Check add_wifi.json ```sudo cat /boot/add_wifi.json```
@@ -10,7 +12,7 @@
 1. Set Swap to auto: ```sudo /boot/dietpi/func/dietpi-set_swapfile 1```
 1. Delete autosetup.log: ```sudo rm /boot/autosetup.log```
 1. Delete Wifi: ```sudo dietpi-wifidb```
-1. Control: ```sudo cat /etc/wpa_supplicant/wpa_supplicant.conf```
+1. Control and del country: ```sudo cat /etc/wpa_supplicant/wpa_supplicant.conf```
 1. Clean dietpi-wifi: ``````
 1. Delete history: ```history -c```
 1. Shutdown: ```sudo shutdown -h now && history -c```
@@ -33,9 +35,9 @@
 1. Mount: ```mkdir /mnt/pi_usb && mount /dev/sdc1 /mnt/pi_usb```
 1. Check if USB is mounted ```findmnt -lo source,target,fstype,label,used,size -t ext4,vfat```
 1. Create Image (Example for 64GB USB-Drive):
-```dd if=/dev/sdc | pv -s 64G | dd of=mupibox-3.1.9_dietpi-bookworm-V7.img```
+```dd if=/dev/sdc | pv -s 59.8G | dd of=mupibox-3.1.9_dietpi-bookworm-V7.img```
 1. Shrink Image:
-```pishrink.sh -a -Z mupibox-3.1.9_dietpi-bookworm-V7.img```
+```./pishrink.sh -a -Z mupibox-3.1.9_dietpi-bookworm-V7.img```
 
 #### Another Shrink
 

@@ -24,7 +24,8 @@ exec 3>${LOG}
 	OS=$(grep -E '^(VERSION_CODENAME)=' /etc/os-release)  >&3 2>&3
 	OS=${OS:17}  >&3 2>&3
 
-	packages2install="git libasound2 jq samba mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential raspberrypi-kernel-headers dkms"
+	#packages2install="git libasound2 jq samba mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential raspberrypi-kernel-headers dkms"
+	packages2install="git libasound2 jq samba mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential"
 	STEP=0
 
 	###############################################################################################
