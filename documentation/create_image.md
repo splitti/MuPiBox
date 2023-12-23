@@ -33,9 +33,9 @@
 1. Mount: ```mkdir /mnt/pi_usb && mount /dev/sdc1 /mnt/pi_usb```
 1. Check if USB is mounted ```findmnt -lo source,target,fstype,label,used,size -t ext4,vfat```
 1. Create Image (Example for 64GB USB-Drive):
-```dd if=/dev/sdc | pv -s 64G | dd of=mupibox_3.1.7-dietpi_bookworm_V8_64b.img```
+```dd if=/dev/sdc | pv -s 64G | dd of=mupibox-3.1.9_dietpi-bookworm-V7.img```
 1. Shrink Image:
-```pishrink.sh -a -Z mupibox.img```
+```pishrink.sh -a -Z mupibox-3.1.9_dietpi-bookworm-V7.img```
 
 #### Another Shrink
 
