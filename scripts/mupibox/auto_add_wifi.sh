@@ -9,9 +9,7 @@ MUPIBOX_CONFIG="/etc/mupibox/mupiboxconfig.json"
 if [ -f "$WIFI_FILE" ]; then
 	SSID=$(/usr/bin/jq -r .ssid ${WIFI_FILE})
 	PSK=$(/usr/bin/jq -r .password ${WIFI_FILE})
-	if [ "${SSID}" = "Your Wifi-Name" ]; then
-		exit
-	else
+	if [ "${SSID}" != "Your Wifi-Name" ]; then
 		sudo rm ${WIFI_FILE}
 		sudo wget -q -O ${WIFI_FILE} ${JSON_TEMPLATE}
 		sudo -i wpa_passphrase "${SSID}" "${PSK}" >> ${WPACONF}
