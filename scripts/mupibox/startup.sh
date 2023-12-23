@@ -2,7 +2,7 @@
 
 #JSON_TEMPLATE="https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/add_wifi.json"
 WIFI_FILE="/boot/add_wifi.json"
-FIRST_INSTALL="/boot/mupi.install"
+FIRST_INSTALL="/home/dietpi/.mupi.install"
 WPACONF="/etc/wpa_supplicant/wpa_supplicant.conf"
 MUPIBOX_CONFIG="/etc/mupibox/mupiboxconfig.json"
 NETWORKCONFIG="/tmp/network.json"
@@ -36,6 +36,8 @@ if [ -f "$WIFI_FILE" ]; then
 		if [ ${ONLINESTATE} != "online" ]; then
 			sudo service ifup@wlan0 stop
 			sudo service ifup@wlan0 start
+			sudo dhclient -r
+			sudo dhclient
 		fi
 	fi
 else
@@ -56,8 +58,10 @@ while [ ${ONLINESTATE} != "online" ]; do
 	ONLINESTATE=$(sudo /usr/bin/jq -r .onlinestate ${NETWORKCONFIG})
 done
 if [ -f "$FIRST_INSTALL" ] && [ ${ONLINESTATE} = "online" ]; then
-	sudo rm ${FIRST_INSTALL}
 	VERSION=$(sudo /usr/bin/jq -r .mupibox.version ${MUPIBOX_CONFIG})
 	CPU=$(cat /proc/cpuinfo | grep Serial | cut -d ":" -f2 | sed 's/^ //')
-	curl -X POST https://mupibox.de/mupi/ct.php -H "Content-Type: application/x-www-form-urlencoded" -d key1=${CPU} -d key2=Installation -d key3="${VERSION}"
+	STATE=$(curl -s -X POST https://mupibox.de/mupi/ct.php -H "Content-Type: application/x-www-form-urlencoded" -d key1=${CPU} -d key2=Installation -d key3="${VERSION}")
+	if [ "$STATE" = "OK" ]; then
+		rm ${FIRST_INSTALL}
+	fi
 fi

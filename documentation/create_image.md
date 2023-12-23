@@ -7,7 +7,7 @@
 1. Check crontab: ```crontab -l```
 1. Check pm2 status: ```pm2 status```
 1. Check add_wifi.json ```sudo cat /boot/add_wifi.json```
-1. Create File in boot: ```sudo touch /boot/mupi.install```
+1. Create File in boot: ```touch /home/dietpi/.mupi.install```
 1. Delete Windows directory: ```sudo rm -R /boot/System\ Volume\ Information/```
 1. Set Swap to auto: ```sudo /boot/dietpi/func/dietpi-set_swapfile 1```
 1. Delete autosetup.log: ```sudo rm /boot/autosetup.log```
