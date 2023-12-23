@@ -1,5 +1,5 @@
 {
-	"version": "3.1.6",
+	"version": "3.1.8",
 	"release": {
 		"dev": [
 			{
@@ -17,16 +17,10 @@
 		],
 		"stable": [
 			{
-			"version": "3.1.6",
-			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.1.6.zip",
-			"releaseinfo": "Initial Release Version - new versioning and installation routines<br>small bugfixes"
-			},
-			{
-			"version": "3.1.7",
-			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.1.7.zip",
-			"releaseinfo": "Initial Release Version - new versioning and installation routines<br>small bugfixes"
+			"version": "3.1.8",
+			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.1.8.zip",
+			"releaseinfo": "Initial Release Version - new versioning and installation routines"
 			}
-
 		]
 	}
 }
