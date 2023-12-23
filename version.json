@@ -21,13 +21,11 @@
 			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.1.8.zip",
 			"releaseinfo": "Initial Release Version - new versioning and installation routines"
 			},
-		"stable": [
 			{
 			"version": "3.1.9",
 			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.1.9.zip",
 			"releaseinfo": "Initial Release Version - new versioning and installation routines"
 			}
-
 		]
 	}
 }
