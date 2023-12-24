@@ -30,6 +30,11 @@
 			"version": "3.1.10",
 			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.1.10.zip",
 			"releaseinfo": "Initial Release Version - new versioning and installation routines"
+			},
+			{
+			"version": "3.1.11",
+			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.1.11.zip",
+			"releaseinfo": "Initial Release Version - new versioning and installation routines"
 			}
 		]
 	}

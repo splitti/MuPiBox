@@ -505,7 +505,11 @@ exec 3>${LOG}
 	  echo -e "initramfs initramfs.img already set"
 	else
 	  echo '' | sudo tee -a /boot/config.txt >&3 2>&3
-	  echo 'initramfs initramfs.img' | sudo tee -a /boot/config.txt >&3 2>&3
+	  echo '#initramfs initramfs.img' | sudo tee -a /boot/config.txt >&3 2>&3
+	fi
+	if [[ -z $(cat /home/dietpi/.profile | grep startup) ]]; then
+		echo "/usr/local/bin/mupibox/./startup.sh &" >> /home/dietpi/.profile
+		touch /home/dietpi/.mupi.install
 	fi
 
 	after=$(date +%s)
