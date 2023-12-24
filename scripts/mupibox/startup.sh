@@ -8,6 +8,15 @@ MUPIBOX_CONFIG="/etc/mupibox/mupiboxconfig.json"
 NETWORKCONFIG="/tmp/network.json"
 ONLINESTATE=$(/usr/bin/jq -r .onlinestate ${NETWORKCONFIG})
 
+init_add_wifi () {
+	sudo rm ${WIFI_FILE}
+	sudo touch ${WIFI_FILE}
+	echo '{' >> ${WIFI_FILE}
+	echo ' "ssid": "Your Wifi-Name",' >> ${WIFI_FILE}
+	echo ' "password": "Your Wifi-Password"' >> ${WIFI_FILE}
+	echo '}' >> ${WIFI_FILE}
+}
+
 ### Check for new wifi network in /boot/add_wifi.json
 
 if [ -f "$WIFI_FILE" ]; then
@@ -16,7 +25,6 @@ if [ -f "$WIFI_FILE" ]; then
 	if [ "${SSID}" != "Your Wifi-Name" ]; then
 		#sudo wget -q -O ${WIFI_FILE} ${JSON_TEMPLATE}
 		WIFI_RESULT=$(sudo -i wpa_passphrase "${SSID}" "${PSK}") 
-		#>> ${WPACONF}
 		IFS=$'\n'
 		i=0
 		for LINES in ${WIFI_RESULT}
@@ -27,12 +35,7 @@ if [ -f "$WIFI_FILE" ]; then
 				fi
 		done
 		unset IFS
-		sudo rm ${WIFI_FILE}
-		sudo touch ${WIFI_FILE}
-		echo '{' | sudo tee -a ${WPACONF}
-		echo ' "ssid": "Your Wifi-Name",' ${WIFI_FILE}
-		echo ' "password": "Your Wifi-Password"' ${WIFI_FILE}
-		echo '}' ${WIFI_FILE}
+		init_add_wifi
 		if [ ${ONLINESTATE} != "online" ]; then
 			sudo service ifup@wlan0 stop
 			sudo service ifup@wlan0 start
@@ -41,12 +44,7 @@ if [ -f "$WIFI_FILE" ]; then
 		fi
 	fi
 else
-	#sudo wget -q -O ${WIFI_FILE} ${JSON_TEMPLATE}
-	sudo touch ${WIFI_FILE}
-	echo '{' | sudo tee -a ${WPACONF}
-	echo ' "ssid": "Your Wifi-Name",' ${WIFI_FILE}
-	echo ' "password": "Your Wifi-Password"' ${WIFI_FILE}
-	echo '}' ${WIFI_FILE}
+	init_add_wifi
 fi
 
 ### Wait for internet connection and make final install-steps
@@ -54,7 +52,9 @@ fi
 sleep 5
 ONLINESTATE=$(/usr/bin/jq -r .onlinestate ${NETWORKCONFIG})
 while [ ${ONLINESTATE} != "online" ]; do
-	sleep 5
+	sudo service ifup@wlan0 stop
+	sudo service ifup@wlan0 start
+	sleep 15
 	ONLINESTATE=$(sudo /usr/bin/jq -r .onlinestate ${NETWORKCONFIG})
 done
 if [ -f "$FIRST_INSTALL" ] && [ ${ONLINESTATE} = "online" ]; then

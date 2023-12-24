@@ -10,6 +10,7 @@
 1. Create File in boot: ```touch /home/dietpi/.mupi.install```
 1. Delete Windows directory: ```sudo rm -R /boot/System\ Volume\ Information/```
 1. Set Swap to auto: ```sudo /boot/dietpi/func/dietpi-set_swapfile 1```
+1. Disable Wait Network: ```sudo /boot/dietpi/func/dietpi-set_software boot_wait_for_network 0```
 1. Delete autosetup.log: ```sudo rm /boot/autosetup.log```
 1. Delete Wifi: ```sudo dietpi-wifidb```
 1. Control and del country: ```sudo cat /etc/wpa_supplicant/wpa_supplicant.conf```
