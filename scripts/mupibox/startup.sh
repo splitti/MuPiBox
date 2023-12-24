@@ -8,12 +8,12 @@ MUPIBOX_CONFIG="/etc/mupibox/mupiboxconfig.json"
 NETWORKCONFIG="/tmp/network.json"
 
 init_add_wifi () {
-	sudo rm ${WIFI_FILE}
+	sudo rm ${WIFI_FILE} > /dev/null
 	sudo touch ${WIFI_FILE}
-	echo '{' >> ${WIFI_FILE}
-	echo ' "ssid": "Your Wifi-Name",' >> ${WIFI_FILE}
-	echo ' "password": "Your Wifi-Password"' >> ${WIFI_FILE}
-	echo '}' >> ${WIFI_FILE}
+	echo '{' | tee -a ${WIFI_FILE}
+	echo ' "ssid": "Your Wifi-Name",' | tee -a ${WIFI_FILE}
+	echo ' "password": "Your Wifi-Password"' | tee -a ${WIFI_FILE}
+	echo '}' | tee -a ${WIFI_FILE}
 }
 
 ### Check for new wifi network in /boot/add_wifi.json
@@ -21,7 +21,9 @@ init_add_wifi () {
 if [ -f "$WIFI_FILE" ]; then
 	SSID=$(/usr/bin/jq -r .ssid ${WIFI_FILE})
 	PSK=$(/usr/bin/jq -r .password ${WIFI_FILE})
-	if [ "${SSID}" != "Your Wifi-Name" ]; then
+	if [ "${SSID}" != "" ] || [ "${PSK}" != "" ]; then
+		init_add_wifi
+	elif [ "${SSID}" != "Your Wifi-Name" ; then
 		#sudo wget -q -O ${WIFI_FILE} ${JSON_TEMPLATE}
 		WIFI_RESULT=$(sudo -i wpa_passphrase "${SSID}" "${PSK}") 
 		IFS=$'\n'

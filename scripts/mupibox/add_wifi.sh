@@ -11,8 +11,9 @@ do
 	if test -f "${MUPIWIFI}"; then
 		SSID=$(/usr/bin/jq -r .[].ssid ${MUPIWIFI})
 		PSK=$(/usr/bin/jq -r .[].pw ${MUPIWIFI})
-
-		if [ ${SSID} = "all" ] && [ ${PSK} = "clear"  ]
+		if [ "${SSID}" != "" ] || [ "${PSK}" != "" ]; then
+			sudo rm ${MUPIWIFI}
+		elif [ ${SSID} = "all" ] && [ ${PSK} = "clear"  ]
 		then
 			sudo rm ${WPACONF}
 			cat << _EOF_ >> ${WPACONF}
@@ -24,16 +25,26 @@ update_config=1
 
 _EOF_
 		else
-			sudo -i wpa_passphrase "${SSID}" "${PSK}" >> ${WPACONF}
+			#sudo -i wpa_passphrase "${SSID}" "${PSK}" >> ${WPACONF}
+			WIFI_RESULT=$(sudo -i wpa_passphrase "${SSID}" "${PSK}") 
+			IFS=$'\n'
+			i=0
+			for LINES in ${WIFI_RESULT}
+			do
+					i=$((i+1))
+					if [ "${i}" = "1" ] || [ "${i}" = "2" ] || [ "${i}" = "4" ] || [ "${i}" = "5" ]; then
+						echo $LINES | sudo tee -a ${WPACONF}
+					fi
+			done
+			unset IFS
+			if [ ${ONLINESTATE} != "online" ]; then
+				#sudo dhclient -r
+				sudo service ifup@wlan0 stop
+				sudo service ifup@wlan0 start
+				#sudo dhclient
+			fi
 		fi
-
-		rm ${MUPIWIFI}
-		if [ ${ONLINESTATE} != "online" ]; then
-			#sudo dhclient -r
-			sudo service ifup@wlan0 stop
-			sudo service ifup@wlan0 start
-			#sudo dhclient
-		fi
+		sudo rm ${MUPIWIFI} > /dev/null
 	fi
 	sleep 2
 done
