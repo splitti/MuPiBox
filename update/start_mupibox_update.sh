@@ -3,8 +3,12 @@
 
 #https://raw.githubusercontent.com/splitti/MuPiBox/main
 
-RELEASE="$1"
-#RELEASE="dev"
+
+if [ "$1" = "dev" ] || [ "$1" = "beta" ] || [ "$1" = "stable" ]; then
+	RELEASE="$1"
+else
+	RELEASE="stable"
+fi
 CONFIG="/etc/mupibox/mupiboxconfig.json"
 LOG="/tmp/mupibox_update.log"
 exec 3>${LOG}
@@ -314,12 +318,12 @@ OS=${OS:17}  >&3 2>&3
 	sudo /usr/bin/chmod 755 /tmp/crontab.template >&3 2>&3
 	sudo /usr/bin/chown dietpi:dietpi /tmp/crontab.template >&3 2>&3
 	sudo /bin/su dietpi -c "/usr/bin/crontab /tmp/crontab.template"  >&3 2>&3
-	if grep -q '^initramfs initramfs.img' /boot/config.txt; then
-	  echo -e "initramfs initramfs.img already set"
-	else
-	  echo '' | sudo tee -a /boot/config.txt >&3 2>&3
-	  echo 'initramfs initramfs.img' | sudo tee -a /boot/config.txt >&3 2>&3
-	fi
+	#if grep -q '^initramfs initramfs.img' /boot/config.txt; then
+	#  echo -e "initramfs initramfs.img already set"
+	#else
+	#  echo '' | sudo tee -a /boot/config.txt >&3 2>&3
+	#  echo 'initramfs initramfs.img' | sudo tee -a /boot/config.txt >&3 2>&3
+	#fi
 
 	after=$(date +%s)
 	echo -e "## Set environment	##  finished after $((after - $before)) seconds" >&3 2>&3
