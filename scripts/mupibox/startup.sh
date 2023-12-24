@@ -6,7 +6,6 @@ FIRST_INSTALL="/home/dietpi/.mupi.install"
 WPACONF="/etc/wpa_supplicant/wpa_supplicant.conf"
 MUPIBOX_CONFIG="/etc/mupibox/mupiboxconfig.json"
 NETWORKCONFIG="/tmp/network.json"
-ONLINESTATE=$(/usr/bin/jq -r .onlinestate ${NETWORKCONFIG})
 
 init_add_wifi () {
 	sudo rm ${WIFI_FILE}
@@ -36,11 +35,17 @@ if [ -f "$WIFI_FILE" ]; then
 		done
 		unset IFS
 		init_add_wifi
+		ONLINESTATE=$(/usr/bin/jq -r .onlinestate ${NETWORKCONFIG})
 		if [ ${ONLINESTATE} != "online" ]; then
 			sudo service ifup@wlan0 stop
 			sudo service ifup@wlan0 start
 			sudo dhclient -r
 			sudo dhclient
+		fi
+		sleep 5
+		ONLINESTATE=$(/usr/bin/jq -r .onlinestate ${NETWORKCONFIG})
+		if [ ${ONLINESTATE} != "online" ]; then
+			sudo reboot
 		fi
 	fi
 else
@@ -52,8 +57,6 @@ fi
 sleep 5
 ONLINESTATE=$(/usr/bin/jq -r .onlinestate ${NETWORKCONFIG})
 while [ ${ONLINESTATE} != "online" ]; do
-	sudo service ifup@wlan0 stop
-	sudo service ifup@wlan0 start
 	sleep 15
 	ONLINESTATE=$(sudo /usr/bin/jq -r .onlinestate ${NETWORKCONFIG})
 done

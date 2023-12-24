@@ -7,6 +7,8 @@
 # --ash-host-window-bounds="400,300"
 # Resolution to use for kiosk mode, should ideally match current system resolution
 
+/usr/local/bin/mupibox/./startup.sh &
+
 rm ~/.config/chromium/Singleton*
 
 CONFIG="/etc/mupibox/mupiboxconfig.json"

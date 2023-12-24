@@ -507,10 +507,7 @@ exec 3>${LOG}
 	  echo '' | sudo tee -a /boot/config.txt >&3 2>&3
 	  echo '#initramfs initramfs.img' | sudo tee -a /boot/config.txt >&3 2>&3
 	fi
-	if [[ -z $(cat /home/dietpi/.profile | grep startup) ]]; then
-		echo "/usr/local/bin/mupibox/./startup.sh &" >> /home/dietpi/.profile
-		touch /home/dietpi/.mupi.install
-	fi
+	touch /home/dietpi/.mupi.install
 
 	after=$(date +%s)
 	echo -e "## Set environment  ##  finished after $((after - $before)) seconds" >&3 2>&3
