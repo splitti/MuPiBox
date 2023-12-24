@@ -137,10 +137,10 @@ OS=${OS:17}  >&3 2>&3
 
 	echo -e "XXX\n${STEP}\nBackup Userdata... \nXXX" >&3 2>&3
 	before=$(date +%s)
-	sudo cp /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json /tmp/data.json >&3 2>&3
-	sudo cp -r /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover /tmp/cover >&3 2>&3
-	sudo cp /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json /tmp/config.json >&3 2>&3
-	sudo cp /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/active_theme.css /tmp/active_theme.css >&3 2>&3
+	sudo mv /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json /tmp/data.json >&3 2>&3
+	sudo mv -r /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover /tmp/cover >&3 2>&3
+	sudo mv /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json /tmp/config.json >&3 2>&3
+	sudo mv /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/active_theme.css /tmp/active_theme.css >&3 2>&3
 	after=$(date +%s)
 	echo -e "## Backup Data  ##  finished after $((after - $before)) seconds" >&3 2>&3
 		
@@ -155,11 +155,11 @@ OS=${OS:17}  >&3 2>&3
 	#sudo su - dietpi -c "pm2 save" >&3 2>&3
 	sudo rm -R /home/dietpi/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
 	sudo mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/ >&3 2>&3
-	sudo cp ${MUPI_SRC}/bin/nodejs/deploy.zip /home/dietpi/.mupibox/Sonos-Kids-Controller-master/deploy.zip >&3 2>&3
+	sudo mv ${MUPI_SRC}/bin/nodejs/deploy.zip /home/dietpi/.mupibox/Sonos-Kids-Controller-master/deploy.zip >&3 2>&3
 	sudo unzip /home/dietpi/.mupibox/Sonos-Kids-Controller-master/deploy.zip -d /home/dietpi/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
 	sudo rm /home/dietpi/.mupibox/Sonos-Kids-Controller-master/deploy.zip >&3 2>&3
-	sudo cp ${MUPI_SRC}/config/templates/www.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >&3 2>&3
-	sudo cp ${MUPI_SRC}/config/templates/monitor.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/monitor.json >&3 2>&3
+	sudo mv ${MUPI_SRC}/config/templates/www.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >&3 2>&3
+	sudo mv ${MUPI_SRC}/config/templates/monitor.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/monitor.json >&3 2>&3
 	sudo chown dietpi:dietpi -R /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www >&3 2>&3
 	after=$(date +%s)
 	echo -e "## Update Kids-Controller  ##  finished after $((after - $before)) seconds" >&3 2>&3
@@ -168,7 +168,7 @@ OS=${OS:17}  >&3 2>&3
 	###############################################################################################
 
 	echo -e "XXX\n${STEP}\nUpdate MPlayer Wrapper... \nXXX"	
-	sudo cp ${MUPI_SRC}/dev/customize/mplayer-wrapper/index.js /home/dietpi/.mupibox/mplayer-wrapper/index.js >&3 2>&3
+	sudo mv ${MUPI_SRC}/dev/customize/mplayer-wrapper/index.js /home/dietpi/.mupibox/mplayer-wrapper/index.js >&3 2>&3
 	after=$(date +%s)
 	echo -e "## Update Mplayer ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
@@ -193,34 +193,34 @@ OS=${OS:17}  >&3 2>&3
 	sudo mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/lines >&3 2>&3
 	
 	#FANTASY-BUTTERFLIES
-	sudo cp ${MUPI_SRC}/themes/fantasybutterflies/odstemplikBold.otf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/fantasybutterflies/odstemplikBold.otf >&3 2>&3
-	sudo cp ${MUPI_SRC}/themes/fantasybutterflies/fantasy-butterflies-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/fantasybutterflies/fantasy-butterflies-bg.jpg >&3 2>&3
-	sudo cp ${MUPI_SRC}/themes/fantasybutterflies/fantasy-circle-bg.png /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/fantasybutterflies/fantasy-circle-bg.png >&3 2>&3
+	sudo mv ${MUPI_SRC}/themes/fantasybutterflies/odstemplikBold.otf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/fantasybutterflies/odstemplikBold.otf >&3 2>&3
+	sudo mv ${MUPI_SRC}/themes/fantasybutterflies/fantasy-butterflies-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/fantasybutterflies/fantasy-butterflies-bg.jpg >&3 2>&3
+	sudo mv ${MUPI_SRC}/themes/fantasybutterflies/fantasy-circle-bg.png /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/fantasybutterflies/fantasy-circle-bg.png >&3 2>&3
 
 	#LINES
-	sudo cp ${MUPI_SRC}/themes/lines/lines-bg.png /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/lines/lines-bg.png >&3 2>&3
-	sudo cp ${MUPI_SRC}/themes/lines/KOMIKND_.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/lines/KOMIKND_.ttf >&3 2>&3
+	sudo mv ${MUPI_SRC}/themes/lines/lines-bg.png /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/lines/lines-bg.png >&3 2>&3
+	sudo mv ${MUPI_SRC}/themes/lines/KOMIKND_.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/lines/KOMIKND_.ttf >&3 2>&3
 
 	#MATRIX
-	sudo cp ${MUPI_SRC}/themes/matrix/matrix-bg.png /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/matrix/matrix-bg.png >&3 2>&3
-	sudo cp ${MUPI_SRC}/themes/matrix/Pixolletta8px.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/matrix/Pixolletta8px.ttf >&3 2>&3
+	sudo mv ${MUPI_SRC}/themes/matrix/matrix-bg.png /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/matrix/matrix-bg.png >&3 2>&3
+	sudo mv ${MUPI_SRC}/themes/matrix/Pixolletta8px.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/matrix/Pixolletta8px.ttf >&3 2>&3
 	
 	#EARTH
-	sudo cp ${MUPI_SRC}/themes/earth/earth-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/earth/earth-bg.jpg >&3 2>&3
-	sudo cp ${MUPI_SRC}/themes/earth/Nasa21.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/earth/Nasa21.ttf >&3 2>&3
+	sudo mv ${MUPI_SRC}/themes/earth/earth-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/earth/earth-bg.jpg >&3 2>&3
+	sudo mv ${MUPI_SRC}/themes/earth/Nasa21.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/earth/Nasa21.ttf >&3 2>&3
 
 	#STEAMPUNK
-	sudo cp ${MUPI_SRC}/themes/steampunk/steampunk-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/steampunk-bg.jpg >&3 2>&3
-	sudo cp ${MUPI_SRC}/themes/steampunk/akaPosse.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/akaPosse.ttf >&3 2>&3
-	sudo cp ${MUPI_SRC}/themes/steampunk/steampunk-gear.png /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/steampunk-gear.png >&3 2>&3
-	sudo cp ${MUPI_SRC}/themes/steampunk/steampunk-header.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/steampunk-header.jpg >&3 2>&3
+	sudo mv ${MUPI_SRC}/themes/steampunk/steampunk-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/steampunk-bg.jpg >&3 2>&3
+	sudo mv ${MUPI_SRC}/themes/steampunk/akaPosse.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/akaPosse.ttf >&3 2>&3
+	sudo mv ${MUPI_SRC}/themes/steampunk/steampunk-gear.png /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/steampunk-gear.png >&3 2>&3
+	sudo mv ${MUPI_SRC}/themes/steampunk/steampunk-header.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/steampunk-header.jpg >&3 2>&3
 
 	sudo chown dietpi:dietpi -R /home/dietpi/.mupibox/Sonos-Kids-Controller-master/
 
-	sudo cp ${MUPI_SRC}/themes/*.css /home/dietpi/MuPiBox/themes/ >&3 2>&3
-	sudo cp ${MUPI_SRC}/scripts/mupibox/* /usr/local/bin/mupibox/ >&3 2>&3
-	sudo cp ${MUPI_SRC}/scripts/bluetooth/* /usr/local/bin/mupibox/ >&3 2>&3
-	sudo cp ${MUPI_SRC}/scripts/wled/* /usr/local/bin/mupibox/ >&3 2>&3
+	sudo mv ${MUPI_SRC}/themes/*.css /home/dietpi/MuPiBox/themes/ >&3 2>&3
+	sudo mv ${MUPI_SRC}/scripts/mupibox/* /usr/local/bin/mupibox/ >&3 2>&3
+	sudo mv ${MUPI_SRC}/scripts/bluetooth/* /usr/local/bin/mupibox/ >&3 2>&3
+	sudo mv ${MUPI_SRC}/scripts/wled/* /usr/local/bin/mupibox/ >&3 2>&3
 		
 	sudo chmod 755 /usr/local/bin/mupibox/* >&3 2>&3
 
@@ -237,11 +237,11 @@ OS=${OS:17}  >&3 2>&3
 
 	# Binaries
 	if [ `getconf LONG_BIT` == 32 ]; then
-		sudo cp ${MUPI_SRC}/bin/spotifyd/0.3.3/spotifyd /usr/bin/spotifyd >&3 2>&3
-		sudo cp ${MUPI_SRC}/bin/fbv/fbv /usr/bin/fbv >&3 2>&3
+		sudo mv ${MUPI_SRC}/bin/spotifyd/0.3.3/spotifyd /usr/bin/spotifyd >&3 2>&3
+		sudo mv ${MUPI_SRC}/bin/fbv/fbv /usr/bin/fbv >&3 2>&3
 	else
-		sudo cp ${MUPI_SRC}/bin/spotifyd/0.3.3/spotifyd_64bit /usr/bin/spotifyd >&3 2>&3
-		sudo cp ${MUPI_SRC}/bin/fbv/fbv_64 /usr/bin/fbv >&3 2>&3
+		sudo mv ${MUPI_SRC}/bin/spotifyd/0.3.3/spotifyd_64bit /usr/bin/spotifyd >&3 2>&3
+		sudo mv ${MUPI_SRC}/bin/fbv/fbv_64 /usr/bin/fbv >&3 2>&3
 
 	fi
 	sudo chmod 755 /usr/bin/fbv /usr/bin/spotifyd >&3 2>&3
@@ -255,10 +255,10 @@ OS=${OS:17}  >&3 2>&3
 	echo -e "XXX\n${STEP}\nCopy some media files... \nXXX"	
 	# Splash and Media
 	before=$(date +%s)
-	#sudo cp ${MUPI_SRC}/config/templates/splash.txt /boot/splash.txt >&3 2>&3
+	#sudo mv ${MUPI_SRC}/config/templates/splash.txt /boot/splash.txt >&3 2>&3
 	sudo wget https://gitlab.com/DarkElvenAngel/initramfs-splash/-/raw/master/boot/initramfs.img -O /boot/initramfs.img >&3 2>&3
 	#cp ${MUPI_SRC}/media/images/goodbye.png ~/MuPiBox/sysmedia/images/goodbye.png >&3 2>&3
-	#sudo cp ${MUPI_SRC}/media/images/splash.png /boot/splash.png >&3 2>&3
+	#sudo mv ${MUPI_SRC}/media/images/splash.png /boot/splash.png >&3 2>&3
 	#cp ${MUPI_SRC}/media/images/MuPiLogo.jpg ~/MuPiBox/sysmedia/images/MuPiLogo.jpg >&3 2>&3
 	#cp ${MUPI_SRC}/media/sound/shutdown.wav ~/MuPiBox/sysmedia/sound/shutdown.wav >&3 2>&3
 	#cp ${MUPI_SRC}/media/sound/startup.wav ~/MuPiBox/sysmedia/sound/startup.wav >&3 2>&3
@@ -271,9 +271,9 @@ OS=${OS:17}  >&3 2>&3
 
 	echo -e "XXX\n${STEP}\nRestarting Services... \nXXX"
 	before=$(date +%s)
-	sudo cp ${MUPI_SRC}/config/services/mupi_check_internet.service /etc/systemd/system/mupi_check_internet.service  >&3 2>&3
-	sudo cp ${MUPI_SRC}/config/services/mupi_check_monitor.service /etc/systemd/system/mupi_check_monitor.service  >&3 2>&3
-	sudo cp ${MUPI_SRC}/config/services/mupi_powerled.service /etc/systemd/system/mupi_powerled.service  >&3 2>&3
+	sudo mv ${MUPI_SRC}/config/services/mupi_check_internet.service /etc/systemd/system/mupi_check_internet.service  >&3 2>&3
+	sudo mv ${MUPI_SRC}/config/services/mupi_check_monitor.service /etc/systemd/system/mupi_check_monitor.service  >&3 2>&3
+	sudo mv ${MUPI_SRC}/config/services/mupi_powerled.service /etc/systemd/system/mupi_powerled.service  >&3 2>&3
 	sudo su - dietpi -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && npm install" >&3 2>&3
 	#sudo su - dietpi -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && pm2 -f start server.js" >&3 2>&3
 	#sudo su - dietpi -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && pm2 -f save" >&3 2>&3
@@ -309,7 +309,7 @@ OS=${OS:17}  >&3 2>&3
 
 	echo -e "XXX\n${STEP}\nSet environment...  \nXXX"	
 	before=$(date +%s)
-	sudo cp ${MUPI_SRC}/config/templates/crontab.template /tmp/crontab.template >&3 2>&3
+	sudo mv ${MUPI_SRC}/config/templates/crontab.template /tmp/crontab.template >&3 2>&3
 	sudo /usr/bin/chmod 755 /tmp/crontab.template >&3 2>&3
 	sudo /usr/bin/chown dietpi:dietpi /tmp/crontab.template >&3 2>&3
 	sudo /bin/su dietpi -c "/usr/bin/crontab /tmp/crontab.template"  >&3 2>&3
@@ -329,8 +329,8 @@ OS=${OS:17}  >&3 2>&3
 	echo -e "XXX\n{STEP}\nDownload OnOffShim-Scripts... \nXXX"	
 	before=$(date +%s)
 	# OnOffShim
-	sudo cp ${MUPI_SRC}/scripts/OnOffShim/off_trigger.sh /var/lib/dietpi/postboot.d/off_trigger.sh >&3 2>&3
-	sudo cp ${MUPI_SRC}/scripts/OnOffShim/poweroff.sh /usr/lib/systemd/system-shutdown/poweroff.sh >&3 2>&3
+	sudo mv ${MUPI_SRC}/scripts/OnOffShim/off_trigger.sh /var/lib/dietpi/postboot.d/off_trigger.sh >&3 2>&3
+	sudo mv ${MUPI_SRC}/scripts/OnOffShim/poweroff.sh /usr/lib/systemd/system-shutdown/poweroff.sh >&3 2>&3
 	sudo chmod 775 /usr/lib/systemd/system-shutdown/poweroff.sh /var/lib/dietpi/postboot.d/off_trigger.sh >&3 2>&3
 	after=$(date +%s)
 	echo -e "## OnOff Shim	##  finished after $((after - $before)) seconds" >&3 2>&3
@@ -341,7 +341,7 @@ OS=${OS:17}  >&3 2>&3
 
 	echo -e "XXX\n{STEP}\nUpdate Admin-Interface... \nXXX"	
 	sudo rm -R /var/www/* >&3 2>&3 
-	sudo cp ${MUPI_SRC}/AdminInterface/release/www.zip /var/www/www.zip >&3 2>&3
+	sudo mv ${MUPI_SRC}/AdminInterface/release/www.zip /var/www/www.zip >&3 2>&3
 	sudo unzip /var/www/www.zip -d /var/www/ >&3 2>&3
 	sudo rm /var/www/www.zip >&3 2>&3
 	sudo ln -s /home/dietpi/MuPiBox/media/cover /var/www/cover >&3 2>&3
@@ -393,7 +393,7 @@ OS=${OS:17}  >&3 2>&3
 	###############################################################################################
 	
 	echo -e "XXX\n${STEP}\nFinalizing setup... \nXXX"
-	sudo cp ${CONFIG} ${CONFIG}_backup  >&3 2>&3
+	sudo mv ${CONFIG} ${CONFIG}_backup  >&3 2>&3
 	/usr/bin/cat <<< $(/usr/bin/jq --arg v "${VERSION}" '.mupibox.version = $v' ${CONFIG}) >  ${CONFIG}
 	sudo chmod 775 ${CONFIG}
 	sudo systemctl start mupi_idle_shutdown.service >&3 2>&3
