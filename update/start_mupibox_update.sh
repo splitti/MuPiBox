@@ -411,7 +411,7 @@ OS=${OS:17}  >&3 2>&3
 	DATE=$(date '+%Y-%m-%d')
 	mv ${LOG} /boot/${DATE}_update_${VERSION}.log >&3 2>&3
 	chown dietpi:dietpi ${CONFIG} >&3 2>&3
-	/usr/bin/cat <<< $(/usr/bin/jq --arg v "${VERSION}" '.mupibox.version = $v' ${MUPIBOX_CONFIG}) > ${MUPIBOX_CONFIG} >&3 2>&3
+	/usr/bin/cat <<< $(/usr/bin/jq --arg v "${VERSION}" '.mupibox.version = $v' ${CONFIG}) > ${CONFIG} >&3 2>&3
 
 	CPU=$(cat /proc/cpuinfo | grep Serial | cut -d ":" -f2 | sed 's/^ //') >&3 2>&3
 
