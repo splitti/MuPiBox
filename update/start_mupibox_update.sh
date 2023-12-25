@@ -398,7 +398,7 @@ OS=${OS:17}  >&3 2>&3
 	###############################################################################################
 	
 	echo -e "XXX\n${STEP}\nFinalizing setup... \nXXX"
-	mv ${CONFIG} ${CONFIG}_backup  >&3 2>&3
+	#cp ${CONFIG} ${CONFIG}_backup  >&3 2>&3
 	/usr/bin/cat <<< $(/usr/bin/jq --arg v "${VERSION}" '.mupibox.version = $v' ${CONFIG}) >  ${CONFIG}
 	chmod 775 ${CONFIG}
 	systemctl start mupi_idle_shutdown.service >&3 2>&3
@@ -411,7 +411,6 @@ OS=${OS:17}  >&3 2>&3
 	DATE=$(date '+%Y-%m-%d')
 	mv ${LOG} /boot/${DATE}_update_${VERSION}.log >&3 2>&3
 	chown dietpi:dietpi ${CONFIG} >&3 2>&3
-	/usr/bin/cat <<< $(/usr/bin/jq --arg v "${VERSION}" '.mupibox.version = $v' ${CONFIG}) > ${CONFIG} >&3 2>&3
 
 	CPU=$(cat /proc/cpuinfo | grep Serial | cut -d ":" -f2 | sed 's/^ //') >&3 2>&3
 
