@@ -10,9 +10,9 @@ NETWORKCONFIG="/tmp/network.json"
 init_add_wifi () {
 	sudo rm ${WIFI_FILE} > /dev/null
 	sudo touch ${WIFI_FILE}
-	echo '{' | tee -a ${WIFI_FILE}
-	echo ' "ssid": "Your Wifi-Name",' | tee -a ${WIFI_FILE}
-	echo ' "password": "Your Wifi-Password"' | tee -a ${WIFI_FILE}
+	echo '{' | sudo tee -a ${WIFI_FILE}
+	echo ' "ssid": "Your Wifi-Name",' | sudo tee -a ${WIFI_FILE}
+	echo ' "password": "Your Wifi-Password"' | sudo tee -a ${WIFI_FILE}
 	echo '}' | tee -a ${WIFI_FILE}
 }
 
@@ -58,6 +58,12 @@ fi
 
 sleep 5
 ONLINESTATE=$(/usr/bin/jq -r .onlinestate ${NETWORKCONFIG})
+if [ ${ONLINESTATE} != "online" ]; then
+	sudo service ifup@wlan0 stop
+	sudo service ifup@wlan0 start
+	sudo dhclient -r
+	sudo dhclient
+fi
 while [ ${ONLINESTATE} != "online" ]; do
 	sleep 15
 	ONLINESTATE=$(sudo /usr/bin/jq -r .onlinestate ${NETWORKCONFIG})
