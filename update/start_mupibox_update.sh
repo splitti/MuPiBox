@@ -122,7 +122,7 @@ OS=${OS:17}  >&3 2>&3
 
 	echo -e "XXX\n${STEP}\nDownload MuPiBox Version ${VERSION}... \nXXX"	
 	before=$(date +%s)
-	wget -q -O ~/mupibox.zip ${MUPIBOX_URL} >&3 2>&3
+	wget -q -O /home/dietpimupibox.zip ${MUPIBOX_URL} >&3 2>&3
 	after=$(date +%s)
 	echo -e "## MuPiBox Download  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
@@ -131,8 +131,8 @@ OS=${OS:17}  >&3 2>&3
 
 	echo -e "XXX\n${STEP}\nUnzip MuPiBox Version ${VERSION}... \nXXX"	
 	before=$(date +%s)
-	unzip -q -d ~/ ~/mupibox.zip >&3 2>&3
-	rm ~/mupibox.zip >&3 2>&3
+	unzip -q -d /home/dietpi /home/dietpimupibox.zip >&3 2>&3
+	rm /home/dietpimupibox.zip >&3 2>&3
 	MUPI_SRC="/home/dietpi/MuPiBox-${VERSION}"
 	after=$(date +%s)
 	echo -e "## Unzip Mupibox Download  ##  finished after $((after - $before)) seconds" >&3 2>&3
@@ -262,11 +262,11 @@ OS=${OS:17}  >&3 2>&3
 	before=$(date +%s)
 	#mv ${MUPI_SRC}/config/templates/splash.txt /boot/splash.txt >&3 2>&3
 	wget https://gitlab.com/DarkElvenAngel/initramfs-splash/-/raw/master/boot/initramfs.img -O /boot/initramfs.img >&3 2>&3
-	#cp ${MUPI_SRC}/media/images/goodbye.png ~/MuPiBox/sysmedia/images/goodbye.png >&3 2>&3
+	#cp ${MUPI_SRC}/media/images/goodbye.png /home/dietpiMuPiBox/sysmedia/images/goodbye.png >&3 2>&3
 	#mv ${MUPI_SRC}/media/images/splash.png /boot/splash.png >&3 2>&3
-	#cp ${MUPI_SRC}/media/images/MuPiLogo.jpg ~/MuPiBox/sysmedia/images/MuPiLogo.jpg >&3 2>&3
-	#cp ${MUPI_SRC}/media/sound/shutdown.wav ~/MuPiBox/sysmedia/sound/shutdown.wav >&3 2>&3
-	#cp ${MUPI_SRC}/media/sound/startup.wav ~/MuPiBox/sysmedia/sound/startup.wav >&3 2>&3
+	#cp ${MUPI_SRC}/media/images/MuPiLogo.jpg /home/dietpiMuPiBox/sysmedia/images/MuPiLogo.jpg >&3 2>&3
+	#cp ${MUPI_SRC}/media/sound/shutdown.wav /home/dietpiMuPiBox/sysmedia/sound/shutdown.wav >&3 2>&3
+	#cp ${MUPI_SRC}/media/sound/startup.wav /home/dietpiMuPiBox/sysmedia/sound/startup.wav >&3 2>&3
 	after=$(date +%s)
 	echo -e "## Copy media files  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
@@ -314,10 +314,9 @@ OS=${OS:17}  >&3 2>&3
 
 	echo -e "XXX\n${STEP}\nSet environment...  \nXXX"	
 	before=$(date +%s)
-	mv ${MUPI_SRC}/config/templates/crontab.template /tmp/crontab.template >&3 2>&3
-	/usr/bin/chmod 755 /tmp/crontab.template >&3 2>&3
-	/usr/bin/chown dietpi:dietpi /tmp/crontab.template >&3 2>&3
-	/bin/su dietpi -c "/usr/bin/crontab /tmp/crontab.template"  >&3 2>&3
+	/usr/bin/chmod 755 ${MUPI_SRC}/config/templates/crontab.template >&3 2>&3
+	/usr/bin/chown dietpi:dietpi ${MUPI_SRC}/config/templates/crontab.template >&3 2>&3
+	/bin/su dietpi -c "/usr/bin/crontab ${MUPI_SRC}/config/templates/crontab.template"  >&3 2>&3
 	#if grep -q '^initramfs initramfs.img' /boot/config.txt; then
 	#  echo -e "initramfs initramfs.img already set"
 	#else
