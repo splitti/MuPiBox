@@ -6,11 +6,6 @@
 			"version": "3.2.1",
 			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.2.1.zip",
 			"releaseinfo": "Initial Release Version - new versioning and installation routines"
-			},
-			{
-			"version": "3.2.3",
-			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.2.3.zip",
-			"releaseinfo": "Initial Release Version - new versioning and installation routines"
 			}
 		],
 		"beta": [
@@ -54,6 +49,11 @@
 			{
 			"version": "3.2.2",
 			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.2.2.zip",
+			"releaseinfo": "Initial Release Version - new versioning and installation routines"
+			},
+			{
+			"version": "3.2.3",
+			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.2.3.zip",
 			"releaseinfo": "Initial Release Version - new versioning and installation routines"
 			}
 		]
