@@ -123,7 +123,7 @@
 		}
 	if( $_POST['mupibox_update'] )
 		{
-		$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh | sudo bash  -s -- 'stable'";
+		$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh | sudo bash  -s -- stable";
 		exec($command, $output, $result );
 		$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
 		$data = json_decode($string, true);
@@ -131,9 +131,9 @@
 		$reboot=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Update complete to Version ".$data["mupibox"]["version"]."</li>";
 		}
-	if( $_POST['mupibox_betaupdate'] )
+	if( $_POST['mupibox_update_beta'] )
 		{
-		$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh | sudo bash  -s -- 'beta'";
+		$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh | sudo bash  -s -- beta";
 		exec($command, $output, $result );
 		$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
 		$data = json_decode($string, true);
@@ -142,9 +142,9 @@
 		$data["mupibox"]["version"]=$data["mupibox"]["version"]." BETA";
 		$CHANGE_TXT=$CHANGE_TXT."<li>Update complete to Beta-Version ".$data["mupibox"]["version"]."</li>";
 		}
-	if( $_POST['mupibox_devupdate'] )
+	if( $_POST['mupibox_update_dev'] )
 		{
-		$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh | sudo bash  -s -- 'dev'";
+		$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh | sudo bash  -s -- dev";
 
 		exec($command, $output, $result );
 		$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
@@ -379,7 +379,7 @@
 								<input type="hidden" name="update_url" value="<?php print $dataonline["release"]["beta"][count($dataonline["release"]["beta"])-1]["url"]; ?>" />
 								<input type="hidden" name="update_env" value="beta" />
 								<input type="hidden" name="update_version" value="<?php print $dataonline["release"]["beta"][count($dataonline["release"]["beta"])-1]["version"]; ?>"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
-								<input id="saveForm" class="button_text_orange" type="submit" name="mupibox_update" value="Update to version <?php print $dataonline["release"]["beta"][count($dataonline["release"]["beta"])-1]["version"]; ?>"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
+								<input id="saveForm" class="button_text_orange" type="submit" name="mupibox_update_beta" value="Update to version <?php print $dataonline["release"]["beta"][count($dataonline["release"]["beta"])-1]["version"]; ?>"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
 								</td>
 						</tr>
 						<tr>
@@ -390,7 +390,7 @@
 								<input type="hidden" name="update_url" value="<?php print $dataonline["release"]["dev"][count($dataonline["release"]["dev"])-1]["url"]; ?>" />
 								<input type="hidden" name="update_env" value="dev" />
 								<input type="hidden" name="update_version" value="<?php print $dataonline["release"]["dev"][count($dataonline["release"]["dev"])-1]["version"]; ?>"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
-								<input id="saveForm" class="button_text_red" type="submit" name="mupibox_update" value="Update to version <?php print $dataonline["release"]["dev"][count($dataonline["release"]["dev"])-1]["version"]; ?>"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
+								<input id="saveForm" class="button_text_red" type="submit" name="mupibox_update_dev" value="Update to version <?php print $dataonline["release"]["dev"][count($dataonline["release"]["dev"])-1]["version"]; ?>"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
 								</td>
 
 
