@@ -219,6 +219,14 @@
 		$change=3;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Update complete</li>";
 		}
+	if( $_POST['pm2_restart'] )
+		{
+		$command = "sudo -i -u dietpi pm2 restart server; sudo -i -u dietpi /usr/local/bin/mupibox/./restart_kiosk.sh";
+		exec($command, $output, $result );
+		$change=3;
+		$CHANGE_TXT=$CHANGE_TXT."<li>Spotify Services are restarted</li>";
+		}
+		
 	if( $_POST['spotify_restart'] )
 		{
 		$command = "sudo /usr/local/bin/mupibox/./spotify_restartspotify_restart.sh";
@@ -330,9 +338,13 @@
 				<p>The box only updates some settings after a reboot. Some of these settings can be activated with this operation without reboot. </p>
 				<input id="saveForm" class="button_text" type="submit" name="update" value="Update settings" />
 			</li>
-			<li class="li_norm"><h2>Restart MuPiBox services</h2>
+			<li class="li_norm"><h2>Restart MuPiBox Spotify services</h2>
 				<p>Restart tbe MuPiBox frontend and the services to connect to spotify. </p>
 				<input id="saveForm" class="button_text" type="submit" name="spotify_restart" value="Restart services" />
+			</li>
+			<li class="li_norm"><h2>Restart PM2</h2>
+				<p>Restart tbe MuPiBox frontend and the kiosk. </p>
+				<input id="saveForm" class="button_text" type="submit" name="pm2_restart" value="Restart services" />
 			</li>
 			<li class="li_norm"><h2>Restart MuPiBox kiosk</h2>
 				<p>Restart chromium browser. </p>
