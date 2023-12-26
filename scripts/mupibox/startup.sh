@@ -7,6 +7,14 @@ WPACONF="/etc/wpa_supplicant/wpa_supplicant.conf"
 MUPIBOX_CONFIG="/etc/mupibox/mupiboxconfig.json"
 NETWORKCONFIG="/tmp/network.json"
 
+restart_network() {
+	sudo service ifup@wlan0 stop
+	sudo service ifup@wlan0 start
+	sudo dhclient -r
+	sudo dhclient
+	sudo wpa_cli -i wlan0 reconfigure
+}
+
 init_add_wifi () {
 	sudo rm ${WIFI_FILE} > /dev/null
 	sudo touch ${WIFI_FILE}
@@ -21,9 +29,17 @@ init_add_wifi () {
 if [ -f "$WIFI_FILE" ]; then
 	SSID=$(/usr/bin/jq -r .ssid ${WIFI_FILE})
 	PSK=$(/usr/bin/jq -r .password ${WIFI_FILE})
-	if [ "${SSID}" != "" ] || [ "${PSK}" != "" ]; then
+	if [ "${SSID}" = "" ] || [ "${PSK}" = "" ]; then
 		init_add_wifi
-	elif [ "${SSID}" != "Your Wifi-Name" ; then
+	elif [ ${SSID} = "clear" ] && [ ${PSK} = "all"  ]; then
+		init_add_wifi
+		sudo rm ${WPACONF}
+		echo '# Grant all members of group "netdev" permissions to configure WiFi, e.g. via wpa_cli or wpa_gui' | sudo tee -a ${WIFI_FILE}
+		echo 'ctrl_interface=DIR=/run/wpa_supplicant GROUP=netdev' | sudo tee -a ${WIFI_FILE}
+		echo '# Allow wpa_cli/wpa_gui to overwrite this config file' | sudo tee -a ${WIFI_FILE}
+		echo 'update_config=1' | sudo tee -a ${WIFI_FILE}
+		restart_network
+	elif [ "${SSID}" != "Your Wifi-Name" ]; then
 		#sudo wget -q -O ${WIFI_FILE} ${JSON_TEMPLATE}
 		WIFI_RESULT=$(sudo -i wpa_passphrase "${SSID}" "${PSK}") 
 		IFS=$'\n'
@@ -39,12 +55,9 @@ if [ -f "$WIFI_FILE" ]; then
 		init_add_wifi
 		ONLINESTATE=$(/usr/bin/jq -r .onlinestate ${NETWORKCONFIG})
 		if [ ${ONLINESTATE} != "online" ]; then
-			sudo service ifup@wlan0 stop
-			sudo service ifup@wlan0 start
-			sudo dhclient -r
-			sudo dhclient
+			restart_network
 		fi
-		sleep 5
+		sleep 10
 		ONLINESTATE=$(/usr/bin/jq -r .onlinestate ${NETWORKCONFIG})
 		if [ ${ONLINESTATE} != "online" ]; then
 			sudo reboot
@@ -59,10 +72,7 @@ fi
 sleep 5
 ONLINESTATE=$(/usr/bin/jq -r .onlinestate ${NETWORKCONFIG})
 if [ ${ONLINESTATE} != "online" ]; then
-	sudo service ifup@wlan0 stop
-	sudo service ifup@wlan0 start
-	sudo dhclient -r
-	sudo dhclient
+	restart_network
 fi
 while [ ${ONLINESTATE} != "online" ]; do
 	sleep 15
