@@ -9,8 +9,8 @@ ONLINESTATE=$(/usr/bin/jq -r .onlinestate ${NETWORKCONFIG})
 restart_network() {
 	sudo service ifup@wlan0 stop
 	sudo service ifup@wlan0 start
-	sudo dhclient -r
-	sudo dhclient
+	#sudo dhclient -r
+	#sudo dhclient
 	sudo wpa_cli -i wlan0 reconfigure
 }
 
@@ -24,10 +24,10 @@ do
 		elif [ ${SSID} = "clear" ] && [ ${PSK} = "all"  ]
 		then
 			sudo rm ${WPACONF}
-			echo '# Grant all members of group "netdev" permissions to configure WiFi, e.g. via wpa_cli or wpa_gui' | sudo tee -a ${WIFI_FILE}
-			echo 'ctrl_interface=DIR=/run/wpa_supplicant GROUP=netdev' | sudo tee -a ${WIFI_FILE}
-			echo '# Allow wpa_cli/wpa_gui to overwrite this config file' | sudo tee -a ${WIFI_FILE}
-			echo 'update_config=1' | sudo tee -a ${WIFI_FILE}
+			echo '# Grant all members of group "netdev" permissions to configure WiFi, e.g. via wpa_cli or wpa_gui' | sudo tee -a ${WPACONF}
+			echo 'ctrl_interface=DIR=/run/wpa_supplicant GROUP=netdev' | sudo tee -a ${WPACONF}
+			echo '# Allow wpa_cli/wpa_gui to overwrite this config file' | sudo tee -a ${WPACONF}
+			echo 'update_config=1' | sudo tee -a ${WPACONF}
 			restart_network			
 		else
 			WIFI_RESULT=$(sudo -i wpa_passphrase "${SSID}" "${PSK}") 
@@ -43,6 +43,8 @@ do
 			unset IFS
 			if [ ${ONLINESTATE} != "online" ]; then
 				restart_network
+				sleep 2
+				sudo reboot
 			fi
 		fi
 		sudo rm ${MUPIWIFI}

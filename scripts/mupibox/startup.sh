@@ -10,18 +10,18 @@ NETWORKCONFIG="/tmp/network.json"
 restart_network() {
 	sudo service ifup@wlan0 stop
 	sudo service ifup@wlan0 start
-	sudo dhclient -r
-	sudo dhclient
+	#sudo dhclient -r
+	#sudo dhclient
 	sudo wpa_cli -i wlan0 reconfigure
 }
 
 init_add_wifi () {
-	sudo rm ${WIFI_FILE} > /dev/null
+	sudo rm ${WIFI_FILE}
 	sudo touch ${WIFI_FILE}
 	echo '{' | sudo tee -a ${WIFI_FILE}
 	echo ' "ssid": "Your Wifi-Name",' | sudo tee -a ${WIFI_FILE}
 	echo ' "password": "Your Wifi-Password"' | sudo tee -a ${WIFI_FILE}
-	echo '}' | tee -a ${WIFI_FILE}
+	echo '}' | sudo tee -a ${WIFI_FILE}
 }
 
 ### Check for new wifi network in /boot/add_wifi.json
@@ -34,10 +34,11 @@ if [ -f "$WIFI_FILE" ]; then
 	elif [ ${SSID} = "clear" ] && [ ${PSK} = "all"  ]; then
 		init_add_wifi
 		sudo rm ${WPACONF}
-		echo '# Grant all members of group "netdev" permissions to configure WiFi, e.g. via wpa_cli or wpa_gui' | sudo tee -a ${WIFI_FILE}
-		echo 'ctrl_interface=DIR=/run/wpa_supplicant GROUP=netdev' | sudo tee -a ${WIFI_FILE}
-		echo '# Allow wpa_cli/wpa_gui to overwrite this config file' | sudo tee -a ${WIFI_FILE}
-		echo 'update_config=1' | sudo tee -a ${WIFI_FILE}
+		sudo touch ${WPACONF}
+		echo '# Grant all members of group "netdev" permissions to configure WiFi, e.g. via wpa_cli or wpa_gui' | sudo tee -a ${WPACONF}
+		echo 'ctrl_interface=DIR=/run/wpa_supplicant GROUP=netdev' | sudo tee -a ${WPACONF}
+		echo '# Allow wpa_cli/wpa_gui to overwrite this config file' | sudo tee -a ${WPACONF}
+		echo 'update_config=1' | sudo tee -a ${WPACONF}
 		restart_network
 	elif [ "${SSID}" != "Your Wifi-Name" ]; then
 		#sudo wget -q -O ${WIFI_FILE} ${JSON_TEMPLATE}
@@ -53,15 +54,9 @@ if [ -f "$WIFI_FILE" ]; then
 		done
 		unset IFS
 		init_add_wifi
-		ONLINESTATE=$(/usr/bin/jq -r .onlinestate ${NETWORKCONFIG})
-		if [ ${ONLINESTATE} != "online" ]; then
-			restart_network
-		fi
-		sleep 10
-		ONLINESTATE=$(/usr/bin/jq -r .onlinestate ${NETWORKCONFIG})
-		if [ ${ONLINESTATE} != "online" ]; then
-			sudo reboot
-		fi
+		restart_network
+		sleep 8
+		sudo reboot
 	fi
 else
 	init_add_wifi
