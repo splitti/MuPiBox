@@ -13,6 +13,11 @@
 			"version": "3.1.5",
 			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.1.5.zip",
 			"releaseinfo": "Initial Release Version - new versioning and installation routines"
+			},
+			{
+			"version": "3.2.5",
+			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.2.5.zip",
+			"releaseinfo": "Troubleshooting for blocking the covers in the selection, display network status, operation of shutdown and restart in the admin touch area"
 			}
 		],
 		"stable": [
