@@ -168,6 +168,7 @@ export class PlayerService {
 
   private sendRequest(url: string) {
     this.getConfig().subscribe(config => {
+      if (!config.rooms[0]) config.rooms[0]='0';
       const baseUrl = 'http://' + config.ip + ':' + config.port + '/' + config.rooms[0] + '/';
       this.http.get(baseUrl + url).subscribe();
     });
