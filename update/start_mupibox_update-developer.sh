@@ -117,7 +117,7 @@ OS=${OS:17}  >&3 2>&3
 
 	echo -e "XXX\n${STEP}\nDownload MuPiBox Version ${VERSION}... \nXXX"	
 	before=$(date +%s)
-	wget -q -O /home/dietpimupibox.zip ${MUPIBOX_URL} >&3 2>&3
+	wget -q -O /home/dietpi/mupibox.zip ${MUPIBOX_URL} >&3 2>&3
 	after=$(date +%s)
 	echo -e "## MuPiBox Download  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
@@ -128,7 +128,7 @@ OS=${OS:17}  >&3 2>&3
 	before=$(date +%s)
 	unzip -q -d /home/dietpi /home/dietpimupibox.zip >&3 2>&3
 	rm /home/dietpimupibox.zip >&3 2>&3
-	MUPI_SRC="/home/dietpi/MuPiBox-${VERSION}"
+	MUPI_SRC="/home/dietpi/MuPiBox-main"
 	after=$(date +%s)
 	echo -e "## Unzip Mupibox Download  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
