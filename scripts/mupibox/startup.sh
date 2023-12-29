@@ -6,6 +6,7 @@ FIRST_INSTALL="/home/dietpi/.mupi.install"
 WPACONF="/etc/wpa_supplicant/wpa_supplicant.conf"
 MUPIBOX_CONFIG="/etc/mupibox/mupiboxconfig.json"
 NETWORKCONFIG="/tmp/network.json"
+RESIZE_SERVICE="/etc/systemd/system/local-fs.target.wants/dietpi-fs_partition_resize.service"
 
 restart_network() {
 	sudo service ifup@wlan0 stop
@@ -23,6 +24,11 @@ init_add_wifi () {
 	echo ' "password": "Your Wifi-Password"' | sudo tee -a ${WIFI_FILE}
 	echo '}' | sudo tee -a ${WIFI_FILE}
 }
+
+
+if [ -f "$RESIZE_SERVICE" ]; then
+	sudo systemctl disable dietpi-fs_partition_resize
+fi
 
 ### Check for new wifi network in /boot/add_wifi.json
 

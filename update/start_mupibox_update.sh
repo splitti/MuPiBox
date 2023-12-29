@@ -106,6 +106,8 @@ OS=${OS:17}  >&3 2>&3
 		echo -e "## pip install pyserial  ##  finished after $((after - $before)) seconds" >&3 2>&3
 		STEP=$(($STEP + 1))
 	fi
+	
+	echo | echo | sudo dietpi-software install 200 >&3 2>&3
 
 	###############################################################################################
 

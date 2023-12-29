@@ -2,19 +2,17 @@
 
 ## Final setup steps
 
-1. Kill pm2 process list: ```pm2 stop all && pm2 kill && pm2 save --force```
-1. Remove pm2: ```sudo npm remove pm2 -g```
 1. Check crontab: ```crontab -l```
 1. Check pm2 status: ```pm2 status```
 1. Check add_wifi.json ```sudo cat /boot/add_wifi.json```
 1. Create File in boot: ```touch /home/dietpi/.mupi.install```
 1. Delete Windows directory: ```sudo rm -R /boot/System\ Volume\ Information/```
-1. Set Swap to auto: ```sudo /boot/dietpi/func/dietpi-set_swapfile 1```
+1. Set Swap to auto: ```sudo /boot/dietpi/func/dietpi-set_swapfile 0```
 1. Disable Wait Network: ```sudo /boot/dietpi/func/dietpi-set_software boot_wait_for_network 0```
 1. Delete autosetup.log: ```sudo rm /boot/autosetup.log```
 1. Delete Wifi: ```sudo dietpi-wifidb```
 1. Control and del country: ```sudo cat /etc/wpa_supplicant/wpa_supplicant.conf```
-1. Clean dietpi-wifi: ``````
+1. Resize after reboot: ```sudo systemctl enable dietpi-fs_partition_resize```
 1. Delete history: ```history -c```
 1. Shutdown: ```sudo shutdown -h now && history -c```
 
