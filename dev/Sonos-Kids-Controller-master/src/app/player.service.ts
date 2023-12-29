@@ -38,11 +38,13 @@ export class PlayerService {
 
   private config: Observable<SonosApiConfig> = null;
   network: Network;
+  public readonly network$: Observable<Network>;
 
   constructor(
     private mediaService: MediaService,
     private http: HttpClient
     ) {
+      this.network$ = this.mediaService.network$;
     }
 
   getConfig() {
