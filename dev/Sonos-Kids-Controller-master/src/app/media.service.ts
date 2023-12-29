@@ -58,8 +58,6 @@ export class MediaService {
     this.playerService.getConfig().subscribe(config => {
       this.ip = config.ip;
       this.hostname = config.server;
-      console.log(this.ip);
-      console.log(this.hostname);
     });
     this.current$ = interval(1000).pipe( // Once a second after subscribe, way too frequent!
       switchMap((): Observable<CurrentSpotify> => this.http.get<CurrentSpotify>('http://' + this.ip + ':5005/state')),
