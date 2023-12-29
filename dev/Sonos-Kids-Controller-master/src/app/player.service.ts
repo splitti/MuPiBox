@@ -48,6 +48,7 @@ export class PlayerService {
     }
 
   getConfig() {
+    console.log(this.config);
     // Observable with caching:
     // publishReplay(1) tells rxjs to cache the last response of the request
     // refCount() keeps the observable alive until all subscribers unsubscribed
@@ -59,7 +60,7 @@ export class PlayerService {
         refCount()
       );
     }
-
+    console.log(this.config);
     return this.config;
   }
 
