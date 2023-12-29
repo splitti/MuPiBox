@@ -51,14 +51,21 @@ export class PlayerService {
     // Observable with caching:
     // publishReplay(1) tells rxjs to cache the last response of the request
     // refCount() keeps the observable alive until all subscribers unsubscribed
-    if (!this.config) {
+    /* if (!this.config) {
       const url = (environment.production) ? '../api/sonos' : 'http://localhost:8200/api/sonos';
 
       this.config = this.http.get<SonosApiConfig>(url).pipe(
         publishReplay(1), // cache result
         refCount()
       );
-    }
+    } */
+
+    const url = (environment.production) ? '../api/sonos' : 'http://localhost:8200/api/sonos';
+
+      this.config = this.http.get<SonosApiConfig>(url).pipe(
+        publishReplay(1), // cache result
+        refCount()
+      );
 
     return this.config;
   }
