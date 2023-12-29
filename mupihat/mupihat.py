@@ -1,14 +1,29 @@
-import smbus
+#!/usr/bin/python3
+from sys import stdout 
+import smbus2
 import time
-import calendar
 from datetime import datetime  
-bus = smbus.SMBus(1)
+import subprocess
+
+def shutdown():
+    print('shutdown Rasperry Pi')
+    subprocess.call(["shutdown", "-h", "now"])
+
+#Get handle to the bus
+try:
+    bus = smbus2.SMBus(1)
+except Exception as e:
+    print(f"An error occurred: {e}")
+    sys.exit(-1)
+
+#I2C address of BQ29572
 address = 0x6b
 
 busWS_ms = 20 # 20ms waitstate after each access
 # Flags
 scriptflag_print_fullstatus = 0
-scriptflag_print_reduced = 1
+scriptflag_print_reduced = 0
+scriptflag_print_v2 = 1
 
 
 #BQ25792 Register
@@ -73,12 +88,30 @@ REG48_Part_Information = 0x48
 def write(REG, value):
     bus.write_byte_data(address, REG, value)
     time.sleep(busWS_ms/1000)
-    return -1
+    return REG, value
 
 def read(REG):
     val = bus.read_byte_data(address, REG)
     time.sleep(busWS_ms/1000)
     return val
+
+def read_block():
+    try:
+        val1 = bus.read_i2c_block_data(address, 0x0, 32)
+        time.sleep(busWS_ms/1000)
+    except:
+        return [255]*73
+    try:
+        val2 = bus.read_i2c_block_data(address, 0x20, 32)
+        time.sleep(busWS_ms/1000)
+    except:
+        return [255]*73
+    try:
+        val3 = bus.read_i2c_block_data(address, 0x40, 9)
+        time.sleep(busWS_ms/1000)
+    except:
+        return [255]*73
+    return (val1 + val2 + val3)
 
 def read16(REG):
     val_lsb = bus.read_byte_data(address, REG+1)
@@ -180,6 +213,20 @@ def bq25792_get_charger_status_bits():
     else: ret = CHG_STAT
     return val, ret 
 
+def bq25792_fget_charger_status_bits(bq_register):
+    val = bq_register[REG1C_Charger_Status_1]
+    CHG_STAT = val >> 5
+    if CHG_STAT == 0x0: ret = 'Not Charging'
+    elif CHG_STAT == 0x01: ret = 'Trickle Charge'
+    elif CHG_STAT == 0x02: ret = 'Pre-Charge'
+    elif CHG_STAT == 0x03: ret = 'Fast-Charge'
+    elif CHG_STAT == 0x04: ret = 'Taper-Charge'
+    elif CHG_STAT == 0x05: ret = 'Reserved'
+    elif CHG_STAT == 0x06: ret = 'Top-off Timer Active Charging'
+    elif CHG_STAT == 0x07: ret = 'Charge Termination Done' 
+    else: ret = CHG_STAT
+    return val, ret 
+
 '''
 Charger Control
 '''
@@ -193,6 +240,32 @@ def bq25792_get_charger_control_0():
     EN_HIZ          = ((val & 0b00000100) == 4)
     EN_TERM         = ((val & 0b00000010) == 2)
     return val, EN_AUTO_IBATDIS, FORCE_IBATDIS, EN_CHG, EN_ICO, FORCE_ICO, EN_HIZ, EN_TERM
+
+def bq25792_fget_charger_control_0(bq_register):
+    val = bq_register[REG0F_Charger_Control_0]
+    EN_AUTO_IBATDIS = ((val & 0b10000000) == 128)
+    FORCE_IBATDIS   = ((val & 0b01000000) == 64)
+    EN_CHG          = ((val & 0b00100000) == 32)
+    EN_ICO          = ((val & 0b00010000) == 16)
+    FORCE_ICO       = ((val & 0b00001000) == 8)
+    EN_HIZ          = ((val & 0b00000100) == 4)
+    EN_TERM         = ((val & 0b00000010) == 2)
+    return val, EN_AUTO_IBATDIS, FORCE_IBATDIS, EN_CHG, EN_ICO, FORCE_ICO, EN_HIZ, EN_TERM
+
+def bq25792_set_charger_control_0(EN_AUTO_IBATDIS, FORCE_IBATDIS, EN_CHG, EN_ICO, FORCE_ICO, EN_HIZ,EN_TERM ):
+    write_val = (EN_AUTO_IBATDIS << 7) | (FORCE_IBATDIS << 6) | (EN_CHG << 5) | (EN_ICO << 4)| (FORCE_ICO << 3)| (EN_HIZ << 2) | (EN_TERM << 1) | 0
+    return write(REG0F_Charger_Control_0, write_val)
+
+def bq25792_fget_charger_control_1(bq_register):
+    val = bq_register[REG10_Charger_Control_1]
+    VAC_OVP       = ((val & 0b00110000) >> 4)
+    WD_RST        = ((val & 0b00001000) >> 3)
+    WATCHDOG      = ((val & 0b00000111))
+    return val, VAC_OVP, WD_RST, WATCHDOG
+  
+def bq25792_set_charger_control_1(VAC_OVP, WD_RST, WATCHDOG):
+    write_val = (VAC_OVP << 4) | (WD_RST << 3) | (WATCHDOG)
+    return write(REG10_Charger_Control_1, write_val)
 
 ''' NTC (Thermistor Control'''
 def bq25792_get_NTC_Control_1():
@@ -238,6 +311,16 @@ def bq25792_get_REG14_Charger_Control_5():
     EN_BATOC     = ((val & 0b00000001) == 1)
     return val, SFET_PRESENT, EN_IBAT, IBAT_REG, EN_IINDPM, EN_EXTILIM, EN_BATOC
 
+def bq25792_fget_REG14_Charger_Control_5(bq_register):
+    val = bq_register[REG14_Charger_Control_5]
+    SFET_PRESENT = ((val & 0b10000000) == 128)
+    EN_IBAT      = ((val & 0b00100000) == 32)
+    IBAT_REG     = ( val & 0b00011000) >> 3
+    EN_IINDPM    = ((val & 0b00000100) == 4)
+    EN_EXTILIM   = ((val & 0b00000010) == 2)
+    EN_BATOC     = ((val & 0b00000001) == 1)
+    return val, SFET_PRESENT, EN_IBAT, IBAT_REG, EN_IINDPM, EN_EXTILIM, EN_BATOC
+
 def bq25792_set_REG14_Charger_Control_5(SFET_PRESENT, EN_IBAT, IBAT_REG, EN_IINDPM, EN_EXTILIM, EN_BATOC):
     write_val = (SFET_PRESENT << 7) | 0 | (EN_IBAT << 5) | (IBAT_REG << 3) | (EN_IINDPM << 2) | (EN_EXTILIM << 1) | EN_BATOC
     return write(REG14_Charger_Control_5, write_val)
@@ -246,12 +329,23 @@ def bq25792_get_VBAT():
     val = read16(REG3B_VBAT_ADC)
     return val
 
+def bq25792_fget_VBAT(bq_register):
+    val = ((bq_register[REG3B_VBAT_ADC] << 8) | bq_register[REG3B_VBAT_ADC+1])
+    return val
+
 def bq25792_get_VBUS():
     val = read16(REG35_VBUS_ADC)
+    return val
+def bq25792_fget_VBUS(bq_register):
+    val = bq_register[REG35_VBUS_ADC]
+    val = ((bq_register[REG35_VBUS_ADC] << 8) | bq_register[REG35_VBUS_ADC+1])
     return val
 
 def bq25792_get_VSYS():
     val = read16(REG3D_VSYS_ADC)
+    return val
+def bq25792_fget_VSYS(bq_register):
+    val = ((bq_register[REG3D_VSYS_ADC] << 8) | bq_register[REG3D_VSYS_ADC+1])
     return val
 
 def bq25792_get_IBAT():
@@ -262,24 +356,66 @@ def bq25792_get_IBAT():
         ret = val
     return  ret
 
+def bq25792_fget_IBAT(bq_register):
+    val = ((bq_register[REG33_IBAT_ADC] << 8) | bq_register[REG33_IBAT_ADC+1])
+    if (val >> 15) == 1:
+        ret = (-1)*(65535 + 1 - val) #two's complement
+    else:
+        ret = val
+    return  ret
+
 def bq25792_get_IBUS():
     val = read16(REG31_IBUS_ADC)
     return val
+def bq25792_fget_IBUS(bq_register):
+    val = ((bq_register[REG31_IBUS_ADC] << 8) | bq_register[REG31_IBUS_ADC+1])
+    if (val >> 15) == 1:
+        ret = (-1)*(65535 + 1 - val) #two's complement
+    else:
+        ret = val
+    return val
 
-# Enable ADC
-val, ADC_EN, ADC_RATE, ADC_SAMPLE, ADC_AVG, ADC_AVG_INIT = bq25792_get_ADC_Control()
-print ('*** BQ25792 - ADC Control (=' + str(hex(val)) + ')***')
-if ADC_EN == 0:
-    ADC_EN = 1
-    print('    Set ADC_EN to 1 ')
-    bq25792_set_ADC_Control(ADC_EN, ADC_RATE, ADC_SAMPLE, ADC_AVG, ADC_AVG_INIT)
+#################
+# Configure BQ
+#################
+try:
+    # Enable ADC
+    val, ADC_EN, ADC_RATE, ADC_SAMPLE, ADC_AVG, ADC_AVG_INIT = bq25792_get_ADC_Control()
+    print ('*** BQ25792 - ADC Control (=' + str(hex(val)) + ')***')
+    if ADC_EN == 0:
+        ADC_EN = 1
+        print('    Set ADC_EN to 1 ')
+        bq25792_set_ADC_Control(ADC_EN, ADC_RATE, ADC_SAMPLE, ADC_AVG, ADC_AVG_INIT)
+        val, ADC_EN, ADC_RATE, ADC_SAMPLE, ADC_AVG, ADC_AVG_INIT = bq25792_get_ADC_Control()
+        print ('*** BQ25792 - ADC Control (=' + str(hex(val)) + ')***')
+    val, SFET_PRESENT, EN_IBAT, IBAT_REG, EN_IINDPM, EN_EXTILIM, EN_BATOC = bq25792_get_REG14_Charger_Control_5()
+    # Enable IBAT and Disable EXTILIM
+    print ('*** BQ25792 - bq25792_get_REG14_Charger_Control_5 (=' + str(hex(val)) + ')***')
+    if EN_IBAT == 0:
+        EN_IBAT = 1
+        EN_EXTILIM = 0
+        print('    Set EN_IBAT to 1, Disable EXTILIM ')
+        bq25792_set_REG14_Charger_Control_5(SFET_PRESENT, EN_IBAT, IBAT_REG, EN_IINDPM, EN_EXTILIM, EN_BATOC)
+    # Charging current limit to 2A
+    bq25792_set_battery_charging_current(2000)
+    # Disabler Charging Termination
+    REG, value =bq25792_set_charger_control_0(EN_AUTO_IBATDIS=1,FORCE_IBATDIS=0,EN_CHG=1,EN_ICO=0,FORCE_ICO=0,EN_HIZ=0,EN_TERM=0)
+    print ('Written to bq25792_set_battery_charging_current'+ str(hex(value)) + ')***')
+    # Disable Watchdog
+    bq25792_set_charger_control_1(VAC_OVP=0,WD_RST=1,WATCHDOG=0)
 
-# Charign current limit to 3A
-bq25792_set_battery_charging_current(3000)
 
-while True:
+except Exception as e:
+    print(f"An error occurred: {e}", file=sys.stderr)
+    sys.exit(-1)
+
+
+def timestamp():
     time_stamp = time.time()
     date_time = datetime.fromtimestamp(time_stamp)
+    return date_time
+
+while True:
     if scriptflag_print_fullstatus:
         print("Timestamp: ", date_time)
         print ('*** BQ25792 - Status ***')
@@ -317,12 +453,7 @@ while True:
         print('IBAT (Dis-)Charge [mA]    = ' +  str(bq25792_get_IBAT()))
         print('IBUS Current [mA]         = ' +  str(bq25792_get_IBUS()))
 
-        val, SFET_PRESENT, EN_IBAT, IBAT_REG, EN_IINDPM, EN_EXTILIM, EN_BATOC = bq25792_get_REG14_Charger_Control_5()
-        print ('*** BQ25792 - bq25792_get_REG14_Charger_Control_5 (=' + str(hex(val)) + ')***')
-        if EN_IBAT == 0:
-            EN_IBAT = 1
-            print('    Set EN_IBAT to 1 ')
-            bq25792_set_REG14_Charger_Control_5(SFET_PRESENT, EN_IBAT, IBAT_REG, EN_IINDPM, EN_EXTILIM, EN_BATOC)
+        
         # end if
     if scriptflag_print_reduced:
         print("Timestamp: ", date_time)
@@ -332,7 +463,37 @@ while True:
         print('IBAT (Dis-)Charge [mA]    = ' +  str(bq25792_get_IBAT()))
         print('IBUS Current [mA]         = ' +  str(bq25792_get_IBUS()))
         print('Charge Current Limit      = ' +  str(bq25792_get_battery_charging_current()))
-
-
-
+        val, CHG_STAT = bq25792_get_charger_status_bits()
+        print('Charger Status (' + str(hex(val)) + ') = ' + str(CHG_STAT))
+    if scriptflag_print_v2:
+        try:
+            bq_register = read_block()
+        except:
+            print("Error I2C")
+        else:
+            print("*** Timestamp: ", timestamp())
+            print('BQ Registers    = ' +  str(bq_register))
+            val, CHG_STAT = bq25792_fget_charger_status_bits(bq_register)
+            print('Charger Status (' + str(hex(val)) + ') = ' + str(CHG_STAT))
+            val, SFET_PRESENT, EN_IBAT, IBAT_REG, EN_IINDPM, EN_EXTILIM, EN_BATOC = bq25792_fget_REG14_Charger_Control_5(bq_register)
+            print('Charger_Control_5_EN_EXTILIM(' + str(hex(val)) + ') = ' + str(EN_EXTILIM))
+            val, EN_AUTO_IBATDIS, FORCE_IBATDIS, EN_CHG, EN_ICO, FORCE_ICO, EN_HIZ, EN_TERM = bq25792_fget_charger_control_0(bq_register)
+            print ('*** BQ25792 - Charger Control (=' + str(hex(val)) + ')***')
+            print('     EN_AUTO_IBATDIS = ' + str(EN_AUTO_IBATDIS))
+            print('     FORCE_IBATDIS   = ' + str(FORCE_IBATDIS))
+            print('     EN_CHGs         = ' + str(EN_CHG))
+            print('     EN_ICO          = ' + str(EN_ICO))
+            print('     FORCE_ICO       = ' + str(FORCE_ICO))
+            print('     EN_HIZ          = ' + str(EN_HIZ))
+            print('     EN_TERM         = ' + str(EN_TERM))
+            print('*** Battery Voltage & Current ***')
+            print('     Battery Voltage  [mV]     = ' +  str(bq25792_fget_VBAT(bq_register)))
+            print('     IBAT (Dis-)Charge [mA]    = ' +  str(bq25792_fget_IBAT(bq_register)))
+            print('     Power Drawn from Bat [W]: = ' +  "{:.2f}".format((bq25792_fget_VBAT(bq_register)/1000) * (bq25792_fget_IBAT(bq_register)/1000)))
+            print('*** VBUS Voltage & Current ***')
+            print('     VBUS Voltage  [mV]        = ' +  str(bq25792_fget_VBUS(bq_register)))
+            print('     IBUS Current [mA]         = ' +  str(bq25792_fget_IBUS(bq_register)))
+            print('     Power Drawn from VBus [W]: = ' +  "{:.2f}".format((bq25792_fget_VBUS(bq_register)/1000) * (bq25792_fget_IBUS(bq_register)/1000)))
+            print('*** VSYS Voltage  ***')
+            print('     VSYS Voltage  [mV]        = ' +  str(bq25792_fget_VSYS(bq_register)))
     time.sleep(2)
