@@ -25,6 +25,7 @@ import { AlbumStop } from './albumstop';
 export class MediaService {
 
   network: Network;
+  ip: String;
   hostname: String;
   response: String;
   private category = 'audiobook';
@@ -55,34 +56,35 @@ export class MediaService {
     private playerService: PlayerService,
   ) {
     this.playerService.getConfig().subscribe(config => {
-      this.hostname = config.ip;
+      this.ip = config.ip;
+      this.hostname = config.server;
     });
     this.current$ = interval(1000).pipe( // Once a second after subscribe, way too frequent!
-      switchMap((): Observable<CurrentSpotify> => this.http.get<CurrentSpotify>('http://' + this.hostname + ':5005/state')),
+      switchMap((): Observable<CurrentSpotify> => this.http.get<CurrentSpotify>('http://' + this.ip + ':5005/state')),
       // Replay the most recent (bufferSize) emission on each subscription
       // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
       shareReplay({ bufferSize: 1, refCount: false }),
     );
     this.local$ = interval(1000).pipe( // Once a second after subscribe, way too frequent!
-      switchMap((): Observable<CurrentMPlayer> => this.http.get<CurrentMPlayer>('http://' + this.hostname + ':5005/local')),
+      switchMap((): Observable<CurrentMPlayer> => this.http.get<CurrentMPlayer>('http://' + this.ip + ':5005/local')),
       // Replay the most recent (bufferSize) emission on each subscription
       // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
       shareReplay({ bufferSize: 1, refCount: false }),
     );
     this.playlist$ = interval(1000).pipe( // Once a second after subscribe, way too frequent!
-      switchMap((): Observable<CurrentPlaylist> => this.http.get<CurrentPlaylist>('http://' + this.hostname + ':5005/playlistTracks')),
+      switchMap((): Observable<CurrentPlaylist> => this.http.get<CurrentPlaylist>('http://' + this.ip + ':5005/playlistTracks')),
       // Replay the most recent (bufferSize) emission on each subscription
       // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
       shareReplay({ bufferSize: 1, refCount: false }),
     );
     this.episode$ = interval(1000).pipe( // Once a second after subscribe, way too frequent!
-      switchMap((): Observable<CurrentEpisode> => this.http.get<CurrentEpisode>('http://' + this.hostname + ':5005/episode')),
+      switchMap((): Observable<CurrentEpisode> => this.http.get<CurrentEpisode>('http://' + this.ip + ':5005/episode')),
       // Replay the most recent (bufferSize) emission on each subscription
       // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
       shareReplay({ bufferSize: 1, refCount: false }),
     );
     this.show$ = interval(1000).pipe( // Once a second after subscribe, way too frequent!
-      switchMap((): Observable<CurrentShow> => this.http.get<CurrentShow>('http://' + this.hostname + ':5005/show')),
+      switchMap((): Observable<CurrentShow> => this.http.get<CurrentShow>('http://' + this.ip + ':5005/show')),
       // Replay the most recent (bufferSize) emission on each subscription
       // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
       shareReplay({ bufferSize: 1, refCount: false }),
@@ -106,7 +108,7 @@ export class MediaService {
       shareReplay({ bufferSize: 1, refCount: false }),
     );
     this.validate$ = interval(1000).pipe( // Once a second after subscribe, way too frequent!
-      switchMap((): Observable<Validate> => this.http.get<Validate>('http://' + this.hostname + ':5005/validate')),
+      switchMap((): Observable<Validate> => this.http.get<Validate>('http://' + this.ip + ':5005/validate')),
       // Replay the most recent (bufferSize) emission on each subscription
       // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
       shareReplay({ bufferSize: 1, refCount: false }),
