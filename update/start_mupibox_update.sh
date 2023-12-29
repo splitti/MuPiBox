@@ -133,7 +133,13 @@ OS=${OS:17}  >&3 2>&3
 	before=$(date +%s)
 	unzip -q -d /home/dietpi /home/dietpi/mupibox.zip >&3 2>&3
 	rm /home/dietpi/mupibox.zip >&3 2>&3
-	MUPI_SRC="/home/dietpi/MuPiBox-${VERSION}"
+	if [ ${RELEASE} = "dev" ]; then
+		MUPI_SRC="/home/dietpi/MuPiBox-main"
+	else
+		MUPI_SRC="/home/dietpi/MuPiBox-${VERSION}"
+	fi
+
+	#MUPI_SRC="/home/dietpi/MuPiBox-${VERSION}"
 	after=$(date +%s)
 	echo -e "## Unzip Mupibox Download  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
