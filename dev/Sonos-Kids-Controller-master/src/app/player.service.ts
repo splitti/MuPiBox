@@ -5,8 +5,7 @@ import { SonosApiConfig } from './sonos-api';
 import { environment } from '../environments/environment';
 import { Observable } from 'rxjs';
 import { publishReplay, refCount } from 'rxjs/operators';
-import { MediaService } from './media.service';
-import { Network } from './network';
+
 import { Resume } from './resume';
 
 export enum PlayerCmds {
@@ -37,14 +36,10 @@ export enum PlayerCmds {
 export class PlayerService {
 
   private config: Observable<SonosApiConfig> = null;
-  network: Network;
-  public readonly network$: Observable<Network>;
 
   constructor(
-    private mediaService: MediaService,
     private http: HttpClient
     ) {
-      this.network$ = this.mediaService.network$;
     }
 
   getConfig() {
@@ -167,14 +162,9 @@ export class PlayerService {
   }
 
   private sendRequest(url: string) {
-    this.mediaService.network$.subscribe(network => {
-      this.network = network;
-    });
     this.getConfig().subscribe(config => {
       if (!config.rooms[0]) config.rooms[0]='0';
-      console.log(this.network);
       const baseUrl = 'http://' + config.ip + ':' + config.port + '/' + config.rooms[0] + '/';
-      console.log(baseUrl + url);
       this.http.get(baseUrl + url).subscribe();
     });
   }
