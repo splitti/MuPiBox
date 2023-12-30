@@ -107,7 +107,7 @@ OS=${OS:17}  >&3 2>&3
 		STEP=$(($STEP + 1))
 	fi
 	
-	echo | echo | sudo dietpi-software install 200 >&3 2>&3
+	yes "" | sudo dietpi-software install 200 >&3 2>&3
 
 	###############################################################################################
 

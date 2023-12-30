@@ -101,7 +101,7 @@ exec 3>${LOG}
 		STEP=$(($STEP + 1))
 	fi
 	
-	echo | echo | sudo dietpi-software install 200 >&3 2>&3
+	yes "" | sudo dietpi-software install 200 >&3 2>&3
 
 	###############################################################################################
 
