@@ -114,3 +114,9 @@ if [[ -z ${WLED} ]]; then
 	/usr/bin/cat <<< $(/usr/bin/jq --arg v "" '.wled.shutdown_id = $v' ${CONFIG}) >  ${CONFIG}                 
 	/usr/bin/cat <<< $(/usr/bin/jq --arg v "" '.wled.main_id = $v' ${CONFIG}) >  ${CONFIG}                 
 fi
+
+#3.2.6
+IPCONTROL=$(/usr/bin/cat ${CONFIG} | grep ip_control_backend)
+if [[ -z ${IPCONTROL} ]]; then
+	/usr/bin/cat <<< $(/usr/bin/jq --arg v "false" '.mupibox.ip_control_backend = $v' ${CONFIG}) >  ${CONFIG}
+fi

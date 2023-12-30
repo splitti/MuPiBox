@@ -1,6 +1,7 @@
 {
 	"mupibox": {
 		"host": "MuPiBox",
+		"ip_control_backend": false,
 		"theme": "blue",
 		"installedThemes": [
 			"blue",
