@@ -87,6 +87,19 @@
 		$change=4;
 		}
 
+	if( $_POST['ip_control_backend'] == "enable" )
+		{
+		$data["mupibox"]["ip_control_backend"]=true;
+		$change=2;
+		$CHANGE_TXT=$CHANGE_TXT."<li>IP Control enabled - Services restarted</li>";
+		}
+	if( $_POST['ip_control_backend'] == "disable" )
+		{
+		$data["mupibox"]["ip_control_backend"]=false;
+		$change=2;
+		$CHANGE_TXT=$CHANGE_TXT."<li>IP Control disabled - Services restarted</li>";
+		}
+
 	if( $_POST['spotifydebug'] == "Controller Debugging Off - turn on" )
 		{
 		$sdcommand='sudo su -c \'sed -i "s/\"logLevel\": \"error\"/\"logLevel\": \"debug\"/g" /home/dietpi/.mupibox/spotifycontroller-main/config/config.json\'';
@@ -345,6 +358,25 @@
 			<li class="li_norm"><h2>Restart PM2</h2>
 				<p>Restart tbe MuPiBox frontend and the kiosk. </p>
 				<input id="saveForm" class="button_text" type="submit" name="pm2_restart" value="Restart services" />
+			</li>
+			<li class="li_norm"><h2>IP Control Backend</h2>
+				<p>In some cases, the MuPiBox cannot communicate correctly via hostname. Try to activate this point, to set the communication to IP.</p>
+				<p>
+				<?php 
+				if( $data["mupibox"]["ip_control_backend"] )
+					{
+					$ip_control_backend_state="enabled";
+					$change_ip_control="disable";
+					}
+				else
+					{
+					$ip_control_backend_state="disabled";
+					$change_ip_control="enable";					
+					}
+
+				echo "IP Control Backend: <b>".$ip_control_backend_state."</b>";
+				?></p>
+				<input id="saveForm" class="button_text" type="submit" name="ip_control_backend" value="<?php print $change_ip_control; ?>" />																									
 			</li>
 			<li class="li_norm"><h2>Restart MuPiBox kiosk</h2>
 				<p>Restart chromium browser. </p>

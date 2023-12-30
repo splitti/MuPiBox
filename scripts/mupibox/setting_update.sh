@@ -5,7 +5,7 @@
 
 MUPIBOX_CONFIG="/etc/mupibox/mupiboxconfig.json"
 SONOS_CONFIG="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json"
-#SONOS_NETWORK="/tmp/network.json"
+#NETWORK_CONFIG="/tmp/network.json"
 SPOTIFYCONTROLLER_CONFIG="/home/dietpi/.mupibox/spotifycontroller-main/config/config.json"
 SPOTIFYD_CONFIG="/etc/spotifyd/spotifyd.conf"
 DISPLAY_STANDBY="/etc/X11/xorg.conf.d/98-dietpi-disable_dpms.conf"
@@ -39,6 +39,12 @@ refreshToken=$(/usr/bin/jq -r .spotify.refreshToken ${MUPIBOX_CONFIG})
 
 ttsLanguage=$(/usr/bin/jq -r .mupibox.ttsLanguage ${MUPIBOX_CONFIG})
 /usr/bin/cat <<< $(/usr/bin/jq --arg v "$ttsLanguage" '.ttsLanguage = $v' ${SPOTIFYCONTROLLER_CONFIG}) >  ${SPOTIFYCONTROLLER_CONFIG}
+
+ip_control_backend=$(/usr/bin/jq -r .mupibox.ip_control_backend ${MUPIBOX_CONFIG})
+if [ "$ip_control_backend" = true ] ; then
+	/usr/bin/cat <<< $(/usr/bin/jq --arg v "$(hostname -I)" '.node-sonos-http-api.ip = $v' ${SONOS_CONFIG}) >  ${SONOS_CONFIG}
+fi
+
 
 username=$(/usr/bin/jq -r .spotify.username ${MUPIBOX_CONFIG})
 /usr/bin/sed -i 's/.*username.*/  username = '\"${username}\"'/g' ${SPOTIFYD_CONFIG}
