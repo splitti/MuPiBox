@@ -42,7 +42,11 @@ ttsLanguage=$(/usr/bin/jq -r .mupibox.ttsLanguage ${MUPIBOX_CONFIG})
 
 ip_control_backend=$(/usr/bin/jq -r .mupibox.ip_control_backend ${MUPIBOX_CONFIG})
 if [ "$ip_control_backend" = true ] ; then
-	/usr/bin/cat <<< $(/usr/bin/jq --arg v "$(hostname -I)" '.node-sonos-http-api.ip = $v' ${SONOS_CONFIG}) >  ${SONOS_CONFIG}
+        IP=$(hostname -I)
+        /usr/bin/cat <<< $(/usr/bin/jq --arg v "${IP}" '.["node-sonos-http-api"].ip = $v' ${SONOS_CONFIG}) >  ${SONOS_CONFIG}
+fi
+if [ "$ip_control_backend" = false ] ; then
+        /usr/bin/cat <<< $(/usr/bin/jq '.["node-sonos-http-api"].ip = ""' ${SONOS_CONFIG}) > ${SONOS_CONFIG}
 fi
 
 
