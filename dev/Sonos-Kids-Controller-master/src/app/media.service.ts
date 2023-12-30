@@ -56,7 +56,11 @@ export class MediaService {
     private playerService: PlayerService,
   ) {
     this.playerService.getConfig().subscribe(config => {
-      this.ip = config.ip;
+      if (config.ip){
+        this.ip = config.ip;
+      }else {
+        this.ip = config.server;
+      }
       this.hostname = config.server;
     });
     this.current$ = interval(1000).pipe( // Once a second after subscribe, way too frequent!

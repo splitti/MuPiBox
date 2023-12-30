@@ -164,9 +164,16 @@ export class PlayerService {
   private sendRequest(url: string) {
     this.getConfig().subscribe(config => {
       if (!config.rooms[0]) config.rooms[0]='0';
-      const baseUrl = 'http://' + config.ip + ':' + config.port + '/' + config.rooms[0] + '/';
-      console.log(baseUrl + url);
-      this.http.get(baseUrl + url).subscribe();
+      
+      if (config.ip){
+        const baseUrl = 'http://' + config.ip + ':' + config.port + '/' + config.rooms[0] + '/';
+        console.log(baseUrl + url);
+        this.http.get(baseUrl + url).subscribe();
+      }else {
+        const baseUrl = 'http://' + config.server + ':' + config.port + '/' + config.rooms[0] + '/';
+        console.log(baseUrl + url);
+        this.http.get(baseUrl + url).subscribe();
+      }
     });
   }
 }
