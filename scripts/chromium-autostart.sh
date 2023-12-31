@@ -7,15 +7,16 @@
 # --ash-host-window-bounds="400,300"
 # Resolution to use for kiosk mode, should ideally match current system resolution
 
-/usr/local/bin/mupibox/./startup.sh &
-
 rm ~/.config/chromium/Singleton*
 
 CONFIG="/etc/mupibox/mupiboxconfig.json"
 RES_X=$(/usr/bin/jq -r .chromium.resX ${CONFIG})
 RES_Y=$(/usr/bin/jq -r .chromium.resY ${CONFIG})
 DEBUG=$(/usr/bin/jq -r .chromium.debug ${CONFIG})
-
+wled_active=$(/usr/bin/jq -r .wled.active ${CONFIG})
+wled_main_id=$(/usr/bin/jq -r .wled.main_id ${CONFIG})
+wled_baud_rate=$(/usr/bin/jq -r .wled.baud_rate ${CONFIG})
+wled_com_port=$(/usr/bin/jq -r .wled.com_port ${CONFIG})
 CHROMIUM_OPTS="--use-gl=egl --kiosk --test-type --window-size=${RES_X:-1280},${RES_Y:-720} --start-fullscreen --start-maximized --window-position=0,0 --disk-cache-dir=/home/dietpi/.mupibox/chromium_cache --disk-cache-size=268435456 --media-cache-size=268435456"
 if [ "${DEBUG}" = "1" ]; then
  CHROMIUM_OPTS=${CHROMIUM_OPTS}" --enable-logging --v=1 --disable-pinch"
@@ -41,3 +42,8 @@ AUDIO_DEVICE=$(/usr/bin/jq -r .mupibox.audioDevice ${CONFIG})
 /usr/bin/mplayer -volume 100 ${START_SOUND} &
 x11vnc -ncache 10 -forever -display :0 &
 pactl load-module module-bluetooth-discover
+
+if [ "${wled_active}" = "true" ]; then
+wled_data='{"on":"t","v":"true","ps":'${wled_main_id}'}'
+sudo python3 /usr/local/bin/mupibox/wled.py $wled_com_port $wled_baud_rate $wled_data
+fi
