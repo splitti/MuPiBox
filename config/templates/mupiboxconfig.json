@@ -201,7 +201,9 @@
 		"active": false,
 		"ip": "",
 		"shutdown_id": "",
-		"main_id": ""
+		"main_id": "",
+		"com_port":"",
+		"baud_rate":""
 	}
 }
 
