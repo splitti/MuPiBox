@@ -9,6 +9,14 @@ SHUT_SPLASH=$(/usr/bin/jq -r .mupibox.shutSplash ${CONFIG})
 TELEGRAM=$(/usr/bin/jq -r .telegram.active ${CONFIG})
 TELEGRAM_CHATID=$(/usr/bin/jq -r .telegram.chatId ${CONFIG})
 TELEGRAM_TOKEN=$(/usr/bin/jq -r .telegram.token ${CONFIG})
+wled_active=$(/usr/bin/jq -r .wled.active ${CONFIG})
+wled_shutdown_id=$(/usr/bin/jq -r .wled.shutdown_id ${CONFIG})
+wled_baud_rate=$(/usr/bin/jq -r .wled.baud_rate ${CONFIG})
+wled_com_port=$(/usr/bin/jq -r .wled.com_port ${CONFIG})
+if [ "${wled_active}" = "true" ]; then
+wled_data='{"on":"t","v":"true","ps":'${wled_shutdown_id}'}'
+sudo python3 /usr/local/bin/mupibox/wled.py $wled_com_port $wled_baud_rate $wled_data
+fi
 if [ "${TELEGRAM}" ] && [ ${#TELEGRAM_CHATID} -ge 1 ] && [ ${#TELEGRAM_TOKEN} -ge 1 ]; then
 	/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "MuPiBox shutdown"
 fi
