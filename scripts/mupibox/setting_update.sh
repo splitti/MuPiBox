@@ -5,7 +5,7 @@
 
 MUPIBOX_CONFIG="/etc/mupibox/mupiboxconfig.json"
 SONOS_CONFIG="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json"
-#NETWORK_CONFIG="/tmp/network.json"
+NETWORK_CONFIG="/tmp/network.json"
 SPOTIFYCONTROLLER_CONFIG="/home/dietpi/.mupibox/spotifycontroller-main/config/config.json"
 SPOTIFYD_CONFIG="/etc/spotifyd/spotifyd.conf"
 DISPLAY_STANDBY="/etc/X11/xorg.conf.d/98-dietpi-disable_dpms.conf"
@@ -43,6 +43,9 @@ ttsLanguage=$(/usr/bin/jq -r .mupibox.ttsLanguage ${MUPIBOX_CONFIG})
 ip_control_backend=$(/usr/bin/jq -r .mupibox.ip_control_backend ${MUPIBOX_CONFIG})
 if [ "$ip_control_backend" = true ] ; then
         IP=$(hostname -I)
+		if [ "$IP" = "" ] ; then
+			IP=$(/usr/bin/jq -r .ip ${NETWORK_CONFIG})
+		fi		
         /usr/bin/cat <<< $(/usr/bin/jq --arg v "${IP}" '.["node-sonos-http-api"].ip = $v' ${SONOS_CONFIG}) >  ${SONOS_CONFIG}
 fi
 if [ "$ip_control_backend" = false ] ; then
