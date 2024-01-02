@@ -18,3 +18,7 @@ We will focus on <b>bookworm</b> and recommend you to update, or reinstall. See 
 <li id='linews' class='linews'>Preparation: MQTT / WLED</li>
 <li id='linews' class='linews'>and some points we forgot ;-)</li>
 </ul>
+<h3>Next Release</h3>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>New: DietPi-Dashboard</li>
+</ul>
