@@ -246,16 +246,16 @@
 			<li class="li_norm">
 
         <h2>Network Information</h2>
-        <table id="network">
-        <tr><td id="netl">IP-Address:</td><td id="netr"><?php print $_SERVER['SERVER_ADDR']; ?></td></tr>
-        <tr><td id="netl">MAC-Address:</td><td id="netr"><?php print $MAC0; ?></td></tr>
-        <tr><td id="netl">Subnet-Adresss:</td><td id="netr"><?php print $SUBNET0; ?></td></tr>
-        <tr><td id="netl">Gateway:</td><td id="netr"><?php print $GATEWAY0; ?></td></tr>
-        <tr><td id="netl">Nameserver:</td><td id="netr"><?php print $DNS; ?></td></tr>
-        <tr><td id="netl">Wifi SSID:</td><td id="netr"><?php print $WIFI; ?></td></tr>
-        <tr><td id="netl">Wifi Link Quality:</td><td id="netr"><?php print $LINKQ; ?></td></tr>
-        <tr><td id="netl">Wifi Signal Level:</td><td id="netr"><?php print $SIGNAL; ?></td></tr>
-        <tr><td id="netl">Bitrate:</td><td id="netr"><?php print $BITRATE ?></td></tr>
+        <table class="version">
+        <tr><td>IP-Address:</td><td><?php print $_SERVER['SERVER_ADDR']; ?></td></tr>
+        <tr><td>MAC-Address:</td><td><?php print $MAC0; ?></td></tr>
+        <tr><td>Subnet-Adresss:</td><td><?php print $SUBNET0; ?></td></tr>
+        <tr><td>Gateway:</td><td><?php print $GATEWAY0; ?></td></tr>
+        <tr><td>Nameserver:</td><td><?php print $DNS; ?></td></tr>
+        <tr><td>Wifi SSID:</td><td><?php print $WIFI; ?></td></tr>
+        <tr><td>Wifi Link Quality:</td><td><?php print $LINKQ; ?></td></tr>
+        <tr><td>Wifi Signal Level:</td><td><?php print $SIGNAL; ?></td></tr>
+        <tr><td>Bitrate:</td><td><?php print $BITRATE ?></td></tr>
         </table>
 		</li></ul></details>
 		
