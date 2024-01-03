@@ -51,6 +51,7 @@ fi
 if [ "$ip_control_backend" = false ] ; then
         /usr/bin/cat <<< $(/usr/bin/jq '.["node-sonos-http-api"].ip = ""' ${SONOS_CONFIG}) > ${SONOS_CONFIG}
 fi
+/usr/bin/cat <<< $(/usr/bin/jq --arg v "5005" '.["node-sonos-http-api"].port = $v' ${SONOS_CONFIG}) >  ${SONOS_CONFIG}
 
 
 username=$(/usr/bin/jq -r .spotify.username ${MUPIBOX_CONFIG})
