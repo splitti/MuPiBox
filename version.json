@@ -18,6 +18,11 @@
 			"version": "3.2.5",
 			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.2.5.zip",
 			"releaseinfo": "Troubleshooting for blocking the covers in the selection, display network status, operation of shutdown and restart in the admin touch area"
+			},
+			{
+			"version": "3.2.6",
+			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.2.6.zip",
+			"releaseinfo": "DietPi Dash, IP Control Backend, Image resize after installation, Bug fixes Validation, monitor and cloud"
 			}
 		],
 		"stable": [
