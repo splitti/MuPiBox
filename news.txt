@@ -7,8 +7,6 @@ We will focus on <b>bookworm</b> and recommend you to update, or reinstall. See 
 <li id='linews' class='linews'>New: Beta Version</li>
 <li id='linews' class='linews'>New: DietPi-Dashboard</li>
 <li id='linews' class='linews'>Adding: Anonymized Statistics about installations and updates</li>
-<li id='linews' class='linews'>Adding: WLED-Support (thanks to ronbal for your support <3)</li>
-<li id='linews' class='linews'>Adding: RTL88X2BU-Drivers [https://github.com/fastoe/RTL8812BU_for_Raspbian]</li>
 <li id='linews' class='linews'>Bugfix: Refresh token spotify</li>
 <li id='linews' class='linews'>Bugfix: Version Bug</li>
 <li id='linews' class='linews'>Bugfix: Spotify Validation</li>
@@ -21,4 +19,8 @@ We will focus on <b>bookworm</b> and recommend you to update, or reinstall. See 
 <h3>Next Release</h3>
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>New: DietPi-Dashboard</li>
+<li id='linews' class='linews'>Adding: WLED-Support (thanks to ronbal for your support <3)</li>
+<li id='linews' class='linews'>Adding: RTL88X2BU-Drivers [https://github.com/fastoe/RTL8812BU_for_Raspbian]</li>
+<li id='linews' class='linews'>Bugfix: Admin-Webinterface missing footer in MuPi-Config</li>
+<li id='linews' class='linews'>Bugfix: Adding Wifi-Bugfixing</li>
 </ul>

@@ -17,8 +17,8 @@ restart_network() {
 while true
 do
 	if test -f "${MUPIWIFI}"; then
-		SSID=$(/usr/bin/jq -r .[].ssid ${MUPIWIFI})
-		PSK=$(/usr/bin/jq -r .[].pw ${MUPIWIFI})
+		SSID="$(/usr/bin/jq -r .[].ssid ${MUPIWIFI})"
+		PSK="$(/usr/bin/jq -r .[].pw ${MUPIWIFI})"
 		if [ "${SSID}" = "" ] || [ "${PSK}" = "" ]; then
 			sudo rm ${MUPIWIFI}
 		elif [ ${SSID} = "clear" ] && [ ${PSK} = "all"  ]

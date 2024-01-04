@@ -30,11 +30,15 @@ if [ -f "$RESIZE_SERVICE" ]; then
 	sudo systemctl disable dietpi-fs_partition_resize
 fi
 
+if [ ! -d "/lib/modules/$(uname -r)/build" ]; then
+	echo "arm_64bit=0" | sudo tee -a /boot/config.txt
+fi
+
 ### Check for new wifi network in /boot/add_wifi.json
 
 if [ -f "$WIFI_FILE" ]; then
-	SSID=$(/usr/bin/jq -r .ssid ${WIFI_FILE})
-	PSK=$(/usr/bin/jq -r .password ${WIFI_FILE})
+	SSID="$(/usr/bin/jq -r .ssid ${WIFI_FILE})"
+	PSK="$(/usr/bin/jq -r .password ${WIFI_FILE})"
 	if [ "${SSID}" = "" ] || [ "${PSK}" = "" ]; then
 		init_add_wifi
 	elif [ ${SSID} = "clear" ] && [ ${PSK} = "all"  ]; then

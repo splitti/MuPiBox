@@ -980,6 +980,9 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 		</ul>
 	</details>
 </form><p>
+<?php
+ include ('includes/footer.php');
+?>
 
 <?php
         //$time2sleep=readfile("/tmp/.time2sleep");
@@ -1053,7 +1056,7 @@ document.getElementById("app").innerHTML = `
     timeLeft
   )}</span>
 </div>
-`;
+	`;
 
 startTimer();
 
@@ -1127,6 +1130,3 @@ function setCircleDasharray() {
 }
 
 </script>
-<?php
- include ('includes/footer.php');
-?>
