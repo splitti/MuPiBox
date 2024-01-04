@@ -3,6 +3,10 @@
 
 #https://raw.githubusercontent.com/splitti/MuPiBox/main
 
+cd /tmp
+wget https://raw.githubusercontent.com/splitti/MuPiBox/main/media/images/installation.png
+/usr/bin/fbv /tmp/installation.png
+
 
 if [ "$1" = "dev" ] || [ "$1" = "beta" ] || [ "$1" = "stable" ]; then
 	RELEASE="$1"
@@ -18,8 +22,6 @@ STEP=0
 VER_JSON="/tmp/version.json"
 OS=$(grep -E '^(VERSION_CODENAME)=' /etc/os-release)  >&3 2>&3
 OS=${OS:17}  >&3 2>&3
-wget -o /tmp/install.png https://raw.githubusercontent.com/splitti/MuPiBox/main/media/images/installation.png
-/usr/bin/fbv /tmp/install.png
 
 {
 	###############################################################################################
