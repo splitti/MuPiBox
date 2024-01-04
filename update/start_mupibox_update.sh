@@ -3,8 +3,10 @@
 
 #https://raw.githubusercontent.com/splitti/MuPiBox/main
 
+
 cd /tmp
 wget https://raw.githubusercontent.com/splitti/MuPiBox/main/media/images/installation.png
+chmod 755 /tmp/installation.png
 killall chromium-browser
 /usr/bin/fbv /tmp/installation.png
 
