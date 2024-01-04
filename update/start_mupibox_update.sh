@@ -10,7 +10,7 @@ else
 	RELEASE="stable"
 fi
 
-killall --signal 9 --wait --quit chromium-browser
+killall -s 9 -w -q chromium-browser
 
 CONFIG="/etc/mupibox/mupiboxconfig.json"
 LOG="/tmp/mupibox_update.log"
@@ -22,10 +22,8 @@ VER_JSON="/tmp/version.json"
 OS=$(grep -E '^(VERSION_CODENAME)=' /etc/os-release)  >&3 2>&3
 OS=${OS:17}  >&3 2>&3
 
-cd /tmp >&3 2>&3
-wget https://raw.githubusercontent.com/splitti/MuPiBox/main/media/images/installation.png >&3 2>&3
-chmod 755 /tmp/installation.png >&3 2>&3
-/usr/bin/fbv installation.png >&3 2>&3
+wget -O /tmp/installation.jpg https://raw.githubusercontent.com/splitti/MuPiBox/main/media/images/installation.jpg >&3 2>&3
+/usr/bin/fbv /tmp/installation.jpg & >&3 2>&3
 
 {
 	###############################################################################################
