@@ -1,4 +1,34 @@
 #!/usr/bin/python3 
+""" Module Mupihat_BQ25792.py, class: bq25792
+Parameters
+----------
+none
+
+Returns
+-------
+none
+
+Licence
+-------
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>
+"""
+__author__ = "Lars Stopfkuchen"
+__license__ = "GPLv3"
+__version__ = "0.0.1"
+__email__ = "lars.stopfkuchen@mupibox.de"
+__status__ = "under development"
+
 import smbus2
 import sys
 import time
@@ -97,7 +127,7 @@ class bq25792:
             self.bq = smbus2.SMBus(i2c_device)
         except Exception as _error:
             sys.stderr.write('%s\n' % str(_error))
-            sys.exit(1)
+            if self._exit_on_error: sys.exit(1)
         finally:
             pass
 
@@ -800,10 +830,12 @@ class bq25792:
         return val, EN_AUTO_IBATDIS, FORCE_IBATDIS, EN_CHG, EN_ICO, FORCE_ICO, EN_HIZ, EN_TERM
 ####
     
+
 """
-Test the class
+Example usage 
 """
 
+'''
 # create instance of bq25792 class
 hat = bq25792()
 
@@ -898,4 +930,4 @@ print ("hat.REG39_VAC2_ADC.VAC2 [mV]:               ",hat.REG39_VAC2_ADC.VAC2_AD
 print ("hat.REG3B_VBAT_ADC.VBAT [mV]:               ",hat.REG3B_VBAT_ADC.VBAT_ADC)
 print ("hat.REG3D_VSYS_ADC.VSYS [mV]:               ",hat.REG3D_VSYS_ADC.VSYS_ADC)
 
-
+'''
