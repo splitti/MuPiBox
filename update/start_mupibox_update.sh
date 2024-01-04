@@ -415,7 +415,7 @@ chmod 755 /tmp/installation.png >&3 2>&3
 	#cp ${CONFIG} ${CONFIG}_backup  >&3 2>&3
 	/usr/bin/cat <<< $(/usr/bin/jq --arg v "${VERSION}" '.mupibox.version = $v' ${CONFIG}) >  ${CONFIG}
 	chmod 775 ${CONFIG}
-	systemctl start mupi_idle_shutdown.service >&3 2>&3
+	#systemctl start mupi_idle_shutdown.service >&3 2>&3
 	rm /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/network.json >&3 2>&3
 	ln -s /tmp/network.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/network.json >&3 2>&3
 	systemctl stop mupi_change_checker.service >&3 2>&3
