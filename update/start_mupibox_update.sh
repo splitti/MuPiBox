@@ -429,7 +429,7 @@ wget -O /tmp/installation.jpg https://raw.githubusercontent.com/splitti/MuPiBox/
 
 	CPU=$(cat /proc/cpuinfo | grep Serial | cut -d ":" -f2 | sed 's/^ //') >&3 2>&3
 	ARCH=$(uname -m) >&3 2>&3	
-	curl -X POST https://mupibox.de/mupi/ct.php -H "Content-Type: application/x-www-form-urlencoded" -d key1=${CPU} -d key2=Update -d key3="${VERSION} ${RELEASE}" -d key4="${ARCH} >&3 2>&3
+	curl -X POST https://mupibox.de/mupi/ct.php -H "Content-Type: application/x-www-form-urlencoded" -d key1=${CPU} -d key2=Update -d key3="${VERSION} ${RELEASE}" -d key4="${ARCH}" >&3 2>&3
 
 	###############################################################################################
 	echo -e "XXX\n100\nInstallation complete, please reboot the system... \nXXX"	
