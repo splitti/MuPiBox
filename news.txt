@@ -23,4 +23,5 @@ We will focus on <b>bookworm</b> and recommend you to update, or reinstall. See 
 <li id='linews' class='linews'>Adding: RTL88X2BU-Drivers [https://github.com/fastoe/RTL8812BU_for_Raspbian]</li>
 <li id='linews' class='linews'>Bugfix: Admin-Webinterface missing footer in MuPi-Config</li>
 <li id='linews' class='linews'>Bugfix: Adding Wifi-Bugfixing</li>
+<li id='linews' class='linews'>Bugfix: v7 Installations get</li>
 </ul>
