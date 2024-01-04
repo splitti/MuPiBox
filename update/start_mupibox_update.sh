@@ -3,13 +3,15 @@
 
 #https://raw.githubusercontent.com/splitti/MuPiBox/main
 
-killall chromium-browser
 
 if [ "$1" = "dev" ] || [ "$1" = "beta" ] || [ "$1" = "stable" ]; then
 	RELEASE="$1"
 else
 	RELEASE="stable"
 fi
+
+killall --signal 9 --wait --quit chromium-browser
+
 CONFIG="/etc/mupibox/mupiboxconfig.json"
 LOG="/tmp/mupibox_update.log"
 exec 3>${LOG}
