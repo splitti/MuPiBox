@@ -3,12 +3,11 @@
 
 #https://raw.githubusercontent.com/splitti/MuPiBox/main
 
-
+killall chromium-browser
 cd /tmp
 wget https://raw.githubusercontent.com/splitti/MuPiBox/main/media/images/installation.png
 chmod 755 /tmp/installation.png
-killall chromium-browser
-/usr/bin/fbv /tmp/installation.png
+/usr/bin/fbv installation.png
 
 
 if [ "$1" = "dev" ] || [ "$1" = "beta" ] || [ "$1" = "stable" ]; then
