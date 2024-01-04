@@ -1,6 +1,10 @@
 #!/bin/bash
 
-/usr/bin/fbv ${SHUT_SPLASH}
+killall -s 9 -w -q chromium-browser
+sleep 0.5
+wget -O /tmp/installation.jpg https://raw.githubusercontent.com/splitti/MuPiBox/main/media/images/installation.jpg
+/usr/bin/fbv /tmp/installation.jpg &
+
 sudo apt-get update
 sudo apt-get install -y raspberrypi-kernel-headers dkms 
 mkdir -p /home/dietpi/.driver/network
