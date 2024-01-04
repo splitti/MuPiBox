@@ -14,6 +14,7 @@ if [ "${TELEGRAM}" ] && [ ${#TELEGRAM_CHATID} -ge 1 ] && [ ${#TELEGRAM_TOKEN} -g
 fi
 
 sudo killall chromium-browser
+sleep 0.5
 /usr/bin/fbv ${SHUT_SPLASH}
 sudo /usr/local/bin/mupibox/./setting_update.sh
 #sudo sh -c 'su - dietpi -s /usr/local/bin/mupibox/shutdown_sound.sh'
