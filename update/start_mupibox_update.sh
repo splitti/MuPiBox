@@ -422,6 +422,7 @@ chmod 755 /tmp/installation.png >&3 2>&3
 	systemctl disable mupi_change_checker.service >&3 2>&3
 	rm /etc/systemd/system/mupi_change_checker.service >&3 2>&3
 	/usr/local/bin/mupibox/./m3u_generator.sh >&3 2>&3
+	/usr/local/bin/mupibox/./setting_update.sh >&3 2>&3
 	DATE=$(date '+%Y-%m-%d')
 	mv ${LOG} /boot/${DATE}_update_${VERSION}.log >&3 2>&3
 	chown dietpi:dietpi ${CONFIG} >&3 2>&3
