@@ -21,6 +21,17 @@
 	$commandB="sudo iwconfig wlan0 | awk '/Bit Rate/{split($2,a,\"=|/\");print a[2]\" Mb/s\"}'";
 	$BITRATE=exec($commandB);
 
+	if( $_POST['RTL88X2BU'] == "Install driver" )
+		{
+		$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/online/install_rtl88x2bu.sh | sudo bash";
+		exec($command, $output, $result );
+
+		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>Driver installed</li>";
+		}
+	if( $_POST['RTL88X2BU'] == "Remove driver" )
+		{
+		}
 	if( $_POST['change_vnc'] == "stop & disable" )
 		{
 		exec("sudo systemctl stop mupi_vnc.service");
@@ -47,6 +58,21 @@
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>VNC-Services enabled and started</li>";
 		}
+
+	if( $_POST['change_dhcp_timeout'] == "enable" )
+		{
+		$command = "sudo /usr/bin/sed -i 's/#timeout 60;/timeout 10;/g' /etc/dhcp/dhclient.conf";
+		exec($command, $output, $result );
+		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>DHCP-Timeout set to 10 seconds</li>";
+		}
+	else if( $_POST['change_dhcp_timeout'] == "disable" )
+		{
+		$command = "sudo /usr/bin/sed -i 's/timeout 10;/#timeout 60;/g' /etc/dhcp/dhclient.conf";
+		exec($command, $output, $result );
+		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>DHCP-Timeout set to default</li>";
+		}
 		
 	if( $_POST['change_samba'] == "enable & start" )
 		{
@@ -61,6 +87,21 @@
 		exec($command, $output, $result );
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Samba disabled</li>";
+		}
+
+	if( $_POST['change_wifi_monitor'] == "enable & start" )
+		{
+		$command = "sudo systemctl enable --now dietpi-wifi-monitor";
+		exec($command, $output, $result );
+		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>DietPi-WiFi-Monitor enabled</li>";
+		}
+	else if( $_POST['change_wifi_monitor'] == "stop & disable" )
+		{
+		$command = "sudo systemctl disable --now dietpi-wifi-monitor";
+		exec($command, $output, $result );
+		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>DietPi-WiFi-Monitor disabled</li>";
 		}
 
 	if( $_POST['change_ftp'] == "enable & start" )
@@ -164,6 +205,19 @@
 		$change_samba = "enable & start";
 		}
 
+	$command = "sudo service dietpi-wifi-monitor status | grep running";
+	exec($command, $wifi_monitor_output, $wifi_monitor_result );
+	if( $wifi_monitor_output[0] )
+		{
+		$wifi_monitor_state = "started";
+		$change_wifi_monitor = "stop & disable";
+		}
+	else
+		{
+		$wifi_monitor_state = "disabled";
+		$change_wifi_monitor = "enable & start";
+		}
+
 	$command = "sudo service proftpd status | grep running";
 	exec($command, $ftpoutput, $ftpresult );
 	if( $ftpoutput[0] )
@@ -203,16 +257,16 @@
 			<li class="li_norm">
 
         <h2>Network Information</h2>
-        <table id="network">
-        <tr><td id="netl">IP-Address:</td><td id="netr"><?php print $_SERVER['SERVER_ADDR']; ?></td></tr>
-        <tr><td id="netl">MAC-Address:</td><td id="netr"><?php print $MAC0; ?></td></tr>
-        <tr><td id="netl">Subnet-Adresss:</td><td id="netr"><?php print $SUBNET0; ?></td></tr>
-        <tr><td id="netl">Gateway:</td><td id="netr"><?php print $GATEWAY0; ?></td></tr>
-        <tr><td id="netl">Nameserver:</td><td id="netr"><?php print $DNS; ?></td></tr>
-        <tr><td id="netl">Wifi SSID:</td><td id="netr"><?php print $WIFI; ?></td></tr>
-        <tr><td id="netl">Wifi Link Quality:</td><td id="netr"><?php print $LINKQ; ?></td></tr>
-        <tr><td id="netl">Wifi Signal Level:</td><td id="netr"><?php print $SIGNAL; ?></td></tr>
-        <tr><td id="netl">Bitrate:</td><td id="netr"><?php print $BITRATE ?></td></tr>
+        <table class="version">
+        <tr><td>IP-Address:</td><td><?php print $_SERVER['SERVER_ADDR']; ?></td></tr>
+        <tr><td>MAC-Address:</td><td><?php print $MAC0; ?></td></tr>
+        <tr><td>Subnet-Adresss:</td><td><?php print $SUBNET0; ?></td></tr>
+        <tr><td>Gateway:</td><td><?php print $GATEWAY0; ?></td></tr>
+        <tr><td>Nameserver:</td><td><?php print $DNS; ?></td></tr>
+        <tr><td>Wifi SSID:</td><td><?php print $WIFI; ?></td></tr>
+        <tr><td>Wifi Link Quality:</td><td><?php print $LINKQ; ?></td></tr>
+        <tr><td>Wifi Signal Level:</td><td><?php print $SIGNAL; ?></td></tr>
+        <tr><td>Bitrate:</td><td><?php print $BITRATE ?></td></tr>
         </table>
 		</li></ul></details>
 		
@@ -313,6 +367,13 @@
 			</p>
 			<p>
 			<?php
+			/*
+			einfügen!!!
+			 echo "#disable ipv6" >> /etc/sysctl.conf
+ echo "net.ipv6.conf.all.disable_ipv6 = 1" >> /etc/sysctl.conf
+ echo "net.ipv6.conf.default.disable_ipv6 = 1" >> /etc/sysctl.conf
+ echo "net.ipv6.conf.lo.disable_ipv6 = 1" >> /etc/sysctl.conf
+			*/
 			$command = "cat /boot/config.txt | grep 'dtoverlay=disable-wifi'";
 			$wifionoff = exec($command, $output);
 			if($wifionoff == "")
@@ -330,6 +391,31 @@
 			</b></p>
 			<input id="saveForm" class="button_text" type="submit" name="change_wifi" value="<?php print $change_wifi; ?>" />
 		</li>
+
+		<li class="li_1"><h2>DHCP-Timeout</h2>
+			<p>
+			Set timeout to 10 seconds (Default 60 seconds)! This setting shortens the boot time in offline mode.
+			</p>
+			<p>
+			<?php
+			$command = "cat /etc/dhcp/dhclient.conf | grep 'timeout 10;'";
+			$dhcp_timeout = exec($command, $output);
+			if($dhcp_timeout == "")
+				{
+				$change_dhcp_timeout="enable";
+				$dhcp_timeout="Default or manual set";
+				}
+			else
+				{
+				$change_dhcp_timeout="disable";
+				$dhcp_timeout="10 seconds";
+				}
+			print "DHCP-Timeout: <b>".$dhcp_timeout;
+			?>
+			</b></p>
+			<input id="saveForm" class="button_text" type="submit" name="change_dhcp_timeout" value="<?php print $change_dhcp_timeout; ?>" />
+		</li>
+
 		<li class="li_1"><h2>Restart Wifi-Device</h2>
 			<p>
 			Restarts the wlan0-Device.
@@ -342,14 +428,51 @@
 			</p>
 			<input id="saveForm" class="button_text" type="submit" name="renew_dhcp" value="Renew DHCP-Lease" />
 		</li>
+		<li class="li_1"><h2>Install RTL88X2BU-Drivers</h2>
+			<p>
+			These drivers are for several network cards like these: 
+			<ul style="list-style-type:'• '; margin-left:20px;"><li>			<a href="https://amzn.to/3vj2Ubn" target="_blank">Referal link to Amazon.com (US)</a></li>
+			<li><a href="https://amzn.to/3U4ID3Z" target="_blank">Referal link to Amazon.de (GER)</a></li></ul>
+			</p>
+			<p>
+			
+			<?php
+			$path="/home/dietpi/.driver/network/88x2bu-20210702";
+		    if($path !== false AND is_dir($path))
+				{
+				$change_rtl88x2bu="Remove driver";
+				$state_rtl88x2bu="installed";
+				}
+			else
+				{
+				$change_rtl88x2bu="Install driver";
+				$state_rtl88x2bu="not installed";
+				}
+			print("<b>State: ".$state_rtl88x2bu);
+			?>
+			</b></p><p>Please notice: Installation takes a long long time! If you want to install manually and see the installation status, check out this blog post: <a href="https://mupibox.de/pimp-die-mupibox-mit-schneller-netzwerkkarte/" target="_blank">Blog Post</a></p>
+			<input id="saveForm" class="button_text" type="submit" name="RTL88X2BU" value="<?php print $change_rtl88x2bu; ?>" />
+		</li>
+
+
 	</ul>
 	</details>
 
 	<details>
 		<summary><i class="fa-solid fa-gear"></i> Services</summary>
 	<ul>
-		<li class="li_1"><h2>Samba</h2>
+		<li class="li_1"><h2>DietPi-WiFi-Monitor</h2>
+			<p>Automatic reconnection to wifi.</p>
 			<p>
+			<?php 
+			echo "DietPi-WiFi-Monitor Status: <b>".$wifi_monitor_state."</b>";
+			?>
+			</p>
+			<input id="saveForm" class="button_text" type="submit" name="change_wifi_monitor" value="<?php print $change_wifi_monitor; ?>" />
+		</li>
+
+		<li class="li_1"><h2>Samba</h2>
+			<p>Disabling this service will result in faster boot time.</p><p>
 			<?php 
 			echo "Samba-Service Status: <b>".$samba_state."</b>";
 			?>

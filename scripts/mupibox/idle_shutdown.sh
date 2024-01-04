@@ -24,7 +24,13 @@ do
 		idle=$(( current_idle_time / 6 ))
 		if ((${idle} >= ${max_idle_time}))
 		then
-			echo "$(date +'%d/%m/%Y %H:%M:%S')  # CURRENT IDLE TIME = ${idle}" >> ${LOG}
+      TELEGRAM=$(/usr/bin/jq -r .telegram.active ${CONFIG})
+      TELEGRAM_CHATID=$(/usr/bin/jq -r .telegram.chatId ${CONFIG})
+      TELEGRAM_TOKEN=$(/usr/bin/jq -r .telegram.token ${CONFIG})
+      if [ "${TELEGRAM}" ] && [ ${#TELEGRAM_CHATID} -ge 1 ] && [ ${#TELEGRAM_TOKEN} -ge 1 ]; then
+      	/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "MuPiBox is to long idle"
+      fi
+      echo "$(date +'%d/%m/%Y %H:%M:%S')  # CURRENT IDLE TIME = ${idle}" >> ${LOG}
 			echo "$(date +'%d/%m/%Y %H:%M:%S')  # MAX IDLE TIME REACHED - SHUTDOWN NOW" >> ${LOG}
 			sudo poweroff
 		  fi

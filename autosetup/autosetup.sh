@@ -1,206 +1,382 @@
 #!/bin/bash
 #
 # Script for MuPiBox Autosetup
-# Start with: cd; curl https://raw.githubusercontent.com/splitti/MuPiBox/main/autosetup/autosetup.sh | bash
+# Start with: cd; curl https://raw.githubusercontent.com/splitti/MuPiBox/main/autosetup/autosetup-stable.sh | bash
 
-#exec {tracefd}>~/.mupibox/autosetup.log; BASH_XTRACEFD=$tracefd; PS4=':$LINENO+'; set -x
+#exec {tracefd}>/home/dietpi/.mupibox/autosetup.log; BASH_XTRACEFD=$tracefd; PS4=':$LINENO+'; set -x
 
+RELEASE="stable"
 LOG="/tmp/autosetup.log"
-#https://raw.githubusercontent.com/splitti/MuPiBox/main
-SRC="https://mupibox.de/version/latest"
+VER_JSON="/tmp/version.json"
 
-autosetup="$(cat ~/.bashrc | grep autosetup)"
+
+
+autosetup="$(cat /home/dietpi/.bashrc | grep autosetup)"
 
 if(( ${#autosetup} > 0 ))
 then
-  head -n -2 ~/.bashrc > /tmp/.bashrc && mv /tmp/.bashrc ~/.bashrc
+  head -n -2 /home/dietpi/.bashrc > /tmp/.bashrc && mv /tmp/.bashrc /home/dietpi/.bashrc
 fi
-
+rm -R /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-*
 exec 3>${LOG}
 
 {
-	###############################################################################################
+	OS=$(grep -E '^(VERSION_CODENAME)=' /etc/os-release)  >&3 2>&3
+	OS=${OS:17}  >&3 2>&3
 
-	echo -e "XXX\n0\nInstall some packages... Please wait!\nXXX"
-	# Get missing packages
-	sudo apt-get update >&3 2>&3
+	#packages2install="git libasound2 jq samba mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential raspberrypi-kernel-headers dkms"
 	packages2install="git libasound2 jq samba mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential"
-	sudo apt-get install ${packages2install} -y >&3 2>&3
+	STEP=0
 
-	for thispackage in `echo ${packages2install}`; do
-		PKG_OK=$(dpkg -l ${thispackage} 2>/dev/null | egrep '^ii' | wc -l) >&3 2>&3
-		if [ ${PKG_OK} -eq 1 ]; then
-		  sudo apt-get --yes install ${thispackage} >&3 2>&3
+	###############################################################################################
+
+	echo -e "XXX\n${STEP}\nUpdate package-list\nXXX"
+	before=$(date +%s)
+	sudo apt-get update >&3 2>&3
+	after=$(date +%s)
+
+	echo -e "## apt-get update ##  finished after $((after - $before)) seconds" >&3 2>&3
+	
+	for package in ${packages2install}
+	do
+		before=$(date +%s)
+		STEP=$(($STEP + 1))
+		echo -e "XXX\n${STEP}\nInstall ${package}\nXXX"
+		#sudo apt-get install ${package} -y >&3 2>&3
+		PKG_OK=$(dpkg -l ${package} 2>/dev/null | egrep '^ii' | wc -l) >&3 2>&3
+		if [ ${PKG_OK} -eq 0 ]; then
+		  sudo apt-get --yes install ${package} >&3 2>&3
 		fi
+		after=$(date +%s)
+		echo -e "## apt-get install ${package}  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	done
-	sudo pip install mutagen  >&3 2>&3
+
+	STEP=$(($STEP + 1))
+	if [ $OS == "bullseye" ]; then
+		echo -e "XXX\n${STEP}\nInstall package mutagen\nXXX"
+		before=$(date +%s)
+		sudo pip install mutagen >&3 2>&3
+		STEP=$(($STEP + 4))
+		after=$(date +%s)
+		echo -e "## pip install mutagen  ##  finished after $((after - $before)) seconds" >&3 2>&3
+	else
+		echo -e "XXX\n${STEP}\nInstall package python3-mutagen\nXXX"
+		packages2install="python3-mutagen mutagen python3-dev"
+		for package in ${packages2install}
+		do		
+			before=$(date +%s)
+			echo -e "XXX\n${STEP}\nInstall ${package}\nXXX"
+			PKG_OK=$(dpkg -l ${package} 2>/dev/null | egrep '^ii' | wc -l) >&3 2>&3
+			if [ ${PKG_OK} -eq 0 ]; then
+			  sudo apt-get --yes install ${package} >&3 2>&3
+			fi
+			after=$(date +%s)
+			STEP=$(($STEP + 1))
+			echo -e "## apt-get install ${package}  ##  finished after $((after - $before)) seconds" >&3 2>&3
+		done
+		echo -e "XXX\n${STEP}\nInstall package pip telepot\nXXX"
+		before=$(date +%s)
+		installed=$(pip list | grep telepot)
+		if [ ${#installed} = 0 ]; then
+			sudo pip install telepot --break-system-packages >&3 2>&3
+		fi
+		after=$(date +%s)
+		echo -e "## pip install telepot  ##  finished after $((after - $before)) seconds" >&3 2>&3
+		STEP=$(($STEP + 1))
+		echo -e "XXX\n${STEP}\nInstall package pip requests\nXXX"
+		before=$(date +%s)
+		installed=$(pip list | grep requests)
+		if [ ${#installed} = 0 ]; then
+			sudo pip install requests --break-system-packages >&3 2>&3
+		fi
+		after=$(date +%s)
+		echo -e "## pip install requests  ##  finished after $((after - $before)) seconds" >&3 2>&3
+		before=$(date +%s)
+		installed=$(pip list | grep pyserial)
+		if [ ${#installed} = 0 ]; then
+			sudo pip install pyserial --break-system-packages >&3 2>&3
+		fi
+		after=$(date +%s)
+		echo -e "## pip install pyserial  ##  finished after $((after - $before)) seconds" >&3 2>&3
+		STEP=$(($STEP + 1))
+	fi
 	
+	sudo su - -c "yes '' | sudo /boot/dietpi/dietpi-software install 200" >&3 2>&3
+
+	###############################################################################################
+
+	echo -e "XXX\n${STEP}\nPrepare MuPiBox Download ... \nXXX"	
+	before=$(date +%s)
+	wget -q -O ${VER_JSON} https://raw.githubusercontent.com/splitti/MuPiBox/main/version.json  >&3 2>&3
+
+	VERSION=$(/usr/bin/jq -r .release.${RELEASE}[-1].version ${VER_JSON})  >&3 2>&3
+	MUPIBOX_URL=$(/usr/bin/jq -r .release.${RELEASE}[-1].url ${VER_JSON})  >&3 2>&3
+	after=$(date +%s)
+	echo -e "## Prepare MuPiBox Download  ##  finished after $((after - $before)) seconds" >&3 2>&3
+
+	echo -e "XXX\n${STEP}\nDownload MuPiBox Version ${VERSION}... \nXXX"	
+	before=$(date +%s)
+	wget -q -O /home/dietpi/mupibox.zip ${MUPIBOX_URL} >&3 2>&3
+	after=$(date +%s)
+	echo -e "## MuPiBox Download  ##  finished after $((after - $before)) seconds" >&3 2>&3
+	STEP=$(($STEP + 1))
+	echo -e "XXX\n${STEP}\nUnzip MuPiBox Version ${VERSION}... \nXXX"	
+	before=$(date +%s)
+	unzip -q -d /home/dietpi/ /home/dietpi/mupibox.zip >&3 2>&3
+	rm /home/dietpi/mupibox.zip >&3 2>&3
+	MUPI_SRC="/home/dietpi/MuPiBox-${VERSION}"
+	after=$(date +%s)
+	echo -e "## Unzip MuPiBox Sources  ##  finished after $((after - $before)) seconds" >&3 2>&3
+	STEP=$(($STEP + 1))
+
 	###############################################################################################
 	
-	echo -e "XXX\n6\nInstall nodeJS 16... \nXXX"	
+	echo -e "XXX\n${STEP}\nInstall nodeJS 16 (Online-Setup 16)... \nXXX"	
+	before=$(date +%s)
 	curl -sL https://deb.nodesource.com/setup_16.x | sudo -E bash - >&3 2>&3
+	after=$(date +%s)
+	echo -e "## Install nodeJS 16  ##  finished after $((after - $before)) seconds" >&3 2>&3
+
+	STEP=$(($STEP + 1))
+	echo -e "XXX\n${STEP}\nInstall package nodejs\nXXX"
+	before=$(date +%s)
 	sudo apt-get install -y nodejs >&3 2>&3
+	after=$(date +%s)
+	echo -e "## Install package nodejs  ##  finished after $((after - $before)) seconds" >&3 2>&3
 
+	STEP=$(($STEP + 1))
+	if [ $OS != "bullseye" ]; then
+	echo -e "XXX\n${STEP}\nInstall package npm\nXXX"
+		before=$(date +%s)
+		sudo apt-get install -y npm >&3 2>&3
+		after=$(date +%s)
+		echo -e "## Install package npm  ##  finished after $((after - $before)) seconds" >&3 2>&3
+	fi
+	STEP=$(($STEP + 1))
+	
 	###############################################################################################
 
-	echo -e "XXX\n10\nInstall ionic... \nXXX"	
+	echo -e "XXX\n${STEP}\nInstall ionic... \nXXX"	
+	before=$(date +%s)
 	sudo npm install -g @ionic/cli >&3 2>&3
+	after=$(date +%s)
+	echo -e "## Install ionic  ##  finished after $((after - $before)) seconds" >&3 2>&3
+	STEP=$(($STEP + 5))
 
 	###############################################################################################
 
-	echo -e "XXX\n15\nInstall pm2... \nXXX"	
+	echo -e "XXX\n${STEP}\nInstall pm2... \nXXX"	
+	before=$(date +%s)
 	sudo npm install pm2 -g  >&3 2>&3
+	after=$(date +%s)
+	echo -e "## Install pm2  ##  finished after $((after - $before)) seconds" >&3 2>&3
+	STEP=$(($STEP + 3))
+
+	echo -e "XXX\n${STEP}\Configure pm2 startup... \nXXX"	
+	before=$(date +%s)
 	pm2 startup >&3 2>&3
 	PM2_ENV=$(sudo cat ${LOG} | sudo grep "sudo env") >&3 2>&3
 	echo ${PM2_ENV} >&3 2>&3
 	${PM2_ENV} >&3 2>&3
+	after=$(date +%s)
+	echo -e "## Configure pm2  ##  finished after $((after - $before)) seconds" >&3 2>&3
+	STEP=$(($STEP + 1))
 
 	###############################################################################################
 
-	echo -e "XXX\n17\nInstall Pi-Blaster... \nXXX"	
+	echo -e "XXX\n${STEP}\nInstall Pi-Blaster... \nXXX"	
+	before=$(date +%s)
 	sudo rm -R /home/dietpi/pi-blaster >&3 2>&3
 	sudo su dietpi -c 'cd /home/dietpi/; git clone https://github.com/sarfata/pi-blaster.git' >&3 2>&3
+	after=$(date +%s)
+	echo -e "## Install Pi-Blaster  ##  finished after $((after - $before)) seconds" >&3 2>&3
+	STEP=$(($STEP + 1))
+
+	echo -e "XXX\n${STEP}\nConfigure Pi-Blaster... \nXXX"	
+	before=$(date +%s)
 	sudo su - -c 'cd /home/dietpi/pi-blaster; ./autogen.sh; ./configure; make; make install' >&3 2>&3
 	sudo /usr/bin/sed -i 's/DAEMON_ARGS=""/DAEMON_ARGS="--gpio 25"/g' /etc/init.d/pi-blaster.boot.sh >&3 2>&3
+	after=$(date +%s)
+	echo -e "## Configure Pi-Blaster  ##  finished after $((after - $before)) seconds" >&3 2>&3
+	STEP=$(($STEP + 1))
 
 	###############################################################################################
 
-	echo -e "XXX\n20\nClean and create directories... \nXXX"	
+	echo -e "XXX\n${STEP}\nClean and create directories... \nXXX"	
+	before=$(date +%s)
 	# Clean and create Directorys
-	sudo rm -R ~/.mupibox >&3 2>&3
-	sudo rm -R ~/MuPiBox >&3 2>&3
-	mkdir -p ~/.mupibox >&3 2>&3
-	mkdir -p ~/.mupibox/chromium_cache >&3 2>&3
-	mkdir -p ~/MuPiBox/tts_files >&3 2>&3
-	mkdir -p ~/MuPiBox/sysmedia/sound >&3 2>&3
-	mkdir ~/MuPiBox/sysmedia/images >&3 2>&3
-	mkdir ~/MuPiBox/media >&3 2>&3
-	mkdir ~/MuPiBox/media/audiobook >&3 2>&3
-	mkdir ~/MuPiBox/media/music >&3 2>&3
-	mkdir ~/MuPiBox/media/cover >&3 2>&3
-	mkdir ~/MuPiBox/themes >&3 2>&3
-	mkdir -p ~/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
+	sudo rm -R /home/dietpi/.mupibox >&3 2>&3
+	sudo rm -R /home/dietpi/MuPiBox >&3 2>&3
+	mkdir -p /home/dietpi/.mupibox >&3 2>&3
+	mkdir -p /home/dietpi/.mupibox/chromium_cache >&3 2>&3
+	mkdir -p /home/dietpi/MuPiBox/tts_files >&3 2>&3
+	mkdir -p /home/dietpi/MuPiBox/sysmedia/sound >&3 2>&3
+	mkdir /home/dietpi/MuPiBox/sysmedia/images >&3 2>&3
+	mkdir /home/dietpi/MuPiBox/media >&3 2>&3
+	mkdir /home/dietpi/MuPiBox/media/audiobook >&3 2>&3
+	mkdir /home/dietpi/MuPiBox/media/music >&3 2>&3
+	mkdir /home/dietpi/MuPiBox/media/cover >&3 2>&3
+	mkdir /home/dietpi/MuPiBox/themes >&3 2>&3
+	mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
 	sudo mkdir /usr/local/bin/mupibox >&3 2>&3
 	sudo mkdir /etc/spotifyd >&3 2>&3
 	sudo mkdir /etc/mupibox >&3 2>&3
 	sudo mkdir /var/log/mupibox/ >&3 2>&3
-	sleep 1
+	after=$(date +%s)
+	echo -e "## Clean and create directories  ##  finished after $((after - $before)) seconds" >&3 2>&3
+	STEP=$(($STEP + 1))
 
 	###############################################################################################
 
-	echo -e "XXX\n21\nCreate hushlogin and load MuPiBox-Config... \nXXX"	
+	echo -e "XXX\n${STEP}\nCreate hushlogin... \nXXX"	
 	# Boot
-	touch ~/.hushlogin >&3 2>&3
+	before=$(date +%s)
+	touch /home/dietpi/.hushlogin >&3 2>&3
+	after=$(date +%s)
+	echo -e "## Create hushlogin  ##  finished after $((after - $before)) seconds" >&3 2>&3
+	STEP=$(($STEP + 1))
+
+	echo -e "XXX\n${STEP}\nCreate MuPiBox-Config... \nXXX"	
+	before=$(date +%s)
 	MUPIBOX_CONFIG="/etc/mupibox/mupiboxconfig.json" >&3 2>&3
-	if [ -f "/boot/mupiboxconfig.json" ]; then
-		sudo mv /boot/mupiboxconfig.json ${MUPIBOX_CONFIG} >&3 2>&3
-	else 
-		sudo wget ${SRC}/config/templates/mupiboxconfig.json -O /etc/mupibox/mupiboxconfig.json >&3 2>&3
-	fi
+	sudo mv -f ${MUPI_SRC}/config/templates/mupiboxconfig.json ${MUPIBOX_CONFIG} >&3 2>&3
 	sudo chown root:www-data /etc/mupibox/mupiboxconfig.json >&3 2>&3
 	sudo chmod 777 /etc/mupibox/mupiboxconfig.json >&3 2>&3
-	sleep 1
+	after=$(date +%s)
+	echo -e "## Create MuPiBox-Config  ##  finished after $((after - $before)) seconds" >&3 2>&3
+	STEP=$(($STEP + 1))
 
 	###############################################################################################
 
-	echo -e "XXX\n22\nInstall mplayer-wrapper... \nXXX"	
+	echo -e "XXX\n${STEP}\nInstall mplayer-wrapper... \nXXX"	
+	before=$(date +%s)
 	# Sources
-	cd ~/.mupibox >&3 2>&3
+	cd /home/dietpi/.mupibox >&3 2>&3
 	git clone https://github.com/derhuerst/mplayer-wrapper >&3 2>&3
-	wget ${SRC}/dev/customize/mplayer-wrapper/index.js -O ~/.mupibox/mplayer-wrapper/index.js >&3 2>&3
-	cd ~/.mupibox/mplayer-wrapper >&3 2>&3
+	cp ${MUPI_SRC}/dev/customize/mplayer-wrapper/index.js /home/dietpi/.mupibox/mplayer-wrapper/index.js >&3 2>&3
+	cd /home/dietpi/.mupibox/mplayer-wrapper >&3 2>&3
 	npm install >&3 2>&3
+	after=$(date +%s)
+	echo -e "## Install mplayer-wrapper  ##  finished after $((after - $before)) seconds" >&3 2>&3
+	STEP=$(($STEP + 1))
 
 	###############################################################################################
 
-	echo -e "XXX\n27\nInstall google-tts... \nXXX"	
+	echo -e "XXX\n${STEP}\nInstall google-tts... \nXXX"	
+	before=$(date +%s)
 
-	cd ~/.mupibox >&3 2>&3
+	cd /home/dietpi/.mupibox >&3 2>&3
 	git clone https://github.com/zlargon/google-tts >&3 2>&3
 	cd google-tts/ >&3 2>&3
 	npm install --save >&3 2>&3
 	npm audit fix >&3 2>&3
 	npm test >&3 2>&3
+	after=$(date +%s)
+	echo -e "## Install google-tts  ##  finished after $((after - $before)) seconds" >&3 2>&3
+	STEP=$(($STEP + 5))
 
 	###############################################################################################
 
-	echo -e "XXX\n32\nInstall Kids-Controller-master... \nXXX"	
+	echo -e "XXX\n${STEP}\nInstall Kids-Controller-master... \nXXX"	
+	before=$(date +%s)
 
-	wget ${SRC}/bin/nodejs/deploy.zip -O ~/.mupibox/Sonos-Kids-Controller-master/sonos-kids-controller.zip >&3 2>&3
-	unzip ~/.mupibox/Sonos-Kids-Controller-master/sonos-kids-controller.zip -d ~/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
-	rm ~/.mupibox/Sonos-Kids-Controller-master/sonos-kids-controller.zip >&3 2>&3
-	wget ${SRC}/config/templates/www.json -O ~/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >&3 2>&3
-	cd ~/.mupibox/Sonos-Kids-Controller-master  >&3 2>&3
+	cp ${MUPI_SRC}/bin/nodejs/deploy.zip /home/dietpi/.mupibox/Sonos-Kids-Controller-master/sonos-kids-controller.zip >&3 2>&3
+	unzip /home/dietpi/.mupibox/Sonos-Kids-Controller-master/sonos-kids-controller.zip -d /home/dietpi/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
+	rm /home/dietpi/.mupibox/Sonos-Kids-Controller-master/sonos-kids-controller.zip >&3 2>&3
+	cp ${MUPI_SRC}/config/templates/www.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >&3 2>&3
+	cp ${MUPI_SRC}/config/templates/monitor.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/monitor.json >&3 2>&3
+	cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master  >&3 2>&3
 	npm install >&3 2>&3
 	pm2 start server.js >&3 2>&3
 	pm2 save >&3 2>&3
+	after=$(date +%s)
+	echo -e "## Install Kids-Controller  ##  finished after $((after - $before)) seconds" >&3 2>&3
+	STEP=$(($STEP + 1))
 
 	###############################################################################################
 
-	echo -e "XXX\n53\nInstall Spotify Controller... \nXXX"	
+	echo -e "XXX\n${STEP}\nInstall Spotify Controller... \nXXX"	
+	before=$(date +%s)
 
-	cd ~/.mupibox >&3 2>&3
+	cd /home/dietpi/.mupibox >&3 2>&3
 	wget https://github.com/amueller-tech/spotifycontroller/archive/main.zip >&3 2>&3
 	unzip main.zip >&3 2>&3
 	rm main.zip >&3 2>&3
-	cd ~/.mupibox/spotifycontroller-main >&3 2>&3
-	wget ${SRC}/config/templates/spotifycontroller.json -O ~/.mupibox/spotifycontroller-main/config/config.json >&3 2>&3
-	wget ${SRC}/bin/nodejs/spotify-control.js -O ~/.mupibox/spotifycontroller-main/spotify-control.js >&3 2>&3
-	ln -s /etc/mupibox/mupiboxconfig.json ~/.mupibox/spotifycontroller-main/config/mupiboxconfig.json >&3 2>&3
+	cd /home/dietpi/.mupibox/spotifycontroller-main >&3 2>&3
+	cp ${MUPI_SRC}/config/templates/spotifycontroller.json /home/dietpi/.mupibox/spotifycontroller-main/config/config.json >&3 2>&3
+	cp ${MUPI_SRC}/bin/nodejs/spotify-control.js /home/dietpi/.mupibox/spotifycontroller-main/spotify-control.js >&3 2>&3
+	ln -s /etc/mupibox/mupiboxconfig.json /home/dietpi/.mupibox/spotifycontroller-main/config/mupiboxconfig.json >&3 2>&3
 	npm install >&3 2>&3 
 	pm2 start spotify-control.js >&3 2>&3
 	pm2 save >&3 2>&3
+	after=$(date +%s)
+	echo -e "## Install Spotify-Controller  ##  finished after $((after - $before)) seconds" >&3 2>&3
+	STEP=$(($STEP + 1))
 
 	###############################################################################################
 
-	echo -e "XXX\n63\nDownload binaries... \nXXX"	
+	echo -e "XXX\n${STEP}\nCopy binaries... \nXXX"	
+	before=$(date +%s)
 
 	# Binaries
-	sudo wget ${SRC}/bin/fbv/fbv -O /usr/bin/fbv >&3 2>&3
 	if [ `getconf LONG_BIT` == 32 ]; then
-		sudo wget ${SRC}/bin/spotifyd/0.3.3/spotifyd -O /usr/bin/spotifyd >&3 2>&3
+		sudo mv -f ${MUPI_SRC}/bin/spotifyd/0.3.3/spotifyd /usr/bin/spotifyd >&3 2>&3
+		sudo mv -f ${MUPI_SRC}/bin/fbv/fbv /usr/bin/fbv >&3 2>&3
 	else
-		sudo wget ${SRC}/bin/spotifyd/0.3.3/spotifyd_64bit -O /usr/bin/spotifyd >&3 2>&3
+		sudo mv -f ${MUPI_SRC}/bin/spotifyd/0.3.3/spotifyd_64bit /usr/bin/spotifyd >&3 2>&3
+		sudo mv -f ${MUPI_SRC}/bin/fbv/fbv_64 /usr/bin/fbv >&3 2>&3
+
 	fi
 	sudo chmod 755 /usr/bin/fbv /usr/bin/spotifyd >&3 2>&3
-	sleep 1
-
+	after=$(date +%s)
+	echo -e "## Copy binaries  ##  finished after $((after - $before)) seconds" >&3 2>&3
+	STEP=$(($STEP + 1))
+	
 	###############################################################################################
 
-	echo -e "XXX\n68\nDownload DietPi-Config... \nXXX"	
+	echo -e "XXX\n${STEP}\nCopy DietPi-Config... \nXXX"	
+	before=$(date +%s)
 
 	# DietPi-Configs
-	#sudo wget ${SRC}/config/templates/98-dietpi-disable_dpms.conf -O /etc/X11/xorg.conf.d/98-dietpi-disable_dpms.conf
-	sudo wget ${SRC}/config/templates/asound.conf -O /etc/asound.conf >&3 2>&3
-	sudo wget ${SRC}/config/templates/smb.conf -O /etc/samba/smb.conf >&3 2>&3
-	sleep 1
+	#sudo mv -f ${MUPI_SRC}/config/templates/98-dietpi-disable_dpms.conf /etc/X11/xorg.conf.d/98-dietpi-disable_dpms.conf
+	sudo mv -f ${MUPI_SRC}/config/templates/asound.conf /etc/asound.conf >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/config/templates/smb.conf /etc/samba/smb.conf >&3 2>&3
+	after=$(date +%s)
+	echo -e "## Copy DietPi-Config  ##  finished after $((after - $before)) seconds" >&3 2>&3
+	STEP=$(($STEP + 1))
 
 	###############################################################################################
 
-	echo -e "XXX\n69\nDownload spotifyd-Config... \nXXX"	
-
+	echo -e "XXX\n${STEP}\nConfigure spotifyd... \nXXX"	
+	before=$(date +%s)
 
 	# spotifyd-Config
-	sudo wget ${SRC}/config/templates/spotifyd.conf -O /etc/spotifyd/spotifyd.conf >&3 2>&3
-	sleep 1
+	sudo mv -f ${MUPI_SRC}/config/templates/spotifyd.conf /etc/spotifyd/spotifyd.conf >&3 2>&3
+	after=$(date +%s)
+	echo -e "## Configure spotifyd  ##  finished after $((after - $before)) seconds" >&3 2>&3
+	STEP=$(($STEP + 1))
 
 	###############################################################################################
 
-	echo -e "XXX\n70\nDownload some media files... \nXXX"	
+	echo -e "XXX\n${STEP}\nCopy some media files... \nXXX"	
 	# Splash and Media
-	sudo wget ${SRC}/config/templates/splash.txt -O /boot/splash.txt >&3 2>&3
+	before=$(date +%s)
+	sudo mv -f ${MUPI_SRC}/config/templates/splash.txt /boot/splash.txt >&3 2>&3
 	sudo wget https://gitlab.com/DarkElvenAngel/initramfs-splash/-/raw/master/boot/initramfs.img -O /boot/initramfs.img >&3 2>&3
-	wget ${SRC}/media/images/goodbye.png -O ~/MuPiBox/sysmedia/images/goodbye.png >&3 2>&3
-	sudo wget ${SRC}/media/images/splash.png -O /boot/splash.png >&3 2>&3
-	wget ${SRC}/media/images/MuPiLogo.jpg -O ~/MuPiBox/sysmedia/images/MuPiLogo.jpg >&3 2>&3
-	wget ${SRC}/media/sound/shutdown.wav -O ~/MuPiBox/sysmedia/sound/shutdown.wav >&3 2>&3
-	wget ${SRC}/media/sound/startup.wav -O ~/MuPiBox/sysmedia/sound/startup.wav >&3 2>&3
-	sleep 1
-
+	cp ${MUPI_SRC}/media/images/goodbye.png /home/dietpi/MuPiBox/sysmedia/images/goodbye.png >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/media/images/splash.png /boot/splash.png >&3 2>&3
+	cp ${MUPI_SRC}/media/images/MuPiLogo.jpg /home/dietpi/MuPiBox/sysmedia/images/MuPiLogo.jpg >&3 2>&3
+	cp ${MUPI_SRC}/media/sound/shutdown.wav /home/dietpi/MuPiBox/sysmedia/sound/shutdown.wav >&3 2>&3
+	cp ${MUPI_SRC}/media/sound/startup.wav /home/dietpi/MuPiBox/sysmedia/sound/startup.wav >&3 2>&3
+	after=$(date +%s)
+	echo -e "## Copy media files  ##  finished after $((after - $before)) seconds" >&3 2>&3
+	STEP=$(($STEP + 1))
+	
 	###############################################################################################
 
-	echo -e "XXX\n75\nDownload MuPiBox-Files... \nXXX"	
+	echo -e "XXX\n${STEP}\nCopy MuPiBox-Files... \nXXX"	
 	# MuPiBox
+	before=$(date +%s)
 	sudo mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/earth >&3 2>&3
 	sudo mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk >&3 2>&3
 	sudo mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/fantasybutterflies >&3 2>&3
@@ -208,103 +384,52 @@ exec 3>${LOG}
 	sudo mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/lines >&3 2>&3
 	
 	#FANTASY-BUTTERFLIES
-	sudo wget ${SRC}/themes/fantasybutterflies/odstemplikBold.otf -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/fantasybutterflies/odstemplikBold.otf >&3 2>&3
-	sudo wget ${SRC}/themes/fantasybutterflies/fantasy-butterflies-bg.jpg -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/fantasybutterflies/fantasy-butterflies-bg.jpg >&3 2>&3
-	sudo wget ${SRC}/themes/fantasybutterflies/fantasy-circle-bg.png -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/fantasybutterflies/fantasy-circle-bg.png >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/themes/fantasybutterflies/odstemplikBold.otf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/fantasybutterflies/odstemplikBold.otf >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/themes/fantasybutterflies/fantasy-butterflies-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/fantasybutterflies/fantasy-butterflies-bg.jpg >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/themes/fantasybutterflies/fantasy-circle-bg.png /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/fantasybutterflies/fantasy-circle-bg.png >&3 2>&3
 
 	#LINES
-	sudo wget ${SRC}/themes/lines/lines-bg.png -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/lines/lines-bg.png >&3 2>&3
-	sudo wget ${SRC}/themes/lines/KOMIKND_.ttf -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/lines/KOMIKND_.ttf >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/themes/lines/lines-bg.png /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/lines/lines-bg.png >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/themes/lines/KOMIKND_.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/lines/KOMIKND_.ttf >&3 2>&3
 
 	#MATRIX
-	sudo wget ${SRC}/themes/matrix/matrix-bg.png -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/matrix/matrix-bg.png >&3 2>&3
-	sudo wget ${SRC}/themes/matrix/Pixolletta8px.ttf -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/matrix/Pixolletta8px.ttf >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/themes/matrix/matrix-bg.png /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/matrix/matrix-bg.png >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/themes/matrix/Pixolletta8px.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/matrix/Pixolletta8px.ttf >&3 2>&3
 	
 	#EARTH
-	sudo wget ${SRC}/themes/earth/earth-bg.jpg -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/earth/earth-bg.jpg >&3 2>&3
-	sudo wget ${SRC}/themes/earth/Nasa21.ttf -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/earth/Nasa21.ttf >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/themes/earth/earth-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/earth/earth-bg.jpg >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/themes/earth/Nasa21.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/earth/Nasa21.ttf >&3 2>&3
 
 	#STEAMPUNK
-	sudo wget ${SRC}/themes/steampunk/steampunk-bg.jpg -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/steampunk-bg.jpg >&3 2>&3
-	sudo wget ${SRC}/themes/steampunk/akaPosse.ttf -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/akaPosse.ttf >&3 2>&3
-	sudo wget ${SRC}/themes/steampunk/steampunk-gear.png -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/steampunk-gear.png >&3 2>&3
-	sudo wget ${SRC}/themes/steampunk/steampunk-header.jpg -O /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/steampunk-header.jpg >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/themes/steampunk/steampunk-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/steampunk-bg.jpg >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/themes/steampunk/akaPosse.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/akaPosse.ttf >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/themes/steampunk/steampunk-gear.png /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/steampunk-gear.png >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/themes/steampunk/steampunk-header.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/steampunk-header.jpg >&3 2>&3
 
 	sudo chown dietpi:dietpi -R /home/dietpi/.mupibox/Sonos-Kids-Controller-master/
 
-	sudo wget ${SRC}/themes/lines.css -O /home/dietpi/MuPiBox/themes/lines.css >&3 2>&3
-	sudo wget ${SRC}/themes/fantasybutterflies.css -O /home/dietpi/MuPiBox/themes/fantasybutterflies.css >&3 2>&3
-	sudo wget ${SRC}/themes/earth.css -O /home/dietpi/MuPiBox/themes/earth.css >&3 2>&3
-	sudo wget ${SRC}/themes/steampunk.css -O /home/dietpi/MuPiBox/themes/steampunk.css >&3 2>&3	
-	sudo wget ${SRC}/themes/dark.css -O ~/MuPiBox/themes/dark.css >&3 2>&3
-	sudo wget ${SRC}/themes/blue.css -O ~/MuPiBox/themes/blue.css >&3 2>&3
-	sudo wget ${SRC}/themes/purple.css -O ~/MuPiBox/themes/purple.css >&3 2>&3
-	sudo wget ${SRC}/themes/darkred.css -O ~/MuPiBox/themes/darkred.css >&3 2>&3
-	sudo wget ${SRC}/themes/red.css -O ~/MuPiBox/themes/red.css >&3 2>&3
-	sudo wget ${SRC}/themes/chocolate.css -O ~/MuPiBox/themes/chocolate.css >&3 2>&3
-	sudo wget ${SRC}/themes/vintage.css -O ~/MuPiBox/themes/vintage.css >&3 2>&3
-	sudo wget ${SRC}/themes/orange.css -O ~/MuPiBox/themes/orange.css >&3 2>&3
-	sudo wget ${SRC}/themes/green.css -O ~/MuPiBox/themes/green.css >&3 2>&3
-	sudo wget ${SRC}/themes/light.css -O ~/MuPiBox/themes/light.css >&3 2>&3
-	sudo wget ${SRC}/themes/deepblue.css -O ~/MuPiBox/themes/deepblue.css >&3 2>&3
-	sudo wget ${SRC}/themes/pink.css -O ~/MuPiBox/themes/pink.css >&3 2>&3
-	sudo wget ${SRC}/themes/xmas.css -O /home/dietpi/MuPiBox/themes/xmas.css >&3 2>&3
-	sudo wget ${SRC}/themes/wood.css -O /home/dietpi/MuPiBox/themes/wood.css >&3 2>&3
-	sudo wget ${SRC}/themes/matrix.css -O /home/dietpi/MuPiBox/themes/matrix.css >&3 2>&3
-	sudo wget ${SRC}/themes/ironman.css -O /home/dietpi/MuPiBox/themes/ironman.css >&3 2>&3
-	sudo wget ${SRC}/themes/captainamerica.css -O /home/dietpi/MuPiBox/themes/captainamerica.css >&3 2>&3
-	sudo wget ${SRC}/themes/xmas.css -O /home/dietpi/MuPiBox/themes/xmas.css >&3 2>&3
-	sudo wget ${SRC}/themes/danger.css -O /home/dietpi/MuPiBox/themes/danger.css >&3 2>&3
-	sudo wget ${SRC}/themes/mint.css -O /home/dietpi/MuPiBox/themes/mint.css >&3 2>&3
-	sudo wget ${SRC}/themes/cinema.css -O /home/dietpi/MuPiBox/themes/cinema.css >&3 2>&3
-
-	sudo wget ${SRC}/scripts/mupibox/mupi_shutdown.sh -O /usr/local/bin/mupibox/mupi_shutdown.sh >&3 2>&3
-	sudo wget ${SRC}/scripts/mupibox/mupi_startup.sh -O /usr/local/bin/mupibox/mupi_startup.sh >&3 2>&3
-
-	sudo wget ${SRC}/scripts/mupibox/shutdown.sh -O /usr/local/bin/mupibox/shutdown.sh >&3 2>&3
-	sudo wget ${SRC}/scripts/mupibox/restart.sh -O /usr/local/bin/mupibox/restart.sh >&3 2>&3
-	sudo wget ${SRC}/scripts/mupibox/change_checker.sh -O /usr/local/bin/mupibox/change_checker.sh >&3 2>&3
-	sudo wget ${SRC}/scripts/mupibox/idle_shutdown.sh -O /usr/local/bin/mupibox/idle_shutdown.sh >&3 2>&3
-	sudo wget ${SRC}/scripts/mupibox/m3u_generator.sh -O /usr/local/bin/mupibox/m3u_generator.sh >&3 2>&3
-	sudo wget ${SRC}/scripts/mupibox/setting_update.sh -O /usr/local/bin/mupibox/setting_update.sh >&3 2>&3
-	#sudo wget ${SRC}/scripts/mupibox/software_shutdown.sh -O /usr/local/bin/mupibox/software_shutdown.sh >&3 2>&3
-	sudo wget ${SRC}/scripts/mupibox/add_wifi.sh -O /usr/local/bin/mupibox/add_wifi.sh >&3 2>&3
-	sudo wget ${SRC}/scripts/mupibox/save_rrd.sh -O /usr/local/bin/mupibox/save_rrd.sh >&3 2>&3
-	sudo wget ${SRC}/scripts/mupibox/get_network.sh -O /usr/local/bin/mupibox/get_network.sh >&3 2>&3
-	sudo wget ${SRC}/scripts/mupibox/check_network.sh -O /usr/local/bin/mupibox/check_network.sh >&3 2>&3
-	sudo wget ${SRC}/scripts/mupibox/check_network.py -O /usr/local/bin/mupibox/check_network.py >&3 2>&3
-	sudo wget ${SRC}/scripts/mupibox/add_index.sh -O /usr/local/bin/mupibox/add_index.sh >&3 2>&3
-	sudo wget ${SRC}/scripts/mupibox/id3tag_converter.sh -O /usr/local/bin/mupibox/id3tag_converter.sh  >&3 2>&3
-	sudo wget ${SRC}/scripts/mupibox/set_hostname.sh -O /usr/local/bin/mupibox/set_hostname.sh  >&3 2>&3
-	sudo wget ${SRC}/scripts/mupibox/repair_config.sh -O /usr/local/bin/mupibox/repair_config.sh  >&3 2>&3
-	sudo wget ${SRC}/scripts/mupibox/mupi_start_led.sh -O /usr/local/bin/mupibox/mupi_start_led.sh  >&3 2>&3
-	sudo wget ${SRC}/scripts/mupibox/mupi_stop_led.sh -O /usr/local/bin/mupibox/mupi_stop_led.sh  >&3 2>&3
-	sudo wget ${SRC}/scripts/mupibox/sleep_timer.sh -O /usr/local/bin/mupibox/sleep_timer.sh  >&3 2>&3
-
-	sudo wget ${SRC}/scripts/bluetooth/start_bt.sh -O /usr/local/bin/mupibox/start_bt.sh >&3 2>&3
-	sudo wget ${SRC}/scripts/bluetooth/stop_bt.sh -O /usr/local/bin/mupibox/stop_bt.sh >&3 2>&3
-	sudo wget ${SRC}/scripts/bluetooth/scan_bt.sh -O /usr/local/bin/mupibox/scan_bt.sh >&3 2>&3
-	sudo wget ${SRC}/scripts/bluetooth/pair_bt.sh -O /usr/local/bin/mupibox/pair_bt.sh >&3 2>&3
-	sudo wget ${SRC}/scripts/bluetooth/remove_bt.sh -O /usr/local/bin/mupibox/remove_bt.sh >&3 2>&3
-	sudo wget ${SRC}/scripts/bluetooth/autoconnect_bt.sh -O /usr/local/bin/mupibox/autoconnect_bt.sh >&3 2>&3
-		
-	sudo wget ${SRC}/scripts/mupibox/restart_kiosk.sh -O /usr/local/bin/mupibox/restart_kiosk.sh >&3 2>&3
-	sudo wget ${SRC}/scripts/mupibox/set_deviceid.sh -O /usr/local/bin/mupibox/set_deviceid.sh >&3 2>&3
-	sudo wget ${SRC}/scripts/mupibox/get_deviceid.sh -O /usr/local/bin/mupibox/get_deviceid.sh >&3 2>&3
-	sudo wget ${SRC}/scripts/mupibox/spotify_restart.sh -O /usr/local/bin/mupibox/spotify_restart.sh >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/themes/*.css /home/dietpi/MuPiBox/themes/ >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/scripts/mupibox/* /usr/local/bin/mupibox/ >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/scripts/bluetooth/* /usr/local/bin/mupibox/ >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/scripts/wled/* /usr/local/bin/mupibox/ >&3 2>&3
 	
-	sudo wget ${SRC}/scripts/mupibox/splash_screen.sh -O /usr/local/bin/mupibox/splash_screen.sh >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/config/templates/add_wifi.json /boot/add_wifi.json >&3 2>&3
+	
 	sudo chmod 755 /usr/local/bin/mupibox/* >&3 2>&3
-	sleep 1
+
+	after=$(date +%s)
+	echo -e "## Copy MuPiBox-Files  ##  finished after $((after - $before)) seconds" >&3 2>&3
+	STEP=$(($STEP + 1))
 
 	###############################################################################################
 
-	echo -e "XXX\n77\nInstall Hifiberry-MiniAmp and Bluetooth support... \nXXX"	
+	echo -e "XXX\n${STEP}\nInstall Hifiberry-MiniAmp and Bluetooth support... \nXXX"	
+	before=$(date +%s)
 
 	sudo /boot/dietpi/dietpi-software install 5 >&3 2>&3
 	sudo /boot/dietpi/func/dietpi-set_hardware bluetooth enable >&3 2>&3
 	sudo /boot/dietpi/func/dietpi-set_hardware soundcard "hifiberry-dac"  >&3 2>&3
-	sudo wget ${SRC}/config/templates/asound.conf -O /etc/asound.conf  >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/config/templates/asound.conf /etc/asound.conf  >&3 2>&3
 	sudo usermod -g pulse -G audio --home /var/run/pulse pulse >&3 2>&3
 	sudo usermod -a -G audio dietpi >&3 2>&3
 	sudo usermod -a -G bluetooth dietpi >&3 2>&3
@@ -331,25 +456,31 @@ exec 3>${LOG}
 	sudo /usr/bin/sed -i 's/; default-server =/default-server = \/var\/run\/pulse\/native/g' /etc/pulse/client.conf >&3 2>&3
 	sudo /usr/bin/sed -i 's/; autospawn = yes/autospawn = no/g' /etc/pulse/client.conf >&3 2>&3
 	sudo /usr/bin/sed -i 's/ExecStart=\/usr\/libexec\/bluetooth\/bluetoothd/ExecStart=\/usr\/libexec\/bluetooth\/bluetoothd --noplugin=sap/g' /lib/systemd/system/bluetooth.service >&3 2>&3
+	after=$(date +%s)
+	echo -e "## Bluetooth-Support  ##  finished after $((after - $before)) seconds" >&3 2>&3
+	STEP=$(($STEP + 1))
 
 	###############################################################################################
 
-	echo -e "XXX\n82\nEnable Admin-Webservice... \nXXX"	
+	echo -e "XXX\n${STEP}\nEnable Admin-Webservice... \nXXX"	
+	before=$(date +%s)
 
 	sudo /boot/dietpi/dietpi-software install 5 84 89 >&3 2>&3
 
 	sudo rm -R /var/www/* >&3 2>&3
-	sudo wget ${SRC}/AdminInterface/release/www.zip -O /var/www/www.zip >&3 2>&3
-	sudo unzip /var/www/www.zip -d /var/www/ >&3 2>&3
-	sudo rm /var/www/www.zip >&3 2>&3
+	sudo unzip ${MUPI_SRC}/AdminInterface/release/www.zip -d /var/www/ >&3 2>&3
 	sudo ln -s /home/dietpi/MuPiBox/media/cover /var/www/cover >&3 2>&3
 	sudo chown -R www-data:www-data /var/www/ >&3 2>&3
 	sudo chmod -R 755 /var/www/ >&3 2>&3
 	sudo chown -R dietpi:www-data /home/dietpi/MuPiBox/media/cover >&3 2>&3
+	after=$(date +%s)
+	echo -e "## Admin-Webinterface  ##  finished after $((after - $before)) seconds" >&3 2>&3
+	STEP=$(($STEP + 1))
 	
 	###############################################################################################
 
-	echo -e "XXX\n87\nSet environment... \nXXX"	
+	echo -e "XXX\n${STEP}\nSet environment... \nXXX"	
+	before=$(date +%s)
 
 	# ENV
 	(echo "mupibox"; echo "mupibox") | sudo smbpasswd -s -a dietpi >&3 2>&3
@@ -358,44 +489,60 @@ exec 3>${LOG}
 	ln -s /home/dietpi/MuPiBox/themes/blue.css ${THEME_FILE} >&3 2>&3
 	sudo echo "www-data ALL=(ALL:ALL) NOPASSWD: ALL" | sudo tee /etc/sudoers.d/www-data  >&3 2>&3
 	sudo usermod -a -G gpio dietpi >&3 2>&3
+	sudo usermod -aG dialout dietpi >&3 2>&3
 	sudo usermod -a -G gpio root >&3 2>&3
-	sudo wget ${SRC}/config/templates/crontab.template -O /tmp/crontab.template >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/config/templates/crontab.template /tmp/crontab.template >&3 2>&3
 	sudo /usr/bin/chmod 755 /tmp/crontab.template >&3 2>&3
 	sudo /usr/bin/chown dietpi:dietpi /tmp/crontab.template >&3 2>&3
 	sudo /bin/su dietpi -c "/usr/bin/crontab /tmp/crontab.template"  >&3 2>&3
-	sudo rm /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/network.json
-	ln -s /tmp/network.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/network.json	
+	sudo rm /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/network.json >&3 2>&3
+	ln -s /tmp/network.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/network.json >&3 2>&3
 	#sudo /boot/dietpi/func/dietpi-set_swapfile 1 zram >&3 2>&3
 	#sudo /boot/dietpi/func/dietpi-set_software boot_wait_for_network 0 >&3 2>&3
-	VERSION=$(curl -sL ${SRC}/version.json | /usr/bin/jq -r .version) >&3 2>&3
-	sudo /usr/bin/sed -i 's/\"version\": \"\"/\"version\": \"'${VERSION}'\"/g' ${MUPIBOX_CONFIG} >&3 2>&3
-	#sudo /usr/bin/cat <<< $(/usr/bin/jq --arg v "${VERSION}" '.mupibox.version = $v' ${MUPIBOX_CONFIG}) > ${MUPIBOX_CONFIG} >&3 2>&3
+	#VERSION=$(curl -sL ${SRC}/version.json | /usr/bin/jq -r .version) >&3 2>&3
+	#sudo /usr/bin/sed -i 's/\"version\": \"\"/\"version\": \"'${VERSION}'\"/g' ${MUPIBOX_CONFIG} >&3 2>&3
+	sudo /usr/bin/cat <<< $(/usr/bin/jq --arg v "${VERSION}" '.mupibox.version = $v' ${MUPIBOX_CONFIG}) > ${MUPIBOX_CONFIG}
 	sudo chmod 775 /etc/mupibox/mupiboxconfig.json >&3 2>&3
-	sleep 1
+	if grep -q '^initramfs initramfs.img' /boot/config.txt; then
+	  echo -e "initramfs initramfs.img already set"
+	else
+	  echo '' | sudo tee -a /boot/config.txt >&3 2>&3
+	  echo '#initramfs initramfs.img' | sudo tee -a /boot/config.txt >&3 2>&3
+	fi
+	touch /home/dietpi/.mupi.install
+
+	after=$(date +%s)
+	echo -e "## Set environment  ##  finished after $((after - $before)) seconds" >&3 2>&3
+	STEP=$(($STEP + 1))
 
 	###############################################################################################
 
-	echo -e "XXX\n88\nDownload OnOffShim-Scripts... \nXXX"	
+	echo -e "XXX\n${STEP}\nCopy OnOffShim-Scripts... \nXXX"	
+	before=$(date +%s)
 
 	# OnOffShim
-	sudo wget ${SRC}/scripts/OnOffShim/off_trigger.sh -O /var/lib/dietpi/postboot.d/off_trigger.sh >&3 2>&3
-	sudo wget ${SRC}/scripts/OnOffShim/poweroff.sh -O /usr/lib/systemd/system-shutdown/poweroff.sh >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/scripts/OnOffShim/off_trigger.sh /var/lib/dietpi/postboot.d/off_trigger.sh >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/scripts/OnOffShim/poweroff.sh /usr/lib/systemd/system-shutdown/poweroff.sh >&3 2>&3
 	sudo chmod 775 /usr/lib/systemd/system-shutdown/poweroff.sh /var/lib/dietpi/postboot.d/off_trigger.sh >&3 2>&3
-	sleep 1
+
+	after=$(date +%s)
+	echo -e "## Copy OnOffShim-Scripts  ##  finished after $((after - $before)) seconds" >&3 2>&3
+	STEP=$(($STEP + 1))
 
 	###############################################################################################
 
-	echo -e "XXX\n90\nInstall Chromium-Kiosk... \nXXX"	
+	echo -e "XXX\n${STEP}\nInstall Chromium-Kiosk... \nXXX"	
+	before=$(date +%s)
 
 	echo -ne '\n' | sudo /boot/dietpi/dietpi-software install 113 >&3 2>&3
 	sudo /boot/dietpi/dietpi-autostart 11 >&3 2>&3
-	sudo wget ${SRC}/scripts/chromium-autostart.sh -O /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/scripts/chromium-autostart.sh /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
 	sudo chmod +x /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
 	sudo usermod -a -G tty dietpi >&3 2>&3
 	#xinit chromium-browser xserver-xorg-legacy xorg
-	sudo apt-get install xserver-xorg-legacy >&3 2>&3
+	sudo apt-get install xserver-xorg-legacy -y >&3 2>&3
 	sudo /usr/bin/sed -i 's/allowed_users\=console/allowed_users\=anybody/g' /etc/X11/Xwrapper.config >&3 2>&3
-	sudo wget ${SRC}/config/templates/98-dietpi-disable_dpms.conf -O /etc/X11/xorg.conf.d/98-dietpi-disable_dpms.conf >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/config/templates/98-dietpi-disable_dpms.conf /etc/X11/xorg.conf.d/98-dietpi-disable_dpms.conf >&3 2>&3
 	sudo /usr/bin/sed -i 's/tty1/tty3 vt.global_cursor_default\=0 fastboot noatime nodiratime noram splash silent loglevel\=0 vt.default_red\=68,68,68,68,68,68,68,68 vt.default_grn\=175,175,175,175,175,175,175,175 vt.default_blu\=226,226,226,226,226,226,226,226/g' /boot/cmdline.txt >&3 2>&3
 	sudo /usr/bin/sed -i 's/session    optional   pam_motd.so motd\=\/run\/motd.dynamic/#session    optional   pam_motd.so motd\=\/run\/motd.dynamic/g' /etc/pam.d/login >&3 2>&3
 	sudo /usr/bin/sed -i 's/session    optional   pam_motd.so noupdate/#session    optional   pam_motd.so noupdate/g' /etc/pam.d/login >&3 2>&3
@@ -408,36 +555,37 @@ exec 3>${LOG}
 	sudo su - -c ". /boot/dietpi/func/dietpi-globals && G_CHECK_ROOT_USER && G_CHECK_ROOTFS_RW && G_INIT && G_CONFIG_INJECT 'framebuffer_width=' \"framebuffer_width=800\" /boot/config.txt" >&3 2>&3
 	sudo su - -c ". /boot/dietpi/func/dietpi-globals && G_CHECK_ROOT_USER && G_CHECK_ROOTFS_RW && G_INIT && G_CONFIG_INJECT 'framebuffer_height=' \"framebuffer_height=480\" /boot/config.txt" >&3 2>&3
 
-	if grep -q '^initramfs initramfs.img' /boot/config.txt; then
-	  echo -e "initramfs initramfs.img already set"
-	  
-	  echo '' | sudo tee -a /boot/config.txt >&3 2>&3
-	  echo 'initramfs initramfs.img' | sudo tee -a /boot/config.txt >&3 2>&3
-	fi
+	after=$(date +%s)
+	echo -e "## Install Chromium  ##  finished after $((after - $before)) seconds" >&3 2>&3
+	STEP=$(($STEP + 1))
 
 	###############################################################################################
 
-	echo -e "XXX\n95\nEnable and start services... \nXXX"	
+	echo -e "XXX\n${STEP}\nEnable and start services... \nXXX"	
+	before=$(date +%s)
 
 	# Enable Services
-	#sudo wget ${SRC}/config/services/mupi_change_checker.service -O /etc/systemd/system/mupi_change_checker.service >&3 2>&3
-	sudo wget ${SRC}/config/services/mupi_idle_shutdown.service -O /etc/systemd/system/mupi_idle_shutdown.service >&3 2>&3
-	sudo wget ${SRC}/config/services/mupi_splash.service -O /etc/systemd/system/mupi_splash.service >&3 2>&3
-	sudo wget ${SRC}/config/services/spotifyd.service -O /etc/systemd/system/spotifyd.service >&3 2>&3
-	sudo wget ${SRC}/config/services/pulseaudio.service -O /etc/systemd/system/pulseaudio.service >&3 2>&3
-	sudo wget ${SRC}/config/services/mupi_startstop.service -O /etc/systemd/system/mupi_startstop.service >&3 2>&3
-	sudo wget ${SRC}/config/services/mupi_wifi.service -O /etc/systemd/system/mupi_wifi.service  >&3 2>&3
-	sudo wget ${SRC}/config/services/mupi_check_internet.service -O /etc/systemd/system/mupi_check_internet.service  >&3 2>&3
-	sudo wget ${SRC}/config/services/mupi_autoconnect_bt.service -O /etc/systemd/system/mupi_autoconnect_bt.service  >&3 2>&3
-	sudo wget ${SRC}/config/services/mupi_vnc.service -O /etc/systemd/system/mupi_vnc.service  >&3 2>&3
-	sudo wget ${SRC}/config/services/mupi_novnc.service -O /etc/systemd/system/mupi_novnc.service  >&3 2>&3
-	sudo wget ${SRC}/config/services/mupi_powerled.service -O /etc/systemd/system/mupi_powerled.service  >&3 2>&3
+	#sudo mv -f ${MUPI_SRC}/config/services/mupi_change_checker.service /etc/systemd/system/mupi_change_checker.service >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/config/services/mupi_idle_shutdown.service /etc/systemd/system/mupi_idle_shutdown.service >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/config/services/mupi_splash.service /etc/systemd/system/mupi_splash.service >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/config/services/spotifyd.service /etc/systemd/system/spotifyd.service >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/config/services/pulseaudio.service /etc/systemd/system/pulseaudio.service >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/config/services/mupi_startstop.service /etc/systemd/system/mupi_startstop.service >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/config/services/mupi_wifi.service /etc/systemd/system/mupi_wifi.service  >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/config/services/mupi_check_internet.service /etc/systemd/system/mupi_check_internet.service  >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/config/services/mupi_check_monitor.service /etc/systemd/system/mupi_check_monitor.service  >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/config/services/mupi_autoconnect_bt.service /etc/systemd/system/mupi_autoconnect_bt.service  >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/config/services/mupi_vnc.service /etc/systemd/system/mupi_vnc.service  >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/config/services/mupi_novnc.service /etc/systemd/system/mupi_novnc.service  >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/config/services/mupi_powerled.service /etc/systemd/system/mupi_powerled.service  >&3 2>&3
 
 	sudo systemctl daemon-reload >&3 2>&3
 	sudo systemctl enable mupi_wifi.service >&3 2>&3
 	sudo systemctl start mupi_wifi.service >&3 2>&3
 	sudo systemctl enable mupi_check_internet.service >&3 2>&3
 	sudo systemctl start mupi_check_internet.service >&3 2>&3
+	sudo systemctl enable mupi_check_monitor.service >&3 2>&3
+	sudo systemctl start mupi_check_monitor.service >&3 2>&3
 	#sudo systemctl enable mupi_change_checker.service >&3 2>&3
 	#sudo systemctl start mupi_change_checker.service >&3 2>&3
 	sudo systemctl enable mupi_idle_shutdown.service >&3 2>&3
@@ -454,13 +602,40 @@ exec 3>${LOG}
 	sudo systemctl start mupi_splash.service >&3 2>&3
 	sudo systemctl enable mupi_powerled.service >&3 2>&3
 	sudo systemctl start mupi_powerled.service >&3 2>&3
+	after=$(date +%s)
+	echo -e "## Enable and start services  ##  finished after $((after - $before)) seconds" >&3 2>&3
+	STEP=$(($STEP + 1))
 
+	###############################################################################################
+	
+#	echo -e "XXX\n${STEP}\nDownload network-driver [RTL88X2BU]... \nXXX"	
+#	before=$(date +%s)
+#	if [ -d "/home/dietpi/.driver/network/src/88x2bu-20210702" ]; then
+#		echo -e "Network driver RTL88X2BU already installed"  >&3 2>&3
+#	else
+#		mkdir -p /home/dietpi/.driver/network/src >&3 2>&3
+#		cd /home/dietpi/.driver/network/src >&3 2>&3
+#		git clone https://github.com/morrownr/88x2bu-20210702.git >&3 2>&3
+#		after=$(date +%s)
+#		echo -e "## Download Network Driver  ##  finished after $((after - $before)) seconds" >&3 2>&3
+#		STEP=$(($STEP + 1))
+#		echo -e "XXX\n${STEP}\nInstall network-driver [RTL88X2BU]... \nXXX"	
+#		before=$(date +%s)
+#		cd /home/dietpi/.driver/network/src/88x2bu-20210702 >&3 2>&3
+#		sudo chmod u+x install-driver.sh >&3 2>&3
+#		sudo ./install-driver.sh NoPrompt >&3 2>&3
+#		after=$(date +%s)
+#		echo -e "## Install Network Driver  ##  finished after $((after - $before)) seconds" >&3 2>&3
+#	fi
+#	STEP=$(($STEP + 1))
+	
 	###############################################################################################
 
 	echo -e "XXX\n100\nInstallation complete, please reboot the system... \nXXX"	
-	sudo mv ${LOG} /boot/autosetup.log
+	sudo rm -R ${MUPI_SRC} >&3 2>&3
+	sudo mv ${LOG} /boot/autosetup.log > /dev/null 2>&3 
+	sleep 5
 
 } | whiptail --title "MuPiBox Autosetup" --gauge "Please wait while installing" 6 60 0
 
 sudo reboot
-

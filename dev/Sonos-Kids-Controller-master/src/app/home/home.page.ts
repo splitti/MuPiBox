@@ -10,6 +10,10 @@ import { Media } from '../media';
 import { Resume } from '../resume';
 import { Network } from "../network";
 import { Observable } from 'rxjs';
+import { Monitor } from '../monitor';
+import { xml2json } from 'xml-js';
+import { HttpClient } from '@angular/common/http';
+import { RssFeed } from '../rssfeed';
 
 @Component({
   selector: 'app-home',
@@ -27,6 +31,8 @@ export class HomePage implements OnInit {
   mediaFile: Media;
   resumeFile: Resume;
   network: Network;
+  monitor: Monitor;
+  jsonRSS: RssFeed;
   currentNetwork = "";
   updateNetwork = false;
   covers = {};
@@ -50,6 +56,7 @@ export class HomePage implements OnInit {
   };
 
   constructor(
+    private http: HttpClient,
     private mediaService: MediaService,
     private artworkService: ArtworkService,
     private playerService: PlayerService,
@@ -65,6 +72,9 @@ export class HomePage implements OnInit {
 
     this.mediaService.network$.subscribe(network => {
       this.network = network;
+    });
+    this.mediaService.monitor$.subscribe(monitor => {
+      this.monitor = monitor;
     });
 
     // Subscribe
@@ -166,51 +176,70 @@ export class HomePage implements OnInit {
   }
 
   artistCoverClicked(clickedArtist: Artist) {
-    this.activityIndicatorService.create().then(indicator => {
-      this.activityIndicatorVisible = true;
-      indicator.present().then(() => {
-        const navigationExtras: NavigationExtras = {
-          state: {
-            artist: clickedArtist
-          }
-        };
-        this.router.navigate(['/medialist'], navigationExtras);
+    if(this.monitor?.monitor == "On"){
+      this.activityIndicatorService.create().then(indicator => {
+        this.activityIndicatorVisible = true;
+        indicator.present().then(() => {
+          const navigationExtras: NavigationExtras = {
+            state: {
+              artist: clickedArtist
+            }
+          };
+          this.router.navigate(['/medialist'], navigationExtras);
+        });
       });
-    });
+    }
   }
 
   artistNameClicked(clickedArtist: Artist) {
-    this.playerService.getConfig().subscribe(config => {
-      if (config.tts == null || config.tts.enabled === true) {
-        this.playerService.say(clickedArtist.name);
-      }
-    });
+    if(this.monitor?.monitor == "On"){
+      this.playerService.getConfig().subscribe(config => {
+        if (config.tts == null || config.tts.enabled === true) {
+          this.playerService.say(clickedArtist.name);
+        }
+      });
+    }
   }
 
   mediaCoverClicked(clickedMedia: Media) {
-    this.activityIndicatorService.create().then(indicator => {
-      this.activityIndicatorVisible = true;
-      indicator.present().then(() => {
-        const navigationExtras: NavigationExtras = {
-          state: {
-            media: clickedMedia
-          }
-        };
-        this.router.navigate(['/player'], navigationExtras);
+    if(this.monitor?.monitor == "On"){
+      this.activityIndicatorService.create().then(indicator => {
+        this.activityIndicatorVisible = true;
+        indicator.present().then(() => {
+          const navigationExtras: NavigationExtras = {
+            state: {
+              media: clickedMedia
+            }
+          };
+          this.router.navigate(['/player'], navigationExtras);
+        });
       });
-    });
+    }
   }
 
   mediaNameClicked(clickedMedia: Media) {
-    this.playerService.getConfig().subscribe(config => {
-      if (config.tts == null || config.tts.enabled === true) {
-        this.playerService.say(clickedMedia.title);
-      }
-    });
+    if(this.monitor?.monitor == "On"){
+      this.playerService.getConfig().subscribe(config => {
+        if (config.tts == null || config.tts.enabled === true) {
+          this.playerService.say(clickedMedia.title);
+        }
+      });
+    }
   }
 
   editButtonPressed() {
     window.clearTimeout(this.editClickTimer);
+
+    // var url='https://www.antennebrandenburg.de/programm/hoeren/podcasts/Zappelduster_Podcast/podcast.xml/feed=podcast.xml';
+    // var response = '';
+    // this.http.get(url, { responseType: 'text' }).subscribe(httpresponse =>
+    //   response=httpresponse
+    //   );
+    //  setTimeout(() => {
+    //   this.jsonRSS = JSON.parse(xml2json(response, {compact: true, spaces: 0, ignoreDeclaration: true, trim: true}));
+    //   console.log(this.jsonRSS.rss.channel.title._text);
+    //   console.log(Object.keys(this.jsonRSS.rss.channel.item).length);
+    // }, 1000)
 
     if (this.editButtonclickCount < 9) {
       this.editButtonclickCount++;
@@ -232,19 +261,21 @@ export class HomePage implements OnInit {
   }
 
   resume() {
-    console.log(this.mediaFile);
-    console.log(this.resumeFile);
-    this.activityIndicatorService.create().then(indicator => {
-      this.activityIndicatorVisible = true;
-      indicator.present().then(() => {
-        const navigationExtras: NavigationExtras = {
-          state: {
-            media: this.mediaFile,
-            resume: this.resumeFile
-          }
-        };
-        this.router.navigate(['/player'], navigationExtras);
+    if(this.monitor?.monitor == "On"){
+      console.log(this.mediaFile);
+      console.log(this.resumeFile);
+      this.activityIndicatorService.create().then(indicator => {
+        this.activityIndicatorVisible = true;
+        indicator.present().then(() => {
+          const navigationExtras: NavigationExtras = {
+            state: {
+              media: this.mediaFile,
+              resume: this.resumeFile
+            }
+          };
+          this.router.navigate(['/player'], navigationExtras);
+        });
       });
-    });
+    }
   }
 }

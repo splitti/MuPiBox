@@ -77,7 +77,7 @@
 		{
 		$bt_state = "ON";
 		$change_bt = "turn off";
-		$command = "sudo -i -u dietpi bluetoothctl paired-devices";
+		$command = "sudo -i -u dietpi bluetoothctl devices";
 		exec($command, $pairoutput, $pairresult );
 		$command = "sudo -i -u dietpi bluetoothctl list";
 		exec($command, $listoutput, $listresult );

@@ -1,5 +1,7 @@
 <?php
         include ('includes/header.php');
+		$onlinejson = file_get_contents('https://raw.githubusercontent.com/splitti/MuPiBox/main/version.json');
+		$dataonline = json_decode($onlinejson, true);
 
         exec("sudo rm /var/www/images/screenshot.png /val/www/images/temp.png /var/www/images/cpuload.png");
         exec("sudo DISPLAY=:0 scrot /var/www/images/screenshot.png");
@@ -48,10 +50,39 @@
 	<details open>
 		<summary><i class="fa-solid fa-circle-info"></i> MuPiBox-News</summary>
 		<ul>
-			<li class="li_norm"><?php
-				$onlinejson = file_get_contents('https://mupibox.de/version/latest/version.json');
-				$dataonline = json_decode($onlinejson, true);
-				print "<p><h2>MuPiBox Version</h2><table><tr><td>Installed version:</td><td>".$data["mupibox"]["version"]."</td></tr><tr><td>Latest stable version:</td><td>".$dataonline["version"]."</td></tr></table></p>";
+			<li class="li_norm">
+					<p><h2>MuPiBox Version</h2><table class="version">
+						<tr>
+								<th>Environment</th>
+								<th>Latest Version</th>
+								<th>Release Information</th>
+						</tr>
+						<tr>
+								<td>Installed</td>
+								<td><?php print $data["mupibox"]["version"]; ?></td>
+								<td></td>
+								</td>
+						</tr>
+						<tr>
+								<td>Stable</td>
+								<td><?php print $dataonline["release"]["stable"][count($dataonline["release"]["stable"])-1]["version"]; ?></td>
+								<td><?php print $dataonline["release"]["stable"][count($dataonline["release"]["stable"])-1]["releaseinfo"]; ?></td>
+								</td>
+						</tr>
+						<tr>
+								<td>Beta</td>
+								<td><?php print $dataonline["release"]["beta"][count($dataonline["release"]["beta"])-1]["version"]; ?></td>
+								<td><?php print $dataonline["release"]["beta"][count($dataonline["release"]["beta"])-1]["releaseinfo"]; ?></td>
+								</td>
+						</tr>
+						<tr>
+								<td>Development</td>
+								<td><?php print $dataonline["release"]["dev"][count($dataonline["release"]["dev"])-1]["version"]; ?></td>
+								<td><?php print $dataonline["release"]["dev"][count($dataonline["release"]["dev"])-1]["releaseinfo"]; ?></td>
+								</td>
+						</tr>
+					</table></p>
+			<?php
 				$news = file_get_contents("https://raw.githubusercontent.com/splitti/MuPiBox/main/news.txt");
 				print "<p><h2>MuPiBox-News</h2>".$news."</p>"; ?>
 			</li>
