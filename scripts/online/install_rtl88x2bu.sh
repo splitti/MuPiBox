@@ -1,6 +1,8 @@
 #!/bin/bash
 
-sudo apt install -y raspberrypi-kernel-headers build-essential bc dkms git
+/usr/bin/fbv ${SHUT_SPLASH}
+sudo apt-get update
+sudo apt-get install -y raspberrypi-kernel-headers dkms 
 mkdir -p /home/dietpi/.driver/network
 cd /home/dietpi/.driver/network/
 git clone https://github.com/morrownr/88x2bu-20210702.git
