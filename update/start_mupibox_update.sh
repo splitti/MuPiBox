@@ -3,13 +3,6 @@
 
 #https://raw.githubusercontent.com/splitti/MuPiBox/main
 
-killall chromium-browser
-sleep 1
-cd /tmp
-wget https://raw.githubusercontent.com/splitti/MuPiBox/main/media/images/installation.png
-chmod 755 /tmp/installation.png
-/usr/bin/fbv installation.png
-
 
 if [ "$1" = "dev" ] || [ "$1" = "beta" ] || [ "$1" = "stable" ]; then
 	RELEASE="$1"
@@ -25,6 +18,12 @@ STEP=0
 VER_JSON="/tmp/version.json"
 OS=$(grep -E '^(VERSION_CODENAME)=' /etc/os-release)  >&3 2>&3
 OS=${OS:17}  >&3 2>&3
+
+killall chromium-browser
+cd /tmp
+wget https://raw.githubusercontent.com/splitti/MuPiBox/main/media/images/installation.png
+chmod 755 /tmp/installation.png
+/usr/bin/fbv installation.png
 
 {
 	###############################################################################################
