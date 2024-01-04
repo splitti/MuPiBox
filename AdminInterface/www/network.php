@@ -23,9 +23,9 @@
 
 	if( $_POST['RTL88X2BU'] == "Install driver" )
 		{
-		exec("sudo apt-get update; sudo apt-get install -y raspberrypi-kernel-headers build-essential bc dkms git");
-		exec("sudo su dietpi -c 'mkdir -p /home/dietpi/.driver/network; cd /home/dietpi/.driver/network/; git clone https://github.com/morrownr/88x2bu-20210702.git; cd /home/dietpi/.driver/network/88x2bu-20210702; chmod +x install-driver.sh'");
-		exec("sudo -i /home/dietpi/.driver/network/88x2bu-20210702/./install-driver.sh NoPrompt";
+		$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/online/install_rtl88x2bu.sh | sudo bash";
+		exec($command, $output, $result );
+
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Driver installed</li>";
 		}
