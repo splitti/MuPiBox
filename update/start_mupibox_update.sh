@@ -4,6 +4,7 @@
 #https://raw.githubusercontent.com/splitti/MuPiBox/main
 
 killall chromium-browser
+sleep 0.5
 cd /tmp
 wget https://raw.githubusercontent.com/splitti/MuPiBox/main/media/images/installation.png
 chmod 755 /tmp/installation.png
