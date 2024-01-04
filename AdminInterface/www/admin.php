@@ -49,7 +49,7 @@
 				exec("sudo chown dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json");
 				exec("sudo chmod 644 /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json");
 
-				$command = "cd; curl -L https://mupibox.de/version/latest/update/conf_update.sh | sudo bash /dev/tty1";
+				$command = "cd; curl -L https://mupibox.de/version/latest/update/conf_update.sh | sudo bash";
 				exec($command, $output, $result );
 
 				$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);

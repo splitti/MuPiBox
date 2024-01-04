@@ -21,6 +21,17 @@
 	$commandB="sudo iwconfig wlan0 | awk '/Bit Rate/{split($2,a,\"=|/\");print a[2]\" Mb/s\"}'";
 	$BITRATE=exec($commandB);
 
+	if( $_POST['RTL88X2BU'] == "Install driver" )
+		{
+		exec("sudo apt-get update; sudo apt-get install -y raspberrypi-kernel-headers build-essential bc dkms git");
+		exec("sudo su dietpi -c 'mkdir -p /home/dietpi/.driver/network; cd /home/dietpi/.driver/network/; git clone https://github.com/morrownr/88x2bu-20210702.git; cd /home/dietpi/.driver/network/88x2bu-20210702; chmod +x install-driver.sh'");
+		exec("sudo -i /home/dietpi/.driver/network/88x2bu-20210702/./install-driver.sh NoPrompt";
+		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>Driver installed</li>";
+		}
+	if( $_POST['RTL88X2BU'] == "Remove driver" )
+		{
+		}
 	if( $_POST['change_vnc'] == "stop & disable" )
 		{
 		exec("sudo systemctl stop mupi_vnc.service");
@@ -417,6 +428,33 @@
 			</p>
 			<input id="saveForm" class="button_text" type="submit" name="renew_dhcp" value="Renew DHCP-Lease" />
 		</li>
+		<li class="li_1"><h2>Install RTL88X2BU-Drivers</h2>
+			<p>
+			These drivers are for several network cards like these: 
+			<ul style="list-style-type:'• '; margin-left:20px;"><li>			<a href="https://amzn.to/3vj2Ubn" target="_blank">Referal link to Amazon.com (US)</a></li>
+			<li><a href="https://amzn.to/3U4ID3Z" target="_blank">Referal link to Amazon.de (GER)</a></li></ul>
+			</p>
+			<p>
+			
+			<?php
+			$path="/home/dietpi/.driver/network/88x2bu-20210702";
+		    if($path !== false AND is_dir($path))
+				{
+				$change_rtl88x2bu="Remove driver";
+				$state_rtl88x2bu="installed";
+				}
+			else
+				{
+				$change_rtl88x2bu="Install driver";
+				$state_rtl88x2bu="not installed";
+				}
+			print("<b>State: ".$state_rtl88x2bu);
+			?>
+			</b></p><p>Please notice: Installation takes a long long time! If you want to install manually and see the installation status, check out this blog post: <a href="https://mupibox.de/pimp-die-mupibox-mit-schneller-netzwerkkarte/" target="_blank">Blog Post</a></p>
+			<input id="saveForm" class="button_text" type="submit" name="RTL88X2BU" value="<?php print $change_rtl88x2bu; ?>" />
+		</li>
+
+
 	</ul>
 	</details>
 
