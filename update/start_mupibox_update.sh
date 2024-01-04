@@ -5,6 +5,7 @@
 
 cd /tmp
 wget https://raw.githubusercontent.com/splitti/MuPiBox/main/media/images/installation.png
+killall chromium-browser
 /usr/bin/fbv /tmp/installation.png
 
 
