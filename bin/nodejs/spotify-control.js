@@ -1034,14 +1034,6 @@ app.use(function(req, res){
     playURL(radioURL);
   }
 
-  if(command.dir.includes("rss") ){
-    currentMeta.currentPlayer = "mplayer";
-    let dir = command.dir;
-    let rssURL = dir.split('rss/').pop();
-    rssURL = decodeURIComponent(rssURL);
-    playURL(rssURL);
-  }
-
   if(command.dir.includes("validate") ){
     valideMedia.validateType = command.name.split(':')[0];
     valideMedia.validateId = command.name.split(':')[1];

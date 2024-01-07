@@ -104,10 +104,6 @@ export class PlayerService {
         url = 'radio/' + encodeURIComponent(media.id) + '/radio';
         break;
       }
-      case 'rss': {
-        url = 'rss/' + encodeURIComponent(media.id) + '/rss';
-        break;
-      }
     }
 
     this.sendRequest(url);
