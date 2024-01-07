@@ -40,6 +40,10 @@ refreshToken=$(/usr/bin/jq -r .spotify.refreshToken ${MUPIBOX_CONFIG})
 ttsLanguage=$(/usr/bin/jq -r .mupibox.ttsLanguage ${MUPIBOX_CONFIG})
 /usr/bin/cat <<< $(/usr/bin/jq --arg v "$ttsLanguage" '.ttsLanguage = $v' ${SPOTIFYCONTROLLER_CONFIG}) >  ${SPOTIFYCONTROLLER_CONFIG}
 
+hostname=$(/usr/bin/jq -r .mupibox.host ${MUPIBOX_CONFIG})
+/usr/bin/cat <<< $(/usr/bin/jq --arg v "${hostname}" '.["node-sonos-http-api"].server = $v' ${SONOS_CONFIG}) >  ${SONOS_CONFIG}
+
+
 ip_control_backend=$(/usr/bin/jq -r .mupibox.ip_control_backend ${MUPIBOX_CONFIG})
 if [ "$ip_control_backend" = true ] ; then
         IP=$(hostname -I)
