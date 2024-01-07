@@ -22,8 +22,8 @@ VER_JSON="/tmp/version.json"
 OS=$(grep -E '^(VERSION_CODENAME)=' /etc/os-release)  >&3 2>&3
 OS=${OS:17}  >&3 2>&3
 
-wget -O /tmp/installation.jpg https://raw.githubusercontent.com/splitti/MuPiBox/main/media/images/installation.jpg >&3 2>&3
-/usr/bin/fbv /tmp/installation.jpg & >&3 2>&3
+#wget -O /tmp/installation.jpg https://raw.githubusercontent.com/splitti/MuPiBox/main/media/images/installation.jpg >&3 2>&3
+#/usr/bin/fbv /tmp/installation.jpg >&3 2>&3
 
 {
 	###############################################################################################
@@ -394,28 +394,6 @@ wget -O /tmp/installation.jpg https://raw.githubusercontent.com/splitti/MuPiBox/
 	after=$(date +%s)
 	echo -e "## Restore Userdata  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
-
-	###############################################################################################
-#	if [ -d "/home/dietpi/.driver/network/src/88x2bu-20210702" ]; then
-#		echo -e "Network driver RTL88X2BU already installed"  >&3 2>&3
-#	else
-#		echo -e "XXX\n${STEP}\nDownload network-driver [RTL88X2BU]... \nXXX"	
-#		before=$(date +%s)
-#		mkdir -p /home/dietpi/.driver/network/src >&3 2>&3
-#		cd /home/dietpi/.driver/network/src >&3 2>&3
-#		git clone https://github.com/morrownr/88x2bu-20210702.git >&3 2>&3
-#		after=$(date +%s)
-#		echo -e "## Download Network Driver  ##  finished after $((after - $before)) seconds" >&3 2>&3
-#		STEP=$(($STEP + 1))
-#		echo -e "XXX\n${STEP}\nInstall network-driver [RTL88X2BU]... \nXXX"	
-#		before=$(date +%s)
-#		cd /home/dietpi/.driver/network/src/88x2bu-20210702 >&3 2>&3
-#		chmod u+x install-driver.sh >&3 2>&3
-#		./install-driver.sh NoPrompt >&3 2>&3
-#		after=$(date +%s)
-#		echo -e "## Install Network Driver  ##  finished after $((after - $before)) seconds" >&3 2>&3
-#		STEP=$(($STEP + 1))
-#	fi	
 	
 	###############################################################################################
 	
