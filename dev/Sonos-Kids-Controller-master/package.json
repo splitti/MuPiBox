@@ -26,6 +26,8 @@
         "simple-keyboard": "^2.32.131",
         "spotify-web-api-js": "^1.5.2",
         "spotify-web-api-node": "^5.0.2",
+        "stream": "^0.0.2",
+        "timers": "^0.1.1",
         "tslib": "^2.2.0",
         "xml-js": "^1.6.11",
         "zone.js": "~0.11.4"
