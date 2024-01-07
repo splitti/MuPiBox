@@ -3,11 +3,12 @@ import { Observable, defer, throwError, of, range } from 'rxjs';
 import { retryWhen, flatMap, tap, delay, take, map, mergeMap, mergeAll, toArray, switchMap } from 'rxjs/operators';
 import { environment } from 'src/environments/environment';
 import { HttpClient } from '@angular/common/http';
-import { xml2json } from 'xml-js';
+//import { xml2json } from 'xml-js';
 import { RssFeed } from './rssfeed';
 import { Media } from './media';
 
 declare const require: any;
+const xml2js = require('xml2js');
 
 @Injectable({
   providedIn: 'root'
@@ -18,67 +19,71 @@ export class RssFeedService {
 
   constructor(private http: HttpClient) {}
 
-  // getRssFeed(
-  //   id: string,
-  //   category: string,
-  //   index: number,
-  //   aPartOfAll: boolean,
-  //   aPartOfAllMin: number,
-  //   aPartOfAllMax: number,
-  //   manualArtistcover: string
-  // ): Observable<Media[]> {
-  //   return this.http.get(id, { responseType: 'text' }).pipe(
-  //     switchMap(async (xml) => await this.parseXmlToJsonRss(xml)),
-  //     map((response: RssFeed) => {
-  //       return response.rss.channel.item.map((item) => {
-  //         const media: Media = {
-  //           id: item.enclosure.$.url,
-  //           artist: response.rss.channel.title,
-  //           title: item.title,
-  //           cover: item['itunes:image'].$.href,
-  //           artistcover: response.rss.channel.image.url,
-  //           type: 'rss',
-  //           category,
-  //           index,
-  //         };
-  //         if (manualArtistcover) {
-  //           media.artistcover = manualArtistcover;
-  //         }
-  //         if (aPartOfAll) {
-  //           media.aPartOfAll = aPartOfAll;
-  //         }
-  //         if (aPartOfAllMin) {
-  //           media.aPartOfAllMin = aPartOfAllMin;
-  //         }
-  //         if (aPartOfAllMax) {
-  //           media.aPartOfAllMax = aPartOfAllMax;
-  //         }
-  //         return media;
-  //       });
-  //     }),
-  //     mergeAll(),
-  //     toArray()
-  //   );
-  // }
+  getRssFeed(
+    id: string,
+    category: string,
+    index: number,
+    shuffle: boolean, 
+    aPartOfAll: boolean,
+    aPartOfAllMin: number,
+    aPartOfAllMax: number,
+    manualArtistcover: string
+  ): Observable<Media[]> {
+    return this.http.get(id, { responseType: 'text' }).pipe(
+      switchMap(async (xml) => await this.parseXmlToJsonRss(xml)),
+      map((response: RssFeed) => {
+        return response.rss.channel.item.map((item) => {
+          const media: Media = {
+            id: item.enclosure.$.url,
+            artist: response.rss.channel.title,
+            title: item.title,
+            cover: item['itunes:image'].$.href,
+            artistcover: response.rss.channel.image.url,
+            type: 'rss',
+            category,
+            index,
+          };
+          if (manualArtistcover) {
+            media.artistcover = manualArtistcover;
+          }
+          if (shuffle) {
+            media.shuffle = shuffle;
+          }
+          if (aPartOfAll) {
+            media.aPartOfAll = aPartOfAll;
+          }
+          if (aPartOfAllMin) {
+            media.aPartOfAllMin = aPartOfAllMin;
+          }
+          if (aPartOfAllMax) {
+            media.aPartOfAllMax = aPartOfAllMax;
+          }
+          return media;
+        });
+      }),
+      mergeAll(),
+      toArray()
+    );
+  }
 
-  // async parseXmlToJsonRss(xml) {
-  //   // With parser
-  //   /* const parser = new xml2js.Parser({ explicitArray: false });
-  //   parser
-  //     .parseStringPromise(xml)
-  //     .then(function(result) {
-  //       console.log(result);
-  //       console.log("Done");
-  //     })
-  //     .catch(function(err) {
-  //       // Failed
-  //     }); */
+  async parseXmlToJsonRss(xml) {
+    // With parser
+    /* const parser = new xml2js.Parser({ explicitArray: false });
+    parser
+      .parseStringPromise(xml)
+      .then(function(result) {
+        console.log(result);
+        console.log("Done");
+      })
+      .catch(function(err) {
+        // Failed
+      }); */
 
-  //   // Without parser
-  //   return await xml2js
-  //     .parseStringPromise(xml, { explicitArray: false })
-  //     .then((response) => response);
-  // }
+    // Without parser
+    return await xml2js
+      .parseStringPromise(xml, { explicitArray: false })
+      .then((response) => response);
+  }
   
   
   
