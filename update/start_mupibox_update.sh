@@ -413,7 +413,7 @@ wget -O /tmp/installation.jpg https://raw.githubusercontent.com/splitti/MuPiBox/
 	chown dietpi:dietpi ${CONFIG} >&3 2>&3
 	
 	su - dietpi -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && npm install" >&3 2>&3
-	su - dietpi -c "pm2 start server"
+	su - dietpi -c "pm2 start server" >&3 2>&3
 
 	OS="$(grep -E '^(VERSION_CODENAME)=' /etc/os-release)"  >&3 2>&3
 	OS="${OS:17}"  >&3 2>&3
