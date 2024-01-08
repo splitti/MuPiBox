@@ -234,9 +234,13 @@ export class HomePage implements OnInit {
     window.clearTimeout(this.editClickTimer);
 
     //Testarea Start
-    //var url='https://www.antennebrandenburg.de/programm/hoeren/podcasts/Zappelduster_Podcast/podcast.xml/feed=podcast.xml';
+    // var url='https://feeds.br.de/anna-und-die-wilden-tiere/feed.xml';
     
-    //this.rssFeed$ = this.rssFeedService.getRssFeed(url, "audiobook", 2, false, 0, 50, "");
+    this.http.get('http://mupibox:8100/api/rss').subscribe(httpresponse =>
+      console.log(httpresponse)
+    );
+
+    //this.rssFeed$ = this.rssFeedService.getRssFeed(url, "audiobook", 2, false, false, 0, 50, "");
     //this.rssFeed$.subscribe((res) => console.log(res));
 
     // var response = '';
@@ -245,7 +249,7 @@ export class HomePage implements OnInit {
     //   );
     //  setTimeout(() => {
     //   this.jsonRSS = JSON.parse(xml2json(response, {compact: true, spaces: 0, ignoreDeclaration: true, trim: true}));
-    //   console.log(this.jsonRSS.rss.channel.title._text);
+    //   console.log(this.jsonRSS.rss.channel.title);
     //   console.log(Object.keys(this.jsonRSS.rss.channel.item).length);
     //   console.log(this.jsonRSS.rss.channel.item);
     // }, 1000)
