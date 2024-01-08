@@ -25,7 +25,7 @@ exec 3>${LOG}
 	OS=${OS:17}  >&3 2>&3
 
 	#packages2install="git libasound2 jq samba mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential raspberrypi-kernel-headers dkms"
-	packages2install="git libasound2 jq samba mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential"
+	packages2install="git libasound2 jq samba mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential pkg-config"
 	STEP=0
 
 	###############################################################################################
@@ -187,7 +187,7 @@ exec 3>${LOG}
 	echo -e "XXX\n${STEP}\nInstall Pi-Blaster... \nXXX"	
 	before=$(date +%s)
 	sudo rm -R /home/dietpi/pi-blaster >&3 2>&3
-	sudo su dietpi -c 'cd /home/dietpi/; git clone https://github.com/sarfata/pi-blaster.git' >&3 2>&3
+	sudo su dietpi -c 'cd /home/dietpi/; git clone https://github.com/splitti/pi-blaster.git' >&3 2>&3
 	after=$(date +%s)
 	echo -e "## Install Pi-Blaster  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
@@ -336,7 +336,7 @@ exec 3>${LOG}
 
 	echo -e "XXX\n${STEP}\nSetup DietPi-Dashboard... \nXXX"	
 	before=$(date +%s)
-	sudo su - -c "yes '' | sudo /boot/dietpi/dietpi-software install 200" >&3 2>&3
+	sudo su - -c "echo '' | sudo /boot/dietpi/dietpi-software install 200" >&3 2>&3
 	sudo /usr/bin/sed -i 's/#terminal_user = "root"/terminal_user = "dietpi"/g' /opt/dietpi-dashboard/config.toml >&3 2>&3
 	sudo /usr/bin/sed -i 's/pass = true/pass = false/g' /opt/dietpi-dashboard/config.toml >&3 2>&3
 	after=$(date +%s)
