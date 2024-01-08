@@ -37,7 +37,7 @@
                                         <ion-select-option value="show_id">Show ID</ion-select-option>
                                         <ion-select-option value="playlist_id">Playlist ID</ion-select-option>
                                         <ion-select-option value="query">Search Query</ion-select-option>
-                                        <ion-select-option value="rss_url">RSS Podcast (not Spotify!)</ion-select-option>
+                                        <ion-select-option value="rss">RSS Podcast (not Spotify!)</ion-select-option>
                                       </ion-select>
                                 </ion-item>
                             </div>
@@ -82,7 +82,7 @@
                                     <ion-input *ngSwitchCase="'playlist_id'" #spotify_playlistid [ngModel]="editMedia?.playlistid" name="spotify_playlistid" type="text" placeholder="Playlist ID" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
                                     <ion-input *ngSwitchCase="'query'" #spotify_query [ngModel]="editMedia?.query" name="spotify_query" type="text" placeholder="Search Query" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
                                     <ion-input *ngSwitchCase="'artist_id'" #spotify_artistid [ngModel]="editMedia?.artistid" name="spotify_artistid" type="text" placeholder="Unique Artist ID" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
-                                    <ion-input *ngSwitchCase="'rss_url'" #rss_url [ngModel]="editMedia?.id" name="rss_url" type="text" placeholder="RSS/Podcast URL" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
+                                    <ion-input *ngSwitchCase="'rss'" #rss [ngModel]="editMedia?.id" name="rss" type="text" placeholder="RSS/Podcast URL" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
                                 </ion-item>
                             </div>
                         </ion-col>
@@ -129,7 +129,7 @@
                                         <ion-select-option value="media_id">Media ID</ion-select-option>
                                         <ion-select-option value="playlist_id">Playlist ID</ion-select-option>
                                         <ion-select-option value="query">Search Query</ion-select-option>
-                                        <ion-select-option value="rss_url">RSS Podcast (not Spotify!)</ion-select-option>
+                                        <ion-select-option value="rss">RSS Podcast (not Spotify!)</ion-select-option>
                                       </ion-select>
                                 </ion-item>
                             </div>
@@ -181,7 +181,7 @@
                                     <ion-input *ngSwitchCase="'playlist_id'" #spotify_playlistid [ngModel]="editMedia?.playlistid" name="spotify_playlistid" type="text" placeholder="Playlist ID" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
                                     <ion-input *ngSwitchCase="'query'" #spotify_query [ngModel]="editMedia?.query" name="spotify_query" type="text" placeholder="Search Query" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
                                     <ion-input *ngSwitchCase="'artist_id'" #spotify_artistid [ngModel]="editMedia?.artistid" name="spotify_artistid" type="text" placeholder="Unique Artist ID" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
-                                    <ion-input *ngSwitchCase="'rss_url'" #rss_url [ngModel]="editMedia?.id" name="rss_url" type="text" placeholder="RSS/Podcast URL" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
+                                    <ion-input *ngSwitchCase="'rss'" #rss [ngModel]="editMedia?.id" name="rss" type="text" placeholder="RSS/Podcast URL" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
                                 </ion-item>
                             </div>
                         </ion-col>
