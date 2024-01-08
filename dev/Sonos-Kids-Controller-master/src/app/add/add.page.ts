@@ -89,7 +89,7 @@ export class AddPage implements OnInit, AfterViewInit {
       }else if(this.source === 'spotify' && this.editMedia?.playlistid) {
         this.searchType = 'playlist_id';
       }else if(this.source === 'rss') {
-        this.searchType = 'rss';
+        this.searchType = 'rss_url';
       }
     }
     this.mediaService.validate$.subscribe(validate => {
@@ -178,7 +178,7 @@ export class AddPage implements OnInit, AfterViewInit {
     this.keyboard.clearInput('spotify_aPartOfAllMin');
     this.keyboard.clearInput('spotify_aPartOfAllMax');
 
-    this.keyboard.clearInput('rss');
+    this.keyboard.clearInput('rss_url');
 
     this.keyboard.clearInput('radio_title');
     this.keyboard.clearInput('radio_id');
@@ -229,7 +229,7 @@ export class AddPage implements OnInit, AfterViewInit {
         case 'spotify_aPartOfAllMax':
           this.keyboard.setInput(this.editMedia.aPartOfAllMax?.toString(), event.target.name);
           break;
-        case 'rss':
+        case 'rss_url':
           this.keyboard.setInput(this.editMedia.id, event.target.name);
           break;
         case 'radio_title':
@@ -283,7 +283,7 @@ export class AddPage implements OnInit, AfterViewInit {
     if (event.detail.value === 'radio'){
       this.source = 'radio';
     }else{
-      if (this.searchType === 'rss'){
+      if (this.searchType == "rss_url"){
         this.source = 'rss';
       }else{
         this.source = 'spotify';
@@ -301,7 +301,7 @@ export class AddPage implements OnInit, AfterViewInit {
       this.keyboard.clearInput('spotify_aPartOfAllMin');
       this.keyboard.clearInput('spotify_aPartOfAllMax');
 
-      this.keyboard.clearInput('rss');
+      this.keyboard.clearInput('rss_url');
 
       this.keyboard.clearInput('radio_title');
       this.keyboard.clearInput('radio_id');
@@ -356,7 +356,7 @@ export class AddPage implements OnInit, AfterViewInit {
         } else if (this.source === 'rss') {
           if (form.form.value.spotify_artist?.length) { media.artist = form.form.value.spotify_artist; }
           if (form.form.value.spotify_artistcover?.length) { media.artistcover = form.form.value.spotify_artistcover; }
-          if (form.form.value.rss?.length) { media.id = form.form.value.rss; }
+          if (form.form.value.rss_url?.length) { media.id = form.form.value.rss_url; }
           if (this.aPartOfAll) { 
             media.aPartOfAllMin = parseInt(form.form.value.spotify_aPartOfAllMin);
             media.aPartOfAllMax = parseInt(form.form.value.spotify_aPartOfAllMax);
@@ -440,7 +440,7 @@ export class AddPage implements OnInit, AfterViewInit {
             this.keyboard.clearInput('spotify_aPartOfAllMin');
             this.keyboard.clearInput('spotify_aPartOfAllMax');
 
-            this.keyboard.clearInput('rss');
+            this.keyboard.clearInput('rss_url');
         
             this.keyboard.clearInput('radio_title');
             this.keyboard.clearInput('radio_id');
@@ -502,7 +502,7 @@ export class AddPage implements OnInit, AfterViewInit {
             this.keyboard.clearInput('spotify_aPartOfAllMin');
             this.keyboard.clearInput('spotify_aPartOfAllMax');
 
-            this.keyboard.clearInput('rss');
+            this.keyboard.clearInput('rss_url');
         
             this.keyboard.clearInput('radio_title');
             this.keyboard.clearInput('radio_id');
@@ -532,13 +532,13 @@ export class AddPage implements OnInit, AfterViewInit {
         this.spotifyaPartOfAllMax.disabled = true;
       }
       
-      if(this.searchType === "artist_id" || this.searchType === "show_id" || this.searchType === "query" || this.searchType === "rss"){
+      if(this.searchType === "artist_id" || this.searchType === "show_id" || this.searchType === "query" || this.searchType === "rss_url"){
         this.spotifyaPartOfAll.disabled = false;
       }else{
         this.spotifyaPartOfAll.disabled = true;
       }
 
-      if(this.searchType === "rss"){
+      if(this.searchType == "rss_url"){
         this.source = 'rss';
       }
     }
@@ -593,7 +593,7 @@ export class AddPage implements OnInit, AfterViewInit {
       );
     } else if (this.source === 'rss') {
       const artist = this.keyboard.getInput('spotify_artist');
-      const id = this.keyboard.getInput('rss');
+      const id = this.keyboard.getInput('rss_url');
       const artistcover = this.keyboard.getInput('spotify_artistcover');
       const query = this.keyboard.getInput('spotify_query');
 
