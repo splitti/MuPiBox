@@ -7,6 +7,7 @@ const jsonfile = require('jsonfile');
 var SpotifyWebApi = require('spotify-web-api-node');
 const config = require('./server/config/config.json');
 const fs = require('fs');
+const { request } = require('http');
 
 app.use(cors());
 
@@ -55,6 +56,20 @@ app.get('/api/network', (req, res) => {
             res.json(data);
         });
     }
+});
+
+app.get('/api/rss', (req, res) => {
+    request.get(
+        {
+            //url: req.params.url,
+            url: 'https://feeds.br.de/lachlabor/feed.xml',
+            headers: {
+                "Access-Control-Allow-Origin": "*",
+            }
+        },
+        function (error, response, body){
+        res(response.body)
+    });
 });
 
 app.get('/api/monitor', (req, res) => {
