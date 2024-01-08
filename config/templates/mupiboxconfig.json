@@ -199,9 +199,9 @@
 	},
 	"wled": {
 		"active": false,
-		"ip": "",
-		"shutdown_id": "",
-		"main_id": ""
+		"startup_id": "",
+		"main_id": "",
+		"shutdown_id": ""		
 	}
 }
 
