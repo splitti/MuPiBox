@@ -236,9 +236,9 @@ export class HomePage implements OnInit {
     //Testarea Start
     // var url='https://feeds.br.de/anna-und-die-wilden-tiere/feed.xml';
     
-    this.http.get('http://mupibox:8100/api/rss').subscribe(httpresponse =>
-      console.log(httpresponse)
-    );
+    //this.http.get('http://mupibox:8100/api/rss').subscribe(httpresponse =>
+    //  console.log(httpresponse)
+    //);
 
     //this.rssFeed$ = this.rssFeedService.getRssFeed(url, "audiobook", 2, false, false, 0, 50, "");
     //this.rssFeed$.subscribe((res) => console.log(res));
