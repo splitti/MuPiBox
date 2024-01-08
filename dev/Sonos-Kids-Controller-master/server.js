@@ -59,17 +59,27 @@ app.get('/api/network', (req, res) => {
 });
 
 app.get('/api/rss', (req, res) => {
-    request.get(
-        {
-            //url: req.params.url,
-            url: 'https://feeds.br.de/lachlabor/feed.xml',
-            headers: {
-                "Access-Control-Allow-Origin": "*",
-            }
-        },
-        function (error, response, body){
-        res(response.body)
-    });
+    fetch('https://feeds.br.de/lachlabor/feed.xml', {
+        headers:{
+            'Access-Control-Allow-Origin': '*',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {console.log(data); res.send(data)})
+    .catch(error => console.log(error));
+    ;
+
+    // request.get(
+    //     {
+    //         //url: req.params.url,
+    //         url: 'https://feeds.br.de/lachlabor/feed.xml',
+    //         headers: {
+    //             "Access-Control-Allow-Origin": "*",
+    //         }
+    //     },
+    //     function (error, response, body){
+    //     res(response.body)
+    // });
 });
 
 app.get('/api/monitor', (req, res) => {
