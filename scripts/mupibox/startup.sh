@@ -31,7 +31,7 @@ if [ -f "$RESIZE_SERVICE" ]; then
 fi
 
 if [ ! -d "/lib/modules/$(uname -r)/build" ]; then
-	echo "arm_64bit=0" | sudo tee -a /boot/config.txt
+	#echo "arm_64bit=0" | sudo tee -a /boot/config.txt
 fi
 
 ### Check for new wifi network in /boot/add_wifi.json
