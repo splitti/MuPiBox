@@ -125,7 +125,7 @@ export class PlayerPage implements OnInit {
           let duration = this.currentPlayedSpotify?.item.duration_ms;
           this.playerService.seekPosition(duration * (newValue / 100));
         }
-      } else if (this.media.type === 'library'){
+      } else if (this.media.type === 'library' || this.media.type === 'rss'){
         this.playerService.seekPosition(newValue);
       }
     }
@@ -184,11 +184,12 @@ export class PlayerPage implements OnInit {
           this.updateProgress();
         }
       }, 1000)
-    } else if (this.media.type === 'library'){
+    } else if (this.media.type === 'library' || this.media.type === 'rss'){
       let seek = this.currentPlayedLocal?.progressTime || 0;
       this.progress = seek || 0;
       if(this.playing && !this.currentPlayedLocal?.playing && this.currentPlayedLocal?.currentTracknr === this.currentPlayedLocal?.totalTracks){
-        this.goBackTimer++;
+        //this.goBackTimer++;
+        console.log("Ich bin ein Timer und zähle");
         if(this.goBackTimer > 10){
           this.navController.back();
         }
@@ -222,7 +223,7 @@ export class PlayerPage implements OnInit {
   }
 
   ionViewWillLeave() {
-    if(this.media.type === 'spotify' || this.media.type === 'library'){
+    if(this.media.type === 'spotify' || this.media.type === 'library' || this.media.type === 'rss'){
       this.saveResumeFiles();
     }
     this.resumePlay = false;
@@ -231,7 +232,7 @@ export class PlayerPage implements OnInit {
       this.playerService.sendCmd(PlayerCmds.SHUFFLEOFF);
     }
     this.playerService.sendCmd(PlayerCmds.STOP);
-    if(this.media.type === 'spotify' &&  this.media.category === 'music') {
+    if(this.media.type === 'spotify' &&  this.media.category === 'music' || this.media.type === 'rss' &&  this.media.category === 'music') {
       if(this.shufflechanged % 2 === 1){
         this.mediaService.editRawMediaAtIndex(this.media.index, this.media);
       }
@@ -355,7 +356,7 @@ export class PlayerPage implements OnInit {
         this.playing = true;
         this.playerService.sendCmd(PlayerCmds.PLAY);
       }
-      if(this.media.type === 'spotify' || this.media.type === 'library'){
+      if(this.media.type === 'spotify' || this.media.type === 'library' || this.media.type === 'rss'){
         this.saveResumeFiles();
       }
     }

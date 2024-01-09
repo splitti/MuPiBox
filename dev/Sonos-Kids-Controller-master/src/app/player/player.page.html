@@ -6,13 +6,15 @@
         <ion-title class="toolbar-album">
             <div *ngIf="media.type ==='spotify' && currentPlayedSpotify?.currently_playing_type !== 'episode'; else elseBlockAlbumShow">{{(spotify$ | async)?.item.album.name}}</div>
             <ng-template #elseBlockAlbumShow><div *ngIf="media.showid; else elseBlockAlbumLocal">{{(episode$ | async)?.show.name}}</div></ng-template>
-            <ng-template #elseBlockAlbumLocal><div *ngIf="media.type ==='library'; else elseBlockAlbumRadio">{{(local$ | async)?.album}}</div></ng-template>
+            <ng-template #elseBlockAlbumLocal><div *ngIf="media.type ==='library'; else elseBlockAlbumRSS">{{(local$ | async)?.album}}</div></ng-template>
+            <ng-template #elseBlockAlbumRSS><div *ngIf="media.type ==='rss'; else elseBlockAlbumRadio">{{media.artist}}</div></ng-template>
             <ng-template #elseBlockAlbumRadio><div>{{media.title}}</div></ng-template>
         </ion-title>
         <ion-title class="toolbar-tracktitle">
             <div *ngIf="media.type ==='spotify' && currentPlayedSpotify?.currently_playing_type !== 'episode'; else elseBlockTitelShow">{{(spotify$ | async)?.item.name}}</div>
             <ng-template #elseBlockTitelShow><div *ngIf="media.showid; else elseBlockTitelLocal">{{(episode$ | async)?.name}}</div></ng-template>
-            <ng-template #elseBlockTitelLocal><div *ngIf="media.type ==='library'; else elseBlockTitelRadio">{{(local$ | async)?.currentTrackname}}</div></ng-template>
+            <ng-template #elseBlockTitelLocal><div *ngIf="media.type ==='library'; else elseBlockTitelRSS">{{(local$ | async)?.currentTrackname}}</div></ng-template>
+            <ng-template #elseBlockTitelRSS><div *ngIf="media.type ==='rss'; else elseBlockTitelRadio">{{media.title}}</div></ng-template>
             <ng-template #elseBlockTitelRadio><div></div></ng-template>
         </ion-title>
         <ion-title class="toolbar-tracknumber" slot="end">
