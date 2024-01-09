@@ -280,15 +280,15 @@ export class AddPage implements OnInit, AfterViewInit {
 
   segmentChanged(event: any) {
     this.category = event.detail.value;
-    if (event.detail.value === 'radio'){
-      this.source = 'radio';
-    }else{
-      if (this.searchType === 'rss'){
-        this.source = 'rss';
-      }else{
-        this.source = 'spotify';
-      }
-    }
+    // if (event.detail.value === 'radio'){
+    //   this.source = 'radio';
+    // }else{
+    //   if (this.searchType === 'rss'){
+    //     this.source = 'rss';
+    //   }else{
+    //     this.source = 'spotify';
+    //   }
+    // }
     window.setTimeout(() => { // wait for new elements to be visible before altering them
       this.keyboard.clearInput('spotify_artist');
       this.keyboard.clearInput('spotify_title');
@@ -314,6 +314,17 @@ export class AddPage implements OnInit, AfterViewInit {
     this.activityIndicatorService.create().then(indicator => {
       this.activityIndicatorVisible = true;
       indicator.present().then(() => {
+
+        if (this.category == 'radio'){
+          this.source = 'radio';
+        }else{
+          if (this.searchType === 'rss'){
+            this.source = 'rss';
+          }else{
+            this.source = 'spotify';
+          }
+        }
+        
         const media: Media = {
           index: this.index,
           type: this.source,
@@ -537,10 +548,6 @@ export class AddPage implements OnInit, AfterViewInit {
       }else{
         this.spotifyaPartOfAll.disabled = true;
       }
-
-      if(this.searchType === "rss"){
-        this.source = 'rss';
-      }
     }
     
     if (this.source === 'spotify') {
@@ -552,6 +559,7 @@ export class AddPage implements OnInit, AfterViewInit {
       const query = this.keyboard.getInput('spotify_query');
       const show = this.keyboard.getInput('spotify_showid');
       const playlist = this.keyboard.getInput('spotify_playlistid');
+      const rss = this.keyboard.getInput('rss');
 
       this.valid = (
         (this.category === 'audiobook' || this.category === 'music') && (
@@ -566,6 +574,8 @@ export class AddPage implements OnInit, AfterViewInit {
           (show?.length > 0 && !(query?.length > 0))
           ||
           (playlist?.length > 0 && artist?.length > 0 && !(query?.length > 0))
+          ||
+          (rss?.length > 0)
           ||
           (this.edit && (artist?.length > 0))
           ||
@@ -593,15 +603,14 @@ export class AddPage implements OnInit, AfterViewInit {
       );
     } else if (this.source === 'rss') {
       const artist = this.keyboard.getInput('spotify_artist');
-      const id = this.keyboard.getInput('rss');
+      const rss = this.keyboard.getInput('rss');
       const artistcover = this.keyboard.getInput('spotify_artistcover');
-      const query = this.keyboard.getInput('spotify_query');
 
       this.valid = (
         (this.category === 'audiobook' || this.category === 'music') && (
-          (id?.length > 0)
+          (rss?.length > 0)
           ||
-          (this.edit && ((id?.length > 0) || (artist?.length > 0) || (artistcover?.length > 0)))
+          (this.edit && ((rss?.length > 0) || (artist?.length > 0) || (artistcover?.length > 0)))
           ||
           (this.edit && (this.shuffle !== this.editMedia?.shuffle))
           ||
