@@ -39,6 +39,9 @@ export class PlayerPage implements OnInit {
       album: "",
       currentTracknr: 0,
       progressTime: 0,
+    },
+    rss: {
+      progressTime: 0,
     }
   };
   cover = '';
@@ -187,9 +190,14 @@ export class PlayerPage implements OnInit {
     } else if (this.media.type === 'library' || this.media.type === 'rss'){
       let seek = this.currentPlayedLocal?.progressTime || 0;
       this.progress = seek || 0;
-      if(this.playing && !this.currentPlayedLocal?.playing && this.currentPlayedLocal?.currentTracknr === this.currentPlayedLocal?.totalTracks){
-        //this.goBackTimer++;
-        console.log("Ich bin ein Timer und zähle");
+      if(this.media.type === 'library' && this.playing && !this.currentPlayedLocal?.playing && this.currentPlayedLocal?.currentTracknr === this.currentPlayedLocal?.totalTracks){
+        this.goBackTimer++;
+        if(this.goBackTimer > 10){
+          this.navController.back();
+        }
+      }
+      if(this.media.type === 'rss' && this.playing && !this.currentPlayedLocal?.playing){
+        this.goBackTimer++;
         if(this.goBackTimer > 10){
           this.navController.back();
         }
@@ -264,6 +272,11 @@ export class PlayerPage implements OnInit {
           this.playerService.seekPosition(this.resume.local.progressTime);
         }, 2000)
       }
+    } else if (this.media.type === 'rss'){
+      this.playerService.playMedia(this.media);
+      setTimeout(() => {
+        this.playerService.seekPosition(this.resume.local.progressTime);
+      }, 2000)
     }
   }
 
@@ -294,6 +307,8 @@ export class PlayerPage implements OnInit {
       this.resumeFile.local.album = this.currentPlayedLocal?.album || "";
       this.resumeFile.local.currentTracknr = this.currentPlayedLocal?.currentTracknr  || 0;
       this.resumeFile.local.progressTime = this.currentPlayedLocal?.progressTime  || 0;
+    } else if (this.media.type === 'rss'){
+      this.resumeFile.rss.progressTime = this.currentPlayedLocal?.progressTime  || 0;
     }
     this.mediaService.saveMedia(this.media);
     this.mediaService.saveResume(this.resumeFile);

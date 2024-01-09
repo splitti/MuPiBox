@@ -9,4 +9,7 @@ export interface Resume {
         currentTracknr?: number;
         progressTime?: number;
     }
+    rss?:{
+        progressTime?: number;
+    }
 }
