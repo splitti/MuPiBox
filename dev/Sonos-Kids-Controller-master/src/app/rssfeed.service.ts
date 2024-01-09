@@ -16,6 +16,7 @@ const xml2js = require('xml2js');
 export class RssFeedService {
 
   jsonRSS: RssFeed;
+  url: string;
 
   constructor(private http: HttpClient) {}
 
@@ -29,8 +30,9 @@ export class RssFeedService {
     aPartOfAllMax: number,
     manualArtistcover: string
   ): Observable<Media[]> {
-    return this.http.get(id, { responseType: 'text' }).pipe(
-      switchMap(async (xml) => await this.parseXmlToJsonRss(xml)),
+    this.url = 'http://127.0.0.1:8200/rssfeed?url=' + id;
+    return this.http.get(this.url/*, { responseType: 'text' }*/).pipe(
+      //switchMap(async (xml) => await this.parseXmlToJsonRss(xml)),
       map((response: RssFeed) => {
         return response.rss.channel.item.map((item) => {
           const media: Media = {

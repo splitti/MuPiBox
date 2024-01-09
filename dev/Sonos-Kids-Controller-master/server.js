@@ -8,6 +8,7 @@ var SpotifyWebApi = require('spotify-web-api-node');
 const config = require('./server/config/config.json');
 const fs = require('fs');
 const request = require('request');
+const xmlparser = require('xml-js');
 
 app.use(cors());
 
@@ -34,13 +35,13 @@ app.use(express.static(path.join(__dirname, 'www'))); // Static path to compiled
 
 
 // Routes
-app.get('/feed', async (req, res) => {
+app.get('/api/rssfeed', async (req, res) => {
     request.get(
       {
         url: req.query.url
       }
       , function (error, response, body) {
-      res.send(/* xmlparser.xml2json( */response.body/* ,  {compact: true, nativeType: true}) */)
+      res.send(xmlparser.xml2json( response.body ,  {compact: true, nativeType: true}) )
     });
 });
 
