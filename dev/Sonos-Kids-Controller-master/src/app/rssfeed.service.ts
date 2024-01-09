@@ -21,6 +21,7 @@ export class RssFeedService {
   constructor(private http: HttpClient) {}
 
   getRssFeed(
+    ip: string,
     id: string,
     category: string,
     index: number,
@@ -30,7 +31,7 @@ export class RssFeedService {
     aPartOfAllMax: number,
     manualArtistcover: string
   ): Observable<Media[]> {
-    this.url = 'http://mupibox:8200/api/rssfeed?url=' + id;
+    this.url = 'http://' + ip + ':8200/api/rssfeed?url=' + id;
     return this.http.get(this.url/*, { responseType: 'text' }*/).pipe(
       //switchMap(async (xml) => await this.parseXmlToJsonRss(xml)),
       map((response: RssFeed) => {

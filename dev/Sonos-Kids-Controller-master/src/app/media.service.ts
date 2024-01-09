@@ -26,9 +26,9 @@ import { RssFeedService } from './rssfeed.service';
 export class MediaService {
 
   network: Network;
-  ip: String;
-  hostname: String;
-  response: String;
+  ip: string;
+  hostname: string;
+  response: string;
   private category = 'audiobook';
   public readonly current$: Observable<CurrentSpotify>;
   public readonly local$: Observable<CurrentMPlayer>;
@@ -303,7 +303,7 @@ export class MediaService {
                       })
                     ),iif(
                       () => (item.type === 'rss' && item.id.length > 0) ? true : false, // Get media by show
-                        this.rssFeedService.getRssFeed(item.id, item.category, item.index, item.shuffle, item.aPartOfAll, item.aPartOfAllMin, item.aPartOfAllMax, item.artistcover).pipe(
+                        this.rssFeedService.getRssFeed(this.ip, item.id, item.category, item.index, item.shuffle, item.aPartOfAll, item.aPartOfAllMin, item.aPartOfAllMax, item.artistcover).pipe(
                           map(items => {  // If the user entered an user-defined artist name in addition to a query, overwrite orignal artist from spotify
                             if (item.artist?.length > 0) {
                               items.forEach(currentItem => {
