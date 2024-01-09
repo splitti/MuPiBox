@@ -36,11 +36,11 @@ export class RssFeedService {
       map((response: RssFeed) => {
         return response.rss.channel.item.map((item) => {
           const media: Media = {
-            id: item.enclosure?.$?.url,
+            id: item.enclosure?._attributes?.url,
             artist: response.rss?.channel?.title._text,
             title: item?.title._text,
-            cover: item['itunes:image']?.$?.href,
-            artistcover: response.rss?.channel?.image?.url,
+            cover: item['itunes:image']?._attributes?.href,
+            artistcover: response.rss?.channel?.image?.url._text,
             type: 'rss',
             category,
             index,

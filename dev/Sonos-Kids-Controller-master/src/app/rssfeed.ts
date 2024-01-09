@@ -5,7 +5,9 @@ export interface RssFeed {
           _text: string;
         };
         image?: {
-          url?: string;
+          url?: {
+            _text: string;
+          };
         };
         item?: Item[];
       };
@@ -16,16 +18,20 @@ export interface RssFeed {
     title?: {
       _text: string;
     };
-    link?: string;
+    link?: {
+      _text: string;
+    };
     enclosure?: {
-      $?: {
+      _attributes?: {
         url?: string;
         length?: number;
       };
     };
-    'itunes:duration'?: string;
+    'itunes:duration'?: {
+      _text: string;
+    };
     'itunes:image'?: {
-      $?: {
+      _attributes?: {
         href?: string;
       };
     };
