@@ -30,7 +30,7 @@ export class RssFeedService {
     aPartOfAllMax: number,
     manualArtistcover: string
   ): Observable<Media[]> {
-    this.url = 'http://127.0.0.1:8200/rssfeed?url=' + id;
+    this.url = 'http://127.0.0.1:8200/api/rssfeed?url=' + id;
     return this.http.get(this.url/*, { responseType: 'text' }*/).pipe(
       //switchMap(async (xml) => await this.parseXmlToJsonRss(xml)),
       map((response: RssFeed) => {
