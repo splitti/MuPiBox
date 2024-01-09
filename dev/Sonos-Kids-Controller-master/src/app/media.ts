@@ -16,5 +16,5 @@ export interface Media {
     aPartOfAll?: boolean;
     aPartOfAllMin?: number;
     aPartOfAllMax?: number;
-    rssFeed?: string;
+    duration?: string;
 }

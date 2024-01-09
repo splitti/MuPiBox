@@ -198,7 +198,7 @@ export class PlayerPage implements OnInit {
       }
       if(this.media.type === 'rss' && this.playing && !this.currentPlayedLocal?.playing){
         this.goBackTimer++;
-        if(this.goBackTimer > 10){
+        if(this.goBackTimer > 100){
           this.navController.back();
         }
       }

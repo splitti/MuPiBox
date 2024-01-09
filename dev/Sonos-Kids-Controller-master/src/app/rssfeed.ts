@@ -21,6 +21,9 @@ export interface RssFeed {
     link?: {
       _text: string;
     };
+    pubDate?: {
+      _text: string;
+    };
     enclosure?: {
       _attributes?: {
         url?: string;

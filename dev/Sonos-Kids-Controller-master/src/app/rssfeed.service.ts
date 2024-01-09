@@ -42,6 +42,8 @@ export class RssFeedService {
             title: item?.title._text,
             cover: item['itunes:image']?._attributes?.href,
             artistcover: response.rss?.channel?.image?.url._text,
+            release_date: item?.pubDate._text,
+            duration: item?.['itunes:duration']._text,
             type: 'rss',
             category,
             index,
@@ -70,7 +72,7 @@ export class RssFeedService {
     );
   }
 
-  async parseXmlToJsonRss(xml) {
+  //async parseXmlToJsonRss(xml) {
     // With parser
     /* const parser = new xml2js.Parser({ explicitArray: false });
     parser
@@ -84,10 +86,10 @@ export class RssFeedService {
       }); */
 
     // Without parser
-    return await xml2js
-      .parseStringPromise(xml, { explicitArray: false })
-      .then((response) => response);
-  }
+    //return await xml2js
+    //  .parseStringPromise(xml, { explicitArray: false })
+    //  .then((response) => response);
+  //}
   
   
   
