@@ -1,7 +1,9 @@
 export interface RssFeed {
     rss?: {
       channel?: {
-        title?: string;
+        title?: {
+          _text: string;
+        };
         image?: {
           url?: string;
         };
@@ -11,7 +13,9 @@ export interface RssFeed {
   }
   
   export interface Item {
-    title?: string;
+    title?: {
+      _text: string;
+    };
     link?: string;
     enclosure?: {
       $?: {
