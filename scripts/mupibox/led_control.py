@@ -36,6 +36,18 @@ def sigterm_handler(*_):
         x -= 1
         POWER_LED.value = x/100
         sleep(0.01)
+    for x in range(int(json_data["led_max_brightness"]), 0):
+        x -= 1
+        POWER_LED.value = x/100
+        sleep(0.01)
+    for x in range(0, int(json_data["led_max_brightness"])):
+        x += 1
+        POWER_LED.value = x/100
+        sleep(0.01)
+    for x in range(int(json_data["led_max_brightness"]), 0):
+        x -= 1
+        POWER_LED.value = x/100
+        sleep(0.01)
     sys.exit(0)
 
 def init():
@@ -45,22 +57,26 @@ def init():
     for x in range(0, int(json_data["led_max_brightness"])):
         x += 1
         POWER_LED.value = x/100
-        sleep(0.05)
+        sleep(0.1)
 
 def main():
+    LED_DIM_MODE_LAST = 0
     while True:
         with open(JSON_DATA_FILE) as json_file:
             json_data = json.load(json_file)
-        if json_data["led_dim_mode"] == 0 and json_data["led_dim_mode"] != LED_DIM_MODE_LAST:
-            for x in range(int(json_data["led_min_brightness"]), int(json_data["led_max_brightness"])):
-                x += 1
+        print(json_data["led_dim_mode"])
+        if json_data["led_dim_mode"] == "0" and json_data["led_dim_mode"] != LED_DIM_MODE_LAST:
+            for x in range(int(json_data["led_min_brightness"]), int(json_data["led_max_brightness"]), +1):
+                #x += 1
                 POWER_LED.value = x/100
                 sleep(0.02)
-        if json_data["led_dim_mode"] == 1 and json_data["led_dim_mode"] != LED_DIM_MODE_LAST:
-            for x in range(int(json_data["led_max_brightness"]), int(json_data["led_min_brightness"])):
-                x += 1
+                print("YES")
+        if json_data["led_dim_mode"] == "1" and json_data["led_dim_mode"] != LED_DIM_MODE_LAST:
+            for x in range(int(json_data["led_max_brightness"]), int(json_data["led_min_brightness"]), -1):
+                #x = x - 1
                 POWER_LED.value = x/100
                 sleep(0.02)
+                print("YES")
         LED_DIM_MODE_LAST = json_data["led_dim_mode"]
         sleep(1)
 
