@@ -56,7 +56,7 @@ export class MedialistPage implements OnInit {
     console.log("this.artist");
     console.log(this.artist);
     
-    if(this.artist.coverMedia.showid && this.artist.coverMedia.showid.length > 0){
+    if((this.artist.coverMedia.showid && this.artist.coverMedia.showid.length > 0) || (this.artist.coverMedia.type == 'rss' && this.artist.coverMedia.id.length > 0)){
       this.mediaService.getMediaFromShow(this.artist).subscribe(media => {
         this.media = media;
   
