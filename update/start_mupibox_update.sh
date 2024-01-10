@@ -330,7 +330,7 @@ wget -O /tmp/installation.jpg https://raw.githubusercontent.com/splitti/MuPiBox/
 	echo -e "XXX\n${STEP}\nUninstall Pi-Blaster... \nXXX"	
 	before=$(date +%s)
 	su - -c 'cd /home/dietpi/pi-blaster; make uninstall' >&3 2>&3
-	rm -R /home/dietpi/pi-blaster
+	rm -R /home/dietpi/pi-blaster >&3 2>&3
 	after=$(date +%s)
 	echo -e "## Pi-Blaster  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
