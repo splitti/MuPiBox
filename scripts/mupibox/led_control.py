@@ -16,40 +16,31 @@ POWER_LED = PWMLED(json_data["led_gpio"])
 def sigterm_handler(*_):
     for x in range(int(json_data["led_max_brightness"]), 0, -1):
         POWER_LED.value = x/100
-        sleep(0.01)
+        sleep(0.003)
     for x in range(0, int(json_data["led_max_brightness"]), +1):
         POWER_LED.value = x/100
-        sleep(0.01)
+        sleep(0.003)
     for x in range(int(json_data["led_max_brightness"]), 0, -1):
         POWER_LED.value = x/100
-        sleep(0.01)
-    for x in range(int(json_data["led_max_brightness"]), 0, -1):
-        POWER_LED.value = x/100
-        sleep(0.01)
+        sleep(0.003)
     for x in range(0, int(json_data["led_max_brightness"]), +1):
         POWER_LED.value = x/100
-        sleep(0.01)
+        sleep(0.003)
     for x in range(int(json_data["led_max_brightness"]), 0, -1):
         POWER_LED.value = x/100
-        sleep(0.01)
-    for x in range(int(json_data["led_max_brightness"]), 0, -1):
-        POWER_LED.value = x/100
-        sleep(0.01)
+        sleep(0.003)
     for x in range(0, int(json_data["led_max_brightness"]), +1):
         POWER_LED.value = x/100
-        sleep(0.01)
+        sleep(0.003)
     for x in range(int(json_data["led_max_brightness"]), 0, -1):
         POWER_LED.value = x/100
-        sleep(0.01)
-    for x in range(int(json_data["led_max_brightness"]), 0, -1):
-        POWER_LED.value = x/100
-        sleep(0.01)
+        sleep(0.003)
     for x in range(0, int(json_data["led_max_brightness"]), +1):
         POWER_LED.value = x/100
-        sleep(0.01)
+        sleep(0.003)
     for x in range(int(json_data["led_max_brightness"]), 0, -1):
         POWER_LED.value = x/100
-        sleep(0.01)
+        sleep(0.003)
     sys.exit(0)
 
 def init():

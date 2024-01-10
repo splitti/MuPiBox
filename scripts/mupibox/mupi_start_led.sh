@@ -17,7 +17,7 @@ echo "{}" | tee ${TMP_LEDFILE}
 /usr/bin/python3 /usr/local/bin/mupibox/led_control.py &
 sleep 30
 
-while [ -f TMP_LEDFILE ]
+while true
 do
 		sleep 1
 		ledPin=$(/usr/bin/jq -r .shim.ledPin ${MUPIBOX_CONFIG})
