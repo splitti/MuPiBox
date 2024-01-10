@@ -1,5 +1,8 @@
 [Unit]
 Description=Power LED Control
+Before=basic.target
+After=local-fs.target sysinit.target
+DefaultDependencies=no
 
 [Service]
 Type=simple

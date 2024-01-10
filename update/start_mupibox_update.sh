@@ -16,7 +16,7 @@ CONFIG="/etc/mupibox/mupiboxconfig.json"
 LOG="/tmp/mupibox_update.log"
 exec 3>${LOG}
 service mupi_idle_shutdown stop
-packages2install="git libasound2 jq samba mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential"
+packages2install="git libasound2 jq samba mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio"
 STEP=0
 VER_JSON="/tmp/version.json"
 OS=$(grep -E '^(VERSION_CODENAME)=' /etc/os-release)  >&3 2>&3
@@ -117,7 +117,7 @@ wget -O /tmp/installation.jpg https://raw.githubusercontent.com/splitti/MuPiBox/
 
 	echo -e "XXX\n${STEP}\nSetup DietPi-Dashboard... \nXXX"	
 	before=$(date +%s)
-	sudo su - -c "yes '' | sudo /boot/dietpi/dietpi-software install 200" >&3 2>&3
+	sudo su - -c "echo '' | sudo /boot/dietpi/dietpi-software install 200" >&3 2>&3
 	sudo /usr/bin/sed -i 's/#terminal_user = "root"/terminal_user = "dietpi"/g' /opt/dietpi-dashboard/config.toml >&3 2>&3
 	sudo /usr/bin/sed -i 's/pass = true/pass = false/g' /opt/dietpi-dashboard/config.toml >&3 2>&3
 	after=$(date +%s)
@@ -327,15 +327,10 @@ wget -O /tmp/installation.jpg https://raw.githubusercontent.com/splitti/MuPiBox/
 
 	###############################################################################################
 
-
-	echo -e "XXX\n${STEP}\nInstall Pi-Blaster... \nXXX"	
+	echo -e "XXX\n${STEP}\nUninstall Pi-Blaster... \nXXX"	
 	before=$(date +%s)
-	rm -R /home/dietpi/pi-blaster >&3 2>&3
-	su dietpi -c 'cd /home/dietpi/; git clone https://github.com/sarfata/pi-blaster.git' >&3 2>&3
-	su - -c 'cd /home/dietpi/pi-blaster; ./autogen.sh; ./configure; make; make install' >&3 2>&3
-	LEDPIN=`cat ${CONFIG} | jq -r '.shim.ledPin'`
-	DAEMON_ARGS='DAEMON_ARGS="--gpio '${LEDPIN}'"'
-	/usr/bin/sed -i 's|DAEMON_ARGS=".*"|'"${DAEMON_ARGS}"'|g' /etc/init.d/pi-blaster.boot.sh >&3 2>&3
+	su - -c 'cd /home/dietpi/pi-blaster; make uninstall' >&3 2>&3
+	rm -R /home/dietpi/pi-blaster
 	after=$(date +%s)
 	echo -e "## Pi-Blaster  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
