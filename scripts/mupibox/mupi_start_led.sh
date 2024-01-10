@@ -14,7 +14,7 @@ echo "{}" | tee ${TMP_LEDFILE}
 /usr/bin/cat <<< $(/usr/bin/jq --arg v "${ledMin}" '.led_min_brightness = $v' ${TMP_LEDFILE}) >  ${TMP_LEDFILE}
 /usr/bin/cat <<< $(/usr/bin/jq --arg v "0" '.led_current_brightness = $v' ${TMP_LEDFILE}) >  ${TMP_LEDFILE}
 /usr/bin/cat <<< $(/usr/bin/jq --arg v "0" '.led_dim_mode = $v' ${TMP_LEDFILE}) >  ${TMP_LEDFILE}
-/usr/bin/python3 /usr/local/bin/mupibox/led_control.py
+/usr/bin/python3 /usr/local/bin/mupibox/led_control.py &
 sleep 30
 
 while [ -f TMP_LEDFILE ]
