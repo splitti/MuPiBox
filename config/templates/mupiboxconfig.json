@@ -205,7 +205,11 @@
 		"active": false,
 		"startup_id": "",
 		"main_id": "",
-		"shutdown_id": ""		
+		"shutdown_id": "",
+		"brightness_default": "255",
+		"brightness_dimmed": "128",
+		"boot_preset": true,
+		"shutdown_preset": true
 	}
 }
 

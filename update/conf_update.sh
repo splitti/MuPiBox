@@ -108,8 +108,13 @@ fi
 WLED=$(/usr/bin/cat ${CONFIG} | grep wled)
 if [[ -z ${WLED} ]]; then
 	/usr/bin/cat <<< $(/usr/bin/jq '.wled.active = false' ${CONFIG}) >  ${CONFIG}
-	/usr/bin/cat <<< $(/usr/bin/jq --arg v "" '.wled.shutdown_id = $v' ${CONFIG}) >  ${CONFIG}                 
+	/usr/bin/cat <<< $(/usr/bin/jq --arg v "" '.wled.startup_id = $v' ${CONFIG}) >  ${CONFIG}                 
 	/usr/bin/cat <<< $(/usr/bin/jq --arg v "" '.wled.main_id = $v' ${CONFIG}) >  ${CONFIG}                 
+	/usr/bin/cat <<< $(/usr/bin/jq --arg v "" '.wled.shutdown_id = $v' ${CONFIG}) >  ${CONFIG}                 
+	/usr/bin/cat <<< $(/usr/bin/jq --arg v "255" '.wled.brightness_default = $v' ${CONFIG}) >  ${CONFIG}                 
+	/usr/bin/cat <<< $(/usr/bin/jq --arg v "128" '.wled.brightness_dimmed = $v' ${CONFIG}) >  ${CONFIG}                 
+	/usr/bin/cat <<< $(/usr/bin/jq --arg v "true" '.wled.boot_preset = $v' ${CONFIG}) >  ${CONFIG}                 
+	/usr/bin/cat <<< $(/usr/bin/jq --arg v "true" '.wled.shutdown_preset = $v' ${CONFIG}) >  ${CONFIG}                 
 fi
 
 #3.2.6
@@ -118,5 +123,13 @@ if [[ -z ${IPCONTROL} ]]; then
 	/usr/bin/cat <<< $(/usr/bin/jq --arg v "false" '.mupibox.ip_control_backend = $v' ${CONFIG}) >  ${CONFIG}
 fi
 /usr/bin/cat <<< $(/usr/bin/jq 'del(.wled.ip)' ${CONFIG}) > ${CONFIG}
+WLED=$(/usr/bin/cat ${CONFIG} | grep boot_preset)
+if [[ -z ${WLED} ]]; then
+	/usr/bin/cat <<< $(/usr/bin/jq --arg v "" '.wled.startup_id = $v' ${CONFIG}) >  ${CONFIG}                 
+	/usr/bin/cat <<< $(/usr/bin/jq --arg v "255" '.wled.brightness_default = $v' ${CONFIG}) >  ${CONFIG}                 
+	/usr/bin/cat <<< $(/usr/bin/jq --arg v "128" '.wled.brightness_dimmed = $v' ${CONFIG}) >  ${CONFIG}                 
+	/usr/bin/cat <<< $(/usr/bin/jq --arg v "true" '.wled.boot_preset = $v' ${CONFIG}) >  ${CONFIG}                 
+	/usr/bin/cat <<< $(/usr/bin/jq --arg v "true" '.wled.shutdown_preset = $v' ${CONFIG}) >  ${CONFIG}                 
+fi
 
 /usr/bin/cat <<< $(/usr/bin/jq '.mupibox.AudioDevices += [{"tname": "mupihat","ufname": "MuPiHat for MuPiBox"},{"tname": "rpi-bcm2835-3.5mm","ufname": "Onboard 3.5mm output"},{"tname": "rpi-bcm2835-hdmi","ufname": "Onboard HDMI output"},{"tname": "hifiberry-amp","ufname": "HifiBerry AMP / AMP+"},{"tname": "hifiberry-dac","ufname": "HifiBerry DAC / MiniAmp"},{"tname": "hifiberry-dacplus","ufname": "HifiBerry DAC+ / DAC+ Pro / AMP2"},{"tname": "usb-dac","ufname": "Any USB Audio DAC (Auto detection)"}]' ${CONFIG}) >  ${CONFIG}

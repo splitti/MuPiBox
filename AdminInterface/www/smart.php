@@ -3,6 +3,8 @@
 	$CHANGE_TXT="<div id='lbinfo'><ul id='lbinfo'>";
 	include ('includes/header.php');
 
+
+
 	if( $_POST['generate_chatId'] )
 		{
 		$command="sudo bash -c '/usr/local/bin/mupibox/./telegram_set_deviceid.sh'";
@@ -59,6 +61,10 @@
 	$wled_info_data = json_decode($info_string, true);
 	$presets_string = file_get_contents('/tmp/.wled.presets.json', true);
 	$wled_presets_data = json_decode($presets_string, true);
+	
+	/*if wled changed bla blubb
+	'curl -H "Content-Type: application/x-www-form-urlencoded" -d "BP='.presetsboot.'&&CA='.brightness.'&&BO='.bootonoff.'" -X POST http://'.$wled_info_data["info"]["ip"].'/settings/leds'
+*/
 
 	if( $change == 1 )
 		{
@@ -114,7 +120,7 @@
    </li>
 
    <li id="li_1" ><div>
-     <label class="labelchecked" for="telegram_active">Telegram activation state:&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; <input type="checkbox" id="telegram_active"  name="telegram_active" <?php
+     <label class="labelchecked" for="telegram_active">Telegram activation state:&nbsp; &nbsp; <input type="checkbox" id="telegram_active"  name="telegram_active" <?php
      if( $data["telegram"]["active"] )
       {
       print "checked";
@@ -166,7 +172,7 @@
                 <tr><td>Name: </td><td><?php print $wled_info_data["info"]["name"]; ?></td></tr>
 <tr><td>ESP: </td><td><?php print $wled_info_data["info"]["arch"]; ?></td></tr>
                 <tr><td>Version: </td><td><?php print $wled_info_data["info"]["ver"]; ?></td></tr></table></p>
-
+				<h3>WLED existing presets</h3>
                 <p><table class="version"><tr><th>ID</th><th>PRESET</th></tr>
                                 <?php
                                 $presets = $wled_presets_data;
@@ -255,7 +261,24 @@ foreach($presets as $preset) {
 	</select></div></p>
 
    <li id="li_1" ><div>
-     <label class="labelchecked" for="wled_active">WLED activation state:&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; <input type="checkbox" id="wled_active"  name="wled_active" <?php
+     <label class="labelchecked" for="wled_boot_active">WLED activation boot preset:&nbsp; &nbsp; <input type="checkbox" id="wled_boot_active"  name="wled_boot_active" <?php
+     if( $data["wled"]["active"] )
+      {
+      print "checked";
+      }
+?> /></label></div>
+
+   <li id="li_1" ><div>
+     <label class="labelchecked" for="wled_shutdown_active">WLED activation shutdown preset:&nbsp; &nbsp; <input type="checkbox" id="wled_shutdown_active"  name="wled_shutdown_active" <?php
+     if( $data["wled"]["active"] )
+      {
+      print "checked";
+      }
+?> /></label></div>
+
+
+   <li id="li_1" ><div>
+     <label class="labelchecked" for="wled_active">WLED activation state:&nbsp; &nbsp; <input type="checkbox" id="wled_active"  name="wled_active" <?php
      if( $data["wled"]["active"] )
       {
       print "checked";

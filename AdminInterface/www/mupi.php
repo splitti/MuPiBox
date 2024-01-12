@@ -264,9 +264,32 @@
  if( $data["mupibox"]["physicalDevice"]!=$_POST['audio'] && $_POST['audioset'])
   {
   $data["mupibox"]["physicalDevice"]=$_POST['audio'];
-  $command = "sudo /boot/dietpi/func/dietpi-set_hardware soundcard '" . $_POST['audio'] . "'";
-  $change_soundcard = exec($command, $output, $change_soundcard );
-  $CHANGE_TXT=$CHANGE_TXT."<li>Soundcard changed to  ".$data["mupibox"]["physicalDevice"]." ---</li>";
+  if( $_POST['audio'] == "mupihat" )
+	{
+	$command = "sudo /boot/dietpi/func/dietpi-set_hardware soundcard 'hifiberry-dac'";
+	$change_soundcard = exec($command, $output, $change_soundcard );
+	
+	exec("sudo sed -zi '/#--------MuPiHAT--------/!s/$/\n#--------MuPiHAT--------/' /boot/config.txt");
+	exec("sudo sed -zi '/dtparam=i2c_arm=on/!s/$/\ndtparam=i2c_arm=on/' /boot/config.txt");
+	exec("sudo sed -zi '/dtparam=i2c1=on/!s/$/\ndtparam=i2c1=on/' /boot/config.txt");
+	exec("sudo sed -zi '/dtparam=i2c_arm_baudrate=50000/!s/$/\ndtparam=i2c_arm_baudrate=50000/' /boot/config.txt");
+	exec("sudo sed -zi '/dtoverlay=max98357a,sdmode-pin=16/!s/$/\ndtoverlay=max98357a,sdmode-pin=16/' /boot/config.txt");
+	exec("sudo sed -zi '/dtoverlay=i2s-mmap/!s/$/\ndtoverlay=i2s-mmap/' /boot/config.txt");
+	$CHANGE_TXT=$CHANGE_TXT."<li>Soundcard changed to  MuPiHat ---</li>";
+	}
+  else
+	{
+	exec("sudo sed -i '/#--------MuPiHAT--------/d' /boot/config.txt");
+	exec("sudo sed -i '/dtparam=i2c_arm=on/d' /boot/config.txt");
+	exec("sudo sed -i '/dtparam=i2c1=on/d' /boot/config.txt");
+	exec("sudo sed -i '/dtparam=i2c_arm_baudrate=50000/d' /boot/config.txt");
+	exec("sudo sed -i '/dtoverlay=max98357a,sdmode-pin=16/d' /boot/config.txt");
+	exec("sudo sed -i '/dtoverlay=i2s-mmap/d' /boot/config.txt");
+	
+	$command = "sudo /boot/dietpi/func/dietpi-set_hardware soundcard '" . $_POST['audio'] . "'";
+	$change_soundcard = exec($command, $output, $change_soundcard );
+	$CHANGE_TXT=$CHANGE_TXT."<li>Soundcard changed to  ".$data["mupibox"]["physicalDevice"]." ---</li>";
+	}
   $change=2;
   }
  if( $data["mupibox"]["host"]!=$_POST['hostname'] && $_POST['submithn'])
