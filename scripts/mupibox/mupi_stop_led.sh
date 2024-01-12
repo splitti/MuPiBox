@@ -1,18 +1,5 @@
 #!/bin/sh
 #
 
-MUPIBOX_CONFIG="/etc/mupibox/mupiboxconfig.json"
-
-ledPin=$(/usr/bin/jq -r .shim.ledPin ${MUPIBOX_CONFIG})
-ledMax=$(($(/usr/bin/jq -r .shim.ledBrightnessMax ${MUPIBOX_CONFIG})/100))
-rm /tmp/.power_led
-sleep 1
-
-for iteration in 1 2 3 4 5 6 7 8 9 10 11 12; do
-	echo "${ledPin}=0" > /dev/pi-blaster
-	/bin/sleep 0.2
-	echo "${ledPin}=${ledMax}" > /dev/pi-blaster
-	/bin/sleep 0.2
-done
-
-echo "${ledPin}=0" > /dev/pi-blaster
+ps -ef | grep 'led_control.py' | grep -v grep | awk '{print $2}' | xargs kill > /dev/null
+ps -ef | grep 'mupi_start_led.sh' | grep -v grep | awk '{print $2}' | xargs kill > /dev/null

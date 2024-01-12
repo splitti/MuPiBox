@@ -8,6 +8,7 @@ DefaultDependencies=no
 Type=simple
 RemainAfterExit=true
 ExecStart=/usr/local/bin/mupibox/./mupi_start_led.sh
+ExecStop=/usr/local/bin/mupibox/./mupi_stop_led.sh
 KillMode=process
 
 [Install]
