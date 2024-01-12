@@ -5,7 +5,7 @@ This script controls the power led.
 
 __author__ = "Olaf Splitt"
 __license__ = "GPLv3"
-__version__ = "0.0.1"
+__version__ = "1.0.1"
 __email__ = "splitti@mupibox.de"
 __status__ = "dev"
 
@@ -57,7 +57,6 @@ def init():
         for x in range(0, 10, +1):
             led_control(0, int(JSON_DATA["led_max_brightness"]), 0.003)
             led_control(int(JSON_DATA["led_max_brightness"]), 0, 0.003)
-        led_control(int(JSON_DATA["led_max_brightness"]), 0, 0.003)
         tmp = os.popen("ps -ef | grep chromium-browser | grep http | grep -v grep").read()
     led_control(0, int(JSON_DATA["led_max_brightness"]), 0.01)
 
