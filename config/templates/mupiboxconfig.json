@@ -126,6 +126,10 @@
 			],
 		"AudioDevices": [
 			{
+				"tname": "mupihat",
+				"ufname": "MuPiHat for MuPiBox"
+			},
+			{
 				"tname": "rpi-bcm2835-3.5mm",
 				"ufname": "Onboard 3.5mm output"
 			},

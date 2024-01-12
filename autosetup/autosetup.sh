@@ -184,21 +184,21 @@ exec 3>${LOG}
 
 	###############################################################################################
 
-	echo -e "XXX\n${STEP}\nInstall Pi-Blaster... \nXXX"	
-	before=$(date +%s)
-	sudo rm -R /home/dietpi/pi-blaster >&3 2>&3
-	sudo su dietpi -c 'cd /home/dietpi/; git clone https://github.com/splitti/pi-blaster.git' >&3 2>&3
-	after=$(date +%s)
-	echo -e "## Install Pi-Blaster  ##  finished after $((after - $before)) seconds" >&3 2>&3
-	STEP=$(($STEP + 1))
+	#echo -e "XXX\n${STEP}\nInstall Pi-Blaster... \nXXX"	
+	#before=$(date +%s)
+	#sudo rm -R /home/dietpi/pi-blaster >&3 2>&3
+	#sudo su dietpi -c 'cd /home/dietpi/; git clone https://github.com/splitti/pi-blaster.git' >&3 2>&3
+	#after=$(date +%s)
+	#echo -e "## Install Pi-Blaster  ##  finished after $((after - $before)) seconds" >&3 2>&3
+	#STEP=$(($STEP + 1))
 
-	echo -e "XXX\n${STEP}\nConfigure Pi-Blaster... \nXXX"	
-	before=$(date +%s)
-	sudo su - -c 'cd /home/dietpi/pi-blaster; ./autogen.sh; ./configure; make; make install' >&3 2>&3
-	sudo /usr/bin/sed -i 's/DAEMON_ARGS=""/DAEMON_ARGS="--gpio 25"/g' /etc/init.d/pi-blaster.boot.sh >&3 2>&3
-	after=$(date +%s)
-	echo -e "## Configure Pi-Blaster  ##  finished after $((after - $before)) seconds" >&3 2>&3
-	STEP=$(($STEP + 1))
+	#echo -e "XXX\n${STEP}\nConfigure Pi-Blaster... \nXXX"	
+	#before=$(date +%s)
+	#sudo su - -c 'cd /home/dietpi/pi-blaster; ./autogen.sh; ./configure; make; make install' >&3 2>&3
+	#sudo /usr/bin/sed -i 's/DAEMON_ARGS=""/DAEMON_ARGS="--gpio 25"/g' /etc/init.d/pi-blaster.boot.sh >&3 2>&3
+	#after=$(date +%s)
+	#echo -e "## Configure Pi-Blaster  ##  finished after $((after - $before)) seconds" >&3 2>&3
+	#STEP=$(($STEP + 1))
 
 	###############################################################################################
 

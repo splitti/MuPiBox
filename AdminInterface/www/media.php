@@ -153,6 +153,10 @@
 				{
 				print $all_media['cover'];
 				}
+			if( $all_media['type'] == "rss" )
+				{
+				print $all_media['cover'];
+				}
 			if( $all_media['type'] == "spotify" )
 				{
 				if ( $all_media['artistcover'] )
@@ -253,6 +257,7 @@
 		<option value="audiobook">Audiobook</option>
 		<option value="music">Music</option>
 		<option value="radio">Radio</option>
+		<option value="rss">RSS</option>
 		<option value="all_media">All media</option>
 	</select>
 	<input id="saveForm" class="button_text" type="submit" name="submit" value="Submit" />
