@@ -53,12 +53,11 @@
         <h3 class="modal-title" id="exampleModalCenterTitle">Please Donate</h3>
       </div>
       <div class="modal-body">
-       <p>The MuPiBox is an open source project and it should stay that way. Erik (nero) and Olaf (splitti) are constantly developing the box, putting a lot of love and energy into the project. The two also offer you support in Discord.</p>
+		<p>The team continues to work on new functions, hardware expansions (MuPiHAT), optimizations and much more. We also offer you support in the Discord.</p>
 
        <p>Please honor the work and donate a small amount:</p>
        <ul>
-         <li><a href="https://paypal.me/EGerhardt" target="_blank">Paypal to Erik (nero)</a></li>
-         <li><a href="https://paypal.me/splittscheid" target="_blank">Paypal to Olaf (splitti)</a></li>
+         <li><a href="https://paypal.me/MuPiBox" target="_blank">Paypal to MuPiBox</a></li>
       </ul>
 	  <p><center><img src='/images/thank-you.jpg' width='300px' /></center></p>
       </div>

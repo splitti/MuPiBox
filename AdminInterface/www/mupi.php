@@ -257,7 +257,7 @@
 		{
 		$brcommand="sudo su - -c 'echo " . $new_bn . " > /sys/class/backlight/rpi_backlight/brightness'";
 		$set_brightness = exec($brcommand, $broutput );
-		$CHANGE_TXT=$CHANGE_TXT."<li>Brightness: " . $new_bn . "</li>";
+		$CHANGE_TXT=$CHANGE_TXT."<li>Backlight-Brightness: " . $_POST['newbrightness'] . "%</li>";
 		$change=2;
 		}
   }
@@ -269,13 +269,13 @@
 	$command = "sudo /boot/dietpi/func/dietpi-set_hardware soundcard 'hifiberry-dac'";
 	$change_soundcard = exec($command, $output, $change_soundcard );
 	
-	exec("sudo sed -zi '/#--------MuPiHAT--------/!s/$/\n#--------MuPiHAT--------/' /boot/config.txt");
+	exec("sudo su - -c \"sudo sed -zi '/#--------MuPiHAT--------/!s/$/\n#--------MuPiHAT--------/' /boot/config.txt\"");
 	exec("sudo sed -zi '/dtparam=i2c_arm=on/!s/$/\ndtparam=i2c_arm=on/' /boot/config.txt");
 	exec("sudo sed -zi '/dtparam=i2c1=on/!s/$/\ndtparam=i2c1=on/' /boot/config.txt");
 	exec("sudo sed -zi '/dtparam=i2c_arm_baudrate=50000/!s/$/\ndtparam=i2c_arm_baudrate=50000/' /boot/config.txt");
 	exec("sudo sed -zi '/dtoverlay=max98357a,sdmode-pin=16/!s/$/\ndtoverlay=max98357a,sdmode-pin=16/' /boot/config.txt");
 	exec("sudo sed -zi '/dtoverlay=i2s-mmap/!s/$/\ndtoverlay=i2s-mmap/' /boot/config.txt");
-	$CHANGE_TXT=$CHANGE_TXT."<li>Soundcard changed to  MuPiHat ---</li>";
+	$CHANGE_TXT=$CHANGE_TXT."<li>Soundcard changed to  MuPiHat</li>";
 	}
   else
 	{
@@ -285,10 +285,10 @@
 	exec("sudo sed -i '/dtparam=i2c_arm_baudrate=50000/d' /boot/config.txt");
 	exec("sudo sed -i '/dtoverlay=max98357a,sdmode-pin=16/d' /boot/config.txt");
 	exec("sudo sed -i '/dtoverlay=i2s-mmap/d' /boot/config.txt");
-	
 	$command = "sudo /boot/dietpi/func/dietpi-set_hardware soundcard '" . $_POST['audio'] . "'";
 	$change_soundcard = exec($command, $output, $change_soundcard );
-	$CHANGE_TXT=$CHANGE_TXT."<li>Soundcard changed to  ".$data["mupibox"]["physicalDevice"]." ---</li>";
+	
+	$CHANGE_TXT=$CHANGE_TXT."<li>Soundcard changed to  ".$data["mupibox"]["physicalDevice"]."x</li>";
 	}
   $change=2;
   }
@@ -738,7 +738,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 					echo $new_bn;
 				?>%</output>				
 				<input class="range slider-progress" data-tick-step="20" name="newbrightness" type="range" min="0" max="100" step="20.0" value="<?php
-					echo $boutput[0];
+					echo $new_bn;
 				?>" oninput="this.previousElementSibling.value = this.value + '%'">
 				</div>
 			</li>
