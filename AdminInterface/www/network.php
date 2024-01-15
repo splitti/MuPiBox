@@ -76,14 +76,14 @@
 		
 	if( $_POST['change_samba'] == "enable & start" )
 		{
-		$command = "sudo apt-get install samba -y && sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/smb.conf -O /etc/samba/smb.conf && sudo systemctl enable smbd.service && sudo systemctl start smbd.service";
+		$command = "sudo apt-get install samba wsdd -y && sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/smb.conf -O /etc/samba/smb.conf && sudo systemctl enable smbd.service && sudo systemctl start smbd.service";
 		exec($command, $output, $result );
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Samba enabled</li>";
 		}
 	else if( $_POST['change_samba'] == "stop & disable" )
 		{
-		$command = "sudo systemctl stop smbd.service && sudo systemctl disable smbd.service && sudo apt-get remove samba -y";
+		$command = "sudo systemctl stop smbd.service && sudo systemctl disable smbd.service && sudo apt-get remove samba wsdd -y";
 		exec($command, $output, $result );
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Samba disabled</li>";
@@ -472,7 +472,9 @@
 		</li>
 
 		<li class="li_1"><h2>Samba</h2>
-			<p>Disabling this service will result in faster boot time.</p><p>
+			<p>Disabling this service will result in faster boot time.</p>
+			<p>New: The package wsdd (Web-Service-Discovery-Daemon) will be also installed. </p>
+			<p>
 			<?php 
 			echo "Samba-Service Status: <b>".$samba_state."</b>";
 			?>
