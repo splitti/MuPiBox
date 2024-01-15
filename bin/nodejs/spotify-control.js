@@ -611,6 +611,7 @@ function playURL(playedURL){
   player.setVolume(volumeStart);
   log.debug(nowDate.toLocaleString() + ": " + playedURL);
   if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Start playing stream"');
+  if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_RSS_Radio.py');
 }
 
   /*seek 30 secends back or forward*/
