@@ -5,6 +5,8 @@
 
 	if( $_POST['change_wled'] )
 		{
+		$data["wled"]["baud_rate"] = $_POST['baud_rate'];
+		$data["wled"]["com_port"] = $_POST['com_port'];
 		$data["wled"]["brightness_dimmed"] = $_POST['brightness_dimmed'];
 		$data["wled"]["brightness_default"] = $_POST['brightness_default'];
 		$data["wled"]["shutdown_id"] = $_POST['wled_shutdown_preset'];
@@ -21,10 +23,12 @@
 		if( $_POST['wled_boot_active'] )
 		{
 			$data["wled"]["boot_active"]=true;
+			curl -H "Content-Type: application/x-www-form-urlencoded" -d "BP='.$data["wled"]["startup_id"].'&&CA='.$data["wled"]["brightness_default"].'&&BO=on" -X POST http://'.$wled_info_data["info"]["ip"].'/settings/leds'
 		}
 		else
 		{
 			$data["wled"]["boot_active"]=false;			
+			curl -H "Content-Type: application/x-www-form-urlencoded" -d "BP='.$data["wled"]["startup_id"].'&&CA='.$data["wled"]["brightness_default"].'&&BO=off" -X POST http://'.$wled_info_data["info"]["ip"].'/settings/leds'
 		}
 		if( $_POST['wled_active'] )
 		{
@@ -86,7 +90,7 @@
 	$change=3;
 	}
 
-	$command='sudo python3 /usr/local/bin/mupibox/wled_get_data.py -s '.$data["wled"]["serial"].' -b '.$data["baud"]["brightness_dimmed"].' -j {"v":true} && sleep 1';
+	$command='sudo python3 /usr/local/bin/mupibox/wled_get_data.py -s '.$data["wled"]["com_port"].' -b '.$data["wled"]["baud_rate"].' -j {"v":true}';
 	exec($command);
 
 	$info_string = file_get_contents('/tmp/.wled.info.json', true);
@@ -94,10 +98,6 @@
 	$presets_string = file_get_contents('/tmp/.wled.presets.json', true);
 	$wled_presets_data = json_decode($presets_string, true);
 	
-	/*if wled changed bla blubb
-	'curl -H "Content-Type: application/x-www-form-urlencoded" -d "BP='.presetsboot.'&&CA='.brightness.'&&BO='.bootonoff.'" -X POST http://'.$wled_info_data["info"]["ip"].'/settings/leds'
-*/
-
 	if( $change == 1 )
 		{
 		$json_object = json_encode($data);
@@ -225,6 +225,37 @@
                                         $i+=1;
                                 }
                                 ?></table></p>
+			<li id="li_1" >
+				<h2>Serial / Com-Port</h2>
+				<p>Just change this value, if you really know what you do!</p>
+				<div>
+				<input id="com_port" name="com_port" class="element text medium" type="text" maxlength="255" value="<?php
+				print $data["wled"]["com_port"];
+				?>" />
+				</div>
+			</li>
+			<li id="li_1" >
+				<h2>Baud-rate</h2>
+				<p>Serial connection speed in bits per second:</p>
+				<div>
+				<select id="baud_rate" name="baud_rate" class="element text medium">
+				<?php 
+				$baud_rates = array(300,1200,2400,4800,9600,19200,38400,57600,115200,230400,460800,921600);
+				foreach($baud_rates as $baud) {
+				if( $baud == $data["wled"]["baud_rate"] )
+					{
+					$selected = " selected=\"selected\"";
+					}
+				else
+					{
+					$selected = "";
+					}
+				print "<option value=\"". $baud . "\"" . $selected  . ">" . $baud . "bps</option>";
+				}
+				?>
+				</select></div>
+			</li>
+		
                 <p>
 	<h3>Set Boot-Preset</h3>
                 <div>
