@@ -210,8 +210,8 @@
 		"shutdown_id": "",
 		"brightness_default": "255",
 		"brightness_dimmed": "128",
-		"boot_preset": true,
-		"shutdown_preset": true
+		"boot_active": false,
+		"shutdown_active": false
 	}
 }
 

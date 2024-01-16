@@ -6,6 +6,7 @@
 
 CONFIG="/etc/mupibox/mupiboxconfig.json"
 SHUT_SPLASH=$(/usr/bin/jq -r .mupibox.shutSplash ${CONFIG})
+wled_shut_active=$(/usr/bin/jq -r .wled.shutdown_active ${CONFIG})
 wled_shut_id=$(/usr/bin/jq -r .wled.shutdown_id ${CONFIG})
 wled_baud_rate=$(/usr/bin/jq -r .wled.baud_rate ${CONFIG})
 wled_com_port=$(/usr/bin/jq -r .wled.com_port ${CONFIG})
@@ -14,10 +15,13 @@ wled_data='{"on":"t","v":"true","ps":'${wled_main_id}',"bri":'${wled_brightness_
 TELEGRAM=$(/usr/bin/jq -r .telegram.active ${CONFIG})
 TELEGRAM_CHATID=$(/usr/bin/jq -r .telegram.chatId ${CONFIG})
 TELEGRAM_TOKEN=$(/usr/bin/jq -r .telegram.token ${CONFIG})
+if [ "${wled_shut_active}" ]; then
+	sudo python3 /usr/local/bin/mupibox/wled_send_data.py ${wled_com_port} ${wled_baud_rate} ${wled_data}
+fi
 if [ "${TELEGRAM}" ] && [ ${#TELEGRAM_CHATID} -ge 1 ] && [ ${#TELEGRAM_TOKEN} -ge 1 ]; then
 	/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "MuPiBox shutdown"
 fi
-sudo python3 /usr/local/bin/mupibox/wled_send_data.py ${wled_com_port} ${wled_baud_rate} ${wled_data}
+
 killall -s 9 -w -q chromium-browser
 /usr/bin/fbv ${SHUT_SPLASH} &
 sudo /usr/local/bin/mupibox/./setting_update.sh

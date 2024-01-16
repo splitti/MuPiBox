@@ -3,6 +3,14 @@
 	$CHANGE_TXT="<div id='lbinfo'><ul id='lbinfo'>";
 	include ('includes/header.php');
 
+	$command='sudo python3 /usr/local/bin/mupibox/wled_get_data.py -s '.$data["wled"]["com_port"].' -b '.$data["wled"]["baud_rate"].' -j {"v":true}';
+	exec($command);
+
+	$info_string = file_get_contents('/tmp/.wled.info.json', true);
+	$wled_info_data = json_decode($info_string, true);
+	$presets_string = file_get_contents('/tmp/.wled.presets.json', true);
+	$wled_presets_data = json_decode($presets_string, true);
+
 	if( $_POST['change_wled'] )
 		{
 		$data["wled"]["baud_rate"] = $_POST['baud_rate'];
@@ -12,7 +20,7 @@
 		$data["wled"]["shutdown_id"] = $_POST['wled_shutdown_preset'];
 		$data["wled"]["startup_id"] = $_POST['wled_boot_preset'];
 		$data["wled"]["main_id"] = $_POST['wled_main_preset'];
-		if( $_POST['wled_shutdown_active'] )
+		if( $_POST['wled_shutdown_active'] == "on" )
 		{
 			$data["wled"]["shutdown_active"]=true;
 		}
@@ -20,15 +28,16 @@
 		{
 			$data["wled"]["shutdown_active"]=false;			
 		}
-		if( $_POST['wled_boot_active'] )
+	
+		if( $_POST['wled_boot_active'] == "on" )
 		{
 			$data["wled"]["boot_active"]=true;
-			curl -H "Content-Type: application/x-www-form-urlencoded" -d "BP='.$data["wled"]["startup_id"].'&&CA='.$data["wled"]["brightness_default"].'&&BO=on" -X POST http://'.$wled_info_data["info"]["ip"].'/settings/leds'
+			exec('curl -H "Content-Type: application/x-www-form-urlencoded" -d "BP='.$data["wled"]["startup_id"].'&&CA='.$data["wled"]["brightness_default"].'&&BO=on" -X POST http://'.$wled_info_data["info"]["ip"].'/settings/leds');
 		}
 		else
 		{
 			$data["wled"]["boot_active"]=false;			
-			curl -H "Content-Type: application/x-www-form-urlencoded" -d "BP='.$data["wled"]["startup_id"].'&&CA='.$data["wled"]["brightness_default"].'&&BO=off" -X POST http://'.$wled_info_data["info"]["ip"].'/settings/leds'
+			exec('curl -H "Content-Type: application/x-www-form-urlencoded" -d "BP='.$data["wled"]["startup_id"].'&&CA='.$data["wled"]["brightness_default"].'&&BO" -X POST http://'.$wled_info_data["info"]["ip"].'/settings/leds');
 		}
 		if( $_POST['wled_active'] )
 		{
@@ -89,14 +98,6 @@
 	$CHANGE_TXT=$CHANGE_TXT."<li>Telegram configuration saved...</li>";
 	$change=3;
 	}
-
-	$command='sudo python3 /usr/local/bin/mupibox/wled_get_data.py -s '.$data["wled"]["com_port"].' -b '.$data["wled"]["baud_rate"].' -j {"v":true}';
-	exec($command);
-
-	$info_string = file_get_contents('/tmp/.wled.info.json', true);
-	$wled_info_data = json_decode($info_string, true);
-	$presets_string = file_get_contents('/tmp/.wled.presets.json', true);
-	$wled_presets_data = json_decode($presets_string, true);
 	
 	if( $change == 1 )
 		{
@@ -332,7 +333,7 @@ foreach($presets as $preset) {
 
    <li id="li_1" ><div>
      <label class="labelchecked" for="wled_boot_active">WLED activation boot preset:&nbsp; &nbsp; <input type="checkbox" id="wled_boot_active"  name="wled_boot_active" <?php
-     if( $data["wled"]["active"] )
+     if( $data["wled"]["boot_active"] )
       {
       print "checked";
       }
@@ -340,7 +341,7 @@ foreach($presets as $preset) {
 
    <li id="li_1" ><div>
      <label class="labelchecked" for="wled_shutdown_active">WLED activation shutdown preset:&nbsp; &nbsp; <input type="checkbox" id="wled_shutdown_active"  name="wled_shutdown_active" <?php
-     if( $data["wled"]["active"] )
+     if( $data["wled"]["shutdown_active"] )
       {
       print "checked";
       }

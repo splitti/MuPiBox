@@ -32,13 +32,15 @@ do
 		#ledMin=$(echo "scale=2; $ledMin/100" | bc)
 		#ledMax=$(echo "scale=2; $ledMax/100" | bc)
 		displayState=`vcgencmd display_power | grep -o '.$'`
-		if [ ${displayState} -eq 0 ]
+		if [ ${displayState} -eq 0 ] && [ ${OLD_STATE} != ${displayState} ]
 		then
 			wled_data='{"on":"t","v":"true","ps":'${wled_main_id}',"bri":'${wled_brightness_dim}'}'
 			/usr/bin/cat <<< $(/usr/bin/jq --arg v "1" '.led_dim_mode = $v' ${TMP_LEDFILE}) >  ${TMP_LEDFILE}
+			OLD_STATE=${displayState}
 		else
 			wled_data='{"on":"t","v":"true","ps":'${wled_main_id}',"bri":'${wled_brightness_def}'}'
 			/usr/bin/cat <<< $(/usr/bin/jq --arg v "0" '.led_dim_mode = $v' ${TMP_LEDFILE}) >  ${TMP_LEDFILE}
+			OLD_STATE=${displayState}
 		fi
 		sudo python3 /usr/local/bin/mupibox/wled_send_data.py ${wled_com_port} ${wled_baud_rate} ${wled_data}
 done
