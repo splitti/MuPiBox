@@ -115,6 +115,8 @@ if [[ -z ${WLED} ]]; then
 	/usr/bin/cat <<< $(/usr/bin/jq --arg v "128" '.wled.brightness_dimmed = $v' ${CONFIG}) >  ${CONFIG}                 
 	/usr/bin/cat <<< $(/usr/bin/jq --arg v "true" '.wled.boot_preset = $v' ${CONFIG}) >  ${CONFIG}                 
 	/usr/bin/cat <<< $(/usr/bin/jq --arg v "true" '.wled.shutdown_preset = $v' ${CONFIG}) >  ${CONFIG}                 
+	/usr/bin/cat <<< $(/usr/bin/jq --arg v "115200" '.wled.baud_rate = $v' ${CONFIG}) >  ${CONFIG}
+	/usr/bin/cat <<< $(/usr/bin/jq --arg v "/dev/ttyUSB0" '.wled.com_port = $v' ${CONFIG}) >  ${CONFIG}
 fi
 
 #3.2.6
