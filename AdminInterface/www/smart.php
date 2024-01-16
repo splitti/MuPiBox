@@ -208,11 +208,12 @@
 		{ ?>
 			
 	<p><table class="version"><tr><td>IP: </td><td><?php print $wled_info_data["info"]["ip"]; ?></td></tr>
-                <tr><td>Name: </td><td><?php print $wled_info_data["info"]["name"]; ?></td></tr>
-<tr><td>ESP: </td><td><?php print $wled_info_data["info"]["arch"]; ?></td></tr>
-                <tr><td>Version: </td><td><?php print $wled_info_data["info"]["ver"]; ?></td></tr></table></p>
-				<h3>WLED existing presets</h3>
-                <p><table class="version"><tr><th>ID</th><th>PRESET</th></tr>
+	<tr><td>MAC: </td><td><?php print $wled_info_data["info"]["mac"]; ?></td></tr>
+    <tr><td>Name: </td><td><?php print $wled_info_data["info"]["name"]; ?></td></tr>
+	<tr><td>ESP: </td><td><?php print $wled_info_data["info"]["arch"]; ?></td></tr>
+    <tr><td>Version: </td><td><?php print $wled_info_data["info"]["ver"]; ?></td></tr></table></p>
+	<h3>WLED existing presets</h3>
+    <p><table class="version"><tr><th>ID</th><th>PRESET</th></tr>
                                 <?php
                                 $presets = $wled_presets_data;
                                 $i=0;
