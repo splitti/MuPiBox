@@ -49,8 +49,9 @@ if [ "${wled_active}" = "true" ]; then
 	wled_main_id=$(/usr/bin/jq -r .wled.main_id ${CONFIG})
 	wled_baud_rate=$(/usr/bin/jq -r .wled.baud_rate ${CONFIG})
 	wled_com_port=$(/usr/bin/jq -r .wled.com_port ${CONFIG})
-	wled_data='{"on":"t","v":"true","ps":'${wled_main_id}'}'
-	sudo python3 /usr/local/bin/mupibox/wled.py ${wled_com_port} ${wled_baud_rate} ${wled_data}
+	wled_brightness_def=$(/usr/bin/jq -r .wled.brightness_default ${CONFIG})
+	wled_data='{"on":"t","v":"true","ps":'${wled_main_id}',"bri":'${wled_brightness_def}'}'
+	sudo python3 /usr/local/bin/mupibox/wled_send_data.py ${wled_com_port} ${wled_baud_rate} ${wled_data}
 fi
 
 # BLUETOOTH

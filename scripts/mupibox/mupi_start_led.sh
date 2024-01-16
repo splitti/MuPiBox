@@ -23,13 +23,22 @@ do
 		ledPin=$(/usr/bin/jq -r .shim.ledPin ${MUPIBOX_CONFIG})
 		ledMax=$(/usr/bin/jq -r .shim.ledBrightnessMax ${MUPIBOX_CONFIG})
 		ledMin=$(/usr/bin/jq -r .shim.ledBrightnessMin ${MUPIBOX_CONFIG})
+		wled_main_id=$(/usr/bin/jq -r .wled.main_id ${CONFIG})
+		wled_baud_rate=$(/usr/bin/jq -r .wled.baud_rate ${CONFIG})
+		wled_com_port=$(/usr/bin/jq -r .wled.com_port ${CONFIG})
+		wled_brightness_def=$(/usr/bin/jq -r .wled.brightness_default ${CONFIG})
+		wled_brightness_dim=$(/usr/bin/jq -r .wled.brightness_default ${CONFIG})
+
 		#ledMin=$(echo "scale=2; $ledMin/100" | bc)
 		#ledMax=$(echo "scale=2; $ledMax/100" | bc)
 		displayState=`vcgencmd display_power | grep -o '.$'`
 		if [ ${displayState} -eq 0 ]
 		then
+			wled_data='{"on":"t","v":"true","ps":'${wled_main_id}',"bri":'${wled_brightness_dim}'}'
 			/usr/bin/cat <<< $(/usr/bin/jq --arg v "1" '.led_dim_mode = $v' ${TMP_LEDFILE}) >  ${TMP_LEDFILE}
 		else
+			wled_data='{"on":"t","v":"true","ps":'${wled_main_id}',"bri":'${wled_brightness_def}'}'
 			/usr/bin/cat <<< $(/usr/bin/jq --arg v "0" '.led_dim_mode = $v' ${TMP_LEDFILE}) >  ${TMP_LEDFILE}
 		fi
+		sudo python3 /usr/local/bin/mupibox/wled_send_data.py ${wled_com_port} ${wled_baud_rate} ${wled_data}
 done
