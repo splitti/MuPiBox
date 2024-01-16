@@ -203,6 +203,8 @@
 	},
 	"wled": {
 		"active": false,
+		"baud_rate": "115200",
+		"com_port": "/dev/ttyUSB0",
 		"startup_id": "",
 		"main_id": "",
 		"shutdown_id": "",

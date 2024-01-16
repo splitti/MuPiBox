@@ -86,7 +86,7 @@
 	$change=3;
 	}
 
-	$command='sudo python3 /usr/local/bin/mupibox/wled.py /dev/ttyUSB0 115200 {"v":true} && sleep 1';
+	$command='sudo python3 /usr/local/bin/mupibox/wled_get_data.py -s '.$data["wled"]["serial"].' -b '.$data["baud"]["brightness_dimmed"].' -j {"v":true} && sleep 1';
 	exec($command);
 
 	$info_string = file_get_contents('/tmp/.wled.info.json', true);

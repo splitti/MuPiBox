@@ -1,9 +1,27 @@
+"""
+Licence
+-------
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>
+"""
+__author__ = "ronbal / Olaf Splitt"
+__license__ = "GPLv3"
+__version__ = "1.0.0"
+__status__ = "stable"
+
 import sys
 import json
 import serial
-import json
-import time
-import requests
 
 # Überprüfen, ob genügend Argumente übergeben wurden
 if len(sys.argv) < 4:
@@ -23,26 +41,13 @@ try:
     ser.write(json_data.encode())
     print(f"JSON-Daten gesendet: {json_data}")
 
-    time.sleep(0.8)
     # Auf die Antwort warten und ausgeben
     response = ser.readline().decode('utf-8').strip()  # strip() entfernt führende und nachfolgende Leerzeichen
-    #print(f"Raw-Antwort von der seriellen Schnittstelle: {response}")
+    print(f"Raw-Antwort von der seriellen Schnittstelle: {response}")
 
-    f = open("/tmp/.wled.info.json", "w")
-    f.write(response)
-    f.close()
-
-    IP = json.loads(response)['info']['ip']
-
-    URL = "http://" + IP + "/presets.json"
-
-    r = requests.get(URL)
-    PRESETS = r.json()
-
-    f = open("/tmp/.wled.presets.json", "w")
-    f.write(json.dumps(PRESETS))
-    f.close()
-
+    # Zusätzlichen String extrahieren
+    additional_string = response.split(":")[-1].strip()
+    print(f"Zusätzlicher String: {additional_string}")
 
 except serial.SerialException as se:
     print(f"Serieller Fehler: {se}")

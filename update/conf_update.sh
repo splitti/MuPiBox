@@ -128,8 +128,11 @@ if [[ -z ${WLED} ]]; then
 	/usr/bin/cat <<< $(/usr/bin/jq --arg v "" '.wled.startup_id = $v' ${CONFIG}) >  ${CONFIG}                 
 	/usr/bin/cat <<< $(/usr/bin/jq --arg v "255" '.wled.brightness_default = $v' ${CONFIG}) >  ${CONFIG}                 
 	/usr/bin/cat <<< $(/usr/bin/jq --arg v "128" '.wled.brightness_dimmed = $v' ${CONFIG}) >  ${CONFIG}                 
-	/usr/bin/cat <<< $(/usr/bin/jq --arg v "true" '.wled.boot_preset = $v' ${CONFIG}) >  ${CONFIG}                 
-	/usr/bin/cat <<< $(/usr/bin/jq --arg v "true" '.wled.shutdown_preset = $v' ${CONFIG}) >  ${CONFIG}                 
+	/usr/bin/cat <<< $(/usr/bin/jq --arg v "true" '.wled.boot_preset = $v' ${CONFIG}) >  ${CONFIG}
+	/usr/bin/cat <<< $(/usr/bin/jq --arg v "true" '.wled.shutdown_preset = $v' ${CONFIG}) >  ${CONFIG}
+	/usr/bin/cat <<< $(/usr/bin/jq --arg v "115200" '.wled.baud_rate = $v' ${CONFIG}) >  ${CONFIG}
+	/usr/bin/cat <<< $(/usr/bin/jq --arg v "/dev/ttyUSB0" '.wled.com_port = $v' ${CONFIG}) >  ${CONFIG}
+	
 fi
 
 /usr/bin/cat <<< $(/usr/bin/jq '.mupibox.AudioDevices += [{"tname": "mupihat","ufname": "MuPiHat for MuPiBox"},{"tname": "rpi-bcm2835-3.5mm","ufname": "Onboard 3.5mm output"},{"tname": "rpi-bcm2835-hdmi","ufname": "Onboard HDMI output"},{"tname": "hifiberry-amp","ufname": "HifiBerry AMP / AMP+"},{"tname": "hifiberry-dac","ufname": "HifiBerry DAC / MiniAmp"},{"tname": "hifiberry-dacplus","ufname": "HifiBerry DAC+ / DAC+ Pro / AMP2"},{"tname": "usb-dac","ufname": "Any USB Audio DAC (Auto detection)"}]' ${CONFIG}) >  ${CONFIG}
