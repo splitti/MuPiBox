@@ -1357,4 +1357,6 @@ details > ul {
 	background-color: #C1EBFF;
 }
 
-
+.labelchecked {
+	font-size: 100%;
+}

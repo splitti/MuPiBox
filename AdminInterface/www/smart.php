@@ -3,8 +3,40 @@
 	$CHANGE_TXT="<div id='lbinfo'><ul id='lbinfo'>";
 	include ('includes/header.php');
 
-
-
+	if( $_POST['change_wled'] )
+		{
+		$data["wled"]["brightness_dimmed"] = $_POST['brightness_dimmed'];
+		$data["wled"]["brightness_default"] = $_POST['brightness_default'];
+		$data["wled"]["shutdown_id"] = $_POST['wled_shutdown_preset'];
+		$data["wled"]["startup_id"] = $_POST['wled_boot_preset'];
+		$data["wled"]["main_id"] = $_POST['wled_main_preset'];
+		if( $_POST['wled_shutdown_active'] )
+		{
+			$data["wled"]["shutdown_active"]=true;
+		}
+		else
+		{
+			$data["wled"]["shutdown_active"]=false;			
+		}
+		if( $_POST['wled_boot_active'] )
+		{
+			$data["wled"]["boot_active"]=true;
+		}
+		else
+		{
+			$data["wled"]["boot_active"]=false;			
+		}
+		if( $_POST['wled_active'] )
+		{
+			$data["wled"]["active"]=true;
+		}
+		else
+		{
+			$data["wled"]["active"]=false;			
+		}
+		$change=4;
+		$CHANGE_TXT=$CHANGE_TXT."<li>WLED settings changed...</li>";
+		}
 	if( $_POST['generate_chatId'] )
 		{
 		$command="sudo bash -c '/usr/local/bin/mupibox/./telegram_set_deviceid.sh'";
@@ -89,6 +121,12 @@
 		exec("sudo mv /tmp/.mupiboxconfig.json /etc/mupibox/mupiboxconfig.json");
 		$command="sudo su dietpi -c 'pm2 restart spotify-control'";
 		exec($command);
+		}
+	if( $change == 4 )
+		{
+		$json_object = json_encode($data);
+		$save_rc = file_put_contents('/tmp/.mupiboxconfig.json', $json_object);
+		exec("sudo mv /tmp/.mupiboxconfig.json /etc/mupibox/mupiboxconfig.json");
 		}
 	$CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 ?>
@@ -188,16 +226,15 @@
                                 }
                                 ?></table></p>
                 <p>
-	<h3>Set Start-Preset</h3>
+	<h3>Set Boot-Preset</h3>
                 <div>
-                <select id="wled_start_preset" name="wled_start_preset" class="element text medium">
+                <select id="wled_boot_preset" name="wled_boot_preset" class="element text medium">
 <?php
 $presets = $wled_presets_data;
 $i=0;
 foreach($presets as $preset) {
 	if( $i >0 )
 		{
-		print "<option value=\"". $i . "\"" . $selected  . ">" . $preset['n'] . "</option>";
 		if( $i == $data["wled"]["startup_id"] )
 				{
 				$selected = " selected=\"selected\"";
@@ -206,6 +243,7 @@ foreach($presets as $preset) {
 				{
 				$selected = "";
 				}
+		print "<option value=\"". $i . "\"" . $selected  . ">" . $preset['n'] . "</option>";
 		}
 	$i+=1;	
 	}
@@ -221,7 +259,6 @@ $i=0;
 foreach($presets as $preset) {
 	if( $i >0 )
 		{
-		print "<option value=\"". $i . "\"" . $selected  . ">" . $preset['n'] . "</option>";
 		if( $i == $data["wled"]["main_id"] )
 				{
 				$selected = " selected=\"selected\"";
@@ -230,6 +267,7 @@ foreach($presets as $preset) {
 				{
 				$selected = "";
 				}
+		print "<option value=\"". $i . "\"" . $selected  . ">" . $preset['n'] . "</option>";
 		}
 	$i+=1;	
 	}
@@ -245,7 +283,6 @@ $i=0;
 foreach($presets as $preset) {
 	if( $i >0 )
 		{
-		print "<option value=\"". $i . "\"" . $selected  . ">" . $preset['n'] . "</option>";
 		if( $i == $data["wled"]["shutdown_id"] )
 				{
 				$selected = " selected=\"selected\"";
@@ -254,6 +291,8 @@ foreach($presets as $preset) {
 				{
 				$selected = "";
 				}
+		print "<option value=\"". $i . "\"" . $selected  . ">" . $preset['n'] . "</option>";
+
 		}
 	$i+=1;	
 	}
@@ -275,8 +314,23 @@ foreach($presets as $preset) {
       print "checked";
       }
 ?> /></label></div>
+   <li id="li_1" >
+				<div>	<h3>Default brightness</h3>
+				<p>Please notice: This value will overwrite brightness settings of the presets!</p>
+					<output id="rangeval" class="rangeval"><?php echo $data["wled"]["brightness_default"]; ?></output>
+					<input class="range slider-progress" list="steplist_po" data-tick-step="1" name="brightness_default" type="range" min="0" max="255" step="1.0" value="<?php echo $data["wled"]["brightness_default"]; ?>" oninput="this.previousElementSibling.value = this.value">
+		
 
+				</div>
+			</li>
+   <li id="li_1" >
+				<div>	<h3>Dimmed brightness</h3>
+					<output id="rangeval" class="rangeval"><?php echo $data["wled"]["brightness_dimmed"]; ?></output>
+					<input class="range slider-progress" list="steplist_po" data-tick-step="1" name="brightness_dimmed" type="range" min="0" max="255" step="1.0" value="<?php echo $data["wled"]["brightness_dimmed"]; ?>" oninput="this.previousElementSibling.value = this.value">
+		
 
+				</div>
+			</li>
    <li id="li_1" ><div>
      <label class="labelchecked" for="wled_active">WLED activation state:&nbsp; &nbsp; <input type="checkbox" id="wled_active"  name="wled_active" <?php
      if( $data["wled"]["active"] )
