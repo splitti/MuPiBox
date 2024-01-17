@@ -16,7 +16,7 @@ CONFIG="/etc/mupibox/mupiboxconfig.json"
 LOG="/tmp/mupibox_update.log"
 exec 3>${LOG}
 service mupi_idle_shutdown stop
-packages2install="git libasound2 jq samba mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio"
+packages2install="git libasound2 jq samba mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio python3-serial"
 STEP=0
 VER_JSON="/tmp/version.json"
 OS=$(grep -E '^(VERSION_CODENAME)=' /etc/os-release)  >&3 2>&3
@@ -103,14 +103,14 @@ wget -O /tmp/installation.jpg https://raw.githubusercontent.com/splitti/MuPiBox/
 		fi
 		after=$(date +%s)
 		echo -e "## pip install requests  ##  finished after $((after - $before)) seconds" >&3 2>&3
-		before=$(date +%s)
-		installed=$(pip list | grep pyserial)
-		if [ ${#installed} = 0 ]; then
-			pip install pyserial --break-system-packages >&3 2>&3
-		fi
-		after=$(date +%s)
-		echo -e "## pip install pyserial  ##  finished after $((after - $before)) seconds" >&3 2>&3
-		STEP=$(($STEP + 1))
+		#before=$(date +%s)
+		#installed=$(pip list | grep pyserial)
+		#if [ ${#installed} = 0 ]; then
+		#	pip install pyserial --break-system-packages >&3 2>&3
+		#fi
+		#after=$(date +%s)
+		#echo -e "## pip install pyserial  ##  finished after $((after - $before)) seconds" >&3 2>&3
+		#STEP=$(($STEP + 1))
 	fi
 	
 	###############################################################################################
@@ -349,7 +349,7 @@ wget -O /tmp/installation.jpg https://raw.githubusercontent.com/splitti/MuPiBox/
 	#  echo '' | tee -a /boot/config.txt >&3 2>&3
 	#  echo 'initramfs initramfs.img' | tee -a /boot/config.txt >&3 2>&3
 	#fi
-
+	sudo usermod -aG dialout dietpi >&3 2>&3
 	after=$(date +%s)
 	echo -e "## Set environment	##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
