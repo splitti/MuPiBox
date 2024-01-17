@@ -35,12 +35,13 @@ do
 		if [ ${displayState} -eq 0 ] && [ ${OLD_STATE} != ${displayState} ]
 		then
 			wled_data='{"on":"t","v":"true","ps":'${wled_main_id}',"bri":'${wled_brightness_dim}'}'
+			sudo python3 /usr/local/bin/mupibox/wled_send_data.py -s ${wled_com_port} -b ${wled_baud_rate} -j ${wled_data}
 			/usr/bin/cat <<< $(/usr/bin/jq --arg v "1" '.led_dim_mode = $v' ${TMP_LEDFILE}) >  ${TMP_LEDFILE}
 			OLD_STATE=${displayState}
 		else
 			wled_data='{"on":"t","v":"true","ps":'${wled_main_id}',"bri":'${wled_brightness_def}'}'
+			sudo python3 /usr/local/bin/mupibox/wled_send_data.py -s ${wled_com_port} -b ${wled_baud_rate} -j ${wled_data}
 			/usr/bin/cat <<< $(/usr/bin/jq --arg v "0" '.led_dim_mode = $v' ${TMP_LEDFILE}) >  ${TMP_LEDFILE}
 			OLD_STATE=${displayState}
 		fi
-		sudo python3 /usr/local/bin/mupibox/wled_send_data.py ${wled_com_port} ${wled_baud_rate} ${wled_data}
 done
