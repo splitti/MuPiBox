@@ -22,6 +22,7 @@ __status__ = "stable"
 import sys
 import json
 import serial
+import getopt
 
 
 def infohelp():
