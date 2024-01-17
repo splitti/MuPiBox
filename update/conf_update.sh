@@ -125,7 +125,7 @@ if [[ -z ${IPCONTROL} ]]; then
 	/usr/bin/cat <<< $(/usr/bin/jq --arg v "false" '.mupibox.ip_control_backend = $v' ${CONFIG}) >  ${CONFIG}
 fi
 /usr/bin/cat <<< $(/usr/bin/jq 'del(.wled.ip)' ${CONFIG}) > ${CONFIG}
-WLED=$(/usr/bin/cat ${CONFIG} | grep boot_preset)
+WLED=$(/usr/bin/cat ${CONFIG} | grep com_port)
 if [[ -z ${WLED} ]]; then
 	/usr/bin/cat <<< $(/usr/bin/jq --arg v "" '.wled.startup_id = $v' ${CONFIG}) >  ${CONFIG}                 
 	/usr/bin/cat <<< $(/usr/bin/jq --arg v "255" '.wled.brightness_default = $v' ${CONFIG}) >  ${CONFIG}                 
