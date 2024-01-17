@@ -19,10 +19,14 @@ echo "{}" | tee ${TMP_LEDFILE}
 # WLED
 wled_active=$(/usr/bin/jq -r .wled.active ${CONFIG})
 if [ ${wled_active} ]; then
+	wled_com_port=$(/usr/bin/jq -r .wled.com_port ${CONFIG})
 	wled_main_id=$(/usr/bin/jq -r .wled.main_id ${CONFIG})
 	wled_baud_rate=$(/usr/bin/jq -r .wled.baud_rate ${CONFIG})
-	wled_com_port=$(/usr/bin/jq -r .wled.com_port ${CONFIG})
 	wled_brightness_def=$(/usr/bin/jq -r .wled.brightness_default ${CONFIG})
+	while [ ! -f ${wled_com_port} ] ;
+	do
+		  sleep 1
+	done
 	wled_data='{"ps":'${wled_main_id}'}'
 	sudo python3 /usr/local/bin/mupibox/wled_send_data.py -s ${wled_com_port} -b ${wled_baud_rate} -j ${wled_data}
 	wled_data='{"bri":'${wled_brightness_def}'}'
@@ -30,7 +34,7 @@ if [ ${wled_active} ]; then
 	wled_data='{"on":true}'
 	sudo python3 /usr/local/bin/mupibox/wled_send_data.py -s ${wled_com_port} -b ${wled_baud_rate} -j ${wled_data}
 fi
-sleep 30
+sleep 20
 
 while true
 do
