@@ -34,15 +34,6 @@ FP_CHROMIUM=$(command -v chromium-browser)
 #sudo nice -n -19 sudo -u dietpi xinit "$FP_CHROMIUM" $CHROMIUM_OPTS --homepage "${URL:-http://MuPiBox:8200}" -- -nocursor tty2 &
 xinit "$FP_CHROMIUM" $CHROMIUM_OPTS --homepage "${URL:-http://MuPiBox:8200}" -- -nocursor tty2 &
 
-# START SOUND
-START_SOUND=$(/usr/bin/jq -r .mupibox.startSound ${CONFIG})
-START_VOLUME=$(/usr/bin/jq -r .mupibox.startVolume ${CONFIG})
-AUDIO_DEVICE=$(/usr/bin/jq -r .mupibox.audioDevice ${CONFIG})
-/usr/bin/amixer sset ${AUDIO_DEVICE} ${START_VOLUME}%
-/usr/bin/mplayer -volume 100 ${START_SOUND} &
-
-x11vnc -ncache 10 -forever -display :0 &
-
 # WLED
 wled_active=$(/usr/bin/jq -r .wled.active ${CONFIG})
 if [ ${wled_active} ]; then
@@ -57,6 +48,17 @@ if [ ${wled_active} ]; then
 	wled_data='{"on":true}'
 	sudo python3 /usr/local/bin/mupibox/wled_send_data.py -s ${wled_com_port} -b ${wled_baud_rate} -j ${wled_data}
 fi
+
+
+# START SOUND
+START_SOUND=$(/usr/bin/jq -r .mupibox.startSound ${CONFIG})
+START_VOLUME=$(/usr/bin/jq -r .mupibox.startVolume ${CONFIG})
+AUDIO_DEVICE=$(/usr/bin/jq -r .mupibox.audioDevice ${CONFIG})
+/usr/bin/amixer sset ${AUDIO_DEVICE} ${START_VOLUME}%
+/usr/bin/mplayer -volume 100 ${START_SOUND} &
+
+x11vnc -ncache 10 -forever -display :0 &
+
 
 # BLUETOOTH
 pactl load-module module-bluetooth-discover

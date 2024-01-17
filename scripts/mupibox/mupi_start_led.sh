@@ -3,6 +3,7 @@
 
 MUPIBOX_CONFIG="/etc/mupibox/mupiboxconfig.json"
 TMP_LEDFILE="/tmp/.power_led"
+OLD_STATE=9
 
 ledPin=$(/usr/bin/jq -r .shim.ledPin ${MUPIBOX_CONFIG})
 ledMax=$(/usr/bin/jq -r .shim.ledBrightnessMax ${MUPIBOX_CONFIG})
@@ -26,7 +27,7 @@ do
 		wled_baud_rate=$(/usr/bin/jq -r .wled.baud_rate ${CONFIG})
 		wled_com_port=$(/usr/bin/jq -r .wled.com_port ${CONFIG})
 		wled_brightness_def=$(/usr/bin/jq -r .wled.brightness_default ${CONFIG})
-		wled_brightness_dim=$(/usr/bin/jq -r .wled.brightness_default ${CONFIG})
+		wled_brightness_dim=$(/usr/bin/jq -r .wled.brightness_dimmed ${CONFIG})
 
 		#ledMin=$(echo "scale=2; $ledMin/100" | bc)
 		#ledMax=$(echo "scale=2; $ledMax/100" | bc)
