@@ -45,7 +45,7 @@ x11vnc -ncache 10 -forever -display :0 &
 
 # WLED
 wled_active=$(/usr/bin/jq -r .wled.active ${CONFIG})
-if [ "${wled_active}" = "true" ]; then
+if [ ${wled_active} ]; then
 	wled_main_id=$(/usr/bin/jq -r .wled.main_id ${CONFIG})
 	wled_baud_rate=$(/usr/bin/jq -r .wled.baud_rate ${CONFIG})
 	wled_com_port=$(/usr/bin/jq -r .wled.com_port ${CONFIG})
