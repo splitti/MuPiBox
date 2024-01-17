@@ -34,12 +34,20 @@ do
 		displayState=`vcgencmd display_power | grep -o '.$'`
 		if [ ${displayState} -eq 0 ] && [ ${OLD_STATE} != ${displayState} ]
 		then
-			wled_data='{"on":"t","v":"true","ps":'${wled_main_id}',"bri":'${wled_brightness_dim}'}'
+			wled_data='{"ps":'${wled_main_id}'}'
+			sudo python3 /usr/local/bin/mupibox/wled_send_data.py -s ${wled_com_port} -b ${wled_baud_rate} -j ${wled_data}
+			wled_data='{"bri":'${wled_brightness_def}'}'
+			sudo python3 /usr/local/bin/mupibox/wled_send_data.py -s ${wled_com_port} -b ${wled_baud_rate} -j ${wled_data}
+			wled_data='{"on":"true"}'
 			sudo python3 /usr/local/bin/mupibox/wled_send_data.py -s ${wled_com_port} -b ${wled_baud_rate} -j ${wled_data}
 			/usr/bin/cat <<< $(/usr/bin/jq --arg v "1" '.led_dim_mode = $v' ${TMP_LEDFILE}) >  ${TMP_LEDFILE}
 			OLD_STATE=${displayState}
 		else
-			wled_data='{"on":"t","v":"true","ps":'${wled_main_id}',"bri":'${wled_brightness_def}'}'
+			wled_data='{"ps":'${wled_main_id}'}'
+			sudo python3 /usr/local/bin/mupibox/wled_send_data.py -s ${wled_com_port} -b ${wled_baud_rate} -j ${wled_data}
+			wled_data='{"bri":'${wled_brightness_def}'}'
+			sudo python3 /usr/local/bin/mupibox/wled_send_data.py -s ${wled_com_port} -b ${wled_baud_rate} -j ${wled_data}
+			wled_data='{"on":"true"}'
 			sudo python3 /usr/local/bin/mupibox/wled_send_data.py -s ${wled_com_port} -b ${wled_baud_rate} -j ${wled_data}
 			/usr/bin/cat <<< $(/usr/bin/jq --arg v "0" '.led_dim_mode = $v' ${TMP_LEDFILE}) >  ${TMP_LEDFILE}
 			OLD_STATE=${displayState}
