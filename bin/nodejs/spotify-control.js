@@ -156,6 +156,7 @@ var currentMeta = {
   activeShow: '',
   totalShows: '',
   currentPlayer: "",
+  currentType: "",
   playing: false,
   pause: false,
   album: "",
@@ -431,7 +432,8 @@ function play(){
       //currentMeta.playing = true;
 	    writeplayerstatePlay();
       if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Start playing"');
-      if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Local.py');
+      if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1 && (currentMeta.currentType === 'rss' || currentMeta.currentType === 'radio')) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Local.py');
+      if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1 && currentMeta.currentType === 'local') cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_RSS_Radio.py');
     }
   }
 }
@@ -823,6 +825,7 @@ function clearValidate(){
 
 async function useSpotify(command){
   currentMeta.currentPlayer = "spotify";
+  currentMeta.currentType = "spotify";
   let dir = command.dir;
   let newdevice = dir.split('/')[1];
   /*await getActiveDevice();*/
@@ -1024,11 +1027,13 @@ app.use(function(req, res){
 
   if(command.dir.includes("library") ){
     currentMeta.currentPlayer = "mplayer";
+    currentMeta.currentType = "local";
     playList(command.name);
   }
 
   if(command.dir.includes("radio") ){
     currentMeta.currentPlayer = "mplayer";
+    currentMeta.currentType = "radio";
     let dir = command.dir;
     let radioURL = dir.split('radio/').pop();
     radioURL = decodeURIComponent(radioURL);
@@ -1037,6 +1042,7 @@ app.use(function(req, res){
 
   if(command.dir.includes("rss") ){
     currentMeta.currentPlayer = "mplayer";
+    currentMeta.currentType = "rss";
     let dir = command.dir;
     let rssURL = dir.split('rss/').pop();
     rssURL = decodeURIComponent(rssURL);
