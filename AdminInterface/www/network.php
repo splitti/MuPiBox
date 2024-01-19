@@ -27,7 +27,14 @@
 		exec($command, $output, $result );
 
 		$change=1;
-		$CHANGE_TXT=$CHANGE_TXT."<li>Driver installed</li>";
+		if (file_exists("/tmp/driver-install.txt")) 
+			{
+			$CHANGE_TXT=$CHANGE_TXT."<li>Kernel-headers not installed. Please check correct arm_64bit-setting in /boot/config.txt (in V7, the setting must be 0).</li>";
+			}
+		else
+			{
+			$CHANGE_TXT=$CHANGE_TXT."<li>Driver installed</li>";
+			}
 		}
 	if( $_POST['RTL88X2BU'] == "Remove driver" )
 		{
