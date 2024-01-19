@@ -70,7 +70,13 @@
 			"version": "3.2.4",
 			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.2.4.zip",
 			"releaseinfo": "Bugfixing for adding Wifis"
+			},
+			{
+			"version": "3.3.0",
+			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.3.0.zip",
+			"releaseinfo": "Podcasts (RSS), DietPi-Dashboard, wsdd, WLED-Support, RTL88X2BU-Drivers, some bugs are fixed"
 			}
+
 		]
 	}
 }
