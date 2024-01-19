@@ -320,7 +320,7 @@ wget -O /tmp/installation.jpg https://raw.githubusercontent.com/splitti/MuPiBox/
 	sudo mv -f ${MUPI_SRC}/config/services/mupi_novnc.service /etc/systemd/system/mupi_novnc.service  >&3 2>&3
 	sudo mv -f ${MUPI_SRC}/config/services/mupi_powerled.service /etc/systemd/system/mupi_powerled.service  >&3 2>&3
 	sudo mv -f ${MUPI_SRC}/config/services/mupi_telegram.service /etc/systemd/system/mupi_telegram.service  >&3 2>&3
-	sudo mv -f ${MUPI_SRC}/config/services/dietpi-dashboard.service /etc/systemd/system/mupi_telegram.service  >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/config/services/dietpi-dashboard.service /etc/systemd/system/dietpi-dashboard.service  >&3 2>&3
 
 	systemctl daemon-reload >&3 2>&3
 	systemctl enable mupi_check_internet.service >&3 2>&3
