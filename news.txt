@@ -13,3 +13,4 @@ We will focus on <b>bookworm</b> and recommend you to update, or reinstall. See 
 <li id='linews' class='linews'>Bugfix: v7 Installations get</li>
 <li id='linews' class='linews'>Bugfix: Wrong values for display brightness in Admin-Interface</li>
 </ul>
+	
