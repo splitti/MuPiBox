@@ -16,5 +16,5 @@ if [ -d "/lib/modules/$(uname -r)/build" ]; then
 	chmod +x install-driver.sh
 	sudo ./install-driver.sh NoPrompt >> /home/dietpi/driver.txt
 elif
-	sudo echo "Kernel-headers not installed. Please check correct arm_64bit-setting in /boot/config.txt (in V7, the setting must be 0)." > /tmp/driver-install.txt
+	sudo touch /tmp/driver-install.txt
 fi
