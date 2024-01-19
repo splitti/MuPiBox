@@ -25,7 +25,7 @@ exec 3>${LOG}
 	OS=${OS:17}  >&3 2>&3
 
 	#packages2install="git libasound2 jq samba mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential raspberrypi-kernel-headers dkms"
-	packages2install="git libasound2 jq samba wsdd mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio python3-serial expect"
+	packages2install="git libasound2 jq samba wsdd mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio python3-serial"
 	STEP=0
 
 	###############################################################################################
@@ -101,7 +101,7 @@ exec 3>${LOG}
 		STEP=$(($STEP + 1))
 	fi
 	
-	sudo su - -c "sudo su - -c '/usr/bin/expect_autoexpect | /boot/dietpi/dietpi-software install 200'" >&3 2>&3
+	sudo su - -c "yes '' | /boot/dietpi/dietpi-software install 200" >&3 2>&3
 
 	###############################################################################################
 
