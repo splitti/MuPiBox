@@ -101,7 +101,8 @@ exec 3>${LOG}
 		STEP=$(($STEP + 1))
 	fi
 	
-	sudo su - -c "set -e; /usr/bin/expect_autoexpect | /boot/dietpi/dietpi-software install 200" & >&3 2>&3
+	set -e
+	sudo su - -c "/usr/bin/expect_autoexpect | /boot/dietpi/dietpi-software install 200" >&3 2>&3
 
 	###############################################################################################
 
