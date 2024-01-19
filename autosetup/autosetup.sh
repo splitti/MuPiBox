@@ -342,8 +342,8 @@ exec 3>${LOG}
 	chmod +x /opt/dietpi-dashboard/dietpi-dashboard >&3 2>&3
 	curl -sSfL https://raw.githubusercontent.com/ravenclaw900/DietPi-Dashboard/main/config.toml -o /opt/dietpi-dashboard/config.toml  >&3 2>&3
 	#bash -c 'su dietpi -c "yes \"\" | sudo /boot/dietpi/dietpi-software install 200"' >&3 2>&3
-	/usr/bin/sed -i 's/#terminal_user = "root"/terminal_user = "dietpi"/g' /opt/dietpi-dashboard/config.toml >&3 2>&3
-	#sudo /usr/bin/sed -i 's/pass = true/pass = false/g' /opt/dietpi-dashboard/config.toml >&3 2>&3
+	sudo /usr/bin/sed -i 's/#terminal_user = "root"/terminal_user = "dietpi"/g' /opt/dietpi-dashboard/config.toml >&3 2>&3
+	sudo /usr/bin/sed -i 's/pass = true/pass = false/g' /opt/dietpi-dashboard/config.toml >&3 2>&3
 	after=$(date +%s)
 	echo -e "## Setup DietPi-Dashboard  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
