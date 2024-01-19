@@ -23,7 +23,7 @@
 
 	if( $_POST['RTL88X2BU'] == "Install driver" )
 		{
-		$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/online/install_rtl88x2bu.sh | sudo bash";
+		$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/online/install_rtl88x2bu.sh | sudo su dietpi -c bash";
 		exec($command, $output, $result );
 
 		$change=1;
@@ -31,6 +31,11 @@
 		}
 	if( $_POST['RTL88X2BU'] == "Remove driver" )
 		{
+		$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/online/remove_rtl88x2bu.sh | sudo su dietpi -c bash";
+		exec($command, $output, $result );
+
+		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>Driver removed</li>";
 		}
 	if( $_POST['change_vnc'] == "stop & disable" )
 		{

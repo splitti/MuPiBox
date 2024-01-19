@@ -16,7 +16,7 @@ CONFIG="/etc/mupibox/mupiboxconfig.json"
 LOG="/tmp/mupibox_update.log"
 exec 3>${LOG}
 service mupi_idle_shutdown stop
-packages2install="git libasound2 jq samba mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio python3-serial"
+packages2install="git libasound2 jq samba wsdd mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio python3-serial expect"
 STEP=0
 VER_JSON="/tmp/version.json"
 OS=$(grep -E '^(VERSION_CODENAME)=' /etc/os-release)  >&3 2>&3
@@ -117,7 +117,7 @@ wget -O /tmp/installation.jpg https://raw.githubusercontent.com/splitti/MuPiBox/
 
 	echo -e "XXX\n${STEP}\nSetup DietPi-Dashboard... \nXXX"	
 	before=$(date +%s)
-	sudo su - -c "yes '' | sudo /boot/dietpi/dietpi-software install 200" >&3 2>&3
+	sudo su - -c "/usr/bin/expect_autoexpect | sudo /boot/dietpi/dietpi-software install 200" >&3 2>&3
 	sudo /usr/bin/sed -i 's/#terminal_user = "root"/terminal_user = "dietpi"/g' /opt/dietpi-dashboard/config.toml >&3 2>&3
 	sudo /usr/bin/sed -i 's/pass = true/pass = false/g' /opt/dietpi-dashboard/config.toml >&3 2>&3
 	after=$(date +%s)
