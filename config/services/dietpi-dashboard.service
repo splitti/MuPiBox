@@ -1,0 +1,14 @@
+[Unit]
+Description=Web Dashboard (DietPi)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+ExecStart=/opt/dietpi-dashboard/dietpi-dashboard
+# TTY input is required for web terminal input
+StandardInput=tty
+TTYPath=/dev/tty42
+StandardOutput=journal
+
+[Install]
+WantedBy=multi-user.target
