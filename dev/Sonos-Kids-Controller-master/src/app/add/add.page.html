@@ -31,7 +31,7 @@
                             <div>
                                 <ion-item>
                                     <ion-label class="dimmed-text">Media search type</ion-label>
-                                    <ion-select #searchTypeSelect interface="popover" [(ngModel)]="searchType" name="searchType" (ionChange)="searchTypeChanged()">
+                                    <ion-select #searchTypeSelect interface="popover" [(ngModel)]="searchType" name="searchType" (ionChange)="searchTypeChanged($event)">
                                         <ion-select-option value="artist_id">Artist ID</ion-select-option>
                                         <ion-select-option value="media_id">Media ID</ion-select-option>
                                         <ion-select-option value="show_id">Show ID</ion-select-option>
@@ -124,7 +124,7 @@
                             <div>
                                 <ion-item>
                                     <ion-label class="dimmed-text">Media search type</ion-label>
-                                    <ion-select #searchTypeSelect interface="popover" [(ngModel)]="searchType" name="searchType" (ionChange)="searchTypeChanged()">
+                                    <ion-select #searchTypeSelect interface="popover" [(ngModel)]="searchType" name="searchType" (ionChange)="searchTypeChanged($event)">
                                         <ion-select-option value="artist_id">Artist ID</ion-select-option>
                                         <ion-select-option value="media_id">Media ID</ion-select-option>
                                         <ion-select-option value="playlist_id">Playlist ID</ion-select-option>
