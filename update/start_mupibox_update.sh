@@ -21,12 +21,29 @@ STEP=0
 VER_JSON="/tmp/version.json"
 OS=$(grep -E '^(VERSION_CODENAME)=' /etc/os-release)  >&3 2>&3
 OS=${OS:17}  >&3 2>&3
+ARCH=$(uname -m) >&3 2>&3	
 
 wget -O /tmp/installation.jpg https://raw.githubusercontent.com/splitti/MuPiBox/main/media/images/installation.jpg >&3 2>&3
 /usr/bin/fbv /tmp/installation.jpg & >&3 2>&3
 
+wget -q -O ${VER_JSON} https://raw.githubusercontent.com/splitti/MuPiBox/main/version.json  >&3 2>&3
+VERSION=$(/usr/bin/jq -r .release.${RELEASE}[-1].version ${VER_JSON})  >&3 2>&3
+MUPIBOX_URL=$(/usr/bin/jq -r .release.${RELEASE}[-1].url ${VER_JSON})  >&3 2>&3
+USER=$(whoami) >&3 2>&3
+PI=$(/usr/bin/cat /sys/firmware/devicetree/base/model) >&3 2>&3
+echo "================================================================================" >&3 2>&3
+echo "= OS:            ${OS}" >&3 2>&3
+echo "= RasPi:         ${PI}" >&3 2>&3
+echo "= Architecture:  ${ARCH}" >&3 2>&3
+echo "= User:          ${USER}" >&3 2>&3
+echo "= Version:       ${VERSION}" >&3 2>&3
+echo "= Update-URL:    ${MUPIBOX_URL}" >&3 2>&3
+echo "================================================================================" >&3 2>&3
+
+
 {
 	###############################################################################################
+
 
 	echo -e "XXX\n0\nPrepare Update... \nXXX"	 >&3 2>&3
 	systemctl stop mupi_idle_shutdown.service >&3 2>&3
@@ -128,17 +145,6 @@ wget -O /tmp/installation.jpg https://raw.githubusercontent.com/splitti/MuPiBox/
 	after=$(date +%s)
 	echo -e "## Setup DietPi-Dashboard  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
-
-	###############################################################################################
-
-	echo -e "XXX\n${STEP}\nPrepare MuPiBox Download ... \nXXX"	
-	before=$(date +%s)
-	wget -q -O ${VER_JSON} https://raw.githubusercontent.com/splitti/MuPiBox/main/version.json  >&3 2>&3
-
-	VERSION=$(/usr/bin/jq -r .release.${RELEASE}[-1].version ${VER_JSON})  >&3 2>&3
-	MUPIBOX_URL=$(/usr/bin/jq -r .release.${RELEASE}[-1].url ${VER_JSON})  >&3 2>&3
-	after=$(date +%s)
-	echo -e "## Prepare MuPiBox Download  ##  finished after $((after - $before)) seconds" >&3 2>&3
 
 	###############################################################################################
 
@@ -428,10 +434,7 @@ wget -O /tmp/installation.jpg https://raw.githubusercontent.com/splitti/MuPiBox/
 	su - dietpi -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && npm install" >&3 2>&3
 	su - dietpi -c "pm2 start server" >&3 2>&3
 
-	OS="$(grep -E '^(VERSION_CODENAME)=' /etc/os-release)"  >&3 2>&3
-	OS="${OS:17}"  >&3 2>&3
 	CPU=$(cat /proc/cpuinfo | grep Serial | cut -d ":" -f2 | sed 's/^ //') >&3 2>&3
-	ARCH=$(uname -m) >&3 2>&3	
 	curl -X POST https://mupibox.de/mupi/ct.php -H "Content-Type: application/x-www-form-urlencoded" -d key1=${CPU} -d key2=Update -d key3="${VERSION} ${RELEASE}" -d key4="${ARCH}" -d key5="${OS}" >&3 2>&3
 
 	###############################################################################################
@@ -440,6 +443,6 @@ wget -O /tmp/installation.jpg https://raw.githubusercontent.com/splitti/MuPiBox/
 	sleep 5
 
 
-} | whiptail --title "MuPiBox Update" --gauge "Please wait while installing" 6 60 0
+} | whiptail --title "MuPiBox Update ${RELEASE]" --gauge "Please wait while installing" 6 60 0
 
 echo "Update finished - please reboot system now!"
