@@ -40,7 +40,6 @@ echo "= Version:       ${VERSION}" >&3 2>&3
 echo "= Update-URL:    ${MUPIBOX_URL}" >&3 2>&3
 echo "================================================================================" >&3 2>&3
 
-
 {
 	###############################################################################################
 
@@ -443,6 +442,6 @@ echo "==========================================================================
 	sleep 5
 
 
-} | whiptail --title "MuPiBox Update ${VERSION] ${RELEASE]" --gauge "Please wait while installing" 6 60 0
+} | whiptail --title "MuPiBox Update ${VERSION} ${RELEASE}" --gauge "Please wait while installing" 6 60 0
 
 echo "Update finished - please reboot system now!"
