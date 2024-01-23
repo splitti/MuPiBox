@@ -443,6 +443,6 @@ echo "==========================================================================
 	sleep 5
 
 
-} | whiptail --title "MuPiBox Update ${RELEASE]" --gauge "Please wait while installing" 6 60 0
+} | whiptail --title "MuPiBox Update ${VERSION] ${RELEASE]" --gauge "Please wait while installing" 6 60 0
 
 echo "Update finished - please reboot system now!"
