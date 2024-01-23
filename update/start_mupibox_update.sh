@@ -29,11 +29,11 @@ wget -O /tmp/installation.jpg https://raw.githubusercontent.com/splitti/MuPiBox/
 wget -q -O ${VER_JSON} https://raw.githubusercontent.com/splitti/MuPiBox/main/version.json  >&3 2>&3
 VERSION=$(/usr/bin/jq -r .release.${RELEASE}[-1].version ${VER_JSON})  >&3 2>&3
 MUPIBOX_URL=$(/usr/bin/jq -r .release.${RELEASE}[-1].url ${VER_JSON})  >&3 2>&3
-USER=$(whoami) >&3 2>&3
-PI=$(/usr/bin/cat /sys/firmware/devicetree/base/model) >&3 2>&3
+USER=$(/usr/bin/whoami) >&3 2>&3
+RASPPI=$(/usr/bin/cat /sys/firmware/devicetree/base/model) >&3 2>&3
 echo "================================================================================" >&3 2>&3
 echo "= OS:            ${OS}" >&3 2>&3
-echo "= RasPi:         ${PI}" >&3 2>&3
+echo "= RasPi:         ${RASPPI}" >&3 2>&3
 echo "= Architecture:  ${ARCH}" >&3 2>&3
 echo "= User:          ${USER}" >&3 2>&3
 echo "= Version:       ${VERSION}" >&3 2>&3
