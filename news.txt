@@ -1,7 +1,7 @@
 <h3>OS-Support</h3>
 We will focus on <b>bookworm</b> and recommend you to update, or reinstall. See also this dietpi-article: <a href=https://dietpi.com/blog/?p=3128>https://dietpi.com/blog/?p=3128</a>
 
-<h3>Update 3.3.0</h3>
+<h3>Update 3.3.0 - 3.3.2</h3>
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>New: Podcasts (RSS) - Please notice: some podcasts take a lot of time to start. This is because of slow server-connections.</li>
 <li id='linews' class='linews'>New: DietPi-Dashboard</li>
@@ -12,5 +12,6 @@ We will focus on <b>bookworm</b> and recommend you to update, or reinstall. See 
 <li id='linews' class='linews'>Bugfix: Adding Wifi-Bugfixing</li>
 <li id='linews' class='linews'>Bugfix: v7 Installations get</li>
 <li id='linews' class='linews'>Bugfix: Wrong values for display brightness in Admin-Interface</li>
+<li id='linews' class='linews'>Bugfix: Adding radio and podcasts were not possible</li>
 </ul>
 	
