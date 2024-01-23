@@ -57,7 +57,7 @@
 
        <p>Please honor the work and donate a small amount:</p>
        <ul>
-         <li><a href="https://paypal.me/MuPiBox" target="_blank">Paypal to MuPiBox</a></li>
+         <li><a href="https://paypal.me/DonateMuPiBox" target="_blank">Paypal to paypal@MuPiBox.de</a></li>
       </ul>
 	  <p><center><img src='/images/thank-you.jpg' width='300px' /></center></p>
       </div>
