@@ -136,7 +136,7 @@
 		}
 	if( $_POST['mupibox_update'] )
 		{
-		$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh | sudo bash nohup -s -- stable";
+		$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh | sudo bash -s -- stable";
 		exec($command, $output, $result );
 		$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
 		$data = json_decode($string, true);
@@ -146,7 +146,7 @@
 		}
 	if( $_POST['mupibox_update_beta'] )
 		{
-		$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh | sudo bash  -s -- beta";
+		$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh | sudo bash -s -- beta";
 		exec($command, $output, $result );
 		$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
 		$data = json_decode($string, true);
@@ -157,7 +157,7 @@
 		}
 	if( $_POST['mupibox_update_dev'] )
 		{
-		$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh | sudo bash  -s -- dev";
+		$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh | sudo bash -s -- dev";
 
 		exec($command, $output, $result );
 		$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);

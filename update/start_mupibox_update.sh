@@ -142,12 +142,12 @@ echo "==========================================================================
 	echo -e "XXX\n${STEP}\nSetup DietPi-Dashboard... \nXXX"	
 	before=$(date +%s)
 	mkdir /opt/dietpi-dashboard >&3 2>&3
-	sudo rm /opt/dietpi-dashboard/dietpi-dashboard >&3 2>&3
-	sudo curl -fL "$(curl -sSf 'https://api.github.com/repos/ravenclaw900/DietPi-Dashboard/releases/latest' | mawk -F\" "/\"browser_download_url\": \".*dietpi-dashboard-$(uname -m)\"/{print \$4}")" -o /opt/dietpi-dashboard/dietpi-dashboard >&3 2>&3
-	sudo chmod +x /opt/dietpi-dashboard/dietpi-dashboard >&3 2>&3
-	sudo curl -sSfL https://raw.githubusercontent.com/ravenclaw900/DietPi-Dashboard/main/config.toml -o /opt/dietpi-dashboard/config.toml  >&3 2>&3
+	rm /opt/dietpi-dashboard/dietpi-dashboard >&3 2>&3
+	curl -fL "$(curl -sSf 'https://api.github.com/repos/ravenclaw900/DietPi-Dashboard/releases/latest' | mawk -F\" "/\"browser_download_url\": \".*dietpi-dashboard-$(uname -m)\"/{print \$4}")" -o /opt/dietpi-dashboard/dietpi-dashboard >&3 2>&3
+	chmod +x /opt/dietpi-dashboard/dietpi-dashboard >&3 2>&3
+	curl -sSfL https://raw.githubusercontent.com/ravenclaw900/DietPi-Dashboard/main/config.toml -o /opt/dietpi-dashboard/config.toml  >&3 2>&3
 	#bash -c 'su dietpi -c "yes \"\" | sudo /boot/dietpi/dietpi-software install 200"' >&3 2>&3
-	sudo /usr/bin/sed -i 's/#terminal_user = "root"/terminal_user = "dietpi"/g' /opt/dietpi-dashboard/config.toml >&3 2>&3
+	/usr/bin/sed -i 's/#terminal_user = "root"/terminal_user = "dietpi"/g' /opt/dietpi-dashboard/config.toml >&3 2>&3
 	#sudo /usr/bin/sed -i 's/pass = true/pass = false/g' /opt/dietpi-dashboard/config.toml >&3 2>&3
 	after=$(date +%s)
 	echo -e "## Setup DietPi-Dashboard  ##  finished after $((after - $before)) seconds" >&3 2>&3
@@ -314,20 +314,20 @@ echo "==========================================================================
 
 	echo -e "XXX\n${STEP}\nRestarting Services... \nXXX"
 	before=$(date +%s)
-	sudo mv -f ${MUPI_SRC}/config/services/mupi_idle_shutdown.service /etc/systemd/system/mupi_idle_shutdown.service >&3 2>&3
-	sudo mv -f ${MUPI_SRC}/config/services/mupi_splash.service /etc/systemd/system/mupi_splash.service >&3 2>&3
-	sudo mv -f ${MUPI_SRC}/config/services/spotifyd.service /etc/systemd/system/spotifyd.service >&3 2>&3
-	sudo mv -f ${MUPI_SRC}/config/services/pulseaudio.service /etc/systemd/system/pulseaudio.service >&3 2>&3
-	sudo mv -f ${MUPI_SRC}/config/services/mupi_startstop.service /etc/systemd/system/mupi_startstop.service >&3 2>&3
-	sudo mv -f ${MUPI_SRC}/config/services/mupi_wifi.service /etc/systemd/system/mupi_wifi.service  >&3 2>&3
-	sudo mv -f ${MUPI_SRC}/config/services/mupi_check_internet.service /etc/systemd/system/mupi_check_internet.service  >&3 2>&3
-	sudo mv -f ${MUPI_SRC}/config/services/mupi_check_monitor.service /etc/systemd/system/mupi_check_monitor.service  >&3 2>&3
-	sudo mv -f ${MUPI_SRC}/config/services/mupi_autoconnect_bt.service /etc/systemd/system/mupi_autoconnect_bt.service  >&3 2>&3
-	sudo mv -f ${MUPI_SRC}/config/services/mupi_vnc.service /etc/systemd/system/mupi_vnc.service  >&3 2>&3
-	sudo mv -f ${MUPI_SRC}/config/services/mupi_novnc.service /etc/systemd/system/mupi_novnc.service  >&3 2>&3
-	sudo mv -f ${MUPI_SRC}/config/services/mupi_powerled.service /etc/systemd/system/mupi_powerled.service  >&3 2>&3
-	sudo mv -f ${MUPI_SRC}/config/services/mupi_telegram.service /etc/systemd/system/mupi_telegram.service  >&3 2>&3
-	sudo mv -f ${MUPI_SRC}/config/services/dietpi-dashboard.service /etc/systemd/system/dietpi-dashboard.service  >&3 2>&3
+	mv -f ${MUPI_SRC}/config/services/mupi_idle_shutdown.service /etc/systemd/system/mupi_idle_shutdown.service >&3 2>&3
+	mv -f ${MUPI_SRC}/config/services/mupi_splash.service /etc/systemd/system/mupi_splash.service >&3 2>&3
+	mv -f ${MUPI_SRC}/config/services/spotifyd.service /etc/systemd/system/spotifyd.service >&3 2>&3
+	mv -f ${MUPI_SRC}/config/services/pulseaudio.service /etc/systemd/system/pulseaudio.service >&3 2>&3
+	mv -f ${MUPI_SRC}/config/services/mupi_startstop.service /etc/systemd/system/mupi_startstop.service >&3 2>&3
+	mv -f ${MUPI_SRC}/config/services/mupi_wifi.service /etc/systemd/system/mupi_wifi.service  >&3 2>&3
+	mv -f ${MUPI_SRC}/config/services/mupi_check_internet.service /etc/systemd/system/mupi_check_internet.service  >&3 2>&3
+	mv -f ${MUPI_SRC}/config/services/mupi_check_monitor.service /etc/systemd/system/mupi_check_monitor.service  >&3 2>&3
+	mv -f ${MUPI_SRC}/config/services/mupi_autoconnect_bt.service /etc/systemd/system/mupi_autoconnect_bt.service  >&3 2>&3
+	mv -f ${MUPI_SRC}/config/services/mupi_vnc.service /etc/systemd/system/mupi_vnc.service  >&3 2>&3
+	mv -f ${MUPI_SRC}/config/services/mupi_novnc.service /etc/systemd/system/mupi_novnc.service  >&3 2>&3
+	mv -f ${MUPI_SRC}/config/services/mupi_powerled.service /etc/systemd/system/mupi_powerled.service  >&3 2>&3
+	mv -f ${MUPI_SRC}/config/services/mupi_telegram.service /etc/systemd/system/mupi_telegram.service  >&3 2>&3
+	mv -f ${MUPI_SRC}/config/services/dietpi-dashboard.service /etc/systemd/system/dietpi-dashboard.service  >&3 2>&3
 
 	systemctl daemon-reload >&3 2>&3
 	systemctl enable mupi_check_internet.service >&3 2>&3
@@ -366,7 +366,7 @@ echo "==========================================================================
 	#  echo '' | tee -a /boot/config.txt >&3 2>&3
 	#  echo 'initramfs initramfs.img' | tee -a /boot/config.txt >&3 2>&3
 	#fi
-	sudo usermod -aG dialout dietpi >&3 2>&3
+	usermod -aG dialout dietpi >&3 2>&3
 	after=$(date +%s)
 	echo -e "## Set environment	##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
