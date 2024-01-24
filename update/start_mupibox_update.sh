@@ -13,7 +13,7 @@ fi
 killall -s 9 -w -q chromium-browser
 
 CONFIG="/etc/mupibox/mupiboxconfig.json"
-LOG="/tmp/mupibox_update.log"
+LOG="/boot/mupibox_update.log"
 exec 3>${LOG}
 service mupi_idle_shutdown stop
 packages2install="git libasound2 jq mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio python3-serial"
@@ -31,13 +31,21 @@ VERSION=$(/usr/bin/jq -r .release.${RELEASE}[-1].version ${VER_JSON})  >&3 2>&3
 MUPIBOX_URL=$(/usr/bin/jq -r .release.${RELEASE}[-1].url ${VER_JSON})  >&3 2>&3
 USER=$(/usr/bin/whoami) >&3 2>&3
 RASPPI=$(/usr/bin/cat /sys/firmware/devicetree/base/model) >&3 2>&3
+if [ ${RELEASE} = "dev" ]; then
+	MUPI_SRC="/home/dietpi/MuPiBox-main" >&3 2>&3
+else
+	MUPI_SRC="/home/dietpi/MuPiBox-${VERSION}" >&3 2>&3
+fi
+
+
 echo "================================================================================" >&3 2>&3
-echo "= OS:            ${OS}" >&3 2>&3
-echo "= RasPi:         ${RASPPI}" >&3 2>&3
-echo "= Architecture:  ${ARCH}" >&3 2>&3
-echo "= User:          ${USER}" >&3 2>&3
-echo "= Version:       ${VERSION}" >&3 2>&3
-echo "= Update-URL:    ${MUPIBOX_URL}" >&3 2>&3
+echo "= OS:               ${OS}" >&3 2>&3
+echo "= RasPi:            ${RASPPI}" >&3 2>&3
+echo "= Architecture:     ${ARCH}" >&3 2>&3
+echo "= User:             ${USER}" >&3 2>&3
+echo "= Version:          ${VERSION}" >&3 2>&3
+echo "= Update-URL:       ${MUPIBOX_URL}" >&3 2>&3
+echo "= Unzip-Directory:  ${MUPI_SRC}" >&3 2>&3
 echo "================================================================================" >&3 2>&3
 
 {
@@ -134,12 +142,12 @@ echo "==========================================================================
 	echo -e "XXX\n${STEP}\nSetup DietPi-Dashboard... \nXXX"	
 	before=$(date +%s)
 	mkdir /opt/dietpi-dashboard >&3 2>&3
-	rm /opt/dietpi-dashboard/dietpi-dashboard >&3 2>&3
-	curl -fL "$(curl -sSf 'https://api.github.com/repos/ravenclaw900/DietPi-Dashboard/releases/latest' | mawk -F\" "/\"browser_download_url\": \".*dietpi-dashboard-$(uname -m)\"/{print \$4}")" -o /opt/dietpi-dashboard/dietpi-dashboard >&3 2>&3
-	chmod +x /opt/dietpi-dashboard/dietpi-dashboard >&3 2>&3
-	curl -sSfL https://raw.githubusercontent.com/ravenclaw900/DietPi-Dashboard/main/config.toml -o /opt/dietpi-dashboard/config.toml  >&3 2>&3
+	sudo rm /opt/dietpi-dashboard/dietpi-dashboard >&3 2>&3
+	sudo curl -fL "$(curl -sSf 'https://api.github.com/repos/ravenclaw900/DietPi-Dashboard/releases/latest' | mawk -F\" "/\"browser_download_url\": \".*dietpi-dashboard-$(uname -m)\"/{print \$4}")" -o /opt/dietpi-dashboard/dietpi-dashboard >&3 2>&3
+	sudo chmod +x /opt/dietpi-dashboard/dietpi-dashboard >&3 2>&3
+	sudo curl -sSfL https://raw.githubusercontent.com/ravenclaw900/DietPi-Dashboard/main/config.toml -o /opt/dietpi-dashboard/config.toml  >&3 2>&3
 	#bash -c 'su dietpi -c "yes \"\" | sudo /boot/dietpi/dietpi-software install 200"' >&3 2>&3
-	/usr/bin/sed -i 's/#terminal_user = "root"/terminal_user = "dietpi"/g' /opt/dietpi-dashboard/config.toml >&3 2>&3
+	sudo /usr/bin/sed -i 's/#terminal_user = "root"/terminal_user = "dietpi"/g' /opt/dietpi-dashboard/config.toml >&3 2>&3
 	#sudo /usr/bin/sed -i 's/pass = true/pass = false/g' /opt/dietpi-dashboard/config.toml >&3 2>&3
 	after=$(date +%s)
 	echo -e "## Setup DietPi-Dashboard  ##  finished after $((after - $before)) seconds" >&3 2>&3
@@ -160,11 +168,6 @@ echo "==========================================================================
 	before=$(date +%s)
 	unzip -q -d /home/dietpi /home/dietpi/mupibox.zip >&3 2>&3
 	rm /home/dietpi/mupibox.zip >&3 2>&3
-	if [ ${RELEASE} = "dev" ]; then
-		MUPI_SRC="/home/dietpi/MuPiBox-main"
-	else
-		MUPI_SRC="/home/dietpi/MuPiBox-${VERSION}"
-	fi
 
 	#MUPI_SRC="/home/dietpi/MuPiBox-${VERSION}"
 	after=$(date +%s)
