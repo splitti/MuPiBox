@@ -9,8 +9,6 @@ RELEASE="stable"
 LOG="/tmp/autosetup.log"
 VER_JSON="/tmp/version.json"
 
-
-
 autosetup="$(cat /home/dietpi/.bashrc | grep autosetup)"
 
 if(( ${#autosetup} > 0 ))
@@ -25,7 +23,7 @@ exec 3>${LOG}
 	OS=${OS:17}  >&3 2>&3
 
 	#packages2install="git libasound2 jq samba mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential raspberrypi-kernel-headers dkms"
-	packages2install="git libasound2 jq samba wsdd mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio python3-serial"
+	packages2install="git libasound2 jq samba wsdd mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio python3-serial libgles2-mesa mesa-utils libsdl2-dev"
 	STEP=0
 
 	###############################################################################################
