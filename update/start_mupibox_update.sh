@@ -269,7 +269,7 @@ echo "==========================================================================
 	mv ${MUPI_SRC}/config/templates/www.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >&3 2>&3
 	
 	chmod 755 /usr/local/bin/mupibox/* >&3 2>&3
-
+	chmod 755 /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
 	after=$(date +%s)
 	echo -e "## Copy MuPiBox-Files  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
