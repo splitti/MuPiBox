@@ -182,7 +182,8 @@
 	"chromium": {
 		"debug": "0",
 		"resX": "800",
-		"resY": "480"
+		"resY": "480",
+		"gpu": false
 	},
 	"pm2": {
 		"ramlog": "0"

@@ -137,4 +137,14 @@ if [[ -z ${WLED} ]]; then
 	
 fi
 
+#3.3.4
+GPU=$(/usr/bin/jq -r .chromium.gpu ${CONFIG})
+if [ "$GPU" == "null" ]; then 
+	/usr/bin/cat <<< $(/usr/bin/jq --arg v "false" '.chromium.gpu = $v' ${CONFIG}) >  ${CONFIG}
+fi
+#MUPIHAT=$(/usr/bin/jq -r .mupibox.mupihat ${CONFIG})
+#if [ "$GPU" == "null" ]; then 
+#	/usr/bin/cat <<< $(/usr/bin/jq --arg v "false" '.mupibox.mupihat = $v' ${CONFIG}) >  ${CONFIG}
+#fi
+
 /usr/bin/cat <<< $(/usr/bin/jq '.mupibox.AudioDevices += [{"tname": "mupihat","ufname": "MuPiHat for MuPiBox"},{"tname": "rpi-bcm2835-3.5mm","ufname": "Onboard 3.5mm output"},{"tname": "rpi-bcm2835-hdmi","ufname": "Onboard HDMI output"},{"tname": "hifiberry-amp","ufname": "HifiBerry AMP / AMP+"},{"tname": "hifiberry-dac","ufname": "HifiBerry DAC / MiniAmp"},{"tname": "hifiberry-dacplus","ufname": "HifiBerry DAC+ / DAC+ Pro / AMP2"},{"tname": "usb-dac","ufname": "Any USB Audio DAC (Auto detection)"}]' ${CONFIG}) >  ${CONFIG}

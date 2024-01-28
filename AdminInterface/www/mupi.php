@@ -57,33 +57,46 @@
 		$CHANGE_TXT=$CHANGE_TXT."<li>Sleeptimer stopped</li>";
 		}
 
+	if($_POST['change_gpu'] == "disable")
+		{
+		$data["chromium"]["gpu"]=false;	
+		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>GPU-Support disabled</li>";
+		}
+	if($_POST['change_gpu'] == "enable")
+		{
+		$data["chromium"]["gpu"]=true;	
+		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>GPU-Support activated</li>";
+		}
+
 	if($_POST['change_pm2log'])
 		{
-			if($data["pm2"]["ramlog"])
+		if($data["pm2"]["ramlog"])
 			{
-				exec("sudo bash -c \"sed '/\/home\/dietpi\/.pm2\/logs/d' /etc/fstab > /tmp/.fstab && mv /tmp/.fstab /etc/fstab\"");
-				$pm2_state = "disabled";
-				$change_pm2 = "enable";
-				$data["pm2"]["ramlog"]=0;
+			exec("sudo bash -c \"sed '/\/home\/dietpi\/.pm2\/logs/d' /etc/fstab > /tmp/.fstab && mv /tmp/.fstab /etc/fstab\"");
+			$pm2_state = "disabled";
+			$change_pm2 = "enable";
+			$data["pm2"]["ramlog"]=0;
 			}
-			else
+		else
 			{
-				exec("sudo bash -c \"sed '/^tmpfs \/var\/log.*/a tmpfs \/home\/dietpi\/.pm2\/logs tmpfs size=50M,noatime,lazytime,nodev,nosuid,mode=1777' /etc/fstab > /tmp/.fstab && mv /tmp/.fstab /etc/fstab\"");
-				$pm2_state = "active";
-				$change_pm2 = "disable";
-				$data["pm2"]["ramlog"]=1;
+			exec("sudo bash -c \"sed '/^tmpfs \/var\/log.*/a tmpfs \/home\/dietpi\/.pm2\/logs tmpfs size=50M,noatime,lazytime,nodev,nosuid,mode=1777' /etc/fstab > /tmp/.fstab && mv /tmp/.fstab /etc/fstab\"");
+			$pm2_state = "active";
+			$change_pm2 = "disable";
+			$data["pm2"]["ramlog"]=1;
 			}
 		$change=2;
 		$CHANGE_TXT=$CHANGE_TXT."<li>PM2-Logs to RAM ".$pm2_state." on next boot</li>";
 		}
 	else
 		{
-			if($data["pm2"]["ramlog"])
+		if($data["pm2"]["ramlog"])
 			{
 				$pm2_state = "active";
 				$change_pm2 = "disable";
 			}
-			else
+		else
 			{
 				$pm2_state = "disabled";
 				$change_pm2 = "enable";
@@ -644,6 +657,33 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				</p>
 				<input id="saveForm" class="button_text" type="submit" name="change_swap" value="<?php print $change_swap; ?>" />
 			</li>
+
+			<li class="li_1"><h2>Chromium-Browser-Parameters</h2>
+			<h2>GPU-Support</h2>
+				<p>
+				Enables or disables GPU-Support! This setting is experimental.
+				</p>
+				<p>
+				<?php
+				$data["chromium"]["gpu"]
+				$currentswapsize = exec($command, $output);
+				if($data["chromium"]["gpu"])
+					{
+					$currentgpusupport="active";
+					$change_gpu="enable";
+					}
+				else
+					{
+					$currentgpusupport="disabled";
+					$change_gpu="disable";
+					}
+
+				echo "GPU-Support: <b>".$currentgpusupport."</b>";
+				?>
+				</p>
+				<input id="saveForm" class="button_text" type="submit" name="change_gpu" value="<?php print $change_gpu; ?>" />
+			</li>
+
 		</ul>
 	</details>
 

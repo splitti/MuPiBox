@@ -11,10 +11,14 @@ CONFIG="/etc/mupibox/mupiboxconfig.json"
 RES_X=$(/usr/bin/jq -r .chromium.resX ${CONFIG})
 RES_Y=$(/usr/bin/jq -r .chromium.resY ${CONFIG})
 DEBUG=$(/usr/bin/jq -r .chromium.debug ${CONFIG})
+FORCE_GPU=$(/usr/bin/jq -r .chromium.gpu ${CONFIG})
 URL="http://$(/usr/bin/jq -r .mupibox.host ${CONFIG}):8200"
+CHROMIUM_OPTS=""
 
 # FORCE GPU
-CHROMIUM_OPTS="--ignore-gpu-blocklist"
+if [ ${FORCE_GPU} ]; then
+	CHROMIUM_OPTS="${CHROMIUM_OPTS} --ignore-gpu-blocklist"
+fi
 # GPU Settings
 CHROMIUM_OPTS="${CHROMIUM_OPTS} --enable-gpu --use-gl=egl --enable-unsafe-webgpu --enable-gpu-rasterization"
 # Enable smooth scrolling animation
@@ -29,11 +33,10 @@ CHROMIUM_OPTS="${CHROMIUM_OPTS} --cast-app-background-color=44afe2ff --default-b
 CHROMIUM_OPTS="${CHROMIUM_OPTS} --kiosk --start-fullscreen --start-maximized"
 # CACHE Parameters 128MB
 CHROMIUM_OPTS="${CHROMIUM_OPTS} --disk-cache-dir=/home/dietpi/.mupibox/chromium_cache --disk-cache-size=134217728"
-
-
-#if [ "${DEBUG}" = "1" ]; then
-# CHROMIUM_OPTS=${CHROMIUM_OPTS}" --enable-logging --v=1 --disable-pinch"
-#fi
+# DEBUG MODE
+if [ "${DEBUG}" = "1" ]; then
+	CHROMIUM_OPTS="${CHROMIUM_OPTS} --enable-logging --v=1 --disable-pinch"
+fi
 
 # If you want tablet mode, uncomment the next line.
 #CHROMIUM_OPTS+=' --force-tablet-mode --tablet-ui'

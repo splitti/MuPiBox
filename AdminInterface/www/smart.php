@@ -198,8 +198,40 @@
    <li id="li_1" >
 
                 <h2>WLED configuration</h2>
-                <h3>WLED Controller Information</h3>
+				<li id="li_1" >
+				<h3>Serial / Com-Port</h3>
+				<p>Just change this value, if you really know what you do! Default: /dev/ttyUSB0</p>
+				<div>
+				<input id="com_port" name="com_port" class="element text medium" type="text" maxlength="255" value="<?php
+				print $data["wled"]["com_port"];
+				?>" />
+				</div>
+			</li>
+			<li id="li_1" >
+				<h3>Baud-rate</h3>
+				<p>Serial connection speed in bits per second - mostly recommend 115200bps!</p>
+				<div>
+				<select id="baud_rate" name="baud_rate" class="element text medium">
+				<?php 
+				$baud_rates = array(300,1200,2400,4800,9600,19200,38400,57600,115200,230400,460800,921600);
+				foreach($baud_rates as $baud) {
+				if( $baud == $data["wled"]["baud_rate"] )
+					{
+					$selected = " selected=\"selected\"";
+					}
+				else
+					{
+					$selected = "";
+					}
+				print "<option value=\"". $baud . "\"" . $selected  . ">" . $baud . "bps</option>";
+				}
+				?>
+				</select></div>
+			</li>
+        <h3>WLED Controller Information</h3>
+
 <?php
+
 	if( empty($wled_info_data["info"]["ver"]) )
 		{
 		print "<p>No WLED-Device found...</p>";
@@ -226,38 +258,7 @@
                                         }
                                         $i+=1;
                                 }
-                                ?></table></p>
-			<li id="li_1" >
-				<h2>Serial / Com-Port</h2>
-				<p>Just change this value, if you really know what you do!</p>
-				<div>
-				<input id="com_port" name="com_port" class="element text medium" type="text" maxlength="255" value="<?php
-				print $data["wled"]["com_port"];
-				?>" />
-				</div>
-			</li>
-			<li id="li_1" >
-				<h2>Baud-rate</h2>
-				<p>Serial connection speed in bits per second:</p>
-				<div>
-				<select id="baud_rate" name="baud_rate" class="element text medium">
-				<?php 
-				$baud_rates = array(300,1200,2400,4800,9600,19200,38400,57600,115200,230400,460800,921600);
-				foreach($baud_rates as $baud) {
-				if( $baud == $data["wled"]["baud_rate"] )
-					{
-					$selected = " selected=\"selected\"";
-					}
-				else
-					{
-					$selected = "";
-					}
-				print "<option value=\"". $baud . "\"" . $selected  . ">" . $baud . "bps</option>";
-				}
-				?>
-				</select></div>
-			</li>
-		
+                                ?></table></p>		
                 <p>
 	<h3>Set Boot-Preset</h3>
                 <div>
@@ -372,11 +373,10 @@ foreach($presets as $preset) {
       }
 ?> /></label></div>
    </li>
-    <input id="saveForm" class="button_text" type="submit" name="change_wled" value="Save WLED-Config" />
-								<?php
+		<?php
 		}
 		?>
-
+    <input id="saveForm" class="button_text" type="submit" name="change_wled" value="Save WLED-Config" />
                         </li>
    </li>
   </ul>
