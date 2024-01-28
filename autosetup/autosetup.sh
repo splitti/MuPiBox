@@ -566,7 +566,7 @@ exec 3>${LOG}
 	#suggest_gpu_mem=76 >&3 2>&3
 	sudo /boot/dietpi/func/dietpi-set_hardware gpumemsplit 128 >&3 2>&3
 	sudo /boot/dietpi/func/dietpi-set_hardware headless 0 >&3 2>&3
-	sudo /boot/dietpi/func/dietpi-set_hardware rpi-opengl disable >&3 2>&3
+	sudo /boot/dietpi/func/dietpi-set_hardware rpi-opengl disable #vc4-fkms-v3d >&3 2>&3
 	sudo su - -c ". /boot/dietpi/func/dietpi-globals && G_CHECK_ROOT_USER && G_CHECK_ROOTFS_RW && G_INIT && G_CONFIG_INJECT 'framebuffer_width=' \"framebuffer_width=800\" /boot/config.txt" >&3 2>&3
 	sudo su - -c ". /boot/dietpi/func/dietpi-globals && G_CHECK_ROOT_USER && G_CHECK_ROOTFS_RW && G_INIT && G_CONFIG_INJECT 'framebuffer_height=' \"framebuffer_height=480\" /boot/config.txt" >&3 2>&3
 
