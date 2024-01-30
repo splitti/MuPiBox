@@ -12,6 +12,11 @@ RES_X=$(/usr/bin/jq -r .chromium.resX ${CONFIG})
 RES_Y=$(/usr/bin/jq -r .chromium.resY ${CONFIG})
 DEBUG=$(/usr/bin/jq -r .chromium.debug ${CONFIG})
 FORCE_GPU=$(/usr/bin/jq -r .chromium.gpu ${CONFIG})
+SCROLL_ANIMATION=$(/usr/bin/jq -r .chromium.sccrollanimation ${CONFIG})
+CACHE_PATH=$(/usr/bin/jq -r .chromium.cachepath ${CONFIG})
+CACHE_SIZE=$(/usr/bin/jq -r .chromium.cachesize ${CONFIG})
+CACHE_SIZE=$(( $CACHE_SIZE * 1024 * 1024))
+KIOSK=$(/usr/bin/jq -r .chromium.kiosk ${CONFIG})
 URL="http://$(/usr/bin/jq -r .mupibox.host ${CONFIG}):8200"
 CHROMIUM_OPTS=""
 
@@ -22,7 +27,11 @@ fi
 # GPU Settings
 CHROMIUM_OPTS="${CHROMIUM_OPTS} --enable-gpu --use-gl=egl --enable-unsafe-webgpu --enable-gpu-rasterization"
 # Enable smooth scrolling animation
-CHROMIUM_OPTS="${CHROMIUM_OPTS} --enable-smooth-scrolling"
+if [ ${SCROLL_ANIMATION} ]; then
+	CHROMIUM_OPTS="${CHROMIUM_OPTS} --enable-smooth-scrolling"
+else
+	CHROMIUM_OPTS="${CHROMIUM_OPTS} --disable-smooth-scrolling"
+fi
 # Suppresses Error dialogs
 CHROMIUM_OPTS="${CHROMIUM_OPTS} --noerrdialogs"
 # Window Settings
@@ -30,9 +39,11 @@ CHROMIUM_OPTS="${CHROMIUM_OPTS} --window-size=${RES_X:-1280},${RES_Y:-720} --win
 # COLOR Parameters
 CHROMIUM_OPTS="${CHROMIUM_OPTS} --cast-app-background-color=44afe2ff --default-background-color=44afe2ff"
 # KIOSK Parameters
-CHROMIUM_OPTS="${CHROMIUM_OPTS} --kiosk --start-fullscreen --start-maximized"
-# CACHE Parameters 128MB
-CHROMIUM_OPTS="${CHROMIUM_OPTS} --disk-cache-dir=/home/dietpi/.mupibox/chromium_cache --disk-cache-size=134217728"
+if [ ${KIOSK} ]; then
+	CHROMIUM_OPTS="${CHROMIUM_OPTS} --kiosk --start-fullscreen --start-maximized"
+fi
+# CACHE Parameters
+CHROMIUM_OPTS="${CHROMIUM_OPTS} --disk-cache-dir=${CACHE_PATH:-/home/dietpi/.mupibox/chromium_cache} --disk-cache-size=134217728"
 # DEBUG MODE
 if [ "${DEBUG}" = "1" ]; then
 	CHROMIUM_OPTS="${CHROMIUM_OPTS} --enable-logging --v=1 --disable-pinch"

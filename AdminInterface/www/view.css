@@ -28,7 +28,7 @@ body
 	padding: 0px;
 	text-align:left;
 	width:100%;
-	max-width:940px;
+	max-width:1000px;
 }
 
 #top
@@ -37,17 +37,16 @@ body
 	height:10px;
 	margin:10px auto 0;
 	width:100%;
-	max-width:940px;
-
+	max-width:1000px;
 }
 
 #footer
 {
-	width:800px;
+	width:1000px;
 	clear:both;
 	background-color:#44afe2;
 	width:100%;
-	max-width:940px;
+	max-width:1000px;
 	padding: 0px;
 	height:80px;
 	display:flex;

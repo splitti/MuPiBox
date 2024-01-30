@@ -183,7 +183,11 @@
 		"debug": "0",
 		"resX": "800",
 		"resY": "480",
-		"gpu": false
+		"gpu": false,
+		"sccrollanimation": false,
+		"cachepath": "/home/dietpi/.mupibox/chromium_cache",
+		"cachesize": "32",
+		"kiosk": true
 	},
 	"pm2": {
 		"ramlog": "0"

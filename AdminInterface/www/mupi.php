@@ -70,6 +70,34 @@
 		$CHANGE_TXT=$CHANGE_TXT."<li>GPU-Support activated</li>";
 		}
 
+
+	if($_POST['change_smoothscrolling'] == "disable")
+		{
+		$data["chromium"]["sccrollanimation"]=false;	
+		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>Scroll animation disabled</li>";
+		}
+	if($_POST['change_smoothscrolling'] == "enable")
+		{
+		$data["chromium"]["sccrollanimation"]=true;	
+		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>Scroll animation activated</li>";
+		}
+
+	if($_POST['change_kiosk'] == "disable")
+		{
+		$data["chromium"]["kiosk"]=false;	
+		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>Kiosk mode disabled</li>";
+		}
+	if($_POST['change_kiosk'] == "enable")
+		{
+		$data["chromium"]["kiosk"]=true;	
+		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>Kiosk mode activated</li>";
+		}
+
+
 	if($_POST['change_pm2log'])
 		{
 		if($data["pm2"]["ramlog"])
@@ -695,13 +723,12 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 			</li>
 
 			<li class="li_1"><h2>Chromium-Browser-Parameters</h2>
-			<h2>GPU-Support</h2>
+			<h2>GPU-Support (experimental)</h2>
 				<p>
-				Enables or disables GPU-Support! This setting is experimental.
+				Enables or disables GPU-Support! This setting is disabled by default.
 				</p>
 				<p>
 				<?php
-				$currentswapsize = exec($command, $output);
 				if($data["chromium"]["gpu"])
 					{
 					$currentgpusupport="active";
@@ -717,6 +744,49 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				?>
 				</p>
 				<input id="saveForm" class="button_text" type="submit" name="change_gpu" value="<?php print $change_gpu; ?>" />
+
+			<h2>Smooth scrolling animation (experimental)</h2>
+				<p>
+				Enables or disables scroll animation! This setting is disabled by default.
+				</p>
+				<p>
+				<?php
+				if($data["chromium"]["sccrollanimation"])
+					{
+					$currentsmoothscrolling="active";
+					$change_smoothscrolling="disable";
+					}
+				else
+					{
+					$currentsmoothscrolling="disabled";
+					$change_smoothscrolling="enable";
+					}
+
+				echo "Smooth scrolling: <b>".$currentsmoothscrolling."</b>";
+				?>
+				</p>
+				<input id="saveForm" class="button_text" type="submit" name="change_smoothscrolling" value="<?php print $change_smoothscrolling; ?>" />
+			<h2>Kîosk mode</h2>
+				<p>
+				Enables or disables kiosk mode! This setting is enabled by default.
+				</p>
+				<p>
+				<?php
+				if($data["chromium"]["kiosk"])
+					{
+					$currentkiosk="active";
+					$change_kiosk="disable";
+					}
+				else
+					{
+					$currentkiosk="disabled";
+					$change_kiosk="enable";
+					}
+
+				echo "Kiosk mode: <b>".$currentkiosk."</b>";
+				?>
+				</p>
+				<input id="saveForm" class="button_text" type="submit" name="change_kiosk" value="<?php print $change_kiosk; ?>" />
 			</li>
 
 		</ul>
