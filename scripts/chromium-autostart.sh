@@ -21,13 +21,13 @@ URL="http://$(/usr/bin/jq -r .mupibox.host ${CONFIG}):8200"
 CHROMIUM_OPTS=""
 
 # FORCE GPU
-if [ ${FORCE_GPU} ]; then
+if ${FORCE_GPU} ; then
 	CHROMIUM_OPTS="${CHROMIUM_OPTS} --ignore-gpu-blocklist"
 fi
 # GPU Settings
 CHROMIUM_OPTS="${CHROMIUM_OPTS} --enable-gpu --use-gl=egl --enable-unsafe-webgpu --enable-gpu-rasterization"
 # Enable smooth scrolling animation
-if [ ${SCROLL_ANIMATION} ]; then
+if ${SCROLL_ANIMATION} ; then
 	CHROMIUM_OPTS="${CHROMIUM_OPTS} --enable-smooth-scrolling"
 else
 	CHROMIUM_OPTS="${CHROMIUM_OPTS} --disable-smooth-scrolling"
@@ -39,11 +39,11 @@ CHROMIUM_OPTS="${CHROMIUM_OPTS} --window-size=${RES_X:-1280},${RES_Y:-720} --win
 # COLOR Parameters
 CHROMIUM_OPTS="${CHROMIUM_OPTS} --cast-app-background-color=44afe2ff --default-background-color=44afe2ff"
 # KIOSK Parameters
-if [ ${KIOSK} ]; then
+if ${KIOSK} ; then
 	CHROMIUM_OPTS="${CHROMIUM_OPTS} --kiosk --start-fullscreen --start-maximized"
 fi
 # CACHE Parameters
-CHROMIUM_OPTS="${CHROMIUM_OPTS} --disk-cache-dir=${CACHE_PATH:-/home/dietpi/.mupibox/chromium_cache} --disk-cache-size=134217728"
+CHROMIUM_OPTS="${CHROMIUM_OPTS} --disk-cache-dir=${CACHE_PATH:-/home/dietpi/.mupibox/chromium_cache} --disk-cache-size=${CACHE_PATH:-33554432}"
 # DEBUG MODE
 if [ "${DEBUG}" = "1" ]; then
 	CHROMIUM_OPTS="${CHROMIUM_OPTS} --enable-logging --v=1 --disable-pinch"

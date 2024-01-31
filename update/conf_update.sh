@@ -140,23 +140,23 @@ fi
 #3.3.4
 GPU=$(/usr/bin/jq -r .chromium.gpu ${CONFIG})
 if [ "$GPU" == "null" ]; then 
-	/usr/bin/cat <<< $(/usr/bin/jq --arg v "false" '.chromium.gpu = $v' ${CONFIG}) >  ${CONFIG}
+	/usr/bin/cat <<< $(/usr/bin/jq '.chromium.gpu = false' ${CONFIG}) >  ${CONFIG}
 fi
 SCROLLANI=$(/usr/bin/jq -r .chromium.sccrollanimation ${CONFIG})
 if [ "$SCROLLANI" == "null" ]; then 
-	/usr/bin/cat <<< $(/usr/bin/jq --arg v "false" '.chromium.sccrollanimation = $v' ${CONFIG}) >  ${CONFIG}
+	/usr/bin/cat <<< $(/usr/bin/jq '.chromium.sccrollanimation = false' ${CONFIG}) >  ${CONFIG}
 fi
 CACHEPATH=$(/usr/bin/jq -r .chromium.cachepath ${CONFIG})
 if [ "$CACHEPATH" == "null" ]; then 
 	/usr/bin/cat <<< $(/usr/bin/jq --arg v "/home/dietpi/.mupibox/chromium_cache" '.chromium.cachepath = $v' ${CONFIG}) >  ${CONFIG}
 fi
 CACHESIZE=$(/usr/bin/jq -r .chromium.cachesize ${CONFIG})
-if [ "$SCROLLANI" == "null" ]; then 
+if [ "$CACHESIZE" == "null" ]; then 
 	/usr/bin/cat <<< $(/usr/bin/jq --arg v "32" '.chromium.cachesize = $v' ${CONFIG}) >  ${CONFIG}
 fi
 KIOSKMODE=$(/usr/bin/jq -r .chromium.kiosk ${CONFIG})
-if [ "$SCROLLANI" == "null" ]; then 
-	/usr/bin/cat <<< $(/usr/bin/jq --arg v "true" '.chromium.kiosk = $v' ${CONFIG}) >  ${CONFIG}
+if [ "$KIOSKMODE" == "null" ]; then 
+	/usr/bin/cat <<< $(/usr/bin/jq '.chromium.kiosk = true' ${CONFIG}) >  ${CONFIG}
 fi
 
 /usr/bin/cat <<< $(/usr/bin/jq '.mupibox.AudioDevices += [{"tname": "mupihat","ufname": "MuPiHat for MuPiBox"},{"tname": "rpi-bcm2835-3.5mm","ufname": "Onboard 3.5mm output"},{"tname": "rpi-bcm2835-hdmi","ufname": "Onboard HDMI output"},{"tname": "hifiberry-amp","ufname": "HifiBerry AMP / AMP+"},{"tname": "hifiberry-dac","ufname": "HifiBerry DAC / MiniAmp"},{"tname": "hifiberry-dacplus","ufname": "HifiBerry DAC+ / DAC+ Pro / AMP2"},{"tname": "usb-dac","ufname": "Any USB Audio DAC (Auto detection)"}]' ${CONFIG}) >  ${CONFIG}
