@@ -20,12 +20,10 @@ KIOSK=$(/usr/bin/jq -r .chromium.kiosk ${CONFIG})
 URL="http://$(/usr/bin/jq -r .mupibox.host ${CONFIG}):8200"
 CHROMIUM_OPTS=""
 
-# FORCE GPU
+# FORCE GPU Settings
 if ${FORCE_GPU} ; then
-	CHROMIUM_OPTS="${CHROMIUM_OPTS} --ignore-gpu-blocklist"
+	CHROMIUM_OPTS="${CHROMIUM_OPTS} --ignore-gpu-blocklist --enable-gpu --use-gl=egl --enable-unsafe-webgpu --enable-gpu-rasterization"
 fi
-# GPU Settings
-CHROMIUM_OPTS="${CHROMIUM_OPTS} --enable-gpu --use-gl=egl --enable-unsafe-webgpu --enable-gpu-rasterization"
 # Enable smooth scrolling animation
 if ${SCROLL_ANIMATION} ; then
 	CHROMIUM_OPTS="${CHROMIUM_OPTS} --enable-smooth-scrolling"
