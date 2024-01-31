@@ -20,8 +20,11 @@ do
                 sudo chown dietpi:dietpi ${MONITOR_FILE}
                 /usr/bin/cat <<< $(/usr/bin/jq -n --arg v "On" '.monitor = $v' ${MONITOR_FILE}) >  ${MONITOR_FILE}
         else
-                MONITOR=$(DISPLAY=:0 xset q | grep "Monitor" | awk '{print $3}')
-                /usr/bin/cat <<< $(/usr/bin/jq --arg v "${MONITOR}" '.monitor = $v' ${MONITOR_FILE}) >  ${MONITOR_FILE}
+                MONITOR=$(sudo -H -u dietpi bash -c "DISPLAY=:0 xset q | grep 'Monitor'")
+				MONITOR=$(echo ${MONITOR} | awk '{print $3}')
+				if [ ${MONITOR} != "" ]; then
+					/usr/bin/cat <<< $(/usr/bin/jq --arg v "${MONITOR}" '.monitor = $v' ${MONITOR_FILE}) >  ${MONITOR_FILE}
+				fi
         fi
 
 	sleep 1
