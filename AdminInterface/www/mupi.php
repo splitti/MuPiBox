@@ -69,7 +69,15 @@
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>GPU-Support activated</li>";
 		}
-
+	if($_POST['change_cache'] )
+		{
+		if($_POST['cachesize'] )
+			{
+			$data["chromium"]["cachesize"]=$_POST['cachesize'];
+			$change=1;
+			$CHANGE_TXT=$CHANGE_TXT."<li>Cache size changed to ".$data["chromium"]["cachesize"]."</li>";
+			}
+		}
 
 	if($_POST['change_smoothscrolling'] == "disable")
 		{
@@ -723,7 +731,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 			</li>
 
 			<li class="li_1"><h2>Chromium-Browser-Parameters</h2>
-			<h2>GPU-Support (experimental)</h2>
+			<h3>GPU-Support (experimental)</h3>
 				<p>
 				Enables or disables GPU-Support! This setting is disabled by default.
 				</p>
@@ -745,7 +753,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				</p>
 				<input id="saveForm" class="button_text" type="submit" name="change_gpu" value="<?php print $change_gpu; ?>" />
 
-			<h2>Smooth scrolling animation (experimental)</h2>
+			<h3>Smooth scrolling animation (experimental)</h3>
 				<p>
 				Enables or disables scroll animation! This setting is disabled by default.
 				</p>
@@ -766,7 +774,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				?>
 				</p>
 				<input id="saveForm" class="button_text" type="submit" name="change_smoothscrolling" value="<?php print $change_smoothscrolling; ?>" />
-			<h2>Kîosk mode</h2>
+			<h3>Kîosk mode</h3>
 				<p>
 				Enables or disables kiosk mode! This setting is enabled by default.
 				</p>
@@ -787,6 +795,28 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				?>
 				</p>
 				<input id="saveForm" class="button_text" type="submit" name="change_kiosk" value="<?php print $change_kiosk; ?>" />
+				<h3>Cache size</h3>
+				<p>Set chromium cache size in MB. Default value is 128.</p>
+				<div>
+				<select id="" name="cachesize" class="element text medium">
+				<?php 
+				$cache_sizes = array(0,8,16,32,64,128,256,512,1024,2048);
+				foreach($cache_sizes as $mb) {
+				if( $mb == $data["chromium"]["cachesize"] )
+					{
+					$selected = " selected=\"selected\"";
+					}
+				else
+					{
+					$selected = "";
+					}
+				print "<option value=\"". $mb . "\"" . $selected  . ">" . $mb . " MB</option>";
+				}
+				?>
+				</select></div>
+				<input id="saveForm" class="button_text" type="submit" name="change_cache" value="Change cache" />
+
+
 			</li>
 
 		</ul>

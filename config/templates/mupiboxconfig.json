@@ -186,7 +186,7 @@
 		"gpu": false,
 		"sccrollanimation": false,
 		"cachepath": "/home/dietpi/.mupibox/chromium_cache",
-		"cachesize": "32",
+		"cachesize": "128",
 		"kiosk": true
 	},
 	"pm2": {

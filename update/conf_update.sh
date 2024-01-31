@@ -152,7 +152,7 @@ if [ "$CACHEPATH" == "null" ]; then
 fi
 CACHESIZE=$(/usr/bin/jq -r .chromium.cachesize ${CONFIG})
 if [ "$CACHESIZE" == "null" ]; then 
-	/usr/bin/cat <<< $(/usr/bin/jq --arg v "32" '.chromium.cachesize = $v' ${CONFIG}) >  ${CONFIG}
+	/usr/bin/cat <<< $(/usr/bin/jq --arg v "128" '.chromium.cachesize = $v' ${CONFIG}) >  ${CONFIG}
 fi
 KIOSKMODE=$(/usr/bin/jq -r .chromium.kiosk ${CONFIG})
 if [ "$KIOSKMODE" == "null" ]; then 
