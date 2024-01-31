@@ -2,6 +2,8 @@
 # Autostart script for kiosk mode, based on @AYapejian: https://github.com/MichaIng/DietPi/issues/1737#issue-318697621
 #
 # Chromium-parameters: https://peter.sh/experiments/chromium-command-line-switches/
+#                      https://kapeli.com/cheat_sheets/Chromium_Command_Line_Switches.docset/Contents/Resources/Documents/index
+# /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh
 
 /usr/local/bin/mupibox/./startup.sh &
 
@@ -20,6 +22,8 @@ KIOSK=$(/usr/bin/jq -r .chromium.kiosk ${CONFIG})
 URL="http://$(/usr/bin/jq -r .mupibox.host ${CONFIG}):8200"
 CHROMIUM_OPTS=""
 
+# Fast feedback and process control
+CHROMIUM_OPTS="--fast --fast-start"
 # FORCE GPU Settings
 if ${FORCE_GPU} ; then
 	CHROMIUM_OPTS="${CHROMIUM_OPTS} --ignore-gpu-blocklist --enable-gpu --use-gl=egl --enable-unsafe-webgpu --enable-gpu-rasterization"

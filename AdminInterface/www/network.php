@@ -503,7 +503,7 @@
 		</li>
 		<li class="li_1"><h2>Enable/Disable VNC</h2>
 			<p>
-			Enables or disables VNC-Service! The service allows remote access to the browser (Display). Usage recommended for Pi version 3 and up.
+			Enables or disables VNC-Service! The service allows remote access to the browser (Display). Usage recommended for Pi version 3 and up. Usually doesn't work with onboard WiFi.
 			</p>
 			<p>
 			<?php 

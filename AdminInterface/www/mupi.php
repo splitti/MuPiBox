@@ -729,9 +729,13 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				</p>
 				<input id="saveForm" class="button_text" type="submit" name="change_swap" value="<?php print $change_swap; ?>" />
 			</li>
-
-			<li class="li_1"><h2>Chromium-Browser-Parameters</h2>
-			<h3>GPU-Support (experimental)</h3>
+		</ul>
+	</details>
+	<details>
+		<summary><i class="fa-brands fa-chrome"></i> Chromium browser parameters</summary>
+		<ul>
+			<li id="li_1" >
+			<h2>GPU-Support (experimental)</h2>
 				<p>
 				Enables or disables GPU-Support! This setting is disabled by default.
 				</p>
@@ -753,7 +757,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				</p>
 				<input id="saveForm" class="button_text" type="submit" name="change_gpu" value="<?php print $change_gpu; ?>" />
 
-			<h3>Smooth scrolling animation (experimental)</h3>
+			<h2>Smooth scrolling animation (experimental)</h2>
 				<p>
 				Enables or disables scroll animation! This setting is disabled by default.
 				</p>
@@ -774,7 +778,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				?>
 				</p>
 				<input id="saveForm" class="button_text" type="submit" name="change_smoothscrolling" value="<?php print $change_smoothscrolling; ?>" />
-			<h3>Kîosk mode</h3>
+			<h2>Kîosk mode</h2>
 				<p>
 				Enables or disables kiosk mode! This setting is enabled by default.
 				</p>
@@ -795,7 +799,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				?>
 				</p>
 				<input id="saveForm" class="button_text" type="submit" name="change_kiosk" value="<?php print $change_kiosk; ?>" />
-				<h3>Cache size</h3>
+				<h2>Cache size</h2>
 				<p>Set chromium cache size in MB. Default value is 128.</p>
 				<div>
 				<select id="" name="cachesize" class="element text medium">
