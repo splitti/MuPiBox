@@ -26,7 +26,7 @@ def on_chat_message(msg):
         subprocess.run(["sudo", "bash", "/usr/local/bin/mupibox/shutdown.sh"])
     elif command == '/screen':
         subprocess.run(["sudo", "rm", "/tmp/telegram_screen.png"])
-        subprocess.run(["sudo", "-H", "-u", "dietpi", "bash", "-c", "\"DISPLAY=:0", "scrot", "/tmp/telegram_screen.png\""])
+        subprocess.run(["sudo", "-H", "-u", "dietpi", "bash", "-c", "DISPLAY=:0 scrot /tmp/telegram_screen.png"])
         bot.sendPhoto(chat_id, open('/tmp/telegram_screen.png', 'rb'))
     elif command == '/reboot':
         subprocess.run(["sudo", "reboot"])
@@ -68,7 +68,7 @@ def on_callback_query(msg):
 
     if query_data == 'screen':
         subprocess.run(["sudo", "rm", "/tmp/telegram_screen.png"])
-        subprocess.run(["sudo", "-H", "-u", "dietpi", "bash", "-c", "\"DISPLAY=:0", "scrot", "/tmp/telegram_screen.png\""])
+        subprocess.run(["sudo", "-H", "-u", "dietpi", "bash", "-c", "DISPLAY=:0 scrot /tmp/telegram_screen.png"])
         bot.sendPhoto(from_id, open('/tmp/telegram_screen.png', 'rb'))
     elif query_data == 'vol':
         markup = InlineKeyboardMarkup(inline_keyboard=[
