@@ -23,7 +23,7 @@ exec 3>${LOG}
 	OS=${OS:17}  >&3 2>&3
 
 	#packages2install="git libasound2 jq samba mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential raspberrypi-kernel-headers dkms"
-	packages2install="git libasound2 jq samba wsdd mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio python3-serial libgles2-mesa mesa-utils libsdl2-dev"
+	packages2install="git libasound2 jq samba wsdd mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio python3-serial libgles2-mesa mesa-utils libsdl2-dev preload"
 	STEP=0
 
 	###############################################################################################
@@ -429,6 +429,9 @@ exec 3>${LOG}
 	sudo mv -f ${MUPI_SRC}/scripts/telegram/* /usr/local/bin/mupibox/ >&3 2>&3
 	
 	sudo mv -f ${MUPI_SRC}/config/templates/add_wifi.json /boot/add_wifi.json >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/config/templates/.bashrc /home/dietpi/.bashrc >&3 2>&3
+
+	sudo chown dietpi:dietpi /home/dietpi/.bashrc >&3 2>&3
 	
 	sudo chmod 755 /usr/local/bin/mupibox/* >&3 2>&3
 
