@@ -1,10 +1,17 @@
 <ion-header class="add-header">
     <ion-toolbar color="light">
+        <ion-buttons slot="start">
+            <ion-button (click)="cancelButtonPressed()" expand="block"><ion-icon name="arrow-back-outline"></ion-icon></ion-button>
+        </ion-buttons>
         <ion-segment #segment value="Add media" (ionChange)="segmentChanged($event)">
             <ion-segment-button #wlan_segment value="Add media">
                 <ion-label>Add media</ion-label>
             </ion-segment-button>
         </ion-segment>
+        <ion-buttons slot="end" class="add-button">
+            <ion-button *ngIf="edit; else elseBlockspotify" size="large" type="submit" expand="block" [disabled]="!valid"><ion-icon slot="icon-only" name="add-outline"></ion-icon></ion-button>
+            <ng-template #elseBlockspotify><ion-button size="large" type="submit" expand="block" [disabled]="!valid"><ion-icon slot="icon-only" name="add-outline"></ion-icon></ion-button></ng-template>
+        </ion-buttons>
         <!-- <ion-segment #segment [(ngModel)]="category" value="{{this.source}}" (ionChange)="segmentChanged($event)">
             <ion-segment-button #audiobook_segment value="audiobook" layout="icon-start">
                 <ion-icon name="{{this.categoryIcons.audiobook}}" color="primary"></ion-icon>
