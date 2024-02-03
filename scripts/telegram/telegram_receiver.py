@@ -5,6 +5,7 @@ import time
 import telepot
 import json
 import subprocess
+import requests
 from telepot.loop import MessageLoop
 from telepot.namedtuple import InlineKeyboardMarkup, InlineKeyboardButton
 
@@ -43,6 +44,7 @@ def on_chat_message(msg):
     elif command == '/help':
         markup = InlineKeyboardMarkup(inline_keyboard=[
                                     [InlineKeyboardButton(text="Current Screen",callback_data='screen'), InlineKeyboardButton(text="Set Volume",callback_data='vol')],
+                                    [InlineKeyboardButton(text="Pause",callback_data='pause'), InlineKeyboardButton(text="Play",callback_data='play')],
                                     [InlineKeyboardButton(text="Sleep Timer",callback_data='sleep'), InlineKeyboardButton(text="Finish current album",callback_data='finishalbum')],
                                     [InlineKeyboardButton(text="Shutdown",callback_data='shutdown'), InlineKeyboardButton(text="Reboot",callback_data='reboot')],
                                     [InlineKeyboardButton(text="Update Media-DB",callback_data='media')]
@@ -59,6 +61,14 @@ def on_chat_message(msg):
     elif command == '/finishalbum':
         bot.sendMessage(chat_id, "After finishing the current album the MuPiBox will be shut down.")
         subprocess.run(["sudo", "/usr/local/bin/mupibox/./albumstop_activator.sh"])
+    elif command == '/pause':
+        bot.sendMessage(chat_id, "Pause")
+        url = 'http://' + config['host'] + ':5005//pause'
+        requests.get(url)
+    elif command == '/play':
+        bot.sendMessage(chat_id, "Play")
+        url = 'http://' + config['host'] + ':5005//play'
+        requests.get(url)
 
 def on_callback_query(msg):
     query_id, from_id, query_data = telepot.glance(msg, flavor='callback_query')
@@ -100,9 +110,18 @@ def on_callback_query(msg):
         sleep = int(split_cmd[1]) * 60
         subprocess.Popen(["sudo", "nohup", "/usr/local/bin/mupibox/./sleep_timer.sh", str(sleep)])
         bot.sendMessage(from_id, "Sleep timer set to " + split_cmd[1] + " minutes")
+    elif query_data == 'play':
+        url = 'http://' + config['host'] + ':5005//play'
+        bot.answerCallbackQuery(query_id, text='Play', show_alert=True)
+        requests.get(url)
+    elif query_data == 'pause':
+        url = 'http://' + config['host'] + ':5005//pause'
+        bot.answerCallbackQuery(query_id, text='Pause', show_alert=True)
+        requests.get(url)
     elif query_data == 'back':
         markup = InlineKeyboardMarkup(inline_keyboard=[
                         [InlineKeyboardButton(text="Current Screen",callback_data='screen'), InlineKeyboardButton(text="Set Volume",callback_data='vol')],
+                        [InlineKeyboardButton(text="Pause",callback_data='pause'), InlineKeyboardButton(text="Play",callback_data='play')],
                         [InlineKeyboardButton(text="Sleep Timer",callback_data='sleep'), InlineKeyboardButton(text="Finish current album",callback_data='finishalbum')],
                         [InlineKeyboardButton(text="Shutdown",callback_data='shutdown'), InlineKeyboardButton(text="Reboot",callback_data='reboot')],
                         [InlineKeyboardButton(text="Update Media-DB",callback_data='media')]
