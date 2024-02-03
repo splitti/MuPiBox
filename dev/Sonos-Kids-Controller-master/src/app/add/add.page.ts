@@ -21,34 +21,31 @@ import { ActivityIndicatorService } from '../activity-indicator.service';
 })
 export class AddPage implements OnInit, AfterViewInit {
 
+  @ViewChild('title', { static: false }) title: IonInput;
+  @ViewChild('spotify_shuffle', { static: false }) spotifyshuffle: IonInput;
   @ViewChild('spotify_aPartOfAll', { static: false }) spotifyaPartOfAll: IonInput;
   @ViewChild('spotify_aPartOfAllMin', { static: false }) spotifyaPartOfAllMin: IonInput;
   @ViewChild('spotify_aPartOfAllMax', { static: false }) spotifyaPartOfAllMax: IonInput;
 
   source = 'spotify';
   category = 'audiobook';
-  searchType = 'media_id';
+  sourceType = 'spotifyURL';
   keyboard: Keyboard;
   selectedInputElem: any;
   valid = false;
   editMedia: Media; 
   edit = false;
+  titleBoolean = false;
   shuffle = false;
   firstInput = true;
   validateState: Validate;
-  rssValidate = false;
+  spotify_url= '';
+  rssValidate = false; //remove
   aPartOfAll = false;
   aPartOfAllMin: number;
   aPartOfAllMax: number;
   index: number;
   activityIndicatorVisible = false;
-
-  categoryIcons = {
-    audiobook: 'book-outline',
-    music: 'musical-notes-outline',
-    playlist: 'document-text-outline',
-    radio: 'radio-outline'
-  };
 
   public readonly validate$: Observable<Validate>;
 
@@ -80,17 +77,13 @@ export class AddPage implements OnInit, AfterViewInit {
       this.aPartOfAllMin = this.editMedia.aPartOfAllMin;
       this.aPartOfAllMax = this.editMedia.aPartOfAllMax;
       if(this.source === 'spotify' && this.editMedia?.query) {
-        this.searchType = 'query';
-      }else if(this.source === 'spotify' && this.editMedia?.artistid) {
-        this.searchType = 'artist_id';
-      }else if(this.source === 'spotify' && this.editMedia?.id) {
-        this.searchType = 'media_id';
-      }else if(this.source === 'spotify' && this.editMedia?.showid) {
-        this.searchType = 'show_id';
-      }else if(this.source === 'spotify' && this.editMedia?.playlistid) {
-        this.searchType = 'playlist_id';
+        this.sourceType = 'spotifySearch';
+      }else if(this.source === 'spotify' && (this.editMedia?.artistid || this.editMedia?.id || this.editMedia?.showid || this.editMedia?.id)) {
+        this.sourceType = 'spotifyURL';
+      }else if(this.source === 'radio' && this.editMedia?.id) {
+        this.sourceType = 'streamURL';
       }else if(this.source === 'rss') {
-        this.searchType = 'rss';
+        this.sourceType = 'rssURL';
       }
     }
     this.mediaService.validate$.subscribe(validate => {
@@ -167,27 +160,14 @@ export class AddPage implements OnInit, AfterViewInit {
     this.navController.back();
   }
 
-  searchTypeChanged(event: any) {
-    if (event.detail.value === 'rss'){
-     this.rssValidate = true;
-    } else { this.rssValidate = false }
+  sourceTypeChanged(event: any) {
+    this.sourceType = event.detail.value;
 
-    this.keyboard.clearInput('spotify_artist');
-    this.keyboard.clearInput('spotify_title');
-    this.keyboard.clearInput('spotify_id');
-    this.keyboard.clearInput('spotify_showid');
-    this.keyboard.clearInput('spotify_playlistid');
-    this.keyboard.clearInput('spotify_artistid');
-    this.keyboard.clearInput('spotify_artistcover');
-    this.keyboard.clearInput('spotify_query');
-    this.keyboard.clearInput('spotify_aPartOfAllMin');
-    this.keyboard.clearInput('spotify_aPartOfAllMax');
+    this.keyboard.clearInput('spotifyURL');
+    this.keyboard.clearInput('spotifySearch');
+    this.keyboard.clearInput('rssURL');
+    this.keyboard.clearInput('streamURL');
 
-    this.keyboard.clearInput('rss');
-
-    this.keyboard.clearInput('radio_title');
-    this.keyboard.clearInput('radio_id');
-    this.keyboard.clearInput('radio_cover');
     this.aPartOfAll = false;
     this.shuffle = false;
 
@@ -204,28 +184,19 @@ export class AddPage implements OnInit, AfterViewInit {
 
     if(this.edit){
       switch (event.target.name) {
-        case 'spotify_artist':
+        case 'label':
           this.keyboard.setInput(this.editMedia.artist, event.target.name);
           break;
-        case 'spotify_title':
+        case 'title':
           this.keyboard.setInput(this.editMedia.title, event.target.name);
           break;
-        case 'spotify_id':
-          this.keyboard.setInput(this.editMedia.id, event.target.name);
+        case 'spotifyURL':
+          this.keyboard.setInput(this.editMedia.spotify_url, event.target.name);
           break;
-        case 'spotify_showid':
-          this.keyboard.setInput(this.editMedia.showid, event.target.name);
-          break;
-        case 'spotify_playlistid':
-            this.keyboard.setInput(this.editMedia.playlistid, event.target.name);
-            break;
-        case 'spotify_artistid':
-          this.keyboard.setInput(this.editMedia.artistid, event.target.name);
-          break;
-        case 'spotify_artistcover':
+        case 'spotify_labelcover':
           this.keyboard.setInput(this.editMedia.artistcover, event.target.name);
           break;
-        case 'spotify_query':
+        case 'spotifySearch':
           this.keyboard.setInput(this.editMedia.query, event.target.name);
           break;
         case 'spotify_aPartOfAllMin':
@@ -234,17 +205,11 @@ export class AddPage implements OnInit, AfterViewInit {
         case 'spotify_aPartOfAllMax':
           this.keyboard.setInput(this.editMedia.aPartOfAllMax?.toString(), event.target.name);
           break;
-        case 'rss':
+        case 'rssURL':
           this.keyboard.setInput(this.editMedia.id, event.target.name);
           break;
-        case 'radio_title':
-          this.keyboard.setInput(this.editMedia.title, event.target.name);
-          break;
-        case 'radio_id':
+        case 'streamURL':
           this.keyboard.setInput(this.editMedia.id, event.target.name);
-          break;
-        case 'radio_cover':
-          this.selectedInputElem.value = this.editMedia.cover;
           break;
       }
     }
@@ -283,32 +248,26 @@ export class AddPage implements OnInit, AfterViewInit {
     }
   }
 
-  segmentChanged(event: any) {
+  categoryChanged(event: any) {
     this.category = event.detail.value;
-     if (event.detail.value === 'radio'){
-      this.source = 'radio';
-     }else{
-      this.source = 'spotify';
+    this.shuffle = false;
+    this.validate();
+  }
+
+  spotifyIDfetcher(url: string, keyword: string){
+    const keywordIndex = url.indexOf(keyword);
+    const questionMarkIndex = url.indexOf('?', keywordIndex);
+
+    // Überprüfen, ob ein Fragezeichen gefunden wurde
+    if (questionMarkIndex !== -1) {
+      // Die Zeichen zwischen dem Schlüsselwort und dem ersten Fragezeichen extrahieren
+      const substring = url.substring(keywordIndex + keyword.length, questionMarkIndex);
+      return substring;
+    } else {
+      // Wenn kein Fragezeichen gefunden wurde, die Zeichen bis zum Ende der URL extrahieren
+      const substring = url.substring(keywordIndex + keyword.length);
+      return substring;
     }
-    window.setTimeout(() => { // wait for new elements to be visible before altering them
-      this.keyboard.clearInput('spotify_artist');
-      this.keyboard.clearInput('spotify_title');
-      this.keyboard.clearInput('spotify_id');
-      this.keyboard.clearInput('spotify_showid');
-      this.keyboard.clearInput('spotify_playlistid');
-      this.keyboard.clearInput('spotify_artistid');
-      this.keyboard.clearInput('spotify_artistcover');
-      this.keyboard.clearInput('spotify_query');
-      this.keyboard.clearInput('spotify_aPartOfAllMin');
-      this.keyboard.clearInput('spotify_aPartOfAllMax');
-
-      this.keyboard.clearInput('rss');
-
-      this.keyboard.clearInput('radio_title');
-      this.keyboard.clearInput('radio_id');
-      this.keyboard.clearInput('radio_cover');
-      this.validate();
-    }, 10);
   }
 
   submit(form: NgForm) {
@@ -316,14 +275,12 @@ export class AddPage implements OnInit, AfterViewInit {
       this.activityIndicatorVisible = true;
       indicator.present().then(() => {
 
-        if (this.category == 'radio'){
+        if(this.sourceType === 'spotifyURL' || this.sourceType === 'spotifySearch'){
+          this.source = 'spotify';
+        }else if(this.sourceType == 'streamURL'){
           this.source = 'radio';
-        }else{
-          if (this.searchType === 'rss'){
-            this.source = 'rss';
-          }else{
-            this.source = 'spotify';
-          }
+        }else if(this.sourceType == 'rssURL'){
+          this.source = 'rss';
         }
         
         const media: Media = {
@@ -336,45 +293,31 @@ export class AddPage implements OnInit, AfterViewInit {
           aPartOfAllMax: this.aPartOfAllMax,
         };
     
-        if (this.source === 'spotify') {
-          if (form.form.value.spotify_artist?.length) { media.artist = form.form.value.spotify_artist; }
-          if (form.form.value.spotify_artistcover?.length) { media.artistcover = form.form.value.spotify_artistcover; }
-          if (form.form.value.spotify_title?.length) { media.title = form.form.value.spotify_title; }
-          if (form.form.value.spotify_query?.length) { media.query = form.form.value.spotify_query; }
-          if (form.form.value.spotify_id?.length) {
-            media.id = form.form.value.spotify_id;
-            this.playerService.validateId(media.id, "spotify_id");
-          }
-          if (form.form.value.spotify_playlistid?.length) {
-            media.playlistid = form.form.value.spotify_playlistid;
-            this.playerService.validateId(media.playlistid, "spotify_playlistid");
-          }
-          if (form.form.value.spotify_showid?.length) {
-            media.showid = form.form.value.spotify_showid;
-            this.playerService.validateId(media.showid, "spotify_showid");
-          }
-          if (form.form.value.spotify_artistid?.length) {
-            media.artistid = form.form.value.spotify_artistid;
-            this.playerService.validateId(media.artistid, "spotify_artistid");
-          }
-          if (this.aPartOfAll) { 
-            media.aPartOfAllMin = parseInt(form.form.value.spotify_aPartOfAllMin);
-            media.aPartOfAllMax = parseInt(form.form.value.spotify_aPartOfAllMax);
-          }
-        } else if (this.source === 'radio') {
-          if (form.form.value.radio_title?.length) { media.title = form.form.value.radio_title; }
-          if (form.form.value.radio_cover?.length) { media.cover = form.form.value.radio_cover; }
-          if (form.form.value.radio_id?.length) { media.id = form.form.value.radio_id; }
-        } else if (this.source === 'rss') {
-          if (form.form.value.spotify_artist?.length) { media.artist = form.form.value.spotify_artist; }
-          if (form.form.value.spotify_artistcover?.length) { media.artistcover = form.form.value.spotify_artistcover; }
-          if (form.form.value.rss?.length) { media.id = form.form.value.rss; }
-          if (this.aPartOfAll) { 
-            media.aPartOfAllMin = parseInt(form.form.value.spotify_aPartOfAllMin);
-            media.aPartOfAllMax = parseInt(form.form.value.spotify_aPartOfAllMax);
+        if (form.form.value.label?.length) { media.artist = form.form.value.label; }
+        if (form.form.value.labelcover?.length) { media.artistcover = form.form.value.labelcover; }
+        if (form.form.value.title?.length) { media.title = form.form.value.title; }
+        if (form.form.value.rssURL?.length) { media.id = form.form.value.rssURL; }
+        if (form.form.value.spotifySearch?.length) { media.query = form.form.value.spotifySearch; }
+        if (form.form.value.streamURL?.length) { media.id = form.form.value.streamURL; }
+        if (form.form.value.spotifyURL?.length) {
+          media.spotify_url = form.form.value.spotifyURL;
+          if(media.spotify_url.startsWith("https://open.spotify.com/")){
+            if(media.spotify_url.includes("playlist/")){
+              media.playlistid = this.spotifyIDfetcher(media.spotify_url, 'playlist/');
+              this.playerService.validateId(media.playlistid, "spotify_playlistid");
+            }else if(media.spotify_url.includes("artist/")){
+              media.artistid = this.spotifyIDfetcher(media.spotify_url, 'artist/');
+              this.playerService.validateId(media.artistid, "spotify_artistid");
+            }else if(media.spotify_url.includes("album/")){
+              media.id = this.spotifyIDfetcher(media.spotify_url, 'album/');
+              this.playerService.validateId(media.id, "spotify_id");
+            }else if(media.spotify_url.includes("show/")){
+              media.showid = this.spotifyIDfetcher(media.spotify_url, 'show/');
+              this.playerService.validateId(media.showid, "spotify_showid");
+            }
           }
         }
-
+        
         console.log(media);
         
     
@@ -389,7 +332,7 @@ export class AddPage implements OnInit, AfterViewInit {
     this.mediaService.validate$.subscribe(validate => {
       this.validateState = validate;
     });
-    if(!this.validateState?.validate && this.source === 'spotify' && media.query === undefined && !this.rssValidate){
+    if(!this.validateState?.validate && this.source === 'spotify' && this.sourceType === 'spotifyURL'){
       this.activityIndicatorService.dismiss();
       this.activityIndicatorVisible = false;
       const alert = await this.alertController.create({
@@ -441,22 +384,15 @@ export class AddPage implements OnInit, AfterViewInit {
           } else {
             form.reset();
 
-            this.keyboard.clearInput('spotify_artist');
-            this.keyboard.clearInput('spotify_title');
-            this.keyboard.clearInput('spotify_id');
-            this.keyboard.clearInput('spotify_showid');
-            this.keyboard.clearInput('spotify_playlistid');
-            this.keyboard.clearInput('spotify_artistid');
-            this.keyboard.clearInput('spotify_artistcover');
-            this.keyboard.clearInput('spotify_query');
+            this.keyboard.clearInput('label');
+            this.keyboard.clearInput('title');
+            this.keyboard.clearInput('spotifyURL');
+            this.keyboard.clearInput('spotifySearch');
+            this.keyboard.clearInput('rssURL');
+            this.keyboard.clearInput('streamURL');
+            this.keyboard.clearInput('labelcover');
             this.keyboard.clearInput('spotify_aPartOfAllMin');
             this.keyboard.clearInput('spotify_aPartOfAllMax');
-
-            this.keyboard.clearInput('rss');
-        
-            this.keyboard.clearInput('radio_title');
-            this.keyboard.clearInput('radio_id');
-            this.keyboard.clearInput('radio_cover');
         
             this.validate();
       
@@ -503,22 +439,15 @@ export class AddPage implements OnInit, AfterViewInit {
           } else {
             form.reset();
 
-            this.keyboard.clearInput('spotify_artist');
-            this.keyboard.clearInput('spotify_title');
-            this.keyboard.clearInput('spotify_id');
-            this.keyboard.clearInput('spotify_showid');
-            this.keyboard.clearInput('spotify_playlistid');
-            this.keyboard.clearInput('spotify_artistid');
-            this.keyboard.clearInput('spotify_artistcover');
-            this.keyboard.clearInput('spotify_query');
+            this.keyboard.clearInput('label');
+            this.keyboard.clearInput('title');
+            this.keyboard.clearInput('spotifyURL');
+            this.keyboard.clearInput('spotifySearch');
+            this.keyboard.clearInput('rssURL');
+            this.keyboard.clearInput('streamURL');
+            this.keyboard.clearInput('labelcover');
             this.keyboard.clearInput('spotify_aPartOfAllMin');
             this.keyboard.clearInput('spotify_aPartOfAllMax');
-
-            this.keyboard.clearInput('rss');
-        
-            this.keyboard.clearInput('radio_title');
-            this.keyboard.clearInput('radio_id');
-            this.keyboard.clearInput('radio_cover');
         
             this.validate();
             
@@ -535,89 +464,78 @@ export class AddPage implements OnInit, AfterViewInit {
   }
 
   validate() {
-    if(this.category === 'audiobook' || this.category === 'music'){
-      if(this.aPartOfAll){
-        this.spotifyaPartOfAllMin.disabled = false;
-        this.spotifyaPartOfAllMax.disabled = false;
-      }else{
-        this.spotifyaPartOfAllMin.disabled = true;
-        this.spotifyaPartOfAllMax.disabled = true;
-      }
-      
-      if(this.searchType === "artist_id" || this.searchType === "show_id" || this.searchType === "query" || this.searchType === "rss"){
-        this.spotifyaPartOfAll.disabled = false;
-      }else{
-        this.spotifyaPartOfAll.disabled = true;
-      }
+    if(this.aPartOfAll){
+      this.spotifyaPartOfAllMin.disabled = false;
+      this.spotifyaPartOfAllMax.disabled = false;
+    }else{
+      this.spotifyaPartOfAllMin.disabled = true;
+      this.spotifyaPartOfAllMax.disabled = true;
+    }
+    if(this.shuffle){
+      this.spotifyshuffle.disabled = false;
+    }else{
+      this.spotifyshuffle.disabled = true;
+    }
+    if(this.titleBoolean){
+      this.title.disabled = false;
+    }else{
+      this.title.disabled = true;
     }
     
-    if (this.source === 'spotify' && !this.rssValidate) {
-      const artist = this.keyboard.getInput('spotify_artist');
-      const title = this.keyboard.getInput('spotify_title');
-      const id = this.keyboard.getInput('spotify_id');
-      const artistid = this.keyboard.getInput('spotify_artistid');
-      const artistcover = this.keyboard.getInput('spotify_artistcover');
-      const query = this.keyboard.getInput('spotify_query');
-      const show = this.keyboard.getInput('spotify_showid');
-      const playlist = this.keyboard.getInput('spotify_playlistid');
+    if(this.sourceType === "spotifyURL" || this.sourceType === "spotifySearch" || this.sourceType === "rssURL"){
+      this.spotifyaPartOfAll.disabled = false;
+    }else{
+      this.spotifyaPartOfAll.disabled = true;
+    }
+    if(this.sourceType === "streamURL"){
+      this.title.disabled = false;
+    }else{
+      this.title.disabled = true;
+    }
+    if((this.sourceType === "spotifyURL" || this.sourceType === "spotifySearch") && (this.category === "music" || this.category === "other")){
+      this.spotifyshuffle.disabled = false;
+    }else{
+      this.spotifyshuffle.disabled = true;
+    }
+    
+    if (this.sourceType === 'spotifyURL' || this.sourceType === 'spotifySearch' || this.sourceType === "rssURL") {
+      const label = this.keyboard.getInput('label');
+      const spotifyURL = this.keyboard.getInput('spotifyURL');
+      const spotifySearch = this.keyboard.getInput('spotifySearch');
+      const rssURL = this.keyboard.getInput('rssURL');
+      const labelcover = this.keyboard.getInput('labelcover');
 
       this.valid = (
-        (this.category === 'audiobook' || this.category === 'music') && (
-          (title?.length > 0 && artist?.length > 0 && !(query?.length > 0) && !(id?.length > 0) && !(artistid?.length > 0))
-          ||
-          (query?.length > 0 && !(title?.length > 0) && !(id?.length > 0) && !(artistid?.length > 0))
-          ||
-          (id?.length > 0 && !(query?.length > 0))
-          ||
-          (artistid?.length > 0 && !(query?.length > 0))
-          ||
-          (show?.length > 0 && !(query?.length > 0))
-          ||
-          (playlist?.length > 0 && artist?.length > 0 && !(query?.length > 0))
-          ||
-          (this.edit && (artist?.length > 0))
-          ||
-          (this.edit && (artistcover?.length > 0))
-          ||
-          (this.edit && (this.shuffle !== this.editMedia?.shuffle))
-          ||
-          (this.edit && (this.aPartOfAll !== this.editMedia?.aPartOfAll))
-          ||
-          (this.edit && (this.aPartOfAllMin !== this.editMedia?.aPartOfAllMin))
-          ||
-          (this.edit && (this.aPartOfAllMax !== this.editMedia?.aPartOfAllMax))
-        )
-      );
-    } else if (this.source === 'radio') {
-      const artist = this.keyboard.getInput('radio_artist');
-      const title = this.keyboard.getInput('radio_title');
-      const id = this.keyboard.getInput('radio_id');
-      const cover = this.keyboard.getInput('radio_cover');
-
-      this.valid = (
-        (title?.length > 0 && id?.length > 0)
+        (spotifyURL?.length > 0 && label?.length > 0)
         ||
-        (this.edit && ((title?.length > 0) || (id?.length > 0) || (artist?.length > 0) || (cover?.length > 0)))
+        (spotifySearch?.length > 0 && label?.length > 0)
+        ||
+        (rssURL?.length > 0 && label?.length > 0)
+        ||
+        (this.edit && ((spotifyURL?.length > 0) || (label?.length > 0) || (labelcover?.length > 0)))
+        ||
+        (this.edit && ((spotifySearch?.length > 0) || (label?.length > 0) || (labelcover?.length > 0)))
+        ||
+        (this.edit && ((rssURL?.length > 0) || (label?.length > 0) || (labelcover?.length > 0)))
+        ||
+        (this.edit && (this.shuffle !== this.editMedia?.shuffle))
+        ||
+        (this.edit && (this.aPartOfAll !== this.editMedia?.aPartOfAll))
+        ||
+        (this.edit && (this.aPartOfAllMin !== this.editMedia?.aPartOfAllMin))
+        ||
+        (this.edit && (this.aPartOfAllMax !== this.editMedia?.aPartOfAllMax))
       );
-    } else if (this.source === 'spotify' && this.rssValidate) {
-      const artist = this.keyboard.getInput('spotify_artist');
-      const rss = this.keyboard.getInput('rss');
-      const artistcover = this.keyboard.getInput('spotify_artistcover');
+    } else if (this.sourceType === 'streamURL') {
+      const label = this.keyboard.getInput('label');
+      const streamURL = this.keyboard.getInput('streamURL');
+      const labelcover = this.keyboard.getInput('labelcover');
+      const title = this.keyboard.getInput('title');
 
       this.valid = (
-        (this.category === 'audiobook' || this.category === 'music') && (
-          (rss?.length > 0)
-          ||
-          (this.edit && ((rss?.length > 0) || (artist?.length > 0) || (artistcover?.length > 0)))
-          ||
-          (this.edit && (this.shuffle !== this.editMedia?.shuffle))
-          ||
-          (this.edit && (this.aPartOfAll !== this.editMedia?.aPartOfAll))
-          ||
-          (this.edit && (this.aPartOfAllMin !== this.editMedia?.aPartOfAllMin))
-          ||
-          (this.edit && (this.aPartOfAllMax !== this.editMedia?.aPartOfAllMax))
-        )
+        (streamURL?.length > 0 && label?.length > 0 && title?.length > 0)
+        ||
+        (this.edit && ((title?.length > 0) || (streamURL?.length > 0) || (label?.length > 0) || (labelcover?.length > 0)))
       );
     }
   }

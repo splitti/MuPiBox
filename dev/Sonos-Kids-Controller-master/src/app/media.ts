@@ -17,4 +17,5 @@ export interface Media {
     aPartOfAllMin?: number;
     aPartOfAllMax?: number;
     duration?: string;
+    spotify_url?: string;
 }
