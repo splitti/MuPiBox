@@ -17,6 +17,15 @@ alias treed='tree -CAFd'
 alias mountedinfo='df -hT'
 alias grep='/usr/bin/grep --color=auto'
 
+#mupibox aliases
+alias mupi-update-stable='cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh | sudo bash  -s -- stable'
+alias mupi-update-beta='cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh | sudo bash  -s -- beta'
+alias mupi-update-dev='cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh | sudo bash  -s -- dev'
+alias mupi-show-conf='sudo cat /etc/mupibox/mupiboxconfig.json | jq . -r -C'
+alias mupi-show-data='sudo cat /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json | jq . -r -C'
+alias mupi-show-network='sudo cat /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/network.json | jq . -r -C'
+alias mupi-restart-chrome='/usr/local/bin/mupibox/./restart_kiosk.sh'
+
 #dietpi aliases
 alias dietpi-letsencrypt='/boot/dietpi/dietpi-letsencrypt'
 alias dietpi-autostart='/boot/dietpi/dietpi-autostart'
@@ -135,21 +144,21 @@ On_IWhite='\033[0;107m'   # White
 OS=$(source /etc/os-release ; echo $PRETTY_NAME)
 RASPI=$(cat /sys/firmware/devicetree/base/model)
 clear
-echo -e "${BCyan}###################################################################${Color_Off}"
-echo -e "${BCyan}##    ${Cyan}Hostname:         ${BGreen}$(hostname)${Color_Off}"
-echo -e "${BCyan}##    ${Cyan}User:             ${BGreen}$(whoami)${Color_Off}"
-echo -e "${BCyan}##    ${Cyan}IP-Address:       ${BGreen}$(hostname -I)${Color_Off}"
-echo -e "${BCyan}##    ${Cyan}OS:               ${BGreen}${OS}${Color_Off}"
-echo -e "${BCyan}##    ${Cyan}RasPi:            ${BGreen}${RASPI}${Color_Off}"
-echo -e "${BCyan}##    ${Cyan}Architecture:     ${BGreen}$(uname -m)${Color_Off}"
-echo -e "${BCyan}##    ${Cyan}MuPiBox-Version:  ${BGreen}$(cat /etc/mupibox/mupiboxconfig.json | jq -r .mupibox.version)${Color_Off}"
-echo -e "${BCyan}##  ${Color_Off}"
-echo -e "${BCyan}##    ${Cyan}Admin-UI:         ${BYellow}http://$(hostname)${Color_Off}"
-echo -e "${BCyan}##    ${Cyan}Web-UI:           ${BYellow}http://$(hostname):8200${Color_Off}"
-echo -e "${BCyan}##  ${Color_Off}"
-echo -e "${BCyan}##    ${Cyan}visit MuPiBox:    ${BRed}https://mupibox.de${Color_Off}"
-echo -e "${BCyan}##    ${Cyan}Latest-Version:   ${BRed}$(curl -s https://raw.githubusercontent.com/splitti/MuPiBox/main/version.json | jq -r .release.stable[-1].version)${Color_Off}"
-echo -e "${BCyan}###################################################################${Color_Off}"
+echo -e "${On_IRed}   ${On_IYellow}   ${On_IGreen}   ${On_IBlue}   ${On_ICyan}   ${On_IPurple}   ${On_IRed}   ${On_IYellow}   ${On_IGreen}   ${On_IBlue}   ${On_ICyan}   ${On_IPurple}   ${On_IRed}   ${On_IYellow}   ${On_IGreen}   ${On_IBlue}   ${On_ICyan}   ${On_IPurple}   ${Color_Off}"
+echo -e "  ${BCyan}Hostname:         ${BGreen}$(hostname)${Color_Off}"
+echo -e "  ${BCyan}User:             ${BGreen}$(whoami)${Color_Off}"
+echo -e "  ${BCyan}IP-Address:       ${BGreen}$(hostname -I)${Color_Off}"
+echo -e "  ${BCyan}OS:               ${BGreen}${OS}${Color_Off}"
+echo -e "  ${BCyan}RasPi:            ${BGreen}${RASPI}${Color_Off}"
+echo -e "  ${BCyan}Architecture:     ${BGreen}$(uname -m)${Color_Off}"
+echo -e "  ${BCyan}MuPiBox-Version:  ${BGreen}$(cat /etc/mupibox/mupiboxconfig.json | jq -r .mupibox.version)${Color_Off}"
+echo -e "${Color_Off}"
+echo -e "  ${BCyan}Admin-UI:         ${BYellow}http://$(hostname)${Color_Off}"
+echo -e "  ${BCyan}Web-UI:           ${BYellow}http://$(hostname):8200${Color_Off}"
+echo -e "${Color_Off}"
+echo -e "  ${BCyan}visit MuPiBox:    ${BRed}https://mupibox.de${Color_Off}"
+echo -e "  ${BCyan}Latest-Version:   ${BRed}$(curl -s https://raw.githubusercontent.com/splitti/MuPiBox/main/version.json | jq -r .release.stable[-1].version)${Color_Off}"
+echo -e "${On_IRed}   ${On_IYellow}   ${On_IGreen}   ${On_IBlue}   ${On_ICyan}   ${On_IPurple}   ${On_IRed}   ${On_IYellow}   ${On_IGreen}   ${On_IBlue}   ${On_ICyan}   ${On_IPurple}   ${On_IRed}   ${On_IYellow}   ${On_IGreen}   ${On_IBlue}   ${On_ICyan}   ${On_IPurple}   ${Color_Off}"
 echo -e "${Color_Off}"
 unset OS
 unset RASPI
