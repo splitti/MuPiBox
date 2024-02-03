@@ -71,7 +71,7 @@ export class HomePage implements OnInit {
   }
 
   ngOnInit() {
-    this.mediaService.setCategory('audiobook');
+    this.mediaService.setCategory(this.category);
 
     this.mediaService.network$.subscribe(network => {
       this.network = network;
@@ -170,7 +170,7 @@ export class HomePage implements OnInit {
   }
 
   update() {
-    if (this.category === 'audiobook' || this.category === 'music') {
+    if (this.category === 'audiobook' || this.category === 'music' || this.category === 'other') {
       this.mediaService.publishArtists();
     } else {
       this.mediaService.publishMedia();

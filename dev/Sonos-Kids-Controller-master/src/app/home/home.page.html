@@ -15,7 +15,7 @@
             <!-- <ion-segment-button value="playlist">
                 <ion-icon name="document-text-outline"></ion-icon>
             </ion-segment-button> -->
-            <ion-segment-button value="radio">
+            <ion-segment-button value="other">
                 <ion-icon name="radio-outline"></ion-icon>
             </ion-segment-button>
         </ion-segment>
@@ -38,7 +38,7 @@
 </ion-header>
 
 <ion-content class="home-content">
-    <div *ngIf="category === 'audiobook' || category === 'music'; then artistBlock else mediaBlock"></div>
+    <div *ngIf="category === 'audiobook' || category === 'music' || category === 'other'; then artistBlock else mediaBlock"></div>
 
     <ng-template #artistBlock>
         <ion-slides [options]="slideOptions" scrollbar="true" #artist_slider>

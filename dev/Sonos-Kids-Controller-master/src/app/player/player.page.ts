@@ -240,7 +240,7 @@ export class PlayerPage implements OnInit {
       this.playerService.sendCmd(PlayerCmds.SHUFFLEOFF);
     }
     this.playerService.sendCmd(PlayerCmds.STOP);
-    if(this.media.type === 'spotify' &&  this.media.category === 'music' || this.media.type === 'rss' &&  this.media.category === 'music') {
+    if((this.media.type === 'spotify' &&  (this.media.category === 'music' || this.media.category === 'other'))) {
       if(this.shufflechanged % 2 === 1){
         this.mediaService.editRawMediaAtIndex(this.media.index, this.media);
       }

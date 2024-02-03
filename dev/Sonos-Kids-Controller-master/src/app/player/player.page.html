@@ -74,7 +74,7 @@
                         </ion-col>
                     </ion-row>
 
-                    <ion-row *ngIf="media.type ==='spotify' && media.category =='music'; else elseBlock" class="volume-controls">
+                    <ion-row *ngIf="media.type ==='spotify' && (media.category =='music' || media.category =='other'); else elseBlock" class="volume-controls">
                         <ion-col size="4" class="ion-text-center">
                             <ion-button (click)="seekBack()" color="light">
                                 <ion-icon slot="icon-only" name="play-back" class="small-icon"></ion-icon>
