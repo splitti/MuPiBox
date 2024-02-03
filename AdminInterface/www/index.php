@@ -4,11 +4,7 @@
 		$dataonline = json_decode($onlinejson, true);
 
         exec("sudo rm /var/www/images/screenshot.png /val/www/images/temp.png /var/www/images/cpuload.png");
-<<<<<<< Updated upstream
-        exec("sudo -H -u dietpi bash -c \"DISPLAY=:0 scrot /tmp/telegram_screen.png\"");
-=======
         exec("sudo -H -u dietpi bash -c 'DISPLAY=:0 scrot /tmp/telegram_screen.png'");
->>>>>>> Stashed changes
         exec('sudo rrdtool graph /var/www/images/temp.png --start -15m -z -a PNG -t "CPU Temperature" --slope-mode --vertical-label "Temperature ºC" -w 700 -h 100 DEF:cpu_temp=/tmp/.rrd/cputemp.rrd:cpu_temp:AVERAGE VDEF:cpu_templ=cpu_temp,LAST LINE1:cpu_temp#ff0000:"Raspberry Pi Temperature,   last\:" GPRINT:cpu_templ:"%7.2lf °C \t\t\t\t\t\t\t\t"');
         exec('sudo rrdtool graph /var/www/images/cpuload.png  --start -15m -a PNG -t "Load Average" --slope-mode --vertical-label "Average Load" -w 750 -h 100 DEF:load1=/tmp/.rrd/cpuusage.rrd:load1:AVERAGE DEF:load5=/tmp/.rrd/cpuusage.rrd:load5:AVERAGE DEF:load15=/tmp/.rrd/cpuusage.rrd:load15:AVERAGE VDEF:load1l=load1,LAST VDEF:load5l=load5,LAST VDEF:load15l=load15,LAST AREA:load1#ff0000:"1 Minute,   last\:" GPRINT:load1l:"%5.2lf \t" AREA:load5#ff9900:"5 Minutes,  last\:" GPRINT:load5l:"%5.2lf \t" AREA:load15#ffff00:"15 Minutes, last\:" GPRINT:load15l:"%5.2lf \t" LINE1:load5#ff9900:"" LINE1:load1#ff0000:"" > /dev/null');
         exec('sudo rrdtool graph /var/www/images/ram.png  --start -15m -a PNG -t "Memory Usage" --slope-mode --vertical-label "Usage in %" --lower-limit 0 --upper-limit 100 -w 750 -h 100 DEF:ram=/tmp/.rrd/ram.rrd:ram:AVERAGE DEF:swap=/tmp/.rrd/ram.rrd:swap:AVERAGE VDEF:raml=ram,LAST VDEF:swapl=swap,LAST AREA:ram#ff0000:"RAM USAGE,   last\:" GPRINT:raml:"%5.2lf " AREA:swap#ff9900:"SWAP USAGE,  last\:" GPRINT:swapl:"%5.2lf " LINE1:ram#ff0000:""  > /dev/null');
@@ -122,6 +118,12 @@
 		$command = "/usr/bin/cat /sys/firmware/devicetree/base/model";
 		exec($command, $moutput, $result );
 		echo "<p><table class='sysinfotbl'><tr><td width=120px>Model:</td><td>" . $moutput[0] . "</td></tr>";
+		$command = "grep PRETTY_NAME /etc/os-release | cut -c 13- | tr -d '\"'";
+		exec($command, $ooutput, $result );
+        echo "<tr><td>OS:</td><td>" . $ooutput[0] . "</td></tr>";
+		$command = "/usr/bin/uname -m";
+		exec($command, $aoutput, $result );
+        echo "<tr><td>Architecture:</td><td>" . $aoutput[0] . "</td></tr>";
         echo "<tr><td>Throttle:</td><td>" . $rpi_throttle . "</td></tr></table></p>";
 		$command = "/usr/bin/systemd-analyze time";
 		exec($command, $toutput, $result );
