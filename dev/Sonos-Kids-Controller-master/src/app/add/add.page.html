@@ -1,5 +1,10 @@
 <ion-header class="add-header">
     <ion-toolbar color="light">
+        <ion-segment #segment value="Add media" (ionChange)="segmentChanged($event)">
+            <ion-segment-button #wlan_segment value="Add media">
+                <ion-label>Add media</ion-label>
+            </ion-segment-button>
+        </ion-segment>
         <!-- <ion-segment #segment [(ngModel)]="category" value="{{this.source}}" (ionChange)="segmentChanged($event)">
             <ion-segment-button #audiobook_segment value="audiobook" layout="icon-start">
                 <ion-icon name="{{this.categoryIcons.audiobook}}" color="primary"></ion-icon>
@@ -56,27 +61,34 @@
             </ion-row>
 
             <ion-row>
-                <ion-col size="4">
+                <ion-col size="3">
                     <div>
                         <ion-item>
                             <ion-input #title [ngModel]="editMedia?.title" name="title" type="text" placeholder="Title" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
                         </ion-item>
                     </div>
                 </ion-col>
-                <ion-col size="4">
+                <ion-col size="3">
+                    <div>
+                        <ion-item>
+                            <ion-input #cover [ngModel]="editMedia?.cover" name="cover" type="text" placeholder="opt. Cover URL" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
+                        </ion-item>
+                    </div>
+                </ion-col>
+                <ion-col size="3">
                     <div>
                         <ion-item [ngSwitch]="sourceType">
-                            <ion-input *ngSwitchCase="'spotifyURL'" #spotifyURL [ngModel]="editMedia?.id" name="spotifyURL" type="text" placeholder="Spotify URL" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
-                            <ion-input *ngSwitchCase="'spotifySearch'" #spotifySearch [ngModel]="editMedia?.id" name="spotifySearch" type="text" placeholder="Spotify Search Query" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
+                            <ion-input *ngSwitchCase="'spotifyURL'" #spotifyURL [ngModel]="editMedia?.spotify_url" name="spotifyURL" type="text" placeholder="Spotify URL" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
+                            <ion-input *ngSwitchCase="'spotifySearch'" #spotifySearch [ngModel]="editMedia?.query" name="spotifySearch" type="text" placeholder="Spotify Search Query" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
                             <ion-input *ngSwitchCase="'rssURL'" #rssURL [ngModel]="editMedia?.id" name="rssURL" type="text" placeholder="RSS/Podcast URL" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
                             <ion-input *ngSwitchCase="'streamURL'" #streamURL [ngModel]="editMedia?.id" name="streamURL" type="text" placeholder="Stream/Radio URL" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
                         </ion-item>
                     </div>
                 </ion-col>
-                <ion-col size="4">
+                <ion-col size="3">
                     <div>
                         <ion-item>
-                            <ion-input #labelcover [ngModel]="editMedia?.artistcover" name="labelcover" type="text" placeholder="opt. Label Cover" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
+                            <ion-input #labelcover [ngModel]="editMedia?.artistcover" name="labelcover" type="text" placeholder="opt. Label Cover URL" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
                         </ion-item>
                     </div>
                 </ion-col>

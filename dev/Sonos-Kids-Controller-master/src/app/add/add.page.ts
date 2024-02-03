@@ -39,8 +39,6 @@ export class AddPage implements OnInit, AfterViewInit {
   shuffle = false;
   firstInput = true;
   validateState: Validate;
-  spotify_url= '';
-  rssValidate = false; //remove
   aPartOfAll = false;
   aPartOfAllMin: number;
   aPartOfAllMax: number;
@@ -193,8 +191,11 @@ export class AddPage implements OnInit, AfterViewInit {
         case 'spotifyURL':
           this.keyboard.setInput(this.editMedia.spotify_url, event.target.name);
           break;
-        case 'spotify_labelcover':
+        case 'labelcover':
           this.keyboard.setInput(this.editMedia.artistcover, event.target.name);
+          break;
+        case 'cover':
+          this.keyboard.setInput(this.editMedia.cover, event.target.name);
           break;
         case 'spotifySearch':
           this.keyboard.setInput(this.editMedia.query, event.target.name);
@@ -254,6 +255,9 @@ export class AddPage implements OnInit, AfterViewInit {
     this.validate();
   }
 
+  segmentChanged(event: any) {
+  }
+
   spotifyIDfetcher(url: string, keyword: string){
     const keywordIndex = url.indexOf(keyword);
     const questionMarkIndex = url.indexOf('?', keywordIndex);
@@ -295,6 +299,7 @@ export class AddPage implements OnInit, AfterViewInit {
     
         if (form.form.value.label?.length) { media.artist = form.form.value.label; }
         if (form.form.value.labelcover?.length) { media.artistcover = form.form.value.labelcover; }
+        if (form.form.value.cover?.length) { media.artistcover = form.form.value.cover; }
         if (form.form.value.title?.length) { media.title = form.form.value.title; }
         if (form.form.value.rssURL?.length) { media.id = form.form.value.rssURL; }
         if (form.form.value.spotifySearch?.length) { media.query = form.form.value.spotifySearch; }
@@ -391,6 +396,7 @@ export class AddPage implements OnInit, AfterViewInit {
             this.keyboard.clearInput('rssURL');
             this.keyboard.clearInput('streamURL');
             this.keyboard.clearInput('labelcover');
+            this.keyboard.clearInput('cover');
             this.keyboard.clearInput('spotify_aPartOfAllMin');
             this.keyboard.clearInput('spotify_aPartOfAllMax');
         
@@ -446,6 +452,7 @@ export class AddPage implements OnInit, AfterViewInit {
             this.keyboard.clearInput('rssURL');
             this.keyboard.clearInput('streamURL');
             this.keyboard.clearInput('labelcover');
+            this.keyboard.clearInput('cover');
             this.keyboard.clearInput('spotify_aPartOfAllMin');
             this.keyboard.clearInput('spotify_aPartOfAllMax');
         
@@ -504,6 +511,7 @@ export class AddPage implements OnInit, AfterViewInit {
       const spotifySearch = this.keyboard.getInput('spotifySearch');
       const rssURL = this.keyboard.getInput('rssURL');
       const labelcover = this.keyboard.getInput('labelcover');
+      const cover = this.keyboard.getInput('cover');
 
       this.valid = (
         (spotifyURL?.length > 0 && label?.length > 0)
@@ -512,11 +520,11 @@ export class AddPage implements OnInit, AfterViewInit {
         ||
         (rssURL?.length > 0 && label?.length > 0)
         ||
-        (this.edit && ((spotifyURL?.length > 0) || (label?.length > 0) || (labelcover?.length > 0)))
+        (this.edit && ((spotifyURL?.length > 0) || (label?.length > 0) || (labelcover?.length > 0) || (cover?.length > 0)))
         ||
-        (this.edit && ((spotifySearch?.length > 0) || (label?.length > 0) || (labelcover?.length > 0)))
+        (this.edit && ((spotifySearch?.length > 0) || (label?.length > 0) || (labelcover?.length > 0) || (cover?.length > 0)))
         ||
-        (this.edit && ((rssURL?.length > 0) || (label?.length > 0) || (labelcover?.length > 0)))
+        (this.edit && ((rssURL?.length > 0) || (label?.length > 0) || (labelcover?.length > 0) || (cover?.length > 0)))
         ||
         (this.edit && (this.shuffle !== this.editMedia?.shuffle))
         ||
@@ -530,12 +538,13 @@ export class AddPage implements OnInit, AfterViewInit {
       const label = this.keyboard.getInput('label');
       const streamURL = this.keyboard.getInput('streamURL');
       const labelcover = this.keyboard.getInput('labelcover');
+      const cover = this.keyboard.getInput('cover');
       const title = this.keyboard.getInput('title');
 
       this.valid = (
         (streamURL?.length > 0 && label?.length > 0 && title?.length > 0)
         ||
-        (this.edit && ((title?.length > 0) || (streamURL?.length > 0) || (label?.length > 0) || (labelcover?.length > 0)))
+        (this.edit && ((title?.length > 0) || (streamURL?.length > 0) || (label?.length > 0) || (labelcover?.length > 0) || (cover?.length > 0)))
       );
     }
   }

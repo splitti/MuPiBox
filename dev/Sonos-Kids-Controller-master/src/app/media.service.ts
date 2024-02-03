@@ -336,7 +336,7 @@ export class MediaService {
       map(media => { // add dummy image for missing covers
         return media.map(currentMedia => {
           if (!currentMedia.cover) {
-            currentMedia.cover = '../assets/images/nocover.png';
+            currentMedia.cover = '../assets/images/nocover_mupi.png';
           }
           return currentMedia;
         });
