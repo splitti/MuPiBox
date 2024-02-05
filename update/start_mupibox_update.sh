@@ -288,7 +288,7 @@ echo "==========================================================================
 		mv ${MUPI_SRC}/bin/spotifyd/0.3.3/spotifyd /usr/bin/spotifyd >&3 2>&3
 		mv ${MUPI_SRC}/bin/fbv/fbv /usr/bin/fbv >&3 2>&3
 	else
-		mv ${MUPI_SRC}/bin/spotifyd/0.3.3/spotifyd_64bit /usr/bin/spotifyd >&3 2>&3
+		mv ${MUPI_SRC}/bin/spotifyd/0.3.5/spotifyd_64bit /usr/bin/spotifyd >&3 2>&3
 		mv ${MUPI_SRC}/bin/fbv/fbv_64 /usr/bin/fbv >&3 2>&3
 
 	fi
