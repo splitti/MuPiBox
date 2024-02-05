@@ -19,7 +19,7 @@ service mupi_idle_shutdown stop
 packages2install="git libasound2 jq mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio python3-serial libgles2-mesa mesa-utils libsdl2-dev preload"
 STEP=0
 VER_JSON="/tmp/version.json"
-OS=$(source /etc/os-release ; echo $PRETTY_NAME)  >&3 2>&3
+OS=$(source /etc/os-release ; echo $VERSION_CODENAME)  >&3 2>&3
 ARCH=$(uname -m) >&3 2>&3	
 
 wget -O /tmp/installation.jpg https://raw.githubusercontent.com/splitti/MuPiBox/main/media/images/installation.jpg >&3 2>&3
