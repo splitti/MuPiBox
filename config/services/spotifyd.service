@@ -7,7 +7,7 @@ Wants=network-online.target
 After=network-online.target
 
 [Service]
-ExecStart=/usr/bin/spotifyd --no-daemon --config-path /etc/spotifyd/spotifyd.conf --initial-volume 30
+ExecStart=/usr/bin/spotifyd --no-daemon --config-path /etc/spotifyd/spotifyd.conf --initial-volume 100
 Restart=always
 RestartSec=12
 

@@ -532,13 +532,13 @@ function playMe(/*activePlaylist*/){
       log.debug(nowDate.toLocaleString() + ": [Spotify Control] Playback error" + err);
       handleSpotifyError(err,"playMe");
     });
-    spotifyApi.setVolume(volumeStart).then(function () {
-      log.debug(nowDate.toLocaleString() + ': [Spotify Control] Setting volume to '+ 99);
-      counter.countsetVolume++;
-      if (config.server.logLevel === 'debug'){writeCounter();}
-      }, function(err) {
-      handleSpotifyError(err,"setVolume");
-    });
+    // spotifyApi.setVolume(volumeStart).then(function () {
+    //   log.debug(nowDate.toLocaleString() + ': [Spotify Control] Setting volume to '+ 99);
+    //   counter.countsetVolume++;
+    //   if (config.server.logLevel === 'debug'){writeCounter();}
+    //   }, function(err) {
+    //   handleSpotifyError(err,"setVolume");
+    // });
   } else {
     spotifyApi.play({ context_uri: activePlaylistId, offset: {"position": resumeOffset}, position_ms: resumeProgess})
     .then(function(data){
@@ -553,13 +553,13 @@ function playMe(/*activePlaylist*/){
       log.debug(nowDate.toLocaleString() + ": [Spotify Control] Playback error" + err);
       handleSpotifyError(err,"playMe");
     });
-    spotifyApi.setVolume(volumeStart).then(function () {
-      counter.countsetVolume++;
-      if (config.server.logLevel === 'debug'){writeCounter();}
-      log.debug(nowDate.toLocaleString() + ': [Spotify Control] Setting volume to '+ 99);
-      }, function(err) {
-      handleSpotifyError(err,"setVolume");
-    });
+    // spotifyApi.setVolume(volumeStart).then(function () {
+    //   counter.countsetVolume++;
+    //   if (config.server.logLevel === 'debug'){writeCounter();}
+    //   log.debug(nowDate.toLocaleString() + ': [Spotify Control] Setting volume to '+ 99);
+    //   }, function(err) {
+    //   handleSpotifyError(err,"setVolume");
+    // });
   }
 }
 
