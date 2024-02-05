@@ -2,6 +2,7 @@
 
 import sys
 import time
+import os
 import telepot
 import json
 import requests
@@ -19,20 +20,22 @@ TOKEN = config['telegram']['token']
 bot = telepot.Bot(TOKEN)
 chat_id = config['telegram']['chatId']
 
-if state['currently_playing_type'] == 'episode':
-    episode = requests.get(urls).json()
-    msg = episode['show']['name'] + "\n" + episode['name']
+player_event = os.environ.get('PLAYER_EVENT')
+
+if player_event == "load":
+    if state['currently_playing_type'] == 'episode':
+        episode = requests.get(urls).json()
+        msg = episode['show']['name'] + "\n" + episode['name']
+        bot.sendMessage(chat_id, msg)
+        subprocess.run(["sudo", "rm", "/tmp/telegram_screen.png"])
+        subprocess.run(["sudo", "-H", "-u", "dietpi", "bash", "-c", "DISPLAY=:0 scrot /tmp/telegram_screen.png"])
+        bot.sendPhoto(chat_id, open('/tmp/telegram_screen.png', 'rb'))
+        sys.exit()
+    msg = state['item']['album']['name'] + "\n" + state['item']['name'] + "\nTrack: " + str(state['item']['track_number']) + "/" + str(state['item']['album']['total_tracks'])
     bot.sendMessage(chat_id, msg)
     subprocess.run(["sudo", "rm", "/tmp/telegram_screen.png"])
     subprocess.run(["sudo", "-H", "-u", "dietpi", "bash", "-c", "DISPLAY=:0 scrot /tmp/telegram_screen.png"])
     bot.sendPhoto(chat_id, open('/tmp/telegram_screen.png', 'rb'))
-    sys.exit()
-
-msg = state['item']['album']['name'] + "\n" + state['item']['name'] + "\nTrack: " + str(state['item']['track_number']) + "/" + str(state['item']['album']['total_tracks'])
-bot.sendMessage(chat_id, msg)
-subprocess.run(["sudo", "rm", "/tmp/telegram_screen.png"])
-subprocess.run(["sudo", "-H", "-u", "dietpi", "bash", "-c", "DISPLAY=:0 scrot /tmp/telegram_screen.png"])
-bot.sendPhoto(chat_id, open('/tmp/telegram_screen.png', 'rb'))
 
 # track_old = 0
 # track_new = state['item']['track_number']
