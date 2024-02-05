@@ -10,9 +10,16 @@
 
         if($_POST['saveSettings'])
 			{
-			$data["spotify"]["cachestate"]=$_POST['spotifycache_active'];
+			if($_POST['spotifycache_active'] == "on")
+				{
+				$data["spotify"]["cachestate"]=true;	
+				}
+			else
+				{
+				$data["spotify"]["cachestate"]=false;	
+				}
 			$data["spotify"]["cachepath"]=$_POST['spotifycache_path'];	
-			$data["spotify"]["cachesize"]=$_POST['cache_size'];
+			$data["spotify"]["maxcachesize"]=$_POST['cache_size'];
 			$CHANGE_TXT=$CHANGE_TXT."<li>Settings saved</li>";
 			$change=1;
 			}
@@ -29,56 +36,56 @@
 			}
 
         if($_POST['setDevID'])
-                {
-                $data["spotify"]["deviceId"]=$_POST['spotdevice'];
-                $CHANGE_TXT=$CHANGE_TXT."<li>Spotify Device-ID saved</li>";
-                $change=1;
-                }
+			{
+			$data["spotify"]["deviceId"]=$_POST['spotdevice'];
+			$CHANGE_TXT=$CHANGE_TXT."<li>Spotify Device-ID saved</li>";
+			$change=1;
+			}
 
         if($_POST['saveLogin'])
-                {
-                $data["spotify"]["username"]=$_POST['spotify_user'];
-                $data["spotify"]["password"]=$_POST['spotify_pwd'];
-                $CHANGE_TXT=$CHANGE_TXT."<li>Login-Data saved</li>";
-                $change=1;
-                }
+			{
+			$data["spotify"]["username"]=$_POST['spotify_user'];
+			$data["spotify"]["password"]=$_POST['spotify_pwd'];
+			$CHANGE_TXT=$CHANGE_TXT."<li>Login-Data saved</li>";
+			$change=1;
+			}
         if( $_POST['saveIDs'] )
-                {
-                $data["spotify"]["clientId"]=$_POST['spotify_clientid'];
-                $data["spotify"]["clientSecret"]=$_POST['spotify_clientsecret'];
-                $CHANGE_TXT=$CHANGE_TXT."<li>Client-Data saved</li>";
-                $change=1;
-                }
+			{
+			$data["spotify"]["clientId"]=$_POST['spotify_clientid'];
+			$data["spotify"]["clientSecret"]=$_POST['spotify_clientsecret'];
+			$CHANGE_TXT=$CHANGE_TXT."<li>Client-Data saved</li>";
+			$change=1;
+			}
         if( $_POST['resetData'] )
-                {
-                $data["spotify"]["deviceId"]="";
-                $data["spotify"]["accessToken"]="";
-                $data["spotify"]["refreshToken"]="";
-                $data["spotify"]["username"]="";
-                $data["spotify"]["password"]="";
-                $data["spotify"]["clientId"]="";
-				$data["spotify"]["clientSecret"]="";
-                $CHANGE_TXT=$CHANGE_TXT."<li>All Spotify Data resettet!</li>";
-                $change=1;
-                }
+			{
+			$data["spotify"]["deviceId"]="";
+			$data["spotify"]["accessToken"]="";
+			$data["spotify"]["refreshToken"]="";
+			$data["spotify"]["username"]="";
+			$data["spotify"]["password"]="";
+			$data["spotify"]["clientId"]="";
+			$data["spotify"]["clientSecret"]="";
+			$CHANGE_TXT=$CHANGE_TXT."<li>All Spotify Data resettet!</li>";
+			$change=1;
+			}
 
         if( $_POST['generateDevID'] )
-                {
-                $command = "sudo /usr/local/bin/mupibox/./set_deviceid.sh";
-                exec($command, $devIDoutput, $result);
-                $string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
-                $data = json_decode($string, true);
-                $CHANGE_TXT=$CHANGE_TXT."<li>Device-ID generated and saved</li>";
-                $change=1;
-                }
+			{
+			$command = "sudo /usr/local/bin/mupibox/./set_deviceid.sh";
+			exec($command, $devIDoutput, $result);
+			$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
+			$data = json_decode($string, true);
+			$CHANGE_TXT=$CHANGE_TXT."<li>Device-ID generated and saved</li>";
+			$change=1;
+			}
 
         if( $change )
-                {
-                $json_object = json_encode($data);
-                $save_rc = file_put_contents('/etc/mupibox/mupiboxconfig.json', $json_object);
-                $command = "sudo /usr/local/bin/mupibox/./setting_update.sh && /usr/local/bin/mupibox/./spotify_restart.sh";
-                exec($command, $output, $result );
-                }
+			{
+			$json_object = json_encode($data);
+			$save_rc = file_put_contents('/etc/mupibox/mupiboxconfig.json', $json_object);
+			$command = "sudo /usr/local/bin/mupibox/./setting_update.sh && /usr/local/bin/mupibox/./spotify_restart.sh";
+			exec($command, $output, $result );
+			}
 
 $CHANGE_TXT=$CHANGE_TXT."</ul>";
 
@@ -86,6 +93,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul>";
                 <form class="appnitro"  method="post" action="spotify.php" id="form">
                                         <div class="description">
                         <h2>Spotify settings</h2>
+						<p>Define login- and common-settings.</p>
                 </div>
 
 
@@ -126,7 +134,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul>";
 				<?php 
 				$cache_size = array(1,2,4,8,16,32,64);
 				foreach($cache_size as $size) {
-				if( $size == $data["spotify"]["cachesize"] )
+				if( $size == $data["spotify"]["maxcachesize"] )
 					{
 					$selected = " selected=\"selected\"";
 					}
