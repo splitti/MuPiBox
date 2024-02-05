@@ -158,5 +158,17 @@ KIOSKMODE=$(/usr/bin/jq -r .chromium.kiosk ${CONFIG})
 if [ "$KIOSKMODE" == "null" ]; then 
 	/usr/bin/cat <<< $(/usr/bin/jq '.chromium.kiosk = true' ${CONFIG}) >  ${CONFIG}
 fi
+MAXCACHE=$(/usr/bin/jq -r .spotify.maxcachesize ${CONFIG})
+if [ "$MAXCACHE" == "null" ]; then 
+	/usr/bin/cat <<< $(/usr/bin/jq --arg v "1073741824" '.spotify.maxcachesize = $v' ${CONFIG}) >  ${CONFIG}
+fi
+CACHEPATH=$(/usr/bin/jq -r .spotify.cachepath ${CONFIG})
+if [ "$CACHEPATH" == "null" ]; then 
+	/usr/bin/cat <<< $(/usr/bin/jq --arg v "/home/dietpi/.cache/spotifyd" '.spotify.cachepath = $v' ${CONFIG}) >  ${CONFIG}
+fi
+CACHESTATE=$(/usr/bin/jq -r .spotify.cachestate ${CONFIG})
+if [ "$CACHESTATE" == "null" ]; then 
+	/usr/bin/cat <<< $(/usr/bin/jq '.spotify.cachepath = true' ${CONFIG}) >  ${CONFIG}
+fi
 
 /usr/bin/cat <<< $(/usr/bin/jq '.mupibox.AudioDevices += [{"tname": "mupihat","ufname": "MuPiHat for MuPiBox"},{"tname": "rpi-bcm2835-3.5mm","ufname": "Onboard 3.5mm output"},{"tname": "rpi-bcm2835-hdmi","ufname": "Onboard HDMI output"},{"tname": "hifiberry-amp","ufname": "HifiBerry AMP / AMP+"},{"tname": "hifiberry-dac","ufname": "HifiBerry DAC / MiniAmp"},{"tname": "hifiberry-dacplus","ufname": "HifiBerry DAC+ / DAC+ Pro / AMP2"},{"tname": "usb-dac","ufname": "Any USB Audio DAC (Auto detection)"}]' ${CONFIG}) >  ${CONFIG}

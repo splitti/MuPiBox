@@ -209,6 +209,7 @@ exec 3>${LOG}
 	mkdir -p /home/dietpi/.mupibox/chromium_cache >&3 2>&3
 	mkdir -p /home/dietpi/MuPiBox/tts_files >&3 2>&3
 	mkdir -p /home/dietpi/MuPiBox/sysmedia/sound >&3 2>&3
+	mkdir -p /home/dietpi/.cache/spotifyd >&3 2>&3
 	mkdir /home/dietpi/MuPiBox/sysmedia/images >&3 2>&3
 	mkdir /home/dietpi/MuPiBox/media >&3 2>&3
 	mkdir /home/dietpi/MuPiBox/media/audiobook >&3 2>&3

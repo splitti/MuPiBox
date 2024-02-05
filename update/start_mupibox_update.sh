@@ -37,7 +37,6 @@ else
 	MUPI_SRC="/home/dietpi/MuPiBox-${VERSION}" >&3 2>&3
 fi
 
-
 echo "==========================================================================================" >&3 2>&3
 echo "= OS:               ${OS}" >&3 2>&3
 echo "= RasPi:            ${RASPPI}" >&3 2>&3
@@ -296,7 +295,8 @@ echo "==========================================================================
 	fi
 	chmod 755 /usr/bin/fbv /usr/bin/spotifyd >&3 2>&3
 
-	service spotifyd start >&3 2>&3
+	mkdir -p $(cat /etc/mupibox/mupiboxconfig.json | jq -r .spotify.cachepath) >&3 2>&3
+	chown dietpi:dietpi $(cat /etc/mupibox/mupiboxconfig.json | jq -r .spotify.cachepath) >&3 2>&3
 
 	after=$(date +%s)
 	echo -e "## Copy binaries  ##  finished after $((after - $before)) seconds" >&3 2>&3
@@ -438,6 +438,8 @@ echo "==========================================================================
 	rm /etc/systemd/system/mupi_change_checker.service >&3 2>&3
 	/usr/local/bin/mupibox/./m3u_generator.sh >&3 2>&3
 	/usr/local/bin/mupibox/./setting_update.sh >&3 2>&3
+	service spotifyd start >&3 2>&3
+
 	DATE=$(date '+%Y-%m-%d')
 	mv ${LOG} /boot/${DATE}_update_${VERSION}.log >&3 2>&3
 	chown dietpi:dietpi ${CONFIG} >&3 2>&3
