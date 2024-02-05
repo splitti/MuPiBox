@@ -282,10 +282,12 @@ echo "==========================================================================
 
 	echo -e "XXX\n${STEP}\nCopy binaries... \nXXX"	
 	before=$(date +%s)
+	
+	service spotifyd stop >&3 2>&3
 
 	# Binaries
 	if [ `getconf LONG_BIT` == 32 ]; then
-		mv ${MUPI_SRC}/bin/spotifyd/0.3.3/spotifyd /usr/bin/spotifyd >&3 2>&3
+		mv ${MUPI_SRC}/bin/spotifyd/0.3.5/spotifyd /usr/bin/spotifyd >&3 2>&3
 		mv ${MUPI_SRC}/bin/fbv/fbv /usr/bin/fbv >&3 2>&3
 	else
 		mv ${MUPI_SRC}/bin/spotifyd/0.3.5/spotifyd_64bit /usr/bin/spotifyd >&3 2>&3
@@ -293,7 +295,9 @@ echo "==========================================================================
 
 	fi
 	chmod 755 /usr/bin/fbv /usr/bin/spotifyd >&3 2>&3
-	sleep 1
+
+	service spotifyd start >&3 2>&3
+
 	after=$(date +%s)
 	echo -e "## Copy binaries  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
