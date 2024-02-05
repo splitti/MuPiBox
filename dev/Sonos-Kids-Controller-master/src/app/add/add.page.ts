@@ -299,7 +299,7 @@ export class AddPage implements OnInit, AfterViewInit {
     
         if (form.form.value.label?.length) { media.artist = form.form.value.label; }
         if (form.form.value.labelcover?.length) { media.artistcover = form.form.value.labelcover; }
-        if (form.form.value.cover?.length) { media.artistcover = form.form.value.cover; }
+        if (form.form.value.cover?.length) { media.cover = form.form.value.cover; }
         if (form.form.value.title?.length) { media.title = form.form.value.title; }
         if (form.form.value.rssURL?.length) { media.id = form.form.value.rssURL; }
         if (form.form.value.spotifySearch?.length) { media.query = form.form.value.spotifySearch; }
