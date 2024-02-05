@@ -165,7 +165,7 @@
 		"clientSecret": "",
 		"accessToken": "",
 		"refreshToken": "",
-		"maxcachesize": "1073741824",
+		"maxcachesize": 1073741824,
 		"cachepath": "/home/dietpi/.cache/spotifyd",
 		"cachestate": true
 	},

@@ -7,17 +7,26 @@
         $SCOPELIST="streaming user-read-currently-playing user-modify-playback-state user-read-playback-state user-read-private user-read-email";
         $SCOPE=urlencode($SCOPELIST);
 
-        if($_GET['code'])
-                {
-                $command="curl -d client_id=".$data["spotify"]["clientId"]." -d client_secret=".$data["spotify"]["clientSecret"]." -d grant_type=authorization_code -d code=".$_GET['code']." -d redirect_uri=".$REDIRECT_URI." https://accounts.spotify.com/api/token";
-                exec($command, $Tokenoutput, $result);
-                $tokendata = json_decode($Tokenoutput[0], true);
-                $data["spotify"]["accessToken"]=$tokendata["access_token"];
-                $data["spotify"]["refreshToken"]=$tokendata["refresh_token"];
-                $CHANGE_TXT=$CHANGE_TXT."<li>Token-Data generated and saved</li>";
-                $change=1;
-                }
 
+        if($_POST['saveSettings'])
+			{
+			$data["spotify"]["cachestate"]=$_POST['spotifycache_active'];
+			$data["spotify"]["cachepath"]=$_POST['spotifycache_path'];	
+			$data["spotify"]["cachesize"]=$_POST['cache_size'];
+			$CHANGE_TXT=$CHANGE_TXT."<li>Settings saved</li>";
+			$change=1;
+			}
+
+        if($_GET['code'])
+			{
+			$command="curl -d client_id=".$data["spotify"]["clientId"]." -d client_secret=".$data["spotify"]["clientSecret"]." -d grant_type=authorization_code -d code=".$_GET['code']." -d redirect_uri=".$REDIRECT_URI." https://accounts.spotify.com/api/token";
+			exec($command, $Tokenoutput, $result);
+			$tokendata = json_decode($Tokenoutput[0], true);
+			$data["spotify"]["accessToken"]=$tokendata["access_token"];
+			$data["spotify"]["refreshToken"]=$tokendata["refresh_token"];
+			$CHANGE_TXT=$CHANGE_TXT."<li>Token-Data generated and saved</li>";
+			$change=1;
+			}
 
         if($_POST['setDevID'])
                 {
@@ -52,13 +61,7 @@
                 $CHANGE_TXT=$CHANGE_TXT."<li>All Spotify Data resettet!</li>";
                 $change=1;
                 }
-        if( $change )
-                {
-                $json_object = json_encode($data);
-                $save_rc = file_put_contents('/etc/mupibox/mupiboxconfig.json', $json_object);
-                $command = "sudo /usr/local/bin/mupibox/./setting_update.sh && /usr/local/bin/mupibox/./spotify_restart.sh";
-                exec($command, $output, $result );
-                }
+
         if( $_POST['generateDevID'] )
                 {
                 $command = "sudo /usr/local/bin/mupibox/./set_deviceid.sh";
@@ -69,22 +72,84 @@
                 $change=1;
                 }
 
+        if( $change )
+                {
+                $json_object = json_encode($data);
+                $save_rc = file_put_contents('/etc/mupibox/mupiboxconfig.json', $json_object);
+                $command = "sudo /usr/local/bin/mupibox/./setting_update.sh && /usr/local/bin/mupibox/./spotify_restart.sh";
+                exec($command, $output, $result );
+                }
+
 $CHANGE_TXT=$CHANGE_TXT."</ul>";
 
 ?>
                 <form class="appnitro"  method="post" action="spotify.php" id="form">
                                         <div class="description">
                         <h2>Spotify settings</h2>
-                        <p>Specify your Spotify-Account-Settings and connect to Spotify... Please notice: all data will be saved as plain text (not encrypted).</p>
                 </div>
- 
+
+
+	<details>
+		<summary><i class="fa-regular fa-circle-check"></i> Common spotify settings</summary>
+				<ul>
+				
+					<li id="li_1" >
+					<h3>Spotify cache state</h3>
+					<p>If set to true, audio data will be cached. Enabling this option could improve speed for playing spotify media. Default: enabled</p>
+
+     <label class="labelchecked" for="spotifycache_active">Cache activation state:&nbsp; &nbsp; <input type="checkbox" id="spotifycache_active"  name="spotifycache_active" <?php
+     if( $data["spotify"]["cachestate"] )
+      {
+      print "checked";
+      }
+?> /></label>
+
+   </li>
+				
+			<li id="li_1" >
+
+                <h3>Spotify cache path</h3>
+                <p>Default: /home/dietpi/.cache/spotifyd</p>
+				<input id="spotifycache_path" name="spotifycache_path" class="element text medium" type="text" maxlength="255" value="<?php
+                print $data["spotify"]["cachepath"];
+?>"/>
+                </li>
+
+			<li id="li_1" >
+				<h3>Cache size</h3>
+				<p>Cache size in GB! Free space:  <?php 
+				$df = floor(disk_free_space("/") / 1024 / 1024 / 1024);
+				print $df;
+				?> GB</p>
+				<div>
+				<select id="cache_size" name="cache_size" class="element text medium">
+				<?php 
+				$cache_size = array(1,2,4,8,16,32,64);
+				foreach($cache_size as $size) {
+				if( $size == $data["spotify"]["cachesize"] )
+					{
+					$selected = " selected=\"selected\"";
+					}
+				else
+					{
+					$selected = "";
+					}
+				print "<option value=\"". $size . "\"" . $selected  . ">" . $size . " GB</option>";
+				}
+				?>
+				</select></div>
+			</li>
+	<li class="buttons"><input id="saveForm" class="button_text" type="submit" name="saveSettings" value="Save Settings" /></li>
+
+		</ul>
+	</details>	
 
 	<details>
 		<summary><i class="fa-regular fa-circle-check"></i> STEP 1 - Login-Data</summary>
 				<ul>
 			<li id="li_1" >
 
-                <h2>Spotify user and password</h2>
+                <h3>Spotify user and password</h3>
                 <p>Please enter Spotify Username and Password. Please notice, spotify premium or family is required!</p>
                         </li>
 
@@ -104,7 +169,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul>";
 ?>"/>
                 </div><p class="guidelines" id="guide_1"><small>Please enter your Spotify Password. The Password will be saved as plain text.</small></p>
                 </li>
-                                <li class="buttons"><input id="saveForm" class="button_text" type="submit" name="saveLogin" value="Save Login Data" /></li>
+				<li class="buttons"><input id="saveForm" class="button_text" type="submit" name="saveLogin" value="Save Login Data" /></li>
 
 		</ul>
 	</details>	
@@ -114,7 +179,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul>";
 		<ul>
 			<li id="li_1" >
 
-                                <h2>Create Developer-App and Client-Connection</h2>
+                                <h3>Create Developer-App and Client-Connection</h3>
 
                 <p>Please login to <a href="https://developer.spotify.com/dashboard/login" target="_blank">Spotify Developer Dashboard</a> and create a new App. You can choose the App-Name or Description, or take "MuPiBox" easily.</p>
                 <p>You will be redireted to the dashboard for the new created app. Copy and paste the Client ID and Client Secret of your app.</p>
@@ -148,7 +213,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul>";
 		<ul>
 			<li id="li_1" >
 
-                                <h2>Create Developer-App and Client-Connection</h2>
+                                <h3>Create Developer-App and Client-Connection</h3>
 
                 <p>Please press the following URL to generate Access and Refresh Token. A login may be necessary.</p>
                                 <p><b>
@@ -182,7 +247,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul>";
 		<ul>
 			<li id="li_1" >
 
-			<h2>Set Device-ID</h2>
+			<h3>Set Device-ID</h3>
             <p>In this last step, you choose your Device... Please notice: sometimes it is necessary to play music on the MuPiBox via app so that the device ID is generated</p>
             </li>
 			<li id="li_1" >
@@ -235,7 +300,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul>";
 		<summary><i class="fa-solid fa-eraser"></i> Reset Spotify-Connection</summary>
 		<ul>
 			<li id="li_1" >
-				<h2>RESET ALL DATA</h2>
+				<h3>RESET ALL DATA</h3>
 
                 <p>Click this Button, to reset all saved spotify data!!!</p>
 				</li>
