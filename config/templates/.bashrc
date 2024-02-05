@@ -9,7 +9,7 @@ alias tf='tail -f'
 alias cls='clear'
 alias md='mkdir'
 alias apt-get='sudo apt-get'
-alias diskspace="du -S | sort -n -r |more"
+alias diskspace="du -S | sort -n -r | more"
 alias folders='du -h --max-depth=1'
 alias folderssort='find . -maxdepth 1 -type d -print0 | xargs -0 du -sk | sort -rn'
 alias tree='tree -CAhF --dirsfirst'
@@ -24,7 +24,10 @@ alias mupi-update-dev='cd; curl -L https://raw.githubusercontent.com/splitti/MuP
 alias mupi-show-conf='sudo cat /etc/mupibox/mupiboxconfig.json | jq . -r -C'
 alias mupi-show-data='sudo cat /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json | jq . -r -C'
 alias mupi-show-network='sudo cat /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/network.json | jq . -r -C'
-alias mupi-restart-chrome='/usr/local/bin/mupibox/./restart_kiosk.sh'
+alias mupi-show-monitor='sudo cat /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/monitor.json | jq . -r -C'
+alias mupi-restart-kiosk='/usr/local/bin/mupibox/./restart_kiosk.sh'
+alias mupi-update-data='/usr/local/bin/mupibox/./m3u_generator.sh'
+
 
 #dietpi aliases
 alias dietpi-letsencrypt='/boot/dietpi/dietpi-letsencrypt'
