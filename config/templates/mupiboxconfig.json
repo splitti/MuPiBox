@@ -204,7 +204,11 @@
 		"topic": "",
 		"clientId": "",
 		"username": "",
-		"password": ""
+		"password": "",
+		"refresh": "",
+		"refreshIdle": "",
+		"timeout": "",
+		"debug": false
 	},
 	"wled": {
 		"active": false,
