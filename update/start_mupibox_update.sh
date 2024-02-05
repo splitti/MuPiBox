@@ -294,7 +294,8 @@ echo "==========================================================================
 
 	fi
 	chmod 755 /usr/bin/fbv /usr/bin/spotifyd >&3 2>&3
-
+	mv ${MUPI_SRC}/config/templates/spotifyd.conf /etc/spotifyd/spotifyd.conf >&3 2>&3
+	
 	mkdir -p $(cat /etc/mupibox/mupiboxconfig.json | jq -r .spotify.cachepath) >&3 2>&3
 	chown dietpi:dietpi $(cat /etc/mupibox/mupiboxconfig.json | jq -r .spotify.cachepath) >&3 2>&3
 
