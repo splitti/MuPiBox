@@ -61,9 +61,9 @@ fi
 cachepath=$(/usr/bin/jq -r .spotify.cachepath ${MUPIBOX_CONFIG})
 /usr/bin/sed -i 's/.*cache_path.*/  cache_path = '\"${cachepath}\"'/g' ${SPOTIFYD_CONFIG}
 maxcachesize=$(/usr/bin/jq -r .spotify.maxcachesize ${MUPIBOX_CONFIG})
-/usr/bin/sed -i 's/.*cache_size.*/  cache_size = '\"${maxcachesize}\"'/g' ${SPOTIFYD_CONFIG}
+/usr/bin/sed -i 's/.*cache_size.*/  cache_size = '${maxcachesize}'/g' ${SPOTIFYD_CONFIG}
 cachestate=$(/usr/bin/jq -r .spotify.cachestate ${MUPIBOX_CONFIG})
-/usr/bin/sed -i 's/.*no_audio_cache.*/  no_audio_cache = '\"${cachestate}\"'/g' ${SPOTIFYD_CONFIG}
+/usr/bin/sed -i 's/.*no_audio_cache.*/  no_audio_cache = '${cachestate}'/g' ${SPOTIFYD_CONFIG}
 
 username=$(/usr/bin/jq -r .spotify.username ${MUPIBOX_CONFIG})
 /usr/bin/sed -i 's/.*username.*/  username = '\"${username}\"'/g' ${SPOTIFYD_CONFIG}
