@@ -168,7 +168,7 @@ if [ "$CACHEPATH" == "null" ]; then
 fi
 CACHESTATE=$(/usr/bin/jq -r .spotify.cachestate ${CONFIG})
 if [ "$CACHESTATE" == "null" ]; then 
-	/usr/bin/cat <<< $(/usr/bin/jq '.spotify.cachepath = true' ${CONFIG}) >  ${CONFIG}
+	/usr/bin/cat <<< $(/usr/bin/jq '.spotify.cachestate = true' ${CONFIG}) >  ${CONFIG}
 fi
 
 /usr/bin/cat <<< $(/usr/bin/jq '.mupibox.AudioDevices += [{"tname": "mupihat","ufname": "MuPiHat for MuPiBox"},{"tname": "rpi-bcm2835-3.5mm","ufname": "Onboard 3.5mm output"},{"tname": "rpi-bcm2835-hdmi","ufname": "Onboard HDMI output"},{"tname": "hifiberry-amp","ufname": "HifiBerry AMP / AMP+"},{"tname": "hifiberry-dac","ufname": "HifiBerry DAC / MiniAmp"},{"tname": "hifiberry-dacplus","ufname": "HifiBerry DAC+ / DAC+ Pro / AMP2"},{"tname": "usb-dac","ufname": "Any USB Audio DAC (Auto detection)"}]' ${CONFIG}) >  ${CONFIG}
