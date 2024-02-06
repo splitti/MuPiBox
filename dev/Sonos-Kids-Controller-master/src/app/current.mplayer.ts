@@ -6,6 +6,7 @@ export interface CurrentMPlayer {
     totalShows?: number,
     currentPlayer?: string;
     playing?: boolean;
+    pause?: boolean;
     album?: string;
     currentTrackname?: string;
     currentTracknr?: number;

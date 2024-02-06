@@ -151,6 +151,8 @@ export class PlayerPage implements OnInit {
       this.currentShow = show;
     });
 
+    this.playing = this.currentPlayedLocal?.pause;
+
     if(this.media.type === 'spotify'){
       let seek = this.currentPlayedSpotify?.progress_ms || 0;
       if (this.media.showid?.length > 0) {
@@ -365,10 +367,10 @@ export class PlayerPage implements OnInit {
   playPause() {
     if(this.monitor?.monitor == "On"){
       if (this.playing) {
-        this.playing = false;
+        //this.playing = false;
         this.playerService.sendCmd(PlayerCmds.PAUSE);
       } else {
-        this.playing = true;
+        //this.playing = true;
         this.playerService.sendCmd(PlayerCmds.PLAY);
       }
       if(this.media.type === 'spotify' || this.media.type === 'library' || this.media.type === 'rss'){
