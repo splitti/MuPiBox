@@ -151,7 +151,7 @@ export class PlayerPage implements OnInit {
       this.currentShow = show;
     });
 
-    this.playing = this.currentPlayedLocal?.pause;
+    this.playing = !this.currentPlayedLocal?.pause;
 
     if(this.media.type === 'spotify'){
       let seek = this.currentPlayedSpotify?.progress_ms || 0;
@@ -292,7 +292,6 @@ export class PlayerPage implements OnInit {
     this.mediaService.episode$.subscribe(episode => {
       this.currentEpisode = episode;
     });
-    console.log(this.currentPlayedSpotify?.progress_ms);
     if(this.media.type === 'spotify' && this.media?.showid){
       this.resumeFile.spotify.track_number = 1;
       this.resumeFile.spotify.progress_ms = this.currentPlayedSpotify?.progress_ms  || 0;
