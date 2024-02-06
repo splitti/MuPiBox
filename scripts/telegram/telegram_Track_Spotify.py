@@ -21,10 +21,9 @@ bot = telepot.Bot(TOKEN)
 chat_id = config['telegram']['chatId']
 
 player_event = os.environ.get('PLAYER_EVENT')
-TRACK_ID = os.environ.get('TRACK_ID')
-OLD_TRACK_ID = os.environ.get('OLD_TRACK_ID')
+POSITION_MS = os.environ.get('POSITION_MS')
 
-if player_event == "change" and TRACK_ID != OLD_TRACK_ID:
+if player_event == "play" and POSITION_MS == "0":
     if state['currently_playing_type'] == 'episode':
         episode = requests.get(urls).json()
         msg = episode['show']['name'] + "\n" + episode['name']
