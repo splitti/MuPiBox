@@ -214,6 +214,7 @@ exec 3>${LOG}
 	mkdir /home/dietpi/MuPiBox/media >&3 2>&3
 	mkdir /home/dietpi/MuPiBox/media/audiobook >&3 2>&3
 	mkdir /home/dietpi/MuPiBox/media/music >&3 2>&3
+	mkdir /home/dietpi/MuPiBox/media/other >&3 2>&3
 	mkdir /home/dietpi/MuPiBox/media/cover >&3 2>&3
 	mkdir /home/dietpi/MuPiBox/themes >&3 2>&3
 	mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
