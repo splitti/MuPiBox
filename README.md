@@ -1,5 +1,5 @@
 # MuPiBox
-![GitHub Release](https://img.shields.io/github/v/release/splitti/MuPiBox) ![Discord](https://img.shields.io/discord/879874342203306005) ![YouTube Channel Views](https://img.shields.io/youtube/channel/views/UCiqTXPBQLYgTB4uPBKzLENA) ![Static Badge](https://img.shields.io/badge/Paypal-Donate?logo=Paypal&label=Donate&link=https%3A%2F%2Fpaypal.me%2FDonateMuPiBox) ![Static Badge](https://img.shields.io/badge/Facebook-Facebook?logo=facebook&labelColor=blue&color=blue&link=https%3A%2F%2Fwww.facebook.com%2Fmupibox)
+![GitHub Release](https://img.shields.io/github/v/release/splitti/MuPiBox) ![Discord](https://img.shields.io/discord/879874342203306005) ![Static Badge](https://img.shields.io/badge/Youtube-Youtube?logo=youtube&labelColor=red&color=red&link=https%3A%2F%2Fwww.youtube.com%2Fchannel%2FUCiqTXPBQLYgTB4uPBKzLENA) ![Static Badge](https://img.shields.io/badge/Paypal-Donate?logo=Paypal&label=Donate&link=https%3A%2F%2Fpaypal.me%2FDonateMuPiBox) ![Static Badge](https://img.shields.io/badge/Facebook-Facebook?logo=facebook&labelColor=blue&color=blue&link=https%3A%2F%2Fwww.facebook.com%2Fmupibox)
 
 MuPiBox is an easy to use music player, controlled via touch display. There could be local music, spotify and also streams.
 ![Caption](media/images/splash.png "Caption") 
