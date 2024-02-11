@@ -1,15 +1,15 @@
 # MuPiBox
 MuPiBox is an easy to use music player, controlled via touch display. There could be local music, spotify and also streams.
 ![Caption](media/images/splash.png "Caption") 
-## Webside & Support
+## Website & Support
 For more informations visit https://mupibox.de or use our Discord-Channel https://discord.gg/4EjCgpCbbe
 Youtube-Channel: https://www.youtube.com/@mupibox
 ## Requierments
-Please visit official Webside https://mupibox.de/anleitungen/installationsanleitung/was-wird-benoetigt/
+Please visit official Website https://mupibox.de/anleitungen/installationsanleitung/was-wird-benoetigt/
 ## Known compatible Hardware
-Please visit official Webside https://mupibox.de/anleitungen/installationsanleitung/kompatible-hardware/
+Please visit official Website https://mupibox.de/anleitungen/installationsanleitung/kompatible-hardware/
 ## How to install
-Please visit official Webside  https://mupibox.de/anleitungen/installationsanleitung/einfache-installation/
+Please visit official Website  https://mupibox.de/anleitungen/installationsanleitung/einfache-installation/
 ## Spend a coffee via paypal to
 - <a href="https://paypal.me/EGerhardt" target="_blank">nero</a>
 - <a href="https://paypal.me/splittscheid" target="_blank">splitti</a>
