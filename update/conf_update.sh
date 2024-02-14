@@ -171,4 +171,51 @@ if [ "$CACHESTATE" == "null" ]; then
 	/usr/bin/cat <<< $(/usr/bin/jq '.spotify.cachestate = true' ${CONFIG}) >  ${CONFIG}
 fi
 
+MQTTDEBUG=$(/usr/bin/jq -r .mqtt.debug ${CONFIG})
+if [ "$MQTTDEBUG" == "null" ]; then 
+	/usr/bin/cat <<< $(/usr/bin/jq '.mqtt.debug = false' ${CONFIG}) >  ${CONFIG}
+fi
+MQTTACTIVE=$(/usr/bin/jq -r .mqtt.active ${CONFIG})
+if [ "$MQTTACTIVE" == "null" ]; then 
+	/usr/bin/cat <<< $(/usr/bin/jq '.mqtt.active = false' ${CONFIG}) >  ${CONFIG}
+fi
+MQTTBROKER=$(/usr/bin/jq -r .mqtt.broker ${CONFIG})
+if [ "$MQTTBROKER" == "null" ]; then 
+	/usr/bin/cat <<< $(/usr/bin/jq --arg v "mqtt-example-broker.com" '.mqtt.broker = $v' ${CONFIG}) >  ${CONFIG}
+fi
+MQTTPORT=$(/usr/bin/jq -r .mqtt.port ${CONFIG})
+if [ "$MQTTPORT" == "null" ]; then 
+	/usr/bin/cat <<< $(/usr/bin/jq --arg v "1883" '.mqtt.port = $v' ${CONFIG}) >  ${CONFIG}
+fi
+MQTTTOPIC=$(/usr/bin/jq -r .mqtt.topic ${CONFIG})
+if [ "$MQTTTOPIC" == "null" ]; then 
+	/usr/bin/cat <<< $(/usr/bin/jq --arg v "MuPiBox/Boxname" '.mqtt.topic = $v' ${CONFIG}) >  ${CONFIG}
+fi
+MQTTBOXNAME=$(/usr/bin/jq -r .mqtt.clientId ${CONFIG})
+if [ "$MQTTBOXNAME" == "null" ]; then 
+	/usr/bin/cat <<< $(/usr/bin/jq --arg v "Boxname" '.mqtt.clientId = $v' ${CONFIG}) >  ${CONFIG}
+fi
+MQTTUSERNAME=$(/usr/bin/jq -r .mqtt.username ${CONFIG})
+if [ "$MQTTUSERNAME" == "null" ]; then 
+	/usr/bin/cat <<< $(/usr/bin/jq --arg v "username" '.mqtt.username = $v' ${CONFIG}) >  ${CONFIG}
+fi
+MQTTPASSWORD=$(/usr/bin/jq -r .mqtt.password ${CONFIG})
+if [ "$MQTTPASSWORD" == "null" ]; then 
+	/usr/bin/cat <<< $(/usr/bin/jq --arg v "password" '.mqtt.password = $v' ${CONFIG}) >  ${CONFIG}
+fi
+MQTTREFRESH=$(/usr/bin/jq -r .mqtt.refresh ${CONFIG})
+if [ "$MQTTREFRESH" == "null" ]; then 
+	/usr/bin/cat <<< $(/usr/bin/jq --arg v "5" '.mqtt.refresh = $v' ${CONFIG}) >  ${CONFIG}
+fi
+MQTTREFRESHIDLE=$(/usr/bin/jq -r .mqtt.refreshIdle ${CONFIG})
+if [ "$MQTTREFRESHIDLE" == "null" ]; then 
+	/usr/bin/cat <<< $(/usr/bin/jq --arg v "30" '.mqtt.refreshIdle = $v' ${CONFIG}) >  ${CONFIG}
+fi
+MQTTTIMEOUT=$(/usr/bin/jq -r .mqtt.timeout ${CONFIG})
+if [ "$MQTTTIMEOUT" == "null" ]; then 
+	/usr/bin/cat <<< $(/usr/bin/jq --arg v "60" '.mqtt.timeout = $v' ${CONFIG}) >  ${CONFIG}
+fi
+
+
+
 /usr/bin/cat <<< $(/usr/bin/jq '.mupibox.AudioDevices += [{"tname": "mupihat","ufname": "MuPiHat for MuPiBox"},{"tname": "rpi-bcm2835-3.5mm","ufname": "Onboard 3.5mm output"},{"tname": "rpi-bcm2835-hdmi","ufname": "Onboard HDMI output"},{"tname": "hifiberry-amp","ufname": "HifiBerry AMP / AMP+"},{"tname": "hifiberry-dac","ufname": "HifiBerry DAC / MiniAmp"},{"tname": "hifiberry-dacplus","ufname": "HifiBerry DAC+ / DAC+ Pro / AMP2"},{"tname": "usb-dac","ufname": "Any USB Audio DAC (Auto detection)"}]' ${CONFIG}) >  ${CONFIG}

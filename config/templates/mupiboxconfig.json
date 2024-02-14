@@ -204,13 +204,13 @@
 		"active": false,
 		"broker": "mqtt-example-broker.com",
 		"port": "1883",
-		"topic": "",
-		"clientId": "",
+		"topic": "MuPiBox/Boxname",
+		"clientId": "MuPiBox",
 		"username": "",
 		"password": "",
-		"refresh": "",
-		"refreshIdle": "",
-		"timeout": "",
+		"refresh": "5",
+		"refreshIdle": "30",
+		"timeout": "60",
 		"debug": false
 	},
 	"wled": {
