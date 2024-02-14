@@ -28,12 +28,12 @@
 
 	if( $_POST['remove_selected'] )
 		{
-		$command = "sudo -i -u dietpi /usr/local/bin/mupibox/./remove_bt.sh ".$_POST['remove_mac'];
+		$command = "sudo -u dietpi /usr/local/bin/mupibox/./remove_bt.sh ".$_POST['remove_mac'];
 		exec($command, $output, $result );
 		$CHANGE_TXT=$CHANGE_TXT."<li>Pairing removed [".$_POST['remove_mac']."</li>";
-		$command = "sudo -i -u dietpi /usr/local/bin/mupibox/./stop_bt.sh";
+		$command = "sudo -u dietpi /usr/local/bin/mupibox/./stop_bt.sh";
 		exec($command, $output, $result );
-		$command = "sudo -i -u dietpi /usr/local/bin/mupibox/./start_bt.sh";
+		$command = "sudo -u dietpi /usr/local/bin/mupibox/./start_bt.sh";
 		exec($command, $output, $result );
 
 		$change=1;
@@ -41,7 +41,7 @@
 
 	if( $_POST['pair_selected'] )
 		{
-		$command = "sudo -i -u dietpi /usr/local/bin/mupibox/./pair_bt.sh ".$_POST['bt_device'];
+		$command = "sudo -u dietpi /usr/local/bin/mupibox/./pair_bt.sh ".$_POST['bt_device'];
 		exec($command, $output, $result );
 		$CHANGE_TXT=$CHANGE_TXT."<li>Device is paired [".$_POST['bt_device']."</li>";
 		$change=1;
@@ -51,35 +51,35 @@
 	if( $_POST['scan_new'] )
 		{
 		/*$command = "sudo hcitool scan > /tmp/bt_scan";*/
-		$command = "sudo -i -u dietpi /usr/local/bin/mupibox/./scan_bt.sh";
+		$command = "sudo -u dietpi /usr/local/bin/mupibox/./scan_bt.sh";
 		exec($command, $output, $result );
 		$change=1;
 		}
 
 	if( $_POST['change_bt'] == "turn on" )
 		{
-		$command = "sudo -i -u dietpi /usr/local/bin/mupibox/./start_bt.sh";
+		$command = "sudo -u dietpi /usr/local/bin/mupibox/./start_bt.sh";
 		exec($command, $output, $result );
 		$CHANGE_TXT=$CHANGE_TXT."<li>Bluetooth is ready now</li>";
 		$change=1;
 		}
 	if( $_POST['change_bt'] == "turn off" )
 		{
-		$command = "sudo -i -u dietpi /usr/local/bin/mupibox/./stop_bt.sh";
+		$command = "sudo -u dietpi /usr/local/bin/mupibox/./stop_bt.sh";
 		exec($command, $output, $result );
 		$CHANGE_TXT=$CHANGE_TXT."<li>Bluetooth is deactivated [just Software for connecting, Service and Hardware continue runnung]</li>";
 		$change=1;
 		}
 
-	$command = "sudo -i -u dietpi bluetoothctl show | grep 'Powered: yes'";
+	$command = "sudo -u dietpi bluetoothctl show | grep 'Powered: yes'";
 	exec($command, $btoutput, $btresult );
 	if( $btoutput[0] )
 		{
 		$bt_state = "ON";
 		$change_bt = "turn off";
-		$command = "sudo -i -u dietpi bluetoothctl devices";
+		$command = "sudo -u dietpi bluetoothctl devices";
 		exec($command, $pairoutput, $pairresult );
-		$command = "sudo -i -u dietpi bluetoothctl list";
+		$command = "sudo -u dietpi bluetoothctl list";
 		exec($command, $listoutput, $listresult );
 		}
 	else
@@ -157,7 +157,7 @@
                                         print "<input type='hidden' name='remove_mac' value='".$split_device[1]."'>";
                                         print "<input id='saveForm' class='button_text' type='submit' name='remove_selected' value='Remove' />&ensp;";
                                         print $split_device[2]." [".$split_device[1]."]";
-                                        $command = "sudo -i -u dietpi bluetoothctl info ".$split_device[1]." | grep 'Connected: yes'";
+                                        $command = "sudo -u dietpi bluetoothctl info ".$split_device[1]." | grep 'Connected: yes'";
                                         unset($connoutput);
                                         exec($command, $connoutput, $connresult );
                                         if( $connoutput[0] )
