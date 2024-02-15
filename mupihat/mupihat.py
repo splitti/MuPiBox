@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+
 """ Script for MuPiHAT Charger IC (BQ25792)
 Parameters
 ----------
@@ -33,6 +34,7 @@ __status__ = "under development"
 
 import sys, getopt
 import time
+import json
 from datetime import datetime  
 
 from mupihat_bq25792 import bq25792
@@ -42,12 +44,30 @@ def timestamp():
     date_time = datetime.fromtimestamp(time_stamp)
     return date_time
 
+def SOC_Battery(CHG_STAT, VBAT):
+     """
+     Calculate State of Charge from VBat reading of charger IC
+     --------------
+     """
+     # TODO, this is only a rudimentary example
+     if (CHG_STAT == 0) or (CHG_STAT == 7):
+          if VBAT > 7400: soc = '5'
+          elif VBAT > 7000: soc = '4'
+          elif VBAT > 6600: soc = '3'
+          elif VBAT > 6200: soc = '2'
+          elif VBAT > 6000: soc = '1'
+          else: soc = '0'
+     else:
+          soc = 'charging' 
+     return soc
+
 def main(argv):
     # parse command line
     sys.stdout = sys.stdout
-    logfile = ''
+    log_flag = 0
+    json_flag = 0
     try:
-        opts, args = getopt.getopt(argv,"h:l",["logfile="])
+        opts, args = getopt.getopt(argv,"h:l:j",["logfile="])
     except getopt.GetoptError:
         print ('mupihat.py -l <logfile>')
         sys.exit(2)
@@ -55,7 +75,18 @@ def main(argv):
         if opt == '-h':
             print ('mupihat.py -l <logfile>')
             sys.exit(0)
-        elif opt in ("-l", "--logfile"):
+        elif opt in ("-j"):
+             #logfile = '/home/dietpi/MuPiBox/media/hat/log.txt'
+             json_file = '/tmp/mupihat.json'
+             json_flag = 1
+        elif opt in ("-l"):
+             #logfile = '/home/dietpi/MuPiBox/media/hat/log.txt'
+             logfile = '/tmp/mupihat.log'
+             log_flag = 1
+             f= open(logfile, 'w')
+             sys.stdout = f
+             print ("----- \n Logfile mupyhat.py \n ----------")
+        elif opt in ("--logfile"):
              logfile = arg
              f= open(logfile, 'w')
              sys.stdout = f
@@ -71,31 +102,7 @@ def main(argv):
     
     # BQ25792 write MuPiHAT Configuration
     try:
-        hat.read_all_register() # read all register once
-        # watchdog
-        reg = hat.REG10_Charger_Control_1
-        reg.WATCHDOG = 0    #disable watchdog
-        hat.write_register(reg)
-        
-        #disable STATUS PIN
-        reg = hat.REG13_Charger_Control_4
-        reg.DIS_STAT = 1
-        hat.write_register(reg)
-        
-        # ADC Control
-        reg = hat.REG2E_ADC_Control
-        reg.ADC_EN = 1
-        reg.ADC_SAMPLE = 0 # 15bit resolution
-        reg.ADC_AVG = 0 # running avg
-        reg.ADC_AVG_INIT = 0 
-        hat.write_register(reg)
-        
-        # Enable the IBAT discharge current sensing for ADC
-        # Disable the external ILIM_HIZ pin input current regulation
-        reg = hat.REG14_Charger_Control_5
-        reg.EN_IBAT = 1
-        reg.EN_EXTILIM = 0
-        hat.write_register(reg)
+        hat.MuPiHAT_Default()
     except Exception as _error:
             sys.stderr.write('MuPiHat configuration failed with error: %s\n' % str(_error))
             sys.exit(2)    
@@ -105,22 +112,40 @@ def main(argv):
 
     # loop
     try:
-        while True:
-            hat.read_all_register()
-            # Timestamp    
-            print ("*** Timestamp: ", timestamp(), flush=True)
-            # Charger Status
-            print ("hat.REG1C_Charger_Status_1:                 ",hat.REG1C_Charger_Status_1.CHG_STAT_STRG)
-            # ADC Reading
-            print ("hat.REG31_IBUS_ADC.IBUS [mA]:               ",hat.REG31_IBUS_ADC.IBUS_ADC)
-            print ("hat.REG33_IBAT_ADC.IBAT [mA]:               ",hat.REG33_IBAT_ADC.IBAT_ADC)
-            print ("hat.REG35_VBUS_ADC.VBUS [mV]:               ",hat.REG35_VBUS_ADC.VBUS_ADC)
-            print ("hat.REG37_VAC1_ADC.VAC1 [mV]:               ",hat.REG37_VAC1_ADC.VAC1_ADC)
-            print ("hat.REG39_VAC2_ADC.VAC2 [mV]:               ",hat.REG39_VAC2_ADC.VAC2_ADC)
-            print ("hat.REG3B_VBAT_ADC.VBAT [mV]:               ",hat.REG3B_VBAT_ADC.VBAT_ADC)
-            print ("hat.REG3D_VSYS_ADC.VSYS [mV]:               ",hat.REG3D_VSYS_ADC.VSYS_ADC)
-            print ("")
-            time.sleep(2)
+        while True:          
+            if log_flag:
+                hat.read_all_register()
+                # Timestamp    
+                print ("*** Timestamp: ", timestamp(), flush=True)
+                print ("hat:   get_thermal_reg_threshold            ",hat.REG16_Temperature_Control.get_thermal_reg_threshold())
+                print ("hat:   get_thermal_shutdown_threshold       ",hat.REG16_Temperature_Control.get_thermal_shutdown_threshold())
+                print ("hat:   Temperature Charger IC               ",hat.REG41_TDIE_ADC.get_IC_temperature())
+                print ("hat:   Temperature Regulation Status        ",hat.REG1D_Charger_Status_2.get_thermal_regulation_status())
+                # Charger Status
+                print ("hat.REG1C_Charger_Status_1:                 ",hat.REG1C_Charger_Status_1.CHG_STAT_STRG)
+                # ADC Reading
+                print ("hat.REG31_IBUS_ADC.IBUS [mA]:               ",hat.get_ibus())
+                print ("hat.REG33_IBAT_ADC.IBAT [mA]:               ",hat.get_ibat())
+                print ("hat.REG35_VBUS_ADC.VBUS [mV]:               ",hat.get_vbus())
+                print ("hat.REG37_VAC1_ADC.VAC1 [mV]:               ",hat.REG37_VAC1_ADC.VAC1_ADC)
+                print ("hat.REG39_VAC2_ADC.VAC2 [mV]:               ",hat.REG39_VAC2_ADC.VAC2_ADC)
+                print ("hat.REG3B_VBAT_ADC.VBAT [mV]:               ",hat.get_vbat())
+                print ("hat.REG3D_VSYS_ADC.VSYS [mV]:               ",hat.REG3D_VSYS_ADC.VSYS_ADC)
+                print ("hat.REG06_Input_Current_Limit.IINDPM[mA]:   ",hat.REG06_Input_Current_Limit.IINDPM)
+                print ("hat.REG06_Input_Current_Limit:              ",hat.REG06_Input_Current_Limit.get())
+                print ("hat.REG0F_Charger_Control_0:                ",hat.REG0F_Charger_Control_0.get())
+                print ("hat.REG0F_Charger_Control_1:                ",hat.REG10_Charger_Control_1.get())
+                #print ("hat.REG0F_Charger_Control_2:                ",hat.REG11_Charger_Control_2.get())
+                #print ("hat.REG0F_Charger_Control_3:                ",hat.REG12_Charger_Control_3.get())
+                print ("hat.REG0F_Charger_Control_4:                ",hat.REG13_Charger_Control_4.get())
+                print ("hat.REG0F_Charger_Control_5:                ",hat.REG14_Charger_Control_5.get())
+                print ("")
+            if json_flag:
+                # Writing to json
+                with open(json_file, "w") as outfile:
+                    json.dump(hat.to_json(), outfile)
+            time.sleep(5)
+
     except KeyboardInterrupt:
         print("mupyhat.py stopped by Key Interrupt")
         sys.exit(0)
