@@ -256,7 +256,8 @@ $CHANGE_TXT=$CHANGE_TXT."</ul>";
 			<li id="li_1" >
 
 			<h3>Set Device-ID</h3>
-            <p>In this last step, you choose your Device... Please notice: sometimes it is necessary to play music on the MuPiBox via app so that the device ID is generated</p>
+			<p>Notice: After step 3, a reboot is required!</p>
+            <p>In this last step, you choose your Device... It is necessary to play music on the MuPiBox via app (for example in browser window of your pc) to generate the device ID!</p>
             </li>
 			<li id="li_1" >
 			<label class="description" for="spotify_deviceid">Select Spotify Device ID </label>

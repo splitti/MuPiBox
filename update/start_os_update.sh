@@ -1,6 +1,6 @@
 #!/bin/bash
 #
 
-sudo apt update -Y
-sudo apt upgrade -Y
+sudo apt-get update -y
+sudo apt-get upgrade -y
 echo "Operating system is updated"
