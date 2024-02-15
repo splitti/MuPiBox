@@ -707,6 +707,7 @@ function cmdCall(cmd){
 async function setVolume(volume){
   let volumeUp = "/usr/bin/amixer sset Master 5%+";
   let volumeDown = "/usr/bin/amixer sset Master 5%-";
+  let volumeMax = "/usr/bin/amixer sset Master " + muPiBoxConfig.mupibox.maxVolume + "%";
   let cmdVolume = "/usr/bin/amixer sget Master | grep 'Right:'";
 
   const exec = require ('child_process').exec;
@@ -726,6 +727,7 @@ async function setVolume(volume){
       currentMeta.volume = parseInt(currentMeta.volume, 10) + 5;
     } else {
       currentMeta.volume = muPiBoxConfig.mupibox.maxVolume
+      await cmdCall(volumeMax);
     }
   } else {
     await cmdCall(volumeDown);
