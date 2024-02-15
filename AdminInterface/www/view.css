@@ -281,7 +281,7 @@ form li:after
 	clear:both;
 	content:".";
 	display:block;
-	height:0;
+	height:10px;
 	visibility:hidden;
 }
 
@@ -397,7 +397,8 @@ form li .datepicker
 	border-bottom:1px dotted #ccc;
 	clear:both;
 	display:inline-block;
-	margin:0 0 1em;
+	margin:0;
+	/* 	margin:0 0 1em; */
 }
 
 .description[class]
@@ -492,6 +493,23 @@ input.button_text_red
 	font-size:90%;
 	font-weight:bold;
 }
+
+input.button_text_orange {
+	background-image: linear-gradient(144deg,#501D00, #C84700 50%,#FD7F39);
+	border: 0;
+	border-radius: 8px;
+	overflow: visible;
+	color: #ffffff;
+	width: auto;
+	min-width: 140px;
+	box-shadow: rgba(0, 0, 0, .3) 0 5px 15px;
+	margin: 5px;
+	padding: 5px 15px;
+	border: 0px;
+	font-size: 90%;
+	font-weight: bold;
+}
+
 
 input.button_text_green
 {
@@ -764,6 +782,15 @@ select.select
 input.currency
 {
 	text-align:right;
+}
+
+.checklabel input:before{
+  content: '';
+  background: #fff;
+  display: block;
+  width: 10px;
+  height: 10px;
+  border: 1px solid #054b61;
 }
 
 input.checkbox
@@ -1311,5 +1338,23 @@ details > ul {
   font-weight: bold;
 }
 
+.version table {
+ table-layout: auto;
+ max-width: 100%;
+ border-spacing: 16px 8px;
+}
+
+.version th {
+	background-color: #054b61;
+	color: #f1f3f4;
+	font-weight: 700;
+}
+.version th, .version td {
+  padding: .3em .6em;
+  border: thin solid #666;
+}
+.version td {
+	background-color: #C1EBFF;
+}
 
 

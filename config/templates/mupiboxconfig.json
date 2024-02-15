@@ -1,6 +1,7 @@
 {
 	"mupibox": {
 		"host": "MuPiBox",
+		"ip_control_backend": false,
 		"theme": "blue",
 		"installedThemes": [
 			"blue",
@@ -181,6 +182,26 @@
 	},
 	"pm2": {
 		"ramlog": "0"
+	},
+	"telegram": {
+		"token": "",
+		"active": false,
+		"chatId": ""
+	},
+	"mqtt": {
+		"active": false,
+		"broker": "mqtt-example-broker.com",
+		"port": "1883",
+		"topic": "",
+		"clientId": "",
+		"username": "",
+		"password": ""
+	},
+	"wled": {
+		"active": false,
+		"ip": "",
+		"shutdown_id": "",
+		"main_id": ""
 	}
 }
 

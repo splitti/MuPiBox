@@ -189,6 +189,7 @@ export class AddPage implements OnInit, AfterViewInit {
     this.selectedInputElem = event.target;
 
     this.keyboard.setOptions({
+      disableCaretPositioning: false,
       inputName: event.target.name
     });
 
@@ -352,8 +353,7 @@ export class AddPage implements OnInit, AfterViewInit {
     this.mediaService.validate$.subscribe(validate => {
       this.validateState = validate;
     });
-
-    if(!this.validateState?.validate && this.source === 'spotify' && (media.query?.length == 0)){
+    if(!this.validateState?.validate && this.source === 'spotify' && media.query === undefined){
       this.activityIndicatorService.dismiss();
       this.activityIndicatorVisible = false;
       const alert = await this.alertController.create({

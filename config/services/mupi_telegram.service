@@ -1,0 +1,10 @@
+[Unit]
+Description=MuPiBox Telegram receiver
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+ExecStart=/usr/local/bin/mupibox/./telegram_start.sh
+
+[Install]
+WantedBy=default.target

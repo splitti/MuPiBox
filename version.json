@@ -1,3 +1,76 @@
 {
-	"version": "3.0.1"
+	"version": "3.2.4",
+	"release": {
+		"dev": [
+			{
+			"version": "X.X.X",
+			"url": "https://github.com/splitti/MuPiBox/archive/refs/heads/main.zip",
+			"releaseinfo": "Development Version, please do not install!"
+			}
+		],
+		"beta": [
+			{
+			"version": "3.1.5",
+			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.1.5.zip",
+			"releaseinfo": "Initial Release Version - new versioning and installation routines"
+			},
+			{
+			"version": "3.2.5",
+			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.2.5.zip",
+			"releaseinfo": "Troubleshooting for blocking the covers in the selection, display network status, operation of shutdown and restart in the admin touch area"
+			},
+			{
+			"version": "3.2.6",
+			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.2.6.zip",
+			"releaseinfo": "DietPi Dash, IP Control Backend, Image resize after installation, Bug fixes Validation, monitor and cloud"
+			}
+		],
+		"stable": [
+			{
+			"version": "3.1.8",
+			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.1.8.zip",
+			"releaseinfo": "Initial Release Version - new versioning and installation routines"
+			},
+			{
+			"version": "3.1.9",
+			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.1.9.zip",
+			"releaseinfo": "Initial Release Version - new versioning and installation routines"
+			},
+			{
+			"version": "3.1.10",
+			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.1.10.zip",
+			"releaseinfo": "Initial Release Version - new versioning and installation routines"
+			},
+			{
+			"version": "3.1.11",
+			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.1.11.zip",
+			"releaseinfo": "Initial Release Version - new versioning and installation routines"
+			},
+			{
+			"version": "3.1.12",
+			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.1.12.zip",
+			"releaseinfo": "Initial Release Version - new versioning and installation routines"
+			},
+			{
+			"version": "3.2.0",
+			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.2.0.zip",
+			"releaseinfo": "Initial Release Version - new versioning and installation routines"
+			},
+			{
+			"version": "3.2.2",
+			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.2.2.zip",
+			"releaseinfo": "Initial Release Version - new versioning and installation routines"
+			},
+			{
+			"version": "3.2.3",
+			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.2.3.zip",
+			"releaseinfo": "Initial Release Version - new versioning and installation routines"
+			},
+			{
+			"version": "3.2.4",
+			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.2.4.zip",
+			"releaseinfo": "Bugfixing for adding Wifis"
+			}
+		]
+	}
 }

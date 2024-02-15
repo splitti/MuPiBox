@@ -5,8 +5,7 @@ import { SonosApiConfig } from './sonos-api';
 import { environment } from '../environments/environment';
 import { Observable } from 'rxjs';
 import { publishReplay, refCount } from 'rxjs/operators';
-import { MediaService } from './media.service';
-import { Network } from './network';
+
 import { Resume } from './resume';
 
 export enum PlayerCmds {
@@ -24,6 +23,7 @@ export enum PlayerCmds {
   SHUFFLEON = 'shuffleon',
   SHUFFLEOFF = 'shuffleoff',
   SHUTOFF = 'shutoff',
+  ALBUMSTOP = 'albumstop',
   REBOOT = 'reboot',
   INDEX = 'index',
   NETWORKRESTART = 'networkrestart',
@@ -36,14 +36,10 @@ export enum PlayerCmds {
 export class PlayerService {
 
   private config: Observable<SonosApiConfig> = null;
-  network: Network;
-  public readonly network$: Observable<Network>;
 
   constructor(
-    private mediaService: MediaService,
     private http: HttpClient
     ) {
-      this.network$ = this.mediaService.network$;
     }
 
   getConfig() {
@@ -167,8 +163,17 @@ export class PlayerService {
 
   private sendRequest(url: string) {
     this.getConfig().subscribe(config => {
-      const baseUrl = 'http://' + config.server + ':' + config.port + '/' + config.rooms[0] + '/';
-      this.http.get(baseUrl + url).subscribe();
+      if (!config.rooms[0]) config.rooms[0]='0';
+      console.log(config);
+      if (config.ip){
+        const baseUrl = 'http://' + config.ip + ':' + config.port + '/' + config.rooms[0] + '/';
+        console.log(baseUrl + url);
+        this.http.get(baseUrl + url).subscribe();
+      }else {
+        const baseUrl = 'http://' + config.server + ':' + config.port + '/' + config.rooms[0] + '/';
+        console.log(baseUrl + url);
+        this.http.get(baseUrl + url).subscribe();
+      }
     });
   }
 }

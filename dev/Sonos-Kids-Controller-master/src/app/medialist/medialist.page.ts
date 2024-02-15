@@ -7,6 +7,7 @@ import { PlayerService } from '../player.service';
 import { ActivityIndicatorService } from '../activity-indicator.service';
 import { Media } from '../media';
 import { Artist } from '../artist';
+import { Monitor } from '../monitor';
 
 @Component({
   selector: 'app-medialist',
@@ -19,6 +20,7 @@ export class MedialistPage implements OnInit {
   artist: Artist;
   media: Media[] = [];
   covers = {};
+  monitor: Monitor;
   activityIndicatorVisible = false;
   aPartOfAllMedia: Media[] = [];
 
@@ -143,6 +145,10 @@ export class MedialistPage implements OnInit {
 
     // Retreive data through subscription above
     this.mediaService.publishArtistMedia();
+
+    this.mediaService.monitor$.subscribe(monitor => {
+      this.monitor = monitor;
+    });
   }
 
   ionViewDidLeave() {
@@ -154,25 +160,29 @@ export class MedialistPage implements OnInit {
   }
 
   coverClicked(clickedMedia: Media) {
-    this.activityIndicatorService.create().then(indicator => {
-      this.activityIndicatorVisible = true;
-      indicator.present().then(() => {
-        const navigationExtras: NavigationExtras = {
-          state: {
-            media: clickedMedia
-          }
-        };
-        this.router.navigate(['/player'], navigationExtras);
+    if(this.monitor?.monitor == "On"){
+      this.activityIndicatorService.create().then(indicator => {
+        this.activityIndicatorVisible = true;
+        indicator.present().then(() => {
+          const navigationExtras: NavigationExtras = {
+            state: {
+              media: clickedMedia
+            }
+          };
+          this.router.navigate(['/player'], navigationExtras);
+        });
       });
-    });
+    }
   }
 
   mediaNameClicked(clickedMedia: Media) {
-    this.playerService.getConfig().subscribe(config => {
-      if (config.tts == null || config.tts.enabled === true) {
-        this.playerService.say(clickedMedia.title);
-      }
-    });
+    if(this.monitor?.monitor == "On"){
+      this.playerService.getConfig().subscribe(config => {
+        if (config.tts == null || config.tts.enabled === true) {
+          this.playerService.say(clickedMedia.title);
+        }
+      });
+    }
   }
 
   slideDidChange() {

@@ -75,7 +75,7 @@
 			}
 		}
 
-	$onlinejson = file_get_contents('https://mupibox.de/version/latest/version.json');
+	$onlinejson = file_get_contents('https://raw.githubusercontent.com/splitti/MuPiBox/main/version.json');
 	$dataonline = json_decode($onlinejson, true);
 	include ('includes/header.php');
 
@@ -85,6 +85,19 @@
 		exec($command);
 		$CHANGE_TXT=$CHANGE_TXT."<li>ID3-Tags converted</li>";
 		$change=4;
+		}
+
+	if( $_POST['ip_control_backend'] == "enable" )
+		{
+		$data["mupibox"]["ip_control_backend"]=true;
+		$change=2;
+		$CHANGE_TXT=$CHANGE_TXT."<li>IP Control enabled - Services restarted</li>";
+		}
+	if( $_POST['ip_control_backend'] == "disable" )
+		{
+		$data["mupibox"]["ip_control_backend"]=false;
+		$change=2;
+		$CHANGE_TXT=$CHANGE_TXT."<li>IP Control disabled - Services restarted</li>";
 		}
 
 	if( $_POST['spotifydebug'] == "Controller Debugging Off - turn on" )
@@ -123,7 +136,7 @@
 		}
 	if( $_POST['mupibox_update'] )
 		{
-		$command = "cd; curl -L https://mupibox.de/version/latest/update/start_mupibox_update.sh | sudo bash";
+		$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh | sudo bash  -s -- stable";
 		exec($command, $output, $result );
 		$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
 		$data = json_decode($string, true);
@@ -131,9 +144,21 @@
 		$reboot=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Update complete to Version ".$data["mupibox"]["version"]."</li>";
 		}
-	if( $_POST['mupibox_devupdate'] )
+	if( $_POST['mupibox_update_beta'] )
 		{
-		$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update-developer.sh | sudo bash";
+		$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh | sudo bash  -s -- beta";
+		exec($command, $output, $result );
+		$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
+		$data = json_decode($string, true);
+		$change=1;
+		$reboot=1;
+		$data["mupibox"]["version"]=$data["mupibox"]["version"]." BETA";
+		$CHANGE_TXT=$CHANGE_TXT."<li>Update complete to Beta-Version ".$data["mupibox"]["version"]."</li>";
+		}
+	if( $_POST['mupibox_update_dev'] )
+		{
+		$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh | sudo bash  -s -- dev";
+
 		exec($command, $output, $result );
 		$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
 		$data = json_decode($string, true);
@@ -162,7 +187,7 @@
 		$command = "sudo /usr/local/bin/mupibox/./m3u_generator.sh";
 		exec($command, $output, $result );
 		$change=3;
-		$CHANGE_TXT=$CHANGE_TXT."<li>Cleaning and updating the data is complete</li>";
+		$CHANGE_TXT=$CHANGE_TXT."<li>Cleaning and updating media data complete</li>";
 		}
 	if( $_POST['shutdown'] )
 		{
@@ -207,6 +232,14 @@
 		$change=3;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Update complete</li>";
 		}
+	if( $_POST['pm2_restart'] )
+		{
+		$command = "sudo -i -u dietpi pm2 restart server; sudo -i -u dietpi /usr/local/bin/mupibox/./restart_kiosk.sh";
+		exec($command, $output, $result );
+		$change=3;
+		$CHANGE_TXT=$CHANGE_TXT."<li>Spotify Services are restarted</li>";
+		}
+		
 	if( $_POST['spotify_restart'] )
 		{
 		$command = "sudo /usr/local/bin/mupibox/./spotify_restartspotify_restart.sh";
@@ -255,7 +288,6 @@
 		exec("sudo /usr/local/bin/mupibox/./set_hostname.sh");
 		exec("sudo -i -u dietpi /usr/local/bin/mupibox/./restart_kiosk.sh");
 		}
-	$rc = $output[count($output)-1];
 	$CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 ?>
 
@@ -319,9 +351,32 @@
 				<p>The box only updates some settings after a reboot. Some of these settings can be activated with this operation without reboot. </p>
 				<input id="saveForm" class="button_text" type="submit" name="update" value="Update settings" />
 			</li>
-			<li class="li_norm"><h2>Restart MuPiBox services</h2>
+			<li class="li_norm"><h2>Restart MuPiBox Spotify services</h2>
 				<p>Restart tbe MuPiBox frontend and the services to connect to spotify. </p>
 				<input id="saveForm" class="button_text" type="submit" name="spotify_restart" value="Restart services" />
+			</li>
+			<li class="li_norm"><h2>Restart PM2</h2>
+				<p>Restart tbe MuPiBox frontend and the kiosk. </p>
+				<input id="saveForm" class="button_text" type="submit" name="pm2_restart" value="Restart services" />
+			</li>
+			<li class="li_norm"><h2>IP Control Backend</h2>
+				<p>In some cases, the MuPiBox cannot communicate correctly via hostname. Try to activate this point, to set the communication to IP.</p>
+				<p>
+				<?php 
+				if( $data["mupibox"]["ip_control_backend"] )
+					{
+					$ip_control_backend_state="enabled";
+					$change_ip_control="disable";
+					}
+				else
+					{
+					$ip_control_backend_state="disabled";
+					$change_ip_control="enable";					
+					}
+
+				echo "IP Control Backend: <b>".$ip_control_backend_state."</b>";
+				?></p>
+				<input id="saveForm" class="button_text" type="submit" name="ip_control_backend" value="<?php print $change_ip_control; ?>" />																									
 			</li>
 			<li class="li_norm"><h2>Restart MuPiBox kiosk</h2>
 				<p>Restart chromium browser. </p>
@@ -329,31 +384,68 @@
 			</li>
 		</ul>
 	</details>
-
-
 	<details>
 		<summary><i class="fa-solid fa-rotate"></i> Updates</summary>
 		<ul>
 			<li class="li_norm"><h2>MuPiBox updates</h2>
-				<p>You can update MuPiBox at any time to stable or development version. The development-version may be buggy.</p>
+				<p>You can update MuPiBox at any time to stable, beta or development version. Please be careful, the development version could destroy your installation!</p>
 				<p>
 					<table>
 						<tr>
-							<td>Installed version:</td>
-							<td><?php print $data["mupibox"]["version"]; ?></td>
+								<td><b>Installed version</b></br>
+								<?php print $data["mupibox"]["version"]; ?></td>
+						</tr>
+					</table>
+					<br>
+					<table class="version">
+						<tr>
+								<th>Environment</th>
+								<th>Latest Version</th>
+								<th>Release-Infos</th>
+								<th>Update-Button</th>
 						</tr>
 						<tr>
-							<td>Latest stable version:</td>
-							<td><?php print $dataonline["version"]; ?></td>
+								<td>Stable</td>
+								<td><?php print $dataonline["release"]["stable"][count($dataonline["release"]["stable"])-1]["version"]; ?></td>
+								<td><?php print $dataonline["release"]["stable"][count($dataonline["release"]["stable"])-1]["releaseinfo"]; ?></td>
+								<td>
+								<input type="hidden" name="update_url" value="<?php print $dataonline["release"]["stable"][count($dataonline["release"]["stable"])-1]["url"]; ?>" />
+								<input type="hidden" name="update_env" value="stable" />
+								<input type="hidden" name="update_version" value="<?php print $dataonline["release"]["stable"][count($dataonline["release"]["stable"])-1]["version"]; ?>"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
+								<input id="saveForm" class="button_text_green" type="submit" name="mupibox_update" value="Update to version <?php print $dataonline["release"]["stable"][count($dataonline["release"]["stable"])-1]["version"]; ?>"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
+								</td>
+						</tr>
+						<tr>
+								<td>Beta</td>
+								<td><?php print $dataonline["release"]["beta"][count($dataonline["release"]["beta"])-1]["version"]; ?></td>
+								<td><?php print $dataonline["release"]["beta"][count($dataonline["release"]["beta"])-1]["releaseinfo"]; ?></td>
+								<td>
+								<input type="hidden" name="update_url" value="<?php print $dataonline["release"]["beta"][count($dataonline["release"]["beta"])-1]["url"]; ?>" />
+								<input type="hidden" name="update_env" value="beta" />
+								<input type="hidden" name="update_version" value="<?php print $dataonline["release"]["beta"][count($dataonline["release"]["beta"])-1]["version"]; ?>"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
+								<input id="saveForm" class="button_text_orange" type="submit" name="mupibox_update_beta" value="Update to version <?php print $dataonline["release"]["beta"][count($dataonline["release"]["beta"])-1]["version"]; ?>"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
+								</td>
+						</tr>
+						<tr>
+								<td>Development</td>
+								<td><?php print $dataonline["release"]["dev"][count($dataonline["release"]["dev"])-1]["version"]; ?></td>
+								<td><?php print $dataonline["release"]["dev"][count($dataonline["release"]["dev"])-1]["releaseinfo"]; ?></td>
+								<td>
+								<input type="hidden" name="update_url" value="<?php print $dataonline["release"]["dev"][count($dataonline["release"]["dev"])-1]["url"]; ?>" />
+								<input type="hidden" name="update_env" value="dev" />
+								<input type="hidden" name="update_version" value="<?php print $dataonline["release"]["dev"][count($dataonline["release"]["dev"])-1]["version"]; ?>"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
+								<input id="saveForm" class="button_text_red" type="submit" name="mupibox_update_dev" value="Update to version <?php print $dataonline["release"]["dev"][count($dataonline["release"]["dev"])-1]["version"]; ?>"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
+								</td>
+
+
+
 						</tr>
 					</table>
 				</p>
-				<p><b>Please note: </b>Always create a backup before updating!!!<br>The update procedure takes a long time (on older Raspberry Pi's up to 15 minutes). Do not close the browser and wait for the reboot.
+				<li class="li_norm"><h2>Update OS (Operating System)</h2>
+				<p><b>Please note: </b>Always create a backup before updating!!!<br>The update procedure takes a long time (on older Raspberry Pi's up to 30 minutes). Do not close the browser and wait for the reboot.
 				</p>
-				<input id="saveForm" class="button_text" type="submit" name="mupibox_update" value="Update MuPiBox (Latest Stable Version)"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
-				<input id="saveForm" class="button_text_red" type="submit" name="mupibox_devupdate" value="Update MuPiBox (Development Version)"  onclick="return confirm('Do really want to Update the MuPiBox to unstable version? Notice: This is an untested Development-Version!');" />
 			</li>
-			<li class="li_norm"><h2>Update OS (Operating System)</h2>
 				Updating OS packages (apt-get update and apt-get upgrade):<br/>
 				<input id="saveForm" class="button_text" type="submit" name="os_update" value="Update OS"  onclick="return confirm('Do really want to update the Operating System?');" />
 			</li>
@@ -396,6 +488,7 @@
 							}
 					?>" />
 				<input id="saveForm" class="button_text" type="submit" name="pm2download" value="Download PM2-Log" onclick="window.open('./pm2logs.php', '_blank');" />
+
 			</li>
 		</ul>
 	</details>	
@@ -403,6 +496,7 @@
 	<details>
 		<summary><i class="far fa-file-alt"></i> Reset configuration</summary>
 		<ul>
+
 			<li class="li_norm"><h2>Reset Spotify-Connection</h2>
 				<p>This will delete all configurations, including the Spotify-Connection:</p>
 				<input id="saveForm" class="button_text_red" type="submit" name="resetMupiConf" value="RESET mupiboxconf.json" onclick="return confirm('Do really want to reset to default mupiboxconf.json?');" />
@@ -415,6 +509,7 @@
 				<p>Repair config.json (Helps for "This site can't be reached"-Error):</p>
 				<input id="saveForm" class="button_text_red" type="submit" name="resetConfigJson" value="RESET config.json" onclick="return confirm('Do really want to repair config.json?');" />
 			</li>
+
 		</ul>
 	</details>
 </form>

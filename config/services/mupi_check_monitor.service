@@ -1,0 +1,8 @@
+[Unit]
+Description=Checks Blank Monitor
+
+[Service]
+ExecStart=/usr/local/bin/mupibox/./get_monitor.sh
+
+[Install]
+WantedBy=default.target

@@ -7,6 +7,8 @@
 # --ash-host-window-bounds="400,300"
 # Resolution to use for kiosk mode, should ideally match current system resolution
 
+/usr/local/bin/mupibox/./startup.sh &
+
 rm ~/.config/chromium/Singleton*
 
 CONFIG="/etc/mupibox/mupiboxconfig.json"
@@ -38,3 +40,4 @@ AUDIO_DEVICE=$(/usr/bin/jq -r .mupibox.audioDevice ${CONFIG})
 /usr/bin/amixer sset ${AUDIO_DEVICE} ${START_VOLUME}%
 /usr/bin/mplayer -volume 100 ${START_SOUND} &
 x11vnc -ncache 10 -forever -display :0 &
+pactl load-module module-bluetooth-discover
