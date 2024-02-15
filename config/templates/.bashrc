@@ -90,6 +90,8 @@ alias tree='tree -CAhF --dirsfirst'
 alias treed='tree -CAFd'
 alias mountedinfo='df -hT'
 alias grep='/usr/bin/grep --color=auto'
+alias reboot='sudo reboot'
+
 function mupi-info() {
 	OS=$(source /etc/os-release ; echo $PRETTY_NAME)
 	RASPI=$(cat /sys/firmware/devicetree/base/model | tr -d '\0' )
