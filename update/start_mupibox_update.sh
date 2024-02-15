@@ -30,7 +30,7 @@ wget -q -O ${VER_JSON} https://raw.githubusercontent.com/splitti/MuPiBox/main/ve
 VERSION=$(/usr/bin/jq -r .release.${RELEASE}[-1].version ${VER_JSON})  >&3 2>&3
 MUPIBOX_URL=$(/usr/bin/jq -r .release.${RELEASE}[-1].url ${VER_JSON})  >&3 2>&3
 USER=$(/usr/bin/whoami) >&3 2>&3
-RASPPI=$(/usr/bin/cat /sys/firmware/devicetree/base/model) >&3 2>&3
+RASPPI=$(/usr/bin/cat /sys/firmware/devicetree/base/model | tr -d '\0' ) >&3 2>&3
 if [ ${RELEASE} = "dev" ]; then
 	MUPI_SRC="/home/dietpi/MuPiBox-main" >&3 2>&3
 else
