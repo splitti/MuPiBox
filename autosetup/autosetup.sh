@@ -529,7 +529,8 @@ exec 3>${LOG}
 	  echo '' | sudo tee -a /boot/config.txt >&3 2>&3
 	  echo '#initramfs initramfs.img' | sudo tee -a /boot/config.txt >&3 2>&3
 	fi
-	touch /home/dietpi/.mupi.install
+	curl https://raw.githubusercontent.com/scopatz/nanorc/master/install.sh | sh >&3 2>&3
+	touch /home/dietpi/.mupi.install >&3 2>&3
 
 	after=$(date +%s)
 	echo -e "## Set environment  ##  finished after $((after - $before)) seconds" >&3 2>&3
