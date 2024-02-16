@@ -224,6 +224,9 @@
 		"brightness_dimmed": "128",
 		"boot_active": false,
 		"shutdown_active": false
+	},
+	"mupihat":{
+		"logfile": "/tmp/mupihat.log"
 	}
 }
 
