@@ -440,7 +440,7 @@ exec 3>${LOG}
 	sudo unzip nanorc.zip >&3 2>&3
 	sudo cp /tmp/nanorc-master/*.nanorc /home/dietpi/.nano/ >&3 2>&3
 	sudo cd /home/dietpi/.nano/ >&3 2>&3
-	sudo rm -R /tmp/nanorc.zip /tmp/nanorc-master >&3 2>&3
+	sudo rm -R /tmp/nanorc.zip /tmp/nanorc-master ~/.nanorc >&3 2>&3
 	sudo touch ~/.nanorc >&3 2>&3
 	while read -r inc; do
 	  if ! grep -q "$inc" "${NANORC_FILE}"; then

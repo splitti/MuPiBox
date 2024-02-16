@@ -277,7 +277,7 @@ echo "==========================================================================
 	unzip nanorc.zip >&3 2>&3
 	cp /tmp/nanorc-master/*.nanorc /home/dietpi/.nano/ >&3 2>&3
 	cd /home/dietpi/.nano/ >&3 2>&3
-	rm -R /tmp/nanorc.zip /tmp/nanorc-master >&3 2>&3
+	rm -R /tmp/nanorc.zip /tmp/nanorc-master ~/.nanorc >&3 2>&3
 	touch ~/.nanorc >&3 2>&3
 	while read -r inc; do
 	  if ! grep -q "$inc" "${NANORC_FILE}"; then
