@@ -315,6 +315,8 @@
   $data["mupibox"]["physicalDevice"]=$_POST['audio'];
   if( $_POST['audio'] == "mupihat" )
 	{
+	exec("sudo systemctl enable mupi_hat.service");
+	exec("sudo service mupi_hat start");
 	$command = "sudo /boot/dietpi/func/dietpi-set_hardware soundcard 'hifiberry-dac'";
 	$change_soundcard = exec($command, $output, $change_soundcard );
 	$command = <<<'EOD'
@@ -369,6 +371,8 @@ EOD;
 sudo sed -i '/dtoverlay=i2s-mmap/d' /boot/config.txt
 EOD;
 	exec($command);
+	exec("sudo service mupi_hat stop");
+	exec("sudo systemctl disable mupi_hat.service");
 
 	$command = "sudo /boot/dietpi/func/dietpi-set_hardware soundcard '" . $_POST['audio'] . "'";
 	$change_soundcard = exec($command, $output, $change_soundcard );
