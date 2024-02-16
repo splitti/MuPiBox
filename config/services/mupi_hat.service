@@ -1,0 +1,15 @@
+[Unit]
+Description=MuPiHAT Service
+Before=basic.target
+After=local-fs.target sysinit.target
+DefaultDependencies=no
+
+[Service]
+Type=simple
+RemainAfterExit=true
+ExecStart=python3 /usr/local/bin/mupibox/mupihat.py -l /tmp/mupihat.json
+ExecStop=pkill -f mupihat.py
+KillMode=process
+
+[Install]
+WantedBy=basic.target

@@ -269,7 +269,22 @@ echo "==========================================================================
 	mv ${MUPI_SRC}/config/templates/www.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >&3 2>&3
 	mv ${MUPI_SRC}/config/templates/.bashrc /home/dietpi/.bashrc >&3 2>&3
 	mv ${MUPI_SRC}/scripts/mupihat/* /usr/local/bin/mupibox/ >&3 2>&3
-	curl https://raw.githubusercontent.com/scopatz/nanorc/master/install.sh | sh >&3 2>&3	
+
+	NANORC_FILE=/home/dietpi/.nanorc  >&3 2>&3
+	wget -O /tmp/nanorc.zip https://github.com/scopatz/nanorc/archive/master.zip  >&3 2>&3
+	mkdir -p /home/dietpi/.nano/ >&3 2>&3
+	cd /tmp >&3 2>&3
+	unzip nanorc.zip >&3 2>&3
+	cp /tmp/nanorc-master/*.nanorc /home/dietpi/.nano/ >&3 2>&3
+	cd /home/dietpi/.nano/ >&3 2>&3
+	rm -R /tmp/nanorc.zip /tmp/nanorc-master >&3 2>&3
+	touch ~/.nanorc >&3 2>&3
+	while read -r inc; do
+	  if ! grep -q "$inc" "${NANORC_FILE}"; then
+		  echo "$inc" >> "$NANORC_FILE" >&3 2>&3
+	  fi
+	done < ~/.nano/nanorc  >&3 2>&3
+	sudo chown -R dietpi:dietpi /home/dietpi/.nanorc /home/dietpi/.nano/  >&3 2>&3
 
 	chown dietpi:dietpi /home/dietpi/.bashrc >&3 2>&3
 	chmod 755 /usr/local/bin/mupibox/* >&3 2>&3

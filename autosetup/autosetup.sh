@@ -433,6 +433,22 @@ exec 3>${LOG}
 	sudo mv -f ${MUPI_SRC}/config/templates/add_wifi.json /boot/add_wifi.json >&3 2>&3
 	sudo mv -f ${MUPI_SRC}/config/templates/.bashrc /home/dietpi/.bashrc >&3 2>&3
 
+	NANORC_FILE=/home/dietpi/.nanorc  >&3 2>&3
+	sudo wget -O /tmp/nanorc.zip https://github.com/scopatz/nanorc/archive/master.zip  >&3 2>&3
+	sudo mkdir -p /home/dietpi/.nano/ >&3 2>&3
+	sudo cd /tmp >&3 2>&3
+	sudo unzip nanorc.zip >&3 2>&3
+	sudo cp /tmp/nanorc-master/*.nanorc /home/dietpi/.nano/ >&3 2>&3
+	sudo cd /home/dietpi/.nano/ >&3 2>&3
+	sudo rm -R /tmp/nanorc.zip /tmp/nanorc-master >&3 2>&3
+	sudo touch ~/.nanorc >&3 2>&3
+	while read -r inc; do
+	  if ! grep -q "$inc" "${NANORC_FILE}"; then
+		 sudo echo "$inc" >> "$NANORC_FILE" >&3 2>&3
+	  fi
+	done < ~/.nano/nanorc  >&3 2>&3
+	sudo chown -R dietpi:dietpi /home/dietpi/.nanorc /home/dietpi/.nano/  >&3 2>&3
+
 	sudo chown dietpi:dietpi /home/dietpi/.bashrc >&3 2>&3
 	
 	sudo chmod 755 /usr/local/bin/mupibox/* >&3 2>&3
