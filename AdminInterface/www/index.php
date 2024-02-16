@@ -112,6 +112,9 @@
 		<summary><i class="fa-brands fa-raspberry-pi"></i> Raspberry Information</summary>
 		<ul>
 			<li class="li_norm"><h2>System Information</h2></li>
+				<p>Download system information for support on discord:</p>
+				<input id="saveForm" class="button_text" type="submit" name="supportdownload" value="Download Support-Infos" onclick="window.open('./support_data.php', '_blank');" />
+			</li>
 			<li class="li_norm">
 
 <?php
