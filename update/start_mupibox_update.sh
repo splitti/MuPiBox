@@ -276,14 +276,9 @@ echo "==========================================================================
 	cd /tmp >&3 2>&3
 	unzip nanorc.zip >&3 2>&3
 	cp /tmp/nanorc-master/*.nanorc /home/dietpi/.nano/ >&3 2>&3
+	cp /tmp/nanorc-master/nanorc ${NANORC_FILE}
 	cd /home/dietpi/.nano/ >&3 2>&3
-	rm -R /tmp/nanorc.zip /tmp/nanorc-master ~/.nanorc >&3 2>&3
-	touch ~/.nanorc >&3 2>&3
-	while read -r inc; do
-	  if ! grep -q "$inc" "${NANORC_FILE}"; then
-		  echo "$inc" >> "$NANORC_FILE" >&3 2>&3
-	  fi
-	done < ~/.nano/nanorc  >&3 2>&3
+	rm -R /tmp/nanorc.zip /tmp/nanorc-master >&3 2>&3
 	sudo chown -R dietpi:dietpi /home/dietpi/.nanorc /home/dietpi/.nano/  >&3 2>&3
 
 	chown dietpi:dietpi /home/dietpi/.bashrc >&3 2>&3
