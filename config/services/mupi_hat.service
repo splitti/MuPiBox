@@ -7,7 +7,7 @@ DefaultDependencies=no
 [Service]
 Type=simple
 RemainAfterExit=true
-ExecStart=python3 -B /usr/local/bin/mupibox/mupihat.py -l /tmp/mupihat.json
+ExecStart=python3 -B /usr/local/bin/mupibox/mupihat.py -j /tmp/mupihat.json
 ExecStop=pkill -f mupihat.py
 KillMode=process
 
