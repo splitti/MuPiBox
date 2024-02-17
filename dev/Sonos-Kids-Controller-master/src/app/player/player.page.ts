@@ -290,6 +290,8 @@ export class PlayerPage implements OnInit {
       this.media.resume.rss.progressTime = this.currentPlayedLocal?.progressTime  || 0;
     }
     this.media.category = "resume";
+    console.log("Add media to resume");
+    console.log(this.media);
     this.mediaService.addRawMedia(this.media);
     this.playerService.sendCmd(PlayerCmds.INDEX);
   }
