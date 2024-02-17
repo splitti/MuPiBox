@@ -289,7 +289,7 @@ export class PlayerPage implements OnInit {
     } else if (this.media.type === 'rss'){
       this.media.resume.rss.progressTime = this.currentPlayedLocal?.progressTime  || 0;
     }
-    this.media.category = "resume"
+    this.media.category = "resume";
     this.mediaService.addRawMedia(this.media);
     this.playerService.sendCmd(PlayerCmds.INDEX);
   }
