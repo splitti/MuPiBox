@@ -113,10 +113,8 @@ export class PlayerService {
 
   resumeMedia(media: Media) {
     console.log("Media object received in resumeMedia:", media);
+    console.log("Resume spotify track number received in resumeMedia:", media.resumespotifytrack_number);
     let url: string;
-    console.log("resumeMedia");
-    console.log(media);
-    console.log(media.resumespotifytrack_number);
 
     if (media.playlistid) {
       url = 'spotify/now/spotify:playlist:' + encodeURIComponent(media.playlistid) + ':' + media.resumespotifytrack_number + ':' + media.resumespotifyprogress_ms;
