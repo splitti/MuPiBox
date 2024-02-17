@@ -276,6 +276,7 @@ export class HomePage implements OnInit {
 
   resume() {
     if(this.monitor?.monitor == "On"){
+      this.mediaService.setCategory("resume");
       this.activityIndicatorService.create().then(indicator => {
         this.activityIndicatorVisible = true;
         indicator.present().then(() => {
