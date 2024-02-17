@@ -3,7 +3,7 @@ import { Observable, defer, throwError, of, range } from 'rxjs';
 import { retryWhen, flatMap, tap, delay, take, map, mergeMap, mergeAll, toArray } from 'rxjs/operators';
 import { environment } from 'src/environments/environment';
 import { HttpClient } from '@angular/common/http';
-import { SpotifyAlbumsResponse, SpotifyAlbumsResponseItem, SpotifyArtistResponse, SpotifyArtistsAlbumsResponse, SpotifyEpisodesResponse, SpotifyShowResponse } from './spotify';
+import { SpotifyAlbumsResponse, SpotifyAlbumsResponseItem, SpotifyArtistResponse, SpotifyArtistsAlbumsResponse, SpotifyEpisodeResponseItem, SpotifyEpisodesResponse, SpotifyShowResponse } from './spotify';
 import { Media } from './media';
 
 declare const require: any;
@@ -222,7 +222,43 @@ export class SpotifyService {
     return album;
   }
 
-  getMediaByPlaylistID(id: string, category: string, index: number, shuffle: boolean, artistcover: string): Observable<Media> {
+  getMediaByEpisode(id: string, category: string, index: number, shuffle: boolean, artistcover: string, resumespotifyduration_ms: number, resumespotifyprogress_ms: number, resumespotifytrack_number: number): Observable<Media> {
+    const album = defer(() => this.spotifyApi.getEpisode(id, { limit: 1, offset: 0, market: 'DE' })).pipe(
+      retryWhen(errors => {
+        return this.errorHandler(errors);
+      }),
+      map((response: SpotifyEpisodeResponseItem) => {
+        const media: Media = {
+          showid: response.id,
+          artist: response.show?.[0]?.name,
+          title: response.name,
+          cover: response?.images[0]?.url,
+          type: 'spotify',
+          category,
+          index
+        };
+        if(resumespotifyduration_ms) {
+          media.resumespotifyduration_ms = resumespotifyduration_ms;
+        }
+        if(resumespotifyprogress_ms) {
+          media.resumespotifyprogress_ms = resumespotifyprogress_ms;
+        }
+        if(resumespotifytrack_number) {
+          media.resumespotifytrack_number = resumespotifytrack_number;
+        }
+        if(artistcover) {
+          media.artistcover = artistcover;
+        }
+        if(shuffle) {
+          media.shuffle = shuffle;
+        }
+        return media;
+      })
+    );
+    return album;
+  }
+
+  getMediaByPlaylistID(id: string, category: string, index: number, shuffle: boolean, artistcover: string, resumespotifyduration_ms: number, resumespotifyprogress_ms: number, resumespotifytrack_number: number): Observable<Media> {
     const album = defer(() => this.spotifyApi.getPlaylist(id, { limit: 1, offset: 0, market: 'DE' })).pipe(
       retryWhen(errors => {
         return this.errorHandler(errors);
@@ -237,6 +273,15 @@ export class SpotifyService {
           category,
           index
         };
+        if(resumespotifyduration_ms) {
+          media.resumespotifyduration_ms = resumespotifyduration_ms;
+        }
+        if(resumespotifyprogress_ms) {
+          media.resumespotifyprogress_ms = resumespotifyprogress_ms;
+        }
+        if(resumespotifytrack_number) {
+          media.resumespotifytrack_number = resumespotifytrack_number;
+        }
         if(artistcover) {
           media.artistcover = artistcover;
         }

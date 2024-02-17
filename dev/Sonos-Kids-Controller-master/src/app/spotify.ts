@@ -58,3 +58,10 @@ export interface SpotifyArtistResponse {
     name?: string;
     images: SpotifyAlbumsResponseImage[];
 }
+
+export interface SpotifyEpisodeResponseItem {
+    images: SpotifyAlbumsResponseImage[];
+    name: string;
+    id: string;
+    show: SpotifyAlbumsResponseArtist[];
+}
