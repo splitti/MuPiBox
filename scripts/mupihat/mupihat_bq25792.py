@@ -33,6 +33,7 @@ import smbus2
 import sys
 import time
 import json
+import yaml
 
 class bq25792:
     """ 
@@ -59,8 +60,17 @@ class bq25792:
         
     """
      # constructor method
-    def __init__(self, i2c_device=1, i2c_addr=0x6b, busWS_ms=10, exit_on_error = False):
+    def __init__(self, i2c_device=1, i2c_addr=0x6b, busWS_ms=10, exit_on_error = False, battery_conf_file="mupihat_battery_conf.yml"):
         try:
+            self.battery_conf_file = battery_conf_file
+            self.battery_conf = {'battery_type' : "Default",
+                                 'v_100': 8100,
+                                 'v_75': 7800,
+                                 'v_50': 7400,
+                                 'v_25': 7000,
+                                 'v_0': 6700,
+                                 'th_warning': 7000,
+                                 'th_shutdown': 6800 }
             self._exit_on_error = exit_on_error
             self.i2c_device = i2c_device
             self.i2c_addr = i2c_addr
@@ -126,13 +136,59 @@ class bq25792:
             self.REG48_Part_Information = 0x48
             # handle to bus
             self.bq = smbus2.SMBus(i2c_device)
+            self.battery_conf_load()
         except Exception as _error:
             sys.stderr.write('%s\n' % str(_error))
             if self._exit_on_error: sys.exit(1)
         finally:
             pass
 
-    
+    def battery_conf_load(self):
+        '''
+        load the battery configuration from yaml file
+        '''
+        try:
+            with open(self.battery_conf_file) as f:
+                content = f.read()
+            self.battery_conf = yaml.load(content, Loader=yaml.FullLoader)
+            return 0
+        except Exception as _error:
+            sys.stderr.write('battery_conf_load from YAML failed, use standard configuration, %s\n' % str(_error))
+            if self._exit_on_error: sys.exit(1)
+            return -1
+        finally:
+            pass
+    def battery_soc(self):
+        '''
+        Description
+        -------
+        Calc the Battery State-of-Charge
+        Compares the voltage of battery (from VBat register value) with thresholds from battery_conf
+
+        Outputs
+        ------
+            Bat_SOC -> str {100%, 75%, 50%, 25%, 0%} \n
+            Bat_Stat -> {OK, LOW, SHUTDOWN}
+        '''
+        Bat_SOC = ''
+        Bat_Stat = ''
+        v_100, v_75, v_50, v_25, v_0 = self.battery_conf['v_100'], self.battery_conf['v_75'],self.battery_conf['v_50'],self.battery_conf['v_25'],self.battery_conf['v_0']
+        th_warning, th_shutdown = self.battery_conf['th_warning'], self.battery_conf['th_shutdown']
+
+        IBat = self.read_Vbat()
+
+        if IBat > v_100     : Bat_SOC = "100%"
+        elif IBat > v_75    : Bat_SOC = "75%"
+        elif IBat > v_50    : Bat_SOC = "50%"
+        elif IBat > v_25    : Bat_SOC = "25%"
+        elif IBat > v_0     : Bat_SOC = "0%"
+
+        if IBat > th_warning : Bat_Stat = 'OK'
+        elif (IBat < th_warning) & (IBat > th_shutdown) : Bat_Stat = 'LOW'
+        elif (IBat < th_shutdown) : Bat_Stat = 'SHUTDOWN'
+
+        return Bat_SOC, Bat_Stat
+
     # BQ25795 Register
     class BQ25795_REGISTER:
         def __init__(self, addr, value=0):
@@ -944,6 +1000,12 @@ class bq25792:
         
     # class methods
     def read_all_register(self):
+        '''
+        This function reads all BQ29572 Charger IC I2C registers
+        Register values of Class are updated
+        Returns 0 if sucessful excecuted
+        Returne -1 if error occured
+        '''
         try:
             val = [0xFF]*73
             val[0:31] = self.bq.read_i2c_block_data(self.i2c_addr, 0x0, 32)
@@ -977,9 +1039,11 @@ class bq25792:
             self.REG3B_VBAT_ADC.set((self.registers[self.REG3B_VBAT_ADC._addr] << 8) | (self.registers[self.REG3B_VBAT_ADC._addr+1]))
             self.REG3D_VSYS_ADC.set((self.registers[self.REG3D_VSYS_ADC._addr] << 8) | (self.registers[self.REG3D_VSYS_ADC._addr+1]))
             self.REG41_TDIE_ADC.set((self.registers[self.REG41_TDIE_ADC._addr] << 8) | (self.registers[self.REG41_TDIE_ADC._addr+1]))
+            return 0
         except Exception as _error:
             sys.stderr.write('read_all_register failed, %s\n' % str(_error))
             if self._exit_on_error: sys.exit(1)
+            return -1
         finally:
             pass
 
@@ -1146,39 +1210,51 @@ class bq25792:
         finally:
             pass
 
+    def write_defaults(self):
+            #Watchdog
+            reg = self.REG10_Charger_Control_1
+            reg.WATCHDOG = 0 #disable watchdog
+            self.write_register(reg)
+            # Thermal Regulation Threshold - a bit more conservative
+            reg = self.REG16_Temperature_Control
+            reg.TREG = 0x2 #100°C
+            reg.TSHUT = 0x2 #120°C
+            self.write_register(reg)
+
+            reg = self.REG2E_ADC_Control
+            reg.ADC_EN = 1
+            reg.ADC_SAMPLE = 0 # 15bit resolution
+            reg.ADC_AVG = 0 # running avg
+            reg.ADC_AVG_INIT = 0 
+            self.write_register(reg)
+
+            reg = self.REG0F_Charger_Control_0
+            reg.EN_TERM = 1 # Enable Charge Termination
+            self.write_register(reg)
+
+            reg = self.REG14_Charger_Control_5
+            reg.EN_IBAT = 1 # Enable the IBAT discharge current sensing for ADC
+            self.write_register(reg)
+            
+            self.enable_extilim()
+            #self.set_input_current_limit(2000)
+            return
+
     def MuPiHAT_Default(self):
-        ''' Write MuPiHAT Default Settings to Charger IC'''
+        ''' 
+        Write MuPiHAT Default Settings to Charger IC
+        '''
         self.read_all_register()
-        #Watchdog
-        reg = self.REG10_Charger_Control_1
-        reg.WATCHDOG = 0 #disable watchdog
-        self.write_register(reg)
-        # Thermal Regulation Threshold - a bit more conservative
-        reg = self.REG16_Temperature_Control
-        reg.TREG = 0x3 #120°C
-        reg.TSHUT = 0x0 #150°C
-        self.write_register(reg)
-
-        reg = self.REG2E_ADC_Control
-        reg.ADC_EN = 1
-        reg.ADC_SAMPLE = 0 # 15bit resolution
-        reg.ADC_AVG = 0 # running avg
-        reg.ADC_AVG_INIT = 0 
-        self.write_register(reg)
-
-        reg = self.REG0F_Charger_Control_0
-        reg.EN_TERM = 1 # Enable Charge Termination
-        self.write_register(reg)
-
-        reg = self.REG14_Charger_Control_5
-        reg.EN_IBAT = 1 # Enable the IBAT discharge current sensing for ADC
-        self.write_register(reg)
-
-        self.disable_extilim()
-        self.set_input_current_limit(2000)# mA
-       
-
-        return
+        self.write_defaults()
+        #tries = 0
+        #max_tries = 3
+        #while tries < max_tries:
+        #    if (self.read_all_register()) == 0:
+        #        self.write_defaults()
+        #        return 0
+        #    else:
+        #        tries += 1
+        #return -1
 
     def get_IC_temperature(self):
         '''
@@ -1192,13 +1268,22 @@ class bq25792:
         Diable External ILIM_HIZ Input Current Limit pin input
         '''
         try:
-            self.read_all_register()
+            # first read register
+            reg_addr = self.REG14_Charger_Control_5._addr
+            val = self.bq.read_byte_data(self.i2c_addr, reg_addr)
+            time.sleep(self.busWS_ms/1000)
+            self.registers[reg_addr] = val
+            self.REG14_Charger_Control_5.set((self.registers[reg_addr]))
+            # then set bit
             self.REG14_Charger_Control_5.EN_EXTILIM = 0
+            self.REG14_Charger_Control_5.get()
+            # now write back
             self.write_register(self.REG14_Charger_Control_5)
-            pass
+            return 0
         except Exception as _error:
             sys.stderr.write('disable_extilim failed, %s\n' % str(_error))
             if self._exit_on_error: sys.exit(1)
+            return -1
         finally:
             pass
 
@@ -1207,15 +1292,48 @@ class bq25792:
         Enable External ILIM_HIZ Input Current Limit pin input
         '''
         try:
-            self.read_all_register()
+            #self.read_all_register()
+            # first read register
+            reg_addr = self.REG14_Charger_Control_5._addr
+            val = self.bq.read_byte_data(self.i2c_addr, reg_addr)
+            time.sleep(self.busWS_ms/1000)
+            self.registers[reg_addr] = val
+            self.REG14_Charger_Control_5.set((self.registers[reg_addr]))
+            # then set bit
             self.REG14_Charger_Control_5.EN_EXTILIM = 1
+            self.REG14_Charger_Control_5.get()
+            # now write back
             self.write_register(self.REG14_Charger_Control_5)
-            pass
+            return 0
         except Exception as _error:
             sys.stderr.write('disable_extilim failed, %s\n' % str(_error))
             if self._exit_on_error: sys.exit(1)
+            return -1
         finally:
             pass
+    
+    def read_REG14_Charger_Control_5(self):
+        '''
+        Read read_REG14_Charger_Control_5
+        Return register value
+        '''
+        try:
+            #self.read_all_register()
+            # first read register
+            reg_addr = self.REG14_Charger_Control_5._addr
+            val = self.bq.read_byte_data(self.i2c_addr, reg_addr)
+            time.sleep(self.busWS_ms/1000)
+            self.registers[reg_addr] = val
+            self.REG14_Charger_Control_5.set((self.registers[reg_addr]))
+            value, SFET_PRESENT, EN_IBAT, IBAT_REG, EN_IINDPM, EN_EXTILIM, EN_BATOC = self.REG14_Charger_Control_5.get()
+            return value
+        except Exception as _error:
+            sys.stderr.write('read_REG14_Charger_Control_5 failed, %s\n' % str(_error))
+            if self._exit_on_error: sys.exit(1)
+            return -1
+        finally:
+            pass
+
 
     def set_input_current_limit(self, input_current_limit):
         '''
@@ -1228,9 +1346,9 @@ class bq25792:
             time.sleep(self.busWS_ms/1000)
             self.bq.write_byte_data(self.i2c_addr, reg._addr+1, reg._value)
             time.sleep(self.busWS_ms/1000)
-            sys.stderr.write('set_input_current_limit to: %s\n' % str(reg._value))
-            self.read_all_register()
-            sys.stderr.write('get_input_current_limit to: %s\n' % str(reg._value))
+            #sys.stderr.write('set_input_current_limit to: %s\n' % str(reg._value))
+            #self.read_all_register()
+            #sys.stderr.write('get_input_current_limit to: %s\n' % str(reg._value))
             pass
         except Exception as _error:
             sys.stderr.write('set_input_current_limit failed, %s\n' % str(_error))
@@ -1294,13 +1412,23 @@ class bq25792:
         return val, EN_AUTO_IBATDIS, FORCE_IBATDIS, EN_CHG, EN_ICO, FORCE_ICO, EN_HIZ, EN_TERM
 
     def to_json(self):
+        bat_SOC, bat_Stat = self.battery_soc()
         return {
             'Charger_Status': self.read_ChargerStatus(),
             'Vbat': self.read_Vbat(),
             'Vbus': self.read_Vbus(),
             'Ibat': self.read_Ibat(),
             'IBus': self.read_Ibus(),
-            'Temp': self.read_TDIE_Temp()
+            'Temp': self.read_TDIE_Temp(),
+            'REG14' : self.read_REG14_Charger_Control_5(),
+            'Bat_SOC' : bat_SOC,
+            'Bat_Stat' : bat_Stat,
+            'Bat_Type' : self.battery_conf['battery_type']
+        }
+    
+    def dump_register(self):
+        return {
+            'dump': str(self.registers)
         }
 ####
     
