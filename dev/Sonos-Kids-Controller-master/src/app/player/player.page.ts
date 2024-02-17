@@ -320,8 +320,8 @@ export class PlayerPage implements OnInit {
     this.media.category = "resume";
     console.log("Save progress");
     console.log(this.media);
-    //this.mediaService.addRawMedia(this.media);
-    //this.playerService.sendCmd(PlayerCmds.INDEX);
+    this.mediaService.addRawMedia(this.media);
+    this.playerService.sendCmd(PlayerCmds.INDEX);
   }
 
   volUp() {
