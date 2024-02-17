@@ -272,11 +272,25 @@ export class PlayerPage implements OnInit {
     this.mediaService.episode$.subscribe(episode => {
       this.currentEpisode = episode;
     });
-    /* if(this.media.type === 'spotify' && this.media?.showid){
+    if(this.media.type === 'spotify' && this.media?.showid){
+      this.media.resume = {
+        spotify:{
+          track_number: 0,
+          progress_ms: 0,
+          duration_ms: 0,
+        }
+      };
       this.media.resume.spotify.track_number = 1;
       this.media.resume.spotify.progress_ms = this.currentPlayedSpotify?.progress_ms  || 0;
       this.media.resume.spotify.duration_ms = this.currentEpisode?.duration_ms || 0;
     } else if(this.media.type === 'spotify'){
+      this.media.resume = {
+        spotify:{
+          track_number: 0,
+          progress_ms: 0,
+          duration_ms: 0,
+        }
+      };
       if(this.media.playlistid){
         this.media.resume.spotify.track_number = this.playlistTrackNr  || 0;
       }else{
@@ -285,17 +299,29 @@ export class PlayerPage implements OnInit {
       this.media.resume.spotify.progress_ms = this.currentPlayedSpotify?.progress_ms  || 0;
       this.media.resume.spotify.duration_ms = this.currentPlayedSpotify?.item.duration_ms || 0;
     } else if (this.media.type === 'library'){
+      this.media.resume = {
+        local: {
+          album: "",
+          currentTracknr: 0,
+          progressTime: 0,
+        }
+      };
       this.media.resume.local.album = this.currentPlayedLocal?.album || "";
       this.media.resume.local.currentTracknr = this.currentPlayedLocal?.currentTracknr  || 0;
       this.media.resume.local.progressTime = this.currentPlayedLocal?.progressTime  || 0;
     } else if (this.media.type === 'rss'){
+      this.media.resume = {
+        rss: {
+          progressTime: 0,
+        }
+      };
       this.media.resume.rss.progressTime = this.currentPlayedLocal?.progressTime  || 0;
-    } */
+    }
     this.media.category = "resume";
     console.log("Save progress");
     console.log(this.media);
-    this.mediaService.addRawMedia(this.media);
-    this.playerService.sendCmd(PlayerCmds.INDEX);
+    //this.mediaService.addRawMedia(this.media);
+    //this.playerService.sendCmd(PlayerCmds.INDEX);
   }
 
   volUp() {
