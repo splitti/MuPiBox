@@ -6,6 +6,16 @@ Parameters
 -l <logfile> : str
     Enable Logging and specify file
 -h : print help
+-j <json file> str
+    enable generation of json file
+
+Call to use for MuPiHAT Service:
+-------
+python3 -B /usr/local/bin/mupibox/mupihat.py -j /tmp/mupihat.json
+
+Call to use for MuPiHAT Print Logging for Debug only (eg. for Battery test):
+-------
+python3 -B /usr/local/bin/mupibox/mupihat.py -l /tmp/mupihat.log
 
 Returns
 -------
@@ -44,6 +54,7 @@ def timestamp():
     date_time = datetime.fromtimestamp(time_stamp)
     return date_time
 
+'''
 def SOC_Battery(CHG_STAT, VBAT):
      """
      Calculate State of Charge from VBat reading of charger IC
@@ -60,37 +71,36 @@ def SOC_Battery(CHG_STAT, VBAT):
      else:
           soc = 'charging' 
      return soc
+'''
+
 
 def main(argv):
     # parse command line
     sys.stdout = sys.stdout
     log_flag = 0
     json_flag = 0
+    logfile = '/tmp/mupihat.log'
+    json_file = '/tmp/mupihat.json'
     try:
-        opts, args = getopt.getopt(argv,"h:l:j",["logfile="])
+        opts, args = getopt.getopt(argv,"h:l:j:",["logfile=", "json="])
     except getopt.GetoptError:
         print ('mupihat.py -l <logfile>')
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print ('mupihat.py -l <logfile>')
+            print ('mupihat.py -l <logfile> -j <json file>')
             sys.exit(0)
-        elif opt in ("-j"):
-             #logfile = '/home/dietpi/MuPiBox/media/hat/log.txt'
-             json_file = '/tmp/mupihat.json'
+        elif opt in ['-j', '--json']:
+             json_file = arg
              json_flag = 1
-        elif opt in ("-l"):
-             #logfile = '/home/dietpi/MuPiBox/media/hat/log.txt'
-             logfile = '/tmp/mupihat.log'
+        elif opt in ['-l', '--logfile']:
+             logfile = arg
              log_flag = 1
              f= open(logfile, 'w')
              sys.stdout = f
              print ("----- \n Logfile mupyhat.py \n ----------")
-        elif opt in ("--logfile"):
-             logfile = arg
-             f= open(logfile, 'w')
-             sys.stdout = f
-             print ("----- \n Logfile mupyhat.py \n ----------")
+        else:
+             assert False, "unhandled option"
     # here it starts
     try:
         hat = bq25792() #instance of bq25792
@@ -114,6 +124,10 @@ def main(argv):
     try:
         while True:          
             if log_flag:
+                '''
+                This is only for debug
+                Log generation for varios tests, eg Battery test  is TBD 
+                '''
                 hat.read_all_register()
                 # Timestamp    
                 print ("*** Timestamp: ", timestamp(), flush=True)
