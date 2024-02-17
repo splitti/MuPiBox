@@ -191,8 +191,7 @@ export class PlayerPage implements OnInit {
   }
 
   ionViewWillEnter() {
-    console.log("ionViewWillEnter");
-    console.log(this.media);
+    console.log("Media object after enter playerpage:", this.media);
     this.updateProgression = true;
     if (this.resumePlay){
       this.resumePlayback();
@@ -232,10 +231,10 @@ export class PlayerPage implements OnInit {
   }
 
   resumePlayback(){
-    console.log("resumePlayback");
-    console.log(this.media);
+    console.log("Media object after start resumePlayback:", this.media);
     if(this.media.type === 'spotify' && !this.media.shuffle){
       console.log("Media object before passing to PlayerService:", this.media);
+      console.log("Resume spotify track number before passing to PlayerService:", this.media.resumespotifytrack_number);
       this.playerService.resumeMedia(this.media);
     } else if (this.media.type === 'library'){
       this.playerService.playMedia(this.media);

@@ -251,7 +251,7 @@ export class MediaService {
       map(items => { // Filter to get only items for the chosen category
         items.forEach(item => item.category = (item.category === undefined) ? 'audiobook' : item.category); // default category
         items = items.filter(item => item.category === this.category);
-        console.log(items);
+        console.log("updateMedia:", items);
         return items;
       }),
       mergeMap(items => from(items)), // parallel calls for each item
@@ -281,7 +281,7 @@ export class MediaService {
               })
             ),
             iif(
-              () => (item.showid && item.showid.length > 0) ? true : false, // Get media by show
+              () => (item.showid && item.showid.length > 0 && item.category !== "resume") ? true : false, // Get media by show
                 this.spotifyService.getMediaByShowID(item.showid, item.category, item.index, item.shuffle, item.aPartOfAll, item.aPartOfAllMin, item.aPartOfAllMax, item.artistcover).pipe(
                   map(items => {  // If the user entered an user-defined artist name in addition to a query, overwrite orignal artist from spotify
                     if (item.artist?.length > 0) {
@@ -293,36 +293,47 @@ export class MediaService {
                   })
                 ),
                 iif(
-                  () => (item.type === 'spotify' && item.playlistid && item.playlistid.length > 0) ? true : false, // Get media by show
-                    this.spotifyService.getMediaByPlaylistID(item.playlistid, item.category, item.index, item.shuffle, item.artistcover).pipe(
-                      map(currentItem => {  // If the user entered an user-defined artist or album name, overwrite values from spotify
+                  () => (item.showid && item.showid.length > 0 && item.category === "resume") ? true : false, // Get media by show
+                    this.spotifyService.getMediaByEpisode(item.id, item.category, item.index, item.shuffle, item.artistcover, item.resumespotifyduration_ms, item.resumespotifyprogress_ms, item.resumespotifytrack_number).pipe(
+                      map(currentItem => {  // If the user entered an user-defined artist name in addition to a query, overwrite orignal artist from spotify
                         if (item.artist?.length > 0) {
                           currentItem.artist = item.artist;
                         }
                         return [currentItem];
                       })
-                    ),iif(
-                      () => (item.type === 'rss' && item.id.length > 0) ? true : false, // Get media by show
-                        this.rssFeedService.getRssFeed(this.ip, item.id, item.category, item.index, item.shuffle, item.aPartOfAll, item.aPartOfAllMin, item.aPartOfAllMax, item.artistcover).pipe(
-                          map(items => {  // If the user entered an user-defined artist name in addition to a query, overwrite orignal artist from spotify
+                    ),
+                    iif(
+                      () => (item.type === 'spotify' && item.playlistid && item.playlistid.length > 0) ? true : false, // Get media by show
+                        this.spotifyService.getMediaByPlaylistID(item.playlistid, item.category, item.index, item.shuffle, item.artistcover, item.resumespotifyduration_ms, item.resumespotifyprogress_ms, item.resumespotifytrack_number).pipe(
+                          map(currentItem => {  // If the user entered an user-defined artist or album name, overwrite values from spotify
                             if (item.artist?.length > 0) {
-                              items.forEach(currentItem => {
-                                currentItem.artist = item.artist;
-                              });
+                              currentItem.artist = item.artist;
                             }
-                            return items;
+                            return [currentItem];
                           })
                         ),iif(
-                          () => (item.type === 'spotify' && item.id && item.id.length > 0) ? true : false, // Get media by album
-                            this.spotifyService.getMediaByID(item.id, item.category, item.index, item.shuffle, item.artistcover).pipe(
-                              map(currentItem => {  // If the user entered an user-defined artist or album name, overwrite values from spotify
+                          () => (item.type === 'rss' && item.id.length > 0) ? true : false, // Get media by show
+                            this.rssFeedService.getRssFeed(this.ip, item.id, item.category, item.index, item.shuffle, item.aPartOfAll, item.aPartOfAllMin, item.aPartOfAllMax, item.artistcover).pipe(
+                              map(items => {  // If the user entered an user-defined artist name in addition to a query, overwrite orignal artist from spotify
                                 if (item.artist?.length > 0) {
-                                  currentItem.artist = item.artist;
+                                  items.forEach(currentItem => {
+                                    currentItem.artist = item.artist;
+                                  });
                                 }
-                                return [currentItem];
+                                return items;
                               })
-                            ),
-                            of([item]) // Single album. Also return as array, so we always have the same data type
+                            ),iif(
+                              () => (item.type === 'spotify' && item.id && item.id.length > 0) ? true : false, // Get media by album
+                                this.spotifyService.getMediaByID(item.id, item.category, item.index, item.shuffle, item.artistcover, item.resumespotifyduration_ms, item.resumespotifyprogress_ms, item.resumespotifytrack_number).pipe(
+                                  map(currentItem => {  // If the user entered an user-defined artist or album name, overwrite values from spotify
+                                    if (item.artist?.length > 0) {
+                                      currentItem.artist = item.artist;
+                                    }
+                                    return [currentItem];
+                                  })
+                                ),
+                                of([item]) // Single album. Also return as array, so we always have the same data type
+                    )
                   )
                 )
               )
