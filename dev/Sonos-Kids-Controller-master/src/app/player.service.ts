@@ -119,10 +119,7 @@ export class PlayerService {
     if (media.playlistid) {
       url = 'spotify/now/spotify:playlist:' + encodeURIComponent(media.playlistid) + ':' + media.resumespotifytrack_number + ':' + media.resumespotifyprogress_ms;
     } else if (media.id) {
-      console.log(media);
-      console.log(media.resumespotifytrack_number);
       url = 'spotify/now/spotify:album:' + encodeURIComponent(media.id) + ':' + media.resumespotifytrack_number + ':' + media.resumespotifyprogress_ms;
-      console.log(url);
     } else if (media.showid) {
       url = 'spotify/now/spotify:episode:' + encodeURIComponent(media.showid) + ':' + media.resumespotifytrack_number + ':' + media.resumespotifyprogress_ms;
     }

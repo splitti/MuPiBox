@@ -191,6 +191,7 @@ export class PlayerPage implements OnInit {
   }
 
   ionViewWillEnter() {
+    console.log("ionViewWillEnter");
     console.log(this.media);
     this.updateProgression = true;
     if (this.resumePlay){
@@ -231,6 +232,8 @@ export class PlayerPage implements OnInit {
   }
 
   resumePlayback(){
+    console.log("resumePlayback");
+    console.log(this.media);
     if(this.media.type === 'spotify' && !this.media.shuffle){
       this.playerService.resumeMedia(this.media);
     } else if (this.media.type === 'library'){
