@@ -123,6 +123,7 @@ export class HomePage implements OnInit {
   }
 
   ionViewWillEnter() {
+    this.mediaService.setCategory("audiobook");
     if (this.needsUpdate) {
       this.update();
     }

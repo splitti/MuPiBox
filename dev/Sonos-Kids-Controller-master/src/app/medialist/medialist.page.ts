@@ -180,7 +180,6 @@ export class MedialistPage implements OnInit {
   }
 
   ionViewDidLeave() {
-    this.resume = false;
     if (this.activityIndicatorVisible) {
       this.activityIndicatorService.dismiss();
       this.activityIndicatorVisible = false;
