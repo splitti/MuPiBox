@@ -6,8 +6,6 @@ import { environment } from '../environments/environment';
 import { Observable } from 'rxjs';
 import { publishReplay, refCount } from 'rxjs/operators';
 
-import { Resume } from './resume';
-
 export enum PlayerCmds {
   PLAY = 'play',
   PAUSE = 'pause',
@@ -113,17 +111,17 @@ export class PlayerService {
     this.sendRequest(url);
   }
 
-  resumeMedia(media: Media, resume: Resume) {
+  resumeMedia(media: Media) {
     let url: string;
+    console.log("resumeMedia");
     console.log(media);
-    console.log(resume);
 
     if (media.playlistid) {
-      url = 'spotify/now/spotify:playlist:' + encodeURIComponent(media.playlistid) + ':' + resume.spotify.track_number + ':' + resume.spotify.progress_ms;
+      url = 'spotify/now/spotify:playlist:' + encodeURIComponent(media.playlistid) + ':' + media.resumespotifytrack_number + ':' + media.resumespotifyprogress_ms;
     } else if (media.id) {
-      url = 'spotify/now/spotify:album:' + encodeURIComponent(media.id) + ':' + resume.spotify.track_number + ':' + resume.spotify.progress_ms;
+      url = 'spotify/now/spotify:album:' + encodeURIComponent(media.id) + ':' + media.resumespotifytrack_number + ':' + media.resumespotifyprogress_ms;
     } else if (media.showid) {
-      url = 'spotify/now/spotify:episode:' + encodeURIComponent(media.showid) + ':' + resume.spotify.track_number + ':' + resume.spotify.progress_ms;
+      url = 'spotify/now/spotify:episode:' + encodeURIComponent(media.showid) + ':' + media.resumespotifytrack_number + ':' + media.resumespotifyprogress_ms;
     }
 
     this.sendRequest(url);

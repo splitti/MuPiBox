@@ -25,7 +25,9 @@ We will focus on <b>bookworm</b> and recommend you to update, or reinstall. See 
 <li id='linews' class='linews'>New: New UI for Media Add area</li>
 <li id='linews' class='linews'>New: No more using of Spotify Ids, now only use the complete URL from Spotify</li>
 <li id='linews' class='linews'>New: Shell login info and aliases for mupibox commands</li>
-<li id='linews' class='linews'>Bugfix: GPU-Support was not enabled</li>
+<li id='linews' class='linews'>New: GPU-Support can be enabled, experimantal (no risc, no fun)</li>
+<li id='linews' class='linews'>New: Download support infos in admin-interface</li>
+<li id='linews' class='linews'>New: MuPiHAT-Support</li>
 <li id='linews' class='linews'>Bugfix: new Spotifyd Version --> less Spotify problems</li>
 <li id='linews' class='linews'>Bugfix: Theme cannot be set</li>
 <li id='linews' class='linews'>Bugfix: Fixing bluetooth problems</li>

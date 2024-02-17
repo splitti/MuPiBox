@@ -123,6 +123,7 @@ export class HomePage implements OnInit {
   }
 
   ionViewWillEnter() {
+    this.mediaService.setCategory("audiobook");
     if (this.needsUpdate) {
       this.update();
     }
@@ -276,18 +277,16 @@ export class HomePage implements OnInit {
 
   resume() {
     if(this.monitor?.monitor == "On"){
-      console.log(this.mediaFile);
-      console.log(this.resumeFile);
+      this.mediaService.setCategory("resume");
       this.activityIndicatorService.create().then(indicator => {
         this.activityIndicatorVisible = true;
         indicator.present().then(() => {
           const navigationExtras: NavigationExtras = {
             state: {
-              media: this.mediaFile,
-              resume: this.resumeFile
+              resume: "resume",
             }
           };
-          this.router.navigate(['/player'], navigationExtras);
+          this.router.navigate(['/medialist'], navigationExtras);
         });
       });
     }

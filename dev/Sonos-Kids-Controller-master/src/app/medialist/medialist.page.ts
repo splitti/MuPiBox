@@ -19,6 +19,7 @@ export class MedialistPage implements OnInit {
 
   artist: Artist;
   media: Media[] = [];
+  resume = false;
   covers = {};
   monitor: Monitor;
   activityIndicatorVisible = false;
@@ -47,6 +48,9 @@ export class MedialistPage implements OnInit {
     this.route.queryParams.subscribe(params => {
       if (this.router.getCurrentNavigation().extras.state) {
         this.artist = this.router.getCurrentNavigation().extras.state.artist;
+        if (this.router.getCurrentNavigation().extras.state?.resume === "resume") {
+          this.resume = true;
+        }
       }
     });
   }
@@ -55,93 +59,117 @@ export class MedialistPage implements OnInit {
     // Subscribe
     console.log("this.artist");
     console.log(this.artist);
+    if(this.resume){
+      this.mediaService.getMediaFromResume().subscribe(media => {
+        this.media = media;
+  
+        this.media.forEach(currentMedia => {
+          this.artworkService.getArtwork(currentMedia).subscribe(url => {
+            this.covers[currentMedia.title] = url;
+          });
+        });
+
+        console.log("getMediaFromResume this.media all");
+        console.log(this.media);
+
+        this.slider.update();
+  
+        // Workaround as the scrollbar handle isn't visible after the immediate update
+        // Seems like a size calculation issue, as resizing the browser window helps
+        // Better fix for this? 
+        window.setTimeout(() => {
+          this.slider.update();
+        }, 1000);
+      });
+    }else{
+      if((this.artist.coverMedia.showid && this.artist.coverMedia.showid.length > 0) || (this.artist.coverMedia.type == 'rss' && this.artist.coverMedia.id.length > 0)){
+        this.mediaService.getMediaFromShow(this.artist).subscribe(media => {
+          this.media = media;
     
-    if((this.artist.coverMedia.showid && this.artist.coverMedia.showid.length > 0) || (this.artist.coverMedia.type == 'rss' && this.artist.coverMedia.id.length > 0)){
-      this.mediaService.getMediaFromShow(this.artist).subscribe(media => {
-        this.media = media;
-  
-        this.media.forEach(currentMedia => {
-          this.artworkService.getArtwork(currentMedia).subscribe(url => {
-            this.covers[currentMedia.title] = url;
+          this.media.forEach(currentMedia => {
+            this.artworkService.getArtwork(currentMedia).subscribe(url => {
+              this.covers[currentMedia.title] = url;
+            });
           });
-        });
-
-        console.log("ShowID this.media all");
-        console.log(this.media);
-
-        if(this.artist.coverMedia?.aPartOfAll){
-          for (let i = 0; i < this.media.length; i++){
-            let rev = this.media.length - i;
-            if(rev >= (this.artist.coverMedia?.aPartOfAllMin) && rev <= (this.artist.coverMedia?.aPartOfAllMax)){
-              this.aPartOfAllMedia.push(this.media[i]);
+  
+          console.log("ShowID this.media all");
+          console.log(this.media);
+  
+          if(this.artist.coverMedia?.aPartOfAll){
+            for (let i = 0; i < this.media.length; i++){
+              let rev = this.media.length - i;
+              if(rev >= (this.artist.coverMedia?.aPartOfAllMin) && rev <= (this.artist.coverMedia?.aPartOfAllMax)){
+                this.aPartOfAllMedia.push(this.media[i]);
+              }
             }
+            this.media = this.aPartOfAllMedia;
           }
-          this.media = this.aPartOfAllMedia;
-        }
-
-        this.slider.update();
-
-        console.log("if ShowID this.media");
-        console.log(this.media);
   
-        // Workaround as the scrollbar handle isn't visible after the immediate update
-        // Seems like a size calculation issue, as resizing the browser window helps
-        // Better fix for this? 
-        window.setTimeout(() => {
           this.slider.update();
-        }, 1000);
-      });
-    } else {
-      this.mediaService.getMediaFromArtist(this.artist).subscribe(media => {
-        this.media = media;
   
-        this.media.forEach(currentMedia => {
-          this.artworkService.getArtwork(currentMedia).subscribe(url => {
-            this.covers[currentMedia.title] = url;
+          console.log("if ShowID this.media");
+          console.log(this.media);
+    
+          // Workaround as the scrollbar handle isn't visible after the immediate update
+          // Seems like a size calculation issue, as resizing the browser window helps
+          // Better fix for this? 
+          window.setTimeout(() => {
+            this.slider.update();
+          }, 1000);
+        });
+      } else {
+        this.mediaService.getMediaFromArtist(this.artist).subscribe(media => {
+          this.media = media;
+    
+          this.media.forEach(currentMedia => {
+            this.artworkService.getArtwork(currentMedia).subscribe(url => {
+              this.covers[currentMedia.title] = url;
+            });
           });
-        });
-
-        console.log("getMediaFromArtist this.media all");
-        console.log(this.media);
-
-        if(this.artist.coverMedia?.aPartOfAll){
-          let min: number;
-          let max: number;
-          if(this.artist.coverMedia?.aPartOfAllMin == null){
-            min = 0
-          }else{
-            min = this.artist.coverMedia?.aPartOfAllMin -1;
-          }
-          if(this.artist.coverMedia?.aPartOfAllMax == null){
-            max = parseInt(this.artist.albumCount) -1;
-          }else{
-            max = this.artist.coverMedia?.aPartOfAllMax -1;
-          }
-          console.log("Min: " + min);
-          console.log("Max: " + max);
-          console.log("media.length: " + this.media.length);
-          for (let i = 0; i < this.media.length; i++){
-            if(i >= min && i <= max){
-              this.aPartOfAllMedia.push(this.media[i]);
-            }
-          }
-          this.media = this.aPartOfAllMedia;
-        }
-
-        this.slider.update();
-
-        console.log("getMediaFromArtist this.media");
-        console.log(this.media);
   
-        // Workaround as the scrollbar handle isn't visible after the immediate update
-        // Seems like a size calculation issue, as resizing the browser window helps
-        // Better fix for this? 
-        window.setTimeout(() => {
+          console.log("getMediaFromArtist this.media all");
+          console.log(this.media);
+  
+          if(this.artist.coverMedia?.aPartOfAll){
+            let min: number;
+            let max: number;
+            if(this.artist.coverMedia?.aPartOfAllMin == null){
+              min = 0
+            }else{
+              min = this.artist.coverMedia?.aPartOfAllMin -1;
+            }
+            if(this.artist.coverMedia?.aPartOfAllMax == null){
+              max = parseInt(this.artist.albumCount) -1;
+            }else{
+              max = this.artist.coverMedia?.aPartOfAllMax -1;
+            }
+            console.log("Min: " + min);
+            console.log("Max: " + max);
+            console.log("media.length: " + this.media.length);
+            for (let i = 0; i < this.media.length; i++){
+              if(i >= min && i <= max){
+                this.aPartOfAllMedia.push(this.media[i]);
+              }
+            }
+            this.media = this.aPartOfAllMedia;
+          }
+  
           this.slider.update();
-        }, 1000);
-      });
-
+  
+          console.log("getMediaFromArtist this.media");
+          console.log(this.media);
+    
+          // Workaround as the scrollbar handle isn't visible after the immediate update
+          // Seems like a size calculation issue, as resizing the browser window helps
+          // Better fix for this? 
+          window.setTimeout(() => {
+            this.slider.update();
+          }, 1000);
+        });
+      }
     }
+
+    
 
     // Retreive data through subscription above
     this.mediaService.publishArtistMedia();

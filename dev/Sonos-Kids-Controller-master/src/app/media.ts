@@ -18,4 +18,11 @@ export interface Media {
     aPartOfAllMax?: number;
     duration?: string;
     spotify_url?: string;
+    resumespotifytrack_number?: number;
+    resumespotifyprogress_ms?: number;
+    resumespotifyduration_ms?: number;
+    resumelocalalbum?: string;
+    resumelocalcurrentTracknr?: number;
+    resumelocalprogressTime?: number;
+    resumerssprogressTime?: number;
 }
