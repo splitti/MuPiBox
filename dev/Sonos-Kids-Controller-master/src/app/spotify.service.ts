@@ -186,7 +186,7 @@ export class SpotifyService {
     return albums;
   }
 
-  getMediaByID(id: string, category: string, index: number, shuffle: boolean, artistcover: string): Observable<Media> {
+  getMediaByID(id: string, category: string, index: number, shuffle: boolean, artistcover: string, resumespotifyduration_ms: number, resumespotifyprogress_ms: number, resumespotifytrack_number: number): Observable<Media> {
     const album = defer(() => this.spotifyApi.getAlbum(id, { limit: 1, offset: 0, market: 'DE' })).pipe(
       retryWhen(errors => {
         return this.errorHandler(errors);
@@ -201,6 +201,15 @@ export class SpotifyService {
           category,
           index
         };
+        if(resumespotifyduration_ms) {
+          media.resumespotifyduration_ms = resumespotifyduration_ms;
+        }
+        if(resumespotifyprogress_ms) {
+          media.resumespotifyprogress_ms = resumespotifyprogress_ms;
+        }
+        if(resumespotifytrack_number) {
+          media.resumespotifytrack_number = resumespotifytrack_number;
+        }
         if(artistcover) {
           media.artistcover = artistcover;
         }

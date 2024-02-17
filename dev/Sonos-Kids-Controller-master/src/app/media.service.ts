@@ -251,7 +251,7 @@ export class MediaService {
       map(items => { // Filter to get only items for the chosen category
         items.forEach(item => item.category = (item.category === undefined) ? 'audiobook' : item.category); // default category
         items = items.filter(item => item.category === this.category);
-        console.log(items);
+        console.log("updateMedia:", items);
         return items;
       }),
       mergeMap(items => from(items)), // parallel calls for each item
@@ -314,7 +314,7 @@ export class MediaService {
                           })
                         ),iif(
                           () => (item.type === 'spotify' && item.id && item.id.length > 0) ? true : false, // Get media by album
-                            this.spotifyService.getMediaByID(item.id, item.category, item.index, item.shuffle, item.artistcover).pipe(
+                            this.spotifyService.getMediaByID(item.id, item.category, item.index, item.shuffle, item.artistcover, item.resumespotifyduration_ms, item.resumespotifyprogress_ms, item.resumespotifytrack_number).pipe(
                               map(currentItem => {  // If the user entered an user-defined artist or album name, overwrite values from spotify
                                 if (item.artist?.length > 0) {
                                   currentItem.artist = item.artist;
