@@ -235,6 +235,7 @@ export class PlayerPage implements OnInit {
     console.log("resumePlayback");
     console.log(this.media);
     if(this.media.type === 'spotify' && !this.media.shuffle){
+      console.log("Media object before passing to PlayerService:", this.media);
       this.playerService.resumeMedia(this.media);
     } else if (this.media.type === 'library'){
       this.playerService.playMedia(this.media);
