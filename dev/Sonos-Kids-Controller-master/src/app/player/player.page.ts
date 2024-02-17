@@ -214,12 +214,12 @@ export class PlayerPage implements OnInit {
     if(this.media.type === 'spotify' || this.media.type === 'library' || this.media.type === 'rss'){
       this.saveResumeFiles();
     }
-    this.resumePlay = false;
     this.updateProgression = false;
     if(this.media.shuffle || this.shufflechanged){
       this.playerService.sendCmd(PlayerCmds.SHUFFLEOFF);
     }
     this.playerService.sendCmd(PlayerCmds.STOP);
+    this.resumePlay = false;
     if((this.media.type === 'spotify' &&  (this.media.category === 'music' || this.media.category === 'other'))) {
       if(this.shufflechanged % 2 === 1){
         this.mediaService.editRawMediaAtIndex(this.media.index, this.media);
@@ -294,9 +294,14 @@ export class PlayerPage implements OnInit {
     this.media.category = "resume";
     console.log("Save progress");
     console.log(this.media);
-    this.mediaService.addRawMedia(this.media);
-    console.log(this.mediaService.getResponse());
-    this.playerService.sendCmd(PlayerCmds.INDEX);
+    if(this.resumePlay){
+      this.mediaService.editRawMediaAtIndex(this.media.index, this.media);
+      console.log(this.mediaService.getResponse());
+    }else{
+      this.mediaService.addRawMedia(this.media);
+      console.log(this.mediaService.getResponse());
+      this.playerService.sendCmd(PlayerCmds.INDEX);
+    }
   }
 
   volUp() {
