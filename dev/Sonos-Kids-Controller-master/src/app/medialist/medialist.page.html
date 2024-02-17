@@ -4,8 +4,8 @@
             <ion-back-button icon="arrow-back-outline" defaultHref="/home"></ion-back-button>
         </ion-buttons>
         <ion-title>
-            <div *ngIf="resume; else elseArtistName">Resume</div>
-            <ng-template #elseArtistName><div>{{artist.name}}</div></ng-template>
+            <div *ngIf="!resume; else elseResume">{{artist.name}}</div>
+            <ng-template #elseResume><div>Resume</div></ng-template>
         </ion-title>
     </ion-toolbar>
 </ion-header>
