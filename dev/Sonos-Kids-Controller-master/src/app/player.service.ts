@@ -116,11 +116,11 @@ export class PlayerService {
     console.log(media);
 
     if (media.playlistid) {
-      url = 'spotify/now/spotify:playlist:' + encodeURIComponent(media.playlistid) + ':' + media.resume.spotify.track_number + ':' + media.resume.spotify.progress_ms;
+      url = 'spotify/now/spotify:playlist:' + encodeURIComponent(media.playlistid) + ':' + media.resumespotifytrack_number + ':' + media.resumespotifyprogress_ms;
     } else if (media.id) {
-      url = 'spotify/now/spotify:album:' + encodeURIComponent(media.id) + ':' + media.resume.spotify.track_number + ':' + media.resume.spotify.progress_ms;
+      url = 'spotify/now/spotify:album:' + encodeURIComponent(media.id) + ':' + media.resumespotifytrack_number + ':' + media.resumespotifyprogress_ms;
     } else if (media.showid) {
-      url = 'spotify/now/spotify:episode:' + encodeURIComponent(media.showid) + ':' + media.resume.spotify.track_number + ':' + media.resume.spotify.progress_ms;
+      url = 'spotify/now/spotify:episode:' + encodeURIComponent(media.showid) + ':' + media.resumespotifytrack_number + ':' + media.resumespotifyprogress_ms;
     }
 
     this.sendRequest(url);
