@@ -113,6 +113,7 @@ export class PlayerService {
 
   resumeMedia(media: Media) {
     let url: string;
+    console.log("resumeMedia");
     console.log(media);
 
     if (media.playlistid) {
