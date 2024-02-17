@@ -9,7 +9,6 @@ import { CurrentSpotify } from '../current.spotify';
 import { CurrentMPlayer } from '../current.mplayer';
 import { Observable } from 'rxjs';
 import { IonRange, NavController } from '@ionic/angular';
-import { Resume } from '../resume';
 import { CurrentPlaylist } from '../current.playlist';
 import { CurrentEpisode } from '../current.episode';
 import { CurrentShow } from '../current.show';
@@ -27,23 +26,7 @@ export class PlayerPage implements OnInit {
   media: Media;
   monitor: Monitor;
   albumStop: AlbumStop;
-  resume: Resume;
   resumePlay = false;
-  resumeFile: Resume = {
-    spotify:{
-      track_number: 0,
-      progress_ms: 0,
-      duration_ms: 0,
-    },
-    local: {
-      album: "",
-      currentTracknr: 0,
-      progressTime: 0,
-    },
-    rss: {
-      progressTime: 0,
-    }
-  };
   cover = '';
   playing = true;
   updateProgression = false;
@@ -80,12 +63,7 @@ export class PlayerPage implements OnInit {
     this.route.queryParams.subscribe(params => {
       if (this.router.getCurrentNavigation().extras.state.media) {
         this.media = this.router.getCurrentNavigation().extras.state.media;
-      }
-    });
-    this.route.queryParams.subscribe(params => {
-      if (this.router.getCurrentNavigation().extras.state.resume) {
-        this.resume = this.router.getCurrentNavigation().extras.state.resume;
-        this.resumePlay = true;
+        if(this.media.category === "resume") {this.resumePlay = true;}
       }
     });
   }
@@ -254,30 +232,30 @@ export class PlayerPage implements OnInit {
 
   resumePlayback(){
     if(this.media.type === 'spotify' && !this.media.shuffle){
-      this.playerService.resumeMedia(this.media, this.resume);
+      this.playerService.resumeMedia(this.media);
     } else if (this.media.type === 'library'){
       this.playerService.playMedia(this.media);
       let j = 1;
-      for(let i = 1; i < this.resume.local.currentTracknr; i++){
+      for(let i = 1; i < this.media.resume.local.currentTracknr; i++){
         setTimeout(() => {
           this.skipNext();
           j = i + 1;
-          if(j === this.resume.local.currentTracknr){
+          if(j === this.media.resume.local.currentTracknr){
             setTimeout(() => {
-              this.playerService.seekPosition(this.resume.local.progressTime);
+              this.playerService.seekPosition(this.media.resume.local.progressTime);
             }, 2000) 
           }
         }, 2000)
       }
-      if (this.resume.local.currentTracknr === 1){
+      if (this.media.resume.local.currentTracknr === 1){
         setTimeout(() => {
-          this.playerService.seekPosition(this.resume.local.progressTime);
+          this.playerService.seekPosition(this.media.resume.local.progressTime);
         }, 2000)
       }
     } else if (this.media.type === 'rss'){
       this.playerService.playMedia(this.media);
       setTimeout(() => {
-        this.playerService.seekPosition(this.resume.local.progressTime);
+        this.playerService.seekPosition(this.media.resume.local.progressTime);
       }, 2000)
     }
   }
@@ -293,26 +271,27 @@ export class PlayerPage implements OnInit {
       this.currentEpisode = episode;
     });
     if(this.media.type === 'spotify' && this.media?.showid){
-      this.resumeFile.spotify.track_number = 1;
-      this.resumeFile.spotify.progress_ms = this.currentPlayedSpotify?.progress_ms  || 0;
-      this.resumeFile.spotify.duration_ms = this.currentEpisode?.duration_ms || 0;
+      this.media.resume.spotify.track_number = 1;
+      this.media.resume.spotify.progress_ms = this.currentPlayedSpotify?.progress_ms  || 0;
+      this.media.resume.spotify.duration_ms = this.currentEpisode?.duration_ms || 0;
     } else if(this.media.type === 'spotify'){
       if(this.media.playlistid){
-        this.resumeFile.spotify.track_number = this.playlistTrackNr  || 0;
+        this.media.resume.spotify.track_number = this.playlistTrackNr  || 0;
       }else{
-        this.resumeFile.spotify.track_number = this.currentPlayedSpotify?.item.track_number  || 0;
+        this.media.resume.spotify.track_number = this.currentPlayedSpotify?.item.track_number  || 0;
       }
-      this.resumeFile.spotify.progress_ms = this.currentPlayedSpotify?.progress_ms  || 0;
-      this.resumeFile.spotify.duration_ms = this.currentPlayedSpotify?.item.duration_ms || 0;
+      this.media.resume.spotify.progress_ms = this.currentPlayedSpotify?.progress_ms  || 0;
+      this.media.resume.spotify.duration_ms = this.currentPlayedSpotify?.item.duration_ms || 0;
     } else if (this.media.type === 'library'){
-      this.resumeFile.local.album = this.currentPlayedLocal?.album || "";
-      this.resumeFile.local.currentTracknr = this.currentPlayedLocal?.currentTracknr  || 0;
-      this.resumeFile.local.progressTime = this.currentPlayedLocal?.progressTime  || 0;
+      this.media.resume.local.album = this.currentPlayedLocal?.album || "";
+      this.media.resume.local.currentTracknr = this.currentPlayedLocal?.currentTracknr  || 0;
+      this.media.resume.local.progressTime = this.currentPlayedLocal?.progressTime  || 0;
     } else if (this.media.type === 'rss'){
-      this.resumeFile.rss.progressTime = this.currentPlayedLocal?.progressTime  || 0;
+      this.media.resume.rss.progressTime = this.currentPlayedLocal?.progressTime  || 0;
     }
-    this.mediaService.saveMedia(this.media);
-    this.mediaService.saveResume(this.resumeFile);
+    this.media.category = "resume"
+    this.mediaService.addRawMedia(this.media);
+    this.playerService.sendCmd(PlayerCmds.INDEX);
   }
 
   volUp() {

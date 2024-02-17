@@ -18,4 +18,21 @@ export interface Media {
     aPartOfAllMax?: number;
     duration?: string;
     spotify_url?: string;
+    resume?: Resume;
+}
+
+export interface Resume {
+    spotify?:{
+        track_number?: number;
+        progress_ms?: number;
+        duration_ms?: number;
+    }
+    local?:{
+        album?: string;
+        currentTracknr?: number;
+        progressTime?: number;
+    }
+    rss?:{
+        progressTime?: number;
+    }
 }
