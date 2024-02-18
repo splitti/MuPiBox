@@ -216,6 +216,6 @@ if [ "$MQTTTIMEOUT" == "null" ]; then
 	/usr/bin/cat <<< $(/usr/bin/jq --arg v "60" '.mqtt.timeout = $v' ${CONFIG}) >  ${CONFIG}
 fi
 
-
+/usr/bin/jq -s '.[0] * .[1]' ${CONFIG} /tmp/mupihat.json >  ${CONFIG}
 
 /usr/bin/cat <<< $(/usr/bin/jq '.mupibox.AudioDevices += [{"tname": "mupihat","ufname": "MuPiHat for MuPiBox"},{"tname": "rpi-bcm2835-3.5mm","ufname": "Onboard 3.5mm output"},{"tname": "rpi-bcm2835-hdmi","ufname": "Onboard HDMI output"},{"tname": "hifiberry-amp","ufname": "HifiBerry AMP / AMP+"},{"tname": "hifiberry-dac","ufname": "HifiBerry DAC / MiniAmp"},{"tname": "hifiberry-dacplus","ufname": "HifiBerry DAC+ / DAC+ Pro / AMP2"},{"tname": "usb-dac","ufname": "Any USB Audio DAC (Auto detection)"}]' ${CONFIG}) >  ${CONFIG}
