@@ -112,10 +112,6 @@ export class PlayerService {
   }
 
   resumeMedia(media: Media) {
-    console.log("Media object received in resumeMedia:", media);
-    console.log("Resume spotify track number received in resumeMedia:", media.resumespotifytrack_number);
-    console.log("Category received in resumeMedia:", media.category);
-    console.log("Index received in resumeMedia:", media.index);
     let url: string;
 
     if (media.playlistid) {

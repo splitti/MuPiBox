@@ -88,7 +88,7 @@ export class EditPage implements OnInit {
                     }
                   } else {
                     console.log("Index: " + item.index);
-                    if(item.type === 'library'){
+                    if(item.type === 'library' && item.category !== "resume"){
                       this.playerService.deleteLocal(item);
                     }
                     this.playerService.sendCmd(PlayerCmds.INDEX);
@@ -150,6 +150,10 @@ export class EditPage implements OnInit {
 
   adminButtonPressed() {
     this.router.navigate(['/admin']);
+  }
+
+  clearResumePressed() {
+    
   }
 
   async networkButtonPressed() {

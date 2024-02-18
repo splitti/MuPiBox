@@ -233,8 +233,6 @@ export class PlayerPage implements OnInit {
   resumePlayback(){
     console.log("Media object after start resumePlayback:", this.media);
     if(this.media.type === 'spotify' && !this.media.shuffle){
-      console.log("Media object before passing to PlayerService:", this.media);
-      console.log("Resume spotify track number before passing to PlayerService:", this.media.resumespotifytrack_number);
       this.playerService.resumeMedia(this.media);
     } else if (this.media.type === 'library'){
       this.media.category = this.media.resumelocalalbum;
@@ -259,14 +257,13 @@ export class PlayerPage implements OnInit {
     } else if (this.media.type === 'rss'){
       this.playerService.playMedia(this.media);
       setTimeout(() => {
-        this.playerService.seekPosition(this.media.resumelocalprogressTime);
+        this.playerService.seekPosition(this.media.resumerssprogressTime);
       }, 2000)
     }
   }
 
   saveResumeFiles(){
-    console.log("Add media to resume");
-    console.log(this.media);
+    console.log("Add media to resume", this.media);
     this.mediaService.current$.subscribe(spotify => {
       this.currentPlayedSpotify = spotify;
     });
@@ -296,8 +293,7 @@ export class PlayerPage implements OnInit {
       this.media.resumerssprogressTime = this.currentPlayedLocal?.progressTime  || 0;
     }
     this.media.category = "resume";
-    console.log("Save progress");
-    console.log(this.media);
+    console.log("Save progress", this.media);
     if(this.resumePlay){
       this.mediaService.editRawMediaAtIndex(this.media.index, this.media);
       console.log(this.mediaService.getResponse());
