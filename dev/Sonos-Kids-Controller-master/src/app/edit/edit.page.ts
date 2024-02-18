@@ -152,8 +152,25 @@ export class EditPage implements OnInit {
     this.router.navigate(['/admin']);
   }
 
-  clearResumePressed() {
-    
+  async clearResumePressed() {
+    const alert = await this.alertController.create({
+      cssClass: 'alert',
+      header: 'Warning',
+      message: 'Do you want to clear all resume media?',
+      buttons: [
+        {
+          text: 'Clear',
+          handler: () => {
+            this.playerService.sendCmd(PlayerCmds.CLEARRESUME);
+          }
+        },
+        {
+          text: 'Cancel'
+        }
+      ]
+    });
+
+    await alert.present();
   }
 
   async networkButtonPressed() {

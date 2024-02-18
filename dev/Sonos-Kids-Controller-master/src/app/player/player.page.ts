@@ -301,6 +301,7 @@ export class PlayerPage implements OnInit {
       this.mediaService.addRawMedia(this.media);
       console.log(this.mediaService.getResponse());
       this.playerService.sendCmd(PlayerCmds.INDEX);
+      this.playerService.sendCmd(PlayerCmds.MAXRESUME);
     }
   }
 
