@@ -425,7 +425,7 @@ echo "==========================================================================
 	chown -R dietpi:www-data /home/dietpi/MuPiBox/media/cover >&3 2>&3
 
 	echo -e "XXX\n${STEP}\nUpdate Config-File... \nXXX"	
-	usr/bin/cat <<< $(/usr/bin/jq -s '.[0] * .[1]' ${CONFIG} ${MUPI_SRC}/config/templates/mupiboxconfig.json) > ${CONFIG}.tmp
+	/usr/bin/cat <<< $(/usr/bin/jq -s '.[0] * .[1]' ${CONFIG} ${MUPI_SRC}/config/templates/mupiboxconfig.json) > ${CONFIG}.tmp
 	#chmod 755 conf_update.sh >&3 2>&3
 	#./conf_update.sh >&3 2>&3
 	
