@@ -214,7 +214,7 @@ fi
 MQTTTIMEOUT=$(/usr/bin/jq -r .mqtt.timeout ${CONFIG})
 if [ "$MQTTTIMEOUT" == "null" ]; then 
 	/usr/bin/cat <<< $(/usr/bin/jq --arg v "60" '.mqtt.timeout = $v' ${CONFIG}) >  ${CONFIG}
-i
+fi
 
 /usr/bin/cat <<< $(/usr/bin/jq '. += {"mupihat": { "battery_types": [{ "name": "Ansmann 2S1P", "config": { "v_100": "8100", "v_75": "7800", "v_50": "7400", "v_25": "7000", "v_0": "6700", "th_warning": "7000", "th_shutdown": "6800" }}, { "name": "ENERpower 2S2P 10.000mAh", "config": {	"v_100": "8400", "v_75": "7800", "v_50": "7200", "v_25": "6600", "v_0": "6000", "th_warning": "6600", "th_shutdown": "6100" }}, { "name": "Custom", "config": { "v_100": "8100", "v_75": "7800", "v_50": "7400", "v_25": "7000", "v_0": "6700", "th_warning": "7000", "th_shutdown": "6800"}}], "selected_battery": "Ansmann 2S1P" }}' ${CONFIG}) >  ${CONFIG}
 
