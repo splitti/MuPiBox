@@ -294,7 +294,7 @@ export class MediaService {
                 ),
                 iif(
                   () => (item.showid && item.showid.length > 0 && item.category === "resume") ? true : false, // Get media by show
-                    this.spotifyService.getMediaByEpisode(item.id, item.category, item.index, item.shuffle, item.artistcover, item.resumespotifyduration_ms, item.resumespotifyprogress_ms, item.resumespotifytrack_number).pipe(
+                    this.spotifyService.getMediaByEpisode(item.showid, item.category, item.index, item.shuffle, item.artistcover, item.resumespotifyduration_ms, item.resumespotifyprogress_ms, item.resumespotifytrack_number).pipe(
                       map(currentItem => {  // If the user entered an user-defined artist name in addition to a query, overwrite orignal artist from spotify
                         if (item.artist?.length > 0) {
                           currentItem.artist = item.artist;
@@ -312,7 +312,7 @@ export class MediaService {
                             return [currentItem];
                           })
                         ),iif(
-                          () => (item.type === 'rss' && item.id.length > 0) ? true : false, // Get media by show
+                          () => (item.type === 'rss' && item.id.length > 0 && item.category !== "resume") ? true : false, // Get media by show
                             this.rssFeedService.getRssFeed(this.ip, item.id, item.category, item.index, item.shuffle, item.aPartOfAll, item.aPartOfAllMin, item.aPartOfAllMax, item.artistcover).pipe(
                               map(items => {  // If the user entered an user-defined artist name in addition to a query, overwrite orignal artist from spotify
                                 if (item.artist?.length > 0) {
