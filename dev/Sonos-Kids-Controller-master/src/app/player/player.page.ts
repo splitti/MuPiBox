@@ -237,6 +237,7 @@ export class PlayerPage implements OnInit {
       console.log("Resume spotify track number before passing to PlayerService:", this.media.resumespotifytrack_number);
       this.playerService.resumeMedia(this.media);
     } else if (this.media.type === 'library'){
+      this.media.category = this.media.resumelocalalbum;
       this.playerService.playMedia(this.media);
       let j = 1;
       for(let i = 1; i < this.media.resumelocalcurrentTracknr; i++){
@@ -279,7 +280,6 @@ export class PlayerPage implements OnInit {
       this.media.resumespotifytrack_number = 1;
       this.media.resumespotifyprogress_ms = this.currentPlayedSpotify?.progress_ms  || 0;
       this.media.resumespotifyduration_ms = this.currentEpisode?.duration_ms || 0;
-      this.media.category = "resume";
     } else if(this.media.type === 'spotify'){
       if(this.media.playlistid){
         this.media.resumespotifytrack_number = this.playlistTrackNr  || 0;
@@ -288,16 +288,14 @@ export class PlayerPage implements OnInit {
       }
       this.media.resumespotifyprogress_ms = this.currentPlayedSpotify?.progress_ms  || 0;
       this.media.resumespotifyduration_ms = this.currentPlayedSpotify?.item.duration_ms || 0;
-      this.media.category = "resume";
     } else if (this.media.type === 'library'){
-      this.media.resumelocalalbum = this.currentPlayedLocal?.album || "";
+      this.media.resumelocalalbum = this.media.category;
       this.media.resumelocalcurrentTracknr = this.currentPlayedLocal?.currentTracknr  || 0;
       this.media.resumelocalprogressTime = this.currentPlayedLocal?.progressTime  || 0;
-      this.media.type = "resume";
     } else if (this.media.type === 'rss'){
       this.media.resumerssprogressTime = this.currentPlayedLocal?.progressTime  || 0;
-      this.media.category = "resume";
     }
+    this.media.category = "resume";
     console.log("Save progress");
     console.log(this.media);
     if(this.resumePlay){
