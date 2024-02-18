@@ -434,7 +434,7 @@ export class MediaService {
     return this.artistMediaSubject.pipe(
       map((media: Media[]) => {
         return media
-          .filter(currentMedia => currentMedia.category === "resume")
+          .filter(currentMedia => (currentMedia.category === "resume") || (currentMedia.type === "resume"))
           .sort((a, b) => a.title.localeCompare(b.title, undefined, {
             numeric: true,
             sensitivity: 'base'
