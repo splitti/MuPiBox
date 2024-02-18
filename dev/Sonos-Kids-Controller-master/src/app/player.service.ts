@@ -26,7 +26,8 @@ export enum PlayerCmds {
   INDEX = 'index',
   NETWORKRESTART = 'networkrestart',
   CLEARVALIDATE = 'clearval',
-  CLEARRESUME = 'clearresume'
+  CLEARRESUME = 'clearresume',
+  MAXRESUME = 'maxresume'
 }
 
 @Injectable({
