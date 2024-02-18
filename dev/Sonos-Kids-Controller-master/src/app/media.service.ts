@@ -10,7 +10,6 @@ import { Network } from "./network";
 import { WLAN } from './wlan';
 import { CurrentSpotify } from './current.spotify';
 import { CurrentMPlayer } from './current.mplayer';
-import { Resume } from './resume';
 import { CurrentPlaylist } from './current.playlist';
 import { CurrentEpisode } from './current.episode';
 import { CurrentShow } from './current.show';
@@ -44,8 +43,6 @@ export class MediaService {
   private rawMediaSubject = new Subject<Media[]>();
   private wlanSubject = new Subject<WLAN[]>();
   private networkSubject = new Subject<Network>();
-  private resumeSubject = new Subject<Resume>();
-  private mediaFileSubject = new Subject<Media>();
 
   private artistSubject = new Subject<Media[]>();
   private mediaSubject = new Subject<Media[]>();
@@ -199,48 +196,6 @@ export class MediaService {
       //this.response = response;
       this.updateWLAN();
     });
-  }
-
-  updateMediaFile() {
-    const url = (environment.production) ? '../api/media' : 'http://' + this.ip + ':8200/api/media';
-    this.http.get<Media>(url).subscribe(media => {
-        this.mediaFileSubject.next(media);
-    });
-  }
-
-  saveMedia(media: Media) {
-    const url = (environment.production) ? '../api/addmedia' : 'http://' + this.ip + ':8200/api/addmedia';
-
-    this.http.post(url, media, { responseType: 'text' }).subscribe(response => {
-      //this.response = response;
-      this.updateMediaFile();
-    });
-  }
-
-  getMediaObservable = (): Observable<Media> =>  {
-    const url = (environment.production) ? '../api/media' : 'http://' + this.ip + ':8200/api/media';
-    return this.http.get<Media>(url);
-  }
-
-  updateResume() {
-    const url = (environment.production) ? '../api/resume' : 'http://' + this.ip + ':8200/api/resume';
-    this.http.get<Resume>(url).subscribe(resume => {
-        this.resumeSubject.next(resume);
-    });
-  }
-
-  saveResume(resume: Resume) {
-    const url = (environment.production) ? '../api/addresume' : 'http://' + this.ip + ':8200/api/addresume';
-
-    this.http.post(url, resume, { responseType: 'text' }).subscribe(response => {
-      //this.response = response;
-      this.updateResume();
-    });
-  }
-
-  getResumeObservable = (): Observable<Resume> =>  {
-    const url = (environment.production) ? '../api/resume' : 'http://' + this.ip + ':8200/api/resume';
-    return this.http.get<Resume>(url);
   }
 
   // Get the media data for the current category from the server
