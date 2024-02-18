@@ -207,6 +207,13 @@ export class MedialistPage implements OnInit {
     }
   }
 
+  backButtonPressed(){
+    if(this.resume){
+      this.mediaService.setCategory("audiobook");
+      this.resume = false;
+    }
+  }
+
   slideDidChange() {
     // console{}.log('Slide did change');
   }
