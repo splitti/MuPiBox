@@ -228,7 +228,8 @@
 	"mupihat": {
 		"battery_types": [
 			{
-				"name": "Ansmann 2S1P": {
+				"name": "Ansmann 2S1P",
+				"config": {
 					"v_100": "8100",
 					"v_75": "7800",
 					"v_50": "7400",
@@ -239,7 +240,8 @@
 				}
 			},
 			{
-				"name": "ENERpower 2S2P 10.000mAh": {
+				"name": "ENERpower 2S2P 10.000mAh",
+				"config": {
 					"v_100": "8400",
 					"v_75": "7800",
 					"v_50": "7200",
@@ -250,7 +252,8 @@
 				}
 			},
 			{
-				"name": "Custom": {
+				"name": "Custom",
+				"config": {
 					"v_100": "8100",
 					"v_75": "7800",
 					"v_50": "7400",
