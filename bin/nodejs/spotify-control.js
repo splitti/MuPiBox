@@ -1120,10 +1120,10 @@ app.use(function(req, res){
     cmdCall('bash /usr/local/bin/mupibox/shutdown.sh');
 
   else if (command.name == "clearresume")
-    cmdCall('bash /usr/local/bin/mupibox/clearresume.sh');
+    cmdCall('sudo bash /usr/local/bin/mupibox/clearresume.sh');
 
   else if (command.name == "maxresume")
-    cmdCall('bash /usr/local/bin/mupibox/remove_max_resume.sh');
+    cmdCall('sudo bash /usr/local/bin/mupibox/remove_max_resume.sh');
 
   else if (command.name == "networkrestart")
     cmdCall('sudo service ifup@wlan0 stop && sudo service ifup@wlan0 start');

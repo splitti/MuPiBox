@@ -3,7 +3,9 @@
 # lösche alle Einträge mit Category resume.
 
 DATA="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json"
-TMP_DATA="/tmp/.data.tmp"
+TMP_DATA="/tmp/.data.json"
+TMP_RESUME_CLEANED="/tmp/.temp_resume_cleaned.json"
+TMP_RESUME="/tmp/.temp_resume.json"
 DATA_LOCK="/tmp/.data.lock"
 
 if [ "$EUID" -ne 0 ]
@@ -24,18 +26,21 @@ else
 	if [ $count -gt 9 ]; then
 	    echo "Die Anzahl der Einträge mit der Kategorie 'resume' ist größer als 9. Lösche Einträge, bis nur noch 9 übrig sind."
 
-	    # Temporäre Datei erstellen, um die Änderungen zu speichern
-	    cp "$DATA" "$TMP_DATA"
-
 	    # Berechne die Anzahl der Einträge, die gelöscht werden müssen
 	    num_to_delete=$((count - 9))
 
 	    # Lösche die ersten 'num_to_delete' Einträge mit der Kategorie "resume"
-	    jq --argjson num_to_delete "$num_to_delete" '(.[] | select(.category == "resume")) |= .[$num_to_delete:]' "$TMP_DATA" > "$DATA"
-	
+		jq '[.[] | select(.category == "resume")]' "$DATA" > "$TMP_RESUME"
+		jq --argjson num_to_delete "$num_to_delete" 'sort_by(.index) | .[$num_to_delete:]' "$TMP_RESUME" > "$TMP_RESUME_CLEANED"
+		jq 'map(select(.category != "resume"))' "$DATA" > "$TMP_DATA"
+		jq -s '.[0] + .[1]' "$TMP_DATA" "$TMP_RESUME_CLEANED" > "$DATA"
+
+		bash /usr/local/bin/mupibox/add_index.sh
+
 	    echo "$num_to_delete Einträge mit der Kategorie 'resume' wurden gelöscht."
 	else
 	    echo "Die Anzahl der Einträge mit der Kategorie 'resume' ist nicht größer als 9."
+		echo $count
 	fi
 
 	/usr/bin/chown dietpi:dietpi ${DATA}
