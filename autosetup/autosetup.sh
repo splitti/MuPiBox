@@ -22,7 +22,7 @@ exec 3>${LOG}
 	OS=$(source /etc/os-release ; echo $PRETTY_NAME) >&3 2>&3
 
 	#packages2install="git libasound2 jq samba mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential raspberrypi-kernel-headers dkms"
-	packages2install="git libasound2 jq samba wsdd mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio python3-serial libgles2-mesa mesa-utils libsdl2-dev preload python3-smbus2"
+	packages2install="git libasound2 jq samba wsdd mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio python3-serial libgles2-mesa mesa-utils libsdl2-dev preload python3-smbus2 python3-pyyaml-env-tag"
 	STEP=0
 
 	###############################################################################################

@@ -77,9 +77,10 @@ export LS_COLORS='*.7z=38;5;40:*.WARC=38;5;40:*.a=38;5;40:*.arj=38;5;40:*.br=38;
 export LS_OPTIONS='--color=auto'
 export GREP_COLORS='ms=1;30;103'
 #eval "$(dircolors)"
+alias cgrep='grep --color=auto'
 alias ls='ls $LS_OPTIONS'
-alias ll='ls $LS_OPTIONS -l'
-alias l='ls $LS_OPTIONS -lA'
+alias ll='ls $LS_OPTIONS -lh'
+alias l='ls $LS_OPTIONS -Ahl'
 alias tf='tail -f'
 alias cls='clear'
 alias md='mkdir'
