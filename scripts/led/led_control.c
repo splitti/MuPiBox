@@ -14,6 +14,7 @@
 #include <json-c/json.h>
 #include <unistd.h>
 #include <pigpio.h>
+#include <sys/stat.h>
 
 #define BUFFER_SIZE 1024
 #define LED_PULSE_DELAY 1500
