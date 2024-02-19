@@ -3,6 +3,7 @@
  * Author:      Olaf Splitt and ChatGPT
  * Date:        2024/02/19
  * Description: This program will control the power led.
+ * Version:     1.0
  * Compiling:   gcc -o led_control led_control.c -lpigpio -ljson-c
  */
 
