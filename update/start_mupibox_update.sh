@@ -375,7 +375,7 @@ echo "==========================================================================
 	echo -e "XXX\n${STEP}\nInstall LED Control... \nXXX"	
 	
 	before=$(date +%s)
-	cd ${MUPI_SRC}/scripts/led >&3 2>&3
+	cd ${MUPI_SRC}/scripts/led/ >&3 2>&3
 	gcc -o led_control led_control.c -lpigpio -ljson-c >&3 2>&3
 	#if [ `getconf LONG_BIT` == 32 ]; then
 	#	mv -f ${MUPI_SRC}/bin/led_control/led_control_32 /usr/local/bin/mupibox/led_control >&3 2>&3
