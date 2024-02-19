@@ -3,7 +3,7 @@
 	$CHANGE_TXT="<div id='lbinfo'><ul id='lbinfo'>";
 	include ('includes/header.php');
 
-
+///etc/modules i2c-dev
 	if( $_POST['change_wled'] )
 		{
 		$data["wled"]["baud_rate"] = $_POST['baud_rate'];

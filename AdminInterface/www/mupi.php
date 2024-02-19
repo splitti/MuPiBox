@@ -315,6 +315,7 @@
   $data["mupibox"]["physicalDevice"]=$_POST['audio'];
   if( $_POST['audio'] == "mupihat" )
 	{
+	exec("sudo echo i2c-dev| sudo tee -a /etc/modules");
 	exec("sudo systemctl enable mupi_hat.service");
 	exec("sudo service mupi_hat start");
 	$command = "sudo /boot/dietpi/func/dietpi-set_hardware soundcard 'hifiberry-dac'";
