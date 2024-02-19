@@ -6,16 +6,20 @@ TMP_LEDFILE="/tmp/.power_led"
 OLD_STATE=1
 
 ledPin=$(/usr/bin/jq -r .shim.ledPin ${MUPIBOX_CONFIG})
+ledPin=$(printf '%d' "$ledPin")
 ledMax=$(/usr/bin/jq -r .shim.ledBrightnessMax ${MUPIBOX_CONFIG})
+ledMax=$(printf '%d' "$ledMax")
 ledMin=$(/usr/bin/jq -r .shim.ledBrightnessMin ${MUPIBOX_CONFIG})
+ledMin=$(printf '%d' "$ledMin")
 
 echo "{}" | tee ${TMP_LEDFILE}
-/usr/bin/cat <<< $(/usr/bin/jq --arg v "${ledPin}" '.led_gpio = $v' ${TMP_LEDFILE}) >  ${TMP_LEDFILE}
-/usr/bin/cat <<< $(/usr/bin/jq --arg v "${ledMax}" '.led_max_brightness = $v' ${TMP_LEDFILE}) >  ${TMP_LEDFILE}
-/usr/bin/cat <<< $(/usr/bin/jq --arg v "${ledMin}" '.led_min_brightness = $v' ${TMP_LEDFILE}) >  ${TMP_LEDFILE}
-/usr/bin/cat <<< $(/usr/bin/jq --arg v "0" '.led_current_brightness = $v' ${TMP_LEDFILE}) >  ${TMP_LEDFILE}
-/usr/bin/cat <<< $(/usr/bin/jq --arg v "0" '.led_dim_mode = $v' ${TMP_LEDFILE}) >  ${TMP_LEDFILE}
-/usr/bin/python3 /usr/local/bin/mupibox/led_control.py &
+/usr/bin/cat <<< $(/usr/bin/jq --argjson v ${ledPin} '.led_gpio = $v' ${TMP_LEDFILE}) >  ${TMP_LEDFILE}
+/usr/bin/cat <<< $(/usr/bin/jq --argjson v ${ledMax} '.led_max_brightness = $v' ${TMP_LEDFILE}) >  ${TMP_LEDFILE}
+/usr/bin/cat <<< $(/usr/bin/jq --argjson v ${ledMin} '.led_min_brightness = $v' ${TMP_LEDFILE}) >  ${TMP_LEDFILE}
+/usr/bin/cat <<< $(/usr/bin/jq '.led_current_brightness = 0' ${TMP_LEDFILE}) >  ${TMP_LEDFILE}
+/usr/bin/cat <<< $(/usr/bin/jq '.led_dim_mode = 0' ${TMP_LEDFILE}) >  ${TMP_LEDFILE}
+#/usr/bin/python3 /usr/local/bin/mupibox/led_control.py &
+/usr/local/bin/mupibox/./led_control &
 
 # WLED
 wled_active=$(/usr/bin/jq -r .wled.active ${MUPIBOX_CONFIG})
@@ -59,7 +63,7 @@ do
 				wled_data='{"bri":'${wled_brightness_def}'}'
 				/usr/bin/python3 /usr/local/bin/mupibox/wled_send_data.py -s ${wled_com_port} -b ${wled_baud_rate} -j ${wled_data}
 			fi
-			/usr/bin/cat <<< $(/usr/bin/jq --arg v "1" '.led_dim_mode = $v' ${TMP_LEDFILE}) >  ${TMP_LEDFILE}
+			/usr/bin/cat <<< $(/usr/bin/jq '.led_dim_mode = 1' ${TMP_LEDFILE}) >  ${TMP_LEDFILE}
 			OLD_STATE=${displayState}
 		elif [ ${displayState} -eq 0 ] && [ ${OLD_STATE} -ne ${displayState} ]
 		then
@@ -67,7 +71,7 @@ do
 				wled_data='{"bri":'${wled_brightness_dim}'}'
 				/usr/bin/python3 /usr/local/bin/mupibox/wled_send_data.py -s ${wled_com_port} -b ${wled_baud_rate} -j ${wled_data}
 			fi
-			/usr/bin/cat <<< $(/usr/bin/jq --arg v "0" '.led_dim_mode = $v' ${TMP_LEDFILE}) >  ${TMP_LEDFILE}
+			/usr/bin/cat <<< $(/usr/bin/jq '.led_dim_mode = 0' ${TMP_LEDFILE}) >  ${TMP_LEDFILE}
 			OLD_STATE=${displayState}
 		fi
 done

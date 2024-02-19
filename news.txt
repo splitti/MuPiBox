@@ -20,6 +20,7 @@ We will focus on <b>bookworm</b> and recommend you to update, or reinstall. See 
 <li id='linews' class='linews'>New: Telegram-Buttons</li>
 <li id='linews' class='linews'>New: Telegram Track Info only if Track changed</li>
 <li id='linews' class='linews'>New: Telegram Pause and Play function</li>
+<li id='linews' class='linews'>New: Redesign resume function, save the last 9 media that was played, new Button in Touch-Admininterface, trash-symbol clear resume</li>
 <li id='linews' class='linews'>New: Chromium parameters in Admin-UI</li>
 <li id='linews' class='linews'>New: Replace Category Radio with "other" to collect all stuff that is not only audiobook or music --> remove and add radio again</li>
 <li id='linews' class='linews'>New: New UI for Media Add area</li>
@@ -28,6 +29,7 @@ We will focus on <b>bookworm</b> and recommend you to update, or reinstall. See 
 <li id='linews' class='linews'>New: GPU-Support can be enabled, experimantal (no risc, no fun)</li>
 <li id='linews' class='linews'>New: Download support infos in admin-interface</li>
 <li id='linews' class='linews'>New: MuPiHAT-Support</li>
+<li id='linews' class='linews'>New: redesigned LED-Control</li>
 <li id='linews' class='linews'>Bugfix: new Spotifyd Version --> less Spotify problems</li>
 <li id='linews' class='linews'>Bugfix: Theme cannot be set</li>
 <li id='linews' class='linews'>Bugfix: Fixing bluetooth problems</li>

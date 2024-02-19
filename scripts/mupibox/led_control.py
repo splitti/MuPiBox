@@ -79,8 +79,7 @@ if __name__ == "__main__":
     JSON_DATA_FILE = "/tmp/.power_led"
     while JSON_DATA == "skip":
         JSON_DATA = read_json()
-    POWER_LED = PWMLED(JSON_DATA["led_gpio"])
-
+    POWER_LED = PWMLED(JSON_DATA["led_gpio"], frequency=1000)
     init()
     signal.signal(signal.SIGTERM, sigterm_handler)
     main()

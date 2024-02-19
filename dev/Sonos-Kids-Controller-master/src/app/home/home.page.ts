@@ -2,19 +2,15 @@ import { Component, OnInit, ViewChild } from '@angular/core';
 import { IonSlides } from '@ionic/angular';
 import { Router, NavigationExtras, ActivatedRoute } from '@angular/router';
 import { MediaService } from '../media.service';
-//import { RssFeedService } from '../rssfeed.service';
 import { ArtworkService } from '../artwork.service';
 import { PlayerService } from '../player.service';
 import { ActivityIndicatorService } from '../activity-indicator.service';
 import { Artist } from '../artist';
 import { Media } from '../media';
-import { Resume } from '../resume';
 import { Network } from "../network";
 import { Observable } from 'rxjs';
 import { Monitor } from '../monitor';
-//import { xml2json } from 'xml-js';
 import { HttpClient } from '@angular/common/http';
-//import { RssFeed } from '../rssfeed';
 
 @Component({
   selector: 'app-home',
@@ -29,11 +25,8 @@ export class HomePage implements OnInit {
 
   artists: Artist[] = [];
   media: Media[] = [];
-  mediaFile: Media;
-  resumeFile: Resume;
   network: Network;
   monitor: Monitor;
-  //jsonRSS: RssFeed;
   currentNetwork = "";
   updateNetwork = false;
   covers = {};
@@ -41,7 +34,6 @@ export class HomePage implements OnInit {
   editButtonclickCount = 0;
   editClickTimer = 0;
   public readonly network$: Observable<Network>;
-  //rssFeed$: Observable<Array<any>>;
 
   needsUpdate = false;
 
@@ -58,14 +50,11 @@ export class HomePage implements OnInit {
   };
 
   constructor(
-    private http: HttpClient,
     private mediaService: MediaService,
-    //private rssFeedService: RssFeedService,
     private artworkService: ArtworkService,
     private playerService: PlayerService,
     private activityIndicatorService: ActivityIndicatorService,
     private router: Router,
-    private activatedRoute: ActivatedRoute
   ) {
     this.network$ = this.mediaService.network$;
   }
@@ -127,12 +116,6 @@ export class HomePage implements OnInit {
       this.update();
     }
     this.updateNetwork = true;
-    this.mediaService.getMediaObservable().subscribe(mediaFile => {
-      this.mediaFile = mediaFile;
-    });
-    this.mediaService.getResumeObservable().subscribe(resumeFile => {
-      this.resumeFile = resumeFile;
-    });
     this.checkNetwork();
   }
 
@@ -232,28 +215,6 @@ export class HomePage implements OnInit {
 
   editButtonPressed() {
     window.clearTimeout(this.editClickTimer);
-
-    //Testarea Start
-    // var url='https://feeds.br.de/anna-und-die-wilden-tiere/feed.xml';
-    
-    //this.http.get('http://mupibox:8100/api/rss').subscribe(httpresponse =>
-    //  console.log(httpresponse)
-    //);
-
-    //this.rssFeed$ = this.rssFeedService.getRssFeed(url, "audiobook", 2, false, false, 0, 50, "");
-    //this.rssFeed$.subscribe((res) => console.log(res));
-
-    // var response = '';
-    // this.http.get(url, { responseType: 'text' }).subscribe(httpresponse =>
-    //   response=httpresponse
-    //   );
-    //  setTimeout(() => {
-    //   this.jsonRSS = JSON.parse(xml2json(response, {compact: true, spaces: 0, ignoreDeclaration: true, trim: true}));
-    //   console.log(this.jsonRSS.rss.channel.title);
-    //   console.log(Object.keys(this.jsonRSS.rss.channel.item).length);
-    //   console.log(this.jsonRSS.rss.channel.item);
-    // }, 1000)
-    //Testarea End
 
     if (this.editButtonclickCount < 9) {
       this.editButtonclickCount++;

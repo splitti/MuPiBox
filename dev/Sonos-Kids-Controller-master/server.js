@@ -23,8 +23,6 @@ const activedataFile = './server/config/active_data.json';
 const networkFile = './server/config/network.json';
 const wlanFile = './server/config/wlan.json';
 const monitorFile = './server/config/monitor.json';
-const mediaFile = './server/config/media.json';
-const resumeFile = './server/config/resume.json';
 const albumstopFile = './server/config/albumstop.json';
 const dataLock = '/tmp/.data.lock';
 
@@ -114,56 +112,6 @@ app.post('/api/addwlan', (req, res) => {
         data.push(req.body);
 
         jsonfile.writeFile(wlanFile, data, { spaces: 4 }, (error) => {
-            if (error) throw err;
-            res.status(200).send('ok');
-        });
-    });
-});
-
-app.get('/api/media', (req, res) => {
-    if (fs.existsSync(mediaFile)){
-        jsonfile.readFile(mediaFile, (error, data) => {
-            if (error) {
-                data = [];
-                console.log("[Sonos-Server] Error /api/media read media.json");
-                console.log(error);
-            }
-            res.json(data);
-        });
-    }
-});
-
-app.post('/api/addmedia', (req, res) => {
-    jsonfile.readFile(mediaFile, (error, data) => {
-        if (error) data = [];
-        data = req.body;
-
-        jsonfile.writeFile(mediaFile, data, { spaces: 4 }, (error) => {
-            if (error) throw err;
-            res.status(200).send('ok');
-        });
-    });
-});
-
-app.get('/api/resume', (req, res) => {
-    if (fs.existsSync(resumeFile)){
-        jsonfile.readFile(resumeFile, (error, data) => {
-            if (error) {
-                data = [];
-                console.log("[Sonos-Server] Error /api/addmedia read resume.json");
-                console.log(error);
-            }
-            res.json(data);
-        });
-    }
-});
-
-app.post('/api/addresume', (req, res) => {
-    jsonfile.readFile(resumeFile, (error, data) => {
-        if (error) data = [];
-        data = req.body;
-
-        jsonfile.writeFile(resumeFile, data, { spaces: 4 }, (error) => {
             if (error) throw err;
             res.status(200).send('ok');
         });

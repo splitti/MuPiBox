@@ -16,7 +16,7 @@ CONFIG="/etc/mupibox/mupiboxconfig.json"
 LOG="/boot/mupibox_update.log"
 exec 3>${LOG}
 service mupi_idle_shutdown stop
-packages2install="git libasound2 jq mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio python3-serial libgles2-mesa mesa-utils libsdl2-dev preload python3-smbus2"
+packages2install="git libasound2 jq mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio python3-serial libgles2-mesa mesa-utils libsdl2-dev preload python3-smbus2 pigpio libjson-c-dev"
 STEP=0
 VER_JSON="/tmp/version.json"
 OS=$(grep -E '^(VERSION_CODENAME)=' /etc/os-release)  >&3 2>&3
@@ -181,7 +181,7 @@ echo "==========================================================================
 	echo -e "XXX\n${STEP}\nBackup Userdata... \nXXX" >&3 2>&3
 	before=$(date +%s)
 	mv /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json /tmp/data.json >&3 2>&3
-	mv -r /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover /tmp/cover >&3 2>&3
+	mv /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover /tmp/cover >&3 2>&3
 	#mv /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json /tmp/config.json >&3 2>&3
 	mv /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/active_theme.css /tmp/active_theme.css >&3 2>&3
 	after=$(date +%s)
@@ -194,7 +194,7 @@ echo "==========================================================================
 
 	echo -e "XXX\n${STEP}\nUpdate Kids-Controller... \nXXX"	
 	before=$(date +%s)
-	su - dietpi -c "pm2 stop server" >&3 2>&3
+	sudo -H -u dietpi bash -c "pm2 stop server" >&3 2>&3
 	#su - dietpi -c "pm2 save" >&3 2>&3
 	rm -R /home/dietpi/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
 	mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/ >&3 2>&3
@@ -279,7 +279,7 @@ echo "==========================================================================
 	cp /tmp/nanorc-master/nanorc ${NANORC_FILE}
 	cd /home/dietpi/.nano/ >&3 2>&3
 	rm -R /tmp/nanorc.zip /tmp/nanorc-master >&3 2>&3
-	sudo chown -R dietpi:dietpi /home/dietpi/.nanorc /home/dietpi/.nano/  >&3 2>&3
+	chown -R dietpi:dietpi /home/dietpi/.nanorc /home/dietpi/.nano/  >&3 2>&3
 
 	chown dietpi:dietpi /home/dietpi/.bashrc >&3 2>&3
 	chmod 755 /usr/local/bin/mupibox/* >&3 2>&3
@@ -335,9 +335,26 @@ echo "==========================================================================
 	after=$(date +%s)
 	echo -e "## Copy media files  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
-	
-	###############################################################################################
 
+		###############################################################################################
+
+	echo -e "XXX\n${STEP}\nInstall LED Control... \nXXX"	
+	
+	before=$(date +%s)
+	rm /usr/local/bin/mupibox/led_control >&3 2>&3
+	gcc -o ${MUPI_SRC}/scripts/led/led_control ${MUPI_SRC}/scripts/led/led_control.c -lpigpio -ljson-c >&3 2>&3
+	#if [ `getconf LONG_BIT` == 32 ]; then
+	#	mv -f ${MUPI_SRC}/bin/led_control/led_control_32 /usr/local/bin/mupibox/led_control >&3 2>&3
+	#else
+	#	mv -f ${MUPI_SRC}/bin/led_control/led_control_64 /usr/local/bin/mupibox/led_control >&3 2>&3
+	#fi
+	mv -f ${MUPI_SRC}/scripts/led/led_control /usr/local/bin/mupibox/led_control >&3 2>&3
+	#/usr/bin/chmod 755 /usr/local/bin/mupibox/led_control >&3 2>&3
+	after=$(date +%s)
+	echo -e "## LED-Control  ##  finished after $((after - $before)) seconds" >&3 2>&3
+	STEP=$(($STEP + 1))
+
+	###############################################################################################
 
 	echo -e "XXX\n${STEP}\nRestarting Services... \nXXX"
 	before=$(date +%s)
@@ -369,12 +386,11 @@ echo "==========================================================================
 	after=$(date +%s)
 	echo -e "## Restarting services  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
-
+	
 	###############################################################################################
-
 	echo -e "XXX\n${STEP}\nUninstall Pi-Blaster... \nXXX"	
 	before=$(date +%s)
-	su - -c 'cd /home/dietpi/pi-blaster; make uninstall' >&3 2>&3
+	sudo -H -u dietpi bash -c 'cd /home/dietpi/pi-blaster; make uninstall' >&3 2>&3
 	rm -R /home/dietpi/pi-blaster >&3 2>&3
 	after=$(date +%s)
 	echo -e "## Pi-Blaster  ##  finished after $((after - $before)) seconds" >&3 2>&3
@@ -387,7 +403,7 @@ echo "==========================================================================
 	before=$(date +%s)
 	/usr/bin/chmod 755 ${MUPI_SRC}/config/templates/crontab.template >&3 2>&3
 	/usr/bin/chown dietpi:dietpi ${MUPI_SRC}/config/templates/crontab.template >&3 2>&3
-	/bin/su dietpi -c "/usr/bin/crontab ${MUPI_SRC}/config/templates/crontab.template"  >&3 2>&3
+	sudo -H -u dietpi bash -c "/usr/bin/crontab ${MUPI_SRC}/config/templates/crontab.template"  >&3 2>&3
 	#if grep -q '^initramfs initramfs.img' /boot/config.txt; then
 	#  echo -e "initramfs initramfs.img already set"
 	#else
@@ -463,8 +479,8 @@ echo "==========================================================================
 	mv ${LOG} /boot/${DATE}_update_${VERSION}.log >&3 2>&3
 	chown dietpi:dietpi ${CONFIG} >&3 2>&3
 	
-	su - dietpi -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && npm install" >&3 2>&3
-	su - dietpi -c "pm2 start server" >&3 2>&3
+	sudo -H -u dietpi bash -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && npm install" >&3 2>&3
+	sudo -H -u dietpi bash -c "pm2 start server" >&3 2>&3
 
 	CPU=$(cat /proc/cpuinfo | grep Serial | cut -d ":" -f2 | sed 's/^ //') >&3 2>&3
 	curl -X POST https://mupibox.de/mupi/ct.php -H "Content-Type: application/x-www-form-urlencoded" -d key1=${CPU} -d key2=Update -d key3="${VERSION} ${RELEASE}" -d key4="${ARCH}" -d key5="${OS}" >&3 2>&3
