@@ -90,7 +90,7 @@ class bq25792:
             self.REG0E_Timer_Control = 0xE
             self.REG0F_Charger_Control_0 = self.REG0F_Charger_Control_0()
             self.REG10_Charger_Control_1 = self.REG10_Charger_Control_1()
-            self.REG11_Charger_Control_2 = 0x11
+            self.REG11_Charger_Control_2 = self.REG11_Charger_Control_2()
             self.REG12_Charger_Control_3 = 0x12
             self.REG13_Charger_Control_4 = self.REG13_Charger_Control_4()
             self.REG14_Charger_Control_5 = self.REG14_Charger_Control_5()
@@ -463,6 +463,70 @@ class bq25792:
             self._value = (self.VAC_OVP << 4) | (self.WD_RST << 3) | (self.WATCHDOG)
             return self._value, self.VAC_OVP, self.WD_RST, self.WATCHDOG
 
+    class REG11_Charger_Control_2(BQ25795_REGISTER):
+        """
+        BQ25795 - REG11_Charger_Control_2
+        ----------
+        FORCE_INDET
+            Force D+/D- detection 
+            Type : RW POR: 0b 
+            0h = Do NOT force D+/D- detection (default) 
+            1h = Force D+/D- algorithm, when D+/D- detection is done, this bit will be reset to 0
+        AUTO_INDET_EN
+            Automatic D+/D- Detection Enable 
+            Type : RW POR: 1b 
+            0h = Disable D+/D- detection when VBUS is pluggedin 
+            1h = Enable D+/D- detection when VBUS is plugged-in (default)
+        EN_12V
+            EN_12V HVDC 
+            Type : RW POR: 0b 
+            0h = Disable 12V mode in HVDCP (default) 
+            1h = Enable 12V mode in HVDCP
+        EN_9V
+            EN_9V HVDC 
+            Type : RW POR: 0b 
+            0h = Disable 9V mode in HVDCP (default) 
+            1h = Enable 9V mode in HVDCP
+        HVDCP_EN
+            High voltage DCP enable. 
+            Type : RW POR: 0b 
+            0h = Disable HVDCP handshake (default) 
+            1h = Enable HVDCP handshake
+        SDRV_CTRL
+            SFET control The external ship FET control logic to force the device enter different modes. 
+            Type : RW POR: 00b 
+            0h = IDLE (default) 
+            1h = Shutdown Mode 
+            2h = Ship Mode 
+            3h = System Power Reset
+        SDRV_DLY
+            Delay time added to the taking action in bit [2:1] of the SFET control 
+            Type : RW POR: 0b 
+            0h = Add 10s delay time (default) 
+            1h = Do NOT add 10s delay time
+        """
+        def __init__(self, addr=0x11, value = 0x40):
+            super().__init__(addr, value)
+            self.FORCE_INDET   = ((self._value & 0b10000000) >> 7)
+            self.AUTO_INDET_EN = ((self._value & 0b01000000) >> 6)
+            self.EN_12V        = ((self._value & 0b00100000) >> 5)
+            self.EN_9V         = ((self._value & 0b00010000) >> 4)
+            self.HVDCP_EN      = ((self._value & 0b00001000) >> 3)
+            self.SDRV_CTRL     = ((self._value & 0b00000110) >> 1)
+            self.SDRV_DLY      = ((self._value & 0b00000001) >> 0)
+        def set (self, value):
+            super().set(value)
+            self.FORCE_INDET   = ((self._value & 0b10000000) >> 7)
+            self.AUTO_INDET_EN = ((self._value & 0b01000000) >> 6)
+            self.EN_12V        = ((self._value & 0b00100000) >> 5)
+            self.EN_9V         = ((self._value & 0b00010000) >> 4)
+            self.HVDCP_EN      = ((self._value & 0b00001000) >> 3)
+            self.SDRV_CTRL     = ((self._value & 0b00000110) >> 1)
+            self.SDRV_DLY      = ((self._value & 0b00000001) >> 0)
+        def get (self):
+            self._value = (self.FORCE_INDET << 7) | (self.AUTO_INDET_EN << 6) | (self.EN_12V << 5) | (self.EN_9V << 4) | (self.HVDCP_EN << 3) | (self.SDRV_CTRL << 1) | (self.SDRV_DLY)
+            return self._value, self.SDRV_DLY, self.SDRV_CTRL, self.HVDCP_EN, self.EN_9V, self.EN_12V, self.AUTO_INDET_EN, self.FORCE_INDET
+        
     class REG13_Charger_Control_4(BQ25795_REGISTER):
         """
         BQ25795 - REG13_Charger_Control_4
@@ -1025,6 +1089,7 @@ class bq25792:
             self.REG0A_Recharge_Control.set(self.registers[self.REG0A_Recharge_Control._addr])
             self.REG0F_Charger_Control_0.set(self.registers[self.REG0F_Charger_Control_0._addr])
             self.REG10_Charger_Control_1.set(self.registers[self.REG10_Charger_Control_1._addr])
+            self.REG11_Charger_Control_2.set(self.registers[self.REG11_Charger_Control_2._addr])
             self.REG13_Charger_Control_4.set(self.registers[self.REG13_Charger_Control_4._addr])
             self.REG14_Charger_Control_5.set(self.registers[self.REG14_Charger_Control_5._addr])
             self.REG16_Temperature_Control.set(self.registers[self.REG16_Temperature_Control._addr])
@@ -1311,7 +1376,33 @@ class bq25792:
             return -1
         finally:
             pass
-    
+
+    def enable_HVDCP(self):
+        '''
+        Enable High voltage DCP
+        Do not use. Not tested!
+        TODO Follow Datsheet 9.3.4.5.2 HVDCP Detection Procedure
+        '''
+        try:
+            # first read register
+            reg_addr = self.REG11_Charger_Control_2._addr
+            val = self.bq.read_byte_data(self.i2c_addr, reg_addr)
+            time.sleep(self.busWS_ms/1000)
+            self.registers[reg_addr] = val
+            self.REG11_Charger_Control_2.set((self.registers[reg_addr]))
+            # then set bit
+            self.REG11_Charger_Control_2.HVDCP_EN = 1
+            self.REG11_Charger_Control_2.get()
+            # now write back
+            self.write_register(self.REG11_Charger_Control_2)
+            return 0
+        except Exception as _error:
+            sys.stderr.write('enable_HVDCP failed, %s\n' % str(_error))
+            if self._exit_on_error: sys.exit(1)
+            return -1
+        finally:
+            pass
+
     def read_REG14_Charger_Control_5(self):
         '''
         Read read_REG14_Charger_Control_5
@@ -1412,6 +1503,38 @@ class bq25792:
         return val, EN_AUTO_IBATDIS, FORCE_IBATDIS, EN_CHG, EN_ICO, FORCE_ICO, EN_HIZ, EN_TERM
 
     def to_json(self):
+        '''
+        Returns json input
+        
+        Output Values
+        ------
+
+        'Charger_Status'
+            Not Charging 
+            Trickle Charge 
+            Pre-charge 
+            Fast charge (CC mode) 
+            Taper Charge (CV mode) 
+            Reserved 
+            Top-off Timer Active Charging 
+            Charge Termination Done
+        'VBus'
+            Bus Power (USB-C or from J2) in mV
+        'Vbat'
+            Battery Voltage in mV
+        'Ibat'
+            Battery Current in mA, reports positive value for the battery charging current, and negative value for the battery discharging current
+        'IBus'
+            Bus Current in mA
+        'Temp'
+            Temperature of Charger IC
+        'Bat_SOC'
+            Estimated State-oF-Charge of Battery (based on VBat) and Battery Config File
+        'Bat_Stat'
+            Battery Status - Indication for Front-End, (OK, LOW, SHUTDOWN)
+        'Bat_Type'
+            Battery Type as read from Battery Config File
+        '''
         bat_SOC, bat_Stat = self.battery_soc()
         return {
             'Charger_Status': self.read_ChargerStatus(),
