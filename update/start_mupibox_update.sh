@@ -383,7 +383,7 @@ echo "==========================================================================
 	#	mv -f ${MUPI_SRC}/bin/led_control/led_control_64 /usr/local/bin/mupibox/led_control >&3 2>&3
 	#fi
 	mv -f ${MUPI_SRC}/scripts/led/led_control /usr/local/bin/mupibox/led_control >&3 2>&3
-	sudo /usr/bin/chmod 755 /usr/local/bin/mupibox/led_control >&3 2>&3
+	/usr/bin/chmod 755 /usr/local/bin/mupibox/led_control >&3 2>&3
 	after=$(date +%s)
 	echo -e "## LED-Control  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))

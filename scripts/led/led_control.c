@@ -86,7 +86,7 @@ void print_json_fields() {
     printf("led_gpio: %d\n", led_gpio);
     printf("led_max_brightness_percent: %d\n", led_max_brightness_percent);
     printf("led_min_brightness_percent: %d\n", led_min_brightness_percent);
-    printf("led_dim_mode: %d\n", led_dim_mode);
+    printf("led_dim_mode: %d\n\n", led_dim_mode);
     printf("Brightness-Values:\n");
     printf("led_max_brightness: %d\n", led_max_brightness);
     printf("led_min_brightness: %d\n", led_min_brightness);
@@ -156,9 +156,9 @@ int main(void) {
     int browser_running = 1;
     while (browser_running) {
         if (system("ps -ef | grep chromium-browser | grep http | grep -v grep") == 0) {
+            printf("Chromium started\n");
             // Browser läuft, beende die Schleife
             browser_running = 0;
-            printf("Chromium started\n");
         } else {
             // Browser wurde nicht gefunden, pulsiere LED
             pulse_led(led_min_brightness, led_max_brightness);
