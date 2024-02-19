@@ -175,6 +175,7 @@ int main(void) {
     // Schleife nach Abschluss des initialen Pulsierens
     while (1) {
 		struct stat file_stat;
+		time_t current_modified;
 		if (stat("/tmp/.power_led", &file_stat) != -1) {
 			time_t current_modified = file_stat.st_mtime;
 		}
