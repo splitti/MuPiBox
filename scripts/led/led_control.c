@@ -197,11 +197,9 @@ int main(void) {
         if (led_dim_mode == 0) {
             // Helligkeit auf led_max_brightness setzen
             fade_led(led_max_brightness);
-            printf("DIM MODE: %d\n", led_dim_mode);
         } else if (led_dim_mode == 1) {
             // Helligkeit auf led_min_brightness setzen
             fade_led(led_min_brightness);
-            printf("DIM MODE: %d\n", led_dim_mode);
         }
 
         // Wartezeit für den nächsten Durchlauf
