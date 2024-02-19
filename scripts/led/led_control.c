@@ -177,7 +177,7 @@ int main(void) {
 		struct stat file_stat;
 		if (stat("/tmp/.power_led", &file_stat) != -1) {
 			time_t current_modified = file_stat.st_mtime;
-
+		}
         // Wenn sich die Datei geändert hat
         if (current_modified != last_modified) {
 			FILE *file = fopen("/tmp/.power_led", "r");

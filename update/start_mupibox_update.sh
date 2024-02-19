@@ -181,7 +181,7 @@ echo "==========================================================================
 	echo -e "XXX\n${STEP}\nBackup Userdata... \nXXX" >&3 2>&3
 	before=$(date +%s)
 	mv /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json /tmp/data.json >&3 2>&3
-	mv -r /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover /tmp/cover >&3 2>&3
+	mv /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover /tmp/cover >&3 2>&3
 	#mv /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json /tmp/config.json >&3 2>&3
 	mv /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/active_theme.css /tmp/active_theme.css >&3 2>&3
 	after=$(date +%s)
@@ -194,7 +194,7 @@ echo "==========================================================================
 
 	echo -e "XXX\n${STEP}\nUpdate Kids-Controller... \nXXX"	
 	before=$(date +%s)
-	su - dietpi -c "pm2 stop server" >&3 2>&3
+	sudo -H -u dietpi bash -c "pm2 stop server" >&3 2>&3
 	#su - dietpi -c "pm2 save" >&3 2>&3
 	rm -R /home/dietpi/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
 	mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/ >&3 2>&3
@@ -279,7 +279,7 @@ echo "==========================================================================
 	cp /tmp/nanorc-master/nanorc ${NANORC_FILE}
 	cd /home/dietpi/.nano/ >&3 2>&3
 	rm -R /tmp/nanorc.zip /tmp/nanorc-master >&3 2>&3
-	sudo chown -R dietpi:dietpi /home/dietpi/.nanorc /home/dietpi/.nano/  >&3 2>&3
+	chown -R dietpi:dietpi /home/dietpi/.nanorc /home/dietpi/.nano/  >&3 2>&3
 
 	chown dietpi:dietpi /home/dietpi/.bashrc >&3 2>&3
 	chmod 755 /usr/local/bin/mupibox/* >&3 2>&3
@@ -390,7 +390,7 @@ echo "==========================================================================
 	###############################################################################################
 	echo -e "XXX\n${STEP}\nUninstall Pi-Blaster... \nXXX"	
 	before=$(date +%s)
-	su - -c 'cd /home/dietpi/pi-blaster; make uninstall' >&3 2>&3
+	sudo -H -u dietpi bash -c 'cd /home/dietpi/pi-blaster; make uninstall' >&3 2>&3
 	rm -R /home/dietpi/pi-blaster >&3 2>&3
 	after=$(date +%s)
 	echo -e "## Pi-Blaster  ##  finished after $((after - $before)) seconds" >&3 2>&3
@@ -403,7 +403,7 @@ echo "==========================================================================
 	before=$(date +%s)
 	/usr/bin/chmod 755 ${MUPI_SRC}/config/templates/crontab.template >&3 2>&3
 	/usr/bin/chown dietpi:dietpi ${MUPI_SRC}/config/templates/crontab.template >&3 2>&3
-	/bin/su dietpi -c "/usr/bin/crontab ${MUPI_SRC}/config/templates/crontab.template"  >&3 2>&3
+	sudo -H -u dietpi bash -c "/usr/bin/crontab ${MUPI_SRC}/config/templates/crontab.template"  >&3 2>&3
 	#if grep -q '^initramfs initramfs.img' /boot/config.txt; then
 	#  echo -e "initramfs initramfs.img already set"
 	#else
@@ -479,8 +479,8 @@ echo "==========================================================================
 	mv ${LOG} /boot/${DATE}_update_${VERSION}.log >&3 2>&3
 	chown dietpi:dietpi ${CONFIG} >&3 2>&3
 	
-	su - dietpi -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && npm install" >&3 2>&3
-	su - dietpi -c "pm2 start server" >&3 2>&3
+	sudo -H -u dietpi bash -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && npm install" >&3 2>&3
+	sudo -H -u dietpi bash -c "pm2 start server" >&3 2>&3
 
 	CPU=$(cat /proc/cpuinfo | grep Serial | cut -d ":" -f2 | sed 's/^ //') >&3 2>&3
 	curl -X POST https://mupibox.de/mupi/ct.php -H "Content-Type: application/x-www-form-urlencoded" -d key1=${CPU} -d key2=Update -d key3="${VERSION} ${RELEASE}" -d key4="${ARCH}" -d key5="${OS}" >&3 2>&3
