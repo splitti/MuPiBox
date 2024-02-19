@@ -167,43 +167,60 @@ int main(void) {
     // Signalhandler für SIGTERM registrieren
     signal(SIGTERM, sigterm_handler);
 
+	int prev_led_dim_mode = -1;
+	time_t last_modified = 0;
+
     // Schleife nach Abschluss des initialen Pulsierens
     while (1) {
-        FILE *file = fopen("/tmp/.power_led", "r");
-        if (file == NULL) {
-            fprintf(stderr, "Fehler beim Öffnen der JSON-Datei.\n");
-            return 1;
-        }
+		struct stat file_stat;
+		if (stat("/tmp/.power_led", &file_stat) != -1) {
+			time_t current_modified = file_stat.st_mtime;
 
-        // JSON-Datei einlesen
-        fseek(file, 0, SEEK_SET);
-        fread(buffer, 1, file_size, file);
-        fclose(file);
+        // Wenn sich die Datei geändert hat
+        if (current_modified != last_modified) {
+			FILE *file = fopen("/tmp/.power_led", "r");
+			if (file == NULL) {
+				fprintf(stderr, "Fehler beim Öffnen der JSON-Datei.\n");
+				return 1;
+			}
 
-        // JSON-Parsing
-        struct json_object *json_obj = json_tokener_parse(buffer);
-        if (json_obj == NULL) {
-            fprintf(stderr, "Fehler beim Parsen der JSON-Datei.\n");
-            return 1;
-        }
+			// JSON-Datei einlesen
+			fseek(file, 0, SEEK_SET);
+			fread(buffer, 1, file_size, file);
+			fclose(file);
 
-        // Werte aus der JSON-Datei auslesen
-        json_object_object_foreach(json_obj, key, val) {
-            if (strcmp(key, "led_dim_mode") == 0)
-                led_dim_mode = json_object_get_int(val);
-        }
+			// JSON-Parsing
+			struct json_object *json_obj = json_tokener_parse(buffer);
+			if (json_obj == NULL) {
+				fprintf(stderr, "Fehler beim Parsen der JSON-Datei.\n");
+				return 1;
+			}
 
-        // Überprüfen und Anpassen der LED-Helligkeit basierend auf led_dim_mode
-        if (led_dim_mode == 0) {
-            // Helligkeit auf led_max_brightness setzen
-            fade_led(led_max_brightness);
-        } else if (led_dim_mode == 1) {
-            // Helligkeit auf led_min_brightness setzen
-            fade_led(led_min_brightness);
-        }
-
+			// Werte aus der JSON-Datei auslesen
+			json_object_object_foreach(json_obj, key, val) {
+				if (strcmp(key, "led_dim_mode") == 0)
+					led_dim_mode = json_object_get_int(val);
+			}
+			if (led_dim_mode != prev_led_dim_mode) {
+				// Überprüfen und Anpassen der LED-Helligkeit basierend auf led_dim_mode
+				if (led_dim_mode == 0) {
+					// Helligkeit auf led_max_brightness setzen
+					fade_led(led_max_brightness);
+				} else if (led_dim_mode == 1) {
+					// Helligkeit auf led_min_brightness setzen
+					fade_led(led_min_brightness);
+				}
+				printf("led_dim_mode: %d\n", led_dim_mode);
+			}
+            last_modified = current_modified;
+			prev_led_dim_mode = led_dim_mode;
+		}
+		else {
+			fprintf(stderr, "Fehler beim Abrufen der Dateiinformationen.\n");
+			return 1;
+		}
         // Wartezeit für den nächsten Durchlauf
-        sleep(1);
+        sleep(2);
 
         // Hier können weitere Anpassungen oder Logik eingefügt werden
     }
