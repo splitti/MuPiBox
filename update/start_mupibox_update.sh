@@ -335,9 +335,26 @@ echo "==========================================================================
 	after=$(date +%s)
 	echo -e "## Copy media files  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
-	
+
 	###############################################################################################
 
+	echo -e "XXX\n${STEP}\nInstall LED Control... \nXXX"	
+	
+	before=$(date +%s)
+	rm /usr/local/bin/mupibox/led_control >&3 2>&3
+	gcc -o ${MUPI_SRC}/scripts/led/led_control ${MUPI_SRC}/scripts/led/led_control.c -lpigpio -ljson-c >&3 2>&3
+	#if [ `getconf LONG_BIT` == 32 ]; then
+	#	mv -f ${MUPI_SRC}/bin/led_control/led_control_32 /usr/local/bin/mupibox/led_control >&3 2>&3
+	#else
+	#	mv -f ${MUPI_SRC}/bin/led_control/led_control_64 /usr/local/bin/mupibox/led_control >&3 2>&3
+	#fi
+	mv -f ${MUPI_SRC}/scripts/led/led_control /usr/local/bin/mupibox/led_control >&3 2>&3
+	/usr/bin/chmod 755 /usr/local/bin/mupibox/led_control >&3 2>&3
+	after=$(date +%s)
+	echo -e "## LED-Control  ##  finished after $((after - $before)) seconds" >&3 2>&3
+	STEP=$(($STEP + 1))
+
+	###############################################################################################
 
 	echo -e "XXX\n${STEP}\nRestarting Services... \nXXX"
 	before=$(date +%s)
@@ -369,25 +386,7 @@ echo "==========================================================================
 	after=$(date +%s)
 	echo -e "## Restarting services  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
-
-	###############################################################################################
-
-	echo -e "XXX\n${STEP}\nInstall LED Control... \nXXX"	
 	
-	before=$(date +%s)
-	gcc -o ${MUPI_SRC}/scripts/led/led_control ${MUPI_SRC}/scripts/led/led_control.c -lpigpio -ljson-c >&3 2>&3
-	#if [ `getconf LONG_BIT` == 32 ]; then
-	#	mv -f ${MUPI_SRC}/bin/led_control/led_control_32 /usr/local/bin/mupibox/led_control >&3 2>&3
-	#else
-	#	mv -f ${MUPI_SRC}/bin/led_control/led_control_64 /usr/local/bin/mupibox/led_control >&3 2>&3
-	#fi
-	mv -f ${MUPI_SRC}/scripts/led/led_control /usr/local/bin/mupibox/led_control >&3 2>&3
-	rm /usr/local/bin/mupibox/led_control >&3 2>&3
-	/usr/bin/chmod 755 /usr/local/bin/mupibox/led_control >&3 2>&3
-	after=$(date +%s)
-	echo -e "## LED-Control  ##  finished after $((after - $before)) seconds" >&3 2>&3
-	STEP=$(($STEP + 1))
-
 	###############################################################################################
 	echo -e "XXX\n${STEP}\nUninstall Pi-Blaster... \nXXX"	
 	before=$(date +%s)
