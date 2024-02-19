@@ -162,6 +162,7 @@ export class EditPage implements OnInit {
           text: 'Clear',
           handler: () => {
             this.playerService.sendCmd(PlayerCmds.CLEARRESUME);
+            this.playerService.sendCmd(PlayerCmds.INDEX);
           }
         },
         {
