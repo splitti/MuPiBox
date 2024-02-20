@@ -18,8 +18,8 @@ echo "{}" | tee ${TMP_LEDFILE}
 /usr/bin/cat <<< $(/usr/bin/jq --argjson v ${ledMin} '.led_min_brightness = $v' ${TMP_LEDFILE}) >  ${TMP_LEDFILE}
 /usr/bin/cat <<< $(/usr/bin/jq '.led_current_brightness = 0' ${TMP_LEDFILE}) >  ${TMP_LEDFILE}
 /usr/bin/cat <<< $(/usr/bin/jq '.led_dim_mode = 0' ${TMP_LEDFILE}) >  ${TMP_LEDFILE}
-#/usr/bin/python3 /usr/local/bin/mupibox/led_control.py &
-/usr/local/bin/mupibox/./led_control &
+/usr/bin/python3 /usr/local/bin/mupibox/led_control.py &
+#/usr/local/bin/mupibox/./led_control &
 
 # WLED
 wled_active=$(/usr/bin/jq -r .wled.active ${MUPIBOX_CONFIG})
