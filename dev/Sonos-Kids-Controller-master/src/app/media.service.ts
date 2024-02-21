@@ -236,12 +236,17 @@ export class MediaService {
   }
 
   // Get the media data for the current category from the server
-  private updateMedia(url: string) {
+  private updateMedia(url: string, resume: boolean) {
     return this.http.get<Media[]>(url).pipe(
       map(items => { // Filter to get only items for the chosen category
-        items.forEach(item => item.category = (item.category === undefined) ? 'audiobook' : item.category); // default category
-        items = items.filter(item => item.category === this.category);
-        console.log("updateMedia for category: " + this.category + " and " + url, items);
+        if(!resume){
+          items.forEach(item => item.category = (item.category === undefined) ? 'audiobook' : item.category); // default category
+          items = items.filter(item => item.category === this.category);
+          console.log("updateMedia for category: " + this.category + " and " + url, items);
+        }else{
+          console.log("updateMedia for resume: ", items);
+        }
+        
         return items;
       }),
       mergeMap(items => from(items)), // parallel calls for each item
@@ -348,7 +353,7 @@ export class MediaService {
   publishArtists() {
     console.log("publishArtists");
     const url = (environment.production) ? '../api/data' : 'http://' + this.ip + ':8200/api/data';
-    this.updateMedia(url).subscribe(media => {
+    this.updateMedia(url, false).subscribe(media => {
       this.artistSubject.next(media);
     });
   }
@@ -356,7 +361,7 @@ export class MediaService {
   publishMedia() {
     console.log("publishMedia");
     const url = (environment.production) ? '../api/data' : 'http://' + this.ip + ':8200/api/data';
-    this.updateMedia(url).subscribe(media => {
+    this.updateMedia(url, false).subscribe(media => {
       this.mediaSubject.next(media);
     });
   }
@@ -364,7 +369,7 @@ export class MediaService {
   publishArtistMedia() {
     console.log("publishArtistMedia");
     const url = (environment.production) ? '../api/data' : 'http://' + this.ip + ':8200/api/data';
-    this.updateMedia(url).subscribe(media => {
+    this.updateMedia(url, false).subscribe(media => {
       this.artistMediaSubject.next(media);
     });
   }
@@ -372,7 +377,7 @@ export class MediaService {
   publishResume() {
     console.log("publishResume");
     const url = (environment.production) ? '../api/resume' : 'http://' + this.ip + ':8200/api/resume';
-    this.updateMedia(url).subscribe(media => {
+    this.updateMedia(url, true).subscribe(media => {
       this.resumeSubject.next(media);
     });
   }
