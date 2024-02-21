@@ -193,7 +193,12 @@ export class MedialistPage implements OnInit {
     if(this.monitor?.monitor == "On"){
       this.activityIndicatorService.create().then(indicator => {
         this.activityIndicatorVisible = true;
-        let checkResumeIndex = this.resumemedia.findIndex(item => {item.id === clickedMedia.id});
+        console.log("ClickedMedia:", clickedMedia);
+        console.log("Resumemedia:", this.resumemedia);
+        let checkResumeIndex: number;
+        checkResumeIndex = this.resumemedia.findIndex(item => {
+          (item.id == clickedMedia.id)
+        });
         console.log("Resume Index:", checkResumeIndex);
         indicator.present().then(() => {
           const navigationExtras: NavigationExtras = {
