@@ -72,10 +72,14 @@ export class MedialistPage implements OnInit {
             this.covers[currentMedia.title] = url;
           });
         });
-
-        console.log("getMediaFromResume", this.media);
+        this.getMediaFromResumeSubscription = this.mediaService.getMediaFromResume().subscribe(media => {
+          this.resumemedia = media;
+          console.log("getMediaFromResume this.resumemedia", this.resumemedia);
+        });
 
         this.slider.update();
+
+        console.log("getMediaFromResume", this.media);
   
         // Workaround as the scrollbar handle isn't visible after the immediate update
         // Seems like a size calculation issue, as resizing the browser window helps
@@ -104,6 +108,10 @@ export class MedialistPage implements OnInit {
             }
             this.media = this.aPartOfAllMedia;
           }
+          this.getMediaFromResumeSubscription = this.mediaService.getMediaFromResume().subscribe(media => {
+            this.resumemedia = media;
+            console.log("getMediaFromResume this.resumemedia", this.resumemedia);
+          });
   
           this.slider.update();
   
@@ -149,6 +157,10 @@ export class MedialistPage implements OnInit {
             }
             this.media = this.aPartOfAllMedia;
           }
+          this.getMediaFromResumeSubscription = this.mediaService.getMediaFromResume().subscribe(media => {
+            this.resumemedia = media;
+            console.log("getMediaFromResume this.resumemedia", this.resumemedia);
+          });
   
           this.slider.update();
   
@@ -162,14 +174,6 @@ export class MedialistPage implements OnInit {
           }, 1000);
         });
       }
-      this.slider.update();
-      this.getMediaFromResumeSubscription = this.mediaService.getMediaFromResume().subscribe(media => {
-        this.resumemedia = media;
-        console.log("getMediaFromResume this.resumemedia", this.resumemedia);
-      });
-      window.setTimeout(() => {
-        this.slider.update();
-      }, 1000);
     }
 
     // Retreive data through subscription above
