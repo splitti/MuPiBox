@@ -182,9 +182,9 @@ export class MedialistPage implements OnInit {
   }
 
   ngOnDestroy(){
-    this.getMediaFromResumeSubscription.unsubscribe;
-    this.getMediaFromShowSubscription.unsubscribe;
-    this.getMediaFromArtistSubscription.unsubscribe;
+    this.getMediaFromResumeSubscription.unsubscribe();
+    this.getMediaFromShowSubscription.unsubscribe();
+    this.getMediaFromArtistSubscription.unsubscribe();
   }
 
   ionViewWillEnter() {
