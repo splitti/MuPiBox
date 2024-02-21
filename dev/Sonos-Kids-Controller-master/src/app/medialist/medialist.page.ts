@@ -193,26 +193,13 @@ export class MedialistPage implements OnInit {
     if(this.monitor?.monitor == "On"){
       this.activityIndicatorService.create().then(indicator => {
         this.activityIndicatorVisible = true;
-        this.mediaService.publishResume();
-        let resumeExistIndex: number;
-        console.log("clickedMedia.id: ", clickedMedia.id);
-        let checkResumeExist = this.resumemedia.find(item => {
-          if(item.id === clickedMedia.id/*((clickedMedia.type === 'spotify' || clickedMedia.type === 'rss' || clickedMedia.type === 'radio') && (item.id === clickedMedia.id)) || (clickedMedia.type === 'spotify' && item.playlistid === clickedMedia.playlistid) || ((clickedMedia.type === 'library') && (item.artist === clickedMedia.artist) && (item.id === clickedMedia.id))*/){
-            console.log("item.id: ", item.id);
-            resumeExistIndex = item.index;
-          }
-        });
-        // if (checkResumeExist){
-        //   resumeExist = true;
-        // }
-        //check if id, playlistid, localvariable in this.resumemedia true --> index übergeben und editieren
-        console.log("Exist Resume", checkResumeExist);
-        console.log("Resume Index", resumeExistIndex);
+        let checkResumeIndex = this.resumemedia.findIndex(item => {item.id === clickedMedia.id});
+        console.log("Resume Index:", checkResumeIndex);
         indicator.present().then(() => {
           const navigationExtras: NavigationExtras = {
             state: {
               media: clickedMedia,
-              resumeIndex: resumeExistIndex,
+              resumeIndex: checkResumeIndex,
             }
           };
           this.router.navigate(['/player'], navigationExtras);
