@@ -193,13 +193,23 @@ export class MedialistPage implements OnInit {
     if(this.monitor?.monitor == "On"){
       this.activityIndicatorService.create().then(indicator => {
         this.activityIndicatorVisible = true;
-        console.log("ClickedMedia:", clickedMedia);
-        console.log("Resumemedia:", this.resumemedia);
-        let checkResumeIndex: number;
-        checkResumeIndex = this.resumemedia.findIndex(item => {
-          (item.id == clickedMedia.id)
-        });
-        console.log("Resume Index:", checkResumeIndex);
+        // console.log("ClickedMedia:", clickedMedia);
+        // console.log("Resumemedia:", this.resumemedia);
+        // let checkResumeIndex: number;
+        // checkResumeIndex = this.resumemedia.findIndex(item => {
+        //   (item.id == clickedMedia.id)
+        // });
+        // console.log("Resume Index:", checkResumeIndex);
+        let searchId = clickedMedia.id; // ID, die du suchen möchtest
+        let checkResumeIndex = -1;
+        console.log("searchId:", searchId);
+        for (let i = 0; i < this.resumemedia.length; i++) {
+          console.log("this.resumemedia[" + i + "].id:", this.resumemedia[i].id);
+          if (this.resumemedia[i].id === searchId) {
+              checkResumeIndex = i;
+              break;
+          }
+        }
         indicator.present().then(() => {
           const navigationExtras: NavigationExtras = {
             state: {
