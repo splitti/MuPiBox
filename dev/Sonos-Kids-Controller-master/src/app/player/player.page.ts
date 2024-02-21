@@ -205,6 +205,8 @@ export class PlayerPage implements OnInit {
     }
     this.updateProgress();
     
+    console.log("Resume Exist Index", this.resumeExistIndex);
+    
     if(this.media.shuffle){
       setTimeout(() => {
         this.playerService.sendCmd(PlayerCmds.SHUFFLEON);

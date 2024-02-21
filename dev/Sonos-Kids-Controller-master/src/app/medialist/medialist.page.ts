@@ -207,9 +207,11 @@ export class MedialistPage implements OnInit {
           console.log("this.resumemedia[" + i + "].id:", this.resumemedia[i].id);
           if (this.resumemedia[i].id === searchId) {
               checkResumeIndex = i;
+              console.log("found index at:", checkResumeIndex);
               break;
           }
         }
+        console.log("checkResumeIndex:", checkResumeIndex);
         indicator.present().then(() => {
           const navigationExtras: NavigationExtras = {
             state: {
