@@ -204,6 +204,7 @@ export class MedialistPage implements OnInit {
         //   resumeExist = true;
         // }
         //check if id, playlistid, localvariable in this.resumemedia true --> index übergeben und editieren
+        console.log("Exist Resume", checkResumeExist);
         indicator.present().then(() => {
           const navigationExtras: NavigationExtras = {
             state: {
