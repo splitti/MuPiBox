@@ -19,6 +19,7 @@ export class MedialistPage implements OnInit {
 
   artist: Artist;
   media: Media[] = [];
+  resumemedia: Media[] = [];
   resume = false;
   covers = {};
   monitor: Monitor;
@@ -68,7 +69,7 @@ export class MedialistPage implements OnInit {
           });
         });
 
-        console.log("getMediaFromResume this.media all", this.media);
+        console.log("getMediaFromResume", this.media);
 
         this.slider.update();
   
@@ -161,16 +162,23 @@ export class MedialistPage implements OnInit {
           }, 1000);
         });
       }
+      this.mediaService.getMediaFromResume().subscribe(media => {
+        this.resumemedia = media;
+        console.log("getMediaFromResume in this.resumemedia", this.resumemedia);
+      });
     }
-
-    
 
     // Retreive data through subscription above
     this.mediaService.publishArtistMedia();
+    this.mediaService.publishResume();
 
     this.mediaService.monitor$.subscribe(monitor => {
       this.monitor = monitor;
     });
+  }
+
+  ionViewWillEnter() {
+    this.mediaService.publishResume();
   }
 
   ionViewDidLeave() {
@@ -185,6 +193,16 @@ export class MedialistPage implements OnInit {
     if(this.monitor?.monitor == "On"){
       this.activityIndicatorService.create().then(indicator => {
         this.activityIndicatorVisible = true;
+        clickedMedia.resumeindex = -1;
+        console.log("search:", clickedMedia);
+        for (let i = 0; i < this.resumemedia.length; i++) {
+          console.log("this.resumemedia[" + i + "].id:", this.resumemedia[i].id);
+          if ((this.resumemedia[i].id === clickedMedia.id || this.resumemedia[i].playlistid === clickedMedia.id) || (this.resumemedia[i].artist === clickedMedia.artist && this.resumemedia[i].id === clickedMedia.id && clickedMedia.type === 'library')) {
+            clickedMedia.resumeindex = i;
+            console.log("found index at:", i);
+            break;
+          }
+        }
         indicator.present().then(() => {
           const navigationExtras: NavigationExtras = {
             state: {

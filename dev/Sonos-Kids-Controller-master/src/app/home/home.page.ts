@@ -10,7 +10,6 @@ import { Media } from '../media';
 import { Network } from "../network";
 import { Observable } from 'rxjs';
 import { Monitor } from '../monitor';
-import { HttpClient } from '@angular/common/http';
 
 @Component({
   selector: 'app-home',

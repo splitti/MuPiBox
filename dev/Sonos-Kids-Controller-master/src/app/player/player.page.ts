@@ -24,6 +24,7 @@ export class PlayerPage implements OnInit {
   @ViewChild("range", {static: false}) range: IonRange;
 
   media: Media;
+  resumemedia: Media;
   monitor: Monitor;
   albumStop: AlbumStop;
   resumePlay = false;
@@ -211,7 +212,7 @@ export class PlayerPage implements OnInit {
   }
 
   ionViewWillLeave() {
-    if(this.media.type === 'spotify' || this.media.type === 'library' || this.media.type === 'rss'){
+    if((this.media.type === 'spotify' || this.media.type === 'library' || this.media.type === 'rss') && !this.media.shuffle){
       this.saveResumeFiles();
     }
     this.updateProgression = false;
@@ -263,7 +264,11 @@ export class PlayerPage implements OnInit {
   }
 
   saveResumeFiles(){
-    console.log("Add media to resume", this.media);
+    if(!this.resumePlay){
+      this.resumemedia = Object.assign({}, this.media);
+    } else {
+      this.resumemedia = this.media;
+    }
     this.mediaService.current$.subscribe(spotify => {
       this.currentPlayedSpotify = spotify;
     });
@@ -273,35 +278,41 @@ export class PlayerPage implements OnInit {
     this.mediaService.episode$.subscribe(episode => {
       this.currentEpisode = episode;
     });
-    if(this.media.type === 'spotify' && this.media?.showid){
-      this.media.resumespotifytrack_number = 1;
-      this.media.resumespotifyprogress_ms = this.currentPlayedSpotify?.progress_ms  || 0;
-      this.media.resumespotifyduration_ms = this.currentEpisode?.duration_ms || 0;
-    } else if(this.media.type === 'spotify'){
-      if(this.media.playlistid){
-        this.media.resumespotifytrack_number = this.playlistTrackNr  || 0;
+    if(this.resumemedia.type === 'spotify' && this.resumemedia?.showid){
+      this.resumemedia.resumespotifytrack_number = 1;
+      this.resumemedia.resumespotifyprogress_ms = this.currentPlayedSpotify?.progress_ms  || 0;
+      this.resumemedia.resumespotifyduration_ms = this.currentEpisode?.duration_ms || 0;
+    } else if(this.resumemedia.type === 'spotify'){
+      if(this.resumemedia.playlistid){
+        this.resumemedia.resumespotifytrack_number = this.playlistTrackNr  || 0;
       }else{
-        this.media.resumespotifytrack_number = this.currentPlayedSpotify?.item.track_number  || 0;
+        this.resumemedia.resumespotifytrack_number = this.currentPlayedSpotify?.item.track_number  || 0;
       }
-      this.media.resumespotifyprogress_ms = this.currentPlayedSpotify?.progress_ms  || 0;
-      this.media.resumespotifyduration_ms = this.currentPlayedSpotify?.item.duration_ms || 0;
-    } else if (this.media.type === 'library'){
-      this.media.resumelocalalbum = this.media.category;
-      this.media.resumelocalcurrentTracknr = this.currentPlayedLocal?.currentTracknr  || 0;
-      this.media.resumelocalprogressTime = this.currentPlayedLocal?.progressTime  || 0;
-    } else if (this.media.type === 'rss'){
-      this.media.resumerssprogressTime = this.currentPlayedLocal?.progressTime  || 0;
+      this.resumemedia.resumespotifyprogress_ms = this.currentPlayedSpotify?.progress_ms  || 0;
+      this.resumemedia.resumespotifyduration_ms = this.currentPlayedSpotify?.item.duration_ms || 0;
+    } else if (this.resumemedia.type === 'library'){
+      this.resumemedia.resumelocalalbum = this.resumemedia.category;
+      this.resumemedia.resumelocalcurrentTracknr = this.currentPlayedLocal?.currentTracknr  || 0;
+      this.resumemedia.resumelocalprogressTime = this.currentPlayedLocal?.progressTime  || 0;
+    } else if (this.resumemedia.type === 'rss'){
+      this.resumemedia.resumerssprogressTime = this.currentPlayedLocal?.progressTime  || 0;
     }
-    this.media.category = "resume";
-    console.log("Save progress", this.media);
-    if(this.resumePlay){
-      this.mediaService.editRawMediaAtIndex(this.media.index, this.media);
-      console.log(this.mediaService.getResponse());
+    this.resumemedia.category = "resume";
+    console.log("Save this.resumemedia", this.resumemedia);
+    console.log("this.media", this.media);
+    if(this.resumePlay || this.resumemedia.resumeindex !== -1){
+      if (this.resumemedia.resumeindex !== -1){
+        this.resumemedia.index = this.resumemedia.resumeindex;
+      }
+      delete this.resumemedia.resumeindex;
+      this.mediaService.editRawResumeAtIndex(this.resumemedia.index, this.resumemedia);
+      console.log("Resume of resume response: ", this.mediaService.getResponse());
     }else{
-      this.mediaService.addRawMedia(this.media);
-      console.log(this.mediaService.getResponse());
-      this.playerService.sendCmd(PlayerCmds.INDEX);
-      this.playerService.sendCmd(PlayerCmds.MAXRESUME);
+      this.mediaService.addRawResume(this.resumemedia);
+      console.log("New resume response: ", this.mediaService.getResponse());
+      setTimeout(() => {
+        this.playerService.sendCmd(PlayerCmds.MAXRESUME);
+      }, 2000)
     }
   }
 

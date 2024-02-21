@@ -185,9 +185,9 @@ else
 	/usr/bin/chown -R dietpi:dietpi /home/dietpi/MuPiBox/media/
 	/usr/bin/chown -R dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover/
 	/usr/bin/chown dietpi:dietpi ${DATA}
+	rm ${DATA_LOCK}
 
 	bash /usr/local/bin/mupibox/add_index.sh
 
 	echo "Cover & Playlists generated"
-	rm ${DATA_LOCK}
 fi

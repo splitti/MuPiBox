@@ -27,7 +27,7 @@ export class MediaService {
   network: Network;
   ip: string;
   hostname: string;
-  response: string;
+  response = '';
   private category = 'audiobook';
   public readonly current$: Observable<CurrentSpotify>;
   public readonly local$: Observable<CurrentMPlayer>;
@@ -43,6 +43,7 @@ export class MediaService {
   private rawMediaSubject = new Subject<Media[]>();
   private wlanSubject = new Subject<WLAN[]>();
   private networkSubject = new Subject<Network>();
+  private resumeSubject = new Subject<Media[]>();
 
   private artistSubject = new Subject<Media[]>();
   private mediaSubject = new Subject<Media[]>();
@@ -146,6 +147,18 @@ export class MediaService {
     });
   }
 
+  getRawResumeObservable = ():Observable<Record<any, any>[]> => {
+    const url = (environment.production) ? '../api/resume' : 'http://' + this.ip + ':8200/api/resume';
+    return this.http.get<Record<any, any>[]>(url);
+  }
+
+  updateRawResume() {
+    const url = (environment.production) ? '../api/resume' : 'http://' + this.ip + ':8200/api/resume';
+    this.http.get<Media[]>(url).subscribe(media => {
+        this.resumeSubject.next(media);
+    });
+  }
+
   updateWLAN() {
     const url = (environment.production) ? '../api/wlan' : 'http://' + this.ip + ':8200/api/wlan';
     this.http.get<WLAN[]>(url).subscribe(wlan => {
@@ -189,6 +202,30 @@ export class MediaService {
     });
   }
 
+  editRawResumeAtIndex(index: number, data: Media) {
+    const url = (environment.production) ? '../api/editresume' : 'http://' + this.ip + ':8200/api/editresume';
+    const body = {
+      index,
+      data
+    };
+
+    console.log(body);
+    
+    this.http.post(url, body, { responseType: 'text' }).subscribe(response => {
+      this.response = response;
+      this.updateRawResume();
+    });
+  }
+
+  addRawResume(media: Media) {
+    const url = (environment.production) ? '../api/addresume' : 'http://' + this.ip + ':8200/api/addresume';
+
+    this.http.post(url, media, { responseType: 'text' }).subscribe(response => {
+      this.response = response;
+      this.updateRawResume();
+    });
+  }
+
   addWLAN(wlan: WLAN) {
     const url = (environment.production) ? '../api/addwlan' : 'http://' + this.ip + ':8200/api/addwlan';
 
@@ -199,9 +236,7 @@ export class MediaService {
   }
 
   // Get the media data for the current category from the server
-  private updateMedia() {
-    const url = (environment.production) ? '../api/data' : 'http://' + this.ip + ':8200/api/data';
-
+  private updateMedia(url: string) {
     return this.http.get<Media[]>(url).pipe(
       map(items => { // Filter to get only items for the chosen category
         items.forEach(item => item.category = (item.category === undefined) ? 'audiobook' : item.category); // default category
@@ -311,20 +346,30 @@ export class MediaService {
   }
 
   publishArtists() {
-    this.updateMedia().subscribe(media => {
+    const url = (environment.production) ? '../api/data' : 'http://' + this.ip + ':8200/api/data';
+    this.updateMedia(url).subscribe(media => {
       this.artistSubject.next(media);
     });
   }
 
   publishMedia() {
-    this.updateMedia().subscribe(media => {
+    const url = (environment.production) ? '../api/data' : 'http://' + this.ip + ':8200/api/data';
+    this.updateMedia(url).subscribe(media => {
       this.mediaSubject.next(media);
     });
   }
 
   publishArtistMedia() {
-    this.updateMedia().subscribe(media => {
+    const url = (environment.production) ? '../api/data' : 'http://' + this.ip + ':8200/api/data';
+    this.updateMedia(url).subscribe(media => {
       this.artistMediaSubject.next(media);
+    });
+  }
+
+  publishResume() {
+    const url = (environment.production) ? '../api/resume' : 'http://' + this.ip + ':8200/api/resume';
+    this.updateMedia(url).subscribe(media => {
+      this.resumeSubject.next(media);
     });
   }
 
@@ -386,7 +431,7 @@ export class MediaService {
 
   // Collect albums from a given artist in the current category
   getMediaFromResume(): Observable<Media[]> {
-    return this.artistMediaSubject.pipe(
+    return this.resumeSubject.pipe(
       map((media: Media[]) => {
         return media
           .filter(currentMedia => currentMedia.category === "resume")

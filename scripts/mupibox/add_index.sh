@@ -1,12 +1,30 @@
 #!/bin/sh
 #
 
-CONFIG="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json"
-CONFIG_TMP="/tmp/data_tmp.json"
+DATA="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json"
+TMP_DATA="/tmp/.data.json"
+DATA_LOCK="/tmp/.data.lock"
 
-/usr/bin/cat ${CONFIG} | grep -v '"index":' > ${CONFIG_TMP}
-/usr/bin/perl -pe 'BEGIN{$k=-1};s/{/$& . "\n        \"index\": " .  ++$k . ","/e' ${CONFIG_TMP} > ${CONFIG}
-/usr/bin/rm ${CONFIG_TMP}
-/usr/bin/echo $(/usr/bin/jq -c . ${CONFIG}) | /usr/bin/jq . > ${CONFIG_TMP}
-/usr/bin/mv ${CONFIG_TMP} ${CONFIG}
-/usr/bin/chown dietpi:dietpi ${CONFIG}
+
+
+
+if [ "$EUID" -ne 0 ]
+  then echo "Please run as root"
+  exit
+fi
+
+if [ -f "${DATA_LOCK}" ]; then
+	echo "Data-file locked."
+    exit
+else
+	touch ${DATA_LOCK}
+
+	/usr/bin/cat ${DATA} | grep -v '"index":' > ${TMP_DATA}
+    /usr/bin/perl -pe 'BEGIN{$k=-1};s/{/$& . "\n        \"index\": " .  ++$k . ","/e' ${TMP_DATA} > ${DATA}
+    /usr/bin/rm ${TMP_DATA}
+    /usr/bin/echo $(/usr/bin/jq -c . ${DATA}) | /usr/bin/jq . > ${TMP_DATA}
+    /usr/bin/mv ${TMP_DATA} ${DATA}
+    /usr/bin/chown dietpi:dietpi ${DATA}
+	echo "Index is finished"
+	rm ${DATA_LOCK}
+fi

@@ -88,7 +88,7 @@ export class EditPage implements OnInit {
                     }
                   } else {
                     console.log("Index: " + item.index);
-                    if(item.type === 'library' && item.category !== "resume"){
+                    if(item.type === 'library'){
                       this.playerService.deleteLocal(item);
                     }
                     this.playerService.sendCmd(PlayerCmds.INDEX);
@@ -162,7 +162,10 @@ export class EditPage implements OnInit {
           text: 'Clear',
           handler: () => {
             this.playerService.sendCmd(PlayerCmds.CLEARRESUME);
-            this.playerService.sendCmd(PlayerCmds.INDEX);
+            setTimeout(() => {
+              this.media = this.mediaService.getRawMediaObservable();
+              this.mediaService.updateRawMedia();
+            }, 2000)
           }
         },
         {

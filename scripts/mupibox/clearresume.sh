@@ -2,8 +2,8 @@
 #
 # lösche alle Einträge mit Category resume.
 
-DATA="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json"
-DATA_LOCK="/tmp/.data.lock"
+DATA="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/resume.json"
+DATA_LOCK="/tmp/.resume.lock"
 
 if [ "$EUID" -ne 0 ]
   then echo "Please run as root"
@@ -11,7 +11,7 @@ if [ "$EUID" -ne 0 ]
 fi
 
 if [ -f "${DATA_LOCK}" ]; then
-	echo "Data-file locked."
+	echo "Resume-file locked."
     exit
 else
 	touch ${DATA_LOCK}
@@ -19,6 +19,6 @@ else
 	jq 'map(select(.category != "resume"))' ${DATA} > ${DATA}.tmp && mv ${DATA}.tmp ${DATA}
 
 	/usr/bin/chown dietpi:dietpi ${DATA}
-	echo "Data.json cleaned from resume"
+	echo "Resume.json cleaned from resume"
 	rm ${DATA_LOCK}
 fi
