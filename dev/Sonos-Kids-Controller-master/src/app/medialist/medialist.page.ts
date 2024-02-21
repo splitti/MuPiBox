@@ -208,17 +208,21 @@ export class MedialistPage implements OnInit {
     if(this.monitor?.monitor == "On"){
       this.activityIndicatorService.create().then(indicator => {
         this.activityIndicatorVisible = true;
-        clickedMedia.resumeindex = -1;
+        clickedMedia.index = -1;
         console.log("search:", clickedMedia);
         for (let i = 0; i < this.resumemedia.length; i++) {
-          console.log("this.resumemedia[" + i + "].id:", this.resumemedia[i].id);
-          if ((this.resumemedia[i].id === clickedMedia.id || this.resumemedia[i].playlistid === clickedMedia.id) || (this.resumemedia[i].artist === clickedMedia.artist && this.resumemedia[i].id === clickedMedia.id && clickedMedia.type === 'library')) {
-            clickedMedia.resumeindex = i;
-            console.log("found index at:", i);
+          console.log("this.resumemedia[" + i + "]:", this.resumemedia[i]);
+          if (this.resumemedia[i].id === clickedMedia.id || this.resumemedia[i].playlistid === clickedMedia.id) {
+            clickedMedia.index = i;
+            console.log("Matched by id or playlistid at index:", i);
+            break;
+          } else if (this.resumemedia[i].artist === clickedMedia.artist && this.resumemedia[i].id === clickedMedia.id && clickedMedia.type === 'library') {
+            clickedMedia.index = i;
+            console.log("Matched by artist, id, and type 'library' at index:", i);
             break;
           }
         }
-        console.log("index at:", clickedMedia.resumeindex);
+        console.log("index at:", clickedMedia.index);
         indicator.present().then(() => {
           const navigationExtras: NavigationExtras = {
             state: {

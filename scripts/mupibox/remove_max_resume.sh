@@ -4,7 +4,6 @@
 
 RESUME="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/resume.json"
 TMP_RESUME="/tmp/.resume.json"
-TMP_RESUME_INDEX="/tmp/.resumeindex.json"
 RESUME_LOCK="/tmp/.resume.lock"
 
 if [ "$EUID" -ne 0 ]
@@ -17,12 +16,6 @@ if [ -f "${RESUME_LOCK}" ]; then
     exit
 else
 	touch ${RESUME_LOCK}
-
-	/usr/bin/cat ${RESUME} | grep -v '"index":' > ${TMP_RESUME}
-    /usr/bin/perl -pe 'BEGIN{$k=-1};s/{/$& . "\n        \"index\": " .  ++$k . ","/e' ${TMP_RESUME} > ${TMP_RESUME_INDEX}
-    /usr/bin/rm ${TMP_RESUME}
-    /usr/bin/echo $(/usr/bin/jq -c . ${TMP_RESUME_INDEX}) | /usr/bin/jq . > ${TMP_RESUME}
-    /usr/bin/mv ${TMP_RESUME} ${RESUME}
 
 	# Anzahl der Einträge mit der Kategorie "resume" zählen
 	json_output=$(jq '[.[] | select(.category == "resume")] | length' "$RESUME")
@@ -43,11 +36,6 @@ else
 	    # Lösche die ersten 'num_to_delete' Einträge mit der Kategorie "resume"
 		jq --argjson num_to_delete "$num_to_delete" 'sort_by(.index) | .[$num_to_delete:]' "$RESUME" > "$TMP_RESUME"
 		/usr/bin/mv ${TMP_RESUME} ${RESUME}
-		/usr/bin/cat ${RESUME} | grep -v '"index":' > ${TMP_RESUME}
-    	/usr/bin/perl -pe 'BEGIN{$k=-1};s/{/$& . "\n        \"index\": " .  ++$k . ","/e' ${TMP_RESUME} > ${TMP_RESUME_INDEX}
-    	/usr/bin/rm ${TMP_RESUME}
-    	/usr/bin/echo $(/usr/bin/jq -c . ${TMP_RESUME_INDEX}) | /usr/bin/jq . > ${TMP_RESUME}
-    	/usr/bin/mv ${TMP_RESUME} ${RESUME}
 
 	    echo "$num_to_delete Einträge mit der Kategorie 'resume' wurden gelöscht."
 	else
