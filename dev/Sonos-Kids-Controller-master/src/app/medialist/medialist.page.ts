@@ -8,6 +8,7 @@ import { ActivityIndicatorService } from '../activity-indicator.service';
 import { Media } from '../media';
 import { Artist } from '../artist';
 import { Monitor } from '../monitor';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-medialist',
@@ -25,6 +26,9 @@ export class MedialistPage implements OnInit {
   monitor: Monitor;
   activityIndicatorVisible = false;
   aPartOfAllMedia: Media[] = [];
+  private getMediaFromResumeSubscription: Subscription;
+  private getMediaFromShowSubscription: Subscription;
+  private getMediaFromArtistSubscription: Subscription;
 
   slideOptions = {
     initialSlide: 0,
@@ -60,7 +64,7 @@ export class MedialistPage implements OnInit {
     // Subscribe
     console.log("this.artist", this.artist);
     if(this.resume){
-      this.mediaService.getMediaFromResume().subscribe(media => {
+      this.getMediaFromResumeSubscription = this.mediaService.getMediaFromResume().subscribe(media => {
         this.media = media;
   
         this.media.forEach(currentMedia => {
@@ -82,7 +86,7 @@ export class MedialistPage implements OnInit {
       });
     }else{
       if((this.artist.coverMedia.showid && this.artist.coverMedia.showid.length > 0) || (this.artist.coverMedia.type == 'rss' && this.artist.coverMedia.id.length > 0)){
-        this.mediaService.getMediaFromShow(this.artist).subscribe(media => {
+        this.getMediaFromShowSubscription = this.mediaService.getMediaFromShow(this.artist).subscribe(media => {
           this.media = media;
     
           this.media.forEach(currentMedia => {
@@ -115,7 +119,7 @@ export class MedialistPage implements OnInit {
           }, 1000);
         });
       } else {
-        this.mediaService.getMediaFromArtist(this.artist).subscribe(media => {
+        this.getMediaFromArtistSubscription = this.mediaService.getMediaFromArtist(this.artist).subscribe(media => {
           this.media = media;
     
           this.media.forEach(currentMedia => {
@@ -162,7 +166,7 @@ export class MedialistPage implements OnInit {
           }, 1000);
         });
       }
-      this.mediaService.getMediaFromResume().subscribe(media => {
+      this.getMediaFromResumeSubscription = this.mediaService.getMediaFromResume().subscribe(media => {
         this.resumemedia = media;
         console.log("getMediaFromResume in this.resumemedia", this.resumemedia);
       });
@@ -175,6 +179,12 @@ export class MedialistPage implements OnInit {
     this.mediaService.monitor$.subscribe(monitor => {
       this.monitor = monitor;
     });
+  }
+
+  ngOnDestroy(){
+    this.getMediaFromResumeSubscription.unsubscribe;
+    this.getMediaFromShowSubscription.unsubscribe;
+    this.getMediaFromArtistSubscription.unsubscribe;
   }
 
   ionViewWillEnter() {
