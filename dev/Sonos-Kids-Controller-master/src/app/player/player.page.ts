@@ -306,7 +306,7 @@ export class PlayerPage implements OnInit {
     console.log("this.media", this.media);
     console.log("Resume Exist Index", this.resumeExistIndex);
     if(this.resumePlay || this.resumeExistIndex){
-      if (this.resumeExistIndex){
+      if (this.resumeExistIndex !== -1){
         this.resumemedia.index = this.resumeExistIndex;
       }
       this.mediaService.editRawResumeAtIndex(this.resumemedia.index, this.resumemedia);
