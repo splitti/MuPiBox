@@ -193,6 +193,9 @@ export class MedialistPage implements OnInit {
     if(this.monitor?.monitor == "On"){
       this.activityIndicatorService.create().then(indicator => {
         this.activityIndicatorVisible = true;
+        this.mediaService.getMediaFromResume().subscribe(media => {
+          this.resumemedia = media;
+        });
         this.mediaService.publishResume();
         let resumeExistIndex: number;
         console.log("clickedMedia.id: ", clickedMedia.id);
