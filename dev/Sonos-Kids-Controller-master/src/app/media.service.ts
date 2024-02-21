@@ -27,7 +27,7 @@ export class MediaService {
   network: Network;
   ip: string;
   hostname: string;
-  response: string;
+  response = '';
   private category = 'audiobook';
   public readonly current$: Observable<CurrentSpotify>;
   public readonly local$: Observable<CurrentMPlayer>;

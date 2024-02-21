@@ -306,7 +306,13 @@ export class PlayerPage implements OnInit {
     }else{
       this.mediaService.addRawMedia(this.resumemedia);
       console.log("New resume response: ", this.mediaService.getResponse());
-      this.playerService.sendCmd(PlayerCmds.MAXRESUME);
+      if (this.mediaService.getResponse() !== 'ok'){
+        this.mediaService.addRawMedia(this.resumemedia);
+        console.log("New resume response: ", this.mediaService.getResponse());
+      }
+      setTimeout(() => {
+        this.playerService.sendCmd(PlayerCmds.MAXRESUME);
+      }, 2000)
     }
   }
 
