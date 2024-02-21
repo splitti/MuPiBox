@@ -162,10 +162,14 @@ export class MedialistPage implements OnInit {
           }, 1000);
         });
       }
+      this.slider.update();
       this.getMediaFromResumeSubscription = this.mediaService.getMediaFromResume().subscribe(media => {
         this.resumemedia = media;
         console.log("getMediaFromResume this.resumemedia", this.resumemedia);
       });
+      window.setTimeout(() => {
+        this.slider.update();
+      }, 1000);
     }
 
     // Retreive data through subscription above
@@ -192,7 +196,7 @@ export class MedialistPage implements OnInit {
 
   ionViewWillEnter() {
     console.log("ionViewWillEnter");
-    this.mediaService.publishResume();
+    //this.mediaService.publishResume();
   }
 
   ionViewDidLeave() {
