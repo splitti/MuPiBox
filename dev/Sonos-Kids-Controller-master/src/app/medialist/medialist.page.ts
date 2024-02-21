@@ -68,7 +68,7 @@ export class MedialistPage implements OnInit {
           });
         });
 
-        console.log("getMediaFromResume this.media all", this.media);
+        console.log("getMediaFromResume", this.media);
 
         this.slider.update();
   
@@ -173,11 +173,13 @@ export class MedialistPage implements OnInit {
     });
   }
 
-  ionViewWillEnter() {
+/*   ionViewWillEnter() {
     //this.mediaService.publishArtists();
     //this.mediaService.publishMedia();
+    console.log("this.artist", this.artist);
+    console.log("this.media", this.media);
     this.mediaService.publishArtistMedia();
-  }
+  } */
 
   ionViewDidLeave() {
     if (this.activityIndicatorVisible) {

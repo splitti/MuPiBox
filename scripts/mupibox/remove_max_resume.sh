@@ -26,6 +26,7 @@ else
 	# Überprüfen, ob die Anzahl größer als 9 ist
 	if [ $count -gt 9 ]; then
 	    echo "Die Anzahl der Einträge mit der Kategorie 'resume' ist größer als 9. Lösche Einträge, bis nur noch 9 übrig sind."
+		echo $count
 
 	    # Berechne die Anzahl der Einträge, die gelöscht werden müssen
 	    num_to_delete=$((count - 9))

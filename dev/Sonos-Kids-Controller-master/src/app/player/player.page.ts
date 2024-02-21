@@ -24,6 +24,7 @@ export class PlayerPage implements OnInit {
   @ViewChild("range", {static: false}) range: IonRange;
 
   media: Media;
+  resumemedia: Media;
   monitor: Monitor;
   albumStop: AlbumStop;
   resumePlay = false;
@@ -263,6 +264,7 @@ export class PlayerPage implements OnInit {
   }
 
   saveResumeFiles(){
+    this.resumemedia = this.media;
     this.mediaService.current$.subscribe(spotify => {
       this.currentPlayedSpotify = spotify;
     });
@@ -272,32 +274,32 @@ export class PlayerPage implements OnInit {
     this.mediaService.episode$.subscribe(episode => {
       this.currentEpisode = episode;
     });
-    if(this.media.type === 'spotify' && this.media?.showid){
-      this.media.resumespotifytrack_number = 1;
-      this.media.resumespotifyprogress_ms = this.currentPlayedSpotify?.progress_ms  || 0;
-      this.media.resumespotifyduration_ms = this.currentEpisode?.duration_ms || 0;
-    } else if(this.media.type === 'spotify'){
-      if(this.media.playlistid){
-        this.media.resumespotifytrack_number = this.playlistTrackNr  || 0;
+    if(this.resumemedia.type === 'spotify' && this.resumemedia?.showid){
+      this.resumemedia.resumespotifytrack_number = 1;
+      this.resumemedia.resumespotifyprogress_ms = this.currentPlayedSpotify?.progress_ms  || 0;
+      this.resumemedia.resumespotifyduration_ms = this.currentEpisode?.duration_ms || 0;
+    } else if(this.resumemedia.type === 'spotify'){
+      if(this.resumemedia.playlistid){
+        this.resumemedia.resumespotifytrack_number = this.playlistTrackNr  || 0;
       }else{
-        this.media.resumespotifytrack_number = this.currentPlayedSpotify?.item.track_number  || 0;
+        this.resumemedia.resumespotifytrack_number = this.currentPlayedSpotify?.item.track_number  || 0;
       }
-      this.media.resumespotifyprogress_ms = this.currentPlayedSpotify?.progress_ms  || 0;
-      this.media.resumespotifyduration_ms = this.currentPlayedSpotify?.item.duration_ms || 0;
-    } else if (this.media.type === 'library'){
-      this.media.resumelocalalbum = this.media.category;
-      this.media.resumelocalcurrentTracknr = this.currentPlayedLocal?.currentTracknr  || 0;
-      this.media.resumelocalprogressTime = this.currentPlayedLocal?.progressTime  || 0;
-    } else if (this.media.type === 'rss'){
-      this.media.resumerssprogressTime = this.currentPlayedLocal?.progressTime  || 0;
+      this.resumemedia.resumespotifyprogress_ms = this.currentPlayedSpotify?.progress_ms  || 0;
+      this.resumemedia.resumespotifyduration_ms = this.currentPlayedSpotify?.item.duration_ms || 0;
+    } else if (this.resumemedia.type === 'library'){
+      this.resumemedia.resumelocalalbum = this.resumemedia.category;
+      this.resumemedia.resumelocalcurrentTracknr = this.currentPlayedLocal?.currentTracknr  || 0;
+      this.resumemedia.resumelocalprogressTime = this.currentPlayedLocal?.progressTime  || 0;
+    } else if (this.resumemedia.type === 'rss'){
+      this.resumemedia.resumerssprogressTime = this.currentPlayedLocal?.progressTime  || 0;
     }
-    this.media.category = "resume";
-    console.log("Save progress", this.media);
+    this.resumemedia.category = "resume";
+    console.log("Save progress", this.resumemedia);
     if(this.resumePlay){
-      this.mediaService.editRawMediaAtIndex(this.media.index, this.media);
+      this.mediaService.editRawMediaAtIndex(this.resumemedia.index, this.resumemedia);
       console.log("Resume of resume", this.mediaService.getResponse());
     }else{
-      this.mediaService.addRawMedia(this.media);
+      this.mediaService.addRawMedia(this.resumemedia);
       console.log("New resume", this.mediaService.getResponse());
       this.playerService.sendCmd(PlayerCmds.INDEX);
       this.playerService.sendCmd(PlayerCmds.MAXRESUME);
