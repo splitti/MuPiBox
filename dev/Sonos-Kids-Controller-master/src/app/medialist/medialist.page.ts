@@ -173,6 +173,12 @@ export class MedialistPage implements OnInit {
     });
   }
 
+  ionViewWillEnter() {
+    //this.mediaService.publishArtists();
+    //this.mediaService.publishMedia();
+    this.mediaService.publishArtistMedia();
+  }
+
   ionViewDidLeave() {
     if (this.activityIndicatorVisible) {
       this.activityIndicatorService.dismiss();

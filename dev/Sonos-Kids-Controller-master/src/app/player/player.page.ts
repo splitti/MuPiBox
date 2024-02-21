@@ -211,7 +211,7 @@ export class PlayerPage implements OnInit {
   }
 
   ionViewWillLeave() {
-    if(this.media.type === 'spotify' || this.media.type === 'library' || this.media.type === 'rss'){
+    if((this.media.type === 'spotify' || this.media.type === 'library' || this.media.type === 'rss') && !this.media.shuffle){
       this.saveResumeFiles();
     }
     this.updateProgression = false;
@@ -263,7 +263,6 @@ export class PlayerPage implements OnInit {
   }
 
   saveResumeFiles(){
-    console.log("Add media to resume", this.media);
     this.mediaService.current$.subscribe(spotify => {
       this.currentPlayedSpotify = spotify;
     });
@@ -296,10 +295,10 @@ export class PlayerPage implements OnInit {
     console.log("Save progress", this.media);
     if(this.resumePlay){
       this.mediaService.editRawMediaAtIndex(this.media.index, this.media);
-      console.log(this.mediaService.getResponse());
+      console.log("Resume of resume", this.mediaService.getResponse());
     }else{
       this.mediaService.addRawMedia(this.media);
-      console.log(this.mediaService.getResponse());
+      console.log("New resume", this.mediaService.getResponse());
       this.playerService.sendCmd(PlayerCmds.INDEX);
       this.playerService.sendCmd(PlayerCmds.MAXRESUME);
     }

@@ -21,6 +21,7 @@ else
 
 	# Anzahl der Einträge mit der Kategorie "resume" zählen
 	count=$(jq '[.[] | select(.category == "resume")] | length' "$DATA")
+	declare -i count
 
 	# Überprüfen, ob die Anzahl größer als 9 ist
 	if [ $count -gt 9 ]; then
@@ -34,6 +35,8 @@ else
 		jq --argjson num_to_delete "$num_to_delete" 'sort_by(.index) | .[$num_to_delete:]' "$TMP_RESUME" > "$TMP_RESUME_CLEANED"
 		jq 'map(select(.category != "resume"))' "$DATA" > "$TMP_DATA"
 		jq -s '.[0] + .[1]' "$TMP_DATA" "$TMP_RESUME_CLEANED" > "$DATA"
+
+		sleep 1
 
 		bash /usr/local/bin/mupibox/add_index.sh
 

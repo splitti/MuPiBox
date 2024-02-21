@@ -80,7 +80,6 @@ export class PlayerService {
 
   playMedia(media: Media) {
     let url: string;
-    console.log(media);
 
     switch (media.type) {
       case 'library': {
