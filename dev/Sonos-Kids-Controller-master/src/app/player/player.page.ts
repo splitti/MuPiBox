@@ -264,7 +264,7 @@ export class PlayerPage implements OnInit {
   }
 
   saveResumeFiles(){
-    this.resumemedia = this.media;
+    this.resumemedia = Object.assign({}, this.media);
     this.mediaService.current$.subscribe(spotify => {
       this.currentPlayedSpotify = spotify;
     });
@@ -294,7 +294,8 @@ export class PlayerPage implements OnInit {
       this.resumemedia.resumerssprogressTime = this.currentPlayedLocal?.progressTime  || 0;
     }
     this.resumemedia.category = "resume";
-    console.log("Save progress", this.resumemedia);
+    console.log("Save this.resumemedia", this.resumemedia);
+    console.log("this.media", this.media);
     if(this.resumePlay){
       this.mediaService.editRawMediaAtIndex(this.resumemedia.index, this.resumemedia);
       console.log("Resume of resume", this.mediaService.getResponse());

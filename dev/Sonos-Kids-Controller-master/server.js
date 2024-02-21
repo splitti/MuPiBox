@@ -49,8 +49,8 @@ app.get('/api/data', (req, res) => {
     jsonfile.readFile(activedataFile, (error, data) => {
         if (error) {
             data = [];
-            console.log(nowDate.toLocaleString() + "[Sonos-Server] Error /api/data read active_data.json");
-            console.log(nowDate.toLocaleString() + error);
+            console.log(nowDate.toLocaleString() + ": [MuPiBox-Server] Error /api/data read active_data.json");
+            console.log(nowDate.toLocaleString() + ": [MuPiBox-Server] " + error);
         }
         res.json(data);
     });
@@ -61,8 +61,8 @@ app.get('/api/network', (req, res) => {
         jsonfile.readFile(networkFile, (error, data) => {
             if (error) {
                 data = [];
-                console.log(nowDate.toLocaleString() + "[Sonos-Server] Error /api/network read network.json");
-                console.log(nowDate.toLocaleString() + error);
+                console.log(nowDate.toLocaleString() + ": [MuPiBox-Server] Error /api/network read network.json");
+                console.log(nowDate.toLocaleString() + ": [MuPiBox-Server] " + error);
             }
             res.json(data);
         });
@@ -74,8 +74,8 @@ app.get('/api/monitor', (req, res) => {
         jsonfile.readFile(monitorFile, (error, data) => {
             if (error) {
                 data = [];
-                console.log(nowDate.toLocaleString() + "[Sonos-Server] Error /api/monitor read monitor.json");
-                console.log(nowDate.toLocaleString() + error);
+                console.log(nowDate.toLocaleString() + ": [MuPiBox-Server] Error /api/monitor read monitor.json");
+                console.log(nowDate.toLocaleString() + ": [MuPiBox-Server] " + error);
             }
             res.json(data);
         });
@@ -87,8 +87,8 @@ app.get('/api/albumstop', (req, res) => {
         jsonfile.readFile(albumstopFile, (error, data) => {
             if (error) {
                 data = [];
-                console.log(nowDate.toLocaleString() + "[Sonos-Server] Error /api/albumstop read albumstop.json");
-                console.log(nowDate.toLocaleString() + error);
+                console.log(nowDate.toLocaleString() + ": [MuPiBox-Server] Error /api/albumstop read albumstop.json");
+                console.log(nowDate.toLocaleString() + ": [MuPiBox-Server] " + error);
             }
             res.json(data);
         });
@@ -100,8 +100,8 @@ app.get('/api/wlan', (req, res) => {
         jsonfile.readFile(wlanFile, (error, data) => {
             if (error) {
                 data = [];
-                console.log(nowDate.toLocaleString() + "[Sonos-Server] Error /api/wlan read wlan.json");
-                console.log(nowDate.toLocaleString() + error);
+                console.log(nowDate.toLocaleString() + ": [MuPiBox-Server] Error /api/wlan read wlan.json");
+                console.log(nowDate.toLocaleString() + ": [MuPiBox-Server] " + error);
             }
             res.json(data);
         });
@@ -123,15 +123,15 @@ app.post('/api/addwlan', (req, res) => {
 app.post('/api/add', (req, res) => {
     try {
         if (fs.existsSync(dataLock)) {
-            console.log(nowDate.toLocaleString() + "[Sonos-Server] /api/add data.json locked");
+            console.log(nowDate.toLocaleString() + ": [MuPiBox-Server] /api/add data.json locked");
             res.status(200).send('locked');
         } else {
             fs.openSync(dataLock, 'w');
             jsonfile.readFile(dataFile, (error, data) => {
                 if (error) {
                     data = [];
-                    console.log(nowDate.toLocaleString() + "[Sonos-Server] Error /api/add read data.json");
-                    console.log(nowDate.toLocaleString() + error);
+                    console.log(nowDate.toLocaleString() + ": [MuPiBox-Server] Error /api/add read data.json");
+                    console.log(nowDate.toLocaleString() + ": [MuPiBox-Server] " + error);
                     res.status(200).send('error');
                 } else {
                     data.push(req.body);
@@ -144,7 +144,7 @@ app.post('/api/add', (req, res) => {
             });
             fs.unlink(dataLock, function (err) {
                 if (err) throw err;
-                console.log(nowDate.toLocaleString() + '[Sonos-Server] /api/add - data.json unlocked, locked file deleted!');
+                console.log(nowDate.toLocaleString() + ': [MuPiBox-Server] /api/add - data.json unlocked, locked file deleted!');
               });
         }
     } catch(err) {
@@ -155,15 +155,15 @@ app.post('/api/add', (req, res) => {
 app.post('/api/delete', (req, res) => {
     try {
         if (fs.existsSync(dataLock)) {
-            console.log(nowDate.toLocaleString() + "[Sonos-Server] /api/delete data.json locked");
+            console.log(nowDate.toLocaleString() + ": [MuPiBox-Server] /api/delete data.json locked");
             res.status(200).send('locked');
         } else {
             fs.openSync(dataLock, 'w');
             jsonfile.readFile(dataFile, (error, data) => {
                 if (error) {
                     data = [];
-                    console.log(nowDate.toLocaleString() + "[Sonos-Server] Error /api/delete read data.json");
-                    console.log(nowDate.toLocaleString() + error);
+                    console.log(nowDate.toLocaleString() + ": [MuPiBox-Server] Error /api/delete read data.json");
+                    console.log(nowDate.toLocaleString() + ": [MuPiBox-Server] " + error);
                     res.status(200).send('error');
                 } else {
                     data.splice(req.body.index, 1);
@@ -176,7 +176,7 @@ app.post('/api/delete', (req, res) => {
             });
             fs.unlink(dataLock, function (err) {
                 if (err) throw err;
-                console.log(nowDate.toLocaleString() + '[Sonos-Server] /api/delete - data.json unlocked, locked file deleted!');
+                console.log(nowDate.toLocaleString() + ': [MuPiBox-Server] /api/delete - data.json unlocked, locked file deleted!');
               });
         }
     } catch(err) {
@@ -187,15 +187,15 @@ app.post('/api/delete', (req, res) => {
 app.post('/api/edit', (req, res) => {
     try {
         if (fs.existsSync(dataLock)) {
-            console.log(nowDate.toLocaleString() + "[Sonos-Server] /api/edit data.json locked");
+            console.log(nowDate.toLocaleString() + ": [MuPiBox-Server] /api/edit data.json locked");
             res.status(200).send('locked');
         } else {
             fs.openSync(dataLock, 'w');
             jsonfile.readFile(dataFile, (error, data) => {
                 if (error) {
                     data = [];
-                    console.log(nowDate.toLocaleString() + "[Sonos-Server] Error /api/edit read data.json");
-                    console.log(nowDate.toLocaleString() + error);
+                    console.log(nowDate.toLocaleString() + ": [MuPiBox-Server] Error /api/edit read data.json");
+                    console.log(nowDate.toLocaleString() + ": [MuPiBox-Server] " + error);
                     res.status(200).send('error');
                 } else {
                     data.splice(req.body.index, 1, req.body.data);
@@ -208,7 +208,7 @@ app.post('/api/edit', (req, res) => {
             });
             fs.unlink(dataLock, function (err) {
                 if (err) throw err;
-                console.log(nowDate.toLocaleString() + '[Sonos-Server] /api/edit - data.json unlocked, locked file deleted!');
+                console.log(nowDate.toLocaleString() + ': [MuPiBox-Server] /api/edit - data.json unlocked, locked file deleted!');
               });
         }
     } catch(err) {
@@ -224,7 +224,7 @@ app.get('/api/token', (req, res) => {
         },
         function(err) {
             console.log(nowDate.toLocaleString() + 
-                'Something went wrong when retrieving a new Spotify access token',
+                ': [MuPiBox-Server] Something went wrong when retrieving a new Spotify access token',
                 err.message
             );
 
@@ -245,4 +245,4 @@ app.get('/api/sonos', (req, res) => {
 
 // listen (start app with 'node server.js')
 app.listen(8200);
-console.log(nowDate.toLocaleString() + "App listening on port 8200");
+console.log(nowDate.toLocaleString() + ": [MuPiBox-Server] App listening on port 8200");

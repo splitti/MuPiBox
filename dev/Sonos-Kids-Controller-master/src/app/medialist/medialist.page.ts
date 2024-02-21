@@ -19,6 +19,7 @@ export class MedialistPage implements OnInit {
 
   artist: Artist;
   media: Media[] = [];
+  resumemedia: Media[] = [];
   resume = false;
   covers = {};
   monitor: Monitor;
@@ -113,6 +114,10 @@ export class MedialistPage implements OnInit {
             this.slider.update();
           }, 1000);
         });
+        this.mediaService.getMediaFromArtistResume(this.artist).subscribe(resumemedia => {
+          this.resumemedia = resumemedia;
+        });
+        console.log("resumemedia ", this.resumemedia);
       } else {
         this.mediaService.getMediaFromArtist(this.artist).subscribe(media => {
           this.media = media;
@@ -160,6 +165,10 @@ export class MedialistPage implements OnInit {
             this.slider.update();
           }, 1000);
         });
+        this.mediaService.getMediaFromArtistResume(this.artist).subscribe(resumemedia => {
+          this.resumemedia = resumemedia;
+        });
+        console.log("resumemedia ", this.resumemedia);
       }
     }
 

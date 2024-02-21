@@ -163,6 +163,10 @@ export class EditPage implements OnInit {
           handler: () => {
             this.playerService.sendCmd(PlayerCmds.CLEARRESUME);
             this.playerService.sendCmd(PlayerCmds.INDEX);
+            setTimeout(() => {
+              this.media = this.mediaService.getRawMediaObservable();
+              this.mediaService.updateRawMedia();
+            }, 2000)
           }
         },
         {
