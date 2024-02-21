@@ -25,6 +25,7 @@ export class PlayerPage implements OnInit {
 
   media: Media;
   resumemedia: Media;
+  resumemedialist: Media[] = [];
   monitor: Monitor;
   albumStop: AlbumStop;
   resumePlay = false;
@@ -97,6 +98,9 @@ export class PlayerPage implements OnInit {
     });
     this.mediaService.albumStop$.subscribe(albumStop => {
       this.albumStop = albumStop;
+    });
+    this.mediaService.getMediaFromResume().subscribe(media => {
+      this.resumemedialist = media;
     });
   }
 
@@ -204,6 +208,7 @@ export class PlayerPage implements OnInit {
       this.playerService.playMedia(this.media);
     }
     this.updateProgress();
+    this.mediaService.publishResume();
     
     if(this.media.shuffle){
       setTimeout(() => {
@@ -305,6 +310,7 @@ export class PlayerPage implements OnInit {
     console.log("Save this.resumemedia", this.resumemedia);
     console.log("this.media", this.media);
     console.log("Resume Exist Index", this.resumeExistIndex);
+    console.log("Resume Test", this.resumemedialist);
     if(this.resumePlay || this.resumeExistIndex){
       if (this.resumeExistIndex){
         this.resumemedia.index = this.resumeExistIndex;
