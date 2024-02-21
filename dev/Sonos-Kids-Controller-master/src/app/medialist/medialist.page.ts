@@ -72,10 +72,6 @@ export class MedialistPage implements OnInit {
             this.covers[currentMedia.title] = url;
           });
         });
-        this.getMediaFromResumeSubscription = this.mediaService.getMediaFromResume().subscribe(media => {
-          this.resumemedia = media;
-          console.log("getMediaFromResume this.resumemedia", this.resumemedia);
-        });
 
         this.slider.update();
 
@@ -108,10 +104,6 @@ export class MedialistPage implements OnInit {
             }
             this.media = this.aPartOfAllMedia;
           }
-          this.getMediaFromResumeSubscription = this.mediaService.getMediaFromResume().subscribe(media => {
-            this.resumemedia = media;
-            console.log("getMediaFromResume this.resumemedia", this.resumemedia);
-          });
   
           this.slider.update();
   
@@ -157,10 +149,6 @@ export class MedialistPage implements OnInit {
             }
             this.media = this.aPartOfAllMedia;
           }
-          this.getMediaFromResumeSubscription = this.mediaService.getMediaFromResume().subscribe(media => {
-            this.resumemedia = media;
-            console.log("getMediaFromResume this.resumemedia", this.resumemedia);
-          });
   
           this.slider.update();
   
@@ -174,6 +162,10 @@ export class MedialistPage implements OnInit {
           }, 1000);
         });
       }
+      this.getMediaFromResumeSubscription = this.mediaService.getMediaFromResume().subscribe(media => {
+        this.resumemedia = media;
+        console.log("getMediaFromResume this.resumemedia", this.resumemedia);
+      });
     }
 
     // Retreive data through subscription above
@@ -187,9 +179,9 @@ export class MedialistPage implements OnInit {
 
   ngOnDestroy(){
     console.log("ngOnDestroy");
-    if(this.getMediaFromResumeSubscription){
-      this.getMediaFromResumeSubscription.unsubscribe();
-    }
+    // if(this.getMediaFromResumeSubscription){
+    //   this.getMediaFromResumeSubscription.unsubscribe();
+    // }
     if (this.getMediaFromShowSubscription){
       this.getMediaFromShowSubscription.unsubscribe();
     }
