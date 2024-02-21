@@ -94,9 +94,7 @@ export class MedialistPage implements OnInit {
               this.covers[currentMedia.title] = url;
             });
           });
-  
-          console.log("ShowID this.media all", this.media);
-  
+    
           if(this.artist.coverMedia?.aPartOfAll){
             for (let i = 0; i < this.media.length; i++){
               let rev = this.media.length - i;
@@ -109,7 +107,7 @@ export class MedialistPage implements OnInit {
   
           this.slider.update();
   
-          console.log("if ShowID this.media", this.media);
+          console.log("getMediaFromShow", this.media);
     
           // Workaround as the scrollbar handle isn't visible after the immediate update
           // Seems like a size calculation issue, as resizing the browser window helps
@@ -127,8 +125,6 @@ export class MedialistPage implements OnInit {
               this.covers[currentMedia.title] = url;
             });
           });
-  
-          console.log("getMediaFromArtist this.media all", this.media);
   
           if(this.artist.coverMedia?.aPartOfAll){
             let min: number;
@@ -156,7 +152,7 @@ export class MedialistPage implements OnInit {
   
           this.slider.update();
   
-          console.log("getMediaFromArtist this.media", this.media);
+          console.log("getMediaFromArtist", this.media);
     
           // Workaround as the scrollbar handle isn't visible after the immediate update
           // Seems like a size calculation issue, as resizing the browser window helps
@@ -168,7 +164,7 @@ export class MedialistPage implements OnInit {
       }
       this.getMediaFromResumeSubscription = this.mediaService.getMediaFromResume().subscribe(media => {
         this.resumemedia = media;
-        console.log("getMediaFromResume in this.resumemedia", this.resumemedia);
+        console.log("getMediaFromResume this.resumemedia", this.resumemedia);
       });
     }
 
@@ -182,6 +178,7 @@ export class MedialistPage implements OnInit {
   }
 
   ngOnDestroy(){
+    console.log("ngOnDestroy");
     if(this.getMediaFromResumeSubscription){
       this.getMediaFromResumeSubscription.unsubscribe();
     }
@@ -194,6 +191,7 @@ export class MedialistPage implements OnInit {
   }
 
   ionViewWillEnter() {
+    console.log("ionViewWillEnter");
     this.mediaService.publishResume();
   }
 
@@ -219,6 +217,7 @@ export class MedialistPage implements OnInit {
             break;
           }
         }
+        console.log("index at:", clickedMedia.resumeindex);
         indicator.present().then(() => {
           const navigationExtras: NavigationExtras = {
             state: {

@@ -346,6 +346,7 @@ export class MediaService {
   }
 
   publishArtists() {
+    console.log("publishArtists");
     const url = (environment.production) ? '../api/data' : 'http://' + this.ip + ':8200/api/data';
     this.updateMedia(url).subscribe(media => {
       this.artistSubject.next(media);
@@ -353,6 +354,7 @@ export class MediaService {
   }
 
   publishMedia() {
+    console.log("publishMedia");
     const url = (environment.production) ? '../api/data' : 'http://' + this.ip + ':8200/api/data';
     this.updateMedia(url).subscribe(media => {
       this.mediaSubject.next(media);
@@ -360,6 +362,7 @@ export class MediaService {
   }
 
   publishArtistMedia() {
+    console.log("publishArtistMedia");
     const url = (environment.production) ? '../api/data' : 'http://' + this.ip + ':8200/api/data';
     this.updateMedia(url).subscribe(media => {
       this.artistMediaSubject.next(media);
@@ -367,6 +370,7 @@ export class MediaService {
   }
 
   publishResume() {
+    console.log("publishResume");
     const url = (environment.production) ? '../api/resume' : 'http://' + this.ip + ':8200/api/resume';
     this.updateMedia(url).subscribe(media => {
       this.resumeSubject.next(media);
