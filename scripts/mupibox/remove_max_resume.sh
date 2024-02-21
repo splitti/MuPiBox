@@ -25,8 +25,12 @@ else
     /usr/bin/mv ${TMP_RESUME} ${RESUME}
 
 	# Anzahl der Einträge mit der Kategorie "resume" zählen
-	count=$(jq '[.[] | select(.category == "resume")] | length' "$RESUME")
-	declare -i count
+	json_output=$(jq '[.[] | select(.category == "resume")] | length' "$RESUME")
+
+	if [ -n "$json_output" ]; then
+	    # Versuchen Sie, den Wert in eine ganze Zahl umzuwandeln
+	    count=$(echo "$json_output" | awk '{print int($0)}')
+	fi
 
 	# Überprüfen, ob die Anzahl größer als 9 ist
 	if [ $count -gt 9 ]; then

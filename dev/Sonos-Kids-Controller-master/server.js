@@ -176,7 +176,7 @@ app.post('/api/addresume', (req, res) => {
             console.log(nowDate.toLocaleString() + ": [MuPiBox-Server] /api/addresume resume.json is locked");
             res.status(200).send('locked');
         } else {
-            fs.openSync(resumeFile, 'w');
+            fs.openSync(resumeLock, 'w');
             jsonfile.readFile(resumeFile, (error, data) => {
                 if (error) {
                     data = [];
