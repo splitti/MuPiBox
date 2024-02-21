@@ -19,6 +19,9 @@ if [ -f "${DATA_LOCK}" ]; then
 else
 	touch ${DATA_LOCK}
 
+	sudo bash /usr/local/bin/mupibox/add_index.sh &
+	wait
+
 	# Anzahl der Einträge mit der Kategorie "resume" zählen
 	count=$(jq '[.[] | select(.category == "resume")] | length' "$DATA")
 	declare -i count

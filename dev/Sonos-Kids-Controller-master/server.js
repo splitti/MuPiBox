@@ -123,7 +123,7 @@ app.post('/api/addwlan', (req, res) => {
 app.post('/api/add', (req, res) => {
     try {
         if (fs.existsSync(dataLock)) {
-            console.log(nowDate.toLocaleString() + ": [MuPiBox-Server] /api/add data.json locked");
+            console.log(nowDate.toLocaleString() + ": [MuPiBox-Server] /api/add data.json is locked");
             res.status(200).send('locked');
         } else {
             fs.openSync(dataLock, 'w');
@@ -155,7 +155,7 @@ app.post('/api/add', (req, res) => {
 app.post('/api/delete', (req, res) => {
     try {
         if (fs.existsSync(dataLock)) {
-            console.log(nowDate.toLocaleString() + ": [MuPiBox-Server] /api/delete data.json locked");
+            console.log(nowDate.toLocaleString() + ": [MuPiBox-Server] /api/delete data.json is locked");
             res.status(200).send('locked');
         } else {
             fs.openSync(dataLock, 'w');
@@ -187,7 +187,7 @@ app.post('/api/delete', (req, res) => {
 app.post('/api/edit', (req, res) => {
     try {
         if (fs.existsSync(dataLock)) {
-            console.log(nowDate.toLocaleString() + ": [MuPiBox-Server] /api/edit data.json locked");
+            console.log(nowDate.toLocaleString() + ": [MuPiBox-Server] /api/edit data.json is locked");
             res.status(200).send('locked');
         } else {
             fs.openSync(dataLock, 'w');

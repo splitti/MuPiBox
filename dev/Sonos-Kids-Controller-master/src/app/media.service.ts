@@ -384,19 +384,6 @@ export class MediaService {
     );
   }
 
-  getMediaFromArtistResume(artist: Artist): Observable<Media[]> {
-    return this.artistMediaSubject.pipe(
-      map((media: Media[]) => {
-        return media
-          .filter(currentMedia => currentMedia.category === "resume")
-          .sort((a, b) => a.title.localeCompare(b.title, undefined, {
-            numeric: true,
-            sensitivity: 'base'
-          }));
-      })
-    );
-  }
-
   // Collect albums from a given artist in the current category
   getMediaFromResume(): Observable<Media[]> {
     return this.artistMediaSubject.pipe(

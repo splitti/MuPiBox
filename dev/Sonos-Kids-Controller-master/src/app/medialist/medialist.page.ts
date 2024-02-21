@@ -114,10 +114,6 @@ export class MedialistPage implements OnInit {
             this.slider.update();
           }, 1000);
         });
-        this.mediaService.getMediaFromArtistResume(this.artist).subscribe(resumemedia => {
-          this.resumemedia = resumemedia;
-        });
-        console.log("resumemedia ", this.resumemedia);
       } else {
         this.mediaService.getMediaFromArtist(this.artist).subscribe(media => {
           this.media = media;
@@ -165,10 +161,6 @@ export class MedialistPage implements OnInit {
             this.slider.update();
           }, 1000);
         });
-        this.mediaService.getMediaFromArtistResume(this.artist).subscribe(resumemedia => {
-          this.resumemedia = resumemedia;
-        });
-        console.log("resumemedia ", this.resumemedia);
       }
     }
 
@@ -180,7 +172,6 @@ export class MedialistPage implements OnInit {
     this.mediaService.monitor$.subscribe(monitor => {
       this.monitor = monitor;
     });
-    console.log("resumemedia ", this.resumemedia);
   }
 
   ionViewDidLeave() {
@@ -195,7 +186,6 @@ export class MedialistPage implements OnInit {
     if(this.monitor?.monitor == "On"){
       this.activityIndicatorService.create().then(indicator => {
         this.activityIndicatorVisible = true;
-        console.log("resumemedia ", this.resumemedia);
         //check if id, playlistid, localvariable in this.resumemedia true --> index übergeben und editieren
         indicator.present().then(() => {
           const navigationExtras: NavigationExtras = {

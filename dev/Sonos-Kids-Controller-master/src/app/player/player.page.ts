@@ -264,7 +264,11 @@ export class PlayerPage implements OnInit {
   }
 
   saveResumeFiles(){
-    this.resumemedia = Object.assign({}, this.media);
+    if(!this.resumePlay){
+      this.resumemedia = Object.assign({}, this.media);
+    } else {
+      this.resumemedia = this.media;
+    }
     this.mediaService.current$.subscribe(spotify => {
       this.currentPlayedSpotify = spotify;
     });
@@ -298,11 +302,10 @@ export class PlayerPage implements OnInit {
     console.log("this.media", this.media);
     if(this.resumePlay){
       this.mediaService.editRawMediaAtIndex(this.resumemedia.index, this.resumemedia);
-      console.log("Resume of resume", this.mediaService.getResponse());
+      console.log("Resume of resume response: ", this.mediaService.getResponse());
     }else{
       this.mediaService.addRawMedia(this.resumemedia);
-      console.log("New resume", this.mediaService.getResponse());
-      this.playerService.sendCmd(PlayerCmds.INDEX);
+      console.log("New resume response: ", this.mediaService.getResponse());
       this.playerService.sendCmd(PlayerCmds.MAXRESUME);
     }
   }
