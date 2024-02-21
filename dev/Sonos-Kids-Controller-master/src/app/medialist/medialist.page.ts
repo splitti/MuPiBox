@@ -193,21 +193,13 @@ export class MedialistPage implements OnInit {
     if(this.monitor?.monitor == "On"){
       this.activityIndicatorService.create().then(indicator => {
         this.activityIndicatorVisible = true;
-        // console.log("ClickedMedia:", clickedMedia);
-        // console.log("Resumemedia:", this.resumemedia);
-        // let checkResumeIndex: number;
-        // checkResumeIndex = this.resumemedia.findIndex(item => {
-        //   (item.id == clickedMedia.id)
-        // });
-        // console.log("Resume Index:", checkResumeIndex);
-        let searchId = clickedMedia.id; // ID, die du suchen möchtest
-        let checkResumeIndex = -1;
-        console.log("searchId:", searchId);
+        clickedMedia.resumeindex = -1;
+        console.log("search:", clickedMedia);
         for (let i = 0; i < this.resumemedia.length; i++) {
           console.log("this.resumemedia[" + i + "].id:", this.resumemedia[i].id);
-          if (this.resumemedia[i].id === searchId) {
+          if (((this.resumemedia[i].id || this.resumemedia[i].playlistid) === clickedMedia.id) || (this.resumemedia[i].artist === clickedMedia.artist && this.resumemedia[i].id === clickedMedia.id && (clickedMedia.type && this.resumemedia[i].type) === 'library')) {
               clickedMedia.resumeindex = i;
-              console.log("found index at:", checkResumeIndex);
+              console.log("found index at:", i);
               break;
           }
         }

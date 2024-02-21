@@ -304,6 +304,7 @@ export class PlayerPage implements OnInit {
       if (this.resumemedia.resumeindex !== -1){
         this.resumemedia.index = this.resumemedia.resumeindex;
       }
+      delete this.resumemedia.resumeindex;
       this.mediaService.editRawResumeAtIndex(this.resumemedia.index, this.resumemedia);
       console.log("Resume of resume response: ", this.mediaService.getResponse());
     }else{
