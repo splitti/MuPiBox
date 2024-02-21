@@ -5,11 +5,15 @@
 DATA_FILE="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json"
 ACTIVE_FILE="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/active_data.json"
 OFFLINE_FILE="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/offline_data.json"
+RESUME_FILE="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/resume.json"
+ACTIVERESUME_FILE="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/active_resume.json"
+OFFLINERESUME_FILE="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/offline_resume.json"
 CONFIG="/etc/mupibox/mupiboxconfig.json"
 NETWORKCONFIG="/tmp/network.json"
 FRONTENDCONFIG="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json"
 #PLAYERSTATE=$(cat /tmp/playerstate)
 DATA_LOCK="/tmp/.data.lock"
+RESUME_LOCK="/tmp/.resume.lock"
 
 
 if [ -f "${DATA_LOCK}" ]; then
@@ -24,6 +28,18 @@ else
 	rm ${DATA_LOCK}
 fi
 
+if [ -f "${RESUME_LOCK}" ]; then
+	echo "Resume-file locked."
+    exit
+else
+	touch ${RESUME_LOCK}
+	if [ ! -f ${RESUME_FILE} ]; then
+			echo -n "[]" > ${RESUME_FILE}
+			chown dietpi:dietpi ${RESUME_FILE}
+	fi
+	rm ${RESUME_LOCK}
+fi
+
 if [ ! -f ${NETWORKCONFIG} ]; then
         sudo echo -n "[]" ${NETWORKCONFIG}
         chown dietpi:dietpi ${NETWORKCONFIG}
@@ -36,15 +52,28 @@ fi
 
 if [ ! -f ${OFFLINE_FILE} ]; then
         echo -n "[" > ${OFFLINE_FILE}
-        echo -n $(jq '.[] | select(.type != "spotify") | select(.type != "show") | select(.type != "radio")' < ${DATA_FILE}) >> ${OFFLINE_FILE}
+        echo -n $(jq '.[] | select(.type != "spotify") | select(.type != "radio") | select(.type != "rss")' < ${DATA_FILE}) >> ${OFFLINE_FILE}
         echo -n "]" >> ${OFFLINE_FILE}
         sed -i 's/} {/}, {/g' ${OFFLINE_FILE}
         chown dietpi:dietpi ${OFFLINE_FILE}
 elif [ $(stat --format='%Y' "${DATA_FILE}") -gt $(stat --format='%Y' "${OFFLINE_FILE}") ]; then
         echo -n "[" > ${OFFLINE_FILE}
-        echo -n $(jq '.[] | select(.type != "spotify") | select(.type != "show") | select(.type != "radio")' < ${DATA_FILE}) >> ${OFFLINE_FILE}
+        echo -n $(jq '.[] | select(.type != "spotify") | select(.type != "radio") | select(.type != "rss")' < ${DATA_FILE}) >> ${OFFLINE_FILE}
         echo -n "]" >> ${OFFLINE_FILE}
         sed -i 's/} {/}, {/g' ${OFFLINE_FILE}
+fi
+
+if [ ! -f ${OFFLINERESUME_FILE} ]; then
+        echo -n "[" > ${OFFLINERESUME_FILE}
+        echo -n $(jq '.[] | select(.type != "spotify") | select(.type != "radio") | select(.type != "rss")' < ${RESUME_FILE}) >> ${OFFLINERESUME_FILE}
+        echo -n "]" >> ${OFFLINERESUME_FILE}
+        sed -i 's/} {/}, {/g' ${OFFLINERESUME_FILE}
+        chown dietpi:dietpi ${OFFLINERESUME_FILE}
+elif [ $(stat --format='%Y' "${RESUME_FILE}") -gt $(stat --format='%Y' "${OFFLINERESUME_FILE}") ]; then
+        echo -n "[" > ${OFFLINERESUME_FILE}
+        echo -n $(jq '.[] | select(.type != "spotify") | select(.type != "radio") | select(.type != "rss")' < ${RESUME_FILE}) >> ${OFFLINERESUME_FILE}
+        echo -n "]" >> ${OFFLINERESUME_FILE}
+        sed -i 's/} {/}, {/g' ${OFFLINERESUME_FILE}
 fi
 
 GW=$(ip route show 0.0.0.0/0 dev wlan0 | cut -d\  -f3)

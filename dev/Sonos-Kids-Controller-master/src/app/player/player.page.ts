@@ -28,6 +28,7 @@ export class PlayerPage implements OnInit {
   monitor: Monitor;
   albumStop: AlbumStop;
   resumePlay = false;
+  resumeExistIndex: number;
   cover = '';
   playing = true;
   updateProgression = false;
@@ -65,6 +66,9 @@ export class PlayerPage implements OnInit {
       if (this.router.getCurrentNavigation().extras.state.media) {
         this.media = this.router.getCurrentNavigation().extras.state.media;
         if(this.media.category === "resume") {this.resumePlay = true;}
+      }
+      if (this.router.getCurrentNavigation().extras.state.resumeId) {
+        this.resumeExistIndex = this.router.getCurrentNavigation().extras.state.resumeIndex;
       }
     });
   }
@@ -300,16 +304,15 @@ export class PlayerPage implements OnInit {
     this.resumemedia.category = "resume";
     console.log("Save this.resumemedia", this.resumemedia);
     console.log("this.media", this.media);
+    if (this.resumeExistIndex){
+      this.resumemedia.index = this.resumeExistIndex;
+    }
     if(this.resumePlay){
-      this.mediaService.editRawMediaAtIndex(this.resumemedia.index, this.resumemedia);
+      this.mediaService.editRawResumeAtIndex(this.resumemedia.index, this.resumemedia);
       console.log("Resume of resume response: ", this.mediaService.getResponse());
     }else{
-      this.mediaService.addRawMedia(this.resumemedia);
+      this.mediaService.addRawResume(this.resumemedia);
       console.log("New resume response: ", this.mediaService.getResponse());
-      if (this.mediaService.getResponse() !== 'ok'){
-        this.mediaService.addRawMedia(this.resumemedia);
-        console.log("New resume response: ", this.mediaService.getResponse());
-      }
       setTimeout(() => {
         this.playerService.sendCmd(PlayerCmds.MAXRESUME);
       }, 2000)

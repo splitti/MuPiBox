@@ -162,16 +162,23 @@ export class MedialistPage implements OnInit {
           }, 1000);
         });
       }
+      this.mediaService.getMediaFromResume().subscribe(media => {
+        this.resumemedia = media;
+        console.log("getMediaFromResume in this.resumemedia", this.resumemedia);
+      });
     }
-
-    
 
     // Retreive data through subscription above
     this.mediaService.publishArtistMedia();
+    this.mediaService.publishResume();
 
     this.mediaService.monitor$.subscribe(monitor => {
       this.monitor = monitor;
     });
+  }
+
+  ionViewWillEnter() {
+    this.mediaService.publishResume();
   }
 
   ionViewDidLeave() {
@@ -186,11 +193,23 @@ export class MedialistPage implements OnInit {
     if(this.monitor?.monitor == "On"){
       this.activityIndicatorService.create().then(indicator => {
         this.activityIndicatorVisible = true;
+        //let resumeExist = false;
+        let checkResumeExist = this.resumemedia.find(item => {
+          if(((clickedMedia.type === 'spotify' || clickedMedia.type === 'rss' || clickedMedia.type === 'radio') && (item.id === clickedMedia.id)) || (clickedMedia.type === 'spotify' && item.playlistid === clickedMedia.playlistid) || ((clickedMedia.type === 'library') && (item.artist === clickedMedia.artist) && (item.id === clickedMedia.id))){
+            return true;
+          }
+          return false;
+        });
+        // if (checkResumeExist){
+        //   resumeExist = true;
+        // }
         //check if id, playlistid, localvariable in this.resumemedia true --> index übergeben und editieren
         indicator.present().then(() => {
           const navigationExtras: NavigationExtras = {
             state: {
-              media: clickedMedia
+              media: clickedMedia,
+              //resumeExist: resumeExist,
+              resumeIndex: checkResumeExist?.index,
             }
           };
           this.router.navigate(['/player'], navigationExtras);
