@@ -305,7 +305,7 @@ export class PlayerPage implements OnInit {
     console.log("Save this.resumemedia", this.resumemedia);
     console.log("this.media", this.media);
     console.log("Resume Exist Index", this.resumeExistIndex);
-    if(this.resumePlay || this.resumeExistIndex){
+    if(this.resumePlay || this.resumeExistIndex !== -1){
       if (this.resumeExistIndex !== -1){
         this.resumemedia.index = this.resumeExistIndex;
       }
