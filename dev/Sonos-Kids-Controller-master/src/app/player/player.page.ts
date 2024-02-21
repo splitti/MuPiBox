@@ -298,18 +298,18 @@ export class PlayerPage implements OnInit {
       this.resumemedia.resumerssprogressTime = this.currentPlayedLocal?.progressTime  || 0;
     }
     this.resumemedia.category = "resume";
-    console.log("Save this.resumemedia", this.resumemedia);
-    console.log("this.media", this.media);
     if(this.resumePlay || this.resumemedia.resumeindex !== -1){
       if (this.resumemedia.resumeindex !== -1){
         this.resumemedia.index = this.resumemedia.resumeindex;
       }
       delete this.resumemedia.resumeindex;
+      console.log("Edit this.resumemedia", this.resumemedia);
       this.mediaService.editRawResumeAtIndex(this.resumemedia.index, this.resumemedia);
-      console.log("Resume of resume response: ", this.mediaService.getResponse());
+      console.log("Edit response: ", this.mediaService.getResponse());
     }else{
+      console.log("Add this.resumemedia", this.resumemedia);
       this.mediaService.addRawResume(this.resumemedia);
-      console.log("New resume response: ", this.mediaService.getResponse());
+      console.log("Add response: ", this.mediaService.getResponse());
       setTimeout(() => {
         this.playerService.sendCmd(PlayerCmds.MAXRESUME);
       }, 2000)
