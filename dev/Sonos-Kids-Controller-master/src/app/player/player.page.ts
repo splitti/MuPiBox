@@ -67,7 +67,7 @@ export class PlayerPage implements OnInit {
         this.media = this.router.getCurrentNavigation().extras.state.media;
         if(this.media.category === "resume") {this.resumePlay = true;}
       }
-      if (this.router.getCurrentNavigation().extras.state.resumeId) {
+      if (this.router.getCurrentNavigation().extras.state.resumeIndex) {
         this.resumeExistIndex = this.router.getCurrentNavigation().extras.state.resumeIndex;
       }
     });
@@ -304,10 +304,11 @@ export class PlayerPage implements OnInit {
     this.resumemedia.category = "resume";
     console.log("Save this.resumemedia", this.resumemedia);
     console.log("this.media", this.media);
-    if (this.resumeExistIndex){
-      this.resumemedia.index = this.resumeExistIndex;
-    }
-    if(this.resumePlay){
+    console.log("Resume Exist Index", this.resumeExistIndex);
+    if(this.resumePlay || this.resumeExistIndex){
+      if (this.resumeExistIndex){
+        this.resumemedia.index = this.resumeExistIndex;
+      }
       this.mediaService.editRawResumeAtIndex(this.resumemedia.index, this.resumemedia);
       console.log("Resume of resume response: ", this.mediaService.getResponse());
     }else{
