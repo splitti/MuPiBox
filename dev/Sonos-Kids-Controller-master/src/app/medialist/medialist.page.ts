@@ -194,8 +194,10 @@ export class MedialistPage implements OnInit {
       this.activityIndicatorService.create().then(indicator => {
         this.activityIndicatorVisible = true;
         //let resumeExist = false;
+        console.log("clickedMedia.id: ", clickedMedia.id);
         let checkResumeExist = this.resumemedia.find(item => {
-          if(((clickedMedia.type === 'spotify' || clickedMedia.type === 'rss' || clickedMedia.type === 'radio') && (item.id === clickedMedia.id)) || (clickedMedia.type === 'spotify' && item.playlistid === clickedMedia.playlistid) || ((clickedMedia.type === 'library') && (item.artist === clickedMedia.artist) && (item.id === clickedMedia.id))){
+          if(item.id === clickedMedia.id/*((clickedMedia.type === 'spotify' || clickedMedia.type === 'rss' || clickedMedia.type === 'radio') && (item.id === clickedMedia.id)) || (clickedMedia.type === 'spotify' && item.playlistid === clickedMedia.playlistid) || ((clickedMedia.type === 'library') && (item.artist === clickedMedia.artist) && (item.id === clickedMedia.id))*/){
+            console.log("item.id: ", item.id);
             return true;
           }
           return false;
