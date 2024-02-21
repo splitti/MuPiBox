@@ -180,15 +180,8 @@ export class MedialistPage implements OnInit {
     this.mediaService.monitor$.subscribe(monitor => {
       this.monitor = monitor;
     });
+    console.log("resumemedia ", this.resumemedia);
   }
-
-/*   ionViewWillEnter() {
-    //this.mediaService.publishArtists();
-    //this.mediaService.publishMedia();
-    console.log("this.artist", this.artist);
-    console.log("this.media", this.media);
-    this.mediaService.publishArtistMedia();
-  } */
 
   ionViewDidLeave() {
     if (this.activityIndicatorVisible) {
@@ -202,6 +195,8 @@ export class MedialistPage implements OnInit {
     if(this.monitor?.monitor == "On"){
       this.activityIndicatorService.create().then(indicator => {
         this.activityIndicatorVisible = true;
+        console.log("resumemedia ", this.resumemedia);
+        //check if id, playlistid, localvariable in this.resumemedia true --> index übergeben und editieren
         indicator.present().then(() => {
           const navigationExtras: NavigationExtras = {
             state: {
