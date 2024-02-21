@@ -206,17 +206,15 @@ export class MedialistPage implements OnInit {
         for (let i = 0; i < this.resumemedia.length; i++) {
           console.log("this.resumemedia[" + i + "].id:", this.resumemedia[i].id);
           if (this.resumemedia[i].id === searchId) {
-              checkResumeIndex = i;
+              clickedMedia.resumeindex = i;
               console.log("found index at:", checkResumeIndex);
               break;
           }
         }
-        console.log("checkResumeIndex:", checkResumeIndex);
         indicator.present().then(() => {
           const navigationExtras: NavigationExtras = {
             state: {
-              media: clickedMedia,
-              resumeIndex: checkResumeIndex,
+              media: clickedMedia
             }
           };
           this.router.navigate(['/player'], navigationExtras);

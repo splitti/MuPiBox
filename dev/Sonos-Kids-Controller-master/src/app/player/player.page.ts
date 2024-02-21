@@ -28,7 +28,6 @@ export class PlayerPage implements OnInit {
   monitor: Monitor;
   albumStop: AlbumStop;
   resumePlay = false;
-  resumeExistIndex: number;
   cover = '';
   playing = true;
   updateProgression = false;
@@ -66,9 +65,6 @@ export class PlayerPage implements OnInit {
       if (this.router.getCurrentNavigation().extras.state.media) {
         this.media = this.router.getCurrentNavigation().extras.state.media;
         if(this.media.category === "resume") {this.resumePlay = true;}
-      }
-      if (this.router.getCurrentNavigation().extras.state.resumeIndex) {
-        this.resumeExistIndex = this.router.getCurrentNavigation().extras.state.resumeIndex;
       }
     });
   }
@@ -205,8 +201,6 @@ export class PlayerPage implements OnInit {
     }
     this.updateProgress();
     
-    console.log("Resume Exist Index", this.resumeExistIndex);
-    
     if(this.media.shuffle){
       setTimeout(() => {
         this.playerService.sendCmd(PlayerCmds.SHUFFLEON);
@@ -306,10 +300,9 @@ export class PlayerPage implements OnInit {
     this.resumemedia.category = "resume";
     console.log("Save this.resumemedia", this.resumemedia);
     console.log("this.media", this.media);
-    console.log("Resume Exist Index", this.resumeExistIndex);
-    if(this.resumePlay || this.resumeExistIndex !== -1){
-      if (this.resumeExistIndex !== -1){
-        this.resumemedia.index = this.resumeExistIndex;
+    if(this.resumePlay || this.resumemedia.resumeindex !== -1){
+      if (this.resumemedia.resumeindex !== -1){
+        this.resumemedia.index = this.resumemedia.resumeindex;
       }
       this.mediaService.editRawResumeAtIndex(this.resumemedia.index, this.resumemedia);
       console.log("Resume of resume response: ", this.mediaService.getResponse());
