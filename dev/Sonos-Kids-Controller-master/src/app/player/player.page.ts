@@ -29,6 +29,7 @@ export class PlayerPage implements OnInit {
   albumStop: AlbumStop;
   resumePlay = false;
   resumeIndex: number;
+  resumeWait = 0;
   cover = '';
   playing = true;
   updateProgression = false;
@@ -132,6 +133,7 @@ export class PlayerPage implements OnInit {
     });
 
     this.playing = !this.currentPlayedLocal?.pause;
+    this.resumeWait++;
 
     if(this.media.type === 'spotify'){
       let seek = this.currentPlayedSpotify?.progress_ms || 0;
@@ -213,7 +215,7 @@ export class PlayerPage implements OnInit {
   }
 
   ionViewWillLeave() {
-    if((this.media.type === 'spotify' || this.media.type === 'library' || this.media.type === 'rss') && !this.media.shuffle){
+    if((this.media.type === 'spotify' || this.media.type === 'library' || this.media.type === 'rss') && !this.media.shuffle && this.resumeWait > 10){
       this.saveResumeFiles();
     }
     this.updateProgression = false;
