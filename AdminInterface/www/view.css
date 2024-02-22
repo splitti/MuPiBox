@@ -173,11 +173,29 @@ form.appnitro, div.appnitro
 }
 
 
+.topnav {
+  background-color: #44afe2;
+  overflow: hidden;
+  padding: 0px 10px 0px 10px;
+}
+
 /* Add a black background color to the top navigation */
 .topnav {
   background-color: #44afe2;
   overflow: hidden;
   padding: 0px 10px 0px 10px;
+}
+
+.topnav a {
+  float: right;
+  display: block;
+  color: #ffffff;
+  text-align: center;
+  padding: 10px 8px;
+  text-decoration: none;
+  font-size: 100%;
+  font-weight: bold;
+  font: Helvetica;
 }
 
 /* Style the links inside the navigation bar */

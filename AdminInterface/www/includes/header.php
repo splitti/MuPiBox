@@ -1,6 +1,30 @@
 <?php
 	$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
 	$data = json_decode($string, true);
+	
+	$mupihat_file = '/tmp/mupihat.json';
+	$mupihat_state = 0;
+
+if (file_exists($mupihat_file)) {
+	$mupihat_state = 1;
+	$string = file_get_contents($mupihat_file, true);
+	$mupihat_data = json_decode($string, true);
+	if ($mupihat_data["Bat_SOC"] == "100%") {
+		$bat_icon = '<i class="fa-solid fa-battery-full" title="'. $mupihat_data["Vbat"]; .'mV"></i>';
+	}
+	elseif ($mupihat_data["Bat_SOC"] == "75%") {
+		$bat_icon = '<i class="fa-solid fa-battery-three-quarters" title="'. $mupihat_data["Vbat"]; .'mV"></i>';
+	}
+	elseif ($mupihat_data["Bat_SOC"] == "50%") {
+		$bat_icon = '<i class="fa-solid fa-battery-half" title="'. $mupihat_data["Vbat"]; .'mV"></i>';
+	}
+	elseif ($mupihat_data["Bat_SOC"] == "25%") {
+		$bat_icon = '<i class="fa-solid fa-battery-quarter" title="'. $mupihat_data["Vbat"]; .'mV"></i>';
+	}
+	else ($mupihat_data["Bat_SOC"] == "0%") {
+		$bat_icon = '<i class="fa-solid fa-battery-empty" title="'. $mupihat_data["Vbat"]; .'mV"></i>';
+	}
+}
 ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -12,15 +36,20 @@
 		<link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.2.1/css/all.css">
 		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 		<title>MuPiBox Admin-Interface</title>
-		<link rel="stylesheet" type="text/css" href="view.css?v=7.1.4" media="all">
+		<link rel="stylesheet" type="text/css" href="view.css?v=7.1.5" media="all">
 		<script type="text/javascript" src="view.js?v=6.0.0"></script>
 		<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 		<link rel="icon" type="image/x-icon" href="/images/favicon.ico">
 
 	</head>
 	<body id="main_body" >
-		<img id="top" src="images/top.png" alt="">
+		<img id="top" src="images/top.png" alt="">	
 		<div id="container">
+			<div class="controlnav" id="myTopnav">
+				<?php
+					print $bat_icon;
+				?>
+			</div>
 			<div class="topnav" id="myTopnav">
 				<a href="index.php"><i class="fa fa-fw fa-home"></i> Home</a>
 				<a href="content.php"><i class="fa-solid fa-music"></i> MuPiBox</a>				
