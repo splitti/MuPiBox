@@ -290,7 +290,7 @@ app.post('/api/editresume', (req, res) => {
             });
             fs.unlink(resumeLock, function (err) {
                 if (err) throw err;
-                console.log(nowDate.toLocaleString() + ': [MuPiBox-Server] /api/editresume - data.json unlocked, locked file deleted!');
+                console.log(nowDate.toLocaleString() + ': [MuPiBox-Server] /api/editresume - resume.json unlocked, locked file deleted!');
               });
         }
     } catch(err) {

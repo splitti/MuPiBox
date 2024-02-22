@@ -210,6 +210,7 @@ export class MedialistPage implements OnInit {
         this.activityIndicatorVisible = true;
         clickedMedia.index = -1;
         console.log("search:", clickedMedia);
+        console.log("length:", this.resumemedia);
         for (let i = 0; i < this.resumemedia.length; i++) {
           console.log("this.resumemedia[" + i + "]:", this.resumemedia[i]);
           if (this.resumemedia[i].id === clickedMedia.id || this.resumemedia[i].playlistid === clickedMedia.id) {
