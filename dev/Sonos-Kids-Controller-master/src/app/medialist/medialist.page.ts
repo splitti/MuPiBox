@@ -21,6 +21,7 @@ export class MedialistPage implements OnInit {
   artist: Artist;
   media: Media[] = [];
   resumemedia: Media[] = [];
+  fromcategory = '';
   resume = false;
   covers = {};
   monitor: Monitor;
@@ -56,6 +57,9 @@ export class MedialistPage implements OnInit {
         if (this.router.getCurrentNavigation().extras.state?.resume === "resume") {
           this.resume = true;
         }
+        if (this.router.getCurrentNavigation().extras.state?.category) {
+          this.fromcategory = this.router.getCurrentNavigation().extras.state.category;
+        }
       }
     });
   }
@@ -73,9 +77,9 @@ export class MedialistPage implements OnInit {
           });
         });
 
-        console.log("getMediaFromResume", this.media);
-
         this.slider.update();
+
+        console.log("getMediaFromResume", this.media);
   
         // Workaround as the scrollbar handle isn't visible after the immediate update
         // Seems like a size calculation issue, as resizing the browser window helps
@@ -162,26 +166,30 @@ export class MedialistPage implements OnInit {
           }, 1000);
         });
       }
-      this.getMediaFromResumeSubscription = this.mediaService.getMediaFromResume().subscribe(media => {
-        this.resumemedia = media;
-        console.log("getMediaFromResume this.resumemedia", this.resumemedia);
-      });
+      //this.getMediaFromResumeSubscription = this.mediaService.getMediaFromResume().subscribe(media => {
+        //this.resumemedia = media;
+        //console.log("getMediaFromResume this.resumemedia", this.resumemedia);
+      //});
     }
 
     // Retreive data through subscription above
     this.mediaService.publishArtistMedia();
     this.mediaService.publishResume();
+    //this.mediaService.updateRawResume();
 
     this.mediaService.monitor$.subscribe(monitor => {
       this.monitor = monitor;
+    });
+    this.mediaService.resume$.subscribe(resume => {
+      this.resumemedia = resume;
     });
   }
 
   ngOnDestroy(){
     console.log("ngOnDestroy");
-    if(this.getMediaFromResumeSubscription){
-      this.getMediaFromResumeSubscription.unsubscribe();
-    }
+     if(this.getMediaFromResumeSubscription){
+       this.getMediaFromResumeSubscription.unsubscribe();
+     }
     if (this.getMediaFromShowSubscription){
       this.getMediaFromShowSubscription.unsubscribe();
     }
@@ -190,10 +198,10 @@ export class MedialistPage implements OnInit {
     }
   }
 
-  ionViewWillEnter() {
-    console.log("ionViewWillEnter");
-    this.mediaService.publishResume();
-  }
+  //ionViewWillEnter() {
+    //console.log("ionViewWillEnter");
+    //this.mediaService.publishResume();
+  //}
 
   ionViewDidLeave() {
     if (this.activityIndicatorVisible) {
@@ -207,17 +215,22 @@ export class MedialistPage implements OnInit {
     if(this.monitor?.monitor == "On"){
       this.activityIndicatorService.create().then(indicator => {
         this.activityIndicatorVisible = true;
-        clickedMedia.resumeindex = -1;
+        clickedMedia.index = -1;
         console.log("search:", clickedMedia);
+        console.log("length:", this.resumemedia);
         for (let i = 0; i < this.resumemedia.length; i++) {
-          console.log("this.resumemedia[" + i + "].id:", this.resumemedia[i].id);
-          if ((this.resumemedia[i].id === clickedMedia.id || this.resumemedia[i].playlistid === clickedMedia.id) || (this.resumemedia[i].artist === clickedMedia.artist && this.resumemedia[i].id === clickedMedia.id && clickedMedia.type === 'library')) {
-            clickedMedia.resumeindex = i;
-            console.log("found index at:", i);
+          console.log("this.resumemedia[" + i + "]:", this.resumemedia[i]);
+          if ((this.resumemedia[i].id && this.resumemedia[i].id === clickedMedia.id) || (this.resumemedia[i].playlistid && this.resumemedia[i].playlistid === clickedMedia.id)) {
+            clickedMedia.index = i;
+            console.log("Matched by id or playlistid at index:", i);
+            break;
+          } else if (this.resumemedia[i].artist === clickedMedia.artist && this.resumemedia[i].id === clickedMedia.id && clickedMedia.type === 'library') {
+            clickedMedia.index = i;
+            console.log("Matched by artist, id, and type 'library' at index:", i);
             break;
           }
         }
-        console.log("index at:", clickedMedia.resumeindex);
+        console.log("index at:", clickedMedia.index);
         indicator.present().then(() => {
           const navigationExtras: NavigationExtras = {
             state: {
@@ -242,7 +255,7 @@ export class MedialistPage implements OnInit {
 
   backButtonPressed(){
     if(this.resume){
-      this.mediaService.setCategory("audiobook");
+      this.mediaService.setCategory(this.fromcategory);
       this.resume = false;
     }
   }

@@ -28,6 +28,7 @@ export class PlayerPage implements OnInit {
   monitor: Monitor;
   albumStop: AlbumStop;
   resumePlay = false;
+  resumeIndex: number;
   cover = '';
   playing = true;
   updateProgression = false;
@@ -298,13 +299,11 @@ export class PlayerPage implements OnInit {
       this.resumemedia.resumerssprogressTime = this.currentPlayedLocal?.progressTime  || 0;
     }
     this.resumemedia.category = "resume";
-    if(this.resumePlay || this.resumemedia.resumeindex !== -1){
-      if (this.resumemedia.resumeindex !== -1){
-        this.resumemedia.index = this.resumemedia.resumeindex;
-      }
-      delete this.resumemedia.resumeindex;
+    this.resumeIndex = this.resumemedia.index;
+    delete this.resumemedia.index;
+    if(this.resumePlay || this.resumeIndex !== -1){
       console.log("Edit this.resumemedia", this.resumemedia);
-      this.mediaService.editRawResumeAtIndex(this.resumemedia.index, this.resumemedia);
+      this.mediaService.editRawResumeAtIndex(this.resumeIndex, this.resumemedia);
       console.log("Edit response: ", this.mediaService.getResponse());
     }else{
       console.log("Add this.resumemedia", this.resumemedia);
