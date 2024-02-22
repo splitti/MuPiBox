@@ -443,11 +443,6 @@ export class MediaService {
     return this.resumeSubject.pipe(
       map((media: Media[]) => {
         return media
-          .filter(currentMedia => currentMedia.category === "resume")
-          .sort((a, b) => a.title.localeCompare(b.title, undefined, {
-            numeric: true,
-            sensitivity: 'base'
-          }));
       })
     );
   }
