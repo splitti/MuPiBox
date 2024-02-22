@@ -163,7 +163,7 @@ export class MedialistPage implements OnInit {
         });
       }
       this.getMediaFromResumeSubscription = this.mediaService.getMediaFromResume().subscribe(media => {
-        this.resumemedia = media;
+        //this.resumemedia = media;
         console.log("getMediaFromResume this.resumemedia", this.resumemedia);
       });
     }
@@ -175,6 +175,9 @@ export class MedialistPage implements OnInit {
 
     this.mediaService.monitor$.subscribe(monitor => {
       this.monitor = monitor;
+    });
+    this.mediaService.resume$.subscribe(resume => {
+      this.resumemedia = resume;
     });
   }
 
