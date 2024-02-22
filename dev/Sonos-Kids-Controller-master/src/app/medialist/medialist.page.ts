@@ -216,7 +216,7 @@ export class MedialistPage implements OnInit {
         console.log("length:", this.resumemedia);
         for (let i = 0; i < this.resumemedia.length; i++) {
           console.log("this.resumemedia[" + i + "]:", this.resumemedia[i]);
-          if (this.resumemedia[i].id === clickedMedia.id || this.resumemedia[i].playlistid === clickedMedia.id) {
+          if ((this.resumemedia[i].id && this.resumemedia[i].id === clickedMedia.id) || (this.resumemedia[i].playlistid && this.resumemedia[i].playlistid === clickedMedia.id)) {
             clickedMedia.index = i;
             console.log("Matched by id or playlistid at index:", i);
             break;
