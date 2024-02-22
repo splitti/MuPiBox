@@ -93,6 +93,18 @@ alias treed='tree -CAFd'
 alias mountedinfo='df -hT'
 alias reboot='sudo reboot'
 
+function mupi-update-webinterface() {
+	sudo rm -R /var/www/*
+	sudo wget -o /var/www/www.zip https://github.com/splitti/MuPiBox/raw/main/AdminInterface/release/www.zip
+	sudo unzip /var/www/www.zip -d /var/www/
+	sudo rm /var/www/www.zip
+	sudo ln -s /home/dietpi/MuPiBox/media/cover /var/www/cover
+	sudo chown -R www-data:www-data /var/www/
+	sudo chmod -R 755 /var/www/
+	sudo chown -R dietpi:www-data /home/dietpi/MuPiBox/media/cover
+
+}
+
 function mupi-info() {
 	OS=$(source /etc/os-release ; echo $PRETTY_NAME)
 	RASPI=$(cat /sys/firmware/devicetree/base/model | tr -d '\0' )
