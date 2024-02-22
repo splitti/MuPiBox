@@ -17,6 +17,15 @@ if [ -f "${RESUME_LOCK}" ]; then
 else
 	touch ${RESUME_LOCK}
 
+	jq 'unique_by(.id)' "$RESUME" > "$TMP_RESUME"
+    /usr/bin/mv ${TMP_RESUME} ${RESUME}
+
+	jq 'unique_by(.playlistid)' "$RESUME" > "$TMP_RESUME"
+    /usr/bin/mv ${TMP_RESUME} ${RESUME}
+
+	jq 'unique_by(.artist, .id, .type)' "$RESUME" > "$TMP_RESUME"
+    /usr/bin/mv ${TMP_RESUME} ${RESUME}
+
 	# Anzahl der Einträge mit der Kategorie "resume" zählen
 	json_output=$(jq '[.[] | select(.category == "resume")] | length' "$RESUME")
 

@@ -383,7 +383,7 @@ export class MediaService {
 
   publishResume() {
     console.log("publishResume");
-    const url = (environment.production) ? '../api/resume' : 'http://' + this.ip + ':8200/api/resume';
+    const url = (environment.production) ? '../api/activeresume' : 'http://' + this.ip + ':8200/api/activeresume';
     this.updateMedia(url, true).subscribe(media => {
       this.resumeSubject.next(media);
     });

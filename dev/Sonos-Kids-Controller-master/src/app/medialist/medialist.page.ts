@@ -21,6 +21,7 @@ export class MedialistPage implements OnInit {
   artist: Artist;
   media: Media[] = [];
   resumemedia: Media[] = [];
+  fromcategory = '';
   resume = false;
   covers = {};
   monitor: Monitor;
@@ -55,6 +56,9 @@ export class MedialistPage implements OnInit {
         this.artist = this.router.getCurrentNavigation().extras.state.artist;
         if (this.router.getCurrentNavigation().extras.state?.resume === "resume") {
           this.resume = true;
+        }
+        if (this.router.getCurrentNavigation().extras.state?.category) {
+          this.fromcategory = this.router.getCurrentNavigation().extras.state.category;
         }
       }
     });
@@ -162,16 +166,16 @@ export class MedialistPage implements OnInit {
           }, 1000);
         });
       }
-      this.getMediaFromResumeSubscription = this.mediaService.getMediaFromResume().subscribe(media => {
+      //this.getMediaFromResumeSubscription = this.mediaService.getMediaFromResume().subscribe(media => {
         //this.resumemedia = media;
-        console.log("getMediaFromResume this.resumemedia", this.resumemedia);
-      });
+        //console.log("getMediaFromResume this.resumemedia", this.resumemedia);
+      //});
     }
 
     // Retreive data through subscription above
     this.mediaService.publishArtistMedia();
     this.mediaService.publishResume();
-    this.mediaService.updateRawResume();
+    //this.mediaService.updateRawResume();
 
     this.mediaService.monitor$.subscribe(monitor => {
       this.monitor = monitor;
@@ -194,10 +198,10 @@ export class MedialistPage implements OnInit {
     }
   }
 
-  ionViewWillEnter() {
-    console.log("ionViewWillEnter");
+  //ionViewWillEnter() {
+    //console.log("ionViewWillEnter");
     //this.mediaService.publishResume();
-  }
+  //}
 
   ionViewDidLeave() {
     if (this.activityIndicatorVisible) {
@@ -251,7 +255,7 @@ export class MedialistPage implements OnInit {
 
   backButtonPressed(){
     if(this.resume){
-      this.mediaService.setCategory("audiobook");
+      this.mediaService.setCategory(this.fromcategory);
       this.resume = false;
     }
   }

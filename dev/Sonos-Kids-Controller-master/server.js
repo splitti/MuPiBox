@@ -62,11 +62,24 @@ app.get('/api/data', (req, res) => {
 });
 
 app.get('/api/resume', (req, res) => {
+    if (fs.existsSync(resumeFile)){
+        jsonfile.readFile(resumeFile, (error, data) => {
+            if (error) {
+                data = [];
+                console.log(nowDate.toLocaleString() + ": [MuPiBox-Server] Error /api/resume read resume.json");
+                console.log(nowDate.toLocaleString() + ": [MuPiBox-Server] " + error);
+            }
+            res.json(data);
+        });
+    }
+});
+
+app.get('/api/activeresume', (req, res) => {
     if (fs.existsSync(activeresumeFile)){
         jsonfile.readFile(activeresumeFile, (error, data) => {
             if (error) {
                 data = [];
-                console.log(nowDate.toLocaleString() + ": [MuPiBox-Server] Error /api/resume read active_resume.json");
+                console.log(nowDate.toLocaleString() + ": [MuPiBox-Server] Error /api/activeresume read active_resume.json");
                 console.log(nowDate.toLocaleString() + ": [MuPiBox-Server] " + error);
             }
             res.json(data);

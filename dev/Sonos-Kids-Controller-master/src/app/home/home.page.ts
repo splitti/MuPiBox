@@ -243,6 +243,7 @@ export class HomePage implements OnInit {
           const navigationExtras: NavigationExtras = {
             state: {
               resume: "resume",
+              category: this.category,
             }
           };
           this.router.navigate(['/medialist'], navigationExtras);
