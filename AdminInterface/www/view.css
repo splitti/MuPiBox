@@ -173,7 +173,20 @@ form.appnitro, div.appnitro
 }
 
 
-.topnav {
+.controlnav i {
+  float: right;
+  display: block;
+  color: #054b61;
+  text-align: center;
+  padding: 10px 8px;
+  text-decoration: none;
+  font-size: 130%;
+  font-weight: bold;
+  font: Helvetica;
+}
+
+
+.controlnav {
   background-color: #44afe2;
   overflow: hidden;
   padding: 0px 10px 0px 10px;
