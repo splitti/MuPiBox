@@ -185,6 +185,9 @@ form.appnitro, div.appnitro
   font: Helvetica;
 }
 
+.controlnav i:hover {
+  color: #ffffff;
+}
 
 .controlnav {
   background-color: #44afe2;

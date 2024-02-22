@@ -11,6 +11,7 @@
 	if ($_GET['hreboot']) {
 		$reboot = 1;
 		}
+	
 	if (file_exists($mupihat_file)) {
 		$mupihat_state = 1;
 		$string = file_get_contents($mupihat_file, true);
