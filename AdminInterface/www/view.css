@@ -183,10 +183,14 @@ form.appnitro, div.appnitro
   font-size: 130%;
   font-weight: bold;
   font: Helvetica;
+  margin-top: 5px;
 }
 
 .controlnav i:hover {
   color: #ffffff;
+  border: 0;
+  background-color: #054b61;
+  border-radius: 50px;
 }
 
 .controlnav {
