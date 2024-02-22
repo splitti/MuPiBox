@@ -449,7 +449,7 @@ export class MediaService {
   getMediaFromResume(): Observable<Media[]> {
     return this.resumeSubject.pipe(
       map((media: Media[]) => {
-        return media
+        return media.reverse()
       })
     );
   }
