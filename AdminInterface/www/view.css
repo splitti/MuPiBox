@@ -174,8 +174,8 @@ form.appnitro, div.appnitro
 
 
 .controlnav i {
+  display: inline-block;
   float: right;
-  display: block;
   color: #054b61;
   text-align: center;
   padding: 10px 8px;
@@ -184,6 +184,8 @@ form.appnitro, div.appnitro
   font-weight: bold;
   font: Helvetica;
   margin-top: 5px;
+  height: 39px;
+  width: 39px;
 }
 
 .controlnav i:hover {
@@ -194,13 +196,16 @@ form.appnitro, div.appnitro
 }
 
 .controlnav {
+  max-width:1080px;
   background-color: #44afe2;
-  overflow: hidden;
   padding: 0px 10px 0px 10px;
+  height: 40px;
+  display:block;
 }
 
 /* Add a black background color to the top navigation */
 .topnav {
+  max-width:1080px;
   background-color: #44afe2;
   overflow: hidden;
   padding: 0px 10px 0px 10px;
@@ -233,8 +238,8 @@ form.appnitro, div.appnitro
 
 /* Change the color of links on hover */
 .topnav a:hover {
-  background-color: #cccccc;
-  color: #054b61;
+  background-color: #054b61;
+  color: #ffffff;
 }
 
 /* Add an active class to highlight the current page */

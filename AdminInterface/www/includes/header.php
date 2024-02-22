@@ -59,7 +59,7 @@
 	<body id="main_body" >
 		<img id="top" src="images/top.png" alt="">	
 		<div id="container">
-			<div class="controlnav" id="myTopnav">
+			<div class="controlnav" id="controlnav">
 				<?php
 					print $bat_icon . " " . $charge_icon;
 				?>
