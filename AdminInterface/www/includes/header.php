@@ -9,20 +9,27 @@ if (file_exists($mupihat_file)) {
 	$mupihat_state = 1;
 	$string = file_get_contents($mupihat_file, true);
 	$mupihat_data = json_decode($string, true);
+
+	$charge_icon = '';
+	if ($mupihat_data["Charger_Status"] != "Not Charging") {
+		$charge_icon = '';
+		$charge_icon = '<i class="fa-solid fa-bolt" title="' . $mupihat_data["Charger_Status"] . '"></i>';
+	}
+
 	if ($mupihat_data["Bat_SOC"] == "100%") {
-		$bat_icon = '<i class="fa-solid fa-battery-full" title="'. $mupihat_data["Vbat"]; .'mV"></i>';
+		$bat_icon = '<i class="fa-solid fa-battery-full" title="'. $mupihat_data["Vbat"] .'mV"></i>';
 	}
 	elseif ($mupihat_data["Bat_SOC"] == "75%") {
-		$bat_icon = '<i class="fa-solid fa-battery-three-quarters" title="'. $mupihat_data["Vbat"]; .'mV"></i>';
+		$bat_icon = '<i class="fa-solid fa-battery-three-quarters" title="'. $mupihat_data["Vbat"] .'mV"></i>';
 	}
 	elseif ($mupihat_data["Bat_SOC"] == "50%") {
-		$bat_icon = '<i class="fa-solid fa-battery-half" title="'. $mupihat_data["Vbat"]; .'mV"></i>';
+		$bat_icon = '<i class="fa-solid fa-battery-half" title="'. $mupihat_data["Vbat"] .'mV"></i>';
 	}
 	elseif ($mupihat_data["Bat_SOC"] == "25%") {
-		$bat_icon = '<i class="fa-solid fa-battery-quarter" title="'. $mupihat_data["Vbat"]; .'mV"></i>';
+		$bat_icon = '<i class="fa-solid fa-battery-quarter" title="'. $mupihat_data["Vbat"] .'mV"></i>';
 	}
 	else ($mupihat_data["Bat_SOC"] == "0%") {
-		$bat_icon = '<i class="fa-solid fa-battery-empty" title="'. $mupihat_data["Vbat"]; .'mV"></i>';
+		$bat_icon = '<i class="fa-solid fa-battery-empty" title="'. $mupihat_data["Vbat"] .'mV"></i>';
 	}
 }
 ?>
@@ -47,7 +54,7 @@ if (file_exists($mupihat_file)) {
 		<div id="container">
 			<div class="controlnav" id="myTopnav">
 				<?php
-					print $bat_icon;
+					print $charge_icon . $bat_icon;
 				?>
 			</div>
 			<div class="topnav" id="myTopnav">
