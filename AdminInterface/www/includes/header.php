@@ -5,6 +5,21 @@
 	$mupihat_file = '/tmp/mupihat.json';
 	$mupihat_state = 0;
 
+	$commandSSID="sudo iwgetid -r";
+	$WIFI=exec($commandSSID);
+	$commandLQ="sudo iwconfig wlan0 | awk '/Link Quality/{split($2,a,\"=|/\");print int((a[2]/a[3])*100)\"\"}' | tr -d '%'";
+	$LINKQ=exec($commandLQ);
+	if ($LINKQ >= 70) {
+		$wifi_icon='<iconify-icon icon="material-symbols:wifi-sharp" title="SSID: ' . $WIFI . ' / Signal Quality: ' . $LINKQ . '%"></iconify-icon>';
+	}
+	elseif ($LINKQ >= 40) {
+		$wifi_icon='<iconify-icon icon="material-symbols:wifi-2-bar-sharp" title="SSID: ' . $WIFI . ' / Signal Quality: ' . $LINKQ . '%"></iconify-icon>';
+	}
+	else {
+		$wifi_icon='<iconify-icon icon="material-symbols:wifi-1-bar-sharp" title="SSID: ' . $WIFI . ' / Signal Quality: ' . $LINKQ . '%"></iconify-icon>';
+	}
+	
+
 	if ($_GET['hshutdown']) {
 		$shutdown = 1;
 		}
@@ -17,26 +32,40 @@
 		$string = file_get_contents($mupihat_file, true);
 		$mupihat_data = json_decode($string, true);
 
-		$charge_icon = '';
-		if ($mupihat_data["Charger_Status"] != "Not Charging") {
-			$charge_icon = '<i class="fa-solid fa-plug-circle-bolt" title="' . $mupihat_data["Charger_Status"] . '"></i>';
-		}
-
 		$bat_icon ='';
-		if ($mupihat_data["Bat_SOC"] == "100%") {
-			$bat_icon = '<i class="fa-solid fa-battery-full" title="' . $mupihat_data["Vbat"] . 'mV"></i>';
-		}
-		elseif ($mupihat_data["Bat_SOC"] == "75%") {
-			$bat_icon = '<i class="fa-solid fa-battery-three-quarters" title="' . $mupihat_data["Vbat"] . 'mV"></i>';
-		}
-		elseif ($mupihat_data["Bat_SOC"] == "50%") {
-			$bat_icon = '<i class="fa-solid fa-battery-half" title="' . $mupihat_data["Vbat"] . 'mV"></i>';
-		}
-		elseif ($mupihat_data["Bat_SOC"] == "25%") {
-			$bat_icon = '<i class="fa-solid fa-battery-quarter" title="' . $mupihat_data["Vbat"] . 'mV"></i>';
+		if ($mupihat_data["Charger_Status"] != "Not Charging") {
+			if ($mupihat_data["Bat_SOC"] == "100%") {
+				$bat_icon = '<iconify-icon icon="mdi:battery-charging-100" title="' . $mupihat_data["Charger_Status"] . " / " . $mupihat_data["Vbat"] . 'mV"></iconify-icon>';
+			}
+			elseif ($mupihat_data["Bat_SOC"] == "75%") {
+				$bat_icon = '<iconify-icon icon="mdi:battery-charging-70" title="' . $mupihat_data["Charger_Status"] . " / " . $mupihat_data["Vbat"] . 'mV"></iconify-icon>';
+			}
+			elseif ($mupihat_data["Bat_SOC"] == "50%") {
+				$bat_icon = '<iconify-icon icon="mdi:battery-charging-50"> title="' . $mupihat_data["Charger_Status"] . " / " . $mupihat_data["Vbat"] . 'mV"</iconify-icon>';
+			}
+			elseif ($mupihat_data["Bat_SOC"] == "25%") {
+				$bat_icon = '<iconify-icon icon="mdi:battery-charging-20" title="' . $mupihat_data["Charger_Status"] . " / " . $mupihat_data["Vbat"] . 'mV"></iconify-icon>';
+			}
+			else {
+				$bat_icon = '<iconify-icon icon="mdi:battery-charging-outline" title="' . $mupihat_data["Charger_Status"] . " / " . $mupihat_data["Vbat"] . 'mV"></iconify-icon>';
+			}
 		}
 		else {
-			$bat_icon = '<i class="fa-solid fa-battery-empty" title="' . $mupihat_data["Vbat"] . 'mV"></i>';
+			if ($mupihat_data["Bat_SOC"] == "100%") {
+				$bat_icon = '<iconify-icon icon="mdi:battery" title="' . $mupihat_data["Charger_Status"] . " / " . $mupihat_data["Vbat"] . 'mV"></iconify-icon>';
+			}
+			elseif ($mupihat_data["Bat_SOC"] == "75%") {
+				$bat_icon = '<iconify-icon icon="mdi:battery-70" title="' . $mupihat_data["Charger_Status"] . " / " . $mupihat_data["Vbat"] . 'mV"></iconify-icon>';
+			}
+			elseif ($mupihat_data["Bat_SOC"] == "50%") {
+				$bat_icon = '<iconify-icon icon="mdi:battery-50" title="' . $mupihat_data["Charger_Status"] . " / " . $mupihat_data["Vbat"] . 'mV"></iconify-icon>';
+			}
+			elseif ($mupihat_data["Bat_SOC"] == "25%") {
+				$bat_icon = '<iconify-icon icon="mdi:battery-20" title="' . $mupihat_data["Charger_Status"] . " / " . $mupihat_data["Vbat"] . 'mV"></iconify-icon>';
+			}
+			else {
+				$bat_icon = '<iconify-icon icon="mdi:battery-outline" title="' . $mupihat_data["Charger_Status"] . " / " . $mupihat_data["Vbat"] . 'mV"></iconify-icon>';
+			}
 		}
 	}
 ?>
@@ -51,6 +80,7 @@
 		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 		<title>MuPiBox Admin-Interface</title>
 		<link rel="stylesheet" type="text/css" href="view.css?v=7.1.7" media="all">
+		<script src="https://code.iconify.design/iconify-icon/2.0.0/iconify-icon.min.js"></script>
 		<script type="text/javascript" src="view.js?v=6.0.0"></script>
 		<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 		<link rel="icon" type="image/x-icon" href="/images/favicon.ico">
@@ -61,10 +91,10 @@
 		<div id="container">
 			<div class="controlnav" id="controlnav">
 				<?php
-					print $bat_icon . " " . $charge_icon;
+					print $wifi_icon . $bat_icon;
 				?>
-				<a href="?hshutdown=1" onclick="return confirm('Do really want to shutdown?')"><i class="fa-solid fa-power-off" title="Shutdown MuPiBox"></i></a>
-				<a href="?hreboot=1" onclick="return confirm('Do really want to reboot?')"><i class="fa-solid fa-arrows-rotate" title="Reboot MuPiBox"></i></a>
+				<a href="?hshutdown=1" onclick="return confirm('Do really want to shutdown?')"><iconify-icon icon="ic:outline-power-settings-new" title="Shutdown" ></iconify-icon></a>
+				<a href="?hreboot=1" onclick="return confirm('Do really want to reboot?')"><iconify-icon icon="ic:outline-restart-alt" title="Reboot" ></iconify-icon></a>
 			</div>
 			<div class="topnav" id="myTopnav">
 				<a href="index.php"><i class="fa fa-fw fa-home"></i> Home</a>

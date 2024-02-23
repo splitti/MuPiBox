@@ -173,22 +173,25 @@ form.appnitro, div.appnitro
 }
 
 
-.controlnav i {
+.controlnav iconify-icon {
+  border: 0;
   display: inline-block;
   float: right;
   color: #054b61;
   text-align: center;
-  padding: 10px 8px;
+  padding: 3px 3px;
   text-decoration: none;
-  font-size: 130%;
+  font-size: 180%;
   font-weight: bold;
+  margin: 4px 4px;
+  /*margin-top: 5px;
+  margin-right: 8px;*/
   font: Helvetica;
-  margin-top: 5px;
-  height: 39px;
-  width: 39px;
+  height: 30px;
+  width: 30px;
 }
 
-.controlnav i:hover {
+.controlnav iconify-icon:hover {
   color: #ffffff;
   border: 0;
   background-color: #054b61;
@@ -205,10 +208,12 @@ form.appnitro, div.appnitro
 
 /* Add a black background color to the top navigation */
 .topnav {
+  width: 100%;
   max-width:1080px;
   background-color: #44afe2;
   overflow: hidden;
   padding: 0px 10px 0px 10px;
+  display:block;
 }
 
 .topnav a {

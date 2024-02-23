@@ -12,10 +12,10 @@
 	$GATEWAY0=exec($commandG0);
 	$commandD="echo $(sudo cat /etc/resolv.conf | grep 'nameserver ') | sed 's/nameserver //g'";
 	$DNS=exec($commandD);
-	$commandW="sudo iw dev wlan0 info | grep ssid | awk '{print $2}'";
+	/*$commandW="sudo iwgetid -r";
 	$WIFI=exec($commandW);
 	$commandL="sudo iwconfig wlan0 | awk '/Link Quality/{split($2,a,\"=|/\");print int((a[2]/a[3])*100)\"%\"}'";
-	$LINKQ=exec($commandL);
+	$LINKQ=exec($commandL);*/
 	$commandS="sudo iwconfig wlan0 | awk '/Signal level/{split($4,a,\"=|/\");print a[2]\" dBm\"}'";
 	$SIGNAL=exec($commandS);
 	$commandB="sudo iwconfig wlan0 | awk '/Bit Rate/{split($2,a,\"=|/\");print a[2]\" Mb/s\"}'";
