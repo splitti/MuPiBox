@@ -18,6 +18,7 @@ import { PlayerService } from './player.service';
 import { Monitor } from './monitor';
 import { AlbumStop } from './albumstop';
 import { RssFeedService } from './rssfeed.service';
+import { Mupihat } from './mupihat';
 
 @Injectable({
   providedIn: 'root'
@@ -40,6 +41,7 @@ export class MediaService {
   public readonly episode$: Observable<CurrentEpisode>;
   public readonly show$: Observable<CurrentShow>;
   public readonly validate$: Observable<Validate>;
+  public readonly mupihat$: Observable<Mupihat>;
 
   private rawMediaSubject = new Subject<Media[]>();
   private wlanSubject = new Subject<WLAN[]>();
@@ -120,6 +122,12 @@ export class MediaService {
     );
     this.validate$ = interval(1000).pipe( // Once a second after subscribe, way too frequent!
       switchMap((): Observable<Validate> => this.http.get<Validate>('http://' + this.ip + ':5005/validate')),
+      // Replay the most recent (bufferSize) emission on each subscription
+      // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
+      shareReplay({ bufferSize: 1, refCount: false }),
+    );
+    this.mupihat$ = interval(1000).pipe( // Once a second after subscribe, way too frequent!
+      switchMap((): Observable<Mupihat> => this.http.get<Mupihat>('http://' + this.ip + ':8200/api/mupihat')),
       // Replay the most recent (bufferSize) emission on each subscription
       // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
       shareReplay({ bufferSize: 1, refCount: false }),

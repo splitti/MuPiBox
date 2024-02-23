@@ -10,6 +10,7 @@ import { Media } from '../media';
 import { Network } from "../network";
 import { Observable } from 'rxjs';
 import { Monitor } from '../monitor';
+import { Mupihat } from '../mupihat';
 
 @Component({
   selector: 'app-home',
@@ -25,6 +26,7 @@ export class HomePage implements OnInit {
   artists: Artist[] = [];
   media: Media[] = [];
   network: Network;
+  mupihat: Mupihat;
   monitor: Monitor;
   currentNetwork = "";
   updateNetwork = false;
@@ -33,6 +35,7 @@ export class HomePage implements OnInit {
   editButtonclickCount = 0;
   editClickTimer = 0;
   public readonly network$: Observable<Network>;
+  public readonly mupihat$: Observable<Mupihat>;
 
   needsUpdate = false;
 
@@ -56,6 +59,7 @@ export class HomePage implements OnInit {
     private router: Router,
   ) {
     this.network$ = this.mediaService.network$;
+    this.mupihat$ = this.mediaService.mupihat$;
   }
 
   ngOnInit() {
@@ -63,6 +67,9 @@ export class HomePage implements OnInit {
 
     this.mediaService.network$.subscribe(network => {
       this.network = network;
+    });
+    this.mediaService.mupihat$.subscribe(mupihat => {
+      this.mupihat = mupihat;
     });
     this.mediaService.monitor$.subscribe(monitor => {
       this.monitor = monitor;
