@@ -28,6 +28,7 @@ const networkFile = './server/config/network.json';
 const wlanFile = './server/config/wlan.json';
 const monitorFile = './server/config/monitor.json';
 const albumstopFile = './server/config/albumstop.json';
+const mupihat = '/tmp/mupihat.json';
 const dataLock = '/tmp/.data.lock';
 const resumeLock = '/tmp/.resume.lock';
 
@@ -67,6 +68,19 @@ app.get('/api/resume', (req, res) => {
             if (error) {
                 data = [];
                 console.log(nowDate.toLocaleString() + ": [MuPiBox-Server] Error /api/resume read resume.json");
+                console.log(nowDate.toLocaleString() + ": [MuPiBox-Server] " + error);
+            }
+            res.json(data);
+        });
+    }
+});
+
+app.get('/api/mupihat', (req, res) => {
+    if (fs.existsSync(mupihat)){
+        jsonfile.readFile(mupihat, (error, data) => {
+            if (error) {
+                data = [];
+                console.log(nowDate.toLocaleString() + ": [MuPiBox-Server] Error /api/resume read mupihat.json");
                 console.log(nowDate.toLocaleString() + ": [MuPiBox-Server] " + error);
             }
             res.json(data);
