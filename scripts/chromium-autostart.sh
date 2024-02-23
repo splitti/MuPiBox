@@ -4,7 +4,7 @@
 # Chromium-parameters: https://peter.sh/experiments/chromium-command-line-switches/
 #                      https://kapeli.com/cheat_sheets/Chromium_Command_Line_Switches.docset/Contents/Resources/Documents/index
 # /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh
-
+clear
 /usr/local/bin/mupibox/./startup.sh &
 
 rm ~/.config/chromium/Singleton*
@@ -90,3 +90,4 @@ pgrep -f "chromium-browser" | while read -r pid; do
     # Setze die Priorität für jeden Prozess neu
     sudo renice -n -10 -p "$pid"
 done
+clear

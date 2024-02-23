@@ -173,17 +173,47 @@ form.appnitro, div.appnitro
 }
 
 
-.topnav {
+.controlnav iconify-icon {
+  border: 0;
+  display: inline-block;
+  float: right;
+  color: #054b61;
+  text-align: center;
+  padding: 4px 4px;
+  text-decoration: none;
+  font-size: 180%;
+  font-weight: bold;
+  margin: 2px 5px;
+  /*margin-top: 5px;
+  margin-right: 8px;*/
+  font: Helvetica;
+  height: 31px;
+  width: 31px;
+}
+
+.controlnav iconify-icon:hover {
+  color: #ffffff;
+  border: 0;
+  background-color: #054b61;
+  border-radius: 50px;
+}
+
+.controlnav {
+  max-width:1080px;
   background-color: #44afe2;
-  overflow: hidden;
   padding: 0px 10px 0px 10px;
+  height: 40px;
+  display:block;
 }
 
 /* Add a black background color to the top navigation */
 .topnav {
+  width: 100%;
+  max-width:1080px;
   background-color: #44afe2;
   overflow: hidden;
   padding: 0px 10px 0px 10px;
+  display:block;
 }
 
 .topnav a {
@@ -213,8 +243,8 @@ form.appnitro, div.appnitro
 
 /* Change the color of links on hover */
 .topnav a:hover {
-  background-color: #cccccc;
-  color: #054b61;
+  background-color: #054b61;
+  color: #ffffff;
 }
 
 /* Add an active class to highlight the current page */

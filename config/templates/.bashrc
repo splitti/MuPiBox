@@ -129,16 +129,8 @@ function mupi-info() {
 	unset RASPI
 }
 function json-live() {
-	clear
-	while true
-	do
-		printf "\\033[H\\033[22J"
-		echo -e "${BCyan}Exit with Ctrl+C"
-		echo -e " ${Color_Off}"
-		cat $1 | jq -r -C
-		sleep 0.5
-	done
-}
+	watch -c -n1 "cat $1 | jq -r -C"
+	}
 
 #mupibox aliases
 alias mupi-update-stable='cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh | sudo bash  -s -- stable'

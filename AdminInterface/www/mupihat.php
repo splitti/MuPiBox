@@ -2,95 +2,6 @@
 	$change=0;
 	$CHANGE_TXT="<div id='lbinfo'><ul id='lbinfo'>";
 	include ('includes/header.php');
-
-///etc/modules i2c-dev
-	if( $_POST['change_wled'] )
-		{
-		$data["wled"]["baud_rate"] = $_POST['baud_rate'];
-		$data["wled"]["com_port"] = $_POST['com_port'];
-		$data["wled"]["brightness_dimmed"] = $_POST['brightness_dimmed'];
-		$data["wled"]["brightness_default"] = $_POST['brightness_default'];
-		$data["wled"]["shutdown_id"] = $_POST['wled_shutdown_preset'];
-		$data["wled"]["startup_id"] = $_POST['wled_boot_preset'];
-		$data["wled"]["main_id"] = $_POST['wled_main_preset'];
-		if( $_POST['wled_shutdown_active'] == "on" )
-		{
-			$data["wled"]["shutdown_active"]=true;
-		}
-		else
-		{
-			$data["wled"]["shutdown_active"]=false;			
-		}
-	
-		if( $_POST['wled_boot_active'] == "on" )
-		{
-			$data["wled"]["boot_active"]=true;
-			exec('curl -H "Content-Type: application/x-www-form-urlencoded" -d "BP='.$data["wled"]["startup_id"].'&&CA='.$data["wled"]["brightness_default"].'&&BO=on" -X POST http://'.$wled_info_data["info"]["ip"].'/settings/leds');
-		}
-		else
-		{
-			$data["wled"]["boot_active"]=false;			
-			exec('curl -H "Content-Type: application/x-www-form-urlencoded" -d "BP='.$data["wled"]["startup_id"].'&&CA='.$data["wled"]["brightness_default"].'&&BO" -X POST http://'.$wled_info_data["info"]["ip"].'/settings/leds');
-		}
-		if( $_POST['wled_active'] )
-		{
-			$data["wled"]["active"]=true;
-		}
-		else
-		{
-			$data["wled"]["active"]=false;			
-		}
-		$change=4;
-		$CHANGE_TXT=$CHANGE_TXT."<li>WLED settings changed...</li>";
-		}
-	if( $_POST['generate_chatId'] )
-		{
-		$command="sudo bash -c '/usr/local/bin/mupibox/./telegram_set_deviceid.sh'";
-		exec($command, $output);
-		$data["telegram"]["chatId"]=$output[0];
-		$change=3;
-		$CHANGE_TXT=$CHANGE_TXT."<li>Telegram Chat ID generation finished...</li>";
-		}
-
-	if( $_POST['change_telegram'] )
-		{
-		$data["telegram"]["chatId"]=$_POST['telegram_chatId'];
-		$data["telegram"]["token"]=$_POST['telegram_token'];
-		if($_POST['telegram_active'])
-			{
-			if (empty($data["telegram"]["chatId"]) or empty($data["telegram"]["token"]))
-				{
-				$CHANGE_TXT=$CHANGE_TXT."<li>Chat ID and Token are needed for service activation!!!</li>";
-				$data["telegram"]["active"]=false;
-				$command="sudo systemctl stop mupi_telegram.service";
-				exec($command);
-				$command="sudo systemctl disable mupi_telegram.service";
-				exec($command);
-				}
-			else
-				{
-				$data["telegram"]["active"]=true;
-				$command="sudo su dietpi -c '/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py \"Telegram enabled\"'";
-				exec($command);
-				$command="sudo systemctl enable mupi_telegram.service";
-				exec($command);
-				$command="sudo systemctl restart mupi_telegram.service";
-				exec($command);
-				}
-			}
-		else
-			{
-			$data["telegram"]["active"]=false;
-			$command="sudo su dietpi -c '/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py \"Telegram disabled\"'";
-			exec($command);
-			$command="sudo systemctl stop mupi_telegram.service";
-			exec($command);
-			$command="sudo systemctl disable mupi_telegram.service";
-			exec($command);
-			}
-	$CHANGE_TXT=$CHANGE_TXT."<li>Telegram configuration saved...</li>";
-	$change=3;
-	}
 	
 	if( $change == 1 )
 		{
@@ -129,15 +40,36 @@
 <form class="appnitro" name="mupi" method="post" action="smart.php" id="form">
 <div class="description">
 <h2>MuPiHAT</h2>
-<p>Make your MuPiBox smart...</p>
+<p>Release the power of MuPi...</p>
 </div>
- <details  open>
-  <summary><i class="fa-solid fa-house-signal"></i> Configuration</summary>
+
+ <details>
+  <summary><i class="fa-solid fa-circle-info"></i> Status</summary>
+    <ul>
+   <li id="li_1" >
+		<h2>Battery Status</h2>
+		<table class="version">
+			<tr><td>Charger_Status:</td><td><?php print $mupihat_data["Charger_Status"] ?></td></tr>
+			<tr><td>Vbat (battery mV):</td><td><?php print $mupihat_data["Vbat"] ?>mV</td></tr>
+			<tr><td>Vbus (charge mV):</td><td><?php print $mupihat_data["Vbus"] ?>mV</td></tr>
+			<tr><td>Ibat (dis- / charge mA):</td><td><?php print $mupihat_data["Ibat"] ?>mA</td></tr>
+			<tr><td>IBus (charge mA):</td><td><?php print $mupihat_data["IBus"] ?>mA</td></tr>
+			<tr><td>Temp:</td><td><?php print $mupihat_data["Temp"] ?>°C</td></tr>
+			<tr><td>REG14:</td><td><?php print $mupihat_data["REG14"] ?></td></tr>
+			<tr><td>Bat_SOC (battery level):</td><td><?php print $mupihat_data["Bat_SOC"] ?></td></tr>
+			<tr><td>Bat_Stat (battery status):</td><td><?php print $mupihat_data["Bat_Stat"] ?></td></tr>
+			<tr><td>Bat_Type (battery type):</td><td><?php print $mupihat_data["Bat_Type"] ?></td></tr>
+		</table>	
+   </li>
+  </ul>
+ </details>
+ <details open>
+  <summary><i class="fa-solid fa-battery-three-quarters"></i> Configuration</summary>
     <ul>
    <li id="li_1" >
 
                 <h2>Battery selection</h2>
-                <p>Choose your battery...</p>
+                <p>Choose your battery... work in progress</p>
 				<div>
 				<select id="battery" name="battery" class="element text medium">
 
