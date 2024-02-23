@@ -131,8 +131,42 @@
 <h2>MuPiHAT</h2>
 <p>Make your MuPiBox smart...</p>
 </div>
- <details  open>
-  <summary><i class="fa-solid fa-house-signal"></i> Configuration</summary>
+
+
+
+
+ <details>
+  <summary><i class="fa-solid fa-circle-info"></i> Status</summary>
+    <ul>
+   <li id="li_1" >
+
+                <h2>Battery Status</h2>
+                <p>Choose your battery...</p>
+				<div>
+				<select id="battery" name="battery" class="element text medium">
+
+
+				<?php
+				$batterys = $data["mupihat"]["battery_types"];
+				foreach($batterys as $battery) {
+				if( $battery['name'] == $data["mupihat"]["selected_battery"] )
+				{
+				$selected = " selected=\"selected\"";
+				}
+				else
+				{
+				$selected = "";
+				}
+				print "<option value=\"". $battery['name'] . "\"" . $selected  . ">" . $battery['name'] . "</option>";
+				}
+				?>
+				</select></div>
+
+   </li>
+  </ul>
+ </details>
+ <details>
+  <summary><i class="fa-solid fa-battery-three-quarters"></i> Configuration</summary>
     <ul>
    <li id="li_1" >
 

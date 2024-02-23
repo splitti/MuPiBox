@@ -276,7 +276,7 @@
         <tr><td>Gateway:</td><td><?php print $GATEWAY0; ?></td></tr>
         <tr><td>Nameserver:</td><td><?php print $DNS; ?></td></tr>
         <tr><td>Wifi SSID:</td><td><?php print $WIFI; ?></td></tr>
-        <tr><td>Wifi Link Quality:</td><td><?php print $LINKQ; ?></td></tr>
+        <tr><td>Wifi Link Quality:</td><td><?php print $LINKQ; ?>%	</td></tr>
         <tr><td>Wifi Signal Level:</td><td><?php print $SIGNAL; ?></td></tr>
         <tr><td>Bitrate:</td><td><?php print $BITRATE ?></td></tr>
         </table>

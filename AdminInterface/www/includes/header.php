@@ -3,7 +3,7 @@
 	$data = json_decode($string, true);
 	
 	$mupihat_file = '/tmp/mupihat.json';
-	$mupihat_state = 0;
+	$mupihat_state = false;
 
 	$commandSSID="sudo iwgetid -r";
 	$WIFI=exec($commandSSID);
@@ -28,7 +28,7 @@
 		}
 	
 	if (file_exists($mupihat_file)) {
-		$mupihat_state = 1;
+		$mupihat_state = true;
 		$string = file_get_contents($mupihat_file, true);
 		$mupihat_data = json_decode($string, true);
 
@@ -108,7 +108,13 @@
 	}
 ?>
 				<a href="mupi.php"><i class="fa-solid fa-headphones"></i> MuPi-Conf</a>
-				<a href="mupihat.php"><i class="fa-solid fa-hat-wizard"></i> MuPiHAT</a>
+				<?php
+				if ($mupihat_state) {
+				?>
+					<a href="mupihat.php"><i class="fa-solid fa-hat-wizard"></i> MuPiHAT</a>
+				<?php
+				}
+				?>
 				<a href="media.php"><i class="fa-solid fa-list"></i> Media</a>
 				<a href="cover.php"><i class="fa-regular fa-image"></i> Cover</a>
 				<a href="bluetooth.php"><i class="fa-brands fa-bluetooth"></i> Bluetooth</a>
