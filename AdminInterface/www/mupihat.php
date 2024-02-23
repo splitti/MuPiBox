@@ -50,20 +50,20 @@
 		<h2>Battery Status</h2>
 		<table class="version">
 			<tr><td>Charger_Status:</td><td><?php print $mupihat_data["Charger_Status"] ?></td></tr>
-			<tr><td>Vbat:</td><td><?php print $mupihat_data["Vbat"] ?></td></tr>
-			<tr><td>Vbus:</td><td><?php print $mupihat_data["Vbus"] ?></td></tr>
-			<tr><td>Ibat:</td><td><?php print $mupihat_data["Ibat"] ?></td></tr>
-			<tr><td>IBus:</td><td><?php print $mupihat_data["IBus"] ?></td></tr>
-			<tr><td>Temp:</td><td><?php print $mupihat_data["Temp"] ?></td></tr>
+			<tr><td>Vbat (battery mV):</td><td><?php print $mupihat_data["Vbat"] ?>mV</td></tr>
+			<tr><td>Vbus (charge mV):</td><td><?php print $mupihat_data["Vbus"] ?>mV</td></tr>
+			<tr><td>Ibat (dis- / charge mA):</td><td><?php print $mupihat_data["Ibat"] ?>mA</td></tr>
+			<tr><td>IBus (charge mA):</td><td><?php print $mupihat_data["IBus"] ?>mA</td></tr>
+			<tr><td>Temp:</td><td><?php print $mupihat_data["Temp"] ?>°C</td></tr>
 			<tr><td>REG14:</td><td><?php print $mupihat_data["REG14"] ?></td></tr>
-			<tr><td>Bat_SOC:</td><td><?php print $mupihat_data["Bat_SOC"] ?></td></tr>
-			<tr><td>Bat_Stat:</td><td><?php print $mupihat_data["Bat_Stat"] ?></td></tr>
-			<tr><td>Bat_Type:</td><td><?php print $mupihat_data["Bat_Type"] ?></td></tr>
+			<tr><td>Bat_SOC (battery level):</td><td><?php print $mupihat_data["Bat_SOC"] ?></td></tr>
+			<tr><td>Bat_Stat (battery status):</td><td><?php print $mupihat_data["Bat_Stat"] ?></td></tr>
+			<tr><td>Bat_Type (battery type):</td><td><?php print $mupihat_data["Bat_Type"] ?></td></tr>
 		</table>	
    </li>
   </ul>
  </details>
- <details>
+ <details open>
   <summary><i class="fa-solid fa-battery-three-quarters"></i> Configuration</summary>
     <ul>
    <li id="li_1" >
