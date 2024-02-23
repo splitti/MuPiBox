@@ -179,16 +179,16 @@ form.appnitro, div.appnitro
   float: right;
   color: #054b61;
   text-align: center;
-  padding: 3px 3px;
+  padding: 4px 4px;
   text-decoration: none;
   font-size: 180%;
   font-weight: bold;
-  margin: 4px 4px;
+  margin: 2px 5px;
   /*margin-top: 5px;
   margin-right: 8px;*/
   font: Helvetica;
-  height: 30px;
-  width: 30px;
+  height: 31px;
+  width: 31px;
 }
 
 .controlnav iconify-icon:hover {
