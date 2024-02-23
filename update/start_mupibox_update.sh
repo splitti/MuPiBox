@@ -36,6 +36,11 @@ if [ ${RELEASE} = "dev" ]; then
 else
 	MUPI_SRC="/home/dietpi/MuPiBox-${VERSION}" >&3 2>&3
 fi
+if [ RELEASE="dev" ]; then
+	VERSION_LONG="${VERSION} [ $(curl -s "https://api.github.com/repos/splitti/MuPiBox" | jq -r '.pushed_at') ]"  >&3 2>&3
+else
+	VERSION_LONG=${VERSION}
+fi
 
 echo "==========================================================================================" >&3 2>&3
 echo "= OS:               ${OS}" >&3 2>&3
@@ -44,7 +49,7 @@ echo "= Architecture:     ${ARCH}" >&3 2>&3
 echo "= User:             ${USER}" >&3 2>&3
 echo "= Parameter:        $1" >&3 2>&3
 echo "= Release:          ${RELEASE}" >&3 2>&3
-echo "= Version:          ${VERSION}" >&3 2>&3
+echo "= Version:          ${VERSION_LONG}" >&3 2>&3
 echo "= Update-URL:       ${MUPIBOX_URL}" >&3 2>&3
 echo "= Unzip-Directory:  ${MUPI_SRC}" >&3 2>&3
 echo "==========================================================================================" >&3 2>&3
@@ -157,7 +162,7 @@ echo "==========================================================================
 
 	###############################################################################################
 
-	echo -e "XXX\n${STEP}\nDownload MuPiBox Version ${VERSION}... \nXXX"	
+	echo -e "XXX\n${STEP}\nDownload MuPiBox Version ${VERSION_LONG}... \nXXX"	
 	before=$(date +%s)
 	wget -q -O /home/dietpi/mupibox.zip ${MUPIBOX_URL} >&3 2>&3
 	after=$(date +%s)
@@ -166,7 +171,7 @@ echo "==========================================================================
 
 	###############################################################################################
 
-	echo -e "XXX\n${STEP}\nUnzip MuPiBox Version ${VERSION}... \nXXX"	
+	echo -e "XXX\n${STEP}\nUnzip MuPiBox Version ${VERSION_LONG}... \nXXX"	
 	before=$(date +%s)
 	unzip -q -d /home/dietpi /home/dietpi/mupibox.zip >&3 2>&3
 	rm /home/dietpi/mupibox.zip >&3 2>&3
@@ -474,16 +479,15 @@ echo "==========================================================================
 	/usr/local/bin/mupibox/./m3u_generator.sh >&3 2>&3
 	/usr/local/bin/mupibox/./setting_update.sh >&3 2>&3
 	service spotifyd start >&3 2>&3
-
-	DATE=$(date '+%Y-%m-%d')
-	mv ${LOG} /boot/${DATE}_update_${VERSION}.log >&3 2>&3
+	
+	mv ${LOG} /boot/$(date +%F)update_${VERSION}.log >&3 2>&3
 	chown dietpi:dietpi ${CONFIG} >&3 2>&3
 	
 	sudo -H -u dietpi bash -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && npm install" >&3 2>&3
 	sudo -H -u dietpi bash -c "pm2 start server" >&3 2>&3
 
 	CPU=$(cat /proc/cpuinfo | grep Serial | cut -d ":" -f2 | sed 's/^ //') >&3 2>&3
-	curl -X POST https://mupibox.de/mupi/ct.php -H "Content-Type: application/x-www-form-urlencoded" -d key1=${CPU} -d key2=Update -d key3="${VERSION} ${RELEASE}" -d key4="${ARCH}" -d key5="${OS}" >&3 2>&3
+	curl -X POST https://mupibox.de/mupi/ct.php -H "Content-Type: application/x-www-form-urlencoded" -d key1=${CPU} -d key2=Update -d key3="${VERSION_LONG} ${RELEASE}" -d key4="${ARCH}" -d key5="${OS}" >&3 2>&3
 
 	###############################################################################################
 	echo -e "XXX\n100\nInstallation complete, please reboot the system... \nXXX"	
@@ -491,6 +495,6 @@ echo "==========================================================================
 	sleep 5
 
 
-} | whiptail --title "MuPiBox Update ${VERSION} ${RELEASE}" --gauge "Please wait while installing" 6 60 0
+} | whiptail --title "MuPiBox Update ${VERSION_LONG} ${RELEASE}" --gauge "Please wait while installing" 6 60 0
 
 echo "Update finished - please reboot system now!"

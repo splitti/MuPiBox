@@ -242,13 +242,13 @@
 			{
 				"name": "ENERpower 2S2P 10.000mAh",
 				"config": {
-					"v_100": "7900",
-					"v_75": "7800",
-					"v_50": "7200",
-					"v_25": "6600",
-					"v_0": "6000",
-					"th_warning": "6600",
-					"th_shutdown": "6100"
+						"v_100": "8000",
+						"v_75": "7700",
+						"v_50": "7300",
+						"v_25": "6900",
+						"v_0": "6000",
+						"th_warning": "6500",
+						"th_shutdown": "6150"
 				}
 			},
 			{
@@ -264,7 +264,7 @@
 				}
 			}
 		],
-		"selected_battery": "Ansmann 2S1P"
+		"selected_battery": "ENERpower 2S2P 10.000mAh"
 	}
 }
 

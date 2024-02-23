@@ -318,7 +318,7 @@
 	exec("sudo echo i2c-dev| sudo tee -a /etc/modules");
 	exec("sudo systemctl enable mupi_hat.service");
 	exec("sudo service mupi_hat start");
-	$command = "sudo /boot/dietpi/func/dietpi-set_hardware soundcard 'hifiberry-dac'";
+	$command = "sudo /boot/dietpi/func/dietpi-set_hardware soundcard 'rpi-bcm2835-3.5mm'";
 	$change_soundcard = exec($command, $output, $change_soundcard );
 	$command = <<<'EOD'
 sudo sed -zi '/#--------MuPiHAT--------/!s/$/\n#--------MuPiHAT--------/' /boot/config.txt
