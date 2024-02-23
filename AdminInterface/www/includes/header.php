@@ -2,9 +2,6 @@
 	$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
 	$data = json_decode($string, true);
 	
-	$mupihat_file = '/tmp/mupihat.json';
-	$mupihat_state = false;
-
 	$commandSSID="sudo iwgetid -r";
 	$WIFI=exec($commandSSID);
 	$commandLQ="sudo iwconfig wlan0 | awk '/Link Quality/{split($2,a,\"=|/\");print int((a[2]/a[3])*100)\"\"}' | tr -d '%'";
@@ -26,6 +23,9 @@
 	if ($_GET['hreboot']) {
 		$reboot = 1;
 		}
+
+	$mupihat_file = '/tmp/mupihat.json';
+	$mupihat_state = false;
 	
 	if (file_exists($mupihat_file)) {
 		$mupihat_state = true;
