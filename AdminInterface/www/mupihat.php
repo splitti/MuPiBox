@@ -40,11 +40,8 @@
 <form class="appnitro" name="mupi" method="post" action="smart.php" id="form">
 <div class="description">
 <h2>MuPiHAT</h2>
-<p>Make your MuPiBox smart...</p>
+<p>Release the power of MuPi...</p>
 </div>
-
-
-
 
  <details>
   <summary><i class="fa-solid fa-circle-info"></i> Status</summary>
@@ -72,7 +69,7 @@
    <li id="li_1" >
 
                 <h2>Battery selection</h2>
-                <p>Choose your battery...</p>
+                <p>Choose your battery... work in progress</p>
 				<div>
 				<select id="battery" name="battery" class="element text medium">
 

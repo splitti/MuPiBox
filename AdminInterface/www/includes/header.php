@@ -41,7 +41,7 @@
 				$bat_icon = '<iconify-icon icon="mdi:battery-charging-70" title="' . $mupihat_data["Charger_Status"] . " / " . $mupihat_data["Vbat"] . 'mV"></iconify-icon>';
 			}
 			elseif ($mupihat_data["Bat_SOC"] == "50%") {
-				$bat_icon = '<iconify-icon icon="mdi:battery-charging-50"> title="' . $mupihat_data["Charger_Status"] . " / " . $mupihat_data["Vbat"] . 'mV"</iconify-icon>';
+				$bat_icon = '<iconify-icon icon="mdi:battery-charging-50" title="' . $mupihat_data["Charger_Status"] . " / " . $mupihat_data["Vbat"] . 'mV"></iconify-icon>';
 			}
 			elseif ($mupihat_data["Bat_SOC"] == "25%") {
 				$bat_icon = '<iconify-icon icon="mdi:battery-charging-20" title="' . $mupihat_data["Charger_Status"] . " / " . $mupihat_data["Vbat"] . 'mV"></iconify-icon>';
