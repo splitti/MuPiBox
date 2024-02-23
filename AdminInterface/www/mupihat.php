@@ -43,18 +43,18 @@
 <p>Release the power of MuPi...</p>
 </div>
 
- <details>
+ <details open>
   <summary><i class="fa-solid fa-circle-info"></i> Status</summary>
     <ul>
    <li id="li_1" >
 		<h2>Battery Status</h2>
 		<table class="version">
-			<tr><td>Charger_Status:</td><td><?php print $mupihat_data["Charger_Status"] ?></td></tr>
+			<tr><td>Charger status:</td><td><?php print $mupihat_data["Charger_Status"] ?></td></tr>
 			<tr><td>Vbat (battery mV):</td><td><?php print $mupihat_data["Vbat"] ?>mV</td></tr>
-			<tr><td>Vbus (charge mV):</td><td><?php print $mupihat_data["Vbus"] ?>mV</td></tr>
+			<tr><td>Vbus (charger mV):</td><td><?php print $mupihat_data["Vbus"] ?>mV</td></tr>
 			<tr><td>Ibat (dis- / charge mA):</td><td><?php print $mupihat_data["Ibat"] ?>mA</td></tr>
-			<tr><td>IBus (charge mA):</td><td><?php print $mupihat_data["IBus"] ?>mA</td></tr>
-			<tr><td>Temp:</td><td><?php print $mupihat_data["Temp"] ?>°C</td></tr>
+			<tr><td>IBus (charger mA):</td><td><?php print $mupihat_data["IBus"] ?>mA</td></tr>
+			<tr><td>Temperature:</td><td><?php print $mupihat_data["Temp"] ?>°C</td></tr>
 			<tr><td>REG14:</td><td><?php print $mupihat_data["REG14"] ?></td></tr>
 			<tr><td>Bat_SOC (battery level):</td><td><?php print $mupihat_data["Bat_SOC"] ?></td></tr>
 			<tr><td>Bat_Stat (battery status):</td><td><?php print $mupihat_data["Bat_Stat"] ?></td></tr>
