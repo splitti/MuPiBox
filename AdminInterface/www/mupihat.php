@@ -36,7 +36,33 @@
 	$CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 ?>
 
+<script>
+	// Funktion für die AJAX-Anfrage
+	function updateTable() {
+		var xhttp = new XMLHttpRequest();
+		xhttp.onreadystatechange = function() {
+			if (this.readyState == 4 && this.status == 200) {
+				// Parse JSON-Daten in ein JavaScript-Objekt
+				var mupihatData = JSON.parse(this.responseText);
+				
+				// Fülle die Tabelle mit den erhaltenen Daten
+				document.getElementById("Charger_Status").innerText = mupihatData.Charger_Status;
+				document.getElementById("Vbat").innerText = mupihatData.Vbat + "mV";
+				document.getElementById("Vbus").innerText = mupihatData.Vbus + "mV";
+				document.getElementById("Ibat").innerText = mupihatData.Ibat + "mA";
+				document.getElementById("IBus").innerText = mupihatData.IBus + "mA";
+				document.getElementById("Temp").innerText = mupihatData.Temp + "°C";
+				document.getElementById("REG14").innerText = mupihatData.REG14;
+				document.getElementById("Bat_SOC").innerText = mupihatData.Bat_SOC;
+				document.getElementById("Bat_Stat").innerText = mupihatData.Bat_Stat;
+				document.getElementById("Bat_Type").innerText = mupihatData.Bat_Type;
+			}
+		};
+		xhttp.open("GET", "update_mupihattable.php", true); // Passe den Pfad zur Serverseite an
+		xhttp.send();
+	}
 
+</script>	
 <form class="appnitro" name="mupi" method="post" action="smart.php" id="form">
 <div class="description">
 <h2>MuPiHAT</h2>
@@ -49,17 +75,17 @@
    <li id="li_1" >
 		<h2>Battery Status</h2>
 		<table class="version">
-			<tr><td>Charger status:</td><td><?php print $mupihat_data["Charger_Status"] ?></td></tr>
-			<tr><td>Vbat (battery mV):</td><td><?php print $mupihat_data["Vbat"] ?>mV</td></tr>
-			<tr><td>Vbus (charger mV):</td><td><?php print $mupihat_data["Vbus"] ?>mV</td></tr>
-			<tr><td>Ibat (dis- / charge mA):</td><td><?php print $mupihat_data["Ibat"] ?>mA</td></tr>
-			<tr><td>IBus (charger mA):</td><td><?php print $mupihat_data["IBus"] ?>mA</td></tr>
-			<tr><td>Temperature:</td><td><?php print $mupihat_data["Temp"] ?>°C</td></tr>
-			<tr><td>REG14:</td><td><?php print $mupihat_data["REG14"] ?></td></tr>
-			<tr><td>Bat_SOC (battery level):</td><td><?php print $mupihat_data["Bat_SOC"] ?></td></tr>
-			<tr><td>Bat_Stat (battery status):</td><td><?php print $mupihat_data["Bat_Stat"] ?></td></tr>
-			<tr><td>Bat_Type (battery type):</td><td><?php print $mupihat_data["Bat_Type"] ?></td></tr>
-		</table>	
+			<tr><td>Charger status:</td><td id="Charger_Status"></td></tr>
+			<tr><td>Vbat (battery mV):</td><td id="Vbat"></td></tr>
+			<tr><td>Vbus (charger mV):</td><td id="Vbus"></td></tr>
+			<tr><td>Ibat (dis- / charge mA):</td><td id="Ibat"></td></tr>
+			<tr><td>IBus (charger mA):</td><td id="IBus"></td></tr>
+			<tr><td>Temperature:</td><td id="Temp"></td></tr>
+			<tr><td>REG14:</td><td id="REG14"></td></tr>
+			<tr><td>Bat_SOC (battery level):</td><td id="Bat_SOC"></td></tr>
+			<tr><td>Bat_Stat (battery status):</td><td id="Bat_Stat"></td></tr>
+			<tr><td>Bat_Type (battery type):</td><td id="Bat_Type"></td></tr>
+		</table>
    </li>
   </ul>
  </details>
@@ -94,7 +120,11 @@
   </ul>
  </details>
 </form><p>
-
+<script>
+    // Funktionsaufruf, um die Tabelle beim Laden der Seite und dann alle 5 Sekunden zu aktualisieren
+    updateTable(); // Ruft die Funktion zuerst auf, um die Tabelle beim Laden der Seite zu aktualisieren
+    setInterval(updateTable, 5000); // Ruft die Funktion alle 5 Sekunden auf
+</script>
 <?php
  include ('includes/footer.php');
 ?>

@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <?php
 	$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
 	$data = json_decode($string, true);
