@@ -74,6 +74,7 @@
     <ul>
    <li id="li_1" >
 		<h2>Battery Status</h2>
+        <p>Will be refreshed in 5 second interval...</p>
 		<table class="version">
 			<tr><td>Charger status:</td><td id="Charger_Status"></td></tr>
 			<tr><td>Vbat (battery mV):</td><td id="Vbat"></td></tr>

@@ -24,50 +24,11 @@
 	if ($_GET['hreboot']) {
 		$reboot = 1;
 		}
-
+		
 	$mupihat_file = '/tmp/mupihat.json';
 	$mupihat_state = false;
-	
 	if (file_exists($mupihat_file)) {
 		$mupihat_state = true;
-		$string = file_get_contents($mupihat_file, true);
-		$mupihat_data = json_decode($string, true);
-
-		$bat_icon ='';
-		if ($mupihat_data["Charger_Status"] != "Not Charging") {
-			if ($mupihat_data["Bat_SOC"] == "100%") {
-				$bat_icon = '<iconify-icon icon="mdi:battery-charging-100" title="' . $mupihat_data["Charger_Status"] . " / " . $mupihat_data["Vbat"] . 'mV"></iconify-icon>';
-			}
-			elseif ($mupihat_data["Bat_SOC"] == "75%") {
-				$bat_icon = '<iconify-icon icon="mdi:battery-charging-70" title="' . $mupihat_data["Charger_Status"] . " / " . $mupihat_data["Vbat"] . 'mV"></iconify-icon>';
-			}
-			elseif ($mupihat_data["Bat_SOC"] == "50%") {
-				$bat_icon = '<iconify-icon icon="mdi:battery-charging-50" title="' . $mupihat_data["Charger_Status"] . " / " . $mupihat_data["Vbat"] . 'mV"></iconify-icon>';
-			}
-			elseif ($mupihat_data["Bat_SOC"] == "25%") {
-				$bat_icon = '<iconify-icon icon="mdi:battery-charging-20" title="' . $mupihat_data["Charger_Status"] . " / " . $mupihat_data["Vbat"] . 'mV"></iconify-icon>';
-			}
-			else {
-				$bat_icon = '<iconify-icon icon="mdi:battery-charging-outline" title="' . $mupihat_data["Charger_Status"] . " / " . $mupihat_data["Vbat"] . 'mV"></iconify-icon>';
-			}
-		}
-		else {
-			if ($mupihat_data["Bat_SOC"] == "100%") {
-				$bat_icon = '<iconify-icon icon="mdi:battery" title="' . $mupihat_data["Charger_Status"] . " / " . $mupihat_data["Vbat"] . 'mV"></iconify-icon>';
-			}
-			elseif ($mupihat_data["Bat_SOC"] == "75%") {
-				$bat_icon = '<iconify-icon icon="mdi:battery-70" title="' . $mupihat_data["Charger_Status"] . " / " . $mupihat_data["Vbat"] . 'mV"></iconify-icon>';
-			}
-			elseif ($mupihat_data["Bat_SOC"] == "50%") {
-				$bat_icon = '<iconify-icon icon="mdi:battery-50" title="' . $mupihat_data["Charger_Status"] . " / " . $mupihat_data["Vbat"] . 'mV"></iconify-icon>';
-			}
-			elseif ($mupihat_data["Bat_SOC"] == "25%") {
-				$bat_icon = '<iconify-icon icon="mdi:battery-20" title="' . $mupihat_data["Charger_Status"] . " / " . $mupihat_data["Vbat"] . 'mV"></iconify-icon>';
-			}
-			else {
-				$bat_icon = '<iconify-icon icon="mdi:battery-outline" title="' . $mupihat_data["Charger_Status"] . " / " . $mupihat_data["Vbat"] . 'mV"></iconify-icon>';
-			}
-		}
 	}
 ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -91,9 +52,8 @@
 		<img id="top" src="images/top.png" alt="">	
 		<div id="container">
 			<div class="controlnav" id="controlnav">
-				<?php
-					print $wifi_icon . $bat_icon;
-				?>
+				<div id="Wifi_Icon"> </div>
+				<div id="Battery_Icon"> </div>
 				<a href="?hshutdown=1" onclick="return confirm('Do really want to shutdown?')"><iconify-icon icon="ic:outline-power-settings-new" title="Shutdown" ></iconify-icon></a>
 				<a href="?hreboot=1" onclick="return confirm('Do really want to reboot?')"><iconify-icon icon="ic:outline-restart-alt" title="Reboot" ></iconify-icon></a>
 			</div>

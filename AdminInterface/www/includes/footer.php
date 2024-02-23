@@ -29,6 +29,53 @@
 		print '<div class="lightbox"><div class="iframeContainer"><div class="toolbarLB"><div class="closeLB" onclick="lightBoxClose()"><div class="closeLBSym">+</div></div></div><p>'.$CHANGE_TXT.'DONE</p></div></div>';
 		} 
 ?>
+<script>
+    // Funktion für die AJAX-Anfrage
+    function updateWIFIIcon() {
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+            if (this.readyState == 4 && this.status == 200) {
+                // Empfangene Daten verarbeiten
+                var bat_icon = this.responseText;
+                
+                // Batterie-Symbol in das Charger_Status-Div einfügen
+                document.getElementById("Wifi_Icon").innerHTML = bat_icon;
+            }
+        };
+        xhttp.open("GET", "update_wifiicon.php", true); // Passe den Pfad zur Serverseite an
+        xhttp.send();
+    }
+
+	updateWIFIIcon();
+    // Die Funktion alle 5 Sekunden aufrufen, um das Batteriesymbol zu aktualisieren
+    setInterval(function() {
+        updateWIFIIcon();
+    }, 3000); // 5000 Millisekunden entsprechen 5 Sekunden
+
+
+    // Funktion für die AJAX-Anfrage
+    function updateBatteryIcon() {
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+            if (this.readyState == 4 && this.status == 200) {
+                // Empfangene Daten verarbeiten
+                var bat_icon = this.responseText;
+                
+                // Batterie-Symbol in das Charger_Status-Div einfügen
+                document.getElementById("Battery_Icon").innerHTML = bat_icon;
+            }
+        };
+        xhttp.open("GET", "update_batteryicon.php", true); // Passe den Pfad zur Serverseite an
+        xhttp.send();
+    }
+
+	updateBatteryIcon();
+    // Die Funktion alle 5 Sekunden aufrufen, um das Batteriesymbol zu aktualisieren
+    setInterval(function() {
+        updateBatteryIcon();
+    }, 5000); // 5000 Millisekunden entsprechen 5 Sekunden
+</script>
+
 	</body>
 </html>
 
