@@ -37,9 +37,9 @@ else
 	MUPI_SRC="/home/dietpi/MuPiBox-${VERSION}" >&3 2>&3
 fi
 if [ RELEASE="dev" ]; then
-	VERSION_LONG="${VERSION} [ $(curl -s "https://api.github.com/repos/splitti/MuPiBox" | jq -r '.pushed_at') ]"  >&3 2>&3
+	VERSION_LONG="DEV $(curl -s "https://api.github.com/repos/splitti/MuPiBox" | jq -r '.pushed_at' | cut -d'T' -f1)"  >&3 2>&3
 else
-	VERSION_LONG=${VERSION}
+	VERSION_LONG="${VERSION} ${RELEASE}"
 fi
 
 echo "==========================================================================================" >&3 2>&3
@@ -480,14 +480,14 @@ echo "==========================================================================
 	/usr/local/bin/mupibox/./setting_update.sh >&3 2>&3
 	service spotifyd start >&3 2>&3
 	
-	mv ${LOG} /boot/$(date +%F)update_${VERSION}.log >&3 2>&3
+	mv ${LOG} /boot/$(date +%F)_update_${VERSION}.log >&3 2>&3
 	chown dietpi:dietpi ${CONFIG} >&3 2>&3
 	
 	sudo -H -u dietpi bash -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && npm install" >&3 2>&3
 	sudo -H -u dietpi bash -c "pm2 start server" >&3 2>&3
 
 	CPU=$(cat /proc/cpuinfo | grep Serial | cut -d ":" -f2 | sed 's/^ //') >&3 2>&3
-	curl -X POST https://mupibox.de/mupi/ct.php -H "Content-Type: application/x-www-form-urlencoded" -d key1=${CPU} -d key2=Update -d key3="${VERSION_LONG} ${RELEASE}" -d key4="${ARCH}" -d key5="${OS}" >&3 2>&3
+	curl -X POST https://mupibox.de/mupi/ct.php -H "Content-Type: application/x-www-form-urlencoded" -d key1=${CPU} -d key2=Update -d key3="${VERSION_LONG}" -d key4="${ARCH}" -d key5="${OS}" >&3 2>&3
 
 	###############################################################################################
 	echo -e "XXX\n100\nInstallation complete, please reboot the system... \nXXX"	
@@ -495,6 +495,6 @@ echo "==========================================================================
 	sleep 5
 
 
-} | whiptail --title "MuPiBox Update ${VERSION_LONG} ${RELEASE}" --gauge "Please wait while installing" 6 60 0
+} | whiptail --title "MuPiBox Update ${VERSION_LONG}" --gauge "Please wait while installing" 6 60 0
 
 echo "Update finished - please reboot system now!"
