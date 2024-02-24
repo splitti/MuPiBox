@@ -428,7 +428,11 @@
 						</tr>
 						<tr>
 								<td>Development</td>
-								<td><?php print $dataonline["release"]["dev"][count($dataonline["release"]["dev"])-1]["version"]; ?></td>
+								<td><?php
+											exec("echo $(sudo curl -s 'https://api.github.com/repos/splitti/MuPiBox' | jq -r '.pushed_at' | cut -d'T' -f1)", $devversion, $rc);
+											print "DEV " . $devversion[0];
+									?>
+								 </td>
 								<td><?php print $dataonline["release"]["dev"][count($dataonline["release"]["dev"])-1]["releaseinfo"]; ?></td>
 								<td>
 								<input type="hidden" name="update_url" value="<?php print $dataonline["release"]["dev"][count($dataonline["release"]["dev"])-1]["url"]; ?>" />
@@ -436,9 +440,6 @@
 								<input type="hidden" name="update_version" value="<?php print $dataonline["release"]["dev"][count($dataonline["release"]["dev"])-1]["version"]; ?>"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
 								<input id="saveForm" class="button_text_red" type="submit" name="mupibox_update_dev" value="Update to version <?php print $dataonline["release"]["dev"][count($dataonline["release"]["dev"])-1]["version"]; ?>"  onclick="return confirm('Do really want to Update the MuPiBox?');" />
 								</td>
-
-
-
 						</tr>
 					</table>
 				</p>
