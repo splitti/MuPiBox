@@ -17,6 +17,8 @@ import json
 from time import sleep
 from gpiozero import PWMLED
 
+DEFAULT_PWM_FREQUENCY = 1000
+
 
 def read_json():
     try:
@@ -79,7 +81,9 @@ if __name__ == "__main__":
     JSON_DATA_FILE = "/tmp/.power_led"
     while JSON_DATA == "skip":
         JSON_DATA = read_json()
-    POWER_LED = PWMLED(JSON_DATA["led_gpio"], frequency=1000)
+        
+    pwm_frequency = int(JSON_DATA.get("pwm_frequency", DEFAULT_PWM_FREQUENCY))    
+    POWER_LED = PWMLED(JSON_DATA["led_gpio"], frequency=pwm_frequency)
     init()
     signal.signal(signal.SIGTERM, sigterm_handler)
     main()

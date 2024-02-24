@@ -156,7 +156,7 @@ class bq25792:
                 if bt["name"] == selected_battery_name:
                     self.battery_conf = bt["config"]
                     self.battery_conf["battery_type"] = selected_battery_name
-                    #print(json.dumps(self.battery_conf, indent=4))
+                    print(json.dumps(self.battery_conf, indent=4))
                     break            
             return 0
         except Exception as _error:

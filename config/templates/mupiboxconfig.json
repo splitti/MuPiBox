@@ -126,8 +126,8 @@
 			],
 		"AudioDevices": [
 			{
-				"tname": "mupihat",
-				"ufname": "MuPiHat for MuPiBox"
+				"tname": "MAX98357A bcm2835-i2s-HiFi HiFi-0",
+				"ufname": "MAX98357A bcm2835-i2s-HiFi HiFi-0"
 			},
 			{
 				"tname": "rpi-bcm2835-3.5mm",
