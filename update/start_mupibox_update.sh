@@ -468,7 +468,7 @@ echo "==========================================================================
 	
 	echo -e "XXX\n${STEP}\nFinalizing setup... \nXXX"
 	#cp ${CONFIG} ${CONFIG}_backup  >&3 2>&3
-	/usr/bin/cat <<< $(/usr/bin/jq --arg v "${VERSION}" '.mupibox.version = $v' ${CONFIG}) >  ${CONFIG}
+	/usr/bin/cat <<< $(/usr/bin/jq --arg v "${VERSION}" '.mupibox.version = $v' ${CONFIG_LONG}) >  ${CONFIG}
 	chmod 775 ${CONFIG}
 	#systemctl start mupi_idle_shutdown.service >&3 2>&3
 	rm /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/network.json >&3 2>&3
