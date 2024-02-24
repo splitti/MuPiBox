@@ -33,7 +33,6 @@ import smbus2
 import sys
 import time
 import json
-import yaml
 
 class bq25792:
     """ 
@@ -60,7 +59,7 @@ class bq25792:
         
     """
      # constructor method
-    def __init__(self, i2c_device=1, i2c_addr=0x6b, busWS_ms=10, exit_on_error = False, battery_conf_file="mupihat_battery_conf.yml"):
+    def __init__(self, i2c_device=1, i2c_addr=0x6b, busWS_ms=10, exit_on_error = False, battery_conf_file="/etc/mupibox/mupiboxconfig.json"):
         try:
             self.battery_conf_file = battery_conf_file
             self.battery_conf = {'battery_type' : "Default",
@@ -148,16 +147,25 @@ class bq25792:
         load the battery configuration from yaml file
         '''
         try:
-            with open(self.battery_conf_file) as f:
-                content = f.read()
-            self.battery_conf = yaml.load(content, Loader=yaml.FullLoader)
+            self.battery_conf = None
+            with open(self.battery_conf_file) as file:
+                config = json.load(file)
+            
+            selected_battery_name = config["mupihat"]["selected_battery"]
+            for bt in config["mupihat"]["battery_types"]:
+                if bt["name"] == selected_battery_name:
+                    self.battery_conf = bt["config"]
+                    self.battery_conf["battery_type"] = selected_battery_name
+                    #print(json.dumps(self.battery_conf, indent=4))
+                    break            
             return 0
         except Exception as _error:
-            sys.stderr.write('battery_conf_load from YAML failed, use standard configuration, %s\n' % str(_error))
+            sys.stderr.write('battery_conf_load from JSON failed, use standard configuration, %s\n' % str(_error))
             if self._exit_on_error: sys.exit(1)
             return -1
         finally:
             pass
+
     def battery_soc(self):
         '''
         Description
