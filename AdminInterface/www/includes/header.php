@@ -17,7 +17,6 @@
 		$wifi_icon='<iconify-icon icon="material-symbols:wifi-1-bar-sharp" title="SSID: ' . $WIFI . ' / Signal Quality: ' . $LINKQ . '%"></iconify-icon>';
 	}
 	
-
 	if ($_GET['hshutdown']) {
 		$shutdown = 1;
 		}

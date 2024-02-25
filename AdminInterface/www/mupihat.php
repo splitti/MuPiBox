@@ -2,7 +2,41 @@
 	$change=0;
 	$CHANGE_TXT="<div id='lbinfo'><ul id='lbinfo'>";
 	include ('includes/header.php');
+
+	if( $_POST['activate_the_hat'] )
+		{
+			if($_POST['mupihat_active'])
+				{
+				$data["mupihat"]["hat_active"] = true;
+				exec("sudo /usr/local/bin/mupibox/./enable_mupihat.sh");
+				$CHANGE_TXT=$CHANGE_TXT."<li>MuPiHAT is active now - sound card set to MAX98357A bcm2835-i2s-HiFi HiFi-0</li>";
+				$change=4;
+				
+				}
+			else
+				{
+				$data["mupihat"]["hat_active"] = false;
+				exec("sudo /usr/local/bin/mupibox/./disable_mupihat.sh");
+				$CHANGE_TXT=$CHANGE_TXT."<li>MuPiHAT is deactivated - - sound card set to Onboard 3.5mm output</li>";
+				$change=4;
+				}
+		}
 	
+	if( $_POST['save_battery'] )
+		{
+		$data["mupihat"]["selected_battery"] = $_POST['battery'];
+		if($data["mupihat"]["hat_active"])
+			{
+			$change=5;
+			$CHANGE_TXT=$CHANGE_TXT."<li>New battery " . $_POST['battery'] . " settings are active</li>";
+			}
+		else
+			{
+			$change=4;
+			$CHANGE_TXT=$CHANGE_TXT."<li>New battery " . $_POST['battery'] . " settings are saved</li>";
+			}
+		}
+
 	if( $change == 1 )
 		{
 		$json_object = json_encode($data);
@@ -32,6 +66,13 @@
 		$json_object = json_encode($data);
 		$save_rc = file_put_contents('/tmp/.mupiboxconfig.json', $json_object);
 		exec("sudo mv /tmp/.mupiboxconfig.json /etc/mupibox/mupiboxconfig.json");
+		}
+	if( $change == 5 )
+		{
+		$json_object = json_encode($data);
+		$save_rc = file_put_contents('/tmp/.mupiboxconfig.json', $json_object);
+		exec("sudo mv /tmp/.mupiboxconfig.json /etc/mupibox/mupiboxconfig.json");
+		exec("sudo service mupi_hat restart");
 		}
 	$CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 ?>
@@ -68,7 +109,9 @@
 <h2>MuPiHAT</h2>
 <p>Release the power of MuPi...</p>
 </div>
-
+<?php
+	if( $mupihat_state ) {
+?>
  <details open>
   <summary><i class="fa-solid fa-circle-info"></i> Status</summary>
     <ul>
@@ -90,33 +133,55 @@
    </li>
   </ul>
  </details>
+<?php
+}
+ ?>
  <details open>
   <summary><i class="fa-solid fa-battery-three-quarters"></i> Configuration</summary>
     <ul>
    <li id="li_1" >
+	<h2>MuPiHAT activation</h2>
+	<p>Choose your battery... work in progress</p>
+	<label class="labelchecked" for="telegram_active">MuPiHAT activation state:&nbsp; &nbsp; <input type="checkbox" id="mupihat_active"  name="mupihat_active" <?php
+	if( $data["mupihat"]["hat_active"] )
+		{
+		print "checked";
+		}
+?> /></label></div>
+	<input id="saveForm" class="button_text" type="submit" name="activate_the_hat" value="Save" />
+	</li>
 
-                <h2>Battery selection</h2>
-                <p>Choose your battery... work in progress</p>
-				<div>
-				<select id="battery" name="battery" class="element text medium">
+
+   <li id="li_1" >
+	<h2>Battery selection</h2>
+	<p>Choose your battery... work in progress</p>
+	<div>
+	<select id="battery" name="battery" class="element text medium">
 
 
-				<?php
-				$batterys = $data["mupihat"]["battery_types"];
-				foreach($batterys as $battery) {
-				if( $battery['name'] == $data["mupihat"]["selected_battery"] )
-				{
-				$selected = " selected=\"selected\"";
-				}
-				else
-				{
-				$selected = "";
-				}
-				print "<option value=\"". $battery['name'] . "\"" . $selected  . ">" . $battery['name'] . "</option>";
-				}
-				?>
-				</select></div>
-
+	<?php
+	$batterys = $data["mupihat"]["battery_types"];
+	foreach($batterys as $battery) {
+	if( $battery['name'] == $data["mupihat"]["selected_battery"] )
+	{
+	$selected = " selected=\"selected\"";
+	}
+	else
+	{
+	$selected = "";
+	}
+	print "<option value=\"". $battery['name'] . "\"" . $selected  . ">" . $battery['name'] . "</option>";
+	}
+	?>
+	<input id="saveForm" class="button_text" type="submit" name="save_battery" value="Save" />
+	</select></div>
+   </li>
+   <li id="li_1" >
+	<h2>Custom battery</h2>
+	<p>Configure your own battery...</p>
+	<div>
+	Work in progress...
+	</div>
    </li>
   </ul>
  </details>
