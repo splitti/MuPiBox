@@ -983,9 +983,13 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				<div>
 				<select id="audio" name="audio" class="element text medium">
 				<?php
+				$bash_command = "sed -n '/^[[:blank:]]*CONFIG_SOUNDCARD=/{s/^[^=]*=//p;q}' /boot/dietpi.txt";
+
+				// Führe den Bash-Befehl aus und speichere das Ergebnis in der Variablen $output
+				$output = exec($bash_command);
 				$audio = $data["mupibox"]["AudioDevices"];
 				foreach($audio as $key) {
-				if( $key['tname'] == $data["mupibox"]["physicalDevice"] )
+				if( strtolower($key['tname']) == strtolower($output) )
 				{
 				$selected = " selected=\"selected\"";
 				}

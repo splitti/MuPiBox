@@ -1,9 +1,0 @@
-# Battery Config for MuPiHAT Estimation of State-of-Charge
-battery_type : "Ansmann 2S1P"
-v_100: 8100
-v_75: 7800
-v_50: 7400
-v_25: 7000
-v_0: 6700
-th_warning: 7000
-th_shutdown: 6800 

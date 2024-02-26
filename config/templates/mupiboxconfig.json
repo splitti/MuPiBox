@@ -138,6 +138,46 @@
 				"ufname": "Onboard HDMI output"
 			},
 			{
+				"tname": "allo-boss-dac-pcm512x-audio",
+				"ufname": "Allo Boss DAC"
+			},
+			{
+				"tname": "allo-boss2-dac-audio",
+				"ufname": "Allo Boss2 DAC"
+			},
+			{
+				"tname": "allo-digione",
+				"ufname": "Allo DigiOne"
+			},
+			{
+				"tname": "allo-katana-dac-audio",
+				"ufname": "Allo Katana DAC"
+			},
+			{
+				"tname": "allo-piano-dac-pcm512x-audio",
+				"ufname": "Allo Piano DAC"
+			},
+			{
+				"tname": "allo-piano-dac-plus-pcm512x-audio",
+				"ufname": "Allo Piano DAC 2.1"
+			},
+			{
+				"tname": "applepi-dac",
+				"ufname": "ApplePi DAC (Orchard Audio)"
+			},
+			{
+				"tname": "dionaudio-loco",
+				"ufname": "Dion Audio LOCO"
+			},
+			{
+				"tname": "dionaudio-loco-v2",
+				"ufname": "Dion Audio LOCO V2"
+			},
+			{
+				"tname": "googlevoicehat-soundcard",
+				"ufname": "Google AIY voice kit"
+			},
+			{
 				"tname": "hifiberry-amp",
 				"ufname": "HifiBerry AMP / AMP+"
 			},
@@ -148,6 +188,50 @@
 			{
 				"tname": "hifiberry-dacplus",
 				"ufname": "HifiBerry DAC+ / DAC+ Pro / AMP2"
+			},
+			{
+				"tname": "hifiberry-dacplusadc",
+				"ufname": "HifiBerry DAC+ADC"
+			},
+			{
+				"tname": "hifiberry-dacplusadcpro",
+				"ufname": "HifiBerry DAC+ADC Pro"
+			},
+			{
+				"tname": "hifiberry-dacplusdsp",
+				"ufname": "HifiBerry DAC+DSP"
+			},
+			{
+				"tname": "hifiberry-dacplushd",
+				"ufname": "HifiBerry DAC+ HD"
+			},
+			{
+				"tname": "hifiberry-digi",
+				"ufname": "HifiBerry Digi / Digi+"
+			},
+			{
+				"tname": "hifiberry-digi-pro",
+				"ufname": "HifiBerry Digi+ Pro"
+			},
+			{
+				"tname": "i-sabre-q2m",
+				"ufname": "AudioPhonics I-Sabre ES9028Q2M / ES9038Q2M"
+			},
+			{
+				"tname": "iqaudio-codec",
+				"ufname": "IQaudIO Pi-Codec HAT"
+			},
+			{
+				"tname": "iqaudio-dac",
+				"ufname": "IQaudIO DAC audio card"
+			},
+			{
+				"tname": "iqaudio-dacplus",
+				"ufname": "Pi-DAC+, Pi-DACZero, Pi-DAC+ Pro, Pi-DigiAMP+"
+			},
+			{
+				"tname": "iqaudio-digi-wm8804-audio",
+				"ufname": "Pi-Digi+"
 			},
 			{
 				"tname": "usb-dac",

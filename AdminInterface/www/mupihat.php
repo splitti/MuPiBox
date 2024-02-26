@@ -170,7 +170,7 @@
     <ul>
    <li id="li_1" >
 	<h2>MuPiHAT activation</h2>
-	<p>This setting activates the MuPiHAT including the sound card. The MuPiBox restarts after the change.</p>
+	<p>This setting activates the MuPiHAT including the soundcard. The MuPiBox restarts after the change.</p>
 	<label class="labelchecked" for="telegram_active">MuPiHAT activation state:&nbsp; &nbsp; <input type="checkbox" id="mupihat_active"  name="mupihat_active" <?php
 	if( $data["mupihat"]["hat_active"] )
 		{
@@ -183,7 +183,7 @@
 
    <li id="li_1" >
 	<h2>Battery selection</h2>
-	<p>Choose your battery... work in progress</p>
+	<p>Choose your battery...</p>
 	<div>
 	<select id="battery" name="battery" class="element text medium">
 
@@ -264,21 +264,12 @@
 		</div>
 	<input id="saveForm" class="button_text" type="submit" name="save_custom" value="Save" />
 
-	</div>
    </li>
   </ul>
  </details>
 </form><p>
 <script>
-	function validateForm() {
-		var input = document.getElementById('v_100').value;
-		// Überprüfen, ob die Eingabe eine Zahl im vierstelligen Bereich ist
-		if (!(/^\d{4}$/.test(input))) {
-			alert("Bitte geben Sie eine vierstellige Zahl ein.");
-			return false; // das Formular wird nicht abgeschickt
-		}
-		return true; // das Formular wird abgeschickt
-	}
+
     // Funktionsaufruf, um die Tabelle beim Laden der Seite und dann alle 5 Sekunden zu aktualisieren
     updateTable(); // Ruft die Funktion zuerst auf, um die Tabelle beim Laden der Seite zu aktualisieren
     setInterval(updateTable, 5000); // Ruft die Funktion alle 5 Sekunden auf
