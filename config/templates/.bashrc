@@ -128,6 +128,7 @@ function mupi-info() {
 	unset OS
 	unset RASPI
 }
+
 function json-live() {
 	watch -c -n1 "cat $1 | jq -r -C"
 	}
@@ -185,25 +186,4 @@ export EDITOR=nano
 export VISUAL=nano
 
 export PS1="\[\e[38;5;226m\]\u\[\e[38;5;160m\]@\[\e[38;5;46m\]\h \[\e[38;5;14m\]\w \[\033[0m\]$ "
-
-OS=$(source /etc/os-release ; echo $PRETTY_NAME)
-RASPI=$(cat /sys/firmware/devicetree/base/model | tr -d '\0' )
 clear
-echo -e "${On_IRed}   ${On_IYellow}   ${On_IGreen}   ${On_IBlue}   ${On_ICyan}   ${On_IPurple}   ${On_IRed}   ${On_IYellow}   ${On_IGreen}   ${On_IBlue}   ${On_ICyan}   ${On_IPurple}   ${On_IRed}   ${On_IYellow}   ${On_IGreen}   ${On_IBlue}   ${On_ICyan}   ${On_IPurple}   ${Color_Off}"
-echo -e "  ${BCyan}Hostname:         ${BIGreen}$(hostname)${Color_Off}"
-echo -e "  ${BCyan}User:             ${BIGreen}$(whoami)${Color_Off}"
-echo -e "  ${BCyan}IP-Address:       ${BIGreen}$(hostname -I)${Color_Off}"
-echo -e "  ${BCyan}OS:               ${BIGreen}${OS}${Color_Off}"
-echo -e "  ${BCyan}RasPi:            ${BIGreen}${RASPI}${Color_Off}"
-echo -e "  ${BCyan}Architecture:     ${BIGreen}$(uname -m)${Color_Off}"
-echo -e "  ${BCyan}MuPiBox-Version:  ${BIGreen}$(cat /etc/mupibox/mupiboxconfig.json | jq -r .mupibox.version)${Color_Off}"
-echo -e "${Color_Off}"
-echo -e "  ${BCyan}Admin-UI:         ${BIYellow}http://$(hostname)${Color_Off}"
-echo -e "  ${BCyan}Web-UI:           ${BIYellow}http://$(hostname):8200${Color_Off}"
-echo -e "${Color_Off}"
-echo -e "  ${BCyan}visit MuPiBox:    ${BIPurple}https://mupibox.de${Color_Off}"
-echo -e "  ${BCyan}Latest-Version:   ${BIPurple}$(curl --max-time 5 -s https://raw.githubusercontent.com/splitti/MuPiBox/main/version.json | jq -r .release.stable[-1].version)${Color_Off}"
-echo -e "${On_IRed}   ${On_IYellow}   ${On_IGreen}   ${On_IBlue}   ${On_ICyan}   ${On_IPurple}   ${On_IRed}   ${On_IYellow}   ${On_IGreen}   ${On_IBlue}   ${On_ICyan}   ${On_IPurple}   ${On_IRed}   ${On_IYellow}   ${On_IGreen}   ${On_IBlue}   ${On_ICyan}   ${On_IPurple}   ${Color_Off}"
-echo -e "${Color_Off}"
-unset OS
-unset RASPI

@@ -32,6 +32,7 @@ We will focus on <b>bookworm</b> and recommend you to update, or reinstall. See 
 <li id='linews' class='linews'>New: redesigned LED-Control</li>
 <li id='linews' class='linews'>New: Header in admin-interface (HAT-Status, Wifi-Link-Quality, reboot and shutdown</li>
 <li id='linews' class='linews'>New: run_once.sh - Script to do some things at startup.</li>
+<li id='linews' class='linews'>New: Standard audio devices in selection.</li>
 <li id='linews' class='linews'>Bugfix: new Spotifyd Version --> less Spotify problems</li>
 <li id='linews' class='linews'>Bugfix: Theme cannot be set</li>
 <li id='linews' class='linews'>Bugfix: Fixing bluetooth problems</li>
