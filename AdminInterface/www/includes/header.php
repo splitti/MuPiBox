@@ -68,13 +68,7 @@
 	}
 ?>
 				<a href="mupi.php"><i class="fa-solid fa-headphones"></i> MuPi-Conf</a>
-				<?php
-				if ($mupihat_state) {
-				?>
-					<a href="mupihat.php"><i class="fa-solid fa-hat-wizard"></i> MuPiHAT</a>
-				<?php
-				}
-				?>
+				<a href="mupihat.php"><i class="fa-solid fa-hat-wizard"></i> MuPiHAT</a>
 				<a href="media.php"><i class="fa-solid fa-list"></i> Media</a>
 				<a href="cover.php"><i class="fa-regular fa-image"></i> Cover</a>
 				<a href="bluetooth.php"><i class="fa-brands fa-bluetooth"></i> Bluetooth</a>

@@ -61,7 +61,7 @@ if [ -f "$WIFI_FILE" ]; then
 		unset IFS
 		init_add_wifi
 		restart_network
-		sleep 8
+		sleep 2
 		sudo reboot
 	fi
 else
@@ -79,6 +79,12 @@ while [ ${ONLINESTATE} != "online" ]; do
 	sleep 15
 	ONLINESTATE=$(sudo /usr/bin/jq -r .onlinestate ${NETWORKCONFIG})
 done
+
+if [ -f "/boot/run_once.sh" ]; then
+	sudo chmod 755 /boot/run_once.sh
+    sudo /boot/./run_once.sh && rm /boot/run_once.sh
+fi
+
 if [ -f "$FIRST_INSTALL" ] && [ ${ONLINESTATE} = "online" ]; then
 	OS="$(grep -E '^(VERSION_CODENAME)=' /etc/os-release)"
 	OS="${OS:17}"

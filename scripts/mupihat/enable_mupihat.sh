@@ -10,6 +10,7 @@ sudo sed -zi '/i2c-dev/!s/$/\ni2c-dev/' /etc/modules
 sudo sed -zi '/i2c-bcm2708/!s/$/\ni2c-bcm2708/' /etc/modules
 sudo modprobe i2c-dev
 sudo modprobe i2c-bcm2708
-sudo /boot/dietpi/func/dietpi-set_hardware soundcard 'MAX98357A bcm2835-i2s-HiFi HiFi-0'
+sudo echo "#!/bin/bash" | sudo tee /boot/run_once.sh
+sudo echo "/boot/dietpi/func/dietpi-set_hardware soundcard 'MAX98357A bcm2835-i2s-HiFi HiFi-0'" | sudo tee -a /boot/run_once.sh
 sudo systemctl enable mupi_hat.service
 sudo service mupi_hat start
