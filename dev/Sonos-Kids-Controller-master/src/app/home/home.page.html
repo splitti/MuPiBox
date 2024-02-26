@@ -20,21 +20,21 @@
             </ion-segment-button>
         </ion-segment>
         <ion-buttons slot="end">
-            <ion-button *ngIf="(mupihat$ | async)?.IBus > 0 && (mupihat$ | async)?.Bat_SOC ==='100%'; else elsecharge70" class="OnlineState" (click)="editButtonPressed()">
+            <ion-button *ngIf="(mupihat$ | async)?.IBus > 0 && (mupihat$ | async)?.Bat_SOC ==='100%'; else elsecharge75" class="OnlineState" (click)="editButtonPressed()">
                 <ion-icon slot="icon-only" src="../../assets/icon/MuPiHAT/Charging100.svg"></ion-icon>
             </ion-button>
-            <ng-template #elsecharge70>
-                <ion-button *ngIf="(mupihat$ | async)?.IBus > 0 && (mupihat$ | async)?.Bat_SOC ==='70%'; else elsecharge50" class="OfflineState" (click)="editButtonPressed()">
+            <ng-template #elsecharge75>
+                <ion-button *ngIf="(mupihat$ | async)?.IBus > 0 && (mupihat$ | async)?.Bat_SOC ==='75%'; else elsecharge50" class="OfflineState" (click)="editButtonPressed()">
                     <ion-icon slot="icon-only" src="../../assets/icon/MuPiHAT/Charging70.svg"></ion-icon>
                 </ion-button>
             </ng-template>
             <ng-template #elsecharge50>
-                <ion-button *ngIf="(mupihat$ | async)?.IBus > 0 && (mupihat$ | async)?.Bat_SOC ==='50%'; else elsecharge20" class="OfflineState" (click)="editButtonPressed()">
+                <ion-button *ngIf="(mupihat$ | async)?.IBus > 0 && (mupihat$ | async)?.Bat_SOC ==='50%'; else elsecharge25" class="OfflineState" (click)="editButtonPressed()">
                     <ion-icon slot="icon-only" src="../../assets/icon/MuPiHAT/Charging50.svg"></ion-icon>
                 </ion-button>
             </ng-template>
-            <ng-template #elsecharge20>
-                <ion-button *ngIf="(mupihat$ | async)?.IBus > 0 && (mupihat$ | async)?.Bat_SOC ==='20%'; else elsecharge0" class="OfflineState" (click)="editButtonPressed()">
+            <ng-template #elsecharge25>
+                <ion-button *ngIf="(mupihat$ | async)?.IBus > 0 && (mupihat$ | async)?.Bat_SOC ==='25%'; else elsecharge0" class="OfflineState" (click)="editButtonPressed()">
                     <ion-icon slot="icon-only" src="../../assets/icon/MuPiHAT/Charging20.svg"></ion-icon>
                 </ion-button>
             </ng-template>
@@ -45,22 +45,22 @@
             </ng-template>
 
             <ng-template #else100>
-                <ion-button *ngIf="(mupihat$ | async)?.Bat_SOC ==='100%'; else else70" class="OfflineState" (click)="editButtonPressed()">
+                <ion-button *ngIf="(mupihat$ | async)?.Bat_SOC ==='100%'; else else75" class="OfflineState" (click)="editButtonPressed()">
                     <ion-icon slot="icon-only" src="../../assets/icon/MuPiHAT/Battery100.svg"></ion-icon>
                 </ion-button>
             </ng-template>
-            <ng-template #else70>
-                <ion-button *ngIf="(mupihat$ | async)?.Bat_SOC ==='70%'; else else50" class="OfflineState" (click)="editButtonPressed()">
+            <ng-template #else75>
+                <ion-button *ngIf="(mupihat$ | async)?.Bat_SOC ==='75%'; else else50" class="OfflineState" (click)="editButtonPressed()">
                     <ion-icon slot="icon-only" src="../../assets/icon/MuPiHAT/Battery70.svg"></ion-icon>
                 </ion-button>
             </ng-template>
             <ng-template #else50>
-                <ion-button *ngIf="(mupihat$ | async)?.Bat_SOC ==='50%'; else else20" class="OfflineState" (click)="editButtonPressed()">
+                <ion-button *ngIf="(mupihat$ | async)?.Bat_SOC ==='50%'; else else25" class="OfflineState" (click)="editButtonPressed()">
                     <ion-icon slot="icon-only" src="../../assets/icon/MuPiHAT/Battery50.svg"></ion-icon>
                 </ion-button>
             </ng-template>
-            <ng-template #else20>
-                <ion-button *ngIf="(mupihat$ | async)?.Bat_SOC ==='20%'; else else0" class="OfflineState" (click)="editButtonPressed()">
+            <ng-template #else25>
+                <ion-button *ngIf="(mupihat$ | async)?.Bat_SOC ==='25%'; else else0" class="OfflineState" (click)="editButtonPressed()">
                     <ion-icon slot="icon-only" src="../../assets/icon/MuPiHAT/Battery20.svg"></ion-icon>
                 </ion-button>
             </ng-template>
