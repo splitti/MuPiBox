@@ -1,0 +1,12 @@
+{
+    "Charger_Status": "Fast charge (CC mode)",
+    "Vbat": 7429,
+    "Vbus": 4282,
+    "Ibat": 280,
+    "IBus": 2392,
+    "Temp": 75,
+    "REG14": 54,
+    "Bat_SOC": "50%",
+    "Bat_Stat": "OK",
+    "Bat_Type": "Default"
+  }
