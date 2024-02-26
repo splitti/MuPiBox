@@ -8,7 +8,8 @@ import { ActivityIndicatorService } from '../activity-indicator.service';
 import { Media } from '../media';
 import { Artist } from '../artist';
 import { Monitor } from '../monitor';
-import { Subscription } from 'rxjs';
+import { Observable, Subscription } from 'rxjs';
+import { Mupihat } from '../mupihat';
 
 @Component({
   selector: 'app-medialist',
@@ -25,11 +26,13 @@ export class MedialistPage implements OnInit {
   resume = false;
   covers = {};
   monitor: Monitor;
+  mupihat: Mupihat;
   activityIndicatorVisible = false;
   aPartOfAllMedia: Media[] = [];
   private getMediaFromResumeSubscription: Subscription;
   private getMediaFromShowSubscription: Subscription;
   private getMediaFromArtistSubscription: Subscription;
+  public readonly mupihat$: Observable<Mupihat>;
 
   slideOptions = {
     initialSlide: 0,
@@ -62,6 +65,7 @@ export class MedialistPage implements OnInit {
         }
       }
     });
+    this.mupihat$ = this.mediaService.mupihat$;
   }
 
   ngOnInit() {
@@ -182,6 +186,9 @@ export class MedialistPage implements OnInit {
     });
     this.mediaService.resume$.subscribe(resume => {
       this.resumemedia = resume;
+    });
+    this.mediaService.mupihat$.subscribe(mupihat => {
+      this.mupihat = mupihat;
     });
   }
 
