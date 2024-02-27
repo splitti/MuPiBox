@@ -8,6 +8,7 @@ DefaultDependencies=no
 Type=simple
 RemainAfterExit=true
 ExecStart=python3 /usr/local/bin/mupibox/fan_control.py
+ExecStop=pkill -f "python3 /usr/local/bin/mupibox/fan_control.py
 KillMode=process
 
 [Install]

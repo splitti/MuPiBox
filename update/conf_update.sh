@@ -227,13 +227,13 @@ if [ "$HAT_ACTIVE" == "null" ]; then
 fi
 
 FAN_ACTIVE=$(/usr/bin/jq -r .fan.fan_active ${CONFIG})
-if [ "$HAT_ACTIVE" == "null" ]; then 
+if [ "$FAN_ACTIVE" == "null" ]; then 
 	/usr/bin/cat <<< $(/usr/bin/jq '.fan.fan_active = false' ${CONFIG}) >  ${CONFIG}
 	/usr/bin/cat <<< $(/usr/bin/jq '.fan.fan_gpio = "13"' ${CONFIG}) >  ${CONFIG}
-	/usr/bin/cat <<< $(/usr/bin/jq '.fan.fan_temp_100 = "70"' ${CONFIG}) >  ${CONFIG}
-	/usr/bin/cat <<< $(/usr/bin/jq '.fan.fan_temp_75 = "60"' ${CONFIG}) >  ${CONFIG}
-	/usr/bin/cat <<< $(/usr/bin/jq '.fan.fan_temp_50 = "50"' ${CONFIG}) >  ${CONFIG}
-	/usr/bin/cat <<< $(/usr/bin/jq '.fan.fan_temp_25 = "40"' ${CONFIG}) >  ${CONFIG}
+	/usr/bin/cat <<< $(/usr/bin/jq '.fan.fan_temp_100 = "75"' ${CONFIG}) >  ${CONFIG}
+	/usr/bin/cat <<< $(/usr/bin/jq '.fan.fan_temp_75 = "65"' ${CONFIG}) >  ${CONFIG}
+	/usr/bin/cat <<< $(/usr/bin/jq '.fan.fan_temp_50 = "55"' ${CONFIG}) >  ${CONFIG}
+	/usr/bin/cat <<< $(/usr/bin/jq '.fan.fan_temp_25 = "45"' ${CONFIG}) >  ${CONFIG}
 fi
 
 #/usr/bin/cat <<< $(/usr/bin/jq '.mupibox.AudioDevices += [{"tname": "MAX98357A bcm2835-i2s-HiFi HiFi-0","ufname": "MAX98357A bcm2835-i2s-HiFi HiFi-0"},{"tname": "rpi-bcm2835-3.5mm","ufname": "Onboard 3.5mm output"},{"tname": "rpi-bcm2835-hdmi","ufname": "Onboard HDMI output"},{"tname": "hifiberry-amp","ufname": "HifiBerry AMP / AMP+"},{"tname": "hifiberry-dac","ufname": "HifiBerry DAC / MiniAmp"},{"tname": "hifiberry-dacplus","ufname": "HifiBerry DAC+ / DAC+ Pro / AMP2"},{"tname": "usb-dac","ufname": "Any USB Audio DAC (Auto detection)"}]' ${CONFIG}) >  ${CONFIG}
