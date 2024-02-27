@@ -383,6 +383,10 @@ exec 3>${LOG}
 	cp ${MUPI_SRC}/media/images/MuPiLogo.jpg /home/dietpi/MuPiBox/sysmedia/images/MuPiLogo.jpg >&3 2>&3
 	cp ${MUPI_SRC}/media/sound/shutdown.wav /home/dietpi/MuPiBox/sysmedia/sound/shutdown.wav >&3 2>&3
 	cp ${MUPI_SRC}/media/sound/startup.wav /home/dietpi/MuPiBox/sysmedia/sound/startup.wav >&3 2>&3
+	cp ${MUPI_SRC}/media/sound/low.mp3 /home/dietpi/MuPiBox/sysmedia/sound/low.mp3 >&3 2>&3
+	cp ${MUPI_SRC}/media/images/installation.jpg /home/dietpiMuPiBox/sysmedia/images/installation.jpg >&3 2>&3
+	cp ${MUPI_SRC}/media/images/battery_low.png /home/dietpi/MuPiBox/sysmedia/images/battery_low >&3 2>&3
+
 	after=$(date +%s)
 	echo -e "## Copy media files  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
