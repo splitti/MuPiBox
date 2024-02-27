@@ -357,6 +357,31 @@
   $change=2;
   }
 
+if( $_POST['fan_control'] )
+	{
+	$data["fan"]["fan_active"] = $_POST['FanPin'];
+	$data["fan"]["fan_gpio"] = $_POST['FanPin'];
+	$data["fan"]["fan_temp_100"] = $_POST['fan_100'];
+	$data["fan"]["fan_temp_75"] = $_POST['fan_75'];
+	$data["fan"]["fan_temp_50"] = $_POST['fan_50'];
+	$data["fan"]["fan_temp_25"] = $_POST['fan_25'];
+	if($_POST['fan_active'])
+		{
+		$data["fan"]["fan_active"] = true;
+		exec("sudo systemctl enable mupi_fan.service");
+		exec("sudo service mupi_fan start");
+		$CHANGE_TXT=$CHANGE_TXT."<li>Fan is active now.</li>";
+		}
+	else 
+		{
+		$data["fan"]["fan_active"] = false;
+		exec("sudo service mupi_fan stop");
+		exec("sudo systemctl disable mupi_fan.service");
+		$CHANGE_TXT=$CHANGE_TXT."<li>Fan is deactivated now.</li>";		
+		}
+	$change = 2;
+	}
+
  if( $data["mupibox"]["maxVolume"]!=$_POST['maxVolume'] && $_POST['audioset'] )
   {
   $data["mupibox"]["maxVolume"]=$_POST['maxVolume'];
@@ -1139,7 +1164,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				<?php
 				$gpios = array( "4", "12", "13", "17", "18", "21", "22", "23", "24", "25", "27" );
 				foreach($gpios as $pin) {
-				if( $pin == $data["shim"]["ledPin"] )
+				if( $pin == $data["fan"]["fan_gpio"] )
 				{
 				$selected = " selected=\"selected\"";
 				}
@@ -1155,34 +1180,66 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 			</li>
 
 			<li id="li_1" >
-				<h2>LED Brightness normal (from 0 to 100%)</h2>
+				<h2>Temperature fan at full speed (100%)</h2>
 				<div>
 					<output id="rangeval" class="rangeval"><?php 
-					echo $data["shim"]["ledBrightnessMax"]
+					echo $data["fan"]["fan_temp_100"] . " °C"
 				?></output>				
 				
-				<input class="range slider-progress" name="ledmaxbrightness" type="range" min="0" max="100" step="1.0" value="<?php 
-					echo $data["shim"]["ledBrightnessMax"]
+				<input class="range slider-progress" name="fan_100" type="range" min="20" max="90" step="1.0" value="<?php 
+					echo $data["fan"]["fan_temp_100"]
 				?>" oninput="this.previousElementSibling.value = this.value">
 				</div>
 			</li>
-
 			<li id="li_1" >
-				<h2>LED Brightness dimmed (from 0 to 100%)</h2>
+				<h2>Temperature fan at 75%</h2>
 				<div>
 					<output id="rangeval" class="rangeval"><?php 
-					echo $data["shim"]["ledBrightnessMin"]
+					echo $data["fan"]["fan_temp_75"] . " °C"
 				?></output>				
-				<input class="range slider-progress" name="ledminbrightness" type="range" min="0" max="100" step="1.0" value="<?php 
-					echo $data["shim"]["ledBrightnessMin"]
+				
+				<input class="range slider-progress" name="fan_75" type="range" min="20" max="90" step="1.0" value="<?php 
+					echo $data["fan"]["fan_temp_75"]
 				?>" oninput="this.previousElementSibling.value = this.value">
 				</div>
 			</li>
+			<li id="li_1" >
+				<h2>Temperature fan at 50%</h2>
+				<div>
+					<output id="rangeval" class="rangeval"><?php 
+					echo $data["fan"]["fan_temp_50"] . " °C"
+				?></output>				
+				
+				<input class="range slider-progress" name="fan_50" type="range" min="20" max="90" step="1.0" value="<?php 
+					echo $data["fan"]["fan_temp_50"]
+				?>" oninput="this.previousElementSibling.value = this.value">
+				</div>
+			</li>
+			<li id="li_1" >
+				<h2>Temperature fan at 25%</h2>
+				<div>
+					<output id="rangeval" class="rangeval"><?php 
+					echo $data["fan"]["fan_temp_25"] . " °C"
+				?></output>				
+				
+				<input class="range slider-progress" name="fan_25" type="range" min="20" max="90" step="1.0" value="<?php 
+					echo $data["fan"]["fan_temp_25"]
+				?>" oninput="this.previousElementSibling.value = this.value">
+				</div>
+			</li>
+			<li id="li_1" >
+	<h2>Fan activation</h2>
+	<p>This setting activates the fan.</p>
+	<label class="labelchecked" for="fan">Fan activation state:&nbsp; &nbsp; <input type="checkbox" id="fan_active"  name="fan_active" <?php
+	if( $data["fan"]["fan_active"] )
+		{
+		print "checked";
+		}
+?> /></label>
+
 
 			<li class="buttons">
-				<input type="hidden" name="form_id" value="37271" />
-
-				<input id="saveForm" class="button_text" type="submit" name="powerset" value="Submit" />
+				<input id="saveForm" class="button_text" type="submit" name="fan_control" value="Submit" />
 			</li>
 		</ul>
 	</details>
