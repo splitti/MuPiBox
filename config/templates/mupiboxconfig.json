@@ -350,6 +350,14 @@
 		],
 		"selected_battery": "ENERpower 2S2P 10.000mAh",
 		"hat_active": false
+	},
+	"fan": {
+		"fan_active": false,
+		"fan_gpio": "13",
+		"fan_temp_100": "70",
+		"fan_temp_75": "60",
+		"fan_temp_50": "50",
+		"fan_temp_25": "40"
 	}
 }
 

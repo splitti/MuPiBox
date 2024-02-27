@@ -108,6 +108,10 @@ function mupi-update-webinterface() {
 function mupi-info() {
 	OS=$(source /etc/os-release ; echo $PRETTY_NAME)
 	RASPI=$(cat /sys/firmware/devicetree/base/model | tr -d '\0' )
+	CPU=$(</sys/class/thermal/thermal_zone0/temp)
+	CPU=$((CPU/1000))
+	GPU=$(sudo vcgencmd measure_temp | grep  -o -E '[[:digit:]].*')
+	IC=$(cat /tmp/mupihat.json | jq -r .Temp)
 	clear
 	echo -e "${On_IRed}   ${On_IYellow}   ${On_IGreen}   ${On_IBlue}   ${On_ICyan}   ${On_IPurple}   ${On_IRed}   ${On_IYellow}   ${On_IGreen}   ${On_IBlue}   ${On_ICyan}   ${On_IPurple}   ${On_IRed}   ${On_IYellow}   ${On_IGreen}   ${On_IBlue}   ${On_ICyan}   ${On_IPurple}   ${Color_Off}"
 	echo -e "  ${BCyan}Hostname:         ${BIGreen}$(hostname)${Color_Off}"
