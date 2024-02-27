@@ -77,6 +77,12 @@ ion-row.media-card {
         color:rgb(255,255,255);opacity:0.6;
 }
 
+.battery ion-icon {
+    height:60% !important;
+    max-height:60% !important;
+    color:rgb(255,255,255);opacity:1.0;
+}
+
 /* MuPiBox manual edit */
 ion-card-header.ion-inherit-color.md.hydrated {
     padding-inline: 10px; 
