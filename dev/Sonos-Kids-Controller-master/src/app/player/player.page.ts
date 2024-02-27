@@ -14,6 +14,7 @@ import { CurrentEpisode } from '../current.episode';
 import { CurrentShow } from '../current.show';
 import { Monitor } from '../monitor';
 import { AlbumStop } from '../albumstop';
+import { Mupihat } from '../mupihat';
 
 @Component({
   selector: 'app-player',
@@ -26,6 +27,7 @@ export class PlayerPage implements OnInit {
   media: Media;
   resumemedia: Media;
   monitor: Monitor;
+  mupihat: Mupihat;
   albumStop: AlbumStop;
   resumePlay = false;
   resumeIndex: number;
@@ -49,6 +51,7 @@ export class PlayerPage implements OnInit {
   public readonly playlist$: Observable<CurrentPlaylist>;
   public readonly episode$: Observable<CurrentEpisode>;
   public readonly show$: Observable<CurrentShow>;
+  public readonly mupihat$: Observable<Mupihat>;
 
   constructor(
     private mediaService: MediaService,
@@ -63,6 +66,7 @@ export class PlayerPage implements OnInit {
     this.playlist$ = this.mediaService.playlist$;
     this.episode$ = this.mediaService.episode$;
     this.show$ = this.mediaService.show$;
+    this.mupihat$ = this.mediaService.mupihat$;
     this.route.queryParams.subscribe(params => {
       if (this.router.getCurrentNavigation().extras.state.media) {
         this.media = this.router.getCurrentNavigation().extras.state.media;
@@ -95,6 +99,9 @@ export class PlayerPage implements OnInit {
     });
     this.mediaService.albumStop$.subscribe(albumStop => {
       this.albumStop = albumStop;
+    });
+    this.mediaService.mupihat$.subscribe(mupihat => {
+      this.mupihat = mupihat;
     });
   }
 

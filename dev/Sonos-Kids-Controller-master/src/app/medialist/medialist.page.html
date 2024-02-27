@@ -7,6 +7,36 @@
             <div *ngIf="!resume; else elseResume">{{artist.name}}</div>
             <ng-template #elseResume><div>Resume</div></ng-template>
         </ion-title>
+        <ng-container *ngIf="mupihat$ | async as mupihat">
+            <ion-icon *ngIf="mupihat.IBus > 0 && mupihat.Bat_SOC === '100%'; else elsecharge75" slot="end" src="../../assets/icon/MuPiHAT/Charging100 .svg" size="large"></ion-icon>
+            <ng-template #elsecharge75>
+                <ion-icon *ngIf="mupihat.IBus > 0 && mupihat.Bat_SOC === '75%'; else elsecharge50" slot="end" src="../../assets/icon/MuPiHAT/Charging70 .svg" size="large"></ion-icon>
+            </ng-template>
+            <ng-template #elsecharge50>
+                <ion-icon *ngIf="mupihat.IBus > 0 && mupihat.Bat_SOC === '50%'; else elsecharge25" slot="end" src="../../assets/icon/MuPiHAT/Charging50 .svg" size="large"></ion-icon>
+            </ng-template>
+            <ng-template #elsecharge25>
+                <ion-icon *ngIf="mupihat.IBus > 0 && mupihat.Bat_SOC === '25%'; else elsecharge0" slot="end" src="../../assets/icon/MuPiHAT/Charging20 .svg" size="large"></ion-icon>
+            </ng-template>
+            <ng-template #elsecharge0>
+                <ion-icon *ngIf="mupihat.IBus > 0 && mupihat.Bat_SOC === '0%'; else else100" slot="end" src="../../assets/icon/MuPiHAT/Charging0 .svg" size="large"></ion-icon>
+            </ng-template>
+            <ng-template #else100>
+                <ion-icon *ngIf="mupihat.Bat_SOC === '100%'; else else75" slot="end" src="../../assets/icon/MuPiHAT/Battery100 .svg" size="large"></ion-icon>
+            </ng-template>
+            <ng-template #else75>
+                <ion-icon *ngIf="mupihat.Bat_SOC === '75%'; else else50" slot="end" src="../../assets/icon/MuPiHAT/Battery70 .svg" size="large"></ion-icon>
+            </ng-template>
+            <ng-template #else50>
+                <ion-icon *ngIf="mupihat.Bat_SOC === '50%'; else else25" slot="end" src="../../assets/icon/MuPiHAT/Battery50 .svg" size="large"></ion-icon>
+            </ng-template>
+            <ng-template #else25>
+                <ion-icon *ngIf="mupihat.Bat_SOC === '25%'; else else0" slot="end" src="../../assets/icon/MuPiHAT/Battery20 .svg" size="large"></ion-icon>
+            </ng-template>
+            <ng-template #else0>
+                <ion-icon *ngIf="mupihat.Bat_SOC === '0%'" slot="end" src="../../assets/icon/MuPiHAT/Battery0 .svg" size="large"></ion-icon>
+            </ng-template>
+        </ng-container>
     </ion-toolbar>
 </ion-header>
 
