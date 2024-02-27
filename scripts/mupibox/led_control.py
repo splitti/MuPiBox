@@ -15,9 +15,9 @@ import signal
 import sys
 import json
 from time import sleep
-from gpiozero import PWMLED
+import RPi.GPIO as GPIO
 
-DEFAULT_PWM_FREQUENCY = 1000
+DEFAULT_PWM_FREQUENCY = 3000
 
 
 def read_json():
@@ -36,12 +36,12 @@ def led_control(start, end, sleep_time):
         cnt = -1
     for x in range(start, end, cnt):
         try:
-            POWER_LED.value = x/100
+            POWER_LED.ChangeDutyCycle(x)
         except:
             pass
         sleep(sleep_time)
     try:
-        POWER_LED.value = end/100
+        POWER_LED.ChangeDutyCycle(end)
     except:
         pass
     print("LED Brightness = " + str(end) + "%")
@@ -81,9 +81,12 @@ if __name__ == "__main__":
     JSON_DATA_FILE = "/tmp/.power_led"
     while JSON_DATA == "skip":
         JSON_DATA = read_json()
-        
-    pwm_frequency = int(JSON_DATA.get("pwm_frequency", DEFAULT_PWM_FREQUENCY))    
-    POWER_LED = PWMLED(JSON_DATA["led_gpio"], frequency=pwm_frequency)
+
+    pwm_frequency = int(JSON_DATA.get("pwm_frequency", DEFAULT_PWM_FREQUENCY))
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setup(JSON_DATA["led_gpio"], GPIO.OUT)
+    POWER_LED = GPIO.PWM(JSON_DATA["led_gpio"], pwm_frequency)
+    POWER_LED.start(0)
     init()
     signal.signal(signal.SIGTERM, sigterm_handler)
     main()

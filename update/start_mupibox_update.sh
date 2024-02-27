@@ -274,6 +274,8 @@ echo "==========================================================================
 	mv ${MUPI_SRC}/config/templates/www.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >&3 2>&3
 	mv ${MUPI_SRC}/config/templates/.bashrc /home/dietpi/.bashrc >&3 2>&3
 	mv ${MUPI_SRC}/scripts/mupihat/* /usr/local/bin/mupibox/ >&3 2>&3
+	mv ${MUPI_SRC}/scripts/fan/* /usr/local/bin/mupibox/ >&3 2>&3
+
 
 	NANORC_FILE=/home/dietpi/.nanorc  >&3 2>&3
 	wget -O /tmp/nanorc.zip https://github.com/scopatz/nanorc/archive/master.zip  >&3 2>&3
@@ -378,6 +380,7 @@ echo "==========================================================================
 	mv -f ${MUPI_SRC}/config/services/mupi_telegram.service /etc/systemd/system/mupi_telegram.service  >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/dietpi-dashboard.service /etc/systemd/system/dietpi-dashboard.service  >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/mupi_hat.service /etc/systemd/system/mupi_hat.service  >&3 2>&3
+	mv -f ${MUPI_SRC}/config/services/mupi_fan.service /etc/systemd/system/mupi_hat.service  >&3 2>&3
 
 	systemctl daemon-reload >&3 2>&3
 	systemctl enable mupi_check_internet.service >&3 2>&3

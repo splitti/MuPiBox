@@ -1074,12 +1074,71 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 
 			<li id="li_1" >
 				<h2>LED GPIO OnOffShim </h2>
-				<p>Possible standard GPIO-Pins are 4, 17, 18, 21, 22, 23, 24, 25 (default PIN) and 27. GPIOs 4 and 17 are used by OnOffShim. GPIOs 18 and 21 are used by HifiBerry MiniAmp. Just use free GPIOs to avoid system errors.</p>
+				<p>Possible standard GPIO-Pins are 4, 12, 13, 17, 18, 21, 22, 23, 24, 25 (default PIN) and 27. GPIOs 4 and 17 are used by OnOffShim. GPIOs 18 and 21 are used by HifiBerry MiniAmp. Just use free GPIOs to avoid system errors.</p>
 				<div><select id="ledPin" name="ledPin" class="element text small">
 				
 				<?php
-				$leds = array( "4", "17", "18", "21", "22", "23", "24", "25", "27" );
+				$leds = array( "4", "12", "13", "17", "18", "21", "22", "23", "24", "25", "27" );
 				foreach($leds as $pin) {
+				if( $pin == $data["shim"]["ledPin"] )
+				{
+				$selected = " selected=\"selected\"";
+				}
+				else
+				{
+				$selected = "";
+				}
+				print "<option value=\"". $pin . "\"" . $selected  . ">" . $pin . "</option>";
+				}
+				?>
+				"</select>	
+				</div>
+			</li>
+
+			<li id="li_1" >
+				<h2>LED Brightness normal (from 0 to 100%)</h2>
+				<div>
+					<output id="rangeval" class="rangeval"><?php 
+					echo $data["shim"]["ledBrightnessMax"]
+				?></output>				
+				
+				<input class="range slider-progress" name="ledmaxbrightness" type="range" min="0" max="100" step="1.0" value="<?php 
+					echo $data["shim"]["ledBrightnessMax"]
+				?>" oninput="this.previousElementSibling.value = this.value">
+				</div>
+			</li>
+
+			<li id="li_1" >
+				<h2>LED Brightness dimmed (from 0 to 100%)</h2>
+				<div>
+					<output id="rangeval" class="rangeval"><?php 
+					echo $data["shim"]["ledBrightnessMin"]
+				?></output>				
+				<input class="range slider-progress" name="ledminbrightness" type="range" min="0" max="100" step="1.0" value="<?php 
+					echo $data["shim"]["ledBrightnessMin"]
+				?>" oninput="this.previousElementSibling.value = this.value">
+				</div>
+			</li>
+
+			<li class="buttons">
+				<input type="hidden" name="form_id" value="37271" />
+
+				<input id="saveForm" class="button_text" type="submit" name="powerset" value="Submit" />
+			</li>
+		</ul>
+	</details>
+	
+	<details>
+		<summary><i class="fa-solid fa-fan"></i> Fan-Control</summary>
+		<ul>
+			<li id="li_1" >
+				<h2>Fan GPIO</h2>
+				<p>Possible standard GPIO-Pins are 4, 12, 13 (default PIN), 17, 18, 21, 22, 23, 24, 25 and 27. GPIOs 4 and 17 are used by OnOffShim. GPIOs 18 and 21 are used by HifiBerry MiniAmp. Just use free GPIOs to avoid system errors.</p>
+				<div><select id="FanPin" name="FanPin" class="element text small">
+				
+				<?php
+				$gpios = array( "4", "12", "13", "17", "18", "21", "22", "23", "24", "25", "27" );
+				foreach($gpios as $pin) {
 				if( $pin == $data["shim"]["ledPin"] )
 				{
 				$selected = " selected=\"selected\"";

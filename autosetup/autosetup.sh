@@ -429,6 +429,7 @@ exec 3>${LOG}
 	sudo mv -f ${MUPI_SRC}/scripts/wled/* /usr/local/bin/mupibox/ >&3 2>&3
 	sudo mv -f ${MUPI_SRC}/scripts/telegram/* /usr/local/bin/mupibox/ >&3 2>&3
 	sudo mv -f ${MUPI_SRC}/scripts/mupihat/* /usr/local/bin/mupibox/ >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/scripts/fan/* /usr/local/bin/mupibox/ >&3 2>&3
 	
 	sudo mv -f ${MUPI_SRC}/config/templates/add_wifi.json /boot/add_wifi.json >&3 2>&3
 	sudo mv -f ${MUPI_SRC}/config/templates/.bashrc /home/dietpi/.bashrc >&3 2>&3
@@ -628,6 +629,7 @@ exec 3>${LOG}
 	sudo mv -f ${MUPI_SRC}/config/services/mupi_telegram.service /etc/systemd/system/mupi_telegram.service  >&3 2>&3
 	sudo mv -f ${MUPI_SRC}/config/services/dietpi-dashboard.service /etc/systemd/system/dietpi-dashboard.service  >&3 2>&3
 	sudo mv -f ${MUPI_SRC}/config/services/mupi_hat.service /etc/systemd/system/mupi_hat.service  >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/config/services/mupi_fan.service /etc/systemd/system/mupi_fan.service  >&3 2>&3
 	
 	sudo systemctl daemon-reload >&3 2>&3
 	sudo systemctl enable mupi_wifi.service >&3 2>&3
