@@ -39,8 +39,7 @@ if [ "$1" = "dev" ]; then
 else
 	VERSION_LONG="${VERSION} ${RELEASE}"
 fi
-echo $VERSION_LONG
-sleep 5
+
 echo "==========================================================================================" >&3 2>&3
 echo "= OS:               ${OS}" >&3 2>&3
 echo "= RasPi:            ${RASPPI}" >&3 2>&3
