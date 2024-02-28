@@ -5,7 +5,7 @@ After=local-fs.target sysinit.target
 DefaultDependencies=no
 
 [Service]
-Type=simple
+Type=oneshot
 RemainAfterExit=true
 ExecStart=/usr/local/bin/mupibox/mupihat_automation.sh
 ExecStart=/usr/bin/python3 -B /usr/local/bin/mupibox/mupihat.py -j /tmp/mupihat.json
