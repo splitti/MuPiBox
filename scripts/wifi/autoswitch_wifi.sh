@@ -62,5 +62,5 @@ while true; do
 	else
 		echo "No configured network in range found." >> ${LOG}
 	fi
-	sleep 10
+	sleep 20
 done
