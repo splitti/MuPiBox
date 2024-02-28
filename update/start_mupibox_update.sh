@@ -36,10 +36,10 @@ if [ ${RELEASE} = "dev" ]; then
 else
 	MUPI_SRC="/home/dietpi/MuPiBox-${VERSION}" >&3 2>&3
 fi
-if [ $RELEASE=="dev" ]; then
-	VERSION_LONG="DEV $(curl -s "https://api.github.com/repos/splitti/MuPiBox" | jq -r '.pushed_at' | cut -d'T' -f1)"  >&3 2>&3
-else
+if [[ "$RELEASE"!="dev" ]]; then
 	VERSION_LONG="${VERSION} ${RELEASE}"
+else
+	VERSION_LONG="DEV $(curl -s "https://api.github.com/repos/splitti/MuPiBox" | jq -r '.pushed_at' | cut -d'T' -f1)"  >&3 2>&3
 fi
 
 echo "==========================================================================================" >&3 2>&3
