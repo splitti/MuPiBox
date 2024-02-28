@@ -38,14 +38,8 @@ sudo service mupi_check_internet stop
 sudo service mupi_wifi stop
 
 sudo su - -c 'nohup /usr/local/bin/mupibox/./mupi_stop_led.sh > /dev/null 2>&1 &'
-sudo systemctl stop mupi_powerled.service 
-
-SHUT_SOUND=$(/usr/bin/jq -r .mupibox.shutSound ${CONFIG})
-START_VOLUME=$(/usr/bin/jq -r .mupibox.startVolume ${CONFIG})
-AUDIO_DEVICE=$(/usr/bin/jq -r .mupibox.audioDevice ${CONFIG})
-/usr/bin/amixer sset ${AUDIO_DEVICE} ${START_VOLUME}%
-
-/usr/bin/mplayer -volume 100 ${SHUT_SOUND}
+sudo service mupi_powerled stop 
+sudo sh -c 'su - dietpi -s /usr/local/bin/mupibox/shutdown_sound.sh' &
 
 #sudo shutdown -h now
 poweroff

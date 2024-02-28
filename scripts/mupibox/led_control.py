@@ -54,6 +54,8 @@ def sigterm_handler(*_):
     sys.exit(0)
 
 def init():
+    GPIO.setup(JSON_DATA["led_gpio"], GPIO.OUT)
+    GPIO.output(JSON_DATA["led_gpio"], GPIO.HIGH)
     tmp = os.popen("ps -ef | grep chromium-browser | grep http | grep -v grep").read()
     while tmp == "":
         for x in range(0, 10, +1):

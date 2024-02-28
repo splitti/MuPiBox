@@ -8,6 +8,11 @@ play_sound() {
     mplayer -nolirc "$SOUND_FILE" > /dev/null
 }
 
+echo "Startin mupihat.py"
+python3 -B /usr/local/bin/mupibox/mupihat.py -j /tmp/mupihat.json
+
+echo $! > /var/run/mupi_hat.pid
+
 while true; do
 	STATE = $(jq -r '.Bat_Stat' ${JSON_FILE})
 	if [ ${STATE} == "OK" ]; then

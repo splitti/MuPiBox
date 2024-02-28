@@ -1,4 +1,6 @@
 <?php
+	$commandSSID="sudo iwgetid -r";
+	$WIFI=exec($commandSSID);
 	$wifi_icon = "";
 	$commandLQ="sudo iwconfig wlan0 | awk '/Link Quality/{split($2,a,\"=|/\");print int((a[2]/a[3])*100)\"\"}' | tr -d '%'";
 	$LINKQ=exec($commandLQ);
