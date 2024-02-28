@@ -13,9 +13,9 @@ echo $! > /run/mupi_hat.pid
 while true; do
 	if [ -f ${JSON_FILE} ]; then
 		STATE = $(jq -r '.Bat_Stat' ${JSON_FILE})
-		if [ "${STATE}" == "OK" ]; then
+		if [ "${STATE}" = "OK" ]; then
 			play_sound
-		elif [ "${STATE}" == "SHUTDOWN" ]; then
+		elif [ "${STATE}" = "SHUTDOWN" ]; then
 			/usr/local/bin/mupibox/mupi_shutdown.sh ${BATTERY_LOW_PNG}
 		fi
 	fi
