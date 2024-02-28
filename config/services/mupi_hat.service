@@ -6,11 +6,10 @@ DefaultDependencies=no
 
 [Service]
 Type=simple
+WorkingDirectory=/usr/local/bin/mupibox/
 User=root
-RemainAfterExit=true
 ExecStart=python3 -B /usr/local/bin/mupibox/mupihat.py -j /tmp/mupihat.json
-ExecStop=pkill -f mupihat.py
-KillMode=process
+Restart=always
 
 [Install]
 WantedBy=basic.target

@@ -1,0 +1,14 @@
+[Unit]
+Description=Mein Service
+After=local-fs.target sysinit.target
+DefaultDependencies=no
+
+[Service]
+Type=simple            
+WorkingDirectory=/tmp/
+User=root
+ExecStart=/bin/bash -c '/usr/local/bin/mupibox/mupihat_automation.sh'
+Restart=always         
+
+[Install]
+WantedBy=multi-user.target

@@ -8,13 +8,12 @@ play_sound() {
     mplayer -nolirc "$SOUND_FILE" > /dev/null
 }
 
-echo $! > /run/mupi_hat.pid
-/usr/bin/python3 -B /usr/local/bin/mupibox/mupihat.py -j /tmp/mupihat.json
+#echo $! > /run/mupi_hat.pid
 
 while true; do
 	if [ -f ${JSON_FILE} ]; then
-		STATE = $(jq -r '.Bat_Stat' ${JSON_FILE})
-		if [ "${STATE}" = "OK" ]; then
+		STATE=$(jq -r '.Bat_Stat' ${JSON_FILE})
+		if [ "${STATE}" = "LOW" ]; then
 			play_sound
 		elif [ "${STATE}" = "SHUTDOWN" ]; then
 			/usr/local/bin/mupibox/mupi_shutdown.sh ${BATTERY_LOW_PNG}
