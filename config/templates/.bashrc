@@ -125,7 +125,7 @@ function mupi-info() {
 	echo -e "${Color_Off}"
 	echo -e "  ${BCyan}visit MuPiBox:    ${BIPurple}https://mupibox.de${Color_Off}"
 	echo -e "  ${BCyan}Latest-Version:   ${BIPurple}$(curl --max-time 5 -s https://raw.githubusercontent.com/splitti/MuPiBox/main/version.json | jq -r .release.stable[-1].version)${Color_Off}"
-	echo -e "  ${BRed}CPU: $CPU °C              IC: $IC$ °C{Color_Off}"
+	echo -e "  ${BRed}CPU: $CPU °C              IC: $IC$ °C${Color_Off}"
 	echo -e "${On_IRed}   ${On_IYellow}   ${On_IGreen}   ${On_IBlue}   ${On_ICyan}   ${On_IPurple}   ${On_IRed}   ${On_IYellow}   ${On_IGreen}   ${On_IBlue}   ${On_ICyan}   ${On_IPurple}   ${On_IRed}   ${On_IYellow}   ${On_IGreen}   ${On_IBlue}   ${On_ICyan}   ${On_IPurple}   ${Color_Off}"
 	echo -e "${Color_Off}"
 	unset OS

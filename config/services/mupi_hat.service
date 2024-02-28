@@ -8,7 +8,8 @@ DefaultDependencies=no
 Type=simple
 RemainAfterExit=true
 ExecStart=/usr/local/bin/mupibox/mupihat_automation.sh
-KillMode=process
+ExecStop=pkill -f -9 mupihat.py
+KillMode=mixed
 PIDFile=/var/run/mupi_hat.pid
 
 [Install]
