@@ -8,15 +8,16 @@ play_sound() {
     mplayer -nolirc "$SOUND_FILE" > /dev/null
 }
 
-
 echo $! > /run/mupi_hat.pid
 
 while true; do
-	STATE = $(jq -r '.Bat_Stat' ${JSON_FILE})
-	if [ "${STATE}" == "OK" ]; then
-		play_sound
-	elif [ "${STATE}" == "SHUTDOWN" ]; then
-		/usr/local/bin/mupibox/mupi_shutdown.sh ${BATTERY_LOW_PNG}
-    fi
+	if [ -f ${JSON_FILE} ]; then
+		STATE = $(jq -r '.Bat_Stat' ${JSON_FILE})
+		if [ "${STATE}" == "OK" ]; then
+			play_sound
+		elif [ "${STATE}" == "SHUTDOWN" ]; then
+			/usr/local/bin/mupibox/mupi_shutdown.sh ${BATTERY_LOW_PNG}
+		fi
+	fi
     sleep 60
 done
