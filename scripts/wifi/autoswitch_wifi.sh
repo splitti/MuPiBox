@@ -5,6 +5,8 @@
 # Author: Olaf Splitt
 # Description: This script searches for available WiFi networks, compares them with the configured networks in the wpa_supplicant.conf file, and automatically connects to the best available network.
 
+sleep 60
+
 LOG="/tmp/autoswitch_wifi.log"
 echo $! > /var/run/mupi_autoconnect-wifi.pid
 touch > ${LOG}
