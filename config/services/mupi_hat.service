@@ -9,9 +9,10 @@ Type=simple
 RemainAfterExit=true
 ExecStart=/usr/local/bin/mupibox/mupihat_automation.sh
 ExecStart=/usr/bin/python3 -B /usr/local/bin/mupibox/mupihat.py -j /tmp/mupihat.json
+ExecStop=pkill -f -9 mupihat_automation.sh
 ExecStop=pkill -f -9 mupihat.py
-KillMode=mixed
-PIDFile=/var/run/mupi_hat.pid
+KillMode=process
+PIDFile=/run/mupi_hat.pid
 
 [Install]
 WantedBy=basic.target

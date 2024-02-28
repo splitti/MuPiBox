@@ -9,7 +9,7 @@ play_sound() {
 }
 
 
-echo $! > /var/run/mupi_hat.pid
+echo $! > /run/mupi_hat.pid
 
 while true; do
 	STATE = $(jq -r '.Bat_Stat' ${JSON_FILE})
