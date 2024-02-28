@@ -13,3 +13,5 @@ sudo modprobe i2c-bcm2708
 sudo sudo /boot/dietpi/func/dietpi-set_hardware soundcard 'MAX98357A bcm2835-i2s-HiFi HiFi-0'
 sudo systemctl enable mupi_hat.service
 sudo service mupi_hat start
+sudo systemctl enable mupi_hat_control.service
+sudo service mupi_hat_control start

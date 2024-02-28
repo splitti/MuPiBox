@@ -1,5 +1,7 @@
 #!/bin/bash
 
+sudo service mupi_hat_control stop
+sudo systemctl disable mupi_hat_control.service
 sudo service mupi_hat stop
 sudo systemctl disable mupi_hat.service
 sudo modprobe -r i2c-dev
