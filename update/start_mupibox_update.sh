@@ -8,7 +8,6 @@ if [ "$1" = "dev" ] || [ "$1" = "beta" ] || [ "$1" = "stable" ]; then
 else
 	RELEASE="stable"
 fi
-echo $RELEASE
 killall -s 9 -w -q chromium-browser
 
 CONFIG="/etc/mupibox/mupiboxconfig.json"
@@ -35,7 +34,7 @@ if [ "$1" = "dev" ]; then
 else
 	MUPI_SRC="/home/dietpi/MuPiBox-${VERSION}" >&3 2>&3
 fi
-if [ "$1" != "dev" ]; then
+if [ "$1" -ne "dev" ]; then
 	VERSION_LONG="${VERSION} ${RELEASE}"
 else
 	VERSION_LONG="DEV $(curl -s "https://api.github.com/repos/splitti/MuPiBox" | jq -r '.pushed_at' | cut -d'T' -f1)"  >&3 2>&3
