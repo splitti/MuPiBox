@@ -5,8 +5,10 @@
 # Author: Olaf Splitt
 # Description: This script searches for available WiFi networks, compares them with the configured networks in the wpa_supplicant.conf file, and automatically connects to the best available network.
 
-
+LOG="/tmp/autoswitch_wifi.log"
 echo $! > /var/run/mupi_autoconnect-wifi.pid
+touch > ${LOG}
+chmod 755 ${LOG}
 
 while true; do
 
@@ -39,23 +41,26 @@ while true; do
 				fi
 			fi
 		done
-	done < <(sudo wpa_cli -i wlan0 scan && sudo wpa_cli -i wlan0 scan_results)
+	done < <(wpa_cli -i wlan0 scan && wpa_cli -i wlan0 scan_results)
 
 	# Print results
-	echo "Current network:  $current_ssid / $current_quality" > /tmp/autoswitch_wifi.log
-	echo "Best network:     $best_ssid / $best_quality" >> /tmp/autoswitch_wifi.log
+	echo "Current network:  $current_ssid / $current_quality" > ${LOG}
+	echo "Best network:     $best_ssid / $best_quality" >> ${LOG}
 
 	# Connect to the best network
 	if [[ -n $best_ssid ]]; then
 		if [[ "$best_ssid" != "$current_ssid" ]]; then
-			sudo wpa_supplicant -B -i wlan0 -c /etc/wpa_supplicant/wpa_supplicant.conf -D wext -W -B >> /tmp/autoswitch_wifi.log
-			sudo dhclient wlan0 >> /tmp/autoswitch_wifi.log
-			echo "Switching to $best_ssid" >> /tmp/autoswitch_wifi.log
+			killall wpa_supplicant >> ${LOG}
+			rm /run/wpa_supplicant.wlan0.pid >> ${LOG}
+			/sbin/wpa_supplicant -s -B -P /run/wpa_supplicant.wlan0.pid -i wlan0 -D nl80211,wext -c /etc/wpa_supplicant/wpa_supplicant.conf & >> /tmp/autoswitch_wifi.log
+			#wpa_supplicant -B -i wlan0 -c /etc/wpa_supplicant/wpa_supplicant.conf -D wext -W -B & >> /tmp/autoswitch_wifi.log
+			dhclient wlan0 >> ${LOG}
+			echo "Switching to $best_ssid" >> ${LOG}
 		else
-			echo "No switch needed" >> /tmp/autoswitch_wifi.log
+			echo "No switch needed" >> ${LOG}
 		fi
 	else
-		echo "No configured network in range found." >> /tmp/autoswitch_wifi.log
+		echo "No configured network in range found." >> ${LOG}
 	fi
-	sleep 20
+	sleep 10
 done

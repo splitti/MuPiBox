@@ -116,6 +116,22 @@
 		$CHANGE_TXT=$CHANGE_TXT."<li>DietPi-WiFi-Monitor disabled</li>";
 		}
 
+	if( $_POST['change_wifi_autoconnect'] == "enable & start" )
+		{
+		$command = "sudo systemctl enable --now mupi_autoconnect-wifi";
+		exec($command, $output, $result );
+		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>Autoconnect-WiFi-Service enabled</li>";
+		}
+	else if( $_POST['change_wifi_autoconnect'] == "stop & disable" )
+		{
+		$command = "sudo systemctl disable --now mupi_autoconnect-wifi";
+		exec($command, $output, $result );
+		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>Autoconnect-WiFi-Service disabled</li>";
+		}
+
+
 	if( $_POST['change_ftp'] == "enable & start" )
 		{
 		$command = " sudo apt-get install proftpd -y && sudo apt-get install samba -y && sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/proftpd.conf -O /etc/proftpd/proftpd.conf && sudo systemctl restart proftpd";
@@ -229,6 +245,21 @@
 		$wifi_monitor_state = "disabled";
 		$change_wifi_monitor = "enable & start";
 		}
+
+	$command = "sudo service mupi_autoconnect-wifi status | grep running";
+	exec($command, $wifi_autoconnect_output, $wifi_autoconnect_result );
+	if( $wifi_autoconnect_output[0] )
+		{
+		$wifi_autoconnect_state = "started";
+		$change_wifi_autoconnect = "stop & disable";
+		}
+	else
+		{
+		$wifi_autoconnect_state = "disabled";
+		$change_wifi_autoconnect = "enable & start";
+		}
+
+
 
 	$command = "sudo service proftpd status | grep running";
 	exec($command, $ftpoutput, $ftpresult );
@@ -474,13 +505,22 @@
 		<summary><i class="fa-solid fa-gear"></i> Services</summary>
 	<ul>
 		<li class="li_1"><h2>DietPi-WiFi-Monitor</h2>
-			<p>Automatic reconnection to wifi.</p>
+			<p>Automatic reconnection to wifi, if signal is lost.</p>
 			<p>
 			<?php 
 			echo "DietPi-WiFi-Monitor Status: <b>".$wifi_monitor_state."</b>";
 			?>
 			</p>
 			<input id="saveForm" class="button_text" type="submit" name="change_wifi_monitor" value="<?php print $change_wifi_monitor; ?>" />
+		</li>
+		<li class="li_1"><h2>Check for best wifi connection</h2>
+			<p>Checks the WiFi SSIDs in the area every 10 seconds and connects to the strongest SSID if this is stored in the configuration. May cause connection dropouts, but allows for quick switching in a multi-Wifi environment.</p>
+			<p>
+			<?php 
+			echo "Autoconnect-wifi: <b>".$wifi_autoconnect_state."</b>";
+			?>
+			</p>
+			<input id="saveForm" class="button_text" type="submit" name="change_wifi_autoconnect" value="<?php print $change_wifi_autoconnect; ?>" />
 		</li>
 
 		<li class="li_1"><h2>Samba</h2>
