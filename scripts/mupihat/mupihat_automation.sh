@@ -9,6 +9,7 @@ play_sound() {
 }
 
 echo $! > /run/mupi_hat.pid
+/usr/bin/python3 -B /usr/local/bin/mupibox/mupihat.py -j /tmp/mupihat.json
 
 while true; do
 	if [ -f ${JSON_FILE} ]; then

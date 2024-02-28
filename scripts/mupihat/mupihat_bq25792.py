@@ -147,20 +147,15 @@ class bq25792:
         load the battery configuration from yaml file
         '''
         try:
+            self.battery_conf = None
             with open(self.battery_conf_file) as file:
                 config = json.load(file)
             
             selected_battery_name = config["mupihat"]["selected_battery"]
             for bt in config["mupihat"]["battery_types"]:
                 if bt["name"] == selected_battery_name:
+                    self.battery_conf = bt["config"]
                     self.battery_conf["battery_type"] = selected_battery_name
-                    self.battery_conf["v_100"] = int(bt["config"]["v_100"])
-                    self.battery_conf["v_75"] = int(bt["config"]["v_75"])
-                    self.battery_conf["v_50"] = int(bt["config"]["v_50"])
-                    self.battery_conf["v_25"] = int(bt["config"]["v_25"])
-                    self.battery_conf["v_0"] = int(bt["config"]["v_0"])
-                    self.battery_conf["th_warning"] = int(bt["config"]["th_warning"])
-                    self.battery_conf["th_shutdown"] = int(bt["config"]["th_shutdown"])
                     print(json.dumps(self.battery_conf, indent=4))
                     break            
             return 0
