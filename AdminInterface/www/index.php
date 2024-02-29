@@ -51,7 +51,7 @@
 			<summary><i class="fa-solid fa-circle-info"></i> MuPiBox-News</summary>
 			<ul>
 				<li class="li_norm">
-						<p><h2>MuPiBox Version</h2><table class="version">
+						<p><h2>MuPiBox-Version</h2><table class="version">
 							<tr>
 									<th>Environment</th>
 									<th>Latest Version</th>

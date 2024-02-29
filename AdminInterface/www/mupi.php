@@ -745,7 +745,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				?>
 				</p>
 				<input id="saveForm" class="button_text" type="submit" name="change_smoothscrolling" value="<?php print $change_smoothscrolling; ?>" />
-			<h2>Kîosk mode</h2>
+			<h2>Kiosk mode</h2>
 				<p>
 				Enables or disables kiosk mode! This setting is enabled by default.
 				</p>
