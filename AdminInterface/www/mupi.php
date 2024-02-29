@@ -268,7 +268,7 @@
 	$tvresult = exec($tvcommand, $tvoutput);
 	if($_POST['thisvolume'] != $tvoutput[0])
 		{ 
-		$command="sudo su dietpi -c '/usr/bin/amixer sset Master " . $_POST['thisvolume'] . "%'";
+		$command="sudo su dietpi -c '/usr/bin/pactl set-sink-volume @DEFAULT_SINK@ " . $_POST['thisvolume'] . "%'";
 		$set_volume = exec($command, $output );
 		$CHANGE_TXT=$CHANGE_TXT."<li>Volume: " . $_POST['thisvolume'] . "%</li>";
 		$change=2;

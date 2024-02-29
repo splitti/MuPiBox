@@ -75,7 +75,7 @@ x11vnc -ncache 10 -forever -display :0 &
 START_SOUND=$(/usr/bin/jq -r .mupibox.startSound ${CONFIG})
 START_VOLUME=$(/usr/bin/jq -r .mupibox.startVolume ${CONFIG})
 AUDIO_DEVICE=$(/usr/bin/jq -r .mupibox.audioDevice ${CONFIG})
-/usr/bin/pactl ${START_VOLUME}%
+/usr/bin/pactl set-sink-volume @DEFAULT_SINK@ ${START_VOLUME}%
 /usr/bin/mplayer -volume 100 ${START_SOUND} &
 pgrep -f "chromium-browser" | while read -r pid; do
     # Setze die Priorität für jeden Prozess neu
