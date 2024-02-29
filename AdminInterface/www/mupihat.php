@@ -122,7 +122,6 @@
 				document.getElementById("Ibat").innerText = mupihatData.Ibat + "mA";
 				document.getElementById("IBus").innerText = mupihatData.IBus + "mA";
 				document.getElementById("Temp").innerText = mupihatData.Temp + "°C";
-				document.getElementById("REG14").innerText = mupihatData.REG14;
 				document.getElementById("Bat_SOC").innerText = mupihatData.Bat_SOC;
 				document.getElementById("Bat_Stat").innerText = mupihatData.Bat_Stat;
 				document.getElementById("Bat_Type").innerText = mupihatData.Bat_Type;
@@ -154,7 +153,6 @@
 			<tr><td>Ibat (dis- / charge mA):</td><td id="Ibat"></td></tr>
 			<tr><td>IBus (charger mA):</td><td id="IBus"></td></tr>
 			<tr><td>Temperature:</td><td id="Temp"></td></tr>
-			<tr><td>REG14:</td><td id="REG14"></td></tr>
 			<tr><td>Bat_SOC (battery level):</td><td id="Bat_SOC"></td></tr>
 			<tr><td>Bat_Stat (battery status):</td><td id="Bat_Stat"></td></tr>
 			<tr><td>Bat_Type (battery type):</td><td id="Bat_Type"></td></tr>
