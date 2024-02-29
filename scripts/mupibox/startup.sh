@@ -82,9 +82,10 @@ while [ ${ONLINESTATE} != "online" ]; do
 	ONLINESTATE=$(sudo /usr/bin/jq -r .onlinestate ${NETWORKCONFIG})
 done
 
-if [ -f "/boot/run_once.sh" ]; then
-	sudo chmod 755 /boot/run_once.sh
-    sudo /boot/./run_once.sh && sudo rm /boot/run_once.sh
+if [ -f "/boot/run_once.sh" ]; 
+	sudo mv /boot/run_once.sh /tmp/run_once.sh
+	sudo chmod 755 /tmp/run_once.sh
+    sudo /tmp/./run_once.sh
 fi
 
 if [ -f "$FIRST_INSTALL" ] && [ ${ONLINESTATE} = "online" ]; then
