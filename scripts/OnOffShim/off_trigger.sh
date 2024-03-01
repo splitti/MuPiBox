@@ -39,7 +39,6 @@ sudo service mupi_wifi stop
 
 sudo su - -c 'nohup /usr/local/bin/mupibox/./mupi_stop_led.sh > /dev/null 2>&1 &'
 sudo service mupi_powerled stop 
-sudo sh -c 'su - dietpi -s /usr/local/bin/mupibox/shutdown_sound.sh' &
 
 #sudo shutdown -h now
 poweroff

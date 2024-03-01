@@ -5,6 +5,14 @@
 # 3. Plays shutdown sound
 
 CONFIG="/etc/mupibox/mupiboxconfig.json"
+SHUT_SOUND=$(/usr/bin/jq -r .mupibox.shutSound ${CONFIG})
+AUDIO_DEVICE=$(/usr/bin/jq -r .mupibox.audioDevice ${CONFIG})
+START_VOLUME=$(/usr/bin/jq -r .mupibox.startVolume ${CONFIG})
+
+/usr/bin/pactl set-sink-volume @DEFAULT_SINK@ ${START_VOLUME}% 
+/usr/bin/aplay ${SHUT_SOUND}
+
+CONFIG="/etc/mupibox/mupiboxconfig.json"
 SHUT_SPLASH=$(/usr/bin/jq -r .mupibox.shutSplash ${CONFIG})
 killall -s 9 -w -q chromium-browser
 if [ -n "$1" ]; then
@@ -12,7 +20,6 @@ if [ -n "$1" ]; then
 else
     /usr/bin/fbv ${SHUT_SPLASH} &
 fi
-sudo sh -c 'su - dietpi -s /usr/local/bin/mupibox/shutdown_sound.sh' &
 wled_shut_active=$(/usr/bin/jq -r .wled.shutdown_active ${CONFIG})
 wled_shut_id=$(/usr/bin/jq -r .wled.shutdown_id ${CONFIG})
 wled_baud_rate=$(/usr/bin/jq -r .wled.baud_rate ${CONFIG})
