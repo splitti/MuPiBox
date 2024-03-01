@@ -198,6 +198,23 @@ form.appnitro, div.appnitro
   border-radius: 50px;
 }
 
+
+
+.rotate25 {
+    display: inline-block;
+-webkit-animation: rotate 4s linear infinite;
+animation: rotate 4s linear infinite;
+}
+
+@keyframes rotate {
+from {
+transform: rotate(0deg);
+}
+to {
+transform: rotate(360deg);
+}
+}
+
 .controlnav {
   max-width:1080px;
   background-color: #44afe2;

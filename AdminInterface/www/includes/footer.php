@@ -30,6 +30,30 @@
 		} 
 ?>
 <script>
+    function updateFanIcon() {
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+            if (this.readyState == 4 && this.status == 200) {
+                // Empfangene Daten verarbeiten
+                var fan_icon = this.responseText;
+                
+                // Batterie-Symbol in das Charger_Status-Div einfügen
+                document.getElementById("Fan_Icon").innerHTML = fan_icon;
+            }
+        };
+        xhttp.open("GET", "update_fanicon.php", true); // Passe den Pfad zur Serverseite an
+        xhttp.send();
+    }
+
+	updateFanIcon();
+    // Die Funktion alle 5 Sekunden aufrufen, um das Batteriesymbol zu aktualisieren
+    setInterval(function() {
+        updateWIFIIcon();
+    }, 2000); // 5000 Millisekunden entsprechen 5 Sekunden
+
+
+
+
     // Funktion für die AJAX-Anfrage
     function updateWIFIIcon() {
         var xhttp = new XMLHttpRequest();

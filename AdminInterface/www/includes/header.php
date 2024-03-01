@@ -7,15 +7,6 @@
 	$WIFI=exec($commandSSID);
 	$commandLQ="sudo iwconfig wlan0 | awk '/Link Quality/{split($2,a,\"=|/\");print int((a[2]/a[3])*100)\"\"}' | tr -d '%'";
 	$LINKQ=exec($commandLQ);
-	if ($LINKQ >= 70) {
-		$wifi_icon='<iconify-icon icon="material-symbols:wifi-sharp" title="SSID: ' . $WIFI . ' / Signal Quality: ' . $LINKQ . '%"></iconify-icon>';
-	}
-	elseif ($LINKQ >= 40) {
-		$wifi_icon='<iconify-icon icon="material-symbols:wifi-2-bar-sharp" title="SSID: ' . $WIFI . ' / Signal Quality: ' . $LINKQ . '%"></iconify-icon>';
-	}
-	else {
-		$wifi_icon='<iconify-icon icon="material-symbols:wifi-1-bar-sharp" title="SSID: ' . $WIFI . ' / Signal Quality: ' . $LINKQ . '%"></iconify-icon>';
-	}
 	
 	if ($_GET['hshutdown']) {
 		$shutdown = 1;
@@ -40,7 +31,7 @@
 		<link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.2.1/css/all.css">
 		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 		<title>MuPiBox Admin-Interface</title>
-		<link rel="stylesheet" type="text/css" href="view.css?v=7.1.7" media="all">
+		<link rel="stylesheet" type="text/css" href="view.css?v=7.1.8" media="all">
 		<script src="https://code.iconify.design/iconify-icon/2.0.0/iconify-icon.min.js"></script>
 		<script type="text/javascript" src="view.js?v=6.0.0"></script>
 		<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
@@ -53,6 +44,7 @@
 			<div class="controlnav" id="controlnav">
 				<div id="Wifi_Icon"> </div>
 				<div id="Battery_Icon"> </div>
+				<div id="Fan_Icon"> </div>
 				<a href="?hshutdown=1" onclick="return confirm('Do really want to shutdown?')"><iconify-icon icon="ic:outline-power-settings-new" title="Shutdown" ></iconify-icon></a>
 				<a href="?hreboot=1" onclick="return confirm('Do really want to reboot?')"><iconify-icon icon="ic:outline-restart-alt" title="Reboot" ></iconify-icon></a>
 			</div>
@@ -64,7 +56,7 @@
 	exec($command, $vncoutput, $vncresult );
 	if( $vncoutput[0] )
 	{
-		echo '				<a href="vnc.php"><i class="fa-solid fa-display"></i> VNC</a>';
+		echo '<a href="vnc.php"><i class="fa-solid fa-display"></i> VNC</a>';
 	}
 ?>
 				<a href="mupi.php"><i class="fa-solid fa-headphones"></i> MuPi-Conf</a>
