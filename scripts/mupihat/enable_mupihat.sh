@@ -14,4 +14,4 @@ sudo systemctl enable mupi_hat.service
 sudo service mupi_hat start
 sudo systemctl enable mupi_hat_control.service
 sudo service mupi_hat_control start
-sudo echo "sudo /boot/dietpi/func/dietpi-set_hardware soundcard 'hw:1,0' && sudo reboot" | sudo tee /boot/run_once.sh
+sudo echo "/boot/dietpi/func/dietpi-set_hardware soundcard 'hw:1,0' && reboot" | sudo tee /boot/run_once.sh

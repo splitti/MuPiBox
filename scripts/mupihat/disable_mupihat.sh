@@ -14,4 +14,4 @@ sudo sed -zi '/dtoverlay=max98357a,sdmode-pin=16/!s/$/\ndtoverlay=max98357a,sdmo
 sudo sed -zi '/dtoverlay=i2s-mmap/!s/$/\ndtoverlay=i2s-mmap/' /boot/config.txt
 sudo sed -zi '/i2c-dev/!s/$/\ni2c-dev/' /etc/modules
 sudo sed -zi '/i2c-bcm2708/!s/$/\ni2c-bcm2708/' /etc/modules
-sudo echo "sudo /boot/dietpi/func/dietpi-set_hardware soundcard 'rpi-bcm2835-3.5mm' && sudo reboot" | sudo tee /boot/run_once.sh
+sudo echo "/boot/dietpi/func/dietpi-set_hardware soundcard 'rpi-bcm2835-3.5mm' && reboot" | sudo tee /boot/run_once.sh

@@ -2,7 +2,7 @@
 
 SOUND_FILE="/home/dietpi/MuPiBox/sysmedia/sound/low.mp3"
 JSON_FILE="/tmp/mupihat.json"
-BATTERY_LOW_PNG="/home/dietpi/MuPiBox/sysmedia/images/battery_low.png"
+BATTERY_LOW="/home/dietpi/MuPiBox/sysmedia/images/battery_low.jpg"
 
 play_sound() {
     mplayer -nolirc "$SOUND_FILE" > /dev/null
@@ -16,7 +16,7 @@ while true; do
 		if [ "${STATE}" = "LOW" ]; then
 			play_sound
 		elif [ "${STATE}" = "SHUTDOWN" ]; then
-			/usr/local/bin/mupibox/mupi_shutdown.sh ${BATTERY_LOW_PNG}
+			/usr/local/bin/mupibox/mupi_shutdown.sh ${BATTERY_LOW}
 		fi
 	fi
     sleep 60
