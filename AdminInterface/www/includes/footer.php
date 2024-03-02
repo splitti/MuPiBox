@@ -48,8 +48,8 @@
 	updateFanIcon();
     // Die Funktion alle 5 Sekunden aufrufen, um das Batteriesymbol zu aktualisieren
     setInterval(function() {
-        updateWIFIIcon();
-    }, 2000); // 5000 Millisekunden entsprechen 5 Sekunden
+        updateFanIcon();
+    }, 5000); // 5000 Millisekunden entsprechen 5 Sekunden
 
 
 

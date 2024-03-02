@@ -198,12 +198,18 @@ form.appnitro, div.appnitro
   border-radius: 50px;
 }
 
+iconify-icon.rotate100 {
+    animation: rotate linear 0.5s infinite !important;
+}
 
-
-.rotate25 {
-    display: inline-block;
--webkit-animation: rotate 4s linear infinite;
-animation: rotate 4s linear infinite;
+iconify-icon.rotate75 {
+    animation: rotate linear 2s infinite !important;
+}
+iconify-icon.rotate50 {
+    animation: rotate linear 3.5s infinite !important;
+}
+iconify-icon.rotate25 {
+    animation: rotate linear 5s infinite !important;
 }
 
 @keyframes rotate {
