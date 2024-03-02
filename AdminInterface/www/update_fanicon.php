@@ -16,19 +16,19 @@
 	
 	
 	if ($speed == "100%") {
-		$fan_icon = '<iconify-icon class="rotate100" icon="mdi:fan" title="' . $show . '"></iconify-icon>';
+		$fan_icon = '<iconify-icon class="show-title rotate100" icon="mdi:fan" title="' . $show . '"></iconify-icon>';
 	}
 	elseif ($speed == "75%") {
-		$fan_icon = '<iconify-icon class="rotate75" icon="mdi:fan" title="' . $show . '"></iconify-icon>';
+		$fan_icon = '<iconify-icon class="show-title rotate75" icon="mdi:fan" title="' . $show . '"></iconify-icon>';
 	}
 	elseif ($speed == "50%") {
-		$fan_icon = '<iconify-icon class="rotate50" icon="mdi:fan" title="' . $show . '"></iconify-icon>';
+		$fan_icon = '<iconify-icon class="show-title rotate50" icon="mdi:fan" title="' . $show . '"></iconify-icon>';
 	}
 	elseif ($speed == "25%") {
-		$fan_icon = '<iconify-icon class="rotate25" icon="mdi:fan" title="' . $show . '"></iconify-icon>';
+		$fan_icon = '<iconify-icon class="show-title rotate25" icon="mdi:fan" title="' . $show . '"></iconify-icon>';
 	}
 	else {
-		$fan_icon = '<iconify-icon icon="mdi:fan-off" title="' . $show . '"></iconify-icon>';
+		$fan_icon = '<iconify-icon class="show-title" icon="mdi:fan-off" title="' . $show . '"></iconify-icon>';
 	}
 
 	}

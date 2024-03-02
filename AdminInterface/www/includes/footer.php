@@ -98,6 +98,13 @@
     setInterval(function() {
         updateBatteryIcon();
     }, 5000); // 5000 Millisekunden entsprechen 5 Sekunden
+
+$(document).ready(function() {
+  $('.show-title').on('click', function() {
+    var title = $(this).attr('title');
+    alert(title);
+  });
+});
 </script>
 
 	</body>
