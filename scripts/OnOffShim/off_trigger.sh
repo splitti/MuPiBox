@@ -33,6 +33,14 @@ until [ $power = $switchtype ]; do
     sleep 0.05
 done
 
+SHUT_SOUND=$(/usr/bin/jq -r .mupibox.shutSound ${CONFIG})
+AUDIO_DEVICE=$(/usr/bin/jq -r .mupibox.audioDevice ${CONFIG})
+START_VOLUME=$(/usr/bin/jq -r .mupibox.startVolume ${CONFIG})
+
+/usr/bin/pactl set-sink-volume @DEFAULT_SINK@ ${START_VOLUME}% 
+/usr/bin/aplay ${SHUT_SOUND}
+
+
 sudo service mupi_startstop stop
 sudo service mupi_check_internet stop
 sudo service mupi_wifi stop
