@@ -156,6 +156,7 @@ def main(argv):
                 print ("")
             if json_flag:
                 # Writing to json
+                hat.MuPiHAT_Default()
                 with open(json_file, "w") as outfile:
                     json.dump(hat.to_json(), outfile)
             time.sleep(5)

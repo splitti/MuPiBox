@@ -8,8 +8,8 @@ DefaultDependencies=no
 Type=simple
 WorkingDirectory=/usr/local/bin/mupibox/
 User=root
-ExecStart=python3 -B /usr/local/bin/mupibox/mupihat.py -j /tmp/mupihat.json
-Restart=always
+ExecStart=/usr/bin/python3 -B /usr/local/bin/mupibox/mupihat.py -j /tmp/mupihat.json
+Restart=on-failure
 
 [Install]
 WantedBy=basic.target
