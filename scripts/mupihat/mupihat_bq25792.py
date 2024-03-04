@@ -1548,7 +1548,8 @@ class bq25792:
         'Bat_Type'
             Battery Type as read from Battery Config File
         '''
-        self.read_all_register()
+        #self.read_all_register()
+        self.write_defaults()
 
         bat_SOC, bat_Stat = self.battery_soc()
         return {

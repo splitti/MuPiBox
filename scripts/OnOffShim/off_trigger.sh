@@ -15,6 +15,7 @@ sleep 10
 CONFIG="/etc/mupibox/mupiboxconfig.json"
 TRIGGER_PIN=$(/usr/bin/jq -r .shim.triggerPin ${CONFIG})
 PRESS_DELAY=$(/usr/bin/jq -r .timeout.pressDelay ${CONFIG})
+START_VOLUME=$(/usr/bin/jq -r .mupibox.startVolume ${CONFIG})
 
 # Check if OnOff-Button is pressed
 /bin/echo ${TRIGGER_PIN} > /sys/class/gpio/export
@@ -29,23 +30,15 @@ until [ $power = $switchtype ]; do
 	if [ $power = $switchtype ]; then
 		sleep ${PRESS_DELAY}
 		power=$(cat /sys/class/gpio/gpio${TRIGGER_PIN}/value)
+		/usr/bin/pactl set-sink-volume @DEFAULT_SINK@ ${START_VOLUME}% 
+		/usr/bin/aplay /home/dietpi/MuPiBox/sysmedia/sound/button_shutdown.wav &
+
 	fi
     sleep 0.05
 done
 
-SHUT_SOUND=$(/usr/bin/jq -r .mupibox.shutSound ${CONFIG})
-AUDIO_DEVICE=$(/usr/bin/jq -r .mupibox.audioDevice ${CONFIG})
-START_VOLUME=$(/usr/bin/jq -r .mupibox.startVolume ${CONFIG})
-
-/usr/bin/pactl set-sink-volume @DEFAULT_SINK@ ${START_VOLUME}% 
-/usr/bin/aplay ${SHUT_SOUND}
-
-
 sudo service mupi_startstop stop
-sudo service mupi_check_internet stop
-sudo service mupi_wifi stop
-
-sudo su - -c 'nohup /usr/local/bin/mupibox/./mupi_stop_led.sh > /dev/null 2>&1 &'
+#sudo su - -c 'nohup /usr/local/bin/mupibox/./mupi_stop_led.sh > /dev/null 2>&1 &'
 sudo service mupi_powerled stop 
 
 #sudo shutdown -h now
