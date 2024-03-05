@@ -8,6 +8,9 @@
 RELEASE="stable"
 LOG="/tmp/autosetup.log"
 VER_JSON="/tmp/version.json"
+OS=$(grep -E '^(VERSION_CODENAME)=' /etc/os-release)  >&3 2>&3
+OS=${OS:17}  >&3 2>&3
+ARCH=$(uname -m) >&3 2>&3	
 
 autosetup="$(cat /home/dietpi/.bashrc | grep autosetup)"
 

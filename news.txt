@@ -35,6 +35,7 @@ We will focus on <b>bookworm</b> and recommend you to update, or reinstall. See 
 <li id='linews' class='linews'>New: Standard audio devices in selection.</li>
 <li id='linews' class='linews'>New: PWM-Fan support</li>
 <li id='linews' class='linews'>New: A new WiFi service that checks network strength and switches to the stronger network</li>
+<li id='linews' class='linews'>New: Theme forms</li>
 <li id='linews' class='linews'>Bugfix: new Spotifyd Version --> less Spotify problems</li>
 <li id='linews' class='linews'>Bugfix: Theme cannot be set</li>
 <li id='linews' class='linews'>Bugfix: Fixing bluetooth problems</li>
