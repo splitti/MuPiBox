@@ -323,8 +323,6 @@
   $data["mupibox"]["host"]=$_POST['hostname'];
   $command = "sudo /boot/dietpi/func/change_hostname " . $_POST['hostname'];
   $change_hostname = exec($command, $output, $change_hostname );
-  $command = "sudo su dietpi -c '/usr/local/bin/mupibox/./set_hostname.sh'";
-  exec($command);
   $CHANGE_TXT=$CHANGE_TXT."<li>Hostname changed to  ".$data["mupibox"]["host"]." [reboot is necessary]</li>";
   $change=1;
   }
@@ -1091,7 +1089,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 					echo $data["timeout"]["pressDelay"];
 				?> sec</output>				
 
-				<input class="range slider-progress" name="pressDelay" type="range" min="0" max="5" step="1.0" value="<?php 
+				<input class="range slider-progress" name="pressDelay" type="range" min="0" max="5" step="0.25" value="<?php 
 					echo $data["timeout"]["pressDelay"];
 				?>" oninput="this.previousElementSibling.value = this.value + ' sec'"><output></output>
 				</div>

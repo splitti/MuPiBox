@@ -120,6 +120,8 @@ imageList['fantasybutterflies'] = new Image(150, 250);
 imageList['fantasybutterflies'].src = "images/fantasybutterflies.png";
 imageList['lines'] = new Image(150, 250);
 imageList['lines'].src = "images/lines.png";
+imageList['forms'] = new Image(150, 250);
+imageList['forms'].src = "images/forms.png";
 
 
 function switchImage() {
