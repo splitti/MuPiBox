@@ -416,7 +416,7 @@ exec 3>${LOG}
 
 	#FORMS
 	sudo mv -f ${MUPI_SRC}/themes/forms/forms-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/forms/forms-bg.jpg >&3 2>&3
-	sudo mv -f ${MUPI_SRC}/themes/forms/HammaMammaJamma.otf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/forms/HammaMammaJamma.otf >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/themes/forms/HammaMammaJamma.otf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/forms/LT_Crafted.otf >&3 2>&3
 
 	#MATRIX
 	sudo mv -f ${MUPI_SRC}/themes/matrix/matrix-bg.png /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/matrix/matrix-bg.png >&3 2>&3
