@@ -189,7 +189,17 @@ export class AddPage implements OnInit, AfterViewInit {
           this.keyboard.setInput(this.editMedia.title, event.target.name);
           break;
         case 'spotifyURL':
-          this.keyboard.setInput(this.editMedia.spotify_url, event.target.name);
+          if(this.editMedia.spotify_url){
+            this.keyboard.setInput(this.editMedia.spotify_url, event.target.name);
+          }else if(this.editMedia.artistid){
+            this.keyboard.setInput(this.editMedia.artistid, event.target.name);
+          }else if(this.editMedia.playlistid){
+            this.keyboard.setInput(this.editMedia.playlistid, event.target.name);
+          }else if(this.editMedia.showid){
+            this.keyboard.setInput(this.editMedia.showid, event.target.name);
+          }else if(this.editMedia.id){
+            this.keyboard.setInput(this.editMedia.id, event.target.name);
+          }
           break;
         case 'labelcover':
           this.keyboard.setInput(this.editMedia.artistcover, event.target.name);
