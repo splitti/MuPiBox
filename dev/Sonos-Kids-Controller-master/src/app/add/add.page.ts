@@ -76,8 +76,17 @@ export class AddPage implements OnInit, AfterViewInit {
       this.aPartOfAllMax = this.editMedia.aPartOfAllMax;
       if(this.source === 'spotify' && this.editMedia?.query) {
         this.sourceType = 'spotifySearch';
-      }else if(this.source === 'spotify' && (this.editMedia?.artistid || this.editMedia?.id || this.editMedia?.showid || this.editMedia?.id)) {
+      }else if(this.source === 'spotify' && (this.editMedia?.artistid || this.editMedia?.id || this.editMedia?.showid || this.editMedia?.id || this.editMedia?.playlistid)) {
         this.sourceType = 'spotifyURL';
+        if(this.editMedia?.id){
+          this.editMedia.spotify_url = 'https://open.spotify.com/album/' + this.editMedia?.id;
+        }else if (this.editMedia?.artistid){
+          this.editMedia.spotify_url = 'https://open.spotify.com/artist/' + this.editMedia?.artistid;
+        }else if (this.editMedia?.showid){
+          this.editMedia.spotify_url = 'https://open.spotify.com/show/' + this.editMedia?.showid;
+        }else if (this.editMedia?.playlistid){
+          this.editMedia.spotify_url = 'https://open.spotify.com/playlist/' + this.editMedia?.playlistid;
+        }
       }else if(this.source === 'radio' && this.editMedia?.id) {
         this.sourceType = 'streamURL';
       }else if(this.source === 'rss') {
@@ -189,17 +198,7 @@ export class AddPage implements OnInit, AfterViewInit {
           this.keyboard.setInput(this.editMedia.title, event.target.name);
           break;
         case 'spotifyURL':
-          if(this.editMedia.spotify_url){
-            this.keyboard.setInput(this.editMedia.spotify_url, event.target.name);
-          }else if(this.editMedia.artistid){
-            this.keyboard.setInput(this.editMedia.artistid, event.target.name);
-          }else if(this.editMedia.playlistid){
-            this.keyboard.setInput(this.editMedia.playlistid, event.target.name);
-          }else if(this.editMedia.showid){
-            this.keyboard.setInput(this.editMedia.showid, event.target.name);
-          }else if(this.editMedia.id){
-            this.keyboard.setInput(this.editMedia.id, event.target.name);
-          }
+          this.keyboard.setInput(this.editMedia.spotify_url, event.target.name);
           break;
         case 'labelcover':
           this.keyboard.setInput(this.editMedia.artistcover, event.target.name);
