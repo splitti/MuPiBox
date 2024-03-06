@@ -22,8 +22,6 @@ rm -R /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-*
 exec 3>${LOG}
 
 {
-	OS=$(source /etc/os-release ; echo $PRETTY_NAME) >&3 2>&3
-
 	#packages2install="git libasound2 jq samba mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential raspberrypi-kernel-headers dkms"
 	packages2install="git libasound2 jq samba wsdd mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio python3-serial libgles2-mesa mesa-utils libsdl2-dev preload python3-smbus2 pigpio libjson-c-dev i2c-tools libi2c-dev python3-smbus"
 	STEP=0
@@ -418,7 +416,7 @@ exec 3>${LOG}
 
 	#FORMS
 	sudo mv -f ${MUPI_SRC}/themes/forms/forms-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/forms/forms-bg.jpg >&3 2>&3
-	sudo mv -f ${MUPI_SRC}/themes/forms/TESLA.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/forms/TESLA.ttf >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/themes/forms/HammaMammaJamma.otf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/forms/HammaMammaJamma.otf >&3 2>&3
 
 	#MATRIX
 	sudo mv -f ${MUPI_SRC}/themes/matrix/matrix-bg.png /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/matrix/matrix-bg.png >&3 2>&3

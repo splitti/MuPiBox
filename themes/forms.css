@@ -1,6 +1,6 @@
 .player-content ion-range{
-	--knob-background: #00ebea;
-	--bar-background-active: #f50261;
+	--knob-background: #9b2bd8;
+	--bar-background-active: #ece947;
 	--bar-background: rgba(255,255,255,.4) !important;
 }
 
@@ -9,15 +9,15 @@
 }
 
 .ion-page .home-header, .ion-page .home-content, .ion-page .medialist-header, .ion-page .medialist-content, .ion-page .player-header {
-	--ion-color-light: #fdcb01 !important;
+	--ion-color-light: #292929 !important;
 }
 
 .ion-page .player-content {
-	--ion-color-light: #00ebea !important;
+	--ion-color-light: #ecec43 !important;
 }
 
 .ion-page{
-	background-image: url("/theme-data/lines/forms-bg.jpg") !important;
+	background-image: url("/theme-data/forms/forms-bg.jpg") !important;
 	background-size: cover !important;
 }
 
@@ -26,42 +26,42 @@ body .home-content, body .medialist-content, body .player-content{
 }
 
 @font-face {
-	font-family: "Komikandy";
-	src: url("/theme-data/forms/TESLA.ttf") format("truetype");
+	font-family: "Hamma Mamma Jamma";
+	src: url("/theme-data/forms/HammaMammaJamma.otf") format("opentype");
 	font-weight: normal;
 	font-style: normal;
 }
 
 
 .home-content .ion-text-nowrap, .medialist-content .ion-text-nowrap {
-	font-family: "Komikandy" !important;
+	font-family: "Hamma Mamma Jamma" !important;
 	font-size:120% !important;
-	color:#250448 !important;
+	color:#d5cdd2 !important;
 	padding-bottom: 0px !important;
 }
 
 .player-header ion-icon, .player-content ion-icon, .home-header ion-icon, .medialist-header ion-icon {
-	color: #250448 !important;
+	color: #9b2bd8 !important;
 }
 
 .medialist-header ion-back-button, .player-header ion-back-button {
-	color: #250448 !important;
+	color: #ecec43 !important;
 }
 
 .player-header .ion-activatable, .home-header .ion-activatable, .medialist-header .ion-activatable {
 	--background-hover-opacity: 0.3 !important;
 	--indicator-height: 8px !important;
-	--ion-color-contrast: #f60261 !important;
+	--ion-color-contrast: #9b2bd8 !important;
 }
 
 .medialist-header ion-title, .player-header ion-title {
-	color: #250448 !important;
-	font-family: "Komikandy" !important;
+	color: #ecec43 !important;
+	font-family: "Hamma Mamma Jamma" !important;
 	font-size:120% !important;
 }
 
 .medialist-content img, .player-content img {
-	border: 8px solid #f60261 !important;
+	border: 0px solid #f60261 !important;
 	background-color: transparent !important;
 }
 
@@ -70,13 +70,13 @@ body .home-content, body .medialist-content, body .player-content{
 }
 
 .home-content .circle-card {
-	border: 8px solid #f60261 !important;
+	border: 0px solid #0c0c0c !important;
 	background-color: transparent !important;
 }
 
 .medialist-content ion-card-header, .home-content ion-card-header {
 	border: 0 !important;
-	background: #00ebea !important;
+	background: #9b2bd8 !important;
 	padding: 16px 10px !important;
 }
 
