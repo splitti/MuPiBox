@@ -35,7 +35,7 @@ body .home-content, body .medialist-content, body .player-content{
 
 .home-content .ion-text-nowrap, .medialist-content .ion-text-nowrap {
         font-family: "SnapHand" !important;
-        font-size:145% !important;
+        font-size:190% !important;
         color:#dbdbdb !important;
         padding-bottom: 0px !important;
 }
@@ -61,7 +61,7 @@ body .home-content, body .medialist-content, body .player-content{
 .medialist-header ion-title, .player-header ion-title {
         color: #dbdbdb !important;
         font-family: "SnapHand" !important;
-        font-size:170% !important;
+        font-size:160% !important;
 }
 
 .medialist-content img, .player-content img {
