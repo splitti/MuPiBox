@@ -1,6 +1,6 @@
 .player-content ion-range{
-        --knob-background: #c02f12;
-        --bar-background-active: #f6b900;
+        --knob-background: #00ff8a;
+        --bar-background-active: #8effcb;
         --bar-background: rgba(255,255,255,.4) !important;
 }
 
@@ -9,12 +9,12 @@
 }
 
 .ion-page .home-header, .ion-page .home-content, .ion-page .medialist-header, .ion-page .medialist-content, .ion-page .player-header {
-        --ion-color-light: rgba(49, 64, 61, 0.8) !important;
+        --ion-color-light: rgba(44, 81, 64, 0.6) !important;
         #--ion-color-light: rgba(249, 33, 44, 0.7) !important;
 }
 
 .ion-page .player-content {
-        --ion-color-light: #c02f12 !important;
+        --ion-color-light: rgba(44, 81, 64, 0.7) !important;
 }
 
 .ion-page{
@@ -36,36 +36,36 @@ body .home-content, body .medialist-content, body .player-content{
 .home-content .ion-text-nowrap, .medialist-content .ion-text-nowrap {
         font-family: "ylee MHIM" !important;
         font-size:190% !important;
-        color:#dbdbdb !important;
+        color:#8effcb !important;
         padding-bottom: 0px !important;
 }
 
 .player-header ion-icon, .player-content ion-icon, .home-header ion-icon, .medialist-header ion-icon {
-        #color: #dbdbdb !important;
+        color: #8effcb !important;
 }
 
 .player-content ion-icon {
-        color: #dbdbdb !important;
+        color: #8effcb !important;
 }
 
 .medialist-header ion-back-button, .player-header ion-back-button {
-        color: #dbdbdb !important;
+        color: #8effcb !important;
 }
 
 .player-header .ion-activatable, .home-header .ion-activatable, .medialist-header .ion-activatable {
         --background-hover-opacity: 0.5 !important;
         --indicator-height: 8px !important;
-        --ion-color-contrast: #fdb53c !important;
+        --ion-color-contrast: #00ff8a !important;
 }
 
 .medialist-header ion-title, .player-header ion-title {
-        color: #dbdbdb !important;
+        color: #00ff8a !important;
         font-family: "ylee MHIM" !important;
         font-size:160% !important;
 }
 
 .medialist-content img, .player-content img {
-        border: 5px solid #fdb53c !important;
+        border: 8px solid rgba(88, 194, 117, 0.4) !important;
         background-color: transparent !important;
 }
 
@@ -74,18 +74,16 @@ body .home-content, body .medialist-content, body .player-content{
 }
 
 .home-content .circle-card {
-        max-width: 200px !important;
-        max-height: 200px !important;
-        border: 5px solid #fdb53c !important;
+        border: 8px solid rgba(88, 194, 117, 0.4) !important;
         background-color: transparent !important;
 }
 
 .medialist-content ion-card-header, .home-content ion-card-header {
         border: 0px !important;
-        background: #275376 !important;
+        background: rgba(44, 81, 64, 0.6) !important;
         padding: 16px 10px !important;
 }
 
 body .edit-header, body .add-header, body .admin-header {
-        --ion-color-light: #c02f12 !important;
+        --ion-color-light: #58c275 !important;
 }
