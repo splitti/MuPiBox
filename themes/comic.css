@@ -61,7 +61,7 @@ body .home-content, body .medialist-content, body .player-content{
 .medialist-header ion-title, .player-header ion-title {
         color: #dbdbdb !important;
         font-family: "SnapHand" !important;
-        font-size:150% !important;
+        font-size:170% !important;
 }
 
 .medialist-content img, .player-content img {
