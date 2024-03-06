@@ -48,8 +48,8 @@
 				<div id="Wifi_Icon"> </div>
 				<div id="Battery_Icon"> </div>
 				<div id="Fan_Icon"> </div>
-				<a href="?hshutdown=1" onclick="return confirm('Do really want to shutdown?')"><iconify-icon icon="ic:outline-power-settings-new" title="Shutdown" ></iconify-icon></a>
-				<a href="?hreboot=1" onclick="return confirm('Do really want to reboot?')"><iconify-icon icon="ic:outline-restart-alt" title="Reboot" ></iconify-icon></a>
+				<a href="?hshutdown=1" onclick="return confirm('Do really want to shutdown?')" ><iconify-icon icon="ic:outline-power-settings-new" title="Shutdown" ></iconify-icon></a>
+				<a href="?hreboot=1" onclick="return confirm('Do really want to reboot?')" ><iconify-icon icon="ic:outline-restart-alt" title="Reboot" ></iconify-icon></a>
 			</div>
 			<div class="topnav" id="myTopnav">
 				<a href="index.php"><i class="fa fa-fw fa-home"></i> Home</a>
