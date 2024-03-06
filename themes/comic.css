@@ -1,0 +1,88 @@
+.player-content ion-range{
+        --knob-background: #9b2bd8;
+        --bar-background-active: #ece947;
+        --bar-background: rgba(255,255,255,.4) !important;
+}
+
+.player-content ion-item{
+        --background: transparent !important;
+}
+
+.ion-page .home-header, .ion-page .home-content, .ion-page .medialist-header, .ion-page .medialist-content, .ion-page .player-header {
+        --ion-color-light: #292929 !important;
+}
+
+.ion-page .player-content {
+        --ion-color-light: #ecec43 !important;
+}
+
+.ion-page{
+        background-image: url("/theme-data/comic/comic-bg.jpg") !important;
+        background-size: cover !important;
+}
+
+body .home-content, body .medialist-content, body .player-content{
+        --ion-background-color: transparent !important;
+}
+
+@font-face {
+        font-family: "SnapHand";
+        src: url("/theme-data/comic/snaphand-v1-free.ttf") format("truetype");
+        font-weight: normal;
+        font-style: normal;
+}
+
+.home-content .ion-text-nowrap, .medialist-content .ion-text-nowrap {
+        font-family: "SnapHand" !important;
+        font-size:180% !important;
+        color:#d5cdd2 !important;
+        padding-bottom: 0px !important;
+}
+
+.player-header ion-icon, .player-content ion-icon, .home-header ion-icon, .medialist-header ion-icon {
+        color: #ecec43 !important;
+}
+
+.player-content ion-icon {
+        color: #9b2bd8 !important;
+}
+
+.medialist-header ion-back-button, .player-header ion-back-button {
+        color: #ecec43 !important;
+}
+
+.player-header .ion-activatable, .home-header .ion-activatable, .medialist-header .ion-activatable {
+        --background-hover-opacity: 0.3 !important;
+        --indicator-height: 8px !important;
+        --ion-color-contrast: #9b2bd8 !important;
+}
+
+.medialist-header ion-title, .player-header ion-title {
+        color: #ecec43 !important;
+        font-family: "SnapHand" !important;
+        font-size:150% !important;
+}
+
+.medialist-content img, .player-content img {
+        border: 0px solid #f60261 !important;
+        background-color: transparent !important;
+}
+
+.medialist-content ion-card, .home-content ion-card {
+        background: transparent !important;
+}
+
+.home-content .circle-card {
+        border: 0px solid #0c0c0c !important;
+        background-color: transparent !important;
+}
+
+.medialist-content ion-card-header, .home-content ion-card-header {
+        border: 0 !important;
+        background: #9b2bd8 !important;
+        padding: 16px 10px !important;
+}
+
+body .edit-header, body .add-header, body .admin-header {
+        --ion-color-light: #054b61 !important;
+}
