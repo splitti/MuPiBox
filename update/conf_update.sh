@@ -217,8 +217,8 @@ if [ "$MQTTTIMEOUT" == "null" ]; then
 fi
 BATTERYCONFIG=$(/usr/bin/jq -r .mupihat.selected_battery ${CONFIG})
 if [ "$BATTERYCONFIG" == "null" ]; then 
-	/usr/bin/cat <<< $(/usr/bin/jq --arg v "ENERpower 2S2P 10.000mAh" '.mupihat.selected_battery = $v' ${CONFIG}) >  ${CONFIG}
-	/usr/bin/cat <<< $(/usr/bin/jq '. += {"mupihat": { "battery_types": [{ "name": "Ansmann 2S1P", "config": { "v_100": "8100", "v_75": "7800", "v_50": "7400", "v_25": "7000", "v_0": "6700", "th_warning": "7000", "th_shutdown": "6800" }}, { "name": "ENERpower 2S2P 10.000mAh", "config": {	"v_100": "8000", "v_75": "7700", "v_50": "7300", "v_25": "6900", "v_0": "6000", "th_warning": "6500", "th_shutdown": "6150" }}, { "name": "Custom", "config": { "v_100": "8100", "v_75": "7800", "v_50": "7400", "v_25": "7000", "v_0": "6700", "th_warning": "7000", "th_shutdown": "6800"}}], "selected_battery": "ENERpower 2S2P 10.000mAh" }}' ${CONFIG}) >  ${CONFIG}
+	/usr/bin/cat <<< $(/usr/bin/jq --arg v "Powerbank" '.mupihat.selected_battery = $v' ${CONFIG}) >  ${CONFIG}
+	/usr/bin/cat <<< $(/usr/bin/jq '. += {"mupihat": { "battery_types": [{ "name": "Ansmann 2S1P", "config": { "v_100": "8100", "v_75": "7800", "v_50": "7400", "v_25": "7000", "v_0": "6700", "th_warning": "7000", "th_shutdown": "6800" }}, { "name": "ENERpower 2S2P 10.000mAh", "config": {	"v_100": "8000", "v_75": "7700", "v_50": "7300", "v_25": "6900", "v_0": "6000", "th_warning": "6500", "th_shutdown": "6150" }}, { "name": "Powerbanl", "config": { "v_100": "1", "v_75": "1", "v_50": "1", "v_25": "1", "v_0": "1", "th_warning": "0", "th_shutdown": "0"}}, { "name": "Custom", "config": { "v_100": "8100", "v_75": "7800", "v_50": "7400", "v_25": "7000", "v_0": "6700", "th_warning": "7000", "th_shutdown": "6800"}}], "selected_battery": "ENERpower 2S2P 10.000mAh" }}' ${CONFIG}) >  ${CONFIG}
 	/usr/bin/cat <<< $(/usr/bin/jq '.mupihat.hat_active = false' ${CONFIG}) >  ${CONFIG}
 fi
 HAT_ACTIVE=$(/usr/bin/jq -r .mupihat.hat_active ${CONFIG})
@@ -254,18 +254,6 @@ fi
 RESUME=$(/usr/bin/cat ${CONFIG} | grep resume)
 if [[ -z ${RESUME} ]]; then 
 	/usr/bin/cat <<< $(/usr/bin/jq '.mupibox.resume = 9' ${CONFIG}) >  ${CONFIG}
-fi
-
-POWERBANK=$(/usr/bin/cat ${CONFIG} | grep Powerbank)
-if [[ -z ${POWERBANK} ]]; then 
-	/usr/bin/cat <<< $(/usr/bin/jq --arg v "Powerbank" '.mupihat.selected_battery? += [$v]' ${CONFIG}) >  ${CONFIG}
-	/usr/bin/cat <<< $(/usr/bin/jq '.mupihat.selected_battery["Powebank"].config.v_100 = "1"' ${CONFIG}) >  ${CONFIG}
-	/usr/bin/cat <<< $(/usr/bin/jq '.mupihat.selected_battery["Powebank"].config.v_75 = "1"' ${CONFIG}) >  ${CONFIG}
-	/usr/bin/cat <<< $(/usr/bin/jq '.mupihat.selected_battery["Powebank"].config.v_50 = "1"' ${CONFIG}) >  ${CONFIG}
-	/usr/bin/cat <<< $(/usr/bin/jq '.mupihat.selected_battery["Powebank"].config.v_25 = "1"' ${CONFIG}) >  ${CONFIG}
-	/usr/bin/cat <<< $(/usr/bin/jq '.mupihat.selected_battery["Powebank"].config.v_0 = "1"' ${CONFIG}) >  ${CONFIG}
-	/usr/bin/cat <<< $(/usr/bin/jq '.mupihat.selected_battery["Powebank"].config.th_warning = "0"' ${CONFIG}) >  ${CONFIG}
-	/usr/bin/cat <<< $(/usr/bin/jq '.mupihat.selected_battery["Powebank"].config.th_shutdown = "0"' ${CONFIG}) >  ${CONFIG}
 fi
 
 #/usr/bin/cat <<< $(/usr/bin/jq '.mupibox.AudioDevices += [{"tname": "MAX98357A bcm2835-i2s-HiFi HiFi-0","ufname": "MAX98357A bcm2835-i2s-HiFi HiFi-0"},{"tname": "rpi-bcm2835-3.5mm","ufname": "Onboard 3.5mm output"},{"tname": "rpi-bcm2835-hdmi","ufname": "Onboard HDMI output"},{"tname": "hifiberry-amp","ufname": "HifiBerry AMP / AMP+"},{"tname": "hifiberry-dac","ufname": "HifiBerry DAC / MiniAmp"},{"tname": "hifiberry-dacplus","ufname": "HifiBerry DAC+ / DAC+ Pro / AMP2"},{"tname": "usb-dac","ufname": "Any USB Audio DAC (Auto detection)"}]' ${CONFIG}) >  ${CONFIG}
