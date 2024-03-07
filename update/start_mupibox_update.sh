@@ -290,18 +290,6 @@ echo "==========================================================================
 	mv ${MUPI_SRC}/scripts/fan/* /usr/local/bin/mupibox/ >&3 2>&3
 	mv ${MUPI_SRC}/scripts/wifi/* /usr/local/bin/mupibox/ >&3 2>&3
 
-
-	NANORC_FILE=/home/dietpi/.nanorc  >&3 2>&3
-	wget -O /tmp/nanorc.zip https://github.com/scopatz/nanorc/archive/master.zip  >&3 2>&3
-	mkdir -p /home/dietpi/.nano/ >&3 2>&3
-	cd /tmp >&3 2>&3
-	unzip nanorc.zip >&3 2>&3
-	cp /tmp/nanorc-master/*.nanorc /home/dietpi/.nano/ >&3 2>&3
-	cp /tmp/nanorc-master/nanorc ${NANORC_FILE}
-	cd /home/dietpi/.nano/ >&3 2>&3
-	rm -R /tmp/nanorc.zip /tmp/nanorc-master >&3 2>&3
-	chown -R dietpi:dietpi /home/dietpi/.nanorc /home/dietpi/.nano/  >&3 2>&3
-
 	chown dietpi:dietpi /home/dietpi/.bashrc >&3 2>&3
 	chmod 755 /usr/local/bin/mupibox/* >&3 2>&3
 	chmod 755 /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
