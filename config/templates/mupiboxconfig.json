@@ -337,6 +337,18 @@
 				}
 			},
 			{
+				"name": "Powerbank",
+				"config": {
+						"v_100": "1",
+						"v_75": "1",
+						"v_50": "1",
+						"v_25": "1",
+						"v_0": "1",
+						"th_warning": "0",
+						"th_shutdown": "0"
+				}
+			},
+			{
 				"name": "Custom",
 				"config": {
 					"v_100": "8100",

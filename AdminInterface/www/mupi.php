@@ -343,7 +343,7 @@
 
  if( $_POST['resume'] != $data["mupibox"]["resume"] && $_POST['mupiset'] )
   {
-  $data["mupibox"]["resume"]=$_POST['resume'];
+  $data["mupibox"]["resume"]=intval($_POST['resume']);
   $CHANGE_TXT=$CHANGE_TXT."<li>Max resume entries  ".$data["mupibox"]["ttsLanguage"]."</li>";
   $change=1;
   }
