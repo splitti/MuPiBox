@@ -3,6 +3,8 @@
 # lösche alle Einträge mit Category resume.
 
 RESUME="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/resume.json"
+CONFIG="/etc/mupibox/mupiboxconfig.json"
+MAXRESUME=$(sudo /usr/bin/jq -r .mupibox.resume ${CONFIG})
 TMP_RESUME="/tmp/.resume.json"
 RESUME_LOCK="/tmp/.resume.lock"
 
@@ -26,12 +28,12 @@ else
 	fi
 
 	# Überprüfen, ob die Anzahl größer als 9 ist
-	if [ $count -gt 9 ]; then
-	    echo "Die Anzahl der Einträge mit der Kategorie 'resume' ist größer als 9. Lösche Einträge, bis nur noch 9 übrig sind."
+	if [ $count -gt $MAXRESUME ]; then
+	    echo "Die Anzahl der Einträge mit der Kategorie 'resume' ist größer als '9'. Lösche Einträge, bis nur noch 9 übrig sind."
 		echo $count
 
 	    # Berechne die Anzahl der Einträge, die gelöscht werden müssen
-	    num_to_delete=$((count - 9))
+	    num_to_delete=$((count - $MAXRESUME))
 
 	    # Lösche die ersten 'num_to_delete' Einträge mit der Kategorie "resume"
 		jq --argjson num_to_delete "$num_to_delete" 'sort_by(.index) | .[$num_to_delete:]' "$RESUME" > "$TMP_RESUME"
