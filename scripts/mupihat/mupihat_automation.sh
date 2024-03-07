@@ -14,7 +14,7 @@ play_sound() {
 while true; do
 	if [ -f ${JSON_FILE} ]; then
 		BATTERY=$(/usr/bin/jq -r .mupihat.selected_battery ${CONFIG})
-		if [ "${BATTERY}" != "Powerbank" ]; then
+		if [ "${BATTERY}" != "USB-C" ]; then
 			STATE=$(jq -r '.Bat_Stat' ${JSON_FILE})
 			if [ "${STATE}" = "LOW" ]; then
 				play_sound

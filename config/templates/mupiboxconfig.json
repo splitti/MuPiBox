@@ -337,7 +337,7 @@
 				}
 			},
 			{
-				"name": "Powerbank",
+				"name": "USB-C mode",
 				"config": {
 						"v_100": "1",
 						"v_75": "1",
@@ -361,7 +361,7 @@
 				}
 			}
 		],
-		"selected_battery": "Powerbank",
+		"selected_battery": "USB-C mode",
 		"hat_active": false
 	},
 	"fan": {
