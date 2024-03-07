@@ -338,8 +338,16 @@
   $CHANGE_TXT=$CHANGE_TXT."<li>New TTS Language  ".$data["mupibox"]["ttsLanguage"]." [reboot is necessary]</li>";
   $command = "sudo rm /home/dietpi/MuPiBox/tts_files/*.mp3";
   exec($command, $output, $result );
-  $change=2;
+  $change=1;
   }
+
+ if( $_POST['resume'] != $data["mupibox"]["resume"] && $_POST['mupiset'] )
+  {
+  $data["mupibox"]["resume"]=$_POST['resume'];
+  $CHANGE_TXT=$CHANGE_TXT."<li>Max resume entries  ".$data["mupibox"]["ttsLanguage"]."</li>";
+  $change=1;
+  }
+
 
  if( $data["shim"]["ledBrightnessMax"]!=$_POST['ledmaxbrightness'] && $_POST['powerset'] )
   {
@@ -696,100 +704,6 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 			</li>
 		</ul>
 	</details>
-	<details>
-		<summary><i class="fa-brands fa-chrome"></i> Chromium browser parameters</summary>
-		<ul>
-			<li id="li_1" >
-			<h2>GPU-Support (experimental)</h2>
-				<p>
-				Enables or disables GPU-Support! This setting is disabled by default.
-				</p>
-				<p>
-				<?php
-				if($data["chromium"]["gpu"])
-					{
-					$currentgpusupport="active";
-					$change_gpu="disable";
-					}
-				else
-					{
-					$currentgpusupport="disabled";
-					$change_gpu="enable";
-					}
-
-				echo "GPU-Support: <b>".$currentgpusupport."</b>";
-				?>
-				</p>
-				<input id="saveForm" class="button_text" type="submit" name="change_gpu" value="<?php print $change_gpu; ?>" />
-
-			<h2>Smooth scrolling animation (experimental)</h2>
-				<p>
-				Enables or disables scroll animation! This setting is disabled by default.
-				</p>
-				<p>
-				<?php
-				if($data["chromium"]["sccrollanimation"])
-					{
-					$currentsmoothscrolling="active";
-					$change_smoothscrolling="disable";
-					}
-				else
-					{
-					$currentsmoothscrolling="disabled";
-					$change_smoothscrolling="enable";
-					}
-
-				echo "Smooth scrolling: <b>".$currentsmoothscrolling."</b>";
-				?>
-				</p>
-				<input id="saveForm" class="button_text" type="submit" name="change_smoothscrolling" value="<?php print $change_smoothscrolling; ?>" />
-			<h2>Kiosk mode</h2>
-				<p>
-				Enables or disables kiosk mode! This setting is enabled by default.
-				</p>
-				<p>
-				<?php
-				if($data["chromium"]["kiosk"])
-					{
-					$currentkiosk="active";
-					$change_kiosk="disable";
-					}
-				else
-					{
-					$currentkiosk="disabled";
-					$change_kiosk="enable";
-					}
-
-				echo "Kiosk mode: <b>".$currentkiosk."</b>";
-				?>
-				</p>
-				<input id="saveForm" class="button_text" type="submit" name="change_kiosk" value="<?php print $change_kiosk; ?>" />
-				<h2>Cache size</h2>
-				<p>Set chromium cache size in MB. Default value is 128.</p>
-				<div>
-				<select id="" name="cachesize" class="element text medium">
-				<?php 
-				$cache_sizes = array(0,8,16,32,64,128,256,512,1024,2048);
-				foreach($cache_sizes as $mb) {
-				if( $mb == $data["chromium"]["cachesize"] )
-					{
-					$selected = " selected=\"selected\"";
-					}
-				else
-					{
-					$selected = "";
-					}
-				print "<option value=\"". $mb . "\"" . $selected  . ">" . $mb . " MB</option>";
-				}
-				?>
-				</select></div>
-				<input id="saveForm" class="button_text" type="submit" name="change_cache" value="Change cache" />
-
-
-			</li>
-
-		</ul>
-	</details>
 
 	<details>
 		<summary><i class="fa-solid fa-radio"></i> MuPiBox settings</summary>
@@ -839,6 +753,20 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				"</select>
 				</div>
 			</li>
+			
+			<li id="li_1" >
+				<h2>Maximum number of resume entries</h2>
+				<div>
+					<output id="rangeval" class="rangeval"><?php 
+					echo $data["mupibox"]["resume"]
+				?></output>				
+				
+				<input class="range slider-progress" name="resume" type="range" min="1" max="99" step="1.0" value="<?php 
+					echo $data["mupibox"]["resume"]
+				?>" oninput="this.previousElementSibling.value = this.value">
+				</div>
+			</li>
+
 			<li class="buttons">
 				<input type="hidden" name="form_id" value="37271" />
 
@@ -846,7 +774,6 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 			</li>
 		</ul>
 	</details>
-
 
 	<details>
 		<summary><i class="fa-solid fa-display"></i> Display settings</summary>
@@ -1241,6 +1168,102 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 			</li>
 		</ul>
 	</details>
+	<details>
+		<summary><i class="fa-brands fa-chrome"></i> Chromium browser parameters</summary>
+		<ul>
+			<li id="li_1" >
+			<h2>GPU-Support (experimental)</h2>
+				<p>
+				Enables or disables GPU-Support! This setting is disabled by default.
+				</p>
+				<p>
+				<?php
+				if($data["chromium"]["gpu"])
+					{
+					$currentgpusupport="active";
+					$change_gpu="disable";
+					}
+				else
+					{
+					$currentgpusupport="disabled";
+					$change_gpu="enable";
+					}
+
+				echo "GPU-Support: <b>".$currentgpusupport."</b>";
+				?>
+				</p>
+				<input id="saveForm" class="button_text" type="submit" name="change_gpu" value="<?php print $change_gpu; ?>" />
+
+			<h2>Smooth scrolling animation (experimental)</h2>
+				<p>
+				Enables or disables scroll animation! This setting is disabled by default.
+				</p>
+				<p>
+				<?php
+				if($data["chromium"]["sccrollanimation"])
+					{
+					$currentsmoothscrolling="active";
+					$change_smoothscrolling="disable";
+					}
+				else
+					{
+					$currentsmoothscrolling="disabled";
+					$change_smoothscrolling="enable";
+					}
+
+				echo "Smooth scrolling: <b>".$currentsmoothscrolling."</b>";
+				?>
+				</p>
+				<input id="saveForm" class="button_text" type="submit" name="change_smoothscrolling" value="<?php print $change_smoothscrolling; ?>" />
+			<h2>Kiosk mode</h2>
+				<p>
+				Enables or disables kiosk mode! This setting is enabled by default.
+				</p>
+				<p>
+				<?php
+				if($data["chromium"]["kiosk"])
+					{
+					$currentkiosk="active";
+					$change_kiosk="disable";
+					}
+				else
+					{
+					$currentkiosk="disabled";
+					$change_kiosk="enable";
+					}
+
+				echo "Kiosk mode: <b>".$currentkiosk."</b>";
+				?>
+				</p>
+				<input id="saveForm" class="button_text" type="submit" name="change_kiosk" value="<?php print $change_kiosk; ?>" />
+				<h2>Cache size</h2>
+				<p>Set chromium cache size in MB. Default value is 128.</p>
+				<div>
+				<select id="" name="cachesize" class="element text medium">
+				<?php 
+				$cache_sizes = array(0,8,16,32,64,128,256,512,1024,2048);
+				foreach($cache_sizes as $mb) {
+				if( $mb == $data["chromium"]["cachesize"] )
+					{
+					$selected = " selected=\"selected\"";
+					}
+				else
+					{
+					$selected = "";
+					}
+				print "<option value=\"". $mb . "\"" . $selected  . ">" . $mb . " MB</option>";
+				}
+				?>
+				</select></div>
+				<input id="saveForm" class="button_text" type="submit" name="change_cache" value="Change cache" />
+
+
+			</li>
+
+		</ul>
+	</details>
+
+
 </form><p>
 <?php
  include ('includes/footer.php');

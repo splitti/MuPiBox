@@ -41,7 +41,7 @@ body .home-content, body .medialist-content, body .player-content{
 }
 
 .player-header ion-icon, .player-content ion-icon, .home-header ion-icon, .medialist-header ion-icon {
-        #color: #dbdbdb !important;
+        color: #dbdbdb !important;
 }
 
 .player-content ion-icon {

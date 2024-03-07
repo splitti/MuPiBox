@@ -1,0 +1,89 @@
+.player-content ion-range{
+        --knob-background: #00ff8a;
+        --bar-background-active: #8effcb;
+        --bar-background: rgba(255,255,255,.4) !important;
+}
+
+.player-content ion-item{
+        --background: transparent !important;
+}
+
+.ion-page .home-header, .ion-page .home-content, .ion-page .medialist-header, .ion-page .medialist-content, .ion-page .player-header {
+        --ion-color-light: rgba(44, 81, 64, 0.6) !important;
+        #--ion-color-light: rgba(249, 33, 44, 0.7) !important;
+}
+
+.ion-page .player-content {
+        --ion-color-light: rgba(44, 81, 64, 0.7) !important;
+}
+
+.ion-page{
+        background-image: url("/theme-data/mystic/mystic-bg.jpg") !important;
+        background-size: cover !important;
+}
+
+body .home-content, body .medialist-content, body .player-content{
+        --ion-background-color: transparent !important;
+}
+
+@font-face {
+        font-family: "ylee MHIM";
+        src: url("/theme-data/mystic/ylee_Mortal_Heart.ttf") format("truetype");
+        font-weight: normal;
+        font-style: normal;
+}
+
+.home-content .ion-text-nowrap, .medialist-content .ion-text-nowrap {
+        font-family: "ylee MHIM" !important;
+        font-size:190% !important;
+        color:#8effcb !important;
+        padding-bottom: 0px !important;
+}
+
+.player-header ion-icon, .player-content ion-icon, .home-header ion-icon, .medialist-header ion-icon {
+        color: #8effcb !important;
+}
+
+.player-content ion-icon {
+        color: #8effcb !important;
+}
+
+.medialist-header ion-back-button, .player-header ion-back-button {
+        color: #8effcb !important;
+}
+
+.player-header .ion-activatable, .home-header .ion-activatable, .medialist-header .ion-activatable {
+        --background-hover-opacity: 0.5 !important;
+        --indicator-height: 8px !important;
+        --ion-color-contrast: #00ff8a !important;
+}
+
+.medialist-header ion-title, .player-header ion-title {
+        color: #00ff8a !important;
+        font-family: "ylee MHIM" !important;
+        font-size:160% !important;
+}
+
+.medialist-content img, .player-content img {
+        border: 8px solid rgba(88, 194, 117, 0.4) !important;
+        background-color: transparent !important;
+}
+
+.medialist-content ion-card, .home-content ion-card {
+        background: transparent !important;
+}
+
+.home-content .circle-card {
+        border: 8px solid rgba(88, 194, 117, 0.4) !important;
+        background-color: transparent !important;
+}
+
+.medialist-content ion-card-header, .home-content ion-card-header {
+        border: 0px !important;
+        background: rgba(44, 81, 64, 0.6) !important;
+        padding: 16px 10px !important;
+}
+
+body .edit-header, body .add-header, body .admin-header {
+        --ion-color-light: #58c275 !important;
+}

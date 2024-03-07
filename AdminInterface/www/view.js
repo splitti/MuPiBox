@@ -124,6 +124,8 @@ imageList['forms'] = new Image(150, 250);
 imageList['forms'].src = "images/forms.png";
 imageList['comic'] = new Image(150, 250);
 imageList['comic'].src = "images/comic.png";
+imageList['mystic'] = new Image(150, 250);
+imageList['mystic'].src = "images/mystic.png";
 
 
 function switchImage() {
