@@ -11,6 +11,57 @@
 		$presets_string = file_get_contents('/tmp/.wled.presets.json', true);
 		$wled_presets_data = json_decode($presets_string, true);
 
+		if( $_POST['change_mqtt'] )
+			{
+			 if( $data["mqtt"]["name"]!=$_POST['mqtt_name'])
+				{
+				$data["mqtt"]["name"]=$_POST['mqtt_name'];
+				}
+			 if( $data["mqtt"]["active"]!=$_POST['mqtt_active'])
+				{
+				$data["mqtt"]["active"]=$_POST['mqtt_active'];
+				}
+			 if( $data["mqtt"]["broker"]!=$_POST['mqtt_broker'])
+				{
+				$data["mqtt"]["broker"]=$_POST['mqtt_broker'];
+				}
+			 if( $data["mqtt"]["port"]!=$_POST['mqtt_port'])
+				{
+				$data["mqtt"]["port"]=$_POST['mqtt_port'];
+				}
+			 if( $data["mqtt"]["topic"]!=$_POST['mqtt_topic'])
+				{
+				$data["mqtt"]["topic"]=$_POST['mqtt_topic'];
+				}
+			 if( $data["mqtt"]["clientId"]!=$_POST['mqtt_clientId'])
+				{
+				$data["mqtt"]["clientId"]=$_POST['mqtt_clientId'];
+				}
+			 if( $data["mqtt"]["username"]!=$_POST['mqtt_username'])
+				{
+				$data["mqtt"]["username"]=$_POST['mqtt_username'];
+				}
+			 if( $data["mqtt"]["password"]!=$_POST['mqtt_password'])
+				{
+				$data["mqtt"]["password"]=$_POST['mqtt_password'];
+				}
+			 if( $data["mqtt"]["refresh"]!=$_POST['mqtt_refresh'])
+				{
+				$data["mqtt"]["refresh"]=$_POST['mqtt_refresh'];
+				}
+			 if( $data["mqtt"]["refreshIdle"]!=$_POST['mqtt_refreshIdle'])
+				{
+				$data["mqtt"]["refreshIdle"]=$_POST['mqtt_refreshIdle'];
+				}
+			 if( $data["mqtt"]["timeout"]!=$_POST['mqtt_timeout'])
+				{
+				$data["mqtt"]["timeout"]=$_POST['mqtt_timeout'];
+				}
+			$change=4;
+			$CHANGE_TXT=$CHANGE_TXT."<li>MQTT settings changed...</li>";
+							
+			}
+
 		if( $_POST['change_wled'] )
 			{
 			$data["wled"]["baud_rate"] = $_POST['baud_rate'];
@@ -145,7 +196,112 @@
 
 					<h2>MQTT configuration</h2>
 					<p>Coming soon...</p>
+		</li>
+				<li id="li_1" >
+					<h3>Public device name</h3>
+					<div>
+					<input id="mqtt_name" name="mqtt_name" class="element text medium" type="text" maxlength="255" value="<?php
+					print $data["mqtt"]["name"];
+					?>" />
+					</div>
+				</li>
+				<li id="li_1" >
+					<h3>Broker</h3>
+					<div>
+					<input id="mqtt_broker" name="mqtt_broker" class="element text medium" type="text" maxlength="255" value="<?php
+					print $data["mqtt"]["broker"];
+					?>" />
+					</div>
+				</li>
+				<li id="li_1" >
+					<h3>Port</h3>
+					<div>
+					<input id="mqtt_port" name="mqtt_port" class="element text medium" type="number" maxlength="5" value="<?php
+					print $data["mqtt"]["port"];
+					?>" />
+					</div>
+				</li>
+				<li id="li_1" >
+					<h3>Topic</h3>
+					<div>
+					<input id="mqtt_topic" name="mqtt_topic" class="element text medium" type="text" maxlength="255" value="<?php
+					print $data["mqtt"]["topic"];
+					?>" />
+					</div>
+				</li>
+				<li id="li_1" >
+					<h3>ClientID</h3>
+					<div>
+					<input id="mqtt_clientId" name="mqtt_clientId" class="element text medium" type="text" maxlength="255" value="<?php
+					print $data["mqtt"]["clientId"];
+					?>" />
+					</div>
+				</li>
+				<li id="li_1" >
+					<h3>MQTT username</h3>
+					<div>
+					<input id="mqtt_username" name="mqtt_username" class="element text medium" type="text" maxlength="255" value="<?php
+					print $data["mqtt"]["username"];
+					?>" />
+					</div>
+				</li>
+				<li id="li_1" >
+					<h3>MQTT password</h3>
+					<div>
+					<input id="mqtt_password" name="mqtt_password" class="element text medium" type="password" maxlength="255" value="<?php
+					print $data["mqtt"]["password"];
+					?>" />
+					</div>
+				</li>
+			<li id="li_1" >
+				<h2>Refresh interval</h2>
+				<div>
+					<output id="rangeval" class="rangeval"><?php 
+					echo $data["mqtt"]["refresh"] . " seconds"
+				?></output>				
+				
+				<input class="range slider-progress" name="mqtt_refresh" type="range" min="1" max="90" step="1.0" value="<?php 
+					echo $data["mqtt"]["refresh"]
+				?>" oninput="this.previousElementSibling.value = this.value">
+				</div>
+			</li>
+
+			<li id="li_1" >
+				<h2>Refresh interval idle</h2>
+				<div>
+					<output id="rangeval" class="rangeval"><?php 
+					echo $data["mqtt"]["refreshIdle"] . " seconds"
+				?></output>				
+				
+				<input class="range slider-progress" name="mqtt_refreshIdle" type="range" min="1" max="90" step="1.0" value="<?php 
+					echo $data["mqtt"]["refreshIdle"]
+				?>" oninput="this.previousElementSibling.value = this.value">
+				</div>
+			</li>
+			<li id="li_1" >
+				<h2>Timeout</h2>
+				<div>
+					<output id="rangeval" class="rangeval"><?php 
+					echo $data["mqtt"]["timeout"] . " seconds"
+				?></output>				
+				
+				<input class="range slider-progress" name="mqtt_timeout" type="range" min="10" max="180" step="5.0" value="<?php 
+					echo $data["mqtt"]["timeout"]
+				?>" oninput="this.previousElementSibling.value = this.value">
+				</div>
+			</li>
+
+
+
+	   	   <li id="li_1" ><div>
+		 <label class="labelchecked" for="mqtt_active">MQTT activation state:&nbsp; &nbsp; <input type="checkbox" id="mqtt_active"  name="mqtt_active" <?php
+		 if( $data["mqtt"]["active"] )
+		  {
+		  print "checked";
+		  }
+	?> /></label></div>
 	   </li>
+		<input id="saveForm" class="button_text" type="submit" name="change_mqtt" value="Save MQTT-Config" />
 	  </ul>
 	 </details>
 

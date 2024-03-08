@@ -14,7 +14,7 @@ CONFIG="/etc/mupibox/mupiboxconfig.json"
 LOG="/boot/mupibox_update.log"
 exec 3>${LOG}
 service mupi_idle_shutdown stop
-packages2install="git libasound2 jq mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio python3-serial libgles2-mesa mesa-utils libsdl2-dev preload python3-smbus2 pigpio libjson-c-dev i2c-tools libi2c-dev python3-smbus"
+packages2install="git libasound2 jq mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt libgles2-mesa mesa-utils libsdl2-dev preload python3-smbus2 pigpio libjson-c-dev i2c-tools libi2c-dev python3-smbus"
 STEP=0
 VER_JSON="/tmp/version.json"
 OS=$(grep -E '^(VERSION_CODENAME)=' /etc/os-release)  >&3 2>&3
@@ -100,9 +100,25 @@ echo "==========================================================================
 		STEP=$(($STEP + 4))
 		after=$(date +%s)
 		echo -e "## pip install mutagen  ##  finished after $((after - $before)) seconds" >&3 2>&3
+		echo -e "XXX\n${STEP}\nInstall package pip requests\nXXX"
+		before=$(date +%s)
+		installed=$(pip list | grep requests)
+		if [ ${#installed} = 0 ]; then
+			pip install requests --break-system-packages >&3 2>&3
+		fi
+		after=$(date +%s)
+		echo -e "## pip install requests  ##  finished after $((after - $before)) seconds" >&3 2>&3
+		before=$(date +%s)
+		installed=$(pip list | grep pyserial)
+		if [ ${#installed} = 0 ]; then
+			pip install pyserial --break-system-packages >&3 2>&3
+		fi
+		after=$(date +%s)
+		echo -e "## pip install pyserial  ##  finished after $((after - $before)) seconds" >&3 2>&3
+		STEP=$(($STEP + 1))
 	else
 		echo -e "XXX\n${STEP}\nInstall package python3-mutagen\nXXX"
-		packages2install="python3-mutagen mutagen python3-dev"
+		packages2install="python3-mutagen  python3-dev"
 		for package in ${packages2install}
 		do		
 			before=$(date +%s)
@@ -124,22 +140,6 @@ echo "==========================================================================
 		after=$(date +%s)
 		echo -e "## pip install telepot  ##  finished after $((after - $before)) seconds" >&3 2>&3
 		STEP=$(($STEP + 1))
-		echo -e "XXX\n${STEP}\nInstall package pip requests\nXXX"
-		before=$(date +%s)
-		installed=$(pip list | grep requests)
-		if [ ${#installed} = 0 ]; then
-			pip install requests --break-system-packages >&3 2>&3
-		fi
-		after=$(date +%s)
-		echo -e "## pip install requests  ##  finished after $((after - $before)) seconds" >&3 2>&3
-		#before=$(date +%s)
-		#installed=$(pip list | grep pyserial)
-		#if [ ${#installed} = 0 ]; then
-		#	pip install pyserial --break-system-packages >&3 2>&3
-		#fi
-		#after=$(date +%s)
-		#echo -e "## pip install pyserial  ##  finished after $((after - $before)) seconds" >&3 2>&3
-		#STEP=$(($STEP + 1))
 	fi
 	
 	###############################################################################################
