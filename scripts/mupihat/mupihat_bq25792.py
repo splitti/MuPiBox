@@ -1438,6 +1438,54 @@ class bq25792:
         finally:
             pass
 
+    def read_EN_CHG(self):
+        '''
+        Read read_REG0F_Charger_Control_0 and return value of Charger Enable Configuration
+        Return Value
+        ---------
+          0h = Charge Disable
+          1h = Charge Enable
+        '''
+        try:
+            #self.read_all_register()
+            # first read register
+            reg_addr = self.REG0F_Charger_Control_0._addr 
+            val = self.bq.read_byte_data(self.i2c_addr, reg_addr)
+            time.sleep(self.busWS_ms/1000)
+            self.registers[reg_addr] = val
+            self.REG0F_Charger_Control_0.set((self.registers[reg_addr]))
+            value, EN_AUTO_IBATDIS, FORCE_IBATDIS, EN_CHG, EN_ICO, FORCE_ICO, EN_HIZ, EN_TERM = self.REG0F_Charger_Control_0.get()
+            return EN_CHG
+        except Exception as _error:
+            sys.stderr.write('read_EN_CHG failed, %s\n' % str(_error))
+            if self._exit_on_error: sys.exit(1)
+            return -1
+        finally:
+            pass
+    def read_VBAT_PRESENT(self):
+        '''
+        Read REG1D_Charger_Status_2 and return value VBAT_PRESENT_STAT
+        Return Value
+        ---------
+          0h = VBAT NOT present 
+          1h = VBAT present
+        '''
+        try:
+            #self.read_all_register()
+            # first read register
+            reg_addr = self.REG1D_Charger_Status_2._addr 
+            val = self.bq.read_byte_data(self.i2c_addr, reg_addr)
+            time.sleep(self.busWS_ms/1000)
+            self.registers[reg_addr] = val
+            self.REG1D_Charger_Status_2.set((self.registers[reg_addr]))
+            value, ICO_STAT, TREG_STAT, DPDM_STAT, VBAT_PRESENT_STAT = self.REG1D_Charger_Status_2.get()
+            return VBAT_PRESENT_STAT
+        except Exception as _error:
+            sys.stderr.write('read_VBAT_PRESENT failed, %s\n' % str(_error))
+            if self._exit_on_error: sys.exit(1)
+            return -1
+        finally:
+            pass
 
     def set_input_current_limit(self, input_current_limit):
         '''
@@ -1541,6 +1589,9 @@ class bq25792:
             Bus Current in mA
         'Temp'
             Temperature of Charger IC
+        'BatteryConnected'
+            0 = Battery not present 
+            1 = Battery present
         'Bat_SOC'
             Estimated State-oF-Charge of Battery (based on VBat) and Battery Config File
         'Bat_Stat'
@@ -1559,7 +1610,8 @@ class bq25792:
             'Ibat': self.read_Ibat(),
             'IBus': self.read_Ibus(),
             'Temp': self.read_TDIE_Temp(),
-            'REG14' : self.read_REG14_Charger_Control_5(),
+            'BatteryConnected' : self.read_VBAT_PRESENT(),
+            #'REG14' : self.read_REG14_Charger_Control_5(),
             'Bat_SOC' : bat_SOC,
             'Bat_Stat' : bat_Stat,
             'Bat_Type' : self.battery_conf['battery_type']
