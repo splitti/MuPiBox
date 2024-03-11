@@ -1,7 +1,7 @@
 [Unit]
 Description=MuPiBox MQTT Service
-Before=basic.target
-After=local-fs.target sysinit.target
+Wants=network-online.target
+After=network-online.target
 DefaultDependencies=no
 
 [Service]
@@ -10,7 +10,7 @@ WorkingDirectory=/tmp/
 User=root
 ExecStart=/usr/bin/python3 -B /usr/local/bin/mupibox/mqtt.py
 ExecStop=/bin/kill -TERM $(cat /run/mupi_mqtt.pid)
-Restart=on-failure
+Restart=on-abort
 
 [Install]
 WantedBy=basic.target
