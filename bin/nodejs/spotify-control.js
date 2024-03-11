@@ -76,7 +76,7 @@ player.on('track-change', () => player.getProps(['filename']))
 
 player.on('path', (val) => {
   console.log('track path is', val);
-  currentMeta.album = val.split('/')[6];
+  currentMeta.album = val.split('/')[7];
 })
 player.on('track-change', () => player.getProps(['path']))
 
