@@ -217,8 +217,8 @@ if [ "$MQTTTIMEOUT" == "null" ]; then
 fi
 BATTERYCONFIG=$(/usr/bin/jq -r .mupihat.selected_battery ${CONFIG})
 if [ "$BATTERYCONFIG" == "null" ]; then 
-	/usr/bin/cat <<< $(/usr/bin/jq --arg v "USB-C" '.mupihat.selected_battery = $v' ${CONFIG}) >  ${CONFIG}
-	/usr/bin/cat <<< $(/usr/bin/jq '. += {"mupihat": { "battery_types": [{ "name": "Ansmann 2S1P", "config": { "v_100": "8100", "v_75": "7800", "v_50": "7400", "v_25": "7000", "v_0": "6700", "th_warning": "7000", "th_shutdown": "6800" }}, { "name": "ENERpower 2S2P 10.000mAh", "config": {	"v_100": "8000", "v_75": "7700", "v_50": "7300", "v_25": "6900", "v_0": "6000", "th_warning": "6500", "th_shutdown": "6150" }}, { "name": "USB-C mode", "config": { "v_100": "1", "v_75": "1", "v_50": "1", "v_25": "1", "v_0": "1", "th_warning": "0", "th_shutdown": "0"}}, { "name": "Custom", "config": { "v_100": "8100", "v_75": "7800", "v_50": "7400", "v_25": "7000", "v_0": "6700", "th_warning": "7000", "th_shutdown": "6800"}}], "selected_battery": "USB-C mode" }}' ${CONFIG}) >  ${CONFIG}
+	/usr/bin/cat <<< $(/usr/bin/jq --arg v "ENERpower 2S2P 10.000mAh" '.mupihat.selected_battery = $v' ${CONFIG}) >  ${CONFIG}
+	/usr/bin/cat <<< $(/usr/bin/jq '. += {"mupihat": { "battery_types": [{ "name": "Ansmann 2S1P", "config": { "v_100": "8100", "v_75": "7800", "v_50": "7400", "v_25": "7000", "v_0": "6700", "th_warning": "7000", "th_shutdown": "6800" }}, { "name": "ENERpower 2S2P 10.000mAh", "config": {	"v_100": "8000", "v_75": "7700", "v_50": "7300", "v_25": "6900", "v_0": "6000", "th_warning": "6500", "th_shutdown": "6150" }}, { "name": "USB-C mode (no battery)", "config": { "v_100": "1", "v_75": "1", "v_50": "1", "v_25": "1", "v_0": "1", "th_warning": "0", "th_shutdown": "0"}}, { "name": "Custom", "config": { "v_100": "8100", "v_75": "7800", "v_50": "7400", "v_25": "7000", "v_0": "6700", "th_warning": "7000", "th_shutdown": "6800"}}], "selected_battery": "USB-C mode" }}' ${CONFIG}) >  ${CONFIG}
 	/usr/bin/cat <<< $(/usr/bin/jq '.mupihat.hat_active = false' ${CONFIG}) >  ${CONFIG}
 fi
 HAT_ACTIVE=$(/usr/bin/jq -r .mupihat.hat_active ${CONFIG})

@@ -241,7 +241,7 @@ exec 3>${LOG}
 	MUPIBOX_CONFIG="/etc/mupibox/mupiboxconfig.json" >&3 2>&3
 	sudo mv -f ${MUPI_SRC}/config/templates/mupiboxconfig.json ${MUPIBOX_CONFIG} >&3 2>&3
 	sudo chown root:www-data /etc/mupibox/mupiboxconfig.json >&3 2>&3
-	sudo chmod 777 /etc/mupibox/mupiboxconfig.json >&3 2>&3
+	sudo chmod 775 /etc/mupibox/mupiboxconfig.json >&3 2>&3
 	after=$(date +%s)
 	echo -e "## Create MuPiBox-Config  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
@@ -452,6 +452,7 @@ exec 3>${LOG}
 	sudo mv -f ${MUPI_SRC}/scripts/mupihat/* /usr/local/bin/mupibox/ >&3 2>&3
 	sudo mv -f ${MUPI_SRC}/scripts/fan/* /usr/local/bin/mupibox/ >&3 2>&3
 	sudo mv -f ${MUPI_SRC}/scripts/wifi/* /usr/local/bin/mupibox/ >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/scripts/mqtt/* /usr/local/bin/mupibox/ >&3 2>&3
 	
 	sudo mv -f ${MUPI_SRC}/config/templates/add_wifi.json /boot/add_wifi.json >&3 2>&3
 	sudo mv -f ${MUPI_SRC}/config/templates/.bashrc /home/dietpi/.bashrc >&3 2>&3
@@ -643,7 +644,7 @@ exec 3>${LOG}
 	sudo mv -f ${MUPI_SRC}/config/services/mupi_hat_control.service /etc/systemd/system/mupi_hat_control.service  >&3 2>&3
 	sudo mv -f ${MUPI_SRC}/config/services/mupi_fan.service /etc/systemd/system/mupi_fan.service  >&3 2>&3
 	sudo mv -f ${MUPI_SRC}/config/services/mupi_autoconnect-wifi.service /etc/systemd/system/mupi_autoconnect-wifi.service  >&3 2>&3
-
+	sudo mv -f ${MUPI_SRC}/config/services/mupi_mqtt.service /etc/systemd/system/mupi_mqtt.service  >&3 2>&3
 	sudo systemctl daemon-reload >&3 2>&3
 	sudo systemctl enable mupi_wifi.service >&3 2>&3
 	sudo systemctl start mupi_wifi.service >&3 2>&3

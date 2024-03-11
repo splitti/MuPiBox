@@ -37,6 +37,10 @@ import requests
 import alsaaudio
 import netifaces as ni
 
+pid = os.getpid()
+with open("/run/mupi_mqtt.pid", "w") as pid_file:
+    pid_file.write(str(pid))
+
 config = "/etc/mupibox/mupiboxconfig.json"
 playerstate = "/tmp/playerstate"
 fan = "/tmp/fan.json"
@@ -62,6 +66,7 @@ mqtt_debug = jsonconfig['mqtt']['debug']
 mupi_version = jsonconfig['mupibox']['version']
 mupi_host = jsonconfig['mupibox']['host']
 
+
 def mqtt_publish_ha():
     # Publish on/off state entity
     state_info = {
@@ -70,7 +75,6 @@ def mqtt_publish_ha():
         "payload_off": "offline",
         "expire_after": "300",
         "state_topic": mqtt_topic + '/' + mqtt_clientId + '/state',
-        "availability_topic": mqtt_topic + '/' + mqtt_clientId + '/state',
         "unique_id": mqtt_clientId + '_mupibox_state',
         "device_class": "connectivity",
         "icon": "mdi:power",
@@ -84,7 +88,7 @@ def mqtt_publish_ha():
             "configuration_url":"http://" + mupi_host
         }
     }
-    client.publish("homeassistant/switch/" + mqtt_clientId + "_state/config", json.dumps(state_info), qos=0, retain=False)
+    client.publish("homeassistant/binary_sensor/" + mqtt_clientId + "_state/config", json.dumps(state_info), qos=0, retain=True)
 
     # Publish version
     version_info = {
@@ -219,13 +223,66 @@ def mqtt_publish_ha():
     }
     client.publish("homeassistant/sensor/" + mqtt_clientId + "_ip/config", json.dumps(ip_info), qos=0, retain=False)
 
+
+
+    # Publish Play Button
+    play_button = {
+        "name": "Play",
+        "availability_topic": mqtt_topic + '/' + mqtt_clientId + '/state',
+        "unique_id": mqtt_clientId + '_mupibox_play',
+        "command_template": "play",
+        "command_topic": mqtt_topic + '/' + mqtt_clientId + '/play/set',
+        "icon": "mdi:play",
+        "platform": "mqtt",
+        "device": {
+            "identifiers": mqtt_clientId + "_mupibox",
+            "name": mqtt_name,
+            "manufacturer": "MuPiBox.de",
+            "model": "Your MuPiBox: " + mupi_host,
+            "sw_version": mupi_version,
+            "configuration_url":"http://" + mupi_host
+        }
+    }
+    client.publish("homeassistant/button/" + mqtt_clientId + "_play/config", json.dumps(play_button), qos=0, retain=False)
+
+    # Publish Pause Button
+    pause_button = {
+        "name": "Pause",
+        "availability_topic": mqtt_topic + '/' + mqtt_clientId + '/state',
+        "unique_id": mqtt_clientId + '_mupibox_pause',
+        "command_template": "pause",
+        "command_topic": mqtt_topic + '/' + mqtt_clientId + '/pause/set',
+        "icon": "mdi:pause",
+        "platform": "mqtt",
+        "device": {
+            "identifiers": mqtt_clientId + "_mupibox",
+            "name": mqtt_name,
+            "manufacturer": "MuPiBox.de",
+            "model": "Your MuPiBox: " + mupi_host,
+            "sw_version": mupi_version,
+            "configuration_url":"http://" + mupi_host
+        }
+    }
+    client.publish("homeassistant/button/" + mqtt_clientId + "_pause/config", json.dumps(pause_button), qos=0, retain=False)
+
+
+
+
+
+
+
+
+
+
+
+
+
     # Publish Shutdown Button
-    power_switch = {
-        "name": "Power",
-        "payload_on": "on",
-        "payload_off": "off",
-        "state_topic": mqtt_topic + '/' + mqtt_clientId + '/power',
+    power_button = {
+        "name": "Shutdown",
+        "availability_topic": mqtt_topic + '/' + mqtt_clientId + '/state',
         "unique_id": mqtt_clientId + '_mupibox_power',
+        "command_template": "shutdown",
         "command_topic": mqtt_topic + '/' + mqtt_clientId + '/power/set',
         "icon": "mdi:power",
         "platform": "mqtt",
@@ -238,16 +295,15 @@ def mqtt_publish_ha():
             "configuration_url":"http://" + mupi_host
         }
     }
-    client.publish("homeassistant/switch/" + mqtt_clientId + "_power/config", json.dumps(power_switch), qos=0, retain=False)
+    client.publish("homeassistant/button/" + mqtt_clientId + "_power/config", json.dumps(power_button), qos=0, retain=False)
 
-    reboot_switch = {
+    reboot_button = {
         "name": "Reboot",
-        #"availability_topic": mqtt_topic + '/' + mqtt_clientId + '/reboot',
-        "state_topic": mqtt_topic + '/' + mqtt_clientId + '/reboot',
+        "availability_topic": mqtt_topic + '/' + mqtt_clientId + '/state',
+        "command_template": "reboot",
         "command_topic": mqtt_topic + '/' + mqtt_clientId + '/reboot/set',
-        "payload_on": "reboot",
-        "payload_off": "off",
         "unique_id": mqtt_clientId + '_mupibox_reboot',
+        "topic": mqtt_topic + '/' + mqtt_clientId + '/state',
         "icon": "mdi:power",
         "platform": "mqtt",
         "device": {
@@ -259,7 +315,7 @@ def mqtt_publish_ha():
             "configuration_url":"http://" + mupi_host
         }
     }
-    client.publish("homeassistant/switch/" + mqtt_clientId + "_reboot/config", json.dumps(reboot_switch), qos=0, retain=False)
+    client.publish("homeassistant/button/" + mqtt_clientId + "_reboot/config", json.dumps(reboot_button), qos=0, retain=False)
 
 
     # Publish Architecture
@@ -304,6 +360,7 @@ def mqtt_publish_ha():
         "state_topic": mqtt_topic + '/' + mqtt_clientId + '/volume',
         "unique_id": mqtt_clientId + '_mupibox_volume',
         "command_topic": mqtt_topic + '/' + mqtt_clientId + '/volume/set',
+        "availability_topic": mqtt_topic + '/' + mqtt_clientId + '/state',
         "unit_of_measurement": "%",
         "value_template": "{{ value|int }}",
         "icon": "mdi:volume-high",
@@ -420,6 +477,7 @@ def mqtt_publish_ha():
         "unique_id": mqtt_clientId + '_mupibox_bat_soc',
         "device_class": "battery",
         "icon": "mdi:battery",
+        "unit_of_measurement": "%",
         "platform": "mqtt",
         "device": {
             "identifiers": mqtt_clientId + "_mupibox",
@@ -454,15 +512,31 @@ def mqtt_publish_ha():
     }
     client.publish("homeassistant/sensor/" + mqtt_clientId + "_hat_temp/config", json.dumps(hat_temp_info), qos=0)
 
+    BatteryConnected_info = {
+        "name": "HAT Battery connected",
+        "state_topic": mqtt_topic + '/' + mqtt_clientId + '/battery_connected',
+        "unique_id": mqtt_clientId + '_mupibox_battery_connected',
+        "value_template": "{{ value|int }}",
+        "icon": "mdi:battery",
+        "platform": "mqtt",
+        "device": {
+            "identifiers": mqtt_clientId + "_mupibox",
+            "name": mqtt_name,
+            "manufacturer": "MuPiBox.de",
+            "model": "Your MuPiBox: " + mupi_host,
+            "sw_version": mupi_version,
+            "configuration_url":"http://" + mupi_host
+        }
+    }
+    client.publish("homeassistant/sensor/" + mqtt_clientId + "_battery_connected/config", json.dumps(BatteryConnected_info), qos=0)
 
     ibus_info = {
         "name": "HAT Ibus (charger)",
         "state_topic": mqtt_topic + '/' + mqtt_clientId + '/ibus',
         "unique_id": mqtt_clientId + '_mupibox_ibus',
-        "command_topic": mqtt_topic + '/' + mqtt_clientId + '/ibus/set',
         "unit_of_measurement": "mA",
         "value_template": "{{ value|int }}",
-        "icon": "mdi:battery",
+        "icon": "mdi:usb-c-port",
         "platform": "mqtt",
         "device": {
             "identifiers": mqtt_clientId + "_mupibox",
@@ -483,7 +557,7 @@ def mqtt_publish_ha():
         "command_topic": mqtt_topic + '/' + mqtt_clientId + '/ibat/set',
         "unit_of_measurement": "mA",
         "value_template": "{{ value|int }}",
-        "icon": "mdi:battery",
+        "icon": "mdi:battery-charging-50",
         "platform": "mqtt",
         "device": {
             "identifiers": mqtt_clientId + "_mupibox",
@@ -504,7 +578,7 @@ def mqtt_publish_ha():
         "command_topic": mqtt_topic + '/' + mqtt_clientId + '/vbus/set',
         "unit_of_measurement": "mV",
         "value_template": "{{ value|int }}",
-        "icon": "mdi:battery",
+        "icon": "mdi:usb-c-port",
         "platform": "mqtt",
         "device": {
             "identifiers": mqtt_clientId + "_mupibox",
@@ -593,8 +667,8 @@ def mqtt_systeminfo():
     architecture = subprocess.check_output(["uname", "-m"]).decode("utf-8")
     client.publish(mqtt_topic + '/' + mqtt_clientId + '/architecture', architecture, qos=0, retain=False)
     client.publish(mqtt_topic + '/' + mqtt_clientId + '/mac', get_mac_address('wlan0'), qos=0, retain=False)
-    client.publish(mqtt_topic + '/' + mqtt_clientId + '/version', mupi_version, qos=0)
-  
+    client.publish(mqtt_topic + '/' + mqtt_clientId + '/version', mupi_version, qos=0)  
+
 # Callback function for when the client receives a CONNACK response from the server.
 def on_connect(client, userdata, flags, rc):
     print("Connected to MQTT broker with result code: " + str(rc))
@@ -664,20 +738,55 @@ def get_mupihat():
     try:
         with open(mupihat) as file:
             mupihat_data = json.load(file)
-        return mupihat_data["Charger_Status"], mupihat_data["Vbat"], mupihat_data["Vbus"], mupihat_data["Ibat"], mupihat_data["IBus"], mupihat_data["Temp"], mupihat_data["Bat_SOC"].replace("%", ""), mupihat_data["Bat_Stat"], mupihat_data["Bat_Type"]
+        return mupihat_data["Charger_Status"], mupihat_data["Vbat"], mupihat_data["Vbus"], mupihat_data["Ibat"], mupihat_data["IBus"], mupihat_data["Temp"], mupihat_data["Bat_SOC"].replace("%", ""), mupihat_data["Bat_Stat"], mupihat_data["Bat_Type"], mupihat_data["BatteryConnected"]
     except:
-        return None, None, None, None, None, None, None, None, None
+        return None, None, None, None, None, None, None, None, None, None
+
+def get_play_information():
+    try:
+        url = 'http://127.0.0.1:5005/local'
+        local = requests.get(url).json()
+        url = 'http://127.0.0.1:5005/state'
+        state = requests.get(url).json()
+
+LOKAL
+msg = local['album'] + "\n" + local['currentTrackname'] + "\nTrack: " + str(local['currentTracknr']) + "/" + str(local['totalTracks'])
+
+SPOTIFY
+        episode = requests.get(urls).json()
+        msg = episode['show']['name'] + "\n" + episode['name']
+    msg = state['item']['album']['name'] + "\n" + state['item']['name'] + "\nTrack: " + str(state['item']['track_number']) + "/" + str(state['item']['album']['total_tracks'])
+
+
+
+        print(local["playing"], local["pause"], local["currentType"], 
+#        return mupihat_data["Charger_Status"], mupihat_data["Vbat"], mupihat_data["Vbus"], mupihat_data["Ibat"], mupihat_data["IBus"], mupihat_data["Temp"], mupihat_data["Bat_SOC"].replace("%", ""), mupihat_data["Bat_Stat"], mupihat_data["Bat_Type"], mupihat_data["BatteryConnected"]
+    except:
+ #       return None, None, None, None, None, None, None, None, None, None
+
 
 def on_message(client, flags, msg):
-    print("Topic: " + msg.topic)
-    print("Message: " + str(msg.payload.decode("utf-8")))
-    if msg.topic == mqtt_topic + '/' + mqtt_clientId + 'reboot/set' and str(msg.payload.decode("utf-8")) == "reboot":
+    #print("Topic: " + msg.topic)
+    #print("Message: " + str(msg.payload.decode("utf-8")))
+    if msg.topic == mqtt_topic + '/' + mqtt_clientId + '/reboot/set' and str(msg.payload.decode("utf-8")) == "reboot":
+        print("Button: reboot")
         os.system("reboot")
-    if msg.topic == mqtt_topic + '/' + mqtt_clientId + '/power/set' and str(msg.payload.decode("utf-8")) == "off":
+    if msg.topic == mqtt_topic + '/' + mqtt_clientId + '/power/set' and str(msg.payload.decode("utf-8")) == "shutdown":
+        print("Button: shutdown")
         os.system("/usr/local/bin/mupibox/./mupi_shutdown.sh")
         os.system("poweroff")
     if msg.topic == mqtt_topic + '/' + mqtt_clientId + '/volume/set':
+        print("Volume: " + msg.payload.decode("utf-8") + "%")
         os.system("/usr/bin/pactl set-sink-volume @DEFAULT_SINK@ " + msg.payload.decode("utf-8") + "%")
+    if msg.topic == mqtt_topic + '/' + mqtt_clientId + '/pause/set' and str(msg.payload.decode("utf-8")) == "pause":
+        print("Button: pause")
+        url = 'http://' + jsonconfig['mupibox']['host'] + ':5005/pause'
+        requests.get(url)
+    if msg.topic == mqtt_topic + '/' + mqtt_clientId + '/play/set' and str(msg.payload.decode("utf-8")) == "play":
+        print("Button: play")
+        url = 'http://' + jsonconfig['mupibox']['host'] + ':5005/play'
+        requests.get(url)
+
 
 ###############################################################################################################
 
@@ -699,10 +808,13 @@ client.connect(mqtt_broker, mqtt_port, mqtt_timeout)
 client.subscribe(mqtt_topic + '/' + mqtt_clientId + '/power/set')
 client.subscribe(mqtt_topic + '/' + mqtt_clientId + '/volume/set')
 client.subscribe(mqtt_topic + '/' + mqtt_clientId + '/reboot/set')
+client.subscribe(mqtt_topic + '/' + mqtt_clientId + '/pause/set')
+client.subscribe(mqtt_topic + '/' + mqtt_clientId + '/play/set')
 
 # Start the MQTT loop
 client.loop_start()
 mqtt_publish_ha()
+time.sleep(2)
 mqtt_systeminfo()
 client.publish(mqtt_topic + '/' + mqtt_clientId + '/state', "online", qos=0)
 client.publish(mqtt_topic + '/' + mqtt_clientId + '/power', "on", qos=0)
@@ -711,8 +823,9 @@ client.publish(mqtt_topic + '/' + mqtt_clientId + '/reboot', "off", qos=0)
 try:
     while True:
         ssid, signal_strength, signal_quality = get_wifi()
-        charger_status, vbat, vbus, ibat, ibus, temp, bat_soc, bat_stat, bat_type = get_mupihat()
-
+        charger_status, vbat, vbus, ibat, ibus, temp, bat_soc, bat_stat, bat_type, battery_connected = get_mupihat()
+        
+        
         client.publish(mqtt_topic + '/' + mqtt_clientId + '/state', "online", qos=0)
         client.publish(mqtt_topic + '/' + mqtt_clientId + '/temperature', float(get_cputemp()), qos=0)
         client.publish(mqtt_topic + '/' + mqtt_clientId + '/volume', int(get_volume()), qos=0)
@@ -720,7 +833,6 @@ try:
         client.publish(mqtt_topic + '/' + mqtt_clientId + '/signal_strength', signal_strength, qos=0)
         client.publish(mqtt_topic + '/' + mqtt_clientId + '/signal_quality', signal_quality, qos=0)
         client.publish(mqtt_topic + '/' + mqtt_clientId + '/fan', get_fan(), qos=0)
-
         client.publish(mqtt_topic + '/' + mqtt_clientId + '/charger_status', charger_status, qos=0)
         client.publish(mqtt_topic + '/' + mqtt_clientId + '/vbat', vbat, qos=0)
         client.publish(mqtt_topic + '/' + mqtt_clientId + '/vbus', vbus, qos=0)
@@ -730,15 +842,13 @@ try:
         client.publish(mqtt_topic + '/' + mqtt_clientId + '/bat_soc', bat_soc, qos=0)
         client.publish(mqtt_topic + '/' + mqtt_clientId + '/bat_stat', bat_stat, qos=0)
         client.publish(mqtt_topic + '/' + mqtt_clientId + '/bat_type', bat_type, qos=0)
-
+        client.publish(mqtt_topic + '/' + mqtt_clientId + '/battery_connected', battery_connected, qos=0)
 
         if player_active():
             sleeptime = mqtt_refresh
-            print("JOOO")
             test = playback_info()
         else:
             sleeptime = mqtt_refreshIdle
-            print("NÖÖÖ")
         time.sleep(sleeptime)
 except KeyboardInterrupt:
     # Stop the MQTT loop and clean up

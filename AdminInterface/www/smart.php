@@ -19,7 +19,18 @@
 				}
 			 if( $data["mqtt"]["active"]!=$_POST['mqtt_active'])
 				{
-				$data["mqtt"]["active"]=$_POST['mqtt_active'];
+				if( $_POST['mqtt_active'] == "on" )
+					{
+					$data["mqtt"]["active"]=true;
+					$command='sudo systemctl enable mupi-mqtt.service && sudo service mupi-mqtt start';
+					exec($command);
+					}
+				else
+					{
+					$data["mqtt"]["active"]=false;
+					$command='sudo service mupi-mqtt stop && sudo systemctl disable mupi-mqtt.service';
+					exec($command);
+					}
 				}
 			 if( $data["mqtt"]["broker"]!=$_POST['mqtt_broker'])
 				{

@@ -337,7 +337,7 @@
 				}
 			},
 			{
-				"name": "USB-C mode",
+				"name": "USB-C mode (no battery)",
 				"config": {
 						"v_100": "1",
 						"v_75": "1",
