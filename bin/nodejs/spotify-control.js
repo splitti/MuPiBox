@@ -40,7 +40,7 @@ refreshToken("0");
 setInterval(refreshToken, 1000 * 60 * 60);
 
 player.on('percent_pos', (val) => {
-  console.log('track progress is', val);
+  //console.log('track progress is', val);
   currentMeta.progressTime = val;
 })
 setInterval(() => {
