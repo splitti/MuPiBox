@@ -749,17 +749,14 @@ def get_play_information():
         url = 'http://127.0.0.1:5005/state'
         state = requests.get(url).json()
 
-LOKAL
-msg = local['album'] + "\n" + local['currentTrackname'] + "\nTrack: " + str(local['currentTracknr']) + "/" + str(local['totalTracks'])
+        #LOKAL
+        #msg = local['album'] + "\n" + local['currentTrackname'] + "\nTrack: " + str(local['currentTracknr']) + "/" + str(local['totalTracks'])
 
-SPOTIFY
+        #SPOTIFY
         episode = requests.get(urls).json()
         msg = episode['show']['name'] + "\n" + episode['name']
-    msg = state['item']['album']['name'] + "\n" + state['item']['name'] + "\nTrack: " + str(state['item']['track_number']) + "/" + str(state['item']['album']['total_tracks'])
-
-
-
-        print(local["playing"], local["pause"], local["currentType"], 
+        #msg = state['item']['album']['name'] + "\n" + state['item']['name'] + "\nTrack: " + str(state['item']['track_number']) + "/" + str(state['item']['album']['total_tracks'])
+        #print(local["playing"], local["pause"], local["currentType"], 
 #        return mupihat_data["Charger_Status"], mupihat_data["Vbat"], mupihat_data["Vbus"], mupihat_data["Ibat"], mupihat_data["IBus"], mupihat_data["Temp"], mupihat_data["Bat_SOC"].replace("%", ""), mupihat_data["Bat_Stat"], mupihat_data["Bat_Type"], mupihat_data["BatteryConnected"]
     except:
  #       return None, None, None, None, None, None, None, None, None, None
