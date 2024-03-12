@@ -62,8 +62,23 @@
                 </ion-button>
             </ng-template>
             <ng-template #else0>
-                <ion-button *ngIf="(mupihat$ | async)?.Bat_SOC ==='0%'" class="battery" (click)="editButtonPressed()">
+                <ion-button *ngIf="(mupihat$ | async)?.Bat_SOC ==='0%'; else elseBlockOnline" class="battery" (click)="editButtonPressed()">
                     <ion-icon slot="icon-only" src="../../assets/icon/MuPiHAT/Battery0.svg" size="large"></ion-icon>
+                </ion-button>
+            </ng-template>
+            <ng-template #elseBlockOnline>
+                <ion-button *ngIf="(network$ | async)?.onlinestate ==='online'; else elseBlockOffline" class="OnlineState" (click)="editButtonPressed()">
+                    <ion-icon slot="icon-only" name="cloud-outline"></ion-icon>
+                </ion-button>
+            </ng-template>
+            <ng-template #elseBlockOffline>
+                <ion-button *ngIf="(network$ | async)?.onlinestate ==='offline'; else elseBlockEmpty" class="OfflineState" (click)="editButtonPressed()">
+                    <ion-icon slot="icon-only" name="cloud-offline-outline"></ion-icon>
+                </ion-button>
+            </ng-template>
+            <ng-template #elseBlockEmpty>
+                <ion-button (click)="editButtonPressed()">
+                    <ion-icon slot="icon-only" name=""></ion-icon>
                 </ion-button>
             </ng-template>
         </ion-buttons>
