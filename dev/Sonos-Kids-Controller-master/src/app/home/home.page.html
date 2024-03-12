@@ -67,7 +67,7 @@
                 </ion-button>
             </ng-template>
         </ion-buttons>
-        <ion-buttons slot="end" *ngIf="!hat_active || (hat_active && (mupihat$ | async)?.BatteryConnected !== 0)">
+        <ion-buttons slot="end" *ngIf="!hat_active || (hat_active && (mupihat$ | async)?.BatteryConnected === 0)">
             <ion-button *ngIf="(network$ | async)?.onlinestate ==='online'; else elseBlockOffline" class="OnlineState" (click)="editButtonPressed()">
                 <ion-icon slot="icon-only" name="cloud-outline"></ion-icon>
             </ion-button>

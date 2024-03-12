@@ -5,7 +5,7 @@ export interface Mupihat {
     Ibat?: number;
     IBus?: number;
     Temp?: number;
-    REG14?: number;
+    BatteryConnected?: number;
     Bat_SOC?: string;
     Bat_Stat?: string;
     Bat_Type?: string;
