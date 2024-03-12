@@ -46,7 +46,7 @@ hostname=$(/usr/bin/jq -r .mupibox.host ${MUPIBOX_CONFIG})
 
 ip_control_backend=$(/usr/bin/jq -r .mupibox.ip_control_backend ${MUPIBOX_CONFIG})
 if [ "$ip_control_backend" = true ] ; then
-        IP=$(hostname -I)
+        IP=$(hostname -I | sed 's/ *$//')
 		if [ "$IP" = "" ] ; then
 			IP=$(/usr/bin/jq -r .ip ${NETWORK_CONFIG})
 		fi		

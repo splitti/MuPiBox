@@ -80,7 +80,7 @@ app.get('/api/mupihat', (req, res) => {
         jsonfile.readFile(mupihat, (error, data) => {
             if (error) {
                 data = [];
-                console.log(nowDate.toLocaleString() + ": [MuPiBox-Server] Error /api/resume read mupihat.json");
+                console.log(nowDate.toLocaleString() + ": [MuPiBox-Server] Error /api/mupihat read mupihat.json");
                 console.log(nowDate.toLocaleString() + ": [MuPiBox-Server] " + error);
             }
             res.json(data);
