@@ -12,14 +12,11 @@
             <ion-segment-button value="music">
                 <ion-icon name="musical-notes-outline"></ion-icon>
             </ion-segment-button>
-            <!-- <ion-segment-button value="playlist">
-                <ion-icon name="document-text-outline"></ion-icon>
-            </ion-segment-button> -->
             <ion-segment-button value="other">
                 <ion-icon name="radio-outline"></ion-icon>
             </ion-segment-button>
         </ion-segment>
-        <ion-buttons slot="end">
+        <ion-buttons slot="end" *ngIf="hat_active">
             <ion-button *ngIf="(mupihat$ | async)?.IBus > 0 && (mupihat$ | async)?.Bat_SOC ==='100%'; else elsecharge75" class="battery" (click)="editButtonPressed()">
                 <ion-icon slot="icon-only" src="../../assets/icon/MuPiHAT/Charging100.svg" size="large"></ion-icon>
             </ion-button>
@@ -65,27 +62,13 @@
                 </ion-button>
             </ng-template>
             <ng-template #else0>
-                <ion-button *ngIf="(mupihat$ | async)?.Bat_SOC ==='0%'; else elseBlockOnline" class="battery" (click)="editButtonPressed()">
+                <ion-button *ngIf="(mupihat$ | async)?.Bat_SOC ==='0%'" class="battery" (click)="editButtonPressed()">
                     <ion-icon slot="icon-only" src="../../assets/icon/MuPiHAT/Battery0.svg" size="large"></ion-icon>
                 </ion-button>
             </ng-template>
-
-            <ng-template #elseBlockOnline>
-                <ion-button *ngIf="(network$ | async)?.onlinestate ==='online'; else elseBlockOffline" class="OnlineState" (click)="editButtonPressed()">
-                    <ion-icon slot="icon-only" name="cloud-outline"></ion-icon>
-                </ion-button>
-            </ng-template>
-            <ng-template #elseBlockOffline>
-                <ion-button *ngIf="(network$ | async)?.onlinestate ==='offline'; else elseBlockEmpty" class="OfflineState" (click)="editButtonPressed()">
-                    <ion-icon slot="icon-only" name="cloud-offline-outline"></ion-icon>
-                </ion-button>
-            </ng-template>
-            <ng-template #elseBlockEmpty>
-                <ion-button (click)="editButtonPressed()">
-                    <ion-icon slot="icon-only" name=""></ion-icon>
-                </ion-button>
-            </ng-template>
-            <!-- <ion-button *ngIf="(network$ | async)?.onlinestate ==='online'; else elseBlockOffline" class="OnlineState" (click)="editButtonPressed()">
+        </ion-buttons>
+        <ion-buttons slot="end" *ngIf="!hat_active">
+            <ion-button *ngIf="(network$ | async)?.onlinestate ==='online'; else elseBlockOffline" class="OnlineState" (click)="editButtonPressed()">
                 <ion-icon slot="icon-only" name="cloud-outline"></ion-icon>
             </ion-button>
             <ng-template #elseBlockOffline>
@@ -97,7 +80,7 @@
                 <ion-button (click)="editButtonPressed()">
                     <ion-icon slot="icon-only" name=""></ion-icon>
                 </ion-button>
-            </ng-template> -->
+            </ng-template>
         </ion-buttons>
     </ion-toolbar>
 </ion-header>

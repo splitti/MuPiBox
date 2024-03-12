@@ -34,6 +34,7 @@ export class HomePage implements OnInit {
   activityIndicatorVisible = false;
   editButtonclickCount = 0;
   editClickTimer = 0;
+  hat_active = false;
   public readonly network$: Observable<Network>;
   public readonly mupihat$: Observable<Mupihat>;
 
@@ -63,6 +64,10 @@ export class HomePage implements OnInit {
   }
 
   ngOnInit() {
+    this.playerService.getConfig().subscribe(config => {
+      this.hat_active = config.hat_active;
+    });
+
     this.mediaService.setCategory(this.category);
 
     this.mediaService.network$.subscribe(network => {
