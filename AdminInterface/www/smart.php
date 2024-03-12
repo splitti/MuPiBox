@@ -302,6 +302,22 @@
 				</div>
 			</li>
 
+	   	   <li id="li_1" ><div>
+		 <label class="labelchecked" for="ha_mqtt_active">Publish MQTT to Homeasssistant:&nbsp; &nbsp; <input type="checkbox" id="ha_mqtt_active"  name="ha_mqtt_active" <?php
+		 if( $data["mqtt"]["ha_mqtt_active"] )
+		  {
+		  print "checked";
+		  }
+	?> /></label></div>
+	   </li>
+				<li id="li_1" >
+					<h3>Homeassistant discovery prefix</h3>
+					<p>Default: homeassistant</p><div>
+					<input id="ha_topic" name="ha_topic" class="element text medium" type="text" maxlength="255" value="<?php
+					print $data["mqtt"]["ha_topic"];
+					?>" />
+					</div>
+				</li>
 
 
 	   	   <li id="li_1" ><div>

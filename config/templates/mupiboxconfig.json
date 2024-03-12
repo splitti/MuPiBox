@@ -296,7 +296,9 @@
 		"refresh": "5",
 		"refreshIdle": "30",
 		"timeout": "60",
-		"debug": false
+		"debug": false,
+		"ha_mqtt_active": false,
+		"ha_topic": "homeassistant"
 	},
 	"wled": {
 		"active": false,
