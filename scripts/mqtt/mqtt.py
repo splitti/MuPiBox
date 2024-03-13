@@ -46,6 +46,7 @@ config = "/etc/mupibox/mupiboxconfig.json"
 playerstate = "/tmp/playerstate"
 fan = "/tmp/fan.json"
 mupihat = "/tmp/mupihat.json"
+data = "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json"
 
 # Load MQTT configuration from JSON file
 with open(config) as file:
@@ -117,6 +118,24 @@ def mqtt_publish_ha():
         }
     }
     client.publish(mqtt_ha_topic + "/binary_sensor/" + mqtt_clientId + "_state/config", json.dumps(state_info), qos=0, retain=True)
+
+    # Publish version
+    play_state = {
+        "name": "Current playback",
+        "state_topic": mqtt_topic + '/' + mqtt_clientId + '/play_text',
+        "unique_id": mqtt_clientId + '_mupibox_play_text',
+        "icon": "mdi:playlist-play",
+        "platform": "mqtt",
+        "device": {
+            "identifiers": mqtt_clientId + "_mupibox",
+            "name": mqtt_name,
+            "manufacturer": "MuPiBox.de",
+            "model": "Your MuPiBox: " + mupi_host,
+            "sw_version": mupi_version,
+            "configuration_url":"http://" + mupi_host
+        }
+    }
+    client.publish(mqtt_ha_topic + "/sensor/" + mqtt_clientId + "_play_text/config", json.dumps(play_state), qos=0, retain=True)
 
     # Publish version
     version_info = {
@@ -760,33 +779,44 @@ def get_mupihat():
 
 def send_play_information():
     try:
-        global previous_content_local, previous_content_state
+        global previous_content_local, previous_content_state, previous_content_episode
         url = 'http://127.0.0.1:5005/local'
         local = requests.get(url).json()
         url = 'http://127.0.0.1:5005/state'
         state = requests.get(url).json()
+        url = 'http://127.0.0.1:5005/episode'
+        episode = requests.get(url).json()
+        play_text = "<idle>"
 
         if local and state:
             if local != previous_content_local or state != previous_content_state:
+                if local['currentPlayer'] == "spotify":
+                    #currently_playing_type = state['currently_playing_type']
+                    if state['currently_playing_type'] == 'episode':
+                        url = 'http://127.0.0.1:5005/episode'
+                        episode = requests.get(url).json()
+                        play_text = episode['show']['name'] + "\n" + episode['name']
+                    else:
+                        play_text = state['item']['album']['name'] + "\n" + state['item']['name'] + "\nTrack: " + str(state['item']['track_number']) + "/" + str(state['item']['album']['total_tracks'])
+                elif local['currentType'] == "local" and local['playing']:
+                    play_text = local['album'] + "\n" + local['currentTrackname'] + "\nTrack: " + str(local['currentTracknr']) + "/" + str(local['totalTracks'])
+                elif local['currentType'] == "radio" and local['playing']:
+                    with open(data) as f:
+                        data_json = json.load(f)
+                    for media in data_json:
+                        if media.get('id') == local['currentTrackname']:
+                            play_text = media.get('title')
+                            break
                 previous_content_local = local
                 previous_content_state = state
                 screenshot = get_screenshot()
                 client.publish(mqtt_topic + '/' + mqtt_clientId + '/screenshot', screenshot, qos=0)
-
-        #LOKAL
-        #msg = local['album'] + "\n" + local['currentTrackname'] + "\nTrack: " + str(local['currentTracknr']) + "/" + str(local['totalTracks'])
-
-        #SPOTIFY
-        #episode = requests.get(urls).json()
-        #msg = episode['show']['name'] + "\n" + episode['name']
-        #msg = state['item']['album']['name'] + "\n" + state['item']['name'] + "\nTrack: " + str(state['item']['track_number']) + "/" + str(state['item']['album']['total_tracks'])
-        #print(local["playing"], local["pause"], local["currentType"], 
-#        return mupihat_data["Charger_Status"], mupihat_data["Vbat"], mupihat_data["Vbus"], mupihat_data["Ibat"], mupihat_data["IBus"], mupihat_data["Temp"], mupihat_data["Bat_SOC"].replace("%", ""), mupihat_data["Bat_Stat"], mupihat_data["Bat_Type"], mupihat_data["BatteryConnected"]
+                client.publish(mqtt_topic + '/' + mqtt_clientId + '/play_text', play_text, qos=0)
     except Exception as e:
         print("Exception: ", e)
  #       return None, None, None, None, None, None, None, None, None, None
 
-def get_screenshot():
+def get_screenshot():   
     try:
         with open("/tmp/mqtt_screen.png", "rb") as f:
             img_bytes = f.read()
