@@ -68,7 +68,7 @@ mqtt_refreshIdle = int(jsonconfig['mqtt']['refreshIdle'])
 mqtt_timeout = int(jsonconfig['mqtt']['timeout'])
 mqtt_debug = jsonconfig['mqtt']['debug']
 mqtt_ha_topic = jsonconfig['mqtt']['ha_topic']
-mqtt_ha_active = jsonconfig['mqtt']['ha_mqtt_active']
+mqtt_ha_active = jsonconfig['mqtt']['ha_active']
 mupi_version = jsonconfig['mupibox']['version']
 mupi_host = jsonconfig['mupibox']['host']
 
