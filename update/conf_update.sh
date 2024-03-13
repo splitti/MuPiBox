@@ -219,7 +219,7 @@ fi
 
 HA_MQTT=$(/usr/bin/jq -r .mqtt.ha_topic ${CONFIG})
 if [ "$HA_MQTT" == "null" ]; then 
-	/usr/bin/cat <<< $(/usr/bin/jq '.mqtt.ha_	active = false' ${CONFIG}) >  ${CONFIG}
+	/usr/bin/cat <<< $(/usr/bin/jq '.mqtt.ha_active = false' ${CONFIG}) >  ${CONFIG}
 	/usr/bin/cat <<< $(/usr/bin/jq --arg v "homeassistant" '.mqtt.ha_topic = $v' ${CONFIG}) >  ${CONFIG}
 fi
 
