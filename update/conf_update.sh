@@ -217,6 +217,12 @@ if [ "$MQTTTIMEOUT" == "null" ]; then
 	/usr/bin/cat <<< $(/usr/bin/jq --arg v "60" '.mqtt.timeout = $v' ${CONFIG}) >  ${CONFIG}
 fi
 
+HA_MQTT=$(/usr/bin/jq -r .mqtt.ha_topic ${CONFIG})
+if [ "$HA_MQTT" == "null" ]; then 
+	/usr/bin/cat <<< $(/usr/bin/jq '.mqtt.ha_active = false' ${CONFIG}) >  ${CONFIG}
+	/usr/bin/cat <<< $(/usr/bin/jq --arg v "homeassistant" '.mqtt.ha_topic = $v' ${CONFIG}) >  ${CONFIG}
+fi
+
 BATTERYCONFIG=$(/usr/bin/jq -r .mupihat.selected_battery ${CONFIG})
 if [ "$BATTERYCONFIG" == "null" ]; then 
 	/usr/bin/cat <<< $(/usr/bin/jq --arg v "ENERpower 2S2P 10.000mAh" '.mupihat.selected_battery = $v' ${CONFIG}) >  ${CONFIG}

@@ -22,20 +22,21 @@ __version__ = "1.0.0"
 __email__ = "splitti@mupibox.de"
 __status__ = "stable"
 
-import paho.mqtt.client as mqtt
+import alsaaudio
+import base64
 import datetime
-import os
-import subprocess
-import time
+import fcntl
 import json
+import netifaces as ni
+import os
+import paho.mqtt.client as mqtt
 import platform
 import re
 import socket
-import fcntl
 import struct
+import subprocess
 import requests
-import alsaaudio
-import netifaces as ni
+import time
 
 pid = os.getpid()
 with open("/run/mupi_mqtt.pid", "w") as pid_file:
@@ -50,6 +51,9 @@ mupihat = "/tmp/mupihat.json"
 with open(config) as file:
     jsonconfig = json.load(file)
 
+previous_content_local = ""
+previous_content_state = ""
+
 # Extract MQTT configuration parameters
 mqtt_name = jsonconfig['mqtt']['name']
 mqtt_topic = jsonconfig['mqtt']['topic'] + "/" + jsonconfig['mqtt']['clientId']
@@ -63,11 +67,35 @@ mqtt_refresh = int(jsonconfig['mqtt']['refresh'])
 mqtt_refreshIdle = int(jsonconfig['mqtt']['refreshIdle'])
 mqtt_timeout = int(jsonconfig['mqtt']['timeout'])
 mqtt_debug = jsonconfig['mqtt']['debug']
+mqtt_ha_topic = jsonconfig['mqtt']['ha_topic']
+mqtt_ha_active = jsonconfig['mqtt']['ha_active']
 mupi_version = jsonconfig['mupibox']['version']
 mupi_host = jsonconfig['mupibox']['host']
 
 
 def mqtt_publish_ha():
+    # Publish image
+    image_data = {
+        "name": "Screenshot",
+        "image_topic": mqtt_topic + '/' + mqtt_clientId + '/screenshot',
+        "content_type": "image/png",
+        "image_encoding": "b64",
+        "unique_id": mqtt_clientId + '_mupibox_screenshot',
+        "device_class": "image",
+        "icon": "mdi:image",
+        "platform": "mqtt",
+        "device": {
+            "identifiers": mqtt_clientId + "_mupibox",
+            "name": mqtt_name,
+            "manufacturer": "MuPiBox.de",
+            "model": "Your MuPiBox: " + mupi_host,
+            "sw_version": mupi_version,
+            "configuration_url":"http://" + mupi_host
+        }
+    }
+    client.publish(mqtt_ha_topic + "/image/" + mqtt_clientId + "_state/config", json.dumps(image_data), qos=0, retain=True)
+
+
     # Publish on/off state entity
     state_info = {
         "name": "State",
@@ -88,7 +116,7 @@ def mqtt_publish_ha():
             "configuration_url":"http://" + mupi_host
         }
     }
-    client.publish("homeassistant/binary_sensor/" + mqtt_clientId + "_state/config", json.dumps(state_info), qos=0, retain=True)
+    client.publish(mqtt_ha_topic + "/binary_sensor/" + mqtt_clientId + "_state/config", json.dumps(state_info), qos=0, retain=True)
 
     # Publish version
     version_info = {
@@ -106,7 +134,7 @@ def mqtt_publish_ha():
             "configuration_url":"http://" + mupi_host
         }
     }
-    client.publish("homeassistant/sensor/" + mqtt_clientId + "_version/config", json.dumps(version_info), qos=0, retain=True)
+    client.publish(mqtt_ha_topic + "/sensor/" + mqtt_clientId + "_version/config", json.dumps(version_info), qos=0, retain=True)
 
 
     # Publish OS Info
@@ -125,7 +153,7 @@ def mqtt_publish_ha():
             "configuration_url":"http://" + mupi_host
         }
     }
-    client.publish("homeassistant/sensor/" + mqtt_clientId + "_os/config", json.dumps(os_info), qos=0, retain=True)
+    client.publish(mqtt_ha_topic + "/sensor/" + mqtt_clientId + "_os/config", json.dumps(os_info), qos=0, retain=True)
 
     # Publish Raspberry Info
     raspi_info = {
@@ -143,7 +171,7 @@ def mqtt_publish_ha():
             "configuration_url":"http://" + mupi_host
         }
     }
-    client.publish("homeassistant/sensor/" + mqtt_clientId + "_raspi/config", json.dumps(raspi_info), qos=0, retain=True)
+    client.publish(mqtt_ha_topic + "/sensor/" + mqtt_clientId + "_raspi/config", json.dumps(raspi_info), qos=0, retain=True)
 
 
     # Publish CPU Temperature state entity
@@ -165,7 +193,7 @@ def mqtt_publish_ha():
             "configuration_url":"http://" + mupi_host
         }
     }
-    client.publish("homeassistant/sensor/" + mqtt_clientId + "_temperature/config", json.dumps(temp_info), qos=0, retain=False)
+    client.publish(mqtt_ha_topic + "/sensor/" + mqtt_clientId + "_temperature/config", json.dumps(temp_info), qos=0, retain=False)
 
     # Publish CPU Temperature state entity
     fan_info = {
@@ -184,7 +212,7 @@ def mqtt_publish_ha():
             "configuration_url":"http://" + mupi_host
         }
     }
-    client.publish("homeassistant/fan/" + mqtt_clientId + "_fan/config", json.dumps(fan_info), qos=0, retain=False)
+    client.publish(mqtt_ha_topic + "/fan/" + mqtt_clientId + "_fan/config", json.dumps(fan_info), qos=0, retain=False)
 
 
     # Publish Hostname
@@ -203,7 +231,7 @@ def mqtt_publish_ha():
             "configuration_url":"http://" + mupi_host
         }
     }
-    client.publish("homeassistant/sensor/" + mqtt_clientId + "_hostname/config", json.dumps(hostname_info), qos=0, retain=True)
+    client.publish(mqtt_ha_topic + "/sensor/" + mqtt_clientId + "_hostname/config", json.dumps(hostname_info), qos=0, retain=True)
 
     # Publish IP
     ip_info = {
@@ -221,7 +249,7 @@ def mqtt_publish_ha():
             "configuration_url":"http://" + mupi_host
         }
     }
-    client.publish("homeassistant/sensor/" + mqtt_clientId + "_ip/config", json.dumps(ip_info), qos=0, retain=False)
+    client.publish(mqtt_ha_topic + "/sensor/" + mqtt_clientId + "_ip/config", json.dumps(ip_info), qos=0, retain=True)
 
 
 
@@ -243,7 +271,7 @@ def mqtt_publish_ha():
             "configuration_url":"http://" + mupi_host
         }
     }
-    client.publish("homeassistant/button/" + mqtt_clientId + "_play/config", json.dumps(play_button), qos=0, retain=False)
+    client.publish(mqtt_ha_topic + "/button/" + mqtt_clientId + "_play/config", json.dumps(play_button), qos=0, retain=False)
 
     # Publish Pause Button
     pause_button = {
@@ -263,19 +291,7 @@ def mqtt_publish_ha():
             "configuration_url":"http://" + mupi_host
         }
     }
-    client.publish("homeassistant/button/" + mqtt_clientId + "_pause/config", json.dumps(pause_button), qos=0, retain=False)
-
-
-
-
-
-
-
-
-
-
-
-
+    client.publish(mqtt_ha_topic + "/button/" + mqtt_clientId + "_pause/config", json.dumps(pause_button), qos=0, retain=False)
 
     # Publish Shutdown Button
     power_button = {
@@ -295,7 +311,7 @@ def mqtt_publish_ha():
             "configuration_url":"http://" + mupi_host
         }
     }
-    client.publish("homeassistant/button/" + mqtt_clientId + "_power/config", json.dumps(power_button), qos=0, retain=False)
+    client.publish(mqtt_ha_topic + "/button/" + mqtt_clientId + "_power/config", json.dumps(power_button), qos=0, retain=False)
 
     reboot_button = {
         "name": "Reboot",
@@ -315,7 +331,7 @@ def mqtt_publish_ha():
             "configuration_url":"http://" + mupi_host
         }
     }
-    client.publish("homeassistant/button/" + mqtt_clientId + "_reboot/config", json.dumps(reboot_button), qos=0, retain=False)
+    client.publish(mqtt_ha_topic + "/button/" + mqtt_clientId + "_reboot/config", json.dumps(reboot_button), qos=0, retain=False)
 
 
     # Publish Architecture
@@ -334,7 +350,7 @@ def mqtt_publish_ha():
             "configuration_url":"http://" + mupi_host
         }
     }
-    client.publish("homeassistant/sensor/" + mqtt_clientId + "_architecture/config", json.dumps(architecture_info), qos=0, retain=False)
+    client.publish(mqtt_ha_topic + "/sensor/" + mqtt_clientId + "_architecture/config", json.dumps(architecture_info), qos=0, retain=False)
 
     # Publish MAC
     mac_info = {
@@ -352,7 +368,7 @@ def mqtt_publish_ha():
             "configuration_url":"http://" + mupi_host
         }
     }
-    client.publish("homeassistant/sensor/" + mqtt_clientId + "_mac/config", json.dumps(mac_info), qos=0, retain=True)
+    client.publish(mqtt_ha_topic + "/sensor/" + mqtt_clientId + "_mac/config", json.dumps(mac_info), qos=0, retain=True)
 
     # Publish Volume
     volume_info = {
@@ -374,7 +390,7 @@ def mqtt_publish_ha():
             "configuration_url":"http://" + mupi_host
         }
     }
-    client.publish("homeassistant/number/" + mqtt_clientId + "_volume/config", json.dumps(volume_info), qos=0)
+    client.publish(mqtt_ha_topic + "/number/" + mqtt_clientId + "_volume/config", json.dumps(volume_info), qos=0)
 
     # Publish SSID
     ssid_info = {
@@ -392,7 +408,7 @@ def mqtt_publish_ha():
             "configuration_url":"http://" + mupi_host
         }
     }
-    client.publish("homeassistant/sensor/" + mqtt_clientId + "_ssid/config", json.dumps(ssid_info), qos=0, retain=False)
+    client.publish(mqtt_ha_topic + "/sensor/" + mqtt_clientId + "_ssid/config", json.dumps(ssid_info), qos=0, retain=False)
 
     # Publish WIFI SIGNAL STRENGTH
     signal_strength_info = {
@@ -411,7 +427,7 @@ def mqtt_publish_ha():
             "configuration_url":"http://" + mupi_host
         }
     }
-    client.publish("homeassistant/sensor/" + mqtt_clientId + "_signal_strength/config", json.dumps(signal_strength_info), qos=0, retain=False)
+    client.publish(mqtt_ha_topic + "/sensor/" + mqtt_clientId + "_signal_strength/config", json.dumps(signal_strength_info), qos=0, retain=False)
 
     # Publish WIFI SIGNAL QUALITY
     signal_quality_info = {
@@ -430,7 +446,7 @@ def mqtt_publish_ha():
             "configuration_url":"http://" + mupi_host
         }
     }
-    client.publish("homeassistant/sensor/" + mqtt_clientId + "_signal_quality/config", json.dumps(signal_quality_info), qos=0, retain=False)
+    client.publish(mqtt_ha_topic + "/sensor/" + mqtt_clientId + "_signal_quality/config", json.dumps(signal_quality_info), qos=0, retain=False)
 
     # Publish HAT bat_type
     bat_type_info = {
@@ -448,7 +464,7 @@ def mqtt_publish_ha():
             "configuration_url":"http://" + mupi_host
         }
     }
-    client.publish("homeassistant/sensor/" + mqtt_clientId + "_bat_type/config", json.dumps(bat_type_info), qos=0)
+    client.publish(mqtt_ha_topic + "/sensor/" + mqtt_clientId + "_bat_type/config", json.dumps(bat_type_info), qos=0)
 
 
     # Publish HAT bat_stat
@@ -467,7 +483,7 @@ def mqtt_publish_ha():
             "configuration_url":"http://" + mupi_host
         }
     }
-    client.publish("homeassistant/sensor/" + mqtt_clientId + "_bat_stat/config", json.dumps(bat_stat_info), qos=0)
+    client.publish(mqtt_ha_topic + "/sensor/" + mqtt_clientId + "_bat_stat/config", json.dumps(bat_stat_info), qos=0)
 
 
     # Publish HAT bat_soc
@@ -488,7 +504,7 @@ def mqtt_publish_ha():
             "configuration_url":"http://" + mupi_host
         }
     }
-    client.publish("homeassistant/sensor/" + mqtt_clientId + "_bat_soc/config", json.dumps(bat_soc_info), qos=0)
+    client.publish(mqtt_ha_topic + "/sensor/" + mqtt_clientId + "_bat_soc/config", json.dumps(bat_soc_info), qos=0, retain=True)
 
 
     hat_temp_info = {
@@ -510,7 +526,7 @@ def mqtt_publish_ha():
             "configuration_url":"http://" + mupi_host
         }
     }
-    client.publish("homeassistant/sensor/" + mqtt_clientId + "_hat_temp/config", json.dumps(hat_temp_info), qos=0)
+    client.publish(mqtt_ha_topic + "/sensor/" + mqtt_clientId + "_hat_temp/config", json.dumps(hat_temp_info), qos=0)
 
     BatteryConnected_info = {
         "name": "HAT Battery connected",
@@ -528,7 +544,7 @@ def mqtt_publish_ha():
             "configuration_url":"http://" + mupi_host
         }
     }
-    client.publish("homeassistant/sensor/" + mqtt_clientId + "_battery_connected/config", json.dumps(BatteryConnected_info), qos=0)
+    client.publish(mqtt_ha_topic + "/sensor/" + mqtt_clientId + "_battery_connected/config", json.dumps(BatteryConnected_info), qos=0)
 
     ibus_info = {
         "name": "HAT Ibus (charger)",
@@ -547,7 +563,7 @@ def mqtt_publish_ha():
             "configuration_url":"http://" + mupi_host
         }
     }
-    client.publish("homeassistant/sensor/" + mqtt_clientId + "_ibus/config", json.dumps(ibus_info), qos=0)
+    client.publish(mqtt_ha_topic + "/sensor/" + mqtt_clientId + "_ibus/config", json.dumps(ibus_info), qos=0)
 
 
     ibat_info = {
@@ -568,7 +584,7 @@ def mqtt_publish_ha():
             "configuration_url":"http://" + mupi_host
         }
     }
-    client.publish("homeassistant/sensor/" + mqtt_clientId + "_ibat/config", json.dumps(ibat_info), qos=0)
+    client.publish(mqtt_ha_topic + "/sensor/" + mqtt_clientId + "_ibat/config", json.dumps(ibat_info), qos=0)
 
 
     vbus_info = {
@@ -589,7 +605,7 @@ def mqtt_publish_ha():
             "configuration_url":"http://" + mupi_host
         }
     }
-    client.publish("homeassistant/sensor/" + mqtt_clientId + "_vbus/config", json.dumps(vbus_info), qos=0)
+    client.publish(mqtt_ha_topic + "/sensor/" + mqtt_clientId + "_vbus/config", json.dumps(vbus_info), qos=0)
 
 
     # Publish HAT vbat
@@ -611,7 +627,7 @@ def mqtt_publish_ha():
             "configuration_url":"http://" + mupi_host
         }
     }
-    client.publish("homeassistant/sensor/" + mqtt_clientId + "_vbat/config", json.dumps(vbat_info), qos=0)
+    client.publish(mqtt_ha_topic + "/sensor/" + mqtt_clientId + "_vbat/config", json.dumps(vbat_info), qos=0)
 
 
     # Publish HAT charger status
@@ -630,7 +646,7 @@ def mqtt_publish_ha():
             "configuration_url":"http://" + mupi_host
         }
     }
-    client.publish("homeassistant/sensor/" + mqtt_clientId + "_charger_status/config", json.dumps(charger_status_info), qos=0)
+    client.publish(mqtt_ha_topic + "/sensor/" + mqtt_clientId + "_charger_status/config", json.dumps(charger_status_info), qos=0)
 
 
 
@@ -644,7 +660,7 @@ def get_ip_address(interface):
         )[20:24])
         return ip_address
     except Exception as e:
-        print("Error:", e)
+        print("Exception: ", e)
         return None
 
 def mqtt_systeminfo():
@@ -742,24 +758,43 @@ def get_mupihat():
     except:
         return None, None, None, None, None, None, None, None, None, None
 
-def get_play_information():
+def send_play_information():
     try:
+        global previous_content_local, previous_content_state
         url = 'http://127.0.0.1:5005/local'
         local = requests.get(url).json()
         url = 'http://127.0.0.1:5005/state'
         state = requests.get(url).json()
 
+        if local and state:
+            if local != previous_content_local or state != previous_content_state:
+                previous_content_local = local
+                previous_content_state = state
+                screenshot = get_screenshot()
+                client.publish(mqtt_topic + '/' + mqtt_clientId + '/screenshot', screenshot, qos=0)
+
         #LOKAL
         #msg = local['album'] + "\n" + local['currentTrackname'] + "\nTrack: " + str(local['currentTracknr']) + "/" + str(local['totalTracks'])
 
         #SPOTIFY
-        episode = requests.get(urls).json()
-        msg = episode['show']['name'] + "\n" + episode['name']
+        #episode = requests.get(urls).json()
+        #msg = episode['show']['name'] + "\n" + episode['name']
         #msg = state['item']['album']['name'] + "\n" + state['item']['name'] + "\nTrack: " + str(state['item']['track_number']) + "/" + str(state['item']['album']['total_tracks'])
         #print(local["playing"], local["pause"], local["currentType"], 
 #        return mupihat_data["Charger_Status"], mupihat_data["Vbat"], mupihat_data["Vbus"], mupihat_data["Ibat"], mupihat_data["IBus"], mupihat_data["Temp"], mupihat_data["Bat_SOC"].replace("%", ""), mupihat_data["Bat_Stat"], mupihat_data["Bat_Type"], mupihat_data["BatteryConnected"]
-    except:
+    except Exception as e:
+        print("Exception: ", e)
  #       return None, None, None, None, None, None, None, None, None, None
+
+def get_screenshot():
+    try:
+        with open("/tmp/mqtt_screen.png", "rb") as f:
+            img_bytes = f.read()
+        img_base64 = base64.b64encode(img_bytes).decode("utf-8")
+        return img_base64        
+    except Exception as e:
+        print("Exception: ", e)
+        return null
 
 
 def on_message(client, flags, msg):
@@ -798,7 +833,7 @@ if mqtt_username and mqtt_password:
 client.on_connect = on_connect
 client.on_disconnect = on_disconnect
 client.on_message = on_message
-#mqtt_topics = (mqtt_topic + '/' + mqtt_clientId + '/'), ("homeassistant/switch/" + mqtt_clientId + "_state/")
+#mqtt_topics = (mqtt_topic + '/' + mqtt_clientId + '/'), (mqtt_ha_topic + "/switch/" + mqtt_clientId + "_state/")
 
 # Connect to the MQTT broker
 client.connect(mqtt_broker, mqtt_port, mqtt_timeout)
@@ -810,8 +845,9 @@ client.subscribe(mqtt_topic + '/' + mqtt_clientId + '/play/set')
 
 # Start the MQTT loop
 client.loop_start()
-mqtt_publish_ha()
-time.sleep(2)
+if mqtt_ha_active:
+    mqtt_publish_ha()
+    time.sleep(2)
 mqtt_systeminfo()
 client.publish(mqtt_topic + '/' + mqtt_clientId + '/state', "online", qos=0)
 client.publish(mqtt_topic + '/' + mqtt_clientId + '/power', "on", qos=0)
@@ -821,7 +857,6 @@ try:
     while True:
         ssid, signal_strength, signal_quality = get_wifi()
         charger_status, vbat, vbus, ibat, ibus, temp, bat_soc, bat_stat, bat_type, battery_connected = get_mupihat()
-        
         
         client.publish(mqtt_topic + '/' + mqtt_clientId + '/state', "online", qos=0)
         client.publish(mqtt_topic + '/' + mqtt_clientId + '/temperature', float(get_cputemp()), qos=0)
@@ -840,6 +875,10 @@ try:
         client.publish(mqtt_topic + '/' + mqtt_clientId + '/bat_stat', bat_stat, qos=0)
         client.publish(mqtt_topic + '/' + mqtt_clientId + '/bat_type', bat_type, qos=0)
         client.publish(mqtt_topic + '/' + mqtt_clientId + '/battery_connected', battery_connected, qos=0)
+        send_play_information()
+
+        subprocess.run(["sudo", "rm", "/tmp/mqtt_screen.png"])
+        subprocess.run(["sudo", "-H", "-u", "dietpi", "bash", "-c", "DISPLAY=:0 scrot /tmp/mqtt_screen.png"])
 
         if player_active():
             sleeptime = mqtt_refresh
