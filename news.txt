@@ -1,7 +1,7 @@
 <h3>OS-Support</h3>
 We will focus on <b>bookworm</b> and recommend you to update, or reinstall. See also this dietpi-article: <a href=https://dietpi.com/blog/?p=3128>https://dietpi.com/blog/?p=3128</a>
 
-<h3>Next Release</h3>
+<h3>v4.0.0</h3>
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>New: Telegram-Buttons</li>
 <li id='linews' class='linews'>New: Telegram Track Info only if Track changed</li>
