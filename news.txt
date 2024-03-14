@@ -1,42 +1,31 @@
 <h3>OS-Support</h3>
 We will focus on <b>bookworm</b> and recommend you to update, or reinstall. See also this dietpi-article: <a href=https://dietpi.com/blog/?p=3128>https://dietpi.com/blog/?p=3128</a>
 
-<h3>Update 3.3.0 - 3.3.3</h3>
-<ul id='ulnews' class='ulnews'>
-<li id='linews' class='linews'>New: Podcasts (RSS) - Please notice: some podcasts take a lot of time to start. This is because of slow server-connections.</li>
-<li id='linews' class='linews'>New: DietPi-Dashboard</li>
-<li id='linews' class='linews'>New: wsdd-Installation (Web-Service-Discovery-Daemon)</li>
-<li id='linews' class='linews'>New: WLED-Support (thanks to ronbal for your support <3)</li>
-<li id='linews' class='linews'>New: RTL88X2BU-Drivers [https://github.com/fastoe/RTL8812BU_for_Raspbian] - Can be installed in admin-menu.</li>
-<li id='linews' class='linews'>Bugfix: Admin-Webinterface missing footer in MuPi-Config</li>
-<li id='linews' class='linews'>Bugfix: Adding Wifi-Bugfixing</li>
-<li id='linews' class='linews'>Bugfix: v7 Installations get</li>
-<li id='linews' class='linews'>Bugfix: Wrong values for display brightness in Admin-Interface</li>
-<li id='linews' class='linews'>Bugfix: Adding radio and podcasts were not possible</li>
-<li id='linews' class='linews'>Bugfix: Stable Update goes wrong</li>
-</ul>
-<h3>Next Release</h3>
+<h3>v4.0.0</h3>
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>New: Telegram-Buttons</li>
 <li id='linews' class='linews'>New: Telegram Track Info only if Track changed</li>
 <li id='linews' class='linews'>New: Telegram Pause and Play function</li>
 <li id='linews' class='linews'>New: Redesign resume function, save the last 9 media that was played, new Button in Touch-Admininterface, trash-symbol clear resume</li>
 <li id='linews' class='linews'>New: Chromium parameters in Admin-UI</li>
-<li id='linews' class='linews'>New: Replace Category Radio with "other" to collect all stuff that is not only audiobook or music --> remove and add radio again</li>
-<li id='linews' class='linews'>New: New UI for Media Add area</li>
-<li id='linews' class='linews'>New: No more using of Spotify Ids, now only use the complete URL from Spotify</li>
+<li id='linews' class='linews'>New: Replace category radio with "other" to collect all stuff that is not only audiobook or music --> remove and add radio again</li>
+<li id='linews' class='linews'>New: New UI for media add area</li>
+<li id='linews' class='linews'>New: No more using of spotify ids, now only use the complete URL from spotify</li>
 <li id='linews' class='linews'>New: Shell login info and aliases for mupibox commands</li>
 <li id='linews' class='linews'>New: GPU-Support can be enabled, experimantal (no risc, no fun)</li>
 <li id='linews' class='linews'>New: Download support infos in admin-interface</li>
 <li id='linews' class='linews'>New: MuPiHAT-Support</li>
 <li id='linews' class='linews'>New: redesigned LED-Control</li>
 <li id='linews' class='linews'>New: Header in admin-interface (HAT-Status, Wifi-Link-Quality, reboot and shutdown</li>
-<li id='linews' class='linews'>New: run_once.sh - Script to do some things at startup.</li>
+<li id='linews' class='linews'>New: run_once.sh - Script to do some things at startup</li>
 <li id='linews' class='linews'>New: Standard audio devices in selection.</li>
 <li id='linews' class='linews'>New: PWM-Fan support</li>
 <li id='linews' class='linews'>New: A new WiFi service that checks network strength and switches to the stronger network</li>
-<li id='linews' class='linews'>New: Theme forms</li>
-<li id='linews' class='linews'>Bugfix: new Spotifyd Version --> less Spotify problems</li>
+<li id='linews' class='linews'>New: Theme forms, comic, mystic</li>
+<li id='linews' class='linews'>Bugfix: new spotifyd version --> less spotify problems</li>
 <li id='linews' class='linews'>Bugfix: Theme cannot be set</li>
 <li id='linews' class='linews'>Bugfix: Fixing bluetooth problems</li>
+</ul>
+<h3>Next Release</h3>
+<ul id='ulnews' class='ulnews'>
 </ul>
