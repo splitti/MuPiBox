@@ -135,7 +135,7 @@ def mqtt_publish_ha():
             "configuration_url":"http://" + mupi_host
         }
     }
-    client.publish(mqtt_ha_topic + "/sensor/" + mqtt_clientId + "_play_text/config", json.dumps(play_state), qos=0, retain=True)
+    client.publish(mqtt_ha_topic + "/sensor/" + mqtt_clientId + "_play_text/config", json.dumps(play_state), qos=0, retain=False)
 
     # Publish version
     version_info = {
@@ -311,6 +311,26 @@ def mqtt_publish_ha():
         }
     }
     client.publish(mqtt_ha_topic + "/button/" + mqtt_clientId + "_pause/config", json.dumps(pause_button), qos=0, retain=False)
+
+    # Publish Screenshot Button
+    take_screenshot = {
+        "name": "Take screenshot",
+        "availability_topic": mqtt_topic + '/' + mqtt_clientId + '/state',
+        "unique_id": mqtt_clientId + '_mupibox_take_screenshot',
+        "command_template": "take_screenshot",
+        "command_topic": mqtt_topic + '/' + mqtt_clientId + '/take_screenshot/set',
+        "icon": "mdi:monitor-screenshot",
+        "platform": "mqtt",
+        "device": {
+            "identifiers": mqtt_clientId + "_mupibox",
+            "name": mqtt_name,
+            "manufacturer": "MuPiBox.de",
+            "model": "Your MuPiBox: " + mupi_host,
+            "sw_version": mupi_version,
+            "configuration_url":"http://" + mupi_host
+        }
+    }
+    client.publish(mqtt_ha_topic + "/button/" + mqtt_clientId + "_take_screenshot/config", json.dumps(take_screenshot), qos=0, retain=False)
 
     # Publish Shutdown Button
     power_button = {
@@ -848,6 +868,9 @@ def on_message(client, flags, msg):
         print("Button: play")
         url = 'http://' + jsonconfig['mupibox']['host'] + ':5005/play'
         requests.get(url)
+    if msg.topic == mqtt_topic + '/' + mqtt_clientId + '/take_screenshot/set' and str(msg.payload.decode("utf-8")) == "take_screenshot":
+        screenshot = get_screenshot()
+        client.publish(mqtt_topic + '/' + mqtt_clientId + '/screenshot', screenshot, qos=0)
 
 
 ###############################################################################################################
