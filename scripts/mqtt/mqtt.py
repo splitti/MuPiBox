@@ -895,6 +895,7 @@ client.subscribe(mqtt_topic + '/' + mqtt_clientId + '/volume/set')
 client.subscribe(mqtt_topic + '/' + mqtt_clientId + '/reboot/set')
 client.subscribe(mqtt_topic + '/' + mqtt_clientId + '/pause/set')
 client.subscribe(mqtt_topic + '/' + mqtt_clientId + '/play/set')
+client.subscribe(mqtt_topic + '/' + mqtt_clientId + '/take_screenshot/set')
 
 # Start the MQTT loop
 client.loop_start()
