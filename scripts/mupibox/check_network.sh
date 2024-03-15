@@ -21,8 +21,8 @@ if [ ! -f ${DATA_FILE} ]; then
 		exit
 	else
 		touch ${DATA_LOCK}
-        echo -n "[]" > ${DATA_FILE}
-        chown dietpi:dietpi ${DATA_FILE}
+		echo -n "[]" >${DATA_FILE}
+		chown dietpi:dietpi ${DATA_FILE}
 		rm ${DATA_LOCK}
 	fi
 fi
@@ -33,26 +33,25 @@ if [ ! -f ${RESUME_FILE} ]; then
 		exit
 	else
 		touch ${RESUME_LOCK}
-        echo -n "[]" > ${RESUME_FILE}
-        chown dietpi:dietpi ${RESUME_FILE}
+		echo -n "[]" >${RESUME_FILE}
+		chown dietpi:dietpi ${RESUME_FILE}
 		rm ${RESUME_LOCK}
 	fi
 fi
 
 if [ ! -f ${NETWORKCONFIG} ]; then
-        sudo echo -n "[]" ${NETWORKCONFIG}
-        chown dietpi:dietpi ${NETWORKCONFIG}
-        chmod 777 ${NETWORKCONFIG}
-        /usr/bin/cat <<< $(/usr/bin/jq -n --arg v "starting" '.onlinestate = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
+	sudo echo -n "[]" ${NETWORKCONFIG}
+	chown dietpi:dietpi ${NETWORKCONFIG}
+	chmod 777 ${NETWORKCONFIG}
+	/usr/bin/cat <<<$(/usr/bin/jq -n --arg v "starting" '.onlinestate = $v' ${NETWORKCONFIG}) >${NETWORKCONFIG}
 else
-        OLD_ONLINESTATE=$(/usr/bin/jq -r .onlinestate ${NETWORKCONFIG})
+	OLD_ONLINESTATE=$(/usr/bin/jq -r .onlinestate ${NETWORKCONFIG})
 fi
 
 #wget -q --spider http://google.com
 
-while true
-do
-	if ( $(/usr/bin/python3 /usr/local/bin/mupibox/check_network.py) == ${TRUESTATE} ); then
+while true; do
+	if ($(/usr/bin/python3 /usr/local/bin/mupibox/check_network.py) == ${TRUESTATE}); then
 		ONLINESTATE=${TRUESTATE}
 		if [ "${ONLINESTATE}" != "${OLDSTATE}" ]; then
 			if [ ! -f ${ACTIVE_FILE} ]; then
@@ -75,41 +74,41 @@ do
 	else
 		ONLINESTATE=${FALSESTATE}
 		if [ ! -f ${OFFLINE_FILE} ]; then
-			echo -n "[" > ${OFFLINE_FILE}
-			echo -n $(jq '.[] | select(.type != "spotify") | select(.type != "radio" | select(.type != "rss")' < ${DATA_FILE}) >> ${OFFLINE_FILE}
-			echo -n "]" >> ${OFFLINE_FILE}
+			echo -n "[" >${OFFLINE_FILE}
+			echo -n $(jq '.[] | select(.type != "spotify") | select(.type != "radio" | select(.type != "rss")' <${DATA_FILE}) >>${OFFLINE_FILE}
+			echo -n "]" >>${OFFLINE_FILE}
 			sed -i 's/} {/}, {/g' ${OFFLINE_FILE}
 			chown dietpi:dietpi ${OFFLINE_FILE}
 		elif [ ! -s ${OFFLINE_FILE} ]; then
 			rm ${OFFLINE_FILE}
-			echo -n "[" > ${OFFLINE_FILE}
-			echo -n $(jq '.[] | select(.type != "spotify") | select(.type != "radio" | select(.type != "rss")' < ${DATA_FILE}) >> ${OFFLINE_FILE}
-			echo -n "]" >> ${OFFLINE_FILE}
+			echo -n "[" >${OFFLINE_FILE}
+			echo -n $(jq '.[] | select(.type != "spotify") | select(.type != "radio" | select(.type != "rss")' <${DATA_FILE}) >>${OFFLINE_FILE}
+			echo -n "]" >>${OFFLINE_FILE}
 			sed -i 's/} {/}, {/g' ${OFFLINE_FILE}
 			chown dietpi:dietpi ${OFFLINE_FILE}
 		elif [ $(stat --format='%Y' "${DATA_FILE}") -gt $(stat --format='%Y' "${OFFLINE_FILE}") ]; then
-			echo -n "[" > ${OFFLINE_FILE}
-			echo -n $(jq '.[] | select(.type != "spotify") | select(.type != "radio" | select(.type != "rss")' < ${DATA_FILE}) >> ${OFFLINE_FILE}
-			echo -n "]" >> ${OFFLINE_FILE}
+			echo -n "[" >${OFFLINE_FILE}
+			echo -n $(jq '.[] | select(.type != "spotify") | select(.type != "radio" | select(.type != "rss")' <${DATA_FILE}) >>${OFFLINE_FILE}
+			echo -n "]" >>${OFFLINE_FILE}
 			sed -i 's/} {/}, {/g' ${OFFLINE_FILE}
 		fi
 		if [ ! -f ${OFFLINERESUME_FILE} ]; then
-			echo -n "[" > ${OFFLINERESUME_FILE}
-			echo -n $(jq '.[] | select(.type != "spotify") | select(.type != "radio" | select(.type != "rss")' < ${RESUME_FILE}) >> ${OFFLINERESUME_FILE}
-			echo -n "]" >> ${OFFLINERESUME_FILE}
+			echo -n "[" >${OFFLINERESUME_FILE}
+			echo -n $(jq '.[] | select(.type != "spotify") | select(.type != "radio" | select(.type != "rss")' <${RESUME_FILE}) >>${OFFLINERESUME_FILE}
+			echo -n "]" >>${OFFLINERESUME_FILE}
 			sed -i 's/} {/}, {/g' ${OFFLINERESUME_FILE}
 			chown dietpi:dietpi ${OFFLINERESUME_FILE}
 		elif [ ! -s ${OFFLINERESUME_FILE} ]; then
 			rm ${OFFLINERESUME_FILE}
-			echo -n "[" > ${OFFLINERESUME_FILE}
-			echo -n $(jq '.[] | select(.type != "spotify") | select(.type != "radio" | select(.type != "rss")' < ${RESUME_FILE}) >> ${OFFLINERESUME_FILE}
-			echo -n "]" >> ${OFFLINERESUME_FILE}
+			echo -n "[" >${OFFLINERESUME_FILE}
+			echo -n $(jq '.[] | select(.type != "spotify") | select(.type != "radio" | select(.type != "rss")' <${RESUME_FILE}) >>${OFFLINERESUME_FILE}
+			echo -n "]" >>${OFFLINERESUME_FILE}
 			sed -i 's/} {/}, {/g' ${OFFLINERESUME_FILE}
 			chown dietpi:dietpi ${OFFLINERESUME_FILE}
 		elif [ $(stat --format='%Y' "${RESUME_FILE}") -gt $(stat --format='%Y' "${OFFLINERESUME_FILE}") ]; then
-			echo -n "[" > ${OFFLINERESUME_FILE}
-			echo -n $(jq '.[] | select(.type != "spotify") | select(.type != "radio" | select(.type != "rss")' < ${RESUME_FILE}) >> ${OFFLINERESUME_FILE}
-			echo -n "]" >> ${OFFLINERESUME_FILE}
+			echo -n "[" >${OFFLINERESUME_FILE}
+			echo -n $(jq '.[] | select(.type != "spotify") | select(.type != "radio" | select(.type != "rss")' <${RESUME_FILE}) >>${OFFLINERESUME_FILE}
+			echo -n "]" >>${OFFLINERESUME_FILE}
 			sed -i 's/} {/}, {/g' ${OFFLINERESUME_FILE}
 		fi
 		if [ "${ONLINESTATE}" != "${OLDSTATE}" ]; then
@@ -133,16 +132,9 @@ do
 	fi
 
 	if [ "${ONLINESTATE}" != "${OLDSTATE}" ]; then
-		/usr/bin/cat <<< $(/usr/bin/jq --arg v "${ONLINESTATE}" '.onlinestate = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
-	#	if [ "${ONLINESTATE}" == "${FALSESTATE}" ] && [ "${OLDSTATE}" != "starting" ]; then
-	#		#sudo dhclient -r
-	#		sudo service ifup@wlan0 stop
-	#		sleep 5
-	#		sudo service ifup@wlan0 start
-	#		#sudo dhclient
-	#	fi
+		/usr/bin/cat <<<$(/usr/bin/jq --arg v "${ONLINESTATE}" '.onlinestate = $v' ${NETWORKCONFIG}) >${NETWORKCONFIG}
 	fi
 	OLDSTATE=${ONLINESTATE}
-	
-	sleep 10
+
+	sleep 60
 done
