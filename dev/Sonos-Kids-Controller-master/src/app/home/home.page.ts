@@ -61,14 +61,13 @@ export class HomePage implements OnInit {
   ) {
     this.network$ = this.mediaService.network$;
     this.mupihat$ = this.mediaService.mupihat$;
-  }
-
-  ngOnInit() {
     this.playerService.getConfig().subscribe(config => {
       this.hat_active = config.hat_active;
       console.log(this.hat_active);
     });
+  }
 
+  ngOnInit() {
     this.mediaService.setCategory(this.category);
 
     this.mediaService.network$.subscribe(network => {
