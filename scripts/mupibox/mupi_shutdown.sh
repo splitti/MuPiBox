@@ -9,6 +9,8 @@ SHUT_SOUND=$(/usr/bin/jq -r .mupibox.shutSound ${CONFIG})
 AUDIO_DEVICE=$(/usr/bin/jq -r .mupibox.audioDevice ${CONFIG})
 START_VOLUME=$(/usr/bin/jq -r .mupibox.startVolume ${CONFIG})
 
+curl -s http://127.0.0.1:5005/pause
+
 sudo -i -u dietpi /usr/local/bin/mupibox/./shutdown_sound.sh
 #/usr/bin/pactl set-sink-volume @DEFAULT_SINK@ ${START_VOLUME}% 
 #/usr/bin/aplay ${SHUT_SOUND}
