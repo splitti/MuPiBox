@@ -9,8 +9,9 @@ SHUT_SOUND=$(/usr/bin/jq -r .mupibox.shutSound ${CONFIG})
 AUDIO_DEVICE=$(/usr/bin/jq -r .mupibox.audioDevice ${CONFIG})
 START_VOLUME=$(/usr/bin/jq -r .mupibox.startVolume ${CONFIG})
 
-/usr/bin/pactl set-sink-volume @DEFAULT_SINK@ ${START_VOLUME}% 
-/usr/bin/aplay ${SHUT_SOUND} &
+sudo -i -u dietpi /usr/local/bin/mupibox/./shutdown_sound.sh
+#/usr/bin/pactl set-sink-volume @DEFAULT_SINK@ ${START_VOLUME}% 
+#/usr/bin/aplay ${SHUT_SOUND}
 
 CONFIG="/etc/mupibox/mupiboxconfig.json"
 SHUT_SPLASH=$(/usr/bin/jq -r .mupibox.shutSplash ${CONFIG})
@@ -29,11 +30,11 @@ wled_brightness_def=$(/usr/bin/jq -r .wled.brightness_default ${CONFIG})
 
 if [ "${wled_shut_active}" ]; then
 	wled_data='{"ps":"'${wled_shut_id}'"}'
-	sudo python3 /usr/local/bin/mupibox/wled_send_data.py -s ${wled_com_port} -b ${wled_baud_rate} -j ${wled_data}
+	python3 /usr/local/bin/mupibox/wled_send_data.py -s ${wled_com_port} -b ${wled_baud_rate} -j ${wled_data}
 	wled_data='{"bri":"'${wled_brightness_def}'"}'
-	sudo python3 /usr/local/bin/mupibox/wled_send_data.py -s ${wled_com_port} -b ${wled_baud_rate} -j ${wled_data}
+	python3 /usr/local/bin/mupibox/wled_send_data.py -s ${wled_com_port} -b ${wled_baud_rate} -j ${wled_data}
 	wled_data='{"on":true}'
-	sudo python3 /usr/local/bin/mupibox/wled_send_data.py -s ${wled_com_port} -b ${wled_baud_rate} -j ${wled_data}
+	python3 /usr/local/bin/mupibox/wled_send_data.py -s ${wled_com_port} -b ${wled_baud_rate} -j ${wled_data}
 fi
 TELEGRAM=$(/usr/bin/jq -r .telegram.active ${CONFIG})
 TELEGRAM_CHATID=$(/usr/bin/jq -r .telegram.chatId ${CONFIG})
