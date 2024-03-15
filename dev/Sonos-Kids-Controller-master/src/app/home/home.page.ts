@@ -66,6 +66,8 @@ export class HomePage implements OnInit {
   ngOnInit() {
     this.playerService.getConfig().subscribe(config => {
       this.hat_active = config.hat_active;
+      console.log(this.hat_active);
+      
     });
 
     this.mediaService.setCategory(this.category);
