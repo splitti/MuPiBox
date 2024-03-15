@@ -9,9 +9,9 @@ NETWORKCONFIG="/tmp/network.json"
 RESIZE_SERVICE="/etc/systemd/system/local-fs.target.wants/dietpi-fs_partition_resize.service"
 MUPIHAT_JSON="/tmp/mupihat.json"
 
-if [ ! -f $MUPIHAT_JSON ]; then
-	echo '{"Charger_Status": "Not Charging", "Vbat": 999, "Vbus": 5000, "Ibat": 0, "IBus": 999, "Temp": 10.0, "BatteryConnected": 0, "Bat_SOC": "100%", "Bat_Stat": "OK", "Bat_Type": "USB-C mode (no battery)"}' | sudo tee /tmp/mupihat.json
-fi
+#if [ ! -f $MUPIHAT_JSON ]; then
+#	echo '{"Charger_Status": "Not Charging", "Vbat": 999, "Vbus": 5000, "Ibat": 0, "IBus": 999, "Temp": 10.0, "BatteryConnected": 0, "Bat_SOC": "100%", "Bat_Stat": "OK", "Bat_Type": "USB-C mode (no battery)"}' | sudo tee /tmp/mupihat.json
+#fi
 
 restart_network() {
 	sudo service ifup@wlan0 stop
