@@ -16,7 +16,7 @@
                 <ion-icon name="radio-outline"></ion-icon>
             </ion-segment-button>
         </ion-segment>
-        <!-- <ion-buttons slot="end" *ngIf="hat_active">
+        <ion-buttons slot="end" *ngIf="hat_active">
             <ion-buttons slot="end" *ngIf="(mupihat$ | async)?.BatteryConnected !== 0; else hatwithnobattery">
                 <ion-button *ngIf="(mupihat$ | async)?.IBus > 0 && (mupihat$ | async)?.Bat_SOC ==='100%'; else elsecharge75" class="battery" (click)="editButtonPressed()">
                     <ion-icon slot="icon-only" src="../../assets/icon/MuPiHAT/Charging100.svg" size="large"></ion-icon>
@@ -83,8 +83,8 @@
                     </ion-button>
                 </ng-template>
             </ng-template>
-        </ion-buttons> -->
-        <ion-buttons slot="end">
+        </ion-buttons>
+        <ion-buttons slot="end" *ngIf="!hat_active">
             <ion-button *ngIf="(network$ | async)?.onlinestate ==='online'; else elseBlockOffline" class="OnlineState" (click)="editButtonPressed()">
                 <ion-icon slot="icon-only" name="cloud-outline"></ion-icon>
             </ion-button>
