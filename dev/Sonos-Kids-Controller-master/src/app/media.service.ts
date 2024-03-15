@@ -19,6 +19,7 @@ import { Monitor } from './monitor';
 import { AlbumStop } from './albumstop';
 import { RssFeedService } from './rssfeed.service';
 import { Mupihat } from './mupihat';
+import { SonosApiConfig } from './sonos-api';
 
 @Injectable({
   providedIn: 'root'
@@ -42,6 +43,7 @@ export class MediaService {
   public readonly show$: Observable<CurrentShow>;
   public readonly validate$: Observable<Validate>;
   public readonly mupihat$: Observable<Mupihat>;
+  public readonly config$: Observable<SonosApiConfig>;
 
   private rawMediaSubject = new Subject<Media[]>();
   private wlanSubject = new Subject<WLAN[]>();
@@ -128,6 +130,12 @@ export class MediaService {
     );
     this.mupihat$ = interval(1000).pipe( // Once a second after subscribe, way too frequent!
       switchMap((): Observable<Mupihat> => this.http.get<Mupihat>('http://' + this.ip + ':8200/api/mupihat')),
+      // Replay the most recent (bufferSize) emission on each subscription
+      // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
+      shareReplay({ bufferSize: 1, refCount: false }),
+    );
+    this.config$ = interval(1000).pipe( // Once a second after subscribe, way too frequent!
+      switchMap((): Observable<SonosApiConfig> => this.http.get<SonosApiConfig>('http://' + this.ip + ':8200/api/sonos')),
       // Replay the most recent (bufferSize) emission on each subscription
       // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
       shareReplay({ bufferSize: 1, refCount: false }),
