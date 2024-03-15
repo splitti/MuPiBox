@@ -133,6 +133,9 @@ while true; do
 
 	if [ "${ONLINESTATE}" != "${OLDSTATE}" ]; then
 		/usr/bin/cat <<<$(/usr/bin/jq --arg v "${ONLINESTATE}" '.onlinestate = $v' ${NETWORKCONFIG}) >${NETWORKCONFIG}
+		if [ "${ONLINESTATE}" == ${TRUESTATE} ]; then
+			/usr/local/bin/mupibox/./get_network.sh
+		fi
 	fi
 	OLDSTATE=${ONLINESTATE}
 
