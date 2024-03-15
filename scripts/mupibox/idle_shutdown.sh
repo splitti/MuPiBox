@@ -12,10 +12,11 @@ chown dietpi:dietpi ${PLAYERSTATE}
 touch ${LOG}
 echo "$(date +'%d/%m/%Y %H:%M:%S')  # SERVICE STARTED" >> ${LOG}
 
+max_idle_time=$(/usr/bin/jq -r .timeout.idlePiShutdown ${CONFIG})
+
 while true
 do
-  sleep 10
-  max_idle_time=$(/usr/bin/jq -r .timeout.idlePiShutdown ${CONFIG})
+  sleep 60
   if (( $max_idle_time > 0 ))
   then
     if [[ $(head -n1 ${PLAYERSTATE}) != "play" ]]
