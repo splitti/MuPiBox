@@ -21,5 +21,4 @@
 # For more information see the manual pages of crontab(5) and cron(8)
 #
 # m h  dom mon dow   command
-#@reboot         sleep 30; /usr/local/bin/mupibox/./get_network.sh
 * * * * *       /usr/local/bin/mupibox/./save_rrd.sh

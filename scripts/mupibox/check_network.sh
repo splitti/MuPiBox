@@ -48,7 +48,7 @@ else
 	OLD_ONLINESTATE=$(/usr/bin/jq -r .onlinestate ${NETWORKCONFIG})
 fi
 
-#wget -q --spider http://google.com
+/usr/local/bin/mupibox/./get_network.sh
 
 while true; do
 	if ($(/usr/bin/python3 /usr/local/bin/mupibox/check_network.py) == ${TRUESTATE}); then
