@@ -28,9 +28,9 @@ do
 			echo 'ctrl_interface=DIR=/run/wpa_supplicant GROUP=netdev' | sudo tee -a ${WPACONF}
 			echo '# Allow wpa_cli/wpa_gui to overwrite this config file' | sudo tee -a ${WPACONF}
 			echo 'update_config=1' | sudo tee -a ${WPACONF}
-			restart_network			
+			restart_network
 		else
-			WIFI_RESULT=$(sudo -i wpa_passphrase "${SSID}" "${PSK}") 
+			WIFI_RESULT=$(sudo -i wpa_passphrase "${SSID}" "${PSK}")
 			IFS=$'\n'
 			i=0
 			for LINES in ${WIFI_RESULT}
@@ -49,5 +49,5 @@ do
 		fi
 		sudo rm ${MUPIWIFI}
 	fi
-	sleep 2
+	sleep 60
 done
