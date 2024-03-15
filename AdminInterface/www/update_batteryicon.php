@@ -5,7 +5,7 @@
 		$string = file_get_contents($mupihat_file, true);
 		$mupihat_data = json_decode($string, true);
 
-		if ($mupihat_data["BatteryConnected"] != 0) {
+		if ($mupihat_data["BatteryConnected"]) {
 			if ($mupihat_data["IBus"] > 0) {
 				if ($mupihat_data["Bat_SOC"] == "100%") {
 					$bat_icon = '<iconify-icon class="show-title" icon="mdi:battery-charging-100" title="' . $mupihat_data["Charger_Status"] . " / " . $mupihat_data["Vbat"] . 'mV"></iconify-icon>';
