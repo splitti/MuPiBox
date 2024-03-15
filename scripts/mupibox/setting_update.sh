@@ -44,7 +44,7 @@ hostname=$(/usr/bin/jq -r .mupibox.host ${MUPIBOX_CONFIG})
 /usr/bin/cat <<< $(/usr/bin/jq --arg v "${hostname}" '.["node-sonos-http-api"].server = $v' ${SONOS_CONFIG}) >  ${SONOS_CONFIG}
 
 hat_active=$(/usr/bin/jq -r .mupihat.hat_active ${MUPIBOX_CONFIG})
-/usr/bin/cat <<< $(/usr/bin/jq --arg v "${hat_active}" '.["node-sonos-http-api"].hat_active = $v' ${SONOS_CONFIG}) >  ${SONOS_CONFIG}
+/usr/bin/cat <<< $(/usr/bin/jq --argjson v "$hat_active" '.["node-sonos-http-api"].hat_active = $v' ${SONOS_CONFIG}) >  ${SONOS_CONFIG}
 
 ip_control_backend=$(/usr/bin/jq -r .mupibox.ip_control_backend ${MUPIBOX_CONFIG})
 if [ "$ip_control_backend" = true ] ; then

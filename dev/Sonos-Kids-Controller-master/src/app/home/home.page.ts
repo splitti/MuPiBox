@@ -11,7 +11,6 @@ import { Network } from "../network";
 import { Observable } from 'rxjs';
 import { Monitor } from '../monitor';
 import { Mupihat } from '../mupihat';
-import { SonosApiConfig } from '../sonos-api';
 
 @Component({
   selector: 'app-home',
@@ -29,16 +28,15 @@ export class HomePage implements OnInit {
   network: Network;
   mupihat: Mupihat;
   monitor: Monitor;
-  config: SonosApiConfig;
   currentNetwork = "";
   updateNetwork = false;
   covers = {};
   activityIndicatorVisible = false;
   editButtonclickCount = 0;
   editClickTimer = 0;
+  hat_active = false;
   public readonly network$: Observable<Network>;
   public readonly mupihat$: Observable<Mupihat>;
-  public readonly config$: Observable<SonosApiConfig>;
 
   needsUpdate = false;
 
@@ -63,7 +61,10 @@ export class HomePage implements OnInit {
   ) {
     this.network$ = this.mediaService.network$;
     this.mupihat$ = this.mediaService.mupihat$;
-    this.config$ = this.mediaService.config$;
+    this.playerService.getConfig().subscribe(config => {
+      this.hat_active = config.hat_active;
+      console.log(this.hat_active);
+    });
   }
 
   ngOnInit() {
@@ -77,9 +78,6 @@ export class HomePage implements OnInit {
     });
     this.mediaService.monitor$.subscribe(monitor => {
       this.monitor = monitor;
-    });
-    this.mediaService.config$.subscribe(config => {
-      this.config = config;
     });
 
     // Subscribe
