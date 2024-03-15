@@ -523,7 +523,7 @@ export class AddPage implements OnInit, AfterViewInit {
       const cover = this.keyboard.getInput('cover');
 
       this.valid = (
-        (spotifyURL?.length > 0 && label?.length > 0)
+        (spotifyURL?.length > 0)
         ||
         (spotifySearch?.length > 0 && label?.length > 0)
         ||
