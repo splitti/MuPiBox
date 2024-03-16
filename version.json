@@ -113,7 +113,7 @@
 			},
 			{
 			"version": "4.0.4",
-			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/4.0.4.zip",
+			"url": "https://github.com/friebi/MuPiBox/archive/refs/tags/4.0.4.zip",
 			"releaseinfo": "Telegram makeover, MQTT support, Resume makeover, UI makeover for adding media, MuPiHAT supportm PWM-Fan support, new themes and many more..."
 			}
 		]
