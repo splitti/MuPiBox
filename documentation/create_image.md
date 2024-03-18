@@ -15,7 +15,8 @@
 1. Delete Wifi: ```sudo dietpi-wifidb```
 1. Control and del country: ```sudo cat /etc/wpa_supplicant/wpa_supplicant.conf```
 1. Resize after reboot: ```sudo systemctl enable dietpi-fs_partition_resize```
-1. Delete history: ```history -c```
+1. Delete history: cat /dev/null > ~/.bash_history
+1. Delete history: ```history -cw```
 1. Shutdown: ```sudo shutdown -h now && history -c```
 
 ## Create image
