@@ -1,9 +1,9 @@
 #!/bin/bash
 #
 # Script for MuPiBox preperation
-# Start with: cd; curl https://raw.githubusercontent.com/splitti/MuPiBox/main/development_prepare/prepare-env.sh | bash
+# Start with: cd; curl https://raw.githubusercontent.com/friebi/MuPiBox/main/development_prepare/prepare-env.sh | bash
 
-percentBar ()  { 
+percentBar ()  {
     local prct totlen=$((8*$2)) lastchar barstring blankstring;
     printf -v prct %.2f "$1"
     ((prct=10#${prct/.}*totlen/10000, prct%8)) &&
@@ -165,7 +165,7 @@ printf ${FORMAT} "$bar"
 # Sources
 cd ~/.mupibox >> ${LOG}
 git clone https://github.com/derhuerst/mplayer-wrapper &>> ${LOG} 2>>${LOG}
-wget https://github.com/splitti/MuPiBox/raw/main/development_prepare/customize/mplayer-wrapper/index.js -O ~/.mupibox/mplayer-wrapper/index.js &>> ${LOG} 2>>${LOG}
+wget https://github.com/friebi/MuPiBox/raw/main/development_prepare/customize/mplayer-wrapper/index.js -O ~/.mupibox/mplayer-wrapper/index.js &>> ${LOG} 2>>${LOG}
 cd ~/.mupibox/mplayer-wrapper &>> ${LOG} 2>>${LOG}
 npm install &>> ${LOG} 2>>${LOG}
 
@@ -210,13 +210,13 @@ unzip V1.6.zip &>> ${LOG} 2>>${LOG}
 rm V1.6.zip &>> ${LOG} 2>>${LOG}
 mv Sonos-Kids-Controller-1.6 Sonos-Kids-Controller-master &>> ${LOG} 2>>${LOG}
 cd ~/.mupibox/Sonos-Kids-Controller-master &>> ${LOG} 2>>${LOG}
-wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/www.json -O ~/.mupibox/Sonos-Kids-Controller-master/server/config/config.json &>> ${LOG} 2>>${LOG}
-wget https://github.com/splitti/MuPiBox/raw/main/development_prepare/customize/Sonos-Kids-Controller-master/server.js -O ~/.mupibox/Sonos-Kids-Controller-master/server.js  &>> ${LOG} 2>>${LOG}
-wget https://github.com/splitti/MuPiBox/raw/main/development_prepare/customize/Sonos-Kids-Controller-master/angular.json -O ~/.mupibox/Sonos-Kids-Controller-master/angular.json &>> ${LOG} 2>>${LOG}
-wget https://github.com/splitti/MuPiBox/raw/main/development_prepare/customize/Sonos-Kids-Controller-master/src/app/player.service.ts -O ~/.mupibox/Sonos-Kids-Controller-master/src/app/player.service.ts &>> ${LOG} 2>>${LOG}
-wget https://github.com/splitti/MuPiBox/raw/main/development_prepare/customize/Sonos-Kids-Controller-master/src/app/player/player.page.html -O ~/.mupibox/Sonos-Kids-Controller-master/src/app/player/player.page.html &>> ${LOG} 2>>${LOG}
-wget https://github.com/splitti/MuPiBox/raw/main/development_prepare/customize/Sonos-Kids-Controller-master/src/app/player/player.page.scss -O ~/.mupibox/Sonos-Kids-Controller-master/src/app/player/player.page.scss &>> ${LOG} 2>>${LOG}
-wget https://github.com/splitti/MuPiBox/raw/main/development_prepare/customize/Sonos-Kids-Controller-master/src/app/player/player.page.ts -O ~/.mupibox/Sonos-Kids-Controller-master/src/app/player/player.page.ts &>> ${LOG} 2>>${LOG}
+wget https://raw.githubusercontent.com/friebi/MuPiBox/main/config/templates/www.json -O ~/.mupibox/Sonos-Kids-Controller-master/server/config/config.json &>> ${LOG} 2>>${LOG}
+wget https://github.com/friebi/MuPiBox/raw/main/development_prepare/customize/Sonos-Kids-Controller-master/server.js -O ~/.mupibox/Sonos-Kids-Controller-master/server.js  &>> ${LOG} 2>>${LOG}
+wget https://github.com/friebi/MuPiBox/raw/main/development_prepare/customize/Sonos-Kids-Controller-master/angular.json -O ~/.mupibox/Sonos-Kids-Controller-master/angular.json &>> ${LOG} 2>>${LOG}
+wget https://github.com/friebi/MuPiBox/raw/main/development_prepare/customize/Sonos-Kids-Controller-master/src/app/player.service.ts -O ~/.mupibox/Sonos-Kids-Controller-master/src/app/player.service.ts &>> ${LOG} 2>>${LOG}
+wget https://github.com/friebi/MuPiBox/raw/main/development_prepare/customize/Sonos-Kids-Controller-master/src/app/player/player.page.html -O ~/.mupibox/Sonos-Kids-Controller-master/src/app/player/player.page.html &>> ${LOG} 2>>${LOG}
+wget https://github.com/friebi/MuPiBox/raw/main/development_prepare/customize/Sonos-Kids-Controller-master/src/app/player/player.page.scss -O ~/.mupibox/Sonos-Kids-Controller-master/src/app/player/player.page.scss &>> ${LOG} 2>>${LOG}
+wget https://github.com/friebi/MuPiBox/raw/main/development_prepare/customize/Sonos-Kids-Controller-master/src/app/player/player.page.ts -O ~/.mupibox/Sonos-Kids-Controller-master/src/app/player/player.page.ts &>> ${LOG} 2>>${LOG}
 ionic build --prod &>> ${LOG} 2>>${LOG}
 rm -rf deploy &>> ${LOG} 2>>${LOG}
 mkdir deploy &>> ${LOG} 2>>${LOG}
@@ -224,7 +224,7 @@ cp -Rp www deploy/ &>> ${LOG} 2>>${LOG}
 mkdir deploy/server &>> ${LOG} 2>>${LOG}
 mkdir deploy/server/config &>> ${LOG} 2>>${LOG}
 cp -p server/config/config-example.json  deploy/server/config/ &>> ${LOG} 2>>${LOG}
-cp -p server.js deploy/ &>> ${LOG} 2>>${LOG} 
+cp -p server.js deploy/ &>> ${LOG} 2>>${LOG}
 cp -p package-deploy.json deploy/package.json &>> ${LOG} 2>>${LOG}
 cp -p README.md deploy/ &>> ${LOG} 2>>${LOG}
 cd deploy &>> ${LOG} 2>>${LOG}
@@ -256,8 +256,8 @@ wget https://github.com/amueller-tech/spotifycontroller/archive/main.zip  &>> ${
 unzip main.zip  &>> ${LOG} 2>>${LOG}
 rm main.zip  &>> ${LOG} 2>>${LOG}
 cd ~/.mupibox/spotifycontroller-main  &>> ${LOG} 2>>${LOG}
-wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/spotifycontroller.json -O ~/.mupibox/spotifycontroller-main/config/config.json &>> ${LOG} 2>>${LOG}
-wget https://github.com/splitti/MuPiBox/raw/main/development_prepare/customize/spotiycontroller-main/spotify-control.js -O ~/.mupibox/spotifycontroller-main/spotify-control.js  &>> ${LOG} 2>>${LOG}
+wget https://raw.githubusercontent.com/friebi/MuPiBox/main/config/templates/spotifycontroller.json -O ~/.mupibox/spotifycontroller-main/config/config.json &>> ${LOG} 2>>${LOG}
+wget https://github.com/friebi/MuPiBox/raw/main/development_prepare/customize/spotiycontroller-main/spotify-control.js -O ~/.mupibox/spotifycontroller-main/spotify-control.js  &>> ${LOG} 2>>${LOG}
 npm install  &>> ${LOG} 2>>${LOG}
 npm start & &>> ${LOG} 2>>${LOG}
 sleep 10  &>> ${LOG} 2>>${LOG}
@@ -279,8 +279,8 @@ percentBar 63 ${BARLENGTH} bar
 printf ${FORMAT} "$bar"
 
 # Binaries
-sudo wget https://github.com/splitti/MuPiBox/raw/main/bin/fbv/fbv -O /usr/bin/fbv  &>> ${LOG} 2>>${LOG}
-sudo wget https://github.com/splitti/MuPiBox/raw/main/bin/spotifyd/0.3.3/dietpi8_64bit/spotifyd -O /usr/bin/spotifyd  &>> ${LOG} 2>>${LOG}
+sudo wget https://github.com/friebi/MuPiBox/raw/main/bin/fbv/fbv -O /usr/bin/fbv  &>> ${LOG} 2>>${LOG}
+sudo wget https://github.com/friebi/MuPiBox/raw/main/bin/spotifyd/0.3.3/dietpi8_64bit/spotifyd -O /usr/bin/spotifyd  &>> ${LOG} 2>>${LOG}
 sudo chmod 755 /usr/bin/fbv /usr/bin/spotifyd &>> ${LOG} 2>>${LOG}
 sleep 1
 
@@ -299,9 +299,9 @@ percentBar 68 ${BARLENGTH} bar
 printf ${FORMAT} "$bar"
 
 # DietPi-Configs
-#sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/98-dietpi-disable_dpms.conf -O /etc/X11/xorg.conf.d/98-dietpi-disable_dpms.conf &>> ${LOG} 2>>${LOG}
-sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/asound.conf -O /etc/asound.conf &>> ${LOG} 2>>${LOG}
-sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/smb.conf -O /etc/samba/smb.conf &>> ${LOG} 2>>${LOG}
+#sudo wget https://raw.githubusercontent.com/friebi/MuPiBox/main/config/templates/98-dietpi-disable_dpms.conf -O /etc/X11/xorg.conf.d/98-dietpi-disable_dpms.conf &>> ${LOG} 2>>${LOG}
+sudo wget https://raw.githubusercontent.com/friebi/MuPiBox/main/config/templates/asound.conf -O /etc/asound.conf &>> ${LOG} 2>>${LOG}
+sudo wget https://raw.githubusercontent.com/friebi/MuPiBox/main/config/templates/smb.conf -O /etc/samba/smb.conf &>> ${LOG} 2>>${LOG}
 sleep 1
 
 ###############################################################################################
@@ -319,9 +319,9 @@ percentBar 69 ${BARLENGTH} bar
 printf ${FORMAT} "$bar"
 
 # Spotify-Configs
-#wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/www.json -O ~/.mupibox/Sonos-Kids-Controller-master/server/config/config.json &>> ${LOG} 2>>${LOG}
-#wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/spotifycontroller.json -O ~/.mupibox/spotifycontroller-main/config/config.json &>> ${LOG} 2>>${LOG}
-sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/spotifyd.conf -O /etc/spotifyd/spotifyd.conf &>> ${LOG} 2>>${LOG}
+#wget https://raw.githubusercontent.com/friebi/MuPiBox/main/config/templates/www.json -O ~/.mupibox/Sonos-Kids-Controller-master/server/config/config.json &>> ${LOG} 2>>${LOG}
+#wget https://raw.githubusercontent.com/friebi/MuPiBox/main/config/templates/spotifycontroller.json -O ~/.mupibox/spotifycontroller-main/config/config.json &>> ${LOG} 2>>${LOG}
+sudo wget https://raw.githubusercontent.com/friebi/MuPiBox/main/config/templates/spotifyd.conf -O /etc/spotifyd/spotifyd.conf &>> ${LOG} 2>>${LOG}
 sleep 1
 
 ###############################################################################################
@@ -339,12 +339,12 @@ percentBar 70 ${BARLENGTH} bar
 printf ${FORMAT} "$bar"
 
 # Splash and Media
-sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/splash.txt -O /boot/splash.txt &>> ${LOG} 2>>${LOG}
+sudo wget https://raw.githubusercontent.com/friebi/MuPiBox/main/config/templates/splash.txt -O /boot/splash.txt &>> ${LOG} 2>>${LOG}
 sudo wget https://gitlab.com/DarkElvenAngel/initramfs-splash/-/raw/master/boot/initramfs.img -O /boot/initramfs.img &>> ${LOG} 2>>${LOG}
-wget https://github.com/splitti/MuPiBox/raw/main/media/images/goodbye.png -O ~/MuPiBox/sysmedia/images/goodbye.png &>> ${LOG} 2>>${LOG}
-sudo wget https://github.com/splitti/MuPiBox/raw/main/media/images/splash.png -O /boot/splash.png &>> ${LOG} 2>>${LOG}
-wget https://github.com/splitti/MuPiBox/raw/main/media/sound/shutdown.wav -O ~/MuPiBox/sysmedia/sound/shutdown.wav &>> ${LOG} 2>>${LOG}
-wget https://github.com/splitti/MuPiBox/raw/main/media/sound/startup.wav -O ~/MuPiBox/sysmedia/sound/startup.wav &>> ${LOG} 2>>${LOG}
+wget https://github.com/friebi/MuPiBox/raw/main/media/images/goodbye.png -O ~/MuPiBox/sysmedia/images/goodbye.png &>> ${LOG} 2>>${LOG}
+sudo wget https://github.com/friebi/MuPiBox/raw/main/media/images/splash.png -O /boot/splash.png &>> ${LOG} 2>>${LOG}
+wget https://github.com/friebi/MuPiBox/raw/main/media/sound/shutdown.wav -O ~/MuPiBox/sysmedia/sound/shutdown.wav &>> ${LOG} 2>>${LOG}
+wget https://github.com/friebi/MuPiBox/raw/main/media/sound/startup.wav -O ~/MuPiBox/sysmedia/sound/startup.wav &>> ${LOG} 2>>${LOG}
 sleep 1
 
 ###############################################################################################
@@ -362,13 +362,13 @@ percentBar 75 ${BARLENGTH} bar
 printf ${FORMAT} "$bar"
 
 # MuPiBox
-sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/mupiboxconfig.json -O /etc/mupibox/mupiboxconfig.json &>> ${LOG} 2>>${LOG}
-sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/change_checker.sh -O /usr/local/bin/mupibox/change_checker.sh &>> ${LOG} 2>>${LOG}
-sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/idle_shutdown.sh -O /usr/local/bin/mupibox/idle_shutdown.sh &>> ${LOG} 2>>${LOG}
-sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/m3u_generator.sh -O /usr/local/bin/mupibox/m3u_generator.sh &>> ${LOG} 2>>${LOG}
-sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/setting_update.sh -O /usr/local/bin/mupibox/setting_update.sh &>> ${LOG} 2>>${LOG}
-sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/software_shutdown.sh -O /usr/local/bin/mupibox/software_shutdown.sh &>> ${LOG} 2>>${LOG}
-sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/mupibox/splash_screen.sh -O /usr/local/bin/mupibox/splash_screen.sh &>> ${LOG} 2>>${LOG}
+sudo wget https://raw.githubusercontent.com/friebi/MuPiBox/main/config/templates/mupiboxconfig.json -O /etc/mupibox/mupiboxconfig.json &>> ${LOG} 2>>${LOG}
+sudo wget https://raw.githubusercontent.com/friebi/MuPiBox/main/scripts/mupibox/change_checker.sh -O /usr/local/bin/mupibox/change_checker.sh &>> ${LOG} 2>>${LOG}
+sudo wget https://raw.githubusercontent.com/friebi/MuPiBox/main/scripts/mupibox/idle_shutdown.sh -O /usr/local/bin/mupibox/idle_shutdown.sh &>> ${LOG} 2>>${LOG}
+sudo wget https://raw.githubusercontent.com/friebi/MuPiBox/main/scripts/mupibox/m3u_generator.sh -O /usr/local/bin/mupibox/m3u_generator.sh &>> ${LOG} 2>>${LOG}
+sudo wget https://raw.githubusercontent.com/friebi/MuPiBox/main/scripts/mupibox/setting_update.sh -O /usr/local/bin/mupibox/setting_update.sh &>> ${LOG} 2>>${LOG}
+sudo wget https://raw.githubusercontent.com/friebi/MuPiBox/main/scripts/mupibox/software_shutdown.sh -O /usr/local/bin/mupibox/software_shutdown.sh &>> ${LOG} 2>>${LOG}
+sudo wget https://raw.githubusercontent.com/friebi/MuPiBox/main/scripts/mupibox/splash_screen.sh -O /usr/local/bin/mupibox/splash_screen.sh &>> ${LOG} 2>>${LOG}
 sudo chmod 755 /usr/local/bin/mupibox/change_checker.sh /usr/local/bin/mupibox/idle_shutdown.sh /usr/local/bin/mupibox/m3u_generator.sh /usr/local/bin/mupibox/setting_update.sh /usr/local/bin/mupibox/software_shutdown.sh /usr/local/bin/mupibox/splash_screen.sh &>> ${LOG} 2>>${LOG}
 sleep 1
 
@@ -388,7 +388,7 @@ printf ${FORMAT} "$bar"
 
 sudo /boot/dietpi/func/dietpi-set_hardware bluetooth enable &>> ${LOG} 2>>${LOG}
 sudo /boot/dietpi/func/dietpi-set_hardware soundcard "hifiberry-dac"  &>> ${LOG} 2>>${LOG}
-sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/asound.conf -O /etc/asound.conf  &>> ${LOG} 2>>${LOG}
+sudo wget https://raw.githubusercontent.com/friebi/MuPiBox/main/config/templates/asound.conf -O /etc/asound.conf  &>> ${LOG} 2>>${LOG}
 sudo usermod -g pulse -G audio,lp --home /var/run/pulse pulse &>> ${LOG} 2>>${LOG}
 sudo usermod -a -G audio dietpi &>> ${LOG} 2>>${LOG}
 sudo usermod -a -G bluetooth dietpi &>> ${LOG} 2>>${LOG}
@@ -397,7 +397,7 @@ sudo usermod -a -G pulse-access dietpi &>> ${LOG} 2>>${LOG}
 sudo usermod -a -G pulse root &>> ${LOG} 2>>${LOG}
 sudo usermod -a -G pulse-access root &>> ${LOG} 2>>${LOG}
 sudo /usr/bin/sed -i 's/; system-instance = no/system-instance = yes/g' /etc/pulse/daemon.conf &>> ${LOG} 2>>${LOG}
-sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/services/pulseaudio.service -O /etc/systemd/system/pulseaudio.service  &>> ${LOG} 2>>${LOG}
+sudo wget https://raw.githubusercontent.com/friebi/MuPiBox/main/config/services/pulseaudio.service -O /etc/systemd/system/pulseaudio.service  &>> ${LOG} 2>>${LOG}
 
 if grep -q '^load-module module-bluetooth-discover' /etc/pulse/system.pa; then
   echo -e "load-module module-bluetooth-discover already set" &>> ${LOG} 2>>${LOG}
@@ -449,8 +449,8 @@ percentBar 83 ${BARLENGTH} bar
 printf ${FORMAT} "$bar"
 
 # OnOffShim & hifiberry
-sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/OnOffShim/off_trigger.sh -O /var/lib/dietpi/postboot.d/off_trigger.sh &>> ${LOG} 2>>${LOG}
-sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/OnOffShim/poweroff.sh -O /usr/lib/systemd/system-shutdown/poweroff.sh &>> ${LOG} 2>>${LOG}
+sudo wget https://raw.githubusercontent.com/friebi/MuPiBox/main/scripts/OnOffShim/off_trigger.sh -O /var/lib/dietpi/postboot.d/off_trigger.sh &>> ${LOG} 2>>${LOG}
+sudo wget https://raw.githubusercontent.com/friebi/MuPiBox/main/scripts/OnOffShim/poweroff.sh -O /usr/lib/systemd/system-shutdown/poweroff.sh &>> ${LOG} 2>>${LOG}
 sudo chmod 775 /usr/lib/systemd/system-shutdown/poweroff.sh /var/lib/dietpi/postboot.d/off_trigger.sh &>> ${LOG} 2>>${LOG}
 sleep 1
 
@@ -473,12 +473,12 @@ sudo /boot/dietpi/func/dietpi-set_hardware gpumemsplit $suggest_gpu_mem &>> ${LO
 sudo /boot/dietpi/dietpi-autostart 11 &>> ${LOG} 2>>${LOG}
 echo -ne '\n' | sudo dietpi-software install 113 &>> ${LOG} 2>>${LOG}
 sudo /boot/dietpi/dietpi-autostart 11 &>> ${LOG} 2>>${LOG}
-sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/chromium-autostart.sh -O /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh &>> ${LOG} 2>>${LOG}
+sudo wget https://raw.githubusercontent.com/friebi/MuPiBox/main/scripts/chromium-autostart.sh -O /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh &>> ${LOG} 2>>${LOG}
 sudo chmod +x /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh &>> ${LOG} 2>>${LOG}
 sudo usermod -a -G tty dietpi &>> ${LOG} 2>>${LOG}
 sudo apt install xserver-xorg-legacy -y &>> ${LOG} 2>>${LOG}
 sudo /usr/bin/sed -i 's/allowed_users\=console/allowed_users\=anybody/g' /etc/X11/Xwrapper.config &>> ${LOG} 2>>${LOG}
-sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/98-dietpi-disable_dpms.conf -O /etc/X11/xorg.conf.d/98-dietpi-disable_dpms.conf &>> ${LOG} 2>>${LOG}
+sudo wget https://raw.githubusercontent.com/friebi/MuPiBox/main/config/templates/98-dietpi-disable_dpms.conf -O /etc/X11/xorg.conf.d/98-dietpi-disable_dpms.conf &>> ${LOG} 2>>${LOG}
 sudo /usr/bin/sed -i 's/tty1/tty3 vt.global_cursor_default\=0 fastboot noatime nodiratime noram splash silent loglevel\=0 vt.default_red\=68,68,68,68,68,68,68,68 vt.default_grn\=175,175,175,175,175,175,175,175 vt.default_blu\=226,226,226,226,226,226,226,226/g' /boot/cmdline.txt &>> ${LOG} 2>>${LOG}
 
 sudo /usr/bin/sed -i 's/session    optional   pam_motd.so motd\=\/run\/motd.dynamic/#session    optional   pam_motd.so motd\=\/run\/motd.dynamic/g' /etc/pam.d/login &>> ${LOG} 2>>${LOG}
@@ -541,4 +541,3 @@ printf "\n${ORIENTATION}Logfile: ${LOG}\n${ORIENTATION}Please reboot and have a 
 #agent on
 #default-agent
 #scan on
-

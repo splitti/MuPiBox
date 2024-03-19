@@ -70,7 +70,7 @@ AUTO_UNMASK_LOGIND=0
 # - Option 1 = Host your script online, then use e.g. AUTO_SETUP_CUSTOM_SCRIPT_EXEC=https://myweb.com/myscript.sh and it will be downloaded and executed automatically.
 # - Executed script log: /var/tmp/dietpi/logs/dietpi-automation_custom_script.log
 # AUTO_SETUP_CUSTOM_SCRIPT_EXEC=0
-AUTO_SETUP_CUSTOM_SCRIPT_EXEC=https://raw.githubusercontent.com/splitti/MuPiBox/main/autosetup/autostart.sh
+AUTO_SETUP_CUSTOM_SCRIPT_EXEC=https://raw.githubusercontent.com/friebi/MuPiBox/main/autosetup/autostart.sh
 
 # Restore a DietPi-Backup on first boot: 0 => disable | 1 => interactive restore (show list of found backups) | 2 => non-interactive restore (restore first found backup)
 # - Simply attach the drive/disk/stick which contains the backup. All attached drives will be mounted temporarily and searched automatically.

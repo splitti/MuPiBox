@@ -4,111 +4,111 @@
 		"dev": [
 			{
 			"version": "X.X.X",
-			"url": "https://github.com/splitti/MuPiBox/archive/refs/heads/main.zip",
+			"url": "https://github.com/friebi/MuPiBox/archive/refs/heads/main.zip",
 			"releaseinfo": "Development Version, install on your own risk! Please create a backup before installation"
 			}
 		],
 		"beta": [
 			{
 			"version": "3.1.5",
-			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.1.5.zip",
+			"url": "https://github.com/friebi/MuPiBox/archive/refs/tags/3.1.5.zip",
 			"releaseinfo": "Initial Release Version - new versioning and installation routines"
 			},
 			{
 			"version": "3.2.5",
-			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.2.5.zip",
+			"url": "https://github.com/friebi/MuPiBox/archive/refs/tags/3.2.5.zip",
 			"releaseinfo": "Troubleshooting for blocking the covers in the selection, display network status, operation of shutdown and restart in the admin touch area"
 			},
 			{
 			"version": "3.2.6",
-			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.2.6.zip",
+			"url": "https://github.com/friebi/MuPiBox/archive/refs/tags/3.2.6.zip",
 			"releaseinfo": "DietPi Dash, IP Control Backend, Image resize after installation, Bug fixes Validation, monitor and cloud"
 			},
 			{
 			"version": "3.3.4",
-			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.3.4.zip",
+			"url": "https://github.com/friebi/MuPiBox/archive/refs/tags/3.3.4.zip",
 			"releaseinfo": "Telegram buttons, new telegram functions, chromium parameters, radio changed to other, new ui for adding media, bugfixes"
 			},
 			{
 			"version": "4.0.3",
-			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/4.0.3.zip",
+			"url": "https://github.com/friebi/MuPiBox/archive/refs/tags/4.0.3.zip",
 			"releaseinfo": "Telegram makeover, MQTT support, Resume makeover, UI makeover for adding media, MuPiHAT supportm PWM-Fan support, new themes and many more..."
 			}
 		],
 		"stable": [
 			{
 			"version": "3.1.8",
-			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.1.8.zip",
+			"url": "https://github.com/friebi/MuPiBox/archive/refs/tags/3.1.8.zip",
 			"releaseinfo": "Initial Release Version - new versioning and installation routines"
 			},
 			{
 			"version": "3.1.9",
-			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.1.9.zip",
+			"url": "https://github.com/friebi/MuPiBox/archive/refs/tags/3.1.9.zip",
 			"releaseinfo": "Initial Release Version - new versioning and installation routines"
 			},
 			{
 			"version": "3.1.10",
-			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.1.10.zip",
+			"url": "https://github.com/friebi/MuPiBox/archive/refs/tags/3.1.10.zip",
 			"releaseinfo": "Initial Release Version - new versioning and installation routines"
 			},
 			{
 			"version": "3.1.11",
-			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.1.11.zip",
+			"url": "https://github.com/friebi/MuPiBox/archive/refs/tags/3.1.11.zip",
 			"releaseinfo": "Initial Release Version - new versioning and installation routines"
 			},
 			{
 			"version": "3.1.12",
-			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.1.12.zip",
+			"url": "https://github.com/friebi/MuPiBox/archive/refs/tags/3.1.12.zip",
 			"releaseinfo": "Initial Release Version - new versioning and installation routines"
 			},
 			{
 			"version": "3.2.0",
-			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.2.0.zip",
+			"url": "https://github.com/friebi/MuPiBox/archive/refs/tags/3.2.0.zip",
 			"releaseinfo": "Initial Release Version - new versioning and installation routines"
 			},
 			{
 			"version": "3.2.2",
-			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.2.2.zip",
+			"url": "https://github.com/friebi/MuPiBox/archive/refs/tags/3.2.2.zip",
 			"releaseinfo": "Initial Release Version - new versioning and installation routines"
 			},
 			{
 			"version": "3.2.3",
-			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.2.3.zip",
+			"url": "https://github.com/friebi/MuPiBox/archive/refs/tags/3.2.3.zip",
 			"releaseinfo": "Initial Release Version - new versioning and installation routines"
 			},
 			{
 			"version": "3.2.4",
-			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.2.4.zip",
+			"url": "https://github.com/friebi/MuPiBox/archive/refs/tags/3.2.4.zip",
 			"releaseinfo": "Bugfixing for adding Wifis"
 			},
 			{
 			"version": "3.3.0",
-			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.3.0.zip",
+			"url": "https://github.com/friebi/MuPiBox/archive/refs/tags/3.3.0.zip",
 			"releaseinfo": "Podcasts (RSS), DietPi-Dashboard, wsdd, WLED-Support, RTL88X2BU-Drivers, some bugs are fixed"
 			},
 			{
 			"version": "3.3.1",
-			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.3.1.zip",
+			"url": "https://github.com/friebi/MuPiBox/archive/refs/tags/3.3.1.zip",
 			"releaseinfo": "Podcasts (RSS), DietPi-Dashboard, wsdd, WLED-Support, RTL88X2BU-Drivers, some bugs are fixed"
 			},
 			{
 			"version": "3.3.2",
-			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.3.2.zip",
+			"url": "https://github.com/friebi/MuPiBox/archive/refs/tags/3.3.2.zip",
 			"releaseinfo": "Podcasts (RSS), DietPi-Dashboard, wsdd, WLED-Support, RTL88X2BU-Drivers, some bugs are fixed"
 			},
 			{
 			"version": "3.3.3",
-			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/3.3.3.zip",
+			"url": "https://github.com/friebi/MuPiBox/archive/refs/tags/3.3.3.zip",
 			"releaseinfo": "Podcasts (RSS), DietPi-Dashboard, wsdd, WLED-Support, RTL88X2BU-Drivers, some bugs are fixed"
 			},
 			{
 			"version": "4.0.0",
-			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/4.0.0.zip",
+			"url": "https://github.com/friebi/MuPiBox/archive/refs/tags/4.0.0.zip",
 			"releaseinfo": "Telegram makeover, MQTT support, Resume makeover, UI makeover for adding media, MuPiHAT supportm PWM-Fan support, new themes and many more..."
 			},
 			{
 			"version": "4.0.1",
-			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/4.0.1.zip",
+			"url": "https://github.com/friebi/MuPiBox/archive/refs/tags/4.0.1.zip",
 			"releaseinfo": "Telegram makeover, MQTT support, Resume makeover, UI makeover for adding media, MuPiHAT supportm PWM-Fan support, new themes and many more..."
 			},
 			{

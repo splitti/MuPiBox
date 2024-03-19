@@ -1,5 +1,5 @@
 <?php
-	$onlinejson = file_get_contents('https://raw.githubusercontent.com/splitti/MuPiBox/main/version.json');
+	$onlinejson = file_get_contents('https://raw.githubusercontent.com/friebi/MuPiBox/main/version.json');
 	$dataonline = json_decode($onlinejson, true);
 	include ('includes/header.php');
 

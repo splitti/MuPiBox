@@ -1,6 +1,6 @@
 	<?php
 			include ('includes/header.php');
-			$onlinejson = file_get_contents('https://raw.githubusercontent.com/splitti/MuPiBox/main/version.json');
+			$onlinejson = file_get_contents('https://raw.githubusercontent.com/friebi/MuPiBox/main/version.json');
 			$dataonline = json_decode($onlinejson, true);
 
 			exec("sudo rm /var/www/images/screenshot.png /val/www/images/temp.png /var/www/images/cpuload.png");
@@ -78,7 +78,7 @@
 							<tr>
 									<td>Development</td>
 									<td><?php
-											exec("echo $(sudo curl -s 'https://api.github.com/repos/splitti/MuPiBox' | jq -r '.pushed_at' | cut -d'T' -f1)", $devversion, $rc);
+											exec("echo $(sudo curl -s 'https://api.github.com/repos/friebi/MuPiBox' | jq -r '.pushed_at' | cut -d'T' -f1)", $devversion, $rc);
 											print "DEV " . $devversion[0];
 										?>
 									</td>
@@ -87,7 +87,7 @@
 							</tr>
 						</table></p>
 				<?php
-					$news = file_get_contents("https://raw.githubusercontent.com/splitti/MuPiBox/main/news.txt");
+					$news = file_get_contents("https://raw.githubusercontent.com/friebi/MuPiBox/main/news.txt");
 					print "<p><h2>MuPiBox-News</h2>".$news."</p>"; ?>
 				</li>
 			</ul>
@@ -207,7 +207,7 @@
 
 			  // Optional; add a title and set the width and height of the chart
 			  var options = {'title':'Disc Space - /boot in Megabytes','width':'auto','height':'auto','is3D':'true'};
-			  
+
 			  // Display the chart inside the <div> element with id="piechart"
 			  var chart = new google.visualization.PieChart(document.getElementById('bootchart'));
 			  chart.draw(data, options);

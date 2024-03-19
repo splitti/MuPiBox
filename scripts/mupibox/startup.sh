@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#JSON_TEMPLATE="https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/add_wifi.json"
+#JSON_TEMPLATE="https://raw.githubusercontent.com/friebi/MuPiBox/main/config/templates/add_wifi.json"
 WIFI_FILE="/boot/add_wifi.json"
 FIRST_INSTALL="/home/dietpi/.mupi.install"
 WPACONF="/etc/wpa_supplicant/wpa_supplicant.conf"
@@ -55,7 +55,7 @@ if [ -f "$WIFI_FILE" ]; then
 		killall -s 9 -w -q chromium-browser
 		/usr/bin/fbv /home/dietpi/MuPiBox/sysmedia/images/installation.jpg &
 		#sudo wget -q -O ${WIFI_FILE} ${JSON_TEMPLATE}
-		WIFI_RESULT=$(sudo -i wpa_passphrase "${SSID}" "${PSK}") 
+		WIFI_RESULT=$(sudo -i wpa_passphrase "${SSID}" "${PSK}")
 		IFS=$'\n'
 		i=0
 		for LINES in ${WIFI_RESULT}
@@ -96,7 +96,7 @@ fi
 if [ -f "$FIRST_INSTALL" ] && [ ${ONLINESTATE} = "online" ]; then
 	OS="$(grep -E '^(VERSION_CODENAME)=' /etc/os-release)"
 	OS="${OS:17}"
-	ARCH=$(uname -m) 
+	ARCH=$(uname -m)
 	VERSION=$(sudo /usr/bin/jq -r .mupibox.version ${MUPIBOX_CONFIG})
 	CPU=$(cat /proc/cpuinfo | grep Serial | cut -d ":" -f2 | sed 's/^ //')
 	STATE=$(curl -X POST https://mupibox.de/mupi/ct.php -H "Content-Type: application/x-www-form-urlencoded" -d key1=${CPU} -d key2="Image Installation" -d key3="${VERSION}" -d key4="${ARCH}" -d key5="${OS}")

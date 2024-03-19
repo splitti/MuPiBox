@@ -1,10 +1,10 @@
 # MuPiBox
-[![GitHub Release](https://img.shields.io/github/v/release/splitti/MuPiBox?label=stable%20release)](https://github.com/splitti/MuPiBox/releases)
-[![GitHub Issues](https://img.shields.io/github/issues/splitti/MuPiBox.svg?style=flat-square&label=Issues&color=d77982)](https://github.com/splitti/MuPiBox/issues)
+[![GitHub Release](https://img.shields.io/github/v/release/splitti/MuPiBox?label=stable%20release)](https://github.com/friebi/MuPiBox/releases)
+[![GitHub Issues](https://img.shields.io/github/issues/splitti/MuPiBox.svg?style=flat-square&label=Issues&color=d77982)](https://github.com/friebi/MuPiBox/issues)
 [![Discord](https://img.shields.io/discord/879874342203306005?logo=Discord&link=https%3A%2F%2Fdiscord.gg%2F4EjCgpCbbe)](https://discord.gg/4EjCgpCbbe) [![Static Badge](https://img.shields.io/badge/Website-Website?logo=Google%20Chrome&logoColor=%23ffffff&labelColor=%234285F4&color=%234285F4&link=https%3A%2F%2Fmupibox.de)](https://mupibox.de) [![Static Badge](https://img.shields.io/badge/Youtube-Youtube?logo=youtube&labelColor=red&color=red&link=https%3A%2F%2Fwww.youtube.com%2Fchannel%2FUCiqTXPBQLYgTB4uPBKzLENA)](https://www.youtube.com/channel/UCiqTXPBQLYgTB4uPBKzLENA) [![Static Badge](https://img.shields.io/badge/Facebook-Facebook?logo=facebook&labelColor=blue&color=blue&link=https%3A%2F%2Fwww.facebook.com%2Fmupibox)](https://www.facebook.com/mupibox) [![Static Badge](https://img.shields.io/badge/Paypal-Donate?logo=Paypal&label=Donate&link=https%3A%2F%2Fpaypal.me%2FDonateMuPiBox)](https://paypal.me/DonateMuPiBox)
 
 MuPiBox is an easy to use music player, controlled via touch display. There could be local music, spotify and also streams.
-![Caption](media/images/splash.png "Caption") 
+![Caption](media/images/splash.png "Caption")
 ## Website & Support
 For more informations visit https://mupibox.de or use our Discord-Channel https://discord.gg/4EjCgpCbbe
 Youtube-Channel: https://www.youtube.com/@mupibox
@@ -33,4 +33,3 @@ Please visit official Website  https://mupibox.de/anleitungen/installationsanlei
 - Startup-Sound by Zeraora (https://freesound.org/people/Zeraora/sounds/572773/)
 - Shutdown-Sound by Leszek_Szary (https://freesound.org/people/Leszek_Szary/sounds/133283/)
 - WLED by Discord-User ronbal and ChatGPT
-  

@@ -23,11 +23,11 @@
 
 	if( $_POST['RTL88X2BU'] == "Install driver" )
 		{
-		$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/online/install_rtl88x2bu.sh | sudo su dietpi -c bash";
+		$command = "cd; curl -L https://raw.githubusercontent.com/friebi/MuPiBox/main/scripts/online/install_rtl88x2bu.sh | sudo su dietpi -c bash";
 		exec($command, $output, $result );
 
 		$change=1;
-		if (file_exists("/tmp/driver-install.txt")) 
+		if (file_exists("/tmp/driver-install.txt"))
 			{
 			$CHANGE_TXT=$CHANGE_TXT."<li>Kernel-headers not installed. Please check correct arm_64bit-setting in /boot/config.txt (in V7, the setting must be 0).</li>";
 			}
@@ -38,7 +38,7 @@
 		}
 	if( $_POST['RTL88X2BU'] == "Remove driver" )
 		{
-		$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/online/remove_rtl88x2bu.sh | sudo su dietpi -c bash";
+		$command = "cd; curl -L https://raw.githubusercontent.com/friebi/MuPiBox/main/scripts/online/remove_rtl88x2bu.sh | sudo su dietpi -c bash";
 		exec($command, $output, $result );
 
 		$change=1;
@@ -51,7 +51,7 @@
 		exec("sudo systemctl disable mupi_vnc.service");
 		exec("sudo systemctl disable mupi_novnc.service");
 		exec("sudo apt-get remove x11vnc websockify -y");
-		exec("sudo pkill websockify");		
+		exec("sudo pkill websockify");
 		exec("sudo rm -R /usr/share/novnc");
 		exec("sudo su - -c \"/usr/bin/cat <<< $(/usr/bin/jq --arg v \"0\" '.tweaks.vnc = $v' /etc/mupibox/mupiboxconfig.json) >  /etc/mupibox/mupiboxconfig.json\"");
 		$change=1;
@@ -65,7 +65,7 @@
 		exec("sudo systemctl enable mupi_vnc.service");
 		exec("sudo systemctl enable mupi_novnc.service");
 		exec("sudo systemctl start mupi_vnc.service");
-		exec("sudo systemctl start mupi_novnc.service");		
+		exec("sudo systemctl start mupi_novnc.service");
 		exec("sudo su - -c \"/usr/bin/cat <<< $(/usr/bin/jq --arg v \"1\" '.tweaks.vnc = $v' /etc/mupibox/mupiboxconfig.json) >  /etc/mupibox/mupiboxconfig.json\"");
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>VNC-Services enabled and started</li>";
@@ -85,10 +85,10 @@
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>DHCP-Timeout set to default</li>";
 		}
-		
+
 	if( $_POST['change_samba'] == "enable & start" )
 		{
-		$command = "sudo apt-get install samba wsdd -y && sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/smb.conf -O /etc/samba/smb.conf && sudo systemctl enable smbd.service && sudo systemctl start smbd.service";
+		$command = "sudo apt-get install samba wsdd -y && sudo wget https://raw.githubusercontent.com/friebi/MuPiBox/main/config/templates/smb.conf -O /etc/samba/smb.conf && sudo systemctl enable smbd.service && sudo systemctl start smbd.service";
 		exec($command, $output, $result );
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Samba enabled</li>";
@@ -134,7 +134,7 @@
 
 	if( $_POST['change_ftp'] == "enable & start" )
 		{
-		$command = " sudo apt-get install proftpd -y && sudo apt-get install samba -y && sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/proftpd.conf -O /etc/proftpd/proftpd.conf && sudo systemctl restart proftpd";
+		$command = " sudo apt-get install proftpd -y && sudo apt-get install samba -y && sudo wget https://raw.githubusercontent.com/friebi/MuPiBox/main/config/templates/proftpd.conf -O /etc/proftpd/proftpd.conf && sudo systemctl restart proftpd";
 		exec($command, $output, $result );
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>FTP enabled</li>";
@@ -312,7 +312,7 @@
         <tr><td>Bitrate:</td><td><?php print $BITRATE ?></td></tr>
         </table>
 		</li></ul></details>
-		
+
 	<details>
 		<summary><i class="fa-regular fa-trash-can"></i> Delete Wifi-Network</summary>
 
@@ -333,11 +333,11 @@
 			{
 				$connection=" [connected]";
 			}
-		else 
+		else
 			{
 				$connection="";
 			}
-		
+
 		echo "<input type=\"radio\" id=\"".$wifidetails[0]."\" name=\"wifinr\" value=\"".$wifidetails[0]."\"> ";
 		echo "<label for=\"".$wifidetails[0]."\"> ".$wifidetails[1].$connection."</label></input><br/>";
 		}
@@ -350,9 +350,9 @@
 		</li>
 	</ul>
 	</details>
-		
-		
-		
+
+
+
 	<details <?php echo $wifiopen;  ?>>
 	<summary><i class="fa-solid fa-tower-broadcast"></i> Add Wifi-Network</summary>
 	<ul>
@@ -362,13 +362,13 @@
 
 	<?php
 	if ( $wifi_networks )
-		{	
+		{
 				?>
 				<li class="li_1">
 				<h2>SSID-Name</h2>
 
 				<div><select id="wifi_name" name="wifi_name" class="element text small">
-				
+
 				<?php
 				foreach($wifi_cleaned as $wifiname) {
 					print "<option value=\"". $wifiname . "\">" . $wifiname . "</option>";
@@ -376,7 +376,7 @@
 				?>
 				"</select></li>
 
-	<?php	
+	<?php
 		}
 	else
 		{
@@ -473,12 +473,12 @@
 		</li>
 		<li class="li_1"><h2>Install RTL88X2BU-Drivers</h2>
 			<p>
-			These drivers are for several network cards like these: 
+			These drivers are for several network cards like these:
 			<ul style="list-style-type:'• '; margin-left:20px;"><li>			<a href="https://amzn.to/3vj2Ubn" target="_blank">Referal link to Amazon.com (US)</a></li>
 			<li><a href="https://amzn.to/3U4ID3Z" target="_blank">Referal link to Amazon.de (GER)</a></li></ul>
 			</p>
 			<p>
-			
+
 			<?php
 			$path="/home/dietpi/.driver/network/88x2bu-20210702";
 		    if($path !== false AND is_dir($path))
@@ -507,7 +507,7 @@
 		<li class="li_1"><h2>DietPi-WiFi-Monitor</h2>
 			<p>Automatic reconnection to wifi, if signal is lost.</p>
 			<p>
-			<?php 
+			<?php
 			echo "DietPi-WiFi-Monitor Status: <b>".$wifi_monitor_state."</b>";
 			?>
 			</p>
@@ -516,7 +516,7 @@
 		<li class="li_1"><h2>Check for best wifi connection</h2>
 			<p>Checks the WiFi SSIDs in the area every 10 seconds and connects to the strongest SSID if this is stored in the configuration. May cause connection dropouts, but allows for quick switching in a multi-Wifi environment.</p>
 			<p>
-			<?php 
+			<?php
 			echo "Autoconnect-wifi: <b>".$wifi_autoconnect_state."</b>";
 			?>
 			</p>
@@ -527,7 +527,7 @@
 			<p>Disabling this service will result in faster boot time.</p>
 			<p>New: The package wsdd (Web-Service-Discovery-Daemon) will be also installed. </p>
 			<p>
-			<?php 
+			<?php
 			echo "Samba-Service Status: <b>".$samba_state."</b>";
 			?>
 			</p>
@@ -535,7 +535,7 @@
 		</li>
 		<li class="li_1"><h2>FTP-Server</h2>
 			<p>
-			<?php 
+			<?php
 			echo "FTP-Service Status: <b>".$ftp_state."</b>";
 			?>
 			</p>
@@ -546,7 +546,7 @@
 			Enables or disables VNC-Service! The service allows remote access to the browser (Display). Usage recommended for Pi version 3 and up. Usually doesn't work with onboard WiFi.
 			</p>
 			<p>
-			<?php 
+			<?php
 			echo "VNC-Service Status: <b>".$vnc_state."</b>";
 			?>
 			</p>

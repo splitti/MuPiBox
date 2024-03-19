@@ -9,8 +9,8 @@
 				</div>
 				<div id="footercenter">
 					<ul>
-						<li><a href="https://github.com/splitti/MuPiBox" target="_blank">Visit MupiBox on Github</a></li>
-						<li><a href="https://github.com/splitti/MuPiBox/blob/main/LICENSE.md" target="_blank">License / Copyright</a></li>						
+						<li><a href="https://github.com/friebi/MuPiBox" target="_blank">Visit MupiBox on Github</a></li>
+						<li><a href="https://github.com/friebi/MuPiBox/blob/main/LICENSE.md" target="_blank">License / Copyright</a></li>
 					</ul>
 				</div>
 				<div id="footerright">
@@ -27,7 +27,7 @@
 	if( $change )
 		{
 		print '<div class="lightbox"><div class="iframeContainer"><div class="toolbarLB"><div class="closeLB" onclick="lightBoxClose()"><div class="closeLBSym">+</div></div></div><p>'.$CHANGE_TXT.'DONE</p></div></div>';
-		} 
+		}
 ?>
 <script>
     function updateFanIcon() {
@@ -36,7 +36,7 @@
             if (this.readyState == 4 && this.status == 200) {
                 // Empfangene Daten verarbeiten
                 var fan_icon = this.responseText;
-                
+
                 // Batterie-Symbol in das Charger_Status-Div einfügen
                 document.getElementById("Fan_Icon").innerHTML = fan_icon;
             }
@@ -61,7 +61,7 @@
             if (this.readyState == 4 && this.status == 200) {
                 // Empfangene Daten verarbeiten
                 var bat_icon = this.responseText;
-                
+
                 // Batterie-Symbol in das Charger_Status-Div einfügen
                 document.getElementById("Wifi_Icon").innerHTML = bat_icon;
             }
@@ -84,7 +84,7 @@
             if (this.readyState == 4 && this.status == 200) {
                 // Empfangene Daten verarbeiten
                 var bat_icon = this.responseText;
-                
+
                 // Batterie-Symbol in das Charger_Status-Div einfügen
                 document.getElementById("Battery_Icon").innerHTML = bat_icon;
             }

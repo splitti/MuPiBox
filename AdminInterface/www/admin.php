@@ -49,7 +49,7 @@
 				exec("sudo chown dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json");
 				exec("sudo chmod 644 /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json");
 
-				$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/conf_update.sh | sudo bash";
+				$command = "cd; curl -L https://raw.githubusercontent.com/friebi/MuPiBox/main/update/conf_update.sh | sudo bash";
 				exec($command, $output, $result );
 
 				$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
@@ -61,7 +61,7 @@
 				$change_hostname = exec($command, $output, $change_hostname );
 				$command = "sudo su dietpi -c '/usr/local/bin/mupibox/./set_hostname.sh'";
 				exec($command);
-				
+
 				$command = "sudo rm '".$target_file."'";
 				exec($command, $output, $result );
 				$change=99;
@@ -75,7 +75,7 @@
 			}
 		}
 
-	$onlinejson = file_get_contents('https://raw.githubusercontent.com/splitti/MuPiBox/main/version.json');
+	$onlinejson = file_get_contents('https://raw.githubusercontent.com/friebi/MuPiBox/main/version.json');
 	$dataonline = json_decode($onlinejson, true);
 	include ('includes/header.php');
 
@@ -136,7 +136,7 @@
 		}
 	if( $_POST['mupibox_update'] )
 		{
-		$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh | sudo bash -s -- stable";
+		$command = "cd; curl -L https://raw.githubusercontent.com/friebi/MuPiBox/main/update/start_mupibox_update.sh | sudo bash -s -- stable";
 		exec($command, $output, $result );
 		$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
 		$data = json_decode($string, true);
@@ -146,7 +146,7 @@
 		}
 	if( $_POST['mupibox_update_beta'] )
 		{
-		$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh | sudo bash -s -- beta";
+		$command = "cd; curl -L https://raw.githubusercontent.com/friebi/MuPiBox/main/update/start_mupibox_update.sh | sudo bash -s -- beta";
 		exec($command, $output, $result );
 		$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
 		$data = json_decode($string, true);
@@ -157,7 +157,7 @@
 		}
 	if( $_POST['mupibox_update_dev'] )
 		{
-		$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh | sudo bash -s -- dev";
+		$command = "cd; curl -L https://raw.githubusercontent.com/friebi/MuPiBox/main/update/start_mupibox_update.sh | sudo bash -s -- dev";
 
 		exec($command, $output, $result );
 		$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
@@ -169,7 +169,7 @@
 		}
 /*	if( $_POST['config_update'] )
 		{
-		$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/conf_update.sh | sudo bash";
+		$command = "cd; curl -L https://raw.githubusercontent.com/friebi/MuPiBox/main/update/conf_update.sh | sudo bash";
 		exec($command, $output, $result );
 		$change=3;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Config is up to date.</li>";
@@ -239,7 +239,7 @@
 		$change=3;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Spotify Services are restarted</li>";
 		}
-		
+
 	if( $_POST['spotify_restart'] )
 		{
 		$command = "sudo /usr/local/bin/mupibox/./spotify_restartspotify_restart.sh";
@@ -249,7 +249,7 @@
 		}
 	if( $_POST['resetMupiConf'] )
 		{
-		$command = "sudo su - -c 'rm /etc/mupibox/mupiboxconfig.json;wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/mupiboxconfig.json -O /etc/mupibox/mupiboxconfig.json;chown root:www-data /etc/mupibox/mupiboxconfig.json;chmod 777 /etc/mupibox/mupiboxconfig.json'";
+		$command = "sudo su - -c 'rm /etc/mupibox/mupiboxconfig.json;wget https://raw.githubusercontent.com/friebi/MuPiBox/main/config/templates/mupiboxconfig.json -O /etc/mupibox/mupiboxconfig.json;chown root:www-data /etc/mupibox/mupiboxconfig.json;chmod 777 /etc/mupibox/mupiboxconfig.json'";
 		exec($command, $output, $result );
 		$change=3;
 		$CHANGE_TXT=$CHANGE_TXT."<li>MuPiBox-Conf is set to initial</li>";
@@ -325,7 +325,7 @@
 	</details>
 
 	<details>
-		<summary><i class="fa-solid fa-download"></i> Backup and restore settings</summary>			
+		<summary><i class="fa-solid fa-download"></i> Backup and restore settings</summary>
 		<ul>
 			<li class="li_norm"><h2>Backup MuPiBox-settings</h2>
 				<p>Backup MuPiBox-Data (cover, mupiboxconfig.json and data.json):</p>
@@ -362,7 +362,7 @@
 			<li class="li_norm"><h2>IP Control Backend</h2>
 				<p>In some cases, the MuPiBox cannot communicate correctly via hostname. Try to activate this point, to set the communication to IP.</p>
 				<p>
-				<?php 
+				<?php
 				if( $data["mupibox"]["ip_control_backend"] )
 					{
 					$ip_control_backend_state="enabled";
@@ -371,12 +371,12 @@
 				else
 					{
 					$ip_control_backend_state="disabled";
-					$change_ip_control="enable";					
+					$change_ip_control="enable";
 					}
 
 				echo "IP Control Backend: <b>".$ip_control_backend_state."</b>";
 				?></p>
-				<input id="saveForm" class="button_text" type="submit" name="ip_control_backend" value="<?php print $change_ip_control; ?>" />																									
+				<input id="saveForm" class="button_text" type="submit" name="ip_control_backend" value="<?php print $change_ip_control; ?>" />
 			</li>
 			<li class="li_norm"><h2>Restart MuPiBox kiosk</h2>
 				<p>Restart chromium browser. </p>
@@ -429,7 +429,7 @@
 						<tr>
 								<td>Development</td>
 								<td><?php
-											exec("echo $(sudo curl -s 'https://api.github.com/repos/splitti/MuPiBox' | jq -r '.pushed_at' | cut -d'T' -f1)", $devversion, $rc);
+											exec("echo $(sudo curl -s 'https://api.github.com/repos/friebi/MuPiBox' | jq -r '.pushed_at' | cut -d'T' -f1)", $devversion, $rc);
 											print "DEV " . $devversion[0];
 									?>
 								 </td>
@@ -492,8 +492,8 @@
 
 			</li>
 		</ul>
-	</details>	
-			
+	</details>
+
 	<details>
 		<summary><i class="far fa-file-alt"></i> Reset configuration</summary>
 		<ul>
