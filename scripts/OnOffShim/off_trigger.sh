@@ -19,8 +19,8 @@ START_VOLUME=$(/usr/bin/jq -r .mupibox.startVolume ${MUPIBOX_CONFIG})
 
 # Check if OnOff-Button is pressed
 power=$(/usr/bin/gpioget $(/usr/bin/gpiofind GPIO${TRIGGER_PIN}))
-[ $power = 0 ] && switchtype="1" #Not a momentary button
-[ $power = 1 ] && switchtype="0" #Momentary button
+[ ${power} == 0 ] && switchtype="1" #Not a momentary button
+[ ${power} == 1 ] && switchtype="0" #Momentary button
 
 until [ ${power} == ${switchtype} ]; do
   if [ ${power} == ${switchtype} ]; then
