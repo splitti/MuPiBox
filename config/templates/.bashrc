@@ -95,7 +95,7 @@ alias reboot='sudo reboot'
 
 function mupi-update-webinterface() {
 	sudo rm -R /var/www/*
-	sudo wget -o /var/www/www.zip https://github.com/friebi/MuPiBox/raw/main/AdminInterface/release/www.zip
+	sudo wget -o /var/www/www.zip https://github.com/friebi/MuPiBox/raw/develop/AdminInterface/release/www.zip
 	sudo unzip /var/www/www.zip -d /var/www/
 	sudo rm /var/www/www.zip
 	sudo ln -s /home/dietpi/MuPiBox/media/cover /var/www/cover
@@ -130,7 +130,7 @@ function mupi-info() {
 	echo -e "  ${BCyan}Web-UI:           ${BIYellow}http://$(hostname):8200${Color_Off}"
 	echo -e "${Color_Off}"
 	echo -e "  ${BCyan}visit MuPiBox:    ${BIPurple}https://mupibox.de${Color_Off}"
-	echo -e "  ${BCyan}Latest-Version:   ${BIPurple}$(curl --max-time 5 -s https://raw.githubusercontent.com/friebi/MuPiBox/main/version.json | jq -r .release.stable[-1].version)${Color_Off}"
+	echo -e "  ${BCyan}Latest-Version:   ${BIPurple}$(curl --max-time 5 -s https://raw.githubusercontent.com/friebi/MuPiBox/develop/version.json | jq -r .release.stable[-1].version)${Color_Off}"
 	echo -e "${Color_Off}"
 	echo -e "  ${BRed}CPU: $CPU         ${IC}${Color_Off}"
 	echo -e "${On_IRed}   ${On_IYellow}   ${On_IGreen}   ${On_IBlue}   ${On_ICyan}   ${On_IPurple}   ${On_IRed}   ${On_IYellow}   ${On_IGreen}   ${On_IBlue}   ${On_ICyan}   ${On_IPurple}   ${On_IRed}   ${On_IYellow}   ${On_IGreen}   ${On_IBlue}   ${On_ICyan}   ${On_IPurple}   ${Color_Off}"
@@ -144,9 +144,9 @@ function json-live() {
 	}
 
 #mupibox aliases
-alias mupi-update-stable='cd; curl -L https://raw.githubusercontent.com/friebi/MuPiBox/main/update/start_mupibox_update.sh | sudo bash  -s -- stable'
-alias mupi-update-beta='cd; curl -L https://raw.githubusercontent.com/friebi/MuPiBox/main/update/start_mupibox_update.sh | sudo bash  -s -- beta'
-alias mupi-update-dev='cd; curl -L https://raw.githubusercontent.com/friebi/MuPiBox/main/update/start_mupibox_update.sh | sudo bash  -s -- dev'
+alias mupi-update-stable='cd; curl -L https://raw.githubusercontent.com/friebi/MuPiBox/develop/update/start_mupibox_update.sh | sudo bash  -s -- stable'
+alias mupi-update-beta='cd; curl -L https://raw.githubusercontent.com/friebi/MuPiBox/develop/update/start_mupibox_update.sh | sudo bash  -s -- beta'
+alias mupi-update-dev='cd; curl -L https://raw.githubusercontent.com/friebi/MuPiBox/develop/update/start_mupibox_update.sh | sudo bash  -s -- dev'
 alias mupi-show-conf='sudo cat /etc/mupibox/mupiboxconfig.json | jq . -r -C'
 alias mupi-show-data='sudo cat /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json | jq . -r -C'
 alias mupi-show-network='sudo cat /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/network.json | jq . -r -C'

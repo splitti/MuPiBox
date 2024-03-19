@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 
-#https://raw.githubusercontent.com/friebi/MuPiBox/main
+#https://raw.githubusercontent.com/friebi/MuPiBox/develop
 #SRC="https://mupibox.de/version/latest"
 CONFIG="/etc/mupibox/mupiboxconfig.json"
 

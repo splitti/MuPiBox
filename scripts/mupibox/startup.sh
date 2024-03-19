@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#JSON_TEMPLATE="https://raw.githubusercontent.com/friebi/MuPiBox/main/config/templates/add_wifi.json"
+#JSON_TEMPLATE="https://raw.githubusercontent.com/friebi/MuPiBox/develop/config/templates/add_wifi.json"
 WIFI_FILE="/boot/add_wifi.json"
 FIRST_INSTALL="/home/dietpi/.mupi.install"
 WPACONF="/etc/wpa_supplicant/wpa_supplicant.conf"

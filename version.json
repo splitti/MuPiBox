@@ -4,7 +4,7 @@
 		"dev": [
 			{
 			"version": "X.X.X",
-			"url": "https://github.com/friebi/MuPiBox/archive/refs/heads/main.zip",
+			"url": "https://github.com/friebi/MuPiBox/archive/refs/heads/develop.zip",
 			"releaseinfo": "Development Version, install on your own risk! Please create a backup before installation"
 			}
 		],

@@ -10,7 +10,7 @@
 				<div id="footercenter">
 					<ul>
 						<li><a href="https://github.com/friebi/MuPiBox" target="_blank">Visit MupiBox on Github</a></li>
-						<li><a href="https://github.com/friebi/MuPiBox/blob/main/LICENSE.md" target="_blank">License / Copyright</a></li>
+						<li><a href="https://github.com/friebi/MuPiBox/blob/develop/LICENSE.md" target="_blank">License / Copyright</a></li>
 					</ul>
 				</div>
 				<div id="footerright">

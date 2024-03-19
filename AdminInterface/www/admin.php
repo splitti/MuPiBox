@@ -49,7 +49,7 @@
 				exec("sudo chown dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json");
 				exec("sudo chmod 644 /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json");
 
-				$command = "cd; curl -L https://raw.githubusercontent.com/friebi/MuPiBox/main/update/conf_update.sh | sudo bash";
+				$command = "cd; curl -L https://raw.githubusercontent.com/friebi/MuPiBox/develop/update/conf_update.sh | sudo bash";
 				exec($command, $output, $result );
 
 				$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
@@ -75,7 +75,7 @@
 			}
 		}
 
-	$onlinejson = file_get_contents('https://raw.githubusercontent.com/friebi/MuPiBox/main/version.json');
+	$onlinejson = file_get_contents('https://raw.githubusercontent.com/friebi/MuPiBox/develop/version.json');
 	$dataonline = json_decode($onlinejson, true);
 	include ('includes/header.php');
 
@@ -136,7 +136,7 @@
 		}
 	if( $_POST['mupibox_update'] )
 		{
-		$command = "cd; curl -L https://raw.githubusercontent.com/friebi/MuPiBox/main/update/start_mupibox_update.sh | sudo bash -s -- stable";
+		$command = "cd; curl -L https://raw.githubusercontent.com/friebi/MuPiBox/develop/update/start_mupibox_update.sh | sudo bash -s -- stable";
 		exec($command, $output, $result );
 		$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
 		$data = json_decode($string, true);
@@ -146,7 +146,7 @@
 		}
 	if( $_POST['mupibox_update_beta'] )
 		{
-		$command = "cd; curl -L https://raw.githubusercontent.com/friebi/MuPiBox/main/update/start_mupibox_update.sh | sudo bash -s -- beta";
+		$command = "cd; curl -L https://raw.githubusercontent.com/friebi/MuPiBox/develop/update/start_mupibox_update.sh | sudo bash -s -- beta";
 		exec($command, $output, $result );
 		$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
 		$data = json_decode($string, true);
@@ -157,7 +157,7 @@
 		}
 	if( $_POST['mupibox_update_dev'] )
 		{
-		$command = "cd; curl -L https://raw.githubusercontent.com/friebi/MuPiBox/main/update/start_mupibox_update.sh | sudo bash -s -- dev";
+		$command = "cd; curl -L https://raw.githubusercontent.com/friebi/MuPiBox/develop/update/start_mupibox_update.sh | sudo bash -s -- dev";
 
 		exec($command, $output, $result );
 		$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
@@ -169,7 +169,7 @@
 		}
 /*	if( $_POST['config_update'] )
 		{
-		$command = "cd; curl -L https://raw.githubusercontent.com/friebi/MuPiBox/main/update/conf_update.sh | sudo bash";
+		$command = "cd; curl -L https://raw.githubusercontent.com/friebi/MuPiBox/develop/update/conf_update.sh | sudo bash";
 		exec($command, $output, $result );
 		$change=3;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Config is up to date.</li>";
@@ -249,7 +249,7 @@
 		}
 	if( $_POST['resetMupiConf'] )
 		{
-		$command = "sudo su - -c 'rm /etc/mupibox/mupiboxconfig.json;wget https://raw.githubusercontent.com/friebi/MuPiBox/main/config/templates/mupiboxconfig.json -O /etc/mupibox/mupiboxconfig.json;chown root:www-data /etc/mupibox/mupiboxconfig.json;chmod 777 /etc/mupibox/mupiboxconfig.json'";
+		$command = "sudo su - -c 'rm /etc/mupibox/mupiboxconfig.json;wget https://raw.githubusercontent.com/friebi/MuPiBox/develop/config/templates/mupiboxconfig.json -O /etc/mupibox/mupiboxconfig.json;chown root:www-data /etc/mupibox/mupiboxconfig.json;chmod 777 /etc/mupibox/mupiboxconfig.json'";
 		exec($command, $output, $result );
 		$change=3;
 		$CHANGE_TXT=$CHANGE_TXT."<li>MuPiBox-Conf is set to initial</li>";

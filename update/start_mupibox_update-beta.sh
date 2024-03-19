@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 
-#https://raw.githubusercontent.com/friebi/MuPiBox/main
+#https://raw.githubusercontent.com/friebi/MuPiBox/develop
 
 RELEASE="beta"
 CONFIG="/etc/mupibox/mupiboxconfig.json"
@@ -106,7 +106,7 @@ OS=${OS:17}  >&3 2>&3
 
 	echo -e "XXX\n${STEP}\nPrepare MuPiBox Download ... \nXXX"
 	before=$(date +%s)
-	wget -q -O ${VER_JSON} https://raw.githubusercontent.com/friebi/MuPiBox/main/version.json  >&3 2>&3
+	wget -q -O ${VER_JSON} https://raw.githubusercontent.com/friebi/MuPiBox/develop/version.json  >&3 2>&3
 
 	VERSION=$(/usr/bin/jq -r .release.${RELEASE}[-1].version ${VER_JSON})  >&3 2>&3
 	MUPIBOX_URL=$(/usr/bin/jq -r .release.${RELEASE}[-1].url ${VER_JSON})  >&3 2>&3

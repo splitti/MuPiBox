@@ -3,7 +3,7 @@
 sudo killall -s 9 -w -q chromium-browser
 sleep 0.5
 sudo rm /tmp/driver-install.txt
-sudo wget -O /tmp/installation.jpg https://raw.githubusercontent.com/friebi/MuPiBox/main/media/images/installation.jpg
+sudo wget -O /tmp/installation.jpg https://raw.githubusercontent.com/friebi/MuPiBox/develop/media/images/installation.jpg
 sudo /usr/bin/fbv /tmp/installation.jpg &
 
 sudo apt-get update
