@@ -8,7 +8,8 @@
 			"enabled": true,
 			"language": "de-de",
 			"volume": "40"
-		}
+		},
+		"hat_active": false
 	},
 	"spotify": {
 		"clientId": "",

@@ -29,6 +29,7 @@ export class MedialistPage implements OnInit {
   mupihat: Mupihat;
   activityIndicatorVisible = false;
   aPartOfAllMedia: Media[] = [];
+  hat_active = false;
   private getMediaFromResumeSubscription: Subscription;
   private getMediaFromShowSubscription: Subscription;
   private getMediaFromArtistSubscription: Subscription;
@@ -70,6 +71,10 @@ export class MedialistPage implements OnInit {
 
   ngOnInit() {
     // Subscribe
+    this.playerService.getConfig().subscribe(config => {
+      this.hat_active = config.hat_active;
+    });
+
     console.log("this.artist", this.artist);
     if(this.resume){
       this.getMediaFromResumeSubscription = this.mediaService.getMediaFromResume().subscribe(media => {

@@ -49,7 +49,7 @@ AUTO_SETUP_BOOT_WAIT_FOR_NETWORK=1
 
 ##### Misc options #####
 # Swap space size to generate: 0 => disable | 1 => auto | 2 and up => size in MiB
-AUTO_SETUP_SWAPFILE_SIZE=8192
+AUTO_SETUP_SWAPFILE_SIZE=1
 # Swap space location: "zram" => swap space on /dev/zram0 (auto-size = 50% of RAM size) | /path/to/file => swap file at location (auto-size = 2 GiB minus RAM size)
 AUTO_SETUP_SWAPFILE_LOCATION=/var/swap
 
@@ -69,6 +69,7 @@ AUTO_UNMASK_LOGIND=0
 # - Option 0 = Copy your script to /boot/Automation_Custom_Script.sh and it will be executed automatically.
 # - Option 1 = Host your script online, then use e.g. AUTO_SETUP_CUSTOM_SCRIPT_EXEC=https://myweb.com/myscript.sh and it will be downloaded and executed automatically.
 # - Executed script log: /var/tmp/dietpi/logs/dietpi-automation_custom_script.log
+# AUTO_SETUP_CUSTOM_SCRIPT_EXEC=0
 AUTO_SETUP_CUSTOM_SCRIPT_EXEC=https://raw.githubusercontent.com/splitti/MuPiBox/main/autosetup/autostart.sh
 
 # Restore a DietPi-Backup on first boot: 0 => disable | 1 => interactive restore (show list of found backups) | 2 => non-interactive restore (restore first found backup)
@@ -184,7 +185,7 @@ CONFIG_PROXY_PASSWORD=
 CONFIG_G_CHECK_URL_TIMEOUT=10
 # Connection attempts with above timeout each, before G_CHECK_NET and G_CHECK_URL give up and prompt an error.
 # - Any value below "1" or a non-integer value will result in the default of 2 attempts.
-CONFIG_G_CHECK_URL_ATTEMPTS=10
+CONFIG_G_CHECK_URL_ATTEMPTS=2
 # General connection and DNS testing
 # - IPv4 address to ping when checking network connectivity. Default: 9.9.9.9 (Quad9 DNS IP)
 CONFIG_CHECK_CONNECTION_IP=9.9.9.9
@@ -219,7 +220,7 @@ CONFIG_ENABLE_IPV6=0
 
 # APT mirrors which are applied to /etc/apt/sources.list | Values here will also be applied during 1st run setup
 # - Raspbian: https://www.raspbian.org/RaspbianMirrors
-CONFIG_APT_RASPBIAN_MIRROR=http://raspbian.raspberrypi.org/raspbian/
+CONFIG_APT_RASPBIAN_MIRROR=http://raspbian.raspberrypi.com/raspbian/
 # - Debian: https://www.debian.org/mirror/official#list
 CONFIG_APT_DEBIAN_MIRROR=https://deb.debian.org/debian/
 

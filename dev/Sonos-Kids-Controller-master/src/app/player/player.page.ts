@@ -46,6 +46,7 @@ export class PlayerPage implements OnInit {
   progress = 0;
   shufflechanged = 0;
   tmpProgressTime = 0;
+  hat_active = false;
   public readonly spotify$: Observable<CurrentSpotify>;
   public readonly local$: Observable<CurrentMPlayer>;
   public readonly playlist$: Observable<CurrentPlaylist>;
@@ -76,6 +77,10 @@ export class PlayerPage implements OnInit {
   }
 
   ngOnInit() {
+    this.playerService.getConfig().subscribe(config => {
+      this.hat_active = config.hat_active;
+    });
+    
     this.mediaService.current$.subscribe(spotify => {
       this.currentPlayedSpotify = spotify;
     });

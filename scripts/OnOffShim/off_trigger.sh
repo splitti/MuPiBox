@@ -31,8 +31,8 @@ until [ $power = $switchtype ]; do
 		sleep ${PRESS_DELAY}
 		power=$(cat /sys/class/gpio/gpio${TRIGGER_PIN}/value)
 		/usr/bin/pactl set-sink-volume @DEFAULT_SINK@ ${START_VOLUME}% 
-		/usr/bin/aplay /home/dietpi/MuPiBox/sysmedia/sound/button_shutdown.wav &
-
+		/usr/bin/aplay /home/dietpi/MuPiBox/sysmedia/sound/button_shutdown.wav
+		#/usr/bin/mplayer -volume ${START_VOLUME} ${START_SOUND} &
 	fi
     sleep 0.05
 done

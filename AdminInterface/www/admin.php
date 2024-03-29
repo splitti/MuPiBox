@@ -49,7 +49,7 @@
 				exec("sudo chown dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json");
 				exec("sudo chmod 644 /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json");
 
-				$command = "cd; curl -L https://mupibox.de/version/latest/update/conf_update.sh | sudo bash";
+				$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/conf_update.sh | sudo bash";
 				exec($command, $output, $result );
 
 				$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
@@ -169,7 +169,7 @@
 		}
 /*	if( $_POST['config_update'] )
 		{
-		$command = "cd; curl -L https://mupibox.de/version/latest/update/conf_update.sh | sudo bash";
+		$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/conf_update.sh | sudo bash";
 		exec($command, $output, $result );
 		$change=3;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Config is up to date.</li>";
@@ -249,7 +249,7 @@
 		}
 	if( $_POST['resetMupiConf'] )
 		{
-		$command = "sudo su - -c 'rm /etc/mupibox/mupiboxconfig.json;wget https://mupibox.de/version/latest/config/templates/mupiboxconfig.json -O /etc/mupibox/mupiboxconfig.json;chown root:www-data /etc/mupibox/mupiboxconfig.json;chmod 777 /etc/mupibox/mupiboxconfig.json'";
+		$command = "sudo su - -c 'rm /etc/mupibox/mupiboxconfig.json;wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/mupiboxconfig.json -O /etc/mupibox/mupiboxconfig.json;chown root:www-data /etc/mupibox/mupiboxconfig.json;chmod 777 /etc/mupibox/mupiboxconfig.json'";
 		exec($command, $output, $result );
 		$change=3;
 		$CHANGE_TXT=$CHANGE_TXT."<li>MuPiBox-Conf is set to initial</li>";

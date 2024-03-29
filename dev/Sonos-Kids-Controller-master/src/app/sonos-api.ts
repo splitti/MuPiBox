@@ -8,4 +8,5 @@ export interface SonosApiConfig {
         language?: string;
         volume?: string;
     };
+    hat_active: boolean;
 }

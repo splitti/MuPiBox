@@ -17,18 +17,38 @@
 				{
 				$data["mqtt"]["name"]=$_POST['mqtt_name'];
 				}
+			 if( $data["mqtt"]["ha_topic"]!=$_POST['ha_topic'])
+				{
+				$data["mqtt"]["ha_topic"]=$_POST['ha_topic'];
+				}
+			 if( $data["mqtt"]["ha_active"]!=$_POST['ha_active'])
+				{
+				if( $_POST['ha_active'] == "on" )
+					{
+					$data["mqtt"]["ha_active"]=true;
+					$command='sudo service mupi_mqtt restart';
+					exec($command);
+					}
+				else
+					{
+					$data["mqtt"]["ha_active"]=false;
+					$command='sudo service mupi_mqtt restart';
+					exec($command);
+					}
+				}
+
 			 if( $data["mqtt"]["active"]!=$_POST['mqtt_active'])
 				{
 				if( $_POST['mqtt_active'] == "on" )
 					{
 					$data["mqtt"]["active"]=true;
-					$command='sudo systemctl enable mupi-mqtt.service && sudo service mupi-mqtt start';
+					$command='sudo systemctl enable mupi_mqtt.service && sudo service mupi_mqtt start';
 					exec($command);
 					}
 				else
 					{
 					$data["mqtt"]["active"]=false;
-					$command='sudo service mupi-mqtt stop && sudo systemctl disable mupi-mqtt.service';
+					$command='sudo service mupi_mqtt stop && sudo systemctl disable mupi_mqtt.service';
 					exec($command);
 					}
 				}
@@ -301,9 +321,6 @@
 				?>" oninput="this.previousElementSibling.value = this.value">
 				</div>
 			</li>
-
-
-
 	   	   <li id="li_1" ><div>
 		 <label class="labelchecked" for="mqtt_active">MQTT activation state:&nbsp; &nbsp; <input type="checkbox" id="mqtt_active"  name="mqtt_active" <?php
 		 if( $data["mqtt"]["active"] )
@@ -312,6 +329,25 @@
 		  }
 	?> /></label></div>
 	   </li>
+
+	   	   <li id="li_1" ><div>
+		 <label class="labelchecked" for="ha_active">Publish MQTT to Homeasssistant:&nbsp; &nbsp; <input type="checkbox" id="ha_active" name="ha_active" <?php
+		 if( $data["mqtt"]["ha_active"] )
+		  {
+		  print "checked";
+		  }
+	?> /></label></div>
+	   </li>
+				<li id="li_1" >
+					<h3>Homeassistant discovery prefix</h3>
+					<p>Default: homeassistant</p><div>
+					<input id="ha_topic" name="ha_topic" class="element text medium" type="text" maxlength="255" value="<?php
+					print $data["mqtt"]["ha_topic"];
+					?>" />
+					</div>
+				</li>
+
+
 		<input id="saveForm" class="button_text" type="submit" name="change_mqtt" value="Save MQTT-Config" />
 	  </ul>
 	 </details>

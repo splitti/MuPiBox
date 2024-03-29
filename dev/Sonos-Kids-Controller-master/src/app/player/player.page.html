@@ -25,7 +25,7 @@
             <ng-template #elseBlockPlaylist><div *ngIf="media.type ==='spotify'; else elseBlockTrackRadio">{{playlistTrackNr}}/{{(local$ | async)?.totalPlaylist}}</div></ng-template>
             <ng-template #elseBlockTrackRadio><div></div></ng-template>
         </ion-title>
-        <ng-container *ngIf="mupihat$ | async as mupihat">
+        <ng-container  *ngIf="hat_active && (mupihat$ | async)?.BatteryConnected !== 0">
             <ion-icon *ngIf="mupihat.IBus > 0 && mupihat.Bat_SOC === '100%'; else elsecharge75" class="battery-icon" slot="end" src="../../assets/icon/MuPiHAT/Charging100.svg" size="large"></ion-icon>
             <ng-template #elsecharge75>
                 <ion-icon *ngIf="mupihat.IBus > 0 && mupihat.Bat_SOC === '75%'; else elsecharge50" class="battery-icon" slot="end" src="../../assets/icon/MuPiHAT/Charging70.svg" size="large"></ion-icon>
