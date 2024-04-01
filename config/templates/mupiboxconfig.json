@@ -27,7 +27,10 @@
 			"earth",
 			"steampunk",
 			"fantasybutterflies",
-			"lines"
+			"lines",
+			"comic",
+			"forms",
+			"mystic"
 			],
 		"startSound": "/home/dietpi/MuPiBox/sysmedia/sound/startup.wav",
 		"shutSound": "/home/dietpi/MuPiBox/sysmedia/sound/shutdown.wav",
