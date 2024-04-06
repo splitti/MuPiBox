@@ -305,6 +305,9 @@ class bq25792:
         def get (self):
             self._value = int(self.IINDPM / 10)
             return self._value, self.IINDPM
+        def get_IINDPM(self):
+            '''return input current limit in mA'''
+            return self.IINDPM
         
         def set_input_current_limit(self, input_current_limit):
             '''
@@ -766,8 +769,9 @@ class bq25792:
             self.ICO_ILIM           = ((self._value & 0b0000000111111111))
         def get (self):
             return self._value, self.ICO_ILIM
-        def get_ICO_ILIM (self)
-            return self.ICO_ILIM
+        def get_ICO_ILIM (self):
+            '''return Input Current Limit obtained from ICO or ILIM_HIZ pin setting in [mA]'''
+            return self.ICO_ILIM*10
         
     class REG1C_Charger_Status_1(BQ25795_REGISTER):
         """
@@ -1291,7 +1295,7 @@ class bq25792:
             return 0xFFFF
         finally:
             return self.REG19_ICO_Current_Limit.get_ICO_ILIM()
-        
+                  
 
     def read_ChargerStatus(self):
         '''
@@ -1372,7 +1376,7 @@ class bq25792:
             self.write_register(reg)
             
             self.enable_extilim()
-            #self.set_input_current_limit(2000)
+            #self.disable_extilim()
             return
 
     def MuPiHAT_Default(self):
