@@ -97,7 +97,7 @@ class bq25792:
             self.REG16_Temperature_Control = self.REG16_Temperature_Control()
             self.REG17_NTC_Control_0 = 0x17
             self.REG18_NTC_Control_1 = 0x18
-            self.REG19_ICO_Current_Limit =0x19
+            self.REG19_ICO_Current_Limit = self.REG19_ICO_Current_Limit()
             self.REG1B_Charger_Status_0 = 0x1b
             self.REG1C_Charger_Status_1 = self.REG1C_Charger_Status_1()
             self.REG1D_Charger_Status_2 = self.REG1D_Charger_Status_2()
@@ -239,14 +239,28 @@ class bq25792:
             super().set(value)
             self.VSYSMIN = self._value * 250 + 2500
 
-    class REG01_Charge_Voltage_Limit:
-        # Battery Voltage Limit: During POR, the device reads the resistance tie to PROG pin, to identify the default battery cell count and determine the default power-on battery voltage regulation limit: 1s: 4.2V 2s: 8.4V 3s: 12.6V 4s: 16.8V Type : RW Range : 3000mV-18800mV Fixed Offset : 0mV Bit Step Size : 10mV
-        def __init__(self, value = 0):
-            self._addr = 0x1
+    class REG01_Charge_Voltage_Limit(BQ25795_REGISTER):
+        """
+        BQ25795 - REG01_Charge_Voltage_Limit
+        ---------
+        VREG, Battery Voltage Limit: 
+            During POR, the device reads the resistance tie to PROG pin, 
+            to identify the default battery cell count and determine the default power-on battery voltage regulation limit: 
+            1s: 4.2V 
+            2s: 8.4V 
+            3s: 12.6V 
+            4s: 16.8V 
+            Type : RW 
+            Range : 3000mV-18800mV 
+            Fixed Offset : 0mV 
+            Bit Step Size : 10mV
+        """
+        def __init__(self, addr=0x1, value=0):
+            super().__init__(addr, value)
             self._value = value
             self.VREG = self._value * 10
         def set (self, value):
-            self._value = value
+            super().set(value)
             self.VREG = self._value * 10
 
     class REG03_Charge_Current_Limit:
@@ -733,7 +747,28 @@ class bq25792:
             elif self.TSHUT == 0x2: return "120°C"
             elif self.TSHUT == 0x3: return "85°C"
             else: return "unknown" 
-
+    class REG19_ICO_Current_Limit(BQ25795_REGISTER):
+        """
+        BQ25795 - REG19_ICO_Current_Limit
+        -----------
+        ICO_ILIM - Input Current Limit obtained from ICO or ILIM_HIZ pin setting 
+        Type : R POR: 0mA (0h) 
+        Range : 100mA-3300mA 
+        Fixed Offset : 0mA 
+        Bit Step Size : 10mA 
+        Clamped Low
+        """
+        def __init__(self, addr=0x19, value = 0):
+            super().__init__(addr, value)
+            self.ICO_ILIM           = ((self._value & 0b0000000111111111))
+        def set (self, value):
+            super().set(value)
+            self.ICO_ILIM           = ((self._value & 0b0000000111111111))
+        def get (self):
+            return self._value, self.ICO_ILIM
+        def get_ICO_ILIM (self)
+            return self.ICO_ILIM
+        
     class REG1C_Charger_Status_1(BQ25795_REGISTER):
         """
         BQ25795 - REG1C_Charger_Status_1
@@ -1236,6 +1271,28 @@ class bq25792:
         finally:
             return self.REG33_IBAT_ADC.get_Ibat()
 
+    def read_InputCurrentLimit(self):
+        '''
+        Read I2C and Return ICO_ILIM in mA   
+                Input Current Limit obtained from ICO or ILIM_HIZ pin setting
+                Range : 100mA-3300mA 
+                Return 0xFFFF is read fails
+        '''
+        try:
+            reg_addr = self.REG19_ICO_Current_Limit._addr
+            val = [0xFF]*2
+            val[0:1] = self.bq.read_i2c_block_data(self.i2c_addr, reg_addr, 2)
+            time.sleep(self.busWS_ms/1000)
+            self.registers[reg_addr:reg_addr+1] = val
+            self.REG19_ICO_Current_Limit.set((self.registers[reg_addr] << 8) | (self.registers[reg_addr+1]))
+        except Exception as _error:
+            sys.stderr.write('read_InputCurrentLimit failed, %s\n' % str(_error))
+            if self._exit_on_error: sys.exit(1)
+            return 0xFFFF
+        finally:
+            return self.REG19_ICO_Current_Limit.get_ICO_ILIM()
+        
+
     def read_ChargerStatus(self):
         '''
         Read I2C and Return Charger Status
@@ -1598,6 +1655,8 @@ class bq25792:
             Battery Status - Indication for Front-End, (OK, LOW, SHUTDOWN)
         'Bat_Type'
             Battery Type as read from Battery Config File
+        'Input_Current_Limit'
+            Input Current Limit obtained from ICO or ILIM_HIZ pin setting
         '''
         #self.read_all_register()
         self.write_defaults()
@@ -1614,7 +1673,8 @@ class bq25792:
             #'REG14' : self.read_REG14_Charger_Control_5(),
             'Bat_SOC' : bat_SOC,
             'Bat_Stat' : bat_Stat,
-            'Bat_Type' : self.battery_conf['battery_type']
+            'Bat_Type' : self.battery_conf['battery_type'],
+            'Input_Current_Limit' : self.read_InputCurrentLimit()
         }
     
     def dump_register(self):
