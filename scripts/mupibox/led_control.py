@@ -68,7 +68,6 @@ def main():
     JSON_DATA = read_json()
     LED_DIM_MODE_LAST = JSON_DATA["led_dim_mode"]
     while True:
-        JSON_DATA = read_json()
         if JSON_DATA != "skip":
             if JSON_DATA["led_dim_mode"] == "0" and JSON_DATA["led_dim_mode"] != LED_DIM_MODE_LAST:
                 led_control(int(JSON_DATA["led_min_brightness"]), int(JSON_DATA["led_max_brightness"]), 0.02)
