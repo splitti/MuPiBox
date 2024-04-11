@@ -283,6 +283,34 @@ export class AddPage implements OnInit, AfterViewInit {
     }
   }
 
+  m3uStreamfetcher(url: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+      // Herunterladen des Inhalts der m3u-Datei
+      fetch(url)
+          .then(response => {
+              if (!response.ok) {
+                  throw new Error(`HTTP error! Status: ${response.status}`);
+              }
+              return response.text();
+          })
+          .then(m3uInhalt => {
+              // RegExp zum Extrahieren der ersten URL
+              const urlRegExp = /(?:^|\r?\n)(?:\s*#.*\r?\n)*\s*(https?:\/\/\S+)/i;
+              const match = m3uInhalt.match(urlRegExp);
+              
+              if (match && match[1]) {
+                  const ersteURL = match[1];
+                  resolve(ersteURL);
+              } else {
+                  reject(new Error("No URL found."));
+              }
+          })
+          .catch(error => {
+              reject(error);
+          });
+    });
+  }
+
   submit(form: NgForm) {
     this.activityIndicatorService.create().then(indicator => {
       this.activityIndicatorVisible = true;
@@ -312,7 +340,19 @@ export class AddPage implements OnInit, AfterViewInit {
         if (form.form.value.title?.length) { media.title = form.form.value.title; }
         if (form.form.value.rssURL?.length) { media.id = form.form.value.rssURL; }
         if (form.form.value.spotifySearch?.length) { media.query = form.form.value.spotifySearch; }
-        if (form.form.value.streamURL?.length) { media.id = form.form.value.streamURL; }
+        if (form.form.value.streamURL?.length) { 
+          media.id = form.form.value.streamURL;
+          if(media.id.endsWith(".m3u")){
+            this.m3uStreamfetcher(media.id)
+              .then(firstURL => {
+                console.log("First found URL:", firstURL);
+                media.id = firstURL;
+              })
+              .catch(error => {
+                  console.error("Error for extract url from m3u:", error);
+              });
+          } 
+        }
         if (form.form.value.spotifyURL?.length) {
           media.spotify_url = form.form.value.spotifyURL;
           if(media.spotify_url.startsWith("https://open.spotify.com/")){
