@@ -30,9 +30,13 @@ until [ $power = $switchtype ]; do
 	if [ $power = $switchtype ]; then
 		sleep ${PRESS_DELAY}
 		power=$(cat /sys/class/gpio/gpio${TRIGGER_PIN}/value)
-		/usr/bin/pactl set-sink-volume @DEFAULT_SINK@ ${START_VOLUME}% 
-		/usr/bin/aplay /home/dietpi/MuPiBox/sysmedia/sound/button_shutdown.wav
-		#/usr/bin/mplayer -volume ${START_VOLUME} ${START_SOUND} &
+		if [ $power = $switchtype ]; then
+			# only play sound if MuPiBox actually shuts down
+			# Could also go after until loop?
+			/usr/bin/pactl set-sink-volume @DEFAULT_SINK@ ${START_VOLUME}%
+			/usr/bin/aplay /home/dietpi/MuPiBox/sysmedia/sound/button_shutdown.wav
+			#/usr/bin/mplayer -volume ${START_VOLUME} ${START_SOUND} &
+		fi
 	fi
 	sleep 0.05
 done
