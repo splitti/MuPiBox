@@ -26,7 +26,7 @@ power=$(cat /sys/class/gpio/gpio${TRIGGER_PIN}/value)
 [ $power = 1 ] && switchtype="0" #Momentary button
 
 until [ $power = $switchtype ]; do
-    power=$(cat /sys/class/gpio/gpio${TRIGGER_PIN}/value)
+	power=$(cat /sys/class/gpio/gpio${TRIGGER_PIN}/value)
 	if [ $power = $switchtype ]; then
 		sleep ${PRESS_DELAY}
 		power=$(cat /sys/class/gpio/gpio${TRIGGER_PIN}/value)
@@ -34,7 +34,7 @@ until [ $power = $switchtype ]; do
 		/usr/bin/aplay /home/dietpi/MuPiBox/sysmedia/sound/button_shutdown.wav
 		#/usr/bin/mplayer -volume ${START_VOLUME} ${START_SOUND} &
 	fi
-    sleep 0.05
+	sleep 0.05
 done
 
 sudo service mupi_startstop stop
