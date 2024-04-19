@@ -266,7 +266,7 @@
 		"poweroffPin": "4",
 		"triggerPin": "17",
 		"cutPin": "27",
-		"ledPin": "25",
+		"ledPin": "13",
 		"ledBrightnessMax": "100",
 		"ledBrightnessMin": "10"
 	},
@@ -371,7 +371,7 @@
 	},
 	"fan": {
 		"fan_active": false,
-		"fan_gpio": "13",
+		"fan_gpio": "12",
 		"fan_temp_100": "75",
 		"fan_temp_75": "65",
 		"fan_temp_50": "55",

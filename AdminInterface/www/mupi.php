@@ -1024,7 +1024,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 
 			<li id="li_1" >
 				<h2>LED GPIO OnOffShim </h2>
-				<p>Possible standard GPIO-Pins are 4, 12, 13, 17, 18, 21, 22, 23, 24, 25 (default PIN) and 27. GPIOs 4 and 17 are used by OnOffShim. GPIOs 18 and 21 are used by HifiBerry MiniAmp. Just use free GPIOs to avoid system errors.</p>
+				<p>Possible standard GPIO-Pins are 4, 12, 13 (default PIN), 17, 18, 21, 22, 23, 24, 25 and 27. GPIOs 4 and 17 are used by OnOffShim. GPIOs 18 and 21 are used by HifiBerry MiniAmp. Just use free GPIOs to avoid system errors.</p>
 				<div><select id="ledPin" name="ledPin" class="element text small">
 				
 				<?php
@@ -1083,7 +1083,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 		<ul>
 			<li id="li_1" >
 				<h2>Fan GPIO</h2>
-				<p>Possible standard GPIO-Pins are 4, 12, 13 (default PIN), 17, 18, 21, 22, 23, 24, 25 and 27. GPIOs 4 and 17 are used by OnOffShim. GPIOs 18 and 21 are used by HifiBerry MiniAmp. Just use free GPIOs to avoid system errors.</p>
+				<p>Possible standard GPIO-Pins are 4, 12 (default PIN), 13, 17, 18, 21, 22, 23, 24, 25 and 27. GPIOs 4 and 17 are used by OnOffShim. GPIOs 18 and 21 are used by HifiBerry MiniAmp. Just use free GPIOs to avoid system errors.</p>
 				<div><select id="FanPin" name="FanPin" class="element text small">
 				
 				<?php
