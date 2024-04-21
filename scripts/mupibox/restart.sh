@@ -1,5 +1,6 @@
 #!/bin/bash
 #
 
-sleep 1.5
-sudo reboot
+service mupi_startstop stop
+service mupi_powerled stop 
+reboot
