@@ -88,7 +88,7 @@
 
 	if( $_POST['change_samba'] == "enable & start" )
 		{
-		$command = "sudo apt-get install samba wsdd -y && sudo wget https://raw.githubusercontent.com/friebi/MuPiBox/develop/config/templates/smb.conf -O /etc/samba/smb.conf && sudo systemctl enable smbd.service && sudo systemctl start smbd.service";
+		$command = "sudo apt-get install samba wsdd -y && sudo wget https://raw.githubusercontent.com/friebi/MuPiBox/develop/config/templates/smb.conf -O /etc/samba/smb.conf && sudo systemctl enable smbd.service && sudo systemctl start smbd.service && (echo 'mupibox'; echo 'mupibox') | sudo smbpasswd -s -a 'dietpi'";
 		exec($command, $output, $result );
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Samba enabled</li>";
