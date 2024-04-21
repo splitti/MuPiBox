@@ -26,9 +26,9 @@ power=$(cat /sys/class/gpio/gpio${TRIGGER_PIN}/value)
 [ $power = 1 ] && switchtype="0" #Momentary button
 
 until [ $power = $switchtype ]; do
+	sleep ${PRESS_DELAY}
     power=$(cat /sys/class/gpio/gpio${TRIGGER_PIN}/value)
 	if [ $power = $switchtype ]; then
-		sleep ${PRESS_DELAY}
 		power=$(cat /sys/class/gpio/gpio${TRIGGER_PIN}/value)
 		/usr/bin/pactl set-sink-volume @DEFAULT_SINK@ ${START_VOLUME}% 
 		/usr/bin/aplay /home/dietpi/MuPiBox/sysmedia/sound/button_shutdown.wav
