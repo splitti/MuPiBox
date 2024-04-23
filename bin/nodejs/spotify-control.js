@@ -1117,7 +1117,7 @@ app.use(function(req, res){
     clearValidate();
 
   else if (command.name == "shutoff")
-    cmdCall('bash /usr/local/bin/mupibox/shutdown.sh');
+    cmdCall('sudo su - -c "/usr/local/bin/mupibox/./shutdown.sh &"');
 
   else if (command.name == "clearresume")
     cmdCall('sudo bash /usr/local/bin/mupibox/clearresume.sh');
@@ -1129,7 +1129,7 @@ app.use(function(req, res){
     cmdCall('sudo service ifup@wlan0 stop && sudo service ifup@wlan0 start');
 
   else if (command.name == "reboot")
-    cmdCall('sudo reboot');
+    cmdCall('sudo su - -c "/usr/local/bin/mupibox/./restart.sh &"');
 
   else if (command.name == "index")
     cmdCall('sudo bash /usr/local/bin/mupibox/add_index.sh');
@@ -1147,6 +1147,9 @@ app.use(function(req, res){
 
   else if (command.name == "albumstop")
     cmdCall('bash /usr/local/bin/mupibox/albumstop.sh');
+
+  else if (command.name == "enablewifi")
+    cmdCall("sudo sed -i -e 's/dtoverlay=disable-wifi//g' /boot/config.txt && sudo head -n -1 /boot/config.txt > /tmp/config.txt && sudo mv /tmp/config.txt /boot/config.txt && sudo su - -c '/usr/local/bin/mupibox/restart.sh &'");
 
 /*   else if (command.name.includes("jumpto:")){
     let offsetTrackNr = command.name.split(':')[1];

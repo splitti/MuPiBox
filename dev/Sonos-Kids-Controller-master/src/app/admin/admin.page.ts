@@ -1,9 +1,10 @@
 import { Component, OnInit, ViewEncapsulation, AfterViewInit, ViewChild } from '@angular/core';
-import { NavController, IonSelect, IonInput, IonSegment } from '@ionic/angular';
+import { NavController, IonSelect, IonInput, IonSegment, AlertController } from '@ionic/angular';
 import { MediaService } from '../media.service';
 import { WLAN } from '../wlan';
 import Keyboard from 'simple-keyboard';
 import { NgForm } from '@angular/forms';
+import { PlayerCmds, PlayerService } from '../player.service';
 
 @Component({
   selector: 'app-admin',
@@ -33,7 +34,9 @@ export class AdminPage implements OnInit, AfterViewInit {
 
   constructor(
     private mediaService: MediaService,
-    private navController: NavController
+    private navController: NavController,
+    public alertController: AlertController,
+    private playerService: PlayerService,
   ) { }
 
   ngOnInit() {
@@ -183,5 +186,47 @@ export class AdminPage implements OnInit, AfterViewInit {
         title?.length > 0 && artist?.length > 0
       );
     }
+  }
+
+  async wifiRestartButtonPressed() {
+    const alert = await this.alertController.create({
+      cssClass: 'alert',
+      header: 'Restart Wifi',
+      message: 'Do you want to restart the wifi network?',
+      buttons: [
+        {
+          text: 'Restart',
+          handler: () => {
+            this.playerService.sendCmd(PlayerCmds.NETWORKRESTART);
+          }
+        },
+        {
+          text: 'Cancel'
+        }
+      ]
+    });
+
+    await alert.present();
+  }
+
+  async enableWifiOnButtonPressed() {
+    const alert = await this.alertController.create({
+      cssClass: 'alert',
+      header: 'OnBoard-Wifi',
+      message: 'Enable OnBoard-Wifi.',
+      buttons: [
+        {
+          text: 'Enable',
+          handler: () => {
+            this.playerService.sendCmd(PlayerCmds.ENABLEWIFI);
+          }
+        },
+        {
+          text: 'Cancel'
+        }
+      ]
+    });
+
+    await alert.present();
   }
 }

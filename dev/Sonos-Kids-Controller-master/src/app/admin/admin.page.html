@@ -8,6 +8,16 @@
                 <ion-label>WLAN</ion-label>
             </ion-segment-button>
         </ion-segment>
+        <ion-buttons slot="end">
+            <ion-button (click)="wifiRestartButtonPressed()">
+                <ion-icon slot="icon-only" name="refresh"></ion-icon>
+            </ion-button>
+        </ion-buttons>
+        <ion-buttons slot="end">
+            <ion-button (click)="enableWifiOnButtonPressed()">
+                <ion-icon slot="icon-only" name="wifi-outline"></ion-icon>
+            </ion-button>
+        </ion-buttons>
     </ion-toolbar>
 </ion-header>
 
