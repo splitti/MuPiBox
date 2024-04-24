@@ -155,7 +155,7 @@ export class EditPage implements OnInit {
   async clearResumePressed() {
     const alert = await this.alertController.create({
       cssClass: 'alert',
-      header: 'Warning',
+      header: 'Resume',
       message: 'Do you want to clear all resume media?',
       buttons: [
         {
@@ -177,31 +177,10 @@ export class EditPage implements OnInit {
     await alert.present();
   }
 
-  async networkButtonPressed() {
-    const alert = await this.alertController.create({
-      cssClass: 'alert',
-      header: 'Warning',
-      message: 'Do you want to restart the wifi network?',
-      buttons: [
-        {
-          text: 'Restart',
-          handler: () => {
-            this.playerService.sendCmd(PlayerCmds.NETWORKRESTART);
-          }
-        },
-        {
-          text: 'Cancel'
-        }
-      ]
-    });
-
-    await alert.present();
-  }
-
   async shutdownMessage() {
     const alert = await this.alertController.create({
       cssClass: 'alert',
-      header: 'Warning',
+      header: 'Powermanagement',
       message: 'Do you want to shutdown the MuPiBox?',
       buttons: [
         {

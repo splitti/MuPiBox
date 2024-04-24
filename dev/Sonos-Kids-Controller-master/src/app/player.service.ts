@@ -27,7 +27,8 @@ export enum PlayerCmds {
   NETWORKRESTART = 'networkrestart',
   CLEARVALIDATE = 'clearval',
   CLEARRESUME = 'clearresume',
-  MAXRESUME = 'maxresume'
+  MAXRESUME = 'maxresume',
+  ENABLEWIFI = 'enablewifi'
 }
 
 @Injectable({

@@ -28,4 +28,5 @@ We will focus on <b>bookworm</b> and recommend you to update, or reinstall. See 
 </ul>
 <h3>Next Release</h3>
 <ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Bugfix: Fan control without MuPiHAT</li>
 </ul>
