@@ -36,13 +36,17 @@ def main():
     FAN75 = int(JSON_DATA['fan']['fan_temp_75'])
     FAN50 = int(JSON_DATA['fan']['fan_temp_50'])
     FAN25 = int(JSON_DATA['fan']['fan_temp_25'])
+    HAT_STATE = JSON_DATA['mupihat']['hat_active']
     IO.setwarnings(False)                                 # Do not show any GPIO warnings
     IO.setmode (IO.BCM)                                   # BCM pin numbers - PIN8 as ‘GPIO13’
     IO.setup(GPIO,IO.OUT)                                 # Initialize GPIO13 as our fan output pin
     fan = IO.PWM(GPIO,100)                                # Set GPIO13 as a PWM output, with 100Hz frequency (this should match your fans specified PWM frequency)
     fan.start(0)                                          # Generate a PWM signal with a 0% duty cycle (fan off)
     while 1:                                              # Execute loop forever
-        JSON_DATA = "skip"
+        if HAT_STATE == "true":
+            JSON_DATA = "-"
+        else:
+            JSON_DATA = "skip"
         while JSON_DATA == "skip":
             JSON_DATA = read_json("/tmp/mupihat.json")
         ictemp = int(JSON_DATA['Temp'])

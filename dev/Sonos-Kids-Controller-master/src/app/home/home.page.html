@@ -19,7 +19,7 @@
         <ion-buttons slot="end" *ngIf="hat_active">
             <ion-buttons slot="end" *ngIf="(mupihat$ | async)?.BatteryConnected === 1; else hatwithnobattery">
                 
-                <ion-button *ngIf="(mupihat$ | async)?.Charger_Status !== 'Not Charging' && (mupihat$ | async)?.Bat_SOC ==='100%'; else charge100" class="battery" (click)="editButtonPressed()">
+                <ion-button *ngIf="(mupihat$ | async)?.Charger_Status === 'Not Charging' && (mupihat$ | async)?.Bat_SOC ==='100%'; else charge100" class="battery" (click)="editButtonPressed()">
                     <ion-icon slot="icon-only" src="../../assets/icon/MuPiHAT/Battery100.svg" size="large"></ion-icon>
                 </ion-button>
                 <ng-template #charge100>
@@ -29,7 +29,7 @@
                 </ng-template>
 
                 <ng-template #battery75>
-                    <ion-button *ngIf="(mupihat$ | async)?.Charger_Status !== 'Not Charging' && (mupihat$ | async)?.Bat_SOC ==='75%'; else charge75" class="battery" (click)="editButtonPressed()">
+                    <ion-button *ngIf="(mupihat$ | async)?.Charger_Status === 'Not Charging' && (mupihat$ | async)?.Bat_SOC ==='75%'; else charge75" class="battery" (click)="editButtonPressed()">
                         <ion-icon slot="icon-only" src="../../assets/icon/MuPiHAT/Battery70.svg" size="large"></ion-icon>
                     </ion-button>
                 </ng-template>
@@ -40,7 +40,7 @@
                 </ng-template>
 
                 <ng-template #battery50>
-                    <ion-button *ngIf="(mupihat$ | async)?.Charger_Status !== 'Not Charging' && (mupihat$ | async)?.Bat_SOC ==='50%'; else charge50" class="battery" (click)="editButtonPressed()">
+                    <ion-button *ngIf="(mupihat$ | async)?.Charger_Status === 'Not Charging' && (mupihat$ | async)?.Bat_SOC ==='50%'; else charge50" class="battery" (click)="editButtonPressed()">
                         <ion-icon slot="icon-only" src="../../assets/icon/MuPiHAT/Battery50.svg" size="large"></ion-icon>
                     </ion-button>
                 </ng-template>
@@ -51,7 +51,7 @@
                 </ng-template>
 
                 <ng-template #battery25>
-                    <ion-button *ngIf="(mupihat$ | async)?.Charger_Status !== 'Not Charging' && (mupihat$ | async)?.Bat_SOC ==='25%'; else charge25" class="battery" (click)="editButtonPressed()">
+                    <ion-button *ngIf="(mupihat$ | async)?.Charger_Status === 'Not Charging' && (mupihat$ | async)?.Bat_SOC ==='25%'; else charge25" class="battery" (click)="editButtonPressed()">
                         <ion-icon slot="icon-only" src="../../assets/icon/MuPiHAT/Battery20.svg" size="large"></ion-icon>
                     </ion-button>
                 </ng-template>
@@ -62,7 +62,7 @@
                 </ng-template>
 
                 <ng-template #battery0>
-                    <ion-button *ngIf="(mupihat$ | async)?.Charger_Status !== 'Not Charging' && (mupihat$ | async)?.Bat_SOC ==='0%'; else charge0" class="battery" (click)="editButtonPressed()">
+                    <ion-button *ngIf="(mupihat$ | async)?.Charger_Status === 'Not Charging' && (mupihat$ | async)?.Bat_SOC ==='0%'; else charge0" class="battery" (click)="editButtonPressed()">
                         <ion-icon slot="icon-only" src="../../assets/icon/MuPiHAT/Battery0.svg" size="large"></ion-icon>
                     </ion-button>
                 </ng-template>
