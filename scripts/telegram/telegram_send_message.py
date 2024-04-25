@@ -13,3 +13,9 @@ bot = telepot.Bot(TOKEN)
 chat_id = config['telegram']['chatId']
 
 bot.sendMessage(chat_id, sys.argv[1])
+
+if config['mupihat']['hat_active']:
+    with open("/tmp/mupihat.json") as file:
+        mupihat = json.load(file)
+
+    bot.sendMessage(chat_id, 'The MupiBox battery is at '+mupihat['Bat_SOC'])
