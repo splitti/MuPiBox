@@ -227,7 +227,7 @@ export class PlayerPage implements OnInit {
   }
 
   ionViewWillLeave() {
-    if((this.media.type === 'spotify' || this.media.type === 'library' || this.media.type === 'rss') && !this.media.shuffle && this.resumeWait > 10){
+    if((this.media.type === 'spotify' || this.media.type === 'library' || this.media.type === 'rss') && !this.media.shuffle && this.resumeWait > 30){
       this.saveResumeFiles();
     }
     this.updateProgression = false;
