@@ -6,6 +6,8 @@ import time                    # Calling time to allow delays to be used
 import subprocess              # Calling subprocess to get the CPU temperature
 import json
 
+
+
 def read_json(JSON_DATA_FILE):
     try:
         with open(JSON_DATA_FILE) as file:
@@ -43,16 +45,16 @@ def main():
     fan = IO.PWM(GPIO,100)                                # Set GPIO13 as a PWM output, with 100Hz frequency (this should match your fans specified PWM frequency)
     fan.start(0)                                          # Generate a PWM signal with a 0% duty cycle (fan off)
     while 1:                                              # Execute loop forever
-        if HAT_STATE == "true":
-            JSON_DATA = "-"
-        else:
+        if HAT_STATE == True:
             JSON_DATA = "skip"
-        while JSON_DATA == "skip":
-            JSON_DATA = read_json("/tmp/mupihat.json")
-        ictemp = int(JSON_DATA['Temp'])
-        cputemp = int(get_temp())                               # Get the current CPU temperature
-        if cputemp > FAN100 or ictemp > FAN100:     # Check temperature threshhold, in degrees celcius
-            fan.ChangeDutyCycle(100)            # Set fan duty based on temperature, 100 is max speed and 0 is min speed or off.
+            while JSON_DATA == "skip":
+                JSON_DATA = read_json("/tmp/mupihat.json")
+            ictemp = int(JSON_DATA['Temp'])
+        else:
+            ictemp = 0
+        cputemp = int(get_temp())                         # Get the current CPU temperature
+        if cputemp > FAN100 or ictemp > FAN100:           # Check temperature threshhold, in degrees celcius
+            fan.ChangeDutyCycle(100)                      # Set fan duty based on temperature, 100 is max speed and 0 is min speed or off.
             speed = "100%"
         elif cputemp > FAN75 or ictemp > FAN75:
             fan.ChangeDutyCycle(75)
