@@ -1,6 +1,6 @@
 [Unit]
 Description=Control service, to automate warn and shutdown
-After=local-fs.target sysinit.target
+After=local-fs.target sysinit.target mupi_hat.service
 DefaultDependencies=no
 
 [Service]

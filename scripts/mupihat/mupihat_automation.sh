@@ -10,6 +10,7 @@ play_sound() {
 }
 
 echo $! > /run/mupi_hat_control.pid
+sleep 30
 
 BAT_CONNECTED=$(jq -r '.BatteryConnected' ${JSON_FILE})
 
