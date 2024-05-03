@@ -26,8 +26,7 @@ if [ "${BAT_CONNECTED}" -eq 1 ]; then
 				elif [ "${STATE}" = "SHUTDOWN" ]; then
 					/usr/local/bin/mupibox/mupi_shutdown.sh ${BATTERY_LOW}
 					echo "Battery state to low - shutdown initiated"
-					service mupi_powerled stop 
-					poweroff
+					/usr/local/bin/mupibox/./shutdown.sh
 				fi
 			fi
 		fi
