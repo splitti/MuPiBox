@@ -16,20 +16,17 @@ BAT_CONNECTED=$(jq -r '.BatteryConnected' ${JSON_FILE})
 if [ "${BAT_CONNECTED}" -eq 1 ]; then
 	while true; do
 		if [ -f ${JSON_FILE} ]; then
-			IBUS=$(jq -r '.IBus' ${JSON_FILE})
-			VBUS=$(jq -r '.VBus' ${JSON_FILE})
+			VBUS=$(jq -r '.Vbus' ${JSON_FILE})
             if [ "$VBUS" -le 1000 ]; then
-				if [ "$IBUS" -eq 0 ]; then
-					STATE=$(jq -r '.Bat_Stat' ${JSON_FILE})
-					if [ "${STATE}" = "LOW" ]; then
-						play_sound
-						echo "Battery state low"
-					elif [ "${STATE}" = "SHUTDOWN" ]; then
-						/usr/local/bin/mupibox/mupi_shutdown.sh ${BATTERY_LOW}
-						echo "Battery state to low - shutdown initiated"
-						service mupi_powerled stop 
-						poweroff
-					fi
+				STATE=$(jq -r '.Bat_Stat' ${JSON_FILE})
+				if [ "${STATE}" = "LOW" ]; then
+					play_sound
+					echo "Battery state low"
+				elif [ "${STATE}" = "SHUTDOWN" ]; then
+					/usr/local/bin/mupibox/mupi_shutdown.sh ${BATTERY_LOW}
+					echo "Battery state to low - shutdown initiated"
+					service mupi_powerled stop 
+					poweroff
 				fi
 			fi
 		fi
