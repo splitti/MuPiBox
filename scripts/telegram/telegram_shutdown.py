@@ -18,4 +18,5 @@ if config['mupihat']['hat_active']:
     with open("/tmp/mupihat.json") as file:
         mupihat = json.load(file)
 
-    bot.sendMessage(chat_id, 'The MupiBox battery is at '+mupihat['Bat_SOC'])
+    if mupihat['BatteryConnected']:
+        bot.sendMessage(chat_id, 'The MupiBox battery is at '+mupihat['Bat_SOC'])
