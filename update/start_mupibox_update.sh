@@ -346,7 +346,7 @@ echo "==========================================================================
 	#cp ${MUPI_SRC}/media/sound/shutdown.wav /home/dietpiMuPiBox/sysmedia/sound/shutdown.wav >&3 2>&3
 	#cp ${MUPI_SRC}/media/sound/startup.wav /home/dietpiMuPiBox/sysmedia/sound/startup.wav >&3 2>&3
 	cp ${MUPI_SRC}/media/sound/button_shutdown.wav /home/dietpi/MuPiBox/sysmedia/sound/button_shutdown.wav >&3 2>&3
-	cp ${MUPI_SRC}/media/sound/low.mp3 /home/dietpiMuPiBox/sysmedia/sound/low.mp3 >&3 2>&3
+	cp ${MUPI_SRC}/media/sound/low.wav /home/dietpiMuPiBox/sysmedia/sound/low.wav >&3 2>&3
 	cp ${MUPI_SRC}/media/images/installation.jpg /home/dietpiMuPiBox/sysmedia/images/installation.jpg >&3 2>&3
 	cp ${MUPI_SRC}/media/images/battery_low.jpg /home/dietpi/MuPiBox/sysmedia/images/battery_low.jpg >&3 2>&3
 

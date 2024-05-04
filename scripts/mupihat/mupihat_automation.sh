@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SOUND_FILE="/home/dietpi/MuPiBox/sysmedia/sound/low.mp3"
+SOUND_FILE="/home/dietpi/MuPiBox/sysmedia/sound/low.wav"
 JSON_FILE="/tmp/mupihat.json"
 BATTERY_LOW="/home/dietpi/MuPiBox/sysmedia/images/battery_low.jpg"
 CONFIG="/etc/mupibox/mupiboxconfig.json"
@@ -10,14 +10,15 @@ play_sound() {
 }
 
 echo $! > /run/mupi_hat_control.pid
+sleep 30
 
 BAT_CONNECTED=$(jq -r '.BatteryConnected' ${JSON_FILE})
 
 if [ "${BAT_CONNECTED}" -eq 1 ]; then
 	while true; do
 		if [ -f ${JSON_FILE} ]; then
-			IBUS=$(jq -r '.IBus' ${JSON_FILE})
-			if [ "$IBUS" -eq 0 ]; then
+			VBUS=$(jq -r '.Vbus' ${JSON_FILE})
+            if [ "$VBUS" -le 1000 ]; then
 				STATE=$(jq -r '.Bat_Stat' ${JSON_FILE})
 				if [ "${STATE}" = "LOW" ]; then
 					play_sound
@@ -25,8 +26,7 @@ if [ "${BAT_CONNECTED}" -eq 1 ]; then
 				elif [ "${STATE}" = "SHUTDOWN" ]; then
 					/usr/local/bin/mupibox/mupi_shutdown.sh ${BATTERY_LOW}
 					echo "Battery state to low - shutdown initiated"
-					service mupi_powerled stop 
-					poweroff
+					/usr/local/bin/mupibox/./shutdown.sh
 				fi
 			fi
 		fi
