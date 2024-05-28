@@ -367,6 +367,20 @@
 			}
 		],
 		"selected_battery": "USB-C mode",
+		"current_limit": [
+            {
+                "name": "safe",
+                "IINDMP": "1790"
+            },
+            {
+                "name": "medium",
+                "IINDMP": "2200"
+            },
+            {
+                "name": "high",
+                "IINDMP": "2700"
+            }
+        ],
 		"hat_active": false
 	},
 	"fan": {
