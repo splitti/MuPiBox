@@ -207,7 +207,7 @@
 	<h2>Custom battery</h2>
 	<p>Configure your own battery...</p>
 	<div>
-		<label class="description" for="battery">v_100 in mA (100% battery)</label>
+		<label class="description" for="battery">v_100 in mV (100% battery)</label>
 				<input id="v_100" name="v_100" class="element text medium" type="text" maxlength="4" value="<?php
 				// Den Namen der gesuchten Konfiguration
 				$desired_config_name = 'Custom';
@@ -225,37 +225,37 @@
 	?>"/>
 		</div>
 	<div>
-		<label class="description" for="battery">v_75 in mA (75% battery)</label>
+		<label class="description" for="battery">v_75 in mV (75% battery)</label>
 				<input id="v_75" name="v_75" class="element text medium" type="text" maxlength="4" value="<?php
 				print $desired_config["v_75"];
 	?>"/>
 		</div>
 	<div>
-		<label class="description" for="battery">v_50 in mA (50% battery)</label>
+		<label class="description" for="battery">v_50 in mV (50% battery)</label>
 				<input id="v_50" name="v_50" class="element text medium" type="text" maxlength="4" value="<?php
 				print $desired_config["v_50"];
 	?>"/>
 		</div>
 	<div>
-		<label class="description" for="battery">v_25 in mA (25% battery)</label>
+		<label class="description" for="battery">v_25 in mV (25% battery)</label>
 				<input id="v_25" name="v_25" class="element text medium" type="text" maxlength="4" value="<?php
 				print $desired_config["v_25"];
 	?>"/>
 		</div>
 	<div>
-		<label class="description" for="battery">v_0 in mA (100% battery)</label>
+		<label class="description" for="battery">v_0 in mV (100% battery)</label>
 				<input id="v_0" name="v_0" class="element text medium" type="text" maxlength="4" value="<?php
 				print $desired_config["v_0"];
 	?>"/>
 		</div>
 	<div>
-		<label class="description" for="battery">th_warning in mA (warning level)</label>
+		<label class="description" for="battery">th_warning in mV (warning level)</label>
 				<input id="th_warning" name="th_warning" class="element text medium" type="text" maxlength="4" value="<?php
 				print $desired_config["th_warning"];
 	?>"/>
 		</div>
 	<div>
-		<label class="description" for="battery">th_shutdown in mA (shutdown level)</label>
+		<label class="description" for="battery">th_shutdown in mV (shutdown level)</label>
 				<input id="th_shutdown" name="th_shutdown" class="element text medium" type="text" maxlength="4" value="<?php
 				print $desired_config["th_shutdown"];
 	?>"/>
