@@ -22,7 +22,7 @@ while true; do
   else
     MONITOR=$(sudo -H -u dietpi bash -c "DISPLAY=:0 xset q | grep 'Monitor'")
     MONITOR=$(echo ${MONITOR} | awk '{print $3}')
-    if [${MONITOR} != ${lastState}] && [ ${MONITOR} != "" ]; then
+    if [ ${MONITOR} != ${lastState} ] && [ ${MONITOR} != "" ]; then
       /usr/bin/cat <<<$(/usr/bin/jq --arg v "${MONITOR}" '.monitor = $v' ${MONITOR_FILE}) >${MONITOR_FILE}
     fi
     lastState=${MONITOR}
