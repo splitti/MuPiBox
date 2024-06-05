@@ -5,6 +5,8 @@
 MONITOR_FILE="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/monitor.json"
 minimumsize=18
 
+lastState="On"
+
 while true; do
   actualsize=$(wc -c <"${MONITOR_FILE}")
 
@@ -20,10 +22,11 @@ while true; do
   else
     MONITOR=$(sudo -H -u dietpi bash -c "DISPLAY=:0 xset q | grep 'Monitor'")
     MONITOR=$(echo ${MONITOR} | awk '{print $3}')
-    if [ ${MONITOR} != "" ]; then
+    if [${MONITOR} != ${lastState}] && [ ${MONITOR} != "" ]; then
       /usr/bin/cat <<<$(/usr/bin/jq --arg v "${MONITOR}" '.monitor = $v' ${MONITOR_FILE}) >${MONITOR_FILE}
     fi
+    lastState=${MONITOR}
   fi
 
-  sleep 30
+  sleep 1
 done
