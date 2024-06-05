@@ -13,17 +13,18 @@ touch ${LOG}
 echo "$(date +'%d/%m/%Y %H:%M:%S')  # SERVICE STARTED" >> ${LOG}
 
 max_idle_time=$(/usr/bin/jq -r .timeout.idlePiShutdown ${CONFIG})
+sleep_sec=60
 
 while true
 do
-  sleep 60
+  sleep ${sleep_sec}
   if (( $max_idle_time > 0 ))
   then
     if [[ $(head -n1 ${PLAYERSTATE}) != "play" ]]
     then
 		((current_idle_time++))
-		idle=${current_idle_time}
-		if ((${idle} >= ${max_idle_time}))
+		idle_min=$(( current_idle_time * 60 / ${sleep_sec} ))
+		if ((${idle_min} >= ${max_idle_time}))
 		then
       TELEGRAM=$(/usr/bin/jq -r .telegram.active ${CONFIG})
       TELEGRAM_CHATID=$(/usr/bin/jq -r .telegram.chatId ${CONFIG})
@@ -31,7 +32,7 @@ do
       if [ "${TELEGRAM}" ] && [ ${#TELEGRAM_CHATID} -ge 1 ] && [ ${#TELEGRAM_TOKEN} -ge 1 ]; then
       	/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "MuPiBox is to long idle"
       fi
-      echo "$(date +'%d/%m/%Y %H:%M:%S')  # CURRENT IDLE TIME = ${idle}" >> ${LOG}
+      echo "$(date +'%d/%m/%Y %H:%M:%S')  # CURRENT IDLE TIME = ${idle_min}" >> ${LOG}
 			echo "$(date +'%d/%m/%Y %H:%M:%S')  # MAX IDLE TIME REACHED - SHUTDOWN NOW" >> ${LOG}
 			sudo /usr/local/bin/mupibox/./shutdown.sh
 		  fi
@@ -42,5 +43,5 @@ do
   else
 		current_idle_time=0
   fi
-  echo "$(date +'%d/%m/%Y %H:%M:%S')  # CURRENT IDLE TIME = ${idle}" >> ${LOG}
+  echo "$(date +'%d/%m/%Y %H:%M:%S')  # CURRENT IDLE TIME = ${idle_min}" >> ${LOG}
 done
