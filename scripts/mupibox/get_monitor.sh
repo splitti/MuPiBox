@@ -24,8 +24,8 @@ while true; do
     MONITOR=$(echo ${MONITOR} | awk '{print $3}')
     if [ ${MONITOR} != ${lastState} ] && [ ${MONITOR} != "" ]; then
       /usr/bin/cat <<<$(/usr/bin/jq --arg v "${MONITOR}" '.monitor = $v' ${MONITOR_FILE}) >${MONITOR_FILE}
+      lastState=${MONITOR}
     fi
-    lastState=${MONITOR}
   fi
 
   sleep 1

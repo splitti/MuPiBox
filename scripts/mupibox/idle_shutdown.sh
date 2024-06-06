@@ -23,7 +23,7 @@ do
     if [[ $(head -n1 ${PLAYERSTATE}) != "play" ]]
     then
 		((current_idle_time++))
-		idle_min=$(( current_idle_time * 60 / ${sleep_sec} ))
+		idle_min=$(( current_idle_time * ${sleep_sec} / 60 ))
 		if ((${idle_min} >= ${max_idle_time}))
 		then
       TELEGRAM=$(/usr/bin/jq -r .telegram.active ${CONFIG})
