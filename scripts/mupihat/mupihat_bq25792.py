@@ -1349,10 +1349,19 @@ class bq25792:
         finally:
             pass
 
+    def watchdog(self):
+            #Watchdog
+            reg = self.REG10_Charger_Control_1
+            #reg.WATCHDOG = 0 #disable watchdog
+            reg.WD_RST = 1 #reset watchdog
+            self.write_register(reg)
+
     def write_defaults(self):
             #Watchdog
             reg = self.REG10_Charger_Control_1
-            reg.WATCHDOG = 0 #disable watchdog
+            #reg.WATCHDOG = 0 #disable watchdog
+            reg.WD_RST = 1 #reset watchdog
+            reg.WATCHDOG = 7 #160s watchdog
             self.write_register(reg)
             # Thermal Regulation Threshold - a bit more conservative
             reg = self.REG16_Temperature_Control
@@ -1375,8 +1384,11 @@ class bq25792:
             reg.EN_IBAT = 1 # Enable the IBAT discharge current sensing for ADC
             self.write_register(reg)
             
-            self.enable_extilim()
-            #self.disable_extilim()
+            #self.enable_extilim()
+            self.disable_extilim()
+            self.set_input_current_limit(2200) # todo this value to be taken from json
+
+
             return
 
     def MuPiHAT_Default(self):
@@ -1550,7 +1562,7 @@ class bq25792:
 
     def set_input_current_limit(self, input_current_limit):
         '''
-        set ILIM in steps of 10mA (eg. 200 for 2000mA)
+        set ILIM
         '''
         try:
             reg = self.REG06_Input_Current_Limit
