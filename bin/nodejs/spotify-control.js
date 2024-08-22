@@ -685,7 +685,7 @@ function deleteLocal(deleteFile){
 }
 
 function cmdCall(cmd){
-  log.debug(nowDate.toLocaleString() + ": " + cmd);
+  log.debug(nowDate.toLocaleString() + ": [Spotify Control]Cmd  " + cmd);
   return new Promise(function (resolve, reject){
     childProcess.exec(cmd, function(error, standardOutput, standardError) {
       if (error) {
