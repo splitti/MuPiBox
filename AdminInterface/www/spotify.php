@@ -83,11 +83,6 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 	<div class="description">
 		<h2>Spotify settings</h2>
 		<p>Define login- and common-settings.</p>
-		<p>To link the MuPiBox to your Spotify account, you need to be on the same Wi-Fi network as the MuPiBox with your smartphone that has the Spotify app installed.</p>
-		<p>The MuPiBox must be switched on. On the smartphone, select the MuPiBox that appears in the Spotify app as the playback device and play something.</p>
-		<p>Then restart the MuPiBox once.</p>
-		<p>Then carry out the following steps 1 to 3.</p>
-		<p>After steps 2 and 3, the MuPiBox should ideally be restarted once in case of problems.</p>
 	</div>
 
 
