@@ -59,22 +59,22 @@ if [ "$ip_control_backend" = false ] ; then
 fi
 /usr/bin/cat <<< $(/usr/bin/jq --arg v "5005" '.["node-sonos-http-api"].port = $v' ${SONOS_CONFIG}) >  ${SONOS_CONFIG}
 
-cachepath=$(/usr/bin/jq -r .spotify.cachepath ${MUPIBOX_CONFIG})
-/usr/bin/sed -i 's@.*cache_path.*@  cache_path = "'${cachepath}'"@g' ${SPOTIFYD_CONFIG}
-maxcachesize=$(/usr/bin/jq -r .spotify.maxcachesize ${MUPIBOX_CONFIG})
-/usr/bin/sed -i 's/.*cache_size.*/  cache_size = '$((maxcachesize*1024*1024*1024))'/g' ${SPOTIFYD_CONFIG}
-cachestate=$(/usr/bin/jq -r .spotify.cachestate ${MUPIBOX_CONFIG})
-#/usr/bin/sed -i 's/.*no_audio_cache.*/  no_audio_cache = '${cachestate}'/g' ${SPOTIFYD_CONFIG}
-if $cachestate ; then
-        /usr/bin/sed -i 's/.*no_audio_cache.*/  no_audio_cache = false/g' ${SPOTIFYD_CONFIG}
-else
-        /usr/bin/sed -i 's/.*no_audio_cache.*/  no_audio_cache = true/g' ${SPOTIFYD_CONFIG}
-fi
+#cachepath=$(/usr/bin/jq -r .spotify.cachepath ${MUPIBOX_CONFIG})
+#/usr/bin/sed -i 's@.*cache_path.*@  cache_path = "'${cachepath}'"@g' ${SPOTIFYD_CONFIG}
+#maxcachesize=$(/usr/bin/jq -r .spotify.maxcachesize ${MUPIBOX_CONFIG})
+#/usr/bin/sed -i 's/.*cache_size.*/  cache_size = '$((maxcachesize*1024*1024*1024))'/g' ${SPOTIFYD_CONFIG}
+#cachestate=$(/usr/bin/jq -r .spotify.cachestate ${MUPIBOX_CONFIG})
+##/usr/bin/sed -i 's/.*no_audio_cache.*/  no_audio_cache = '${cachestate}'/g' ${SPOTIFYD_CONFIG}
+#if $cachestate ; then
+#        /usr/bin/sed -i 's/.*no_audio_cache.*/  no_audio_cache = false/g' ${SPOTIFYD_CONFIG}
+#else
+#        /usr/bin/sed -i 's/.*no_audio_cache.*/  no_audio_cache = true/g' ${SPOTIFYD_CONFIG}
+#fi
 
-username=$(/usr/bin/jq -r .spotify.username ${MUPIBOX_CONFIG})
-/usr/bin/sed -i 's/.*username.*/  username = '\"${username}\"'/g' ${SPOTIFYD_CONFIG}
-password=$(/usr/bin/jq -r .spotify.password ${MUPIBOX_CONFIG})
-/usr/bin/sed -i 's/.*password.*/  password = '\"${password}\"'/g' ${SPOTIFYD_CONFIG}
+#username=$(/usr/bin/jq -r .spotify.username ${MUPIBOX_CONFIG})
+#/usr/bin/sed -i 's/.*username.*/  username = '\"${username}\"'/g' ${SPOTIFYD_CONFIG}
+#password=$(/usr/bin/jq -r .spotify.password ${MUPIBOX_CONFIG})
+#/usr/bin/sed -i 's/.*password.*/  password = '\"${password}\"'/g' ${SPOTIFYD_CONFIG}
 hostname=$(/usr/bin/jq -r .mupibox.host ${MUPIBOX_CONFIG})
 /usr/bin/sed -i 's/.*device_name.*/  device_name = '\"${hostname}\"'/g' ${SPOTIFYD_CONFIG}
 

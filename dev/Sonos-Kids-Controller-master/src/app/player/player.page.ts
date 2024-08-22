@@ -382,12 +382,12 @@ export class PlayerPage implements OnInit {
       if (this.playing) {
         //this.playing = false;
         this.playerService.sendCmd(PlayerCmds.PAUSE);
+        if(this.media.type === 'spotify' || this.media.type === 'library' || this.media.type === 'rss'){
+          this.saveResumeFiles();
+        }
       } else {
         //this.playing = true;
         this.playerService.sendCmd(PlayerCmds.PLAY);
-      }
-      if(this.media.type === 'spotify' || this.media.type === 'library' || this.media.type === 'rss'){
-        this.saveResumeFiles();
       }
     }
   }
