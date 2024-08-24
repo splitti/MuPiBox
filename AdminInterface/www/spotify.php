@@ -48,6 +48,7 @@ if ($_POST['saveIDs']) {
 	$CHANGE_TXT = $CHANGE_TXT . "<li>Client-Data saved</li>";
 	$change = 1;
 }
+
 if ($_POST['resetData']) {
 	$command = "sudo rm /home/dietpi/.cache/spotifyd/credentials.json";
 	exec($command, $devIDoutput, $result);
@@ -58,6 +59,12 @@ if ($_POST['resetData']) {
 	$data["spotify"]["clientSecret"] = "";
 	$CHANGE_TXT = $CHANGE_TXT . "<li>All Spotify Data resettet!</li>";
 	$change = 1;
+}
+
+if ($_POST['spotifyServiceRestart']) {
+	$command = "sudo /usr/local/bin/mupibox/./spotify_restart.sh";
+	exec($command, $devIDoutput, $result);
+	$CHANGE_TXT = $CHANGE_TXT . "<li>All Spotify Services are restartet</li>";
 }
 
 if ($_POST['generateDevID']) {
@@ -82,98 +89,15 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 <form class="appnitro" method="post" action="spotify.php" id="form">
 	<div class="description">
 		<h2>Spotify settings</h2>
-		<p>Define login- and common-settings.</p>
-		<p>To link the MuPiBox to your Spotify account, you need to be on the same Wi-Fi network as the MuPiBox with your smartphone that has the Spotify app installed.</p>
-		<p>The MuPiBox must be switched on. On the smartphone, select the MuPiBox that appears in the Spotify app as the playback device and play something.</p>
-		<p>Then restart the MuPiBox once.</p>
-		<p>Then carry out the following steps 1 to 3.</p>
-		<p>After steps 2 and 3, the MuPiBox should ideally be restarted once in case of problems.</p>
+		<div class="note">
+		<h3>Important information for Spotify setup</h3>
+		<p>Carry out the following steps 1 to 4.</p>
+		<p>Restarting the Spotify services in step 3 is necessary.</p>
+		<p>To link the MuPiBox to your Spotify account (step 4), you need to be on the same Wi-Fi network as the MuPiBox with your Spotify app (Smartphone/PC).</p>
+		<p>The MuPiBox must be switched on. Select the MuPiBox that appears in the Spotify app as the playback device and play something.</p>
+		<p>Reload this page and try to switch the Device ID in step 4.</p>
+		</div>
 	</div>
-
-
-	<!--	<details>
-		<summary><i class="fa-regular fa-circle-check"></i> Common spotify settings</summary>
-		<ul>
-
-			<li id="li_1">
-				<h3>Spotify cache state</h3>
-				<p>If set to true, audio data will be cached. Enabling this option could improve speed for playing spotify media. Default: enabled</p>
-
-				<label class="labelchecked" for="spotifycache_active">Cache activation state:&nbsp; &nbsp; <input type="checkbox" id="spotifycache_active" name="spotifycache_active" <?php
-																																														if ($data["spotify"]["cachestate"]) {
-																																															print "checked";
-																																														}
-																																														?> /></label>
-
-			</li>
-
-			<li id="li_1">
-
-				<h3>Spotify cache path</h3>
-				<p>Default: /home/dietpi/.cache/spotifyd</p>
-				<input id="spotifycache_path" name="spotifycache_path" class="element text medium" type="text" maxlength="255" value="<?php
-																																		print $data["spotify"]["cachepath"];
-																																		?>" />
-			</li>
-
-			<li id="li_1">
-				<h3>Cache size</h3>
-				<p>Cache size in GB! Free space: <?php
-													$df = floor(disk_free_space("/") / 1024 / 1024 / 1024);
-													print $df;
-													?> GB</p>
-				<div>
-					<select id="cache_size" name="cache_size" class="element text medium">
-						<?php
-						$cache_size = array(1, 2, 4, 8, 16, 32, 64);
-						foreach ($cache_size as $size) {
-							if ($size == $data["spotify"]["maxcachesize"]) {
-								$selected = " selected=\"selected\"";
-							} else {
-								$selected = "";
-							}
-							print "<option value=\"" . $size . "\"" . $selected  . ">" . $size . " GB</option>";
-						}
-						?>
-					</select>
-				</div>
-			</li>
-			<li class="buttons"><input id="saveForm" class="button_text" type="submit" name="saveSettings" value="Save Settings" /></li>
-
-		</ul>
-	</details>-->
-
-	<!--<details>
-		<summary><i class="fa-regular fa-circle-check"></i> STEP 1 - Login-Data</summary>
-		<ul>
-			<li id="li_1">
-
-				<h3>Spotify user and password</h3>
-				<p>Please enter Spotify Username and Password. Please notice, spotify premium or family is required!</p>
-			</li>
-
-			<li id="li_1">
-				<label class="description" for="spotify_user">Spotify Username</label>
-				<div>
-					<input id="spotify_user" name="spotify_user" class="element text medium" type="text" maxlength="255" value="<?php
-																																print $data["spotify"]["username"];
-																																?>" />
-				</div>
-				<p class="guidelines" id="guide_1"><small>Please enter your Spotify Username.</small></p>
-			</li>
-			<li id="li_1">
-				<label class="description" for="spotify_pwd">Spotify Password </label>
-				<div>
-					<input id="spotify_pwd" name="spotify_pwd" class="element text medium" type="password" maxlength="255" value="<?php
-																																	print $data["spotify"]["password"];
-																																	?>" />
-				</div>
-				<p class="guidelines" id="guide_1"><small>Please enter your Spotify Password. The Password will be saved as plain text.</small></p>
-			</li>
-			<li class="buttons"><input id="saveForm" class="button_text" type="submit" name="saveLogin" value="Save Login Data" /></li>
-
-		</ul>
-	</details> -->
 
 	<details>
 		<summary><i class="fa-regular fa-circle-check"></i> STEP 1 - Developer Client-Connection</summary>
@@ -217,7 +141,6 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 			<li id="li_1">
 
 				<h3>Create Developer-App and Client-Connection</h3>
-				<p>Notice: After step 2, a reboot is required!</p>
 				<p>Please press the following URL to generate Access and Refresh Token. A login may be necessary.</p>
 				<p><b>
 						<?php
@@ -247,13 +170,27 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 	</details>
 
 	<details>
-		<summary><i class="fa-regular fa-circle-check"></i> STEP 3 - Device-ID</summary>
+		<summary><i class="fa-regular fa-circle-check"></i> STEP 3 - Restart services</summary>
+		<ul>
+			<li id="li_1">
+				<h3>Restart services</h3>
+				<p>A restart of the Spotify services are necessary to proceed to step 4.</p>
+				<p>Click this Button, to restart all spotify services!</p>
+			</li>
+			<li class="buttons">
+				<input id="saveForm" class="button_text" type="submit" name="spotifyServiceRestart" value="Restart spotify services" onclick="return confirm('Do really want to restart the spotify services?');" />
+			</li>
+		</ul>
+	</details>
+
+
+	<details>
+		<summary><i class="fa-regular fa-circle-check"></i> STEP 4 - Device-ID</summary>
 		<ul>
 			<li id="li_1">
 
 				<h3>Set Device-ID</h3>
-				<p>Notice: After step 3, a reboot is required!</p>
-				<p>In this last step, you choose your Device... It is necessary to play music on the MuPiBox via app (for example in browser window of your pc) to generate the device ID!</p>
+				<p>In this last step, you choose your Device... It is necessary to play music on the MuPiBox via app (for example in browser window of your pc or by smartphone) to generate the device ID! Reload this page and choose the playback device.</p>
 			</li>
 			<li id="li_1">
 				<label class="description" for="spotify_deviceid">Select Spotify Device ID </label>
@@ -295,6 +232,59 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 			</li>
 		</ul>
 	</details>
+
+	<details>
+		<summary><i class="fa-regular fa-circle-check"></i> Common spotify settings</summary>
+		<ul>
+
+			<li id="li_1">
+				<h3>Spotify cache state</h3>
+				<p>If set to true, audio data will be cached. Enabling this option could improve speed for playing spotify media. Default: enabled</p>
+				<p>This option must be enabled to use spotify since version 4.1.0</p>
+
+				<label class="labelchecked" for="spotifycache_active">Cache activation state:&nbsp; &nbsp; <input type="checkbox"  id="spotifycache_active" name="spotifycache_active" onclick="return false" <?php
+					if ($data["spotify"]["cachestate"]) {
+						print "checked";
+						}
+					?> readonly /></label>
+			</li>
+
+			<li id="li_1">
+
+				<h3>Spotify cache path</h3>
+				<p>Default: /home/dietpi/.cache/spotifyd</p>
+				<input id="spotifycache_path" name="spotifycache_path" class="element text medium" type="text" maxlength="255" value="<?php
+																																		print $data["spotify"]["cachepath"];
+																																		?>" />
+			</li>
+
+			<li id="li_1">
+				<h3>Cache size</h3>
+				<p>Cache size in GB! Free space: <?php
+													$df = floor(disk_free_space("/") / 1024 / 1024 / 1024);
+													print $df;
+													?> GB</p>
+				<div>
+					<select id="cache_size" name="cache_size" class="element text medium">
+						<?php
+						$cache_size = array(1, 2, 4, 8, 16, 32, 64);
+						foreach ($cache_size as $size) {
+							if ($size == $data["spotify"]["maxcachesize"]) {
+								$selected = " selected=\"selected\"";
+							} else {
+								$selected = "";
+							}
+							print "<option value=\"" . $size . "\"" . $selected  . ">" . $size . " GB</option>";
+						}
+						?>
+					</select>
+				</div>
+			</li>
+			<li class="buttons"><input id="saveForm" class="button_text" type="submit" name="saveSettings" value="Save Settings" /></li>
+
+		</ul>
+	</details>
+
 
 	<details>
 		<summary><i class="fa-solid fa-eraser"></i> Reset Spotify-Connection</summary>

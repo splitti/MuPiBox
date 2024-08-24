@@ -287,7 +287,7 @@ echo "==========================================================================
 	mv ${MUPI_SRC}/scripts/bluetooth/* /usr/local/bin/mupibox/ >&3 2>&3
 	mv ${MUPI_SRC}/scripts/wled/* /usr/local/bin/mupibox/ >&3 2>&3
 	mv ${MUPI_SRC}/scripts/telegram/* /usr/local/bin/mupibox/ >&3 2>&3
-	mv ${MUPI_SRC}/config/templates/www.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >&3 2>&3
+	#mv ${MUPI_SRC}/config/templates/www.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >&3 2>&3
 	mv ${MUPI_SRC}/config/templates/.bashrc /home/dietpi/.bashrc >&3 2>&3
 	mv ${MUPI_SRC}/scripts/mupihat/* /usr/local/bin/mupibox/ >&3 2>&3
 	mv ${MUPI_SRC}/scripts/fan/* /usr/local/bin/mupibox/ >&3 2>&3
@@ -321,7 +321,6 @@ echo "==========================================================================
 	else
 		mv ${MUPI_SRC}/bin/spotifyd/0.3.5/spotifyd_64bit /usr/bin/spotifyd >&3 2>&3
 		mv ${MUPI_SRC}/bin/fbv/fbv_64 /usr/bin/fbv >&3 2>&3
-
 	fi
 	chmod 755 /usr/bin/fbv /usr/bin/spotifyd >&3 2>&3
 	mv ${MUPI_SRC}/config/templates/spotifyd.conf /etc/spotifyd/spotifyd.conf >&3 2>&3
