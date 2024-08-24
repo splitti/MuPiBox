@@ -1,3 +1,8 @@
+<h3>Spotify connection problems</h3>
+<p>With Spotify's API change, MuPiBox version 4.0.4 no longer works with Spotify...</p>
+<p>The good news is that we have already adapted the login process in the new version 4.1.0. However, to do this it is necessary to reset the Spotify data in the MuPiBox admin interface and re-enter it. If you have any questions, we are happy to help in Discord.</p>
+
+
 <h3>OS-Support</h3>
 We will focus on <b>bookworm</b> and recommend you to update, or reinstall. See also this dietpi-article: <a href=https://dietpi.com/blog/?p=3128>https://dietpi.com/blog/?p=3128</a>
 
