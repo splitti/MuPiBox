@@ -8,7 +8,7 @@ $SCOPELIST = "streaming user-read-currently-playing user-modify-playback-state u
 $SCOPE = urlencode($SCOPELIST);
 
 
-if ($_POST['saveSettings']) {
+if ( $_POST['saveSettings']) {
 	if ($_POST['spotifycache_active'] == "on") {
 		$data["spotify"]["cachestate"] = true;
 	} else {
@@ -20,14 +20,36 @@ if ($_POST['saveSettings']) {
 	$change = 1;
 }
 
+if ( $_POST['spotifyget'] ) {
+	$CHANGE_TXT = $CHANGE_TXT . "<li>Token-Data generated and saved</li>";
+	$change = 1;
+}
+
 if ($_GET['code']) {
 	$command = "curl -d client_id=" . $data["spotify"]["clientId"] . " -d client_secret=" . $data["spotify"]["clientSecret"] . " -d grant_type=authorization_code -d code=" . $_GET['code'] . " -d redirect_uri=" . $REDIRECT_URI . " https://accounts.spotify.com/api/token";
 	exec($command, $Tokenoutput, $result);
 	$tokendata = json_decode($Tokenoutput[0], true);
 	$data["spotify"]["accessToken"] = $tokendata["access_token"];
 	$data["spotify"]["refreshToken"] = $tokendata["refresh_token"];
-	$CHANGE_TXT = $CHANGE_TXT . "<li>Token-Data generated and saved</li>";
-	$change = 1;
+	$json_object = json_encode($data);
+	$save_rc = file_put_contents('/tmp/.mupiboxconfig.json', $json_object);
+	exec("sudo mv /tmp/.mupiboxconfig.json /etc/mupibox/mupiboxconfig.json");
+?>
+<form class="appnitro" method="post" action="spotify.php" id="form">
+<div class="description">
+<h2>Please wait... Data will be saved, page will reload automatically!!!</h2>
+</div><p></p>
+<input id="spotifyget" name="spotifyget" class="element readonly large" type="hidden" maxlength="255" value="saving" />
+</form>
+<p></p>
+<?php
+	include('includes/footer.php');
+?>
+<script type="text/javascript">
+    document.getElementById('form').submit();
+</script>
+<?php
+	exit();
 }
 
 if ($_POST['setDevID']) {
