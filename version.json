@@ -140,6 +140,11 @@
 			"version": "4.1.3",
 			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/4.1.3.zip",
 			"releaseinfo": "Fixed Spotify connection problems..."
+			},
+			{
+			"version": "4.1.4",
+			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/4.1.4.zip",
+			"releaseinfo": "Fixed Spotify connection problems..."
 			}
 		]
 	}
