@@ -52,6 +52,8 @@ if ($_POST['saveIDs']) {
 if ($_POST['resetData']) {
 	$command = "sudo rm /home/dietpi/.cache/spotifyd/credentials.json";
 	exec($command, $devIDoutput, $result);
+	$data["spotify"]["username"] = "";
+	$data["spotify"]["password"] = "";
 	$data["spotify"]["deviceId"] = "";
 	$data["spotify"]["accessToken"] = "";
 	$data["spotify"]["refreshToken"] = "";
@@ -59,12 +61,6 @@ if ($_POST['resetData']) {
 	$data["spotify"]["clientSecret"] = "";
 	$CHANGE_TXT = $CHANGE_TXT . "<li>All Spotify Data resettet!</li>";
 	$change = 1;
-}
-
-if ($_POST['spotifyServiceRestart']) {
-	$command = "sudo /usr/local/bin/mupibox/./spotify_restart.sh";
-	exec($command, $devIDoutput, $result);
-	$CHANGE_TXT = $CHANGE_TXT . "<li>All Spotify Services are restartet</li>";
 }
 
 if ($_POST['generateDevID']) {
@@ -78,9 +74,9 @@ if ($_POST['generateDevID']) {
 
 if ($change) {
 	$json_object = json_encode($data);
-	$save_rc = file_put_contents('/etc/mupibox/mupiboxconfig.json', $json_object);
-	$command = "sudo /usr/local/bin/mupibox/./setting_update.sh && /usr/local/bin/mupibox/./spotify_restart.sh";
-	exec($command, $output, $result);
+	$save_rc = file_put_contents('/tmp/.mupiboxconfig.json', $json_object);
+	exec("sudo mv /tmp/.mupiboxconfig.json /etc/mupibox/mupiboxconfig.json");
+	exec("sudo /usr/local/bin/mupibox/./setting_update.sh");
 }
 
 $CHANGE_TXT = $CHANGE_TXT . "</ul>";
@@ -91,11 +87,10 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 		<h2>Spotify settings</h2>
 		<div class="note">
 		<h3>Important information for Spotify setup</h3>
-		<p>Carry out the following steps 1 to 4.</p>
-		<p>Restarting the Spotify services in step 3 is necessary.</p>
-		<p>To link the MuPiBox to your Spotify account (step 4), you need to be on the same Wi-Fi network as the MuPiBox with your Spotify app (Smartphone/PC).</p>
+		<p>Carry out the following steps 1 to 3.</p>
+		<p>To link the MuPiBox to your Spotify account (step 3), you need to be on the same Wi-Fi network as the MuPiBox with your Spotify app (Smartphone/PC).</p>
 		<p>The MuPiBox must be switched on. Select the MuPiBox that appears in the Spotify app as the playback device and play something.</p>
-		<p>Reload this page and try to switch the Device ID in step 4.</p>
+		<p>Reload this page and try to switch the Device ID in step 3.</p>
 		</div>
 	</div>
 
@@ -170,22 +165,7 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 	</details>
 
 	<details>
-		<summary><i class="fa-regular fa-circle-check"></i> STEP 3 - Restart services</summary>
-		<ul>
-			<li id="li_1">
-				<h3>Restart services</h3>
-				<p>A restart of the Spotify services are necessary to proceed to step 4.</p>
-				<p>Click this Button, to restart all spotify services!</p>
-			</li>
-			<li class="buttons">
-				<input id="saveForm" class="button_text" type="submit" name="spotifyServiceRestart" value="Restart spotify services" onclick="return confirm('Do really want to restart the spotify services?');" />
-			</li>
-		</ul>
-	</details>
-
-
-	<details>
-		<summary><i class="fa-regular fa-circle-check"></i> STEP 4 - Device-ID</summary>
+		<summary><i class="fa-regular fa-circle-check"></i> STEP 3 - Device-ID</summary>
 		<ul>
 			<li id="li_1">
 
