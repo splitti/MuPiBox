@@ -21,7 +21,7 @@ if ( $_POST['saveSettings']) {
 }
 
 if ( $_POST['spotifyget'] ) {
-	$CHANGE_TXT = $CHANGE_TXT . "<li>Token-Data generated and saved</li>";
+	$CHANGE_TXT = $CHANGE_TXT . "<li>Token-Data generated, saved & Services restartet</li>";
 	$change = 1;
 }
 
@@ -34,6 +34,9 @@ if ($_GET['code']) {
 	$json_object = json_encode($data);
 	$save_rc = file_put_contents('/tmp/.mupiboxconfig.json', $json_object);
 	exec("sudo mv /tmp/.mupiboxconfig.json /etc/mupibox/mupiboxconfig.json");
+	exec("sudo /usr/local/bin/mupibox/./setting_update.sh");
+	exec("sudo /usr/local/bin/mupibox/./spotify_restart.sh");
+
 ?>
 <form class="appnitro" method="post" action="spotify.php" id="form">
 <div class="description">
@@ -54,8 +57,8 @@ if ($_GET['code']) {
 
 if ($_POST['setDevID']) {
 	$data["spotify"]["deviceId"] = $_POST['spotdevice'];
-	$CHANGE_TXT = $CHANGE_TXT . "<li>Spotify Device-ID saved</li>";
-	$change = 1;
+	$CHANGE_TXT = $CHANGE_TXT . "<li>Spotify Device-ID saved & Services restartet</li>";
+	$change = 2;
 }
 
 if ($_POST['saveLogin']) {
@@ -81,8 +84,8 @@ if ($_POST['resetData']) {
 	$data["spotify"]["refreshToken"] = "";
 	$data["spotify"]["clientId"] = "";
 	$data["spotify"]["clientSecret"] = "";
-	$CHANGE_TXT = $CHANGE_TXT . "<li>All Spotify Data resettet!</li>";
-	$change = 1;
+	$CHANGE_TXT = $CHANGE_TXT . "<li>All Spotify Data deleted & Services restartet!</li>";
+	$change = 2;
 }
 
 if ($_POST['generateDevID']) {
@@ -99,6 +102,9 @@ if ($change) {
 	$save_rc = file_put_contents('/tmp/.mupiboxconfig.json', $json_object);
 	exec("sudo mv /tmp/.mupiboxconfig.json /etc/mupibox/mupiboxconfig.json");
 	exec("sudo /usr/local/bin/mupibox/./setting_update.sh");
+}
+
+if ($change == 2) {
 	exec("sudo /usr/local/bin/mupibox/./spotify_restart.sh");
 }
 
