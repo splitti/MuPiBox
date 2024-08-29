@@ -1,0 +1,14 @@
+# Steps
+- Go to `dev/Sonos-Kids-Controller-master`
+- Run `npm install`, `npm ionic`
+- Setup config:
+```
+    {
+    "spotify":
+    {
+        "clientId": "",
+        "clientSecret": ""
+    }
+}
+```
+- Run `npm start`
