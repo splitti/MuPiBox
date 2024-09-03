@@ -37,3 +37,4 @@ Please visit official website  https://mupibox.de/anleitungen/installationsanlei
 - Shutdown-Sound by Leszek_Szary (https://freesound.org/people/Leszek_Szary/sounds/133283/)
 - WLED by Discord-User ronbal and ChatGPT
   
+## Contributing

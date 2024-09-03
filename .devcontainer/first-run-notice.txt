@@ -1,3 +1,8 @@
+#TODO
+- Replace TSLint with ESLint, install devcontainer stuff for it
+- Enable all frontend tests
+- Install chrome
+
 # Steps
 - Go to `dev/Sonos-Kids-Controller-master`
 - Run `npm install`, `npm ionic`
