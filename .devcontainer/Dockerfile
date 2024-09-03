@@ -13,6 +13,12 @@ RUN apt-get update \
     && apt-get clean -y \
     && rm -rf /var/lib/apt/lists/*
 
+# Install chrome.
+RUN wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb \
+    && dpkg -i google-chrome-stable_current_amd64.deb \
+    && apt --fix-broken install \
+    && rm google-chrome-stable_current_amd64.deb
+
 # Show first run notice when starting codespaces.
 COPY first-run-notice.txt /tmp/scripts/
 RUN mkdir -p "/usr/local/etc/vscode-dev-containers/" \
