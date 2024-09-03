@@ -1,0 +1,59 @@
+name: Merge main changes into develop and toUpstream
+run-name: Merging main changes into develop and toUpstream
+on: workflow_dispatch
+jobs:
+  Sync-Upstream:
+    runs-on: ubuntu-latest
+    env:
+      DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+      UPSTREAM_BRANCH: toUpstream
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - name: Add upstream remote
+        run: git remote add upstream https://github.com/splitti/MuPiBox.git
+      - name: Gather all new tags from upstream
+        run: NEWTAGS=$(git fetch --tags --force upstream 2>&1 | awk '/\[new tag\]/ {print $4}')
+      - name: Reset existing tags to the ones from origin repository
+        run: git fetch --tags --force
+      - name: Set user name
+        run: git config --global user.name ${{ github.actor }}
+      - name: Merge tags into develop one by one
+        run: |
+          for tag in ${NEWTAGS[@]}
+          do
+            git merge --no-edit ${tag}
+
+            # modify version.json splitti -> friebi
+            sed --in-place s/splitti/friebi/g version.json
+
+            # commit it
+            git add version.json
+            git commit --message='v${tag}'
+            git tag --force ${tag}
+
+            # merge changes also into toUpstream
+            git checkout ${UPSTREAM_BRANCH}
+            if ! git merge --no-commit ${DEFAULT_BRANCH}; then :; fi
+            DELETED_FILES=$(git status | awk '/deleted by us/ {print $4}')
+            if [ ! -z "${DELETED_FILES}" ]; then git rm ${DELETED_FILES}; fi
+            git commit --no-edit
+
+            # revert splitti -> friebi change
+            git revert --no-edit $(git log --max-count=1 --no-merges --pretty=format:"%h")
+
+            git checkout ${DEFAULT_BRANCH}
+          done
+      - name: Merge remaining changes from main
+        run: git merge --no-edit origin/main
+      - name: Merge also to toUpstream
+        run: |
+          git checkout ${UPSTREAM_BRANCH}
+          if ! git merge --no-commit ${DEFAULT_BRANCH}; then :; fi
+          DELETED_FILES=$(git status | awk '/deleted by us/ {print $4}')
+          if [ ! -z "${DELETED_FILES}" ]; then git rm ${DELETED_FILES}; fi
+          git commit --no-edit
+      - name: Push everything
+        run: git push --all --force

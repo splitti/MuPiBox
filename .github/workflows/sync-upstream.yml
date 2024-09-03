@@ -1,0 +1,14 @@
+name: Sync upstream repository
+run-name: Syncing upstream repository
+on:
+  schedule:
+    # Runs every night at 3 am
+    - cron: '0 3 * * *'
+jobs:
+  Sync-Upstream:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Sync upstream
+        run: gh repo sync friebi/MuPiBox -b main
