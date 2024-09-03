@@ -9,6 +9,7 @@ RUN apt-get update \
         unzip \
         build-essential \
         curl \
+        wget \
     && apt-get autoremove -y \
     && apt-get clean -y \
     && rm -rf /var/lib/apt/lists/*
