@@ -7,7 +7,8 @@
         "ng": "ng",
         "start": "node server.js",
         "build": "ionic build --prod",
-        "deploy": "ionic build --prod"
+        "deploy": "ionic build --prod",
+        "test": "ng test"
     },
     "private": true,
     "dependencies": {
