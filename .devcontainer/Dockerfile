@@ -16,7 +16,7 @@ RUN apt-get update \
 
 # Install chrome.
 RUN wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb --no-check-certificate \
-    && apt-get install -y -f google-chrome-stable_current_amd64.deb \
+    && apt-get install -y ./google-chrome-stable_current_amd64.deb \
     && apt --fix-broken install \
     && rm -f google-chrome-stable_current_amd64.deb
 
