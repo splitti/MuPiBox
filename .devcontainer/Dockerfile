@@ -12,14 +12,11 @@ RUN apt-get update \
     && apt-get autoremove -y \
     && apt-get clean -y \
     && rm -rf /var/lib/apt/lists/*
-    
-# Allow docker-in-docker 
-VOLUME [ "/var/lib/docker" ]
 
 # Show first run notice when starting codespaces.
 COPY first-run-notice.txt /tmp/scripts/
 RUN mkdir -p "/usr/local/etc/vscode-dev-containers/" \
-    && mv -f /tmp/scripts/first-run-notice.txt /usr/local/etc/vscode-dev-containers/
+    && mv -f /tmp/scripts/first-run-notice.txt /usr/local/etc/vscode-dev-containers/ \
     && rm -rf /tmp/scripts
 
 # Set defaults.

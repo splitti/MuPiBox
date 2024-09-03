@@ -4,6 +4,9 @@
         "context": "."
     },
     "features": {
+        "ghcr.io/devcontainers/features/common-utils:2": {
+            "username": "codespace",
+        },
         "ghcr.io/devcontainers/features/php:1": {
             "version": "8.3.0",
             "installComposer": "true"
@@ -31,9 +34,10 @@
         },
         "ghcr.io/devcontainers/features/docker-in-docker:2": {
             "version": "latest"
-        },
-        "ghcr.io/kreemer/features/chrometesting:1": {}
+        }
     },
+    "remoteUser": "codespace",
+    "containerUser": "codespace",
     "customizations": {
         "vscode": {
             "extensions": [
