@@ -15,10 +15,10 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # Install chrome.
-RUN wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb \
+RUN wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb --no-check-certificate \
     && dpkg -i google-chrome-stable_current_amd64.deb \
     && apt --fix-broken install \
-    && rm google-chrome-stable_current_amd64.deb
+    && rm -f google-chrome-stable_current_amd64.deb
 
 # Show first run notice when starting codespaces.
 COPY first-run-notice.txt /tmp/scripts/
