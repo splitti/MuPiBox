@@ -400,4 +400,4 @@ const tryReadFile = (filePath, retries = 3, delayMs = 1000) => {
 
 // listen (start app with 'node server.js')
 app.listen(8200);
-console.log(nowDate.toLocaleString() + ": [MuPiBox-Server] Server start at http://localhost:8200");
+console.log(nowDate.toLocaleString() + ": [MuPiBox-Server] Server started at http://localhost:8200");
