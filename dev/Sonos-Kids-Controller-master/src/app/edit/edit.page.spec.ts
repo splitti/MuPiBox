@@ -2,6 +2,7 @@ import { async, ComponentFixture, TestBed } from '@angular/core/testing';
 import { IonicModule } from '@ionic/angular';
 
 import { EditPage } from './edit.page';
+import { HttpClientModule } from '@angular/common/http';
 
 describe('EditPage', () => {
   let component: EditPage;
@@ -10,7 +11,7 @@ describe('EditPage', () => {
   beforeEach(async(() => {
     TestBed.configureTestingModule({
       declarations: [ EditPage ],
-      imports: [IonicModule.forRoot()]
+      imports: [IonicModule.forRoot(), HttpClientModule]
     }).compileComponents();
 
     fixture = TestBed.createComponent(EditPage);
