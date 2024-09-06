@@ -1,0 +1,15 @@
+[Unit]
+Description=A spotify connect device
+Documentation=https://github.com/librespot-org/librespot/wiki/Options
+Wants=sound.target
+After=sound.target
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+ExecStart=/usr/bin/librespot -q
+Restart=always
+RestartSec=12
+
+[Install]
+WantedBy=default.target
