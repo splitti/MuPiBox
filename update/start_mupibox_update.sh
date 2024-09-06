@@ -320,6 +320,7 @@ echo "==========================================================================
 	chmod 755 /usr/bin/fbv /usr/bin/librespot >&3 2>&3
 	#mv ${MUPI_SRC}/config/templates/librespot.conf /etc/spotifyd/spotifyd.conf >&3 2>&3
 	
+	mkdir /etc/librespot/ >&3 2>&3
 	mkdir -p $(cat /etc/mupibox/mupiboxconfig.json | jq -r .spotify.cachepath) >&3 2>&3
 	chown dietpi:dietpi $(cat /etc/mupibox/mupiboxconfig.json | jq -r .spotify.cachepath) >&3 2>&3
 
@@ -373,6 +374,7 @@ echo "==========================================================================
 	mv -f ${MUPI_SRC}/config/services/mupi_idle_shutdown.service /etc/systemd/system/mupi_idle_shutdown.service >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/mupi_splash.service /etc/systemd/system/mupi_splash.service >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/librespot.service /etc/systemd/system/librespot.service >&3 2>&3
+	mv -f ${MUPI_SRC}/config/templates/env-librespot /etc/librespot/env-librespot >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/pulseaudio.service /etc/systemd/system/pulseaudio.service >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/mupi_startstop.service /etc/systemd/system/mupi_startstop.service >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/mupi_wifi.service /etc/systemd/system/mupi_wifi.service  >&3 2>&3
@@ -390,6 +392,8 @@ echo "==========================================================================
 	mv -f ${MUPI_SRC}/config/services/mupi_mqtt.service /etc/systemd/system/mupi_mqtt.service  >&3 2>&3
 
 	systemctl daemon-reload >&3 2>&3
+	systemctl enable librespot.service >&3 2>&3	
+	systemctl start librespot.service >&3 2>&3	
 	systemctl enable mupi_check_internet.service >&3 2>&3
 	systemctl start mupi_check_internet.service >&3 2>&3
 	systemctl enable mupi_check_monitor.service >&3 2>&3
@@ -489,8 +493,6 @@ echo "==========================================================================
 	rm /etc/systemd/system/mupi_change_checker.service >&3 2>&3
 	/usr/local/bin/mupibox/./m3u_generator.sh >&3 2>&3
 	/usr/local/bin/mupibox/./setting_update.sh >&3 2>&3
-	systemctl daemon-reload
-	systemctl enable librespot.service >&3 2>&3	
 	service librespot start >&3 2>&3
 	
 	mv ${LOG} /boot/$(date +%F)_update_${VERSION}.log >&3 2>&3

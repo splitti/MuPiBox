@@ -7,7 +7,7 @@ Wants=network-online.target
 After=network-online.target
 
 [Service]
-ExecStart=/usr/bin/librespot -q
+ExecStart=ExecStart=/bin/bash -c 'source /etc/librespot/env-librespot && /usr/bin/librespot -q'
 Restart=always
 RestartSec=12
 
