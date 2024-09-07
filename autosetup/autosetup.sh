@@ -659,7 +659,7 @@ exec 3>${LOG}
 	sudo systemctl start mupi_idle_shutdown.service >&3 2>&3
 	sudo systemctl enable librespot.service >&3 2>&3	
 	sudo systemctl start librespot.service >&3 2>&3	
-	sudo systemctl start spotifyd.service >&3 2>&3
+
 	sudo systemctl enable smbd.service >&3 2>&3
 	sudo systemctl start smbd.service >&3 2>&3
 	sudo systemctl enable mupi_startstop.service >&3 2>&3
