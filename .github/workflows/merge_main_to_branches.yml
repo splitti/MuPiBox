@@ -18,10 +18,10 @@ jobs:
         run: NEWTAGS=$(git fetch --tags --force upstream 2>&1 | awk '/\[new tag\]/ {print $4}')
       - name: Reset existing tags to the ones from origin repository
         run: git fetch --tags --force
-      - name: Set user name
-        run: git config --global user.name ${{ github.actor }}
       - name: Merge tags into develop one by one
         run: |
+          git config --global user.name ${{ github.actor }}
+
           for tag in ${NEWTAGS[@]}
           do
             git merge --no-edit ${tag}
@@ -51,6 +51,7 @@ jobs:
       - name: Merge also to toUpstream
         run: |
           git checkout ${UPSTREAM_BRANCH}
+          git config --global user.name ${{ github.actor }}
           if ! git merge --no-commit ${DEFAULT_BRANCH}; then :; fi
           DELETED_FILES=$(git status | awk '/deleted by us/ {print $4}')
           if [ ! -z "${DELETED_FILES}" ]; then git rm ${DELETED_FILES}; fi
