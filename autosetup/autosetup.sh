@@ -362,14 +362,14 @@ exec 3>${LOG}
 
 	###############################################################################################
 
-	echo -e "XXX\n${STEP}\nConfigure spotifyd... \nXXX"	
-	before=$(date +%s)
+#	echo -e "XXX\n${STEP}\nConfigure spotifyd... \nXXX"	
+#	before=$(date +%s)
 
 	# spotifyd-Config
-	sudo mv -f ${MUPI_SRC}/config/templates/spotifyd.conf /etc/spotifyd/spotifyd.conf >&3 2>&3
-	after=$(date +%s)
-	echo -e "## Configure spotifyd  ##  finished after $((after - $before)) seconds" >&3 2>&3
-	STEP=$(($STEP + 1))
+#	sudo mv -f ${MUPI_SRC}/config/templates/spotifyd.conf /etc/spotifyd/spotifyd.conf >&3 2>&3
+#	after=$(date +%s)
+#	echo -e "## Configure spotifyd  ##  finished after $((after - $before)) seconds" >&3 2>&3
+#	STEP=$(($STEP + 1))
 
 	###############################################################################################
 
@@ -628,6 +628,8 @@ exec 3>${LOG}
 	sudo mv -f ${MUPI_SRC}/config/services/mupi_idle_shutdown.service /etc/systemd/system/mupi_idle_shutdown.service >&3 2>&3
 	sudo mv -f ${MUPI_SRC}/config/services/mupi_splash.service /etc/systemd/system/mupi_splash.service >&3 2>&3
 	sudo mv -f ${MUPI_SRC}/config/services/spotifyd.service /etc/systemd/system/spotifyd.service >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/config/services/librespot.service /etc/systemd/system/librespot.service >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/config/templates/env-librespot /etc/librespot/env-librespot >&3 2>&3
 	sudo mv -f ${MUPI_SRC}/config/services/pulseaudio.service /etc/systemd/system/pulseaudio.service >&3 2>&3
 	sudo mv -f ${MUPI_SRC}/config/services/mupi_startstop.service /etc/systemd/system/mupi_startstop.service >&3 2>&3
 	sudo mv -f ${MUPI_SRC}/config/services/mupi_wifi.service /etc/systemd/system/mupi_wifi.service  >&3 2>&3
@@ -655,7 +657,8 @@ exec 3>${LOG}
 	#sudo systemctl start mupi_change_checker.service >&3 2>&3
 	sudo systemctl enable mupi_idle_shutdown.service >&3 2>&3
 	sudo systemctl start mupi_idle_shutdown.service >&3 2>&3
-	sudo systemctl enable spotifyd.service >&3 2>&3
+	sudo systemctl enable librespot.service >&3 2>&3	
+	sudo systemctl start librespot.service >&3 2>&3	
 	sudo systemctl start spotifyd.service >&3 2>&3
 	sudo systemctl enable smbd.service >&3 2>&3
 	sudo systemctl start smbd.service >&3 2>&3
