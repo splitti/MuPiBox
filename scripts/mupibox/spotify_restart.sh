@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 
-sudo service spotifyd restart
+sudo service librespot restart
 if [ -e "/usr/local/bin/pm2" ]; then
 	sudo sh -c 'su - dietpi -s /usr/local/bin/pm2 restart server'
 	sudo sh -c 'su - dietpi -s /usr/local/bin/pm2 restart spotify-control'

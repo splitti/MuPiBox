@@ -31,7 +31,7 @@ jobs:
 
             # commit it
             git add version.json
-            git commit --message='v${tag}'
+            git commit --message="v${tag}"
             git tag --force ${tag}
 
             # merge changes also into toUpstream
