@@ -1,3 +1,6 @@
+#!/bin/bash
+#
+
 MUPIBOX_CONFIG="/etc/mupibox/mupiboxconfig.json"
 
 export LIBRESPOT_CACHE=$(/usr/bin/jq -r .spotify.cachepath ${MUPIBOX_CONFIG})
@@ -16,3 +19,5 @@ username=$( jq -r .username ${LIBRESPOT_CACHE}/credentials.json )
 if [[ ! -z "$var" ]]; then
   export LIBRESPOT_USERNAME=${username}
 fi
+
+/usr/bin/librespot -q
