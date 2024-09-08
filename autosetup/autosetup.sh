@@ -209,7 +209,7 @@ exec 3>${LOG}
 	mkdir -p /home/dietpi/.mupibox/chromium_cache >&3 2>&3
 	mkdir -p /home/dietpi/MuPiBox/tts_files >&3 2>&3
 	mkdir -p /home/dietpi/MuPiBox/sysmedia/sound >&3 2>&3
-	mkdir -p /home/dietpi/.cache/spotifyd >&3 2>&3
+	mkdir -p /home/dietpi/.cache/spotify >&3 2>&3
 	mkdir /home/dietpi/MuPiBox/sysmedia/images >&3 2>&3
 	mkdir /home/dietpi/MuPiBox/media >&3 2>&3
 	mkdir /home/dietpi/MuPiBox/media/audiobook >&3 2>&3
@@ -219,7 +219,7 @@ exec 3>${LOG}
 	mkdir /home/dietpi/MuPiBox/themes >&3 2>&3
 	mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
 	sudo mkdir /usr/local/bin/mupibox >&3 2>&3
-	sudo mkdir /etc/spotifyd >&3 2>&3
+	#sudo mkdir /etc/spotifyd >&3 2>&3
 	sudo mkdir /etc/mupibox >&3 2>&3
 	sudo mkdir /var/log/mupibox/ >&3 2>&3
 	after=$(date +%s)
@@ -320,14 +320,13 @@ exec 3>${LOG}
 
 	# Binaries
 	if [ `getconf LONG_BIT` == 32 ]; then
-		sudo mv -f ${MUPI_SRC}/bin/spotifyd/0.3.3/spotifyd /usr/bin/spotifyd >&3 2>&3
-		sudo mv -f ${MUPI_SRC}/bin/fbv/fbv /usr/bin/fbv >&3 2>&3
+		mv ${MUPI_SRC}/bin/librespot/dev_0.5_20240905/librespot-32bit /usr/bin/librespot >&3 2>&3
+		mv ${MUPI_SRC}/bin/fbv/fbv /usr/bin/fbv >&3 2>&3
 	else
-		sudo mv -f ${MUPI_SRC}/bin/spotifyd/0.3.3/spotifyd_64bit /usr/bin/spotifyd >&3 2>&3
-		sudo mv -f ${MUPI_SRC}/bin/fbv/fbv_64 /usr/bin/fbv >&3 2>&3
-
+		mv ${MUPI_SRC}/bin/librespot/dev_0.5_20240905/librespot-64bit /usr/bin/librespot >&3 2>&3
+		mv ${MUPI_SRC}/bin/fbv/fbv_64 /usr/bin/fbv >&3 2>&3
 	fi
-	sudo chmod 755 /usr/bin/fbv /usr/bin/spotifyd >&3 2>&3
+	sudo chmod 755 /usr/bin/fbv /usr/bin/librespot >&3 2>&3
 	after=$(date +%s)
 	echo -e "## Copy binaries  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
@@ -363,14 +362,14 @@ exec 3>${LOG}
 
 	###############################################################################################
 
-	echo -e "XXX\n${STEP}\nConfigure spotifyd... \nXXX"
-	before=$(date +%s)
+#	echo -e "XXX\n${STEP}\nConfigure spotifyd... \nXXX"
+#	before=$(date +%s)
 
 	# spotifyd-Config
-	sudo mv -f ${MUPI_SRC}/config/templates/spotifyd.conf /etc/spotifyd/spotifyd.conf >&3 2>&3
-	after=$(date +%s)
-	echo -e "## Configure spotifyd  ##  finished after $((after - $before)) seconds" >&3 2>&3
-	STEP=$(($STEP + 1))
+#	sudo mv -f ${MUPI_SRC}/config/templates/spotifyd.conf /etc/spotifyd/spotifyd.conf >&3 2>&3
+#	after=$(date +%s)
+#	echo -e "## Configure spotifyd  ##  finished after $((after - $before)) seconds" >&3 2>&3
+#	STEP=$(($STEP + 1))
 
 	###############################################################################################
 
@@ -629,6 +628,8 @@ exec 3>${LOG}
 	sudo mv -f ${MUPI_SRC}/config/services/mupi_idle_shutdown.service /etc/systemd/system/mupi_idle_shutdown.service >&3 2>&3
 	sudo mv -f ${MUPI_SRC}/config/services/mupi_splash.service /etc/systemd/system/mupi_splash.service >&3 2>&3
 	sudo mv -f ${MUPI_SRC}/config/services/spotifyd.service /etc/systemd/system/spotifyd.service >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/config/services/librespot.service /etc/systemd/system/librespot.service >&3 2>&3
+	sudo mv -f ${MUPI_SRC}/config/templates/env-librespot /etc/librespot/env-librespot >&3 2>&3
 	sudo mv -f ${MUPI_SRC}/config/services/pulseaudio.service /etc/systemd/system/pulseaudio.service >&3 2>&3
 	sudo mv -f ${MUPI_SRC}/config/services/mupi_startstop.service /etc/systemd/system/mupi_startstop.service >&3 2>&3
 	sudo mv -f ${MUPI_SRC}/config/services/mupi_wifi.service /etc/systemd/system/mupi_wifi.service  >&3 2>&3
@@ -656,8 +657,9 @@ exec 3>${LOG}
 	#sudo systemctl start mupi_change_checker.service >&3 2>&3
 	sudo systemctl enable mupi_idle_shutdown.service >&3 2>&3
 	sudo systemctl start mupi_idle_shutdown.service >&3 2>&3
-	sudo systemctl enable spotifyd.service >&3 2>&3
-	sudo systemctl start spotifyd.service >&3 2>&3
+	sudo systemctl enable librespot.service >&3 2>&3
+	sudo systemctl start librespot.service >&3 2>&3
+
 	sudo systemctl enable smbd.service >&3 2>&3
 	sudo systemctl start smbd.service >&3 2>&3
 	sudo systemctl enable mupi_startstop.service >&3 2>&3
