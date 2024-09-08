@@ -42,7 +42,7 @@ Contributing changes to the MuPiBox source code is easy thanks to GitHub codespa
 1. Fork this repository.
 2. Start a codespace session.
 3. The box UI located in `dev/Sonos-Kids-Controller-master`
-    - Run `npm install` the first time. To start the server, run `npm build`, create a `config.json` file in the `server/config` subfolder, fill it with `{"spotify": { "clientId": "", "clientSecret": "" }}`, and then run `npm start`
+    - Run `npm install` the first time. To start the development server, copy the `config/templates/www.json` as `config.json` to the `server/config` subfolder, and then run `npm run serve-backend` and `npm run serve-frontend` while being in the `dev/Sonos-Kids-Controller-master` folder.
 4. The Admin interface is located in `AdminInterface/www`.
     - Use `php -S 127.0.0.1:8000` to start a development server.
 5. Create a git branch, commit and push your changes.

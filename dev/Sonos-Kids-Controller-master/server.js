@@ -35,8 +35,16 @@ const resumeLock = '/tmp/.resume.lock';
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-app.use(express.static(path.join(__dirname, 'www'))); // Static path to compiled Ionic app
-
+// We only want to serve the Angular app as static files in production so that we can start
+// the Angular development server during development to be able to hot-reload and debug.
+// We explicitely check for !== 'development' for now so we do not need to set this env in
+// production.
+console.log("started")
+if (process.env.NODE_ENV !== 'development') {
+    // Static path to compiled Angular app
+    console.log("Serve www")
+    app.use(express.static(path.join(__dirname, 'www')));
+}
 
 // Routes
 app.get('/api/rssfeed', async (req, res) => {
@@ -369,8 +377,9 @@ app.get('/api/token', (req, res) => {
 });
 
 app.get('/api/sonos', (req, res) => {
+    res.status(200).send({ip: "localhost", port: "8200"})
     // Send server address and port of the node-sonos-http-api instance to the client
-    res.status(200).send(config['node-sonos-http-api']);
+    // res.status(200).send(config['node-sonos-http-api']);
 });
 
 const tryReadFile = (filePath, retries = 3, delayMs = 1000) => {

@@ -5,6 +5,8 @@
     "homepage": "https://github.com/Thyraz/Sonos-Kids-Controller",
     "scripts": {
         "ng": "ng",
+        "serve-backend": "NODE_ENV=development node server.js",
+        "serve-frontend": "ng serve",
         "start": "node server.js",
         "build": "ionic build --prod",
         "deploy": "ionic build --prod",
