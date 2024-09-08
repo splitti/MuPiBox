@@ -377,9 +377,8 @@ app.get('/api/token', (req, res) => {
 });
 
 app.get('/api/sonos', (req, res) => {
-    res.status(200).send({ip: "localhost", port: "8200"})
     // Send server address and port of the node-sonos-http-api instance to the client
-    // res.status(200).send(config['node-sonos-http-api']);
+    res.status(200).send(config['node-sonos-http-api']);
 });
 
 const tryReadFile = (filePath, retries = 3, delayMs = 1000) => {
