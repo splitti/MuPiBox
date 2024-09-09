@@ -37,3 +37,15 @@ Please visit official website  https://mupibox.de/anleitungen/installationsanlei
 - Shutdown-Sound by Leszek_Szary (https://freesound.org/people/Leszek_Szary/sounds/133283/)
 - WLED by Discord-User ronbal and ChatGPT
 
+## Contributing
+Contributing changes to the MuPiBox source code is easy thanks to GitHub codespaces that allow you to develop inside the browser without needing to set up a local development environment.
+1. Fork this repository.
+2. Start a codespace session.
+3. The box UI located in `dev/Sonos-Kids-Controller-master`
+    - Run `npm install` the first time. To start the server, run `npm build`, create a `config.json` file in the `server/config` subfolder, fill it with `{"spotify": { "clientId": "", "clientSecret": "" }}`, and then run `npm start`
+4. The Admin interface is located in `AdminInterface/www`.
+    - Use `php -S 127.0.0.1:8000` to start a development server.
+5. Create a git branch, commit and push your changes.
+6. Create a pull request for your changes.
+
+Of course, other contributions, e.g., reporting issues etc., are also welcome.
