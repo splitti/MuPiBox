@@ -1,0 +1,2 @@
+Welcome to the MuPiBox code repository!
+You can find the box UI in `dev/Sonos-Kids-Controller-master` and the admin page in `AdminInterface/www`.
