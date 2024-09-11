@@ -6,6 +6,7 @@ import { HttpClientModule } from '@angular/common/http';
 import { IonicModule } from '@ionic/angular';
 import { MedialistPage } from './medialist.page';
 import { RouterTestingModule } from '@angular/router/testing';
+import { of } from 'rxjs';
 
 describe('MedialistPage', () => {
   let component: MedialistPage
@@ -34,22 +35,18 @@ describe('MedialistPage', () => {
   })
 
   describe('should correctly slice show media', () => {
-    it('should not slice at all', () => {
-      component.artist = createArtist({coverMedia: createMedia({ })})
+    fit('should not slice at all if not wanted', () => {
+      component.artist = createArtist({coverMedia: createMedia({showid: 'a', aPartOfAll: undefined})})
+      const mediaList = [createMedia({})]
+      spyOn((component as any).mediaService, 'getMediaFromShow').and.returnValue(of(mediaList));
+      (component as any).fetchMedia()
+      expect(component.media).toEqual(mediaList)
     })
   })
 
-  it('should correctly slice artist media', () => {
+  describe('should correctly slice artist media', () => {
     it('should not slice at all', () => {
-      component.artist = {
-        name: "Baw Batrol",
-        albumCount: "1",
-        cover: "",
-        coverMedia: {
-          type: "",
-          category: ""
-        }
-      }
+      component.artist = createArtist({coverMedia: createMedia({showid: 'a', aPartOfAll: undefined})})
     })
   })
 })

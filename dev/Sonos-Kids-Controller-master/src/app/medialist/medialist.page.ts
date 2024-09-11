@@ -156,18 +156,6 @@ export class MedialistPage implements OnInit {
     }
   }
 
-  slideDidChange() {
-    // console{}.log('Slide did change');
-  }
-
-  slidePrev() {
-    this.slider.slidePrev();
-  }
-
-  slideNext() {
-    this.slider.slideNext();
-  }
-
   private fetchMedia(): void {
     // Method for direct and delayed slider update.
     const updateSlider = (): void => {
@@ -197,43 +185,44 @@ export class MedialistPage implements OnInit {
         updateSlider()
       });
     } else {
-      const sliceMedia = (media: Media[]): Media[] => {
-        if (this.artist.coverMedia?.aPartOfAll) {
-          return media.slice(this.artist.coverMedia?.aPartOfAllMin, )
+      // const sliceMedia = (media: Media[]): Media[] => {
+      //   if (this.artist.coverMedia?.aPartOfAll) {
+      //     // return media.slice(this.artist.coverMedia?.aPartOfAllMin, )
 
-          for (let i = 0; i < this.media.length; i++){
-            let rev = this.media.length - i;
-            if(rev >= (this.artist.coverMedia?.aPartOfAllMin) && rev <= (this.artist.coverMedia?.aPartOfAllMax)){
-              this.aPartOfAllMedia.push(this.media[i]);
-            }
-          }
-          this.media = this.aPartOfAllMedia;
-        }
-        return media
+      //     for (let i = 0; i < this.media.length; i++){
+      //       let rev = this.media.length - i;
+      //       if(rev >= (this.artist.coverMedia?.aPartOfAllMin) && rev <= (this.artist.coverMedia?.aPartOfAllMax)){
+      //         this.aPartOfAllMedia.push(this.media[i]);
+      //       }
+      //     }
+      //     this.media = this.aPartOfAllMedia;
+      //   }
+      //   return media
 
-        if(this.artist.coverMedia?.aPartOfAll){
-          let min: number;
-          let max: number;
-          if(this.artist.coverMedia?.aPartOfAllMin == null){
-            min = 0
-          }else{
-            min = this.artist.coverMedia?.aPartOfAllMin -1;
-          }
-          if(this.artist.coverMedia?.aPartOfAllMax == null){
-            max = parseInt(this.artist.albumCount) -1;
-          }else{
-            max = this.artist.coverMedia?.aPartOfAllMax -1;
-          }
-          for (let i = 0; i < this.media.length; i++){
-            if(i >= min && i <= max){
-              this.aPartOfAllMedia.push(this.media[i]);
-            }
-          }
-          this.media = this.aPartOfAllMedia;
-        }
-      }
+      //   if(this.artist.coverMedia?.aPartOfAll){
+      //     let min: number;
+      //     let max: number;
+      //     if(this.artist.coverMedia?.aPartOfAllMin == null){
+      //       min = 0
+      //     }else{
+      //       min = this.artist.coverMedia?.aPartOfAllMin -1;
+      //     }
+      //     if(this.artist.coverMedia?.aPartOfAllMax == null){
+      //       max = parseInt(this.artist.albumCount) -1;
+      //     }else{
+      //       max = this.artist.coverMedia?.aPartOfAllMax -1;
+      //     }
+      //     for (let i = 0; i < this.media.length; i++){
+      //       if(i >= min && i <= max){
+      //         this.aPartOfAllMedia.push(this.media[i]);
+      //       }
+      //     }
+      //     this.media = this.aPartOfAllMedia;
+      //   }
+      // }
 
-      if ((this.artist.coverMedia.showid && this.artist.coverMedia.showid.length > 0) || (this.artist.coverMedia.type == 'rss' && this.artist.coverMedia.id.length > 0)) {
+      if ((this.artist.coverMedia.showid && this.artist.coverMedia.showid.length > 0)
+           || (this.artist.coverMedia.type == 'rss' && this.artist.coverMedia.id.length > 0)) {
         this.getMediaFromShowSubscription = this.mediaService.getMediaFromShow(this.artist).subscribe(media => {
           this.media = media;
           fetchArtwork(this.media)
