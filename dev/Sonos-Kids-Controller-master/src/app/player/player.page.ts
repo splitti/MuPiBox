@@ -70,7 +70,7 @@ export class PlayerPage implements OnInit {
     this.show$ = this.mediaService.show$;
     this.mupihat$ = this.mediaService.mupihat$;
     this.route.queryParams.subscribe((params) => {
-      if (this.router.getCurrentNavigation().extras.state.media) {
+      if (this.router.getCurrentNavigation()?.extras.state?.media) {
         this.media = this.router.getCurrentNavigation().extras.state.media;
         if (this.media.category === "resume") {
           this.resumePlay = true;
