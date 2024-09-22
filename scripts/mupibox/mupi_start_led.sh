@@ -10,9 +10,9 @@ ledMax=$(/usr/bin/jq -r .shim.ledBrightnessMax ${MUPIBOX_CONFIG})
 ledMin=$(/usr/bin/jq -r .shim.ledBrightnessMin ${MUPIBOX_CONFIG})
 
 echo "{}" | tee ${TMP_LEDFILE}
-/usr/bin/cat <<<$(/usr/bin/jq --argjson v $(printf '%d' "$ledPin") '.led_gpio = $v' ${TMP_LEDFILE}) >${TMP_LEDFILE}
-/usr/bin/cat <<<$(/usr/bin/jq --argjson v $(printf '%d' "$ledMax") '.led_max_brightness = $v' ${TMP_LEDFILE}) >${TMP_LEDFILE}
-/usr/bin/cat <<<$(/usr/bin/jq --argjson v $(printf '%d' "$ledMin") '.led_min_brightness = $v' ${TMP_LEDFILE}) >${TMP_LEDFILE}
+/usr/bin/cat <<<$(/usr/bin/jq --argjson v $(printf '%d' "${ledPin}") '.led_gpio = $v' ${TMP_LEDFILE}) >${TMP_LEDFILE}
+/usr/bin/cat <<<$(/usr/bin/jq --argjson v $(printf '%d' "${ledMax}") '.led_max_brightness = $v' ${TMP_LEDFILE}) >${TMP_LEDFILE}
+/usr/bin/cat <<<$(/usr/bin/jq --argjson v $(printf '%d' "${ledMin}") '.led_min_brightness = $v' ${TMP_LEDFILE}) >${TMP_LEDFILE}
 /usr/bin/cat <<<$(/usr/bin/jq '.led_current_brightness = 0' ${TMP_LEDFILE}) >${TMP_LEDFILE}
 /usr/bin/cat <<<$(/usr/bin/jq '.led_dim_mode = 0' ${TMP_LEDFILE}) >${TMP_LEDFILE}
 /usr/bin/python3 /usr/local/bin/mupibox/led_control.py &

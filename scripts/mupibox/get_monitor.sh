@@ -14,7 +14,7 @@ while true; do
     sudo echo -n "{}" ${MONITOR_FILE}
     sudo chown dietpi:dietpi ${MONITOR_FILE}
     /usr/bin/cat <<<$(/usr/bin/jq -n --arg v "On" '.monitor = $v' ${MONITOR_FILE}) >${MONITOR_FILE}
-  elif [ $actualsize -le $minimumsize ]; then
+  elif [ ${actualsize} -le ${minimumsize} ]; then
     sudo rm ${MONITOR_FILE}
     sudo echo -n "{}" ${MONITOR_FILE}
     sudo chown dietpi:dietpi ${MONITOR_FILE}
