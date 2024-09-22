@@ -18,7 +18,7 @@ sleep_sec=60
 while true; do
   sleep ${sleep_sec}
 
-  if (($max_idle_time > 0)); then
+  if ((${max_idle_time} > 0)); then
     if [[ $(head -n1 ${PLAYERSTATE}) != "play" ]]; then
       ((current_idle_ticks++))
       idle_min=$((current_idle_time * ${sleep_sec} / 60))
