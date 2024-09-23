@@ -319,6 +319,7 @@ echo "==========================================================================
 
 	echo -e "XXX\n${STEP}\nCopy binaries... \nXXX"	
 	before=$(date +%s)
+	rm /usr/bin/jq >&3 2>&3
 	
 	service spotifyd stop >&3 2>&3
 	systemctl disable spotifyd >&3 2>&3
