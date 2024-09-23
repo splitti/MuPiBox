@@ -38,8 +38,14 @@ exec 3>${LOG}
 
 	echo -e "## apt-get update ##  finished after $((after - $before)) seconds" >&3 2>&3
 
+	echo -e "XXX\n${STEP}\nPrepare MuPiBox Download ... \nXXX"
+	before=$(date +%s)
+	wget -q -O ${VER_JSON} https://raw.githubusercontent.com/splitti/MuPiBox/main/version.json  >&3 2>&3
+
 	VERSION=$(/usr/bin/jq -r .release.${RELEASE}[-1].version ${VER_JSON})  >&3 2>&3
 	MUPIBOX_URL=$(/usr/bin/jq -r .release.${RELEASE}[-1].url ${VER_JSON})  >&3 2>&3
+	after=$(date +%s)
+	echo -e "## Prepare MuPiBox Download  ##  finished after $((after - $before)) seconds" >&3 2>&3
 
 	for package in ${packages2install}
 	do
@@ -121,13 +127,6 @@ exec 3>${LOG}
 	sudo su - -c "yes '' | /boot/dietpi/dietpi-software install 200" >&3 2>&3
 
 	###############################################################################################
-
-	echo -e "XXX\n${STEP}\nPrepare MuPiBox Download ... \nXXX"
-	before=$(date +%s)
-	wget -q -O ${VER_JSON} https://raw.githubusercontent.com/splitti/MuPiBox/main/version.json  >&3 2>&3
-
-	after=$(date +%s)
-	echo -e "## Prepare MuPiBox Download  ##  finished after $((after - $before)) seconds" >&3 2>&3
 
 	echo -e "XXX\n${STEP}\nDownload MuPiBox Version ${VERSION}... \nXXX"
 	before=$(date +%s)
