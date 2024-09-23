@@ -109,7 +109,6 @@ echo "==========================================================================
 		echo -e "## apt-get remove ${package}  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	done
 
-
 	STEP=$(($STEP + 1))
 	if [ $OS == "bullseye" ]; then
 		echo -e "XXX\n${STEP}\nInstall package mutagen\nXXX"
@@ -322,6 +321,7 @@ echo "==========================================================================
 
 	echo -e "XXX\n${STEP}\nCopy binaries... \nXXX"
 	before=$(date +%s)
+	rm /usr/bin/jq >&3 2>&3
 
 	service spotifyd stop >&3 2>&3
 	systemctl disable spotifyd >&3 2>&3
@@ -329,13 +329,14 @@ echo "==========================================================================
 
 	# Binaries
 	if [ `getconf LONG_BIT` == 32 ]; then
+		wget -O /usr/bin/jq https://github.com/jqlang/jq/releases/latest/download/jq-linux-armhf >&3 2>&3
 		mv ${MUPI_SRC}/bin/librespot/dev_0.5_20240905/librespot-32bit /usr/bin/librespot >&3 2>&3
 		mv ${MUPI_SRC}/bin/fbv/fbv /usr/bin/fbv >&3 2>&3
 	else
+		wget -O /usr/bin/jq https://github.com/jqlang/jq/releases/latest/download/jq-linux-arm64 >&3 2>&3
 		mv ${MUPI_SRC}/bin/librespot/dev_0.5_20240905/librespot-64bit /usr/bin/librespot >&3 2>&3
 		mv ${MUPI_SRC}/bin/fbv/fbv_64 /usr/bin/fbv >&3 2>&3
 	fi
-	wget -O /usr/bin/jq https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-arm64
 	chmod 755 /usr/bin/fbv /usr/bin/jq /usr/bin/librespot >&3 2>&3
 	#mv ${MUPI_SRC}/config/templates/librespot.conf /etc/spotifyd/spotifyd.conf >&3 2>&3
 

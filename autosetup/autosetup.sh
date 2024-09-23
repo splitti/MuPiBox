@@ -22,10 +22,11 @@ rm -R /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-*
 exec 3>${LOG}
 
 {
-	packages2install="git libasound2 jq mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools\
+	packages2install="git libasound2 mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools\
 		wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio python3-serial\
 		python3-requests python3-paho-mqtt libgles2-mesa mesa-utils libsdl2-dev preload python3-smbus2 pigpio libjson-c-dev\
 		i2c-tools libi2c-dev python3-smbus python3-alsaaudio python3-netifaces gpiod"
+	packages2remove="jq"
 	STEP=0
 
 	###############################################################################################
@@ -36,6 +37,9 @@ exec 3>${LOG}
 	after=$(date +%s)
 
 	echo -e "## apt-get update ##  finished after $((after - $before)) seconds" >&3 2>&3
+
+	VERSION=$(/usr/bin/jq -r .release.${RELEASE}[-1].version ${VER_JSON})  >&3 2>&3
+	MUPIBOX_URL=$(/usr/bin/jq -r .release.${RELEASE}[-1].url ${VER_JSON})  >&3 2>&3
 
 	for package in ${packages2install}
 	do
@@ -49,6 +53,19 @@ exec 3>${LOG}
 		fi
 		after=$(date +%s)
 		echo -e "## apt-get install ${package}  ##  finished after $((after - $before)) seconds" >&3 2>&3
+	done
+
+	for package in ${packages2remove}
+	do
+		before=$(date +%s)
+		STEP=$(($STEP + 1))
+		echo -e "XXX\n${STEP}\Remove ${package}\nXXX"
+		PKG_OK=$(dpkg -l ${package} 2>/dev/null | egrep '^ii' | wc -l) >&3 2>&3
+		if [ ${PKG_OK} -eq 0 ]; then
+		  apt-get --yes remove ${package} >&3 2>&3
+		fi
+		after=$(date +%s)
+		echo -e "## apt-get remove ${package}  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	done
 
 	STEP=$(($STEP + 1))
@@ -109,8 +126,6 @@ exec 3>${LOG}
 	before=$(date +%s)
 	wget -q -O ${VER_JSON} https://raw.githubusercontent.com/friebi/MuPiBox/develop/version.json  >&3 2>&3
 
-	VERSION=$(/usr/bin/jq -r .release.${RELEASE}[-1].version ${VER_JSON})  >&3 2>&3
-	MUPIBOX_URL=$(/usr/bin/jq -r .release.${RELEASE}[-1].url ${VER_JSON})  >&3 2>&3
 	after=$(date +%s)
 	echo -e "## Prepare MuPiBox Download  ##  finished after $((after - $before)) seconds" >&3 2>&3
 
@@ -319,16 +334,19 @@ exec 3>${LOG}
 
 	echo -e "XXX\n${STEP}\nCopy binaries... \nXXX"
 	before=$(date +%s)
+	rm /usr/bin/jq >&3 2>&3
 
 	# Binaries
 	if [ `getconf LONG_BIT` == 32 ]; then
+		wget -O /usr/bin/jq https://github.com/jqlang/jq/releases/latest/download/jq-linux-armhf >&3 2>&3
 		mv ${MUPI_SRC}/bin/librespot/dev_0.5_20240905/librespot-32bit /usr/bin/librespot >&3 2>&3
 		mv ${MUPI_SRC}/bin/fbv/fbv /usr/bin/fbv >&3 2>&3
 	else
+		wget -O /usr/bin/jq https://github.com/jqlang/jq/releases/latest/download/jq-linux-arm64 >&3 2>&3
 		mv ${MUPI_SRC}/bin/librespot/dev_0.5_20240905/librespot-64bit /usr/bin/librespot >&3 2>&3
 		mv ${MUPI_SRC}/bin/fbv/fbv_64 /usr/bin/fbv >&3 2>&3
 	fi
-	sudo chmod 755 /usr/bin/fbv /usr/bin/librespot >&3 2>&3
+	chmod 755 /usr/bin/fbv /usr/bin/jq /usr/bin/librespot >&3 2>&3
 	after=$(date +%s)
 	echo -e "## Copy binaries  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
