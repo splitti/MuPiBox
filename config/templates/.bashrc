@@ -197,3 +197,4 @@ export VISUAL=nano
 
 export PS1="\[\e[38;5;226m\]\u\[\e[38;5;160m\]@\[\e[38;5;46m\]\h \[\e[38;5;14m\]\w \[\033[0m\]$ "
 clear
+

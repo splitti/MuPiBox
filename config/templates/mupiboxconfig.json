@@ -254,7 +254,7 @@
 		"accessToken": "",
 		"refreshToken": "",
 		"maxcachesize": 1073741824,
-		"cachepath": "/home/dietpi/.cache/spotifyd",
+		"cachepath": "/home/dietpi/.cache/spotify",
 		"cachestate": true
 	},
 	"timeout": {

@@ -14,7 +14,8 @@ CONFIG="/etc/mupibox/mupiboxconfig.json"
 LOG="/boot/mupibox_update.log"
 exec 3>${LOG}
 service mupi_idle_shutdown stop
-packages2install="git libasound2 jq mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt libgles2-mesa mesa-utils libsdl2-dev preload python3-smbus2 pigpio libjson-c-dev i2c-tools libi2c-dev python3-smbus python3-alsaaudio python3-netifaces"
+packages2install="git libasound2 mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt libgles2-mesa mesa-utils libsdl2-dev preload python3-smbus2 pigpio libjson-c-dev i2c-tools libi2c-dev python3-smbus python3-alsaaudio python3-netifaces"
+packages2remove="jq"
 STEP=0
 VER_JSON="/tmp/version.json"
 OS=$(grep -E '^(VERSION_CODENAME)=' /etc/os-release)  >&3 2>&3
@@ -91,6 +92,20 @@ echo "==========================================================================
 		after=$(date +%s)
 		echo -e "## apt-get install ${package}  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	done
+	
+	for package in ${packages2remove}
+	do
+		before=$(date +%s)
+		STEP=$(($STEP + 1))
+		echo -e "XXX\n${STEP}\Remove ${package}\nXXX"
+		PKG_OK=$(dpkg -l ${package} 2>/dev/null | egrep '^ii' | wc -l) >&3 2>&3
+		if [ ${PKG_OK} -eq 0 ]; then
+		  apt-get --yes remove ${package} >&3 2>&3
+		fi
+		after=$(date +%s)
+		echo -e "## apt-get remove ${package}  ##  finished after $((after - $before)) seconds" >&3 2>&3
+	done
+
 
 	STEP=$(($STEP + 1))
 	if [ $OS == "bullseye" ]; then
@@ -304,24 +319,26 @@ echo "==========================================================================
 
 	echo -e "XXX\n${STEP}\nCopy binaries... \nXXX"	
 	before=$(date +%s)
+	rm /usr/bin/jq >&3 2>&3
 	
 	service spotifyd stop >&3 2>&3
+	systemctl disable spotifyd >&3 2>&3
+	service librespot stop >&3 2>&3
 
 	# Binaries
 	if [ `getconf LONG_BIT` == 32 ]; then
-		if [ $OS == "bullseye" ]; then
-			mv ${MUPI_SRC}/bin/spotifyd/0.3.3/spotifyd /usr/bin/spotifyd >&3 2>&3
-		else
-			mv ${MUPI_SRC}/bin/spotifyd/0.3.5/spotifyd /usr/bin/spotifyd >&3 2>&3
-		fi
-			mv ${MUPI_SRC}/bin/fbv/fbv /usr/bin/fbv >&3 2>&3
+		wget -O /usr/bin/jq https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-armhf >&3 2>&3
+		mv ${MUPI_SRC}/bin/librespot/dev_0.5_20240905/librespot-32bit /usr/bin/librespot >&3 2>&3
+		mv ${MUPI_SRC}/bin/fbv/fbv /usr/bin/fbv >&3 2>&3
 	else
-		mv ${MUPI_SRC}/bin/spotifyd/0.3.5/spotifyd_64bit /usr/bin/spotifyd >&3 2>&3
+		wget -O /usr/bin/jq https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-arm64 >&3 2>&3
+		mv ${MUPI_SRC}/bin/librespot/dev_0.5_20240905/librespot-64bit /usr/bin/librespot >&3 2>&3
 		mv ${MUPI_SRC}/bin/fbv/fbv_64 /usr/bin/fbv >&3 2>&3
 	fi
-	chmod 755 /usr/bin/fbv /usr/bin/spotifyd >&3 2>&3
-	mv ${MUPI_SRC}/config/templates/spotifyd.conf /etc/spotifyd/spotifyd.conf >&3 2>&3
+	chmod 755 /usr/bin/fbv /usr/bin/jq /usr/bin/librespot >&3 2>&3
+	#mv ${MUPI_SRC}/config/templates/librespot.conf /etc/spotifyd/spotifyd.conf >&3 2>&3
 	
+	mkdir /etc/librespot/ >&3 2>&3
 	mkdir -p $(cat /etc/mupibox/mupiboxconfig.json | jq -r .spotify.cachepath) >&3 2>&3
 	chown dietpi:dietpi $(cat /etc/mupibox/mupiboxconfig.json | jq -r .spotify.cachepath) >&3 2>&3
 
@@ -374,7 +391,8 @@ echo "==========================================================================
 	before=$(date +%s)
 	mv -f ${MUPI_SRC}/config/services/mupi_idle_shutdown.service /etc/systemd/system/mupi_idle_shutdown.service >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/mupi_splash.service /etc/systemd/system/mupi_splash.service >&3 2>&3
-	mv -f ${MUPI_SRC}/config/services/spotifyd.service /etc/systemd/system/spotifyd.service >&3 2>&3
+	mv -f ${MUPI_SRC}/config/services/librespot.service /etc/systemd/system/librespot.service >&3 2>&3
+	mv -f ${MUPI_SRC}/config/templates/env-librespot /etc/librespot/env-librespot >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/pulseaudio.service /etc/systemd/system/pulseaudio.service >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/mupi_startstop.service /etc/systemd/system/mupi_startstop.service >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/mupi_wifi.service /etc/systemd/system/mupi_wifi.service  >&3 2>&3
@@ -392,6 +410,8 @@ echo "==========================================================================
 	mv -f ${MUPI_SRC}/config/services/mupi_mqtt.service /etc/systemd/system/mupi_mqtt.service  >&3 2>&3
 
 	systemctl daemon-reload >&3 2>&3
+	systemctl enable librespot.service >&3 2>&3	
+	systemctl start librespot.service >&3 2>&3	
 	systemctl enable mupi_check_internet.service >&3 2>&3
 	systemctl start mupi_check_internet.service >&3 2>&3
 	systemctl enable mupi_check_monitor.service >&3 2>&3
@@ -491,7 +511,7 @@ echo "==========================================================================
 	rm /etc/systemd/system/mupi_change_checker.service >&3 2>&3
 	/usr/local/bin/mupibox/./m3u_generator.sh >&3 2>&3
 	/usr/local/bin/mupibox/./setting_update.sh >&3 2>&3
-	service spotifyd start >&3 2>&3
+	service librespot restart >&3 2>&3
 	
 	mv ${LOG} /boot/$(date +%F)_update_${VERSION}.log >&3 2>&3
 	chown dietpi:dietpi ${CONFIG} >&3 2>&3
