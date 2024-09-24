@@ -113,19 +113,21 @@
                     <div>
                         <ion-item>
                             <ion-label>Interval</ion-label>
-                            <ion-checkbox #spotify_aPartOfAll name="spotify_aPartOfAll" [(ngModel)]="aPartOfAll" (ionChange)="validate()"></ion-checkbox>
+                            <ion-checkbox #spotify_aPartOfAll name="spotify_aPartOfAll" [(ngModel)]="aPartOfAll" (ionChange)="validate()" placeholder="Start"></ion-checkbox>
                         </ion-item>
                     </div>
                 </ion-col>
                 <ion-col size="3">
-                    <div>
+                    <div class="mupi-inline-label">
+                        <label>Start:</label>
                         <ion-item>
                             <ion-input #spotify_aPartOfAllMin [(ngModel)]="aPartOfAllMin" name="spotify_aPartOfAllMin" type="number" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
                         </ion-item>
                     </div>
                 </ion-col>
                 <ion-col size="3">
-                    <div>
+                    <div class="mupi-inline-label">
+                        <label>End:</label>
                         <ion-item>
                             <ion-input #spotify_aPartOfAllMax [(ngModel)]="aPartOfAllMax" name="spotify_aPartOfAllMax" type="number" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
                         </ion-item>
