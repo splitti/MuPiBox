@@ -157,19 +157,7 @@ export class MedialistPage implements OnInit {
   }
 
   private fetchMedia(): void {
-    // Method for direct and delayed slider update.
-    const updateSlider = (): void => {
-      this.slider.update();
-  
-      // Workaround as the scrollbar handle isn't visible after the immediate update
-      // Seems like a size calculation issue, as resizing the browser window helps
-      // Better fix for this? 
-      window.setTimeout(() => {
-        this.slider.update();
-      }, 1000);
-    }
-
-    // Method to fetch artwork for all media.
+    // Method to fetch artwork for given media.
     const fetchArtwork = (media: Media[]): void => {
       media.forEach(currentMedia => {
         this.artworkService.getArtwork(currentMedia).subscribe(url => {
@@ -182,7 +170,7 @@ export class MedialistPage implements OnInit {
       this.getMediaFromResumeSubscription = this.mediaService.getMediaFromResume().subscribe(media => {
         this.media = media;
         fetchArtwork(this.media)
-        updateSlider()
+        this.updateSlider()
       });
     } else {
       // const sliceMedia = (media: Media[]): Media[] => {
@@ -237,7 +225,7 @@ export class MedialistPage implements OnInit {
             this.media = this.aPartOfAllMedia;
           }
   
-          updateSlider()
+          this.updateSlider()
         });
       } else {
         this.getMediaFromArtistSubscription = this.mediaService.getMediaFromArtist(this.artist).subscribe(media => {
@@ -265,9 +253,23 @@ export class MedialistPage implements OnInit {
             this.media = this.aPartOfAllMedia;
           }
   
-          updateSlider()
+          this.updateSlider()
         });
       }
     }
+  }
+
+  /**
+   * Updates the slider immediately and after a delay again.
+   */
+  private updateSlider(): void {
+    this.slider.update();
+
+    // Workaround as the scrollbar handle isn't visible after the immediate update
+    // Seems like a size calculation issue, as resizing the browser window helps
+    // Better fix for this? 
+    window.setTimeout(() => {
+      this.slider.update();
+    }, 1000);
   }
 }
