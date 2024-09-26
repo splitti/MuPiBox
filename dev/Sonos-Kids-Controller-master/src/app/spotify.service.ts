@@ -1,10 +1,11 @@
-import { Injectable } from '@angular/core';
-import { Observable, defer, throwError, of, range } from 'rxjs';
-import { retryWhen, flatMap, tap, delay, take, map, mergeMap, mergeAll, toArray } from 'rxjs/operators';
-import { environment } from 'src/environments/environment';
-import { HttpClient } from '@angular/common/http';
+import { Observable, defer, of, range, throwError } from 'rxjs';
 import { SpotifyAlbumsResponse, SpotifyAlbumsResponseItem, SpotifyArtistResponse, SpotifyArtistsAlbumsResponse, SpotifyEpisodeResponseItem, SpotifyEpisodesResponse, SpotifyShowResponse } from './spotify';
+import { delay, flatMap, map, mergeAll, mergeMap, retryWhen, take, tap, toArray } from 'rxjs/operators';
+
+import { HttpClient } from '@angular/common/http';
+import { Injectable } from '@angular/core';
 import { Media } from './media';
+import { environment } from 'src/environments/environment';
 
 declare const require: any;
 
@@ -39,6 +40,7 @@ export class SpotifyService {
               artist: item.artists[0].name,
               title: item.name,
               cover: item.images[0].url,
+              release_date: item.release_date,
               type: 'spotify',
               category,
               index
@@ -102,6 +104,7 @@ export class SpotifyService {
               title: item.name,
               cover: item.images[0].url,
               artistcover: multiplier.artistcover,
+              release_date: item.release_date,
               type: 'spotify',
               category,
               index
@@ -269,6 +272,7 @@ export class SpotifyService {
           artist: response.artists?.[0]?.name,
           title: response.name,
           cover: response?.images[0]?.url,
+          release_date: response.release_date,
           type: 'spotify',
           category,
           index

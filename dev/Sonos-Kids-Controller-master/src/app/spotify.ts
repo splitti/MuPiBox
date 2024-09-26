@@ -12,6 +12,7 @@ export interface SpotifyAlbumsResponseItem {
     name: string;
     id: string;
     artists: SpotifyAlbumsResponseArtist[];
+    release_date: string
 }
 
 export interface SpotifyAlbumsResponse {
