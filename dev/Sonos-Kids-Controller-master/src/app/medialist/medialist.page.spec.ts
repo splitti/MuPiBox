@@ -37,19 +37,47 @@ describe('MedialistPage', () => {
     expect(component).toBeTruthy();
   })
 
-  describe('should correctly slice show media', () => {
-    fit('should not slice at all if not wanted', () => {
+  fdescribe('should correctly slice show media', () => {
+    it('should not slice at all if not wanted', () => {
       component.artist = createArtist({coverMedia: createMedia({showid: 'a', aPartOfAll: undefined})})
       const mediaList = [createMedia({})]
-      spyOn((component as any).mediaService, 'getMediaFromShow').and.returnValue(of(mediaList));
+      const spy = spyOn((component as any).mediaService, 'getMediaFromShow').and.returnValue(of(mediaList));
       (component as any).fetchMedia()
+      // Ensure the correct method was called.
+      expect(spy).toHaveBeenCalledOnceWith(component.artist)
       expect(component.media).toEqual(mediaList)
+    })
+
+    it('should slice if wanted', () => {
+      component.artist = createArtist({coverMedia: createMedia({showid: 'a', aPartOfAll: true, aPartOfAllMin: 1, aPartOfAllMax: 2})})
+      const mediaList = [createMedia({title: "a"}), createMedia({title: "b"}), createMedia({title: "c"})]
+      const spy = spyOn((component as any).mediaService, 'getMediaFromShow').and.returnValue(of(mediaList));
+      (component as any).fetchMedia()
+      // Ensure the correct method was called.
+      expect(spy).toHaveBeenCalledOnceWith(component.artist)
+      expect(component.media).toEqual([createMedia({title: "b"}), createMedia({title: "c"})])
     })
   })
 
-  describe('should correctly slice artist media', () => {
-    it('should not slice at all', () => {
-      component.artist = createArtist({coverMedia: createMedia({showid: 'a', aPartOfAll: undefined})})
+  fdescribe('should correctly slice artist media', () => {
+    it('should not slice at all if not wanted', () => {
+      component.artist = createArtist({coverMedia: createMedia({aPartOfAll: undefined})})
+      const mediaList = [createMedia({})]
+      const spy = spyOn((component as any).mediaService, 'getMediaFromArtist').and.returnValue(of(mediaList));
+      (component as any).fetchMedia()
+      // Ensure the correct method was called.
+      expect(spy).toHaveBeenCalledOnceWith(component.artist)
+      expect(component.media).toEqual(mediaList)
+    })
+
+    it('should slice if wanted', () => {
+      component.artist = createArtist({coverMedia: createMedia({aPartOfAll: true, aPartOfAllMin: 1, aPartOfAllMax: 2})})
+      const mediaList = [createMedia({title: "a"}), createMedia({title: "b"}), createMedia({title: "c"})]
+      const spy = spyOn((component as any).mediaService, 'getMediaFromArtist').and.returnValue(of(mediaList));
+      (component as any).fetchMedia()
+      // Ensure the correct method was called.
+      expect(spy).toHaveBeenCalledOnceWith(component.artist)
+      expect(component.media).toEqual([createMedia({title: "a"}), createMedia({title: "b"})])
     })
   })
 })
