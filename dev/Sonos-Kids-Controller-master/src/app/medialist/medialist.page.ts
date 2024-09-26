@@ -173,86 +173,26 @@ export class MedialistPage implements OnInit {
         this.updateSlider()
       });
     } else {
-      // const sliceMedia = (media: Media[]): Media[] => {
-      //   if (this.artist.coverMedia?.aPartOfAll) {
-      //     // return media.slice(this.artist.coverMedia?.aPartOfAllMin, )
-
-      //     for (let i = 0; i < this.media.length; i++){
-      //       let rev = this.media.length - i;
-      //       if(rev >= (this.artist.coverMedia?.aPartOfAllMin) && rev <= (this.artist.coverMedia?.aPartOfAllMax)){
-      //         this.aPartOfAllMedia.push(this.media[i]);
-      //       }
-      //     }
-      //     this.media = this.aPartOfAllMedia;
-      //   }
-      //   return media
-
-      //   if(this.artist.coverMedia?.aPartOfAll){
-      //     let min: number;
-      //     let max: number;
-      //     if(this.artist.coverMedia?.aPartOfAllMin == null){
-      //       min = 0
-      //     }else{
-      //       min = this.artist.coverMedia?.aPartOfAllMin -1;
-      //     }
-      //     if(this.artist.coverMedia?.aPartOfAllMax == null){
-      //       max = parseInt(this.artist.albumCount) -1;
-      //     }else{
-      //       max = this.artist.coverMedia?.aPartOfAllMax -1;
-      //     }
-      //     for (let i = 0; i < this.media.length; i++){
-      //       if(i >= min && i <= max){
-      //         this.aPartOfAllMedia.push(this.media[i]);
-      //       }
-      //     }
-      //     this.media = this.aPartOfAllMedia;
-      //   }
-      // }
+      const sliceMedia = (media: Media[], offsetByOne: boolean = false): Media[] => {
+        if (this.artist.coverMedia?.aPartOfAll) {
+          const min = this.artist.coverMedia?.aPartOfAllMin - (offsetByOne ? 1 : 0) ?? 0
+          const max = (this.artist.coverMedia?.aPartOfAllMax ?? parseInt(this.artist.albumCount)) - (offsetByOne ? 1 : 0)
+          return media.slice(min, max + 1)
+        }
+        return media
+      }
 
       if ((this.artist.coverMedia.showid && this.artist.coverMedia.showid.length > 0)
            || (this.artist.coverMedia.type == 'rss' && this.artist.coverMedia.id.length > 0)) {
         this.getMediaFromShowSubscription = this.mediaService.getMediaFromShow(this.artist).subscribe(media => {
-          this.media = media;
+          this.media = sliceMedia(media)
           fetchArtwork(this.media)
-    
-          if (this.artist.coverMedia?.aPartOfAll){
-            for (let i = 0; i < this.media.length; i++){
-              let rev = this.media.length - i;
-              if(rev >= (this.artist.coverMedia?.aPartOfAllMin) && rev <= (this.artist.coverMedia?.aPartOfAllMax)){
-                this.aPartOfAllMedia.push(this.media[i]);
-              }
-            }
-            this.media = this.aPartOfAllMedia;
-          }
-  
           this.updateSlider()
         });
       } else {
         this.getMediaFromArtistSubscription = this.mediaService.getMediaFromArtist(this.artist).subscribe(media => {
-          this.media = media;
-          fetchArtwork(this.media)
-
-          if(this.artist.coverMedia?.aPartOfAll){
-            let min: number;
-            let max: number;
-            if(this.artist.coverMedia?.aPartOfAllMin == null){
-              min = 0
-            }else{
-              min = this.artist.coverMedia?.aPartOfAllMin -1;
-            }
-            if(this.artist.coverMedia?.aPartOfAllMax == null){
-              max = parseInt(this.artist.albumCount) -1;
-            }else{
-              max = this.artist.coverMedia?.aPartOfAllMax -1;
-            }
-            for (let i = 0; i < this.media.length; i++){
-              if(i >= min && i <= max){
-                this.aPartOfAllMedia.push(this.media[i]);
-              }
-            }
-            this.media = this.aPartOfAllMedia;
-          }
-  
+          this.media = sliceMedia(media, true)
+          fetchArtwork(this.media)  
           this.updateSlider()
         });
       }
