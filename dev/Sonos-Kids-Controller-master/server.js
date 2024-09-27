@@ -41,7 +41,6 @@ app.use(express.urlencoded({ extended: false }));
 // production.
 if (process.env.NODE_ENV !== 'development') {
     // Static path to compiled Angular app
-    console.log("Serve www")
     app.use(express.static(path.join(__dirname, 'www')));
 }
 
