@@ -1,12 +1,12 @@
 import { ActivatedRoute, NavigationExtras, Router } from '@angular/router';
 import { Component, OnInit, ViewChild } from '@angular/core';
+import { Media, MediaSorting } from '../media';
 import { Observable, Subscription } from 'rxjs';
 
 import { ActivityIndicatorService } from '../activity-indicator.service';
 import { Artist } from '../artist';
 import { ArtworkService } from '../artwork.service';
 import { IonSlides } from '@ionic/angular';
-import { Media } from '../media';
 import { MediaService } from '../media.service';
 import { Monitor } from '../monitor';
 import { Mupihat } from '../mupihat';
@@ -166,6 +166,25 @@ export class MedialistPage implements OnInit {
       });
     }
 
+    const sortMedia = (coverMedia: Media, media: Media[]): Media[] => {
+      switch (coverMedia.sorting) {
+        case MediaSorting.AlphabeticalDescending:
+          return media.sort((a, b) => b.title.localeCompare(a.title, undefined, {
+            numeric: true,
+            sensitivity: 'base'
+          }))
+        case MediaSorting.ReleaseDateAscending:
+            return media.sort((a, b) => (new Date(b.release_date)).getTime() - (new Date(a.release_date)).getTime())
+        case MediaSorting.ReleaseDateDescending:
+          return media.sort((a, b) => (new Date(a.release_date)).getTime() - (new Date(b.release_date)).getTime())
+        default: // MediaList.Alphabetical.Ascending
+            return media.sort((a, b) => a.title.localeCompare(b.title, undefined, {
+              numeric: true,
+              sensitivity: 'base'
+            }))
+      } 
+    }
+
     if (this.resume) {
       this.getMediaFromResumeSubscription = this.mediaService.getMediaFromResume().subscribe(media => {
         this.media = media;
@@ -185,13 +204,15 @@ export class MedialistPage implements OnInit {
       if ((this.artist.coverMedia.showid && this.artist.coverMedia.showid.length > 0)
            || (this.artist.coverMedia.type == 'rss' && this.artist.coverMedia.id.length > 0)) {
         this.getMediaFromShowSubscription = this.mediaService.getMediaFromShow(this.artist).subscribe(media => {
-          this.media = sliceMedia(media)
+          // We need to sort first and then slice since this is the intuitive behavior.
+          this.media = sliceMedia(sortMedia(this.artist.coverMedia, media))
           fetchArtwork(this.media)
           this.updateSlider()
         });
       } else {
         this.getMediaFromArtistSubscription = this.mediaService.getMediaFromArtist(this.artist).subscribe(media => {
-          this.media = sliceMedia(media, true)
+          // We need to sort first and then slice since this is the intuitive behavior.
+          this.media = this.media = sliceMedia(sortMedia(this.artist.coverMedia, media), true)
           fetchArtwork(this.media)  
           this.updateSlider()
         });

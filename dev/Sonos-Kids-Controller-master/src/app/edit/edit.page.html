@@ -37,11 +37,10 @@
 <ion-content class="edit-content">
     <ion-list mode="ios"  class="edit-list">
         <ion-item *ngFor="let item of (media | async); let i = index" lines="inset"  class="edit-item">
-            <ion-grid  class="edit-grid">
+            <ion-grid class="edit-grid">
                 <ion-row class="edit-row">
                     <ion-col size="2" class="edit-col">
                         <ion-label color="dark" class="transparent">
-                            <p>Index:</p>
                             <p>Type:</p>
                             <p>Category:</p>
                             <p *ngIf="item.artist">Label:</p>
@@ -55,13 +54,11 @@
                             <p *ngIf="item.artistcover">LabelCover:</p>
                             <p *ngIf="item.shuffle">Shuffle:</p>
                             <p *ngIf="item.aPartOfAll">Interval:</p>
-                            <p *ngIf="item.aPartOfAll && item.aPartOfAllMin">Start:</p>
-                            <p *ngIf="item.aPartOfAll && item.aPartOfAllMax">End:</p>
+                            <p *ngIf="item.sorting">Sorting:</p>
                         </ion-label>
                     </ion-col>
                     <ion-col size="8" class="edit-col">
                         <ion-label color="dark">
-                            <p class="transparent">{{item.index}}</p>
                             <p class="transparent">{{item.type}}</p>
                             <p class="transparent">{{item.category || 'audiobook'}}</p>
                             <p *ngIf="item.artist">{{item.artist}}</p>
@@ -74,9 +71,8 @@
                             <p *ngIf="item.cover" class="transparent">{{item.cover}}</p>
                             <p *ngIf="item.artistcover" class="transparent">{{item.artistcover}}</p>
                             <p *ngIf="item.shuffle">{{item.shuffle}}</p>
-                            <p *ngIf="item.aPartOfAll">{{item.aPartOfAll}}</p>
-                            <p *ngIf="item.aPartOfAll">{{item.aPartOfAllMin || '-'}}</p>
-                            <p *ngIf="item.aPartOfAll">{{item.aPartOfAllMax || '-'}}</p>
+                            <p *ngIf="item.aPartOfAll">{{ item.aPartOfAllMin ?? '0' }} - {{ item.aPartOfAllMax || '-' }}</p>
+                            <p *ngIf="item.sorting">{{ item.sorting }}</p>
                         </ion-label>
                     </ion-col>
                     <ion-col size="1" class="vertical-center-content edit-col">

@@ -1,25 +1,26 @@
-import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable, from, of, iif, Subject, interval } from 'rxjs';
-import { map, mergeMap, tap, toArray, mergeAll, switchMap, shareReplay } from 'rxjs/operators';
-import { environment } from '../environments/environment';
-import { SpotifyService } from './spotify.service';
-import { Media } from './media';
+import { Observable, Subject, from, iif, interval, of } from 'rxjs';
+import { map, mergeAll, mergeMap, shareReplay, switchMap, tap, toArray } from 'rxjs/operators';
+
+import { AlbumStop } from './albumstop';
 import { Artist } from './artist';
-import { Network } from "./network";
-import { WLAN } from './wlan';
-import { CurrentSpotify } from './current.spotify';
+import { CurrentEpisode } from './current.episode';
 import { CurrentMPlayer } from './current.mplayer';
 import { CurrentPlaylist } from './current.playlist';
-import { CurrentEpisode } from './current.episode';
 import { CurrentShow } from './current.show';
-import { Validate } from './validate';
-import { PlayerService } from './player.service';
+import { CurrentSpotify } from './current.spotify';
+import { HttpClient } from '@angular/common/http';
+import { Injectable } from '@angular/core';
+import { Media } from './media';
 import { Monitor } from './monitor';
-import { AlbumStop } from './albumstop';
-import { RssFeedService } from './rssfeed.service';
 import { Mupihat } from './mupihat';
+import { Network } from "./network";
+import { PlayerService } from './player.service';
+import { RssFeedService } from './rssfeed.service';
 import { SonosApiConfig } from './sonos-api';
+import { SpotifyService } from './spotify.service';
+import { Validate } from './validate';
+import { WLAN } from './wlan';
+import { environment } from '../environments/environment';
 
 @Injectable({
   providedIn: 'root'
@@ -276,7 +277,7 @@ export class MediaService {
       map((item) => // get media for the current item
         iif(
           () => (item.query && item.query.length > 0) ? true : false, // Get media by query
-          this.spotifyService.getMediaByQuery(item.query, item.category, item.index, item.shuffle, item.aPartOfAll, item.aPartOfAllMin, item.aPartOfAllMax, item.artistcover).pipe(
+          this.spotifyService.getMediaByQuery(item.query, item.category, item.index, item).pipe(
             map(items => {  // If the user entered an user-defined artist name in addition to a query, overwrite orignal artist from spotify
               if (item.artist?.length > 0) {
                 items.forEach(currentItem => {
@@ -288,7 +289,7 @@ export class MediaService {
           ),
           iif(
             () => (item.artistid && item.artistid.length > 0) ? true : false, // Get media by artist
-            this.spotifyService.getMediaByArtistID(item.artistid, item.category, item.index, item.shuffle, item.aPartOfAll, item.aPartOfAllMin, item.aPartOfAllMax, item.artistcover).pipe(
+            this.spotifyService.getMediaByArtistID(item.artistid, item.category, item.index, item).pipe(
               map(items => {  // If the user entered an user-defined artist name in addition to a query, overwrite orignal artist from spotify
                 if (item.artist?.length > 0) {
                   items.forEach(currentItem => {
@@ -300,7 +301,7 @@ export class MediaService {
             ),
             iif(
               () => (item.showid && item.showid.length > 0 && item.category !== "resume") ? true : false, // Get media by show
-                this.spotifyService.getMediaByShowID(item.showid, item.category, item.index, item.shuffle, item.aPartOfAll, item.aPartOfAllMin, item.aPartOfAllMax, item.artistcover).pipe(
+                this.spotifyService.getMediaByShowID(item.showid, item.category, item.index, item).pipe(
                   map(items => {  // If the user entered an user-defined artist name in addition to a query, overwrite orignal artist from spotify
                     if (item.artist?.length > 0) {
                       items.forEach(currentItem => {
@@ -451,12 +452,7 @@ export class MediaService {
   getMediaFromArtist(artist: Artist): Observable<Media[]> {
     return this.artistMediaSubject.pipe(
       map((media: Media[]) => {
-        return media
-          .filter(currentMedia => currentMedia.artist === artist.name)
-          .sort((a, b) => a.title.localeCompare(b.title, undefined, {
-            numeric: true,
-            sensitivity: 'base'
-          }));
+        return media.filter(currentMedia => currentMedia.artist === artist.name)
       })
     );
   }
@@ -474,9 +470,7 @@ export class MediaService {
   getMediaFromShow(artist: Artist): Observable<Media[]> {
     return this.artistMediaSubject.pipe(
       map((media: Media[]) => {
-        return media
-          .filter(currentMedia => currentMedia.artist === artist.name)
-          .sort((a, b) => (new Date(b.release_date)).getTime() - (new Date(a.release_date)).getTime());
+        return media.filter(currentMedia => currentMedia.artist === artist.name)
       })
     );
   }

@@ -98,8 +98,13 @@
                 <ion-col size="2">
                     <div>
                         <ion-item>
-                            <ion-label>Sort descending</ion-label>
-                            <ion-checkbox #spotify_shuffle name="spotify_shuffle" [(ngModel)]="shuffle" (ionChange)="validate()"></ion-checkbox>
+                            <ion-label class="dimmed-text">Sorting</ion-label>
+                            <ion-select #sortingSelect interface="popover" [(ngModel)]="sorting" name="sorting">
+                                <ion-select-option value="AlphabeticalAscending">alphabetical asc.</ion-select-option>
+                                <ion-select-option value="AlphabeticalDescending">alphabetical desc.</ion-select-option>
+                                <ion-select-option value="ReleaseDateAscending">release date asc.</ion-select-option>
+                                <ion-select-option value="ReleaseDateDescending">release date desc.</ion-select-option>
+                            </ion-select>
                         </ion-item>
                     </div>
                 </ion-col>

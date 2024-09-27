@@ -7,13 +7,14 @@ import { Injectable } from '@angular/core';
 import { Media } from './media';
 import { environment } from 'src/environments/environment';
 
+export type ExtraDataMedia = Pick<Media, 'artistcover' | 'shuffle' | 'aPartOfAll' | 'aPartOfAllMin' | 'aPartOfAllMax' | 'sorting'>
+
 declare const require: any;
 
 @Injectable({
   providedIn: 'root'
 })
 export class SpotifyService {
-
   spotifyApi: any;
   refreshingToken = false;
 
@@ -22,7 +23,7 @@ export class SpotifyService {
     this.spotifyApi = new SpotifyWebApi();
   }
 
-  getMediaByQuery(query: string, category: string, index: number, shuffle: boolean, aPartOfAll: boolean, aPartOfAllMin: number, aPartOfAllMax: number, artistcover: string): Observable<Media[]> {
+  getMediaByQuery(query: string, category: string, index: number, extraDataSource: ExtraDataMedia): Observable<Media[]> {
     const albums = defer(() => this.spotifyApi.searchAlbums(query, { limit: 1, offset: 0, market: 'DE' })).pipe(
       retryWhen(errors => {
         return this.errorHandler(errors);
@@ -44,23 +45,9 @@ export class SpotifyService {
               type: 'spotify',
               category,
               index
-            };
-            if(artistcover) {
-              media.artistcover = artistcover;
             }
-            if(shuffle) {
-              media.shuffle = shuffle;
-            }
-            if(aPartOfAll) {
-              media.aPartOfAll = aPartOfAll;
-            }
-            if(aPartOfAllMin) {
-              media.aPartOfAllMin = aPartOfAllMin;
-            }
-            if(aPartOfAllMax) {
-              media.aPartOfAllMax = aPartOfAllMax;
-            }
-            return media;
+            this.copyExtraMediaData(extraDataSource, media)
+            return media
           });
         })
       )),
@@ -71,7 +58,7 @@ export class SpotifyService {
     return albums;
   }
 
-  getMediaByArtistID(id: string, category: string, index: number, shuffle: boolean, aPartOfAll: boolean, aPartOfAllMin: number, aPartOfAllMax: number, manualArtistcover: string): Observable<Media[]> {
+  getMediaByArtistID(id: string, category: string, index: number, extraDataSource: ExtraDataMedia): Observable<Media[]> {
     const albums = defer(() => this.spotifyApi.getArtistAlbums(id, { include_groups: 'album,single,compilation', limit: 1, offset: 0, market: 'DE' })).pipe(
       retryWhen(errors => {
         return this.errorHandler(errors);
@@ -108,23 +95,9 @@ export class SpotifyService {
               type: 'spotify',
               category,
               index
-            };
-            if(manualArtistcover) {
-              media.artistcover = manualArtistcover;
             }
-            if(shuffle) {
-              media.shuffle = shuffle;
-            }
-            if(aPartOfAll) {
-              media.aPartOfAll = aPartOfAll;
-            }
-            if(aPartOfAllMin) {
-              media.aPartOfAllMin = aPartOfAllMin;
-            }
-            if(aPartOfAllMax) {
-              media.aPartOfAllMax = aPartOfAllMax;
-            }
-            return media;
+            this.copyExtraMediaData(extraDataSource, media)
+            return media
           });
         })
       )),
@@ -135,7 +108,7 @@ export class SpotifyService {
     return albums;
   }
 
-  getMediaByShowID(id: string, category: string, index: number, shuffle: boolean, aPartOfAll: boolean, aPartOfAllMin: number, aPartOfAllMax: number, manualArtistcover: string): Observable<Media[]> {
+  getMediaByShowID(id: string, category: string, index: number, extraDataSource: ExtraDataMedia): Observable<Media[]> {
     const albums = defer(() => this.spotifyApi.getShow(id, { limit: 1, offset: 0, market: 'DE' })).pipe(
       retryWhen(errors => {
         return this.errorHandler(errors);
@@ -163,23 +136,9 @@ export class SpotifyService {
               category,
               release_date: item.release_date,
               index
-            };
-            if(manualArtistcover) {
-              media.artistcover = manualArtistcover;
             }
-            if(shuffle) {
-              media.shuffle = shuffle;
-            }
-            if(aPartOfAll) {
-              media.aPartOfAll = aPartOfAll;
-            }
-            if(aPartOfAllMin) {
-              media.aPartOfAllMin = aPartOfAllMin;
-            }
-            if(aPartOfAllMax) {
-              media.aPartOfAllMax = aPartOfAllMax;
-            }
-            return media;
+            this.copyExtraMediaData(extraDataSource, media)
+            return media
           });
         })
       )),
@@ -333,5 +292,14 @@ export class SpotifyService {
       delay(500),
       take(10)
     );
+  }
+
+  private copyExtraMediaData(source: ExtraDataMedia, target: Media): void {
+    const keys = ['artistcover', 'shuffle',  'aPartOfAll', 'aPartOfAllMin', 'aPartOfAllMax', 'sorting']
+    keys.forEach(key => {
+      if (source[key]) {
+        target[key] = source[key]
+      }
+    })
   }
 }
