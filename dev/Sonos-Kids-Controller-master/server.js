@@ -39,10 +39,8 @@ app.use(express.urlencoded({ extended: false }));
 // the Angular development server during development to be able to hot-reload and debug.
 // We explicitely check for !== 'development' for now so we do not need to set this env in
 // production.
-console.log("started")
 if (process.env.NODE_ENV !== 'development') {
     // Static path to compiled Angular app
-    console.log("Serve www")
     app.use(express.static(path.join(__dirname, 'www')));
 }
 
