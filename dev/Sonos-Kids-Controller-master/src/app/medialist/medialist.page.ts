@@ -32,8 +32,7 @@ export class MedialistPage implements OnInit {
   aPartOfAllMedia: Media[] = [];
   hat_active = false;
   private getMediaFromResumeSubscription: Subscription;
-  private getMediaFromShowSubscription: Subscription;
-  private getMediaFromArtistSubscription: Subscription;
+  private getMediaFromArtistSubscription?: Subscription;
   public readonly mupihat$: Observable<Mupihat>;
 
   slideOptions = {
@@ -56,7 +55,7 @@ export class MedialistPage implements OnInit {
     private playerService: PlayerService,
     private activityIndicatorService: ActivityIndicatorService
   ) {
-    this.route.queryParams.subscribe(params => {
+    this.route.queryParams.subscribe(_params => {
       if (this.router.getCurrentNavigation()?.extras.state?.artist) {
         this.artist = this.router.getCurrentNavigation().extras.state.artist;
         if (this.router.getCurrentNavigation().extras.state?.resume === "resume") {
@@ -97,12 +96,7 @@ export class MedialistPage implements OnInit {
     if(this.getMediaFromResumeSubscription){
        this.getMediaFromResumeSubscription.unsubscribe();
      }
-    if (this.getMediaFromShowSubscription){
-      this.getMediaFromShowSubscription.unsubscribe();
-    }
-    if(this.getMediaFromArtistSubscription){
-      this.getMediaFromArtistSubscription.unsubscribe();
-    }
+    this.getMediaFromArtistSubscription?.unsubscribe()
   }
 
   ionViewDidLeave() {
@@ -201,22 +195,15 @@ export class MedialistPage implements OnInit {
         return media
       }
 
-      if ((this.artist.coverMedia.showid && this.artist.coverMedia.showid.length > 0)
-           || (this.artist.coverMedia.type == 'rss' && this.artist.coverMedia.id.length > 0)) {
-        this.getMediaFromShowSubscription = this.mediaService.getMediaFromShow(this.artist).subscribe(media => {
-          // We need to sort first and then slice since this is the intuitive behavior.
-          this.media = sliceMedia(sortMedia(this.artist.coverMedia, media))
-          fetchArtwork(this.media)
-          this.updateSlider()
-        });
-      } else {
-        this.getMediaFromArtistSubscription = this.mediaService.getMediaFromArtist(this.artist).subscribe(media => {
-          // We need to sort first and then slice since this is the intuitive behavior.
-          this.media = this.media = sliceMedia(sortMedia(this.artist.coverMedia, media), true)
-          fetchArtwork(this.media)  
-          this.updateSlider()
-        });
-      }
+      const isShow = (this.artist.coverMedia.showid && this.artist.coverMedia.showid.length > 0)
+      || (this.artist.coverMedia.type == 'rss' && this.artist.coverMedia.id.length > 0)
+
+      this.getMediaFromArtistSubscription = this.mediaService.getMediaFromArtist(this.artist).subscribe(media => {
+        // We need to sort first and then slice since this is the intuitive behavior.
+        this.media = sliceMedia(sortMedia(this.artist.coverMedia, media), !isShow)
+        fetchArtwork(this.media)
+        this.updateSlider()
+      })
     }
   }
 
