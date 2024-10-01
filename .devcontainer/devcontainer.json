@@ -40,6 +40,9 @@
     "containerUser": "codespace",
     "customizations": {
         "vscode": {
+            "settings": {
+                "files.insertFinalNewline": true
+            },
             "extensions": [
                 "eamodio.gitlens",
                 "devsense.phptools-vscode"

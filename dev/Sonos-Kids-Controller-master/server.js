@@ -35,8 +35,14 @@ const resumeLock = '/tmp/.resume.lock';
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-app.use(express.static(path.join(__dirname, 'www'))); // Static path to compiled Ionic app
-
+// We only want to serve the Angular app as static files in production so that we can start
+// the Angular development server during development to be able to hot-reload and debug.
+// We explicitely check for !== 'development' for now so we do not need to set this env in
+// production.
+if (process.env.NODE_ENV !== 'development') {
+    // Static path to compiled Angular app
+    app.use(express.static(path.join(__dirname, 'www')));
+}
 
 // Routes
 app.get('/api/rssfeed', async (req, res) => {
