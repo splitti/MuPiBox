@@ -261,55 +261,43 @@ export class MediaService {
 
   // Get the media data for the current category from the server
   private updateMedia(url: string, resume: boolean) {
+    // Custom rxjs pipe to override artist.
+    const overwriteArtist = (item: Media) => (source$: Observable<Media[]>): Observable<Media[]> => {
+      return source$.pipe(
+        // If the user entered an user-defined artist name in addition to a query,
+        // overwrite orignal artist from spotify.
+        map(items => {
+          if (item.artist?.length > 0) {
+            items.forEach(currentItem => {
+              currentItem.artist = item.artist;
+            });
+          }
+          return items;
+        })
+      )
+    }
+
+
     return this.http.get<Media[]>(url).pipe(
       map(items => { // Filter to get only items for the chosen category
-        if(!resume){
+        if (!resume) {
           items.forEach(item => item.category = (item.category === undefined) ? 'audiobook' : item.category); // default category
-          items = items.filter(item => item.category === this.category);
-          console.log("updateMedia for category: " + this.category + " and " + url, items);
-        }else{
-          console.log("updateMedia for resume: ", items);
-        }
-        
+          items = items.filter(item => item.category === this.category)
+        }        
         return items;
       }),
       mergeMap(items => from(items)), // parallel calls for each item
       map((item) => // get media for the current item
         iif(
           () => (item.query && item.query.length > 0) ? true : false, // Get media by query
-          this.spotifyService.getMediaByQuery(item.query, item.category, item.index, item).pipe(
-            map(items => {  // If the user entered an user-defined artist name in addition to a query, overwrite orignal artist from spotify
-              if (item.artist?.length > 0) {
-                items.forEach(currentItem => {
-                  currentItem.artist = item.artist;
-                });
-              }
-              return items;
-            })
-          ),
+          this.spotifyService.getMediaByQuery(item.query, item.category, item.index, item).pipe(overwriteArtist(item)),
           iif(
             () => (item.artistid && item.artistid.length > 0) ? true : false, // Get media by artist
-            this.spotifyService.getMediaByArtistID(item.artistid, item.category, item.index, item).pipe(
-              map(items => {  // If the user entered an user-defined artist name in addition to a query, overwrite orignal artist from spotify
-                if (item.artist?.length > 0) {
-                  items.forEach(currentItem => {
-                    currentItem.artist = item.artist;
-                  });
-                }
-                return items;
-              })
-            ),
+            this.spotifyService.getMediaByArtistID(item.artistid, item.category, item.index, item).pipe(overwriteArtist(item)),
             iif(
               () => (item.showid && item.showid.length > 0 && item.category !== "resume") ? true : false, // Get media by show
                 this.spotifyService.getMediaByShowID(item.showid, item.category, item.index, item).pipe(
-                  map(items => {  // If the user entered an user-defined artist name in addition to a query, overwrite orignal artist from spotify
-                    if (item.artist?.length > 0) {
-                      items.forEach(currentItem => {
-                        currentItem.artist = item.artist;
-                      });
-                    }
-                    return items;
-                  })
+                  overwriteArtist(item)
                 ),
                 iif(
                   () => (item.showid && item.showid.length > 0 && item.category === "resume") ? true : false, // Get media by show
@@ -333,14 +321,7 @@ export class MediaService {
                         ),iif(
                           () => (item.type === 'rss' && item.id.length > 0 && item.category !== "resume") ? true : false, // Get media by show
                             this.rssFeedService.getRssFeed(this.ip, item.id, item.category, item.index, item.shuffle, item.aPartOfAll, item.aPartOfAllMin, item.aPartOfAllMax, item.artistcover).pipe(
-                              map(items => {  // If the user entered an user-defined artist name in addition to a query, overwrite orignal artist from spotify
-                                if (item.artist?.length > 0) {
-                                  items.forEach(currentItem => {
-                                    currentItem.artist = item.artist;
-                                  });
-                                }
-                                return items;
-                              })
+                              overwriteArtist(item)
                             ),iif(
                               () => (item.type === 'spotify' && item.id && item.id.length > 0) ? true : false, // Get media by album
                                 this.spotifyService.getMediaByID(item.id, item.category, item.index, item.shuffle, item.artistcover, item.resumespotifyduration_ms, item.resumespotifyprogress_ms, item.resumespotifytrack_number).pipe(
