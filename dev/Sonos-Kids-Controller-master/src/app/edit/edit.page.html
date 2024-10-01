@@ -16,11 +16,6 @@
                 <ion-icon slot="icon-only" name="wifi-outline"></ion-icon>
             </ion-button>
         </ion-buttons>
-        <!-- <ion-buttons slot="end">
-            <ion-button (click)="networkButtonPressed()">
-                <ion-icon slot="icon-only" name="wifi-outline"></ion-icon>
-            </ion-button>
-        </ion-buttons> -->
         <ion-buttons slot="end">
             <ion-button (click)="clearResumePressed()">
                 <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
@@ -71,7 +66,7 @@
                             <p *ngIf="item.cover" class="transparent">{{item.cover}}</p>
                             <p *ngIf="item.artistcover" class="transparent">{{item.artistcover}}</p>
                             <p *ngIf="item.shuffle">{{item.shuffle}}</p>
-                            <p *ngIf="item.aPartOfAll">{{ item.aPartOfAllMin ?? '0' }} - {{ item.aPartOfAllMax || '-' }}</p>
+                            <p *ngIf="item.aPartOfAll">{{ item.aPartOfAllMin ?? '0' }} - {{ item.aPartOfAllMax || 'end' }}</p>
                             <p *ngIf="item.sorting">{{ item.sorting }}</p>
                         </ion-label>
                     </ion-col>
