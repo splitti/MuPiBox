@@ -1,14 +1,15 @@
-import { Component, OnInit, ViewEncapsulation, AfterViewInit, ViewChild } from '@angular/core';
-import { NavController, IonSelect, IonInput, IonSegment, AlertController } from '@ionic/angular';
-import { MediaService } from '../media.service';
-import { Media } from '../media';
-import Keyboard from 'simple-keyboard';
-import { NgForm } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { AfterViewInit, Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
+import { AlertController, IonInput, IonSegment, IonSelect, NavController } from '@ionic/angular';
 import { PlayerCmds, PlayerService } from '../player.service';
+
+import { ActivityIndicatorService } from '../activity-indicator.service';
+import Keyboard from 'simple-keyboard';
+import { Media } from '../media';
+import { MediaService } from '../media.service';
+import { NgForm } from '@angular/forms';
 import { Observable } from 'rxjs';
 import { Validate } from '../validate';
-import { ActivityIndicatorService } from '../activity-indicator.service';
 
 @Component({
   selector: 'app-add',
@@ -401,8 +402,8 @@ export class AddPage implements OnInit, AfterViewInit {
       });
   
       await alert.present();
-    }else{
-      if(this.edit){
+    } else {
+      if(this.edit) {
         this.mediaService.editRawMediaAtIndex(this.editMedia.index, media);
         setTimeout(async () => {
           let check = this.mediaService.getResponse();

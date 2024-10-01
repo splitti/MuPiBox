@@ -1,3 +1,10 @@
+# Config files of MupiBox.
+server/config/config.json
+server/config/active_data.json
+server/config/data.json
+server/config/monitor.json
+
+
 # Specifies intentionally untracked files to ignore when using Git
 # http://git-scm.com/docs/gitignore
 
@@ -31,7 +38,4 @@ npm-debug.log*
 /plugins
 /www
 /deploy
-
-server/config/data.json
-config.json
 
