@@ -27,7 +27,7 @@ Please visit official website  https://mupibox.de/anleitungen/installationsanlei
 - Initramfs Splash by DarkElevenAngel (https://gitlab.com/DarkElvenAngel/initramfs-splash)
 - Sonos Kids Controller by Thyraz (https://github.com/Thyraz/Sonos-Kids-Controller)
 - SpotifyController (https://github.com/amueller-tech/spotifycontroller)
-- Spotifyd (https://github.com/Spotifyd/spotifyd)
+- Librespot (https://github.com/librespot-org/librespot)
 - mplayer-wrapper by derhuerst (https://github.com/derhuerst/mplayer-wrapper)
 - pi-blaster by sarfata (https://github.com/sarfata/pi-blaster)
 - google-tts by zlargon (https://github.com/zlargon/google-tts)

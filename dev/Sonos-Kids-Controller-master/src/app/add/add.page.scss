@@ -160,3 +160,11 @@ ion-item {
 .add-content {
     --ion-background-color: #000000 !important;
 }
+
+.mupi-inline-label {
+    display: flex;
+
+    label {
+        margin-right: 2px;
+    }
+}

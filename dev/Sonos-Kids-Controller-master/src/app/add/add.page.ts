@@ -1,6 +1,6 @@
 import { ActivatedRoute, Router } from '@angular/router';
 import { AfterViewInit, Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
-import { AlertController, IonInput, IonSegment, IonSelect, NavController } from '@ionic/angular';
+import { AlertController, IonInput, NavController } from '@ionic/angular';
 import { Media, MediaSorting } from '../media';
 import { PlayerCmds, PlayerService } from '../player.service';
 
@@ -402,8 +402,8 @@ export class AddPage implements OnInit, AfterViewInit {
       });
   
       await alert.present();
-    }else{
-      if(this.edit){
+    } else {
+      if(this.edit) {
         this.mediaService.editRawMediaAtIndex(this.editMedia.index, media);
         setTimeout(async () => {
           let check = this.mediaService.getResponse();
