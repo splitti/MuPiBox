@@ -1,3 +1,4 @@
+import { ExtraDataMedia, Utils } from './utils';
 import { Observable, defer, of, range, throwError } from 'rxjs';
 import { SpotifyAlbumsResponse, SpotifyAlbumsResponseItem, SpotifyArtistResponse, SpotifyArtistsAlbumsResponse, SpotifyEpisodeResponseItem, SpotifyEpisodesResponse, SpotifyShowResponse } from './spotify';
 import { delay, flatMap, map, mergeAll, mergeMap, retryWhen, take, tap, toArray } from 'rxjs/operators';
@@ -6,8 +7,6 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Media } from './media';
 import { environment } from 'src/environments/environment';
-
-export type ExtraDataMedia = Pick<Media, 'artistcover' | 'shuffle' | 'aPartOfAll' | 'aPartOfAllMin' | 'aPartOfAllMax' | 'sorting'>
 
 declare const require: any;
 
@@ -46,7 +45,7 @@ export class SpotifyService {
               category,
               index
             }
-            this.copyExtraMediaData(extraDataSource, media)
+            Utils.copyExtraMediaData(extraDataSource, media)
             return media
           });
         })
@@ -96,7 +95,7 @@ export class SpotifyService {
               category,
               index
             }
-            this.copyExtraMediaData(extraDataSource, media)
+            Utils.copyExtraMediaData(extraDataSource, media)
             return media
           });
         })
@@ -137,7 +136,7 @@ export class SpotifyService {
               release_date: item.release_date,
               index
             }
-            this.copyExtraMediaData(extraDataSource, media)
+            Utils.copyExtraMediaData(extraDataSource, media)
             return media
           });
         })
@@ -292,14 +291,5 @@ export class SpotifyService {
       delay(500),
       take(10)
     );
-  }
-
-  private copyExtraMediaData(source: ExtraDataMedia, target: Media): void {
-    const keys = ['artistcover', 'shuffle',  'aPartOfAll', 'aPartOfAllMin', 'aPartOfAllMax', 'sorting']
-    keys.forEach(key => {
-      if (source[key]) {
-        target[key] = source[key]
-      }
-    })
   }
 }

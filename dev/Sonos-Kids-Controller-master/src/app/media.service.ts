@@ -311,7 +311,7 @@ export class MediaService {
                           overwriteArtist(item)
                         ),iif(
                           () => (item.type === 'rss' && item.id.length > 0 && item.category !== "resume") ? true : false, // Get media by rss feed
-                            this.rssFeedService.getRssFeed(this.ip, item.id, item.category, item.index, item.shuffle, item.aPartOfAll, item.aPartOfAllMin, item.aPartOfAllMax, item.artistcover).pipe(
+                            this.rssFeedService.getRssFeed(this.ip, item.id, item.category, item.index, item).pipe(
                               overwriteArtist(item)
                             ),iif(
                               () => (item.type === 'spotify' && item.id && item.id.length > 0) ? true : false, // Get media by album
