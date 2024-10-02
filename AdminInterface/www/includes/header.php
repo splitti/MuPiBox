@@ -34,7 +34,7 @@
 		<link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.5.1/css/all.css">
 		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 		<title>MuPiBox Admin-Interface</title>
-		<link rel="stylesheet" type="text/css" href="view.css?v=7.1.10" media="all">
+		<link rel="stylesheet" type="text/css" href="view.css?v=7.1.11" media="all">
 		<script src="https://code.iconify.design/iconify-icon/2.0.0/iconify-icon.min.js"></script>
 		<script type="text/javascript" src="view.js?v=6.0.0"></script>
 		<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
@@ -73,29 +73,7 @@
 				<?php /*<a href="service.php"><i class="fa-solid fa-gear"></i> Services</a>
 				<a href="tweaks.php"><i class="fa-solid fa-rocket"></i> Performance</a>*/ ?>
 				<a href="/" onmouseover="javascript:event.target.port=5252" target="_blank"><i class="fa-brands fa-raspberry-pi"></i> DietPi-Dash</a>
-				<a href="youtube-dl.php"><i class="fa-brands fa-youtube"></i> Youtube</a>
+				<a href="/" onmouseover="javascript:event.target.port=8081" target="_blank"><i class="fa-brands fa-youtube"></i> Youtube</a>
 				<a href="admin.php"><i class="fa-solid fa-screwdriver-wrench"></i> Admin</a>
 				<a href="javascript:void(0);" class="icon" onclick="myFunction()"><i class="fa fa-bars"></i></a>
 			</div>
-
-<div class="modal fade" id="ModalCenter" tabindex="-1" role="dialog" aria-labelledby="ModalCenterTitle" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3 class="modal-title" id="exampleModalCenterTitle">Please Donate</h3>
-      </div>
-      <div class="modal-body">
-		<p>The team continues to work on new functions, hardware expansions (MuPiHAT), optimizations and much more. We also offer you support in the Discord.</p>
-
-       <p>Please honor the work and donate a small amount:</p>
-       <ul>
-         <li><a href="https://paypal.me/DonateMuPiBox" target="_blank">Paypal to paypal@MuPiBox.de</a></li>
-      </ul>
-	  <p><center><img src='/images/thank-you.jpg' width='300px' /></center></p>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-      </div>
-    </div>
-  </div>
-</div>
