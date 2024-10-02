@@ -65,4 +65,5 @@ export interface SpotifyEpisodeResponseItem {
     name: string;
     id: string;
     show: SpotifyAlbumsResponseArtist[];
+    release_date?: string
 }

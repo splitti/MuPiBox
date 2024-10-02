@@ -159,6 +159,7 @@ export class SpotifyService {
           title: response.name,
           cover: response?.images[0]?.url,
           type: 'spotify',
+          release_date: response.release_date,
           category,
           index
         };
@@ -195,6 +196,7 @@ export class SpotifyService {
           title: response.name,
           cover: response?.images[0]?.url,
           type: 'spotify',
+          release_date: response.release_date,
           category,
           index
         };
