@@ -268,9 +268,9 @@ export class MediaService {
           if (item.artist?.length > 0) {
             items.forEach(currentItem => {
               currentItem.artist = item.artist;
-            });
+            })
           }
-          return items;
+          return items
         })
       )
     }
@@ -288,37 +288,44 @@ export class MediaService {
       mergeMap(items => from(items)), // parallel calls for each item
       map((item) => // get media for the current item
         iif(
-          () => (item.query && item.query.length > 0) ? true : false, // Get media by query
+          // Get media by query
+          () => (item.query && item.query.length > 0) ? true : false,
           this.spotifyService.getMediaByQuery(item.query, item.category, item.index, item).pipe(overwriteArtist(item)),
           iif(
-            () => (item.artistid && item.artistid.length > 0) ? true : false, // Get media by artist
+            // Get media by artist
+            () => (item.artistid && item.artistid.length > 0) ? true : false,
             this.spotifyService.getMediaByArtistID(item.artistid, item.category, item.index, item).pipe(overwriteArtist(item)),
             iif(
-              () => (item.showid && item.showid.length > 0 && item.category !== "resume") ? true : false, // Get media by show
-                this.spotifyService.getMediaByShowID(item.showid, item.category, item.index, item).pipe(
-                  overwriteArtist(item)
-                ),
+              // Get media by show
+              () => (item.showid && item.showid.length > 0 && item.category !== "resume") ? true : false,
+              this.spotifyService.getMediaByShowID(item.showid, item.category, item.index, item).pipe(overwriteArtist(item)),
+              iif(
+                // Get media by show supporting resume
+                () => (item.showid && item.showid.length > 0 && item.category === "resume") ? true : false,
+                  this.spotifyService.getMediaByEpisode(item.showid, item.category, item.index, item.shuffle, item.artistcover, item.resumespotifyduration_ms, item.resumespotifyprogress_ms, item.resumespotifytrack_number).pipe(
+                    map(currentItem => [currentItem]), // Return single album as list to keep data type.
+                    overwriteArtist(item)
+                  ),
                 iif(
-                  () => (item.showid && item.showid.length > 0 && item.category === "resume") ? true : false, // Get media by show supporting resume
-                    this.spotifyService.getMediaByEpisode(item.showid, item.category, item.index, item.shuffle, item.artistcover, item.resumespotifyduration_ms, item.resumespotifyprogress_ms, item.resumespotifytrack_number).pipe(
+                  // Get media by playlist
+                  () => (item.type === 'spotify' && item.playlistid && item.playlistid.length > 0) ? true : false,
+                    this.spotifyService.getMediaByPlaylistID(item.playlistid, item.category, item.index, item.shuffle, item.artistcover, item.resumespotifyduration_ms, item.resumespotifyprogress_ms, item.resumespotifytrack_number).pipe(
                       map(currentItem => [currentItem]), // Return single album as list to keep data type.
                       overwriteArtist(item)
                     ),
+                  iif(
+                    // Get media by rss feed
+                    () => (item.type === 'rss' && item.id.length > 0 && item.category !== "resume") ? true : false,
+                    this.rssFeedService.getRssFeed(this.ip, item.id, item.category, item.index, item).pipe(
+                      overwriteArtist(item)
+                    ),
                     iif(
-                      () => (item.type === 'spotify' && item.playlistid && item.playlistid.length > 0) ? true : false, // Get media by playlist
-                        this.spotifyService.getMediaByPlaylistID(item.playlistid, item.category, item.index, item.shuffle, item.artistcover, item.resumespotifyduration_ms, item.resumespotifyprogress_ms, item.resumespotifytrack_number).pipe(
-                          map(currentItem => [currentItem]), // Return single album as list to keep data type.
-                          overwriteArtist(item)
-                        ),iif(
-                          () => (item.type === 'rss' && item.id.length > 0 && item.category !== "resume") ? true : false, // Get media by rss feed
-                            this.rssFeedService.getRssFeed(this.ip, item.id, item.category, item.index, item).pipe(
-                              overwriteArtist(item)
-                            ),iif(
-                              () => (item.type === 'spotify' && item.id && item.id.length > 0) ? true : false, // Get media by album
-                                this.spotifyService.getMediaByID(item.id, item.category, item.index, item.shuffle, item.artistcover, item.resumespotifyduration_ms, item.resumespotifyprogress_ms, item.resumespotifytrack_number).pipe(
-                                  map(currentItem => [currentItem]), // Return single album as list to keep data type.
-                                  overwriteArtist(item)
-                                )
+                      // Get media by album (resume).
+                      () => (item.type === 'spotify' && item.id && item.id.length > 0) ? true : false,
+                      this.spotifyService.getMediaByID(item.id, item.category, item.index, item.shuffle, item.artistcover, item.resumespotifyduration_ms, item.resumespotifyprogress_ms, item.resumespotifytrack_number).pipe(
+                        map(currentItem => [currentItem]), // Return single album as list to keep data type.
+                        overwriteArtist(item)
+                      )
                     )
                   )
                 )
