@@ -37,11 +37,11 @@ describe('MedialistPage', () => {
     expect(component).toBeTruthy();
   })
 
-  fdescribe('should correctly slice show media', () => {
+  describe('should correctly slice show media', () => {
     it('should not slice at all if not wanted', () => {
       component.artist = createArtist({coverMedia: createMedia({showid: 'a', aPartOfAll: undefined})})
       const mediaList = [createMedia({})]
-      const spy = spyOn((component as any).mediaService, 'getMediaFromShow').and.returnValue(of(mediaList));
+      const spy = spyOn((component as any).mediaService, 'getMediaFromArtist').and.returnValue(of(mediaList));
       (component as any).fetchMedia()
       // Ensure the correct method was called.
       expect(spy).toHaveBeenCalledOnceWith(component.artist)
@@ -51,7 +51,7 @@ describe('MedialistPage', () => {
     it('should slice if wanted', () => {
       component.artist = createArtist({coverMedia: createMedia({showid: 'a', aPartOfAll: true, aPartOfAllMin: 1, aPartOfAllMax: 2})})
       const mediaList = [createMedia({title: "a"}), createMedia({title: "b"}), createMedia({title: "c"})]
-      const spy = spyOn((component as any).mediaService, 'getMediaFromShow').and.returnValue(of(mediaList));
+      const spy = spyOn((component as any).mediaService, 'getMediaFromArtist').and.returnValue(of(mediaList));
       (component as any).fetchMedia()
       // Ensure the correct method was called.
       expect(spy).toHaveBeenCalledOnceWith(component.artist)
@@ -59,7 +59,7 @@ describe('MedialistPage', () => {
     })
   })
 
-  fdescribe('should correctly slice artist media', () => {
+  describe('should correctly slice artist media', () => {
     it('should not slice at all if not wanted', () => {
       component.artist = createArtist({coverMedia: createMedia({aPartOfAll: undefined})})
       const mediaList = [createMedia({})]
