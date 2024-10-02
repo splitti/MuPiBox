@@ -64,6 +64,7 @@ echo "==========================================================================
 	mkdir /home/dietpi/MuPiBox/media/music >&3 2>&3
 	mkdir /home/dietpi/MuPiBox/media/other >&3 2>&3
 	mkdir /home/dietpi/MuPiBox/media/cover >&3 2>&3
+	mkdir /home/dietpi/MuPiBox/media/youtube-dl >&3 2>&3
 	chown dietpi:dietpi /home/dietpi/MuPiBox/media/audiobook >&3 2>&3
 	chown dietpi:dietpi /home/dietpi/MuPiBox/media/music >&3 2>&3
 
@@ -156,6 +157,20 @@ echo "==========================================================================
 		echo -e "## pip install telepot  ##  finished after $((after - $before)) seconds" >&3 2>&3
 		STEP=$(($STEP + 1))
 	fi
+
+	###############################################################################################
+
+	echo -e "XXX\n${STEP}\nSetup docker and container... \nXXX"	
+	before=$(date +%s)
+	if [ ! -f /usr/bin/docker ]; then
+		sudo bash < <(curl -fsSL https://get.Docker.com) >&3 2>&3
+	fi
+	sudo docker rm youtube-dl >&3 2>&3
+	sudo docker run --name youtube-dl -d --restart unless-stopped -p 8081:8081 -v /home/dietpi/MuPiBox/media/youtube-dl:/downloads ghcr.io/alexta69/metube >&3 2>&3
+	sudo docker image prune -a -f  >&3 2>&3
+	after=$(date +%s)
+	echo -e "## Setup docker and container  ##  finished after $((after - $before)) seconds" >&3 2>&3
+	STEP=$(($STEP + 1))
 	
 	###############################################################################################
 
