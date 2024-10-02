@@ -303,14 +303,14 @@ export class MediaService {
                 // Get media by show supporting resume
                 () => (item.showid && item.showid.length > 0 && item.category === "resume") ? true : false,
                   this.spotifyService.getMediaByEpisode(item.showid, item.category, item.index, item.shuffle, item.artistcover, item.resumespotifyduration_ms, item.resumespotifyprogress_ms, item.resumespotifytrack_number).pipe(
-                    map(currentItem => [currentItem]), // Return single album as list to keep data type.
+                    map(currentItem => [currentItem]),
                     overwriteArtist(item)
                   ),
                 iif(
                   // Get media by playlist
                   () => (item.type === 'spotify' && item.playlistid && item.playlistid.length > 0) ? true : false,
                     this.spotifyService.getMediaByPlaylistID(item.playlistid, item.category, item.index, item.shuffle, item.artistcover, item.resumespotifyduration_ms, item.resumespotifyprogress_ms, item.resumespotifytrack_number).pipe(
-                      map(currentItem => [currentItem]), // Return single album as list to keep data type.
+                      map(currentItem => [currentItem]),
                       overwriteArtist(item)
                     ),
                   iif(
@@ -323,9 +323,10 @@ export class MediaService {
                       // Get media by album (resume).
                       () => (item.type === 'spotify' && item.id && item.id.length > 0) ? true : false,
                       this.spotifyService.getMediaByID(item.id, item.category, item.index, item.shuffle, item.artistcover, item.resumespotifyduration_ms, item.resumespotifyprogress_ms, item.resumespotifytrack_number).pipe(
-                        map(currentItem => [currentItem]), // Return single album as list to keep data type.
+                        map(currentItem => [currentItem]),
                         overwriteArtist(item)
-                      )
+                      ),
+                      of([item]) // Single album. Also return as array, so we always have the same data type
                     )
                   )
                 )
