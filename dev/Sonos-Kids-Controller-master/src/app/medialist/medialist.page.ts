@@ -160,8 +160,9 @@ export class MedialistPage implements OnInit {
       });
     }
 
-    const sortMedia = (coverMedia: Media, media: Media[]): Media[] => {
-      switch (coverMedia.sorting) {
+    const sortMedia = (coverMedia: Media, media: Media[], defaultSorting: MediaSorting): Media[] => {
+      const sorting = coverMedia.sorting ?? defaultSorting
+      switch (sorting) {
         case MediaSorting.AlphabeticalDescending:
           return media.sort((a, b) => b.title.localeCompare(a.title, undefined, {
             numeric: true,
@@ -200,7 +201,11 @@ export class MedialistPage implements OnInit {
 
       this.getMediaFromArtistSubscription = this.mediaService.getMediaFromArtist(this.artist).subscribe(media => {
         // We need to sort first and then slice since this is the intuitive behavior.
-        this.media = sliceMedia(sortMedia(this.artist.coverMedia, media), !isShow)
+        this.media = sliceMedia(
+          sortMedia(this.artist.coverMedia,
+                    media,
+                    isShow ? MediaSorting.ReleaseDateAscending : MediaSorting.AlphabeticalAscending),
+          !isShow)
         fetchArtwork(this.media)
         this.updateSlider()
       })

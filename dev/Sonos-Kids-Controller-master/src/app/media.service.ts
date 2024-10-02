@@ -208,8 +208,6 @@ export class MediaService {
       index,
       data
     };
-
-    console.log(body);
     
     this.http.post(url, body, { responseType: 'text' }).subscribe(response => {
       this.response = response;
@@ -279,11 +277,12 @@ export class MediaService {
 
 
     return this.http.get<Media[]>(url).pipe(
-      map(items => { // Filter to get only items for the chosen category
+      // Filter to get only items for the chosen category.
+      map(items => {
         if (!resume) {
-          items.forEach(item => item.category = (item.category === undefined) ? 'audiobook' : item.category); // default category
+          items.forEach(item => item.category = (item.category === undefined) ? 'audiobook' : item.category);
           items = items.filter(item => item.category === this.category)
-        }        
+        }
         return items;
       }),
       mergeMap(items => from(items)), // parallel calls for each item
@@ -300,39 +299,26 @@ export class MediaService {
                   overwriteArtist(item)
                 ),
                 iif(
-                  () => (item.showid && item.showid.length > 0 && item.category === "resume") ? true : false, // Get media by show
+                  () => (item.showid && item.showid.length > 0 && item.category === "resume") ? true : false, // Get media by show supporting resume
                     this.spotifyService.getMediaByEpisode(item.showid, item.category, item.index, item.shuffle, item.artistcover, item.resumespotifyduration_ms, item.resumespotifyprogress_ms, item.resumespotifytrack_number).pipe(
-                      map(currentItem => {  // If the user entered an user-defined artist name in addition to a query, overwrite orignal artist from spotify
-                        if (item.artist?.length > 0) {
-                          currentItem.artist = item.artist;
-                        }
-                        return [currentItem];
-                      })
+                      map(currentItem => [currentItem]), // Return single album as list to keep data type.
+                      overwriteArtist(item)
                     ),
                     iif(
-                      () => (item.type === 'spotify' && item.playlistid && item.playlistid.length > 0) ? true : false, // Get media by show
+                      () => (item.type === 'spotify' && item.playlistid && item.playlistid.length > 0) ? true : false, // Get media by playlist
                         this.spotifyService.getMediaByPlaylistID(item.playlistid, item.category, item.index, item.shuffle, item.artistcover, item.resumespotifyduration_ms, item.resumespotifyprogress_ms, item.resumespotifytrack_number).pipe(
-                          map(currentItem => {  // If the user entered an user-defined artist or album name, overwrite values from spotify
-                            if (item.artist?.length > 0) {
-                              currentItem.artist = item.artist;
-                            }
-                            return [currentItem];
-                          })
+                          map(currentItem => [currentItem]), // Return single album as list to keep data type.
+                          overwriteArtist(item)
                         ),iif(
-                          () => (item.type === 'rss' && item.id.length > 0 && item.category !== "resume") ? true : false, // Get media by show
+                          () => (item.type === 'rss' && item.id.length > 0 && item.category !== "resume") ? true : false, // Get media by rss feed
                             this.rssFeedService.getRssFeed(this.ip, item.id, item.category, item.index, item.shuffle, item.aPartOfAll, item.aPartOfAllMin, item.aPartOfAllMax, item.artistcover).pipe(
                               overwriteArtist(item)
                             ),iif(
                               () => (item.type === 'spotify' && item.id && item.id.length > 0) ? true : false, // Get media by album
                                 this.spotifyService.getMediaByID(item.id, item.category, item.index, item.shuffle, item.artistcover, item.resumespotifyduration_ms, item.resumespotifyprogress_ms, item.resumespotifytrack_number).pipe(
-                                  map(currentItem => {  // If the user entered an user-defined artist or album name, overwrite values from spotify
-                                    if (item.artist?.length > 0) {
-                                      currentItem.artist = item.artist;
-                                    }
-                                    return [currentItem];
-                                  })
-                                ),
-                                of([item]) // Single album. Also return as array, so we always have the same data type
+                                  map(currentItem => [currentItem]), // Return single album as list to keep data type.
+                                  overwriteArtist(item)
+                                )
                     )
                   )
                 )
