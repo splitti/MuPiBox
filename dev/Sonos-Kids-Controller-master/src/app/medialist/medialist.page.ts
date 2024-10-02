@@ -169,15 +169,15 @@ export class MedialistPage implements OnInit {
             sensitivity: 'base'
           }))
         case MediaSorting.ReleaseDateAscending:
-            return media.sort((a, b) => (new Date(b.release_date)).getTime() - (new Date(a.release_date)).getTime())
+            return media.sort((a, b) => (new Date(a.release_date)).getTime() - (new Date(b.release_date)).getTime())
         case MediaSorting.ReleaseDateDescending:
-          return media.sort((a, b) => (new Date(a.release_date)).getTime() - (new Date(b.release_date)).getTime())
+          return media.sort((a, b) => (new Date(b.release_date)).getTime() - (new Date(a.release_date)).getTime())
         default: // MediaList.Alphabetical.Ascending
             return media.sort((a, b) => a.title.localeCompare(b.title, undefined, {
               numeric: true,
               sensitivity: 'base'
             }))
-      } 
+      }
     }
 
     if (this.resume) {
@@ -204,7 +204,7 @@ export class MedialistPage implements OnInit {
         this.media = sliceMedia(
           sortMedia(this.artist.coverMedia,
                     media,
-                    isShow ? MediaSorting.ReleaseDateAscending : MediaSorting.AlphabeticalAscending),
+                    isShow ? MediaSorting.ReleaseDateDescending : MediaSorting.AlphabeticalAscending),
           !isShow)
         fetchArtwork(this.media)
         this.updateSlider()
