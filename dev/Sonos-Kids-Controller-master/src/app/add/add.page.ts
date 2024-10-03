@@ -1,11 +1,11 @@
 import { ActivatedRoute, Router } from '@angular/router';
 import { AfterViewInit, Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
-import { AlertController, IonInput, IonSegment, IonSelect, NavController } from '@ionic/angular';
+import { AlertController, IonInput, NavController } from '@ionic/angular';
+import { Media, MediaSorting } from '../media';
 import { PlayerCmds, PlayerService } from '../player.service';
 
 import { ActivityIndicatorService } from '../activity-indicator.service';
 import Keyboard from 'simple-keyboard';
-import { Media } from '../media';
 import { MediaService } from '../media.service';
 import { NgForm } from '@angular/forms';
 import { Observable } from 'rxjs';
@@ -31,6 +31,7 @@ export class AddPage implements OnInit, AfterViewInit {
   source = 'spotify';
   category = 'audiobook';
   sourceType = 'spotifyURL';
+  sorting: MediaSorting = MediaSorting.AlphabeticalAscending
   keyboard: Keyboard;
   selectedInputElem: any;
   valid = false;
@@ -75,6 +76,7 @@ export class AddPage implements OnInit, AfterViewInit {
       this.aPartOfAll = this.editMedia.aPartOfAll;
       this.aPartOfAllMin = this.editMedia.aPartOfAllMin;
       this.aPartOfAllMax = this.editMedia.aPartOfAllMax;
+      this.sorting = this.editMedia.sorting ?? MediaSorting.AlphabeticalAscending
       if(this.source === 'spotify' && this.editMedia?.query) {
         this.sourceType = 'spotifySearch';
       }else if(this.source === 'spotify' && (this.editMedia?.artistid || this.editMedia?.id || this.editMedia?.showid || this.editMedia?.id || this.editMedia?.playlistid)) {
@@ -333,6 +335,7 @@ export class AddPage implements OnInit, AfterViewInit {
           aPartOfAll: this.aPartOfAll,
           aPartOfAllMin: this.aPartOfAllMin,
           aPartOfAllMax: this.aPartOfAllMax,
+          sorting: this.sorting
         };
     
         if (form.form.value.label?.length) { media.artist = form.form.value.label; }
@@ -371,10 +374,7 @@ export class AddPage implements OnInit, AfterViewInit {
               this.playerService.validateId(media.showid, "spotify_showid");
             }
           }
-        }
-        
-        console.log(media);
-        
+        }        
     
         setTimeout(() => {
           this.save(media, form);
@@ -393,7 +393,7 @@ export class AddPage implements OnInit, AfterViewInit {
       const alert = await this.alertController.create({
         cssClass: 'alert',
         header: 'Warning',
-        message: 'The id is not valide or you have no internet connection!',
+        message: 'The id is not valid or you have no internet connection!',
         buttons: [
           {
             text: 'Okay'
@@ -427,7 +427,7 @@ export class AddPage implements OnInit, AfterViewInit {
               const alert = await this.alertController.create({
                 cssClass: 'alert',
                 header: 'Warning',
-                message: 'File locked, please try in a moment again.',
+                message: 'File locked, please try again in a moment.',
                 buttons: [
                   {
                     text: 'Okay'
@@ -483,7 +483,7 @@ export class AddPage implements OnInit, AfterViewInit {
               const alert = await this.alertController.create({
                 cssClass: 'alert',
                 header: 'Warning',
-                message: 'File locked, please try in a moment again.',
+                message: 'File locked, please try again in a moment.',
                 buttons: [
                   {
                     text: 'Okay'
@@ -583,6 +583,8 @@ export class AddPage implements OnInit, AfterViewInit {
         (this.edit && (this.aPartOfAllMin !== this.editMedia?.aPartOfAllMin))
         ||
         (this.edit && (this.aPartOfAllMax !== this.editMedia?.aPartOfAllMax))
+        ||
+        (this.edit && (this.sorting !== this.editMedia?.sorting))
       );
     } else if (this.sourceType === 'streamURL') {
       const label = this.keyboard.getInput('label');

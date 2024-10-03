@@ -1,3 +1,10 @@
+export enum MediaSorting {
+    AlphabeticalAscending = 'AlphabeticalAscending',
+    AlphabeticalDescending = 'AlphabeticalDescending',
+    ReleaseDateAscending = 'ReleaseDateAscending',
+    ReleaseDateDescending = 'ReleaseDateDescending'
+}
+
 export interface Media {
     index?: number;
     artist?: string;
@@ -16,6 +23,7 @@ export interface Media {
     aPartOfAll?: boolean;
     aPartOfAllMin?: number;
     aPartOfAllMax?: number;
+    sorting?: MediaSorting;
     duration?: string;
     spotify_url?: string;
     resumespotifytrack_number?: number;

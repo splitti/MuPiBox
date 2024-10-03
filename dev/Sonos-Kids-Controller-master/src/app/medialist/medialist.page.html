@@ -41,7 +41,7 @@
 </ion-header>
 
 <ion-content class="medialist-content">
-    <ion-slides [options]="slideOptions" scrollbar="true" #slider (ionSlideDidChange)="slideDidChange()">
+    <ion-slides [options]="slideOptions" scrollbar="true" #slider>
         <ion-slide *ngFor="let currentMedia of media; let indexOfMedia=index">
             <ion-grid>
                 <ion-row class="media-card">

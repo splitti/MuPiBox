@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
 import { Media } from './media';
+import { Observable } from 'rxjs';
 import { SpotifyService } from './spotify.service';
 
 @Injectable({
@@ -28,8 +28,6 @@ export class ArtworkService {
 
   getArtistArtwork(media: Media): Observable<string> {
     let artwork: Observable<string>;
-
-    console.log(media);
 
     if (media.type === 'spotify' && !media.cover) {
       artwork = this.spotifyService.getAlbumArtwork(media.artist, media.title);
