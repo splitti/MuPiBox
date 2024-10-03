@@ -243,7 +243,7 @@
 	?>"/>
 		</div>
 	<div>
-		<label class="description" for="battery">v_0 in mV (100% battery)</label>
+		<label class="description" for="battery">v_0 in mV (0% battery)</label>
 				<input id="v_0" name="v_0" class="element text medium" type="text" maxlength="4" value="<?php
 				print $desired_config["v_0"];
 	?>"/>

@@ -28,7 +28,7 @@ body
 	padding: 0px;
 	text-align:left;
 	width:100%;
-	max-width:1080px;
+	max-width:1140px;
 }
 
 #top
@@ -37,7 +37,7 @@ body
 	height:10px;
 	margin:10px auto 0;
 	width:100%;
-	max-width:1080px;
+	max-width:1140px;
 }
 
 #footer
@@ -46,7 +46,7 @@ body
 	clear:both;
 	background-color:#44afe2;
 	width:100%;
-	max-width:1080px;
+	max-width:1140px;
 	padding: 0px;
 	height:80px;
 	display:flex;
@@ -222,7 +222,7 @@ transform: rotate(360deg);
 }
 
 .controlnav {
-  max-width:1080px;
+  max-width:1140px;
   background-color: #44afe2;
   padding: 0px 10px 0px 10px;
   height: 40px;
@@ -232,7 +232,7 @@ transform: rotate(360deg);
 /* Add a black background color to the top navigation */
 .topnav {
   width: 100%;
-  max-width:1080px;
+  max-width:1140px;
   background-color: #44afe2;
   overflow: hidden;
   padding: 0px 10px 0px 10px;
@@ -283,7 +283,7 @@ transform: rotate(360deg);
 }
 
 /* When the screen is less than 600 pixels wide, hide all links, except for the first one ("Home"). Show the link that contains should open and close the topnav (.icon) */
-@media screen and (max-width: 1070px) {
+@media screen and (max-width: 1130px) {
   .topnav a:not(:first-child) {display: none;}
   .topnav a.icon {
     float: right;
@@ -292,7 +292,7 @@ transform: rotate(360deg);
 }
 
 /* The "responsive" class is added to the topnav with JavaScript when the user clicks on the icon. This class makes the topnav look good on small screens (display the links vertically instead of horizontally) */
-@media screen and (max-width: 1070px) {
+@media screen and (max-width: 1130px) {
   .topnav.responsive {position: relative;}
   .topnav.responsive a.icon {
     position: absolute;
