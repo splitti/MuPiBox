@@ -1,10 +1,12 @@
-import { Injectable } from '@angular/core';
-import { Observable, defer, throwError, of, range } from 'rxjs';
-import { retryWhen, flatMap, tap, delay, take, map, mergeMap, mergeAll, toArray } from 'rxjs/operators';
-import { environment } from 'src/environments/environment';
-import { HttpClient } from '@angular/common/http';
+import { ExtraDataMedia, Utils } from './utils';
+import { Observable, defer, of, range, throwError } from 'rxjs';
 import { SpotifyAlbumsResponse, SpotifyAlbumsResponseItem, SpotifyArtistResponse, SpotifyArtistsAlbumsResponse, SpotifyEpisodeResponseItem, SpotifyEpisodesResponse, SpotifyShowResponse } from './spotify';
+import { delay, flatMap, map, mergeAll, mergeMap, retryWhen, take, tap, toArray } from 'rxjs/operators';
+
+import { HttpClient } from '@angular/common/http';
+import { Injectable } from '@angular/core';
 import { Media } from './media';
+import { environment } from 'src/environments/environment';
 
 declare const require: any;
 
@@ -12,7 +14,6 @@ declare const require: any;
   providedIn: 'root'
 })
 export class SpotifyService {
-
   spotifyApi: any;
   refreshingToken = false;
 
@@ -21,7 +22,7 @@ export class SpotifyService {
     this.spotifyApi = new SpotifyWebApi();
   }
 
-  getMediaByQuery(query: string, category: string, index: number, shuffle: boolean, aPartOfAll: boolean, aPartOfAllMin: number, aPartOfAllMax: number, artistcover: string): Observable<Media[]> {
+  getMediaByQuery(query: string, category: string, index: number, extraDataSource: ExtraDataMedia): Observable<Media[]> {
     const albums = defer(() => this.spotifyApi.searchAlbums(query, { limit: 1, offset: 0, market: 'DE' })).pipe(
       retryWhen(errors => {
         return this.errorHandler(errors);
@@ -39,26 +40,13 @@ export class SpotifyService {
               artist: item.artists[0].name,
               title: item.name,
               cover: item.images[0].url,
+              release_date: item.release_date,
               type: 'spotify',
               category,
               index
-            };
-            if(artistcover) {
-              media.artistcover = artistcover;
             }
-            if(shuffle) {
-              media.shuffle = shuffle;
-            }
-            if(aPartOfAll) {
-              media.aPartOfAll = aPartOfAll;
-            }
-            if(aPartOfAllMin) {
-              media.aPartOfAllMin = aPartOfAllMin;
-            }
-            if(aPartOfAllMax) {
-              media.aPartOfAllMax = aPartOfAllMax;
-            }
-            return media;
+            Utils.copyExtraMediaData(extraDataSource, media)
+            return media
           });
         })
       )),
@@ -69,7 +57,7 @@ export class SpotifyService {
     return albums;
   }
 
-  getMediaByArtistID(id: string, category: string, index: number, shuffle: boolean, aPartOfAll: boolean, aPartOfAllMin: number, aPartOfAllMax: number, manualArtistcover: string): Observable<Media[]> {
+  getMediaByArtistID(id: string, category: string, index: number, extraDataSource: ExtraDataMedia): Observable<Media[]> {
     const albums = defer(() => this.spotifyApi.getArtistAlbums(id, { include_groups: 'album,single,compilation', limit: 1, offset: 0, market: 'DE' })).pipe(
       retryWhen(errors => {
         return this.errorHandler(errors);
@@ -102,26 +90,13 @@ export class SpotifyService {
               title: item.name,
               cover: item.images[0].url,
               artistcover: multiplier.artistcover,
+              release_date: item.release_date,
               type: 'spotify',
               category,
               index
-            };
-            if(manualArtistcover) {
-              media.artistcover = manualArtistcover;
             }
-            if(shuffle) {
-              media.shuffle = shuffle;
-            }
-            if(aPartOfAll) {
-              media.aPartOfAll = aPartOfAll;
-            }
-            if(aPartOfAllMin) {
-              media.aPartOfAllMin = aPartOfAllMin;
-            }
-            if(aPartOfAllMax) {
-              media.aPartOfAllMax = aPartOfAllMax;
-            }
-            return media;
+            Utils.copyExtraMediaData(extraDataSource, media)
+            return media
           });
         })
       )),
@@ -132,7 +107,7 @@ export class SpotifyService {
     return albums;
   }
 
-  getMediaByShowID(id: string, category: string, index: number, shuffle: boolean, aPartOfAll: boolean, aPartOfAllMin: number, aPartOfAllMax: number, manualArtistcover: string): Observable<Media[]> {
+  getMediaByShowID(id: string, category: string, index: number, extraDataSource: ExtraDataMedia): Observable<Media[]> {
     const albums = defer(() => this.spotifyApi.getShow(id, { limit: 1, offset: 0, market: 'DE' })).pipe(
       retryWhen(errors => {
         return this.errorHandler(errors);
@@ -160,23 +135,9 @@ export class SpotifyService {
               category,
               release_date: item.release_date,
               index
-            };
-            if(manualArtistcover) {
-              media.artistcover = manualArtistcover;
             }
-            if(shuffle) {
-              media.shuffle = shuffle;
-            }
-            if(aPartOfAll) {
-              media.aPartOfAll = aPartOfAll;
-            }
-            if(aPartOfAllMin) {
-              media.aPartOfAllMin = aPartOfAllMin;
-            }
-            if(aPartOfAllMax) {
-              media.aPartOfAllMax = aPartOfAllMax;
-            }
-            return media;
+            Utils.copyExtraMediaData(extraDataSource, media)
+            return media
           });
         })
       )),
@@ -198,6 +159,7 @@ export class SpotifyService {
           title: response.name,
           cover: response?.images[0]?.url,
           type: 'spotify',
+          release_date: response.release_date,
           category,
           index
         };
@@ -234,6 +196,7 @@ export class SpotifyService {
           title: response.name,
           cover: response?.images[0]?.url,
           type: 'spotify',
+          release_date: response.release_date,
           category,
           index
         };
@@ -269,6 +232,7 @@ export class SpotifyService {
           artist: response.artists?.[0]?.name,
           title: response.name,
           cover: response?.images[0]?.url,
+          release_date: response.release_date,
           type: 'spotify',
           category,
           index

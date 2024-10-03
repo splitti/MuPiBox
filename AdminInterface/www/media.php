@@ -220,6 +220,10 @@
 				{
 				print "<tr><td style>Cover-URL:</td><td><a href='" . $all_media['artistcover'] . "' target='_blank'>" . substr($all_media['artistcover'],0,45) . "...</a></td></tr>";
 				}
+			if($all_media['sorting'])
+				{
+				print "<tr><td>Sorting:</td><td>".$all_media['sorting']."</td></tr>";
+				}
 			if($all_media['aPartOfAll'])
 				{
 				print "<tr><td>Interval:</td><td>".($all_media['aPartOfAll']  ? 'true' : 'false')."</td></tr>";
