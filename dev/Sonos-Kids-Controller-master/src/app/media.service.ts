@@ -1,25 +1,26 @@
-import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable, from, of, iif, Subject, interval } from 'rxjs';
-import { map, mergeMap, tap, toArray, mergeAll, switchMap, shareReplay } from 'rxjs/operators';
-import { environment } from '../environments/environment';
-import { SpotifyService } from './spotify.service';
-import { Media } from './media';
+import { Observable, Subject, from, iif, interval, of } from 'rxjs';
+import { map, mergeAll, mergeMap, shareReplay, switchMap, tap, toArray } from 'rxjs/operators';
+
+import { AlbumStop } from './albumstop';
 import { Artist } from './artist';
-import { Network } from "./network";
-import { WLAN } from './wlan';
-import { CurrentSpotify } from './current.spotify';
+import { CurrentEpisode } from './current.episode';
 import { CurrentMPlayer } from './current.mplayer';
 import { CurrentPlaylist } from './current.playlist';
-import { CurrentEpisode } from './current.episode';
 import { CurrentShow } from './current.show';
-import { Validate } from './validate';
-import { PlayerService } from './player.service';
+import { CurrentSpotify } from './current.spotify';
+import { HttpClient } from '@angular/common/http';
+import { Injectable } from '@angular/core';
+import { Media } from './media';
 import { Monitor } from './monitor';
-import { AlbumStop } from './albumstop';
-import { RssFeedService } from './rssfeed.service';
 import { Mupihat } from './mupihat';
+import { Network } from "./network";
+import { PlayerService } from './player.service';
+import { RssFeedService } from './rssfeed.service';
 import { SonosApiConfig } from './sonos-api';
+import { SpotifyService } from './spotify.service';
+import { Validate } from './validate';
+import { WLAN } from './wlan';
+import { environment } from '../environments/environment';
 
 @Injectable({
   providedIn: 'root'
@@ -207,8 +208,6 @@ export class MediaService {
       index,
       data
     };
-
-    console.log(body);
     
     this.http.post(url, body, { responseType: 'text' }).subscribe(response => {
       this.response = response;
@@ -260,97 +259,74 @@ export class MediaService {
 
   // Get the media data for the current category from the server
   private updateMedia(url: string, resume: boolean) {
+    // Custom rxjs pipe to override artist.
+    const overwriteArtist = (item: Media) => (source$: Observable<Media[]>): Observable<Media[]> => {
+      return source$.pipe(
+        // If the user entered an user-defined artist name in addition to a query,
+        // overwrite orignal artist from spotify.
+        map(items => {
+          if (item.artist?.length > 0) {
+            items.forEach(currentItem => {
+              currentItem.artist = item.artist;
+            })
+          }
+          return items
+        })
+      )
+    }
+
+
     return this.http.get<Media[]>(url).pipe(
-      map(items => { // Filter to get only items for the chosen category
-        if(!resume){
-          items.forEach(item => item.category = (item.category === undefined) ? 'audiobook' : item.category); // default category
-          items = items.filter(item => item.category === this.category);
-          console.log("updateMedia for category: " + this.category + " and " + url, items);
-        }else{
-          console.log("updateMedia for resume: ", items);
+      // Filter to get only items for the chosen category.
+      map(items => {
+        if (!resume) {
+          items.forEach(item => item.category = (item.category === undefined) ? 'audiobook' : item.category);
+          items = items.filter(item => item.category === this.category)
         }
-        
         return items;
       }),
       mergeMap(items => from(items)), // parallel calls for each item
       map((item) => // get media for the current item
         iif(
-          () => (item.query && item.query.length > 0) ? true : false, // Get media by query
-          this.spotifyService.getMediaByQuery(item.query, item.category, item.index, item.shuffle, item.aPartOfAll, item.aPartOfAllMin, item.aPartOfAllMax, item.artistcover).pipe(
-            map(items => {  // If the user entered an user-defined artist name in addition to a query, overwrite orignal artist from spotify
-              if (item.artist?.length > 0) {
-                items.forEach(currentItem => {
-                  currentItem.artist = item.artist;
-                });
-              }
-              return items;
-            })
-          ),
+          // Get media by query
+          () => (item.query && item.query.length > 0) ? true : false,
+          this.spotifyService.getMediaByQuery(item.query, item.category, item.index, item).pipe(overwriteArtist(item)),
           iif(
-            () => (item.artistid && item.artistid.length > 0) ? true : false, // Get media by artist
-            this.spotifyService.getMediaByArtistID(item.artistid, item.category, item.index, item.shuffle, item.aPartOfAll, item.aPartOfAllMin, item.aPartOfAllMax, item.artistcover).pipe(
-              map(items => {  // If the user entered an user-defined artist name in addition to a query, overwrite orignal artist from spotify
-                if (item.artist?.length > 0) {
-                  items.forEach(currentItem => {
-                    currentItem.artist = item.artist;
-                  });
-                }
-                return items;
-              })
-            ),
+            // Get media by artist
+            () => (item.artistid && item.artistid.length > 0) ? true : false,
+            this.spotifyService.getMediaByArtistID(item.artistid, item.category, item.index, item).pipe(overwriteArtist(item)),
             iif(
-              () => (item.showid && item.showid.length > 0 && item.category !== "resume") ? true : false, // Get media by show
-                this.spotifyService.getMediaByShowID(item.showid, item.category, item.index, item.shuffle, item.aPartOfAll, item.aPartOfAllMin, item.aPartOfAllMax, item.artistcover).pipe(
-                  map(items => {  // If the user entered an user-defined artist name in addition to a query, overwrite orignal artist from spotify
-                    if (item.artist?.length > 0) {
-                      items.forEach(currentItem => {
-                        currentItem.artist = item.artist;
-                      });
-                    }
-                    return items;
-                  })
-                ),
+              // Get media by show
+              () => (item.showid && item.showid.length > 0 && item.category !== "resume") ? true : false,
+              this.spotifyService.getMediaByShowID(item.showid, item.category, item.index, item).pipe(overwriteArtist(item)),
+              iif(
+                // Get media by show supporting resume
+                () => (item.showid && item.showid.length > 0 && item.category === "resume") ? true : false,
+                  this.spotifyService.getMediaByEpisode(item.showid, item.category, item.index, item.shuffle, item.artistcover, item.resumespotifyduration_ms, item.resumespotifyprogress_ms, item.resumespotifytrack_number).pipe(
+                    map(currentItem => [currentItem]),
+                    overwriteArtist(item)
+                  ),
                 iif(
-                  () => (item.showid && item.showid.length > 0 && item.category === "resume") ? true : false, // Get media by show
-                    this.spotifyService.getMediaByEpisode(item.showid, item.category, item.index, item.shuffle, item.artistcover, item.resumespotifyduration_ms, item.resumespotifyprogress_ms, item.resumespotifytrack_number).pipe(
-                      map(currentItem => {  // If the user entered an user-defined artist name in addition to a query, overwrite orignal artist from spotify
-                        if (item.artist?.length > 0) {
-                          currentItem.artist = item.artist;
-                        }
-                        return [currentItem];
-                      })
+                  // Get media by playlist
+                  () => (item.type === 'spotify' && item.playlistid && item.playlistid.length > 0) ? true : false,
+                    this.spotifyService.getMediaByPlaylistID(item.playlistid, item.category, item.index, item.shuffle, item.artistcover, item.resumespotifyduration_ms, item.resumespotifyprogress_ms, item.resumespotifytrack_number).pipe(
+                      map(currentItem => [currentItem]),
+                      overwriteArtist(item)
+                    ),
+                  iif(
+                    // Get media by rss feed
+                    () => (item.type === 'rss' && item.id.length > 0 && item.category !== "resume") ? true : false,
+                    this.rssFeedService.getRssFeed(this.ip, item.id, item.category, item.index, item).pipe(
+                      overwriteArtist(item)
                     ),
                     iif(
-                      () => (item.type === 'spotify' && item.playlistid && item.playlistid.length > 0) ? true : false, // Get media by show
-                        this.spotifyService.getMediaByPlaylistID(item.playlistid, item.category, item.index, item.shuffle, item.artistcover, item.resumespotifyduration_ms, item.resumespotifyprogress_ms, item.resumespotifytrack_number).pipe(
-                          map(currentItem => {  // If the user entered an user-defined artist or album name, overwrite values from spotify
-                            if (item.artist?.length > 0) {
-                              currentItem.artist = item.artist;
-                            }
-                            return [currentItem];
-                          })
-                        ),iif(
-                          () => (item.type === 'rss' && item.id.length > 0 && item.category !== "resume") ? true : false, // Get media by show
-                            this.rssFeedService.getRssFeed(this.ip, item.id, item.category, item.index, item.shuffle, item.aPartOfAll, item.aPartOfAllMin, item.aPartOfAllMax, item.artistcover).pipe(
-                              map(items => {  // If the user entered an user-defined artist name in addition to a query, overwrite orignal artist from spotify
-                                if (item.artist?.length > 0) {
-                                  items.forEach(currentItem => {
-                                    currentItem.artist = item.artist;
-                                  });
-                                }
-                                return items;
-                              })
-                            ),iif(
-                              () => (item.type === 'spotify' && item.id && item.id.length > 0) ? true : false, // Get media by album
-                                this.spotifyService.getMediaByID(item.id, item.category, item.index, item.shuffle, item.artistcover, item.resumespotifyduration_ms, item.resumespotifyprogress_ms, item.resumespotifytrack_number).pipe(
-                                  map(currentItem => {  // If the user entered an user-defined artist or album name, overwrite values from spotify
-                                    if (item.artist?.length > 0) {
-                                      currentItem.artist = item.artist;
-                                    }
-                                    return [currentItem];
-                                  })
-                                ),
-                                of([item]) // Single album. Also return as array, so we always have the same data type
+                      // Get media by album (resume).
+                      () => (item.type === 'spotify' && item.id && item.id.length > 0) ? true : false,
+                      this.spotifyService.getMediaByID(item.id, item.category, item.index, item.shuffle, item.artistcover, item.resumespotifyduration_ms, item.resumespotifyprogress_ms, item.resumespotifytrack_number).pipe(
+                        map(currentItem => [currentItem]),
+                        overwriteArtist(item)
+                      ),
+                      of([item]) // Single album. Also return as array, so we always have the same data type
                     )
                   )
                 )
@@ -451,12 +427,7 @@ export class MediaService {
   getMediaFromArtist(artist: Artist): Observable<Media[]> {
     return this.artistMediaSubject.pipe(
       map((media: Media[]) => {
-        return media
-          .filter(currentMedia => currentMedia.artist === artist.name)
-          .sort((a, b) => a.title.localeCompare(b.title, undefined, {
-            numeric: true,
-            sensitivity: 'base'
-          }));
+        return media.filter(currentMedia => currentMedia.artist === artist.name)
       })
     );
   }
@@ -466,17 +437,6 @@ export class MediaService {
     return this.resumeSubject.pipe(
       map((media: Media[]) => {
         return media.reverse()
-      })
-    );
-  }
-
-  // Collect albums from a given artist in the current category
-  getMediaFromShow(artist: Artist): Observable<Media[]> {
-    return this.artistMediaSubject.pipe(
-      map((media: Media[]) => {
-        return media
-          .filter(currentMedia => currentMedia.artist === artist.name)
-          .sort((a, b) => (new Date(b.release_date)).getTime() - (new Date(a.release_date)).getTime());
       })
     );
   }
