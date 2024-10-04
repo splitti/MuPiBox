@@ -1,24 +1,22 @@
-import { ExtraDataMedia, Utils } from './utils';
-import { Observable, defer, of, range, throwError } from 'rxjs';
-import { delay, flatMap, map, mergeAll, mergeMap, retryWhen, switchMap, take, tap, toArray } from 'rxjs/operators';
+import type { Observable } from 'rxjs'
+import { map, mergeAll, toArray } from 'rxjs/operators'
+import { type ExtraDataMedia, Utils } from './utils'
 
-import { HttpClient } from '@angular/common/http';
-import { Injectable } from '@angular/core';
-import { Media } from './media';
+import type { HttpClient } from '@angular/common/http'
+import { Injectable } from '@angular/core'
+import type { Media } from './media'
 //import { xml2json } from 'xml-js';
-import { RssFeed } from './rssfeed';
-import { environment } from 'src/environments/environment';
+import type { RssFeed } from './rssfeed'
 
-declare const require: any;
-const xml2js = require('xml2js');
+declare const require: any
+const xml2js = require('xml2js')
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class RssFeedService {
-
-  jsonRSS: RssFeed;
-  url: string;
+  jsonRSS: RssFeed
+  url: string
 
   constructor(private http: HttpClient) {}
 
@@ -27,10 +25,10 @@ export class RssFeedService {
     id: string,
     category: string,
     index: number,
-    extraDataSource: ExtraDataMedia
+    extraDataSource: ExtraDataMedia,
   ): Observable<Media[]> {
-    this.url = 'http://' + ip + ':8200/api/rssfeed?url=' + id;
-    return this.http.get(this.url/*, { responseType: 'text' }*/).pipe(
+    this.url = `http://${ip}:8200/api/rssfeed?url=${id}`
+    return this.http.get(this.url /*, { responseType: 'text' }*/).pipe(
       //switchMap(async (xml) => await this.parseXmlToJsonRss(xml)),
       map((response: RssFeed) => {
         return response.rss.channel.item.map((item) => {
@@ -47,11 +45,11 @@ export class RssFeedService {
             index,
           }
           Utils.copyExtraMediaData(extraDataSource, media)
-          return media;
-        });
+          return media
+        })
       }),
       mergeAll(),
-      toArray()
-    );
+      toArray(),
+    )
   }
 }

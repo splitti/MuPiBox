@@ -1,3 +1,3 @@
 export interface AlbumStop {
-    albumStop?: string;
+  albumStop?: string
 }

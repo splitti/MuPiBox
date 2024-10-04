@@ -1,12 +1,12 @@
-import { Component, OnInit } from '@angular/core';
-import { NavigationExtras, Router } from '@angular/router';
-import { AlertController } from '@ionic/angular';
-import { MediaService } from '../media.service';
-import { Media } from '../media';
-import { Network } from "../network";
-import { Observable } from "rxjs";
-import { ActivityIndicatorService } from '../activity-indicator.service';
-import { PlayerCmds, PlayerService } from '../player.service';
+import { Component, type OnInit } from '@angular/core'
+import type { NavigationExtras, Router } from '@angular/router'
+import type { AlertController } from '@ionic/angular'
+import type { Observable } from 'rxjs'
+import type { ActivityIndicatorService } from '../activity-indicator.service'
+import type { Media } from '../media'
+import type { MediaService } from '../media.service'
+import type { Network } from '../network'
+import { PlayerCmds, type PlayerService } from '../player.service'
 
 @Component({
   selector: 'app-edit',
@@ -14,32 +14,29 @@ import { PlayerCmds, PlayerService } from '../player.service';
   styleUrls: ['./edit.page.scss'],
 })
 export class EditPage implements OnInit {
-
-  media: Observable<Record<any, any>[]>;
-  network: Observable<Network>;
-  networkparameter: Network;
-  activityIndicatorVisible = false;
+  media: Observable<Record<any, any>[]>
+  network: Observable<Network>
+  networkparameter: Network
+  activityIndicatorVisible = false
 
   constructor(
     private mediaService: MediaService,
     public alertController: AlertController,
     private playerService: PlayerService,
     private router: Router,
-    private activityIndicatorService: ActivityIndicatorService
-  ) {
-  }
+    private activityIndicatorService: ActivityIndicatorService,
+  ) {}
 
   ngOnInit() {
     // Subscribe
-    this.network = this.mediaService.getNetworkObservable();
-    this.media = this.mediaService.getRawMediaObservable();
+    this.network = this.mediaService.getNetworkObservable()
+    this.media = this.mediaService.getRawMediaObservable()
 
     // Retreive data through subscription above
-    this.mediaService.updateNetwork();
-    this.mediaService.updateRawMedia();
+    this.mediaService.updateNetwork()
+    this.mediaService.updateRawMedia()
 
-    window.setTimeout(() => {
-    }, 1000);
+    window.setTimeout(() => {}, 1000)
   }
 
   async deleteButtonPressed(item: Media) {
@@ -51,16 +48,16 @@ export class EditPage implements OnInit {
         {
           text: 'Ok',
           handler: () => {
-            this.activityIndicatorService.create().then(indicator => {
-              this.activityIndicatorVisible = true;
+            this.activityIndicatorService.create().then((indicator) => {
+              this.activityIndicatorVisible = true
               indicator.present().then(() => {
-                this.mediaService.deleteRawMediaAtIndex(item.index);
+                this.mediaService.deleteRawMediaAtIndex(item.index)
                 setTimeout(async () => {
-                  let check = this.mediaService.getResponse();
-                  console.log("write check: " + check);
-                  if(check === 'error' || check === 'locked'){
-                    this.activityIndicatorService.dismiss();
-                    this.activityIndicatorVisible = false;
+                  const check = this.mediaService.getResponse()
+                  console.log(`write check: ${check}`)
+                  if (check === 'error' || check === 'locked') {
+                    this.activityIndicatorService.dismiss()
+                    this.activityIndicatorVisible = false
                     if (check === 'error') {
                       const alert = await this.alertController.create({
                         cssClass: 'alert',
@@ -68,11 +65,11 @@ export class EditPage implements OnInit {
                         message: 'Error to delet the entry.',
                         buttons: [
                           {
-                            text: 'Okay'
-                          }
-                        ]
-                      });
-                      await alert.present();
+                            text: 'Okay',
+                          },
+                        ],
+                      })
+                      await alert.present()
                     } else if (check === 'locked') {
                       const alert = await this.alertController.create({
                         cssClass: 'alert',
@@ -80,76 +77,76 @@ export class EditPage implements OnInit {
                         message: 'File locked, please try in a moment again.',
                         buttons: [
                           {
-                            text: 'Okay'
-                          }
-                        ]
-                      });
-                      await alert.present();
+                            text: 'Okay',
+                          },
+                        ],
+                      })
+                      await alert.present()
                     }
                   } else {
-                    console.log("Index: " + item.index);
-                    if(item.type === 'library'){
-                      this.playerService.deleteLocal(item);
+                    console.log(`Index: ${item.index}`)
+                    if (item.type === 'library') {
+                      this.playerService.deleteLocal(item)
                     }
-                    this.playerService.sendCmd(PlayerCmds.INDEX);
+                    this.playerService.sendCmd(PlayerCmds.INDEX)
                     setTimeout(() => {
-                      this.network = this.mediaService.getNetworkObservable();
-                      this.media = this.mediaService.getRawMediaObservable();
-                      this.mediaService.updateRawMedia();
-                      this.mediaService.updateNetwork();
-                      this.activityIndicatorService.dismiss();
-                      this.activityIndicatorVisible = false;
+                      this.network = this.mediaService.getNetworkObservable()
+                      this.media = this.mediaService.getRawMediaObservable()
+                      this.mediaService.updateRawMedia()
+                      this.mediaService.updateNetwork()
+                      this.activityIndicatorService.dismiss()
+                      this.activityIndicatorVisible = false
                     }, 2000)
                   }
                 }, 2000)
-              });
-            });
-          }
+              })
+            })
+          },
         },
         {
-          text: 'Cancel'
-        }
-      ]
-    });
+          text: 'Cancel',
+        },
+      ],
+    })
 
-    await alert.present();
+    await alert.present()
   }
 
   editButtonPreddes(item: Media) {
-    this.activityIndicatorService.create().then(indicator => {
-      this.activityIndicatorVisible = true;
+    this.activityIndicatorService.create().then((indicator) => {
+      this.activityIndicatorVisible = true
       indicator.present().then(() => {
         const navigationExtras: NavigationExtras = {
           state: {
-            media: item
-          }
-        };
-        this.router.navigate(['/add'], navigationExtras);
-      });
-    });
+            media: item,
+          },
+        }
+        this.router.navigate(['/add'], navigationExtras)
+      })
+    })
   }
-  
-  ionViewWillEnter() {
-    this.network = this.mediaService.getNetworkObservable();
-    this.media = this.mediaService.getRawMediaObservable();
 
-    this.mediaService.updateNetwork();
-    this.mediaService.updateRawMedia();
+  ionViewWillEnter() {
+    this.network = this.mediaService.getNetworkObservable()
+    this.media = this.mediaService.getRawMediaObservable()
+
+    this.mediaService.updateNetwork()
+    this.mediaService.updateRawMedia()
   }
 
   ionViewDidLeave() {
     if (this.activityIndicatorVisible) {
-      this.activityIndicatorService.dismiss();
-      this.activityIndicatorVisible = false;
+      this.activityIndicatorService.dismiss()
+      this.activityIndicatorVisible = false
     }
   }
 
   addButtonPressed() {
-    this.router.navigate(['/add']);
+    this.router.navigate(['/add'])
   }
 
   adminButtonPressed() {
-    this.router.navigate(['/admin']);
+    this.router.navigate(['/admin'])
   }
 
   async clearResumePressed() {
@@ -161,20 +158,20 @@ export class EditPage implements OnInit {
         {
           text: 'Clear',
           handler: () => {
-            this.playerService.sendCmd(PlayerCmds.CLEARRESUME);
+            this.playerService.sendCmd(PlayerCmds.CLEARRESUME)
             setTimeout(() => {
-              this.media = this.mediaService.getRawMediaObservable();
-              this.mediaService.updateRawMedia();
+              this.media = this.mediaService.getRawMediaObservable()
+              this.mediaService.updateRawMedia()
             }, 2000)
-          }
+          },
         },
         {
-          text: 'Cancel'
-        }
-      ]
-    });
+          text: 'Cancel',
+        },
+      ],
+    })
 
-    await alert.present();
+    await alert.present()
   }
 
   async shutdownMessage() {
@@ -186,21 +183,21 @@ export class EditPage implements OnInit {
         {
           text: 'Shutdown',
           handler: () => {
-            this.playerService.sendCmd(PlayerCmds.SHUTOFF);
-          }
+            this.playerService.sendCmd(PlayerCmds.SHUTOFF)
+          },
         },
         {
           text: 'Reboot',
           handler: () => {
-            this.playerService.sendCmd(PlayerCmds.REBOOT);
-          }
+            this.playerService.sendCmd(PlayerCmds.REBOOT)
+          },
         },
         {
-          text: 'Cancel'
-        }
-      ]
-    });
+          text: 'Cancel',
+        },
+      ],
+    })
 
-    await alert.present();
+    await alert.present()
   }
 }

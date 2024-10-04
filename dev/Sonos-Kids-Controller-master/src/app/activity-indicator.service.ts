@@ -1,23 +1,20 @@
-import { Injectable } from '@angular/core';
-import { LoadingController } from '@ionic/angular';
+import { Injectable } from '@angular/core'
+import type { LoadingController } from '@ionic/angular'
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class ActivityIndicatorService {
-
-  constructor(
-    public loadingController: LoadingController
-  ) { }
+  constructor(public loadingController: LoadingController) {}
 
   create(): Promise<HTMLIonLoadingElement> {
     return this.loadingController.create({
       mode: 'ios',
-      spinner: 'circles'
-    });
+      spinner: 'circles',
+    })
   }
 
   dismiss() {
-    this.loadingController.dismiss();
+    this.loadingController.dismiss()
   }
 }
