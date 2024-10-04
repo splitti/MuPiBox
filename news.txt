@@ -33,6 +33,8 @@ We will focus on <b>bookworm</b> and recommend you to update, or reinstall. See 
 </ul>
 <h3>Next Release</h3>
 <ul id='ulnews' class='ulnews'>
-<li id='linews' class='linews'>Update: jq Version 1.7.1</li>
-<li id='linews' class='linews'>Update: librespot (insteat of spotifyd)</li>
+<li id='linews' class='linews'>Update: jq Version 1.7.1 (performance improvements)</li>
+<li id='linews' class='linews'>Update: librespot (instead of spotifyd)</li>
+<li id='linews' class='linews'>New: Youtube-DL</li>
+
 </ul>
