@@ -1,10 +1,10 @@
-import { type ComponentFixture, TestBed } from '@angular/core/testing'
-import { IonicModule } from '@ionic/angular'
+import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing'
+import { ComponentFixture, TestBed } from '@angular/core/testing'
 
 import { HttpClientModule } from '@angular/common/http'
-import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing'
 import { FormsModule } from '@angular/forms'
 import { RouterTestingModule } from '@angular/router/testing'
+import { IonicModule } from '@ionic/angular'
 import { AddPage } from './add.page'
 
 describe('AddPage', () => {

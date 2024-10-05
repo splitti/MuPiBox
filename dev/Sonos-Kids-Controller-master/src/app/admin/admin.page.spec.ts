@@ -1,10 +1,10 @@
-import { type ComponentFixture, TestBed, async } from '@angular/core/testing'
-import { IonicModule } from '@ionic/angular'
+import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing'
+import { ComponentFixture, TestBed, async } from '@angular/core/testing'
 
 import { HttpClientModule } from '@angular/common/http'
-import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing'
 import { FormsModule } from '@angular/forms'
 import { UrlSerializer } from '@angular/router'
+import { IonicModule } from '@ionic/angular'
 import { AdminPage } from './admin.page'
 
 describe('AdminPage', () => {

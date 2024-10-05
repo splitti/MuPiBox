@@ -1,6 +1,6 @@
-import { NgModule } from '@angular/core'
-import { RouterModule, type Routes } from '@angular/router'
+import { RouterModule, Routes } from '@angular/router'
 
+import { NgModule } from '@angular/core'
 import { PlayerPage } from './player.page'
 
 const routes: Routes = [

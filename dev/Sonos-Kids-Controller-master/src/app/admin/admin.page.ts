@@ -1,9 +1,10 @@
-import { type AfterViewInit, Component, type OnInit, ViewChild, ViewEncapsulation } from '@angular/core'
+import { AfterViewInit, Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core'
+import { AlertController, IonInput, IonSegment, IonSelect, NavController } from '@ionic/angular'
+import { PlayerCmds, PlayerService } from '../player.service'
+
 import type { NgForm } from '@angular/forms'
-import type { AlertController, IonInput, IonSegment, IonSelect, NavController } from '@ionic/angular'
 import Keyboard from 'simple-keyboard'
-import type { MediaService } from '../media.service'
-import { PlayerCmds, type PlayerService } from '../player.service'
+import { MediaService } from '../media.service'
 import type { WLAN } from '../wlan'
 
 @Component({

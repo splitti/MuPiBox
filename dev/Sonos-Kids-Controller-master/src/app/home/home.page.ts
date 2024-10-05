@@ -1,16 +1,17 @@
-import { Component, type OnInit, ViewChild } from '@angular/core'
-import type { NavigationExtras, Router } from '@angular/router'
+import { Component, OnInit, ViewChild } from '@angular/core'
+import { NavigationExtras, Router } from '@angular/router'
+
 import type { IonSlides } from '@ionic/angular'
 import type { Observable } from 'rxjs'
-import type { ActivityIndicatorService } from '../activity-indicator.service'
+import { ActivityIndicatorService } from '../activity-indicator.service'
 import type { Artist } from '../artist'
-import type { ArtworkService } from '../artwork.service'
+import { ArtworkService } from '../artwork.service'
 import type { Media } from '../media'
-import type { MediaService } from '../media.service'
+import { MediaService } from '../media.service'
 import type { Monitor } from '../monitor'
 import type { Mupihat } from '../mupihat'
 import type { Network } from '../network'
-import type { PlayerService } from '../player.service'
+import { PlayerService } from '../player.service'
 
 @Component({
   selector: 'app-home',

@@ -1,9 +1,9 @@
-import type { Observable } from 'rxjs'
 import { map, mergeAll, toArray } from 'rxjs/operators'
-import { type ExtraDataMedia, Utils } from './utils'
+import { ExtraDataMedia, Utils } from './utils'
 
-import type { HttpClient } from '@angular/common/http'
+import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
+import type { Observable } from 'rxjs'
 import type { Media } from './media'
 //import { xml2json } from 'xml-js';
 import type { RssFeed } from './rssfeed'

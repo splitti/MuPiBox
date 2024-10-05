@@ -1,14 +1,14 @@
-import { type AfterViewInit, Component, type OnInit, ViewChild, ViewEncapsulation } from '@angular/core'
-import type { ActivatedRoute, Router } from '@angular/router'
-import type { AlertController, IonInput, NavController } from '@ionic/angular'
-import { type Media, MediaSorting } from '../media'
-import { PlayerCmds, type PlayerService } from '../player.service'
+import { AfterViewInit, Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core'
+import { ActivatedRoute, Router } from '@angular/router'
+import { AlertController, IonInput, NavController } from '@ionic/angular'
+import { Media, MediaSorting } from '../media'
+import { PlayerCmds, PlayerService } from '../player.service'
 
 import type { NgForm } from '@angular/forms'
 import type { Observable } from 'rxjs'
 import Keyboard from 'simple-keyboard'
-import type { ActivityIndicatorService } from '../activity-indicator.service'
-import type { MediaService } from '../media.service'
+import { ActivityIndicatorService } from '../activity-indicator.service'
+import { MediaService } from '../media.service'
 import type { Validate } from '../validate'
 
 @Component({

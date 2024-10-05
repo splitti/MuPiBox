@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core'
-import type { LoadingController } from '@ionic/angular'
+import { LoadingController } from '@ionic/angular'
 
 @Injectable({
   providedIn: 'root',

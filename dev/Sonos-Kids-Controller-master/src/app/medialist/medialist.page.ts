@@ -1,16 +1,16 @@
-import { Component, type OnInit, ViewChild } from '@angular/core'
-import type { ActivatedRoute, NavigationExtras, Router } from '@angular/router'
+import { Component, OnInit, ViewChild } from '@angular/core'
+import { ActivatedRoute, NavigationExtras, Router } from '@angular/router'
 import type { Observable, Subscription } from 'rxjs'
-import { type Media, MediaSorting } from '../media'
+import { Media, MediaSorting } from '../media'
 
 import type { IonSlides } from '@ionic/angular'
-import type { ActivityIndicatorService } from '../activity-indicator.service'
+import { ActivityIndicatorService } from '../activity-indicator.service'
 import type { Artist } from '../artist'
-import type { ArtworkService } from '../artwork.service'
-import type { MediaService } from '../media.service'
+import { ArtworkService } from '../artwork.service'
+import { MediaService } from '../media.service'
 import type { Monitor } from '../monitor'
 import type { Mupihat } from '../mupihat'
-import type { PlayerService } from '../player.service'
+import { PlayerService } from '../player.service'
 
 @Component({
   selector: 'app-medialist',

@@ -1,12 +1,13 @@
-import { Component, type OnInit } from '@angular/core'
-import type { NavigationExtras, Router } from '@angular/router'
-import type { AlertController } from '@ionic/angular'
+import { Component, OnInit } from '@angular/core'
+import { NavigationExtras, Router } from '@angular/router'
+import { PlayerCmds, PlayerService } from '../player.service'
+
+import { AlertController } from '@ionic/angular'
 import type { Observable } from 'rxjs'
-import type { ActivityIndicatorService } from '../activity-indicator.service'
+import { ActivityIndicatorService } from '../activity-indicator.service'
 import type { Media } from '../media'
-import type { MediaService } from '../media.service'
+import { MediaService } from '../media.service'
 import type { Network } from '../network'
-import { PlayerCmds, type PlayerService } from '../player.service'
 
 @Component({
   selector: 'app-edit',

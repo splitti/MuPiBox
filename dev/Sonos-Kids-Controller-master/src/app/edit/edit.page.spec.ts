@@ -1,9 +1,9 @@
-import { type ComponentFixture, TestBed, async } from '@angular/core/testing'
-import { IonicModule } from '@ionic/angular'
+import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing'
+import { ComponentFixture, TestBed, async } from '@angular/core/testing'
 
 import { HttpClientModule } from '@angular/common/http'
-import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing'
 import { RouterTestingModule } from '@angular/router/testing'
+import { IonicModule } from '@ionic/angular'
 import { EditPage } from './edit.page'
 
 describe('EditPage', () => {

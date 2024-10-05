@@ -1,5 +1,5 @@
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing'
-import { type ComponentFixture, TestBed } from '@angular/core/testing'
+import { ComponentFixture, TestBed } from '@angular/core/testing'
 import { createArtist, createMedia } from 'src/app/fixtures'
 
 import { HttpClientModule } from '@angular/common/http'

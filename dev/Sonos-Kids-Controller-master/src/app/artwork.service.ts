@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core'
 import { Observable } from 'rxjs'
 import type { Media } from './media'
-import type { SpotifyService } from './spotify.service'
+import { SpotifyService } from './spotify.service'
 
 @Injectable({
   providedIn: 'root',

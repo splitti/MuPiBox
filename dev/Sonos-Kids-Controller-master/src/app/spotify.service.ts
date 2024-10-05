@@ -1,4 +1,4 @@
-import { type Observable, defer, of, range, throwError } from 'rxjs'
+import { Observable, defer, of, range, throwError } from 'rxjs'
 import { delay, flatMap, map, mergeAll, mergeMap, retryWhen, take, tap, toArray } from 'rxjs/operators'
 import type {
   SpotifyAlbumsResponse,
@@ -9,9 +9,9 @@ import type {
   SpotifyEpisodesResponse,
   SpotifyShowResponse,
 } from './spotify'
-import { type ExtraDataMedia, Utils } from './utils'
+import { ExtraDataMedia, Utils } from './utils'
 
-import type { HttpClient } from '@angular/common/http'
+import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
 import { environment } from 'src/environments/environment'
 import type { Media } from './media'

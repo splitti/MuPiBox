@@ -1,20 +1,20 @@
-import { Component, type OnInit, ViewChild } from '@angular/core'
-import type { ActivatedRoute, Router } from '@angular/router'
+import { Component, OnInit, ViewChild } from '@angular/core'
+import { ActivatedRoute, Router } from '@angular/router'
+import { IonRange, NavController } from '@ionic/angular'
+import { PlayerCmds, PlayerService } from '../player.service'
 
-import type { IonRange, NavController } from '@ionic/angular'
 import type { Observable } from 'rxjs'
 import type { AlbumStop } from '../albumstop'
-import type { ArtworkService } from '../artwork.service'
+import { ArtworkService } from '../artwork.service'
 import type { CurrentEpisode } from '../current.episode'
 import type { CurrentMPlayer } from '../current.mplayer'
 import type { CurrentPlaylist } from '../current.playlist'
 import type { CurrentShow } from '../current.show'
 import type { CurrentSpotify } from '../current.spotify'
 import type { Media } from '../media'
-import type { MediaService } from '../media.service'
+import { MediaService } from '../media.service'
 import type { Monitor } from '../monitor'
 import type { Mupihat } from '../mupihat'
-import { PlayerCmds, type PlayerService } from '../player.service'
 
 @Component({
   selector: 'app-player',
