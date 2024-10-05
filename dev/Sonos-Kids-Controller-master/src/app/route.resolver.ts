@@ -1,9 +1,9 @@
 import { Injectable } from '@angular/core'
-import type { Resolve } from '@angular/router'
+
 import { MediaService } from './media.service'
 
 @Injectable()
-export class RouteResolver implements Resolve<any> {
+export class RouteResolver  {
   constructor(private mediaService: MediaService) {}
 
   resolve() {
