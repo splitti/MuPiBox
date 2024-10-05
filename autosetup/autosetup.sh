@@ -128,7 +128,9 @@ exec 3>${LOG}
 	STEP=$(($STEP + 1))
 
 	###############################################################################################
-	
+	# TODO: Might need to install nodejs 18 since angular only supports newer versions?
+	# On the other hand, we don't really care since we pre-compile Angular? unless the "final"
+	# building of a new image happens on a rpi system set up with this script.
 	echo -e "XXX\n${STEP}\nInstall nodeJS 16 (Online-Setup 16)... \nXXX"	
 	before=$(date +%s)
 	curl -sL https://deb.nodesource.com/setup_16.x | sudo -E bash - >&3 2>&3
