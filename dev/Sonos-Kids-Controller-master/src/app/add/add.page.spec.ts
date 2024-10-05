@@ -1,11 +1,11 @@
-import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing'
 import { ComponentFixture, TestBed } from '@angular/core/testing'
+import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing'
 
-import { HttpClientModule } from '@angular/common/http'
-import { FormsModule } from '@angular/forms'
-import { RouterTestingModule } from '@angular/router/testing'
-import { IonicModule } from '@ionic/angular'
 import { AddPage } from './add.page'
+import { FormsModule } from '@angular/forms'
+import { HttpClientModule } from '@angular/common/http'
+import { IonicModule } from '@ionic/angular'
+import { RouterTestingModule } from '@angular/router/testing'
 
 describe('AddPage', () => {
   let component: AddPage
@@ -26,7 +26,7 @@ describe('AddPage', () => {
   })
 
   it('should create', () => {
-    httpClient.expectOne('http://localhost:8200/api/sonos')
+    httpClient.expectOne('http://localhost:8200/api/sonos').flush([])
     expect(component).toBeTruthy()
   })
 })

@@ -1,9 +1,6 @@
 import { Observable, Subject, from, iif, interval, of } from 'rxjs'
 import { map, mergeAll, mergeMap, shareReplay, switchMap, toArray } from 'rxjs/operators'
 
-import { HttpClient } from '@angular/common/http'
-import { Injectable } from '@angular/core'
-import { environment } from '../environments/environment'
 import type { AlbumStop } from './albumstop'
 import type { Artist } from './artist'
 import type { CurrentEpisode } from './current.episode'
@@ -11,6 +8,8 @@ import type { CurrentMPlayer } from './current.mplayer'
 import type { CurrentPlaylist } from './current.playlist'
 import type { CurrentShow } from './current.show'
 import type { CurrentSpotify } from './current.spotify'
+import { HttpClient } from '@angular/common/http'
+import { Injectable } from '@angular/core'
 import type { Media } from './media'
 import type { Monitor } from './monitor'
 import type { Mupihat } from './mupihat'
@@ -21,6 +20,7 @@ import type { SonosApiConfig } from './sonos-api'
 import { SpotifyService } from './spotify.service'
 import type { Validate } from './validate'
 import type { WLAN } from './wlan'
+import { environment } from '../environments/environment'
 
 @Injectable({
   providedIn: 'root',
@@ -410,7 +410,6 @@ export class MediaService {
   }
 
   publishArtists() {
-    console.log('publishArtists')
     const url = environment.production ? '../api/data' : `http://${this.ip}:8200/api/data`
     this.updateMedia(url, false).subscribe((media) => {
       this.artistSubject.next(media)
@@ -418,7 +417,6 @@ export class MediaService {
   }
 
   publishMedia() {
-    console.log('publishMedia')
     const url = environment.production ? '../api/data' : `http://${this.ip}:8200/api/data`
     this.updateMedia(url, false).subscribe((media) => {
       this.mediaSubject.next(media)
@@ -426,7 +424,6 @@ export class MediaService {
   }
 
   publishArtistMedia() {
-    console.log('publishArtistMedia')
     const url = environment.production ? '../api/data' : `http://${this.ip}:8200/api/data`
     this.updateMedia(url, false).subscribe((media) => {
       this.artistMediaSubject.next(media)
@@ -434,7 +431,6 @@ export class MediaService {
   }
 
   publishResume() {
-    console.log('publishResume')
     const url = environment.production ? '../api/activeresume' : `http://${this.ip}:8200/api/activeresume`
     this.updateMedia(url, true).subscribe((media) => {
       this.resumeSubject.next(media)
