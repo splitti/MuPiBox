@@ -1,15 +1,11 @@
-import { map, mergeAll, toArray } from 'rxjs/operators'
 import { ExtraDataMedia, Utils } from './utils'
+import { map, mergeAll, toArray } from 'rxjs/operators'
 
 import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
-import type { Observable } from 'rxjs'
 import type { Media } from './media'
-//import { xml2json } from 'xml-js';
+import type { Observable } from 'rxjs'
 import type { RssFeed } from './rssfeed'
-
-declare const require: any
-const xml2js = require('xml2js')
 
 @Injectable({
   providedIn: 'root',

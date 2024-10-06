@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing'
 
-import { HttpClientModule } from '@angular/common/http'
+import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http'
 import { PlayerService } from './player.service'
 
 describe('PlayerService', () => {
@@ -8,8 +8,9 @@ describe('PlayerService', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      imports: [HttpClientModule],
-    })
+    imports: [],
+    providers: [provideHttpClient(withInterceptorsFromDi())]
+})
     service = TestBed.inject(PlayerService)
   })
 

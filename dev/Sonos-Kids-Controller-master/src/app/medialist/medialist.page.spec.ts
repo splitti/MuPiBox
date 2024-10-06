@@ -1,8 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing'
-import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing'
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing'
 import { createArtist, createMedia } from 'src/app/fixtures'
+import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http'
 
-import { HttpClientModule } from '@angular/common/http'
 import { IonicModule } from '@ionic/angular'
 import { MediaSorting } from '../media'
 import { MedialistPage } from './medialist.page'
@@ -16,9 +16,9 @@ describe('MedialistPage', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      declarations: [MedialistPage],
-      imports: [IonicModule.forRoot(), RouterTestingModule, HttpClientModule, HttpClientTestingModule],
-    }).compileComponents()
+    imports: [IonicModule.forRoot(), RouterTestingModule, MedialistPage],
+    providers: [provideHttpClient(withInterceptorsFromDi()), provideHttpClientTesting()],
+}).compileComponents()
 
     httpClient = TestBed.inject(HttpTestingController)
 

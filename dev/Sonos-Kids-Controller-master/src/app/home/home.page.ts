@@ -1,26 +1,31 @@
-import { Component, OnInit, ViewChild } from '@angular/core'
+import { CUSTOM_ELEMENTS_SCHEMA, Component, OnInit } from '@angular/core'
+import { IonButton, IonIcon, IonicModule } from '@ionic/angular'
 import { NavigationExtras, Router } from '@angular/router'
 
-import type { IonSlides } from '@ionic/angular'
-import type { Observable } from 'rxjs'
 import { ActivityIndicatorService } from '../activity-indicator.service'
 import type { Artist } from '../artist'
 import { ArtworkService } from '../artwork.service'
+import { CommonModule } from '@angular/common'
+import { FormsModule } from '@angular/forms'
 import type { Media } from '../media'
 import { MediaService } from '../media.service'
 import type { Monitor } from '../monitor'
 import type { Mupihat } from '../mupihat'
 import type { Network } from '../network'
+import type { Observable } from 'rxjs'
 import { PlayerService } from '../player.service'
 
 @Component({
   selector: 'app-home',
   templateUrl: 'home.page.html',
   styleUrls: ['home.page.scss'],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
+  imports: [CommonModule, FormsModule, IonicModule],
+  standalone: true,
 })
 export class HomePage implements OnInit {
-  @ViewChild('artist_slider', { static: false }) artistSlider: IonSlides
-  @ViewChild('media_slider', { static: false }) mediaSlider: IonSlides
+  // @ViewChild('artist_slider', { static: false }) artistSlider: IonSlides
+  // @ViewChild('media_slider', { static: false }) mediaSlider: IonSlides
 
   category = 'audiobook'
 
@@ -90,14 +95,14 @@ export class HomePage implements OnInit {
           this.covers[currentMedia.title] = url
         })
       }
-      this.mediaSlider.update().then(null)
+      // this.mediaSlider.update().then(null)
 
       // Workaround as the scrollbar handle isn't visible after the immediate update
       // Seems like a size calculation issue, as resizing the browser window helps
       // Better fix for this?
-      window.setTimeout(() => {
-        this.mediaSlider?.update()
-      }, 1000)
+      // window.setTimeout(() => {
+      // this.mediaSlider?.update()
+      // }, 1000)
     })
 
     this.mediaService.getArtists().subscribe((artists) => {
@@ -107,14 +112,14 @@ export class HomePage implements OnInit {
           this.covers[artist.name] = url
         })
       }
-      this.artistSlider?.update()
+      // this.artistSlider?.update()
 
       // Workaround as the scrollbar handle isn't visible after the immediate update
       // Seems like a size calculation issue, as resizing the browser window helps
       // Better fix for this?
-      window.setTimeout(() => {
-        this.artistSlider?.update()
-      }, 1000)
+      // window.setTimeout(() => {
+      //   this.artistSlider?.update()
+      // }, 1000)
     })
 
     this.update()

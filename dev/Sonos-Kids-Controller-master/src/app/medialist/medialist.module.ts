@@ -9,7 +9,6 @@ import { MedialistPageRoutingModule } from './medialist-routing.module'
 import { MedialistPage } from './medialist.page'
 
 @NgModule({
-  imports: [CommonModule, FormsModule, IonicModule, MedialistPageRoutingModule],
-  declarations: [MedialistPage],
+    imports: [CommonModule, FormsModule, IonicModule, MedialistPageRoutingModule, MedialistPage],
 })
 export class MedialistPageModule {}

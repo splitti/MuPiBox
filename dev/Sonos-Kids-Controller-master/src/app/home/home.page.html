@@ -110,8 +110,8 @@
     <div *ngIf="category === 'audiobook' || category === 'music' || category === 'other'; then artistBlock else mediaBlock"></div>
 
     <ng-template #artistBlock>
-        <ion-slides [options]="slideOptions" scrollbar="true" #artist_slider>
-            <ion-slide *ngFor="let currentArtist of artists">
+        <swiper-container slides-per-view="3" scrollbar="true" loop="false">
+            <swiper-slide *ngFor="let currentArtist of artists">
                 <ion-grid>
                     <ion-row>
                         <ion-col size="12">
@@ -130,13 +130,13 @@
                         </ion-col>
                     </ion-row>
                 </ion-grid>
-            </ion-slide>
-        </ion-slides>
+            </swiper-slide>
+        </swiper-container>
     </ng-template>
     
     <ng-template #mediaBlock>
-        <ion-slides *ngIf="media" [options]="slideOptions" scrollbar="true" #media_slider>
-            <ion-slide *ngFor="let currentMedia of media">
+        <swiper-container *ngIf="media" slides-per-view="3" scrollbar="true" loop="false">
+            <swiper-slide *ngFor="let currentMedia of media">
                 <ion-grid>
                     <ion-row class="media-card">
                         <ion-col size="12">
@@ -149,7 +149,7 @@
                         </ion-col>
                     </ion-row>
                 </ion-grid>
-            </ion-slide>
-        </ion-slides>
+            </swiper-slide>
+        </swiper-container>
     </ng-template>
 </ion-content>

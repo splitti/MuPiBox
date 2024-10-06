@@ -2,17 +2,25 @@ import { Component, OnInit } from '@angular/core'
 import { NavigationExtras, Router } from '@angular/router'
 import { PlayerCmds, PlayerService } from '../player.service'
 
-import { AlertController } from '@ionic/angular'
+import { AlertController, IonicModule } from '@ionic/angular'
 import type { Observable } from 'rxjs'
 import { ActivityIndicatorService } from '../activity-indicator.service'
 import type { Media } from '../media'
 import { MediaService } from '../media.service'
 import type { Network } from '../network'
+import { NgFor, NgIf, AsyncPipe } from '@angular/common';
 
 @Component({
-  selector: 'app-edit',
-  templateUrl: './edit.page.html',
-  styleUrls: ['./edit.page.scss'],
+    selector: 'app-edit',
+    templateUrl: './edit.page.html',
+    styleUrls: ['./edit.page.scss'],
+    standalone: true,
+    imports: [
+        IonicModule,
+        NgFor,
+        NgIf,
+        AsyncPipe,
+    ],
 })
 export class EditPage implements OnInit {
   media: Observable<Record<any, any>[]>

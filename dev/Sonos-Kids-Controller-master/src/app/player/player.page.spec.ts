@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing'
-import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing'
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing'
+import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http'
 
-import { HttpClientModule } from '@angular/common/http'
 import { IonicModule } from '@ionic/angular'
 import { PlayerPage } from './player.page'
 import { RouterTestingModule } from '@angular/router/testing'
@@ -13,9 +13,9 @@ describe('PlayerPage', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      declarations: [PlayerPage],
-      imports: [IonicModule.forRoot(), HttpClientModule, HttpClientTestingModule, RouterTestingModule],
-    }).compileComponents()
+    imports: [IonicModule.forRoot(), RouterTestingModule, PlayerPage],
+    providers: [provideHttpClient(withInterceptorsFromDi()), provideHttpClientTesting()],
+}).compileComponents()
 
     httpClient = TestBed.inject(HttpTestingController)
 

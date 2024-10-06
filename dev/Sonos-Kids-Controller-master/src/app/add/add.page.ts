@@ -1,6 +1,6 @@
 import { AfterViewInit, Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core'
 import { ActivatedRoute, Router } from '@angular/router'
-import { AlertController, IonInput, NavController } from '@ionic/angular'
+import { AlertController, IonInput, NavController, IonicModule } from '@ionic/angular'
 import { Media, MediaSorting } from '../media'
 import { PlayerCmds, PlayerService } from '../player.service'
 
@@ -10,12 +10,22 @@ import Keyboard from 'simple-keyboard'
 import { ActivityIndicatorService } from '../activity-indicator.service'
 import { MediaService } from '../media.service'
 import type { Validate } from '../validate'
+import { FormsModule } from '@angular/forms';
+import { NgSwitch, NgSwitchCase, NgIf } from '@angular/common';
 
 @Component({
-  selector: 'app-add',
-  encapsulation: ViewEncapsulation.None,
-  templateUrl: './add.page.html',
-  styleUrls: ['./add.page.scss', '../../../node_modules/simple-keyboard/build/css/index.css'],
+    selector: 'app-add',
+    encapsulation: ViewEncapsulation.None,
+    templateUrl: './add.page.html',
+    styleUrls: ['./add.page.scss', '../../../node_modules/simple-keyboard/build/css/index.css'],
+    standalone: true,
+    imports: [
+        IonicModule,
+        FormsModule,
+        NgSwitch,
+        NgSwitchCase,
+        NgIf,
+    ],
 })
 export class AddPage implements OnInit, AfterViewInit {
   @ViewChild('title', { static: false }) title: IonInput

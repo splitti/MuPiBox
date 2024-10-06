@@ -9,7 +9,6 @@ import { PlayerPageRoutingModule } from './player-routing.module'
 import { PlayerPage } from './player.page'
 
 @NgModule({
-  imports: [CommonModule, FormsModule, IonicModule, PlayerPageRoutingModule],
-  declarations: [PlayerPage],
+    imports: [CommonModule, FormsModule, IonicModule, PlayerPageRoutingModule, PlayerPage],
 })
 export class PlayerPageModule {}
