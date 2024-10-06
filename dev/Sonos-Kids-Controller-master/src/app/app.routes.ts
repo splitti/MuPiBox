@@ -1,15 +1,15 @@
-import { AddPage } from './add/add.page'
-import { AdminPage } from './admin/admin.page'
-import { EditPage } from './edit/edit.page'
-import { HomePage } from './home/home.page'
-import { MedialistPage } from './medialist/medialist.page'
-import { PlayerPage } from './player/player.page'
+
+
+
+
+
+
 import { Routes } from '@angular/router'
 
 export const routes: Routes = [
   {
     path: 'home',
-    component: HomePage,
+    loadComponent: () => import('./home/home.page').then(m => m.HomePage),
   },
   {
     path: '',
@@ -18,22 +18,22 @@ export const routes: Routes = [
   },
   {
     path: 'medialist',
-    component: MedialistPage,
+    loadComponent: () => import('./medialist/medialist.page').then(m => m.MedialistPage),
   },
   {
     path: 'player',
-    component: PlayerPage,
+    loadComponent: () => import('./player/player.page').then(m => m.PlayerPage),
   },
   {
     path: 'edit',
-    component: EditPage,
+    loadComponent: () => import('./edit/edit.page').then(m => m.EditPage),
   },
   {
     path: 'admin',
-    component: AdminPage,
+    loadComponent: () => import('./admin/admin.page').then(m => m.AdminPage),
   },
   {
     path: 'add',
-    component: AddPage,
+    loadComponent: () => import('./add/add.page').then(m => m.AddPage),
   },
 ]
