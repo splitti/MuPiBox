@@ -1,27 +1,24 @@
+import { AlertController, IonicModule } from '@ionic/angular'
 import { Component, OnInit } from '@angular/core'
 import { NavigationExtras, Router } from '@angular/router'
 import { PlayerCmds, PlayerService } from '../player.service'
 
-import { AlertController, IonicModule } from '@ionic/angular'
-import type { Observable } from 'rxjs'
 import { ActivityIndicatorService } from '../activity-indicator.service'
+import { AsyncPipe } from '@angular/common'
 import type { Media } from '../media'
 import { MediaService } from '../media.service'
 import type { Network } from '../network'
-import { AsyncPipe } from '@angular/common';
+import type { Observable } from 'rxjs'
 
 @Component({
-    selector: 'app-edit',
-    templateUrl: './edit.page.html',
-    styleUrls: ['./edit.page.scss'],
-    standalone: true,
-    imports: [
-    IonicModule,
-    AsyncPipe
-],
+  selector: 'app-edit',
+  templateUrl: './edit.page.html',
+  styleUrls: ['./edit.page.scss'],
+  standalone: true,
+  imports: [IonicModule, AsyncPipe],
 })
 export class EditPage implements OnInit {
-  media: Observable<Record<any, any>[]>
+  media: Observable<Media[]>
   network: Observable<Network>
   networkparameter: Network
   activityIndicatorVisible = false

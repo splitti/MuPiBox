@@ -172,9 +172,9 @@ export class MediaService {
     })
   }
 
-  getRawMediaObservable = (): Observable<Record<any, any>[]> => {
+  getRawMediaObservable = (): Observable<Media[]> => {
     const url = environment.production ? '../api/data' : `http://${this.ip}:8200/api/data`
-    return this.http.get<Record<any, any>[]>(url)
+    return this.http.get<Media[]>(url)
   }
 
   updateRawMedia() {
