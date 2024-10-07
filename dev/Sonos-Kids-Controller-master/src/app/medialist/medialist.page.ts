@@ -11,7 +11,7 @@ import type { Monitor } from '../monitor'
 import type { Mupihat } from '../mupihat'
 import { PlayerService } from '../player.service'
 import { IonicModule } from '@ionic/angular';
-import { NgIf, NgFor, AsyncPipe } from '@angular/common';
+import { AsyncPipe } from '@angular/common';
 
 @Component({
     selector: 'app-medialist',
@@ -20,11 +20,9 @@ import { NgIf, NgFor, AsyncPipe } from '@angular/common';
     schemas: [CUSTOM_ELEMENTS_SCHEMA],
     standalone: true,
     imports: [
-        IonicModule,
-        NgIf,
-        NgFor,
-        AsyncPipe,
-    ],
+    IonicModule,
+    AsyncPipe
+],
 })
 export class MedialistPage implements OnInit {
   // @ViewChild('slider', { static: false }) slider: IonSlides

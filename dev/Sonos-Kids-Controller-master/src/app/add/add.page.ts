@@ -11,7 +11,7 @@ import { ActivityIndicatorService } from '../activity-indicator.service'
 import { MediaService } from '../media.service'
 import type { Validate } from '../validate'
 import { FormsModule } from '@angular/forms';
-import { NgSwitch, NgSwitchCase, NgIf } from '@angular/common';
+
 
 @Component({
     selector: 'app-add',
@@ -20,12 +20,9 @@ import { NgSwitch, NgSwitchCase, NgIf } from '@angular/common';
     styleUrls: ['./add.page.scss', '../../../node_modules/simple-keyboard/build/css/index.css'],
     standalone: true,
     imports: [
-        IonicModule,
-        FormsModule,
-        NgSwitch,
-        NgSwitchCase,
-        NgIf,
-    ],
+    IonicModule,
+    FormsModule
+],
 })
 export class AddPage implements OnInit, AfterViewInit {
   @ViewChild('title', { static: false }) title: IonInput

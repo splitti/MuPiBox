@@ -15,7 +15,7 @@ import type { Media } from '../media'
 import { MediaService } from '../media.service'
 import type { Monitor } from '../monitor'
 import type { Mupihat } from '../mupihat'
-import { NgIf, AsyncPipe } from '@angular/common';
+import { AsyncPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
 @Component({
@@ -24,11 +24,10 @@ import { FormsModule } from '@angular/forms';
     styleUrls: ['./player.page.scss'],
     standalone: true,
     imports: [
-        IonicModule,
-        NgIf,
-        FormsModule,
-        AsyncPipe,
-    ],
+    IonicModule,
+    FormsModule,
+    AsyncPipe
+],
 })
 export class PlayerPage implements OnInit {
   @ViewChild('range', { static: false }) range: IonRange

@@ -8,7 +8,7 @@ import { ActivityIndicatorService } from '../activity-indicator.service'
 import type { Media } from '../media'
 import { MediaService } from '../media.service'
 import type { Network } from '../network'
-import { NgFor, NgIf, AsyncPipe } from '@angular/common';
+import { AsyncPipe } from '@angular/common';
 
 @Component({
     selector: 'app-edit',
@@ -16,11 +16,9 @@ import { NgFor, NgIf, AsyncPipe } from '@angular/common';
     styleUrls: ['./edit.page.scss'],
     standalone: true,
     imports: [
-        IonicModule,
-        NgFor,
-        NgIf,
-        AsyncPipe,
-    ],
+    IonicModule,
+    AsyncPipe
+],
 })
 export class EditPage implements OnInit {
   media: Observable<Record<any, any>[]>

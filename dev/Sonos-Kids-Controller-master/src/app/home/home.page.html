@@ -1,155 +1,174 @@
 <ion-header class="home-header">
-    <ion-toolbar color="light">
-        <ion-buttons slot="start">
-            <ion-button (click)="resume()">
-                <ion-icon slot="icon-only" name="timer-outline"></ion-icon>
-            </ion-button>
-        </ion-buttons>
-        <ion-segment value="{{this.category}}" (ionChange)="categoryChanged($event)">
-            <ion-segment-button value="audiobook">
-                <ion-icon name="book-outline"></ion-icon>
-            </ion-segment-button>
-            <ion-segment-button value="music">
-                <ion-icon name="musical-notes-outline"></ion-icon>
-            </ion-segment-button>
-            <ion-segment-button value="other">
-                <ion-icon name="radio-outline"></ion-icon>
-            </ion-segment-button>
-        </ion-segment>
-        <ion-buttons slot="end" *ngIf="hat_active">
-            <ion-buttons slot="end" *ngIf="(mupihat$ | async)?.BatteryConnected === 1; else hatwithnobattery">
-                
-                <ion-button *ngIf="(mupihat$ | async)?.Charger_Status === 'Not Charging' && (mupihat$ | async)?.Bat_SOC ==='100%'; else charge100" class="battery" (click)="editButtonPressed()">
-                    <ion-icon slot="icon-only" src="../../assets/icon/MuPiHAT/Battery100.svg" size="large"></ion-icon>
+  <ion-toolbar color="light">
+    <ion-buttons slot="start">
+      <ion-button (click)="resume()">
+        <ion-icon slot="icon-only" name="timer-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-segment value="{{this.category}}" (ionChange)="categoryChanged($event)">
+      <ion-segment-button value="audiobook">
+        <ion-icon name="book-outline"></ion-icon>
+      </ion-segment-button>
+      <ion-segment-button value="music">
+        <ion-icon name="musical-notes-outline"></ion-icon>
+      </ion-segment-button>
+      <ion-segment-button value="other">
+        <ion-icon name="radio-outline"></ion-icon>
+      </ion-segment-button>
+    </ion-segment>
+    @if (hat_active) {
+      <ion-buttons slot="end">
+        @if ((mupihat$ | async)?.BatteryConnected === 1) {
+          <ion-buttons slot="end">
+            @if ((mupihat$ | async)?.Charger_Status === 'Not Charging' && (mupihat$ | async)?.Bat_SOC ==='100%') {
+              <ion-button class="battery" (click)="editButtonPressed()">
+                <ion-icon slot="icon-only" src="../../assets/icon/MuPiHAT/Battery100.svg" size="large"></ion-icon>
+              </ion-button>
+            } @else {
+              @if ((mupihat$ | async)?.Bat_SOC ==='100%') {
+                <ion-button class="battery" (click)="editButtonPressed()">
+                  <ion-icon slot="icon-only" src="../../assets/icon/MuPiHAT/Charging100.svg" size="large"></ion-icon>
                 </ion-button>
-                <ng-template #charge100>
-                    <ion-button *ngIf="(mupihat$ | async)?.Bat_SOC ==='100%'; else battery75" class="battery" (click)="editButtonPressed()">
-                        <ion-icon slot="icon-only" src="../../assets/icon/MuPiHAT/Charging100.svg" size="large"></ion-icon>
+              } @else {
+                @if ((mupihat$ | async)?.Charger_Status === 'Not Charging' && (mupihat$ | async)?.Bat_SOC ==='75%') {
+                  <ion-button class="battery" (click)="editButtonPressed()">
+                    <ion-icon slot="icon-only" src="../../assets/icon/MuPiHAT/Battery70.svg" size="large"></ion-icon>
+                  </ion-button>
+                } @else {
+                  @if ((mupihat$ | async)?.Bat_SOC ==='75%') {
+                    <ion-button class="battery" (click)="editButtonPressed()">
+                      <ion-icon slot="icon-only" src="../../assets/icon/MuPiHAT/Charging70.svg" size="large"></ion-icon>
                     </ion-button>
-                </ng-template>
-
-                <ng-template #battery75>
-                    <ion-button *ngIf="(mupihat$ | async)?.Charger_Status === 'Not Charging' && (mupihat$ | async)?.Bat_SOC ==='75%'; else charge75" class="battery" (click)="editButtonPressed()">
-                        <ion-icon slot="icon-only" src="../../assets/icon/MuPiHAT/Battery70.svg" size="large"></ion-icon>
-                    </ion-button>
-                </ng-template>
-                <ng-template #charge75>
-                    <ion-button *ngIf="(mupihat$ | async)?.Bat_SOC ==='75%'; else battery50" class="battery" (click)="editButtonPressed()">
-                        <ion-icon slot="icon-only" src="../../assets/icon/MuPiHAT/Charging70.svg" size="large"></ion-icon>
-                    </ion-button>
-                </ng-template>
-
-                <ng-template #battery50>
-                    <ion-button *ngIf="(mupihat$ | async)?.Charger_Status === 'Not Charging' && (mupihat$ | async)?.Bat_SOC ==='50%'; else charge50" class="battery" (click)="editButtonPressed()">
+                  } @else {
+                    @if ((mupihat$ | async)?.Charger_Status === 'Not Charging' && (mupihat$ | async)?.Bat_SOC ==='50%') {
+                      <ion-button class="battery" (click)="editButtonPressed()">
                         <ion-icon slot="icon-only" src="../../assets/icon/MuPiHAT/Battery50.svg" size="large"></ion-icon>
-                    </ion-button>
-                </ng-template>
-                <ng-template #charge50>
-                    <ion-button *ngIf="(mupihat$ | async)?.Bat_SOC ==='50%'; else battery25" class="battery" (click)="editButtonPressed()">
-                        <ion-icon slot="icon-only" src="../../assets/icon/MuPiHAT/Charging50.svg" size="large"></ion-icon>
-                    </ion-button>
-                </ng-template>
-
-                <ng-template #battery25>
-                    <ion-button *ngIf="(mupihat$ | async)?.Charger_Status === 'Not Charging' && (mupihat$ | async)?.Bat_SOC ==='25%'; else charge25" class="battery" (click)="editButtonPressed()">
-                        <ion-icon slot="icon-only" src="../../assets/icon/MuPiHAT/Battery20.svg" size="large"></ion-icon>
-                    </ion-button>
-                </ng-template>
-                <ng-template #charge25>
-                    <ion-button *ngIf="(mupihat$ | async)?.Bat_SOC ==='25%'; else battery0" class="battery" (click)="editButtonPressed()">
-                        <ion-icon slot="icon-only" src="../../assets/icon/MuPiHAT/Charging20.svg" size="large"></ion-icon>
-                    </ion-button>
-                </ng-template>
-
-                <ng-template #battery0>
-                    <ion-button *ngIf="(mupihat$ | async)?.Charger_Status === 'Not Charging' && (mupihat$ | async)?.Bat_SOC ==='0%'; else charge0" class="battery" (click)="editButtonPressed()">
-                        <ion-icon slot="icon-only" src="../../assets/icon/MuPiHAT/Battery0.svg" size="large"></ion-icon>
-                    </ion-button>
-                </ng-template>
-                <ng-template #charge0>
-                    <ion-button *ngIf="(mupihat$ | async)?.Bat_SOC ==='0%'" class="battery" (click)="editButtonPressed()">
-                        <ion-icon slot="icon-only" src="../../assets/icon/MuPiHAT/Charging0.svg" size="large"></ion-icon>
-                    </ion-button>
-                </ng-template>
-            </ion-buttons>
-            <ng-template #hatwithnobattery>
-                <ion-button *ngIf="(network$ | async)?.onlinestate ==='online'; else elseBlockOffline" class="OnlineState" (click)="editButtonPressed()">
-                    <ion-icon slot="icon-only" name="cloud-outline"></ion-icon>
-                </ion-button>
-                <ng-template #elseBlockOffline>
-                    <ion-button *ngIf="(network$ | async)?.onlinestate ==='offline'; else elseBlockEmpty" class="OfflineState" (click)="editButtonPressed()">
-                        <ion-icon slot="icon-only" name="cloud-offline-outline"></ion-icon>
-                    </ion-button>
-                </ng-template>
-                <ng-template #elseBlockEmpty>
-                    <ion-button (click)="editButtonPressed()">
-                        <ion-icon slot="icon-only" name=""></ion-icon>
-                    </ion-button>
-                </ng-template>
-            </ng-template>
-        </ion-buttons>
-        <ion-buttons slot="end" *ngIf="!hat_active">
-            <ion-button *ngIf="(network$ | async)?.onlinestate ==='online'; else elseBlockOffline" class="OnlineState" (click)="editButtonPressed()">
-                <ion-icon slot="icon-only" name="cloud-outline"></ion-icon>
+                      </ion-button>
+                    } @else {
+                      @if ((mupihat$ | async)?.Bat_SOC ==='50%') {
+                        <ion-button class="battery" (click)="editButtonPressed()">
+                          <ion-icon slot="icon-only" src="../../assets/icon/MuPiHAT/Charging50.svg" size="large"></ion-icon>
+                        </ion-button>
+                      } @else {
+                        @if ((mupihat$ | async)?.Charger_Status === 'Not Charging' && (mupihat$ | async)?.Bat_SOC ==='25%') {
+                          <ion-button class="battery" (click)="editButtonPressed()">
+                            <ion-icon slot="icon-only" src="../../assets/icon/MuPiHAT/Battery20.svg" size="large"></ion-icon>
+                          </ion-button>
+                        } @else {
+                          @if ((mupihat$ | async)?.Bat_SOC ==='25%') {
+                            <ion-button class="battery" (click)="editButtonPressed()">
+                              <ion-icon slot="icon-only" src="../../assets/icon/MuPiHAT/Charging20.svg" size="large"></ion-icon>
+                            </ion-button>
+                          } @else {
+                            @if ((mupihat$ | async)?.Charger_Status === 'Not Charging' && (mupihat$ | async)?.Bat_SOC ==='0%') {
+                              <ion-button class="battery" (click)="editButtonPressed()">
+                                <ion-icon slot="icon-only" src="../../assets/icon/MuPiHAT/Battery0.svg" size="large"></ion-icon>
+                              </ion-button>
+                            } @else {
+                              @if ((mupihat$ | async)?.Bat_SOC ==='0%') {
+                                <ion-button class="battery" (click)="editButtonPressed()">
+                                  <ion-icon slot="icon-only" src="../../assets/icon/MuPiHAT/Charging0.svg" size="large"></ion-icon>
+                                </ion-button>
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          </ion-buttons>
+        } @else {
+          @if ((network$ | async)?.onlinestate ==='online') {
+            <ion-button class="OnlineState" (click)="editButtonPressed()">
+              <ion-icon slot="icon-only" name="cloud-outline"></ion-icon>
             </ion-button>
-            <ng-template #elseBlockOffline>
-                <ion-button *ngIf="(network$ | async)?.onlinestate ==='offline'; else elseBlockEmpty" class="OfflineState" (click)="editButtonPressed()">
-                    <ion-icon slot="icon-only" name="cloud-offline-outline"></ion-icon>
-                </ion-button>
-            </ng-template>
-            <ng-template #elseBlockEmpty>
-                <ion-button (click)="editButtonPressed()">
-                    <ion-icon slot="icon-only" name=""></ion-icon>
-                </ion-button>
-            </ng-template>
-        </ion-buttons>
-    </ion-toolbar>
+          } @else {
+            @if ((network$ | async)?.onlinestate ==='offline') {
+              <ion-button class="OfflineState" (click)="editButtonPressed()">
+                <ion-icon slot="icon-only" name="cloud-offline-outline"></ion-icon>
+              </ion-button>
+            } @else {
+              <ion-button (click)="editButtonPressed()">
+                <ion-icon slot="icon-only" name=""></ion-icon>
+              </ion-button>
+            }
+          }
+        }
+      </ion-buttons>
+    }
+    @if (!hat_active) {
+      <ion-buttons slot="end">
+        @if ((network$ | async)?.onlinestate ==='online') {
+          <ion-button class="OnlineState" (click)="editButtonPressed()">
+            <ion-icon slot="icon-only" name="cloud-outline"></ion-icon>
+          </ion-button>
+        } @else {
+          @if ((network$ | async)?.onlinestate ==='offline') {
+            <ion-button class="OfflineState" (click)="editButtonPressed()">
+              <ion-icon slot="icon-only" name="cloud-offline-outline"></ion-icon>
+            </ion-button>
+          } @else {
+            <ion-button (click)="editButtonPressed()">
+              <ion-icon slot="icon-only" name=""></ion-icon>
+            </ion-button>
+          }
+        }
+      </ion-buttons>
+    }
+  </ion-toolbar>
 </ion-header>
 
 <ion-content class="home-content">
-    <div *ngIf="category === 'audiobook' || category === 'music' || category === 'other'; then artistBlock else mediaBlock"></div>
+  @if (category === 'audiobook' || category === 'music' || category === 'other') {
+    <swiper-container slides-per-view="3" scrollbar="true" loop="false">
+      @for (currentArtist of artists; track currentArtist) {
+        <swiper-slide>
+          <ion-grid>
+            <ion-row>
+              <ion-col size="12">
+                <ion-card class="circle-card">
+                  <img (click)="artistCoverClicked(currentArtist)" draggable="false" style="-moz-user-select: none;" ondragstart="return false;" src="{{covers[currentArtist.name]}}">
+                </ion-card>
+              </ion-col>
+            </ion-row>
+            <ion-row class="title-card">
+              <ion-col size="12">
+                <ion-card (click)="artistNameClicked(currentArtist)">
+                  <ion-card-header>
+                    <ion-card-title class="ion-text-nowrap truncate-text">{{currentArtist.name}}</ion-card-title>
+                  </ion-card-header>
+                </ion-card>
+              </ion-col>
+            </ion-row>
+          </ion-grid>
+        </swiper-slide>
+      }
+    </swiper-container>
+  } @else {
+    @if (media) {
+      <swiper-container slides-per-view="3" scrollbar="true" loop="false">
+        @for (currentMedia of media; track currentMedia) {
+          <swiper-slide>
+            <ion-grid>
+              <ion-row class="media-card">
+                <ion-col size="12">
+                  <ion-card class="media-card">
+                    <img (click)="mediaCoverClicked(currentMedia)" draggable="false" style="-moz-user-select: none;" ondragstart="return false;" src="{{covers[currentMedia.title]}}">
+                    <ion-card-header (click)="mediaNameClicked(currentMedia)">
+                      <ion-card-title class="ion-text-nowrap truncate-text">{{currentMedia.title}}</ion-card-title>
+                    </ion-card-header>
+                  </ion-card>
+                </ion-col>
+              </ion-row>
+            </ion-grid>
+          </swiper-slide>
+        }
+      </swiper-container>
+    }
+  }
 
-    <ng-template #artistBlock>
-        <swiper-container slides-per-view="3" scrollbar="true" loop="false">
-            <swiper-slide *ngFor="let currentArtist of artists">
-                <ion-grid>
-                    <ion-row>
-                        <ion-col size="12">
-                            <ion-card class="circle-card">
-                                <img (click)="artistCoverClicked(currentArtist)" draggable="false" style="-moz-user-select: none;" ondragstart="return false;" src="{{covers[currentArtist.name]}}">
-                            </ion-card>
-                        </ion-col>
-                    </ion-row>
-                    <ion-row class="title-card">
-                        <ion-col size="12">
-                            <ion-card (click)="artistNameClicked(currentArtist)">
-                                <ion-card-header>
-                                    <ion-card-title class="ion-text-nowrap truncate-text">{{currentArtist.name}}</ion-card-title>
-                                </ion-card-header>
-                            </ion-card>
-                        </ion-col>
-                    </ion-row>
-                </ion-grid>
-            </swiper-slide>
-        </swiper-container>
-    </ng-template>
-    
-    <ng-template #mediaBlock>
-        <swiper-container *ngIf="media" slides-per-view="3" scrollbar="true" loop="false">
-            <swiper-slide *ngFor="let currentMedia of media">
-                <ion-grid>
-                    <ion-row class="media-card">
-                        <ion-col size="12">
-                            <ion-card class="media-card">
-                                <img (click)="mediaCoverClicked(currentMedia)" draggable="false" style="-moz-user-select: none;" ondragstart="return false;" src="{{covers[currentMedia.title]}}">
-                                <ion-card-header (click)="mediaNameClicked(currentMedia)">
-                                    <ion-card-title class="ion-text-nowrap truncate-text">{{currentMedia.title}}</ion-card-title>
-                                </ion-card-header>
-                            </ion-card>
-                        </ion-col>
-                    </ion-row>
-                </ion-grid>
-            </swiper-slide>
-        </swiper-container>
-    </ng-template>
+
 </ion-content>

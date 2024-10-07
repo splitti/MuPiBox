@@ -6,7 +6,7 @@ import type { NgForm } from '@angular/forms'
 import Keyboard from 'simple-keyboard'
 import { MediaService } from '../media.service'
 import type { WLAN } from '../wlan'
-import { NgSwitch, NgSwitchCase } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 
 @Component({
@@ -16,11 +16,9 @@ import { FormsModule } from '@angular/forms';
     styleUrls: ['./admin.page.scss', '../../../node_modules/simple-keyboard/build/css/index.css'],
     standalone: true,
     imports: [
-        IonicModule,
-        NgSwitch,
-        NgSwitchCase,
-        FormsModule,
-    ],
+    IonicModule,
+    FormsModule
+],
 })
 export class AdminPage implements OnInit, AfterViewInit {
   @ViewChild('segment', { static: false }) segment: IonSegment
