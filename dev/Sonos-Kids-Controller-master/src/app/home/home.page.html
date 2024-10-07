@@ -123,7 +123,7 @@
 
 <ion-content class="home-content">
   @if (category === 'audiobook' || category === 'music' || category === 'other') {
-    <swiper-container slides-per-view="3" scrollbar="true" loop="false">
+    <swiper-container slides-per-view="3" loop="false" scrollbar="true" free-mode="true" free-mode-sticky="true" free-mode-momentum-bounce="false" css-mode="true">
       @for (currentArtist of artists; track currentArtist) {
         <swiper-slide>
           <ion-grid>
