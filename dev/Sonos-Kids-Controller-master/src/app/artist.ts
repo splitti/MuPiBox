@@ -1,8 +1,8 @@
-import { Media } from './media';
+import type { Media } from './media'
 
 export interface Artist {
-    name: string;
-    albumCount: string;
-    cover: string;
-    coverMedia: Media;
+  name: string
+  albumCount: string
+  cover: string
+  coverMedia: Media
 }

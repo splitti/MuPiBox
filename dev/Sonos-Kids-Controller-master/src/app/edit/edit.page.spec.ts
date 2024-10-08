@@ -1,32 +1,31 @@
-import { async, ComponentFixture, TestBed } from '@angular/core/testing';
-import { IonicModule } from '@ionic/angular';
+import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing'
+import { ComponentFixture, TestBed, async } from '@angular/core/testing'
 
-import { EditPage } from './edit.page';
-import { HttpClientModule } from '@angular/common/http';
-import { RouterTestingModule } from '@angular/router/testing';
-import { HttpClientTestingModule, HttpTestingController } from "@angular/common/http/testing"
-
+import { HttpClientModule } from '@angular/common/http'
+import { RouterTestingModule } from '@angular/router/testing'
+import { IonicModule } from '@ionic/angular'
+import { EditPage } from './edit.page'
 
 describe('EditPage', () => {
-  let component: EditPage;
-  let fixture: ComponentFixture<EditPage>;
-  let httpClient: HttpTestingController;
+  let component: EditPage
+  let fixture: ComponentFixture<EditPage>
+  let httpClient: HttpTestingController
 
   beforeEach(async(() => {
     TestBed.configureTestingModule({
-      declarations: [ EditPage ],
-      imports: [IonicModule.forRoot(), HttpClientModule, RouterTestingModule, HttpClientTestingModule]
-    }).compileComponents();
+      declarations: [EditPage],
+      imports: [IonicModule.forRoot(), HttpClientModule, RouterTestingModule, HttpClientTestingModule],
+    }).compileComponents()
 
     httpClient = TestBed.inject(HttpTestingController)
 
-    fixture = TestBed.createComponent(EditPage);
-    component = fixture.componentInstance;
-    fixture.detectChanges();
-  }));
+    fixture = TestBed.createComponent(EditPage)
+    component = fixture.componentInstance
+    fixture.detectChanges()
+  }))
 
   it('should create', () => {
-    httpClient.expectOne("http://localhost:8200/api/sonos")
-    expect(component).toBeTruthy();
-  });
-});
+    httpClient.expectOne('http://localhost:8200/api/sonos')
+    expect(component).toBeTruthy()
+  })
+})

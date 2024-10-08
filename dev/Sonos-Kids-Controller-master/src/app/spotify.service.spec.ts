@@ -1,19 +1,19 @@
-import { TestBed } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing'
 
-import { SpotifyService } from './spotify.service';
-import { HttpClientModule } from '@angular/common/http';
+import { HttpClientModule } from '@angular/common/http'
+import { SpotifyService } from './spotify.service'
 
 describe('SpotifyService', () => {
-  let service: SpotifyService;
+  let service: SpotifyService
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      imports: [HttpClientModule]
-    });
-    service = TestBed.inject(SpotifyService);
-  });
+      imports: [HttpClientModule],
+    })
+    service = TestBed.inject(SpotifyService)
+  })
 
   it('should be created', () => {
-    expect(service).toBeTruthy();
-  });
-});
+    expect(service).toBeTruthy()
+  })
+})

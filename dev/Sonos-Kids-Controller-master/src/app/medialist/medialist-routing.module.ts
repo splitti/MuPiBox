@@ -1,14 +1,14 @@
-import { NgModule } from '@angular/core';
-import { Routes, RouterModule } from '@angular/router';
+import { RouterModule, Routes } from '@angular/router'
 
-import { MedialistPage } from './medialist.page';
+import { NgModule } from '@angular/core'
+import { MedialistPage } from './medialist.page'
 
 const routes: Routes = [
   {
     path: '',
-    component: MedialistPage
-  }
-];
+    component: MedialistPage,
+  },
+]
 
 @NgModule({
   imports: [RouterModule.forChild(routes)],

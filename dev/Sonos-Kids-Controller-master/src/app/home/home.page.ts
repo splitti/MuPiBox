@@ -1,16 +1,17 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
-import { IonSlides } from '@ionic/angular';
-import { Router, NavigationExtras, ActivatedRoute } from '@angular/router';
-import { MediaService } from '../media.service';
-import { ArtworkService } from '../artwork.service';
-import { PlayerService } from '../player.service';
-import { ActivityIndicatorService } from '../activity-indicator.service';
-import { Artist } from '../artist';
-import { Media } from '../media';
-import { Network } from "../network";
-import { Observable } from 'rxjs';
-import { Monitor } from '../monitor';
-import { Mupihat } from '../mupihat';
+import { Component, OnInit, ViewChild } from '@angular/core'
+import { NavigationExtras, Router } from '@angular/router'
+
+import type { IonSlides } from '@ionic/angular'
+import type { Observable } from 'rxjs'
+import { ActivityIndicatorService } from '../activity-indicator.service'
+import type { Artist } from '../artist'
+import { ArtworkService } from '../artwork.service'
+import type { Media } from '../media'
+import { MediaService } from '../media.service'
+import type { Monitor } from '../monitor'
+import type { Mupihat } from '../mupihat'
+import type { Network } from '../network'
+import { PlayerService } from '../player.service'
 
 @Component({
   selector: 'app-home',
@@ -18,27 +19,27 @@ import { Mupihat } from '../mupihat';
   styleUrls: ['home.page.scss'],
 })
 export class HomePage implements OnInit {
-  @ViewChild('artist_slider', { static: false }) artistSlider: IonSlides;
-  @ViewChild('media_slider', { static: false }) mediaSlider: IonSlides;
+  @ViewChild('artist_slider', { static: false }) artistSlider: IonSlides
+  @ViewChild('media_slider', { static: false }) mediaSlider: IonSlides
 
-  category =  'audiobook';
+  category = 'audiobook'
 
-  artists: Artist[] = [];
-  media: Media[] = [];
-  network: Network;
-  mupihat: Mupihat;
-  monitor: Monitor;
-  currentNetwork = "";
-  updateNetwork = false;
-  covers = {};
-  activityIndicatorVisible = false;
-  editButtonclickCount = 0;
-  editClickTimer = 0;
-  hat_active = false;
-  public readonly network$: Observable<Network>;
-  public readonly mupihat$: Observable<Mupihat>;
+  artists: Artist[] = []
+  media: Media[] = []
+  network: Network
+  mupihat: Mupihat
+  monitor: Monitor
+  currentNetwork = ''
+  updateNetwork = false
+  covers = {}
+  activityIndicatorVisible = false
+  editButtonclickCount = 0
+  editClickTimer = 0
+  hat_active = false
+  public readonly network$: Observable<Network>
+  public readonly mupihat$: Observable<Mupihat>
 
-  needsUpdate = false;
+  needsUpdate = false
 
   slideOptions = {
     initialSlide: 0,
@@ -49,8 +50,8 @@ export class HomePage implements OnInit {
     freeModeSticky: true,
     freeModeMomentumBounce: false,
     freeModeMomentumRatio: 1.0,
-    freeModeMomentumVelocityRatio: 1.0
-  };
+    freeModeMomentumVelocityRatio: 1.0,
+  }
 
   constructor(
     private mediaService: MediaService,
@@ -59,208 +60,204 @@ export class HomePage implements OnInit {
     private activityIndicatorService: ActivityIndicatorService,
     private router: Router,
   ) {
-    this.network$ = this.mediaService.network$;
-    this.mupihat$ = this.mediaService.mupihat$;
-    this.playerService.getConfig().subscribe(config => {
-      this.hat_active = config.hat_active;
-      console.log(this.hat_active);
-    });
+    this.network$ = this.mediaService.network$
+    this.mupihat$ = this.mediaService.mupihat$
+    this.playerService.getConfig().subscribe((config) => {
+      this.hat_active = config.hat_active
+      console.log(this.hat_active)
+    })
   }
 
   ngOnInit() {
-    this.mediaService.setCategory(this.category);
+    this.mediaService.setCategory(this.category)
 
-    this.mediaService.network$.subscribe(network => {
-      this.network = network;
-    });
-    this.mediaService.mupihat$.subscribe(mupihat => {
-      this.mupihat = mupihat;
-    });
-    this.mediaService.monitor$.subscribe(monitor => {
-      this.monitor = monitor;
-    });
+    this.mediaService.network$.subscribe((network) => {
+      this.network = network
+    })
+    this.mediaService.mupihat$.subscribe((mupihat) => {
+      this.mupihat = mupihat
+    })
+    this.mediaService.monitor$.subscribe((monitor) => {
+      this.monitor = monitor
+    })
 
     // Subscribe
-    this.mediaService.getMedia().subscribe(media => {
-      this.media = media;
+    this.mediaService.getMedia().subscribe((media) => {
+      this.media = media
 
-      this.media.forEach(currentMedia => {
-        this.artworkService.getArtwork(currentMedia).subscribe(url => {
-          this.covers[currentMedia.title] = url;
-        });
-
-        this.mediaSlider.update().then(null);
-      });
-
+      for (const currentMedia of media) {
+        this.artworkService.getArtwork(currentMedia).subscribe((url) => {
+          this.covers[currentMedia.title] = url
+        })
+      }
+      this.mediaSlider.update().then(null)
 
       // Workaround as the scrollbar handle isn't visible after the immediate update
       // Seems like a size calculation issue, as resizing the browser window helps
       // Better fix for this?
       window.setTimeout(() => {
-        this.mediaSlider?.update();
-      }, 1000);
-    });
+        this.mediaSlider?.update()
+      }, 1000)
+    })
 
-    this.mediaService.getArtists().subscribe(artists => {
-      this.artists = artists;
-
-      this.artists.forEach(artist => {
-        this.artworkService.getArtistArtwork(artist.coverMedia).subscribe(url => {
-          this.covers[artist.name] = url;
-        });
-      });
-      this.artistSlider?.update();
+    this.mediaService.getArtists().subscribe((artists) => {
+      this.artists = artists
+      for (const artist of this.artists) {
+        this.artworkService.getArtistArtwork(artist.coverMedia).subscribe((url) => {
+          this.covers[artist.name] = url
+        })
+      }
+      this.artistSlider?.update()
 
       // Workaround as the scrollbar handle isn't visible after the immediate update
       // Seems like a size calculation issue, as resizing the browser window helps
-      // Better fix for this? 
+      // Better fix for this?
       window.setTimeout(() => {
-        this.artistSlider?.update();
-      }, 1000);
-    });
+        this.artistSlider?.update()
+      }, 1000)
+    })
 
-    this.update();
+    this.update()
   }
 
   ionViewWillEnter() {
     if (this.needsUpdate) {
-      this.update();
+      this.update()
     }
-    this.updateNetwork = true;
-    this.checkNetwork();
+    this.updateNetwork = true
+    this.checkNetwork()
   }
 
-
-  checkNetwork(){
+  checkNetwork() {
     //console.log("Onlinestate:" + this.network?.onlinestate);
     // console.log("CurrentNetwork:" + this.currentNetwork);
-    if(this.network?.ip !== undefined){
-      if(this.network?.onlinestate !== this.currentNetwork){
-        this.currentNetwork = this.network?.onlinestate;
+    if (this.network?.ip !== undefined) {
+      if (this.network?.onlinestate !== this.currentNetwork) {
+        this.currentNetwork = this.network?.onlinestate
         // console.log("Network changed");
-        this.update();
+        this.update()
       }
     }
-    
+
     setTimeout(() => {
-      if(this.updateNetwork){
-        this.checkNetwork();
+      if (this.updateNetwork) {
+        this.checkNetwork()
       }
     }, 1000)
   }
 
   ionViewDidLeave() {
-    this.updateNetwork = false;
+    this.updateNetwork = false
     if (this.activityIndicatorVisible) {
-      this.activityIndicatorService.dismiss();
-      this.activityIndicatorVisible = false;
+      this.activityIndicatorService.dismiss()
+      this.activityIndicatorVisible = false
     }
   }
 
   categoryChanged(event: any) {
-    this.category = event.detail.value;
-    this.mediaService.setCategory(this.category);
-    this.update();
+    this.category = event.detail.value
+    this.mediaService.setCategory(this.category)
+    this.update()
   }
 
-  update() {
+  update() {
     if (this.category === 'audiobook' || this.category === 'music' || this.category === 'other') {
-      this.mediaService.publishArtists();
+      this.mediaService.publishArtists()
     } else {
-      this.mediaService.publishMedia();
+      this.mediaService.publishMedia()
     }
-    this.needsUpdate = false;
+    this.needsUpdate = false
   }
 
   artistCoverClicked(clickedArtist: Artist) {
-    if(this.monitor?.monitor == "On"){
-      this.activityIndicatorService.create().then(indicator => {
-        this.activityIndicatorVisible = true;
+    if (this.monitor?.monitor === 'On') {
+      this.activityIndicatorService.create().then((indicator) => {
+        this.activityIndicatorVisible = true
         indicator.present().then(() => {
           const navigationExtras: NavigationExtras = {
             state: {
-              artist: clickedArtist
-            }
-          };
-          this.router.navigate(['/medialist'], navigationExtras);
-        });
-      });
+              artist: clickedArtist,
+            },
+          }
+          this.router.navigate(['/medialist'], navigationExtras)
+        })
+      })
     }
   }
 
   artistNameClicked(clickedArtist: Artist) {
-    if(this.monitor?.monitor == "On"){
-      this.playerService.getConfig().subscribe(config => {
-        if (config.tts == null || config.tts.enabled === true) {
-          this.playerService.say(clickedArtist.name);
+    if (this.monitor?.monitor === 'On') {
+      this.playerService.getConfig().subscribe((config) => {
+        if (config.tts == null || config.tts.enabled === true) {
+          this.playerService.say(clickedArtist.name)
         }
-      });
+      })
     }
   }
 
   mediaCoverClicked(clickedMedia: Media) {
-    if(this.monitor?.monitor == "On"){
-      this.activityIndicatorService.create().then(indicator => {
-        this.activityIndicatorVisible = true;
+    if (this.monitor?.monitor === 'On') {
+      this.activityIndicatorService.create().then((indicator) => {
+        this.activityIndicatorVisible = true
         indicator.present().then(() => {
           const navigationExtras: NavigationExtras = {
             state: {
-              media: clickedMedia
-            }
-          };
-          this.router.navigate(['/player'], navigationExtras);
-        });
-      });
+              media: clickedMedia,
+            },
+          }
+          this.router.navigate(['/player'], navigationExtras)
+        })
+      })
     }
   }
 
   mediaNameClicked(clickedMedia: Media) {
-    if(this.monitor?.monitor == "On"){
-      this.playerService.getConfig().subscribe(config => {
-        if (config.tts == null || config.tts.enabled === true) {
-          this.playerService.say(clickedMedia.title);
+    if (this.monitor?.monitor === 'On') {
+      this.playerService.getConfig().subscribe((config) => {
+        if (config.tts == null || config.tts.enabled === true) {
+          this.playerService.say(clickedMedia.title)
         }
-      });
+      })
     }
   }
 
   editButtonPressed() {
-    window.clearTimeout(this.editClickTimer);
+    window.clearTimeout(this.editClickTimer)
 
     if (this.editButtonclickCount < 9) {
-      this.editButtonclickCount++;
+      this.editButtonclickCount++
 
       this.editClickTimer = window.setTimeout(() => {
-        this.editButtonclickCount = 0;
-      }, 500);
+        this.editButtonclickCount = 0
+      }, 500)
     } else {
-      this.editButtonclickCount = 0;
-      this.needsUpdate = true;
+      this.editButtonclickCount = 0
+      this.needsUpdate = true
 
-      this.activityIndicatorService.create().then(indicator => {
-        this.activityIndicatorVisible = true;
+      this.activityIndicatorService.create().then((indicator) => {
+        this.activityIndicatorVisible = true
         indicator.present().then(() => {
-          this.router.navigate(['/edit']);
-        });
-      });
+          this.router.navigate(['/edit'])
+        })
+      })
     }
   }
 
   resume() {
-    if(this.monitor?.monitor == "On"){
-      this.mediaService.setCategory("resume");
-      this.activityIndicatorService.create().then(indicator => {
-        this.activityIndicatorVisible = true;
+    if (this.monitor?.monitor === 'On') {
+      this.mediaService.setCategory('resume')
+      this.activityIndicatorService.create().then((indicator) => {
+        this.activityIndicatorVisible = true
         indicator.present().then(() => {
           const navigationExtras: NavigationExtras = {
             state: {
-              resume: "resume",
+              resume: 'resume',
               category: this.category,
-            }
-          };
-          this.router.navigate(['/medialist'], navigationExtras);
-        });
-      });
+            },
+          }
+          this.router.navigate(['/medialist'], navigationExtras)
+        })
+      })
     }
   }
 }

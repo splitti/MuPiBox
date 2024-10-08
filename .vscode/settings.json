@@ -1,0 +1,6 @@
+{
+  "files.insertFinalNewline": true,
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "biomejs.biome",
+  "biome.lspBin": "./dev/Sonos-Kids-Controller-master/node_modules/@biomejs/biome/bin/biome"
+}

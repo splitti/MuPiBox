@@ -1,24 +1,24 @@
-import { MediaSorting } from "./media"
-import { Utils } from "./utils"
-import { createMedia } from "./fixtures"
+import { createMedia } from './fixtures'
+import { MediaSorting } from './media'
+import { Utils } from './utils'
 
 describe('Utils', () => {
   it('should copy data if provided', () => {
     const target = createMedia({
-        artistcover: 'a',
-        shuffle: false,
-        aPartOfAll: true,
-        aPartOfAllMin: -1,
-        aPartOfAllMax: 10,
-        sorting: MediaSorting.AlphabeticalAscending,
+      artistcover: 'a',
+      shuffle: false,
+      aPartOfAll: true,
+      aPartOfAllMin: -1,
+      aPartOfAllMax: 10,
+      sorting: MediaSorting.AlphabeticalAscending,
     })
     const source = {
-        artistcover: 'b',
-        shuffle: true,
-        aPartOfAll: false,
-        aPartOfAllMin: 2,
-        aPartOfAllMax: 3,
-        sorting: MediaSorting.ReleaseDateAscending,
+      artistcover: 'b',
+      shuffle: true,
+      aPartOfAll: false,
+      aPartOfAllMin: 2,
+      aPartOfAllMax: 3,
+      sorting: MediaSorting.ReleaseDateAscending,
     }
     Utils.copyExtraMediaData(source, target)
     expect(target.artistcover).toEqual('b')
@@ -30,20 +30,20 @@ describe('Utils', () => {
   })
   it('should not copy data if undefined or null', () => {
     const target = createMedia({
-        artistcover: 'a',
-        shuffle: false,
-        aPartOfAll: true,
-        aPartOfAllMin: -1,
-        aPartOfAllMax: 10,
-        sorting: MediaSorting.AlphabeticalAscending,
+      artistcover: 'a',
+      shuffle: false,
+      aPartOfAll: true,
+      aPartOfAllMin: -1,
+      aPartOfAllMax: 10,
+      sorting: MediaSorting.AlphabeticalAscending,
     })
     const source = {
-        artistcover: 'b',
-        shuffle: null,
-        aPartOfAll: undefined,
-        aPartOfAllMin: null,
-        aPartOfAllMax: undefined,
-        sorting: MediaSorting.ReleaseDateAscending,
+      artistcover: 'b',
+      shuffle: null,
+      aPartOfAll: undefined,
+      aPartOfAllMin: null,
+      aPartOfAllMax: undefined,
+      sorting: MediaSorting.ReleaseDateAscending,
     }
     Utils.copyExtraMediaData(source, target)
     expect(target.artistcover).toEqual('b')
