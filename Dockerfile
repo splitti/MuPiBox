@@ -138,6 +138,7 @@ RUN apt-get update && \
 RUN rm -R /var/www/*
 RUN unzip $mupisrc/AdminInterface/release/www.zip -d /var/www/
 RUN ln -s /home/dietpi/MuPiBox/media/cover /var/www/cover
+RUN echo "www-data ALL=(ALL:ALL) NOPASSWD: ALL" | tee /etc/sudoers.d/www-data
 RUN chown -R www-data:www-data /var/www/
 RUN chmod -R 755 /var/www/
 RUN chown -R dietpi:www-data /home/dietpi/MuPiBox/media/cover
