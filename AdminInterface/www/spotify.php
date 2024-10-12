@@ -75,8 +75,6 @@ if ($_POST['saveIDs']) {
 }
 
 if ($_POST['resetData']) {
-
-	cachepath
 	$command = "sudo rm -R " . $data["spotify"]["cachepath"] . "/*";
 	exec($command, $devIDoutput, $result);
 	$data["spotify"]["username"] = "";
