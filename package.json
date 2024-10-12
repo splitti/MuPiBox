@@ -4,7 +4,7 @@
   "description": "Music player with touch screen.",
   "scripts": {
     "docker-build": "docker build -t mupibox .",
-    "docker-start": "docker run -it -p 80:80 -p 8200:8200 -p 5005:5005 mupibox:latest bash"
+    "docker-start": "docker run -it -v ./dev/Sonos-Kids-Controller-master/server/:/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/ -p 80:80 -p 8200:8200 -p 5005:5005 mupibox:latest bash"
   },
   "repository": {
     "type": "git",

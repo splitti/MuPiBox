@@ -17,14 +17,16 @@ RUN apt-get update && \
     unzip \
     && rm -rf /var/lib/apt/lists/*
 
+# Setup nodejs.
+RUN curl -sL https://deb.nodesource.com/setup_16.x | bash
+
+# Add dietpi user.
 RUN groupadd -r dietpi && useradd -r -g dietpi dietpi
 RUN groupadd -r gpio
+
+# Add repo source.
 USER dietpi
-
-# RUN touch /home/dietpi/.bashrc
-
 ARG mupisrc=/home/dietpi/MuPiBoxSource
-
 COPY ./AdminInterface $mupisrc/AdminInterface
 COPY ./autosetup  $mupisrc/autosetup
 COPY ./bin  $mupisrc/bin
@@ -33,14 +35,12 @@ COPY ./dev  $mupisrc/dev
 COPY ./media  $mupisrc/media
 COPY ./scripts  $mupisrc/scripts
 COPY ./themes  $mupisrc/themes
-
 USER root
 
 # Needed for "Tracker "idealTree" already exists" error not happening
 WORKDIR /home/dietpi
 
-# Setup nodejs.
-RUN curl -sL https://deb.nodesource.com/setup_16.x | bash
+# Install nodejs packages.
 RUN npm install -g @ionic/cli
 RUN npm install -g pm2
 RUN pm2 startup
@@ -114,7 +114,7 @@ RUN mv $mupisrc/bin/librespot/dev_0.5_20240905/librespot-64bit /usr/bin/librespo
 RUN mv $mupisrc/bin/fbv/fbv_64 /usr/bin/fbv
 RUN chmod 755 /usr/bin/fbv /usr/bin/librespot
 
-# Copy media files.
+# TODO: Copy media files.
 # RUN mv -f $mupisrc/config/templates/splash.txt /boot/splash.txt
 # RUN wget https://gitlab.com/DarkElvenAngel/initramfs-splash/-/raw/master/boot/initramfs.img -O /boot/initramfs.img
 # RUN cp $mupisrc/media/images/goodbye.png /home/dietpi/MuPiBox/sysmedia/images/goodbye.png
@@ -136,16 +136,14 @@ RUN apt-get update && \
     lighttpd \
     && rm -rf /var/lib/apt/lists/*
 RUN rm -R /var/www/*
-RUN unzip $mupisrc/AdminInterface/release/www.zip -d /var/www/
+RUN unzip $mupisrc/AdminInterface/release/www.zip -d /var/www/html
 RUN ln -s /home/dietpi/MuPiBox/media/cover /var/www/cover
+
+# Rights etc. for www-data.
 RUN echo "www-data ALL=(ALL:ALL) NOPASSWD: ALL" | tee /etc/sudoers.d/www-data
 RUN chown -R www-data:www-data /var/www/
 RUN chmod -R 755 /var/www/
 RUN chown -R dietpi:www-data /home/dietpi/MuPiBox/media/cover
-
-# RUN chmod +x $mupisrc/autosetup/autosetup.sh
-# USER dietpi
-# RUN $mupisrc/autosetup/autosetup.sh uselocal
 
 EXPOSE 8200
 EXPOSE 5005
