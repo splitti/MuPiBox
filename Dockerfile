@@ -2,6 +2,9 @@ FROM debian:bookworm-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
 
+# Ensure we install nodejs 16.
+RUN curl -sL https://deb.nodesource.com/setup_16.x | bash
+
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     sudo \
@@ -16,9 +19,6 @@ RUN apt-get update && \
     git \
     unzip \
     && rm -rf /var/lib/apt/lists/*
-
-# Setup nodejs.
-RUN curl -sL https://deb.nodesource.com/setup_16.x | bash
 
 # Add dietpi user.
 RUN groupadd -r dietpi && useradd -r -g dietpi dietpi
@@ -79,8 +79,6 @@ WORKDIR /home/dietpi/.mupibox
 RUN git clone https://github.com/zlargon/google-tts
 WORKDIR /home/dietpi/.mupibox/google-tts/
 RUN npm install --save
-# RUN npm audit fix
-# RUN npm test
 
 # Frontend.
 RUN cp $mupisrc/bin/nodejs/deploy.zip /home/dietpi/.mupibox/Sonos-Kids-Controller-master/sonos-kids-controller.zip
@@ -93,8 +91,6 @@ RUN cp $mupisrc/config/templates/www.json /home/dietpi/.mupibox/Sonos-Kids-Contr
 RUN cp $mupisrc/config/templates/monitor.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/monitor.json
 WORKDIR /home/dietpi/.mupibox/Sonos-Kids-Controller-master 
 RUN npm install
-RUN pm2 start server.js
-RUN pm2 save
 
 # Spotify player.
 WORKDIR /home/dietpi/.mupibox
@@ -105,9 +101,7 @@ WORKDIR /home/dietpi/.mupibox/spotifycontroller-main
 RUN cp $mupisrc/config/templates/spotifycontroller.json /home/dietpi/.mupibox/spotifycontroller-main/config/config.json
 RUN cp $mupisrc/bin/nodejs/spotify-control.js /home/dietpi/.mupibox/spotifycontroller-main/spotify-control.js
 RUN ln -s /etc/mupibox/mupiboxconfig.json /home/dietpi/.mupibox/spotifycontroller-main/config/mupiboxconfig.json
-RUN npm install 
-RUN pm2 start spotify-control.js
-RUN pm2 save
+RUN npm install
 
 # Copy binaries.
 RUN mv $mupisrc/bin/librespot/dev_0.5_20240905/librespot-64bit /usr/bin/librespot
