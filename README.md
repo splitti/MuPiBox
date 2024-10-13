@@ -39,7 +39,9 @@ Please visit official website  https://mupibox.de/anleitungen/installationsanlei
 - Youtube Downloader MeTube (https://github.com/alexta69/metube/pkgs/container/metube)
 
 ## Contributing
-Contributing changes to the MuPiBox source code is easy thanks to GitHub codespaces that allow you to develop inside the browser without needing to set up a local development environment.
+All contributions, e.g., reporting issues etc., are welcome.
+
+If you want to contribute changes to the MuPiBox source code is easy thanks to GitHub codespaces that allow you to develop inside the browser without needing to set up a local development environment.
 1. Fork this repository.
 2. Start a codespace session.
 3. The box UI located in `dev/Sonos-Kids-Controller-master`
@@ -49,4 +51,4 @@ Contributing changes to the MuPiBox source code is easy thanks to GitHub codespa
 5. Create a git branch, commit and push your changes.
 6. Create a pull request for your changes.
 
-Of course, other contributions, e.g., reporting issues etc., are also welcome.
+The Dockerfile in the root directory allows you to test your changes in a production setting (make sure to run `deploy.sh` first). Currently, only the box UI can be tested this way.

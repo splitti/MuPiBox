@@ -1,0 +1,44 @@
+{
+  "$schema": "https://biomejs.dev/schemas/1.9.2/schema.json",
+  "vcs": {
+    "enabled": false,
+    "clientKind": "git",
+    "useIgnoreFile": false
+  },
+  "files": {
+    "ignoreUnknown": false,
+    "ignore": ["package-lock.json", "*/node_modules/*", "*/www/*", "*/.angular/*", "spotify-web-api.js", "*/server/config/*.json"]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "lineWidth": 120
+  },
+  "organizeImports": {
+    "enabled": true
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "style": {
+        "useImportType": "off"
+      },
+      "recommended": true,
+      "suspicious": {
+        "noExplicitAny": "off"
+      },
+      "correctness": {
+        "noUnusedImports": {
+          "level": "warn",
+          "fix": "safe"
+        }
+      }
+    }
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single",
+      "semicolons": "asNeeded"
+    }
+  }
+}

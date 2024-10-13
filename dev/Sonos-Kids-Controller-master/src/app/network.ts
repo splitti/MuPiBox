@@ -1,5 +1,5 @@
 export interface Network {
-    ip?: string;
-    host?: string;
-    onlinestate?: string;
+  ip?: string
+  host?: string
+  onlinestate?: string
 }
