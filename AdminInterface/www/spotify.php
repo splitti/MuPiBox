@@ -75,7 +75,7 @@ if ($_POST['saveIDs']) {
 }
 
 if ($_POST['resetData']) {
-	$command = "sudo rm /home/dietpi/.cache/spotifyd/credentials.json";
+	$command = "sudo rm -R " . $data["spotify"]["cachepath"] . "/*";
 	exec($command, $devIDoutput, $result);
 	$data["spotify"]["username"] = "";
 	$data["spotify"]["password"] = "";

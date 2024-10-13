@@ -246,8 +246,6 @@
 		"version": ""
 	},
 	"spotify": {
-		"username": "",
-		"password": "",
 		"deviceId": "",
 		"clientId": "",
 		"clientSecret": "",
