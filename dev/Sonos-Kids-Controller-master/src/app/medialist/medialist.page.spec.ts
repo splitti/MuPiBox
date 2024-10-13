@@ -16,9 +16,9 @@ describe('MedialistPage', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-    imports: [IonicModule.forRoot(), RouterTestingModule, MedialistPage],
-    providers: [provideHttpClient(withInterceptorsFromDi()), provideHttpClientTesting()],
-}).compileComponents()
+      imports: [IonicModule.forRoot(), RouterTestingModule, MedialistPage],
+      providers: [provideHttpClient(withInterceptorsFromDi()), provideHttpClientTesting()],
+    }).compileComponents()
 
     httpClient = TestBed.inject(HttpTestingController)
 
@@ -27,9 +27,6 @@ describe('MedialistPage', () => {
     // TODO: Artist may be undefined when strictly following TS types, this should be corrected in
     // medialist.page.ts
     component.artist = createArtist()
-    // Somehow we must prevent a slider update since either the slider object or its update method is
-    // broken in this karma/jasmine environment.
-    spyOn<any>(component, 'updateSlider')
     fixture.detectChanges()
   })
 

@@ -123,7 +123,7 @@
 
 <ion-content class="home-content">
   @if (category === 'audiobook' || category === 'music' || category === 'other') {
-    <swiper-container slides-per-view="3" loop="false" scrollbar="true" free-mode="true" free-mode-sticky="true" free-mode-momentum-bounce="false" css-mode="true">
+    <swiper-container slides-per-view="3" scrollbar="true" free-mode="false" css-mode="true">
       @for (currentArtist of artists; track currentArtist) {
         <swiper-slide>
           <ion-grid>
@@ -138,7 +138,7 @@
               <ion-col size="12">
                 <ion-card (click)="artistNameClicked(currentArtist)">
                   <ion-card-header>
-                    <ion-card-title class="ion-text-nowrap truncate-text">{{currentArtist.name}}</ion-card-title>
+                    <ion-card-title class="ion-text-nowrap truncate-text ion-text-center">{{currentArtist.name}}</ion-card-title>
                   </ion-card-header>
                 </ion-card>
               </ion-col>
@@ -149,7 +149,7 @@
     </swiper-container>
   } @else {
     @if (media) {
-      <swiper-container slides-per-view="3" scrollbar="true" loop="false">
+      <swiper-container slides-per-view="3" scrollbar="true" free-mode="false" css-mode="true">
         @for (currentMedia of media; track currentMedia) {
           <swiper-slide>
             <ion-grid>
@@ -158,7 +158,7 @@
                   <ion-card class="media-card">
                     <img (click)="mediaCoverClicked(currentMedia)" draggable="false" style="-moz-user-select: none;" ondragstart="return false;" src="{{covers[currentMedia.title]}}">
                     <ion-card-header (click)="mediaNameClicked(currentMedia)">
-                      <ion-card-title class="ion-text-nowrap truncate-text">{{currentMedia.title}}</ion-card-title>
+                      <ion-card-title class="ion-text-nowrap truncate-text ion-text-center">{{currentMedia.title}}</ion-card-title>
                     </ion-card-header>
                   </ion-card>
                 </ion-col>

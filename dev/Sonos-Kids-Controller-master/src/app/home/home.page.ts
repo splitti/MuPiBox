@@ -1,5 +1,4 @@
 import { CUSTOM_ELEMENTS_SCHEMA, Component, OnInit } from '@angular/core'
-import { IonButton, IonIcon, IonicModule } from '@ionic/angular'
 import { NavigationExtras, Router } from '@angular/router'
 
 import { ActivityIndicatorService } from '../activity-indicator.service'
@@ -7,6 +6,7 @@ import type { Artist } from '../artist'
 import { ArtworkService } from '../artwork.service'
 import { CommonModule } from '@angular/common'
 import { FormsModule } from '@angular/forms'
+import { IonicModule } from '@ionic/angular'
 import type { Media } from '../media'
 import { MediaService } from '../media.service'
 import type { Monitor } from '../monitor'
@@ -24,9 +24,6 @@ import { PlayerService } from '../player.service'
   standalone: true,
 })
 export class HomePage implements OnInit {
-  // @ViewChild('artist_slider', { static: false }) artistSlider: IonSlides
-  // @ViewChild('media_slider', { static: false }) mediaSlider: IonSlides
-
   category = 'audiobook'
 
   artists: Artist[] = []
@@ -45,18 +42,6 @@ export class HomePage implements OnInit {
   public readonly mupihat$: Observable<Mupihat>
 
   needsUpdate = false
-
-  slideOptions = {
-    initialSlide: 0,
-    slidesPerView: 3,
-    autoplay: false,
-    loop: false,
-    freeMode: true,
-    freeModeSticky: true,
-    freeModeMomentumBounce: false,
-    freeModeMomentumRatio: 1.0,
-    freeModeMomentumVelocityRatio: 1.0,
-  }
 
   constructor(
     private mediaService: MediaService,
@@ -94,14 +79,6 @@ export class HomePage implements OnInit {
           this.covers[currentMedia.title] = url
         })
       }
-      // this.mediaSlider.update().then(null)
-
-      // Workaround as the scrollbar handle isn't visible after the immediate update
-      // Seems like a size calculation issue, as resizing the browser window helps
-      // Better fix for this?
-      // window.setTimeout(() => {
-      // this.mediaSlider?.update()
-      // }, 1000)
     })
 
     this.mediaService.getArtists().subscribe((artists) => {
@@ -111,14 +88,6 @@ export class HomePage implements OnInit {
           this.covers[artist.name] = url
         })
       }
-      // this.artistSlider?.update()
-
-      // Workaround as the scrollbar handle isn't visible after the immediate update
-      // Seems like a size calculation issue, as resizing the browser window helps
-      // Better fix for this?
-      // window.setTimeout(() => {
-      //   this.artistSlider?.update()
-      // }, 1000)
     })
 
     this.update()
@@ -130,15 +99,17 @@ export class HomePage implements OnInit {
     }
     this.updateNetwork = true
     this.checkNetwork()
+
+    // This is a fix for the scroll bar not showing the current location when using the back button
+    // from the media list or admin page.
+    const swiper = document.querySelector('swiper-container').swiper
+    swiper?.update()
   }
 
   checkNetwork() {
-    //console.log("Onlinestate:" + this.network?.onlinestate);
-    // console.log("CurrentNetwork:" + this.currentNetwork);
     if (this.network?.ip !== undefined) {
       if (this.network?.onlinestate !== this.currentNetwork) {
         this.currentNetwork = this.network?.onlinestate
-        // console.log("Network changed");
         this.update()
       }
     }

@@ -6,27 +6,22 @@ import type { Observable, Subscription } from 'rxjs'
 import { ActivityIndicatorService } from '../activity-indicator.service'
 import type { Artist } from '../artist'
 import { ArtworkService } from '../artwork.service'
+import { AsyncPipe } from '@angular/common'
+import { IonicModule } from '@ionic/angular'
 import { MediaService } from '../media.service'
 import type { Monitor } from '../monitor'
 import type { Mupihat } from '../mupihat'
 import { PlayerService } from '../player.service'
-import { IonicModule } from '@ionic/angular';
-import { AsyncPipe } from '@angular/common';
 
 @Component({
-    selector: 'app-medialist',
-    templateUrl: './medialist.page.html',
-    styleUrls: ['./medialist.page.scss'],
-    schemas: [CUSTOM_ELEMENTS_SCHEMA],
-    standalone: true,
-    imports: [
-    IonicModule,
-    AsyncPipe
-],
+  selector: 'app-medialist',
+  templateUrl: './medialist.page.html',
+  styleUrls: ['./medialist.page.scss'],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
+  standalone: true,
+  imports: [IonicModule, AsyncPipe],
 })
 export class MedialistPage implements OnInit {
-  // @ViewChild('slider', { static: false }) slider: IonSlides
-
   artist: Artist
   media: Media[] = []
   resumemedia: Media[] = []
@@ -203,7 +198,6 @@ export class MedialistPage implements OnInit {
       this.getMediaFromResumeSubscription = this.mediaService.getMediaFromResume().subscribe((media) => {
         this.media = media
         fetchArtwork(this.media)
-        this.updateSlider()
       })
     } else {
       const sliceMedia = (media: Media[], offsetByOne = false): Media[] => {
@@ -231,21 +225,7 @@ export class MedialistPage implements OnInit {
           !isShow,
         )
         fetchArtwork(this.media)
-        this.updateSlider()
       })
     }
-  }
-
-  /**
-   * Updates the slider immediately and after a delay again.
-   */
-  private updateSlider(): void {
-    // this.slider.update()
-    // Workaround as the scrollbar handle isn't visible after the immediate update
-    // Seems like a size calculation issue, as resizing the browser window helps
-    // Better fix for this?
-    // window.setTimeout(() => {
-    //   this.slider.update()
-    // }, 1000)
   }
 }

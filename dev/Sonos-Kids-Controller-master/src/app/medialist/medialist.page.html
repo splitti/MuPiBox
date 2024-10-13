@@ -55,7 +55,7 @@
 </ion-header>
 
 <ion-content class="medialist-content">
-  <swiper-container slides-per-view="3" loop="false" scrollbar="true" free-mode="true" free-mode-sticky="true" free-mode-momentum-bounce="false" css-mode="true">
+  <swiper-container slides-per-view="3" scrollbar="true" free-mode="false" css-mode="true">
     @for (currentMedia of media; track currentMedia; let indexOfMedia = $index) {
       <swiper-slide>
         <ion-grid>
@@ -64,7 +64,7 @@
               <ion-card>
                 <img (click)="coverClicked(currentMedia)" draggable="false" style="-moz-user-select: none;" ondragstart="return false;" src="{{covers[currentMedia.title]}}">
                 <ion-card-header (click)="mediaNameClicked(currentMedia)">
-                  <ion-card-title class="ion-text-nowrap truncate-text">{{currentMedia.title}}</ion-card-title>
+                  <ion-card-title class="ion-text-nowrap truncate-text ion-text-center">{{currentMedia.title}}</ion-card-title>
                 </ion-card-header>
               </ion-card>
             </ion-col>
