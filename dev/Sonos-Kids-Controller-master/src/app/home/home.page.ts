@@ -102,8 +102,7 @@ export class HomePage implements OnInit {
 
     // This is a fix for the scroll bar not showing the current location when using the back button
     // from the media list or admin page.
-    const swiper = document.querySelector('swiper-container').swiper
-    swiper?.update()
+    document.querySelector('swiper-container').swiper?.update()
   }
 
   checkNetwork() {

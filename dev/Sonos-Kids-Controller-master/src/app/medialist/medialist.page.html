@@ -55,7 +55,7 @@
 </ion-header>
 
 <ion-content class="medialist-content">
-  <swiper-container slides-per-view="3" scrollbar="true" free-mode="false" css-mode="true">
+  <swiper-container slides-per-view="3" scrollbar="true" scrollbar-hide="true" free-mode="false" css-mode="true">
     @for (currentMedia of media; track currentMedia; let indexOfMedia = $index) {
       <swiper-slide>
         <ion-grid>
