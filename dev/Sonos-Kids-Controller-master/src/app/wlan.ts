@@ -1,5 +1,5 @@
 export interface WLAN {
-    category: string;
-    ssid?: string;
-    pw?: string;
+  category: string
+  ssid?: string
+  pw?: string
 }

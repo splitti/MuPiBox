@@ -1,13 +1,14 @@
-import { NgModule } from '@angular/core';
-import { Routes, RouterModule } from '@angular/router';
-import { EditPage } from './edit.page';
+import { RouterModule, Routes } from '@angular/router'
+
+import { NgModule } from '@angular/core'
+import { EditPage } from './edit.page'
 
 const routes: Routes = [
   {
     path: '',
-    component: EditPage
-  }
-];
+    component: EditPage,
+  },
+]
 
 @NgModule({
   imports: [RouterModule.forChild(routes)],
