@@ -33,7 +33,7 @@
         <ion-col size="4">
           <div>
             <ion-item>
-              <ion-label class="dimmed-text">Source type</ion-label>
+              <ion-label class="dimmed-text">Source</ion-label>
               <ion-select #sourceTypeSelect interface="popover" [(ngModel)]="sourceType" name="sourceType" (ionChange)="sourceTypeChanged($event)">
                 <ion-select-option value="spotifyURL">Spotify URL</ion-select-option>
                 <ion-select-option value="spotifySearch">Spotify Search Query</ion-select-option>
@@ -54,11 +54,13 @@
 
       <ion-row>
         <ion-col size="3">
-          <div>
-            <ion-item>
-              <ion-input #title [ngModel]="editMedia?.title" name="title" type="text" placeholder="Title" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
-            </ion-item>
-          </div>
+          @if (sourceType === 'streamURL') {
+            <div>
+              <ion-item>
+                <ion-input #title [ngModel]="editMedia?.title" name="title" type="text" placeholder="Title" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
+              </ion-item>
+            </div>
+          }
         </ion-col>
         <ion-col size="3">
           <div>
@@ -98,17 +100,21 @@
 
       <ion-row>
         <ion-col size="2">
-          <div>
-            <ion-item>
-              <ion-label>Shuffle Mode</ion-label>
-              <ion-checkbox #spotify_shuffle name="spotify_shuffle" [(ngModel)]="shuffle" (ionChange)="validate()"></ion-checkbox>
-            </ion-item>
-          </div>
+          @if (!((sourceType === 'spotifyURL' || sourceType === 'spotifySearch') &&
+        (category === 'music' || category === 'other'))) {
+            <div>
+              <ion-item>
+                <!-- TODO: Fix disabled state. -->
+                <ion-label class="ion-padding-end">Shuffle</ion-label>
+                <ion-checkbox #spotify_shuffle name="spotify_shuffle" [(ngModel)]="shuffle" (ionChange)="validate()"></ion-checkbox>
+              </ion-item>
+            </div>
+          }
         </ion-col>
         <ion-col size="2">
           <div>
             <ion-item>
-              <ion-label class="dimmed-text">Sorting</ion-label>
+              <ion-label class="dimmed-text">Sort</ion-label>
               <ion-select #sortingSelect interface="popover" [(ngModel)]="sorting" name="sorting">
                 <ion-select-option value="AlphabeticalAscending">alphabetical asc.</ion-select-option>
                 <ion-select-option value="AlphabeticalDescending">alphabetical desc.</ion-select-option>
@@ -119,29 +125,33 @@
           </div>
         </ion-col>
         <ion-col size="2">
-          <div>
-            <ion-item>
-              <ion-label>Interval</ion-label>
-              <ion-checkbox #spotify_aPartOfAll name="spotify_aPartOfAll" [(ngModel)]="aPartOfAll" (ionChange)="validate()"></ion-checkbox>
-            </ion-item>
-          </div>
+          @if (sourceType !== 'streamURL') {
+            <div>
+              <ion-item>
+                <ion-label style="padding-right: 10px;">Interval</ion-label>
+                <ion-checkbox #spotify_aPartOfAll name="spotify_aPartOfAll" [(ngModel)]="aPartOfAll" (ionChange)="validate()"></ion-checkbox>
+              </ion-item>
+            </div>
+          }
         </ion-col>
-        <ion-col size="3">
-          <div class="mupi-inline-label">
-            <label>Start:</label>
-            <ion-item>
-              <ion-input #spotify_aPartOfAllMin [(ngModel)]="aPartOfAllMin" name="spotify_aPartOfAllMin" type="number" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" [disabled]="!aPartOfAll" ngModel></ion-input>
-            </ion-item>
-          </div>
-        </ion-col>
-        <ion-col size="3">
-          <div class="mupi-inline-label">
-            <label>End:</label>
-            <ion-item>
-              <ion-input #spotify_aPartOfAllMax [(ngModel)]="aPartOfAllMax" name="spotify_aPartOfAllMax" type="number" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" [disabled]="!aPartOfAll" ngModel></ion-input>
-            </ion-item>
-          </div>
-        </ion-col>
+        @if (aPartOfAll && sourceType !== 'streamURL') {
+          <ion-col size="3">
+            <div class="mupi-inline-label">
+              <ion-label>Start:</ion-label>
+              <ion-item>
+                <ion-input #spotify_aPartOfAllMin [(ngModel)]="aPartOfAllMin" name="spotify_aPartOfAllMin" type="number" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
+              </ion-item>
+            </div>
+          </ion-col>
+          <ion-col size="3">
+            <div class="mupi-inline-label">
+              <ion-label>End:</ion-label>
+              <ion-item>
+                <ion-input #spotify_aPartOfAllMax [(ngModel)]="aPartOfAllMax" name="spotify_aPartOfAllMax" type="number" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
+              </ion-item>
+            </div>
+          </ion-col>
+        }
       </ion-row>
 
       <ion-row>

@@ -21,12 +21,6 @@ import type { Validate } from '../validate'
   imports: [IonicModule, FormsModule],
 })
 export class AddPage implements OnInit, AfterViewInit {
-  @ViewChild('title', { static: false }) title: IonInput
-  @ViewChild('spotify_shuffle', { static: false }) spotifyshuffle: IonInput
-  @ViewChild('spotify_aPartOfAll', { static: false }) spotifyaPartOfAll: IonInput
-  @ViewChild('spotify_aPartOfAllMin', { static: false }) spotifyaPartOfAllMin: IonInput
-  @ViewChild('spotify_aPartOfAllMax', { static: false }) spotifyaPartOfAllMax: IonInput
-
   source = 'spotify'
   category = 'audiobook'
   sourceType = 'spotifyURL'
@@ -36,7 +30,6 @@ export class AddPage implements OnInit, AfterViewInit {
   valid = false
   editMedia: Media
   edit = false
-  titleBoolean = false
   shuffle = false
   firstInput = true
   validateState: Validate
@@ -532,43 +525,6 @@ export class AddPage implements OnInit, AfterViewInit {
   }
 
   validate() {
-    if (this.aPartOfAll) {
-      this.spotifyaPartOfAllMin.disabled = false
-      this.spotifyaPartOfAllMax.disabled = false
-    } else {
-      this.spotifyaPartOfAllMin.disabled = true
-      this.spotifyaPartOfAllMax.disabled = true
-    }
-    if (this.shuffle) {
-      this.spotifyshuffle.disabled = false
-    } else {
-      this.spotifyshuffle.disabled = true
-    }
-    if (this.titleBoolean) {
-      this.title.disabled = false
-    } else {
-      this.title.disabled = true
-    }
-
-    if (this.sourceType === 'spotifyURL' || this.sourceType === 'spotifySearch' || this.sourceType === 'rssURL') {
-      this.spotifyaPartOfAll.disabled = false
-    } else {
-      this.spotifyaPartOfAll.disabled = true
-    }
-    if (this.sourceType === 'streamURL') {
-      this.title.disabled = false
-    } else {
-      this.title.disabled = true
-    }
-    if (
-      (this.sourceType === 'spotifyURL' || this.sourceType === 'spotifySearch') &&
-      (this.category === 'music' || this.category === 'other')
-    ) {
-      this.spotifyshuffle.disabled = false
-    } else {
-      this.spotifyshuffle.disabled = true
-    }
-
     if (this.sourceType === 'spotifyURL' || this.sourceType === 'spotifySearch' || this.sourceType === 'rssURL') {
       const label = this.keyboard.getInput('label')
       const spotifyURL = this.keyboard.getInput('spotifyURL')
