@@ -1,28 +1,24 @@
-import { AfterViewInit, Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core'
 import { ActivatedRoute, Router } from '@angular/router'
-import { AlertController, IonInput, NavController, IonicModule } from '@ionic/angular'
+import { AfterViewInit, Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core'
+import { AlertController, IonInput, IonicModule, NavController } from '@ionic/angular'
 import { Media, MediaSorting } from '../media'
 import { PlayerCmds, PlayerService } from '../player.service'
 
+import { ActivityIndicatorService } from '../activity-indicator.service'
+import { FormsModule } from '@angular/forms'
+import Keyboard from 'simple-keyboard'
+import { MediaService } from '../media.service'
 import type { NgForm } from '@angular/forms'
 import type { Observable } from 'rxjs'
-import Keyboard from 'simple-keyboard'
-import { ActivityIndicatorService } from '../activity-indicator.service'
-import { MediaService } from '../media.service'
 import type { Validate } from '../validate'
-import { FormsModule } from '@angular/forms';
-
 
 @Component({
-    selector: 'app-add',
-    encapsulation: ViewEncapsulation.None,
-    templateUrl: './add.page.html',
-    styleUrls: ['./add.page.scss', '../../../node_modules/simple-keyboard/build/css/index.css'],
-    standalone: true,
-    imports: [
-    IonicModule,
-    FormsModule
-],
+  selector: 'app-add',
+  encapsulation: ViewEncapsulation.None,
+  templateUrl: './add.page.html',
+  styleUrls: ['./add.page.scss'],
+  standalone: true,
+  imports: [IonicModule, FormsModule],
 })
 export class AddPage implements OnInit, AfterViewInit {
   @ViewChild('title', { static: false }) title: IonInput
@@ -115,10 +111,6 @@ export class AddPage implements OnInit, AfterViewInit {
     this.keyboard = new Keyboard({
       onChange: (input) => {
         this.selectedInputElem.value = input
-
-        console.log(this.selectedInputElem)
-        console.log(this.selectedInputElem.value)
-
         this.validate()
       },
       onKeyPress: (button) => {

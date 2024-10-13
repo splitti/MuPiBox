@@ -8,16 +8,13 @@
   },
   "private": true,
   "dependencies": {
-    "rxjs": "~7.8.1",
     "cors": "^2.8.5",
-    "express": "^4.17.2",
+    "express": "^4.21.1",
     "jsonfile": "^6.1.0",
     "request": "^2.88.2",
-    "simple-keyboard": "^2.32.131",
     "spotify-web-api-js": "^1.5.2",
     "spotify-web-api-node": "^5.0.2",
-    "xml-js": "^1.6.11",
-    "zone.js": "~0.14.10"
+    "xml-js": "^1.6.11"
   },
   "devDependencies": {},
   "description": "Software for self made touchscreen jukeboxes for kids"
