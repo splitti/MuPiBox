@@ -1,10 +1,10 @@
-import { ExtraDataMedia, Utils } from './utils'
 import { map, mergeAll, toArray } from 'rxjs/operators'
+import { ExtraDataMedia, Utils } from './utils'
 
 import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
-import type { Media } from './media'
 import type { Observable } from 'rxjs'
+import type { Media } from './media'
 import type { RssFeed } from './rssfeed'
 
 @Injectable({

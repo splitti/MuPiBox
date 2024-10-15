@@ -1,14 +1,14 @@
-import { AlertController, IonicModule } from '@ionic/angular'
 import { Component, OnInit } from '@angular/core'
 import { NavigationExtras, Router } from '@angular/router'
+import { AlertController, IonicModule } from '@ionic/angular'
 import { PlayerCmds, PlayerService } from '../player.service'
 
-import { ActivityIndicatorService } from '../activity-indicator.service'
 import { AsyncPipe } from '@angular/common'
+import type { Observable } from 'rxjs'
+import { ActivityIndicatorService } from '../activity-indicator.service'
 import type { Media } from '../media'
 import { MediaService } from '../media.service'
 import type { Network } from '../network'
-import type { Observable } from 'rxjs'
 
 @Component({
   selector: 'app-edit',

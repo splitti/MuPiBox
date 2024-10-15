@@ -1,8 +1,10 @@
 import { Component, OnInit, ViewChild } from '@angular/core'
 import { ActivatedRoute, Router } from '@angular/router'
-import { IonRange, NavController, IonicModule } from '@ionic/angular'
+import { IonRange, IonicModule, NavController } from '@ionic/angular'
 import { PlayerCmds, PlayerService } from '../player.service'
 
+import { AsyncPipe } from '@angular/common'
+import { FormsModule } from '@angular/forms'
 import type { Observable } from 'rxjs'
 import type { AlbumStop } from '../albumstop'
 import { ArtworkService } from '../artwork.service'
@@ -15,19 +17,13 @@ import type { Media } from '../media'
 import { MediaService } from '../media.service'
 import type { Monitor } from '../monitor'
 import type { Mupihat } from '../mupihat'
-import { AsyncPipe } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 
 @Component({
-    selector: 'app-player',
-    templateUrl: './player.page.html',
-    styleUrls: ['./player.page.scss'],
-    standalone: true,
-    imports: [
-    IonicModule,
-    FormsModule,
-    AsyncPipe
-],
+  selector: 'app-player',
+  templateUrl: './player.page.html',
+  styleUrls: ['./player.page.scss'],
+  standalone: true,
+  imports: [IonicModule, FormsModule, AsyncPipe],
 })
 export class PlayerPage implements OnInit {
   @ViewChild('range', { static: false }) range: IonRange

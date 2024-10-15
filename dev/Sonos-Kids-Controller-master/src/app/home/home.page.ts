@@ -1,18 +1,18 @@
 import { CUSTOM_ELEMENTS_SCHEMA, Component, OnInit } from '@angular/core'
 import { NavigationExtras, Router } from '@angular/router'
 
-import { ActivityIndicatorService } from '../activity-indicator.service'
-import type { Artist } from '../artist'
-import { ArtworkService } from '../artwork.service'
 import { CommonModule } from '@angular/common'
 import { FormsModule } from '@angular/forms'
 import { IonicModule } from '@ionic/angular'
+import type { Observable } from 'rxjs'
+import { ActivityIndicatorService } from '../activity-indicator.service'
+import type { Artist } from '../artist'
+import { ArtworkService } from '../artwork.service'
 import type { Media } from '../media'
 import { MediaService } from '../media.service'
 import type { Monitor } from '../monitor'
 import type { Mupihat } from '../mupihat'
 import type { Network } from '../network'
-import type { Observable } from 'rxjs'
 import { PlayerService } from '../player.service'
 
 @Component({
