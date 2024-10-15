@@ -61,7 +61,6 @@ export class MediaService {
     private playerService: PlayerService,
   ) {
     this.playerService.getConfig().subscribe((config) => {
-      console.log(config)
       if (config.ip) {
         this.ip = config.ip
       } else {

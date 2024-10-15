@@ -11,7 +11,8 @@
     "build": "ionic build --prod",
     "deploy": "ionic build --prod",
     "test": "ng test",
-    "lint": "npx @biomejs/biome check ."
+    "lint": "npx @biomejs/biome check .",
+    "lint:fix": "npx @biomejs/biome check --fix ."
   },
   "private": true,
   "dependencies": {
@@ -48,6 +49,7 @@
     "karma-coverage-istanbul-reporter": "~3.0.3",
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "^2.1.0",
+    "karma-spec-reporter": "*",
     "protractor": "~7.0.0",
     "typescript": "~5.4.5",
     "cors": "^2.8.5",
