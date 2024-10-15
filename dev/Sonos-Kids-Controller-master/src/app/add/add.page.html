@@ -100,11 +100,10 @@
 
       <ion-row>
         <ion-col size="2">
-          @if (!((sourceType === 'spotifyURL' || sourceType === 'spotifySearch') &&
-        (category === 'music' || category === 'other'))) {
+          @if ((sourceType === 'spotifyURL' || sourceType === 'spotifySearch') &&
+        (category === 'music' || category === 'other')) {
             <div>
               <ion-item>
-                <!-- TODO: Fix disabled state. -->
                 <ion-label class="ion-padding-end">Shuffle</ion-label>
                 <ion-checkbox #spotify_shuffle name="spotify_shuffle" [(ngModel)]="shuffle" (ionChange)="validate()"></ion-checkbox>
               </ion-item>
