@@ -21,8 +21,7 @@ if ( $_POST['saveSettings']) {
 }
 
 if ( $_POST['spotifyget'] ) {
-	$CHANGE_TXT = $CHANGE_TXT . "<li>Token-Data generated, saved & Services restartet</li>";
-	$change = 1;
+	$CHANGE_TXT = $CHANGE_TXT . "<li>Token-Data generated, saved & Services restarted</li>";
 }
 
 if ($_GET['code']) {
@@ -38,7 +37,7 @@ if ($_GET['code']) {
 	exec("sudo /usr/local/bin/mupibox/./spotify_restart.sh");
 
 ?>
-<form class="appnitro" method="post" action="spotify.php" id="form">
+<form class="appnitro" method="get" action="spotify.php" id="form">
 <div class="description">
 <h2>Please wait... Data will be saved, page will reload automatically!!!</h2>
 </div><p></p>
@@ -114,13 +113,7 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 <form class="appnitro" method="post" action="spotify.php" id="form">
 	<div class="description">
 		<h2>Spotify settings</h2>
-		<div class="note">
-		<h3>Important information for Spotify setup</h3>
-		<p>Carry out the following steps 1 to 3.</p>
-		<p>To link the MuPiBox to your Spotify account (step 3), you need to be on the same Wi-Fi network as the MuPiBox with your Spotify app (Smartphone/PC).</p>
-		<p>The MuPiBox must be switched on. Select the MuPiBox that appears in the Spotify app as the playback device and play something.</p>
-		<p>Reload this page and try to switch the Device ID in step 3.</p>
-		</div>
+        <p>Define login- and common-settings.</p>
 	</div>
 
 	<details>
@@ -193,13 +186,14 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 		</ul>
 	</details>
 
-	<details>
+	<details <?= isset($_GET['spotifyget']) ? 'open' : ''; ?>>
 		<summary><i class="fa-regular fa-circle-check"></i> STEP 3 - Device-ID</summary>
 		<ul>
 			<li id="li_1">
 
 				<h3>Set Device-ID</h3>
-				<p>In this last step, you choose your Device... It is necessary to play music on the MuPiBox via app (for example in browser window of your pc or by smartphone) to generate the device ID! Reload this page and choose the playback device.</p>
+				<p>In this last step, you choose your playback device.</p>
+                <p><a href="spotify.php?spotifyget=reload">Reload</a> this page if device id is not showing up.</p>
 			</li>
 			<li id="li_1">
 				<label class="description" for="spotify_deviceid">Select Spotify Device ID </label>
@@ -221,6 +215,7 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 						print "<option value=\"" . $this_device["id"] . "\"" . $selected  . ">" . $this_device["name"] . " (" . $this_device["id"] . ")</option>";
 					}
 					echo '</select>';
+                    echo ' <a href="spotify.php?spotifyget=reload"><iconify-icon icon="mdi:reload" title="Reload"></iconify-icon></a>';
 					echo '</li><li class="buttons"><input id="saveForm" class="button_text" type="submit" name="setDevID" value="Set DeviceID" /></li><br><li id="li_1" >';
 				} else {
 					print '<p>Please complete the previous steps.</p></li><br><li id="li_1" >';
@@ -249,7 +244,6 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 			<li id="li_1">
 				<h3>Spotify cache state</h3>
 				<p>If set to true, audio data will be cached. Enabling this option could improve speed for playing spotify media. Default: enabled</p>
-				<p>This option must be enabled to use spotify since version 4.1.0</p>
 
 				<label class="labelchecked" for="spotifycache_active">Cache activation state:&nbsp; &nbsp; <input type="checkbox"  id="spotifycache_active" name="spotifycache_active" onclick="return false" <?php
 					if ($data["spotify"]["cachestate"]) {

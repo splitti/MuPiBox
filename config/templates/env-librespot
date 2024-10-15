@@ -12,7 +12,8 @@ cachestate=$(/usr/bin/jq -r .spotify.cachestate ${MUPIBOX_CONFIG})
 if ! $cachestate ; then
     export LIBRESPOT_NAME_DISABLE_AUDIO_CACHE=1
 fi
-username=$( jq -r .username ${LIBRESPOT_CACHE}/credentials.json )
-if [[ ! -z "$var" ]]; then
-  export LIBRESPOT_USERNAME=${username}
+access_token=$(/usr/bin/jq -r .spotify.accessToken ${MUPIBOX_CONFIG})
+credentials="${LIBRESPOT_CACHE}/credentials.json"
+if [ ! -z "$access-token" ] && [ ! -f $credentials ]; then
+  export LIBRESPOT_ACCESS_TOKEN=${access_token}
 fi
