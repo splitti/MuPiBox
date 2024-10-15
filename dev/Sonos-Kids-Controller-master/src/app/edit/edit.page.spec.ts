@@ -25,7 +25,7 @@ describe('EditPage', () => {
   })
 
   it('should create', () => {
-    httpClient.expectOne('http://localhost:8200/api/sonos').flush([])
+    httpClient.expectOne('http://localhost:8200/api/sonos')
     expect(component).toBeTruthy()
   })
 })

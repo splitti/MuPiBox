@@ -128,6 +128,7 @@ exec 3>${LOG}
 	STEP=$(($STEP + 1))
 
 	###############################################################################################
+
 	echo -e "XXX\n${STEP}\nInstall nodeJS 16 (Online-Setup 16)... \nXXX"	
 	before=$(date +%s)
 	curl -sL https://deb.nodesource.com/setup_16.x | sudo -E bash - >&3 2>&3
