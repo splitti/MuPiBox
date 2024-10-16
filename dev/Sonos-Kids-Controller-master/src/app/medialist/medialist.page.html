@@ -1,60 +1,76 @@
 <ion-header class="medialist-header">
-    <ion-toolbar color="light">
-        <ion-buttons slot="start">
-            <ion-back-button (click)="backButtonPressed()" icon="arrow-back-outline" defaultHref="/home"></ion-back-button>
-        </ion-buttons>
-        <ion-title>
-            <div *ngIf="!resume; else elseResume">{{artist.name}}</div>
-            <ng-template #elseResume><div>Resume</div></ng-template>
-        </ion-title>
-        <ng-container  *ngIf="hat_active && (mupihat$ | async)?.BatteryConnected === 1">
-            <ion-icon *ngIf="mupihat.IBus > 0 && mupihat.Bat_SOC === '100%'; else elsecharge75" class="battery-icon" slot="end" src="../../assets/icon/MuPiHAT/Charging100.svg" size="large"></ion-icon>
-            <ng-template #elsecharge75>
-                <ion-icon *ngIf="mupihat.IBus > 0 && mupihat.Bat_SOC === '75%'; else elsecharge50" class="battery-icon" slot="end" src="../../assets/icon/MuPiHAT/Charging70.svg" size="large"></ion-icon>
-            </ng-template>
-            <ng-template #elsecharge50>
-                <ion-icon *ngIf="mupihat.IBus > 0 && mupihat.Bat_SOC === '50%'; else elsecharge25" class="battery-icon" slot="end" src="../../assets/icon/MuPiHAT/Charging50.svg" size="large"></ion-icon>
-            </ng-template>
-            <ng-template #elsecharge25>
-                <ion-icon *ngIf="mupihat.IBus > 0 && mupihat.Bat_SOC === '25%'; else elsecharge0" class="battery-icon" slot="end" src="../../assets/icon/MuPiHAT/Charging20.svg" size="large"></ion-icon>
-            </ng-template>
-            <ng-template #elsecharge0>
-                <ion-icon *ngIf="mupihat.IBus > 0 && mupihat.Bat_SOC === '0%'; else else100" class="battery-icon" slot="end" src="../../assets/icon/MuPiHAT/Charging0.svg" size="large"></ion-icon>
-            </ng-template>
-            <ng-template #else100>
-                <ion-icon *ngIf="mupihat.Bat_SOC === '100%'; else else75" class="battery-icon" slot="end" src="../../assets/icon/MuPiHAT/Battery100.svg" size="large"></ion-icon>
-            </ng-template>
-            <ng-template #else75>
-                <ion-icon *ngIf="mupihat.Bat_SOC === '75%'; else else50" class="battery-icon" slot="end" src="../../assets/icon/MuPiHAT/Battery70.svg" size="large"></ion-icon>
-            </ng-template>
-            <ng-template #else50>
-                <ion-icon *ngIf="mupihat.Bat_SOC === '50%'; else else25" class="battery-icon" slot="end" src="../../assets/icon/MuPiHAT/Battery50.svg" size="large"></ion-icon>
-            </ng-template>
-            <ng-template #else25>
-                <ion-icon *ngIf="mupihat.Bat_SOC === '25%'; else else0" class="battery-icon" slot="end" src="../../assets/icon/MuPiHAT/Battery20.svg" size="large"></ion-icon>
-            </ng-template>
-            <ng-template #else0>
-                <ion-icon *ngIf="mupihat.Bat_SOC === '0%'" class="battery-icon" slot="end" src="../../assets/icon/MuPiHAT/Battery0.svg" size="large"></ion-icon>
-            </ng-template>
-        </ng-container>
-    </ion-toolbar>
+  <ion-toolbar color="light">
+    <ion-buttons slot="start">
+      <ion-back-button (click)="backButtonPressed()" icon="arrow-back-outline" defaultHref="/home"></ion-back-button>
+    </ion-buttons>
+    <ion-title>
+      @if (!resume) {
+        <div>{{artist.name}}</div>
+      } @else {
+        <div>Resume</div>
+      }
+    </ion-title>
+    @if (hat_active && (mupihat$ | async)?.BatteryConnected === 1) {
+      @if (mupihat.IBus > 0 && mupihat.Bat_SOC === '100%') {
+        <ion-icon class="battery-icon" slot="end" src="../../assets/icon/MuPiHAT/Charging100.svg" size="large"></ion-icon>
+      } @else {
+        @if (mupihat.IBus > 0 && mupihat.Bat_SOC === '75%') {
+          <ion-icon class="battery-icon" slot="end" src="../../assets/icon/MuPiHAT/Charging70.svg" size="large"></ion-icon>
+        } @else {
+          @if (mupihat.IBus > 0 && mupihat.Bat_SOC === '50%') {
+            <ion-icon class="battery-icon" slot="end" src="../../assets/icon/MuPiHAT/Charging50.svg" size="large"></ion-icon>
+          } @else {
+            @if (mupihat.IBus > 0 && mupihat.Bat_SOC === '25%') {
+              <ion-icon class="battery-icon" slot="end" src="../../assets/icon/MuPiHAT/Charging20.svg" size="large"></ion-icon>
+            } @else {
+              @if (mupihat.IBus > 0 && mupihat.Bat_SOC === '0%') {
+                <ion-icon class="battery-icon" slot="end" src="../../assets/icon/MuPiHAT/Charging0.svg" size="large"></ion-icon>
+              } @else {
+                @if (mupihat.Bat_SOC === '100%') {
+                  <ion-icon class="battery-icon" slot="end" src="../../assets/icon/MuPiHAT/Battery100.svg" size="large"></ion-icon>
+                } @else {
+                  @if (mupihat.Bat_SOC === '75%') {
+                    <ion-icon class="battery-icon" slot="end" src="../../assets/icon/MuPiHAT/Battery70.svg" size="large"></ion-icon>
+                  } @else {
+                    @if (mupihat.Bat_SOC === '50%') {
+                      <ion-icon class="battery-icon" slot="end" src="../../assets/icon/MuPiHAT/Battery50.svg" size="large"></ion-icon>
+                    } @else {
+                      @if (mupihat.Bat_SOC === '25%') {
+                        <ion-icon class="battery-icon" slot="end" src="../../assets/icon/MuPiHAT/Battery20.svg" size="large"></ion-icon>
+                      } @else {
+                        @if (mupihat.Bat_SOC === '0%') {
+                          <ion-icon class="battery-icon" slot="end" src="../../assets/icon/MuPiHAT/Battery0.svg" size="large"></ion-icon>
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  </ion-toolbar>
 </ion-header>
 
 <ion-content class="medialist-content">
-    <ion-slides [options]="slideOptions" scrollbar="true" #slider>
-        <ion-slide *ngFor="let currentMedia of media; let indexOfMedia=index">
-            <ion-grid>
-                <ion-row class="media-card">
-                    <ion-col size="12">
-                        <ion-card>
-                            <img (click)="coverClicked(currentMedia)" draggable="false" style="-moz-user-select: none;" ondragstart="return false;" src="{{covers[currentMedia.title]}}">
-                            <ion-card-header (click)="mediaNameClicked(currentMedia)">
-                                <ion-card-title class="ion-text-nowrap truncate-text">{{currentMedia.title}}</ion-card-title>
-                            </ion-card-header>
-                        </ion-card>
-                    </ion-col>
-                </ion-row>
-            </ion-grid>
-        </ion-slide>
-    </ion-slides>
+  <swiper-container slides-per-view="3" scrollbar="true" scrollbar-hide="true" free-mode="false" css-mode="true">
+    @for (currentMedia of media; track currentMedia; let indexOfMedia = $index) {
+      <swiper-slide>
+        <ion-grid>
+          <ion-row class="media-card">
+            <ion-col size="12">
+              <ion-card>
+                <img (click)="coverClicked(currentMedia)" draggable="false" style="-moz-user-select: none;" ondragstart="return false;" src="{{covers[currentMedia.title]}}">
+                <ion-card-header (click)="mediaNameClicked(currentMedia)">
+                  <ion-card-title class="ion-text-nowrap truncate-text ion-text-center">{{currentMedia.title}}</ion-card-title>
+                </ion-card-header>
+              </ion-card>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+      </swiper-slide>
+    }
+  </swiper-container>
 </ion-content>

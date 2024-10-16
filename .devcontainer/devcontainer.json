@@ -43,7 +43,7 @@
       "settings": {
         "files.insertFinalNewline": true
       },
-      "extensions": ["eamodio.gitlens", "devsense.phptools-vscode", "biomejs.biome"]
+      "extensions": ["eamodio.gitlens", "devsense.phptools-vscode", "biomejs.biome", "Angular.ng-template"]
     }
   }
 }

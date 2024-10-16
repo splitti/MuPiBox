@@ -1,3 +1,8 @@
+swiper-container {
+    --swiper-scrollbar-bg-color: rgba(255, 255, 255, 0.1);
+    --swiper-scrollbar-drag-bg-color: rgba(255, 255, 255, 0.3)
+}
+
 ion-back-button {
     --min-height: 70px;
     --min-width: 120px;
@@ -38,10 +43,6 @@ ion-row.media-card {
         padding-left: 20px;
         padding-right: 20px;
     }
-}
-
-.swiper-slide {
-    touch-action: none;
 }
 
 .battery-icon {

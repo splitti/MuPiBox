@@ -1,7 +1,7 @@
-import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing'
+import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http'
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing'
 import { ComponentFixture, TestBed } from '@angular/core/testing'
 
-import { HttpClientModule } from '@angular/common/http'
 import { FormsModule } from '@angular/forms'
 import { RouterTestingModule } from '@angular/router/testing'
 import { IonicModule } from '@ionic/angular'
@@ -14,8 +14,8 @@ describe('AddPage', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      declarations: [AddPage],
-      imports: [IonicModule.forRoot(), HttpClientModule, RouterTestingModule, FormsModule, HttpClientTestingModule],
+      imports: [IonicModule.forRoot(), RouterTestingModule, FormsModule, AddPage],
+      providers: [provideHttpClient(withInterceptorsFromDi()), provideHttpClientTesting()],
     }).compileComponents()
 
     httpClient = TestBed.inject(HttpTestingController)
