@@ -21,7 +21,8 @@ if ( $_POST['saveSettings']) {
 }
 
 if ( $_POST['spotifyget'] ) {
-	$CHANGE_TXT = $CHANGE_TXT . "<li>Token-Data generated, saved & Services restarted</li>";
+	$CHANGE_TXT = $CHANGE_TXT . "<li>Token-Data generated, saved & Services restartet</li>";
+	$change = 1;
 }
 
 if ($_GET['code']) {
@@ -37,7 +38,7 @@ if ($_GET['code']) {
 	exec("sudo /usr/local/bin/mupibox/./spotify_restart.sh");
 
 ?>
-<form class="appnitro" method="get" action="spotify.php" id="form">
+<form class="appnitro" method="post" action="spotify.php" id="form">
 <div class="description">
 <h2>Please wait... Data will be saved, page will reload automatically!!!</h2>
 </div><p></p>
@@ -186,7 +187,7 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 		</ul>
 	</details>
 
-	<details <?= isset($_GET['spotifyget']) ? 'open' : ''; ?>>
+	<details>
 		<summary><i class="fa-regular fa-circle-check"></i> STEP 3 - Device-ID</summary>
 		<ul>
 			<li id="li_1">
@@ -215,7 +216,6 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 						print "<option value=\"" . $this_device["id"] . "\"" . $selected  . ">" . $this_device["name"] . " (" . $this_device["id"] . ")</option>";
 					}
 					echo '</select>';
-                    echo ' <a href="spotify.php?spotifyget=reload"><iconify-icon icon="mdi:reload" title="Reload"></iconify-icon></a>';
 					echo '</li><li class="buttons"><input id="saveForm" class="button_text" type="submit" name="setDevID" value="Set DeviceID" /></li><br><li id="li_1" >';
 				} else {
 					print '<p>Please complete the previous steps.</p></li><br><li id="li_1" >';
@@ -244,6 +244,7 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 			<li id="li_1">
 				<h3>Spotify cache state</h3>
 				<p>If set to true, audio data will be cached. Enabling this option could improve speed for playing spotify media. Default: enabled</p>
+				<p>This option must be enabled to use spotify since version 4.1.0</p>
 
 				<label class="labelchecked" for="spotifycache_active">Cache activation state:&nbsp; &nbsp; <input type="checkbox"  id="spotifycache_active" name="spotifycache_active" onclick="return false" <?php
 					if ($data["spotify"]["cachestate"]) {
