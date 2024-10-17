@@ -1,7 +1,8 @@
 import { AfterViewInit, Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core'
-import { AlertController, IonInput, IonSegment, IonSelect, NavController } from '@ionic/angular'
+import { AlertController, IonInput, IonSegment, IonSelect, IonicModule, NavController } from '@ionic/angular'
 import { PlayerCmds, PlayerService } from '../player.service'
 
+import { FormsModule } from '@angular/forms'
 import type { NgForm } from '@angular/forms'
 import Keyboard from 'simple-keyboard'
 import { MediaService } from '../media.service'
@@ -11,7 +12,9 @@ import type { WLAN } from '../wlan'
   selector: 'app-admin',
   encapsulation: ViewEncapsulation.None,
   templateUrl: './admin.page.html',
-  styleUrls: ['./admin.page.scss', '../../../node_modules/simple-keyboard/build/css/index.css'],
+  styleUrls: ['./admin.page.scss'],
+  standalone: true,
+  imports: [IonicModule, FormsModule],
 })
 export class AdminPage implements OnInit, AfterViewInit {
   @ViewChild('segment', { static: false }) segment: IonSegment

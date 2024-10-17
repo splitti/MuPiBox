@@ -1,8 +1,8 @@
-import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing'
+import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http'
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing'
 import { ComponentFixture, TestBed } from '@angular/core/testing'
 import { createArtist, createMedia } from 'src/app/fixtures'
 
-import { HttpClientModule } from '@angular/common/http'
 import { RouterTestingModule } from '@angular/router/testing'
 import { IonicModule } from '@ionic/angular'
 import { of } from 'rxjs'
@@ -16,8 +16,8 @@ describe('MedialistPage', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      declarations: [MedialistPage],
-      imports: [IonicModule.forRoot(), RouterTestingModule, HttpClientModule, HttpClientTestingModule],
+      imports: [IonicModule.forRoot(), RouterTestingModule, MedialistPage],
+      providers: [provideHttpClient(withInterceptorsFromDi()), provideHttpClientTesting()],
     }).compileComponents()
 
     httpClient = TestBed.inject(HttpTestingController)
@@ -27,9 +27,6 @@ describe('MedialistPage', () => {
     // TODO: Artist may be undefined when strictly following TS types, this should be corrected in
     // medialist.page.ts
     component.artist = createArtist()
-    // Somehow we must prevent a slider update since either the slider object or its update method is
-    // broken in this karma/jasmine environment.
-    spyOn<any>(component, 'updateSlider')
     fixture.detectChanges()
   })
 
@@ -40,6 +37,7 @@ describe('MedialistPage', () => {
 
   describe('show media', () => {
     it('should not slice at all if not wanted', () => {
+      httpClient.expectOne('http://localhost:8200/api/sonos')
       component.artist = createArtist({ coverMedia: createMedia({ showid: 'a', aPartOfAll: undefined }) })
       const mediaList = [createMedia({})]
       const spy = spyOn((component as any).mediaService, 'getMediaFromArtist').and.returnValue(of(mediaList))
@@ -50,6 +48,7 @@ describe('MedialistPage', () => {
     })
 
     it('shouldmsort by release date desc. by default', () => {
+      httpClient.expectOne('http://localhost:8200/api/sonos')
       component.artist = createArtist({ coverMedia: createMedia({ showid: 'a', aPartOfAll: undefined }) })
       const mediaList = [
         createMedia({ title: 'a', release_date: '2020' }),
@@ -68,6 +67,7 @@ describe('MedialistPage', () => {
     })
 
     it('should sort by release date asc.', () => {
+      httpClient.expectOne('http://localhost:8200/api/sonos')
       component.artist = createArtist({
         coverMedia: createMedia({ showid: 'a', aPartOfAll: undefined, sorting: MediaSorting.ReleaseDateAscending }),
       })
@@ -88,6 +88,7 @@ describe('MedialistPage', () => {
     })
 
     it('should slice if wanted and sort by release date desc. by default', () => {
+      httpClient.expectOne('http://localhost:8200/api/sonos')
       component.artist = createArtist({
         coverMedia: createMedia({ showid: 'a', aPartOfAll: true, aPartOfAllMin: 1, aPartOfAllMax: 2 }),
       })
@@ -107,6 +108,7 @@ describe('MedialistPage', () => {
     })
 
     it('should slice if wanted and sort as wanted', () => {
+      httpClient.expectOne('http://localhost:8200/api/sonos')
       component.artist = createArtist({
         coverMedia: createMedia({
           showid: 'a',
@@ -134,6 +136,7 @@ describe('MedialistPage', () => {
 
   describe('should correctly slice artist media', () => {
     it('should not slice at all if not wanted', () => {
+      httpClient.expectOne('http://localhost:8200/api/sonos')
       component.artist = createArtist({ coverMedia: createMedia({ aPartOfAll: undefined }) })
       const mediaList = [createMedia({})]
       const spy = spyOn((component as any).mediaService, 'getMediaFromArtist').and.returnValue(of(mediaList))
@@ -144,6 +147,7 @@ describe('MedialistPage', () => {
     })
 
     it('should slice if wanted and sort alphabetical by default', () => {
+      httpClient.expectOne('http://localhost:8200/api/sonos')
       component.artist = createArtist({
         coverMedia: createMedia({ aPartOfAll: true, aPartOfAllMin: 1, aPartOfAllMax: 2 }),
       })

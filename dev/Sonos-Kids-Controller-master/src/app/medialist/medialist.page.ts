@@ -1,9 +1,10 @@
-import { Component, OnInit, ViewChild } from '@angular/core'
+import { CUSTOM_ELEMENTS_SCHEMA, Component, OnInit } from '@angular/core'
 import { ActivatedRoute, NavigationExtras, Router } from '@angular/router'
 import type { Observable, Subscription } from 'rxjs'
 import { Media, MediaSorting } from '../media'
 
-import type { IonSlides } from '@ionic/angular'
+import { AsyncPipe } from '@angular/common'
+import { IonicModule } from '@ionic/angular'
 import { ActivityIndicatorService } from '../activity-indicator.service'
 import type { Artist } from '../artist'
 import { ArtworkService } from '../artwork.service'
@@ -16,10 +17,11 @@ import { PlayerService } from '../player.service'
   selector: 'app-medialist',
   templateUrl: './medialist.page.html',
   styleUrls: ['./medialist.page.scss'],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
+  standalone: true,
+  imports: [IonicModule, AsyncPipe],
 })
 export class MedialistPage implements OnInit {
-  @ViewChild('slider', { static: false }) slider: IonSlides
-
   artist: Artist
   media: Media[] = []
   resumemedia: Media[] = []
@@ -196,12 +198,11 @@ export class MedialistPage implements OnInit {
       this.getMediaFromResumeSubscription = this.mediaService.getMediaFromResume().subscribe((media) => {
         this.media = media
         fetchArtwork(this.media)
-        this.updateSlider()
       })
     } else {
       const sliceMedia = (media: Media[], offsetByOne = false): Media[] => {
         if (this.artist.coverMedia?.aPartOfAll) {
-          const min = this.artist.coverMedia?.aPartOfAllMin - (offsetByOne ? 1 : 0) ?? 0
+          const min = Math.max(0, (this.artist.coverMedia?.aPartOfAllMin ?? 0) - (offsetByOne ? 1 : 0))
           const max =
             (this.artist.coverMedia?.aPartOfAllMax ?? Number.parseInt(this.artist.albumCount)) - (offsetByOne ? 1 : 0)
           return media.slice(min, max + 1)
@@ -224,22 +225,7 @@ export class MedialistPage implements OnInit {
           !isShow,
         )
         fetchArtwork(this.media)
-        this.updateSlider()
       })
     }
-  }
-
-  /**
-   * Updates the slider immediately and after a delay again.
-   */
-  private updateSlider(): void {
-    this.slider.update()
-
-    // Workaround as the scrollbar handle isn't visible after the immediate update
-    // Seems like a size calculation issue, as resizing the browser window helps
-    // Better fix for this?
-    window.setTimeout(() => {
-      this.slider.update()
-    }, 1000)
   }
 }
