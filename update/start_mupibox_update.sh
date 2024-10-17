@@ -40,11 +40,13 @@ if [ "$1" = "dev" ]; then
 else
 	VERSION_LONG="${VERSION} ${RELEASE}"
 fi
+NODEJS=$(nodejs --version) >&3 2>&3
 
 echo "==========================================================================================" >&3 2>&3
 echo "= OS:               ${OS}" >&3 2>&3
 echo "= RasPi:            ${RASPPI}" >&3 2>&3
 echo "= Architecture:     ${ARCH}" >&3 2>&3
+echo "= Node.js:          ${NODEJS}" >&3 2>&3
 echo "= User:             ${USER}" >&3 2>&3
 echo "= Parameter:        $1" >&3 2>&3
 echo "= Release:          ${RELEASE}" >&3 2>&3
@@ -70,6 +72,8 @@ echo "==========================================================================
 
 	STEP=$(($STEP + 1))
 
+	###############################################################################################
+
 	echo -e "XXX\n${STEP}\nUpdate package-list\nXXX"
 	before=$(date +%s)
 	apt-get update >&3 2>&3
@@ -79,6 +83,21 @@ echo "==========================================================================
 
 	###############################################################################################
 
+	echo -e "XXX\n${STEP}\nUpdate Node.js\nXXX"
+	before=$(date +%s)
+	if [[ "$NODEJS" == "v20."* ]]; then
+		echo "Node.js already at v20.*" >&3 2>&3
+	else
+		apt-get --yes remove nodejs >&3 2>&3
+		curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash - >&3 2>&3
+		apt-get install -y nodejs >&3 2>&3
+	fi
+	after=$(date +%s)
+
+	echo -e "## apt-get update ##  finished after $((after - $before)) seconds" >&3 2>&3
+
+
+	###############################################################################################
 	
 	for package in ${packages2install}
 	do
@@ -106,7 +125,6 @@ echo "==========================================================================
 		after=$(date +%s)
 		echo -e "## apt-get remove ${package}  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	done
-
 
 	STEP=$(($STEP + 1))
 	if [ $OS == "bullseye" ]; then
