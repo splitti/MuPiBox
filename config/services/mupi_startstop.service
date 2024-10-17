@@ -5,7 +5,7 @@ Description=Run Scripts at Start and Stop
 Type=oneshot
 RemainAfterExit=true
 ExecStart=/usr/local/bin/mupibox/mupi_startup.sh
-ExecStop=/usr/local/bin/mupibox/mupi_shutdown.sh
+ExecStop=/bin/bash -c '[ -z "$DISABLE_MUPI_START_STOP" ] && /usr/local/bin/mupibox/mupi_shutdown.sh'
 
 [Install]
 WantedBy=multi-user.target
