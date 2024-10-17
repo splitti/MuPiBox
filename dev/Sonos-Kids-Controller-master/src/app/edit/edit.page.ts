@@ -1,8 +1,9 @@
 import { Component, OnInit } from '@angular/core'
 import { NavigationExtras, Router } from '@angular/router'
+import { AlertController, IonicModule } from '@ionic/angular'
 import { PlayerCmds, PlayerService } from '../player.service'
 
-import { AlertController } from '@ionic/angular'
+import { AsyncPipe } from '@angular/common'
 import type { Observable } from 'rxjs'
 import { ActivityIndicatorService } from '../activity-indicator.service'
 import type { Media } from '../media'
@@ -13,9 +14,11 @@ import type { Network } from '../network'
   selector: 'app-edit',
   templateUrl: './edit.page.html',
   styleUrls: ['./edit.page.scss'],
+  standalone: true,
+  imports: [IonicModule, AsyncPipe],
 })
 export class EditPage implements OnInit {
-  media: Observable<Record<any, any>[]>
+  media: Observable<Media[]>
   network: Observable<Network>
   networkparameter: Network
   activityIndicatorVisible = false

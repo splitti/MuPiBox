@@ -1,9 +1,10 @@
-import { AfterViewInit, Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core'
+import { AfterViewInit, Component, OnInit, ViewEncapsulation } from '@angular/core'
 import { ActivatedRoute, Router } from '@angular/router'
-import { AlertController, IonInput, NavController } from '@ionic/angular'
+import { AlertController, IonicModule, NavController } from '@ionic/angular'
 import { Media, MediaSorting } from '../media'
 import { PlayerCmds, PlayerService } from '../player.service'
 
+import { FormsModule } from '@angular/forms'
 import type { NgForm } from '@angular/forms'
 import type { Observable } from 'rxjs'
 import Keyboard from 'simple-keyboard'
@@ -15,15 +16,11 @@ import type { Validate } from '../validate'
   selector: 'app-add',
   encapsulation: ViewEncapsulation.None,
   templateUrl: './add.page.html',
-  styleUrls: ['./add.page.scss', '../../../node_modules/simple-keyboard/build/css/index.css'],
+  styleUrls: ['./add.page.scss'],
+  standalone: true,
+  imports: [IonicModule, FormsModule],
 })
 export class AddPage implements OnInit, AfterViewInit {
-  @ViewChild('title', { static: false }) title: IonInput
-  @ViewChild('spotify_shuffle', { static: false }) spotifyshuffle: IonInput
-  @ViewChild('spotify_aPartOfAll', { static: false }) spotifyaPartOfAll: IonInput
-  @ViewChild('spotify_aPartOfAllMin', { static: false }) spotifyaPartOfAllMin: IonInput
-  @ViewChild('spotify_aPartOfAllMax', { static: false }) spotifyaPartOfAllMax: IonInput
-
   source = 'spotify'
   category = 'audiobook'
   sourceType = 'spotifyURL'
@@ -33,7 +30,6 @@ export class AddPage implements OnInit, AfterViewInit {
   valid = false
   editMedia: Media
   edit = false
-  titleBoolean = false
   shuffle = false
   firstInput = true
   validateState: Validate
@@ -108,10 +104,6 @@ export class AddPage implements OnInit, AfterViewInit {
     this.keyboard = new Keyboard({
       onChange: (input) => {
         this.selectedInputElem.value = input
-
-        console.log(this.selectedInputElem)
-        console.log(this.selectedInputElem.value)
-
         this.validate()
       },
       onKeyPress: (button) => {
@@ -533,43 +525,6 @@ export class AddPage implements OnInit, AfterViewInit {
   }
 
   validate() {
-    if (this.aPartOfAll) {
-      this.spotifyaPartOfAllMin.disabled = false
-      this.spotifyaPartOfAllMax.disabled = false
-    } else {
-      this.spotifyaPartOfAllMin.disabled = true
-      this.spotifyaPartOfAllMax.disabled = true
-    }
-    if (this.shuffle) {
-      this.spotifyshuffle.disabled = false
-    } else {
-      this.spotifyshuffle.disabled = true
-    }
-    if (this.titleBoolean) {
-      this.title.disabled = false
-    } else {
-      this.title.disabled = true
-    }
-
-    if (this.sourceType === 'spotifyURL' || this.sourceType === 'spotifySearch' || this.sourceType === 'rssURL') {
-      this.spotifyaPartOfAll.disabled = false
-    } else {
-      this.spotifyaPartOfAll.disabled = true
-    }
-    if (this.sourceType === 'streamURL') {
-      this.title.disabled = false
-    } else {
-      this.title.disabled = true
-    }
-    if (
-      (this.sourceType === 'spotifyURL' || this.sourceType === 'spotifySearch') &&
-      (this.category === 'music' || this.category === 'other')
-    ) {
-      this.spotifyshuffle.disabled = false
-    } else {
-      this.spotifyshuffle.disabled = true
-    }
-
     if (this.sourceType === 'spotifyURL' || this.sourceType === 'spotifySearch' || this.sourceType === 'rssURL') {
       const label = this.keyboard.getInput('label')
       const spotifyURL = this.keyboard.getInput('spotifyURL')

@@ -1,8 +1,11 @@
-import { Component, OnInit, ViewChild } from '@angular/core'
+import { CUSTOM_ELEMENTS_SCHEMA, Component, OnInit } from '@angular/core'
 import { NavigationExtras, Router } from '@angular/router'
 
-import type { IonSlides } from '@ionic/angular'
+import { CommonModule } from '@angular/common'
+import { FormsModule } from '@angular/forms'
+import { IonicModule } from '@ionic/angular'
 import type { Observable } from 'rxjs'
+import { SwiperContainer } from 'swiper/element'
 import { ActivityIndicatorService } from '../activity-indicator.service'
 import type { Artist } from '../artist'
 import { ArtworkService } from '../artwork.service'
@@ -17,11 +20,11 @@ import { PlayerService } from '../player.service'
   selector: 'app-home',
   templateUrl: 'home.page.html',
   styleUrls: ['home.page.scss'],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
+  imports: [CommonModule, FormsModule, IonicModule],
+  standalone: true,
 })
 export class HomePage implements OnInit {
-  @ViewChild('artist_slider', { static: false }) artistSlider: IonSlides
-  @ViewChild('media_slider', { static: false }) mediaSlider: IonSlides
-
   category = 'audiobook'
 
   artists: Artist[] = []
@@ -41,18 +44,6 @@ export class HomePage implements OnInit {
 
   needsUpdate = false
 
-  slideOptions = {
-    initialSlide: 0,
-    slidesPerView: 3,
-    autoplay: false,
-    loop: false,
-    freeMode: true,
-    freeModeSticky: true,
-    freeModeMomentumBounce: false,
-    freeModeMomentumRatio: 1.0,
-    freeModeMomentumVelocityRatio: 1.0,
-  }
-
   constructor(
     private mediaService: MediaService,
     private artworkService: ArtworkService,
@@ -64,7 +55,6 @@ export class HomePage implements OnInit {
     this.mupihat$ = this.mediaService.mupihat$
     this.playerService.getConfig().subscribe((config) => {
       this.hat_active = config.hat_active
-      console.log(this.hat_active)
     })
   }
 
@@ -90,14 +80,6 @@ export class HomePage implements OnInit {
           this.covers[currentMedia.title] = url
         })
       }
-      this.mediaSlider.update().then(null)
-
-      // Workaround as the scrollbar handle isn't visible after the immediate update
-      // Seems like a size calculation issue, as resizing the browser window helps
-      // Better fix for this?
-      window.setTimeout(() => {
-        this.mediaSlider?.update()
-      }, 1000)
     })
 
     this.mediaService.getArtists().subscribe((artists) => {
@@ -107,14 +89,6 @@ export class HomePage implements OnInit {
           this.covers[artist.name] = url
         })
       }
-      this.artistSlider?.update()
-
-      // Workaround as the scrollbar handle isn't visible after the immediate update
-      // Seems like a size calculation issue, as resizing the browser window helps
-      // Better fix for this?
-      window.setTimeout(() => {
-        this.artistSlider?.update()
-      }, 1000)
     })
 
     this.update()
@@ -126,15 +100,16 @@ export class HomePage implements OnInit {
     }
     this.updateNetwork = true
     this.checkNetwork()
+
+    // This is a fix for the scroll bar not showing the current location when using the back button
+    // from the media list or admin page.
+    ;(document.querySelector('swiper-container') as SwiperContainer).swiper?.update()
   }
 
   checkNetwork() {
-    //console.log("Onlinestate:" + this.network?.onlinestate);
-    // console.log("CurrentNetwork:" + this.currentNetwork);
     if (this.network?.ip !== undefined) {
       if (this.network?.onlinestate !== this.currentNetwork) {
         this.currentNetwork = this.network?.onlinestate
-        // console.log("Network changed");
         this.update()
       }
     }

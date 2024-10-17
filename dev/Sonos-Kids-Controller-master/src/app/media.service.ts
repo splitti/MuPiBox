@@ -61,7 +61,6 @@ export class MediaService {
     private playerService: PlayerService,
   ) {
     this.playerService.getConfig().subscribe((config) => {
-      console.log(config)
       if (config.ip) {
         this.ip = config.ip
       } else {
@@ -172,9 +171,9 @@ export class MediaService {
     })
   }
 
-  getRawMediaObservable = (): Observable<Record<any, any>[]> => {
+  getRawMediaObservable = (): Observable<Media[]> => {
     const url = environment.production ? '../api/data' : `http://${this.ip}:8200/api/data`
-    return this.http.get<Record<any, any>[]>(url)
+    return this.http.get<Media[]>(url)
   }
 
   updateRawMedia() {
@@ -410,7 +409,6 @@ export class MediaService {
   }
 
   publishArtists() {
-    console.log('publishArtists')
     const url = environment.production ? '../api/data' : `http://${this.ip}:8200/api/data`
     this.updateMedia(url, false).subscribe((media) => {
       this.artistSubject.next(media)
@@ -418,7 +416,6 @@ export class MediaService {
   }
 
   publishMedia() {
-    console.log('publishMedia')
     const url = environment.production ? '../api/data' : `http://${this.ip}:8200/api/data`
     this.updateMedia(url, false).subscribe((media) => {
       this.mediaSubject.next(media)
@@ -426,7 +423,6 @@ export class MediaService {
   }
 
   publishArtistMedia() {
-    console.log('publishArtistMedia')
     const url = environment.production ? '../api/data' : `http://${this.ip}:8200/api/data`
     this.updateMedia(url, false).subscribe((media) => {
       this.artistMediaSubject.next(media)
@@ -434,7 +430,6 @@ export class MediaService {
   }
 
   publishResume() {
-    console.log('publishResume')
     const url = environment.production ? '../api/activeresume' : `http://${this.ip}:8200/api/activeresume`
     this.updateMedia(url, true).subscribe((media) => {
       this.resumeSubject.next(media)

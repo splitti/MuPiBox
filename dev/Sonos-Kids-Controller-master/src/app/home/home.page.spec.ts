@@ -1,7 +1,7 @@
-import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing'
+import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http'
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing'
 import { ComponentFixture, TestBed } from '@angular/core/testing'
 
-import { HttpClientModule } from '@angular/common/http'
 import { RouterTestingModule } from '@angular/router/testing'
 import { IonicModule } from '@ionic/angular'
 import { HomePage } from './home.page'
@@ -13,8 +13,8 @@ describe('HomePage', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      declarations: [HomePage],
-      imports: [IonicModule.forRoot(), HttpClientModule, HttpClientTestingModule, RouterTestingModule],
+      imports: [IonicModule.forRoot(), RouterTestingModule, HomePage],
+      providers: [provideHttpClient(withInterceptorsFromDi()), provideHttpClientTesting()],
     }).compileComponents()
 
     httpClient = TestBed.inject(HttpTestingController)
