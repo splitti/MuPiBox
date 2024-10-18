@@ -43,11 +43,13 @@ if [ "$1" = "dev" ]; then
 else
 	VERSION_LONG="${VERSION} ${RELEASE}"
 fi
+NODEJS=$(nodejs --version) >&3 2>&3
 
 echo "==========================================================================================" >&3 2>&3
 echo "= OS:               ${OS}" >&3 2>&3
 echo "= RasPi:            ${RASPPI}" >&3 2>&3
 echo "= Architecture:     ${ARCH}" >&3 2>&3
+echo "= Node.js:          ${NODEJS}" >&3 2>&3
 echo "= User:             ${USER}" >&3 2>&3
 echo "= Parameter:        $1" >&3 2>&3
 echo "= Release:          ${RELEASE}" >&3 2>&3
@@ -73,6 +75,8 @@ echo "==========================================================================
 
 	STEP=$(($STEP + 1))
 
+	###############################################################################################
+
 	echo -e "XXX\n${STEP}\nUpdate package-list\nXXX"
 	before=$(date +%s)
 	apt-get update >&3 2>&3
@@ -82,6 +86,21 @@ echo "==========================================================================
 
 	###############################################################################################
 
+	echo -e "XXX\n${STEP}\nUpdate Node.js\nXXX"
+	before=$(date +%s)
+	if [[ "$NODEJS" == "v20."* ]]; then
+		echo "Node.js already at v20.*" >&3 2>&3
+	else
+		apt-get --yes remove nodejs >&3 2>&3
+		curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash - >&3 2>&3
+		apt-get install -y nodejs >&3 2>&3
+	fi
+	after=$(date +%s)
+
+	echo -e "## apt-get update ##  finished after $((after - $before)) seconds" >&3 2>&3
+
+
+	###############################################################################################
 
 	for package in ${packages2install}
 	do
@@ -345,11 +364,11 @@ echo "==========================================================================
 	# Binaries
 	if [ `getconf LONG_BIT` == 32 ]; then
 		wget -O /usr/bin/jq https://github.com/jqlang/jq/releases/latest/download/jq-linux-armhf >&3 2>&3
-		mv ${MUPI_SRC}/bin/librespot/dev_0.5_20240905/librespot-32bit /usr/bin/librespot >&3 2>&3
+		mv ${MUPI_SRC}/bin/librespot/0.5.0/librespot-32bit /usr/bin/librespot >&3 2>&3
 		mv ${MUPI_SRC}/bin/fbv/fbv /usr/bin/fbv >&3 2>&3
 	else
 		wget -O /usr/bin/jq https://github.com/jqlang/jq/releases/latest/download/jq-linux-arm64 >&3 2>&3
-		mv ${MUPI_SRC}/bin/librespot/dev_0.5_20241008/librespot-64bit /usr/bin/librespot >&3 2>&3
+		mv ${MUPI_SRC}/bin/librespot/0.5.0/librespot-64bit /usr/bin/librespot >&3 2>&3
 		mv ${MUPI_SRC}/bin/fbv/fbv_64 /usr/bin/fbv >&3 2>&3
 	fi
 	chmod 755 /usr/bin/fbv /usr/bin/jq /usr/bin/librespot >&3 2>&3
