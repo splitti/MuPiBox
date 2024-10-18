@@ -114,13 +114,7 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 <form class="appnitro" method="post" action="spotify.php" id="form">
 	<div class="description">
 		<h2>Spotify settings</h2>
-		<div class="note">
-		<h3>Important information for Spotify setup</h3>
-		<p>Carry out the following steps 1 to 3.</p>
-		<p>To link the MuPiBox to your Spotify account (step 3), you need to be on the same Wi-Fi network as the MuPiBox with your Spotify app (Smartphone/PC).</p>
-		<p>The MuPiBox must be switched on. Select the MuPiBox that appears in the Spotify app as the playback device and play something.</p>
-		<p>Reload this page and try to switch the Device ID in step 3.</p>
-		</div>
+        <p>Define login- and common-settings.</p>
 	</div>
 
 	<details>
@@ -199,7 +193,8 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 			<li id="li_1">
 
 				<h3>Set Device-ID</h3>
-				<p>In this last step, you choose your Device... It is necessary to play music on the MuPiBox via app (for example in browser window of your pc or by smartphone) to generate the device ID! Reload this page and choose the playback device.</p>
+				<p>In this last step, you choose your playback device.</p>
+                <p><a href="spotify.php?spotifyget=reload">Reload</a> this page if device id is not showing up.</p>
 			</li>
 			<li id="li_1">
 				<label class="description" for="spotify_deviceid">Select Spotify Device ID </label>
