@@ -1,9 +1,27 @@
 import { Component, OnInit } from '@angular/core'
 import { NavigationExtras, Router } from '@angular/router'
-import { AlertController, IonicModule } from '@ionic/angular'
+import { AlertController } from '@ionic/angular/standalone'
 import { PlayerCmds, PlayerService } from '../player.service'
 
 import { AsyncPipe } from '@angular/common'
+import {
+  IonBackButton,
+  IonButton,
+  IonButtons,
+  IonCol,
+  IonContent,
+  IonGrid,
+  IonHeader,
+  IonIcon,
+  IonItem,
+  IonLabel,
+  IonList,
+  IonRow,
+  IonTitle,
+  IonToolbar,
+} from '@ionic/angular/standalone'
+import { addIcons } from 'ionicons'
+import { addOutline, brushOutline, close, powerOutline, trashOutline, wifiOutline } from 'ionicons/icons'
 import type { Observable } from 'rxjs'
 import { ActivityIndicatorService } from '../activity-indicator.service'
 import type { Media } from '../media'
@@ -15,7 +33,23 @@ import type { Network } from '../network'
   templateUrl: './edit.page.html',
   styleUrls: ['./edit.page.scss'],
   standalone: true,
-  imports: [IonicModule, AsyncPipe],
+  imports: [
+    AsyncPipe,
+    IonHeader,
+    IonToolbar,
+    IonButtons,
+    IonBackButton,
+    IonTitle,
+    IonButton,
+    IonIcon,
+    IonContent,
+    IonList,
+    IonItem,
+    IonGrid,
+    IonRow,
+    IonCol,
+    IonLabel,
+  ],
 })
 export class EditPage implements OnInit {
   media: Observable<Media[]>
@@ -29,7 +63,9 @@ export class EditPage implements OnInit {
     private playerService: PlayerService,
     private router: Router,
     private activityIndicatorService: ActivityIndicatorService,
-  ) {}
+  ) {
+    addIcons({ addOutline, wifiOutline, trashOutline, powerOutline, brushOutline, close })
+  }
 
   ngOnInit() {
     // Subscribe

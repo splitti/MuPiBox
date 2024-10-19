@@ -1,29 +1,73 @@
-import { ActivatedRoute, Router } from '@angular/router'
 import { Component, OnInit, ViewChild } from '@angular/core'
-import { IonRange, IonicModule, NavController } from '@ionic/angular'
+import { ActivatedRoute, Router } from '@angular/router'
+import { NavController } from '@ionic/angular/standalone'
 import { PlayerCmds, PlayerService } from '../player.service'
 
+import { AsyncPipe } from '@angular/common'
+import { FormsModule } from '@angular/forms'
+import {
+  IonBackButton,
+  IonButton,
+  IonButtons,
+  IonCard,
+  IonCol,
+  IonContent,
+  IonGrid,
+  IonHeader,
+  IonIcon,
+  IonRange,
+  IonRow,
+  IonTitle,
+  IonToolbar,
+} from '@ionic/angular/standalone'
+import { addIcons } from 'ionicons'
+import {
+  pause,
+  play,
+  playBack,
+  playForward,
+  playSkipBack,
+  playSkipForward,
+  shuffleOutline,
+  volumeHighOutline,
+  volumeLowOutline,
+} from 'ionicons/icons'
+import type { Observable } from 'rxjs'
 import type { AlbumStop } from '../albumstop'
 import { ArtworkService } from '../artwork.service'
-import { AsyncPipe } from '@angular/common'
 import type { CurrentEpisode } from '../current.episode'
 import type { CurrentMPlayer } from '../current.mplayer'
 import type { CurrentPlaylist } from '../current.playlist'
 import type { CurrentShow } from '../current.show'
 import type { CurrentSpotify } from '../current.spotify'
-import { FormsModule } from '@angular/forms'
 import type { Media } from '../media'
 import { MediaService } from '../media.service'
 import type { Monitor } from '../monitor'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
-import type { Observable } from 'rxjs'
 
 @Component({
   selector: 'app-player',
   templateUrl: './player.page.html',
   styleUrls: ['./player.page.scss'],
   standalone: true,
-  imports: [IonicModule, FormsModule, AsyncPipe, MupiHatIconComponent],
+  imports: [
+    FormsModule,
+    AsyncPipe,
+    MupiHatIconComponent,
+    IonHeader,
+    IonToolbar,
+    IonButtons,
+    IonBackButton,
+    IonTitle,
+    IonContent,
+    IonGrid,
+    IonRow,
+    IonCol,
+    IonCard,
+    IonRange,
+    IonButton,
+    IonIcon,
+  ],
 })
 export class PlayerPage implements OnInit {
   @ViewChild('range', { static: false }) range: IonRange
@@ -77,6 +121,17 @@ export class PlayerPage implements OnInit {
           this.resumePlay = true
         }
       }
+    })
+    addIcons({
+      volumeLowOutline,
+      pause,
+      play,
+      volumeHighOutline,
+      playSkipBack,
+      playSkipForward,
+      playBack,
+      shuffleOutline,
+      playForward,
     })
   }
 

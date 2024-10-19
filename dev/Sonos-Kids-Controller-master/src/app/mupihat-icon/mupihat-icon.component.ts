@@ -1,12 +1,11 @@
 import { AsyncPipe } from '@angular/common'
+import { HttpClient } from '@angular/common/http'
 import { Component } from '@angular/core'
 import { IonIcon } from '@ionic/angular/standalone'
-import { MediaService } from '../media.service'
+import { type Observable, interval, switchMap } from 'rxjs'
 import type { Mupihat } from '../mupihat'
-import { interval, shareReplay, switchMap, type Observable } from 'rxjs'
 import { PlayerService } from '../player.service'
 import { SonosApiConfig } from '../sonos-api'
-import { HttpClient } from '@angular/common/http'
 
 @Component({
   selector: 'mupihat-icon',

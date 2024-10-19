@@ -4,7 +4,6 @@ import { ComponentFixture, TestBed } from '@angular/core/testing'
 import { createArtist, createMedia } from 'src/app/fixtures'
 
 import { RouterTestingModule } from '@angular/router/testing'
-import { IonicModule } from '@ionic/angular'
 import { of } from 'rxjs'
 import { MediaSorting } from '../media'
 import { MedialistPage } from './medialist.page'

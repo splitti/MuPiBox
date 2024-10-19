@@ -1,17 +1,30 @@
-import { ActivatedRoute, NavigationExtras, Router } from '@angular/router'
 import { CUSTOM_ELEMENTS_SCHEMA, Component, OnInit } from '@angular/core'
+import { ActivatedRoute, NavigationExtras, Router } from '@angular/router'
 import { Media, MediaSorting } from '../media'
 
+import { AsyncPipe } from '@angular/common'
+import {
+  IonBackButton,
+  IonButtons,
+  IonCard,
+  IonCardHeader,
+  IonCardTitle,
+  IonCol,
+  IonContent,
+  IonGrid,
+  IonHeader,
+  IonRow,
+  IonTitle,
+  IonToolbar,
+} from '@ionic/angular/standalone'
+import type { Subscription } from 'rxjs'
 import { ActivityIndicatorService } from '../activity-indicator.service'
 import type { Artist } from '../artist'
 import { ArtworkService } from '../artwork.service'
-import { AsyncPipe } from '@angular/common'
-import { IonicModule } from '@ionic/angular'
 import { MediaService } from '../media.service'
 import type { Monitor } from '../monitor'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
 import { PlayerService } from '../player.service'
-import type { Subscription } from 'rxjs'
 
 @Component({
   selector: 'app-medialist',
@@ -19,7 +32,22 @@ import type { Subscription } from 'rxjs'
   styleUrls: ['./medialist.page.scss'],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   standalone: true,
-  imports: [IonicModule, AsyncPipe, MupiHatIconComponent],
+  imports: [
+    AsyncPipe,
+    MupiHatIconComponent,
+    IonHeader,
+    IonToolbar,
+    IonButtons,
+    IonBackButton,
+    IonTitle,
+    IonContent,
+    IonGrid,
+    IonRow,
+    IonCol,
+    IonCard,
+    IonCardHeader,
+    IonCardTitle,
+  ],
 })
 export class MedialistPage implements OnInit {
   artist: Artist

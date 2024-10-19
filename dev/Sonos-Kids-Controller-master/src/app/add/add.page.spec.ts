@@ -4,7 +4,6 @@ import { ComponentFixture, TestBed } from '@angular/core/testing'
 
 import { FormsModule } from '@angular/forms'
 import { RouterTestingModule } from '@angular/router/testing'
-import { IonicModule } from '@ionic/angular'
 import { AddPage } from './add.page'
 
 describe('AddPage', () => {

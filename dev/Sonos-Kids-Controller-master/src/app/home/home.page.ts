@@ -1,28 +1,70 @@
 import { CUSTOM_ELEMENTS_SCHEMA, Component, OnInit } from '@angular/core'
 import { NavigationExtras, Router } from '@angular/router'
 
+import { CommonModule } from '@angular/common'
+import { FormsModule } from '@angular/forms'
+import {
+  IonButton,
+  IonButtons,
+  IonCard,
+  IonCardHeader,
+  IonCardTitle,
+  IonCol,
+  IonContent,
+  IonGrid,
+  IonHeader,
+  IonIcon,
+  IonRow,
+  IonSegment,
+  IonSegmentButton,
+  IonToolbar,
+} from '@ionic/angular/standalone'
+import { addIcons } from 'ionicons'
+import {
+  bookOutline,
+  cloudOfflineOutline,
+  cloudOutline,
+  musicalNotesOutline,
+  radioOutline,
+  timerOutline,
+} from 'ionicons/icons'
+import { type Observable, distinctUntilChanged, filter, map } from 'rxjs'
+import { SwiperContainer } from 'swiper/element'
 import { ActivityIndicatorService } from '../activity-indicator.service'
 import type { Artist } from '../artist'
 import { ArtworkService } from '../artwork.service'
-import { CommonModule } from '@angular/common'
-import { FormsModule } from '@angular/forms'
-import { IonicModule } from '@ionic/angular'
 import type { Media } from '../media'
 import { MediaService } from '../media.service'
 import type { Monitor } from '../monitor'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
 import type { Network } from '../network'
-import { distinctUntilChanged, filter, map, type Observable } from 'rxjs'
 import { PlayerService } from '../player.service'
 import { SonosApiConfig } from '../sonos-api'
-import { SwiperContainer } from 'swiper/element'
 
 @Component({
   selector: 'app-home',
   templateUrl: 'home.page.html',
   styleUrls: ['home.page.scss'],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
-  imports: [CommonModule, FormsModule, IonicModule, MupiHatIconComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    MupiHatIconComponent,
+    IonHeader,
+    IonToolbar,
+    IonButtons,
+    IonButton,
+    IonIcon,
+    IonSegment,
+    IonSegmentButton,
+    IonContent,
+    IonGrid,
+    IonRow,
+    IonCol,
+    IonCard,
+    IonCardHeader,
+    IonCardTitle,
+  ],
   standalone: true,
 })
 export class HomePage implements OnInit {
@@ -62,6 +104,7 @@ export class HomePage implements OnInit {
       .subscribe((_) => {
         this.update()
       })
+    addIcons({ timerOutline, bookOutline, musicalNotesOutline, radioOutline, cloudOutline, cloudOfflineOutline })
   }
 
   ngOnInit() {
