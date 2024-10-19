@@ -73,14 +73,14 @@ export class MedialistPage implements OnInit {
     private activityIndicatorService: ActivityIndicatorService,
   ) {
     this.route.queryParams.subscribe((_params) => {
+      if (this.router.getCurrentNavigation().extras.state?.resume === 'resume') {
+        this.resume = true
+      }
+      if (this.router.getCurrentNavigation().extras.state?.category) {
+        this.fromcategory = this.router.getCurrentNavigation().extras.state.category
+      }
       if (this.router.getCurrentNavigation()?.extras.state?.artist) {
         this.artist = this.router.getCurrentNavigation().extras.state.artist
-        if (this.router.getCurrentNavigation().extras.state?.resume === 'resume') {
-          this.resume = true
-        }
-        if (this.router.getCurrentNavigation().extras.state?.category) {
-          this.fromcategory = this.router.getCurrentNavigation().extras.state.category
-        }
       }
     })
 
