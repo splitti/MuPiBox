@@ -1,22 +1,10 @@
-import { ActivatedRoute, Router } from '@angular/router'
-import { Component, OnInit, ViewChild } from '@angular/core'
-import { IonRange, IonicModule, NavController } from '@ionic/angular'
-import { PlayerCmds, PlayerService } from '../player.service'
-
-import type { AlbumStop } from '../albumstop'
-import { ArtworkService } from '../artwork.service'
 import { AsyncPipe } from '@angular/common'
-import type { CurrentEpisode } from '../current.episode'
-import type { CurrentMPlayer } from '../current.mplayer'
-import type { CurrentPlaylist } from '../current.playlist'
-import type { CurrentShow } from '../current.show'
-import type { CurrentSpotify } from '../current.spotify'
-import { FormsModule } from '@angular/forms'
-import type { Media } from '../media'
+import { Component } from '@angular/core'
+import { IonIcon } from '@ionic/angular/standalone'
 import { MediaService } from '../media.service'
-import type { Monitor } from '../monitor'
 import type { Mupihat } from '../mupihat'
 import type { Observable } from 'rxjs'
+import { PlayerService } from '../player.service'
 import { SonosApiConfig } from '../sonos-api'
 
 @Component({
@@ -24,7 +12,7 @@ import { SonosApiConfig } from '../sonos-api'
   templateUrl: './mupihat-icon.component.html',
   styleUrls: ['./mupihat-icon.component.scss'],
   standalone: true,
-  imports: [IonicModule, FormsModule, AsyncPipe],
+  imports: [AsyncPipe, IonIcon],
 })
 export class MupiHatIconComponent {
   protected hat_active = false

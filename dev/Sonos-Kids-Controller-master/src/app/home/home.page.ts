@@ -1,27 +1,29 @@
 import { CUSTOM_ELEMENTS_SCHEMA, Component, OnInit } from '@angular/core'
 import { NavigationExtras, Router } from '@angular/router'
 
-import { CommonModule } from '@angular/common'
-import { FormsModule } from '@angular/forms'
-import { IonicModule } from '@ionic/angular'
-import type { Observable } from 'rxjs'
-import { SwiperContainer } from 'swiper/element'
 import { ActivityIndicatorService } from '../activity-indicator.service'
 import type { Artist } from '../artist'
 import { ArtworkService } from '../artwork.service'
+import { CommonModule } from '@angular/common'
+import { FormsModule } from '@angular/forms'
+import { IonicModule } from '@ionic/angular'
 import type { Media } from '../media'
 import { MediaService } from '../media.service'
 import type { Monitor } from '../monitor'
+import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
 import type { Mupihat } from '../mupihat'
 import type { Network } from '../network'
+import { distinctUntilChanged, filter, map, type Observable } from 'rxjs'
 import { PlayerService } from '../player.service'
+import { SonosApiConfig } from '../sonos-api'
+import { SwiperContainer } from 'swiper/element'
 
 @Component({
   selector: 'app-home',
   templateUrl: 'home.page.html',
   styleUrls: ['home.page.scss'],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
-  imports: [CommonModule, FormsModule, IonicModule],
+  imports: [CommonModule, FormsModule, IonicModule, MupiHatIconComponent],
   standalone: true,
 })
 export class HomePage implements OnInit {
@@ -29,8 +31,6 @@ export class HomePage implements OnInit {
 
   artists: Artist[] = []
   media: Media[] = []
-  network: Network
-  mupihat: Mupihat
   monitor: Monitor
   currentNetwork = ''
   updateNetwork = false
@@ -38,9 +38,8 @@ export class HomePage implements OnInit {
   activityIndicatorVisible = false
   editButtonclickCount = 0
   editClickTimer = 0
-  hat_active = false
   public readonly network$: Observable<Network>
-  public readonly mupihat$: Observable<Mupihat>
+  protected readonly config$: Observable<SonosApiConfig>
 
   needsUpdate = false
 
@@ -52,21 +51,22 @@ export class HomePage implements OnInit {
     private router: Router,
   ) {
     this.network$ = this.mediaService.network$
-    this.mupihat$ = this.mediaService.mupihat$
-    this.playerService.getConfig().subscribe((config) => {
-      this.hat_active = config.hat_active
-    })
+    this.config$ = this.playerService.getConfig()
+
+    // If the network changes, we want to update our list.
+    this.network$
+      .pipe(
+        filter((network) => network.ip !== undefined),
+        map((network) => network.onlinestate),
+        distinctUntilChanged(),
+      )
+      .subscribe((_) => {
+        this.update()
+      })
   }
 
   ngOnInit() {
     this.mediaService.setCategory(this.category)
-
-    this.mediaService.network$.subscribe((network) => {
-      this.network = network
-    })
-    this.mediaService.mupihat$.subscribe((mupihat) => {
-      this.mupihat = mupihat
-    })
     this.mediaService.monitor$.subscribe((monitor) => {
       this.monitor = monitor
     })
@@ -98,31 +98,12 @@ export class HomePage implements OnInit {
     if (this.needsUpdate) {
       this.update()
     }
-    this.updateNetwork = true
-    this.checkNetwork()
-
     // This is a fix for the scroll bar not showing the current location when using the back button
     // from the media list or admin page.
     ;(document.querySelector('swiper-container') as SwiperContainer).swiper?.update()
   }
 
-  checkNetwork() {
-    if (this.network?.ip !== undefined) {
-      if (this.network?.onlinestate !== this.currentNetwork) {
-        this.currentNetwork = this.network?.onlinestate
-        this.update()
-      }
-    }
-
-    setTimeout(() => {
-      if (this.updateNetwork) {
-        this.checkNetwork()
-      }
-    }, 1000)
-  }
-
   ionViewDidLeave() {
-    this.updateNetwork = false
     if (this.activityIndicatorVisible) {
       this.activityIndicatorService.dismiss()
       this.activityIndicatorVisible = false

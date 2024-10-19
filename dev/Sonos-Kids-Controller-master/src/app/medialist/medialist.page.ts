@@ -1,7 +1,6 @@
 import { ActivatedRoute, NavigationExtras, Router } from '@angular/router'
 import { CUSTOM_ELEMENTS_SCHEMA, Component, OnInit } from '@angular/core'
 import { Media, MediaSorting } from '../media'
-import type { Observable, Subscription } from 'rxjs'
 
 import { ActivityIndicatorService } from '../activity-indicator.service'
 import type { Artist } from '../artist'
@@ -10,8 +9,9 @@ import { AsyncPipe } from '@angular/common'
 import { IonicModule } from '@ionic/angular'
 import { MediaService } from '../media.service'
 import type { Monitor } from '../monitor'
-import type { Mupihat } from '../mupihat'
+import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
 import { PlayerService } from '../player.service'
+import type { Subscription } from 'rxjs'
 
 @Component({
   selector: 'app-medialist',
@@ -19,7 +19,7 @@ import { PlayerService } from '../player.service'
   styleUrls: ['./medialist.page.scss'],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   standalone: true,
-  imports: [IonicModule, AsyncPipe],
+  imports: [IonicModule, AsyncPipe, MupiHatIconComponent],
 })
 export class MedialistPage implements OnInit {
   artist: Artist
@@ -29,13 +29,11 @@ export class MedialistPage implements OnInit {
   resume = false
   covers = {}
   monitor: Monitor
-  mupihat: Mupihat
   activityIndicatorVisible = false
   aPartOfAllMedia: Media[] = []
   hat_active = false
   private getMediaFromResumeSubscription: Subscription
   private getMediaFromArtistSubscription?: Subscription
-  public readonly mupihat$: Observable<Mupihat>
 
   constructor(
     private route: ActivatedRoute,
@@ -56,14 +54,9 @@ export class MedialistPage implements OnInit {
         }
       }
     })
-    this.mupihat$ = this.mediaService.mupihat$
   }
 
   ngOnInit() {
-    this.playerService.getConfig().subscribe((config) => {
-      this.hat_active = config.hat_active
-    })
-
     this.fetchMedia()
 
     // Retreive data through subscription above
@@ -76,9 +69,6 @@ export class MedialistPage implements OnInit {
     })
     this.mediaService.resume$.subscribe((resume) => {
       this.resumemedia = resume
-    })
-    this.mediaService.mupihat$.subscribe((mupihat) => {
-      this.mupihat = mupihat
     })
   }
 
