@@ -2,10 +2,10 @@ import { publishReplay, refCount } from 'rxjs/operators'
 
 import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
-import type { Observable } from 'rxjs'
-import { environment } from '../environments/environment'
 import type { Media } from './media'
+import type { Observable } from 'rxjs'
 import type { SonosApiConfig } from './sonos-api'
+import { environment } from '../environments/environment'
 
 export enum PlayerCmds {
   PLAY = 'play',
@@ -162,14 +162,11 @@ export class PlayerService {
   private sendRequest(url: string) {
     this.getConfig().subscribe((config) => {
       if (!config.rooms[0]) config.rooms[0] = '0'
-      //console.log(config);
       if (config.ip) {
         const baseUrl = `http://${config.ip}:${config.port}/${config.rooms[0]}/`
-        console.log(baseUrl + url)
         this.http.get(baseUrl + url).subscribe()
       } else {
         const baseUrl = `http://${config.server}:${config.port}/${config.rooms[0]}/`
-        console.log(baseUrl + url)
         this.http.get(baseUrl + url).subscribe()
       }
     })

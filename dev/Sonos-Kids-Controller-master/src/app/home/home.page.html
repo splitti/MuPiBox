@@ -57,7 +57,7 @@
             </ion-row>
             <ion-row class="title-card">
               <ion-col size="12">
-                <ion-card (click)="artistNameClicked(currentArtist)">
+                <ion-card (click)="readText(currentArtist.name)">
                   <ion-card-header>
                     <ion-card-title class="ion-text-nowrap truncate-text ion-text-center">{{currentArtist.name}}</ion-card-title>
                   </ion-card-header>
@@ -78,7 +78,7 @@
                 <ion-col size="12">
                   <ion-card class="media-card">
                     <img (click)="mediaCoverClicked(currentMedia)" draggable="false" style="-moz-user-select: none;" ondragstart="return false;" src="{{covers[currentMedia.title]}}">
-                    <ion-card-header (click)="mediaNameClicked(currentMedia)">
+                    <ion-card-header (click)="readText(currentMedia.title)">
                       <ion-card-title class="ion-text-nowrap truncate-text ion-text-center">{{currentMedia.title}}</ion-card-title>
                     </ion-card-header>
                   </ion-card>

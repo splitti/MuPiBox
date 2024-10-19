@@ -1,9 +1,4 @@
 import { Component, OnInit } from '@angular/core'
-import { NavigationExtras, Router } from '@angular/router'
-import { AlertController } from '@ionic/angular/standalone'
-import { PlayerCmds, PlayerService } from '../player.service'
-
-import { AsyncPipe } from '@angular/common'
 import {
   IonBackButton,
   IonButton,
@@ -20,13 +15,26 @@ import {
   IonTitle,
   IonToolbar,
 } from '@ionic/angular/standalone'
-import { addIcons } from 'ionicons'
-import { addOutline, brushOutline, close, powerOutline, trashOutline, wifiOutline } from 'ionicons/icons'
-import type { Observable } from 'rxjs'
+import { NavigationExtras, Router } from '@angular/router'
+import { PlayerCmds, PlayerService } from '../player.service'
+import {
+  addOutline,
+  arrowBackOutline,
+  brushOutline,
+  close,
+  powerOutline,
+  trashOutline,
+  wifiOutline,
+} from 'ionicons/icons'
+
 import { ActivityIndicatorService } from '../activity-indicator.service'
+import { AlertController } from '@ionic/angular/standalone'
+import { AsyncPipe } from '@angular/common'
 import type { Media } from '../media'
 import { MediaService } from '../media.service'
 import type { Network } from '../network'
+import type { Observable } from 'rxjs'
+import { addIcons } from 'ionicons'
 
 @Component({
   selector: 'app-edit',
@@ -53,9 +61,9 @@ import type { Network } from '../network'
 })
 export class EditPage implements OnInit {
   media: Observable<Media[]>
-  network: Observable<Network>
-  networkparameter: Network
   activityIndicatorVisible = false
+
+  protected network$: Observable<Network>
 
   constructor(
     private mediaService: MediaService,
@@ -64,19 +72,16 @@ export class EditPage implements OnInit {
     private router: Router,
     private activityIndicatorService: ActivityIndicatorService,
   ) {
-    addIcons({ addOutline, wifiOutline, trashOutline, powerOutline, brushOutline, close })
+    addIcons({ addOutline, arrowBackOutline, wifiOutline, trashOutline, powerOutline, brushOutline, close })
+    this.network$ = this.mediaService.network$
   }
 
   ngOnInit() {
     // Subscribe
-    this.network = this.mediaService.getNetworkObservable()
     this.media = this.mediaService.getRawMediaObservable()
 
     // Retreive data through subscription above
-    this.mediaService.updateNetwork()
     this.mediaService.updateRawMedia()
-
-    window.setTimeout(() => {}, 1000)
   }
 
   async deleteButtonPressed(item: Media) {
@@ -130,10 +135,8 @@ export class EditPage implements OnInit {
                     }
                     this.playerService.sendCmd(PlayerCmds.INDEX)
                     setTimeout(() => {
-                      this.network = this.mediaService.getNetworkObservable()
                       this.media = this.mediaService.getRawMediaObservable()
                       this.mediaService.updateRawMedia()
-                      this.mediaService.updateNetwork()
                       this.activityIndicatorService.dismiss()
                       this.activityIndicatorVisible = false
                     }, 2000)
@@ -167,10 +170,7 @@ export class EditPage implements OnInit {
   }
 
   ionViewWillEnter() {
-    this.network = this.mediaService.getNetworkObservable()
     this.media = this.mediaService.getRawMediaObservable()
-
-    this.mediaService.updateNetwork()
     this.mediaService.updateRawMedia()
   }
 

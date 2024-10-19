@@ -28,7 +28,7 @@ import {
   radioOutline,
   timerOutline,
 } from 'ionicons/icons'
-import { type Observable, distinctUntilChanged, filter, map } from 'rxjs'
+import { type Observable, distinctUntilChanged, filter, lastValueFrom, map } from 'rxjs'
 import { SwiperContainer } from 'swiper/element'
 import { ActivityIndicatorService } from '../activity-indicator.service'
 import type { Artist } from '../artist'
@@ -68,18 +68,17 @@ import { SonosApiConfig } from '../sonos-api'
   standalone: true,
 })
 export class HomePage implements OnInit {
-  category = 'audiobook'
-
   artists: Artist[] = []
   media: Media[] = []
   monitor: Monitor
-  currentNetwork = ''
-  updateNetwork = false
   covers = {}
   activityIndicatorVisible = false
   editButtonclickCount = 0
   editClickTimer = 0
-  public readonly network$: Observable<Network>
+
+  protected category = 'audiobook'
+
+  protected readonly network$: Observable<Network>
   protected readonly config$: Observable<SonosApiConfig>
 
   needsUpdate = false
@@ -95,6 +94,7 @@ export class HomePage implements OnInit {
     this.config$ = this.playerService.getConfig()
 
     // If the network changes, we want to update our list.
+    // TODO: Unsubscribe?
     this.network$
       .pipe(
         filter((network) => network.ip !== undefined),
@@ -111,26 +111,6 @@ export class HomePage implements OnInit {
     this.mediaService.setCategory(this.category)
     this.mediaService.monitor$.subscribe((monitor) => {
       this.monitor = monitor
-    })
-
-    // Subscribe
-    this.mediaService.getMedia().subscribe((media) => {
-      this.media = media
-
-      for (const currentMedia of media) {
-        this.artworkService.getArtwork(currentMedia).subscribe((url) => {
-          this.covers[currentMedia.title] = url
-        })
-      }
-    })
-
-    this.mediaService.getArtists().subscribe((artists) => {
-      this.artists = artists
-      for (const artist of this.artists) {
-        this.artworkService.getArtistArtwork(artist.coverMedia).subscribe((url) => {
-          this.covers[artist.name] = url
-        })
-      }
     })
 
     this.update()
@@ -152,7 +132,7 @@ export class HomePage implements OnInit {
     }
   }
 
-  categoryChanged(event: any) {
+  categoryChanged(event: any): void {
     this.category = event.detail.value
     this.mediaService.setCategory(this.category)
     this.update()
@@ -160,9 +140,28 @@ export class HomePage implements OnInit {
 
   update() {
     if (this.category === 'audiobook' || this.category === 'music' || this.category === 'other') {
-      this.mediaService.publishArtists()
+      lastValueFrom(this.mediaService.fetchArtistData(this.category))
+        .then((artists) => {
+          this.artists = artists
+
+          for (const artist of this.artists) {
+            this.artworkService.getArtistArtwork(artist.coverMedia).subscribe((url) => {
+              this.covers[artist.name] = url
+            })
+          }
+        })
+        .catch((error) => console.error(error))
     } else {
-      this.mediaService.publishMedia()
+      lastValueFrom(this.mediaService.fetchMediaData(this.category))
+        .then((media) => {
+          this.media = media
+          for (const currentMedia of media) {
+            this.artworkService.getArtwork(currentMedia).subscribe((url) => {
+              this.covers[currentMedia.title] = url
+            })
+          }
+        })
+        .catch((error) => console.error(error))
     }
     this.needsUpdate = false
   }
@@ -183,16 +182,6 @@ export class HomePage implements OnInit {
     }
   }
 
-  artistNameClicked(clickedArtist: Artist) {
-    if (this.monitor?.monitor === 'On') {
-      this.playerService.getConfig().subscribe((config) => {
-        if (config.tts == null || config.tts.enabled === true) {
-          this.playerService.say(clickedArtist.name)
-        }
-      })
-    }
-  }
-
   mediaCoverClicked(clickedMedia: Media) {
     if (this.monitor?.monitor === 'On') {
       this.activityIndicatorService.create().then((indicator) => {
@@ -205,16 +194,6 @@ export class HomePage implements OnInit {
           }
           this.router.navigate(['/player'], navigationExtras)
         })
-      })
-    }
-  }
-
-  mediaNameClicked(clickedMedia: Media) {
-    if (this.monitor?.monitor === 'On') {
-      this.playerService.getConfig().subscribe((config) => {
-        if (config.tts == null || config.tts.enabled === true) {
-          this.playerService.say(clickedMedia.title)
-        }
       })
     }
   }
@@ -255,6 +234,16 @@ export class HomePage implements OnInit {
           }
           this.router.navigate(['/medialist'], navigationExtras)
         })
+      })
+    }
+  }
+
+  protected readText(text: string): void {
+    if (this.monitor?.monitor === 'On') {
+      this.playerService.getConfig().subscribe((config) => {
+        if (config.tts == null || config.tts.enabled === true) {
+          this.playerService.say(text)
+        }
       })
     }
   }

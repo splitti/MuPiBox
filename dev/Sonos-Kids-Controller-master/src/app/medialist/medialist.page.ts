@@ -1,8 +1,5 @@
-import { CUSTOM_ELEMENTS_SCHEMA, Component, OnInit } from '@angular/core'
 import { ActivatedRoute, NavigationExtras, Router } from '@angular/router'
-import { Media, MediaSorting } from '../media'
-
-import { AsyncPipe } from '@angular/common'
+import { CUSTOM_ELEMENTS_SCHEMA, Component, OnInit } from '@angular/core'
 import {
   IonBackButton,
   IonButtons,
@@ -17,14 +14,19 @@ import {
   IonTitle,
   IonToolbar,
 } from '@ionic/angular/standalone'
-import type { Subscription } from 'rxjs'
+import { Media, MediaSorting } from '../media'
+
 import { ActivityIndicatorService } from '../activity-indicator.service'
 import type { Artist } from '../artist'
 import { ArtworkService } from '../artwork.service'
+import { AsyncPipe } from '@angular/common'
 import { MediaService } from '../media.service'
 import type { Monitor } from '../monitor'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
 import { PlayerService } from '../player.service'
+import type { Subscription } from 'rxjs'
+import { addIcons } from 'ionicons'
+import { arrowBackOutline } from 'ionicons/icons'
 
 @Component({
   selector: 'app-medialist',
@@ -59,7 +61,6 @@ export class MedialistPage implements OnInit {
   monitor: Monitor
   activityIndicatorVisible = false
   aPartOfAllMedia: Media[] = []
-  hat_active = false
   private getMediaFromResumeSubscription: Subscription
   private getMediaFromArtistSubscription?: Subscription
 
@@ -82,6 +83,8 @@ export class MedialistPage implements OnInit {
         }
       }
     })
+
+    addIcons({ arrowBackOutline })
   }
 
   ngOnInit() {

@@ -1,10 +1,10 @@
-import { map, mergeAll, toArray } from 'rxjs/operators'
+import type { CategoryType, Media } from './media'
 import { ExtraDataMedia, Utils } from './utils'
+import { map, mergeAll, toArray } from 'rxjs/operators'
 
 import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
 import type { Observable } from 'rxjs'
-import type { Media } from './media'
 import type { RssFeed } from './rssfeed'
 
 @Injectable({
@@ -19,7 +19,7 @@ export class RssFeedService {
   getRssFeed(
     ip: string,
     id: string,
-    category: string,
+    category: CategoryType,
     index: number,
     extraDataSource: ExtraDataMedia,
   ): Observable<Media[]> {

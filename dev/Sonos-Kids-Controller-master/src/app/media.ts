@@ -5,6 +5,9 @@ export enum MediaSorting {
   ReleaseDateDescending = 'ReleaseDateDescending',
 }
 
+// TODO: Enforce proper string literal type.
+export type CategoryType = string // 'audiobook' | 'music' | 'other' | 'resume'
+
 export interface Media {
   index?: number
   artist?: string
@@ -17,7 +20,7 @@ export interface Media {
   release_date?: string
   cover?: string
   type: string
-  category: string
+  category: CategoryType
   artistcover?: string
   shuffle?: boolean
   aPartOfAll?: boolean
