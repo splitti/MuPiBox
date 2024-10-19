@@ -93,7 +93,6 @@ export class MedialistPage implements OnInit {
     // Retreive data through subscription above
     this.mediaService.publishArtistMedia()
     this.mediaService.publishResume()
-    //this.mediaService.updateRawResume();
 
     this.mediaService.monitor$.subscribe((monitor) => {
       this.monitor = monitor

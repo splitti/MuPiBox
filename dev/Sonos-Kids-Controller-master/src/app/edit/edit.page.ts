@@ -77,11 +77,7 @@ export class EditPage implements OnInit {
   }
 
   ngOnInit() {
-    // Subscribe
-    this.media = this.mediaService.getRawMediaObservable()
-
-    // Retreive data through subscription above
-    this.mediaService.updateRawMedia()
+    this.media = this.mediaService.fetchRawMedia()
   }
 
   async deleteButtonPressed(item: Media) {
@@ -135,8 +131,7 @@ export class EditPage implements OnInit {
                     }
                     this.playerService.sendCmd(PlayerCmds.INDEX)
                     setTimeout(() => {
-                      this.media = this.mediaService.getRawMediaObservable()
-                      this.mediaService.updateRawMedia()
+                      this.media = this.mediaService.fetchRawMedia()
                       this.activityIndicatorService.dismiss()
                       this.activityIndicatorVisible = false
                     }, 2000)
@@ -170,8 +165,7 @@ export class EditPage implements OnInit {
   }
 
   ionViewWillEnter() {
-    this.media = this.mediaService.getRawMediaObservable()
-    this.mediaService.updateRawMedia()
+    this.media = this.mediaService.fetchRawMedia()
   }
 
   ionViewDidLeave() {
@@ -200,8 +194,7 @@ export class EditPage implements OnInit {
           handler: () => {
             this.playerService.sendCmd(PlayerCmds.CLEARRESUME)
             setTimeout(() => {
-              this.media = this.mediaService.getRawMediaObservable()
-              this.mediaService.updateRawMedia()
+              this.media = this.mediaService.fetchRawMedia()
             }, 2000)
           },
         },

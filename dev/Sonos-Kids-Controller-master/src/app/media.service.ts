@@ -43,7 +43,6 @@ export class MediaService {
   public readonly validate$: Observable<Validate>
   public readonly config$: Observable<SonosApiConfig>
 
-  private rawMediaSubject = new Subject<Media[]>()
   private wlanSubject = new Subject<WLAN[]>()
   private resumeSubject = new Subject<Media[]>()
 
@@ -147,21 +146,8 @@ export class MediaService {
   // Handling of RAW media entries from data.json
   // --------------------------------------------
 
-  getRawMediaObservable = (): Observable<Media[]> => {
-    const url = environment.production ? '../api/data' : `http://${this.ip}:8200/api/data`
-    return this.http.get<Media[]>(url)
-  }
-
-  updateRawMedia() {
-    const url = environment.production ? '../api/data' : `http://${this.ip}:8200/api/data`
-    this.http.get<Media[]>(url).subscribe((media) => {
-      this.rawMediaSubject.next(media)
-    })
-  }
-
-  getRawResumeObservable = (): Observable<Record<any, any>[]> => {
-    const url = environment.production ? '../api/resume' : `http://${this.ip}:8200/api/resume`
-    return this.http.get<Record<any, any>[]>(url)
+  public fetchRawMedia(): Observable<Media[]> {
+    return this.http.get<Media[]>('http://localhost:8200/api/data')
   }
 
   updateRawResume() {
@@ -186,7 +172,6 @@ export class MediaService {
 
     this.http.post(url, body, { responseType: 'text' }).subscribe((response) => {
       this.response = response
-      this.updateRawMedia()
     })
   }
 
@@ -199,7 +184,6 @@ export class MediaService {
 
     this.http.post(url, body, { responseType: 'text' }).subscribe((response) => {
       this.response = response
-      this.updateRawMedia()
     })
   }
 
@@ -208,7 +192,6 @@ export class MediaService {
 
     this.http.post(url, media, { responseType: 'text' }).subscribe((response) => {
       this.response = response
-      this.updateRawMedia()
     })
   }
 
@@ -243,12 +226,8 @@ export class MediaService {
     })
   }
 
-  public fetchData(category: CategoryType): Observable<Media[]> {
-    return this.updateMedia('http://localhost:8200/api/data', false, category)
-  }
-
   public fetchMediaData(category: CategoryType): Observable<Media[]> {
-    return this.fetchData(category).pipe(
+    return this.fetchMedia(category).pipe(
       map((media: Media[]) => {
         return media.sort((a, b) =>
           a.title.localeCompare(b.title, undefined, {
@@ -261,7 +240,7 @@ export class MediaService {
   }
 
   public fetchArtistData(category: CategoryType): Observable<Artist[]> {
-    return this.fetchData(category).pipe(
+    return this.fetchMedia(category).pipe(
       map((media: Media[]) => {
         // Create temporary object with artists as keys and albumCounts as values
         const mediaCounts = media.reduce((tempCounts, currentMedia) => {
@@ -313,6 +292,10 @@ export class MediaService {
     )
   }
 
+  private fetchMedia(category: CategoryType): Observable<Media[]> {
+    return this.updateMedia('http://localhost:8200/api/data', false, category)
+  }
+
   // Get the media data for the current category from the server
   private updateMedia(url: string, resume: boolean, category: CategoryType): Observable<Media[]> {
     // Custom rxjs pipe to override artist.
@@ -343,7 +326,7 @@ export class MediaService {
         for (const item of items) {
           item.category = item.category === undefined ? 'audiobook' : item.category
         }
-        return items.filter((item) => item.category === this.category)
+        return items.filter((item) => item.category === category)
       }),
       mergeMap((items) => from(items)), // parallel calls for each item
       map(
