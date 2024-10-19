@@ -4,14 +4,6 @@ ion-back-button {
     --icon-font-size: 30px;
 }
 
-ion-range{
-    --bar-height: 6px;
-    --knob-size: 25px;
-    --knob-border-radius: 50%;
-    --bar-border-radius: 20px;
-    --knob-box-shadow: 0px 0px 0px 3px #fff;
-}
-
 .cover-card {
     margin-top: 20px;
     width: 350px;
@@ -40,18 +32,9 @@ ion-range{
 	max-width: 150px;
 }
 
-.play-controls{
-        margin-top:0px;
-}
-
-
 .indicator-button {
     opacity: 0.35;
     pointer-events: none;
-}
-
-.volume-controls {
-    margin-top: 50px;
 }
 
 .truncate-text {
@@ -63,12 +46,32 @@ ion-range{
     font-size: 30px !important;
 }
 
-ion-button {
-    --padding-start: 35px;
-    --padding-end: 35px;
-    --padding-top: 35px;
-    --padding-bottom: 35px;
-    font-size: 30px !important;
+.controls {
+    .slider-row {
+        margin-top: 20px;
+        padding-left: 15px;
+        padding-right: 15px;
+
+        ion-range {
+            --bar-height: 6px;
+            --knob-size: 25px;
+            --knob-border-radius: 50%;
+            --bar-border-radius: 20px;
+            --knob-box-shadow: 0px 0px 0px 3px #fff;
+        }
+    }
+
+    .controls-row {
+        margin-top: 10px;
+
+        ion-button {
+            --padding-start: 35px;
+            --padding-end: 35px;
+            --padding-top: 20px;
+            --padding-bottom: 20px;
+            font-size: 30px !important;
+        }
+    }
 }
 
 .volume-button {
