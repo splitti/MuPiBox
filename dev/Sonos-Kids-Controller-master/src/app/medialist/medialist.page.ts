@@ -60,7 +60,6 @@ export class MedialistPage implements OnInit {
   covers = {}
   monitor: Monitor
   activityIndicatorVisible = false
-  aPartOfAllMedia: Media[] = []
   private getMediaFromResumeSubscription: Subscription
   private getMediaFromArtistSubscription?: Subscription
 
@@ -114,7 +113,6 @@ export class MedialistPage implements OnInit {
       this.activityIndicatorService.dismiss()
       this.activityIndicatorVisible = false
     }
-    this.aPartOfAllMedia = []
   }
 
   coverClicked(clickedMedia: Media) {
