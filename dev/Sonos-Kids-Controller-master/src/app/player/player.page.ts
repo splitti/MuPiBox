@@ -1,29 +1,29 @@
-import { Component, OnInit, ViewChild } from '@angular/core'
 import { ActivatedRoute, Router } from '@angular/router'
+import { Component, OnInit, ViewChild } from '@angular/core'
 import { IonRange, IonicModule, NavController } from '@ionic/angular'
 import { PlayerCmds, PlayerService } from '../player.service'
 
-import { AsyncPipe } from '@angular/common'
-import { FormsModule } from '@angular/forms'
-import type { Observable } from 'rxjs'
 import type { AlbumStop } from '../albumstop'
 import { ArtworkService } from '../artwork.service'
+import { AsyncPipe } from '@angular/common'
 import type { CurrentEpisode } from '../current.episode'
 import type { CurrentMPlayer } from '../current.mplayer'
 import type { CurrentPlaylist } from '../current.playlist'
 import type { CurrentShow } from '../current.show'
 import type { CurrentSpotify } from '../current.spotify'
+import { FormsModule } from '@angular/forms'
 import type { Media } from '../media'
 import { MediaService } from '../media.service'
 import type { Monitor } from '../monitor'
-import type { Mupihat } from '../mupihat'
+import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
+import type { Observable } from 'rxjs'
 
 @Component({
   selector: 'app-player',
   templateUrl: './player.page.html',
   styleUrls: ['./player.page.scss'],
   standalone: true,
-  imports: [IonicModule, FormsModule, AsyncPipe],
+  imports: [IonicModule, FormsModule, AsyncPipe, MupiHatIconComponent],
 })
 export class PlayerPage implements OnInit {
   @ViewChild('range', { static: false }) range: IonRange
@@ -31,7 +31,6 @@ export class PlayerPage implements OnInit {
   media: Media
   resumemedia: Media
   monitor: Monitor
-  mupihat: Mupihat
   albumStop: AlbumStop
   resumePlay = false
   resumeIndex: number
@@ -51,13 +50,11 @@ export class PlayerPage implements OnInit {
   progress = 0
   shufflechanged = 0
   tmpProgressTime = 0
-  hat_active = false
   public readonly spotify$: Observable<CurrentSpotify>
   public readonly local$: Observable<CurrentMPlayer>
   public readonly playlist$: Observable<CurrentPlaylist>
   public readonly episode$: Observable<CurrentEpisode>
   public readonly show$: Observable<CurrentShow>
-  public readonly mupihat$: Observable<Mupihat>
 
   constructor(
     private mediaService: MediaService,
@@ -72,8 +69,8 @@ export class PlayerPage implements OnInit {
     this.playlist$ = this.mediaService.playlist$
     this.episode$ = this.mediaService.episode$
     this.show$ = this.mediaService.show$
-    this.mupihat$ = this.mediaService.mupihat$
-    this.route.queryParams.subscribe((params) => {
+
+    this.route.queryParams.subscribe((_params) => {
       if (this.router.getCurrentNavigation()?.extras.state?.media) {
         this.media = this.router.getCurrentNavigation().extras.state.media
         if (this.media.category === 'resume') {
@@ -84,10 +81,6 @@ export class PlayerPage implements OnInit {
   }
 
   ngOnInit() {
-    this.playerService.getConfig().subscribe((config) => {
-      this.hat_active = config.hat_active
-    })
-
     this.mediaService.current$.subscribe((spotify) => {
       this.currentPlayedSpotify = spotify
     })
@@ -111,9 +104,6 @@ export class PlayerPage implements OnInit {
     })
     this.mediaService.albumStop$.subscribe((albumStop) => {
       this.albumStop = albumStop
-    })
-    this.mediaService.mupihat$.subscribe((mupihat) => {
-      this.mupihat = mupihat
     })
   }
 

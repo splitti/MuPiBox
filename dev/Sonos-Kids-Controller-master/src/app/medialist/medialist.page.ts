@@ -1,13 +1,13 @@
-import { CUSTOM_ELEMENTS_SCHEMA, Component, OnInit } from '@angular/core'
 import { ActivatedRoute, NavigationExtras, Router } from '@angular/router'
-import type { Observable, Subscription } from 'rxjs'
+import { CUSTOM_ELEMENTS_SCHEMA, Component, OnInit } from '@angular/core'
 import { Media, MediaSorting } from '../media'
+import type { Observable, Subscription } from 'rxjs'
 
-import { AsyncPipe } from '@angular/common'
-import { IonicModule } from '@ionic/angular'
 import { ActivityIndicatorService } from '../activity-indicator.service'
 import type { Artist } from '../artist'
 import { ArtworkService } from '../artwork.service'
+import { AsyncPipe } from '@angular/common'
+import { IonicModule } from '@ionic/angular'
 import { MediaService } from '../media.service'
 import type { Monitor } from '../monitor'
 import type { Mupihat } from '../mupihat'
@@ -36,18 +36,6 @@ export class MedialistPage implements OnInit {
   private getMediaFromResumeSubscription: Subscription
   private getMediaFromArtistSubscription?: Subscription
   public readonly mupihat$: Observable<Mupihat>
-
-  slideOptions = {
-    initialSlide: 0,
-    slidesPerView: 3,
-    autoplay: false,
-    loop: false,
-    freeMode: true,
-    freeModeSticky: true,
-    freeModeMomentumBounce: false,
-    freeModeMomentumRatio: 1.0,
-    freeModeMomentumVelocityRatio: 1.0,
-  }
 
   constructor(
     private route: ActivatedRoute,
