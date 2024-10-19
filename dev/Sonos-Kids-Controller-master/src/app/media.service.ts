@@ -1,9 +1,6 @@
 import { Observable, Subject, from, iif, interval, of } from 'rxjs'
 import { map, mergeAll, mergeMap, shareReplay, switchMap, toArray } from 'rxjs/operators'
 
-import { HttpClient } from '@angular/common/http'
-import { Injectable } from '@angular/core'
-import { environment } from '../environments/environment'
 import type { AlbumStop } from './albumstop'
 import type { Artist } from './artist'
 import type { CurrentEpisode } from './current.episode'
@@ -11,9 +8,10 @@ import type { CurrentMPlayer } from './current.mplayer'
 import type { CurrentPlaylist } from './current.playlist'
 import type { CurrentShow } from './current.show'
 import type { CurrentSpotify } from './current.spotify'
+import { HttpClient } from '@angular/common/http'
+import { Injectable } from '@angular/core'
 import type { Media } from './media'
 import type { Monitor } from './monitor'
-import type { Mupihat } from './mupihat'
 import type { Network } from './network'
 import { PlayerService } from './player.service'
 import { RssFeedService } from './rssfeed.service'
@@ -21,6 +19,7 @@ import type { SonosApiConfig } from './sonos-api'
 import { SpotifyService } from './spotify.service'
 import type { Validate } from './validate'
 import type { WLAN } from './wlan'
+import { environment } from '../environments/environment'
 
 @Injectable({
   providedIn: 'root',
@@ -42,7 +41,6 @@ export class MediaService {
   public readonly episode$: Observable<CurrentEpisode>
   public readonly show$: Observable<CurrentShow>
   public readonly validate$: Observable<Validate>
-  public readonly mupihat$: Observable<Mupihat>
   public readonly config$: Observable<SonosApiConfig>
 
   private rawMediaSubject = new Subject<Media[]>()
@@ -135,13 +133,6 @@ export class MediaService {
     this.validate$ = interval(1000).pipe(
       // Once a second after subscribe, way too frequent!
       switchMap((): Observable<Validate> => this.http.get<Validate>(`http://${this.ip}:5005/validate`)),
-      // Replay the most recent (bufferSize) emission on each subscription
-      // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
-      shareReplay({ bufferSize: 1, refCount: false }),
-    )
-    this.mupihat$ = interval(1000).pipe(
-      // Once a second after subscribe, way too frequent!
-      switchMap((): Observable<Mupihat> => this.http.get<Mupihat>(`http://${this.ip}:8200/api/mupihat`)),
       // Replay the most recent (bufferSize) emission on each subscription
       // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
       shareReplay({ bufferSize: 1, refCount: false }),
@@ -242,8 +233,6 @@ export class MediaService {
       index,
       data,
     }
-
-    console.log(body)
 
     this.http.post(url, body, { responseType: 'text' }).subscribe((response) => {
       this.response = response
