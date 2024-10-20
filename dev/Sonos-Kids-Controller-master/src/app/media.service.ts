@@ -34,7 +34,6 @@ export class MediaService {
   public readonly local$: Observable<CurrentMPlayer>
   public readonly network$: Observable<Network>
   public readonly monitor$: Observable<Monitor>
-  public readonly resume$: Observable<Media[]>
   public readonly albumStop$: Observable<AlbumStop>
   public readonly networkLocal$: Observable<Network>
   public readonly playlist$: Observable<CurrentPlaylist>
@@ -108,13 +107,6 @@ export class MediaService {
     this.monitor$ = interval(1000).pipe(
       // Once a second after subscribe, way too frequent!
       switchMap((): Observable<Monitor> => this.http.get<Monitor>(`http://${this.ip}:8200/api/monitor`)),
-      // Replay the most recent (bufferSize) emission on each subscription
-      // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
-      shareReplay({ bufferSize: 1, refCount: false }),
-    )
-    this.resume$ = interval(1000).pipe(
-      // Once a second after subscribe, way too frequent!
-      switchMap((): Observable<Media[]> => this.http.get<Media[]>(`http://${this.ip}:8200/api/resume`)),
       // Replay the most recent (bufferSize) emission on each subscription
       // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
       shareReplay({ bufferSize: 1, refCount: false }),
@@ -292,6 +284,15 @@ export class MediaService {
     )
   }
 
+  public fetchResumeData() {
+    // Category is irrelevant if 'resume' is set to true.
+    return this.updateMedia('http://localhost:8200/api/activeresume', true, 'resume').pipe(
+      map((media: Media[]) => {
+        return media.reverse()
+      }),
+    )
+  }
+
   private fetchMedia(category: CategoryType): Observable<Media[]> {
     return this.updateMedia('http://localhost:8200/api/data', false, category)
   }
@@ -441,27 +442,11 @@ export class MediaService {
     })
   }
 
-  publishResume() {
-    const url = environment.production ? '../api/activeresume' : `http://${this.ip}:8200/api/activeresume`
-    this.updateMedia(url, true, this.category).subscribe((media) => {
-      this.resumeSubject.next(media)
-    })
-  }
-
   // Collect albums from a given artist in the current category
   getMediaFromArtist(artist: Artist): Observable<Media[]> {
     return this.artistMediaSubject.pipe(
       map((media: Media[]) => {
         return media.filter((currentMedia) => currentMedia.artist === artist.name)
-      }),
-    )
-  }
-
-  // Collect albums from a given artist in the current category
-  getMediaFromResume(): Observable<Media[]> {
-    return this.resumeSubject.pipe(
-      map((media: Media[]) => {
-        return media.reverse()
       }),
     )
   }

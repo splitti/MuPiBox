@@ -1,10 +1,5 @@
-import { Component, OnInit, ViewChild } from '@angular/core'
 import { ActivatedRoute, Router } from '@angular/router'
-import { NavController } from '@ionic/angular/standalone'
-import { PlayerCmds, PlayerService } from '../player.service'
-
-import { AsyncPipe } from '@angular/common'
-import { FormsModule } from '@angular/forms'
+import { Component, OnInit, ViewChild } from '@angular/core'
 import {
   IonBackButton,
   IonButton,
@@ -20,7 +15,7 @@ import {
   IonTitle,
   IonToolbar,
 } from '@ionic/angular/standalone'
-import { addIcons } from 'ionicons'
+import { PlayerCmds, PlayerService } from '../player.service'
 import {
   pause,
   play,
@@ -32,18 +27,23 @@ import {
   volumeHighOutline,
   volumeLowOutline,
 } from 'ionicons/icons'
-import type { Observable } from 'rxjs'
+
 import type { AlbumStop } from '../albumstop'
 import { ArtworkService } from '../artwork.service'
+import { AsyncPipe } from '@angular/common'
 import type { CurrentEpisode } from '../current.episode'
 import type { CurrentMPlayer } from '../current.mplayer'
 import type { CurrentPlaylist } from '../current.playlist'
 import type { CurrentShow } from '../current.show'
 import type { CurrentSpotify } from '../current.spotify'
+import { FormsModule } from '@angular/forms'
 import type { Media } from '../media'
 import { MediaService } from '../media.service'
 import type { Monitor } from '../monitor'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
+import { NavController } from '@ionic/angular/standalone'
+import type { Observable } from 'rxjs'
+import { addIcons } from 'ionicons'
 
 @Component({
   selector: 'app-player',
@@ -264,7 +264,6 @@ export class PlayerPage implements OnInit {
   }
 
   ionViewWillEnter() {
-    console.log('Media object after enter playerpage:', this.media)
     this.updateProgression = true
     if (this.resumePlay) {
       this.resumePlayback()
@@ -377,13 +376,9 @@ export class PlayerPage implements OnInit {
     this.resumeIndex = this.resumemedia.index
     this.resumemedia.index = undefined
     if (this.resumePlay || this.resumeIndex !== -1 || this.resumeAdded) {
-      console.log('Edit this.resumemedia', this.resumemedia)
       this.mediaService.editRawResumeAtIndex(this.resumeIndex, this.resumemedia)
-      console.log('Edit response: ', this.mediaService.getResponse())
     } else {
-      console.log('Add this.resumemedia', this.resumemedia)
       this.mediaService.addRawResume(this.resumemedia)
-      console.log('Add response: ', this.mediaService.getResponse())
       this.resumeAdded = true
       setTimeout(() => {
         this.playerService.sendCmd(PlayerCmds.MAXRESUME)

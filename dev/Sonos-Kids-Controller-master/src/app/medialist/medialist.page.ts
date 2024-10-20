@@ -54,13 +54,9 @@ import { arrowBackOutline } from 'ionicons/icons'
 export class MedialistPage implements OnInit {
   artist: Artist
   media: Media[] = []
-  resumemedia: Media[] = []
-  fromcategory = ''
-  resume = false
   covers = {}
   monitor: Monitor
   activityIndicatorVisible = false
-  private getMediaFromResumeSubscription: Subscription
   private getMediaFromArtistSubscription?: Subscription
 
   constructor(
@@ -72,12 +68,6 @@ export class MedialistPage implements OnInit {
     private activityIndicatorService: ActivityIndicatorService,
   ) {
     this.route.queryParams.subscribe((_params) => {
-      if (this.router.getCurrentNavigation().extras.state?.resume === 'resume') {
-        this.resume = true
-      }
-      if (this.router.getCurrentNavigation().extras.state?.category) {
-        this.fromcategory = this.router.getCurrentNavigation().extras.state.category
-      }
       if (this.router.getCurrentNavigation()?.extras.state?.artist) {
         this.artist = this.router.getCurrentNavigation().extras.state.artist
       }
@@ -91,20 +81,13 @@ export class MedialistPage implements OnInit {
 
     // Retreive data through subscription above
     this.mediaService.publishArtistMedia()
-    this.mediaService.publishResume()
 
     this.mediaService.monitor$.subscribe((monitor) => {
       this.monitor = monitor
     })
-    this.mediaService.resume$.subscribe((resume) => {
-      this.resumemedia = resume
-    })
   }
 
   ngOnDestroy() {
-    if (this.getMediaFromResumeSubscription) {
-      this.getMediaFromResumeSubscription.unsubscribe()
-    }
     this.getMediaFromArtistSubscription?.unsubscribe()
   }
 
@@ -119,24 +102,6 @@ export class MedialistPage implements OnInit {
     if (this.monitor?.monitor === 'On') {
       this.activityIndicatorService.create().then((indicator) => {
         this.activityIndicatorVisible = true
-        clickedMedia.index = -1
-        for (let i = 0; i < this.resumemedia.length; i++) {
-          if (
-            (this.resumemedia[i].id && this.resumemedia[i].id === clickedMedia.id) ||
-            (this.resumemedia[i].playlistid && this.resumemedia[i].playlistid === clickedMedia.id)
-          ) {
-            clickedMedia.index = i
-            break
-          }
-          if (
-            this.resumemedia[i].artist === clickedMedia.artist &&
-            this.resumemedia[i].id === clickedMedia.id &&
-            clickedMedia.type === 'library'
-          ) {
-            clickedMedia.index = i
-            break
-          }
-        }
         indicator.present().then(() => {
           const navigationExtras: NavigationExtras = {
             state: {
@@ -151,18 +116,7 @@ export class MedialistPage implements OnInit {
 
   mediaNameClicked(clickedMedia: Media) {
     if (this.monitor?.monitor === 'On') {
-      this.playerService.getConfig().subscribe((config) => {
-        if (config.tts == null || config.tts.enabled === true) {
-          this.playerService.say(clickedMedia.title)
-        }
-      })
-    }
-  }
-
-  backButtonPressed() {
-    if (this.resume) {
-      this.mediaService.setCategory(this.fromcategory)
-      this.resume = false
+      this.playerService.sayText(clickedMedia.title)
     }
   }
 
@@ -200,38 +154,31 @@ export class MedialistPage implements OnInit {
       }
     }
 
-    if (this.resume) {
-      this.getMediaFromResumeSubscription = this.mediaService.getMediaFromResume().subscribe((media) => {
-        this.media = media
-        fetchArtwork(this.media)
-      })
-    } else {
-      const sliceMedia = (media: Media[], offsetByOne = false): Media[] => {
-        if (this.artist.coverMedia?.aPartOfAll) {
-          const min = Math.max(0, (this.artist.coverMedia?.aPartOfAllMin ?? 0) - (offsetByOne ? 1 : 0))
-          const max =
-            (this.artist.coverMedia?.aPartOfAllMax ?? Number.parseInt(this.artist.albumCount)) - (offsetByOne ? 1 : 0)
-          return media.slice(min, max + 1)
-        }
-        return media
+    const sliceMedia = (media: Media[], offsetByOne = false): Media[] => {
+      if (this.artist.coverMedia?.aPartOfAll) {
+        const min = Math.max(0, (this.artist.coverMedia?.aPartOfAllMin ?? 0) - (offsetByOne ? 1 : 0))
+        const max =
+          (this.artist.coverMedia?.aPartOfAllMax ?? Number.parseInt(this.artist.albumCount)) - (offsetByOne ? 1 : 0)
+        return media.slice(min, max + 1)
       }
-
-      const isShow =
-        (this.artist.coverMedia.showid && this.artist.coverMedia.showid.length > 0) ||
-        (this.artist.coverMedia.type === 'rss' && this.artist.coverMedia.id.length > 0)
-
-      this.getMediaFromArtistSubscription = this.mediaService.getMediaFromArtist(this.artist).subscribe((media) => {
-        // We need to sort first and then slice since this is the intuitive behavior.
-        this.media = sliceMedia(
-          sortMedia(
-            this.artist.coverMedia,
-            media,
-            isShow ? MediaSorting.ReleaseDateDescending : MediaSorting.AlphabeticalAscending,
-          ),
-          !isShow,
-        )
-        fetchArtwork(this.media)
-      })
+      return media
     }
+
+    const isShow =
+      (this.artist.coverMedia.showid && this.artist.coverMedia.showid.length > 0) ||
+      (this.artist.coverMedia.type === 'rss' && this.artist.coverMedia.id.length > 0)
+
+    this.getMediaFromArtistSubscription = this.mediaService.getMediaFromArtist(this.artist).subscribe((media) => {
+      // We need to sort first and then slice since this is the intuitive behavior.
+      this.media = sliceMedia(
+        sortMedia(
+          this.artist.coverMedia,
+          media,
+          isShow ? MediaSorting.ReleaseDateDescending : MediaSorting.AlphabeticalAscending,
+        ),
+        !isShow,
+      )
+      fetchArtwork(this.media)
+    })
   }
 }

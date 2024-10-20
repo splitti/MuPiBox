@@ -56,6 +56,18 @@ export class PlayerService {
     return this.config
   }
 
+  /**
+   * Says the given {@link text} with TTS if TTS is enabled.
+   * @param text - The text that should be spoken with TTS.
+   */
+  public sayText(text: string): void {
+    this.getConfig().subscribe((config) => {
+      if (config.tts == null || config.tts.enabled === true) {
+        this.say(text)
+      }
+    })
+  }
+
   sendCmd(cmd: PlayerCmds) {
     this.sendRequest(cmd)
   }
@@ -147,7 +159,7 @@ export class PlayerService {
     this.sendRequest(url)
   }
 
-  say(text: string) {
+  private say(text: string) {
     this.getConfig().subscribe((config) => {
       let url = `say/${encodeURIComponent(text)}`
 

@@ -6,6 +6,7 @@ import { type Observable, interval, switchMap } from 'rxjs'
 import type { Mupihat } from '../mupihat'
 import { PlayerService } from '../player.service'
 import { SonosApiConfig } from '../sonos-api'
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop'
 
 @Component({
   selector: 'mupihat-icon',
@@ -23,8 +24,10 @@ export class MupiHatIconComponent {
     private http: HttpClient,
     private playerService: PlayerService,
   ) {
-    this.mupihat$ = interval(5000).pipe(
+    // Every 2 seconds should be enough for timely charging update.
+    this.mupihat$ = interval(2000).pipe(
       switchMap((): Observable<Mupihat> => this.http.get<Mupihat>('http://localhost:8200/api/mupihat')),
+      takeUntilDestroyed(),
     )
     this.config$ = this.playerService.getConfig()
   }

@@ -1,0 +1,50 @@
+swiper-container {
+    --swiper-scrollbar-bg-color: rgba(255, 255, 255, 0.1);
+    --swiper-scrollbar-drag-bg-color: rgba(255, 255, 255, 0.3)
+}
+
+ion-back-button {
+    --min-height: 70px;
+    --min-width: 120px;
+    --icon-font-size: 30px;
+}
+
+ion-card {
+    width: 230px;
+    margin: 0 auto !important;
+}
+
+.media-card img {
+    width: 230px;
+    max-width: 230px !important;
+    min-width: 230px !important;
+}
+
+ion-card-title {
+    padding-bottom: 5px;
+}
+
+ion-row.media-card {
+    padding-top: 35px;
+    padding-bottom: 42px;
+}
+
+.truncate-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.button-container {
+    margin-top: -15px;
+    ion-button {
+        --padding-start: 50px;
+        --padding-end: 50px;
+        --border-radius: 6px;
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+}
+
+.battery-icon {
+    margin-right: 15px;
+}

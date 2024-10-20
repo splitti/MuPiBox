@@ -222,29 +222,13 @@ export class HomePage implements OnInit {
 
   resume() {
     if (this.monitor?.monitor === 'On') {
-      this.mediaService.setCategory('resume')
-      this.activityIndicatorService.create().then((indicator) => {
-        this.activityIndicatorVisible = true
-        indicator.present().then(() => {
-          const navigationExtras: NavigationExtras = {
-            state: {
-              resume: 'resume',
-              category: this.category,
-            },
-          }
-          this.router.navigate(['/medialist'], navigationExtras)
-        })
-      })
+      this.router.navigate(['/resume'])
     }
   }
 
   protected readText(text: string): void {
     if (this.monitor?.monitor === 'On') {
-      this.playerService.getConfig().subscribe((config) => {
-        if (config.tts == null || config.tts.enabled === true) {
-          this.playerService.say(text)
-        }
-      })
+      this.playerService.sayText(text)
     }
   }
 }

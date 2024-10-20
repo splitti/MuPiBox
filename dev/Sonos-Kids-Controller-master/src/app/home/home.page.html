@@ -1,6 +1,7 @@
 <ion-header class="home-header">
   <ion-toolbar color="light">
     <ion-buttons slot="start">
+      <!-- TODO: make normal link -->
       <ion-button (click)="resume()">
         <ion-icon slot="icon-only" name="timer-outline"></ion-icon>
       </ion-button>
@@ -17,7 +18,7 @@
       </ion-segment-button>
     </ion-segment>
     
-    <!--TODO: Fix alignement of category tabs -->
+    <!--TODO: Fix alignement of category tabs. -->
     <ion-buttons slot="end">
       @if ((network$ | async)?.onlinestate ==='online') {
         <ion-button class="OnlineState" (click)="editButtonPressed()">
