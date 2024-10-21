@@ -35,7 +35,6 @@ import type { Artist } from '../artist'
 import { ArtworkService } from '../artwork.service'
 import type { Media } from '../media'
 import { MediaService } from '../media.service'
-import type { Monitor } from '../monitor'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
 import type { Network } from '../network'
 import { PlayerService } from '../player.service'
@@ -70,7 +69,6 @@ import { SonosApiConfig } from '../sonos-api'
 export class HomePage implements OnInit {
   artists: Artist[] = []
   media: Media[] = []
-  monitor: Monitor
   covers = {}
   activityIndicatorVisible = false
   editButtonclickCount = 0
@@ -109,10 +107,6 @@ export class HomePage implements OnInit {
 
   ngOnInit() {
     this.mediaService.setCategory(this.category)
-    this.mediaService.monitor$.subscribe((monitor) => {
-      this.monitor = monitor
-    })
-
     this.update()
   }
 
@@ -132,13 +126,13 @@ export class HomePage implements OnInit {
     }
   }
 
-  categoryChanged(event: any): void {
+  public categoryChanged(event: any): void {
     this.category = event.detail.value
     this.mediaService.setCategory(this.category)
     this.update()
   }
 
-  update() {
+  private update(): void {
     if (this.category === 'audiobook' || this.category === 'music' || this.category === 'other') {
       lastValueFrom(this.mediaService.fetchArtistData(this.category))
         .then((artists) => {
@@ -167,35 +161,31 @@ export class HomePage implements OnInit {
   }
 
   artistCoverClicked(clickedArtist: Artist) {
-    if (this.monitor?.monitor === 'On') {
-      this.activityIndicatorService.create().then((indicator) => {
-        this.activityIndicatorVisible = true
-        indicator.present().then(() => {
-          const navigationExtras: NavigationExtras = {
-            state: {
-              artist: clickedArtist,
-            },
-          }
-          this.router.navigate(['/medialist'], navigationExtras)
-        })
+    this.activityIndicatorService.create().then((indicator) => {
+      this.activityIndicatorVisible = true
+      indicator.present().then(() => {
+        const navigationExtras: NavigationExtras = {
+          state: {
+            artist: clickedArtist,
+          },
+        }
+        this.router.navigate(['/medialist'], navigationExtras)
       })
-    }
+    })
   }
 
   mediaCoverClicked(clickedMedia: Media) {
-    if (this.monitor?.monitor === 'On') {
-      this.activityIndicatorService.create().then((indicator) => {
-        this.activityIndicatorVisible = true
-        indicator.present().then(() => {
-          const navigationExtras: NavigationExtras = {
-            state: {
-              media: clickedMedia,
-            },
-          }
-          this.router.navigate(['/player'], navigationExtras)
-        })
+    this.activityIndicatorService.create().then((indicator) => {
+      this.activityIndicatorVisible = true
+      indicator.present().then(() => {
+        const navigationExtras: NavigationExtras = {
+          state: {
+            media: clickedMedia,
+          },
+        }
+        this.router.navigate(['/player'], navigationExtras)
       })
-    }
+    })
   }
 
   editButtonPressed() {
@@ -221,14 +211,10 @@ export class HomePage implements OnInit {
   }
 
   resume() {
-    if (this.monitor?.monitor === 'On') {
-      this.router.navigate(['/resume'])
-    }
+    this.router.navigate(['/resume'])
   }
 
   protected readText(text: string): void {
-    if (this.monitor?.monitor === 'On') {
-      this.playerService.sayText(text)
-    }
+    this.playerService.sayText(text)
   }
 }

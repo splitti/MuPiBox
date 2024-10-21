@@ -21,7 +21,6 @@ import type { Artist } from '../artist'
 import { ArtworkService } from '../artwork.service'
 import { AsyncPipe } from '@angular/common'
 import { MediaService } from '../media.service'
-import type { Monitor } from '../monitor'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
 import { PlayerService } from '../player.service'
 import type { Subscription } from 'rxjs'
@@ -55,7 +54,6 @@ export class MedialistPage implements OnInit {
   artist: Artist
   media: Media[] = []
   covers = {}
-  monitor: Monitor
   activityIndicatorVisible = false
   private getMediaFromArtistSubscription?: Subscription
 
@@ -81,10 +79,6 @@ export class MedialistPage implements OnInit {
 
     // Retreive data through subscription above
     this.mediaService.publishArtistMedia()
-
-    this.mediaService.monitor$.subscribe((monitor) => {
-      this.monitor = monitor
-    })
   }
 
   ngOnDestroy() {
@@ -99,25 +93,21 @@ export class MedialistPage implements OnInit {
   }
 
   coverClicked(clickedMedia: Media) {
-    if (this.monitor?.monitor === 'On') {
-      this.activityIndicatorService.create().then((indicator) => {
-        this.activityIndicatorVisible = true
-        indicator.present().then(() => {
-          const navigationExtras: NavigationExtras = {
-            state: {
-              media: clickedMedia,
-            },
-          }
-          this.router.navigate(['/player'], navigationExtras)
-        })
+    this.activityIndicatorService.create().then((indicator) => {
+      this.activityIndicatorVisible = true
+      indicator.present().then(() => {
+        const navigationExtras: NavigationExtras = {
+          state: {
+            media: clickedMedia,
+          },
+        }
+        this.router.navigate(['/player'], navigationExtras)
       })
-    }
+    })
   }
 
   mediaNameClicked(clickedMedia: Media) {
-    if (this.monitor?.monitor === 'On') {
-      this.playerService.sayText(clickedMedia.title)
-    }
+    this.playerService.sayText(clickedMedia.title)
   }
 
   private fetchMedia(): void {

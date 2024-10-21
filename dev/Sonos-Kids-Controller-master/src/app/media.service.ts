@@ -11,7 +11,6 @@ import type { CurrentShow } from './current.show'
 import type { CurrentSpotify } from './current.spotify'
 import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
-import type { Monitor } from './monitor'
 import type { Network } from './network'
 import { PlayerService } from './player.service'
 import { RssFeedService } from './rssfeed.service'
@@ -33,9 +32,7 @@ export class MediaService {
   public readonly current$: Observable<CurrentSpotify>
   public readonly local$: Observable<CurrentMPlayer>
   public readonly network$: Observable<Network>
-  public readonly monitor$: Observable<Monitor>
   public readonly albumStop$: Observable<AlbumStop>
-  public readonly networkLocal$: Observable<Network>
   public readonly playlist$: Observable<CurrentPlaylist>
   public readonly episode$: Observable<CurrentEpisode>
   public readonly show$: Observable<CurrentShow>
@@ -100,13 +97,6 @@ export class MediaService {
     this.network$ = interval(1000).pipe(
       // Once a second after subscribe, way too frequent!
       switchMap((): Observable<Network> => this.http.get<Network>(`http://${this.ip}:8200/api/network`)),
-      // Replay the most recent (bufferSize) emission on each subscription
-      // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
-      shareReplay({ bufferSize: 1, refCount: false }),
-    )
-    this.monitor$ = interval(1000).pipe(
-      // Once a second after subscribe, way too frequent!
-      switchMap((): Observable<Monitor> => this.http.get<Monitor>(`http://${this.ip}:8200/api/monitor`)),
       // Replay the most recent (bufferSize) emission on each subscription
       // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
       shareReplay({ bufferSize: 1, refCount: false }),
@@ -443,7 +433,7 @@ export class MediaService {
   }
 
   // Collect albums from a given artist in the current category
-  getMediaFromArtist(artist: Artist): Observable<Media[]> {
+  public getMediaFromArtist(artist: Artist): Observable<Media[]> {
     return this.artistMediaSubject.pipe(
       map((media: Media[]) => {
         return media.filter((currentMedia) => currentMedia.artist === artist.name)

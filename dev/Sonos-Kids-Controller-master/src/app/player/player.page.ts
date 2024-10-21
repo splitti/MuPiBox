@@ -39,7 +39,6 @@ import type { CurrentSpotify } from '../current.spotify'
 import { FormsModule } from '@angular/forms'
 import type { Media } from '../media'
 import { MediaService } from '../media.service'
-import type { Monitor } from '../monitor'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
 import { NavController } from '@ionic/angular/standalone'
 import type { Observable } from 'rxjs'
@@ -74,7 +73,6 @@ export class PlayerPage implements OnInit {
 
   media: Media
   resumemedia: Media
-  monitor: Monitor
   albumStop: AlbumStop
   resumePlay = false
   resumeIndex: number
@@ -154,28 +152,23 @@ export class PlayerPage implements OnInit {
     this.artworkService.getArtwork(this.media).subscribe((url) => {
       this.cover = url
     })
-    this.mediaService.monitor$.subscribe((monitor) => {
-      this.monitor = monitor
-    })
     this.mediaService.albumStop$.subscribe((albumStop) => {
       this.albumStop = albumStop
     })
   }
 
   seek() {
-    if (this.monitor?.monitor === 'On') {
-      const newValue = +this.range.value
-      if (this.media.type === 'spotify') {
-        if (this.media.showid?.length > 0) {
-          const duration = this.currentEpisode?.duration_ms
-          this.playerService.seekPosition(duration * (newValue / 100))
-        } else {
-          const duration = this.currentPlayedSpotify?.item.duration_ms
-          this.playerService.seekPosition(duration * (newValue / 100))
-        }
-      } else if (this.media.type === 'library' || this.media.type === 'rss') {
-        this.playerService.seekPosition(newValue)
+    const newValue = +this.range.value
+    if (this.media.type === 'spotify') {
+      if (this.media.showid?.length > 0) {
+        const duration = this.currentEpisode?.duration_ms
+        this.playerService.seekPosition(duration * (newValue / 100))
+      } else {
+        const duration = this.currentPlayedSpotify?.item.duration_ms
+        this.playerService.seekPosition(duration * (newValue / 100))
       }
+    } else if (this.media.type === 'library' || this.media.type === 'rss') {
+      this.playerService.seekPosition(newValue)
     }
   }
 
@@ -387,77 +380,61 @@ export class PlayerPage implements OnInit {
   }
 
   volUp() {
-    if (this.monitor?.monitor === 'On') {
-      this.playerService.sendCmd(PlayerCmds.VOLUMEUP)
-    }
+    this.playerService.sendCmd(PlayerCmds.VOLUMEUP)
   }
 
   volDown() {
-    if (this.monitor?.monitor === 'On') {
-      this.playerService.sendCmd(PlayerCmds.VOLUMEDOWN)
-    }
+    this.playerService.sendCmd(PlayerCmds.VOLUMEDOWN)
   }
 
   skipPrev() {
-    if (this.monitor?.monitor === 'On') {
-      if (this.playing) {
-        this.playerService.sendCmd(PlayerCmds.PREVIOUS)
-      } else {
-        this.playing = true
-        this.playerService.sendCmd(PlayerCmds.PREVIOUS)
-      }
+    if (this.playing) {
+      this.playerService.sendCmd(PlayerCmds.PREVIOUS)
+    } else {
+      this.playing = true
+      this.playerService.sendCmd(PlayerCmds.PREVIOUS)
     }
   }
 
   skipNext() {
-    if (this.monitor?.monitor === 'On') {
-      if (this.playing) {
-        this.playerService.sendCmd(PlayerCmds.NEXT)
-      } else {
-        this.playing = true
-        this.playerService.sendCmd(PlayerCmds.NEXT)
-      }
+    if (this.playing) {
+      this.playerService.sendCmd(PlayerCmds.NEXT)
+    } else {
+      this.playing = true
+      this.playerService.sendCmd(PlayerCmds.NEXT)
     }
   }
 
   toggleshuffle() {
-    if (this.monitor?.monitor === 'On') {
-      if (this.media.shuffle) {
-        this.shufflechanged++
-        this.media.shuffle = false
-        this.playerService.sendCmd(PlayerCmds.SHUFFLEOFF)
-      } else {
-        this.shufflechanged++
-        this.media.shuffle = true
-        this.playerService.sendCmd(PlayerCmds.SHUFFLEON)
-      }
+    if (this.media.shuffle) {
+      this.shufflechanged++
+      this.media.shuffle = false
+      this.playerService.sendCmd(PlayerCmds.SHUFFLEOFF)
+    } else {
+      this.shufflechanged++
+      this.media.shuffle = true
+      this.playerService.sendCmd(PlayerCmds.SHUFFLEON)
     }
   }
 
   playPause() {
-    if (this.monitor?.monitor === 'On') {
-      if (this.playing) {
-        //this.playing = false;
-        this.playerService.sendCmd(PlayerCmds.PAUSE)
-        if (this.media.type === 'spotify' || this.media.type === 'library' || this.media.type === 'rss') {
-          this.saveResumeFiles()
-        }
-      } else {
-        //this.playing = true;
-        this.playerService.sendCmd(PlayerCmds.PLAY)
+    if (this.playing) {
+      //this.playing = false;
+      this.playerService.sendCmd(PlayerCmds.PAUSE)
+      if (this.media.type === 'spotify' || this.media.type === 'library' || this.media.type === 'rss') {
+        this.saveResumeFiles()
       }
+    } else {
+      //this.playing = true;
+      this.playerService.sendCmd(PlayerCmds.PLAY)
     }
   }
 
   seekForward() {
-    if (this.monitor?.monitor === 'On') {
-      this.playerService.sendCmd(PlayerCmds.SEEKFORWARD)
-    }
+    this.playerService.sendCmd(PlayerCmds.SEEKFORWARD)
   }
 
   seekBack() {
-    if (this.monitor?.monitor === 'On') {
-      this.playerService.sendCmd(PlayerCmds.SEEKBACK)
-    }
+    this.playerService.sendCmd(PlayerCmds.SEEKBACK)
   }
 }
