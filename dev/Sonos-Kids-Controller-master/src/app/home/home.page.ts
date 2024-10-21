@@ -33,12 +33,13 @@ import { SwiperContainer } from 'swiper/element'
 import { ActivityIndicatorService } from '../activity-indicator.service'
 import type { Artist } from '../artist'
 import { ArtworkService } from '../artwork.service'
-import type { Media } from '../media'
+import type { CategoryType, Media } from '../media'
 import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
 import type { Network } from '../network'
 import { PlayerService } from '../player.service'
 import { SonosApiConfig } from '../sonos-api'
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop'
 
 @Component({
   selector: 'app-home',
@@ -74,7 +75,7 @@ export class HomePage implements OnInit {
   editButtonclickCount = 0
   editClickTimer = 0
 
-  protected category = 'audiobook'
+  protected category: CategoryType = 'audiobook'
 
   protected readonly network$: Observable<Network>
   protected readonly config$: Observable<SonosApiConfig>
@@ -92,12 +93,12 @@ export class HomePage implements OnInit {
     this.config$ = this.playerService.getConfig()
 
     // If the network changes, we want to update our list.
-    // TODO: Unsubscribe?
     this.network$
       .pipe(
         filter((network) => network.ip !== undefined),
         map((network) => network.onlinestate),
         distinctUntilChanged(),
+        takeUntilDestroyed(),
       )
       .subscribe((_) => {
         this.update()

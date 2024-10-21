@@ -300,7 +300,6 @@ export class PlayerPage implements OnInit {
   }
 
   resumePlayback() {
-    console.log('Media object after start resumePlayback:', this.media)
     if (this.media.type === 'spotify' && !this.media.shuffle) {
       this.playerService.resumeMedia(this.media)
     } else if (this.media.type === 'library') {

@@ -33,18 +33,3 @@ ion-row.media-card {
     overflow: hidden;
     text-overflow: ellipsis;
 }
-
-.button-container {
-    margin-top: -15px;
-    ion-button {
-        --padding-start: 50px;
-        --padding-end: 50px;
-        --border-radius: 6px;
-        padding-left: 20px;
-        padding-right: 20px;
-    }
-}
-
-.battery-icon {
-    margin-right: 15px;
-}

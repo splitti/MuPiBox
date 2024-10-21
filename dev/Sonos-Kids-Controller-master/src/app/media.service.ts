@@ -420,7 +420,7 @@ export class MediaService {
   }
 
   // Choose which media category should be displayed in the app
-  setCategory(category: string) {
+  setCategory(category: CategoryType) {
     this.category = category
   }
 }

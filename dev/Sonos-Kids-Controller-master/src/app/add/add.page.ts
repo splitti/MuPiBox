@@ -1,11 +1,7 @@
-import { AfterViewInit, Component, OnInit, ViewEncapsulation } from '@angular/core'
 import { ActivatedRoute, Router } from '@angular/router'
+import { AfterViewInit, Component, OnInit, ViewEncapsulation } from '@angular/core'
 import { AlertController, NavController } from '@ionic/angular/standalone'
-import { Media, MediaSorting } from '../media'
-import { PlayerCmds, PlayerService } from '../player.service'
-
-import { FormsModule } from '@angular/forms'
-import type { NgForm } from '@angular/forms'
+import { CategoryType, Media, MediaSorting } from '../media'
 import {
   IonButton,
   IonButtons,
@@ -25,13 +21,17 @@ import {
   IonSelectOption,
   IonToolbar,
 } from '@ionic/angular/standalone'
-import { addIcons } from 'ionicons'
+import { PlayerCmds, PlayerService } from '../player.service'
 import { arrowBackOutline, saveOutline } from 'ionicons/icons'
-import type { Observable } from 'rxjs'
-import Keyboard from 'simple-keyboard'
+
 import { ActivityIndicatorService } from '../activity-indicator.service'
+import { FormsModule } from '@angular/forms'
+import Keyboard from 'simple-keyboard'
 import { MediaService } from '../media.service'
+import type { NgForm } from '@angular/forms'
+import type { Observable } from 'rxjs'
 import type { Validate } from '../validate'
+import { addIcons } from 'ionicons'
 
 @Component({
   selector: 'app-add',
@@ -62,7 +62,7 @@ import type { Validate } from '../validate'
 })
 export class AddPage implements OnInit, AfterViewInit {
   source = 'spotify'
-  category = 'audiobook'
+  category: CategoryType = 'audiobook'
   sourceType = 'spotifyURL'
   sorting: MediaSorting = MediaSorting.AlphabeticalAscending
   keyboard: Keyboard

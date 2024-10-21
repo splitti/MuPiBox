@@ -1,12 +1,12 @@
-import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http'
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing'
 import { ComponentFixture, TestBed } from '@angular/core/testing'
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing'
 import { createArtist, createMedia } from 'src/app/fixtures'
+import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http'
 
-import { RouterTestingModule } from '@angular/router/testing'
-import { of } from 'rxjs'
 import { MediaSorting } from '../media'
 import { MedialistPage } from './medialist.page'
+import { RouterTestingModule } from '@angular/router/testing'
+import { of } from 'rxjs'
 
 describe('MedialistPage', () => {
   let component: MedialistPage
@@ -23,9 +23,7 @@ describe('MedialistPage', () => {
 
     fixture = TestBed.createComponent(MedialistPage)
     component = fixture.componentInstance
-    // TODO: Artist may be undefined when strictly following TS types, this should be corrected in
-    // medialist.page.ts
-    component.artist = createArtist()
+    ;(component as any).artist = createArtist()
     fixture.detectChanges()
   })
 
