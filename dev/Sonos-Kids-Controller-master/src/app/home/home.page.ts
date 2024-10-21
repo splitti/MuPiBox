@@ -78,7 +78,6 @@ export class HomePage implements OnInit {
   protected category: CategoryType = 'audiobook'
 
   protected readonly network$: Observable<Network>
-  protected readonly config$: Observable<SonosApiConfig>
 
   needsUpdate = false
 
@@ -90,7 +89,6 @@ export class HomePage implements OnInit {
     private router: Router,
   ) {
     this.network$ = this.mediaService.network$
-    this.config$ = this.playerService.getConfig()
 
     // If the network changes, we want to update our list.
     this.network$
