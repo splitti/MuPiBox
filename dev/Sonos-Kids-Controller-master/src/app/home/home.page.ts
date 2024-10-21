@@ -167,6 +167,7 @@ export class HomePage implements OnInit {
         const navigationExtras: NavigationExtras = {
           state: {
             artist: clickedArtist,
+            category: this.category,
           },
         }
         this.router.navigate(['/medialist'], navigationExtras)

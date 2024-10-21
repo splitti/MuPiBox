@@ -1,5 +1,6 @@
 import { ActivatedRoute, NavigationExtras, Router } from '@angular/router'
 import { CUSTOM_ELEMENTS_SCHEMA, Component, OnInit } from '@angular/core'
+import { CategoryType, Media, MediaSorting } from '../media'
 import {
   IonBackButton,
   IonButtons,
@@ -14,7 +15,6 @@ import {
   IonTitle,
   IonToolbar,
 } from '@ionic/angular/standalone'
-import { Media, MediaSorting } from '../media'
 
 import { ActivityIndicatorService } from '../activity-indicator.service'
 import type { Artist } from '../artist'
@@ -23,9 +23,9 @@ import { AsyncPipe } from '@angular/common'
 import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
 import { PlayerService } from '../player.service'
-import type { Subscription } from 'rxjs'
 import { addIcons } from 'ionicons'
 import { arrowBackOutline } from 'ionicons/icons'
+import { lastValueFrom } from 'rxjs'
 
 @Component({
   selector: 'app-medialist',
@@ -51,11 +51,11 @@ import { arrowBackOutline } from 'ionicons/icons'
   ],
 })
 export class MedialistPage implements OnInit {
-  artist: Artist
-  media: Media[] = []
-  covers = {}
-  activityIndicatorVisible = false
-  private getMediaFromArtistSubscription?: Subscription
+  protected artist?: Artist
+  protected category: CategoryType = 'audiobook'
+  protected media: Media[] = []
+  protected covers = {}
+  protected activityIndicatorVisible = false
 
   constructor(
     private route: ActivatedRoute,
@@ -66,9 +66,8 @@ export class MedialistPage implements OnInit {
     private activityIndicatorService: ActivityIndicatorService,
   ) {
     this.route.queryParams.subscribe((_params) => {
-      if (this.router.getCurrentNavigation()?.extras.state?.artist) {
-        this.artist = this.router.getCurrentNavigation().extras.state.artist
-      }
+      this.artist = this.router.getCurrentNavigation().extras.state?.artist
+      this.category = this.router.getCurrentNavigation().extras.state?.category ?? 'audiobook'
     })
 
     addIcons({ arrowBackOutline })
@@ -76,13 +75,6 @@ export class MedialistPage implements OnInit {
 
   ngOnInit() {
     this.fetchMedia()
-
-    // Retreive data through subscription above
-    this.mediaService.publishArtistMedia()
-  }
-
-  ngOnDestroy() {
-    this.getMediaFromArtistSubscription?.unsubscribe()
   }
 
   ionViewDidLeave() {
@@ -158,17 +150,19 @@ export class MedialistPage implements OnInit {
       (this.artist.coverMedia.showid && this.artist.coverMedia.showid.length > 0) ||
       (this.artist.coverMedia.type === 'rss' && this.artist.coverMedia.id.length > 0)
 
-    this.getMediaFromArtistSubscription = this.mediaService.getMediaFromArtist(this.artist).subscribe((media) => {
-      // We need to sort first and then slice since this is the intuitive behavior.
-      this.media = sliceMedia(
-        sortMedia(
-          this.artist.coverMedia,
-          media,
-          isShow ? MediaSorting.ReleaseDateDescending : MediaSorting.AlphabeticalAscending,
-        ),
-        !isShow,
-      )
-      fetchArtwork(this.media)
-    })
+    lastValueFrom(this.mediaService.fetchMediaFromArtist(this.artist, this.category))
+      .then((media) => {
+        // We need to sort first and then slice since this is the intuitive behavior.
+        this.media = sliceMedia(
+          sortMedia(
+            this.artist.coverMedia,
+            media,
+            isShow ? MediaSorting.ReleaseDateDescending : MediaSorting.AlphabeticalAscending,
+          ),
+          !isShow,
+        )
+        fetchArtwork(this.media)
+      })
+      .catch((error) => console.error(error))
   }
 }

@@ -208,6 +208,15 @@ export class MediaService {
     })
   }
 
+  // Collect albums from a given artist in the current category
+  public fetchMediaFromArtist(artist: Artist, category: CategoryType): Observable<Media[]> {
+    return this.fetchMedia(category).pipe(
+      map((media: Media[]) => {
+        return media.filter((currentMedia) => currentMedia.artist === artist.name)
+      }),
+    )
+  }
+
   public fetchMediaData(category: CategoryType): Observable<Media[]> {
     return this.fetchMedia(category).pipe(
       map((media: Media[]) => {
@@ -274,7 +283,7 @@ export class MediaService {
     )
   }
 
-  public fetchResumeData() {
+  public fetchResumeData(): Observable<Media[]> {
     // Category is irrelevant if 'resume' is set to true.
     return this.updateMedia('http://localhost:8200/api/activeresume', true, 'resume').pipe(
       map((media: Media[]) => {
