@@ -150,6 +150,7 @@ export class MedialistPage implements OnInit {
 
     lastValueFrom(this.mediaService.fetchMediaFromArtist(this.artist, this.category))
       .then((media) => {
+        console.log('bla')
         // We need to sort first and then slice since this is the intuitive behavior.
         this.media = sliceMedia(
           sortMedia(
