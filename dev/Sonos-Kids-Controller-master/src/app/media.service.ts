@@ -14,7 +14,6 @@ import { Injectable } from '@angular/core'
 import type { Network } from './network'
 import { PlayerService } from './player.service'
 import { RssFeedService } from './rssfeed.service'
-import type { SonosApiConfig } from './sonos-api'
 import { SpotifyService } from './spotify.service'
 import type { Validate } from './validate'
 import type { WLAN } from './wlan'
@@ -24,9 +23,7 @@ import { environment } from '../environments/environment'
   providedIn: 'root',
 })
 export class MediaService {
-  network: Network
   ip: string
-  hostname: string
   response = ''
   private category: CategoryType = 'audiobook'
   public readonly current$: Observable<CurrentSpotify>
@@ -37,12 +34,8 @@ export class MediaService {
   public readonly episode$: Observable<CurrentEpisode>
   public readonly show$: Observable<CurrentShow>
   public readonly validate$: Observable<Validate>
-  public readonly config$: Observable<SonosApiConfig>
 
   private wlanSubject = new Subject<WLAN[]>()
-  private resumeSubject = new Subject<Media[]>()
-
-  private artistMediaSubject = new Subject<Media[]>()
 
   constructor(
     private http: HttpClient,
@@ -115,13 +108,6 @@ export class MediaService {
       // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
       shareReplay({ bufferSize: 1, refCount: false }),
     )
-    this.config$ = interval(1000).pipe(
-      // Once a second after subscribe, way too frequent!
-      switchMap((): Observable<SonosApiConfig> => this.http.get<SonosApiConfig>(`http://${this.ip}:8200/api/sonos`)),
-      // Replay the most recent (bufferSize) emission on each subscription
-      // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
-      shareReplay({ bufferSize: 1, refCount: false }),
-    )
   }
 
   // --------------------------------------------
@@ -130,13 +116,6 @@ export class MediaService {
 
   public fetchRawMedia(): Observable<Media[]> {
     return this.http.get<Media[]>('http://localhost:8200/api/data')
-  }
-
-  updateRawResume() {
-    const url = environment.production ? '../api/resume' : `http://${this.ip}:8200/api/resume`
-    this.http.get<Media[]>(url).subscribe((media) => {
-      this.resumeSubject.next(media)
-    })
   }
 
   updateWLAN() {
@@ -186,7 +165,6 @@ export class MediaService {
 
     this.http.post(url, body, { responseType: 'text' }).subscribe((response) => {
       this.response = response
-      this.updateRawResume()
     })
   }
 
@@ -195,7 +173,6 @@ export class MediaService {
 
     this.http.post(url, media, { responseType: 'text' }).subscribe((response) => {
       this.response = response
-      this.updateRawResume()
     })
   }
 
@@ -283,7 +260,7 @@ export class MediaService {
     )
   }
 
-  public fetchResumeData(): Observable<Media[]> {
+  public fetchActiveResumeData(): Observable<Media[]> {
     // Category is irrelevant if 'resume' is set to true.
     return this.updateMedia('http://localhost:8200/api/activeresume', true, 'resume').pipe(
       map((media: Media[]) => {
@@ -430,22 +407,6 @@ export class MediaService {
           }
           return currentMedia
         })
-      }),
-    )
-  }
-
-  publishArtistMedia() {
-    const url = environment.production ? '../api/data' : `http://${this.ip}:8200/api/data`
-    this.updateMedia(url, false, this.category).subscribe((media) => {
-      this.artistMediaSubject.next(media)
-    })
-  }
-
-  // Collect albums from a given artist in the current category
-  public getMediaFromArtist(artist: Artist): Observable<Media[]> {
-    return this.artistMediaSubject.pipe(
-      map((media: Media[]) => {
-        return media.filter((currentMedia) => currentMedia.artist === artist.name)
       }),
     )
   }

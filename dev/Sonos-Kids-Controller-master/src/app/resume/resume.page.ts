@@ -107,7 +107,7 @@ export class ResumePage implements OnInit {
   }
 
   private fetchResumeMedia(): void {
-    lastValueFrom(this.mediaService.fetchResumeData())
+    lastValueFrom(this.mediaService.fetchActiveResumeData())
       .then((media) => {
         this.media = media
         for (const currentMedia of this.media) {
