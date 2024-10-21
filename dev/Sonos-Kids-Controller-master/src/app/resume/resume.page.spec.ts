@@ -1,12 +1,7 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing'
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing'
-import { createArtist, createMedia } from 'src/app/fixtures'
 import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http'
-
-import { MediaSorting } from '../media'
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing'
+import { ComponentFixture, TestBed } from '@angular/core/testing'
 import { ResumePage } from './resume.page'
-import { RouterTestingModule } from '@angular/router/testing'
-import { of } from 'rxjs'
 
 describe('ResumePage', () => {
   let component: ResumePage

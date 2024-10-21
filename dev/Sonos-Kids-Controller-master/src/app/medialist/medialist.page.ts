@@ -1,6 +1,5 @@
-import { ActivatedRoute, NavigationExtras, Router } from '@angular/router'
 import { CUSTOM_ELEMENTS_SCHEMA, Component, OnInit } from '@angular/core'
-import { CategoryType, Media, MediaSorting } from '../media'
+import { ActivatedRoute, NavigationExtras, Router } from '@angular/router'
 import {
   IonBackButton,
   IonButtons,
@@ -15,17 +14,18 @@ import {
   IonTitle,
   IonToolbar,
 } from '@ionic/angular/standalone'
+import { CategoryType, Media, MediaSorting } from '../media'
 
-import { ActivityIndicatorService } from '../activity-indicator.service'
-import type { Artist } from '../artist'
-import { ArtworkService } from '../artwork.service'
 import { AsyncPipe } from '@angular/common'
-import { MediaService } from '../media.service'
-import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
-import { PlayerService } from '../player.service'
 import { addIcons } from 'ionicons'
 import { arrowBackOutline } from 'ionicons/icons'
 import { lastValueFrom } from 'rxjs'
+import { ActivityIndicatorService } from '../activity-indicator.service'
+import type { Artist } from '../artist'
+import { ArtworkService } from '../artwork.service'
+import { MediaService } from '../media.service'
+import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
+import { PlayerService } from '../player.service'
 
 @Component({
   selector: 'app-medialist',

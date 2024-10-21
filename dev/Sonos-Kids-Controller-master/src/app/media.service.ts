@@ -1,7 +1,10 @@
-import type { CategoryType, Media } from './media'
 import { Observable, Subject, from, iif, interval, of } from 'rxjs'
 import { map, mergeAll, mergeMap, shareReplay, switchMap, toArray } from 'rxjs/operators'
+import type { CategoryType, Media } from './media'
 
+import { HttpClient } from '@angular/common/http'
+import { Injectable } from '@angular/core'
+import { environment } from '../environments/environment'
 import type { AlbumStop } from './albumstop'
 import type { Artist } from './artist'
 import type { CurrentEpisode } from './current.episode'
@@ -9,8 +12,6 @@ import type { CurrentMPlayer } from './current.mplayer'
 import type { CurrentPlaylist } from './current.playlist'
 import type { CurrentShow } from './current.show'
 import type { CurrentSpotify } from './current.spotify'
-import { HttpClient } from '@angular/common/http'
-import { Injectable } from '@angular/core'
 import { Mupihat } from './mupihat'
 import type { Network } from './network'
 import { PlayerService } from './player.service'
@@ -18,7 +19,6 @@ import { RssFeedService } from './rssfeed.service'
 import { SpotifyService } from './spotify.service'
 import type { Validate } from './validate'
 import type { WLAN } from './wlan'
-import { environment } from '../environments/environment'
 
 @Injectable({
   providedIn: 'root',

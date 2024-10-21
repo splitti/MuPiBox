@@ -1,6 +1,6 @@
+import { map, mergeAll, toArray } from 'rxjs/operators'
 import type { CategoryType, Media } from './media'
 import { ExtraDataMedia, Utils } from './utils'
-import { map, mergeAll, toArray } from 'rxjs/operators'
 
 import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'

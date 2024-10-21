@@ -1,6 +1,6 @@
-import type { CategoryType, Media } from './media'
-import { ExtraDataMedia, Utils } from './utils'
 import { Observable, defer, of, range, throwError } from 'rxjs'
+import { delay, flatMap, map, mergeAll, mergeMap, retryWhen, take, tap, toArray } from 'rxjs/operators'
+import type { CategoryType, Media } from './media'
 import type {
   SpotifyAlbumsResponse,
   SpotifyAlbumsResponseItem,
@@ -10,7 +10,7 @@ import type {
   SpotifyEpisodesResponse,
   SpotifyShowResponse,
 } from './spotify'
-import { delay, flatMap, map, mergeAll, mergeMap, retryWhen, take, tap, toArray } from 'rxjs/operators'
+import { ExtraDataMedia, Utils } from './utils'
 
 import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'

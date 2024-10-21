@@ -2,6 +2,7 @@ import { CUSTOM_ELEMENTS_SCHEMA, Component, OnInit } from '@angular/core'
 import { NavigationExtras, Router } from '@angular/router'
 
 import { CommonModule } from '@angular/common'
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop'
 import { FormsModule } from '@angular/forms'
 import {
   IonButton,
@@ -38,8 +39,6 @@ import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
 import type { Network } from '../network'
 import { PlayerService } from '../player.service'
-import { SonosApiConfig } from '../sonos-api'
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop'
 
 @Component({
   selector: 'app-home',

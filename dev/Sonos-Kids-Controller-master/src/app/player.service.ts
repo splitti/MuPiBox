@@ -2,10 +2,10 @@ import { publishReplay, refCount } from 'rxjs/operators'
 
 import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
-import type { Media } from './media'
 import type { Observable } from 'rxjs'
-import type { SonosApiConfig } from './sonos-api'
 import { environment } from '../environments/environment'
+import type { Media } from './media'
+import type { SonosApiConfig } from './sonos-api'
 
 export enum PlayerCmds {
   PLAY = 'play',

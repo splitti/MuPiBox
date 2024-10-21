@@ -1,9 +1,8 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing'
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing'
 import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http'
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing'
+import { ComponentFixture, TestBed } from '@angular/core/testing'
 
 import { EditPage } from './edit.page'
-import { RouterTestingModule } from '@angular/router/testing'
 
 describe('EditPage', () => {
   let component: EditPage

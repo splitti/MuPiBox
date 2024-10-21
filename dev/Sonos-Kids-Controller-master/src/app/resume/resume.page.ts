@@ -1,4 +1,5 @@
 import { CUSTOM_ELEMENTS_SCHEMA, Component, OnInit } from '@angular/core'
+import { NavigationExtras, Router } from '@angular/router'
 import {
   IonBackButton,
   IonButtons,
@@ -13,18 +14,17 @@ import {
   IonTitle,
   IonToolbar,
 } from '@ionic/angular/standalone'
-import { NavigationExtras, Router } from '@angular/router'
 
-import { ArtworkService } from '../artwork.service'
 import { AsyncPipe } from '@angular/common'
 import { HttpClient } from '@angular/common/http'
+import { addIcons } from 'ionicons'
+import { arrowBackOutline } from 'ionicons/icons'
+import { lastValueFrom } from 'rxjs'
+import { ArtworkService } from '../artwork.service'
 import { Media } from '../media'
 import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
 import { PlayerService } from '../player.service'
-import { addIcons } from 'ionicons'
-import { arrowBackOutline } from 'ionicons/icons'
-import { lastValueFrom } from 'rxjs'
 
 @Component({
   selector: 'mupi-resume',

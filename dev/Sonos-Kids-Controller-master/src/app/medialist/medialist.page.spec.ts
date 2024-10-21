@@ -1,12 +1,12 @@
-import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing'
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing'
-import { createArtist, createMedia } from 'src/app/fixtures'
 import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http'
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing'
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing'
+import { createArtist, createMedia } from 'src/app/fixtures'
 
 import { ActivatedRoute } from '@angular/router'
+import { of } from 'rxjs'
 import { MediaSorting } from '../media'
 import { MedialistPage } from './medialist.page'
-import { of } from 'rxjs'
 
 describe('MedialistPage', () => {
   let component: MedialistPage
