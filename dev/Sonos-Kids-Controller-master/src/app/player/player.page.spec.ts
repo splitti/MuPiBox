@@ -1,9 +1,10 @@
-import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http'
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing'
 import { ComponentFixture, TestBed } from '@angular/core/testing'
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing'
+import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http'
 
-import { RouterTestingModule } from '@angular/router/testing'
+import { ActivatedRoute } from '@angular/router'
 import { PlayerPage } from './player.page'
+import { RouterTestingModule } from '@angular/router/testing'
 
 describe('PlayerPage', () => {
   let component: PlayerPage
@@ -12,8 +13,12 @@ describe('PlayerPage', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      imports: [IonicModule.forRoot(), RouterTestingModule, PlayerPage],
-      providers: [provideHttpClient(withInterceptorsFromDi()), provideHttpClientTesting()],
+      imports: [PlayerPage],
+      providers: [
+        provideHttpClient(withInterceptorsFromDi()),
+        provideHttpClientTesting(),
+        { provide: ActivatedRoute, useValue: {} },
+      ],
     }).compileComponents()
 
     httpClient = TestBed.inject(HttpTestingController)
@@ -22,7 +27,7 @@ describe('PlayerPage', () => {
     component = fixture.componentInstance
     component.media = {
       type: '',
-      category: '',
+      category: 'audiobook',
     }
     fixture.detectChanges()
   })

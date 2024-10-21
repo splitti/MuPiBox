@@ -112,14 +112,12 @@ export class PlayerPage implements OnInit {
     this.episode$ = this.mediaService.episode$
     this.show$ = this.mediaService.show$
 
-    this.route.queryParams.subscribe((_params) => {
-      if (this.router.getCurrentNavigation()?.extras.state?.media) {
-        this.media = this.router.getCurrentNavigation().extras.state.media
-        if (this.media.category === 'resume') {
-          this.resumePlay = true
-        }
+    if (this.router.getCurrentNavigation()?.extras.state?.media) {
+      this.media = this.router.getCurrentNavigation().extras.state.media
+      if (this.media.category === 'resume') {
+        this.resumePlay = true
       }
-    })
+    }
     addIcons({
       volumeLowOutline,
       pause,

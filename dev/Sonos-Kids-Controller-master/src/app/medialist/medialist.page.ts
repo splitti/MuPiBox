@@ -65,10 +65,8 @@ export class MedialistPage implements OnInit {
     private playerService: PlayerService,
     private activityIndicatorService: ActivityIndicatorService,
   ) {
-    this.route.queryParams.subscribe((_params) => {
-      this.artist = this.router.getCurrentNavigation().extras.state?.artist
-      this.category = this.router.getCurrentNavigation().extras.state?.category ?? 'audiobook'
-    })
+    this.artist = this.router.getCurrentNavigation()?.extras.state?.artist
+    this.category = this.router.getCurrentNavigation()?.extras.state?.category ?? 'audiobook'
 
     addIcons({ arrowBackOutline })
   }

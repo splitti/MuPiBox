@@ -91,12 +91,10 @@ export class AddPage implements OnInit, AfterViewInit {
     private activityIndicatorService: ActivityIndicatorService,
   ) {
     this.validate$ = this.mediaService.validate$
-    this.route.queryParams.subscribe((params) => {
-      if (this.router.getCurrentNavigation()?.extras.state) {
-        this.editMedia = this.router.getCurrentNavigation().extras.state.media
-        this.edit = true
-      }
-    })
+    if (this.router.getCurrentNavigation()?.extras.state) {
+      this.editMedia = this.router.getCurrentNavigation().extras.state.media
+      this.edit = true
+    }
     addIcons({ arrowBackOutline, saveOutline })
   }
 

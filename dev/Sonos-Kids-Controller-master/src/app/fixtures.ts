@@ -12,7 +12,7 @@ export const createFixture = <T>(data: T): ((additional_data?: Partial<T>) => T)
 
 export const createMedia = createFixture<Media>({
   type: '',
-  category: '',
+  category: 'audiobook',
 })
 
 export const createArtist = createFixture<Artist>({

@@ -1,10 +1,10 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing'
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing'
-import { MedialistPage, ResumePage } from './resume.page'
 import { createArtist, createMedia } from 'src/app/fixtures'
 import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http'
 
 import { MediaSorting } from '../media'
+import { ResumePage } from './resume.page'
 import { RouterTestingModule } from '@angular/router/testing'
 import { of } from 'rxjs'
 
@@ -15,13 +15,13 @@ describe('ResumePage', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      imports: [IonicModule.forRoot(), RouterTestingModule, ResumePage],
+      imports: [ResumePage],
       providers: [provideHttpClient(withInterceptorsFromDi()), provideHttpClientTesting()],
     }).compileComponents()
 
     httpClient = TestBed.inject(HttpTestingController)
 
-    fixture = TestBed.createComponent(MedialistPage)
+    fixture = TestBed.createComponent(ResumePage)
     component = fixture.componentInstance
     fixture.detectChanges()
   })

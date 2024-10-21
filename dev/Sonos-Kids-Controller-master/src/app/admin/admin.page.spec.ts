@@ -1,10 +1,10 @@
-import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http'
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing'
 import { ComponentFixture, TestBed } from '@angular/core/testing'
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing'
+import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http'
 
+import { AdminPage } from './admin.page'
 import { FormsModule } from '@angular/forms'
 import { UrlSerializer } from '@angular/router'
-import { AdminPage } from './admin.page'
 
 describe('AdminPage', () => {
   let component: AdminPage
@@ -13,7 +13,7 @@ describe('AdminPage', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      imports: [IonicModule.forRoot(), FormsModule, AdminPage],
+      imports: [FormsModule, AdminPage],
       providers: [UrlSerializer, provideHttpClient(withInterceptorsFromDi()), provideHttpClientTesting()],
     }).compileComponents()
 
