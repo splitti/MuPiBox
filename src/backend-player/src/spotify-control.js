@@ -98,27 +98,16 @@ setInterval(() => {
   const exec = require ('child_process').exec;
   exec(cmdVolume, (e, stdout, stderr) => {
     if (e instanceof Error){
-      //console.error(e);
-      throw e;
+      // TODO: Get this to run in development.
+      if (process.env.NODE_ENV === 'development') {
+        return
+      } else {
+        throw e;
+      }
     }
     currentMeta.volume = parseInt(stdout.split('[')[1].split('%')[0], 10);
-    //console.log('stdout', stdout);
-    //console.log('stderr', stderr);
   });
 }, 1000)
-
-// let cmdVolume = "/usr/bin/amixer sget Master | grep 'Right:'";
-// console.log(cmdVolume);
-// const exec = require ('child_process').exec;
-// exec(cmdVolume, (e, stdout, stderr) => {
-//   if (e instanceof Error){
-//     console.error(e);
-//     throw e;
-//   }
-//   currentMeta.volume = parseInt(stdout.split('[')[1].split('%')[0], 10);
-//   console.log('stdout', stdout);
-//   console.log('stderr', stderr);
-// });
 
   /*store device to be played back*/
 let activeDevice = "";
@@ -218,17 +207,6 @@ function writeCounter(){
 	})
 }
 
-// function writecurrentMeta(){
-// 	var json = JSON.stringify(currentMeta);
-// 	fs.writeFile(currentMetaFile, json, err => {
-// 		if (err) {
-// 			console.error(err)
-// 			return
-// 		}
-// 		log.debug(nowDate.toLocaleString() + ": [Spotify Control] Write currentMeta to " + currentMetaFile);
-// 	})
-// }
-
 function refreshToken(){
   spotifyApi.refreshAccessToken()
     .then(function(data) {
@@ -313,26 +291,7 @@ function handleSpotifyError(err, from){
   }
 }
 
-// async function getActiveDevice(){
-//   await spotifyApi.getMyCurrentPlaybackState().
-//   then(function(data) {
-//     log.debug(nowDate.toLocaleString() + ": [Spotify Control]Type:" + typeof(data.body.device.id));
-//     counter.countgetMyCurrentPlaybackState++;
-//     if (config.server.logLevel === 'debug'){writeCounter();}
-//     if (typeof(data.body.device.id) !== 'undefined'){
-//       activeDevice = "";
-//       log.debug(nowDate.toLocaleString() + ": [Spotify Control]Current active device is undefined");
-//     } else {
-//       activeDevice = data.body.device.id;
-//     }
-//     activeDevice = data.body.device.id;
-//     log.debug(nowDate.toLocaleString() + ": [Spotify Control]Current active device is " + activeDevice);
-//   }, function(err) {
-//     handleSpotifyError(err,"getActiveDevice");
-//   });
-// }
-
-  /*queries all devices and transfers playback to the first one discovered*/
+/*queries all devices and transfers playback to the first one discovered*/
 function setActiveDevice() {
     /*find devices first and choose first one available*/
   spotifyApi.getMyDevices()
@@ -450,19 +409,6 @@ function play(){
     }
   }
 }
-
-/* function jumpTo(offsetTrackNr){
-  console.log(offsetTrackNr);
-  spotifyApi.play({ offset: {"position": offsetTrackNr}})
-    .then(function() {
-      counter.countjumpto++;
-      if (config.server.logLevel === 'debug'){writeCounter();}
-      log.debug(nowDate.toLocaleString() + ': [Spotify Control] Jump to position ' + offsetTrackNr);
-		  writeplayerstatePlay();
-    }, function(err) {
-      handleSpotifyError(err,"jumpTo");
-    });
-} */
 
 function next(){
   if (currentMeta.currentPlayer == "spotify"){
