@@ -395,11 +395,5 @@ const tryReadFile = (filePath, retries = 3, delayMs = 1000) => {
   })
 }
 
-// Catch all other routes and return the index file from Ionic app
-//app.get('*', (req, res) => {
-//    res.sendFile(path.join(__dirname, 'www/index.html'));
-//});
-
-// listen (start app with 'node server.js')
 app.listen(8200)
-console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Server started at http://localhost:8200`)
+console.log(`${nowDate.toLocaleString()}: [mupibox-backend-api] Server started at http://localhost:8200`)

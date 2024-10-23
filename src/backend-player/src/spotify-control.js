@@ -16,7 +16,7 @@ if (process.env.NODE_ENV === 'development') {
 
 const muPiBoxConfig = require(`${configBasePath}/mupiboxconfig.json`);
 const network = require(`${configBasePath}/network.json`);
-const config = require(`${configBasePath}/config.json`);
+const config = require(`${configBasePath}/config.json`);  // TODO: Is this really the same config?
 
 const log = require('console-log-level')({ level: config.server.logLevel });
 
@@ -1115,6 +1115,6 @@ app.use(function(req, res){
   res.send(resp);
 });
 
-server.listen(config.server.port, () => {
-  log.debug(nowDate.toLocaleString() + ": [Spotify Control] Webserver is running on port: " + config.server.port );
-});
+server.listen(config.server.port)
+console.log(`${nowDate.toLocaleString()}: [mupibox-backend-player] Server started at http://localhost:${config.server.port}`)
+
