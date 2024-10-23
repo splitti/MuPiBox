@@ -1,2 +1,4 @@
+src/backend-api/config/*.json
+
 
 *.bak
