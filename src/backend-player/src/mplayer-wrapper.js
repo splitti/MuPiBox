@@ -6,7 +6,7 @@ const {spawn} = require('child_process')
 const byLine = require('byline')
 const debug = require('debug')('mplayer-wrapper')
 
-const parsers = require('./lib/parsers')
+const parsers = require('./parsers')
 
 const createPlayer = () => {
 	const out = new EventEmitter()

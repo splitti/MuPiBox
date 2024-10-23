@@ -1,4 +1,6 @@
 src/backend-api/config/*.json
+src/**/*.zip
 
+**/node_modules/
 
 *.bak

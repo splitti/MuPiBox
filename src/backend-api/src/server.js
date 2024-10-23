@@ -1,16 +1,31 @@
 // Setup
 const express = require('express')
 const cors = require('cors')
-const app = express()
 const path = require('node:path')
 const jsonfile = require('jsonfile')
 const SpotifyWebApi = require('spotify-web-api-node')
-const config = require('./server/config/config.json')
 const fs = require('node:fs')
 const request = require('request')
 const xmlparser = require('xml-js')
 
-app.use(cors())
+// Configuration files.
+let configBasePath = './server/config'
+if (process.env.NODE_ENV === 'development') {
+  configBasePath = '../config'
+}
+
+const config = require(`${configBasePath}/config.json`)
+const dataFile = `${configBasePath}/data.json`
+const resumeFile = `${configBasePath}/resume.json`
+const activedataFile = `${configBasePath}/active_data.json`
+const activeresumeFile = `${configBasePath}/active_resume.json`
+const networkFile = `${configBasePath}/network.json`
+const wlanFile = `${configBasePath}/wlan.json`
+const monitorFile = `${configBasePath}/monitor.json`
+const albumstopFile = `${configBasePath}/albumstop.json`
+const mupihat = '/tmp/mupihat.json'
+const dataLock = '/tmp/.data.lock'
+const resumeLock = '/tmp/.resume.lock'
 
 const spotifyApi = new SpotifyWebApi({
   clientId: config.spotify.clientId,
@@ -19,19 +34,8 @@ const spotifyApi = new SpotifyWebApi({
 
 const nowDate = new Date()
 
-// Configuration
-const dataFile = './server/config/data.json'
-const resumeFile = './server/config/resume.json'
-const activedataFile = './server/config/active_data.json'
-const activeresumeFile = './server/config/active_resume.json'
-const networkFile = './server/config/network.json'
-const wlanFile = './server/config/wlan.json'
-const monitorFile = './server/config/monitor.json'
-const albumstopFile = './server/config/albumstop.json'
-const mupihat = '/tmp/mupihat.json'
-const dataLock = '/tmp/.data.lock'
-const resumeLock = '/tmp/.resume.lock'
-
+const app = express()
+app.use(cors())
 app.use(express.json())
 app.use(express.urlencoded({ extended: false }))
 

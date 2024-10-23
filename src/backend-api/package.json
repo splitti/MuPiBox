@@ -1,0 +1,20 @@
+{
+  "name": "mupibox-backend-api",
+  "version": "1.0.0",
+  "author": "Mupi Team",
+  "homepage": "https://github.com/splitti/mupibox",
+  "scripts": {
+    "serve": "NODE_ENV=development node src/server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.1",
+    "jsonfile": "^6.1.0",
+    "request": "^2.88.2",
+    "spotify-web-api-node": "^5.0.2",
+    "xml-js": "^1.6.11"
+  },
+  "devDependencies": {},
+  "description": "API backend server for the MupiBox.",
+  "private": true
+}

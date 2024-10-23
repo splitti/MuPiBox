@@ -2,18 +2,25 @@ const express = require('express');
 const http = require('http');
 const bodyParser = require('body-parser');
 const path = require('path');
-const config = require('./config/config.json');
-const log = require('console-log-level')({ level: config.server.logLevel });
 const SpotifyWebApi = require('spotify-web-api-node');
-const createPlayer = require('./../mplayer-wrapper');
-const googleTTS = require('./../google-tts');
+const createPlayer = require('./mplayer-wrapper.js');
+const googleTTS = require('google-tts-api');
 const fs = require('fs');
 const childProcess = require("child_process");
-const muPiBoxConfig = require('./config/mupiboxconfig.json');
-const network = require('/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/network.json');
 const { stderr } = require('process');
 
-  /*set up express router and set headers for cross origin requests*/
+let configBasePath = './config'
+if (process.env.NODE_ENV === 'development') {
+  configBasePath = '../../backend-api/config'
+}
+
+const muPiBoxConfig = require(`${configBasePath}/mupiboxconfig.json`);
+const network = require(`${configBasePath}/network.json`);
+const config = require(`${configBasePath}/config.json`);
+
+const log = require('console-log-level')({ level: config.server.logLevel });
+
+/*set up express router and set headers for cross origin requests*/
 const app = express();
 const server = http.createServer(app);
 const player = createPlayer();

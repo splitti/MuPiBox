@@ -1,20 +1,16 @@
 {
-  "name": "Sonos-Kids-Controller",
-  "version": "1.6.0",
-  "author": "Tobias Wiedenmann",
-  "homepage": "https://github.com/Thyraz/Sonos-Kids-Controller",
+  "name": "mupibox-frontend",
+  "version": "1.0.0",
+  "author": "Mupi Team",
+  "homepage": "https://github.com/splitti/mupibox",
   "scripts": {
     "ng": "ng",
-    "serve-backend": "NODE_ENV=development node server.js",
-    "serve-frontend": "ng serve",
-    "start": "node server.js",
+    "serve": "ng serve",
     "build": "ionic build --prod",
-    "deploy": "ionic build --prod",
     "test": "ng test",
     "lint": "npx @biomejs/biome check .",
     "lint:fix": "npx @biomejs/biome check --fix ."
   },
-  "private": true,
   "dependencies": {
     "@angular/common": "^18.2.7",
     "@angular/core": "^18.2.7",
@@ -51,13 +47,8 @@
     "karma-jasmine-html-reporter": "^2.1.0",
     "karma-spec-reporter": "*",
     "protractor": "~7.0.0",
-    "typescript": "~5.4.5",
-    "cors": "^2.8.5",
-    "express": "^4.21.1",
-    "jsonfile": "^6.1.0",
-    "request": "^2.88.2",
-    "spotify-web-api-node": "^5.0.2",
-    "xml-js": "^1.6.11"
+    "typescript": "~5.4.5"
   },
-  "description": "Software for self made touchscreen jukeboxes for kids"
+  "description": "Frontend UI for the MupiBox.",
+  "private": true
 }
