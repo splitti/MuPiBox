@@ -4,7 +4,9 @@
     "author": "Mupi Team",
     "homepage": "https://github.com/splitti/mupibox",
     "scripts": {
-      "serve": "NODE_ENV=development node src/spotify-control.js"
+      "serve": "NODE_ENV=development node src/spotify-control.js",
+      "lint": "npx @biomejs/biome check .",
+      "lint:fix": "npx @biomejs/biome check --fix ."
     },
     "dependencies": {
       "body-parser": "^1.19.0",

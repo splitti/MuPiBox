@@ -9,7 +9,9 @@
     "serve": "npm run serve --workspaces",
     "serve:frontend": "npm run serve --workspace=mupibox-frontend",
     "serve:backend-api": "npm run serve --workspace=mupibox-backend-api",
-    "serve:backend-player": "npm run serve --workspace=mupibox-backend-player"
+    "serve:backend-player": "npm run serve --workspace=mupibox-backend-player",
+    "lint": "npm run lint --workspaces",
+    "lint:fix": "npm run lint:fix --workspaces"
   },
   "keywords": [
     "mupi",
@@ -21,5 +23,8 @@
   ],
   "author": "Mupi Team",
   "license": "MIT",
-  "private": true
+  "private": true,
+  "devDependencies": {
+    "@biomejs/biome": "*"
+  }
 }

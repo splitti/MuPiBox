@@ -4,7 +4,9 @@
   "author": "Mupi Team",
   "homepage": "https://github.com/splitti/mupibox",
   "scripts": {
-    "serve": "NODE_ENV=development node src/server.js"
+    "serve": "NODE_ENV=development node src/server.js",
+    "lint": "npx @biomejs/biome check .",
+    "lint:fix": "npx @biomejs/biome check --fix ."
   },
   "dependencies": {
     "cors": "^2.8.5",
