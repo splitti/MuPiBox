@@ -10,17 +10,11 @@
     "serve:frontend": "npm run serve --workspace=mupibox-frontend",
     "serve:backend-api": "npm run serve --workspace=mupibox-backend-api",
     "serve:backend-player": "npm run serve --workspace=mupibox-backend-player",
+    "build": "npm run build --workspaces",
     "lint": "npm run lint --workspaces",
     "lint:fix": "npm run lint:fix --workspaces"
   },
-  "keywords": [
-    "mupi",
-    "music",
-    "rss feed",
-    "spotify",
-    "raspberry pi",
-    "touch screen"
-  ],
+  "keywords": ["mupi", "music", "rss feed", "spotify", "raspberry pi", "touch screen"],
   "author": "Mupi Team",
   "license": "MIT",
   "private": true,

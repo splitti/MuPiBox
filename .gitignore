@@ -1,5 +1,7 @@
 src/backend-api/config/*.json
 src/**/*.zip
+src/deploy.zip
+src/deploy
 
 **/node_modules/
 

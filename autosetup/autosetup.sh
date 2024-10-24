@@ -553,7 +553,6 @@ exec 3>${LOG}
 	sudo /usr/bin/chmod 755 /tmp/crontab.template >&3 2>&3
 	sudo /usr/bin/chown dietpi:dietpi /tmp/crontab.template >&3 2>&3
 	sudo /bin/su dietpi -c "/usr/bin/crontab /tmp/crontab.template"  >&3 2>&3
-	sudo rm /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/network.json >&3 2>&3
 	ln -s /tmp/network.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/network.json >&3 2>&3
 	#sudo /boot/dietpi/func/dietpi-set_swapfile 1 zram >&3 2>&3
 	#sudo /boot/dietpi/func/dietpi-set_software boot_wait_for_network 0 >&3 2>&3

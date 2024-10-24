@@ -6,7 +6,7 @@
   "scripts": {
     "ng": "ng",
     "serve": "ng serve",
-    "build": "ionic build --prod",
+    "build": "ng build --configuration production --output-path=../deploy/www",
     "test": "ng test",
     "lint": "npx @biomejs/biome check .",
     "lint:fix": "npx @biomejs/biome check --fix ."
@@ -32,7 +32,6 @@
     "@angular/compiler-cli": "^18.2.7",
     "@angular/language-service": "^18.2.7",
     "@ionic/angular-toolkit": "^5.0.0",
-    "@ionic/cli": "7.2.0",
     "@types/jasmine": "~5.1.4",
     "@types/jasminewd2": "~2.0.13",
     "@types/node": "^16",
