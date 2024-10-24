@@ -248,69 +248,25 @@ exec 3>${LOG}
 
 	###############################################################################################
 
-	echo -e "XXX\n${STEP}\nInstall mplayer-wrapper... \nXXX"	
-	before=$(date +%s)
-	# Sources
-	cd /home/dietpi/.mupibox >&3 2>&3
-	git clone https://github.com/derhuerst/mplayer-wrapper >&3 2>&3
-	cp ${MUPI_SRC}/dev/customize/mplayer-wrapper/index.js /home/dietpi/.mupibox/mplayer-wrapper/index.js >&3 2>&3
-	cd /home/dietpi/.mupibox/mplayer-wrapper >&3 2>&3
-	npm install >&3 2>&3
-	after=$(date +%s)
-	echo -e "## Install mplayer-wrapper  ##  finished after $((after - $before)) seconds" >&3 2>&3
-	STEP=$(($STEP + 1))
-
-	###############################################################################################
-
-	echo -e "XXX\n${STEP}\nInstall google-tts... \nXXX"	
+	echo -e "XXX\n${STEP}\nInstall frontend, backend-api, and backend-player... \nXXX"	
 	before=$(date +%s)
 
-	cd /home/dietpi/.mupibox >&3 2>&3
-	git clone https://github.com/zlargon/google-tts >&3 2>&3
-	cd google-tts/ >&3 2>&3
-	npm install --save >&3 2>&3
-	npm audit fix >&3 2>&3
-	npm test >&3 2>&3
-	after=$(date +%s)
-	echo -e "## Install google-tts  ##  finished after $((after - $before)) seconds" >&3 2>&3
-	STEP=$(($STEP + 5))
-
-	###############################################################################################
-
-	echo -e "XXX\n${STEP}\nInstall Kids-Controller-master... \nXXX"	
-	before=$(date +%s)
-
-	cp ${MUPI_SRC}/bin/nodejs/deploy.zip /home/dietpi/.mupibox/Sonos-Kids-Controller-master/sonos-kids-controller.zip >&3 2>&3
-	unzip /home/dietpi/.mupibox/Sonos-Kids-Controller-master/sonos-kids-controller.zip -d /home/dietpi/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
-	rm /home/dietpi/.mupibox/Sonos-Kids-Controller-master/sonos-kids-controller.zip >&3 2>&3
+	unzip ${MUPI_SRC}/bin/nodejs/deploy.zip -d /home/dietpi/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
 	cp ${MUPI_SRC}/config/templates/www.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >&3 2>&3
 	cp ${MUPI_SRC}/config/templates/monitor.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/monitor.json >&3 2>&3
-	cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master  >&3 2>&3
-	npm install >&3 2>&3
+	cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master >&3 2>&3
+	# Start backend-api.
 	pm2 start server.js >&3 2>&3
 	pm2 save >&3 2>&3
-	after=$(date +%s)
-	echo -e "## Install Kids-Controller  ##  finished after $((after - $before)) seconds" >&3 2>&3
-	STEP=$(($STEP + 1))
-
-	###############################################################################################
-
-	echo -e "XXX\n${STEP}\nInstall Spotify Controller... \nXXX"	
-	before=$(date +%s)
-
-	cd /home/dietpi/.mupibox >&3 2>&3
-	wget https://github.com/amueller-tech/spotifycontroller/archive/main.zip >&3 2>&3
-	unzip main.zip >&3 2>&3
-	rm main.zip >&3 2>&3
-	cd /home/dietpi/.mupibox/spotifycontroller-main >&3 2>&3
+	# Setup and start backend-player.
+	cp /home/dietpi/.mupibox/Sonos-Kids-Controller-master/spotify-control.js /home/dietpi/.mupibox/spotifycontroller-main >&3 2>&3
 	cp ${MUPI_SRC}/config/templates/spotifycontroller.json /home/dietpi/.mupibox/spotifycontroller-main/config/config.json >&3 2>&3
-	cp ${MUPI_SRC}/bin/nodejs/spotify-control.js /home/dietpi/.mupibox/spotifycontroller-main/spotify-control.js >&3 2>&3
 	ln -s /etc/mupibox/mupiboxconfig.json /home/dietpi/.mupibox/spotifycontroller-main/config/mupiboxconfig.json >&3 2>&3
-	npm install >&3 2>&3 
+	cd /home/dietpi/.mupibox/spotifycontroller-main >&3 2>&3
 	pm2 start spotify-control.js >&3 2>&3
 	pm2 save >&3 2>&3
 	after=$(date +%s)
-	echo -e "## Install Spotify-Controller  ##  finished after $((after - $before)) seconds" >&3 2>&3
+	echo -e "## Install frontend, backend-api, and backend-player  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
 
 	###############################################################################################
@@ -554,6 +510,8 @@ exec 3>${LOG}
 	sudo /usr/bin/chown dietpi:dietpi /tmp/crontab.template >&3 2>&3
 	sudo /bin/su dietpi -c "/usr/bin/crontab /tmp/crontab.template"  >&3 2>&3
 	ln -s /tmp/network.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/network.json >&3 2>&3
+	ln -s /tmp/network.json /home/dietpi/.mupibox/spotifycontroller-main/config/network.json >&3 2>&3
+
 	#sudo /boot/dietpi/func/dietpi-set_swapfile 1 zram >&3 2>&3
 	#sudo /boot/dietpi/func/dietpi-set_software boot_wait_for_network 0 >&3 2>&3
 	#VERSION=$(curl -sL ${SRC}/version.json | /usr/bin/jq -r .version) >&3 2>&3
