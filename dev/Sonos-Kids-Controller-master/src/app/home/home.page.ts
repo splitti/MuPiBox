@@ -84,7 +84,6 @@ export class HomePage implements OnInit {
     private mediaService: MediaService,
     private artworkService: ArtworkService,
     private playerService: PlayerService,
-    private activityIndicatorService: ActivityIndicatorService,
     private router: Router,
   ) {
     this.network$ = this.mediaService.network$
@@ -115,13 +114,6 @@ export class HomePage implements OnInit {
     // This is a fix for the scroll bar not showing the current location when using the back button
     // from the media list or admin page.
     ;(document.querySelector('swiper-container') as SwiperContainer).swiper?.update()
-  }
-
-  ionViewDidLeave() {
-    if (this.activityIndicatorVisible) {
-      this.activityIndicatorService.dismiss()
-      this.activityIndicatorVisible = false
-    }
   }
 
   public categoryChanged(event: any): void {
@@ -159,32 +151,22 @@ export class HomePage implements OnInit {
   }
 
   artistCoverClicked(clickedArtist: Artist) {
-    this.activityIndicatorService.create().then((indicator) => {
-      this.activityIndicatorVisible = true
-      indicator.present().then(() => {
-        const navigationExtras: NavigationExtras = {
-          state: {
-            artist: clickedArtist,
-            category: this.category,
-          },
-        }
-        this.router.navigate(['/medialist'], navigationExtras)
-      })
-    })
+    const navigationExtras: NavigationExtras = {
+      state: {
+        artist: clickedArtist,
+        category: this.category,
+      },
+    }
+    this.router.navigate(['/medialist'], navigationExtras)
   }
 
   mediaCoverClicked(clickedMedia: Media) {
-    this.activityIndicatorService.create().then((indicator) => {
-      this.activityIndicatorVisible = true
-      indicator.present().then(() => {
-        const navigationExtras: NavigationExtras = {
-          state: {
-            media: clickedMedia,
-          },
-        }
-        this.router.navigate(['/player'], navigationExtras)
-      })
-    })
+    const navigationExtras: NavigationExtras = {
+      state: {
+        media: clickedMedia,
+      },
+    }
+    this.router.navigate(['/player'], navigationExtras)
   }
 
   editButtonPressed() {
@@ -199,13 +181,7 @@ export class HomePage implements OnInit {
     } else {
       this.editButtonclickCount = 0
       this.needsUpdate = true
-
-      this.activityIndicatorService.create().then((indicator) => {
-        this.activityIndicatorVisible = true
-        indicator.present().then(() => {
-          this.router.navigate(['/edit'])
-        })
-      })
+      this.router.navigate(['/edit'])
     }
   }
 
