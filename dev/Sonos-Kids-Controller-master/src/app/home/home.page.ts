@@ -93,10 +93,13 @@ export class HomePage implements OnInit {
         map((network) => network.onlinestate === 'online'),
       ),
     )
-    effect(() => {
-      console.log(`Online state changed to ${this.isOnline()}`)
-      this.update()
-    })
+    effect(
+      () => {
+        console.log(`Online state changed to ${this.isOnline()}`)
+        this.update()
+      },
+      { allowSignalWrites: true },
+    )
     addIcons({ timerOutline, bookOutline, musicalNotesOutline, radioOutline, cloudOutline, cloudOfflineOutline })
   }
 
