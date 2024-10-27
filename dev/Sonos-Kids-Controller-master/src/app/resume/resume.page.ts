@@ -1,5 +1,4 @@
-import { CUSTOM_ELEMENTS_SCHEMA, Component, OnInit } from '@angular/core'
-import { NavigationExtras, Router } from '@angular/router'
+import { CUSTOM_ELEMENTS_SCHEMA, Component, OnInit, WritableSignal, signal } from '@angular/core'
 import {
   IonBackButton,
   IonButtons,
@@ -14,17 +13,19 @@ import {
   IonTitle,
   IonToolbar,
 } from '@ionic/angular/standalone'
+import { NavigationExtras, Router } from '@angular/router'
 
+import { ArtworkService } from '../artwork.service'
 import { AsyncPipe } from '@angular/common'
 import { HttpClient } from '@angular/common/http'
-import { addIcons } from 'ionicons'
-import { arrowBackOutline } from 'ionicons/icons'
-import { lastValueFrom } from 'rxjs'
-import { ArtworkService } from '../artwork.service'
+import { LoadingComponent } from '../loading/loading.component'
 import { Media } from '../media'
 import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
 import { PlayerService } from '../player.service'
+import { addIcons } from 'ionicons'
+import { arrowBackOutline } from 'ionicons/icons'
+import { lastValueFrom } from 'rxjs'
 
 @Component({
   selector: 'mupi-resume',
@@ -35,6 +36,7 @@ import { PlayerService } from '../player.service'
   imports: [
     AsyncPipe,
     MupiHatIconComponent,
+    LoadingComponent,
     IonHeader,
     IonToolbar,
     IonButtons,
@@ -52,6 +54,7 @@ import { PlayerService } from '../player.service'
 export class ResumePage implements OnInit {
   protected media: Media[] = []
   protected covers = {}
+  protected isLoading: WritableSignal<boolean> = signal(false)
 
   public constructor(
     private router: Router,
@@ -107,8 +110,10 @@ export class ResumePage implements OnInit {
   }
 
   private fetchResumeMedia(): void {
+    this.isLoading.set(true)
     lastValueFrom(this.mediaService.fetchActiveResumeData())
       .then((media) => {
+        this.isLoading.set(false)
         this.media = media
         for (const currentMedia of this.media) {
           this.artworkService.getArtwork(currentMedia).subscribe((url) => {
