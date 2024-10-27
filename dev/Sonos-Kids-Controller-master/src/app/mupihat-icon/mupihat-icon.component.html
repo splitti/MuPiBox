@@ -1,34 +1,33 @@
-@if ((config$ | async)?.hat_active) {
-@if ((mupihat$ | async); as mupihat) {
-@if (mupihat?.BatteryConnected === 1) {
-    @if (mupihat.IBus > 0 && mupihat.Bat_SOC === '100%') {
+@if (config()?.hat_active && mupihat() !== undefined) {
+@if (mupihat().BatteryConnected === 1) {
+    @if (mupihat().IBus > 0 && mupihat().Bat_SOC === '100%') {
       <ion-icon src="../../assets/icon/MuPiHAT/Charging100.svg" size="large"></ion-icon>
     } @else {
-      @if (mupihat.IBus > 0 && mupihat.Bat_SOC === '75%') {
+      @if (mupihat().IBus > 0 && mupihat().Bat_SOC === '75%') {
         <ion-icon src="../../assets/icon/MuPiHAT/Charging70.svg" size="large"></ion-icon>
       } @else {
-        @if (mupihat.IBus > 0 && mupihat.Bat_SOC === '50%') {
+        @if (mupihat().IBus > 0 && mupihat().Bat_SOC === '50%') {
           <ion-icon src="../../assets/icon/MuPiHAT/Charging50.svg" size="large"></ion-icon>
         } @else {
-          @if (mupihat.IBus > 0 && mupihat.Bat_SOC === '25%') {
+          @if (mupihat().IBus > 0 && mupihat().Bat_SOC === '25%') {
             <ion-icon src="../../assets/icon/MuPiHAT/Charging20.svg" size="large"></ion-icon>
           } @else {
-            @if (mupihat.IBus > 0 && mupihat.Bat_SOC === '0%') {
+            @if (mupihat().IBus > 0 && mupihat().Bat_SOC === '0%') {
               <ion-icon src="../../assets/icon/MuPiHAT/Charging0.svg" size="large"></ion-icon>
             } @else {
-              @if (mupihat.Bat_SOC === '100%') {
+              @if (mupihat().Bat_SOC === '100%') {
                 <ion-icon src="../../assets/icon/MuPiHAT/Battery100.svg" size="large"></ion-icon>
               } @else {
-                @if (mupihat.Bat_SOC === '75%') {
+                @if (mupihat().Bat_SOC === '75%') {
                   <ion-icon src="../../assets/icon/MuPiHAT/Battery70.svg" size="large"></ion-icon>
                 } @else {
-                  @if (mupihat.Bat_SOC === '50%') {
+                  @if (mupihat().Bat_SOC === '50%') {
                     <ion-icon src="../../assets/icon/MuPiHAT/Battery50.svg" size="large"></ion-icon>
                   } @else {
-                    @if (mupihat.Bat_SOC === '25%') {
+                    @if (mupihat().Bat_SOC === '25%') {
                       <ion-icon src="../../assets/icon/MuPiHAT/Battery20.svg" size="large"></ion-icon>
                     } @else {
-                      @if (mupihat.Bat_SOC === '0%') {
+                      @if (mupihat().Bat_SOC === '0%') {
                         <ion-icon src="../../assets/icon/MuPiHAT/Battery0.svg" size="large"></ion-icon>
                       }
                     }
@@ -41,5 +40,4 @@
       }
     }
   }
-}
 }
