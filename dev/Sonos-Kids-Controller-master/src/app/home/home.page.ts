@@ -1,8 +1,8 @@
-import { CUSTOM_ELEMENTS_SCHEMA, Component, OnInit } from '@angular/core'
+import { CUSTOM_ELEMENTS_SCHEMA, Component, OnInit, Signal, WritableSignal, effect, signal } from '@angular/core'
 import { NavigationExtras, Router } from '@angular/router'
 
 import { CommonModule } from '@angular/common'
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop'
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop'
 import { FormsModule } from '@angular/forms'
 import {
   IonButton,
@@ -39,6 +39,7 @@ import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
 import type { Network } from '../network'
 import { PlayerService } from '../player.service'
+import { LoadingComponent } from '../loading/loading.component'
 
 @Component({
   selector: 'app-home',
@@ -49,6 +50,7 @@ import { PlayerService } from '../player.service'
     CommonModule,
     FormsModule,
     MupiHatIconComponent,
+    LoadingComponent,
     IonHeader,
     IonToolbar,
     IonButtons,
@@ -67,18 +69,17 @@ import { PlayerService } from '../player.service'
   standalone: true,
 })
 export class HomePage implements OnInit {
-  artists: Artist[] = []
-  media: Media[] = []
-  covers = {}
-  activityIndicatorVisible = false
-  editButtonclickCount = 0
-  editClickTimer = 0
+  protected artists: Artist[] = []
+  protected media: Media[] = []
+  protected covers = {}
+  protected editButtonclickCount = 0
+  protected editClickTimer = 0
 
   protected category: CategoryType = 'audiobook'
 
-  protected readonly network$: Observable<Network>
-
-  needsUpdate = false
+  protected isOnline: Signal<boolean>
+  protected isLoading: WritableSignal<boolean> = signal(false)
+  protected needsUpdate = false
 
   constructor(
     private mediaService: MediaService,
@@ -86,19 +87,16 @@ export class HomePage implements OnInit {
     private playerService: PlayerService,
     private router: Router,
   ) {
-    this.network$ = this.mediaService.network$
-
-    // If the network changes, we want to update our list.
-    this.network$
-      .pipe(
+    this.isOnline = toSignal(
+      this.mediaService.network$.pipe(
         filter((network) => network.ip !== undefined),
-        map((network) => network.onlinestate),
-        distinctUntilChanged(),
-        takeUntilDestroyed(),
-      )
-      .subscribe((_) => {
-        this.update()
-      })
+        map((network) => network.onlinestate === 'online'),
+      ),
+    )
+    effect(() => {
+      console.log(`Online state changed to ${this.isOnline()}`)
+      this.update()
+    })
     addIcons({ timerOutline, bookOutline, musicalNotesOutline, radioOutline, cloudOutline, cloudOfflineOutline })
   }
 
@@ -123,9 +121,11 @@ export class HomePage implements OnInit {
   }
 
   private update(): void {
+    this.isLoading.set(true)
     if (this.category === 'audiobook' || this.category === 'music' || this.category === 'other') {
       lastValueFrom(this.mediaService.fetchArtistData(this.category))
         .then((artists) => {
+          this.isLoading.set(false)
           this.artists = artists
 
           for (const artist of this.artists) {
@@ -138,6 +138,7 @@ export class HomePage implements OnInit {
     } else {
       lastValueFrom(this.mediaService.fetchMediaData(this.category))
         .then((media) => {
+          this.isLoading.set(false)
           this.media = media
           for (const currentMedia of media) {
             this.artworkService.getArtwork(currentMedia).subscribe((url) => {

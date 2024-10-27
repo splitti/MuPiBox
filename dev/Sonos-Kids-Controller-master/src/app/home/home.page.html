@@ -19,12 +19,10 @@
     
     <ion-buttons slot="end">
       <ion-button class="status-icons" (click)="editButtonPressed()">
-          @if ((network$ | async)?.onlinestate ==='online') {
-              <ion-icon slot="icon-only" name="cloud-outline"></ion-icon>
+          @if (isOnline()) {
+            <ion-icon slot="icon-only" name="cloud-outline"></ion-icon>
           } @else {
-            @if ((network$ | async)?.onlinestate ==='offline') {
-                <ion-icon slot="icon-only" name="cloud-offline-outline"></ion-icon>
-            }
+            <ion-icon slot="icon-only" name="cloud-offline-outline"></ion-icon>
           }
           <mupihat-icon></mupihat-icon>
         </ion-button>
@@ -33,8 +31,9 @@
 </ion-header>
 
 <ion-content class="home-content">
+  <mupi-loading [loading]="isLoading()"></mupi-loading>
+  <swiper-container slides-per-view="3" scrollbar="true" scrollbar-hide="true" free-mode="false" css-mode="true">
   @if (category === 'audiobook' || category === 'music' || category === 'other') {
-    <swiper-container slides-per-view="3" scrollbar="true" scrollbar-hide="true" free-mode="false" css-mode="true">
       @for (currentArtist of artists; track currentArtist) {
         <swiper-slide>
           <ion-grid>
@@ -57,10 +56,8 @@
           </ion-grid>
         </swiper-slide>
       }
-    </swiper-container>
   } @else {
     @if (media) {
-      <swiper-container slides-per-view="3" scrollbar="true" scrollbar-hide="true" free-mode="false" css-mode="true">
         @for (currentMedia of media; track currentMedia) {
           <swiper-slide>
             <ion-grid>
@@ -77,7 +74,7 @@
             </ion-grid>
           </swiper-slide>
         }
-      </swiper-container>
     }
   }
+</swiper-container>
 </ion-content>
