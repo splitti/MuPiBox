@@ -1,10 +1,10 @@
-import { Component } from '@angular/core'
 import { IonApp, IonRouterOutlet } from '@ionic/angular/standalone'
-import { Observable, interval, map, switchMap } from 'rxjs'
+import { Observable, distinctUntilChanged, interval, map, switchMap } from 'rxjs'
 
+import { Component } from '@angular/core'
 import { HttpClient } from '@angular/common/http'
-import { toSignal } from '@angular/core/rxjs-interop'
 import { Monitor } from './monitor'
+import { toSignal } from '@angular/core/rxjs-interop'
 
 @Component({
   selector: 'app-root',
@@ -18,6 +18,7 @@ export class AppComponent {
     interval(1000).pipe(
       switchMap((): Observable<Monitor> => this.http.get<Monitor>('http://localhost:8200/api/monitor')),
       map((monitor) => monitor.monitor !== 'On'),
+      distinctUntilChanged(),
     ),
     { initialValue: false },
   )
