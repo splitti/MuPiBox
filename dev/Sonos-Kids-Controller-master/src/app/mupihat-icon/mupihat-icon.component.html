@@ -1,4 +1,4 @@
-@if (config()?.hat_active && mupihat() !== undefined) {
+@if (hat_active && mupihat() !== undefined) {
 @if (mupihat().BatteryConnected === 1) {
     @if (mupihat().IBus > 0 && mupihat().Bat_SOC === '100%') {
       <ion-icon src="../../assets/icon/MuPiHAT/Charging100.svg" size="large"></ion-icon>

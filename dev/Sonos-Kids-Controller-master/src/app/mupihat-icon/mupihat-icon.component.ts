@@ -1,8 +1,8 @@
 import { AsyncPipe } from '@angular/common'
-import { Component, Signal } from '@angular/core'
-import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop'
+import { Component, computed, Signal } from '@angular/core'
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop'
 import { IonIcon } from '@ionic/angular/standalone'
-import { type Observable } from 'rxjs'
+import { map, of, switchMap, type Observable } from 'rxjs'
 import { MediaService } from '../media.service'
 import type { Mupihat } from '../mupihat'
 import { PlayerService } from '../player.service'
@@ -16,14 +16,18 @@ import { SonosApiConfig } from '../sonos-api'
   imports: [IonIcon],
 })
 export class MupiHatIconComponent {
-  protected readonly mupihat: Signal<Mupihat>
-  protected readonly config: Signal<SonosApiConfig>
+  protected readonly mupihat: Signal<Mupihat | undefined>
+  protected readonly hat_active: Signal<boolean>
 
   public constructor(
     private playerService: PlayerService,
     private mediaService: MediaService,
   ) {
-    this.mupihat = toSignal(this.mediaService.mupihat$)
-    this.config = toSignal(this.playerService.getConfig())
+    this.hat_active = toSignal(this.playerService.getConfig().pipe(map((config) => config.hat_active)))
+    this.mupihat = toSignal(
+      toObservable(this.hat_active).pipe(
+        switchMap((hat_active) => (hat_active ? this.mediaService.mupihat$ : of(undefined))),
+      ),
+    )
   }
 }
