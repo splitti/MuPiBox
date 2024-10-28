@@ -1,10 +1,10 @@
 import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http'
 
-import { provideHttpClientTesting } from '@angular/common/http/testing'
-import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core'
-import { TestBed } from '@angular/core/testing'
 import { ActivatedRoute } from '@angular/router'
 import { AppComponent } from './app.component'
+import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core'
+import { TestBed } from '@angular/core/testing'
+import { provideHttpClientTesting } from '@angular/common/http/testing'
 
 describe('AppComponent', () => {
   beforeEach(() => {
@@ -24,4 +24,6 @@ describe('AppComponent', () => {
     const app = fixture.debugElement.componentInstance
     expect(app).toBeTruthy()
   })
+
+  // TODO: Test that monitor blocker only blocks event propagation if monitor is off.
 })
