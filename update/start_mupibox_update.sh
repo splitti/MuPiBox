@@ -8,7 +8,7 @@ if [ "$1" = "dev" ] || [ "$1" = "beta" ] || [ "$1" = "stable" ]; then
 else
 	RELEASE="stable"
 fi
-killall -s 9 -w -q chromium-browser
+killall -s 9 -w -q chromium
 
 CONFIG="/etc/mupibox/mupiboxconfig.json"
 LOG="/boot/mupibox_update.log"
