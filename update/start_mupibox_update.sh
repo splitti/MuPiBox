@@ -85,11 +85,11 @@ echo "==========================================================================
 
 	echo -e "XXX\n${STEP}\nUpdate Node.js\nXXX"
 	before=$(date +%s)
-	if [[ "$NODEJS" == "v20."* ]]; then
-		echo "Node.js already at v20.*" >&3 2>&3
+	if [[ "$NODEJS" == "v22."* ]]; then
+		echo "Node.js already at v22.*" >&3 2>&3
 	else
 		apt-get --yes remove nodejs >&3 2>&3
-		curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash - >&3 2>&3
+		curl -fsSL https://deb.nodesource.com/setup_22.x | sudo bash - >&3 2>&3
 		apt-get install -y nodejs >&3 2>&3
 	fi
 	after=$(date +%s)
