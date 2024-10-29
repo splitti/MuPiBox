@@ -8,7 +8,7 @@ if [ "$1" = "dev" ] || [ "$1" = "beta" ] || [ "$1" = "stable" ]; then
 else
 	RELEASE="stable"
 fi
-killall -s 9 -w -q chromium-browser
+killall -s 9 -w -q chromium
 
 CONFIG="/etc/mupibox/mupiboxconfig.json"
 LOG="/boot/mupibox_update.log"
@@ -88,11 +88,11 @@ echo "==========================================================================
 
 	echo -e "XXX\n${STEP}\nUpdate Node.js\nXXX"
 	before=$(date +%s)
-	if [[ "$NODEJS" == "v20."* ]]; then
-		echo "Node.js already at v20.*" >&3 2>&3
+	if [[ "$NODEJS" == "v22."* ]]; then
+		echo "Node.js already at v22.*" >&3 2>&3
 	else
 		apt-get --yes remove nodejs >&3 2>&3
-		curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash - >&3 2>&3
+		curl -fsSL https://deb.nodesource.com/setup_22.x | sudo bash - >&3 2>&3
 		apt-get install -y nodejs >&3 2>&3
 	fi
 	after=$(date +%s)
@@ -183,12 +183,13 @@ echo "==========================================================================
 
 	echo -e "XXX\n${STEP}\nSetup docker and container... \nXXX"
 	before=$(date +%s)
-	if [ ! -f /usr/bin/docker ]; then
-		sudo bash < <(curl -fsSL https://get.Docker.com) >&3 2>&3
-	fi
+#	if [ ! -f /usr/bin/docker ]; then
+#		sudo bash < <(curl -fsSL https://get.Docker.com) >&3 2>&3
+#	fi
 	sudo docker rm youtube-dl >&3 2>&3
-	sudo docker run --name youtube-dl -d --restart unless-stopped -p 8081:8081 -v /home/dietpi/MuPiBox/media/youtube-dl:/downloads ghcr.io/alexta69/metube >&3 2>&3
+#	sudo docker run --name youtube-dl -d --restart unless-stopped -p 8081:8081 -v /home/dietpi/MuPiBox/media/youtube-dl:/downloads ghcr.io/alexta69/metube >&3 2>&3
 	sudo docker image prune -a -f  >&3 2>&3
+	sudo apt-get --yes remove docker   >&3 2>&3
 	after=$(date +%s)
 	echo -e "## Setup docker and container  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
