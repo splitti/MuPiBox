@@ -2,7 +2,7 @@ import { CUSTOM_ELEMENTS_SCHEMA, Component, OnInit, Signal, WritableSignal, effe
 import { NavigationExtras, Router } from '@angular/router'
 
 import { CommonModule } from '@angular/common'
-import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop'
+import { toSignal } from '@angular/core/rxjs-interop'
 import { FormsModule } from '@angular/forms'
 import {
   IonButton,
@@ -29,17 +29,15 @@ import {
   radioOutline,
   timerOutline,
 } from 'ionicons/icons'
-import { type Observable, distinctUntilChanged, filter, lastValueFrom, map } from 'rxjs'
+import { filter, lastValueFrom, map } from 'rxjs'
 import { SwiperContainer } from 'swiper/element'
-import { ActivityIndicatorService } from '../activity-indicator.service'
 import type { Artist } from '../artist'
 import { ArtworkService } from '../artwork.service'
+import { LoadingComponent } from '../loading/loading.component'
 import type { CategoryType, Media } from '../media'
 import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
-import type { Network } from '../network'
 import { PlayerService } from '../player.service'
-import { LoadingComponent } from '../loading/loading.component'
 
 @Component({
   selector: 'app-home',

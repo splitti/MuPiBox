@@ -1,12 +1,10 @@
-import { AsyncPipe } from '@angular/common'
-import { Component, computed, Signal } from '@angular/core'
-import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop'
+import { Component, Signal } from '@angular/core'
+import { toObservable, toSignal } from '@angular/core/rxjs-interop'
 import { IonIcon } from '@ionic/angular/standalone'
-import { map, of, switchMap, type Observable } from 'rxjs'
+import { map, of, switchMap } from 'rxjs'
 import { MediaService } from '../media.service'
 import type { Mupihat } from '../mupihat'
 import { PlayerService } from '../player.service'
-import { SonosApiConfig } from '../sonos-api'
 
 @Component({
   selector: 'mupihat-icon',
