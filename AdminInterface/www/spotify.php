@@ -256,7 +256,7 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 			<li id="li_1">
 
 				<h3>Spotify cache path</h3>
-				<p>Default: /home/dietpi/.cache/spotifyd</p>
+				<p>Default: /home/dietpi/.cache/spotify</p>
 				<input id="spotifycache_path" name="spotifycache_path" class="element text medium" type="text" maxlength="255" value="<?php
 																																		print $data["spotify"]["cachepath"];
 																																		?>" />
