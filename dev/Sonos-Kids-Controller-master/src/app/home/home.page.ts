@@ -8,7 +8,7 @@ import {
   effect,
   signal,
 } from '@angular/core'
-import type { CategoryType, Media } from '../media'
+import { NavigationExtras, Router } from '@angular/router'
 import {
   IonButton,
   IonButtons,
@@ -25,7 +25,6 @@ import {
   IonSegmentButton,
   IonToolbar,
 } from '@ionic/angular/standalone'
-import { NavigationExtras, Router } from '@angular/router'
 import {
   bookOutline,
   cloudOfflineOutline,
@@ -35,18 +34,18 @@ import {
   timerOutline,
 } from 'ionicons/icons'
 import { filter, lastValueFrom, map } from 'rxjs'
+import type { CategoryType, Media } from '../media'
 
+import { CommonModule } from '@angular/common'
+import { toSignal } from '@angular/core/rxjs-interop'
+import { FormsModule } from '@angular/forms'
+import { addIcons } from 'ionicons'
 import type { Artist } from '../artist'
 import { ArtworkService } from '../artwork.service'
-import { CommonModule } from '@angular/common'
-import { FormsModule } from '@angular/forms'
 import { LoadingComponent } from '../loading/loading.component'
 import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
 import { PlayerService } from '../player.service'
-import { SwiperContainer } from 'swiper/element'
-import { addIcons } from 'ionicons'
-import { toSignal } from '@angular/core/rxjs-interop'
 
 @Component({
   selector: 'app-home',
@@ -117,15 +116,7 @@ export class HomePage implements OnInit {
   }
 
   ionViewWillEnter() {
-    if (this.needsUpdate) {
-      this.update()
-    }
-  }
-
-  public ionViewDidEnter(): void {
-    // This is a fix for the scroll bar not showing the current location when using the back button
-    // from the media list or admin page.
-    ;(document.querySelector('swiper-container') as SwiperContainer).swiper?.update()
+    this.update()
   }
 
   public categoryChanged(event: any): void {
