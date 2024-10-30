@@ -1,11 +1,10 @@
-import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing'
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing'
 import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http'
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing'
+import { ComponentFixture, TestBed } from '@angular/core/testing'
 
+import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core'
 import { ActivatedRoute } from '@angular/router'
 import { AppComponent } from './app.component'
-import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core'
-import { createMonitor } from './fixtures'
 
 describe('AppComponent', () => {
   let component: AppComponent

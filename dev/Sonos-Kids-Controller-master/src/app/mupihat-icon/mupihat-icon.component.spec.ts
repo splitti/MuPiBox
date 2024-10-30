@@ -1,9 +1,9 @@
-import { ComponentFixture, TestBed, discardPeriodicTasks, fakeAsync, tick } from '@angular/core/testing'
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing'
 import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http'
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing'
+import { ComponentFixture, TestBed, discardPeriodicTasks, fakeAsync, tick } from '@angular/core/testing'
 
-import { MupiHatIconComponent } from './mupihat-icon.component'
 import { createConfig } from '../fixtures'
+import { MupiHatIconComponent } from './mupihat-icon.component'
 
 describe('MupiHatIconComponent', () => {
   let component: MupiHatIconComponent

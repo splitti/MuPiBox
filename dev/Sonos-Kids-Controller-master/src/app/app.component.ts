@@ -3,8 +3,8 @@ import { IonApp, IonRouterOutlet } from '@ionic/angular/standalone'
 import { Observable, distinctUntilChanged, interval, map, switchMap } from 'rxjs'
 
 import { HttpClient } from '@angular/common/http'
-import { Monitor } from './monitor'
 import { toSignal } from '@angular/core/rxjs-interop'
+import { Monitor } from './monitor'
 
 @Component({
   selector: 'app-root',
