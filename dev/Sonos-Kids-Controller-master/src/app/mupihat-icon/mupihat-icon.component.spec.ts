@@ -1,8 +1,9 @@
-import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http'
+import { ComponentFixture, TestBed, discardPeriodicTasks, fakeAsync, tick } from '@angular/core/testing'
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing'
-import { ComponentFixture, TestBed } from '@angular/core/testing'
+import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http'
 
 import { MupiHatIconComponent } from './mupihat-icon.component'
+import { createConfig } from '../fixtures'
 
 describe('MupiHatIconComponent', () => {
   let component: MupiHatIconComponent
@@ -26,9 +27,23 @@ describe('MupiHatIconComponent', () => {
     httpClient.expectOne('http://localhost:8200/api/sonos')
     expect(component).toBeTruthy()
   })
+
+  it('should not fire mupihat requests if config says mupihat is not active', fakeAsync(() => {
+    httpClient.expectOne('http://localhost:8200/api/sonos').flush(createConfig({ hat_active: false }))
+    fixture.detectChanges()
+    expect((component as any).hat_active()).toBeFalse()
+    tick(10000)
+    httpClient.expectNone('http://localhost:8200/api/mupihat')
+  }))
+
+  it('should fire mupihat requests if config says mupihat is active', fakeAsync(() => {
+    httpClient.expectOne('http://localhost:8200/api/sonos').flush(createConfig({ hat_active: true }))
+    fixture.detectChanges()
+    expect((component as any).hat_active()).toBeTrue()
+    tick(2000)
+    httpClient.expectOne('http://localhost:8200/api/mupihat')
+    tick(2000)
+    httpClient.expectOne('http://localhost:8200/api/mupihat')
+    discardPeriodicTasks()
+  }))
 })
-
-// TODO.
-// TODO: Test that there are no mupihat requests if config is false.
-
-// TODO: Test that there are mupihat requests if config is true.
