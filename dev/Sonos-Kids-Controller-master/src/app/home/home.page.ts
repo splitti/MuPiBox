@@ -1,9 +1,14 @@
-import { CUSTOM_ELEMENTS_SCHEMA, Component, OnInit, Signal, WritableSignal, effect, signal } from '@angular/core'
-import { NavigationExtras, Router } from '@angular/router'
-
-import { CommonModule } from '@angular/common'
-import { toSignal } from '@angular/core/rxjs-interop'
-import { FormsModule } from '@angular/forms'
+import {
+  CUSTOM_ELEMENTS_SCHEMA,
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+  Signal,
+  WritableSignal,
+  effect,
+  signal,
+} from '@angular/core'
+import type { CategoryType, Media } from '../media'
 import {
   IonButton,
   IonButtons,
@@ -20,7 +25,7 @@ import {
   IonSegmentButton,
   IonToolbar,
 } from '@ionic/angular/standalone'
-import { addIcons } from 'ionicons'
+import { NavigationExtras, Router } from '@angular/router'
 import {
   bookOutline,
   cloudOfflineOutline,
@@ -30,14 +35,18 @@ import {
   timerOutline,
 } from 'ionicons/icons'
 import { filter, lastValueFrom, map } from 'rxjs'
-import { SwiperContainer } from 'swiper/element'
+
 import type { Artist } from '../artist'
 import { ArtworkService } from '../artwork.service'
+import { CommonModule } from '@angular/common'
+import { FormsModule } from '@angular/forms'
 import { LoadingComponent } from '../loading/loading.component'
-import type { CategoryType, Media } from '../media'
 import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
 import { PlayerService } from '../player.service'
+import { SwiperContainer } from 'swiper/element'
+import { addIcons } from 'ionicons'
+import { toSignal } from '@angular/core/rxjs-interop'
 
 @Component({
   selector: 'app-home',
@@ -65,6 +74,7 @@ import { PlayerService } from '../player.service'
     IonCardTitle,
   ],
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.Default,
 })
 export class HomePage implements OnInit {
   protected artists: Artist[] = []
