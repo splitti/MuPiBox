@@ -3,11 +3,7 @@ swiper-container {
     --swiper-scrollbar-drag-bg-color: rgba(255, 255, 255, 0.3)
 }
 
-.mupihat-icon-container {
-    padding-right: 20px;
-}
-
-ion-button {
+ion-back-button {
     --min-height: 70px;
     --min-width: 120px;
     --icon-font-size: 30px;
@@ -36,4 +32,8 @@ ion-row.media-card {
 .truncate-text {
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.mupihat-icon-container {
+    padding-right: 20px;
 }

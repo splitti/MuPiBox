@@ -1,5 +1,6 @@
 import { Observable, defer, of, range, throwError } from 'rxjs'
 import { delay, flatMap, map, mergeAll, mergeMap, retryWhen, take, tap, toArray } from 'rxjs/operators'
+import type { CategoryType, Media } from './media'
 import type {
   SpotifyAlbumsResponse,
   SpotifyAlbumsResponseItem,
@@ -14,7 +15,6 @@ import { ExtraDataMedia, Utils } from './utils'
 import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
 import { environment } from 'src/environments/environment'
-import type { Media } from './media'
 
 declare const require: any
 
@@ -32,7 +32,7 @@ export class SpotifyService {
 
   getMediaByQuery(
     query: string,
-    category: string,
+    category: CategoryType,
     index: number,
     extraDataSource: ExtraDataMedia,
   ): Observable<Media[]> {
@@ -74,7 +74,7 @@ export class SpotifyService {
 
   getMediaByArtistID(
     id: string,
-    category: string,
+    category: CategoryType,
     index: number,
     extraDataSource: ExtraDataMedia,
   ): Observable<Media[]> {
@@ -147,7 +147,12 @@ export class SpotifyService {
     return albums
   }
 
-  getMediaByShowID(id: string, category: string, index: number, extraDataSource: ExtraDataMedia): Observable<Media[]> {
+  getMediaByShowID(
+    id: string,
+    category: CategoryType,
+    index: number,
+    extraDataSource: ExtraDataMedia,
+  ): Observable<Media[]> {
     const albums = defer(() => this.spotifyApi.getShow(id, { limit: 1, offset: 0, market: 'DE' })).pipe(
       retryWhen((errors) => {
         return this.errorHandler(errors)
@@ -199,7 +204,7 @@ export class SpotifyService {
 
   getMediaByID(
     id: string,
-    category: string,
+    category: CategoryType,
     index: number,
     shuffle: boolean,
     artistcover: string,
@@ -245,7 +250,7 @@ export class SpotifyService {
 
   getMediaByEpisode(
     id: string,
-    category: string,
+    category: CategoryType,
     index: number,
     shuffle: boolean,
     artistcover: string,
@@ -291,7 +296,7 @@ export class SpotifyService {
 
   getMediaByPlaylistID(
     id: string,
-    category: string,
+    category: CategoryType,
     index: number,
     shuffle: boolean,
     artistcover: string,

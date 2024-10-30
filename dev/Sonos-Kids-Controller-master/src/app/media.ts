@@ -5,6 +5,8 @@ export enum MediaSorting {
   ReleaseDateDescending = 'ReleaseDateDescending',
 }
 
+export type CategoryType = 'audiobook' | 'music' | 'other' | 'resume'
+
 export interface Media {
   index?: number
   artist?: string
@@ -17,7 +19,7 @@ export interface Media {
   release_date?: string
   cover?: string
   type: string
-  category: string
+  category: CategoryType
   artistcover?: string
   shuffle?: boolean
   aPartOfAll?: boolean
@@ -29,7 +31,7 @@ export interface Media {
   resumespotifytrack_number?: number
   resumespotifyprogress_ms?: number
   resumespotifyduration_ms?: number
-  resumelocalalbum?: string
+  resumelocalalbum?: CategoryType
   resumelocalcurrentTracknr?: number
   resumelocalprogressTime?: number
   resumerssprogressTime?: number

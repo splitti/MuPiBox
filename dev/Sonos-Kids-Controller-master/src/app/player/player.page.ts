@@ -1,10 +1,37 @@
 import { Component, OnInit, ViewChild } from '@angular/core'
 import { ActivatedRoute, Router } from '@angular/router'
-import { IonRange, IonicModule, NavController } from '@ionic/angular'
+import {
+  IonBackButton,
+  IonButton,
+  IonButtons,
+  IonCard,
+  IonCol,
+  IonContent,
+  IonGrid,
+  IonHeader,
+  IonIcon,
+  IonRange,
+  IonRow,
+  IonTitle,
+  IonToolbar,
+} from '@ionic/angular/standalone'
+import {
+  pause,
+  play,
+  playBack,
+  playForward,
+  playSkipBack,
+  playSkipForward,
+  shuffleOutline,
+  volumeHighOutline,
+  volumeLowOutline,
+} from 'ionicons/icons'
 import { PlayerCmds, PlayerService } from '../player.service'
 
 import { AsyncPipe } from '@angular/common'
 import { FormsModule } from '@angular/forms'
+import { NavController } from '@ionic/angular/standalone'
+import { addIcons } from 'ionicons'
 import type { Observable } from 'rxjs'
 import type { AlbumStop } from '../albumstop'
 import { ArtworkService } from '../artwork.service'
@@ -15,23 +42,37 @@ import type { CurrentShow } from '../current.show'
 import type { CurrentSpotify } from '../current.spotify'
 import type { Media } from '../media'
 import { MediaService } from '../media.service'
-import type { Monitor } from '../monitor'
-import type { Mupihat } from '../mupihat'
+import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
 
 @Component({
   selector: 'app-player',
   templateUrl: './player.page.html',
   styleUrls: ['./player.page.scss'],
   standalone: true,
-  imports: [IonicModule, FormsModule, AsyncPipe],
+  imports: [
+    FormsModule,
+    AsyncPipe,
+    MupiHatIconComponent,
+    IonHeader,
+    IonToolbar,
+    IonButtons,
+    IonBackButton,
+    IonTitle,
+    IonContent,
+    IonGrid,
+    IonRow,
+    IonCol,
+    IonCard,
+    IonRange,
+    IonButton,
+    IonIcon,
+  ],
 })
 export class PlayerPage implements OnInit {
   @ViewChild('range', { static: false }) range: IonRange
 
   media: Media
   resumemedia: Media
-  monitor: Monitor
-  mupihat: Mupihat
   albumStop: AlbumStop
   resumePlay = false
   resumeIndex: number
@@ -51,13 +92,11 @@ export class PlayerPage implements OnInit {
   progress = 0
   shufflechanged = 0
   tmpProgressTime = 0
-  hat_active = false
   public readonly spotify$: Observable<CurrentSpotify>
   public readonly local$: Observable<CurrentMPlayer>
   public readonly playlist$: Observable<CurrentPlaylist>
   public readonly episode$: Observable<CurrentEpisode>
   public readonly show$: Observable<CurrentShow>
-  public readonly mupihat$: Observable<Mupihat>
 
   constructor(
     private mediaService: MediaService,
@@ -72,22 +111,27 @@ export class PlayerPage implements OnInit {
     this.playlist$ = this.mediaService.playlist$
     this.episode$ = this.mediaService.episode$
     this.show$ = this.mediaService.show$
-    this.mupihat$ = this.mediaService.mupihat$
-    this.route.queryParams.subscribe((params) => {
-      if (this.router.getCurrentNavigation()?.extras.state?.media) {
-        this.media = this.router.getCurrentNavigation().extras.state.media
-        if (this.media.category === 'resume') {
-          this.resumePlay = true
-        }
+
+    if (this.router.getCurrentNavigation()?.extras.state?.media) {
+      this.media = this.router.getCurrentNavigation().extras.state.media
+      if (this.media.category === 'resume') {
+        this.resumePlay = true
       }
+    }
+    addIcons({
+      volumeLowOutline,
+      pause,
+      play,
+      volumeHighOutline,
+      playSkipBack,
+      playSkipForward,
+      playBack,
+      shuffleOutline,
+      playForward,
     })
   }
 
   ngOnInit() {
-    this.playerService.getConfig().subscribe((config) => {
-      this.hat_active = config.hat_active
-    })
-
     this.mediaService.current$.subscribe((spotify) => {
       this.currentPlayedSpotify = spotify
     })
@@ -106,31 +150,23 @@ export class PlayerPage implements OnInit {
     this.artworkService.getArtwork(this.media).subscribe((url) => {
       this.cover = url
     })
-    this.mediaService.monitor$.subscribe((monitor) => {
-      this.monitor = monitor
-    })
     this.mediaService.albumStop$.subscribe((albumStop) => {
       this.albumStop = albumStop
-    })
-    this.mediaService.mupihat$.subscribe((mupihat) => {
-      this.mupihat = mupihat
     })
   }
 
   seek() {
-    if (this.monitor?.monitor === 'On') {
-      const newValue = +this.range.value
-      if (this.media.type === 'spotify') {
-        if (this.media.showid?.length > 0) {
-          const duration = this.currentEpisode?.duration_ms
-          this.playerService.seekPosition(duration * (newValue / 100))
-        } else {
-          const duration = this.currentPlayedSpotify?.item.duration_ms
-          this.playerService.seekPosition(duration * (newValue / 100))
-        }
-      } else if (this.media.type === 'library' || this.media.type === 'rss') {
-        this.playerService.seekPosition(newValue)
+    const newValue = +this.range.value
+    if (this.media.type === 'spotify') {
+      if (this.media.showid?.length > 0) {
+        const duration = this.currentEpisode?.duration_ms
+        this.playerService.seekPosition(duration * (newValue / 100))
+      } else {
+        const duration = this.currentPlayedSpotify?.item.duration_ms
+        this.playerService.seekPosition(duration * (newValue / 100))
       }
+    } else if (this.media.type === 'library' || this.media.type === 'rss') {
+      this.playerService.seekPosition(newValue)
     }
   }
 
@@ -219,7 +255,6 @@ export class PlayerPage implements OnInit {
   }
 
   ionViewWillEnter() {
-    console.log('Media object after enter playerpage:', this.media)
     this.updateProgression = true
     if (this.resumePlay) {
       this.resumePlayback()
@@ -263,7 +298,6 @@ export class PlayerPage implements OnInit {
   }
 
   resumePlayback() {
-    console.log('Media object after start resumePlayback:', this.media)
     if (this.media.type === 'spotify' && !this.media.shuffle) {
       this.playerService.resumeMedia(this.media)
     } else if (this.media.type === 'library') {
@@ -332,13 +366,9 @@ export class PlayerPage implements OnInit {
     this.resumeIndex = this.resumemedia.index
     this.resumemedia.index = undefined
     if (this.resumePlay || this.resumeIndex !== -1 || this.resumeAdded) {
-      console.log('Edit this.resumemedia', this.resumemedia)
       this.mediaService.editRawResumeAtIndex(this.resumeIndex, this.resumemedia)
-      console.log('Edit response: ', this.mediaService.getResponse())
     } else {
-      console.log('Add this.resumemedia', this.resumemedia)
       this.mediaService.addRawResume(this.resumemedia)
-      console.log('Add response: ', this.mediaService.getResponse())
       this.resumeAdded = true
       setTimeout(() => {
         this.playerService.sendCmd(PlayerCmds.MAXRESUME)
@@ -347,77 +377,61 @@ export class PlayerPage implements OnInit {
   }
 
   volUp() {
-    if (this.monitor?.monitor === 'On') {
-      this.playerService.sendCmd(PlayerCmds.VOLUMEUP)
-    }
+    this.playerService.sendCmd(PlayerCmds.VOLUMEUP)
   }
 
   volDown() {
-    if (this.monitor?.monitor === 'On') {
-      this.playerService.sendCmd(PlayerCmds.VOLUMEDOWN)
-    }
+    this.playerService.sendCmd(PlayerCmds.VOLUMEDOWN)
   }
 
   skipPrev() {
-    if (this.monitor?.monitor === 'On') {
-      if (this.playing) {
-        this.playerService.sendCmd(PlayerCmds.PREVIOUS)
-      } else {
-        this.playing = true
-        this.playerService.sendCmd(PlayerCmds.PREVIOUS)
-      }
+    if (this.playing) {
+      this.playerService.sendCmd(PlayerCmds.PREVIOUS)
+    } else {
+      this.playing = true
+      this.playerService.sendCmd(PlayerCmds.PREVIOUS)
     }
   }
 
   skipNext() {
-    if (this.monitor?.monitor === 'On') {
-      if (this.playing) {
-        this.playerService.sendCmd(PlayerCmds.NEXT)
-      } else {
-        this.playing = true
-        this.playerService.sendCmd(PlayerCmds.NEXT)
-      }
+    if (this.playing) {
+      this.playerService.sendCmd(PlayerCmds.NEXT)
+    } else {
+      this.playing = true
+      this.playerService.sendCmd(PlayerCmds.NEXT)
     }
   }
 
   toggleshuffle() {
-    if (this.monitor?.monitor === 'On') {
-      if (this.media.shuffle) {
-        this.shufflechanged++
-        this.media.shuffle = false
-        this.playerService.sendCmd(PlayerCmds.SHUFFLEOFF)
-      } else {
-        this.shufflechanged++
-        this.media.shuffle = true
-        this.playerService.sendCmd(PlayerCmds.SHUFFLEON)
-      }
+    if (this.media.shuffle) {
+      this.shufflechanged++
+      this.media.shuffle = false
+      this.playerService.sendCmd(PlayerCmds.SHUFFLEOFF)
+    } else {
+      this.shufflechanged++
+      this.media.shuffle = true
+      this.playerService.sendCmd(PlayerCmds.SHUFFLEON)
     }
   }
 
   playPause() {
-    if (this.monitor?.monitor === 'On') {
-      if (this.playing) {
-        //this.playing = false;
-        this.playerService.sendCmd(PlayerCmds.PAUSE)
-        if (this.media.type === 'spotify' || this.media.type === 'library' || this.media.type === 'rss') {
-          this.saveResumeFiles()
-        }
-      } else {
-        //this.playing = true;
-        this.playerService.sendCmd(PlayerCmds.PLAY)
+    if (this.playing) {
+      //this.playing = false;
+      this.playerService.sendCmd(PlayerCmds.PAUSE)
+      if (this.media.type === 'spotify' || this.media.type === 'library' || this.media.type === 'rss') {
+        this.saveResumeFiles()
       }
+    } else {
+      //this.playing = true;
+      this.playerService.sendCmd(PlayerCmds.PLAY)
     }
   }
 
   seekForward() {
-    if (this.monitor?.monitor === 'On') {
-      this.playerService.sendCmd(PlayerCmds.SEEKFORWARD)
-    }
+    this.playerService.sendCmd(PlayerCmds.SEEKFORWARD)
   }
 
   seekBack() {
-    if (this.monitor?.monitor === 'On') {
-      this.playerService.sendCmd(PlayerCmds.SEEKBACK)
-    }
+    this.playerService.sendCmd(PlayerCmds.SEEKBACK)
   }
 }

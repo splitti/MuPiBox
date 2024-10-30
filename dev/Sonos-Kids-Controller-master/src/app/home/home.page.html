@@ -16,114 +16,24 @@
         <ion-icon name="radio-outline"></ion-icon>
       </ion-segment-button>
     </ion-segment>
-    @if (hat_active) {
-      <ion-buttons slot="end">
-        @if ((mupihat$ | async)?.BatteryConnected === 1) {
-          <ion-buttons slot="end">
-            @if ((mupihat$ | async)?.Charger_Status === 'Not Charging' && (mupihat$ | async)?.Bat_SOC ==='100%') {
-              <ion-button class="battery" (click)="editButtonPressed()">
-                <ion-icon slot="icon-only" src="../../assets/icon/MuPiHAT/Battery100.svg" size="large"></ion-icon>
-              </ion-button>
-            } @else {
-              @if ((mupihat$ | async)?.Bat_SOC ==='100%') {
-                <ion-button class="battery" (click)="editButtonPressed()">
-                  <ion-icon slot="icon-only" src="../../assets/icon/MuPiHAT/Charging100.svg" size="large"></ion-icon>
-                </ion-button>
-              } @else {
-                @if ((mupihat$ | async)?.Charger_Status === 'Not Charging' && (mupihat$ | async)?.Bat_SOC ==='75%') {
-                  <ion-button class="battery" (click)="editButtonPressed()">
-                    <ion-icon slot="icon-only" src="../../assets/icon/MuPiHAT/Battery70.svg" size="large"></ion-icon>
-                  </ion-button>
-                } @else {
-                  @if ((mupihat$ | async)?.Bat_SOC ==='75%') {
-                    <ion-button class="battery" (click)="editButtonPressed()">
-                      <ion-icon slot="icon-only" src="../../assets/icon/MuPiHAT/Charging70.svg" size="large"></ion-icon>
-                    </ion-button>
-                  } @else {
-                    @if ((mupihat$ | async)?.Charger_Status === 'Not Charging' && (mupihat$ | async)?.Bat_SOC ==='50%') {
-                      <ion-button class="battery" (click)="editButtonPressed()">
-                        <ion-icon slot="icon-only" src="../../assets/icon/MuPiHAT/Battery50.svg" size="large"></ion-icon>
-                      </ion-button>
-                    } @else {
-                      @if ((mupihat$ | async)?.Bat_SOC ==='50%') {
-                        <ion-button class="battery" (click)="editButtonPressed()">
-                          <ion-icon slot="icon-only" src="../../assets/icon/MuPiHAT/Charging50.svg" size="large"></ion-icon>
-                        </ion-button>
-                      } @else {
-                        @if ((mupihat$ | async)?.Charger_Status === 'Not Charging' && (mupihat$ | async)?.Bat_SOC ==='25%') {
-                          <ion-button class="battery" (click)="editButtonPressed()">
-                            <ion-icon slot="icon-only" src="../../assets/icon/MuPiHAT/Battery20.svg" size="large"></ion-icon>
-                          </ion-button>
-                        } @else {
-                          @if ((mupihat$ | async)?.Bat_SOC ==='25%') {
-                            <ion-button class="battery" (click)="editButtonPressed()">
-                              <ion-icon slot="icon-only" src="../../assets/icon/MuPiHAT/Charging20.svg" size="large"></ion-icon>
-                            </ion-button>
-                          } @else {
-                            @if ((mupihat$ | async)?.Charger_Status === 'Not Charging' && (mupihat$ | async)?.Bat_SOC ==='0%') {
-                              <ion-button class="battery" (click)="editButtonPressed()">
-                                <ion-icon slot="icon-only" src="../../assets/icon/MuPiHAT/Battery0.svg" size="large"></ion-icon>
-                              </ion-button>
-                            } @else {
-                              @if ((mupihat$ | async)?.Bat_SOC ==='0%') {
-                                <ion-button class="battery" (click)="editButtonPressed()">
-                                  <ion-icon slot="icon-only" src="../../assets/icon/MuPiHAT/Charging0.svg" size="large"></ion-icon>
-                                </ion-button>
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          </ion-buttons>
-        } @else {
-          @if ((network$ | async)?.onlinestate ==='online') {
-            <ion-button class="OnlineState" (click)="editButtonPressed()">
-              <ion-icon slot="icon-only" name="cloud-outline"></ion-icon>
-            </ion-button>
-          } @else {
-            @if ((network$ | async)?.onlinestate ==='offline') {
-              <ion-button class="OfflineState" (click)="editButtonPressed()">
-                <ion-icon slot="icon-only" name="cloud-offline-outline"></ion-icon>
-              </ion-button>
-            } @else {
-              <ion-button (click)="editButtonPressed()">
-                <ion-icon slot="icon-only" name=""></ion-icon>
-              </ion-button>
-            }
-          }
-        }
-      </ion-buttons>
-    }
-    @if (!hat_active) {
-      <ion-buttons slot="end">
-        @if ((network$ | async)?.onlinestate ==='online') {
-          <ion-button class="OnlineState" (click)="editButtonPressed()">
+    
+    <ion-buttons slot="end">
+      <ion-button class="status-icons" (click)="editButtonPressed()">
+          @if (isOnline()) {
             <ion-icon slot="icon-only" name="cloud-outline"></ion-icon>
-          </ion-button>
-        } @else {
-          @if ((network$ | async)?.onlinestate ==='offline') {
-            <ion-button class="OfflineState" (click)="editButtonPressed()">
-              <ion-icon slot="icon-only" name="cloud-offline-outline"></ion-icon>
-            </ion-button>
           } @else {
-            <ion-button (click)="editButtonPressed()">
-              <ion-icon slot="icon-only" name=""></ion-icon>
-            </ion-button>
+            <ion-icon slot="icon-only" name="cloud-offline-outline"></ion-icon>
           }
-        }
+          <mupihat-icon></mupihat-icon>
+        </ion-button>
       </ion-buttons>
-    }
   </ion-toolbar>
 </ion-header>
 
 <ion-content class="home-content">
+  <mupi-loading [loading]="isLoading()"></mupi-loading>
+  <swiper-container slides-per-view="3" scrollbar="true" scrollbar-hide="true" free-mode="false" css-mode="true">
   @if (category === 'audiobook' || category === 'music' || category === 'other') {
-    <swiper-container slides-per-view="3" scrollbar="true" scrollbar-hide="true" free-mode="false" css-mode="true">
       @for (currentArtist of artists; track currentArtist) {
         <swiper-slide>
           <ion-grid>
@@ -136,7 +46,7 @@
             </ion-row>
             <ion-row class="title-card">
               <ion-col size="12">
-                <ion-card (click)="artistNameClicked(currentArtist)">
+                <ion-card (click)="readText(currentArtist.name)">
                   <ion-card-header>
                     <ion-card-title class="ion-text-nowrap truncate-text ion-text-center">{{currentArtist.name}}</ion-card-title>
                   </ion-card-header>
@@ -146,10 +56,8 @@
           </ion-grid>
         </swiper-slide>
       }
-    </swiper-container>
   } @else {
     @if (media) {
-      <swiper-container slides-per-view="3" scrollbar="true" scrollbar-hide="true" free-mode="false" css-mode="true">
         @for (currentMedia of media; track currentMedia) {
           <swiper-slide>
             <ion-grid>
@@ -157,7 +65,7 @@
                 <ion-col size="12">
                   <ion-card class="media-card">
                     <img (click)="mediaCoverClicked(currentMedia)" draggable="false" style="-moz-user-select: none;" ondragstart="return false;" src="{{covers[currentMedia.title]}}">
-                    <ion-card-header (click)="mediaNameClicked(currentMedia)">
+                    <ion-card-header (click)="readText(currentMedia.title)">
                       <ion-card-title class="ion-text-nowrap truncate-text ion-text-center">{{currentMedia.title}}</ion-card-title>
                     </ion-card-header>
                   </ion-card>
@@ -166,9 +74,7 @@
             </ion-grid>
           </swiper-slide>
         }
-      </swiper-container>
     }
   }
-
-
+</swiper-container>
 </ion-content>

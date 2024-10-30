@@ -1,5 +1,6 @@
 import { Observable, Subject, from, iif, interval, of } from 'rxjs'
 import { map, mergeAll, mergeMap, shareReplay, switchMap, toArray } from 'rxjs/operators'
+import type { CategoryType, Media } from './media'
 
 import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
@@ -11,13 +12,10 @@ import type { CurrentMPlayer } from './current.mplayer'
 import type { CurrentPlaylist } from './current.playlist'
 import type { CurrentShow } from './current.show'
 import type { CurrentSpotify } from './current.spotify'
-import type { Media } from './media'
-import type { Monitor } from './monitor'
-import type { Mupihat } from './mupihat'
+import { Mupihat } from './mupihat'
 import type { Network } from './network'
 import { PlayerService } from './player.service'
 import { RssFeedService } from './rssfeed.service'
-import type { SonosApiConfig } from './sonos-api'
 import { SpotifyService } from './spotify.service'
 import type { Validate } from './validate'
 import type { WLAN } from './wlan'
@@ -26,33 +24,20 @@ import type { WLAN } from './wlan'
   providedIn: 'root',
 })
 export class MediaService {
-  network: Network
   ip: string
-  hostname: string
   response = ''
-  private category = 'audiobook'
+  private category: CategoryType = 'audiobook'
   public readonly current$: Observable<CurrentSpotify>
   public readonly local$: Observable<CurrentMPlayer>
   public readonly network$: Observable<Network>
-  public readonly monitor$: Observable<Monitor>
-  public readonly resume$: Observable<Media[]>
   public readonly albumStop$: Observable<AlbumStop>
-  public readonly networkLocal$: Observable<Network>
   public readonly playlist$: Observable<CurrentPlaylist>
   public readonly episode$: Observable<CurrentEpisode>
   public readonly show$: Observable<CurrentShow>
   public readonly validate$: Observable<Validate>
   public readonly mupihat$: Observable<Mupihat>
-  public readonly config$: Observable<SonosApiConfig>
 
-  private rawMediaSubject = new Subject<Media[]>()
   private wlanSubject = new Subject<WLAN[]>()
-  private networkSubject = new Subject<Network>()
-  private resumeSubject = new Subject<Media[]>()
-
-  private artistSubject = new Subject<Media[]>()
-  private mediaSubject = new Subject<Media[]>()
-  private artistMediaSubject = new Subject<Media[]>()
 
   constructor(
     private http: HttpClient,
@@ -67,90 +52,48 @@ export class MediaService {
         this.ip = config.server
       }
     })
+
+    // Prepare subscriptions.
+    // shareReplay replays the most recent (bufferSize) emission on each subscription
+    // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
     this.current$ = interval(1000).pipe(
-      // Once a second after subscribe, way too frequent!
       switchMap((): Observable<CurrentSpotify> => this.http.get<CurrentSpotify>(`http://${this.ip}:5005/state`)),
-      // Replay the most recent (bufferSize) emission on each subscription
-      // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
       shareReplay({ bufferSize: 1, refCount: false }),
     )
     this.local$ = interval(1000).pipe(
-      // Once a second after subscribe, way too frequent!
       switchMap((): Observable<CurrentMPlayer> => this.http.get<CurrentMPlayer>(`http://${this.ip}:5005/local`)),
-      // Replay the most recent (bufferSize) emission on each subscription
-      // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
       shareReplay({ bufferSize: 1, refCount: false }),
     )
     this.playlist$ = interval(1000).pipe(
-      // Once a second after subscribe, way too frequent!
       switchMap(
         (): Observable<CurrentPlaylist> => this.http.get<CurrentPlaylist>(`http://${this.ip}:5005/playlistTracks`),
       ),
-      // Replay the most recent (bufferSize) emission on each subscription
-      // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
       shareReplay({ bufferSize: 1, refCount: false }),
     )
     this.episode$ = interval(1000).pipe(
-      // Once a second after subscribe, way too frequent!
       switchMap((): Observable<CurrentEpisode> => this.http.get<CurrentEpisode>(`http://${this.ip}:5005/episode`)),
-      // Replay the most recent (bufferSize) emission on each subscription
-      // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
       shareReplay({ bufferSize: 1, refCount: false }),
     )
     this.show$ = interval(1000).pipe(
-      // Once a second after subscribe, way too frequent!
       switchMap((): Observable<CurrentShow> => this.http.get<CurrentShow>(`http://${this.ip}:5005/show`)),
-      // Replay the most recent (bufferSize) emission on each subscription
-      // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
       shareReplay({ bufferSize: 1, refCount: false }),
     )
-    this.network$ = interval(1000).pipe(
-      // Once a second after subscribe, way too frequent!
+    // 5 seconds is enough for wifi update and showing/hiding media.
+    this.network$ = interval(5000).pipe(
       switchMap((): Observable<Network> => this.http.get<Network>(`http://${this.ip}:8200/api/network`)),
-      // Replay the most recent (bufferSize) emission on each subscription
-      // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
-      shareReplay({ bufferSize: 1, refCount: false }),
-    )
-    this.monitor$ = interval(1000).pipe(
-      // Once a second after subscribe, way too frequent!
-      switchMap((): Observable<Monitor> => this.http.get<Monitor>(`http://${this.ip}:8200/api/monitor`)),
-      // Replay the most recent (bufferSize) emission on each subscription
-      // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
-      shareReplay({ bufferSize: 1, refCount: false }),
-    )
-    this.resume$ = interval(1000).pipe(
-      // Once a second after subscribe, way too frequent!
-      switchMap((): Observable<Media[]> => this.http.get<Media[]>(`http://${this.ip}:8200/api/resume`)),
-      // Replay the most recent (bufferSize) emission on each subscription
-      // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
       shareReplay({ bufferSize: 1, refCount: false }),
     )
     this.albumStop$ = interval(1000).pipe(
-      // Once a second after subscribe, way too frequent!
       switchMap((): Observable<AlbumStop> => this.http.get<AlbumStop>(`http://${this.ip}:8200/api/albumstop`)),
-      // Replay the most recent (bufferSize) emission on each subscription
-      // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
       shareReplay({ bufferSize: 1, refCount: false }),
     )
     this.validate$ = interval(1000).pipe(
-      // Once a second after subscribe, way too frequent!
       switchMap((): Observable<Validate> => this.http.get<Validate>(`http://${this.ip}:5005/validate`)),
-      // Replay the most recent (bufferSize) emission on each subscription
-      // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
       shareReplay({ bufferSize: 1, refCount: false }),
     )
-    this.mupihat$ = interval(1000).pipe(
-      // Once a second after subscribe, way too frequent!
-      switchMap((): Observable<Mupihat> => this.http.get<Mupihat>(`http://${this.ip}:8200/api/mupihat`)),
-      // Replay the most recent (bufferSize) emission on each subscription
-      // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
-      shareReplay({ bufferSize: 1, refCount: false }),
-    )
-    this.config$ = interval(1000).pipe(
-      // Once a second after subscribe, way too frequent!
-      switchMap((): Observable<SonosApiConfig> => this.http.get<SonosApiConfig>(`http://${this.ip}:8200/api/sonos`)),
-      // Replay the most recent (bufferSize) emission on each subscription
-      // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
+    // Every 2 seconds should be enough for timely charging update.
+    this.mupihat$ = interval(2000).pipe(
+      switchMap((): Observable<Mupihat> => this.http.get<Mupihat>('http://localhost:8200/api/mupihat')),
       shareReplay({ bufferSize: 1, refCount: false }),
     )
   }
@@ -159,40 +102,8 @@ export class MediaService {
   // Handling of RAW media entries from data.json
   // --------------------------------------------
 
-  getNetworkObservable = (): Observable<Network> => {
-    const url = environment.production ? '../api/network' : `http://${this.ip}:8200/api/network`
-    return this.http.get<Network>(url)
-  }
-
-  updateNetwork() {
-    const url = environment.production ? '../api/network' : `http://${this.ip}:8200/api/network`
-    this.http.get<Network>(url).subscribe((network) => {
-      this.networkSubject.next(network)
-    })
-  }
-
-  getRawMediaObservable = (): Observable<Media[]> => {
-    const url = environment.production ? '../api/data' : `http://${this.ip}:8200/api/data`
-    return this.http.get<Media[]>(url)
-  }
-
-  updateRawMedia() {
-    const url = environment.production ? '../api/data' : `http://${this.ip}:8200/api/data`
-    this.http.get<Media[]>(url).subscribe((media) => {
-      this.rawMediaSubject.next(media)
-    })
-  }
-
-  getRawResumeObservable = (): Observable<Record<any, any>[]> => {
-    const url = environment.production ? '../api/resume' : `http://${this.ip}:8200/api/resume`
-    return this.http.get<Record<any, any>[]>(url)
-  }
-
-  updateRawResume() {
-    const url = environment.production ? '../api/resume' : `http://${this.ip}:8200/api/resume`
-    this.http.get<Media[]>(url).subscribe((media) => {
-      this.resumeSubject.next(media)
-    })
+  public fetchRawMedia(): Observable<Media[]> {
+    return this.http.get<Media[]>('http://localhost:8200/api/data')
   }
 
   updateWLAN() {
@@ -210,7 +121,6 @@ export class MediaService {
 
     this.http.post(url, body, { responseType: 'text' }).subscribe((response) => {
       this.response = response
-      this.updateRawMedia()
     })
   }
 
@@ -223,7 +133,6 @@ export class MediaService {
 
     this.http.post(url, body, { responseType: 'text' }).subscribe((response) => {
       this.response = response
-      this.updateRawMedia()
     })
   }
 
@@ -232,7 +141,6 @@ export class MediaService {
 
     this.http.post(url, media, { responseType: 'text' }).subscribe((response) => {
       this.response = response
-      this.updateRawMedia()
     })
   }
 
@@ -243,11 +151,8 @@ export class MediaService {
       data,
     }
 
-    console.log(body)
-
     this.http.post(url, body, { responseType: 'text' }).subscribe((response) => {
       this.response = response
-      this.updateRawResume()
     })
   }
 
@@ -256,7 +161,6 @@ export class MediaService {
 
     this.http.post(url, media, { responseType: 'text' }).subscribe((response) => {
       this.response = response
-      this.updateRawResume()
     })
   }
 
@@ -269,8 +173,96 @@ export class MediaService {
     })
   }
 
+  // Collect albums from a given artist in the current category
+  public fetchMediaFromArtist(artist: Artist, category: CategoryType): Observable<Media[]> {
+    return this.fetchMedia(category).pipe(
+      map((media: Media[]) => {
+        return media.filter((currentMedia) => currentMedia.artist === artist.name)
+      }),
+    )
+  }
+
+  public fetchMediaData(category: CategoryType): Observable<Media[]> {
+    return this.fetchMedia(category).pipe(
+      map((media: Media[]) => {
+        return media.sort((a, b) =>
+          a.title.localeCompare(b.title, undefined, {
+            numeric: true,
+            sensitivity: 'base',
+          }),
+        )
+      }),
+    )
+  }
+
+  public fetchArtistData(category: CategoryType): Observable<Artist[]> {
+    return this.fetchMedia(category).pipe(
+      map((media: Media[]) => {
+        // Create temporary object with artists as keys and albumCounts as values
+        const mediaCounts = media.reduce((tempCounts, currentMedia) => {
+          tempCounts[currentMedia.artist] = (tempCounts[currentMedia.artist] || 0) + 1
+          return tempCounts
+        }, {})
+
+        // Create temporary object with artists as keys and covers (first media cover) as values
+        const covers = media
+          .sort((a, b) => (a.title <= b.title ? -1 : 1))
+          .reduce((tempCovers, currentMedia) => {
+            if (/* currentMedia.type === 'library' &&  */ currentMedia.artistcover) {
+              if (!tempCovers[currentMedia.artist]) {
+                tempCovers[currentMedia.artist] = currentMedia.artistcover
+              }
+            } else {
+              if (!tempCovers[currentMedia.artist]) {
+                tempCovers[currentMedia.artist] = currentMedia.cover
+              }
+            }
+            return tempCovers
+          }, {})
+
+        // Create temporary object with artists as keys and first media as values
+        const coverMedia = media
+          .sort((a, b) => (a.title <= b.title ? -1 : 1))
+          .reduce((tempMedia, currentMedia) => {
+            if (!tempMedia[currentMedia.artist]) {
+              tempMedia[currentMedia.artist] = currentMedia
+            }
+            return tempMedia
+          }, {})
+
+        // Build Array of Artist objects sorted by Artist name
+        const artists: Artist[] = Object.keys(mediaCounts)
+          .sort()
+          .map((currentName) => {
+            const artist: Artist = {
+              name: currentName,
+              albumCount: mediaCounts[currentName],
+              cover: covers[currentName],
+              coverMedia: coverMedia[currentName],
+            }
+            return artist
+          })
+
+        return artists
+      }),
+    )
+  }
+
+  public fetchActiveResumeData(): Observable<Media[]> {
+    // Category is irrelevant if 'resume' is set to true.
+    return this.updateMedia('http://localhost:8200/api/activeresume', true, 'resume').pipe(
+      map((media: Media[]) => {
+        return media.reverse()
+      }),
+    )
+  }
+
+  private fetchMedia(category: CategoryType): Observable<Media[]> {
+    return this.updateMedia('http://localhost:8200/api/data', false, category)
+  }
+
   // Get the media data for the current category from the server
-  private updateMedia(url: string, resume: boolean) {
+  private updateMedia(url: string, resume: boolean, category: CategoryType): Observable<Media[]> {
     // Custom rxjs pipe to override artist.
     const overwriteArtist =
       (item: Media) =>
@@ -299,13 +291,12 @@ export class MediaService {
         for (const item of items) {
           item.category = item.category === undefined ? 'audiobook' : item.category
         }
-        return items.filter((item) => item.category === this.category)
+        return items.filter((item) => item.category === category)
       }),
       mergeMap((items) => from(items)), // parallel calls for each item
       map(
-        (
-          item, // get media for the current item
-        ) =>
+        // get media for the current item
+        (item) =>
           iif(
             // Get media by query
             () => !!(item.query && item.query.length > 0),
@@ -408,120 +399,6 @@ export class MediaService {
     )
   }
 
-  publishArtists() {
-    const url = environment.production ? '../api/data' : `http://${this.ip}:8200/api/data`
-    this.updateMedia(url, false).subscribe((media) => {
-      this.artistSubject.next(media)
-    })
-  }
-
-  publishMedia() {
-    const url = environment.production ? '../api/data' : `http://${this.ip}:8200/api/data`
-    this.updateMedia(url, false).subscribe((media) => {
-      this.mediaSubject.next(media)
-    })
-  }
-
-  publishArtistMedia() {
-    const url = environment.production ? '../api/data' : `http://${this.ip}:8200/api/data`
-    this.updateMedia(url, false).subscribe((media) => {
-      this.artistMediaSubject.next(media)
-    })
-  }
-
-  publishResume() {
-    const url = environment.production ? '../api/activeresume' : `http://${this.ip}:8200/api/activeresume`
-    this.updateMedia(url, true).subscribe((media) => {
-      this.resumeSubject.next(media)
-    })
-  }
-
-  // Get all artists for the current category
-  getArtists(): Observable<Artist[]> {
-    return this.artistSubject.pipe(
-      map((media: Media[]) => {
-        // Create temporary object with artists as keys and albumCounts as values
-        const mediaCounts = media.reduce((tempCounts, currentMedia) => {
-          tempCounts[currentMedia.artist] = (tempCounts[currentMedia.artist] || 0) + 1
-          return tempCounts
-        }, {})
-
-        // Create temporary object with artists as keys and covers (first media cover) as values
-        const covers = media
-          .sort((a, b) => (a.title <= b.title ? -1 : 1))
-          .reduce((tempCovers, currentMedia) => {
-            if (/* currentMedia.type === 'library' &&  */ currentMedia.artistcover) {
-              if (!tempCovers[currentMedia.artist]) {
-                tempCovers[currentMedia.artist] = currentMedia.artistcover
-              }
-            } else {
-              if (!tempCovers[currentMedia.artist]) {
-                tempCovers[currentMedia.artist] = currentMedia.cover
-              }
-            }
-            return tempCovers
-          }, {})
-
-        // Create temporary object with artists as keys and first media as values
-        const coverMedia = media
-          .sort((a, b) => (a.title <= b.title ? -1 : 1))
-          .reduce((tempMedia, currentMedia) => {
-            if (!tempMedia[currentMedia.artist]) {
-              tempMedia[currentMedia.artist] = currentMedia
-            }
-            return tempMedia
-          }, {})
-
-        // Build Array of Artist objects sorted by Artist name
-        const artists: Artist[] = Object.keys(mediaCounts)
-          .sort()
-          .map((currentName) => {
-            const artist: Artist = {
-              name: currentName,
-              albumCount: mediaCounts[currentName],
-              cover: covers[currentName],
-              coverMedia: coverMedia[currentName],
-            }
-            return artist
-          })
-
-        return artists
-      }),
-    )
-  }
-
-  // Collect albums from a given artist in the current category
-  getMediaFromArtist(artist: Artist): Observable<Media[]> {
-    return this.artistMediaSubject.pipe(
-      map((media: Media[]) => {
-        return media.filter((currentMedia) => currentMedia.artist === artist.name)
-      }),
-    )
-  }
-
-  // Collect albums from a given artist in the current category
-  getMediaFromResume(): Observable<Media[]> {
-    return this.resumeSubject.pipe(
-      map((media: Media[]) => {
-        return media.reverse()
-      }),
-    )
-  }
-
-  // Get all media entries for the current category
-  getMedia(): Observable<Media[]> {
-    return this.mediaSubject.pipe(
-      map((media: Media[]) => {
-        return media.sort((a, b) =>
-          a.title.localeCompare(b.title, undefined, {
-            numeric: true,
-            sensitivity: 'base',
-          }),
-        )
-      }),
-    )
-  }
-
   // Get all media entries for the current category
   getResponse() {
     const tmpResponse = this.response
@@ -531,7 +408,7 @@ export class MediaService {
   }
 
   // Choose which media category should be displayed in the app
-  setCategory(category: string) {
+  setCategory(category: CategoryType) {
     this.category = category
   }
 }

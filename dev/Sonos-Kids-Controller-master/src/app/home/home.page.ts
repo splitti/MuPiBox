@@ -1,19 +1,50 @@
-import { CUSTOM_ELEMENTS_SCHEMA, Component, OnInit } from '@angular/core'
+import {
+  CUSTOM_ELEMENTS_SCHEMA,
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+  Signal,
+  WritableSignal,
+  effect,
+  signal,
+} from '@angular/core'
 import { NavigationExtras, Router } from '@angular/router'
+import {
+  IonButton,
+  IonButtons,
+  IonCard,
+  IonCardHeader,
+  IonCardTitle,
+  IonCol,
+  IonContent,
+  IonGrid,
+  IonHeader,
+  IonIcon,
+  IonRow,
+  IonSegment,
+  IonSegmentButton,
+  IonToolbar,
+} from '@ionic/angular/standalone'
+import {
+  bookOutline,
+  cloudOfflineOutline,
+  cloudOutline,
+  musicalNotesOutline,
+  radioOutline,
+  timerOutline,
+} from 'ionicons/icons'
+import { filter, lastValueFrom, map } from 'rxjs'
+import type { CategoryType, Media } from '../media'
 
 import { CommonModule } from '@angular/common'
+import { toSignal } from '@angular/core/rxjs-interop'
 import { FormsModule } from '@angular/forms'
-import { IonicModule } from '@ionic/angular'
-import type { Observable } from 'rxjs'
-import { SwiperContainer } from 'swiper/element'
-import { ActivityIndicatorService } from '../activity-indicator.service'
+import { addIcons } from 'ionicons'
 import type { Artist } from '../artist'
 import { ArtworkService } from '../artwork.service'
-import type { Media } from '../media'
+import { LoadingComponent } from '../loading/loading.component'
 import { MediaService } from '../media.service'
-import type { Monitor } from '../monitor'
-import type { Mupihat } from '../mupihat'
-import type { Network } from '../network'
+import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
 import { PlayerService } from '../player.service'
 
 @Component({
@@ -21,179 +52,127 @@ import { PlayerService } from '../player.service'
   templateUrl: 'home.page.html',
   styleUrls: ['home.page.scss'],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
-  imports: [CommonModule, FormsModule, IonicModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    MupiHatIconComponent,
+    LoadingComponent,
+    IonHeader,
+    IonToolbar,
+    IonButtons,
+    IonButton,
+    IonIcon,
+    IonSegment,
+    IonSegmentButton,
+    IonContent,
+    IonGrid,
+    IonRow,
+    IonCol,
+    IonCard,
+    IonCardHeader,
+    IonCardTitle,
+  ],
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.Default,
 })
 export class HomePage implements OnInit {
-  category = 'audiobook'
+  protected artists: Artist[] = []
+  protected media: Media[] = []
+  protected covers = {}
+  protected editButtonclickCount = 0
+  protected editClickTimer = 0
 
-  artists: Artist[] = []
-  media: Media[] = []
-  network: Network
-  mupihat: Mupihat
-  monitor: Monitor
-  currentNetwork = ''
-  updateNetwork = false
-  covers = {}
-  activityIndicatorVisible = false
-  editButtonclickCount = 0
-  editClickTimer = 0
-  hat_active = false
-  public readonly network$: Observable<Network>
-  public readonly mupihat$: Observable<Mupihat>
+  protected category: CategoryType = 'audiobook'
 
-  needsUpdate = false
+  protected isOnline: Signal<boolean>
+  protected isLoading: WritableSignal<boolean> = signal(false)
+  protected needsUpdate = false
 
   constructor(
     private mediaService: MediaService,
     private artworkService: ArtworkService,
     private playerService: PlayerService,
-    private activityIndicatorService: ActivityIndicatorService,
     private router: Router,
   ) {
-    this.network$ = this.mediaService.network$
-    this.mupihat$ = this.mediaService.mupihat$
-    this.playerService.getConfig().subscribe((config) => {
-      this.hat_active = config.hat_active
-    })
+    this.isOnline = toSignal(
+      this.mediaService.network$.pipe(
+        filter((network) => network.ip !== undefined),
+        map((network) => network.onlinestate === 'online'),
+      ),
+    )
+    effect(
+      () => {
+        console.log(`Online state changed to ${this.isOnline()}`)
+        this.update()
+      },
+      { allowSignalWrites: true },
+    )
+    addIcons({ timerOutline, bookOutline, musicalNotesOutline, radioOutline, cloudOutline, cloudOfflineOutline })
   }
 
   ngOnInit() {
     this.mediaService.setCategory(this.category)
-
-    this.mediaService.network$.subscribe((network) => {
-      this.network = network
-    })
-    this.mediaService.mupihat$.subscribe((mupihat) => {
-      this.mupihat = mupihat
-    })
-    this.mediaService.monitor$.subscribe((monitor) => {
-      this.monitor = monitor
-    })
-
-    // Subscribe
-    this.mediaService.getMedia().subscribe((media) => {
-      this.media = media
-
-      for (const currentMedia of media) {
-        this.artworkService.getArtwork(currentMedia).subscribe((url) => {
-          this.covers[currentMedia.title] = url
-        })
-      }
-    })
-
-    this.mediaService.getArtists().subscribe((artists) => {
-      this.artists = artists
-      for (const artist of this.artists) {
-        this.artworkService.getArtistArtwork(artist.coverMedia).subscribe((url) => {
-          this.covers[artist.name] = url
-        })
-      }
-    })
-
     this.update()
   }
 
   ionViewWillEnter() {
-    if (this.needsUpdate) {
-      this.update()
-    }
-    this.updateNetwork = true
-    this.checkNetwork()
-
-    // This is a fix for the scroll bar not showing the current location when using the back button
-    // from the media list or admin page.
-    ;(document.querySelector('swiper-container') as SwiperContainer).swiper?.update()
+    this.update()
   }
 
-  checkNetwork() {
-    if (this.network?.ip !== undefined) {
-      if (this.network?.onlinestate !== this.currentNetwork) {
-        this.currentNetwork = this.network?.onlinestate
-        this.update()
-      }
-    }
-
-    setTimeout(() => {
-      if (this.updateNetwork) {
-        this.checkNetwork()
-      }
-    }, 1000)
-  }
-
-  ionViewDidLeave() {
-    this.updateNetwork = false
-    if (this.activityIndicatorVisible) {
-      this.activityIndicatorService.dismiss()
-      this.activityIndicatorVisible = false
-    }
-  }
-
-  categoryChanged(event: any) {
+  public categoryChanged(event: any): void {
     this.category = event.detail.value
     this.mediaService.setCategory(this.category)
     this.update()
   }
 
-  update() {
+  private update(): void {
+    this.isLoading.set(true)
     if (this.category === 'audiobook' || this.category === 'music' || this.category === 'other') {
-      this.mediaService.publishArtists()
+      lastValueFrom(this.mediaService.fetchArtistData(this.category))
+        .then((artists) => {
+          this.isLoading.set(false)
+          this.artists = artists
+
+          for (const artist of this.artists) {
+            this.artworkService.getArtistArtwork(artist.coverMedia).subscribe((url) => {
+              this.covers[artist.name] = url
+            })
+          }
+        })
+        .catch((error) => console.error(error))
     } else {
-      this.mediaService.publishMedia()
+      lastValueFrom(this.mediaService.fetchMediaData(this.category))
+        .then((media) => {
+          this.isLoading.set(false)
+          this.media = media
+          for (const currentMedia of media) {
+            this.artworkService.getArtwork(currentMedia).subscribe((url) => {
+              this.covers[currentMedia.title] = url
+            })
+          }
+        })
+        .catch((error) => console.error(error))
     }
     this.needsUpdate = false
   }
 
   artistCoverClicked(clickedArtist: Artist) {
-    if (this.monitor?.monitor === 'On') {
-      this.activityIndicatorService.create().then((indicator) => {
-        this.activityIndicatorVisible = true
-        indicator.present().then(() => {
-          const navigationExtras: NavigationExtras = {
-            state: {
-              artist: clickedArtist,
-            },
-          }
-          this.router.navigate(['/medialist'], navigationExtras)
-        })
-      })
+    const navigationExtras: NavigationExtras = {
+      state: {
+        artist: clickedArtist,
+        category: this.category,
+      },
     }
-  }
-
-  artistNameClicked(clickedArtist: Artist) {
-    if (this.monitor?.monitor === 'On') {
-      this.playerService.getConfig().subscribe((config) => {
-        if (config.tts == null || config.tts.enabled === true) {
-          this.playerService.say(clickedArtist.name)
-        }
-      })
-    }
+    this.router.navigate(['/medialist'], navigationExtras)
   }
 
   mediaCoverClicked(clickedMedia: Media) {
-    if (this.monitor?.monitor === 'On') {
-      this.activityIndicatorService.create().then((indicator) => {
-        this.activityIndicatorVisible = true
-        indicator.present().then(() => {
-          const navigationExtras: NavigationExtras = {
-            state: {
-              media: clickedMedia,
-            },
-          }
-          this.router.navigate(['/player'], navigationExtras)
-        })
-      })
+    const navigationExtras: NavigationExtras = {
+      state: {
+        media: clickedMedia,
+      },
     }
-  }
-
-  mediaNameClicked(clickedMedia: Media) {
-    if (this.monitor?.monitor === 'On') {
-      this.playerService.getConfig().subscribe((config) => {
-        if (config.tts == null || config.tts.enabled === true) {
-          this.playerService.say(clickedMedia.title)
-        }
-      })
-    }
+    this.router.navigate(['/player'], navigationExtras)
   }
 
   editButtonPressed() {
@@ -208,31 +187,15 @@ export class HomePage implements OnInit {
     } else {
       this.editButtonclickCount = 0
       this.needsUpdate = true
-
-      this.activityIndicatorService.create().then((indicator) => {
-        this.activityIndicatorVisible = true
-        indicator.present().then(() => {
-          this.router.navigate(['/edit'])
-        })
-      })
+      this.router.navigate(['/edit'])
     }
   }
 
   resume() {
-    if (this.monitor?.monitor === 'On') {
-      this.mediaService.setCategory('resume')
-      this.activityIndicatorService.create().then((indicator) => {
-        this.activityIndicatorVisible = true
-        indicator.present().then(() => {
-          const navigationExtras: NavigationExtras = {
-            state: {
-              resume: 'resume',
-              category: this.category,
-            },
-          }
-          this.router.navigate(['/medialist'], navigationExtras)
-        })
-      })
-    }
+    this.router.navigate(['/resume'])
+  }
+
+  protected readText(text: string): void {
+    this.playerService.sayText(text)
   }
 }

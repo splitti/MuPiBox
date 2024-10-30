@@ -61,47 +61,7 @@
         }
       }
     </ion-title>
-    @if (hat_active && (mupihat$ | async)?.BatteryConnected === 1) {
-      @if (mupihat.IBus > 0 && mupihat.Bat_SOC === '100%') {
-        <ion-icon class="battery-icon" slot="end" src="../../assets/icon/MuPiHAT/Charging100.svg" size="large"></ion-icon>
-      } @else {
-        @if (mupihat.IBus > 0 && mupihat.Bat_SOC === '75%') {
-          <ion-icon class="battery-icon" slot="end" src="../../assets/icon/MuPiHAT/Charging70.svg" size="large"></ion-icon>
-        } @else {
-          @if (mupihat.IBus > 0 && mupihat.Bat_SOC === '50%') {
-            <ion-icon class="battery-icon" slot="end" src="../../assets/icon/MuPiHAT/Charging50.svg" size="large"></ion-icon>
-          } @else {
-            @if (mupihat.IBus > 0 && mupihat.Bat_SOC === '25%') {
-              <ion-icon class="battery-icon" slot="end" src="../../assets/icon/MuPiHAT/Charging20.svg" size="large"></ion-icon>
-            } @else {
-              @if (mupihat.IBus > 0 && mupihat.Bat_SOC === '0%') {
-                <ion-icon class="battery-icon" slot="end" src="../../assets/icon/MuPiHAT/Charging0.svg" size="large"></ion-icon>
-              } @else {
-                @if (mupihat.Bat_SOC === '100%') {
-                  <ion-icon class="battery-icon" slot="end" src="../../assets/icon/MuPiHAT/Battery100.svg" size="large"></ion-icon>
-                } @else {
-                  @if (mupihat.Bat_SOC === '75%') {
-                    <ion-icon class="battery-icon" slot="end" src="../../assets/icon/MuPiHAT/Battery70.svg" size="large"></ion-icon>
-                  } @else {
-                    @if (mupihat.Bat_SOC === '50%') {
-                      <ion-icon class="battery-icon" slot="end" src="../../assets/icon/MuPiHAT/Battery50.svg" size="large"></ion-icon>
-                    } @else {
-                      @if (mupihat.Bat_SOC === '25%') {
-                        <ion-icon class="battery-icon" slot="end" src="../../assets/icon/MuPiHAT/Battery20.svg" size="large"></ion-icon>
-                      } @else {
-                        @if (mupihat.Bat_SOC === '0%') {
-                          <ion-icon class="battery-icon" slot="end" src="../../assets/icon/MuPiHAT/Battery0.svg" size="large"></ion-icon>
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
+    <span slot="end" class="mupihat-icon-container"><mupihat-icon></mupihat-icon></span>
   </ion-toolbar>
 </ion-header>
 
@@ -115,13 +75,13 @@
       </ion-col>
 
       <ion-col size="6">
-        <ion-item lines="none">
-          @if (media.type !=='radio') {
-            <ion-range #range [(ngModel)]="progress" max="100" (touchend)="seek()" (mouseup)="seek()"></ion-range>
-          }
-        </ion-item>
-        <ion-grid>
-          <ion-row class="play-controls">
+        <ion-grid class="controls">
+          <ion-row class="slider-row">
+            @if (media.type !=='radio') {
+              <ion-range #range [(ngModel)]="progress" max="100" (touchend)="seek()" (mouseup)="seek()"></ion-range>
+            }
+          </ion-row>
+          <ion-row class="controls-row">
             <ion-col size="4" class="ion-text-center">
               <ion-button (click)="volDown()" color="light">
                 <ion-icon slot="icon-only" name="volume-low-outline" class="small-icon"></ion-icon>
@@ -144,7 +104,7 @@
             </ion-col>
           </ion-row>
 
-          <ion-row class="volume-controls">
+          <ion-row class="controls-row">
             <ion-col size="6" class="ion-text-center">
               <ion-button [disabled]="this.media.showid" (click)="skipPrev()" color="light">
                 <ion-icon slot="icon-only" name="play-skip-back" class="small-icon"></ion-icon>
@@ -158,7 +118,7 @@
           </ion-row>
 
           @if (media.type ==='spotify' && (media.category =='music' || media.category =='other')) {
-            <ion-row class="volume-controls">
+            <ion-row class="controls-row">
               <ion-col size="4" class="ion-text-center">
                 <ion-button (click)="seekBack()" color="light">
                   <ion-icon slot="icon-only" name="play-back" class="small-icon"></ion-icon>
@@ -183,7 +143,7 @@
               </ion-col>
             </ion-row>
           } @else {
-            <ion-row class="volume-controls">
+            <ion-row class="controls-row">
               <ion-col size="6" class="ion-text-center">
                 <ion-button (click)="seekBack()" color="light">
                   <ion-icon slot="icon-only" name="play-back" class="small-icon"></ion-icon>

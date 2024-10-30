@@ -34,6 +34,8 @@ if ${SCROLL_ANIMATION} ; then
 else
 	CHROMIUM_OPTS="${CHROMIUM_OPTS} --disable-smooth-scrolling"
 fi
+# Disable touch swipe back and forward gestures.
+CHROMIUM_OPTS="${CHROMIUM_OPTS} --disable-features=OverscrollHistoryNavigation"
 # Suppresses Error dialogs
 CHROMIUM_OPTS="${CHROMIUM_OPTS} --noerrdialogs"
 # Window Settings
