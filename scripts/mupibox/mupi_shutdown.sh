@@ -46,7 +46,10 @@ if [ "${TELEGRAM}" ] && [ ${#TELEGRAM_CHATID} -ge 1 ] && [ ${#TELEGRAM_TOKEN} -g
 	/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "MuPiBox shutdown" &
 fi
 
-service mupi_powerled stop 
+service mupi_powerled stop
+
+# disable execution of mupi_startstop service on shutdown again
+systemctl set-environment DISABLE_MUPI_START_STOP=1
 
 #sudo /usr/local/bin/mupibox/./setting_update.sh
 #sudo sh -c 'su - dietpi -s /usr/local/bin/mupibox/shutdown_sound.sh'
