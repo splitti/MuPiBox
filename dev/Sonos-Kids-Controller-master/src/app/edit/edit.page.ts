@@ -1,9 +1,35 @@
 import { Component, OnInit } from '@angular/core'
 import { NavigationExtras, Router } from '@angular/router'
-import { AlertController, IonicModule } from '@ionic/angular'
+import {
+  IonBackButton,
+  IonButton,
+  IonButtons,
+  IonCol,
+  IonContent,
+  IonGrid,
+  IonHeader,
+  IonIcon,
+  IonItem,
+  IonLabel,
+  IonList,
+  IonRow,
+  IonTitle,
+  IonToolbar,
+} from '@ionic/angular/standalone'
+import {
+  addOutline,
+  arrowBackOutline,
+  brushOutline,
+  close,
+  powerOutline,
+  trashOutline,
+  wifiOutline,
+} from 'ionicons/icons'
 import { PlayerCmds, PlayerService } from '../player.service'
 
 import { AsyncPipe } from '@angular/common'
+import { AlertController } from '@ionic/angular/standalone'
+import { addIcons } from 'ionicons'
 import type { Observable } from 'rxjs'
 import { ActivityIndicatorService } from '../activity-indicator.service'
 import type { Media } from '../media'
@@ -15,13 +41,29 @@ import type { Network } from '../network'
   templateUrl: './edit.page.html',
   styleUrls: ['./edit.page.scss'],
   standalone: true,
-  imports: [IonicModule, AsyncPipe],
+  imports: [
+    AsyncPipe,
+    IonHeader,
+    IonToolbar,
+    IonButtons,
+    IonBackButton,
+    IonTitle,
+    IonButton,
+    IonIcon,
+    IonContent,
+    IonList,
+    IonItem,
+    IonGrid,
+    IonRow,
+    IonCol,
+    IonLabel,
+  ],
 })
 export class EditPage implements OnInit {
   media: Observable<Media[]>
-  network: Observable<Network>
-  networkparameter: Network
   activityIndicatorVisible = false
+
+  protected network$: Observable<Network>
 
   constructor(
     private mediaService: MediaService,
@@ -29,18 +71,13 @@ export class EditPage implements OnInit {
     private playerService: PlayerService,
     private router: Router,
     private activityIndicatorService: ActivityIndicatorService,
-  ) {}
+  ) {
+    addIcons({ addOutline, arrowBackOutline, wifiOutline, trashOutline, powerOutline, brushOutline, close })
+    this.network$ = this.mediaService.network$
+  }
 
   ngOnInit() {
-    // Subscribe
-    this.network = this.mediaService.getNetworkObservable()
-    this.media = this.mediaService.getRawMediaObservable()
-
-    // Retreive data through subscription above
-    this.mediaService.updateNetwork()
-    this.mediaService.updateRawMedia()
-
-    window.setTimeout(() => {}, 1000)
+    this.media = this.mediaService.fetchRawMedia()
   }
 
   async deleteButtonPressed(item: Media) {
@@ -94,10 +131,7 @@ export class EditPage implements OnInit {
                     }
                     this.playerService.sendCmd(PlayerCmds.INDEX)
                     setTimeout(() => {
-                      this.network = this.mediaService.getNetworkObservable()
-                      this.media = this.mediaService.getRawMediaObservable()
-                      this.mediaService.updateRawMedia()
-                      this.mediaService.updateNetwork()
+                      this.media = this.mediaService.fetchRawMedia()
                       this.activityIndicatorService.dismiss()
                       this.activityIndicatorVisible = false
                     }, 2000)
@@ -131,11 +165,7 @@ export class EditPage implements OnInit {
   }
 
   ionViewWillEnter() {
-    this.network = this.mediaService.getNetworkObservable()
-    this.media = this.mediaService.getRawMediaObservable()
-
-    this.mediaService.updateNetwork()
-    this.mediaService.updateRawMedia()
+    this.media = this.mediaService.fetchRawMedia()
   }
 
   ionViewDidLeave() {
@@ -164,8 +194,7 @@ export class EditPage implements OnInit {
           handler: () => {
             this.playerService.sendCmd(PlayerCmds.CLEARRESUME)
             setTimeout(() => {
-              this.media = this.mediaService.getRawMediaObservable()
-              this.mediaService.updateRawMedia()
+              this.media = this.mediaService.fetchRawMedia()
             }, 2000)
           },
         },

@@ -3,8 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ComponentFixture, TestBed } from '@angular/core/testing'
 
 import { FormsModule } from '@angular/forms'
-import { RouterTestingModule } from '@angular/router/testing'
-import { IonicModule } from '@ionic/angular'
+import { ActivatedRoute } from '@angular/router'
 import { AddPage } from './add.page'
 
 describe('AddPage', () => {
@@ -14,8 +13,12 @@ describe('AddPage', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      imports: [IonicModule.forRoot(), RouterTestingModule, FormsModule, AddPage],
-      providers: [provideHttpClient(withInterceptorsFromDi()), provideHttpClientTesting()],
+      imports: [FormsModule, AddPage],
+      providers: [
+        provideHttpClient(withInterceptorsFromDi()),
+        provideHttpClientTesting(),
+        { provide: ActivatedRoute, useValue: {} },
+      ],
     }).compileComponents()
 
     httpClient = TestBed.inject(HttpTestingController)

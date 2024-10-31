@@ -2,8 +2,6 @@ import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http'
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing'
 import { ComponentFixture, TestBed } from '@angular/core/testing'
 
-import { RouterTestingModule } from '@angular/router/testing'
-import { IonicModule } from '@ionic/angular'
 import { HomePage } from './home.page'
 
 describe('HomePage', () => {
@@ -13,7 +11,7 @@ describe('HomePage', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      imports: [IonicModule.forRoot(), RouterTestingModule, HomePage],
+      imports: [HomePage],
       providers: [provideHttpClient(withInterceptorsFromDi()), provideHttpClientTesting()],
     }).compileComponents()
 
