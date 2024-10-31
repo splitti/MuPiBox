@@ -8,8 +8,11 @@ CONFIG="/etc/mupibox/mupiboxconfig.json"
 SHUT_SOUND=$(/usr/bin/jq -r .mupibox.shutSound ${CONFIG})
 AUDIO_DEVICE=$(/usr/bin/jq -r .mupibox.audioDevice ${CONFIG})
 START_VOLUME=$(/usr/bin/jq -r .mupibox.startVolume ${CONFIG})
+PLAYERSTATE="/tmp/playerstate"
 
-curl -s http://127.0.0.1:5005/pause
+if [ $(head -n1 ${PLAYERSTATE}) = "play" ]; then
+  curl -s http://127.0.0.1:5005/pause
+fi
 
 sudo -i -u dietpi /usr/local/bin/mupibox/./shutdown_sound.sh
 #/usr/bin/pactl set-sink-volume @DEFAULT_SINK@ ${START_VOLUME}% 
