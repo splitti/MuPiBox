@@ -362,11 +362,11 @@ echo "==========================================================================
 	# Binaries
 	if [ `getconf LONG_BIT` == 32 ]; then
 		wget -O /usr/bin/jq https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-armhf >&3 2>&3
-		mv ${MUPI_SRC}/bin/librespot/0.5.0/librespot-32bit /usr/bin/librespot >&3 2>&3
+		mv ${MUPI_SRC}/bin/librespot/0.6.0/librespot-32bit /usr/bin/librespot >&3 2>&3
 		mv ${MUPI_SRC}/bin/fbv/fbv /usr/bin/fbv >&3 2>&3
 	else
 		wget -O /usr/bin/jq https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-arm64 >&3 2>&3
-		mv ${MUPI_SRC}/bin/librespot/0.5.0/librespot-64bit /usr/bin/librespot >&3 2>&3
+		mv ${MUPI_SRC}/bin/librespot/0.6.0/librespot-64bit /usr/bin/librespot >&3 2>&3
 		mv ${MUPI_SRC}/bin/fbv/fbv_64 /usr/bin/fbv >&3 2>&3
 	fi
 	chmod 755 /usr/bin/fbv /usr/bin/jq /usr/bin/librespot >&3 2>&3
