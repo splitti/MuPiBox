@@ -3,6 +3,8 @@ src/**/*.zip
 src/deploy.zip
 src/deploy
 
-**/node_modules/
+node_modules
+.angular
+**/server/config/*.json
 
 *.bak
