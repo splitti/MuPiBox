@@ -1,4 +1,4 @@
-import { CUSTOM_ELEMENTS_SCHEMA, Component, OnInit, WritableSignal, signal } from '@angular/core'
+import { CUSTOM_ELEMENTS_SCHEMA, Component, WritableSignal, signal } from '@angular/core'
 import { NavigationExtras, Router } from '@angular/router'
 import {
   IonBackButton,
@@ -51,7 +51,7 @@ import { PlayerService } from '../player.service'
     LoadingComponent,
   ],
 })
-export class MedialistPage implements OnInit {
+export class MedialistPage {
   protected artist?: Artist
   protected category: CategoryType = 'audiobook'
   protected media: Media[] = []
@@ -70,7 +70,7 @@ export class MedialistPage implements OnInit {
     addIcons({ arrowBackOutline })
   }
 
-  ngOnInit() {
+  public ionViewWillEnter(): void {
     this.fetchMedia()
   }
 
