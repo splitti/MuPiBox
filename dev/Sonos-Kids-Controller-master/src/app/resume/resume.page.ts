@@ -74,7 +74,7 @@ export class ResumePage implements OnInit {
     // We need to set the original index (this comes from the mismatch between us editing the original
     // data in the player page but showing only the "active" data on this page).
     // This will not be needed once we filter "online" unavailable media in the frontend.
-    lastValueFrom(this.http.get<Media[]>('http://localhost:8200/api/resume'))
+    lastValueFrom(this.http.get<Media[]>(`${this.mediaService.getAPIBaseUrl()}/resume`))
       .then((resumemedia) => {
         clickedMedia.index = -1
         for (let i = 0; i < resumemedia.length; i++) {

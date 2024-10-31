@@ -93,7 +93,7 @@ export class MediaService {
     )
     // Every 2 seconds should be enough for timely charging update.
     this.mupihat$ = interval(2000).pipe(
-      switchMap((): Observable<Mupihat> => this.http.get<Mupihat>('http://localhost:8200/api/mupihat')),
+      switchMap((): Observable<Mupihat> => this.http.get<Mupihat>(`http://${this.ip}:8200/api/mupihat`)),
       shareReplay({ bufferSize: 1, refCount: false }),
     )
   }
@@ -103,18 +103,18 @@ export class MediaService {
   // --------------------------------------------
 
   public fetchRawMedia(): Observable<Media[]> {
-    return this.http.get<Media[]>('http://localhost:8200/api/data')
+    return this.http.get<Media[]>(`${this.getAPIBaseUrl()}/data`)
   }
 
   updateWLAN() {
-    const url = environment.production ? '../api/wlan' : `http://${this.ip}:8200/api/wlan`
+    const url = `${this.getAPIBaseUrl()}/wlan`
     this.http.get<WLAN[]>(url).subscribe((wlan) => {
       this.wlanSubject.next(wlan)
     })
   }
 
   deleteRawMediaAtIndex(index: number) {
-    const url = environment.production ? '../api/delete' : `http://${this.ip}:8200/api/delete`
+    const url = `${this.getAPIBaseUrl()}/delete`
     const body = {
       index,
     }
@@ -125,7 +125,7 @@ export class MediaService {
   }
 
   editRawMediaAtIndex(index: number, data: Media) {
-    const url = environment.production ? '../api/edit' : `http://${this.ip}:8200/api/edit`
+    const url = `${this.getAPIBaseUrl()}/edit`
     const body = {
       index,
       data,
@@ -137,7 +137,7 @@ export class MediaService {
   }
 
   addRawMedia(media: Media) {
-    const url = environment.production ? '../api/add' : `http://${this.ip}:8200/api/add`
+    const url = `${this.getAPIBaseUrl()}/add`
 
     this.http.post(url, media, { responseType: 'text' }).subscribe((response) => {
       this.response = response
@@ -145,7 +145,7 @@ export class MediaService {
   }
 
   editRawResumeAtIndex(index: number, data: Media) {
-    const url = environment.production ? '../api/editresume' : `http://${this.ip}:8200/api/editresume`
+    const url = `${this.getAPIBaseUrl()}/editresume`
     const body = {
       index,
       data,
@@ -157,7 +157,7 @@ export class MediaService {
   }
 
   addRawResume(media: Media) {
-    const url = environment.production ? '../api/addresume' : `http://${this.ip}:8200/api/addresume`
+    const url = `${this.getAPIBaseUrl()}/addresume`
 
     this.http.post(url, media, { responseType: 'text' }).subscribe((response) => {
       this.response = response
@@ -165,7 +165,7 @@ export class MediaService {
   }
 
   addWLAN(wlan: WLAN) {
-    const url = environment.production ? '../api/addwlan' : `http://${this.ip}:8200/api/addwlan`
+    const url = `${this.getAPIBaseUrl()}/addwlan`
 
     this.http.post(url, wlan).subscribe((response) => {
       //this.response = response;
@@ -250,7 +250,7 @@ export class MediaService {
 
   public fetchActiveResumeData(): Observable<Media[]> {
     // Category is irrelevant if 'resume' is set to true.
-    return this.updateMedia('http://localhost:8200/api/activeresume', true, 'resume').pipe(
+    return this.updateMedia(`${this.getAPIBaseUrl()}/activeresume`, true, 'resume').pipe(
       map((media: Media[]) => {
         return media.reverse()
       }),
@@ -258,7 +258,7 @@ export class MediaService {
   }
 
   private fetchMedia(category: CategoryType): Observable<Media[]> {
-    return this.updateMedia('http://localhost:8200/api/data', false, category)
+    return this.updateMedia(`${this.getAPIBaseUrl()}/data`, false, category)
   }
 
   // Get the media data for the current category from the server
@@ -410,5 +410,9 @@ export class MediaService {
   // Choose which media category should be displayed in the app
   setCategory(category: CategoryType) {
     this.category = category
+  }
+
+  public getAPIBaseUrl(): string {
+    return environment.production ? '../api' : `http://${this.ip}:8200/api`
   }
 }
