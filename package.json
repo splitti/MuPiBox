@@ -7,7 +7,7 @@
     "docker:build": "docker build -t mupibox .",
     "docker:start": "docker run -it -v ./src/backend-api/:/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/ -p 80:80 -p 8200:8200 -p 5005:5005 mupibox:latest bash",
     "serve": "npm run serve --workspaces",
-    "serve:frontend": "npm run serve --workspace=mupibox-frontend",
+    "serve:frontend-box": "npm run serve --workspace=mupibox-frontend-box",
     "serve:backend-api": "npm run serve --workspace=mupibox-backend-api",
     "serve:backend-player": "npm run serve --workspace=mupibox-backend-player",
     "build": "npm run build --workspaces",

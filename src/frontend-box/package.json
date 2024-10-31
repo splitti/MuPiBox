@@ -1,5 +1,5 @@
 {
-  "name": "mupibox-frontend",
+  "name": "mupibox-frontend-box",
   "version": "1.0.0",
   "author": "Mupi Team",
   "homepage": "https://github.com/splitti/mupibox",
@@ -47,6 +47,6 @@
     "protractor": "~7.0.0",
     "typescript": "~5.4.5"
   },
-  "description": "Frontend UI for the MupiBox.",
+  "description": "Frontend UI running on the MupiBox.",
   "private": true
 }
