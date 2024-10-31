@@ -2,6 +2,7 @@
 
 #cleanup
 rm -rf deploy
+rm -rf www
 
 # Build the Angular app.
 npm run build
@@ -11,6 +12,9 @@ read -p "Press Enter to resume ..."
 
 # copy everything to deploy directory
 mkdir deploy
+# Move browser sub-folder to top-folder as with webpack.
+mv www/browser/* www/
+rm www/browser
 # Copy Angular frontend app.
 cp -Rp www deploy/
 # Copy network.json.
