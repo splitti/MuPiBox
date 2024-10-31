@@ -1,9 +1,28 @@
 import { AfterViewInit, Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core'
-import { AlertController, IonInput, IonSegment, IonSelect, IonicModule, NavController } from '@ionic/angular'
+import { AlertController, IonSelect, NavController } from '@ionic/angular/standalone'
 import { PlayerCmds, PlayerService } from '../player.service'
 
 import { FormsModule } from '@angular/forms'
 import type { NgForm } from '@angular/forms'
+import {
+  IonBackButton,
+  IonButton,
+  IonButtons,
+  IonCol,
+  IonContent,
+  IonGrid,
+  IonHeader,
+  IonIcon,
+  IonInput,
+  IonItem,
+  IonLabel,
+  IonRow,
+  IonSegment,
+  IonSegmentButton,
+  IonToolbar,
+} from '@ionic/angular/standalone'
+import { addIcons } from 'ionicons'
+import { refresh, wifiOutline } from 'ionicons/icons'
 import Keyboard from 'simple-keyboard'
 import { MediaService } from '../media.service'
 import type { WLAN } from '../wlan'
@@ -14,7 +33,24 @@ import type { WLAN } from '../wlan'
   templateUrl: './admin.page.html',
   styleUrls: ['./admin.page.scss'],
   standalone: true,
-  imports: [IonicModule, FormsModule],
+  imports: [
+    FormsModule,
+    IonHeader,
+    IonToolbar,
+    IonButtons,
+    IonBackButton,
+    IonSegment,
+    IonSegmentButton,
+    IonLabel,
+    IonButton,
+    IonIcon,
+    IonContent,
+    IonGrid,
+    IonRow,
+    IonCol,
+    IonItem,
+    IonInput,
+  ],
 })
 export class AdminPage implements OnInit, AfterViewInit {
   @ViewChild('segment', { static: false }) segment: IonSegment
@@ -36,7 +72,9 @@ export class AdminPage implements OnInit, AfterViewInit {
     private navController: NavController,
     public alertController: AlertController,
     private playerService: PlayerService,
-  ) {}
+  ) {
+    addIcons({ refresh, wifiOutline })
+  }
 
   ngOnInit() {}
 

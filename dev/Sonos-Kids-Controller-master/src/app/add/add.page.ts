@@ -1,11 +1,32 @@
 import { AfterViewInit, Component, OnInit, ViewEncapsulation } from '@angular/core'
 import { ActivatedRoute, Router } from '@angular/router'
-import { AlertController, IonicModule, NavController } from '@ionic/angular'
-import { Media, MediaSorting } from '../media'
+import { AlertController, NavController } from '@ionic/angular/standalone'
+import {
+  IonButton,
+  IonButtons,
+  IonCheckbox,
+  IonCol,
+  IonContent,
+  IonGrid,
+  IonHeader,
+  IonIcon,
+  IonInput,
+  IonItem,
+  IonLabel,
+  IonRow,
+  IonSegment,
+  IonSegmentButton,
+  IonSelect,
+  IonSelectOption,
+  IonToolbar,
+} from '@ionic/angular/standalone'
+import { arrowBackOutline, saveOutline } from 'ionicons/icons'
+import { CategoryType, Media, MediaSorting } from '../media'
 import { PlayerCmds, PlayerService } from '../player.service'
 
 import { FormsModule } from '@angular/forms'
 import type { NgForm } from '@angular/forms'
+import { addIcons } from 'ionicons'
 import type { Observable } from 'rxjs'
 import Keyboard from 'simple-keyboard'
 import { ActivityIndicatorService } from '../activity-indicator.service'
@@ -18,11 +39,30 @@ import type { Validate } from '../validate'
   templateUrl: './add.page.html',
   styleUrls: ['./add.page.scss'],
   standalone: true,
-  imports: [IonicModule, FormsModule],
+  imports: [
+    FormsModule,
+    IonHeader,
+    IonToolbar,
+    IonButtons,
+    IonButton,
+    IonIcon,
+    IonSegment,
+    IonSegmentButton,
+    IonLabel,
+    IonContent,
+    IonGrid,
+    IonRow,
+    IonCol,
+    IonItem,
+    IonSelect,
+    IonSelectOption,
+    IonInput,
+    IonCheckbox,
+  ],
 })
 export class AddPage implements OnInit, AfterViewInit {
   source = 'spotify'
-  category = 'audiobook'
+  category: CategoryType = 'audiobook'
   sourceType = 'spotifyURL'
   sorting: MediaSorting = MediaSorting.AlphabeticalAscending
   keyboard: Keyboard
@@ -51,12 +91,11 @@ export class AddPage implements OnInit, AfterViewInit {
     private activityIndicatorService: ActivityIndicatorService,
   ) {
     this.validate$ = this.mediaService.validate$
-    this.route.queryParams.subscribe((params) => {
-      if (this.router.getCurrentNavigation()?.extras.state) {
-        this.editMedia = this.router.getCurrentNavigation().extras.state.media
-        this.edit = true
-      }
-    })
+    if (this.router.getCurrentNavigation()?.extras.state) {
+      this.editMedia = this.router.getCurrentNavigation().extras.state.media
+      this.edit = true
+    }
+    addIcons({ arrowBackOutline, saveOutline })
   }
 
   ngOnInit() {

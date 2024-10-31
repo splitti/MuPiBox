@@ -11,6 +11,10 @@ export const routes: Routes = [
     pathMatch: 'full',
   },
   {
+    path: 'resume',
+    loadComponent: () => import('./resume/resume.page').then((m) => m.ResumePage),
+  },
+  {
     path: 'medialist',
     loadComponent: () => import('./medialist/medialist.page').then((m) => m.MedialistPage),
   },

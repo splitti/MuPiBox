@@ -4,7 +4,9 @@
       <ion-back-button icon="arrow-back-outline" defaultHref="/home"></ion-back-button>
     </ion-buttons>
     <ion-title>
-      {{(network | async)?.host}} - {{( network | async)?.ip}}
+      @if (network$ | async; as network) {
+        {{ network.host }} - {{ network.ip }}
+      }
     </ion-title>
     <ion-buttons slot="end">
       <ion-button (click)="addButtonPressed()">

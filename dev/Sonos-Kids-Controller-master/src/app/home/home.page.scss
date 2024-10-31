@@ -55,33 +55,11 @@ ion-row.media-card {
     text-overflow: ellipsis;
 }
 
-.button-container {
-    margin-top: -15px;
-    ion-button {
-        --padding-start: 50px;
-        --padding-end: 50px;
-        --border-radius: 6px;
-        padding-left: 20px;
-        padding-right: 20px;
-    }
-}
-
-.OnlineState ion-icon {
-        height:60% !important;
-        max-height:60% !important;
-        color:rgb(255,255,255);opacity:0.6;
-}
-
-.OfflineState ion-icon {
-        height:60% !important;
-        max-height:60% !important;
-        color:rgb(255,255,255);opacity:0.6;
-}
-
-.battery ion-icon {
-    height:60% !important;
-    max-height:60% !important;
-    color:rgb(255,255,255);opacity:1.0;
+.status-icons ion-icon {
+    height: 60% !important;
+    max-height: 60% !important;
+    color: rgb(255, 255, 255);
+    opacity: 1.0;
 }
 
 /* MuPiBox manual edit */

@@ -3,12 +3,12 @@
     <ion-buttons slot="start">
       <ion-back-button icon="arrow-back-outline" defaultHref="/home"></ion-back-button>
     </ion-buttons>
-    <ion-title>{{artist.name}}</ion-title>
+    <ion-title>Resume</ion-title>
     <span slot="end" class="mupihat-icon-container"><mupihat-icon></mupihat-icon></span>
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="medialist-content">
+<ion-content class="resume-content">
   <mupi-loading [loading]="isLoading()"></mupi-loading>
   <swiper-container slides-per-view="3" scrollbar="true" scrollbar-hide="true" free-mode="false" css-mode="true">
     @for (currentMedia of media; track currentMedia; let indexOfMedia = $index) {

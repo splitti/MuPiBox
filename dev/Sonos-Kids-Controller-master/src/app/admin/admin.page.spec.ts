@@ -4,7 +4,6 @@ import { ComponentFixture, TestBed } from '@angular/core/testing'
 
 import { FormsModule } from '@angular/forms'
 import { UrlSerializer } from '@angular/router'
-import { IonicModule } from '@ionic/angular'
 import { AdminPage } from './admin.page'
 
 describe('AdminPage', () => {
@@ -14,7 +13,7 @@ describe('AdminPage', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      imports: [IonicModule.forRoot(), FormsModule, AdminPage],
+      imports: [FormsModule, AdminPage],
       providers: [UrlSerializer, provideHttpClient(withInterceptorsFromDi()), provideHttpClientTesting()],
     }).compileComponents()
 
