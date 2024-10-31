@@ -1,5 +1,6 @@
 ﻿
-remove-item .\deploy -Recurse -Confirm:$false
+Remove-Item .\deploy -Recurse -Confirm:$false
+Remove-Item .\www -Recurse -Confirm:$false
 Remove-Item .\deploy.zip -Confirm:$false
 
 # build personal web app
@@ -8,6 +9,9 @@ ionic build --prod
 # copy everything to deploy directory
 mkdir deploy
 
+# Move browser sub-folder to top-folder as with webpack.
+Copy-Item www\browser .\www\ -Recurse -Confirm:$false
+Remove-Item .\www\browser -Recurse -Confirm:$false
 Copy-Item www .\deploy\ -Recurse -Confirm:$false
 Copy-Item server .\deploy\ -Recurse -Confirm:$false
 
