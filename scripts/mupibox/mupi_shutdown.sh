@@ -8,8 +8,11 @@ CONFIG="/etc/mupibox/mupiboxconfig.json"
 SHUT_SOUND=$(/usr/bin/jq -r .mupibox.shutSound ${CONFIG})
 AUDIO_DEVICE=$(/usr/bin/jq -r .mupibox.audioDevice ${CONFIG})
 START_VOLUME=$(/usr/bin/jq -r .mupibox.startVolume ${CONFIG})
+PLAYERSTATE="/tmp/playerstate"
 
-curl -s http://127.0.0.1:5005/pause
+if [ $(head -n1 ${PLAYERSTATE}) = "play" ]; then
+  curl -s http://127.0.0.1:5005/pause
+fi
 
 sudo -i -u dietpi /usr/local/bin/mupibox/./shutdown_sound.sh
 #/usr/bin/pactl set-sink-volume @DEFAULT_SINK@ ${START_VOLUME}% 
@@ -46,7 +49,10 @@ if [ "${TELEGRAM}" ] && [ ${#TELEGRAM_CHATID} -ge 1 ] && [ ${#TELEGRAM_TOKEN} -g
 	/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "MuPiBox shutdown" &
 fi
 
-service mupi_powerled stop 
+service mupi_powerled stop
+
+# disable execution of mupi_startstop service on shutdown again
+systemctl set-environment DISABLE_MUPI_START_STOP=1
 
 #sudo /usr/local/bin/mupibox/./setting_update.sh
 #sudo sh -c 'su - dietpi -s /usr/local/bin/mupibox/shutdown_sound.sh'

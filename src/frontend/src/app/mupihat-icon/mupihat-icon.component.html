@@ -1,45 +1,22 @@
-@if ((config$ | async)?.hat_active) {
-@if ((mupihat$ | async); as mupihat) {
-@if (mupihat?.BatteryConnected === 1) {
-    @if (mupihat.IBus > 0 && mupihat.Bat_SOC === '100%') {
-      <ion-icon src="../../assets/icon/MuPiHAT/Charging100.svg" size="large"></ion-icon>
-    } @else {
-      @if (mupihat.IBus > 0 && mupihat.Bat_SOC === '75%') {
-        <ion-icon src="../../assets/icon/MuPiHAT/Charging70.svg" size="large"></ion-icon>
-      } @else {
-        @if (mupihat.IBus > 0 && mupihat.Bat_SOC === '50%') {
-          <ion-icon src="../../assets/icon/MuPiHAT/Charging50.svg" size="large"></ion-icon>
-        } @else {
-          @if (mupihat.IBus > 0 && mupihat.Bat_SOC === '25%') {
-            <ion-icon src="../../assets/icon/MuPiHAT/Charging20.svg" size="large"></ion-icon>
-          } @else {
-            @if (mupihat.IBus > 0 && mupihat.Bat_SOC === '0%') {
-              <ion-icon src="../../assets/icon/MuPiHAT/Charging0.svg" size="large"></ion-icon>
-            } @else {
-              @if (mupihat.Bat_SOC === '100%') {
-                <ion-icon src="../../assets/icon/MuPiHAT/Battery100.svg" size="large"></ion-icon>
-              } @else {
-                @if (mupihat.Bat_SOC === '75%') {
-                  <ion-icon src="../../assets/icon/MuPiHAT/Battery70.svg" size="large"></ion-icon>
-                } @else {
-                  @if (mupihat.Bat_SOC === '50%') {
-                    <ion-icon src="../../assets/icon/MuPiHAT/Battery50.svg" size="large"></ion-icon>
-                  } @else {
-                    @if (mupihat.Bat_SOC === '25%') {
-                      <ion-icon src="../../assets/icon/MuPiHAT/Battery20.svg" size="large"></ion-icon>
-                    } @else {
-                      @if (mupihat.Bat_SOC === '0%') {
-                        <ion-icon src="../../assets/icon/MuPiHAT/Battery0.svg" size="large"></ion-icon>
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
+@if (hat_active && mupihat() !== undefined) {
+  @if (mupihat().BatteryConnected === 1) {
+    @let svgBaseName = mupihat().IBus > 0 ? 'Charging' : 'Battery';
+    @switch (mupihat().Bat_SOC) {
+      @case ('100%') {
+        <ion-icon src="../../assets/icon/MuPiHAT/{{svgBaseName}}100.svg" size="large"></ion-icon>
+      }
+      @case ('75%') {
+        <ion-icon src="../../assets/icon/MuPiHAT/{{svgBaseName}}70.svg" size="large"></ion-icon>
+      }
+      @case ('50%') {
+        <ion-icon src="../../assets/icon/MuPiHAT/{{svgBaseName}}50.svg" size="large"></ion-icon>
+      }
+      @case ('25%') {
+        <ion-icon src="../../assets/icon/MuPiHAT/{{svgBaseName}}20.svg" size="large"></ion-icon>
+      }
+      @default {
+        <ion-icon src="../../assets/icon/MuPiHAT/{{svgBaseName}}0.svg" size="large"></ion-icon>
       }
     }
   }
-}
 }

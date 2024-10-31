@@ -1,5 +1,6 @@
 ﻿
-remove-item .\deploy -Recurse -Confirm:$false
+Remove-Item .\deploy -Recurse -Confirm:$false
+Remove-Item .\www -Recurse -Confirm:$false
 Remove-Item .\deploy.zip -Confirm:$false
 
 npm run build

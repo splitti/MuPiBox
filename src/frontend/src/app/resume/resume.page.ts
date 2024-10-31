@@ -1,4 +1,4 @@
-import { CUSTOM_ELEMENTS_SCHEMA, Component, OnInit } from '@angular/core'
+import { CUSTOM_ELEMENTS_SCHEMA, Component, OnInit, WritableSignal, signal } from '@angular/core'
 import { NavigationExtras, Router } from '@angular/router'
 import {
   IonBackButton,
@@ -21,6 +21,7 @@ import { addIcons } from 'ionicons'
 import { arrowBackOutline } from 'ionicons/icons'
 import { lastValueFrom } from 'rxjs'
 import { ArtworkService } from '../artwork.service'
+import { LoadingComponent } from '../loading/loading.component'
 import { Media } from '../media'
 import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
@@ -35,6 +36,7 @@ import { PlayerService } from '../player.service'
   imports: [
     AsyncPipe,
     MupiHatIconComponent,
+    LoadingComponent,
     IonHeader,
     IonToolbar,
     IonButtons,
@@ -52,6 +54,7 @@ import { PlayerService } from '../player.service'
 export class ResumePage implements OnInit {
   protected media: Media[] = []
   protected covers = {}
+  protected isLoading: WritableSignal<boolean> = signal(false)
 
   public constructor(
     private router: Router,
@@ -71,7 +74,7 @@ export class ResumePage implements OnInit {
     // We need to set the original index (this comes from the mismatch between us editing the original
     // data in the player page but showing only the "active" data on this page).
     // This will not be needed once we filter "online" unavailable media in the frontend.
-    lastValueFrom(this.http.get<Media[]>('http://localhost:8200/api/resume'))
+    lastValueFrom(this.http.get<Media[]>(`${this.mediaService.getAPIBaseUrl()}/resume`))
       .then((resumemedia) => {
         clickedMedia.index = -1
         for (let i = 0; i < resumemedia.length; i++) {
@@ -107,8 +110,10 @@ export class ResumePage implements OnInit {
   }
 
   private fetchResumeMedia(): void {
+    this.isLoading.set(true)
     lastValueFrom(this.mediaService.fetchActiveResumeData())
       .then((media) => {
+        this.isLoading.set(false)
         this.media = media
         for (const currentMedia of this.media) {
           this.artworkService.getArtwork(currentMedia).subscribe((url) => {

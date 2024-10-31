@@ -1,5 +1,5 @@
-import { CUSTOM_ELEMENTS_SCHEMA, Component, OnInit } from '@angular/core'
-import { ActivatedRoute, NavigationExtras, Router } from '@angular/router'
+import { CUSTOM_ELEMENTS_SCHEMA, Component, OnInit, WritableSignal, signal } from '@angular/core'
+import { NavigationExtras, Router } from '@angular/router'
 import {
   IonBackButton,
   IonButtons,
@@ -20,9 +20,9 @@ import { AsyncPipe } from '@angular/common'
 import { addIcons } from 'ionicons'
 import { arrowBackOutline } from 'ionicons/icons'
 import { lastValueFrom } from 'rxjs'
-import { ActivityIndicatorService } from '../activity-indicator.service'
 import type { Artist } from '../artist'
 import { ArtworkService } from '../artwork.service'
+import { LoadingComponent } from '../loading/loading.component'
 import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
 import { PlayerService } from '../player.service'
@@ -48,6 +48,7 @@ import { PlayerService } from '../player.service'
     IonCard,
     IonCardHeader,
     IonCardTitle,
+    LoadingComponent,
   ],
 })
 export class MedialistPage implements OnInit {
@@ -55,15 +56,13 @@ export class MedialistPage implements OnInit {
   protected category: CategoryType = 'audiobook'
   protected media: Media[] = []
   protected covers = {}
-  protected activityIndicatorVisible = false
+  protected isLoading: WritableSignal<boolean> = signal(false)
 
   constructor(
-    private route: ActivatedRoute,
     private router: Router,
     private mediaService: MediaService,
     private artworkService: ArtworkService,
     private playerService: PlayerService,
-    private activityIndicatorService: ActivityIndicatorService,
   ) {
     this.artist = this.router.getCurrentNavigation()?.extras.state?.artist
     this.category = this.router.getCurrentNavigation()?.extras.state?.category ?? 'audiobook'
@@ -75,25 +74,13 @@ export class MedialistPage implements OnInit {
     this.fetchMedia()
   }
 
-  ionViewDidLeave() {
-    if (this.activityIndicatorVisible) {
-      this.activityIndicatorService.dismiss()
-      this.activityIndicatorVisible = false
-    }
-  }
-
   coverClicked(clickedMedia: Media) {
-    this.activityIndicatorService.create().then((indicator) => {
-      this.activityIndicatorVisible = true
-      indicator.present().then(() => {
-        const navigationExtras: NavigationExtras = {
-          state: {
-            media: clickedMedia,
-          },
-        }
-        this.router.navigate(['/player'], navigationExtras)
-      })
-    })
+    const navigationExtras: NavigationExtras = {
+      state: {
+        media: clickedMedia,
+      },
+    }
+    this.router.navigate(['/player'], navigationExtras)
   }
 
   mediaNameClicked(clickedMedia: Media) {
@@ -101,6 +88,8 @@ export class MedialistPage implements OnInit {
   }
 
   private fetchMedia(): void {
+    this.isLoading.set(true)
+
     // Method to fetch artwork for given media.
     const fetchArtwork = (media: Media[]): void => {
       for (const currentMedia of media) {
@@ -150,7 +139,7 @@ export class MedialistPage implements OnInit {
 
     lastValueFrom(this.mediaService.fetchMediaFromArtist(this.artist, this.category))
       .then((media) => {
-        console.log('bla')
+        this.isLoading.set(false)
         // We need to sort first and then slice since this is the intuitive behavior.
         this.media = sliceMedia(
           sortMedia(

@@ -1,9 +1,14 @@
-import { CUSTOM_ELEMENTS_SCHEMA, Component, OnInit } from '@angular/core'
+import {
+  CUSTOM_ELEMENTS_SCHEMA,
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+  Signal,
+  WritableSignal,
+  effect,
+  signal,
+} from '@angular/core'
 import { NavigationExtras, Router } from '@angular/router'
-
-import { CommonModule } from '@angular/common'
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop'
-import { FormsModule } from '@angular/forms'
 import {
   IonButton,
   IonButtons,
@@ -20,7 +25,6 @@ import {
   IonSegmentButton,
   IonToolbar,
 } from '@ionic/angular/standalone'
-import { addIcons } from 'ionicons'
 import {
   bookOutline,
   cloudOfflineOutline,
@@ -29,15 +33,18 @@ import {
   radioOutline,
   timerOutline,
 } from 'ionicons/icons'
-import { type Observable, distinctUntilChanged, filter, lastValueFrom, map } from 'rxjs'
-import { SwiperContainer } from 'swiper/element'
-import { ActivityIndicatorService } from '../activity-indicator.service'
+import { filter, lastValueFrom, map } from 'rxjs'
+import type { CategoryType, Media } from '../media'
+
+import { CommonModule } from '@angular/common'
+import { toSignal } from '@angular/core/rxjs-interop'
+import { FormsModule } from '@angular/forms'
+import { addIcons } from 'ionicons'
 import type { Artist } from '../artist'
 import { ArtworkService } from '../artwork.service'
-import type { CategoryType, Media } from '../media'
+import { LoadingComponent } from '../loading/loading.component'
 import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
-import type { Network } from '../network'
 import { PlayerService } from '../player.service'
 
 @Component({
@@ -49,6 +56,7 @@ import { PlayerService } from '../player.service'
     CommonModule,
     FormsModule,
     MupiHatIconComponent,
+    LoadingComponent,
     IonHeader,
     IonToolbar,
     IonButtons,
@@ -65,41 +73,40 @@ import { PlayerService } from '../player.service'
     IonCardTitle,
   ],
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.Default,
 })
 export class HomePage implements OnInit {
-  artists: Artist[] = []
-  media: Media[] = []
-  covers = {}
-  activityIndicatorVisible = false
-  editButtonclickCount = 0
-  editClickTimer = 0
+  protected artists: Artist[] = []
+  protected media: Media[] = []
+  protected covers = {}
+  protected editButtonclickCount = 0
+  protected editClickTimer = 0
 
   protected category: CategoryType = 'audiobook'
 
-  protected readonly network$: Observable<Network>
-
-  needsUpdate = false
+  protected isOnline: Signal<boolean>
+  protected isLoading: WritableSignal<boolean> = signal(false)
+  protected needsUpdate = false
 
   constructor(
     private mediaService: MediaService,
     private artworkService: ArtworkService,
     private playerService: PlayerService,
-    private activityIndicatorService: ActivityIndicatorService,
     private router: Router,
   ) {
-    this.network$ = this.mediaService.network$
-
-    // If the network changes, we want to update our list.
-    this.network$
-      .pipe(
+    this.isOnline = toSignal(
+      this.mediaService.network$.pipe(
         filter((network) => network.ip !== undefined),
-        map((network) => network.onlinestate),
-        distinctUntilChanged(),
-        takeUntilDestroyed(),
-      )
-      .subscribe((_) => {
+        map((network) => network.onlinestate === 'online'),
+      ),
+    )
+    effect(
+      () => {
+        console.log(`Online state changed to ${this.isOnline()}`)
         this.update()
-      })
+      },
+      { allowSignalWrites: true },
+    )
     addIcons({ timerOutline, bookOutline, musicalNotesOutline, radioOutline, cloudOutline, cloudOfflineOutline })
   }
 
@@ -109,19 +116,7 @@ export class HomePage implements OnInit {
   }
 
   ionViewWillEnter() {
-    if (this.needsUpdate) {
-      this.update()
-    }
-    // This is a fix for the scroll bar not showing the current location when using the back button
-    // from the media list or admin page.
-    ;(document.querySelector('swiper-container') as SwiperContainer).swiper?.update()
-  }
-
-  ionViewDidLeave() {
-    if (this.activityIndicatorVisible) {
-      this.activityIndicatorService.dismiss()
-      this.activityIndicatorVisible = false
-    }
+    this.update()
   }
 
   public categoryChanged(event: any): void {
@@ -131,9 +126,11 @@ export class HomePage implements OnInit {
   }
 
   private update(): void {
+    this.isLoading.set(true)
     if (this.category === 'audiobook' || this.category === 'music' || this.category === 'other') {
       lastValueFrom(this.mediaService.fetchArtistData(this.category))
         .then((artists) => {
+          this.isLoading.set(false)
           this.artists = artists
 
           for (const artist of this.artists) {
@@ -146,6 +143,7 @@ export class HomePage implements OnInit {
     } else {
       lastValueFrom(this.mediaService.fetchMediaData(this.category))
         .then((media) => {
+          this.isLoading.set(false)
           this.media = media
           for (const currentMedia of media) {
             this.artworkService.getArtwork(currentMedia).subscribe((url) => {
@@ -159,32 +157,22 @@ export class HomePage implements OnInit {
   }
 
   artistCoverClicked(clickedArtist: Artist) {
-    this.activityIndicatorService.create().then((indicator) => {
-      this.activityIndicatorVisible = true
-      indicator.present().then(() => {
-        const navigationExtras: NavigationExtras = {
-          state: {
-            artist: clickedArtist,
-            category: this.category,
-          },
-        }
-        this.router.navigate(['/medialist'], navigationExtras)
-      })
-    })
+    const navigationExtras: NavigationExtras = {
+      state: {
+        artist: clickedArtist,
+        category: this.category,
+      },
+    }
+    this.router.navigate(['/medialist'], navigationExtras)
   }
 
   mediaCoverClicked(clickedMedia: Media) {
-    this.activityIndicatorService.create().then((indicator) => {
-      this.activityIndicatorVisible = true
-      indicator.present().then(() => {
-        const navigationExtras: NavigationExtras = {
-          state: {
-            media: clickedMedia,
-          },
-        }
-        this.router.navigate(['/player'], navigationExtras)
-      })
-    })
+    const navigationExtras: NavigationExtras = {
+      state: {
+        media: clickedMedia,
+      },
+    }
+    this.router.navigate(['/player'], navigationExtras)
   }
 
   editButtonPressed() {
@@ -199,13 +187,7 @@ export class HomePage implements OnInit {
     } else {
       this.editButtonclickCount = 0
       this.needsUpdate = true
-
-      this.activityIndicatorService.create().then((indicator) => {
-        this.activityIndicatorVisible = true
-        indicator.present().then(() => {
-          this.router.navigate(['/edit'])
-        })
-      })
+      this.router.navigate(['/edit'])
     }
   }
 

@@ -8,7 +8,8 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="medialist-content">
+<ion-content class="resume-content">
+  <mupi-loading [loading]="isLoading()"></mupi-loading>
   <swiper-container slides-per-view="3" scrollbar="true" scrollbar-hide="true" free-mode="false" css-mode="true">
     @for (currentMedia of media; track currentMedia; let indexOfMedia = $index) {
       <swiper-slide>

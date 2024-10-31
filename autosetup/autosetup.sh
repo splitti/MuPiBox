@@ -276,10 +276,10 @@ exec 3>${LOG}
 
 	# Binaries
 	if [ `getconf LONG_BIT` == 32 ]; then
-		mv ${MUPI_SRC}/bin/librespot/0.5.0/librespot-32bit /usr/bin/librespot >&3 2>&3
+		mv ${MUPI_SRC}/bin/librespot/0.6.0/librespot-32bit /usr/bin/librespot >&3 2>&3
 		mv ${MUPI_SRC}/bin/fbv/fbv /usr/bin/fbv >&3 2>&3
 	else
-		mv ${MUPI_SRC}/bin/librespot/0.5.0/librespot-64bit /usr/bin/librespot >&3 2>&3
+		mv ${MUPI_SRC}/bin/librespot/0.6.0/librespot-64bit /usr/bin/librespot >&3 2>&3
 		mv ${MUPI_SRC}/bin/fbv/fbv_64 /usr/bin/fbv >&3 2>&3
 	fi
 	sudo chmod 755 /usr/bin/fbv /usr/bin/librespot >&3 2>&3
