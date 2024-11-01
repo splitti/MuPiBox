@@ -1,4 +1,4 @@
-import { CUSTOM_ELEMENTS_SCHEMA, Component, OnInit, WritableSignal, signal } from '@angular/core'
+import { CUSTOM_ELEMENTS_SCHEMA, Component, WritableSignal, signal } from '@angular/core'
 import { NavigationExtras, Router } from '@angular/router'
 import {
   IonBackButton,
@@ -51,7 +51,7 @@ import { PlayerService } from '../player.service'
     IonCardTitle,
   ],
 })
-export class ResumePage implements OnInit {
+export class ResumePage {
   protected media: Media[] = []
   protected covers = {}
   protected isLoading: WritableSignal<boolean> = signal(false)
@@ -66,7 +66,7 @@ export class ResumePage implements OnInit {
     addIcons({ arrowBackOutline })
   }
 
-  public ngOnInit(): void {
+  public ionViewWillEnter(): void {
     this.fetchResumeMedia()
   }
 

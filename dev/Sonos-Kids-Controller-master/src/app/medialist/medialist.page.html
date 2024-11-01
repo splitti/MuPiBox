@@ -17,7 +17,7 @@
           <ion-row class="media-card">
             <ion-col size="12">
               <ion-card>
-                <img (click)="coverClicked(currentMedia)" draggable="false" style="-moz-user-select: none;" ondragstart="return false;" src="{{covers[currentMedia.title]}}">
+                <img (click)="coverClicked(currentMedia)" draggable="false" style="-user-select: none;" ondragstart="return false;" src="{{covers[currentMedia.title]}}">
                 <ion-card-header (click)="mediaNameClicked(currentMedia)">
                   <ion-card-title class="ion-text-nowrap truncate-text ion-text-center">{{currentMedia.title}}</ion-card-title>
                 </ion-card-header>

@@ -1,2 +1,6 @@
 
 *.bak
+
+node_modules
+.angular
+src/deploy
