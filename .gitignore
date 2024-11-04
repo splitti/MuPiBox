@@ -8,3 +8,7 @@ node_modules
 **/server/config/*.json
 
 *.bak
+
+node_modules
+.angular
+src/deploy
