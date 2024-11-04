@@ -1,15 +1,16 @@
 #!/bin/bash
 
-#cleanup
-rm -rf deploy
-
-# Build the Angular app.
+rm -rf ./deploy
 npm run build
 
 # Pause execution to see if the build process worked
 read -p "Press Enter to resume ..."
 
-# archive
+# Fix folder structure and add readme.
+mv ./deploy/www/browser/* ./deploy/www
+cp ./backend-player/README.md ./deploy/
+
+# Archive.
 cd deploy
 zip -r ../deploy.zip .
 cd ..
@@ -17,6 +18,6 @@ cd ..
 # Deploy to bin folder.
 cp deploy.zip ../bin/nodejs/deploy.zip -f
 
-#cleanup
+# Cleanup
 rm -rf deploy
 rm -rf deploy.zip
