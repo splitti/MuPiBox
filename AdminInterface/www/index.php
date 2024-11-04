@@ -131,7 +131,11 @@
 			$command = "/usr/bin/uname -m";
 			exec($command, $aoutput, $result );
 			echo "<tr><td>Architecture:</td><td>" . $aoutput[0] . "</td></tr>";
-			echo "<tr><td>Throttle:</td><td>" . $rpi_throttle . "</td></tr></table></p>";
+			echo "<tr><td>Throttle:</td><td>" . $rpi_throttle . "</td></tr>";
+			exec("/usr/bin/librespot --version | awk '{print $2}'", $loutput, $result );
+			echo "<tr><td>MuPiBox:</td><td>" . $data["mupibox"]["version"] . "</td></tr>";			
+			echo "<tr><td>Librespot:</td><td>" . $loutput[0] . "</td></tr></table></p>";
+
 			$command = "/usr/bin/systemd-analyze time";
 			exec($command, $toutput, $result );
 			echo "<p>" . $toutput[0] . "</p></li><li class=\"li_norm\">";
