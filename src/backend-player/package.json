@@ -5,7 +5,7 @@
   "homepage": "https://github.com/splitti/mupibox",
   "scripts": {
     "serve": "NODE_ENV=development node src/spotify-control.js",
-    "build": "esbuild src/spotify-control.js --bundle --minify --platform=node --outfile=../deploy/spotify-control.js",
+    "build": "esbuild src/spotify-control.js --bundle --minify --platform=node --target=node22 --outfile=../deploy/spotify-control.js",
     "lint": "npx @biomejs/biome check .",
     "lint:fix": "npx @biomejs/biome check --fix ."
   },

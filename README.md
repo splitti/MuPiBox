@@ -44,8 +44,8 @@ All contributions, e.g., reporting issues etc., are welcome.
 If you want to contribute changes to the MuPiBox source code is easy thanks to GitHub codespaces that allow you to develop inside the browser without needing to set up a local development environment.
 1. Fork this repository.
 2. Start a codespace session.
-3. The box UI located in `dev/frontend`
-    - Run `npm install` the first time. To start the development server, copy the `config/templates/www.json` as `config.json` and the `monitor.json` files to the `server/config` subfolder, and then run `npm run serve-backend` and `npm run serve-frontend` while being in the `dev/frontend` folder.
+3. The box UI and backend servers are located in `src`
+    - Run `npm install` in the root folder the first time. To start the development server, copy the `config/templates/www.json` as `config.json` and the `monitor.json` files to the `server/config` subfolder, and then run `npm run serve-backend` and `npm run serve-frontend`.
 4. The Admin interface is located in `AdminInterface/www`.
     - Use `php -S 127.0.0.1:8000` to start a development server.
 5. Create a git branch, commit and push your changes.

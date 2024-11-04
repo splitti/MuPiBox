@@ -5,7 +5,7 @@
   "homepage": "https://github.com/splitti/mupibox",
   "scripts": {
     "serve": "NODE_ENV=development node src/server.js",
-    "build": "esbuild src/server.js --bundle --minify --platform=node --outfile=../deploy/server.js",
+    "build": "esbuild src/server.js --bundle --minify --platform=node --target=node22 --outfile=../deploy/server.js",
     "lint": "npx @biomejs/biome check .",
     "lint:fix": "npx @biomejs/biome check --fix ."
   },
