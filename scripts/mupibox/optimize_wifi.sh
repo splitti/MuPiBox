@@ -38,8 +38,8 @@ fi
 rm "$WPACONF.bak"
 cp "$WPACONF" "$WPACONF.bak"
 add_config 'bgscan="simple:30:-70:60"'
-add_config 'roam_timeout=5'
-add_config 'disable_pm=1'
+#add_config 'roam_timeout=5'
+#add_config 'disable_pm=1'
 add_config 'ap_scan=1'
 
 in_network_block=0

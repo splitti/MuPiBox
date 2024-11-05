@@ -31,8 +31,8 @@ do
 			echo '# Allow wpa_cli/wpa_gui to overwrite this config file' | sudo tee -a ${WPACONF}
 			echo 'update_config=1' | sudo tee -a ${WPACONF}
 			echo 'bgscan="simple:30:-70:60"' | sudo tee -a ${WPACONF}
-			echo 'roam_timeout=5' | sudo tee -a ${WPACONF}
-			echo 'disable_pm=1' | sudo tee -a ${WPACONF}
+			#echo 'roam_timeout=5' | sudo tee -a ${WPACONF}
+			#echo 'disable_pm=1' | sudo tee -a ${WPACONF}
 			echo 'ap_scan=1' | sudo tee -a ${WPACONF}
 			restart_network			
 		else
