@@ -31,7 +31,7 @@ if ! grep -q "wpa-roam /etc/wpa_supplicant/wpa_supplicant.conf" "$NETWORKINTERFA
 	cp "$NETWORKINTERFACES" "$NETWORKINTERFACES.bak"
 	sed -i 's|wpa-conf /etc/wpa_supplicant/wpa_supplicant.conf|wpa-roam /etc/wpa_supplicant/wpa_supplicant.conf|' $NETWORKINTERFACES
 	sed -i 's|iface wlan0 inet dhcp|iface wlan0 inet manual|' $NETWORKINTERFACES
-	echo "iface wlan0 inet dhcp" | tee -a $NETWORKINTERFACES > /dev/null
+	echo "iface default inet dhcp" | tee -a $NETWORKINTERFACES > /dev/null
 fi
 
 # /etc/wpa_supplicant/wpa_supplicant
