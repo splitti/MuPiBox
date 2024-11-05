@@ -502,6 +502,7 @@ echo "==========================================================================
 
 
 	echo -e "XXX\n{STEP}\nUpdate Admin-Interface... \nXXX"	
+	before=$(date +%s)
 	rm -R /var/www/* >&3 2>&3 
 	mv ${MUPI_SRC}/AdminInterface/release/www.zip /var/www/www.zip >&3 2>&3
 	unzip /var/www/www.zip -d /var/www/ >&3 2>&3
@@ -510,15 +511,36 @@ echo "==========================================================================
 	chown -R www-data:www-data /var/www/ >&3 2>&3
 	chmod -R 755 /var/www/ >&3 2>&3
 	chown -R dietpi:www-data /home/dietpi/MuPiBox/media/cover >&3 2>&3
+	echo -e "## Admin-Interface	##  finished after $((after - $before)) seconds" >&3 2>&3
+	STEP=$(($STEP + 1))
+
+	###############################################################################################
 
 	echo -e "XXX\n${STEP}\nUpdate Config-File... \nXXX"	
+	before=$(date +%s)
 	cd ${MUPI_SRC}/update/	>&3 2>&3
 	chmod 755 conf_update.sh >&3 2>&3
 	./conf_update.sh >&3 2>&3
+	after=$(date +%s)
+	echo -e "## Config-File	##  finished after $((after - $before)) seconds" >&3 2>&3
+	STEP=$(($STEP + 1))
+	
+	
+	###############################################################################################
+
+	echo -e "XXX\n{STEP}\nNetwork optimization... \nXXX"	
+	before=$(date +%s)
+
+	cd /usr/local/bin/mupibox/	>&3 2>&3
+	./optimize_wifi.sh >&3 2>&3
+	after=$(date +%s)
+	echo -e "## Network optimization ##  finished after $((after - $before)) seconds" >&3 2>&3
+	STEP=$(($STEP + 1))
 	
 	###############################################################################################
 
 	echo -e "XXX\n${STEP}\nRestore Userdata... \nXXX"
+	before=$(date +%s)
 	mv /tmp/data.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json  >&3 2>&3
 	mv /tmp/cover /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover  >&3 2>&3
 	#mv /tmp/config.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json  >&3 2>&3
