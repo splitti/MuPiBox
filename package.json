@@ -12,14 +12,7 @@
     "serve:backend-player": "npm run serve --workspace=mupibox-backend-player",
     "build": "npm run build --workspaces",
     "lint": "npm run lint --workspaces",
-    "lint:fix": "npm run lint:fix --workspaces",
-    "deploy": "cross-os deploy"
-  },
-  "cross-os": {
-    "deploy": {
-      "win32": ".\\src\\deploy.ps1'",
-      "linux": ". ./src/deploy.sh"
-    }
+    "lint:fix": "npm run lint:fix --workspaces"
   },
   "keywords": ["mupi", "music", "rss feed", "spotify", "raspberry pi", "touch screen"],
   "author": "Mupi Team",
@@ -27,6 +20,6 @@
   "private": true,
   "devDependencies": {
     "@biomejs/biome": "*",
-    "cross-os": "1.5.0"
+    "cross-env": "7.0.3"
   }
 }

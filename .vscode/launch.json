@@ -1,37 +1,41 @@
 {
-    // Use IntelliSense to learn about possible attributes.
-    // Hover to view descriptions of existing attributes.
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "name": "Launch built-in server",
-            "type": "php",
-            "request": "launch",
-            "runtimeArgs": [
-                "-S",
-                "localhost:8000",
-                "-t",
-                "AdminInterface/www/"
-            ],
-            "port": 9003,
-            "serverReadyAction": {
-                "action": "openExternally"
-            }
-        },
-        {
-            "name": "Launch Edge",
-            "request": "launch",
-            "type": "msedge",
-            "url": "http://localhost:4200",
-            "webRoot": "${workspaceFolder}/dev/Sonos-Kids-Controller-master"
-        },
-        {
-            "name": "Launch Chrome",
-            "request": "launch",
-            "type": "chrome",
-            "url": "http://localhost:4200",
-            "webRoot": "${workspaceFolder}/dev/Sonos-Kids-Controller-master"
-        }
-    ]
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Launch backend-api",
+      "program": "${workspaceFolder}/src/backend-api/src/server.js",
+      "request": "launch",
+      "type": "node",
+      "env": {
+        "NODE_ENV": "development"
+      }
+    },
+    {
+      "name": "Launch built-in server",
+      "type": "php",
+      "request": "launch",
+      "runtimeArgs": ["-S", "localhost:8000", "-t", "AdminInterface/www/"],
+      "port": 9003,
+      "serverReadyAction": {
+        "action": "openExternally"
+      }
+    },
+    {
+      "name": "Launch Edge",
+      "request": "launch",
+      "type": "msedge",
+      "url": "http://localhost:4200",
+      "webRoot": "${workspaceFolder}/src/frontend-box"
+    },
+    {
+      "name": "Launch Chrome",
+      "request": "launch",
+      "type": "chrome",
+      "url": "http://localhost:4200",
+      "webRoot": "${workspaceFolder}/src/frontend-box"
+    }
+  ]
 }
