@@ -4,14 +4,16 @@
 MUPIWIFI="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/wlan.json"
 WPACONF="/etc/wpa_supplicant/wpa_supplicant.conf"
 NETWORKCONFIG="/tmp/network.json"
+NETWORKINTERFACES="/etc/network/interfaces"
 ONLINESTATE=$(/usr/bin/jq -r .onlinestate ${NETWORKCONFIG})
 
 restart_network() {
+	sudo service wpa_supplicant restart
 	sudo service ifup@wlan0 stop
 	sudo service ifup@wlan0 start
 	#sudo dhclient -r
 	#sudo dhclient
-	sudo wpa_cli -i wlan0 reconfigure
+	#sudo wpa_cli -i wlan0 reconfigure
 }
 
 while true
@@ -28,11 +30,19 @@ do
 			echo 'ctrl_interface=DIR=/run/wpa_supplicant GROUP=netdev' | sudo tee -a ${WPACONF}
 			echo '# Allow wpa_cli/wpa_gui to overwrite this config file' | sudo tee -a ${WPACONF}
 			echo 'update_config=1' | sudo tee -a ${WPACONF}
+			echo 'bgscan="simple:30:-70:60"' | sudo tee -a ${WPACONF}
+			#echo 'roam_timeout=5' | sudo tee -a ${WPACONF}
+			#echo 'disable_pm=1' | sudo tee -a ${WPACONF}
+			echo 'ap_scan=1' | sudo tee -a ${WPACONF}
 			restart_network
 		else
 			WIFI_RESULT=$(sudo -i wpa_passphrase "${SSID}" "${PSK}")
 			IFS=$'\n'
 			i=0
+			new_line='    scan_ssid=1'
+			# Ersetze mit sed und füge die Zeile hinzu
+			WIFI_RESULT=$(echo "$WIFI_RESULT" | sed '/#psk=.*$/a\'$'\n'"$new_line")
+			echo $WIFI_RESULT
 			for LINES in ${WIFI_RESULT}
 			do
 					i=$((i+1))
@@ -41,11 +51,6 @@ do
 					fi
 			done
 			unset IFS
-			if [ ${ONLINESTATE} != "online" ]; then
-				restart_network
-				sleep 2
-				sudo reboot
-			fi
 		fi
 		sudo rm ${MUPIWIFI}
 	fi
