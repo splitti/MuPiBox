@@ -244,36 +244,19 @@ echo "==========================================================================
 	###############################################################################################
 
 
-	echo -e "XXX\n${STEP}\nUpdate Kids-Controller... \nXXX"	
+	echo -e "XXX\n${STEP}\nUpdate frontend, backend-api, and backend-player ... \nXXX"	
 	before=$(date +%s)
 	sudo -H -u dietpi bash -c "pm2 stop server" >&3 2>&3
 	#su - dietpi -c "pm2 save" >&3 2>&3
 	rm -R /home/dietpi/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
 	mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/ >&3 2>&3
-	mv ${MUPI_SRC}/bin/nodejs/deploy.zip /home/dietpi/.mupibox/Sonos-Kids-Controller-master/deploy.zip >&3 2>&3
-	unzip /home/dietpi/.mupibox/Sonos-Kids-Controller-master/deploy.zip -d /home/dietpi/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
-	rm /home/dietpi/.mupibox/Sonos-Kids-Controller-master/deploy.zip >&3 2>&3
+	unzip ${MUPI_SRC}/bin/nodejs/deploy.zip -d /home/dietpi/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
 	mv ${MUPI_SRC}/config/templates/monitor.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/monitor.json >&3 2>&3
 	mv ${MUPI_SRC}/config/templates/www.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >&3 2>&3
 	chown dietpi:dietpi -R /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www >&3 2>&3
+	cp /home/dietpi/.mupibox/Sonos-Kids-Controller-master/spotify-control.js /home/dietpi/.mupibox/spotifycontroller-main/spotify-control.js >&3 2>&3
 	after=$(date +%s)
 	echo -e "## Update Kids-Controller  ##  finished after $((after - $before)) seconds" >&3 2>&3
-	STEP=$(($STEP + 1))
-
-	###############################################################################################
-
-	echo -e "XXX\n${STEP}\nUpdate MPlayer Wrapper... \nXXX"	
-	mv ${MUPI_SRC}/dev/customize/mplayer-wrapper/index.js /home/dietpi/.mupibox/mplayer-wrapper/index.js >&3 2>&3
-	after=$(date +%s)
-	echo -e "## Update Mplayer ##  finished after $((after - $before)) seconds" >&3 2>&3
-	STEP=$(($STEP + 1))
-
-	###############################################################################################
-
-	echo -e "XXX\n${STEP}\nUpdate Spotify Control... \nXXX"	
-	cp ${MUPI_SRC}/bin/nodejs/spotify-control.js /home/dietpi/.mupibox/spotifycontroller-main/spotify-control.js >&3 2>&3
-	after=$(date +%s)
-	echo -e "## Update Spotify Control  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
 
 	###############################################################################################
@@ -560,7 +543,7 @@ echo "==========================================================================
 	chown root:www-data ${CONFIG}
 	chmod 775 ${CONFIG}
 	#systemctl start mupi_idle_shutdown.service >&3 2>&3
-	rm /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/network.json >&3 2>&3
+	rm -f /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/network.json >&3 2>&3
 	ln -s /tmp/network.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/network.json >&3 2>&3
 	systemctl stop mupi_change_checker.service >&3 2>&3
 	systemctl disable mupi_change_checker.service >&3 2>&3

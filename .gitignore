@@ -1,6 +1,17 @@
+# Config files.
+src/backend-api/config/*.json
+src/backend-player/config/*.json
+**/server/config/*.json
 
-*.bak
+# Temporary deploy files.
+src/**/*.zip
+src/deploy.zip
+src/deploy
 
+# npm / Angular files.
 node_modules
 .angular
-src/deploy
+
+# Other files.
+*.bak
+
