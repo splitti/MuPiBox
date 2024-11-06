@@ -259,6 +259,7 @@ exec 3>${LOG}
 	pm2 start server.js >&3 2>&3
 	pm2 save >&3 2>&3
 	# Setup and start backend-player.
+	mkdir -p /home/dietpi/.mupibox/spotifycontroller-main >&3 2>&3
 	cp /home/dietpi/.mupibox/Sonos-Kids-Controller-master/spotify-control.js /home/dietpi/.mupibox/spotifycontroller-main >&3 2>&3
 	cp ${MUPI_SRC}/config/templates/spotifycontroller.json /home/dietpi/.mupibox/spotifycontroller-main/config/config.json >&3 2>&3
 	ln -s /etc/mupibox/mupiboxconfig.json /home/dietpi/.mupibox/spotifycontroller-main/config/mupiboxconfig.json >&3 2>&3
