@@ -1,12 +1,12 @@
-// Setup
-const express = require('express')
-const cors = require('cors')
-const path = require('node:path')
-const jsonfile = require('jsonfile')
-const SpotifyWebApi = require('spotify-web-api-node')
-const fs = require('node:fs')
-const request = require('request')
-const xmlparser = require('xml-js')
+import SpotifyWebApi from 'spotify-web-api-node'
+import cors from 'cors'
+import express from 'express'
+import fs from 'node:fs'
+import jsonfile from 'jsonfile'
+import path from 'node:path'
+import { readFile } from 'node:fs/promises'
+import request from 'request'
+import xmlparser from 'xml-js'
 
 // Configuration files.
 let configBasePath = './server/config'
@@ -16,7 +16,18 @@ if (process.env.NODE_ENV === 'development') {
   dataBasePath = './config' // This uses the package.json path as pwd.
 }
 
-const config = require(`${configBasePath}/config.json`)
+async function readJsonFile(path: string) {
+  const file = await readFile(path, 'utf8')
+  return JSON.parse(file)
+}
+
+let spotifyApi: SpotifyWebApi | undefined = undefined
+readJsonFile(`${configBasePath}/config.json`).then((config) => {
+  spotifyApi = new SpotifyWebApi({
+    clientId: config.spotify.clientId,
+    clientSecret: config.spotify.clientSecret,
+  })
+})
 const dataFile = `${dataBasePath}/data.json`
 const resumeFile = `${dataBasePath}/resume.json`
 const activedataFile = `${dataBasePath}/active_data.json`
@@ -28,11 +39,6 @@ const albumstopFile = `${dataBasePath}/albumstop.json`
 const mupihat = '/tmp/mupihat.json'
 const dataLock = '/tmp/.data.lock'
 const resumeLock = '/tmp/.resume.lock'
-
-const spotifyApi = new SpotifyWebApi({
-  clientId: config.spotify.clientId,
-  clientSecret: config.spotify.clientSecret,
-})
 
 const nowDate = new Date()
 
@@ -356,6 +362,10 @@ app.post('/api/editresume', (req, res) => {
 })
 
 app.get('/api/token', (req, res) => {
+  if (spotifyApi === undefined) {
+    res.status(500).send('Could not intialize Spotify API.')
+    return
+  }
   // Retrieve an access token from Spotify
   spotifyApi.clientCredentialsGrant().then(
     (data) => {
