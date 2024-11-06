@@ -129,11 +129,11 @@ exec 3>${LOG}
 
 	###############################################################################################
 
-	echo -e "XXX\n${STEP}\nInstall nodeJS 16 (Online-Setup 16)... \nXXX"	
+	echo -e "XXX\n${STEP}\nInstall nodeJS 22 (Online-Setup 22)... \nXXX"	
 	before=$(date +%s)
-	curl -sL https://deb.nodesource.com/setup_16.x | sudo -E bash - >&3 2>&3
+	curl -sL https://deb.nodesource.com/setup_22.x | sudo -E bash - >&3 2>&3
 	after=$(date +%s)
-	echo -e "## Install nodeJS 16  ##  finished after $((after - $before)) seconds" >&3 2>&3
+	echo -e "## Install nodeJS 22  ##  finished after $((after - $before)) seconds" >&3 2>&3
 
 	STEP=$(($STEP + 1))
 	echo -e "XXX\n${STEP}\nInstall package nodejs\nXXX"
