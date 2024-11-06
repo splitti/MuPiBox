@@ -521,7 +521,7 @@ echo "==========================================================================
 	chown root:www-data ${CONFIG}
 	chmod 775 ${CONFIG}
 	#systemctl start mupi_idle_shutdown.service >&3 2>&3
-	rm /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/network.json >&3 2>&3
+	rm -f /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/network.json >&3 2>&3
 	ln -s /tmp/network.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/network.json >&3 2>&3
 	systemctl stop mupi_change_checker.service >&3 2>&3
 	systemctl disable mupi_change_checker.service >&3 2>&3
