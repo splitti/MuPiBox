@@ -5,16 +5,27 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Launch backend-api",
+      "name": "Launch: backend-api",
       "program": "${workspaceFolder}/src/backend-api/src/server.js",
       "request": "launch",
       "type": "node",
       "env": {
         "NODE_ENV": "development"
-      }
+      },
+      "cwd": "${workspaceFolder}/src/backend-api/"
     },
     {
-      "name": "Launch built-in server",
+      "name": "Launch: backend-player",
+      "program": "${workspaceFolder}/src/backend-player/src/spotify-control.js",
+      "request": "launch",
+      "type": "node",
+      "env": {
+        "NODE_ENV": "development"
+      },
+      "cwd": "${workspaceFolder}/src/backend-player/"
+    },
+    {
+      "name": "Launch: php admin page",
       "type": "php",
       "request": "launch",
       "runtimeArgs": ["-S", "localhost:8000", "-t", "AdminInterface/www/"],
@@ -24,14 +35,14 @@
       }
     },
     {
-      "name": "Launch Edge",
+      "name": "Launch: Edge",
       "request": "launch",
       "type": "msedge",
       "url": "http://localhost:4200",
       "webRoot": "${workspaceFolder}/src/frontend-box"
     },
     {
-      "name": "Launch Chrome",
+      "name": "Launch: Chrome",
       "request": "launch",
       "type": "chrome",
       "url": "http://localhost:4200",
