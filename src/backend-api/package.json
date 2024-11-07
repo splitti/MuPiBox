@@ -14,7 +14,7 @@
     "cors": "^2.8.5",
     "express": "^4.21.1",
     "jsonfile": "^6.1.0",
-    "request": "^2.88.2",
+    "ky": "1.7.2",
     "spotify-web-api-node": "^5.0.2",
     "xml-js": "^1.6.11"
   },
@@ -24,9 +24,10 @@
     "@types/express": "5.0.0",
     "@types/jsonfile": "6.1.4",
     "@types/spotify-web-api-node": "5.0.11",
-    "@types/request": "2.48.12",
     "esbuild": "0.24.0",
-    "tsx": "4.19.2"
+    "tsx": "4.19.2",
+    "jest": "29.7.0",
+    "supertest": "7.0.0"
   },
   "description": "API backend server for the MupiBox.",
   "private": true,

@@ -4,9 +4,9 @@ import cors from 'cors'
 import express from 'express'
 import fs from 'node:fs'
 import jsonfile from 'jsonfile'
+import ky from 'ky'
 import path from 'node:path'
 import { readFile } from 'node:fs/promises'
-import request from 'request'
 import xmlparser from 'xml-js'
 
 // Configuration files.
@@ -60,13 +60,16 @@ if (process.env.NODE_ENV !== 'development') {
 // Routes
 app.get('/api/rssfeed', async (req, res) => {
   const rssUrl = req.query.url
-  if (typeof rssUrl === 'string') {
-    request.get(rssUrl, (_error, response, _body) => {
-      res.send(xmlparser.xml2json(response.body, { compact: true, nativeType: true }))
-    })
-  } else {
+  if (typeof rssUrl !== 'string') {
     res.status(500).send('Given url is not a string.')
+    return
   }
+  // TODO: Use try/catch?
+  ky.get(rssUrl)
+    .text()
+    .then((response) => {
+      res.send(xmlparser.xml2json(response, { compact: true, nativeType: true }))
+    })
 })
 
 app.get('/api/data', (req, res) => {
