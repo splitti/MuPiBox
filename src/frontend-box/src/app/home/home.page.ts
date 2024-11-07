@@ -8,7 +8,7 @@ import {
   effect,
   signal,
 } from '@angular/core'
-import { NavigationExtras, Router } from '@angular/router'
+import type { CategoryType, Media } from '../media'
 import {
   IonButton,
   IonButtons,
@@ -25,6 +25,7 @@ import {
   IonSegmentButton,
   IonToolbar,
 } from '@ionic/angular/standalone'
+import { NavigationExtras, Router } from '@angular/router'
 import {
   bookOutline,
   cloudOfflineOutline,
@@ -33,19 +34,18 @@ import {
   radioOutline,
   timerOutline,
 } from 'ionicons/icons'
-import { filter, lastValueFrom, map } from 'rxjs'
-import type { CategoryType, Media } from '../media'
+import { catchError, combineLatest, distinctUntilChanged, filter, lastValueFrom, map, of, switchMap, tap } from 'rxjs'
+import { toObservable, toSignal } from '@angular/core/rxjs-interop'
 
-import { CommonModule } from '@angular/common'
-import { toSignal } from '@angular/core/rxjs-interop'
-import { FormsModule } from '@angular/forms'
-import { addIcons } from 'ionicons'
 import type { Artist } from '../artist'
 import { ArtworkService } from '../artwork.service'
+import { CommonModule } from '@angular/common'
+import { FormsModule } from '@angular/forms'
 import { LoadingComponent } from '../loading/loading.component'
 import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
 import { PlayerService } from '../player.service'
+import { addIcons } from 'ionicons'
 
 @Component({
   selector: 'app-home',
@@ -75,18 +75,17 @@ import { PlayerService } from '../player.service'
   standalone: true,
   changeDetection: ChangeDetectionStrategy.Default,
 })
-export class HomePage implements OnInit {
-  protected artists: Artist[] = []
-  protected media: Media[] = []
+export class HomePage {
   protected covers = {}
   protected editButtonclickCount = 0
   protected editClickTimer = 0
 
-  protected category: CategoryType = 'audiobook'
-
+  protected artists: Signal<Artist[]>
   protected isOnline: Signal<boolean>
   protected isLoading: WritableSignal<boolean> = signal(false)
-  protected needsUpdate = false
+  protected category: WritableSignal<CategoryType> = signal('audiobook')
+
+  protected pageIsShown: WritableSignal<boolean> = signal(true)
 
   constructor(
     private mediaService: MediaService,
@@ -94,85 +93,64 @@ export class HomePage implements OnInit {
     private playerService: PlayerService,
     private router: Router,
   ) {
+    addIcons({ timerOutline, bookOutline, musicalNotesOutline, radioOutline, cloudOutline, cloudOfflineOutline })
+
     this.isOnline = toSignal(
       this.mediaService.network$.pipe(
         filter((network) => network.ip !== undefined),
         map((network) => network.onlinestate === 'online'),
+        distinctUntilChanged(),
       ),
     )
-    effect(
-      () => {
-        console.log(`Online state changed to ${this.isOnline()}`)
-        this.update()
-      },
-      { allowSignalWrites: true },
-    )
-    addIcons({ timerOutline, bookOutline, musicalNotesOutline, radioOutline, cloudOutline, cloudOfflineOutline })
-  }
-
-  ngOnInit() {
-    this.mediaService.setCategory(this.category)
-    this.update()
-  }
-
-  ionViewWillEnter() {
-    this.update()
-  }
-
-  public categoryChanged(event: any): void {
-    this.category = event.detail.value
-    this.mediaService.setCategory(this.category)
-    this.update()
-  }
-
-  private update(): void {
-    this.isLoading.set(true)
-    if (this.category === 'audiobook' || this.category === 'music' || this.category === 'other') {
-      lastValueFrom(this.mediaService.fetchArtistData(this.category))
-        .then((artists) => {
-          this.isLoading.set(false)
-          this.artists = artists
-
-          for (const artist of this.artists) {
+    this.artists = toSignal(
+      combineLatest([toObservable(this.category), toObservable(this.isOnline)]).pipe(
+        map(([category, _isOnline]) => category),
+        tap(() => this.isLoading.set(true)),
+        switchMap((category) => {
+          return this.mediaService.fetchArtistData(category).pipe(
+            catchError((error) => {
+              console.error(error)
+              return of([])
+            }),
+          )
+        }),
+        map((artists) => {
+          for (const artist of artists) {
             this.artworkService.getArtistArtwork(artist.coverMedia).subscribe((url) => {
               this.covers[artist.name] = url
             })
           }
-        })
-        .catch((error) => console.error(error))
-    } else {
-      lastValueFrom(this.mediaService.fetchMediaData(this.category))
-        .then((media) => {
-          this.isLoading.set(false)
-          this.media = media
-          for (const currentMedia of media) {
-            this.artworkService.getArtwork(currentMedia).subscribe((url) => {
-              this.covers[currentMedia.title] = url
-            })
-          }
-        })
-        .catch((error) => console.error(error))
-    }
-    this.needsUpdate = false
+          return artists
+        }),
+        tap(() => this.isLoading.set(false)),
+      ),
+    )
+
+    effect(() => {
+      this.mediaService.setCategory(this.category())
+    })
+  }
+
+  public ionViewWillEnter(): void {
+    this.pageIsShown.set(true)
+  }
+
+  public ionViewWillLeave(): void {
+    this.pageIsShown.set(false)
+  }
+
+  public categoryChanged(event: any): void {
+    this.category.set(event.detail.value)
   }
 
   artistCoverClicked(clickedArtist: Artist) {
     const navigationExtras: NavigationExtras = {
       state: {
         artist: clickedArtist,
-        category: this.category,
+        category: this.category(),
       },
     }
     this.router.navigate(['/medialist'], navigationExtras)
-  }
-
-  mediaCoverClicked(clickedMedia: Media) {
-    const navigationExtras: NavigationExtras = {
-      state: {
-        media: clickedMedia,
-      },
-    }
-    this.router.navigate(['/player'], navigationExtras)
   }
 
   editButtonPressed() {
@@ -186,12 +164,11 @@ export class HomePage implements OnInit {
       }, 500)
     } else {
       this.editButtonclickCount = 0
-      this.needsUpdate = true
       this.router.navigate(['/edit'])
     }
   }
 
-  resume() {
+  protected resume(): void {
     this.router.navigate(['/resume'])
   }
 
