@@ -59,14 +59,14 @@ if (process.env.NODE_ENV !== 'development') {
 
 // Routes
 app.get('/api/rssfeed', async (req, res) => {
-  request.get(
-    {
-      url: req.query.url,
-    },
-    (error, response, body) => {
+  const rssUrl = req.query.url
+  if (typeof rssUrl === 'string') {
+    request.get(rssUrl, (_error, response, _body) => {
       res.send(xmlparser.xml2json(response.body, { compact: true, nativeType: true }))
-    },
-  )
+    })
+  } else {
+    res.status(500).send('Given url is not a string.')
+  }
 })
 
 app.get('/api/data', (req, res) => {
