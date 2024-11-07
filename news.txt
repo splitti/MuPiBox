@@ -35,7 +35,7 @@ We will focus on <b>bookworm</b> and recommend you to update, or reinstall. See 
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>Update: jq Version 1.7.1 (performance improvements)</li>
 <li id='linews' class='linews'>Update: librespot (instead of spotifyd)</li>
-<li id='linews' class='linews'>New: Youtube-DL</li>
+<li id='linews' class='linews'>New: Basic network roaming</li>
 <li id='linews' class='linews'>New: The sorting of albums/tracks can now be set when adding or editing an entry</li>
 <li id='linews' class='linews'>New: Disabled the Chrome gesture control which can lead to unwanted navigation</li>
 <li id='linews' class='linews'>Bugfix: Fixed the loading spinner to show until loading of track/artists lists is fully done</li>
