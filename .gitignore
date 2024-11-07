@@ -1,6 +1,18 @@
-*.bak
-*.orig
+# Config files.
+src/backend-api/config/*.json
+src/backend-player/config/*.json
+**/server/config/*.json
 
+# Temporary deploy files.
+src/**/*.zip
+src/deploy.zip
+src/deploy
+
+# npm / Angular / esbuild files.
 node_modules
 .angular
-src/deploy
+*.esbuild-meta.json
+
+# Other files.
+*.bak
+

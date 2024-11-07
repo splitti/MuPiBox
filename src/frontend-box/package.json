@@ -1,0 +1,52 @@
+{
+  "name": "mupibox-frontend-box",
+  "version": "1.0.0",
+  "author": "Mupi Team",
+  "homepage": "https://github.com/splitti/mupibox",
+  "scripts": {
+    "ng": "ng",
+    "serve": "ng serve",
+    "build": "ng build --configuration production --output-path=../deploy/www",
+    "test": "ng test",
+    "lint": "npx @biomejs/biome check .",
+    "lint:fix": "npx @biomejs/biome check --fix ."
+  },
+  "dependencies": {
+    "@angular/common": "^18.2.7",
+    "@angular/core": "^18.2.7",
+    "@angular/forms": "^18.2.7",
+    "@angular/platform-browser": "^18.2.7",
+    "@angular/platform-browser-dynamic": "^18.2.7",
+    "@angular/router": "^18.2.7",
+    "@ionic/angular": "^8.3.2",
+    "swiper": "^11.1.14",
+    "rxjs": "~7.8.1",
+    "simple-keyboard": "^3.8.8",
+    "tslib": "^2.7.0",
+    "zone.js": "~0.14.10"
+  },
+  "devDependencies": {
+    "@angular-devkit/build-angular": "^18.2.7",
+    "@angular/cli": "18.2.7",
+    "@angular/compiler": "^18.2.7",
+    "@angular/compiler-cli": "^18.2.7",
+    "@angular/language-service": "^18.2.7",
+    "@ionic/angular-toolkit": "^5.0.0",
+    "@types/jasmine": "~5.1.4",
+    "@types/jasminewd2": "~2.0.13",
+    "@types/node": "^16",
+    "jasmine-core": "~5.4.0",
+    "jasmine-spec-reporter": "~7.0.0",
+    "karma": "~6.4.4",
+    "karma-chrome-launcher": "~3.2.0",
+    "karma-coverage": "~2.2.1",
+    "karma-coverage-istanbul-reporter": "~3.0.3",
+    "karma-jasmine": "~5.1.0",
+    "karma-jasmine-html-reporter": "^2.1.0",
+    "karma-spec-reporter": "*",
+    "protractor": "~7.0.0",
+    "typescript": "~5.4.5"
+  },
+  "description": "Frontend UI running on the MupiBox.",
+  "private": true
+}
