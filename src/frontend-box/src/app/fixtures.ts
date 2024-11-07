@@ -1,10 +1,10 @@
 // This file contains dummy data that should only be used in
 // test files (*.spec.ts).
 
+import { ServerHttpApiConfig } from '@backend-api/server.model'
 import type { Artist } from './artist'
 import type { Media } from './media'
 import { Monitor } from './monitor'
-import { SonosApiConfig } from './sonos-api'
 
 export const createFixture = <T>(data: T): ((additional_data?: Partial<T>) => T) => {
   return (additional_data) => {
@@ -12,7 +12,7 @@ export const createFixture = <T>(data: T): ((additional_data?: Partial<T>) => T)
   }
 }
 
-export const createConfig = createFixture<SonosApiConfig>({
+export const createConfig = createFixture<ServerHttpApiConfig>({
   server: 'localhost',
   ip: 'localhost',
   port: '8200',

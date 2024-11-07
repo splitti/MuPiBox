@@ -12,7 +12,8 @@
     "importHelpers": true,
     "target": "ES2022",
     "lib": ["es2018", "dom"],
-    "useDefineForClassFields": false
+    "useDefineForClassFields": false,
+    "paths": { "@backend-api/*": ["../backend-api/src/models/*"] }
   },
   "angularCompilerOptions": {
     "fullTemplateTypeCheck": true,

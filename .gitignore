@@ -8,9 +8,10 @@ src/**/*.zip
 src/deploy.zip
 src/deploy
 
-# npm / Angular files.
+# npm / Angular / esbuild files.
 node_modules
 .angular
+*.esbuild-meta.json
 
 # Other files.
 *.bak

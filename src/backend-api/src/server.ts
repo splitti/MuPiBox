@@ -1,38 +1,45 @@
-// Setup
-const express = require('express')
-const cors = require('cors')
-const path = require('node:path')
-const jsonfile = require('jsonfile')
-const SpotifyWebApi = require('spotify-web-api-node')
-const fs = require('node:fs')
-const request = require('request')
-const xmlparser = require('xml-js')
+import { ServerConfig } from './models/server.model'
+import SpotifyWebApi from 'spotify-web-api-node'
+import cors from 'cors'
+import express from 'express'
+import fs from 'node:fs'
+import jsonfile from 'jsonfile'
+import path from 'node:path'
+import { readFile } from 'node:fs/promises'
+import request from 'request'
+import xmlparser from 'xml-js'
 
 // Configuration files.
 let configBasePath = './server/config'
-let dataBasePath = './server/config'
 if (process.env.NODE_ENV === 'development') {
-  configBasePath = '../config' // This is needed since 'require' uses this file as base path.
-  dataBasePath = './config' // This uses the package.json path as pwd.
+  configBasePath = './config' // This uses the package.json path as pwd.
 }
 
-const config = require(`${configBasePath}/config.json`)
-const dataFile = `${dataBasePath}/data.json`
-const resumeFile = `${dataBasePath}/resume.json`
-const activedataFile = `${dataBasePath}/active_data.json`
-const activeresumeFile = `${dataBasePath}/active_resume.json`
-const networkFile = `${dataBasePath}/network.json`
-const wlanFile = `${dataBasePath}/wlan.json`
-const monitorFile = `${dataBasePath}/monitor.json`
-const albumstopFile = `${dataBasePath}/albumstop.json`
+async function readJsonFile(path: string) {
+  const file = await readFile(path, 'utf8')
+  return JSON.parse(file)
+}
+
+let config: ServerConfig | undefined = undefined
+let spotifyApi: SpotifyWebApi | undefined = undefined
+readJsonFile(`${configBasePath}/config.json`).then((configFile) => {
+  config = configFile
+  spotifyApi = new SpotifyWebApi({
+    clientId: config?.spotify?.clientId,
+    clientSecret: config?.spotify?.clientSecret,
+  })
+})
+const dataFile = `${configBasePath}/data.json`
+const resumeFile = `${configBasePath}/resume.json`
+const activedataFile = `${configBasePath}/active_data.json`
+const activeresumeFile = `${configBasePath}/active_resume.json`
+const networkFile = `${configBasePath}/network.json`
+const wlanFile = `${configBasePath}/wlan.json`
+const monitorFile = `${configBasePath}/monitor.json`
+const albumstopFile = `${configBasePath}/albumstop.json`
 const mupihat = '/tmp/mupihat.json'
 const dataLock = '/tmp/.data.lock'
 const resumeLock = '/tmp/.resume.lock'
-
-const spotifyApi = new SpotifyWebApi({
-  clientId: config.spotify.clientId,
-  clientSecret: config.spotify.clientSecret,
-})
 
 const nowDate = new Date()
 
@@ -52,14 +59,14 @@ if (process.env.NODE_ENV !== 'development') {
 
 // Routes
 app.get('/api/rssfeed', async (req, res) => {
-  request.get(
-    {
-      url: req.query.url,
-    },
-    (error, response, body) => {
+  const rssUrl = req.query.url
+  if (typeof rssUrl === 'string') {
+    request.get(rssUrl, (_error, response, _body) => {
       res.send(xmlparser.xml2json(response.body, { compact: true, nativeType: true }))
-    },
-  )
+    })
+  } else {
+    res.status(500).send('Given url is not a string.')
+  }
 })
 
 app.get('/api/data', (req, res) => {
@@ -186,7 +193,7 @@ app.post('/api/addwlan', (req, res) => {
     out.push(req.body)
 
     jsonfile.writeFile(wlanFile, out, { spaces: 4 }, (error) => {
-      if (error) throw err
+      if (error) throw error
       res.status(200).send('ok')
     })
   })
@@ -208,7 +215,7 @@ app.post('/api/add', (req, res) => {
           data.push(req.body)
 
           jsonfile.writeFile(dataFile, data, { spaces: 4 }, (error) => {
-            if (error) throw err
+            if (error) throw error
             res.status(200).send('ok')
           })
         }
@@ -239,7 +246,7 @@ app.post('/api/addresume', (req, res) => {
           data.push(req.body)
 
           jsonfile.writeFile(resumeFile, data, { spaces: 4 }, (error) => {
-            if (error) throw err
+            if (error) throw error
             res.status(200).send('ok')
           })
         }
@@ -272,7 +279,7 @@ app.post('/api/delete', (req, res) => {
           data.splice(req.body.index, 1)
 
           jsonfile.writeFile(dataFile, data, { spaces: 4 }, (error) => {
-            if (error) throw err
+            if (error) throw error
             res.status(200).send('ok')
           })
         }
@@ -305,7 +312,7 @@ app.post('/api/edit', (req, res) => {
           data.splice(req.body.index, 1, req.body.data)
 
           jsonfile.writeFile(dataFile, data, { spaces: 4 }, (error) => {
-            if (error) throw err
+            if (error) throw error
             res.status(200).send('ok')
           })
         }
@@ -338,7 +345,7 @@ app.post('/api/editresume', (req, res) => {
           data.splice(req.body.index, 1, req.body.data)
 
           jsonfile.writeFile(resumeFile, data, { spaces: 4 }, (error) => {
-            if (error) throw err
+            if (error) throw error
             res.status(200).send('ok')
           })
         }
@@ -356,6 +363,10 @@ app.post('/api/editresume', (req, res) => {
 })
 
 app.get('/api/token', (req, res) => {
+  if (spotifyApi === undefined) {
+    res.status(500).send('Could not intialize Spotify API.')
+    return
+  }
   // Retrieve an access token from Spotify
   spotifyApi.clientCredentialsGrant().then(
     (data) => {
@@ -373,13 +384,17 @@ app.get('/api/token', (req, res) => {
 })
 
 app.get('/api/sonos', (req, res) => {
+  if (config === undefined) {
+    res.status(500).send('Could not load server config.')
+    return
+  }
   // Send server address and port of the node-sonos-http-api instance to the client
   res.status(200).send(config['node-sonos-http-api'])
 })
 
-const tryReadFile = (filePath, retries = 3, delayMs = 1000) => {
+const tryReadFile = (filePath: string, retries = 3, delayMs = 1000) => {
   return new Promise((resolve, reject) => {
-    const attempt = (remainingRetries) => {
+    const attempt = (remainingRetries: number) => {
       jsonfile.readFile(filePath, (error, data) => {
         if (error) {
           if (remainingRetries > 0) {

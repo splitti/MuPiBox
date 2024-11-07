@@ -2,10 +2,10 @@ import { publishReplay, refCount } from 'rxjs/operators'
 
 import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
+import type { ServerHttpApiConfig } from '@backend-api/server.model'
 import type { Observable } from 'rxjs'
 import { environment } from '../environments/environment'
 import type { Media } from './media'
-import type { SonosApiConfig } from './sonos-api'
 
 export enum PlayerCmds {
   PLAY = 'play',
@@ -36,7 +36,7 @@ export enum PlayerCmds {
   providedIn: 'root',
 })
 export class PlayerService {
-  private config: Observable<SonosApiConfig> = null
+  private config: Observable<ServerHttpApiConfig> = null
 
   constructor(private http: HttpClient) {}
 
@@ -47,7 +47,7 @@ export class PlayerService {
     if (!this.config) {
       const url = environment.production ? '../api/sonos' : 'http://localhost:8200/api/sonos'
 
-      this.config = this.http.get<SonosApiConfig>(url).pipe(
+      this.config = this.http.get<ServerHttpApiConfig>(url).pipe(
         publishReplay(1), // cache result
         refCount(),
       )

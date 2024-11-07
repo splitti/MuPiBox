@@ -11,6 +11,9 @@
     "serve:backend-api": "npm run serve --workspace=mupibox-backend-api",
     "serve:backend-player": "npm run serve --workspace=mupibox-backend-player",
     "build": "npm run build --workspaces",
+    "build:frontend-box": "npm run build --workspace=mupibox-frontend-box",
+    "build:backend-api": "npm run build --workspace=mupibox-backend-api",
+    "build:backend-player": "npm run build --workspace=mupibox-backend-player",
     "lint": "npm run lint --workspaces",
     "lint:fix": "npm run lint:fix --workspaces"
   },
