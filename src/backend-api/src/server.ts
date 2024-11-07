@@ -10,10 +10,8 @@ import xmlparser from 'xml-js'
 
 // Configuration files.
 let configBasePath = './server/config'
-let dataBasePath = './server/config'
 if (process.env.NODE_ENV === 'development') {
-  configBasePath = '../config' // This is needed since 'require' uses this file as base path.
-  dataBasePath = './config' // This uses the package.json path as pwd.
+  configBasePath = './config' // This uses the package.json path as pwd.
 }
 
 async function readJsonFile(path: string) {
@@ -28,14 +26,14 @@ readJsonFile(`${configBasePath}/config.json`).then((config) => {
     clientSecret: config.spotify.clientSecret,
   })
 })
-const dataFile = `${dataBasePath}/data.json`
-const resumeFile = `${dataBasePath}/resume.json`
-const activedataFile = `${dataBasePath}/active_data.json`
-const activeresumeFile = `${dataBasePath}/active_resume.json`
-const networkFile = `${dataBasePath}/network.json`
-const wlanFile = `${dataBasePath}/wlan.json`
-const monitorFile = `${dataBasePath}/monitor.json`
-const albumstopFile = `${dataBasePath}/albumstop.json`
+const dataFile = `${configBasePath}/data.json`
+const resumeFile = `${configBasePath}/resume.json`
+const activedataFile = `${configBasePath}/active_data.json`
+const activeresumeFile = `${configBasePath}/active_resume.json`
+const networkFile = `${configBasePath}/network.json`
+const wlanFile = `${configBasePath}/wlan.json`
+const monitorFile = `${configBasePath}/monitor.json`
+const albumstopFile = `${configBasePath}/albumstop.json`
 const mupihat = '/tmp/mupihat.json'
 const dataLock = '/tmp/.data.lock'
 const resumeLock = '/tmp/.resume.lock'

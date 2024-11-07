@@ -1,7 +1,0 @@
-{
-  "watch": ["src"],
-  "ignore": ["src/**/*.spec.ts", "node_modules"],
-  "ext": "ts,js,json",
-  "exec": "etsc && node ./build/server.js",
-  "legacyWatch": true
-}
