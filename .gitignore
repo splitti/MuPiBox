@@ -3,9 +3,6 @@ src/backend-api/config/*.json
 src/backend-player/config/*.json
 **/server/config/*.json
 
-# Temporary build files.
-src/backend-api/build/*
-
 # Temporary deploy files.
 src/**/*.zip
 src/deploy.zip
