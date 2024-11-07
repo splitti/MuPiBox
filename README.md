@@ -36,7 +36,7 @@ Please visit official website  https://mupibox.de/anleitungen/installationsanlei
 - Startup-Sound by Zeraora (https://freesound.org/people/Zeraora/sounds/572773/)
 - Shutdown-Sound by Leszek_Szary (https://freesound.org/people/Leszek_Szary/sounds/133283/)
 - WLED by Discord-User ronbal and ChatGPT
-- Youtube Downloader MeTube (https://github.com/alexta69/metube/pkgs/container/metube)
+- jq (https://github.com/jqlang/jq/releases)
   
 ## Contributing
 All contributions, e.g., reporting issues etc., are welcome.
