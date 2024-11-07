@@ -1,3 +1,4 @@
+import { ServerConfig } from './models/server.model'
 import SpotifyWebApi from 'spotify-web-api-node'
 import cors from 'cors'
 import express from 'express'
@@ -19,11 +20,13 @@ async function readJsonFile(path: string) {
   return JSON.parse(file)
 }
 
+let config: ServerConfig | undefined = undefined
 let spotifyApi: SpotifyWebApi | undefined = undefined
-readJsonFile(`${configBasePath}/config.json`).then((config) => {
+readJsonFile(`${configBasePath}/config.json`).then((configFile) => {
+  config = configFile
   spotifyApi = new SpotifyWebApi({
-    clientId: config.spotify.clientId,
-    clientSecret: config.spotify.clientSecret,
+    clientId: config?.spotify?.clientId,
+    clientSecret: config?.spotify?.clientSecret,
   })
 })
 const dataFile = `${configBasePath}/data.json`
@@ -190,7 +193,7 @@ app.post('/api/addwlan', (req, res) => {
     out.push(req.body)
 
     jsonfile.writeFile(wlanFile, out, { spaces: 4 }, (error) => {
-      if (error) throw err
+      if (error) throw error
       res.status(200).send('ok')
     })
   })
@@ -212,7 +215,7 @@ app.post('/api/add', (req, res) => {
           data.push(req.body)
 
           jsonfile.writeFile(dataFile, data, { spaces: 4 }, (error) => {
-            if (error) throw err
+            if (error) throw error
             res.status(200).send('ok')
           })
         }
@@ -243,7 +246,7 @@ app.post('/api/addresume', (req, res) => {
           data.push(req.body)
 
           jsonfile.writeFile(resumeFile, data, { spaces: 4 }, (error) => {
-            if (error) throw err
+            if (error) throw error
             res.status(200).send('ok')
           })
         }
@@ -276,7 +279,7 @@ app.post('/api/delete', (req, res) => {
           data.splice(req.body.index, 1)
 
           jsonfile.writeFile(dataFile, data, { spaces: 4 }, (error) => {
-            if (error) throw err
+            if (error) throw error
             res.status(200).send('ok')
           })
         }
@@ -309,7 +312,7 @@ app.post('/api/edit', (req, res) => {
           data.splice(req.body.index, 1, req.body.data)
 
           jsonfile.writeFile(dataFile, data, { spaces: 4 }, (error) => {
-            if (error) throw err
+            if (error) throw error
             res.status(200).send('ok')
           })
         }
@@ -342,7 +345,7 @@ app.post('/api/editresume', (req, res) => {
           data.splice(req.body.index, 1, req.body.data)
 
           jsonfile.writeFile(resumeFile, data, { spaces: 4 }, (error) => {
-            if (error) throw err
+            if (error) throw error
             res.status(200).send('ok')
           })
         }
@@ -381,13 +384,17 @@ app.get('/api/token', (req, res) => {
 })
 
 app.get('/api/sonos', (req, res) => {
+  if (config === undefined) {
+    res.status(500).send('Could not load server config.')
+    return
+  }
   // Send server address and port of the node-sonos-http-api instance to the client
   res.status(200).send(config['node-sonos-http-api'])
 })
 
-const tryReadFile = (filePath, retries = 3, delayMs = 1000) => {
+const tryReadFile = (filePath: string, retries = 3, delayMs = 1000) => {
   return new Promise((resolve, reject) => {
-    const attempt = (remainingRetries) => {
+    const attempt = (remainingRetries: number) => {
       jsonfile.readFile(filePath, (error, data) => {
         if (error) {
           if (remainingRetries > 0) {
