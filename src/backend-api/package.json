@@ -5,7 +5,7 @@
   "homepage": "https://github.com/splitti/mupibox",
   "scripts": {
     "serve": "cross-env NODE_ENV=development tsx watch src/server.ts",
-    "build": "npm run check-types && esbuild src/server.ts --bundle --minify --platform=node --target=node22 --outfile=../deploy/server.js",
+    "build": "npm run check-types && esbuild src/server.ts --bundle --minify --platform=node --target=node22 --metafile=backend-api.esbuild-meta.json --outfile=../deploy/server.js",
     "lint": "npx @biomejs/biome check .",
     "lint:fix": "npx @biomejs/biome check --fix .",
     "check-types": "npx tsc --noEmit"
