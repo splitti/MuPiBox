@@ -1,4 +1,5 @@
-import { CUSTOM_ELEMENTS_SCHEMA, Component, WritableSignal, signal } from '@angular/core'
+import { CUSTOM_ELEMENTS_SCHEMA, Component, Signal, WritableSignal, signal } from '@angular/core'
+import { toObservable, toSignal } from '@angular/core/rxjs-interop'
 import { NavigationExtras, Router } from '@angular/router'
 import {
   IonBackButton,
@@ -14,13 +15,13 @@ import {
   IonTitle,
   IonToolbar,
 } from '@ionic/angular/standalone'
+import { catchError, lastValueFrom, map, of, switchMap, tap } from 'rxjs'
 
-import { AsyncPipe } from '@angular/common'
 import { HttpClient } from '@angular/common/http'
 import { addIcons } from 'ionicons'
 import { arrowBackOutline } from 'ionicons/icons'
-import { lastValueFrom } from 'rxjs'
 import { ArtworkService } from '../artwork.service'
+import { IonicSliderWorkaround } from '../ionic-slider-workaround'
 import { LoadingComponent } from '../loading/loading.component'
 import { Media } from '../media'
 import { MediaService } from '../media.service'
@@ -34,7 +35,6 @@ import { PlayerService } from '../player.service'
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   standalone: true,
   imports: [
-    AsyncPipe,
     MupiHatIconComponent,
     LoadingComponent,
     IonHeader,
@@ -51,10 +51,11 @@ import { PlayerService } from '../player.service'
     IonCardTitle,
   ],
 })
-export class ResumePage {
-  protected media: Media[] = []
+export class ResumePage extends IonicSliderWorkaround {
   protected covers = {}
+  protected isOnline: Signal<boolean>
   protected isLoading: WritableSignal<boolean> = signal(false)
+  protected media: Signal<Media[]>
 
   public constructor(
     private router: Router,
@@ -63,11 +64,33 @@ export class ResumePage {
     private artworkService: ArtworkService,
     private playerService: PlayerService,
   ) {
+    super()
     addIcons({ arrowBackOutline })
-  }
 
-  public ionViewWillEnter(): void {
-    this.fetchResumeMedia()
+    this.isOnline = toSignal(this.mediaService.isOnline())
+
+    this.media = toSignal(
+      toObservable(this.isOnline).pipe(
+        tap(() => this.isLoading.set(true)),
+        switchMap((_isOnline) => {
+          return this.mediaService.fetchActiveResumeData().pipe(
+            catchError((error) => {
+              console.error(error)
+              return of([])
+            }),
+          )
+        }),
+        map((media) => {
+          for (const currentMedia of media) {
+            this.artworkService.getArtwork(currentMedia).subscribe((url) => {
+              this.covers[currentMedia.title] = url
+            })
+          }
+          return media
+        }),
+        tap(() => this.isLoading.set(false)),
+      ),
+    )
   }
 
   protected coverClicked(clickedMedia: Media): void {
@@ -107,20 +130,5 @@ export class ResumePage {
 
   protected mediaNameClicked(clickedMedia: Media): void {
     this.playerService.sayText(clickedMedia.title)
-  }
-
-  private fetchResumeMedia(): void {
-    this.isLoading.set(true)
-    lastValueFrom(this.mediaService.fetchActiveResumeData())
-      .then((media) => {
-        this.isLoading.set(false)
-        this.media = media
-        for (const currentMedia of this.media) {
-          this.artworkService.getArtwork(currentMedia).subscribe((url) => {
-            this.covers[currentMedia.title] = url
-          })
-        }
-      })
-      .catch((error) => console.error(error))
   }
 }
