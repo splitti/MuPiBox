@@ -126,6 +126,7 @@ function mupi-info() {
 	echo -e "  ${BCyan}Architecture:     ${BIGreen}$(uname -m)${Color_Off}"
 	echo -e "  ${BCyan}MuPiBox-Version:  ${BIGreen}$(cat /etc/mupibox/mupiboxconfig.json | jq -r .mupibox.version)${Color_Off}"
 	echo -e "  ${BCyan}Librespot:        ${BIGreen}$(/usr/bin/librespot --version | awk '{print $2}')${Color_Off}"
+	echo -e "  ${BCyan}jq:               ${BIGreen}$(/usr/bin/jq --version}')${Color_Off}"
 	echo -e "${Color_Off}"
 	echo -e "  ${BCyan}Admin-UI:         ${BIYellow}http://$(hostname)${Color_Off}"
 	echo -e "  ${BCyan}Web-UI:           ${BIYellow}http://$(hostname):8200${Color_Off}"

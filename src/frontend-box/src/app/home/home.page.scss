@@ -55,11 +55,16 @@ ion-row.media-card {
     text-overflow: ellipsis;
 }
 
-.status-icons ion-icon {
-    height: 60% !important;
-    max-height: 60% !important;
-    color: rgb(255, 255, 255);
-    opacity: 1.0;
+.status-icons {
+    --padding-start: 0px !important;
+    --padding-end: 0px !important;
+
+    ion-icon {
+        height: 60% !important;
+        max-height: 60% !important;
+        color: rgb(255, 255, 255);
+        opacity: 1.0;
+    }
 }
 
 /* MuPiBox manual edit */

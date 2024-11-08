@@ -1,5 +1,4 @@
 import { ServerConfig } from './models/server.model'
-import SpotifyWebApi from 'spotify-web-api-node'
 import cors from 'cors'
 import express from 'express'
 import fs from 'node:fs'

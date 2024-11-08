@@ -6,6 +6,7 @@
   "scripts": {
     "serve": "cross-env NODE_ENV=development tsx watch src/server.ts",
     "build": "npm run check-types && esbuild src/server.ts --bundle --minify --platform=node --target=node22 --metafile=backend-api.esbuild-meta.json --outfile=../deploy/server.js",
+    "test": "",
     "lint": "npx @biomejs/biome check .",
     "lint:fix": "npx @biomejs/biome check --fix .",
     "check-types": "npx tsc --noEmit"
