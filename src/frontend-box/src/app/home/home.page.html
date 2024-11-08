@@ -33,7 +33,7 @@
 <ion-content class="home-content">
   <mupi-loading [loading]="isLoading()"></mupi-loading>
   @if (pageIsShown()) {
-  <swiper-container slides-per-view="3" scrollbar="true" scrollbar-hide="true" free-mode="false" css-mode="true">
+    <swiper-container slides-per-view="3" scrollbar="true" scrollbar-hide="true" free-mode="false" css-mode="true">
       @for (currentArtist of artists(); track currentArtist) {
         <swiper-slide>
           <ion-grid>
@@ -56,6 +56,6 @@
           </ion-grid>
         </swiper-slide>
       }
-</swiper-container>
+    </swiper-container>
   }
 </ion-content>

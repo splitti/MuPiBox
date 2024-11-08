@@ -2,13 +2,11 @@ import {
   CUSTOM_ELEMENTS_SCHEMA,
   ChangeDetectionStrategy,
   Component,
-  OnInit,
   Signal,
   WritableSignal,
   effect,
   signal,
 } from '@angular/core'
-import type { CategoryType, Media } from '../media'
 import {
   IonButton,
   IonButtons,
@@ -34,13 +32,15 @@ import {
   radioOutline,
   timerOutline,
 } from 'ionicons/icons'
-import { catchError, combineLatest, distinctUntilChanged, filter, lastValueFrom, map, of, switchMap, tap } from 'rxjs'
+import { catchError, combineLatest, map, of, switchMap, tap } from 'rxjs'
 import { toObservable, toSignal } from '@angular/core/rxjs-interop'
 
 import type { Artist } from '../artist'
 import { ArtworkService } from '../artwork.service'
+import type { CategoryType } from '../media'
 import { CommonModule } from '@angular/common'
 import { FormsModule } from '@angular/forms'
+import { IonicSliderWorkaround } from '../ionic-slider-workaround'
 import { LoadingComponent } from '../loading/loading.component'
 import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
@@ -75,7 +75,7 @@ import { addIcons } from 'ionicons'
   standalone: true,
   changeDetection: ChangeDetectionStrategy.Default,
 })
-export class HomePage {
+export class HomePage extends IonicSliderWorkaround {
   protected covers = {}
   protected editButtonclickCount = 0
   protected editClickTimer = 0
@@ -85,23 +85,17 @@ export class HomePage {
   protected isLoading: WritableSignal<boolean> = signal(false)
   protected category: WritableSignal<CategoryType> = signal('audiobook')
 
-  protected pageIsShown: WritableSignal<boolean> = signal(true)
-
   constructor(
     private mediaService: MediaService,
     private artworkService: ArtworkService,
     private playerService: PlayerService,
     private router: Router,
   ) {
+    super()
     addIcons({ timerOutline, bookOutline, musicalNotesOutline, radioOutline, cloudOutline, cloudOfflineOutline })
 
-    this.isOnline = toSignal(
-      this.mediaService.network$.pipe(
-        filter((network) => network.ip !== undefined),
-        map((network) => network.onlinestate === 'online'),
-        distinctUntilChanged(),
-      ),
-    )
+    this.isOnline = toSignal(this.mediaService.isOnline())
+
     this.artists = toSignal(
       combineLatest([toObservable(this.category), toObservable(this.isOnline)]).pipe(
         map(([category, _isOnline]) => category),
@@ -129,14 +123,6 @@ export class HomePage {
     effect(() => {
       this.mediaService.setCategory(this.category())
     })
-  }
-
-  public ionViewWillEnter(): void {
-    this.pageIsShown.set(true)
-  }
-
-  public ionViewWillLeave(): void {
-    this.pageIsShown.set(false)
   }
 
   public categoryChanged(event: any): void {
