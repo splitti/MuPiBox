@@ -1,13 +1,13 @@
-import { ServerConfig } from './models/server.model'
-import SpotifyWebApi from 'spotify-web-api-node'
+import fs from 'node:fs'
+import { readFile } from 'node:fs/promises'
+import path from 'node:path'
 import cors from 'cors'
 import express from 'express'
-import fs from 'node:fs'
 import jsonfile from 'jsonfile'
-import path from 'node:path'
-import { readFile } from 'node:fs/promises'
 import request from 'request'
+import SpotifyWebApi from 'spotify-web-api-node'
 import xmlparser from 'xml-js'
+import { ServerConfig } from './models/server.model'
 
 // Configuration files.
 let configBasePath = './server/config'

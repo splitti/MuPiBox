@@ -7,6 +7,8 @@ import {
   effect,
   signal,
 } from '@angular/core'
+import { toObservable, toSignal } from '@angular/core/rxjs-interop'
+import { NavigationExtras, Router } from '@angular/router'
 import {
   IonButton,
   IonButtons,
@@ -23,7 +25,6 @@ import {
   IonSegmentButton,
   IonToolbar,
 } from '@ionic/angular/standalone'
-import { NavigationExtras, Router } from '@angular/router'
 import {
   bookOutline,
   cloudOfflineOutline,
@@ -33,19 +34,18 @@ import {
   timerOutline,
 } from 'ionicons/icons'
 import { catchError, combineLatest, map, of, switchMap, tap } from 'rxjs'
-import { toObservable, toSignal } from '@angular/core/rxjs-interop'
 
-import type { Artist } from '../artist'
-import { ArtworkService } from '../artwork.service'
-import type { CategoryType } from '../media'
 import { CommonModule } from '@angular/common'
 import { FormsModule } from '@angular/forms'
+import { addIcons } from 'ionicons'
+import type { Artist } from '../artist'
+import { ArtworkService } from '../artwork.service'
 import { IonicSliderWorkaround } from '../ionic-slider-workaround'
 import { LoadingComponent } from '../loading/loading.component'
+import type { CategoryType } from '../media'
 import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
 import { PlayerService } from '../player.service'
-import { addIcons } from 'ionicons'
 
 @Component({
   selector: 'app-home',

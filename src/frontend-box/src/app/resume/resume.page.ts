@@ -1,4 +1,6 @@
 import { CUSTOM_ELEMENTS_SCHEMA, Component, Signal, WritableSignal, signal } from '@angular/core'
+import { toObservable, toSignal } from '@angular/core/rxjs-interop'
+import { NavigationExtras, Router } from '@angular/router'
 import {
   IonBackButton,
   IonButtons,
@@ -13,21 +15,18 @@ import {
   IonTitle,
   IonToolbar,
 } from '@ionic/angular/standalone'
-import { NavigationExtras, Router } from '@angular/router'
 import { catchError, lastValueFrom, map, of, switchMap, tap } from 'rxjs'
-import { toObservable, toSignal } from '@angular/core/rxjs-interop'
 
-import { ArtworkService } from '../artwork.service'
-import { AsyncPipe } from '@angular/common'
 import { HttpClient } from '@angular/common/http'
+import { addIcons } from 'ionicons'
+import { arrowBackOutline } from 'ionicons/icons'
+import { ArtworkService } from '../artwork.service'
 import { IonicSliderWorkaround } from '../ionic-slider-workaround'
 import { LoadingComponent } from '../loading/loading.component'
 import { Media } from '../media'
 import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
 import { PlayerService } from '../player.service'
-import { addIcons } from 'ionicons'
-import { arrowBackOutline } from 'ionicons/icons'
 
 @Component({
   selector: 'mupi-resume',

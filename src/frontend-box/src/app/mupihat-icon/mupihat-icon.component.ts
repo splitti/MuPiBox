@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, Signal } from '@angular/core'
-import { map, of, switchMap } from 'rxjs'
 import { toObservable, toSignal } from '@angular/core/rxjs-interop'
+import { map, of, switchMap } from 'rxjs'
 
 import { IonIcon } from '@ionic/angular/standalone'
 import { MediaService } from '../media.service'
