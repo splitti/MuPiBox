@@ -39,14 +39,14 @@ do
 			WIFI_RESULT=$(sudo -i wpa_passphrase "${SSID}" "${PSK}") 
 			IFS=$'\n'
 			i=0
-			new_line='    scan_ssid=1'
+			new_line='	scan_ssid=1'
 			# Ersetze mit sed und füge die Zeile hinzu
 			WIFI_RESULT=$(echo "$WIFI_RESULT" | sed '/#psk=.*$/a\'$'\n'"$new_line")
 			echo $WIFI_RESULT
 			for LINES in ${WIFI_RESULT}
 			do
 					i=$((i+1))
-					if [ "${i}" = "1" ] || [ "${i}" = "2" ] || [ "${i}" = "4" ] || [ "${i}" = "5" ]; then
+					if [ "${i}" = "1" ] || [ "${i}" = "2" ] || [ "${i}" = "4" ] || [ "${i}" = "5" ] || [ "${i}" = "6" ]; then
 						echo $LINES | sudo tee -a ${WPACONF}
 					fi
 			done
