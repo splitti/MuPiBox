@@ -42,7 +42,8 @@ const resumeLock = '/tmp/.resume.lock'
 
 const nowDate = new Date()
 
-const app = express()
+// We export the app so we can use it in testing.
+export const app = express()
 app.use(cors())
 app.use(express.json())
 app.use(express.urlencoded({ extended: false }))
@@ -51,7 +52,7 @@ app.use(express.urlencoded({ extended: false }))
 // the Angular development server during development to be able to hot-reload and debug.
 // We explicitely check for !== 'development' for now so we do not need to set this env in
 // production.
-if (process.env.NODE_ENV !== 'development') {
+if (process.env.NODE_ENV !== 'development' && process.env.NODE_ENV !== 'test') {
   // Static path to compiled Angular app
   app.use(express.static(path.join(__dirname, 'www')))
 }
