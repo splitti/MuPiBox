@@ -14,6 +14,7 @@
     "build:frontend-box": "npm run build --workspace=mupibox-frontend-box",
     "build:backend-api": "npm run build --workspace=mupibox-backend-api",
     "build:backend-player": "npm run build --workspace=mupibox-backend-player",
+    "test": "npm run test --workspaces",
     "lint": "npm run lint --workspaces",
     "lint:fix": "npm run lint:fix --workspaces"
   },

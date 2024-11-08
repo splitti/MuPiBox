@@ -3,29 +3,31 @@
     <ion-buttons slot="start">
       <ion-back-button icon="arrow-back-outline" defaultHref="/home"></ion-back-button>
     </ion-buttons>
-    <ion-title>{{artist.name}}</ion-title>
+    <ion-title>{{artist().name}}</ion-title>
     <span slot="end" class="mupihat-icon-container"><mupihat-icon></mupihat-icon></span>
   </ion-toolbar>
 </ion-header>
 
 <ion-content class="medialist-content">
   <mupi-loading [loading]="isLoading()"></mupi-loading>
-  <swiper-container slides-per-view="3" scrollbar="true" scrollbar-hide="true" free-mode="false" css-mode="true">
-    @for (currentMedia of media; track currentMedia; let indexOfMedia = $index) {
-      <swiper-slide>
-        <ion-grid>
-          <ion-row class="media-card">
-            <ion-col size="12">
-              <ion-card>
-                <img (click)="coverClicked(currentMedia)" draggable="false" style="-user-select: none;" ondragstart="return false;" src="{{covers[currentMedia.title]}}">
-                <ion-card-header (click)="mediaNameClicked(currentMedia)">
-                  <ion-card-title class="ion-text-nowrap truncate-text ion-text-center">{{currentMedia.title}}</ion-card-title>
-                </ion-card-header>
-              </ion-card>
-            </ion-col>
-          </ion-row>
-        </ion-grid>
-      </swiper-slide>
-    }
-  </swiper-container>
+  @if (pageIsShown()) {
+    <swiper-container slides-per-view="3" scrollbar="true" scrollbar-hide="true" free-mode="false" css-mode="true">
+      @for (currentMedia of media(); track currentMedia; let indexOfMedia = $index) {
+        <swiper-slide>
+          <ion-grid>
+            <ion-row class="media-card">
+              <ion-col size="12">
+                <ion-card>
+                  <img (click)="coverClicked(currentMedia)" draggable="false" style="-user-select: none;" ondragstart="return false;" src="{{covers[currentMedia.title]}}">
+                  <ion-card-header (click)="mediaNameClicked(currentMedia)">
+                    <ion-card-title class="ion-text-nowrap truncate-text ion-text-center">{{currentMedia.title}}</ion-card-title>
+                  </ion-card-header>
+                </ion-card>
+              </ion-col>
+            </ion-row>
+          </ion-grid>
+        </swiper-slide>
+      }
+    </swiper-container>
+  }
 </ion-content>

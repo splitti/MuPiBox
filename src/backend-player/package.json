@@ -6,6 +6,7 @@
   "scripts": {
     "serve": "cross-env NODE_ENV=development node src/spotify-control.js",
     "build": "esbuild src/spotify-control.js --bundle --minify --platform=node --target=node22 --outfile=../deploy/spotify-control.js",
+    "test": "",
     "lint": "npx @biomejs/biome check .",
     "lint:fix": "npx @biomejs/biome check --fix ."
   },
