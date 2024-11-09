@@ -116,6 +116,9 @@ export class HomePage extends IonicSliderWorkaround {
           }
           return artists
         }),
+        // This is a fix for the swiper staying at a scrolled position
+        // when switching categories.
+        tap(() => this.swiper().slideTo(0, 0)),
         tap(() => this.isLoading.set(false)),
       ),
     )
