@@ -7,8 +7,6 @@ import {
   effect,
   signal,
 } from '@angular/core'
-import { toObservable, toSignal } from '@angular/core/rxjs-interop'
-import { NavigationExtras, Router } from '@angular/router'
 import {
   IonButton,
   IonButtons,
@@ -25,6 +23,7 @@ import {
   IonSegmentButton,
   IonToolbar,
 } from '@ionic/angular/standalone'
+import { NavigationExtras, Router } from '@angular/router'
 import {
   bookOutline,
   cloudOfflineOutline,
@@ -34,18 +33,19 @@ import {
   timerOutline,
 } from 'ionicons/icons'
 import { catchError, combineLatest, map, of, switchMap, tap } from 'rxjs'
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop'
 
-import { CommonModule } from '@angular/common'
-import { FormsModule } from '@angular/forms'
-import { addIcons } from 'ionicons'
 import type { Artist } from '../artist'
 import { ArtworkService } from '../artwork.service'
+import type { CategoryType } from '../media'
+import { CommonModule } from '@angular/common'
+import { FormsModule } from '@angular/forms'
 import { IonicSliderWorkaround } from '../ionic-slider-workaround'
 import { LoadingComponent } from '../loading/loading.component'
-import type { CategoryType } from '../media'
 import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
 import { PlayerService } from '../player.service'
+import { addIcons } from 'ionicons'
 
 @Component({
   selector: 'app-home',
@@ -116,9 +116,6 @@ export class HomePage extends IonicSliderWorkaround {
           }
           return artists
         }),
-        // This is a fix for the swiper staying at a scrolled position
-        // when switching categories.
-        tap(() => this.swiper().slideTo(0, 0)),
         tap(() => this.isLoading.set(false)),
       ),
     )
@@ -126,6 +123,14 @@ export class HomePage extends IonicSliderWorkaround {
     effect(() => {
       this.mediaService.setCategory(this.category())
     })
+
+    // This is a fix for the swiper staying at a scrolled position
+    // when switching categories.
+    // Since we cannot have an effect without using the signals value, we convert it
+    // to an observable here.
+    toObservable(this.isLoading)
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => this.swiper().slideTo(0, 0))
   }
 
   public categoryChanged(event: any): void {
