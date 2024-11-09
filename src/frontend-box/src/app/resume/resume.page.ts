@@ -1,38 +1,23 @@
-import { CUSTOM_ELEMENTS_SCHEMA, Component, Signal, WritableSignal, signal } from '@angular/core'
+import { ChangeDetectionStrategy, Component, Signal, WritableSignal, computed, signal } from '@angular/core'
 import { toObservable, toSignal } from '@angular/core/rxjs-interop'
 import { NavigationExtras, Router } from '@angular/router'
-import {
-  IonBackButton,
-  IonButtons,
-  IonCard,
-  IonCardHeader,
-  IonCardTitle,
-  IonCol,
-  IonContent,
-  IonGrid,
-  IonHeader,
-  IonRow,
-  IonTitle,
-  IonToolbar,
-} from '@ionic/angular/standalone'
-import { catchError, lastValueFrom, map, of, switchMap, tap } from 'rxjs'
+import { IonBackButton, IonButtons, IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular/standalone'
+import { catchError, lastValueFrom, of, switchMap, tap } from 'rxjs'
+import { SwiperComponent, SwiperData } from '../swiper/swiper.component'
 
 import { HttpClient } from '@angular/common/http'
 import { addIcons } from 'ionicons'
 import { arrowBackOutline } from 'ionicons/icons'
 import { ArtworkService } from '../artwork.service'
-import { IonicSliderWorkaround } from '../ionic-slider-workaround'
 import { LoadingComponent } from '../loading/loading.component'
 import { Media } from '../media'
 import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
-import { PlayerService } from '../player.service'
 
 @Component({
   selector: 'mupi-resume',
   templateUrl: './resume.page.html',
   styleUrls: ['./resume.page.scss'],
-  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   standalone: true,
   imports: [
     MupiHatIconComponent,
@@ -43,28 +28,30 @@ import { PlayerService } from '../player.service'
     IonBackButton,
     IonTitle,
     IonContent,
-    IonGrid,
-    IonRow,
-    IonCol,
-    IonCard,
-    IonCardHeader,
-    IonCardTitle,
+    SwiperComponent,
   ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ResumePage extends IonicSliderWorkaround {
-  protected covers = {}
+export class ResumePage {
   protected isOnline: Signal<boolean>
   protected isLoading: WritableSignal<boolean> = signal(false)
   protected media: Signal<Media[]>
+  protected swiperData: Signal<SwiperData<Media>[]> = computed(() => {
+    return this.media()?.map((media) => {
+      return {
+        name: media.title,
+        imgSrc: this.artworkService.getArtwork(media),
+        data: media,
+      }
+    })
+  })
 
   public constructor(
     private router: Router,
     private http: HttpClient,
     private mediaService: MediaService,
     private artworkService: ArtworkService,
-    private playerService: PlayerService,
   ) {
-    super()
     addIcons({ arrowBackOutline })
 
     this.isOnline = toSignal(this.mediaService.isOnline())
@@ -79,14 +66,6 @@ export class ResumePage extends IonicSliderWorkaround {
               return of([])
             }),
           )
-        }),
-        map((media) => {
-          for (const currentMedia of media) {
-            this.artworkService.getArtwork(currentMedia).subscribe((url) => {
-              this.covers[currentMedia.title] = url
-            })
-          }
-          return media
         }),
         tap(() => this.isLoading.set(false)),
       ),
@@ -126,9 +105,5 @@ export class ResumePage extends IonicSliderWorkaround {
         this.router.navigate(['/player'], navigationExtras)
       })
       .catch((error) => console.error(error))
-  }
-
-  protected mediaNameClicked(clickedMedia: Media): void {
-    this.playerService.sayText(clickedMedia.title)
   }
 }

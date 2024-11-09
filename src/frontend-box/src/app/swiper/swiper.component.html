@@ -1,0 +1,24 @@
+<swiper-container #swiper slides-per-view="3" scrollbar="true" scrollbar-hide="true" free-mode="false" css-mode="true">
+    @for (currentData of data(); track currentData) {
+      <swiper-slide>
+        <ion-grid>
+          <ion-row class="img-row">
+            <ion-col size="12">
+              <ion-card [class.circle-card]="roundImages()">
+                <img (click)="this.elementClicked.emit(currentData)" draggable="false" style="-user-select: none;" ondragstart="return false;" src="{{currentData.imgSrc | async}}">
+              </ion-card>
+            </ion-col>
+          </ion-row>
+          <ion-row class="title-row">
+            <ion-col size="12">
+              <ion-card (click)="readText(currentData.name)">
+                <ion-card-header>
+                  <ion-card-title class="ion-text-nowrap truncate-text ion-text-center">{{currentData.name}}</ion-card-title>
+                </ion-card-header>
+              </ion-card>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+      </swiper-slide>
+    }
+  </swiper-container>

@@ -32,30 +32,5 @@
 
 <ion-content class="home-content">
   <mupi-loading [loading]="isLoading()"></mupi-loading>
-  @if (pageIsShown()) {
-    <swiper-container #swiper slides-per-view="3" scrollbar="true" scrollbar-hide="true" free-mode="false" css-mode="true">
-      @for (currentArtist of artists(); track currentArtist) {
-        <swiper-slide>
-          <ion-grid>
-            <ion-row>
-              <ion-col size="12">
-                <ion-card class="circle-card">
-                  <img (click)="artistCoverClicked(currentArtist)" draggable="false" style="-user-select: none;" ondragstart="return false;" src="{{currentArtist.cover}}">
-                </ion-card>
-              </ion-col>
-            </ion-row>
-            <ion-row class="title-card">
-              <ion-col size="12">
-                <ion-card (click)="readText(currentArtist.name)">
-                  <ion-card-header>
-                    <ion-card-title class="ion-text-nowrap truncate-text ion-text-center">{{currentArtist.name}}</ion-card-title>
-                  </ion-card-header>
-                </ion-card>
-              </ion-col>
-            </ion-row>
-          </ion-grid>
-        </swiper-slide>
-      }
-    </swiper-container>
-  }
+  <mupi-swiper [data]="swiperData()" roundImages="true" (elementClicked)="this.artistCoverClicked($event.data)"></mupi-swiper>
 </ion-content>

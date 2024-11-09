@@ -1,38 +1,23 @@
-import { CUSTOM_ELEMENTS_SCHEMA, Component, Signal, WritableSignal, signal } from '@angular/core'
+import { ChangeDetectionStrategy, Component, Signal, WritableSignal, computed, signal } from '@angular/core'
 import { toObservable, toSignal } from '@angular/core/rxjs-interop'
 import { NavigationExtras, Router } from '@angular/router'
-import {
-  IonBackButton,
-  IonButtons,
-  IonCard,
-  IonCardHeader,
-  IonCardTitle,
-  IonCol,
-  IonContent,
-  IonGrid,
-  IonHeader,
-  IonRow,
-  IonTitle,
-  IonToolbar,
-} from '@ionic/angular/standalone'
+import { IonBackButton, IonButtons, IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular/standalone'
 import { catchError, combineLatest, map, of, switchMap, tap } from 'rxjs'
 import { CategoryType, Media, MediaSorting } from '../media'
+import { SwiperComponent, SwiperData } from '../swiper/swiper.component'
 
 import { addIcons } from 'ionicons'
 import { arrowBackOutline } from 'ionicons/icons'
 import type { Artist } from '../artist'
 import { ArtworkService } from '../artwork.service'
-import { IonicSliderWorkaround } from '../ionic-slider-workaround'
 import { LoadingComponent } from '../loading/loading.component'
 import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
-import { PlayerService } from '../player.service'
 
 @Component({
   selector: 'app-medialist',
   templateUrl: './medialist.page.html',
   styleUrls: ['./medialist.page.scss'],
-  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   standalone: true,
   imports: [
     MupiHatIconComponent,
@@ -42,30 +27,31 @@ import { PlayerService } from '../player.service'
     IonBackButton,
     IonTitle,
     IonContent,
-    IonGrid,
-    IonRow,
-    IonCol,
-    IonCard,
-    IonCardHeader,
-    IonCardTitle,
+    SwiperComponent,
     LoadingComponent,
   ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class MedialistPage extends IonicSliderWorkaround {
-  protected covers = {}
-
+export class MedialistPage {
   protected isLoading: WritableSignal<boolean> = signal(false)
   protected category: WritableSignal<CategoryType> = signal('audiobook')
   protected artist: WritableSignal<Artist | undefined> = signal(undefined)
   protected media: Signal<Media[]>
+  protected swiperData: Signal<SwiperData<Media>[]> = computed(() => {
+    return this.media()?.map((media) => {
+      return {
+        name: media.title,
+        imgSrc: this.artworkService.getArtwork(media),
+        data: media,
+      }
+    })
+  })
 
   constructor(
     private router: Router,
     private mediaService: MediaService,
     private artworkService: ArtworkService,
-    private playerService: PlayerService,
   ) {
-    super()
     addIcons({ arrowBackOutline })
 
     this.artist.set(this.router.getCurrentNavigation()?.extras.state?.artist)
@@ -110,14 +96,6 @@ export class MedialistPage extends IonicSliderWorkaround {
             }),
           )
         }),
-        map((media) => {
-          for (const currentMedia of media) {
-            this.artworkService.getArtwork(currentMedia).subscribe((url) => {
-              this.covers[currentMedia.title] = url
-            })
-          }
-          return media
-        }),
         tap(() => this.isLoading.set(false)),
       ),
     )
@@ -130,10 +108,6 @@ export class MedialistPage extends IonicSliderWorkaround {
       },
     }
     this.router.navigate(['/player'], navigationExtras)
-  }
-
-  protected mediaNameClicked(clickedMedia: Media): void {
-    this.playerService.sayText(clickedMedia.title)
   }
 
   private sortMedia(coverMedia: Media, media: Media[], defaultSorting: MediaSorting): Media[] {
