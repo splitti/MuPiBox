@@ -21,13 +21,12 @@ while true
 do
 	if test -f "${MUPIWIFI}"
 	then
-		echo "FILLI"
 		SSID="$(/usr/bin/jq -r .[].ssid ${MUPIWIFI})"
 		PSK="$(/usr/bin/jq -r .[].pw ${MUPIWIFI})"
 		if [ "${SSID}" = "" ]
 		then
 			sudo rm ${MUPIWIFI}
-		elif [ ${SSID} = "clear" ] && [ ${PSK} = "all"  ]
+		elif [ ${SSID} = "clear" ]
 		then
 			sudo rm ${WPACONF}
 			echo '# Grant all members of group "netdev" permissions to configure WiFi, e.g. via wpa_cli or wpa_gui' | sudo tee -a ${WPACONF}
@@ -41,6 +40,7 @@ do
 			restart_network			
 		elif [ "${PSK}" = "" ]
 		then
+			echo '' | sudo tee -a ${WPACONF}
 			echo 'network={' | sudo tee -a ${WPACONF}
 			echo '	ssid="'${SSID}'"' | sudo tee -a ${WPACONF}
 			echo '	scan_ssid=1' | sudo tee -a ${WPACONF}
@@ -53,7 +53,9 @@ do
 			new_line='scan_ssid=1'
 			# Ersetze mit sed und füge die Zeile hinzu
 			WIFI_RESULT=$(echo "$WIFI_RESULT" | sed '/#psk=.*$/a\'$'\n'"\t$new_line")
-			echo $WIFI_RESULT
+			#echo $WIFI_RESULT
+			echo '' | sudo tee -a ${WPACONF}
+
 			for LINES in ${WIFI_RESULT}
 			do
 					i=$((i+1))
