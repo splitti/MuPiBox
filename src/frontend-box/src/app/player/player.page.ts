@@ -189,6 +189,9 @@ export class PlayerPage implements OnInit {
 
     this.playing = !this.currentPlayedLocal?.pause
     this.resumeWait++
+    if (this.resumeWait % 30 === 0) {
+      this.saveResumeFiles()
+    }
 
     if (this.media.type === 'spotify') {
       const seek = this.currentPlayedSpotify?.progress_ms || 0
