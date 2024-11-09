@@ -56,7 +56,7 @@ in_network_block=0
         if [[ $in_network_block -eq 1 ]]; then
             if [[ "$line" =~ ^\} ]]; then
                 if [[ $scan_ssid_found -eq 0 ]]; then
-                    echo "    scan_ssid=1"
+                    echo "	scan_ssid=1"
                 fi
                 in_network_block=0
             fi
