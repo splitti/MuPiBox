@@ -366,8 +366,13 @@ export class PlayerPage implements OnInit {
       this.resumemedia.resumerssprogressTime = this.currentPlayedLocal?.progressTime || 0
     }
     this.resumemedia.category = 'resume'
+    console.log('Edit this.resumemedia', this.resumemedia)
+    console.log('Edit this.resumemediaindex', this.resumemedia.index)
     this.resumeIndex = this.resumemedia.index
     this.resumemedia.index = undefined
+    console.log('Edit this.resumemedia', this.resumemedia)
+    console.log('Edit this.resumemediaindex', this.resumemedia.index)
+    console.log('Edit this.resumeIndex', this.resumeIndex)
     if (this.resumePlay || this.resumeIndex !== -1 || this.resumeAdded) {
       this.mediaService.editRawResumeAtIndex(this.resumeIndex, this.resumemedia)
     } else {
