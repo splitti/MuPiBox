@@ -342,8 +342,13 @@ app.post('/api/editresume', (req, res) => {
           console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] ${error}`)
           res.status(200).send('error')
         } else {
-          data.splice(req.body.index, 1, req.body.data)
+          // Bestimme den zu verwendenden Index
+          const indexToReplace = Math.min(req.body.index, data.length - 1)
 
+          // Ersetze den berechneten Index mit neuen Daten
+          data.splice(indexToReplace, 1, req.body.data)
+
+          // Speichere die geänderten Daten zurück in die Datei
           jsonfile.writeFile(resumeFile, data, { spaces: 4 }, (error) => {
             if (error) throw error
             res.status(200).send('ok')
