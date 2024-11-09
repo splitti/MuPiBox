@@ -619,6 +619,8 @@ function playMe(/*activePlaylist*/) {
       .play({ context_uri: activePlaylistId, offset: { position: resumeOffset }, position_ms: resumeProgess })
       .then(
         (data) => {
+          log.debug(`${nowDate.toLocaleString()}: debugging: ${muPiBoxConfig.telegram}`)
+          log.debug(`${nowDate.toLocaleString()}: debugging: ${network.onlinestate}`)
           log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Playback started`)
           counter.countplay++
           if (config.server.logLevel === 'debug') {
