@@ -23,7 +23,7 @@ chat_id = config['telegram']['chatId']
 player_event = os.environ.get('PLAYER_EVENT')
 POSITION_MS = os.environ.get('POSITION_MS')
 
-if player_event == "play" and POSITION_MS == "0":
+if player_event == "playing" and POSITION_MS == "0":
     if state['currently_playing_type'] == 'episode':
         episode = requests.get(urls).json()
         msg = episode['show']['name'] + "\n" + episode['name']
