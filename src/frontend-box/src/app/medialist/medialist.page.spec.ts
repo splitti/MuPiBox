@@ -1,6 +1,6 @@
 import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http'
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing'
-import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing'
+import { ComponentFixture, TestBed } from '@angular/core/testing'
 import { createArtist, createMedia } from 'src/app/fixtures'
 
 import { ActivatedRoute } from '@angular/router'
@@ -27,7 +27,7 @@ describe('MedialistPage', () => {
 
     fixture = TestBed.createComponent(MedialistPage)
     component = fixture.componentInstance
-    ;(component as any).artist = createArtist()
+    ;(component as any).artist.set(createArtist())
     fixture.detectChanges()
   })
 
@@ -37,41 +37,42 @@ describe('MedialistPage', () => {
   })
 
   describe('show media', () => {
-    it('should not slice at all if not wanted', fakeAsync(() => {
+    it('should not slice at all if not wanted', () => {
       httpClient.expectOne('http://localhost:8200/api/sonos')
-      ;(component as any).artist = createArtist({ coverMedia: createMedia({ showid: 'a', aPartOfAll: undefined }) })
       const mediaList = [createMedia({})]
+      const artist = createArtist({ coverMedia: createMedia({ showid: 'a', aPartOfAll: undefined }) })
       const spy = spyOn((component as any).mediaService, 'fetchMediaFromArtist').and.returnValue(of(mediaList))
-      ;(component as any).fetchMedia()
-      tick()
+      ;(component as any).artist.set(artist)
+      TestBed.flushEffects()
       // Ensure the correct method was called.
-      expect(spy).toHaveBeenCalledOnceWith((component as any).artist, 'audiobook')
-      expect((component as any).media).toEqual(mediaList)
-    }))
+      expect(spy).toHaveBeenCalledOnceWith(artist, 'audiobook')
+      expect((component as any).media()).toEqual(mediaList)
+    })
 
-    it('should sort by release date desc. by default', fakeAsync(() => {
+    it('should sort by release date desc. by default', () => {
       httpClient.expectOne('http://localhost:8200/api/sonos')
-      ;(component as any).artist = createArtist({ coverMedia: createMedia({ showid: 'a', aPartOfAll: undefined }) })
+      const artist = createArtist({ coverMedia: createMedia({ showid: 'a', aPartOfAll: undefined }) })
       const mediaList = [
         createMedia({ title: 'a', release_date: '2020' }),
         createMedia({ title: 'b', release_date: '2009' }),
         createMedia({ title: 'c', release_date: '2011' }),
       ]
+
       const spy = spyOn((component as any).mediaService, 'fetchMediaFromArtist').and.returnValue(of(mediaList))
-      ;(component as any).fetchMedia()
-      tick()
+      ;(component as any).artist.set(artist)
+      TestBed.flushEffects()
       // Ensure the correct method was called.
-      expect(spy).toHaveBeenCalledOnceWith((component as any).artist, 'audiobook')
-      expect((component as any).media).toEqual([
+      expect(spy).toHaveBeenCalledOnceWith(artist, 'audiobook')
+      expect((component as any).media()).toEqual([
         createMedia({ title: 'a', release_date: '2020' }),
         createMedia({ title: 'c', release_date: '2011' }),
         createMedia({ title: 'b', release_date: '2009' }),
       ])
-    }))
+    })
 
-    it('should sort by release date asc.', fakeAsync(() => {
+    it('should sort by release date asc.', () => {
       httpClient.expectOne('http://localhost:8200/api/sonos')
-      ;(component as any).artist = createArtist({
+      const artist = createArtist({
         coverMedia: createMedia({ showid: 'a', aPartOfAll: undefined, sorting: MediaSorting.ReleaseDateAscending }),
       })
       const mediaList = [
@@ -80,20 +81,20 @@ describe('MedialistPage', () => {
         createMedia({ title: 'c', release_date: '2011' }),
       ]
       const spy = spyOn((component as any).mediaService, 'fetchMediaFromArtist').and.returnValue(of(mediaList))
-      ;(component as any).fetchMedia()
-      tick()
+      ;(component as any).artist.set(artist)
+      TestBed.flushEffects()
       // Ensure the correct method was called.
-      expect(spy).toHaveBeenCalledOnceWith((component as any).artist, 'audiobook')
-      expect((component as any).media).toEqual([
+      expect(spy).toHaveBeenCalledOnceWith(artist, 'audiobook')
+      expect((component as any).media()).toEqual([
         createMedia({ title: 'b', release_date: '2009' }),
         createMedia({ title: 'c', release_date: '2011' }),
         createMedia({ title: 'a', release_date: '2020' }),
       ])
-    }))
+    })
 
-    it('should slice if wanted and sort by release date desc. by default', fakeAsync(() => {
+    it('should slice if wanted and sort by release date desc. by default', () => {
       httpClient.expectOne('http://localhost:8200/api/sonos')
-      ;(component as any).artist = createArtist({
+      const artist = createArtist({
         coverMedia: createMedia({ showid: 'a', aPartOfAll: true, aPartOfAllMin: 1, aPartOfAllMax: 2 }),
       })
       const mediaList = [
@@ -102,19 +103,19 @@ describe('MedialistPage', () => {
         createMedia({ title: 'c', release_date: '2011' }),
       ]
       const spy = spyOn((component as any).mediaService, 'fetchMediaFromArtist').and.returnValue(of(mediaList))
-      ;(component as any).fetchMedia()
-      tick()
+      ;(component as any).artist.set(artist)
+      TestBed.flushEffects()
       // Ensure the correct method was called.
-      expect(spy).toHaveBeenCalledOnceWith((component as any).artist, 'audiobook')
-      expect((component as any).media).toEqual([
+      expect(spy).toHaveBeenCalledOnceWith(artist, 'audiobook')
+      expect((component as any).media()).toEqual([
         createMedia({ title: 'c', release_date: '2011' }),
         createMedia({ title: 'b', release_date: '2009' }),
       ])
-    }))
+    })
 
-    it('should slice if wanted and sort as wanted', fakeAsync(() => {
+    it('should slice if wanted and sort as wanted', () => {
       httpClient.expectOne('http://localhost:8200/api/sonos')
-      ;(component as any).artist = createArtist({
+      const artist = createArtist({
         coverMedia: createMedia({
           showid: 'a',
           aPartOfAll: true,
@@ -129,42 +130,42 @@ describe('MedialistPage', () => {
         createMedia({ title: 'c', release_date: '2009' }),
       ]
       const spy = spyOn((component as any).mediaService, 'fetchMediaFromArtist').and.returnValue(of(mediaList))
-      ;(component as any).fetchMedia()
-      tick()
+      ;(component as any).artist.set(artist)
+      TestBed.flushEffects()
       // Ensure the correct method was called.
-      expect(spy).toHaveBeenCalledOnceWith((component as any).artist, 'audiobook')
-      expect((component as any).media).toEqual([
+      expect(spy).toHaveBeenCalledOnceWith(artist, 'audiobook')
+      expect((component as any).media()).toEqual([
         createMedia({ title: 'b', release_date: '2011' }),
         createMedia({ title: 'a', release_date: '2010' }),
       ])
-    }))
+    })
   })
 
   describe('should correctly slice artist media', () => {
-    it('should not slice at all if not wanted', fakeAsync(() => {
+    it('should not slice at all if not wanted', () => {
       httpClient.expectOne('http://localhost:8200/api/sonos')
-      ;(component as any).artist = createArtist({ coverMedia: createMedia({ aPartOfAll: undefined }) })
+      const artist = createArtist({ coverMedia: createMedia({ aPartOfAll: undefined }) })
       const mediaList = [createMedia({})]
       const spy = spyOn((component as any).mediaService, 'fetchMediaFromArtist').and.returnValue(of(mediaList))
-      ;(component as any).fetchMedia()
-      tick()
+      ;(component as any).artist.set(artist)
+      TestBed.flushEffects()
       // Ensure the correct method was called.
-      expect(spy).toHaveBeenCalledOnceWith((component as any).artist, 'audiobook')
-      expect((component as any).media).toEqual(mediaList)
-    }))
+      expect(spy).toHaveBeenCalledOnceWith(artist, 'audiobook')
+      expect((component as any).media()).toEqual(mediaList)
+    })
 
-    it('should slice if wanted and sort alphabetical by default', fakeAsync(() => {
+    it('should slice if wanted and sort alphabetical by default', () => {
       httpClient.expectOne('http://localhost:8200/api/sonos')
-      ;(component as any).artist = createArtist({
+      const artist = createArtist({
         coverMedia: createMedia({ aPartOfAll: true, aPartOfAllMin: 1, aPartOfAllMax: 2 }),
       })
       const mediaList = [createMedia({ title: 'b' }), createMedia({ title: 'a' }), createMedia({ title: 'c' })]
       const spy = spyOn((component as any).mediaService, 'fetchMediaFromArtist').and.returnValue(of(mediaList))
-      ;(component as any).fetchMedia()
-      tick()
+      ;(component as any).artist.set(artist)
+      TestBed.flushEffects()
       // Ensure the correct method was called.
-      expect(spy).toHaveBeenCalledOnceWith((component as any).artist, 'audiobook')
-      expect((component as any).media).toEqual([createMedia({ title: 'a' }), createMedia({ title: 'b' })])
-    }))
+      expect(spy).toHaveBeenCalledOnceWith(artist, 'audiobook')
+      expect((component as any).media()).toEqual([createMedia({ title: 'a' }), createMedia({ title: 'b' })])
+    })
   })
 })

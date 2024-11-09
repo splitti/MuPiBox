@@ -1,5 +1,5 @@
-import { Observable, Subject, from, iif, interval, of } from 'rxjs'
-import { map, mergeAll, mergeMap, shareReplay, switchMap, toArray } from 'rxjs/operators'
+import { Observable, Subject, from, iif, interval, of, timer } from 'rxjs'
+import { distinctUntilChanged, filter, map, mergeAll, mergeMap, shareReplay, switchMap, toArray } from 'rxjs/operators'
 import type { CategoryType, Media } from './media'
 
 import { HttpClient } from '@angular/common/http'
@@ -79,7 +79,8 @@ export class MediaService {
       shareReplay({ bufferSize: 1, refCount: false }),
     )
     // 5 seconds is enough for wifi update and showing/hiding media.
-    this.network$ = interval(5000).pipe(
+    // Use timer so the first request is after 300ms.
+    this.network$ = timer(300, 5000).pipe(
       switchMap((): Observable<Network> => this.http.get<Network>(`http://${this.ip}:8200/api/network`)),
       shareReplay({ bufferSize: 1, refCount: false }),
     )
@@ -101,6 +102,14 @@ export class MediaService {
   // --------------------------------------------
   // Handling of RAW media entries from data.json
   // --------------------------------------------
+
+  public isOnline(): Observable<boolean> {
+    return this.network$.pipe(
+      filter((network) => network.ip !== undefined),
+      map((network) => network.onlinestate === 'online'),
+      distinctUntilChanged(),
+    )
+  }
 
   public fetchRawMedia(): Observable<Media[]> {
     return this.http.get<Media[]>(`${this.getAPIBaseUrl()}/data`)
@@ -413,6 +422,6 @@ export class MediaService {
   }
 
   public getAPIBaseUrl(): string {
-    return environment.production ? '../api' : `http://${this.ip}:8200/api`
+    return environment.backend.apiUrl
   }
 }
