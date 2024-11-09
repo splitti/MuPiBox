@@ -9,14 +9,14 @@ const fs = require('node:fs')
 const childProcess = require('node:child_process')
 
 let configBasePath = './config'
-let networkConfigBasePath = '/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config'
+//let networkConfigBasePath = '/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config'
 if (process.env.NODE_ENV === 'development') {
   configBasePath = '../config'
-  networkConfigBasePath = '../../backend-api/config'
+  //networkConfigBasePath = '../../backend-api/config'
 }
 
 const muPiBoxConfig = require(`${configBasePath}/mupiboxconfig.json`)
-const network = require(`${networkConfigBasePath}/network.json`)
+//const network = require(`${networkConfigBasePath}/network.json`)
 const config = require(`${configBasePath}/config.json`)
 
 const log = require('console-log-level')({ level: config.server.logLevel })
@@ -102,7 +102,7 @@ player.on('track-change', () => player.getProps(['path']))
 player.on('track-change', () => {
   if (
     muPiBoxConfig.telegram.active &&
-    network.onlinestate === 'online' &&
+    //network.onlinestate === 'online' &&
     muPiBoxConfig.telegram.token.length > 1 &&
     muPiBoxConfig.telegram.chatId.length > 1 &&
     (currentMeta.currentType === 'rss' || currentMeta.currentType === 'radio')
@@ -110,7 +110,7 @@ player.on('track-change', () => {
     cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_RSS_Radio.py')
   if (
     muPiBoxConfig.telegram.active &&
-    network.onlinestate === 'online' &&
+    //network.onlinestate === 'online' &&
     muPiBoxConfig.telegram.token.length > 1 &&
     muPiBoxConfig.telegram.chatId.length > 1 &&
     currentMeta.currentType === 'local'
@@ -382,7 +382,7 @@ function setActiveDevice() {
 function pause() {
   if (
     muPiBoxConfig.telegram.active &&
-    network.onlinestate === 'online' &&
+    //network.onlinestate === 'online' &&
     muPiBoxConfig.telegram.token.length > 1 &&
     muPiBoxConfig.telegram.chatId.length > 1
   )
@@ -414,7 +414,7 @@ function pause() {
 function stop() {
   if (
     muPiBoxConfig.telegram.active &&
-    network.onlinestate === 'online' &&
+    //network.onlinestate === 'online' &&
     muPiBoxConfig.telegram.token.length > 1 &&
     muPiBoxConfig.telegram.chatId.length > 1
   )
@@ -475,7 +475,7 @@ function play() {
     )
     if (
       muPiBoxConfig.telegram.active &&
-      network.onlinestate === 'online' &&
+      //network.onlinestate === 'online' &&
       muPiBoxConfig.telegram.token.length > 1 &&
       muPiBoxConfig.telegram.chatId.length > 1
     )
@@ -489,7 +489,7 @@ function play() {
       writeplayerstatePlay()
       if (
         muPiBoxConfig.telegram.active &&
-        network.onlinestate === 'online' &&
+        //network.onlinestate === 'online' &&
         muPiBoxConfig.telegram.token.length > 1 &&
         muPiBoxConfig.telegram.chatId.length > 1
       )
@@ -595,13 +595,11 @@ function playMe(/*activePlaylist*/) {
         spotifyRunning = true
         if (
           muPiBoxConfig.telegram.active &&
-          network.onlinestate === 'online' &&
+          //network.onlinestate === 'online' &&
           muPiBoxConfig.telegram.token.length > 1 &&
           muPiBoxConfig.telegram.chatId.length > 1
-        ) {
+        )
           cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Start playing spotify"')
-        }
-        cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Start playing spotify"')
         //if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Spotify.py');
       },
       (err) => {
@@ -621,9 +619,6 @@ function playMe(/*activePlaylist*/) {
       .play({ context_uri: activePlaylistId, offset: { position: resumeOffset }, position_ms: resumeProgess })
       .then(
         (data) => {
-          log.debug(`${nowDate.toLocaleString()}: [Spotify Debugging] Debugging started`)
-          log.debug(`${nowDate.toLocaleString()}: debugging: ${muPiBoxConfig.telegram}`)
-          log.debug(`${nowDate.toLocaleString()}: debugging: ${network.onlinestate}`)
           log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Playback started`)
           counter.countplay++
           if (config.server.logLevel === 'debug') {
@@ -631,16 +626,13 @@ function playMe(/*activePlaylist*/) {
           }
           writeplayerstatePlay()
           spotifyRunning = true
-          log.debug(`${nowDate.toLocaleString()}: debugging: ${muPiBoxConfig.telegram}`)
-          log.debug(`${nowDate.toLocaleString()}: debugging: ${network.onlinestate}`)
           if (
             muPiBoxConfig.telegram.active &&
-            network.onlinestate === 'online' &&
+            //network.onlinestate === 'online' &&
             muPiBoxConfig.telegram.token.length > 1 &&
             muPiBoxConfig.telegram.chatId.length > 1
           )
-            log.debug(`${nowDate.toLocaleString()}: [Spotify Control] in der If Schleife`)
-          cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Start playing spotify"')
+            cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Start playing spotify"')
           //if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Spotify.py');
         },
         (err) => {
@@ -673,7 +665,7 @@ function playList(playedList) {
 
   if (
     muPiBoxConfig.telegram.active &&
-    network.onlinestate === 'online' &&
+    //network.onlinestate === 'online' &&
     muPiBoxConfig.telegram.token.length > 1 &&
     muPiBoxConfig.telegram.chatId.length > 1
   )
@@ -715,7 +707,7 @@ function playURL(playedURL) {
   log.debug(`${nowDate.toLocaleString()}: ${playedURL}`)
   if (
     muPiBoxConfig.telegram.active &&
-    network.onlinestate === 'online' &&
+    //network.onlinestate === 'online' &&
     muPiBoxConfig.telegram.token.length > 1 &&
     muPiBoxConfig.telegram.chatId.length > 1
   )
