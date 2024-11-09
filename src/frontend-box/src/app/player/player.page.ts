@@ -76,7 +76,7 @@ export class PlayerPage implements OnInit {
   albumStop: AlbumStop
   resumePlay = false
   resumeIndex: number
-  resumeWait = 0
+  resumeTimer = 0
   resumeAdded = false
   cover = ''
   playing = true
@@ -188,9 +188,11 @@ export class PlayerPage implements OnInit {
     })
 
     this.playing = !this.currentPlayedLocal?.pause
-    this.resumeWait++
-    if (this.resumeWait % 30 === 0) {
-      this.saveResumeFiles()
+    if (this.playing) {
+      this.resumeTimer++
+      if (this.resumeTimer % 30 === 0) {
+        this.saveResumeFiles()
+      }
     }
 
     if (this.media.type === 'spotify') {
@@ -280,7 +282,7 @@ export class PlayerPage implements OnInit {
     if (
       (this.media.type === 'spotify' || this.media.type === 'library' || this.media.type === 'rss') &&
       !this.media.shuffle &&
-      this.resumeWait > 30
+      this.resumeTimer > 30
     ) {
       this.saveResumeFiles()
     }
@@ -368,16 +370,19 @@ export class PlayerPage implements OnInit {
     this.resumemedia.category = 'resume'
     console.log('Edit this.resumemedia', this.resumemedia)
     console.log('Edit this.resumemediaindex', this.resumemedia.index)
-    this.resumeIndex = this.resumemedia.index
-    this.resumemedia.index = undefined
+    if (this.resumemedia.index !== undefined) {
+      this.resumeIndex = this.resumemedia.index
+      this.resumemedia.index = undefined
+    }
     console.log('Edit this.resumemedia', this.resumemedia)
     console.log('Edit this.resumemediaindex', this.resumemedia.index)
     console.log('Edit this.resumeIndex', this.resumeIndex)
-    if (this.resumePlay || this.resumeIndex !== -1 || this.resumeAdded) {
+    if (this.resumePlay || this.resumeAdded) {
       this.mediaService.editRawResumeAtIndex(this.resumeIndex, this.resumemedia)
     } else {
       this.mediaService.addRawResume(this.resumemedia)
       this.resumeAdded = true
+      this.resumeIndex = 99
       setTimeout(() => {
         this.playerService.sendCmd(PlayerCmds.MAXRESUME)
       }, 2000)
