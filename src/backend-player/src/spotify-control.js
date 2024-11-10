@@ -1199,9 +1199,10 @@ app.use((req, res) => {
   if (command.dir.includes('radio')) {
     currentMeta.currentPlayer = 'mplayer'
     currentMeta.currentType = 'radio'
-    currentMeta.currentTrackname = command.dir.split(':')[1]
-    currentMeta.album = command.dir.split(':')[2]
-    const dir = command.dir.split(':')[0]
+    const parts = decodeURIComponent(command.name).split(':title:artist:')
+    currentMeta.currentTrackname = parts[0]
+    currentMeta.album = parts[1]
+    const dir = command.dir
     let radioURL = dir.split('radio/').pop()
     radioURL = decodeURIComponent(radioURL)
     playURL(radioURL)
