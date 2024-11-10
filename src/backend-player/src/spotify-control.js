@@ -1206,9 +1206,9 @@ app.use((req, res) => {
   if (command.dir.includes('rss')) {
     currentMeta.currentPlayer = 'mplayer'
     currentMeta.currentType = 'rss'
-    currentMeta.album = command.dir.split('rss/')[1]
-    currentMeta.currentTrackname = command.dir.split('rss/')[2]
-    const dir = command.dir.split('rss/')[3]
+    currentMeta.currentTrackname = command.name.split(':title:artist:')[0]
+    currentMeta.album = command.name.split(':title:artist:')[1]
+    const dir = command.dir
     let rssURL = dir.split('rss/').pop()
     rssURL = decodeURIComponent(rssURL)
     playURL(rssURL)
