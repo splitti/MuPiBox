@@ -11,10 +11,11 @@ import {
   signal,
   viewChild,
 } from '@angular/core'
-import { Observable } from 'rxjs'
+import { IonCard, IonCardHeader, IonCardTitle, IonCol, IonGrid, IonRow } from '@ionic/angular/standalone'
 
 import { AsyncPipe } from '@angular/common'
 import { cloneDeep } from 'lodash-es'
+import { Observable } from 'rxjs'
 import { PlayerService } from '../player.service'
 
 export interface SwiperData<T> {
@@ -27,7 +28,7 @@ export interface SwiperData<T> {
   selector: 'mupi-swiper',
   templateUrl: './swiper.component.html',
   styleUrls: ['./swiper.component.scss'],
-  imports: [AsyncPipe],
+  imports: [AsyncPipe, IonCard, IonCardHeader, IonCardTitle, IonCol, IonGrid, IonRow],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
