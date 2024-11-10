@@ -9,8 +9,9 @@ ONLINESTATE=$(/usr/bin/jq -r .onlinestate ${NETWORKCONFIG})
 
 restart_network() {
 	sudo service wpa_supplicant restart
-	sudo service ifup@wlan0 stop
-	sudo service ifup@wlan0 start
+#	sudo service ifup@wlan0 stop
+#	sudo service ifup@wlan0 start
+
 	#sudo dhclient -r
 	#sudo dhclient
 	#sudo wpa_cli -i wlan0 reconfigure
@@ -18,12 +19,14 @@ restart_network() {
 
 while true
 do
-	if test -f "${MUPIWIFI}"; then
+	if test -f "${MUPIWIFI}"
+	then
 		SSID="$(/usr/bin/jq -r .[].ssid ${MUPIWIFI})"
 		PSK="$(/usr/bin/jq -r .[].pw ${MUPIWIFI})"
-		if [ "${SSID}" = "" ] || [ "${PSK}" = "" ]; then
+		if [ "${SSID}" = "" ]
+		then
 			sudo rm ${MUPIWIFI}
-		elif [ ${SSID} = "clear" ] && [ ${PSK} = "all"  ]
+		elif [ ${SSID} = "clear" ]
 		then
 			sudo rm ${WPACONF}
 			echo '# Grant all members of group "netdev" permissions to configure WiFi, e.g. via wpa_cli or wpa_gui' | sudo tee -a ${WPACONF}
@@ -35,14 +38,24 @@ do
 			#echo 'disable_pm=1' | sudo tee -a ${WPACONF}
 			echo 'ap_scan=1' | sudo tee -a ${WPACONF}
 			restart_network
+		elif [ "${PSK}" = "" ]
+		then
+			echo '' | sudo tee -a ${WPACONF}
+			echo 'network={' | sudo tee -a ${WPACONF}
+			echo '	ssid="'${SSID}'"' | sudo tee -a ${WPACONF}
+			echo '	scan_ssid=1' | sudo tee -a ${WPACONF}
+			echo '}' | sudo tee -a ${WPACONF}
+			restart_network
 		else
 			WIFI_RESULT=$(sudo -i wpa_passphrase "${SSID}" "${PSK}")
 			IFS=$'\n'
 			i=0
-			new_line='	scan_ssid=1'
+			new_line='scan_ssid=1'
 			# Ersetze mit sed und füge die Zeile hinzu
-			WIFI_RESULT=$(echo "$WIFI_RESULT" | sed '/#psk=.*$/a\'$'\n'"$new_line")
-			echo $WIFI_RESULT
+			WIFI_RESULT=$(echo "$WIFI_RESULT" | sed '/#psk=.*$/a\'$'\n'"\t$new_line")
+			#echo $WIFI_RESULT
+			echo '' | sudo tee -a ${WPACONF}
+
 			for LINES in ${WIFI_RESULT}
 			do
 					i=$((i+1))
@@ -51,6 +64,7 @@ do
 					fi
 			done
 			unset IFS
+			restart_network
 		fi
 		sudo rm ${MUPIWIFI}
 	fi
