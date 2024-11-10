@@ -37,6 +37,7 @@ import { LoadingComponent } from '../loading/loading.component'
 import type { CategoryType } from '../media'
 import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
+import { SwiperIonicEventsHelper } from '../swiper/swiper-ionic-events-helper'
 
 @Component({
   selector: 'app-home',
@@ -58,7 +59,7 @@ import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class HomePage {
+export class HomePage extends SwiperIonicEventsHelper {
   protected editButtonclickCount = 0
   protected editClickTimer = 0
 
@@ -73,6 +74,7 @@ export class HomePage {
     private artworkService: ArtworkService,
     private router: Router,
   ) {
+    super()
     addIcons({ timerOutline, bookOutline, musicalNotesOutline, radioOutline, cloudOutline, cloudOfflineOutline })
 
     this.isOnline = toSignal(this.mediaService.isOnline())
@@ -89,6 +91,7 @@ export class HomePage {
             }),
           )
         }),
+        tap(() => this.resetSliderPosition()),
         tap(() => this.isLoading.set(false)),
       ),
     )

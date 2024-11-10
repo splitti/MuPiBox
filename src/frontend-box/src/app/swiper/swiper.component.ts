@@ -6,18 +6,16 @@ import {
   Signal,
   WritableSignal,
   computed,
-  effect,
   input,
   output,
   signal,
   viewChild,
 } from '@angular/core'
-import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop'
+import { Observable } from 'rxjs'
 
 import { AsyncPipe } from '@angular/common'
-import { Observable } from 'rxjs'
-import { PlayerService } from '../player.service'
 import { cloneDeep } from 'lodash-es'
+import { PlayerService } from '../player.service'
 
 export interface SwiperData<T> {
   name: string
@@ -43,31 +41,32 @@ export class SwiperComponent<T> {
   protected swiper = computed(() => this.swiperContainer()?.nativeElement.swiper)
   protected pageIsShown: WritableSignal<boolean> = signal(false)
 
-  protected shownData: WritableSignal<SwiperData<T>[]> = signal([])
+  // This is a hacky workaround for the problem that the swiper doesn't allow to scroll
+  // after an ionic navigation event if the data is not updated. Thus, we copy the given
+  // data here internally to fake updated data.
+  // This might be removed when we have a generic API cache so we can just get new results
+  // on every ionic navigation.
+  protected shownData: Signal<SwiperData<T>[]>
 
   public constructor(private playerService: PlayerService) {
-    // If the data changes, we reset the scroll index.
-    // Since we cannot have an effect without using the signals value, we convert it
-    // to an observable here.
-    toObservable(this.data)
-      .pipe(takeUntilDestroyed())
-      .subscribe(() => this.swiper()?.slideTo(0, 0))
-
-    effect(() => {
+    this.shownData = computed(() => {
       if (this.pageIsShown()) {
-        this.shownData.set(cloneDeep(this.data()))
-      } else {
-        this.shownData.set([])
+        return cloneDeep(this.data())
       }
+      return []
     })
   }
 
-  public ionViewWillEnter(): void {
+  public ionViewDidEnter(): void {
     this.pageIsShown.set(true)
   }
 
   public ionViewWillLeave(): void {
     this.pageIsShown.set(false)
+  }
+
+  public resetSwiperPosition(): void {
+    this.swiper()?.slideTo(0, 0)
   }
 
   protected readText(text: string): void {

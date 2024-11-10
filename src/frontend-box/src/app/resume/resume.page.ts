@@ -13,6 +13,7 @@ import { LoadingComponent } from '../loading/loading.component'
 import { Media } from '../media'
 import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
+import { SwiperIonicEventsHelper } from '../swiper/swiper-ionic-events-helper'
 
 @Component({
   selector: 'mupi-resume',
@@ -32,7 +33,7 @@ import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ResumePage {
+export class ResumePage extends SwiperIonicEventsHelper {
   protected isOnline: Signal<boolean>
   protected isLoading: WritableSignal<boolean> = signal(false)
   protected media: Signal<Media[]>
@@ -52,6 +53,7 @@ export class ResumePage {
     private mediaService: MediaService,
     private artworkService: ArtworkService,
   ) {
+    super()
     addIcons({ arrowBackOutline })
 
     this.isOnline = toSignal(this.mediaService.isOnline())

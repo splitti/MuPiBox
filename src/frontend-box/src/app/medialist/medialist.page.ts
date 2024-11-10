@@ -13,6 +13,7 @@ import { ArtworkService } from '../artwork.service'
 import { LoadingComponent } from '../loading/loading.component'
 import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
+import { SwiperIonicEventsHelper } from '../swiper/swiper-ionic-events-helper'
 
 @Component({
   selector: 'app-medialist',
@@ -32,7 +33,7 @@ import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class MedialistPage {
+export class MedialistPage extends SwiperIonicEventsHelper {
   protected isLoading: WritableSignal<boolean> = signal(false)
   protected category: WritableSignal<CategoryType> = signal('audiobook')
   protected artist: WritableSignal<Artist | undefined> = signal(undefined)
@@ -52,6 +53,7 @@ export class MedialistPage {
     private mediaService: MediaService,
     private artworkService: ArtworkService,
   ) {
+    super()
     addIcons({ arrowBackOutline })
 
     this.artist.set(this.router.getCurrentNavigation()?.extras.state?.artist)
