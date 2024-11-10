@@ -73,7 +73,9 @@ player.on('metadata', (val) => {
   //currentMeta.currentTracknr = parseInt(val.Comment?.split(',').pop(), 10);
   currentMeta.currentTracknr = currentMeta.currentTracknr + 1
   log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Current Tracknr: ${currentMeta.currentTracknr}`)
-  currentMeta.currentTrackname = val.Title
+  if (currentMeta.currentType !== 'rss' && currentMeta.currentType !== 'radio') {
+    currentMeta.currentTrackname = val.Title
+  }
 })
 player.on('track-change', () => player.getProps(['metadata']))
 
@@ -95,7 +97,9 @@ player.on('track-change', () => player.getProps(['filename']))
 
 player.on('path', (val) => {
   console.log('track path is', val)
-  currentMeta.album = val.split('/')[7]
+  if (currentMeta.currentType !== 'rss' && currentMeta.currentType !== 'radio') {
+    currentMeta.album = val.split('/')[7]
+  }
 })
 player.on('track-change', () => player.getProps(['path']))
 
@@ -1206,12 +1210,9 @@ app.use((req, res) => {
   if (command.dir.includes('rss')) {
     currentMeta.currentPlayer = 'mplayer'
     currentMeta.currentType = 'rss'
-    log.debug(`${nowDate.toLocaleString()}: [Spotify Control]name: ${command.name}`)
     const parts = decodeURIComponent(command.name).split(':title:artist:')
     currentMeta.currentTrackname = parts[0]
     currentMeta.album = parts[1]
-    log.debug(`${nowDate.toLocaleString()}: [Spotify Control]currentTrackname: ${currentMeta.currentTrackname}`)
-    log.debug(`${nowDate.toLocaleString()}: [Spotify Control]album: ${currentMeta.album}`)
     const dir = command.dir
     let rssURL = dir.split('rss/').pop()
     rssURL = decodeURIComponent(rssURL)
