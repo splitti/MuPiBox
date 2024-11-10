@@ -109,11 +109,11 @@ export class PlayerService {
         break
       }
       case 'radio': {
-        url = `radio/${encodeURIComponent(media.id)}/radio`
+        url = `radio/${encodeURIComponent(media.id)}:${encodeURIComponent(media.title)}:${encodeURIComponent(media.artist)}/radio`
         break
       }
       case 'rss': {
-        url = `rss/${encodeURIComponent(media.id)}/rss`
+        url = `rss/${encodeURIComponent(media.id)}:${encodeURIComponent(media.title)}:${encodeURIComponent(media.artist)}/rss`
         break
       }
     }

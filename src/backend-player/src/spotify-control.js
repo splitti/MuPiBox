@@ -1195,7 +1195,9 @@ app.use((req, res) => {
   if (command.dir.includes('radio')) {
     currentMeta.currentPlayer = 'mplayer'
     currentMeta.currentType = 'radio'
-    const dir = command.dir
+    currentMeta.currentTrackname = command.dir.split(':')[1]
+    currentMeta.album = command.dir.split(':')[2]
+    const dir = command.dir.split(':')[0]
     let radioURL = dir.split('radio/').pop()
     radioURL = decodeURIComponent(radioURL)
     playURL(radioURL)
@@ -1204,7 +1206,9 @@ app.use((req, res) => {
   if (command.dir.includes('rss')) {
     currentMeta.currentPlayer = 'mplayer'
     currentMeta.currentType = 'rss'
-    const dir = command.dir
+    currentMeta.currentTrackname = command.dir.split(':')[1]
+    currentMeta.album = command.dir.split(':')[2]
+    const dir = command.dir.split(':')[0]
     let rssURL = dir.split('rss/').pop()
     rssURL = decodeURIComponent(rssURL)
     playURL(rssURL)

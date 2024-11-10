@@ -282,7 +282,8 @@ export class PlayerPage implements OnInit {
     if (
       (this.media.type === 'spotify' || this.media.type === 'library' || this.media.type === 'rss') &&
       !this.media.shuffle &&
-      this.resumeTimer > 30
+      this.resumeTimer > 30 &&
+      this.playing
     ) {
       this.saveResumeFiles()
     }
@@ -368,15 +369,10 @@ export class PlayerPage implements OnInit {
       this.resumemedia.resumerssprogressTime = this.currentPlayedLocal?.progressTime || 0
     }
     this.resumemedia.category = 'resume'
-    console.log('Edit this.resumemedia', this.resumemedia)
-    console.log('Edit this.resumemediaindex', this.resumemedia.index)
     if (this.resumemedia.index !== undefined) {
       this.resumeIndex = this.resumemedia.index
       this.resumemedia.index = undefined
     }
-    console.log('Edit this.resumemedia', this.resumemedia)
-    console.log('Edit this.resumemediaindex', this.resumemedia.index)
-    console.log('Edit this.resumeIndex', this.resumeIndex)
     if (this.resumePlay || this.resumeAdded) {
       this.mediaService.editRawResumeAtIndex(this.resumeIndex, this.resumemedia)
     } else {
