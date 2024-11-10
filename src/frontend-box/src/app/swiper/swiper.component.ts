@@ -3,6 +3,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
+  Signal,
   WritableSignal,
   computed,
   effect,
@@ -16,6 +17,7 @@ import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop'
 import { AsyncPipe } from '@angular/common'
 import { Observable } from 'rxjs'
 import { PlayerService } from '../player.service'
+import { cloneDeep } from 'lodash-es'
 
 export interface SwiperData<T> {
   name: string
@@ -41,6 +43,8 @@ export class SwiperComponent<T> {
   protected swiper = computed(() => this.swiperContainer()?.nativeElement.swiper)
   protected pageIsShown: WritableSignal<boolean> = signal(false)
 
+  protected shownData: WritableSignal<SwiperData<T>[]> = signal([])
+
   public constructor(private playerService: PlayerService) {
     // If the data changes, we reset the scroll index.
     // Since we cannot have an effect without using the signals value, we convert it
@@ -51,7 +55,9 @@ export class SwiperComponent<T> {
 
     effect(() => {
       if (this.pageIsShown()) {
-        this.swiper()?.update()
+        this.shownData.set(cloneDeep(this.data()))
+      } else {
+        this.shownData.set([])
       }
     })
   }

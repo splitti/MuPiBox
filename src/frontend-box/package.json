@@ -23,7 +23,8 @@
     "rxjs": "~7.8.1",
     "simple-keyboard": "^3.8.8",
     "tslib": "^2.7.0",
-    "zone.js": "~0.14.10"
+    "zone.js": "~0.14.10",
+    "lodash-es": "4.17.21"
   },
   "devDependencies": {
     "@angular-devkit/build-angular": "^18.2.7",
@@ -35,6 +36,7 @@
     "@types/jasmine": "~5.1.4",
     "@types/jasminewd2": "~2.0.13",
     "@types/node": "^16",
+    "@types/lodash-es": "4.17.12",
     "jasmine-core": "~5.4.0",
     "jasmine-spec-reporter": "~7.0.0",
     "karma": "~6.4.4",

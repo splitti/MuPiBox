@@ -1,5 +1,5 @@
 <swiper-container #swiper slides-per-view="3" scrollbar="true" scrollbar-hide="true" free-mode="false" css-mode="true">
-    @for (currentData of data(); track currentData) {
+    @for (currentData of shownData(); track currentData) {
       <swiper-slide>
         <ion-grid>
           <ion-row class="img-row">
