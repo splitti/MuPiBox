@@ -382,6 +382,10 @@ export class AddPage implements OnInit, AfterViewInit {
           media.title = form.form.value.title
         }
         if (form.form.value.rssURL?.length) {
+          if (form.form.value.rssURL.startsWith('https://')) {
+            // Ersetze 'https' durch 'http'
+            form.form.value.rssURL = form.form.value.rssURL.replace('https://', 'http://')
+          }
           media.id = form.form.value.rssURL
         }
         if (form.form.value.spotifySearch?.length) {
@@ -398,6 +402,10 @@ export class AddPage implements OnInit, AfterViewInit {
               .catch((error) => {
                 console.error('Error for extract url from m3u:', error)
               })
+          }
+          if (media.id.startsWith('https://')) {
+            // Ersetze 'https' durch 'http'
+            media.id = media.id.replace('https://', 'http://')
           }
         }
         if (form.form.value.spotifyURL?.length) {

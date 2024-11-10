@@ -17,8 +17,8 @@ TOKEN = config['telegram']['token']
 bot = telepot.Bot(TOKEN)
 chat_id = config['telegram']['chatId']
 
-#msg = local['album'] + "\n" + local['currentTrackname']
-#bot.sendMessage(chat_id, msg)
+msg = local['album'] + "\n" + local['currentTrackname']
+bot.sendMessage(chat_id, msg)
 subprocess.run(["sudo", "rm", "/tmp/telegram_screen.png"])
 subprocess.run(["sudo", "-H", "-u", "dietpi", "bash", "-c", "DISPLAY=:0 scrot /tmp/telegram_screen.png"])
 bot.sendPhoto(chat_id, open('/tmp/telegram_screen.png', 'rb'))

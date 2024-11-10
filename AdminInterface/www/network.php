@@ -156,8 +156,8 @@
 		$save_rc = file_put_contents('/tmp/.add-wifi.json', $json_object);
 		exec("sudo chmod 755 /tmp/.add-wifi.json");
 		exec("sudo mv /tmp/.add-wifi.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/wlan.json");
-		sleep(5);
-		exec("sudo wpa_cli -i wlan0 reconfigure");
+		sleep(2);
+		#exec("sudo wpa_cli -i wlan0 reconfigure");
 		$CHANGE_TXT=$CHANGE_TXT."<li>Wifi ".$_POST['wifi_name']." added</li>";
 		$change=1;
 
