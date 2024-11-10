@@ -1206,8 +1206,12 @@ app.use((req, res) => {
   if (command.dir.includes('rss')) {
     currentMeta.currentPlayer = 'mplayer'
     currentMeta.currentType = 'rss'
-    currentMeta.currentTrackname = command.name.split(':title:artist:')[0]
-    currentMeta.album = command.name.split(':title:artist:')[1]
+    log.debug(`${nowDate.toLocaleString()}: [Spotify Control]name: ${command.name}`)
+    const parts = decodeURIComponent(command.name).split(':title:artist:')
+    currentMeta.currentTrackname = parts[0]
+    currentMeta.album = parts[1]
+    log.debug(`${nowDate.toLocaleString()}: [Spotify Control]currentTrackname: ${currentMeta.currentTrackname}`)
+    log.debug(`${nowDate.toLocaleString()}: [Spotify Control]album: ${currentMeta.album}`)
     const dir = command.dir
     let rssURL = dir.split('rss/').pop()
     rssURL = decodeURIComponent(rssURL)
