@@ -146,11 +146,6 @@ let playlist
 let spotifyRunning = false
 let show
 let date = ''
-const valideMedia = {
-  validateId: '',
-  validateType: '',
-  validate: false,
-}
 const counter = {
   countgetMyCurrentPlaybackState: 0,
   countgetMyCurrentPlaybackStateHTTP: 0,
@@ -887,85 +882,6 @@ function downloadTTS(name) {
     .catch(console.error)
 }
 
-function validateSpotify() {
-  if (valideMedia.validateType === 'id') {
-    spotifyApi.getAlbum(valideMedia.validateId).then(
-      (data) => {
-        counter.countgetAlbum++
-        if (config.server.logLevel === 'debug') {
-          writeCounter()
-        }
-        if (data.body.id !== undefined) {
-          log.debug(`${nowDate.toLocaleString()}: [Spotify Control]ValidationId ${valideMedia.validateId}`)
-          log.debug(`${nowDate.toLocaleString()}: [Spotify Control]ValidationCompareId ${data.body.id}`)
-          valideMedia.validate = true
-        }
-      },
-      (err) => {
-        handleSpotifyError(err, 'validateId')
-        valideMedia.validate = false
-      },
-    )
-  }
-  if (valideMedia.validateType === 'showid') {
-    spotifyApi.getShow(valideMedia.validateId).then(
-      (data) => {
-        counter.countgetShow++
-        if (config.server.logLevel === 'debug') {
-          writeCounter()
-        }
-        if (data.body.id !== undefined) {
-          valideMedia.validate = true
-        }
-      },
-      (err) => {
-        handleSpotifyError(err, 'validateShow')
-        valideMedia.validate = false
-      },
-    )
-  }
-  if (valideMedia.validateType === 'artistid') {
-    spotifyApi.getArtist(valideMedia.validateId).then(
-      (data) => {
-        counter.countgetArtist++
-        if (config.server.logLevel === 'debug') {
-          writeCounter()
-        }
-        if (data.body.id !== undefined) {
-          valideMedia.validate = true
-        }
-      },
-      (err) => {
-        handleSpotifyError(err, 'validateArtist')
-        valideMedia.validate = false
-      },
-    )
-  }
-  if (valideMedia.validateType === 'playlistid') {
-    spotifyApi.getPlaylist(valideMedia.validateId).then(
-      (data) => {
-        counter.countgetPlaylist++
-        if (config.server.logLevel === 'debug') {
-          writeCounter()
-        }
-        if (data.body.id !== undefined) {
-          valideMedia.validate = true
-        }
-      },
-      (err) => {
-        handleSpotifyError(err, 'validatePlaylist')
-        valideMedia.validate = false
-      },
-    )
-  }
-}
-
-function clearValidate() {
-  valideMedia.validate = false
-  valideMedia.validateId = ''
-  valideMedia.validateType = ''
-}
-
 async function useSpotify(command) {
   currentMeta.currentPlayer = 'spotify'
   currentMeta.currentType = 'spotify'
@@ -1162,12 +1078,6 @@ app.get('/episode', (req, res) => {
 
 /*endpoint to return playlist information*/
 /*only used if sonos-kids-player is modified*/
-app.get('/validate', (req, res) => {
-  res.send(valideMedia)
-})
-
-/*endpoint to return playlist information*/
-/*only used if sonos-kids-player is modified*/
 app.get('/show', (req, res) => {
   res.send(show)
 })
@@ -1220,12 +1130,6 @@ app.use((req, res) => {
     playURL(rssURL)
   }
 
-  if (command.dir.includes('validate')) {
-    valideMedia.validateType = command.name.split(':')[0]
-    valideMedia.validateId = command.name.split(':')[1]
-    validateSpotify()
-  }
-
   if (command.dir.includes('say/')) {
     const dir = command.dir
     let nameTTS = dir.split('say/').pop()
@@ -1257,7 +1161,6 @@ app.use((req, res) => {
   else if (command.name === '-5') setVolume(0)
   else if (command.name === 'shuffleon') shuffleon()
   else if (command.name === 'shuffleoff') shuffleoff()
-  else if (command.name === 'clearval') clearValidate()
   else if (command.name === 'shutoff') cmdCall('sudo su - -c "/usr/local/bin/mupibox/./shutdown.sh &"')
   else if (command.name === 'clearresume') cmdCall('sudo bash /usr/local/bin/mupibox/clearresume.sh')
   else if (command.name === 'maxresume') cmdCall('sudo bash /usr/local/bin/mupibox/remove_max_resume.sh')

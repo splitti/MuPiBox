@@ -357,26 +357,21 @@ export class SpotifyService {
 
   async validateSpotify(spotifyId: string, spotifyCategory: string): Promise<boolean> {
     let validateState = false
-    console.log('validateState in Service', validateState)
-    console.log('spotifyId in Service', spotifyId)
-    console.log('spotifyCategory in Service', spotifyCategory)
+
     try {
       if (spotifyCategory === 'album') {
-        console.log('Service Album')
         const data = await this.spotifyApi.getAlbum(spotifyId)
-        if (data.body.id !== undefined) {
+        if (data.id !== undefined) {
           validateState = true
         }
       } else if (spotifyCategory === 'show') {
         const data = await this.spotifyApi.getShow(spotifyId)
-        if (data.body.id !== undefined) {
+        if (data.id !== undefined) {
           validateState = true
         }
       } else if (spotifyCategory === 'artist') {
-        console.log('Service Artist')
         const data = await this.spotifyApi.getArtist(spotifyId)
-        console.log('data in Service', data)
-        if (data.body.id !== undefined) {
+        if (data.id !== undefined) {
           validateState = true
         }
       } else if (spotifyCategory === 'playlist') {
@@ -389,7 +384,6 @@ export class SpotifyService {
       validateState = false
     }
 
-    console.log('validateState in Service', validateState)
     return validateState
   }
 

@@ -31,7 +31,6 @@ import type { Observable } from 'rxjs'
 import Keyboard from 'simple-keyboard'
 import { ActivityIndicatorService } from '../activity-indicator.service'
 import { MediaService } from '../media.service'
-import type { Validate } from '../validate'
 import { SpotifyService } from '../spotify.service'
 
 @Component({
@@ -80,8 +79,6 @@ export class AddPage implements OnInit, AfterViewInit {
   index: number
   activityIndicatorVisible = false
 
-  public readonly validate$: Observable<Validate>
-
   constructor(
     private mediaService: MediaService,
     private navController: NavController,
@@ -92,7 +89,6 @@ export class AddPage implements OnInit, AfterViewInit {
     public alertController: AlertController,
     private activityIndicatorService: ActivityIndicatorService,
   ) {
-    this.validate$ = this.mediaService.validate$
     if (this.router.getCurrentNavigation()?.extras.state) {
       this.editMedia = this.router.getCurrentNavigation().extras.state.media
       this.edit = true
@@ -136,9 +132,6 @@ export class AddPage implements OnInit, AfterViewInit {
         this.sourceType = 'rssURL'
       }
     }
-    //this.mediaService.validate$.subscribe((validate) => {
-    //  this.validateState = validate
-    //})
   }
 
   ngAfterViewInit() {
@@ -419,29 +412,20 @@ export class AddPage implements OnInit, AfterViewInit {
                 .validateSpotify(media.playlistid, 'playlist')
                 .then((result) => {
                   this.validateState = result
-                  console.log('validateState:', this.validateState)
                 })
                 .catch((error) => {
-                  console.error('Fehler bei der Validierung:', error)
                   this.validateState = false
                 })
-              //this.playerService.validateId(media.playlistid, 'spotify_playlistid')
             } else if (media.spotify_url.includes('artist/')) {
               media.artistid = this.spotifyIDfetcher(media.spotify_url, 'artist/')
-              console.log('ArtistID', media.artistid)
-              console.log('validateState', this.validateState)
               this.spotifyService
                 .validateSpotify(media.artistid, 'artist')
                 .then((result) => {
                   this.validateState = result
-                  console.log('validateState:', this.validateState)
                 })
                 .catch((error) => {
-                  console.error('Fehler bei der Validierung:', error)
                   this.validateState = false
                 })
-              console.log('validateState', this.validateState)
-              //this.playerService.validateId(media.artistid, 'spotify_artistid')
             } else if (media.spotify_url.includes('album/')) {
               media.id = this.spotifyIDfetcher(media.spotify_url, 'album/')
               console.log('AlbumId', media.id)
@@ -449,26 +433,20 @@ export class AddPage implements OnInit, AfterViewInit {
                 .validateSpotify(media.id, 'album')
                 .then((result) => {
                   this.validateState = result
-                  console.log('validateState:', this.validateState)
                 })
                 .catch((error) => {
-                  console.error('Fehler bei der Validierung:', error)
                   this.validateState = false
                 })
-              //this.playerService.validateId(media.id, 'spotify_id')
             } else if (media.spotify_url.includes('show/')) {
               media.showid = this.spotifyIDfetcher(media.spotify_url, 'show/')
               this.spotifyService
                 .validateSpotify(media.showid, 'show')
                 .then((result) => {
                   this.validateState = result
-                  console.log('validateState:', this.validateState)
                 })
                 .catch((error) => {
-                  console.error('Fehler bei der Validierung:', error)
                   this.validateState = false
                 })
-              //this.playerService.validateId(media.showid, 'spotify_showid')
             }
           }
         }
@@ -546,8 +524,6 @@ export class AddPage implements OnInit, AfterViewInit {
 
             this.validate()
 
-            this.playerService.sendCmd(PlayerCmds.CLEARVALIDATE)
-
             setTimeout(() => {
               this.navController.back()
             }, 2000)
@@ -603,7 +579,6 @@ export class AddPage implements OnInit, AfterViewInit {
             this.validate()
 
             this.playerService.sendCmd(PlayerCmds.INDEX)
-            this.playerService.sendCmd(PlayerCmds.CLEARVALIDATE)
 
             setTimeout(() => {
               this.navController.back()

@@ -26,7 +26,6 @@ export enum PlayerCmds {
   REBOOT = 'reboot',
   INDEX = 'index',
   NETWORKRESTART = 'networkrestart',
-  CLEARVALIDATE = 'clearval',
   CLEARRESUME = 'clearresume',
   MAXRESUME = 'maxresume',
   ENABLEWIFI = 'enablewifi',
@@ -76,11 +75,6 @@ export class PlayerService {
     const seekpos = `seekpos:${pos}`
     this.sendRequest(seekpos)
   }
-
-  /*  jumpTo(offset){
-    let offsetTrackNr = 'jumpto:' + offset;
-    this.sendRequest(offsetTrackNr);
-  } */
 
   deleteLocal(media: Media) {
     const url = `deletelocal/${encodeURIComponent(media.category)}:${encodeURIComponent(media.artist)}:${encodeURIComponent(media.title)}`
@@ -132,30 +126,6 @@ export class PlayerService {
       url = `spotify/now/spotify:episode:${encodeURIComponent(media.showid)}:${media.resumespotifytrack_number}:${media.resumespotifyprogress_ms}`
     }
 
-    this.sendRequest(url)
-  }
-
-  validateId(id: string, category: string) {
-    let url: string
-
-    switch (category) {
-      case 'spotify_id': {
-        url = `validate/id:${encodeURIComponent(id)}`
-        break
-      }
-      case 'spotify_showid': {
-        url = `validate/showid:${encodeURIComponent(id)}`
-        break
-      }
-      case 'spotify_artistid': {
-        url = `validate/artistid:${encodeURIComponent(id)}`
-        break
-      }
-      case 'spotify_playlistid': {
-        url = `validate/playlistid:${encodeURIComponent(id)}`
-        break
-      }
-    }
     this.sendRequest(url)
   }
 
