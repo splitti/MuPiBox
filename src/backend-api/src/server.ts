@@ -1,4 +1,5 @@
 import { ServerConfig } from './models/server.model'
+import SpotifyWebApi from 'spotify-web-api-node'
 import cors from 'cors'
 import express from 'express'
 import fs from 'node:fs'
@@ -8,9 +9,13 @@ import path from 'node:path'
 import { readFile } from 'node:fs/promises'
 import xmlparser from 'xml-js'
 
+const testServe = process.env.NODE_ENV === 'test'
+const devServe = process.env.NODE_ENV === 'development'
+const productionServe = !(testServe || devServe)
+
 // Configuration files.
 let configBasePath = './server/config'
-if (process.env.NODE_ENV === 'development') {
+if (!productionServe) {
   configBasePath = './config' // This uses the package.json path as pwd.
 }
 
@@ -52,7 +57,7 @@ app.use(express.urlencoded({ extended: false }))
 // the Angular development server during development to be able to hot-reload and debug.
 // We explicitely check for !== 'development' for now so we do not need to set this env in
 // production.
-if (process.env.NODE_ENV !== 'development' && process.env.NODE_ENV !== 'test') {
+if (productionServe) {
   // Static path to compiled Angular app
   app.use(express.static(path.join(__dirname, 'www')))
 }
@@ -441,5 +446,7 @@ const tryReadFile = (filePath: string, retries = 3, delayMs = 1000) => {
   })
 }
 
-app.listen(8200)
-console.log(`${nowDate.toLocaleString()}: [mupibox-backend-api] Server started at http://localhost:8200`)
+if (!testServe) {
+  app.listen(8200)
+  console.log(`${nowDate.toLocaleString()}: [mupibox-backend-api] Server started at http://localhost:8200`)
+}

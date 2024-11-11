@@ -20,15 +20,16 @@
     "xml-js": "^1.6.11"
   },
   "devDependencies": {
-    "typescript": "5.6.3",
-    "@types/node": "22.9.0",
     "@types/express": "5.0.0",
     "@types/jsonfile": "6.1.4",
+    "@types/node": "22.9.0",
     "@types/spotify-web-api-node": "5.0.11",
     "@types/supertest": "6.0.2",
     "esbuild": "0.24.0",
+    "nock": "^14.0.0-beta.15",
+    "supertest": "7.0.0",
     "tsx": "4.19.2",
-    "supertest": "7.0.0"
+    "typescript": "5.6.3"
   },
   "description": "API backend server for the MupiBox.",
   "private": true,
