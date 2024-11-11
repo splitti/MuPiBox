@@ -355,6 +355,58 @@ export class SpotifyService {
     return artwork
   }
 
+  validateSpotify(spotifyId: string, spotifyCategory: string) {
+    let validateState: boolean
+    console.log('validateState in Service', validateState)
+    if (spotifyCategory === 'album') {
+      this.spotifyApi.getAlbum(spotifyId).then(
+        (data) => {
+          if (data.body.id !== undefined) {
+            validateState = true
+          }
+        },
+        (err) => {
+          validateState = false
+        },
+      )
+    } else if (spotifyCategory === 'show') {
+      this.spotifyApi.getShow(spotifyId).then(
+        (data) => {
+          if (data.body.id !== undefined) {
+            validateState = true
+          }
+        },
+        (err) => {
+          validateState = false
+        },
+      )
+    } else if (spotifyCategory === 'artist') {
+      this.spotifyApi.getArtist(spotifyId).then(
+        (data) => {
+          if (data.body.id !== undefined) {
+            validateState = true
+          }
+        },
+        (err) => {
+          validateState = false
+        },
+      )
+    } else if (spotifyCategory === 'playlist') {
+      this.spotifyApi.getPlaylist(spotifyId).then(
+        (data) => {
+          if (data.body.id !== undefined) {
+            validateState = true
+          }
+        },
+        (err) => {
+          validateState = false
+        },
+      )
+    }
+    console.log('validateState in Service', validateState)
+    return validateState
+  }
+
   refreshToken() {
     const tokenUrl = environment.production ? '../api/token' : 'http://localhost:8200/api/token'
     this.http.get(tokenUrl, { responseType: 'text' }).subscribe((token) => {

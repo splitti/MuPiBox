@@ -32,6 +32,7 @@ import Keyboard from 'simple-keyboard'
 import { ActivityIndicatorService } from '../activity-indicator.service'
 import { MediaService } from '../media.service'
 import type { Validate } from '../validate'
+import { SpotifyService } from '../spotify.service'
 
 @Component({
   selector: 'app-add',
@@ -72,7 +73,7 @@ export class AddPage implements OnInit, AfterViewInit {
   edit = false
   shuffle = false
   firstInput = true
-  validateState: Validate
+  validateState: boolean
   aPartOfAll = false
   aPartOfAllMin: number
   aPartOfAllMax: number
@@ -87,6 +88,7 @@ export class AddPage implements OnInit, AfterViewInit {
     private route: ActivatedRoute,
     private router: Router,
     private playerService: PlayerService,
+    private spotifyService: SpotifyService,
     public alertController: AlertController,
     private activityIndicatorService: ActivityIndicatorService,
   ) {
@@ -134,9 +136,9 @@ export class AddPage implements OnInit, AfterViewInit {
         this.sourceType = 'rssURL'
       }
     }
-    this.mediaService.validate$.subscribe((validate) => {
-      this.validateState = validate
-    })
+    //this.mediaService.validate$.subscribe((validate) => {
+    //  this.validateState = validate
+    //})
   }
 
   ngAfterViewInit() {
@@ -413,16 +415,24 @@ export class AddPage implements OnInit, AfterViewInit {
           if (media.spotify_url.startsWith('https://open.spotify.com/')) {
             if (media.spotify_url.includes('playlist/')) {
               media.playlistid = this.spotifyIDfetcher(media.spotify_url, 'playlist/')
-              this.playerService.validateId(media.playlistid, 'spotify_playlistid')
+              this.validateState = this.spotifyService.validateSpotify(media.playlistid, 'playlist')
+              //this.playerService.validateId(media.playlistid, 'spotify_playlistid')
             } else if (media.spotify_url.includes('artist/')) {
               media.artistid = this.spotifyIDfetcher(media.spotify_url, 'artist/')
-              this.playerService.validateId(media.artistid, 'spotify_artistid')
+              console.log('ArtistID', media.artistid)
+              console.log('validateState', this.validateState)
+              this.validateState = this.spotifyService.validateSpotify(media.artistid, 'artist')
+              console.log('validateState', this.validateState)
+              //this.playerService.validateId(media.artistid, 'spotify_artistid')
             } else if (media.spotify_url.includes('album/')) {
               media.id = this.spotifyIDfetcher(media.spotify_url, 'album/')
-              this.playerService.validateId(media.id, 'spotify_id')
+              console.log('AlbumId', media.id)
+              this.validateState = this.spotifyService.validateSpotify(media.id, 'album')
+              //this.playerService.validateId(media.id, 'spotify_id')
             } else if (media.spotify_url.includes('show/')) {
               media.showid = this.spotifyIDfetcher(media.spotify_url, 'show/')
-              this.playerService.validateId(media.showid, 'spotify_showid')
+              this.validateState = this.spotifyService.validateSpotify(media.showid, 'show')
+              //this.playerService.validateId(media.showid, 'spotify_showid')
             }
           }
         }
@@ -435,10 +445,7 @@ export class AddPage implements OnInit, AfterViewInit {
   }
 
   async save(media: Media, form: NgForm) {
-    this.mediaService.validate$.subscribe((validate) => {
-      this.validateState = validate
-    })
-    if (!this.validateState?.validate && this.source === 'spotify' && this.sourceType === 'spotifyURL') {
+    if (!this.validateState && this.source === 'spotify' && this.sourceType === 'spotifyURL') {
       this.activityIndicatorService.dismiss()
       this.activityIndicatorVisible = false
       const alert = await this.alertController.create({
