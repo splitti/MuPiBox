@@ -69,12 +69,15 @@ app.get('/api/rssfeed', async (req, res) => {
     res.status(500).send('Given url is not a string.')
     return
   }
-  // TODO: Use try/catch?
-  ky.get(rssUrl)
-    .text()
-    .then((response) => {
-      res.send(xmlparser.xml2json(response, { compact: true, nativeType: true }))
-    })
+  try {
+    ky.get(rssUrl)
+      .text()
+      .then((response) => {
+        res.send(xmlparser.xml2json(response, { compact: true, nativeType: true }))
+      })
+  } catch {
+    res.status(500).send('External url responded with error code.')
+  }
 })
 
 app.get('/api/data', (req, res) => {

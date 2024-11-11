@@ -11,17 +11,23 @@ describe('rss feeds', () => {
     request(app).get('/api/rssfeed').expect(500, done)
   })
 
-  it('should request a provided url', (_t, done) => {
-    const scope = nock('http://example.com').get('/').reply(200, {
-      status: 200,
-      message: '<?xml version="1.0" encoding="UTF-8"?><test>This is a mocked response.</test>',
-    })
+  it('should request a provided url and convert the xml response to json', (_t, done) => {
+    nock('http://example.com')
+      .get('/')
+      .reply(200, '<?xml version="1.0" encoding="UTF-8"?><note><title>Test</title></note>')
     request(app)
       .get('/api/rssfeed?url=http://example.com')
       .end((_err, res) => {
-        assert.equal(res.body.status, 200)
-        assert.equal(res.body.message, '<test>This is a mocked response.</test>')
+        assert.equal(
+          res.text,
+          '{"_declaration":{"_attributes":{"version":"1.0","encoding":"UTF-8"}},"note":{"title":{"_text":"Test"}}}',
+        )
         done()
       })
+  })
+
+  it('should handle error responses from the external urls', (_t, done) => {
+    nock('http://example.com').get('/').reply(500, 'Error')
+    request(app).get('/api/rssfeed?url=http://example.com').expect(500, done)
   })
 })
