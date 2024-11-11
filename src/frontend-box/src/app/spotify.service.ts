@@ -381,7 +381,7 @@ export class SpotifyService {
         }
       } else if (spotifyCategory === 'playlist') {
         const data = await this.spotifyApi.getPlaylist(spotifyId)
-        if (data.body.id !== undefined) {
+        if (data.id !== undefined) {
           validateState = true
         }
       }
