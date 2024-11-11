@@ -3,41 +3,44 @@
 
 MUPIWIFI="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/wlan.json"
 WPACONF="/etc/wpa_supplicant/wpa_supplicant.conf"
+TMP_WPACONF="/tmp/wpa_supplicant.conf"
 NETWORKCONFIG="/tmp/network.json"
 NETWORKINTERFACES="/etc/network/interfaces"
 ONLINESTATE=$(/usr/bin/jq -r .onlinestate ${NETWORKCONFIG})
 
 restart_network() {
-	sudo service wpa_supplicant restart
-#	sudo service ifup@wlan0 stop
-#	sudo service ifup@wlan0 start
-
+	#sudo service wpa_supplicant restart
+	#sudo service networking restart
+	#sudo service ifup@wlan0 restart
+	#sudo service ifup@wlan0 start
 	#sudo dhclient -r
 	#sudo dhclient
-	#sudo wpa_cli -i wlan0 reconfigure
+	sudo wpa_cli -i wlan0 reconfigure
 }
 
 while true
 do
 	if test -f "${MUPIWIFI}"
 	then
-		echo "FILLI"
 		SSID="$(/usr/bin/jq -r .[].ssid ${MUPIWIFI})"
 		PSK="$(/usr/bin/jq -r .[].pw ${MUPIWIFI})"
 		if [ "${SSID}" = "" ]
 		then
 			sudo rm ${MUPIWIFI}
-		elif [ ${SSID} = "clear" ] && [ ${PSK} = "all"  ]
+		elif [ ${SSID} = "clear" ]
 		then
-			sudo rm ${WPACONF}
-			echo '# Grant all members of group "netdev" permissions to configure WiFi, e.g. via wpa_cli or wpa_gui' | sudo tee -a ${WPACONF}
-			echo 'ctrl_interface=DIR=/run/wpa_supplicant GROUP=netdev' | sudo tee -a ${WPACONF}
-			echo '# Allow wpa_cli/wpa_gui to overwrite this config file' | sudo tee -a ${WPACONF}
-			echo 'update_config=1' | sudo tee -a ${WPACONF}
-			echo 'bgscan="simple:30:-70:60"' | sudo tee -a ${WPACONF}
-			#echo 'roam_timeout=5' | sudo tee -a ${WPACONF}
-			#echo 'disable_pm=1' | sudo tee -a ${WPACONF}
-			echo 'ap_scan=1' | sudo tee -a ${WPACONF}
+			sudo rm ${TMP_WPACONF} > /dev/null 2>&1
+			echo '# Grant all members of group "netdev" permissions to configure WiFi, e.g. via wpa_cli or wpa_gui' | sudo tee -a ${TMP_WPACONF}
+			echo 'ctrl_interface=DIR=/run/wpa_supplicant GROUP=netdev' | sudo tee -a ${TMP_WPACONF}
+			echo '# Allow wpa_cli/wpa_gui to overwrite this config file' | sudo tee -a ${TMP_WPACONF}
+			echo 'update_config=1' | sudo tee -a ${TMP_WPACONF}
+			echo 'bgscan="simple:30:-70:60"' | sudo tee -a ${TMP_WPACONF}
+			#echo 'roam_timeout=5' | sudo tee -a ${TMP_WPACONF}
+			#echo 'disable_pm=1' | sudo tee -a ${TMP_WPACONF}
+			echo 'ap_scan=1' | sudo tee -a ${TMP_WPACONF}
+			sudo mv -f ${TMP_WPACONF} ${WPACONF}
+			sudo chmod 600 ${WPACONF}
+			sudo chown root:root ${WPACONF}
 			restart_network			
 		elif [ "${PSK}" = "" ]
 		then
@@ -53,7 +56,7 @@ do
 			new_line='scan_ssid=1'
 			# Ersetze mit sed und füge die Zeile hinzu
 			WIFI_RESULT=$(echo "$WIFI_RESULT" | sed '/#psk=.*$/a\'$'\n'"\t$new_line")
-			echo $WIFI_RESULT
+			#echo $WIFI_RESULT
 			for LINES in ${WIFI_RESULT}
 			do
 					i=$((i+1))

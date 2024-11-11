@@ -243,7 +243,18 @@ app.post('/api/addresume', (req, res) => {
           console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] ${error}`)
           res.status(200).send('error')
         } else {
-          data.push(req.body)
+          // Index des vorhandenen Eintrags mit derselben "id" finden
+          const index = data.findIndex((item: { id: any }) => item.id === req.body.id)
+
+          if (index !== -1) {
+            // Wenn der Eintrag vorhanden ist, ersetze ihn
+            data[index] = req.body
+            console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Entry with id ${req.body.id} replaced.`)
+          } else {
+            // Wenn der Eintrag nicht vorhanden ist, füge ihn hinzu
+            data.push(req.body)
+            console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] New entry with id ${req.body.id} added.`)
+          }
 
           jsonfile.writeFile(resumeFile, data, { spaces: 4 }, (error) => {
             if (error) throw error
@@ -342,8 +353,23 @@ app.post('/api/editresume', (req, res) => {
           console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] ${error}`)
           res.status(200).send('error')
         } else {
-          data.splice(req.body.index, 1, req.body.data)
+          // Prüfe, ob die ID bereits im Array existiert
+          const existingIndex = data.findIndex((item: { id: any }) => item.id === req.body.data.id)
 
+          if (existingIndex !== -1) {
+            // Ersetze den vorhandenen Eintrag mit derselben ID
+            data[existingIndex] = req.body.data
+            console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Entry with id ${req.body.data.id} replaced.`)
+          } else {
+            // Bestimme den zu verwendenden Index basierend auf der Array-Länge
+            const indexToReplace = Math.min(req.body.index, data.length - 1)
+
+            // Ersetze den Eintrag am berechneten Index oder füge hinzu
+            data.splice(indexToReplace, 1, req.body.data)
+            console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Entry at index ${indexToReplace} replaced.`)
+          }
+
+          // Speichere die geänderten Daten zurück in die Datei
           jsonfile.writeFile(resumeFile, data, { spaces: 4 }, (error) => {
             if (error) throw error
             res.status(200).send('ok')

@@ -1443,3 +1443,15 @@ details > ul {
 .labelchecked {
 	font-size: 100%;
 }
+
+#reloadicon {
+        font-size: 1.8em;
+        margin-bottom:0;
+        padding-bottom:0;
+        margin-left:10px;
+        color:#054b61;
+}
+
+#reloadicon:hover{
+        color:red;
+}
