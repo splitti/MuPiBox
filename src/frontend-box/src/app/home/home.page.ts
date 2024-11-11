@@ -4,6 +4,7 @@ import { NavigationExtras, Router } from '@angular/router'
 import {
   IonButton,
   IonButtons,
+  IonContent,
   IonHeader,
   IonIcon,
   IonSegment,
@@ -45,6 +46,7 @@ import { SwiperIonicEventsHelper } from '../swiper/swiper-ionic-events-helper'
     IonSegment,
     IonSegmentButton,
     SwiperComponent,
+    IonContent,
   ],
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
