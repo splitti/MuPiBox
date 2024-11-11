@@ -173,11 +173,13 @@ app.get('/api/albumstop', (req, res) => {
       if (error) {
         console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error /api/albumstop read albumstop.json`)
         console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] ${error}`)
-        res.json([])
+        res.json({})
       } else {
         res.json(data)
       }
     })
+  } else {
+    res.json({})
   }
 })
 
