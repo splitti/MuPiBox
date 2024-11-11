@@ -415,23 +415,59 @@ export class AddPage implements OnInit, AfterViewInit {
           if (media.spotify_url.startsWith('https://open.spotify.com/')) {
             if (media.spotify_url.includes('playlist/')) {
               media.playlistid = this.spotifyIDfetcher(media.spotify_url, 'playlist/')
-              this.validateState = this.spotifyService.validateSpotify(media.playlistid, 'playlist')
+              this.spotifyService
+                .validateSpotify(media.playlistid, 'playlist')
+                .then((result) => {
+                  this.validateState = result
+                  console.log('validateState:', this.validateState)
+                })
+                .catch((error) => {
+                  console.error('Fehler bei der Validierung:', error)
+                  this.validateState = false
+                })
               //this.playerService.validateId(media.playlistid, 'spotify_playlistid')
             } else if (media.spotify_url.includes('artist/')) {
               media.artistid = this.spotifyIDfetcher(media.spotify_url, 'artist/')
               console.log('ArtistID', media.artistid)
               console.log('validateState', this.validateState)
-              this.validateState = this.spotifyService.validateSpotify(media.artistid, 'artist')
+              this.spotifyService
+                .validateSpotify(media.artistid, 'artist')
+                .then((result) => {
+                  this.validateState = result
+                  console.log('validateState:', this.validateState)
+                })
+                .catch((error) => {
+                  console.error('Fehler bei der Validierung:', error)
+                  this.validateState = false
+                })
               console.log('validateState', this.validateState)
               //this.playerService.validateId(media.artistid, 'spotify_artistid')
             } else if (media.spotify_url.includes('album/')) {
               media.id = this.spotifyIDfetcher(media.spotify_url, 'album/')
               console.log('AlbumId', media.id)
-              this.validateState = this.spotifyService.validateSpotify(media.id, 'album')
+              this.spotifyService
+                .validateSpotify(media.id, 'album')
+                .then((result) => {
+                  this.validateState = result
+                  console.log('validateState:', this.validateState)
+                })
+                .catch((error) => {
+                  console.error('Fehler bei der Validierung:', error)
+                  this.validateState = false
+                })
               //this.playerService.validateId(media.id, 'spotify_id')
             } else if (media.spotify_url.includes('show/')) {
               media.showid = this.spotifyIDfetcher(media.spotify_url, 'show/')
-              this.validateState = this.spotifyService.validateSpotify(media.showid, 'show')
+              this.spotifyService
+                .validateSpotify(media.showid, 'show')
+                .then((result) => {
+                  this.validateState = result
+                  console.log('validateState:', this.validateState)
+                })
+                .catch((error) => {
+                  console.error('Fehler bei der Validierung:', error)
+                  this.validateState = false
+                })
               //this.playerService.validateId(media.showid, 'spotify_showid')
             }
           }

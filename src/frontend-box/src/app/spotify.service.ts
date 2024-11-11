@@ -355,59 +355,40 @@ export class SpotifyService {
     return artwork
   }
 
-  validateSpotify(spotifyId: string, spotifyCategory: string) {
-    let validateState: boolean
+  async validateSpotify(spotifyId: string, spotifyCategory: string): Promise<boolean> {
+    let validateState = false
     console.log('validateState in Service', validateState)
     console.log('spotifyId in Service', spotifyId)
     console.log('spotifyCategory in Service', spotifyCategory)
-    if (spotifyCategory === 'album') {
-      console.log('Service Album')
-      this.spotifyApi.getAlbum(spotifyId).then(
-        (data) => {
-          if (data.body.id !== undefined) {
-            validateState = true
-          }
-        },
-        (err) => {
-          validateState = false
-        },
-      )
-    } else if (spotifyCategory === 'show') {
-      this.spotifyApi.getShow(spotifyId).then(
-        (data) => {
-          if (data.body.id !== undefined) {
-            validateState = true
-          }
-        },
-        (err) => {
-          validateState = false
-        },
-      )
-    } else if (spotifyCategory === 'artist') {
-      console.log('Service Artist')
-      this.spotifyApi.getArtist(spotifyId).then(
-        (data) => {
-          console.log('data in Service', data)
-          if (data.body.id !== undefined) {
-            validateState = true
-          }
-        },
-        (err) => {
-          validateState = false
-        },
-      )
-    } else if (spotifyCategory === 'playlist') {
-      this.spotifyApi.getPlaylist(spotifyId).then(
-        (data) => {
-          if (data.body.id !== undefined) {
-            validateState = true
-          }
-        },
-        (err) => {
-          validateState = false
-        },
-      )
+    try {
+      if (spotifyCategory === 'album') {
+        console.log('Service Album')
+        const data = await this.spotifyApi.getAlbum(spotifyId)
+        if (data.body.id !== undefined) {
+          validateState = true
+        }
+      } else if (spotifyCategory === 'show') {
+        const data = await this.spotifyApi.getShow(spotifyId)
+        if (data.body.id !== undefined) {
+          validateState = true
+        }
+      } else if (spotifyCategory === 'artist') {
+        console.log('Service Artist')
+        const data = await this.spotifyApi.getArtist(spotifyId)
+        console.log('data in Service', data)
+        if (data.body.id !== undefined) {
+          validateState = true
+        }
+      } else if (spotifyCategory === 'playlist') {
+        const data = await this.spotifyApi.getPlaylist(spotifyId)
+        if (data.body.id !== undefined) {
+          validateState = true
+        }
+      }
+    } catch (err) {
+      validateState = false
     }
+
     console.log('validateState in Service', validateState)
     return validateState
   }
