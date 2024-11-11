@@ -194,28 +194,19 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 
 				<h3>Set Device-ID</h3>
 				<p>In this last step, you choose your playback device.</p>
-                <p><a href="spotify.php?spotifyget=reload">Reload</a> this page if device id is not showing up.</p>
+                <p><a href="javascript:loadDeviceIdOptions()" title="Reload device list">Reload</a>, if device id is not showing up.</p>
 			</li>
 			<li id="li_1">
 				<label class="description" for="spotify_deviceid">Select Spotify Device ID </label>
 				<?php
 				if ($data["spotify"]["accessToken"] != "" and $data["spotify"]["refreshToken"] != "") {
 					echo '<select id="spotdevice" name="spotdevice" class="element text medium">';
-
-					$command = "sudo /usr/local/bin/mupibox/./get_deviceid.sh";
-					exec($command, $devIDoutput, $result);
-					$spotify_dev_json = file_get_contents('/tmp/.spotify_devices', true);
-					$devices = json_decode($spotify_dev_json, true);
-					foreach ($devices as $this_device) {
-						if ($this_device["id"] == $data["spotify"]["deviceId"]) {
-							$selected = " selected=\"selected\"";
-							$activated_device_name = $this_device["name"];
-						} else {
-							$selected = "";
-						}
-						print "<option value=\"" . $this_device["id"] . "\"" . $selected  . ">" . $this_device["name"] . " (" . $this_device["id"] . ")</option>";
-					}
 					echo '</select>';
+					echo '<a href="javascript:loadDeviceIdOptions()" id="reloadicon" title="Reload device list">';
+					echo '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 1536 1536" {...$$props}>
+	<path fill="currentColor" d="M1511 928q0 5-1 7q-64 268-268 434.5T764 1536q-146 0-282.5-55T238 1324l-129 129q-19 19-45 19t-45-19t-19-45V960q0-26 19-45t45-19h448q26 0 45 19t19 45t-19 45l-137 137q71 66 161 102t187 36q134 0 250-65t186-179q11-17 53-117q8-23 30-23h192q13 0 22.5 9.5t9.5 22.5m25-800v448q0 26-19 45t-45 19h-448q-26 0-45-19t-19-45t19-45l138-138Q969 256 768 256q-134 0-250 65T332 500q-11 17-53 117q-8 23-30 23H50q-13 0-22.5-9.5T18 608v-7q65-268 270-434.5T768 0q146 0 284 55.5T1297 212l130-129q19-19 45-19t45 19t19 45" />
+</svg>';
+					echo '</a>';
 					echo '</li><li class="buttons"><input id="saveForm" class="button_text" type="submit" name="setDevID" value="Set DeviceID" /></li><br><li id="li_1" >';
 				} else {
 					print '<p>Please complete the previous steps.</p></li><br><li id="li_1" >';
@@ -223,9 +214,7 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 				?>
 				<div>
 					<label class="description" for="spotify_devicename">Activated Spotify Device Name:</label>
-					<input id="spotify_deviceid" name="spotify_devicename" class="element readonly large" type="text" maxlength="255" value="<?php
-																																				print $activated_device_name;
-																																				?>" readonly />
+					<input id="spotify_devicename" name="spotify_devicename" class="element readonly large" type="text" maxlength="255" value="" readonly />					
 				</div>
 				<div><label class="description" for="spotify_deviceid">Activated Spotify Device ID:</label>
 					<input id="spotify_deviceid" name="spotify_deviceid" class="element readonly large" type="text" maxlength="255" value="<?php
@@ -306,6 +295,35 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 
 </form>
 <p></p>
+<script>
+	const spotifyDeviceIdSelectBox = document.getElementById("spotdevice");
+	const deviceListUrl = 'http://<?= $data['mupibox']['host'] ?>:5005/getDevices';
+	const currentDeviceId = '<?= $data['spotify']['deviceId'] ?>';
+	const currentDeviceIdField = document.getElementById("spotify_devicename");
+	const fetchSpotifyDevices = async () => {
+		const response = await fetch(deviceListUrl);
+		return response.json();
+	};
+
+	const loadDeviceIdOptions = async () => {
+		const spotifyDevices = await fetchSpotifyDevices();
+		spotifyDeviceIdSelectBox.innerHTML = "";
+		currentDeviceIdField.value = "";
+		spotifyDevices.forEach(spotifyDevice => {
+			const newOption = document.createElement("option");
+			newOption.value = spotifyDevice.id;
+			newOption.text = spotifyDevice.name + " (" + spotifyDevice.id + ")";
+			if (spotifyDevice.id === currentDeviceId) {
+				newOption.selected = true;
+				currentDeviceIdField.value = spotifyDevice.name;
+			}
+			spotifyDeviceIdSelectBox.appendChild(newOption);
+		});
+	};
+	if (spotifyDeviceIdSelectBox !== null) {
+		loadDeviceIdOptions();
+	}
+</script>
 <?php
 include('includes/footer.php');
 ?>

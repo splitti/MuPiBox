@@ -9,14 +9,14 @@ const fs = require('node:fs')
 const childProcess = require('node:child_process')
 
 let configBasePath = './config'
-let networkConfigBasePath = '/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config'
+//let networkConfigBasePath = '/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config'
 if (process.env.NODE_ENV === 'development') {
   configBasePath = '../config'
-  networkConfigBasePath = '../../backend-api/config'
+  //networkConfigBasePath = '../../backend-api/config'
 }
 
 const muPiBoxConfig = require(`${configBasePath}/mupiboxconfig.json`)
-const network = require(`${networkConfigBasePath}/network.json`)
+//const network = require(`${networkConfigBasePath}/network.json`)
 const config = require(`${configBasePath}/config.json`)
 
 const log = require('console-log-level')({ level: config.server.logLevel })
@@ -73,7 +73,9 @@ player.on('metadata', (val) => {
   //currentMeta.currentTracknr = parseInt(val.Comment?.split(',').pop(), 10);
   currentMeta.currentTracknr = currentMeta.currentTracknr + 1
   log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Current Tracknr: ${currentMeta.currentTracknr}`)
-  currentMeta.currentTrackname = val.Title
+  if (currentMeta.currentType !== 'rss' && currentMeta.currentType !== 'radio') {
+    currentMeta.currentTrackname = val.Title
+  }
 })
 player.on('track-change', () => player.getProps(['metadata']))
 
@@ -95,14 +97,16 @@ player.on('track-change', () => player.getProps(['filename']))
 
 player.on('path', (val) => {
   console.log('track path is', val)
-  currentMeta.album = val.split('/')[7]
+  if (currentMeta.currentType !== 'rss' && currentMeta.currentType !== 'radio') {
+    currentMeta.album = val.split('/')[7]
+  }
 })
 player.on('track-change', () => player.getProps(['path']))
 
 player.on('track-change', () => {
   if (
     muPiBoxConfig.telegram.active &&
-    network.onlinestate === 'online' &&
+    //network.onlinestate === 'online' &&
     muPiBoxConfig.telegram.token.length > 1 &&
     muPiBoxConfig.telegram.chatId.length > 1 &&
     (currentMeta.currentType === 'rss' || currentMeta.currentType === 'radio')
@@ -110,7 +114,7 @@ player.on('track-change', () => {
     cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_RSS_Radio.py')
   if (
     muPiBoxConfig.telegram.active &&
-    network.onlinestate === 'online' &&
+    //network.onlinestate === 'online' &&
     muPiBoxConfig.telegram.token.length > 1 &&
     muPiBoxConfig.telegram.chatId.length > 1 &&
     currentMeta.currentType === 'local'
@@ -382,7 +386,7 @@ function setActiveDevice() {
 function pause() {
   if (
     muPiBoxConfig.telegram.active &&
-    network.onlinestate === 'online' &&
+    //network.onlinestate === 'online' &&
     muPiBoxConfig.telegram.token.length > 1 &&
     muPiBoxConfig.telegram.chatId.length > 1
   )
@@ -414,7 +418,7 @@ function pause() {
 function stop() {
   if (
     muPiBoxConfig.telegram.active &&
-    network.onlinestate === 'online' &&
+    //network.onlinestate === 'online' &&
     muPiBoxConfig.telegram.token.length > 1 &&
     muPiBoxConfig.telegram.chatId.length > 1
   )
@@ -475,7 +479,7 @@ function play() {
     )
     if (
       muPiBoxConfig.telegram.active &&
-      network.onlinestate === 'online' &&
+      //network.onlinestate === 'online' &&
       muPiBoxConfig.telegram.token.length > 1 &&
       muPiBoxConfig.telegram.chatId.length > 1
     )
@@ -489,7 +493,7 @@ function play() {
       writeplayerstatePlay()
       if (
         muPiBoxConfig.telegram.active &&
-        network.onlinestate === 'online' &&
+        //network.onlinestate === 'online' &&
         muPiBoxConfig.telegram.token.length > 1 &&
         muPiBoxConfig.telegram.chatId.length > 1
       )
@@ -595,7 +599,7 @@ function playMe(/*activePlaylist*/) {
         spotifyRunning = true
         if (
           muPiBoxConfig.telegram.active &&
-          network.onlinestate === 'online' &&
+          //network.onlinestate === 'online' &&
           muPiBoxConfig.telegram.token.length > 1 &&
           muPiBoxConfig.telegram.chatId.length > 1
         )
@@ -628,7 +632,7 @@ function playMe(/*activePlaylist*/) {
           spotifyRunning = true
           if (
             muPiBoxConfig.telegram.active &&
-            network.onlinestate === 'online' &&
+            //network.onlinestate === 'online' &&
             muPiBoxConfig.telegram.token.length > 1 &&
             muPiBoxConfig.telegram.chatId.length > 1
           )
@@ -665,7 +669,7 @@ function playList(playedList) {
 
   if (
     muPiBoxConfig.telegram.active &&
-    network.onlinestate === 'online' &&
+    //network.onlinestate === 'online' &&
     muPiBoxConfig.telegram.token.length > 1 &&
     muPiBoxConfig.telegram.chatId.length > 1
   )
@@ -707,7 +711,7 @@ function playURL(playedURL) {
   log.debug(`${nowDate.toLocaleString()}: ${playedURL}`)
   if (
     muPiBoxConfig.telegram.active &&
-    network.onlinestate === 'online' &&
+    //network.onlinestate === 'online' &&
     muPiBoxConfig.telegram.token.length > 1 &&
     muPiBoxConfig.telegram.chatId.length > 1
   )
@@ -1195,6 +1199,9 @@ app.use((req, res) => {
   if (command.dir.includes('radio')) {
     currentMeta.currentPlayer = 'mplayer'
     currentMeta.currentType = 'radio'
+    const parts = decodeURIComponent(command.name).split(':title:artist:')
+    currentMeta.currentTrackname = parts[0]
+    currentMeta.album = parts[1]
     const dir = command.dir
     let radioURL = dir.split('radio/').pop()
     radioURL = decodeURIComponent(radioURL)
@@ -1204,6 +1211,9 @@ app.use((req, res) => {
   if (command.dir.includes('rss')) {
     currentMeta.currentPlayer = 'mplayer'
     currentMeta.currentType = 'rss'
+    const parts = decodeURIComponent(command.name).split(':title:artist:')
+    currentMeta.currentTrackname = parts[0]
+    currentMeta.album = parts[1]
     const dir = command.dir
     let rssURL = dir.split('rss/').pop()
     rssURL = decodeURIComponent(rssURL)

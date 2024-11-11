@@ -2,5 +2,7 @@
   "files.insertFinalNewline": true,
   "editor.formatOnSave": true,
   "editor.defaultFormatter": "biomejs.biome",
+  "editor.guides.bracketPairs": "active",
+  "editor.guides.bracketPairsHorizontal": "active",
   "typescript.preferences.autoImportFileExcludePatterns": ["@ionic/angular/common", "@ionic/angular"]
 }

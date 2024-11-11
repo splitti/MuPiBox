@@ -10,24 +10,5 @@
 
 <ion-content class="resume-content">
   <mupi-loading [loading]="isLoading()"></mupi-loading>
-  @if (pageIsShown()) {
-    <swiper-container slides-per-view="3" scrollbar="true" scrollbar-hide="true" free-mode="false" css-mode="true">
-      @for (currentMedia of media(); track currentMedia; let indexOfMedia = $index) {
-        <swiper-slide>
-          <ion-grid>
-            <ion-row class="media-card">
-              <ion-col size="12">
-                <ion-card>
-                  <img (click)="coverClicked(currentMedia)" draggable="false" style="-moz-user-select: none;" ondragstart="return false;" src="{{covers[currentMedia.title]}}">
-                  <ion-card-header (click)="mediaNameClicked(currentMedia)">
-                    <ion-card-title class="ion-text-nowrap truncate-text ion-text-center">{{currentMedia.title}}</ion-card-title>
-                  </ion-card-header>
-                </ion-card>
-              </ion-col>
-            </ion-row>
-          </ion-grid>
-        </swiper-slide>
-      }
-    </swiper-container>
-  }
+  <mupi-swiper [data]="swiperData()" (elementClicked)="this.coverClicked($event.data)"></mupi-swiper>
 </ion-content>

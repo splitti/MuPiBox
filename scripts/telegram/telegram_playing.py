@@ -9,7 +9,7 @@ import requests
 with open("/etc/mupibox/mupiboxconfig.json") as file:
     config = json.load(file)
 
-url = 'http://mupibox:5005/local'
+url = 'http://127.0.0.1:5005/local'
 state = requests.get(url).json()
 
 TOKEN = config['telegram']['token']
