@@ -1,26 +1,12 @@
-import {
-  CUSTOM_ELEMENTS_SCHEMA,
-  ChangeDetectionStrategy,
-  Component,
-  Signal,
-  WritableSignal,
-  effect,
-  signal,
-} from '@angular/core'
+import { ChangeDetectionStrategy, Component, Signal, WritableSignal, computed, effect, signal } from '@angular/core'
 import { toObservable, toSignal } from '@angular/core/rxjs-interop'
 import { NavigationExtras, Router } from '@angular/router'
 import {
   IonButton,
   IonButtons,
-  IonCard,
-  IonCardHeader,
-  IonCardTitle,
-  IonCol,
   IonContent,
-  IonGrid,
   IonHeader,
   IonIcon,
-  IonRow,
   IonSegment,
   IonSegmentButton,
   IonToolbar,
@@ -34,27 +20,22 @@ import {
   timerOutline,
 } from 'ionicons/icons'
 import { catchError, combineLatest, map, of, switchMap, tap } from 'rxjs'
+import { SwiperComponent, SwiperData } from '../swiper/swiper.component'
 
-import { CommonModule } from '@angular/common'
-import { FormsModule } from '@angular/forms'
 import { addIcons } from 'ionicons'
 import type { Artist } from '../artist'
 import { ArtworkService } from '../artwork.service'
-import { IonicSliderWorkaround } from '../ionic-slider-workaround'
 import { LoadingComponent } from '../loading/loading.component'
 import type { CategoryType } from '../media'
 import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
-import { PlayerService } from '../player.service'
+import { SwiperIonicEventsHelper } from '../swiper/swiper-ionic-events-helper'
 
 @Component({
   selector: 'app-home',
   templateUrl: 'home.page.html',
   styleUrls: ['home.page.scss'],
-  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   imports: [
-    CommonModule,
-    FormsModule,
     MupiHatIconComponent,
     LoadingComponent,
     IonHeader,
@@ -64,23 +45,18 @@ import { PlayerService } from '../player.service'
     IonIcon,
     IonSegment,
     IonSegmentButton,
+    SwiperComponent,
     IonContent,
-    IonGrid,
-    IonRow,
-    IonCol,
-    IonCard,
-    IonCardHeader,
-    IonCardTitle,
   ],
   standalone: true,
-  changeDetection: ChangeDetectionStrategy.Default,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class HomePage extends IonicSliderWorkaround {
-  protected covers = {}
+export class HomePage extends SwiperIonicEventsHelper {
   protected editButtonclickCount = 0
   protected editClickTimer = 0
 
   protected artists: Signal<Artist[]>
+  protected swiperData: Signal<SwiperData<Artist>[]>
   protected isOnline: Signal<boolean>
   protected isLoading: WritableSignal<boolean> = signal(false)
   protected category: WritableSignal<CategoryType> = signal('audiobook')
@@ -88,7 +64,6 @@ export class HomePage extends IonicSliderWorkaround {
   constructor(
     private mediaService: MediaService,
     private artworkService: ArtworkService,
-    private playerService: PlayerService,
     private router: Router,
   ) {
     super()
@@ -108,38 +83,41 @@ export class HomePage extends IonicSliderWorkaround {
             }),
           )
         }),
-        map((artists) => {
-          for (const artist of artists) {
-            this.artworkService.getArtistArtwork(artist.coverMedia).subscribe((url) => {
-              this.covers[artist.name] = url
-            })
-          }
-          return artists
-        }),
+        tap(() => this.resetSwiperPosition()),
         tap(() => this.isLoading.set(false)),
       ),
     )
+
+    this.swiperData = computed(() => {
+      return this.artists()?.map((artist) => {
+        return {
+          name: artist.name,
+          imgSrc: this.artworkService.getArtistArtwork(artist.coverMedia),
+          data: artist,
+        }
+      })
+    })
 
     effect(() => {
       this.mediaService.setCategory(this.category())
     })
   }
 
-  public categoryChanged(event: any): void {
+  protected categoryChanged(event: any): void {
     this.category.set(event.detail.value)
   }
 
-  artistCoverClicked(clickedArtist: Artist) {
+  protected artistCoverClicked(artist: Artist): void {
     const navigationExtras: NavigationExtras = {
       state: {
-        artist: clickedArtist,
+        artist: artist,
         category: this.category(),
       },
     }
     this.router.navigate(['/medialist'], navigationExtras)
   }
 
-  editButtonPressed() {
+  protected editButtonPressed(): void {
     window.clearTimeout(this.editClickTimer)
 
     if (this.editButtonclickCount < 9) {
@@ -156,9 +134,5 @@ export class HomePage extends IonicSliderWorkaround {
 
   protected resume(): void {
     this.router.navigate(['/resume'])
-  }
-
-  protected readText(text: string): void {
-    this.playerService.sayText(text)
   }
 }
