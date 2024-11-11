@@ -358,6 +358,8 @@ export class SpotifyService {
   validateSpotify(spotifyId: string, spotifyCategory: string) {
     let validateState: boolean
     console.log('validateState in Service', validateState)
+    console.log('spotifyId in Service', spotifyId)
+    console.log('spotifyCategory in Service', spotifyCategory)
     if (spotifyCategory === 'album') {
       this.spotifyApi.getAlbum(spotifyId).then(
         (data) => {
