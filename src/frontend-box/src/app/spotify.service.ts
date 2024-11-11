@@ -361,6 +361,7 @@ export class SpotifyService {
     console.log('spotifyId in Service', spotifyId)
     console.log('spotifyCategory in Service', spotifyCategory)
     if (spotifyCategory === 'album') {
+      console.log('Service Album')
       this.spotifyApi.getAlbum(spotifyId).then(
         (data) => {
           if (data.body.id !== undefined) {
@@ -383,8 +384,10 @@ export class SpotifyService {
         },
       )
     } else if (spotifyCategory === 'artist') {
+      console.log('Service Artist')
       this.spotifyApi.getArtist(spotifyId).then(
         (data) => {
+          console.log('data in Service', data)
           if (data.body.id !== undefined) {
             validateState = true
           }
