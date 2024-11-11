@@ -17,7 +17,6 @@ import type { Network } from './network'
 import { PlayerService } from './player.service'
 import { RssFeedService } from './rssfeed.service'
 import { SpotifyService } from './spotify.service'
-import type { Validate } from './validate'
 import type { WLAN } from './wlan'
 
 @Injectable({
@@ -34,7 +33,6 @@ export class MediaService {
   public readonly playlist$: Observable<CurrentPlaylist>
   public readonly episode$: Observable<CurrentEpisode>
   public readonly show$: Observable<CurrentShow>
-  public readonly validate$: Observable<Validate>
   public readonly mupihat$: Observable<Mupihat>
 
   private wlanSubject = new Subject<WLAN[]>()
@@ -86,10 +84,6 @@ export class MediaService {
     )
     this.albumStop$ = interval(1000).pipe(
       switchMap((): Observable<AlbumStop> => this.http.get<AlbumStop>(`http://${this.ip}:8200/api/albumstop`)),
-      shareReplay({ bufferSize: 1, refCount: false }),
-    )
-    this.validate$ = interval(1000).pipe(
-      switchMap((): Observable<Validate> => this.http.get<Validate>(`http://${this.ip}:5005/validate`)),
       shareReplay({ bufferSize: 1, refCount: false }),
     )
     // Every 2 seconds should be enough for timely charging update.
