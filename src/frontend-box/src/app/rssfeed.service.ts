@@ -5,6 +5,7 @@ import { ExtraDataMedia, Utils } from './utils'
 import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
 import type { Observable } from 'rxjs'
+import { environment } from 'src/environments/environment'
 import type { RssFeed } from './rssfeed'
 
 @Injectable({
@@ -16,14 +17,8 @@ export class RssFeedService {
 
   constructor(private http: HttpClient) {}
 
-  getRssFeed(
-    ip: string,
-    id: string,
-    category: CategoryType,
-    index: number,
-    extraDataSource: ExtraDataMedia,
-  ): Observable<Media[]> {
-    this.url = `http://${ip}:8200/api/rssfeed?url=${id}`
+  getRssFeed(id: string, category: CategoryType, index: number, extraDataSource: ExtraDataMedia): Observable<Media[]> {
+    this.url = `${environment.backend.apiUrl}/rssfeed?url=${id}`
     return this.http.get(this.url /*, { responseType: 'text' }*/).pipe(
       //switchMap(async (xml) => await this.parseXmlToJsonRss(xml)),
       map((response: RssFeed) => {

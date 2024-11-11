@@ -14,7 +14,6 @@ import type { CurrentShow } from './current.show'
 import type { CurrentSpotify } from './current.spotify'
 import { Mupihat } from './mupihat'
 import type { Network } from './network'
-import { PlayerService } from './player.service'
 import { RssFeedService } from './rssfeed.service'
 import { SpotifyService } from './spotify.service'
 import type { WLAN } from './wlan'
@@ -23,9 +22,7 @@ import type { WLAN } from './wlan'
   providedIn: 'root',
 })
 export class MediaService {
-  ip: string
   response = ''
-  private category: CategoryType = 'audiobook'
   public readonly current$: Observable<CurrentSpotify>
   public readonly local$: Observable<CurrentMPlayer>
   public readonly network$: Observable<Network>
@@ -41,54 +38,48 @@ export class MediaService {
     private http: HttpClient,
     private spotifyService: SpotifyService,
     private rssFeedService: RssFeedService,
-    private playerService: PlayerService,
   ) {
-    this.playerService.getConfig().subscribe((config) => {
-      if (config.ip) {
-        this.ip = config.ip
-      } else {
-        this.ip = config.server
-      }
-    })
-
     // Prepare subscriptions.
     // shareReplay replays the most recent (bufferSize) emission on each subscription
     // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
     this.current$ = interval(1000).pipe(
-      switchMap((): Observable<CurrentSpotify> => this.http.get<CurrentSpotify>(`http://${this.ip}:5005/state`)),
+      switchMap((): Observable<CurrentSpotify> => this.http.get<CurrentSpotify>(`${this.getPlayerBackendUrl()}/state`)),
       shareReplay({ bufferSize: 1, refCount: false }),
     )
     this.local$ = interval(1000).pipe(
-      switchMap((): Observable<CurrentMPlayer> => this.http.get<CurrentMPlayer>(`http://${this.ip}:5005/local`)),
+      switchMap((): Observable<CurrentMPlayer> => this.http.get<CurrentMPlayer>(`${this.getPlayerBackendUrl()}/local`)),
       shareReplay({ bufferSize: 1, refCount: false }),
     )
     this.playlist$ = interval(1000).pipe(
       switchMap(
-        (): Observable<CurrentPlaylist> => this.http.get<CurrentPlaylist>(`http://${this.ip}:5005/playlistTracks`),
+        (): Observable<CurrentPlaylist> =>
+          this.http.get<CurrentPlaylist>(`${this.getPlayerBackendUrl()}/playlistTracks`),
       ),
       shareReplay({ bufferSize: 1, refCount: false }),
     )
     this.episode$ = interval(1000).pipe(
-      switchMap((): Observable<CurrentEpisode> => this.http.get<CurrentEpisode>(`http://${this.ip}:5005/episode`)),
+      switchMap(
+        (): Observable<CurrentEpisode> => this.http.get<CurrentEpisode>(`${this.getPlayerBackendUrl()}/episode`),
+      ),
       shareReplay({ bufferSize: 1, refCount: false }),
     )
     this.show$ = interval(1000).pipe(
-      switchMap((): Observable<CurrentShow> => this.http.get<CurrentShow>(`http://${this.ip}:5005/show`)),
+      switchMap((): Observable<CurrentShow> => this.http.get<CurrentShow>(`${this.getPlayerBackendUrl()}/show`)),
       shareReplay({ bufferSize: 1, refCount: false }),
     )
     // 5 seconds is enough for wifi update and showing/hiding media.
     // Use timer so the first request is after 300ms.
     this.network$ = timer(300, 5000).pipe(
-      switchMap((): Observable<Network> => this.http.get<Network>(`http://${this.ip}:8200/api/network`)),
+      switchMap((): Observable<Network> => this.http.get<Network>(`${this.getApiBackendUrl()}/network`)),
       shareReplay({ bufferSize: 1, refCount: false }),
     )
     this.albumStop$ = interval(1000).pipe(
-      switchMap((): Observable<AlbumStop> => this.http.get<AlbumStop>(`http://${this.ip}:8200/api/albumstop`)),
+      switchMap((): Observable<AlbumStop> => this.http.get<AlbumStop>(`${this.getApiBackendUrl()}/albumstop`)),
       shareReplay({ bufferSize: 1, refCount: false }),
     )
     // Every 2 seconds should be enough for timely charging update.
     this.mupihat$ = interval(2000).pipe(
-      switchMap((): Observable<Mupihat> => this.http.get<Mupihat>(`http://${this.ip}:8200/api/mupihat`)),
+      switchMap((): Observable<Mupihat> => this.http.get<Mupihat>(`${this.getApiBackendUrl()}/mupihat`)),
       shareReplay({ bufferSize: 1, refCount: false }),
     )
   }
@@ -106,18 +97,18 @@ export class MediaService {
   }
 
   public fetchRawMedia(): Observable<Media[]> {
-    return this.http.get<Media[]>(`${this.getAPIBaseUrl()}/data`)
+    return this.http.get<Media[]>(`${this.getApiBackendUrl()}/data`)
   }
 
   updateWLAN() {
-    const url = `${this.getAPIBaseUrl()}/wlan`
+    const url = `${this.getApiBackendUrl()}/wlan`
     this.http.get<WLAN[]>(url).subscribe((wlan) => {
       this.wlanSubject.next(wlan)
     })
   }
 
   deleteRawMediaAtIndex(index: number) {
-    const url = `${this.getAPIBaseUrl()}/delete`
+    const url = `${this.getApiBackendUrl()}/delete`
     const body = {
       index,
     }
@@ -128,7 +119,7 @@ export class MediaService {
   }
 
   editRawMediaAtIndex(index: number, data: Media) {
-    const url = `${this.getAPIBaseUrl()}/edit`
+    const url = `${this.getApiBackendUrl()}/edit`
     const body = {
       index,
       data,
@@ -140,7 +131,7 @@ export class MediaService {
   }
 
   addRawMedia(media: Media) {
-    const url = `${this.getAPIBaseUrl()}/add`
+    const url = `${this.getApiBackendUrl()}/add`
 
     this.http.post(url, media, { responseType: 'text' }).subscribe((response) => {
       this.response = response
@@ -148,7 +139,7 @@ export class MediaService {
   }
 
   editRawResumeAtIndex(index: number, data: Media) {
-    const url = `${this.getAPIBaseUrl()}/editresume`
+    const url = `${this.getApiBackendUrl()}/editresume`
     const body = {
       index,
       data,
@@ -160,7 +151,7 @@ export class MediaService {
   }
 
   addRawResume(media: Media) {
-    const url = `${this.getAPIBaseUrl()}/addresume`
+    const url = `${this.getApiBackendUrl()}/addresume`
 
     this.http.post(url, media, { responseType: 'text' }).subscribe((response) => {
       this.response = response
@@ -168,7 +159,7 @@ export class MediaService {
   }
 
   addWLAN(wlan: WLAN) {
-    const url = `${this.getAPIBaseUrl()}/addwlan`
+    const url = `${this.getApiBackendUrl()}/addwlan`
 
     this.http.post(url, wlan).subscribe((response) => {
       //this.response = response;
@@ -253,7 +244,7 @@ export class MediaService {
 
   public fetchActiveResumeData(): Observable<Media[]> {
     // Category is irrelevant if 'resume' is set to true.
-    return this.updateMedia(`${this.getAPIBaseUrl()}/activeresume`, true, 'resume').pipe(
+    return this.updateMedia(`${this.getApiBackendUrl()}/activeresume`, true, 'resume').pipe(
       map((media: Media[]) => {
         return media.reverse()
       }),
@@ -261,7 +252,7 @@ export class MediaService {
   }
 
   private fetchMedia(category: CategoryType): Observable<Media[]> {
-    return this.updateMedia(`${this.getAPIBaseUrl()}/data`, false, category)
+    return this.updateMedia(`${this.getApiBackendUrl()}/data`, false, category)
   }
 
   // Get the media data for the current category from the server
@@ -358,7 +349,7 @@ export class MediaService {
                       // Get media by rss feed
                       () => !!(item.type === 'rss' && item.id.length > 0 && item.category !== 'resume'),
                       this.rssFeedService
-                        .getRssFeed(this.ip, item.id, item.category, item.index, item)
+                        .getRssFeed(item.id, item.category, item.index, item)
                         .pipe(overwriteArtist(item)),
                       iif(
                         // Get media by album (resume).
@@ -410,12 +401,11 @@ export class MediaService {
     return tmpResponse
   }
 
-  // Choose which media category should be displayed in the app
-  setCategory(category: CategoryType) {
-    this.category = category
+  private getApiBackendUrl(): string {
+    return environment.backend.apiUrl
   }
 
-  public getAPIBaseUrl(): string {
+  private getPlayerBackendUrl(): string {
     return environment.backend.apiUrl
   }
 }
