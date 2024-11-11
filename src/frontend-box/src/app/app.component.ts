@@ -3,10 +3,9 @@ import { IonApp, IonRouterOutlet } from '@ionic/angular/standalone'
 import { Observable, distinctUntilChanged, interval, map, switchMap } from 'rxjs'
 
 import { HttpClient } from '@angular/common/http'
-import { MediaService } from './media.service'
-import { Monitor } from './monitor'
-import { environment } from 'src/environments/environment'
 import { toSignal } from '@angular/core/rxjs-interop'
+import { environment } from 'src/environments/environment'
+import { Monitor } from './monitor'
 
 @Component({
   selector: 'app-root',
