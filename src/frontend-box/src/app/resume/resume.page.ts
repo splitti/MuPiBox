@@ -8,6 +8,7 @@ import { SwiperComponent, SwiperData } from '../swiper/swiper.component'
 import { HttpClient } from '@angular/common/http'
 import { addIcons } from 'ionicons'
 import { arrowBackOutline } from 'ionicons/icons'
+import { environment } from 'src/environments/environment'
 import { ArtworkService } from '../artwork.service'
 import { LoadingComponent } from '../loading/loading.component'
 import { Media } from '../media'
@@ -78,7 +79,7 @@ export class ResumePage extends SwiperIonicEventsHelper {
     // We need to set the original index (this comes from the mismatch between us editing the original
     // data in the player page but showing only the "active" data on this page).
     // This will not be needed once we filter "online" unavailable media in the frontend.
-    lastValueFrom(this.http.get<Media[]>(`${this.mediaService.getAPIBaseUrl()}/resume`))
+    lastValueFrom(this.http.get<Media[]>(`${environment.backend.apiUrl}/resume`))
       .then((resumemedia) => {
         clickedMedia.index = -1
         for (let i = 0; i < resumemedia.length; i++) {

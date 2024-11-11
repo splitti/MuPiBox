@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, Signal, WritableSignal, computed, effect, signal } from '@angular/core'
+import { ChangeDetectionStrategy, Component, Signal, WritableSignal, computed, signal } from '@angular/core'
 import { toObservable, toSignal } from '@angular/core/rxjs-interop'
 import { NavigationExtras, Router } from '@angular/router'
 import {
@@ -96,10 +96,6 @@ export class HomePage extends SwiperIonicEventsHelper {
           data: artist,
         }
       })
-    })
-
-    effect(() => {
-      this.mediaService.setCategory(this.category())
     })
   }
 
