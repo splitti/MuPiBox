@@ -6,9 +6,12 @@
   "configurations": [
     {
       "name": "Launch: backend-api",
-      "program": "${workspaceFolder}/src/backend-api/src/server.js",
+      "program": "${workspaceFolder}/src/backend-api/src/server.ts",
       "request": "launch",
       "type": "node",
+      "runtimeExecutable": "tsx",
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
       "env": {
         "NODE_ENV": "development"
       },
