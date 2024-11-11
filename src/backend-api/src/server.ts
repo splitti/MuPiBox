@@ -1,13 +1,13 @@
-import { ServerConfig } from './models/server.model'
-import SpotifyWebApi from 'spotify-web-api-node'
+import fs from 'node:fs'
+import { readFile } from 'node:fs/promises'
+import path from 'node:path'
 import cors from 'cors'
 import express from 'express'
-import fs from 'node:fs'
 import jsonfile from 'jsonfile'
 import ky from 'ky'
-import path from 'node:path'
-import { readFile } from 'node:fs/promises'
+import SpotifyWebApi from 'spotify-web-api-node'
 import xmlparser from 'xml-js'
+import { ServerConfig } from './models/server.model'
 
 const testServe = process.env.NODE_ENV === 'test'
 const devServe = process.env.NODE_ENV === 'development'
@@ -69,15 +69,14 @@ app.get('/api/rssfeed', async (req, res) => {
     res.status(500).send('Given url is not a string.')
     return
   }
-  try {
-    ky.get(rssUrl)
-      .text()
-      .then((response) => {
-        res.send(xmlparser.xml2json(response, { compact: true, nativeType: true }))
-      })
-  } catch {
-    res.status(500).send('External url responded with error code.')
-  }
+  ky.get(rssUrl)
+    .text()
+    .then((response) => {
+      res.send(xmlparser.xml2json(response, { compact: true, nativeType: true }))
+    })
+    .catch(() => {
+      res.status(500).send('External url responded with error code.')
+    })
 })
 
 app.get('/api/data', (req, res) => {
