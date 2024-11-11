@@ -297,7 +297,7 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 <p></p>
 <script>
 	const spotifyDeviceIdSelectBox = document.getElementById("spotdevice");
-	const deviceListUrl = 'http://<?= $data['mupibox']['host'] ?>:5005/getDevices';
+	const deviceListUrl = 'http://<?= $_SERVER['HTTP_HOST'] ?>:5005/getDevices';
 	const currentDeviceId = '<?= $data['spotify']['deviceId'] ?>';
 	const currentDeviceIdField = document.getElementById("spotify_devicename");
 	const fetchSpotifyDevices = async () => {
