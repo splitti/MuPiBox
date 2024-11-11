@@ -6,7 +6,7 @@
   "scripts": {
     "serve": "cross-env NODE_ENV=development tsx watch src/server.ts",
     "build": "npm run check-types && esbuild src/server.ts --bundle --minify --platform=node --target=node22 --metafile=backend-api.esbuild-meta.json --outfile=../deploy/server.js",
-    "test": "",
+    "test": "cross-env NODE_ENV=test tsx --test src/*.spec.ts",
     "lint": "npx @biomejs/biome check .",
     "lint:fix": "npx @biomejs/biome check --fix .",
     "check-types": "npx tsc --noEmit"
@@ -15,19 +15,21 @@
     "cors": "^2.8.5",
     "express": "^4.21.1",
     "jsonfile": "^6.1.0",
-    "request": "^2.88.2",
+    "ky": "1.7.2",
     "spotify-web-api-node": "^5.0.2",
     "xml-js": "^1.6.11"
   },
   "devDependencies": {
-    "typescript": "5.6.3",
-    "@types/node": "22.9.0",
     "@types/express": "5.0.0",
     "@types/jsonfile": "6.1.4",
+    "@types/node": "22.9.0",
     "@types/spotify-web-api-node": "5.0.11",
-    "@types/request": "2.48.12",
+    "@types/supertest": "6.0.2",
     "esbuild": "0.24.0",
-    "tsx": "4.19.2"
+    "nock": "^14.0.0-beta.15",
+    "supertest": "7.0.0",
+    "tsx": "4.19.2",
+    "typescript": "5.6.3"
   },
   "description": "API backend server for the MupiBox.",
   "private": true,
