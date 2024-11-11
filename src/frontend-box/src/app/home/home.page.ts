@@ -1,13 +1,4 @@
-import {
-  CUSTOM_ELEMENTS_SCHEMA,
-  ChangeDetectionStrategy,
-  Component,
-  Signal,
-  WritableSignal,
-  computed,
-  effect,
-  signal,
-} from '@angular/core'
+import { ChangeDetectionStrategy, Component, Signal, WritableSignal, computed, effect, signal } from '@angular/core'
 import { toObservable, toSignal } from '@angular/core/rxjs-interop'
 import { NavigationExtras, Router } from '@angular/router'
 import {
@@ -43,7 +34,6 @@ import { SwiperIonicEventsHelper } from '../swiper/swiper-ionic-events-helper'
   selector: 'app-home',
   templateUrl: 'home.page.html',
   styleUrls: ['home.page.scss'],
-  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   imports: [
     MupiHatIconComponent,
     LoadingComponent,
@@ -91,7 +81,7 @@ export class HomePage extends SwiperIonicEventsHelper {
             }),
           )
         }),
-        tap(() => this.resetSliderPosition()),
+        tap(() => this.resetSwiperPosition()),
         tap(() => this.isLoading.set(false)),
       ),
     )

@@ -5,7 +5,7 @@ import { SwiperComponent } from './swiper.component'
 /**
  * Pages using the {@link SwiperComponent} should extend this class
  * so that the {@link SwiperComponent} gets notified of ionic navitation events.
- * It also provides a utlity function {@link resetSliderPosition} to reset the slider
+ * It also provides a utlity function {@link resetSwiperPosition} to reset the slider
  * to the first slide.
  */
 @Directive()
@@ -21,9 +21,9 @@ export class SwiperIonicEventsHelper {
   }
 
   /**
-   * Reset slider position to first slide.
+   * Reset swiper position to first slide.
    */
-  public resetSliderPosition(): void {
+  public resetSwiperPosition(): void {
     this.swiperComponent().resetSwiperPosition()
   }
 }
