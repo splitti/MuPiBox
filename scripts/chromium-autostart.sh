@@ -66,7 +66,8 @@ STARTX='xinit'
 [ "$USER" = 'root' ] || STARTX='startx'
 
 #sudo nice -n -19 sudo -u dietpi xinit "$FP_CHROMIUM" $CHROMIUM_OPTS --homepage "${URL:-http://MuPiBox:8200}" -- -nocursor tty2 &
-exec "$STARTX" "$FP_CHROMIUM" $CHROMIUM_OPTS --homepage "${URL:-http://MuPiBox:8200}" -- -nocursor tty2 &
+#exec "$STARTX" "$FP_CHROMIUM" $CHROMIUM_OPTS --homepage "${URL:-http://MuPiBox:8200}" -- -nocursor tty2 &
+exec "$STARTX" "$FP_CHROMIUM" $CHROMIUM_OPTS --homepage "http://localhost:8200" -- -nocursor tty2 &
 
 # BLUETOOTH
 pactl load-module module-bluetooth-discover
