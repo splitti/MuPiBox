@@ -1,14 +1,16 @@
 {
-  "name": "app",
+  "name": "mupibox-frontend-app",
   "version": "0.1.0",
+  "author": "Mupi Team",
+  "homepage": "https://github.com/splitti/mupibox",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve",
-    "build": "ng build",
-    "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "serve": "ng serve",
+    "build": "ng build --configuration production --output-path=../deploy/app",
+    "test": "ng test",
+    "lint": "npx @biomejs/biome check .",
+    "lint:fix": "npx @biomejs/biome check --fix ."
   },
-  "private": true,
   "dependencies": {
     "@angular/animations": "^18.2.0",
     "@angular/common": "^18.2.0",
@@ -18,9 +20,9 @@
     "@angular/platform-browser": "^18.2.0",
     "@angular/platform-browser-dynamic": "^18.2.0",
     "@angular/router": "^18.2.0",
+    "@ionic/angular": "^8.3.2",
     "rxjs": "~7.8.0",
-    "tslib": "^2.3.0",
-    "zone.js": "~0.14.10"
+    "tslib": "^2.3.0"
   },
   "devDependencies": {
     "@angular-devkit/build-angular": "^18.2.7",
@@ -34,5 +36,7 @@
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
     "typescript": "~5.5.2"
-  }
+  },
+  "description": "An app to manage settings for MupiBox.",
+  "private": true
 }
