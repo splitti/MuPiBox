@@ -26,18 +26,18 @@ ion-card-title.ion-text-nowrap.truncate-text {
 }
 
 .mupi-loading-spinner{
-        border-radius: 50% !important;
-        background-color: #054b61;
-        padding:2px;
+        #border-radius: 50% !important;
+        #background-color: #054b61;
+        #padding:2px;
 }
 
 ion-spinner{
-        background-image: url('mupi.png') !important;
+        #background-image: url('mupi.png') !important;
         color: #44afe2 !important;
         #width: 170px !important;
         #height: 170px !important;
-        background-size: 70%;
-        background-position: center; 
-        background-repeat: no-repeat;
-        background-attachment: fixed;
+        #background-size: 70%;
+        #background-position: center; 
+        #background-repeat: no-repeat;
+        #background-attachment: fixed;
 }
