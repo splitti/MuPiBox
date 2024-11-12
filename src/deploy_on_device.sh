@@ -23,7 +23,7 @@ cp -a ./deploy/www/ /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/
 
 # Restore user data.
 mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/
-mv  /tmp/user_data_backup/*.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/
+mv /tmp/user_data_backup/*.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/
 mv /tmp/user_data_backup/cover /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover
 mv /tmp/user_data_backup/active_theme.css /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/active_theme.css
 

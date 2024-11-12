@@ -3,7 +3,7 @@ FROM debian:bookworm-slim
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Ensure we install nodejs 16.
-RUN curl -sL https://deb.nodesource.com/setup_16.x | bash
+RUN curl -sL https://deb.nodesource.com/setup_22.x | bash
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \

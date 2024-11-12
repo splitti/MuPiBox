@@ -19,7 +19,6 @@ CACHE_PATH=$(/usr/bin/jq -r .chromium.cachepath ${CONFIG})
 CACHE_SIZE=$(/usr/bin/jq -r .chromium.cachesize ${CONFIG})
 CACHE_SIZE=$(( $CACHE_SIZE * 1024 * 1024))
 KIOSK=$(/usr/bin/jq -r .chromium.kiosk ${CONFIG})
-URL="http://$(/usr/bin/jq -r .mupibox.host ${CONFIG}):8200"
 CHROMIUM_OPTS=""
 
 # Fast feedback and process control
@@ -66,7 +65,7 @@ STARTX='xinit'
 [ "$USER" = 'root' ] || STARTX='startx'
 
 #sudo nice -n -19 sudo -u dietpi xinit "$FP_CHROMIUM" $CHROMIUM_OPTS --homepage "${URL:-http://MuPiBox:8200}" -- -nocursor tty2 &
-exec "$STARTX" "$FP_CHROMIUM" $CHROMIUM_OPTS --homepage "${URL:-http://MuPiBox:8200}" -- -nocursor tty2 &
+exec "$STARTX" "$FP_CHROMIUM" $CHROMIUM_OPTS --homepage "http://localhost:8200" -- -nocursor tty2 &
 
 # BLUETOOTH
 pactl load-module module-bluetooth-discover
