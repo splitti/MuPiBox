@@ -104,3 +104,7 @@ body .home-content, body .medialist-content, body .player-content{
 body .edit-header, body .add-header, body .admin-header {
 	--ion-color-light: #054b61 !important;
 }
+
+ion-spinner{
+        color: #fd7f39 !important;
+}
