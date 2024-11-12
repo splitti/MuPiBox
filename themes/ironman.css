@@ -24,3 +24,7 @@ ion-card {
 ion-card-title.ion-text-nowrap.truncate-text {
 /*	color: #000000 !important;*/
 }
+
+ion-spinner{
+        color: #FCC200 !important;
+}
