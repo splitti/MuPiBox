@@ -4,14 +4,18 @@ import path from 'node:path'
 import cors from 'cors'
 import express from 'express'
 import jsonfile from 'jsonfile'
-import request from 'request'
+import ky from 'ky'
 import SpotifyWebApi from 'spotify-web-api-node'
 import xmlparser from 'xml-js'
 import { ServerConfig } from './models/server.model'
 
+const testServe = process.env.NODE_ENV === 'test'
+const devServe = process.env.NODE_ENV === 'development'
+const productionServe = !(testServe || devServe)
+
 // Configuration files.
 let configBasePath = './server/config'
-if (process.env.NODE_ENV === 'development') {
+if (!productionServe) {
   configBasePath = './config' // This uses the package.json path as pwd.
 }
 
@@ -43,7 +47,8 @@ const resumeLock = '/tmp/.resume.lock'
 
 const nowDate = new Date()
 
-const app = express()
+// We export the app so we can use it in testing.
+export const app = express()
 app.use(cors())
 app.use(express.json())
 app.use(express.urlencoded({ extended: false }))
@@ -52,7 +57,7 @@ app.use(express.urlencoded({ extended: false }))
 // the Angular development server during development to be able to hot-reload and debug.
 // We explicitely check for !== 'development' for now so we do not need to set this env in
 // production.
-if (process.env.NODE_ENV !== 'development') {
+if (productionServe) {
   // Static path to compiled Angular app
   app.use(express.static(path.join(__dirname, 'www')))
 }
@@ -60,13 +65,18 @@ if (process.env.NODE_ENV !== 'development') {
 // Routes
 app.get('/api/rssfeed', async (req, res) => {
   const rssUrl = req.query.url
-  if (typeof rssUrl === 'string') {
-    request.get(rssUrl, (_error, response, _body) => {
-      res.send(xmlparser.xml2json(response.body, { compact: true, nativeType: true }))
-    })
-  } else {
+  if (typeof rssUrl !== 'string') {
     res.status(500).send('Given url is not a string.')
+    return
   }
+  ky.get(rssUrl)
+    .text()
+    .then((response) => {
+      res.send(xmlparser.xml2json(response, { compact: true, nativeType: true }))
+    })
+    .catch(() => {
+      res.status(500).send('External url responded with error code.')
+    })
 })
 
 app.get('/api/data', (req, res) => {
@@ -163,11 +173,13 @@ app.get('/api/albumstop', (req, res) => {
       if (error) {
         console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error /api/albumstop read albumstop.json`)
         console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] ${error}`)
-        res.json([])
+        res.json({})
       } else {
         res.json(data)
       }
     })
+  } else {
+    res.json({})
   }
 })
 
@@ -438,5 +450,7 @@ const tryReadFile = (filePath: string, retries = 3, delayMs = 1000) => {
   })
 }
 
-app.listen(8200)
-console.log(`${nowDate.toLocaleString()}: [mupibox-backend-api] Server started at http://localhost:8200`)
+if (!testServe) {
+  app.listen(8200)
+  console.log(`${nowDate.toLocaleString()}: [mupibox-backend-api] Server started at http://localhost:8200`)
+}

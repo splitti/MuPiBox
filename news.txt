@@ -41,5 +41,8 @@ We will focus on <b>bookworm</b> and recommend you to update, or reinstall. See 
 <li id='linews' class='linews'>New: Wifi can be added without encryption</li>
 <li id='linews' class='linews'>Bugfix: Fixed the loading spinner to show until loading of track/artists lists is fully done</li>
 <li id='linews' class='linews'>Bugfix: Fixed an issue with showing only a part of albums/tracks (interval function).</li>
+<li id='linews' class='linews'>Bugfix: Resume function</li>
+<li id='linews' class='linews'>Bugfix: Less problems to add spotify</li>
+<li id='linews' class='linews'>Bugfix: Podcasts are added with http to be more perfomant</li>
 
 </ul>

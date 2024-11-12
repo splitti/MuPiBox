@@ -16,7 +16,7 @@ zip -r ../deploy.zip .
 cd ..
 
 # Deploy to bin folder.
-cp deploy.zip ../bin/nodejs/deploy.zip -f
+cp -f deploy.zip ../bin/nodejs/deploy.zip
 
 # Cleanup
 rm -rf deploy

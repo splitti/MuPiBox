@@ -4,7 +4,7 @@ import { Observable, distinctUntilChanged, interval, map, switchMap } from 'rxjs
 
 import { HttpClient } from '@angular/common/http'
 import { toSignal } from '@angular/core/rxjs-interop'
-import { MediaService } from './media.service'
+import { environment } from 'src/environments/environment'
 import { Monitor } from './monitor'
 
 @Component({
@@ -18,14 +18,11 @@ import { Monitor } from './monitor'
 export class AppComponent {
   protected monitorOff: Signal<boolean>
 
-  public constructor(
-    private http: HttpClient,
-    private mediaService: MediaService,
-  ) {
+  public constructor(private http: HttpClient) {
     this.monitorOff = toSignal(
       // 1.5s should be enough to be somewhat "recent".
       interval(1500).pipe(
-        switchMap((): Observable<Monitor> => this.http.get<Monitor>(`${this.mediaService.getAPIBaseUrl()}/monitor`)),
+        switchMap((): Observable<Monitor> => this.http.get<Monitor>(`${environment.backend.apiUrl}/monitor`)),
         map((monitor) => monitor.monitor !== 'On'),
         distinctUntilChanged(),
       ),
