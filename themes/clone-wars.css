@@ -1,72 +1,72 @@
 .player-content ion-range{
-	--knob-background: #4287f5;
-	--bar-background-active: #4287f5;
-	--bar-background: rgba(255,255,255,.2) !important;
+        --knob-background: #4287f5;
+        --bar-background-active: #4287f5;
+        --bar-background: rgba(255,255,255,.2) !important;
 }
 
 .player-content ion-item{
-	--background: transparent !important;
-	box-shadow: 0 0 0 0 !imporant;
+        --background: transparent !important;
+        box-shadow: 0 0 0 0 !imporant;
 }
 
 .ion-page .home-header, .ion-page .home-content, .ion-page .medialist-header, .ion-page .medialist-content, .ion-page .player-header, .ion-page .player-content{
-	--ion-color-light: transparent !important;
+        --ion-color-light: transparent !important;
 }
 
 .ion-page{
-	background-image: url("/theme-data/clone-wars/clone-wars-bg.jpg") !important;
-	background-size: cover !important;
+        background-image: url("/theme-data/clone-wars/clone-wars-bg.jpg") !important;
+        background-size: cover !important;
 }
 
 body .home-content, body .medialist-content, body .player-content{
-	--ion-background-color: transparent !important;
+        --ion-background-color: transparent !important;
 }
 
 /*ion-col ion-button {
-	height: 70px !important;
-	background-color:rgba(255,255,255,.1) !important;
-	margin-bottom:-35px !important;
+        height: 70px !important;
+        background-color:rgba(255,255,255,.1) !important;
+        margin-bottom:-35px !important;
 }*/
 
 @font-face {
-	font-family: "Nasa21";
-	src: url("/theme-data/clone-wars/Starjedi.ttf") format("truetype");
-	font-weight: normal;
-	font-style: normal;
+        font-family: "Star Jedi";
+        src: url("/theme-data/clone-wars/Starjedi.ttf") format("truetype");
+        font-weight: normal;
+        font-style: normal;
         }
 
 
 .home-content .ion-text-nowrap, .medialist-content .ion-text-nowrap {
-	font-family: "Star Jedi" !important;
-	font-size:160% !important;
-	color:#ffffff !important;
+        font-family: "Star Jedi" !important;
+        font-size:120% !important;
+        color:#ffffff !important;
   }
-  
+
   .medialist-header ion-title, .player-header ion-title {
-	color: #ffffff !important;
-	font-family: "Star Jedi" !important;
-	font-size:160% !important;
+        color: #ffffff !important;
+        font-family: "Star Jedi" !important;
+        font-size:120% !important;
 }
 
 
 .medialist-content ion-card, .home-content ion-card {
-	background: transparent !important;
-	box-shadow: 0px 0px 0px 0px !important;	
+        background: transparent !important;
+        box-shadow: 0px 0px 0px 0px !important;
 }
 
 .home-content .circle-card {
-	border: 8px solid rgba(255,255,255,.2) !important;
-	background-color: transparent !important;
+        border: 8px solid rgba(255,255,255,.2) !important;
+        background-color: transparent !important;
 }
 
 .medialist-content ion-card-header, .home-content ion-card-header {
-	border: 0 !important;
-	background: rgba(0,0,0,.4) !important;
-	box-shadow: 10px 20px 0px 0px !important;
+        border: 0 !important;
+        background: rgba(0,0,0,.4) !important;
+        box-shadow: 10px 20px 0px 0px !important;
 }
 
 body .edit-header, body .add-header, body .admin-header {
-	--ion-color-light: #054b61 !important;
+        --ion-color-light: #054b61 !important;
 }
 
 ion-spinner{
