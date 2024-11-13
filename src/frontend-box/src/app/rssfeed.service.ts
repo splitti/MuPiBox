@@ -19,17 +19,18 @@ export class RssFeedService {
 
   getRssFeed(id: string, category: CategoryType, index: number, extraDataSource: ExtraDataMedia): Observable<Media[]> {
     this.url = `${environment.backend.apiUrl}/rssfeed?url=${id}`
-    return this.http.get(this.url /*, { responseType: 'text' }*/).pipe(
+    return this.http.get(this.url).pipe(
       map((response: RssFeed) => {
         return response.rss.channel.item.map((item) => {
+          console.log(item)
           const media: Media = {
             id: item.enclosure?._attributes?.url,
-            artist: response.rss?.channel?.title._text,
-            title: this.extractTitle(item?.title._text), // Verwende extractTitle auf dem Titel
+            artist: this.handleCData(response.rss?.channel?.title),
+            title: this.handleCData(item?.title),
             cover: item['itunes:image']?._attributes?.href,
-            artistcover: response.rss?.channel?.image?.url._text,
-            release_date: item?.pubDate._text,
-            duration: item?.['itunes:duration']._text,
+            artistcover: this.handleCData(response.rss?.channel?.image?.url),
+            release_date: this.handleCData(item?.pubDate),
+            duration: this.handleCData(item?.['itunes:duration']),
             type: 'rss',
             category,
             index,
@@ -43,8 +44,23 @@ export class RssFeedService {
     )
   }
 
-  extractTitle(text: string): string {
-    const cdataMatch = text.match(/<!\[CDATA\[(.*?)\]\]>/)
-    return cdataMatch ? cdataMatch[1] : text // CDATA-Inhalt oder unveränderten Text zurückgeben
+  private handleCData(text?: { _text: string } | { _cdata: string }): string {
+    if (text === undefined) {
+      return 'No title'
+    }
+    if (typeof text === 'string') {
+      return text
+    }
+    // If it is normal text stuff, the element has a _text property.
+    if (typeof text === 'object' && '_text' in text) {
+      return text._text
+    }
+    // It might be a cdata-type stuff. In that case,
+    // xml-js returns an object with a cdata tag, see
+    // https://www.npmjs.com/package/xml-js#sample-conversions
+    if (typeof text === 'object' && '_cdata' in text) {
+      return text._cdata
+    }
+    return 'No title'
   }
 }
