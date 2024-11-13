@@ -126,6 +126,8 @@ imageList['comic'] = new Image(150, 250);
 imageList['comic'].src = "images/comic.png";
 imageList['mystic'] = new Image(150, 250);
 imageList['mystic'].src = "images/mystic.png";
+imageList['clone-wars'] = new Image(150, 250);
+imageList['clone-wars'].src = "images/clone-wars.png";
 
 
 function switchImage() {
