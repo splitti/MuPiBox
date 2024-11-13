@@ -276,6 +276,8 @@ echo "==========================================================================
 	mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/clone-wars >&3 2>&3
 	mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/enterprise >&3 2>&3
 	mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/spiderman >&3 2>&3
+	mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/supermario >&3 2>&3
+	mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/pikachu >&3 2>&3
 	
 	#FANTASY-BUTTERFLIES
 	mv ${MUPI_SRC}/themes/fantasybutterflies/odstemplikBold.otf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/fantasybutterflies/odstemplikBold.otf >&3 2>&3
