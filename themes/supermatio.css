@@ -1,0 +1,74 @@
+.player-content ion-range{
+        --knob-background: #B11313;
+        --bar-background-active: #B11313;
+        --bar-background: rgba(255,255,255,.2) !important;
+}
+
+.player-content ion-item{
+        --background: transparent !important;
+        box-shadow: 0 0 0 0 !imporant;
+}
+
+.ion-page .home-header, .ion-page .home-content, .ion-page .medialist-header, .ion-page .medialist-content, .ion-page .player-header, .ion-page .player-content{
+        --ion-color-light: rgba(177,19,19,.4) !important;
+}
+
+.ion-page{
+        background-image: url("/theme-data/supermario/supermario-bg.jpg") !important;
+        background-size: cover !important;
+}
+
+body .home-content, body .medialist-content, body .player-content{
+        --ion-background-color: transparent !important;
+}
+
+/*ion-col ion-button {
+        height: 70px !important;
+        background-color:rgba(177,19,19,.2) !important;
+        margin-bottom:35px !important;
+}*/
+
+@font-face {
+        font-family: "New Super Mario Font U";
+        src: url("/theme-data/supermario/NewSuperMarioFontU.ttf") format("truetype");
+        font-weight: normal;
+        font-style: normal;
+        }
+
+
+.home-content .ion-text-nowrap, .medialist-content .ion-text-nowrap {
+        font-family: "New Super Mario Font U" !important;
+        font-size:170% !important;
+        color:#ffffff !important;
+  }
+
+  .medialist-header ion-title, .player-header ion-title {
+        color: #ffffff !important;
+        font-family: "Intensa Fuente" !important;
+        font-size:170% !important;
+}
+
+
+.medialist-content ion-card, .home-content ion-card {
+        background: transparent !important;
+        box-shadow: 0px 0px 0px 0px !important;
+}
+
+.home-content .circle-card {
+        border: 8px solid rgba(177,19,19,.4) !important;
+        background-color: transparent !important;
+}
+
+.medialist-content ion-card-header, .home-content ion-card-header {
+        border: 0 !important;
+        background: rgba(177,19,19,.6) !important;
+        box-shadow: 10px 20px 0px 0px !important;
+}
+
+body .edit-header, body .add-header, body .admin-header {
+        --ion-color-light: #054b61 !important;
+}
+
+ion-spinner{
+        color: #ffffff !important;
+}

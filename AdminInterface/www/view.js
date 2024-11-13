@@ -132,6 +132,10 @@ imageList['enterprise'] = new Image(150, 250);
 imageList['enterprise'].src = "images/enterprise.png";
 imageList['spiderman'] = new Image(150, 250);
 imageList['spiderman'].src = "images/spiderman.png";
+imageList['supermario'] = new Image(150, 250);
+imageList['supermario'].src = "images/supermario.png";
+imageList['pikachu'] = new Image(150, 250);
+imageList['pikachu'].src = "images/pikachu.png";
 
 
 function switchImage() {
