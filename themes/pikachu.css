@@ -1,6 +1,6 @@
 .player-content ion-range{
-        --knob-background: #B11313;
-        --bar-background-active: #B11313;
+        --knob-background: #F62D14;
+        --bar-background-active: #FAD61D;
         --bar-background: rgba(255,255,255,.2) !important;
 }
 
@@ -10,7 +10,11 @@
 }
 
 .ion-page .home-header, .ion-page .home-content, .ion-page .medialist-header, .ion-page .medialist-content, .ion-page .player-header, .ion-page .player-content{
-        --ion-color-light: rgba(177,19,19,.4) !important;
+        --ion-color-light: rgba(250, 214, 29,.3) !important;
+}
+
+.player-header ion-icon, .player-content ion-icon, .home-header ion-icon, .medialist-header ion-icon {
+        color: #ffffff !important;
 }
 
 .ion-page{
@@ -55,13 +59,13 @@ body .home-content, body .medialist-content, body .player-content{
 }
 
 .home-content .circle-card {
-        border: 8px solid rgba(177,19,19,.4) !important;
+        border: 8px solid rgba(246, 45, 20,.4) !important;
         background-color: transparent !important;
 }
 
 .medialist-content ion-card-header, .home-content ion-card-header {
         border: 0 !important;
-        background: rgba(177,19,19,.6) !important;
+        background: rgba(250, 214, 29,.6) !important;
         box-shadow: 10px 20px 0px 0px !important;
 }
 
@@ -70,5 +74,5 @@ body .edit-header, body .add-header, body .admin-header {
 }
 
 ion-spinner{
-        color: #ffffff !important;
+        color: #FAD61D !important;
 }

@@ -1,6 +1,6 @@
 .player-content ion-range{
-        --knob-background: #B11313;
-        --bar-background-active: #B11313;
+        --knob-background: #0001fc;
+        --bar-background-active: #fe0002;
         --bar-background: rgba(255,255,255,.2) !important;
 }
 
@@ -10,7 +10,7 @@
 }
 
 .ion-page .home-header, .ion-page .home-content, .ion-page .medialist-header, .ion-page .medialist-content, .ion-page .player-header, .ion-page .player-content{
-        --ion-color-light: rgba(177,19,19,.4) !important;
+        --ion-color-light: rgba(0, 1, 252,.4) !important;
 }
 
 .ion-page{
@@ -42,9 +42,9 @@ body .home-content, body .medialist-content, body .player-content{
         color:#ffffff !important;
   }
 
-  .medialist-header ion-title, .player-header ion-title {
+.medialist-header ion-title, .player-header ion-title {
         color: #ffffff !important;
-        font-family: "Intensa Fuente" !important;
+        font-family: "New Super Mario Font U" !important;
         font-size:170% !important;
 }
 
@@ -55,13 +55,13 @@ body .home-content, body .medialist-content, body .player-content{
 }
 
 .home-content .circle-card {
-        border: 8px solid rgba(177,19,19,.4) !important;
+        border: 8px solid rgba(254, 0, 2,.4) !important;
         background-color: transparent !important;
 }
 
 .medialist-content ion-card-header, .home-content ion-card-header {
         border: 0 !important;
-        background: rgba(177,19,19,.6) !important;
+        background: rgba(254, 0, 2,.6) !important;
         box-shadow: 10px 20px 0px 0px !important;
 }
 
@@ -70,5 +70,5 @@ body .edit-header, body .add-header, body .admin-header {
 }
 
 ion-spinner{
-        color: #ffffff !important;
+        color: #0001fc !important;
 }
