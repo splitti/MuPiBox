@@ -138,7 +138,8 @@ imageList['pikachu'] = new Image(150, 250);
 imageList['pikachu'].src = "images/pikachu.png";
 imageList['dinosaur'] = new Image(150, 250);
 imageList['dinosaur'].src = "images/dinosaur.png";
-
+imageList['unicorn'] = new Image(150, 250);
+imageList['unicorn'].src = "images/unicorn.png";
 
 function switchImage() {
     var selectedImage = document.mupi.theme.options[document.mupi.theme.selectedIndex].value;
