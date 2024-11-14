@@ -280,6 +280,7 @@ echo "==========================================================================
 	mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/pikachu >&3 2>&3
 	mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/dinosaur >&3 2>&3
 	mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/unicorn >&3 2>&3
+	mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/axolotl >&3 2>&3
 	
 	#FANTASY-BUTTERFLIES
 	mv ${MUPI_SRC}/themes/fantasybutterflies/odstemplikBold.otf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/fantasybutterflies/odstemplikBold.otf >&3 2>&3
@@ -333,6 +334,10 @@ echo "==========================================================================
 	#UNICORN
 	mv ${MUPI_SRC}/themes/unicorn/Tangerine_Regular.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/unicorn/Tangerine_Regular.ttf >&3 2>&3
 	mv ${MUPI_SRC}/themes/unicorn/unicorn-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/unicorn/unicorn-bg.jpg >&3 2>&3
+
+	#AXOLOTOL
+	mv ${MUPI_SRC}/themes/axolotl/Tangerine_Regular.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/axolotl/Tangerine_Regular.ttf >&3 2>&3
+	mv ${MUPI_SRC}/themes/axolotl/axolotl-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/axolotl/axolotl-bg.jpg >&3 2>&3
 
 	#EARTH
 	mv ${MUPI_SRC}/themes/earth/earth-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/earth/earth-bg.jpg >&3 2>&3

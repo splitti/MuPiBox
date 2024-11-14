@@ -14,7 +14,7 @@
 }
 
 .ion-page{
-        background-image: url("/theme-data/unicorn/unicorn-bg.jpg") !important;
+        background-image: url("/theme-data/axolotl/axolotl-bg.jpg") !important;
         background-size: cover !important;
 }
 
@@ -30,7 +30,7 @@ body .home-content, body .medialist-content, body .player-content{
 
 @font-face {
         font-family: "Tangerine";
-        src: url("/theme-data/unicorn/Tangerine_Regular.ttf") format("truetype");
+        src: url("/theme-data/axolotl/Tangerine_Regular.ttf") format("truetype");
         font-weight: normal;
         font-style: normal;
         }

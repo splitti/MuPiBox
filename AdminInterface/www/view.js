@@ -140,6 +140,8 @@ imageList['dinosaur'] = new Image(150, 250);
 imageList['dinosaur'].src = "images/dinosaur.png";
 imageList['unicorn'] = new Image(150, 250);
 imageList['unicorn'].src = "images/unicorn.png";
+imageList['axolotl'] = new Image(150, 250);
+imageList['axolotl'].src = "images/axolotl.png";
 
 function switchImage() {
     var selectedImage = document.mupi.theme.options[document.mupi.theme.selectedIndex].value;
