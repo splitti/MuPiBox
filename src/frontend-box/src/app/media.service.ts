@@ -406,6 +406,6 @@ export class MediaService {
   }
 
   private getPlayerBackendUrl(): string {
-    return environment.backend.apiUrl
+    return environment.backend.playerUrl
   }
 }
