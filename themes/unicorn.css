@@ -29,22 +29,22 @@ body .home-content, body .medialist-content, body .player-content{
 }*/
 
 @font-face {
-        font-family: "Tangerine";
-        src: url("/theme-data/unicorn/Tangerine_Regular.ttf") format("truetype");
+        font-family: "Magnolia Script";
+        src: url("/theme-data/unicorn/MagnoliaScript.ttf") format("truetype");
         font-weight: normal;
         font-style: normal;
         }
 
 
 .home-content .ion-text-nowrap, .medialist-content .ion-text-nowrap {
-        font-family: "Tangerine" !important;
+        font-family: "Magnolia Script" !important;
         font-size:160% !important;
         color:#ffffff !important;
   }
 
 .medialist-header ion-title, .player-header ion-title {
         color: #ffffff !important;
-        font-family: "Tangerine" !important;
+        font-family: "Magnolia Script" !important;
         font-size:160% !important;
 }
 
