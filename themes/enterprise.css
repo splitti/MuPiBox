@@ -42,7 +42,7 @@ body .home-content, body .medialist-content, body .player-content{
 	color:#ffffff !important;
   }
   
-  .medialist-header ion-title, .player-header ion-title {
+.medialist-header ion-title, .player-header ion-title {
 	color: #ffffff !important;
 	font-family: "Nasa21" !important;
 	font-size:160% !important;

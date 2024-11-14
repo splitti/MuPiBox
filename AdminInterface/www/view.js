@@ -136,6 +136,8 @@ imageList['supermario'] = new Image(150, 250);
 imageList['supermario'].src = "images/supermario.png";
 imageList['pikachu'] = new Image(150, 250);
 imageList['pikachu'].src = "images/pikachu.png";
+imageList['dinosaur'] = new Image(150, 250);
+imageList['dinosaur'].src = "images/dinosaur.png";
 
 
 function switchImage() {
