@@ -126,7 +126,22 @@ imageList['comic'] = new Image(150, 250);
 imageList['comic'].src = "images/comic.png";
 imageList['mystic'] = new Image(150, 250);
 imageList['mystic'].src = "images/mystic.png";
-
+imageList['clone-wars'] = new Image(150, 250);
+imageList['clone-wars'].src = "images/clone-wars.png";
+imageList['enterprise'] = new Image(150, 250);
+imageList['enterprise'].src = "images/enterprise.png";
+imageList['spiderman'] = new Image(150, 250);
+imageList['spiderman'].src = "images/spiderman.png";
+imageList['supermario'] = new Image(150, 250);
+imageList['supermario'].src = "images/supermario.png";
+imageList['pikachu'] = new Image(150, 250);
+imageList['pikachu'].src = "images/pikachu.png";
+imageList['dinosaur'] = new Image(150, 250);
+imageList['dinosaur'].src = "images/dinosaur.png";
+imageList['unicorn'] = new Image(150, 250);
+imageList['unicorn'].src = "images/unicorn.png";
+imageList['axolotl'] = new Image(150, 250);
+imageList['axolotl'].src = "images/axolotl.png";
 
 function switchImage() {
     var selectedImage = document.mupi.theme.options[document.mupi.theme.selectedIndex].value;
