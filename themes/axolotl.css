@@ -30,7 +30,7 @@ body .home-content, body .medialist-content, body .player-content{
 
 @font-face {
         font-family: "Magnolia Script";
-        src: url("/theme-data/unicorn/MagnoliaScript.ttf") format("truetype");
+        src: url("/theme-data/unicorn/MagnoliaScript.otf") format("opentype");
         font-weight: normal;
         font-style: normal;
         }
