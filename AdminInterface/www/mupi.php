@@ -515,7 +515,7 @@ if( $_POST['fan_control'] )
 			$final_file = "/home/dietpi/MuPiBox/themes/custom-bg.jpg";
 			#$linked_file = "/home/dietpi/MuPiBox/themes/custom-bg.jpg";
 			exec("sudo mv ".$target_file." ".$final_file);
-			if (file_exists($filename))
+			if (file_exists($final_file))
 				{
 				$CHANGE_TXT=$CHANGE_TXT."<li>Image upload completed!</li>";
 				} 
