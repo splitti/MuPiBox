@@ -1,6 +1,12 @@
 import { IonicRouteStrategy, provideIonicAngular } from '@ionic/angular/standalone'
+import {
+  NgZone,
+  enableProdMode,
+  importProvidersFrom,
+  provideExperimentalZonelessChangeDetection,
+  ɵNoopNgZone,
+} from '@angular/core'
 import { RouteReuseStrategy, provideRouter } from '@angular/router'
-import { enableProdMode, provideExperimentalZonelessChangeDetection } from '@angular/core'
 
 import { AppComponent } from './app/app.component'
 import { bootstrapApplication } from '@angular/platform-browser'
@@ -13,9 +19,13 @@ if (environment.production) {
 
 bootstrapApplication(AppComponent, {
   providers: [
-    provideExperimentalZonelessChangeDetection(),
+    // Currently we cannot use standalone components together with zoneless apparently.
+    // { provide: NgZone, useClass: ɵNoopNgZone },
+    // provideExperimentalZonelessChangeDetection(),
     { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
     provideIonicAngular({ mode: 'md' }),
     provideRouter(routes),
   ],
-}).catch((err) => console.error(err))
+}).catch((err) => {
+  console.error(err)
+})
