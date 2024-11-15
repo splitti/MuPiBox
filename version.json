@@ -38,6 +38,11 @@
 			"version": "4.0.5",
 			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/4.0.5.zip",
 			"releaseinfo": "Telegram makeover, MQTT support, Resume makeover, UI makeover for adding media, MuPiHAT supportm PWM-Fan support, new themes and many more... Bug fixes: volume when switching off, shutdown MuPiHAT"
+			},
+			{
+			"version": "4.2.0",
+			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/4.2.0.zip",
+			"releaseinfo": "New nodejs, jq and librespot version, network roaming, sort options for albums, WiFi without encryption, new themes, custom theme, bugfixes"
 			}
 		],
 		"stable": [

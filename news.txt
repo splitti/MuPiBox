@@ -31,19 +31,23 @@ We will focus on <b>bookworm</b> and recommend you to update, or reinstall. See 
 <li id='linews' class='linews'>Bugfix: Theme cannot be set</li>
 <li id='linews' class='linews'>Bugfix: Fixing bluetooth problems</li>
 </ul>
-<h3>Next Release</h3>
+<h3>Beta Release</h3>
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>Update: jq Version 1.7.1 (performance improvements)</li>
 <li id='linews' class='linews'>Update: librespot (instead of spotifyd)</li>
+<li id='linews' class='linews'>Update: NodeJS 22</li>
 <li id='linews' class='linews'>New: Basic network roaming</li>
 <li id='linews' class='linews'>New: The sorting of albums/tracks can now be set when adding or editing an entry</li>
 <li id='linews' class='linews'>New: Disabled the Chrome gesture control which can lead to unwanted navigation</li>
 <li id='linews' class='linews'>New: Wifi can be added without encryption</li>
 <li id='linews' class='linews'>New: Cool themes</li>
+<li id='linews' class='linews'>New: Custom theme (upload your favourite Background image)</li>
 <li id='linews' class='linews'>Bugfix: Fixed the loading spinner to show until loading of track/artists lists is fully done</li>
 <li id='linews' class='linews'>Bugfix: Fixed an issue with showing only a part of albums/tracks (interval function).</li>
 <li id='linews' class='linews'>Bugfix: Resume function</li>
 <li id='linews' class='linews'>Bugfix: Less problems to add spotify</li>
 <li id='linews' class='linews'>Bugfix: Podcasts are added with http to be more perfomant</li>
-
+</ul>
+<h3>Next Release</h3>
+<ul id='ulnews' class='ulnews'>
 </ul>
