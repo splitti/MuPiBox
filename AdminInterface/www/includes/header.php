@@ -49,9 +49,9 @@
 		<link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.5.1/css/all.css">
 		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 		<title>MuPiBox Admin-Interface</title>
-		<link rel="stylesheet" type="text/css" href="view.css?v=7.1.11" media="all">
+		<link rel="stylesheet" type="text/css" href="view.css?v=7.1.12" media="all">
 		<script src="https://code.iconify.design/iconify-icon/2.0.0/iconify-icon.min.js"></script>
-		<script type="text/javascript" src="view.js?v=6.0.4"></script>
+		<script type="text/javascript" src="view.js?v=6.0.5"></script>
 		<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 		<link rel="icon" type="image/x-icon" href="/images/favicon.ico">
 
