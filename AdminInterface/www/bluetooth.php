@@ -7,8 +7,6 @@
 	default-agent
 	scan on
 	*/
-	$change=0;
-	$CHANGE_TXT="<div id='lbinfo'><ul id='lbinfo'>";
 	include ('includes/header.php');
 
 	if( $_POST['change_btac'] == "enable & start" )

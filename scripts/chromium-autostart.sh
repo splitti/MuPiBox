@@ -22,7 +22,7 @@ KIOSK=$(/usr/bin/jq -r .chromium.kiosk ${CONFIG})
 CHROMIUM_OPTS=""
 
 # Fast feedback and process control
-CHROMIUM_OPTS="--fast --fast-start"
+CHROMIUM_OPTS="--fast --fast-start --skip-gpu-data-loading"
 # FORCE GPU Settings
 if ${FORCE_GPU} ; then
 	CHROMIUM_OPTS="${CHROMIUM_OPTS} --ignore-gpu-blocklist --enable-gpu --use-gl=egl --enable-unsafe-webgpu --enable-gpu-rasterization"

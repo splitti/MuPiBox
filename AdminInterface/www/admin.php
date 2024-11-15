@@ -10,10 +10,8 @@
 		exec("sudo -i -u dietpi /usr/local/bin/mupibox/./restart_kiosk.sh");
 		}
 
-	$change=0;
 	$shutdown=0;
 	$reboot=0;
-	$CHANGE_TXT="<div id='lbinfo'><ul id='lbinfo'>";
 
 	if( $_POST['submitfile'] )
 		{
