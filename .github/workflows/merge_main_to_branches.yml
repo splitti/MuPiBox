@@ -54,6 +54,6 @@ jobs:
           if ! git merge --no-commit ${DEFAULT_BRANCH}; then :; fi
           DELETED_FILES=$(git status | awk '/deleted by us/ {print $4}')
           if [ ! -z "${DELETED_FILES}" ]; then git rm ${DELETED_FILES}; fi
-          git commit --no-edit
+          if ! git commit --no-edit; then :; fi
       - name: Push everything
         run: git push --all --force
