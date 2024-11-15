@@ -3,9 +3,6 @@
 	$dataonline = json_decode($onlinejson, true);
 	include ('includes/header.php');
 
-	$change=0;
-	$CHANGE_TXT="<div id='lbinfo'><ul id='lbinfo'>";
-
 	if( $_POST['change_netboot'] == "activate for next boot" )
 		{
 		$command = "sudo /boot/dietpi/func/dietpi-set_software boot_wait_for_network 1";

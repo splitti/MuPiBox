@@ -1,6 +1,4 @@
 <?php
-	$change=0;
-	$CHANGE_TXT="<div id='lbinfo'><ul id='lbinfo'>";
 	include ('includes/header.php');
 
 	$hdmi_rotate_option[0][0]="0";

@@ -1,9 +1,7 @@
 <?php
-	$change=0;
 	$onlinejson = file_get_contents('https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/mupiboxconfig.json');
 	$dataonline = json_decode($onlinejson, true);
 	include ('includes/header.php');
-	$CHANGE_TXT="<div id='lbinfo'><ul id='lbinfo'>";
 
 	if( $_POST['change_vnc'] == "stop & disable" )
 		{
