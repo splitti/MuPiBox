@@ -26,6 +26,10 @@
 <?php
 	if( $change )
 		{
+		if( $change == 99 )
+			{
+			$CHANGE_TXT=$CHANGE_TXT."</ul></div>";
+			}
 		print '<div class="lightbox"><div class="iframeContainer"><div class="toolbarLB"><div class="closeLB" onclick="lightBoxClose()"><div class="closeLBSym">+</div></div></div><p>'.$CHANGE_TXT.'DONE</p></div></div>';
 		}
 ?>

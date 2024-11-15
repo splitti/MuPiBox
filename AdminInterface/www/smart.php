@@ -1,6 +1,4 @@
 	<?php
-		$change=0;
-		$CHANGE_TXT="<div id='lbinfo'><ul id='lbinfo'>";
 		include ('includes/header.php');
 
 		$command='sudo python3 /usr/local/bin/mupibox/wled_get_data.py -s '.$data["wled"]["com_port"].' -b '.$data["wled"]["baud_rate"].' -j {"v":true}';

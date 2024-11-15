@@ -1,6 +1,4 @@
 <?php
-	$change=0;
-	$CHANGE_TXT="<div id='lbinfo'><ul id='lbinfo'>";
 	$wifiopen="";
 
 	include ('includes/header.php');
