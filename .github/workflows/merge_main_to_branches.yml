@@ -56,4 +56,4 @@ jobs:
           if [ ! -z "${DELETED_FILES}" ]; then git rm ${DELETED_FILES}; fi
           if ! git commit --no-edit; then :; fi
       - name: Push everything
-        run: git push --all --force
+        run: git push --all --tags --force
