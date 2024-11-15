@@ -446,6 +446,90 @@ if( $_POST['fan_control'] )
 	$CHANGE_TXT=$CHANGE_TXT."<li>Start Volume is set to ".$data["mupibox"]["maxVolume"]."% because of max volume setting</li>";
 	$change=2;
 	}
+  
+	if( $_POST['submitfile'] )
+		{
+		$target_dir = "/var/www/";
+		$target_file = $target_dir . "custom-bg.jpg";#basename($_FILES["fileToUpload"]["name"]);
+		$uploadOk = 1;
+		//$FileType = strtolower(pathinfo($target_file,PATHINFO_EXTENSION));
+
+		// never assume the upload succeeded
+		if ($_FILES["fileToUpload"]["error"] !== UPLOAD_ERR_OK) {
+			$CHANGE_TXT=$CHANGE_TXT."<li>Upload failed with error code " . $_FILES["fileToUpload"]["tmp_name"] . "</li>";
+			$uploadOk = 0;
+		}
+		else
+			{
+			$info = getimagesize($_FILES["fileToUpload"]["tmp_name"]);
+			if ($info[2] !== IMAGETYPE_JPEG) {
+				$CHANGE_TXT=$CHANGE_TXT."<li>Wrong file-type. Please upload an image of type jpeg, webp, png or gif.</li>";
+				$uploadOk = 0;
+				}
+			else
+				{
+				if ($info[0] != 800 || $info[1] != 480) 
+					{
+					$scale = max(800 / $info[0], 480 / $info[1]);
+					$newWidth = $info[0] * $scale;
+					$newHeight = $info[1] * $scale;
+
+					$image = imagecreatefromstring(file_get_contents($_FILES["fileToUpload"]["tmp_name"]));
+					if ($image === false)
+						{
+						$CHANGE_TXT .= "<li>Error loading the image file.</li>";
+						$uploadOk = 0;
+						} 
+					else 
+						{
+						$newImage = imagecreatetruecolor($newWidth, $newHeight);
+
+						// Bild kopieren und skalieren
+						imagecopyresampled($newImage, $image, 0, 0, 0, 0, $newWidth, $newHeight, $info[0], $info[1]);
+
+						// Bild speichern
+						imagejpeg($newImage, $target_file, 90); // Bildqualität auf 90 (0-100)
+						
+						imagedestroy($image);
+						imagedestroy($newImage);
+
+						$CHANGE_TXT .= "<li>Image resized to min. 800 X 480px.</li>";
+						}
+					}
+				else
+					{
+					if (move_uploaded_file($_FILES["fileToUpload"]["tmp_name"], $target_file))
+						{
+						$change=1;
+						}
+					else
+						{
+						$change=0;
+						}
+					}
+				}
+			}
+		// Check if $uploadOk is set to 0 by an error
+		if ($uploadOk != 0)
+			{
+			$final_file = "/home/dietpi/MuPiBox/themes/custom-bg.jpg";
+			#$linked_file = "/home/dietpi/MuPiBox/themes/custom-bg.jpg";
+			exec("sudo mv ".$target_file." ".$final_file);
+			if (file_exists($final_file))
+				{
+				$CHANGE_TXT=$CHANGE_TXT."<li>Image upload completed!</li>";
+				} 
+			else 
+				{
+				$CHANGE_TXT=$CHANGE_TXT."<li>ERROR: Error on uploading image!</li>";
+				}
+			}
+		else
+			{
+			$CHANGE_TXT=$CHANGE_TXT."<li>Image upload cancled!</li>";			
+			}
+		$change = 3;
+		}  
  if( $change == 1 )
   {
    $json_object = json_encode($data);
@@ -463,11 +547,12 @@ if( $_POST['fan_control'] )
    exec("sudo mv /tmp/.mupiboxconfig.json /etc/mupibox/mupiboxconfig.json");
    exec("sudo /usr/local/bin/mupibox/./setting_update.sh");
   }
+  
 $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 ?>
 
 
-<form class="appnitro" name="mupi" method="post" action="mupi.php" id="form">
+<form class="appnitro" name="mupi" method="post" action="mupi.php" id="form"  enctype="multipart/form-data">
 <div class="description">
 <h2>MupiBox settings</h2>
 <p>This is the central configuration of your MuPiBox...</p>
@@ -771,6 +856,20 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				<input type="hidden" name="form_id" value="37271" />
 
 				<input id="saveForm" class="button_text" type="submit" name="mupiset" value="Submit" />
+			</li>
+		</ul>
+	</details>
+
+	<details>
+		<summary><i class="fa-solid fa-palette"></i> Custom theme</summary>
+		<ul>
+			<li id="li_1" >
+				<h2>Background image </h2>
+				<p>
+				Please note: Activating the theme in the theme menu. The image should be 800X480px in size, ideally in JPEG format.
+				</p>
+				<input type="file" class="button_text_upload" name="fileToUpload" id="fileToUpload">
+				<input type="submit" class="button_text" value="Upload Image" name="submitfile" >
 			</li>
 		</ul>
 	</details>
