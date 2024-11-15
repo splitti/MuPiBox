@@ -31,7 +31,7 @@ We will focus on <b>bookworm</b> and recommend you to update, or reinstall. See 
 <li id='linews' class='linews'>Bugfix: Theme cannot be set</li>
 <li id='linews' class='linews'>Bugfix: Fixing bluetooth problems</li>
 </ul>
-<h3>Beta Release</h3>
+<h3>Beta Release 4.2.0</h3>
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>Update: jq Version 1.7.1 (performance improvements)</li>
 <li id='linews' class='linews'>Update: librespot (instead of spotifyd)</li>
