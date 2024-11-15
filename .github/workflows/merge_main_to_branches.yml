@@ -15,7 +15,9 @@ jobs:
       - name: Add upstream remote
         run: git remote add upstream https://github.com/splitti/MuPiBox.git
       - name: Gather all new tags from upstream
-        run: NEWTAGS=$(git fetch --tags --force upstream 2>&1 | awk '/\[new tag\]/ {print $4}')
+        run: |
+          NEWTAGS=$(git fetch --tags --force upstream 2>&1 | awk '/\[new tag\]/ {print $4}')
+          echo $NEWTAGS
       - name: Reset existing tags to the ones from origin repository
         run: git fetch --tags --force
       - name: Set user name
@@ -24,6 +26,7 @@ jobs:
           git config --global user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
       - name: Merge tags into develop one by one
         run: |
+          echo $NEWTAGS
           for tag in ${NEWTAGS[@]}
           do
             git merge --no-edit ${tag}
