@@ -1,14 +1,15 @@
-import fs from 'node:fs'
-import { readFile } from 'node:fs/promises'
-import path from 'node:path'
+import { ServerConfig } from './models/server.model'
+import SpotifyWebApi from 'spotify-web-api-node'
 import cors from 'cors'
 import express from 'express'
+import fs from 'node:fs'
 import jsonfile from 'jsonfile'
 import ky from 'ky'
-import SpotifyWebApi from 'spotify-web-api-node'
+import path from 'node:path'
+import { readFile } from 'node:fs/promises'
 import xmlparser from 'xml-js'
-import { ServerConfig } from './models/server.model'
 
+const serverName = 'mupibox-backend-api'
 const testServe = process.env.NODE_ENV === 'test'
 const devServe = process.env.NODE_ENV === 'development'
 const productionServe = !(testServe || devServe)
@@ -19,8 +20,8 @@ if (!productionServe) {
   configBasePath = './config' // This uses the package.json path as pwd.
 }
 
-async function readJsonFile(path: string) {
-  const file = await readFile(path, 'utf8')
+const readJsonFile = async (filePath: fs.PathLike): Promise<any> => {
+  const file = await readFile(filePath, 'utf-8')
   return JSON.parse(file)
 }
 
@@ -63,6 +64,18 @@ if (productionServe) {
 }
 
 // Routes
+app.get('/api/albumgroups', async (_req, res) => {
+  try {
+    const data = await readJsonFile(dataFile)
+
+    console.log(data)
+    res.json(data)
+  } catch (error) {
+    console.error(`${nowDate.toLocaleString()}: [${serverName}] ${error}`)
+    res.json([])
+  }
+})
+
 app.get('/api/rssfeed', async (req, res) => {
   const rssUrl = req.query.url
   if (typeof rssUrl !== 'string') {
@@ -452,5 +465,5 @@ const tryReadFile = (filePath: string, retries = 3, delayMs = 1000) => {
 
 if (!testServe) {
   app.listen(8200)
-  console.log(`${nowDate.toLocaleString()}: [mupibox-backend-api] Server started at http://localhost:8200`)
+  console.log(`${nowDate.toLocaleString()}: [${serverName}] Server started at http://localhost:8200`)
 }

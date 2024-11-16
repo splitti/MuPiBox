@@ -19,9 +19,7 @@
     "@angular/platform-browser-dynamic": "^18.2.7",
     "@angular/router": "^18.2.7",
     "@ionic/angular": "^8.3.2",
-    "swiper": "^11.1.14",
     "rxjs": "~7.8.1",
-    "simple-keyboard": "^3.8.8",
     "tslib": "^2.7.0",
     "zone.js": "~0.14.10",
     "lodash-es": "4.17.21"
@@ -34,8 +32,6 @@
     "@angular/language-service": "^18.2.7",
     "@ionic/angular-toolkit": "^5.0.0",
     "@types/jasmine": "~5.1.4",
-    "@types/jasminewd2": "~2.0.13",
-    "@types/node": "^16",
     "@types/lodash-es": "4.17.12",
     "jasmine-core": "~5.4.0",
     "jasmine-spec-reporter": "~7.0.0",
@@ -46,9 +42,8 @@
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "^2.1.0",
     "karma-spec-reporter": "*",
-    "protractor": "~7.0.0",
     "typescript": "~5.4.5"
   },
-  "description": "Frontend UI running on the MupiBox.",
+  "description": "Frontend app for managing a MupiBox.",
   "private": true
 }
