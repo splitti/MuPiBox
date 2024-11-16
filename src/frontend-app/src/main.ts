@@ -1,17 +1,17 @@
-import { IonicRouteStrategy, provideIonicAngular } from '@ionic/angular/standalone'
-import {
-  NgZone,
-  enableProdMode,
-  importProvidersFrom,
-  provideExperimentalZonelessChangeDetection,
-  ɵNoopNgZone,
-} from '@angular/core'
+import { provideHttpClient, withInterceptorsFromDi, withJsonpSupport } from '@angular/common/http'
+import { enableProdMode, importProvidersFrom } from '@angular/core'
+import { BrowserModule, bootstrapApplication } from '@angular/platform-browser'
 import { RouteReuseStrategy, provideRouter } from '@angular/router'
 
+import { IonicRouteStrategy } from '@ionic/angular/standalone'
+import { provideIonicAngular } from '@ionic/angular/standalone'
+import { register as registerSwiperComponents } from 'swiper/element/bundle'
 import { AppComponent } from './app/app.component'
-import { bootstrapApplication } from '@angular/platform-browser'
-import { environment } from './environments/environment'
 import { routes } from './app/app.routes'
+import { environment } from './environments/environment'
+
+// Register swiper webcomponents before bootstrapping.
+registerSwiperComponents()
 
 if (environment.production) {
   enableProdMode()
@@ -19,13 +19,10 @@ if (environment.production) {
 
 bootstrapApplication(AppComponent, {
   providers: [
-    // Currently we cannot use standalone components together with zoneless apparently.
-    // { provide: NgZone, useClass: ɵNoopNgZone },
-    // provideExperimentalZonelessChangeDetection(),
-    { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
-    provideIonicAngular({ mode: 'md' }),
     provideRouter(routes),
+    importProvidersFrom(BrowserModule),
+    { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
+    provideHttpClient(withInterceptorsFromDi(), withJsonpSupport()),
+    provideIonicAngular({ mode: 'md' }),
   ],
-}).catch((err) => {
-  console.error(err)
-})
+}).catch((err) => console.log(err))

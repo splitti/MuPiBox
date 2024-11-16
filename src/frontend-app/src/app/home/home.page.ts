@@ -1,12 +1,10 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core'
-import { IonApp, IonRouterOutlet } from '@ionic/angular/standalone'
-
 @Component({
-  selector: 'mupiapp-home',
-  standalone: true,
+  selector: 'app-home',
+  templateUrl: 'home.page.html',
+  styleUrls: ['home.page.scss'],
   imports: [],
-  templateUrl: './home.page.html',
-  styleUrl: './home.page.scss',
+  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HomePage {}

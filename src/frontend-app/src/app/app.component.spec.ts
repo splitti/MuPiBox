@@ -1,21 +1,25 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing'
 
+import { ActivatedRoute } from '@angular/router'
 import { AppComponent } from './app.component'
-import { provideExperimentalZonelessChangeDetection } from '@angular/core'
 
 describe('AppComponent', () => {
+  let component: AppComponent
   let fixture: ComponentFixture<AppComponent>
 
-  beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      imports: [AppComponent, provideExperimentalZonelessChangeDetection()],
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [AppComponent],
+      schemas: [],
+      providers: [{ provide: ActivatedRoute, useValue: {} }],
     }).compileComponents()
-    const fixture = TestBed.createComponent(AppComponent)
-    await fixture.whenStable()
+
+    fixture = TestBed.createComponent(AppComponent)
+    component = fixture.componentInstance
+    fixture.detectChanges()
   })
 
   it('should create the app', () => {
-    const app = fixture.componentInstance
-    expect(app).toBeTruthy()
+    expect(component).toBeTruthy()
   })
 })
