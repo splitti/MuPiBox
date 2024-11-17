@@ -1,38 +1,35 @@
+import {
+  AlbumGroup,
+  RadioAlbumGroup,
+  RssAlbumGroup,
+  SpotifyQueryAlbumGroup,
+  SpotifyUrlAlbumGroup,
+  SpotifyUrlType,
+} from './models/albumgroup.model'
+
 import { ServerConfig } from './models/server.model'
-import SpotifyWebApi from 'spotify-web-api-node'
 import cors from 'cors'
+import { environment } from './environment'
 import express from 'express'
 import fs from 'node:fs'
 import jsonfile from 'jsonfile'
 import ky from 'ky'
 import path from 'node:path'
-import { readFile } from 'node:fs/promises'
+import { readJsonFile } from './utils'
+import { spotifyApi } from './spotify'
 import xmlparser from 'xml-js'
 
 const serverName = 'mupibox-backend-api'
-const testServe = process.env.NODE_ENV === 'test'
-const devServe = process.env.NODE_ENV === 'development'
-const productionServe = !(testServe || devServe)
 
 // Configuration files.
 let configBasePath = './server/config'
-if (!productionServe) {
+if (!environment.production) {
   configBasePath = './config' // This uses the package.json path as pwd.
 }
 
-const readJsonFile = async (filePath: fs.PathLike): Promise<any> => {
-  const file = await readFile(filePath, 'utf-8')
-  return JSON.parse(file)
-}
-
 let config: ServerConfig | undefined = undefined
-let spotifyApi: SpotifyWebApi | undefined = undefined
 readJsonFile(`${configBasePath}/config.json`).then((configFile) => {
   config = configFile
-  spotifyApi = new SpotifyWebApi({
-    clientId: config?.spotify?.clientId,
-    clientSecret: config?.spotify?.clientSecret,
-  })
 })
 const dataFile = `${configBasePath}/data.json`
 const resumeFile = `${configBasePath}/resume.json`
@@ -58,18 +55,102 @@ app.use(express.urlencoded({ extended: false }))
 // the Angular development server during development to be able to hot-reload and debug.
 // We explicitely check for !== 'development' for now so we do not need to set this env in
 // production.
-if (productionServe) {
+if (environment.production) {
   // Static path to compiled Angular app
   app.use(express.static(path.join(__dirname, 'www')))
 }
 
 // Routes
+
+const createRadioAlbumGroup = (item: any): RadioAlbumGroup => {
+  return {
+    sourceType: 'radio',
+    name: item.artist,
+    img: undefined,
+    category: item.category,
+    url: item.id,
+  }
+}
+
+const createRssAlbumGroup = (item: any): RssAlbumGroup => {
+  return {
+    sourceType: 'rss',
+    name: item.artist,
+    img: undefined,
+    category: item.category,
+    url: item.id,
+    sorting: item.sorting,
+    // TODO: Range?
+  }
+}
+
+const createSpotifyQueryAlbumGroup = (item: any): SpotifyQueryAlbumGroup => {
+  return {
+    sourceType: 'spotifyQuery',
+    name: item.artist,
+    img: undefined,
+    category: item.category,
+    query: item.query,
+    sorting: item.sorting,
+    // TODO: Range?
+  }
+}
+
+const getSpotifyUrlType = (url: string): SpotifyUrlType => {
+  if (url.includes('artist')) return 'artist'
+  if (url.includes('album')) return 'album'
+  if (url.includes('show')) return 'show'
+  return 'playlist'
+}
+
+const createSpotifyUrlAlbumGroup = (item: any): SpotifyUrlAlbumGroup => {
+  return {
+    sourceType: 'spotifyUrl',
+    name: item.artist,
+    img: undefined,
+    category: item.category,
+    url: item.spotify_url,
+    sorting: item.sorting,
+    urlType: getSpotifyUrlType(item.spotify_url),
+    shuffle: item.shuffle,
+    // TODO: Range?
+  }
+}
+
 app.get('/api/albumgroups', async (_req, res) => {
   try {
     const data = await readJsonFile(dataFile)
+    const out: AlbumGroup[] = []
 
-    console.log(data)
-    res.json(data)
+    for (const item of data) {
+      if (item.type === 'radio') {
+        out.push(createRadioAlbumGroup(item))
+      } else if (item.type === 'rss') {
+        out.push(createRssAlbumGroup(item))
+      } else if (item.type === 'spotify') {
+        if ('query' in item) {
+          out.push(createSpotifyQueryAlbumGroup(item))
+        } else if ('spotify_url' in item) {
+          out.push(createSpotifyUrlAlbumGroup(item))
+        }
+      }
+    }
+
+    // Get the images for the spotify stuff.
+    const promises = await Promise.allSettled(
+      out
+        .filter((items) => items.sourceType === 'spotifyUrl')
+        .map((item) => {
+          if (item.urlType === 'artist') {
+            return spotifyApi?.getArtist(item.url)
+          }
+        }),
+    )
+    console.log(promises)
+
+    // TODO: Local files.
+
+    res.json(out)
   } catch (error) {
     console.error(`${nowDate.toLocaleString()}: [${serverName}] ${error}`)
     res.json([])
@@ -418,20 +499,11 @@ app.get('/api/token', (req, res) => {
     res.status(500).send('Could not intialize Spotify API.')
     return
   }
-  // Retrieve an access token from Spotify
-  spotifyApi.clientCredentialsGrant().then(
-    (data) => {
-      res.status(200).send(data.body.access_token)
-    },
-    (err) => {
-      console.log(
-        `${nowDate.toLocaleString()}: [MuPiBox-Server] Something went wrong when retrieving a new Spotify access token`,
-        err.message,
-      )
-
-      res.status(500).send(err.message)
-    },
-  )
+  if (spotifyApi.getAccessToken() === undefined) {
+    res.status(500).send('Spotify access token not set yet.')
+    return
+  }
+  res.status(200).send(spotifyApi.getAccessToken())
 })
 
 app.get('/api/sonos', (req, res) => {
@@ -463,7 +535,7 @@ const tryReadFile = (filePath: string, retries = 3, delayMs = 1000) => {
   })
 }
 
-if (!testServe) {
+if (!environment.test) {
   app.listen(8200)
   console.log(`${nowDate.toLocaleString()}: [${serverName}] Server started at http://localhost:8200`)
 }
