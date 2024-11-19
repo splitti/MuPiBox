@@ -7,7 +7,7 @@
     "docker:build": "docker build -t mupibox .",
     "docker:start": "docker run -it -v ./src/backend-api/:/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/ -p 80:80 -p 8200:8200 -p 5005:5005 mupibox:latest bash",
     "serve": "concurrently 'npm run serve:admin' 'npm run serve:frontend-app' 'npm run serve:frontend-box' 'npm run serve:backend-api' 'npm run serve:backend-player'",
-    "serve:admin": "cd AdminInterface && php -S 127.0.0.1:8000",
+    "serve:admin": "cd AdminInterface/www && php -S 127.0.0.1:8000",
     "serve:frontend-app": "npm run serve --workspace=mupibox-frontend-app",
     "serve:frontend-box": "npm run serve --workspace=mupibox-frontend-box",
     "serve:backend-api": "npm run serve --workspace=mupibox-backend-api",

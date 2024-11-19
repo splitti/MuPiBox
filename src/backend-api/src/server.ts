@@ -131,22 +131,29 @@ app.get('/api/folders', async (_req, res) => {
 
     // For this, we might need to first set the `artist` field for entries that do
     // not have it set yet.
-    const entriesWithNoArtistField = data.filter((entry) => entry.artist === undefined)
+    const entriesWithoutFolderName = data.filter((entry) => entry.artist === undefined)
     // Now we merge all artists
-    const artistQueries = [
+    const entries = [
       ...chunks(
-        entriesWithNoArtistField.filter((entry) => 'artistid' in entry),
+        entriesWithoutFolderName.filter((entry) => 'showid' in entry),
         50,
       ),
     ]
-    const results = await Promise.allSettled(
-      artistQueries.map((data) => {
-        return spotifyApi?.getArtists(data.map((entry) => entry.artistid)).then((r) => [data, r])
-      }),
-    )
-    for (const query in results) {
-      for ()
+    if (entries.length > 0) {
+      const results = await Promise.allSettled(
+        entries.map((data) => {
+          return spotifyApi
+            ?.getShows(data.map((entry) => entry.showid))
+            .then((r) => r)
+            .catch((error) => console.error(error))
+        }),
+      )
+
+      console.log(JSON.stringify(results))
     }
+    // for (const query in results) {
+    //   for (query)
+    // }
 
     // const folderMap: Map<string, {folder: Folder, }
 
@@ -168,16 +175,16 @@ app.get('/api/folders', async (_req, res) => {
 
     // Get the images for the spotify stuff.
     // TODO: Merge artist queries, up to 50, see https://developer.spotify.com/documentation/web-api/reference/get-multiple-artists
-    const promises = await Promise.allSettled(
-      out
-        .filter((items) => items.sourceType === 'spotifyUrl')
-        .map((item) => {
-          if (item.urlType === 'artist') {
-            return spotifyApi?.getArtist(item.url)
-          }
-        }),
-    )
-    console.log(promises)
+    // const promises = await Promise.allSettled(
+    //   out
+    //     .filter((items) => items.sourceType === 'spotifyUrl')
+    //     .map((item) => {
+    //       if (item.urlType === 'artist') {
+    //         return spotifyApi?.getArtist(item.url)
+    //       }
+    //     }),
+    // )
+    // console.log(promises)
 
     // TODO: Local files.
 
