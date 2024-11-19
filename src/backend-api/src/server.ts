@@ -6,7 +6,7 @@ import {
   SpotifyUrlAlbumGroup,
   SpotifyUrlType,
 } from './models/albumgroup.model'
-import { BaseData, Data } from './models/data.model'
+import { BaseData, Data, SpotifyShowData } from './models/data.model'
 import { chunks, readJsonFile } from './utils'
 
 import { Folder } from './models/folder.model'
@@ -141,15 +141,23 @@ app.get('/api/folders', async (_req, res) => {
     ]
     if (entries.length > 0) {
       const results = await Promise.allSettled(
-        entries.map((data) => {
-          return spotifyApi
-            ?.getShows(data.map((entry) => entry.showid))
-            .then((r) => r)
-            .catch((error) => console.error(error))
+        entries.map((tmpData) => {
+          return spotifyApi?.getShows(tmpData.map((entry) => entry.showid)).then((r) => [tmpData, r])
         }),
       )
-
-      console.log(JSON.stringify(results))
+      for (const res of results) {
+        if (res.status === 'fulfilled' && res.value !== undefined) {
+          const cachedData = res.value[0] as SpotifyShowData[]
+          const responseData = res.value[1] as Response<Spot
+          for (let i = 0; i < cachedData.length; ++i) {
+            const dataEntry = cachedData[i]
+            const apiResponse = res.value[1]
+            console.log(dataEntry)
+            console.log(apiResponse)
+          }
+        }
+        // TODO: What to do in this case?
+      }
     }
     // for (const query in results) {
     //   for (query)
