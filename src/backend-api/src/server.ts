@@ -90,8 +90,12 @@ app.get('/api/folders', async (_req, res) => {
     const folderMap = new Map<string, FolderWithChildren>()
     for (const entry of data) {
       const folderId = toMapKey(entry)
-      if (folderMap.has(folderId)) {
-        folderMap.get(folderId)?.children.push(entry)
+      const folder = folderMap.get(folderId)
+      if (folder !== undefined) {
+        folder?.children.push(entry)
+        if (folder.img === undefined && entry.artistcover !== undefined) {
+          folder.img = entry.artistcover
+        }
       } else {
         folderMap.set(folderId, {
           name: entry.artist ?? 'No name',
@@ -104,8 +108,10 @@ app.get('/api/folders', async (_req, res) => {
 
     // Finally, we need to check if we have an image url for each folder.
     // If not, we check if we can request it.
+    // TODO: Handle RSS.
     const folderList = [...folderMap.values()]
-    // TODO
+    const folderWithoutImage = folderList.filter((folder) => folder.img === undefined)
+    // const childrenOfFoldersWithoutImage = folderWithoutImage.map(folder => folder.children.filter(child => child.type !== ))
 
     // Last, convert to the data format we want to return.
     const out: FolderWithNumChildren[] = folderList.map((folder) => {

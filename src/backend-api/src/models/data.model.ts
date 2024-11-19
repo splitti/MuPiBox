@@ -14,6 +14,17 @@ export interface BaseData {
   artistcover?: string
 }
 
+export interface RssData extends BaseData {
+  artist: string // Creating RssData requires the folder name!
+  id: string // This is the url to the rss feed.
+}
+
+export interface RadioData extends BaseData {
+  artist: string // Creating RadioData requires the folder name!
+  id: string // The stream url.
+  title: string // The name of the radio stream.
+}
+
 export interface SpotifyData extends BaseData {
   spotify_url: string
 }
