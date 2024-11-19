@@ -6,8 +6,9 @@ import {
   SpotifyUrlAlbumGroup,
   SpotifyUrlType,
 } from './models/albumgroup.model'
+import { BaseData, Data } from './models/data.model'
+import { chunks, readJsonFile } from './utils'
 
-import { BaseData } from './models/data.model'
 import { Folder } from './models/folder.model'
 import { ServerConfig } from './models/server.model'
 import cors from 'cors'
@@ -17,7 +18,6 @@ import fs from 'node:fs'
 import jsonfile from 'jsonfile'
 import ky from 'ky'
 import path from 'node:path'
-import { readJsonFile } from './utils'
 import { spotifyApi } from './spotify'
 import xmlparser from 'xml-js'
 
@@ -121,16 +121,32 @@ const createSpotifyUrlAlbumGroup = (item: any): SpotifyUrlAlbumGroup => {
 
 app.get('/api/folders', async (_req, res) => {
   try {
-    const data: BaseData[] = await readJsonFile(dataFile)
+    const data: Data[] = await readJsonFile(dataFile)
 
     const toMapKey = (folder: Folder): string => {
       return `${folder.name}|{}|${folder.category}`
     }
 
     // First, we sort all data.json entries into folders.
+
     // For this, we might need to first set the `artist` field for entries that do
     // not have it set yet.
     const entriesWithNoArtistField = data.filter((entry) => entry.artist === undefined)
+    // Now we merge all artists
+    const artistQueries = [
+      ...chunks(
+        entriesWithNoArtistField.filter((entry) => 'artistid' in entry),
+        50,
+      ),
+    ]
+    const results = await Promise.allSettled(
+      artistQueries.map((data) => {
+        return spotifyApi?.getArtists(data.map((entry) => entry.artistid)).then((r) => [data, r])
+      }),
+    )
+    for (const query in results) {
+      for ()
+    }
 
     // const folderMap: Map<string, {folder: Folder, }
 
