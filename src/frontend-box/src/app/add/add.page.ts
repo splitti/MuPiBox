@@ -1,6 +1,7 @@
-import { AfterViewInit, Component, OnInit, ViewEncapsulation } from '@angular/core'
 import { ActivatedRoute, Router } from '@angular/router'
+import { AfterViewInit, Component, OnInit, ViewEncapsulation } from '@angular/core'
 import { AlertController, NavController } from '@ionic/angular/standalone'
+import { CategoryType, Media, MediaSorting } from '../media'
 import {
   IonButton,
   IonButtons,
@@ -20,17 +21,16 @@ import {
   IonSelectOption,
   IonToolbar,
 } from '@ionic/angular/standalone'
-import { arrowBackOutline, saveOutline } from 'ionicons/icons'
-import { CategoryType, Media, MediaSorting } from '../media'
 import { PlayerCmds, PlayerService } from '../player.service'
+import { arrowBackOutline, saveOutline } from 'ionicons/icons'
 
-import { FormsModule } from '@angular/forms'
-import type { NgForm } from '@angular/forms'
-import { addIcons } from 'ionicons'
-import Keyboard from 'simple-keyboard'
 import { ActivityIndicatorService } from '../activity-indicator.service'
+import { FormsModule } from '@angular/forms'
+import Keyboard from 'simple-keyboard'
 import { MediaService } from '../media.service'
+import type { NgForm } from '@angular/forms'
 import { SpotifyService } from '../spotify.service'
+import { addIcons } from 'ionicons'
 
 @Component({
   selector: 'app-add',
@@ -438,15 +438,16 @@ export class AddPage implements OnInit, AfterViewInit {
                 })
             } else if (media.spotify_url.includes('show/')) {
               media.showid = this.spotifyIDfetcher(media.spotify_url, 'show/')
-              this.spotifyService
-                .validateSpotify(media.showid, 'show')
-                .then((result) => {
-                  this.validateState = result
-                })
-                .catch((error) => {
-                  this.validateState = false
-                })
+              // this.spotifyService
+              //   .validateSpotify(media.showid, 'show')
+              //   .then((result) => {
+              //     this.validateState = result
+              //   })
+              //   .catch((error) => {
+              //     this.validateState = false
+              //   })
             }
+            this.validateState = true
           }
         }
 
