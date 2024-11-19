@@ -1,4 +1,5 @@
-export type CategoryType = 'audiobook' | 'music' | 'other'
+import { CategoryType } from './folder.model'
+
 export type SourceType = 'spotifyQuery' | 'spotifyUrl' | 'rss' | 'local' | 'radio'
 export type SpotifyUrlType = 'artist' | 'playlist' | 'album' | 'show'
 

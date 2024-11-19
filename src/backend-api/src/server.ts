@@ -7,6 +7,7 @@ import {
   SpotifyUrlType,
 } from './models/albumgroup.model'
 
+import { Folder } from './models/folder.model'
 import { ServerConfig } from './models/server.model'
 import cors from 'cors'
 import { environment } from './environment'
@@ -117,9 +118,16 @@ const createSpotifyUrlAlbumGroup = (item: any): SpotifyUrlAlbumGroup => {
   }
 }
 
-app.get('/api/albumgroups', async (_req, res) => {
+app.get('/api/folders', async (_req, res) => {
   try {
     const data = await readJsonFile(dataFile)
+
+    const toMapKey = (folder: Folder): string => {
+      return `${folder.name}|||${folder.category}`
+    }
+
+    // First, we gather all map s
+
     const out: AlbumGroup[] = []
 
     for (const item of data) {
@@ -137,6 +145,7 @@ app.get('/api/albumgroups', async (_req, res) => {
     }
 
     // Get the images for the spotify stuff.
+    // TODO: Merge artist queries, up to 50, see https://developer.spotify.com/documentation/web-api/reference/get-multiple-artists
     const promises = await Promise.allSettled(
       out
         .filter((items) => items.sourceType === 'spotifyUrl')
