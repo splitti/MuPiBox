@@ -1,3 +1,5 @@
+import { BaseData } from './data.model'
+
 export type CategoryType = 'audiobook' | 'music' | 'other'
 
 /**
@@ -19,4 +21,11 @@ export interface Folder {
 export interface FolderWithNumChildren extends Folder {
   numChildEntries: number
   numOfflineChildEntries: number
+}
+
+/**
+ * TODO
+ */
+export interface FolderWithChildren extends Folder {
+  children: BaseData[]
 }

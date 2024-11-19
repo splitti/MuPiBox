@@ -7,9 +7,16 @@ import {
   SpotifyUrlType,
 } from './models/albumgroup.model'
 import { BaseData, Data, SpotifyShowData } from './models/data.model'
+import { Folder, FolderWithChildren, FolderWithNumChildren } from './models/folder.model'
 import { chunks, readJsonFile } from './utils'
+import {
+  fillAlbumDataEntry,
+  fillArtistDataEntry,
+  fillPlaylistDataEntry,
+  fillShowDataEntry,
+  spotifyApi,
+} from './spotify'
 
-import { Folder } from './models/folder.model'
 import { ServerConfig } from './models/server.model'
 import cors from 'cors'
 import { environment } from './environment'
@@ -18,7 +25,6 @@ import fs from 'node:fs'
 import jsonfile from 'jsonfile'
 import ky from 'ky'
 import path from 'node:path'
-import { spotifyApi } from './spotify'
 import xmlparser from 'xml-js'
 
 const serverName = 'mupibox-backend-api'
@@ -63,139 +69,60 @@ if (environment.production) {
 }
 
 // Routes
-
-const createRadioAlbumGroup = (item: any): RadioAlbumGroup => {
-  return {
-    sourceType: 'radio',
-    name: item.artist,
-    img: undefined,
-    category: item.category,
-    url: item.id,
-  }
-}
-
-const createRssAlbumGroup = (item: any): RssAlbumGroup => {
-  return {
-    sourceType: 'rss',
-    name: item.artist,
-    img: undefined,
-    category: item.category,
-    url: item.id,
-    sorting: item.sorting,
-    // TODO: Range?
-  }
-}
-
-const createSpotifyQueryAlbumGroup = (item: any): SpotifyQueryAlbumGroup => {
-  return {
-    sourceType: 'spotifyQuery',
-    name: item.artist,
-    img: undefined,
-    category: item.category,
-    query: item.query,
-    sorting: item.sorting,
-    // TODO: Range?
-  }
-}
-
-const getSpotifyUrlType = (url: string): SpotifyUrlType => {
-  if (url.includes('artist')) return 'artist'
-  if (url.includes('album')) return 'album'
-  if (url.includes('show')) return 'show'
-  return 'playlist'
-}
-
-const createSpotifyUrlAlbumGroup = (item: any): SpotifyUrlAlbumGroup => {
-  return {
-    sourceType: 'spotifyUrl',
-    name: item.artist,
-    img: undefined,
-    category: item.category,
-    url: item.spotify_url,
-    sorting: item.sorting,
-    urlType: getSpotifyUrlType(item.spotify_url),
-    shuffle: item.shuffle,
-    // TODO: Range?
-  }
-}
-
 app.get('/api/folders', async (_req, res) => {
   try {
     const data: Data[] = await readJsonFile(dataFile)
 
-    const toMapKey = (folder: Folder): string => {
-      return `${folder.name}|{}|${folder.category}`
-    }
-
     // First, we sort all data.json entries into folders.
-
     // For this, we might need to first set the `artist` field for entries that do
     // not have it set yet.
+    // These adapt the original entries in `data`.
     const entriesWithoutFolderName = data.filter((entry) => entry.artist === undefined)
-    // Now we merge all artists
-    const entries = [
-      ...chunks(
-        entriesWithoutFolderName.filter((entry) => 'showid' in entry),
-        50,
-      ),
-    ]
-    if (entries.length > 0) {
-      const results = await Promise.allSettled(
-        entries.map((tmpData) => {
-          return spotifyApi?.getShows(tmpData.map((entry) => entry.showid)).then((r) => [tmpData, r])
-        }),
-      )
-      for (const res of results) {
-        if (res.status === 'fulfilled' && res.value !== undefined) {
-          const cachedData = res.value[0] as SpotifyShowData[]
-          const responseData = res.value[1] as Response<Spot
-          for (let i = 0; i < cachedData.length; ++i) {
-            const dataEntry = cachedData[i]
-            const apiResponse = res.value[1]
-            console.log(dataEntry)
-            console.log(apiResponse)
-          }
-        }
-        // TODO: What to do in this case?
-      }
+    await fillShowDataEntry(entriesWithoutFolderName.filter((entry) => 'showid' in entry))
+    await fillArtistDataEntry(entriesWithoutFolderName.filter((entry) => 'artistid' in entry))
+    await fillAlbumDataEntry(entriesWithoutFolderName.filter((entry) => 'id' in entry))
+    await fillPlaylistDataEntry(entriesWithoutFolderName.filter((entry) => 'playlistid' in entry))
+
+    // Now sort them into folders.
+    const toMapKey = (folder: BaseData): string => {
+      return `${folder.artist}|{}|${folder.category}`
     }
-    // for (const query in results) {
-    //   for (query)
-    // }
-
-    // const folderMap: Map<string, {folder: Folder, }
-
-    const out: AlbumGroup[] = []
-
-    for (const item of data) {
-      if (item.type === 'radio') {
-        out.push(createRadioAlbumGroup(item))
-      } else if (item.type === 'rss') {
-        out.push(createRssAlbumGroup(item))
-      } else if (item.type === 'spotify') {
-        if ('query' in item) {
-          out.push(createSpotifyQueryAlbumGroup(item))
-        } else if ('spotify_url' in item) {
-          out.push(createSpotifyUrlAlbumGroup(item))
-        }
+    const folderMap = new Map<string, FolderWithChildren>()
+    for (const entry of data) {
+      const folderId = toMapKey(entry)
+      if (folderMap.has(folderId)) {
+        folderMap.get(folderId)?.children.push(entry)
+      } else {
+        folderMap.set(folderId, {
+          name: entry.artist ?? 'No name',
+          img: entry.artistcover,
+          category: entry.category,
+          children: [entry],
+        })
       }
     }
 
-    // Get the images for the spotify stuff.
-    // TODO: Merge artist queries, up to 50, see https://developer.spotify.com/documentation/web-api/reference/get-multiple-artists
-    // const promises = await Promise.allSettled(
-    //   out
-    //     .filter((items) => items.sourceType === 'spotifyUrl')
-    //     .map((item) => {
-    //       if (item.urlType === 'artist') {
-    //         return spotifyApi?.getArtist(item.url)
-    //       }
-    //     }),
-    // )
-    // console.log(promises)
+    // Finally, we need to check if we have an image url for each folder.
+    // If not, we check if we can request it.
+    const folderList = [...folderMap.values()]
+    // TODO
 
-    // TODO: Local files.
-
+    // Last, convert to the data format we want to return.
+    const out: FolderWithNumChildren[] = folderList.map((folder) => {
+      const offlineEntries = folder.children.reduce<number>((prev: number, curr: BaseData) => {
+        if (curr.type === 'library') {
+          return prev + 1
+        }
+        return prev
+      }, 0)
+      return {
+        name: folder.name,
+        category: folder.category,
+        img: folder.img,
+        numChildEntries: folder.children.length,
+        numOfflineChildEntries: offlineEntries,
+      }
+    })
     res.json(out)
   } catch (error) {
     console.error(`${nowDate.toLocaleString()}: [${serverName}] ${error}`)
