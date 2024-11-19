@@ -80,7 +80,7 @@ app.get('/api/folders', async (_req, res) => {
     const entriesWithoutFolderName = data.filter((entry) => entry.artist === undefined)
     await fillShowDataEntry(entriesWithoutFolderName.filter((entry) => 'showid' in entry))
     await fillArtistDataEntry(entriesWithoutFolderName.filter((entry) => 'artistid' in entry))
-    await fillAlbumDataEntry(entriesWithoutFolderName.filter((entry) => 'id' in entry))
+    await fillAlbumDataEntry(entriesWithoutFolderName.filter((entry) => 'id' in entry && 'spotify_url' in entry))
     await fillPlaylistDataEntry(entriesWithoutFolderName.filter((entry) => 'playlistid' in entry))
 
     // Now sort them into folders.
@@ -136,6 +136,16 @@ app.get('/api/folders', async (_req, res) => {
   }
 })
 
+app.get('/api/data', async (_req, res) => {
+  try {
+    const data: Data[] = await readJsonFile(dataFile)
+    res.json(data)
+  } catch (error) {
+    console.error(`${nowDate.toLocaleString()}: [${serverName}] ${error}`)
+    res.json([])
+  }
+})
+
 app.get('/api/rssfeed', async (req, res) => {
   const rssUrl = req.query.url
   if (typeof rssUrl !== 'string') {
@@ -152,7 +162,7 @@ app.get('/api/rssfeed', async (req, res) => {
     })
 })
 
-app.get('/api/data', (req, res) => {
+app.get('/api/activedata', (req, res) => {
   if (fs.existsSync(activedataFile)) {
     jsonfile.readFile(activedataFile, (error, data) => {
       if (error) {

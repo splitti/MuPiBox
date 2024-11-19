@@ -45,4 +45,4 @@ export interface SpotifyPlaylistData extends SpotifyData {
   playlistid: string
 }
 
-export type Data = BaseData | SpotifyAlbumData | SpotifyArtistData | SpotifyPlaylistData | SpotifyShowData
+export type Data = RadioData | RssData | SpotifyAlbumData | SpotifyArtistData | SpotifyPlaylistData | SpotifyShowData

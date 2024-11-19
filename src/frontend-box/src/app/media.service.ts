@@ -1,10 +1,7 @@
+import type { CategoryType, Media } from './media'
 import { Observable, Subject, from, iif, interval, of, timer } from 'rxjs'
 import { distinctUntilChanged, filter, map, mergeAll, mergeMap, shareReplay, switchMap, toArray } from 'rxjs/operators'
-import type { CategoryType, Media } from './media'
 
-import { HttpClient } from '@angular/common/http'
-import { Injectable } from '@angular/core'
-import { environment } from '../environments/environment'
 import type { AlbumStop } from './albumstop'
 import type { Artist } from './artist'
 import type { CurrentEpisode } from './current.episode'
@@ -12,11 +9,14 @@ import type { CurrentMPlayer } from './current.mplayer'
 import type { CurrentPlaylist } from './current.playlist'
 import type { CurrentShow } from './current.show'
 import type { CurrentSpotify } from './current.spotify'
+import { HttpClient } from '@angular/common/http'
+import { Injectable } from '@angular/core'
 import { Mupihat } from './mupihat'
 import type { Network } from './network'
 import { RssFeedService } from './rssfeed.service'
 import { SpotifyService } from './spotify.service'
 import type { WLAN } from './wlan'
+import { environment } from '../environments/environment'
 
 @Injectable({
   providedIn: 'root',
@@ -97,7 +97,7 @@ export class MediaService {
   }
 
   public fetchRawMedia(): Observable<Media[]> {
-    return this.http.get<Media[]>(`${this.getApiBackendUrl()}/data`)
+    return this.http.get<Media[]>(`${this.getApiBackendUrl()}/activedata`)
   }
 
   updateWLAN() {
@@ -252,7 +252,7 @@ export class MediaService {
   }
 
   private fetchMedia(category: CategoryType): Observable<Media[]> {
-    return this.updateMedia(`${this.getApiBackendUrl()}/data`, false, category)
+    return this.updateMedia(`${this.getApiBackendUrl()}/activedata`, false, category)
   }
 
   // Get the media data for the current category from the server
