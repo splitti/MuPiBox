@@ -1,6 +1,6 @@
 #!/bin/bash
 
-sudo killall -s 9 -w -q chromium-browser
+sudo killall -s 9 -w -q chromium
 sleep 0.5
 sudo rm /tmp/driver-install.txt
 sudo wget -O /tmp/installation.jpg https://raw.githubusercontent.com/friebi/MuPiBox/develop/media/images/installation.jpg

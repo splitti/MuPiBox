@@ -52,7 +52,7 @@ if [ -f "$WIFI_FILE" ]; then
 		echo 'update_config=1' | sudo tee -a ${WPACONF}
 		restart_network
 	elif [ "${SSID}" != "Your Wifi-Name" ]; then
-		killall -s 9 -w -q chromium-browser
+		killall -s 9 -w -q chromium
 		/usr/bin/fbv /home/dietpi/MuPiBox/sysmedia/images/installation.jpg &
 		#sudo wget -q -O ${WIFI_FILE} ${JSON_TEMPLATE}
 		WIFI_RESULT=$(sudo -i wpa_passphrase "${SSID}" "${PSK}")
