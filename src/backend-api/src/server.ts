@@ -75,7 +75,8 @@ app.get('/api/folders', async (_req, res) => {
 
     // First, we sort all data.json entries into folders.
     // For this, we might need to first set the `artist` field for entries that do
-    // not have it set yet.
+    // not have it set yet. Spotify shows, artists, albums and playlists are the only
+    // data entries where we allow the user to not specify the folder name.
     // These adapt the original entries in `data`.
     const entriesWithoutFolderName = data.filter((entry) => entry.artist === undefined)
     await fillShowDataEntry(entriesWithoutFolderName.filter((entry) => 'showid' in entry))
