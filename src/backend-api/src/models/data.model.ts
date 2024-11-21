@@ -1,8 +1,19 @@
-import { CategoryType } from './folder.model'
+import { CategoryType, Sorting } from './folder.model'
 
 export type SourceType = 'spotify' | 'library' | 'rss' | 'radio'
 
+/**
+ * TODO
+ */
+export interface HasMultipleMedia {
+  aPartOfAll?: boolean
+  aPartOfAllMin?: number
+  aPartOfAllMax?: number
+  sorting?: Sorting
+}
+
 export interface BaseData {
+  index?: number
   type: SourceType
   // ============ The following three are values of the folder ================
   category: CategoryType
@@ -12,7 +23,9 @@ export interface BaseData {
   artist?: string
   // This is the optional folder image url.
   artistcover?: string
+
   // TODO: cover etc.
+  title?: string
 }
 
 export interface LocalData extends BaseData {
@@ -21,10 +34,11 @@ export interface LocalData extends BaseData {
   title: string // see above
 }
 
-export interface RssData extends BaseData {
+export interface RssData extends BaseData, HasMultipleMedia {
   type: 'rss'
   artist: string // Creating RssData requires the folder name!
   id: string // This is the url to the rss feed.
+  duration?: string
 }
 
 export interface RadioData extends BaseData {
@@ -32,40 +46,41 @@ export interface RadioData extends BaseData {
   artist: string // Creating RadioData requires the folder name!
   id: string // The stream url.
   title: string // The name of the radio stream.
+  cover?: string
 }
 
-export interface SpotifyData extends BaseData {
+export interface SpotifyBaseData extends BaseData, HasMultipleMedia {
   type: 'spotify'
   spotify_url: string
+  shuffle?: boolean
 }
 
-export interface SpotifyQueryData extends SpotifyData {
+export interface SpotifyQueryData extends SpotifyBaseData {
   artist: string // Creating SpotifyQueryData requires the folder name!
   query: string
 }
 
-export interface SpotifyArtistData extends SpotifyData {
+export interface SpotifyArtistData extends SpotifyBaseData {
   artistid: string
 }
 
-export interface SpotifyAlbumData extends SpotifyData {
+export interface SpotifyAlbumData extends SpotifyBaseData {
   id: string
 }
 
-export interface SpotifyShowData extends SpotifyData {
+export interface SpotifyShowData extends SpotifyBaseData {
   showid: string
 }
 
-export interface SpotifyPlaylistData extends SpotifyData {
+export interface SpotifyPlaylistData extends SpotifyBaseData {
   playlistid: string
 }
 
-export type Data =
-  | LocalData
-  | RadioData
-  | RssData
+export type SpotifyData =
   | SpotifyQueryData
   | SpotifyAlbumData
   | SpotifyArtistData
   | SpotifyPlaylistData
   | SpotifyShowData
+
+export type Data = LocalData | RadioData | RssData | SpotifyData
