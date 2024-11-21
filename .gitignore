@@ -12,6 +12,7 @@ src/deploy
 node_modules
 .angular
 *.esbuild-meta.json
+src/frontend-lib/dist
 
 # Other files.
 *.bak

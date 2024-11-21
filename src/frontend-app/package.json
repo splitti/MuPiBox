@@ -22,7 +22,8 @@
     "rxjs": "~7.8.1",
     "tslib": "^2.7.0",
     "zone.js": "~0.14.10",
-    "lodash-es": "4.17.21"
+    "lodash-es": "4.17.21",
+    "mupibox-frontend-lib": "file:../frontend-lib/dist/frontend-lib"
   },
   "devDependencies": {
     "@angular-devkit/build-angular": "^18.2.7",

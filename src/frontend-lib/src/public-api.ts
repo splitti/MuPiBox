@@ -1,6 +1,5 @@
 /*
- * Public API Surface of test
+ * Public API Surface of this library.
  */
 
-export * from './lib/test.service';
-export * from './lib/test.component';
+export * from './lib/data.service'
