@@ -1,4 +1,4 @@
-import { Observable, defer, of, range, throwError, firstValueFrom } from 'rxjs'
+import { Observable, defer, firstValueFrom, of, range, throwError } from 'rxjs'
 import { delay, flatMap, map, mergeAll, mergeMap, retryWhen, take, tap, toArray } from 'rxjs/operators'
 import type { CategoryType, Media } from './media'
 import type {
@@ -361,48 +361,44 @@ export class SpotifyService {
     try {
       if (spotifyCategory === 'album') {
         const data: any = await firstValueFrom(
-            defer(() => this.spotifyApi.getAlbum(spotifyId, { limit: 1, offset: 0, market: 'DE' }))
-                .pipe(
-                  retryWhen(
-                      (errors) => { return this.errorHandler(errors) }
-                  )
-                )
+          defer(() => this.spotifyApi.getAlbum(spotifyId, { limit: 1, offset: 0, market: 'DE' })).pipe(
+            retryWhen((errors) => {
+              return this.errorHandler(errors)
+            }),
+          ),
         )
         if (data.id !== undefined) {
           validateState = true
         }
       } else if (spotifyCategory === 'show') {
         const data: any = await firstValueFrom(
-            defer(() => this.spotifyApi.getShow(spotifyId))
-                .pipe(
-                    retryWhen(
-                        (errors) => { return this.errorHandler(errors) }
-                    )
-                )
+          defer(() => this.spotifyApi.getShow(spotifyId)).pipe(
+            retryWhen((errors) => {
+              return this.errorHandler(errors)
+            }),
+          ),
         )
         if (data.id !== undefined) {
           validateState = true
         }
       } else if (spotifyCategory === 'artist') {
         const data: any = await firstValueFrom(
-            defer(() => this.spotifyApi.getArtist(spotifyId))
-                .pipe(
-                    retryWhen(
-                        (errors) => { return this.errorHandler(errors) }
-                    )
-                )
+          defer(() => this.spotifyApi.getArtist(spotifyId)).pipe(
+            retryWhen((errors) => {
+              return this.errorHandler(errors)
+            }),
+          ),
         )
         if (data.id !== undefined) {
           validateState = true
         }
       } else if (spotifyCategory === 'playlist') {
         const data: any = await firstValueFrom(
-            defer(() => this.spotifyApi.getPlaylist(spotifyId))
-                .pipe(
-                    retryWhen(
-                        (errors) => { return this.errorHandler(errors) }
-                    )
-                )
+          defer(() => this.spotifyApi.getPlaylist(spotifyId)).pipe(
+            retryWhen((errors) => {
+              return this.errorHandler(errors)
+            }),
+          ),
         )
         if (data.id !== undefined) {
           validateState = true
