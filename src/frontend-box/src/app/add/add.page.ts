@@ -435,7 +435,8 @@ export class AddPage implements OnInit, AfterViewInit {
 
         let spotifyError = 'The id is not valid or you have no internet connection!'
         if (!media.playlistid && !media.artistid && !media.id && !media.showid) {
-          spotifyError = 'URL is not valid! It should start with "https://open.spotify.com/" and contain "playlist/", "artist/", "album/" or "show/".'
+          spotifyError =
+            'URL is not valid! It should start with "https://open.spotify.com/" and contain "playlist/", "artist/", "album/" or "show/".'
         }
 
         const alert = await this.alertController.create({
@@ -579,9 +580,7 @@ export class AddPage implements OnInit, AfterViewInit {
       validationResult = this.spotifyService.validateSpotify(media.showid, 'show')
     }
 
-    const timeout: Promise<boolean> = new Promise(
-        (resolve) => setTimeout(() => resolve(false), 30000)
-    )
+    const timeout: Promise<boolean> = new Promise((resolve) => setTimeout(() => resolve(false), 30000))
 
     return Promise.race([validationResult, timeout])
   }
