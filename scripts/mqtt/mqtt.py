@@ -771,7 +771,7 @@ def send_play_information():
         state = requests.get(url).json()
         url = 'http://127.0.0.1:5005/episode'
         episode = requests.get(url).json()
-        play_text = "<idle>"
+        play_text = ""
 
         if local and state:
             if local != previous_content_local or state != previous_content_state:
