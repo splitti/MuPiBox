@@ -1,5 +1,6 @@
+[![Discord](https://img.shields.io/discord/879874342203306005?logo=Discord&link=https%3A%2F%2Fdiscord.gg%2F4EjCgpCbbe)](https://discord.gg/4EjCgpCbbe) [![Static Badge]
 # Home Assistant example card
-Just a quick Setup guide. Visit our discourd channel for more informations.
+Just a quick Setup guide. Visit our discord channel (https://discord.gg/4EjCgpCbbe) for more informations.
 ![Example](example.png "Example") 
 ## Setup
 1. Copy the img folder to the www directory of your Home Assistant installation.
