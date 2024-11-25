@@ -237,7 +237,7 @@ def mqtt_publish_ha():
 
     # Publish URL Admininterface
     admininterface_info = {
-        "name": "Admininterfface",
+        "name": "Admininterface",
         "state_topic": mqtt_topic + '/' + mqtt_clientId + '/admininterface',
         "unique_id": mqtt_clientId + '_mupibox_admininterface',
         "icon": "mdi:web",
