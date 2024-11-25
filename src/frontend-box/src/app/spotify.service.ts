@@ -1,4 +1,4 @@
-import { Observable, defer, of, range, throwError } from 'rxjs'
+import { Observable, defer, firstValueFrom, of, range, throwError } from 'rxjs'
 import { delay, flatMap, map, mergeAll, mergeMap, retryWhen, take, tap, toArray } from 'rxjs/operators'
 import type { CategoryType, Media } from './media'
 import type {
@@ -360,27 +360,52 @@ export class SpotifyService {
 
     try {
       if (spotifyCategory === 'album') {
-        const data = await this.spotifyApi.getAlbum(spotifyId)
+        const data: any = await firstValueFrom(
+          defer(() => this.spotifyApi.getAlbum(spotifyId, { limit: 1, offset: 0, market: 'DE' })).pipe(
+            retryWhen((errors) => {
+              return this.errorHandler(errors)
+            }),
+          ),
+        )
         if (data.id !== undefined) {
           validateState = true
         }
       } else if (spotifyCategory === 'show') {
-        const data = await this.spotifyApi.getShow(spotifyId)
+        const data: any = await firstValueFrom(
+          defer(() => this.spotifyApi.getShow(spotifyId)).pipe(
+            retryWhen((errors) => {
+              return this.errorHandler(errors)
+            }),
+          ),
+        )
         if (data.id !== undefined) {
           validateState = true
         }
       } else if (spotifyCategory === 'artist') {
-        const data = await this.spotifyApi.getArtist(spotifyId)
+        const data: any = await firstValueFrom(
+          defer(() => this.spotifyApi.getArtist(spotifyId)).pipe(
+            retryWhen((errors) => {
+              return this.errorHandler(errors)
+            }),
+          ),
+        )
         if (data.id !== undefined) {
           validateState = true
         }
       } else if (spotifyCategory === 'playlist') {
-        const data = await this.spotifyApi.getPlaylist(spotifyId)
+        const data: any = await firstValueFrom(
+          defer(() => this.spotifyApi.getPlaylist(spotifyId)).pipe(
+            retryWhen((errors) => {
+              return this.errorHandler(errors)
+            }),
+          ),
+        )
         if (data.id !== undefined) {
           validateState = true
         }
       }
     } catch (err) {
+      console.log(err)
       validateState = false
     }
 

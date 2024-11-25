@@ -1,6 +1,4 @@
 <?php
-$change = 0;
-$CHANGE_TXT = "<div id='lbinfo'><ul id='lbinfo'>";
 
 include('includes/header.php');
 $REDIRECT_URI = "http://" . $_SERVER['HTTP_HOST'] . "/spotify.php";

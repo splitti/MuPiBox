@@ -407,186 +407,183 @@ export class AddPage implements OnInit, AfterViewInit {
           if (media.spotify_url.startsWith('https://open.spotify.com/')) {
             if (media.spotify_url.includes('playlist/')) {
               media.playlistid = this.spotifyIDfetcher(media.spotify_url, 'playlist/')
-              this.spotifyService
-                .validateSpotify(media.playlistid, 'playlist')
-                .then((result) => {
-                  this.validateState = result
-                })
-                .catch((error) => {
-                  this.validateState = false
-                })
             } else if (media.spotify_url.includes('artist/')) {
               media.artistid = this.spotifyIDfetcher(media.spotify_url, 'artist/')
-              this.spotifyService
-                .validateSpotify(media.artistid, 'artist')
-                .then((result) => {
-                  this.validateState = result
-                })
-                .catch((error) => {
-                  this.validateState = false
-                })
             } else if (media.spotify_url.includes('album/')) {
               media.id = this.spotifyIDfetcher(media.spotify_url, 'album/')
-              console.log('AlbumId', media.id)
-              this.spotifyService
-                .validateSpotify(media.id, 'album')
-                .then((result) => {
-                  this.validateState = result
-                })
-                .catch((error) => {
-                  this.validateState = false
-                })
             } else if (media.spotify_url.includes('show/')) {
               media.showid = this.spotifyIDfetcher(media.spotify_url, 'show/')
-              // this.spotifyService
-              //   .validateSpotify(media.showid, 'show')
-              //   .then((result) => {
-              //     this.validateState = result
-              //   })
-              //   .catch((error) => {
-              //     this.validateState = false
-              //   })
             }
             this.validateState = true
           }
         }
-
-        setTimeout(() => {
-          this.save(media, form)
-        }, 2500)
+        this.save(media, form)
       })
     })
   }
 
   async save(media: Media, form: NgForm) {
-    if (!this.validateState && this.source === 'spotify' && this.sourceType === 'spotifyURL') {
-      this.activityIndicatorService.dismiss()
-      this.activityIndicatorVisible = false
-      const alert = await this.alertController.create({
-        cssClass: 'alert',
-        header: 'Warning',
-        message: 'The id is not valid or you have no internet connection!',
-        buttons: [
-          {
-            text: 'Okay',
-          },
-        ],
-      })
+    if (this.source === 'spotify' && this.sourceType === 'spotifyURL') {
+      let spotifyValidationResult: boolean
+      try {
+        spotifyValidationResult = await this.validateSpotify(media)
+      } catch (error) {
+        spotifyValidationResult = false
+      }
+      if (!spotifyValidationResult) {
+        this.activityIndicatorService.dismiss()
+        this.activityIndicatorVisible = false
 
-      await alert.present()
-    } else {
-      if (this.edit) {
-        this.mediaService.editRawMediaAtIndex(this.editMedia.index, media)
-        setTimeout(async () => {
-          const check = this.mediaService.getResponse()
-          console.log(`write check: ${check}`)
-          if (check === 'error' || check === 'locked') {
-            this.activityIndicatorService.dismiss()
-            this.activityIndicatorVisible = false
-            if (check === 'error') {
-              const alert = await this.alertController.create({
-                cssClass: 'alert',
-                header: 'Warning',
-                message: 'Error to write edit entry.',
-                buttons: [
-                  {
-                    text: 'Okay',
-                  },
-                ],
-              })
-              await alert.present()
-            } else if (check === 'locked') {
-              const alert = await this.alertController.create({
-                cssClass: 'alert',
-                header: 'Warning',
-                message: 'File locked, please try again in a moment.',
-                buttons: [
-                  {
-                    text: 'Okay',
-                  },
-                ],
-              })
-              await alert.present()
-            }
-          } else {
-            form.reset()
+        let spotifyError = 'The id is not valid or you have no internet connection!'
+        if (!media.playlistid && !media.artistid && !media.id && !media.showid) {
+          spotifyError =
+            'URL is not valid! It should start with "https://open.spotify.com/" and contain "playlist/", "artist/", "album/" or "show/".'
+        }
 
-            this.keyboard.clearInput('label')
-            this.keyboard.clearInput('title')
-            this.keyboard.clearInput('spotifyURL')
-            this.keyboard.clearInput('spotifySearch')
-            this.keyboard.clearInput('rssURL')
-            this.keyboard.clearInput('streamURL')
-            this.keyboard.clearInput('labelcover')
-            this.keyboard.clearInput('cover')
-            this.keyboard.clearInput('spotify_aPartOfAllMin')
-            this.keyboard.clearInput('spotify_aPartOfAllMax')
+        const alert = await this.alertController.create({
+          cssClass: 'alert',
+          header: 'Warning',
+          message: spotifyError,
+          buttons: [
+            {
+              text: 'Okay',
+            },
+          ],
+        })
 
-            this.validate()
-
-            setTimeout(() => {
-              this.navController.back()
-            }, 2000)
-          }
-        }, 2000)
-      } else {
-        this.mediaService.addRawMedia(media)
-        setTimeout(async () => {
-          const check = this.mediaService.getResponse()
-          console.log(`write check: ${check}`)
-          if (check === 'error' || check === 'locked') {
-            this.activityIndicatorService.dismiss()
-            this.activityIndicatorVisible = false
-            if (check === 'error') {
-              const alert = await this.alertController.create({
-                cssClass: 'alert',
-                header: 'Warning',
-                message: 'Error to write new entry.',
-                buttons: [
-                  {
-                    text: 'Okay',
-                  },
-                ],
-              })
-              await alert.present()
-            } else if (check === 'locked') {
-              const alert = await this.alertController.create({
-                cssClass: 'alert',
-                header: 'Warning',
-                message: 'File locked, please try again in a moment.',
-                buttons: [
-                  {
-                    text: 'Okay',
-                  },
-                ],
-              })
-              await alert.present()
-            }
-          } else {
-            form.reset()
-
-            this.keyboard.clearInput('label')
-            this.keyboard.clearInput('title')
-            this.keyboard.clearInput('spotifyURL')
-            this.keyboard.clearInput('spotifySearch')
-            this.keyboard.clearInput('rssURL')
-            this.keyboard.clearInput('streamURL')
-            this.keyboard.clearInput('labelcover')
-            this.keyboard.clearInput('cover')
-            this.keyboard.clearInput('spotify_aPartOfAllMin')
-            this.keyboard.clearInput('spotify_aPartOfAllMax')
-
-            this.validate()
-
-            this.playerService.sendCmd(PlayerCmds.INDEX)
-
-            setTimeout(() => {
-              this.navController.back()
-            }, 2000)
-          }
-        }, 2000)
+        await alert.present()
+        return
       }
     }
+
+    if (this.edit) {
+      this.mediaService.editRawMediaAtIndex(this.editMedia.index, media)
+      setTimeout(async () => {
+        const check = this.mediaService.getResponse()
+        console.log(`write check: ${check}`)
+        if (check === 'error' || check === 'locked') {
+          this.activityIndicatorService.dismiss()
+          this.activityIndicatorVisible = false
+          if (check === 'error') {
+            const alert = await this.alertController.create({
+              cssClass: 'alert',
+              header: 'Warning',
+              message: 'Error to write edit entry.',
+              buttons: [
+                {
+                  text: 'Okay',
+                },
+              ],
+            })
+            await alert.present()
+          } else if (check === 'locked') {
+            const alert = await this.alertController.create({
+              cssClass: 'alert',
+              header: 'Warning',
+              message: 'File locked, please try again in a moment.',
+              buttons: [
+                {
+                  text: 'Okay',
+                },
+              ],
+            })
+            await alert.present()
+          }
+        } else {
+          form.reset()
+
+          this.keyboard.clearInput('label')
+          this.keyboard.clearInput('title')
+          this.keyboard.clearInput('spotifyURL')
+          this.keyboard.clearInput('spotifySearch')
+          this.keyboard.clearInput('rssURL')
+          this.keyboard.clearInput('streamURL')
+          this.keyboard.clearInput('labelcover')
+          this.keyboard.clearInput('cover')
+          this.keyboard.clearInput('spotify_aPartOfAllMin')
+          this.keyboard.clearInput('spotify_aPartOfAllMax')
+
+          this.validate()
+
+          setTimeout(() => {
+            this.navController.back()
+          }, 2000)
+        }
+      }, 2000)
+    } else {
+      this.mediaService.addRawMedia(media)
+      setTimeout(async () => {
+        const check = this.mediaService.getResponse()
+        console.log(`write check: ${check}`)
+        if (check === 'error' || check === 'locked') {
+          this.activityIndicatorService.dismiss()
+          this.activityIndicatorVisible = false
+          if (check === 'error') {
+            const alert = await this.alertController.create({
+              cssClass: 'alert',
+              header: 'Warning',
+              message: 'Error to write new entry.',
+              buttons: [
+                {
+                  text: 'Okay',
+                },
+              ],
+            })
+            await alert.present()
+          } else if (check === 'locked') {
+            const alert = await this.alertController.create({
+              cssClass: 'alert',
+              header: 'Warning',
+              message: 'File locked, please try again in a moment.',
+              buttons: [
+                {
+                  text: 'Okay',
+                },
+              ],
+            })
+            await alert.present()
+          }
+        } else {
+          form.reset()
+
+          this.keyboard.clearInput('label')
+          this.keyboard.clearInput('title')
+          this.keyboard.clearInput('spotifyURL')
+          this.keyboard.clearInput('spotifySearch')
+          this.keyboard.clearInput('rssURL')
+          this.keyboard.clearInput('streamURL')
+          this.keyboard.clearInput('labelcover')
+          this.keyboard.clearInput('cover')
+          this.keyboard.clearInput('spotify_aPartOfAllMin')
+          this.keyboard.clearInput('spotify_aPartOfAllMax')
+
+          this.validate()
+
+          this.playerService.sendCmd(PlayerCmds.INDEX)
+
+          setTimeout(() => {
+            this.navController.back()
+          }, 2000)
+        }
+      }, 2000)
+    }
+  }
+
+  async validateSpotify(media: Media): Promise<boolean> {
+    let validationResult: Promise<boolean> = Promise.resolve(false)
+    if (media.playlistid) {
+      validationResult = this.spotifyService.validateSpotify(media.playlistid, 'playlist')
+    } else if (media.artistid) {
+      validationResult = this.spotifyService.validateSpotify(media.artistid, 'artist')
+    } else if (media.id) {
+      validationResult = this.spotifyService.validateSpotify(media.id, 'album')
+    } else if (media.showid) {
+      validationResult = this.spotifyService.validateSpotify(media.showid, 'show')
+    }
+
+    const timeout: Promise<boolean> = new Promise((resolve) => setTimeout(() => resolve(false), 30000))
+
+    return Promise.race([validationResult, timeout])
   }
 
   validate() {

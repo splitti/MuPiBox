@@ -9,6 +9,9 @@ import requests
 with open("/etc/mupibox/mupiboxconfig.json") as file:
     config = json.load(file)
 
+if not config['telegram']['active']:
+    quit()
+
 url = 'http://127.0.0.1:5005/local'
 state = requests.get(url).json()
 

@@ -21,7 +21,7 @@ sudo -i -u dietpi /usr/local/bin/mupibox/./shutdown_sound.sh
 CONFIG="/etc/mupibox/mupiboxconfig.json"
 SHUT_SPLASH=$(/usr/bin/jq -r .mupibox.shutSplash ${CONFIG})
 
-killall -s 9 -w -q chromium-browser
+killall -s 9 -w -q chromium
 if [ -n "$1" ]; then
     /usr/bin/fbv $1 &
 else

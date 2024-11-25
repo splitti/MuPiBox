@@ -44,31 +44,40 @@ function myFunction() {
   }
 }
 
-$(document).ready(function(){
-        $('#remform').on("submit", function(){
+$(document).ready(function() {
+    // Gemeinsame Funktion für die Animationen
+    function showModal() {
         $("#mupif").fadeIn();
         $("#loading-circle").fadeIn();
-	$("#lock-modal").fadeIn('slow');
-        });
+        $("#lock-modal").fadeIn('slow');
+    }
+
+    // Event-Handler für alle Links
+    $('a').on("click", function(e) {
+        const href = $(this).attr('href');
+
+        // Prüfen, ob der Link ein Ziel hat (kein JavaScript:void(0) oder Anker)
+        if (href && href !== "#" && !href.startsWith('javascript')) {
+            e.preventDefault(); // Verhindert sofortiges Navigieren
+            showModal();
+
+            // Nach der Animation navigieren
+            setTimeout(function() {
+                window.location.href = href;
+            }, 1000); // Verzögerung in Millisekunden
+        }
+    });
+
+    // Event-Handler für Formulare
+    $('#remform, #form').on("submit", function() {
+        showModal();
+    });
+
+    // Event-Handler für den Button mit ID 'loading'
+    $('#loading').click(function() {
+        showModal();
+    });
 });
-
-
-$(document).ready(function(){
-        $('#loading').click(function(){
-        $("#mupif").fadeIn();
-        $("#loading-circle").fadeIn();
-		$("#lock-modal").fadeIn('slow');
-        });
-});
-
-
-$(document).ready(function(){
-	$("#form").on("submit", function(){
-	$("#mupif").fadeIn();
-	$("#loading-circle").fadeIn();
-	$("#lock-modal").fadeIn('slow');
-  });//submit
-});//document ready
 
 // This is the code to preload the images
 var imageList = Array();
@@ -142,6 +151,8 @@ imageList['unicorn'] = new Image(150, 250);
 imageList['unicorn'].src = "images/unicorn.png";
 imageList['axolotl'] = new Image(150, 250);
 imageList['axolotl'].src = "images/axolotl.png";
+imageList['custom'] = new Image(150, 250);
+imageList['custom'].src = "images/custom.png";
 
 function switchImage() {
     var selectedImage = document.mupi.theme.options[document.mupi.theme.selectedIndex].value;

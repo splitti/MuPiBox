@@ -274,16 +274,22 @@ app.get('/api/network', (req, res) => {
 })
 
 app.get('/api/monitor', (req, res) => {
-  if (fs.existsSync(monitorFile)) {
+  const ip = req.socket.remoteAddress
+  const host = req.hostname
+  const isLocalhost =  ip === "127.0.0.1" || ip === "::ffff:127.0.0.1" || ip === "::1" || host.indexOf("localhost") !== -1
+
+  if (fs.existsSync(monitorFile) && isLocalhost) {
     jsonfile.readFile(monitorFile, (error, data) => {
       if (error) {
         console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error /api/monitor read monitor.json`)
         console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] ${error}`)
-        res.json([])
+        res.json({"monitor": "On"})
       } else {
         res.json(data)
       }
     })
+  } else {
+    res.json({"monitor": "On" })
   }
 })
 

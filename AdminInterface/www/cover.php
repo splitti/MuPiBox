@@ -1,5 +1,4 @@
 <?php
-	$CHANGE_TXT="<div id='lbinfo'><ul id='lbinfo'>";
 	include ('includes/header.php');
 
 	if( $_POST['deleteimage'] )

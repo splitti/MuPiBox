@@ -18,7 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>
 
 __author__ = "Olaf Splitt"
 __license__ = "GPLv3"
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 __email__ = "splitti@mupibox.de"
 __status__ = "stable"
 
@@ -32,47 +32,12 @@ import os
 import paho.mqtt.client as mqtt
 import platform
 import re
+import signal
 import socket
 import struct
 import subprocess
 import requests
 import time
-
-pid = os.getpid()
-with open("/run/mupi_mqtt.pid", "w") as pid_file:
-    pid_file.write(str(pid))
-
-config = "/etc/mupibox/mupiboxconfig.json"
-playerstate = "/tmp/playerstate"
-fan = "/tmp/fan.json"
-mupihat = "/tmp/mupihat.json"
-data = "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json"
-
-# Load MQTT configuration from JSON file
-with open(config) as file:
-    jsonconfig = json.load(file)
-
-previous_content_local = ""
-previous_content_state = ""
-
-# Extract MQTT configuration parameters
-mqtt_name = jsonconfig['mqtt']['name']
-mqtt_topic = jsonconfig['mqtt']['topic'] + "/" + jsonconfig['mqtt']['clientId']
-mqtt_clientId = jsonconfig['mqtt']['clientId']
-mqtt_active = jsonconfig['mqtt']['active']
-mqtt_broker = jsonconfig['mqtt']['broker']
-mqtt_port = int(jsonconfig['mqtt']['port'])
-mqtt_username = jsonconfig['mqtt']['username']
-mqtt_password = jsonconfig['mqtt']['password']
-mqtt_refresh = int(jsonconfig['mqtt']['refresh'])
-mqtt_refreshIdle = int(jsonconfig['mqtt']['refreshIdle'])
-mqtt_timeout = int(jsonconfig['mqtt']['timeout'])
-mqtt_debug = jsonconfig['mqtt']['debug']
-mqtt_ha_topic = jsonconfig['mqtt']['ha_topic']
-mqtt_ha_active = jsonconfig['mqtt']['ha_active']
-mupi_version = jsonconfig['mupibox']['version']
-mupi_host = jsonconfig['mupibox']['host']
-
 
 def mqtt_publish_ha():
     # Publish image
@@ -712,7 +677,7 @@ def mqtt_systeminfo():
         client.publish(mqtt_topic + '/' + mqtt_clientId + '/os', os_name, qos=0, retain=False)
     else:
         print("PRETTY_NAME not found in /etc/os-release")
-        
+
     raspi = subprocess.check_output(["cat", "/sys/firmware/devicetree/base/model"]).decode("utf-8")
     client.publish(mqtt_topic + '/' + mqtt_clientId + '/raspi', raspi, qos=0, retain=False)
     hostname = subprocess.check_output(["hostname"]).decode("utf-8")
@@ -722,7 +687,7 @@ def mqtt_systeminfo():
     architecture = subprocess.check_output(["uname", "-m"]).decode("utf-8")
     client.publish(mqtt_topic + '/' + mqtt_clientId + '/architecture', architecture, qos=0, retain=False)
     client.publish(mqtt_topic + '/' + mqtt_clientId + '/mac', get_mac_address('wlan0'), qos=0, retain=False)
-    client.publish(mqtt_topic + '/' + mqtt_clientId + '/version', mupi_version, qos=0)  
+    client.publish(mqtt_topic + '/' + mqtt_clientId + '/version', mupi_version, qos=0)
 
 # Callback function for when the client receives a CONNACK response from the server.
 def on_connect(client, userdata, flags, rc):
@@ -763,7 +728,7 @@ def get_wifi():
         signal_strength_match = re.search(r'Signal level=(-\d+)', result)
         signal_strength = int(signal_strength_match.group(1)) if signal_strength_match else None
         signal_quality = int(subprocess.check_output("sudo iwconfig wlan0 | awk '/Link Quality/{split($2,a,\"=|/\");print int((a[2]/a[3])*100)\"\"}' | tr -d '%'", shell=True))
-        
+
         return ssid, signal_strength, signal_quality
     except subprocess.CalledProcessError as e:
         print("Command error iwconfig:", e)
@@ -779,7 +744,7 @@ def get_mac_address(interface):
         mac = ni.ifaddresses(interface)[ni.AF_LINK][0]['addr']
         return mac
     except ValueError:
-        return None    
+        return None
 
 def get_fan():
     try:
@@ -806,7 +771,7 @@ def send_play_information():
         state = requests.get(url).json()
         url = 'http://127.0.0.1:5005/episode'
         episode = requests.get(url).json()
-        play_text = "<idle>"
+        play_text = ""
 
         if local and state:
             if local != previous_content_local or state != previous_content_state:
@@ -836,12 +801,12 @@ def send_play_information():
         print("Exception: ", e)
  #       return None, None, None, None, None, None, None, None, None, None
 
-def get_screenshot():   
+def get_screenshot():
     try:
         with open("/tmp/mqtt_screen.png", "rb") as f:
             img_bytes = f.read()
         img_base64 = base64.b64encode(img_bytes).decode("utf-8")
-        return img_base64        
+        return img_base64
     except Exception as e:
         print("Exception: ", e)
         return null
@@ -872,76 +837,147 @@ def on_message(client, flags, msg):
         screenshot = get_screenshot()
         client.publish(mqtt_topic + '/' + mqtt_clientId + '/screenshot', screenshot, qos=0)
 
+def check_server_availability(host, port, retry_interval):
+    while True:
+        try:
+            with socket.create_connection((host, port), timeout=5) as sock:
+                print(f"Server {host}:{port} ist erreichbar.")
+                return True
+        except (socket.timeout, socket.error) as e:
+            print(f"Server {host}:{port} ist nicht erreichbar. Fehler: {e}")
+            print(f"Erneuter Versuch in {retry_interval} Sekunden...")
+            time.sleep(retry_interval)
+
+def handle_shutdown(signum, frame):
+    print(f"Signal {signum} received. Service will be stopped...")
+    client.loop_stop()
+    client.publish(mqtt_topic + '/' + mqtt_clientId + '/state', "offline", qos=0)
+    exit(0)
 
 ###############################################################################################################
 
-# Create an MQTT client instance
-client = mqtt.Client()
+def main():
+    global running
 
-# Set the username and password for the MQTT connection if they are provided
-if mqtt_username and mqtt_password:
-    client.username_pw_set(mqtt_username, mqtt_password)
+    signal.signal(signal.SIGINT, handle_shutdown)  # Strg+C
+    signal.signal(signal.SIGTERM, handle_shutdown)  # service stop
 
-# Set the callback functions
-client.on_connect = on_connect
-client.on_disconnect = on_disconnect
-client.on_message = on_message
-#mqtt_topics = (mqtt_topic + '/' + mqtt_clientId + '/'), (mqtt_ha_topic + "/switch/" + mqtt_clientId + "_state/")
+    global pid, config, playerstate, fan, mupihat, data, jsonconfig, previous_content_local, previous_content_state, mqtt_name
+    global mqtt_topic, mqtt_clientId, mqtt_active, mqtt_broker, mqtt_port, mqtt_username, mqtt_password, mqtt_refresh, mqtt_refreshIdle
+    global mqtt_timeout, mqtt_debug, mqtt_ha_topic, mqtt_ha_active, mupi_version, mupi_host 
 
-# Connect to the MQTT broker
-client.connect(mqtt_broker, mqtt_port, mqtt_timeout)
-client.subscribe(mqtt_topic + '/' + mqtt_clientId + '/power/set')
-client.subscribe(mqtt_topic + '/' + mqtt_clientId + '/volume/set')
-client.subscribe(mqtt_topic + '/' + mqtt_clientId + '/reboot/set')
-client.subscribe(mqtt_topic + '/' + mqtt_clientId + '/pause/set')
-client.subscribe(mqtt_topic + '/' + mqtt_clientId + '/play/set')
-client.subscribe(mqtt_topic + '/' + mqtt_clientId + '/take_screenshot/set')
+#    pid = os.getpid()
+#    with open("/run/mupi_mqtt.pid", "w") as pid_file:
+#        pid_file.write(str(pid))
 
-# Start the MQTT loop
-client.loop_start()
-if mqtt_ha_active:
-    mqtt_publish_ha()
-    time.sleep(2)
-mqtt_systeminfo()
-client.publish(mqtt_topic + '/' + mqtt_clientId + '/state', "online", qos=0)
-client.publish(mqtt_topic + '/' + mqtt_clientId + '/power', "on", qos=0)
-client.publish(mqtt_topic + '/' + mqtt_clientId + '/reboot', "off", qos=0)
+    config = "/etc/mupibox/mupiboxconfig.json"
+    playerstate = "/tmp/playerstate"
+    fan = "/tmp/fan.json"
+    mupihat = "/tmp/mupihat.json"
+    data = "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json"
 
-try:
-    while True:
-        ssid, signal_strength, signal_quality = get_wifi()
-        charger_status, vbat, vbus, ibat, ibus, temp, bat_soc, bat_stat, bat_type, battery_connected = get_mupihat()
-        
+    # Load MQTT configuration from JSON file
+    with open(config) as file:
+        jsonconfig = json.load(file)
+
+    previous_content_local = ""
+    previous_content_state = ""
+
+    # Extract MQTT configuration parameters
+    mqtt_name = jsonconfig['mqtt']['name']
+    mqtt_topic = jsonconfig['mqtt']['topic'] + "/" + jsonconfig['mqtt']['clientId']
+    mqtt_clientId = jsonconfig['mqtt']['clientId']
+    mqtt_active = jsonconfig['mqtt']['active']
+    mqtt_broker = jsonconfig['mqtt']['broker']
+    mqtt_port = int(jsonconfig['mqtt']['port'])
+    mqtt_username = jsonconfig['mqtt']['username']
+    mqtt_password = jsonconfig['mqtt']['password']
+    mqtt_refresh = int(jsonconfig['mqtt']['refresh'])
+    mqtt_refreshIdle = int(jsonconfig['mqtt']['refreshIdle'])
+    mqtt_timeout = int(jsonconfig['mqtt']['timeout'])
+    mqtt_debug = jsonconfig['mqtt']['debug']
+    mqtt_ha_topic = jsonconfig['mqtt']['ha_topic']
+    mqtt_ha_active = jsonconfig['mqtt']['ha_active']
+    mupi_version = jsonconfig['mupibox']['version']
+    mupi_host = jsonconfig['mupibox']['host']
+    
+    
+    # Check MQTT Broker online state
+    if check_server_availability(mqtt_broker,1883,mqtt_refresh):
+
+        global client
+
+        # Create an MQTT client instance
+        client = mqtt.Client()
+
+        # Set the username and password for the MQTT connection if they are provided
+        if mqtt_username and mqtt_password:
+                client.username_pw_set(mqtt_username, mqtt_password)
+
+        # Set the callback functions
+        client.on_connect = on_connect
+        client.on_disconnect = on_disconnect
+        client.on_message = on_message
+        #mqtt_topics = (mqtt_topic + '/' + mqtt_clientId + '/'), (mqtt_ha_topic + "/switch/" + mqtt_clientId + "_state/")
+
+        # Connect to the MQTT broker
+        client.connect(mqtt_broker, mqtt_port, mqtt_timeout)
+        client.subscribe(mqtt_topic + '/' + mqtt_clientId + '/power/set')
+        client.subscribe(mqtt_topic + '/' + mqtt_clientId + '/volume/set')
+        client.subscribe(mqtt_topic + '/' + mqtt_clientId + '/reboot/set')
+        client.subscribe(mqtt_topic + '/' + mqtt_clientId + '/pause/set')
+        client.subscribe(mqtt_topic + '/' + mqtt_clientId + '/play/set')
+        client.subscribe(mqtt_topic + '/' + mqtt_clientId + '/take_screenshot/set')
+
+        client.loop_start()
+        if mqtt_ha_active:
+            mqtt_publish_ha()
+            time.sleep(2)
+        mqtt_systeminfo()
         client.publish(mqtt_topic + '/' + mqtt_clientId + '/state', "online", qos=0)
-        client.publish(mqtt_topic + '/' + mqtt_clientId + '/temperature', float(get_cputemp()), qos=0)
-        client.publish(mqtt_topic + '/' + mqtt_clientId + '/volume', int(get_volume()), qos=0)
-        client.publish(mqtt_topic + '/' + mqtt_clientId + '/ssid', ssid, qos=0)
-        client.publish(mqtt_topic + '/' + mqtt_clientId + '/signal_strength', signal_strength, qos=0)
-        client.publish(mqtt_topic + '/' + mqtt_clientId + '/signal_quality', signal_quality, qos=0)
-        client.publish(mqtt_topic + '/' + mqtt_clientId + '/fan', get_fan(), qos=0)
-        client.publish(mqtt_topic + '/' + mqtt_clientId + '/charger_status', charger_status, qos=0)
-        client.publish(mqtt_topic + '/' + mqtt_clientId + '/vbat', vbat, qos=0)
-        client.publish(mqtt_topic + '/' + mqtt_clientId + '/vbus', vbus, qos=0)
-        client.publish(mqtt_topic + '/' + mqtt_clientId + '/ibat', ibat, qos=0)
-        client.publish(mqtt_topic + '/' + mqtt_clientId + '/ibus', ibus, qos=0)
-        client.publish(mqtt_topic + '/' + mqtt_clientId + '/hat_temp', temp, qos=0)
-        client.publish(mqtt_topic + '/' + mqtt_clientId + '/bat_soc', bat_soc, qos=0)
-        client.publish(mqtt_topic + '/' + mqtt_clientId + '/bat_stat', bat_stat, qos=0)
-        client.publish(mqtt_topic + '/' + mqtt_clientId + '/bat_type', bat_type, qos=0)
-        client.publish(mqtt_topic + '/' + mqtt_clientId + '/battery_connected', battery_connected, qos=0)
-        send_play_information()
+        client.publish(mqtt_topic + '/' + mqtt_clientId + '/power', "on", qos=0)
+        client.publish(mqtt_topic + '/' + mqtt_clientId + '/reboot', "off", qos=0)
 
-        subprocess.run(["sudo", "rm", "/tmp/mqtt_screen.png"])
-        subprocess.run(["sudo", "-H", "-u", "dietpi", "bash", "-c", "DISPLAY=:0 scrot /tmp/mqtt_screen.png"])
+        try:
+            while True:
+                ssid, signal_strength, signal_quality = get_wifi()
+                charger_status, vbat, vbus, ibat, ibus, temp, bat_soc, bat_stat, bat_type, battery_connected = get_mupihat()
 
-        if player_active():
-            sleeptime = mqtt_refresh
-            test = playback_info()
-        else:
-            sleeptime = mqtt_refreshIdle
-        time.sleep(sleeptime)
-except KeyboardInterrupt:
-    # Stop the MQTT loop and clean up
-    client.loop_stop()
-    # Send "off" message to device topic on script exit
-    client.publish(mqtt_topic + '/' + mqtt_clientId + '/state', "offline", qos=0)
+                client.publish(mqtt_topic + '/' + mqtt_clientId + '/state', "online", qos=0)
+                client.publish(mqtt_topic + '/' + mqtt_clientId + '/temperature', float(get_cputemp()), qos=0)
+                client.publish(mqtt_topic + '/' + mqtt_clientId + '/volume', int(get_volume()), qos=0)
+                client.publish(mqtt_topic + '/' + mqtt_clientId + '/ssid', ssid, qos=0)
+                client.publish(mqtt_topic + '/' + mqtt_clientId + '/signal_strength', signal_strength, qos=0)
+                client.publish(mqtt_topic + '/' + mqtt_clientId + '/signal_quality', signal_quality, qos=0)
+                client.publish(mqtt_topic + '/' + mqtt_clientId + '/fan', get_fan(), qos=0)
+                client.publish(mqtt_topic + '/' + mqtt_clientId + '/charger_status', charger_status, qos=0)
+                client.publish(mqtt_topic + '/' + mqtt_clientId + '/vbat', vbat, qos=0)
+                client.publish(mqtt_topic + '/' + mqtt_clientId + '/vbus', vbus, qos=0)
+                client.publish(mqtt_topic + '/' + mqtt_clientId + '/ibat', ibat, qos=0)
+                client.publish(mqtt_topic + '/' + mqtt_clientId + '/ibus', ibus, qos=0)
+                client.publish(mqtt_topic + '/' + mqtt_clientId + '/hat_temp', temp, qos=0)
+                client.publish(mqtt_topic + '/' + mqtt_clientId + '/bat_soc', bat_soc, qos=0)
+                client.publish(mqtt_topic + '/' + mqtt_clientId + '/bat_stat', bat_stat, qos=0)
+                client.publish(mqtt_topic + '/' + mqtt_clientId + '/bat_type', bat_type, qos=0)
+                client.publish(mqtt_topic + '/' + mqtt_clientId + '/battery_connected', battery_connected, qos=0)
+                send_play_information()
+
+                subprocess.run(["sudo", "rm", "/tmp/mqtt_screen.png"])
+                subprocess.run(["sudo", "-H", "-u", "dietpi", "bash", "-c", "DISPLAY=:0 scrot /tmp/mqtt_screen.png"])
+
+                if player_active():
+                    sleeptime = mqtt_refresh
+                    test = playback_info()
+                else:
+                    sleeptime = mqtt_refreshIdle
+                time.sleep(sleeptime)
+        except Exception as e:
+            print(f"Signal {signum} received. Service will be stopped...")
+            client.loop_stop()
+            client.publish(mqtt_topic + '/' + mqtt_clientId + '/state', "offline", qos=0)
+            client.disconnect()
+            exit(0)
+
+
+if __name__ == "__main__":
+    main()

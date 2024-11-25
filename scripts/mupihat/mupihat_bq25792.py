@@ -188,17 +188,17 @@ class bq25792:
         v_100, v_75, v_50, v_25, v_0 = self.battery_conf['v_100'], self.battery_conf['v_75'],self.battery_conf['v_50'],self.battery_conf['v_25'],self.battery_conf['v_0']
         th_warning, th_shutdown = self.battery_conf['th_warning'], self.battery_conf['th_shutdown']
 
-        IBat = self.read_Vbat()
+        VBat = self.read_Vbat()
 
-        if IBat > v_100     : Bat_SOC = "100%"
-        elif IBat > v_75    : Bat_SOC = "75%"
-        elif IBat > v_50    : Bat_SOC = "50%"
-        elif IBat > v_25    : Bat_SOC = "25%"
-        elif IBat > v_0     : Bat_SOC = "0%"
+        if VBat > v_100     : Bat_SOC = "100%"
+        elif VBat > v_75    : Bat_SOC = "75%"
+        elif VBat > v_50    : Bat_SOC = "50%"
+        elif VBat > v_25    : Bat_SOC = "25%"
+        elif VBat > v_0     : Bat_SOC = "0%"
 
-        if IBat > th_warning : Bat_Stat = 'OK'
-        elif (IBat < th_warning) & (IBat > th_shutdown) : Bat_Stat = 'LOW'
-        elif (IBat < th_shutdown) : Bat_Stat = 'SHUTDOWN'
+        if VBat > th_warning : Bat_Stat = 'OK'
+        elif (VBat < th_warning) & (VBat > th_shutdown) : Bat_Stat = 'LOW'
+        elif (VBat < th_shutdown) : Bat_Stat = 'SHUTDOWN'
 
         return Bat_SOC, Bat_Stat
 
@@ -1168,7 +1168,7 @@ class bq25792:
         '''
         Read I2C and Return TDIE_ADC (IC Temperature) in degree
                 Range : -40°C-150°C 
-                Returns 255 if read fails
+                Returns old value if read fails
         '''
         try:
             reg_addr = self.REG41_TDIE_ADC._addr
@@ -1180,7 +1180,7 @@ class bq25792:
         except Exception as _error:
             sys.stderr.write('read_TDIE_Temp failed, %s\n' % str(_error))
             if self._exit_on_error: sys.exit(1)
-            return 255
+            return self.REG41_TDIE_ADC.get_IC_temperature()
         finally:
             return self.REG41_TDIE_ADC.get_IC_temperature()
 
@@ -1191,7 +1191,7 @@ class bq25792:
                 The battery remote sensing voltage (VBATP-GND) ADC reading 
                 Type : R POR: 0mV (0h) 
                 Range : 0mV-20000mV 
-                returns 0xFFFF if read fails
+                returns previous value if read fails
         '''
         try:
             reg_addr = self.REG3B_VBAT_ADC._addr
@@ -1203,7 +1203,7 @@ class bq25792:
         except Exception as _error:
             sys.stderr.write('read_Vbat failed, %s\n' % str(_error))
             if self._exit_on_error: sys.exit(1)
-            return 0xFFFF
+            return self.REG3B_VBAT_ADC.get_Vbat()
         finally:
             return self.REG3B_VBAT_ADC.get_Vbat()
 
@@ -1213,7 +1213,7 @@ class bq25792:
                 VBUS ADC reading 
                 Range : 0mV-30000mV 
                 Fixed Offset : 0mV Bit Step Size : 1mV
-                returns 0xFFFF if read fails
+                returns old value if read fails
         '''
         try:
             reg_addr = self.REG35_VBUS_ADC._addr
@@ -1225,7 +1225,7 @@ class bq25792:
         except Exception as _error:
             sys.stderr.write('read_Vbus failed, %s\n' % str(_error))
             if self._exit_on_error: sys.exit(1)
-            return 0xFFFF
+            return self.REG35_VBUS_ADC.get_Vbus()
         finally:
             return self.REG35_VBUS_ADC.get_Vbus()
 
@@ -1237,7 +1237,7 @@ class bq25792:
                 and when the current is flowing from PMID to VBUS, 
                 IBUS ADC reports negative value. 
                 Range : 0mA-5000mA 
-                Return 0xFFFF is read fails
+                Return old value is read fails
         '''
         try:
             reg_addr = self.REG31_IBUS_ADC._addr
@@ -1249,7 +1249,7 @@ class bq25792:
         except Exception as _error:
             sys.stderr.write('read_Ibus failed, %s\n' % str(_error))
             if self._exit_on_error: sys.exit(1)
-            return 0xFFFF
+            return self.REG31_IBUS_ADC.get_Ibus()
         finally:
             return self.REG31_IBUS_ADC.get_Ibus()
 
@@ -1259,7 +1259,7 @@ class bq25792:
                 IBAT ADC reading Reported in 2 's Complement. 
                 The IBAT ADC reports positive value for the battery charging current, and negative value for the battery discharging current if EN_IBAT in REG0x14[5] = 1. 
                 Range : 0mA-8000mA 
-                Return 0xFFFF is read fails
+                Return old value is read fails
         '''
         try:
             reg_addr = self.REG33_IBAT_ADC._addr
@@ -1271,7 +1271,7 @@ class bq25792:
         except Exception as _error:
             sys.stderr.write('read_Ibat failed, %s\n' % str(_error))
             if self._exit_on_error: sys.exit(1)
-            return 0xFFFF
+            return self.REG33_IBAT_ADC.get_Ibat()
         finally:
             return self.REG33_IBAT_ADC.get_Ibat()
 
@@ -1280,7 +1280,7 @@ class bq25792:
         Read I2C and Return ICO_ILIM in mA   
                 Input Current Limit obtained from ICO or ILIM_HIZ pin setting
                 Range : 100mA-3300mA 
-                Return 0xFFFF is read fails
+                Return old value is read fails
         '''
         try:
             reg_addr = self.REG19_ICO_Current_Limit._addr
@@ -1292,7 +1292,7 @@ class bq25792:
         except Exception as _error:
             sys.stderr.write('read_InputCurrentLimit failed, %s\n' % str(_error))
             if self._exit_on_error: sys.exit(1)
-            return 0xFFFF
+            return self.REG19_ICO_Current_Limit.get_ICO_ILIM()
         finally:
             return self.REG19_ICO_Current_Limit.get_ICO_ILIM()
                   
@@ -1310,7 +1310,7 @@ class bq25792:
             5h = Reserved 
             6h = Top-off Timer Active Charging 
             7h = Charge Termination Done
-            return 0xFF if read fails
+            return old value if read fails
         '''
         try:
             reg_addr = self.REG1C_Charger_Status_1._addr
@@ -1321,7 +1321,7 @@ class bq25792:
         except Exception as _error:
             sys.stderr.write('read_ChargerStatus failed, %s\n' % str(_error))
             if self._exit_on_error: sys.exit(1)
-            return 0xFF
+            return self.REG1C_Charger_Status_1.CHG_STAT_STRG
         finally:
             return self.REG1C_Charger_Status_1.CHG_STAT_STRG
     def write_register(self, reg):
@@ -1556,7 +1556,8 @@ class bq25792:
         except Exception as _error:
             sys.stderr.write('read_VBAT_PRESENT failed, %s\n' % str(_error))
             if self._exit_on_error: sys.exit(1)
-            return -1
+            value, ICO_STAT, TREG_STAT, DPDM_STAT, VBAT_PRESENT_STAT = self.REG1D_Charger_Status_2.get()
+            return VBAT_PRESENT_STAT
         finally:
             pass
 

@@ -2,7 +2,8 @@
 <?php
 	$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
 	$data = json_decode($string, true);
-	
+	$change=0;
+	$CHANGE_TXT="<div id='lbinfo'><ul id='lbinfo'>";
 	$commandSSID="sudo iwgetid -r";
 	$WIFI=exec($commandSSID);
 	$commandLQ="sudo iwconfig wlan0 | awk '/Link Quality/{split($2,a,\"=|/\");print int((a[2]/a[3])*100)\"\"}' | tr -d '%'";
@@ -10,9 +11,23 @@
 	
 	if ($_GET['hshutdown']) {
 		$shutdown = 1;
+		$change=99;
+		$CHANGE_TXT=$CHANGE_TXT."<li>Shutdown MuPiBox</li>";
 		}
 	if ($_GET['hreboot']) {
 		$reboot = 1;
+		$change=99;
+		$CHANGE_TXT=$CHANGE_TXT."<li>Reboot MuPiBox</li>";
+		}
+	if ($_GET['hchromerestart']) {
+		exec("sudo -i -u dietpi /usr/local/bin/mupibox/./restart_kiosk.sh");
+		$change=99;
+		$CHANGE_TXT=$CHANGE_TXT."<li>Restart Chrome kiosk</li>";
+		}
+	if ($_GET['hrefreshdatabase']) {
+		exec("sudo /usr/local/bin/mupibox/./m3u_generator.sh");
+		$change=99;
+		$CHANGE_TXT=$CHANGE_TXT."<li>Update media database finished</li>";
 		}
 		
 	$mupihat_file = '/tmp/mupihat.json';
@@ -34,9 +49,9 @@
 		<link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.5.1/css/all.css">
 		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 		<title>MuPiBox Admin-Interface</title>
-		<link rel="stylesheet" type="text/css" href="view.css?v=7.1.11" media="all">
+		<link rel="stylesheet" type="text/css" href="view.css?v=7.1.12" media="all">
 		<script src="https://code.iconify.design/iconify-icon/2.0.0/iconify-icon.min.js"></script>
-		<script type="text/javascript" src="view.js?v=6.0.3"></script>
+		<script type="text/javascript" src="view.js?v=6.0.5"></script>
 		<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 		<link rel="icon" type="image/x-icon" href="/images/favicon.ico">
 
@@ -50,6 +65,8 @@
 				<div id="Fan_Icon"> </div>
 				<a href="?hshutdown=1" onclick="return confirm('Do really want to shutdown?')" ><iconify-icon icon="ic:outline-power-settings-new" title="Shutdown" ></iconify-icon></a>
 				<a href="?hreboot=1" onclick="return confirm('Do really want to reboot?')" ><iconify-icon icon="ic:outline-restart-alt" title="Reboot" ></iconify-icon></a>
+				<a href="?hchromerestart=1" onclick="return confirm('Do really want to restart chrome kiosk?')" ><iconify-icon icon="tabler:brand-chrome"  title="Restart chrome browser" ></iconify-icon></a>
+				<a href="?hrefreshdatabase=1" onclick="return confirm('Do really want to reload media database?')" ><iconify-icon icon="mdi:database-refresh-outline"  title="Reload media database" ></iconify-icon></a>
 			</div>
 			<div class="topnav" id="myTopnav">
 				<a href="index.php"><i class="fa fa-fw fa-home"></i> Home</a>
