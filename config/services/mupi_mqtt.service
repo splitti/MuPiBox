@@ -10,7 +10,7 @@ WorkingDirectory=/tmp/
 User=root
 PIDFile=/run/mupi_mqtt.pid
 ExecStart=/usr/bin/python3 -B /usr/local/bin/mupibox/mqtt.py
-ExecStop=/bin/kill -TERM $(cat /run/mupi_mqtt.pid)
+#ExecStop=/bin/kill -TERM $(cat /run/mupi_mqtt.pid)
 Restart=on-abort
 
 [Install]
