@@ -10,8 +10,12 @@ cards:
     title: <ANYTHING YOU WANT>
   - type: conditional
     conditions:
-      - entity: binary_sensor.<YOUR_MQTT_BOXNAME>_state
-        state_not: "off"
+        - entity: binary_sensor.<YOUR_MQTT_BOXNAME>_state
+          state_not: "off"
+        - entity: binary_sensor.<YOUR_MQTT_BOXNAME>_state
+          state_not: "unavailable"
+        - entity: binary_sensor.<YOUR_MQTT_BOXNAME>_state
+          state_not: "unknown"
     card:
       type: custom:button-card
       aspect_ratio: 12/1
@@ -52,6 +56,12 @@ cards:
           conditions:
             - entity: binary_sensor.<YOUR_MQTT_BOXNAME>_state
               state_not: "off"
+            - entity: binary_sensor.<YOUR_MQTT_BOXNAME>_state
+              state_not: "off"
+            - entity: binary_sensor.<YOUR_MQTT_BOXNAME>_state
+              state_not: "unavailable"
+            - entity: binary_sensor.<YOUR_MQTT_BOXNAME>_state
+              state_not: "unknown"
           elements:
             - entity: button.<YOUR_MQTT_BOXNAME>_shutdown
               type: state-icon
