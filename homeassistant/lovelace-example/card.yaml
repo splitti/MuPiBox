@@ -63,20 +63,38 @@ cards:
             - entity: binary_sensor.<YOUR_MQTT_BOXNAME>_state
               state_not: unknown
           elements:
-            - entity: button.<YOUR_MQTT_BOXNAME>_shutdown
-              type: state-icon
-              icon: mdi:power
+            - type: custom:config-template-card
+              entities:
+                - button.<YOUR_MQTT_BOXNAME>_shutdown
+              element:
+                type: custom:button-card
+                entity: button.<YOUR_MQTT_BOXNAME>_shutdown
+                icon: mdi:power
+                name: ""
+                show_name: false
+                show_state: false
+                tap_action:
+                  action: toggle
+                  confirmation:
+                    text: Do you really want to shutdown?
+                styles:
+                  card:
+                    - background: none
+                    - box-shadow: none
+                    - padding: 0
+                    - margin: 0
+                    - border: 0
+                  icon:
+                    - color: var(--primary-color)
+                    - width: 25px
+                    - height: 25px
               style:
                 top: 48%
                 left: 24%
                 transform: translate(-50%, -50%) scale(77%, 77%)
                 font-size: 1em
-                "--paper-item-icon-color": "#054b61"
-              state_color: true
-              tap_action:
-                action: toggle
-              confirmation:
-                text: Do you really want to shutdown?
+                color: rgba(0,0,0,0)
+                "--icon-primary-color": "#054b61"
             - entity: button.<YOUR_MQTT_BOXNAME>_take_screenshot
               type: state-icon
               style:
@@ -124,8 +142,12 @@ cards:
                 type: state-icon
                 entity: sensor.<YOUR_MQTT_BOXNAME>_hat_battery_level
                 icon: >-
-                  ${states['sensor.<YOUR_MQTT_BOXNAME>_hat_battery_level'].state > 99
-                  ? 'mdi:battery' :
+                  ${states['sensor.<YOUR_MQTT_BOXNAME>_hat_battery_connected'].state != 1 ?
+                  'null' :
+                  states['sensor.<YOUR_MQTT_BOXNAME>_hat_vbus_charger'].state > 0 ?
+                  'mdi:battery-charging-outline' :
+                  states['sensor.<YOUR_MQTT_BOXNAME>_hat_battery_level'].state > 99 ?
+                  'mdi:battery' :
                     states['sensor.<YOUR_MQTT_BOXNAME>_hat_battery_level'].state > 74 ?
                   'mdi:battery-70' :
                     states['sensor.<YOUR_MQTT_BOXNAME>_hat_battery_level'].state > 49 ?
@@ -184,7 +206,8 @@ cards:
                 tap_action:
                   action: url
                   url_path: >
-                    [[[ return states['sensor.<YOUR_MQTT_BOXNAME>_admininterface'].state; ]]]
+                    [[[ return
+                    states['sensor.<YOUR_MQTT_BOXNAME>_admininterface'].state; ]]]
                 styles:
                   card:
                     - background: none
