@@ -6,7 +6,14 @@ import {
   SpotifyUrlAlbumGroup,
   SpotifyUrlType,
 } from './models/albumgroup.model'
-import { BaseData, Data, SpotifyShowData } from './models/data.model'
+import {
+  BaseData,
+  Data,
+  SpotifyAlbumData,
+  SpotifyArtistData,
+  SpotifyPlaylistData,
+  SpotifyShowData,
+} from './models/data.model'
 import { Folder, FolderWithChildren, FolderWithNumChildren } from './models/folder.model'
 import { chunks, readJsonFile } from './utils'
 import {
@@ -81,7 +88,7 @@ app.get('/api/folders', async (_req, res) => {
     const entriesWithoutFolderName = data.filter((entry) => entry.artist === undefined)
     await fillShowDataEntry(entriesWithoutFolderName.filter((entry) => 'showid' in entry))
     await fillArtistDataEntry(entriesWithoutFolderName.filter((entry) => 'artistid' in entry))
-    await fillAlbumDataEntry(entriesWithoutFolderName.filter((entry) => 'id' in entry && 'spotify_url' in entry))
+    await fillAlbumDataEntry(entriesWithoutFolderName.filter((entry) => 'id' in entry && entry.type === 'spotify'))
     await fillPlaylistDataEntry(entriesWithoutFolderName.filter((entry) => 'playlistid' in entry))
 
     // Now sort them into folders.
@@ -109,10 +116,39 @@ app.get('/api/folders', async (_req, res) => {
 
     // Finally, we need to check if we have an image url for each folder.
     // If not, we check if we can request it.
-    // TODO: Handle RSS.
     const folderList = [...folderMap.values()]
     const folderWithoutImage = folderList.filter((folder) => folder.img === undefined)
-    // const childrenOfFoldersWithoutImage = folderWithoutImage.map(folder => folder.children.filter(child => child.type !== ))
+    const childrenWithFolders = folderWithoutImage.map((folder) => {
+      console.log(folder.children)
+      return { data: folder.children[0], folder: folder }
+    })
+    await fillShowDataEntry(
+      childrenWithFolders
+        .map((entry) => entry.data)
+        .filter<SpotifyShowData>((entry): entry is SpotifyShowData => 'showid' in entry),
+    )
+    await fillArtistDataEntry(
+      childrenWithFolders
+        .map((entry) => entry.data)
+        .filter<SpotifyArtistData>((entry): entry is SpotifyArtistData => 'artistid' in entry),
+    )
+    await fillAlbumDataEntry(
+      childrenWithFolders
+        .map((entry) => entry.data)
+        .filter<SpotifyAlbumData>((entry): entry is SpotifyAlbumData => 'id' in entry && entry.type === 'spotify'),
+    )
+    await fillPlaylistDataEntry(
+      childrenWithFolders
+        .map((entry) => entry.data)
+        .filter<SpotifyPlaylistData>((entry): entry is SpotifyPlaylistData => 'playlistid' in entry),
+    )
+    // TODO: RSS
+    // TODO: Spotify search query
+
+    // Write the image back.
+    for (const entry of childrenWithFolders) {
+      entry.folder.img = entry.data.artistcover
+    }
 
     // Last, convert to the data format we want to return.
     const out: FolderWithNumChildren[] = folderList.map((folder) => {
