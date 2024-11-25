@@ -2,8 +2,8 @@
 Just a quick Setup guide. Visit our discord channel (https://discord.gg/4EjCgpCbbe) for more informations.
 ![Example](example.png "Example") 
 
-##Requirements
-You Need the following plugins installed in HACS:
+## Requirements
+You need the following plugins installed in HACS:
 - mushroom-title-Card
 - button-Card
 - config-template-card
