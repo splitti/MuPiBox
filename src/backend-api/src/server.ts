@@ -24,6 +24,7 @@ import {
   spotifyApi,
 } from './spotify'
 
+import { Network } from './models/network.model'
 import { ServerConfig } from './models/server.model'
 import cors from 'cors'
 import { environment } from './environment'
@@ -78,7 +79,12 @@ if (environment.production) {
 // Routes
 app.get('/api/folders', async (_req, res) => {
   try {
-    const data: Data[] = await readJsonFile(dataFile)
+    let data: Data[] = await readJsonFile(dataFile)
+    const network: Network = await readJsonFile(networkFile)
+    // If we are not online, we filter all sources that require an online connection out.
+    if (network.onlinestate !== 'online') {
+      data = data.filter((entry) => entry.type === 'library')
+    }
 
     // First, we sort all data.json entries into folders.
     // For this, we might need to first set the `artist` field for entries that do
@@ -119,7 +125,6 @@ app.get('/api/folders', async (_req, res) => {
     const folderList = [...folderMap.values()]
     const folderWithoutImage = folderList.filter((folder) => folder.img === undefined)
     const childrenWithFolders = folderWithoutImage.map((folder) => {
-      console.log(folder.children)
       return { data: folder.children[0], folder: folder }
     })
     await fillShowDataEntry(
@@ -276,20 +281,21 @@ app.get('/api/network', (req, res) => {
 app.get('/api/monitor', (req, res) => {
   const ip = req.socket.remoteAddress
   const host = req.hostname
-  const isLocalhost =  ip === "127.0.0.1" || ip === "::ffff:127.0.0.1" || ip === "::1" || host.indexOf("localhost") !== -1
+  const isLocalhost =
+    ip === '127.0.0.1' || ip === '::ffff:127.0.0.1' || ip === '::1' || host.indexOf('localhost') !== -1
 
   if (fs.existsSync(monitorFile) && isLocalhost) {
     jsonfile.readFile(monitorFile, (error, data) => {
       if (error) {
         console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error /api/monitor read monitor.json`)
         console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] ${error}`)
-        res.json({"monitor": "On"})
+        res.json({ monitor: 'On' })
       } else {
         res.json(data)
       }
     })
   } else {
-    res.json({"monitor": "On" })
+    res.json({ monitor: 'On' })
   }
 })
 

@@ -1,1 +1,9 @@
-Bla
+Blab
+<ion-list>
+@for (entry of data(); track entry) {
+    <ion-item button (click)="entryClicked.emit(entry)">
+    {{ entry.index }}
+    {{ entry.title }}
+    </ion-item>
+}
+</ion-list>

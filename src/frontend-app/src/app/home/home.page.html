@@ -1,1 +1,10 @@
-Bla
+
+<ion-content>
+    <mupiapp-data-list (entryClicked)="entryClicked($event)"></mupiapp-data-list>
+    <ion-fab slot="fixed" horizontal="end" vertical="bottom">
+        <!-- TODO: Change to routerLink to get ion navigation -->
+        <ion-fab-button href="./add" routerDirection="forward">
+          <ion-icon name="add"></ion-icon>
+        </ion-fab-button>
+      </ion-fab>
+</ion-content>
