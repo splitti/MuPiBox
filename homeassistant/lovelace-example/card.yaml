@@ -1,0 +1,208 @@
+type: vertical-stack
+cards:
+  - type: custom:mushroom-title-card
+    alignment: center
+    card_mod:
+      style: |
+        ha-card {
+          font-variant: small-caps;
+        }        
+    title: <ANYTHING YOU WANT>
+  - type: conditional
+    conditions:
+        - entity: binary_sensor.<YOUR_MQTT_BOXNAME>_state
+          state_not: "off"
+        - entity: binary_sensor.<YOUR_MQTT_BOXNAME>_state
+          state_not: "unavailable"
+        - entity: binary_sensor.<YOUR_MQTT_BOXNAME>_state
+          state_not: "unknown"
+    card:
+      type: custom:button-card
+      aspect_ratio: 12/1
+      card_mod:
+        style: |
+          ha-card {
+            box-shadow: none; 
+            border: none;     
+            padding: 0;       
+            margin: 0;        
+            background: none; 
+          }
+      name: |
+        [[[return `<div style='display: flex;
+                               padding: 0px 5px 0px 5px;
+                               align-items: center;
+                               background: transparent;'>
+
+           <marquee>
+           <span style='color: #054b61;align-items: center;'>
+           ${states['sensor.<YOUR_MQTT_BOXNAME>_current_playback'].state}&nbsp</span>
+           </marquee>`]]]  
+  - type: custom:mod-card
+    card:
+      type: picture-elements
+      image: /local/img/MuPiHomeAssistant.png
+      card_mod:
+        style: |
+          ha-card {
+            box-shadow: none; 
+            border: none;     
+            padding: 0;       
+            margin: 0;        
+            background: none; 
+          }
+      elements:
+        - type: conditional
+          conditions:
+            - entity: binary_sensor.<YOUR_MQTT_BOXNAME>_state
+              state_not: "off"
+            - entity: binary_sensor.<YOUR_MQTT_BOXNAME>_state
+              state_not: "off"
+            - entity: binary_sensor.<YOUR_MQTT_BOXNAME>_state
+              state_not: "unavailable"
+            - entity: binary_sensor.<YOUR_MQTT_BOXNAME>_state
+              state_not: "unknown"
+          elements:
+            - entity: button.<YOUR_MQTT_BOXNAME>_shutdown
+              type: state-icon
+              icon: mdi:power
+              style:
+                top: 48%
+                left: 24%
+                transform: translate(-50%, -50%) scale(77%, 77%)
+                font-size: 1em
+                "--paper-item-icon-color": "#054b61"
+              state_color: true
+              tap_action:
+                action: toggle
+              confirmation:
+                text: Do you really want to shutdown?
+            - entity: button.<YOUR_MQTT_BOXNAME>_take_screenshot
+              type: state-icon
+              style:
+                top: 59%
+                left: 24%
+                transform: translate(-50%, -50%) scale(77%, 77%)
+                font-size: 1em
+                "--paper-item-icon-color": "#054b61"
+              tap_action:
+                action: toggle
+            - type: custom:config-template-card
+              entities:
+                - sensor.<YOUR_MQTT_BOXNAME>_wifi_signal_quality
+              element:
+                type: state-icon
+                entity: sensor.<YOUR_MQTT_BOXNAME>_wifi_signal_quality
+              style:
+                top: 70%
+                left: 24%
+                transform: translate(-50%, -50%) scale(77%, 77%)
+                font-size: 1em
+                color: rgba(0,0,0,0)
+                "--paper-item-icon-color": >-
+                  ${states['sensor.<YOUR_MQTT_BOXNAME>_wifi_signal_quality'].state > 90
+                  ? '#054b61' :
+                    states['sensor.<YOUR_MQTT_BOXNAME>_wifi_signal_quality'].state > 70 ?
+                  '#054b61' :
+                    states['sensor.<YOUR_MQTT_BOXNAME>_wifi_signal_quality'].state > 50 ?
+                  'orange' :
+                    states['sensor.<YOUR_MQTT_BOXNAME>_wifi_signal_quality'].state > 30 ?
+                  'red' : 'red'}
+                icon: >-
+                  ${states['sensor.<YOUR_MQTT_BOXNAME>_wifi_signal_quality'].state > 89
+                  ? 'mdi:wifi-4' :
+                    states['sensor.<YOUR_MQTT_BOXNAME>_wifi_signal_quality'].state > 69 ?
+                  'mdi:wifi-strength-3' :
+                    states['sensor.<YOUR_MQTT_BOXNAME>_wifi_signal_quality'].state > 49 ?
+                  'mdi:wifi-strength-2' :
+                    states['sensor.<YOUR_MQTT_BOXNAME>_wifi_signal_quality'].state > 29 ?
+                  'mdi:wifi-strength-1-alert' : 'mdi:wifi-strength-outline'}
+            - type: custom:config-template-card
+              entities:
+                - sensor.<YOUR_MQTT_BOXNAME>_hat_battery_level
+              element:
+                type: state-icon
+                entity: sensor.<YOUR_MQTT_BOXNAME>_hat_battery_level
+                icon: >-
+                  ${states['sensor.<YOUR_MQTT_BOXNAME>_hat_battery_level'].state > 99 ?
+                  'mdi:battery' :
+                    states['sensor.<YOUR_MQTT_BOXNAME>_hat_battery_level'].state > 74 ?
+                  'mdi:battery-70' :
+                    states['sensor.<YOUR_MQTT_BOXNAME>_hat_battery_level'].state > 49 ?
+                  'mdi:battery-50' :
+                    states['sensor.<YOUR_MQTT_BOXNAME>_hat_battery_level'].state > 24 ?
+                  'mdi:battery-20' : 'mdi:battery-alert-variant-outline'}
+              style:
+                top: 81%
+                left: 24%
+                transform: translate(-50%, -50%) scale(77%, 77%)
+                font-size: 1em
+                color: rgba(0,0,0,0)
+                "--icon-primary-color": >-
+                  ${states['sensor.<YOUR_MQTT_BOXNAME>_hat_battery_level'].state > 24 ?
+                  '#054b61' : 'red'}
+            - type: custom:config-template-card
+              entities:
+                - button.<YOUR_MQTT_BOXNAME>_pause
+              element:
+                type: state-icon
+                entity: button.<YOUR_MQTT_BOXNAME>_pause
+                tap_action:
+                  action: toggle
+              style:
+                top: 90%
+                left: 45%
+                transform: translate(-50%, -50%) scale(77%, 77%)
+                font-size: 1em
+                color: rgba(0,0,0,0)
+                "--icon-primary-color": "#054b61"
+            - type: custom:config-template-card
+              entities:
+                - button.<YOUR_MQTT_BOXNAME>_play
+              element:
+                type: state-icon
+                entity: button.<YOUR_MQTT_BOXNAME>_play
+                tap_action:
+                  action: toggle
+              style:
+                top: 90%
+                left: 55%
+                transform: translate(-50%, -50%) scale(77%, 77%)
+                font-size: 1em
+                color: rgba(0,0,0,0)
+                "--icon-primary-color": "#054b61"
+            - type: custom:hui-element
+              card_type: picture-entity
+              show_name: false
+              show_state: false
+              entity: image.<YOUR_MQTT_BOXNAME>_screenshot
+              style:
+                top: 66%
+                left: 51%
+                transform: >-
+                  skew(2deg, -1deg) rotate(1deg) translate(-50%, -50%)
+                  scale(77%, 77%)
+                "--ha-card-border-width": 0px
+                "--ha-card-border-radius": 0px
+                "--ha-card-background": none
+            - entity: sensor.<YOUR_MQTT_BOXNAME>_cpu_temperature
+              type: state-badge
+              style:
+                top: 99%
+                left: 93%
+                font-size: 0.7em
+                color: rgba(0,0,0,0)
+                "--label-badge-red": "#054b61"
+            - type: custom:config-template-card
+              entities:
+                - button.<YOUR_MQTT_BOXNAME>_play
+              element:
+                type: custom:slider-entity-row
+                entity: number.<YOUR_MQTT_BOXNAME>_volume
+                name: hide_state
+                attribute: volume_level
+                full_row: true
+              style:
+                top: 40%
+                left: 50%
+                "--primary-color": "#054b61"
