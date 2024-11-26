@@ -1,5 +1,53 @@
-<ion-grid>
-    <ion-row>
-        Source: <ion-select></ion-select>
-    </ion-row>
-</ion-grid>
+<ion-header>
+    <ion-toolbar>
+        <ion-buttons slot="start">
+            <ion-back-button></ion-back-button>
+        </ion-buttons>
+      <ion-title>Create entry</ion-title>
+    </ion-toolbar>
+</ion-header>
+<ion-content>
+    <ion-card>
+        <ion-card-header>
+            <ion-card-title>General</ion-card-title>
+        </ion-card-header>
+        
+        <ion-card-content>
+            <ion-grid>
+                <ion-row>
+                    Source: <ion-select></ion-select>
+                </ion-row>
+                <ion-row>
+                    <ion-segment [scrollable]="true" value="audiobook">
+                        <ion-segment-button value="audiobook">
+                            Audiobook
+                        </ion-segment-button>
+                        <ion-segment-button value="music">
+                            Music
+                        </ion-segment-button>
+                        <ion-segment-button value="other">
+                            Other
+                        </ion-segment-button>
+                    </ion-segment>
+                </ion-row>
+            </ion-grid>        </ion-card-content>
+    </ion-card>
+    <ion-card>
+        <ion-card-header>
+          <ion-card-title>Folder</ion-card-title>
+        </ion-card-header>
+      
+        <ion-card-content>
+          Here's a small text description for the card content. Nothing more, nothing less.
+        </ion-card-content>
+    </ion-card>
+    <ion-card>
+        <ion-card-header>
+            <ion-card-title>Settings</ion-card-title>
+        </ion-card-header>
+        
+        <ion-card-content>
+            Here's a small text description for the card content. Nothing more, nothing less.
+        </ion-card-content>
+    </ion-card>
+</ion-content>

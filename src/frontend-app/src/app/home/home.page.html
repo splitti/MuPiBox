@@ -1,4 +1,12 @@
-<!-- TODO: Add header + create button if on desktop  -->
+<!-- TODO: Add header + create button only if on desktop  -->
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Data</ion-title>
+    <ion-buttons slot="end">
+      <ion-button fill="outline">+ Create</ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
 <ion-content>
     <mupiapp-data-list (entryClicked)="entryClicked($event)"></mupiapp-data-list>
     <ion-fab slot="fixed" horizontal="end" vertical="bottom">

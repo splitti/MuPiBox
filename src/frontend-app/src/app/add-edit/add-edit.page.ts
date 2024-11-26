@@ -1,5 +1,23 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core'
-import { IonGrid, IonRow, IonSelect } from '@ionic/angular/standalone'
+import {
+  IonBackButton,
+  IonButtons,
+  IonCard,
+  IonCardContent,
+  IonCardHeader,
+  IonCardSubtitle,
+  IonCardTitle,
+  IonContent,
+  IonGrid,
+  IonHeader,
+  IonIcon,
+  IonRow,
+  IonSegment,
+  IonSegmentButton,
+  IonSelect,
+  IonTitle,
+  IonToolbar,
+} from '@ionic/angular/standalone'
 
 import { DataListComponent } from '../data-list/data-list.component'
 
@@ -7,7 +25,25 @@ import { DataListComponent } from '../data-list/data-list.component'
   selector: 'mupiapp-add-edit',
   templateUrl: 'add-edit.page.html',
   styleUrls: ['add-edit.page.scss'],
-  imports: [IonRow, IonGrid, IonSelect],
+  imports: [
+    IonButtons,
+    IonBackButton,
+    IonTitle,
+    IonHeader,
+    IonToolbar,
+    IonCardContent,
+    IonCard,
+    IonCardHeader,
+    IonCardSubtitle,
+    IonCardTitle,
+    IonContent,
+    IonIcon,
+    IonSegmentButton,
+    IonSegment,
+    IonRow,
+    IonGrid,
+    IonSelect,
+  ],
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
