@@ -1,8 +1,8 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core'
+import { ClickedDataEntry, DataListComponent } from '../data-list/data-list.component'
 import { IonContent, IonFab, IonFabButton, IonIcon } from '@ionic/angular/standalone'
 
 import { Data } from '@backend-api/data.model'
-import { DataListComponent } from '../data-list/data-list.component'
 import { Router } from '@angular/router'
 import { add } from 'ionicons/icons'
 import { addIcons } from 'ionicons'
@@ -20,8 +20,7 @@ export class HomePage {
     addIcons({ add })
   }
 
-  protected entryClicked(data: Data): void {
-    console.log(data)
-    this.router.navigate(['edit', data.index])
+  protected entryClicked(clickedData: ClickedDataEntry): void {
+    this.router.navigate(['edit', clickedData.index])
   }
 }

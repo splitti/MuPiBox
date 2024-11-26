@@ -1,9 +1,9 @@
 <ion-list>
-@for (entry of shownData(); track entry) {
+@for (entry of shownData(); track entry; let idx = $index) {
     <!-- TODO: don't use id but just the index of the entry -->
-    <ion-item button detail="true" (click)="entryClicked.emit(entry.data)">
+    <ion-item button detail="true" (click)="entryClicked.emit({index: idx, data: entry.data})">
       <ion-icon slot="start" src="assets/{{ entry.icon }}.svg" aria-hidden="true"></ion-icon>
-      <ion-label>
+      <ion-label class="mupi-data-label">
         <h3>{{ entry.name }}</h3>
         <p class="mupi-data-detail">
             <span>{{ entry.category }}</span>
