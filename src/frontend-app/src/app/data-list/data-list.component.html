@@ -1,9 +1,18 @@
-Blab
 <ion-list>
-@for (entry of data(); track entry) {
-    <ion-item button (click)="entryClicked.emit(entry)">
-    {{ entry.index }}
-    {{ entry.title }}
+@for (entry of shownData(); track entry) {
+    <!-- TODO: don't use id but just the index of the entry -->
+    <ion-item button detail="true" (click)="entryClicked.emit(entry.data)">
+      <ion-icon slot="start" src="assets/{{ entry.icon }}.svg" aria-hidden="true"></ion-icon>
+      <ion-label>
+        <h3>{{ entry.name }}</h3>
+        <p class="mupi-data-detail">
+            <span>{{ entry.category }}</span>
+            @if (entry.detail) {
+                <span>{{ entry.detail }}</span>
+            }
+        </p>
+      </ion-label>
+      <ion-button slot="end" fill="outline">Edit</ion-button>
     </ion-item>
 }
 </ion-list>

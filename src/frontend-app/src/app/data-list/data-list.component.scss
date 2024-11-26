@@ -1,0 +1,5 @@
+.mupi-data-detail {
+    span:not(:first-of-type)::before {
+        content: ' - ';
+    }
+}

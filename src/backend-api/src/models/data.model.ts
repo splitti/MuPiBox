@@ -55,7 +55,9 @@ export interface SpotifyBaseData extends BaseData, HasMultipleMedia {
   shuffle?: boolean
 }
 
-export interface SpotifyQueryData extends SpotifyBaseData {
+// TODO: Check again if this can be merged with SPotifyBaseData. Does not seem to exist for spotify search query!
+export interface SpotifyQueryData extends BaseData {
+  type: 'spotify'
   artist: string // Creating SpotifyQueryData requires the folder name!
   query: string
 }
