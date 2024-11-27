@@ -34,4 +34,8 @@ export const routes: Routes = [
     path: 'add',
     loadComponent: () => import('./add/add.page').then((m) => m.AddPage),
   },
+  {
+    path: 'settings',
+    loadComponent: () => import('./settings/settings.page').then((m) => m.SettingsPage),
+  },
 ]
