@@ -22,6 +22,7 @@ export interface DataListEntry {
   name: string
   detail: string
   category: CategoryType
+  allowEdit: boolean
   data: Data
 }
 
@@ -56,6 +57,7 @@ export class DataListComponent {
         name: entry.title === undefined ? detail : entry.title,
         detail: entry.title === undefined ? '' : detail,
         category: entry.category,
+        allowEdit: entry.type !== 'library',
         data: entry,
       }
     })

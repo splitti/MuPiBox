@@ -1,15 +1,18 @@
 <ion-header>
     <ion-toolbar>
         <ion-buttons slot="start">
-            <ion-back-button></ion-back-button>
+            <ion-back-button defaultHref="/"></ion-back-button>
         </ion-buttons>
       <ion-title>Create entry</ion-title>
+      <ion-buttons slot="end">
+        <ion-button>Delete</ion-button>
+    </ion-buttons>
     </ion-toolbar>
 </ion-header>
 <ion-content>
     <ion-card>
         <ion-card-header>
-            <ion-card-title>General</ion-card-title>
+            <ion-card-title>Source</ion-card-title>
         </ion-card-header>
         
         <ion-card-content>
@@ -17,7 +20,18 @@
                 <ion-row>
                     Source: <ion-select></ion-select>
                 </ion-row>
+            </ion-grid>        
+        </ion-card-content>
+    </ion-card>
+    <ion-card>
+        <ion-card-header>
+          <ion-card-title>Folder</ion-card-title>
+        </ion-card-header>
+      
+        <ion-card-content>
+            <ion-grid>
                 <ion-row>
+                    <ion-label>Category</ion-label>
                     <ion-segment [scrollable]="true" value="audiobook">
                         <ion-segment-button value="audiobook">
                             Audiobook
@@ -30,15 +44,16 @@
                         </ion-segment-button>
                     </ion-segment>
                 </ion-row>
-            </ion-grid>        </ion-card-content>
-    </ion-card>
-    <ion-card>
-        <ion-card-header>
-          <ion-card-title>Folder</ion-card-title>
-        </ion-card-header>
-      
-        <ion-card-content>
-          Here's a small text description for the card content. Nothing more, nothing less.
+                <ion-row>
+                    Folder name
+                </ion-row>
+                <ion-row>
+                    Folder image
+                </ion-row>
+                <ion-row>
+                    Sorting order
+                </ion-row>
+            </ion-grid>
         </ion-card-content>
     </ion-card>
     <ion-card>
@@ -47,7 +62,15 @@
         </ion-card-header>
         
         <ion-card-content>
-            Here's a small text description for the card content. Nothing more, nothing less.
+            Shuffle, range, cover, title
         </ion-card-content>
     </ion-card>
 </ion-content>
+<ion-footer>
+    <ion-toolbar>
+        <ion-buttons>
+            <ion-button>Cancel</ion-button>
+            <ion-button>Save</ion-button>
+        </ion-buttons>
+    </ion-toolbar>
+</ion-footer>

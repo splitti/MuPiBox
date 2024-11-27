@@ -61,22 +61,22 @@ export interface SpotifyQueryData extends SpotifyBaseData {
 
 export interface SpotifyArtistData extends SpotifyBaseData {
   artistid: string
-  spotify_url: string
+  spotify_url?: string
 }
 
 export interface SpotifyAlbumData extends SpotifyBaseData {
   id: string
-  spotify_url: string
+  spotify_url?: string
 }
 
 export interface SpotifyShowData extends SpotifyBaseData {
   showid: string
-  spotify_url: string
+  spotify_url?: string
 }
 
 export interface SpotifyPlaylistData extends SpotifyBaseData {
   playlistid: string
-  spotify_url: string
+  spotify_url?: string
 }
 
 export type SpotifyData =

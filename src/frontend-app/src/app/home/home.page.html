@@ -1,18 +1,11 @@
-<!-- TODO: Add header + create button only if on desktop  -->
 <ion-header>
   <ion-toolbar>
     <ion-title>Data</ion-title>
     <ion-buttons slot="end">
-      <ion-button fill="outline">+ Create</ion-button>
+      <ion-button fill="outline"><ion-icon slot="start" name="add"></ion-icon>Add</ion-button>
     </ion-buttons>
   </ion-toolbar>
 </ion-header>
 <ion-content>
     <mupiapp-data-list (entryClicked)="entryClicked($event)"></mupiapp-data-list>
-    <ion-fab slot="fixed" horizontal="end" vertical="bottom">
-        <!-- TODO: Change to routerLink to get ion navigation -->
-        <ion-fab-button href="./add" routerDirection="forward">
-          <ion-icon name="add"></ion-icon>
-        </ion-fab-button>
-      </ion-fab>
 </ion-content>

@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core'
 import {
   IonBackButton,
+  IonButton,
   IonButtons,
   IonCard,
   IonCardContent,
@@ -8,9 +9,11 @@ import {
   IonCardSubtitle,
   IonCardTitle,
   IonContent,
+  IonFooter,
   IonGrid,
   IonHeader,
   IonIcon,
+  IonLabel,
   IonRow,
   IonSegment,
   IonSegmentButton,
@@ -26,6 +29,9 @@ import { DataListComponent } from '../data-list/data-list.component'
   templateUrl: 'add-edit.page.html',
   styleUrls: ['add-edit.page.scss'],
   imports: [
+    IonButton,
+    IonFooter,
+    IonLabel,
     IonButtons,
     IonBackButton,
     IonTitle,

@@ -1,5 +1,4 @@
 import { Component, OnInit } from '@angular/core'
-import { NavigationExtras, Router } from '@angular/router'
 import {
   IonBackButton,
   IonButton,
@@ -16,6 +15,8 @@ import {
   IonTitle,
   IonToolbar,
 } from '@ionic/angular/standalone'
+import { NavigationExtras, Router } from '@angular/router'
+import { PlayerCmds, PlayerService } from '../player.service'
 import {
   addOutline,
   arrowBackOutline,
@@ -25,16 +26,15 @@ import {
   trashOutline,
   wifiOutline,
 } from 'ionicons/icons'
-import { PlayerCmds, PlayerService } from '../player.service'
 
-import { AsyncPipe } from '@angular/common'
-import { AlertController } from '@ionic/angular/standalone'
-import { addIcons } from 'ionicons'
-import type { Observable } from 'rxjs'
 import { ActivityIndicatorService } from '../activity-indicator.service'
+import { AlertController } from '@ionic/angular/standalone'
+import { AsyncPipe } from '@angular/common'
 import type { Media } from '../media'
 import { MediaService } from '../media.service'
-import type { Network } from '../network'
+import type { Network } from '@backend-api/network.model'
+import type { Observable } from 'rxjs'
+import { addIcons } from 'ionicons'
 
 @Component({
   selector: 'app-edit',
