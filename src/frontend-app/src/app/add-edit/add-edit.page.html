@@ -16,11 +16,16 @@
         </ion-card-header>
         
         <ion-card-content>
-            <ion-grid>
-                <ion-row>
-                    Source: <ion-select></ion-select>
-                </ion-row>
-            </ion-grid>        
+            <ion-select justify="start" fill="outline" interface="popover" placeholder="Select a source type">
+                <div slot="label">Source type <span class="mupi-required">(required)</span></div>
+                <ion-select-option value="spotifyURL">Spotify URL</ion-select-option>
+                <ion-select-option value="spotifySearch">Spotify Search Query</ion-select-option>
+                <ion-select-option value="rssURL">RSS/Podcast URL</ion-select-option>
+                <ion-select-option value="streamURL">Stream/Radio URL</ion-select-option>
+            </ion-select>
+            <ion-input fill="outline" helperText="URL of the source.">
+                <div slot="label">Source URL <span class="mupi-required">(required)</span></div>
+            </ion-input>
         </ion-card-content>
     </ion-card>
     <ion-card>
@@ -29,31 +34,33 @@
         </ion-card-header>
       
         <ion-card-content>
-            <ion-grid>
-                <ion-row>
-                    <ion-label>Category</ion-label>
-                    <ion-segment [scrollable]="true" value="audiobook">
-                        <ion-segment-button value="audiobook">
-                            Audiobook
-                        </ion-segment-button>
-                        <ion-segment-button value="music">
-                            Music
-                        </ion-segment-button>
-                        <ion-segment-button value="other">
-                            Other
-                        </ion-segment-button>
-                    </ion-segment>
-                </ion-row>
-                <ion-row>
-                    Folder name
-                </ion-row>
-                <ion-row>
-                    Folder image
-                </ion-row>
-                <ion-row>
-                    Sorting order
-                </ion-row>
-            </ion-grid>
+            <ion-label position="fixed">Category</ion-label>
+            <ion-segment [scrollable]="true" value="audiobook">
+                <ion-segment-button value="audiobook">
+                    Audiobook
+                </ion-segment-button>
+                <ion-segment-button value="music">
+                    Music
+                </ion-segment-button>
+                <ion-segment-button value="other">
+                    Other
+                </ion-segment-button>
+            </ion-segment>
+            <ion-toggle justify="start">Automatic folder name & image</ion-toggle>
+            <ion-input fill="outline" helperText="Name of the folder containing this data entry. This is used on the top level of the MupiBox interface.">
+                <div slot="label">Folder name <span class="mupi-required">(required)</span></div>
+            </ion-input>
+            <ion-input fill="outline" helperText="URL of an image that should be used for the folder containing this data entry. This is shown on the top level of the MupiBox interface.">
+                <div slot="label">Folder image URL</div>
+            </ion-input>
+            <ion-select justify="start" fill="outline" interface="popover" value="AlphabeticalAscending">
+                <div slot="label">Sorting</div>
+                <!-- TODO: Use ts types as values here -->
+                <ion-select-option value="AlphabeticalAscending">alphabetical asc.</ion-select-option>
+                <ion-select-option value="AlphabeticalDescending">alphabetical desc.</ion-select-option>
+                <ion-select-option value="ReleaseDateAscending">release date asc.</ion-select-option>
+                <ion-select-option value="ReleaseDateDescending">release date desc.</ion-select-option>
+            </ion-select>
         </ion-card-content>
     </ion-card>
     <ion-card>
@@ -62,7 +69,22 @@
         </ion-card-header>
         
         <ion-card-content>
-            Shuffle, range, cover, title
+            <ion-input fill="outline" helperText="Title of this data entry. This is used on the second level of the MupiBox interface.">
+                <div slot="label">Title <span class="mupi-required">(required)</span></div>
+            </ion-input>
+            <ion-input fill="outline" helperText="URL of an image that should be used for this data entry. This is shown on the second level of the MupiBox interface.">
+                <div slot="label">Cover image URL</div>
+            </ion-input>
+            <ion-toggle justify="start">Shuffle</ion-toggle>
+            <div>
+                <ion-toggle justify="start">Interval</ion-toggle>
+                <ion-input inputmode="numeric" min="0">
+                    <div slot="label">Min <span class="mupi-required">(required)</span></div>
+                </ion-input>
+                <ion-input inputmode="numeric" min="0">
+                    <div slot="label">Max <span class="mupi-required">(required)</span></div>
+                </ion-input>
+            </div>
         </ion-card-content>
     </ion-card>
 </ion-content>
