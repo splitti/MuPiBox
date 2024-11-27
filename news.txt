@@ -1,37 +1,12 @@
 <h3>Spotify connection problems</h3>
-<p>With Spotify's API change, MuPiBox version 4.0.4 no longer works with Spotify...</p>
-<p>The good news is that we have already adapted the login process in the new version 4.1.0. However, to do this it is necessary to reset the Spotify data in the MuPiBox admin interface and re-enter it. If you have any questions, we are happy to help in Discord.</p>
+<p>With Spotify's API change, MuPiBox versions below 4.2.0 are no longer working with Spotify...</p>
+<p>The good news is that we have had a working solution since version 4.2.0.</p>
 
 
 <h3>OS-Support</h3>
 We will focus on <b>bookworm</b> and recommend you to update, or reinstall. See also this dietpi-article: <a href=https://dietpi.com/blog/?p=3128>https://dietpi.com/blog/?p=3128</a>
 
-<h3>v4.0.0</h3>
-<ul id='ulnews' class='ulnews'>
-<li id='linews' class='linews'>New: Telegram-Buttons</li>
-<li id='linews' class='linews'>New: Telegram Track Info only if Track changed</li>
-<li id='linews' class='linews'>New: Telegram Pause and Play function</li>
-<li id='linews' class='linews'>New: Redesign resume function, save the last 9 media that was played, new Button in Touch-Admininterface, trash-symbol clear resume</li>
-<li id='linews' class='linews'>New: Chromium parameters in Admin-UI</li>
-<li id='linews' class='linews'>New: Replace category radio with "other" to collect all stuff that is not only audiobook or music --> remove and add radio again</li>
-<li id='linews' class='linews'>New: New UI for media add area</li>
-<li id='linews' class='linews'>New: No more using of spotify ids, now only use the complete URL from spotify</li>
-<li id='linews' class='linews'>New: Shell login info and aliases for mupibox commands</li>
-<li id='linews' class='linews'>New: GPU-Support can be enabled, experimantal (no risc, no fun)</li>
-<li id='linews' class='linews'>New: Download support infos in admin-interface</li>
-<li id='linews' class='linews'>New: MuPiHAT-Support</li>
-<li id='linews' class='linews'>New: redesigned LED-Control</li>
-<li id='linews' class='linews'>New: Header in admin-interface (HAT-Status, Wifi-Link-Quality, reboot and shutdown</li>
-<li id='linews' class='linews'>New: run_once.sh - Script to do some things at startup</li>
-<li id='linews' class='linews'>New: Standard audio devices in selection.</li>
-<li id='linews' class='linews'>New: PWM-Fan support</li>
-<li id='linews' class='linews'>New: A new WiFi service that checks network strength and switches to the stronger network</li>
-<li id='linews' class='linews'>New: Theme forms, comic, mystic</li>
-<li id='linews' class='linews'>Bugfix: new spotifyd version --> less spotify problems</li>
-<li id='linews' class='linews'>Bugfix: Theme cannot be set</li>
-<li id='linews' class='linews'>Bugfix: Fixing bluetooth problems</li>
-</ul>
-<h3>Beta Release 4.2.0</h3>
+<h3>Stable Release 4.2.1</h3>
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>Update: jq Version 1.7.1 (performance improvements)</li>
 <li id='linews' class='linews'>Update: librespot (instead of spotifyd)</li>
@@ -41,12 +16,22 @@ We will focus on <b>bookworm</b> and recommend you to update, or reinstall. See 
 <li id='linews' class='linews'>New: Disabled the Chrome gesture control which can lead to unwanted navigation</li>
 <li id='linews' class='linews'>New: Wifi can be added without encryption</li>
 <li id='linews' class='linews'>New: Cool themes</li>
+<li id='linews' class='linews'>New: MQTT admin interface link</li>
+<li id='linews' class='linews'>New: Home Assistant Card template</li>
 <li id='linews' class='linews'>New: Custom theme (upload your favourite Background image)</li>
 <li id='linews' class='linews'>Bugfix: Fixed the loading spinner to show until loading of track/artists lists is fully done</li>
+<li id='linews' class='linews'>Bugfix: MQTT is working again</li>
 <li id='linews' class='linews'>Bugfix: Fixed an issue with showing only a part of albums/tracks (interval function).</li>
 <li id='linews' class='linews'>Bugfix: Resume function</li>
 <li id='linews' class='linews'>Bugfix: Less problems to add spotify</li>
 <li id='linews' class='linews'>Bugfix: Podcasts are added with http to be more perfomant</li>
+</ul>
+<h3>Next Release</h3>
+<ul id='ulnews' class='ulnews'>
+</ul>
+<h3>Next Release (DEV/BETA/STABLE)</h3>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>We will see...</li>
 </ul>
 <h3>Next Release</h3>
 <ul id='ulnews' class='ulnews'>
