@@ -1,4 +1,4 @@
-import { Observable, defer, firstValueFrom, of, range, throwError } from 'rxjs'
+import {Observable, defer, firstValueFrom, of, range, throwError, catchError, EMPTY} from 'rxjs'
 import { delay, flatMap, map, mergeAll, mergeMap, retryWhen, take, tap, toArray } from 'rxjs/operators'
 import type { CategoryType, Media } from './media'
 import type {
@@ -28,6 +28,7 @@ export class SpotifyService {
   constructor(private http: HttpClient) {
     const SpotifyWebApi = require('../../src/app/spotify-web-api.js')
     this.spotifyApi = new SpotifyWebApi()
+    this.refreshToken()
   }
 
   getMediaByQuery(
@@ -308,6 +309,10 @@ export class SpotifyService {
       retryWhen((errors) => {
         return this.errorHandler(errors)
       }),
+      catchError(err => {
+        console.log("Caught error for Spotify playlist %s, continuing...", id)
+        return EMPTY;
+      }),
       map((response: SpotifyAlbumsResponseItem) => {
         const media: Media = {
           playlistid: response.id,
@@ -413,21 +418,28 @@ export class SpotifyService {
   }
 
   refreshToken() {
+    if (this.refreshingToken) {
+      return
+    }
+    this.refreshingToken = true
     const tokenUrl = environment.production ? '../api/token' : 'http://localhost:8200/api/token'
-    this.http.get(tokenUrl, { responseType: 'text' }).subscribe((token) => {
-      this.spotifyApi.setAccessToken(token)
-      this.refreshingToken = false
-    })
+    this.http.get(tokenUrl, { responseType: 'text' })
+      .subscribe({
+        next: (token) => {
+          this.spotifyApi.setAccessToken(token)
+          this.refreshingToken = false
+        },
+        error: () => {
+          this.refreshingToken = false
+        }
+      })
   }
 
   errorHandler(errors: Observable<any>) {
     return errors.pipe(
-      flatMap((error) => (error.status !== 401 && error.status !== 429 ? throwError(error) : of(error))),
+      mergeMap((error) => (error.status !== 401 && error.status !== 429 ? throwError(error) : of(error))),
       tap((_) => {
-        if (!this.refreshingToken) {
           this.refreshToken()
-          this.refreshingToken = true
-        }
       }),
       delay(500),
       take(10),
