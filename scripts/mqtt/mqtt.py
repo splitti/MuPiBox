@@ -235,6 +235,23 @@ def mqtt_publish_ha():
     }
     client.publish(mqtt_ha_topic + "/sensor/" + mqtt_clientId + "_ip/config", json.dumps(ip_info), qos=0, retain=True)
 
+    # Publish URL Admininterface
+    admininterface_info = {
+        "name": "Admininterface",
+        "state_topic": mqtt_topic + '/' + mqtt_clientId + '/admininterface',
+        "unique_id": mqtt_clientId + '_mupibox_admininterface',
+        "icon": "mdi:web",
+        "platform": "mqtt",
+        "device": {
+            "identifiers": mqtt_clientId + "_mupibox",
+            "name": mqtt_name,
+            "manufacturer": "MuPiBox.de",
+            "model": "Your MuPiBox: " + mupi_host,
+            "sw_version": mupi_version,
+            "configuration_url":"http://" + mupi_host
+        }
+    }
+    client.publish(mqtt_ha_topic + "/sensor/" + mqtt_clientId + "_admininterface/config", json.dumps(admininterface_info), qos=0, retain=True)
 
 
     # Publish Play Button
@@ -688,6 +705,7 @@ def mqtt_systeminfo():
     client.publish(mqtt_topic + '/' + mqtt_clientId + '/architecture', architecture, qos=0, retain=False)
     client.publish(mqtt_topic + '/' + mqtt_clientId + '/mac', get_mac_address('wlan0'), qos=0, retain=False)
     client.publish(mqtt_topic + '/' + mqtt_clientId + '/version', mupi_version, qos=0)
+    client.publish(mqtt_topic + '/' + mqtt_clientId + '/admininterface', 'http://' + ip, qos=0)
 
 # Callback function for when the client receives a CONNACK response from the server.
 def on_connect(client, userdata, flags, rc):
