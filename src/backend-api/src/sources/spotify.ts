@@ -4,11 +4,11 @@ import {
   SpotifyArtistData,
   SpotifyPlaylistData,
   SpotifyShowData,
-} from './models/data.model'
-import { chunks, readJsonFile } from './utils'
+} from '../models/data.model'
+import { chunks, readJsonFile } from '../utils'
 
 import SpotifyWebApi from 'spotify-web-api-node'
-import { environment } from './environment'
+import { environment } from '../environment'
 
 let configBasePath = './server/config' // TODO: Fix for production.
 if (!environment.production) {
@@ -59,9 +59,16 @@ readJsonFile(`${configBasePath}/config.json`)
 
 // setInterval(refreshToken, 1000 * 60 * 60)
 
-export const fillDataEntry = async <T extends BaseData>(
+type getObjectType =
+  | ((index: number, res: SpotifyApi.MultipleAlbumsResponse) => SpotifyApi.AlbumObjectFull)
+  | ((index: number, res: SpotifyApi.MultipleShowsResponse) => SpotifyApi.ShowObjectSimplified)
+  | ((index: number, res: SpotifyApi.MultipleArtistsResponse) => SpotifyApi.ArtistObjectFull)
+  | ((index: number, res: SpotifyApi.PlaylistObjectFull) => SpotifyApi.PlaylistObjectFull)
+
+const fillDataEntry = async <T extends BaseData>(
   spotifyCall: (spotifyApi: SpotifyWebApi | undefined, data: T[]) => Promise<any> | undefined,
   chunkSize: number,
+  getObject: getObjectType,
   data: T[],
 ): Promise<void> => {
   if (data.length <= 0) {
@@ -88,7 +95,7 @@ export const fillDataEntry = async <T extends BaseData>(
         for (let i = 0; i < cachedData.length; ++i) {
           const dataEntry = cachedData[i]
           // TODO: Ensure that i-th response entry has a value.
-          const apiResponse = responseData.body.shows[i]
+          const apiResponse = getObject(i, responseData.body)
           dataEntry.artist = apiResponse.name
           // Also write cover if we are here.
           if (dataEntry.artistcover === undefined && apiResponse.images.length > 0) {
@@ -107,6 +114,9 @@ export const fillAlbumDataEntry = (fillDataEntry<SpotifyAlbumData>).bind(
     return spotifyApi?.getAlbums(data.map((entry) => entry.id))
   },
   20,
+  (index: number, res: SpotifyApi.MultipleAlbumsResponse) => {
+    return res.albums[index]
+  },
 )
 export const fillArtistDataEntry = (fillDataEntry<SpotifyArtistData>).bind(
   undefined,
@@ -114,6 +124,9 @@ export const fillArtistDataEntry = (fillDataEntry<SpotifyArtistData>).bind(
     return spotifyApi?.getArtists(data.map((entry) => entry.artistid))
   },
   50,
+  (index: number, res: SpotifyApi.MultipleArtistsResponse) => {
+    return res.artists[index]
+  },
 )
 export const fillShowDataEntry = (fillDataEntry<SpotifyShowData>).bind(
   undefined,
@@ -121,11 +134,18 @@ export const fillShowDataEntry = (fillDataEntry<SpotifyShowData>).bind(
     return spotifyApi?.getShows(data.map((entry) => entry.showid))
   },
   50,
+  (index: number, res: SpotifyApi.MultipleShowsResponse) => {
+    return res.shows[index]
+  },
 )
+//  TODO: Handle failing access.
 export const fillPlaylistDataEntry = (fillDataEntry<SpotifyPlaylistData>).bind(
   undefined,
   (spotifyApi: SpotifyWebApi | undefined, data: SpotifyPlaylistData[]) => {
     return spotifyApi?.getPlaylist(data.map((entry) => entry.playlistid)[0])
   },
   1, // Playlists can only be requested one at a time.
+  (_index: number, res: SpotifyApi.PlaylistObjectFull) => {
+    return res
+  },
 )

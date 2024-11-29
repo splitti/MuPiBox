@@ -1,38 +1,32 @@
 import {
-  AlbumGroup,
-  RadioAlbumGroup,
-  RssAlbumGroup,
-  SpotifyQueryAlbumGroup,
-  SpotifyUrlAlbumGroup,
-  SpotifyUrlType,
-} from './models/albumgroup.model'
-import {
   BaseData,
   Data,
+  RssData,
   SpotifyAlbumData,
   SpotifyArtistData,
   SpotifyPlaylistData,
   SpotifyShowData,
 } from './models/data.model'
-import { Folder, FolderWithChildren, FolderWithNumChildren } from './models/folder.model'
-import { chunks, readJsonFile } from './utils'
+import { Folder, FolderWithChildren } from './models/folder.model'
 import {
   fillAlbumDataEntry,
   fillArtistDataEntry,
   fillPlaylistDataEntry,
   fillShowDataEntry,
   spotifyApi,
-} from './spotify'
+} from './sources/spotify'
 
 import { Network } from './models/network.model'
 import { ServerConfig } from './models/server.model'
 import cors from 'cors'
 import { environment } from './environment'
 import express from 'express'
+import { fillRssDataEntry } from './sources/rss'
 import fs from 'node:fs'
 import jsonfile from 'jsonfile'
 import ky from 'ky'
 import path from 'node:path'
+import { readJsonFile } from './utils'
 import xmlparser from 'xml-js'
 
 const serverName = 'mupibox-backend-api'
@@ -92,10 +86,12 @@ app.get('/api/folders', async (_req, res) => {
     // data entries where we allow the user to not specify the folder name.
     // These adapt the original entries in `data`.
     const entriesWithoutFolderName = data.filter((entry) => entry.artist === undefined)
-    await fillShowDataEntry(entriesWithoutFolderName.filter((entry) => 'showid' in entry))
-    await fillArtistDataEntry(entriesWithoutFolderName.filter((entry) => 'artistid' in entry))
-    await fillAlbumDataEntry(entriesWithoutFolderName.filter((entry) => 'id' in entry && entry.type === 'spotify'))
-    await fillPlaylistDataEntry(entriesWithoutFolderName.filter((entry) => 'playlistid' in entry))
+    await Promise.allSettled([
+      fillShowDataEntry(entriesWithoutFolderName.filter((entry) => 'showid' in entry)),
+      fillArtistDataEntry(entriesWithoutFolderName.filter((entry) => 'artistid' in entry)),
+      fillAlbumDataEntry(entriesWithoutFolderName.filter((entry) => 'id' in entry && entry.type === 'spotify')),
+      fillPlaylistDataEntry(entriesWithoutFolderName.filter((entry) => 'playlistid' in entry)),
+    ])
 
     // Now sort them into folders.
     const toMapKey = (folder: BaseData): string => {
@@ -127,27 +123,32 @@ app.get('/api/folders', async (_req, res) => {
     const childrenWithFolders = folderWithoutImage.map((folder) => {
       return { data: folder.children[0], folder: folder }
     })
-    await fillShowDataEntry(
+    await Promise.allSettled([
+      fillShowDataEntry(
+        childrenWithFolders
+          .map((entry) => entry.data)
+          .filter<SpotifyShowData>((entry): entry is SpotifyShowData => 'showid' in entry),
+      ),
+      fillArtistDataEntry(
+        childrenWithFolders
+          .map((entry) => entry.data)
+          .filter<SpotifyArtistData>((entry): entry is SpotifyArtistData => 'artistid' in entry),
+      ),
+      fillAlbumDataEntry(
+        childrenWithFolders
+          .map((entry) => entry.data)
+          .filter<SpotifyAlbumData>((entry): entry is SpotifyAlbumData => 'id' in entry && entry.type === 'spotify'),
+      ),
+      fillPlaylistDataEntry(
+        childrenWithFolders
+          .map((entry) => entry.data)
+          .filter<SpotifyPlaylistData>((entry): entry is SpotifyPlaylistData => 'playlistid' in entry),
+      ),
       childrenWithFolders
         .map((entry) => entry.data)
-        .filter<SpotifyShowData>((entry): entry is SpotifyShowData => 'showid' in entry),
-    )
-    await fillArtistDataEntry(
-      childrenWithFolders
-        .map((entry) => entry.data)
-        .filter<SpotifyArtistData>((entry): entry is SpotifyArtistData => 'artistid' in entry),
-    )
-    await fillAlbumDataEntry(
-      childrenWithFolders
-        .map((entry) => entry.data)
-        .filter<SpotifyAlbumData>((entry): entry is SpotifyAlbumData => 'id' in entry && entry.type === 'spotify'),
-    )
-    await fillPlaylistDataEntry(
-      childrenWithFolders
-        .map((entry) => entry.data)
-        .filter<SpotifyPlaylistData>((entry): entry is SpotifyPlaylistData => 'playlistid' in entry),
-    )
-    // TODO: RSS
+        .filter<RssData>((entry): entry is RssData => entry.type === 'rss')
+        .map((entry) => fillRssDataEntry(entry)),
+    ])
     // TODO: Spotify search query
 
     // Write the image back.
@@ -156,19 +157,11 @@ app.get('/api/folders', async (_req, res) => {
     }
 
     // Last, convert to the data format we want to return.
-    const out: FolderWithNumChildren[] = folderList.map((folder) => {
-      const offlineEntries = folder.children.reduce<number>((prev: number, curr: BaseData) => {
-        if (curr.type === 'library') {
-          return prev + 1
-        }
-        return prev
-      }, 0)
+    const out: Folder[] = folderList.map((folder) => {
       return {
         name: folder.name,
         category: folder.category,
         img: folder.img,
-        numChildEntries: folder.children.length,
-        numOfflineChildEntries: offlineEntries,
       }
     })
     res.json(out)
