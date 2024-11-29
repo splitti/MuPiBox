@@ -5,6 +5,7 @@ import {
   SpotifyAlbumData,
   SpotifyArtistData,
   SpotifyPlaylistData,
+  SpotifyQueryData,
   SpotifyShowData,
 } from './models/data.model'
 import { Folder, FolderWithChildren } from './models/folder.model'
@@ -12,6 +13,7 @@ import {
   fillAlbumDataEntry,
   fillArtistDataEntry,
   fillPlaylistDataEntry,
+  fillSearchQueryDataEntry,
   fillShowDataEntry,
   spotifyApi,
 } from './sources/spotify'
@@ -144,12 +146,16 @@ app.get('/api/folders', async (_req, res) => {
           .map((entry) => entry.data)
           .filter<SpotifyPlaylistData>((entry): entry is SpotifyPlaylistData => 'playlistid' in entry),
       ),
+      fillSearchQueryDataEntry(
+        childrenWithFolders
+          .map((entry) => entry.data)
+          .filter<SpotifyQueryData>((entry): entry is SpotifyQueryData => 'query' in entry),
+      ),
       childrenWithFolders
         .map((entry) => entry.data)
         .filter<RssData>((entry): entry is RssData => entry.type === 'rss')
         .map((entry) => fillRssDataEntry(entry)),
     ])
-    // TODO: Spotify search query
 
     // Write the image back.
     for (const entry of childrenWithFolders) {

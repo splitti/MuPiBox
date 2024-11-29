@@ -3,6 +3,7 @@ import {
   SpotifyAlbumData,
   SpotifyArtistData,
   SpotifyPlaylistData,
+  SpotifyQueryData,
   SpotifyShowData,
 } from '../models/data.model'
 import { chunks, readJsonFile } from '../utils'
@@ -64,6 +65,7 @@ type getObjectType =
   | ((index: number, res: SpotifyApi.MultipleShowsResponse) => SpotifyApi.ShowObjectSimplified)
   | ((index: number, res: SpotifyApi.MultipleArtistsResponse) => SpotifyApi.ArtistObjectFull)
   | ((index: number, res: SpotifyApi.PlaylistObjectFull) => SpotifyApi.PlaylistObjectFull)
+  | ((index: number, res: SpotifyApi.AlbumSearchResponse) => SpotifyApi.AlbumObjectSimplified)
 
 const fillDataEntry = async <T extends BaseData>(
   spotifyCall: (spotifyApi: SpotifyWebApi | undefined, data: T[]) => Promise<any> | undefined,
@@ -147,5 +149,16 @@ export const fillPlaylistDataEntry = (fillDataEntry<SpotifyPlaylistData>).bind(
   1, // Playlists can only be requested one at a time.
   (_index: number, res: SpotifyApi.PlaylistObjectFull) => {
     return res
+  },
+)
+
+export const fillSearchQueryDataEntry = (fillDataEntry<SpotifyQueryData>).bind(
+  undefined,
+  (spotifyApi: SpotifyWebApi | undefined, data: SpotifyQueryData[]) => {
+    return spotifyApi?.searchAlbums(data.map((entry) => entry.query)[0])
+  },
+  1, // Search queries are one at a time.
+  (index: number, res: SpotifyApi.AlbumSearchResponse) => {
+    return res.albums.items[index]
   },
 )
