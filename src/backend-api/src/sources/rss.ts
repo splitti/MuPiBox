@@ -37,7 +37,7 @@ const handleCData = (text?: RssTextOrCdata): string | undefined => {
 const getRssFeed = async (url: string): Promise<RssFeed | undefined> => {
   try {
     const response = await ky.get(url).text()
-    return xmlparser.xml2json(response, { compact: true, nativeType: true }) as RssFeed
+    return JSON.parse(xmlparser.xml2json(response, { compact: true, nativeType: true })) as RssFeed
   } catch {
     return undefined
   }
