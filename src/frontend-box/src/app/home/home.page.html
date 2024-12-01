@@ -32,5 +32,5 @@
 
 <ion-content class="home-content">
   <mupi-loading [loading]="isLoading()"></mupi-loading>
-  <mupi-swiper [data]="swiperData()" roundImages="true" (elementClicked)="this.artistCoverClicked($event.data)"></mupi-swiper>
+  <mupi-swiper [data]="swiperData()" roundImages="true" (elementClicked)="this.folderClicked($event.data)"></mupi-swiper>
 </ion-content>

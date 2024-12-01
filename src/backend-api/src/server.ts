@@ -170,7 +170,22 @@ app.get('/api/folders', async (_req, res) => {
         img: folder.img,
       }
     })
+    out.sort((a: Folder, b: Folder) => {
+      return a.name.localeCompare(b.name, undefined, {
+        numeric: true,
+        sensitivity: 'base',
+      })
+    })
     res.json(out)
+  } catch (error) {
+    console.error(`${nowDate.toLocaleString()}: [${serverName}] ${error}`)
+    res.json([])
+  }
+})
+app.get('/api/media/:category/:folder', async (_req, res) => {
+  try {
+    const data: Data[] = await readJsonFile(dataFile)
+    res.json(data)
   } catch (error) {
     console.error(`${nowDate.toLocaleString()}: [${serverName}] ${error}`)
     res.json([])

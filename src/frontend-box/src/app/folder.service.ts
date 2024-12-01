@@ -1,4 +1,4 @@
-import { Data } from '@backend-api/data.model'
+import { Folder } from '@backend-api/folder.model'
 import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
 import { Observable } from 'rxjs'
@@ -10,8 +10,8 @@ import { environment } from 'src/environments/environment'
 @Injectable({
   providedIn: 'root',
 })
-export class DataService {
-  private endpoint = `${environment.backend.apiUrl}/data`
+export class FolderService {
+  private endpoint = `${environment.backend.apiUrl}/folders`
 
   public constructor(private httpClient: HttpClient) {}
 
@@ -19,7 +19,7 @@ export class DataService {
    * TODO
    * @returns
    */
-  public getData(): Observable<Data[]> {
-    return this.httpClient.get<Data[]>(this.endpoint)
+  public getFolder(): Observable<Folder[]> {
+    return this.httpClient.get<Folder[]>(this.endpoint)
   }
 }

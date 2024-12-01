@@ -31,4 +31,7 @@ describe('rss feeds', () => {
     nock('http://example.com').persist().get('/').replyWithError('Random error')
     request(app).get('/api/rssfeed?url=http://example.com').expect(500, done)
   })
+
+  // TODO: Test folders endpoint
+  // TODO: Test media endpoint.
 })
