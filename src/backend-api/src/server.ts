@@ -9,7 +9,7 @@ import {
   SpotifyShowData,
 } from './models/data.model'
 import { Folder, FolderWithChildren } from './models/folder.model'
-import { addRssImageInformation, fillRssDataEntry } from './sources/rss'
+import { addRssImageInformation, fillRssDataEntry, getRssMedia } from './sources/rss'
 import {
   addSpotifyImageInformation,
   addSpotifyTitleInformation,
@@ -21,6 +21,7 @@ import {
   spotifyApi,
 } from './sources/spotify'
 
+import { Media } from './models/media.model'
 import { Network } from './models/network.model'
 import { ServerConfig } from './models/server.model'
 import cors from 'cors'
@@ -168,7 +169,21 @@ app.get('/api/media/:category/:folder', async (req, res) => {
 
     const folders = await getFoldersWithData(categoryData)
 
-    res.json(folders.find((folder) => folder.name === req.params.folder)?.children)
+    const dataEntries = folders
+      .filter((folder) => folder.name === req.params.folder)
+      .flatMap((folder) => folder.children)
+
+    const results = dataEntries.map((entry) => {
+      if (entry.type === 'rss') {
+        return getRssMedia(entry)
+      }
+      return undefined
+    })
+    const out = (await Promise.allSettled(results))
+      .filter((promise) => promise.status === 'fulfilled')
+      .flatMap((promise) => promise.value)
+
+    res.json(out)
   } catch (error) {
     console.error(`${nowDate.toLocaleString()}: [${serverName}] ${error}`)
     res.json([])

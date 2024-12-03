@@ -1,6 +1,7 @@
 import { Data, RssData } from 'src/models/data.model'
 import { RssFeed, RssTextOrCdata } from 'src/models/rss.model'
 
+import { RssMedia } from 'src/models/media.model'
 import ky from 'ky'
 import xmlparser from 'xml-js'
 
@@ -81,29 +82,16 @@ export const addRssImageInformation = async (data: Data[]): Promise<void> => {
   )
 }
 
-// export const getRssFeed = (id: string, category: CategoryType, index: number, extraDataSource: ExtraDataMedia): Observable<Media[]> {
-//     this.url = `${environment.backend.apiUrl}/rssfeed?url=${id}`
-//     return this.http.get(this.url).pipe(
-//       map((response: RssFeed) => {
-//         return response.rss.channel.item.map((item) => {
-//           console.log(item)
-//           const media: Media = {
-//             id: item.enclosure?._attributes?.url,
-//             artist: this.handleCData(response.rss?.channel?.title),
-//             title: this.handleCData(item?.title),
-//             cover: item['itunes:image']?._attributes?.href,
-//             artistcover: this.handleCData(response.rss?.channel?.image?.url),
-//             release_date: this.handleCData(item?.pubDate),
-//             duration: this.handleCData(item?.['itunes:duration']),
-//             type: 'rss',
-//             category,
-//             index,
-//           }
-//           Utils.copyExtraMediaData(extraDataSource, media)
-//           return media
-//         })
-//       }),
-//       mergeAll(),
-//       toArray(),
-//     )
-//   }
+export const getRssMedia = async (data: RssData): Promise<RssMedia[] | undefined> => {
+  const feed = await getRssFeed(data.id)
+  return feed?.rss?.channel?.item?.map((item) => {
+    return {
+      type: 'rss',
+      name: handleCData(item?.title) ?? 'No title',
+      img: item['itunes:image']?._attributes?.href ?? '',
+      url: item.enclosure?._attributes?.url ?? '',
+      releaseDate: handleCData(item?.pubDate) ?? '',
+      folderName: handleCData(feed?.rss?.channel?.title) ?? '',
+    }
+  })
+}

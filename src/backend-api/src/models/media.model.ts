@@ -18,6 +18,7 @@ export interface RssMedia extends BaseMedia {
   type: 'rss'
   url: string
   folderName: string
+  releaseDate: string
 }
 
 export interface RadioMedia extends BaseMedia {
@@ -29,9 +30,13 @@ export interface RadioMedia extends BaseMedia {
 export interface SpotifyPlaylistMedia extends BaseMedia {
   type: 'spotifyPlaylist'
   id: string
+  releaseDate: string
 }
 
 export interface SpotifyEpisodeMedia extends BaseMedia {
   type: 'spotifyEpisode'
   id: string
+  releaseDate: string
 }
+
+export type Media = RssMedia | RadioMedia | LocalMedia | SpotifyEpisodeMedia | SpotifyPlaylistMedia
