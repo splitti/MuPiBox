@@ -1,4 +1,4 @@
-import { BaseData, Data } from './data.model'
+import { Data } from './data.model'
 
 export type CategoryType = 'audiobook' | 'music' | 'other'
 

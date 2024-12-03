@@ -1,38 +1,18 @@
-import {
-  BaseData,
-  Data,
-  RssData,
-  SpotifyAlbumData,
-  SpotifyArtistData,
-  SpotifyPlaylistData,
-  SpotifyQueryData,
-  SpotifyShowData,
-} from './models/data.model'
-import { Folder, FolderWithChildren } from './models/folder.model'
-import { addRssImageInformation, fillRssDataEntry, getRssMedia } from './sources/rss'
-import {
-  addSpotifyImageInformation,
-  addSpotifyTitleInformation,
-  fillAlbumDataEntry,
-  fillArtistDataEntry,
-  fillPlaylistDataEntry,
-  fillSearchQueryDataEntry,
-  fillShowDataEntry,
-  spotifyApi,
-} from './sources/spotify'
-
-import { Media } from './models/media.model'
-import { Network } from './models/network.model'
-import { ServerConfig } from './models/server.model'
-import cors from 'cors'
-import { environment } from './environment'
-import express from 'express'
 import fs from 'node:fs'
+import path from 'node:path'
+import cors from 'cors'
+import express from 'express'
 import jsonfile from 'jsonfile'
 import ky from 'ky'
-import path from 'node:path'
-import { readJsonFile } from './utils'
 import xmlparser from 'xml-js'
+import { environment } from './environment'
+import { Data } from './models/data.model'
+import { Folder, FolderWithChildren } from './models/folder.model'
+import { Network } from './models/network.model'
+import { ServerConfig } from './models/server.model'
+import { addRssImageInformation, getRssMedia } from './sources/rss'
+import { addSpotifyImageInformation, addSpotifyTitleInformation, spotifyApi } from './sources/spotify'
+import { readJsonFile } from './utils'
 
 const serverName = 'mupibox-backend-api'
 

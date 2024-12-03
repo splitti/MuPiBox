@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises'
 
 /**
  * Reads a file from disk and parses it as JSON.
- * 
+ *
  * @param filePath - The path of the JSON file.
  * @returns - A promise of the JSON data.
  */
@@ -14,7 +14,7 @@ export const readJsonFile = async (filePath: PathLike): Promise<any> => {
 
 /**
  * Splits a given list into chunks of given size.
- * 
+ *
  * @param array - The list that should be split into chunks.
  * @param chunkSize - The maximum number of elements in each chunk.
  */

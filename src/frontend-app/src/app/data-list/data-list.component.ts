@@ -1,10 +1,10 @@
-import { ChangeDetectionStrategy, Component, ENVIRONMENT_INITIALIZER, Signal, computed, output } from '@angular/core'
+import { ChangeDetectionStrategy, Component, Signal, computed, output } from '@angular/core'
 import { IonButton, IonIcon, IonItem, IonLabel, IonList } from '@ionic/angular/standalone'
 
-import { CategoryType } from '@backend-api/folder.model'
-import { Data } from '@backend-api/data.model'
-import { DataService } from '../services/data.service'
 import { toSignal } from '@angular/core/rxjs-interop'
+import { Data } from '@backend-api/data.model'
+import { CategoryType } from '@backend-api/folder.model'
+import { DataService } from '../services/data.service'
 
 /**
  * TODO

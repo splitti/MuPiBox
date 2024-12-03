@@ -17,15 +17,15 @@ import {
   IonSegmentButton,
   IonToolbar,
 } from '@ionic/angular/standalone'
-import { PlayerCmds, PlayerService } from '../player.service'
 import { refresh, wifiOutline } from 'ionicons/icons'
+import { PlayerCmds, PlayerService } from '../player.service'
 
 import { FormsModule } from '@angular/forms'
+import type { NgForm } from '@angular/forms'
+import { addIcons } from 'ionicons'
 import Keyboard from 'simple-keyboard'
 import { MediaService } from '../media.service'
-import type { NgForm } from '@angular/forms'
 import type { WLAN } from '../wlan'
-import { addIcons } from 'ionicons'
 
 @Component({
   selector: 'app-admin',

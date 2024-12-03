@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, Signal, WritableSignal, computed, signal } from '@angular/core'
+import { ChangeDetectionStrategy, Component } from '@angular/core'
 import {
   IonBackButton,
   IonButton,
@@ -11,28 +11,13 @@ import {
   IonTitle,
   IonToolbar,
 } from '@ionic/angular/standalone'
-import { NavigationExtras, Router } from '@angular/router'
-import { SwiperComponent, SwiperData } from '../swiper/swiper.component'
-import {
-  addOutline,
-  arrowBackOutline,
-  brushOutline,
-  close,
-  powerOutline,
-  trashOutline,
-  wifiOutline,
-} from 'ionicons/icons'
-import { catchError, combineLatest, map, of, switchMap, tap } from 'rxjs'
-import { toObservable, toSignal } from '@angular/core/rxjs-interop'
-
-import type { Artist } from '../artist'
-import { ArtworkService } from '../artwork.service'
-import type { CategoryType } from '../media'
+import { addIcons } from 'ionicons'
+import { arrowBackOutline } from 'ionicons/icons'
+import { of } from 'rxjs'
 import { LoadingComponent } from '../loading/loading.component'
-import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
 import { SwiperIonicEventsHelper } from '../swiper/swiper-ionic-events-helper'
-import { addIcons } from 'ionicons'
+import { SwiperComponent, SwiperData } from '../swiper/swiper.component'
 
 @Component({
   selector: 'app-settings',

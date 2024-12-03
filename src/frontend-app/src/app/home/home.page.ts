@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core'
-import { ClickedDataEntry, DataListComponent } from '../data-list/data-list.component'
+import { Router } from '@angular/router'
 import {
   IonBackButton,
   IonButton,
@@ -12,11 +12,9 @@ import {
   IonTitle,
   IonToolbar,
 } from '@ionic/angular/standalone'
-
-import { Data } from '@backend-api/data.model'
-import { Router } from '@angular/router'
-import { add } from 'ionicons/icons'
 import { addIcons } from 'ionicons'
+import { add } from 'ionicons/icons'
+import { ClickedDataEntry, DataListComponent } from '../data-list/data-list.component'
 
 @Component({
   selector: 'mupiapp-home',

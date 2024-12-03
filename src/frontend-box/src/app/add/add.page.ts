@@ -1,7 +1,6 @@
-import { ActivatedRoute, Router } from '@angular/router'
 import { AfterViewInit, Component, OnInit, ViewEncapsulation } from '@angular/core'
+import { ActivatedRoute, Router } from '@angular/router'
 import { AlertController, NavController } from '@ionic/angular/standalone'
-import { CategoryType, Media, MediaSorting } from '../media'
 import {
   IonButton,
   IonButtons,
@@ -21,16 +20,17 @@ import {
   IonSelectOption,
   IonToolbar,
 } from '@ionic/angular/standalone'
-import { PlayerCmds, PlayerService } from '../player.service'
 import { arrowBackOutline, saveOutline } from 'ionicons/icons'
+import { CategoryType, Media, MediaSorting } from '../media'
+import { PlayerCmds, PlayerService } from '../player.service'
 
-import { ActivityIndicatorService } from '../activity-indicator.service'
 import { FormsModule } from '@angular/forms'
-import Keyboard from 'simple-keyboard'
-import { MediaService } from '../media.service'
 import type { NgForm } from '@angular/forms'
-import { SpotifyService } from '../spotify.service'
 import { addIcons } from 'ionicons'
+import Keyboard from 'simple-keyboard'
+import { ActivityIndicatorService } from '../activity-indicator.service'
+import { MediaService } from '../media.service'
+import { SpotifyService } from '../spotify.service'
 
 @Component({
   selector: 'app-add',

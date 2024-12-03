@@ -1,5 +1,5 @@
-import { ActivatedRoute, Router } from '@angular/router'
 import { ChangeDetectionStrategy, Component, OnInit, ViewChild, WritableSignal, signal } from '@angular/core'
+import { Router } from '@angular/router'
 import {
   IonBackButton,
   IonButton,
@@ -15,7 +15,6 @@ import {
   IonTitle,
   IonToolbar,
 } from '@ionic/angular/standalone'
-import { PlayerCmds, PlayerService } from '../player.service'
 import {
   pause,
   play,
@@ -27,23 +26,24 @@ import {
   volumeHighOutline,
   volumeLowOutline,
 } from 'ionicons/icons'
+import { PlayerCmds, PlayerService } from '../player.service'
 
+import { AsyncPipe } from '@angular/common'
+import { FormsModule } from '@angular/forms'
+import { Media as BackendMedia } from '@backend-api/media.model'
+import { NavController } from '@ionic/angular/standalone'
+import { addIcons } from 'ionicons'
+import type { Observable } from 'rxjs'
 import type { AlbumStop } from '../albumstop'
 import { ArtworkService } from '../artwork.service'
-import { AsyncPipe } from '@angular/common'
-import { Media as BackendMedia } from '@backend-api/media.model'
 import type { CurrentEpisode } from '../current.episode'
 import type { CurrentMPlayer } from '../current.mplayer'
 import type { CurrentPlaylist } from '../current.playlist'
 import type { CurrentShow } from '../current.show'
 import type { CurrentSpotify } from '../current.spotify'
-import { FormsModule } from '@angular/forms'
 import type { Media } from '../media'
 import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
-import { NavController } from '@ionic/angular/standalone'
-import type { Observable } from 'rxjs'
-import { addIcons } from 'ionicons'
 
 @Component({
   selector: 'app-player',

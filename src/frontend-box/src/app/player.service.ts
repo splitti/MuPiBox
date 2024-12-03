@@ -1,12 +1,12 @@
 import { publishReplay, refCount } from 'rxjs/operators'
 
-import { Media as BackendMedia } from '@backend-api/media.model'
 import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
-import type { Media } from './media'
-import type { Observable } from 'rxjs'
+import { Media as BackendMedia } from '@backend-api/media.model'
 import type { ServerHttpApiConfig } from '@backend-api/server.model'
+import type { Observable } from 'rxjs'
 import { environment } from '../environments/environment'
+import type { Media } from './media'
 
 export enum PlayerCmds {
   PLAY = 'play',

@@ -1,8 +1,8 @@
 import { Data, RssData } from 'src/models/data.model'
 import { RssFeed, RssTextOrCdata } from 'src/models/rss.model'
 
-import { RssMedia } from 'src/models/media.model'
 import ky from 'ky'
+import { RssMedia } from 'src/models/media.model'
 import xmlparser from 'xml-js'
 
 /**

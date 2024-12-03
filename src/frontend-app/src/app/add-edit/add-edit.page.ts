@@ -29,8 +29,6 @@ import {
   IonToolbar,
 } from '@ionic/angular/standalone'
 
-import { DataListComponent } from '../data-list/data-list.component'
-
 @Component({
   selector: 'mupiapp-add-edit',
   templateUrl: 'add-edit.page.html',
