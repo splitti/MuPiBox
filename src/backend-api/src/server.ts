@@ -173,6 +173,7 @@ app.get('/api/media/:category/:folder', async (req, res) => {
       .filter((folder) => folder.name === req.params.folder)
       .flatMap((folder) => folder.children)
 
+    // TODO: Slice and sort media.
     const results = dataEntries.map((entry) => {
       if (entry.type === 'rss') {
         return getRssMedia(entry)

@@ -4,6 +4,7 @@ import { distinctUntilChanged, filter, map, mergeAll, mergeMap, shareReplay, swi
 
 import type { AlbumStop } from './albumstop'
 import type { Artist } from './artist'
+import { Media as BackendMedia } from '@backend-api/media.model'
 import type { CurrentEpisode } from './current.episode'
 import type { CurrentMPlayer } from './current.mplayer'
 import type { CurrentPlaylist } from './current.playlist'
@@ -22,6 +23,8 @@ import { environment } from '../environments/environment'
   providedIn: 'root',
 })
 export class MediaService {
+  private endpoint = `${environment.backend.apiUrl}/media`
+
   response = ''
   public readonly current$: Observable<CurrentSpotify>
   public readonly local$: Observable<CurrentMPlayer>
@@ -81,6 +84,19 @@ export class MediaService {
     this.mupihat$ = interval(2000).pipe(
       switchMap((): Observable<Mupihat> => this.http.get<Mupihat>(`${this.getApiBackendUrl()}/mupihat`)),
       shareReplay({ bufferSize: 1, refCount: false }),
+    )
+  }
+
+  /**
+   * TODO
+   *
+   * @param category
+   * @param folder
+   * @returns
+   */
+  public getMedia(category: string, folder: string): Observable<BackendMedia[]> {
+    return this.http.get<BackendMedia[]>(
+      `${this.endpoint}/${encodeURIComponent(category)}/${encodeURIComponent(folder)}`,
     )
   }
 
