@@ -1,5 +1,6 @@
 import { publishReplay, refCount } from 'rxjs/operators'
 
+import { Media as BackendMedia } from '@backend-api/media.model'
 import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
 import type { Media } from './media'
@@ -52,6 +53,8 @@ export class PlayerService {
 
     return this.config
   }
+
+  public playBackendMedia(media: BackendMedia): void {}
 
   /**
    * Says the given {@link text} with TTS if TTS is enabled.

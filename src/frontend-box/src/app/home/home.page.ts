@@ -64,9 +64,9 @@ export class HomePage extends SwiperIonicEventsHelper {
   protected isLoading: WritableSignal<boolean> = signal(false)
   protected category: WritableSignal<CategoryType> = signal('audiobook')
 
+  // TODO: Fix broken images or folders with no image (also on media page and player page and resume page.)
   constructor(
     private mediaService: MediaService,
-    private artworkService: ArtworkService,
     private router: Router,
     private folderService: FolderService,
   ) {
@@ -102,33 +102,6 @@ export class HomePage extends SwiperIonicEventsHelper {
           }
         })
     })
-
-    // this.artists = toSignal(
-    //   combineLatest([toObservable(this.category), toObservable(this.isOnline)]).pipe(
-    //     map(([category, _isOnline]) => category),
-    //     tap(() => this.isLoading.set(true)),
-    //     switchMap((category) => {
-    //       return this.mediaService.fetchArtistData(category).pipe(
-    //         catchError((error) => {
-    //           console.error(error)
-    //           return of([])
-    //         }),
-    //       )
-    //     }),
-    //     tap(() => this.resetSwiperPosition()),
-    //     tap(() => this.isLoading.set(false)),
-    //   ),
-    // )
-
-    // this.swiperData = computed(() => {
-    //   return this.artists()?.map((artist) => {
-    //     return {
-    //       name: artist.name,
-    //       imgSrc: this.artworkService.getArtistArtwork(artist.coverMedia),
-    //       data: artist,
-    //     }
-    //   })
-    // })
   }
 
   protected categoryChanged(event: any): void {

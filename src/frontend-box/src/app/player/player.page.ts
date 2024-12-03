@@ -1,5 +1,5 @@
 import { ActivatedRoute, Router } from '@angular/router'
-import { Component, OnInit, ViewChild } from '@angular/core'
+import { ChangeDetectionStrategy, Component, OnInit, ViewChild, WritableSignal, signal } from '@angular/core'
 import {
   IonBackButton,
   IonButton,
@@ -31,6 +31,7 @@ import {
 import type { AlbumStop } from '../albumstop'
 import { ArtworkService } from '../artwork.service'
 import { AsyncPipe } from '@angular/common'
+import { Media as BackendMedia } from '@backend-api/media.model'
 import type { CurrentEpisode } from '../current.episode'
 import type { CurrentMPlayer } from '../current.mplayer'
 import type { CurrentPlaylist } from '../current.playlist'
@@ -67,8 +68,14 @@ import { addIcons } from 'ionicons'
     IonButton,
     IonIcon,
   ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PlayerPage implements OnInit {
+  protected backendMedia: WritableSignal<BackendMedia | undefined> = signal(undefined)
+  protected resuming: WritableSignal<boolean> = signal(false)
+
+  protected img: WritableSignal<string | undefined> = signal(undefined)
+
   @ViewChild('range', { static: false }) range: IonRange
 
   media: Media
@@ -78,7 +85,6 @@ export class PlayerPage implements OnInit {
   resumeIndex: number
   resumeTimer = 0
   resumeAdded = false
-  cover = ''
   playing = true
   updateProgression = false
   currentPlayedSpotify: CurrentSpotify
@@ -91,7 +97,6 @@ export class PlayerPage implements OnInit {
   goBackTimer = 0
   progress = 0
   shufflechanged = 0
-  tmpProgressTime = 0
   public readonly spotify$: Observable<CurrentSpotify>
   public readonly local$: Observable<CurrentMPlayer>
   public readonly playlist$: Observable<CurrentPlaylist>
@@ -105,18 +110,6 @@ export class PlayerPage implements OnInit {
     private navController: NavController,
     private playerService: PlayerService,
   ) {
-    this.spotify$ = this.mediaService.current$
-    this.local$ = this.mediaService.local$
-    this.playlist$ = this.mediaService.playlist$
-    this.episode$ = this.mediaService.episode$
-    this.show$ = this.mediaService.show$
-
-    if (this.router.getCurrentNavigation()?.extras.state?.media) {
-      this.media = this.router.getCurrentNavigation().extras.state.media
-      if (this.media.category === 'resume') {
-        this.resumePlay = true
-      }
-    }
     addIcons({
       volumeLowOutline,
       pause,
@@ -128,6 +121,16 @@ export class PlayerPage implements OnInit {
       shuffleOutline,
       playForward,
     })
+
+    this.backendMedia.set(this.router.getCurrentNavigation().extras.state?.media)
+    this.resuming.set(this.router.getCurrentNavigation().extras.state?.resuming ?? false)
+    this.img.set(this.backendMedia().img)
+
+    this.spotify$ = this.mediaService.current$
+    this.local$ = this.mediaService.local$
+    this.playlist$ = this.mediaService.playlist$
+    this.episode$ = this.mediaService.episode$
+    this.show$ = this.mediaService.show$
   }
 
   ngOnInit() {
@@ -145,9 +148,6 @@ export class PlayerPage implements OnInit {
     })
     this.mediaService.show$.subscribe((show) => {
       this.currentShow = show
-    })
-    this.artworkService.getArtwork(this.media).subscribe((url) => {
-      this.cover = url
     })
     this.mediaService.albumStop$.subscribe((albumStop) => {
       this.albumStop = albumStop
@@ -171,6 +171,8 @@ export class PlayerPage implements OnInit {
 
   updateProgress() {
     this.playing = !this.currentPlayedLocal?.pause
+
+    // Periodically update the resume list.
     if (this.playing) {
       this.resumeTimer++
       if (this.resumeTimer % 30 === 0) {
@@ -191,7 +193,7 @@ export class PlayerPage implements OnInit {
         this.currentPlaylist?.items.forEach((element, index) => {
           if (this.currentPlayedSpotify?.item.id === element.track?.id) {
             this.playlistTrackNr = index + 1 // +1 since we want human-readable indexing in the frontend.
-            this.cover = element.track.album.images[1].url
+            this.img.set(element.track.album.images[1].url)
           }
         })
       }
@@ -199,7 +201,7 @@ export class PlayerPage implements OnInit {
         this.currentShow?.items.forEach((element, index) => {
           if (this.currentPlayedLocal?.activeEpisode === element?.id) {
             this.showTrackNr = this.currentEpisode.show.total_episodes - index
-            this.cover = element.images[1].url
+            this.img.set(element.images[1].url)
           }
         })
       }
@@ -319,15 +321,6 @@ export class PlayerPage implements OnInit {
     } else {
       this.resumemedia = this.media
     }
-    this.mediaService.current$.subscribe((spotify) => {
-      this.currentPlayedSpotify = spotify
-    })
-    this.mediaService.local$.subscribe((local) => {
-      this.currentPlayedLocal = local
-    })
-    this.mediaService.episode$.subscribe((episode) => {
-      this.currentEpisode = episode
-    })
     if (this.resumemedia.type === 'spotify' && this.resumemedia?.showid) {
       this.resumemedia.resumespotifytrack_number = 1
       this.resumemedia.resumespotifyprogress_ms = this.currentPlayedSpotify?.progress_ms || 0

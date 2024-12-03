@@ -35,11 +35,10 @@ import { arrowBackOutline } from 'ionicons/icons'
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MedialistPage extends SwiperIonicEventsHelper {
-  readonly category = input<string>()
-  readonly folder = input<string>()
+  protected readonly category = input<string>()
+  protected readonly folder = input<string>()
 
   protected isLoading: WritableSignal<boolean> = signal(false)
-  protected artist: WritableSignal<Artist | undefined> = signal(undefined)
   protected media: Signal<BackendMedia[]>
   protected swiperData: Signal<SwiperData<BackendMedia>[]> = computed(() => {
     return this.media()?.map((media) => {
