@@ -1,6 +1,6 @@
+import { Data, RssData } from 'src/models/data.model'
 import { RssFeed, RssTextOrCdata } from 'src/models/rss.model'
 
-import { RssData } from 'src/models/data.model'
 import ky from 'ky'
 import xmlparser from 'xml-js'
 
@@ -48,7 +48,7 @@ const getRssFeed = async (url: string): Promise<RssFeed | undefined> => {
  * @param data
  * @returns
  */
-export const fillRssDataEntry = async (data: RssData): Promise<void> => {
+const fillRssDataEntry = async (data: RssData): Promise<void> => {
   if (data.artistcover !== undefined) {
     return
   }
@@ -68,6 +68,17 @@ export const fillRssDataEntry = async (data: RssData): Promise<void> => {
     }
   }
   data.artistcover = imageUrl
+}
+
+/**
+ * Adds cover image information to all rss data entries in {@link data}.
+ *
+ * @param data - The data entries which will be extended with cover image information.
+ */
+export const addRssImageInformation = async (data: Data[]): Promise<void> => {
+  await Promise.allSettled(
+    data.filter<RssData>((entry): entry is RssData => entry.type === 'rss').map((entry) => fillRssDataEntry(entry)),
+  )
 }
 
 // export const getRssFeed = (id: string, category: CategoryType, index: number, extraDataSource: ExtraDataMedia): Observable<Media[]> {

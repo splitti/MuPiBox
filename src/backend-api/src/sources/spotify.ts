@@ -1,5 +1,6 @@
 import {
   BaseData,
+  Data,
   SpotifyAlbumData,
   SpotifyArtistData,
   SpotifyPlaylistData,
@@ -110,7 +111,7 @@ const fillDataEntry = async <T extends BaseData>(
   }
 }
 
-export const fillAlbumDataEntry = (fillDataEntry<SpotifyAlbumData>).bind(
+const fillAlbumDataEntry = (fillDataEntry<SpotifyAlbumData>).bind(
   undefined,
   (spotifyApi: SpotifyWebApi | undefined, data: SpotifyAlbumData[]) => {
     return spotifyApi?.getAlbums(data.map((entry) => entry.id))
@@ -120,7 +121,7 @@ export const fillAlbumDataEntry = (fillDataEntry<SpotifyAlbumData>).bind(
     return res.albums[index]
   },
 )
-export const fillArtistDataEntry = (fillDataEntry<SpotifyArtistData>).bind(
+const fillArtistDataEntry = (fillDataEntry<SpotifyArtistData>).bind(
   undefined,
   (spotifyApi: SpotifyWebApi | undefined, data: SpotifyArtistData[]) => {
     return spotifyApi?.getArtists(data.map((entry) => entry.artistid))
@@ -130,7 +131,7 @@ export const fillArtistDataEntry = (fillDataEntry<SpotifyArtistData>).bind(
     return res.artists[index]
   },
 )
-export const fillShowDataEntry = (fillDataEntry<SpotifyShowData>).bind(
+const fillShowDataEntry = (fillDataEntry<SpotifyShowData>).bind(
   undefined,
   (spotifyApi: SpotifyWebApi | undefined, data: SpotifyShowData[]) => {
     return spotifyApi?.getShows(data.map((entry) => entry.showid))
@@ -141,7 +142,7 @@ export const fillShowDataEntry = (fillDataEntry<SpotifyShowData>).bind(
   },
 )
 //  TODO: Handle failing access.
-export const fillPlaylistDataEntry = (fillDataEntry<SpotifyPlaylistData>).bind(
+const fillPlaylistDataEntry = (fillDataEntry<SpotifyPlaylistData>).bind(
   undefined,
   (spotifyApi: SpotifyWebApi | undefined, data: SpotifyPlaylistData[]) => {
     return spotifyApi?.getPlaylist(data.map((entry) => entry.playlistid)[0])
@@ -152,7 +153,7 @@ export const fillPlaylistDataEntry = (fillDataEntry<SpotifyPlaylistData>).bind(
   },
 )
 
-export const fillSearchQueryDataEntry = (fillDataEntry<SpotifyQueryData>).bind(
+const fillSearchQueryDataEntry = (fillDataEntry<SpotifyQueryData>).bind(
   undefined,
   (spotifyApi: SpotifyWebApi | undefined, data: SpotifyQueryData[]) => {
     return spotifyApi?.searchAlbums(data.map((entry) => entry.query)[0])
@@ -162,3 +163,45 @@ export const fillSearchQueryDataEntry = (fillDataEntry<SpotifyQueryData>).bind(
     return res.albums.items[index]
   },
 )
+
+/**
+ * TODO
+ * @param data
+ * @returns
+ */
+const isSpotifyShowData = (data: Data): data is SpotifyShowData => {
+  return data.type === 'spotify' && 'showid' in data
+}
+
+/**
+ * Adds title information (and cover image if not yet set)
+ * to the spotify-based data in the given {@link data}.
+ * Does not check query-based data entries since they require a title
+ * when created.
+ *
+ * @param data - The data that is modified with the title information.
+ */
+export const addSpotifyTitleInformation = async (data: Data[]): Promise<void> => {
+  await Promise.allSettled([
+    fillShowDataEntry(data.filter((entry) => isSpotifyShowData(entry))),
+    fillArtistDataEntry(data.filter((entry) => 'artistid' in entry)),
+    fillAlbumDataEntry(data.filter((entry) => 'id' in entry && entry.type === 'spotify')),
+    fillPlaylistDataEntry(data.filter((entry) => 'playlistid' in entry)),
+  ])
+}
+
+/**
+ * Adds cover image information (and title if not yet set)
+ * to the spotify-based data in the given {@link data}.
+ *
+ * @param data - The data that is modified with the cover image information.
+ */
+export const addSpotifyImageInformation = async (data: Data[]): Promise<void> => {
+  await Promise.allSettled([
+    fillShowDataEntry(data.filter((entry) => isSpotifyShowData(entry))),
+    fillArtistDataEntry(data.filter((entry) => 'artistid' in entry)),
+    fillAlbumDataEntry(data.filter((entry) => 'id' in entry && entry.type === 'spotify')),
+    fillPlaylistDataEntry(data.filter((entry) => 'playlistid' in entry)),
+    fillSearchQueryDataEntry(data.filter<SpotifyQueryData>((entry): entry is SpotifyQueryData => 'query' in entry)),
+  ])
+}

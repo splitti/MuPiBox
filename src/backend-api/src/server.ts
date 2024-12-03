@@ -9,7 +9,10 @@ import {
   SpotifyShowData,
 } from './models/data.model'
 import { Folder, FolderWithChildren } from './models/folder.model'
+import { addRssImageInformation, fillRssDataEntry } from './sources/rss'
 import {
+  addSpotifyImageInformation,
+  addSpotifyTitleInformation,
   fillAlbumDataEntry,
   fillArtistDataEntry,
   fillPlaylistDataEntry,
@@ -23,7 +26,6 @@ import { ServerConfig } from './models/server.model'
 import cors from 'cors'
 import { environment } from './environment'
 import express from 'express'
-import { fillRssDataEntry } from './sources/rss'
 import fs from 'node:fs'
 import jsonfile from 'jsonfile'
 import ky from 'ky'
@@ -72,6 +74,44 @@ if (environment.production) {
   app.use(express.static(path.join(__dirname, 'www')))
 }
 
+/**
+ *
+ * @param data - The data that should be sorted into folders. Note that the data entries
+ * might be changed after calling this method (i.e., artist and artistcover might be
+ * added).
+ */
+const getFoldersWithData = async (data: Data[]): Promise<FolderWithChildren[]> => {
+  // For this, we might need to first set the `artist` field for entries that do
+  // not have it set yet. Spotify shows, artists, albums and playlists are the only
+  // data entries where we allow the user to not specify the folder name.
+  // These adapt the original entries in `data`.
+  await addSpotifyTitleInformation(data.filter((entry) => entry.artist === undefined))
+
+  // Now sort them into folders.
+  const toMapKey = (folder: Data): string => {
+    return `${folder.artist}|{}|${folder.category}`
+  }
+  const folderMap = new Map<string, FolderWithChildren>()
+  for (const entry of data) {
+    const folderId = toMapKey(entry)
+    const folder = folderMap.get(folderId)
+    if (folder !== undefined) {
+      folder?.children.push(entry)
+      if (folder.img === undefined && entry.artistcover !== undefined) {
+        folder.img = entry.artistcover
+      }
+    } else {
+      folderMap.set(folderId, {
+        name: entry.artist ?? 'No name',
+        img: entry.artistcover,
+        category: entry.category,
+        children: [entry],
+      })
+    }
+  }
+  return [...folderMap.values()]
+}
+
 // Routes
 app.get('/api/folders', async (_req, res) => {
   try {
@@ -83,109 +123,52 @@ app.get('/api/folders', async (_req, res) => {
     }
 
     // First, we sort all data.json entries into folders.
-    // For this, we might need to first set the `artist` field for entries that do
-    // not have it set yet. Spotify shows, artists, albums and playlists are the only
-    // data entries where we allow the user to not specify the folder name.
-    // These adapt the original entries in `data`.
-    const entriesWithoutFolderName = data.filter((entry) => entry.artist === undefined)
-    await Promise.allSettled([
-      fillShowDataEntry(entriesWithoutFolderName.filter((entry) => 'showid' in entry)),
-      fillArtistDataEntry(entriesWithoutFolderName.filter((entry) => 'artistid' in entry)),
-      fillAlbumDataEntry(entriesWithoutFolderName.filter((entry) => 'id' in entry && entry.type === 'spotify')),
-      fillPlaylistDataEntry(entriesWithoutFolderName.filter((entry) => 'playlistid' in entry)),
-    ])
-
-    // Now sort them into folders.
-    const toMapKey = (folder: BaseData): string => {
-      return `${folder.artist}|{}|${folder.category}`
-    }
-    const folderMap = new Map<string, FolderWithChildren>()
-    for (const entry of data) {
-      const folderId = toMapKey(entry)
-      const folder = folderMap.get(folderId)
-      if (folder !== undefined) {
-        folder?.children.push(entry)
-        if (folder.img === undefined && entry.artistcover !== undefined) {
-          folder.img = entry.artistcover
-        }
-      } else {
-        folderMap.set(folderId, {
-          name: entry.artist ?? 'No name',
-          img: entry.artistcover,
-          category: entry.category,
-          children: [entry],
-        })
-      }
-    }
+    const folderList = await getFoldersWithData(data)
 
     // Finally, we need to check if we have an image url for each folder.
     // If not, we check if we can request it.
-    const folderList = [...folderMap.values()]
     const folderWithoutImage = folderList.filter((folder) => folder.img === undefined)
     const childrenWithFolders = folderWithoutImage.map((folder) => {
       return { data: folder.children[0], folder: folder }
     })
     await Promise.allSettled([
-      fillShowDataEntry(
-        childrenWithFolders
-          .map((entry) => entry.data)
-          .filter<SpotifyShowData>((entry): entry is SpotifyShowData => 'showid' in entry),
-      ),
-      fillArtistDataEntry(
-        childrenWithFolders
-          .map((entry) => entry.data)
-          .filter<SpotifyArtistData>((entry): entry is SpotifyArtistData => 'artistid' in entry),
-      ),
-      fillAlbumDataEntry(
-        childrenWithFolders
-          .map((entry) => entry.data)
-          .filter<SpotifyAlbumData>((entry): entry is SpotifyAlbumData => 'id' in entry && entry.type === 'spotify'),
-      ),
-      fillPlaylistDataEntry(
-        childrenWithFolders
-          .map((entry) => entry.data)
-          .filter<SpotifyPlaylistData>((entry): entry is SpotifyPlaylistData => 'playlistid' in entry),
-      ),
-      fillSearchQueryDataEntry(
-        childrenWithFolders
-          .map((entry) => entry.data)
-          .filter<SpotifyQueryData>((entry): entry is SpotifyQueryData => 'query' in entry),
-      ),
-      childrenWithFolders
-        .map((entry) => entry.data)
-        .filter<RssData>((entry): entry is RssData => entry.type === 'rss')
-        .map((entry) => fillRssDataEntry(entry)),
+      addSpotifyImageInformation(childrenWithFolders.map((entry) => entry.data)),
+      addRssImageInformation(childrenWithFolders.map((entry) => entry.data)),
     ])
-
-    // Write the image back.
+    // Write the image to the folder.
     for (const entry of childrenWithFolders) {
       entry.folder.img = entry.data.artistcover
     }
 
-    // Last, convert to the data format we want to return.
-    const out: Folder[] = folderList.map((folder) => {
-      return {
-        name: folder.name,
-        category: folder.category,
-        img: folder.img,
-      }
-    })
-    out.sort((a: Folder, b: Folder) => {
-      return a.name.localeCompare(b.name, undefined, {
-        numeric: true,
-        sensitivity: 'base',
+    // Last, convert to the data format we want, sort and return.
+    const out: Folder[] = folderList
+      .map((folder) => {
+        return {
+          name: folder.name,
+          category: folder.category,
+          img: folder.img,
+        }
       })
-    })
+      .sort((a: Folder, b: Folder) => {
+        return a.name.localeCompare(b.name, undefined, {
+          numeric: true,
+          sensitivity: 'base',
+        })
+      })
     res.json(out)
   } catch (error) {
     console.error(`${nowDate.toLocaleString()}: [${serverName}] ${error}`)
     res.json([])
   }
 })
-app.get('/api/media/:category/:folder', async (_req, res) => {
+app.get('/api/media/:category/:folder', async (req, res) => {
   try {
     const data: Data[] = await readJsonFile(dataFile)
-    res.json(data)
+    const categoryData = data.filter((entry) => entry.category === req.params.category)
+
+    const folders = await getFoldersWithData(categoryData)
+
+    res.json(folders.find((folder) => folder.name === req.params.folder)?.children)
   } catch (error) {
     console.error(`${nowDate.toLocaleString()}: [${serverName}] ${error}`)
     res.json([])
