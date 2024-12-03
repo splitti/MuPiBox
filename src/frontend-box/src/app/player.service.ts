@@ -2,10 +2,10 @@ import { publishReplay, refCount } from 'rxjs/operators'
 
 import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
-import type { ServerHttpApiConfig } from '@backend-api/server.model'
-import type { Observable } from 'rxjs'
-import { environment } from '../environments/environment'
 import type { Media } from './media'
+import type { Observable } from 'rxjs'
+import type { ServerHttpApiConfig } from '@backend-api/server.model'
+import { environment } from '../environments/environment'
 
 export enum PlayerCmds {
   PLAY = 'play',
@@ -94,6 +94,7 @@ export class PlayerService {
         if (media.playlistid) {
           url = `spotify/now/spotify:playlist:${encodeURIComponent(media.playlistid)}:0:0`
         } else if (media.id) {
+          // TODO: Is this even used?
           url = `spotify/now/spotify:album:${encodeURIComponent(media.id)}:0:0`
         } else if (media.showid) {
           url = `spotify/now/spotify:episode:${encodeURIComponent(media.showid)}:0:0`

@@ -16,6 +16,7 @@ export interface BaseData {
   index?: number
   type: SourceType
   // ============ The following three are values of the folder ================
+  // TODO: Can this be undefined. Assume `audiobook`
   category: CategoryType
   // `artist` is the folder name.
   // If it is not set, the folder name is tried to be taken from the source

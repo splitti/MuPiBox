@@ -1,5 +1,5 @@
-import { Component, OnInit, ViewChild } from '@angular/core'
 import { ActivatedRoute, Router } from '@angular/router'
+import { Component, OnInit, ViewChild } from '@angular/core'
 import {
   IonBackButton,
   IonButton,
@@ -15,6 +15,7 @@ import {
   IonTitle,
   IonToolbar,
 } from '@ionic/angular/standalone'
+import { PlayerCmds, PlayerService } from '../player.service'
 import {
   pause,
   play,
@@ -26,23 +27,22 @@ import {
   volumeHighOutline,
   volumeLowOutline,
 } from 'ionicons/icons'
-import { PlayerCmds, PlayerService } from '../player.service'
 
-import { AsyncPipe } from '@angular/common'
-import { FormsModule } from '@angular/forms'
-import { NavController } from '@ionic/angular/standalone'
-import { addIcons } from 'ionicons'
-import type { Observable } from 'rxjs'
 import type { AlbumStop } from '../albumstop'
 import { ArtworkService } from '../artwork.service'
+import { AsyncPipe } from '@angular/common'
 import type { CurrentEpisode } from '../current.episode'
 import type { CurrentMPlayer } from '../current.mplayer'
 import type { CurrentPlaylist } from '../current.playlist'
 import type { CurrentShow } from '../current.show'
 import type { CurrentSpotify } from '../current.spotify'
+import { FormsModule } from '@angular/forms'
 import type { Media } from '../media'
 import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
+import { NavController } from '@ionic/angular/standalone'
+import type { Observable } from 'rxjs'
+import { addIcons } from 'ionicons'
 
 @Component({
   selector: 'app-player',
@@ -100,7 +100,6 @@ export class PlayerPage implements OnInit {
 
   constructor(
     private mediaService: MediaService,
-    private route: ActivatedRoute,
     private router: Router,
     private artworkService: ArtworkService,
     private navController: NavController,
@@ -171,22 +170,6 @@ export class PlayerPage implements OnInit {
   }
 
   updateProgress() {
-    this.mediaService.current$.subscribe((spotify) => {
-      this.currentPlayedSpotify = spotify
-    })
-    this.mediaService.local$.subscribe((local) => {
-      this.currentPlayedLocal = local
-    })
-    this.mediaService.playlist$.subscribe((playlist) => {
-      this.currentPlaylist = playlist
-    })
-    this.mediaService.episode$.subscribe((episode) => {
-      this.currentEpisode = episode
-    })
-    this.mediaService.show$.subscribe((show) => {
-      this.currentShow = show
-    })
-
     this.playing = !this.currentPlayedLocal?.pause
     if (this.playing) {
       this.resumeTimer++
@@ -226,11 +209,6 @@ export class PlayerPage implements OnInit {
           this.navController.back()
         }
       }
-      setTimeout(() => {
-        if (this.updateProgression) {
-          this.updateProgress()
-        }
-      }, 1000)
     } else if (this.media.type === 'library' || this.media.type === 'rss') {
       const seek = this.currentPlayedLocal?.progressTime || 0
       this.progress = seek || 0
@@ -251,12 +229,13 @@ export class PlayerPage implements OnInit {
           this.navController.back()
         }
       }
-      setTimeout(() => {
-        if (this.updateProgression) {
-          this.updateProgress()
-        }
-      }, 1000)
     }
+    // Periodicially refresh the progress.
+    setTimeout(() => {
+      if (this.updateProgression) {
+        this.updateProgress()
+      }
+    }, 1000)
   }
 
   ionViewWillEnter() {
@@ -394,44 +373,28 @@ export class PlayerPage implements OnInit {
   }
 
   skipPrev() {
-    if (this.playing) {
-      this.playerService.sendCmd(PlayerCmds.PREVIOUS)
-    } else {
-      this.playing = true
-      this.playerService.sendCmd(PlayerCmds.PREVIOUS)
-    }
+    this.playing = true
+    this.playerService.sendCmd(PlayerCmds.PREVIOUS)
   }
 
   skipNext() {
-    if (this.playing) {
-      this.playerService.sendCmd(PlayerCmds.NEXT)
-    } else {
-      this.playing = true
-      this.playerService.sendCmd(PlayerCmds.NEXT)
-    }
+    this.playing = true
+    this.playerService.sendCmd(PlayerCmds.NEXT)
   }
 
   toggleshuffle() {
-    if (this.media.shuffle) {
-      this.shufflechanged++
-      this.media.shuffle = false
-      this.playerService.sendCmd(PlayerCmds.SHUFFLEOFF)
-    } else {
-      this.shufflechanged++
-      this.media.shuffle = true
-      this.playerService.sendCmd(PlayerCmds.SHUFFLEON)
-    }
+    this.shufflechanged++
+    this.playerService.sendCmd(this.media.shuffle ? PlayerCmds.SHUFFLEOFF : PlayerCmds.SHUFFLEON)
+    this.media.shuffle = !this.media.shuffle
   }
 
   playPause() {
     if (this.playing) {
-      //this.playing = false;
       this.playerService.sendCmd(PlayerCmds.PAUSE)
       if (this.media.type === 'spotify' || this.media.type === 'library' || this.media.type === 'rss') {
         this.saveResumeFiles()
       }
     } else {
-      //this.playing = true;
       this.playerService.sendCmd(PlayerCmds.PLAY)
     }
   }
