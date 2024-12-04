@@ -75,7 +75,7 @@
         <ion-grid class="controls">
           <ion-row class="slider-row">
             @if (backendMedia().type !=='radio') {
-              <ion-range #range [(ngModel)]="progress" max="100" (touchend)="seek()" (mouseup)="seek()"></ion-range>
+              <ion-range [(ngModel)]="progress" max="100" (ionChange)="seek($event)" ion-range></ion-range>
             }
           </ion-row>
 

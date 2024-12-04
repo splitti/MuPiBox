@@ -1,5 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, ViewChild, WritableSignal, signal } from '@angular/core'
-import { Router } from '@angular/router'
+import { ChangeDetectionStrategy, Component, OnInit, Signal, ViewChild, WritableSignal, signal } from '@angular/core'
 import {
   IonBackButton,
   IonButton,
@@ -14,7 +13,9 @@ import {
   IonRow,
   IonTitle,
   IonToolbar,
+  RangeCustomEvent,
 } from '@ionic/angular/standalone'
+import { PlayerCmds, PlayerService } from '../player.service'
 import {
   pause,
   play,
@@ -26,24 +27,25 @@ import {
   volumeHighOutline,
   volumeLowOutline,
 } from 'ionicons/icons'
-import { PlayerCmds, PlayerService } from '../player.service'
 
-import { AsyncPipe } from '@angular/common'
-import { FormsModule } from '@angular/forms'
-import { Media as BackendMedia } from '@backend-api/media.model'
-import { NavController } from '@ionic/angular/standalone'
-import { addIcons } from 'ionicons'
-import type { Observable } from 'rxjs'
 import type { AlbumStop } from '../albumstop'
 import { ArtworkService } from '../artwork.service'
+import { AsyncPipe } from '@angular/common'
+import { Media as BackendMedia } from '@backend-api/media.model'
 import type { CurrentEpisode } from '../current.episode'
 import type { CurrentMPlayer } from '../current.mplayer'
 import type { CurrentPlaylist } from '../current.playlist'
 import type { CurrentShow } from '../current.show'
 import type { CurrentSpotify } from '../current.spotify'
+import { FormsModule } from '@angular/forms'
 import type { Media } from '../media'
 import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
+import { NavController } from '@ionic/angular/standalone'
+import type { Observable } from 'rxjs'
+import { Router } from '@angular/router'
+import { addIcons } from 'ionicons'
+import { toSignal } from '@angular/core/rxjs-interop'
 
 @Component({
   selector: 'app-player',
@@ -70,43 +72,36 @@ import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class PlayerPage implements OnInit {
+export class PlayerPage {
   protected backendMedia: WritableSignal<BackendMedia | undefined> = signal(undefined)
   protected resuming: WritableSignal<boolean> = signal(false)
 
   protected img: WritableSignal<string | undefined> = signal(undefined)
 
-  @ViewChild('range', { static: false }) range: IonRange
-
   media: Media
   resumemedia: Media
-  albumStop: AlbumStop
   resumePlay = false
   resumeIndex: number
   resumeTimer = 0
   resumeAdded = false
   playing = true
   updateProgression = false
-  currentPlayedSpotify: CurrentSpotify
-  currentPlayedLocal: CurrentMPlayer
-  currentPlaylist: CurrentPlaylist
-  currentEpisode: CurrentEpisode
-  currentShow: CurrentShow
   playlistTrackNr = 0
   showTrackNr = 0
   goBackTimer = 0
   progress = 0
   shufflechanged = 0
-  public readonly spotify$: Observable<CurrentSpotify>
-  public readonly local$: Observable<CurrentMPlayer>
-  public readonly playlist$: Observable<CurrentPlaylist>
-  public readonly episode$: Observable<CurrentEpisode>
-  public readonly show$: Observable<CurrentShow>
+
+  protected readonly spotify: Signal<CurrentSpotify>
+  protected readonly local: Signal<CurrentMPlayer>
+  protected readonly playlist: Signal<CurrentPlaylist>
+  protected readonly episode: Signal<CurrentEpisode>
+  protected readonly show: Signal<CurrentShow>
+  protected readonly albumStop: Signal<AlbumStop>
 
   constructor(
     private mediaService: MediaService,
     private router: Router,
-    private artworkService: ArtworkService,
     private navController: NavController,
     private playerService: PlayerService,
   ) {
@@ -126,47 +121,23 @@ export class PlayerPage implements OnInit {
     this.resuming.set(this.router.getCurrentNavigation().extras.state?.resuming ?? false)
     this.img.set(this.backendMedia().img)
 
-    this.spotify$ = this.mediaService.current$
-    this.local$ = this.mediaService.local$
-    this.playlist$ = this.mediaService.playlist$
-    this.episode$ = this.mediaService.episode$
-    this.show$ = this.mediaService.show$
+    this.spotify = toSignal(this.mediaService.current$)
+    this.local = toSignal(this.mediaService.local$)
+    this.playlist = toSignal(this.mediaService.playlist$)
+    this.episode = toSignal(this.mediaService.episode$)
+    this.show = toSignal(this.mediaService.show$)
+    this.albumStop = toSignal(this.mediaService.albumStop$)
   }
 
-  ngOnInit() {
-    this.mediaService.current$.subscribe((spotify) => {
-      this.currentPlayedSpotify = spotify
-    })
-    this.mediaService.local$.subscribe((local) => {
-      this.currentPlayedLocal = local
-    })
-    this.mediaService.playlist$.subscribe((playlist) => {
-      this.currentPlaylist = playlist
-    })
-    this.mediaService.episode$.subscribe((episode) => {
-      this.currentEpisode = episode
-    })
-    this.mediaService.show$.subscribe((show) => {
-      this.currentShow = show
-    })
-    this.mediaService.albumStop$.subscribe((albumStop) => {
-      this.albumStop = albumStop
-    })
-  }
+  protected seek(event: Event): void {
+    let newValue = (event as RangeCustomEvent).detail.value as number
 
-  seek() {
-    const newValue = +this.range.value
-    if (this.media.type === 'spotify') {
-      if (this.media.showid?.length > 0) {
-        const duration = this.currentEpisode?.duration_ms
-        this.playerService.seekPosition(duration * (newValue / 100))
-      } else {
-        const duration = this.currentPlayedSpotify?.item.duration_ms
-        this.playerService.seekPosition(duration * (newValue / 100))
-      }
-    } else if (this.media.type === 'library' || this.media.type === 'rss') {
-      this.playerService.seekPosition(newValue)
+    if (this.backendMedia().type === 'spotifyEpisode') {
+      newValue = (this.episode()?.duration_ms ?? 0.0) * (newValue / 100)
+    } else if (this.backendMedia().type === 'spotifyPlaylist') {
+      newValue = (this.spotify()?.item.duration_ms ?? 0.0) * (newValue / 100)
     }
+    this.playerService.seekPosition(newValue)
   }
 
   updateProgress() {
@@ -279,7 +250,7 @@ export class PlayerPage implements OnInit {
         this.mediaService.editRawMediaAtIndex(this.media.index, this.media)
       }
     }
-    if (this.albumStop?.albumStop === 'On') {
+    if (this.albumStop().albumStop === 'On') {
       this.playerService.sendCmd(PlayerCmds.ALBUMSTOP)
     }
   }
