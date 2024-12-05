@@ -1,8 +1,8 @@
 import { Data, RssData } from 'src/models/data.model'
 import { RssFeed, RssTextOrCdata } from 'src/models/rss.model'
 
-import ky from 'ky'
 import { RssMedia } from 'src/models/media.model'
+import ky from 'ky'
 import xmlparser from 'xml-js'
 
 /**
@@ -91,7 +91,10 @@ export const getRssMedia = async (data: RssData): Promise<RssMedia[] | undefined
       img: item['itunes:image']?._attributes?.href ?? '',
       url: item.enclosure?._attributes?.url ?? '',
       releaseDate: handleCData(item?.pubDate) ?? '',
-      folderName: handleCData(feed?.rss?.channel?.title) ?? '',
+      folderName: data.artist, // We discard the channel title? handleCData(feed?.rss?.channel?.title) ?? ''
+      category: data.category,
+      allowShuffle: false,
+      shuffle: false,
     }
   })
 }

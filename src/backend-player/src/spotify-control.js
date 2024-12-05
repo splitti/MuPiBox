@@ -7,10 +7,11 @@ const createPlayer = require('./mplayer-wrapper.js')
 const googleTTS = require('google-tts-api')
 const fs = require('node:fs')
 const childProcess = require('node:child_process')
+const { environment } = require('./environment.js')
 
 let configBasePath = './config'
 //let networkConfigBasePath = '/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config'
-if (process.env.NODE_ENV === 'development') {
+if (!environment.production) {
   configBasePath = '../config'
   //networkConfigBasePath = '../../backend-api/config'
 }
@@ -19,7 +20,16 @@ const muPiBoxConfig = require(`${configBasePath}/mupiboxconfig.json`)
 //const network = require(`${networkConfigBasePath}/network.json`)
 const config = require(`${configBasePath}/config.json`)
 
-const log = require('console-log-level')({ level: config.server.logLevel })
+let log
+if (environment.production) {
+  log = require('console-log-level')({ level: config.server.logLevel })
+} else {
+  log = {
+    debug: (val) => {
+      console.log(val)
+    },
+  }
+}
 
 /*set up express router and set headers for cross origin requests*/
 const app = express()
@@ -28,20 +38,13 @@ const player = createPlayer()
 
 app.use(bodyParser.urlencoded({ extended: true }))
 app.use(bodyParser.json())
-app.use((req, res, next) => {
+app.use((_req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*')
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept')
   next()
 })
 
 /*init spotify API */
-const scopes = [
-  'streaming',
-  'user-read-currently-currentMeta.playing',
-  'user-modify-playback-state',
-  'user-read-playback-state',
-]
-
 const spotifyApi = new SpotifyWebApi({
   clientId: config.spotify.clientId,
   clientSecret: config.spotify.clientSecret,
@@ -698,7 +701,7 @@ function playFile(playedFile) {
 }
 
 function playURL(playedURL) {
-  log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Starting currentMeta.playing:${playedURL}`)
+  log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Starting currentMeta.playing: ${playedURL}`)
   //currentMeta.playing = true;
   writeplayerstatePlay()
   player.play(playedURL)

@@ -4,23 +4,23 @@
   "author": "Mupi Team",
   "homepage": "https://github.com/splitti/mupibox",
   "scripts": {
-    "serve": "cross-env NODE_ENV=development node src/spotify-control.js",
+    "serve": "cross-env NODE_ENV=development node --watch src/spotify-control.js",
     "build": "esbuild src/spotify-control.js --bundle --minify --platform=node --target=node22 --outfile=../deploy/spotify-control.js",
     "test": "",
     "lint": "npx @biomejs/biome check .",
     "lint:fix": "npx @biomejs/biome check --fix ."
   },
   "dependencies": {
-    "body-parser": "^1.19.0",
+    "body-parser": "^1.20.3",
     "console-log-level": "^1.4.1",
-    "express": "^4.17.1",
+    "express": "^4.21.1",
     "http": "0.0.1-security",
-    "nodemon": "^2.0.7",
+    "nodemon": "^3.1.7",
     "path": "^0.12.7",
     "google-tts-api": "2.0.2",
-    "spotify-web-api-node": "^5.0.0",
+    "spotify-web-api-node": "^5.0.2",
     "byline": "^5.0.0",
-    "debug": "^4.3.4",
+    "debug": "^4.3.7",
     "js-string-escape": "^1.0.1"
   },
   "devDependencies": {

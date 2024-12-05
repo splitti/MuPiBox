@@ -1,22 +1,22 @@
 <ion-header class="player-header">
   <ion-toolbar color="light">
     <ion-buttons slot="start">
-      <ion-back-button icon="arrow-back-outline" defaultHref="/medialist"></ion-back-button>
+      <ion-back-button icon="arrow-back-outline" [defaultHref]="'media/{{ media().category }}/{{ media().folderName }}'"></ion-back-button>
     </ion-buttons>
     <ion-title class="toolbar-album">
       <div>
-      @switch (backendMedia().type) {
+      @switch (media().type) {
         @case ('spotifyPlaylist') {
-          {{ (spotify$ | async)?.item.album.name }}
+          {{ spotify()?.item.album.name }}
         }
         @case ('spotifyEpisode') {
-          {{ (episode$ | async)?.show.name }}
+          {{ episode()?.show.name }}
         }
         @case ('local') {
-          {{ (local$ | async)?.album }}
+          {{ local()?.album }}
         }
         @default {
-          {{ backendMedia().name }}
+          {{ media().folderName }}
         }
       }
       </div>
@@ -24,37 +24,37 @@
     <ion-title class="toolbar-tracktitle">
 
       <div>
-        @switch (backendMedia().type) {
+        @switch (media().type) {
           @case ('spotifyPlaylist') {
-            {{ (spotify$ | async)?.item.name }}
+            {{ spotify()?.item.name }}
           }
           @case ('spotifyEpisode') {
-            {{ (episode$ | async)?.name }}
+            {{ episode()?.name }}
           }
           @case ('local') {
-            {{ (local$ | async)?.currentTrackname }}
+            {{ local()?.currentTrackname }}
           }
           @case ('rss') {
-            {{ backendMedia().name }}
+            {{ media().name }}
           }
         }
       </div>
     </ion-title>
     <ion-title class="toolbar-tracknumber" slot="end">
-      <div>{{(local$ | async)?.volume}}%</div>
+      <div>{{local()?.volume}}%</div>
 
       <div>
-        @switch (backendMedia().type) {
+        @switch (media().type) {
           @case ('spotifyPlaylist') {
-            {{ (spotify$ | async)?.item.track_number }}/{{ (spotify$ | async)?.item.album.total_tracks }}
+            {{ spotify()?.item.track_number }}/{{ spotify()?.item.album.total_tracks }}
           }
           @case ('spotifyEpisode') {
-            {{ showTrackNr }}/{{ (episode$ | async)?.show.total_episodes }}
+            {{ showTrackNr }}/{{ episode()?.show.total_episodes }}
           }
           @case ('local') {
-            {{ (local$ | async)?.currentTracknr }}/{{ (local$ | async)?.totalTracks }}
+            {{ local()?.currentTracknr }}/{{ local()?.totalTracks }}
           }
-          <!-- ELSE ??: {{playlistTrackNr}}/{{(local$ | async)?.totalPlaylist}} -->
+          <!-- ELSE ??: {{playlistTrackNr}}/{{local()?.totalPlaylist}} -->
         }
       </div>
     </ion-title>
@@ -74,7 +74,7 @@
       <ion-col size="6">
         <ion-grid class="controls">
           <ion-row class="slider-row">
-            @if (backendMedia().type !=='radio') {
+            @if (media().type !=='radio') {
               <ion-range [(ngModel)]="progress" max="100" (ionChange)="seek($event)" ion-range></ion-range>
             }
           </ion-row>
@@ -86,8 +86,8 @@
               </ion-button>
             </ion-col>
             <ion-col size="4" class="ion-text-center">
-              <ion-button (click)="playPause()" color="light">
-                <ion-icon slot="icon-only" [name]="playing ? 'pause' : 'play'" class="small-icon"></ion-icon>
+              <ion-button (click)="playing() ? pause() : play()" color="light">
+                <ion-icon slot="icon-only" [name]="playing() ? 'pause' : 'play'" class="small-icon"></ion-icon>
               </ion-button>
             </ion-col>
             <ion-col size="4" class="ion-text-center">
@@ -99,38 +99,36 @@
 
           <ion-row class="controls-row">
             <ion-col size="6" class="ion-text-center">
-              <ion-button [disabled]="this.media.showid" (click)="skipPrev()" color="light">
+              <!-- [disabled]="this.media.showid" -->
+              <ion-button (click)="skipPrev()" color="light">
                 <ion-icon slot="icon-only" name="play-skip-back" class="small-icon"></ion-icon>
               </ion-button>
             </ion-col>
             <ion-col size="6" class="ion-text-center">
-              <ion-button [disabled]="this.media.showid" (click)="skipNext()" color="light">
+              <ion-button (click)="skipNext()" color="light">
                 <ion-icon slot="icon-only" name="play-skip-forward" class="small-icon"></ion-icon>
               </ion-button>
             </ion-col>
           </ion-row>
 
           <ion-row class="controls-row">
-            @let showShuffleButton = media.type ==='spotify' && (media.category =='music' || media.category =='other');
-
-            <ion-col [size]="showShuffleButton ? '4' : '6'" class="ion-text-center">
+            <ion-col [size]="media().allowShuffle ? '4' : '6'" class="ion-text-center">
               <ion-button (click)="seekBack()" color="light">
                 <ion-icon slot="icon-only" name="play-back" class="small-icon"></ion-icon>
               </ion-button>
             </ion-col>
-            @if (showShuffleButton) {
+            @if (media().allowShuffle) {
               <ion-col size="4" class="ion-text-center">
-                <ion-button (click)="toggleshuffle()" [color]="media.shuffle ? 'dark' : 'light'">
+                <ion-button (click)="toggleshuffle()" [color]="media().shuffle ? 'dark' : 'light'">
                   <ion-icon slot="icon-only" name="shuffle-outline" class="small-icon"></ion-icon>
                 </ion-button>
               </ion-col>
             }
-            <ion-col [size]="showShuffleButton ? '4' : '6'" class="ion-text-center">
+            <ion-col [size]="media().allowShuffle ? '4' : '6'" class="ion-text-center">
               <ion-button (click)="seekForward()" color="light">
                 <ion-icon slot="icon-only" name="play-forward" class="small-icon"></ion-icon>
               </ion-button>
             </ion-col>
-
           </ion-row>
         </ion-grid>
       </ion-col>

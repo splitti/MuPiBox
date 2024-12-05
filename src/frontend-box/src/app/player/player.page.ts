@@ -1,4 +1,13 @@
-import { ChangeDetectionStrategy, Component, OnInit, Signal, ViewChild, WritableSignal, signal } from '@angular/core'
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+  Signal,
+  ViewChild,
+  WritableSignal,
+  computed,
+  signal,
+} from '@angular/core'
 import {
   IonBackButton,
   IonButton,
@@ -73,12 +82,13 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop'
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PlayerPage {
-  protected backendMedia: WritableSignal<BackendMedia | undefined> = signal(undefined)
+  protected media: WritableSignal<BackendMedia | undefined> = signal(undefined)
   protected resuming: WritableSignal<boolean> = signal(false)
 
   protected img: WritableSignal<string | undefined> = signal(undefined)
 
   protected pageIsShown: WritableSignal<boolean> = signal(true)
+  protected playing: Signal<boolean>
 
   resumePlay = false
   resumeIndex: number
@@ -87,7 +97,6 @@ export class PlayerPage {
   showTrackNr = 0
   progress = 0
   shufflechanged = 0
-  protected playing = true
 
   protected readonly spotify: Signal<CurrentSpotify>
   protected readonly local: Signal<CurrentMPlayer>
@@ -114,9 +123,9 @@ export class PlayerPage {
       playForward,
     })
 
-    this.backendMedia.set(this.router.getCurrentNavigation().extras.state?.media)
+    this.media.set(this.router.getCurrentNavigation().extras.state?.media)
     this.resuming.set(this.router.getCurrentNavigation().extras.state?.resuming ?? false)
-    this.img.set(this.backendMedia().img)
+    this.img.set(this.media().img)
 
     this.spotify = toSignal(this.mediaService.current$)
     this.local = toSignal(this.mediaService.local$)
@@ -124,6 +133,12 @@ export class PlayerPage {
     this.episode = toSignal(this.mediaService.episode$)
     this.show = toSignal(this.mediaService.show$)
     this.albumStop = toSignal(this.mediaService.albumStop$)
+
+    // TODO: Ideally, in the future, we want to immediately update the ui and only revert it
+    // if the backend is saying something different.
+    this.playing = computed(() => {
+      return !(this.local()?.pause ?? false)
+    })
 
     interval(30000)
       .pipe(takeUntilDestroyed())
@@ -140,7 +155,7 @@ export class PlayerPage {
     if (this.resuming()) {
       this.resumePlayback()
     } else {
-      this.playerService.playBackendMedia(this.backendMedia())
+      this.playerService.playBackendMedia(this.media())
     }
     this.updateProgress()
 
@@ -162,9 +177,9 @@ export class PlayerPage {
   protected seek(event: Event): void {
     let newValue = (event as RangeCustomEvent).detail.value as number
 
-    if (this.backendMedia().type === 'spotifyEpisode') {
+    if (this.media().type === 'spotifyEpisode') {
       newValue = (this.episode()?.duration_ms ?? 0.0) * (newValue / 100)
-    } else if (this.backendMedia().type === 'spotifyPlaylist') {
+    } else if (this.media().type === 'spotifyPlaylist') {
       newValue = (this.spotify()?.item.duration_ms ?? 0.0) * (newValue / 100)
     }
     this.playerService.seekPosition(newValue)
@@ -305,12 +320,10 @@ export class PlayerPage {
   }
 
   skipPrev() {
-    this.playing = true
     this.playerService.sendCmd(PlayerCmds.PREVIOUS)
   }
 
   skipNext() {
-    this.playing = true
     this.playerService.sendCmd(PlayerCmds.NEXT)
   }
 
@@ -321,16 +334,16 @@ export class PlayerPage {
     // this.media.shuffle = !this.media.shuffle
   }
 
-  playPause() {
-    if (this.playing) {
-      this.playerService.sendCmd(PlayerCmds.PAUSE)
-      // TODO
-      // if (this.media.type === 'spotify' || this.media.type === 'library' || this.media.type === 'rss') {
-      //   this.saveResumeFiles()
-      // }
-    } else {
-      this.playerService.sendCmd(PlayerCmds.PLAY)
-    }
+  protected play(): void {
+    this.playerService.sendCmd(PlayerCmds.PLAY)
+  }
+
+  protected pause(): void {
+    this.playerService.sendCmd(PlayerCmds.PAUSE)
+    // TODO
+    // if (this.media.type === 'spotify' || this.media.type === 'library' || this.media.type === 'rss') {
+    //   this.saveResumeFiles()
+    // }
   }
 
   seekForward() {
