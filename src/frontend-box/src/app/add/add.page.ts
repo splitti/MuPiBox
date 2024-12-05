@@ -414,6 +414,7 @@ export class AddPage implements OnInit, AfterViewInit {
             } else if (media.spotify_url.includes('show/')) {
               media.showid = this.spotifyIDfetcher(media.spotify_url, 'show/')
             }
+            this.validateState = true
           }
         }
         this.save(media, form)

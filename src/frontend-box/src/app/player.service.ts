@@ -2,6 +2,7 @@ import { publishReplay, refCount } from 'rxjs/operators'
 
 import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
+import { Media as BackendMedia } from '@backend-api/media.model'
 import type { ServerHttpApiConfig } from '@backend-api/server.model'
 import type { Observable } from 'rxjs'
 import { environment } from '../environments/environment'
@@ -53,6 +54,8 @@ export class PlayerService {
     return this.config
   }
 
+  public playBackendMedia(media: BackendMedia): void {}
+
   /**
    * Says the given {@link text} with TTS if TTS is enabled.
    * @param text - The text that should be spoken with TTS.
@@ -94,6 +97,7 @@ export class PlayerService {
         if (media.playlistid) {
           url = `spotify/now/spotify:playlist:${encodeURIComponent(media.playlistid)}:0:0`
         } else if (media.id) {
+          // TODO: Is this even used?
           url = `spotify/now/spotify:album:${encodeURIComponent(media.id)}:0:0`
         } else if (media.showid) {
           url = `spotify/now/spotify:episode:${encodeURIComponent(media.showid)}:0:0`

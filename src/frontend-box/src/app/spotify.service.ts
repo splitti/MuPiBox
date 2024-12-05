@@ -1,5 +1,5 @@
-import {Observable, defer, firstValueFrom, of, range, throwError, catchError, EMPTY} from 'rxjs'
-import { delay, flatMap, map, mergeAll, mergeMap, retryWhen, take, tap, toArray } from 'rxjs/operators'
+import { EMPTY, Observable, catchError, defer, firstValueFrom, of, range, throwError } from 'rxjs'
+import { delay, map, mergeAll, mergeMap, retryWhen, take, tap, toArray } from 'rxjs/operators'
 import type { CategoryType, Media } from './media'
 import type {
   SpotifyAlbumsResponse,
@@ -309,9 +309,9 @@ export class SpotifyService {
       retryWhen((errors) => {
         return this.errorHandler(errors)
       }),
-      catchError(err => {
-        console.log("Caught error for Spotify playlist %s, continuing...", id)
-        return EMPTY;
+      catchError((err) => {
+        console.log('Caught error for Spotify playlist %s, continuing...', id)
+        return EMPTY
       }),
       map((response: SpotifyAlbumsResponseItem) => {
         const media: Media = {
@@ -423,23 +423,22 @@ export class SpotifyService {
     }
     this.refreshingToken = true
     const tokenUrl = environment.production ? '../api/token' : 'http://localhost:8200/api/token'
-    this.http.get(tokenUrl, { responseType: 'text' })
-      .subscribe({
-        next: (token) => {
-          this.spotifyApi.setAccessToken(token)
-          this.refreshingToken = false
-        },
-        error: () => {
-          this.refreshingToken = false
-        }
-      })
+    this.http.get(tokenUrl, { responseType: 'text' }).subscribe({
+      next: (token) => {
+        this.spotifyApi.setAccessToken(token)
+        this.refreshingToken = false
+      },
+      error: () => {
+        this.refreshingToken = false
+      },
+    })
   }
 
   errorHandler(errors: Observable<any>) {
     return errors.pipe(
       mergeMap((error) => (error.status !== 401 && error.status !== 429 ? throwError(error) : of(error))),
       tap((_) => {
-          this.refreshToken()
+        this.refreshToken()
       }),
       delay(500),
       take(10),
