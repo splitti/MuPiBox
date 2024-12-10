@@ -422,7 +422,7 @@ export class SpotifyService {
       return
     }
     this.refreshingToken = true
-    const tokenUrl = environment.production ? '../api/token' : 'http://localhost:8200/api/token'
+    const tokenUrl = `${environment.backend.playerUrl}/spotify/token`
     this.http.get(tokenUrl, { responseType: 'text' })
       .subscribe({
         next: (token) => {
