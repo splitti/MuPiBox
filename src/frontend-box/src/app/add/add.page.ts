@@ -635,10 +635,6 @@ export class AddPage implements OnInit, AfterViewInit {
     }
   }
 
-  toggleKeyboard() {
-    this.handleLayoutChange('{collapse}');
-  }
-
   private showKeyboard() {
     const keyboardElement = document.querySelector('.simple-keyboard') as HTMLElement;
     if (keyboardElement) {
