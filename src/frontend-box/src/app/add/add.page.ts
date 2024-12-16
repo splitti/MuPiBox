@@ -77,7 +77,7 @@ export class AddPage implements OnInit, AfterViewInit {
   aPartOfAllMax: number
   index: number
   activityIndicatorVisible = false
-  isKeyboardVisible: boolean
+  isKeyboardVisible = false
 
   constructor(
     private mediaService: MediaService,
@@ -179,6 +179,11 @@ export class AddPage implements OnInit, AfterViewInit {
         '{collapse}': '▼',
       },
     })
+
+    const keyboardElement = document.querySelector('.simple-keyboard') as HTMLElement;
+    if (keyboardElement) {
+      keyboardElement.style.display = 'none';
+    }
 
     this.selectedInputElem = document.querySelector('ion-input:first-child')
 
