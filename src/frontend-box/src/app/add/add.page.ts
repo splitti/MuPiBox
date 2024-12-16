@@ -77,6 +77,7 @@ export class AddPage implements OnInit, AfterViewInit {
   aPartOfAllMax: number
   index: number
   activityIndicatorVisible = false
+  isKeyboardVisible: any
 
   constructor(
     private mediaService: MediaService,
@@ -145,22 +146,22 @@ export class AddPage implements OnInit, AfterViewInit {
       theme: 'hg-theme-default hg-theme-ios',
       layout: {
         default: [
-          'q w e r t z u i o p ü',
+          'q w e r t z u i o p ü {collapse}',
           'a s d f g h j k l ö ä',
           '{shift} y x c v b n m {shift}',
           '{alt} , {space} . {bksp}',
         ],
         shift: [
-          'Q W E R T Z U I O P Ü',
+          'Q W E R T Z U I O P Ü {collapse}',
           'A S D F G H J K L Ö Ä',
           '{shiftactivated} Y X C V B N M {shift}',
-          '{alt} , {space} . {bksp}',
+          '{alt} , {space} . {bksp}'
         ],
         alt: [
-          '1 2 3 4 5 6 7 8 9 0 =',
+          '1 2 3 4 5 6 7 8 9 0 = {collapse}',
           `% @ # $ § & * ° ^ / \\ ' "`,
           '_ ~ - + ; : { } [ ] ( )',
-          '{default} ! {space} ? {bksp}',
+          '{default} ! {space} ? {bksp}'
         ],
       },
       display: {
@@ -175,6 +176,7 @@ export class AddPage implements OnInit, AfterViewInit {
         '{space}': ' ',
         '{default}': 'ABC',
         '{back}': '⇦',
+        '{collapse}': '▼',
       },
     })
 
@@ -215,6 +217,13 @@ export class AddPage implements OnInit, AfterViewInit {
   focusChanged(event: any) {
     this.selectedInputElem = event.target
 
+    if (!this.isKeyboardVisible) {
+      const keyboardElement = document.querySelector('.simple-keyboard') as HTMLElement;
+      if (keyboardElement) {
+        keyboardElement.style.display = 'block';
+        this.isKeyboardVisible = true;
+      }
+    }
     this.keyboard.setOptions({
       disableCaretPositioning: false,
       inputName: event.target.name,
@@ -266,6 +275,13 @@ export class AddPage implements OnInit, AfterViewInit {
     let layout: string
 
     switch (button) {
+      case '{collapse}':
+        const keyboardElement = document.querySelector('.simple-keyboard') as HTMLElement;
+        if (keyboardElement) {
+          keyboardElement.style.display = 'none';
+          this.isKeyboardVisible = false;
+        }
+        return;
       case '{shift}':
       case '{shiftactivated}':
       case '{default}':
@@ -623,5 +639,9 @@ export class AddPage implements OnInit, AfterViewInit {
             labelcover?.length > 0 ||
             cover?.length > 0))
     }
+  }
+
+  toggleKeyboard() {
+    this.handleLayoutChange('{collapse}');
   }
 }
