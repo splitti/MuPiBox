@@ -180,11 +180,7 @@ export class AddPage implements OnInit, AfterViewInit {
       },
     })
 
-    const keyboardElement = document.querySelector('.simple-keyboard') as HTMLElement;
-    if (keyboardElement) {
-      keyboardElement.style.display = 'none';
-    }
-
+    this.hideKeyboard();
     this.selectedInputElem = document.querySelector('ion-input:first-child')
 
     this.validate()
@@ -223,12 +219,9 @@ export class AddPage implements OnInit, AfterViewInit {
     this.selectedInputElem = event.target
 
     if (!this.isKeyboardVisible) {
-      const keyboardElement = document.querySelector('.simple-keyboard') as HTMLElement;
-      if (keyboardElement) {
-        keyboardElement.style.display = 'block';
-        this.isKeyboardVisible = true;
-      }
+      this.showKeyboard();
     }
+
     this.keyboard.setOptions({
       disableCaretPositioning: false,
       inputName: event.target.name,
@@ -281,11 +274,7 @@ export class AddPage implements OnInit, AfterViewInit {
 
     switch (button) {
       case '{collapse}':
-        const keyboardElement = document.querySelector('.simple-keyboard') as HTMLElement;
-        if (keyboardElement) {
-          keyboardElement.style.display = 'none';
-          this.isKeyboardVisible = false;
-        }
+        this.hideKeyboard();
         return;
       case '{shift}':
       case '{shiftactivated}':
@@ -648,5 +637,21 @@ export class AddPage implements OnInit, AfterViewInit {
 
   toggleKeyboard() {
     this.handleLayoutChange('{collapse}');
+  }
+
+  private showKeyboard() {
+    const keyboardElement = document.querySelector('.simple-keyboard') as HTMLElement;
+    if (keyboardElement) {
+      keyboardElement.style.display = 'block';
+      this.isKeyboardVisible = true;
+    }
+  }
+
+  private hideKeyboard() {
+    const keyboardElement = document.querySelector('.simple-keyboard') as HTMLElement;
+    if (keyboardElement) {
+      keyboardElement.style.display = 'none';
+      this.isKeyboardVisible = false;
+    }
   }
 }
