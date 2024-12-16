@@ -77,7 +77,7 @@ export class AddPage implements OnInit, AfterViewInit {
   aPartOfAllMax: number
   index: number
   activityIndicatorVisible = false
-  isKeyboardVisible: any
+  isKeyboardVisible: boolean
 
   constructor(
     private mediaService: MediaService,
