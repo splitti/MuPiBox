@@ -27,6 +27,7 @@ export interface BaseData {
 
   // TODO: cover etc.
   title?: string
+  cover?: string
 }
 
 export interface LocalData extends BaseData {
@@ -47,7 +48,6 @@ export interface RadioData extends BaseData {
   artist: string // Creating RadioData requires the folder name!
   id: string // The stream url.
   title: string // The name of the radio stream.
-  cover?: string
 }
 
 export interface SpotifyBaseData extends BaseData, HasMultipleMedia {

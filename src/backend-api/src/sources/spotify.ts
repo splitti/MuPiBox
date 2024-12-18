@@ -3,6 +3,7 @@ import {
   Data,
   SpotifyAlbumData,
   SpotifyArtistData,
+  SpotifyData,
   SpotifyPlaylistData,
   SpotifyQueryData,
   SpotifyShowData,
@@ -11,6 +12,7 @@ import { chunks, readJsonFile } from '../utils'
 
 import SpotifyWebApi from 'spotify-web-api-node'
 import { environment } from '../environment'
+import { SpotifyAlbumMedia, SpotifyEpisodeMedia, SpotifyMedia, SpotifyPlaylistMedia } from 'src/models/media.model'
 
 let configBasePath = './server/config' // TODO: Fix for production.
 if (!environment.production) {
@@ -174,6 +176,15 @@ const isSpotifyShowData = (data: Data): data is SpotifyShowData => {
 }
 
 /**
+ * TODO
+ * @param data
+ * @returns
+ */
+const isSpotifyArtistData = (data: Data): data is SpotifyArtistData => {
+  return data.type === 'spotify' && 'artistid' in data
+}
+
+/**
  * Adds title information (and cover image if not yet set)
  * to the spotify-based data in the given {@link data}.
  * Does not check query-based data entries since they require a title
@@ -184,7 +195,7 @@ const isSpotifyShowData = (data: Data): data is SpotifyShowData => {
 export const addSpotifyTitleInformation = async (data: Data[]): Promise<void> => {
   await Promise.allSettled([
     fillShowDataEntry(data.filter((entry) => isSpotifyShowData(entry))),
-    fillArtistDataEntry(data.filter((entry) => 'artistid' in entry)),
+    fillArtistDataEntry(data.filter((entry) => isSpotifyArtistData(entry))),
     fillAlbumDataEntry(data.filter((entry) => 'id' in entry && entry.type === 'spotify')),
     fillPlaylistDataEntry(data.filter((entry) => 'playlistid' in entry)),
   ])
@@ -199,9 +210,71 @@ export const addSpotifyTitleInformation = async (data: Data[]): Promise<void> =>
 export const addSpotifyImageInformation = async (data: Data[]): Promise<void> => {
   await Promise.allSettled([
     fillShowDataEntry(data.filter((entry) => isSpotifyShowData(entry))),
-    fillArtistDataEntry(data.filter((entry) => 'artistid' in entry)),
+    fillArtistDataEntry(data.filter((entry) => isSpotifyArtistData(entry))),
     fillAlbumDataEntry(data.filter((entry) => 'id' in entry && entry.type === 'spotify')),
     fillPlaylistDataEntry(data.filter((entry) => 'playlistid' in entry)),
     fillSearchQueryDataEntry(data.filter<SpotifyQueryData>((entry): entry is SpotifyQueryData => 'query' in entry)),
   ])
+}
+
+const getSpotifyArtistAlbums = async (data: SpotifyArtistData): Promise<SpotifyAlbumMedia[] | undefined> => {
+  if (spotifyApi === undefined) {
+    return undefined
+  }
+
+  const chunkSize = 50
+
+  const mapSpotifyAlbumToMedia = (album: SpotifyApi.AlbumObjectSimplified): SpotifyAlbumMedia => {
+    return {
+      type: 'spotifyAlbum',
+      name: album.name,
+      category: data.category,
+      folderName: data.artist ?? '',
+      img: album.images.length > 0 ? album.images[0].url : '',
+      // TODO: Shuffle?
+      allowShuffle: false,
+      shuffle: false,
+      id: album.id,
+      releaseDate: album.release_date,
+    }
+  }
+
+  const firstAlbums = await spotifyApi.getArtistAlbums(data.artistid, { limit: chunkSize, offset: 0 })
+  if (firstAlbums.statusCode !== 200) {
+    return undefined
+  }
+  const out = firstAlbums.body.items.map(mapSpotifyAlbumToMedia)
+  // Request the rest of the albums if there are more than 50.
+  const numChunks = Math.ceil(firstAlbums.body.total / chunkSize)
+  if (firstAlbums.body.total > chunkSize) {
+    const results = await Promise.allSettled(
+      Array.from({ length: numChunks }, (_, i) => chunkSize + i * chunkSize).map((offset) => {
+        return spotifyApi?.getArtistAlbums(data.artistid, { limit: chunkSize, offset: offset })
+      }),
+    )
+    out.push(
+      ...results
+        .filter((promise) => promise.status === 'fulfilled')
+        .flatMap((promise) => promise.value)
+        .flatMap((res) => res?.body.items.map(mapSpotifyAlbumToMedia))
+        .filter((album) => album !== undefined),
+    )
+  }
+  return out
+}
+
+/**
+ * TODO
+ *
+ * @param data T
+ * @returns
+ */
+export const getSpotifyMedia = async (data: SpotifyData): Promise<SpotifyMedia[] | undefined> => {
+  if (spotifyApi === undefined) {
+    return undefined
+  }
+  if (isSpotifyArtistData(data)) {
+    return getSpotifyArtistAlbums(data)
+  }
+  return undefined
 }

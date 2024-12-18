@@ -1,6 +1,6 @@
 import { CategoryType } from './folder.model'
 
-export type MediaType = 'rss' | 'local' | 'radio' | 'spotifyPlaylist' | 'spotifyEpisode'
+export type MediaType = 'rss' | 'local' | 'radio' | 'spotifyPlaylist' | 'spotifyEpisode' | 'spotifyAlbum'
 
 export interface BaseMedia {
   type: MediaType
@@ -49,4 +49,14 @@ export interface SpotifyEpisodeMedia extends BaseMedia {
   shuffle: boolean
 }
 
-export type Media = RssMedia | RadioMedia | LocalMedia | SpotifyEpisodeMedia | SpotifyPlaylistMedia
+export interface SpotifyAlbumMedia extends BaseMedia {
+  type: 'spotifyAlbum'
+  id: string
+  releaseDate: string
+  allowShuffle: boolean
+  shuffle: boolean
+}
+
+export type SpotifyMedia = SpotifyEpisodeMedia | SpotifyPlaylistMedia | SpotifyAlbumMedia
+
+export type Media = RssMedia | RadioMedia | LocalMedia | SpotifyMedia

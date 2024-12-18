@@ -91,7 +91,10 @@ export const getRssMedia = async (data: RssData): Promise<RssMedia[] | undefined
       img: item['itunes:image']?._attributes?.href ?? '',
       url: item.enclosure?._attributes?.url ?? '',
       releaseDate: handleCData(item?.pubDate) ?? '',
-      folderName: data.artist, // We discard the channel title? handleCData(feed?.rss?.channel?.title) ?? ''
+      // We discard the channel title: handleCData(feed?.rss?.channel?.title) ?? ''
+      // We do this since this folderName is shown on top on the player page and
+      // we want to show the user-defined folder name there.
+      folderName: data.artist,
       category: data.category,
       allowShuffle: false,
       shuffle: false,

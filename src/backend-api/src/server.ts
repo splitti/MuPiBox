@@ -1,18 +1,19 @@
-import fs from 'node:fs'
-import path from 'node:path'
-import cors from 'cors'
-import express from 'express'
-import jsonfile from 'jsonfile'
-import ky from 'ky'
-import xmlparser from 'xml-js'
-import { environment } from './environment'
-import { Data } from './models/data.model'
 import { Folder, FolderWithChildren } from './models/folder.model'
+import { addRssImageInformation, getRssMedia } from './sources/rss'
+import { addSpotifyImageInformation, addSpotifyTitleInformation, getSpotifyMedia, spotifyApi } from './sources/spotify'
+
+import { Data } from './models/data.model'
 import { Network } from './models/network.model'
 import { ServerConfig } from './models/server.model'
-import { addRssImageInformation, getRssMedia } from './sources/rss'
-import { addSpotifyImageInformation, addSpotifyTitleInformation, spotifyApi } from './sources/spotify'
+import cors from 'cors'
+import { environment } from './environment'
+import express from 'express'
+import fs from 'node:fs'
+import jsonfile from 'jsonfile'
+import ky from 'ky'
+import path from 'node:path'
 import { readJsonFile } from './utils'
+import xmlparser from 'xml-js'
 
 const serverName = 'mupibox-backend-api'
 
@@ -157,6 +158,32 @@ app.get('/api/media/:category/:folder', async (req, res) => {
     const results = dataEntries.map((entry) => {
       if (entry.type === 'rss') {
         return getRssMedia(entry)
+      }
+      if (entry.type === 'spotify') {
+        return getSpotifyMedia(entry)
+      }
+      if (entry.type === 'radio') {
+        return Promise.resolve({
+          type: 'radio',
+          url: entry.id,
+          name: entry.title,
+          category: entry.category,
+          folderName: entry.artist,
+          img: entry.cover,
+          allowShuffle: false,
+          shuffle: false,
+        })
+      }
+      if (entry.type === 'library') {
+        return Promise.resolve({
+          type: 'local',
+          name: entry.title,
+          category: entry.category,
+          folderName: entry.artist,
+          img: entry.cover,
+          allowShuffle: false,
+          shuffle: false,
+        })
       }
       return undefined
     })
