@@ -4,6 +4,8 @@ import type { CategoryType, Media } from './media'
 
 import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
+import { Media as BackendMedia } from '@backend-api/media.model'
+import type { Network } from '@backend-api/network.model'
 import { environment } from '../environments/environment'
 import type { AlbumStop } from './albumstop'
 import type { Artist } from './artist'
@@ -13,7 +15,6 @@ import type { CurrentPlaylist } from './current.playlist'
 import type { CurrentShow } from './current.show'
 import type { CurrentSpotify } from './current.spotify'
 import { Mupihat } from './mupihat'
-import type { Network } from './network'
 import { RssFeedService } from './rssfeed.service'
 import { SpotifyService } from './spotify.service'
 import type { WLAN } from './wlan'
@@ -22,6 +23,8 @@ import type { WLAN } from './wlan'
   providedIn: 'root',
 })
 export class MediaService {
+  private endpoint = `${environment.backend.apiUrl}/media`
+
   response = ''
   public readonly current$: Observable<CurrentSpotify>
   public readonly local$: Observable<CurrentMPlayer>
@@ -84,6 +87,19 @@ export class MediaService {
     )
   }
 
+  /**
+   * TODO
+   *
+   * @param category
+   * @param folder
+   * @returns
+   */
+  public getMedia(category: string, folder: string): Observable<BackendMedia[]> {
+    return this.http.get<BackendMedia[]>(
+      `${this.endpoint}/${encodeURIComponent(category)}/${encodeURIComponent(folder)}`,
+    )
+  }
+
   // --------------------------------------------
   // Handling of RAW media entries from data.json
   // --------------------------------------------
@@ -97,7 +113,7 @@ export class MediaService {
   }
 
   public fetchRawMedia(): Observable<Media[]> {
-    return this.http.get<Media[]>(`${this.getApiBackendUrl()}/data`)
+    return this.http.get<Media[]>(`${this.getApiBackendUrl()}/activedata`)
   }
 
   updateWLAN() {
@@ -252,7 +268,7 @@ export class MediaService {
   }
 
   private fetchMedia(category: CategoryType): Observable<Media[]> {
-    return this.updateMedia(`${this.getApiBackendUrl()}/data`, false, category)
+    return this.updateMedia(`${this.getApiBackendUrl()}/activedata`, false, category)
   }
 
   // Get the media data for the current category from the server

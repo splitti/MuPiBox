@@ -1,37 +1,31 @@
-import fs from 'node:fs'
-import { readFile } from 'node:fs/promises'
-import path from 'node:path'
+import { Folder, FolderWithChildren } from './models/folder.model'
+import { addRssImageInformation, getRssMedia } from './sources/rss'
+import { addSpotifyImageInformation, addSpotifyTitleInformation, getSpotifyMedia, spotifyApi } from './sources/spotify'
+
+import { Data } from './models/data.model'
+import { Network } from './models/network.model'
+import { ServerConfig } from './models/server.model'
 import cors from 'cors'
+import { environment } from './environment'
 import express from 'express'
+import fs from 'node:fs'
 import jsonfile from 'jsonfile'
 import ky from 'ky'
-import SpotifyWebApi from 'spotify-web-api-node'
+import path from 'node:path'
+import { readJsonFile } from './utils'
 import xmlparser from 'xml-js'
-import { ServerConfig } from './models/server.model'
 
-const testServe = process.env.NODE_ENV === 'test'
-const devServe = process.env.NODE_ENV === 'development'
-const productionServe = !(testServe || devServe)
+const serverName = 'mupibox-backend-api'
 
 // Configuration files.
 let configBasePath = './server/config'
-if (!productionServe) {
+if (!environment.production) {
   configBasePath = './config' // This uses the package.json path as pwd.
 }
 
-async function readJsonFile(path: string) {
-  const file = await readFile(path, 'utf8')
-  return JSON.parse(file)
-}
-
 let config: ServerConfig | undefined = undefined
-let spotifyApi: SpotifyWebApi | undefined = undefined
 readJsonFile(`${configBasePath}/config.json`).then((configFile) => {
   config = configFile
-  spotifyApi = new SpotifyWebApi({
-    clientId: config?.spotify?.clientId,
-    clientSecret: config?.spotify?.clientSecret,
-  })
 })
 const dataFile = `${configBasePath}/data.json`
 const resumeFile = `${configBasePath}/resume.json`
@@ -57,12 +51,163 @@ app.use(express.urlencoded({ extended: false }))
 // the Angular development server during development to be able to hot-reload and debug.
 // We explicitely check for !== 'development' for now so we do not need to set this env in
 // production.
-if (productionServe) {
+if (environment.production) {
   // Static path to compiled Angular app
   app.use(express.static(path.join(__dirname, 'www')))
 }
 
+/**
+ *
+ * @param data - The data that should be sorted into folders. Note that the data entries
+ * might be changed after calling this method (i.e., artist and artistcover might be
+ * added).
+ */
+const getFoldersWithData = async (data: Data[]): Promise<FolderWithChildren[]> => {
+  // For this, we might need to first set the `artist` field for entries that do
+  // not have it set yet. Spotify shows, artists, albums and playlists are the only
+  // data entries where we allow the user to not specify the folder name.
+  // These adapt the original entries in `data`.
+  await addSpotifyTitleInformation(data.filter((entry) => entry.artist === undefined))
+
+  // Now sort them into folders.
+  const toMapKey = (folder: Data): string => {
+    return `${folder.artist}|{}|${folder.category}`
+  }
+  const folderMap = new Map<string, FolderWithChildren>()
+  for (const entry of data) {
+    const folderId = toMapKey(entry)
+    const folder = folderMap.get(folderId)
+    if (folder !== undefined) {
+      folder?.children.push(entry)
+      if (folder.img === undefined && entry.artistcover !== undefined) {
+        folder.img = entry.artistcover
+      }
+    } else {
+      folderMap.set(folderId, {
+        name: entry.artist ?? 'No name',
+        img: entry.artistcover,
+        category: entry.category,
+        children: [entry],
+      })
+    }
+  }
+  return [...folderMap.values()]
+}
+
 // Routes
+app.get('/api/folders', async (_req, res) => {
+  try {
+    let data: Data[] = await readJsonFile(dataFile)
+    const network: Network = await readJsonFile(networkFile)
+    // If we are not online, we filter all sources that require an online connection out.
+    if (network.onlinestate !== 'online') {
+      data = data.filter((entry) => entry.type === 'library')
+    }
+
+    // First, we sort all data.json entries into folders.
+    const folderList = await getFoldersWithData(data)
+
+    // Finally, we need to check if we have an image url for each folder.
+    // If not, we check if we can request it.
+    const folderWithoutImage = folderList.filter((folder) => folder.img === undefined)
+    const childrenWithFolders = folderWithoutImage.map((folder) => {
+      return { data: folder.children[0], folder: folder }
+    })
+    await Promise.allSettled([
+      addSpotifyImageInformation(childrenWithFolders.map((entry) => entry.data)),
+      addRssImageInformation(childrenWithFolders.map((entry) => entry.data)),
+    ])
+    // Write the image to the folder.
+    for (const entry of childrenWithFolders) {
+      entry.folder.img = entry.data.artistcover
+    }
+
+    // Last, convert to the data format we want, sort and return.
+    const out: Folder[] = folderList
+      .map((folder) => {
+        return {
+          name: folder.name,
+          category: folder.category,
+          img: folder.img,
+        }
+      })
+      .sort((a: Folder, b: Folder) => {
+        return a.name.localeCompare(b.name, undefined, {
+          numeric: true,
+          sensitivity: 'base',
+        })
+      })
+    res.json(out)
+  } catch (error) {
+    console.error(`${nowDate.toLocaleString()}: [${serverName}] ${error}`)
+    res.json([])
+  }
+})
+app.get('/api/media/:category/:folder', async (req, res) => {
+  try {
+    const data: Data[] = await readJsonFile(dataFile)
+    const categoryData = data.filter((entry) => entry.category === req.params.category)
+
+    const folders = await getFoldersWithData(categoryData)
+
+    const dataEntries = folders
+      .filter((folder) => folder.name === req.params.folder)
+      .flatMap((folder) => folder.children)
+
+    // TODO: Slice and sort media.
+    const results = dataEntries.map((entry) => {
+      if (entry.type === 'rss') {
+        return getRssMedia(entry)
+      }
+      if (entry.type === 'spotify') {
+        return getSpotifyMedia(entry)
+      }
+      if (entry.type === 'radio') {
+        return Promise.resolve({
+          type: 'radio',
+          url: entry.id,
+          name: entry.title,
+          category: entry.category,
+          folderName: entry.artist,
+          img: entry.cover,
+          allowShuffle: false,
+          shuffle: false,
+        })
+      }
+      if (entry.type === 'library') {
+        return Promise.resolve({
+          type: 'local',
+          name: entry.title,
+          category: entry.category,
+          folderName: entry.artist,
+          img: entry.cover,
+          allowShuffle: false,
+          shuffle: false,
+        })
+      }
+      return undefined
+    })
+    const out = (await Promise.allSettled(results))
+      .filter((promise) => promise.status === 'fulfilled')
+      .flatMap((promise) => promise.value)
+
+    res.json(out)
+  } catch (error) {
+    console.error(`${nowDate.toLocaleString()}: [${serverName}] ${error}`)
+    res.json([])
+  }
+})
+
+app.get('/api/data', async (_req, res) => {
+  try {
+    const data: Data[] = await readJsonFile(dataFile)
+    res.json(data)
+  } catch (error) {
+    console.error(`${nowDate.toLocaleString()}: [${serverName}] ${error}`)
+    res.json([])
+  }
+})
+
 app.get('/api/rssfeed', async (req, res) => {
   const rssUrl = req.query.url
   if (typeof rssUrl !== 'string') {
@@ -79,7 +224,7 @@ app.get('/api/rssfeed', async (req, res) => {
     })
 })
 
-app.get('/api/data', (req, res) => {
+app.get('/api/activedata', (req, res) => {
   if (fs.existsSync(activedataFile)) {
     jsonfile.readFile(activedataFile, (error, data) => {
       if (error) {
@@ -156,20 +301,21 @@ app.get('/api/network', (req, res) => {
 app.get('/api/monitor', (req, res) => {
   const ip = req.socket.remoteAddress
   const host = req.hostname
-  const isLocalhost =  ip === "127.0.0.1" || ip === "::ffff:127.0.0.1" || ip === "::1" || host.indexOf("localhost") !== -1
+  const isLocalhost =
+    ip === '127.0.0.1' || ip === '::ffff:127.0.0.1' || ip === '::1' || host.indexOf('localhost') !== -1
 
   if (fs.existsSync(monitorFile) && isLocalhost) {
     jsonfile.readFile(monitorFile, (error, data) => {
       if (error) {
         console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error /api/monitor read monitor.json`)
         console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] ${error}`)
-        res.json({"monitor": "On"})
+        res.json({ monitor: 'On' })
       } else {
         res.json(data)
       }
     })
   } else {
-    res.json({"monitor": "On" })
+    res.json({ monitor: 'On' })
   }
 })
 
@@ -411,20 +557,11 @@ app.get('/api/token', (req, res) => {
     res.status(500).send('Could not intialize Spotify API.')
     return
   }
-  // Retrieve an access token from Spotify
-  spotifyApi.clientCredentialsGrant().then(
-    (data) => {
-      res.status(200).send(data.body.access_token)
-    },
-    (err) => {
-      console.log(
-        `${nowDate.toLocaleString()}: [MuPiBox-Server] Something went wrong when retrieving a new Spotify access token`,
-        err.message,
-      )
-
-      res.status(500).send(err.message)
-    },
-  )
+  if (spotifyApi.getAccessToken() === undefined) {
+    res.status(500).send('Spotify access token not set yet.')
+    return
+  }
+  res.status(200).send(spotifyApi.getAccessToken())
 })
 
 app.get('/api/sonos', (req, res) => {
@@ -456,7 +593,7 @@ const tryReadFile = (filePath: string, retries = 3, delayMs = 1000) => {
   })
 }
 
-if (!testServe) {
+if (!environment.test) {
   app.listen(8200)
-  console.log(`${nowDate.toLocaleString()}: [mupibox-backend-api] Server started at http://localhost:8200`)
+  console.log(`${nowDate.toLocaleString()}: [${serverName}] Server started at http://localhost:8200`)
 }

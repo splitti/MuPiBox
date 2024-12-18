@@ -7,13 +7,14 @@ const createPlayer = require('./mplayer-wrapper.js')
 const googleTTS = require('google-tts-api')
 const fs = require('node:fs')
 const childProcess = require('node:child_process')
-const proto = require("./spotify-proto.js")
-const crypto = require("crypto")
-const request = require('superagent');
+const { environment } = require('./environment.js')
+const proto = require('./spotify-proto.js')
+const crypto = require('crypto')
+const request = require('superagent')
 
 let configBasePath = './config'
 //let networkConfigBasePath = '/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config'
-if (process.env.NODE_ENV === 'development') {
+if (!environment.production) {
   configBasePath = '../config'
   //networkConfigBasePath = '../../backend-api/config'
 }
@@ -22,6 +23,16 @@ const muPiBoxConfig = require(`${configBasePath}/mupiboxconfig.json`)
 //const network = require(`${networkConfigBasePath}/network.json`)
 const config = require(`${configBasePath}/config.json`)
 
+let log
+if (environment.production) {
+  log = require('console-log-level')({ level: config.server.logLevel })
+} else {
+  log = {
+    debug: (val) => {
+      console.log(val)
+    },
+  }
+}
 const spotifyCredentialsPath = muPiBoxConfig.spotify.cachepath
 let credentials = null
 try {
@@ -30,8 +41,6 @@ try {
   console.log(`Could not load: ${spotifyCredentialsPath}/credentials.json`)
 }
 
-const log = require('console-log-level')({ level: config.server.logLevel })
-
 /*set up express router and set headers for cross origin requests*/
 const app = express()
 const server = http.createServer(app)
@@ -39,20 +48,13 @@ const player = createPlayer()
 
 app.use(bodyParser.urlencoded({ extended: true }))
 app.use(bodyParser.json())
-app.use((req, res, next) => {
+app.use((_req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*')
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept')
   next()
 })
 
 /*init spotify API */
-const scopes = [
-  'streaming',
-  'user-read-currently-currentMeta.playing',
-  'user-modify-playback-state',
-  'user-read-playback-state',
-]
-
 const spotifyApi = new SpotifyWebApi({
   clientId: config.spotify.clientId,
   clientSecret: config.spotify.clientSecret,
@@ -65,7 +67,7 @@ setInterval(refreshToken, 1000 * 60 * 60)
 
 let apiAccessToken = {
   accessToken: null,
-  expires: Date.now()
+  expires: Date.now(),
 }
 
 player.on('percent_pos', (val) => {
@@ -255,27 +257,27 @@ function refreshToken() {
 
 async function refreshTokenApi() {
   return spotifyApi.refreshAccessToken().then(
-      (data) => {
-        apiAccessToken.accessToken = data.body.access_token
-        apiAccessToken.expires = Date.now() + data.body.expires_in * 1000
-        return apiAccessToken.accessToken
-      },
-      (err) => {
-        log.debug(`${nowDate.toLocaleString()}: Could not refresh access token`, err)
-        throw err
-      },
-    )
+    (data) => {
+      apiAccessToken.accessToken = data.body.access_token
+      apiAccessToken.expires = Date.now() + data.body.expires_in * 1000
+      return apiAccessToken.accessToken
+    },
+    (err) => {
+      log.debug(`${nowDate.toLocaleString()}: Could not refresh access token`, err)
+      throw err
+    },
+  )
 }
 
 async function librespotRefreshToken() {
   const loginUrl = 'https://login5.spotify.com/v3/login'
-  const clientId = "65b708073fc0480ea92a077233ca87bd"
+  const clientId = '65b708073fc0480ea92a077233ca87bd'
   const deviceName = muPiBoxConfig.mupibox.host
   const username = credentials.username
   const dataBase64 = credentials.auth_data
 
   const sha1 = function (data) {
-    let generator = crypto.createHash('sha1');
+    let generator = crypto.createHash('sha1')
     generator.update(data)
     return generator.digest('hex')
   }
@@ -284,20 +286,21 @@ async function librespotRefreshToken() {
 
   const clientInfo = proto.spotify.login5.v3.ClientInfo.create({
     clientId,
-    deviceId
+    deviceId,
   })
 
   const storedCredential = proto.spotify.login5.v3.credentials.StoredCredential.create({
     username,
-    data
+    data,
   })
 
   const loginRequest = proto.spotify.login5.v3.LoginRequest.create({
     clientInfo,
-    storedCredential
+    storedCredential,
   })
 
-  return request.post(loginUrl)
+  return request
+    .post(loginUrl)
     .set('Content-Type', 'application/x-protobuf')
     .send(proto.spotify.login5.v3.LoginRequest.encode(loginRequest).finish())
     .responseType('blob')
@@ -309,29 +312,28 @@ async function librespotRefreshToken() {
       (err) => {
         log.debug(`${nowDate.toLocaleString()}: Could not refresh access token`, err)
         throw err
-      }
+      },
     )
 }
 
 async function getMyDevices() {
-  if (apiAccessToken.accessToken !== null && apiAccessToken.expires < Date.now() ) {
+  if (apiAccessToken.accessToken !== null && apiAccessToken.expires < Date.now()) {
     const spotifyApi = new SpotifyWebApi({
       clientId: config.spotify.clientId,
       clientSecret: config.spotify.clientSecret,
-      accessToken: apiAccessToken.accessToken
+      accessToken: apiAccessToken.accessToken,
     })
     return spotifyApi.getMyDevices()
   }
 
-  return refreshTokenApi()
-    .then((accessToken) => {
-      const spotifyApi = new SpotifyWebApi({
-        clientId: config.spotify.clientId,
-        clientSecret: config.spotify.clientSecret,
-        accessToken: accessToken
-      })
-      return spotifyApi.getMyDevices()
+  return refreshTokenApi().then((accessToken) => {
+    const spotifyApi = new SpotifyWebApi({
+      clientId: config.spotify.clientId,
+      clientSecret: config.spotify.clientSecret,
+      accessToken: accessToken,
     })
+    return spotifyApi.getMyDevices()
+  })
 }
 
 function setAccessToken(token) {
@@ -795,7 +797,7 @@ function playFile(playedFile) {
 }
 
 function playURL(playedURL) {
-  log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Starting currentMeta.playing:${playedURL}`)
+  log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Starting currentMeta.playing: ${playedURL}`)
   //currentMeta.playing = true;
   writeplayerstatePlay()
   player.play(playedURL)
