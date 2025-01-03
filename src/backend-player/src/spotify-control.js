@@ -7,6 +7,9 @@ const createPlayer = require('./mplayer-wrapper.js')
 const googleTTS = require('google-tts-api')
 const fs = require('node:fs')
 const childProcess = require('node:child_process')
+const proto = require("./spotify-proto.js")
+const crypto = require("crypto")
+const request = require('superagent');
 
 let configBasePath = './config'
 //let networkConfigBasePath = '/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config'
@@ -18,6 +21,14 @@ if (process.env.NODE_ENV === 'development') {
 const muPiBoxConfig = require(`${configBasePath}/mupiboxconfig.json`)
 //const network = require(`${networkConfigBasePath}/network.json`)
 const config = require(`${configBasePath}/config.json`)
+
+const spotifyCredentialsPath = muPiBoxConfig.spotify.cachepath
+let credentials = null
+try {
+  credentials = require(`${spotifyCredentialsPath}/credentials.json`)
+} catch (err) {
+  console.log(`Could not load: ${spotifyCredentialsPath}/credentials.json`)
+}
 
 const log = require('console-log-level')({ level: config.server.logLevel })
 
@@ -49,9 +60,13 @@ const spotifyApi = new SpotifyWebApi({
 })
 
 /*sets and refreshes access token every hour */
-spotifyApi.setAccessToken(config.spotify.accessToken)
-refreshToken('0')
+refreshToken()
 setInterval(refreshToken, 1000 * 60 * 60)
+
+let apiAccessToken = {
+  accessToken: null,
+  expires: Date.now()
+}
 
 player.on('percent_pos', (val) => {
   //console.log('track progress is', val);
@@ -231,26 +246,109 @@ function writeCounter() {
 }
 
 function refreshToken() {
-  spotifyApi.refreshAccessToken().then(
-    (data) => {
-      log.debug(`${nowDate.toLocaleString()}: The access token has been refreshed!`)
-      counter.countfreshAccessToken++
-      if (config.server.logLevel === 'debug') {
-        writeCounter()
+  if (credentials) {
+    librespotRefreshToken().then((accessToken) => setAccessToken(accessToken))
+  } else {
+    refreshTokenApi().then((accessToken) => setAccessToken(accessToken))
+  }
+}
+
+async function refreshTokenApi() {
+  return spotifyApi.refreshAccessToken().then(
+      (data) => {
+        apiAccessToken.accessToken = data.body.access_token
+        apiAccessToken.expires = Date.now() + data.body.expires_in * 1000
+        return apiAccessToken.accessToken
+      },
+      (err) => {
+        log.debug(`${nowDate.toLocaleString()}: Could not refresh access token`, err)
+        throw err
+      },
+    )
+}
+
+async function librespotRefreshToken() {
+  const loginUrl = 'https://login5.spotify.com/v3/login'
+  const clientId = "65b708073fc0480ea92a077233ca87bd"
+  const deviceName = muPiBoxConfig.mupibox.host
+  const username = credentials.username
+  const dataBase64 = credentials.auth_data
+
+  const sha1 = function (data) {
+    let generator = crypto.createHash('sha1');
+    generator.update(data)
+    return generator.digest('hex')
+  }
+  const deviceId = sha1(deviceName)
+  const data = Uint8Array.from(Buffer.from(dataBase64, 'base64'))
+
+  const clientInfo = proto.spotify.login5.v3.ClientInfo.create({
+    clientId,
+    deviceId
+  })
+
+  const storedCredential = proto.spotify.login5.v3.credentials.StoredCredential.create({
+    username,
+    data
+  })
+
+  const loginRequest = proto.spotify.login5.v3.LoginRequest.create({
+    clientInfo,
+    storedCredential
+  })
+
+  return request.post(loginUrl)
+    .set('Content-Type', 'application/x-protobuf')
+    .send(proto.spotify.login5.v3.LoginRequest.encode(loginRequest).finish())
+    .responseType('blob')
+    .then(
+      (res) => {
+        const loginResponse = proto.spotify.login5.v3.LoginResponse.decode(Uint8Array.from(res.body))
+        return loginResponse.ok.accessToken
+      },
+      (err) => {
+        log.debug(`${nowDate.toLocaleString()}: Could not refresh access token`, err)
+        throw err
       }
-      spotifyApi.setAccessToken(data.body.access_token)
-      counter.countsetAccessToken++
-      if (config.server.logLevel === 'debug') {
-        writeCounter()
-      }
-      if (currentMeta.activeSpotifyId.includes('spotify:') && !spotifyRunning) {
-        playMe()
-      }
-    },
-    (err) => {
-      log.debug(`${nowDate.toLocaleString()}: Could not refresh access token`, err)
-    },
-  )
+    )
+}
+
+async function getMyDevices() {
+  if (apiAccessToken.accessToken !== null && apiAccessToken.expires < Date.now() ) {
+    const spotifyApi = new SpotifyWebApi({
+      clientId: config.spotify.clientId,
+      clientSecret: config.spotify.clientSecret,
+      accessToken: apiAccessToken.accessToken
+    })
+    return spotifyApi.getMyDevices()
+  }
+
+  return refreshTokenApi()
+    .then((accessToken) => {
+      const spotifyApi = new SpotifyWebApi({
+        clientId: config.spotify.clientId,
+        clientSecret: config.spotify.clientSecret,
+        accessToken: accessToken
+      })
+      return spotifyApi.getMyDevices()
+    })
+}
+
+function setAccessToken(token) {
+  spotifyApi.setAccessToken(token)
+  log.debug(`${nowDate.toLocaleString()}: The access token has been refreshed!`)
+  counter.countfreshAccessToken++
+  if (config.server.logLevel === 'debug') {
+    writeCounter()
+  }
+  spotifyApi.setAccessToken(data.body.access_token)
+  counter.countsetAccessToken++
+  if (config.server.logLevel === 'debug') {
+    writeCounter()
+  }
+  if (currentMeta.activeSpotifyId.includes('spotify:') && !spotifyRunning) {
+    playMe()
+  }
 }
 
 /*called in all error cases*/
@@ -337,8 +435,7 @@ function handleSpotifyError(err, from) {
 /*queries all devices and transfers playback to the first one discovered*/
 function setActiveDevice() {
   /*find devices first and choose first one available*/
-  spotifyApi
-    .getMyDevices()
+  getMyDevices()
     .then(
       (data) => {
         counter.countgetMyDevices++
@@ -971,7 +1068,7 @@ async function useSpotify(command) {
 /*endpoint to return all spotify connect devices on the network*/
 /*only used if sonos-kids-player is modified*/
 app.get('/getDevices', (req, res) => {
-  spotifyApi.getMyDevices().then(
+  getMyDevices().then(
     (data) => {
       counter.countgetMyDevices++
       if (config.server.logLevel === 'debug') {
@@ -1086,6 +1183,10 @@ app.get('/show', (req, res) => {
 /*only used if sonos-kids-player is modified*/
 app.get('/local', (req, res) => {
   res.send(currentMeta)
+})
+
+app.get('/spotify/token', (req, res) => {
+  res.send(spotifyApi.getAccessToken())
 })
 
 /*sonos-kids-controller sends commands via http get and uses path names for encoding*/
