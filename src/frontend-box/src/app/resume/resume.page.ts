@@ -1,20 +1,19 @@
 import { ChangeDetectionStrategy, Component, Signal, WritableSignal, computed, signal } from '@angular/core'
-import { toObservable, toSignal } from '@angular/core/rxjs-interop'
-import { NavigationExtras, Router } from '@angular/router'
 import { IonBackButton, IonButtons, IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular/standalone'
-import { catchError, lastValueFrom, of, switchMap, tap } from 'rxjs'
+import { NavigationExtras, Router } from '@angular/router'
 import { SwiperComponent, SwiperData } from '../swiper/swiper.component'
+import { catchError, lastValueFrom, of, switchMap, tap } from 'rxjs'
+import { toObservable, toSignal } from '@angular/core/rxjs-interop'
 
 import { HttpClient } from '@angular/common/http'
-import { addIcons } from 'ionicons'
-import { arrowBackOutline } from 'ionicons/icons'
-import { environment } from 'src/environments/environment'
-import { ArtworkService } from '../artwork.service'
 import { LoadingComponent } from '../loading/loading.component'
 import { Media } from '../media'
 import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
 import { SwiperIonicEventsHelper } from '../swiper/swiper-ionic-events-helper'
+import { addIcons } from 'ionicons'
+import { arrowBackOutline } from 'ionicons/icons'
+import { environment } from 'src/environments/environment'
 
 @Component({
   selector: 'mupi-resume',
@@ -42,7 +41,7 @@ export class ResumePage extends SwiperIonicEventsHelper {
     return this.media()?.map((media) => {
       return {
         name: media.title,
-        imgSrc: this.artworkService.getArtwork(media),
+        imgSrc: of(media.cover ?? ''), // TODO: get rid of swiper data.
         data: media,
       }
     })
@@ -52,7 +51,6 @@ export class ResumePage extends SwiperIonicEventsHelper {
     private router: Router,
     private http: HttpClient,
     private mediaService: MediaService,
-    private artworkService: ArtworkService,
   ) {
     super()
     addIcons({ arrowBackOutline })

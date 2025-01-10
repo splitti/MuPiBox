@@ -36,9 +36,9 @@ import {
   volumeHighOutline,
   volumeLowOutline,
 } from 'ionicons/icons'
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop'
 
 import type { AlbumStop } from '../albumstop'
-import { ArtworkService } from '../artwork.service'
 import { AsyncPipe } from '@angular/common'
 import { Media as BackendMedia } from '@backend-api/media.model'
 import type { CurrentEpisode } from '../current.episode'
@@ -47,14 +47,12 @@ import type { CurrentPlaylist } from '../current.playlist'
 import type { CurrentShow } from '../current.show'
 import type { CurrentSpotify } from '../current.spotify'
 import { FormsModule } from '@angular/forms'
-import type { Media } from '../media'
 import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
 import { NavController } from '@ionic/angular/standalone'
-import { interval, type Observable } from 'rxjs'
 import { Router } from '@angular/router'
 import { addIcons } from 'ionicons'
-import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop'
+import { interval } from 'rxjs'
 
 @Component({
   selector: 'app-player',
@@ -63,7 +61,6 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop'
   standalone: true,
   imports: [
     FormsModule,
-    AsyncPipe,
     MupiHatIconComponent,
     IonHeader,
     IonToolbar,

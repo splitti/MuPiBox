@@ -354,20 +354,22 @@ const getSpotifyShowEpisodes = (getSpotifyMediaGeneric<SpotifyShowData>).bind(
     }),
   50,
   (data: SpotifyShowData, res: SpotifyApi.ShowEpisodesResponse) =>
-    res.items.map((episode) => {
-      return {
-        type: 'spotifyEpisode',
-        name: episode.name,
-        category: data.category,
-        folderName: data.artist ?? '',
-        img: episode.images.length > 0 ? episode.images[0].url : '',
-        // TODO: Shuffle?
-        allowShuffle: false,
-        shuffle: false,
-        id: episode.id,
-        releaseDate: episode.release_date,
-      }
-    }),
+    res.items
+      .filter((episode) => episode != null)
+      .map((episode) => {
+        return {
+          type: 'spotifyEpisode',
+          name: episode.name,
+          category: data.category,
+          folderName: data.artist ?? '',
+          img: episode.images.length > 0 ? episode.images[0].url : '',
+          // TODO: Shuffle?
+          allowShuffle: false,
+          shuffle: false,
+          id: episode.id,
+          releaseDate: episode.release_date,
+        }
+      }),
 )
 
 /**

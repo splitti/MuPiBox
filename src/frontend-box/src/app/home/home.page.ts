@@ -22,7 +22,6 @@ import {
 import { catchError, of, switchMap, tap } from 'rxjs'
 import { toObservable, toSignal } from '@angular/core/rxjs-interop'
 
-import type { Artist } from '../artist'
 import type { CategoryType } from '../media'
 import { Folder } from '@backend-api/folder.model'
 import { FolderService } from '../folder.service'
@@ -56,14 +55,13 @@ export class HomePage extends SwiperIonicEventsHelper {
   protected editButtonclickCount = 0
   protected editClickTimer = 0
 
-  protected artists: Signal<Artist[]>
   protected folders: Signal<Folder[]>
   protected swiperData: Signal<SwiperData<Folder>[]>
   protected isOnline: Signal<boolean>
   protected isLoading: WritableSignal<boolean> = signal(false)
   protected category: WritableSignal<CategoryType> = signal('audiobook')
 
-  // TODO: Fix broken images or folders with no image (also on media page and player page and resume page.)
+  // TODO: Fix broken images or folders with no image (also on media page and player page and resume page.) use assets/images/nocover_mupi.png
   constructor(
     private mediaService: MediaService,
     private router: Router,
