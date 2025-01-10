@@ -158,3 +158,9 @@ function switchImage() {
     var selectedImage = document.mupi.theme.options[document.mupi.theme.selectedIndex].value;
     document.selectedTheme.src = imageList[selectedImage].src;
 }
+
+function stopEvent(event) {
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+    event.preventDefault();
+}
