@@ -179,7 +179,7 @@ export class SpotifyService {
             return this.errorHandler(errors)
           }),
           map((response: SpotifyEpisodesResponse) => {
-            return response.items.map((item) => {
+            return response.items.filter((el) => el != null).map((item) => {
               const media: Media = {
                 showid: item.id,
                 artist: multiplier.name,
