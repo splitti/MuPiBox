@@ -76,10 +76,10 @@ export class PlayerService {
       //   }
       //   break
       // }
-      // case 'radio': {
-      //   url = `radio/${encodeURIComponent(media.id)}/${encodeURIComponent(media.title)}:title:artist:${encodeURIComponent(media.artist)}`
-      //   break
-      // }
+      case 'radio': {
+        url = `radio/${encodeURIComponent(media.url)}/${encodeURIComponent(media.name)}:title:artist:${encodeURIComponent(media.folderName)}`
+        break
+      }
       case 'rss': {
         url = `rss/${encodeURIComponent(media.url)}/${encodeURIComponent(media.name)}:title:artist:${encodeURIComponent(media.folderName)}`
         break

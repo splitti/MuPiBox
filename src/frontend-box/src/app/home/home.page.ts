@@ -1,6 +1,4 @@
 import { ChangeDetectionStrategy, Component, Signal, WritableSignal, computed, signal } from '@angular/core'
-import { toObservable, toSignal } from '@angular/core/rxjs-interop'
-import { NavigationExtras, Router } from '@angular/router'
 import {
   IonButton,
   IonButtons,
@@ -11,6 +9,8 @@ import {
   IonSegmentButton,
   IonToolbar,
 } from '@ionic/angular/standalone'
+import { NavigationExtras, Router } from '@angular/router'
+import { SwiperComponent, SwiperData } from '../swiper/swiper.component'
 import {
   bookOutline,
   cloudOfflineOutline,
@@ -20,17 +20,17 @@ import {
   timerOutline,
 } from 'ionicons/icons'
 import { catchError, of, switchMap, tap } from 'rxjs'
-import { SwiperComponent, SwiperData } from '../swiper/swiper.component'
+import { toObservable, toSignal } from '@angular/core/rxjs-interop'
 
-import { Folder } from '@backend-api/folder.model'
-import { addIcons } from 'ionicons'
 import type { Artist } from '../artist'
+import type { CategoryType } from '../media'
+import { Folder } from '@backend-api/folder.model'
 import { FolderService } from '../folder.service'
 import { LoadingComponent } from '../loading/loading.component'
-import type { CategoryType } from '../media'
 import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
 import { SwiperIonicEventsHelper } from '../swiper/swiper-ionic-events-helper'
+import { addIcons } from 'ionicons'
 
 @Component({
   selector: 'app-home',
@@ -113,16 +113,6 @@ export class HomePage extends SwiperIonicEventsHelper {
    */
   protected folderClicked(folder: Folder): void {
     this.router.navigate(['/media', folder.category, folder.name])
-  }
-
-  protected artistCoverClicked(artist: Artist): void {
-    const navigationExtras: NavigationExtras = {
-      state: {
-        artist: artist,
-        category: this.category(),
-      },
-    }
-    this.router.navigate(['/medialist'], navigationExtras)
   }
 
   protected editButtonPressed(): void {

@@ -36,9 +36,9 @@ export interface RadioMedia extends BaseMedia {
 export interface SpotifyPlaylistMedia extends BaseMedia {
   type: 'spotifyPlaylist'
   id: string
-  releaseDate: string
   allowShuffle: boolean
   shuffle: boolean
+  // TODO: releaseDate
 }
 
 export interface SpotifyEpisodeMedia extends BaseMedia {
@@ -52,7 +52,7 @@ export interface SpotifyEpisodeMedia extends BaseMedia {
 export interface SpotifyAlbumMedia extends BaseMedia {
   type: 'spotifyAlbum'
   id: string
-  releaseDate: string
+  // TODO: releaseDate
   allowShuffle: boolean
   shuffle: boolean
 }

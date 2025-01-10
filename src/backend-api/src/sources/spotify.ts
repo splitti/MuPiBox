@@ -3,6 +3,7 @@ import {
   Data,
   SpotifyAlbumData,
   SpotifyArtistData,
+  SpotifyBaseData,
   SpotifyData,
   SpotifyPlaylistData,
   SpotifyQueryData,
@@ -119,9 +120,7 @@ const fillAlbumDataEntry = (fillDataEntry<SpotifyAlbumData>).bind(
     return spotifyApi?.getAlbums(data.map((entry) => entry.id))
   },
   20,
-  (index: number, res: SpotifyApi.MultipleAlbumsResponse) => {
-    return res.albums[index]
-  },
+  (index: number, res: SpotifyApi.MultipleAlbumsResponse) => res.albums[index],
 )
 const fillArtistDataEntry = (fillDataEntry<SpotifyArtistData>).bind(
   undefined,
@@ -129,9 +128,7 @@ const fillArtistDataEntry = (fillDataEntry<SpotifyArtistData>).bind(
     return spotifyApi?.getArtists(data.map((entry) => entry.artistid))
   },
   50,
-  (index: number, res: SpotifyApi.MultipleArtistsResponse) => {
-    return res.artists[index]
-  },
+  (index: number, res: SpotifyApi.MultipleArtistsResponse) => res.artists[index],
 )
 const fillShowDataEntry = (fillDataEntry<SpotifyShowData>).bind(
   undefined,
@@ -139,9 +136,7 @@ const fillShowDataEntry = (fillDataEntry<SpotifyShowData>).bind(
     return spotifyApi?.getShows(data.map((entry) => entry.showid))
   },
   50,
-  (index: number, res: SpotifyApi.MultipleShowsResponse) => {
-    return res.shows[index]
-  },
+  (index: number, res: SpotifyApi.MultipleShowsResponse) => res.shows[index],
 )
 //  TODO: Handle failing access.
 const fillPlaylistDataEntry = (fillDataEntry<SpotifyPlaylistData>).bind(
@@ -150,9 +145,7 @@ const fillPlaylistDataEntry = (fillDataEntry<SpotifyPlaylistData>).bind(
     return spotifyApi?.getPlaylist(data.map((entry) => entry.playlistid)[0])
   },
   1, // Playlists can only be requested one at a time.
-  (_index: number, res: SpotifyApi.PlaylistObjectFull) => {
-    return res
-  },
+  (_index: number, res: SpotifyApi.PlaylistObjectFull) => res,
 )
 
 const fillSearchQueryDataEntry = (fillDataEntry<SpotifyQueryData>).bind(
@@ -161,9 +154,7 @@ const fillSearchQueryDataEntry = (fillDataEntry<SpotifyQueryData>).bind(
     return spotifyApi?.searchAlbums(data.map((entry) => entry.query)[0])
   },
   1, // Search queries are one at a time.
-  (index: number, res: SpotifyApi.AlbumSearchResponse) => {
-    return res.albums.items[index]
-  },
+  (index: number, res: SpotifyApi.AlbumSearchResponse) => res.albums.items[index],
 )
 
 /**
@@ -185,6 +176,33 @@ const isSpotifyArtistData = (data: Data): data is SpotifyArtistData => {
 }
 
 /**
+ * TODO
+ * @param data
+ * @returns
+ */
+const isSpotifyPlaylistData = (data: Data): data is SpotifyPlaylistData => {
+  return data.type === 'spotify' && 'playlistid' in data
+}
+
+/**
+ * TODO
+ * @param data
+ * @returns
+ */
+const isSpotifyAlbumData = (data: Data): data is SpotifyAlbumData => {
+  return data.type === 'spotify' && 'id' in data
+}
+
+/**
+ * TODO
+ * @param data
+ * @returns
+ */
+const isSpotifyQueryData = (data: Data): data is SpotifyQueryData => {
+  return data.type === 'spotify' && 'query' in data
+}
+
+/**
  * Adds title information (and cover image if not yet set)
  * to the spotify-based data in the given {@link data}.
  * Does not check query-based data entries since they require a title
@@ -194,10 +212,10 @@ const isSpotifyArtistData = (data: Data): data is SpotifyArtistData => {
  */
 export const addSpotifyTitleInformation = async (data: Data[]): Promise<void> => {
   await Promise.allSettled([
-    fillShowDataEntry(data.filter((entry) => isSpotifyShowData(entry))),
-    fillArtistDataEntry(data.filter((entry) => isSpotifyArtistData(entry))),
-    fillAlbumDataEntry(data.filter((entry) => 'id' in entry && entry.type === 'spotify')),
-    fillPlaylistDataEntry(data.filter((entry) => 'playlistid' in entry)),
+    fillShowDataEntry(data.filter(isSpotifyShowData)),
+    fillArtistDataEntry(data.filter(isSpotifyArtistData)),
+    fillAlbumDataEntry(data.filter(isSpotifyAlbumData)),
+    fillPlaylistDataEntry(data.filter(isSpotifyPlaylistData)),
   ])
 }
 
@@ -209,59 +227,148 @@ export const addSpotifyTitleInformation = async (data: Data[]): Promise<void> =>
  */
 export const addSpotifyImageInformation = async (data: Data[]): Promise<void> => {
   await Promise.allSettled([
-    fillShowDataEntry(data.filter((entry) => isSpotifyShowData(entry))),
-    fillArtistDataEntry(data.filter((entry) => isSpotifyArtistData(entry))),
-    fillAlbumDataEntry(data.filter((entry) => 'id' in entry && entry.type === 'spotify')),
-    fillPlaylistDataEntry(data.filter((entry) => 'playlistid' in entry)),
-    fillSearchQueryDataEntry(data.filter<SpotifyQueryData>((entry): entry is SpotifyQueryData => 'query' in entry)),
+    fillShowDataEntry(data.filter(isSpotifyShowData)),
+    fillArtistDataEntry(data.filter(isSpotifyArtistData)),
+    fillAlbumDataEntry(data.filter(isSpotifyAlbumData)),
+    fillPlaylistDataEntry(data.filter(isSpotifyPlaylistData)),
+    fillSearchQueryDataEntry(data.filter(isSpotifyQueryData)),
   ])
 }
 
-const getSpotifyArtistAlbums = async (data: SpotifyArtistData): Promise<SpotifyAlbumMedia[] | undefined> => {
+interface Response<T> {
+  body: T
+  headers: Record<string, string>
+  statusCode: number
+}
+
+type mapResponseType =
+  | ((data: SpotifyAlbumData, res: SpotifyApi.ArtistsAlbumsResponse) => SpotifyAlbumMedia[])
+  | ((data: SpotifyArtistData, res: SpotifyApi.ArtistsAlbumsResponse) => SpotifyAlbumMedia[])
+  | ((data: SpotifyPlaylistData, res: SpotifyApi.PlaylistObjectFull) => SpotifyPlaylistMedia[])
+  | ((data: SpotifyQueryData, res: SpotifyApi.AlbumSearchResponse) => SpotifyAlbumMedia[])
+  | ((data: SpotifyShowData, res: SpotifyApi.AlbumSearchResponse) => SpotifyAlbumMedia[])
+
+//   | ((index: number, res: SpotifyApi.MultipleShowsResponse) => SpotifyApi.ShowObjectSimplified)
+//   | ((index: number, res: SpotifyApi.MultipleArtistsResponse) => SpotifyApi.ArtistObjectFull)
+//   | ((index: number, res: SpotifyApi.PlaylistObjectFull) => SpotifyApi.PlaylistObjectFull)
+//   | ((index: number, res: SpotifyApi.AlbumSearchResponse) => SpotifyApi.AlbumObjectSimplified)
+
+const getSpotifyMediaGeneric = async <T extends SpotifyBaseData>(
+  spotifyCall: (
+    spotifyApi: SpotifyWebApi | undefined,
+    data: T,
+    chunkSize: number,
+    offset: number,
+  ) => Promise<Response<any>> | undefined,
+  chunkSize: number,
+  mapResponse: (data: T, res: any) => SpotifyMedia[],
+  data: T,
+): Promise<SpotifyMedia[] | undefined> => {
   if (spotifyApi === undefined) {
     return undefined
   }
 
-  const chunkSize = 50
-
-  const mapSpotifyAlbumToMedia = (album: SpotifyApi.AlbumObjectSimplified): SpotifyAlbumMedia => {
-    return {
-      type: 'spotifyAlbum',
-      name: album.name,
-      category: data.category,
-      folderName: data.artist ?? '',
-      img: album.images.length > 0 ? album.images[0].url : '',
-      // TODO: Shuffle?
-      allowShuffle: false,
-      shuffle: false,
-      id: album.id,
-      releaseDate: album.release_date,
-    }
-  }
-
-  const firstAlbums = await spotifyApi.getArtistAlbums(data.artistid, { limit: chunkSize, offset: 0 })
-  if (firstAlbums.statusCode !== 200) {
+  const firstResults = await spotifyCall(spotifyApi, data, chunkSize, 0)?.catch((_error) => {
+    return undefined
+  })
+  if (firstResults === undefined) {
     return undefined
   }
-  const out = firstAlbums.body.items.map(mapSpotifyAlbumToMedia)
+  const out = mapResponse(data, firstResults.body)
   // Request the rest of the albums if there are more than 50.
-  const numChunks = Math.ceil(firstAlbums.body.total / chunkSize)
-  if (firstAlbums.body.total > chunkSize) {
+  const numChunks = Math.ceil(firstResults.body.total / chunkSize)
+  if (firstResults.body.total > chunkSize) {
     const results = await Promise.allSettled(
-      Array.from({ length: numChunks }, (_, i) => chunkSize + i * chunkSize).map((offset) => {
-        return spotifyApi?.getArtistAlbums(data.artistid, { limit: chunkSize, offset: offset })
-      }),
+      Array.from({ length: numChunks }, (_, i) => chunkSize + i * chunkSize).map((offset) =>
+        spotifyCall(spotifyApi, data, chunkSize, offset),
+      ),
     )
     out.push(
       ...results
         .filter((promise) => promise.status === 'fulfilled')
         .flatMap((promise) => promise.value)
-        .flatMap((res) => res?.body.items.map(mapSpotifyAlbumToMedia))
+        .flatMap((res) => mapResponse(data, res?.body))
         .filter((album) => album !== undefined),
     )
   }
   return out
 }
+
+const getSpotifyArtistAlbums = (getSpotifyMediaGeneric<SpotifyArtistData>).bind(
+  undefined,
+  (spotifyApi: SpotifyWebApi | undefined, data: SpotifyArtistData, chunkSize: number, offset: number) =>
+    spotifyApi?.getArtistAlbums(data.artistid, {
+      limit: chunkSize,
+      offset: offset,
+      include_groups: 'album,single,compilation',
+    }),
+  50,
+  (data: SpotifyArtistData, res: SpotifyApi.ArtistsAlbumsResponse) =>
+    res.items.map((album) => {
+      return {
+        type: 'spotifyAlbum',
+        name: album.name,
+        category: data.category,
+        folderName: data.artist ?? '',
+        img: album.images.length > 0 ? album.images[0].url : '',
+        // TODO: Shuffle?
+        allowShuffle: false,
+        shuffle: false,
+        id: album.id,
+        releaseDate: album.release_date,
+      }
+    }),
+)
+
+const getSpotifyQueryAlbums = (getSpotifyMediaGeneric<SpotifyQueryData>).bind(
+  undefined,
+  (spotifyApi: SpotifyWebApi | undefined, data: SpotifyQueryData, chunkSize: number, offset: number) =>
+    spotifyApi?.searchAlbums(data.query, {
+      limit: chunkSize,
+      offset: offset,
+    }),
+  50,
+  (data: SpotifyQueryData, res: SpotifyApi.AlbumSearchResponse) =>
+    res.albums.items.map((album) => {
+      return {
+        type: 'spotifyAlbum',
+        name: album.name,
+        category: data.category,
+        folderName: data.artist ?? '',
+        img: album.images.length > 0 ? album.images[0].url : '',
+        // TODO: Shuffle?
+        allowShuffle: false,
+        shuffle: false,
+        id: album.id,
+        releaseDate: album.release_date,
+      }
+    }),
+)
+
+const getSpotifyShowEpisodes = (getSpotifyMediaGeneric<SpotifyShowData>).bind(
+  undefined,
+  (spotifyApi: SpotifyWebApi | undefined, data: SpotifyShowData, chunkSize: number, offset: number) =>
+    spotifyApi?.getShowEpisodes(data.showid, {
+      limit: chunkSize,
+      offset: offset,
+    }),
+  50,
+  (data: SpotifyShowData, res: SpotifyApi.ShowEpisodesResponse) =>
+    res.items.map((episode) => {
+      return {
+        type: 'spotifyEpisode',
+        name: episode.name,
+        category: data.category,
+        folderName: data.artist ?? '',
+        img: episode.images.length > 0 ? episode.images[0].url : '',
+        // TODO: Shuffle?
+        allowShuffle: false,
+        shuffle: false,
+        id: episode.id,
+        releaseDate: episode.release_date,
+      }
+    }),
+)
 
 /**
  * TODO
@@ -276,5 +383,43 @@ export const getSpotifyMedia = async (data: SpotifyData): Promise<SpotifyMedia[]
   if (isSpotifyArtistData(data)) {
     return getSpotifyArtistAlbums(data)
   }
-  return undefined
+  if (isSpotifyShowData(data)) {
+    return getSpotifyShowEpisodes(data)
+  }
+  if (isSpotifyQueryData(data)) {
+    return getSpotifyQueryAlbums(data)
+  }
+  if (isSpotifyAlbumData(data)) {
+    return [
+      {
+        type: 'spotifyAlbum',
+        name: data.title ?? data.artist ?? 'no title',
+        category: data.category,
+        folderName: data.artist ?? '',
+        img: data.cover ?? data.artistcover ?? '',
+        // TODO: Shuffle?
+        allowShuffle: false,
+        shuffle: false,
+        id: data.id,
+      },
+    ]
+  }
+  if (isSpotifyPlaylistData(data)) {
+    return [
+      {
+        type: 'spotifyPlaylist',
+        name: data.title ?? data.artist ?? 'no title',
+        category: data.category,
+        folderName: data.artist ?? '',
+        img: data.cover ?? data.artistcover ?? '',
+        // TODO: Shuffle?
+        allowShuffle: false,
+        shuffle: false,
+        id: data.playlistid,
+      },
+    ]
+  }
+
+  // TODO: Sorting and interval.
+  return []
 }
