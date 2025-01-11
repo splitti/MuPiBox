@@ -1,5 +1,6 @@
 [Unit]
 Description=Run Scripts at Start and Stop
+After=pulseaudio.service
 
 [Service]
 Type=oneshot
