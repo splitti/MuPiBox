@@ -34,19 +34,15 @@
         </ion-card-header>
       
         <ion-card-content>
-            <ion-label position="fixed">Category</ion-label>
-            <ion-segment [scrollable]="true" value="audiobook">
-                <ion-segment-button value="audiobook">
-                    Audiobook
-                </ion-segment-button>
-                <ion-segment-button value="music">
-                    Music
-                </ion-segment-button>
-                <ion-segment-button value="other">
-                    Other
-                </ion-segment-button>
-            </ion-segment>
-            <ion-toggle justify="start">Automatic folder name & image</ion-toggle>
+            <ion-select justify="start" fill="outline" interface="popover" placeholder="Select a category">
+                <div slot="label">Category <span class="mupi-required">(required)</span></div>
+                <ion-select-option value="audiobook">Audiobook</ion-select-option>
+                <ion-select-option value="music">Music</ion-select-option>
+                <ion-select-option value="other">Other</ion-select-option>
+            </ion-select>
+            <div class="mupi-input-outline">
+                <ion-toggle justify="start">Automatic folder name & image</ion-toggle>
+            </div>
             <ion-input fill="outline" helperText="Name of the folder containing this data entry. This is used on the top level of the MupiBox interface.">
                 <div slot="label">Folder name <span class="mupi-required">(required)</span></div>
             </ion-input>
@@ -75,14 +71,18 @@
             <ion-input fill="outline" helperText="URL of an image that should be used for this data entry. This is shown on the second level of the MupiBox interface.">
                 <div slot="label">Cover image URL</div>
             </ion-input>
-            <ion-toggle justify="start">Shuffle</ion-toggle>
+            <div class="mupi-input-outline">
+                <ion-toggle justify="start">Shuffle</ion-toggle>
+            </div>
             <div>
-                <ion-toggle justify="start">Interval</ion-toggle>
-                <ion-input inputmode="numeric" min="0">
-                    <div slot="label">Min <span class="mupi-required">(required)</span></div>
+                <div class="mupi-input-outline">
+                    <ion-toggle justify="start">Interval</ion-toggle>
+                </div>
+                <ion-input fill="outline" inputmode="numeric" min="0">
+                    <div slot="label">Start interval <span class="mupi-required">(required)</span></div>
                 </ion-input>
-                <ion-input inputmode="numeric" min="0">
-                    <div slot="label">Max <span class="mupi-required">(required)</span></div>
+                <ion-input fill="outline" inputmode="numeric" min="0">
+                    <div slot="label">End interval <span class="mupi-required">(required)</span></div>
                 </ion-input>
             </div>
         </ion-card-content>

@@ -10,3 +10,10 @@ ion-toggle {
     font-size: smaller;
     color: var(--ion-text-color-step-550);
 }
+
+.mupi-input-outline {
+    border: 1px solid var(--ion-background-color-step-300);
+    border-radius: 4px;
+    padding: 4px 16px 4px 16px;
+    margin-bottom: 1em;
+}
