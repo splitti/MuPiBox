@@ -16,4 +16,8 @@ ion-toggle {
     border-radius: 4px;
     padding: 4px 16px 4px 16px;
     margin-bottom: 1em;
+
+    &:hover {
+        border-color: var(--ion-background-color-step-750);
+    }
 }

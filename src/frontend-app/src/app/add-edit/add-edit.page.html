@@ -16,14 +16,14 @@
         </ion-card-header>
         
         <ion-card-content>
-            <ion-select justify="start" fill="outline" interface="popover" placeholder="Select a source type">
+            <ion-select justify="start" fill="outline" interface="popover" placeholder="Select a source type" [(ngModel)]="sourceTypeControl">
                 <div slot="label">Source type <span class="mupi-required">(required)</span></div>
                 <ion-select-option value="spotifyURL">Spotify URL</ion-select-option>
                 <ion-select-option value="spotifySearch">Spotify Search Query</ion-select-option>
                 <ion-select-option value="rssURL">RSS/Podcast URL</ion-select-option>
                 <ion-select-option value="streamURL">Stream/Radio URL</ion-select-option>
             </ion-select>
-            <ion-input fill="outline" helperText="URL of the source.">
+            <ion-input fill="outline" helperText="URL of the source." [(ngModel)]="sourceUrl">
                 <div slot="label">Source URL <span class="mupi-required">(required)</span></div>
             </ion-input>
         </ion-card-content>
@@ -34,21 +34,28 @@
         </ion-card-header>
       
         <ion-card-content>
-            <ion-select justify="start" fill="outline" interface="popover" placeholder="Select a category">
+            <ion-select justify="start" fill="outline" interface="popover" placeholder="Select a category" [(ngModel)]="category">
                 <div slot="label">Category <span class="mupi-required">(required)</span></div>
                 <ion-select-option value="audiobook">Audiobook</ion-select-option>
                 <ion-select-option value="music">Music</ion-select-option>
                 <ion-select-option value="other">Other</ion-select-option>
             </ion-select>
-            <div class="mupi-input-outline">
-                <ion-toggle justify="start">Automatic folder name & image</ion-toggle>
-            </div>
-            <ion-input fill="outline" helperText="Name of the folder containing this data entry. This is used on the top level of the MupiBox interface.">
-                <div slot="label">Folder name <span class="mupi-required">(required)</span></div>
-            </ion-input>
-            <ion-input fill="outline" helperText="URL of an image that should be used for the folder containing this data entry. This is shown on the top level of the MupiBox interface.">
-                <div slot="label">Folder image URL</div>
-            </ion-input>
+            {{allowAutomaticFolderNameAndImage()}}
+            {{sourceType()}}
+            @if (allowAutomaticFolderNameAndImage()) {
+                <div class="mupi-input-outline">
+                    <ion-toggle justify="start" [(ngModel)]="automaticFolderNameAndImage">Automatic folder name & image</ion-toggle>
+                </div>
+            }
+            <!-- TODO: Always show if Spotify query or a non-spotify source -->
+            @if (!allowAutomaticFolderNameAndImage() || automaticFolderNameAndImage()) {
+                <ion-input fill="outline" helperText="Name of the folder containing this data entry. This is used on the top level of the MupiBox interface.">
+                    <div slot="label">Folder name <span class="mupi-required">(required)</span></div>
+                </ion-input>
+                <ion-input fill="outline" helperText="URL of an image that should be used for the folder containing this data entry. This is shown on the top level of the MupiBox interface.">
+                    <div slot="label">Folder image URL</div>
+                </ion-input>
+            }
             <ion-select justify="start" fill="outline" interface="popover" value="AlphabeticalAscending">
                 <div slot="label">Sorting</div>
                 <!-- TODO: Use ts types as values here -->
