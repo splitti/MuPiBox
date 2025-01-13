@@ -191,6 +191,54 @@ app.get('/api/media/:category/:folder', async (req, res) => {
       .filter((promise) => promise.status === 'fulfilled')
       .flatMap((promise) => promise.value)
 
+    //       const sliceMedia = (media: Media[], offsetByOne = false): Media[] => {
+    //         if (artist.coverMedia?.aPartOfAll) {
+    //           const min = Math.max(0, (artist.coverMedia?.aPartOfAllMin ?? 0) - (offsetByOne ? 1 : 0))
+    //           const max =
+    //             (artist.coverMedia?.aPartOfAllMax ?? Number.parseInt(artist.albumCount)) - (offsetByOne ? 1 : 0)
+    //           return media.slice(min, max + 1)
+    //         }
+    //         return media
+    //       }
+
+    //       const isShow =
+    //         (artist.coverMedia.showid && artist.coverMedia.showid.length > 0) ||
+    //         (artist.coverMedia.type === 'rss' && artist.coverMedia.id.length > 0)
+
+    //   const sorting = coverMedia.sorting ?? defaultSorting
+    //   switch (sorting) {
+    //     case MediaSorting.AlphabeticalDescending:
+    //       return media.sort((a, b) =>
+    //         b.title.localeCompare(a.title, undefined, {
+    //           numeric: true,
+    //           sensitivity: 'base',
+    //         }),
+    //       )
+    //     case MediaSorting.ReleaseDateAscending:
+    //       return media.sort((a, b) => new Date(a.release_date).getTime() - new Date(b.release_date).getTime())
+    //     case MediaSorting.ReleaseDateDescending:
+    //       return media.sort((a, b) => new Date(b.release_date).getTime() - new Date(a.release_date).getTime())
+    //     default: // MediaList.Alphabetical.Ascending
+    //       return media.sort((a, b) =>
+    //         a.title.localeCompare(b.title, undefined, {
+    //           numeric: true,
+    //           sensitivity: 'base',
+    //         }),
+    //       )
+    //   }
+    // }
+
+    //         map((media) => {
+    //           return sliceMedia(
+    //             this.sortMedia(
+    //               artist.coverMedia,
+    //               media,
+    //               isShow ? MediaSorting.ReleaseDateDescending : MediaSorting.AlphabeticalAscending,
+    //             ),
+    //             !isShow,
+    //           )
+    //         }),
+
     res.json(out)
   } catch (error) {
     console.error(`${nowDate.toLocaleString()}: [${serverName}] ${error}`)
@@ -206,22 +254,6 @@ app.get('/api/data', async (_req, res) => {
     console.error(`${nowDate.toLocaleString()}: [${serverName}] ${error}`)
     res.json([])
   }
-})
-
-app.get('/api/rssfeed', async (req, res) => {
-  const rssUrl = req.query.url
-  if (typeof rssUrl !== 'string') {
-    res.status(500).send('Given url is not a string.')
-    return
-  }
-  ky.get(rssUrl)
-    .text()
-    .then((response) => {
-      res.send(xmlparser.xml2json(response, { compact: true, nativeType: true }))
-    })
-    .catch(() => {
-      res.status(500).send('External url responded with error code.')
-    })
 })
 
 app.get('/api/activedata', (req, res) => {

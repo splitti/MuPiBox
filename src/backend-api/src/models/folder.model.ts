@@ -20,7 +20,7 @@ export interface Folder {
 }
 
 /**
- * TODO
+ * A top-level folder on the box ui with its associated {@link Data} children.
  */
 export interface FolderWithChildren extends Folder {
   children: Data[]

@@ -9,7 +9,6 @@ import {
   IonSegmentButton,
   IonToolbar,
 } from '@ionic/angular/standalone'
-import { NavigationExtras, Router } from '@angular/router'
 import { SwiperComponent, SwiperData } from '../swiper/swiper.component'
 import {
   bookOutline,
@@ -28,6 +27,7 @@ import { FolderService } from '../folder.service'
 import { LoadingComponent } from '../loading/loading.component'
 import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
+import { Router } from '@angular/router'
 import { SwiperIonicEventsHelper } from '../swiper/swiper-ionic-events-helper'
 import { addIcons } from 'ionicons'
 
@@ -94,7 +94,7 @@ export class HomePage extends SwiperIonicEventsHelper {
         .map((folder) => {
           return {
             name: folder.name,
-            imgSrc: of(folder.img),
+            imgSrc: folder.img,
             data: folder,
           }
         })

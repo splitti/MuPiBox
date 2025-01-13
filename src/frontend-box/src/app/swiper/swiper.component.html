@@ -5,7 +5,7 @@
           <ion-row class="img-row">
             <ion-col size="12">
               <ion-card [class.circle-card]="roundImages()" (click)="this.elementClicked.emit(currentData)">
-                <img draggable="false" style="-user-select: none;" ondragstart="return false;" src="{{currentData.imgSrc | async}}">
+                <img draggable="false" style="-user-select: none;" ondragstart="return false;" src="{{currentData.imgSrc}}">
               </ion-card>
             </ion-col>
           </ion-row>

@@ -11,13 +11,14 @@ import {
   IonTitle,
   IonToolbar,
 } from '@ionic/angular/standalone'
-import { addIcons } from 'ionicons'
-import { arrowBackOutline } from 'ionicons/icons'
-import { of } from 'rxjs'
+import { SwiperComponent, SwiperData } from '../swiper/swiper.component'
+
 import { LoadingComponent } from '../loading/loading.component'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
 import { SwiperIonicEventsHelper } from '../swiper/swiper-ionic-events-helper'
-import { SwiperComponent, SwiperData } from '../swiper/swiper.component'
+import { addIcons } from 'ionicons'
+import { arrowBackOutline } from 'ionicons/icons'
+import { of } from 'rxjs'
 
 @Component({
   selector: 'app-settings',
@@ -50,17 +51,17 @@ export class SettingsPage extends SwiperIonicEventsHelper {
   protected swiperData: SwiperData<string>[] = [
     {
       name: 'WiFi settings',
-      imgSrc: of('../../assets/wifi-settings.svg'),
+      imgSrc: '../../assets/wifi-settings.svg',
       data: 'admin',
     },
     {
       name: 'More settings',
-      imgSrc: of('../../assets/qr.svg'),
+      imgSrc: '../../assets/qr.svg',
       data: 'bla',
     },
     {
       name: 'Reboot / Shutdown',
-      imgSrc: of('../../assets/power.svg'),
+      imgSrc: '../../assets/power.svg',
       data: 'bla',
     },
   ]

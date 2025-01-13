@@ -41,7 +41,7 @@ export class ResumePage extends SwiperIonicEventsHelper {
     return this.media()?.map((media) => {
       return {
         name: media.title,
-        imgSrc: of(media.cover ?? ''), // TODO: get rid of swiper data.
+        imgSrc: media.cover ?? '',
         data: media,
       }
     })

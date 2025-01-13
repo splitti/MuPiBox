@@ -1,6 +1,6 @@
+import { Data } from '@backend-api/data.model'
 import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
-import { Data } from '@backend-api/data.model'
 import { Observable } from 'rxjs'
 import { environment } from 'src/environments/environment'
 
@@ -16,8 +16,8 @@ export class DataService {
   public constructor(private httpClient: HttpClient) {}
 
   /**
-   * TODO
-   * @returns
+   * Fetch the data from the backend.
+   * @returns - A list of unmodified {@link Data} objects from the backend.
    */
   public getData(): Observable<Data[]> {
     return this.httpClient.get<Data[]>(this.endpoint)

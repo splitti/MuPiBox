@@ -1,15 +1,16 @@
 import { describe, it } from 'node:test'
 
+import { app } from './server'
 import assert from 'node:assert'
 import nock from 'nock'
 import request from 'supertest'
-import { app } from './server'
 
 describe('rss feeds', () => {
   it('should return an error if no url is provided', (_t, done) => {
     request(app).get('/api/rssfeed').expect(500, done)
   })
 
+  // TODO: Replace this test with test for new rss source.
   it('should request a provided url and convert the xml response to json', (_t, done) => {
     nock('http://example.com')
       .get('/')
