@@ -20,11 +20,12 @@ do
                 sudo chown dietpi:dietpi ${MONITOR_FILE}
                 /usr/bin/cat <<< $(/usr/bin/jq -n --arg v "On" '.monitor = $v' ${MONITOR_FILE}) >  ${MONITOR_FILE}
         else
-                MONITOR=$(sudo -H -u dietpi bash -c "DISPLAY=:0 xset q | grep 'Monitor'")
-				MONITOR=$(echo ${MONITOR} | awk '{print $3}')
-				if [ ${MONITOR} != "" ]; then
-					/usr/bin/cat <<< $(/usr/bin/jq --arg v "${MONITOR}" '.monitor = $v' ${MONITOR_FILE}) >  ${MONITOR_FILE}
-				fi
+                MONITOR=$(sudo -H -u root bash -c "vcgencmd display_power")
+                                MONITOR=(${MONITOR##*=})
+                                if [ ${MONITOR} == "0" ]; then
+                                        /usr/bin/cat <<< $(/usr/bin/jq --arg v "Off" '.monitor = $v' ${MONITOR_FILE}) >  ${MONITOR_FILE}
+                                elif [ ${MONITOR} == "1"  ]; then
+                                        //usr/bin/cat <<< $(/usr/bin/jq --arg v "On" '.monitor = $v' ${MONITOR_FILE}) >  ${MONITOR_FILE}
         fi
 
 	sleep 1
