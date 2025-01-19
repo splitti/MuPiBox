@@ -25,7 +25,7 @@ do
                                 if [ ${MONITOR} == "0" ]; then
                                         /usr/bin/cat <<< $(/usr/bin/jq --arg v "Off" '.monitor = $v' ${MONITOR_FILE}) >  ${MONITOR_FILE}
                                 elif [ ${MONITOR} == "1"  ]; then
-                                        //usr/bin/cat <<< $(/usr/bin/jq --arg v "On" '.monitor = $v' ${MONITOR_FILE}) >  ${MONITOR_FILE}
+                                        /usr/bin/cat <<< $(/usr/bin/jq --arg v "On" '.monitor = $v' ${MONITOR_FILE}) >  ${MONITOR_FILE}
         fi
 
 	sleep 1
