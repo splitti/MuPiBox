@@ -146,22 +146,22 @@ export class AddPage implements OnInit, AfterViewInit {
       theme: 'hg-theme-default hg-theme-ios',
       layout: {
         default: [
-          'q w e r t z u i o p ü {collapse}',
+          'q w e r t z u i o p ü',
           'a s d f g h j k l ö ä',
           '{shift} y x c v b n m {shift}',
-          '{alt} , {space} . {bksp}',
+          '{alt} {collapse} , {space} . {bksp}',
         ],
         shift: [
-          'Q W E R T Z U I O P Ü {collapse}',
+          'Q W E R T Z U I O P Ü',
           'A S D F G H J K L Ö Ä',
           '{shiftactivated} Y X C V B N M {shift}',
-          '{alt} , {space} . {bksp}'
+          '{alt} {collapse} , {space} . {bksp}',
         ],
         alt: [
-          '1 2 3 4 5 6 7 8 9 0 = {collapse}',
+          '1 2 3 4 5 6 7 8 9 0 =',
           `% @ # $ § & * ° ^ / \\ ' "`,
           '_ ~ - + ; : { } [ ] ( )',
-          '{default} ! {space} ? {bksp}'
+          '{default} {collapse} ! {space} ? {bksp}',
         ],
       },
       display: {
@@ -180,7 +180,7 @@ export class AddPage implements OnInit, AfterViewInit {
       },
     })
 
-    this.hideKeyboard();
+    this.hideKeyboard()
     this.selectedInputElem = document.querySelector('ion-input:first-child')
 
     this.validate()
@@ -219,7 +219,7 @@ export class AddPage implements OnInit, AfterViewInit {
     this.selectedInputElem = event.target
 
     if (!this.isKeyboardVisible) {
-      this.showKeyboard();
+      this.showKeyboard()
     }
 
     this.keyboard.setOptions({
@@ -274,8 +274,8 @@ export class AddPage implements OnInit, AfterViewInit {
 
     switch (button) {
       case '{collapse}':
-        this.hideKeyboard();
-        return;
+        this.hideKeyboard()
+        return
       case '{shift}':
       case '{shiftactivated}':
       case '{default}':
@@ -636,18 +636,18 @@ export class AddPage implements OnInit, AfterViewInit {
   }
 
   private showKeyboard() {
-    const keyboardElement = document.querySelector('.simple-keyboard') as HTMLElement;
+    const keyboardElement = document.querySelector('.simple-keyboard') as HTMLElement
     if (keyboardElement) {
-      keyboardElement.style.display = 'block';
-      this.isKeyboardVisible = true;
+      keyboardElement.style.display = 'block'
+      this.isKeyboardVisible = true
     }
   }
 
   private hideKeyboard() {
-    const keyboardElement = document.querySelector('.simple-keyboard') as HTMLElement;
+    const keyboardElement = document.querySelector('.simple-keyboard') as HTMLElement
     if (keyboardElement) {
-      keyboardElement.style.display = 'none';
-      this.isKeyboardVisible = false;
+      keyboardElement.style.display = 'none'
+      this.isKeyboardVisible = false
     }
   }
 }
