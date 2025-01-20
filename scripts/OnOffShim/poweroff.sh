@@ -1,19 +1,17 @@
-#!/bin/sh
-#
-# OnOff SHIM exposed by cyperghost for retropie.org.uk
-# This is mandatory for proper SHIM shutdown!
+#!/bin/bash
 
 CONFIG="/etc/mupibox/mupiboxconfig.json"
 POWEROFF_PIN=$(/usr/bin/jq -r .shim.poweroffPin ${CONFIG})
 CUT_PIN=$(/usr/bin/jq -r .shim.cutPin ${CONFIG})
 
 if [ "$1" = "poweroff" ]; then
-    # added by schlizbäda:
-    /bin/echo ${CUT_PIN} > /sys/class/gpio/export
-    /bin/echo out > /sys/class/gpio/gpio${CUT_PIN}/direction
-    /bin/echo 1 > /sys/class/gpio/gpio${CUT_PIN}/value
+    echo "$(date): Initiating poweroff sequence"
 
-    /bin/echo ${POWEROFF_PIN} > /sys/class/gpio/export
-    /bin/echo out > /sys/class/gpio/gpio${POWEROFF_PIN}/direction
-    /bin/echo 0 > /sys/class/gpio/gpio${POWEROFF_PIN}/value
+    # CUT_PIN setzen (z. B. Stromzufuhr abschalten)
+    gpioset gpiochip0 ${CUT_PIN}=1
+
+    # POWEROFF_PIN setzen (Signal an OnOff SHIM)
+    gpioset gpiochip0 ${POWEROFF_PIN}=0
+
+    echo "$(date): Poweroff sequence complete"
 fi
