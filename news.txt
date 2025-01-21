@@ -31,7 +31,7 @@ We will focus on <b>bookworm</b> and recommend you to update, or reinstall. See 
 </ul>
 <h3>Next Release (DEV/BETA/STABLE)</h3>
 <ul id='ulnews' class='ulnews'>
-<li id='linews' class='linews'>We will see...</li>
+<li id='linews' class='linews'>Update: Since sysfs-gpio is no longer integrated in debian, we switched to the current and modern libgpiod</li>
 </ul>
 <h3>Next Release</h3>
 <ul id='ulnews' class='ulnews'>

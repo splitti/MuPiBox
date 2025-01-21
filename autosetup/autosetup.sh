@@ -22,10 +22,8 @@ rm -R /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-*
 exec 3>${LOG}
 
 {
-	packages2install="git libasound2 mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools\
-		wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio python3-serial\
-		python3-requests python3-paho-mqtt libgles2-mesa mesa-utils libsdl2-dev preload python3-smbus2 pigpio libjson-c-dev\
-		i2c-tools libi2c-dev python3-smbus python3-alsaaudio python3-netifaces gpiod"
+	#packages2install="git libasound2 jq samba mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential raspberrypi-kernel-headers dkms"
+	packages2install="gpiod git libasound2 mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt libgles2-mesa mesa-utils libsdl2-dev preload python3-smbus2 pigpio libjson-c-dev i2c-tools libi2c-dev python3-smbus python3-alsaaudio python3-netifaces"
 	packages2remove="jq"
 	STEP=0
 
@@ -537,12 +535,19 @@ exec 3>${LOG}
 	#sudo /usr/bin/sed -i 's/\"version\": \"\"/\"version\": \"'${VERSION}'\"/g' ${MUPIBOX_CONFIG} >&3 2>&3
 	sudo /usr/bin/cat <<< $(/usr/bin/jq --arg v "${VERSION}" '.mupibox.version = $v' ${MUPIBOX_CONFIG}) > ${MUPIBOX_CONFIG}
 	sudo chmod 775 /etc/mupibox/mupiboxconfig.json >&3 2>&3
-	if grep -q '^initramfs initramfs.img' /boot/config.txt; then
-	  echo -e "initramfs initramfs.img already set"
+	#if grep -q '^initramfs initramfs.img' /boot/config.txt; then
+	#  echo -e "initramfs initramfs.img already set"
+	#else
+	#  echo '' | sudo tee -a /boot/config.txt >&3 2>&3
+	#  echo '#initramfs initramfs.img' | sudo tee -a /boot/config.txt >&3 2>&3
+	#fi
+	if grep -q '^dtparam=gpio=on' /boot/config.txt; then
+	  echo -e "dtparam=gpio=on already set"
 	else
 	  echo '' | sudo tee -a /boot/config.txt >&3 2>&3
-	  echo '#initramfs initramfs.img' | sudo tee -a /boot/config.txt >&3 2>&3
+	  echo 'dtparam=gpio=on' | sudo tee -a /boot/config.txt >&3 2>&3
 	fi
+
 	curl https://raw.githubusercontent.com/scopatz/nanorc/master/install.sh | sh >&3 2>&3
 	touch /home/dietpi/.mupi.install >&3 2>&3
 
