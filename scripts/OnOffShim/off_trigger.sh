@@ -52,7 +52,7 @@ if [ $? -eq 0 ]; then
     sudo service mupi_powerled stop
 
     echo "$(date) - INFO:  System shutdown initiated" >> ${LOGFILE}
-#    sudo poweroff
+    sudo poweroff
 else
     echo "$(date) - ERROR: Error monitoring GPIO${TRIGGER_PIN}" >> ${LOGFILE}
 fi
