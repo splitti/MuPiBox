@@ -5,6 +5,8 @@ Wants=sound.target
 After=sound.target
 Wants=network-online.target
 After=network-online.target
+Wants=pulseaudio.service
+After=pulseaudio.service
 
 [Service]
 ExecStart=/bin/bash -c 'source /etc/librespot/env-librespot && /usr/bin/librespot -q'

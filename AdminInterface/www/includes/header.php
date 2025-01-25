@@ -51,7 +51,7 @@
 		<title>MuPiBox Admin-Interface</title>
 		<link rel="stylesheet" type="text/css" href="view.css?v=7.1.12" media="all">
 		<script src="https://code.iconify.design/iconify-icon/2.0.0/iconify-icon.min.js"></script>
-		<script type="text/javascript" src="view.js?v=6.0.5"></script>
+		<script type="text/javascript" src="view.js?v=6.0.6"></script>
 		<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 		<link rel="icon" type="image/x-icon" href="/images/favicon.ico">
 
@@ -63,10 +63,10 @@
 				<div id="Wifi_Icon"> </div>
 				<div id="Battery_Icon"> </div>
 				<div id="Fan_Icon"> </div>
-				<a href="?hshutdown=1" onclick="return confirm('Do really want to shutdown?')" ><iconify-icon icon="ic:outline-power-settings-new" title="Shutdown" ></iconify-icon></a>
-				<a href="?hreboot=1" onclick="return confirm('Do really want to reboot?')" ><iconify-icon icon="ic:outline-restart-alt" title="Reboot" ></iconify-icon></a>
-				<a href="?hchromerestart=1" onclick="return confirm('Do really want to restart chrome kiosk?')" ><iconify-icon icon="tabler:brand-chrome"  title="Restart chrome browser" ></iconify-icon></a>
-				<a href="?hrefreshdatabase=1" onclick="return confirm('Do really want to reload media database?')" ><iconify-icon icon="mdi:database-refresh-outline"  title="Reload media database" ></iconify-icon></a>
+				<a href="?hshutdown=1" onclick="confirm('Do really want to shutdown?') || stopEvent(event)" ><iconify-icon icon="ic:outline-power-settings-new" title="Shutdown" ></iconify-icon></a>
+				<a href="?hreboot=1" onclick="confirm('Do really want to reboot?') || stopEvent(event)" ><iconify-icon icon="ic:outline-restart-alt" title="Reboot" ></iconify-icon></a>
+				<a href="?hchromerestart=1" onclick="confirm('Do really want to restart chrome kiosk?') || stopEvent(event)" ><iconify-icon icon="tabler:brand-chrome"  title="Restart chrome browser" ></iconify-icon></a>
+				<a href="?hrefreshdatabase=1" onclick="confirm('Do really want to reload media database?') || stopEvent(event)" ><iconify-icon icon="mdi:database-refresh-outline"  title="Reload media database" ></iconify-icon></a>
 			</div>
 			<div class="topnav" id="myTopnav">
 				<a href="index.php"><i class="fa fa-fw fa-home"></i> Home</a>

@@ -14,7 +14,7 @@ CONFIG="/etc/mupibox/mupiboxconfig.json"
 LOG="/boot/mupibox_update.log"
 exec 3>${LOG}
 service mupi_idle_shutdown stop
-packages2install="git libasound2 mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt libgles2-mesa mesa-utils libsdl2-dev preload python3-smbus2 pigpio libjson-c-dev i2c-tools libi2c-dev python3-smbus python3-alsaaudio python3-netifaces"
+packages2install="gpiod git libasound2 mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt libgles2-mesa mesa-utils libsdl2-dev preload python3-smbus2 pigpio libjson-c-dev i2c-tools libi2c-dev python3-smbus python3-alsaaudio python3-netifaces"
 packages2remove="jq"
 STEP=0
 VER_JSON="/tmp/version.json"
@@ -504,6 +504,14 @@ echo "==========================================================================
 	/usr/bin/chmod 755 ${MUPI_SRC}/config/templates/crontab.template >&3 2>&3
 	/usr/bin/chown dietpi:dietpi ${MUPI_SRC}/config/templates/crontab.template >&3 2>&3
 	sudo -H -u dietpi bash -c "/usr/bin/crontab ${MUPI_SRC}/config/templates/crontab.template"  >&3 2>&3
+
+	if grep -q '^dtparam=gpio=on' /boot/config.txt; then
+	  echo -e "dtparam=gpio=on already set"
+	else
+	  echo '' | tee -a /boot/config.txt >&3 2>&3
+	  echo 'dtparam=gpio=on' | tee -a /boot/config.txt >&3 2>&3
+	fi
+
 	#if grep -q '^initramfs initramfs.img' /boot/config.txt; then
 	#  echo -e "initramfs initramfs.img already set"
 	#else

@@ -76,6 +76,7 @@ export class AddPage implements OnInit, AfterViewInit {
   aPartOfAllMax: number
   index: number
   activityIndicatorVisible = false
+  isKeyboardVisible = false
 
   constructor(
     private mediaService: MediaService,
@@ -146,19 +147,19 @@ export class AddPage implements OnInit, AfterViewInit {
           'q w e r t z u i o p ü',
           'a s d f g h j k l ö ä',
           '{shift} y x c v b n m {shift}',
-          '{alt} , {space} . {bksp}',
+          '{alt} {collapse} , {space} . {bksp}',
         ],
         shift: [
           'Q W E R T Z U I O P Ü',
           'A S D F G H J K L Ö Ä',
           '{shiftactivated} Y X C V B N M {shift}',
-          '{alt} , {space} . {bksp}',
+          '{alt} {collapse} , {space} . {bksp}',
         ],
         alt: [
           '1 2 3 4 5 6 7 8 9 0 =',
           `% @ # $ § & * ° ^ / \\ ' "`,
           '_ ~ - + ; : { } [ ] ( )',
-          '{default} ! {space} ? {bksp}',
+          '{default} {collapse} ! {space} ? {bksp}',
         ],
       },
       display: {
@@ -173,9 +174,11 @@ export class AddPage implements OnInit, AfterViewInit {
         '{space}': ' ',
         '{default}': 'ABC',
         '{back}': '⇦',
+        '{collapse}': '▼',
       },
     })
 
+    this.hideKeyboard()
     this.selectedInputElem = document.querySelector('ion-input:first-child')
 
     this.validate()
@@ -212,6 +215,10 @@ export class AddPage implements OnInit, AfterViewInit {
 
   focusChanged(event: any) {
     this.selectedInputElem = event.target
+
+    if (!this.isKeyboardVisible) {
+      this.showKeyboard()
+    }
 
     this.keyboard.setOptions({
       disableCaretPositioning: false,
@@ -264,6 +271,9 @@ export class AddPage implements OnInit, AfterViewInit {
     let layout: string
 
     switch (button) {
+      case '{collapse}':
+        this.hideKeyboard()
+        return
       case '{shift}':
       case '{shiftactivated}':
       case '{default}':
@@ -621,6 +631,22 @@ export class AddPage implements OnInit, AfterViewInit {
             label?.length > 0 ||
             labelcover?.length > 0 ||
             cover?.length > 0))
+    }
+  }
+
+  private showKeyboard() {
+    const keyboardElement = document.querySelector('.simple-keyboard') as HTMLElement
+    if (keyboardElement) {
+      keyboardElement.style.display = 'block'
+      this.isKeyboardVisible = true
+    }
+  }
+
+  private hideKeyboard() {
+    const keyboardElement = document.querySelector('.simple-keyboard') as HTMLElement
+    if (keyboardElement) {
+      keyboardElement.style.display = 'none'
+      this.isKeyboardVisible = false
     }
   }
 }
