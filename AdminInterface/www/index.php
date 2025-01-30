@@ -135,7 +135,7 @@
 			exec("/usr/bin/librespot --version | awk '{print $2}'", $loutput, $result );
 			exec("/usr/bin/jq --version", $joutput, $result );
 			echo "<tr><td>MuPiBox:</td><td>" . $data["mupibox"]["version"] . "</td></tr>";			
-			echo "<tr><td>Librespot:</td><td>" . $loutput[0] . "</td></tr></table></p>";
+			echo "<tr><td>Librespot:</td><td>" . $loutput[0] . "</td></tr>";
 			echo "<tr><td>jq:</td><td>" . $joutput[0] . "</td></tr></table></p>";
 
 			$command = "/usr/bin/systemd-analyze time";
