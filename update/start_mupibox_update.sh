@@ -506,10 +506,17 @@ echo "==========================================================================
 	sudo -H -u dietpi bash -c "/usr/bin/crontab ${MUPI_SRC}/config/templates/crontab.template"  >&3 2>&3
 
 	if grep -q '^dtparam=gpio=on' /boot/config.txt; then
-	  echo -e "dtparam=gpio=on already set"
+	  echo -e "dtparam=gpio=on already set" >&3 2>&3
 	else
 	  echo '' | tee -a /boot/config.txt >&3 2>&3
 	  echo 'dtparam=gpio=on' | tee -a /boot/config.txt >&3 2>&3
+	fi
+
+	if grep -q '^dtoverlay=gpio-poweroff,gpiopin=4,active_low=1' /boot/config.txt; then
+	  echo -e "dtparam=gpio=on already set" >&3 2>&3
+	else
+	  echo '' | tee -a /boot/config.txt >&3 2>&3
+	  echo 'dtoverlay=gpio-poweroff,gpiopin=4,active_low=1' | tee -a /boot/config.txt >&3 2>&3
 	fi
 
 	#if grep -q '^initramfs initramfs.img' /boot/config.txt; then
