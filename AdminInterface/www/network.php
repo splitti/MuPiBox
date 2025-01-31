@@ -402,7 +402,7 @@
 		<summary><i class="fa-solid fa-toggle-off"></i> Misc Options</summary>
 
 	<ul>
-		<li class="li_1"><h2>Enable/Disable OnBoad Wifi</h2>
+		<li class="li_1"><h2>Enable/Disable OnBoard Wifi</h2>
 			<p>
 			Enables or disables OnBoard Wifi! Please be sure what you do!
 			</p>
