@@ -61,13 +61,18 @@ const spotifyApi = new SpotifyWebApi({
   refreshToken: config.spotify.refreshToken,
 })
 
-/*sets and refreshes access token every hour */
+/* sets and refreshes access token every hour */
 refreshToken()
 setInterval(refreshToken, 1000 * 60 * 60)
 
 let apiAccessToken = {
   accessToken: null,
   expires: Date.now(),
+}
+
+let librespotAccessToken = {
+  accessToken: null,
+  expires: Date.now()
 }
 
 player.on('percent_pos', (val) => {
@@ -247,12 +252,17 @@ function writeCounter() {
   })
 }
 
-function refreshToken() {
-  if (credentials) {
-    librespotRefreshToken().then((accessToken) => setAccessToken(accessToken))
-  } else {
-    refreshTokenApi().then((accessToken) => setAccessToken(accessToken))
-  }
+async function refreshToken() {
+  const refreshToken = credentials ? librespotRefreshToken : refreshTokenApi
+
+  return new Promise((resolve, reject) => {
+    refreshToken()
+      .then((accessToken) => {
+        setAccessToken(accessToken)
+        resolve(accessToken)
+      })
+      .catch(() => reject())
+  })
 }
 
 async function refreshTokenApi() {
@@ -307,6 +317,8 @@ async function librespotRefreshToken() {
     .then(
       (res) => {
         const loginResponse = proto.spotify.login5.v3.LoginResponse.decode(Uint8Array.from(res.body))
+        librespotAccessToken.accessToken = loginResponse.ok.accessToken
+        librespotAccessToken.expires = Date.now() + loginResponse.ok.accessTokenExpiresIn * 1000
         return loginResponse.ok.accessToken
       },
       (err) => {
@@ -337,13 +349,12 @@ async function getMyDevices() {
 }
 
 function setAccessToken(token) {
-  spotifyApi.setAccessToken(token)
   log.debug(`${nowDate.toLocaleString()}: The access token has been refreshed!`)
   counter.countfreshAccessToken++
   if (config.server.logLevel === 'debug') {
     writeCounter()
   }
-  spotifyApi.setAccessToken(data.body.access_token)
+  spotifyApi.setAccessToken(token)
   counter.countsetAccessToken++
   if (config.server.logLevel === 'debug') {
     writeCounter()
@@ -1188,7 +1199,15 @@ app.get('/local', (req, res) => {
 })
 
 app.get('/spotify/token', (req, res) => {
-  res.send(spotifyApi.getAccessToken())
+  const accessTokenData = credentials ? librespotAccessToken : apiAccessToken
+
+  if (accessTokenData.accessToken !== null && accessTokenData.expires < Date.now() ) {
+    res.send(accessTokenData.accessToken)
+  } else {
+    refreshToken()
+      .then(() => res.send(accessTokenData.accessToken))
+      .catch(() => res.status(500).send('Error refreshing token'))
+  }
 })
 
 /*sonos-kids-controller sends commands via http get and uses path names for encoding*/
