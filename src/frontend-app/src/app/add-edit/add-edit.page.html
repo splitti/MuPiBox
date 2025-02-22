@@ -3,27 +3,28 @@
         <ion-buttons slot="start">
             <ion-back-button defaultHref="/"></ion-back-button>
         </ion-buttons>
-      <ion-title>Create entry</ion-title>
+      <ion-title>Create/Edit/TODO entry</ion-title>
       <ion-buttons slot="end">
         <ion-button>Delete</ion-button>
     </ion-buttons>
     </ion-toolbar>
 </ion-header>
 <ion-content>
+    <form [formGroup]="formGroup">
     <ion-card>
         <ion-card-header>
             <ion-card-title>Source</ion-card-title>
         </ion-card-header>
         
         <ion-card-content>
-            <ion-select justify="start" fill="outline" interface="popover" placeholder="Select a source type" [(ngModel)]="sourceTypeControl">
+            <ion-select justify="start" fill="outline" interface="popover" placeholder="Select a source type" formControlName="sourceType">
                 <div slot="label">Source type <span class="mupi-required">(required)</span></div>
                 <ion-select-option value="spotifyURL">Spotify URL</ion-select-option>
                 <ion-select-option value="spotifySearch">Spotify Search Query</ion-select-option>
                 <ion-select-option value="rssURL">RSS/Podcast URL</ion-select-option>
                 <ion-select-option value="streamURL">Stream/Radio URL</ion-select-option>
             </ion-select>
-            <ion-input fill="outline" helperText="URL of the source." [(ngModel)]="sourceUrl">
+            <ion-input fill="outline" helperText="URL of the source." formControlName="sourceUrl">
                 <div slot="label">Source URL <span class="mupi-required">(required)</span></div>
             </ion-input>
         </ion-card-content>
@@ -34,7 +35,7 @@
         </ion-card-header>
       
         <ion-card-content>
-            <ion-select justify="start" fill="outline" interface="popover" placeholder="Select a category" [(ngModel)]="category">
+            <ion-select justify="start" fill="outline" interface="popover" placeholder="Select a category" formControlName="category">
                 <div slot="label">Category <span class="mupi-required">(required)</span></div>
                 <ion-select-option value="audiobook">Audiobook</ion-select-option>
                 <ion-select-option value="music">Music</ion-select-option>
@@ -94,6 +95,7 @@
             </div>
         </ion-card-content>
     </ion-card>
+    </form>
 </ion-content>
 <ion-footer>
     <ion-toolbar>

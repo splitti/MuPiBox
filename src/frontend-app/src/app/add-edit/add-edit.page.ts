@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, model, signal } from '@angular/core'
-import { FormControl, FormsModule, Validators } from '@angular/forms'
+import { FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms'
 import {
   IonBackButton,
   IonButton,
@@ -63,6 +63,7 @@ export enum AddEditPageSourceType {
     IonSelectOption,
     IonSelect,
     FormsModule,
+    ReactiveFormsModule,
   ],
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -80,4 +81,10 @@ export class AddEditPage {
   protected automaticFolderNameAndImage = model(true)
 
   protected sourceType = toSignal(this.sourceTypeControl.valueChanges)
+
+  protected formGroup = new FormGroup({
+    sourceType: this.sourceTypeControl,
+    sourceUrl: this.sourceUrl,
+    category: this.category,
+  })
 }
