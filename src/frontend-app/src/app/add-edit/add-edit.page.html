@@ -41,8 +41,6 @@
                 <ion-select-option value="music">Music</ion-select-option>
                 <ion-select-option value="other">Other</ion-select-option>
             </ion-select>
-            {{allowAutomaticFolderNameAndImage()}}
-            {{sourceType()}}
             @if (allowAutomaticFolderNameAndImage()) {
                 <div class="mupi-input-outline">
                     <ion-toggle justify="start" [(ngModel)]="automaticFolderNameAndImage">Automatic folder name & image</ion-toggle>
@@ -50,14 +48,14 @@
             }
             <!-- TODO: Always show if Spotify query or a non-spotify source -->
             @if (!allowAutomaticFolderNameAndImage() || automaticFolderNameAndImage()) {
-                <ion-input fill="outline" helperText="Name of the folder containing this data entry. This is used on the top level of the MupiBox interface.">
+                <ion-input fill="outline" helperText="Name of the folder containing this data entry. This is used on the top level of the MupiBox interface." formControlName="folderName">
                     <div slot="label">Folder name <span class="mupi-required">(required)</span></div>
                 </ion-input>
-                <ion-input fill="outline" helperText="URL of an image that should be used for the folder containing this data entry. This is shown on the top level of the MupiBox interface.">
+                <ion-input fill="outline" helperText="URL of an image that should be used for the folder containing this data entry. This is shown on the top level of the MupiBox interface." formControlName="folderImageUrl">
                     <div slot="label">Folder image URL</div>
                 </ion-input>
             }
-            <ion-select justify="start" fill="outline" interface="popover" value="AlphabeticalAscending">
+            <ion-select justify="start" fill="outline" interface="popover" value="AlphabeticalAscending" formControlName="sorting">
                 <div slot="label">Sorting</div>
                 <!-- TODO: Use ts types as values here -->
                 <ion-select-option value="AlphabeticalAscending">alphabetical asc.</ion-select-option>
@@ -73,10 +71,10 @@
         </ion-card-header>
         
         <ion-card-content>
-            <ion-input fill="outline" helperText="Title of this data entry. This is used on the second level of the MupiBox interface.">
+            <ion-input fill="outline" helperText="Title of this data entry. This is used on the second level of the MupiBox interface." formControlName="title">
                 <div slot="label">Title <span class="mupi-required">(required)</span></div>
             </ion-input>
-            <ion-input fill="outline" helperText="URL of an image that should be used for this data entry. This is shown on the second level of the MupiBox interface.">
+            <ion-input fill="outline" helperText="URL of an image that should be used for this data entry. This is shown on the second level of the MupiBox interface." formControlName="coverImageUrl">
                 <div slot="label">Cover image URL</div>
             </ion-input>
             <div class="mupi-input-outline">
@@ -84,14 +82,19 @@
             </div>
             <div>
                 <div class="mupi-input-outline">
-                    <ion-toggle justify="start">Interval</ion-toggle>
+                    <ion-toggle justify="start" formControlName="interval">Interval</ion-toggle>
                 </div>
-                <ion-input fill="outline" inputmode="numeric" min="0">
-                    <div slot="label">Start interval <span class="mupi-required">(required)</span></div>
-                </ion-input>
-                <ion-input fill="outline" inputmode="numeric" min="0">
-                    <div slot="label">End interval <span class="mupi-required">(required)</span></div>
-                </ion-input>
+                <div class="helper-text sc-ion-input-md">
+                    Allows to only show a subset of the entries of this source.
+                </div>
+                @if (intervalSignal()) {
+                    <ion-input fill="outline" inputmode="numeric" min="0">
+                        <div slot="label">Start interval <span class="mupi-required">(required)</span></div>
+                    </ion-input>
+                    <ion-input fill="outline" inputmode="numeric" min="0">
+                        <div slot="label">End interval <span class="mupi-required">(required)</span></div>
+                    </ion-input>
+                }
             </div>
         </ion-card-content>
     </ion-card>
