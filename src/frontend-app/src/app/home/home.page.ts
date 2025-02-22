@@ -1,17 +1,6 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core'
 import { ClickedDataEntry, DataListComponent } from '../data-list/data-list.component'
-import {
-  IonBackButton,
-  IonButton,
-  IonButtons,
-  IonContent,
-  IonFab,
-  IonFabButton,
-  IonHeader,
-  IonIcon,
-  IonTitle,
-  IonToolbar,
-} from '@ionic/angular/standalone'
+import { IonButton, IonButtons, IonContent, IonHeader, IonIcon, IonTitle, IonToolbar } from '@ionic/angular/standalone'
 
 import { Router } from '@angular/router'
 import { add } from 'ionicons/icons'
@@ -21,19 +10,7 @@ import { addIcons } from 'ionicons'
   selector: 'mupiapp-home',
   templateUrl: 'home.page.html',
   styleUrls: ['home.page.scss'],
-  imports: [
-    IonButton,
-    IonTitle,
-    IonBackButton,
-    IonButtons,
-    IonToolbar,
-    IonHeader,
-    DataListComponent,
-    IonContent,
-    IonFab,
-    IonFabButton,
-    IonIcon,
-  ],
+  imports: [IonButton, IonTitle, IonButtons, IonToolbar, IonHeader, DataListComponent, IonContent, IonIcon],
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

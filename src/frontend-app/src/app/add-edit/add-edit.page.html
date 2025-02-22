@@ -4,8 +4,12 @@
             <ion-back-button defaultHref="/"></ion-back-button>
         </ion-buttons>
       <ion-title>Create/Edit/TODO entry</ion-title>
+      <!-- TODO: Only show delete when editing -->
       <ion-buttons slot="end">
-        <ion-button>Delete</ion-button>
+        <ion-button fill="outline">
+            <ion-icon slot="start" name="trash-outline"></ion-icon>
+            Delete
+        </ion-button>
     </ion-buttons>
     </ion-toolbar>
 </ion-header>
@@ -24,8 +28,8 @@
                 <ion-select-option value="rssURL">RSS/Podcast URL</ion-select-option>
                 <ion-select-option value="streamURL">Stream/Radio URL</ion-select-option>
             </ion-select>
-            <ion-input fill="outline" helperText="URL of the source." formControlName="sourceUrl">
-                <div slot="label">Source URL <span class="mupi-required">(required)</span></div>
+            <ion-input fill="outline" [helperText]="sourceTypeSignal() === 'spotifySearch' ? 'Spotify search query.' : 'URL of the source.'" formControlName="sourceUrl">
+                <div slot="label">{{ sourceTypeSignal() !== 'spotifySearch' ? 'Source URL' : 'Search query' }} <span class="mupi-required">(required)</span></div>
             </ion-input>
         </ion-card-content>
     </ion-card>
@@ -42,16 +46,17 @@
                 <ion-select-option value="other">Other</ion-select-option>
             </ion-select>
             @if (allowAutomaticFolderNameAndImage()) {
-                <div class="mupi-input-outline">
-                    <ion-toggle justify="start" [(ngModel)]="automaticFolderNameAndImage">Automatic folder name & image</ion-toggle>
+                <div class="mupi-input">
+                    <div class="mupi-input-outline">
+                        <ion-toggle justify="start" [(ngModel)]="useAutomaticFolderNameAndImage" [checked]="useAutomaticFolderNameAndImage ? 'true' : 'false'">Automatic folder name & image</ion-toggle>
+                    </div>
                 </div>
             }
-            <!-- TODO: Always show if Spotify query or a non-spotify source -->
-            @if (!allowAutomaticFolderNameAndImage() || automaticFolderNameAndImage()) {
+            @if (!allowAutomaticFolderNameAndImage() || (allowAutomaticFolderNameAndImage() && !useAutomaticFolderNameAndImage())) {
                 <ion-input fill="outline" helperText="Name of the folder containing this data entry. This is used on the top level of the MupiBox interface." formControlName="folderName">
                     <div slot="label">Folder name <span class="mupi-required">(required)</span></div>
                 </ion-input>
-                <ion-input fill="outline" helperText="URL of an image that should be used for the folder containing this data entry. This is shown on the top level of the MupiBox interface." formControlName="folderImageUrl">
+                <ion-input fill="outline" helperText="Optional URL of an image that should be used for the folder containing this data entry. This is shown on the top level of the MupiBox interface. Some source types can automatically retrieve this image URL. Providing a value here overrides these automatically retrieved image." formControlName="folderImageUrl">
                     <div slot="label">Folder image URL</div>
                 </ion-input>
             }
@@ -71,40 +76,60 @@
         </ion-card-header>
         
         <ion-card-content>
-            <ion-input fill="outline" helperText="Title of this data entry. This is used on the second level of the MupiBox interface." formControlName="title">
-                <div slot="label">Title <span class="mupi-required">(required)</span></div>
-            </ion-input>
-            <ion-input fill="outline" helperText="URL of an image that should be used for this data entry. This is shown on the second level of the MupiBox interface." formControlName="coverImageUrl">
+            <!-- For all types except stream urls, the title of albums are automatically retrieved. -->
+             @if (sourceTypeSignal() === 'streamURL') {
+                <ion-input fill="outline" helperText="Title of this stream. This is used on the second level of the MupiBox interface." formControlName="title">
+                    <div slot="label">Title <span class="mupi-required">(required)</span></div>
+                </ion-input>
+            }
+            <ion-input fill="outline" helperText="Optional URL of an image that should be used for this album/playlist/data entry. This is shown on the second level of the MupiBox interface. Some source types automatically retrieve images URLs. Providing a value here overrides these automatically retrieved images." formControlName="coverImageUrl">
                 <div slot="label">Cover image URL</div>
             </ion-input>
-            <div class="mupi-input-outline">
-                <ion-toggle justify="start">Shuffle</ion-toggle>
-            </div>
-            <div>
-                <div class="mupi-input-outline">
-                    <ion-toggle justify="start" formControlName="interval">Interval</ion-toggle>
+            @if (showShuffleToggle()) {
+                <div class="mupi-input">
+                    <div class="mupi-input-outline">
+                        <ion-toggle justify="start">Shuffle</ion-toggle>
+                    </div>
+                    <div class="mupi-input-help-text">
+                        If enabled, the tracks will be played in random order by default.
+                    </div>
                 </div>
-                <div class="helper-text sc-ion-input-md">
-                    Allows to only show a subset of the entries of this source.
+            }
+            <!-- Showing the interval does not make sense for streams since they only have one entry in the folder. -->
+             @if (sourceTypeSignal() !== undefined && sourceTypeSignal() !== 'streamURL') {            
+                <div>
+                    <div class="mupi-input">
+                        <div class="mupi-input-outline">
+                            <ion-toggle justify="start" formControlName="interval">Interval</ion-toggle>
+                        </div>
+                        <div class="mupi-input-help-text">
+                            Allows to only show a subset of the entries of this source.
+                        </div>
+                    </div>
+                    @if (intervalSignal()) {
+                        <ion-input fill="outline" inputmode="numeric" min="0" formControlName="intervalStart">
+                            <div slot="label">Interval start <span class="mupi-required">(required)</span></div>
+                        </ion-input>
+                        <ion-input fill="outline" inputmode="numeric" min="0" formControlName="intervalEnd">
+                            <div slot="label">Interval end <span class="mupi-required">(required)</span></div>
+                        </ion-input>
+                    }
                 </div>
-                @if (intervalSignal()) {
-                    <ion-input fill="outline" inputmode="numeric" min="0">
-                        <div slot="label">Start interval <span class="mupi-required">(required)</span></div>
-                    </ion-input>
-                    <ion-input fill="outline" inputmode="numeric" min="0">
-                        <div slot="label">End interval <span class="mupi-required">(required)</span></div>
-                    </ion-input>
-                }
-            </div>
+            }
         </ion-card-content>
     </ion-card>
     </form>
 </ion-content>
 <ion-footer>
     <ion-toolbar>
-        <ion-buttons>
-            <ion-button>Cancel</ion-button>
-            <ion-button>Save</ion-button>
+        <ion-buttons slot="primary">
+            <ion-button fill="solid" [disabled]="formGroup.invalid">
+                <ion-icon slot="start" name="save-outline"></ion-icon>
+                Save
+            </ion-button>
+        </ion-buttons>
+        <ion-buttons slot="secondary">
+            <ion-button fill="solid">Cancel</ion-button>
         </ion-buttons>
     </ion-toolbar>
 </ion-footer>

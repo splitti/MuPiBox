@@ -1,5 +1,5 @@
 import { CategoryType, Sorting } from '@backend-api/folder.model'
-import { ChangeDetectionStrategy, Component, computed, model, signal } from '@angular/core'
+import { ChangeDetectionStrategy, Component, computed, effect, model } from '@angular/core'
 import { FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms'
 import {
   IonBackButton,
@@ -8,30 +8,21 @@ import {
   IonCard,
   IonCardContent,
   IonCardHeader,
-  IonCardSubtitle,
   IonCardTitle,
   IonContent,
   IonFooter,
-  IonGrid,
   IonHeader,
   IonIcon,
   IonInput,
-  IonItem,
-  IonLabel,
-  IonList,
-  IonNote,
-  IonRow,
-  IonSegment,
-  IonSegmentButton,
   IonSelect,
   IonSelectOption,
-  IonText,
   IonTitle,
   IonToggle,
   IonToolbar,
 } from '@ionic/angular/standalone'
+import { saveOutline, trashOutline } from 'ionicons/icons'
 
-import { SourceType } from '@backend-api/data.model'
+import { addIcons } from 'ionicons'
 import { toSignal } from '@angular/core/rxjs-interop'
 
 export enum AddEditPageSourceType {
@@ -57,6 +48,7 @@ export enum AddEditPageSourceType {
     IonToolbar,
     IonCardContent,
     IonCard,
+    IonIcon,
     IonCardHeader,
     IonCardTitle,
     IonContent,
@@ -69,7 +61,8 @@ export enum AddEditPageSourceType {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AddEditPage {
-  protected sourceTypeControl = new FormControl<AddEditPageSourceType | undefined>(undefined, Validators.required)
+  protected sourceType = new FormControl<AddEditPageSourceType | undefined>(undefined, Validators.required)
+  // This is either the url of the source or the spotify search query.
   protected sourceUrl = new FormControl<string | undefined>(undefined, Validators.required)
 
   protected category = new FormControl<CategoryType>('audiobook', Validators.required)
@@ -82,19 +75,33 @@ export class AddEditPage {
 
   protected shuffle = new FormControl<boolean>(false)
   protected interval = new FormControl<boolean>(false)
+  protected intervalStart = new FormControl<number | undefined>(undefined)
+  protected intervalEnd = new FormControl<number | undefined>(undefined)
 
   // If the source is Spotify (not Spotify query), we allow the folder name and cover image
   // to be automatically deduced. In that case, we want to simplify the UI by hiding the (optional)
   // overrriding inputs for folder name and image behind a toggle.
-  protected allowAutomaticFolderNameAndImage = computed(() => this.sourceType() === AddEditPageSourceType.SpotifyUrl)
+  protected allowAutomaticFolderNameAndImage = computed(
+    () => this.sourceTypeSignal() === AddEditPageSourceType.SpotifyUrl,
+  )
 
-  protected automaticFolderNameAndImage = model(true)
+  // We only allow setting the default shuffle toggle for spotify data sources and non-audiobook
+  // categories (since it doesn't make sense to shuffle audiobook tracks).
+  protected showShuffleToggle = computed(() => {
+    return (
+      (this.sourceTypeSignal() === 'spotifyURL' || this.sourceTypeSignal() === 'spotifySearch') &&
+      (this.categorySignal() === 'music' || this.categorySignal() === 'other')
+    )
+  })
 
-  protected sourceType = toSignal(this.sourceTypeControl.valueChanges)
+  protected useAutomaticFolderNameAndImage = model(true)
+
+  protected sourceTypeSignal = toSignal(this.sourceType.valueChanges)
+  protected categorySignal = toSignal(this.category.valueChanges)
   protected intervalSignal = toSignal(this.interval.valueChanges)
 
   protected formGroup = new FormGroup({
-    sourceType: this.sourceTypeControl,
+    sourceType: this.sourceType,
     sourceUrl: this.sourceUrl,
     category: this.category,
     sorting: this.sorting,
@@ -104,5 +111,28 @@ export class AddEditPage {
     coverImageUrl: this.coverImageUrl,
     shuffle: this.shuffle,
     interval: this.interval,
+    intervalStart: this.intervalStart,
+    intervalEnd: this.intervalEnd,
   })
+
+  public constructor() {
+    addIcons({ saveOutline, trashOutline })
+
+    effect(() => {
+      this.setFormControlRequired(this.intervalStart, this.intervalSignal())
+      this.setFormControlRequired(this.intervalEnd, this.intervalSignal())
+    })
+    effect(() => {
+      this.setFormControlRequired(this.title, this.sourceTypeSignal() === 'streamURL')
+    })
+  }
+
+  private setFormControlRequired(control: FormControl, required: boolean): void {
+    if (required) {
+      control.setValidators([Validators.required])
+    } else {
+      control.clearValidators()
+    }
+    control.updateValueAndValidity()
+  }
 }

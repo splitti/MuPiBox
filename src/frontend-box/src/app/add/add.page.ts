@@ -579,15 +579,15 @@ export class AddPage implements OnInit, AfterViewInit {
 
   async validateSpotify(media: Media): Promise<boolean> {
     let validationResult: Promise<boolean> = Promise.resolve(false)
-    if (media.playlistid) {
-      validationResult = this.spotifyService.validateSpotify(media.playlistid, 'playlist')
-    } else if (media.artistid) {
-      validationResult = this.spotifyService.validateSpotify(media.artistid, 'artist')
-    } else if (media.id) {
-      validationResult = this.spotifyService.validateSpotify(media.id, 'album')
-    } else if (media.showid) {
-      validationResult = this.spotifyService.validateSpotify(media.showid, 'show')
-    }
+    // if (media.playlistid) {
+    //   validationResult = this.spotifyService.validateSpotify(media.playlistid, 'playlist')
+    // } else if (media.artistid) {
+    //   validationResult = this.spotifyService.validateSpotify(media.artistid, 'artist')
+    // } else if (media.id) {
+    //   validationResult = this.spotifyService.validateSpotify(media.id, 'album')
+    // } else if (media.showid) {
+    //   validationResult = this.spotifyService.validateSpotify(media.showid, 'show')
+    // }
 
     const timeout: Promise<boolean> = new Promise((resolve) => setTimeout(() => resolve(false), 30000))
 

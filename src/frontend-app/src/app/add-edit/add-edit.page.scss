@@ -11,13 +11,24 @@ ion-toggle {
     color: var(--ion-text-color-step-550);
 }
 
-.mupi-input-outline {
-    border: 1px solid var(--ion-background-color-step-300);
-    border-radius: 4px;
-    padding: 4px 16px 4px 16px;
+.mupi-input {
     margin-bottom: 1em;
 
+    .mupi-input-outline {
+        border: 1px solid var(--ion-background-color-step-300);
+        border-radius: 4px;
+        padding: 4px 16px 4px 16px;
+    }
     &:hover {
-        border-color: var(--ion-background-color-step-750);
+        .mupi-input-outline {
+            border-color: var(--ion-background-color-step-750);
+        }
+    }
+
+    .mupi-input-help-text {
+        font-size: 0.75rem;
+        padding-left: 16px;
+        padding-top: 5px;
     }
 }
+
