@@ -127,6 +127,18 @@ export class AddEditPage {
     })
   }
 
+  /**
+   * TODO
+   */
+  protected toggleUseAutomaticFolderNameAndImage(): void {
+    this.useAutomaticFolderNameAndImage.update((val) => !val)
+  }
+
+  /**
+   * TODO
+   * @param control
+   * @param required
+   */
   private setFormControlRequired(control: FormControl, required: boolean): void {
     if (required) {
       control.setValidators([Validators.required])
