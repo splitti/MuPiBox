@@ -1,5 +1,6 @@
+import { ActivatedRoute, Router } from '@angular/router'
 import { CategoryType, Sorting } from '@backend-api/folder.model'
-import { ChangeDetectionStrategy, Component, computed, effect, model } from '@angular/core'
+import { ChangeDetectionStrategy, Component, computed, effect, inject, model, signal } from '@angular/core'
 import { FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms'
 import {
   IonBackButton,
@@ -14,12 +15,14 @@ import {
   IonHeader,
   IonIcon,
   IonInput,
+  IonNote,
   IonSelect,
   IonSelectOption,
   IonTitle,
   IonToggle,
   IonToolbar,
 } from '@ionic/angular/standalone'
+import { Observable, of } from 'rxjs'
 import { saveOutline, trashOutline } from 'ionicons/icons'
 
 import { addIcons } from 'ionicons'
@@ -37,6 +40,7 @@ export enum AddEditPageSourceType {
   templateUrl: 'add-edit.page.html',
   styleUrls: ['add-edit.page.scss'],
   imports: [
+    IonNote,
     IonToggle,
     IonInput,
     IonButton,
@@ -63,7 +67,11 @@ export enum AddEditPageSourceType {
 export class AddEditPage {
   protected sourceType = new FormControl<AddEditPageSourceType | undefined>(undefined, Validators.required)
   // This is either the url of the source or the spotify search query.
-  protected sourceUrl = new FormControl<string | undefined>(undefined, Validators.required)
+  protected sourceUrl = new FormControl<string | undefined>(undefined, {
+    validators: Validators.required,
+    asyncValidators: this.validateSourceUrl,
+    updateOn: 'blur',
+  })
 
   protected category = new FormControl<CategoryType>('audiobook', Validators.required)
   protected folderName = new FormControl<string>('', Validators.required)
@@ -115,6 +123,10 @@ export class AddEditPage {
     intervalEnd: this.intervalEnd,
   })
 
+  protected isEditing = computed(() => this.editDataId() !== null)
+  private editDataId = signal<number | null>(null)
+  private readonly route = inject(ActivatedRoute)
+
   public constructor() {
     addIcons({ saveOutline, trashOutline })
 
@@ -125,6 +137,11 @@ export class AddEditPage {
     effect(() => {
       this.setFormControlRequired(this.title, this.sourceTypeSignal() === 'streamURL')
     })
+
+    // Check if we are editing.
+    if (this.route.snapshot.url.length > 1) {
+      this.editDataId.set(1)
+    }
   }
 
   /**
@@ -146,5 +163,30 @@ export class AddEditPage {
       control.clearValidators()
     }
     control.updateValueAndValidity()
+  }
+
+  /**
+   * TODO
+   * @param control T
+   * @returns
+   */
+  private validateSourceUrl(): Observable<{ [key: string]: any } | null> {
+    // If there is no value yet or if the source type is not a spotify url, we just accept it
+    // as valid.
+    if (!this.sourceUrl.value || this.sourceType.value !== AddEditPageSourceType.SpotifyUrl) {
+      return of(null)
+    }
+
+    // return this.http.get(`/api/validate?value=${control.value}`).pipe(
+    //   map((response: any) => {
+    //     return response.isValid ? null : { invalidApiValue: true }
+    //   }),
+    //   catchError(() => of({ invalidApiValue: true })),
+    // )
+  }
+
+  private create(): void {
+    // TODO: Handle m3u stuff?
+    // TODO:
   }
 }

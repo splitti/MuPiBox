@@ -1,6 +1,6 @@
 import { Folder, FolderWithChildren } from './models/folder.model'
 import { addRssImageInformation, getRssMedia } from './sources/rss'
-import { addSpotifyImageInformation, addSpotifyTitleInformation, getSpotifyMedia, spotifyApi } from './sources/spotify'
+import { addSpotifyImageInformation, addSpotifyTitleInformation, getSpotifyMedia } from './sources/spotify'
 
 import { Data } from './models/data.model'
 import { Network } from './models/network.model'
@@ -10,10 +10,8 @@ import { environment } from './environment'
 import express from 'express'
 import fs from 'node:fs'
 import jsonfile from 'jsonfile'
-import ky from 'ky'
 import path from 'node:path'
 import { readJsonFile } from './utils'
-import xmlparser from 'xml-js'
 
 const serverName = 'mupibox-backend-api'
 
@@ -29,8 +27,6 @@ readJsonFile(`${configBasePath}/config.json`).then((configFile) => {
 })
 const dataFile = `${configBasePath}/data.json`
 const resumeFile = `${configBasePath}/resume.json`
-const activedataFile = `${configBasePath}/active_data.json`
-const activeresumeFile = `${configBasePath}/active_resume.json`
 const networkFile = `${configBasePath}/network.json`
 const wlanFile = `${configBasePath}/wlan.json`
 const monitorFile = `${configBasePath}/monitor.json`
@@ -143,6 +139,7 @@ app.get('/api/folders', async (_req, res) => {
     res.json([])
   }
 })
+
 app.get('/api/media/:category/:folder', async (req, res) => {
   try {
     const data: Data[] = await readJsonFile(dataFile)
@@ -163,9 +160,12 @@ app.get('/api/media/:category/:folder', async (req, res) => {
         return getSpotifyMedia(entry)
       }
       if (entry.type === 'radio') {
+        // We replace https with https for now since mplayer is way slower
+        // with https streams. We should fix this in the future.
+        const streamUrl = entry.id.replace('https://', 'http://')
         return Promise.resolve({
           type: 'radio',
-          url: entry.id,
+          url: streamUrl,
           name: entry.title,
           category: entry.category,
           folderName: entry.artist,
@@ -256,19 +256,7 @@ app.get('/api/data', async (_req, res) => {
   }
 })
 
-app.get('/api/activedata', (req, res) => {
-  if (fs.existsSync(activedataFile)) {
-    jsonfile.readFile(activedataFile, (error, data) => {
-      if (error) {
-        console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error /api/data read active_data.json`)
-        console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] ${error}`)
-        res.json([])
-      } else {
-        res.json(data)
-      }
-    })
-  }
-})
+app.get('/api/validate', (req, res) => {})
 
 app.get('/api/resume', (req, res) => {
   if (fs.existsSync(resumeFile)) {
@@ -291,20 +279,6 @@ app.get('/api/mupihat', (req, res) => {
     jsonfile.readFile(mupihat, (error, data) => {
       if (error) {
         console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error /api/mupihat read mupihat.json`)
-        console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] ${error}`)
-        res.json([])
-      } else {
-        res.json(data)
-      }
-    })
-  }
-})
-
-app.get('/api/activeresume', (req, res) => {
-  if (fs.existsSync(activeresumeFile)) {
-    jsonfile.readFile(activeresumeFile, (error, data) => {
-      if (error) {
-        console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error /api/activeresume read active_resume.json`)
         console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] ${error}`)
         res.json([])
       } else {
@@ -577,18 +551,6 @@ app.post('/api/editresume', (req, res) => {
   } catch (err) {
     console.error(err)
   }
-})
-
-app.get('/api/token', (req, res) => {
-  if (spotifyApi === undefined) {
-    res.status(500).send('Could not intialize Spotify API.')
-    return
-  }
-  if (spotifyApi.getAccessToken() === undefined) {
-    res.status(500).send('Spotify access token not set yet.')
-    return
-  }
-  res.status(200).send(spotifyApi.getAccessToken())
 })
 
 app.get('/api/sonos', (req, res) => {

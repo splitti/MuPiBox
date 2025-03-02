@@ -85,11 +85,14 @@ export const addRssImageInformation = async (data: Data[]): Promise<void> => {
 export const getRssMedia = async (data: RssData): Promise<RssMedia[] | undefined> => {
   const feed = await getRssFeed(data.id)
   return feed?.rss?.channel?.item?.map((item) => {
+    // We replace https with https for now since mplayer is way slower
+    // with https streams. We should fix this in the future.
+    const rssUrl = (item.enclosure?._attributes?.url ?? '').replace('https://', 'http://')
     return {
       type: 'rss',
       name: handleCData(item?.title) ?? 'No title',
       img: item['itunes:image']?._attributes?.href ?? '',
-      url: item.enclosure?._attributes?.url ?? '',
+      url: rssUrl,
       releaseDate: handleCData(item?.pubDate) ?? '',
       // We discard the channel title: handleCData(feed?.rss?.channel?.title) ?? ''
       // We do this since this folderName is shown on top on the player page and

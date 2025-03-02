@@ -3,14 +3,15 @@
         <ion-buttons slot="start">
             <ion-back-button defaultHref="/"></ion-back-button>
         </ion-buttons>
-      <ion-title>Create/Edit/TODO entry</ion-title>
-      <!-- TODO: Only show delete when editing -->
-      <ion-buttons slot="end">
-        <ion-button fill="outline">
-            <ion-icon slot="start" name="trash-outline"></ion-icon>
-            Delete
-        </ion-button>
-    </ion-buttons>
+      <ion-title>{{ isEditing() ? "Edit" : "Create" }}</ion-title>
+      @if (isEditing()) {
+        <ion-buttons slot="end">
+            <ion-button fill="outline">
+                <ion-icon slot="start" name="trash-outline"></ion-icon>
+                Delete
+            </ion-button>
+        </ion-buttons>
+      }
     </ion-toolbar>
 </ion-header>
 <ion-content>
@@ -31,6 +32,11 @@
             <ion-input fill="outline" [helperText]="sourceTypeSignal() === 'spotifySearch' ? 'Spotify search query.' : 'URL of the source.'" formControlName="sourceUrl">
                 <div slot="label">{{ sourceTypeSignal() !== 'spotifySearch' ? 'Source URL' : 'Search query' }} <span class="mupi-required">(required)</span></div>
             </ion-input>
+            @if (sourceUrl.hasError('invalidApiValue')) {
+                <ion-note color="danger">
+                    Invalid URL. Please provide a valid Spotify URL.
+                </ion-note>
+            }
         </ion-card-content>
     </ion-card>
     @if (sourceTypeSignal() !== undefined) {
@@ -130,7 +136,7 @@
         <ion-buttons slot="primary">
             <ion-button fill="solid" [disabled]="formGroup.invalid">
                 <ion-icon slot="start" name="save-outline"></ion-icon>
-                Save
+                {{ isEditing() ? 'Save' : 'Create' }}
             </ion-button>
         </ion-buttons>
         <ion-buttons slot="secondary">
