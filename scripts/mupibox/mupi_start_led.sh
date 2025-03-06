@@ -26,7 +26,7 @@ wled_brightness_dim=$(/usr/bin/jq -r .wled.brightness_dimmed ${MUPIBOX_CONFIG})
 
 # WLED
 wled_active=$(/usr/bin/jq -r .wled.active ${MUPIBOX_CONFIG})
-if [ ${wled_active} ]; then
+if [ ${wled_active} = true ]; then
 	pid=$(pidof /usr/lib/chromium-browser/chromium-browser)
 	while [ -z "${pid}" ]; do
 		pid=$(pidof /usr/lib/chromium-browser/chromium-browser)
@@ -44,14 +44,14 @@ while true; do
 	displayState=$(vcgencmd display_power | grep -o '.$')
 	wled_active=$(/usr/bin/jq -r .wled.active ${MUPIBOX_CONFIG})
 	if [ ${displayState} -eq 1 ] && [ ${OLD_STATE} -ne ${displayState} ]; then
-		if [ ${wled_active} ]; then
+		if [ ${wled_active} = true ]; then
 			wled_data='{"bri":'${wled_brightness_def}'}'
 			/usr/bin/python3 /usr/local/bin/mupibox/wled_send_data.py -s ${wled_com_port} -b ${wled_baud_rate} -j ${wled_data}
 		fi
 		/usr/bin/cat <<<$(/usr/bin/jq '.led_dim_mode = 1' ${TMP_LEDFILE}) >${TMP_LEDFILE}
 		OLD_STATE=${displayState}
 	elif [ ${displayState} -eq 0 ] && [ ${OLD_STATE} -ne ${displayState} ]; then
-		if [ ${wled_active} ]; then
+		if [ ${wled_active} = true ]; then
 			wled_data='{"bri":'${wled_brightness_dim}'}'
 			/usr/bin/python3 /usr/local/bin/mupibox/wled_send_data.py -s ${wled_com_port} -b ${wled_baud_rate} -j ${wled_data}
 		fi
