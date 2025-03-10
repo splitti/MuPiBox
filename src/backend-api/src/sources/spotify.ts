@@ -14,6 +14,7 @@ import { chunks, readJsonFile } from '../utils'
 import SpotifyWebApi from 'spotify-web-api-node'
 import { environment } from '../environment'
 import { SpotifyAlbumMedia, SpotifyEpisodeMedia, SpotifyMedia, SpotifyPlaylistMedia } from 'src/models/media.model'
+import { SpotifyUrlData } from 'src/models/spotify-url-data.model'
 
 let configBasePath = './server/config' // TODO: Fix for production.
 if (!environment.production) {
@@ -426,4 +427,32 @@ export const getSpotifyMedia = async (data: SpotifyData): Promise<SpotifyMedia[]
   return []
 }
 
-// export const validateSpotifyUrl
+export const validateSpotifyUrlData = async (data: SpotifyUrlData): boolean => {
+  let promise
+  switch (data.type) {
+    case 'album': {
+      promise = spotifyApi?.getAlbum(data.id)
+      break
+    }
+    case 'artist': {
+      promise = spotifyApi?.getArtist(data.id)
+      break
+    }
+    case 'playlist': {
+      promise = spotifyApi?.getPlaylist(data.id)
+      break
+    }
+    case 'show': {
+      promise = spotifyApi?.getShow(data.id)
+      break
+    }
+    default:
+      return false
+  }
+  try {
+    await promise
+    return true
+  } catch (error) {
+    return false
+  }
+}

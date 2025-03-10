@@ -1,10 +1,17 @@
 import { Folder, FolderWithChildren } from './models/folder.model'
+import { Request, Response } from 'express'
 import { addRssImageInformation, getRssMedia } from './sources/rss'
-import { addSpotifyImageInformation, addSpotifyTitleInformation, getSpotifyMedia } from './sources/spotify'
+import {
+  addSpotifyImageInformation,
+  addSpotifyTitleInformation,
+  getSpotifyMedia,
+  validateSpotifyUrlData,
+} from './sources/spotify'
 
 import { Data } from './models/data.model'
 import { Network } from './models/network.model'
 import { ServerConfig } from './models/server.model'
+import { SpotifyUrlData } from './models/spotify-url-data.model'
 import cors from 'cors'
 import { environment } from './environment'
 import express from 'express'
@@ -256,7 +263,19 @@ app.get('/api/data', async (_req, res) => {
   }
 })
 
-app.get('/api/validate', (req, res) => {})
+app.post('/api/validate-spotify', async (req: Request, res: Response) => {
+  const spotifyUrlData: SpotifyUrlData = req.body
+  if (!spotifyUrlData || !spotifyUrlData.type || !spotifyUrlData.id) {
+    res.status(400).json({ error: 'Invalid Spotify URL.' })
+    return
+  }
+
+  const isValid = await validateSpotifyUrlData(spotifyUrlData)
+  if (isValid) {
+    res.status(200).json({ message: 'Spotify URL is valid.' })
+  }
+  res.status(400).json({ error: 'Invalid Spotify URL.' })
+})
 
 app.get('/api/resume', (req, res) => {
   if (fs.existsSync(resumeFile)) {

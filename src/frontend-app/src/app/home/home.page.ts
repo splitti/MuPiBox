@@ -5,12 +5,13 @@ import { IonButton, IonButtons, IonContent, IonHeader, IonIcon, IonTitle, IonToo
 import { Router } from '@angular/router'
 import { add } from 'ionicons/icons'
 import { addIcons } from 'ionicons'
+import { RouterLinkWithHref } from '@angular/router';
 
 @Component({
   selector: 'mupiapp-home',
   templateUrl: 'home.page.html',
   styleUrls: ['home.page.scss'],
-  imports: [IonButton, IonTitle, IonButtons, IonToolbar, IonHeader, DataListComponent, IonContent, IonIcon],
+  imports: [IonButton, IonTitle, IonButtons, IonToolbar, IonHeader, DataListComponent, IonContent, IonIcon, RouterLinkWithHref],
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

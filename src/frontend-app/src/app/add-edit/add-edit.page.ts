@@ -1,4 +1,3 @@
-import { ActivatedRoute, Router } from '@angular/router'
 import { CategoryType, Sorting } from '@backend-api/folder.model'
 import { ChangeDetectionStrategy, Component, computed, effect, inject, model, signal } from '@angular/core'
 import { FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms'
@@ -22,9 +21,13 @@ import {
   IonToggle,
   IonToolbar,
 } from '@ionic/angular/standalone'
-import { Observable, of } from 'rxjs'
+import { Observable, catchError, map, of } from 'rxjs'
 import { saveOutline, trashOutline } from 'ionicons/icons'
 
+import { ActivatedRoute } from '@angular/router'
+import { DataService } from '../services/data.service'
+import { RssData } from '@backend-api/data.model'
+import { SpotifyUrlData } from '@backend-api/spotify-url-data.model'
 import { addIcons } from 'ionicons'
 import { toSignal } from '@angular/core/rxjs-interop'
 
@@ -74,12 +77,12 @@ export class AddEditPage {
   })
 
   protected category = new FormControl<CategoryType>('audiobook', Validators.required)
-  protected folderName = new FormControl<string>('', Validators.required)
-  protected folderImageUrl = new FormControl<string>('')
+  protected folderName = new FormControl<string | undefined>(undefined, Validators.required)
+  protected folderImageUrl = new FormControl<string | undefined>(undefined)
   protected sorting = new FormControl<Sorting>(Sorting.AlphabeticalAscending, Validators.required)
 
-  protected title = new FormControl<string>('', Validators.required)
-  protected coverImageUrl = new FormControl<string>('')
+  protected title = new FormControl<string | undefined>(undefined, Validators.required)
+  protected coverImageUrl = new FormControl<string | undefined>(undefined)
 
   protected shuffle = new FormControl<boolean>(false)
   protected interval = new FormControl<boolean>(false)
@@ -126,6 +129,7 @@ export class AddEditPage {
   protected isEditing = computed(() => this.editDataId() !== null)
   private editDataId = signal<number | null>(null)
   private readonly route = inject(ActivatedRoute)
+  private readonly dataService = inject(DataService)
 
   public constructor() {
     addIcons({ saveOutline, trashOutline })
@@ -136,6 +140,10 @@ export class AddEditPage {
     })
     effect(() => {
       this.setFormControlRequired(this.title, this.sourceTypeSignal() === 'streamURL')
+    })
+    effect(() => {
+      console.log("bla")
+      this.setFormControlRequired(this.folderName, !this.allowAutomaticFolderNameAndImage())
     })
 
     // Check if we are editing.
@@ -173,20 +181,62 @@ export class AddEditPage {
   private validateSourceUrl(): Observable<{ [key: string]: any } | null> {
     // If there is no value yet or if the source type is not a spotify url, we just accept it
     // as valid.
+    console.log(this.sourceUrl)
     if (!this.sourceUrl.value || this.sourceType.value !== AddEditPageSourceType.SpotifyUrl) {
       return of(null)
     }
-
-    // return this.http.get(`/api/validate?value=${control.value}`).pipe(
-    //   map((response: any) => {
-    //     return response.isValid ? null : { invalidApiValue: true }
-    //   }),
-    //   catchError(() => of({ invalidApiValue: true })),
-    // )
+    this.dataService.validateSpotify(this.extractSpotifyUrlData(this.sourceUrl.value)).pipe(
+      map((isValid: boolean) => {
+        return isValid ? null : { invalidApiValue: true }
+      }),
+      catchError(() => of({ invalidApiValue: true })),
+    )
   }
 
   private create(): void {
+    if (this.formGroup.invalid) {
+      return
+    }
+    switch (this.sourceType.value) {
+      case AddEditPageSourceType.SpotifyUrl:
+        // this.createSpotify()
+        break
+      case AddEditPageSourceType.SpotifySearch:
+        // this.createSpotifySearch()
+        break
+      case AddEditPageSourceType.RssUrl:
+        const rssData: RssData = {
+          type: 'rss',
+          category: this.category.value,
+          artist: this.folderName.value,
+          artistcover: this.folderImageUrl.value,
+          title: this.title.value,
+          cover: this.coverImageUrl.value,
+          aPartOfAll: this.interval.value,
+          aPartOfAllMin: this.interval.value ? this.intervalStart.value : undefined,
+          aPartOfAllMax: this.interval.value ? this.intervalEnd.value : undefined,
+          sorting: this.sorting.value,
+          id: this.sourceUrl.value,
+        }
+        // this.dataService.createData(rssData)
+        break
+      case AddEditPageSourceType.StreamUrl:
+        // this.createStream()
+        break
+    }
     // TODO: Handle m3u stuff?
     // TODO:
+  }
+
+  private extractSpotifyUrlData(url: string): SpotifyUrlData | null {
+    const regex = '^https://open.spotify.com/.*(playlist|show|album|artist)/([a-zA-Z0-9]+)(.*)$'
+    const match = url.match(regex)
+    if (!match) {
+      return null
+    }
+    return {
+      type: match[1] as SpotifyUrlData['type'],
+      id: match[2],
+    }
   }
 }
