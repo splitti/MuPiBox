@@ -1,6 +1,6 @@
+import { AsyncValidatorFn, FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms'
 import { CategoryType, Sorting } from '@backend-api/folder.model'
 import { ChangeDetectionStrategy, Component, computed, effect, inject, model, signal } from '@angular/core'
-import { FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms'
 import {
   IonBackButton,
   IonButton,
@@ -72,8 +72,6 @@ export class AddEditPage {
   // This is either the url of the source or the spotify search query.
   protected sourceUrl = new FormControl<string | undefined>(undefined, {
     validators: Validators.required,
-    asyncValidators: this.validateSourceUrl,
-    updateOn: 'blur',
   })
 
   protected category = new FormControl<CategoryType>('audiobook', Validators.required)
@@ -142,8 +140,14 @@ export class AddEditPage {
       this.setFormControlRequired(this.title, this.sourceTypeSignal() === 'streamURL')
     })
     effect(() => {
-      console.log("bla")
       this.setFormControlRequired(this.folderName, !this.allowAutomaticFolderNameAndImage())
+    })
+    effect(() => {
+      if (this.sourceTypeSignal() === AddEditPageSourceType.SpotifyUrl) {
+        console.log('vla')
+        this.sourceUrl.setAsyncValidators([this.getSourceUrlValidator()])
+      } else [this.sourceUrl.clearAsyncValidators()]
+      this.sourceUrl.updateValueAndValidity()
     })
 
     // Check if we are editing.
@@ -178,19 +182,18 @@ export class AddEditPage {
    * @param control T
    * @returns
    */
-  private validateSourceUrl(): Observable<{ [key: string]: any } | null> {
-    // If there is no value yet or if the source type is not a spotify url, we just accept it
-    // as valid.
-    console.log(this.sourceUrl)
-    if (!this.sourceUrl.value || this.sourceType.value !== AddEditPageSourceType.SpotifyUrl) {
-      return of(null)
+  private getSourceUrlValidator(): AsyncValidatorFn {
+    return (control: FormControl): Observable<{ [key: string]: any } | null> => {
+      if (!control.value) {
+        return of(null)
+      }
+      return this.dataService.validateSpotify(this.extractSpotifyUrlData(control.value)).pipe(
+        map((isValid: boolean) => {
+          return isValid ? null : { invalidApiValue: true }
+        }),
+        catchError(() => of({ invalidApiValue: true })),
+      )
     }
-    this.dataService.validateSpotify(this.extractSpotifyUrlData(this.sourceUrl.value)).pipe(
-      map((isValid: boolean) => {
-        return isValid ? null : { invalidApiValue: true }
-      }),
-      catchError(() => of({ invalidApiValue: true })),
-    )
   }
 
   private create(): void {
@@ -204,7 +207,7 @@ export class AddEditPage {
       case AddEditPageSourceType.SpotifySearch:
         // this.createSpotifySearch()
         break
-      case AddEditPageSourceType.RssUrl:
+      case AddEditPageSourceType.RssUrl: {
         const rssData: RssData = {
           type: 'rss',
           category: this.category.value,
@@ -220,6 +223,7 @@ export class AddEditPage {
         }
         // this.dataService.createData(rssData)
         break
+      }
       case AddEditPageSourceType.StreamUrl:
         // this.createStream()
         break

@@ -29,13 +29,18 @@
                 <ion-select-option value="rssURL">RSS/Podcast URL</ion-select-option>
                 <ion-select-option value="streamURL">Stream/Radio URL</ion-select-option>
             </ion-select>
-            <ion-input fill="outline" [helperText]="sourceTypeSignal() === 'spotifySearch' ? 'Spotify search query.' : 'URL of the source.'" formControlName="sourceUrl">
+            <ion-input fill="outline" formControlName="sourceUrl">
                 <div slot="label">{{ sourceTypeSignal() !== 'spotifySearch' ? 'Source URL' : 'Search query' }} <span class="mupi-required">(required)</span></div>
             </ion-input>
+            <div class="mupi-input-help-text">
+                {{ sourceTypeSignal() === 'spotifySearch' ? 'Spotify search query.' : 'URL of the source.' }}
+            </div>
             @if (sourceUrl.hasError('invalidApiValue')) {
-                <ion-note color="danger">
-                    Invalid URL. Please provide a valid Spotify URL.
-                </ion-note>
+                <div class="mupi-input-help-text">
+                    <ion-note color="danger">
+                        Invalid URL. Please provide a valid Spotify URL. It should start with "https://open.spotify.com/" and contain "playlist/", "artist/", "album/" or "show/".'
+                    </ion-note>
+                </div>
             }
         </ion-card-content>
     </ion-card>
