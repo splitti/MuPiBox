@@ -25,7 +25,9 @@ export class DataService {
   }
 
   // public deleteData
-  // public createData
+  public createData(newData: Data): Observable<Data> {
+    return this.httpClient.post<Data>(`${this.endpoint}/data`, newData)
+  }
   // public clearResumeData
 
   /**

@@ -35,7 +35,7 @@
             <div class="mupi-input-help-text">
                 {{ sourceTypeSignal() === 'spotifySearch' ? 'Spotify search query.' : 'URL of the source.' }}
             </div>
-            @if (sourceUrl.hasError('invalidApiValue')) {
+            @if (sourceUrl.hasError('invalidSpotifyUrl')) {
                 <div class="mupi-input-help-text">
                     <ion-note color="danger">
                         Invalid URL. Please provide a valid Spotify URL. It should start with "https://open.spotify.com/" and contain "playlist/", "artist/", "album/" or "show/".'
@@ -69,6 +69,7 @@
                 }
                 @if (!allowAutomaticFolderNameAndImage() || (allowAutomaticFolderNameAndImage() && !useAutomaticFolderNameAndImage())) {
                     <ion-input fill="outline" helperText="Name of the folder containing this data entry. This is used on the top level of the MupiBox interface." formControlName="folderName">
+                        <!-- TODO: IT should not always show required -->
                         <div slot="label">Folder name <span class="mupi-required">(required)</span></div>
                     </ion-input>
                     <ion-input fill="outline" helperText="Optional URL of an image that should be used for the folder containing this data entry. This is shown on the top level of the MupiBox interface. Some source types can automatically retrieve this image URL. Providing a value here overrides these automatically retrieved image." formControlName="folderImageUrl">

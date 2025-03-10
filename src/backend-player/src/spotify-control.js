@@ -72,7 +72,7 @@ let apiAccessToken = {
 
 let librespotAccessToken = {
   accessToken: null,
-  expires: Date.now()
+  expires: Date.now(),
 }
 
 player.on('percent_pos', (val) => {
@@ -1201,7 +1201,7 @@ app.get('/local', (req, res) => {
 app.get('/spotify/token', (req, res) => {
   const accessTokenData = credentials ? librespotAccessToken : apiAccessToken
 
-  if (accessTokenData.accessToken !== null && accessTokenData.expires < Date.now() ) {
+  if (accessTokenData.accessToken !== null && accessTokenData.expires < Date.now()) {
     res.send(accessTokenData.accessToken)
   } else {
     refreshToken()
@@ -1284,6 +1284,7 @@ app.use((req, res) => {
   else if (command.name === 'shuffleon') shuffleon()
   else if (command.name === 'shuffleoff') shuffleoff()
   else if (command.name === 'shutoff') cmdCall('sudo su - -c "/usr/local/bin/mupibox/./shutdown.sh &"')
+  // TODO: Create new endpoint for this.
   else if (command.name === 'clearresume') cmdCall('sudo bash /usr/local/bin/mupibox/clearresume.sh')
   else if (command.name === 'maxresume') cmdCall('sudo bash /usr/local/bin/mupibox/remove_max_resume.sh')
   else if (command.name === 'networkrestart') cmdCall('sudo service ifup@wlan0 stop && sudo service ifup@wlan0 start')

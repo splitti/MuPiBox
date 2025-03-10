@@ -263,6 +263,41 @@ app.get('/api/data', async (_req, res) => {
   }
 })
 
+// Allow creating new data.
+app.post('/api/data', async (req, res) => {
+  try {
+    // There might be a data lock. If so, we retry 5 times to reduce errors for the user.
+    // In the future, we want to get rid of this lock if possible.
+    for (let i = 0; i < 5; ++i) {
+      if (!fs.existsSync(dataLock)) {
+        break
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+    }
+    // The lock is still there :(
+    if (fs.existsSync(dataLock)) {
+      console.log(`${nowDate.toLocaleString()}: [${serverName}] /api/data data.json is locked`)
+      res.status(503).send('Data file is locked. Try again later.')
+      return
+    }
+
+    fs.openSync(dataLock, 'w')
+    const data: Data[] = await readJsonFile(dataFile)
+    data.push(req.body)
+    jsonfile.writeFile(dataFile, data, { spaces: 4 }, (error) => {
+      if (error) throw error
+      res.status(201).send(req.body)
+    })
+    fs.unlink(dataLock, (err) => {
+      if (err) throw err
+      console.log(`${nowDate.toLocaleString()}: [${serverName}] /api/data - data.json unlocked, locked file deleted!`)
+    })
+  } catch (error) {
+    console.error(`${nowDate.toLocaleString()}: [${serverName}] ${error}`)
+    res.status(500).send('Could not add entry to the data file.')
+  }
+})
+
 app.post('/api/validate-spotify', async (req: Request, res: Response) => {
   const spotifyUrlData: SpotifyUrlData = req.body
   if (!spotifyUrlData || !spotifyUrlData.type || !spotifyUrlData.id) {
@@ -273,8 +308,9 @@ app.post('/api/validate-spotify', async (req: Request, res: Response) => {
   const isValid = await validateSpotifyUrlData(spotifyUrlData)
   if (isValid) {
     res.status(200).json({ message: 'Spotify URL is valid.' })
+  } else {
+    res.status(400).json({ error: 'Invalid Spotify URL.' })
   }
-  res.status(400).json({ error: 'Invalid Spotify URL.' })
 })
 
 app.get('/api/resume', (req, res) => {
@@ -381,37 +417,6 @@ app.post('/api/addwlan', (req, res) => {
       res.status(200).send('ok')
     })
   })
-})
-
-app.post('/api/add', (req, res) => {
-  try {
-    if (fs.existsSync(dataLock)) {
-      console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] /api/add data.json is locked`)
-      res.status(200).send('locked')
-    } else {
-      fs.openSync(dataLock, 'w')
-      jsonfile.readFile(dataFile, (error, data) => {
-        if (error) {
-          console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error /api/add read data.json`)
-          console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] ${error}`)
-          res.status(200).send('error')
-        } else {
-          data.push(req.body)
-
-          jsonfile.writeFile(dataFile, data, { spaces: 4 }, (error) => {
-            if (error) throw error
-            res.status(200).send('ok')
-          })
-        }
-      })
-      fs.unlink(dataLock, (err) => {
-        if (err) throw err
-        console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] /api/add - data.json unlocked, locked file deleted!`)
-      })
-    }
-  } catch (err) {
-    console.error(err)
-  }
 })
 
 app.post('/api/addresume', (req, res) => {

@@ -189,9 +189,9 @@ export class AddEditPage {
       }
       return this.dataService.validateSpotify(this.extractSpotifyUrlData(control.value)).pipe(
         map((isValid: boolean) => {
-          return isValid ? null : { invalidApiValue: true }
+          return isValid ? null : { invalidSpotifyUrl: true }
         }),
-        catchError(() => of({ invalidApiValue: true })),
+        catchError(() => of({ invalidSpotifyUrl: true })),
       )
     }
   }
@@ -221,7 +221,7 @@ export class AddEditPage {
           sorting: this.sorting.value,
           id: this.sourceUrl.value,
         }
-        // this.dataService.createData(rssData)
+        this.dataService.createData(rssData)
         break
       }
       case AddEditPageSourceType.StreamUrl:
