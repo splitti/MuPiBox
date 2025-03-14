@@ -1,6 +1,6 @@
 import socket
 
-def internet(host="1.1.1.1", port=53, timeout=10):
+def internet(host="1.1.1.1", port=443, timeout=10):
     try:
         socket.setdefaulttimeout(timeout)
         socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect((host, port))
