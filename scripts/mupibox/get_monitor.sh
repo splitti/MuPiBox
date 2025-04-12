@@ -23,9 +23,14 @@ while true; do
     MONITOR=$(sudo -H -u root bash -c "vcgencmd display_power")
     MONITOR=(${MONITOR##*=})
     if [ ${MONITOR} != ${lastState} ]
-      if [ ${MONITOR} == "0" ]; then
+      POWER=-1
+      if [ ${MONITOR} == "-1" ]; then
+        POWER=$(cat /sys/class/backlight/*/bl_power)
+      fi
+
+      if [ ${MONITOR} == "0"]  || [ ${POWER} == "4" ]; then
         /usr/bin/cat <<< $(/usr/bin/jq --arg v "Off" '.monitor = $v' ${MONITOR_FILE}) >  ${MONITOR_FILE}
-      elif [ ${MONITOR} == "1"  ]; then
+      elif [ ${MONITOR} == "1" ] || [ ${POWER} == "0" ]; then
         /usr/bin/cat <<< $(/usr/bin/jq --arg v "On" '.monitor = $v' ${MONITOR_FILE}) >  ${MONITOR_FILE}
       fi
       lastState=${MONITOR}
