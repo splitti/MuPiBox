@@ -274,7 +274,7 @@
   }
  if( $_POST['displayset'] )
   {
-	$command = "cat /sys/class/backlight/rpi_backlight/brightness";
+	$command = "cat /sys/class/backlight/*/brightness";
 	$thisbrightness = exec($command, $tboutput);
 
 	switch ($_POST['newbrightness']) {
@@ -302,7 +302,7 @@
 
 	if( $new_bn != $tboutput[0] )
 		{
-		$brcommand="sudo su - -c 'echo " . $new_bn . " > /sys/class/backlight/rpi_backlight/brightness'";
+		$brcommand="sudo su - -c 'echo " . $new_bn . " > /sys/class/backlight/*/brightness'";
 		$set_brightness = exec($brcommand, $broutput );
 		$CHANGE_TXT=$CHANGE_TXT."<li>Backlight-Brightness: " . $_POST['newbrightness'] . "%</li>";
 		$change=2;
@@ -879,7 +879,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				<h2>Brightness</h2>
 				<div>
 					<output id="rangeval" class="rangeval"><?php 
-					$tbcommand = "cat /sys/class/backlight/rpi_backlight/brightness";
+					$tbcommand = "cat /sys/class/backlight/*/brightness";
 					$tbrightness = exec($tbcommand, $boutput);
 					switch ($boutput[0]) {
 					case "0":
