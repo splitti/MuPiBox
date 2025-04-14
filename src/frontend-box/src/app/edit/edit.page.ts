@@ -28,13 +28,13 @@ import {
 import { PlayerCmds, PlayerService } from '../player.service'
 
 import { AsyncPipe } from '@angular/common'
+import type { Network } from '@backend-api/network.model'
 import { AlertController } from '@ionic/angular/standalone'
 import { addIcons } from 'ionicons'
 import type { Observable } from 'rxjs'
 import { ActivityIndicatorService } from '../activity-indicator.service'
 import type { Media } from '../media'
 import { MediaService } from '../media.service'
-import type { Network } from '../network'
 
 @Component({
   selector: 'app-edit',
