@@ -126,7 +126,7 @@
 	if ($data['interfacelogin']['state']) {
 		echo '<a href="logout.php" onclick="confirm(\'Do really want to logout?\') || stopEvent(event)" ><iconify-icon icon="material-symbols:logout" title="Logout" ></iconify-icon></a>';
 	}
- ?>
+?>
 				<div id="Wifi_Icon"> </div>
 				<div id="Battery_Icon"> </div>
 				<div id="Fan_Icon"> </div>
