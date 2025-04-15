@@ -556,7 +556,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 <p>This is the central configuration of your MuPiBox...</p>
 </div>
 
-	<details>
+	<details id="timerseetings">
 		<summary><i class="fa-solid fa-clock"></i> Timer settings</summary>
 		<ul>
 			<li id="li_1" >
@@ -632,7 +632,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 		</ul>
 	</details>
 
-	<details>
+	<details id="systemsettings">
 		<summary><i class="fa-solid fa-screwdriver-wrench"></i> System settings</summary>
 		<ul>
 			<li id="li_1" >
@@ -788,7 +788,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 		</ul>
 	</details>
 
-	<details>
+	<details id="mupiboxsetting">
 		<summary><i class="fa-solid fa-radio"></i> MuPiBox settings</summary>
 		<ul>
 			<li id="li_1" >
@@ -858,7 +858,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 		</ul>
 	</details>
 
-	<details>
+	<details id="currenttheme">
 		<summary><i class="fa-solid fa-palette"></i> Custom theme</summary>
 		<ul>
 			<li id="li_1" >
@@ -872,7 +872,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 		</ul>
 	</details>
 
-	<details>
+	<details id="displaysettings">
 		<summary><i class="fa-solid fa-display"></i> Display settings</summary>
 		<ul>
 			<li id="li_1" >
@@ -1022,7 +1022,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 			</li>
 		</ul>
 	</details>
-	<details>
+	<details id="audiosettings">
 		<summary><i class="fa-solid fa-volume-high"></i> Audio settings</summary>
 		<ul>
 			<li id="li_1" >
@@ -1100,7 +1100,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 			</li>
 		</ul>
 	</details>
-	<details>
+	<details id="poweronsettings">
 		<summary><i class="fa-solid fa-power-off"></i> Power-on settings</summary>
 		<ul>
 		
@@ -1175,7 +1175,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 		</ul>
 	</details>
 	
-	<details>
+	<details id="fancontrol">
 		<summary><i class="fa-solid fa-fan"></i> Fan-Control</summary>
 		<ul>
 			<li id="li_1" >
@@ -1265,7 +1265,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 			</li>
 		</ul>
 	</details>
-	<details>
+	<details id="chromiumparameters">
 		<summary><i class="fa-brands fa-chrome"></i> Chromium browser parameters</summary>
 		<ul>
 			<li id="li_1" >

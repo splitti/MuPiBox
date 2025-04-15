@@ -138,7 +138,7 @@
 <?php
 	if( $mupihat_state ) {
 ?>
- <details open>
+ <details id="mupihatstatus">
   <summary><i class="fa-solid fa-circle-info"></i> Status</summary>
     <ul>
    <li id="li_1" >
@@ -161,7 +161,7 @@
 <?php
 }
  ?>
- <details open>
+ <details id="mupihatconfiguration">
   <summary><i class="fa-solid fa-battery-three-quarters"></i> Configuration</summary>
     <ul>
    <li id="li_1" >

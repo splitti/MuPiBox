@@ -218,7 +218,7 @@
 	<h2>Smart settings</h2>
 	<p>Make your MuPiBox smart...</p>
 	</div>
-	 <details>
+	 <details id="mqttconfig">
 	  <summary><i class="fa-solid fa-house-signal"></i> MQTT</summary>
 		<ul>
 	   <li id="li_1" >
@@ -350,7 +350,7 @@
 	  </ul>
 	 </details>
 
-	 <details>
+	 <details id="telegramconfig">
 	  <summary><i class="fa-brands fa-telegram"></i> Telegram</summary>
 		<ul>
 	   <li id="li_1" >
@@ -393,7 +393,7 @@
 	   </li>
 	  </ul>
 	 </details>
-	 <details>
+	 <details id="wledconfig">
 	  <summary><i class="fa-solid fa-lightbulb"></i> WLED</summary>
 		<ul>
 	   <li id="li_1" >

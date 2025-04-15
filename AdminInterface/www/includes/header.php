@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <?php
+	session_start();
 	if (isset($_POST['spotifyget']) && $_POST['spotifyget'] === 'saving') {
 		if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
 			$http_url = 'http://' . $_SERVER['HTTP_HOST'] . $_SERVER['PHP_SELF'];
@@ -7,9 +8,35 @@
 			exit;
 		}
 	}
-
 	$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
 	$data = json_decode($string, true);
+	loginEnabled = $data['interfacelogin']['state'];
+	$hashedPassword = $data['interfacelogin']['password'];
+
+	if ($loginEnabled) {
+		if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
+			if (isset($_POST['password'])) {
+				if (password_verify($_POST['password'], $hashedPassword)) {
+					$_SESSION['logged_in'] = true;
+					header("Location: " . $_SERVER['PHP_SELF']);
+					exit;
+				} else {
+					$error = "Falsches Passwort!";
+				}
+			}
+
+			// Loginformular anzeigen und ausführen stoppen
+			?>
+			<form method="post" style="margin:2em;">
+				<label for="pw">Password:</label>
+				<input type="password" id="pw" name="password" />
+				<button type="submit">Login</button>
+				<?php if (isset($error)) echo "<p style='color:red;'>$error</p>"; ?>
+			</form>
+			<?php
+			exit;
+		}
+	}
 	$change=0;
 	$CHANGE_TXT="<div id='lbinfo'><ul id='lbinfo'>";
 	$commandSSID="sudo iwgetid -r";
