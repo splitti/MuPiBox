@@ -1,7 +1,7 @@
 <?php
 
 include('includes/header.php');
-$REDIRECT_URI = "http://" . $_SERVER['HTTP_HOST'] . "/spotify.php";
+$REDIRECT_URI = "https://" . $_SERVER['HTTP_HOST'] . "/spotify.php";
 $SCOPELIST = "streaming user-read-currently-playing user-modify-playback-state user-read-playback-state user-read-private user-read-email";
 $SCOPE = urlencode($SCOPELIST);
 
