@@ -316,7 +316,7 @@ if [[ -z ${CUSTOMTHEME} ]]; then
 	/usr/bin/cat <<< $(/usr/bin/jq '.mupibox.customTheme = ""' ${CONFIG}) >  ${CONFIG}
 fi
 
-ADMININTERFACE=$(interfacelogin)
+ADMININTERFACE=$(/usr/bin/cat ${CONFIG} | grep interfacelogin)
 if [[ -z ${ADMININTERFACE} ]]; then
 	/usr/bin/cat <<< $(/usr/bin/jq '.interfacelogin.state = false' ${CONFIG}) >  ${CONFIG}
 	/usr/bin/cat <<< $(/usr/bin/jq --arg v "$2y$10$tA27/5vXFUPgjfjfi7dpTuk.1yOffsg6kuSDQBGTv4sjpVkRlhd76" '.interfacelogin.password = $v' ${CONFIG}) >  ${CONFIG}                 
