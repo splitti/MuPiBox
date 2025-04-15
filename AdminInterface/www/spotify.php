@@ -35,7 +35,6 @@ if ($_GET['code']) {
 	exec("sudo /usr/local/bin/mupibox/./setting_update.sh");
     exec("sudo rm {$data['spotify']['cachepath']}/credentials.json");
 	exec("sudo /usr/local/bin/mupibox/./spotify_restart.sh");
-
 ?>
 <form class="appnitro" method="post" action="spotify.php" id="form">
 <div class="description">

@@ -1,5 +1,13 @@
 <!DOCTYPE html>
 <?php
+	if (isset($_POST['spotifyget']) && $_POST['spotifyget'] === 'saving') {
+		if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
+			$http_url = 'http://' . $_SERVER['HTTP_HOST'] . $_SERVER['PHP_SELF'];
+			header("Location: $http_url?spotifyget=saving");
+			exit;
+		}
+	}
+
 	$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
 	$data = json_decode($string, true);
 	$change=0;
@@ -35,6 +43,17 @@
 	if (file_exists($mupihat_file)) {
 		$mupihat_state = true;
 	}
+
+	$force_https = false;
+	if ($_SERVER['REQUEST_URI'] === '/securearea') {
+		$force_https = true;
+	}
+
+	$protocol = $force_https ? 'https' : 'http';
+	$host = $_SERVER['HTTP_HOST'];
+
+	$link = $protocol . '://' . $host . '/';
+
 ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -69,28 +88,28 @@
 				<a href="?hrefreshdatabase=1" onclick="confirm('Do really want to reload media database?') || stopEvent(event)" ><iconify-icon icon="mdi:database-refresh-outline"  title="Reload media database" ></iconify-icon></a>
 			</div>
 			<div class="topnav" id="myTopnav">
-				<a href="index.php"><i class="fa fa-fw fa-home"></i> Home</a>
-				<a href="content.php"><i class="fa-solid fa-music"></i> MuPiBox</a>				
+				<a href="<?= $link ?>index.php"><i class="fa fa-fw fa-home"></i> Home</a>
+				<a href="<?= $link ?>content.php"><i class="fa-solid fa-music"></i> MuPiBox</a>				
 <?php
 	$command = "ps -ef | grep websockify | grep -v grep";
 	exec($command, $vncoutput, $vncresult );
 	if( $vncoutput[0] )
 	{
-		echo '<a href="vnc.php"><i class="fa-solid fa-display"></i> VNC</a>';
+		echo '<a href="' . $link . 'vnc.php"><i class="fa-solid fa-display"></i> VNC</a>';
 	}
 ?>
-				<a href="mupi.php"><i class="fa-solid fa-headphones"></i> MuPi-Conf</a>
-				<a href="mupihat.php"><i class="fa-solid fa-hat-wizard"></i> MuPiHAT</a>
-				<a href="media.php"><i class="fa-solid fa-list"></i> Media</a>
-				<a href="cover.php"><i class="fa-regular fa-image"></i> Cover</a>
-				<a href="bluetooth.php"><i class="fa-brands fa-bluetooth"></i> Bluetooth</a>
-				<a href="spotify.php"><i class="fa-brands fa-spotify"></i> Spotify</a>
-				<a href="network.php"><i class="fa-solid fa-wifi"></i> Network</a>
-				<a href="smart.php"><i class="fa-solid fa-share-nodes"></i> Smart</a>
+				<a href="<?= $link ?>mupi.php"><i class="fa-solid fa-headphones"></i> MuPi-Conf</a>
+				<a href="<?= $link ?>mupihat.php"><i class="fa-solid fa-hat-wizard"></i> MuPiHAT</a>
+				<a href="<?= $link ?>media.php"><i class="fa-solid fa-list"></i> Media</a>
+				<a href="<?= $link ?>cover.php"><i class="fa-regular fa-image"></i> Cover</a>
+				<a href="<?= $link ?>bluetooth.php"><i class="fa-brands fa-bluetooth"></i> Bluetooth</a>
+				<a href="<?= $link ?>spotify.php"><i class="fa-brands fa-spotify"></i> Spotify</a>
+				<a href="<?= $link ?>network.php"><i class="fa-solid fa-wifi"></i> Network</a>
+				<a href="<?= $link ?>smart.php"><i class="fa-solid fa-share-nodes"></i> Smart</a>
 				<?php /*<a href="service.php"><i class="fa-solid fa-gear"></i> Services</a>
 				<a href="tweaks.php"><i class="fa-solid fa-rocket"></i> Performance</a>*/ ?>
-				<a href="/" onmouseover="javascript:event.target.port=5252" target="_blank"><i class="fa-brands fa-raspberry-pi"></i> DietPi-Dash</a>
+				<a href="<?= $link ?>" onmouseover="javascript:event.target.port=5252" target="_blank"><i class="fa-brands fa-raspberry-pi"></i> DietPi-Dash</a>
 				<?php /*<a href="/" onmouseover="javascript:event.target.port=8081" target="_blank"><i class="fa-brands fa-youtube"></i> Youtube</a>*/ ?>
-				<a href="admin.php"><i class="fa-solid fa-screwdriver-wrench"></i> Admin</a>
+				<a href="<?= $link ?>admin.php"><i class="fa-solid fa-screwdriver-wrench"></i> Admin</a>
 				<a href="javascript:void(0);" class="icon" onclick="myFunction()"><i class="fa fa-bars"></i></a>
 			</div>
