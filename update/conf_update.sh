@@ -319,7 +319,7 @@ fi
 ADMININTERFACE=$(interfacelogin)
 if [[ -z ${ADMININTERFACE} ]]; then
 	/usr/bin/cat <<< $(/usr/bin/jq '.interfacelogin.state = false' ${CONFIG}) >  ${CONFIG}
-	/usr/bin/cat <<< $(/usr/bin/jq --arg v "$2y$10$g6rGqnpjDK0rg9s5wXOouuMj47.A18em/6mNG6cNjMPs8j85u.vlq" '.interfacelogin.password = $v' ${CONFIG}) >  ${CONFIG}                 
+	/usr/bin/cat <<< $(/usr/bin/jq --arg v "$2y$10$tA27/5vXFUPgjfjfi7dpTuk.1yOffsg6kuSDQBGTv4sjpVkRlhd76" '.interfacelogin.password = $v' ${CONFIG}) >  ${CONFIG}                 
 fi
 
 
