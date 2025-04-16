@@ -1,6 +1,4 @@
 <?php
-	$wifiopen="";
-
 	include ('includes/header.php');
 	$commandM0="cat /sys/class/net/wlan0/address";
 	$MAC0=exec($commandM0);
@@ -171,8 +169,6 @@
 			$wifiarray[] = $wifidetails[4];
 		}
 		$wifi_cleaned = array_unique($wifiarray);
-
-		$wifiopen=" open";
 		}
 
 	if( $_POST['delete_wifi'] )
@@ -292,7 +288,7 @@
 	<p>Network informations, options and so on...</p>
 </div>
 
-	<details>
+	<details id="networkinformation">
 		<summary><i class="fa-solid fa-wifi"></i> Network Information</summary>
 		<ul>
 			<li class="li_norm">
@@ -311,7 +307,7 @@
         </table>
 		</li></ul></details>
 
-	<details>
+	<details id="deletewifi">
 		<summary><i class="fa-regular fa-trash-can"></i> Delete Wifi-Network</summary>
 
 	<ul>
@@ -349,9 +345,7 @@
 	</ul>
 	</details>
 
-
-
-	<details <?php echo $wifiopen;  ?>>
+	<details id="addwifi">
 	<summary><i class="fa-solid fa-tower-broadcast"></i> Add Wifi-Network</summary>
 	<ul>
 	<li class="li_1"><h2>Search and Add Wifi</h2>
@@ -397,8 +391,7 @@
 	</ul>
 	</details>
 
-
-	<details>
+	<details id="miscwifioptions">
 		<summary><i class="fa-solid fa-toggle-off"></i> Misc Options</summary>
 
 	<ul>
@@ -495,11 +488,10 @@
 			<input id="saveForm" class="button_text" type="submit" name="RTL88X2BU" value="<?php print $change_rtl88x2bu; ?>" />
 		</li>
 
-
 	</ul>
 	</details>
 
-	<details>
+	<details id="wifisettings">
 		<summary><i class="fa-solid fa-gear"></i> Services</summary>
 	<ul>
 		<li class="li_1"><h2>DietPi-WiFi-Monitor</h2>
@@ -555,5 +547,5 @@
 </form>
 
 <?php
-        include ('includes/footer.php');
+	include ('includes/footer.php');
 ?>

@@ -1455,3 +1455,55 @@ details > ul {
 #reloadicon:hover{
         color:red;
 }
+
+#login-overlay {
+	background:#054b61;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 100%;
+    background-color: rgba(0,0,0,0.6);
+    z-index: 9998;
+}
+
+#login-wrapper {
+	font-family:Helvetica, Arial, Verdana, sans-serif;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #44afe2;
+    padding: 40px 60px;
+    border-radius: 16px;
+    box-shadow: 0 0 25px rgba(0, 0, 0, 0.4);
+    max-width: 400px;
+    width: 90%;
+    text-align: center;
+    z-index: 9999;
+    animation: fadein 0.4s ease-out;
+}
+
+#login-wrapper h2 {
+    color: #054b61;
+    font-size: 160%;
+    margin-bottom: 20px;
+}
+
+#login-wrapper input.text {
+    width: 100%;
+    font-size: 140%;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+#login-wrapper .button_text_green {
+    width: 100%;
+    font-size: 100%;
+}
+
+#login-wrapper .error {
+    color: red;
+    font-weight: bold;
+    margin-top: 10px;
+}

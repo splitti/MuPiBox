@@ -136,7 +136,7 @@
 		<h2>MupiBox services</h2>
 		<p>De/Activate some helpfull services...</p>
 	</div>
-	<details>
+	<details id="networkserciceconfig">
 		<summary><i class="fa-solid fa-network-wired"></i> Network</summary>
 	<ul>
 		<li class="li_1"><h2>Samba</h2>
@@ -168,7 +168,7 @@
 		</li>
 	</ul>
 	</details>
-	<details>
+	<details id="bluetoothserviceconfig">
 		<summary><i class="fa-brands fa-bluetooth"></i> Bluetooth</summary>
 	<ul>
 		<li class="li_1"><h2>Bluetooth-Autoconnect-Helper (Just if automatic reconnect won't work)</h2>

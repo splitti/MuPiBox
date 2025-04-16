@@ -296,7 +296,7 @@
 	</div>
 
 
-	<details>
+	<details id="controlsystem">
 		<summary><i class="fa-solid fa-power-off"></i> Control system</summary>
 		<ul>
 			<li class="li_norm">
@@ -307,7 +307,7 @@
 		</ul>
 	</details>
 
-	<details>
+	<details  id="musicdatabase">
 		<summary><i class="fa-sharp fa-solid fa-music"></i> Music database</summary>
 		<ul>
 			<li class="li_norm"><h2>Clean and update music database</h2>
@@ -322,7 +322,7 @@
 		</ul>
 	</details>
 
-	<details>
+	<details id="backuprestore">
 		<summary><i class="fa-solid fa-download"></i> Backup and restore settings</summary>
 		<ul>
 			<li class="li_norm"><h2>Backup MuPiBox-settings</h2>
@@ -341,7 +341,7 @@
 		</ul>
 	</details>
 
-	<details>
+	<details id="settingsandservices">
 		<summary><i class="fa-solid fa-gears"></i> MuPiBox settings and services</summary>
 		<ul>
 
@@ -382,7 +382,7 @@
 			</li>
 		</ul>
 	</details>
-	<details>
+	<details id="updatessection">
 		<summary><i class="fa-solid fa-rotate"></i> Updates</summary>
 		<ul>
 			<li class="li_norm"><h2>MuPiBox updates</h2>
@@ -452,7 +452,7 @@
 	</details>
 
 
-	<details>
+	<details id="loggingdebug">
 		<summary><i class="fas fa-stream"></i> Logging / Debug</summary>
 		<ul>
 			<li class="li_norm">
@@ -492,7 +492,7 @@
 		</ul>
 	</details>
 
-	<details>
+	<details id="resetconfiguration">
 		<summary><i class="far fa-file-alt"></i> Reset configuration</summary>
 		<ul>
 

@@ -55,6 +55,30 @@
 		$CHANGE_TXT=$CHANGE_TXT."<li>Sleeptimer stopped</li>";
 		}
 
+	if($_POST['submitpw'])
+		{
+		$hash = password_hash($_POST['newpwd'], PASSWORD_DEFAULT);
+		$data["interfacelogin"]["password"]=$hash;
+		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>New password has been set</li>";
+		}
+
+
+	if($_POST['change_login'])
+		{
+		if($data["interfacelogin"]["state"])
+			{
+			$data["interfacelogin"]["state"]=false;	
+			$CHANGE_TXT=$CHANGE_TXT."<li>Login disabled</li>";
+			}
+		else
+			{
+			$data["interfacelogin"]["state"]=true;	
+			$CHANGE_TXT=$CHANGE_TXT."<li>Login enabled</li>";
+			}
+		$change=1;
+		}
+
 	if($_POST['change_gpu'] == "disable")
 		{
 		$data["chromium"]["gpu"]=false;	
@@ -556,7 +580,46 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 <p>This is the central configuration of your MuPiBox...</p>
 </div>
 
-	<details>
+	<details id="loginsettings">
+		<summary><i class="fa-solid fa-user-lock"></i> Login settings</summary>
+		<ul>
+			<li id="li_1" >
+				<h2>Password </h2>
+				<p>
+				The default password is "MuP1B0x"!
+				</p>
+				<div>
+				<input id="newpwd" name="newpwd" class="element text medium" type="password" minlength="6" maxlength="255" value=""/>
+				<input type="submit" class="button_text" value="Set new password" name="submitpw" >
+				</div>
+			</li>
+		</ul>
+		<ul>
+			<li class="li_1"><h2>Enable login</h2>
+				<p>
+				The login will be instantly activated after enabling this option!
+				</p>
+				<p>
+				<?php
+				if ($data['interfacelogin']['state']) {
+					$login_state="enabled";
+					$login_button="disable";
+					}
+				else {
+					$login_state="disabled";
+					$login_button="enable";
+					}
+				echo "Login state: <b>".$login_state."</b>";
+				?>
+				</p>
+				<input id="saveForm" class="button_text" type="submit" name="change_login" value="<?php print $login_button; ?>" />
+			</li>
+
+		</ul>
+	</details>
+
+
+	<details id="timerseetings">
 		<summary><i class="fa-solid fa-clock"></i> Timer settings</summary>
 		<ul>
 			<li id="li_1" >
@@ -632,7 +695,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 		</ul>
 	</details>
 
-	<details>
+	<details id="systemsettings">
 		<summary><i class="fa-solid fa-screwdriver-wrench"></i> System settings</summary>
 		<ul>
 			<li id="li_1" >
@@ -788,7 +851,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 		</ul>
 	</details>
 
-	<details>
+	<details id="mupiboxsetting">
 		<summary><i class="fa-solid fa-radio"></i> MuPiBox settings</summary>
 		<ul>
 			<li id="li_1" >
@@ -858,7 +921,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 		</ul>
 	</details>
 
-	<details>
+	<details id="currenttheme">
 		<summary><i class="fa-solid fa-palette"></i> Custom theme</summary>
 		<ul>
 			<li id="li_1" >
@@ -872,7 +935,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 		</ul>
 	</details>
 
-	<details>
+	<details id="displaysettings">
 		<summary><i class="fa-solid fa-display"></i> Display settings</summary>
 		<ul>
 			<li id="li_1" >
@@ -1022,7 +1085,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 			</li>
 		</ul>
 	</details>
-	<details>
+	<details id="audiosettings">
 		<summary><i class="fa-solid fa-volume-high"></i> Audio settings</summary>
 		<ul>
 			<li id="li_1" >
@@ -1100,7 +1163,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 			</li>
 		</ul>
 	</details>
-	<details>
+	<details id="poweronsettings">
 		<summary><i class="fa-solid fa-power-off"></i> Power-on settings</summary>
 		<ul>
 		
@@ -1175,7 +1238,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 		</ul>
 	</details>
 	
-	<details>
+	<details id="fancontrol">
 		<summary><i class="fa-solid fa-fan"></i> Fan-Control</summary>
 		<ul>
 			<li id="li_1" >
@@ -1265,7 +1328,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 			</li>
 		</ul>
 	</details>
-	<details>
+	<details id="chromiumparameters">
 		<summary><i class="fa-brands fa-chrome"></i> Chromium browser parameters</summary>
 		<ul>
 			<li id="li_1" >
