@@ -237,7 +237,7 @@
 		$change=3;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Spotify Services are restarted</li>";
 		}
-		
+
 	if( $_POST['spotify_restart'] )
 		{
 		$command = "sudo /usr/local/bin/mupibox/./spotify_restartspotify_restart.sh";
@@ -296,7 +296,7 @@
 	</div>
 
 
-	<details>
+	<details id="controlsystem">
 		<summary><i class="fa-solid fa-power-off"></i> Control system</summary>
 		<ul>
 			<li class="li_norm">
@@ -307,7 +307,7 @@
 		</ul>
 	</details>
 
-	<details>
+	<details  id="musicdatabase">
 		<summary><i class="fa-sharp fa-solid fa-music"></i> Music database</summary>
 		<ul>
 			<li class="li_norm"><h2>Clean and update music database</h2>
@@ -322,8 +322,8 @@
 		</ul>
 	</details>
 
-	<details>
-		<summary><i class="fa-solid fa-download"></i> Backup and restore settings</summary>			
+	<details id="backuprestore">
+		<summary><i class="fa-solid fa-download"></i> Backup and restore settings</summary>
 		<ul>
 			<li class="li_norm"><h2>Backup MuPiBox-settings</h2>
 				<p>Backup MuPiBox-Data (cover, mupiboxconfig.json and data.json):</p>
@@ -341,7 +341,7 @@
 		</ul>
 	</details>
 
-	<details>
+	<details id="settingsandservices">
 		<summary><i class="fa-solid fa-gears"></i> MuPiBox settings and services</summary>
 		<ul>
 
@@ -360,7 +360,7 @@
 			<li class="li_norm"><h2>IP Control Backend</h2>
 				<p>In some cases, the MuPiBox cannot communicate correctly via hostname. Try to activate this point, to set the communication to IP.</p>
 				<p>
-				<?php 
+				<?php
 				if( $data["mupibox"]["ip_control_backend"] )
 					{
 					$ip_control_backend_state="enabled";
@@ -369,12 +369,12 @@
 				else
 					{
 					$ip_control_backend_state="disabled";
-					$change_ip_control="enable";					
+					$change_ip_control="enable";
 					}
 
 				echo "IP Control Backend: <b>".$ip_control_backend_state."</b>";
 				?></p>
-				<input id="saveForm" class="button_text" type="submit" name="ip_control_backend" value="<?php print $change_ip_control; ?>" />																									
+				<input id="saveForm" class="button_text" type="submit" name="ip_control_backend" value="<?php print $change_ip_control; ?>" />
 			</li>
 			<li class="li_norm"><h2>Restart MuPiBox kiosk</h2>
 				<p>Restart chromium browser. </p>
@@ -382,7 +382,7 @@
 			</li>
 		</ul>
 	</details>
-	<details>
+	<details id="updatessection">
 		<summary><i class="fa-solid fa-rotate"></i> Updates</summary>
 		<ul>
 			<li class="li_norm"><h2>MuPiBox updates</h2>
@@ -452,7 +452,7 @@
 	</details>
 
 
-	<details>
+	<details id="loggingdebug">
 		<summary><i class="fas fa-stream"></i> Logging / Debug</summary>
 		<ul>
 			<li class="li_norm">
@@ -490,9 +490,9 @@
 
 			</li>
 		</ul>
-	</details>	
-			
-	<details>
+	</details>
+
+	<details id="resetconfiguration">
 		<summary><i class="far fa-file-alt"></i> Reset configuration</summary>
 		<ul>
 

@@ -169,7 +169,7 @@
                                 </li>
                         </ul>
 	<form class='appnitro'  method='post' action='bluetooth.php' id='remform'>
-	<details>
+	<details id="bluetoothservice">
 		<summary><i class="fa-brands fa-bluetooth"></i> Bluetooth-Service</summary>
 	<ul>
 		<li class="li_1"><h2>Bluetooth-Autoconnect-Helper (Just if automatic reconnect won't work)</h2>

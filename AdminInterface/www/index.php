@@ -47,7 +47,7 @@
 
 	<form class="appnitro" name="network" method="post" action="index.php" id="form">
 
-		<details open>
+		<details id="news">
 			<summary><i class="fa-solid fa-circle-info"></i> MuPiBox-News</summary>
 			<ul>
 				<li class="li_norm">
@@ -104,7 +104,7 @@
 		}
 	*/
 	?>
-		<details>
+		<details id="currentscreen">
 			<summary><i class="fa-solid fa-display"></i> Current Screen</summary>
 			<ul>
 				<li class="li_norm">
@@ -112,7 +112,7 @@
 				</li>
 			</ul>
 		</details>
-		<details>
+		<details id="raspberryinformation">
 			<summary><i class="fa-brands fa-raspberry-pi"></i> Raspberry Information</summary>
 			<ul>
 				<li class="li_norm"><h2>System Information</h2></li>
@@ -159,7 +159,7 @@
 	</li></ul></details>
 
 
-		<details>
+		<details id="sdcard">
 			<summary><i class="fa-solid fa-sd-card"></i> SD-Card</summary>
 			<ul>
 				<li class="li_norm">

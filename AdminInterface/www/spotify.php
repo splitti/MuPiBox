@@ -35,7 +35,6 @@ if ($_GET['code']) {
 	exec("sudo /usr/local/bin/mupibox/./setting_update.sh");
     exec("sudo rm {$data['spotify']['cachepath']}/credentials.json");
 	exec("sudo /usr/local/bin/mupibox/./spotify_restart.sh");
-
 ?>
 <form class="appnitro" method="post" action="spotify.php" id="form">
 <div class="description">
@@ -116,7 +115,7 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
         <p>Define login- and common-settings.</p>
 	</div>
 
-	<details>
+	<details id="step1">
 		<summary><i class="fa-regular fa-circle-check"></i> STEP 1 - Developer Client-Connection</summary>
 		<ul>
 			<li id="li_1">
@@ -152,7 +151,7 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 		</ul>
 	</details>
 
-	<details>
+	<details id="step2">
 		<summary><i class="fa-regular fa-circle-check"></i> STEP 2 - Access- and Refresh-Token</summary>
 		<ul>
 			<li id="li_1">
@@ -186,7 +185,7 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 		</ul>
 	</details>
 
-	<details>
+	<details id="step3">
 		<summary><i class="fa-regular fa-circle-check"></i> STEP 3 - Device-ID</summary>
 		<ul>
 			<li id="li_1">
@@ -225,7 +224,7 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 		</ul>
 	</details>
 
-	<details>
+	<details  id="spotifycommonsettings">
 		<summary><i class="fa-regular fa-circle-check"></i> Common spotify settings</summary>
 		<ul>
 
@@ -278,7 +277,7 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 	</details>
 
 
-	<details>
+	<details id="spotifyreset">
 		<summary><i class="fa-solid fa-eraser"></i> Reset Spotify-Connection</summary>
 		<ul>
 			<li id="li_1">
