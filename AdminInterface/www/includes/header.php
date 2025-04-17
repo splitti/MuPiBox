@@ -88,7 +88,7 @@
 		<title>MuPiBox Admin-Interface</title>
 		<link rel="stylesheet" type="text/css" href="view.css?v=7.1.12" media="all">
 		<script src="https://code.iconify.design/iconify-icon/2.0.0/iconify-icon.min.js"></script>
-		<script type="text/javascript" src="view.js?v=6.0.6"></script>
+		<script type="text/javascript" src="view.js?v=6.0.7"></script>
 		<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 		<link rel="icon" type="image/x-icon" href="/images/favicon.ico">
 		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.css">
