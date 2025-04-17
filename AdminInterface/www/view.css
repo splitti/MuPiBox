@@ -1532,3 +1532,42 @@ details > ul {
 	font-weight: bold;
 	margin: 1em 0;
 }
+
+
+#logoutput {
+	background: #000;
+	color: #00ff00;
+	font-family: monospace;
+	font-size: 90%;
+	padding: 10px;
+	height: 500px;
+	overflow-y: scroll;
+	border-radius: 8px;
+	white-space: pre-wrap;
+}
+.buttons-row {
+	margin: 15px 0;
+	display: flex;
+	gap: 10px;
+	flex-wrap: wrap;
+	align-items: center;
+}
+.error {
+	color: #ff5555;
+}
+.warn {
+	color: #ffaa00;
+}
+.status-box {
+	background: #f5f5f5;
+	border: 1px solid #ccc;
+	padding: 10px;
+	font-family: monospace;
+	white-space: pre-wrap;
+	max-height: 300px;
+	overflow-y: auto;
+	border-radius: 8px;
+}
+.status-line {
+	margin-bottom: 5px;
+}
