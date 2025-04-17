@@ -1507,3 +1507,28 @@ details > ul {
     font-weight: bold;
     margin-top: 10px;
 }
+
+#file-nav {
+	margin: 20px 0;
+}
+#file-nav a {
+	margin-right: 15px;
+	text-decoration: none;
+	font-weight: bold;
+	color: #054b61;
+}
+#file-nav a.active {
+	color: #ffffff;
+	background-color: #44afe2;
+	padding: 5px 10px;
+	border-radius: 8px;
+}
+.CodeMirror {
+	border: 1px solid #ccc;
+	height: auto;
+	font-size: 90%;
+}
+.message {
+	font-weight: bold;
+	margin: 1em 0;
+}
