@@ -588,7 +588,7 @@ echo "==========================================================================
 	echo -e "XXX\n{STEP}\nActivate SSL... \nXXX"	
 	before=$(date +%s)
 	
-	openssl req -new -x509 -keyout /etc/lighttpd/server.pem -out /etc/lighttpd/server.pem -days 3650 -nodes -subj "/C=DE/CN=mupibox"  >&3 2>&3
+	openssl req -new -x509 -keyout /etc/lighttpd/server.pem -out /etc/lighttpd/server.pem -days 3650 -nodes -subj "/C=DE/CN=mupibox" >/dev/null >&3 2>&3
 	lighty-enable-mod ssl  >&3 2>&3
 	service lighttpd force-reload  >&3 2>&3
 	after=$(date +%s)
