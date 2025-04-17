@@ -176,7 +176,7 @@
 				<a href="tweaks.php"><i class="fa-solid fa-rocket"></i> Performance</a>*/ ?>
 				<a href="<?= $link ?>" onmouseover="javascript:event.target.port=5252" target="_blank"><i class="fa-brands fa-raspberry-pi"></i> DietPi-Dash</a>
 				<?php /*<a href="/" onmouseover="javascript:event.target.port=8081" target="_blank"><i class="fa-brands fa-youtube"></i> Youtube</a>*/ ?>
-				<a href="<?= $link ?>logviewer.php"><i class="fa-solid fa-file-lines"></i>"></i> Logs</a>
+				<a href="<?= $link ?>logviewer.php"><i class="fa-solid fa-file-lines"></i> Logs</a>
 				<a href="<?= $link ?>jsoneditor.php"><i class="fa-solid fa-code"></i> JSON</a>
 				<a href="<?= $link ?>admin.php"><i class="fa-solid fa-screwdriver-wrench"></i> Admin</a>
 				<a href="javascript:void(0);" class="icon" onclick="myFunction()"><i class="fa fa-bars"></i></a>

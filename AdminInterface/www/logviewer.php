@@ -1,114 +1,116 @@
 <?php
 	include ('includes/header.php');
-	session_start();
 
-	$logfiles = [
-		'server-error' => '/home/dietpi/.pm2/logs/server-error.log',
-		'server-out' => '/home/dietpi/.pm2/logs/server-out.log',
+	// Auswahlmenü
+	$options = [
+		'log:idle_shutdown'   => 'Log: idle_shutdown.log',
+		'log:shutdown_control'   => 'Log: shutdown_control.log',
+		'log:server-error' => 'PM2-Log: server-error.log',
+		'log:server-out'   => 'PM2-Log: server-out.log',
+		'log:spotify-control-error'   => 'PM2-Log: spotify-control-error.log',
+		'log:spotify-control-out'   => 'PM2-Log: spotify-control-out.log',
+		'status:mupi_autoconnect_bt.service'   => 'Status: mupi_autoconnect_bt.service',
+		'status:mupi_autoconnect-wifi.service'   => 'Status: mupi_autoconnect-wifi.service',
+		'status:mupi_check_internet.service'   => 'Status: mupi_check_internet.service',
+		'status:mupi_check_monitor.service'   => 'Status: mupi_check_monitor.service',
+		'status:mupi_fan.service'   => 'Status: mupi_fan.service',
+		'status:mupi_hat_control.service'   => 'Status: mupi_hat_control.service',
+		'status:mupi_hat.service'   => 'Status: mupi_hat.service',
+		'status:mupi_idle_shutdown.service'   => 'Status: mupi_idle_shutdown.service',
+		'status:mupi_mqtt.service'   => 'Status: mupi_mqtt.service',
+		'status:mupi_novnc.service'   => 'Status: mupi_novnc.service',
+		'status:mupi_powerled.service'   => 'Status: mupi_powerled.service',
+		'status:mupi_splash.service'   => 'Status: mupi_splash.service',
+		'status:mupi_startstop.service'   => 'Status: mupi_startstop.service',
+		'status:mupi_telegram.service'   => 'Status: mupi_telegram.service',
+		'status:mupi_vnc.service'   => 'Status: mupi_vnc.service',
+		'status:mupi_wifi.service'   => 'Status: mupi_wifi.service',
+		'status:pm2-dietpi.service'   => 'Status: pm2-dietpi.service',
+		'status:proftpd.service.service'   => 'Status: proftpd.service.service',
+		'status:samba-ad-dc.service'   => 'Status: samba-ad-dc.service'
 	];
 
-	$services = ['pm2', 'mupibox', 'nginx'];
 ?>
-    <form class="appnitro">
+<form class="appnitro" onsubmit="return false;">
+    <h2>Log- & Service-Monitor</h2>
 
-    <h2>🧰 Live Logs & Dienstemonitor</h2>
-
-    <!-- Log-Auswahl -->
         <ul>
             <li>
-                <label class="description">Logdatei wählen:</label>
-                <select id="log-select" class="select medium">
-                    <?php foreach ($logfiles as $key => $path): ?>
-                        <option value="<?= $key ?>"><?= $key ?> (<?= basename($path) ?>)</option>
+                Show Log- or Service-Status:
+                <select id="view-select" class="select medium">
+                    <?php foreach ($options as $value => $label): ?>
+                        <option value="<?= $value ?>"><?= $label ?></option>
                     <?php endforeach; ?>
                 </select>
             </li>
-            <li>
-                <label class="description">🔍 Suche (grep):</label>
-                <input type="text" id="log-search" class="text medium" placeholder="Fehler, IP, etc.">
+            <li id="search-row">
+                <label class="description"><i class="fa-solid fa-magnifying-glass"></i> Search (grep):</label>
+                <input type="text" id="search" class="text medium" placeholder="Keyword...">
             </li>
         </ul>
+
+    <div class="buttons-row" style="margin-bottom: 10px;">
+        <input type="button" class="button_text" value="Refresh manually" onclick="loadData(true)">
+        <input type="button" class="button_text_red" value="Pause" id="pauseBtn" onclick="togglePause()">
+        <input type="button" class="button_text_green" value="Download" id="dlBtn" onclick="downloadData()">
+    </div>
+
+    <div id="output"><i class="fa-solid fa-hourglass-start"></i> Loading data...</div>
     </form>
-
-    <!-- Log Buttons -->
-    <div class="buttons-row">
-        <input type="button" class="button_text" value="🔄 Manuell aktualisieren" onclick="updateLog(true)">
-        <input type="button" class="button_text_red" value="⏸ Pause" id="pauseBtn" onclick="togglePause()">
-        <input type="button" class="button_text_green" value="📥 Download" onclick="downloadLog()">
-    </div>
-
-    <!-- Logausgabe -->
-    <div id="logoutput">⏳ Lade Logdaten...</div>
-
-    <hr>
-
-    <h3>⚙️ Dienste überwachen</h3>
-    <div class="buttons-row">
-        <?php foreach ($services as $service): ?>
-            <span><b><?= strtoupper($service) ?></b></span>
-            <input type="button" class="button_text_green" value="🔄 Status" onclick="getStatus('<?= $service ?>')">
-            <input type="button" class="button_text" value="🔁 Restart" onclick="controlService('<?= $service ?>', 'restart')">
-            <input type="button" class="button_text_orange" value="▶️ Start" onclick="controlService('<?= $service ?>', 'start')">
-            <input type="button" class="button_text_red" value="⏹ Stop" onclick="controlService('<?= $service ?>', 'stop')">
-        <?php endforeach; ?>
-    </div>
-
-    <div id="servicestatus" class="status-box">⏳ Dienststatus wird geladen…</div>
-</div>
 
 <script>
 let paused = false;
-let currentLog = document.getElementById("log-select").value;
-let interval = setInterval(updateLog, 3000);
+let interval = setInterval(loadData, 1500);
 
-document.getElementById("log-select").addEventListener("change", () => {
-    currentLog = document.getElementById("log-select").value;
-    updateLog(true);
+const select = document.getElementById("view-select");
+const output = document.getElementById("output");
+const search = document.getElementById("search");
+const searchRow = document.getElementById("search-row");
+const pauseBtn = document.getElementById("pauseBtn");
+const dlBtn = document.getElementById("dlBtn");
+
+select.addEventListener("change", () => {
+    const val = select.value;
+    const isLog = val.startsWith("log:");
+    searchRow.style.display = isLog ? "block" : "none";
+    dlBtn.style.display = isLog ? "inline-block" : "none";
+    loadData(true);
 });
-document.getElementById("log-search").addEventListener("input", () => updateLog(true));
+search.addEventListener("input", () => loadData(true));
 
-function updateLog(force = false) {
+function loadData(force = false) {
     if (paused && !force) return;
 
-    const grep = document.getElementById("log-search").value;
-    fetch(`backend.php?mode=log&log=${currentLog}&grep=${encodeURIComponent(grep)}`)
+    const val = select.value;
+    const grep = search.value;
+    const [type, key] = val.split(":");
+
+    fetch(`backend.php?mode=${type}&key=${key}&grep=${encodeURIComponent(grep)}`)
         .then(res => res.text())
         .then(text => {
             const html = text
                 .replace(/(ERROR|Error|Exception)/g, '<span class="error">$1</span>')
                 .replace(/(WARN|Warning)/g, '<span class="warn">$1</span>');
-            document.getElementById("logoutput").innerHTML = html;
-            document.getElementById("logoutput").scrollTop = document.getElementById("logoutput").scrollHeight;
+            output.innerHTML = html;
+            output.scrollTop = output.scrollHeight;
         });
 }
 
 function togglePause() {
     paused = !paused;
-    document.getElementById("pauseBtn").value = paused ? "▶️ Fortsetzen" : "⏸ Pause";
+    pauseBtn.value = paused ? "Continue" : "Pause";
 }
 
-function downloadLog() {
-    const grep = document.getElementById("log-search").value;
-    window.open(`backend.php?mode=download&log=${currentLog}&grep=${encodeURIComponent(grep)}`, "_blank");
+function downloadData() {
+    const val = select.value;
+    const grep = search.value;
+    const [type, key] = val.split(":");
+    window.open(`backend.php?mode=download&key=${key}&grep=${encodeURIComponent(grep)}`, "_blank");
 }
 
-function getStatus(service) {
-    fetch(`backend.php?mode=status&service=${service}`)
-        .then(res => res.text())
-        .then(text => {
-            document.getElementById("servicestatus").innerText = text;
-        });
-}
-
-function controlService(service, action) {
-    fetch(`backend.php?mode=control&service=${service}&action=${action}`)
-        .then(res => res.text())
-        .then(text => {
-            document.getElementById("servicestatus").innerText = text;
-            setTimeout(() => getStatus(service), 2000); // nach kurzer Zeit Status neu laden
-        });
-}
+loadData();
 </script>
+
 <?php
  include ('includes/footer.php');
 ?>

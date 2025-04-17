@@ -2,78 +2,53 @@
 $logfiles = [
     'server-error' => '/home/dietpi/.pm2/logs/server-error.log',
     'server-out' => '/home/dietpi/.pm2/logs/server-out.log',
+    'spotify-control-error' => '/home/dietpi/.pm2/logs/spotify-control-error.log',
+    'spotify-control-out' => '/home/dietpi/.pm2/logs/spotify-control-out.log',
+    'shutdown_control' => '/tmp/shutdown_control.log',
+    'idle_shutdown' => '/tmp/idle_shutdown.log'
 ];
 
-$services = ['pm2', 'mupibox', 'nginx'];
+$services = ['mupi_autoconnect_bt.service', 'mupi_autoconnect-wifi.service', 'mupi_check_internet.service', 'mupi_check_monitor.service', 'mupi_fan.service', 'mupi_hat_control.service', 'mupi_hat.service', 'mupi_idle_shutdown.service', 'mupi_mqtt.service', 'mupi_novnc.service', 'mupi_powerled.service', 'mupi_splash.service', 'mupi_startstop.service', 'mupi_telegram.service', 'mupi_vnc.service', 'mupi_wifi.service', 'pm2-dietpi.service', 'samba-ad-dc.service', 'wpa_supplicant.service', 'proftpd.service'];
 
-$mode = $_GET['mode'] ?? null;
+$mode = $_GET['mode'] ?? '';
+$key = $_GET['key'] ?? '';
+$grep = $_GET['grep'] ?? '';
 
 switch ($mode) {
     case 'log':
-        $logKey = $_GET['log'] ?? '';
-        $grep = $_GET['grep'] ?? '';
-        if (!isset($logfiles[$logKey])) {
+        if (!isset($logfiles[$key])) {
             http_response_code(400);
-            echo "❌ Unbekannte Logdatei.";
+            echo "❌ Unkown Log.";
             exit;
         }
-
-        $file = $logfiles[$logKey];
-        $cmd = "tail -n 100 " . escapeshellarg($file);
-        if (!empty($grep)) {
-            $cmd .= " | grep -i " . escapeshellarg($grep);
-        }
-        echo shell_exec($cmd);
-        break;
-
-    case 'download':
-        $logKey = $_GET['log'] ?? '';
-        $grep = $_GET['grep'] ?? '';
-        if (!isset($logfiles[$logKey])) {
-            http_response_code(400);
-            echo "❌ Unbekannte Logdatei.";
-            exit;
-        }
-
-        $file = $logfiles[$logKey];
-        $cmd = "tail -n 500 " . escapeshellarg($file);
-        if (!empty($grep)) {
-            $cmd .= " | grep -i " . escapeshellarg($grep);
-        }
-
-        header('Content-Type: text/plain');
-        header('Content-Disposition: attachment; filename="' . basename($file) . '"');
+        $cmd = "tail -n 100 " . escapeshellarg($logfiles[$key]);
+        if ($grep) $cmd .= " | grep -i " . escapeshellarg($grep);
         echo shell_exec($cmd);
         break;
 
     case 'status':
-        $service = $_GET['service'] ?? '';
-        if (!in_array($service, $services)) {
+        if (!in_array($key, $services)) {
             http_response_code(400);
-            echo "❌ Unbekannter Dienst.";
+            echo "❌ Unkown Service.";
             exit;
         }
-
-        echo shell_exec("systemctl status " . escapeshellarg($service) . " --no-pager");
+        echo shell_exec("sudo systemctl status " . escapeshellarg($key) . " --no-pager");
         break;
 
-    case 'control':
-        $service = $_GET['service'] ?? '';
-        $action = $_GET['action'] ?? '';
-
-        if (!in_array($service, $services) || !in_array($action, ['start', 'stop', 'restart'])) {
+    case 'download':
+        if (!isset($logfiles[$key])) {
             http_response_code(400);
-            echo "❌ Ungültiger Befehl.";
+            echo "❌ Unkown Log.";
             exit;
         }
-
-        // Achtung: sudo-Rechte vorausgesetzt!
-        $output = shell_exec("sudo systemctl $action " . escapeshellarg($service) . " 2>&1");
-        echo "🔧 Befehl: systemctl $action $service\n\n" . $output;
+        $cmd = "tail -n 500 " . escapeshellarg($logfiles[$key]);
+        if ($grep) $cmd .= " | grep -i " . escapeshellarg($grep);
+        header('Content-Type: text/plain');
+        header('Content-Disposition: attachment; filename="' . basename($logfiles[$key]) . '"');
+        echo shell_exec($cmd);
         break;
 
     default:
         http_response_code(400);
-        echo "❌ Ungültiger Modus.";
-        break;
+        echo "❌ Invalid Mode.";
 }
