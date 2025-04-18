@@ -178,18 +178,18 @@ echo "==========================================================================
 
 	###############################################################################################
 
-	echo -e "XXX\n${STEP}\nSetup docker and container... \nXXX"
-	before=$(date +%s)
+#	echo -e "XXX\n${STEP}\nSetup docker and container... \nXXX"
+#	before=$(date +%s)
 #	if [ ! -f /usr/bin/docker ]; then
 #		sudo bash < <(curl -fsSL https://get.Docker.com) >&3 2>&3
 #	fi
-	sudo docker rm youtube-dl >&3 2>&3
+#	sudo docker rm youtube-dl >&3 2>&3
 #	sudo docker run --name youtube-dl -d --restart unless-stopped -p 8081:8081 -v /home/dietpi/MuPiBox/media/youtube-dl:/downloads ghcr.io/alexta69/metube >&3 2>&3
-	sudo docker image prune -a -f  >&3 2>&3
-	sudo apt-get --yes remove docker   >&3 2>&3
-	after=$(date +%s)
-	echo -e "## Setup docker and container  ##  finished after $((after - $before)) seconds" >&3 2>&3
-	STEP=$(($STEP + 1))
+#	sudo docker image prune -a -f  >&3 2>&3
+#	sudo apt-get --yes remove docker   >&3 2>&3
+#	after=$(date +%s)
+#	echo -e "## Setup docker and container  ##  finished after $((after - $before)) seconds" >&3 2>&3
+#	STEP=$(($STEP + 1))
 
 	###############################################################################################
 
@@ -586,9 +586,9 @@ echo "==========================================================================
 	echo -e "XXX\n{STEP}\nActivate SSL... \nXXX"
 	before=$(date +%s)
 
-	openssl req -new -x509 -keyout /etc/lighttpd/server.pem -out /etc/lighttpd/server.pem -days 3650 -nodes -subj "/C=DE/CN=mupibox"
-	lighty-enable-mod ssl
-	service lighttpd force-reload
+	openssl req -new -x509 -keyout /etc/lighttpd/server.pem -out /etc/lighttpd/server.pem -days 3650 -nodes -subj "/C=DE/CN=mupibox" >/dev/null >&3 2>&3
+	lighty-enable-mod ssl  >&3 2>&3
+	service lighttpd force-reload  >&3 2>&3
 	after=$(date +%s)
 	echo -e "## Network optimization ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))

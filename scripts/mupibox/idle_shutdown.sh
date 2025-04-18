@@ -3,7 +3,7 @@
 # Auto shutdown after idle time.
 
 CONFIG="/etc/mupibox/mupiboxconfig.json"
-LOG="/var/log/mupibox/idle_shutdown.log"
+LOG="/tmp/idle_shutdown.log"
 current_idle_ticks=0
 PLAYERSTATE="/tmp/playerstate"
 

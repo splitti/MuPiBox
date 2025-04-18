@@ -8,6 +8,21 @@
 			exit;
 		}
 	}
+
+	$session_timeout = 60 * 60;
+	if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
+		if (isset($_SESSION['last_activity'])) {
+			if (time() - $_SESSION['last_activity'] > $session_timeout) {
+				// Session ist abgelaufen
+				session_unset();
+				session_destroy();
+				header("Location: " . $_SERVER['PHP_SELF']);
+				exit;
+			}
+		}
+		$_SESSION['last_activity'] = time(); // Zeit aktualisieren
+	}
+
 	$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
 	$data = json_decode($string, true);
 	$loginEnabled = $data['interfacelogin']['state'];
@@ -73,10 +88,13 @@
 		<title>MuPiBox Admin-Interface</title>
 		<link rel="stylesheet" type="text/css" href="view.css?v=7.1.12" media="all">
 		<script src="https://code.iconify.design/iconify-icon/2.0.0/iconify-icon.min.js"></script>
-		<script type="text/javascript" src="view.js?v=6.0.6"></script>
+		<script type="text/javascript" src="view.js?v=6.0.7"></script>
 		<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 		<link rel="icon" type="image/x-icon" href="/images/favicon.ico">
-
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.css">
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/theme/eclipse.min.css">
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/javascript/javascript.min.js"></script>
 	</head>
 <?php
 	if ($loginEnabled) {
@@ -158,6 +176,8 @@
 				<a href="tweaks.php"><i class="fa-solid fa-rocket"></i> Performance</a>*/ ?>
 				<a href="<?= $link ?>" onmouseover="javascript:event.target.port=5252" target="_blank"><i class="fa-brands fa-raspberry-pi"></i> DietPi-Dash</a>
 				<?php /*<a href="/" onmouseover="javascript:event.target.port=8081" target="_blank"><i class="fa-brands fa-youtube"></i> Youtube</a>*/ ?>
+				<a href="<?= $link ?>logviewer.php"><i class="fa-solid fa-file-lines"></i> Logs</a>
+				<a href="<?= $link ?>jsoneditor.php"><i class="fa-solid fa-code"></i> JSON</a>
 				<a href="<?= $link ?>admin.php"><i class="fa-solid fa-screwdriver-wrench"></i> Admin</a>
 				<a href="javascript:void(0);" class="icon" onclick="myFunction()"><i class="fa fa-bars"></i></a>
 			</div>
