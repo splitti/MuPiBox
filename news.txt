@@ -1,38 +1,24 @@
-<h3>Spotify connection problems</h3>
-<p>With Spotify's API change, MuPiBox versions below 4.2.0 are no longer working with Spotify...</p>
-<p>The good news is that we have had a working solution since version 4.2.0.</p>
-
-
 <h3>OS-Support</h3>
 We will focus on <b>bookworm</b> and recommend you to update, or reinstall. See also this dietpi-article: <a href=https://dietpi.com/blog/?p=3128>https://dietpi.com/blog/?p=3128</a>
 
-<h3>Stable Release 4.2.1</h3>
+<h3>Stable Release 4.2.3</h3>
 <ul id='ulnews' class='ulnews'>
-<li id='linews' class='linews'>Update: jq Version 1.7.1 (performance improvements)</li>
-<li id='linews' class='linews'>Update: librespot (instead of spotifyd)</li>
-<li id='linews' class='linews'>Update: NodeJS 22</li>
-<li id='linews' class='linews'>New: Basic network roaming</li>
-<li id='linews' class='linews'>New: The sorting of albums/tracks can now be set when adding or editing an entry</li>
-<li id='linews' class='linews'>New: Disabled the Chrome gesture control which can lead to unwanted navigation</li>
-<li id='linews' class='linews'>New: Wifi can be added without encryption</li>
-<li id='linews' class='linews'>New: Cool themes</li>
-<li id='linews' class='linews'>New: MQTT admin interface link</li>
-<li id='linews' class='linews'>New: Home Assistant Card template</li>
-<li id='linews' class='linews'>New: Custom theme (upload your favourite Background image)</li>
-<li id='linews' class='linews'>Bugfix: Fixed the loading spinner to show until loading of track/artists lists is fully done</li>
-<li id='linews' class='linews'>Bugfix: MQTT is working again</li>
-<li id='linews' class='linews'>Bugfix: Fixed an issue with showing only a part of albums/tracks (interval function).</li>
-<li id='linews' class='linews'>Bugfix: Resume function</li>
-<li id='linews' class='linews'>Bugfix: Less problems to add spotify</li>
-<li id='linews' class='linews'>Bugfix: Podcasts are added with http to be more perfomant</li>
+<li id='linews' class='linews'>Update: The admin interface can now be password protected. The default password is: MuP1B0x</li>
+<li id='linews' class='linews'>Update: Since sysfs-gpio is no longer integrated in debian, we switched to the current and modern libgpiod</li>
+<li id='linews' class='linews'>Update: Since Spotify only allows third-party apps to register via websites with a certificate, the MuPiBox receives a self-signed certificate.</li>
+<li id='linews' class='linews'>Update: Librespot Version dev_0.6 build on 2025-03-05.</li>
+<li id='linews' class='linews'>New: You can edit the important JSON files in the Admin Panel</li>
+<li id='linews' class='linews'>New: You can view Logs and Service States (realtime) in the Admin Panel</li>
 </ul>
+
 <h3>Next Release</h3>
 <ul id='ulnews' class='ulnews'>
 </ul>
 <h3>Next Release (DEV/BETA/STABLE)</h3>
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>Update: Since sysfs-gpio is no longer integrated in debian, we switched to the current and modern libgpiod</li>
-</ul>
-<h3>Next Release</h3>
-<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Update: Since Spotify only allows third-party apps to register via websites with a certificate, the MuPiBox receives a self-signed certificate.</li>
+<li id='linews' class='linews'>Update: Librespot Version dev_0.6 build on 2025-03-05.</li>
+<li id='linews' class='linews'>New: You can edit the important JSON files in the Admin Panel</li>
+<li id='linews' class='linews'>New: You can view Logs and Service States (realtime) in the Admin Panel</li>
 </ul>

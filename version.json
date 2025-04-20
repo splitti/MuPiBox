@@ -160,6 +160,11 @@
 			"version": "4.2.1",
 			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/4.2.1.zip",
 			"releaseinfo": "A major update with numerous fixes and exciting new features..."
+			},
+			{
+			"version": "4.2.3",
+			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/4.2.3.zip",
+			"releaseinfo": "Some improvements for spotify login and some new features in admin panel..."
 			}
 		]
 	}
