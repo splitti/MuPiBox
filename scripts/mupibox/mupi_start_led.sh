@@ -23,7 +23,7 @@ echo "{}" | tee ${TMP_LEDFILE}
 
 # WLED
 wled_active=$(/usr/bin/jq -r .wled.active ${MUPIBOX_CONFIG})
-if [ ${wled_active} ]; then
+if [ ${wled_active} = true ]; then
 	wled_com_port=$(/usr/bin/jq -r .wled.com_port ${MUPIBOX_CONFIG})
 	wled_main_id=$(/usr/bin/jq -r .wled.main_id ${MUPIBOX_CONFIG})
 	wled_baud_rate=$(/usr/bin/jq -r .wled.baud_rate ${MUPIBOX_CONFIG})
@@ -59,7 +59,7 @@ do
 		wled_active=$(/usr/bin/jq -r .wled.active ${MUPIBOX_CONFIG})
 		if [ ${displayState} -eq 1 ] && [ ${OLD_STATE} -ne ${displayState} ]
 		then
-			if [ ${wled_active} ]; then
+			if [ ${wled_active} = true ]; then
 				wled_data='{"bri":'${wled_brightness_def}'}'
 				/usr/bin/python3 /usr/local/bin/mupibox/wled_send_data.py -s ${wled_com_port} -b ${wled_baud_rate} -j ${wled_data}
 			fi
@@ -67,7 +67,7 @@ do
 			OLD_STATE=${displayState}
 		elif [ ${displayState} -eq 0 ] && [ ${OLD_STATE} -ne ${displayState} ]
 		then
-			if [ ${wled_active} ]; then
+			if [ ${wled_active} = true ]; then
 				wled_data='{"bri":'${wled_brightness_dim}'}'
 				/usr/bin/python3 /usr/local/bin/mupibox/wled_send_data.py -s ${wled_com_port} -b ${wled_baud_rate} -j ${wled_data}
 			fi

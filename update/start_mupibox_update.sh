@@ -14,7 +14,7 @@ CONFIG="/etc/mupibox/mupiboxconfig.json"
 LOG="/boot/mupibox_update.log"
 exec 3>${LOG}
 service mupi_idle_shutdown stop
-packages2install="gpiod git libasound2 mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt libgles2-mesa mesa-utils libsdl2-dev preload python3-smbus2 pigpio libjson-c-dev i2c-tools libi2c-dev python3-smbus python3-alsaaudio python3-netifaces"
+packages2install="lighttpd-mod-openssl gpiod git libasound2 mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt libgles2-mesa mesa-utils libsdl2-dev preload python3-smbus2 pigpio libjson-c-dev i2c-tools libi2c-dev python3-smbus python3-alsaaudio python3-netifaces"
 packages2remove="jq"
 STEP=0
 VER_JSON="/tmp/version.json"
@@ -178,18 +178,18 @@ echo "==========================================================================
 
 	###############################################################################################
 
-	echo -e "XXX\n${STEP}\nSetup docker and container... \nXXX"	
-	before=$(date +%s)
+#	echo -e "XXX\n${STEP}\nSetup docker and container... \nXXX"	
+#	before=$(date +%s)
 #	if [ ! -f /usr/bin/docker ]; then
 #		sudo bash < <(curl -fsSL https://get.Docker.com) >&3 2>&3
 #	fi
-	sudo docker rm youtube-dl >&3 2>&3
+#	sudo docker rm youtube-dl >&3 2>&3
 #	sudo docker run --name youtube-dl -d --restart unless-stopped -p 8081:8081 -v /home/dietpi/MuPiBox/media/youtube-dl:/downloads ghcr.io/alexta69/metube >&3 2>&3
-	sudo docker image prune -a -f  >&3 2>&3
-	sudo apt-get --yes remove docker   >&3 2>&3
-	after=$(date +%s)
-	echo -e "## Setup docker and container  ##  finished after $((after - $before)) seconds" >&3 2>&3
-	STEP=$(($STEP + 1))
+#	sudo docker image prune -a -f  >&3 2>&3
+#	sudo apt-get --yes remove docker   >&3 2>&3
+#	after=$(date +%s)
+#	echo -e "## Setup docker and container  ##  finished after $((after - $before)) seconds" >&3 2>&3
+#	STEP=$(($STEP + 1))
 	
 	###############################################################################################
 
@@ -391,11 +391,13 @@ echo "==========================================================================
 	# Binaries
 	if [ `getconf LONG_BIT` == 32 ]; then
 		wget -O /usr/bin/jq https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-armhf >&3 2>&3
-		mv ${MUPI_SRC}/bin/librespot/0.6.0/librespot-32bit /usr/bin/librespot >&3 2>&3
+		wget -O /usr/bin/librespot https://github.com/splitti/MuPiBox/raw/refs/heads/main/bin/librespot/dev_0.6_20250305/librespot-32bit >&3 2>&3
+		#mv ${MUPI_SRC}/bin/librespot/dev_0.6_20250305/librespot-32bit /usr/bin/librespot >&3 2>&3
 		mv ${MUPI_SRC}/bin/fbv/fbv /usr/bin/fbv >&3 2>&3
 	else
 		wget -O /usr/bin/jq https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-arm64 >&3 2>&3
-		mv ${MUPI_SRC}/bin/librespot/0.6.0/librespot-64bit /usr/bin/librespot >&3 2>&3
+		wget -O /usr/bin/librespot https://github.com/splitti/MuPiBox/raw/refs/heads/main/bin/librespot/dev_0.6_20250305/librespot-64bit >&3 2>&3
+		#mv ${MUPI_SRC}/bin/librespot/dev_0.6_20250305/librespot-64bit /usr/bin/librespot >&3 2>&3
 		mv ${MUPI_SRC}/bin/fbv/fbv_64 /usr/bin/fbv >&3 2>&3
 	fi
 	chmod 755 /usr/bin/fbv /usr/bin/jq /usr/bin/librespot >&3 2>&3
@@ -580,7 +582,19 @@ echo "==========================================================================
 	after=$(date +%s)
 	echo -e "## Network optimization ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
+
+	###############################################################################################
+
+	echo -e "XXX\n{STEP}\nActivate SSL... \nXXX"	
+	before=$(date +%s)
 	
+	openssl req -new -x509 -keyout /etc/lighttpd/server.pem -out /etc/lighttpd/server.pem -days 3650 -nodes -subj "/C=DE/CN=mupibox" >/dev/null >&3 2>&3
+	lighty-enable-mod ssl  >&3 2>&3
+	service lighttpd force-reload  >&3 2>&3
+	after=$(date +%s)
+	echo -e "## Network optimization ##  finished after $((after - $before)) seconds" >&3 2>&3
+	STEP=$(($STEP + 1))
+
 	###############################################################################################
 
 	echo -e "XXX\n${STEP}\nRestore Userdata... \nXXX"

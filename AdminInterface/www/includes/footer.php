@@ -109,6 +109,29 @@ $(document).ready(function() {
     alert(title);
   });
 });
+
+
+//Code für offene Details
+document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll("details").forEach(function (detail) {
+        const id = detail.id;
+        if (!id) return;
+
+        // Zustand beim Laden setzen
+        const isOpen = localStorage.getItem("details-" + id);
+        if (isOpen === "true") {
+            detail.open = true;
+        } else if (isOpen === "false") {
+            detail.open = false;
+        }
+
+        // Zustand speichern bei Änderung
+        detail.addEventListener("toggle", function () {
+            localStorage.setItem("details-" + id, detail.open);
+        });
+    });
+});
+
 </script>
 
 	</body>

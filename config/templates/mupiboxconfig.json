@@ -32,6 +32,7 @@
 			"forms",
 			"mystic"
 			],
+		"customTheme": "",
 		"startSound": "/home/dietpi/MuPiBox/sysmedia/sound/startup.wav",
 		"shutSound": "/home/dietpi/MuPiBox/sysmedia/sound/shutdown.wav",
 		"startVolume": "40",
@@ -244,6 +245,10 @@
 		"AudioDevice": "hifiberry-dac",
 		"resume": 9,
 		"version": ""
+	},
+	"interfacelogin": {
+		"state": false,
+		"password": "$2y$10$tA27/5vXFUPgjfjfi7dpTuk.1yOffsg6kuSDQBGTv4sjpVkRlhd76"
 	},
 	"spotify": {
 		"deviceId": "",
