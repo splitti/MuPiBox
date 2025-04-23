@@ -23,13 +23,13 @@ import {
 } from '@ionic/angular/standalone'
 import { Observable, catchError, map, of } from 'rxjs'
 import { saveOutline, trashOutline } from 'ionicons/icons'
+import { toObservable, toSignal } from '@angular/core/rxjs-interop'
 
 import { ActivatedRoute } from '@angular/router'
 import { DataService } from '../services/data.service'
 import { RssData } from '@backend-api/data.model'
 import { SpotifyUrlData } from '@backend-api/spotify-url-data.model'
 import { addIcons } from 'ionicons'
-import { toSignal } from '@angular/core/rxjs-interop'
 
 export enum AddEditPageSourceType {
   SpotifyUrl = 'spotifyURL',
@@ -144,7 +144,6 @@ export class AddEditPage {
     })
     effect(() => {
       if (this.sourceTypeSignal() === AddEditPageSourceType.SpotifyUrl) {
-        console.log('vla')
         this.sourceUrl.setAsyncValidators([this.getSourceUrlValidator()])
       } else [this.sourceUrl.clearAsyncValidators()]
       this.sourceUrl.updateValueAndValidity()
@@ -154,6 +153,10 @@ export class AddEditPage {
     if (this.route.snapshot.url.length > 1) {
       this.editDataId.set(1)
     }
+    // TODO: Fetch the data.
+    // toObservable(this.editDataId).pipe(
+    //   tap()
+    // )
   }
 
   /**
@@ -163,40 +166,7 @@ export class AddEditPage {
     this.useAutomaticFolderNameAndImage.update((val) => !val)
   }
 
-  /**
-   * TODO
-   * @param control
-   * @param required
-   */
-  private setFormControlRequired(control: FormControl, required: boolean): void {
-    if (required) {
-      control.setValidators([Validators.required])
-    } else {
-      control.clearValidators()
-    }
-    control.updateValueAndValidity()
-  }
-
-  /**
-   * TODO
-   * @param control T
-   * @returns
-   */
-  private getSourceUrlValidator(): AsyncValidatorFn {
-    return (control: FormControl): Observable<{ [key: string]: any } | null> => {
-      if (!control.value) {
-        return of(null)
-      }
-      return this.dataService.validateSpotify(this.extractSpotifyUrlData(control.value)).pipe(
-        map((isValid: boolean) => {
-          return isValid ? null : { invalidSpotifyUrl: true }
-        }),
-        catchError(() => of({ invalidSpotifyUrl: true })),
-      )
-    }
-  }
-
-  private create(): void {
+  protected create(): void {
     if (this.formGroup.invalid) {
       return
     }
@@ -230,6 +200,39 @@ export class AddEditPage {
     }
     // TODO: Handle m3u stuff?
     // TODO:
+  }
+
+  /**
+   * TODO
+   * @param control
+   * @param required
+   */
+  private setFormControlRequired(control: FormControl, required: boolean): void {
+    if (required) {
+      control.setValidators([Validators.required])
+    } else {
+      control.clearValidators()
+    }
+    control.updateValueAndValidity()
+  }
+
+  /**
+   * TODO
+   * @param control T
+   * @returns
+   */
+  private getSourceUrlValidator(): AsyncValidatorFn {
+    return (control: FormControl): Observable<{ [key: string]: any } | null> => {
+      if (!control.value) {
+        return of(null)
+      }
+      return this.dataService.validateSpotify(this.extractSpotifyUrlData(control.value)).pipe(
+        map((isValid: boolean) => {
+          return isValid ? null : { invalidSpotifyUrl: true }
+        }),
+        catchError(() => of({ invalidSpotifyUrl: true })),
+      )
+    }
   }
 
   private extractSpotifyUrlData(url: string): SpotifyUrlData | null {

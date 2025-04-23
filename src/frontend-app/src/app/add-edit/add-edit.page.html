@@ -140,7 +140,7 @@
 <ion-footer>
     <ion-toolbar>
         <ion-buttons slot="primary">
-            <ion-button fill="solid" [disabled]="formGroup.invalid">
+            <ion-button fill="solid" [disabled]="formGroup.invalid" (click)="create()">
                 <ion-icon slot="start" name="save-outline"></ion-icon>
                 {{ isEditing() ? 'Save' : 'Create' }}
             </ion-button>
