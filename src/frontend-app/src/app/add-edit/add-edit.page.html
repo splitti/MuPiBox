@@ -139,6 +139,11 @@
 </ion-content>
 <ion-footer>
     <ion-toolbar>
+        @if (formGroup.hasError('createError')) {
+            <ion-note color="danger">
+                {{ formGroup.getError('createError') }}
+            </ion-note>
+        }
         <ion-buttons slot="primary">
             <ion-button fill="solid" [disabled]="formGroup.invalid" (click)="create()">
                 <ion-icon slot="start" name="save-outline"></ion-icon>

@@ -1,6 +1,8 @@
+import { ActivatedRoute, Router } from '@angular/router'
 import { AsyncValidatorFn, FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms'
 import { CategoryType, Sorting } from '@backend-api/folder.model'
 import { ChangeDetectionStrategy, Component, computed, effect, inject, model, signal } from '@angular/core'
+import { Data, RssData } from '@backend-api/data.model'
 import {
   IonBackButton,
   IonButton,
@@ -21,13 +23,11 @@ import {
   IonToggle,
   IonToolbar,
 } from '@ionic/angular/standalone'
-import { Observable, catchError, map, of } from 'rxjs'
+import { Observable, catchError, lastValueFrom, map, of } from 'rxjs'
 import { saveOutline, trashOutline } from 'ionicons/icons'
 import { toObservable, toSignal } from '@angular/core/rxjs-interop'
 
-import { ActivatedRoute } from '@angular/router'
 import { DataService } from '../services/data.service'
-import { RssData } from '@backend-api/data.model'
 import { SpotifyUrlData } from '@backend-api/spotify-url-data.model'
 import { addIcons } from 'ionicons'
 
@@ -126,6 +126,8 @@ export class AddEditPage {
 
   protected isEditing = computed(() => this.editDataId() !== null)
   private editDataId = signal<number | null>(null)
+
+  private readonly router = inject(Router)
   private readonly route = inject(ActivatedRoute)
   private readonly dataService = inject(DataService)
 
@@ -167,9 +169,11 @@ export class AddEditPage {
   }
 
   protected create(): void {
+    this.formGroup.setErrors(null)
     if (this.formGroup.invalid) {
       return
     }
+    let dataToCreate: Data | null = null
     switch (this.sourceType.value) {
       case AddEditPageSourceType.SpotifyUrl:
         // this.createSpotify()
@@ -191,7 +195,7 @@ export class AddEditPage {
           sorting: this.sorting.value,
           id: this.sourceUrl.value,
         }
-        this.dataService.createData(rssData)
+        dataToCreate = rssData
         break
       }
       case AddEditPageSourceType.StreamUrl:
@@ -199,7 +203,19 @@ export class AddEditPage {
         break
     }
     // TODO: Handle m3u stuff?
-    // TODO:
+    if (dataToCreate === null) {
+      return
+    }
+    lastValueFrom(this.dataService.createData(dataToCreate))
+      .then(() => {
+        this.router.navigate([''])
+      })
+      .catch((error) => {
+        // TODO: Allow submitting form again.
+        this.formGroup.setErrors({
+          createError: 'Failed to create entry. This might be due to a locked data file. Please try again in a moment.',
+        })
+      })
   }
 
   /**
