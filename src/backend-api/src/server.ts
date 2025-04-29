@@ -253,6 +253,9 @@ app.get('/api/media/:category/:folder', async (req, res) => {
   }
 })
 
+/**
+ * TODO
+ */
 app.get('/api/data', async (_req, res) => {
   try {
     const data: Data[] = await readJsonFile(dataFile)
@@ -263,7 +266,27 @@ app.get('/api/data', async (_req, res) => {
   }
 })
 
-// Allow creating new data.
+/**
+ * TODO
+ */
+app.get('/data/:index', async (req, res) => {
+  try {
+    const index = Number.parseInt(req.params.index, 10)
+    const data: Data[] = await readJsonFile(dataFile)
+    if (index >= 0 && index < data.length) {
+      res.json(data[index])
+    } else {
+      res.status(404).json({ error: 'Data not found' })
+    }
+  } catch (error) {
+    console.error(`${nowDate.toLocaleString()}: [${serverName}] ${error}`)
+    res.status(404).json({ error: 'Data not found' })
+  }
+})
+
+/**
+ * TODO
+ */
 app.post('/api/data', async (req, res) => {
   try {
     // There might be a data lock. If so, we retry 5 times to reduce errors for the user.
@@ -298,6 +321,9 @@ app.post('/api/data', async (req, res) => {
   }
 })
 
+/**
+ * TODO
+ */
 app.post('/api/validate-spotify', async (req: Request, res: Response) => {
   const spotifyUrlData: SpotifyUrlData = req.body
   if (!spotifyUrlData || !spotifyUrlData.type || !spotifyUrlData.id) {
