@@ -25,38 +25,106 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>
 """
 __author__ = "Lars Stopfkuchen"
 __license__ = "GPLv3"
-__version__ = "0.0.1"
-__email__ = "lars.stopfkuchen@mupibox.de"
-__status__ = "under development"
+__version__ = "0.2.0"
+__email__ = "larsstopfkuchen@mupihat.de"
+__status__ = "released"
 
 import smbus2
 import sys
 import time
 import json
 
+import logging
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,  # Set the logging level (INFO, DEBUG, WARNING, etc.)
+    format="%(asctime)s - %(levelname)s - %(message)s",  # Log format
+    handlers=[
+        logging.StreamHandler(sys.stdout),  # Output logs to the console
+    ]
+)
+
+
+class I2CError(Exception):
+    """Custom exception for I2C communication errors."""
+    pass
+
 class bq25792:
-    """ 
-    Summary
-    ----------
-      A class for accessing BQ25792 charger IC 
-    
-    Usage: 
-    ----------
-        TODO
+    """
+    A class for interfacing with the BQ25792 charger IC.
+
+    The BQ25792 is a highly integrated battery charge management IC that supports USB-C PD and other power sources. 
+    This class provides methods to configure, monitor, and control the charger IC via I2C communication.
 
     Attributes
     ----------
-    i2c_device : int (default: 1)
-         see number in /dev/i2c-X
-    i2c_addr : int (default: 0x6b)
-        i2c adresss of BQ25792
-    busWS_ms : int (default: 10)
-        sleep time after i2c access in [ms]
+    i2c_device : int
+        The I2C bus number (default: 1).
+    i2c_addr : int
+        The I2C address of the BQ25792 IC (default: 0x6b).
+    busWS_ms : int
+        Sleep time after I2C access in milliseconds (default: 10).
+    registers : list
+        A list of register values read from the BQ25792 IC.
+    battery_conf : dict
+        Configuration for the battery, including thresholds for state-of-charge (SOC) and warnings.
+    battery_conf_file : str
+        Path to the JSON configuration file for the battery.
 
     Methods
     -------
-    TODO
-        
+    __init__(i2c_device=1, i2c_addr=0x6b, busWS_ms=10, exit_on_error=False, battery_conf_file="/etc/mupibox/mupiboxconfig.json")
+        Initializes the BQ25792 class and sets up default configurations.
+    read_register(reg_addr, length=1)
+        Reads data from a specific register.
+    write_register(reg)
+        Writes a single-byte value to a register.
+    write_register_word(reg)
+        Writes a two-byte value to a register.
+    read_all_register()
+        Reads all registers from the BQ25792 IC and updates the class attributes.
+    read_Vbat()
+        Reads the battery voltage (VBAT) in millivolts.
+    read_Ibat()
+        Reads the battery current (IBAT) in milliamps.
+    read_Vbus()
+        Reads the bus voltage (VBUS) in millivolts.
+    read_Ibus()
+        Reads the bus current (IBUS) in milliamps.
+    read_TDIE_Temp()
+        Reads the IC temperature in degrees Celsius.
+    set_input_current_limit(input_current_limit)
+        Sets the input current limit in milliamps.
+    disable_extilim()
+        Disables the external ILIM_HIZ input current limit pin.
+    enable_extilim()
+        Enables the external ILIM_HIZ input current limit pin.
+    read_ChargerStatus()
+        Reads the charger status and returns a descriptive string.
+    read_VBAT_PRESENT()
+        Checks if the battery is present and returns the status.
+    write_defaults()
+        Writes default settings to the charger IC.
+    MuPiHAT_Default()
+        Writes default settings specific to the MuPiHAT project.
+    to_json()
+        Returns a JSON object with key metrics such as voltage, current, temperature, and charger status.
+    to_json_registers()
+        Returns a JSON object containing all register variables with their names and values.
+    battery_soc()
+        Calculates the battery state-of-charge (SOC) based on the VBAT value and configuration thresholds.
+    soft_reset()
+        Performs a soft reset of the charger IC.
+    safe_execute(func, *args, **kwargs)
+        Executes a function safely, catching exceptions and handling errors.
+
+    Usage
+    -----
+    # Example usage:
+    hat = bq25792()
+    hat.read_all_register()
+    print(hat.to_json())
     """
      # constructor method
     def __init__(self, i2c_device=1, i2c_addr=0x6b, busWS_ms=10, exit_on_error = False, battery_conf_file="/etc/mupibox/mupiboxconfig.json"):
@@ -84,9 +152,9 @@ class bq25792:
             self.REG08_Precharge_Control = self.REG08_Precharge_Control()
             self.REG09_Termination_Control = self.REG09_Termination_Control()
             self.REG0A_Recharge_Control = self.REG0A_Recharge_Control() 
-            self.REG0B_VOTG_regulation = 0xB
-            self.REG0D_IOTG_regulation = 0xD
-            self.REG0E_Timer_Control = 0xE
+            self.REG0B_VOTG_regulation = self.REG0B_VOTG_regulation()
+            self.REG0D_IOTG_regulation = self.REG0D_IOTG_regulation()
+            self.REG0E_Timer_Control = self.REG0E_Timer_Control()
             self.REG0F_Charger_Control_0 = self.REG0F_Charger_Control_0()
             self.REG10_Charger_Control_1 = self.REG10_Charger_Control_1()
             self.REG11_Charger_Control_2 = self.REG11_Charger_Control_2()
@@ -137,14 +205,15 @@ class bq25792:
             self.bq = smbus2.SMBus(i2c_device)
             self.battery_conf_load()
         except Exception as _error:
-            sys.stderr.write('%s\n' % str(_error))
+            #sys.stderr.write('%s\n' % str(_error))
+            logging.error("BQ25792 init failed, %s", str(_error))
             if self._exit_on_error: sys.exit(1)
         finally:
             pass
 
     def battery_conf_load(self):
         '''
-        load the battery configuration from yaml file
+        load the battery configuration from json file
         '''
         try:
             with open(self.battery_conf_file) as file:
@@ -161,11 +230,11 @@ class bq25792:
                     self.battery_conf["v_0"] = int(bt["config"]["v_0"])
                     self.battery_conf["th_warning"] = int(bt["config"]["th_warning"])
                     self.battery_conf["th_shutdown"] = int(bt["config"]["th_shutdown"])
-                    print(json.dumps(self.battery_conf, indent=4))
+                    logging.info("Battery configuration loaded from JSON: %s", self.battery_conf_file)
                     break            
             return 0
         except Exception as _error:
-            sys.stderr.write('battery_conf_load from JSON failed, use standard configuration, %s\n' % str(_error))
+            logging.error("battery_conf_load from JSON failed, use standard configuration, %s", str(_error))
             if self._exit_on_error: sys.exit(1)
             return -1
         finally:
@@ -261,9 +330,9 @@ class bq25792:
             self.VREG = self._value * 10
         def set (self, value):
             super().set(value)
-            self.VREG = self._value * 10
+            self.VRE0G = self._value * 10
 
-    class REG03_Charge_Current_Limit:
+    class REG03_Charge_Current_Limit(BQ25795_REGISTER):
         #Charge Current Limit During POR, the device reads the resistance tie to PROG pin, to identify the default battery cell count and determine the default power-on battery charging current: 1s and 2s: 3s and 4s: 1A Type : RW Range : 50mA-5000mA Fixed Offset : 0mA Bit Step Size : 10mA
         def __init__(self, value = 0):
             self._addr = 0x3
@@ -273,7 +342,7 @@ class bq25792:
             self._value = value
             self.ICHG = self._value * 10
 
-    class REG05_Input_Voltage_Limit:
+    class REG05_Input_Voltage_Limit(BQ25795_REGISTER):
         #Absolute VINDPM Threshold VINDPM register is reset to 3600mV upon adapter unplugged and it is set to the value based on the VBUS measurement when the adapter plugs in. It is not reset by the REG_RST and the WATCHDOG Type : RW POR: 3600mV (24h) Range : 3600mV-22000mV Fixed Offset : 0mV Bit Step Size : 100mV
         def __init__(self, value = 0):
             self._addr = 0x5
@@ -294,7 +363,8 @@ class bq25792:
             Non-Standard Adapter = 1A/2A/2.1A/2.4A 
             Type : RW POR: 3000mA (12Ch) 
             Range : 100mA-3300mA 
-            Fixed Offset : 0mA Bit Step Size : 10mA
+            Fixed Offset : 0mA 
+            Bit Step Size : 10mA
         '''
         def __init__(self, addr=0x6, value=0x12c):
             super().__init__(addr, value)
@@ -308,7 +378,13 @@ class bq25792:
         def get_IINDPM(self):
             '''return input current limit in mA'''
             return self.IINDPM
-        
+        def set_IINDPM(self, IINDPM):
+            '''
+            Set input current limit in mA steps (10mA steps, Range : 100mA-3300mA)
+            '''
+            self.IINDPM = IINDPM
+            self.get()
+
         def set_input_current_limit(self, input_current_limit):
             '''
             Set input current limit in mA steps (10mA steps, Range : 100mA-3300mA)
@@ -316,15 +392,9 @@ class bq25792:
             self.IINDPM = input_current_limit
             self.get()
         
-        def __init__(self, value = 0):
-            self._addr = 0x6
-            self._value = value
-            self.IINDPM = self._value * 10
-        def set (self, value):
-            self._value = value
-            self.IINDPM = self._value * 10
+    
 
-    class REG08_Precharge_Control:
+    class REG08_Precharge_Control(BQ25795_REGISTER):
         # VBAT_LOWV: Battery voltage thresholds for the transition from precharge to fast charge, which is defined as a ratio of battery regulation limit (VREG) Type : RW POR: 11b 0h = 15%*VREG 1h = 62.2%*VREG 2h = 66.7%*VREG 3h = 71.4%*VREG
         # IPRECHG: Precharge current limit Type : RW POR: 120mA (3h) Range : 40mA-2000mA Fixed Offset : 0mA Bit Step Size : 40mA
         def __init__(self, value = 0):
@@ -337,20 +407,52 @@ class bq25792:
             self.VBAT_LOWV = ((self._value & 0b11000000) >> 6)
             self.IPRECHG   = (self._value & 0b00111111) * 40
     
-    class REG09_Termination_Control:
-        # REG_RST: Reset registers to default values and reset timer Type : RW POR: 0b 0h = Not reset 1h = Reset
-        # ITERM: Termination current Type : RW POR: 200mA (5h) Range : 40mA-1000mA Fixed Offset : 0mA Bit Step Size : 40mA
-        def __init__(self, value = 0):
-            self._addr = 0x9
-            self._value = value
+    class REG09_Termination_Control(BQ25795_REGISTER):
+        """
+        BQ25795 - EG09_Termination_Control
+        ----------
+        REG_RST: 
+            Reset registers to default values and reset timer 
+            Type : RW POR: 0b 0h = Not reset 1h = Reset
+        ITERM: 
+            Termination current 
+            Type : RW POR: 200mA (5h) 
+            Range : 40mA-1000mA 
+            Fixed Offset : 0mA 
+            Bit Step Size : 40mA
+        """
+
+        def __init__(self, addr=0x9, value=0):
+            super().__init__(addr, value)
             self.REG_RST = ((self._value & 0b01000000) >> 6)
             self.ITERM   = (self._value & 0b00011111) * 40
         def set (self, value):
-            self._value = value
+            super().set(value)
             self.REG_RST = ((self._value & 0b01000000) >> 6)
             self.ITERM   = (self._value & 0b00011111) * 40
+        def get (self):
+            self._value = (self.REG_RST << 6) | (self.ITERM >> 0)
+            return self._value, self.REG_RST, self.ITERM
+        def get_ITERM(self):
+            '''return termination current in mA'''
+            return self.ITERM
+        def set_ITERM(self, ITERM):
+            '''
+            Set termination current in mA steps (40mA steps, Range : 40mA-1000mA)
+            '''
+            self.ITERM = ITERM
+            self.get()
+        def get_REG_RST(self):
+            '''return REG_RST'''
+            return self.REG_RST
+        def set_REG_RST(self, REG_RST):
+            '''
+            Set REG_RST (0h = Not reset, 1h = Reset)
+            '''
+            self.REG_RST = REG_RST
+            self.get()
 
-    class REG0A_Recharge_Control:
+    class REG0A_Recharge_Control(BQ25795_REGISTER):
         """
         BQ25795 - REG0A_Recharge_Control
         ----------
@@ -388,6 +490,132 @@ class bq25792:
             self.CELL       = ((self._value & 0b11000000) >> 6)
             self.TRECHG     = ((self._value & 0b00110000) >> 4)
             self.VRECHG     = ((self._value & 0b00001111) >> 0)
+
+    class REG0B_VOTG_regulation(BQ25795_REGISTER):
+        """
+        BQ25795 - REG0B_VOTG_regulation
+        ----------
+        VOTG: 
+            OTG mode regulation voltage
+            Type : RW 
+            POR: 5000mV (DCh) 
+            Range : 2800mV-22000mV 
+            Fixed Offset : 2800mV 
+            Bit Step Size : 10mV 
+            Clamped High
+        """
+        def __init__(self, addr=0xb, value=0):
+            super().__init__(addr, value)
+            self.VOTG = ((self._value & 0b11111111111))
+        def set (self, value):
+            super().set(value)
+            self.VOTG = ((self._value & 0b11111111111))
+        def get (self):
+            self._value = self.VOTG
+            return self._value, self.VOTG
+
+    class REG0E_Timer_Control(BQ25795_REGISTER):
+        """
+        BQ25795 - REG0E_Timer_Control
+        ----------
+        TOPOFF_TMR: 
+            Top-off timer control 
+            Type : RW 
+            POR: 00b 0h = Disabled (default) 
+            1h = 15 mins 
+            2h = 30 mins 
+            3h = 45 mins
+        EN_TRICHG_TMR:
+            Enable the Trickle Charge Timer 
+            Type : RW 
+            POR: 0b 0h = Disabled (default) 
+            1h = Enabled
+        EN_PRECHG_TMR:
+            Enable the Precharge Timer 
+            Type : RW 
+            POR: 0b 0h = Disabled (default) 
+            1h = Enabled  
+        EN_CHG_TMR:
+            Enable the Charge Timer 
+            Type : RW 
+            POR: 0b 
+            0h = Disabled (default) 
+            1h = Enabled
+        CHG_TMR:
+            Charge Timer Setting 
+            Type : RW 
+            POR: 10b 
+            0h = 5 hrs 
+            1h = 10 hrs 
+            2h = 12 hrs (default)  
+            3h = 24 hrs 
+        TMR2X_EN:
+            Enable the 2X Timer 
+            Type : RW 
+            POR: 1b 
+            0h =  Trickle charge, pre-charge and fast charge timer NOT slowed by 2X during input DPM or thermal regulation.
+            1h = Trickle charge, pre-charge and fast charge timer slowed by 2X during input DPM or thermal regulation (default)  
+        """
+        def __init__(self, addr=0xe, value=0x3d):
+            super().__init__(addr, value)   
+            self.TOPOFF_TMR = ((self._value & 0b11000000) >> 6)
+            self.EN_TRICHG_TMR = ((self._value & 0b00100000) >> 5) 
+            self.EN_PRECHG_TMR = ((self._value & 0b00010000) >> 4)
+            self.EN_CHG_TMR = ((self._value & 0b00001000) >> 3) 
+            self.CHG_TMR = ((self._value & 0b00000110) >> 1)
+            self.TMR2X_EN = ((self._value & 0b00000001) >> 0)         
+        def set (self, value):
+            super().set(value)
+            self.TOPOFF_TMR = ((self._value & 0b11000000) >> 6)
+            self.EN_TRICHG_TMR = ((self._value & 0b00100000) >> 5) 
+            self.EN_PRECHG_TMR = ((self._value & 0b00010000) >> 4)
+            self.EN_CHG_TMR = ((self._value & 0b00001000) >> 3) 
+            self.CHG_TMR = ((self._value & 0b00000110) >> 1)
+            self.TMR2X_EN = ((self._value & 0b00000001) >> 0)
+        def get (self):
+            self._value = (self.TOPOFF_TMR << 6) | (self.EN_TRICHG_TMR << 5) | (self.EN_PRECHG_TMR << 4) | (self.EN_CHG_TMR << 3) | (self.CHG_TMR << 1) | (self.TMR2X_EN << 0)
+            return self._value, self.TOPOFF_TMR, self.EN_TRICHG_TMR, self.EN_PRECHG_TMR, self.EN_CHG_TMR, self.CHG_TMR, self.TMR2X_EN
+        def get_TMR2X_EN(self):
+            '''return TMR2X_EN'''
+            return self.TMR2X_EN
+        def set_TMR2X_EN(self, TMR2X_EN):
+            '''
+            Set TMR2X_EN
+            '''
+            self.TMR2X_EN = TMR2X_EN
+            self.get()
+        
+        
+    class REG0D_IOTG_regulation(BQ25795_REGISTER):
+        """
+        BQ25795 - REG0D_IOTG_regulation
+        ----------
+        PRECHG_TMR: 
+            Pre-charge safety timer setting 
+            Type : RW 
+            POR: 0b 
+            0h = 2 hrs (default) 
+            1h = 0.5 hrs
+        IOTG:
+            OTG current limit 
+            Type : RW 
+            POR: 3000mA (4Bh) 
+            Range : 120mA-3320mA 
+            Fixed Offset : 0mA 
+            Bit Step Size : 40mA 
+            Clamped Low
+        """
+        def __init__(self, addr=0xd, value=0):
+            super().__init__(addr, value)
+            self.PRECHG_TMR =   (self._value & 0b10000000)
+            self.IOTG =         (self._value & 0b01111111)
+        def set (self, value):
+            super().set(value)
+            self.PRECHG_TMR =   (self._value & 0b10000000)
+            self.IOTG =         (self._value & 0b01111111)
+        def get (self):
+            self._value = (self.PRECHG_TMR << 7) | (self.IOTG & 0b01111111)
+            return self._value, self.PRECHG_TMR, self.IOTG
 
     class REG0F_Charger_Control_0(BQ25795_REGISTER):
         """
@@ -429,7 +657,7 @@ class bq25792:
             0h = Disable 
             1h = Enable (default)
         """
-        def __init__(self, addr=0xf, value = 0):
+        def __init__(self, addr=0xf, value = 0xA2):
             super().__init__(addr, value)
             self.EN_AUTO_IBATDIS = ((self._value & 0b10000000) == 128)
             self.FORCE_IBATDIS   = ((self._value & 0b01000000) == 64)
@@ -450,6 +678,69 @@ class bq25792:
         def get (self):
             self._value = (self.EN_AUTO_IBATDIS << 7) | (self.FORCE_IBATDIS << 6) | (self.EN_CHG << 5) | (self.EN_ICO << 4)| (self.FORCE_ICO << 3)| (self.EN_HIZ << 2) | (self.EN_TERM << 1) | 0
             return self._value, self.EN_AUTO_IBATDIS, self.FORCE_IBATDIS, self.EN_CHG, self.EN_ICO, self.FORCE_ICO, self.EN_HIZ, self.EN_TERM 
+        def get_EN_AUTO_IBATDIS(self):
+            '''return EN_AUTO_IBATDIS'''
+            return self.EN_AUTO_IBATDIS
+        def set_EN_AUTO_IBATDIS(self, EN_AUTO_IBATDIS):
+            '''
+            Set EN_AUTO_IBATDIS (0h = The charger will NOT apply a discharging current on BAT during battery OVP, 1h = The charger will apply a discharging current on BAT during battery OVP)
+            '''
+            self.EN_AUTO_IBATDIS = EN_AUTO_IBATDIS
+            self.get()
+        def get_FORCE_IBATDIS(self):
+            '''return FORCE_IBATDIS'''
+            return self.FORCE_IBATDIS
+        def set_FORCE_IBATDIS(self, FORCE_IBATDIS):
+            '''     
+            Set FORCE_IBATDIS (0h = IDLE (default), 1h = Force the charger to apply a discharging current on BAT regardless the battery OVP status)
+            '''
+            self.FORCE_IBATDIS = FORCE_IBATDIS
+            self.get()  
+        def get_EN_CHG(self):
+            '''return EN_CHG'''
+            return self.EN_CHG  
+        def set_EN_CHG(self, EN_CHG):
+            '''
+            Set EN_CHG (0h = Charge Disable, 1h = Charge Enable (default))  
+            '''
+            self.EN_CHG = EN_CHG
+            self.get()
+        def get_EN_ICO(self):
+            '''return EN_ICO'''
+            return self.EN_ICO
+        def set_EN_ICO(self, EN_ICO):
+            '''
+            Set EN_ICO (0h = Disable ICO (default), 1h = Enable ICO) 
+            '''
+            self.EN_ICO = EN_ICO
+            self.get()
+        def get_FORCE_ICO(self):
+            '''return FORCE_ICO'''
+            return self.FORCE_ICO
+        def set_FORCE_ICO(self, FORCE_ICO):
+            '''
+            Set FORCE_ICO (0h = Do NOT force ICO (Default), 1h = Force ICO start) 
+            '''
+            self.FORCE_ICO = FORCE_ICO
+            self.get()
+        def get_EN_HIZ(self):
+            '''return EN_HIZ'''
+            return self.EN_HIZ
+        def set_EN_HIZ(self, EN_HIZ):
+            '''
+            Set EN_HIZ (0h = Disable (default), 1h = Enable) 
+            '''
+            self.EN_HIZ = EN_HIZ
+            self.get()
+        def get_EN_TERM(self):
+            '''return EN_TERM'''
+            return self.EN_TERM
+        def set_EN_TERM(self, EN_TERM):
+            '''
+            Set EN_TERM (0h = Disable, 1h = Enable (default)) 
+            '''
+            self.EN_TERM = EN_TERM
+            self.get()
 
     class REG10_Charger_Control_1(BQ25795_REGISTER):
         """
@@ -492,6 +783,34 @@ class bq25792:
         def get (self):
             self._value = (self.VAC_OVP << 4) | (self.WD_RST << 3) | (self.WATCHDOG)
             return self._value, self.VAC_OVP, self.WD_RST, self.WATCHDOG
+        def get_VAC_OVP(self):
+            '''return VAC_OVP'''
+            return self.VAC_OVP 
+        def set_VAC_OVP(self, VAC_OVP):
+            '''
+            Set VAC_OVP (0h = 26V (default), 1h = 18V, 2h = 12V, 3h = 7V)   
+            '''
+            self.VAC_OVP = VAC_OVP  
+            self.get()
+        def get_WD_RST(self):
+            '''return WD_RST'''
+            return self.WD_RST  
+        def set_WD_RST(self, WD_RST):
+            '''
+            Set WD_RST (0h = Normal (default), 1h = Reset (this bit goes back to 0 after timer resets)) 
+            '''
+            self.WD_RST = WD_RST    
+            self.get()
+        def get_WATCHDOG(self): 
+            '''return WATCHDOG'''
+            return self.WATCHDOG
+        def set_WATCHDOG(self, WATCHDOG):   
+            '''
+            Set WATCHDOG (0h = Disable, 1h = 0.5s, 2h = 1s, 3h = 2s, 4h = 20s, 5h = 40s (default), 6h = 80s, 7h = 160s) 
+            '''
+            self.WATCHDOG = WATCHDOG  
+            self.get()
+
 
     class REG11_Charger_Control_2(BQ25795_REGISTER):
         """
@@ -685,7 +1004,61 @@ class bq25792:
         def get (self):
             self._value =  (self.SFET_PRESENT << 7) | 0 | (self.EN_IBAT << 5) | (self.IBAT_REG << 3) | (self.EN_IINDPM << 2) | (self.EN_EXTILIM << 1) | self.EN_BATOC
             return self._value, self.SFET_PRESENT, self.EN_IBAT, self.IBAT_REG, self.EN_IINDPM, self.EN_EXTILIM, self.EN_BATOC
-
+        def get_SFET_PRESENT(self):
+            '''return SFET_PRESENT'''
+            return self.SFET_PRESENT
+        def set_SFET_PRESENT(self, SFET_PRESENT):   
+            '''
+            Set SFET_PRESENT (0h = No ship FET populated, 1h = Ship FET populated) 
+            '''
+            self.SFET_PRESENT = SFET_PRESENT  
+            self.get()
+        def get_EN_IBAT(self):
+            '''return EN_IBAT'''
+            return self.EN_IBAT
+        def set_EN_IBAT(self, EN_IBAT):
+            '''
+            Set EN_IBAT (0h = Disable IBAT discharge current sensing for ADC (default), 1h = Enable the IBAT discharge current sensing for ADC) 
+            '''
+            self.EN_IBAT = EN_IBAT  
+            self.get()
+        def get_IBAT_REG(self):
+            '''return IBAT_REG'''
+            return self.IBAT_REG
+        def set_IBAT_REG(self, IBAT_REG):
+            '''
+            Set IBAT_REG (0h = 3A, 1h = 4A, 2h = 5A (default), 3h = Disable) 
+            '''
+            self.IBAT_REG = IBAT_REG  
+            self.get()
+        def get_EN_IINDPM(self):
+            '''return EN_IINDPM'''
+            return self.EN_IINDPM       
+        def set_EN_IINDPM(self, EN_IINDPM):
+            '''
+            Set EN_IINDPM (0h = Disable, 1h = Enable (default)) 
+            '''
+            self.EN_IINDPM = EN_IINDPM  
+            self.get()
+        def get_EN_EXTILIM(self):
+            '''return EN_EXTILIM'''
+            return self.EN_EXTILIM
+        def set_EN_EXTILIM(self, EN_EXTILIM):   
+            '''
+            Set EN_EXTILIM (0h = Disable, 1h = Enable (default)) 
+            '''
+            self.EN_EXTILIM = EN_EXTILIM  
+            self.get()
+        def get_EN_BATOC(self):
+            '''return EN_BATOC'''
+            return self.EN_BATOC
+        def set_EN_BATOC(self, EN_BATOC):
+            '''
+            Set EN_BATOC (0h = Disable (default), 1h = Enable) 
+            '''
+            self.EN_BATOC = EN_BATOC  
+            self.get()
+    
     class REG16_Temperature_Control(BQ25795_REGISTER):
         """
         BQ25795 - REG16_Temperature_Control
@@ -750,6 +1123,53 @@ class bq25792:
             elif self.TSHUT == 0x2: return "120°C"
             elif self.TSHUT == 0x3: return "85°C"
             else: return "unknown" 
+        def get_VBUS_PD_EN(self):
+            '''return VBUS_PD_EN'''
+            return self.VBUS_PD_EN
+        def set_VBUS_PD_EN(self, VBUS_PD_EN):
+            '''
+            Set VBUS_PD_EN (0h = Disable (default), 1h = Enable) 
+            '''
+            self.VBUS_PD_EN = VBUS_PD_EN  
+            self.get()
+        def get_VAC1_PD_EN(self):
+            '''return VAC1_PD_EN'''
+            return self.VAC1_PD_EN
+        def set_VAC1_PD_EN(self, VAC1_PD_EN):
+            '''
+            Set VAC1_PD_EN (0h = Disable (default), 1h = Enable) 
+            '''
+            self.VAC1_PD_EN = VAC1_PD_EN  
+            self.get()
+        def get_VAC2_PD_EN(self):
+            '''return VAC2_PD_EN'''
+            return self.VAC2_PD_EN
+        def set_VAC2_PD_EN(self, VAC2_PD_EN):   
+            '''
+            Set VAC2_PD_EN (0h = Disable (default), 1h = Enable) 
+            '''
+            self.VAC2_PD_EN = VAC2_PD_EN  
+            self.get()
+        def get_TREG(self):
+            '''return TREG'''
+            return self.TREG
+        def set_TREG(self, TREG):
+            '''     
+            Set TREG (0h = 60°C, 1h = 80°C, 2h = 100°C, 3h = 120°C (default))
+            ''' 
+            self.TREG = TREG
+            self.get()
+        def get_TSHUT(self):
+            '''return TSHUT'''
+            return self.TSHUT   
+        def set_TSHUT(self, TSHUT):
+            '''
+            Set TSHUT (0h = 150°C (default), 1h = 130°C, 2h = 120°C, 3h = 85°C) 
+            '''
+            self.TSHUT = TSHUT
+            self.get()
+
+    
     class REG19_ICO_Current_Limit(BQ25795_REGISTER):
         """
         BQ25795 - REG19_ICO_Current_Limit
@@ -943,6 +1363,52 @@ class bq25792:
         def get(self):
             self._value = (self.ADC_EN << 7) | (self.ADC_RATE << 6) | (self.ADC_SAMPLE << 4) | (self.ADC_AVG << 3) | (self.ADC_AVG_INIT << 2) | 0b00
             return self._value, self.ADC_EN, self.ADC_RATE, self.ADC_SAMPLE, self.ADC_AVG, self.ADC_AVG_INIT
+        def get_ADC_EN(self):
+            '''return ADC_EN'''
+            return self.ADC_EN  
+        def set_ADC_EN(self, ADC_EN):
+            '''
+            Set ADC_EN (0h = Disable, 1h = Enable) 
+            '''
+            self.ADC_EN = ADC_EN  
+            self.get()
+        def get_ADC_RATE(self):
+            '''return ADC_RATE'''
+            return self.ADC_RATE
+        def set_ADC_RATE(self, ADC_RATE):
+            '''
+            Set ADC_RATE (0h = Continuous conversion, 1h = One shot conversion) 
+            '''
+            self.ADC_RATE = ADC_RATE  
+            self.get()
+        def get_ADC_SAMPLE(self):
+            '''return ADC_SAMPLE'''
+            return self.ADC_SAMPLE
+        def set_ADC_SAMPLE(self, ADC_SAMPLE):
+            '''
+            Set ADC_SAMPLE (0h = 15 bit effective resolution, 1h = 14 bit effective resolution, 2h = 13 bit effective resolution, 3h = 12 bit effective resolution (default - not recommended)) 
+            '''
+            self.ADC_SAMPLE = ADC_SAMPLE  
+            self.get()
+        def get_ADC_AVG(self):
+            '''return ADC_AVG'''
+            return self.ADC_AVG
+        def set_ADC_AVG(self, ADC_AVG):
+            '''
+            Set ADC_AVG (0h = Single value, 1h = Running average) 
+            '''
+            self.ADC_AVG = ADC_AVG  
+            self.get()
+        def get_ADC_AVG_INIT(self):
+            '''return ADC_AVG_INIT'''
+            return self.ADC_AVG_INIT    
+        def set_ADC_AVG_INIT(self, ADC_AVG_INIT):
+            '''
+            Set ADC_AVG_INIT (0h = Start average using the existing register value, 1h = Start average using a new ADC conversion)
+            '''
+            self.ADC_AVG_INIT = ADC_AVG_INIT
+            self.get()
+        
     class REG31_IBUS_ADC(BQ25795_REGISTER):
         """
         BQ25795 - REG31_IBUS_ADC
@@ -965,6 +1431,13 @@ class bq25792:
             return self._value, self.IBUS_ADC
         def get_Ibus(self):
             return self.IBUS_ADC
+        def get_Ibus_mA(self):
+            '''
+            Returns IBUS_ADC in [mA]    
+            '''
+            return self.IBUS_ADC*1.0
+        
+
         
     class REG33_IBAT_ADC(BQ25795_REGISTER):
         """
@@ -988,6 +1461,12 @@ class bq25792:
             return self._value, self.IBAT_ADC
         def get_Ibat(self):
             return self.IBAT_ADC
+        def get_Ibat_mA(self):
+            '''
+            Returns IBAT_ADC in [mA] 
+            '''
+            return self.IBAT_ADC*1.0    
+        
         
     class REG35_VBUS_ADC(BQ25795_REGISTER):
         """
@@ -1027,7 +1506,9 @@ class bq25792:
             super().set(value)
             self.VAC1_ADC             = self._value
         def get(self):
-            return self._value, self.VAC1_ADC    
+            return self._value, self.VAC1_ADC   
+        def get_Vac1(self):
+            return self.VAC1_ADC 
     
     class REG39_VAC2_ADC(BQ25795_REGISTER):
         """
@@ -1047,6 +1528,8 @@ class bq25792:
             self.VAC2_ADC             = self._value
         def get(self):
             return self._value, self.VAC2_ADC
+        def get_Vac2(self):
+            return self.VAC2_ADC
 
     class REG3B_VBAT_ADC(BQ25795_REGISTER):
         """
@@ -1088,6 +1571,8 @@ class bq25792:
             self.VSYS_ADC             = self._value
         def get(self):
             return self._value, self.VSYS_ADC
+        def get_Vsys(self):
+            return self.VSYS_ADC
 
     class REG41_TDIE_ADC(BQ25795_REGISTER):
         """
@@ -1103,34 +1588,150 @@ class bq25792:
         def __init__(self, addr=0x41, value = 0):
             super().__init__(addr, value)
             self.TDIE_ADC             = super().twos_complement()
+            self.TemperatureIC       = self.TDIE_ADC*0.5
         def set (self, value):
             super().set(value)
             self.TDIE_ADC             = super().twos_complement()
+            self.TemperatureIC       = self.TDIE_ADC*0.5
         def get(self):
-            return self._value, self.TDIE_ADC
+            return self._value, self.TDIE_ADC, self.TemperatureIC
         def get_IC_temperature(self):
             '''
             Get Temperature of BQ2595 IC in °C
             '''
-            return self.TDIE_ADC*0.5 
+            return self.TemperatureIC 
+        def get_TDIE_ADC(self):
+            '''
+            Get TDIE_ADC value in °C
+            '''
+            return self.TDIE_ADC
+
         
-    # class methods
-    def read_all_register(self):
-        '''
-        This function reads all BQ29572 Charger IC I2C registers
-        Register values of Class are updated
-        Returns 0 if sucessful excecuted
-        Returne -1 if error occured
-        '''
+    # class methods 
+    
+
+    def safe_execute(self, func, *args, **kwargs):
+        """
+        Executes a function safely, catching exceptions and handling errors.
+        If `_exit_on_error` is True, the program will exit on error.
+        """
         try:
-            val = [0xFF]*73
-            val[0:31] = self.bq.read_i2c_block_data(self.i2c_addr, 0x0, 32)
-            time.sleep(self.busWS_ms/1000)
-            val[32:63] = self.bq.read_i2c_block_data(self.i2c_addr, 0x20, 32)
-            time.sleep(self.busWS_ms/1000)
-            val[64:72] = self.bq.read_i2c_block_data(self.i2c_addr, 0x40, 9)
-            time.sleep(self.busWS_ms/1000)
+            return func(*args, **kwargs)
+        except Exception as e:
+            #sys.stderr.write(f"Error in {func.__name__}: {str(e)}\n")
+            logging.error(f"Error in {func.__name__}: {str(e)}")
+            if self._exit_on_error:
+                sys.exit(1)
+            raise I2CError(f"Failed to execute {func.__name__}") from e
+
+    def read_register(self, reg_addr, length=1):
+        """
+        Reads data from a register safely using the `safe_execute` method.
+        """
+        return self.safe_execute(self.bq.read_i2c_block_data, self.i2c_addr, reg_addr, length)
+
+    def write_register(self, reg):
+        """
+        Writes a single-byte register value safely.
+        """
+        reg.get()
+        self.safe_execute(self.bq.write_byte_data, self.i2c_addr, reg._addr, reg._value)
+
+    def write_register_word(self, reg):
+        """
+        Writes a two-byte register value safely.
+        """
+        reg.get()
+        self.safe_execute(self.bq.write_byte_data, self.i2c_addr, reg._addr, reg._value & 0xFF)
+        self.safe_execute(self.bq.write_byte_data, self.i2c_addr, reg._addr + 1, (reg._value >> 8) & 0xFF)
+
+   
+
+    def read_TDIE_Temp(self):
+        """
+        Reads the TDIE_ADC register and returns the IC temperature in degrees Celsius.
+        If the read operation fails, it returns the last known value.
+        """
+        try:
+            reg_addr = self.REG41_TDIE_ADC._addr
+            data = self.safe_execute(self.bq.read_i2c_block_data, self.i2c_addr, reg_addr, 2)
+            if data:
+                self.REG41_TDIE_ADC.set((data[0] << 8) | data[1])
+        except I2CError:
+            #sys.stderr.write("read_TDIE_Temp failed, returning previous value.\n")
+            logging.error("read_TDIE_Temp failed, returning previous value.")
+        return self.REG41_TDIE_ADC.get_IC_temperature()
+
+    def read_Vbat(self) -> int:
+        """
+        Reads the VBAT_ADC register and returns the battery voltage in mV.
+        """
+        try:
+            reg_addr = self.REG3B_VBAT_ADC._addr
+            data = self.read_register(reg_addr, length=2)
+            self.REG3B_VBAT_ADC.set((data[0] << 8) | data[1])
+        except I2CError:
+            #sys.stderr.write("read_Vbat failed, returning previous value.\n")
+            logging.error("read_Vbat failed, returning previous value.")
+        return self.REG3B_VBAT_ADC.get_Vbat()
+
+
+    def read_Vbus(self):
+        """
+        Reads the VBUS_ADC register and returns the bus voltage in mV.
+        If the read operation fails, it returns the last known value.
+        """
+        try:
+            reg_addr = self.REG35_VBUS_ADC._addr
+            data = self.safe_execute(self.bq.read_i2c_block_data, self.i2c_addr, reg_addr, 2)
+            if data:
+                self.REG35_VBUS_ADC.set((data[0] << 8) | data[1])
+        except I2CError:
+            #sys.stderr.write("read_Vbus failed, returning previous value.\n")
+            logging.error("read_Vbus failed, returning previous value.")
+        return self.REG35_VBUS_ADC.get_Vbus()
+
+    def read_Ibus(self):
+        """
+        Reads the IBUS_ADC register and returns the bus current in mA.
+        The IBUS ADC reading is reported in 2's complement.
+        If the read operation fails, it returns the last known value.
+        """
+        try:
+            reg_addr = self.REG31_IBUS_ADC._addr
+            data = self.safe_execute(self.bq.read_i2c_block_data, self.i2c_addr, reg_addr, 2)
+            if data:
+                self.REG31_IBUS_ADC.set((data[0] << 8) | data[1])
+        except I2CError:
+            #sys.stderr.write("read_Ibus failed, returning previous value.\n")
+            logging.error("read_Ibus failed, returning previous value.")
+        return self.REG31_IBUS_ADC.get_Ibus()
+
+    def read_Ibat(self) -> int:
+        """
+        Reads the IBAT_ADC register and returns the battery current in mA.
+        """
+        try:
+            reg_addr = self.REG33_IBAT_ADC._addr
+            data = self.read_register(reg_addr, length=2)
+            self.REG33_IBAT_ADC.set((data[0] << 8) | data[1])
+        except I2CError:
+            #sys.stderr.write("read_Ibat failed, returning previous value.\n")
+            logging.error("read_Ibat failed, returning previous value.")
+        return self.REG33_IBAT_ADC.get_Ibat()
+
+
+    def read_all_register(self):
+        """
+        Reads all BQ25792 registers and updates the class attributes.
+        """
+        try:
+            val = [0xFF] * 73
+            val[0:31] = self.read_register(0x0, 32)
+            val[32:63] = self.read_register(0x20, 32)
+            val[64:72] = self.read_register(0x40, 9)
             self.registers = val
+            # Update register values
             self.REG00_Minimal_System_Voltage.set(self.registers[self.REG00_Minimal_System_Voltage._addr])
             self.REG01_Charge_Voltage_Limit.set((self.registers[self.REG01_Charge_Voltage_Limit._addr] << 8) | (self.registers[self.REG01_Charge_Voltage_Limit._addr+1]))
             self.REG03_Charge_Current_Limit.set((self.registers[self.REG03_Charge_Current_Limit._addr] << 8) | (self.registers[self.REG03_Charge_Current_Limit._addr+1]))
@@ -1139,6 +1740,9 @@ class bq25792:
             self.REG08_Precharge_Control.set(self.registers[self.REG08_Precharge_Control._addr])
             self.REG09_Termination_Control.set(self.registers[self.REG09_Termination_Control._addr])
             self.REG0A_Recharge_Control.set(self.registers[self.REG0A_Recharge_Control._addr])
+            self.REG0B_VOTG_regulation.set((self.registers[self.REG0B_VOTG_regulation._addr]<< 8) | (self.registers[self.REG0B_VOTG_regulation._addr+1]))  
+            self.REG0D_IOTG_regulation.set(self.registers[self.REG0D_IOTG_regulation._addr])
+            self.REG0E_Timer_Control.set(self.registers[self.REG0E_Timer_Control._addr])
             self.REG0F_Charger_Control_0.set(self.registers[self.REG0F_Charger_Control_0._addr])
             self.REG10_Charger_Control_1.set(self.registers[self.REG10_Charger_Control_1._addr])
             self.REG11_Charger_Control_2.set(self.registers[self.REG11_Charger_Control_2._addr])
@@ -1157,255 +1761,106 @@ class bq25792:
             self.REG3D_VSYS_ADC.set((self.registers[self.REG3D_VSYS_ADC._addr] << 8) | (self.registers[self.REG3D_VSYS_ADC._addr+1]))
             self.REG41_TDIE_ADC.set((self.registers[self.REG41_TDIE_ADC._addr] << 8) | (self.registers[self.REG41_TDIE_ADC._addr+1]))
             return 0
-        except Exception as _error:
-            sys.stderr.write('read_all_register failed, %s\n' % str(_error))
-            if self._exit_on_error: sys.exit(1)
+        except I2CError:
+            #ys.stderr.write("read_all_register failed.\n")
+            logging.error("read_all_register failed.")
             return -1
-        finally:
-            pass
 
-    def read_TDIE_Temp(self):
-        '''
-        Read I2C and Return TDIE_ADC (IC Temperature) in degree
-                Range : -40°C-150°C 
-                Returns old value if read fails
-        '''
-        try:
-            reg_addr = self.REG41_TDIE_ADC._addr
-            val = [0xFF]*2
-            val[0:1] = self.bq.read_i2c_block_data(self.i2c_addr, reg_addr, 2)
-            time.sleep(self.busWS_ms/1000)
-            self.registers[reg_addr:reg_addr+1] = val
-            self.REG41_TDIE_ADC.set((self.registers[reg_addr] << 8) | (self.registers[reg_addr+1]))
-        except Exception as _error:
-            sys.stderr.write('read_TDIE_Temp failed, %s\n' % str(_error))
-            if self._exit_on_error: sys.exit(1)
-            return self.REG41_TDIE_ADC.get_IC_temperature()
-        finally:
-            return self.REG41_TDIE_ADC.get_IC_temperature()
-
-    def read_Vbat(self):
-        '''
-        Read I2C and Return VBAT_ADC in mV 
-                VBAT_ADC
-                The battery remote sensing voltage (VBATP-GND) ADC reading 
-                Type : R POR: 0mV (0h) 
-                Range : 0mV-20000mV 
-                returns previous value if read fails
-        '''
-        try:
-            reg_addr = self.REG3B_VBAT_ADC._addr
-            val = [0xFF]*2
-            val[0:1] = self.bq.read_i2c_block_data(self.i2c_addr, reg_addr, 2)
-            time.sleep(self.busWS_ms/1000)
-            self.registers[reg_addr:reg_addr+1] = val
-            self.REG3B_VBAT_ADC.set((self.registers[reg_addr] << 8) | (self.registers[reg_addr+1]))
-        except Exception as _error:
-            sys.stderr.write('read_Vbat failed, %s\n' % str(_error))
-            if self._exit_on_error: sys.exit(1)
-            return self.REG3B_VBAT_ADC.get_Vbat()
-        finally:
-            return self.REG3B_VBAT_ADC.get_Vbat()
-
-    def read_Vbus(self):
-        '''
-        Read I2C and Return VBUS_ADC in mV 
-                VBUS ADC reading 
-                Range : 0mV-30000mV 
-                Fixed Offset : 0mV Bit Step Size : 1mV
-                returns old value if read fails
-        '''
-        try:
-            reg_addr = self.REG35_VBUS_ADC._addr
-            val = [0xFF]*2
-            val[0:1] = self.bq.read_i2c_block_data(self.i2c_addr, reg_addr, 2)
-            time.sleep(self.busWS_ms/1000)
-            self.registers[reg_addr:reg_addr+1] = val
-            self.REG35_VBUS_ADC.set((self.registers[reg_addr] << 8) | (self.registers[reg_addr+1]))
-        except Exception as _error:
-            sys.stderr.write('read_Vbus failed, %s\n' % str(_error))
-            if self._exit_on_error: sys.exit(1)
-            return self.REG35_VBUS_ADC.get_Vbus()
-        finally:
-            return self.REG35_VBUS_ADC.get_Vbus()
-
-    def read_Ibus(self):
-        '''
-        Read I2C and Return IBUS_ADC in mA   
-                IBUS ADC reading Reported in 2 's Complement. 
-                When the current is flowing from VBUS to PMID, IBUS ADC reports positive value, 
-                and when the current is flowing from PMID to VBUS, 
-                IBUS ADC reports negative value. 
-                Range : 0mA-5000mA 
-                Return old value is read fails
-        '''
-        try:
-            reg_addr = self.REG31_IBUS_ADC._addr
-            val = [0xFF]*2
-            val[0:1] = self.bq.read_i2c_block_data(self.i2c_addr, reg_addr, 2)
-            time.sleep(self.busWS_ms/1000)
-            self.registers[reg_addr:reg_addr+1] = val
-            self.REG31_IBUS_ADC.set((self.registers[reg_addr] << 8) | (self.registers[reg_addr+1]))
-        except Exception as _error:
-            sys.stderr.write('read_Ibus failed, %s\n' % str(_error))
-            if self._exit_on_error: sys.exit(1)
-            return self.REG31_IBUS_ADC.get_Ibus()
-        finally:
-            return self.REG31_IBUS_ADC.get_Ibus()
-
-    def read_Ibat(self):
-        '''
-        Read I2C and Return IBAT_ADC in mA   
-                IBAT ADC reading Reported in 2 's Complement. 
-                The IBAT ADC reports positive value for the battery charging current, and negative value for the battery discharging current if EN_IBAT in REG0x14[5] = 1. 
-                Range : 0mA-8000mA 
-                Return old value is read fails
-        '''
-        try:
-            reg_addr = self.REG33_IBAT_ADC._addr
-            val = [0xFF]*2
-            val[0:1] = self.bq.read_i2c_block_data(self.i2c_addr, reg_addr, 2)
-            time.sleep(self.busWS_ms/1000)
-            self.registers[reg_addr:reg_addr+1] = val
-            self.REG33_IBAT_ADC.set((self.registers[reg_addr] << 8) | (self.registers[reg_addr+1]))
-        except Exception as _error:
-            sys.stderr.write('read_Ibat failed, %s\n' % str(_error))
-            if self._exit_on_error: sys.exit(1)
-            return self.REG33_IBAT_ADC.get_Ibat()
-        finally:
-            return self.REG33_IBAT_ADC.get_Ibat()
-
-    def read_InputCurrentLimit(self):
-        '''
-        Read I2C and Return ICO_ILIM in mA   
-                Input Current Limit obtained from ICO or ILIM_HIZ pin setting
-                Range : 100mA-3300mA 
-                Return old value is read fails
-        '''
+    def read_InputCurrentLimit(self) -> int:
+        """
+        Reads the input current limit (ICO_ILIM) in mA.
+        Returns the last known value if the read operation fails.
+        """
         try:
             reg_addr = self.REG19_ICO_Current_Limit._addr
-            val = [0xFF]*2
-            val[0:1] = self.bq.read_i2c_block_data(self.i2c_addr, reg_addr, 2)
-            time.sleep(self.busWS_ms/1000)
-            self.registers[reg_addr:reg_addr+1] = val
-            self.REG19_ICO_Current_Limit.set((self.registers[reg_addr] << 8) | (self.registers[reg_addr+1]))
-        except Exception as _error:
-            sys.stderr.write('read_InputCurrentLimit failed, %s\n' % str(_error))
-            if self._exit_on_error: sys.exit(1)
-            return self.REG19_ICO_Current_Limit.get_ICO_ILIM()
-        finally:
-            return self.REG19_ICO_Current_Limit.get_ICO_ILIM()
+            data = self.read_register(reg_addr, length=2)
+            self.REG19_ICO_Current_Limit.set((data[0] << 8) | data[1])
+        except I2CError:
+            #sys.stderr.write("read_InputCurrentLimit failed, returning previous value.\n")
+            logging.error("read_InputCurrentLimit failed, returning previous value.")
+
+        return self.REG19_ICO_Current_Limit.get_ICO_ILIM()
                   
 
-    def read_ChargerStatus(self):
-        '''
-        Read I2C and Return Charger Status
-        CHG_STAT
-            Charge Status bits 
-            0h = Not Charging 
-            1h = Trickle Charge 
-            2h = Pre-charge 
-            3h = Fast charge (CC mode) 
-            4h = Taper Charge (CV mode) 
-            5h = Reserved 
-            6h = Top-off Timer Active Charging 
-            7h = Charge Termination Done
-            return old value if read fails
-        '''
+    def read_ChargerStatus(self) -> str:
+        """
+        Reads the charger status and returns the charge status string.
+        """
         try:
             reg_addr = self.REG1C_Charger_Status_1._addr
-            val = self.bq.read_byte_data(self.i2c_addr, reg_addr)
-            time.sleep(self.busWS_ms/1000)
-            self.registers[reg_addr] = val
-            self.REG1C_Charger_Status_1.set((self.registers[reg_addr]))
-        except Exception as _error:
-            sys.stderr.write('read_ChargerStatus failed, %s\n' % str(_error))
-            if self._exit_on_error: sys.exit(1)
-            return self.REG1C_Charger_Status_1.CHG_STAT_STRG
-        finally:
-            return self.REG1C_Charger_Status_1.CHG_STAT_STRG
-    def write_register(self, reg):
+            data = self.read_register(reg_addr, length=1)
+            self.REG1C_Charger_Status_1.set(data[0])
+        except I2CError:
+            #sys.stderr.write("read_ChargerStatus failed, returning previous value.\n")
+            logging.error("read_ChargerStatus failed, returning previous value.")
+        return self.REG1C_Charger_Status_1.CHG_STAT_STRG
+    
+    def soft_reset(self):
+        """
+        Performs a soft reset of the charger IC.
+        """
         try:
-            reg.get()
-            self.bq.write_byte_data(self.i2c_addr, reg._addr, reg._value)
-            time.sleep(self.busWS_ms/1000)
-            pass
-        except Exception as _error:
-            sys.stderr.write('write_register failed, %s\n' % str(_error))
-            if self._exit_on_error: sys.exit(1)
-        finally:
-            pass
-    def write_register_word(self, reg):
-        try:
-            reg.get()
-            self.bq.write_byte_data(self.i2c_addr, reg._addr, (reg._value))
-            time.sleep(self.busWS_ms/1000)
-            self.bq.write_byte_data(self.i2c_addr, reg._addr+1, (reg._value>>8))
-            time.sleep(self.busWS_ms/1000)
-            pass
-        except Exception as _error:
-            sys.stderr.write('write_register failed, %s\n' % str(_error))
-            if self._exit_on_error: sys.exit(1)
-        finally:
-            pass
-
-    def watchdog(self):
-            #Watchdog
-            reg = self.REG10_Charger_Control_1
-            #reg.WATCHDOG = 0 #disable watchdog
-            reg.WD_RST = 1 #reset watchdog
+            reg = self.REG09_Termination_Control
+            reg.set_REG_RST(1)
             self.write_register(reg)
+            time.sleep(0.1)
+            reg = self.REG09_Termination_Control
+            reg.set_REG_RST(0)
+            self.write_register(reg)
+            time.sleep(0.1)
+            logging.info("soft_reset done.")
+            return 0
+        except I2CError:
+            logging.error("soft_reset failed.")
+            return -1
 
     def write_defaults(self):
-            #Watchdog
-            reg = self.REG10_Charger_Control_1
-            #reg.WATCHDOG = 0 #disable watchdog
-            reg.WD_RST = 1 #reset watchdog
-            reg.WATCHDOG = 7 #160s watchdog
-            self.write_register(reg)
-            # Thermal Regulation Threshold - a bit more conservative
-            reg = self.REG16_Temperature_Control
-            reg.TREG = 0x2 #100°C
-            reg.TSHUT = 0x2 #120°C
-            self.write_register(reg)
+        '''
+        Write default settings to the charger IC.   
+        ''' 
+        #Watchdog
+        reg = self.REG10_Charger_Control_1
+        reg.set_WATCHDOG(7) #160s watchdog
+        reg.set_WD_RST(1) #reset watchdog    
+        self.write_register(reg)
 
-            reg = self.REG2E_ADC_Control
-            reg.ADC_EN = 1
-            reg.ADC_SAMPLE = 0 # 15bit resolution
-            reg.ADC_AVG = 0 # running avg
-            reg.ADC_AVG_INIT = 0 
-            self.write_register(reg)
+        # Thermal Regulation Threshold - a bit more conservative
+        reg = self.REG16_Temperature_Control
+        reg.set_TREG(0x2) #100°C
+        reg.set_TSHUT(0x2) #120°C
+        self.write_register(reg)
 
-            reg = self.REG0F_Charger_Control_0
-            reg.EN_TERM = 1 # Enable Charge Termination
-            self.write_register(reg)
+        reg = self.REG2E_ADC_Control
+        reg.set_ADC_RATE(0) # Continuous conversion
+        reg.set_ADC_EN(1) # Enable ADC
+        reg.set_ADC_SAMPLE(0) # 15bit resolution
+        reg.set_ADC_AVG(0) # running avg
+        reg.set_ADC_AVG_INIT(0) # start average using the existing register value
+        self.write_register(reg)
 
-            reg = self.REG14_Charger_Control_5
-            reg.EN_IBAT = 1 # Enable the IBAT discharge current sensing for ADC
-            self.write_register(reg)
-            
-            #self.enable_extilim()
-            self.disable_extilim()
-            self.set_input_current_limit(2200) # todo this value to be taken from json
+        reg = self.REG0F_Charger_Control_0
+        reg.set_EN_CHG(1)   # Enable Charger
+        reg.set_EN_TERM(1)  # Enable Charge Termination
+        self.write_register(reg)
 
+        reg = self.REG14_Charger_Control_5
+        reg.set_EN_IBAT(1) # Enable the IBAT discharge current sensing for ADC
+        reg.set_EN_EXTILIM(1) # Enable External ILIM_HIZ Input Current Limit pin input
+        self.write_register(reg)
+        
+        
+        self.set_input_current_limit(2200) # 2.2A input current limit
 
-            return
+        return
 
     def MuPiHAT_Default(self):
         ''' 
         Write MuPiHAT Default Settings to Charger IC
         '''
+        self.soft_reset()
         self.read_all_register()
         self.write_defaults()
-        #tries = 0
-        #max_tries = 3
-        #while tries < max_tries:
-        #    if (self.read_all_register()) == 0:
-        #        self.write_defaults()
-        #        return 0
-        #    else:
-        #        tries += 1
-        #return -1
+        return
 
     def get_IC_temperature(self):
         '''
@@ -1414,127 +1869,8 @@ class bq25792:
         self.read_all_register()
         return self.REG41_TDIE_ADC.get_IC_temperature()
 
-    def disable_extilim(self):
-        '''
-        Diable External ILIM_HIZ Input Current Limit pin input
-        '''
-        try:
-            # first read register
-            reg_addr = self.REG14_Charger_Control_5._addr
-            val = self.bq.read_byte_data(self.i2c_addr, reg_addr)
-            time.sleep(self.busWS_ms/1000)
-            self.registers[reg_addr] = val
-            self.REG14_Charger_Control_5.set((self.registers[reg_addr]))
-            # then set bit
-            self.REG14_Charger_Control_5.EN_EXTILIM = 0
-            self.REG14_Charger_Control_5.get()
-            # now write back
-            self.write_register(self.REG14_Charger_Control_5)
-            return 0
-        except Exception as _error:
-            sys.stderr.write('disable_extilim failed, %s\n' % str(_error))
-            if self._exit_on_error: sys.exit(1)
-            return -1
-        finally:
-            pass
-
-    def enable_extilim(self):
-        '''
-        Enable External ILIM_HIZ Input Current Limit pin input
-        '''
-        try:
-            #self.read_all_register()
-            # first read register
-            reg_addr = self.REG14_Charger_Control_5._addr
-            val = self.bq.read_byte_data(self.i2c_addr, reg_addr)
-            time.sleep(self.busWS_ms/1000)
-            self.registers[reg_addr] = val
-            self.REG14_Charger_Control_5.set((self.registers[reg_addr]))
-            # then set bit
-            self.REG14_Charger_Control_5.EN_EXTILIM = 1
-            self.REG14_Charger_Control_5.get()
-            # now write back
-            self.write_register(self.REG14_Charger_Control_5)
-            return 0
-        except Exception as _error:
-            sys.stderr.write('disable_extilim failed, %s\n' % str(_error))
-            if self._exit_on_error: sys.exit(1)
-            return -1
-        finally:
-            pass
-
-    def enable_HVDCP(self):
-        '''
-        Enable High voltage DCP
-        Do not use. Not tested!
-        TODO Follow Datsheet 9.3.4.5.2 HVDCP Detection Procedure
-        '''
-        try:
-            # first read register
-            reg_addr = self.REG11_Charger_Control_2._addr
-            val = self.bq.read_byte_data(self.i2c_addr, reg_addr)
-            time.sleep(self.busWS_ms/1000)
-            self.registers[reg_addr] = val
-            self.REG11_Charger_Control_2.set((self.registers[reg_addr]))
-            # then set bit
-            self.REG11_Charger_Control_2.HVDCP_EN = 1
-            self.REG11_Charger_Control_2.get()
-            # now write back
-            self.write_register(self.REG11_Charger_Control_2)
-            return 0
-        except Exception as _error:
-            sys.stderr.write('enable_HVDCP failed, %s\n' % str(_error))
-            if self._exit_on_error: sys.exit(1)
-            return -1
-        finally:
-            pass
-
-    def read_REG14_Charger_Control_5(self):
-        '''
-        Read read_REG14_Charger_Control_5
-        Return register value
-        '''
-        try:
-            #self.read_all_register()
-            # first read register
-            reg_addr = self.REG14_Charger_Control_5._addr
-            val = self.bq.read_byte_data(self.i2c_addr, reg_addr)
-            time.sleep(self.busWS_ms/1000)
-            self.registers[reg_addr] = val
-            self.REG14_Charger_Control_5.set((self.registers[reg_addr]))
-            value, SFET_PRESENT, EN_IBAT, IBAT_REG, EN_IINDPM, EN_EXTILIM, EN_BATOC = self.REG14_Charger_Control_5.get()
-            return value
-        except Exception as _error:
-            sys.stderr.write('read_REG14_Charger_Control_5 failed, %s\n' % str(_error))
-            if self._exit_on_error: sys.exit(1)
-            return -1
-        finally:
-            pass
-
-    def read_EN_CHG(self):
-        '''
-        Read read_REG0F_Charger_Control_0 and return value of Charger Enable Configuration
-        Return Value
-        ---------
-          0h = Charge Disable
-          1h = Charge Enable
-        '''
-        try:
-            #self.read_all_register()
-            # first read register
-            reg_addr = self.REG0F_Charger_Control_0._addr 
-            val = self.bq.read_byte_data(self.i2c_addr, reg_addr)
-            time.sleep(self.busWS_ms/1000)
-            self.registers[reg_addr] = val
-            self.REG0F_Charger_Control_0.set((self.registers[reg_addr]))
-            value, EN_AUTO_IBATDIS, FORCE_IBATDIS, EN_CHG, EN_ICO, FORCE_ICO, EN_HIZ, EN_TERM = self.REG0F_Charger_Control_0.get()
-            return EN_CHG
-        except Exception as _error:
-            sys.stderr.write('read_EN_CHG failed, %s\n' % str(_error))
-            if self._exit_on_error: sys.exit(1)
-            return -1
-        finally:
-            pass
+    
+    
     def read_VBAT_PRESENT(self):
         '''
         Read REG1D_Charger_Status_2 and return value VBAT_PRESENT_STAT
@@ -1548,42 +1884,60 @@ class bq25792:
             # first read register
             reg_addr = self.REG1D_Charger_Status_2._addr 
             val = self.bq.read_byte_data(self.i2c_addr, reg_addr)
-            time.sleep(self.busWS_ms/1000)
             self.registers[reg_addr] = val
             self.REG1D_Charger_Status_2.set((self.registers[reg_addr]))
             value, ICO_STAT, TREG_STAT, DPDM_STAT, VBAT_PRESENT_STAT = self.REG1D_Charger_Status_2.get()
             return VBAT_PRESENT_STAT
         except Exception as _error:
-            sys.stderr.write('read_VBAT_PRESENT failed, %s\n' % str(_error))
+            #sys.stderr.write('read_VBAT_PRESENT failed, %s\n' % str(_error))
+            logging.error('read_VBAT_PRESENT failed, %s\n' % str(_error))
             if self._exit_on_error: sys.exit(1)
             value, ICO_STAT, TREG_STAT, DPDM_STAT, VBAT_PRESENT_STAT = self.REG1D_Charger_Status_2.get()
             return VBAT_PRESENT_STAT
         finally:
             pass
 
-    def set_input_current_limit(self, input_current_limit):
-        '''
-        set ILIM
-        '''
+
+    def set_input_current_limit(self, input_current_limit: int) -> None:
+        """
+        Sets the input current limit (IINDPM) in mA.
+        The value is written to the REG06_Input_Current_Limit register.
+
+        Parameters:
+            input_current_limit (int): Desired input current limit in mA (10mA steps, range: 100mA-3300mA).
+
+        Raises:
+            ValueError: If the input current limit is out of the valid range.
+            I2CError: If the I2C write operation fails.
+        """
         try:
+            # Validate the input current limit
+            if input_current_limit < 100 or input_current_limit > 3300:
+                raise ValueError("Input current limit must be between 100mA and 3300mA (inclusive).")
+
+            # Align the input current limit to the nearest 10mA step
+            input_current_limit = (input_current_limit // 10) * 10
+
+            # Set the input current limit in the register
             reg = self.REG06_Input_Current_Limit
             reg.set_input_current_limit(input_current_limit)
-            self.bq.write_byte_data(self.i2c_addr, reg._addr, (reg._value >> 8))
-            time.sleep(self.busWS_ms/1000)
-            self.bq.write_byte_data(self.i2c_addr, reg._addr+1, reg._value)
-            time.sleep(self.busWS_ms/1000)
-            #sys.stderr.write('set_input_current_limit to: %s\n' % str(reg._value))
-            #self.read_all_register()
-            #sys.stderr.write('get_input_current_limit to: %s\n' % str(reg._value))
-            pass
-        except Exception as _error:
-            sys.stderr.write('set_input_current_limit failed, %s\n' % str(_error))
-            if self._exit_on_error: sys.exit(1)
-        finally:
-            pass
 
+            # Write the high and low bytes of the register value
+            self.write_register_word(reg)
 
+            logging.info(f"Input current limit set to {input_current_limit} mA.")
+        except ValueError as ve:
+            #sys.stderr.write(f"Invalid input current limit: {str(ve)}\n")
+            logging.error(f"Invalid input current limit: {str(ve)}")
+            if self._exit_on_error:
+                sys.exit(1)
+        except I2CError as ie:
+            #sys.stderr.write(f"Failed to set input current limit: {str(ie)}\n")
+            logging.error(f"Failed to set input current limit: {str(ie)}")
+            if self._exit_on_error:
+                sys.exit(1)
 
+    
     def get_ibat(self) -> int:
         """
         Get the IBAT current in mA, reports positive value for the battery charging current, and negative value for the battery discharging current
@@ -1605,7 +1959,6 @@ class bq25792:
         """
         Get the VBUS Bus Voltage  in mV
         """
-
         return self.REG35_VBUS_ADC.VBUS_ADC
     
     def bq25792_REG1C_Charger_Status_1(self, i2c_read=True):
@@ -1687,118 +2040,33 @@ class bq25792:
             'IBus': self.read_Ibus(),
             'Temp': self.read_TDIE_Temp(),
             'BatteryConnected' : self.read_VBAT_PRESENT(),
-            #'REG14' : self.read_REG14_Charger_Control_5(),
             'Bat_SOC' : bat_SOC,
             'Bat_Stat' : bat_Stat,
             'Bat_Type' : self.battery_conf['battery_type'],
             'Input_Current_Limit' : self.read_InputCurrentLimit()
         }
     
-    def dump_register(self):
-        return {
-            'dump': str(self.registers)
-        }
+    def to_json_registers(self):
+        """
+        returns a JSON object containing all variables with their names and values
+        from instances of BQ25795_REGISTER, as well as the content of battery_conf.
+        """
+        registers_data = {}
+
+        # Iterate over all attributes of the bq25792 class
+        for attr_name in dir(self):
+            attr = getattr(self, attr_name)
+            # Check if the attribute is an instance of BQ25795_REGISTER
+            if isinstance(attr, self.BQ25795_REGISTER):
+                # Collect all variables and their values from the instance
+                register_values = {}
+                for var_name, var_value in vars(attr).items():
+                    if not var_name.startswith("_"):  # Skip private/internal variables
+                        register_values[var_name] = var_value
+                registers_data[attr_name] = register_values
+
+        # Add battery_conf to the JSON output
+        registers_data["battery_conf"] = self.battery_conf
+
+        return registers_data
 ####
-    
-    
-
-"""
-Example usage 
-"""
-
-'''
-# create instance of bq25792 class
-hat = bq25792()
-
-###
-# read all register and print some
-hat.read_all_register()
-print (hat.registers)
-print ("hat.REG00_Minimal_System_Voltage.VSYSMIN:   ",hat.REG00_Minimal_System_Voltage.VSYSMIN)
-print ("hat.REG01_Charge_Voltage_Limit.VREG:        ",hat.REG01_Charge_Voltage_Limit.VREG)
-print ("hat.REG03_Charge_Current_Limit.ICHG:        ",hat.REG03_Charge_Current_Limit.ICHG)
-print ("hat.REG05_Input_Voltage_Limit.VINDPM:       ",hat.REG05_Input_Voltage_Limit.VINDPM)
-print ("hat.REG06_Input_Current_Limit.IINDPM:       ",hat.REG06_Input_Current_Limit.IINDPM)
-print ("hat.REG08_Precharge_Control.VBAT_LOWV:      ",hat.REG08_Precharge_Control.VBAT_LOWV)
-print ("hat.REG08_Precharge_Control.IPRECHG:        ",hat.REG08_Precharge_Control.IPRECHG)
-print ("hat.REG09_Termination_Control.ITERM:        ",hat.REG09_Termination_Control.ITERM)
-print ("hat.REG0F_Charger_Control_0:                ",hat.REG0F_Charger_Control_0.get())
-print ("hat.REG10_Charger_Control_1:                ",hat.REG10_Charger_Control_1.get())
-print ("hat.REG13_Charger_Control_4:                ",hat.REG13_Charger_Control_4.get())
-print ("hat.REG14_Charger_Control_5:                ",hat.REG14_Charger_Control_5.get())
-print ("hat.REG1C_Charger_Status_1:                 ",hat.REG1C_Charger_Status_1.get())
-print ("hat.REG2E_ADC_Control:                      ",hat.REG2E_ADC_Control.get())
-print ("hat.REG31_IBUS_ADC.IBUS [mA]:               ",hat.REG31_IBUS_ADC.IBUS_ADC)
-print ("hat.REG33_IBAT_ADC.IBAT [mA]:               ",hat.REG33_IBAT_ADC.IBAT_ADC)
-print ("hat.REG35_VBUS_ADC.VBUS [mV]:               ",hat.REG35_VBUS_ADC.VBUS_ADC)
-print ("hat.REG37_VAC1_ADC.VAC1 [mV]:               ",hat.REG37_VAC1_ADC.VAC1_ADC)
-print ("hat.REG39_VAC2_ADC.VAC2 [mV]:               ",hat.REG39_VAC2_ADC.VAC2_ADC)
-print ("hat.REG3B_VBAT_ADC.VBAT [mV]:               ",hat.REG3B_VBAT_ADC.VBAT_ADC)
-print ("hat.REG3D_VSYS_ADC.VSYS [mV]:               ",hat.REG3D_VSYS_ADC.VSYS_ADC)
-###
-# write a register
-# create instance of register you want to access
-reg = hat.REG0F_Charger_Control_0
-# modify bits or parameter
-reg.EN_CHG = 0
-# call get() to update register value in register instance
-reg.get()
-
-# write register to i2c by passing register instance to write_register function
-hat.write_register(reg)
-
-# check if it worked
-hat.read_all_register()
-print ("hat.REG0F_Charger_Control_0:                ",hat.REG0F_Charger_Control_0.get())
-
-# modify bits or parameter and to the same again
-reg.EN_CHG = 1
-hat.write_register(reg)
-
-hat.read_all_register()
-print ("hat.REG0F_Charger_Control_0:                ",hat.REG0F_Charger_Control_0.get())
-
-# watchdog
-reg = hat.REG10_Charger_Control_1
-reg.WATCHDOG = 0    #disable watchdog
-hat.write_register(reg)
-hat.read_all_register()
-print ("hat.REG10_Charger_Control_1:                ",hat.REG10_Charger_Control_1.get())
-
-
-#disable STATUS PIN
-reg = hat.REG13_Charger_Control_4
-reg.DIS_STAT = 1
-hat.write_register(reg)
-hat.read_all_register()
-print ("hat.REG13_Charger_Control_4:                ",hat.REG13_Charger_Control_4.get())
-
-# ADC Control
-reg = hat.REG2E_ADC_Control
-reg.ADC_EN = 1
-reg.ADC_SAMPLE = 0 # 15bit resolution
-reg.ADC_AVG = 0 # running avg
-reg.ADC_AVG_INIT = 0 
-hat.write_register(reg)
-hat.read_all_register()
-print ("hat.REG2E_ADC_Control:                      ",hat.REG2E_ADC_Control.get())
-
-# Enable the IBAT discharge current sensing for ADC
-# Disable the external ILIM_HIZ pin input current regulation
-reg = hat.REG14_Charger_Control_5
-reg.EN_IBAT = 1
-reg.EN_EXTILIM = 0
-hat.write_register(reg)
-hat.read_all_register()
-print ("hat.REG14_Charger_Control_5:                ",hat.REG14_Charger_Control_5.get())
-
-# ADC Reading
-print ("hat.REG31_IBUS_ADC.IBUS [mA]:               ",hat.REG31_IBUS_ADC.IBUS_ADC)
-print ("hat.REG33_IBAT_ADC.IBAT [mA]:               ",hat.REG33_IBAT_ADC.IBAT_ADC)
-print ("hat.REG35_VBUS_ADC.VBUS [mV]:               ",hat.REG35_VBUS_ADC.VBUS_ADC)
-print ("hat.REG37_VAC1_ADC.VAC1 [mV]:               ",hat.REG37_VAC1_ADC.VAC1_ADC)
-print ("hat.REG39_VAC2_ADC.VAC2 [mV]:               ",hat.REG39_VAC2_ADC.VAC2_ADC)
-print ("hat.REG3B_VBAT_ADC.VBAT [mV]:               ",hat.REG3B_VBAT_ADC.VBAT_ADC)
-print ("hat.REG3D_VSYS_ADC.VSYS [mV]:               ",hat.REG3D_VSYS_ADC.VSYS_ADC)
-
-'''
