@@ -1,7 +1,7 @@
 import { provideHttpClient, withInterceptorsFromDi, withJsonpSupport } from '@angular/common/http'
 import { enableProdMode, importProvidersFrom } from '@angular/core'
 import { BrowserModule, bootstrapApplication } from '@angular/platform-browser'
-import { RouteReuseStrategy, provideRouter } from '@angular/router'
+import { RouteReuseStrategy, provideRouter, withComponentInputBinding } from '@angular/router'
 
 import { IonicRouteStrategy } from '@ionic/angular/standalone'
 import { provideIonicAngular } from '@ionic/angular/standalone'
@@ -20,7 +20,7 @@ if (environment.production) {
 
 bootstrapApplication(AppComponent, {
   providers: [
-    provideRouter(routes),
+    provideRouter(routes, withComponentInputBinding()),
     importProvidersFrom(BrowserModule),
     MediaService,
     { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
