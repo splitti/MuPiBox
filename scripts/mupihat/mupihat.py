@@ -84,7 +84,6 @@ def log_register_values():
 def index():
     """Flask route to display register values."""
     try:
-        hat.read_all_register()
         return render_template("index.html", registers=hat.to_json_registers())
     except Exception as e:
         return f"Error reading registers: {str(e)}", 500
@@ -93,10 +92,7 @@ def index():
 @app.route("/api/registers")
 def api_registers():
     """Flask API endpoint to return register values as JSON."""
-    try:
-        
-        
-        hat.read_all_register()
+    try:     
         return jsonify(hat.to_json_registers())
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -106,6 +102,10 @@ def periodic_json_dump():
     """Periodically writes the register values to a JSON file."""
     global json_flag, json_file
     while True:
+        hat.watchdog_reset()
+        time.sleep(0.1)  # Allow time for the watchdog reset
+        hat.read_all_register()
+        time.sleep(1)  # Allow time for the registers to be updated
         if json_flag:
             try:
                 with open(json_file, "w") as outfile:
@@ -114,8 +114,7 @@ def periodic_json_dump():
                 logging.error("Failed to write JSON dump: %s", str(e))
         if log_flag:
             log_register_values()
-
-        time.sleep(5)  # Run every 5 seconds
+        time.sleep(3.9)  # Run every 4 seconds
 
 
 def parse_arguments():
