@@ -4,7 +4,11 @@ export interface CurrentSpotify {
     album?: {
       name?: string
       total_tracks?: number
-    }
+    },
+    show?: {
+      name?: string,
+      total_episodes?: number
+    },
     duration_ms?: number
     id?: string
     name?: string

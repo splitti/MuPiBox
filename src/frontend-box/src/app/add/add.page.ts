@@ -114,7 +114,8 @@ export class AddPage implements OnInit, AfterViewInit {
           this.editMedia?.id ||
           this.editMedia?.showid ||
           this.editMedia?.id ||
-          this.editMedia?.playlistid)
+          this.editMedia?.playlistid ||
+          this.editMedia?.audiobookid)
       ) {
         this.sourceType = 'spotifyURL'
         if (this.editMedia?.id) {
@@ -123,6 +124,8 @@ export class AddPage implements OnInit, AfterViewInit {
           this.editMedia.spotify_url = `https://open.spotify.com/artist/${this.editMedia?.artistid}`
         } else if (this.editMedia?.showid) {
           this.editMedia.spotify_url = `https://open.spotify.com/show/${this.editMedia?.showid}`
+        } else if (this.editMedia?.audiobookid) {
+          this.editMedia.spotify_url = `https://open.spotify.com/show/${this.editMedia?.audiobookid}`
         } else if (this.editMedia?.playlistid) {
           this.editMedia.spotify_url = `https://open.spotify.com/playlist/${this.editMedia?.playlistid}`
         }
@@ -463,6 +466,12 @@ export class AddPage implements OnInit, AfterViewInit {
         await alert.present()
         return
       }
+
+      const isAudiobook = await this.isAudiobook(media)
+      if (isAudiobook) {
+        media.audiobookid = media.showid
+        media.showid = null
+      }
     }
 
     if (this.edit) {
@@ -588,6 +597,17 @@ export class AddPage implements OnInit, AfterViewInit {
       validationResult = this.spotifyService.validateSpotify(media.id, 'album')
     } else if (media.showid) {
       validationResult = this.spotifyService.validateSpotify(media.showid, 'show')
+    }
+
+    const timeout: Promise<boolean> = new Promise((resolve) => setTimeout(() => resolve(false), 30000))
+
+    return Promise.race([validationResult, timeout])
+  }
+
+  async isAudiobook(media: Media): Promise<boolean> {
+    let validationResult: Promise<boolean> = Promise.resolve(false)
+    if (media.showid) {
+      validationResult = this.spotifyService.validateSpotify(media.showid, 'audiobook')
     }
 
     const timeout: Promise<boolean> = new Promise((resolve) => setTimeout(() => resolve(false), 30000))
