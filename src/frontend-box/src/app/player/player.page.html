@@ -52,11 +52,16 @@
           @if (media.showid) {
             <div>{{showTrackNr}}/{{(episode$ | async)?.show.total_episodes}}</div>
           } @else {
-            @if (media.type ==='spotify') {
-              <div>{{playlistTrackNr}}/{{(local$ | async)?.totalPlaylist}}</div>
+            @if (media.audiobookid) {
+                <div>{{showTrackNr}}/{{(show$ | async)?.total}}</div>
             } @else {
-              <div></div>
+              @if (media.type ==='spotify') {
+                  <div>{{playlistTrackNr}}/{{(local$ | async)?.totalPlaylist}}</div>
+              } @else {
+                  <div></div>
+              }
             }
+
           }
         }
       }

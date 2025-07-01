@@ -60,6 +60,9 @@
                 @if (item.showid) {
                   <p>ShowID:</p>
                 }
+                @if (item.audiobookid) {
+                  <p>AudiobookID:</p>
+                }
                 @if (item.playlistid) {
                   <p>PlaylistID:</p>
                 }
@@ -102,6 +105,9 @@
                 }
                 @if (item.showid) {
                   <p>{{item.showid}}</p>
+                }
+                @if (item.audiobookid) {
+                  <p>{{item.audiobookid}}</p>
                 }
                 @if (item.playlistid) {
                   <p>{{item.playlistid}}</p>

@@ -220,6 +220,14 @@ export class PlayerPage implements OnInit {
           }
         })
       }
+      if (this.media.audiobookid) {
+        this.currentShow?.items.forEach((element, index) => {
+          if (this.currentPlayedSpotify?.item.id  === element?.id) {
+            this.showTrackNr = index + 1
+            this.cover = element.images[1].url
+          }
+        })
+      }
       if (this.playing && !this.currentPlayedSpotify?.is_playing) {
         this.goBackTimer++
         if (this.goBackTimer > 10) {
