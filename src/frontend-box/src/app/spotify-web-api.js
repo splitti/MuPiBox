@@ -1844,6 +1844,24 @@ var SpotifyWebApi = (function () {
   };
 
   /**
+   * Fetches an audiobook from the Spotify catalog.
+   * See [Get a Show](https://developer.spotify.com/documentation/web-api/reference/get-an-audiobook) on
+   * the Spotify Developer site for more information about the endpoint.
+   *
+   * @param {string} id The id of the audiobook. If you know the Spotify URI it is easy
+   * to find the show id (e.g. spotify:show:<here_is_the_audiobook_id>)
+   * @param {Object} options A JSON object with options that can be passed
+   * @param {function(Object,Object)} callback An optional callback that receives 2 parameters. The first
+   * one is the error object (null if no error), and the second is the value if the request succeeded.
+   * @return {Object} Null if a callback is provided, a `Promise` object otherwise
+   */
+  Constr.prototype.getAudiobook = function (id, options, callback) {
+    var requestData = {};
+    requestData.url = _baseUri + '/audiobooks/' + id;
+    return _checkParamsAndPerformRequest(requestData, options, callback);
+  };
+
+  /**
    * Fetches multiple shows from the Spotify catalog.
    * See [Get Several Shows](https://developer.spotify.com/documentation/web-api/reference/shows/get-several-shows/) on
    * the Spotify Developer site for more information about the endpoint.

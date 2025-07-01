@@ -97,6 +97,8 @@ export class PlayerService {
           url = `spotify/now/spotify:album:${encodeURIComponent(media.id)}:0:0`
         } else if (media.showid) {
           url = `spotify/now/spotify:episode:${encodeURIComponent(media.showid)}:0:0`
+        } else if (media.audiobookid) {
+            url = `spotify/now/spotify:show:${encodeURIComponent(media.audiobookid)}:0:0`
         }
         break
       }
@@ -122,6 +124,8 @@ export class PlayerService {
       url = `spotify/now/spotify:album:${encodeURIComponent(media.id)}:${media.resumespotifytrack_number}:${media.resumespotifyprogress_ms}`
     } else if (media.showid) {
       url = `spotify/now/spotify:episode:${encodeURIComponent(media.showid)}:${media.resumespotifytrack_number}:${media.resumespotifyprogress_ms}`
+    } else if (media.audiobookid) {
+      url = `spotify/now/spotify:show:${encodeURIComponent(media.audiobookid)}:${media.resumespotifytrack_number}:${media.resumespotifyprogress_ms}`
     }
 
     this.sendRequest(url)

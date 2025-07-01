@@ -67,3 +67,11 @@ export interface SpotifyEpisodeResponseItem {
   show: SpotifyAlbumsResponseArtist[]
   release_date?: string
 }
+
+export interface SpotifyAudiobooksResponseItem {
+  images: SpotifyAlbumsResponseImage[]
+  name: string
+  id: string
+  authors: SpotifyAlbumsResponseArtist[]
+  release_date: string
+}
