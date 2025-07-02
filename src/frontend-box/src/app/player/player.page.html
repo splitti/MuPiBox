@@ -48,6 +48,8 @@
           @case ('spotifyPlaylist') {
             {{ spotify()?.item.track_number }}/{{ spotify()?.item.album.total_tracks }}
           }
+          <!-- TODO: Check if audiobook can also be episode.
+           Commit: https://github.com/splitti/MuPiBox/commit/5b9a71d94331369f01b7450738df500b0849410e -->
           @case ('spotifyEpisode') {
             {{ showTrackNr }}/{{ episode()?.show.total_episodes }}
           }
