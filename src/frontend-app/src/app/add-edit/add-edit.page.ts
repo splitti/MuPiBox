@@ -151,13 +151,18 @@ export class AddEditPage {
       this.sourceUrl.updateValueAndValidity()
     })
 
-    this.editDataId = toSignal(this.route.paramMap.pipe(map((params) => {
-      const idFromParams = params.get("id")
-      const id = idFromParams !== null ? Number(idFromParams) : undefined;
+    this.editDataId = toSignal(
+      this.route.paramMap.pipe(
+        map((params) => {
+          const idFromParams = params.get('id')
+          const id = idFromParams !== null ? Number(idFromParams) : undefined
 
-      if (id !== undefined && !Number.isNaN(id)) {
-      params.get('id') ?? null
-  })))
+          if (id !== undefined && !Number.isNaN(id)) {
+            params.get('id') ?? null
+          }
+        }),
+      ),
+    )
 
     // Check if we are editing.
     if (this.route.snapshot.url.length > 1) {

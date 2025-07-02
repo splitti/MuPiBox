@@ -992,6 +992,32 @@ function downloadTTS(name) {
     .catch(console.error)
 }
 
+async function updateShow(showId) {
+  let offset = 0
+  let showtemp
+  while (offset === 0 || offset < currentMeta.totalShows) {
+    await spotifyApi.getShowEpisodes(showId, {limit: 50, offset: offset}).then(
+        (data) => {
+          counter.countgetShowEpisodes++
+          if (config.server.logLevel === 'debug') {
+            writeCounter()
+          }
+          if (offset > 0) {
+            showtemp.items = showtemp.items.concat(data.body.items)
+          } else {
+            showtemp = data.body
+            currentMeta.totalShows = showtemp.total
+          }
+        },
+        (err) => {
+          handleSpotifyError(err, 'getShowEpisodes')
+        },
+    )
+    offset = offset + 50
+  }
+  show = showtemp
+}
+
 async function useSpotify(command) {
   currentMeta.currentPlayer = 'spotify'
   currentMeta.currentType = 'spotify'
@@ -1038,8 +1064,6 @@ async function useSpotify(command) {
     playlist = playlisttemp
   } else if (command.name.split(':')[1] === 'episode') {
     currentMeta.activeEpisode = command.name.split(':')[2]
-    let offset = 0
-    let showtemp
     await spotifyApi.getEpisode(currentMeta.activeEpisode).then(
       (data) => {
         counter.countgetEpisode++
@@ -1053,26 +1077,11 @@ async function useSpotify(command) {
         handleSpotifyError(err, 'getEpisode')
       },
     )
-    while (offset < currentMeta.totalShows) {
-      await spotifyApi.getShowEpisodes(currentMeta.activeShow, { limit: 50, offset: offset }).then(
-        (data) => {
-          counter.countgetShowEpisodes++
-          if (config.server.logLevel === 'debug') {
-            writeCounter()
-          }
-          if (offset > 0) {
-            showtemp.items = showtemp.items.concat(data.body.items)
-          } else {
-            showtemp = data.body
-          }
-        },
-        (err) => {
-          handleSpotifyError(err, 'getShowEpisodes')
-        },
-      )
-      offset = offset + 50
-    }
-    show = showtemp
+    await updateShow(currentMeta.activeShow)
+  } else if (command.name.split(':')[1] === 'show') {
+    currentMeta.activeShow = command.name.split(':')[2]
+    currentMeta.totalShows = ''
+    await updateShow(currentMeta.activeShow)
   }
   currentMeta.activeSpotifyId = command.name
   playMe()
@@ -1107,7 +1116,9 @@ app.get('/setDevice', (req, res) => {
 /*only used if sonos-kids-player is modified*/
 app.get('/state', (req, res) => {
   if (currentMeta.currentPlayer === 'spotify') {
-    spotifyApi.getMyCurrentPlaybackState().then(
+    spotifyApi.getMyCurrentPlaybackState({
+      additional_types: 'episode,track',
+    }).then(
       (data) => {
         counter.countgetMyCurrentPlaybackStateHTTP++
         if (config.server.logLevel === 'debug') {

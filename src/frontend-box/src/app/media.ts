@@ -16,6 +16,7 @@ export interface Media {
   artistid?: string // done
   showid?: string // done
   playlistid?: string // done
+  audiobookid?: string // to verify
   release_date?: string
   cover?: string
   type: string // done

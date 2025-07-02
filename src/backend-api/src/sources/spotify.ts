@@ -3,6 +3,7 @@ import {
   Data,
   SpotifyAlbumData,
   SpotifyArtistData,
+  SpotifyAudiobookData,
   SpotifyBaseData,
   SpotifyData,
   SpotifyPlaylistData,
@@ -158,6 +159,15 @@ const fillSearchQueryDataEntry = (fillDataEntry<SpotifyQueryData>).bind(
   (index: number, res: SpotifyApi.AlbumSearchResponse) => res.albums.items[index],
 )
 
+const fillAudiobookDataEntry = (fillDataEntry<SpotifyAudiobookData>).bind(
+  undefined,
+  (spotifyApi: SpotifyWebApi | undefined, data: SpotifyAudiobookData[]) => {
+    return [] // TODO: Audiobooks are not supported yet by our used library. What do we do?
+  },
+  1, // Search queries are one at a time.
+  (index: number, res: SpotifyApi.AlbumSearchResponse) => res.albums.items[index],
+)
+
 /**
  * TODO
  * @param data
@@ -204,6 +214,15 @@ const isSpotifyQueryData = (data: Data): data is SpotifyQueryData => {
 }
 
 /**
+ * TODO
+ * @param data
+ * @returns
+ */
+const isSpotifyAudiobookData = (data: Data): data is SpotifyAudiobookData => {
+  return data.type === 'spotify' && 'audiobookid' in data
+}
+
+/**
  * Adds title information (and cover image if not yet set)
  * to the spotify-based data in the given {@link data}.
  * Does not check query-based data entries since they require a title
@@ -217,6 +236,7 @@ export const addSpotifyTitleInformation = async (data: Data[]): Promise<void> =>
     fillArtistDataEntry(data.filter(isSpotifyArtistData)),
     fillAlbumDataEntry(data.filter(isSpotifyAlbumData)),
     fillPlaylistDataEntry(data.filter(isSpotifyPlaylistData)),
+    fillAudiobookDataEntry(data.filter(isSpotifyAudiobookData)),
   ])
 }
 
@@ -233,6 +253,7 @@ export const addSpotifyImageInformation = async (data: Data[]): Promise<void> =>
     fillAlbumDataEntry(data.filter(isSpotifyAlbumData)),
     fillPlaylistDataEntry(data.filter(isSpotifyPlaylistData)),
     fillSearchQueryDataEntry(data.filter(isSpotifyQueryData)),
+    fillAudiobookDataEntry(data.filter(isSpotifyAudiobookData)),
   ])
 }
 
@@ -392,6 +413,10 @@ export const getSpotifyMedia = async (data: SpotifyData): Promise<SpotifyMedia[]
   if (isSpotifyQueryData(data)) {
     return getSpotifyQueryAlbums(data)
   }
+  if (isSpotifyAudiobookData(data)) {
+    // TODO: Implement audiobook support.
+    return []
+  }
   if (isSpotifyAlbumData(data)) {
     return [
       {
@@ -427,7 +452,7 @@ export const getSpotifyMedia = async (data: SpotifyData): Promise<SpotifyMedia[]
   return []
 }
 
-export const validateSpotifyUrlData = async (data: SpotifyUrlData): boolean => {
+export const validateSpotifyUrlData = async (data: SpotifyUrlData): Promise<boolean> => {
   let promise
   switch (data.type) {
     case 'album': {

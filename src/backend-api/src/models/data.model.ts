@@ -75,6 +75,11 @@ export interface SpotifyShowData extends SpotifyBaseData {
   spotify_url?: string
 }
 
+export interface SpotifyAudiobookData extends SpotifyBaseData {
+  audiobookid: string
+  spotify_url?: string
+}
+
 export interface SpotifyPlaylistData extends SpotifyBaseData {
   playlistid: string
   spotify_url?: string
@@ -86,5 +91,6 @@ export type SpotifyData =
   | SpotifyArtistData
   | SpotifyPlaylistData
   | SpotifyShowData
+  | SpotifyAudiobookData
 
 export type Data = LocalData | RadioData | RssData | SpotifyData

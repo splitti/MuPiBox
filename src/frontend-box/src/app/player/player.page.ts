@@ -208,6 +208,14 @@ export class PlayerPage {
     //       }
     //     })
     //   }
+    //   if (this.media.audiobookid) {
+    //     this.currentShow?.items.forEach((element, index) => {
+    //       if (this.currentPlayedSpotify?.item.id === element?.id) {
+    //         this.showTrackNr = index + 1
+    //         this.cover = element.images[1].url
+    //       }
+    //     })
+    //   }
     // } else if (this.media.type === 'library' || this.media.type === 'rss') {
     //   this.progress = this.local()?.progressTime ?? 0
     // }
