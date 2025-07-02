@@ -151,23 +151,15 @@ export class AddEditPage {
       this.sourceUrl.updateValueAndValidity()
     })
 
-    this.editDataId = toSignal(
+    this.editDataId = toSignal<number | null>(
       this.route.paramMap.pipe(
         map((params) => {
           const idFromParams = params.get('id')
-          const id = idFromParams !== null ? Number(idFromParams) : undefined
-
-          if (id !== undefined && !Number.isNaN(id)) {
-            params.get('id') ?? null
-          }
+          return idFromParams !== null ? Number(idFromParams) : null
         }),
       ),
     )
 
-    // Check if we are editing.
-    if (this.route.snapshot.url.length > 1) {
-      this.editDataId.set(1)
-    }
     // TODO: Fetch the data.
     // toObservable(this.editDataId).pipe(
     //   tap()
@@ -276,7 +268,7 @@ export class AddEditPage {
   }
 
   private extractSpotifyUrlData(url: string): SpotifyUrlData | null {
-    const regex = '^https://open.spotify.com/.*(playlist|show|album|artist)/([a-zA-Z0-9]+)(.*)$'
+    const regex = '^https://open.spotify.com/.*(playlist|show|album|artist|audiobooks)/([a-zA-Z0-9]+)(.*)$'
     const match = url.match(regex)
     if (!match) {
       return null
