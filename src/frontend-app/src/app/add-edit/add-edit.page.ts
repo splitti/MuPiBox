@@ -1,8 +1,8 @@
 import { ActivatedRoute, Router } from '@angular/router'
 import { AsyncValidatorFn, FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms'
 import { CategoryType, Sorting } from '@backend-api/folder.model'
-import { ChangeDetectionStrategy, Component, computed, effect, inject, model, signal } from '@angular/core'
-import { Data, RssData } from '@backend-api/data.model'
+import { ChangeDetectionStrategy, Component, Signal, computed, effect, inject, model, signal } from '@angular/core'
+import { Data, RadioData, RssData } from '@backend-api/data.model'
 import {
   IonBackButton,
   IonButton,
@@ -125,7 +125,7 @@ export class AddEditPage {
   })
 
   protected isEditing = computed(() => this.editDataId() !== null)
-  private editDataId = signal<number | null>(null)
+  private editDataId: Signal<number | null>
 
   private readonly router = inject(Router)
   private readonly route = inject(ActivatedRoute)
@@ -150,6 +150,14 @@ export class AddEditPage {
       } else [this.sourceUrl.clearAsyncValidators()]
       this.sourceUrl.updateValueAndValidity()
     })
+
+    this.editDataId = toSignal(this.route.paramMap.pipe(map((params) => {
+      const idFromParams = params.get("id")
+      const id = idFromParams !== null ? Number(idFromParams) : undefined;
+
+      if (id !== undefined && !Number.isNaN(id)) {
+      params.get('id') ?? null
+  })))
 
     // Check if we are editing.
     if (this.route.snapshot.url.length > 1) {
@@ -198,9 +206,19 @@ export class AddEditPage {
         dataToCreate = rssData
         break
       }
-      case AddEditPageSourceType.StreamUrl:
-        // this.createStream()
+      case AddEditPageSourceType.StreamUrl: {
+        const radioData: RadioData = {
+          type: 'radio',
+          category: this.category.value,
+          artist: this.folderName.value,
+          artistcover: this.folderImageUrl.value,
+          title: this.title.value,
+          cover: this.coverImageUrl.value,
+          id: this.sourceUrl.value,
+        }
+        dataToCreate = radioData
         break
+      }
     }
     // TODO: Handle m3u stuff?
     if (dataToCreate === null) {
@@ -208,6 +226,7 @@ export class AddEditPage {
     }
     lastValueFrom(this.dataService.createData(dataToCreate))
       .then(() => {
+        // TODO: Maybe show confirmation?
         this.router.navigate([''])
       })
       .catch((error) => {
