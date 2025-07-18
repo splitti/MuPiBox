@@ -5,7 +5,7 @@
     </ion-buttons>
     @let networkVar = network();
     @if (networkVar?.host !== undefined && networkVar?.ip !== undefined) {
-          <!-- <ion-title>Settings: {{ networkVar.host }} - {{ networkVar.ip }}</ion-title> -->
+      <ion-title>Settings: {{ networkVar?.host }} - {{ networkVar?.ip }}</ion-title>
     } @else {
       <ion-title>Settings</ion-title>
     }
@@ -13,5 +13,5 @@
   </ion-toolbar>
 </ion-header>
 <ion-content>
-  <mupi-swiper [data]="swiperData" (elementClicked)="entryClicked($event)"></mupi-swiper>
+  <mupi-swiper [data]="swiperData()" (elementClicked)="entryClicked($event)"></mupi-swiper>
 </ion-content>

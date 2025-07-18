@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, Signal, computed, effect, inject, signal } from '@angular/core'
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core'
 import { IonBackButton, IonButtons, IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular/standalone'
 import { SwiperComponent, SwiperData } from '../swiper/swiper.component'
 
@@ -6,7 +6,6 @@ import { AlertController } from '@ionic/angular/standalone'
 import { HttpClient } from '@angular/common/http'
 import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
-import { Network } from '@backend-api/network.model'
 import QRCode from 'qrcode'
 import { Router } from '@angular/router'
 import { SwiperIonicEventsHelper } from '../swiper/swiper-ionic-events-helper'
@@ -70,7 +69,7 @@ export class SettingsPage extends SwiperIonicEventsHelper {
       () => {
         const ip = this.network()?.ip
         if (ip !== undefined) {
-          QRCode.toDataURL(ip).then((url) => {
+          QRCode.toDataURL(`http://${ip}`, { color: { light: '#00000000' } }).then((url) => {
             this.qrCodeSrc.set(url)
           })
         } else {
