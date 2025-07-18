@@ -15,6 +15,11 @@ swiper-container {
         ion-card {
             width: 230px;
             --background: #262626;
+
+            img {
+                height: 100%;
+                width: 100%;
+            }
     
             ion-card-title {
                 padding-bottom: 5px;

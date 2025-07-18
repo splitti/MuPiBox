@@ -1,4 +1,5 @@
 import { PathLike } from 'node:fs'
+import { exec } from 'node:child_process'
 import { readFile } from 'node:fs/promises'
 
 /**
@@ -22,4 +23,26 @@ export function* chunks<T>(array: T[], chunkSize: number): Generator<T[], void> 
   for (let i = 0; i < array.length; i += chunkSize) {
     yield array.slice(i, i + chunkSize)
   }
+}
+
+/**
+ * Executes the given command in a child process and returns the standard output.
+ * If an error occurs, it will be logged and the promise will be rejected.
+ * @param cmd - The command to execute.
+ * @returns - A promise that resolves with the standard output of the command.
+ */
+export const cmdCall = async (cmd: string): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    exec(cmd, (error, standardOutput, standardError) => {
+      if (error) {
+        reject()
+        return
+      }
+      if (standardError) {
+        reject(standardError)
+        return
+      }
+      resolve(standardOutput)
+    })
+  })
 }

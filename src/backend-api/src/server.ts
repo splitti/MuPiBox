@@ -7,6 +7,7 @@ import {
   getSpotifyMedia,
   validateSpotifyUrlData,
 } from './sources/spotify'
+import { cmdCall, readJsonFile } from './utils'
 
 import { Data } from './models/data.model'
 import { Network } from './models/network.model'
@@ -18,7 +19,6 @@ import express from 'express'
 import fs from 'node:fs'
 import jsonfile from 'jsonfile'
 import path from 'node:path'
-import { readJsonFile } from './utils'
 
 const serverName = 'mupibox-backend-api'
 
@@ -337,6 +337,24 @@ app.post('/api/validate-spotify', async (req: Request, res: Response) => {
   } else {
     res.status(400).json({ error: 'Invalid Spotify URL.' })
   }
+})
+
+app.post('/api/reboot', async (_req, res) => {
+  cmdCall('sudo su - -c "/usr/local/bin/mupibox/./restart.sh &"')
+    .then(() => res.status(200).send('Rebooting...'))
+    .catch((error) => {
+      console.log(`${nowDate.toLocaleString()}: [${serverName}] Error /api/reboot`)
+      res.status(500).send('Internal Server Error')
+    })
+})
+
+app.post('api/shutdown', (_req, res) => {
+  cmdCall('sudo su - -c "/usr/local/bin/mupibox/./shutdown.sh &"')
+    .then(() => res.status(200).send('Shutting down...'))
+    .catch((error) => {
+      console.log(`${nowDate.toLocaleString()}: [${serverName}] Error /api/shutdown`)
+      res.status(500).send('Internal Server Error')
+    })
 })
 
 app.get('/api/resume', (req, res) => {

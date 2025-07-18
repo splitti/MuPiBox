@@ -606,7 +606,7 @@ export class AddPage implements OnInit, AfterViewInit {
   async isAudiobook(media: Media): Promise<boolean> {
     let validationResult: Promise<boolean> = Promise.resolve(false)
     if (media.showid) {
-      validationResult = this.spotifyService.validateSpotify(media.showid, 'audiobook')
+      // validationResult = this.spotifyService.validateSpotify(media.showid, 'audiobook')
     }
 
     const timeout: Promise<boolean> = new Promise((resolve) => setTimeout(() => resolve(false), 30000))

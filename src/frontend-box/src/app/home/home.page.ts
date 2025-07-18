@@ -52,7 +52,7 @@ import { addIcons } from 'ionicons'
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HomePage extends SwiperIonicEventsHelper {
-  protected editButtonclickCount = 0
+  protected settingsButtonClickCount = 0
   protected editClickTimer = 0
 
   protected folders: Signal<Folder[]>
@@ -113,18 +113,18 @@ export class HomePage extends SwiperIonicEventsHelper {
     this.router.navigate(['/media', folder.category, folder.name])
   }
 
-  protected editButtonPressed(): void {
+  protected settingsButtonPressed(): void {
     window.clearTimeout(this.editClickTimer)
 
-    if (this.editButtonclickCount < 9) {
-      this.editButtonclickCount++
+    if (this.settingsButtonClickCount < 9) {
+      this.settingsButtonClickCount++
 
       this.editClickTimer = window.setTimeout(() => {
-        this.editButtonclickCount = 0
+        this.settingsButtonClickCount = 0
       }, 500)
     } else {
-      this.editButtonclickCount = 0
-      this.router.navigate(['/edit'])
+      this.settingsButtonClickCount = 0
+      this.router.navigate(['/settings'])
     }
   }
 

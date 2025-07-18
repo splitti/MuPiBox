@@ -1,6 +1,5 @@
-import type { CategoryType, Media } from './media'
-import { Observable, Subject, from, iif, interval, of, timer } from 'rxjs'
-import { distinctUntilChanged, filter, map, mergeAll, mergeMap, shareReplay, switchMap, toArray } from 'rxjs/operators'
+import { Observable, Subject, interval, of, timer } from 'rxjs'
+import { distinctUntilChanged, filter, map, shareReplay, switchMap } from 'rxjs/operators'
 
 import type { AlbumStop } from './albumstop'
 import { Media as BackendMedia } from '@backend-api/media.model'
@@ -11,6 +10,7 @@ import type { CurrentShow } from './current.show'
 import type { CurrentSpotify } from './current.spotify'
 import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
+import type { Media } from './media'
 import { Mupihat } from './mupihat'
 import type { Network } from '@backend-api/network.model'
 import type { WLAN } from './wlan'
@@ -402,15 +402,12 @@ export class MediaService {
   //     }),
   //   )
   // }
-
-  // Get all media entries for the current category
   getResponse() {
     const tmpResponse = this.response
     this.response = ''
 
     return tmpResponse
   }
-
   private getApiBackendUrl(): string {
     return environment.backend.apiUrl
   }

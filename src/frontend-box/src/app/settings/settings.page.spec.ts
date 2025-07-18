@@ -1,8 +1,8 @@
-import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http'
-import { provideHttpClientTesting } from '@angular/common/http/testing'
 import { ComponentFixture, TestBed } from '@angular/core/testing'
+import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http'
 
 import { SettingsPage } from './settings.page'
+import { provideHttpClientTesting } from '@angular/common/http/testing'
 
 describe('SettingsPage', () => {
   let component: SettingsPage
@@ -22,4 +22,6 @@ describe('SettingsPage', () => {
   it('should create', () => {
     expect(component).toBeTruthy()
   })
+
+  // TODO: Test buttons clicked
 })

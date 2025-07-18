@@ -11,27 +11,25 @@ import {
   IonIcon,
   IonInput,
   IonItem,
-  IonLabel,
   IonRow,
   IonSegment,
-  IonSegmentButton,
   IonToolbar,
 } from '@ionic/angular/standalone'
-import { refresh, wifiOutline } from 'ionicons/icons'
 import { PlayerCmds, PlayerService } from '../player.service'
+import { refresh, wifiOutline } from 'ionicons/icons'
 
 import { FormsModule } from '@angular/forms'
-import type { NgForm } from '@angular/forms'
-import { addIcons } from 'ionicons'
 import Keyboard from 'simple-keyboard'
 import { MediaService } from '../media.service'
+import type { NgForm } from '@angular/forms'
 import type { WLAN } from '../wlan'
+import { addIcons } from 'ionicons'
 
 @Component({
-  selector: 'app-admin',
+  selector: 'app-wifi',
   encapsulation: ViewEncapsulation.None,
-  templateUrl: './admin.page.html',
-  styleUrls: ['./admin.page.scss'],
+  templateUrl: './wifi.page.html',
+  styleUrls: ['./wifi.page.scss'],
   standalone: true,
   imports: [
     IonTitle,
@@ -40,9 +38,6 @@ import type { WLAN } from '../wlan'
     IonToolbar,
     IonButtons,
     IonBackButton,
-    IonSegment,
-    IonSegmentButton,
-    IonLabel,
     IonButton,
     IonIcon,
     IonContent,
@@ -53,7 +48,7 @@ import type { WLAN } from '../wlan'
     IonInput,
   ],
 })
-export class AdminPage implements OnInit, AfterViewInit {
+export class WifiPage implements OnInit, AfterViewInit {
   @ViewChild('segment', { static: false }) segment: IonSegment
   @ViewChild('select', { static: false }) select: IonSelect
 

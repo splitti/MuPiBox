@@ -996,22 +996,22 @@ async function updateShow(showId) {
   let offset = 0
   let showtemp
   while (offset === 0 || offset < currentMeta.totalShows) {
-    await spotifyApi.getShowEpisodes(showId, {limit: 50, offset: offset}).then(
-        (data) => {
-          counter.countgetShowEpisodes++
-          if (config.server.logLevel === 'debug') {
-            writeCounter()
-          }
-          if (offset > 0) {
-            showtemp.items = showtemp.items.concat(data.body.items)
-          } else {
-            showtemp = data.body
-            currentMeta.totalShows = showtemp.total
-          }
-        },
-        (err) => {
-          handleSpotifyError(err, 'getShowEpisodes')
-        },
+    await spotifyApi.getShowEpisodes(showId, { limit: 50, offset: offset }).then(
+      (data) => {
+        counter.countgetShowEpisodes++
+        if (config.server.logLevel === 'debug') {
+          writeCounter()
+        }
+        if (offset > 0) {
+          showtemp.items = showtemp.items.concat(data.body.items)
+        } else {
+          showtemp = data.body
+          currentMeta.totalShows = showtemp.total
+        }
+      },
+      (err) => {
+        handleSpotifyError(err, 'getShowEpisodes')
+      },
     )
     offset = offset + 50
   }
@@ -1116,34 +1116,36 @@ app.get('/setDevice', (req, res) => {
 /*only used if sonos-kids-player is modified*/
 app.get('/state', (req, res) => {
   if (currentMeta.currentPlayer === 'spotify') {
-    spotifyApi.getMyCurrentPlaybackState({
-      additional_types: 'episode,track',
-    }).then(
-      (data) => {
-        counter.countgetMyCurrentPlaybackStateHTTP++
-        if (config.server.logLevel === 'debug') {
-          writeCounter()
-        }
-        let state = data.body
-        if (Object.keys(state).length === 0) {
-          state = {
-            item: {
-              album: {
-                name: '',
-                total_tracks: '',
-              },
-              name: '',
-              track_number: '',
-            },
-            currently_playing_type: '',
+    spotifyApi
+      .getMyCurrentPlaybackState({
+        additional_types: 'episode,track',
+      })
+      .then(
+        (data) => {
+          counter.countgetMyCurrentPlaybackStateHTTP++
+          if (config.server.logLevel === 'debug') {
+            writeCounter()
           }
-        }
-        res.send(state)
-      },
-      (err) => {
-        handleSpotifyError(err, 'stateHTTP')
-      },
-    )
+          let state = data.body
+          if (Object.keys(state).length === 0) {
+            state = {
+              item: {
+                album: {
+                  name: '',
+                  total_tracks: '',
+                },
+                name: '',
+                track_number: '',
+              },
+              currently_playing_type: '',
+            }
+          }
+          res.send(state)
+        },
+        (err) => {
+          handleSpotifyError(err, 'stateHTTP')
+        },
+      )
   } else {
     const state = {
       item: {
@@ -1294,12 +1296,10 @@ app.use((req, res) => {
   else if (command.name === '-5') setVolume(0)
   else if (command.name === 'shuffleon') shuffleon()
   else if (command.name === 'shuffleoff') shuffleoff()
-  else if (command.name === 'shutoff') cmdCall('sudo su - -c "/usr/local/bin/mupibox/./shutdown.sh &"')
   // TODO: Create new endpoint for this.
   else if (command.name === 'clearresume') cmdCall('sudo bash /usr/local/bin/mupibox/clearresume.sh')
   else if (command.name === 'maxresume') cmdCall('sudo bash /usr/local/bin/mupibox/remove_max_resume.sh')
   else if (command.name === 'networkrestart') cmdCall('sudo service ifup@wlan0 stop && sudo service ifup@wlan0 start')
-  else if (command.name === 'reboot') cmdCall('sudo su - -c "/usr/local/bin/mupibox/./restart.sh &"')
   else if (command.name === 'index') cmdCall('sudo bash /usr/local/bin/mupibox/add_index.sh')
   else if (command.name === 'seek+30') seek(1)
   else if (command.name === 'seek-30') seek(0)

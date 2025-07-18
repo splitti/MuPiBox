@@ -24,7 +24,8 @@
     "simple-keyboard": "^3.8.8",
     "tslib": "^2.7.0",
     "zone.js": "~0.14.10",
-    "lodash-es": "4.17.21"
+    "lodash-es": "4.17.21",
+    "qrcode": "^1.5.4"
   },
   "devDependencies": {
     "@angular-devkit/build-angular": "^18.2.7",
