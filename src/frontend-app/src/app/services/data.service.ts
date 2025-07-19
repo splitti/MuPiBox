@@ -37,7 +37,14 @@ export class DataService {
   public createData(newData: Data): Observable<Data> {
     return this.httpClient.post<Data>(`${this.endpoint}/data`, newData)
   }
-  // public clearResumeData
+
+  /**
+   * Removes all resume entries.
+   * @returns - An observable that completes when the resume data is cleared.
+   */
+  public clearResumeData(): Observable<void> {
+    return this.httpClient.delete<void>(`${this.endpoint}/resume`)
+  }
 
   /**
    * TODO

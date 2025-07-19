@@ -373,6 +373,16 @@ app.get('/api/resume', (req, res) => {
   }
 })
 
+app.delete('/api/resume', async (_req, res) => {
+  try {
+    await jsonfile.writeFile(resumeFile, [], { spaces: 4 })
+    res.status(200).send('All resume data deleted.')
+  } catch (error) {
+    console.error(`${nowDate.toLocaleString()}: [${serverName}] ${error}`)
+    res.status(500).send('Could not delete all resume data.')
+  }
+})
+
 app.get('/api/mupihat', (req, res) => {
   if (fs.existsSync(mupihat)) {
     jsonfile.readFile(mupihat, (error, data) => {

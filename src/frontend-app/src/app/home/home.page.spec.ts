@@ -19,4 +19,6 @@ describe('HomePage', () => {
   it('should create', () => {
     expect(component).toBeTruthy()
   })
+
+  // TODO: Test clear resume.
 })

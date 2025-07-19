@@ -1291,7 +1291,6 @@ app.use((req, res) => {
   else if (command.name === 'shuffleon') shuffleon()
   else if (command.name === 'shuffleoff') shuffleoff()
   // TODO: Create new endpoint for this.
-  else if (command.name === 'clearresume') cmdCall('sudo bash /usr/local/bin/mupibox/clearresume.sh')
   else if (command.name === 'maxresume') cmdCall('sudo bash /usr/local/bin/mupibox/remove_max_resume.sh')
   else if (command.name === 'networkrestart') cmdCall('sudo service ifup@wlan0 stop && sudo service ifup@wlan0 start')
   else if (command.name === 'index') cmdCall('sudo bash /usr/local/bin/mupibox/add_index.sh')

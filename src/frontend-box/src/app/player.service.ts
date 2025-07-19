@@ -22,13 +22,9 @@ export enum PlayerCmds {
   SEEKBACK = 'seek-30',
   SHUFFLEON = 'shuffleon',
   SHUFFLEOFF = 'shuffleoff',
-  SHUTOFF = 'shutoff',
   ALBUMSTOP = 'albumstop',
-  REBOOT = 'reboot',
   INDEX = 'index',
   NETWORKRESTART = 'networkrestart',
-  CLEARRESUME = 'clearresume',
-  MAXRESUME = 'maxresume',
   ENABLEWIFI = 'enablewifi',
 }
 
@@ -135,7 +131,7 @@ export class PlayerService {
         } else if (media.showid) {
           url = `spotify/now/spotify:episode:${encodeURIComponent(media.showid)}:0:0`
         } else if (media.audiobookid) {
-            url = `spotify/now/spotify:show:${encodeURIComponent(media.audiobookid)}:0:0`
+          url = `spotify/now/spotify:show:${encodeURIComponent(media.audiobookid)}:0:0`
         }
         break
       }

@@ -180,52 +180,55 @@ export class AddEditPage {
     )
 
     // Set edit data to the form fields.
-    effect(() => {
-      const data = this.editData()
-      if (data == null) {
-        return
-      }
-      if (isSpotifyData(data)) {
-        if (isSpotifyQueryData(data)) {
-          this.sourceType.setValue(AddEditPageSourceType.SpotifySearch)
-          this.sourceUrl.setValue(data.query)
-        } else {
-          this.sourceType.setValue(AddEditPageSourceType.SpotifyUrl)
-          this.sourceUrl.setValue(data.spotify_url)
+    effect(
+      () => {
+        const data = this.editData()
+        if (data == null) {
+          return
         }
-      } else if (isRadioData(data)) {
-        this.sourceType.setValue(AddEditPageSourceType.StreamUrl)
-        this.sourceUrl.setValue(data.id)
-      } else if (isRssData(data)) {
-        this.sourceType.setValue(AddEditPageSourceType.RssUrl)
-        this.sourceUrl.setValue(data.id)
-      }
-      this.category.setValue(data.category)
-      // this.sorting.setValue(data.sorting)
-      this.folderName.setValue(data.artist)
-      this.folderImageUrl.setValue(data.artistcover)
-      this.useAutomaticFolderNameAndImage.set(data.artist === undefined && data.artistcover === undefined)
+        if (isSpotifyData(data)) {
+          if (isSpotifyQueryData(data)) {
+            this.sourceType.setValue(AddEditPageSourceType.SpotifySearch)
+            this.sourceUrl.setValue(data.query)
+          } else {
+            this.sourceType.setValue(AddEditPageSourceType.SpotifyUrl)
+            this.sourceUrl.setValue(data.spotify_url)
+          }
+        } else if (isRadioData(data)) {
+          this.sourceType.setValue(AddEditPageSourceType.StreamUrl)
+          this.sourceUrl.setValue(data.id)
+        } else if (isRssData(data)) {
+          this.sourceType.setValue(AddEditPageSourceType.RssUrl)
+          this.sourceUrl.setValue(data.id)
+        }
+        this.category.setValue(data.category)
+        // this.sorting.setValue(data.sorting)
+        this.folderName.setValue(data.artist)
+        this.folderImageUrl.setValue(data.artistcover)
+        this.useAutomaticFolderNameAndImage.set(data.artist === undefined && data.artistcover === undefined)
 
-      this.title.setValue(data.title)
-      this.coverImageUrl.setValue(data.cover)
-      if (isRadioData(data)) {
-        this.shuffle.setValue(false)
-        this.interval.setValue(false)
-        this.intervalStart.setValue(undefined)
-        this.intervalEnd.setValue(undefined)
-      } else {
-        // this.shuffle.setValue(data?.shuffle ?? false)
-        if ('aPartOfAll' in data) {
-          this.interval.setValue(data.aPartOfAll ?? false)
-          this.intervalStart.setValue(data.aPartOfAllMin ?? undefined)
-          this.intervalEnd.setValue(data.aPartOfAllMax ?? undefined)
-        } else {
+        this.title.setValue(data.title)
+        this.coverImageUrl.setValue(data.cover)
+        if (isRadioData(data)) {
+          this.shuffle.setValue(false)
           this.interval.setValue(false)
           this.intervalStart.setValue(undefined)
           this.intervalEnd.setValue(undefined)
+        } else {
+          // this.shuffle.setValue(data?.shuffle ?? false)
+          if ('aPartOfAll' in data) {
+            this.interval.setValue(data.aPartOfAll ?? false)
+            this.intervalStart.setValue(data.aPartOfAllMin ?? undefined)
+            this.intervalEnd.setValue(data.aPartOfAllMax ?? undefined)
+          } else {
+            this.interval.setValue(false)
+            this.intervalStart.setValue(undefined)
+            this.intervalEnd.setValue(undefined)
+          }
         }
-      }
-    })
+      },
+      { allowSignalWrites: true },
+    )
   }
 
   /**
