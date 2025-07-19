@@ -9,12 +9,18 @@ import {
   SpotifyPlaylistData,
   SpotifyQueryData,
   SpotifyShowData,
+  isSpotifyShowData,
+  isSpotifyArtistData,
+  isSpotifyPlaylistData,
+  isSpotifyAlbumData,
+  isSpotifyQueryData,
+  isSpotifyAudiobookData,
 } from '../models/data.model'
 import { chunks, readJsonFile } from '../utils'
 
 import SpotifyWebApi from 'spotify-web-api-node'
 import { environment } from '../environment'
-import { SpotifyAlbumMedia, SpotifyEpisodeMedia, SpotifyMedia, SpotifyPlaylistMedia } from 'src/models/media.model'
+import { SpotifyAlbumMedia, SpotifyMedia, SpotifyPlaylistMedia } from 'src/models/media.model'
 import { SpotifyUrlData } from 'src/models/spotify-url-data.model'
 
 let configBasePath = './server/config' // TODO: Fix for production.
@@ -167,60 +173,6 @@ const fillAudiobookDataEntry = (fillDataEntry<SpotifyAudiobookData>).bind(
   1, // Search queries are one at a time.
   (index: number, res: SpotifyApi.AlbumSearchResponse) => res.albums.items[index],
 )
-
-/**
- * TODO
- * @param data
- * @returns
- */
-const isSpotifyShowData = (data: Data): data is SpotifyShowData => {
-  return data.type === 'spotify' && 'showid' in data
-}
-
-/**
- * TODO
- * @param data
- * @returns
- */
-const isSpotifyArtistData = (data: Data): data is SpotifyArtistData => {
-  return data.type === 'spotify' && 'artistid' in data
-}
-
-/**
- * TODO
- * @param data
- * @returns
- */
-const isSpotifyPlaylistData = (data: Data): data is SpotifyPlaylistData => {
-  return data.type === 'spotify' && 'playlistid' in data
-}
-
-/**
- * TODO
- * @param data
- * @returns
- */
-const isSpotifyAlbumData = (data: Data): data is SpotifyAlbumData => {
-  return data.type === 'spotify' && 'id' in data
-}
-
-/**
- * TODO
- * @param data
- * @returns
- */
-const isSpotifyQueryData = (data: Data): data is SpotifyQueryData => {
-  return data.type === 'spotify' && 'query' in data
-}
-
-/**
- * TODO
- * @param data
- * @returns
- */
-const isSpotifyAudiobookData = (data: Data): data is SpotifyAudiobookData => {
-  return data.type === 'spotify' && 'audiobookid' in data
-}
 
 /**
  * Adds title information (and cover image if not yet set)

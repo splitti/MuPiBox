@@ -9,7 +9,7 @@ const fs = require('node:fs')
 const childProcess = require('node:child_process')
 const { environment } = require('./environment.js')
 const proto = require('./spotify-proto.js')
-const crypto = require('crypto')
+const crypto = require('node:crypto')
 const request = require('superagent')
 
 let configBasePath = './config'
@@ -1104,12 +1104,6 @@ app.get('/getDevices', (req, res) => {
       handleSpotifyError(err, 'getMyDevicesHTTP')
     },
   )
-})
-
-/*endpoint transfer a playback to a specific device*/
-/*only used if sonos-kids-player is modified*/
-app.get('/setDevice', (req, res) => {
-  transferPlayback(req.query.id)
 })
 
 /*endpoint to return all state information*/

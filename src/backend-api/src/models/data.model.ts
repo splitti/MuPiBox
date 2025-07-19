@@ -94,3 +94,84 @@ export type SpotifyData =
   | SpotifyAudiobookData
 
 export type Data = LocalData | RadioData | RssData | SpotifyData
+
+/**
+ * Returns true if the data is of type {@link RssData}.
+ * @param data - The data to check.
+ * @returns - True if the data is of type {@link RssData}, false otherwise.
+ */
+export const isRssData = (data: Data): data is RssData => {
+  return data.type === 'rss'
+}
+
+/**
+ * Returns true if the data is of type {@link RadioData}.
+ * @param data - The data to check.
+ * @returns - True if the data is of type {@link RadioData}, false otherwise.
+ */
+export const isRadioData = (data: Data): data is RadioData => {
+  return data.type === 'radio'
+}
+
+/**
+ * Returns true if the data is of type {@link SpotifyData}.
+ * @param data - The data to check.
+ * @returns - True if the data is of type {@link SpotifyData}, false otherwise.
+ */
+export const isSpotifyData = (data: Data): data is SpotifyData => {
+  return data.type === 'spotify'
+}
+
+/**
+ * Returns true if the data is of type {@link SpotifyShowData}.
+ * @param data - The data to check.
+ * @returns - True if the data is of type {@link SpotifyShowData}, false otherwise.
+ */
+export const isSpotifyShowData = (data: Data): data is SpotifyShowData => {
+  return isSpotifyData(data) && 'showid' in data
+}
+
+/**
+ * Returns true if the data is of type {@link SpotifyArtistData}.
+ * @param data - The data to check.
+ * @returns - True if the data is of type {@link SpotifyArtistData}, false otherwise.
+ */
+export const isSpotifyArtistData = (data: Data): data is SpotifyArtistData => {
+  return isSpotifyData(data) && 'artistid' in data
+}
+
+/**
+ * Returns true if the data is of type {@link SpotifyPlaylistData}.
+ * @param data - The data to check.
+ * @returns - True if the data is of type {@link SpotifyPlaylistData}, false otherwise.
+ */
+export const isSpotifyPlaylistData = (data: Data): data is SpotifyPlaylistData => {
+  return isSpotifyData(data) && 'playlistid' in data
+}
+
+/**
+ * Returns true if the data is of type {@link SpotifyAlbumData}.
+ * @param data - The data to check.
+ * @returns - True if the data is of type {@link SpotifyAlbumData}, false otherwise.
+ */
+export const isSpotifyAlbumData = (data: Data): data is SpotifyAlbumData => {
+  return isSpotifyData(data) && 'id' in data
+}
+
+/**
+ * Returns true if the data is of type {@link SpotifyQueryData}.
+ * @param data - The data to check.
+ * @returns - True if the data is of type {@link SpotifyQueryData}, false otherwise.
+ */
+export const isSpotifyQueryData = (data: Data): data is SpotifyQueryData => {
+  return isSpotifyData(data) && 'query' in data
+}
+
+/**
+ * Returns true if the data is of type {@link SpotifyAudiobookData}.
+ * @param data - The data to check.
+ * @returns - True if the data is of type {@link SpotifyAudiobookData}, false otherwise.
+ */
+export const isSpotifyAudiobookData = (data: Data): data is SpotifyAudiobookData => {
+  return isSpotifyData(data) && 'audiobookid' in data
+}

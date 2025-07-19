@@ -24,6 +24,15 @@ export class DataService {
     return this.httpClient.get<Data[]>(`${this.endpoint}/data`)
   }
 
+  /**
+   * Fetch a specific data item by its ID.
+   * @param id - The ID of the data item to fetch.
+   * @returns - An observable that emits the {@link Data} object with the specified ID.
+   */
+  public getDataById(id: number): Observable<Data> {
+    return this.httpClient.get<Data>(`${this.endpoint}/data/${id}`)
+  }
+
   // public deleteData
   public createData(newData: Data): Observable<Data> {
     return this.httpClient.post<Data>(`${this.endpoint}/data`, newData)

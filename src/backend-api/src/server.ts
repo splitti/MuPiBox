@@ -269,7 +269,7 @@ app.get('/api/data', async (_req, res) => {
 /**
  * TODO
  */
-app.get('/data/:index', async (req, res) => {
+app.get('/api/data/:index', async (req, res) => {
   try {
     const index = Number.parseInt(req.params.index, 10)
     const data: Data[] = await readJsonFile(dataFile)

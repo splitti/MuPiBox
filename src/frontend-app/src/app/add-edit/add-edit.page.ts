@@ -2,7 +2,15 @@ import { ActivatedRoute, Router } from '@angular/router'
 import { AsyncValidatorFn, FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms'
 import { CategoryType, Sorting } from '@backend-api/folder.model'
 import { ChangeDetectionStrategy, Component, Signal, computed, effect, inject, model, signal } from '@angular/core'
-import { Data, RadioData, RssData } from '@backend-api/data.model'
+import {
+  Data,
+  RadioData,
+  RssData,
+  isRadioData,
+  isRssData,
+  isSpotifyData,
+  isSpotifyQueryData,
+} from '@backend-api/data.model'
 import {
   IonBackButton,
   IonButton,
@@ -23,7 +31,7 @@ import {
   IonToggle,
   IonToolbar,
 } from '@ionic/angular/standalone'
-import { Observable, catchError, lastValueFrom, map, of } from 'rxjs'
+import { Observable, catchError, lastValueFrom, map, of, switchMap } from 'rxjs'
 import { saveOutline, trashOutline } from 'ionicons/icons'
 import { toObservable, toSignal } from '@angular/core/rxjs-interop'
 
@@ -126,6 +134,7 @@ export class AddEditPage {
 
   protected isEditing = computed(() => this.editDataId() !== null)
   private editDataId: Signal<number | null>
+  private editData: Signal<Data | null>
 
   private readonly router = inject(Router)
   private readonly route = inject(ActivatedRoute)
@@ -159,11 +168,64 @@ export class AddEditPage {
         }),
       ),
     )
+    this.editData = toSignal<Data | null>(
+      toObservable(this.editDataId).pipe(
+        switchMap((id) => {
+          if (id === null) {
+            return of(null)
+          }
+          return this.dataService.getDataById(id)
+        }),
+      ),
+    )
 
-    // TODO: Fetch the data.
-    // toObservable(this.editDataId).pipe(
-    //   tap()
-    // )
+    // Set edit data to the form fields.
+    effect(() => {
+      const data = this.editData()
+      if (data == null) {
+        return
+      }
+      if (isSpotifyData(data)) {
+        if (isSpotifyQueryData(data)) {
+          this.sourceType.setValue(AddEditPageSourceType.SpotifySearch)
+          this.sourceUrl.setValue(data.query)
+        } else {
+          this.sourceType.setValue(AddEditPageSourceType.SpotifyUrl)
+          this.sourceUrl.setValue(data.spotify_url)
+        }
+      } else if (isRadioData(data)) {
+        this.sourceType.setValue(AddEditPageSourceType.StreamUrl)
+        this.sourceUrl.setValue(data.id)
+      } else if (isRssData(data)) {
+        this.sourceType.setValue(AddEditPageSourceType.RssUrl)
+        this.sourceUrl.setValue(data.id)
+      }
+      this.category.setValue(data.category)
+      // this.sorting.setValue(data.sorting)
+      this.folderName.setValue(data.artist)
+      this.folderImageUrl.setValue(data.artistcover)
+      this.useAutomaticFolderNameAndImage.set(data.artist === undefined && data.artistcover === undefined)
+
+      this.title.setValue(data.title)
+      this.coverImageUrl.setValue(data.cover)
+      if (isRadioData(data)) {
+        this.shuffle.setValue(false)
+        this.interval.setValue(false)
+        this.intervalStart.setValue(undefined)
+        this.intervalEnd.setValue(undefined)
+      } else {
+        // this.shuffle.setValue(data?.shuffle ?? false)
+        if ('aPartOfAll' in data) {
+          this.interval.setValue(data.aPartOfAll ?? false)
+          this.intervalStart.setValue(data.aPartOfAllMin ?? undefined)
+          this.intervalEnd.setValue(data.aPartOfAllMax ?? undefined)
+        } else {
+          this.interval.setValue(false)
+          this.intervalStart.setValue(undefined)
+          this.intervalEnd.setValue(undefined)
+        }
+      }
+    })
   }
 
   /**
