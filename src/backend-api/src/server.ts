@@ -456,6 +456,14 @@ const tryReadFile = (filePath: string, retries = 3, delayMs = 1000) => {
   })
 }
 
+// Catch-all handler: send back Angular's index.html file for any non-API routes
+// This must be placed after all API routes but before starting the server
+if (productionServe) {
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'www/index.html'))
+  })
+}
+
 if (!testServe) {
   app.listen(8200)
   console.log(`${nowDate.toLocaleString()}: [mupibox-backend-api] Server started at http://localhost:8200`)
