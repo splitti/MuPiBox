@@ -5590,7 +5590,7 @@ class bq25792:
           0h = VBAT NOT present 
           1h = VBAT present
         '''
-        self.REG1D_Charger_Status_2.get_VBAT_PRESENT_STAT()
+        return self.REG1D_Charger_Status_2.get_VBAT_PRESENT_STAT()
 
 
     def set_input_current_limit(self, input_current_limit: int) -> None:
