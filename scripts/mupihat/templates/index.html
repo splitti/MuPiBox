@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MuPiHAT Register Values</title>
+    <script>
+        // Function to fetch and update register values
+        function updateRegisters() {
+            fetch('/api/registers')
+                .then(response => response.json())
+                .then(data => {
+                    const tableBody = document.getElementById('registers-table-body');
+                    tableBody.innerHTML = ''; // Clear the table body
+
+                    // Populate the table with updated register values
+                    for (const [register, values] of Object.entries(data)) {
+                        // Create a row for the register name
+                        const registerRow = document.createElement('tr');
+                        const registerCell = document.createElement('td');
+                        const valueCell = document.createElement('td');
+
+                        // Make the register name bold
+                        registerCell.innerHTML = `<strong>${register}</strong>`;
+                        valueCell.textContent = ''; // Leave empty for now
+
+                        registerRow.appendChild(registerCell);
+                        registerRow.appendChild(valueCell);
+                        tableBody.appendChild(registerRow);
+
+                        // Add rows for each key-value pair in the register
+                        for (const [key, value] of Object.entries(values)) {
+                            const valueRow = document.createElement('tr');
+                            const keyCell = document.createElement('td');
+                            const nestedValueCell = document.createElement('td');
+
+                            keyCell.textContent = `  - ${key}`; // Indent to show it's nested
+                            nestedValueCell.textContent = value;
+
+                            valueRow.appendChild(keyCell);
+                            valueRow.appendChild(nestedValueCell);
+                            tableBody.appendChild(valueRow);
+                        }
+                    }
+                })
+                .catch(error => console.error('Error fetching register values:', error));
+        }
+
+        // Update registers every 5 seconds
+        setInterval(updateRegisters, 5000);
+
+        // Fetch registers immediately when the page loads
+        window.onload = updateRegisters;
+    </script>
+</head>
+<body>
+    <h1>MuPiHAT Register Values</h1>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Register</th>
+                <th>Value</th>
+            </tr>
+        </thead>
+        <tbody id="registers-table-body">
+            <!-- Register values will be dynamically inserted here -->
+        </tbody>
+    </table>
+</body>
+</html>
