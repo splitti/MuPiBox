@@ -9,6 +9,7 @@ import type {
   SpotifyEpisodeResponseItem,
   SpotifyEpisodesResponse,
   SpotifyShowResponse,
+  SpotifyAudiobooksResponseItem,
 } from './spotify'
 import { ExtraDataMedia, Utils } from './utils'
 
@@ -249,6 +250,52 @@ export class SpotifyService {
     return album
   }
 
+  getAudiobookByID(
+      id: string,
+      category: CategoryType,
+      index: number,
+      shuffle: boolean,
+      artistcover: string,
+      resumespotifyduration_ms: number,
+      resumespotifyprogress_ms: number,
+      resumespotifytrack_number: number,
+  ): Observable<Media> {
+    const audiobook = defer(() => this.spotifyApi.getAudiobook(id, { market: 'DE' })).pipe(
+        retryWhen((errors) => {
+          return this.errorHandler(errors)
+        }),
+        map((response: SpotifyAudiobooksResponseItem) => {
+          const media: Media = {
+            audiobookid: response.id,
+            artist: response.authors?.[0]?.name,
+            title: response.name,
+            cover: response?.images[0]?.url,
+            type: 'spotify',
+            release_date: response.release_date,
+            category,
+            index,
+          }
+          if (resumespotifyduration_ms) {
+            media.resumespotifyduration_ms = resumespotifyduration_ms
+          }
+          if (resumespotifyprogress_ms) {
+            media.resumespotifyprogress_ms = resumespotifyprogress_ms
+          }
+          if (resumespotifytrack_number) {
+            media.resumespotifytrack_number = resumespotifytrack_number
+          }
+          if (artistcover) {
+            media.artistcover = artistcover
+          }
+          if (shuffle) {
+            media.shuffle = shuffle
+          }
+          return media
+        }),
+    )
+    return audiobook
+  }
+
   getMediaByEpisode(
     id: string,
     category: CategoryType,
@@ -382,6 +429,17 @@ export class SpotifyService {
               return this.errorHandler(errors)
             }),
           ),
+        )
+        if (data.id !== undefined) {
+          validateState = true
+        }
+      } else if (spotifyCategory === 'audiobook') {
+        const data: any = await firstValueFrom(
+            defer(() => this.spotifyApi.getAudiobook(spotifyId)).pipe(
+                retryWhen((errors) => {
+                  return this.errorHandler(errors)
+                }),
+            ),
         )
         if (data.id !== undefined) {
           validateState = true
