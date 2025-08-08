@@ -1,0 +1,157 @@
+<ion-header>
+    <ion-toolbar>
+        <ion-buttons slot="start">
+            <ion-back-button defaultHref="/"></ion-back-button>
+        </ion-buttons>
+      <ion-title>{{ isEditing() ? "Edit" : "Create" }}</ion-title>
+      @if (isEditing()) {
+        <ion-buttons slot="end">
+            <ion-button fill="outline">
+                <ion-icon slot="start" name="trash-outline"></ion-icon>
+                Delete
+            </ion-button>
+        </ion-buttons>
+      }
+    </ion-toolbar>
+</ion-header>
+<ion-content>
+    <form [formGroup]="formGroup">
+    <ion-card>
+        <ion-card-header>
+            <ion-card-title>Source</ion-card-title>
+        </ion-card-header>
+        
+        <ion-card-content>
+            <ion-select justify="start" fill="outline" interface="popover" placeholder="Select a source type" formControlName="sourceType">
+                <div slot="label">Source type <span class="mupi-required">(required)</span></div>
+                <ion-select-option value="spotifyURL">Spotify URL</ion-select-option>
+                <ion-select-option value="spotifySearch">Spotify Search Query</ion-select-option>
+                <ion-select-option value="rssURL">RSS/Podcast URL</ion-select-option>
+                <ion-select-option value="streamURL">Stream/Radio URL</ion-select-option>
+            </ion-select>
+            <ion-input fill="outline" formControlName="sourceUrl">
+                <div slot="label">{{ sourceTypeSignal() !== 'spotifySearch' ? 'Source URL' : 'Search query' }} <span class="mupi-required">(required)</span></div>
+            </ion-input>
+            <div class="mupi-input-help-text">
+                {{ sourceTypeSignal() === 'spotifySearch' ? 'Spotify search query.' : 'URL of the source.' }}
+            </div>
+            @if (sourceUrl.hasError('invalidSpotifyUrl')) {
+                <div class="mupi-input-help-text">
+                    <ion-note color="danger">
+                        Invalid URL. Please provide a valid Spotify URL. It should start with "https://open.spotify.com/" and contain "playlist/", "artist/", "album/" or "show/".'
+                    </ion-note>
+                </div>
+            }
+        </ion-card-content>
+    </ion-card>
+    @if (sourceTypeSignal() !== undefined) {
+        <ion-card>
+            <ion-card-header>
+            <ion-card-title>Folder</ion-card-title>
+            </ion-card-header>
+        
+            <ion-card-content>
+                <ion-select justify="start" fill="outline" interface="popover" placeholder="Select a category" formControlName="category">
+                    <div slot="label">Category <span class="mupi-required">(required)</span></div>
+                    <ion-select-option value="audiobook">Audiobook</ion-select-option>
+                    <ion-select-option value="music">Music</ion-select-option>
+                    <ion-select-option value="other">Other</ion-select-option>
+                </ion-select>
+                @if (allowAutomaticFolderNameAndImage()) {
+                    <div class="mupi-input">
+                        <div class="mupi-input-outline">
+                            <ion-toggle justify="start" (ionChange)="toggleUseAutomaticFolderNameAndImage()" [checked]="useAutomaticFolderNameAndImage ? 'true' : 'false'">Automatic folder name & image</ion-toggle>
+                        </div>
+                        <div class="mupi-input-help-text">
+                            When using a Spotify URL as source type, the folder name and image can be automatically retrieved. Toggle this to off to manually override the automatically retrieved values.
+                        </div>
+                    </div>
+                }
+                @if (!allowAutomaticFolderNameAndImage() || (allowAutomaticFolderNameAndImage() && !useAutomaticFolderNameAndImage())) {
+                    <ion-input fill="outline" helperText="Name of the folder containing this data entry. This is used on the top level of the MupiBox interface." formControlName="folderName">
+                        <!-- TODO: IT should not always show required -->
+                        <div slot="label">Folder name <span class="mupi-required">(required)</span></div>
+                    </ion-input>
+                    <ion-input fill="outline" helperText="Optional URL of an image that should be used for the folder containing this data entry. This is shown on the top level of the MupiBox interface. Some source types can automatically retrieve this image URL. Providing a value here overrides these automatically retrieved image." formControlName="folderImageUrl">
+                        <div slot="label">Folder image URL</div>
+                    </ion-input>
+                }
+                <ion-select justify="start" fill="outline" interface="popover" value="AlphabeticalAscending" formControlName="sorting">
+                    <div slot="label">Sorting</div>
+                    <!-- TODO: Use ts types as values here -->
+                    <ion-select-option value="AlphabeticalAscending">alphabetical asc.</ion-select-option>
+                    <ion-select-option value="AlphabeticalDescending">alphabetical desc.</ion-select-option>
+                    <ion-select-option value="ReleaseDateAscending">release date asc.</ion-select-option>
+                    <ion-select-option value="ReleaseDateDescending">release date desc.</ion-select-option>
+                </ion-select>
+            </ion-card-content>
+        </ion-card>
+        <ion-card>
+            <ion-card-header>
+                <ion-card-title>Settings</ion-card-title>
+            </ion-card-header>
+            
+            <ion-card-content>
+                <!-- For all types except stream urls, the title of albums are automatically retrieved. -->
+                @if (sourceTypeSignal() === 'streamURL') {
+                    <ion-input fill="outline" helperText="Title of this stream. This is used on the second level of the MupiBox interface." formControlName="title">
+                        <div slot="label">Title <span class="mupi-required">(required)</span></div>
+                    </ion-input>
+                }
+                <ion-input fill="outline" helperText="Optional URL of an image that should be used for this album/playlist/data entry. This is shown on the second level of the MupiBox interface. Some source types automatically retrieve images URLs. Providing a value here overrides these automatically retrieved images." formControlName="coverImageUrl">
+                    <div slot="label">Cover image URL</div>
+                </ion-input>
+                @if (showShuffleToggle()) {
+                    <div class="mupi-input">
+                        <div class="mupi-input-outline">
+                            <ion-toggle justify="start">Shuffle</ion-toggle>
+                        </div>
+                        <div class="mupi-input-help-text">
+                            If enabled, the tracks will be played in random order by default.
+                        </div>
+                    </div>
+                }
+                <!-- Showing the interval does not make sense for streams since they only have one entry in the folder. -->
+                @if (sourceTypeSignal() !== undefined && sourceTypeSignal() !== 'streamURL') {            
+                    <div>
+                        <div class="mupi-input">
+                            <div class="mupi-input-outline">
+                                <ion-toggle justify="start" formControlName="interval">Interval</ion-toggle>
+                            </div>
+                            <div class="mupi-input-help-text">
+                                Allows to only show a subset of the entries of this source.
+                            </div>
+                        </div>
+                        @if (intervalSignal()) {
+                            <ion-input fill="outline" inputmode="numeric" min="0" formControlName="intervalStart">
+                                <div slot="label">Interval start <span class="mupi-required">(required)</span></div>
+                            </ion-input>
+                            <ion-input fill="outline" inputmode="numeric" min="0" formControlName="intervalEnd">
+                                <div slot="label">Interval end <span class="mupi-required">(required)</span></div>
+                            </ion-input>
+                        }
+                    </div>
+                }
+            </ion-card-content>
+        </ion-card>
+    }
+    </form>
+</ion-content>
+<ion-footer>
+    <ion-toolbar>
+        @if (formGroup.hasError('createError')) {
+            <ion-note color="danger">
+                {{ formGroup.getError('createError') }}
+            </ion-note>
+        }
+        <ion-buttons slot="primary">
+            <ion-button fill="solid" [disabled]="formGroup.invalid" (click)="create()">
+                <ion-icon slot="start" name="save-outline"></ion-icon>
+                {{ isEditing() ? 'Update' : 'Create' }}
+            </ion-button>
+        </ion-buttons>
+        <ion-buttons slot="secondary">
+            <ion-button fill="solid">Cancel</ion-button>
+        </ion-buttons>
+    </ion-toolbar>
+</ion-footer>

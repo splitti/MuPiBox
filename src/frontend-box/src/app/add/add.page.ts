@@ -1,6 +1,7 @@
-import { AfterViewInit, Component, OnInit, ViewEncapsulation } from '@angular/core'
 import { ActivatedRoute, Router } from '@angular/router'
+import { AfterViewInit, Component, OnInit, ViewEncapsulation } from '@angular/core'
 import { AlertController, NavController } from '@ionic/angular/standalone'
+import { CategoryType, Media, MediaSorting } from '../media'
 import {
   IonButton,
   IonButtons,
@@ -20,17 +21,15 @@ import {
   IonSelectOption,
   IonToolbar,
 } from '@ionic/angular/standalone'
-import { arrowBackOutline, saveOutline } from 'ionicons/icons'
-import { CategoryType, Media, MediaSorting } from '../media'
 import { PlayerCmds, PlayerService } from '../player.service'
+import { arrowBackOutline, saveOutline } from 'ionicons/icons'
 
+import { ActivityIndicatorService } from '../activity-indicator.service'
 import { FormsModule } from '@angular/forms'
+import Keyboard from 'simple-keyboard'
+import { MediaService } from '../media.service'
 import type { NgForm } from '@angular/forms'
 import { addIcons } from 'ionicons'
-import Keyboard from 'simple-keyboard'
-import { ActivityIndicatorService } from '../activity-indicator.service'
-import { MediaService } from '../media.service'
-import { SpotifyService } from '../spotify.service'
 
 @Component({
   selector: 'app-add',
@@ -85,7 +84,6 @@ export class AddPage implements OnInit, AfterViewInit {
     private route: ActivatedRoute,
     private router: Router,
     private playerService: PlayerService,
-    private spotifyService: SpotifyService,
     public alertController: AlertController,
     private activityIndicatorService: ActivityIndicatorService,
   ) {
@@ -427,6 +425,7 @@ export class AddPage implements OnInit, AfterViewInit {
             } else if (media.spotify_url.includes('show/')) {
               media.showid = this.spotifyIDfetcher(media.spotify_url, 'show/')
             }
+            this.validateState = true
           }
         }
         this.save(media, form)
@@ -589,15 +588,15 @@ export class AddPage implements OnInit, AfterViewInit {
 
   async validateSpotify(media: Media): Promise<boolean> {
     let validationResult: Promise<boolean> = Promise.resolve(false)
-    if (media.playlistid) {
-      validationResult = this.spotifyService.validateSpotify(media.playlistid, 'playlist')
-    } else if (media.artistid) {
-      validationResult = this.spotifyService.validateSpotify(media.artistid, 'artist')
-    } else if (media.id) {
-      validationResult = this.spotifyService.validateSpotify(media.id, 'album')
-    } else if (media.showid) {
-      validationResult = this.spotifyService.validateSpotify(media.showid, 'show')
-    }
+    // if (media.playlistid) {
+    //   validationResult = this.spotifyService.validateSpotify(media.playlistid, 'playlist')
+    // } else if (media.artistid) {
+    //   validationResult = this.spotifyService.validateSpotify(media.artistid, 'artist')
+    // } else if (media.id) {
+    //   validationResult = this.spotifyService.validateSpotify(media.id, 'album')
+    // } else if (media.showid) {
+    //   validationResult = this.spotifyService.validateSpotify(media.showid, 'show')
+    // }
 
     const timeout: Promise<boolean> = new Promise((resolve) => setTimeout(() => resolve(false), 30000))
 
@@ -607,7 +606,7 @@ export class AddPage implements OnInit, AfterViewInit {
   async isAudiobook(media: Media): Promise<boolean> {
     let validationResult: Promise<boolean> = Promise.resolve(false)
     if (media.showid) {
-      validationResult = this.spotifyService.validateSpotify(media.showid, 'audiobook')
+      // validationResult = this.spotifyService.validateSpotify(media.showid, 'audiobook')
     }
 
     const timeout: Promise<boolean> = new Promise((resolve) => setTimeout(() => resolve(false), 30000))

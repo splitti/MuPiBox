@@ -7,13 +7,14 @@ const createPlayer = require('./mplayer-wrapper.js')
 const googleTTS = require('google-tts-api')
 const fs = require('node:fs')
 const childProcess = require('node:child_process')
-const proto = require("./spotify-proto.js")
-const crypto = require("crypto")
-const request = require('superagent');
+const { environment } = require('./environment.js')
+const proto = require('./spotify-proto.js')
+const crypto = require('node:crypto')
+const request = require('superagent')
 
 let configBasePath = './config'
 //let networkConfigBasePath = '/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config'
-if (process.env.NODE_ENV === 'development') {
+if (!environment.production) {
   configBasePath = '../config'
   //networkConfigBasePath = '../../backend-api/config'
 }
@@ -22,6 +23,16 @@ const muPiBoxConfig = require(`${configBasePath}/mupiboxconfig.json`)
 //const network = require(`${networkConfigBasePath}/network.json`)
 const config = require(`${configBasePath}/config.json`)
 
+let log
+if (environment.production) {
+  log = require('console-log-level')({ level: config.server.logLevel })
+} else {
+  log = {
+    debug: (val) => {
+      console.log(val)
+    },
+  }
+}
 const spotifyCredentialsPath = muPiBoxConfig.spotify.cachepath
 let credentials = null
 try {
@@ -30,8 +41,6 @@ try {
   console.log(`Could not load: ${spotifyCredentialsPath}/credentials.json`)
 }
 
-const log = require('console-log-level')({ level: config.server.logLevel })
-
 /*set up express router and set headers for cross origin requests*/
 const app = express()
 const server = http.createServer(app)
@@ -39,20 +48,13 @@ const player = createPlayer()
 
 app.use(bodyParser.urlencoded({ extended: true }))
 app.use(bodyParser.json())
-app.use((req, res, next) => {
+app.use((_req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*')
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept')
   next()
 })
 
 /*init spotify API */
-const scopes = [
-  'streaming',
-  'user-read-currently-currentMeta.playing',
-  'user-modify-playback-state',
-  'user-read-playback-state',
-]
-
 const spotifyApi = new SpotifyWebApi({
   clientId: config.spotify.clientId,
   clientSecret: config.spotify.clientSecret,
@@ -65,12 +67,12 @@ setInterval(refreshToken, 1000 * 60 * 60)
 
 let apiAccessToken = {
   accessToken: null,
-  expires: Date.now()
+  expires: Date.now(),
 }
 
 let librespotAccessToken = {
   accessToken: null,
-  expires: Date.now()
+  expires: Date.now(),
 }
 
 player.on('percent_pos', (val) => {
@@ -265,27 +267,27 @@ async function refreshToken() {
 
 async function refreshTokenApi() {
   return spotifyApi.refreshAccessToken().then(
-      (data) => {
-        apiAccessToken.accessToken = data.body.access_token
-        apiAccessToken.expires = Date.now() + data.body.expires_in * 1000
-        return apiAccessToken.accessToken
-      },
-      (err) => {
-        log.debug(`${nowDate.toLocaleString()}: Could not refresh access token`, err)
-        throw err
-      },
-    )
+    (data) => {
+      apiAccessToken.accessToken = data.body.access_token
+      apiAccessToken.expires = Date.now() + data.body.expires_in * 1000
+      return apiAccessToken.accessToken
+    },
+    (err) => {
+      log.debug(`${nowDate.toLocaleString()}: Could not refresh access token`, err)
+      throw err
+    },
+  )
 }
 
 async function librespotRefreshToken() {
   const loginUrl = 'https://login5.spotify.com/v3/login'
-  const clientId = "65b708073fc0480ea92a077233ca87bd"
+  const clientId = '65b708073fc0480ea92a077233ca87bd'
   const deviceName = muPiBoxConfig.mupibox.host
   const username = credentials.username
   const dataBase64 = credentials.auth_data
 
   const sha1 = function (data) {
-    let generator = crypto.createHash('sha1');
+    let generator = crypto.createHash('sha1')
     generator.update(data)
     return generator.digest('hex')
   }
@@ -294,20 +296,21 @@ async function librespotRefreshToken() {
 
   const clientInfo = proto.spotify.login5.v3.ClientInfo.create({
     clientId,
-    deviceId
+    deviceId,
   })
 
   const storedCredential = proto.spotify.login5.v3.credentials.StoredCredential.create({
     username,
-    data
+    data,
   })
 
   const loginRequest = proto.spotify.login5.v3.LoginRequest.create({
     clientInfo,
-    storedCredential
+    storedCredential,
   })
 
-  return request.post(loginUrl)
+  return request
+    .post(loginUrl)
     .set('Content-Type', 'application/x-protobuf')
     .send(proto.spotify.login5.v3.LoginRequest.encode(loginRequest).finish())
     .responseType('blob')
@@ -321,29 +324,28 @@ async function librespotRefreshToken() {
       (err) => {
         log.debug(`${nowDate.toLocaleString()}: Could not refresh access token`, err)
         throw err
-      }
+      },
     )
 }
 
 async function getMyDevices() {
-  if (apiAccessToken.accessToken !== null && apiAccessToken.expires < Date.now() ) {
+  if (apiAccessToken.accessToken !== null && apiAccessToken.expires < Date.now()) {
     const spotifyApi = new SpotifyWebApi({
       clientId: config.spotify.clientId,
       clientSecret: config.spotify.clientSecret,
-      accessToken: apiAccessToken.accessToken
+      accessToken: apiAccessToken.accessToken,
     })
     return spotifyApi.getMyDevices()
   }
 
-  return refreshTokenApi()
-    .then((accessToken) => {
-      const spotifyApi = new SpotifyWebApi({
-        clientId: config.spotify.clientId,
-        clientSecret: config.spotify.clientSecret,
-        accessToken: accessToken
-      })
-      return spotifyApi.getMyDevices()
+  return refreshTokenApi().then((accessToken) => {
+    const spotifyApi = new SpotifyWebApi({
+      clientId: config.spotify.clientId,
+      clientSecret: config.spotify.clientSecret,
+      accessToken: accessToken,
     })
+    return spotifyApi.getMyDevices()
+  })
 }
 
 function setAccessToken(token) {
@@ -806,7 +808,7 @@ function playFile(playedFile) {
 }
 
 function playURL(playedURL) {
-  log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Starting currentMeta.playing:${playedURL}`)
+  log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Starting currentMeta.playing: ${playedURL}`)
   //currentMeta.playing = true;
   writeplayerstatePlay()
   player.play(playedURL)
@@ -994,22 +996,22 @@ async function updateShow(showId) {
   let offset = 0
   let showtemp
   while (offset === 0 || offset < currentMeta.totalShows) {
-    await spotifyApi.getShowEpisodes(showId, {limit: 50, offset: offset}).then(
-        (data) => {
-          counter.countgetShowEpisodes++
-          if (config.server.logLevel === 'debug') {
-            writeCounter()
-          }
-          if (offset > 0) {
-            showtemp.items = showtemp.items.concat(data.body.items)
-          } else {
-            showtemp = data.body
-            currentMeta.totalShows = showtemp.total
-          }
-        },
-        (err) => {
-          handleSpotifyError(err, 'getShowEpisodes')
-        },
+    await spotifyApi.getShowEpisodes(showId, { limit: 50, offset: offset }).then(
+      (data) => {
+        counter.countgetShowEpisodes++
+        if (config.server.logLevel === 'debug') {
+          writeCounter()
+        }
+        if (offset > 0) {
+          showtemp.items = showtemp.items.concat(data.body.items)
+        } else {
+          showtemp = data.body
+          currentMeta.totalShows = showtemp.total
+        }
+      },
+      (err) => {
+        handleSpotifyError(err, 'getShowEpisodes')
+      },
     )
     offset = offset + 50
   }
@@ -1104,44 +1106,40 @@ app.get('/getDevices', (req, res) => {
   )
 })
 
-/*endpoint transfer a playback to a specific device*/
-/*only used if sonos-kids-player is modified*/
-app.get('/setDevice', (req, res) => {
-  transferPlayback(req.query.id)
-})
-
 /*endpoint to return all state information*/
 /*only used if sonos-kids-player is modified*/
 app.get('/state', (req, res) => {
   if (currentMeta.currentPlayer === 'spotify') {
-    spotifyApi.getMyCurrentPlaybackState({
-      additional_types: 'episode,track',
-    }).then(
-      (data) => {
-        counter.countgetMyCurrentPlaybackStateHTTP++
-        if (config.server.logLevel === 'debug') {
-          writeCounter()
-        }
-        let state = data.body
-        if (Object.keys(state).length === 0) {
-          state = {
-            item: {
-              album: {
-                name: '',
-                total_tracks: '',
-              },
-              name: '',
-              track_number: '',
-            },
-            currently_playing_type: '',
+    spotifyApi
+      .getMyCurrentPlaybackState({
+        additional_types: 'episode,track',
+      })
+      .then(
+        (data) => {
+          counter.countgetMyCurrentPlaybackStateHTTP++
+          if (config.server.logLevel === 'debug') {
+            writeCounter()
           }
-        }
-        res.send(state)
-      },
-      (err) => {
-        handleSpotifyError(err, 'stateHTTP')
-      },
-    )
+          let state = data.body
+          if (Object.keys(state).length === 0) {
+            state = {
+              item: {
+                album: {
+                  name: '',
+                  total_tracks: '',
+                },
+                name: '',
+                track_number: '',
+              },
+              currently_playing_type: '',
+            }
+          }
+          res.send(state)
+        },
+        (err) => {
+          handleSpotifyError(err, 'stateHTTP')
+        },
+      )
   } else {
     const state = {
       item: {
@@ -1210,7 +1208,7 @@ app.get('/local', (req, res) => {
 app.get('/spotify/token', (req, res) => {
   const accessTokenData = credentials ? librespotAccessToken : apiAccessToken
 
-  if (accessTokenData.accessToken !== null && accessTokenData.expires < Date.now() ) {
+  if (accessTokenData.accessToken !== null && accessTokenData.expires < Date.now()) {
     res.send(accessTokenData.accessToken)
   } else {
     refreshToken()
@@ -1292,11 +1290,9 @@ app.use((req, res) => {
   else if (command.name === '-5') setVolume(0)
   else if (command.name === 'shuffleon') shuffleon()
   else if (command.name === 'shuffleoff') shuffleoff()
-  else if (command.name === 'shutoff') cmdCall('sudo su - -c "/usr/local/bin/mupibox/./shutdown.sh &"')
-  else if (command.name === 'clearresume') cmdCall('sudo bash /usr/local/bin/mupibox/clearresume.sh')
+  // TODO: Create new endpoint for this.
   else if (command.name === 'maxresume') cmdCall('sudo bash /usr/local/bin/mupibox/remove_max_resume.sh')
   else if (command.name === 'networkrestart') cmdCall('sudo service ifup@wlan0 stop && sudo service ifup@wlan0 start')
-  else if (command.name === 'reboot') cmdCall('sudo su - -c "/usr/local/bin/mupibox/./restart.sh &"')
   else if (command.name === 'index') cmdCall('sudo bash /usr/local/bin/mupibox/add_index.sh')
   else if (command.name === 'seek+30') seek(1)
   else if (command.name === 'seek-30') seek(0)

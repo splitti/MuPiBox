@@ -1,0 +1,8 @@
+.mupihat-icon-container {
+    padding-right: 20px;
+}
+
+:host ::ng-deep mupi-swiper img {
+    filter: invert(1);
+    padding: 10px;
+}
