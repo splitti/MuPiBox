@@ -170,7 +170,7 @@ export class MediaService {
   addWLAN(wlan: WLAN) {
     const url = `${this.getApiBackendUrl()}/addwlan`
 
-    this.http.post(url, wlan).subscribe((response) => {
+    this.http.post(url, wlan, { responseType: 'text'}).subscribe((response) => {
       //this.response = response;
       this.updateWLAN()
     })

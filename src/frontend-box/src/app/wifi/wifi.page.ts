@@ -171,11 +171,14 @@ export class WifiPage implements OnInit, AfterViewInit {
       category: 'WLAN',
     }
 
-    if (form.form.value.wlan_ssid?.length) {
-      wlan.ssid = form.form.value.wlan_ssid
+    const wlanSsid = this.keyboard.getInput('wlan_ssid') ?? ''
+    const wlanPw = this.keyboard.getInput('wlan_pw') ?? ''
+
+    if (wlanSsid.length) {
+      wlan.ssid = wlanSsid
     }
-    if (form.form.value.wlan_pw?.length) {
-      wlan.pw = form.form.value.wlan_pw
+    if (wlanPw.length) {
+      wlan.pw = wlanPw
     }
 
     this.mediaService.addWLAN(wlan)
@@ -191,10 +194,10 @@ export class WifiPage implements OnInit, AfterViewInit {
   }
 
   validate() {
-    const artist = this.keyboard.getInput('wlan_ssid')
-    const title = this.keyboard.getInput('wlan_pw')
+    const wlanSsid = this.keyboard.getInput('wlan_ssid')
+    const wlanPw = this.keyboard.getInput('wlan_pw')
 
-    this.valid = title?.length > 0 && artist?.length > 0
+    this.valid = wlanSsid.length > 0 && (wlanPw.length === 0 || (wlanPw.length >= 8 && wlanPw.length <= 63))
   }
 
   async wifiRestartButtonPressed() {
