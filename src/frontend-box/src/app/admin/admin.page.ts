@@ -189,11 +189,14 @@ export class AdminPage implements OnInit, AfterViewInit {
       //if (form.form.value.network_host?.length) { wlan.host = form.form.value.spotify_artist; }
       //if (form.form.value.network_ip?.length) { wlan.title = form.form.value.spotify_title; }
     } else if (this.source === 'wlan') {
-      if (form.form.value.wlan_ssid?.length) {
-        wlan.ssid = form.form.value.wlan_ssid
+      const wlanSsid = this.keyboard.getInput('wlan_ssid') ?? '';
+      const wlanPw = this.keyboard.getInput('wlan_pw') ?? '';
+
+      if (wlanSsid.length) {
+        wlan.ssid = wlanSsid
       }
-      if (form.form.value.wlan_pw?.length) {
-        wlan.pw = form.form.value.wlan_pw
+      if (wlanPw.length) {
+        wlan.pw = wlanPw
       }
     }
 
@@ -218,10 +221,10 @@ export class AdminPage implements OnInit, AfterViewInit {
 
       this.valid = title?.length > 0 && artist?.length > 0
     } else if (this.source === 'wlan') {
-      const artist = this.keyboard.getInput('wlan_ssid')
-      const title = this.keyboard.getInput('wlan_pw')
+      const wlanSsid = this.keyboard.getInput('wlan_ssid') ?? '';
+      const wlanPw = this.keyboard.getInput('wlan_pw') ?? '';
 
-      this.valid = title?.length > 0 && artist?.length > 0
+      this.valid = wlanSsid.length > 0 && (wlanPw.length === 0 || wlanPw.length >= 8 && wlanPw.length <= 63)
     }
   }
 
