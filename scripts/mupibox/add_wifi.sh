@@ -27,7 +27,7 @@ do
 		if [ "${SSID}" = "" ]
 		then
 			sudo rm ${MUPIWIFI}
-		elif [ ${SSID} = "clear" ]
+		elif [ "${SSID}" = "clear" ]
 		then
 			sudo rm ${TMP_WPACONF} > /dev/null 2>&1
 			echo '# Grant all members of group "netdev" permissions to configure WiFi, e.g. via wpa_cli or wpa_gui' | sudo tee -a ${TMP_WPACONF}
