@@ -75,3 +75,8 @@ export interface SpotifyAudiobooksResponseItem {
   authors: SpotifyAlbumsResponseArtist[]
   release_date: string
 }
+
+export interface SpotifyConfig {
+  clientId: string
+  clientSecret: string
+}

@@ -161,7 +161,7 @@ export class MediaService {
   addWLAN(wlan: WLAN) {
     const url = `${this.getApiBackendUrl()}/addwlan`
 
-    this.http.post(url, wlan, { responseType: 'text'}).subscribe((response) => {
+    this.http.post(url, wlan, { responseType: 'text' }).subscribe((response) => {
       //this.response = response;
       this.updateWLAN()
     })
@@ -369,26 +369,26 @@ export class MediaService {
                             map((currentItem) => [currentItem]),
                             overwriteArtist(item),
                           ),
-                          iif(
-                              // Get media by audiobook (resume).
-                              () => !!(item.type === 'spotify' && item.audiobookid && item.audiobookid.length > 0),
-                              this.spotifyService
-                                  .getAudiobookByID(
-                                      item.audiobookid,
-                                      item.category,
-                                      item.index,
-                                      item.shuffle,
-                                      item.artistcover,
-                                      item.resumespotifyduration_ms,
-                                      item.resumespotifyprogress_ms,
-                                      item.resumespotifytrack_number,
-                                  )
-                                  .pipe(
-                                      map((currentItem) => [currentItem]),
-                                      overwriteArtist(item),
-                                  ),
-                              of([item]), // Single album. Also return as array, so we always have the same data type
-                          ),
+                        iif(
+                          // Get media by audiobook (resume).
+                          () => !!(item.type === 'spotify' && item.audiobookid && item.audiobookid.length > 0),
+                          this.spotifyService
+                            .getAudiobookByID(
+                              item.audiobookid,
+                              item.category,
+                              item.index,
+                              item.shuffle,
+                              item.artistcover,
+                              item.resumespotifyduration_ms,
+                              item.resumespotifyprogress_ms,
+                              item.resumespotifytrack_number,
+                            )
+                            .pipe(
+                              map((currentItem) => [currentItem]),
+                              overwriteArtist(item),
+                            ),
+                          of([item]), // Single album. Also return as array, so we always have the same data type
+                        ),
                       ),
                     ),
                   ),

@@ -98,7 +98,7 @@ export class PlayerService {
         } else if (media.showid) {
           url = `spotify/now/spotify:episode:${encodeURIComponent(media.showid)}:0:0`
         } else if (media.audiobookid) {
-            url = `spotify/now/spotify:show:${encodeURIComponent(media.audiobookid)}:0:0`
+          url = `spotify/now/spotify:show:${encodeURIComponent(media.audiobookid)}:0:0`
         }
         break
       }
