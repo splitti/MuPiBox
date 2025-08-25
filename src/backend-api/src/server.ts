@@ -5,7 +5,6 @@ import cors from 'cors'
 import express from 'express'
 import jsonfile from 'jsonfile'
 import ky from 'ky'
-import SpotifyWebApi from 'spotify-web-api-node'
 import xmlparser from 'xml-js'
 import { ServerConfig } from './models/server.model'
 
@@ -25,13 +24,8 @@ async function readJsonFile(path: string) {
 }
 
 let config: ServerConfig | undefined = undefined
-let spotifyApi: SpotifyWebApi | undefined = undefined
 readJsonFile(`${configBasePath}/config.json`).then((configFile) => {
   config = configFile
-  spotifyApi = new SpotifyWebApi({
-    clientId: config?.spotify?.clientId,
-    clientSecret: config?.spotify?.clientSecret,
-  })
 })
 const dataFile = `${configBasePath}/data.json`
 const resumeFile = `${configBasePath}/resume.json`
@@ -156,20 +150,21 @@ app.get('/api/network', (req, res) => {
 app.get('/api/monitor', (req, res) => {
   const ip = req.socket.remoteAddress
   const host = req.hostname
-  const isLocalhost =  ip === "127.0.0.1" || ip === "::ffff:127.0.0.1" || ip === "::1" || host.indexOf("localhost") !== -1
+  const isLocalhost =
+    ip === '127.0.0.1' || ip === '::ffff:127.0.0.1' || ip === '::1' || host.indexOf('localhost') !== -1
 
   if (fs.existsSync(monitorFile) && isLocalhost) {
     jsonfile.readFile(monitorFile, (error, data) => {
       if (error) {
         console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error /api/monitor read monitor.json`)
         console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] ${error}`)
-        res.json({"monitor": "On"})
+        res.json({ monitor: 'On' })
       } else {
         res.json(data)
       }
     })
   } else {
-    res.json({"monitor": "On" })
+    res.json({ monitor: 'On' })
   }
 })
 
@@ -406,25 +401,12 @@ app.post('/api/editresume', (req, res) => {
   }
 })
 
-app.get('/api/token', (req, res) => {
-  if (spotifyApi === undefined) {
-    res.status(500).send('Could not intialize Spotify API.')
+app.get('/api/spotify/config', (req, res) => {
+  if (config?.spotify === undefined) {
+    res.status(500).send('Could load spotify config.')
     return
   }
-  // Retrieve an access token from Spotify
-  spotifyApi.clientCredentialsGrant().then(
-    (data) => {
-      res.status(200).send(data.body.access_token)
-    },
-    (err) => {
-      console.log(
-        `${nowDate.toLocaleString()}: [MuPiBox-Server] Something went wrong when retrieving a new Spotify access token`,
-        err.message,
-      )
-
-      res.status(500).send(err.message)
-    },
-  )
+  res.status(200).send(config.spotify)
 })
 
 app.get('/api/sonos', (req, res) => {
