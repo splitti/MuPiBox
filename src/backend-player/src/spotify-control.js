@@ -25,7 +25,8 @@ const config = require(`${configBasePath}/config.json`)
 const spotifyCredentialsPath = muPiBoxConfig.spotify.cachepath
 let credentials = null
 try {
-  credentials = require(`${spotifyCredentialsPath}/credentials.json`)
+  // Deactivate this for now, because we try not to use librespot.
+  // credentials = require(`${spotifyCredentialsPath}/credentials.json`)
 } catch (err) {
   console.log(`Could not load: ${spotifyCredentialsPath}/credentials.json`)
 }
@@ -47,10 +48,12 @@ app.use((req, res, next) => {
 
 /*init spotify API */
 const scopes = [
-  'streaming',
-  'user-read-currently-currentMeta.playing',
-  'user-modify-playback-state',
-  'user-read-playback-state',
+    'streaming',
+    'user-read-currently-playing',
+    'user-modify-playback-state',
+    'user-read-playback-state',
+    'playlist-read-private',
+    'playlist-read-collaborative'
 ]
 
 const spotifyApi = new SpotifyWebApi({
@@ -158,7 +161,7 @@ setInterval(() => {
 }, 1000)
 
 /*store device to be played back*/
-let activeDevice = ''
+let activeDevice = config.spotify.deviceId
 const nowDate = new Date()
 const volumeStart = 99
 let playerstate
@@ -373,7 +376,6 @@ function handleSpotifyError(err, from) {
     if (config.server.logLevel === 'debug') {
       writeCounter()
     }
-    activeDevice = ''
     if (currentMeta.activeSpotifyId !== '0') {
       setActiveDevice()
     }
@@ -396,7 +398,6 @@ function handleSpotifyError(err, from) {
     if (config.server.logLevel === 'debug') {
       writeCounter()
     }
-    activeDevice = ''
     if (currentMeta.activeSpotifyId !== '0') {
       setActiveDevice()
     }
@@ -419,7 +420,7 @@ function handleSpotifyError(err, from) {
       },
       (err) => {
         log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Playback error${err}`)
-        handleSpotifyError(err, 'transferPlayback')
+        handleSpotifyError(err, 'ack')
       },
     )
   } else {
@@ -435,45 +436,25 @@ function handleSpotifyError(err, from) {
 
 /*queries all devices and transfers playback to the first one discovered*/
 function setActiveDevice() {
-  /*find devices first and choose first one available*/
-  spotifyApi.getMyDevices()
-    .then(
-      (data) => {
-        counter.countgetMyDevices++
-        if (config.server.logLevel === 'debug') {
-          writeCounter()
+  spotifyApi.transferMyPlayback([activeDevice]).then(
+    () => {
+      counter.counttransferMyPlayback++
+      if (config.server.logLevel === 'debug') {
+        writeCounter()
+      }
+      log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Transfering playback to ${activeDevice}`)
+      if (currentMeta.activeSpotifyId.includes('spotify:')) {
+        if (currentMeta.pause) {
+          play()
+        } else {
+          playMe()
         }
-        const availableDevices = data.body.devices
-        activeDevice = availableDevices[0]
-      },
-      (err) => {
-        log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Transfering error: ${err}`)
-        handleSpotifyError(err, 'getMyDevices')
-      },
-    )
-    .then(() => {
-      /*transfer to active device*/
-      activeDevice = config.spotify.deviceId
-      spotifyApi.transferMyPlayback([activeDevice]).then(
-        () => {
-          counter.counttransferMyPlayback++
-          if (config.server.logLevel === 'debug') {
-            writeCounter()
-          }
-          log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Transfering playback to ${activeDevice}`)
-          if (currentMeta.activeSpotifyId.includes('spotify:')) {
-            if (currentMeta.pause) {
-              play()
-            } else {
-              playMe()
-            }
-          }
-        },
-        (err) => {
-          handleSpotifyError(err, 'transferMyPlayback')
-        },
-      )
-    })
+      }
+    },
+    (err) => {
+      handleSpotifyError(err, 'transferMyPlayback')
+    },
+  )
 }
 
 function pause() {
@@ -949,7 +930,7 @@ async function setVolume(volume) {
 }
 
 async function transferPlayback(id) {
-  await spotifyApi.transferMyPlayback([id], { play: false }).then(
+  await spotifyApi.transferMyPlayback([id]).then(
     () => {
       counter.counttransferMyPlayback++
       if (config.server.logLevel === 'debug') {
@@ -1011,8 +992,6 @@ async function useSpotify(command) {
   currentMeta.currentType = 'spotify'
   const dir = command.dir
   const newdevice = dir.split('/')[1]
-  /*await getActiveDevice();*/
-  /*setActiveDevice();*/
   log.debug(`${nowDate.toLocaleString()}: [Spotify Control] device is ${activeDevice} and new is ${newdevice}`)
   /*active device has changed, transfer playback*/
   if (newdevice !== activeDevice) {
@@ -1021,6 +1000,9 @@ async function useSpotify(command) {
     await transferPlayback(newdevice)
     activeDevice = newdevice
     log.debug(`${nowDate.toLocaleString()}: [Spotify Control] device is ${activeDevice}`)
+    log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Waiting for device transfer to complete...`)
+    await new Promise(resolve => setTimeout(resolve, 3000))
+    log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Device transfer delay completed`)
   } else {
     log.debug(`${nowDate.toLocaleString()}: [Spotify Control] still same device, won't change: ${activeDevice}`)
   }

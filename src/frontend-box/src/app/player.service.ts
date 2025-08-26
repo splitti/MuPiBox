@@ -6,6 +6,7 @@ import type { ServerHttpApiConfig } from '@backend-api/server.model'
 import type { Observable } from 'rxjs'
 import { environment } from '../environments/environment'
 import type { Media } from './media'
+import { SpotifyService } from './spotify.service'
 
 export enum PlayerCmds {
   PLAY = 'play',
@@ -37,7 +38,7 @@ export enum PlayerCmds {
 export class PlayerService {
   private config: Observable<ServerHttpApiConfig> = null
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private spotifyService: SpotifyService) {}
 
   getConfig() {
     // Observable with caching:
@@ -91,15 +92,15 @@ export class PlayerService {
         break
       }
       case 'spotify': {
-        if (media.playlistid) {
-          url = `spotify/now/spotify:playlist:${encodeURIComponent(media.playlistid)}:0:0`
-        } else if (media.id) {
-          url = `spotify/now/spotify:album:${encodeURIComponent(media.id)}:0:0`
-        } else if (media.showid) {
-          url = `spotify/now/spotify:episode:${encodeURIComponent(media.showid)}:0:0`
-        } else if (media.audiobookid) {
-          url = `spotify/now/spotify:show:${encodeURIComponent(media.audiobookid)}:0:0`
-        }
+          if (media.playlistid) {
+              url = `spotify/now/spotify:playlist:${encodeURIComponent(media.playlistid)}:0:0`
+          } else if (media.id) {
+              url = `spotify/now/spotify:album:${encodeURIComponent(media.id)}:0:0`
+          } else if (media.showid) {
+              url = `spotify/now/spotify:episode:${encodeURIComponent(media.showid)}:0:0`
+          } else if (media.audiobookid) {
+              url = `spotify/now/spotify:show:${encodeURIComponent(media.audiobookid)}:0:0`
+          }
         break
       }
       case 'radio': {
@@ -118,15 +119,15 @@ export class PlayerService {
   resumeMedia(media: Media) {
     let url: string
 
-    if (media.playlistid) {
-      url = `spotify/now/spotify:playlist:${encodeURIComponent(media.playlistid)}:${media.resumespotifytrack_number}:${media.resumespotifyprogress_ms}`
-    } else if (media.id) {
-      url = `spotify/now/spotify:album:${encodeURIComponent(media.id)}:${media.resumespotifytrack_number}:${media.resumespotifyprogress_ms}`
-    } else if (media.showid) {
-      url = `spotify/now/spotify:episode:${encodeURIComponent(media.showid)}:${media.resumespotifytrack_number}:${media.resumespotifyprogress_ms}`
-    } else if (media.audiobookid) {
-      url = `spotify/now/spotify:show:${encodeURIComponent(media.audiobookid)}:${media.resumespotifytrack_number}:${media.resumespotifyprogress_ms}`
-    }
+      if (media.playlistid) {
+          url = `spotify/now/spotify:playlist:${encodeURIComponent(media.playlistid)}:${media.resumespotifytrack_number}:${media.resumespotifyprogress_ms}`
+      } else if (media.id) {
+          url = `spotify/now/spotify:album:${encodeURIComponent(media.id)}:${media.resumespotifytrack_number}:${media.resumespotifyprogress_ms}`
+      } else if (media.showid) {
+          url = `spotify/now/spotify:episode:${encodeURIComponent(media.showid)}:${media.resumespotifytrack_number}:${media.resumespotifyprogress_ms}`
+      } else if (media.audiobookid) {
+          url = `spotify/now/spotify:show:${encodeURIComponent(media.audiobookid)}:${media.resumespotifytrack_number}:${media.resumespotifyprogress_ms}`
+      }
 
     this.sendRequest(url)
   }
@@ -145,8 +146,8 @@ export class PlayerService {
 
   private sendRequest(url: string) {
     this.getConfig().subscribe((config) => {
-      if (!config.rooms[0]) config.rooms[0] = '0'
-      const baseUrl = `${environment.backend.playerUrl}/${config.rooms[0]}/`
+      const room = this.spotifyService.getDeviceId() ?? config.rooms[0] ?? '0'
+      const baseUrl = `${environment.backend.playerUrl}/${room}/`
       this.http.get(baseUrl + url).subscribe()
     })
   }

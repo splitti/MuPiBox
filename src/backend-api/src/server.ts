@@ -406,7 +406,10 @@ app.get('/api/spotify/config', (req, res) => {
     res.status(500).send('Could load spotify config.')
     return
   }
-  res.status(200).send(config.spotify)
+  res.status(200).send({
+    ...config.spotify,
+    deviceName: config['node-sonos-http-api'].server
+  })
 })
 
 app.get('/api/sonos', (req, res) => {

@@ -42,10 +42,41 @@ export class MediaService {
     // Prepare subscriptions.
     // shareReplay replays the most recent (bufferSize) emission on each subscription
     // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
-    this.current$ = interval(1000).pipe(
-      switchMap((): Observable<CurrentSpotify> => this.http.get<CurrentSpotify>(`${this.getPlayerBackendUrl()}/state`)),
-      shareReplay({ bufferSize: 1, refCount: false }),
-    )
+    // Hybrid approach: Poll Web Playback SDK state for localhost, HTTP polling for remote
+    this.current$ = this.spotifyService.shouldUsePlayer()
+      ? // Local: Poll Web Playback SDK state every second for accurate position
+        interval(1000).pipe(
+          switchMap(() => {
+            if (this.spotifyService.isPlayerReady()) {
+              return this.spotifyService.getCurrentState().then(state => {
+                if (!state || !state.track_window?.current_track) {
+                  return {} as CurrentSpotify
+                }
+                
+                const currentTrack = state.track_window.current_track
+                return {
+                  progress_ms: state.position,
+                  is_playing: !state.paused,
+                  item: {
+                    id: currentTrack.id,
+                    name: currentTrack.name,
+                    duration_ms: currentTrack.duration_ms,
+                    track_number: 1, // Web Playback SDK doesn't provide track number
+                    album: currentTrack.album
+                  }
+                } as CurrentSpotify
+              }).catch(() => ({} as CurrentSpotify))
+            } else {
+              return of({} as CurrentSpotify)
+            }
+          }),
+          shareReplay({ bufferSize: 1, refCount: false }),
+        )
+      : // Remote: HTTP polling
+        interval(10000).pipe(
+          switchMap((): Observable<CurrentSpotify> => this.http.get<CurrentSpotify>(`${this.getPlayerBackendUrl()}/state`)),
+          shareReplay({ bufferSize: 1, refCount: false }),
+        )
     this.local$ = interval(1000).pipe(
       switchMap((): Observable<CurrentMPlayer> => this.http.get<CurrentMPlayer>(`${this.getPlayerBackendUrl()}/local`)),
       shareReplay({ bufferSize: 1, refCount: false }),
