@@ -1,4 +1,6 @@
-import { ChangeDetectionStrategy, Component, Signal, WritableSignal, computed, signal } from '@angular/core'
+import { ChangeDetectionStrategy, Component, computed, Signal, signal, WritableSignal } from '@angular/core'
+import { toObservable, toSignal } from '@angular/core/rxjs-interop'
+import { NavigationExtras, Router } from '@angular/router'
 import {
   IonButton,
   IonButtons,
@@ -9,8 +11,7 @@ import {
   IonSegmentButton,
   IonToolbar,
 } from '@ionic/angular/standalone'
-import { NavigationExtras, Router } from '@angular/router'
-import { SwiperComponent, SwiperData } from '../swiper/swiper.component'
+import { addIcons } from 'ionicons'
 import {
   bookOutline,
   cloudOfflineOutline,
@@ -20,16 +21,15 @@ import {
   timerOutline,
 } from 'ionicons/icons'
 import { catchError, combineLatest, map, of, switchMap, tap } from 'rxjs'
-import { toObservable, toSignal } from '@angular/core/rxjs-interop'
 
 import type { Artist } from '../artist'
 import { ArtworkService } from '../artwork.service'
-import type { CategoryType } from '../media'
 import { LoadingComponent } from '../loading/loading.component'
+import type { CategoryType } from '../media'
 import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
+import { SwiperComponent, SwiperData } from '../swiper/swiper.component'
 import { SwiperIonicEventsHelper } from '../swiper/swiper-ionic-events-helper'
-import { addIcons } from 'ionicons'
 
 @Component({
   selector: 'app-home',

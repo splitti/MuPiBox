@@ -1,6 +1,5 @@
-import { describe, it } from 'node:test'
-
 import assert from 'node:assert'
+import { describe, it } from 'node:test'
 import nock from 'nock'
 import request from 'supertest'
 import { app } from './server'

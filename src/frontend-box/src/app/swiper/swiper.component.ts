@@ -1,24 +1,23 @@
+import { AsyncPipe } from '@angular/common'
 import {
-  CUSTOM_ELEMENTS_SCHEMA,
   ChangeDetectionStrategy,
   Component,
-  ElementRef,
-  Signal,
-  WritableSignal,
+  CUSTOM_ELEMENTS_SCHEMA,
   computed,
+  ElementRef,
   effect,
   input,
   output,
+  Signal,
   signal,
   viewChild,
+  WritableSignal,
 } from '@angular/core'
 import { IonCard, IonCardHeader, IonCardTitle, IonCol, IonGrid, IonRow } from '@ionic/angular/standalone'
-
-import { AsyncPipe } from '@angular/common'
-import { Observable } from 'rxjs'
-import { PlayerService } from '../player.service'
-import Swiper from 'swiper'
 import { cloneDeep } from 'lodash-es'
+import { Observable } from 'rxjs'
+import Swiper from 'swiper'
+import { PlayerService } from '../player.service'
 
 export interface SwiperData<T> {
   name: string
