@@ -1,5 +1,5 @@
-import { EMPTY, Observable, catchError, defer, firstValueFrom, of, range, throwError, BehaviorSubject } from 'rxjs'
-import { delay, map, mergeAll, mergeMap, retryWhen, take, tap, toArray } from 'rxjs/operators'
+import { EMPTY, Observable, catchError, defer, firstValueFrom, of, range, throwError, BehaviorSubject, from, interval } from 'rxjs'
+import { delay, map, mergeAll, mergeMap, retryWhen, take, tap, toArray, filter, switchMap, distinctUntilChanged } from 'rxjs/operators'
 import type { CategoryType, Media } from './media'
 import { SpotifyConfig, SpotifyPlayer, SpotifyPlayerConfig, SpotifyWebPlaybackState, SpotifyWebPlaybackTrack } from './spotify'
 import { ExtraDataMedia, Utils } from './utils'
@@ -43,6 +43,8 @@ export class SpotifyService {
 
   // SDK loading state
   private sdkLoadingPromise: Promise<void> | null = null
+  public sdkLoadError$ = new BehaviorSubject<string | null>(null)
+  private network$: Observable<any> | null = null
 
   constructor(private http: HttpClient, @Inject(DOCUMENT) private document: Document) {
     this.initializeSpotify()
@@ -493,18 +495,106 @@ export class SpotifyService {
         next: (spotifyConfig: SpotifyConfig) => {
           this.spotifyApi = SpotifyApi.withClientCredentials(spotifyConfig.clientId, spotifyConfig.clientSecret)
           this.deviceName = spotifyConfig.deviceName
-          if (this.isLocalhost()) {
+          if (this.shouldUsePlayer()) {
             this.initializeWebPlaybackSDK()
           }
         },
       })
   }
 
+  /**
+   * Inject MediaService network observable for retry logic
+   * Called by MediaService after initialization
+   */
+  setNetworkObservable(network$: Observable<any>): void {
+    this.network$ = network$
+    this.setupProactiveSDKMonitoring()
+  }
+
+  /**
+   * Set up background monitoring that proactively tries to load SDK when conditions are right
+   */
+  private setupProactiveSDKMonitoring(): void {
+    if (!this.network$ || !this.shouldUsePlayer()) {
+      return
+    }
+
+    // Monitor network status changes and connection state
+    this.network$.pipe(
+      filter((network) => network.ip !== undefined),
+      map((network) => network.onlinestate === 'online'),
+      distinctUntilChanged(),
+      switchMap(isOnline => {
+        if (isOnline && !this.isPlayerReady()) {
+          console.log('Network is online and web player should be available - checking SDK status')
+          return this.checkAndRetrySDKLoading()
+        }
+        return of(null)
+      })
+    ).subscribe({
+      next: () => { /* handled in checkAndRetrySDKLoading */ },
+      error: (error) => console.warn('SDK monitoring error:', error)
+    })
+
+    // Also periodically check if we should have a working player but don't
+    interval(30000).pipe(
+      filter(() => this.shouldUsePlayer() && !this.isPlayerReady()),
+      switchMap(() => {
+        if (navigator.onLine) {
+          console.log('Periodic check: Should have web player but don\'t - attempting SDK retry')
+          return this.checkAndRetrySDKLoading()
+        }
+        return of(null)
+      })
+    ).subscribe({
+      next: () => { /* handled in checkAndRetrySDKLoading */ },
+      error: (error) => console.warn('Periodic SDK check error:', error)
+    })
+  }
+
+  /**
+   * Check current state and retry SDK loading if needed
+   */
+  private checkAndRetrySDKLoading(): Observable<any> {
+    // If we already have a working player, no need to retry
+    if (this.isPlayerReady()) {
+      return of(null)
+    }
+
+    // If we're not on localhost, don't try to load SDK
+    if (!this.shouldUsePlayer()) {
+      return of(null)
+    }
+
+    // Check network connectivity
+    if (!navigator.onLine) {
+      return of(null)
+    }
+
+    console.log('Attempting proactive Spotify SDK loading...')
+    
+    return from(this.retrySDKLoadingIfNeeded()).pipe(
+      catchError(error => {
+        console.warn('Proactive SDK retry failed:', error)
+        return of(null)
+      })
+    )
+  }
+
   private loadSpotifySDK(): Promise<void> {
     return new Promise((resolve, reject) => {
       // Check if SDK is already loaded
       if (window.Spotify && window.Spotify.Player) {
+        this.sdkLoadError$.next(null)
         resolve()
+        return
+      }
+
+      // Check network connectivity if available
+      if (!navigator.onLine) {
+        const errorMsg = 'Cannot load Spotify player - device is offline'
+        this.sdkLoadError$.next(errorMsg)
+        reject(new Error(errorMsg))
         return
       }
 
@@ -515,9 +605,12 @@ export class SpotifyService {
       // Set up the callback
       window.onSpotifyWebPlaybackSDKReady = () => {
         if (window.Spotify && window.Spotify.Player) {
+          this.sdkLoadError$.next(null)
           resolve()
         } else {
-          reject(new Error('SDK ready callback fired but Spotify object not available'))
+          const errorMsg = 'SDK ready callback fired but Spotify object not available'
+          this.sdkLoadError$.next(errorMsg)
+          reject(new Error(errorMsg))
         }
       }
 
@@ -529,12 +622,15 @@ export class SpotifyService {
       script.onload = () => {
         setTimeout(() => {
           if (window.Spotify && window.Spotify.Player) {
+            this.sdkLoadError$.next(null)
             resolve()
           }
         }, 500)
       }
       
       script.onerror = () => {
+        const errorMsg = 'Cannot load Spotify player - check internet connection'
+        this.sdkLoadError$.next(errorMsg)
         reject(new Error('Failed to load Spotify Web Playback SDK script'))
       }
       
@@ -543,8 +639,11 @@ export class SpotifyService {
       // Timeout fallback
       setTimeout(() => {
         if (window.Spotify && window.Spotify.Player) {
+          this.sdkLoadError$.next(null)
           resolve()
         } else {
+          const errorMsg = 'Spotify player load timeout - check connection'
+          this.sdkLoadError$.next(errorMsg)
           reject(new Error('Spotify SDK load timeout'))
         }
       }, 10000)
@@ -553,7 +652,7 @@ export class SpotifyService {
 
   initializeWebPlaybackSDK(): void {
     if (!this.sdkLoadingPromise) {
-      this.sdkLoadingPromise = this.loadSpotifySDK()
+      this.sdkLoadingPromise = this.loadSpotifySDKWithRetry()
         .then(() => {
           if (typeof window.Spotify === 'undefined' || !window.Spotify.Player) {
             throw new Error('Spotify Web Playback SDK not properly loaded')
@@ -565,6 +664,27 @@ export class SpotifyService {
           this.isConnected$.next(false)
         })
     }
+  }
+
+  private async loadSpotifySDKWithRetry(maxRetries = 3): Promise<void> {
+    let lastError: Error
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        await this.loadSpotifySDK()
+        return
+      } catch (error) {
+        lastError = error as Error
+        console.warn(`SDK load attempt ${attempt} failed:`, error)
+        
+        if (attempt < maxRetries) {
+          // Wait before retry, with exponential backoff
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt))
+        }
+      }
+    }
+    
+    throw lastError!
   }
 
   private initializePlayer(): void {
@@ -776,6 +896,40 @@ export class SpotifyService {
 
   isPlayerReady(): boolean {
     return this.player !== null && this.deviceId !== null
+  }
+
+  /**
+   * Retry SDK loading when network comes back online or when playback is requested
+   */
+  async retrySDKLoadingIfNeeded(): Promise<void> {
+    // If we already have a working player, no need to retry
+    if (this.isPlayerReady()) {
+      return
+    }
+
+    // If we're not on localhost, don't try to load SDK
+    if (!this.shouldUsePlayer()) {
+      return
+    }
+
+    // Check network connectivity
+    if (!navigator.onLine) {
+      throw new Error('Cannot retry SDK loading - device is offline')
+    }
+
+    // If we already have an ongoing SDK loading attempt, wait for it
+    if (this.sdkLoadingPromise) {
+      console.log('SDK loading already in progress, waiting...')
+      return this.sdkLoadingPromise
+    }
+
+    console.log('Retrying Spotify SDK loading...')
+    
+    // Try to initialize again
+    this.initializeWebPlaybackSDK()
+    
+    // Wait for the initialization to complete or fail
+    return this.sdkLoadingPromise || Promise.resolve()
   }
 
   shouldUsePlayer(): boolean {

@@ -1,4 +1,4 @@
-import { Observable, Subject, from, iif, interval, of, timer } from 'rxjs'
+import { Observable, Subject, from, iif, interval, of, timer, firstValueFrom } from 'rxjs'
 import { distinctUntilChanged, filter, map, mergeAll, mergeMap, shareReplay, switchMap, toArray } from 'rxjs/operators'
 import type { CategoryType, Media } from './media'
 
@@ -39,6 +39,8 @@ export class MediaService {
     private spotifyService: SpotifyService,
     private rssFeedService: RssFeedService,
   ) {
+    // Provide network observable to SpotifyService for retry logic
+    this.spotifyService.setNetworkObservable(this.network$)
     // Prepare subscriptions.
     // shareReplay replays the most recent (bufferSize) emission on each subscription
     // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
