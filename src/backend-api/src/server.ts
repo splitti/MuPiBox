@@ -7,6 +7,7 @@ import jsonfile from 'jsonfile'
 import ky from 'ky'
 import xmlparser from 'xml-js'
 import { ServerConfig } from './models/server.model'
+import { SpotifyMediaInfo } from './services/spotify-media-info.service'
 
 const testServe = process.env.NODE_ENV === 'test'
 const devServe = process.env.NODE_ENV === 'development'
@@ -40,6 +41,9 @@ const dataLock = '/tmp/.data.lock'
 const resumeLock = '/tmp/.resume.lock'
 
 const nowDate = new Date()
+
+// Initialize Spotify scraper
+const spotifyMediaInfo = new SpotifyMediaInfo()
 
 // We export the app so we can use it in testing.
 export const app = express()
@@ -410,6 +414,30 @@ app.get('/api/spotify/config', (req, res) => {
     ...config.spotify,
     deviceName: config['node-sonos-http-api'].server
   })
+})
+
+app.get('/api/spotify/playlist/:playlistId', async (req, res) => {
+  const playlistId = req.params.playlistId
+  
+  if (!playlistId) {
+    res.status(400).json({ error: 'Playlist ID is required' })
+    return
+  }
+
+  try {
+    console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Fetching Spotify playlist: ${playlistId}`)
+    
+    const playlistData = await spotifyMediaInfo.fetchPlaylistData(playlistId)
+    res.status(200).json(playlistData)
+    
+    console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Successfully fetched playlist: ${playlistData.playlist.name}`)
+  } catch (error) {
+    console.error(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error fetching playlist ${playlistId}:`, error)
+    res.status(500).json({ 
+      error: 'Failed to fetch playlist data',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    })
+  }
 })
 
 app.get('/api/sonos', (req, res) => {

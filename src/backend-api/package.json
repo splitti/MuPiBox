@@ -16,6 +16,7 @@
     "express": "^4.21.1",
     "jsonfile": "^6.1.0",
     "ky": "1.7.2",
+    "puppeteer": "^24.18.0",
     "spotify-web-api-node": "^5.0.2",
     "xml-js": "^1.6.11"
   },
