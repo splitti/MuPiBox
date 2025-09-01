@@ -942,4 +942,64 @@ export class SpotifyService {
   getDeviceId(): string | null {
     return this.deviceId
   }
+
+  /**
+   * Get album information including total tracks
+   */
+  getAlbumInfo(albumId: string): Observable<{ total_tracks: number; album_name: string }> {
+    if (!this.spotifyApi) {
+      return of({ total_tracks: 0, album_name: '' })
+    }
+    
+    return defer(() => this.spotifyApi.albums.get(albumId, 'DE')).pipe(
+      map(album => ({
+        total_tracks: album.total_tracks,
+        album_name: album.name
+      })),
+      catchError(error => {
+        console.error('Error getting album info:', error)
+        return of({ total_tracks: 0, album_name: '' })
+      })
+    )
+  }
+
+  /**
+   * Get playlist information including total tracks
+   */
+  getPlaylistInfo(playlistId: string): Observable<{ total_tracks: number; playlist_name: string }> {
+    if (!this.spotifyApi) {
+      return of({ total_tracks: 0, playlist_name: '' })
+    }
+    
+    return defer(() => this.spotifyApi.playlists.getPlaylist(playlistId, 'DE')).pipe(
+      map(playlist => ({
+        total_tracks: playlist.tracks.total,
+        playlist_name: playlist.name
+      })),
+      catchError(error => {
+        console.error('Error getting playlist info:', error)
+        return of({ total_tracks: 0, playlist_name: '' })
+      })
+    )
+  }
+
+  /**
+   * Get show information including total episodes
+   */
+  getShowInfo(showId: string): Observable<{ total_episodes: number; show_name: string }> {
+    if (!this.spotifyApi) {
+      return of({ total_episodes: 0, show_name: '' })
+    }
+    
+    return defer(() => this.spotifyApi.shows.get(showId, 'DE')).pipe(
+      map(show => ({
+        total_episodes: show.total_episodes,
+        show_name: show.name
+      })),
+      catchError(error => {
+        console.error('Error getting show info:', error)
+        return of({ total_episodes: 0, show_name: '' })
+      })
+    )
+  }
 }

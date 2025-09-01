@@ -1,6 +1,6 @@
 import { Observable, Subject, from, iif, interval, of, timer, firstValueFrom } from 'rxjs'
 import { distinctUntilChanged, filter, map, mergeAll, mergeMap, shareReplay, switchMap, toArray } from 'rxjs/operators'
-import type { CategoryType, Media } from './media'
+import type { CategoryType, Media, MediaInfoCache } from './media'
 
 import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
@@ -33,6 +33,9 @@ export class MediaService {
   public readonly mupihat$: Observable<Mupihat>
 
   private wlanSubject = new Subject<WLAN[]>()
+  
+  // Cache for album/playlist/show information (refreshes when switching media)
+  private mediaInfoCache: MediaInfoCache = {}
 
   constructor(
     private http: HttpClient,
@@ -50,12 +53,20 @@ export class MediaService {
         interval(1000).pipe(
           switchMap(() => {
             if (this.spotifyService.isPlayerReady()) {
-              return this.spotifyService.getCurrentState().then(state => {
+              return this.spotifyService.getCurrentState().then(async state => {
                 if (!state || !state.track_window?.current_track) {
                   return {} as CurrentSpotify
                 }
                 
                 const currentTrack = state.track_window.current_track
+                const contextUri = state.context?.uri
+                
+                // Get enhanced media information if context is available
+                let mediaInfo = null
+                if (contextUri) {
+                  mediaInfo = await this.getMediaInfo(contextUri)
+                }
+                
                 return {
                   progress_ms: state.position,
                   is_playing: !state.paused,
@@ -64,7 +75,17 @@ export class MediaService {
                     name: currentTrack.name,
                     duration_ms: currentTrack.duration_ms,
                     track_number: 1, // Web Playback SDK doesn't provide track number
-                    album: currentTrack.album
+                    album: currentTrack.album,
+                    ...(mediaInfo && {
+                      album: {
+                        name: this.getMediaName(mediaInfo) || currentTrack.album?.name,
+                        total_tracks: mediaInfo.total_tracks
+                      },
+                      show: {
+                        name: mediaInfo.show_name,
+                        total_episodes: mediaInfo.total_episodes
+                      }
+                    })
                   }
                 } as CurrentSpotify
               }).catch(() => ({} as CurrentSpotify))
@@ -459,5 +480,89 @@ export class MediaService {
 
   private getPlayerBackendUrl(): string {
     return environment.backend.playerUrl
+  }
+
+  /**
+   * Clear the media info cache (useful for manual cache invalidation)
+   */
+  public clearMediaInfoCache(): void {
+    this.mediaInfoCache = {}
+  }
+
+  /**
+   * Get the appropriate name based on media type
+   */
+  private getMediaName(mediaInfo: MediaInfoCache): string | undefined {
+    switch (mediaInfo.mediaType) {
+      case 'album':
+        return mediaInfo.album_name
+      case 'playlist':
+        return mediaInfo.playlist_name
+      case 'show':
+        return mediaInfo.show_name
+      default:
+        return mediaInfo.album_name || mediaInfo.playlist_name || mediaInfo.show_name
+    }
+  }
+
+  /**
+   * Get enhanced media information (total tracks/episodes) for albums, playlists, or shows
+   * Uses caching to avoid repeated API calls for the same media ID
+   */
+  private async getMediaInfo(contextUri: string): Promise<{
+    total_tracks?: number
+    total_episodes?: number
+    name?: string
+  } | null> {
+    try {
+      let mediaInfo: any = null
+      let mediaId: string | null = null
+      
+      // Parse the URI to determine the type and extract the ID
+      if (contextUri.includes('spotify:album:')) {
+        mediaId = contextUri.split('spotify:album:')[1]
+        mediaInfo = await firstValueFrom(
+          this.spotifyService.getAlbumInfo(mediaId)
+        )
+      } else if (contextUri.includes('spotify:playlist:')) {
+        mediaId = contextUri.split('spotify:playlist:')[1]
+        mediaInfo = await firstValueFrom(
+          this.spotifyService.getPlaylistInfo(mediaId)
+        )
+      } else if (contextUri.includes('spotify:show:')) {
+        mediaId = contextUri.split('spotify:show:')[1]
+        mediaInfo = await firstValueFrom(
+          this.spotifyService.getShowInfo(mediaId)
+        )
+      }
+
+      if (mediaInfo && mediaId) {
+        // Check if we have cached data for the same media ID
+        if (this.mediaInfoCache.currentId === mediaId) {
+          return this.mediaInfoCache
+        }
+        
+        // Determine media type and set appropriate name
+        let mediaType: 'album' | 'playlist' | 'show' = 'album'
+        if (contextUri.includes('spotify:playlist:')) {
+          mediaType = 'playlist'
+        } else if (contextUri.includes('spotify:show:')) {
+          mediaType = 'show'
+        }
+        
+        // Cache the new result (replacing the old one)
+        this.mediaInfoCache = {
+          ...mediaInfo,
+          currentId: mediaId,
+          mediaType
+        }
+        
+        return mediaInfo
+      }
+    } catch (error) {
+      console.warn('Failed to get media info for URI:', contextUri, error)
+    }
+
+    return null
   }
 }

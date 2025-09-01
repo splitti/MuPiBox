@@ -37,3 +37,14 @@ export interface Media {
   resumelocalprogressTime?: number
   resumerssprogressTime?: number
 }
+
+// Cache interface for storing album/playlist/show information
+export interface MediaInfoCache {
+  total_tracks?: number
+  total_episodes?: number
+  album_name?: string
+  playlist_name?: string
+  show_name?: string
+  currentId?: string
+  mediaType?: 'album' | 'playlist' | 'show'
+}
