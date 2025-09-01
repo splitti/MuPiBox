@@ -34,11 +34,8 @@ import { NavController } from '@ionic/angular/standalone'
 import { addIcons } from 'ionicons'
 import type { Observable } from 'rxjs'
 import type { AlbumStop } from '../albumstop'
-import { ArtworkService } from '../artwork.service'
-import type { CurrentEpisode } from '../current.episode'
+
 import type { CurrentMPlayer } from '../current.mplayer'
-import type { CurrentPlaylist } from '../current.playlist'
-import type { CurrentShow } from '../current.show'
 import type { CurrentSpotify } from '../current.spotify'
 import type { Media } from '../media'
 import { MediaService } from '../media.service'
@@ -83,10 +80,6 @@ export class PlayerPage implements OnInit {
   updateProgression = false
   currentPlayedSpotify: CurrentSpotify
   currentPlayedLocal: CurrentMPlayer
-  currentPlaylist: CurrentPlaylist
-  currentEpisode: CurrentEpisode
-  currentShow: CurrentShow
-  playlistTrackNr = 0
   showTrackNr = 0
   goBackTimer = 0
   progress = 0
@@ -94,23 +87,16 @@ export class PlayerPage implements OnInit {
   tmpProgressTime = 0
   public readonly spotify$: Observable<CurrentSpotify>
   public readonly local$: Observable<CurrentMPlayer>
-  public readonly playlist$: Observable<CurrentPlaylist>
-  public readonly episode$: Observable<CurrentEpisode>
-  public readonly show$: Observable<CurrentShow>
 
   constructor(
     private mediaService: MediaService,
     private route: ActivatedRoute,
     private router: Router,
-    private artworkService: ArtworkService,
     private navController: NavController,
     private playerService: PlayerService,
   ) {
     this.spotify$ = this.mediaService.current$
     this.local$ = this.mediaService.local$
-    this.playlist$ = this.mediaService.playlist$
-    this.episode$ = this.mediaService.episode$
-    this.show$ = this.mediaService.show$
 
     if (this.router.getCurrentNavigation()?.extras.state?.media) {
       this.media = this.router.getCurrentNavigation().extras.state.media
@@ -138,17 +124,15 @@ export class PlayerPage implements OnInit {
     this.mediaService.local$.subscribe((local) => {
       this.currentPlayedLocal = local
     })
-    this.mediaService.playlist$.subscribe((playlist) => {
-      this.currentPlaylist = playlist
-    })
-    this.mediaService.episode$.subscribe((episode) => {
-      this.currentEpisode = episode
-    })
-    this.mediaService.show$.subscribe((show) => {
-      this.currentShow = show
-    })
-    this.artworkService.getArtwork(this.media).subscribe((url) => {
-      this.cover = url
+    // Use cover from CurrentSpotify for Spotify content, fallback to media.cover for other types
+    this.mediaService.current$.subscribe((spotify) => {
+      if (this.media.type === 'spotify' && spotify?.item?.album?.images?.[0]?.url) {
+        this.cover = spotify.item.album.images[0].url
+      } else if (this.media.cover) {
+        this.cover = this.media.cover
+      } else {
+        this.cover = '../assets/images/nocover_mupi.png'
+      }
     })
     this.mediaService.albumStop$.subscribe((albumStop) => {
       this.albumStop = albumStop
@@ -158,13 +142,8 @@ export class PlayerPage implements OnInit {
   seek() {
     const newValue = +this.range.value
     if (this.media.type === 'spotify') {
-      if (this.media.showid?.length > 0) {
-        const duration = this.currentEpisode?.duration_ms
-        this.playerService.seekPosition(duration * (newValue / 100))
-      } else {
-        const duration = this.currentPlayedSpotify?.item.duration_ms
-        this.playerService.seekPosition(duration * (newValue / 100))
-      }
+      const duration = this.currentPlayedSpotify?.item.duration_ms
+      this.playerService.seekPosition(duration * (newValue / 100))
     } else if (this.media.type === 'library' || this.media.type === 'rss') {
       this.playerService.seekPosition(newValue)
     }
@@ -177,15 +156,6 @@ export class PlayerPage implements OnInit {
     this.mediaService.local$.subscribe((local) => {
       this.currentPlayedLocal = local
     })
-    this.mediaService.playlist$.subscribe((playlist) => {
-      this.currentPlaylist = playlist
-    })
-    this.mediaService.episode$.subscribe((episode) => {
-      this.currentEpisode = episode
-    })
-    this.mediaService.show$.subscribe((show) => {
-      this.currentShow = show
-    })
 
     this.playing = !this.currentPlayedLocal?.pause
     if (this.playing) {
@@ -197,36 +167,8 @@ export class PlayerPage implements OnInit {
 
     if (this.media.type === 'spotify') {
       const seek = this.currentPlayedSpotify?.progress_ms || 0
-      if (this.media.showid?.length > 0) {
-        this.progress = (seek / this.currentEpisode?.duration_ms) * 100 || 0
-      } else {
-        if (this.currentPlayedSpotify?.item != null) {
-          this.progress = (seek / this.currentPlayedSpotify?.item.duration_ms) * 100 || 0
-        }
-      }
-      if (this.media.playlistid) {
-        this.currentPlaylist?.items.forEach((element, index) => {
-          if (this.currentPlayedSpotify?.item.id === element.track?.id) {
-            this.playlistTrackNr = index + 1 // +1 since we want human-readable indexing in the frontend.
-            this.cover = element.track.album.images[1].url
-          }
-        })
-      }
-      if (this.media.showid) {
-        this.currentShow?.items.forEach((element, index) => {
-          if (this.currentPlayedLocal?.activeEpisode === element?.id) {
-            this.showTrackNr = this.currentEpisode.show.total_episodes - index
-            this.cover = element.images[1].url
-          }
-        })
-      }
-      if (this.media.audiobookid) {
-        this.currentShow?.items.forEach((element, index) => {
-          if (this.currentPlayedSpotify?.item.id === element?.id) {
-            this.showTrackNr = index + 1
-            this.cover = element.images[1].url
-          }
-        })
+      if (this.currentPlayedSpotify?.item != null) {
+        this.progress = (seek / this.currentPlayedSpotify?.item.duration_ms) * 100 || 0
       }
       if (this.playing && !this.currentPlayedSpotify?.is_playing) {
         this.goBackTimer++
@@ -354,19 +296,12 @@ export class PlayerPage implements OnInit {
     this.mediaService.local$.subscribe((local) => {
       this.currentPlayedLocal = local
     })
-    this.mediaService.episode$.subscribe((episode) => {
-      this.currentEpisode = episode
-    })
     if (this.resumemedia.type === 'spotify' && this.resumemedia?.showid) {
-      this.resumemedia.resumespotifytrack_number = 1
+      this.resumemedia.resumespotifytrack_number = this.currentPlayedSpotify?.item?.track_number || 1
       this.resumemedia.resumespotifyprogress_ms = this.currentPlayedSpotify?.progress_ms || 0
-      this.resumemedia.resumespotifyduration_ms = this.currentEpisode?.duration_ms || 0
+      this.resumemedia.resumespotifyduration_ms = this.currentPlayedSpotify?.item?.duration_ms || 0
     } else if (this.resumemedia.type === 'spotify') {
-      if (this.resumemedia.playlistid) {
-        this.resumemedia.resumespotifytrack_number = this.playlistTrackNr || 0
-      } else {
-        this.resumemedia.resumespotifytrack_number = this.currentPlayedSpotify?.item.track_number || 0
-      }
+      this.resumemedia.resumespotifytrack_number = this.currentPlayedSpotify?.item.track_number || 0
       this.resumemedia.resumespotifyprogress_ms = this.currentPlayedSpotify?.progress_ms || 0
       this.resumemedia.resumespotifyduration_ms = this.currentPlayedSpotify?.item.duration_ms || 0
     } else if (this.resumemedia.type === 'library') {

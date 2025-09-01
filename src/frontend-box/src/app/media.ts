@@ -38,13 +38,18 @@ export interface Media {
   resumerssprogressTime?: number
 }
 
-// Cache interface for storing album/playlist/show information
+// Cache interface for storing album/playlist/show/audiobook information
 export interface MediaInfoCache {
   total_tracks?: number
   total_episodes?: number
+  total_chapters?: number
   album_name?: string
   playlist_name?: string
   show_name?: string
+  audiobook_name?: string
   currentId?: string
-  mediaType?: 'album' | 'playlist' | 'show'
+  mediaType?: 'album' | 'playlist' | 'show' | 'audiobook'
+  tracks?: any[]
+  episodes?: any[]
+  chapters?: any[]
 }

@@ -413,20 +413,7 @@ export class SpotifyService {
     return album
   }
 
-  // Only used for single "artist + title" entries with "type: spotify" in the database.
-  // Artwork for spotify search queries are already fetched together with the initial searchAlbums request
-  getAlbumArtwork(artist: string, title: string): Observable<string> {
-    const artwork = defer(() => this.spotifyApi.search(`album:${title} artist:${artist}`, ['album'], 'DE')).pipe(
-      retryWhen((errors) => {
-        return this.errorHandler(errors)
-      }),
-      map((response: SearchResults<['album']>) => {
-        return response?.albums?.items?.[0]?.images?.[0]?.url || ''
-      }),
-    )
 
-    return artwork
-  }
 
   async validateSpotify(spotifyId: string, spotifyCategory: string): Promise<boolean> {
     let validateState = false
@@ -970,38 +957,54 @@ export class SpotifyService {
   }
 
   /**
-   * Get album information including total tracks
+   * Get album information including total tracks and track data
    */
-  getAlbumInfo(albumId: string): Observable<{ total_tracks: number; album_name: string }> {
+  getAlbumInfo(albumId: string): Observable<{ total_tracks: number; album_name: string; tracks?: any[] }> {
     if (!this.spotifyApi) {
-      return of({ total_tracks: 0, album_name: '' })
+      return of({ total_tracks: 0, album_name: '', tracks: [] })
     }
     
     return defer(() => this.spotifyApi.albums.get(albumId, 'DE')).pipe(
       map(album => ({
         total_tracks: album.total_tracks,
-        album_name: album.name
+        album_name: album.name,
+        tracks: album.tracks.items.map(track => ({
+          id: track.id,
+          uri: track.uri,
+          name: track.name,
+          track_number: track.track_number
+        }))
       })),
       catchError(error => {
         console.error('Error getting album info:', error)
-        return of({ total_tracks: 0, album_name: '' })
+        return of({ total_tracks: 0, album_name: '', tracks: [] })
       })
     )
   }
 
   /**
-   * Get playlist information including total tracks
+   * Get playlist information including total tracks and track data
    */
-  getPlaylistInfo(playlistId: string): Observable<{ total_tracks: number; playlist_name: string }> {
+  getPlaylistInfo(playlistId: string): Observable<{ total_tracks: number; playlist_name: string; tracks?: any[] }> {
     if (!this.spotifyApi) {
-      return of({ total_tracks: 0, playlist_name: '' })
+      return of({ total_tracks: 0, playlist_name: '', tracks: [] })
     }
     
     return defer(() => this.spotifyApi.playlists.getPlaylist(playlistId, 'DE')).pipe(
-      map(playlist => ({
-        total_tracks: playlist.tracks.total,
-        playlist_name: playlist.name
-      })),
+      switchMap(playlist => {
+        // Get all tracks for position calculation
+        return defer(() => this.spotifyApi.playlists.getPlaylistItems(playlistId, 'DE')).pipe(
+          map(tracksData => ({
+            total_tracks: playlist.tracks.total,
+            playlist_name: playlist.name,
+            tracks: tracksData.items.map(item => ({
+              id: item.track.id,
+              uri: item.track.uri,
+              name: item.track.name
+            }))
+          }))
+        )
+      }),
       catchError(error => {
         console.log('Spotify API failed for playlist info %s, trying backend media info...', playlistId)
         
@@ -1009,11 +1012,16 @@ export class SpotifyService {
         return this.http.get<any>(`/api/spotify/playlist/${playlistId}`).pipe(
           map(backendData => ({
             total_tracks: backendData.tracks?.length || 0,
-            playlist_name: backendData.playlist?.name || ''
+            playlist_name: backendData.playlist?.name || '',
+            tracks: backendData.tracks?.map((track: any) => ({
+              id: track.id,
+              uri: track.uri,
+              name: track.name
+            })) || []
           })),
           catchError(backendError => {
             console.error('Backend also failed for playlist info:', backendError)
-            return of({ total_tracks: 0, playlist_name: '' })
+            return of({ total_tracks: 0, playlist_name: '', tracks: [] })
           })
         )
       })
@@ -1021,21 +1029,56 @@ export class SpotifyService {
   }
 
   /**
-   * Get show information including total episodes
+   * Get show information including total episodes and episode data
    */
-  getShowInfo(showId: string): Observable<{ total_episodes: number; show_name: string }> {
+  getShowInfo(showId: string): Observable<{ total_episodes: number; show_name: string; episodes?: any[] }> {
     if (!this.spotifyApi) {
-      return of({ total_episodes: 0, show_name: '' })
+      return of({ total_episodes: 0, show_name: '', episodes: [] })
     }
     
     return defer(() => this.spotifyApi.shows.get(showId, 'DE')).pipe(
-      map(show => ({
-        total_episodes: show.total_episodes,
-        show_name: show.name
-      })),
+      switchMap(show => {
+        // Get all episodes for position calculation
+        return defer(() => this.spotifyApi.shows.episodes(showId, 'DE')).pipe(
+          map(episodesData => ({
+            total_episodes: show.total_episodes,
+            show_name: show.name,
+            episodes: episodesData.items.map(episode => ({
+              id: episode.id,
+              uri: episode.uri,
+              name: episode.name
+            }))
+          }))
+        )
+      }),
       catchError(error => {
         console.error('Error getting show info:', error)
-        return of({ total_episodes: 0, show_name: '' })
+        return of({ total_episodes: 0, show_name: '', episodes: [] })
+      })
+    )
+  }
+
+  /**
+   * Get audiobook information including total chapters and chapter data
+   */
+  getAudiobookInfo(audiobookId: string): Observable<{ total_chapters: number; audiobook_name: string; chapters?: any[] }> {
+    if (!this.spotifyApi) {
+      return of({ total_chapters: 0, audiobook_name: '', chapters: [] })
+    }
+    
+    return defer(() => this.spotifyApi.audiobooks.get(audiobookId, 'DE')).pipe(
+      map(audiobook => ({
+        total_chapters: audiobook.chapters?.total || 0,
+        audiobook_name: audiobook.name,
+        chapters: audiobook.chapters?.items?.map(chapter => ({
+          id: chapter.id,
+          uri: chapter.uri,
+          name: chapter.name
+        })) || []
+      })),
+      catchError(error => {
+        console.error('Error getting audiobook info:', error)
+        return of({ total_chapters: 0, audiobook_name: '', chapters: [] })
       })
     )
   }
