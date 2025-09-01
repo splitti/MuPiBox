@@ -370,18 +370,28 @@ export class SpotifyService {
         return this.errorHandler(errors)
       }),
       catchError((err) => {
-        console.log('Caught error for Spotify playlist %s, continuing...', id)
-        return EMPTY
+        console.log('Spotify API failed for playlist %s, trying backend media info service...', id)
+
+        return this.http.get<any>(`/api/spotify/playlist/${id}`).pipe(
+          catchError((backendErr) => {
+            console.log('Backend also failed for playlist %s, continuing...', id)
+            return EMPTY
+          })
+        )
       }),
-      map((response: Playlist) => {
+      map((response: Playlist | any) => {
+        // Check if response is from backend scraper (has different structure)
+        const isFromBackend = response.playlist && response.tracks
+        
         const media: Media = {
-          playlistid: response.id,
-          title: response.name,
-          cover: response?.images[0]?.url,
+          playlistid: isFromBackend ? id : response.id,
+          title: isFromBackend ? response.playlist.name : response.name,
+          cover: isFromBackend ? response.playlist.images?.[0]?.url : response?.images[0]?.url,
           type: 'spotify',
           category,
           index,
         }
+
         if (resumespotifyduration_ms) {
           media.resumespotifyduration_ms = resumespotifyduration_ms
         }
@@ -467,15 +477,31 @@ export class SpotifyService {
           validateState = true
         }
       } else if (spotifyCategory === 'playlist') {
-        const data: any = await firstValueFrom(
-          defer(() => this.spotifyApi.playlists.getPlaylist(spotifyId)).pipe(
-            retryWhen((errors) => {
-              return this.errorHandler(errors)
-            }),
-          ),
-        )
-        if (data.id !== undefined) {
-          validateState = true
+        try {
+          const data: any = await firstValueFrom(
+            defer(() => this.spotifyApi.playlists.getPlaylist(spotifyId)).pipe(
+              retryWhen((errors) => {
+                return this.errorHandler(errors)
+              }),
+            ),
+          )
+          if (data.id !== undefined) {
+            validateState = true
+          }
+        } catch (playlistErr) {
+          console.log('Spotify API validation failed for playlist %s, trying backend media info...', spotifyId)
+
+          try {
+            const backendData: any = await firstValueFrom(
+              this.http.get<any>(`/api/spotify/playlist/${spotifyId}`)
+            )
+            if (backendData.playlist?.name) {
+              validateState = true
+            }
+          } catch (backendErr) {
+            console.log('Backend validation also failed for playlist %s', spotifyId)
+            validateState = false
+          }
         }
       }
     } catch (err) {
@@ -977,8 +1003,19 @@ export class SpotifyService {
         playlist_name: playlist.name
       })),
       catchError(error => {
-        console.error('Error getting playlist info:', error)
-        return of({ total_tracks: 0, playlist_name: '' })
+        console.log('Spotify API failed for playlist info %s, trying backend media info...', playlistId)
+        
+        // Fallback to backend scraper endpoint
+        return this.http.get<any>(`/api/spotify/playlist/${playlistId}`).pipe(
+          map(backendData => ({
+            total_tracks: backendData.tracks?.length || 0,
+            playlist_name: backendData.playlist?.name || ''
+          })),
+          catchError(backendError => {
+            console.error('Backend also failed for playlist info:', backendError)
+            return of({ total_tracks: 0, playlist_name: '' })
+          })
+        )
       })
     )
   }
