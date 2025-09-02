@@ -285,11 +285,7 @@ export class PlayerPage implements OnInit {
   }
 
   saveResumeFiles() {
-    if (!this.resumePlay) {
-      this.resumemedia = Object.assign({}, this.media)
-    } else {
-      this.resumemedia = this.media
-    }
+    this.resumemedia = Object.assign({}, this.media)
     this.mediaService.current$.subscribe((spotify) => {
       this.currentPlayedSpotify = spotify
     })
