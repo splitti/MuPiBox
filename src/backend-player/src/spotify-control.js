@@ -253,10 +253,8 @@ function writeCounter() {
 }
 
 async function refreshToken() {
-  const refreshToken = credentials ? librespotRefreshToken : refreshTokenApi
-
   return new Promise((resolve, reject) => {
-    refreshToken()
+    refreshTokenApi()
       .then((accessToken) => {
         setAccessToken(accessToken)
         resolve(accessToken)
@@ -328,26 +326,6 @@ async function librespotRefreshToken() {
     )
 }
 
-async function getMyDevices() {
-  if (apiAccessToken.accessToken !== null && apiAccessToken.expires < Date.now()) {
-    const spotifyApi = new SpotifyWebApi({
-      clientId: config.spotify.clientId,
-      clientSecret: config.spotify.clientSecret,
-      accessToken: apiAccessToken.accessToken,
-    })
-    return spotifyApi.getMyDevices()
-  }
-
-  return refreshTokenApi().then((accessToken) => {
-    const spotifyApi = new SpotifyWebApi({
-      clientId: config.spotify.clientId,
-      clientSecret: config.spotify.clientSecret,
-      accessToken: accessToken,
-    })
-    return spotifyApi.getMyDevices()
-  })
-}
-
 function setAccessToken(token) {
   log.debug(`${nowDate.toLocaleString()}: The access token has been refreshed!`)
   counter.countfreshAccessToken++
@@ -362,6 +340,19 @@ function setAccessToken(token) {
   if (currentMeta.activeSpotifyId.includes('spotify:') && !spotifyRunning) {
     playMe()
   }
+}
+
+async function getSpotifyApi() {
+  if (!credentials) {
+    return spotifyApi
+  }
+  if (librespotAccessToken.accessToken === null && librespotAccessToken.expires >= Date.now()) {
+    await librespotRefreshToken()
+  }
+
+  return new SpotifyWebApi({
+    accessToken: librespotAccessToken.accessToken,
+  })
 }
 
 /*called in all error cases*/
@@ -448,7 +439,8 @@ function handleSpotifyError(err, from) {
 /*queries all devices and transfers playback to the first one discovered*/
 function setActiveDevice() {
   /*find devices first and choose first one available*/
-  getMyDevices()
+  spotifyApi
+    .getMyDevices()
     .then(
       (data) => {
         counter.countgetMyDevices++
@@ -1042,7 +1034,7 @@ async function useSpotify(command) {
     let playlisttemp
     currentMeta.totalPlaylist = 1
     while (offset < currentMeta.totalPlaylist) {
-      await spotifyApi.getPlaylistTracks(currentMeta.activePlaylist, { limit: 50, offset: offset }).then(
+      await (await getSpotifyApi()).getPlaylistTracks(currentMeta.activePlaylist, { limit: 50, offset: offset }).then(
         (data) => {
           counter.countgetPlaylistTracks++
           if (config.server.logLevel === 'debug') {
@@ -1090,7 +1082,7 @@ async function useSpotify(command) {
 /*endpoint to return all spotify connect devices on the network*/
 /*only used if sonos-kids-player is modified*/
 app.get('/getDevices', (req, res) => {
-  getMyDevices().then(
+  spotifyApi.getMyDevices().then(
     (data) => {
       counter.countgetMyDevices++
       if (config.server.logLevel === 'debug') {
@@ -1207,6 +1199,7 @@ app.get('/local', (req, res) => {
 
 app.get('/spotify/token', (req, res) => {
   const accessTokenData = credentials ? librespotAccessToken : apiAccessToken
+  const refreshToken = credentials ? librespotRefreshToken : refreshTokenApi
 
   if (accessTokenData.accessToken !== null && accessTokenData.expires < Date.now()) {
     res.send(accessTokenData.accessToken)

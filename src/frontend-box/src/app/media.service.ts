@@ -170,7 +170,7 @@ export class MediaService {
   addWLAN(wlan: WLAN) {
     const url = `${this.getApiBackendUrl()}/addwlan`
 
-    this.http.post(url, wlan, { responseType: 'text'}).subscribe((response) => {
+    this.http.post(url, wlan, { responseType: 'text' }).subscribe((response) => {
       //this.response = response;
       this.updateWLAN()
     })
@@ -285,64 +285,46 @@ export class MediaService {
   //       )
   //     }
 
-  //   return this.http.get<Media[]>(url).pipe(
-  //     // Filter to get only items for the chosen category.
-  //     map((items) => {
-  //       if (resume) {
-  //         return items
-  //       }
-  //       // Else: !resume.
-  //       for (const item of items) {
-  //         item.category = item.category === undefined ? 'audiobook' : item.category
-  //       }
-  //       return items.filter((item) => item.category === category)
-  //     }),
-  //     mergeMap((items) => from(items)), // parallel calls for each item
-  //     map(
-  //       // get media for the current item
-  //       (item) =>
-  //         iif(
-  //           // Get media by query
-  //           () => !!(item.query && item.query.length > 0),
-  //           this.spotifyService
-  //             .getMediaByQuery(item.query, item.category, item.index, item)
-  //             .pipe(overwriteArtist(item)),
+  //     return this.http.get<Media[]>(url).pipe(
+  //       // Filter to get only items for the chosen category.
+  //       map((items) => {
+  //         if (resume) {
+  //           return items
+  //         }
+  //         // Else: !resume.
+  //         for (const item of items) {
+  //           item.category = item.category === undefined ? 'audiobook' : item.category
+  //         }
+  //         return items.filter((item) => item.category === category)
+  //       }),
+  //       mergeMap((items) => from(items)), // parallel calls for each item
+  //       map(
+  //         // get media for the current item
+  //         (item) =>
   //           iif(
-  //             // Get media by artist
-  //             () => !!(item.artistid && item.artistid.length > 0),
+  //             // Get media by query
+  //             () => !!(item.query && item.query.length > 0),
   //             this.spotifyService
-  //               .getMediaByArtistID(item.artistid, item.category, item.index, item)
+  //               .getMediaByQuery(item.query, item.category, item.index, item)
   //               .pipe(overwriteArtist(item)),
   //             iif(
-  //               // Get media by show
-  //               () => !!(item.showid && item.showid.length > 0 && item.category !== 'resume'),
+  //               // Get media by artist
+  //               () => !!(item.artistid && item.artistid.length > 0),
   //               this.spotifyService
-  //                 .getMediaByShowID(item.showid, item.category, item.index, item)
+  //                 .getMediaByArtistID(item.artistid, item.category, item.index, item)
   //                 .pipe(overwriteArtist(item)),
   //               iif(
-  //                 // Get media by show supporting resume
-  //                 () => !!(item.showid && item.showid.length > 0 && item.category === 'resume'),
+  //                 // Get media by show
+  //                 () => !!(item.showid && item.showid.length > 0 && item.category !== 'resume'),
   //                 this.spotifyService
-  //                   .getMediaByEpisode(
-  //                     item.showid,
-  //                     item.category,
-  //                     item.index,
-  //                     item.shuffle,
-  //                     item.artistcover,
-  //                     item.resumespotifyduration_ms,
-  //                     item.resumespotifyprogress_ms,
-  //                     item.resumespotifytrack_number,
-  //                   )
-  //                   .pipe(
-  //                     map((currentItem) => [currentItem]),
-  //                     overwriteArtist(item),
-  //                   ),
+  //                   .getMediaByShowID(item.showid, item.category, item.index, item)
+  //                   .pipe(overwriteArtist(item)),
   //                 iif(
-  //                   // Get media by playlist
-  //                   () => !!(item.type === 'spotify' && item.playlistid && item.playlistid.length > 0),
+  //                   // Get media by show supporting resume
+  //                   () => !!(item.showid && item.showid.length > 0 && item.category === 'resume'),
   //                   this.spotifyService
-  //                     .getMediaByPlaylistID(
-  //                       item.playlistid,
+  //                     .getMediaByEpisode(
+  //                       item.showid,
   //                       item.category,
   //                       item.index,
   //                       item.shuffle,
@@ -356,52 +338,91 @@ export class MediaService {
   //                       overwriteArtist(item),
   //                     ),
   //                   iif(
-  //                     // Get media by rss feed
-  //                     () => !!(item.type === 'rss' && item.id.length > 0 && item.category !== 'resume'),
-  //                     this.rssFeedService
-  //                       .getRssFeed(item.id, item.category, item.index, item)
-  //                       .pipe(overwriteArtist(item)),
+  //                     // Get media by playlist
+  //                     () => !!(item.type === 'spotify' && item.playlistid && item.playlistid.length > 0),
+  //                     this.spotifyService
+  //                       .getMediaByPlaylistID(
+  //                         item.playlistid,
+  //                         item.category,
+  //                         item.index,
+  //                         item.shuffle,
+  //                         item.artistcover,
+  //                         item.resumespotifyduration_ms,
+  //                         item.resumespotifyprogress_ms,
+  //                         item.resumespotifytrack_number,
+  //                       )
+  //                       .pipe(
+  //                         map((currentItem) => [currentItem]),
+  //                         overwriteArtist(item),
+  //                       ),
   //                     iif(
-  //                       // Get media by album (resume).
-  //                       () => !!(item.type === 'spotify' && item.id && item.id.length > 0),
-  //                       this.spotifyService
-  //                         .getMediaByID(
-  //                           item.id,
-  //                           item.category,
-  //                           item.index,
-  //                           item.shuffle,
-  //                           item.artistcover,
-  //                           item.resumespotifyduration_ms,
-  //                           item.resumespotifyprogress_ms,
-  //                           item.resumespotifytrack_number,
-  //                         )
-  //                         .pipe(
-  //                           map((currentItem) => [currentItem]),
-  //                           overwriteArtist(item),
+  //                       // Get media by rss feed
+  //                       () => !!(item.type === 'rss' && item.id.length > 0 && item.category !== 'resume'),
+  //                       this.rssFeedService
+  //                         .getRssFeed(item.id, item.category, item.index, item)
+  //                         .pipe(overwriteArtist(item)),
+  //                       iif(
+  //                         // Get media by album (resume).
+  //                         () => !!(item.type === 'spotify' && item.id && item.id.length > 0),
+  //                         this.spotifyService
+  //                           .getMediaByID(
+  //                             item.id,
+  //                             item.category,
+  //                             item.index,
+  //                             item.shuffle,
+  //                             item.artistcover,
+  //                             item.resumespotifyduration_ms,
+  //                             item.resumespotifyprogress_ms,
+  //                             item.resumespotifytrack_number,
+  //                           )
+  //                           .pipe(
+  //                             map((currentItem) => [currentItem]),
+  //                             overwriteArtist(item),
+  //                           ),
+  //                         iif(
+  //                           // Get media by audiobook (resume).
+  //                           () => !!(item.type === 'spotify' && item.audiobookid && item.audiobookid.length > 0),
+  //                           this.spotifyService
+  //                             .getAudiobookByID(
+  //                               item.audiobookid,
+  //                               item.category,
+  //                               item.index,
+  //                               item.shuffle,
+  //                               item.artistcover,
+  //                               item.resumespotifyduration_ms,
+  //                               item.resumespotifyprogress_ms,
+  //                               item.resumespotifytrack_number,
+  //                             )
+  //                             .pipe(
+  //                               map((currentItem) => [currentItem]),
+  //                               overwriteArtist(item),
+  //                             ),
+  //                           of([item]), // Single album. Also return as array, so we always have the same data type
   //                         ),
-  //                       of([item]), // Single album. Also return as array, so we always have the same data type
+  //                       ),
   //                     ),
   //                   ),
   //                 ),
   //               ),
   //             ),
   //           ),
-  //         ),
-  //     ),
-  //     mergeMap((items) => from(items)), // seperate arrays to single observables
-  //     mergeAll(), // merge everything together
-  //     toArray(), // convert to array
-  //     map((media) => {
-  //       // add dummy image for missing covers
-  //       return media.map((currentMedia) => {
-  //         if (!currentMedia.cover) {
-  //           currentMedia.cover = '../assets/images/nocover_mupi.png'
-  //         }
-  //         return currentMedia
-  //       })
-  //     }),
-  //   )
-  // }
+  //       ),
+  //       mergeMap((items) => from(items)), // seperate arrays to single observables
+  //       mergeAll(), // merge everything together
+  //       toArray(), // convert to array
+  //       map((media) => {
+  //         // add dummy image for missing covers
+  //         return media.map((currentMedia) => {
+  //           if (!currentMedia.cover) {
+  //             currentMedia.cover = '../assets/images/nocover_mupi.png'
+  //           }
+  //           return currentMedia
+  //         })
+  //       }),
+  //     )
+  //   }
+
+  // Get all media entries for the current category
   getResponse() {
     const tmpResponse = this.response
     this.response = ''

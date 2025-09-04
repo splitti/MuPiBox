@@ -631,6 +631,15 @@ app.post('/api/editresume', (req, res) => {
   }
 })
 
+// TODO: CHeck if this is used.
+app.get('/api/spotify/config', (req, res) => {
+  if (config?.spotify === undefined) {
+    res.status(500).send('Could load spotify config.')
+    return
+  }
+  res.status(200).send(config.spotify)
+})
+
 app.get('/api/sonos', (req, res) => {
   if (config === undefined) {
     res.status(500).send('Could not load server config.')
