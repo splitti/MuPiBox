@@ -18,7 +18,9 @@ export class SpotifyMediaInfo {
 
   private async getBrowser(): Promise<Browser> {
     if (!this.browser) {
-      this.browser = await puppeteer.launch({
+      // In production (DietPi), use system Chromium instead of bundled version
+      const isProduction = process.env.NODE_ENV === 'production' || !process.env.NODE_ENV
+      const launchOptions: any = {
         headless: true,
         args: [
           '--no-sandbox',
@@ -30,7 +32,33 @@ export class SpotifyMediaInfo {
           '--disable-javascript-harmony-shipping',
           '--disable-extensions-http-throttling'
         ]
-      })
+      }
+
+      // Use system Chromium in production environment
+      if (isProduction) {
+        // Try common Chromium paths on DietPi/Debian systems
+        const chromiumPaths = [
+          '/usr/bin/chromium-browser',
+          '/usr/bin/chromium',
+          '/usr/bin/google-chrome',
+          '/usr/bin/google-chrome-stable'
+        ]
+        
+        const fs = await import('node:fs')
+        for (const path of chromiumPaths) {
+          if (fs.existsSync(path)) {
+            launchOptions.executablePath = path
+            console.log(`Using system Chromium at: ${path}`)
+            break
+          }
+        }
+        
+        if (!launchOptions.executablePath) {
+          console.warn('No system Chromium found, falling back to bundled version')
+        }
+      }
+
+      this.browser = await puppeteer.launch(launchOptions)
     }
     return this.browser
   }
