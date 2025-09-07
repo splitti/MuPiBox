@@ -30,12 +30,12 @@ VERSION=$(/usr/bin/jq -r .release.${RELEASE}[-1].version ${VER_JSON})  >&3 2>&3
 MUPIBOX_URL=$(/usr/bin/jq -r .release.${RELEASE}[-1].url ${VER_JSON})  >&3 2>&3
 USER=$(/usr/bin/whoami) >&3 2>&3
 RASPPI=$(/usr/bin/cat /sys/firmware/devicetree/base/model | tr -d '\0' ) >&3 2>&3
-if [ "$1" = "dev" ]; then
+if [ "$RELEASE" = "dev" ]; then
 	MUPI_SRC="/home/dietpi/MuPiBox-main" >&3 2>&3
 else
 	MUPI_SRC="/home/dietpi/MuPiBox-${VERSION}" >&3 2>&3
 fi
-if [ "$1" = "dev" ]; then
+if [ "$RELEASE" = "dev" ]; then
 	VERSION_LONG="DEV $(curl -s "https://api.github.com/repos/splitti/MuPiBox" | jq -r '.pushed_at' | cut -d'T' -f1)"  >&3 2>&3
 else
 	VERSION_LONG="${VERSION} ${RELEASE}"
@@ -475,8 +475,8 @@ echo "==========================================================================
 	mv -f ${MUPI_SRC}/config/services/mupi_mqtt.service /etc/systemd/system/mupi_mqtt.service  >&3 2>&3
 
 	systemctl daemon-reload >&3 2>&3
-	systemctl enable librespot.service >&3 2>&3	
-	systemctl start librespot.service >&3 2>&3	
+  systemctl enable librespot.service >&3 2>&3
+  systemctl start librespot.service >&3 2>&3
 	systemctl enable mupi_check_internet.service >&3 2>&3
 	systemctl start mupi_check_internet.service >&3 2>&3
 	systemctl enable mupi_check_monitor.service >&3 2>&3
