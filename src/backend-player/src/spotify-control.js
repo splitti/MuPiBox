@@ -7,9 +7,6 @@ const createPlayer = require('./mplayer-wrapper.js')
 const googleTTS = require('google-tts-api')
 const fs = require('node:fs')
 const childProcess = require('node:child_process')
-const proto = require("./spotify-proto.js")
-const crypto = require("crypto")
-const request = require('superagent');
 
 let configBasePath = './config'
 //let networkConfigBasePath = '/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config'
@@ -19,17 +16,7 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 const muPiBoxConfig = require(`${configBasePath}/mupiboxconfig.json`)
-//const network = require(`${networkConfigBasePath}/network.json`)
 const config = require(`${configBasePath}/config.json`)
-
-const spotifyCredentialsPath = muPiBoxConfig.spotify.cachepath
-let credentials = null
-try {
-  // Deactivate this for now, because we try not to use librespot.
-  // credentials = require(`${spotifyCredentialsPath}/credentials.json`)
-} catch (err) {
-  console.log(`Could not load: ${spotifyCredentialsPath}/credentials.json`)
-}
 
 const log = require('console-log-level')({ level: config.server.logLevel })
 
@@ -46,16 +33,6 @@ app.use((req, res, next) => {
   next()
 })
 
-/*init spotify API */
-const scopes = [
-    'streaming',
-    'user-read-currently-playing',
-    'user-modify-playback-state',
-    'user-read-playback-state',
-    'playlist-read-private',
-    'playlist-read-collaborative'
-]
-
 const spotifyApi = new SpotifyWebApi({
   clientId: config.spotify.clientId,
   clientSecret: config.spotify.clientSecret,
@@ -66,14 +43,9 @@ const spotifyApi = new SpotifyWebApi({
 refreshToken()
 setInterval(refreshToken, 1000 * 60 * 60)
 
-let apiAccessToken = {
+const apiAccessToken = {
   accessToken: null,
-  expires: Date.now()
-}
-
-let librespotAccessToken = {
-  accessToken: null,
-  expires: Date.now()
+  expires: Date.now(),
 }
 
 player.on('percent_pos', (val) => {
@@ -160,8 +132,7 @@ setInterval(() => {
   })
 }, 1000)
 
-/*store device to be played back*/
-let activeDevice = config.spotify.deviceId
+let activeDevice = null
 const nowDate = new Date()
 const volumeStart = 99
 let playerstate
@@ -243,7 +214,7 @@ function writeCounter() {
 
 async function refreshToken() {
   return new Promise((resolve, reject) => {
-      refreshTokenApi()
+    refreshTokenApi()
       .then((accessToken) => {
         setAccessToken(accessToken)
         resolve(accessToken)
@@ -254,64 +225,16 @@ async function refreshToken() {
 
 async function refreshTokenApi() {
   return spotifyApi.refreshAccessToken().then(
-      (data) => {
-        apiAccessToken.accessToken = data.body.access_token
-        apiAccessToken.expires = Date.now() + data.body.expires_in * 1000
-        return apiAccessToken.accessToken
-      },
-      (err) => {
-        log.debug(`${nowDate.toLocaleString()}: Could not refresh access token`, err)
-        throw err
-      },
-    )
-}
-
-async function librespotRefreshToken() {
-  const loginUrl = 'https://login5.spotify.com/v3/login'
-  const clientId = "65b708073fc0480ea92a077233ca87bd"
-  const deviceName = muPiBoxConfig.mupibox.host
-  const username = credentials.username
-  const dataBase64 = credentials.auth_data
-
-  const sha1 = function (data) {
-    let generator = crypto.createHash('sha1');
-    generator.update(data)
-    return generator.digest('hex')
-  }
-  const deviceId = sha1(deviceName)
-  const data = Uint8Array.from(Buffer.from(dataBase64, 'base64'))
-
-  const clientInfo = proto.spotify.login5.v3.ClientInfo.create({
-    clientId,
-    deviceId
-  })
-
-  const storedCredential = proto.spotify.login5.v3.credentials.StoredCredential.create({
-    username,
-    data
-  })
-
-  const loginRequest = proto.spotify.login5.v3.LoginRequest.create({
-    clientInfo,
-    storedCredential
-  })
-
-  return request.post(loginUrl)
-    .set('Content-Type', 'application/x-protobuf')
-    .send(proto.spotify.login5.v3.LoginRequest.encode(loginRequest).finish())
-    .responseType('blob')
-    .then(
-      (res) => {
-        const loginResponse = proto.spotify.login5.v3.LoginResponse.decode(Uint8Array.from(res.body))
-        librespotAccessToken.accessToken = loginResponse.ok.accessToken
-        librespotAccessToken.expires = Date.now() + loginResponse.ok.accessTokenExpiresIn * 1000
-        return loginResponse.ok.accessToken
-      },
-      (err) => {
-        log.debug(`${nowDate.toLocaleString()}: Could not refresh access token`, err)
-        throw err
-      }
-    )
+    (data) => {
+      apiAccessToken.accessToken = data.body.access_token
+      apiAccessToken.expires = Date.now() + data.body.expires_in * 1000
+      return apiAccessToken.accessToken
+    },
+    (err) => {
+      log.debug(`${nowDate.toLocaleString()}: Could not refresh access token`, err)
+      throw err
+    },
+  )
 }
 
 function setAccessToken(token) {
@@ -328,19 +251,6 @@ function setAccessToken(token) {
   if (currentMeta.activeSpotifyId.includes('spotify:') && !spotifyRunning) {
     playMe()
   }
-}
-
-async function getSpotifyApi() {
-    if (!credentials) {
-        return spotifyApi
-    }
-    if (librespotAccessToken.accessToken === null && librespotAccessToken.expires >= Date.now() ) {
-        await librespotRefreshToken();
-    }
-
-    return new SpotifyWebApi({
-        accessToken: librespotAccessToken.accessToken
-    })
 }
 
 /*called in all error cases*/
@@ -424,6 +334,36 @@ function handleSpotifyError(err, from) {
 
 /*queries all devices and transfers playback to the first one discovered*/
 function setActiveDevice() {
+  // If activeDevice is not set, get available devices and use the first one
+  if (!activeDevice || activeDevice === '') {
+    spotifyApi.getMyDevices().then(
+      (data) => {
+        counter.countgetMyDevices++
+        if (config.server.logLevel === 'debug') {
+          writeCounter()
+        }
+        const availableDevices = data.body.devices
+        if (availableDevices && availableDevices.length > 0) {
+          activeDevice = availableDevices[0].id
+          log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Auto-selected device: ${activeDevice}`)
+          // Now transfer playback to the selected device
+          transferPlaybackToActiveDevice()
+        } else {
+          log.debug(`${nowDate.toLocaleString()}: [Spotify Control] No available devices found`)
+        }
+      },
+      (err) => {
+        log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Error getting devices: ${err}`)
+        handleSpotifyError(err, 'getMyDevices')
+      },
+    )
+  } else {
+    // activeDevice is already set, proceed with transfer
+    transferPlaybackToActiveDevice()
+  }
+}
+
+function transferPlaybackToActiveDevice() {
   spotifyApi.transferMyPlayback([activeDevice]).then(
     () => {
       counter.counttransferMyPlayback++
@@ -679,31 +619,29 @@ function playMe() {
     //   handleSpotifyError(err,"setVolume");
     // });
   } else {
-    spotifyApi
-      .play({ context_uri: contextUri, offset: { position: resumeOffset }, position_ms: resumeProgess })
-      .then(
-        (data) => {
-          log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Playback started`)
-          counter.countplay++
-          if (config.server.logLevel === 'debug') {
-            writeCounter()
-          }
-          writeplayerstatePlay()
-          spotifyRunning = true
-          if (
-            muPiBoxConfig.telegram.active &&
-            //network.onlinestate === 'online' &&
-            muPiBoxConfig.telegram.token.length > 1 &&
-            muPiBoxConfig.telegram.chatId.length > 1
-          )
-            cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Start playing spotify"')
-          //if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Spotify.py');
-        },
-        (err) => {
-          log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Playback error${err}`)
-          handleSpotifyError(err, 'playMe')
-        },
-      )
+    spotifyApi.play({ context_uri: contextUri, offset: { position: resumeOffset }, position_ms: resumeProgess }).then(
+      (data) => {
+        log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Playback started`)
+        counter.countplay++
+        if (config.server.logLevel === 'debug') {
+          writeCounter()
+        }
+        writeplayerstatePlay()
+        spotifyRunning = true
+        if (
+          muPiBoxConfig.telegram.active &&
+          //network.onlinestate === 'online' &&
+          muPiBoxConfig.telegram.token.length > 1 &&
+          muPiBoxConfig.telegram.chatId.length > 1
+        )
+          cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Start playing spotify"')
+        //if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Spotify.py');
+      },
+      (err) => {
+        log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Playback error${err}`)
+        handleSpotifyError(err, 'playMe')
+      },
+    )
     // spotifyApi.setVolume(volumeStart).then(function () {
     //   counter.countsetVolume++;
     //   if (config.server.logLevel === 'debug'){writeCounter();}
@@ -953,15 +891,15 @@ async function useSpotify(command) {
   const dir = command.dir
   const newdevice = dir.split('/')[1]
   log.debug(`${nowDate.toLocaleString()}: [Spotify Control] device is ${activeDevice} and new is ${newdevice}`)
-  /*active device has changed, transfer playback*/
-  if (newdevice !== activeDevice) {
+  /* the active device has changed: transfer playback*/
+  if (newdevice !== 'current' && newdevice !== activeDevice) {
     log.debug(`${nowDate.toLocaleString()}: [Spotify Control] device changed from ${activeDevice} to ${newdevice}`)
     log.debug(`${nowDate.toLocaleString()}: [Spotify Control] device is ${activeDevice}`)
     await transferPlayback(newdevice)
     activeDevice = newdevice
     log.debug(`${nowDate.toLocaleString()}: [Spotify Control] device is ${activeDevice}`)
     log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Waiting for device transfer to complete...`)
-    await new Promise(resolve => setTimeout(resolve, 3000))
+    await new Promise((resolve) => setTimeout(resolve, 1500))
     log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Device transfer delay completed`)
   } else {
     log.debug(`${nowDate.toLocaleString()}: [Spotify Control] still same device, won't change: ${activeDevice}`)
@@ -1000,34 +938,36 @@ app.get('/setDevice', (req, res) => {
 /*only used if sonos-kids-player is modified*/
 app.get('/state', (req, res) => {
   if (currentMeta.currentPlayer === 'spotify') {
-    spotifyApi.getMyCurrentPlaybackState({
-      additional_types: 'episode,track',
-    }).then(
-      (data) => {
-        counter.countgetMyCurrentPlaybackStateHTTP++
-        if (config.server.logLevel === 'debug') {
-          writeCounter()
-        }
-        let state = data.body
-        if (Object.keys(state).length === 0) {
-          state = {
-            item: {
-              album: {
-                name: '',
-                total_tracks: '',
-              },
-              name: '',
-              track_number: '',
-            },
-            currently_playing_type: '',
+    spotifyApi
+      .getMyCurrentPlaybackState({
+        additional_types: 'episode,track',
+      })
+      .then(
+        (data) => {
+          counter.countgetMyCurrentPlaybackStateHTTP++
+          if (config.server.logLevel === 'debug') {
+            writeCounter()
           }
-        }
-        res.send(state)
-      },
-      (err) => {
-        handleSpotifyError(err, 'stateHTTP')
-      },
-    )
+          let state = data.body
+          if (Object.keys(state).length === 0) {
+            state = {
+              item: {
+                album: {
+                  name: '',
+                  total_tracks: '',
+                },
+                name: '',
+                track_number: '',
+              },
+              currently_playing_type: '',
+            }
+          }
+          res.send(state)
+        },
+        (err) => {
+          handleSpotifyError(err, 'stateHTTP')
+        },
+      )
   } else {
     const state = {
       item: {
@@ -1051,10 +991,10 @@ app.get('/local', (req, res) => {
 })
 
 app.get('/spotify/token', (req, res) => {
-  const accessTokenData = credentials ? librespotAccessToken : apiAccessToken
-  const refreshToken = credentials ? librespotRefreshToken : refreshTokenApi
+  const accessTokenData = apiAccessToken
+  const refreshToken = refreshTokenApi
 
-  if (accessTokenData.accessToken !== null && accessTokenData.expires < Date.now() ) {
+  if (accessTokenData.accessToken !== null && accessTokenData.expires < Date.now()) {
     res.send(accessTokenData.accessToken)
   } else {
     refreshToken()

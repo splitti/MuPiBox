@@ -1,23 +1,48 @@
-import { EMPTY, Observable, catchError, defer, firstValueFrom, of, range, throwError, BehaviorSubject, from, interval } from 'rxjs'
-import { delay, map, mergeAll, mergeMap, retryWhen, take, tap, toArray, filter, switchMap, distinctUntilChanged } from 'rxjs/operators'
+import {
+  BehaviorSubject,
+  EMPTY,
+  Observable,
+  catchError,
+  defer,
+  firstValueFrom,
+  from,
+  interval,
+  of,
+  range,
+  throwError,
+} from 'rxjs'
+import {
+  delay,
+  distinctUntilChanged,
+  filter,
+  map,
+  mergeAll,
+  mergeMap,
+  retryWhen,
+  switchMap,
+  take,
+  timeout,
+  toArray,
+} from 'rxjs/operators'
 import type { CategoryType, Media } from './media'
-import { SpotifyConfig, SpotifyPlayer, SpotifyPlayerConfig, SpotifyWebPlaybackState, SpotifyWebPlaybackTrack } from './spotify'
+import { SpotifyConfig, SpotifyPlayer, SpotifyWebPlaybackState, SpotifyWebPlaybackTrack } from './spotify'
 import { ExtraDataMedia, Utils } from './utils'
 
-import { HttpClient } from '@angular/common/http'
-import { Injectable, Inject } from '@angular/core'
 import { DOCUMENT } from '@angular/common'
+import { HttpClient } from '@angular/common/http'
+import { Inject, Injectable } from '@angular/core'
 import { SpotifyApi } from '@spotify/web-api-ts-sdk'
 import type {
-    Album,
-    Artist,
-    Audiobook,
-    Episode,
-    Page, Playlist,
-    SearchResults,
-    Show,
-    SimplifiedAlbum,
-    SimplifiedEpisode,
+  Album,
+  Artist,
+  Audiobook,
+  Episode,
+  Page,
+  Playlist,
+  SearchResults,
+  Show,
+  SimplifiedAlbum,
+  SimplifiedEpisode,
 } from '@spotify/web-api-ts-sdk/src/types'
 import { environment } from 'src/environments/environment'
 
@@ -30,11 +55,11 @@ export class SpotifyService {
   spotifyApi: SpotifyApi | undefined = undefined
   refreshingToken = false
   deviceName: string | undefined = undefined
-  
+
   // Web Playback SDK properties
   private player: SpotifyPlayer | null = null
   private deviceId: string | null = null
-  
+
   // Player state observables
   public playerState$ = new BehaviorSubject<SpotifyWebPlaybackState | null>(null)
   public isConnected$ = new BehaviorSubject<boolean>(false)
@@ -46,16 +71,16 @@ export class SpotifyService {
   public sdkLoadError$ = new BehaviorSubject<string | null>(null)
   private network$: Observable<any> | null = null
 
-  constructor(private http: HttpClient, @Inject(DOCUMENT) private document: Document) {
+  constructor(
+    private http: HttpClient,
+    @Inject(DOCUMENT) private document: Document,
+  ) {
     this.initializeSpotify()
   }
 
   private isLocalhost(): boolean {
     const hostname = window.location.hostname
-    return hostname === 'localhost' || 
-           hostname === '127.0.0.1' || 
-           hostname === '::1' ||
-           hostname === ''  // file:// protocol
+    return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1' || hostname === '' // file:// protocol
   }
 
   getMediaByQuery(
@@ -373,16 +398,17 @@ export class SpotifyService {
         console.log('Spotify API failed for playlist %s, trying backend media info service...', id)
 
         return this.http.get<any>(`/api/spotify/playlist/${id}`).pipe(
+          timeout(30000),
           catchError((backendErr) => {
-            console.log('Backend also failed for playlist %s, continuing...', id)
+            console.error(`Backend failed for playlist ${id}:`, backendErr?.message || backendErr)
             return EMPTY
-          })
+          }),
         )
       }),
       map((response: Playlist | any) => {
         // Check if response is from backend scraper (has different structure)
         const isFromBackend = response.playlist && response.tracks
-        
+
         const media: Media = {
           playlistid: isFromBackend ? id : response.id,
           title: isFromBackend ? response.playlist.name : response.name,
@@ -412,8 +438,6 @@ export class SpotifyService {
     )
     return album
   }
-
-
 
   async validateSpotify(spotifyId: string, spotifyCategory: string): Promise<boolean> {
     let validateState = false
@@ -480,7 +504,7 @@ export class SpotifyService {
 
           try {
             const backendData: any = await firstValueFrom(
-              this.http.get<any>(`/api/spotify/playlist/${spotifyId}`)
+              this.http.get<any>(`/api/spotify/playlist/${spotifyId}`).pipe(timeout(30000)),
             )
             if (backendData.playlist?.name) {
               validateState = true
@@ -533,71 +557,117 @@ export class SpotifyService {
     }
 
     // Monitor network status changes and connection state
-    this.network$.pipe(
-      filter((network) => network.ip !== undefined),
-      map((network) => network.onlinestate === 'online'),
-      distinctUntilChanged(),
-      switchMap(isOnline => {
-        if (isOnline && !this.isPlayerReady()) {
-          console.log('Network is online and web player should be available - checking SDK status')
-          return this.checkAndRetrySDKLoading()
-        }
-        return of(null)
+    this.network$
+      .pipe(
+        filter((network) => network.ip !== undefined),
+        map((network) => network.onlinestate === 'online'),
+        distinctUntilChanged(),
+        switchMap((isOnline) => {
+          if (isOnline && !this.isPlayerReady()) {
+            console.log('Network is online and web player should be available - checking SDK status')
+            return from(this.performHealthCheckAndRecovery(false))
+          }
+          return of(null)
+        }),
+      )
+      .subscribe({
+        next: () => {
+          /* handled in performHealthCheckAndRecovery */
+        },
+        error: (error) => console.warn('SDK monitoring error:', error),
       })
-    ).subscribe({
-      next: () => { /* handled in checkAndRetrySDKLoading */ },
-      error: (error) => console.warn('SDK monitoring error:', error)
-    })
 
     // Also periodically check if we should have a working player but don't
-    interval(30000).pipe(
-      filter(() => this.shouldUsePlayer() && !this.isPlayerReady()),
-      switchMap(() => {
-        if (navigator.onLine) {
-          console.log('Periodic check: Should have web player but don\'t - attempting SDK retry')
-          return this.checkAndRetrySDKLoading()
-        }
-        return of(null)
+    interval(30000)
+      .pipe(
+        filter(() => this.shouldUsePlayer() && !this.isPlayerReady()),
+        switchMap(() => {
+          if (navigator.onLine) {
+            console.log("Periodic check: Should have web player but don't - attempting SDK retry")
+            return from(this.performHealthCheckAndRecovery(false))
+          }
+          return of(null)
+        }),
+      )
+      .subscribe({
+        next: () => {
+          /* handled in performHealthCheckAndRecovery */
+        },
+        error: (error) => console.warn('Periodic SDK check error:', error),
       })
-    ).subscribe({
-      next: () => { /* handled in checkAndRetrySDKLoading */ },
-      error: (error) => console.warn('Periodic SDK check error:', error)
-    })
   }
 
   /**
-   * Check current state and retry SDK loading if needed
+   * Core health check logic shared between monitoring and on-demand checks
    */
-  private checkAndRetrySDKLoading(): Observable<any> {
-    // If we already have a working player, no need to retry
-    if (this.isPlayerReady()) {
-      return of(null)
-    }
+  private async performHealthCheckAndRecovery(comprehensive = true): Promise<boolean> {
+    const startTime = Date.now()
+    console.debug(`🔍 Starting Spotify player health check (${comprehensive ? 'comprehensive' : 'basic'})...`)
 
-    // If we're not on localhost, don't try to load SDK
+    // If we're not supposed to use the player, return success
     if (!this.shouldUsePlayer()) {
-      return of(null)
+      console.debug('✅ Player not needed on this environment')
+      return true
     }
 
-    // Check network connectivity
+    // Basic connectivity check
     if (!navigator.onLine) {
-      return of(null)
+      console.debug('❌ Device is offline - cannot ensure player health')
+      this.logHealthCheckResult(false, 'Device offline', Date.now() - startTime)
+      return false
     }
 
-    console.log('Attempting proactive Spotify SDK loading...')
-    
-    return from(this.retrySDKLoadingIfNeeded()).pipe(
-      catchError(error => {
-        console.warn('Proactive SDK retry failed:', error)
-        return of(null)
-      })
-    )
+    try {
+      // Check if we have a basic player instance
+      if (!this.isPlayerReady()) {
+        console.log('⚠️  Player not ready - attempting recovery...')
+        const recovered = await this.performCompleteRecovery()
+        if (!recovered) {
+          this.logHealthCheckResult(false, 'Recovery failed', Date.now() - startTime)
+          return false
+        }
+      }
+
+      // For comprehensive checks, also test functionality
+      if (comprehensive) {
+        console.log('🔬 Testing player functionality...')
+        const isHealthy = await this.testPlayerFunctionality()
+
+        if (!isHealthy) {
+          console.log('⚠️  Player functional test failed - attempting recovery...')
+          const recovered = await this.performCompleteRecovery()
+          if (!recovered) {
+            this.logHealthCheckResult(false, 'Recovery after functional test failed', Date.now() - startTime)
+            return false
+          }
+
+          // Re-test after recovery
+          const isHealthyAfterRecovery = await this.testPlayerFunctionality()
+          if (!isHealthyAfterRecovery) {
+            this.logHealthCheckResult(false, 'Still unhealthy after recovery', Date.now() - startTime)
+            return false
+          }
+        }
+      }
+
+      console.debug(`✅ Player health check passed (${comprehensive ? 'comprehensive' : 'basic'})`)
+      this.logHealthCheckResult(
+        true,
+        comprehensive ? 'Healthy - comprehensive' : 'Healthy - basic',
+        Date.now() - startTime,
+      )
+      return true
+    } catch (error) {
+      console.error('❌ Health check failed with error:', error)
+      this.logHealthCheckResult(false, `Error: ${error.message}`, Date.now() - startTime)
+      return false
+    }
   }
 
   private loadSpotifySDK(): Promise<void> {
     return new Promise((resolve, reject) => {
       // Check if SDK is already loaded
-      if (window.Spotify && window.Spotify.Player) {
+      if (window.Spotify?.Player) {
         this.sdkLoadError$.next(null)
         resolve()
         return
@@ -613,11 +683,13 @@ export class SpotifyService {
 
       // Remove any existing scripts
       const existingScripts = this.document.querySelectorAll('script[src="https://sdk.scdn.co/spotify-player.js"]')
-      existingScripts.forEach(script => script.remove())
+      for (const script of Array.from(existingScripts)) {
+        script.remove()
+      }
 
       // Set up the callback
       window.onSpotifyWebPlaybackSDKReady = () => {
-        if (window.Spotify && window.Spotify.Player) {
+        if (window.Spotify?.Player) {
           this.sdkLoadError$.next(null)
           resolve()
         } else {
@@ -631,27 +703,27 @@ export class SpotifyService {
       const script = this.document.createElement('script')
       script.src = 'https://sdk.scdn.co/spotify-player.js'
       script.async = true
-      
+
       script.onload = () => {
         setTimeout(() => {
-          if (window.Spotify && window.Spotify.Player) {
+          if (window.Spotify?.Player) {
             this.sdkLoadError$.next(null)
             resolve()
           }
         }, 500)
       }
-      
+
       script.onerror = () => {
         const errorMsg = 'Cannot load Spotify player - check internet connection'
         this.sdkLoadError$.next(errorMsg)
         reject(new Error('Failed to load Spotify Web Playback SDK script'))
       }
-      
+
       this.document.head.appendChild(script)
 
       // Timeout fallback
       setTimeout(() => {
-        if (window.Spotify && window.Spotify.Player) {
+        if (window.Spotify?.Player) {
           this.sdkLoadError$.next(null)
           resolve()
         } else {
@@ -681,7 +753,7 @@ export class SpotifyService {
 
   private async loadSpotifySDKWithRetry(maxRetries = 3): Promise<void> {
     let lastError: Error
-    
+
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         await this.loadSpotifySDK()
@@ -689,15 +761,15 @@ export class SpotifyService {
       } catch (error) {
         lastError = error as Error
         console.warn(`SDK load attempt ${attempt} failed:`, error)
-        
+
         if (attempt < maxRetries) {
           // Wait before retry, with exponential backoff
-          await new Promise(resolve => setTimeout(resolve, 1000 * attempt))
+          await new Promise((resolve) => setTimeout(resolve, 1000 * attempt))
         }
       }
     }
-    
-    throw lastError!
+
+    throw lastError || new Error('Failed to get token after all retry attempts')
   }
 
   private initializePlayer(): void {
@@ -724,51 +796,49 @@ export class SpotifyService {
           },
         })
       },
-      volume: 1
+      volume: 1,
     })
 
-
-
-    this.player!.addListener('ready', ({ device_id }) => {
+    this.player?.addListener('ready', ({ device_id }) => {
       console.log('Ready with Device ID', device_id)
       this.deviceId = device_id
       this.isConnected$.next(true)
     })
 
-    this.player!.addListener('not_ready', ({ device_id }) => {
+    this.player?.addListener('not_ready', ({ device_id }) => {
       console.log('Device ID gone', device_id)
       this.deviceId = null
       this.isConnected$.next(false)
     })
 
-    this.player!.addListener('initialization_error', ({ message }) => {
+    this.player?.addListener('initialization_error', ({ message }) => {
       console.error('Initialization Error', message)
       this.isConnected$.next(false)
     })
 
-    this.player!.addListener('authentication_error', ({ message }) => {
+    this.player?.addListener('authentication_error', ({ message }) => {
       console.error('Authentication Error', message)
       this.isConnected$.next(false)
     })
 
-    this.player!.addListener('account_error', ({ message }) => {
+    this.player?.addListener('account_error', ({ message }) => {
       console.error('Account Error', message)
       this.isConnected$.next(false)
     })
 
-    this.player!.addListener('playback_error', ({ message }) => {
+    this.player?.addListener('playback_error', ({ message }) => {
       console.error('Playback Error', message)
       this.isConnected$.next(false)
     })
 
-    this.player!.addListener('player_state_changed', (state: SpotifyWebPlaybackState) => {
+    this.player?.addListener('player_state_changed', (state: SpotifyWebPlaybackState) => {
       this.playerState$.next(state)
       this.currentTrack$.next(state.track_window.current_track)
       this.isActive$.next(state.is_active)
       console.debug('Player State Changed', state)
     })
 
-    this.player!.connect()
+    this.player?.connect()
   }
 
   errorHandler(errors: Observable<any>) {
@@ -777,24 +847,23 @@ export class SpotifyService {
         if (error.status === 429) {
           // Handle rate limiting - extract retry delay from headers
           let retryAfter: string | null = null
-          
+
           // Try different ways to access the Retry-After header
           if (error.headers?.get) {
             retryAfter = error.headers.get('Retry-After') || error.headers.get('retry-after')
           } else if (error.headers) {
             retryAfter = error.headers['Retry-After'] || error.headers['retry-after']
           }
-          
-          const delaySeconds = retryAfter ? parseInt(retryAfter, 10) : 1
+
+          const delaySeconds = retryAfter ? Number.parseInt(retryAfter, 10) : 1
           const delayMs = delaySeconds * 1000
-          
+
           console.warn(`Rate limited by Spotify API. Retrying after ${delaySeconds} seconds`)
-          
+
           return of(error).pipe(delay(delayMs))
-        } else {
-          // For other errors, don't retry
-          return throwError(() => error)
         }
+        // For other errors, don't retry
+        return throwError(() => error)
       }),
       take(2),
     )
@@ -808,8 +877,8 @@ export class SpotifyService {
     }
 
     try {
-        // Resume playback
-        await this.player.resume()
+      // Resume playback
+      await this.player.resume()
     } catch (error) {
       console.error('Error playing:', error)
     }
@@ -911,38 +980,162 @@ export class SpotifyService {
     return this.player !== null && this.deviceId !== null
   }
 
-  /**
-   * Retry SDK loading when network comes back online or when playback is requested
-   */
-  async retrySDKLoadingIfNeeded(): Promise<void> {
-    // If we already have a working player, no need to retry
-    if (this.isPlayerReady()) {
-      return
+  async ensurePlayerHealthy(): Promise<boolean> {
+    return this.performHealthCheckAndRecovery(true)
+  }
+
+  private async testPlayerFunctionality(): Promise<boolean> {
+    if (!this.player || !this.deviceId) {
+      return false
     }
 
-    // If we're not on localhost, don't try to load SDK
-    if (!this.shouldUsePlayer()) {
-      return
+    try {
+      const state = await Promise.race([
+        this.player.getCurrentState(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000)),
+      ])
+
+      console.log('🔧 Player responded to getCurrentState()')
+      return true
+    } catch (error) {
+      console.log('❌ Player functional test failed:', error.message)
+      return false
+    }
+  }
+
+  private async performCompleteRecovery(): Promise<boolean> {
+    console.log('🔄 Starting complete Spotify SDK recovery...')
+    const recoveryStartTime = Date.now()
+
+    try {
+      // Step 1: Complete teardown
+      await this.completeSDKTeardown()
+
+      // Step 2: Clear any cached state
+      this.sdkLoadingPromise = null
+      this.sdkLoadError$.next(null)
+
+      // Step 3: Rebuild from scratch
+      console.log('🏗️  Rebuilding SDK from scratch...')
+      await this.initializeWebPlaybackSDKSync()
+
+      // Step 4: Wait for ready state with timeout
+      const isReady = await this.waitForPlayerReady(10000)
+
+      if (isReady) {
+        console.log(`✅ Complete recovery successful in ${Date.now() - recoveryStartTime}ms`)
+        return true
+      }
+      console.log(`❌ Recovery failed - player not ready after ${Date.now() - recoveryStartTime}ms`)
+      return false
+    } catch (error) {
+      console.error(`❌ Recovery failed after ${Date.now() - recoveryStartTime}ms:`, error)
+      return false
+    }
+  }
+
+  private async completeSDKTeardown(): Promise<void> {
+    console.log('🧹 Performing complete SDK teardown...')
+
+    // Disconnect and clear player
+    if (this.player) {
+      try {
+        await this.player.disconnect()
+      } catch (error) {
+        console.log('Warning: Error during player disconnect:', error)
+      }
+      this.player = null
     }
 
-    // Check network connectivity
-    if (!navigator.onLine) {
-      throw new Error('Cannot retry SDK loading - device is offline')
+    // Clear device ID and state
+    this.deviceId = null
+    this.isConnected$.next(false)
+    this.isActive$.next(false)
+    this.playerState$.next(null)
+    this.currentTrack$.next(null)
+
+    // Remove SDK script from DOM
+    const existingScripts = this.document.querySelectorAll('script[src="https://sdk.scdn.co/spotify-player.js"]')
+    for (const script of Array.from(existingScripts)) {
+      script.remove()
     }
 
-    // If we already have an ongoing SDK loading attempt, wait for it
-    if (this.sdkLoadingPromise) {
-      console.log('SDK loading already in progress, waiting...')
-      return this.sdkLoadingPromise
+    // Clear global Spotify object
+    if (window.Spotify) {
+      window.Spotify = undefined
+    }
+    if (window.onSpotifyWebPlaybackSDKReady) {
+      window.onSpotifyWebPlaybackSDKReady = undefined
     }
 
-    console.log('Retrying Spotify SDK loading...')
-    
-    // Try to initialize again
-    this.initializeWebPlaybackSDK()
-    
-    // Wait for the initialization to complete or fail
-    return this.sdkLoadingPromise || Promise.resolve()
+    console.log('🧹 SDK teardown complete')
+  }
+
+  private async initializeWebPlaybackSDKSync(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      // Set up success/failure callbacks
+      const originalLoadingPromise = this.sdkLoadingPromise
+
+      this.initializeWebPlaybackSDK()
+
+      // Wait for the loading promise to resolve or reject
+      if (this.sdkLoadingPromise) {
+        this.sdkLoadingPromise.then(() => resolve()).catch((error) => reject(error))
+      } else {
+        reject(new Error('Failed to start SDK loading'))
+      }
+    })
+  }
+
+  private async waitForPlayerReady(timeoutMs: number): Promise<boolean> {
+    const startTime = Date.now()
+
+    return new Promise((resolve) => {
+      const checkReady = () => {
+        if (this.isPlayerReady()) {
+          resolve(true)
+          return
+        }
+
+        if (Date.now() - startTime > timeoutMs) {
+          resolve(false)
+          return
+        }
+
+        setTimeout(checkReady, 100)
+      }
+
+      checkReady()
+    })
+  }
+
+  private logHealthCheckResult(success: boolean, details: string, durationMs: number): void {
+    const timestamp = new Date().toISOString()
+    const result = success ? '✅ SUCCESS' : '❌ FAILED'
+    const logMessage = `[${timestamp}] Spotify Health Check ${result}: ${details} (${durationMs}ms)`
+
+    console.debug(logMessage)
+
+    this.logCurrentSDKState()
+  }
+
+  private logCurrentSDKState(): void {
+    const timestamp = new Date().toISOString()
+    const state = {
+      hasPlayer: !!this.player,
+      hasDeviceId: !!this.deviceId,
+      deviceId: this.deviceId,
+      isConnected: this.isConnected$.value,
+      isActive: this.isActive$.value,
+      sdkLoadError: this.sdkLoadError$.value,
+      hasSpotifyGlobal: typeof window.Spotify !== 'undefined',
+      hasPlayerClass: typeof window.Spotify?.Player !== 'undefined',
+      navigatorOnline: navigator.onLine,
+      shouldUsePlayer: this.shouldUsePlayer(),
+      isLocalhost: this.isLocalhost(),
+    }
+
+    console.debug(`SPOTIFY_SDK_STATE: ${JSON.stringify(state)} | ${timestamp}`)
   }
 
   shouldUsePlayer(): boolean {
@@ -963,22 +1156,22 @@ export class SpotifyService {
     if (!this.spotifyApi) {
       return of({ total_tracks: 0, album_name: '', tracks: [] })
     }
-    
+
     return defer(() => this.spotifyApi.albums.get(albumId, 'DE')).pipe(
-      map(album => ({
+      map((album) => ({
         total_tracks: album.total_tracks,
         album_name: album.name,
-        tracks: album.tracks.items.map(track => ({
+        tracks: album.tracks.items.map((track) => ({
           id: track.id,
           uri: track.uri,
           name: track.name,
-          track_number: track.track_number
-        }))
+          track_number: track.track_number,
+        })),
       })),
-      catchError(error => {
+      catchError((error) => {
         console.error('Error getting album info:', error)
         return of({ total_tracks: 0, album_name: '', tracks: [] })
-      })
+      }),
     )
   }
 
@@ -989,42 +1182,45 @@ export class SpotifyService {
     if (!this.spotifyApi) {
       return of({ total_tracks: 0, playlist_name: '', tracks: [] })
     }
-    
+
     return defer(() => this.spotifyApi.playlists.getPlaylist(playlistId, 'DE')).pipe(
-      switchMap(playlist => {
+      switchMap((playlist) => {
         // Get all tracks for position calculation
         return defer(() => this.spotifyApi.playlists.getPlaylistItems(playlistId, 'DE')).pipe(
-          map(tracksData => ({
+          map((tracksData) => ({
             total_tracks: playlist.tracks.total,
             playlist_name: playlist.name,
-            tracks: tracksData.items.map(item => ({
+            tracks: tracksData.items.map((item) => ({
               id: item.track.id,
               uri: item.track.uri,
-              name: item.track.name
-            }))
-          }))
+              name: item.track.name,
+            })),
+          })),
         )
       }),
-      catchError(error => {
+      catchError((error) => {
         console.log('Spotify API failed for playlist info %s, trying backend media info...', playlistId)
-        
+
         // Fallback to backend scraper endpoint
         return this.http.get<any>(`/api/spotify/playlist/${playlistId}`).pipe(
-          map(backendData => ({
+          // Increase timeout for playlist info - backend needs time for Puppeteer + API calls
+          timeout(60000), // 60 seconds
+          map((backendData: any) => ({
             total_tracks: backendData.tracks?.length || 0,
             playlist_name: backendData.playlist?.name || '',
-            tracks: backendData.tracks?.map((track: any) => ({
-              id: track.id,
-              uri: track.uri,
-              name: track.name
-            })) || []
+            tracks:
+              backendData.tracks?.map((track: any) => ({
+                id: track.id,
+                uri: track.uri,
+                name: track.name,
+              })) || [],
           })),
-          catchError(backendError => {
+          catchError((backendError) => {
             console.error('Backend also failed for playlist info:', backendError)
             return of({ total_tracks: 0, playlist_name: '', tracks: [] })
-          })
+          }),
         )
-      })
+      }),
     )
   }
 
@@ -1035,51 +1231,54 @@ export class SpotifyService {
     if (!this.spotifyApi) {
       return of({ total_episodes: 0, show_name: '', episodes: [] })
     }
-    
+
     return defer(() => this.spotifyApi.shows.get(showId, 'DE')).pipe(
-      switchMap(show => {
+      switchMap((show) => {
         // Get all episodes for position calculation
         return defer(() => this.spotifyApi.shows.episodes(showId, 'DE')).pipe(
-          map(episodesData => ({
+          map((episodesData) => ({
             total_episodes: show.total_episodes,
             show_name: show.name,
-            episodes: episodesData.items.map(episode => ({
+            episodes: episodesData.items.map((episode) => ({
               id: episode.id,
               uri: episode.uri,
-              name: episode.name
-            }))
-          }))
+              name: episode.name,
+            })),
+          })),
         )
       }),
-      catchError(error => {
+      catchError((error) => {
         console.error('Error getting show info:', error)
         return of({ total_episodes: 0, show_name: '', episodes: [] })
-      })
+      }),
     )
   }
 
   /**
    * Get audiobook information including total chapters and chapter data
    */
-  getAudiobookInfo(audiobookId: string): Observable<{ total_chapters: number; audiobook_name: string; chapters?: any[] }> {
+  getAudiobookInfo(
+    audiobookId: string,
+  ): Observable<{ total_chapters: number; audiobook_name: string; chapters?: any[] }> {
     if (!this.spotifyApi) {
       return of({ total_chapters: 0, audiobook_name: '', chapters: [] })
     }
-    
+
     return defer(() => this.spotifyApi.audiobooks.get(audiobookId, 'DE')).pipe(
-      map(audiobook => ({
+      map((audiobook) => ({
         total_chapters: audiobook.chapters?.total || 0,
         audiobook_name: audiobook.name,
-        chapters: audiobook.chapters?.items?.map(chapter => ({
-          id: chapter.id,
-          uri: chapter.uri,
-          name: chapter.name
-        })) || []
+        chapters:
+          audiobook.chapters?.items?.map((chapter) => ({
+            id: chapter.id,
+            uri: chapter.uri,
+            name: chapter.name,
+          })) || [],
       })),
-      catchError(error => {
+      catchError((error) => {
         console.error('Error getting audiobook info:', error)
         return of({ total_chapters: 0, audiobook_name: '', chapters: [] })
-      })
+      }),
     )
   }
 }

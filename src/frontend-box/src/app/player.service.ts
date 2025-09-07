@@ -38,7 +38,10 @@ export enum PlayerCmds {
 export class PlayerService {
   private config: Observable<ServerHttpApiConfig> = null
 
-  constructor(private http: HttpClient, private spotifyService: SpotifyService) {}
+  constructor(
+    private http: HttpClient,
+    private spotifyService: SpotifyService,
+  ) {}
 
   getConfig() {
     // Observable with caching:
@@ -80,7 +83,7 @@ export class PlayerService {
     this.sendRequest(url)
   }
 
-  playMedia(media: Media) {
+  async playMedia(media: Media): Promise<boolean> {
     let url: string
 
     switch (media.type) {
@@ -92,15 +95,22 @@ export class PlayerService {
         break
       }
       case 'spotify': {
-          if (media.playlistid) {
-              url = `spotify/now/spotify:playlist:${encodeURIComponent(media.playlistid)}:0:0`
-          } else if (media.id) {
-              url = `spotify/now/spotify:album:${encodeURIComponent(media.id)}:0:0`
-          } else if (media.showid) {
-              url = `spotify/now/spotify:episode:${encodeURIComponent(media.showid)}:0:0`
-          } else if (media.audiobookid) {
-              url = `spotify/now/spotify:show:${encodeURIComponent(media.audiobookid)}:0:0`
-          }
+        const isHealthy = await this.spotifyService.ensurePlayerHealthy()
+
+        if (!isHealthy) {
+          console.error('❌ Spotify player health check failed - cannot start playback')
+          return false
+        }
+
+        if (media.playlistid) {
+          url = `spotify/now/spotify:playlist:${encodeURIComponent(media.playlistid)}:0:0`
+        } else if (media.id) {
+          url = `spotify/now/spotify:album:${encodeURIComponent(media.id)}:0:0`
+        } else if (media.showid) {
+          url = `spotify/now/spotify:episode:${encodeURIComponent(media.showid)}:0:0`
+        } else if (media.audiobookid) {
+          url = `spotify/now/spotify:show:${encodeURIComponent(media.audiobookid)}:0:0`
+        }
         break
       }
       case 'radio': {
@@ -114,22 +124,31 @@ export class PlayerService {
     }
 
     this.sendRequest(url)
+    return true
   }
 
-  resumeMedia(media: Media) {
+  async resumeMedia(media: Media): Promise<boolean> {
     let url: string
 
-      if (media.playlistid) {
-          url = `spotify/now/spotify:playlist:${encodeURIComponent(media.playlistid)}:${media.resumespotifytrack_number}:${media.resumespotifyprogress_ms}`
-      } else if (media.id) {
-          url = `spotify/now/spotify:album:${encodeURIComponent(media.id)}:${media.resumespotifytrack_number}:${media.resumespotifyprogress_ms}`
-      } else if (media.showid) {
-          url = `spotify/now/spotify:episode:${encodeURIComponent(media.showid)}:${media.resumespotifytrack_number}:${media.resumespotifyprogress_ms}`
-      } else if (media.audiobookid) {
-          url = `spotify/now/spotify:show:${encodeURIComponent(media.audiobookid)}:${media.resumespotifytrack_number}:${media.resumespotifyprogress_ms}`
-      }
+    const isHealthy = await this.spotifyService.ensurePlayerHealthy()
+
+    if (!isHealthy) {
+      console.error('❌ Spotify player health check failed - cannot resume playback')
+      return false
+    }
+
+    if (media.playlistid) {
+      url = `spotify/now/spotify:playlist:${encodeURIComponent(media.playlistid)}:${media.resumespotifytrack_number}:${media.resumespotifyprogress_ms}`
+    } else if (media.id) {
+      url = `spotify/now/spotify:album:${encodeURIComponent(media.id)}:${media.resumespotifytrack_number}:${media.resumespotifyprogress_ms}`
+    } else if (media.showid) {
+      url = `spotify/now/spotify:episode:${encodeURIComponent(media.showid)}:${media.resumespotifytrack_number}:${media.resumespotifyprogress_ms}`
+    } else if (media.audiobookid) {
+      url = `spotify/now/spotify:show:${encodeURIComponent(media.audiobookid)}:${media.resumespotifytrack_number}:${media.resumespotifyprogress_ms}`
+    }
 
     this.sendRequest(url)
+    return true
   }
 
   private say(text: string) {
@@ -145,10 +164,8 @@ export class PlayerService {
   }
 
   private sendRequest(url: string) {
-    this.getConfig().subscribe((config) => {
-      const room = this.spotifyService.getDeviceId() ?? config.rooms[0] ?? '0'
-      const baseUrl = `${environment.backend.playerUrl}/${room}/`
-      this.http.get(baseUrl + url).subscribe()
-    })
+    const room = this.spotifyService.getDeviceId() ?? 'current'
+    const baseUrl = `${environment.backend.playerUrl}/${room}/`
+    this.http.get(baseUrl + url).subscribe()
   }
 }

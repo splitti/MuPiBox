@@ -209,12 +209,15 @@ export class PlayerPage implements OnInit {
     }
   }
 
-  ionViewWillEnter() {
+  async ionViewWillEnter() {
     this.updateProgression = true
     if (this.resumePlay) {
-      this.resumePlayback()
+      await this.resumePlayback()
     } else {
-      this.playerService.playMedia(this.media)
+      const success = await this.playerService.playMedia(this.media)
+      if (!success && this.media.type === 'spotify') {
+        console.error('Failed to start Spotify playback - player health check failed')
+      }
     }
     this.updateProgress()
 
@@ -253,12 +256,19 @@ export class PlayerPage implements OnInit {
     }
   }
 
-  resumePlayback() {
+  async resumePlayback() {
     if (this.media.type === 'spotify' && !this.media.shuffle) {
-      this.playerService.resumeMedia(this.media)
+      const success = await this.playerService.resumeMedia(this.media)
+      if (!success) {
+        console.error('Failed to resume Spotify playback - player health check failed')
+      }
     } else if (this.media.type === 'library') {
       this.media.category = this.media.resumelocalalbum
-      this.playerService.playMedia(this.media)
+      const success = await this.playerService.playMedia(this.media)
+      if (!success) {
+        console.error('Failed to start local library playback')
+        return
+      }
       let j = 1
       for (let i = 1; i < this.media.resumelocalcurrentTracknr; i++) {
         setTimeout(() => {
@@ -277,7 +287,11 @@ export class PlayerPage implements OnInit {
         }, 2000)
       }
     } else if (this.media.type === 'rss') {
-      this.playerService.playMedia(this.media)
+      const success = await this.playerService.playMedia(this.media)
+      if (!success) {
+        console.error('Failed to start RSS playback')
+        return
+      }
       setTimeout(() => {
         this.playerService.seekPosition(this.media.resumerssprogressTime)
       }, 2000)
