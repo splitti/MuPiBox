@@ -140,7 +140,6 @@ export interface SpotifyWebPlaybackState {
     hifi_status: string
   }
   timestamp: number
-  is_active: boolean
 }
 
 export interface SpotifyPlayer {

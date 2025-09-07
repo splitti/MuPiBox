@@ -66,6 +66,10 @@ export class SpotifyService {
   public isActive$ = new BehaviorSubject<boolean>(false)
   public currentTrack$ = new BehaviorSubject<SpotifyWebPlaybackTrack | null>(null)
 
+  // External playback detection
+  private previousPlayerState: SpotifyWebPlaybackState | null = null
+  public externalPlaybackDetected$ = new BehaviorSubject<SpotifyWebPlaybackTrack | null>(null)
+
   // SDK loading state
   private sdkLoadingPromise: Promise<void> | null = null
   public sdkLoadError$ = new BehaviorSubject<string | null>(null)
@@ -834,7 +838,16 @@ export class SpotifyService {
     this.player?.addListener('player_state_changed', (state: SpotifyWebPlaybackState) => {
       this.playerState$.next(state)
       this.currentTrack$.next(state.track_window.current_track)
-      this.isActive$.next(state.is_active)
+      this.isActive$.next(true)
+
+      // Detect when playback becomes active - let the navigator service determine if it's external
+      if (!state.paused && state.track_window.current_track) {
+        console.log('🔍 Spotify playback detected:', state.track_window.current_track.name)
+        this.externalPlaybackDetected$.next(state.track_window.current_track)
+      }
+
+      // Store current state for comparison
+      this.previousPlayerState = state
       console.debug('Player State Changed', state)
     })
 
@@ -1140,6 +1153,19 @@ export class SpotifyService {
 
   shouldUsePlayer(): boolean {
     return this.isLocalhost()
+  }
+
+  /**
+   * Create a Media object from Spotify Web Playback SDK track information
+   */
+  createMediaFromSpotifyTrack(track: SpotifyWebPlaybackTrack): Media {
+    return {
+      type: 'spotify',
+      category: 'other',
+      title: track.name,
+      artist: track.artists?.[0]?.name || 'Unknown Artist',
+      cover: track.album?.images?.[0]?.url || '../assets/images/nocover_mupi.png',
+    }
   }
 
   /**

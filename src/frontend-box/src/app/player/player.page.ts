@@ -40,6 +40,7 @@ import type { CurrentSpotify } from '../current.spotify'
 import type { Media } from '../media'
 import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
+import { SpotifyService } from '../spotify.service'
 
 @Component({
   selector: 'app-player',
@@ -78,6 +79,7 @@ export class PlayerPage implements OnInit {
   cover = ''
   playing = true
   updateProgression = false
+  private isExternalPlayback = false
   currentPlayedSpotify: CurrentSpotify
   currentPlayedLocal: CurrentMPlayer
   showTrackNr = 0
@@ -94,6 +96,7 @@ export class PlayerPage implements OnInit {
     private router: Router,
     private navController: NavController,
     private playerService: PlayerService,
+    private spotifyService: SpotifyService,
   ) {
     this.spotify$ = this.mediaService.current$
     this.local$ = this.mediaService.local$
@@ -103,6 +106,9 @@ export class PlayerPage implements OnInit {
       if (this.media.category === 'resume') {
         this.resumePlay = true
       }
+      this.isExternalPlayback = false
+    } else {
+      this.isExternalPlayback = true
     }
     addIcons({
       volumeLowOutline,
@@ -118,6 +124,11 @@ export class PlayerPage implements OnInit {
   }
 
   ngOnInit() {
+    // Handle case where no media object was provided (external playback)
+    if (!this.media) {
+      this.handleExternalPlayback()
+    }
+
     this.mediaService.current$.subscribe((spotify) => {
       this.currentPlayedSpotify = spotify
     })
@@ -126,9 +137,9 @@ export class PlayerPage implements OnInit {
     })
     // Use cover from CurrentSpotify for Spotify content, fallback to media.cover for other types
     this.mediaService.current$.subscribe((spotify) => {
-      if (this.media.type === 'spotify' && spotify?.item?.album?.images?.[0]?.url) {
+      if (this.media?.type === 'spotify' && spotify?.item?.album?.images?.[0]?.url) {
         this.cover = spotify.item.album.images[0].url
-      } else if (this.media.cover) {
+      } else if (this.media?.cover) {
         this.cover = this.media.cover
       } else {
         this.cover = '../assets/images/nocover_mupi.png'
@@ -137,6 +148,34 @@ export class PlayerPage implements OnInit {
     this.mediaService.albumStop$.subscribe((albumStop) => {
       this.albumStop = albumStop
     })
+  }
+
+  private handleExternalPlayback(): void {
+    // Check if there's currently playing Spotify content we can use
+    const currentTrack = this.spotifyService.currentTrack$.value
+    if (currentTrack) {
+      console.log('🔄 Creating media object for externally started Spotify playback')
+      this.media = this.spotifyService.createMediaFromSpotifyTrack(currentTrack)
+      console.log('✅ External playback media object created:', this.media)
+    } else {
+      // Fallback: create a minimal media object and wait for track info
+      console.log('⚠️ No current track info available, creating fallback media object')
+      this.media = {
+        type: 'spotify',
+        category: 'music',
+        title: 'External Playback',
+        artist: 'Unknown',
+        cover: '../assets/images/nocover_mupi.png',
+      }
+
+      // Subscribe to currentTrack$ to update when track info becomes available
+      this.spotifyService.currentTrack$.subscribe((track) => {
+        if (track && this.media.title === 'External Playback') {
+          console.log('🔄 Updating media object with track info:', track.name)
+          this.media = this.spotifyService.createMediaFromSpotifyTrack(track)
+        }
+      })
+    }
   }
 
   seek() {
@@ -213,15 +252,19 @@ export class PlayerPage implements OnInit {
     this.updateProgression = true
     if (this.resumePlay) {
       await this.resumePlayback()
-    } else {
+    } else if (!this.isExternalPlayback) {
+      // Only start playback if this is not external playback (already playing)
       const success = await this.playerService.playMedia(this.media)
       if (!success && this.media.type === 'spotify') {
         console.error('Failed to start Spotify playback - player health check failed')
       }
+    } else {
+      console.log('🎵 External playback detected - skipping playMedia call (already playing)')
     }
+
     this.updateProgress()
 
-    if (this.media.shuffle) {
+    if (this.media?.shuffle && !this.isExternalPlayback) {
       setTimeout(() => {
         this.playerService.sendCmd(PlayerCmds.SHUFFLEON)
         setTimeout(() => {
