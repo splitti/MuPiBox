@@ -194,8 +194,8 @@ export class WifiPage implements OnInit, AfterViewInit {
   }
 
   validate() {
-    const wlanSsid = this.keyboard.getInput('wlan_ssid')
-    const wlanPw = this.keyboard.getInput('wlan_pw')
+    const wlanSsid = this.keyboard.getInput('wlan_ssid') ?? ''
+    const wlanPw = this.keyboard.getInput('wlan_pw') ?? ''
 
     this.valid = wlanSsid.length > 0 && (wlanPw.length === 0 || (wlanPw.length >= 8 && wlanPw.length <= 63))
   }
