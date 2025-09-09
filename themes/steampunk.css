@@ -101,7 +101,7 @@ body .home-content, body .medialist-content, body .player-content{
         color: #fd7f39 !important;
 }
 
-body .edit-header, body .add-header, body .admin-header {
+body .edit-header, body .add-header, body .wifi-header {
 	--ion-color-light: #054b61 !important;
 }
 

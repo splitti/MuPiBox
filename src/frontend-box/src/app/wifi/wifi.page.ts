@@ -1,9 +1,5 @@
 import { AfterViewInit, Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core'
-import { AlertController, IonSelect, NavController } from '@ionic/angular/standalone'
-import { PlayerCmds, PlayerService } from '../player.service'
-
-import { FormsModule } from '@angular/forms'
-import type { NgForm } from '@angular/forms'
+import { AlertController, IonSelect, IonTitle, NavController } from '@ionic/angular/standalone'
 import {
   IonBackButton,
   IonButton,
@@ -15,33 +11,33 @@ import {
   IonIcon,
   IonInput,
   IonItem,
-  IonLabel,
   IonRow,
   IonSegment,
-  IonSegmentButton,
   IonToolbar,
 } from '@ionic/angular/standalone'
-import { addIcons } from 'ionicons'
+import { PlayerCmds, PlayerService } from '../player.service'
 import { refresh, wifiOutline } from 'ionicons/icons'
+
+import { FormsModule } from '@angular/forms'
 import Keyboard from 'simple-keyboard'
 import { MediaService } from '../media.service'
+import type { NgForm } from '@angular/forms'
 import type { WLAN } from '../wlan'
+import { addIcons } from 'ionicons'
 
 @Component({
-  selector: 'app-admin',
+  selector: 'app-wifi',
   encapsulation: ViewEncapsulation.None,
-  templateUrl: './admin.page.html',
-  styleUrls: ['./admin.page.scss'],
+  templateUrl: './wifi.page.html',
+  styleUrls: ['./wifi.page.scss'],
   standalone: true,
   imports: [
+    IonTitle,
     FormsModule,
     IonHeader,
     IonToolbar,
     IonButtons,
     IonBackButton,
-    IonSegment,
-    IonSegmentButton,
-    IonLabel,
     IonButton,
     IonIcon,
     IonContent,
@@ -52,7 +48,7 @@ import type { WLAN } from '../wlan'
     IonInput,
   ],
 })
-export class AdminPage implements OnInit, AfterViewInit {
+export class WifiPage implements OnInit, AfterViewInit {
   @ViewChild('segment', { static: false }) segment: IonSegment
   @ViewChild('select', { static: false }) select: IonSelect
 
@@ -61,8 +57,6 @@ export class AdminPage implements OnInit, AfterViewInit {
   @ViewChild('wlan_ssid', { static: false }) wlanSsid: IonInput
   @ViewChild('wlan_pw', { static: false }) wlanPw: IonInput
 
-  source = 'wlan'
-  category = 'WLAN'
   keyboard: Keyboard
   selectedInputElem: any
   valid = false
@@ -172,40 +166,25 @@ export class AdminPage implements OnInit, AfterViewInit {
     }
   }
 
-  segmentChanged(event: any) {
-    this.source = event.detail.value
-    window.setTimeout(() => {
-      // wait for new elements to be visible before altering them
-      this.validate()
-    }, 10)
-  }
-
   submit(form: NgForm) {
     const wlan: WLAN = {
-      category: this.category,
+      category: 'WLAN',
     }
 
-    if (this.source === 'network') {
-      //if (form.form.value.network_host?.length) { wlan.host = form.form.value.spotify_artist; }
-      //if (form.form.value.network_ip?.length) { wlan.title = form.form.value.spotify_title; }
-    } else if (this.source === 'wlan') {
-      const wlanSsid = this.keyboard.getInput('wlan_ssid') ?? ''
-      const wlanPw = this.keyboard.getInput('wlan_pw') ?? ''
+    const wlanSsid = this.keyboard.getInput('wlan_ssid') ?? ''
+    const wlanPw = this.keyboard.getInput('wlan_pw') ?? ''
 
-      if (wlanSsid.length) {
-        wlan.ssid = wlanSsid
-      }
-      if (wlanPw.length) {
-        wlan.pw = wlanPw
-      }
+    if (wlanSsid.length) {
+      wlan.ssid = wlanSsid
+    }
+    if (wlanPw.length) {
+      wlan.pw = wlanPw
     }
 
     this.mediaService.addWLAN(wlan)
 
     form.reset()
 
-    this.keyboard.clearInput('network_ip')
-    this.keyboard.clearInput('network_host')
     this.keyboard.clearInput('wlan_ssid')
     this.keyboard.clearInput('wlan_pw')
 
@@ -215,17 +194,10 @@ export class AdminPage implements OnInit, AfterViewInit {
   }
 
   validate() {
-    if (this.source === 'network') {
-      const artist = this.keyboard.getInput('network_ip')
-      const title = this.keyboard.getInput('network_host')
+    const wlanSsid = this.keyboard.getInput('wlan_ssid')
+    const wlanPw = this.keyboard.getInput('wlan_pw')
 
-      this.valid = title?.length > 0 && artist?.length > 0
-    } else if (this.source === 'wlan') {
-      const wlanSsid = this.keyboard.getInput('wlan_ssid') ?? ''
-      const wlanPw = this.keyboard.getInput('wlan_pw') ?? ''
-
-      this.valid = wlanSsid.length > 0 && (wlanPw.length === 0 || (wlanPw.length >= 8 && wlanPw.length <= 63))
-    }
+    this.valid = wlanSsid.length > 0 && (wlanPw.length === 0 || (wlanPw.length >= 8 && wlanPw.length <= 63))
   }
 
   async wifiRestartButtonPressed() {
