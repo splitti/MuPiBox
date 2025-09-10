@@ -1,3 +1,4 @@
+import { exec } from 'node:child_process'
 import fs from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
@@ -28,6 +29,7 @@ let config: ServerConfig | undefined = undefined
 readJsonFile(`${configBasePath}/config.json`).then((configFile) => {
   config = configFile
 })
+const mupiboxConfigPath = '/etc/mupibox/mupiboxconfig.json'
 const dataFile = `${configBasePath}/data.json`
 const resumeFile = `${configBasePath}/resume.json`
 const activedataFile = `${configBasePath}/active_data.json`
@@ -449,6 +451,42 @@ app.get('/api/sonos', (req, res) => {
   }
   // Send server address and port of the node-sonos-http-api instance to the client
   res.status(200).send(config['node-sonos-http-api'])
+})
+
+app.get('/api/config', (req, res) => {
+  fs.readFile(mupiboxConfigPath, 'utf8', (err, data) => {
+    if (err) {
+      console.error(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error reading mupibox config: ${err.message}`)
+      res.status(500).send('Error reading mupibox configuration')
+      return
+    }
+
+    try {
+      const mupiboxConfig = JSON.parse(data)
+      res.json(mupiboxConfig)
+    } catch (parseError) {
+      const errorMessage = parseError instanceof Error ? parseError.message : String(parseError)
+      console.error(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error parsing mupibox config: ${errorMessage}`)
+      res.status(500).send('Error parsing mupibox configuration')
+    }
+  })
+})
+
+app.post('/api/screen/off', (req, res) => {
+  exec('DISPLAY=:0 xset dpms force off', (error, stdout, stderr) => {
+    if (error) {
+      console.error(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error turning off screen: ${error.message}`)
+      res.status(500).send('error')
+      return
+    }
+    if (stderr) {
+      console.error(`${nowDate.toLocaleString()}: [MuPiBox-Server] Stderr turning off screen: ${stderr}`)
+      res.status(500).send('error')
+      return
+    }
+    console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Screen turned off`)
+    res.status(200).send('ok')
+  })
 })
 
 const tryReadFile = (filePath: string, retries = 3, delayMs = 1000) => {

@@ -164,7 +164,7 @@ export class PlayerService {
   }
 
   private sendRequest(url: string) {
-    const room = this.spotifyService.getDeviceId() ?? 'current'
+    const room = this.spotifyService.isPlayerReady() ? this.spotifyService.getDeviceId() : 'current'
     const baseUrl = `${environment.backend.playerUrl}/${room}/`
     this.http.get(baseUrl + url).subscribe()
   }

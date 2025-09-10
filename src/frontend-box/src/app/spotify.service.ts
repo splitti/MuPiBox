@@ -63,7 +63,6 @@ export class SpotifyService {
   // Player state observables
   public playerState$ = new BehaviorSubject<SpotifyWebPlaybackState | null>(null)
   public isConnected$ = new BehaviorSubject<boolean>(false)
-  public isActive$ = new BehaviorSubject<boolean>(false)
   public currentTrack$ = new BehaviorSubject<SpotifyWebPlaybackTrack | null>(null)
 
   // External playback detection
@@ -97,12 +96,26 @@ export class SpotifyService {
       retryWhen((errors) => {
         return this.errorHandler(errors)
       }),
+      catchError((err) => {
+        console.warn(
+          `Search query failed for "${query}" due to rate limiting or API error, returning empty results:`,
+          err?.message || err,
+        )
+        return of({ albums: { total: 0 } })
+      }),
       map((response: SearchResults<['album']>) => response.albums.total),
       mergeMap((count) => range(0, Math.ceil(count / 50))),
       mergeMap((multiplier) =>
         defer(() => this.spotifyApi.search(query, ['album'], 'DE', 50, 50 * multiplier)).pipe(
           retryWhen((errors) => {
             return this.errorHandler(errors)
+          }),
+          catchError((err) => {
+            console.warn(
+              `Search query page ${multiplier} failed for "${query}" due to rate limiting or API error, returning empty results:`,
+              err?.message || err,
+            )
+            return of({ albums: { items: [] } })
           }),
           map((response: SearchResults<['album']>) => {
             return response.albums.items.map((item) => {
@@ -139,6 +152,13 @@ export class SpotifyService {
       retryWhen((errors) => {
         return this.errorHandler(errors)
       }),
+      catchError((err) => {
+        console.warn(
+          `Artist albums query failed for artist ${id} due to rate limiting or API error, returning empty results:`,
+          err?.message || err,
+        )
+        return of({ total: 0 })
+      }),
       map((response: Page<SimplifiedAlbum>) => ({ counter: response.total })),
       mergeMap((count) =>
         range(0, Math.ceil(count.counter / 50)).pipe(
@@ -153,9 +173,16 @@ export class SpotifyService {
           retryWhen((errors) => {
             return this.errorHandler(errors)
           }),
+          catchError((err) => {
+            console.warn(
+              `Artist info query failed for artist ${id} due to rate limiting or API error:`,
+              err?.message || err,
+            )
+            return of({ images: [{ url: '../assets/images/nocover_mupi.png' }] })
+          }),
           map((response: Artist) => ({
             range: counter.range,
-            artistcover: response.images[0].url,
+            artistcover: response.images?.[0]?.url || '../assets/images/nocover_mupi.png',
           })),
         ),
       ),
@@ -165,6 +192,13 @@ export class SpotifyService {
         ).pipe(
           retryWhen((errors) => {
             return this.errorHandler(errors)
+          }),
+          catchError((err) => {
+            console.warn(
+              `Artist albums page ${multiplier.range} failed for artist ${id} due to rate limiting or API error, returning empty results:`,
+              err?.message || err,
+            )
+            return of({ items: [] })
           }),
           map((response: Page<SimplifiedAlbum>) => {
             return response.items.map((item) => {
@@ -202,6 +236,17 @@ export class SpotifyService {
       retryWhen((errors) => {
         return this.errorHandler(errors)
       }),
+      catchError((err) => {
+        console.warn(
+          `Show info query failed for show ${id} due to rate limiting or API error, returning empty results:`,
+          err?.message || err,
+        )
+        return of({
+          episodes: { total: 0 },
+          name: '',
+          images: [{ url: '../assets/images/nocover_mupi.png' }],
+        })
+      }),
       map((response: Show) => ({
         count: response.episodes.total,
         name: response.name,
@@ -219,6 +264,13 @@ export class SpotifyService {
         defer(() => this.spotifyApi.shows.episodes(id, 'DE', 50, 50 * multiplier.range)).pipe(
           retryWhen((errors) => {
             return this.errorHandler(errors)
+          }),
+          catchError((err) => {
+            console.warn(
+              `Show episodes page ${multiplier.range} failed for show ${id} due to rate limiting or API error, returning empty results:`,
+              err?.message || err,
+            )
+            return of({ items: [] })
           }),
           map((response: Page<SimplifiedEpisode>) => {
             return response.items
@@ -260,6 +312,14 @@ export class SpotifyService {
     const album = defer(() => this.spotifyApi.albums.get(id, 'DE')).pipe(
       retryWhen((errors) => {
         return this.errorHandler(errors)
+      }),
+      catchError((err) => {
+        console.warn(
+          `Album info query failed for album ${id} due to rate limiting or API error, skipping this item:`,
+          err?.message || err,
+        )
+        // Skip failed items entirely
+        return EMPTY
       }),
       map((response: Album) => {
         const media: Media = {
@@ -307,6 +367,14 @@ export class SpotifyService {
       retryWhen((errors) => {
         return this.errorHandler(errors)
       }),
+      catchError((err) => {
+        console.warn(
+          `Audiobook info query failed for audiobook ${id} due to rate limiting or API error, skipping this item:`,
+          err?.message || err,
+        )
+        // Skip failed items entirely
+        return EMPTY
+      }),
       map((response: Audiobook) => {
         const media: Media = {
           audiobookid: response.id,
@@ -351,6 +419,14 @@ export class SpotifyService {
     const album = defer(() => this.spotifyApi.episodes.get(id, 'DE')).pipe(
       retryWhen((errors) => {
         return this.errorHandler(errors)
+      }),
+      catchError((err) => {
+        console.warn(
+          `Episode info query failed for episode ${id} due to rate limiting or API error, skipping this item:`,
+          err?.message || err,
+        )
+        // Skip failed items entirely
+        return EMPTY
       }),
       map((response: Episode) => {
         const media: Media = {
@@ -838,12 +914,14 @@ export class SpotifyService {
     this.player?.addListener('player_state_changed', (state: SpotifyWebPlaybackState) => {
       this.playerState$.next(state)
       this.currentTrack$.next(state.track_window.current_track)
-      this.isActive$.next(true)
 
-      // Detect when playback becomes active - let the navigator service determine if it's external
-      if (!state.paused && state.track_window.current_track) {
-        console.log('🔍 Spotify playback detected:', state.track_window.current_track.name)
-        this.externalPlaybackDetected$.next(state.track_window.current_track)
+      // Only detect external playback on actual track changes, not every state change
+      const currentTrack = state.track_window.current_track
+      const previousTrack = this.previousPlayerState?.track_window?.current_track
+
+      if (!state.paused && currentTrack && (!previousTrack || previousTrack.id !== currentTrack.id)) {
+        console.log('🔍 Spotify track change detected:', currentTrack.name)
+        this.externalPlaybackDetected$.next(currentTrack)
       }
 
       // Store current state for comparison
@@ -884,8 +962,8 @@ export class SpotifyService {
 
   // Player control methods
   async play(): Promise<void> {
-    if (!this.player || !this.deviceId) {
-      console.warn('Player not ready')
+    if (!this.isPlayerReady()) {
+      console.warn('Player not ready or not connected')
       return
     }
 
@@ -898,8 +976,8 @@ export class SpotifyService {
   }
 
   async pause(): Promise<void> {
-    if (!this.player) {
-      console.warn('Player not ready')
+    if (!this.isPlayerReady()) {
+      console.warn('Player not ready or not connected')
       return
     }
 
@@ -911,8 +989,8 @@ export class SpotifyService {
   }
 
   async nextTrack(): Promise<void> {
-    if (!this.player) {
-      console.warn('Player not ready')
+    if (!this.isPlayerReady()) {
+      console.warn('Player not ready or not connected')
       return
     }
 
@@ -924,8 +1002,8 @@ export class SpotifyService {
   }
 
   async previousTrack(): Promise<void> {
-    if (!this.player) {
-      console.warn('Player not ready')
+    if (!this.isPlayerReady()) {
+      console.warn('Player not ready or not connected')
       return
     }
 
@@ -937,8 +1015,8 @@ export class SpotifyService {
   }
 
   async setVolume(volume: number): Promise<void> {
-    if (!this.player) {
-      console.warn('Player not ready')
+    if (!this.isPlayerReady()) {
+      console.warn('Player not ready or not connected')
       return
     }
 
@@ -950,8 +1028,8 @@ export class SpotifyService {
   }
 
   async getVolume(): Promise<number> {
-    if (!this.player) {
-      console.warn('Player not ready')
+    if (!this.isPlayerReady()) {
+      console.warn('Player not ready or not connected')
       return 0
     }
 
@@ -964,8 +1042,8 @@ export class SpotifyService {
   }
 
   async getCurrentState(): Promise<any> {
-    if (!this.player) {
-      console.warn('Player not ready')
+    if (!this.isPlayerReady()) {
+      console.warn('Player not ready or not connected')
       return null
     }
 
@@ -983,14 +1061,13 @@ export class SpotifyService {
       this.player = null
       this.deviceId = null
       this.isConnected$.next(false)
-      this.isActive$.next(false)
       this.playerState$.next(null)
       this.currentTrack$.next(null)
     }
   }
 
   isPlayerReady(): boolean {
-    return this.player !== null && this.deviceId !== null
+    return this.player !== null && this.deviceId !== null && this.isConnected$.value === true
   }
 
   async ensurePlayerHealthy(): Promise<boolean> {
@@ -998,7 +1075,7 @@ export class SpotifyService {
   }
 
   private async testPlayerFunctionality(): Promise<boolean> {
-    if (!this.player || !this.deviceId) {
+    if (!this.isPlayerReady()) {
       return false
     }
 
@@ -1063,7 +1140,6 @@ export class SpotifyService {
     // Clear device ID and state
     this.deviceId = null
     this.isConnected$.next(false)
-    this.isActive$.next(false)
     this.playerState$.next(null)
     this.currentTrack$.next(null)
 
@@ -1139,7 +1215,6 @@ export class SpotifyService {
       hasDeviceId: !!this.deviceId,
       deviceId: this.deviceId,
       isConnected: this.isConnected$.value,
-      isActive: this.isActive$.value,
       sdkLoadError: this.sdkLoadError$.value,
       hasSpotifyGlobal: typeof window.Spotify !== 'undefined',
       hasPlayerClass: typeof window.Spotify?.Player !== 'undefined',
