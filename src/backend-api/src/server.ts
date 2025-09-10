@@ -444,6 +444,30 @@ app.get('/api/spotify/playlist/:playlistId', async (req, res) => {
   }
 })
 
+app.get('/api/spotify/album/:albumId', async (req, res) => {
+  const albumId = req.params.albumId
+
+  if (!albumId) {
+    res.status(400).json({ error: 'Album ID is required' })
+    return
+  }
+
+  try {
+    console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Fetching Spotify album: ${albumId}`)
+
+    const albumData = await spotifyMediaInfo.fetchAlbumData(albumId)
+    res.status(200).json(albumData)
+
+    console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Successfully fetched album: ${albumData.album.name}`)
+  } catch (error) {
+    console.error(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error fetching album ${albumId}:`, error)
+    res.status(500).json({
+      error: 'Failed to fetch album data',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    })
+  }
+})
+
 app.get('/api/sonos', (req, res) => {
   if (config === undefined) {
     res.status(500).send('Could not load server config.')

@@ -314,21 +314,27 @@ export class SpotifyService {
         return this.errorHandler(errors)
       }),
       catchError((err) => {
-        console.warn(
-          `Album info query failed for album ${id} due to rate limiting or API error, skipping this item:`,
-          err?.message || err,
+        console.log('Spotify API failed for album %s, trying backend media info service...', id)
+
+        return this.http.get<any>(`/api/spotify/album/${id}`).pipe(
+          timeout(30000),
+          catchError((backendErr) => {
+            console.error(`Backend failed for album ${id}:`, backendErr?.message || backendErr)
+            return EMPTY
+          }),
         )
-        // Skip failed items entirely
-        return EMPTY
       }),
-      map((response: Album) => {
+      map((response: Album | any) => {
+        // Check if response is from backend scraper (has different structure)
+        const isFromBackend = response.album && response.tracks
+
         const media: Media = {
-          id: response.id,
-          artist: response.artists?.[0]?.name,
-          title: response.name,
-          cover: response?.images[0]?.url,
+          id: isFromBackend ? id : response.id,
+          artist: isFromBackend ? response.album.artists?.[0]?.name : response.artists?.[0]?.name,
+          title: isFromBackend ? response.album.name : response.name,
+          cover: isFromBackend ? response.album.images?.[0]?.url : response?.images[0]?.url,
           type: 'spotify',
-          release_date: response.release_date,
+          release_date: isFromBackend ? response.album.release_date : response.release_date,
           category,
           index,
         }
@@ -524,15 +530,31 @@ export class SpotifyService {
 
     try {
       if (spotifyCategory === 'album') {
-        const data: any = await firstValueFrom(
-          defer(() => this.spotifyApi.albums.get(spotifyId, 'DE')).pipe(
-            retryWhen((errors) => {
-              return this.errorHandler(errors)
-            }),
-          ),
-        )
-        if (data.id !== undefined) {
-          validateState = true
+        try {
+          const data: any = await firstValueFrom(
+            defer(() => this.spotifyApi.albums.get(spotifyId, 'DE')).pipe(
+              retryWhen((errors) => {
+                return this.errorHandler(errors)
+              }),
+            ),
+          )
+          if (data.id !== undefined) {
+            validateState = true
+          }
+        } catch (albumErr) {
+          console.log('Spotify API validation failed for album %s, trying backend media info...', spotifyId)
+
+          try {
+            const backendData: any = await firstValueFrom(
+              this.http.get<any>(`/api/spotify/album/${spotifyId}`).pipe(timeout(30000)),
+            )
+            if (backendData.album?.name) {
+              validateState = true
+            }
+          } catch (backendErr) {
+            console.log('Backend validation also failed for album %s', spotifyId)
+            validateState = false
+          }
         }
       } else if (spotifyCategory === 'show') {
         const data: any = await firstValueFrom(
@@ -1270,8 +1292,30 @@ export class SpotifyService {
         })),
       })),
       catchError((error) => {
-        console.error('Error getting album info:', error)
-        return of({ total_tracks: 0, album_name: '', tracks: [] })
+        console.log('Spotify API failed for album info %s, trying backend media info...', albumId)
+
+        // Fallback to backend scraper endpoint
+        return this.http.get<any>(`/api/spotify/album/${albumId}`).pipe(
+          // Increase timeout for album info - backend needs time for Puppeteer + API calls
+          timeout(60000), // 60 seconds
+          map((backendData: any) => ({
+            total_tracks: backendData.tracks?.length || 0,
+            album_name: backendData.album?.name || '',
+            tracks:
+              backendData.tracks?.map((track: any) => ({
+                id: track.external_urls?.spotify
+                  ? track.external_urls.spotify.split('/').pop()
+                  : track.uri?.split(':').pop(),
+                uri: track.uri,
+                name: track.name,
+                track_number: backendData.tracks.indexOf(track) + 1, // Calculate track number based on position
+              })) || [],
+          })),
+          catchError((backendError) => {
+            console.error('Backend also failed for album info:', backendError)
+            return of({ total_tracks: 0, album_name: '', tracks: [] })
+          }),
+        )
       }),
     )
   }

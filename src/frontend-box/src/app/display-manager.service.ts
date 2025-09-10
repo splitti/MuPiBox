@@ -82,9 +82,11 @@ export class DisplayManagerService {
     const isPlaying = this.spotifyService.playerState$.value?.paused === false
     const idleTimeSeconds = (Date.now() - this.lastActivityTimestamp) / 1000
     const timeoutSeconds = this.idleTimeoutMinutes * 60
-    
-    console.log(`[DisplayManager] Check: Playing=${isPlaying}, Idle=${idleTimeSeconds.toFixed(1)}s, Timeout=${timeoutSeconds}s`)
-    
+
+    console.log(
+      `[DisplayManager] Check: Playing=${isPlaying}, Idle=${idleTimeSeconds.toFixed(1)}s, Timeout=${timeoutSeconds}s`,
+    )
+
     if (!isPlaying) {
       // If not playing, we don't need to force the screen off. The system's default BlankTime should work.
       return

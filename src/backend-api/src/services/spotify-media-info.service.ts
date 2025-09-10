@@ -2,8 +2,11 @@ import fs from 'node:fs'
 import path from 'node:path'
 import puppeteer, { Browser, Page } from 'puppeteer'
 import {
+  AlbumPathfinderResponse,
   PathfinderResponse,
   SpotifyAlbum,
+  SpotifyAlbumData,
+  SpotifyAlbumMetadata,
   SpotifyArtist,
   SpotifyPlaylistData,
   SpotifyPlaylistMetadata,
@@ -22,14 +25,15 @@ export class SpotifyMediaInfo {
   private backgroundPages = new Set<Page>()
 
   // Queue for background updates to prevent resource exhaustion
-  private backgroundQueue: string[] = []
+  private backgroundQueue: Array<{ id: string; type: 'playlist' | 'album' }> = []
   private isProcessingBackground = false
   private readonly maxConcurrentBackground = 3 // Limit concurrent background updates
 
   // Queue for foreground requests to prevent concurrent access to main page
   private foregroundQueue: Array<{
-    playlistId: string
-    resolve: (data: SpotifyPlaylistData) => void
+    id: string
+    type: 'playlist' | 'album'
+    resolve: (data: SpotifyPlaylistData | SpotifyAlbumData) => void
     reject: (error: Error) => void
   }> = []
   private isProcessingForeground = false
@@ -38,9 +42,9 @@ export class SpotifyMediaInfo {
   private pendingForegroundRequests = new Map<
     string,
     {
-      promise: Promise<SpotifyPlaylistData>
+      promise: Promise<SpotifyPlaylistData | SpotifyAlbumData>
       subscribers: Array<{
-        resolve: (data: SpotifyPlaylistData) => void
+        resolve: (data: SpotifyPlaylistData | SpotifyAlbumData) => void
         reject: (error: Error) => void
       }>
     }
@@ -157,13 +161,16 @@ export class SpotifyMediaInfo {
     }
   }
 
-  private getCacheFilePath(playlistId: string): string {
-    return path.join(this.cacheDir, `${playlistId}.json`)
+  private getCacheFilePath(id: string, type: 'playlist' | 'album'): string {
+    return path.join(this.cacheDir, `${type}_${id}.json`)
   }
 
-  private async getFromCache(playlistId: string): Promise<{ data: SpotifyPlaylistData | null; isStale: boolean }> {
+  private async getFromCache(
+    id: string,
+    type: 'playlist' | 'album',
+  ): Promise<{ data: SpotifyPlaylistData | SpotifyAlbumData | null; isStale: boolean }> {
     try {
-      const cacheFile = this.getCacheFilePath(playlistId)
+      const cacheFile = this.getCacheFilePath(id, type)
 
       if (!fs.existsSync(cacheFile)) {
         return { data: null, isStale: false }
@@ -175,57 +182,81 @@ export class SpotifyMediaInfo {
       const cachedData = JSON.parse(fs.readFileSync(cacheFile, 'utf8'))
 
       if (isStale) {
-        console.info(`📦 Cache stale for playlist ${playlistId}, will update in background`)
+        console.info(`📦 Cache stale for ${type} ${id}, will update in background`)
       } else {
-        console.info(`✅ Fresh cache hit for playlist ${playlistId}`)
+        console.info(`✅ Fresh cache hit for ${type} ${id}`)
       }
 
       return { data: cachedData, isStale }
     } catch (error) {
-      console.error(`Error reading cache for ${playlistId}:`, error)
+      console.error(`Error reading cache for ${type} ${id}:`, error)
       return { data: null, isStale: false }
     }
   }
 
-  private async saveToCache(playlistId: string, data: SpotifyPlaylistData): Promise<void> {
+  private async saveToCache(id: string, data: SpotifyPlaylistData | SpotifyAlbumData): Promise<void> {
     try {
       this.ensureCacheDir()
-      const cacheFile = this.getCacheFilePath(playlistId)
+
+      // Determine the type based on data structure
+      const type: 'playlist' | 'album' = 'album' in data ? 'album' : 'playlist'
+      const cacheFile = this.getCacheFilePath(id, type)
 
       fs.writeFileSync(cacheFile, JSON.stringify(data, null, 2))
-      console.info(`💾 Cached playlist data for ${playlistId}`)
+      console.info(`💾 Cached ${type} data for ${id}`)
     } catch (error) {
-      console.error(`Error saving cache for ${playlistId}:`, error)
+      console.error(`Error saving cache for ${id}:`, error)
     }
   }
 
   public async fetchPlaylistData(playlistId: string): Promise<SpotifyPlaylistData> {
     // Check cache first (stale-while-revalidate pattern)
-    const cacheResult = await this.getFromCache(playlistId)
+    const cacheResult = await this.getFromCache(playlistId, 'playlist')
 
     if (cacheResult.data) {
       // Return cached data immediately, even if stale
       if (cacheResult.isStale) {
         // Trigger background update if cache is stale and not already updating
-        this.triggerBackgroundUpdate(playlistId)
+        this.triggerBackgroundUpdate(playlistId, 'playlist')
       }
-      return cacheResult.data
+      return cacheResult.data as SpotifyPlaylistData
     }
 
     // No cache exists - queue for synchronous processing
     console.info(`🔍 No cache for playlist ${playlistId}, adding to foreground queue...`)
-    return this.queueForegroundRequest(playlistId)
+    return this.queueForegroundRequest(playlistId, 'playlist') as Promise<SpotifyPlaylistData>
+  }
+
+  public async fetchAlbumData(albumId: string): Promise<SpotifyAlbumData> {
+    // Check cache first (stale-while-revalidate pattern)
+    const cacheResult = await this.getFromCache(albumId, 'album')
+
+    if (cacheResult.data) {
+      // Return cached data immediately, even if stale
+      if (cacheResult.isStale) {
+        // Trigger background update if cache is stale and not already updating
+        this.triggerBackgroundUpdate(albumId, 'album')
+      }
+      return cacheResult.data as SpotifyAlbumData
+    }
+
+    // No cache exists - queue for synchronous processing
+    console.info(`🔍 No cache for album ${albumId}, adding to foreground queue...`)
+    return this.queueForegroundRequest(albumId, 'album') as Promise<SpotifyAlbumData>
   }
 
   /**
    * Queue foreground request with de-duplication support
    */
-  private async queueForegroundRequest(playlistId: string): Promise<SpotifyPlaylistData> {
-    // Check if there's already a pending request for this playlist
-    const existingRequest = this.pendingForegroundRequests.get(playlistId)
+  private async queueForegroundRequest(
+    id: string,
+    type: 'playlist' | 'album',
+  ): Promise<SpotifyPlaylistData | SpotifyAlbumData> {
+    // Check if there's already a pending request for this item
+    const existingRequest = this.pendingForegroundRequests.get(id)
     if (existingRequest) {
       console.debug(
-        `🔗 Joining existing foreground request for playlist ${playlistId} (${existingRequest.subscribers.length + 1} total subscribers)`,
+        `🔗 Joining existing foreground request for ${type} ${id} (${existingRequest.subscribers.length + 1} total subscribers)`,
       )
 
       // Subscribe to existing request
@@ -239,17 +270,16 @@ export class SpotifyMediaInfo {
       const subscribers = [{ resolve, reject }]
 
       // Create the actual promise that will be executed
-      const requestPromise = new Promise<SpotifyPlaylistData>((promiseResolve, promiseReject) => {
+      const requestPromise = new Promise<SpotifyPlaylistData | SpotifyAlbumData>((promiseResolve, promiseReject) => {
         const queueEntry = {
-          playlistId,
+          id,
+          type,
           resolve: promiseResolve,
           reject: promiseReject,
         }
 
         this.foregroundQueue.push(queueEntry)
-        console.debug(
-          `📋 Queued new foreground request for playlist ${playlistId} (position ${this.foregroundQueue.length})`,
-        )
+        console.debug(`📋 Queued new foreground request for ${type} ${id} (position ${this.foregroundQueue.length})`)
 
         // Process queue if not already processing
         if (!this.isProcessingForeground) {
@@ -258,7 +288,7 @@ export class SpotifyMediaInfo {
       })
 
       // Track this request for de-duplication
-      this.pendingForegroundRequests.set(playlistId, {
+      this.pendingForegroundRequests.set(id, {
         promise: requestPromise,
         subscribers,
       })
@@ -266,14 +296,14 @@ export class SpotifyMediaInfo {
       // Handle completion/failure for all subscribers
       requestPromise
         .then((data) => {
-          console.debug(`✅ Resolving ${subscribers.length} subscribers for playlist ${playlistId}`)
+          console.debug(`✅ Resolving ${subscribers.length} subscribers for ${type} ${id}`)
           for (const sub of subscribers) {
             sub.resolve(data)
           }
         })
         .catch((error) => {
           console.error(
-            `❌ Rejecting ${subscribers.length} subscribers for playlist ${playlistId}:`,
+            `❌ Rejecting ${subscribers.length} subscribers for ${type} ${id}:`,
             error instanceof Error ? error.message : String(error),
           )
           for (const sub of subscribers) {
@@ -282,7 +312,7 @@ export class SpotifyMediaInfo {
         })
         .finally(() => {
           // Clean up tracking
-          this.pendingForegroundRequests.delete(playlistId)
+          this.pendingForegroundRequests.delete(id)
         })
     })
   }
@@ -301,18 +331,23 @@ export class SpotifyMediaInfo {
     while (this.foregroundQueue.length > 0) {
       const queueEntry = this.foregroundQueue.shift()
       if (!queueEntry) break
-      const { playlistId, resolve, reject } = queueEntry
+      const { id, type, resolve, reject } = queueEntry
 
       try {
-        console.debug(
-          `⚡ Processing foreground request for playlist ${playlistId} (${this.foregroundQueue.length} remaining)`,
-        )
-        const playlistData = await this.fetchPlaylistDataSync(playlistId, false) // false = foreground
-        resolve(playlistData)
-        console.debug(`✅ Completed foreground request for playlist ${playlistId}`)
+        console.debug(`⚡ Processing foreground request for ${type} ${id} (${this.foregroundQueue.length} remaining)`)
+
+        let data: SpotifyPlaylistData | SpotifyAlbumData
+        if (type === 'playlist') {
+          data = await this.fetchPlaylistDataSync(id, false) // false = foreground
+        } else {
+          data = await this.fetchAlbumDataSync(id, false) // false = foreground
+        }
+
+        resolve(data)
+        console.debug(`✅ Completed foreground request for ${type} ${id}`)
       } catch (error) {
         console.error(
-          `❌ Failed foreground request for playlist ${playlistId}:`,
+          `❌ Failed foreground request for ${type} ${id}:`,
           error instanceof Error ? error.message : String(error),
         )
         reject(error instanceof Error ? error : new Error(String(error)))
@@ -326,20 +361,20 @@ export class SpotifyMediaInfo {
   /**
    * Trigger background cache update if not already in progress
    */
-  private triggerBackgroundUpdate(playlistId: string): void {
-    if (this.backgroundUpdates.has(playlistId)) {
-      console.debug(`🔄 Background update already in progress for playlist ${playlistId}`)
+  private triggerBackgroundUpdate(id: string, type: 'playlist' | 'album'): void {
+    if (this.backgroundUpdates.has(id)) {
+      console.debug(`🔄 Background update already in progress for ${type} ${id}`)
       return
     }
 
-    if (this.backgroundQueue.includes(playlistId)) {
-      console.debug(`📋 Background update already queued for playlist ${playlistId}`)
+    if (this.backgroundQueue.some((item) => item.id === id && item.type === type)) {
+      console.debug(`📋 Background update already queued for ${type} ${id}`)
       return
     }
 
     // Add to background queue instead of running immediately
-    this.backgroundQueue.push(playlistId)
-    console.debug(`📋 Queued background update for playlist ${playlistId} (position ${this.backgroundQueue.length})`)
+    this.backgroundQueue.push({ id, type })
+    console.debug(`📋 Queued background update for ${type} ${id} (position ${this.backgroundQueue.length})`)
 
     // Start processing queue if not already running
     if (!this.isProcessingBackground) {
@@ -364,29 +399,33 @@ export class SpotifyMediaInfo {
     while (this.backgroundQueue.length > 0 || concurrentPromises.size > 0) {
       // Start new background updates up to the concurrency limit
       while (this.backgroundQueue.length > 0 && concurrentPromises.size < this.maxConcurrentBackground) {
-        const playlistId = this.backgroundQueue.shift()
-        if (!playlistId) break
+        const queueItem = this.backgroundQueue.shift()
+        if (!queueItem) break
 
-        if (this.backgroundUpdates.has(playlistId)) {
-          console.debug(`⏭️ Skipping ${playlistId} - already in progress`)
+        const { id, type } = queueItem
+
+        if (this.backgroundUpdates.has(id)) {
+          console.debug(`⏭️ Skipping ${type} ${id} - already in progress`)
           continue
         }
 
         console.debug(
-          `🚀 Starting background update for playlist ${playlistId} (${concurrentPromises.size + 1}/${this.maxConcurrentBackground} slots)`,
+          `🚀 Starting background update for ${type} ${id} (${concurrentPromises.size + 1}/${this.maxConcurrentBackground} slots)`,
         )
-        this.backgroundUpdates.add(playlistId)
+        this.backgroundUpdates.add(id)
 
-        const updatePromise = this.fetchPlaylistDataSync(playlistId, true)
+        const updatePromise = (
+          type === 'playlist' ? this.fetchPlaylistDataSync(id, true) : this.fetchAlbumDataSync(id, true)
+        )
           .then(() => {
-            console.debug(`✅ [BG] Background update completed for playlist ${playlistId}`)
+            console.debug(`✅ [BG] Background update completed for ${type} ${id}`)
           })
           .catch((error) => {
             const errorMessage = error instanceof Error ? error.message : String(error)
-            console.error(`❌ [BG] Background update failed for playlist ${playlistId}:`, errorMessage)
+            console.error(`❌ [BG] Background update failed for ${type} ${id}:`, errorMessage)
           })
           .finally(() => {
-            this.backgroundUpdates.delete(playlistId)
+            this.backgroundUpdates.delete(id)
             concurrentPromises.delete(updatePromise)
           })
 
@@ -521,6 +560,133 @@ export class SpotifyMediaInfo {
     }
   }
 
+  /**
+   * Synchronous album fetch that actually hits Spotify (used for both blocking and background updates)
+   */
+  private async fetchAlbumDataSync(albumId: string, isBackground = false): Promise<SpotifyAlbumData> {
+    const page = await this.getPage(isBackground)
+    const logPrefix = isBackground ? '[BG]' : '[FG]'
+
+    try {
+      // Clear any existing listeners and state
+      page.removeAllListeners('response')
+
+      // Set up response interception for pathfinder API
+      let pathfinderData: AlbumPathfinderResponse | null = null
+
+      // Track all Spotify API calls for debugging
+      page.on('response', async (response) => {
+        const url = response.url()
+
+        // Log all Spotify API calls
+        if (
+          url.includes('open.spotify.com') ||
+          url.includes('spotify.com/api') ||
+          url.includes('api-partner.spotify.com')
+        ) {
+          console.debug(`Spotify API call: ${url}`)
+        }
+
+        if (url.includes('api-partner.spotify.com/pathfinder') && url.includes('query')) {
+          try {
+            console.debug(`🎯 Found pathfinder response: ${url}`)
+            const responseData = await response.json()
+            console.debug('Response data keys:', Object.keys(responseData))
+
+            if (responseData.data?.albumUnion) {
+              // Prioritize responses with detailed data over minimal responses
+              const hasName = responseData.data.albumUnion.name && responseData.data.albumUnion.name !== 'undefined'
+              const hasDetailedData = !!(
+                responseData.data.albumUnion.tracksV2?.items?.length ||
+                responseData.data.albumUnion.artists?.items?.length ||
+                responseData.data.albumUnion.coverArt?.sources?.length
+              )
+
+              // Only capture if:
+              // 1. We don't have any data yet and this has a name, OR
+              // 2. This response has detailed data (even if we already have a minimal response)
+              if ((!pathfinderData && hasName) || hasDetailedData) {
+                const wasMinimal = pathfinderData && !pathfinderData.data.albumUnion.tracksV2
+                pathfinderData = responseData as AlbumPathfinderResponse
+
+                if (hasDetailedData) {
+                  console.debug(
+                    '✅ Successfully captured pathfinder data for album:',
+                    responseData.data.albumUnion.name,
+                  )
+                } else {
+                  console.debug('📋 Captured basic pathfinder data for album:', responseData.data.albumUnion.name)
+                }
+              }
+            } else if (responseData.data) {
+              console.debug('📊 Response data structure:', Object.keys(responseData.data))
+              // Only log a sample if it's not color data and not playlist data
+              if (!responseData.data.extractedColors && !responseData.data.playlistV2) {
+                console.debug('Sample response:', JSON.stringify(responseData, null, 2).substring(0, 1000))
+              }
+            } else {
+              console.debug('❌ No data property in response')
+            }
+          } catch (error) {
+            console.error('Error parsing pathfinder response:', error)
+          }
+        }
+      })
+
+      // Navigate to the Spotify album URL
+      const spotifyUrl = `https://open.spotify.com/album/${albumId}`
+      console.debug(`${logPrefix} Navigating to: ${spotifyUrl}`)
+
+      await page.goto(spotifyUrl, {
+        waitUntil: 'domcontentloaded',
+        timeout: 15000,
+      })
+
+      // Wait for the album to load and pathfinder data to be captured
+      console.debug(`${logPrefix} Waiting for album page to load...`)
+
+      try {
+        await page.waitForSelector('[data-testid="album-page"]', { timeout: 10000 })
+        console.debug(`${logPrefix} Album page loaded`)
+      } catch (error) {
+        console.debug(`${logPrefix} Album page selector not found, trying alternative approach`)
+        // Wait for title instead
+        await page.waitForSelector('title', { timeout: 5000 })
+      }
+
+      console.debug(`${logPrefix} Waiting for network requests to complete...`)
+      // Wait for pathfinder data with shorter timeout
+      await new Promise((resolve) => setTimeout(resolve, 3000))
+      console.debug(`${logPrefix} Network wait completed`)
+
+      if (!pathfinderData) {
+        throw new Error('Could not capture pathfinder data from Spotify')
+      }
+
+      // Transform the pathfinder response to our format
+      const albumData = this.transformAlbumPathfinderData(pathfinderData)
+
+      // Save to cache for next time
+      await this.saveToCache(albumId, albumData)
+
+      return albumData
+    } catch (error) {
+      console.error(`${logPrefix} Error fetching album data:`, error)
+      throw error
+    } finally {
+      // Clean up listeners
+      page.removeAllListeners('response')
+
+      // Close background pages after use to free resources
+      if (isBackground && this.backgroundPages.has(page)) {
+        console.debug('🔧 Closing background page after update')
+        await page.close()
+        this.backgroundPages.delete(page)
+      }
+      // Keep main page open for reuse
+    }
+  }
+
   private transformPathfinderData(pathfinderData: PathfinderResponse): SpotifyPlaylistData {
     const playlistData = pathfinderData.data.playlistV2
 
@@ -609,6 +775,83 @@ export class SpotifyMediaInfo {
       return ''
     }
     return uri.split(':').pop() || ''
+  }
+
+  private transformAlbumPathfinderData(pathfinderData: AlbumPathfinderResponse): SpotifyAlbumData {
+    const albumData = pathfinderData.data.albumUnion
+
+    // Transform album metadata
+    const album: SpotifyAlbumMetadata = {
+      name: albumData.name || 'Unknown Album',
+      uri: albumData.uri || '',
+      external_urls: {
+        spotify: `https://open.spotify.com/album/${this.extractIdFromUri(albumData.uri)}`,
+      },
+      images: (albumData.coverArt?.sources || []).map((source) => ({
+        url: source.url,
+        width: source.width,
+        height: source.height,
+      })),
+      artists: (albumData.artists?.items || []).map((artistItem) => ({
+        name: artistItem.profile?.name || 'Unknown Artist',
+        uri: artistItem.uri || '',
+        external_urls: {
+          spotify: `https://open.spotify.com/artist/${this.extractIdFromUri(artistItem.uri)}`,
+        },
+      })),
+      release_date: albumData.date?.isoString ? albumData.date.isoString.split('T')[0] : undefined,
+      total_tracks: albumData.tracksV2?.totalCount || 0,
+    }
+
+    // Transform tracks from tracksV2
+    const tracks: SpotifyTrack[] = (albumData.tracksV2?.items || [])
+      .map((trackItem) => {
+        const trackData = trackItem.track
+
+        if (!trackData) {
+          console.warn('Invalid track data:', trackItem)
+          return null
+        }
+
+        const artists: SpotifyArtist[] = (trackData.artists?.items || []).map((artistItem) => ({
+          name: artistItem.profile?.name || 'Unknown Artist',
+          uri: artistItem.uri || '',
+          external_urls: {
+            spotify: `https://open.spotify.com/artist/${this.extractIdFromUri(artistItem.uri)}`,
+          },
+        }))
+
+        // Use album info for track's album data
+        const albumInfo: SpotifyAlbum = {
+          name: albumData.name || 'Unknown Album',
+          uri: albumData.uri || '',
+          external_urls: {
+            spotify: `https://open.spotify.com/album/${this.extractIdFromUri(albumData.uri)}`,
+          },
+          images: (albumData.coverArt?.sources || []).map((source) => ({
+            url: source.url,
+            width: source.width,
+            height: source.height,
+          })),
+        }
+
+        return {
+          name: trackData.name || 'Unknown Track',
+          uri: trackData.uri || '',
+          duration_ms: trackData.duration?.totalMilliseconds || 0,
+          artists,
+          album: albumInfo,
+          external_urls: {
+            spotify: `https://open.spotify.com/track/${this.extractIdFromUri(trackData.uri)}`,
+          },
+        }
+      })
+      .filter((track) => track !== null) as SpotifyTrack[]
+
+    return {
+      album,
+      tracks,
+    }
   }
 
   public async dispose(): Promise<void> {
