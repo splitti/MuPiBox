@@ -86,7 +86,7 @@ body .home-content, body .medialist-content, body .player-content{
         padding: 16px 10px !important;
 }
 
-body .edit-header, body .add-header, body .admin-header {
+body .edit-header, body .add-header, body .wifi-header {
         --ion-color-light: #c02f12 !important;
 }
 
