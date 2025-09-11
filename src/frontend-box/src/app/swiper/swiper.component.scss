@@ -14,6 +14,12 @@ swiper-container {
         ion-card {
             width: 230px;
             --background: #262626;
+
+            img {
+                -user-select: none;
+                height: 100%;
+                width: 100%;
+            }
     
             ion-card-title {
                 padding-bottom: 5px;
@@ -25,7 +31,7 @@ swiper-container {
         padding-bottom: 20px;
 
         ion-card {
-            width: 240px;
+            width: 230px;
             height: 56px;
             --background: #262626;
         }
@@ -46,10 +52,4 @@ swiper-container {
     border-radius: 50%;
     border: 6px solid var(--ion-color-dark);
     margin-top: 32px;
-}
-
-.media-card img {
-    width: 230px;
-    max-width: 230px !important;
-    min-width: 230px !important;
 }

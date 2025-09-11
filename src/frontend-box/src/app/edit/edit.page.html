@@ -1,7 +1,7 @@
 <ion-header class="edit-header">
   <ion-toolbar color="light">
     <ion-buttons slot="start">
-      <ion-back-button icon="arrow-back-outline" defaultHref="/home"></ion-back-button>
+      <ion-back-button icon="arrow-back-outline" defaultHref="/settings"></ion-back-button>
     </ion-buttons>
     <ion-title>
       @if (network$ | async; as network) {
@@ -14,18 +14,8 @@
       </ion-button>
     </ion-buttons>
     <ion-buttons slot="end">
-      <ion-button (click)="adminButtonPressed()">
-        <ion-icon slot="icon-only" name="wifi-outline"></ion-icon>
-      </ion-button>
-    </ion-buttons>
-    <ion-buttons slot="end">
       <ion-button (click)="clearResumePressed()">
         <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
-      </ion-button>
-    </ion-buttons>
-    <ion-buttons slot="end">
-      <ion-button (click)="shutdownMessage()">
-        <ion-icon slot="icon-only" name="power-outline"></ion-icon>
       </ion-button>
     </ion-buttons>
   </ion-toolbar>

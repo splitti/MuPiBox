@@ -6,7 +6,8 @@
   "scripts": {
     "docker:build": "docker build -t mupibox .",
     "docker:start": "docker run -it -v ./src/backend-api/:/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/ -p 80:80 -p 8200:8200 -p 5005:5005 mupibox:latest bash",
-    "serve": "npm run serve --workspaces",
+    "serve": "concurrently 'npm run serve:admin' 'npm run serve:frontend-box' 'npm run serve:backend-api' 'npm run serve:backend-player'",
+    "serve:admin": "cd AdminInterface/www && php -S 127.0.0.1:8000",
     "serve:frontend-box": "npm run serve --workspace=mupibox-frontend-box",
     "serve:backend-api": "npm run serve --workspace=mupibox-backend-api",
     "serve:backend-player": "npm run serve --workspace=mupibox-backend-player",
@@ -26,6 +27,7 @@
   "private": true,
   "devDependencies": {
     "@biomejs/biome": "*",
-    "cross-env": "7.0.3"
+    "cross-env": "7.0.3",
+    "concurrently": "9.1.0"
   }
 }
