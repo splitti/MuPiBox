@@ -179,10 +179,6 @@ export class EditPage implements OnInit {
     this.router.navigate(['/add'])
   }
 
-  adminButtonPressed() {
-    this.router.navigate(['/wifi'])
-  }
-
   async clearResumePressed() {
     const alert = await this.alertController.create({
       cssClass: 'alert',
@@ -196,33 +192,6 @@ export class EditPage implements OnInit {
             setTimeout(() => {
               this.media = this.mediaService.fetchRawMedia()
             }, 2000)
-          },
-        },
-        {
-          text: 'Cancel',
-        },
-      ],
-    })
-
-    await alert.present()
-  }
-
-  async shutdownMessage() {
-    const alert = await this.alertController.create({
-      cssClass: 'alert',
-      header: 'Powermanagement',
-      message: 'Do you want to shutdown the MuPiBox?',
-      buttons: [
-        {
-          text: 'Shutdown',
-          handler: () => {
-            this.playerService.sendCmd(PlayerCmds.SHUTOFF)
-          },
-        },
-        {
-          text: 'Reboot',
-          handler: () => {
-            this.playerService.sendCmd(PlayerCmds.REBOOT)
           },
         },
         {
