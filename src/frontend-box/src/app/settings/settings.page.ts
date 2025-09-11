@@ -1,6 +1,8 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core'
+import { ChangeDetectionStrategy, Component, Signal, computed, effect, inject, signal } from '@angular/core'
 import { IonBackButton, IonButtons, IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular/standalone'
 import { SwiperComponent, SwiperData } from '../swiper/swiper.component'
+import { from, of, switchMap } from 'rxjs'
+import { toObservable, toSignal } from '@angular/core/rxjs-interop'
 
 import { AlertController } from '@ionic/angular/standalone'
 import { HttpClient } from '@angular/common/http'
@@ -11,8 +13,6 @@ import { Router } from '@angular/router'
 import { SwiperIonicEventsHelper } from '../swiper/swiper-ionic-events-helper'
 import { addIcons } from 'ionicons'
 import { arrowBackOutline } from 'ionicons/icons'
-import { toSignal } from '@angular/core/rxjs-interop'
-import {of} from 'rxjs'
 
 @Component({
   selector: 'app-settings',
@@ -34,10 +34,10 @@ import {of} from 'rxjs'
 })
 export class SettingsPage extends SwiperIonicEventsHelper {
   private mediaService = inject(MediaService)
-  protected network = toSignal(this.mediaService.network$)
+  protected network = toSignal(this.mediaService.network$, { initialValue: null })
 
   protected swiperData = computed(() => {
-    return [
+    const out = [
       {
         name: 'Add media',
         imgSrc: of('../../assets/plus-box-outline.svg'),
@@ -53,15 +53,18 @@ export class SettingsPage extends SwiperIonicEventsHelper {
         imgSrc: of('../../assets/power.svg'),
         data: 'shutdown',
       },
-      {
+    ]
+    if (this.qrCodeSrc() !== null) {
+      out.push({
         name: 'More settings',
         imgSrc: of(this.qrCodeSrc()),
         data: 'more-settings',
-      },
-    ]
+      })
+    }
+    return out
   })
 
-  private qrCodeSrc = signal<string>('')
+  protected qrCodeSrc: Signal<string>
 
   private router = inject(Router)
   private alertController = inject(AlertController)
@@ -71,18 +74,16 @@ export class SettingsPage extends SwiperIonicEventsHelper {
     super()
     addIcons({ arrowBackOutline })
 
-    effect(
-      () => {
-        const ip = this.network()?.ip
-        if (ip !== undefined) {
-          QRCode.toDataURL(`http://${ip}`, { color: { light: '#00000000' } }).then((url) => {
-            this.qrCodeSrc.set(url)
-          })
-        } else {
-          this.qrCodeSrc.set('')
-        }
-      },
-      { allowSignalWrites: true },
+    this.qrCodeSrc = toSignal(
+      toObservable(this.network).pipe(
+        switchMap((network) => {
+          if (network?.ip !== undefined) {
+            return from(QRCode.toDataURL(`http://${network.ip}`, { color: { light: '#00000000' } }))
+          }
+          return of(null)
+        }),
+      ),
+      { initialValue: null },
     )
   }
 
