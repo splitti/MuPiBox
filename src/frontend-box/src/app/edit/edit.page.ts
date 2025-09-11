@@ -32,7 +32,7 @@ import { AlertController } from '@ionic/angular/standalone'
 import { AsyncPipe } from '@angular/common'
 import type { Media } from '../media'
 import { MediaService } from '../media.service'
-import type { Network } from '../network'
+import type { Network } from '@backend-api/network.model'
 import type { Observable } from 'rxjs'
 import { addIcons } from 'ionicons'
 
@@ -184,53 +184,51 @@ export class EditPage implements OnInit {
   }
 
   async clearResumePressed() {
-    const alert = await this.alertController.create({
-      cssClass: 'alert',
-      header: 'Resume',
-      message: 'Do you want to clear all resume media?',
-      buttons: [
-        {
-          text: 'Clear',
-          handler: () => {
-            this.playerService.sendCmd(PlayerCmds.CLEARRESUME)
-            setTimeout(() => {
-              this.media = this.mediaService.fetchRawMedia()
-            }, 2000)
-          },
-        },
-        {
-          text: 'Cancel',
-        },
-      ],
-    })
-
-    await alert.present()
+    // const alert = await this.alertController.create({
+    //   cssClass: 'alert',
+    //   header: 'Resume',
+    //   message: 'Do you want to clear all resume media?',
+    //   buttons: [
+    //     {
+    //       text: 'Clear',
+    //       handler: () => {
+    //         this.playerService.sendCmd(PlayerCmds.CLEARRESUME)
+    //         setTimeout(() => {
+    //           this.media = this.mediaService.fetchRawMedia()
+    //         }, 2000)
+    //       },
+    //     },
+    //     {
+    //       text: 'Cancel',
+    //     },
+    //   ],
+    // })
+    // await alert.present()
   }
 
   async shutdownMessage() {
-    const alert = await this.alertController.create({
-      cssClass: 'alert',
-      header: 'Powermanagement',
-      message: 'Do you want to shutdown the MuPiBox?',
-      buttons: [
-        {
-          text: 'Shutdown',
-          handler: () => {
-            this.playerService.sendCmd(PlayerCmds.SHUTOFF)
-          },
-        },
-        {
-          text: 'Reboot',
-          handler: () => {
-            this.playerService.sendCmd(PlayerCmds.REBOOT)
-          },
-        },
-        {
-          text: 'Cancel',
-        },
-      ],
-    })
-
-    await alert.present()
+    // const alert = await this.alertController.create({
+    //   cssClass: 'alert',
+    //   header: 'Powermanagement',
+    //   message: 'Do you want to shutdown the MuPiBox?',
+    //   buttons: [
+    //     {
+    //       text: 'Shutdown',
+    //       handler: () => {
+    //         this.playerService.sendCmd(PlayerCmds.SHUTOFF)
+    //       },
+    //     },
+    //     {
+    //       text: 'Reboot',
+    //       handler: () => {
+    //         this.playerService.sendCmd(PlayerCmds.REBOOT)
+    //       },
+    //     },
+    //     {
+    //       text: 'Cancel',
+    //     },
+    //   ],
+    // })
+    // await alert.present()
   }
 }
