@@ -88,8 +88,8 @@ export class AddPage implements OnInit, AfterViewInit {
     public alertController: AlertController,
     private activityIndicatorService: ActivityIndicatorService,
   ) {
-    if (this.router.getCurrentNavigation()?.extras.state) {
-      this.editMedia = this.router.getCurrentNavigation().extras.state.media
+    if (this.router.currentNavigation()?.extras.state) {
+      this.editMedia = this.router.currentNavigation().extras.state.media
       this.edit = true
     }
     addIcons({ arrowBackOutline, saveOutline })

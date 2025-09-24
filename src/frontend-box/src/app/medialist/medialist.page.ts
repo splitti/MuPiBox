@@ -55,8 +55,8 @@ export class MedialistPage extends SwiperIonicEventsHelper {
     super()
     addIcons({ arrowBackOutline })
 
-    this.artist.set(this.router.getCurrentNavigation()?.extras.state?.artist)
-    this.category.set(this.router.getCurrentNavigation()?.extras.state?.category ?? 'audiobook')
+    this.artist.set(this.router.currentNavigation()?.extras.state?.artist)
+    this.category.set(this.router.currentNavigation()?.extras.state?.category ?? 'audiobook')
 
     this.media = toSignal(
       combineLatest([toObservable(this.category), toObservable(this.artist)]).pipe(
