@@ -1,12 +1,3 @@
-import { EMPTY, Observable, catchError, defer, firstValueFrom, of, range, throwError } from 'rxjs'
-import { delay, map, mergeAll, mergeMap, retryWhen, take, tap, toArray } from 'rxjs/operators'
-import type { CategoryType, Media } from './media'
-import { SpotifyAlbumsResponseItem, SpotifyConfig } from './spotify'
-import { ExtraDataMedia, Utils } from './utils'
-
-import { HttpClient } from '@angular/common/http'
-import { Injectable } from '@angular/core'
-import { SpotifyApi } from '@spotify/web-api-ts-sdk'
 import type {
   Album,
   Artist,
@@ -17,7 +8,16 @@ import type {
   Show,
   SimplifiedAlbum,
   SimplifiedEpisode,
-} from '@spotify/web-api-ts-sdk/src/types'
+} from '@spotify/web-api-ts-sdk'
+import type { CategoryType, Media } from './media'
+import { EMPTY, Observable, catchError, defer, firstValueFrom, of, range, throwError } from 'rxjs'
+import { ExtraDataMedia, Utils } from './utils'
+import { SpotifyAlbumsResponseItem, SpotifyConfig } from './spotify'
+import { delay, map, mergeAll, mergeMap, retryWhen, take, tap, toArray } from 'rxjs/operators'
+
+import { HttpClient } from '@angular/common/http'
+import { Injectable } from '@angular/core'
+import { SpotifyApi } from '@spotify/web-api-ts-sdk'
 import { environment } from 'src/environments/environment'
 
 declare const require: any
