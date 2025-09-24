@@ -12,12 +12,12 @@
     "lint:fix": "npx @biomejs/biome check --fix ."
   },
   "dependencies": {
-    "@angular/common": "^18.2.7",
-    "@angular/core": "^18.2.7",
-    "@angular/forms": "^18.2.7",
-    "@angular/platform-browser": "^18.2.7",
-    "@angular/platform-browser-dynamic": "^18.2.7",
-    "@angular/router": "^18.2.7",
+    "@angular/common": "^19.2.15",
+    "@angular/core": "^19.2.15",
+    "@angular/forms": "^19.2.15",
+    "@angular/platform-browser": "^19.2.15",
+    "@angular/platform-browser-dynamic": "^19.2.15",
+    "@angular/router": "^19.2.15",
     "@ionic/angular": "^8.3.2",
     "@spotify/web-api-ts-sdk": "^1.2.0",
     "lodash-es": "4.17.21",
@@ -25,14 +25,14 @@
     "simple-keyboard": "^3.8.8",
     "swiper": "^11.1.14",
     "tslib": "^2.7.0",
-    "zone.js": "~0.14.10"
+    "zone.js": "~0.15.1"
   },
   "devDependencies": {
-    "@angular-devkit/build-angular": "^18.2.7",
-    "@angular/cli": "18.2.7",
-    "@angular/compiler": "^18.2.7",
-    "@angular/compiler-cli": "^18.2.7",
-    "@angular/language-service": "^18.2.7",
+    "@angular-devkit/build-angular": "^19.2.17",
+    "@angular/cli": "19.2.17",
+    "@angular/compiler": "^19.2.15",
+    "@angular/compiler-cli": "^19.2.15",
+    "@angular/language-service": "^19.2.15",
     "@ionic/angular-toolkit": "^5.0.0",
     "@types/jasmine": "~5.1.4",
     "@types/jasminewd2": "~2.0.13",
@@ -48,7 +48,7 @@
     "karma-jasmine-html-reporter": "^2.1.0",
     "karma-spec-reporter": "*",
     "protractor": "~7.0.0",
-    "typescript": "~5.4.5"
+    "typescript": "~5.8.3"
   },
   "description": "Frontend UI running on the MupiBox.",
   "private": true

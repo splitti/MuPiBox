@@ -30,7 +30,6 @@ import { addIcons } from 'ionicons'
   encapsulation: ViewEncapsulation.None,
   templateUrl: './wifi.page.html',
   styleUrls: ['./wifi.page.scss'],
-  standalone: true,
   imports: [
     IonTitle,
     FormsModule,
