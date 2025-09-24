@@ -22,6 +22,4 @@ describe('SettingsPage', () => {
   it('should create', () => {
     expect(component).toBeTruthy()
   })
-
-  // TODO: Test buttons clicked
 })
