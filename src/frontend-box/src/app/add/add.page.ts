@@ -1,6 +1,7 @@
-import { AfterViewInit, Component, OnInit, ViewEncapsulation } from '@angular/core'
 import { ActivatedRoute, Router } from '@angular/router'
+import { AfterViewInit, Component, OnInit, ViewEncapsulation } from '@angular/core'
 import { AlertController, NavController } from '@ionic/angular/standalone'
+import { CategoryType, Media, MediaSorting } from '../media'
 import {
   IonButton,
   IonButtons,
@@ -20,24 +21,22 @@ import {
   IonSelectOption,
   IonToolbar,
 } from '@ionic/angular/standalone'
-import { arrowBackOutline, saveOutline } from 'ionicons/icons'
-import { CategoryType, Media, MediaSorting } from '../media'
 import { PlayerCmds, PlayerService } from '../player.service'
+import { arrowBackOutline, saveOutline } from 'ionicons/icons'
 
-import { FormsModule } from '@angular/forms'
-import type { NgForm } from '@angular/forms'
-import { addIcons } from 'ionicons'
-import Keyboard from 'simple-keyboard'
 import { ActivityIndicatorService } from '../activity-indicator.service'
+import { FormsModule } from '@angular/forms'
+import Keyboard from 'simple-keyboard'
 import { MediaService } from '../media.service'
+import type { NgForm } from '@angular/forms'
 import { SpotifyService } from '../spotify.service'
+import { addIcons } from 'ionicons'
 
 @Component({
   selector: 'app-add',
   encapsulation: ViewEncapsulation.None,
   templateUrl: './add.page.html',
   styleUrls: ['./add.page.scss'],
-  standalone: true,
   imports: [
     FormsModule,
     IonHeader,
@@ -89,8 +88,8 @@ export class AddPage implements OnInit, AfterViewInit {
     public alertController: AlertController,
     private activityIndicatorService: ActivityIndicatorService,
   ) {
-    if (this.router.getCurrentNavigation()?.extras.state) {
-      this.editMedia = this.router.getCurrentNavigation().extras.state.media
+    if (this.router.currentNavigation()?.extras.state) {
+      this.editMedia = this.router.currentNavigation().extras.state.media
       this.edit = true
     }
     addIcons({ arrowBackOutline, saveOutline })
