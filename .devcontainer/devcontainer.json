@@ -12,8 +12,8 @@
       "installComposer": "true"
     },
     "ghcr.io/devcontainers/features/node:1": {
-      "version": "20",
-      "additionalVersions": "18"
+      "version": "22",
+      "additionalVersions": "20"
     },
     "ghcr.io/devcontainers/features/python:1": {
       "version": "3.12.1",

@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, Signal } from '@angular/core'
-import { toObservable, toSignal } from '@angular/core/rxjs-interop'
 import { map, of, switchMap } from 'rxjs'
+import { toObservable, toSignal } from '@angular/core/rxjs-interop'
 
 import { IonIcon } from '@ionic/angular/standalone'
 import { MediaService } from '../media.service'
@@ -11,7 +11,6 @@ import { PlayerService } from '../player.service'
   selector: 'mupihat-icon',
   templateUrl: './mupihat-icon.component.html',
   styleUrls: ['./mupihat-icon.component.scss'],
-  standalone: true,
   imports: [IonIcon],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
