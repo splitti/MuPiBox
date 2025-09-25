@@ -1,5 +1,5 @@
-import { Component, OnInit, ViewChild } from '@angular/core'
 import { ActivatedRoute, Router } from '@angular/router'
+import { Component, OnInit, ViewChild } from '@angular/core'
 import {
   IonBackButton,
   IonButton,
@@ -15,6 +15,7 @@ import {
   IonTitle,
   IonToolbar,
 } from '@ionic/angular/standalone'
+import { PlayerCmds, PlayerService } from '../player.service'
 import {
   pause,
   play,
@@ -26,29 +27,27 @@ import {
   volumeHighOutline,
   volumeLowOutline,
 } from 'ionicons/icons'
-import { PlayerCmds, PlayerService } from '../player.service'
 
-import { AsyncPipe } from '@angular/common'
-import { FormsModule } from '@angular/forms'
-import { NavController } from '@ionic/angular/standalone'
-import { addIcons } from 'ionicons'
-import type { Observable } from 'rxjs'
 import type { AlbumStop } from '../albumstop'
 import { ArtworkService } from '../artwork.service'
+import { AsyncPipe } from '@angular/common'
 import type { CurrentEpisode } from '../current.episode'
 import type { CurrentMPlayer } from '../current.mplayer'
 import type { CurrentPlaylist } from '../current.playlist'
 import type { CurrentShow } from '../current.show'
 import type { CurrentSpotify } from '../current.spotify'
+import { FormsModule } from '@angular/forms'
 import type { Media } from '../media'
 import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
+import { NavController } from '@ionic/angular/standalone'
+import type { Observable } from 'rxjs'
+import { addIcons } from 'ionicons'
 
 @Component({
   selector: 'app-player',
   templateUrl: './player.page.html',
   styleUrls: ['./player.page.scss'],
-  standalone: true,
   imports: [
     FormsModule,
     AsyncPipe,
@@ -112,8 +111,8 @@ export class PlayerPage implements OnInit {
     this.episode$ = this.mediaService.episode$
     this.show$ = this.mediaService.show$
 
-    if (this.router.getCurrentNavigation()?.extras.state?.media) {
-      this.media = this.router.getCurrentNavigation().extras.state.media
+    if (this.router.currentNavigation()?.extras.state?.media) {
+      this.media = this.router.currentNavigation().extras.state.media
       if (this.media.category === 'resume') {
         this.resumePlay = true
       }
