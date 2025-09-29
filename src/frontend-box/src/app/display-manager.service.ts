@@ -72,12 +72,6 @@ export class DisplayManagerService {
     })
   }
 
-  private monitorSpotifyState(): void {
-    // We don't need to reset the idle timer on Spotify state changes
-    // We only monitor the state to know if music is playing for our idle check logic
-    // The idle timer should only be reset by actual user interactions
-  }
-
   private checkIdleState(): void {
     const isPlaying = this.spotifyService.playerState$.value?.paused === false
     const idleTimeSeconds = (Date.now() - this.lastActivityTimestamp) / 1000

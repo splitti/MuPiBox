@@ -45,6 +45,7 @@ import type {
   SimplifiedEpisode,
 } from '@spotify/web-api-ts-sdk/src/types'
 import { environment } from 'src/environments/environment'
+import { LogService } from './log.service'
 
 declare const require: any
 
@@ -77,6 +78,7 @@ export class SpotifyService {
   constructor(
     private http: HttpClient,
     @Inject(DOCUMENT) private document: Document,
+    private logService: LogService,
   ) {
     this.initializeSpotify()
   }
@@ -97,7 +99,7 @@ export class SpotifyService {
         return this.errorHandler(errors)
       }),
       catchError((err) => {
-        console.warn(
+        this.logService.warn(
           `Search query failed for "${query}" due to rate limiting or API error, returning empty results:`,
           err?.message || err,
         )
@@ -111,7 +113,7 @@ export class SpotifyService {
             return this.errorHandler(errors)
           }),
           catchError((err) => {
-            console.warn(
+            this.logService.warn(
               `Search query page ${multiplier} failed for "${query}" due to rate limiting or API error, returning empty results:`,
               err?.message || err,
             )
@@ -153,7 +155,7 @@ export class SpotifyService {
         return this.errorHandler(errors)
       }),
       catchError((err) => {
-        console.warn(
+        this.logService.warn(
           `Artist albums query failed for artist ${id} due to rate limiting or API error, returning empty results:`,
           err?.message || err,
         )
@@ -174,7 +176,7 @@ export class SpotifyService {
             return this.errorHandler(errors)
           }),
           catchError((err) => {
-            console.warn(
+            this.logService.warn(
               `Artist info query failed for artist ${id} due to rate limiting or API error:`,
               err?.message || err,
             )
@@ -194,7 +196,7 @@ export class SpotifyService {
             return this.errorHandler(errors)
           }),
           catchError((err) => {
-            console.warn(
+            this.logService.warn(
               `Artist albums page ${multiplier.range} failed for artist ${id} due to rate limiting or API error, returning empty results:`,
               err?.message || err,
             )
@@ -237,7 +239,7 @@ export class SpotifyService {
         return this.errorHandler(errors)
       }),
       catchError((err) => {
-        console.warn(
+        this.logService.warn(
           `Show info query failed for show ${id} due to rate limiting or API error, returning empty results:`,
           err?.message || err,
         )
@@ -266,7 +268,7 @@ export class SpotifyService {
             return this.errorHandler(errors)
           }),
           catchError((err) => {
-            console.warn(
+            this.logService.warn(
               `Show episodes page ${multiplier.range} failed for show ${id} due to rate limiting or API error, returning empty results:`,
               err?.message || err,
             )
@@ -314,12 +316,12 @@ export class SpotifyService {
         return this.errorHandler(errors)
       }),
       catchError((err) => {
-        console.log('Spotify API failed for album %s, trying backend media info service...', id)
+        this.logService.log('Spotify API failed for album %s, trying backend media info service...', id)
 
         return this.http.get<any>(`/api/spotify/album/${id}`).pipe(
           timeout(30000),
           catchError((backendErr) => {
-            console.error(`Backend failed for album ${id}:`, backendErr?.message || backendErr)
+            this.logService.error(`Backend failed for album ${id}:`, backendErr?.message || backendErr)
             return EMPTY
           }),
         )
@@ -374,7 +376,7 @@ export class SpotifyService {
         return this.errorHandler(errors)
       }),
       catchError((err) => {
-        console.warn(
+        this.logService.warn(
           `Audiobook info query failed for audiobook ${id} due to rate limiting or API error, skipping this item:`,
           err?.message || err,
         )
@@ -427,7 +429,7 @@ export class SpotifyService {
         return this.errorHandler(errors)
       }),
       catchError((err) => {
-        console.warn(
+        this.logService.warn(
           `Episode info query failed for episode ${id} due to rate limiting or API error, skipping this item:`,
           err?.message || err,
         )
@@ -481,12 +483,12 @@ export class SpotifyService {
         return this.errorHandler(errors)
       }),
       catchError((err) => {
-        console.log('Spotify API failed for playlist %s, trying backend media info service...', id)
+        this.logService.log('Spotify API failed for playlist %s, trying backend media info service...', id)
 
         return this.http.get<any>(`/api/spotify/playlist/${id}`).pipe(
           timeout(30000),
           catchError((backendErr) => {
-            console.error(`Backend failed for playlist ${id}:`, backendErr?.message || backendErr)
+            this.logService.error(`Backend failed for playlist ${id}:`, backendErr?.message || backendErr)
             return EMPTY
           }),
         )
@@ -542,7 +544,7 @@ export class SpotifyService {
             validateState = true
           }
         } catch (albumErr) {
-          console.log('Spotify API validation failed for album %s, trying backend media info...', spotifyId)
+          this.logService.log('Spotify API validation failed for album %s, trying backend media info...', spotifyId)
 
           try {
             const backendData: any = await firstValueFrom(
@@ -552,7 +554,7 @@ export class SpotifyService {
               validateState = true
             }
           } catch (backendErr) {
-            console.log('Backend validation also failed for album %s', spotifyId)
+            this.logService.log('Backend validation also failed for album %s', spotifyId)
             validateState = false
           }
         }
@@ -602,7 +604,7 @@ export class SpotifyService {
             validateState = true
           }
         } catch (playlistErr) {
-          console.log('Spotify API validation failed for playlist %s, trying backend media info...', spotifyId)
+          this.logService.log('Spotify API validation failed for playlist %s, trying backend media info...', spotifyId)
 
           try {
             const backendData: any = await firstValueFrom(
@@ -612,13 +614,13 @@ export class SpotifyService {
               validateState = true
             }
           } catch (backendErr) {
-            console.log('Backend validation also failed for playlist %s', spotifyId)
+            this.logService.log('Backend validation also failed for playlist %s', spotifyId)
             validateState = false
           }
         }
       }
     } catch (err) {
-      console.log(err)
+      this.logService.log(err)
       validateState = false
     }
 
@@ -666,7 +668,7 @@ export class SpotifyService {
         distinctUntilChanged(),
         switchMap((isOnline) => {
           if (isOnline && !this.isPlayerReady()) {
-            console.log('Network is online and web player should be available - checking SDK status')
+            this.logService.log('Network is online and web player should be available - checking SDK status')
             return from(this.performHealthCheckAndRecovery(false))
           }
           return of(null)
@@ -676,7 +678,7 @@ export class SpotifyService {
         next: () => {
           /* handled in performHealthCheckAndRecovery */
         },
-        error: (error) => console.warn('SDK monitoring error:', error),
+        error: (error) => this.logService.warn('SDK monitoring error:', error),
       })
 
     // Also periodically check if we should have a working player but don't
@@ -685,7 +687,7 @@ export class SpotifyService {
         filter(() => this.shouldUsePlayer() && !this.isPlayerReady()),
         switchMap(() => {
           if (navigator.onLine) {
-            console.log("Periodic check: Should have web player but don't - attempting SDK retry")
+            this.logService.log("Periodic check: Should have web player but don't - attempting SDK retry")
             return from(this.performHealthCheckAndRecovery(false))
           }
           return of(null)
@@ -695,7 +697,7 @@ export class SpotifyService {
         next: () => {
           /* handled in performHealthCheckAndRecovery */
         },
-        error: (error) => console.warn('Periodic SDK check error:', error),
+        error: (error) => this.logService.warn('Periodic SDK check error:', error),
       })
   }
 
@@ -704,17 +706,17 @@ export class SpotifyService {
    */
   private async performHealthCheckAndRecovery(comprehensive = true): Promise<boolean> {
     const startTime = Date.now()
-    console.debug(`🔍 Starting Spotify player health check (${comprehensive ? 'comprehensive' : 'basic'})...`)
+    this.logService.debug(`🔍 Starting Spotify player health check (${comprehensive ? 'comprehensive' : 'basic'})...`)
 
     // If we're not supposed to use the player, return success
     if (!this.shouldUsePlayer()) {
-      console.debug('✅ Player not needed on this environment')
+      this.logService.debug('✅ Player not needed on this environment')
       return true
     }
 
     // Basic connectivity check
     if (!navigator.onLine) {
-      console.debug('❌ Device is offline - cannot ensure player health')
+      this.logService.debug('❌ Device is offline - cannot ensure player health')
       this.logHealthCheckResult(false, 'Device offline', Date.now() - startTime)
       return false
     }
@@ -722,7 +724,7 @@ export class SpotifyService {
     try {
       // Check if we have a basic player instance
       if (!this.isPlayerReady()) {
-        console.log('⚠️  Player not ready - attempting recovery...')
+        this.logService.log('⚠️  Player not ready - attempting recovery...')
         const recovered = await this.performCompleteRecovery()
         if (!recovered) {
           this.logHealthCheckResult(false, 'Recovery failed', Date.now() - startTime)
@@ -732,11 +734,11 @@ export class SpotifyService {
 
       // For comprehensive checks, also test functionality
       if (comprehensive) {
-        console.log('🔬 Testing player functionality...')
+        this.logService.log('🔬 Testing player functionality...')
         const isHealthy = await this.testPlayerFunctionality()
 
         if (!isHealthy) {
-          console.log('⚠️  Player functional test failed - attempting recovery...')
+          this.logService.log('⚠️  Player functional test failed - attempting recovery...')
           const recovered = await this.performCompleteRecovery()
           if (!recovered) {
             this.logHealthCheckResult(false, 'Recovery after functional test failed', Date.now() - startTime)
@@ -752,7 +754,7 @@ export class SpotifyService {
         }
       }
 
-      console.debug(`✅ Player health check passed (${comprehensive ? 'comprehensive' : 'basic'})`)
+      this.logService.debug(`✅ Player health check passed (${comprehensive ? 'comprehensive' : 'basic'})`)
       this.logHealthCheckResult(
         true,
         comprehensive ? 'Healthy - comprehensive' : 'Healthy - basic',
@@ -760,7 +762,7 @@ export class SpotifyService {
       )
       return true
     } catch (error) {
-      console.error('❌ Health check failed with error:', error)
+      this.logService.error('❌ Health check failed with error:', error)
       this.logHealthCheckResult(false, `Error: ${error.message}`, Date.now() - startTime)
       return false
     }
@@ -847,7 +849,7 @@ export class SpotifyService {
           this.initializePlayer()
         })
         .catch((error) => {
-          console.error('Failed to initialize Spotify Web Playback SDK:', error)
+          this.logService.error('Failed to initialize Spotify Web Playback SDK:', error)
           this.isConnected$.next(false)
         })
     }
@@ -862,7 +864,7 @@ export class SpotifyService {
         return
       } catch (error) {
         lastError = error as Error
-        console.warn(`SDK load attempt ${attempt} failed:`, error)
+        this.logService.warn(`SDK load attempt ${attempt} failed:`, error)
 
         if (attempt < maxRetries) {
           // Wait before retry, with exponential backoff
@@ -886,14 +888,14 @@ export class SpotifyService {
         this.http.get(tokenUrl, { responseType: 'text' }).subscribe({
           next: (token) => {
             if (!token || typeof token !== 'string' || token.trim() === '') {
-              console.error('Invalid or empty Spotify token received')
+              this.logService.error('Invalid or empty Spotify token received')
               return
             }
             // Token is passed directly to callback
             cb(token)
           },
           error: (error) => {
-            console.error('Failed to fetch Spotify token for player:', error)
+            this.logService.error('Failed to fetch Spotify token for player:', error)
             this.isConnected$.next(false)
           },
         })
@@ -902,34 +904,34 @@ export class SpotifyService {
     })
 
     this.player?.addListener('ready', ({ device_id }) => {
-      console.log('Ready with Device ID', device_id)
+      this.logService.log('Ready with Device ID', device_id)
       this.deviceId = device_id
       this.isConnected$.next(true)
     })
 
     this.player?.addListener('not_ready', ({ device_id }) => {
-      console.log('Device ID gone', device_id)
+      this.logService.log('Device ID gone', device_id)
       this.deviceId = null
       this.isConnected$.next(false)
     })
 
     this.player?.addListener('initialization_error', ({ message }) => {
-      console.error('Initialization Error', message)
+      this.logService.error('Initialization Error', message)
       this.isConnected$.next(false)
     })
 
     this.player?.addListener('authentication_error', ({ message }) => {
-      console.error('Authentication Error', message)
+      this.logService.error('Authentication Error', message)
       this.isConnected$.next(false)
     })
 
     this.player?.addListener('account_error', ({ message }) => {
-      console.error('Account Error', message)
+      this.logService.error('Account Error', message)
       this.isConnected$.next(false)
     })
 
     this.player?.addListener('playback_error', ({ message }) => {
-      console.error('Playback Error', message)
+      this.logService.error('Playback Error', message)
       this.isConnected$.next(false)
     })
 
@@ -942,13 +944,13 @@ export class SpotifyService {
       const previousTrack = this.previousPlayerState?.track_window?.current_track
 
       if (!state.paused && currentTrack && (!previousTrack || previousTrack.id !== currentTrack.id)) {
-        console.log('🔍 Spotify track change detected:', currentTrack.name)
+        this.logService.log('🔍 Spotify track change detected:', currentTrack.name)
         this.externalPlaybackDetected$.next(currentTrack)
       }
 
       // Store current state for comparison
       this.previousPlayerState = state
-      console.debug('Player State Changed', state)
+      this.logService.debug('Player State Changed', state)
     })
 
     this.player?.connect()
@@ -971,7 +973,7 @@ export class SpotifyService {
           const delaySeconds = retryAfter ? Number.parseInt(retryAfter, 10) : 1
           const delayMs = delaySeconds * 1000
 
-          console.warn(`Rate limited by Spotify API. Retrying after ${delaySeconds} seconds`)
+          this.logService.warn(`Rate limited by Spotify API. Retrying after ${delaySeconds} seconds`)
 
           return of(error).pipe(delay(delayMs))
         }
@@ -985,7 +987,7 @@ export class SpotifyService {
   // Player control methods
   async play(): Promise<void> {
     if (!this.isPlayerReady()) {
-      console.warn('Player not ready or not connected')
+      this.logService.warn('Player not ready or not connected')
       return
     }
 
@@ -993,86 +995,86 @@ export class SpotifyService {
       // Resume playback
       await this.player.resume()
     } catch (error) {
-      console.error('Error playing:', error)
+      this.logService.error('Error playing:', error)
     }
   }
 
   async pause(): Promise<void> {
     if (!this.isPlayerReady()) {
-      console.warn('Player not ready or not connected')
+      this.logService.warn('Player not ready or not connected')
       return
     }
 
     try {
       await this.player.pause()
     } catch (error) {
-      console.error('Error pausing:', error)
+      this.logService.error('Error pausing:', error)
     }
   }
 
   async nextTrack(): Promise<void> {
     if (!this.isPlayerReady()) {
-      console.warn('Player not ready or not connected')
+      this.logService.warn('Player not ready or not connected')
       return
     }
 
     try {
       await this.player.nextTrack()
     } catch (error) {
-      console.error('Error skipping to next track:', error)
+      this.logService.error('Error skipping to next track:', error)
     }
   }
 
   async previousTrack(): Promise<void> {
     if (!this.isPlayerReady()) {
-      console.warn('Player not ready or not connected')
+      this.logService.warn('Player not ready or not connected')
       return
     }
 
     try {
       await this.player.previousTrack()
     } catch (error) {
-      console.error('Error skipping to previous track:', error)
+      this.logService.error('Error skipping to previous track:', error)
     }
   }
 
   async setVolume(volume: number): Promise<void> {
     if (!this.isPlayerReady()) {
-      console.warn('Player not ready or not connected')
+      this.logService.warn('Player not ready or not connected')
       return
     }
 
     try {
       await this.player.setVolume(volume)
     } catch (error) {
-      console.error('Error setting volume:', error)
+      this.logService.error('Error setting volume:', error)
     }
   }
 
   async getVolume(): Promise<number> {
     if (!this.isPlayerReady()) {
-      console.warn('Player not ready or not connected')
+      this.logService.warn('Player not ready or not connected')
       return 0
     }
 
     try {
       return await this.player.getVolume()
     } catch (error) {
-      console.error('Error getting volume:', error)
+      this.logService.error('Error getting volume:', error)
       return 0
     }
   }
 
   async getCurrentState(): Promise<any> {
     if (!this.isPlayerReady()) {
-      console.warn('Player not ready or not connected')
+      this.logService.warn('Player not ready or not connected')
       return null
     }
 
     try {
       return await this.player.getCurrentState()
     } catch (error) {
-      console.error('Error getting current state:', error)
+      this.logService.error('Error getting current state:', error)
       return null
     }
   }
@@ -1107,16 +1109,16 @@ export class SpotifyService {
         new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000)),
       ])
 
-      console.log('🔧 Player responded to getCurrentState()')
+      this.logService.log('🔧 Player responded to getCurrentState()')
       return true
     } catch (error) {
-      console.log('❌ Player functional test failed:', error.message)
+      this.logService.log('❌ Player functional test failed:', error.message)
       return false
     }
   }
 
   private async performCompleteRecovery(): Promise<boolean> {
-    console.log('🔄 Starting complete Spotify SDK recovery...')
+    this.logService.log('🔄 Starting complete Spotify SDK recovery...')
     const recoveryStartTime = Date.now()
 
     try {
@@ -1128,33 +1130,33 @@ export class SpotifyService {
       this.sdkLoadError$.next(null)
 
       // Step 3: Rebuild from scratch
-      console.log('🏗️  Rebuilding SDK from scratch...')
+      this.logService.log('🏗️  Rebuilding SDK from scratch...')
       await this.initializeWebPlaybackSDKSync()
 
       // Step 4: Wait for ready state with timeout
       const isReady = await this.waitForPlayerReady(10000)
 
       if (isReady) {
-        console.log(`✅ Complete recovery successful in ${Date.now() - recoveryStartTime}ms`)
+        this.logService.log(`✅ Complete recovery successful in ${Date.now() - recoveryStartTime}ms`)
         return true
       }
-      console.log(`❌ Recovery failed - player not ready after ${Date.now() - recoveryStartTime}ms`)
+      this.logService.log(`❌ Recovery failed - player not ready after ${Date.now() - recoveryStartTime}ms`)
       return false
     } catch (error) {
-      console.error(`❌ Recovery failed after ${Date.now() - recoveryStartTime}ms:`, error)
+      this.logService.error(`❌ Recovery failed after ${Date.now() - recoveryStartTime}ms:`, error)
       return false
     }
   }
 
   private async completeSDKTeardown(): Promise<void> {
-    console.log('🧹 Performing complete SDK teardown...')
+    this.logService.log('🧹 Performing complete SDK teardown...')
 
     // Disconnect and clear player
     if (this.player) {
       try {
         await this.player.disconnect()
       } catch (error) {
-        console.log('Warning: Error during player disconnect:', error)
+        this.logService.warn('Warning: Error during player disconnect:', error)
       }
       this.player = null
     }
@@ -1179,7 +1181,7 @@ export class SpotifyService {
       window.onSpotifyWebPlaybackSDKReady = undefined
     }
 
-    console.log('🧹 SDK teardown complete')
+    this.logService.log('🧹 SDK teardown complete')
   }
 
   private async initializeWebPlaybackSDKSync(): Promise<void> {
@@ -1225,7 +1227,7 @@ export class SpotifyService {
     const result = success ? '✅ SUCCESS' : '❌ FAILED'
     const logMessage = `[${timestamp}] Spotify Health Check ${result}: ${details} (${durationMs}ms)`
 
-    console.debug(logMessage)
+    this.logService.debug(logMessage)
 
     this.logCurrentSDKState()
   }
@@ -1245,7 +1247,7 @@ export class SpotifyService {
       isLocalhost: this.isLocalhost(),
     }
 
-    console.debug(`SPOTIFY_SDK_STATE: ${JSON.stringify(state)} | ${timestamp}`)
+    this.logService.debug(`SPOTIFY_SDK_STATE: ${JSON.stringify(state)} | ${timestamp}`)
   }
 
   shouldUsePlayer(): boolean {
@@ -1292,7 +1294,7 @@ export class SpotifyService {
         })),
       })),
       catchError((error) => {
-        console.log('Spotify API failed for album info %s, trying backend media info...', albumId)
+        this.logService.log('Spotify API failed for album info %s, trying backend media info...', albumId)
 
         // Fallback to backend scraper endpoint
         return this.http.get<any>(`/api/spotify/album/${albumId}`).pipe(
@@ -1312,7 +1314,7 @@ export class SpotifyService {
               })) || [],
           })),
           catchError((backendError) => {
-            console.error('Backend also failed for album info:', backendError)
+            this.logService.error('Backend also failed for album info:', backendError)
             return of({ total_tracks: 0, album_name: '', tracks: [] })
           }),
         )
@@ -1344,7 +1346,7 @@ export class SpotifyService {
         )
       }),
       catchError((error) => {
-        console.log('Spotify API failed for playlist info %s, trying backend media info...', playlistId)
+        this.logService.log('Spotify API failed for playlist info %s, trying backend media info...', playlistId)
 
         // Fallback to backend scraper endpoint
         return this.http.get<any>(`/api/spotify/playlist/${playlistId}`).pipe(
@@ -1361,7 +1363,7 @@ export class SpotifyService {
               })) || [],
           })),
           catchError((backendError) => {
-            console.error('Backend also failed for playlist info:', backendError)
+            this.logService.error('Backend also failed for playlist info:', backendError)
             return of({ total_tracks: 0, playlist_name: '', tracks: [] })
           }),
         )
@@ -1393,7 +1395,7 @@ export class SpotifyService {
         )
       }),
       catchError((error) => {
-        console.error('Error getting show info:', error)
+        this.logService.error('Error getting show info:', error)
         return of({ total_episodes: 0, show_name: '', episodes: [] })
       }),
     )
@@ -1421,7 +1423,7 @@ export class SpotifyService {
           })) || [],
       })),
       catchError((error) => {
-        console.error('Error getting audiobook info:', error)
+        this.logService.error('Error getting audiobook info:', error)
         return of({ total_chapters: 0, audiobook_name: '', chapters: [] })
       }),
     )

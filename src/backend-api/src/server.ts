@@ -7,6 +7,7 @@ import express from 'express'
 import jsonfile from 'jsonfile'
 import ky from 'ky'
 import xmlparser from 'xml-js'
+import { LogRequest, LogResponse } from './models/log.model'
 import { ServerConfig } from './models/server.model'
 import { SpotifyMediaInfo } from './services/spotify-media-info.service'
 
@@ -494,6 +495,67 @@ app.get('/api/config', (req, res) => {
       res.status(500).send('Error parsing mupibox configuration')
     }
   })
+})
+
+app.post('/api/logs', (req, res) => {
+  try {
+    const logRequest = req.body as LogRequest
+
+    if (!logRequest.entries || !Array.isArray(logRequest.entries)) {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid log request format. Expected entries array.',
+        entriesReceived: 0,
+      } as LogResponse)
+      return
+    }
+
+    // Process each log entry
+    for (const entry of logRequest.entries) {
+      const timestamp = entry.timestamp || new Date().toISOString()
+      const source = entry.source || 'Frontend'
+      const level = entry.level || 'log'
+
+      // Format the message similar to existing server logs
+      let logMessage = `${timestamp}: [MuPiBox-${source}] ${entry.message}`
+
+      // Add additional context if available
+      if (entry.url) {
+        logMessage += ` | URL: ${entry.url}`
+      }
+
+      // Output to appropriate console method
+      switch (level) {
+        case 'error':
+          console.error(logMessage, ...(entry.args || []))
+          break
+        case 'warn':
+          console.warn(logMessage, ...(entry.args || []))
+          break
+        case 'debug':
+          console.debug(logMessage, ...(entry.args || []))
+          break
+        default:
+          console.log(logMessage, ...(entry.args || []))
+          break
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Logs received successfully',
+      entriesReceived: logRequest.entries.length,
+    } as LogResponse)
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    console.error(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error processing logs: ${errorMessage}`)
+
+    res.status(500).json({
+      success: false,
+      message: 'Error processing logs',
+      entriesReceived: 0,
+    } as LogResponse)
+  }
 })
 
 app.post('/api/screen/off', (req, res) => {
