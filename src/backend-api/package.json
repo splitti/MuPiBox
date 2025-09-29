@@ -12,19 +12,18 @@
     "check-types": "npx tsc --noEmit"
   },
   "dependencies": {
+    "@spotify/web-api-ts-sdk": "^1.2.0",
     "cors": "^2.8.5",
     "express": "^4.21.1",
     "jsonfile": "^6.1.0",
     "ky": "1.7.2",
     "puppeteer": "^24.18.0",
-    "spotify-web-api-node": "^5.0.2",
     "xml-js": "^1.6.11"
   },
   "devDependencies": {
     "@types/express": "5.0.0",
     "@types/jsonfile": "6.1.4",
     "@types/node": "22.9.0",
-    "@types/spotify-web-api-node": "5.0.11",
     "@types/supertest": "6.0.2",
     "esbuild": "0.24.0",
     "nock": "^14.0.0-beta.15",

@@ -1,29 +1,5 @@
-import {
-  BehaviorSubject,
-  EMPTY,
-  Observable,
-  catchError,
-  defer,
-  firstValueFrom,
-  from,
-  interval,
-  of,
-  range,
-  throwError,
-} from 'rxjs'
-import {
-  delay,
-  distinctUntilChanged,
-  filter,
-  map,
-  mergeAll,
-  mergeMap,
-  retryWhen,
-  switchMap,
-  take,
-  timeout,
-  toArray,
-} from 'rxjs/operators'
+import { BehaviorSubject, EMPTY, Observable, catchError, firstValueFrom, from, interval, of } from 'rxjs'
+import { distinctUntilChanged, filter, map, scan, switchMap, take, takeLast, timeout } from 'rxjs/operators'
 import type { CategoryType, Media } from './media'
 import { SpotifyConfig, SpotifyPlayer, SpotifyWebPlaybackState, SpotifyWebPlaybackTrack } from './spotify'
 import { ExtraDataMedia, Utils } from './utils'
@@ -31,30 +7,13 @@ import { ExtraDataMedia, Utils } from './utils'
 import { DOCUMENT } from '@angular/common'
 import { HttpClient } from '@angular/common/http'
 import { Inject, Injectable } from '@angular/core'
-import { SpotifyApi } from '@spotify/web-api-ts-sdk'
-import type {
-  Album,
-  Artist,
-  Audiobook,
-  Episode,
-  Page,
-  Playlist,
-  SearchResults,
-  Show,
-  SimplifiedAlbum,
-  SimplifiedEpisode,
-} from '@spotify/web-api-ts-sdk/src/types'
 import { environment } from 'src/environments/environment'
 import { LogService } from './log.service'
-
-declare const require: any
 
 @Injectable({
   providedIn: 'root',
 })
 export class SpotifyService {
-  spotifyApi: SpotifyApi | undefined = undefined
-  refreshingToken = false
   deviceName: string | undefined = undefined
 
   // Web Playback SDK properties
@@ -80,12 +39,68 @@ export class SpotifyService {
     @Inject(DOCUMENT) private document: Document,
     private logService: LogService,
   ) {
-    this.initializeSpotify()
+    this.initializeSpotifyConfig()
   }
 
   private isLocalhost(): boolean {
     const hostname = window.location.hostname
     return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1' || hostname === '' // file:// protocol
+  }
+
+  /**
+   * Helper method to fetch all paginated results from the backend API using total count
+   */
+  private fetchAllPaginatedResults<T>(url: string, baseParams: any, pageSize = 50): Observable<T[]> {
+    const fetchPage = (offset: number): Observable<{ items: T[]; total: number; limit: number; offset: number }> => {
+      const params = { ...baseParams, limit: pageSize.toString(), offset: offset.toString() }
+      return this.http.get<{ items: T[]; total: number; limit: number; offset: number }>(url, { params })
+    }
+
+    // First, get the total count and then fetch all pages
+    return fetchPage(0).pipe(
+      switchMap((firstPageResponse) => {
+        const { items: firstPageItems, total } = firstPageResponse
+
+        // If we have all results in the first page, return them
+        if (firstPageItems.length >= total) {
+          return of(firstPageItems)
+        }
+
+        // Calculate how many more pages we need
+        const remainingItems = total - firstPageItems.length
+        const additionalPagesNeeded = Math.ceil(remainingItems / pageSize)
+
+        if (additionalPagesNeeded <= 0) {
+          return of(firstPageItems)
+        }
+
+        // Create observables for additional pages
+        const additionalPageObservables: Observable<T[]>[] = []
+        for (let page = 1; page <= additionalPagesNeeded; page++) {
+          const offset = page * pageSize
+          additionalPageObservables.push(
+            fetchPage(offset).pipe(
+              map((response) => response.items),
+              catchError((error) => {
+                this.logService.warn(`Failed to fetch page at offset ${offset}:`, error?.message || error)
+                return of([] as T[])
+              }),
+            ),
+          )
+        }
+
+        // Combine first page with all additional pages
+        return from(additionalPageObservables).pipe(
+          switchMap((obs) => obs),
+          scan((acc: T[], pageItems: T[]) => [...acc, ...pageItems], firstPageItems),
+          takeLast(1),
+        )
+      }),
+      catchError((error) => {
+        this.logService.warn('Pagination fetch failed:', error?.message || error)
+        return of([])
+      }),
+    )
   }
 
   getMediaByQuery(
@@ -94,54 +109,33 @@ export class SpotifyService {
     index: number,
     extraDataSource: ExtraDataMedia,
   ): Observable<Media[]> {
-    const albums = defer(() => this.spotifyApi.search(query, ['album'], 'DE', 1, 0)).pipe(
-      retryWhen((errors) => {
-        return this.errorHandler(errors)
+    const searchUrl = `${environment.backend.apiUrl}/spotify/search/albums`
+
+    return this.fetchAllPaginatedResults<any>(searchUrl, { query }).pipe(
+      map((albums: any[]) => {
+        return albums.map((album) => {
+          const media: Media = {
+            id: album.id,
+            artist: album.artists?.[0]?.name || 'Unknown Artist',
+            title: album.name,
+            cover: album.images?.[0]?.url || '../assets/images/nocover_mupi.png',
+            release_date: album.release_date,
+            type: 'spotify',
+            category,
+            index,
+          }
+          Utils.copyExtraMediaData(extraDataSource, media)
+          return media
+        })
       }),
       catchError((err) => {
         this.logService.warn(
-          `Search query failed for "${query}" due to rate limiting or API error, returning empty results:`,
+          `Search query failed for "${query}" due to API error, returning empty results:`,
           err?.message || err,
         )
-        return of({ albums: { total: 0 } })
+        return of([])
       }),
-      map((response: SearchResults<['album']>) => response.albums.total),
-      mergeMap((count) => range(0, Math.ceil(count / 50))),
-      mergeMap((multiplier) =>
-        defer(() => this.spotifyApi.search(query, ['album'], 'DE', 50, 50 * multiplier)).pipe(
-          retryWhen((errors) => {
-            return this.errorHandler(errors)
-          }),
-          catchError((err) => {
-            this.logService.warn(
-              `Search query page ${multiplier} failed for "${query}" due to rate limiting or API error, returning empty results:`,
-              err?.message || err,
-            )
-            return of({ albums: { items: [] } })
-          }),
-          map((response: SearchResults<['album']>) => {
-            return response.albums.items.map((item) => {
-              const media: Media = {
-                id: item.id,
-                artist: item.artists[0].name,
-                title: item.name,
-                cover: item.images[0].url,
-                release_date: item.release_date,
-                type: 'spotify',
-                category,
-                index,
-              }
-              Utils.copyExtraMediaData(extraDataSource, media)
-              return media
-            })
-          }),
-        ),
-      ),
-      mergeAll(),
-      toArray(),
     )
-
-    return albums
   }
 
   getMediaByArtistID(
@@ -150,67 +144,23 @@ export class SpotifyService {
     index: number,
     extraDataSource: ExtraDataMedia,
   ): Observable<Media[]> {
-    const albums = defer(() => this.spotifyApi.artists.albums(id, 'album,single,compilation', 'DE', 1, 0)).pipe(
-      retryWhen((errors) => {
-        return this.errorHandler(errors)
-      }),
-      catchError((err) => {
-        this.logService.warn(
-          `Artist albums query failed for artist ${id} due to rate limiting or API error, returning empty results:`,
-          err?.message || err,
-        )
-        return of({ total: 0 })
-      }),
-      map((response: Page<SimplifiedAlbum>) => ({ counter: response.total })),
-      mergeMap((count) =>
-        range(0, Math.ceil(count.counter / 50)).pipe(
-          map((index) => ({
-            range: index,
-            ...count,
-          })),
-        ),
-      ),
-      mergeMap((counter) =>
-        defer(() => this.spotifyApi.artists.get(id)).pipe(
-          retryWhen((errors) => {
-            return this.errorHandler(errors)
-          }),
-          catchError((err) => {
-            this.logService.warn(
-              `Artist info query failed for artist ${id} due to rate limiting or API error:`,
-              err?.message || err,
-            )
-            return of({ images: [{ url: '../assets/images/nocover_mupi.png' }] })
-          }),
-          map((response: Artist) => ({
-            range: counter.range,
-            artistcover: response.images?.[0]?.url || '../assets/images/nocover_mupi.png',
-          })),
-        ),
-      ),
-      mergeMap((multiplier) =>
-        defer(() =>
-          this.spotifyApi.artists.albums(id, 'album,single,compilation', 'DE', 50, 50 * multiplier.range),
-        ).pipe(
-          retryWhen((errors) => {
-            return this.errorHandler(errors)
-          }),
-          catchError((err) => {
-            this.logService.warn(
-              `Artist albums page ${multiplier.range} failed for artist ${id} due to rate limiting or API error, returning empty results:`,
-              err?.message || err,
-            )
-            return of({ items: [] })
-          }),
-          map((response: Page<SimplifiedAlbum>) => {
-            return response.items.map((item) => {
+    const artistAlbumsUrl = `${environment.backend.apiUrl}/spotify/artist/${id}/albums`
+    const artistUrl = `${environment.backend.apiUrl}/spotify/artist/${id}`
+
+    return this.http.get<any>(artistUrl).pipe(
+      switchMap((artist) => {
+        const artistcover = artist.images?.[0]?.url || '../assets/images/nocover_mupi.png'
+
+        return this.fetchAllPaginatedResults<any>(artistAlbumsUrl, {}).pipe(
+          map((albums) => {
+            return albums.map((album) => {
               const media: Media = {
-                id: item.id,
-                artist: item.artists[0].name,
-                title: item.name,
-                cover: item.images[0].url,
-                artistcover: multiplier.artistcover,
-                release_date: item.release_date,
+                id: album.id,
+                artist: album.artists?.[0]?.name || 'Unknown Artist',
+                title: album.name,
+                cover: album.images?.[0]?.url || '../assets/images/nocover_mupi.png',
+                artistcover: artistcover,
+                release_date: album.release_date,
                 type: 'spotify',
                 category,
                 index,
@@ -219,13 +169,16 @@ export class SpotifyService {
               return media
             })
           }),
-        ),
-      ),
-      mergeAll(),
-      toArray(),
+        )
+      }),
+      catchError((err) => {
+        this.logService.warn(
+          `Artist albums query failed for artist ${id} due to API error, returning empty results:`,
+          err?.message || err,
+        )
+        return of([])
+      }),
     )
-
-    return albums
   }
 
   getMediaByShowID(
@@ -234,71 +187,44 @@ export class SpotifyService {
     index: number,
     extraDataSource: ExtraDataMedia,
   ): Observable<Media[]> {
-    const albums = defer(() => this.spotifyApi.shows.get(id, 'DE')).pipe(
-      retryWhen((errors) => {
-        return this.errorHandler(errors)
-      }),
-      catchError((err) => {
-        this.logService.warn(
-          `Show info query failed for show ${id} due to rate limiting or API error, returning empty results:`,
-          err?.message || err,
-        )
-        return of({
-          episodes: { total: 0 },
-          name: '',
-          images: [{ url: '../assets/images/nocover_mupi.png' }],
-        })
-      }),
-      map((response: Show) => ({
-        count: response.episodes.total,
-        name: response.name,
-        showcover: response.images[0].url,
-      })),
-      mergeMap((obj) =>
-        range(0, Math.ceil(obj.count / 50)).pipe(
-          map((index) => ({
-            range: index,
-            ...obj,
-          })),
-        ),
-      ),
-      mergeMap((multiplier) =>
-        defer(() => this.spotifyApi.shows.episodes(id, 'DE', 50, 50 * multiplier.range)).pipe(
-          retryWhen((errors) => {
-            return this.errorHandler(errors)
-          }),
-          catchError((err) => {
-            this.logService.warn(
-              `Show episodes page ${multiplier.range} failed for show ${id} due to rate limiting or API error, returning empty results:`,
-              err?.message || err,
-            )
-            return of({ items: [] })
-          }),
-          map((response: Page<SimplifiedEpisode>) => {
-            return response.items
-              .filter((el) => el != null)
-              .map((item) => {
+    const showUrl = `${environment.backend.apiUrl}/spotify/show/${id}`
+    const showEpisodesUrl = `${environment.backend.apiUrl}/spotify/show/${id}/episodes`
+
+    return this.http.get<any>(showUrl).pipe(
+      switchMap((show) => {
+        const showName = show.name || 'Unknown Show'
+        const showcover = show.images?.[0]?.url || '../assets/images/nocover_mupi.png'
+
+        return this.fetchAllPaginatedResults<any>(showEpisodesUrl, {}).pipe(
+          map((episodes) => {
+            return episodes
+              .filter((episode) => episode != null)
+              .map((episode) => {
                 const media: Media = {
-                  showid: item.id,
-                  artist: multiplier.name,
-                  title: item.name,
-                  cover: item.images[0].url,
-                  artistcover: multiplier.showcover,
+                  showid: episode.id,
+                  artist: showName,
+                  title: episode.name,
+                  cover: episode.images?.[0]?.url || showcover,
+                  artistcover: showcover,
                   type: 'spotify',
                   category,
-                  release_date: item.release_date,
+                  release_date: episode.release_date,
                   index,
                 }
                 Utils.copyExtraMediaData(extraDataSource, media)
                 return media
               })
           }),
-        ),
-      ),
-      mergeAll(),
-      toArray(),
+        )
+      }),
+      catchError((err) => {
+        this.logService.warn(
+          `Show episodes query failed for show ${id} due to API error, returning empty results:`,
+          err?.message || err,
+        )
+        return of([])
+      }),
     )
-    return albums
   }
 
   getMediaByID(
@@ -311,32 +237,17 @@ export class SpotifyService {
     resumespotifyprogress_ms: number,
     resumespotifytrack_number: number,
   ): Observable<Media> {
-    const album = defer(() => this.spotifyApi.albums.get(id, 'DE')).pipe(
-      retryWhen((errors) => {
-        return this.errorHandler(errors)
-      }),
-      catchError((err) => {
-        this.logService.log('Spotify API failed for album %s, trying backend media info service...', id)
+    const albumUrl = `${environment.backend.apiUrl}/spotify/album/${id}`
 
-        return this.http.get<any>(`/api/spotify/album/${id}`).pipe(
-          timeout(30000),
-          catchError((backendErr) => {
-            this.logService.error(`Backend failed for album ${id}:`, backendErr?.message || backendErr)
-            return EMPTY
-          }),
-        )
-      }),
-      map((response: Album | any) => {
-        // Check if response is from backend scraper (has different structure)
-        const isFromBackend = response.album && response.tracks
-
+    return this.http.get<any>(albumUrl).pipe(
+      map((album) => {
         const media: Media = {
-          id: isFromBackend ? id : response.id,
-          artist: isFromBackend ? response.album.artists?.[0]?.name : response.artists?.[0]?.name,
-          title: isFromBackend ? response.album.name : response.name,
-          cover: isFromBackend ? response.album.images?.[0]?.url : response?.images[0]?.url,
+          id: album.id,
+          artist: album.artists?.[0]?.name || 'Unknown Artist',
+          title: album.name,
+          cover: album.images?.[0]?.url || '../assets/images/nocover_mupi.png',
           type: 'spotify',
-          release_date: isFromBackend ? response.album.release_date : response.release_date,
+          release_date: album.release_date,
           category,
           index,
         }
@@ -357,8 +268,15 @@ export class SpotifyService {
         }
         return media
       }),
+      catchError((err) => {
+        this.logService.warn(
+          `Album info query failed for album ${id} due to API error, skipping this item:`,
+          err?.message || err,
+        )
+        // Skip failed items entirely
+        return EMPTY
+      }),
     )
-    return album
   }
 
   getAudiobookByID(
@@ -371,24 +289,15 @@ export class SpotifyService {
     resumespotifyprogress_ms: number,
     resumespotifytrack_number: number,
   ): Observable<Media> {
-    const audiobook = defer(() => this.spotifyApi.audiobooks.get(id, 'DE')).pipe(
-      retryWhen((errors) => {
-        return this.errorHandler(errors)
-      }),
-      catchError((err) => {
-        this.logService.warn(
-          `Audiobook info query failed for audiobook ${id} due to rate limiting or API error, skipping this item:`,
-          err?.message || err,
-        )
-        // Skip failed items entirely
-        return EMPTY
-      }),
-      map((response: Audiobook) => {
+    const audiobookUrl = `${environment.backend.apiUrl}/spotify/audiobook/${id}`
+
+    return this.http.get<any>(audiobookUrl).pipe(
+      map((audiobook) => {
         const media: Media = {
-          audiobookid: response.id,
-          artist: response.authors?.[0]?.name,
-          title: response.name,
-          cover: response?.images[0]?.url,
+          audiobookid: audiobook.id,
+          artist: audiobook.authors?.[0]?.name || 'Unknown Author',
+          title: audiobook.name,
+          cover: audiobook.images?.[0]?.url || '../assets/images/nocover_mupi.png',
           type: 'spotify',
           category,
           index,
@@ -410,8 +319,15 @@ export class SpotifyService {
         }
         return media
       }),
+      catchError((err) => {
+        this.logService.warn(
+          `Audiobook info query failed for audiobook ${id} due to API error, skipping this item:`,
+          err?.message || err,
+        )
+        // Skip failed items entirely
+        return EMPTY
+      }),
     )
-    return audiobook
   }
 
   getMediaByEpisode(
@@ -424,26 +340,17 @@ export class SpotifyService {
     resumespotifyprogress_ms: number,
     resumespotifytrack_number: number,
   ): Observable<Media> {
-    const album = defer(() => this.spotifyApi.episodes.get(id, 'DE')).pipe(
-      retryWhen((errors) => {
-        return this.errorHandler(errors)
-      }),
-      catchError((err) => {
-        this.logService.warn(
-          `Episode info query failed for episode ${id} due to rate limiting or API error, skipping this item:`,
-          err?.message || err,
-        )
-        // Skip failed items entirely
-        return EMPTY
-      }),
-      map((response: Episode) => {
+    const episodeUrl = `${environment.backend.apiUrl}/spotify/episode/${id}`
+
+    return this.http.get<any>(episodeUrl).pipe(
+      map((episode) => {
         const media: Media = {
-          showid: response.id,
-          artist: response.show?.[0]?.name,
-          title: response.name,
-          cover: response?.images[0]?.url,
+          showid: episode.id,
+          artist: episode.show?.[0]?.name || 'Unknown Show',
+          title: episode.name,
+          cover: episode.images?.[0]?.url || '../assets/images/nocover_mupi.png',
           type: 'spotify',
-          release_date: response.release_date,
+          release_date: episode.release_date,
           category,
           index,
         }
@@ -464,8 +371,15 @@ export class SpotifyService {
         }
         return media
       }),
+      catchError((err) => {
+        this.logService.warn(
+          `Episode info query failed for episode ${id} due to API error, skipping this item:`,
+          err?.message || err,
+        )
+        // Skip failed items entirely
+        return EMPTY
+      }),
     )
-    return album
   }
 
   getMediaByPlaylistID(
@@ -478,14 +392,14 @@ export class SpotifyService {
     resumespotifyprogress_ms: number,
     resumespotifytrack_number: number,
   ): Observable<Media> {
-    const album = defer(() => this.spotifyApi.playlists.getPlaylist(id, 'DE')).pipe(
-      retryWhen((errors) => {
-        return this.errorHandler(errors)
-      }),
+    // Try API first, then fallback to scraper
+    const playlistApiUrl = `${environment.backend.apiUrl}/spotify/playlist-api/${id}`
+
+    return this.http.get<any>(playlistApiUrl).pipe(
       catchError((err) => {
         this.logService.log('Spotify API failed for playlist %s, trying backend media info service...', id)
 
-        return this.http.get<any>(`/api/spotify/playlist/${id}`).pipe(
+        return this.http.get<any>(`${environment.backend.apiUrl}/spotify/playlist/${id}`).pipe(
           timeout(30000),
           catchError((backendErr) => {
             this.logService.error(`Backend failed for playlist ${id}:`, backendErr?.message || backendErr)
@@ -493,14 +407,14 @@ export class SpotifyService {
           }),
         )
       }),
-      map((response: Playlist | any) => {
+      map((response: any) => {
         // Check if response is from backend scraper (has different structure)
         const isFromBackend = response.playlist && response.tracks
 
         const media: Media = {
           playlistid: isFromBackend ? id : response.id,
           title: isFromBackend ? response.playlist.name : response.name,
-          cover: isFromBackend ? response.playlist.images?.[0]?.url : response?.images[0]?.url,
+          cover: isFromBackend ? response.playlist.images?.[0]?.url : response?.images?.[0]?.url,
           type: 'spotify',
           category,
           index,
@@ -524,121 +438,41 @@ export class SpotifyService {
         return media
       }),
     )
-    return album
   }
 
   async validateSpotify(spotifyId: string, spotifyCategory: string): Promise<boolean> {
-    let validateState = false
-
     try {
-      if (spotifyCategory === 'album') {
-        try {
-          const data: any = await firstValueFrom(
-            defer(() => this.spotifyApi.albums.get(spotifyId, 'DE')).pipe(
-              retryWhen((errors) => {
-                return this.errorHandler(errors)
-              }),
-            ),
-          )
-          if (data.id !== undefined) {
-            validateState = true
-          }
-        } catch (albumErr) {
-          this.logService.log('Spotify API validation failed for album %s, trying backend media info...', spotifyId)
+      const validationUrl = `${environment.backend.apiUrl}/spotify/validate`
+      const data = await firstValueFrom(
+        this.http
+          .post<any>(validationUrl, {
+            id: spotifyId,
+            type: spotifyCategory,
+          })
+          .pipe(timeout(30000)),
+      )
 
-          try {
-            const backendData: any = await firstValueFrom(
-              this.http.get<any>(`/api/spotify/album/${spotifyId}`).pipe(timeout(30000)),
-            )
-            if (backendData.album?.name) {
-              validateState = true
-            }
-          } catch (backendErr) {
-            this.logService.log('Backend validation also failed for album %s', spotifyId)
-            validateState = false
-          }
-        }
-      } else if (spotifyCategory === 'show') {
-        const data: any = await firstValueFrom(
-          defer(() => this.spotifyApi.shows.get(spotifyId, 'DE')).pipe(
-            retryWhen((errors) => {
-              return this.errorHandler(errors)
-            }),
-          ),
-        )
-        if (data.id !== undefined) {
-          validateState = true
-        }
-      } else if (spotifyCategory === 'audiobook') {
-        const data: any = await firstValueFrom(
-          defer(() => this.spotifyApi.audiobooks.get(spotifyId)).pipe(
-            retryWhen((errors) => {
-              return this.errorHandler(errors)
-            }),
-          ),
-        )
-        if (data.id !== undefined) {
-          validateState = true
-        }
-      } else if (spotifyCategory === 'artist') {
-        const data: any = await firstValueFrom(
-          defer(() => this.spotifyApi.artists.get(spotifyId)).pipe(
-            retryWhen((errors) => {
-              return this.errorHandler(errors)
-            }),
-          ),
-        )
-        if (data.id !== undefined) {
-          validateState = true
-        }
-      } else if (spotifyCategory === 'playlist') {
-        try {
-          const data: any = await firstValueFrom(
-            defer(() => this.spotifyApi.playlists.getPlaylist(spotifyId)).pipe(
-              retryWhen((errors) => {
-                return this.errorHandler(errors)
-              }),
-            ),
-          )
-          if (data.id !== undefined) {
-            validateState = true
-          }
-        } catch (playlistErr) {
-          this.logService.log('Spotify API validation failed for playlist %s, trying backend media info...', spotifyId)
-
-          try {
-            const backendData: any = await firstValueFrom(
-              this.http.get<any>(`/api/spotify/playlist/${spotifyId}`).pipe(timeout(30000)),
-            )
-            if (backendData.playlist?.name) {
-              validateState = true
-            }
-          } catch (backendErr) {
-            this.logService.log('Backend validation also failed for playlist %s', spotifyId)
-            validateState = false
-          }
-        }
-      }
+      return data.valid || false
     } catch (err) {
-      this.logService.log(err)
-      validateState = false
+      this.logService.warn(`Validation failed for ${spotifyCategory} ${spotifyId}:`, err)
+      return false
     }
-
-    return validateState
   }
 
-  initializeSpotify(): void {
+  private initializeSpotifyConfig(): void {
     const spotifyConfigUrl = `${environment.backend.apiUrl}/spotify/config`
     this.http
       .get<SpotifyConfig>(spotifyConfigUrl)
       .pipe(take(1))
       .subscribe({
         next: (spotifyConfig: SpotifyConfig) => {
-          this.spotifyApi = SpotifyApi.withClientCredentials(spotifyConfig.clientId, spotifyConfig.clientSecret)
           this.deviceName = spotifyConfig.deviceName
           if (this.shouldUsePlayer()) {
             this.initializeWebPlaybackSDK()
           }
+        },
+        error: (error) => {
+          this.logService.error('Failed to get Spotify config:', error)
         },
       })
   }
@@ -956,34 +790,6 @@ export class SpotifyService {
     this.player?.connect()
   }
 
-  errorHandler(errors: Observable<any>) {
-    return errors.pipe(
-      mergeMap((error) => {
-        if (error.status === 429) {
-          // Handle rate limiting - extract retry delay from headers
-          let retryAfter: string | null = null
-
-          // Try different ways to access the Retry-After header
-          if (error.headers?.get) {
-            retryAfter = error.headers.get('Retry-After') || error.headers.get('retry-after')
-          } else if (error.headers) {
-            retryAfter = error.headers['Retry-After'] || error.headers['retry-after']
-          }
-
-          const delaySeconds = retryAfter ? Number.parseInt(retryAfter, 10) : 1
-          const delayMs = delaySeconds * 1000
-
-          this.logService.warn(`Rate limited by Spotify API. Retrying after ${delaySeconds} seconds`)
-
-          return of(error).pipe(delay(delayMs))
-        }
-        // For other errors, don't retry
-        return throwError(() => error)
-      }),
-      take(2),
-    )
-  }
-
   // Player control methods
   async play(): Promise<void> {
     if (!this.isPlayerReady()) {
@@ -1278,15 +1084,13 @@ export class SpotifyService {
    * Get album information including total tracks and track data
    */
   getAlbumInfo(albumId: string): Observable<{ total_tracks: number; album_name: string; tracks?: any[] }> {
-    if (!this.spotifyApi) {
-      return of({ total_tracks: 0, album_name: '', tracks: [] })
-    }
+    const albumUrl = `${environment.backend.apiUrl}/spotify/album/${albumId}`
 
-    return defer(() => this.spotifyApi.albums.get(albumId, 'DE')).pipe(
+    return this.http.get<any>(albumUrl).pipe(
       map((album) => ({
         total_tracks: album.total_tracks,
         album_name: album.name,
-        tracks: album.tracks.items.map((track) => ({
+        tracks: album.tracks.items.map((track: any) => ({
           id: track.id,
           uri: track.uri,
           name: track.name,
@@ -1294,30 +1098,8 @@ export class SpotifyService {
         })),
       })),
       catchError((error) => {
-        this.logService.log('Spotify API failed for album info %s, trying backend media info...', albumId)
-
-        // Fallback to backend scraper endpoint
-        return this.http.get<any>(`/api/spotify/album/${albumId}`).pipe(
-          // Increase timeout for album info - backend needs time for Puppeteer + API calls
-          timeout(60000), // 60 seconds
-          map((backendData: any) => ({
-            total_tracks: backendData.tracks?.length || 0,
-            album_name: backendData.album?.name || '',
-            tracks:
-              backendData.tracks?.map((track: any) => ({
-                id: track.external_urls?.spotify
-                  ? track.external_urls.spotify.split('/').pop()
-                  : track.uri?.split(':').pop(),
-                uri: track.uri,
-                name: track.name,
-                track_number: backendData.tracks.indexOf(track) + 1, // Calculate track number based on position
-              })) || [],
-          })),
-          catchError((backendError) => {
-            this.logService.error('Backend also failed for album info:', backendError)
-            return of({ total_tracks: 0, album_name: '', tracks: [] })
-          }),
-        )
+        this.logService.error('Error getting album info:', error)
+        return of({ total_tracks: 0, album_name: '', tracks: [] })
       }),
     )
   }
@@ -1326,18 +1108,17 @@ export class SpotifyService {
    * Get playlist information including total tracks and track data
    */
   getPlaylistInfo(playlistId: string): Observable<{ total_tracks: number; playlist_name: string; tracks?: any[] }> {
-    if (!this.spotifyApi) {
-      return of({ total_tracks: 0, playlist_name: '', tracks: [] })
-    }
+    const playlistApiUrl = `${environment.backend.apiUrl}/spotify/playlist-api/${playlistId}`
+    const playlistTracksUrl = `${environment.backend.apiUrl}/spotify/playlist/${playlistId}/tracks`
 
-    return defer(() => this.spotifyApi.playlists.getPlaylist(playlistId, 'DE')).pipe(
+    return this.http.get<any>(playlistApiUrl).pipe(
       switchMap((playlist) => {
         // Get all tracks for position calculation
-        return defer(() => this.spotifyApi.playlists.getPlaylistItems(playlistId, 'DE')).pipe(
+        return this.http.get<any[]>(playlistTracksUrl).pipe(
           map((tracksData) => ({
             total_tracks: playlist.tracks.total,
             playlist_name: playlist.name,
-            tracks: tracksData.items.map((item) => ({
+            tracks: tracksData.map((item: any) => ({
               id: item.track.id,
               uri: item.track.uri,
               name: item.track.name,
@@ -1349,7 +1130,7 @@ export class SpotifyService {
         this.logService.log('Spotify API failed for playlist info %s, trying backend media info...', playlistId)
 
         // Fallback to backend scraper endpoint
-        return this.http.get<any>(`/api/spotify/playlist/${playlistId}`).pipe(
+        return this.http.get<any>(`${environment.backend.apiUrl}/spotify/playlist/${playlistId}`).pipe(
           // Increase timeout for playlist info - backend needs time for Puppeteer + API calls
           timeout(60000), // 60 seconds
           map((backendData: any) => ({
@@ -1375,20 +1156,19 @@ export class SpotifyService {
    * Get show information including total episodes and episode data
    */
   getShowInfo(showId: string): Observable<{ total_episodes: number; show_name: string; episodes?: any[] }> {
-    if (!this.spotifyApi) {
-      return of({ total_episodes: 0, show_name: '', episodes: [] })
-    }
+    const showUrl = `${environment.backend.apiUrl}/spotify/show/${showId}`
+    const showEpisodesUrl = `${environment.backend.apiUrl}/spotify/show/${showId}/episodes`
 
-    return defer(() => this.spotifyApi.shows.get(showId, 'DE')).pipe(
+    return this.http.get<any>(showUrl).pipe(
       switchMap((show) => {
         // Get all episodes for position calculation
-        return defer(() => this.spotifyApi.shows.episodes(showId, 'DE')).pipe(
+        return this.http.get<any[]>(showEpisodesUrl).pipe(
           map((episodesData) => ({
             total_episodes: show.total_episodes,
             show_name: show.name,
-            episodes: episodesData.items.map((episode) => ({
+            episodes: episodesData.map((episode: any) => ({
               id: episode.id,
-              uri: episode.uri,
+              uri: episode.uri || `spotify:episode:${episode.id}`,
               name: episode.name,
             })),
           })),
@@ -1407,16 +1187,14 @@ export class SpotifyService {
   getAudiobookInfo(
     audiobookId: string,
   ): Observable<{ total_chapters: number; audiobook_name: string; chapters?: any[] }> {
-    if (!this.spotifyApi) {
-      return of({ total_chapters: 0, audiobook_name: '', chapters: [] })
-    }
+    const audiobookUrl = `${environment.backend.apiUrl}/spotify/audiobook/${audiobookId}`
 
-    return defer(() => this.spotifyApi.audiobooks.get(audiobookId, 'DE')).pipe(
+    return this.http.get<any>(audiobookUrl).pipe(
       map((audiobook) => ({
         total_chapters: audiobook.chapters?.total || 0,
         audiobook_name: audiobook.name,
         chapters:
-          audiobook.chapters?.items?.map((chapter) => ({
+          audiobook.chapters?.items?.map((chapter: any) => ({
             id: chapter.id,
             uri: chapter.uri,
             name: chapter.name,

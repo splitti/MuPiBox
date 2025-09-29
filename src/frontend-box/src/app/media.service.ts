@@ -158,18 +158,18 @@ export class MediaService {
             }
             return of({} as CurrentSpotify)
           }),
-          shareReplay({ bufferSize: 1, refCount: false }),
+          shareReplay({ bufferSize: 1, refCount: true }),
         )
       : // Remote: HTTP polling
         interval(10000).pipe(
           switchMap(
             (): Observable<CurrentSpotify> => this.http.get<CurrentSpotify>(`${this.getPlayerBackendUrl()}/state`),
           ),
-          shareReplay({ bufferSize: 1, refCount: false }),
+          shareReplay({ bufferSize: 1, refCount: true }),
         )
     this.local$ = interval(1000).pipe(
       switchMap((): Observable<CurrentMPlayer> => this.http.get<CurrentMPlayer>(`${this.getPlayerBackendUrl()}/local`)),
-      shareReplay({ bufferSize: 1, refCount: false }),
+      shareReplay({ bufferSize: 1, refCount: true }),
     )
 
     // 5 seconds is enough for wifi update and showing/hiding media.
@@ -582,12 +582,25 @@ export class MediaService {
       // Parse the URI to determine the type and extract the ID
       if (contextUri.includes('spotify:album:')) {
         mediaId = contextUri.split('spotify:album:')[1]
-        mediaInfo = await firstValueFrom(this.spotifyService.getAlbumInfo(mediaId))
       } else if (contextUri.includes('spotify:playlist:')) {
         mediaId = contextUri.split('spotify:playlist:')[1]
-        mediaInfo = await firstValueFrom(this.spotifyService.getPlaylistInfo(mediaId))
       } else if (contextUri.includes('spotify:show:')) {
         mediaId = contextUri.split('spotify:show:')[1]
+      }
+
+      if (mediaId === null) {
+          return null
+      }
+
+      if (this.mediaInfoCache.currentId === mediaId) {
+        return this.mediaInfoCache
+      }
+
+      if (contextUri.includes('spotify:album:')) {
+        mediaInfo = await firstValueFrom(this.spotifyService.getAlbumInfo(mediaId))
+      } else if (contextUri.includes('spotify:playlist:')) {
+        mediaInfo = await firstValueFrom(this.spotifyService.getPlaylistInfo(mediaId))
+      } else if (contextUri.includes('spotify:show:')) {
         // Both shows and audiobooks use spotify:show: URIs
         // Try audiobook endpoint first (more specific, will fail for podcast shows)
         try {
@@ -603,11 +616,6 @@ export class MediaService {
       }
 
       if (mediaInfo && mediaId) {
-        // Check if we have cached data for the same media ID
-        if (this.mediaInfoCache.currentId === mediaId) {
-          return this.mediaInfoCache
-        }
-
         // Determine media type and set appropriate name
         let mediaType: 'album' | 'playlist' | 'show' | 'audiobook' = 'album'
         if (contextUri.includes('spotify:playlist:')) {
