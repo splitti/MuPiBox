@@ -16,6 +16,7 @@ import {
   IonToolbar,
 } from '@ionic/angular/standalone'
 import {
+  arrowBackOutline,
   pause,
   play,
   playBack,
@@ -111,6 +112,7 @@ export class PlayerPage implements OnInit {
       this.isExternalPlayback = true
     }
     addIcons({
+      arrowBackOutline,
       volumeLowOutline,
       pause,
       play,

@@ -836,7 +836,7 @@ app.post('/api/logs', (req, res) => {
 
       // Format the message similar to existing server logs
       const sourceWithUrl = entry.url ? `${source}|${entry.url}` : source
-      let logMessage = `${timestamp}: [MuPiBox-${sourceWithUrl}] ${entry.message}`
+      const logMessage = `${timestamp}: [MuPiBox-${sourceWithUrl}] ${entry.message}`
 
       // Output to appropriate console method
       switch (level) {

@@ -297,14 +297,33 @@ export class MediaService {
   public fetchArtistData(category: CategoryType): Observable<Artist[]> {
     return this.fetchMedia(category).pipe(
       map((media: Media[]) => {
-        // Create temporary object with artists as keys and albumCounts as values
-        const mediaCounts = media.reduce((tempCounts, currentMedia) => {
+        // Separate playlists without artists from regular media
+        const regularMedia: Media[] = []
+        const standalonePlaylistsData: Artist[] = []
+
+        for (const currentMedia of media) {
+          // If it's a playlist without an artist, create a direct Artist entry
+          if (currentMedia.playlistid && !currentMedia.artist) {
+            standalonePlaylistsData.push({
+              name: currentMedia.title || 'Unknown Playlist',
+              albumCount: '1', // Playlists have 1 "album" (themselves)
+              cover: currentMedia.cover || '../assets/images/nocover_mupi.png',
+              coverMedia: currentMedia,
+            })
+          } else if (currentMedia.artist) {
+            // Regular media with artist - include in normal grouping
+            regularMedia.push(currentMedia)
+          }
+          // Skip media without artist that aren't playlists (they would cause undefined grouping)
+        }
+
+        // Process regular media with artist grouping
+        const mediaCounts = regularMedia.reduce((tempCounts, currentMedia) => {
           tempCounts[currentMedia.artist] = (tempCounts[currentMedia.artist] || 0) + 1
           return tempCounts
         }, {})
 
-        // Create temporary object with artists as keys and covers (first media cover) as values
-        const covers = media
+        const covers = regularMedia
           .sort((a, b) => (a.title <= b.title ? -1 : 1))
           .reduce((tempCovers, currentMedia) => {
             if (/* currentMedia.type === 'library' &&  */ currentMedia.artistcover) {
@@ -319,8 +338,7 @@ export class MediaService {
             return tempCovers
           }, {})
 
-        // Create temporary object with artists as keys and first media as values
-        const coverMedia = media
+        const coverMedia = regularMedia
           .sort((a, b) => (a.title <= b.title ? -1 : 1))
           .reduce((tempMedia, currentMedia) => {
             if (!tempMedia[currentMedia.artist]) {
@@ -330,19 +348,23 @@ export class MediaService {
           }, {})
 
         // Build Array of Artist objects sorted by Artist name
-        const artists: Artist[] = Object.keys(mediaCounts)
+        const regularArtists: Artist[] = Object.keys(mediaCounts)
           .sort()
           .map((currentName) => {
             const artist: Artist = {
               name: currentName,
-              albumCount: mediaCounts[currentName],
+              albumCount: mediaCounts[currentName].toString(),
               cover: covers[currentName],
               coverMedia: coverMedia[currentName],
             }
             return artist
           })
 
-        return artists
+        // Combine regular artists with standalone playlists
+        const allArtists = [...regularArtists, ...standalonePlaylistsData]
+
+        // Sort the combined array by name
+        return allArtists.sort((a, b) => (a.name <= b.name ? -1 : 1))
       }),
     )
   }
@@ -589,7 +611,7 @@ export class MediaService {
       }
 
       if (mediaId === null) {
-          return null
+        return null
       }
 
       if (this.mediaInfoCache.currentId === mediaId) {
