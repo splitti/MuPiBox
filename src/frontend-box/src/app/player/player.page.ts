@@ -20,6 +20,7 @@ import {
 } from '@ionic/angular/standalone'
 import { addIcons } from 'ionicons'
 import {
+  arrowBackOutline,
   pause,
   play,
   playBack,
@@ -108,6 +109,7 @@ export class PlayerPage implements OnInit {
       this.isExternalPlayback = true
     }
     addIcons({
+      arrowBackOutline,
       volumeLowOutline,
       pause,
       play,

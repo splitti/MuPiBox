@@ -102,14 +102,26 @@ export class HomePage extends SwiperIonicEventsHelper {
     this.category.set(event.detail.value)
   }
 
-  protected artistCoverClicked(artist: Artist): void {
-    const navigationExtras: NavigationExtras = {
-      state: {
-        artist: artist,
-        category: this.category(),
-      },
+  protected async artistCoverClicked(artist: Artist): Promise<void> {
+    // Check if this is a standalone playlist (playlist without artist)
+    if (artist.coverMedia?.playlistid && !artist.coverMedia?.artist) {
+      // This is a standalone playlist - start playback directly
+      const navigationExtras: NavigationExtras = {
+        state: {
+          media: artist.coverMedia,
+        },
+      }
+      this.router.navigate(['/player'], navigationExtras)
+    } else {
+      // This is a regular artist - navigate to medialist
+      const navigationExtras: NavigationExtras = {
+        state: {
+          artist: artist,
+          category: this.category(),
+        },
+      }
+      this.router.navigate(['/medialist'], navigationExtras)
     }
-    this.router.navigate(['/medialist'], navigationExtras)
   }
 
   protected editButtonPressed(): void {

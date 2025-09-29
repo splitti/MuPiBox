@@ -912,8 +912,8 @@ const tryReadFile = (filePath: string, retries = 3, delayMs = 1000) => {
 // Catch-all handler: send back Angular's index.html file for any non-API routes
 // This must be placed after all API routes but before starting the server
 if (productionServe) {
-  app.get('*', (_req, res) => {
-    res.sendFile(path.join(__dirname, 'www/index.html'))
+  app.get(/.*/, (_req, res) => {
+    res.sendFile('index.html', { root: path.join(__dirname, 'www') })
   })
 }
 
