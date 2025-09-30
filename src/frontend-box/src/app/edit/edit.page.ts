@@ -40,7 +40,6 @@ import { addIcons } from 'ionicons'
   selector: 'app-edit',
   templateUrl: './edit.page.html',
   styleUrls: ['./edit.page.scss'],
-  standalone: true,
   imports: [
     AsyncPipe,
     IonHeader,

@@ -13,7 +13,7 @@ import {
   viewChild,
 } from '@angular/core'
 import { IonCard, IonCardHeader, IonCardTitle, IonCol, IonGrid, IonRow } from '@ionic/angular/standalone'
-import { Observable, of } from 'rxjs'
+import { Observable } from 'rxjs'
 
 import { AsyncPipe } from '@angular/common'
 import { PlayerService } from '../player.service'
@@ -32,7 +32,6 @@ export interface SwiperData<T> {
   styleUrls: ['./swiper.component.scss'],
   imports: [AsyncPipe, IonCard, IonCardHeader, IonCardTitle, IonCol, IonGrid, IonRow],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SwiperComponent<T> {

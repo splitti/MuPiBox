@@ -48,7 +48,6 @@ import { addIcons } from 'ionicons'
     SwiperComponent,
     IonContent,
   ],
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HomePage extends SwiperIonicEventsHelper {
