@@ -94,7 +94,19 @@ export class SettingsPage extends SwiperIonicEventsHelper {
       this.router.navigate(['/wifi'])
     } else if (entryData.data === 'shutdown') {
       this.shutdownMessage()
+    } else if (entryData.data === 'more-settings') {
+      this.moreSettingsMessage()
     }
+  }
+
+  private async moreSettingsMessage() {
+    const msg = await this.alertController.create({
+      cssClass: 'alert',
+      header: 'More settings',
+      message: `For more settings, open 'http://${this.network()?.ip}' on your mobile device or PC. You can also scan the QR-code to open it.`,
+      buttons: ['OK'],
+    })
+    await msg.present()
   }
 
   private async shutdownMessage() {

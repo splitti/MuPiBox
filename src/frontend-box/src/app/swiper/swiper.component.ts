@@ -13,9 +13,9 @@ import {
   viewChild,
 } from '@angular/core'
 import { IonCard, IonCardHeader, IonCardTitle, IonCol, IonGrid, IonRow } from '@ionic/angular/standalone'
-import { Observable } from 'rxjs'
 
 import { AsyncPipe } from '@angular/common'
+import { Observable } from 'rxjs'
 import { PlayerService } from '../player.service'
 import Swiper from 'swiper'
 import { cloneDeep } from 'lodash-es'
