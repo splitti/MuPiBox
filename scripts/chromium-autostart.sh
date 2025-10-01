@@ -51,6 +51,8 @@ CHROMIUM_OPTS="${CHROMIUM_OPTS} --disk-cache-dir=${CACHE_PATH:-/home/dietpi/.mup
 if [ "${DEBUG}" = "1" ]; then
 	CHROMIUM_OPTS="${CHROMIUM_OPTS} --enable-logging --v=1 --disable-pinch"
 fi
+# Spotify Web Playback SDK Support
+CHROMIUM_OPTS="${CHROMIUM_OPTS} --autoplay-policy=no-user-gesture-required"
 
 # If you want tablet mode, uncomment the next line.
 #CHROMIUM_OPTS+=' --force-tablet-mode --tablet-ui'

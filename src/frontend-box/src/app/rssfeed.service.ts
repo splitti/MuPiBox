@@ -1,12 +1,11 @@
-import { map, mergeAll, toArray } from 'rxjs/operators'
-import type { CategoryType, Media } from './media'
-import { ExtraDataMedia, Utils } from './utils'
-
 import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
 import type { Observable } from 'rxjs'
+import { map, mergeAll, toArray } from 'rxjs/operators'
 import { environment } from 'src/environments/environment'
+import type { CategoryType, Media } from './media'
 import type { RssFeed } from './rssfeed'
+import { ExtraDataMedia, Utils } from './utils'
 
 @Injectable({
   providedIn: 'root',

@@ -76,7 +76,7 @@ const createPlayer = () => {
     if (line === 'ANS_ERROR=PROPERTY_UNAVAILABLE') return out.emit('playlist-finish')
     // todo: `ANS_ERROR=PROPERTY_UNAVAILABLE`
 
-    const parts = /^ANS_([\w]+)\=/g.exec(line)
+    const parts = /^ANS_([\w]+)=/g.exec(line)
     if (!parts || !parts[1]) return null
     const prop = parts[1]
 

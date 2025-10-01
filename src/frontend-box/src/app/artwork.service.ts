@@ -1,45 +1,24 @@
 import { Injectable } from '@angular/core'
 import { Observable } from 'rxjs'
 import type { Media } from './media'
-import { SpotifyService } from './spotify.service'
 
 @Injectable({
   providedIn: 'root',
 })
 export class ArtworkService {
-  constructor(private spotifyService: SpotifyService) {}
-
   getArtwork(media: Media): Observable<string> {
-    let artwork: Observable<string>
+    const coverUrl = media.cover || '../assets/images/nocover_mupi.png'
 
-    if (media.type === 'spotify' && !media.cover) {
-      artwork = this.spotifyService.getAlbumArtwork(media.artist, media.title)
-    } else {
-      artwork = new Observable((observer) => {
-        observer.next(media.cover)
-      })
-    }
-
-    return artwork
+    return new Observable((observer) => {
+      observer.next(coverUrl)
+    })
   }
 
   getArtistArtwork(media: Media): Observable<string> {
-    let artwork: Observable<string>
+    const coverUrl = media.artistcover || media.cover || '../assets/images/nocover_mupi.png'
 
-    if (media.type === 'spotify' && !media.cover) {
-      artwork = this.spotifyService.getAlbumArtwork(media.artist, media.title)
-    } else {
-      if (media.artistcover) {
-        artwork = new Observable((observer) => {
-          observer.next(media.artistcover)
-        })
-      } else {
-        artwork = new Observable((observer) => {
-          observer.next(media.cover)
-        })
-      }
-    }
-
-    return artwork
+    return new Observable((observer) => {
+      observer.next(coverUrl)
+    })
   }
 }
