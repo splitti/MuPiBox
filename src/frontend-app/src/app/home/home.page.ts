@@ -1,12 +1,10 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core'
-import { ClickedDataEntry, DataListComponent } from '../data-list/data-list.component'
+import { Router, RouterLinkWithHref } from '@angular/router'
 import { IonButton, IonButtons, IonContent, IonHeader, IonIcon, IonTitle, IonToolbar } from '@ionic/angular/standalone'
-
-import { DataService } from '../services/data.service'
-import { Router } from '@angular/router'
-import { RouterLinkWithHref } from '@angular/router'
-import { add } from 'ionicons/icons'
 import { addIcons } from 'ionicons'
+import { add } from 'ionicons/icons'
+import { ClickedDataEntry, DataListComponent } from '../data-list/data-list.component'
+import { DataService } from '../services/data.service'
 
 @Component({
   selector: 'mupiapp-home',

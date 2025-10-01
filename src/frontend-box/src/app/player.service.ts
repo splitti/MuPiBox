@@ -1,16 +1,11 @@
-import { publishReplay, refCount } from 'rxjs/operators'
-
-import { Media as BackendMedia } from '@backend-api/media.model'
 import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
+import { Media as BackendMedia } from '@backend-api/media.model'
 import type { ServerHttpApiConfig } from '@backend-api/server.model'
 import type { Observable } from 'rxjs'
 import { publishReplay, refCount } from 'rxjs/operators'
 import { environment } from '../environments/environment'
 import type { Media } from './media'
-import type { Observable } from 'rxjs'
-import type { ServerHttpApiConfig } from '@backend-api/server.model'
-import { environment } from '../environments/environment'
 import { SpotifyService } from './spotify.service'
 
 export enum PlayerCmds {

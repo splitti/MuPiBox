@@ -1,9 +1,8 @@
-import { describe, it } from 'node:test'
-
-import { app } from './server'
 import assert from 'node:assert'
+import { describe, it } from 'node:test'
 import nock from 'nock'
 import request from 'supertest'
+import { app } from './server'
 
 describe('rss feeds', () => {
   it('should return an error if no url is provided', (_t, done) => {

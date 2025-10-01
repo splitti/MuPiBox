@@ -1,17 +1,8 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  OnInit,
-  Signal,
-  ViewChild,
-  WritableSignal,
-  computed,
-  signal,
-} from '@angular/core'
-import { AsyncPipe } from '@angular/common'
-import { Component, OnInit, ViewChild } from '@angular/core'
+import { ChangeDetectionStrategy, Component, computed, signal, WritableSignal } from '@angular/core'
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop'
 import { FormsModule } from '@angular/forms'
 import { ActivatedRoute, Router } from '@angular/router'
+import { Media as BackendMedia } from '@backend-api/media.model'
 import {
   IonBackButton,
   IonButton,
@@ -26,10 +17,8 @@ import {
   IonRow,
   IonTitle,
   IonToolbar,
-  RangeCustomEvent,
   NavController,
 } from '@ionic/angular/standalone'
-import { PlayerCmds, PlayerService } from '../player.service'
 import { addIcons } from 'ionicons'
 import {
   arrowBackOutline,
@@ -43,22 +32,12 @@ import {
   volumeHighOutline,
   volumeLowOutline,
 } from 'ionicons/icons'
-import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop'
-
 import type { Observable } from 'rxjs'
-import type { AlbumStop } from '../albumstop'
-import { AsyncPipe } from '@angular/common'
-import { Media as BackendMedia } from '@backend-api/media.model'
-import type { CurrentEpisode } from '../current.episode'
+import { interval } from 'rxjs'
 import type { CurrentMPlayer } from '../current.mplayer'
 import type { CurrentSpotify } from '../current.spotify'
-import { FormsModule } from '@angular/forms'
 import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
-import { NavController } from '@ionic/angular/standalone'
-import { Router } from '@angular/router'
-import { addIcons } from 'ionicons'
-import { interval } from 'rxjs'
 import { PlayerCmds, PlayerService } from '../player.service'
 import { SpotifyService } from '../spotify.service'
 
@@ -92,7 +71,7 @@ export class PlayerPage {
   protected img: WritableSignal<string | undefined> = signal(undefined)
 
   protected pageIsShown: WritableSignal<boolean> = signal(true)
-  protected playing: Signal<boolean>
+  // protected playing: Signal<boolean>
 
   resumePlay = false
   resumeIndex: number
@@ -321,50 +300,50 @@ export class PlayerPage {
     this.playerService.seekPosition(newValue)
   }
 
-  protected updateProgress(): void {
-    // if (this.media.type === 'spotify') {
-    //   const seek = this.currentPlayedSpotify?.progress_ms || 0
-    //   if (this.media.showid?.length > 0) {
-    //     this.progress = (seek / this.currentEpisode?.duration_ms) * 100 || 0
-    //   } else {
-    //     if (this.currentPlayedSpotify?.item != null) {
-    //       this.progress = (seek / this.currentPlayedSpotify?.item.duration_ms) * 100 || 0
-    //     }
-    //   }
-    //   if (this.media.playlistid) {
-    //     this.currentPlaylist?.items.forEach((element, index) => {
-    //       if (this.currentPlayedSpotify?.item.id === element.track?.id) {
-    //         this.playlistTrackNr = index + 1 // +1 since we want human-readable indexing in the frontend.
-    //         this.img.set(element.track.album.images[1].url)
-    //       }
-    //     })
-    //   }
-    //   if (this.media.showid) {
-    //     this.currentShow?.items.forEach((element, index) => {
-    //       if (this.currentPlayedLocal?.activeEpisode === element?.id) {
-    //         this.showTrackNr = this.currentEpisode.show.total_episodes - index
-    //         this.img.set(element.images[1].url)
-    //       }
-    //     })
-    //   }
-    //   if (this.media.audiobookid) {
-    //     this.currentShow?.items.forEach((element, index) => {
-    //       if (this.currentPlayedSpotify?.item.id === element?.id) {
-    //         this.showTrackNr = index + 1
-    //         this.cover = element.images[1].url
-    //       }
-    //     })
-    //   }
-    // } else if (this.media.type === 'library' || this.media.type === 'rss') {
-    //   this.progress = this.local()?.progressTime ?? 0
-    // }
-    // Periodicially refresh the progress.
-    setTimeout(() => {
-      if (this.pageIsShown()) {
-        this.updateProgress()
-      }
-    }, 1000)
-  }
+  // protected updateProgress(): void {
+  // if (this.media.type === 'spotify') {
+  //   const seek = this.currentPlayedSpotify?.progress_ms || 0
+  //   if (this.media.showid?.length > 0) {
+  //     this.progress = (seek / this.currentEpisode?.duration_ms) * 100 || 0
+  //   } else {
+  //     if (this.currentPlayedSpotify?.item != null) {
+  //       this.progress = (seek / this.currentPlayedSpotify?.item.duration_ms) * 100 || 0
+  //     }
+  //   }
+  //   if (this.media.playlistid) {
+  //     this.currentPlaylist?.items.forEach((element, index) => {
+  //       if (this.currentPlayedSpotify?.item.id === element.track?.id) {
+  //         this.playlistTrackNr = index + 1 // +1 since we want human-readable indexing in the frontend.
+  //         this.img.set(element.track.album.images[1].url)
+  //       }
+  //     })
+  //   }
+  //   if (this.media.showid) {
+  //     this.currentShow?.items.forEach((element, index) => {
+  //       if (this.currentPlayedLocal?.activeEpisode === element?.id) {
+  //         this.showTrackNr = this.currentEpisode.show.total_episodes - index
+  //         this.img.set(element.images[1].url)
+  //       }
+  //     })
+  //   }
+  //   if (this.media.audiobookid) {
+  //     this.currentShow?.items.forEach((element, index) => {
+  //       if (this.currentPlayedSpotify?.item.id === element?.id) {
+  //         this.showTrackNr = index + 1
+  //         this.cover = element.images[1].url
+  //       }
+  //     })
+  //   }
+  // } else if (this.media.type === 'library' || this.media.type === 'rss') {
+  //   this.progress = this.local()?.progressTime ?? 0
+  // }
+  // Periodicially refresh the progress.
+  //   setTimeout(() => {
+  //     if (this.pageIsShown()) {
+  //       this.updateProgress()
+  //     }
+  //   }, 1000)
+  // }
 
   ionViewWillLeave() {
     this.pageIsShown.set(false)

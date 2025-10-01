@@ -1,6 +1,16 @@
+import SpotifyWebApi from 'spotify-web-api-node'
+import { SpotifyAlbumMedia, SpotifyMedia, SpotifyPlaylistMedia } from 'src/models/media.model'
+import { SpotifyUrlData } from 'src/models/spotify-url-data.model'
+import { environment } from '../environment'
 import {
   BaseData,
   Data,
+  isSpotifyAlbumData,
+  isSpotifyArtistData,
+  isSpotifyAudiobookData,
+  isSpotifyPlaylistData,
+  isSpotifyQueryData,
+  isSpotifyShowData,
   SpotifyAlbumData,
   SpotifyArtistData,
   SpotifyAudiobookData,
@@ -9,19 +19,8 @@ import {
   SpotifyPlaylistData,
   SpotifyQueryData,
   SpotifyShowData,
-  isSpotifyShowData,
-  isSpotifyArtistData,
-  isSpotifyPlaylistData,
-  isSpotifyAlbumData,
-  isSpotifyQueryData,
-  isSpotifyAudiobookData,
 } from '../models/data.model'
 import { chunks, readJsonFile } from '../utils'
-
-import SpotifyWebApi from 'spotify-web-api-node'
-import { environment } from '../environment'
-import { SpotifyAlbumMedia, SpotifyMedia, SpotifyPlaylistMedia } from 'src/models/media.model'
-import { SpotifyUrlData } from 'src/models/spotify-url-data.model'
 
 let configBasePath = './server/config' // TODO: Fix for production.
 if (!environment.production) {

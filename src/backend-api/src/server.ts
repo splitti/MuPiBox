@@ -1,5 +1,19 @@
+import { exec } from 'node:child_process'
+import fs from 'node:fs'
+import path from 'node:path'
+import cors from 'cors'
+import express, { Request, Response } from 'express'
+import jsonfile from 'jsonfile'
+import { environment } from './environment'
+import { Data } from './models/data.model'
 import { Folder, FolderWithChildren } from './models/folder.model'
-import { Request, Response } from 'express'
+import { LogRequest, LogResponse } from './models/log.model'
+import { Network } from './models/network.model'
+import { ServerConfig } from './models/server.model'
+import type { SpotifyValidationRequest, SpotifyValidationResponse } from './models/spotify-api.model'
+import { SpotifyUrlData } from './models/spotify-url-data.model'
+import { SpotifyApiService } from './services/spotify-api.service'
+import { SpotifyMediaInfo } from './services/spotify-media-info.service'
 import { addRssImageInformation, getRssMedia } from './sources/rss'
 import {
   addSpotifyImageInformation,
@@ -8,31 +22,6 @@ import {
   validateSpotifyUrlData,
 } from './sources/spotify'
 import { cmdCall, readJsonFile } from './utils'
-import { exec } from 'node:child_process'
-import fs from 'node:fs'
-import { readFile } from 'node:fs/promises'
-import path from 'node:path'
-import cors from 'cors'
-import express from 'express'
-import jsonfile from 'jsonfile'
-import ky from 'ky'
-import xmlparser from 'xml-js'
-import { LogRequest, LogResponse } from './models/log.model'
-import { ServerConfig } from './models/server.model'
-import type { SpotifyValidationRequest, SpotifyValidationResponse } from './models/spotify-api.model'
-import { SpotifyApiService } from './services/spotify-api.service'
-import { SpotifyMediaInfo } from './services/spotify-media-info.service'
-
-import { Data } from './models/data.model'
-import { Network } from './models/network.model'
-import { ServerConfig } from './models/server.model'
-import { SpotifyUrlData } from './models/spotify-url-data.model'
-import cors from 'cors'
-import { environment } from './environment'
-import express from 'express'
-import fs from 'node:fs'
-import jsonfile from 'jsonfile'
-import path from 'node:path'
 
 const serverName = 'mupibox-backend-api'
 
@@ -42,7 +31,7 @@ if (!environment.production) {
   configBasePath = './config' // This uses the package.json path as pwd.
 }
 
-let config: ServerConfig | undefined = undefined
+let config: ServerConfig | undefined
 readJsonFile(`${configBasePath}/config.json`).then((configFile) => {
   config = configFile
 

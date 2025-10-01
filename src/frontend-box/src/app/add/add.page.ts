@@ -2,10 +2,8 @@ import { AfterViewInit, Component, OnInit, ViewEncapsulation } from '@angular/co
 import type { NgForm } from '@angular/forms'
 import { FormsModule } from '@angular/forms'
 import { ActivatedRoute, Router } from '@angular/router'
-import { AfterViewInit, Component, OnInit, ViewEncapsulation } from '@angular/core'
-import { AlertController, NavController } from '@ionic/angular/standalone'
-import { CategoryType, Media, MediaSorting } from '../media'
 import {
+  AlertController,
   IonCol,
   IonContent,
   IonGrid,
@@ -22,14 +20,6 @@ import {
   IonToolbar,
   NavController,
 } from '@ionic/angular/standalone'
-import { PlayerCmds, PlayerService } from '../player.service'
-import { arrowBackOutline, saveOutline } from 'ionicons/icons'
-
-import { ActivityIndicatorService } from '../activity-indicator.service'
-import { FormsModule } from '@angular/forms'
-import Keyboard from 'simple-keyboard'
-import { MediaService } from '../media.service'
-import type { NgForm } from '@angular/forms'
 import { addIcons } from 'ionicons'
 import { arrowBackOutline, saveOutline } from 'ionicons/icons'
 import Keyboard from 'simple-keyboard'
@@ -37,7 +27,6 @@ import { ActivityIndicatorService } from '../activity-indicator.service'
 import { CategoryType, Media, MediaSorting } from '../media'
 import { MediaService } from '../media.service'
 import { PlayerCmds, PlayerService } from '../player.service'
-import { SpotifyService } from '../spotify.service'
 
 @Component({
   selector: 'app-add',
@@ -594,7 +583,7 @@ export class AddPage implements OnInit, AfterViewInit {
   }
 
   async validateSpotify(media: Media): Promise<boolean> {
-    let validationResult: Promise<boolean> = Promise.resolve(false)
+    const validationResult: Promise<boolean> = Promise.resolve(false)
     // if (media.playlistid) {
     //   validationResult = this.spotifyService.validateSpotify(media.playlistid, 'playlist')
     // } else if (media.artistid) {
@@ -611,7 +600,7 @@ export class AddPage implements OnInit, AfterViewInit {
   }
 
   async isAudiobook(media: Media): Promise<boolean> {
-    let validationResult: Promise<boolean> = Promise.resolve(false)
+    const validationResult: Promise<boolean> = Promise.resolve(false)
     if (media.showid) {
       // validationResult = this.spotifyService.validateSpotify(media.showid, 'audiobook')
     }

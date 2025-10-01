@@ -1,5 +1,5 @@
-import { PathLike } from 'node:fs'
 import { exec } from 'node:child_process'
+import { PathLike } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 
 /**

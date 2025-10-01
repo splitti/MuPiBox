@@ -1,8 +1,8 @@
-import { Data } from '@backend-api/data.model'
 import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
-import { Observable } from 'rxjs'
+import { Data } from '@backend-api/data.model'
 import { SpotifyUrlData } from '@backend-api/spotify-url-data.model'
+import { Observable } from 'rxjs'
 import { environment } from 'src/environments/environment'
 
 /**

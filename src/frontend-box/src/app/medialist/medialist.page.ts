@@ -1,28 +1,16 @@
-import { ChangeDetectionStrategy, Component, Signal, WritableSignal, computed, input, signal } from '@angular/core'
-import { ChangeDetectionStrategy, Component, computed, Signal, signal, WritableSignal } from '@angular/core'
+import { ChangeDetectionStrategy, Component, computed, input, Signal, signal, WritableSignal } from '@angular/core'
 import { toObservable, toSignal } from '@angular/core/rxjs-interop'
 import { NavigationExtras, Router } from '@angular/router'
-import { IonBackButton, IonButtons, IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular/standalone'
-import { NavigationExtras, Router } from '@angular/router'
-import { SwiperComponent, SwiperData } from '../swiper/swiper.component'
-import { combineLatest, of, switchMap, tap } from 'rxjs'
-import { toObservable, toSignal } from '@angular/core/rxjs-interop'
-
 import { Media as BackendMedia } from '@backend-api/media.model'
+import { IonBackButton, IonButtons, IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular/standalone'
 import { addIcons } from 'ionicons'
 import { arrowBackOutline } from 'ionicons/icons'
-import { catchError, combineLatest, map, of, switchMap, tap } from 'rxjs'
-
-import type { Artist } from '../artist'
-import { ArtworkService } from '../artwork.service'
+import { combineLatest, of, switchMap, tap } from 'rxjs'
 import { LoadingComponent } from '../loading/loading.component'
-import { CategoryType, Media, MediaSorting } from '../media'
 import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
 import { SwiperComponent, SwiperData } from '../swiper/swiper.component'
 import { SwiperIonicEventsHelper } from '../swiper/swiper-ionic-events-helper'
-import { addIcons } from 'ionicons'
-import { arrowBackOutline } from 'ionicons/icons'
 
 @Component({
   selector: 'app-medialist',

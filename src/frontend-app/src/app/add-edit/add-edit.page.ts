@@ -1,16 +1,18 @@
-import { ActivatedRoute, Router } from '@angular/router'
+import { ChangeDetectionStrategy, Component, computed, effect, inject, model, Signal } from '@angular/core'
+import { toObservable, toSignal } from '@angular/core/rxjs-interop'
 import { AsyncValidatorFn, FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms'
-import { CategoryType, Sorting } from '@backend-api/folder.model'
-import { ChangeDetectionStrategy, Component, Signal, computed, effect, inject, model, signal } from '@angular/core'
+import { ActivatedRoute, Router } from '@angular/router'
 import {
   Data,
-  RadioData,
-  RssData,
   isRadioData,
   isRssData,
   isSpotifyData,
   isSpotifyQueryData,
+  RadioData,
+  RssData,
 } from '@backend-api/data.model'
+import { CategoryType, Sorting } from '@backend-api/folder.model'
+import { SpotifyUrlData } from '@backend-api/spotify-url-data.model'
 import {
   IonBackButton,
   IonButton,
@@ -31,13 +33,10 @@ import {
   IonToggle,
   IonToolbar,
 } from '@ionic/angular/standalone'
-import { Observable, catchError, lastValueFrom, map, of, switchMap } from 'rxjs'
-import { saveOutline, trashOutline } from 'ionicons/icons'
-import { toObservable, toSignal } from '@angular/core/rxjs-interop'
-
-import { DataService } from '../services/data.service'
-import { SpotifyUrlData } from '@backend-api/spotify-url-data.model'
 import { addIcons } from 'ionicons'
+import { saveOutline, trashOutline } from 'ionicons/icons'
+import { catchError, lastValueFrom, map, Observable, of, switchMap } from 'rxjs'
+import { DataService } from '../services/data.service'
 
 export enum AddEditPageSourceType {
   SpotifyUrl = 'spotifyURL',

@@ -1,3 +1,7 @@
+import { HttpClient } from '@angular/common/http'
+import { ChangeDetectionStrategy, Component, computed, inject, Signal } from '@angular/core'
+import { toObservable, toSignal } from '@angular/core/rxjs-interop'
+import { Router } from '@angular/router'
 import {
   AlertController,
   IonBackButton,
@@ -7,19 +11,14 @@ import {
   IonTitle,
   IonToolbar,
 } from '@ionic/angular/standalone'
-import { ChangeDetectionStrategy, Component, Signal, computed, inject } from '@angular/core'
-import { SwiperComponent, SwiperData } from '../swiper/swiper.component'
-import { from, of, switchMap } from 'rxjs'
-import { toObservable, toSignal } from '@angular/core/rxjs-interop'
-
-import { HttpClient } from '@angular/common/http'
-import { MediaService } from '../media.service'
-import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
-import QRCode from 'qrcode'
-import { Router } from '@angular/router'
-import { SwiperIonicEventsHelper } from '../swiper/swiper-ionic-events-helper'
 import { addIcons } from 'ionicons'
 import { arrowBackOutline } from 'ionicons/icons'
+import QRCode from 'qrcode'
+import { from, of, switchMap } from 'rxjs'
+import { MediaService } from '../media.service'
+import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
+import { SwiperComponent, SwiperData } from '../swiper/swiper.component'
+import { SwiperIonicEventsHelper } from '../swiper/swiper-ionic-events-helper'
 
 @Component({
   selector: 'app-settings',
