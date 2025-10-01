@@ -5,6 +5,18 @@
 
 if [ "$1" = "dev" ] || [ "$1" = "beta" ] || [ "$1" = "stable" ]; then
 	RELEASE="$1"
+elif [ "$1" = "branch" ]; then
+  RELEASE="dev"
+  BRANCH="$2"
+  if [ -z "$BRANCH" ]; then
+    echo "Error: Branch name is required when using branch install"
+    exit 1
+  fi
+  BRANCH_EXISTS=$(curl -s -o /dev/null -w "%{http_code}" https://api.github.com/repos/splitti/MuPiBox/branches/${BRANCH})
+  if [ "$BRANCH_EXISTS" != "200" ]; then
+    echo "Error: Branch '${BRANCH}' does not exist on GitHub"
+    exit 1
+  fi
 else
 	RELEASE="stable"
 fi
@@ -14,7 +26,7 @@ CONFIG="/etc/mupibox/mupiboxconfig.json"
 LOG="/boot/mupibox_update.log"
 exec 3>${LOG}
 service mupi_idle_shutdown stop
-packages2install="lighttpd-mod-openssl gpiod git libasound2 mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt libgles2-mesa mesa-utils libsdl2-dev preload python3-smbus2 pigpio libjson-c-dev i2c-tools libi2c-dev python3-smbus python3-alsaaudio python3-netifaces"
+packages2install="lighttpd-mod-openssl gpiod git libasound2 mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt libgles2-mesa mesa-utils libsdl2-dev preload python3-smbus2 pigpio libjson-c-dev i2c-tools libi2c-dev python3-smbus python3-alsaaudio python3-netifaces libwidevinecdm0"
 packages2remove="jq"
 STEP=0
 VER_JSON="/tmp/version.json"
@@ -25,17 +37,28 @@ ARCH=$(uname -m) >&3 2>&3
 wget -O /tmp/installation.jpg https://raw.githubusercontent.com/splitti/MuPiBox/main/media/images/installation.jpg >&3 2>&3
 /usr/bin/fbv /tmp/installation.jpg & >&3 2>&3
 
-wget -q -O ${VER_JSON} https://raw.githubusercontent.com/splitti/MuPiBox/main/version.json  >&3 2>&3
-VERSION=$(/usr/bin/jq -r .release.${RELEASE}[-1].version ${VER_JSON})  >&3 2>&3
-MUPIBOX_URL=$(/usr/bin/jq -r .release.${RELEASE}[-1].url ${VER_JSON})  >&3 2>&3
+if [ -z "$BRANCH" ]; then
+  wget -q -O ${VER_JSON} https://raw.githubusercontent.com/splitti/MuPiBox/main/version.json >&3 2>&3
+  VERSION=$(/usr/bin/jq -r .release.${RELEASE}[-1].version ${VER_JSON})  >&3 2>&3
+  MUPIBOX_URL=$(/usr/bin/jq -r .release.${RELEASE}[-1].url ${VER_JSON})  >&3 2>&3
+else
+  MUPIBOX_URL="https://github.com/splitti/MuPiBox/archive/refs/heads/${BRANCH}.zip"
+fi
+
 USER=$(/usr/bin/whoami) >&3 2>&3
 RASPPI=$(/usr/bin/cat /sys/firmware/devicetree/base/model | tr -d '\0' ) >&3 2>&3
-if [ "$1" = "dev" ]; then
+
+if [ -n "$BRANCH" ]; then
+	MUPI_SRC="/home/dietpi/MuPiBox-${BRANCH}" >&3 2>&3
+elif [ "$RELEASE" = "dev" ]; then
 	MUPI_SRC="/home/dietpi/MuPiBox-main" >&3 2>&3
 else
 	MUPI_SRC="/home/dietpi/MuPiBox-${VERSION}" >&3 2>&3
 fi
-if [ "$1" = "dev" ]; then
+
+if [ -n "$BRANCH" ]; then
+  VERSION_LONG="DEV ${BRANCH} $(curl -s 'https://api.github.com/repos/splitti/MuPiBox/branches/'"$BRANCH" | jq -r '.commit.commit.committer.date' | cut -d'T' -f1)" >&3 2>&3
+elif [ "$RELEASE" = "dev" ]; then
 	VERSION_LONG="DEV $(curl -s "https://api.github.com/repos/splitti/MuPiBox" | jq -r '.pushed_at' | cut -d'T' -f1)"  >&3 2>&3
 else
 	VERSION_LONG="${VERSION} ${RELEASE}"
@@ -387,6 +410,9 @@ echo "==========================================================================
 	service spotifyd stop >&3 2>&3
 	systemctl disable spotifyd >&3 2>&3
 	service librespot stop >&3 2>&3
+	if [ "$RELEASE" = "dev" ]; then
+		systemctl disable librespot >&3 2>&3
+	fi
 
 	# Binaries
 	if [ `getconf LONG_BIT` == 32 ]; then
@@ -475,8 +501,10 @@ echo "==========================================================================
 	mv -f ${MUPI_SRC}/config/services/mupi_mqtt.service /etc/systemd/system/mupi_mqtt.service  >&3 2>&3
 
 	systemctl daemon-reload >&3 2>&3
-	systemctl enable librespot.service >&3 2>&3	
-	systemctl start librespot.service >&3 2>&3	
+	if [ "$RELEASE" = "dev" ]; then
+		systemctl enable librespot.service >&3 2>&3
+		systemctl start librespot.service >&3 2>&3
+	fi
 	systemctl enable mupi_check_internet.service >&3 2>&3
 	systemctl start mupi_check_internet.service >&3 2>&3
 	systemctl enable mupi_check_monitor.service >&3 2>&3

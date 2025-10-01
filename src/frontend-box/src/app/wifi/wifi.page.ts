@@ -1,6 +1,8 @@
 import { AfterViewInit, Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core'
-import { AlertController, IonSelect, IonTitle, NavController } from '@ionic/angular/standalone'
+import type { NgForm } from '@angular/forms'
+import { FormsModule } from '@angular/forms'
 import {
+  AlertController,
   IonBackButton,
   IonButton,
   IonButtons,
@@ -13,17 +15,17 @@ import {
   IonItem,
   IonRow,
   IonSegment,
+  IonSelect,
+  IonTitle,
   IonToolbar,
+  NavController,
 } from '@ionic/angular/standalone'
-import { PlayerCmds, PlayerService } from '../player.service'
+import { addIcons } from 'ionicons'
 import { refresh, wifiOutline } from 'ionicons/icons'
-
-import { FormsModule } from '@angular/forms'
 import Keyboard from 'simple-keyboard'
 import { MediaService } from '../media.service'
-import type { NgForm } from '@angular/forms'
+import { PlayerCmds, PlayerService } from '../player.service'
 import type { WLAN } from '../wlan'
-import { addIcons } from 'ionicons'
 
 @Component({
   selector: 'app-wifi',

@@ -7,8 +7,10 @@
       @if (media.type ==='spotify' && currentPlayedSpotify?.currently_playing_type !== 'episode') {
         <div>{{(spotify$ | async)?.item.album.name}}</div>
       } @else {
-        @if (media.showid) {
-          <div>{{(episode$ | async)?.show.name}}</div>
+        @if (media.showid && (spotify$ | async)?.show_details) {
+          <div>{{(spotify$ | async)?.show_details?.name}}</div>
+        } @else if (media.audiobookid && (spotify$ | async)?.audiobook) {
+          <div>{{(spotify$ | async)?.audiobook?.name}}</div>
         } @else {
           @if (media.type ==='library') {
             <div>{{(local$ | async)?.album}}</div>
@@ -26,8 +28,10 @@
       @if (media.type ==='spotify' && currentPlayedSpotify?.currently_playing_type !== 'episode') {
         <div>{{(spotify$ | async)?.item.name}}</div>
       } @else {
-        @if (media.showid) {
-          <div>{{(episode$ | async)?.name}}</div>
+        @if (media.showid && (spotify$ | async)?.show_details) {
+          <div>{{(spotify$ | async)?.item?.name}}</div>
+        } @else if (media.audiobookid && (spotify$ | async)?.audiobook) {
+          <div>{{(spotify$ | async)?.item?.name}}</div>
         } @else {
           @if (media.type ==='library') {
             <div>{{(local$ | async)?.currentTrackname}}</div>
@@ -46,23 +50,26 @@
       @if (media.type ==='library') {
         <div>{{(local$ | async)?.currentTracknr}}/{{(local$ | async)?.totalTracks}}</div>
       } @else {
-        @if (media.type ==='spotify' && !media.playlistid && currentPlayedSpotify?.currently_playing_type !== 'episode') {
-          <div>{{(spotify$ | async)?.item.track_number}}/{{(spotify$ | async)?.item.album.total_tracks}}</div>
-        } @else {
-          @if (media.showid) {
-            <div>{{showTrackNr}}/{{(episode$ | async)?.show.total_episodes}}</div>
+        @if (media.type ==='spotify') {
+          @if (media.playlistid && (spotify$ | async)?.playlist) {
+            <!-- Playlist -->
+            <div>{{(spotify$ | async)?.playlist?.current_track_position}}/{{(spotify$ | async)?.playlist?.total_tracks}}</div>
+          } @else if (media.showid && (spotify$ | async)?.show_details) {
+            <!-- Show/Podcast -->
+            <div>{{(spotify$ | async)?.show_details?.current_episode_position}}/{{(spotify$ | async)?.show_details?.total_episodes}}</div>
+          } @else if (media.audiobookid && (spotify$ | async)?.audiobook) {
+            <!-- Audiobook -->
+            <div>{{(spotify$ | async)?.audiobook?.current_chapter_position}}/{{(spotify$ | async)?.audiobook?.total_chapters}}</div>
+          } @else if (currentPlayedSpotify?.currently_playing_type !== 'episode') {
+            <!-- Regular album -->
+            <div>{{(spotify$ | async)?.item.track_number}}/{{(spotify$ | async)?.item.album.total_tracks}}</div>
           } @else {
-            @if (media.audiobookid) {
-                <div>{{showTrackNr}}/{{(show$ | async)?.total}}</div>
-            } @else {
-              @if (media.type ==='spotify') {
-                  <div>{{playlistTrackNr}}/{{(local$ | async)?.totalPlaylist}}</div>
-              } @else {
-                  <div></div>
-              }
-            }
-
+            <!-- Fallback - no track info available -->
+            <div></div>
           }
+        } @else {
+          <!-- Non-Spotify content (Library) -->
+          <div></div>
         }
       }
     </ion-title>

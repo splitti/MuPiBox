@@ -1,19 +1,19 @@
-import { CategoryType, Media, MediaSorting } from '../media'
-import { ChangeDetectionStrategy, Component, Signal, WritableSignal, computed, signal } from '@angular/core'
-import { IonBackButton, IonButtons, IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular/standalone'
-import { NavigationExtras, Router } from '@angular/router'
-import { SwiperComponent, SwiperData } from '../swiper/swiper.component'
-import { catchError, combineLatest, map, of, switchMap, tap } from 'rxjs'
+import { ChangeDetectionStrategy, Component, computed, Signal, signal, WritableSignal } from '@angular/core'
 import { toObservable, toSignal } from '@angular/core/rxjs-interop'
+import { NavigationExtras, Router } from '@angular/router'
+import { IonBackButton, IonButtons, IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular/standalone'
+import { addIcons } from 'ionicons'
+import { arrowBackOutline } from 'ionicons/icons'
+import { catchError, combineLatest, map, of, switchMap, tap } from 'rxjs'
 
 import type { Artist } from '../artist'
 import { ArtworkService } from '../artwork.service'
 import { LoadingComponent } from '../loading/loading.component'
+import { CategoryType, Media, MediaSorting } from '../media'
 import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
+import { SwiperComponent, SwiperData } from '../swiper/swiper.component'
 import { SwiperIonicEventsHelper } from '../swiper/swiper-ionic-events-helper'
-import { addIcons } from 'ionicons'
-import { arrowBackOutline } from 'ionicons/icons'
 
 @Component({
   selector: 'app-medialist',
@@ -70,7 +70,7 @@ export class MedialistPage extends SwiperIonicEventsHelper {
             if (artist.coverMedia?.aPartOfAll) {
               const min = Math.max(0, (artist.coverMedia?.aPartOfAllMin ?? 0) - (offsetByOne ? 1 : 0))
               const max =
-                (artist.coverMedia?.aPartOfAllMax ?? Number.parseInt(artist.albumCount)) - (offsetByOne ? 1 : 0)
+                (artist.coverMedia?.aPartOfAllMax ?? Number.parseInt(artist.albumCount, 10)) - (offsetByOne ? 1 : 0)
               return media.slice(min, max + 1)
             }
             return media
