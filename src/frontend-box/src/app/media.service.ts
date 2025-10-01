@@ -1,16 +1,21 @@
 import { Observable, Subject, interval, of, timer } from 'rxjs'
 import { distinctUntilChanged, filter, map, shareReplay, switchMap } from 'rxjs/operators'
 
+import { HttpClient } from '@angular/common/http'
+import { Injectable } from '@angular/core'
+import { firstValueFrom, from, iif, interval, Observable, of, Subject, timer } from 'rxjs'
+import { distinctUntilChanged, filter, map, mergeAll, mergeMap, shareReplay, switchMap, toArray } from 'rxjs/operators'
+import { environment } from '../environments/environment'
 import type { AlbumStop } from './albumstop'
 import { Media as BackendMedia } from '@backend-api/media.model'
 import type { CurrentEpisode } from './current.episode'
+import type { Artist } from './artist'
 import type { CurrentMPlayer } from './current.mplayer'
-import type { CurrentPlaylist } from './current.playlist'
-import type { CurrentShow } from './current.show'
 import type { CurrentSpotify } from './current.spotify'
 import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
 import type { Media } from './media'
+import type { CategoryType, Media, MediaInfoCache } from './media'
 import { Mupihat } from './mupihat'
 import type { Network } from '@backend-api/network.model'
 import type { WLAN } from './wlan'
@@ -27,9 +32,6 @@ export class MediaService {
   public readonly local$: Observable<CurrentMPlayer>
   public readonly network$: Observable<Network>
   public readonly albumStop$: Observable<AlbumStop>
-  public readonly playlist$: Observable<CurrentPlaylist>
-  public readonly episode$: Observable<CurrentEpisode>
-  public readonly show$: Observable<CurrentShow>
   public readonly mupihat$: Observable<Mupihat>
 
   private wlanSubject = new Subject<WLAN[]>()
@@ -38,31 +40,137 @@ export class MediaService {
     // Prepare subscriptions.
     // shareReplay replays the most recent (bufferSize) emission on each subscription
     // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
-    this.current$ = interval(1000).pipe(
-      switchMap((): Observable<CurrentSpotify> => this.http.get<CurrentSpotify>(`${this.getPlayerBackendUrl()}/state`)),
-      shareReplay({ bufferSize: 1, refCount: false }),
-    )
+    // Hybrid approach: Poll Web Playback SDK state for localhost, HTTP polling for remote
+    this.current$ = this.spotifyService.shouldUsePlayer()
+      ? // Local: Poll Web Playback SDK state every second for accurate position
+        interval(1000).pipe(
+          switchMap(() => {
+            if (this.spotifyService.isPlayerReady()) {
+              return this.spotifyService
+                .getCurrentState()
+                .then(async (state) => {
+                  if (!state || !state.track_window?.current_track) {
+                    return {} as CurrentSpotify
+                  }
+
+                  const currentTrack = state.track_window.current_track
+                  const contextUri = state.context?.uri
+
+                  // Get enhanced media information if context is available
+                  let mediaInfo = null
+                  let trackPosition = 1
+
+                  if (contextUri) {
+                    mediaInfo = await this.getMediaInfo(contextUri)
+
+                    // Calculate track/episode/chapter position based on context type
+                    if (contextUri.includes('spotify:album:') && mediaInfo && mediaInfo.tracks) {
+                      const currentTrackIndex = mediaInfo.tracks.findIndex(
+                        (track: any) => track.id === currentTrack.id || track.uri === currentTrack.uri,
+                      )
+                      if (currentTrackIndex !== -1) {
+                        trackPosition = currentTrackIndex + 1
+                      }
+                    } else if (contextUri.includes('spotify:playlist:') && mediaInfo && mediaInfo.tracks) {
+                      const currentTrackIndex = mediaInfo.tracks.findIndex(
+                        (track: any) => track.id === currentTrack.id || track.uri === currentTrack.uri,
+                      )
+                      if (currentTrackIndex !== -1) {
+                        trackPosition = currentTrackIndex + 1
+                      }
+                    } else if (contextUri.includes('spotify:show:')) {
+                      // Both shows and audiobooks use spotify:show: URIs
+                      if (mediaInfo?.episodes) {
+                        // This is a podcast show
+                        const currentEpisodeIndex = mediaInfo.episodes.findIndex(
+                          (episode: any) => episode.id === currentTrack.id || episode.uri === currentTrack.uri,
+                        )
+                        if (currentEpisodeIndex !== -1) {
+                          trackPosition = currentEpisodeIndex + 1
+                        }
+                      } else if (mediaInfo?.chapters) {
+                        // This is an audiobook (treated as show with chapters)
+                        const currentChapterIndex = mediaInfo.chapters.findIndex(
+                          (chapter: any) => chapter.id === currentTrack.id || chapter.uri === currentTrack.uri,
+                        )
+                        if (currentChapterIndex !== -1) {
+                          trackPosition = currentChapterIndex + 1
+                        }
+                      }
+                    }
+                  }
+
+                  const contextType = contextUri ? contextUri.split(':')[1] : undefined
+
+                  return {
+                    progress_ms: state.position,
+                    is_playing: !state.paused,
+                    item: {
+                      id: currentTrack.id,
+                      name: currentTrack.name,
+                      duration_ms: currentTrack.duration_ms,
+                      track_number: ['album', 'playlist', 'show'].includes(contextType)
+                        ? trackPosition
+                        : currentTrack.track_number || 1,
+                      album: currentTrack.album,
+                      ...(mediaInfo && {
+                        album: {
+                          ...currentTrack.album,
+                          name: this.getMediaName(mediaInfo) || currentTrack.album?.name,
+                          total_tracks: mediaInfo.total_tracks,
+                        },
+                        show: {
+                          name: mediaInfo.show_name,
+                          total_episodes: mediaInfo.total_episodes,
+                        },
+                      }),
+                    },
+                    ...(contextType === 'playlist' &&
+                      mediaInfo && {
+                        playlist: {
+                          name: mediaInfo.playlist_name,
+                          total_tracks: mediaInfo.total_tracks,
+                          current_track_position: trackPosition,
+                        },
+                      }),
+                    ...(contextType === 'show' &&
+                      mediaInfo &&
+                      mediaInfo.episodes && {
+                        show_details: {
+                          name: mediaInfo.show_name,
+                          total_episodes: mediaInfo.total_episodes,
+                          current_episode_position: trackPosition,
+                        },
+                      }),
+                    ...(contextType === 'show' &&
+                      mediaInfo &&
+                      mediaInfo.chapters && {
+                        audiobook: {
+                          name: mediaInfo.audiobook_name,
+                          total_chapters: mediaInfo.total_chapters,
+                          current_chapter_position: trackPosition,
+                        },
+                      }),
+                  } as CurrentSpotify
+                })
+                .catch(() => ({}) as CurrentSpotify)
+            }
+            return of({} as CurrentSpotify)
+          }),
+          shareReplay({ bufferSize: 1, refCount: true }),
+        )
+      : // Remote: HTTP polling
+        interval(10000).pipe(
+          switchMap(
+            (): Observable<CurrentSpotify> => this.http.get<CurrentSpotify>(`${this.getPlayerBackendUrl()}/state`),
+          ),
+          shareReplay({ bufferSize: 1, refCount: true }),
+        )
     this.local$ = interval(1000).pipe(
       switchMap((): Observable<CurrentMPlayer> => this.http.get<CurrentMPlayer>(`${this.getPlayerBackendUrl()}/local`)),
-      shareReplay({ bufferSize: 1, refCount: false }),
+      shareReplay({ bufferSize: 1, refCount: true }),
     )
-    this.playlist$ = interval(1000).pipe(
-      switchMap(
-        (): Observable<CurrentPlaylist> =>
-          this.http.get<CurrentPlaylist>(`${this.getPlayerBackendUrl()}/playlistTracks`),
-      ),
-      shareReplay({ bufferSize: 1, refCount: false }),
-    )
-    this.episode$ = interval(1000).pipe(
-      switchMap(
-        (): Observable<CurrentEpisode> => this.http.get<CurrentEpisode>(`${this.getPlayerBackendUrl()}/episode`),
-      ),
-      shareReplay({ bufferSize: 1, refCount: false }),
-    )
-    this.show$ = interval(1000).pipe(
-      switchMap((): Observable<CurrentShow> => this.http.get<CurrentShow>(`${this.getPlayerBackendUrl()}/show`)),
-      shareReplay({ bufferSize: 1, refCount: false }),
-    )
+
     // 5 seconds is enough for wifi update and showing/hiding media.
     // Use timer so the first request is after 300ms.
     this.network$ = timer(300, 5000).pipe(
@@ -170,7 +278,7 @@ export class MediaService {
   addWLAN(wlan: WLAN) {
     const url = `${this.getApiBackendUrl()}/addwlan`
 
-    this.http.post(url, wlan, { responseType: 'text' }).subscribe((response) => {
+    this.http.post(url, wlan, { responseType: 'text' }).subscribe((_response) => {
       //this.response = response;
       this.updateWLAN()
     })
@@ -435,5 +543,118 @@ export class MediaService {
 
   private getPlayerBackendUrl(): string {
     return environment.backend.playerUrl
+  }
+
+  /**
+   * Clear the media info cache (useful for manual cache invalidation)
+   */
+  public clearMediaInfoCache(): void {
+    this.mediaInfoCache = {}
+  }
+
+  /**
+   * Get the appropriate name based on media type
+   */
+  private getMediaName(mediaInfo: MediaInfoCache): string | undefined {
+    switch (mediaInfo.mediaType) {
+      case 'album':
+        return mediaInfo.album_name
+      case 'playlist':
+        return mediaInfo.playlist_name
+      case 'show':
+        return mediaInfo.show_name
+      case 'audiobook':
+        return mediaInfo.audiobook_name
+      default:
+        return mediaInfo.album_name || mediaInfo.playlist_name || mediaInfo.show_name || mediaInfo.audiobook_name
+    }
+  }
+
+  /**
+   * Get enhanced media information (total tracks/episodes/chapters) for all content types
+   * Uses caching to avoid repeated API calls for the same media ID
+   */
+  private async getMediaInfo(contextUri: string): Promise<{
+    total_tracks?: number
+    total_episodes?: number
+    total_chapters?: number
+    name?: string
+    tracks?: any[]
+    episodes?: any[]
+    chapters?: any[]
+    playlist_name?: string
+    show_name?: string
+    album_name?: string
+    audiobook_name?: string
+  } | null> {
+    try {
+      let mediaInfo: any = null
+      let mediaId: string | null = null
+
+      // Parse the URI to determine the type and extract the ID
+      if (contextUri.includes('spotify:album:')) {
+        mediaId = contextUri.split('spotify:album:')[1]
+      } else if (contextUri.includes('spotify:playlist:')) {
+        mediaId = contextUri.split('spotify:playlist:')[1]
+      } else if (contextUri.includes('spotify:show:')) {
+        mediaId = contextUri.split('spotify:show:')[1]
+      }
+
+      if (mediaId === null) {
+        return null
+      }
+
+      if (this.mediaInfoCache.currentId === mediaId) {
+        return this.mediaInfoCache
+      }
+
+      if (contextUri.includes('spotify:album:')) {
+        mediaInfo = await firstValueFrom(this.spotifyService.getAlbumInfo(mediaId))
+      } else if (contextUri.includes('spotify:playlist:')) {
+        mediaInfo = await firstValueFrom(this.spotifyService.getPlaylistInfo(mediaId))
+      } else if (contextUri.includes('spotify:show:')) {
+        // Both shows and audiobooks use spotify:show: URIs
+        // Try audiobook endpoint first (more specific, will fail for podcast shows)
+        try {
+          mediaInfo = await firstValueFrom(this.spotifyService.getAudiobookInfo(mediaId))
+        } catch {
+          // Fallback to show API (more general, works for both shows and audiobooks)
+          try {
+            mediaInfo = await firstValueFrom(this.spotifyService.getShowInfo(mediaId))
+          } catch {
+            console.warn('Failed to get info for show/audiobook:', mediaId)
+          }
+        }
+      }
+
+      if (mediaInfo && mediaId) {
+        // Determine media type and set appropriate name
+        let mediaType: 'album' | 'playlist' | 'show' | 'audiobook' = 'album'
+        if (contextUri.includes('spotify:playlist:')) {
+          mediaType = 'playlist'
+        } else if (contextUri.includes('spotify:show:')) {
+          // Both shows and audiobooks use spotify:show: URIs
+          // Determine type based on the returned data structure
+          if (mediaInfo.chapters && mediaInfo.total_chapters) {
+            mediaType = 'audiobook'
+          } else {
+            mediaType = 'show'
+          }
+        }
+
+        // Cache the new result (replacing the old one)
+        this.mediaInfoCache = {
+          ...mediaInfo,
+          currentId: mediaId,
+          mediaType,
+        }
+
+        return mediaInfo
+      }
+    } catch (error) {
+      console.warn('Failed to get media info for URI:', contextUri, error)
+    }
+
+    return null
   }
 }

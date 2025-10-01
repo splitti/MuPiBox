@@ -5,6 +5,8 @@ import { RouteReuseStrategy, provideRouter, withComponentInputBinding } from '@a
 
 import { IonicRouteStrategy } from '@ionic/angular/standalone'
 import { provideIonicAngular } from '@ionic/angular/standalone'
+import { provideRouter, RouteReuseStrategy } from '@angular/router'
+import { IonicRouteStrategy, provideIonicAngular } from '@ionic/angular/standalone'
 import { register as registerSwiperComponents } from 'swiper/element/bundle'
 import { AppComponent } from './app/app.component'
 import { routes } from './app/app.routes'

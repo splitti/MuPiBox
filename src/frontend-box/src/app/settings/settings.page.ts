@@ -1,8 +1,17 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core'
-import { IonBackButton, IonButtons, IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular/standalone'
+import {
+  AlertController,
+  IonBackButton,
+  IonButtons,
+  IonContent,
+  IonHeader,
+  IonTitle,
+  IonToolbar,
+} from '@ionic/angular/standalone'
+import { ChangeDetectionStrategy, Component, Signal, computed, inject } from '@angular/core'
 import { SwiperComponent, SwiperData } from '../swiper/swiper.component'
+import { from, of, switchMap } from 'rxjs'
+import { toObservable, toSignal } from '@angular/core/rxjs-interop'
 
-import { AlertController } from '@ionic/angular/standalone'
 import { HttpClient } from '@angular/common/http'
 import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
@@ -11,7 +20,6 @@ import { Router } from '@angular/router'
 import { SwiperIonicEventsHelper } from '../swiper/swiper-ionic-events-helper'
 import { addIcons } from 'ionicons'
 import { arrowBackOutline } from 'ionicons/icons'
-import { toSignal } from '@angular/core/rxjs-interop'
 
 @Component({
   selector: 'app-settings',
@@ -33,29 +41,37 @@ import { toSignal } from '@angular/core/rxjs-interop'
 })
 export class SettingsPage extends SwiperIonicEventsHelper {
   private mediaService = inject(MediaService)
-  protected network = toSignal(this.mediaService.network$)
+  protected network = toSignal(this.mediaService.network$, { initialValue: null })
 
   protected swiperData = computed(() => {
-    return [
+    const out = [
       {
-        name: 'Add media & more',
-        imgSrc: this.qrCodeSrc(),
+        name: 'Add media',
+        imgSrc: of('../../assets/plus-box-outline.svg'),
         data: 'add-media',
       },
       {
         name: 'WiFi settings',
-        imgSrc: '../../assets/wifi-settings.svg',
+        imgSrc: of('../../assets/wifi.svg'),
         data: 'wifi',
       },
       {
         name: 'Reboot / Shutdown',
-        imgSrc: '../../assets/power.svg',
+        imgSrc: of('../../assets/power.svg'),
         data: 'shutdown',
       },
     ]
+    if (this.qrCodeSrc() !== null) {
+      out.push({
+        name: 'More settings',
+        imgSrc: of(this.qrCodeSrc()),
+        data: 'more-settings',
+      })
+    }
+    return out
   })
 
-  private qrCodeSrc = signal<string>('')
+  protected qrCodeSrc: Signal<string>
 
   private router = inject(Router)
   private alertController = inject(AlertController)
@@ -65,27 +81,39 @@ export class SettingsPage extends SwiperIonicEventsHelper {
     super()
     addIcons({ arrowBackOutline })
 
-    effect(
-      () => {
-        const ip = this.network()?.ip
-        if (ip !== undefined) {
-          QRCode.toDataURL(`http://${ip}`, { color: { light: '#00000000' } }).then((url) => {
-            this.qrCodeSrc.set(url)
-          })
-        } else {
-          this.qrCodeSrc.set('')
-        }
-      },
-      { allowSignalWrites: true },
+    this.qrCodeSrc = toSignal(
+      toObservable(this.network).pipe(
+        switchMap((network) => {
+          if (network?.ip !== undefined) {
+            return from(QRCode.toDataURL(`http://${network.ip}`, { color: { light: '#00000000' } }))
+          }
+          return of(null)
+        }),
+      ),
+      { initialValue: null },
     )
   }
 
   protected entryClicked(entryData: SwiperData<string>): void {
-    if (entryData.data === 'wifi') {
+    if (entryData.data === 'add-media') {
+      this.router.navigate(['/edit'])
+    } else if (entryData.data === 'wifi') {
       this.router.navigate(['/wifi'])
     } else if (entryData.data === 'shutdown') {
       this.shutdownMessage()
+    } else if (entryData.data === 'more-settings') {
+      this.moreSettingsMessage()
     }
+  }
+
+  private async moreSettingsMessage() {
+    const msg = await this.alertController.create({
+      cssClass: 'alert',
+      header: 'More settings',
+      message: `For more settings, open 'http://${this.network()?.ip}' on your mobile device or PC. You can also scan the QR-code to open it.`,
+      buttons: ['OK'],
+    })
+    await msg.present()
   }
 
   private async shutdownMessage() {

@@ -4,59 +4,73 @@
       <ion-back-button icon="arrow-back-outline" [defaultHref]="'media/{{ media().category }}/{{ media().folderName }}'"></ion-back-button>
     </ion-buttons>
     <ion-title class="toolbar-album">
-      <div>
-      @switch (media().type) {
-        @case ('spotifyPlaylist') {
-          {{ spotify()?.item.album.name }}
-        }
-        @case ('spotifyEpisode') {
-          {{ episode()?.show.name }}
-        }
-        @case ('local') {
-          {{ local()?.album }}
-        }
-        @default {
-          {{ media().folderName }}
+      @if (media.type ==='spotify' && currentPlayedSpotify?.currently_playing_type !== 'episode') {
+        <div>{{(spotify$ | async)?.item.album.name}}</div>
+      } @else {
+        @if (media.showid && (spotify$ | async)?.show_details) {
+          <div>{{(spotify$ | async)?.show_details?.name}}</div>
+        } @else if (media.audiobookid && (spotify$ | async)?.audiobook) {
+          <div>{{(spotify$ | async)?.audiobook?.name}}</div>
+        } @else {
+          @if (media.type ==='library') {
+            <div>{{(local$ | async)?.album}}</div>
+          } @else {
+            @if (media.type ==='rss') {
+              <div>{{media.artist}}</div>
+            } @else {
+              <div>{{media.title}}</div>
+            }
+          }
         }
       }
       </div>
     </ion-title>
     <ion-title class="toolbar-tracktitle">
-
-      <div>
-        @switch (media().type) {
-          @case ('spotifyPlaylist') {
-            {{ spotify()?.item.name }}
-          }
-          @case ('spotifyEpisode') {
-            {{ episode()?.name }}
-          }
-          @case ('local') {
-            {{ local()?.currentTrackname }}
-          }
-          @case ('rss') {
-            {{ media().name }}
+      @if (media.type ==='spotify' && currentPlayedSpotify?.currently_playing_type !== 'episode') {
+        <div>{{(spotify$ | async)?.item.name}}</div>
+      } @else {
+        @if (media.showid && (spotify$ | async)?.show_details) {
+          <div>{{(spotify$ | async)?.item?.name}}</div>
+        } @else if (media.audiobookid && (spotify$ | async)?.audiobook) {
+          <div>{{(spotify$ | async)?.item?.name}}</div>
+        } @else {
+          @if (media.type ==='library') {
+            <div>{{(local$ | async)?.currentTrackname}}</div>
+          } @else {
+            @if (media.type ==='rss') {
+              <div>{{media.title}}</div>
+            } @else {
+              <div></div>
+            }
           }
         }
       </div>
     </ion-title>
     <ion-title class="toolbar-tracknumber" slot="end">
-      <div>{{local()?.volume}}%</div>
-
-      <div>
-        @switch (media().type) {
-          @case ('spotifyPlaylist') {
-            {{ spotify()?.item.track_number }}/{{ spotify()?.item.album.total_tracks }}
+      <div>{{(local$ | async)?.volume}}%</div>
+      @if (media.type ==='library') {
+        <div>{{(local$ | async)?.currentTracknr}}/{{(local$ | async)?.totalTracks}}</div>
+      } @else {
+        @if (media.type ==='spotify') {
+          @if (media.playlistid && (spotify$ | async)?.playlist) {
+            <!-- Playlist -->
+            <div>{{(spotify$ | async)?.playlist?.current_track_position}}/{{(spotify$ | async)?.playlist?.total_tracks}}</div>
+          } @else if (media.showid && (spotify$ | async)?.show_details) {
+            <!-- Show/Podcast -->
+            <div>{{(spotify$ | async)?.show_details?.current_episode_position}}/{{(spotify$ | async)?.show_details?.total_episodes}}</div>
+          } @else if (media.audiobookid && (spotify$ | async)?.audiobook) {
+            <!-- Audiobook -->
+            <div>{{(spotify$ | async)?.audiobook?.current_chapter_position}}/{{(spotify$ | async)?.audiobook?.total_chapters}}</div>
+          } @else if (currentPlayedSpotify?.currently_playing_type !== 'episode') {
+            <!-- Regular album -->
+            <div>{{(spotify$ | async)?.item.track_number}}/{{(spotify$ | async)?.item.album.total_tracks}}</div>
+          } @else {
+            <!-- Fallback - no track info available -->
+            <div></div>
           }
-          <!-- TODO: Check if audiobook can also be episode.
-           Commit: https://github.com/splitti/MuPiBox/commit/5b9a71d94331369f01b7450738df500b0849410e -->
-          @case ('spotifyEpisode') {
-            {{ showTrackNr }}/{{ episode()?.show.total_episodes }}
-          }
-          @case ('local') {
-            {{ local()?.currentTracknr }}/{{ local()?.totalTracks }}
-          }
-          <!-- ELSE ??: {{playlistTrackNr}}/{{local()?.totalPlaylist}} -->
+        } @else {
+          <!-- Non-Spotify content (Library) -->
+          <div></div>
         }
       </div>
     </ion-title>

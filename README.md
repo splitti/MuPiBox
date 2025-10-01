@@ -37,8 +37,8 @@ Please visit official website  https://mupibox.de/anleitungen/installationsanlei
 - Shutdown-Sound by Leszek_Szary (https://freesound.org/people/Leszek_Szary/sounds/133283/)
 - WLED by Discord-User ronbal and ChatGPT
 - jq (https://github.com/jqlang/jq/releases)
-- Icons are from https://github.com/Templarian/MaterialDesign 
-  
+- Icons are from https://github.com/Templarian/MaterialDesign
+
 ## Contributing
 All contributions, e.g., reporting issues etc., are welcome.
 

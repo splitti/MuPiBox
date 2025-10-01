@@ -3,10 +3,15 @@ import { publishReplay, refCount } from 'rxjs/operators'
 import { Media as BackendMedia } from '@backend-api/media.model'
 import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
+import type { ServerHttpApiConfig } from '@backend-api/server.model'
+import type { Observable } from 'rxjs'
+import { publishReplay, refCount } from 'rxjs/operators'
+import { environment } from '../environments/environment'
 import type { Media } from './media'
 import type { Observable } from 'rxjs'
 import type { ServerHttpApiConfig } from '@backend-api/server.model'
 import { environment } from '../environments/environment'
+import { SpotifyService } from './spotify.service'
 
 export enum PlayerCmds {
   PLAY = 'play',
@@ -34,7 +39,10 @@ export enum PlayerCmds {
 export class PlayerService {
   private config: Observable<ServerHttpApiConfig> = null
 
-  constructor(private http: HttpClient) {}
+  constructor(
+    private http: HttpClient,
+    private spotifyService: SpotifyService,
+  ) {}
 
   getConfig() {
     // Observable with caching:
@@ -111,7 +119,7 @@ export class PlayerService {
     this.sendRequest(url)
   }
 
-  playMedia(media: Media) {
+  async playMedia(media: Media): Promise<boolean> {
     let url: string
 
     switch (media.type) {
@@ -123,6 +131,13 @@ export class PlayerService {
         break
       }
       case 'spotify': {
+        const isHealthy = await this.spotifyService.ensurePlayerHealthy()
+
+        if (!isHealthy) {
+          console.error('❌ Spotify player health check failed - cannot start playback')
+          return false
+        }
+
         if (media.playlistid) {
           url = `spotify/now/spotify:playlist:${encodeURIComponent(media.playlistid)}:0:0`
         } else if (media.id) {
@@ -146,10 +161,18 @@ export class PlayerService {
     }
 
     this.sendRequest(url)
+    return true
   }
 
-  resumeMedia(media: Media) {
+  async resumeMedia(media: Media): Promise<boolean> {
     let url: string
+
+    const isHealthy = await this.spotifyService.ensurePlayerHealthy()
+
+    if (!isHealthy) {
+      console.error('❌ Spotify player health check failed - cannot resume playback')
+      return false
+    }
 
     if (media.playlistid) {
       url = `spotify/now/spotify:playlist:${encodeURIComponent(media.playlistid)}:${media.resumespotifytrack_number}:${media.resumespotifyprogress_ms}`
@@ -162,6 +185,7 @@ export class PlayerService {
     }
 
     this.sendRequest(url)
+    return true
   }
 
   private say(text: string) {
@@ -177,10 +201,8 @@ export class PlayerService {
   }
 
   private sendRequest(url: string) {
-    this.getConfig().subscribe((config) => {
-      if (!config.rooms[0]) config.rooms[0] = '0'
-      const baseUrl = `${environment.backend.playerUrl}/${config.rooms[0]}/`
-      this.http.get(baseUrl + url).subscribe()
-    })
+    const room = this.spotifyService.isPlayerReady() ? this.spotifyService.getDeviceId() : 'current'
+    const baseUrl = `${environment.backend.playerUrl}/${room}/`
+    this.http.get(baseUrl + url).subscribe()
   }
 }
