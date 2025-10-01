@@ -1,0 +1,17 @@
+<ion-header class="settings-header">
+  <ion-toolbar color="light">
+    <ion-buttons slot="start">
+      <ion-back-button icon="arrow-back-outline" defaultHref="/home"></ion-back-button>
+    </ion-buttons>
+    @let networkVar = network();
+    @if (networkVar?.host !== undefined && networkVar?.ip !== undefined) {
+      <ion-title>Settings: {{ networkVar?.host }} - {{ networkVar?.ip }}</ion-title>
+    } @else {
+      <ion-title>Settings</ion-title>
+    }
+    <span slot="end" class="mupihat-icon-container"><mupihat-icon></mupihat-icon></span>
+  </ion-toolbar>
+</ion-header>
+<ion-content>
+  <mupi-swiper [data]="swiperData()" (elementClicked)="entryClicked($event)"></mupi-swiper>
+</ion-content>

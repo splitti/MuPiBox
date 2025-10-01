@@ -16,6 +16,7 @@ We will focus on <b>bookworm</b> and recommend you to update, or reinstall. See 
 </ul>
 <h3>Next Release (DEV/BETA/STABLE)</h3>
 <ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Update: The settings page on the box got a design update.</li>
 <li id='linews' class='linews'>Update: Since sysfs-gpio is no longer integrated in debian, we switched to the current and modern libgpiod</li>
 <li id='linews' class='linews'>Update: Since Spotify only allows third-party apps to register via websites with a certificate, the MuPiBox receives a self-signed certificate.</li>
 <li id='linews' class='linews'>Update: Librespot Version dev_0.6 build on 2025-03-05.</li>
