@@ -2,7 +2,6 @@ import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http'
 import { provideHttpClientTesting } from '@angular/common/http/testing'
 import { ComponentFixture, TestBed } from '@angular/core/testing'
 
-import { of } from 'rxjs'
 import { SwiperComponent, SwiperData } from './swiper.component'
 
 describe('SwiperComponent', () => {
@@ -25,7 +24,7 @@ describe('SwiperComponent', () => {
   })
 
   it('should fill shownData when "ionViewDidEnter" is called', () => {
-    const swiperData: SwiperData<number>[] = [{ name: 'test', imgSrc: of('bla'), data: 0 }]
+    const swiperData: SwiperData<number>[] = [{ name: 'test', imgSrc: 'bla', data: 0 }]
     fixture.componentRef.setInput('data', swiperData)
     expect((component as any).pageIsShown()).toBeFalse()
     expect((component as any).shownData()).toEqual([])
@@ -36,7 +35,7 @@ describe('SwiperComponent', () => {
   })
 
   it('should clear shownData when "ionViewWillLeave" is called', () => {
-    const swiperData: SwiperData<number>[] = [{ name: 'test', imgSrc: of('bla'), data: 0 }]
+    const swiperData: SwiperData<number>[] = [{ name: 'test', imgSrc: 'bla', data: 0 }]
     fixture.componentRef.setInput('data', swiperData)
     ;(component as any).pageIsShown.set(true)
     TestBed.flushEffects()

@@ -1,31 +1,34 @@
 import { exec } from 'node:child_process'
 import fs from 'node:fs'
-import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import cors from 'cors'
-import express from 'express'
+import express, { Request, Response } from 'express'
 import jsonfile from 'jsonfile'
-import ky from 'ky'
-import xmlparser from 'xml-js'
+import { environment } from './environment'
+import { Data } from './models/data.model'
+import { Folder, FolderWithChildren } from './models/folder.model'
 import { LogRequest, LogResponse } from './models/log.model'
+import { Network } from './models/network.model'
 import { ServerConfig } from './models/server.model'
 import type { SpotifyValidationRequest, SpotifyValidationResponse } from './models/spotify-api.model'
+import { SpotifyUrlData } from './models/spotify-url-data.model'
 import { SpotifyApiService } from './services/spotify-api.service'
 import { SpotifyMediaInfo } from './services/spotify-media-info.service'
+import { addRssImageInformation, getRssMedia } from './sources/rss'
+import {
+  addSpotifyImageInformation,
+  addSpotifyTitleInformation,
+  getSpotifyMedia,
+  validateSpotifyUrlData,
+} from './sources/spotify'
+import { cmdCall, readJsonFile } from './utils'
 
-const testServe = process.env.NODE_ENV === 'test'
-const devServe = process.env.NODE_ENV === 'development'
-const productionServe = !(testServe || devServe)
+const serverName = 'mupibox-backend-api'
 
 // Configuration files.
 let configBasePath = './server/config'
-if (!productionServe) {
+if (!environment.production) {
   configBasePath = './config' // This uses the package.json path as pwd.
-}
-
-async function readJsonFile(path: string) {
-  const file = await readFile(path, 'utf8')
-  return JSON.parse(file)
 }
 
 let config: ServerConfig | undefined
@@ -47,8 +50,6 @@ readJsonFile(`${configBasePath}/config.json`).then((configFile) => {
 const mupiboxConfigPath = '/etc/mupibox/mupiboxconfig.json'
 const dataFile = `${configBasePath}/data.json`
 const resumeFile = `${configBasePath}/resume.json`
-const activedataFile = `${configBasePath}/active_data.json`
-const activeresumeFile = `${configBasePath}/active_resume.json`
 const networkFile = `${configBasePath}/network.json`
 const wlanFile = `${configBasePath}/wlan.json`
 const monitorFile = `${configBasePath}/monitor.json`
@@ -73,40 +74,307 @@ app.use(express.urlencoded({ extended: false }))
 // the Angular development server during development to be able to hot-reload and debug.
 // We explicitely check for !== 'development' for now so we do not need to set this env in
 // production.
-if (productionServe) {
+if (environment.production) {
   // Static path to compiled Angular app
   app.use(express.static(path.join(__dirname, 'www')))
 }
 
+/**
+ *
+ * @param data - The data that should be sorted into folders. Note that the data entries
+ * might be changed after calling this method (i.e., artist and artistcover might be
+ * added).
+ */
+const getFoldersWithData = async (data: Data[]): Promise<FolderWithChildren[]> => {
+  // For this, we might need to first set the `artist` field for entries that do
+  // not have it set yet. Spotify shows, artists, albums and playlists are the only
+  // data entries where we allow the user to not specify the folder name.
+  // These adapt the original entries in `data`.
+  await addSpotifyTitleInformation(data.filter((entry) => entry.artist === undefined))
+
+  // Now sort them into folders.
+  const toMapKey = (folder: Data): string => {
+    return `${folder.artist}|{}|${folder.category}`
+  }
+  const folderMap = new Map<string, FolderWithChildren>()
+  for (const entry of data) {
+    const folderId = toMapKey(entry)
+    const folder = folderMap.get(folderId)
+    if (folder !== undefined) {
+      folder?.children.push(entry)
+      if (folder.img === undefined && entry.artistcover !== undefined) {
+        folder.img = entry.artistcover
+      }
+    } else {
+      folderMap.set(folderId, {
+        name: entry.artist ?? 'No name',
+        img: entry.artistcover,
+        category: entry.category,
+        children: [entry],
+      })
+    }
+  }
+  return [...folderMap.values()]
+}
+
 // Routes
-app.get('/api/rssfeed', async (req, res) => {
-  const rssUrl = req.query.url
-  if (typeof rssUrl !== 'string') {
-    res.status(500).send('Given url is not a string.')
+app.get('/api/folders', async (_req, res) => {
+  try {
+    let data: Data[] = await readJsonFile(dataFile)
+    const network: Network = await readJsonFile(networkFile)
+    // If we are not online, we filter all sources that require an online connection out.
+    if (network.onlinestate !== 'online') {
+      data = data.filter((entry) => entry.type === 'library')
+    }
+
+    // First, we sort all data.json entries into folders.
+    const folderList = await getFoldersWithData(data)
+
+    // Finally, we need to check if we have an image url for each folder.
+    // If not, we check if we can request it.
+    const folderWithoutImage = folderList.filter((folder) => folder.img === undefined)
+    const childrenWithFolders = folderWithoutImage.map((folder) => {
+      return { data: folder.children[0], folder: folder }
+    })
+    await Promise.allSettled([
+      addSpotifyImageInformation(childrenWithFolders.map((entry) => entry.data)),
+      addRssImageInformation(childrenWithFolders.map((entry) => entry.data)),
+    ])
+    // Write the image to the folder.
+    for (const entry of childrenWithFolders) {
+      entry.folder.img = entry.data.artistcover
+    }
+
+    // Last, convert to the data format we want, sort and return.
+    const out: Folder[] = folderList
+      .map((folder) => {
+        return {
+          name: folder.name,
+          category: folder.category,
+          img: folder.img,
+        }
+      })
+      .sort((a: Folder, b: Folder) => {
+        return a.name.localeCompare(b.name, undefined, {
+          numeric: true,
+          sensitivity: 'base',
+        })
+      })
+    res.json(out)
+  } catch (error) {
+    console.error(`${nowDate.toLocaleString()}: [${serverName}] ${error}`)
+    res.json([])
+  }
+})
+
+app.get('/api/media/:category/:folder', async (req, res) => {
+  try {
+    const data: Data[] = await readJsonFile(dataFile)
+    const categoryData = data.filter((entry) => entry.category === req.params.category)
+
+    const folders = await getFoldersWithData(categoryData)
+
+    const dataEntries = folders
+      .filter((folder) => folder.name === req.params.folder)
+      .flatMap((folder) => folder.children)
+
+    // TODO: Slice and sort media.
+    const results = dataEntries.map((entry) => {
+      if (entry.type === 'rss') {
+        return getRssMedia(entry)
+      }
+      if (entry.type === 'spotify') {
+        return getSpotifyMedia(entry)
+      }
+      if (entry.type === 'radio') {
+        // We replace https with https for now since mplayer is way slower
+        // with https streams. We should fix this in the future.
+        const streamUrl = entry.id.replace('https://', 'http://')
+        return Promise.resolve({
+          type: 'radio',
+          url: streamUrl,
+          name: entry.title,
+          category: entry.category,
+          folderName: entry.artist,
+          img: entry.cover,
+          allowShuffle: false,
+          shuffle: false,
+        })
+      }
+      if (entry.type === 'library') {
+        return Promise.resolve({
+          type: 'local',
+          name: entry.title,
+          category: entry.category,
+          folderName: entry.artist,
+          img: entry.cover,
+          allowShuffle: false,
+          shuffle: false,
+        })
+      }
+      return undefined
+    })
+    const out = (await Promise.allSettled(results))
+      .filter((promise) => promise.status === 'fulfilled')
+      .flatMap((promise) => promise.value)
+
+    //       const sliceMedia = (media: Media[], offsetByOne = false): Media[] => {
+    //         if (artist.coverMedia?.aPartOfAll) {
+    //           const min = Math.max(0, (artist.coverMedia?.aPartOfAllMin ?? 0) - (offsetByOne ? 1 : 0))
+    //           const max =
+    //             (artist.coverMedia?.aPartOfAllMax ?? Number.parseInt(artist.albumCount)) - (offsetByOne ? 1 : 0)
+    //           return media.slice(min, max + 1)
+    //         }
+    //         return media
+    //       }
+
+    //       const isShow =
+    //         (artist.coverMedia.showid && artist.coverMedia.showid.length > 0) ||
+    //         (artist.coverMedia.type === 'rss' && artist.coverMedia.id.length > 0)
+
+    //   const sorting = coverMedia.sorting ?? defaultSorting
+    //   switch (sorting) {
+    //     case MediaSorting.AlphabeticalDescending:
+    //       return media.sort((a, b) =>
+    //         b.title.localeCompare(a.title, undefined, {
+    //           numeric: true,
+    //           sensitivity: 'base',
+    //         }),
+    //       )
+    //     case MediaSorting.ReleaseDateAscending:
+    //       return media.sort((a, b) => new Date(a.release_date).getTime() - new Date(b.release_date).getTime())
+    //     case MediaSorting.ReleaseDateDescending:
+    //       return media.sort((a, b) => new Date(b.release_date).getTime() - new Date(a.release_date).getTime())
+    //     default: // MediaList.Alphabetical.Ascending
+    //       return media.sort((a, b) =>
+    //         a.title.localeCompare(b.title, undefined, {
+    //           numeric: true,
+    //           sensitivity: 'base',
+    //         }),
+    //       )
+    //   }
+    // }
+
+    //         map((media) => {
+    //           return sliceMedia(
+    //             this.sortMedia(
+    //               artist.coverMedia,
+    //               media,
+    //               isShow ? MediaSorting.ReleaseDateDescending : MediaSorting.AlphabeticalAscending,
+    //             ),
+    //             !isShow,
+    //           )
+    //         }),
+
+    res.json(out)
+  } catch (error) {
+    console.error(`${nowDate.toLocaleString()}: [${serverName}] ${error}`)
+    res.json([])
+  }
+})
+
+/**
+ * TODO
+ */
+app.get('/api/data', async (_req, res) => {
+  try {
+    const data: Data[] = await readJsonFile(dataFile)
+    res.json(data)
+  } catch (error) {
+    console.error(`${nowDate.toLocaleString()}: [${serverName}] ${error}`)
+    res.json([])
+  }
+})
+
+/**
+ * TODO
+ */
+app.get('/api/data/:index', async (req, res) => {
+  try {
+    const index = Number.parseInt(req.params.index, 10)
+    const data: Data[] = await readJsonFile(dataFile)
+    if (index >= 0 && index < data.length) {
+      res.json(data[index])
+    } else {
+      res.status(404).json({ error: 'Data not found' })
+    }
+  } catch (error) {
+    console.error(`${nowDate.toLocaleString()}: [${serverName}] ${error}`)
+    res.status(404).json({ error: 'Data not found' })
+  }
+})
+
+/**
+ * TODO
+ */
+app.post('/api/data', async (req, res) => {
+  try {
+    // There might be a data lock. If so, we retry 5 times to reduce errors for the user.
+    // In the future, we want to get rid of this lock if possible.
+    for (let i = 0; i < 5; ++i) {
+      if (!fs.existsSync(dataLock)) {
+        break
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+    }
+    // The lock is still there :(
+    if (fs.existsSync(dataLock)) {
+      console.log(`${nowDate.toLocaleString()}: [${serverName}] /api/data data.json is locked`)
+      res.status(503).send('Data file is locked. Try again later.')
+      return
+    }
+
+    fs.openSync(dataLock, 'w')
+    const data: Data[] = await readJsonFile(dataFile)
+    data.push(req.body)
+    jsonfile.writeFile(dataFile, data, { spaces: 4 }, (error) => {
+      if (error) throw error
+      res.status(201).send(req.body)
+    })
+    fs.unlink(dataLock, (err) => {
+      if (err) throw err
+      console.log(`${nowDate.toLocaleString()}: [${serverName}] /api/data - data.json unlocked, locked file deleted!`)
+    })
+  } catch (error) {
+    console.error(`${nowDate.toLocaleString()}: [${serverName}] ${error}`)
+    res.status(500).send('Could not add entry to the data file.')
+  }
+})
+
+/**
+ * TODO
+ */
+app.post('/api/validate-spotify', async (req: Request, res: Response) => {
+  const spotifyUrlData: SpotifyUrlData = req.body
+  if (!spotifyUrlData || !spotifyUrlData.type || !spotifyUrlData.id) {
+    res.status(400).json({ error: 'Invalid Spotify URL.' })
     return
   }
-  ky.get(rssUrl)
-    .text()
-    .then((response) => {
-      res.send(xmlparser.xml2json(response, { compact: true, nativeType: true }))
-    })
-    .catch(() => {
-      res.status(500).send('External url responded with error code.')
+
+  const isValid = await validateSpotifyUrlData(spotifyUrlData)
+  if (isValid) {
+    res.status(200).json({ message: 'Spotify URL is valid.' })
+  } else {
+    res.status(400).json({ error: 'Invalid Spotify URL.' })
+  }
+})
+
+app.post('/api/reboot', async (_req, res) => {
+  cmdCall('sudo su - -c "/usr/local/bin/mupibox/./restart.sh &"')
+    .then(() => res.status(200).send('Rebooting...'))
+    .catch((error) => {
+      console.log(`${nowDate.toLocaleString()}: [${serverName}] Error /api/reboot`)
+      res.status(500).send('Internal Server Error')
     })
 })
 
-app.get('/api/data', (_req, res) => {
-  if (fs.existsSync(activedataFile)) {
-    jsonfile.readFile(activedataFile, (error, data) => {
-      if (error) {
-        console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error /api/data read active_data.json`)
-        console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] ${error}`)
-        res.json([])
-      } else {
-        res.json(data)
-      }
+app.post('api/shutdown', (_req, res) => {
+  cmdCall('sudo su - -c "/usr/local/bin/mupibox/./shutdown.sh &"')
+    .then(() => res.status(200).send('Shutting down...'))
+    .catch((error) => {
+      console.log(`${nowDate.toLocaleString()}: [${serverName}] Error /api/shutdown`)
+      res.status(500).send('Internal Server Error')
     })
-  }
 })
 
 app.get('/api/resume', (_req, res) => {
@@ -125,7 +393,17 @@ app.get('/api/resume', (_req, res) => {
   }
 })
 
-app.get('/api/mupihat', (_req, res) => {
+app.delete('/api/resume', async (_req, res) => {
+  try {
+    await jsonfile.writeFile(resumeFile, [], { spaces: 4 })
+    res.status(200).send('All resume data deleted.')
+  } catch (error) {
+    console.error(`${nowDate.toLocaleString()}: [${serverName}] ${error}`)
+    res.status(500).send('Could not delete all resume data.')
+  }
+})
+
+app.get('/api/mupihat', (req, res) => {
   if (fs.existsSync(mupihat)) {
     jsonfile.readFile(mupihat, (error, data) => {
       if (error) {
@@ -139,21 +417,7 @@ app.get('/api/mupihat', (_req, res) => {
   }
 })
 
-app.get('/api/activeresume', (_req, res) => {
-  if (fs.existsSync(activeresumeFile)) {
-    jsonfile.readFile(activeresumeFile, (error, data) => {
-      if (error) {
-        console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error /api/activeresume read active_resume.json`)
-        console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] ${error}`)
-        res.json([])
-      } else {
-        res.json(data)
-      }
-    })
-  }
-})
-
-app.get('/api/network', (_req, res) => {
+app.get('/api/network', (req, res) => {
   if (fs.existsSync(networkFile)) {
     tryReadFile(networkFile)
       .then((data) => {
@@ -170,12 +434,7 @@ app.get('/api/network', (_req, res) => {
 })
 
 app.get('/api/monitor', (req, res) => {
-  const ip = req.socket.remoteAddress
-  const host = req.hostname
-  const isLocalhost =
-    ip === '127.0.0.1' || ip === '::ffff:127.0.0.1' || ip === '::1' || host.indexOf('localhost') !== -1
-
-  if (fs.existsSync(monitorFile) && isLocalhost) {
+  if (fs.existsSync(monitorFile)) {
     jsonfile.readFile(monitorFile, (error, data) => {
       if (error) {
         console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error /api/monitor read monitor.json`)
@@ -232,37 +491,6 @@ app.post('/api/addwlan', (req, res) => {
       res.status(200).send('ok')
     })
   })
-})
-
-app.post('/api/add', (req, res) => {
-  try {
-    if (fs.existsSync(dataLock)) {
-      console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] /api/add data.json is locked`)
-      res.status(200).send('locked')
-    } else {
-      fs.openSync(dataLock, 'w')
-      jsonfile.readFile(dataFile, (error, data) => {
-        if (error) {
-          console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error /api/add read data.json`)
-          console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] ${error}`)
-          res.status(200).send('error')
-        } else {
-          data.push(req.body)
-
-          jsonfile.writeFile(dataFile, data, { spaces: 4 }, (error) => {
-            if (error) throw error
-            res.status(200).send('ok')
-          })
-        }
-      })
-      fs.unlink(dataLock, (err) => {
-        if (err) throw err
-        console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] /api/add - data.json unlocked, locked file deleted!`)
-      })
-    }
-  } catch (err) {
-    console.error(err)
-  }
 })
 
 app.post('/api/addresume', (req, res) => {
@@ -423,6 +651,7 @@ app.post('/api/editresume', (req, res) => {
   }
 })
 
+// TODO: CHeck if this is used.
 app.get('/api/spotify/config', (_req, res) => {
   if (config?.spotify === undefined) {
     res.status(500).send('Could load spotify config.')
@@ -911,13 +1140,13 @@ const tryReadFile = (filePath: string, retries = 3, delayMs = 1000) => {
 
 // Catch-all handler: send back Angular's index.html file for any non-API routes
 // This must be placed after all API routes but before starting the server
-if (productionServe) {
+if (environment.production) {
   app.get(/.*/, (_req, res) => {
     res.sendFile('index.html', { root: path.join(__dirname, 'www') })
   })
 }
 
-if (!testServe) {
+if (!environment.test) {
   app.listen(8200)
-  console.log(`${nowDate.toLocaleString()}: [mupibox-backend-api] Server started at http://localhost:8200`)
+  console.log(`${nowDate.toLocaleString()}: [${serverName}] Server started at http://localhost:8200`)
 }

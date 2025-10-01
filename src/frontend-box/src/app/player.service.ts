@@ -1,5 +1,6 @@
 import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
+import { Media as BackendMedia } from '@backend-api/media.model'
 import type { ServerHttpApiConfig } from '@backend-api/server.model'
 import type { Observable } from 'rxjs'
 import { publishReplay, refCount } from 'rxjs/operators'
@@ -21,13 +22,9 @@ export enum PlayerCmds {
   SEEKBACK = 'seek-30',
   SHUFFLEON = 'shuffleon',
   SHUFFLEOFF = 'shuffleoff',
-  SHUTOFF = 'shutoff',
   ALBUMSTOP = 'albumstop',
-  REBOOT = 'reboot',
   INDEX = 'index',
   NETWORKRESTART = 'networkrestart',
-  CLEARRESUME = 'clearresume',
-  MAXRESUME = 'maxresume',
   ENABLEWIFI = 'enablewifi',
 }
 
@@ -54,6 +51,41 @@ export class PlayerService {
     }
 
     return this.config
+  }
+
+  public playBackendMedia(media: BackendMedia): void {
+    let url: string
+
+    switch (media.type) {
+      // case 'library': {
+      //   if (!media.id) {
+      //     media.id = media.title
+      //   }
+      //   url = `musicsearch/library/album/${encodeURIComponent(media.category)}:${encodeURIComponent(media.artist)}:${encodeURIComponent(media.title)}`
+      //   break
+      // }
+      // case 'spotify': {
+      //   if (media.playlistid) {
+      //     url = `spotify/now/spotify:playlist:${encodeURIComponent(media.playlistid)}:0:0`
+      //   } else if (media.id) {
+      //     // TODO: Is this even used?
+      //     url = `spotify/now/spotify:album:${encodeURIComponent(media.id)}:0:0`
+      //   } else if (media.showid) {
+      //     url = `spotify/now/spotify:episode:${encodeURIComponent(media.showid)}:0:0`
+      //   }
+      //   break
+      // }
+      case 'radio': {
+        url = `radio/${encodeURIComponent(media.url)}/${encodeURIComponent(media.name)}:title:artist:${encodeURIComponent(media.folderName)}`
+        break
+      }
+      case 'rss': {
+        url = `rss/${encodeURIComponent(media.url)}/${encodeURIComponent(media.name)}:title:artist:${encodeURIComponent(media.folderName)}`
+        break
+      }
+    }
+
+    this.sendRequest(url)
   }
 
   /**
@@ -104,6 +136,7 @@ export class PlayerService {
         if (media.playlistid) {
           url = `spotify/now/spotify:playlist:${encodeURIComponent(media.playlistid)}:0:0`
         } else if (media.id) {
+          // TODO: Is this even used?
           url = `spotify/now/spotify:album:${encodeURIComponent(media.id)}:0:0`
         } else if (media.showid) {
           url = `spotify/now/spotify:episode:${encodeURIComponent(media.showid)}:0:0`

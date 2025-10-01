@@ -1,13 +1,11 @@
+export type RssTextOrCdata = { _text: string } | { _cdata: string }
+
 export interface RssFeed {
   rss?: {
     channel?: {
-      title?: {
-        _text: string
-      }
+      title?: RssTextOrCdata
       image?: {
-        url?: {
-          _text: string
-        }
+        url?: RssTextOrCdata
       }
       item?: Item[]
     }
@@ -15,15 +13,9 @@ export interface RssFeed {
 }
 
 export interface Item {
-  title?: {
-    _text: string
-  }
-  link?: {
-    _text: string
-  }
-  pubDate?: {
-    _text: string
-  }
+  title?: RssTextOrCdata
+  link?: RssTextOrCdata
+  pubDate?: RssTextOrCdata
   enclosure?: {
     _attributes?: {
       url?: string

@@ -1,0 +1,12 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Data</ion-title>
+    <ion-buttons slot="end">
+      <ion-button fill="outline" [routerLink]="['/add']"><ion-icon slot="start" name="add"></ion-icon>Add</ion-button>
+      <ion-button fill="outline" (click)="clearResume()">Clear resume</ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+<ion-content>
+    <mupiapp-data-list (entryClicked)="entryClicked($event)"></mupiapp-data-list>
+</ion-content>

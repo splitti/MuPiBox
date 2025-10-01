@@ -8,27 +8,27 @@ export enum MediaSorting {
 export type CategoryType = 'audiobook' | 'music' | 'other' | 'resume'
 
 export interface Media {
-  index?: number
-  artist?: string
-  title?: string
-  query?: string
-  id?: string
-  artistid?: string
-  showid?: string
-  playlistid?: string
-  audiobookid?: string
+  index?: number // done
+  artist?: string // done
+  title?: string // done
+  query?: string // done
+  id?: string // done
+  artistid?: string // done
+  showid?: string // done
+  playlistid?: string // done
+  audiobookid?: string // to verify
   release_date?: string
   cover?: string
-  type: string
-  category: CategoryType
-  artistcover?: string
-  shuffle?: boolean
-  aPartOfAll?: boolean
-  aPartOfAllMin?: number
-  aPartOfAllMax?: number
-  sorting?: MediaSorting
-  duration?: string
-  spotify_url?: string
+  type: string // done
+  category: CategoryType // done
+  artistcover?: string // done
+  shuffle?: boolean // done
+  aPartOfAll?: boolean // done
+  aPartOfAllMin?: number // done
+  aPartOfAllMax?: number // done
+  sorting?: MediaSorting // done
+  duration?: string // done
+  spotify_url?: string // done
   resumespotifytrack_number?: number
   resumespotifyprogress_ms?: number
   resumespotifyduration_ms?: number

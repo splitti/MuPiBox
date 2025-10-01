@@ -1,4 +1,3 @@
-import { AsyncPipe } from '@angular/common'
 import {
   ChangeDetectionStrategy,
   Component,
@@ -15,13 +14,12 @@ import {
 } from '@angular/core'
 import { IonCard, IonCardHeader, IonCardTitle, IonCol, IonGrid, IonRow } from '@ionic/angular/standalone'
 import { cloneDeep } from 'lodash-es'
-import { Observable } from 'rxjs'
 import Swiper from 'swiper'
 import { PlayerService } from '../player.service'
 
 export interface SwiperData<T> {
   name: string
-  imgSrc: Observable<string>
+  imgSrc: string
   data: T
 }
 
@@ -29,7 +27,7 @@ export interface SwiperData<T> {
   selector: 'mupi-swiper',
   templateUrl: './swiper.component.html',
   styleUrls: ['./swiper.component.scss'],
-  imports: [AsyncPipe, IonCard, IonCardHeader, IonCardTitle, IonCol, IonGrid, IonRow],
+  imports: [IonCard, IonCardHeader, IonCardTitle, IonCol, IonGrid, IonRow],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

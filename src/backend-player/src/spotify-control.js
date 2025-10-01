@@ -7,10 +7,11 @@ const createPlayer = require('./mplayer-wrapper.js')
 const googleTTS = require('google-tts-api')
 const fs = require('node:fs')
 const childProcess = require('node:child_process')
+const { environment } = require('./environment.js')
 
 let configBasePath = './config'
 //let networkConfigBasePath = '/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config'
-if (process.env.NODE_ENV === 'development') {
+if (!environment.production) {
   configBasePath = '../config'
   //networkConfigBasePath = '../../backend-api/config'
 }
@@ -18,8 +19,16 @@ if (process.env.NODE_ENV === 'development') {
 const muPiBoxConfig = require(`${configBasePath}/mupiboxconfig.json`)
 const config = require(`${configBasePath}/config.json`)
 
-const log = require('console-log-level')({ level: config.server.logLevel })
-
+let log
+if (environment.production) {
+  log = require('console-log-level')({ level: config.server.logLevel })
+} else {
+  log = {
+    debug: (val) => {
+      console.log(val)
+    },
+  }
+}
 /*set up express router and set headers for cross origin requests*/
 const app = express()
 const server = http.createServer(app)
@@ -701,7 +710,7 @@ function playFile(playedFile) {
 }
 
 function playURL(playedURL) {
-  log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Starting currentMeta.playing:${playedURL}`)
+  log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Starting currentMeta.playing: ${playedURL}`)
   //currentMeta.playing = true;
   writeplayerstatePlay()
   player.play(playedURL)
@@ -904,7 +913,6 @@ async function useSpotify(command) {
   } else {
     log.debug(`${nowDate.toLocaleString()}: [Spotify Control] still same device, won't change: ${activeDevice}`)
   }
-
   currentMeta.activeSpotifyId = command.name
   playMe()
 }
@@ -1076,11 +1084,9 @@ app.use((req, res) => {
   else if (command.name === '-5') setVolume(0)
   else if (command.name === 'shuffleon') shuffleon()
   else if (command.name === 'shuffleoff') shuffleoff()
-  else if (command.name === 'shutoff') cmdCall('sudo su - -c "/usr/local/bin/mupibox/./shutdown.sh &"')
-  else if (command.name === 'clearresume') cmdCall('sudo bash /usr/local/bin/mupibox/clearresume.sh')
+  // TODO: Create new endpoint for this.
   else if (command.name === 'maxresume') cmdCall('sudo bash /usr/local/bin/mupibox/remove_max_resume.sh')
   else if (command.name === 'networkrestart') cmdCall('sudo service ifup@wlan0 stop && sudo service ifup@wlan0 start')
-  else if (command.name === 'reboot') cmdCall('sudo su - -c "/usr/local/bin/mupibox/./restart.sh &"')
   else if (command.name === 'index') cmdCall('sudo bash /usr/local/bin/mupibox/add_index.sh')
   else if (command.name === 'seek+30') seek(1)
   else if (command.name === 'seek-30') seek(0)
