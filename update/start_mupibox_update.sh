@@ -501,7 +501,7 @@ echo "==========================================================================
 	mv -f ${MUPI_SRC}/config/services/mupi_mqtt.service /etc/systemd/system/mupi_mqtt.service  >&3 2>&3
 
 	systemctl daemon-reload >&3 2>&3
-	if [ "$RELEASE" = "dev" ]; then
+	if [ "$RELEASE" != "dev" ]; then
 		systemctl enable librespot.service >&3 2>&3
 		systemctl start librespot.service >&3 2>&3
 	fi
