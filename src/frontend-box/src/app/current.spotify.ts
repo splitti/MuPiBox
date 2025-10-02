@@ -4,6 +4,11 @@ export interface CurrentSpotify {
     album?: {
       name?: string
       total_tracks?: number
+      images?: Array<{
+        url?: string
+        height?: number
+        width?: number
+      }>
     }
     show?: {
       name?: string
@@ -16,4 +21,19 @@ export interface CurrentSpotify {
   }
   currently_playing_type?: string
   is_playing?: boolean
+  playlist?: {
+    name?: string
+    total_tracks?: number
+    current_track_position?: number
+  }
+  show_details?: {
+    name?: string
+    total_episodes?: number
+    current_episode_position?: number
+  }
+  audiobook?: {
+    name?: string
+    total_chapters?: number
+    current_chapter_position?: number
+  }
 }

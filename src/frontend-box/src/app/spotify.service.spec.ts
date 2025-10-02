@@ -1,6 +1,5 @@
-import { TestBed } from '@angular/core/testing'
-
 import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http'
+import { TestBed } from '@angular/core/testing'
 import { SpotifyService } from './spotify.service'
 
 describe('SpotifyService', () => {
