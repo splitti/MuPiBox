@@ -1,7 +1,9 @@
 import { AfterViewInit, Component, OnInit, ViewEncapsulation } from '@angular/core'
+import type { NgForm } from '@angular/forms'
+import { FormsModule } from '@angular/forms'
 import { ActivatedRoute, Router } from '@angular/router'
-import { AlertController, NavController } from '@ionic/angular/standalone'
 import {
+  AlertController,
   IonButton,
   IonButtons,
   IonCheckbox,
@@ -19,17 +21,15 @@ import {
   IonSelect,
   IonSelectOption,
   IonToolbar,
+  NavController,
 } from '@ionic/angular/standalone'
-import { arrowBackOutline, saveOutline } from 'ionicons/icons'
-import { CategoryType, Media, MediaSorting } from '../media'
-import { PlayerCmds, PlayerService } from '../player.service'
-
-import { FormsModule } from '@angular/forms'
-import type { NgForm } from '@angular/forms'
 import { addIcons } from 'ionicons'
+import { arrowBackOutline, saveOutline } from 'ionicons/icons'
 import Keyboard from 'simple-keyboard'
 import { ActivityIndicatorService } from '../activity-indicator.service'
+import { CategoryType, Media, MediaSorting } from '../media'
 import { MediaService } from '../media.service'
+import { PlayerCmds, PlayerService } from '../player.service'
 import { SpotifyService } from '../spotify.service'
 
 @Component({
@@ -37,7 +37,6 @@ import { SpotifyService } from '../spotify.service'
   encapsulation: ViewEncapsulation.None,
   templateUrl: './add.page.html',
   styleUrls: ['./add.page.scss'],
-  standalone: true,
   imports: [
     FormsModule,
     IonHeader,
@@ -82,15 +81,15 @@ export class AddPage implements OnInit, AfterViewInit {
   constructor(
     private mediaService: MediaService,
     private navController: NavController,
-    private route: ActivatedRoute,
+    _route: ActivatedRoute,
     private router: Router,
     private playerService: PlayerService,
     private spotifyService: SpotifyService,
     public alertController: AlertController,
     private activityIndicatorService: ActivityIndicatorService,
   ) {
-    if (this.router.getCurrentNavigation()?.extras.state) {
-      this.editMedia = this.router.getCurrentNavigation().extras.state.media
+    if (this.router.currentNavigation()?.extras.state) {
+      this.editMedia = this.router.currentNavigation().extras.state.media
       this.edit = true
     }
     addIcons({ arrowBackOutline, saveOutline })
@@ -308,7 +307,7 @@ export class AddPage implements OnInit, AfterViewInit {
     this.validate()
   }
 
-  segmentChanged(event: any) {}
+  segmentChanged(_event: any) {}
 
   spotifyIDfetcher(url: string, keyword: string) {
     const keywordIndex = url.indexOf(keyword)
@@ -439,7 +438,7 @@ export class AddPage implements OnInit, AfterViewInit {
       let spotifyValidationResult: boolean
       try {
         spotifyValidationResult = await this.validateSpotify(media)
-      } catch (error) {
+      } catch (_error) {
         spotifyValidationResult = false
       }
       if (!spotifyValidationResult) {

@@ -1,25 +1,24 @@
-import { ChangeDetectionStrategy, Component, Signal, WritableSignal, computed, signal } from '@angular/core'
+import { ChangeDetectionStrategy, Component, computed, Signal, signal, WritableSignal } from '@angular/core'
 import { toObservable, toSignal } from '@angular/core/rxjs-interop'
 import { NavigationExtras, Router } from '@angular/router'
 import { IonBackButton, IonButtons, IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular/standalone'
-import { catchError, combineLatest, map, of, switchMap, tap } from 'rxjs'
-import { CategoryType, Media, MediaSorting } from '../media'
-import { SwiperComponent, SwiperData } from '../swiper/swiper.component'
-
 import { addIcons } from 'ionicons'
 import { arrowBackOutline } from 'ionicons/icons'
+import { catchError, combineLatest, map, of, switchMap, tap } from 'rxjs'
+
 import type { Artist } from '../artist'
 import { ArtworkService } from '../artwork.service'
 import { LoadingComponent } from '../loading/loading.component'
+import { CategoryType, Media, MediaSorting } from '../media'
 import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
+import { SwiperComponent, SwiperData } from '../swiper/swiper.component'
 import { SwiperIonicEventsHelper } from '../swiper/swiper-ionic-events-helper'
 
 @Component({
   selector: 'app-medialist',
   templateUrl: './medialist.page.html',
   styleUrls: ['./medialist.page.scss'],
-  standalone: true,
   imports: [
     MupiHatIconComponent,
     IonHeader,
@@ -56,8 +55,8 @@ export class MedialistPage extends SwiperIonicEventsHelper {
     super()
     addIcons({ arrowBackOutline })
 
-    this.artist.set(this.router.getCurrentNavigation()?.extras.state?.artist)
-    this.category.set(this.router.getCurrentNavigation()?.extras.state?.category ?? 'audiobook')
+    this.artist.set(this.router.currentNavigation()?.extras.state?.artist)
+    this.category.set(this.router.currentNavigation()?.extras.state?.category ?? 'audiobook')
 
     this.media = toSignal(
       combineLatest([toObservable(this.category), toObservable(this.artist)]).pipe(
@@ -71,7 +70,7 @@ export class MedialistPage extends SwiperIonicEventsHelper {
             if (artist.coverMedia?.aPartOfAll) {
               const min = Math.max(0, (artist.coverMedia?.aPartOfAllMin ?? 0) - (offsetByOne ? 1 : 0))
               const max =
-                (artist.coverMedia?.aPartOfAllMax ?? Number.parseInt(artist.albumCount)) - (offsetByOne ? 1 : 0)
+                (artist.coverMedia?.aPartOfAllMax ?? Number.parseInt(artist.albumCount, 10)) - (offsetByOne ? 1 : 0)
               return media.slice(min, max + 1)
             }
             return media

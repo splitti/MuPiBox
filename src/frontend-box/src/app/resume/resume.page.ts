@@ -1,26 +1,24 @@
-import { ChangeDetectionStrategy, Component, Signal, WritableSignal, computed, signal } from '@angular/core'
+import { HttpClient } from '@angular/common/http'
+import { ChangeDetectionStrategy, Component, computed, Signal, signal, WritableSignal } from '@angular/core'
 import { toObservable, toSignal } from '@angular/core/rxjs-interop'
 import { NavigationExtras, Router } from '@angular/router'
 import { IonBackButton, IonButtons, IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular/standalone'
-import { catchError, lastValueFrom, of, switchMap, tap } from 'rxjs'
-import { SwiperComponent, SwiperData } from '../swiper/swiper.component'
-
-import { HttpClient } from '@angular/common/http'
 import { addIcons } from 'ionicons'
 import { arrowBackOutline } from 'ionicons/icons'
+import { catchError, lastValueFrom, of, switchMap, tap } from 'rxjs'
 import { environment } from 'src/environments/environment'
 import { ArtworkService } from '../artwork.service'
 import { LoadingComponent } from '../loading/loading.component'
 import { Media } from '../media'
 import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
+import { SwiperComponent, SwiperData } from '../swiper/swiper.component'
 import { SwiperIonicEventsHelper } from '../swiper/swiper-ionic-events-helper'
 
 @Component({
   selector: 'mupi-resume',
   templateUrl: './resume.page.html',
   styleUrls: ['./resume.page.scss'],
-  standalone: true,
   imports: [
     MupiHatIconComponent,
     LoadingComponent,

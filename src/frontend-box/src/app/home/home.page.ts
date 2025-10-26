@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, Signal, WritableSignal, computed, signal } from '@angular/core'
+import { ChangeDetectionStrategy, Component, computed, Signal, signal, WritableSignal } from '@angular/core'
 import { toObservable, toSignal } from '@angular/core/rxjs-interop'
 import { NavigationExtras, Router } from '@angular/router'
 import {
@@ -11,6 +11,7 @@ import {
   IonSegmentButton,
   IonToolbar,
 } from '@ionic/angular/standalone'
+import { addIcons } from 'ionicons'
 import {
   bookOutline,
   cloudOfflineOutline,
@@ -20,15 +21,14 @@ import {
   timerOutline,
 } from 'ionicons/icons'
 import { catchError, combineLatest, map, of, switchMap, tap } from 'rxjs'
-import { SwiperComponent, SwiperData } from '../swiper/swiper.component'
 
-import { addIcons } from 'ionicons'
 import type { Artist } from '../artist'
 import { ArtworkService } from '../artwork.service'
 import { LoadingComponent } from '../loading/loading.component'
 import type { CategoryType } from '../media'
 import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
+import { SwiperComponent, SwiperData } from '../swiper/swiper.component'
 import { SwiperIonicEventsHelper } from '../swiper/swiper-ionic-events-helper'
 
 @Component({
@@ -48,12 +48,11 @@ import { SwiperIonicEventsHelper } from '../swiper/swiper-ionic-events-helper'
     SwiperComponent,
     IonContent,
   ],
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HomePage extends SwiperIonicEventsHelper {
-  protected editButtonclickCount = 0
-  protected editClickTimer = 0
+  protected settingsButtonClickCount = 0
+  protected settingsClickTimer = 0
 
   protected artists: Signal<Artist[]>
   protected swiperData: Signal<SwiperData<Artist>[]>
@@ -103,28 +102,40 @@ export class HomePage extends SwiperIonicEventsHelper {
     this.category.set(event.detail.value)
   }
 
-  protected artistCoverClicked(artist: Artist): void {
-    const navigationExtras: NavigationExtras = {
-      state: {
-        artist: artist,
-        category: this.category(),
-      },
+  protected async artistCoverClicked(artist: Artist): Promise<void> {
+    // Check if this is a standalone playlist (playlist without artist)
+    if (artist.coverMedia?.playlistid && !artist.coverMedia?.artist) {
+      // This is a standalone playlist - start playback directly
+      const navigationExtras: NavigationExtras = {
+        state: {
+          media: artist.coverMedia,
+        },
+      }
+      this.router.navigate(['/player'], navigationExtras)
+    } else {
+      // This is a regular artist - navigate to medialist
+      const navigationExtras: NavigationExtras = {
+        state: {
+          artist: artist,
+          category: this.category(),
+        },
+      }
+      this.router.navigate(['/medialist'], navigationExtras)
     }
-    this.router.navigate(['/medialist'], navigationExtras)
   }
 
-  protected editButtonPressed(): void {
-    window.clearTimeout(this.editClickTimer)
+  protected settingsButtonPressed(): void {
+    window.clearTimeout(this.settingsClickTimer)
 
-    if (this.editButtonclickCount < 9) {
-      this.editButtonclickCount++
+    if (this.settingsButtonClickCount < 9) {
+      this.settingsButtonClickCount++
 
-      this.editClickTimer = window.setTimeout(() => {
-        this.editButtonclickCount = 0
+      this.settingsClickTimer = window.setTimeout(() => {
+        this.settingsButtonClickCount = 0
       }, 500)
     } else {
-      this.editButtonclickCount = 0
-      this.router.navigate(['/edit'])
+      this.settingsButtonClickCount = 0
+      this.router.navigate(['/settings'])
     }
   }
 

@@ -27,8 +27,12 @@ export const routes: Routes = [
     loadComponent: () => import('./edit/edit.page').then((m) => m.EditPage),
   },
   {
-    path: 'admin',
-    loadComponent: () => import('./admin/admin.page').then((m) => m.AdminPage),
+    path: 'settings',
+    loadComponent: () => import('./settings/settings.page').then((m) => m.SettingsPage),
+  },
+  {
+    path: 'wifi',
+    loadComponent: () => import('./wifi/wifi.page').then((m) => m.WifiPage),
   },
   {
     path: 'add',

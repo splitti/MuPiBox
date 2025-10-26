@@ -45,7 +45,7 @@ body .home-content, body .medialist-content, body .player-content{
         box-shadow: 10px 20px 0px 0px !important;
 }
 
-body .edit-header, body .add-header, body .admin-header {
+body .edit-header, body .add-header, body .wifi-header {
         --ion-color-light: #054b61 !important;
 }
 

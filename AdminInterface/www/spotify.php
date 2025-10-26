@@ -6,15 +6,9 @@ $SCOPELIST = "streaming user-read-currently-playing user-modify-playback-state u
 $SCOPE = urlencode($SCOPELIST);
 
 
-if ( $_POST['saveSettings']) {
-	if ($_POST['spotifycache_active'] == "on") {
-		$data["spotify"]["cachestate"] = true;
-	} else {
-		$data["spotify"]["cachestate"] = false;
-	}
-	$data["spotify"]["cachepath"] = $_POST['spotifycache_path'];
-	$data["spotify"]["maxcachesize"] = $_POST['cache_size'];
-	$CHANGE_TXT = $CHANGE_TXT . "<li>Settings saved</li>";
+if ( $_POST['clearCache']) {
+    exec("sudo rm -r /home/dietpi/.mupibox/Sonos-Kids-Controller-master/cache/*");
+	$CHANGE_TXT = $CHANGE_TXT . "<li>Cleared spotify metadata cache</li>";
 	$change = 1;
 }
 
@@ -53,18 +47,6 @@ if ($_GET['code']) {
 	exit();
 }
 
-if ($_POST['setDevID']) {
-	$data["spotify"]["deviceId"] = $_POST['spotdevice'];
-	$CHANGE_TXT = $CHANGE_TXT . "<li>Spotify Device-ID saved & Services restartet</li>";
-	$change = 2;
-}
-
-if ($_POST['saveLogin']) {
-	$data["spotify"]["username"] = $_POST['spotify_user'];
-	$data["spotify"]["password"] = $_POST['spotify_pwd'];
-	$CHANGE_TXT = $CHANGE_TXT . "<li>Login-Data saved</li>";
-	$change = 1;
-}
 if ($_POST['saveIDs']) {
 	$data["spotify"]["clientId"] = $_POST['spotify_clientid'];
 	$data["spotify"]["clientSecret"] = $_POST['spotify_clientsecret'];
@@ -73,8 +55,8 @@ if ($_POST['saveIDs']) {
 }
 
 if ($_POST['resetData']) {
-	$command = "sudo rm -R " . $data["spotify"]["cachepath"] . "/*";
-	exec($command, $devIDoutput, $result);
+    exec("sudo rm -r /home/dietpi/.mupibox/Sonos-Kids-Controller-master/cache/*");
+	exec("sudo rm -R " . $data["spotify"]["cachepath"] . "/*");
 	$data["spotify"]["username"] = "";
 	$data["spotify"]["password"] = "";
 	$data["spotify"]["deviceId"] = "";
@@ -84,15 +66,6 @@ if ($_POST['resetData']) {
 	$data["spotify"]["clientSecret"] = "";
 	$CHANGE_TXT = $CHANGE_TXT . "<li>All Spotify Data deleted & Services restartet!</li>";
 	$change = 2;
-}
-
-if ($_POST['generateDevID']) {
-	$command = "sudo /usr/local/bin/mupibox/./set_deviceid.sh";
-	exec($command, $devIDoutput, $result);
-	$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
-	$data = json_decode($string, true);
-	$CHANGE_TXT = $CHANGE_TXT . "<li>Device-ID generated and saved</li>";
-	$change = 1;
 }
 
 if ($change) {
@@ -181,46 +154,6 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 																																					?>" readonly />
 				</div>
 			</li>
-
-		</ul>
-	</details>
-
-	<details id="step3">
-		<summary><i class="fa-regular fa-circle-check"></i> STEP 3 - Device-ID</summary>
-		<ul>
-			<li id="li_1">
-
-				<h3>Set Device-ID</h3>
-				<p>In this last step, you choose your playback device.</p>
-                <p><a href="javascript:loadDeviceIdOptions()" title="Reload device list">Reload</a>, if device id is not showing up.</p>
-			</li>
-			<li id="li_1">
-				<label class="description" for="spotify_deviceid">Select Spotify Device ID </label>
-				<?php
-				if ($data["spotify"]["accessToken"] != "" and $data["spotify"]["refreshToken"] != "") {
-					echo '<select id="spotdevice" name="spotdevice" class="element text medium">';
-					echo '</select>';
-					echo '<a href="javascript:loadDeviceIdOptions()" id="reloadicon" title="Reload device list">';
-					echo '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 1536 1536" {...$$props}>
-	<path fill="currentColor" d="M1511 928q0 5-1 7q-64 268-268 434.5T764 1536q-146 0-282.5-55T238 1324l-129 129q-19 19-45 19t-45-19t-19-45V960q0-26 19-45t45-19h448q26 0 45 19t19 45t-19 45l-137 137q71 66 161 102t187 36q134 0 250-65t186-179q11-17 53-117q8-23 30-23h192q13 0 22.5 9.5t9.5 22.5m25-800v448q0 26-19 45t-45 19h-448q-26 0-45-19t-19-45t19-45l138-138Q969 256 768 256q-134 0-250 65T332 500q-11 17-53 117q-8 23-30 23H50q-13 0-22.5-9.5T18 608v-7q65-268 270-434.5T768 0q146 0 284 55.5T1297 212l130-129q19-19 45-19t45 19t19 45" />
-</svg>';
-					echo '</a>';
-					echo '</li><li class="buttons"><input id="saveForm" class="button_text" type="submit" name="setDevID" value="Set DeviceID" /></li><br><li id="li_1" >';
-				} else {
-					print '<p>Please complete the previous steps.</p></li><br><li id="li_1" >';
-				}
-				?>
-				<div>
-					<label class="description" for="spotify_devicename">Activated Spotify Device Name:</label>
-					<input id="spotify_devicename" name="spotify_devicename" class="element readonly large" type="text" maxlength="255" value="" readonly />					
-				</div>
-				<div><label class="description" for="spotify_deviceid">Activated Spotify Device ID:</label>
-					<input id="spotify_deviceid" name="spotify_deviceid" class="element readonly large" type="text" maxlength="255" value="<?php
-																																			print $data["spotify"]["deviceId"];
-																																			?>" readonly />
-				</div>
-
-			</li>
 		</ul>
 	</details>
 
@@ -229,49 +162,12 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 		<ul>
 
 			<li id="li_1">
-				<h3>Spotify cache state</h3>
-				<p>If set to true, audio data will be cached. Enabling this option could improve speed for playing spotify media. Default: enabled</p>
-				<p>This option must be enabled to use spotify since version 4.1.0</p>
-
-				<label class="labelchecked" for="spotifycache_active">Cache activation state:&nbsp; &nbsp; <input type="checkbox"  id="spotifycache_active" name="spotifycache_active" onclick="return false" <?php
-					if ($data["spotify"]["cachestate"]) {
-						print "checked";
-						}
-					?> readonly /></label>
+				<h3>Spotify metadata cache</h3>
+				<p>Spotify playlists curated by Spotify will be cached for 12 hours</p>
+				<p>All other spotify media metadata will be cached for half an hour to not run into rate limits</p>
 			</li>
 
-			<li id="li_1">
-
-				<h3>Spotify cache path</h3>
-				<p>Default: /home/dietpi/.cache/spotify</p>
-				<input id="spotifycache_path" name="spotifycache_path" class="element text medium" type="text" maxlength="255" value="<?php
-																																		print $data["spotify"]["cachepath"];
-																																		?>" />
-			</li>
-
-			<li id="li_1">
-				<h3>Cache size</h3>
-				<p>Cache size in GB! Free space: <?php
-													$df = floor(disk_free_space("/") / 1024 / 1024 / 1024);
-													print $df;
-													?> GB</p>
-				<div>
-					<select id="cache_size" name="cache_size" class="element text medium">
-						<?php
-						$cache_size = array(1, 2, 4, 8, 16, 32, 64);
-						foreach ($cache_size as $size) {
-							if ($size == $data["spotify"]["maxcachesize"]) {
-								$selected = " selected=\"selected\"";
-							} else {
-								$selected = "";
-							}
-							print "<option value=\"" . $size . "\"" . $selected  . ">" . $size . " GB</option>";
-						}
-						?>
-					</select>
-				</div>
-			</li>
-			<li class="buttons"><input id="saveForm" class="button_text" type="submit" name="saveSettings" value="Save Settings" /></li>
+			<li class="buttons"><input id="saveForm" class="button_text" type="submit" name="clearCache" value="Clear cache" /></li>
 
 		</ul>
 	</details>
@@ -293,35 +189,6 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 
 </form>
 <p></p>
-<script>
-	const spotifyDeviceIdSelectBox = document.getElementById("spotdevice");
-	const deviceListUrl = 'http://<?= $_SERVER['HTTP_HOST'] ?>:5005/getDevices';
-	const currentDeviceId = '<?= $data['spotify']['deviceId'] ?>';
-	const currentDeviceIdField = document.getElementById("spotify_devicename");
-	const fetchSpotifyDevices = async () => {
-		const response = await fetch(deviceListUrl);
-		return response.json();
-	};
-
-	const loadDeviceIdOptions = async () => {
-		const spotifyDevices = await fetchSpotifyDevices();
-		spotifyDeviceIdSelectBox.innerHTML = "";
-		currentDeviceIdField.value = "";
-		spotifyDevices.forEach(spotifyDevice => {
-			const newOption = document.createElement("option");
-			newOption.value = spotifyDevice.id;
-			newOption.text = spotifyDevice.name + " (" + spotifyDevice.id + ")";
-			if (spotifyDevice.id === currentDeviceId) {
-				newOption.selected = true;
-				currentDeviceIdField.value = spotifyDevice.name;
-			}
-			spotifyDeviceIdSelectBox.appendChild(newOption);
-		});
-	};
-	if (spotifyDeviceIdSelectBox !== null) {
-		loadDeviceIdOptions();
-	}
-</script>
 <?php
 include('includes/footer.php');
 ?>

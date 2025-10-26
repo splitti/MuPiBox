@@ -1,10 +1,9 @@
 import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http'
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing'
 import { ComponentFixture, TestBed } from '@angular/core/testing'
-import { createArtist, createMedia } from 'src/app/fixtures'
-
 import { ActivatedRoute } from '@angular/router'
 import { of } from 'rxjs'
+import { createArtist, createMedia } from 'src/app/fixtures'
 import { MediaSorting } from '../media'
 import { MedialistPage } from './medialist.page'
 
