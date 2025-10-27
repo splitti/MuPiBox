@@ -1,0 +1,19 @@
+<ion-list>
+@for (entry of shownData(); track entry; let idx = $index) {
+  <ion-item [button]="entry.allowEdit" [detail]="entry.allowEdit" (click)="entry.allowEdit && entryClicked.emit({index: idx, data: entry.data})">
+    <ion-icon slot="start" src="assets/{{ entry.icon }}.svg" aria-hidden="true"></ion-icon>
+    <ion-label class="mupi-data-label">
+      <h3>{{ entry.name }}</h3>
+      <p class="mupi-data-detail">
+          <span>{{ entry.category }}</span>
+          @if (entry.detail) {
+              <span>{{ entry.detail }}</span>
+          }
+      </p>
+    </ion-label>
+    @if (entry.allowEdit) {
+      <ion-button slot="end" fill="outline">Edit</ion-button>
+    }
+  </ion-item>
+}
+</ion-list>

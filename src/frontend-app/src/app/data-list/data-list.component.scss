@@ -1,0 +1,11 @@
+.mupi-data-label {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+
+    .mupi-data-detail {
+        span:not(:first-of-type)::before {
+            content: ' - ';
+        }
+    }
+}

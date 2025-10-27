@@ -7,7 +7,6 @@ import { addIcons } from 'ionicons'
 import { arrowBackOutline } from 'ionicons/icons'
 import { catchError, lastValueFrom, of, switchMap, tap } from 'rxjs'
 import { environment } from 'src/environments/environment'
-import { ArtworkService } from '../artwork.service'
 import { LoadingComponent } from '../loading/loading.component'
 import { Media } from '../media'
 import { MediaService } from '../media.service'
@@ -40,7 +39,7 @@ export class ResumePage extends SwiperIonicEventsHelper {
     return this.media()?.map((media) => {
       return {
         name: media.title,
-        imgSrc: this.artworkService.getArtwork(media),
+        imgSrc: media.cover ?? '',
         data: media,
       }
     })
@@ -50,7 +49,6 @@ export class ResumePage extends SwiperIonicEventsHelper {
     private router: Router,
     private http: HttpClient,
     private mediaService: MediaService,
-    private artworkService: ArtworkService,
   ) {
     super()
     addIcons({ arrowBackOutline })

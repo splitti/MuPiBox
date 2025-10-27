@@ -19,6 +19,10 @@ export const routes: Routes = [
     loadComponent: () => import('./medialist/medialist.page').then((m) => m.MedialistPage),
   },
   {
+    path: 'media/:category/:folder',
+    loadComponent: () => import('./medialist/medialist.page').then((m) => m.MedialistPage),
+  },
+  {
     path: 'player',
     loadComponent: () => import('./player/player.page').then((m) => m.PlayerPage),
   },
@@ -37,5 +41,9 @@ export const routes: Routes = [
   {
     path: 'add',
     loadComponent: () => import('./add/add.page').then((m) => m.AddPage),
+  },
+  {
+    path: 'settings',
+    loadComponent: () => import('./settings/settings.page').then((m) => m.SettingsPage),
   },
 ]

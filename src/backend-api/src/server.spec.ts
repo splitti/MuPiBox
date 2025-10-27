@@ -9,6 +9,7 @@ describe('rss feeds', () => {
     request(app).get('/api/rssfeed').expect(500, done)
   })
 
+  // TODO: Replace this test with test for new rss source.
   it('should request a provided url and convert the xml response to json', (_t, done) => {
     nock('http://example.com')
       .get('/')
@@ -30,4 +31,7 @@ describe('rss feeds', () => {
     nock('http://example.com').persist().get('/').replyWithError('Random error')
     request(app).get('/api/rssfeed?url=http://example.com').expect(500, done)
   })
+
+  // TODO: Test folders endpoint
+  // TODO: Test media endpoint.
 })

@@ -178,26 +178,25 @@ export class EditPage implements OnInit {
   }
 
   async clearResumePressed() {
-    const alert = await this.alertController.create({
-      cssClass: 'alert',
-      header: 'Resume',
-      message: 'Do you want to clear all resume media?',
-      buttons: [
-        {
-          text: 'Clear',
-          handler: () => {
-            this.playerService.sendCmd(PlayerCmds.CLEARRESUME)
-            setTimeout(() => {
-              this.media = this.mediaService.fetchRawMedia()
-            }, 2000)
-          },
-        },
-        {
-          text: 'Cancel',
-        },
-      ],
-    })
-
-    await alert.present()
+    // const alert = await this.alertController.create({
+    //   cssClass: 'alert',
+    //   header: 'Resume',
+    //   message: 'Do you want to clear all resume media?',
+    //   buttons: [
+    //     {
+    //       text: 'Clear',
+    //       handler: () => {
+    //         this.playerService.sendCmd(PlayerCmds.CLEARRESUME)
+    //         setTimeout(() => {
+    //           this.media = this.mediaService.fetchRawMedia()
+    //         }, 2000)
+    //       },
+    //     },
+    //     {
+    //       text: 'Cancel',
+    //     },
+    //   ],
+    // })
+    // await alert.present()
   }
 }

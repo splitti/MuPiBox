@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http'
 import { ChangeDetectionStrategy, Component, Signal } from '@angular/core'
 import { toSignal } from '@angular/core/rxjs-interop'
 import { IonApp, IonRouterOutlet } from '@ionic/angular/standalone'
-import { distinctUntilChanged, interval, map, Observable, switchMap } from 'rxjs'
+import { distinctUntilChanged, interval, map, Observable, of, switchMap } from 'rxjs'
 import { environment } from 'src/environments/environment'
 import { DisplayManagerService } from './display-manager.service'
 import { ExternalPlaybackNavigatorService } from './external-playback-navigator.service'
@@ -26,7 +26,13 @@ export class AppComponent {
     this.monitorOff = toSignal(
       // 1.5s should be enough to be somewhat "recent".
       interval(1500).pipe(
-        switchMap((): Observable<Monitor> => this.http.get<Monitor>(`${environment.backend.apiUrl}/monitor`)),
+        switchMap(
+          (): Observable<Monitor> =>
+            // Only if we run on the box do we want to disable input if the monitor is off.
+            environment.runsOnBox
+              ? this.http.get<Monitor>(`${environment.backend.apiUrl}/monitor`)
+              : of({ monitor: 'On' }),
+        ),
         map((monitor) => monitor.monitor !== 'On'),
         distinctUntilChanged(),
       ),

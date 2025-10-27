@@ -1,7 +1,8 @@
-import { AsyncPipe } from '@angular/common'
-import { Component, OnInit, ViewChild } from '@angular/core'
+import { ChangeDetectionStrategy, Component, computed, signal, WritableSignal } from '@angular/core'
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop'
 import { FormsModule } from '@angular/forms'
 import { ActivatedRoute, Router } from '@angular/router'
+import { Media as BackendMedia } from '@backend-api/media.model'
 import {
   IonBackButton,
   IonButton,
@@ -32,10 +33,9 @@ import {
   volumeLowOutline,
 } from 'ionicons/icons'
 import type { Observable } from 'rxjs'
-import type { AlbumStop } from '../albumstop'
+import { interval } from 'rxjs'
 import type { CurrentMPlayer } from '../current.mplayer'
 import type { CurrentSpotify } from '../current.spotify'
-import type { Media } from '../media'
 import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
 import { PlayerCmds, PlayerService } from '../player.service'
@@ -47,7 +47,6 @@ import { SpotifyService } from '../spotify.service'
   styleUrls: ['./player.page.scss'],
   imports: [
     FormsModule,
-    AsyncPipe,
     MupiHatIconComponent,
     IonHeader,
     IonToolbar,
@@ -63,16 +62,19 @@ import { SpotifyService } from '../spotify.service'
     IonButton,
     IonIcon,
   ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class PlayerPage implements OnInit {
-  @ViewChild('range', { static: false }) range: IonRange
+export class PlayerPage {
+  protected media: WritableSignal<BackendMedia | undefined> = signal(undefined)
+  protected resuming: WritableSignal<boolean> = signal(false)
 
-  media: Media
-  resumemedia: Media
-  albumStop: AlbumStop
+  protected img: WritableSignal<string | undefined> = signal(undefined)
+
+  protected pageIsShown: WritableSignal<boolean> = signal(true)
+  // protected playing: Signal<boolean>
+
   resumePlay = false
   resumeIndex: number
-  resumeTimer = 0
   resumeAdded = false
   cover = ''
   playing = true
@@ -81,7 +83,6 @@ export class PlayerPage implements OnInit {
   currentPlayedSpotify: CurrentSpotify
   currentPlayedLocal: CurrentMPlayer
   showTrackNr = 0
-  goBackTimer = 0
   progress = 0
   shufflechanged = 0
   tmpProgressTime = 0
@@ -120,6 +121,31 @@ export class PlayerPage implements OnInit {
       shuffleOutline,
       playForward,
     })
+
+    this.media.set(this.router.getCurrentNavigation().extras.state?.media)
+    this.resuming.set(this.router.getCurrentNavigation().extras.state?.resuming ?? false)
+    this.img.set(this.media().img)
+
+    this.spotify = toSignal(this.mediaService.current$)
+    this.local = toSignal(this.mediaService.local$)
+    this.playlist = toSignal(this.mediaService.playlist$)
+    this.episode = toSignal(this.mediaService.episode$)
+    this.show = toSignal(this.mediaService.show$)
+    this.albumStop = toSignal(this.mediaService.albumStop$)
+
+    // TODO: Ideally, in the future, we want to immediately update the ui and only revert it
+    // if the backend is saying something different.
+    this.playing = computed(() => {
+      return !(this.local()?.pause ?? false)
+    })
+
+    interval(30000)
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => {
+        if (this.backendIsPlaying()) {
+          this.saveResumeFiles()
+        }
+      })
   }
 
   ngOnInit() {
@@ -271,29 +297,66 @@ export class PlayerPage implements OnInit {
         }, 1000)
       }, 5000)
     }
+    this.playerService.seekPosition(newValue)
   }
 
+  // protected updateProgress(): void {
+  // if (this.media.type === 'spotify') {
+  //   const seek = this.currentPlayedSpotify?.progress_ms || 0
+  //   if (this.media.showid?.length > 0) {
+  //     this.progress = (seek / this.currentEpisode?.duration_ms) * 100 || 0
+  //   } else {
+  //     if (this.currentPlayedSpotify?.item != null) {
+  //       this.progress = (seek / this.currentPlayedSpotify?.item.duration_ms) * 100 || 0
+  //     }
+  //   }
+  //   if (this.media.playlistid) {
+  //     this.currentPlaylist?.items.forEach((element, index) => {
+  //       if (this.currentPlayedSpotify?.item.id === element.track?.id) {
+  //         this.playlistTrackNr = index + 1 // +1 since we want human-readable indexing in the frontend.
+  //         this.img.set(element.track.album.images[1].url)
+  //       }
+  //     })
+  //   }
+  //   if (this.media.showid) {
+  //     this.currentShow?.items.forEach((element, index) => {
+  //       if (this.currentPlayedLocal?.activeEpisode === element?.id) {
+  //         this.showTrackNr = this.currentEpisode.show.total_episodes - index
+  //         this.img.set(element.images[1].url)
+  //       }
+  //     })
+  //   }
+  //   if (this.media.audiobookid) {
+  //     this.currentShow?.items.forEach((element, index) => {
+  //       if (this.currentPlayedSpotify?.item.id === element?.id) {
+  //         this.showTrackNr = index + 1
+  //         this.cover = element.images[1].url
+  //       }
+  //     })
+  //   }
+  // } else if (this.media.type === 'library' || this.media.type === 'rss') {
+  //   this.progress = this.local()?.progressTime ?? 0
+  // }
+  // Periodicially refresh the progress.
+  //   setTimeout(() => {
+  //     if (this.pageIsShown()) {
+  //       this.updateProgress()
+  //     }
+  //   }, 1000)
+  // }
+
   ionViewWillLeave() {
-    if (
-      (this.media.type === 'spotify' || this.media.type === 'library' || this.media.type === 'rss') &&
-      !this.media.shuffle &&
-      this.resumeTimer > 30 &&
-      this.playing
-    ) {
+    this.pageIsShown.set(false)
+
+    if (this.playing) {
       this.saveResumeFiles()
     }
-    this.updateProgression = false
-    if (this.media.shuffle || this.shufflechanged) {
-      this.playerService.sendCmd(PlayerCmds.SHUFFLEOFF)
-    }
+
+    // Reset player state.
+    this.playerService.sendCmd(PlayerCmds.SHUFFLEOFF)
     this.playerService.sendCmd(PlayerCmds.STOP)
-    this.resumePlay = false
-    if (this.media.type === 'spotify' && (this.media.category === 'music' || this.media.category === 'other')) {
-      if (this.shufflechanged % 2 === 1) {
-        this.mediaService.editRawMediaAtIndex(this.media.index, this.media)
-      }
-    }
-    if (this.albumStop?.albumStop === 'On') {
+
+    if (this.albumStop().albumStop === 'On') {
       this.playerService.sendCmd(PlayerCmds.ALBUMSTOP)
     }
   }
@@ -389,46 +452,30 @@ export class PlayerPage implements OnInit {
   }
 
   skipPrev() {
-    if (this.playing) {
-      this.playerService.sendCmd(PlayerCmds.PREVIOUS)
-    } else {
-      this.playing = true
-      this.playerService.sendCmd(PlayerCmds.PREVIOUS)
-    }
+    this.playerService.sendCmd(PlayerCmds.PREVIOUS)
   }
 
   skipNext() {
-    if (this.playing) {
-      this.playerService.sendCmd(PlayerCmds.NEXT)
-    } else {
-      this.playing = true
-      this.playerService.sendCmd(PlayerCmds.NEXT)
-    }
+    this.playerService.sendCmd(PlayerCmds.NEXT)
   }
 
   toggleshuffle() {
-    if (this.media.shuffle) {
-      this.shufflechanged++
-      this.media.shuffle = false
-      this.playerService.sendCmd(PlayerCmds.SHUFFLEOFF)
-    } else {
-      this.shufflechanged++
-      this.media.shuffle = true
-      this.playerService.sendCmd(PlayerCmds.SHUFFLEON)
-    }
+    this.shufflechanged++
+    //  TODO: Shuffle? -> we need folder.
+    // this.playerService.sendCmd(this.backen.shuffle ? PlayerCmds.SHUFFLEOFF : PlayerCmds.SHUFFLEON)
+    // this.media.shuffle = !this.media.shuffle
   }
 
-  playPause() {
-    if (this.playing) {
-      //this.playing = false;
-      this.playerService.sendCmd(PlayerCmds.PAUSE)
-      if (this.media.type === 'spotify' || this.media.type === 'library' || this.media.type === 'rss') {
-        this.saveResumeFiles()
-      }
-    } else {
-      //this.playing = true;
-      this.playerService.sendCmd(PlayerCmds.PLAY)
-    }
+  protected play(): void {
+    this.playerService.sendCmd(PlayerCmds.PLAY)
+  }
+
+  protected pause(): void {
+    this.playerService.sendCmd(PlayerCmds.PAUSE)
+    // TODO
+    // if (this.media.type === 'spotify' || this.media.type === 'library' || this.media.type === 'rss') {
+    //   this.saveResumeFiles()
+    // }
   }
 
   seekForward() {

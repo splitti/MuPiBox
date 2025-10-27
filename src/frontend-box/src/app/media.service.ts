@@ -1,23 +1,23 @@
 import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
-import { firstValueFrom, from, iif, interval, Observable, of, Subject, timer } from 'rxjs'
-import { distinctUntilChanged, filter, map, mergeAll, mergeMap, shareReplay, switchMap, toArray } from 'rxjs/operators'
+import { Media as BackendMedia } from '@backend-api/media.model'
+import type { Network } from '@backend-api/network.model'
+import { firstValueFrom, interval, Observable, of, Subject, timer } from 'rxjs'
+import { distinctUntilChanged, filter, map, shareReplay, switchMap } from 'rxjs/operators'
 import { environment } from '../environments/environment'
 import type { AlbumStop } from './albumstop'
-import type { Artist } from './artist'
 import type { CurrentMPlayer } from './current.mplayer'
 import type { CurrentSpotify } from './current.spotify'
-import type { CategoryType, Media, MediaInfoCache } from './media'
+import type { Media, MediaInfoCache } from './media'
 import { Mupihat } from './mupihat'
-import type { Network } from './network'
-import { RssFeedService } from './rssfeed.service'
-import { SpotifyService } from './spotify.service'
 import type { WLAN } from './wlan'
 
 @Injectable({
   providedIn: 'root',
 })
 export class MediaService {
+  private endpoint = `${environment.backend.apiUrl}/media`
+
   response = ''
   public readonly current$: Observable<CurrentSpotify>
   public readonly local$: Observable<CurrentMPlayer>
@@ -27,16 +27,7 @@ export class MediaService {
 
   private wlanSubject = new Subject<WLAN[]>()
 
-  // Cache for album/playlist/show information (refreshes when switching media)
-  private mediaInfoCache: MediaInfoCache = {}
-
-  constructor(
-    private http: HttpClient,
-    private spotifyService: SpotifyService,
-    private rssFeedService: RssFeedService,
-  ) {
-    // Provide network observable to SpotifyService for retry logic
-    this.spotifyService.setNetworkObservable(this.network$)
+  constructor(private http: HttpClient) {
     // Prepare subscriptions.
     // shareReplay replays the most recent (bufferSize) emission on each subscription
     // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
@@ -188,6 +179,19 @@ export class MediaService {
     )
   }
 
+  /**
+   * TODO
+   *
+   * @param category
+   * @param folder
+   * @returns
+   */
+  public getMedia(category: string, folder: string): Observable<BackendMedia[]> {
+    return this.http.get<BackendMedia[]>(
+      `${this.endpoint}/${encodeURIComponent(category)}/${encodeURIComponent(folder)}`,
+    )
+  }
+
   // --------------------------------------------
   // Handling of RAW media entries from data.json
   // --------------------------------------------
@@ -201,7 +205,7 @@ export class MediaService {
   }
 
   public fetchRawMedia(): Observable<Media[]> {
-    return this.http.get<Media[]>(`${this.getApiBackendUrl()}/data`)
+    return this.http.get<Media[]>(`${this.getApiBackendUrl()}/activedata`)
   }
 
   updateWLAN() {
@@ -271,272 +275,251 @@ export class MediaService {
     })
   }
 
-  // Collect albums from a given artist in the current category
-  public fetchMediaFromArtist(artist: Artist, category: CategoryType): Observable<Media[]> {
-    return this.fetchMedia(category).pipe(
-      map((media: Media[]) => {
-        return media.filter((currentMedia) => currentMedia.artist === artist.name)
-      }),
-    )
-  }
+  // // Collect albums from a given artist in the current category
+  // public fetchMediaFromArtist(artist: Artist, category: CategoryType): Observable<Media[]> {
+  //   return this.fetchMedia(category).pipe(
+  //     map((media: Media[]) => {
+  //       return media.filter((currentMedia) => currentMedia.artist === artist.name)
+  //     }),
+  //   )
+  // }
 
-  public fetchMediaData(category: CategoryType): Observable<Media[]> {
-    return this.fetchMedia(category).pipe(
-      map((media: Media[]) => {
-        return media.sort((a, b) =>
-          a.title.localeCompare(b.title, undefined, {
-            numeric: true,
-            sensitivity: 'base',
-          }),
-        )
-      }),
-    )
-  }
+  // public fetchMediaData(category: CategoryType): Observable<Media[]> {
+  //   return this.fetchMedia(category).pipe(
+  //     map((media: Media[]) => {
+  //       return media.sort((a, b) =>
+  //         a.title.localeCompare(b.title, undefined, {
+  //           numeric: true,
+  //           sensitivity: 'base',
+  //         }),
+  //       )
+  //     }),
+  //   )
+  // }
 
-  public fetchArtistData(category: CategoryType): Observable<Artist[]> {
-    return this.fetchMedia(category).pipe(
-      map((media: Media[]) => {
-        // Separate playlists without artists from regular media
-        const regularMedia: Media[] = []
-        const standalonePlaylistsData: Artist[] = []
+  // public fetchArtistData(category: CategoryType): Observable<Artist[]> {
+  //   return this.fetchMedia(category).pipe(
+  //     map((media: Media[]) => {
+  //       // Create temporary object with artists as keys and albumCounts as values
+  //       const mediaCounts = media.reduce((tempCounts, currentMedia) => {
+  //         tempCounts[currentMedia.artist] = (tempCounts[currentMedia.artist] || 0) + 1
+  //         return tempCounts
+  //       }, {})
 
-        for (const currentMedia of media) {
-          // If it's a playlist without an artist, create a direct Artist entry
-          if (currentMedia.playlistid && !currentMedia.artist) {
-            standalonePlaylistsData.push({
-              name: currentMedia.title || 'Unknown Playlist',
-              albumCount: '1', // Playlists have 1 "album" (themselves)
-              cover: currentMedia.cover || '../assets/images/nocover_mupi.png',
-              coverMedia: currentMedia,
-            })
-          } else if (currentMedia.artist) {
-            // Regular media with artist - include in normal grouping
-            regularMedia.push(currentMedia)
-          }
-          // Skip media without artist that aren't playlists (they would cause undefined grouping)
-        }
+  //       // Create temporary object with artists as keys and covers (first media cover) as values
+  //       const covers = media
+  //         .sort((a, b) => (a.title <= b.title ? -1 : 1))
+  //         .reduce((tempCovers, currentMedia) => {
+  //           if (/* currentMedia.type === 'library' &&  */ currentMedia.artistcover) {
+  //             if (!tempCovers[currentMedia.artist]) {
+  //               tempCovers[currentMedia.artist] = currentMedia.artistcover
+  //             }
+  //           } else {
+  //             if (!tempCovers[currentMedia.artist]) {
+  //               tempCovers[currentMedia.artist] = currentMedia.cover
+  //             }
+  //           }
+  //           return tempCovers
+  //         }, {})
 
-        // Process regular media with artist grouping
-        const mediaCounts = regularMedia.reduce((tempCounts, currentMedia) => {
-          tempCounts[currentMedia.artist] = (tempCounts[currentMedia.artist] || 0) + 1
-          return tempCounts
-        }, {})
+  //       // Create temporary object with artists as keys and first media as values
+  //       const coverMedia = media
+  //         .sort((a, b) => (a.title <= b.title ? -1 : 1))
+  //         .reduce((tempMedia, currentMedia) => {
+  //           if (!tempMedia[currentMedia.artist]) {
+  //             tempMedia[currentMedia.artist] = currentMedia
+  //           }
+  //           return tempMedia
+  //         }, {})
 
-        const covers = regularMedia
-          .sort((a, b) => (a.title <= b.title ? -1 : 1))
-          .reduce((tempCovers, currentMedia) => {
-            if (/* currentMedia.type === 'library' &&  */ currentMedia.artistcover) {
-              if (!tempCovers[currentMedia.artist]) {
-                tempCovers[currentMedia.artist] = currentMedia.artistcover
-              }
-            } else {
-              if (!tempCovers[currentMedia.artist]) {
-                tempCovers[currentMedia.artist] = currentMedia.cover
-              }
-            }
-            return tempCovers
-          }, {})
+  //       // Build Array of Artist objects sorted by Artist name
+  //       const artists: Artist[] = Object.keys(mediaCounts)
+  //         .sort()
+  //         .map((currentName) => {
+  //           const artist: Artist = {
+  //             name: currentName,
+  //             albumCount: mediaCounts[currentName],
+  //             cover: covers[currentName],
+  //             coverMedia: coverMedia[currentName],
+  //           }
+  //           return artist
+  //         })
 
-        const coverMedia = regularMedia
-          .sort((a, b) => (a.title <= b.title ? -1 : 1))
-          .reduce((tempMedia, currentMedia) => {
-            if (!tempMedia[currentMedia.artist]) {
-              tempMedia[currentMedia.artist] = currentMedia
-            }
-            return tempMedia
-          }, {})
-
-        // Build Array of Artist objects sorted by Artist name
-        const regularArtists: Artist[] = Object.keys(mediaCounts)
-          .sort()
-          .map((currentName) => {
-            const artist: Artist = {
-              name: currentName,
-              albumCount: mediaCounts[currentName].toString(),
-              cover: covers[currentName],
-              coverMedia: coverMedia[currentName],
-            }
-            return artist
-          })
-
-        // Combine regular artists with standalone playlists
-        const allArtists = [...regularArtists, ...standalonePlaylistsData]
-
-        // Sort the combined array by name
-        return allArtists.sort((a, b) => (a.name <= b.name ? -1 : 1))
-      }),
-    )
-  }
+  //       return artists
+  //     }),
+  //   )
+  // }
 
   public fetchActiveResumeData(): Observable<Media[]> {
     // Category is irrelevant if 'resume' is set to true.
-    return this.updateMedia(`${this.getApiBackendUrl()}/activeresume`, true, 'resume').pipe(
-      map((media: Media[]) => {
-        return media.reverse()
-      }),
-    )
+    return of([])
+    // return this.updateMedia(`${this.getApiBackendUrl()}/activeresume`, true, 'resume').pipe(
+    //   map((media: Media[]) => {
+    //     return media.reverse()
+    //   }),
+    // )
   }
 
-  private fetchMedia(category: CategoryType): Observable<Media[]> {
-    return this.updateMedia(`${this.getApiBackendUrl()}/data`, false, category)
-  }
+  // private fetchMedia(category: CategoryType): Observable<Media[]> {
+  //   return this.updateMedia(`${this.getApiBackendUrl()}/activedata`, false, category)
+  // }
 
-  // Get the media data for the current category from the server
-  private updateMedia(url: string, resume: boolean, category: CategoryType): Observable<Media[]> {
-    // Custom rxjs pipe to override artist.
-    const overwriteArtist =
-      (item: Media) =>
-      (source$: Observable<Media[]>): Observable<Media[]> => {
-        return source$.pipe(
-          // If the user entered an user-defined artist name in addition to a query,
-          // overwrite orignal artist from spotify.
-          map((items) => {
-            if (item.artist?.length > 0) {
-              for (const currentItem of items) {
-                currentItem.artist = item.artist
-              }
-            }
-            return items
-          }),
-        )
-      }
+  // // Get the media data for the current category from the server
+  // private updateMedia(url: string, resume: boolean, category: CategoryType): Observable<Media[]> {
+  //   // Custom rxjs pipe to override artist.
+  //   const overwriteArtist =
+  //     (item: Media) =>
+  //     (source$: Observable<Media[]>): Observable<Media[]> => {
+  //       return source$.pipe(
+  //         // If the user entered an user-defined artist name in addition to a query,
+  //         // overwrite orignal artist from spotify.
+  //         map((items) => {
+  //           if (item.artist?.length > 0) {
+  //             for (const currentItem of items) {
+  //               currentItem.artist = item.artist
+  //             }
+  //           }
+  //           return items
+  //         }),
+  //       )
+  //     }
 
-    return this.http.get<Media[]>(url).pipe(
-      // Filter to get only items for the chosen category.
-      map((items) => {
-        if (resume) {
-          return items
-        }
-        // Else: !resume.
-        for (const item of items) {
-          item.category = item.category === undefined ? 'audiobook' : item.category
-        }
-        return items.filter((item) => item.category === category)
-      }),
-      mergeMap((items) => from(items)), // parallel calls for each item
-      map(
-        // get media for the current item
-        (item) =>
-          iif(
-            // Get media by query
-            () => !!(item.query && item.query.length > 0),
-            this.spotifyService
-              .getMediaByQuery(item.query, item.category, item.index, item)
-              .pipe(overwriteArtist(item)),
-            iif(
-              // Get media by artist
-              () => !!(item.artistid && item.artistid.length > 0),
-              this.spotifyService
-                .getMediaByArtistID(item.artistid, item.category, item.index, item)
-                .pipe(overwriteArtist(item)),
-              iif(
-                // Get media by show
-                () => !!(item.showid && item.showid.length > 0 && item.category !== 'resume'),
-                this.spotifyService
-                  .getMediaByShowID(item.showid, item.category, item.index, item)
-                  .pipe(overwriteArtist(item)),
-                iif(
-                  // Get media by show supporting resume
-                  () => !!(item.showid && item.showid.length > 0 && item.category === 'resume'),
-                  this.spotifyService
-                    .getMediaByEpisode(
-                      item.showid,
-                      item.category,
-                      item.index,
-                      item.shuffle,
-                      item.artistcover,
-                      item.resumespotifyduration_ms,
-                      item.resumespotifyprogress_ms,
-                      item.resumespotifytrack_number,
-                    )
-                    .pipe(
-                      map((currentItem) => [currentItem]),
-                      overwriteArtist(item),
-                    ),
-                  iif(
-                    // Get media by playlist
-                    () => !!(item.type === 'spotify' && item.playlistid && item.playlistid.length > 0),
-                    this.spotifyService
-                      .getMediaByPlaylistID(
-                        item.playlistid,
-                        item.category,
-                        item.index,
-                        item.shuffle,
-                        item.artistcover,
-                        item.resumespotifyduration_ms,
-                        item.resumespotifyprogress_ms,
-                        item.resumespotifytrack_number,
-                      )
-                      .pipe(
-                        map((currentItem) => [currentItem]),
-                        overwriteArtist(item),
-                      ),
-                    iif(
-                      // Get media by rss feed
-                      () => !!(item.type === 'rss' && item.id.length > 0 && item.category !== 'resume'),
-                      this.rssFeedService
-                        .getRssFeed(item.id, item.category, item.index, item)
-                        .pipe(overwriteArtist(item)),
-                      iif(
-                        // Get media by album (resume).
-                        () => !!(item.type === 'spotify' && item.id && item.id.length > 0),
-                        this.spotifyService
-                          .getMediaByID(
-                            item.id,
-                            item.category,
-                            item.index,
-                            item.shuffle,
-                            item.artistcover,
-                            item.resumespotifyduration_ms,
-                            item.resumespotifyprogress_ms,
-                            item.resumespotifytrack_number,
-                          )
-                          .pipe(
-                            map((currentItem) => [currentItem]),
-                            overwriteArtist(item),
-                          ),
-                        iif(
-                          // Get media by audiobook (resume).
-                          () => !!(item.type === 'spotify' && item.audiobookid && item.audiobookid.length > 0),
-                          this.spotifyService
-                            .getAudiobookByID(
-                              item.audiobookid,
-                              item.category,
-                              item.index,
-                              item.shuffle,
-                              item.artistcover,
-                              item.resumespotifyduration_ms,
-                              item.resumespotifyprogress_ms,
-                              item.resumespotifytrack_number,
-                            )
-                            .pipe(
-                              map((currentItem) => [currentItem]),
-                              overwriteArtist(item),
-                            ),
-                          of([item]), // Single album. Also return as array, so we always have the same data type
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-      ),
-      mergeMap((items) => from(items)), // seperate arrays to single observables
-      mergeAll(), // merge everything together
-      toArray(), // convert to array
-      map((media) => {
-        // add dummy image for missing covers
-        return media.map((currentMedia) => {
-          if (!currentMedia.cover) {
-            currentMedia.cover = '../assets/images/nocover_mupi.png'
-          }
-          return currentMedia
-        })
-      }),
-    )
-  }
+  //     return this.http.get<Media[]>(url).pipe(
+  //       // Filter to get only items for the chosen category.
+  //       map((items) => {
+  //         if (resume) {
+  //           return items
+  //         }
+  //         // Else: !resume.
+  //         for (const item of items) {
+  //           item.category = item.category === undefined ? 'audiobook' : item.category
+  //         }
+  //         return items.filter((item) => item.category === category)
+  //       }),
+  //       mergeMap((items) => from(items)), // parallel calls for each item
+  //       map(
+  //         // get media for the current item
+  //         (item) =>
+  //           iif(
+  //             // Get media by query
+  //             () => !!(item.query && item.query.length > 0),
+  //             this.spotifyService
+  //               .getMediaByQuery(item.query, item.category, item.index, item)
+  //               .pipe(overwriteArtist(item)),
+  //             iif(
+  //               // Get media by artist
+  //               () => !!(item.artistid && item.artistid.length > 0),
+  //               this.spotifyService
+  //                 .getMediaByArtistID(item.artistid, item.category, item.index, item)
+  //                 .pipe(overwriteArtist(item)),
+  //               iif(
+  //                 // Get media by show
+  //                 () => !!(item.showid && item.showid.length > 0 && item.category !== 'resume'),
+  //                 this.spotifyService
+  //                   .getMediaByShowID(item.showid, item.category, item.index, item)
+  //                   .pipe(overwriteArtist(item)),
+  //                 iif(
+  //                   // Get media by show supporting resume
+  //                   () => !!(item.showid && item.showid.length > 0 && item.category === 'resume'),
+  //                   this.spotifyService
+  //                     .getMediaByEpisode(
+  //                       item.showid,
+  //                       item.category,
+  //                       item.index,
+  //                       item.shuffle,
+  //                       item.artistcover,
+  //                       item.resumespotifyduration_ms,
+  //                       item.resumespotifyprogress_ms,
+  //                       item.resumespotifytrack_number,
+  //                     )
+  //                     .pipe(
+  //                       map((currentItem) => [currentItem]),
+  //                       overwriteArtist(item),
+  //                     ),
+  //                   iif(
+  //                     // Get media by playlist
+  //                     () => !!(item.type === 'spotify' && item.playlistid && item.playlistid.length > 0),
+  //                     this.spotifyService
+  //                       .getMediaByPlaylistID(
+  //                         item.playlistid,
+  //                         item.category,
+  //                         item.index,
+  //                         item.shuffle,
+  //                         item.artistcover,
+  //                         item.resumespotifyduration_ms,
+  //                         item.resumespotifyprogress_ms,
+  //                         item.resumespotifytrack_number,
+  //                       )
+  //                       .pipe(
+  //                         map((currentItem) => [currentItem]),
+  //                         overwriteArtist(item),
+  //                       ),
+  //                     iif(
+  //                       // Get media by rss feed
+  //                       () => !!(item.type === 'rss' && item.id.length > 0 && item.category !== 'resume'),
+  //                       this.rssFeedService
+  //                         .getRssFeed(item.id, item.category, item.index, item)
+  //                         .pipe(overwriteArtist(item)),
+  //                       iif(
+  //                         // Get media by album (resume).
+  //                         () => !!(item.type === 'spotify' && item.id && item.id.length > 0),
+  //                         this.spotifyService
+  //                           .getMediaByID(
+  //                             item.id,
+  //                             item.category,
+  //                             item.index,
+  //                             item.shuffle,
+  //                             item.artistcover,
+  //                             item.resumespotifyduration_ms,
+  //                             item.resumespotifyprogress_ms,
+  //                             item.resumespotifytrack_number,
+  //                           )
+  //                           .pipe(
+  //                             map((currentItem) => [currentItem]),
+  //                             overwriteArtist(item),
+  //                           ),
+  //                         iif(
+  //                           // Get media by audiobook (resume).
+  //                           () => !!(item.type === 'spotify' && item.audiobookid && item.audiobookid.length > 0),
+  //                           this.spotifyService
+  //                             .getAudiobookByID(
+  //                               item.audiobookid,
+  //                               item.category,
+  //                               item.index,
+  //                               item.shuffle,
+  //                               item.artistcover,
+  //                               item.resumespotifyduration_ms,
+  //                               item.resumespotifyprogress_ms,
+  //                               item.resumespotifytrack_number,
+  //                             )
+  //                             .pipe(
+  //                               map((currentItem) => [currentItem]),
+  //                               overwriteArtist(item),
+  //                             ),
+  //                           of([item]), // Single album. Also return as array, so we always have the same data type
+  //                         ),
+  //                       ),
+  //                     ),
+  //                   ),
+  //                 ),
+  //               ),
+  //             ),
+  //           ),
+  //       ),
+  //       mergeMap((items) => from(items)), // seperate arrays to single observables
+  //       mergeAll(), // merge everything together
+  //       toArray(), // convert to array
+  //       map((media) => {
+  //         // add dummy image for missing covers
+  //         return media.map((currentMedia) => {
+  //           if (!currentMedia.cover) {
+  //             currentMedia.cover = '../assets/images/nocover_mupi.png'
+  //           }
+  //           return currentMedia
+  //         })
+  //       }),
+  //     )
+  //   }
 
   // Get all media entries for the current category
   getResponse() {
@@ -545,7 +528,6 @@ export class MediaService {
 
     return tmpResponse
   }
-
   private getApiBackendUrl(): string {
     return environment.backend.apiUrl
   }
