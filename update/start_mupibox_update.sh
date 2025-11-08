@@ -4,7 +4,7 @@
 #https://raw.githubusercontent.com/splitti/MuPiBox/main
 
 if [ "$1" = "dev" ] || [ "$1" = "beta" ] || [ "$1" = "stable" ]; then
-	RELEASE="$1"
+  RELEASE="$1"
 elif [ "$1" = "branch" ]; then
   RELEASE="dev"
   BRANCH="$2"
@@ -32,13 +32,13 @@ STEP=0
 VER_JSON="/tmp/version.json"
 OS=$(grep -E '^(VERSION_CODENAME)=' /etc/os-release)  >&3 2>&3
 OS=${OS:17}  >&3 2>&3
-ARCH=$(uname -m) >&3 2>&3	
+ARCH=$(uname -m) >&3 2>&3
 
 wget -O /tmp/installation.jpg https://raw.githubusercontent.com/splitti/MuPiBox/main/media/images/installation.jpg >&3 2>&3
 /usr/bin/fbv /tmp/installation.jpg & >&3 2>&3
 
 if [ -z "$BRANCH" ]; then
-  wget -q -O ${VER_JSON} https://raw.githubusercontent.com/splitti/MuPiBox/main/version.json >&3 2>&3
+  wget -q -O ${VER_JSON} https://raw.githubusercontent.com/splitti/MuPiBox/develop/version.json  >&3 2>&3
   VERSION=$(/usr/bin/jq -r .release.${RELEASE}[-1].version ${VER_JSON})  >&3 2>&3
   MUPIBOX_URL=$(/usr/bin/jq -r .release.${RELEASE}[-1].url ${VER_JSON})  >&3 2>&3
 else
@@ -57,7 +57,7 @@ else
 fi
 
 if [ -n "$BRANCH" ]; then
-  VERSION_LONG="DEV ${BRANCH} $(curl -s 'https://api.github.com/repos/splitti/MuPiBox/branches/'"$BRANCH" | jq -r '.commit.commit.committer.date' | cut -d'T' -f1)" >&3 2>&3
+	VERSION_LONG="DEV ${BRANCH} $(curl -s 'https://api.github.com/repos/splitti/MuPiBox/branches/'"$BRANCH" | jq -r '.commit.commit.committer.date' | cut -d'T' -f1)" >&3 2>&3
 elif [ "$RELEASE" = "dev" ]; then
 	VERSION_LONG="DEV $(curl -s "https://api.github.com/repos/splitti/MuPiBox" | jq -r '.pushed_at' | cut -d'T' -f1)"  >&3 2>&3
 else
@@ -84,8 +84,8 @@ echo "==========================================================================
 
 	echo -e "XXX\n0\nPrepare Update... \nXXX"	 >&3 2>&3
 	systemctl stop mupi_idle_shutdown.service >&3 2>&3
-	mkdir /home/dietpi/.mupibox/chromium_cache >&3 2>&3	
-	mkdir /home/dietpi/MuPiBox/media/audiobook >&3 2>&3	
+	mkdir /home/dietpi/.mupibox/chromium_cache >&3 2>&3
+	mkdir /home/dietpi/MuPiBox/media/audiobook >&3 2>&3
 	mkdir /home/dietpi/MuPiBox/media/music >&3 2>&3
 	mkdir /home/dietpi/MuPiBox/media/other >&3 2>&3
 	mkdir /home/dietpi/MuPiBox/media/cover >&3 2>&3
@@ -121,7 +121,7 @@ echo "==========================================================================
 
 
 	###############################################################################################
-	
+
 	for package in ${packages2install}
 	do
 		before=$(date +%s)
@@ -135,7 +135,7 @@ echo "==========================================================================
 		after=$(date +%s)
 		echo -e "## apt-get install ${package}  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	done
-	
+
 	for package in ${packages2remove}
 	do
 		before=$(date +%s)
@@ -177,7 +177,7 @@ echo "==========================================================================
 		echo -e "XXX\n${STEP}\nInstall package python3-mutagen\nXXX"
 		packages2install="python3-mutagen  python3-dev"
 		for package in ${packages2install}
-		do		
+		do
 			before=$(date +%s)
 			echo -e "XXX\n${STEP}\nInstall ${package}\nXXX"
 			PKG_OK=$(dpkg -l ${package} 2>/dev/null | egrep '^ii' | wc -l) >&3 2>&3
@@ -201,7 +201,7 @@ echo "==========================================================================
 
 	###############################################################################################
 
-#	echo -e "XXX\n${STEP}\nSetup docker and container... \nXXX"	
+#	echo -e "XXX\n${STEP}\nSetup docker and container... \nXXX"
 #	before=$(date +%s)
 #	if [ ! -f /usr/bin/docker ]; then
 #		sudo bash < <(curl -fsSL https://get.Docker.com) >&3 2>&3
@@ -213,10 +213,10 @@ echo "==========================================================================
 #	after=$(date +%s)
 #	echo -e "## Setup docker and container  ##  finished after $((after - $before)) seconds" >&3 2>&3
 #	STEP=$(($STEP + 1))
-	
+
 	###############################################################################################
 
-	echo -e "XXX\n${STEP}\nSetup DietPi-Dashboard... \nXXX"	
+	echo -e "XXX\n${STEP}\nSetup DietPi-Dashboard... \nXXX"
 	before=$(date +%s)
 	mkdir /opt/dietpi-dashboard >&3 2>&3
 	rm /opt/dietpi-dashboard/dietpi-dashboard >&3 2>&3
@@ -232,7 +232,7 @@ echo "==========================================================================
 
 	###############################################################################################
 
-	echo -e "XXX\n${STEP}\nDownload MuPiBox Version ${VERSION_LONG}... \nXXX"	
+	echo -e "XXX\n${STEP}\nDownload MuPiBox Version ${VERSION_LONG}... \nXXX"
 	before=$(date +%s)
 	wget -q -O /home/dietpi/mupibox.zip ${MUPIBOX_URL} >&3 2>&3
 	after=$(date +%s)
@@ -241,7 +241,7 @@ echo "==========================================================================
 
 	###############################################################################################
 
-	echo -e "XXX\n${STEP}\nUnzip MuPiBox Version ${VERSION_LONG}... \nXXX"	
+	echo -e "XXX\n${STEP}\nUnzip MuPiBox Version ${VERSION_LONG}... \nXXX"
 	before=$(date +%s)
 	unzip -q -d /home/dietpi /home/dietpi/mupibox.zip >&3 2>&3
 	rm /home/dietpi/mupibox.zip >&3 2>&3
@@ -261,13 +261,13 @@ echo "==========================================================================
 	mv /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/active_theme.css /tmp/active_theme.css >&3 2>&3
 	after=$(date +%s)
 	echo -e "## Backup Data  ##  finished after $((after - $before)) seconds" >&3 2>&3
-		
+
 	STEP=$(($STEP + 1))
 
 	###############################################################################################
 
 
-	echo -e "XXX\n${STEP}\nUpdate frontend, backend-api, and backend-player ... \nXXX"	
+	echo -e "XXX\n${STEP}\nUpdate frontend, backend-api, and backend-player ... \nXXX"
 	before=$(date +%s)
 	sudo -H -u dietpi bash -c "pm2 stop server" >&3 2>&3
 	#su - dietpi -c "pm2 save" >&3 2>&3
@@ -285,7 +285,7 @@ echo "==========================================================================
 
 	###############################################################################################
 
-	echo -e "XXX\n${STEP}\nCopy MuPiBox-Files... \nXXX"	
+	echo -e "XXX\n${STEP}\nCopy MuPiBox-Files... \nXXX"
 	# MuPiBox
 	before=$(date +%s)
 	mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/earth >&3 2>&3
@@ -305,7 +305,7 @@ echo "==========================================================================
 	mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/unicorn >&3 2>&3
 	mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/axolotl >&3 2>&3
 	mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/custom >&3 2>&3
-	
+
 	#FANTASY-BUTTERFLIES
 	mv ${MUPI_SRC}/themes/fantasybutterflies/odstemplikBold.otf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/fantasybutterflies/odstemplikBold.otf >&3 2>&3
 	mv ${MUPI_SRC}/themes/fantasybutterflies/fantasy-butterflies-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/fantasybutterflies/fantasy-butterflies-bg.jpg >&3 2>&3
@@ -338,7 +338,7 @@ echo "==========================================================================
 	#ENTERPRISE
 	mv ${MUPI_SRC}/themes/enterprise/Nasa21.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/enterprise/Nasa21.ttf >&3 2>&3
 	mv ${MUPI_SRC}/themes/enterprise/enterprise-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/enterprise/enterprise-bg.jpg >&3 2>&3
-	
+
 	#SPIDERMAN
 	mv ${MUPI_SRC}/themes/spiderman/IntensaFuente.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/spiderman/IntensaFuente.ttf >&3 2>&3
 	mv ${MUPI_SRC}/themes/spiderman/spiderman-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/spiderman/spiderman-bg.jpg >&3 2>&3
@@ -350,11 +350,11 @@ echo "==========================================================================
 	#MARIO
 	mv ${MUPI_SRC}/themes/supermario/NewSuperMarioFontU.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/supermario/NewSuperMarioFontU.ttf >&3 2>&3
 	mv ${MUPI_SRC}/themes/supermario/supermario-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/supermario/supermario-bg.jpg >&3 2>&3
-	
+
 	#DINOSAUR
 	mv ${MUPI_SRC}/themes/dinosaur/BerlinSmallCaps.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/dinosaur/BerlinSmallCaps.ttf >&3 2>&3
 	mv ${MUPI_SRC}/themes/dinosaur/dinosaur-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/dinosaur/dinosaur-bg.jpg >&3 2>&3
-	
+
 	#UNICORN
 	mv ${MUPI_SRC}/themes/unicorn/MagnoliaScript.otf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/unicorn/MagnoliaScript.otf >&3 2>&3
 	mv ${MUPI_SRC}/themes/unicorn/unicorn-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/unicorn/unicorn-bg.jpg >&3 2>&3
@@ -403,10 +403,10 @@ echo "==========================================================================
 
 	###############################################################################################
 
-	echo -e "XXX\n${STEP}\nCopy binaries... \nXXX"	
+	echo -e "XXX\n${STEP}\nCopy binaries... \nXXX"
 	before=$(date +%s)
 	rm /usr/bin/jq >&3 2>&3
-	
+
 	service spotifyd stop >&3 2>&3
 	systemctl disable spotifyd >&3 2>&3
 	service librespot stop >&3 2>&3
@@ -416,19 +416,17 @@ echo "==========================================================================
 
 	# Binaries
 	if [ `getconf LONG_BIT` == 32 ]; then
-		wget -O /usr/bin/jq https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-armhf >&3 2>&3
+		wget -O /usr/bin/jq https://github.com/jqlang/jq/releases/latest/download/jq-linux-armhf >&3 2>&3
 		wget -O /usr/bin/librespot https://github.com/splitti/MuPiBox/raw/refs/heads/main/bin/librespot/dev_0.6_20250806/librespot-32bit >&3 2>&3
-		#mv ${MUPI_SRC}/bin/librespot/dev_0.6_20250305/librespot-32bit /usr/bin/librespot >&3 2>&3
 		mv ${MUPI_SRC}/bin/fbv/fbv /usr/bin/fbv >&3 2>&3
 	else
-		wget -O /usr/bin/jq https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-arm64 >&3 2>&3
+		wget -O /usr/bin/jq https://github.com/jqlang/jq/releases/latest/download/jq-linux-arm64 >&3 2>&3
 		wget -O /usr/bin/librespot https://github.com/splitti/MuPiBox/raw/refs/heads/main/bin/librespot/dev_0.6_20250806/librespot-64bit >&3 2>&3
-		#mv ${MUPI_SRC}/bin/librespot/dev_0.6_20250305/librespot-64bit /usr/bin/librespot >&3 2>&3
 		mv ${MUPI_SRC}/bin/fbv/fbv_64 /usr/bin/fbv >&3 2>&3
 	fi
 	chmod 755 /usr/bin/fbv /usr/bin/jq /usr/bin/librespot >&3 2>&3
 	#mv ${MUPI_SRC}/config/templates/librespot.conf /etc/spotifyd/spotifyd.conf >&3 2>&3
-	
+
 	mkdir /etc/librespot/ >&3 2>&3
 	mkdir -p $(cat /etc/mupibox/mupiboxconfig.json | jq -r .spotify.cachepath) >&3 2>&3
 	chown dietpi:dietpi $(cat /etc/mupibox/mupiboxconfig.json | jq -r .spotify.cachepath) >&3 2>&3
@@ -436,10 +434,10 @@ echo "==========================================================================
 	after=$(date +%s)
 	echo -e "## Copy binaries  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
-	
+
 	###############################################################################################
 
-	echo -e "XXX\n${STEP}\nCopy some media files... \nXXX"	
+	echo -e "XXX\n${STEP}\nCopy some media files... \nXXX"
 	# Splash and Media
 	before=$(date +%s)
 	#mv ${MUPI_SRC}/config/templates/splash.txt /boot/splash.txt >&3 2>&3
@@ -460,8 +458,8 @@ echo "==========================================================================
 
 	###############################################################################################
 
-	echo -e "XXX\n${STEP}\nInstall LED Control... \nXXX"	
-	
+	echo -e "XXX\n${STEP}\nInstall LED Control... \nXXX"
+
 	before=$(date +%s)
 	rm /usr/local/bin/mupibox/led_control >&3 2>&3
 	gcc -o ${MUPI_SRC}/scripts/led/led_control ${MUPI_SRC}/scripts/led/led_control.c -lpigpio -ljson-c >&3 2>&3
@@ -516,9 +514,9 @@ echo "==========================================================================
 	after=$(date +%s)
 	echo -e "## Restarting services  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
-	
+
 	###############################################################################################
-	echo -e "XXX\n${STEP}\nUninstall Pi-Blaster... \nXXX"	
+	echo -e "XXX\n${STEP}\nUninstall Pi-Blaster... \nXXX"
 	before=$(date +%s)
 	sudo -H -u dietpi bash -c 'cd /home/dietpi/pi-blaster; make uninstall' >&3 2>&3
 	rm -R /home/dietpi/pi-blaster >&3 2>&3
@@ -529,7 +527,7 @@ echo "==========================================================================
 	###############################################################################################
 
 
-	echo -e "XXX\n${STEP}\nSet environment...  \nXXX"	
+	echo -e "XXX\n${STEP}\nSet environment...  \nXXX"
 	before=$(date +%s)
 	/usr/bin/chmod 755 ${MUPI_SRC}/config/templates/crontab.template >&3 2>&3
 	/usr/bin/chown dietpi:dietpi ${MUPI_SRC}/config/templates/crontab.template >&3 2>&3
@@ -559,10 +557,10 @@ echo "==========================================================================
 	after=$(date +%s)
 	echo -e "## Set environment	##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
-	
+
 	###############################################################################################
 
-	echo -e "XXX\n{STEP}\nDownload OnOffShim-Scripts... \nXXX"	
+	echo -e "XXX\n{STEP}\nDownload OnOffShim-Scripts... \nXXX"
 	before=$(date +%s)
 	# OnOffShim
 	mv ${MUPI_SRC}/scripts/OnOffShim/off_trigger.sh /var/lib/dietpi/postboot.d/off_trigger.sh >&3 2>&3
@@ -575,9 +573,9 @@ echo "==========================================================================
 	###############################################################################################
 
 
-	echo -e "XXX\n{STEP}\nUpdate Admin-Interface... \nXXX"	
+	echo -e "XXX\n{STEP}\nUpdate Admin-Interface... \nXXX"
 	before=$(date +%s)
-	rm -R /var/www/* >&3 2>&3 
+	rm -R /var/www/* >&3 2>&3
 	mv ${MUPI_SRC}/AdminInterface/release/www.zip /var/www/www.zip >&3 2>&3
 	unzip /var/www/www.zip -d /var/www/ >&3 2>&3
 	rm /var/www/www.zip >&3 2>&3
@@ -590,7 +588,7 @@ echo "==========================================================================
 
 	###############################################################################################
 
-	echo -e "XXX\n${STEP}\nUpdate Config-File... \nXXX"	
+	echo -e "XXX\n${STEP}\nUpdate Config-File... \nXXX"
 	before=$(date +%s)
 	cd ${MUPI_SRC}/update/	>&3 2>&3
 	chmod 755 conf_update.sh >&3 2>&3
@@ -598,11 +596,11 @@ echo "==========================================================================
 	after=$(date +%s)
 	echo -e "## Config-File	##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
-	
-	
+
+
 	###############################################################################################
 
-	echo -e "XXX\n{STEP}\nNetwork optimization... \nXXX"	
+	echo -e "XXX\n{STEP}\nNetwork optimization... \nXXX"
 	before=$(date +%s)
 
 	cd /usr/local/bin/mupibox/	>&3 2>&3
@@ -613,9 +611,9 @@ echo "==========================================================================
 
 	###############################################################################################
 
-	echo -e "XXX\n{STEP}\nActivate SSL... \nXXX"	
+	echo -e "XXX\n{STEP}\nActivate SSL... \nXXX"
 	before=$(date +%s)
-	
+
 	openssl req -new -x509 -keyout /etc/lighttpd/server.pem -out /etc/lighttpd/server.pem -days 3650 -nodes -subj "/C=DE/CN=mupibox" >/dev/null >&3 2>&3
 	lighty-enable-mod ssl  >&3 2>&3
 	service lighttpd force-reload  >&3 2>&3
@@ -637,9 +635,9 @@ echo "==========================================================================
 	after=$(date +%s)
 	echo -e "## Restore Userdata  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
-	
+
 	###############################################################################################
-	
+
 	echo -e "XXX\n${STEP}\nFinalizing setup... \nXXX"
 	#cp ${CONFIG} ${CONFIG}_backup  >&3 2>&3
 	/usr/bin/cat <<< $(/usr/bin/jq --arg v "${VERSION_LONG}" '.mupibox.version = $v' ${CONFIG}) >  ${CONFIG}
@@ -654,10 +652,10 @@ echo "==========================================================================
 	/usr/local/bin/mupibox/./m3u_generator.sh >&3 2>&3
 	/usr/local/bin/mupibox/./setting_update.sh >&3 2>&3
 	service librespot restart >&3 2>&3
-	
+
 	mv ${LOG} /boot/$(date +%F)_update_${VERSION}.log >&3 2>&3
 	chown dietpi:dietpi ${CONFIG} >&3 2>&3
-	
+
 	sudo -H -u dietpi bash -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && npm install" >&3 2>&3
 	sudo -H -u dietpi bash -c "pm2 start server" >&3 2>&3
 
@@ -665,7 +663,7 @@ echo "==========================================================================
 	curl -X POST https://mupibox.de/mupi/ct.php -H "Content-Type: application/x-www-form-urlencoded" -d key1=${CPU} -d key2=Update -d key3="${VERSION_LONG}" -d key4="${ARCH}" -d key5="${OS}" >&3 2>&3
 
 	###############################################################################################
-	echo -e "XXX\n100\nInstallation complete, please reboot the system... \nXXX"	
+	echo -e "XXX\n100\nInstallation complete, please reboot the system... \nXXX"
 	rm -R ${MUPI_SRC} >&3 2>&3
 	sleep 5
 
