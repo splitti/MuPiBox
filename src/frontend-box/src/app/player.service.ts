@@ -94,7 +94,7 @@ export class PlayerService {
         break
       }
       case 'spotify': {
-        const isHealthy = await this.spotifyService.ensurePlayerHealthy()
+        const isHealthy = await this.spotifyService.ensurePlayerReady()
 
         if (!isHealthy) {
           console.error('❌ Spotify player health check failed - cannot start playback')
@@ -129,7 +129,7 @@ export class PlayerService {
   async resumeMedia(media: Media): Promise<boolean> {
     let url: string
 
-    const isHealthy = await this.spotifyService.ensurePlayerHealthy()
+    const isHealthy = await this.spotifyService.ensurePlayerReady()
 
     if (!isHealthy) {
       console.error('❌ Spotify player health check failed - cannot resume playback')
