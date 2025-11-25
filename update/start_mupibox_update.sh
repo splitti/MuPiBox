@@ -20,7 +20,7 @@ elif [ "$1" = "branch" ]; then
 else
 	RELEASE="stable"
 fi
-killall -s 9 -w -q chromium
+killall -s 9 -w -q -r chromium
 
 CONFIG="/etc/mupibox/mupiboxconfig.json"
 LOG="/boot/mupibox_update.log"

@@ -37,9 +37,8 @@ export class SpotifyService {
     return this.playerService.currentTrack$
   }
 
-  /** External playback detection observable */
-  get externalPlaybackDetected$() {
-    return this.playerService.externalPlaybackDetected$
+  get trackChangeDetected$() {
+    return this.playerService.trackChangeDetected$
   }
 
   /** Check if player is ready */

@@ -33,7 +33,7 @@ export class SpotifyPlayerService {
 
   // External playback detection
   private previousPlayerState: SpotifyWebPlaybackState | null = null
-  public externalPlaybackDetected$ = new BehaviorSubject<SpotifyWebPlaybackTrack | null>(null)
+  public trackChangeDetected$ = new BehaviorSubject<SpotifyWebPlaybackTrack | null>(null)
 
   // Error state observable for UI feedback
   public sdkLoadError$ = new BehaviorSubject<string | null>(null)
@@ -54,7 +54,9 @@ export class SpotifyPlayerService {
     this.deviceName = deviceName
     if (this.shouldUsePlayer()) {
       this.logService.log('[Spotify SDK] Initializing with device name:', deviceName)
-      this.tryLoadSDK()
+      this.ensurePlayerReady().catch((error) => {
+        this.logService.error('[Spotify SDK] Error during initialization:', error)
+      })
     }
   }
 
@@ -199,6 +201,7 @@ export class SpotifyPlayerService {
       this.isConnected$.next(false)
       this.playerState$.next(null)
       this.currentTrack$.next(null)
+      this.previousPlayerState = null
       this.sdkState = 'loaded' // SDK is still loaded, just disconnected
     }
   }
@@ -448,14 +451,11 @@ export class SpotifyPlayerService {
 
       if (!state.paused && currentTrack && (!previousTrack || previousTrack.id !== currentTrack.id)) {
         this.logService.log('[Spotify SDK] Track change detected:', currentTrack.name)
-        this.externalPlaybackDetected$.next(currentTrack)
+        this.trackChangeDetected$.next(currentTrack)
       }
 
       this.previousPlayerState = state
     })
-
-    // Connect the player
-    this.player?.connect()
   }
 
   // ============================================================================

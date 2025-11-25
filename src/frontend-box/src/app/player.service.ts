@@ -4,6 +4,7 @@ import type { ServerHttpApiConfig } from '@backend-api/server.model'
 import type { Observable } from 'rxjs'
 import { publishReplay, refCount } from 'rxjs/operators'
 import { environment } from '../environments/environment'
+import { LogService } from './log.service'
 import type { Media } from './media'
 import { SpotifyService } from './spotify.service'
 
@@ -39,6 +40,7 @@ export class PlayerService {
 
   constructor(
     private http: HttpClient,
+    private logService: LogService,
     private spotifyService: SpotifyService,
   ) {}
 
@@ -97,7 +99,7 @@ export class PlayerService {
         const isHealthy = await this.spotifyService.ensurePlayerReady()
 
         if (!isHealthy) {
-          console.error('❌ Spotify player health check failed - cannot start playback')
+          this.logService.error('Spotify player health check failed - cannot start playback')
           return false
         }
 
@@ -132,7 +134,7 @@ export class PlayerService {
     const isHealthy = await this.spotifyService.ensurePlayerReady()
 
     if (!isHealthy) {
-      console.error('❌ Spotify player health check failed - cannot resume playback')
+      this.logService.error('Spotify player health check failed - cannot resume playback')
       return false
     }
 

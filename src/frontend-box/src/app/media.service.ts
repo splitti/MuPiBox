@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
 import { firstValueFrom, from, iif, interval, Observable, of, Subject } from 'rxjs'
-import { map, mergeAll, mergeMap, shareReplay, switchMap, toArray } from 'rxjs/operators'
+import { map, mergeAll, mergeMap, shareReplay, switchMap, timeout, toArray } from 'rxjs/operators'
 import { environment } from '../environments/environment'
 import type { AlbumStop } from './albumstop'
 import type { Artist } from './artist'
@@ -179,6 +179,49 @@ export class MediaService {
       switchMap((): Observable<Mupihat> => this.http.get<Mupihat>(`${this.getApiBackendUrl()}/mupihat`)),
       shareReplay({ bufferSize: 1, refCount: false }),
     )
+
+    this.initTelegramNotifications()
+  }
+
+  // --------------------------------------------
+  // Telegram Notifications
+  // --------------------------------------------
+
+  private initTelegramNotifications(): void {
+    this.spotifyService.trackChangeDetected$.subscribe((track) => {
+      if (track) {
+        this.sendTelegramNotification()
+      }
+    })
+  }
+
+  private sendTelegramNotification(): void {
+    firstValueFrom(this.current$)
+      .then((spotify) => {
+        const item = spotify?.item
+        if (!item?.name) return
+
+        const parts: string[] = []
+
+        if (item.show?.name) {
+          parts.push(item.show.name)
+          parts.push(item.name)
+        } else {
+          if (item.album?.name) {
+            parts.push(item.album.name)
+          }
+          parts.push(item.name)
+          if (item.track_number && item.album?.total_tracks) {
+            parts.push(`Track: ${item.track_number}/${item.album.total_tracks}`)
+          }
+        }
+
+        const message = parts.join('\n')
+        this.http.post(`${this.getApiBackendUrl()}/telegram/screen`, { message }).subscribe({
+          error: (err) => console.warn('Failed to send Telegram notification:', err),
+        })
+      })
+      .catch((err) => console.warn('Failed to get current state for Telegram:', err))
   }
 
   // --------------------------------------------
@@ -616,9 +659,10 @@ export class MediaService {
       }
 
       if (contextUri.includes('spotify:album:')) {
-        mediaInfo = await firstValueFrom(this.spotifyService.getAlbumInfo(mediaId))
+        mediaInfo = await firstValueFrom(this.spotifyService.getAlbumInfo(mediaId).pipe(timeout(5000)))
       } else if (contextUri.includes('spotify:playlist:')) {
-        mediaInfo = await firstValueFrom(this.spotifyService.getPlaylistInfo(mediaId))
+        // Use shorter timeout for polling - don't block on slow playlist info fetches
+        mediaInfo = await firstValueFrom(this.spotifyService.getPlaylistInfo(mediaId).pipe(timeout(5000)))
       } else if (contextUri.includes('spotify:show:')) {
         // Both shows and audiobooks use spotify:show: URIs
         // Try audiobook endpoint first (more specific, will fail for podcast shows)

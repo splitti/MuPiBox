@@ -889,6 +889,56 @@ app.post('/api/screen/off', (_req, res) => {
   })
 })
 
+app.post('/api/telegram/screen', (req, res) => {
+  fs.readFile(mupiboxConfigPath, 'utf8', (err, data) => {
+    if (err) {
+      console.error(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error reading config: ${err.message}`)
+      res.status(500).send('error')
+      return
+    }
+
+    try {
+      const mupiboxConfig = JSON.parse(data)
+      if (
+        !mupiboxConfig.telegram?.active ||
+        !mupiboxConfig.telegram?.token?.length ||
+        !mupiboxConfig.telegram?.chatId?.length
+      ) {
+        console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Telegram notification disabled.`)
+        res.status(400).send('telegram_not_configured')
+        return
+      }
+
+      const message = req.body?.message || ''
+      const args = message
+        ? message
+            .split('\n')
+            .map((line: string) => `"${line.replace(/"/g, '\\"')}"`)
+            .join(' ')
+        : ''
+
+      exec(`/usr/bin/python3 /usr/local/bin/mupibox/telegram_notify_screen.py ${args}`, (error, _stdout, stderr) => {
+        if (error) {
+          console.error(
+            `${nowDate.toLocaleString()}: [MuPiBox-Server] Error sending telegram notification: ${error.message}`,
+          )
+          res.status(500).send('error')
+          return
+        }
+        if (stderr) {
+          console.error(`${nowDate.toLocaleString()}: [MuPiBox-Server] Stderr telegram notification: ${stderr}`)
+          res.status(500).send('error')
+          return
+        }
+        res.status(200).send('ok')
+      })
+    } catch (parseError) {
+      console.error(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error parsing config: ${parseError}`)
+      res.status(500).send('error')
+    }
+  })
+})
+
 const tryReadFile = (filePath: string, retries = 3, delayMs = 1000) => {
   return new Promise((resolve, reject) => {
     const attempt = (remainingRetries: number) => {
