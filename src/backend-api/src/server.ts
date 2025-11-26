@@ -889,6 +889,40 @@ app.post('/api/screen/off', (_req, res) => {
   })
 })
 
+app.post('/api/shutdown', (_req, res) => {
+  exec('sudo su - -c "/usr/local/bin/mupibox/./shutdown.sh &"', (error, _stdout, stderr) => {
+    if (error) {
+      console.error(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error executing shutdown: ${error.message}`)
+      res.status(500).send('error')
+      return
+    }
+    if (stderr) {
+      console.error(`${nowDate.toLocaleString()}: [MuPiBox-Server] Stderr executing shutdown: ${stderr}`)
+      res.status(500).send('error')
+      return
+    }
+    console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] System shutdown initiated`)
+    res.status(200).send('ok')
+  })
+})
+
+app.post('/api/reboot', (_req, res) => {
+  exec('sudo su - -c "/usr/local/bin/mupibox/./restart.sh &"', (error, _stdout, stderr) => {
+    if (error) {
+      console.error(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error executing restart: ${error.message}`)
+      res.status(500).send('error')
+      return
+    }
+    if (stderr) {
+      console.error(`${nowDate.toLocaleString()}: [MuPiBox-Server] Stderr executing restart: ${stderr}`)
+      res.status(500).send('error')
+      return
+    }
+    console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] System restart initiated`)
+    res.status(200).send('ok')
+  })
+})
+
 app.post('/api/telegram/screen', (req, res) => {
   fs.readFile(mupiboxConfigPath, 'utf8', (err, data) => {
     if (err) {
