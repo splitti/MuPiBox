@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
 import { firstValueFrom, from, iif, interval, Observable, of, Subject } from 'rxjs'
-import { map, mergeAll, mergeMap, shareReplay, switchMap, timeout, toArray } from 'rxjs/operators'
+import { map, mergeAll, mergeMap, shareReplay, switchMap, toArray } from 'rxjs/operators'
 import { environment } from '../environments/environment'
 import type { AlbumStop } from './albumstop'
 import type { Artist } from './artist'
@@ -659,10 +659,9 @@ export class MediaService {
       }
 
       if (contextUri.includes('spotify:album:')) {
-        mediaInfo = await firstValueFrom(this.spotifyService.getAlbumInfo(mediaId).pipe(timeout(5000)))
+        mediaInfo = await firstValueFrom(this.spotifyService.getAlbumInfo(mediaId))
       } else if (contextUri.includes('spotify:playlist:')) {
-        // Use shorter timeout for polling - don't block on slow playlist info fetches
-        mediaInfo = await firstValueFrom(this.spotifyService.getPlaylistInfo(mediaId).pipe(timeout(5000)))
+        mediaInfo = await firstValueFrom(this.spotifyService.getPlaylistInfo(mediaId))
       } else if (contextUri.includes('spotify:show:')) {
         // Both shows and audiobooks use spotify:show: URIs
         // Try audiobook endpoint first (more specific, will fail for podcast shows)
