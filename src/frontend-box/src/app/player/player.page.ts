@@ -35,6 +35,7 @@ import type { Observable } from 'rxjs'
 import type { AlbumStop } from '../albumstop'
 import type { CurrentMPlayer } from '../current.mplayer'
 import type { CurrentSpotify } from '../current.spotify'
+import { LogService } from '../log.service'
 import type { Media } from '../media'
 import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
@@ -89,6 +90,7 @@ export class PlayerPage implements OnInit {
   public readonly local$: Observable<CurrentMPlayer>
 
   constructor(
+    private logService: LogService,
     private mediaService: MediaService,
     _route: ActivatedRoute,
     private router: Router,
@@ -153,12 +155,12 @@ export class PlayerPage implements OnInit {
     // Check if there's currently playing Spotify content we can use
     const currentTrack = this.spotifyService.currentTrack$.value
     if (currentTrack) {
-      console.log('🔄 Creating media object for externally started Spotify playback')
+      this.logService.log('[PlayerPage] Creating media object for externally started Spotify playback')
       this.media = this.spotifyService.createMediaFromSpotifyTrack(currentTrack)
-      console.log('✅ External playback media object created:', this.media)
+      this.logService.log('[PlayerPage] External playback media object created:', this.media)
     } else {
       // Fallback: create a minimal media object and wait for track info
-      console.log('⚠️ No current track info available, creating fallback media object')
+      this.logService.log('[PlayerPage] No current track info available, creating fallback media object')
       this.media = {
         type: 'spotify',
         category: 'music',
@@ -170,7 +172,7 @@ export class PlayerPage implements OnInit {
       // Subscribe to currentTrack$ to update when track info becomes available
       this.spotifyService.currentTrack$.subscribe((track) => {
         if (track && this.media.title === 'External Playback') {
-          console.log('🔄 Updating media object with track info:', track.name)
+          this.logService.log('[PlayerPage] Updating media object with track info:', track.name)
           this.media = this.spotifyService.createMediaFromSpotifyTrack(track)
         }
       })
@@ -255,10 +257,8 @@ export class PlayerPage implements OnInit {
       // Only start playback if this is not external playback (already playing)
       const success = await this.playerService.playMedia(this.media)
       if (!success && this.media.type === 'spotify') {
-        console.error('Failed to start Spotify playback - player health check failed')
+        this.logService.error('[PlayerPage] Failed to start Spotify playback - player health check failed')
       }
-    } else {
-      console.log('🎵 External playback detected - skipping playMedia call (already playing)')
     }
 
     this.updateProgress()
@@ -302,13 +302,13 @@ export class PlayerPage implements OnInit {
     if (this.media.type === 'spotify' && !this.media.shuffle) {
       const success = await this.playerService.resumeMedia(this.media)
       if (!success) {
-        console.error('Failed to resume Spotify playback - player health check failed')
+        this.logService.error('[PlayerPage] Failed to resume Spotify playback - player health check failed')
       }
     } else if (this.media.type === 'library') {
       this.media.category = this.media.resumelocalalbum
       const success = await this.playerService.playMedia(this.media)
       if (!success) {
-        console.error('Failed to start local library playback')
+        this.logService.error('[PlayerPage] Failed to start local library playback')
         return
       }
       let j = 1
@@ -331,7 +331,7 @@ export class PlayerPage implements OnInit {
     } else if (this.media.type === 'rss') {
       const success = await this.playerService.playMedia(this.media)
       if (!success) {
-        console.error('Failed to start RSS playback')
+        this.logService.error('[PlayerPage] Failed to start RSS playback')
         return
       }
       setTimeout(() => {

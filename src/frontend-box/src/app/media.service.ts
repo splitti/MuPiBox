@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
-import { firstValueFrom, from, iif, interval, Observable, of, Subject, timer } from 'rxjs'
-import { distinctUntilChanged, filter, map, mergeAll, mergeMap, shareReplay, switchMap, toArray } from 'rxjs/operators'
+import { firstValueFrom, from, iif, interval, Observable, of, Subject } from 'rxjs'
+import { map, mergeAll, mergeMap, shareReplay, switchMap, toArray } from 'rxjs/operators'
 import { environment } from '../environments/environment'
 import type { AlbumStop } from './albumstop'
 import type { Artist } from './artist'
@@ -10,6 +10,7 @@ import type { CurrentSpotify } from './current.spotify'
 import type { CategoryType, Media, MediaInfoCache } from './media'
 import { Mupihat } from './mupihat'
 import type { Network } from './network'
+import { NetworkService } from './network.service'
 import { RssFeedService } from './rssfeed.service'
 import { SpotifyService } from './spotify.service'
 import type { WLAN } from './wlan'
@@ -21,7 +22,6 @@ export class MediaService {
   response = ''
   public readonly current$: Observable<CurrentSpotify>
   public readonly local$: Observable<CurrentMPlayer>
-  public readonly network$: Observable<Network>
   public readonly albumStop$: Observable<AlbumStop>
   public readonly mupihat$: Observable<Mupihat>
 
@@ -34,9 +34,8 @@ export class MediaService {
     private http: HttpClient,
     private spotifyService: SpotifyService,
     private rssFeedService: RssFeedService,
+    private networkService: NetworkService,
   ) {
-    // Provide network observable to SpotifyService for retry logic
-    this.spotifyService.setNetworkObservable(this.network$)
     // Prepare subscriptions.
     // shareReplay replays the most recent (bufferSize) emission on each subscription
     // Keep the buffered emission(s) (refCount) even after everyone unsubscribes. Can cause memory leaks.
@@ -171,12 +170,6 @@ export class MediaService {
       shareReplay({ bufferSize: 1, refCount: true }),
     )
 
-    // 5 seconds is enough for wifi update and showing/hiding media.
-    // Use timer so the first request is after 300ms.
-    this.network$ = timer(300, 5000).pipe(
-      switchMap((): Observable<Network> => this.http.get<Network>(`${this.getApiBackendUrl()}/network`)),
-      shareReplay({ bufferSize: 1, refCount: false }),
-    )
     this.albumStop$ = interval(1000).pipe(
       switchMap((): Observable<AlbumStop> => this.http.get<AlbumStop>(`${this.getApiBackendUrl()}/albumstop`)),
       shareReplay({ bufferSize: 1, refCount: false }),
@@ -186,19 +179,67 @@ export class MediaService {
       switchMap((): Observable<Mupihat> => this.http.get<Mupihat>(`${this.getApiBackendUrl()}/mupihat`)),
       shareReplay({ bufferSize: 1, refCount: false }),
     )
+
+    this.initTelegramNotifications()
+  }
+
+  // --------------------------------------------
+  // Telegram Notifications
+  // --------------------------------------------
+
+  private initTelegramNotifications(): void {
+    this.spotifyService.trackChangeDetected$.subscribe((track) => {
+      if (track) {
+        this.sendTelegramNotification()
+      }
+    })
+  }
+
+  private sendTelegramNotification(): void {
+    firstValueFrom(this.current$)
+      .then((spotify) => {
+        const item = spotify?.item
+        if (!item?.name) return
+
+        const parts: string[] = []
+
+        if (item.show?.name) {
+          parts.push(item.show.name)
+          parts.push(item.name)
+        } else {
+          if (item.album?.name) {
+            parts.push(item.album.name)
+          }
+          parts.push(item.name)
+          if (item.track_number && item.album?.total_tracks) {
+            parts.push(`Track: ${item.track_number}/${item.album.total_tracks}`)
+          }
+        }
+
+        const message = parts.join('\n')
+        this.http.post(`${this.getApiBackendUrl()}/telegram/screen`, { message }).subscribe({
+          error: (err) => console.warn('Failed to send Telegram notification:', err),
+        })
+      })
+      .catch((err) => console.warn('Failed to get current state for Telegram:', err))
+  }
+
+  // --------------------------------------------
+  // Network state (delegated to NetworkService)
+  // --------------------------------------------
+
+  /** Network state observable - delegates to NetworkService */
+  public get network$(): Observable<Network> {
+    return this.networkService.network$
+  }
+
+  public isOnline(): Observable<boolean> {
+    return this.networkService.isOnline()
   }
 
   // --------------------------------------------
   // Handling of RAW media entries from data.json
   // --------------------------------------------
-
-  public isOnline(): Observable<boolean> {
-    return this.network$.pipe(
-      filter((network) => network.ip !== undefined),
-      map((network) => network.onlinestate === 'online'),
-      distinctUntilChanged(),
-    )
-  }
 
   public fetchRawMedia(): Observable<Media[]> {
     return this.http.get<Media[]>(`${this.getApiBackendUrl()}/data`)

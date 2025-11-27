@@ -19,7 +19,7 @@ export class ExternalPlaybackNavigatorService {
 
   private initializeExternalPlaybackDetection(): void {
     // Monitor external playback detection
-    this.spotifyService.externalPlaybackDetected$
+    this.spotifyService.trackChangeDetected$
       .pipe(
         filter((track) => track !== null),
         filter(() => !this.isCurrentlyOnPlayerPage()),
