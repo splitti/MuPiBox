@@ -21,7 +21,7 @@ sudo -i -u dietpi /usr/local/bin/mupibox/./shutdown_sound.sh
 CONFIG="/etc/mupibox/mupiboxconfig.json"
 SHUT_SPLASH=$(/usr/bin/jq -r .mupibox.shutSplash ${CONFIG})
 
-killall -s 9 -w -q chromium
+killall -s 9 -w -q -r chromium
 if [ -n "$1" ]; then
     /usr/bin/fbv $1 &
 else
@@ -49,7 +49,7 @@ if [ "${TELEGRAM}" = true ] && [ ${#TELEGRAM_CHATID} -ge 1 ] && [ ${#TELEGRAM_TO
 	/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "MuPiBox shutdown" &
 fi
 
-service mupi_powerled stop
+systemctl --no-block stop mupi_powerled
 
 # disable execution of mupi_startstop service on shutdown again
 systemctl set-environment DISABLE_MUPI_START_STOP=1
