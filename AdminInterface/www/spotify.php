@@ -96,7 +96,8 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 				<h3>Create Developer-App and Client-Connection</h3>
 
 				<p>Please login to <a href="https://developer.spotify.com/dashboard/login" target="_blank">Spotify Developer Dashboard</a> and create a new App. You can choose the App-Name or Description, or take "MuPiBox" easily.</p>
-				<p>You will be redireted to the dashboard for the new created app. Copy and paste the Client ID and Client Secret of your app.</p>
+                <p>Ensure that both <strong>Web API</strong> and <strong>Web Playback SDK</strong> are checked under <strong>Which API/SDK are you planning to use?</strong>.</p>
+                <p>You will be redirected to the dashboard for the new created app. Copy and paste the Client ID and Client Secret of your app.</p>
 				<p>Edit the settings and add the following URL to Redirect URIs:</p>
 				<?php print "<p><b>" . $REDIRECT_URI . "</b></p>"; ?>
 			</li>
