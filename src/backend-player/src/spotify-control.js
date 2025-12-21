@@ -1041,7 +1041,7 @@ app.get('/spotify/token', (_req, res) => {
   } else {
     refreshToken()
       .then(() => res.send(accessTokenData.accessToken))
-      .catch(() => res.status(500).send('Error refreshing token'))
+      .catch((err) => res.status(500).send(`Error refreshing token: ${err}`))
   }
 })
 
