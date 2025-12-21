@@ -477,8 +477,10 @@ export class SpotifyPlayerService {
         filter(() => this.sdkState === 'error' || this.sdkState === 'not_loaded'),
       )
       .subscribe(() => {
-        this.logService.log('[Spotify SDK] Network online, retrying SDK load...')
-        this.tryLoadSDK()
+        this.logService.log('[Spotify SDK] Network online, attempting full recovery...')
+        this.ensurePlayerReady().catch((error) => {
+          this.logService.error('[Spotify SDK] Error during network recovery:', error)
+        })
       })
   }
 

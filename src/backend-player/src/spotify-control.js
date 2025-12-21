@@ -885,24 +885,66 @@ function downloadTTS(name) {
     .catch(console.error)
 }
 
+async function getCurrentActiveDevice() {
+  try {
+    const data = await spotifyApi.getMyCurrentPlaybackState()
+    if (data.body?.device) {
+      log.debug(
+        `${nowDate.toLocaleString()}: [Spotify Control] Current active device from Spotify: ${data.body.device.id} (${data.body.device.name})`,
+      )
+      return data.body.device.id
+    }
+    log.debug(`${nowDate.toLocaleString()}: [Spotify Control] No active device in current playback state`)
+    return null
+  } catch (err) {
+    log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Error getting current playback state: ${err}`)
+    return null
+  }
+}
+
 async function useSpotify(command) {
   currentMeta.currentPlayer = 'spotify'
   currentMeta.currentType = 'spotify'
   const dir = command.dir
   const newdevice = dir.split('/')[1]
-  log.debug(`${nowDate.toLocaleString()}: [Spotify Control] device is ${activeDevice} and new is ${newdevice}`)
-  /* the active device has changed: transfer playback*/
-  if (newdevice !== 'current' && newdevice !== activeDevice) {
-    log.debug(`${nowDate.toLocaleString()}: [Spotify Control] device changed from ${activeDevice} to ${newdevice}`)
-    log.debug(`${nowDate.toLocaleString()}: [Spotify Control] device is ${activeDevice}`)
+
+  log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Stored device: ${activeDevice}, Requested: ${newdevice}`)
+
+  let needsTransfer = false
+
+  if (newdevice === 'current') {
+    // Use current device, no transfer needed
+    log.debug(`${nowDate.toLocaleString()}: [Spotify Control] using current device: ${activeDevice}`)
+  } else if (newdevice !== activeDevice) {
+    // Fast path: locally stored device is different -> transfer immediately
+    log.debug(
+      `${nowDate.toLocaleString()}: [Spotify Control] device changed from ${activeDevice} to ${newdevice} (local check)`,
+    )
+    needsTransfer = true
+  } else {
+    // Slow path: local matches requested, but verify with Spotify API (e.g. after network recovery)
+    const spotifyActiveDevice = await getCurrentActiveDevice()
+    log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Spotify active device: ${spotifyActiveDevice}`)
+
+    if (spotifyActiveDevice && spotifyActiveDevice !== newdevice) {
+      // Spotify has a different device active -> transfer required
+      log.debug(
+        `${nowDate.toLocaleString()}: [Spotify Control] Spotify device mismatch, transferring from ${spotifyActiveDevice} to ${newdevice}`,
+      )
+      needsTransfer = true
+    } else {
+      log.debug(`${nowDate.toLocaleString()}: [Spotify Control] device already correct: ${newdevice}`)
+    }
+  }
+
+  // Perform transfer if needed
+  if (needsTransfer) {
     await transferPlayback(newdevice)
     activeDevice = newdevice
-    log.debug(`${nowDate.toLocaleString()}: [Spotify Control] device is ${activeDevice}`)
+    log.debug(`${nowDate.toLocaleString()}: [Spotify Control] device is now ${activeDevice}`)
     log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Waiting for device transfer to complete...`)
     await new Promise((resolve) => setTimeout(resolve, 1500))
     log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Device transfer delay completed`)
-  } else {
-    log.debug(`${nowDate.toLocaleString()}: [Spotify Control] still same device, won't change: ${activeDevice}`)
   }
 
   currentMeta.activeSpotifyId = command.name
@@ -999,7 +1041,7 @@ app.get('/spotify/token', (_req, res) => {
   } else {
     refreshToken()
       .then(() => res.send(accessTokenData.accessToken))
-      .catch(() => res.status(500).send('Error refreshing token'))
+      .catch((err) => res.status(500).send(`Error refreshing token: ${err}`))
   }
 })
 
