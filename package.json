@@ -2,7 +2,9 @@
   "name": "mupibox",
   "version": "1.0.0",
   "description": "Music player with touch screen.",
-  "workspaces": ["src/*"],
+  "workspaces": [
+    "src/*"
+  ],
   "scripts": {
     "docker:build": "docker build -t mupibox .",
     "docker:start": "docker run -it -v ./src/backend-api/:/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/ -p 80:80 -p 8200:8200 -p 5005:5005 mupibox:latest bash",
@@ -21,13 +23,21 @@
     "lint": "npm run lint --workspaces",
     "lint:fix": "npm run lint:fix --workspaces"
   },
-  "keywords": ["mupi", "music", "rss feed", "spotify", "raspberry pi", "touch screen"],
+  "keywords": [
+    "mupi",
+    "music",
+    "rss feed",
+    "spotify",
+    "raspberry pi",
+    "touch screen"
+  ],
   "author": "Mupi Team",
   "license": "MIT",
   "private": true,
   "devDependencies": {
     "@biomejs/biome": "*",
-    "cross-env": "7.0.3",
-    "concurrently": "9.1.0"
+    "baseline-browser-mapping": "^2.9.9",
+    "concurrently": "9.1.0",
+    "cross-env": "7.0.3"
   }
 }
