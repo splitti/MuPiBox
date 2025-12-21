@@ -1036,7 +1036,7 @@ app.get('/spotify/token', (_req, res) => {
   const accessTokenData = apiAccessToken
   const refreshToken = refreshTokenApi
 
-  if (accessTokenData.accessToken !== null && accessTokenData.expires < Date.now()) {
+  if (accessTokenData.accessToken !== null && accessTokenData.expires > Date.now()) {
     res.send(accessTokenData.accessToken)
   } else {
     refreshToken()

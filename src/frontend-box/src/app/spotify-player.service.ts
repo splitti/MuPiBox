@@ -206,6 +206,20 @@ export class SpotifyPlayerService {
     }
   }
 
+  private cleanupBrokenPlayer(): void {
+    this.logService.warn('[Spotify SDK] Cleaning up player due to token/auth failure')
+    if (this.player) {
+      this.player.disconnect()
+      this.player = null
+    }
+    this.deviceId = null
+    this.sdkState = 'loaded'
+    this.isConnected$.next(false)
+    this.playerState$.next(null)
+    this.currentTrack$.next(null)
+    this.previousPlayerState = null
+  }
+
   // ============================================================================
   // SDK Loading and Recovery
   // ============================================================================
@@ -391,13 +405,14 @@ export class SpotifyPlayerService {
           next: (token) => {
             if (!token || typeof token !== 'string' || token.trim() === '') {
               this.logService.error('[Spotify SDK] Invalid or empty token received')
+              cb('') // Signal error to SDK
               return
             }
             cb(token)
           },
           error: (error) => {
             this.logService.error('[Spotify SDK] Failed to fetch token:', error)
-            this.isConnected$.next(false)
+            cb('') // Signal error to SDK -> will trigger authentication_error after retries
           },
         })
       },
@@ -423,17 +438,17 @@ export class SpotifyPlayerService {
     // Error events
     this.player?.addListener('initialization_error', ({ message }) => {
       this.logService.error('[Spotify SDK] Initialization error:', message)
-      this.isConnected$.next(false)
+      this.cleanupBrokenPlayer()
     })
 
     this.player?.addListener('authentication_error', ({ message }) => {
       this.logService.error('[Spotify SDK] Authentication error:', message)
-      this.isConnected$.next(false)
+      this.cleanupBrokenPlayer()
     })
 
     this.player?.addListener('account_error', ({ message }) => {
       this.logService.error('[Spotify SDK] Account error:', message)
-      this.isConnected$.next(false)
+      this.cleanupBrokenPlayer()
     })
 
     this.player?.addListener('playback_error', ({ message }) => {
