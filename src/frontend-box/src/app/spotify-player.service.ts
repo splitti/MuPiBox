@@ -38,12 +38,23 @@ export class SpotifyPlayerService {
   // Error state observable for UI feedback
   public sdkLoadError$ = new BehaviorSubject<string | null>(null)
 
+  // Lock to prevent parallel ensurePlayerReady calls
+  private ensurePlayerReadyPromise: Promise<boolean> | null = null
+
+  // Cached online state from NetworkService
+  private isOnline = false
+
   constructor(
     private http: HttpClient,
     @Inject(DOCUMENT) private document: Document,
     private logService: LogService,
     private networkService: NetworkService,
   ) {
+    // Subscribe to network state to keep cached value up to date
+    this.networkService.isOnline().subscribe((online) => {
+      this.isOnline = online
+    })
+
     this.setupNetworkMonitoring()
   }
 
@@ -228,48 +239,81 @@ export class SpotifyPlayerService {
    * Ensure the player is ready before playback.
    * Called by external code before attempting to play.
    * Will attempt to load SDK and connect if needed.
+   * Prevents parallel calls and implements timeout protection.
    */
   async ensurePlayerReady(): Promise<boolean> {
+    // If already in progress, return the existing promise
+    if (this.ensurePlayerReadyPromise) {
+      this.logService.log('[Spotify SDK] ensurePlayerReady() already in progress, waiting...')
+      return this.ensurePlayerReadyPromise
+    }
+
+    // Create new promise with timeout protection
+    this.ensurePlayerReadyPromise = Promise.race([
+      this._ensurePlayerReadyInternal(),
+      new Promise<boolean>((resolve) =>
+        setTimeout(() => {
+          this.logService.error('[Spotify SDK] ensurePlayerReady() timeout after 30s')
+          resolve(false)
+        }, 30000),
+      ),
+    ]).finally(() => {
+      // Clear the lock when done (success, failure, or timeout)
+      this.ensurePlayerReadyPromise = null
+    })
+
+    return this.ensurePlayerReadyPromise
+  }
+
+  /**
+   * Internal implementation of ensurePlayerReady with error handling
+   */
+  private async _ensurePlayerReadyInternal(): Promise<boolean> {
     this.logService.log('[Spotify SDK] ensurePlayerReady() called, state:', this.sdkState)
 
-    // Already ready
-    if (this.isPlayerReady()) {
-      this.logService.log('[Spotify SDK] Player already ready')
-      return true
-    }
+    try {
+      // Already ready
+      if (this.isPlayerReady()) {
+        this.logService.log('[Spotify SDK] Player already ready')
+        return true
+      }
 
-    // Can't do anything without network
-    if (!navigator.onLine) {
-      this.logService.warn('[Spotify SDK] Cannot ensure player ready - device is offline')
+      // Can't do anything without network
+      if (!this.isOnline) {
+        this.logService.warn('[Spotify SDK] Cannot ensure player ready - device is offline')
+        return false
+      }
+
+      // Step 1: Load SDK if needed
+      if (this.sdkState === 'not_loaded' || this.sdkState === 'error') {
+        await this.tryLoadSDK()
+      }
+
+      // Step 2: Create player if SDK loaded but no player
+      if (this.sdkState === 'loaded' && !this.player) {
+        this.logService.log('[Spotify SDK] Creating player instance')
+        this.initializePlayer()
+      }
+
+      // Step 3: Connect player if exists but not connected
+      if (this.player && !this.isConnected$.value) {
+        this.logService.log('[Spotify SDK] Connecting player')
+        try {
+          await this.player.connect()
+          // Wait briefly for ready event
+          await this.waitForConnection(5000)
+        } catch (error) {
+          this.logService.error('[Spotify SDK] Error connecting player:', error)
+        }
+      }
+
+      const ready = this.isPlayerReady()
+      this.logService.log('[Spotify SDK] ensurePlayerReady() result:', ready, 'state:', this.sdkState)
+      return ready
+    } catch (error) {
+      this.logService.error('[Spotify SDK] ensurePlayerReady() exception:', error)
       return false
     }
-
-    // Step 1: Load SDK if needed
-    if (this.sdkState === 'not_loaded' || this.sdkState === 'error') {
-      await this.tryLoadSDK()
-    }
-
-    // Step 2: Create player if SDK loaded but no player
-    if (this.sdkState === 'loaded' && !this.player) {
-      this.logService.log('[Spotify SDK] Creating player instance')
-      this.initializePlayer()
-    }
-
-    // Step 3: Connect player if exists but not connected
-    if (this.player && !this.isConnected$.value) {
-      this.logService.log('[Spotify SDK] Connecting player')
-      try {
-        await this.player.connect()
-        // Wait briefly for ready event
-        await this.waitForConnection(5000)
-      } catch (error) {
-        this.logService.error('[Spotify SDK] Error connecting player:', error)
-      }
-    }
-
-    const ready = this.isPlayerReady()
-    this.logService.log('[Spotify SDK] ensurePlayerReady() result:', ready, 'state:', this.sdkState)
-    return ready
   }
 
   /**
@@ -316,7 +360,7 @@ export class SpotifyPlayerService {
   private loadSDKScript(): Promise<void> {
     return new Promise((resolve, reject) => {
       // Check network
-      if (!navigator.onLine) {
+      if (!this.isOnline) {
         reject(new Error('Device is offline'))
         return
       }
