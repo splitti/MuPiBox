@@ -18,7 +18,12 @@ import type {
 export class SpotifyApiService {
   private spotifyApi: SpotifyApi
   private cacheDir = path.join(process.cwd(), 'cache', 'spotify-api')
-  private cacheExpiry = 30 * 60 * 1000 // 30 minutes in milliseconds
+  private cacheExpiry = {
+    static: 7 * 24 * 60 * 60 * 1000, // 7 days for Albums, Shows, Artists, etc.
+    semiStatic: 24 * 60 * 60 * 1000, // 24 hours for Artist Albums, Show Episodes
+    dynamic: 2 * 60 * 60 * 1000, // 2 hours for Playlists
+    search: 6 * 60 * 60 * 1000, // 6 hours for Search Results
+  }
 
   // Rate limiting
   private lastRequestTime = 0
@@ -49,7 +54,8 @@ export class SpotifyApiService {
   private backgroundUpdates = new Set<string>()
   private backgroundQueue: Array<{ key: string; operation: () => Promise<any> }> = []
   private isProcessingBackground = false
-  private readonly maxConcurrentBackground = 2
+  private readonly maxConcurrentBackground = 1
+  private readonly backgroundUpdateDelay = 10000 // 10 seconds between updates
 
   constructor(private config: ServerConfig) {
     this.spotifyApi = SpotifyApi.withClientCredentials(
@@ -67,6 +73,28 @@ export class SpotifyApiService {
 
   private getCacheFilePath(cacheKey: string): string {
     return path.join(this.cacheDir, `${cacheKey}.json`)
+  }
+
+  private getCacheExpiryForKey(cacheKey: string): number {
+    if (
+      cacheKey.startsWith('album_') ||
+      cacheKey.startsWith('show_') ||
+      cacheKey.startsWith('audiobook_') ||
+      cacheKey.startsWith('artist_') ||
+      cacheKey.startsWith('episode_')
+    ) {
+      return this.cacheExpiry.static
+    }
+    if (cacheKey.startsWith('artist_albums_') || cacheKey.startsWith('show_episodes_')) {
+      return this.cacheExpiry.semiStatic
+    }
+    if (cacheKey.startsWith('playlist_')) {
+      return this.cacheExpiry.dynamic
+    }
+    if (cacheKey.startsWith('search_')) {
+      return this.cacheExpiry.search
+    }
+    return this.cacheExpiry.dynamic // Fallback
   }
 
   private async getFromCache(cacheKey: string): Promise<{ data: any | null; isStale: boolean }> {
@@ -100,10 +128,11 @@ export class SpotifyApiService {
       this.ensureCacheDir()
       const cacheFile = this.getCacheFilePath(cacheKey)
 
+      const expiryTime = this.getCacheExpiryForKey(cacheKey)
       const cachedData: CachedSpotifyData = {
         data,
         timestamp: Date.now(),
-        expiresAt: Date.now() + this.cacheExpiry,
+        expiresAt: Date.now() + expiryTime,
       }
 
       fs.writeFileSync(cacheFile, JSON.stringify(cachedData, null, 2))
@@ -140,22 +169,24 @@ export class SpotifyApiService {
     }
   }
 
-  private async executeWithCache<T>(cacheKey: string, operation: () => Promise<T>, skipCache = false): Promise<T> {
-    // Check cache first (unless explicitly skipped)
-    if (!skipCache) {
-      const cacheResult = await this.getFromCache(cacheKey)
+  private async executeWithCache<T>(
+    cacheKey: string,
+    operation: () => Promise<T>,
+    forceBackgroundRefresh = false,
+  ): Promise<T> {
+    const cacheResult = await this.getFromCache(cacheKey)
 
-      if (cacheResult.data) {
-        // Return cached data immediately, even if stale
-        if (cacheResult.isStale) {
-          // Trigger background update if cache is stale and not already updating
-          this.triggerBackgroundUpdate(cacheKey, operation)
-        }
-        return cacheResult.data as T
+    if (cacheResult.data) {
+      // Return cached data immediately, even if stale
+      if (cacheResult.isStale || forceBackgroundRefresh) {
+        // Trigger background update if cache is stale or refresh is forced
+        // Prioritize forced refreshes (e.g., when actively playing content)
+        this.triggerBackgroundUpdate(cacheKey, operation, forceBackgroundRefresh)
       }
+      return cacheResult.data as T
     }
 
-    // No cache exists or cache skipped - queue for synchronous processing
+    // No cache exists - queue for synchronous processing
     console.info(`🔍 No cache for ${cacheKey}, executing request...`)
     return this.queueRequest(cacheKey, operation)
   }
@@ -245,7 +276,7 @@ export class SpotifyApiService {
     console.debug('🏁 Finished processing request queue')
   }
 
-  private triggerBackgroundUpdate(cacheKey: string, operation: () => Promise<any>): void {
+  private triggerBackgroundUpdate(cacheKey: string, operation: () => Promise<any>, prioritize = false): void {
     if (this.backgroundUpdates.has(cacheKey)) {
       console.debug(`🔄 Background update already in progress for ${cacheKey}`)
       return
@@ -256,8 +287,15 @@ export class SpotifyApiService {
       return
     }
 
-    this.backgroundQueue.push({ key: cacheKey, operation })
-    console.debug(`📋 Queued background update for ${cacheKey}`)
+    if (prioritize) {
+      // Add to front of queue for immediate processing
+      this.backgroundQueue.unshift({ key: cacheKey, operation })
+      console.debug(`⚡ Prioritized background update for ${cacheKey} (added to front of queue)`)
+    } else {
+      // Add to end of queue
+      this.backgroundQueue.push({ key: cacheKey, operation })
+      console.debug(`📋 Queued background update for ${cacheKey}`)
+    }
 
     if (!this.isProcessingBackground) {
       this.processBackgroundQueue()
@@ -290,6 +328,8 @@ export class SpotifyApiService {
           .then(async (result) => {
             await this.saveToCache(key, result)
             console.debug(`✅ [BG] Background update completed for ${key}`)
+            // Delay to reduce load on Raspberry Pi
+            await new Promise((resolve) => setTimeout(resolve, this.backgroundUpdateDelay))
           })
           .catch((error) => {
             console.error(
@@ -412,42 +452,50 @@ export class SpotifyApiService {
     })
   }
 
-  async getPlaylist(playlistId: string): Promise<SpotifyApiPlaylistDetails> {
+  async getPlaylist(playlistId: string, forceBackgroundRefresh = false): Promise<SpotifyApiPlaylistDetails> {
     const cacheKey = `playlist_${playlistId}`
 
-    return this.executeWithCache(cacheKey, async () => {
-      const result = await this.spotifyApi.playlists.getPlaylist(playlistId, 'DE')
-      return {
-        id: result.id,
-        name: result.name,
-        images: result.images,
-        tracks: {
-          total: result.tracks.total,
-          items: result.tracks.items.map((item: any) => ({
-            track: {
-              id: item.track?.id || '',
-              uri: item.track?.uri || '',
-              name: item.track?.name || '',
-            },
-          })),
-        },
-      }
-    })
+    return this.executeWithCache(
+      cacheKey,
+      async () => {
+        const result = await this.spotifyApi.playlists.getPlaylist(playlistId, 'DE')
+        return {
+          id: result.id,
+          name: result.name,
+          images: result.images,
+          tracks: {
+            total: result.tracks.total,
+            items: result.tracks.items.map((item: any) => ({
+              track: {
+                id: item.track?.id || '',
+                uri: item.track?.uri || '',
+                name: item.track?.name || '',
+              },
+            })),
+          },
+        }
+      },
+      forceBackgroundRefresh,
+    )
   }
 
-  async getPlaylistTracks(playlistId: string, limit = 50, offset = 0): Promise<any[]> {
+  async getPlaylistTracks(playlistId: string, limit = 50, offset = 0, forceBackgroundRefresh = false): Promise<any[]> {
     const cacheKey = `playlist_tracks_${playlistId}_${limit}_${offset}`
 
-    return this.executeWithCache(cacheKey, async () => {
-      const result = await this.spotifyApi.playlists.getPlaylistItems(
-        playlistId,
-        'DE',
-        'items(track(id,uri,name))',
-        Math.min(limit, 50) as any,
-        offset,
-      )
-      return result.items
-    })
+    return this.executeWithCache(
+      cacheKey,
+      async () => {
+        const result = await this.spotifyApi.playlists.getPlaylistItems(
+          playlistId,
+          'DE',
+          'items(track(id,uri,name))',
+          Math.min(limit, 50) as any,
+          offset,
+        )
+        return result.items
+      },
+      forceBackgroundRefresh,
+    )
   }
 
   async getShow(showId: string): Promise<SpotifyApiShowDetails> {
