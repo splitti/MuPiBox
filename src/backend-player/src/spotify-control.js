@@ -2,11 +2,16 @@ const express = require('express')
 const http = require('node:http')
 const bodyParser = require('body-parser')
 const path = require('node:path')
+const dns = require('node:dns')
 const SpotifyWebApi = require('spotify-web-api-node')
 const createPlayer = require('./mplayer-wrapper.js')
 const googleTTS = require('google-tts-api')
 const fs = require('node:fs')
 const childProcess = require('node:child_process')
+
+// Force IPv4 for DNS lookups to avoid EAI_AGAIN errors on Raspberry Pi
+// This fixes issues where IPv6 is misconfigured or not supported
+dns.setDefaultResultOrder('ipv4first')
 
 let configBasePath = './config'
 //let networkConfigBasePath = '/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config'
@@ -1036,7 +1041,7 @@ app.get('/spotify/token', (_req, res) => {
   const accessTokenData = apiAccessToken
   const refreshToken = refreshTokenApi
 
-  if (accessTokenData.accessToken !== null && accessTokenData.expires < Date.now()) {
+  if (accessTokenData.accessToken !== null && accessTokenData.expires > Date.now()) {
     res.send(accessTokenData.accessToken)
   } else {
     refreshToken()

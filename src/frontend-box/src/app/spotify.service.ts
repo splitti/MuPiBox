@@ -547,8 +547,8 @@ export class SpotifyService {
    * Get playlist information including total tracks and track data
    */
   getPlaylistInfo(playlistId: string): Observable<{ total_tracks: number; playlist_name: string; tracks?: any[] }> {
-    const playlistApiUrl = `${environment.backend.apiUrl}/spotify/playlist-api/${playlistId}`
-    const playlistTracksUrl = `${environment.backend.apiUrl}/spotify/playlist/${playlistId}/tracks`
+    const playlistApiUrl = `${environment.backend.apiUrl}/spotify/playlist-api/${playlistId}?refresh=true`
+    const playlistTracksUrl = `${environment.backend.apiUrl}/spotify/playlist/${playlistId}/tracks?refresh=true`
 
     return this.http.get<any>(playlistApiUrl).pipe(
       switchMap((playlist) => {
