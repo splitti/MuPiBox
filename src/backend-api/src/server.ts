@@ -1,4 +1,5 @@
 import { exec } from 'node:child_process'
+import dns from 'node:dns'
 import fs from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
@@ -12,6 +13,10 @@ import { ServerConfig } from './models/server.model'
 import type { SpotifyValidationRequest, SpotifyValidationResponse } from './models/spotify-api.model'
 import { SpotifyApiService } from './services/spotify-api.service'
 import { SpotifyMediaInfo } from './services/spotify-media-info.service'
+
+// Force IPv4 for DNS lookups to avoid EAI_AGAIN errors on Raspberry Pi
+// This fixes issues where IPv6 is misconfigured or not supported
+dns.setDefaultResultOrder('ipv4first')
 
 const testServe = process.env.NODE_ENV === 'test'
 const devServe = process.env.NODE_ENV === 'development'
@@ -579,6 +584,7 @@ app.get('/api/spotify/playlist-api/:playlistId', async (req, res) => {
   }
 
   const playlistId = req.params.playlistId
+  const forceRefresh = req.query.refresh === 'true'
 
   if (!playlistId) {
     res.status(400).json({ error: 'Playlist ID is required' })
@@ -586,7 +592,7 @@ app.get('/api/spotify/playlist-api/:playlistId', async (req, res) => {
   }
 
   try {
-    const playlist = await spotifyApiService.getPlaylist(playlistId)
+    const playlist = await spotifyApiService.getPlaylist(playlistId, forceRefresh)
     res.status(200).json(playlist)
   } catch (error) {
     console.error(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error getting playlist:`, error)
@@ -607,6 +613,7 @@ app.get('/api/spotify/playlist/:playlistId/tracks', async (req, res) => {
   const playlistId = req.params.playlistId
   const limit = Number.parseInt(req.query.limit as string, 10) || 50
   const offset = Number.parseInt(req.query.offset as string, 10) || 0
+  const forceRefresh = req.query.refresh === 'true'
 
   if (!playlistId) {
     res.status(400).json({ error: 'Playlist ID is required' })
@@ -614,7 +621,7 @@ app.get('/api/spotify/playlist/:playlistId/tracks', async (req, res) => {
   }
 
   try {
-    const tracks = await spotifyApiService.getPlaylistTracks(playlistId, limit, offset)
+    const tracks = await spotifyApiService.getPlaylistTracks(playlistId, limit, offset, forceRefresh)
     res.status(200).json(tracks)
   } catch (error) {
     console.error(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error getting playlist tracks:`, error)
