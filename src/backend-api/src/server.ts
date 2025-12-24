@@ -439,29 +439,84 @@ app.get('/api/spotify/config', (_req, res) => {
   })
 })
 
+// Unified playlist endpoint with API + Scraper fallback and optimized caching
 app.get('/api/spotify/playlist/:playlistId', async (req, res) => {
   const playlistId = req.params.playlistId
+  const forceRefresh = req.query.refresh === 'true'
 
   if (!playlistId) {
     res.status(400).json({ error: 'Playlist ID is required' })
     return
   }
 
-  try {
-    console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Fetching Spotify playlist: ${playlistId}`)
+  if (!spotifyApiService) {
+    res.status(503).json({ error: 'Spotify API service not available' })
+    return
+  }
 
-    const playlistData = await spotifyMediaInfo.fetchPlaylistData(playlistId)
-    res.status(200).json(playlistData)
+  // Step 1: Check scraper cache first (fastest - no API call needed)
+  const cachedScraperData = await spotifyMediaInfo.getCachedPlaylistData(playlistId)
 
+  if (cachedScraperData) {
+    // Return cached data immediately for best performance
     console.log(
-      `${nowDate.toLocaleString()}: [MuPiBox-Server] Successfully fetched playlist: ${playlistData.playlist.name}`,
+      `${nowDate.toLocaleString()}: [MuPiBox-Server] ⚡ Returning cached scraper data for playlist: ${cachedScraperData.playlist.name}`,
     )
-  } catch (error) {
-    console.error(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error fetching playlist ${playlistId}:`, error)
-    res.status(500).json({
-      error: 'Failed to fetch playlist data',
-      message: error instanceof Error ? error.message : 'Unknown error',
+    res.status(200).json(cachedScraperData)
+
+    // Trigger background update (fire-and-forget) to keep cache fresh
+    // This runs async after response is sent
+    setImmediate(async () => {
+      if (!spotifyApiService) return
+
+      try {
+        console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] 🔄 Background update for playlist ${playlistId}`)
+
+        // Try API first in background
+        await spotifyApiService.getPlaylist(playlistId, forceRefresh)
+        console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] ✅ Background API update completed`)
+      } catch (_apiError) {
+        // If API fails, update via scraper
+        console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] API failed in background, updating via scraper`)
+        await spotifyMediaInfo.fetchPlaylistData(playlistId)
+      }
     })
+
+    return
+  }
+
+  // Step 2: No cache exists - fetch synchronously (try API first, then scraper)
+  try {
+    console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Fetching playlist via API: ${playlistId}`)
+
+    // Try API first (fast for public/accessible playlists)
+    const apiData = await spotifyApiService.getPlaylist(playlistId, forceRefresh)
+    res.status(200).json(apiData)
+
+    console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Successfully fetched playlist via API: ${apiData.name}`)
+  } catch (_apiError) {
+    console.log(
+      `${nowDate.toLocaleString()}: [MuPiBox-Server] API failed for playlist ${playlistId}, trying scraper fallback...`,
+    )
+
+    // API failed - try scraper fallback (for private/restricted playlists)
+    try {
+      const scraperData = await spotifyMediaInfo.fetchPlaylistData(playlistId)
+      res.status(200).json(scraperData)
+
+      console.log(
+        `${nowDate.toLocaleString()}: [MuPiBox-Server] Successfully fetched playlist via scraper: ${scraperData.playlist.name}`,
+      )
+    } catch (scraperError) {
+      console.error(
+        `${nowDate.toLocaleString()}: [MuPiBox-Server] Both API and scraper failed for playlist ${playlistId}:`,
+        scraperError,
+      )
+      res.status(500).json({
+        error: 'Failed to fetch playlist data',
+        message: scraperError instanceof Error ? scraperError.message : 'Unknown error',
+      })
+    }
   }
 })
 
@@ -571,33 +626,6 @@ app.get('/api/spotify/album/:albumId', async (req, res) => {
     console.error(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error getting album:`, error)
     res.status(500).json({
       error: 'Failed to get album',
-      message: error instanceof Error ? error.message : 'Unknown error',
-    })
-  }
-})
-
-// Get playlist details (using API service, not scraper)
-app.get('/api/spotify/playlist-api/:playlistId', async (req, res) => {
-  if (!spotifyApiService) {
-    res.status(503).json({ error: 'Spotify API service not available' })
-    return
-  }
-
-  const playlistId = req.params.playlistId
-  const forceRefresh = req.query.refresh === 'true'
-
-  if (!playlistId) {
-    res.status(400).json({ error: 'Playlist ID is required' })
-    return
-  }
-
-  try {
-    const playlist = await spotifyApiService.getPlaylist(playlistId, forceRefresh)
-    res.status(200).json(playlist)
-  } catch (error) {
-    console.error(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error getting playlist:`, error)
-    res.status(500).json({
-      error: 'Failed to get playlist',
       message: error instanceof Error ? error.message : 'Unknown error',
     })
   }
