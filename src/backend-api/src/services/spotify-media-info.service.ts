@@ -203,6 +203,15 @@ export class SpotifyMediaInfo {
     }
   }
 
+  /**
+   * Get cached playlist data without triggering any fetching.
+   * Returns null if no cache exists.
+   */
+  public async getCachedPlaylistData(playlistId: string): Promise<SpotifyPlaylistData | null> {
+    const cacheResult = await this.getFromCache(playlistId, 'playlist')
+    return cacheResult.data
+  }
+
   public async fetchPlaylistData(playlistId: string): Promise<SpotifyPlaylistData> {
     // Check cache first (stale-while-revalidate pattern)
     const cacheResult = await this.getFromCache(playlistId, 'playlist')

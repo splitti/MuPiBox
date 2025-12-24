@@ -444,20 +444,14 @@ export class SpotifyService {
     resumespotifyprogress_ms: number,
     resumespotifytrack_number: number,
   ): Observable<Media> {
-    // Try API first, then fallback to scraper
-    const playlistApiUrl = `${environment.backend.apiUrl}/spotify/playlist-api/${id}`
+    // Unified endpoint handles API + Scraper fallback automatically in backend
+    const playlistUrl = `${environment.backend.apiUrl}/spotify/playlist/${id}?refresh=true`
 
-    return this.http.get<any>(playlistApiUrl).pipe(
-      catchError((_err) => {
-        this.logService.log('Spotify API failed for playlist %s, trying backend media info service...', id)
-
-        return this.http.get<any>(`${environment.backend.apiUrl}/spotify/playlist/${id}`).pipe(
-          timeout(30000),
-          catchError((backendErr) => {
-            this.logService.error(`Backend failed for playlist ${id}:`, backendErr?.message || backendErr)
-            return EMPTY
-          }),
-        )
+    return this.http.get<any>(playlistUrl).pipe(
+      timeout(60000), // 60 seconds (for scraper fallback if needed)
+      catchError((err) => {
+        this.logService.error(`Failed to fetch playlist ${id}:`, err?.message || err)
+        return EMPTY
       }),
       map((response: any) => {
         // Check if response is from backend scraper (has different structure)
@@ -547,46 +541,45 @@ export class SpotifyService {
    * Get playlist information including total tracks and track data
    */
   getPlaylistInfo(playlistId: string): Observable<{ total_tracks: number; playlist_name: string; tracks?: any[] }> {
-    const playlistApiUrl = `${environment.backend.apiUrl}/spotify/playlist-api/${playlistId}?refresh=true`
-    const playlistTracksUrl = `${environment.backend.apiUrl}/spotify/playlist/${playlistId}/tracks?refresh=true`
+    // Unified endpoint handles API + Scraper fallback automatically in backend
+    const playlistUrl = `${environment.backend.apiUrl}/spotify/playlist/${playlistId}?refresh=true`
 
-    return this.http.get<any>(playlistApiUrl).pipe(
-      switchMap((playlist) => {
-        // Get all tracks for position calculation
-        return this.http.get<any[]>(playlistTracksUrl).pipe(
-          map((tracksData) => ({
-            total_tracks: playlist.tracks.total,
-            playlist_name: playlist.name,
-            tracks: tracksData.map((item: any) => ({
-              id: item.track.id,
-              uri: item.track.uri,
-              name: item.track.name,
+    return this.http.get<any>(playlistUrl).pipe(
+      timeout(60000), // 60 seconds (for scraper fallback if needed)
+      switchMap((response) => {
+        // Check if response is from backend scraper (has different structure)
+        const isFromBackend = response.playlist && response.tracks
+
+        if (isFromBackend) {
+          // Scraper format - tracks are directly in array with full data
+          return of({
+            total_tracks: response.tracks.length,
+            playlist_name: response.playlist.name,
+            tracks: response.tracks.map((track: any) => ({
+              id: track.id,
+              uri: track.uri,
+              name: track.name,
             })),
-          })),
-        )
+          })
+        } else {
+          // API format - fetch all tracks via tracks endpoint for complete data
+          const playlistTracksUrl = `${environment.backend.apiUrl}/spotify/playlist/${playlistId}/tracks?refresh=true`
+          return this.http.get<any[]>(playlistTracksUrl).pipe(
+            map((tracksData) => ({
+              total_tracks: response.tracks.total,
+              playlist_name: response.name,
+              tracks: tracksData.map((item: any) => ({
+                id: item.track.id,
+                uri: item.track.uri,
+                name: item.track.name,
+              })),
+            })),
+          )
+        }
       }),
-      catchError((_error) => {
-        this.logService.log('Spotify API failed for playlist info %s, trying backend media info...', playlistId)
-
-        // Fallback to backend scraper endpoint
-        return this.http.get<any>(`${environment.backend.apiUrl}/spotify/playlist/${playlistId}`).pipe(
-          // Increase timeout for playlist info - backend needs time for Puppeteer + API calls
-          timeout(60000), // 60 seconds
-          map((backendData: any) => ({
-            total_tracks: backendData.tracks?.length || 0,
-            playlist_name: backendData.playlist?.name || '',
-            tracks:
-              backendData.tracks?.map((track: any) => ({
-                id: track.id,
-                uri: track.uri,
-                name: track.name,
-              })) || [],
-          })),
-          catchError((backendError) => {
-            this.logService.error('Backend also failed for playlist info:', backendError)
-            return of({ total_tracks: 0, playlist_name: '', tracks: [] })
-          }),
-        )
+      catchError((error) => {
+        this.logService.error('Failed to fetch playlist info:', error)
+        return of({ total_tracks: 0, playlist_name: '', tracks: [] })
       }),
     )
   }
