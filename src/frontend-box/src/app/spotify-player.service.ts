@@ -2,7 +2,7 @@ import { DOCUMENT } from '@angular/common'
 import { HttpClient } from '@angular/common/http'
 import { Inject, Injectable } from '@angular/core'
 import { BehaviorSubject } from 'rxjs'
-import { filter } from 'rxjs/operators'
+import { debounceTime, filter } from 'rxjs/operators'
 import { environment } from 'src/environments/environment'
 import { LogService } from './log.service'
 import type { Media } from './media'
@@ -40,6 +40,14 @@ export class SpotifyPlayerService {
 
   // Lock to prevent parallel ensurePlayerReady calls
   private ensurePlayerReadyPromise: Promise<boolean> | null = null
+
+  // Timeout tracking to prevent ghost callbacks
+  private activeTimeouts: Set<ReturnType<typeof setTimeout>> = new Set()
+
+  // Network recovery cooldown
+  private lastRecoveryAttempt: number = 0
+  private readonly RECOVERY_COOLDOWN_MS = 10000 // 10 seconds
+  private readonly NETWORK_DEBOUNCE_MS = 3000 // 3 seconds - wait for network to stabilize
 
   // Cached online state from NetworkService
   private isOnline = false
@@ -242,23 +250,35 @@ export class SpotifyPlayerService {
    * Prevents parallel calls and implements timeout protection.
    */
   async ensurePlayerReady(): Promise<boolean> {
+    // If player is already ready, return immediately without waiting for any ongoing recovery
+    if (this.isPlayerReady()) {
+      this.logService.log('[Spotify SDK] Player already ready, returning immediately')
+      return true
+    }
+
     // If already in progress, return the existing promise
     if (this.ensurePlayerReadyPromise) {
       this.logService.log('[Spotify SDK] ensurePlayerReady() already in progress, waiting...')
       return this.ensurePlayerReadyPromise
     }
 
+    // Clear any previous timeouts to prevent ghost callbacks
+    this.clearAllTimeouts()
+
     // Create new promise with timeout protection
     this.ensurePlayerReadyPromise = Promise.race([
       this._ensurePlayerReadyInternal(),
-      new Promise<boolean>((resolve) =>
-        setTimeout(() => {
+      new Promise<boolean>((resolve) => {
+        const timeoutId = setTimeout(() => {
           this.logService.error('[Spotify SDK] ensurePlayerReady() timeout after 30s')
+          this.activeTimeouts.delete(timeoutId)
           resolve(false)
-        }, 30000),
-      ),
+        }, 30000)
+        this.activeTimeouts.add(timeoutId)
+      }),
     ]).finally(() => {
-      // Clear the lock when done (success, failure, or timeout)
+      // Clear all timeouts and the lock when done (success, failure, or timeout)
+      this.clearAllTimeouts()
       this.ensurePlayerReadyPromise = null
     })
 
@@ -314,6 +334,16 @@ export class SpotifyPlayerService {
       this.logService.error('[Spotify SDK] ensurePlayerReady() exception:', error)
       return false
     }
+  }
+
+  /**
+   * Clear all active timeout timers to prevent ghost callbacks
+   */
+  private clearAllTimeouts(): void {
+    for (const timeoutId of this.activeTimeouts) {
+      clearTimeout(timeoutId)
+    }
+    this.activeTimeouts.clear()
   }
 
   /**
@@ -533,10 +563,24 @@ export class SpotifyPlayerService {
       .isOnline()
       .pipe(
         filter((isOnline) => isOnline),
+        debounceTime(this.NETWORK_DEBOUNCE_MS), // Wait for network to stabilize
         filter(() => this.sdkState === 'error' || this.sdkState === 'not_loaded'),
       )
       .subscribe(() => {
-        this.logService.log('[Spotify SDK] Network online, attempting full recovery...')
+        // Check cooldown to prevent excessive recovery attempts
+        const now = Date.now()
+        const timeSinceLastAttempt = now - this.lastRecoveryAttempt
+
+        if (timeSinceLastAttempt < this.RECOVERY_COOLDOWN_MS) {
+          const remainingCooldown = Math.ceil((this.RECOVERY_COOLDOWN_MS - timeSinceLastAttempt) / 1000)
+          this.logService.log(
+            `[Spotify SDK] Network online but in cooldown period (${remainingCooldown}s remaining), skipping recovery`,
+          )
+          return
+        }
+
+        this.logService.log('[Spotify SDK] Network online and stable, attempting full recovery...')
+        this.lastRecoveryAttempt = now
         this.ensurePlayerReady().catch((error) => {
           this.logService.error('[Spotify SDK] Error during network recovery:', error)
         })
