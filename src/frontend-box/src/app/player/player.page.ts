@@ -258,6 +258,11 @@ export class PlayerPage implements OnInit {
       const success = await this.playerService.playMedia(this.media)
       if (!success && this.media.type === 'spotify') {
         this.logService.error('[PlayerPage] Failed to start Spotify playback - player health check failed')
+        // Mark as not playing and navigate back
+        this.playing = false
+        this.updateProgression = false
+        this.navController.back()
+        return
       }
     }
 
@@ -303,6 +308,11 @@ export class PlayerPage implements OnInit {
       const success = await this.playerService.resumeMedia(this.media)
       if (!success) {
         this.logService.error('[PlayerPage] Failed to resume Spotify playback - player health check failed')
+        // Mark as not playing and navigate back
+        this.playing = false
+        this.updateProgression = false
+        this.navController.back()
+        return
       }
     } else if (this.media.type === 'library') {
       this.media.category = this.media.resumelocalalbum
