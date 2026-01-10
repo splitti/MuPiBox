@@ -8,16 +8,19 @@ jobs:
       DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
       UPSTREAM_BRANCH: toUpstream
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           fetch-tags: true
+
       - name: Add upstream remote
         run: git remote add upstream https://github.com/splitti/MuPiBox.git
+
       - name: Set user name
         run: |
           git config --global user.name "${{ github.actor }}"
           git config --global user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
+
       - name: Merge new tags into develop one by one
         run: |
           NEWTAGS=$(git fetch --tags --force upstream 2>&1 | awk '/\[new tag\]/ {print $4}')
@@ -46,8 +49,10 @@ jobs:
 
             git checkout ${DEFAULT_BRANCH}
           done
+
       - name: Merge remaining changes from main
         run: git merge --no-edit origin/main
+
       - name: Merge also to toUpstream
         run: |
           git checkout ${UPSTREAM_BRANCH}
@@ -55,6 +60,7 @@ jobs:
           DELETED_FILES=$(git status | awk '/deleted by us/ {print $4}')
           if [ ! -z "${DELETED_FILES}" ]; then git rm ${DELETED_FILES}; fi
           if ! git commit --no-edit; then :; fi
+
       - name: Push everything
         run: |
           git push --all
