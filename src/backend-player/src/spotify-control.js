@@ -592,8 +592,22 @@ function playMe() {
   resumeProgess = currentMeta.activeSpotifyId.split(':')[4]
   tmp = currentMeta.activeSpotifyId.split(':')
   contextUri = `${tmp[0]}:${tmp[1]}:${tmp[2]}`
+
+  // Prepare play options with device_id if available
+  const playOptions = {
+    offset: { position: resumeOffset },
+    position_ms: resumeProgess,
+  }
+
+  // Add device_id if we have an active device
+  if (activeDevice) {
+    playOptions.device_id = activeDevice
+    log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Playing on device: ${activeDevice}`)
+  }
+
   if (contextUri.split(':')[1] === 'episode') {
-    spotifyApi.play({ uris: [contextUri], offset: { position: resumeOffset }, position_ms: resumeProgess }).then(
+    playOptions.uris = [contextUri]
+    spotifyApi.play(playOptions).then(
       (_data) => {
         counter.countplay++
         if (config.server.logLevel === 'debug') {
@@ -624,7 +638,8 @@ function playMe() {
     //   handleSpotifyError(err,"setVolume");
     // });
   } else {
-    spotifyApi.play({ context_uri: contextUri, offset: { position: resumeOffset }, position_ms: resumeProgess }).then(
+    playOptions.context_uri = contextUri
+    spotifyApi.play(playOptions).then(
       (_data) => {
         log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Playback started`)
         counter.countplay++
@@ -890,23 +905,6 @@ function downloadTTS(name) {
     .catch(console.error)
 }
 
-async function getCurrentActiveDevice() {
-  try {
-    const data = await spotifyApi.getMyCurrentPlaybackState()
-    if (data.body?.device) {
-      log.debug(
-        `${nowDate.toLocaleString()}: [Spotify Control] Current active device from Spotify: ${data.body.device.id} (${data.body.device.name})`,
-      )
-      return data.body.device.id
-    }
-    log.debug(`${nowDate.toLocaleString()}: [Spotify Control] No active device in current playback state`)
-    return null
-  } catch (err) {
-    log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Error getting current playback state: ${err}`)
-    return null
-  }
-}
-
 async function useSpotify(command) {
   currentMeta.currentPlayer = 'spotify'
   currentMeta.currentType = 'spotify'
@@ -915,41 +913,14 @@ async function useSpotify(command) {
 
   log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Stored device: ${activeDevice}, Requested: ${newdevice}`)
 
-  let needsTransfer = false
-
-  if (newdevice === 'current') {
-    // Use current device, no transfer needed
-    log.debug(`${nowDate.toLocaleString()}: [Spotify Control] using current device: ${activeDevice}`)
-  } else if (newdevice !== activeDevice) {
-    // Fast path: locally stored device is different -> transfer immediately
-    log.debug(
-      `${nowDate.toLocaleString()}: [Spotify Control] device changed from ${activeDevice} to ${newdevice} (local check)`,
-    )
-    needsTransfer = true
-  } else {
-    // Slow path: local matches requested, but verify with Spotify API (e.g. after network recovery)
-    const spotifyActiveDevice = await getCurrentActiveDevice()
-    log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Spotify active device: ${spotifyActiveDevice}`)
-
-    if (spotifyActiveDevice && spotifyActiveDevice !== newdevice) {
-      // Spotify has a different device active -> transfer required
-      log.debug(
-        `${nowDate.toLocaleString()}: [Spotify Control] Spotify device mismatch, transferring from ${spotifyActiveDevice} to ${newdevice}`,
-      )
-      needsTransfer = true
-    } else {
-      log.debug(`${nowDate.toLocaleString()}: [Spotify Control] device already correct: ${newdevice}`)
-    }
-  }
-
-  // Perform transfer if needed
-  if (needsTransfer) {
-    await transferPlayback(newdevice)
+  // Update active device (will be used in playMe() via device_id parameter)
+  if (newdevice !== 'current') {
     activeDevice = newdevice
-    log.debug(`${nowDate.toLocaleString()}: [Spotify Control] device is now ${activeDevice}`)
-    log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Waiting for device transfer to complete...`)
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-    log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Device transfer delay completed`)
+    log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Device set to: ${activeDevice}`)
+  } else {
+    // Reset device to let Spotify use the currently active device
+    activeDevice = null
+    log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Using current active Spotify device (no device_id specified)`)
   }
 
   currentMeta.activeSpotifyId = command.name
