@@ -138,7 +138,7 @@ def parse_arguments():
         "-c", "--config",
         type=str,
         help="Config (Json) File for MuPiHAT",
-        default="/etc/mupibox/mupihatconfig.json"
+        default="/etc/mupibox/mupiboxconfig.json"
     )
     return parser.parse_args()
 
