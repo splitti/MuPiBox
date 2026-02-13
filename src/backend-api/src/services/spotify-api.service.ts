@@ -384,7 +384,7 @@ export class SpotifyApiService {
   async getArtistAlbums(
     artistId: string,
     albumTypes = 'album,single,compilation',
-    limit = 50,
+    limit = 5,
     offset = 0,
   ): Promise<{ items: SpotifyApiArtistAlbumsResult[]; total: number; limit: number; offset: number }> {
     const cacheKey = `artist_albums_${artistId}_${albumTypes}_${limit}_${offset}`
@@ -394,7 +394,7 @@ export class SpotifyApiService {
         artistId,
         'album,single,compilation',
         'DE',
-        Math.min(limit, 50) as any,
+        Math.min(limit, 5) as any,
         offset,
       )
       return {
@@ -414,13 +414,13 @@ export class SpotifyApiService {
 
   async getShowEpisodes(
     showId: string,
-    limit = 50,
+    limit = 5,
     offset = 0,
   ): Promise<{ items: SpotifyApiShowEpisodesResult[]; total: number; limit: number; offset: number }> {
     const cacheKey = `show_episodes_${showId}_${limit}_${offset}`
 
     return this.executeWithCache(cacheKey, async () => {
-      const result = await this.spotifyApi.shows.episodes(showId, 'DE', Math.min(limit, 50) as any, offset)
+      const result = await this.spotifyApi.shows.episodes(showId, 'DE', Math.min(limit, 5) as any, offset)
       return {
         items: result.items.map((item) => ({
           id: item.id,
@@ -464,14 +464,8 @@ export class SpotifyApiService {
           name: result.name,
           images: result.images,
           tracks: {
-            total: result.tracks.total,
-            items: result.tracks.items.map((item: any) => ({
-              track: {
-                id: item.track?.id || '',
-                uri: item.track?.uri || '',
-                name: item.track?.name || '',
-              },
-            })),
+            total: 0,
+            items: [],
           },
         }
       },
@@ -479,7 +473,7 @@ export class SpotifyApiService {
     )
   }
 
-  async getPlaylistTracks(playlistId: string, limit = 50, offset = 0, forceBackgroundRefresh = false): Promise<any[]> {
+  async getPlaylistTracks(playlistId: string, limit = 5, offset = 0, forceBackgroundRefresh = false): Promise<any[]> {
     const cacheKey = `playlist_tracks_${playlistId}_${limit}_${offset}`
 
     return this.executeWithCache(
@@ -489,7 +483,7 @@ export class SpotifyApiService {
           playlistId,
           'DE',
           'items(track(id,uri,name))',
-          Math.min(limit, 50) as any,
+          Math.min(limit, 5) as any,
           offset,
         )
         return result.items
