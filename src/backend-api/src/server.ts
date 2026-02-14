@@ -467,19 +467,8 @@ app.get('/api/spotify/playlist/:playlistId', async (req, res) => {
     // Trigger background update (fire-and-forget) to keep cache fresh
     // This runs async after response is sent
     setImmediate(async () => {
-      if (!spotifyApiService) return
-
-      try {
-        console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] 🔄 Background update for playlist ${playlistId}`)
-
-        // Try API first in background
-        await spotifyApiService.getPlaylist(playlistId, forceRefresh)
-        console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] ✅ Background API update completed`)
-      } catch (_apiError) {
-        // If API fails, update via scraper
-        console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] API failed in background, updating via scraper`)
-        await spotifyMediaInfo.fetchPlaylistData(playlistId)
-      }
+      console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] API failed in background, updating via scraper`)
+      await spotifyMediaInfo.fetchPlaylistData(playlistId)
     })
 
     return
@@ -494,12 +483,15 @@ app.get('/api/spotify/playlist/:playlistId', async (req, res) => {
     res.status(200).json(apiData)
 
     console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Successfully fetched playlist via API: ${apiData.name}`)
+
+    // Always try to fetch playlist via scraper
+    await spotifyMediaInfo.fetchPlaylistData(playlistId)
   } catch (_apiError) {
     console.log(
       `${nowDate.toLocaleString()}: [MuPiBox-Server] API failed for playlist ${playlistId}, trying scraper fallback...`,
     )
 
-    // API failed - try scraper fallback (for private/restricted playlists)
+    // API failed - use scraper immediately
     try {
       const scraperData = await spotifyMediaInfo.fetchPlaylistData(playlistId)
       res.status(200).json(scraperData)
@@ -557,7 +549,7 @@ app.get('/api/spotify/artist/:artistId/albums', async (req, res) => {
 
   const artistId = req.params.artistId
   const albumTypes = (req.query.album_type as string) || 'album,single,compilation'
-  const limit = Number.parseInt(req.query.limit as string, 10) || 50
+  const limit = Number.parseInt(req.query.limit as string, 10) || 5
   const offset = Number.parseInt(req.query.offset as string, 10) || 0
 
   if (!artistId) {
