@@ -98,7 +98,7 @@ export class SpotifyService {
   /**
    * Helper method to fetch all paginated results from the backend API using total count
    */
-  private fetchAllPaginatedResults<T>(url: string, baseParams: any, pageSize = 50): Observable<T[]> {
+  private fetchAllPaginatedResults<T>(url: string, baseParams: any, pageSize = 5): Observable<T[]> {
     const fetchPage = (offset: number): Observable<{ items: T[]; total: number; limit: number; offset: number }> => {
       const params = { ...baseParams, limit: pageSize.toString(), offset: offset.toString() }
       return this.http.get<{ items: T[]; total: number; limit: number; offset: number }>(url, { params })
@@ -445,7 +445,7 @@ export class SpotifyService {
     resumespotifytrack_number: number,
   ): Observable<Media> {
     // Unified endpoint handles API + Scraper fallback automatically in backend
-    const playlistUrl = `${environment.backend.apiUrl}/spotify/playlist/${id}?refresh=true`
+    const playlistUrl = `${environment.backend.apiUrl}/spotify/playlist/${id}`
 
     return this.http.get<any>(playlistUrl).pipe(
       timeout(60000), // 60 seconds (for scraper fallback if needed)
@@ -562,19 +562,15 @@ export class SpotifyService {
             })),
           })
         } else {
-          // API format - fetch all tracks via tracks endpoint for complete data
-          const playlistTracksUrl = `${environment.backend.apiUrl}/spotify/playlist/${playlistId}/tracks?refresh=true`
-          return this.http.get<any[]>(playlistTracksUrl).pipe(
-            map((tracksData) => ({
-              total_tracks: response.tracks.total,
-              playlist_name: response.name,
-              tracks: tracksData.map((item: any) => ({
-                id: item.track.id,
-                uri: item.track.uri,
-                name: item.track.name,
-              })),
+          return of({
+            total_tracks: response.tracks.total,
+            playlist_name: response.name,
+            tracks: response.tracks.items.map((item: any) => ({
+              id: item.track.id,
+              uri: item.track.uri,
+              name: item.track.name,
             })),
-          )
+          })
         }
       }),
       catchError((error) => {

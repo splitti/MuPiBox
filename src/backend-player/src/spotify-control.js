@@ -920,7 +920,9 @@ async function useSpotify(command) {
   } else {
     // Reset device to let Spotify use the currently active device
     activeDevice = null
-    log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Using current active Spotify device (no device_id specified)`)
+    log.debug(
+      `${nowDate.toLocaleString()}: [Spotify Control] Using current active Spotify device (no device_id specified)`,
+    )
   }
 
   currentMeta.activeSpotifyId = command.name

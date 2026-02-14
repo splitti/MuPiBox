@@ -51,7 +51,7 @@
         <div>{{(local$ | async)?.currentTracknr}}/{{(local$ | async)?.totalTracks}}</div>
       } @else {
         @if (media.type ==='spotify') {
-          @if (media.playlistid && (spotify$ | async)?.playlist) {
+          @if (media.playlistid && (spotify$ | async)?.playlist?.total_tracks && (spotify$ | async)?.playlist?.total_tracks > 0) {
             <!-- Playlist -->
             <div>{{(spotify$ | async)?.playlist?.current_track_position}}/{{(spotify$ | async)?.playlist?.total_tracks}}</div>
           } @else if (media.showid && (spotify$ | async)?.show_details) {
@@ -60,7 +60,7 @@
           } @else if (media.audiobookid && (spotify$ | async)?.audiobook) {
             <!-- Audiobook -->
             <div>{{(spotify$ | async)?.audiobook?.current_chapter_position}}/{{(spotify$ | async)?.audiobook?.total_chapters}}</div>
-          } @else if (currentPlayedSpotify?.currently_playing_type !== 'episode') {
+          } @else if (currentPlayedSpotify?.currently_playing_type !== 'episode' && (spotify$ | async)?.item.album.total_tracks > 0) {
             <!-- Regular album -->
             <div>{{(spotify$ | async)?.item.track_number}}/{{(spotify$ | async)?.item.album.total_tracks}}</div>
           } @else {
