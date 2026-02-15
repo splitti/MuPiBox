@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
 import { catchError, EMPTY, firstValueFrom, from, Observable, of } from 'rxjs'
-import { map, scan, switchMap, take, takeLast, timeout } from 'rxjs/operators'
+import { concatMap, map, scan, switchMap, take, takeLast, timeout } from 'rxjs/operators'
 import { environment } from 'src/environments/environment'
 import { LogService } from './log.service'
 import type { CategoryType, Media } from './media'
@@ -98,7 +98,7 @@ export class SpotifyService {
   /**
    * Helper method to fetch all paginated results from the backend API using total count
    */
-  private fetchAllPaginatedResults<T>(url: string, baseParams: any, pageSize = 5): Observable<T[]> {
+  private fetchAllPaginatedResults<T>(url: string, baseParams: any, pageSize = 10): Observable<T[]> {
     const fetchPage = (offset: number): Observable<{ items: T[]; total: number; limit: number; offset: number }> => {
       const params = { ...baseParams, limit: pageSize.toString(), offset: offset.toString() }
       return this.http.get<{ items: T[]; total: number; limit: number; offset: number }>(url, { params })
@@ -139,7 +139,7 @@ export class SpotifyService {
 
         // Combine first page with all additional pages
         return from(additionalPageObservables).pipe(
-          switchMap((obs) => obs),
+          concatMap((obs) => obs),
           scan((acc: T[], pageItems: T[]) => [...acc, ...pageItems], firstPageItems),
           takeLast(1),
         )
