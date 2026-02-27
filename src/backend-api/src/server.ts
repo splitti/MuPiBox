@@ -9,6 +9,7 @@ import jsonfile from 'jsonfile'
 import ky from 'ky'
 import xmlparser from 'xml-js'
 import { LogRequest, LogResponse } from './models/log.model'
+import type { MupiboxConfig } from './models/mupibox-config.model'
 import { ServerConfig } from './models/server.model'
 import type { SpotifyValidationRequest, SpotifyValidationResponse } from './models/spotify-api.model'
 import { SpotifyApiService } from './services/spotify-api.service'
@@ -63,6 +64,21 @@ const dataLock = '/tmp/.data.lock'
 const resumeLock = '/tmp/.resume.lock'
 
 const nowDate = new Date()
+
+let mupiboxConfigCache: MupiboxConfig | undefined
+let mupiboxConfigLoadPromise: Promise<MupiboxConfig | undefined> | null = null
+
+const setupMupiboxConfigWatch = () => {
+  try {
+    fs.watch(mupiboxConfigPath, { persistent: false }, () => {
+      mupiboxConfigCache = undefined
+    })
+  } catch (error) {
+    console.warn(`${nowDate.toLocaleString()}: [MuPiBox-Server] Failed to watch mupibox config for changes:`, error)
+  }
+}
+
+setupMupiboxConfigWatch()
 
 // Initialize Spotify services
 const spotifyMediaInfo = new SpotifyMediaInfo()
@@ -451,6 +467,29 @@ app.get('/api/spotify/playlist/:playlistId', async (req, res) => {
 
   if (!spotifyApiService) {
     res.status(503).json({ error: 'Spotify API service not available' })
+    return
+  }
+
+  const mupiboxConfig = await getMupiboxConfig()
+  const disableScraperForPlaylists = Boolean(mupiboxConfig?.spotify?.disableScraperForPlaylists)
+
+  if (disableScraperForPlaylists) {
+    try {
+      console.log(
+        `${nowDate.toLocaleString()}: [MuPiBox-Server] Scraper disabled for playlists, using API only: ${playlistId}`,
+      )
+      const apiData = await spotifyApiService.getPlaylist(playlistId, forceRefresh)
+      res.status(200).json(apiData)
+    } catch (apiError) {
+      console.error(
+        `${nowDate.toLocaleString()}: [MuPiBox-Server] API failed for playlist ${playlistId} (scraper disabled):`,
+        apiError,
+      )
+      res.status(500).json({
+        error: 'Failed to fetch playlist data',
+        message: apiError instanceof Error ? apiError.message : 'Unknown error',
+      })
+    }
     return
   }
 
@@ -1018,6 +1057,31 @@ const tryReadFile = (filePath: string, retries = 3, delayMs = 1000) => {
     }
     attempt(retries)
   })
+}
+
+const getMupiboxConfig = async (): Promise<MupiboxConfig | undefined> => {
+  if (mupiboxConfigCache !== undefined) {
+    return mupiboxConfigCache
+  }
+
+  if (mupiboxConfigLoadPromise) {
+    return await mupiboxConfigLoadPromise
+  }
+
+  mupiboxConfigLoadPromise = (async () => {
+    try {
+      const configData = (await readJsonFile(mupiboxConfigPath)) as MupiboxConfig
+      mupiboxConfigCache = configData
+      return configData
+    } catch (error) {
+      console.warn(`${nowDate.toLocaleString()}: [MuPiBox-Server] Failed to read mupibox config:`, error)
+      return undefined
+    } finally {
+      mupiboxConfigLoadPromise = null
+    }
+  })()
+
+  return await mupiboxConfigLoadPromise
 }
 
 // Catch-all handler: send back Angular's index.html file for any non-API routes
