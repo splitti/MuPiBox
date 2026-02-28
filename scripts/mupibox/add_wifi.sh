@@ -41,7 +41,7 @@ do
 			sudo mv -f ${TMP_WPACONF} ${WPACONF}
 			sudo chmod 600 ${WPACONF}
 			sudo chown root:root ${WPACONF}
-			restart_network			
+			restart_network
 		elif [ "${PSK}" = "" ]
 		then
 			echo 'network={' | sudo tee -a ${WPACONF}
@@ -50,7 +50,7 @@ do
 			echo '}' | sudo tee -a ${WPACONF}
 			restart_network
 		else
-			WIFI_RESULT=$(sudo -i wpa_passphrase "${SSID}" "${PSK}") 
+			WIFI_RESULT=$(sudo -i wpa_passphrase "${SSID}" "${PSK}")
 			IFS=$'\n'
 			i=0
 			new_line='scan_ssid=1'
@@ -69,5 +69,5 @@ do
 		fi
 		sudo rm ${MUPIWIFI}
 	fi
-	sleep 2
+	sleep 60
 done
