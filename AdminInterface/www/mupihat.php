@@ -36,7 +36,7 @@
 				$data["mupihat"]["hat_active"] = true;
 				exec("sudo /usr/local/bin/mupibox/./enable_mupihat.sh");
 				$CHANGE_TXT=$CHANGE_TXT."<li>MuPiHAT is active now - sound card set to MAX98357A bcm2835-i2s-HiFi HiFi-0. The MuPiBox will now restart.</li>";
-				$change=4;
+				$change=2;
 				$reboot = 1;
 				}
 			else
@@ -44,7 +44,7 @@
 				$data["mupihat"]["hat_active"] = false;
 				exec("sudo /usr/local/bin/mupibox/./disable_mupihat.sh");
 				$CHANGE_TXT=$CHANGE_TXT."<li>MuPiHAT is deactivated - - sound card set to Onboard 3.5mm output. The MuPiBox will now restart.</li>";
-				$change=4;
+				$change=2;
 				$reboot = 1;
 				}
 		}
