@@ -54,6 +54,12 @@ if ($_POST['saveIDs']) {
 	$change = 1;
 }
 
+if ($_POST['savePlaylistScraper']) {
+	$data["spotify"]["disableScraperForPlaylists"] = (bool) ($_POST['spotify_disable_scraper_playlists'] ?? false);
+	$CHANGE_TXT = $CHANGE_TXT . "<li>Common Spotify settings saved</li>";
+	$change = 1;
+}
+
 if ($_POST['resetData']) {
     exec("sudo rm -r /home/dietpi/.mupibox/Sonos-Kids-Controller-master/cache/*");
 	exec("sudo rm -R " . $data["spotify"]["cachepath"] . "/*");
@@ -161,14 +167,39 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 	<details  id="spotifycommonsettings">
 		<summary><i class="fa-regular fa-circle-check"></i> Common spotify settings</summary>
 		<ul>
+            <li id="li_1">
+                <h3>Spotify Playlist handling</h3>
+                <p>There are specific playlists that are not found by the Spotify API. <br>
+                    Also playlists that you don't own no longer show the included tracks.<br>
+                    In the Mupibox we implemented a spotify website fallback to find these playlists.<br>
+                    It is enabled by default and used for all playlists. <br>
+                    You can disable this option to use the spotify API only and save CPU usage.
+                </p>
+            </li>
+
+            <li class="buttons">
+                <input name="spotify_disable_scraper_playlists" type="hidden" value="<?php
+                print ($data["spotify"]["disableScraperForPlaylists"] ?? false)
+                ? "0"
+                : "1";
+                ?>" />
+                <input id="saveForm" class="button_text" type="submit" name="savePlaylistScraper" value="<?php
+                print ($data["spotify"]["disableScraperForPlaylists"] ?? false)
+                        ? "Enable playlist handling"
+                        : "Disable playlist handling";
+                ?>" />
+            </li>
 
 			<li id="li_1">
 				<h3>Spotify metadata cache</h3>
-				<p>Spotify playlists curated by Spotify will be cached for 12 hours</p>
-				<p>All other spotify media metadata will be cached for half an hour to not run into rate limits</p>
+				<p>Spotify playlists metadata from the Spotify website will be cached for 12 hours.</p>
+				<p>All other spotify media metadata will be cached from 7 days for mostly static content (albums, shows, artists) down to 2–6 hours for more frequently changing playlists and search results.</p>
+                <p>If you play a playlist, the cache will be refreshed immediately.</p>
 			</li>
 
-			<li class="buttons"><input id="saveForm" class="button_text" type="submit" name="clearCache" value="Clear cache" /></li>
+			<li class="buttons">
+				<input id="saveForm" class="button_text" type="submit" name="clearCache" value="Clear cache" />
+			</li>
 
 		</ul>
 	</details>
