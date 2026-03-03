@@ -58,6 +58,12 @@ export interface PathfinderResponse {
           }>
         }>
       }
+      ownerV2: {
+        data: {
+          name: string
+          uri: string
+        }
+      }
       owner: {
         data: {
           name: string
