@@ -57,10 +57,25 @@ export class SpotifyMediaInfo {
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-gpu',
-        '--disable-features=VizDisplayCompositor',
+        '--no-zygote',
+        '--disable-extensions',
         '--disable-images',
-        '--disable-javascript-harmony-shipping',
-        '--disable-extensions-http-throttling',
+        '--autoplay-policy=no-user-gesture-required',
+        '--disable-component-update',
+        '--disable-background-networking',
+        '--disable-background-timer-throttling',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-breakpad',
+        '--disable-client-side-phishing-detection',
+        '--disable-default-apps',
+        '--disable-hang-monitor',
+        '--disable-popup-blocking',
+        '--disable-prompt-on-repost',
+        '--disable-sync',
+        '--metrics-recording-only',
+        '--no-first-run',
+        '--safebrowsing-disable-auto-update',
+        '--js-flags="--max-old-space-size=128"', // RAM Limit für JS Engine
       ],
     }
 
@@ -113,7 +128,14 @@ export class SpotifyMediaInfo {
         let capturedBearer: string | null = null
         let capturedClient: string | null = null
 
+        await page.setRequestInterception(true)
         page.on('request', (request) => {
+          const resourceType = request.resourceType()
+          if (['image', 'font', 'media'].includes(resourceType)) {
+            request.abort()
+            return
+          }
+
           const url = request.url()
           const method = request.method()
           // console.debug(`Request: ${method} ${url}`)
@@ -157,6 +179,8 @@ export class SpotifyMediaInfo {
           if (client) {
             capturedClient = client
           }
+
+          request.continue()
         })
 
         // Use the requested playlist to trigger authentication and get the token
@@ -166,6 +190,18 @@ export class SpotifyMediaInfo {
           waitUntil: 'networkidle2',
           timeout: 60000,
         })
+
+        // Give it a bit more time to capture tokens if they haven't been captured yet
+        if (!capturedBearer || !this.metadataHash) {
+          try {
+            await page.waitForResponse(
+              (response) => response.url().includes('api-partner.spotify.com/pathfinder/v2/query'),
+              { timeout: 10000 },
+            )
+          } catch (_e) {
+            // Ignore timeout
+          }
+        }
 
         if (capturedBearer && this.metadataHash) {
           this.bearerToken = capturedBearer
