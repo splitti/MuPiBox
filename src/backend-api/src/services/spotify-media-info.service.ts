@@ -9,15 +9,17 @@ import type {
 import type { SpotifyAlbum, SpotifyArtist, SpotifyTrack } from '../models/spotify-shared.model'
 
 export class SpotifyMediaInfo {
-  private browser: Browser | null = null
-  private page: Page | null = null // Main page for synchronous requests
+  private bearerToken: string | null = null
+  private clientToken: string | null = null
+  private playlistHash: string = ''
+  private metadataHash: string = ''
+  private lastTokenUpdate = 0
+  private tokenRefreshInProgress: Promise<void> | null = null
   private cacheDir = path.join(process.cwd(), 'cache', 'spotify')
   private cacheExpiry = 12 * 60 * 60 * 1000 // 12 hours in milliseconds
 
   // Track ongoing background updates to prevent duplicate requests
   private backgroundUpdates = new Set<string>()
-  // Track background pages to clean them up properly
-  private backgroundPages = new Set<Page>()
 
   // Queue for background updates to prevent resource exhaustion
   private backgroundQueue: Array<{ id: string; type: 'playlist' }> = []
@@ -46,108 +48,357 @@ export class SpotifyMediaInfo {
   >()
 
   private async getBrowser(): Promise<Browser> {
-    if (!this.browser) {
-      // In production (DietPi), use system Chromium instead of bundled version
-      const isProduction = process.env.NODE_ENV === 'production' || !process.env.NODE_ENV
-      const launchOptions: any = {
-        headless: true,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-gpu',
-          '--disable-features=VizDisplayCompositor',
-          '--disable-images',
-          '--disable-javascript-harmony-shipping',
-          '--disable-extensions-http-throttling',
-        ],
+    // In production (DietPi), use system Chromium instead of bundled version
+    const isProduction = process.env.NODE_ENV === 'production' || !process.env.NODE_ENV
+    const launchOptions: any = {
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--no-zygote',
+        '--disable-extensions',
+        '--disable-images',
+        '--autoplay-policy=no-user-gesture-required',
+        '--disable-component-update',
+        '--disable-background-networking',
+        '--disable-background-timer-throttling',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-breakpad',
+        '--disable-client-side-phishing-detection',
+        '--disable-default-apps',
+        '--disable-hang-monitor',
+        '--disable-popup-blocking',
+        '--disable-prompt-on-repost',
+        '--disable-sync',
+        '--metrics-recording-only',
+        '--no-first-run',
+        '--safebrowsing-disable-auto-update',
+        '--js-flags="--max-old-space-size=128"', // RAM Limit für JS Engine
+      ],
+    }
+
+    // Use system Chromium in production environment
+    if (isProduction) {
+      // Try common Chromium paths on DietPi/Debian systems
+      const chromiumPaths = [
+        '/usr/bin/chromium-browser',
+        '/usr/bin/chromium',
+        '/usr/bin/google-chrome',
+        '/usr/bin/google-chrome-stable',
+      ]
+
+      for (const path of chromiumPaths) {
+        if (fs.existsSync(path)) {
+          launchOptions.executablePath = path
+          console.info(`Using system Chromium at: ${path}`)
+          break
+        }
       }
 
-      // Use system Chromium in production environment
-      if (isProduction) {
-        // Try common Chromium paths on DietPi/Debian systems
-        const chromiumPaths = [
-          '/usr/bin/chromium-browser',
-          '/usr/bin/chromium',
-          '/usr/bin/google-chrome',
-          '/usr/bin/google-chrome-stable',
-        ]
+      if (!launchOptions.executablePath) {
+        console.warn('No system Chromium found, falling back to bundled version')
+      }
+    }
 
-        const fs = await import('node:fs')
-        for (const path of chromiumPaths) {
-          if (fs.existsSync(path)) {
-            launchOptions.executablePath = path
-            console.info(`Using system Chromium at: ${path}`)
-            break
+    return await puppeteer.launch(launchOptions)
+  }
+
+  private async ensureAuthenticated(playlistId: string): Promise<void> {
+    // If token is less than 50 minutes old, assume it's still valid
+    const tokenAge = Date.now() - this.lastTokenUpdate
+    if (this.bearerToken && tokenAge < 50 * 60 * 1000) {
+      return
+    }
+
+    if (this.tokenRefreshInProgress) {
+      return this.tokenRefreshInProgress
+    }
+
+    this.tokenRefreshInProgress = (async () => {
+      console.info(`🔄 Updating Spotify authentication token using playlist: ${playlistId}`)
+      let browser: Browser | null = null
+      let page: Page | null = null
+
+      try {
+        browser = await this.getBrowser()
+        page = await browser.newPage()
+
+        let capturedBearer: string | null = null
+        let capturedClient: string | null = null
+
+        await page.setRequestInterception(true)
+        page.on('request', (request) => {
+          const resourceType = request.resourceType()
+          if (['image', 'font', 'media'].includes(resourceType)) {
+            request.abort()
+            return
+          }
+
+          const url = request.url()
+          const method = request.method()
+          // console.debug(`Request: ${method} ${url}`)
+
+          // Capture the sha256Hash for fetchPlaylistContents or fetchPlaylistMetadata from the request body
+          try {
+            if (url.includes('api-partner.spotify.com/pathfinder/v2/query') && method === 'POST') {
+              const postDataStr = request.postData()
+              if (postDataStr) {
+                const postData = JSON.parse(postDataStr)
+                const operationName = postData.operationName
+                const hash = postData.extensions?.persistedQuery?.sha256Hash
+
+                if (hash && typeof hash === 'string') {
+                  if (operationName === 'fetchPlaylistContents') {
+                    this.playlistHash = hash
+                    console.debug(`Captured Spotify playlist sha256Hash (contents): ${hash}`)
+                  } else if (
+                    operationName === 'fetchPlaylistMetadata' ||
+                    operationName === 'fetchPlaylistMetadataV2' ||
+                    operationName === 'fetchPlaylist'
+                  ) {
+                    this.metadataHash = hash
+                    console.debug(`Captured Spotify playlist sha256Hash (metadata): ${hash}`)
+                  } else {
+                    console.debug(`Captured other operation: ${operationName} with hash: ${hash}`)
+                  }
+                }
+              }
+            }
+          } catch (_e) {
+            // Ignore parsing errors
+          }
+
+          const headers = request.headers()
+          const auth = headers.authorization
+          if (auth?.startsWith('Bearer ')) {
+            capturedBearer = auth
+          }
+          const client = headers['client-token']
+          if (client) {
+            capturedClient = client
+          }
+
+          request.continue()
+        })
+
+        // Use the requested playlist to trigger authentication and get the token
+        // This avoids issues with PersistedQueryNotFound when fetching data directly later
+        // console.log(`Navigating to: https://open.spotify.com/playlist/${playlistId}`)
+        await page.goto(`https://open.spotify.com/playlist/${playlistId}`, {
+          waitUntil: 'networkidle2',
+          timeout: 60000,
+        })
+
+        // Give it a bit more time to capture tokens if they haven't been captured yet
+        if (!capturedBearer || !this.metadataHash) {
+          try {
+            await page.waitForResponse(
+              (response) => response.url().includes('api-partner.spotify.com/pathfinder/v2/query'),
+              { timeout: 10000 },
+            )
+          } catch (_e) {
+            // Ignore timeout
           }
         }
 
-        if (!launchOptions.executablePath) {
-          console.warn('No system Chromium found, falling back to bundled version')
+        if (capturedBearer && this.metadataHash) {
+          this.bearerToken = capturedBearer
+          this.clientToken = capturedClient
+          this.lastTokenUpdate = Date.now()
+          console.info('✅ Successfully captured new Spotify authentication tokens and hashes')
+        } else {
+          const missing = []
+          if (!capturedBearer) missing.push('bearer token')
+          if (!this.metadataHash) missing.push('metadata hash')
+          throw new Error(`Failed to capture essential Spotify data: ${missing.join(', ')}`)
         }
+      } catch (error) {
+        console.error('❌ Error updating Spotify token:', error)
+        throw error
+      } finally {
+        if (page) await page.close().catch(() => {})
+        if (browser) await browser.close().catch(() => {})
+        this.tokenRefreshInProgress = null
       }
+    })()
 
-      this.browser = await puppeteer.launch(launchOptions)
-    }
-    return this.browser
+    return this.tokenRefreshInProgress
   }
 
-  private async getPage(isBackground = false): Promise<Page> {
-    if (isBackground) {
-      // Create a separate page instance for background updates to avoid conflicts
-      const browser = await this.getBrowser()
-      const backgroundPage = await browser.newPage()
-
-      // Set user agent and viewport
-      await backgroundPage.setUserAgent(
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      )
-      await backgroundPage.setViewport({ width: 1366, height: 768 })
-
-      // Track background page for cleanup
-      this.backgroundPages.add(backgroundPage)
-
-      console.debug('🔧 Created dedicated background page for update')
-      return backgroundPage
+  /**
+   * Fetch only metadata for a playlist
+   */
+  private async fetchPlaylistMetadata(playlistId: string, headers: Record<string, string>): Promise<any> {
+    const variables = {
+      uri: `spotify:playlist:${playlistId}`,
+      offset: 0,
+      limit: 100,
+      enableWatchFeedEntrypoint: true,
     }
 
-    // Main page for synchronous requests
-    if (!this.page) {
-      const browser = await this.getBrowser()
-      this.page = await browser.newPage()
-
-      // Set user agent and viewport once
-      await this.page.setUserAgent(
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      )
-      await this.page.setViewport({ width: 1366, height: 768 })
+    const extensions = {
+      persistedQuery: {
+        version: 1,
+        sha256Hash: this.metadataHash,
+      },
     }
-    return this.page
+
+    if (!extensions.persistedQuery.sha256Hash) {
+      throw new Error('No Spotify metadata hash available. Authentication may have failed.')
+    }
+
+    const url = 'https://api-partner.spotify.com/pathfinder/v2/query'
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        variables,
+        operationName: 'fetchPlaylistMetadata',
+        extensions,
+      }),
+    })
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        this.bearerToken = null
+        this.lastTokenUpdate = 0
+      }
+      throw new Error(`Spotify Metadata API error: ${response.status}`)
+    }
+
+    return await response.json()
+  }
+
+  /**
+   * Fetch contents (tracks) for a playlist with pagination
+   */
+  private async fetchPlaylistContents(
+    playlistId: string,
+    headers: Record<string, string>,
+    offset = 0,
+    limit = 100,
+  ): Promise<PathfinderResponse> {
+    const variables = {
+      uri: `spotify:playlist:${playlistId}`,
+      offset,
+      limit,
+    }
+
+    const extensions = {
+      persistedQuery: {
+        version: 1,
+        sha256Hash: this.playlistHash || this.metadataHash,
+      },
+    }
+
+    if (!extensions.persistedQuery.sha256Hash) {
+      throw new Error('No Spotify playlist hash available. Authentication may have failed.')
+    }
+
+    const url = 'https://api-partner.spotify.com/pathfinder/v2/query'
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        variables,
+        operationName: 'fetchPlaylistContents',
+        extensions,
+      }),
+    })
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        this.bearerToken = null
+        this.lastTokenUpdate = 0
+      }
+      throw new Error(`Spotify Contents API error: ${response.status}`)
+    }
+
+    return (await response.json()) as PathfinderResponse
+  }
+
+  /**
+   * Synchronous fetch that actually hits Spotify (used for both blocking and background updates)
+   */
+  private async fetchPlaylistDataSync(playlistId: string, isBackground = false): Promise<SpotifyPlaylistData> {
+    const logPrefix = isBackground ? '[BG]' : '[FG]'
+
+    try {
+      console.debug(`${logPrefix} Fetching playlist data from Spotify: ${playlistId}`)
+
+      await this.ensureAuthenticated(playlistId)
+
+      if (!this.bearerToken) {
+        throw new Error('No bearer token available')
+      }
+
+      const headers: Record<string, string> = {
+        accept: 'application/json',
+        'accept-language': 'de',
+        'app-platform': 'WebPlayer',
+        authorization: this.bearerToken,
+        'content-type': 'application/json;charset=UTF-8',
+        origin: 'https://open.spotify.com',
+        referer: 'https://open.spotify.com/',
+        'sec-fetch-dest': 'empty',
+        'sec-fetch-mode': 'cors',
+        'sec-fetch-site': 'same-site',
+        'user-agent':
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36',
+      }
+
+      if (this.clientToken) {
+        headers['client-token'] = this.clientToken
+      }
+
+      // 1. Fetch Metadata
+      const metadataData = await this.fetchPlaylistMetadata(playlistId, headers)
+
+      // 2. Fetch Contents (Tracks) - Fetch first 100 tracks
+      const contentsData = await this.fetchPlaylistContents(playlistId, headers, 0, 100)
+
+      const totalTracks = contentsData.data?.playlistV2?.content?.totalCount || 0
+      let fetchedTracksCount = contentsData.data?.playlistV2?.content?.items?.length || 0
+
+      // Fetch more tracks if needed (Spotify typically allows up to 100 per request)
+      while (fetchedTracksCount < totalTracks) {
+        console.debug(`${logPrefix} Fetching more tracks for ${playlistId} (${fetchedTracksCount}/${totalTracks})`)
+        const nextBatch = await this.fetchPlaylistContents(playlistId, headers, fetchedTracksCount, 100)
+        const nextItems = nextBatch.data?.playlistV2?.content?.items || []
+
+        if (nextItems.length === 0) break // Should not happen if totalCount is correct
+
+        contentsData.data.playlistV2.content.items.push(...nextItems)
+        fetchedTracksCount += nextItems.length
+      }
+
+      // Merge data: Use metadata for playlist info, and contents for tracks
+      const mergedData: PathfinderResponse = {
+        data: {
+          playlistV2: {
+            ...metadataData.data?.playlistV2,
+            content: contentsData.data?.playlistV2?.content || metadataData.data?.playlistV2?.content,
+          },
+        },
+      }
+
+      if (!mergedData.data?.playlistV2) {
+        throw new Error('Invalid response data structure from Spotify API')
+      }
+
+      const playlistData = this.transformPathfinderData(mergedData)
+      await this.saveToCache(playlistId, playlistData)
+      return playlistData
+    } catch (error) {
+      console.error(`${logPrefix} Error fetching playlist data:`, error)
+      throw error
+    }
   }
 
   private async closeBrowser(): Promise<void> {
-    // Close all background pages first
-    for (const backgroundPage of this.backgroundPages) {
-      try {
-        await backgroundPage.close()
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error)
-        console.warn('Error closing background page:', errorMessage)
-      }
-    }
-    this.backgroundPages.clear()
-
-    // Close main page
-    if (this.page) {
-      await this.page.close()
-      this.page = null
-    }
-
-    // Close browser
-    if (this.browser) {
-      await this.browser.close()
-      this.browser = null
-    }
+    // Browser is now closed immediately after use in ensureAuthenticated
   }
 
   private ensureCacheDir(): void {
@@ -417,124 +668,6 @@ export class SpotifyMediaInfo {
     console.debug('🏁 Finished processing background queue')
   }
 
-  /**
-   * Synchronous fetch that actually hits Spotify (used for both blocking and background updates)
-   */
-  private async fetchPlaylistDataSync(playlistId: string, isBackground = false): Promise<SpotifyPlaylistData> {
-    const page = await this.getPage(isBackground)
-    const logPrefix = isBackground ? '[BG]' : '[FG]'
-
-    try {
-      // Clear any existing listeners and state
-      page.removeAllListeners('response')
-
-      // Set up response interception for pathfinder API
-      let pathfinderData: PathfinderResponse | null = null
-
-      // Track all Spotify API calls for debugging
-      page.on('response', async (response) => {
-        const url = response.url()
-
-        // Log all Spotify API calls
-        if (
-          url.includes('open.spotify.com') ||
-          url.includes('spotify.com/api') ||
-          url.includes('api-partner.spotify.com')
-        ) {
-          console.debug(`Spotify API call: ${url}`)
-        }
-
-        if (url.includes('api-partner.spotify.com/pathfinder') && url.includes('query')) {
-          try {
-            console.debug(`🎯 Found pathfinder response: ${url}`)
-            const responseData = await response.json()
-            console.debug('Response data keys:', Object.keys(responseData))
-
-            if (responseData.data?.playlistV2) {
-              // Only capture if we don't already have data, or if this data has more content
-              const hasContent = responseData.data.playlistV2.name && responseData.data.playlistV2.name !== 'undefined'
-              if (!pathfinderData || hasContent) {
-                pathfinderData = responseData as PathfinderResponse
-                console.debug(
-                  '✅ Successfully captured pathfinder data for playlist:',
-                  responseData.data.playlistV2.name,
-                )
-
-                // If we have a named playlist, we can stop looking
-                if (hasContent) {
-                  console.debug('🎯 Found complete playlist data, using this response')
-                  // We can break early since we have the data we need
-                }
-              }
-            } else if (responseData.data) {
-              console.debug('📊 Response data structure:', Object.keys(responseData.data))
-              // Only log a sample if it's not color data
-              if (!responseData.data.extractedColors) {
-                console.debug('Sample response:', JSON.stringify(responseData, null, 2).substring(0, 1000))
-              }
-            } else {
-              console.debug('❌ No data property in response')
-            }
-          } catch (error) {
-            console.error('Error parsing pathfinder response:', error)
-          }
-        }
-      })
-
-      // Navigate to the Spotify playlist URL
-      const spotifyUrl = `https://open.spotify.com/playlist/${playlistId}`
-      console.debug(`${logPrefix} Navigating to: ${spotifyUrl}`)
-
-      await page.goto(spotifyUrl, {
-        waitUntil: 'domcontentloaded',
-        timeout: 15000,
-      })
-
-      // Wait for the playlist to load and pathfinder data to be captured
-      console.debug(`${logPrefix} Waiting for playlist page to load...`)
-
-      try {
-        await page.waitForSelector('[data-testid="playlist-page"]', { timeout: 10000 })
-        console.debug(`${logPrefix} Playlist page loaded`)
-      } catch (_error) {
-        console.debug(`${logPrefix} Playlist page selector not found, trying alternative approach`)
-        // Wait for title instead
-        await page.waitForSelector('title', { timeout: 5000 })
-      }
-
-      console.debug(`${logPrefix} Waiting for network requests to complete...`)
-      // Wait for pathfinder data with shorter timeout
-      await new Promise((resolve) => setTimeout(resolve, 3000))
-      console.debug(`${logPrefix} Network wait completed`)
-
-      if (!pathfinderData) {
-        throw new Error('Could not capture pathfinder data from Spotify')
-      }
-
-      // Transform the pathfinder response to our format
-      const playlistData = this.transformPathfinderData(pathfinderData)
-
-      // Save to cache for next time
-      await this.saveToCache(playlistId, playlistData)
-
-      return playlistData
-    } catch (error) {
-      console.error(`${logPrefix} Error fetching playlist data:`, error)
-      throw error
-    } finally {
-      // Clean up listeners
-      page.removeAllListeners('response')
-
-      // Close background pages after use to free resources
-      if (isBackground && this.backgroundPages.has(page)) {
-        console.debug('🔧 Closing background page after update')
-        await page.close()
-        this.backgroundPages.delete(page)
-      }
-      // Keep main page open for reuse
-    }
-  }
-
   private transformPathfinderData(pathfinderData: PathfinderResponse): SpotifyPlaylistData {
     const playlistData = pathfinderData.data.playlistV2
 
@@ -548,17 +681,17 @@ export class SpotifyMediaInfo {
       },
       images:
         playlistData.images?.items?.length > 0
-          ? playlistData.images.items[0].sources.map((source) => ({
+          ? playlistData.images.items[0].sources.map((source: any) => ({
               url: source.url,
               width: source.width,
               height: source.height,
             }))
           : [],
       owner: {
-        display_name: playlistData.owner?.data?.name || 'Unknown',
-        uri: playlistData.owner?.data?.uri || '',
+        display_name: playlistData.ownerV2?.data?.name || playlistData.owner?.data?.name || 'Unknown',
+        uri: playlistData.ownerV2?.data?.uri || playlistData.owner?.data?.uri || '',
         external_urls: {
-          spotify: `https://open.spotify.com/user/${this.extractIdFromUri(playlistData.owner?.data?.uri)}`,
+          spotify: `https://open.spotify.com/user/${this.extractIdFromUri(playlistData.ownerV2?.data?.uri || playlistData.owner?.data?.uri)}`,
         },
       },
       public: true,
@@ -618,7 +751,7 @@ export class SpotifyMediaInfo {
   }
 
   private extractIdFromUri(uri: string | undefined): string {
-    if (!uri || typeof uri !== 'string') {
+    if (!uri) {
       console.warn('Invalid URI provided to extractIdFromUri:', uri)
       return ''
     }

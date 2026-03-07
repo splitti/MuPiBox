@@ -51,6 +51,8 @@ readJsonFile(`${configBasePath}/config.json`).then((configFile) => {
   }
 })
 const mupiboxConfigPath = '/etc/mupibox/mupiboxconfig.json'
+const mupiboxConfigDir = path.dirname(mupiboxConfigPath)
+const mupiboxConfigFile = path.basename(mupiboxConfigPath)
 const dataFile = `${configBasePath}/data.json`
 const resumeFile = `${configBasePath}/resume.json`
 const activedataFile = `${configBasePath}/active_data.json`
@@ -63,18 +65,19 @@ const mupihat = '/tmp/mupihat.json'
 const dataLock = '/tmp/.data.lock'
 const resumeLock = '/tmp/.resume.lock'
 
-const nowDate = new Date()
-
 let mupiboxConfigCache: MupiboxConfig | undefined
 let mupiboxConfigLoadPromise: Promise<MupiboxConfig | undefined> | null = null
 
 const setupMupiboxConfigWatch = () => {
   try {
-    fs.watch(mupiboxConfigPath, { persistent: false }, () => {
-      mupiboxConfigCache = undefined
+    // Watch the directory so atomic replace (write+rename) still triggers.
+    fs.watch(mupiboxConfigDir, { persistent: false }, (_event, filename) => {
+      if (!filename || filename.toString() === mupiboxConfigFile) {
+        mupiboxConfigCache = undefined
+      }
     })
   } catch (error) {
-    console.warn(`${nowDate.toLocaleString()}: [MuPiBox-Server] Failed to watch mupibox config for changes:`, error)
+    console.warn(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to watch mupibox config for changes:`, error)
   }
 }
 
@@ -120,8 +123,8 @@ app.get('/api/data', (_req, res) => {
   if (fs.existsSync(activedataFile)) {
     jsonfile.readFile(activedataFile, (error, data) => {
       if (error) {
-        console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error /api/data read active_data.json`)
-        console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] ${error}`)
+        console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Error /api/data read active_data.json`)
+        console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] ${error}`)
         res.json([])
       } else {
         res.json(data)
@@ -137,8 +140,8 @@ app.get('/api/resume', (_req, res) => {
         res.json(data)
       })
       .catch((error) => {
-        console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error /api/resume read resume.json`)
-        console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] ${error}`)
+        console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Error /api/resume read resume.json`)
+        console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] ${error}`)
         res.status(500).send('Internal Server Error')
       })
   } else {
@@ -150,8 +153,8 @@ app.get('/api/mupihat', (_req, res) => {
   if (fs.existsSync(mupihat)) {
     jsonfile.readFile(mupihat, (error, data) => {
       if (error) {
-        console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error /api/mupihat read mupihat.json`)
-        console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] ${error}`)
+        console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Error /api/mupihat read mupihat.json`)
+        console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] ${error}`)
         res.json([])
       } else {
         res.json(data)
@@ -164,8 +167,8 @@ app.get('/api/activeresume', (_req, res) => {
   if (fs.existsSync(activeresumeFile)) {
     jsonfile.readFile(activeresumeFile, (error, data) => {
       if (error) {
-        console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error /api/activeresume read active_resume.json`)
-        console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] ${error}`)
+        console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Error /api/activeresume read active_resume.json`)
+        console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] ${error}`)
         res.json([])
       } else {
         res.json(data)
@@ -181,8 +184,8 @@ app.get('/api/network', (_req, res) => {
         res.json(data)
       })
       .catch((error) => {
-        console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error /api/network read network.json`)
-        console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] ${error}`)
+        console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Error /api/network read network.json`)
+        console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] ${error}`)
         res.status(500).send('Internal Server Error')
       })
   } else {
@@ -199,8 +202,8 @@ app.get('/api/monitor', (req, res) => {
   if (fs.existsSync(monitorFile) && isLocalhost) {
     jsonfile.readFile(monitorFile, (error, data) => {
       if (error) {
-        console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error /api/monitor read monitor.json`)
-        console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] ${error}`)
+        console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Error /api/monitor read monitor.json`)
+        console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] ${error}`)
         res.json({ monitor: 'On' })
       } else {
         res.json(data)
@@ -215,8 +218,8 @@ app.get('/api/albumstop', (_req, res) => {
   if (fs.existsSync(albumstopFile)) {
     jsonfile.readFile(albumstopFile, (error, data) => {
       if (error) {
-        console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error /api/albumstop read albumstop.json`)
-        console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] ${error}`)
+        console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Error /api/albumstop read albumstop.json`)
+        console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] ${error}`)
         res.json({})
       } else {
         res.json(data)
@@ -231,8 +234,8 @@ app.get('/api/wlan', (_req, res) => {
   if (fs.existsSync(wlanFile)) {
     jsonfile.readFile(wlanFile, (error, data) => {
       if (error) {
-        console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error /api/wlan read wlan.json`)
-        console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] ${error}`)
+        console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Error /api/wlan read wlan.json`)
+        console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] ${error}`)
         res.json([])
       } else {
         res.json(data)
@@ -258,14 +261,14 @@ app.post('/api/addwlan', (req, res) => {
 app.post('/api/add', (req, res) => {
   try {
     if (fs.existsSync(dataLock)) {
-      console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] /api/add data.json is locked`)
+      console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] /api/add data.json is locked`)
       res.status(200).send('locked')
     } else {
       fs.openSync(dataLock, 'w')
       jsonfile.readFile(dataFile, (error, data) => {
         if (error) {
-          console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error /api/add read data.json`)
-          console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] ${error}`)
+          console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Error /api/add read data.json`)
+          console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] ${error}`)
           res.status(200).send('error')
         } else {
           data.push(req.body)
@@ -278,7 +281,9 @@ app.post('/api/add', (req, res) => {
       })
       fs.unlink(dataLock, (err) => {
         if (err) throw err
-        console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] /api/add - data.json unlocked, locked file deleted!`)
+        console.log(
+          `${new Date().toLocaleString()}: [MuPiBox-Server] /api/add - data.json unlocked, locked file deleted!`,
+        )
       })
     }
   } catch (err) {
@@ -289,14 +294,14 @@ app.post('/api/add', (req, res) => {
 app.post('/api/addresume', (req, res) => {
   try {
     if (fs.existsSync(resumeLock)) {
-      console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] /api/addresume resume.json is locked`)
+      console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] /api/addresume resume.json is locked`)
       res.status(200).send('locked')
     } else {
       fs.openSync(resumeLock, 'w')
       jsonfile.readFile(resumeFile, (error, data) => {
         if (error) {
-          console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error /api/add read resume.json`)
-          console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] ${error}`)
+          console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Error /api/add read resume.json`)
+          console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] ${error}`)
           res.status(200).send('error')
         } else {
           // Index des vorhandenen Eintrags mit derselben "id" finden
@@ -305,11 +310,11 @@ app.post('/api/addresume', (req, res) => {
           if (index !== -1) {
             // Wenn der Eintrag vorhanden ist, ersetze ihn
             data[index] = req.body
-            console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Entry with id ${req.body.id} replaced.`)
+            console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Entry with id ${req.body.id} replaced.`)
           } else {
             // Wenn der Eintrag nicht vorhanden ist, füge ihn hinzu
             data.push(req.body)
-            console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] New entry with id ${req.body.id} added.`)
+            console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] New entry with id ${req.body.id} added.`)
           }
 
           jsonfile.writeFile(resumeFile, data, { spaces: 4 }, (error) => {
@@ -321,7 +326,7 @@ app.post('/api/addresume', (req, res) => {
       fs.unlink(resumeLock, (err) => {
         if (err) throw err
         console.log(
-          `${nowDate.toLocaleString()}: [MuPiBox-Server] /api/addresume - resume.json unlocked, locked file deleted!`,
+          `${new Date().toLocaleString()}: [MuPiBox-Server] /api/addresume - resume.json unlocked, locked file deleted!`,
         )
       })
     }
@@ -333,14 +338,14 @@ app.post('/api/addresume', (req, res) => {
 app.post('/api/delete', (req, res) => {
   try {
     if (fs.existsSync(dataLock)) {
-      console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] /api/delete data.json is locked`)
+      console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] /api/delete data.json is locked`)
       res.status(200).send('locked')
     } else {
       fs.openSync(dataLock, 'w')
       jsonfile.readFile(dataFile, (error, data) => {
         if (error) {
-          console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error /api/delete read data.json`)
-          console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] ${error}`)
+          console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Error /api/delete read data.json`)
+          console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] ${error}`)
           res.status(200).send('error')
         } else {
           data.splice(req.body.index, 1)
@@ -354,7 +359,7 @@ app.post('/api/delete', (req, res) => {
       fs.unlink(dataLock, (err) => {
         if (err) throw err
         console.log(
-          `${nowDate.toLocaleString()}: [MuPiBox-Server] /api/delete - data.json unlocked, locked file deleted!`,
+          `${new Date().toLocaleString()}: [MuPiBox-Server] /api/delete - data.json unlocked, locked file deleted!`,
         )
       })
     }
@@ -366,14 +371,14 @@ app.post('/api/delete', (req, res) => {
 app.post('/api/edit', (req, res) => {
   try {
     if (fs.existsSync(dataLock)) {
-      console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] /api/edit data.json is locked`)
+      console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] /api/edit data.json is locked`)
       res.status(200).send('locked')
     } else {
       fs.openSync(dataLock, 'w')
       jsonfile.readFile(dataFile, (error, data) => {
         if (error) {
-          console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error /api/edit read data.json`)
-          console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] ${error}`)
+          console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Error /api/edit read data.json`)
+          console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] ${error}`)
           res.status(200).send('error')
         } else {
           data.splice(req.body.index, 1, req.body.data)
@@ -387,7 +392,7 @@ app.post('/api/edit', (req, res) => {
       fs.unlink(dataLock, (err) => {
         if (err) throw err
         console.log(
-          `${nowDate.toLocaleString()}: [MuPiBox-Server] /api/edit - data.json unlocked, locked file deleted!`,
+          `${new Date().toLocaleString()}: [MuPiBox-Server] /api/edit - data.json unlocked, locked file deleted!`,
         )
       })
     }
@@ -399,14 +404,14 @@ app.post('/api/edit', (req, res) => {
 app.post('/api/editresume', (req, res) => {
   try {
     if (fs.existsSync(resumeLock)) {
-      console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] /api/editresume resume.json is locked`)
+      console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] /api/editresume resume.json is locked`)
       res.status(200).send('locked')
     } else {
       fs.openSync(resumeLock, 'w')
       jsonfile.readFile(resumeFile, (error, data) => {
         if (error) {
-          console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error /api/editresume read resume.json`)
-          console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] ${error}`)
+          console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Error /api/editresume read resume.json`)
+          console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] ${error}`)
           res.status(200).send('error')
         } else {
           // Prüfe, ob die ID bereits im Array existiert
@@ -415,14 +420,14 @@ app.post('/api/editresume', (req, res) => {
           if (existingIndex !== -1) {
             // Ersetze den vorhandenen Eintrag mit derselben ID
             data[existingIndex] = req.body.data
-            console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Entry with id ${req.body.data.id} replaced.`)
+            console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Entry with id ${req.body.data.id} replaced.`)
           } else {
             // Bestimme den zu verwendenden Index basierend auf der Array-Länge
             const indexToReplace = Math.min(req.body.index, data.length - 1)
 
             // Ersetze den Eintrag am berechneten Index oder füge hinzu
             data.splice(indexToReplace, 1, req.body.data)
-            console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Entry at index ${indexToReplace} replaced.`)
+            console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Entry at index ${indexToReplace} replaced.`)
           }
 
           // Speichere die geänderten Daten zurück in die Datei
@@ -435,7 +440,7 @@ app.post('/api/editresume', (req, res) => {
       fs.unlink(resumeLock, (err) => {
         if (err) throw err
         console.log(
-          `${nowDate.toLocaleString()}: [MuPiBox-Server] /api/editresume - resume.json unlocked, locked file deleted!`,
+          `${new Date().toLocaleString()}: [MuPiBox-Server] /api/editresume - resume.json unlocked, locked file deleted!`,
         )
       })
     }
@@ -476,13 +481,13 @@ app.get('/api/spotify/playlist/:playlistId', async (req, res) => {
   if (disableScraperForPlaylists) {
     try {
       console.log(
-        `${nowDate.toLocaleString()}: [MuPiBox-Server] Scraper disabled for playlists, using API only: ${playlistId}`,
+        `${new Date().toLocaleString()}: [MuPiBox-Server] Scraper disabled for playlists, using API only: ${playlistId}`,
       )
       const apiData = await spotifyApiService.getPlaylist(playlistId, forceRefresh)
       res.status(200).json(apiData)
     } catch (apiError) {
       console.error(
-        `${nowDate.toLocaleString()}: [MuPiBox-Server] API failed for playlist ${playlistId} (scraper disabled):`,
+        `${new Date().toLocaleString()}: [MuPiBox-Server] API failed for playlist ${playlistId} (scraper disabled):`,
         apiError,
       )
       res.status(500).json({
@@ -499,14 +504,14 @@ app.get('/api/spotify/playlist/:playlistId', async (req, res) => {
   if (cachedScraperData) {
     // Return cached data immediately for best performance
     console.log(
-      `${nowDate.toLocaleString()}: [MuPiBox-Server] ⚡ Returning cached scraper data for playlist: ${cachedScraperData.playlist.name}`,
+      `${new Date().toLocaleString()}: [MuPiBox-Server] ⚡ Returning cached scraper data for playlist: ${cachedScraperData.playlist.name}`,
     )
     res.status(200).json(cachedScraperData)
 
     // Trigger background update (fire-and-forget) to keep cache fresh
     // This runs async after response is sent
     setImmediate(async () => {
-      console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] API failed in background, updating via scraper`)
+      console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] API failed in background, updating via scraper`)
       await spotifyMediaInfo.fetchPlaylistData(playlistId)
     })
 
@@ -515,19 +520,21 @@ app.get('/api/spotify/playlist/:playlistId', async (req, res) => {
 
   // Step 2: No cache exists - fetch synchronously (try API first, then scraper)
   try {
-    console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Fetching playlist via API: ${playlistId}`)
+    console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Fetching playlist via API: ${playlistId}`)
 
     // Try API first (fast for public/accessible playlists)
     const apiData = await spotifyApiService.getPlaylist(playlistId, forceRefresh)
     res.status(200).json(apiData)
 
-    console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Successfully fetched playlist via API: ${apiData.name}`)
+    console.log(
+      `${new Date().toLocaleString()}: [MuPiBox-Server] Successfully fetched playlist via API: ${apiData.name}`,
+    )
 
     // Always try to fetch playlist via scraper
     await spotifyMediaInfo.fetchPlaylistData(playlistId)
   } catch (_apiError) {
     console.log(
-      `${nowDate.toLocaleString()}: [MuPiBox-Server] API failed for playlist ${playlistId}, trying scraper fallback...`,
+      `${new Date().toLocaleString()}: [MuPiBox-Server] API failed for playlist ${playlistId}, trying scraper fallback...`,
     )
 
     // API failed - use scraper immediately
@@ -536,11 +543,11 @@ app.get('/api/spotify/playlist/:playlistId', async (req, res) => {
       res.status(200).json(scraperData)
 
       console.log(
-        `${nowDate.toLocaleString()}: [MuPiBox-Server] Successfully fetched playlist via scraper: ${scraperData.playlist.name}`,
+        `${new Date().toLocaleString()}: [MuPiBox-Server] Successfully fetched playlist via scraper: ${scraperData.playlist.name}`,
       )
     } catch (scraperError) {
       console.error(
-        `${nowDate.toLocaleString()}: [MuPiBox-Server] Both API and scraper failed for playlist ${playlistId}:`,
+        `${new Date().toLocaleString()}: [MuPiBox-Server] Both API and scraper failed for playlist ${playlistId}:`,
         scraperError,
       )
       res.status(500).json({
@@ -571,7 +578,7 @@ app.get('/api/spotify/search/albums', async (req, res) => {
     const results = await spotifyApiService.searchAlbums(query, limit, offset)
     res.status(200).json(results)
   } catch (error) {
-    console.error(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error searching albums:`, error)
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error searching albums:`, error)
     res.status(500).json({
       error: 'Failed to search albums',
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -600,7 +607,7 @@ app.get('/api/spotify/artist/:artistId/albums', async (req, res) => {
     const results = await spotifyApiService.getArtistAlbums(artistId, albumTypes, limit, offset)
     res.status(200).json(results)
   } catch (error) {
-    console.error(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error getting artist albums:`, error)
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error getting artist albums:`, error)
     res.status(500).json({
       error: 'Failed to get artist albums',
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -628,7 +635,7 @@ app.get('/api/spotify/show/:showId/episodes', async (req, res) => {
     const results = await spotifyApiService.getShowEpisodes(showId, limit, offset)
     res.status(200).json(results)
   } catch (error) {
-    console.error(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error getting show episodes:`, error)
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error getting show episodes:`, error)
     res.status(500).json({
       error: 'Failed to get show episodes',
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -654,7 +661,7 @@ app.get('/api/spotify/album/:albumId', async (req, res) => {
     const album = await spotifyApiService.getAlbum(albumId)
     res.status(200).json(album)
   } catch (error) {
-    console.error(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error getting album:`, error)
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error getting album:`, error)
     res.status(500).json({
       error: 'Failed to get album',
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -683,7 +690,7 @@ app.get('/api/spotify/playlist/:playlistId/tracks', async (req, res) => {
     const tracks = await spotifyApiService.getPlaylistTracks(playlistId, limit, offset, forceRefresh)
     res.status(200).json(tracks)
   } catch (error) {
-    console.error(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error getting playlist tracks:`, error)
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error getting playlist tracks:`, error)
     res.status(500).json({
       error: 'Failed to get playlist tracks',
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -709,7 +716,7 @@ app.get('/api/spotify/show/:showId', async (req, res) => {
     const show = await spotifyApiService.getShow(showId)
     res.status(200).json(show)
   } catch (error) {
-    console.error(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error getting show:`, error)
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error getting show:`, error)
     res.status(500).json({
       error: 'Failed to get show',
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -735,7 +742,7 @@ app.get('/api/spotify/audiobook/:audiobookId', async (req, res) => {
     const audiobook = await spotifyApiService.getAudiobook(audiobookId)
     res.status(200).json(audiobook)
   } catch (error) {
-    console.error(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error getting audiobook:`, error)
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error getting audiobook:`, error)
     res.status(500).json({
       error: 'Failed to get audiobook',
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -761,7 +768,7 @@ app.get('/api/spotify/episode/:episodeId', async (req, res) => {
     const episode = await spotifyApiService.getEpisode(episodeId)
     res.status(200).json(episode)
   } catch (error) {
-    console.error(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error getting episode:`, error)
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error getting episode:`, error)
     res.status(500).json({
       error: 'Failed to get episode',
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -787,7 +794,7 @@ app.get('/api/spotify/artist/:artistId', async (req, res) => {
     const artist = await spotifyApiService.getArtist(artistId)
     res.status(200).json(artist)
   } catch (error) {
-    console.error(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error getting artist:`, error)
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error getting artist:`, error)
     res.status(500).json({
       error: 'Failed to get artist',
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -822,20 +829,22 @@ app.post('/api/spotify/validate', async (req, res) => {
     // If API validation failed and it's a playlist, try fallback
     if (type === 'playlist') {
       console.log(
-        `${nowDate.toLocaleString()}: [MuPiBox-Server] Spotify API validation failed for playlist ${id}, trying fallback...`,
+        `${new Date().toLocaleString()}: [MuPiBox-Server] Spotify API validation failed for playlist ${id}, trying fallback...`,
       )
 
       try {
         const playlistData = await spotifyMediaInfo.fetchPlaylistData(id)
         if (playlistData.playlist?.name) {
-          console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Scraper validation successful for playlist ${id}`)
+          console.log(
+            `${new Date().toLocaleString()}: [MuPiBox-Server] Scraper validation successful for playlist ${id}`,
+          )
           const response: SpotifyValidationResponse = { valid: true, id, type }
           res.status(200).json(response)
           return
         }
       } catch (scraperError) {
         console.log(
-          `${nowDate.toLocaleString()}: [MuPiBox-Server] Scraper validation also failed for playlist ${id}:`,
+          `${new Date().toLocaleString()}: [MuPiBox-Server] Scraper validation also failed for playlist ${id}:`,
           scraperError instanceof Error ? scraperError.message : String(scraperError),
         )
       }
@@ -845,7 +854,7 @@ app.post('/api/spotify/validate', async (req, res) => {
     const response: SpotifyValidationResponse = { valid: false, id, type }
     res.status(200).json(response)
   } catch (error) {
-    console.error(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error validating Spotify resource:`, error)
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error validating Spotify resource:`, error)
     res.status(500).json({
       error: 'Failed to validate resource',
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -865,7 +874,7 @@ app.get('/api/sonos', (_req, res) => {
 app.get('/api/config', (_req, res) => {
   fs.readFile(mupiboxConfigPath, 'utf8', (err, data) => {
     if (err) {
-      console.error(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error reading mupibox config: ${err.message}`)
+      console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error reading mupibox config: ${err.message}`)
       res.status(500).send('Error reading mupibox configuration')
       return
     }
@@ -875,7 +884,7 @@ app.get('/api/config', (_req, res) => {
       res.json(mupiboxConfig)
     } catch (parseError) {
       const errorMessage = parseError instanceof Error ? parseError.message : String(parseError)
-      console.error(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error parsing mupibox config: ${errorMessage}`)
+      console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error parsing mupibox config: ${errorMessage}`)
       res.status(500).send('Error parsing mupibox configuration')
     }
   })
@@ -928,7 +937,7 @@ app.post('/api/logs', (req, res) => {
     } as LogResponse)
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    console.error(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error processing logs: ${errorMessage}`)
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error processing logs: ${errorMessage}`)
 
     res.status(500).json({
       success: false,
@@ -941,16 +950,16 @@ app.post('/api/logs', (req, res) => {
 app.post('/api/screen/off', (_req, res) => {
   exec('DISPLAY=:0 xset dpms force off', (error, _stdout, stderr) => {
     if (error) {
-      console.error(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error turning off screen: ${error.message}`)
+      console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error turning off screen: ${error.message}`)
       res.status(500).send('error')
       return
     }
     if (stderr) {
-      console.error(`${nowDate.toLocaleString()}: [MuPiBox-Server] Stderr turning off screen: ${stderr}`)
+      console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Stderr turning off screen: ${stderr}`)
       res.status(500).send('error')
       return
     }
-    console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Screen turned off`)
+    console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Screen turned off`)
     res.status(200).send('ok')
   })
 })
@@ -958,16 +967,16 @@ app.post('/api/screen/off', (_req, res) => {
 app.post('/api/shutdown', (_req, res) => {
   exec('sudo su - -c "/usr/local/bin/mupibox/./shutdown.sh &"', (error, _stdout, stderr) => {
     if (error) {
-      console.error(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error executing shutdown: ${error.message}`)
+      console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error executing shutdown: ${error.message}`)
       res.status(500).send('error')
       return
     }
     if (stderr) {
-      console.error(`${nowDate.toLocaleString()}: [MuPiBox-Server] Stderr executing shutdown: ${stderr}`)
+      console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Stderr executing shutdown: ${stderr}`)
       res.status(500).send('error')
       return
     }
-    console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] System shutdown initiated`)
+    console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] System shutdown initiated`)
     res.status(200).send('ok')
   })
 })
@@ -975,16 +984,16 @@ app.post('/api/shutdown', (_req, res) => {
 app.post('/api/reboot', (_req, res) => {
   exec('sudo su - -c "/usr/local/bin/mupibox/./restart.sh &"', (error, _stdout, stderr) => {
     if (error) {
-      console.error(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error executing restart: ${error.message}`)
+      console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error executing restart: ${error.message}`)
       res.status(500).send('error')
       return
     }
     if (stderr) {
-      console.error(`${nowDate.toLocaleString()}: [MuPiBox-Server] Stderr executing restart: ${stderr}`)
+      console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Stderr executing restart: ${stderr}`)
       res.status(500).send('error')
       return
     }
-    console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] System restart initiated`)
+    console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] System restart initiated`)
     res.status(200).send('ok')
   })
 })
@@ -992,7 +1001,7 @@ app.post('/api/reboot', (_req, res) => {
 app.post('/api/telegram/screen', (req, res) => {
   fs.readFile(mupiboxConfigPath, 'utf8', (err, data) => {
     if (err) {
-      console.error(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error reading config: ${err.message}`)
+      console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error reading config: ${err.message}`)
       res.status(500).send('error')
       return
     }
@@ -1004,7 +1013,7 @@ app.post('/api/telegram/screen', (req, res) => {
         !mupiboxConfig.telegram?.token?.length ||
         !mupiboxConfig.telegram?.chatId?.length
       ) {
-        console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Telegram notification disabled.`)
+        console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Telegram notification disabled.`)
         res.status(400).send('telegram_not_configured')
         return
       }
@@ -1020,20 +1029,20 @@ app.post('/api/telegram/screen', (req, res) => {
       exec(`/usr/bin/python3 /usr/local/bin/mupibox/telegram_notify_screen.py ${args}`, (error, _stdout, stderr) => {
         if (error) {
           console.error(
-            `${nowDate.toLocaleString()}: [MuPiBox-Server] Error sending telegram notification: ${error.message}`,
+            `${new Date().toLocaleString()}: [MuPiBox-Server] Error sending telegram notification: ${error.message}`,
           )
           res.status(500).send('error')
           return
         }
         if (stderr) {
-          console.error(`${nowDate.toLocaleString()}: [MuPiBox-Server] Stderr telegram notification: ${stderr}`)
+          console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Stderr telegram notification: ${stderr}`)
           res.status(500).send('error')
           return
         }
         res.status(200).send('ok')
       })
     } catch (parseError) {
-      console.error(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error parsing config: ${parseError}`)
+      console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error parsing config: ${parseError}`)
       res.status(500).send('error')
     }
   })
@@ -1045,7 +1054,7 @@ const tryReadFile = (filePath: string, retries = 3, delayMs = 1000) => {
       jsonfile.readFile(filePath, (error, data) => {
         if (error) {
           if (remainingRetries > 0) {
-            console.log(`${nowDate.toLocaleString()}: [MuPiBox-Server] Error reading ${filePath}, retrying...`)
+            console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Error reading ${filePath}, retrying...`)
             setTimeout(() => attempt(remainingRetries - 1), delayMs)
           } else {
             reject(error)
@@ -1074,7 +1083,7 @@ const getMupiboxConfig = async (): Promise<MupiboxConfig | undefined> => {
       mupiboxConfigCache = configData
       return configData
     } catch (error) {
-      console.warn(`${nowDate.toLocaleString()}: [MuPiBox-Server] Failed to read mupibox config:`, error)
+      console.warn(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to read mupibox config:`, error)
       return undefined
     } finally {
       mupiboxConfigLoadPromise = null
@@ -1094,5 +1103,5 @@ if (productionServe) {
 
 if (!testServe) {
   app.listen(8200)
-  console.log(`${nowDate.toLocaleString()}: [mupibox-backend-api] Server started at http://localhost:8200`)
+  console.log(`${new Date().toLocaleString()}: [mupibox-backend-api] Server started at http://localhost:8200`)
 }
