@@ -1,20 +1,9 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import puppeteer, { Browser, Page } from 'puppeteer'
-import type {
-  PathfinderResponse,
-  SpotifyPlaylistData,
-  SpotifyPlaylistMetadata,
-} from '../models/spotify-media-info.model'
-import type { SpotifyAlbum, SpotifyArtist, SpotifyTrack } from '../models/spotify-shared.model'
+import type { SpotifyPlaylistData, SpotifyPlaylistMetadata } from '../models/spotify-media-info.model'
+import type { SpotifyTrack } from '../models/spotify-shared.model'
 
 export class SpotifyMediaInfo {
-  private bearerToken: string | null = null
-  private clientToken: string | null = null
-  private playlistHash: string = ''
-  private metadataHash: string = ''
-  private lastTokenUpdate = 0
-  private tokenRefreshInProgress: Promise<void> | null = null
   private cacheDir = path.join(process.cwd(), 'cache', 'spotify')
   private cacheExpiry = 12 * 60 * 60 * 1000 // 12 hours in milliseconds
 
@@ -26,7 +15,7 @@ export class SpotifyMediaInfo {
   private isProcessingBackground = false
   private readonly maxConcurrentBackground = 3 // Limit concurrent background updates
 
-  // Queue for foreground requests to prevent concurrent access to main page
+  // Queue for foreground requests
   private foregroundQueue: Array<{
     id: string
     type: 'playlist'
@@ -47,348 +36,37 @@ export class SpotifyMediaInfo {
     }
   >()
 
-  private async getBrowser(): Promise<Browser> {
-    // In production (DietPi), use system Chromium instead of bundled version
-    const isProduction = process.env.NODE_ENV === 'production' || !process.env.NODE_ENV
-    const launchOptions: any = {
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--no-zygote',
-        '--disable-extensions',
-        '--disable-images',
-        '--autoplay-policy=no-user-gesture-required',
-        '--disable-component-update',
-        '--disable-background-networking',
-        '--disable-background-timer-throttling',
-        '--disable-backgrounding-occluded-windows',
-        '--disable-breakpad',
-        '--disable-client-side-phishing-detection',
-        '--disable-default-apps',
-        '--disable-hang-monitor',
-        '--disable-popup-blocking',
-        '--disable-prompt-on-repost',
-        '--disable-sync',
-        '--metrics-recording-only',
-        '--no-first-run',
-        '--safebrowsing-disable-auto-update',
-        '--js-flags="--max-old-space-size=128"', // RAM Limit für JS Engine
-      ],
-    }
-
-    // Use system Chromium in production environment
-    if (isProduction) {
-      // Try common Chromium paths on DietPi/Debian systems
-      const chromiumPaths = [
-        '/usr/bin/chromium-browser',
-        '/usr/bin/chromium',
-        '/usr/bin/google-chrome',
-        '/usr/bin/google-chrome-stable',
-      ]
-
-      for (const path of chromiumPaths) {
-        if (fs.existsSync(path)) {
-          launchOptions.executablePath = path
-          console.info(`Using system Chromium at: ${path}`)
-          break
-        }
-      }
-
-      if (!launchOptions.executablePath) {
-        console.warn('No system Chromium found, falling back to bundled version')
-      }
-    }
-
-    return await puppeteer.launch(launchOptions)
-  }
-
-  private async ensureAuthenticated(playlistId: string): Promise<void> {
-    // If token is less than 50 minutes old, assume it's still valid
-    const tokenAge = Date.now() - this.lastTokenUpdate
-    if (this.bearerToken && tokenAge < 50 * 60 * 1000) {
-      return
-    }
-
-    if (this.tokenRefreshInProgress) {
-      return this.tokenRefreshInProgress
-    }
-
-    this.tokenRefreshInProgress = (async () => {
-      console.info(`🔄 Updating Spotify authentication token using playlist: ${playlistId}`)
-      let browser: Browser | null = null
-      let page: Page | null = null
-
-      try {
-        browser = await this.getBrowser()
-        page = await browser.newPage()
-
-        let capturedBearer: string | null = null
-        let capturedClient: string | null = null
-
-        await page.setRequestInterception(true)
-        page.on('request', (request) => {
-          const resourceType = request.resourceType()
-          if (['image', 'font', 'media'].includes(resourceType)) {
-            request.abort()
-            return
-          }
-
-          const url = request.url()
-          const method = request.method()
-          // console.debug(`Request: ${method} ${url}`)
-
-          // Capture the sha256Hash for fetchPlaylistContents or fetchPlaylistMetadata from the request body
-          try {
-            if (url.includes('api-partner.spotify.com/pathfinder/v2/query') && method === 'POST') {
-              const postDataStr = request.postData()
-              if (postDataStr) {
-                const postData = JSON.parse(postDataStr)
-                const operationName = postData.operationName
-                const hash = postData.extensions?.persistedQuery?.sha256Hash
-
-                if (hash && typeof hash === 'string') {
-                  if (operationName === 'fetchPlaylistContents') {
-                    this.playlistHash = hash
-                    console.debug(`Captured Spotify playlist sha256Hash (contents): ${hash}`)
-                  } else if (
-                    operationName === 'fetchPlaylistMetadata' ||
-                    operationName === 'fetchPlaylistMetadataV2' ||
-                    operationName === 'fetchPlaylist'
-                  ) {
-                    this.metadataHash = hash
-                    console.debug(`Captured Spotify playlist sha256Hash (metadata): ${hash}`)
-                  } else {
-                    console.debug(`Captured other operation: ${operationName} with hash: ${hash}`)
-                  }
-                }
-              }
-            }
-          } catch (_e) {
-            // Ignore parsing errors
-          }
-
-          const headers = request.headers()
-          const auth = headers.authorization
-          if (auth?.startsWith('Bearer ')) {
-            capturedBearer = auth
-          }
-          const client = headers['client-token']
-          if (client) {
-            capturedClient = client
-          }
-
-          request.continue()
-        })
-
-        // Use the requested playlist to trigger authentication and get the token
-        // This avoids issues with PersistedQueryNotFound when fetching data directly later
-        // console.log(`Navigating to: https://open.spotify.com/playlist/${playlistId}`)
-        await page.goto(`https://open.spotify.com/playlist/${playlistId}`, {
-          waitUntil: 'networkidle2',
-          timeout: 60000,
-        })
-
-        // Give it a bit more time to capture tokens if they haven't been captured yet
-        if (!capturedBearer || !this.metadataHash) {
-          try {
-            await page.waitForResponse(
-              (response) => response.url().includes('api-partner.spotify.com/pathfinder/v2/query'),
-              { timeout: 10000 },
-            )
-          } catch (_e) {
-            // Ignore timeout
-          }
-        }
-
-        if (capturedBearer && this.metadataHash) {
-          this.bearerToken = capturedBearer
-          this.clientToken = capturedClient
-          this.lastTokenUpdate = Date.now()
-          console.info('✅ Successfully captured new Spotify authentication tokens and hashes')
-        } else {
-          const missing = []
-          if (!capturedBearer) missing.push('bearer token')
-          if (!this.metadataHash) missing.push('metadata hash')
-          throw new Error(`Failed to capture essential Spotify data: ${missing.join(', ')}`)
-        }
-      } catch (error) {
-        console.error('❌ Error updating Spotify token:', error)
-        throw error
-      } finally {
-        if (page) await page.close().catch(() => {})
-        if (browser) await browser.close().catch(() => {})
-        this.tokenRefreshInProgress = null
-      }
-    })()
-
-    return this.tokenRefreshInProgress
-  }
-
   /**
-   * Fetch only metadata for a playlist
-   */
-  private async fetchPlaylistMetadata(playlistId: string, headers: Record<string, string>): Promise<any> {
-    const variables = {
-      uri: `spotify:playlist:${playlistId}`,
-      offset: 0,
-      limit: 100,
-      enableWatchFeedEntrypoint: true,
-    }
-
-    const extensions = {
-      persistedQuery: {
-        version: 1,
-        sha256Hash: this.metadataHash,
-      },
-    }
-
-    if (!extensions.persistedQuery.sha256Hash) {
-      throw new Error('No Spotify metadata hash available. Authentication may have failed.')
-    }
-
-    const url = 'https://api-partner.spotify.com/pathfinder/v2/query'
-    const response = await fetch(url, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        variables,
-        operationName: 'fetchPlaylistMetadata',
-        extensions,
-      }),
-    })
-
-    if (!response.ok) {
-      if (response.status === 401) {
-        this.bearerToken = null
-        this.lastTokenUpdate = 0
-      }
-      throw new Error(`Spotify Metadata API error: ${response.status}`)
-    }
-
-    return await response.json()
-  }
-
-  /**
-   * Fetch contents (tracks) for a playlist with pagination
-   */
-  private async fetchPlaylistContents(
-    playlistId: string,
-    headers: Record<string, string>,
-    offset = 0,
-    limit = 100,
-  ): Promise<PathfinderResponse> {
-    const variables = {
-      uri: `spotify:playlist:${playlistId}`,
-      offset,
-      limit,
-    }
-
-    const extensions = {
-      persistedQuery: {
-        version: 1,
-        sha256Hash: this.playlistHash || this.metadataHash,
-      },
-    }
-
-    if (!extensions.persistedQuery.sha256Hash) {
-      throw new Error('No Spotify playlist hash available. Authentication may have failed.')
-    }
-
-    const url = 'https://api-partner.spotify.com/pathfinder/v2/query'
-    const response = await fetch(url, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        variables,
-        operationName: 'fetchPlaylistContents',
-        extensions,
-      }),
-    })
-
-    if (!response.ok) {
-      if (response.status === 401) {
-        this.bearerToken = null
-        this.lastTokenUpdate = 0
-      }
-      throw new Error(`Spotify Contents API error: ${response.status}`)
-    }
-
-    return (await response.json()) as PathfinderResponse
-  }
-
-  /**
-   * Synchronous fetch that actually hits Spotify (used for both blocking and background updates)
+   * Synchronous fetch using Spotify Embed URL (used for both blocking and background updates)
    */
   private async fetchPlaylistDataSync(playlistId: string, isBackground = false): Promise<SpotifyPlaylistData> {
     const logPrefix = isBackground ? '[BG]' : '[FG]'
 
     try {
-      console.debug(`${logPrefix} Fetching playlist data from Spotify: ${playlistId}`)
+      console.debug(`${logPrefix} Fetching playlist data from Spotify Embed: ${playlistId}`)
 
-      await this.ensureAuthenticated(playlistId)
-
-      if (!this.bearerToken) {
-        throw new Error('No bearer token available')
-      }
-
-      const headers: Record<string, string> = {
-        accept: 'application/json',
-        'accept-language': 'de',
-        'app-platform': 'WebPlayer',
-        authorization: this.bearerToken,
-        'content-type': 'application/json;charset=UTF-8',
-        origin: 'https://open.spotify.com',
-        referer: 'https://open.spotify.com/',
-        'sec-fetch-dest': 'empty',
-        'sec-fetch-mode': 'cors',
-        'sec-fetch-site': 'same-site',
-        'user-agent':
-          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36',
-      }
-
-      if (this.clientToken) {
-        headers['client-token'] = this.clientToken
-      }
-
-      // 1. Fetch Metadata
-      const metadataData = await this.fetchPlaylistMetadata(playlistId, headers)
-
-      // 2. Fetch Contents (Tracks) - Fetch first 100 tracks
-      const contentsData = await this.fetchPlaylistContents(playlistId, headers, 0, 100)
-
-      const totalTracks = contentsData.data?.playlistV2?.content?.totalCount || 0
-      let fetchedTracksCount = contentsData.data?.playlistV2?.content?.items?.length || 0
-
-      // Fetch more tracks if needed (Spotify typically allows up to 100 per request)
-      while (fetchedTracksCount < totalTracks) {
-        console.debug(`${logPrefix} Fetching more tracks for ${playlistId} (${fetchedTracksCount}/${totalTracks})`)
-        const nextBatch = await this.fetchPlaylistContents(playlistId, headers, fetchedTracksCount, 100)
-        const nextItems = nextBatch.data?.playlistV2?.content?.items || []
-
-        if (nextItems.length === 0) break // Should not happen if totalCount is correct
-
-        contentsData.data.playlistV2.content.items.push(...nextItems)
-        fetchedTracksCount += nextItems.length
-      }
-
-      // Merge data: Use metadata for playlist info, and contents for tracks
-      const mergedData: PathfinderResponse = {
-        data: {
-          playlistV2: {
-            ...metadataData.data?.playlistV2,
-            content: contentsData.data?.playlistV2?.content || metadataData.data?.playlistV2?.content,
-          },
+      const embedUrl = `https://open.spotify.com/embed/playlist/${playlistId}`
+      const response = await fetch(embedUrl, {
+        headers: {
+          'user-agent':
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36',
         },
+      })
+
+      if (!response.ok) {
+        throw new Error(`Spotify Embed API error: ${response.status}`)
       }
 
-      if (!mergedData.data?.playlistV2) {
-        throw new Error('Invalid response data structure from Spotify API')
+      const html = await response.text()
+      const match = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/)
+
+      if (!match) {
+        throw new Error('Could not find __NEXT_DATA__ script tag in Spotify Embed HTML')
       }
 
-      const playlistData = this.transformPathfinderData(mergedData)
+      const nextData = JSON.parse(match[1])
+      const playlistData = this.transformEmbedData(nextData)
+
       await this.saveToCache(playlistId, playlistData)
       return playlistData
     } catch (error) {
@@ -397,8 +75,55 @@ export class SpotifyMediaInfo {
     }
   }
 
-  private async closeBrowser(): Promise<void> {
-    // Browser is now closed immediately after use in ensureAuthenticated
+  private transformEmbedData(nextData: any): SpotifyPlaylistData {
+    const entity = nextData.props?.pageProps?.state?.data?.entity
+    if (!entity) {
+      throw new Error('Invalid data structure: missing entity in NEXT_DATA')
+    }
+
+    // Transform playlist metadata
+    const playlist: SpotifyPlaylistMetadata = {
+      name: entity.name || entity.title || 'Unknown Playlist',
+      images:
+        entity.coverArt?.sources?.length > 0
+          ? entity.coverArt.sources.map((source: any) => ({
+              url: source.url,
+              width: source.width || 0,
+              height: source.height || 0,
+            }))
+          : [],
+      tracks: {
+        total: entity.trackList?.length || 0,
+      },
+    }
+
+    // Transform tracks
+    const tracks: SpotifyTrack[] = (entity.trackList || []).map((item: any) => {
+      // Extract artist from subtitle if available
+      const artists = item.subtitle
+        ? item.subtitle.split(/[,;]\s*|\s*,\s*| /).map((name: string) => ({
+            name: name.trim(),
+            uri: '', // URI not available in embed data for individual artists
+          }))
+        : []
+
+      return {
+        name: item.title || 'Unknown Track',
+        uri: item.uri || '',
+        duration_ms: item.duration || 0,
+        artists: artists,
+        album: {
+          name: '',
+          uri: '',
+          images: [],
+        },
+      }
+    })
+
+    return {
+      playlist,
+      tracks,
+    }
   }
 
   private ensureCacheDir(): void {
@@ -668,96 +393,6 @@ export class SpotifyMediaInfo {
     console.debug('🏁 Finished processing background queue')
   }
 
-  private transformPathfinderData(pathfinderData: PathfinderResponse): SpotifyPlaylistData {
-    const playlistData = pathfinderData.data.playlistV2
-
-    // Transform playlist metadata
-    const playlist: SpotifyPlaylistMetadata = {
-      name: playlistData.name || 'Unknown Playlist',
-      description: playlistData.description || '',
-      uri: playlistData.uri || '',
-      external_urls: {
-        spotify: `https://open.spotify.com/playlist/${this.extractIdFromUri(playlistData.uri)}`,
-      },
-      images:
-        playlistData.images?.items?.length > 0
-          ? playlistData.images.items[0].sources.map((source: any) => ({
-              url: source.url,
-              width: source.width,
-              height: source.height,
-            }))
-          : [],
-      owner: {
-        display_name: playlistData.ownerV2?.data?.name || playlistData.owner?.data?.name || 'Unknown',
-        uri: playlistData.ownerV2?.data?.uri || playlistData.owner?.data?.uri || '',
-        external_urls: {
-          spotify: `https://open.spotify.com/user/${this.extractIdFromUri(playlistData.ownerV2?.data?.uri || playlistData.owner?.data?.uri)}`,
-        },
-      },
-      public: true,
-      tracks: {
-        total: playlistData.content?.totalCount || 0,
-      },
-    }
-
-    // Transform tracks
-    const tracks: SpotifyTrack[] = (playlistData.content?.items || [])
-      .map((item) => {
-        const trackData = item?.itemV2?.data
-
-        if (!trackData) {
-          console.warn('Invalid track data:', item)
-          return null
-        }
-
-        const artists: SpotifyArtist[] = (trackData.artists?.items || []).map((artistItem) => ({
-          name: artistItem?.profile?.name || 'Unknown Artist',
-          uri: artistItem?.uri || '',
-          external_urls: {
-            spotify: `https://open.spotify.com/artist/${this.extractIdFromUri(artistItem?.uri)}`,
-          },
-        }))
-
-        const album: SpotifyAlbum = {
-          name: trackData.albumOfTrack?.name || 'Unknown Album',
-          uri: trackData.albumOfTrack?.uri || '',
-          external_urls: {
-            spotify: `https://open.spotify.com/album/${this.extractIdFromUri(trackData.albumOfTrack?.uri)}`,
-          },
-          images: (trackData.albumOfTrack?.coverArt?.sources || []).map((source) => ({
-            url: source.url,
-            width: source.width,
-            height: source.height,
-          })),
-        }
-
-        return {
-          name: trackData.name || 'Unknown Track',
-          uri: trackData.uri || '',
-          duration_ms: trackData.duration?.totalMilliseconds || 0,
-          artists,
-          album,
-          external_urls: {
-            spotify: `https://open.spotify.com/track/${this.extractIdFromUri(trackData.uri)}`,
-          },
-        }
-      })
-      .filter((track) => track !== null) as SpotifyTrack[]
-
-    return {
-      playlist,
-      tracks,
-    }
-  }
-
-  private extractIdFromUri(uri: string | undefined): string {
-    if (!uri) {
-      console.warn('Invalid URI provided to extractIdFromUri:', uri)
-      return ''
-    }
-    return uri.split(':').pop() || ''
-  }
-
   public async dispose(): Promise<void> {
     // Clear any ongoing background updates
     this.backgroundUpdates.clear()
@@ -781,8 +416,5 @@ export class SpotifyMediaInfo {
       }
     }
     this.pendingForegroundRequests.clear()
-
-    // Close browser and all pages
-    await this.closeBrowser()
   }
 }

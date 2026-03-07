@@ -17,7 +17,6 @@
     "express": "^5.1.0",
     "jsonfile": "^6.2.0",
     "ky": "1.10.0",
-    "puppeteer": "^24.18.0",
     "xml-js": "^1.6.11"
   },
   "devDependencies": {
