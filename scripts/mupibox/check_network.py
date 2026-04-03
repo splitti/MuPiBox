@@ -3,10 +3,10 @@ import requests
 def internet():
     try:
         response = requests.get("https://www.google.com", timeout=5)
-        print("true") if response.status_code == 200 else print("false")
+        print("online") if response.status_code == 200 else print("offline")
 #        return response.status_code == 200
     except requests.RequestException:
-        print("false")
+        print("offline")
 #        return False
 
 internet()
