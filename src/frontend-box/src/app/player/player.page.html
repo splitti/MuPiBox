@@ -73,7 +73,16 @@
         }
       }
     </ion-title>
-    <span slot="end" class="mupihat-icon-container"><mupihat-icon></mupihat-icon></span>
+    <ion-buttons slot="end">
+      <ion-button class="status-icons" (click)="settingsButtonPressed()">
+        @if (isOnline()) {
+          <ion-icon name="cloud-outline"></ion-icon>
+        } @else {
+          <ion-icon name="cloud-offline-outline"></ion-icon>
+        }
+        <mupihat-icon></mupihat-icon>
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 

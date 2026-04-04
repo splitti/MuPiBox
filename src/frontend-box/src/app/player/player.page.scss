@@ -76,3 +76,17 @@ ion-back-button {
 .mupihat-icon-container {
     padding-right: 20px;
 }
+
+.status-icons {
+    --padding-start: 0px !important;
+    --padding-end: 0px !important;
+    height: 70px !important;
+    width: 70px !important;
+    font-size: 20px !important;
+
+    ion-icon {
+        font-size: 28px !important;
+        color: rgb(255, 255, 255);
+        opacity: 1.0;
+    }
+}
