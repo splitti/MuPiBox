@@ -40,6 +40,8 @@ import type { Media } from '../media'
 import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
 import { PlayerCmds, PlayerService } from '../player.service'
+import type { PlaytimePlayState } from '../playtime.model'
+import { PlaytimeService } from '../playtime.service'
 import { SpotifyService } from '../spotify.service'
 
 @Component({
@@ -86,6 +88,9 @@ export class PlayerPage implements OnInit {
   progress = 0
   shufflechanged = 0
   tmpProgressTime = 0
+  // Tracks the playtime state across ticks so we can detect transitions
+  // (normal -> grace, grace -> blocked, etc.) and persist resume on time.
+  private prevPlaytimeState: PlaytimePlayState | 'unknown' = 'unknown'
   public readonly spotify$: Observable<CurrentSpotify>
   public readonly local$: Observable<CurrentMPlayer>
 
@@ -97,6 +102,7 @@ export class PlayerPage implements OnInit {
     private navController: NavController,
     private playerService: PlayerService,
     private spotifyService: SpotifyService,
+    private playtimeService: PlaytimeService,
   ) {
     this.spotify$ = this.mediaService.current$
     this.local$ = this.mediaService.local$
@@ -204,6 +210,7 @@ export class PlayerPage implements OnInit {
         this.saveResumeFiles()
       }
     }
+    this.checkPlaytimeForResume()
 
     if (this.media.type === 'spotify') {
       const seek = this.currentPlayedSpotify?.progress_ms || 0
@@ -348,6 +355,28 @@ export class PlayerPage implements OnInit {
         this.playerService.seekPosition(this.media.resumerssprogressTime)
       }, 2000)
     }
+  }
+
+  // The 30s saveResumeFiles cadence in updateProgress() is fine for normal use, but it
+  // can be up to 30 seconds stale when the playtime limit cuts playback off. Save
+  // immediately on the entry transition to grace and to blocked so the resume entry
+  // captures (close to) the actual stop position. In the last minute before the limit
+  // is reached, also save more frequently so the grace-entry save isn't itself stale.
+  private checkPlaytimeForResume() {
+    const status = this.playtimeService.status()
+    if (!status.enabled) {
+      this.prevPlaytimeState = 'unknown'
+      return
+    }
+    const cur = status.state
+    if (this.prevPlaytimeState !== 'unknown' && cur !== this.prevPlaytimeState) {
+      if (cur === 'grace' || cur === 'blocked') {
+        this.saveResumeFiles()
+      }
+    } else if (cur === 'normal' && this.playing && status.remainingSeconds <= 60 && this.resumeTimer % 5 === 0) {
+      this.saveResumeFiles()
+    }
+    this.prevPlaytimeState = cur
   }
 
   saveResumeFiles() {
