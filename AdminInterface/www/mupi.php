@@ -449,6 +449,7 @@ if( $_POST['fan_control'] )
    $data["playtimeLimit"] = array(
     "enabled" => false,
     "resetHour" => 0,
+    "maxOverrunMinutes" => 10,
     "limitsMinutes" => array("mon"=>60,"tue"=>60,"wed"=>60,"thu"=>60,"fri"=>60,"sat"=>60,"sun"=>60),
    );
    }
@@ -458,6 +459,7 @@ if( $_POST['fan_control'] )
    }
   $data["playtimeLimit"]["enabled"] = (isset($_POST['playtime_enabled']) && $_POST['playtime_enabled'] === '1');
   $data["playtimeLimit"]["resetHour"] = max(0, min(23, intval($_POST['playtime_resetHour'])));
+  $data["playtimeLimit"]["maxOverrunMinutes"] = max(0, min(60, intval($_POST['playtime_maxOverrunMinutes'])));
   $playtime_days = array('mon','tue','wed','thu','fri','sat','sun');
   foreach( $playtime_days as $d )
    {
@@ -753,6 +755,12 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				<h2>Reset hour (0 - 23)</h2>
 				<p>Hour of day at which the counter resets to 0. <b>0</b> = midnight. Use e.g. <b>4</b> if you don't want a reset to interrupt late evening listening.</p>
 				<input type="number" name="playtime_resetHour" min="0" max="23" step="1" value="<?php echo $playtime_resetHour; ?>">
+			</li>
+			<li id="li_1">
+				<h2>Grace period (minutes)</h2>
+				<p>When the daily limit is reached, allow playback to continue for up to this many additional minutes so the current track can finish naturally. The player stops at the next track boundary (for local files / radio / RSS) or at the latest when this grace runs out. <b>0</b> = stop immediately at the limit. Default: <b>10</b>. Maximum: 60.</p>
+				<?php $playtime_maxOverrunMinutes = isset($data["playtimeLimit"]["maxOverrunMinutes"]) ? intval($data["playtimeLimit"]["maxOverrunMinutes"]) : 10; ?>
+				<input type="number" name="playtime_maxOverrunMinutes" min="0" max="60" step="1" value="<?php echo $playtime_maxOverrunMinutes; ?>"> min
 			</li>
 			<li id="li_1">
 				<h2>Daily limit per weekday (minutes)</h2>

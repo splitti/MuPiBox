@@ -122,6 +122,20 @@ player.on('track-change', () => {
     cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Local.py')
 })
 
+// Playtime grace period: stop at the next natural mplayer break point
+// (start of next track, or end of playlist). Spotify doesn't surface these
+// events, so for Spotify the grace timeout in playtimeTick() is the only stop trigger.
+player.on('track-change', () => {
+  if (playtimeState.state === 'grace') {
+    finalizePlaytimeBlock('next track would start during grace period')
+  }
+})
+player.on('playlist-finish', () => {
+  if (playtimeState.state === 'grace') {
+    finalizePlaytimeBlock('playlist finished during grace period')
+  }
+})
+
 setInterval(() => {
   const cmdVolume = "/usr/bin/amixer sget Master | grep 'Right:'"
   const exec = require('node:child_process').exec
@@ -194,9 +208,16 @@ const PLAYTIME_CHECKPOINT_INTERVAL_MS = 60_000
 function readPlaytimeConfig() {
   const raw = muPiBoxConfig?.playtimeLimit || {}
   const resetHour = Number.isInteger(raw.resetHour) && raw.resetHour >= 0 && raw.resetHour < 24 ? raw.resetHour : 0
+  // Grace period in minutes after the limit is reached during which playback may
+  // continue (current track allowed to finish). 0 = stop immediately at the limit.
+  const maxOverrunMinutes =
+    Number.isInteger(raw.maxOverrunMinutes) && raw.maxOverrunMinutes >= 0 && raw.maxOverrunMinutes <= 60
+      ? raw.maxOverrunMinutes
+      : 10
   return {
     enabled: raw.enabled === true,
     resetHour,
+    maxOverrunMinutes,
     limitsMinutes: { ...PLAYTIME_DEFAULT_LIMITS, ...(raw.limitsMinutes || {}) },
   }
 }
@@ -217,11 +238,13 @@ function isActuallyPlaying() {
   return false
 }
 
+// state machine: 'normal' (under limit) → 'grace' (over limit, current track finishing) → 'blocked' (stopped)
 const playtimeState = {
   date: '',
   dayKey: 'mon',
   usedSeconds: 0,
-  blocked: false,
+  state: 'normal',
+  graceEndsAt: null,
 }
 let playtimeLastCheckpointAt = 0
 let playtimeLastCheckpointSeconds = -1
@@ -251,14 +274,17 @@ function writePlaytimeWorking() {
     return
   }
   const limit = cfg.limitsMinutes[playtimeState.dayKey] ?? 60
+  const graceEndsInSeconds =
+    playtimeState.graceEndsAt !== null ? Math.max(0, Math.ceil((playtimeState.graceEndsAt - Date.now()) / 1000)) : 0
   const payload = {
     enabled: true,
+    state: playtimeState.state,
     date: playtimeState.date,
     dayKey: playtimeState.dayKey,
     limitMinutes: limit,
     usedSeconds: playtimeState.usedSeconds,
     remainingSeconds: Math.max(0, limit * 60 - playtimeState.usedSeconds),
-    blocked: playtimeState.blocked,
+    graceEndsInSeconds,
     resetHour: cfg.resetHour,
   }
   fs.writeFile(PLAYTIME_WORKING_PATH, JSON.stringify(payload), () => {})
@@ -277,12 +303,24 @@ function writePlaytimeCheckpoint() {
   playtimeLastCheckpointSeconds = playtimeState.usedSeconds
 }
 
+// Used by the catch-all to decide whether to refuse new play/resume/skip commands.
+// During grace, the *current* track is allowed to finish but no new playback may start.
 function isPlaytimeBlocked() {
-  const cfg = readPlaytimeConfig()
-  if (!cfg.enabled) return false
-  const today = getLogicalDay(new Date(), cfg.resetHour)
-  const limit = cfg.limitsMinutes[today.dayKey] ?? 60
-  return playtimeState.usedSeconds >= limit * 60
+  return playtimeState.state === 'grace' || playtimeState.state === 'blocked'
+}
+
+// Transition to fully-stopped state. Called from the tick on grace timeout, from the
+// mplayer track-change/playlist-finish handlers, or directly when grace=0.
+function finalizePlaytimeBlock(reason) {
+  log.info(`${new Date().toLocaleString()}: [Playtime] Finalizing block (${reason})`)
+  playtimeState.state = 'blocked'
+  playtimeState.graceEndsAt = null
+  try {
+    stop()
+  } catch (e) {
+    log.error(`${new Date().toLocaleString()}: [Playtime] Error stopping playback:`, e)
+  }
+  writePlaytimeCheckpoint()
 }
 
 // Commands that *start or resume* playback. These get blocked when the daily cap is hit.
@@ -306,18 +344,22 @@ function isPlayInitiatingCommand(command) {
 function playtimeTick() {
   const cfg = readPlaytimeConfig()
   if (!cfg.enabled) {
-    if (playtimeState.blocked) playtimeState.blocked = false
+    if (playtimeState.state !== 'normal' || playtimeState.graceEndsAt !== null) {
+      playtimeState.state = 'normal'
+      playtimeState.graceEndsAt = null
+    }
     writePlaytimeWorking()
     return
   }
   const now = new Date()
   const today = getLogicalDay(now, cfg.resetHour)
-  // Day rollover: reset counter
+  // Day rollover: reset counter and state
   if (today.dateStr !== playtimeState.date) {
     playtimeState.date = today.dateStr
     playtimeState.dayKey = today.dayKey
     playtimeState.usedSeconds = 0
-    playtimeState.blocked = false
+    playtimeState.state = 'normal'
+    playtimeState.graceEndsAt = null
     writePlaytimeCheckpoint()
     log.info(`${now.toLocaleString()}: [Playtime] New day: ${today.dateStr} (${today.dayKey})`)
   }
@@ -325,22 +367,30 @@ function playtimeTick() {
   if (isActuallyPlaying()) {
     playtimeState.usedSeconds++
   }
-  // Check the limit
+  // State transitions
   const limit = cfg.limitsMinutes[today.dayKey] ?? 60
   const limitSeconds = limit * 60
-  const wasBlocked = playtimeState.blocked
-  playtimeState.blocked = playtimeState.usedSeconds >= limitSeconds
-  // Just-blocked transition: stop playback once
-  if (playtimeState.blocked && !wasBlocked) {
-    log.info(
-      `${now.toLocaleString()}: [Playtime] Daily limit reached (${limit} min for ${today.dayKey}). Stopping playback.`,
-    )
-    try {
-      stop()
-    } catch (e) {
-      log.error(`${now.toLocaleString()}: [Playtime] Error stopping playback:`, e)
+  const limitReached = playtimeState.usedSeconds >= limitSeconds
+  if (limitReached) {
+    if (playtimeState.state === 'normal') {
+      // Just-reached transition
+      const overrunMs = cfg.maxOverrunMinutes * 60 * 1000
+      if (overrunMs > 0) {
+        playtimeState.state = 'grace'
+        playtimeState.graceEndsAt = Date.now() + overrunMs
+        log.info(
+          `${now.toLocaleString()}: [Playtime] Daily limit reached (${limit} min for ${today.dayKey}). Entering grace period (max ${cfg.maxOverrunMinutes} min until current track ends).`,
+        )
+        writePlaytimeCheckpoint()
+      } else {
+        finalizePlaytimeBlock(`limit reached (${limit} min, no grace configured)`)
+      }
+    } else if (playtimeState.state === 'grace') {
+      if (playtimeState.graceEndsAt !== null && Date.now() >= playtimeState.graceEndsAt) {
+        finalizePlaytimeBlock(`grace period expired (${cfg.maxOverrunMinutes} min)`)
+      }
     }
-    writePlaytimeCheckpoint()
+    // else 'blocked': stay blocked
   }
   // Working state: every tick (tmpfs, no SD wear)
   writePlaytimeWorking()

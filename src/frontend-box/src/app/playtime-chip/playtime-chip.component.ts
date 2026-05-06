@@ -18,7 +18,7 @@ export class PlaytimeChipComponent {
 
   protected readonly visible: Signal<boolean> = computed(() => {
     const s = this.playtimeService.status()
-    return s.enabled === true && !s.blocked
+    return s.enabled === true && s.state === 'normal'
   })
 
   protected readonly remainingMinutes: Signal<number> = computed(() => {

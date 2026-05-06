@@ -38,7 +38,7 @@ export class AppComponent {
     )
     this.playtimeBlocked = computed(() => {
       const s = playtimeService.status()
-      return s.enabled === true && s.blocked
+      return s.enabled === true && s.state === 'blocked'
     })
   }
 }
