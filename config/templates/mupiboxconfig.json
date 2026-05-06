@@ -279,6 +279,19 @@
 			"sun": 60
 		}
 	},
+	"quietHours": {
+		"enabled": false,
+		"maxOverrunMinutes": 10,
+		"schedule": {
+			"mon": [],
+			"tue": [],
+			"wed": [],
+			"thu": [],
+			"fri": [],
+			"sat": [],
+			"sun": []
+		}
+	},
 	"shim": {
 		"poweroffPin": "4",
 		"triggerPin": "17",

@@ -362,10 +362,11 @@ export class PlayerPage implements OnInit {
   }
 
   // The 30s saveResumeFiles cadence in updateProgress() is fine for normal use, but it
-  // can be up to 30 seconds stale when the playtime limit cuts playback off. Save
-  // immediately on the entry transition to grace and to blocked so the resume entry
-  // captures (close to) the actual stop position. In the last minute before the limit
-  // is reached, also save more frequently so the grace-entry save isn't itself stale.
+  // can be up to 30 seconds stale when playback is cut off (playtime cap or quiet
+  // hours window). Save immediately on the entry transition to grace and to blocked
+  // so the resume entry captures (close to) the actual stop position. In the last
+  // minute before the playtime limit, also save more frequently so the grace-entry
+  // save isn't itself stale.
   private checkPlaytimeForResume() {
     const status = this.playtimeService.status()
     if (!status.enabled) {
@@ -377,7 +378,13 @@ export class PlayerPage implements OnInit {
       if (cur === 'grace' || cur === 'blocked') {
         this.saveResumeFiles()
       }
-    } else if (cur === 'normal' && this.playing && status.remainingSeconds <= 60 && this.resumeTimer % 5 === 0) {
+    } else if (
+      cur === 'normal' &&
+      this.playing &&
+      status.playtime.enabled &&
+      status.playtime.remainingSeconds <= 60 &&
+      this.resumeTimer % 5 === 0
+    ) {
       this.saveResumeFiles()
     }
     this.prevPlaytimeState = cur

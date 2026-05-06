@@ -18,13 +18,15 @@ export class PlaytimeChipComponent {
 
   protected readonly visible: Signal<boolean> = computed(() => {
     const s = this.playtimeService.status()
-    return s.enabled === true && s.state === 'normal'
+    // Show only when playtime is enabled AND nothing is restricting playback
+    // (combined state is 'normal'). Quiet-only setups have no countdown to show.
+    return s.enabled === true && s.playtime.enabled && s.state === 'normal'
   })
 
   protected readonly remainingMinutes: Signal<number> = computed(() => {
     const s = this.playtimeService.status()
-    if (s.enabled !== true) return 0
-    return Math.ceil(s.remainingSeconds / 60)
+    if (s.enabled !== true || !s.playtime.enabled) return 0
+    return Math.ceil(s.playtime.remainingSeconds / 60)
   })
 
   protected readonly level: Signal<ChipLevel> = computed(() => {

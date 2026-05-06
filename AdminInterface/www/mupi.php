@@ -471,6 +471,45 @@ if( $_POST['fan_control'] )
   $CHANGE_TXT = $CHANGE_TXT."<li>Playtime limit settings saved (player restarting...)</li>";
   $change = 2;
   }
+ if( $_POST['quiethours_save'] )
+  {
+  if( !isset($data["quietHours"]) || !is_array($data["quietHours"]) )
+   {
+   $data["quietHours"] = array(
+    "enabled" => false,
+    "maxOverrunMinutes" => 10,
+    "schedule" => array("mon"=>array(),"tue"=>array(),"wed"=>array(),"thu"=>array(),"fri"=>array(),"sat"=>array(),"sun"=>array()),
+   );
+   }
+  $data["quietHours"]["enabled"] = (isset($_POST['quiethours_enabled']) && $_POST['quiethours_enabled'] === '1');
+  $data["quietHours"]["maxOverrunMinutes"] = max(0, min(60, intval($_POST['quiethours_maxOverrunMinutes'])));
+  $quiethours_days = array('mon','tue','wed','thu','fri','sat','sun');
+  $quiethours_window_count = 0;
+  foreach( $quiethours_days as $d )
+   {
+   $rawWindows = isset($_POST['quiet_windows'][$d]) && is_array($_POST['quiet_windows'][$d]) ? $_POST['quiet_windows'][$d] : array();
+   $cleaned = array();
+   foreach( $rawWindows as $w )
+    {
+    if( !is_array($w) ) continue;
+    $from = isset($w['from']) ? trim($w['from']) : '';
+    $to = isset($w['to']) ? trim($w['to']) : '';
+    // Skip incomplete rows (so add-row-then-don't-fill doesn't pollute config).
+    if( $from === '' || $to === '' ) continue;
+    if( !preg_match('/^([01][0-9]|2[0-3]):[0-5][0-9]$/', $from) ) continue;
+    if( !preg_match('/^([01][0-9]|2[0-3]):[0-5][0-9]$/', $to) ) continue;
+    $entry = array('from' => $from, 'to' => $to);
+    $label = isset($w['label']) ? trim($w['label']) : '';
+    if( $label !== '' ) $entry['label'] = $label;
+    $cleaned[] = $entry;
+    $quiethours_window_count++;
+    }
+   $data["quietHours"]["schedule"][$d] = array_values($cleaned);
+   }
+  $playtime_changed = true; // share the player-restart trigger below
+  $CHANGE_TXT = $CHANGE_TXT."<li>Quiet hours saved (".$quiethours_window_count." window(s), player restarting...)</li>";
+  $change = 2;
+  }
  if( $data["shim"]["ledPin"]!=$_POST['ledPin'] && $_POST['ledPin'])
   {
   $data["shim"]["ledPin"]=$_POST['ledPin'];
@@ -791,6 +830,107 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 			</li>
 		</ul>
 	</details>
+
+	<details id="quiethours">
+		<summary><i class="fa-solid fa-moon"></i> Quiet hours</summary>
+		<ul>
+			<li id="li_1">
+				<h2>About</h2>
+				<p>Define time windows per weekday in which playback is automatically blocked (e.g. homework time, mealtimes, bedtime). Multiple windows per day are supported. Settings take effect after saving (the player is restarted automatically).</p>
+				<p>Set a window's <b>from</b> later than its <b>to</b> to span midnight (e.g. 20:00 → 06:00 covers the night). The optional <b>label</b> is shown to the kid on the block screen.</p>
+			</li>
+			<li id="li_1">
+				<h2>Status</h2>
+				<?php
+				$qh_enabled_state = ( isset($data["quietHours"]["enabled"]) && $data["quietHours"]["enabled"] ) ? true : false;
+				$qh_maxOverrunMinutes = isset($data["quietHours"]["maxOverrunMinutes"]) ? intval($data["quietHours"]["maxOverrunMinutes"]) : 10;
+				$qh_schedule = isset($data["quietHours"]["schedule"]) && is_array($data["quietHours"]["schedule"]) ? $data["quietHours"]["schedule"] : array();
+				echo '<p>Currently: <b>'.($qh_enabled_state ? 'ENABLED' : 'DISABLED').'</b></p>';
+				?>
+				<p>Enable / disable quiet hours:</p>
+				<select name="quiethours_enabled">
+					<option value="1" <?php echo $qh_enabled_state ? 'selected' : ''; ?>>Enabled</option>
+					<option value="0" <?php echo !$qh_enabled_state ? 'selected' : ''; ?>>Disabled</option>
+				</select>
+			</li>
+			<li id="li_1">
+				<h2>Grace period (minutes)</h2>
+				<p>When a quiet window starts, allow up to this many additional minutes for the current track to finish naturally. <b>0</b> = stop immediately at the window boundary. Default: <b>10</b>. Maximum: 60.</p>
+				<input type="number" name="quiethours_maxOverrunMinutes" min="0" max="60" step="1" value="<?php echo $qh_maxOverrunMinutes; ?>"> min
+			</li>
+			<li id="li_1">
+				<h2>Windows per weekday</h2>
+				<p>Use „+ Add window" to add another row to a day. Empty rows are ignored on save.</p>
+				<?php
+				$qh_day_labels = array(
+					'mon' => 'Monday',
+					'tue' => 'Tuesday',
+					'wed' => 'Wednesday',
+					'thu' => 'Thursday',
+					'fri' => 'Friday',
+					'sat' => 'Saturday',
+					'sun' => 'Sunday',
+				);
+				foreach( $qh_day_labels as $key => $label ) {
+					$windows = isset($qh_schedule[$key]) && is_array($qh_schedule[$key]) ? $qh_schedule[$key] : array();
+					echo '<div class="quiet-day-block" style="margin-top:1em;padding:0.5em;border:1px solid #ddd;border-radius:4px;">';
+					echo '<b>'.$label.'</b>';
+					echo '<table class="quiet-windows-table" id="quiet-windows-'.$key.'" style="width:100%;margin-top:0.4em;">';
+					echo '<tr><th>From</th><th>To</th><th>Label (optional)</th><th></th></tr>';
+					$idx = 0;
+					foreach( $windows as $w ) {
+						if( !is_array($w) ) continue;
+						$wFrom = htmlspecialchars(isset($w['from']) ? $w['from'] : '');
+						$wTo = htmlspecialchars(isset($w['to']) ? $w['to'] : '');
+						$wLabel = htmlspecialchars(isset($w['label']) ? $w['label'] : '');
+						echo '<tr class="quiet-window-row">';
+						echo '<td><input type="time" name="quiet_windows['.$key.']['.$idx.'][from]" value="'.$wFrom.'"></td>';
+						echo '<td><input type="time" name="quiet_windows['.$key.']['.$idx.'][to]" value="'.$wTo.'"></td>';
+						echo '<td><input type="text" name="quiet_windows['.$key.']['.$idx.'][label]" value="'.$wLabel.'" placeholder="e.g. Bedtime"></td>';
+						echo '<td><button type="button" class="button_text_red" onclick="removeQuietWindow(this)">×</button></td>';
+						echo '</tr>';
+						$idx++;
+					}
+					echo '</table>';
+					echo '<button type="button" class="button_text" onclick="addQuietWindow(\''.$key.'\')" style="margin-top:0.4em;">+ Add window</button>';
+					echo '</div>';
+				}
+				?>
+			</li>
+			<li class="buttons">
+				<input type="hidden" name="form_id" value="37271" />
+				<input id="saveForm" class="button_text" type="submit" name="quiethours_save" value="Save quiet hours" />
+			</li>
+		</ul>
+	</details>
+
+	<script>
+	function addQuietWindow(day) {
+		var table = document.getElementById('quiet-windows-' + day);
+		// Determine next index by counting existing rows (excluding header).
+		var existingRows = table.querySelectorAll('tr.quiet-window-row');
+		var nextIdx = 0;
+		existingRows.forEach(function(r){
+			var input = r.querySelector('input[name^="quiet_windows[' + day + ']["]');
+			if (input) {
+				var m = input.name.match(/\[(\d+)\]/);
+				if (m) nextIdx = Math.max(nextIdx, parseInt(m[1]) + 1);
+			}
+		});
+		var row = document.createElement('tr');
+		row.className = 'quiet-window-row';
+		row.innerHTML =
+			'<td><input type="time" name="quiet_windows[' + day + '][' + nextIdx + '][from]"></td>' +
+			'<td><input type="time" name="quiet_windows[' + day + '][' + nextIdx + '][to]"></td>' +
+			'<td><input type="text" name="quiet_windows[' + day + '][' + nextIdx + '][label]" placeholder="e.g. Bedtime"></td>' +
+			'<td><button type="button" class="button_text_red" onclick="removeQuietWindow(this)">×</button></td>';
+		table.appendChild(row);
+	}
+	function removeQuietWindow(btn) {
+		var row = btn.closest('tr.quiet-window-row');
+		if (row && row.parentNode) row.parentNode.removeChild(row);
+	}
+	</script>
 
 	<details id="systemsettings">
 		<summary><i class="fa-solid fa-screwdriver-wrench"></i> System settings</summary>

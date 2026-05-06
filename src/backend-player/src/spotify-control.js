@@ -122,17 +122,25 @@ player.on('track-change', () => {
     cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Local.py')
 })
 
-// Playtime grace period: stop at the next natural mplayer break point
+// Playtime + Quiet-Hours grace: stop at the next natural mplayer break point
 // (start of next track, or end of playlist). Spotify doesn't surface these
-// events, so for Spotify the grace timeout in playtimeTick() is the only stop trigger.
+// events, so for Spotify the grace timeout in the tick is the only stop trigger.
+// Both sub-systems are checked independently — a single track-change can
+// finalize either or both if both happen to be in grace simultaneously.
 player.on('track-change', () => {
   if (playtimeState.state === 'grace') {
     finalizePlaytimeBlock('next track would start during grace period')
+  }
+  if (quietHoursState.state === 'grace') {
+    finalizeQuietHoursBlock('next track would start during grace period')
   }
 })
 player.on('playlist-finish', () => {
   if (playtimeState.state === 'grace') {
     finalizePlaytimeBlock('playlist finished during grace period')
+  }
+  if (quietHoursState.state === 'grace') {
+    finalizeQuietHoursBlock('playlist finished during grace period')
   }
 })
 
@@ -222,6 +230,64 @@ function readPlaytimeConfig() {
   }
 }
 
+// === Quiet Hours ===
+const QUIET_DEFAULT_SCHEDULE = { mon: [], tue: [], wed: [], thu: [], fri: [], sat: [], sun: [] }
+
+function readQuietHoursConfig() {
+  const raw = muPiBoxConfig?.quietHours || {}
+  const maxOverrunMinutes =
+    Number.isInteger(raw.maxOverrunMinutes) && raw.maxOverrunMinutes >= 0 && raw.maxOverrunMinutes <= 60
+      ? raw.maxOverrunMinutes
+      : 10
+  return {
+    enabled: raw.enabled === true,
+    maxOverrunMinutes,
+    schedule: { ...QUIET_DEFAULT_SCHEDULE, ...(raw.schedule || {}) },
+  }
+}
+
+// 'HH:MM' → minutes since midnight, or null if invalid.
+function parseHHMMToMinutes(hhmm) {
+  if (typeof hhmm !== 'string') return null
+  const m = hhmm.match(/^(\d{1,2}):(\d{2})$/)
+  if (!m) return null
+  const h = Number(m[1])
+  const min = Number(m[2])
+  if (h < 0 || h > 23 || min < 0 || min > 59) return null
+  return h * 60 + min
+}
+
+// Returns the active quiet window object {from, to, label?} that contains "now",
+// or null if no window applies. Windows belong to the day they start on; a
+// midnight-spanning window (from > to) covers from `from` of its day until `to`
+// of the next day.
+function findActiveQuietWindow(now, schedule) {
+  const todayKey = PLAYTIME_DAY_KEYS[now.getDay()]
+  const yesterdayKey = PLAYTIME_DAY_KEYS[(now.getDay() + 6) % 7]
+  const nowMinutes = now.getHours() * 60 + now.getMinutes()
+
+  for (const w of schedule[todayKey] || []) {
+    const fromMin = parseHHMMToMinutes(w.from)
+    const toMin = parseHHMMToMinutes(w.to)
+    if (fromMin === null || toMin === null) continue
+    if (fromMin < toMin) {
+      if (nowMinutes >= fromMin && nowMinutes < toMin) return w
+    } else if (fromMin > toMin) {
+      // Same-day half of a midnight-spanning window
+      if (nowMinutes >= fromMin) return w
+    }
+    // fromMin === toMin: zero-length, skip
+  }
+  // Yesterday's wrapping windows (the to-half lands in today's early hours)
+  for (const w of schedule[yesterdayKey] || []) {
+    const fromMin = parseHHMMToMinutes(w.from)
+    const toMin = parseHHMMToMinutes(w.to)
+    if (fromMin === null || toMin === null) continue
+    if (fromMin > toMin && nowMinutes < toMin) return w
+  }
+  return null
+}
+
 // Reset-hour shifts when "today" begins. With resetHour=4, Sunday 02:00 still counts as Saturday.
 function getLogicalDay(now, resetHour) {
   const shifted = new Date(now.getTime() - resetHour * 3600 * 1000)
@@ -249,6 +315,13 @@ const playtimeState = {
 let playtimeLastCheckpointAt = 0
 let playtimeLastCheckpointSeconds = -1
 
+// Quiet hours uses the same state machine but is purely time-window-driven (no counter).
+const quietHoursState = {
+  state: 'normal',
+  graceEndsAt: null,
+  activeWindow: null, // current window object {from, to, label?} when in_window
+}
+
 function loadPlaytimeCheckpoint() {
   try {
     if (!fs.existsSync(PLAYTIME_CHECKPOINT_PATH)) return
@@ -268,25 +341,53 @@ function loadPlaytimeCheckpoint() {
   }
 }
 
-function writePlaytimeWorking() {
-  const cfg = readPlaytimeConfig()
-  if (!cfg.enabled) {
+function writeCombinedWorking() {
+  const ptCfg = readPlaytimeConfig()
+  const qhCfg = readQuietHoursConfig()
+
+  if (!ptCfg.enabled && !qhCfg.enabled) {
     fs.writeFile(PLAYTIME_WORKING_PATH, JSON.stringify({ enabled: false }), () => {})
     return
   }
-  const limit = cfg.limitsMinutes[playtimeState.dayKey] ?? 60
-  const graceEndsInSeconds =
+
+  // Combined effective state across both sub-systems
+  let state = 'normal'
+  if (playtimeState.state === 'blocked' || quietHoursState.state === 'blocked') state = 'blocked'
+  else if (playtimeState.state === 'grace' || quietHoursState.state === 'grace') state = 'grace'
+
+  // blockSource: prefer 'quiet' over 'playtime' if both are restricting (more "explainable" to the kid)
+  let blockSource = null
+  if (quietHoursState.state !== 'normal') blockSource = 'quiet'
+  else if (playtimeState.state !== 'normal') blockSource = 'playtime'
+
+  const ptLimit = ptCfg.enabled ? (ptCfg.limitsMinutes[playtimeState.dayKey] ?? 60) : 0
+  const ptGraceEndsInSeconds =
     playtimeState.graceEndsAt !== null ? Math.max(0, Math.ceil((playtimeState.graceEndsAt - Date.now()) / 1000)) : 0
+  const qhGraceEndsInSeconds =
+    quietHoursState.graceEndsAt !== null ? Math.max(0, Math.ceil((quietHoursState.graceEndsAt - Date.now()) / 1000)) : 0
+
   const payload = {
     enabled: true,
-    state: playtimeState.state,
-    date: playtimeState.date,
-    dayKey: playtimeState.dayKey,
-    limitMinutes: limit,
-    usedSeconds: playtimeState.usedSeconds,
-    remainingSeconds: Math.max(0, limit * 60 - playtimeState.usedSeconds),
-    graceEndsInSeconds,
-    resetHour: cfg.resetHour,
+    state,
+    blockSource,
+    playtime: {
+      enabled: ptCfg.enabled,
+      state: playtimeState.state,
+      date: playtimeState.date,
+      dayKey: playtimeState.dayKey,
+      limitMinutes: ptLimit,
+      usedSeconds: playtimeState.usedSeconds,
+      remainingSeconds: ptCfg.enabled ? Math.max(0, ptLimit * 60 - playtimeState.usedSeconds) : 0,
+      graceEndsInSeconds: ptGraceEndsInSeconds,
+      resetHour: ptCfg.resetHour,
+    },
+    quiet: {
+      enabled: qhCfg.enabled,
+      state: quietHoursState.state,
+      inWindow: quietHoursState.activeWindow !== null,
+      ...(quietHoursState.activeWindow?.label ? { label: quietHoursState.activeWindow.label } : {}),
+      graceEndsInSeconds: qhGraceEndsInSeconds,
+    },
   }
   fs.writeFile(PLAYTIME_WORKING_PATH, JSON.stringify(payload), () => {})
 }
@@ -305,10 +406,17 @@ function writePlaytimeCheckpoint() {
 }
 
 // Used by the catch-all to decide whether to refuse new play/resume/skip commands.
-// During grace, the *current* track is allowed to finish but no new playback may start.
-function isPlaytimeBlocked() {
-  return playtimeState.state === 'grace' || playtimeState.state === 'blocked'
+// True if EITHER playtime OR quiet hours is currently restricting playback.
+function isPlaybackBlocked() {
+  return (
+    playtimeState.state === 'grace' ||
+    playtimeState.state === 'blocked' ||
+    quietHoursState.state === 'grace' ||
+    quietHoursState.state === 'blocked'
+  )
 }
+// Backwards-compat alias kept so older call sites keep working.
+const isPlaytimeBlocked = isPlaybackBlocked
 
 // Transition to fully-stopped state. Called from the tick on grace timeout, from the
 // mplayer track-change/playlist-finish handlers, or directly when grace=0.
@@ -323,6 +431,17 @@ function finalizePlaytimeBlock(reason) {
     console.error(`${new Date().toLocaleString()}: [Playtime] Error stopping playback:`, e)
   }
   writePlaytimeCheckpoint()
+}
+
+function finalizeQuietHoursBlock(reason) {
+  console.log(`${new Date().toLocaleString()}: [QuietHours] Finalizing block (${reason})`)
+  quietHoursState.state = 'blocked'
+  quietHoursState.graceEndsAt = null
+  try {
+    stop()
+  } catch (e) {
+    console.error(`${new Date().toLocaleString()}: [QuietHours] Error stopping playback:`, e)
+  }
 }
 
 // Commands that *start or resume* playback. These get blocked when the daily cap is hit.
@@ -343,14 +462,16 @@ function isPlayInitiatingCommand(command) {
   return false
 }
 
-function playtimeTick() {
+// Updates playtimeState only (counter, day rollover, state transitions, SD checkpoint).
+// Working-state file is written separately by writeCombinedWorking once both
+// sub-systems have ticked, so the payload is consistent.
+function playtimeTickStep() {
   const cfg = readPlaytimeConfig()
   if (!cfg.enabled) {
     if (playtimeState.state !== 'normal' || playtimeState.graceEndsAt !== null) {
       playtimeState.state = 'normal'
       playtimeState.graceEndsAt = null
     }
-    writePlaytimeWorking()
     return
   }
   const now = new Date()
@@ -369,13 +490,11 @@ function playtimeTick() {
   if (isActuallyPlaying()) {
     playtimeState.usedSeconds++
   }
-  // State transitions
   const limit = cfg.limitsMinutes[today.dayKey] ?? 60
   const limitSeconds = limit * 60
   const limitReached = playtimeState.usedSeconds >= limitSeconds
   if (limitReached) {
     if (playtimeState.state === 'normal') {
-      // Just-reached transition
       const overrunMs = cfg.maxOverrunMinutes * 60 * 1000
       if (overrunMs > 0) {
         playtimeState.state = 'grace'
@@ -394,9 +513,6 @@ function playtimeTick() {
     }
     // else 'blocked': stay blocked
   }
-  // Working state: every tick (tmpfs, no SD wear)
-  writePlaytimeWorking()
-  // SD checkpoint: every 60s if value changed
   if (
     Date.now() - playtimeLastCheckpointAt >= PLAYTIME_CHECKPOINT_INTERVAL_MS &&
     playtimeState.usedSeconds !== playtimeLastCheckpointSeconds
@@ -405,8 +521,59 @@ function playtimeTick() {
   }
 }
 
+// Updates quietHoursState based on whether "now" falls inside any configured window.
+// Mirror of playtimeTickStep but purely time-window-driven (no counter).
+function quietHoursTickStep() {
+  const cfg = readQuietHoursConfig()
+  if (!cfg.enabled) {
+    if (quietHoursState.state !== 'normal' || quietHoursState.activeWindow !== null) {
+      // User just disabled mid-window: instantly release. Playback isn't auto-started
+      // (it was stopped by the previous block) — kid taps play to resume.
+      quietHoursState.state = 'normal'
+      quietHoursState.graceEndsAt = null
+      quietHoursState.activeWindow = null
+    }
+    return
+  }
+  const now = new Date()
+  const window = findActiveQuietWindow(now, cfg.schedule)
+  if (window) {
+    if (quietHoursState.state === 'normal') {
+      // Just entered a window
+      quietHoursState.activeWindow = window
+      const overrunMs = cfg.maxOverrunMinutes * 60 * 1000
+      if (overrunMs > 0) {
+        quietHoursState.state = 'grace'
+        quietHoursState.graceEndsAt = Date.now() + overrunMs
+        console.log(
+          `${now.toLocaleString()}: [QuietHours] Entered window ${window.from}-${window.to}${window.label ? ` (${window.label})` : ''}. Entering grace period (max ${cfg.maxOverrunMinutes} min).`,
+        )
+      } else {
+        finalizeQuietHoursBlock(`entered window ${window.from}-${window.to} (no grace configured)`)
+      }
+    } else if (quietHoursState.state === 'grace') {
+      if (quietHoursState.graceEndsAt !== null && Date.now() >= quietHoursState.graceEndsAt) {
+        finalizeQuietHoursBlock(`grace period expired (${cfg.maxOverrunMinutes} min)`)
+      }
+    }
+    // 'blocked': stay blocked
+  } else if (quietHoursState.state !== 'normal') {
+    // Just exited a window — release without auto-starting playback
+    console.log(`${now.toLocaleString()}: [QuietHours] Window ended. Playback can resume on user action.`)
+    quietHoursState.state = 'normal'
+    quietHoursState.graceEndsAt = null
+    quietHoursState.activeWindow = null
+  }
+}
+
+function combinedTick() {
+  playtimeTickStep()
+  quietHoursTickStep()
+  writeCombinedWorking()
+}
+
 loadPlaytimeCheckpoint()
-setInterval(playtimeTick, 1000)
+setInterval(combinedTick, 1000)
 
 function writeplayerstatePlay() {
   playerstate = 'play'
@@ -1258,13 +1425,16 @@ app.use((req, res) => {
   log.debug(`${nowDate.toLocaleString()}: [Spotify Control]name: ${command.name}`)
   log.debug(`${nowDate.toLocaleString()}: [Spotify Control]dir: ${command.dir}`)
 
-  // Playtime limit: refuse new playback when the daily cap is reached.
+  // Playtime / Quiet-Hours: refuse new playback when either is restricting.
   // Pause/stop/volume/system commands fall through normally.
-  if (isPlaytimeBlocked() && isPlayInitiatingCommand(command)) {
+  if (isPlaybackBlocked() && isPlayInitiatingCommand(command)) {
+    const inQuiet = quietHoursState.state !== 'normal'
+    const reason = inQuiet ? 'quiet_hours_active' : 'playtime_limit_reached'
+    const tag = inQuiet ? 'QuietHours' : 'Playtime'
     console.log(
-      `${new Date().toLocaleString()}: [Playtime] Rejected command (limit reached): name=${command.name} dir=${command.dir}`,
+      `${new Date().toLocaleString()}: [${tag}] Rejected command (${reason}): name=${command.name} dir=${command.dir}`,
     )
-    res.status(423).send({ status: 'blocked', error: 'playtime_limit_reached' })
+    res.status(423).send({ status: 'blocked', error: reason })
     return
   }
 
