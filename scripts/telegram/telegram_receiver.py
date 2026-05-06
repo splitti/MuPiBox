@@ -15,11 +15,27 @@ with open("/etc/mupibox/mupiboxconfig.json") as file:
 if not config['telegram']['active']:
     quit()
 
+# Authorization: only respond to messages from the configured chat. Without
+# this check anyone who discovers the bot username can send /shutdown,
+# /reboot, /vol etc. — the bot token is the only barrier, which is too thin.
+# An empty chatId is treated as "deny all": the user has to configure one
+# for outbound notifications anyway, so requiring it here loses nothing.
+ALLOWED_CHAT_ID = str(config['telegram'].get('chatId', '')).strip()
+
+def is_authorized(chat_id):
+    if not ALLOWED_CHAT_ID:
+        print('Refusing message: no chatId configured in mupiboxconfig.json')
+        return False
+    return str(chat_id) == ALLOWED_CHAT_ID
+
 message_with_inline_keyboard = None
 
 def on_chat_message(msg):
     content_type, chat_type, chat_id = telepot.glance(msg)
     print(content_type, chat_type, chat_id)
+    if not is_authorized(chat_id):
+        print(f'Rejected message from unauthorized chat_id: {chat_id}')
+        return
     if content_type != 'text':
         return
     command = msg['text']
@@ -73,6 +89,9 @@ def on_chat_message(msg):
 def on_callback_query(msg):
     query_id, from_id, query_data = telepot.glance(msg, flavor='callback_query')
     print('Callback Query:', query_id, from_id, query_data)
+    if not is_authorized(from_id):
+        print(f'Rejected callback from unauthorized user_id: {from_id}')
+        return
 
     global message_with_inline_keyboard
 
