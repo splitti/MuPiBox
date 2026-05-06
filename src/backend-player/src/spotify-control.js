@@ -246,9 +246,13 @@ function loadPlaytimeCheckpoint() {
 
 function writePlaytimeWorking() {
   const cfg = readPlaytimeConfig()
+  if (!cfg.enabled) {
+    fs.writeFile(PLAYTIME_WORKING_PATH, JSON.stringify({ enabled: false }), () => {})
+    return
+  }
   const limit = cfg.limitsMinutes[playtimeState.dayKey] ?? 60
   const payload = {
-    enabled: cfg.enabled,
+    enabled: true,
     date: playtimeState.date,
     dayKey: playtimeState.dayKey,
     limitMinutes: limit,
@@ -303,6 +307,7 @@ function playtimeTick() {
   const cfg = readPlaytimeConfig()
   if (!cfg.enabled) {
     if (playtimeState.blocked) playtimeState.blocked = false
+    writePlaytimeWorking()
     return
   }
   const now = new Date()

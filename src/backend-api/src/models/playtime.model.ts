@@ -1,0 +1,26 @@
+export type PlaytimeDayKey = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'
+
+export type PlaytimeLimitsMinutes = Partial<Record<PlaytimeDayKey, number>>
+
+export interface PlaytimeLimitConfig {
+  enabled: boolean
+  resetHour?: number
+  limitsMinutes?: PlaytimeLimitsMinutes
+}
+
+export type PlaytimeStatus = PlaytimeStatusEnabled | PlaytimeStatusDisabled
+
+export interface PlaytimeStatusDisabled {
+  enabled: false
+}
+
+export interface PlaytimeStatusEnabled {
+  enabled: true
+  date: string
+  dayKey: PlaytimeDayKey
+  limitMinutes: number
+  usedSeconds: number
+  remainingSeconds: number
+  blocked: boolean
+  resetHour: number
+}
