@@ -836,8 +836,16 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 		<ul>
 			<li id="li_1">
 				<h2>About</h2>
-				<p>Define time windows per weekday in which playback is automatically blocked (e.g. homework time, mealtimes, bedtime). Multiple windows per day are supported. Settings take effect after saving (the player is restarted automatically).</p>
-				<p>Set a window's <b>from</b> later than its <b>to</b> to span midnight (e.g. 20:00 → 06:00 covers the night). The optional <b>label</b> is shown to the kid on the block screen.</p>
+				<p>Define time windows per weekday during which playback is automatically blocked (e.g. homework, mealtimes, bedtime). Multiple windows per day are supported.</p>
+				<p><b>How a window is interpreted:</b></p>
+				<ul style="margin-left:1.2em;list-style:disc;">
+					<li>A window <b>belongs to the day it starts on</b>.</li>
+					<li>If <b>from</b> is later than <b>to</b>, the window automatically continues into the next morning.</li>
+					<li><b>Example:</b> a single entry on <i>Monday</i> with <code>from 20:00 → to 08:00</code> blocks playback Monday evening <i>and</i> Tuesday morning until 08:00. You do <b>not</b> need a separate Tuesday entry for the same night.</li>
+					<li>Multiple windows on the same day combine — e.g. add a <code>14:00 → 16:00 (Homework)</code> alongside <code>20:00 → 08:00 (Bedtime)</code> to block both periods.</li>
+					<li>The optional <b>label</b> is shown to the kid on the block screen (e.g. „Homework", „Bedtime").</li>
+				</ul>
+				<p>Settings take effect after saving (the player is restarted automatically).</p>
 			</li>
 			<li id="li_1">
 				<h2>Status</h2>
