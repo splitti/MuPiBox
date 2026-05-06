@@ -2,5 +2,8 @@
   @if (monitorOff()) {
     <div class="mupi-monitor-blocker" (click)="$event.stopPropagation()"></div>
   }
+  @if (playtimeBlocked()) {
+    <mupi-playtime-blocked></mupi-playtime-blocked>
+  }
   <ion-router-outlet></ion-router-outlet>
 </ion-app>

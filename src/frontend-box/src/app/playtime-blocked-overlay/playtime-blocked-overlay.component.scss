@@ -1,0 +1,41 @@
+.playtime-blocked-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  user-select: none;
+  cursor: default;
+
+  .content {
+    color: #ffffff;
+    padding: 2rem;
+    max-width: 90%;
+  }
+
+  .icon {
+    font-size: 96px;
+    margin-bottom: 1.5rem;
+    opacity: 0.85;
+  }
+
+  h1 {
+    font-size: 2rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+    line-height: 1.2;
+  }
+
+  p {
+    font-size: 1.25rem;
+    opacity: 0.8;
+    margin: 0;
+    line-height: 1.3;
+  }
+}
