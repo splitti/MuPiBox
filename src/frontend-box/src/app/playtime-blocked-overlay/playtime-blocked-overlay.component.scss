@@ -37,5 +37,14 @@
     opacity: 0.8;
     margin: 0;
     line-height: 1.3;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .inline-icon {
+    font-size: 1.4rem;
+    opacity: 0.85;
+    vertical-align: middle;
   }
 }

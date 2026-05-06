@@ -258,12 +258,13 @@ function loadPlaytimeCheckpoint() {
       playtimeState.date = data.date
       playtimeState.dayKey = data.dayKey || today.dayKey
       playtimeState.usedSeconds = Number(data.usedSeconds) || 0
-      log.info(
+      // console.log so it shows even when logLevel='error' (the default)
+      console.log(
         `${new Date().toLocaleString()}: [Playtime] Resumed counter: ${playtimeState.usedSeconds}s for ${playtimeState.date}`,
       )
     }
   } catch (e) {
-    log.error(`${new Date().toLocaleString()}: [Playtime] Failed to load checkpoint:`, e)
+    console.error(`${new Date().toLocaleString()}: [Playtime] Failed to load checkpoint:`, e)
   }
 }
 
@@ -312,13 +313,14 @@ function isPlaytimeBlocked() {
 // Transition to fully-stopped state. Called from the tick on grace timeout, from the
 // mplayer track-change/playlist-finish handlers, or directly when grace=0.
 function finalizePlaytimeBlock(reason) {
-  log.info(`${new Date().toLocaleString()}: [Playtime] Finalizing block (${reason})`)
+  // console.log so it shows even when logLevel='error' (the default)
+  console.log(`${new Date().toLocaleString()}: [Playtime] Finalizing block (${reason})`)
   playtimeState.state = 'blocked'
   playtimeState.graceEndsAt = null
   try {
     stop()
   } catch (e) {
-    log.error(`${new Date().toLocaleString()}: [Playtime] Error stopping playback:`, e)
+    console.error(`${new Date().toLocaleString()}: [Playtime] Error stopping playback:`, e)
   }
   writePlaytimeCheckpoint()
 }
@@ -361,7 +363,7 @@ function playtimeTick() {
     playtimeState.state = 'normal'
     playtimeState.graceEndsAt = null
     writePlaytimeCheckpoint()
-    log.info(`${now.toLocaleString()}: [Playtime] New day: ${today.dateStr} (${today.dayKey})`)
+    console.log(`${now.toLocaleString()}: [Playtime] New day: ${today.dateStr} (${today.dayKey})`)
   }
   // Increment counter only when actually playing
   if (isActuallyPlaying()) {
@@ -378,7 +380,7 @@ function playtimeTick() {
       if (overrunMs > 0) {
         playtimeState.state = 'grace'
         playtimeState.graceEndsAt = Date.now() + overrunMs
-        log.info(
+        console.log(
           `${now.toLocaleString()}: [Playtime] Daily limit reached (${limit} min for ${today.dayKey}). Entering grace period (max ${cfg.maxOverrunMinutes} min until current track ends).`,
         )
         writePlaytimeCheckpoint()
@@ -1259,7 +1261,7 @@ app.use((req, res) => {
   // Playtime limit: refuse new playback when the daily cap is reached.
   // Pause/stop/volume/system commands fall through normally.
   if (isPlaytimeBlocked() && isPlayInitiatingCommand(command)) {
-    log.info(
+    console.log(
       `${new Date().toLocaleString()}: [Playtime] Rejected command (limit reached): name=${command.name} dir=${command.dir}`,
     )
     res.status(423).send({ status: 'blocked', error: 'playtime_limit_reached' })

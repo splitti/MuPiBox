@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core'
 import { IonIcon } from '@ionic/angular/standalone'
 import { addIcons } from 'ionicons'
-import { moonOutline } from 'ionicons/icons'
+import { moonOutline, musicalNotesOutline } from 'ionicons/icons'
 
 @Component({
   selector: 'mupi-playtime-blocked',
@@ -12,6 +12,6 @@ import { moonOutline } from 'ionicons/icons'
 })
 export class PlaytimeBlockedOverlayComponent {
   constructor() {
-    addIcons({ moonOutline })
+    addIcons({ moonOutline, musicalNotesOutline })
   }
 }
