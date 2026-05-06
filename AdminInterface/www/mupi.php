@@ -468,7 +468,7 @@ if( $_POST['fan_control'] )
    $data["playtimeLimit"]["limitsMinutes"][$d] = max(0, min(1440, $val));
    }
   $playtime_changed = true;
-  $CHANGE_TXT = $CHANGE_TXT."<li>Playtime limit settings saved (player restarting...)</li>";
+  $CHANGE_TXT = $CHANGE_TXT."<li>Playtime limit settings saved (live, no restart needed)</li>";
   $change = 2;
   }
  if( $_POST['quiethours_save'] )
@@ -506,8 +506,8 @@ if( $_POST['fan_control'] )
     }
    $data["quietHours"]["schedule"][$d] = array_values($cleaned);
    }
-  $playtime_changed = true; // share the player-restart trigger below
-  $CHANGE_TXT = $CHANGE_TXT."<li>Quiet hours saved (".$quiethours_window_count." window(s), player restarting...)</li>";
+  $playtime_changed = true;
+  $CHANGE_TXT = $CHANGE_TXT."<li>Quiet hours saved (".$quiethours_window_count." window(s), live, no restart needed)</li>";
   $change = 2;
   }
  if( $data["shim"]["ledPin"]!=$_POST['ledPin'] && $_POST['ledPin'])
@@ -638,11 +638,11 @@ if( $_POST['fan_control'] )
    exec("sudo mv /tmp/.mupiboxconfig.json /etc/mupibox/mupiboxconfig.json");
    exec("sudo /usr/local/bin/mupibox/./setting_update.sh");
   }
- if( $playtime_changed )
-  {
-  // Player caches mupiboxconfig.json at startup via require(); restart so the new playtime values take effect.
-  exec("sudo -i -u dietpi pm2 restart spotify-control");
-  }
+ // Note: playtime/quiet-hours saves used to trigger `pm2 restart spotify-control` here
+ // because the player cached mupiboxconfig.json at startup via require(). The player
+ // now does live-reload via fs.watch, so the restart is no longer needed for those
+ // sub-blocks — the changes take effect within ~50ms without an audio gap.
+ // $playtime_changed stays as a flag in case future code wants to react to it.
 
 $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 ?>

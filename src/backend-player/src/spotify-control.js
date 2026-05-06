@@ -20,7 +20,63 @@ if (process.env.NODE_ENV === 'development') {
   //networkConfigBasePath = '../../backend-api/config'
 }
 
-const muPiBoxConfig = require(`${configBasePath}/mupiboxconfig.json`)
+// mupiboxconfig.json supports live reload — admin saves take effect within ~50ms
+// without a pm2 restart. config.json (Spotify creds, log level, port) is read once
+// at startup because spotifyApi/log/server.listen() seal those values; changing those
+// still requires a pm2 restart.
+const MUPIBOX_CONFIG_PATH = `${configBasePath}/mupiboxconfig.json`
+
+function readMupiBoxConfigFromDisk() {
+  try {
+    return JSON.parse(fs.readFileSync(MUPIBOX_CONFIG_PATH, 'utf8'))
+  } catch (err) {
+    console.error(`${new Date().toLocaleString()}: [Config] Failed to read ${MUPIBOX_CONFIG_PATH}:`, err)
+    return null
+  }
+}
+
+let muPiBoxConfig = readMupiBoxConfigFromDisk()
+if (!muPiBoxConfig) {
+  console.error(
+    `${new Date().toLocaleString()}: [Config] mupiboxconfig.json missing or unparseable on startup, exiting.`,
+  )
+  process.exit(1)
+}
+
+// Watch the directory containing the resolved file (the local path is typically a symlink
+// to /etc/mupibox/mupiboxconfig.json on the box). Watching the directory rather than the
+// symlinked file is what makes atomic-rename writes (admin uses `mv tmp dest`) trigger.
+function setupMupiBoxConfigWatch() {
+  let watchDir
+  let watchFile
+  try {
+    const realPath = fs.realpathSync(MUPIBOX_CONFIG_PATH)
+    watchDir = path.dirname(realPath)
+    watchFile = path.basename(realPath)
+  } catch (err) {
+    console.warn(
+      `${new Date().toLocaleString()}: [Config] Cannot resolve ${MUPIBOX_CONFIG_PATH} for watch (live-reload disabled):`,
+      err,
+    )
+    return
+  }
+  try {
+    fs.watch(watchDir, { persistent: false }, (_event, filename) => {
+      if (!filename || filename.toString() !== watchFile) return
+      const fresh = readMupiBoxConfigFromDisk()
+      if (fresh) {
+        muPiBoxConfig = fresh
+        console.log(`${new Date().toLocaleString()}: [Config] Reloaded mupiboxconfig.json (live)`)
+      }
+      // On parse failure we keep the old in-memory copy — fs.watch can fire mid-write.
+    })
+    console.log(`${new Date().toLocaleString()}: [Config] Watching ${watchDir}/${watchFile} for live-reload`)
+  } catch (err) {
+    console.warn(`${new Date().toLocaleString()}: [Config] fs.watch failed (live-reload disabled):`, err)
+  }
+}
+setupMupiBoxConfigWatch()
+
 const config = require(`${configBasePath}/config.json`)
 
 const log = require('console-log-level')({ level: config.server.logLevel })
@@ -415,8 +471,6 @@ function isPlaybackBlocked() {
     quietHoursState.state === 'blocked'
   )
 }
-// Backwards-compat alias kept so older call sites keep working.
-const isPlaytimeBlocked = isPlaybackBlocked
 
 // Transition to fully-stopped state. Called from the tick on grace timeout, from the
 // mplayer track-change/playlist-finish handlers, or directly when grace=0.
