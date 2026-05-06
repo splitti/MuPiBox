@@ -2,6 +2,7 @@
   @if (monitorOff()) {
     <div class="mupi-monitor-blocker" (click)="$event.stopPropagation()"></div>
   }
+  <mupi-playtime-chip></mupi-playtime-chip>
   @if (playtimeBlocked()) {
     <mupi-playtime-blocked></mupi-playtime-blocked>
   }

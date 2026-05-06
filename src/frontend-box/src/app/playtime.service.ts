@@ -5,7 +5,9 @@ import { catchError, of, switchMap, timer } from 'rxjs'
 import { environment } from 'src/environments/environment'
 import type { PlaytimeStatus } from './playtime.model'
 
-const POLL_INTERVAL_MS = 30_000
+// Polled by chip + overlay + player page. Endpoint just reads /tmp/playtime.json
+// (tmpfs), so 5s is fine and gives snappy state transitions in the UI.
+const POLL_INTERVAL_MS = 5_000
 
 @Injectable({ providedIn: 'root' })
 export class PlaytimeService {

@@ -28,7 +28,6 @@ import { LoadingComponent } from '../loading/loading.component'
 import type { CategoryType } from '../media'
 import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
-import { PlaytimeChipComponent } from '../playtime-chip/playtime-chip.component'
 import { SwiperComponent, SwiperData } from '../swiper/swiper.component'
 import { SwiperIonicEventsHelper } from '../swiper/swiper-ionic-events-helper'
 
@@ -38,7 +37,6 @@ import { SwiperIonicEventsHelper } from '../swiper/swiper-ionic-events-helper'
   styleUrls: ['home.page.scss'],
   imports: [
     MupiHatIconComponent,
-    PlaytimeChipComponent,
     LoadingComponent,
     IonHeader,
     IonToolbar,

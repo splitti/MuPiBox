@@ -9,12 +9,13 @@ import { ExternalPlaybackNavigatorService } from './external-playback-navigator.
 import { Monitor } from './monitor'
 import { PlaytimeService } from './playtime.service'
 import { PlaytimeBlockedOverlayComponent } from './playtime-blocked-overlay/playtime-blocked-overlay.component'
+import { PlaytimeChipComponent } from './playtime-chip/playtime-chip.component'
 
 @Component({
   selector: 'app-root',
   templateUrl: 'app.component.html',
   styleUrls: ['app.component.scss'],
-  imports: [IonApp, IonRouterOutlet, PlaytimeBlockedOverlayComponent],
+  imports: [IonApp, IonRouterOutlet, PlaytimeBlockedOverlayComponent, PlaytimeChipComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AppComponent {
