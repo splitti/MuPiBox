@@ -2,7 +2,7 @@ export type PlaytimeDayKey = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'su
 
 export type PlaytimePlayState = 'normal' | 'grace' | 'blocked'
 
-export type PlaybackBlockSource = 'playtime' | 'quiet'
+export type PlaybackBlockSource = 'playtime' | 'quiet' | 'override'
 
 export type PlaytimeStatus = PlaytimeStatusActive | PlaytimeStatusDisabled
 
@@ -36,4 +36,8 @@ export interface PlaytimeStatusActive {
   blockSource: PlaybackBlockSource | null
   playtime: PlaytimeSubStatus
   quiet: QuietHoursSubStatus
+  override?: {
+    allowUntil: number
+    forceBlockUntil: number
+  }
 }

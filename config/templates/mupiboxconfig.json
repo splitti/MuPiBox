@@ -292,6 +292,10 @@
 			"sun": []
 		}
 	},
+	"playbackOverride": {
+		"allowUntil": 0,
+		"forceBlockUntil": 0
+	},
 	"shim": {
 		"poweroffPin": "4",
 		"triggerPin": "17",

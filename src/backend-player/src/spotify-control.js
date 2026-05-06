@@ -283,7 +283,38 @@ function readPlaytimeConfig() {
     resetHour,
     maxOverrunMinutes,
     limitsMinutes: { ...PLAYTIME_DEFAULT_LIMITS, ...(raw.limitsMinutes || {}) },
+    todayBonus: raw.todayBonus || null,
   }
+}
+
+// Bonus minutes awarded by parent (via Telegram /extend or Admin) for today only.
+// If the stored date doesn't match the current logical day, the bonus is treated
+// as 0 — auto-resets at day rollover without needing to clear it explicitly.
+function getTodayBonusMinutes(cfg, todayDateStr) {
+  const b = cfg.todayBonus
+  if (!b || typeof b !== 'object') return 0
+  if (b.date !== todayDateStr) return 0
+  const m = Number(b.minutes)
+  if (!Number.isFinite(m) || m <= 0) return 0
+  return Math.min(m, 1440)
+}
+
+// Parent overrides via Telegram or admin endpoints.
+// allowUntil   → bypass all blocks (state stays 'normal', no finalize calls)
+// forceBlockUntil → force playback off (state forced to 'blocked', stop() called)
+function readPlaybackOverrides() {
+  const raw = muPiBoxConfig?.playbackOverride || {}
+  const allowUntil = Number(raw.allowUntil) || 0
+  const forceBlockUntil = Number(raw.forceBlockUntil) || 0
+  return { allowUntil, forceBlockUntil }
+}
+
+function isAllowOverrideActive() {
+  return Date.now() < readPlaybackOverrides().allowUntil
+}
+
+function isForceBlockActive() {
+  return Date.now() < readPlaybackOverrides().forceBlockUntil
 }
 
 // === Quiet Hours ===
@@ -400,23 +431,37 @@ function loadPlaytimeCheckpoint() {
 function writeCombinedWorking() {
   const ptCfg = readPlaytimeConfig()
   const qhCfg = readQuietHoursConfig()
+  const ovr = readPlaybackOverrides()
+  const now = Date.now()
+  const inForceBlock = now < ovr.forceBlockUntil
+  const inAllowOverride = now < ovr.allowUntil
 
-  if (!ptCfg.enabled && !qhCfg.enabled) {
+  if (!ptCfg.enabled && !qhCfg.enabled && !inForceBlock && !inAllowOverride) {
     fs.writeFile(PLAYTIME_WORKING_PATH, JSON.stringify({ enabled: false }), () => {})
     return
   }
 
-  // Combined effective state across both sub-systems
+  // Effective state: forceBlock wins, then allowOverride forces normal,
+  // otherwise combine the two sub-systems naturally.
   let state = 'normal'
-  if (playtimeState.state === 'blocked' || quietHoursState.state === 'blocked') state = 'blocked'
-  else if (playtimeState.state === 'grace' || quietHoursState.state === 'grace') state = 'grace'
-
-  // blockSource: prefer 'quiet' over 'playtime' if both are restricting (more "explainable" to the kid)
   let blockSource = null
-  if (quietHoursState.state !== 'normal') blockSource = 'quiet'
-  else if (playtimeState.state !== 'normal') blockSource = 'playtime'
+  if (inForceBlock) {
+    state = 'blocked'
+    blockSource = 'override'
+  } else if (!inAllowOverride) {
+    if (playtimeState.state === 'blocked' || quietHoursState.state === 'blocked') state = 'blocked'
+    else if (playtimeState.state === 'grace' || quietHoursState.state === 'grace') state = 'grace'
+    if (state !== 'normal') {
+      // Prefer 'quiet' over 'playtime' if both restrict — more explainable
+      if (quietHoursState.state !== 'normal') blockSource = 'quiet'
+      else if (playtimeState.state !== 'normal') blockSource = 'playtime'
+    }
+  }
+  // else: allowUntil-override active → state stays 'normal'
 
-  const ptLimit = ptCfg.enabled ? (ptCfg.limitsMinutes[playtimeState.dayKey] ?? 60) : 0
+  const baseLimit = ptCfg.enabled ? (ptCfg.limitsMinutes[playtimeState.dayKey] ?? 60) : 0
+  const bonus = ptCfg.enabled ? getTodayBonusMinutes(ptCfg, playtimeState.date) : 0
+  const ptLimit = baseLimit + bonus
   const ptGraceEndsInSeconds =
     playtimeState.graceEndsAt !== null ? Math.max(0, Math.ceil((playtimeState.graceEndsAt - Date.now()) / 1000)) : 0
   const qhGraceEndsInSeconds =
@@ -444,6 +489,10 @@ function writeCombinedWorking() {
       ...(quietHoursState.activeWindow?.label ? { label: quietHoursState.activeWindow.label } : {}),
       graceEndsInSeconds: qhGraceEndsInSeconds,
     },
+    override: {
+      allowUntil: ovr.allowUntil,
+      forceBlockUntil: ovr.forceBlockUntil,
+    },
   }
   fs.writeFile(PLAYTIME_WORKING_PATH, JSON.stringify(payload), () => {})
 }
@@ -462,8 +511,13 @@ function writePlaytimeCheckpoint() {
 }
 
 // Used by the catch-all to decide whether to refuse new play/resume/skip commands.
-// True if EITHER playtime OR quiet hours is currently restricting playback.
+// Combines the natural state of both sub-systems with parent overrides:
+//  - forceBlockUntil active → always blocked (highest priority)
+//  - allowUntil active     → never blocked  (parent gave the green light)
+//  - otherwise: blocked if playtime OR quiet hours says so
 function isPlaybackBlocked() {
+  if (isForceBlockActive()) return true
+  if (isAllowOverrideActive()) return false
   return (
     playtimeState.state === 'grace' ||
     playtimeState.state === 'blocked' ||
@@ -474,8 +528,10 @@ function isPlaybackBlocked() {
 
 // Transition to fully-stopped state. Called from the tick on grace timeout, from the
 // mplayer track-change/playlist-finish handlers, or directly when grace=0.
+// While allowUntil-override is active, transitions are suppressed — the parent has
+// explicitly green-lit playback for this window, so neither grace nor stop fire.
 function finalizePlaytimeBlock(reason) {
-  // console.log so it shows even when logLevel='error' (the default)
+  if (isAllowOverrideActive()) return
   console.log(`${new Date().toLocaleString()}: [Playtime] Finalizing block (${reason})`)
   playtimeState.state = 'blocked'
   playtimeState.graceEndsAt = null
@@ -488,6 +544,7 @@ function finalizePlaytimeBlock(reason) {
 }
 
 function finalizeQuietHoursBlock(reason) {
+  if (isAllowOverrideActive()) return
   console.log(`${new Date().toLocaleString()}: [QuietHours] Finalizing block (${reason})`)
   quietHoursState.state = 'blocked'
   quietHoursState.graceEndsAt = null
@@ -544,7 +601,10 @@ function playtimeTickStep() {
   if (isActuallyPlaying()) {
     playtimeState.usedSeconds++
   }
-  const limit = cfg.limitsMinutes[today.dayKey] ?? 60
+  // Effective limit = base + bonus (bonus auto-zeroes when its date doesn't match today)
+  const baseLimit = cfg.limitsMinutes[today.dayKey] ?? 60
+  const bonus = getTodayBonusMinutes(cfg, today.dateStr)
+  const limit = baseLimit + bonus
   const limitSeconds = limit * 60
   const limitReached = playtimeState.usedSeconds >= limitSeconds
   if (limitReached) {
@@ -554,7 +614,7 @@ function playtimeTickStep() {
         playtimeState.state = 'grace'
         playtimeState.graceEndsAt = Date.now() + overrunMs
         console.log(
-          `${now.toLocaleString()}: [Playtime] Daily limit reached (${limit} min for ${today.dayKey}). Entering grace period (max ${cfg.maxOverrunMinutes} min until current track ends).`,
+          `${now.toLocaleString()}: [Playtime] Daily limit reached (${limit} min for ${today.dayKey}${bonus > 0 ? `, +${bonus} bonus` : ''}). Entering grace period (max ${cfg.maxOverrunMinutes} min until current track ends).`,
         )
         writePlaytimeCheckpoint()
       } else {
@@ -564,8 +624,22 @@ function playtimeTickStep() {
       if (playtimeState.graceEndsAt !== null && Date.now() >= playtimeState.graceEndsAt) {
         finalizePlaytimeBlock(`grace period expired (${cfg.maxOverrunMinutes} min)`)
       }
+    } else if (playtimeState.state === 'blocked') {
+      // Still blocked, but parent might have just added bonus — re-evaluate
+      if (playtimeState.usedSeconds < limitSeconds) {
+        playtimeState.state = 'normal'
+        console.log(
+          `${now.toLocaleString()}: [Playtime] Bonus applied (${bonus} min) — releasing block, ${Math.ceil((limitSeconds - playtimeState.usedSeconds) / 60)} min remaining.`,
+        )
+      }
     }
-    // else 'blocked': stay blocked
+  } else if (playtimeState.state !== 'normal') {
+    // Counter is below the limit (e.g. parent extended the limit) — release.
+    playtimeState.state = 'normal'
+    playtimeState.graceEndsAt = null
+    console.log(
+      `${now.toLocaleString()}: [Playtime] Released — usedSeconds (${playtimeState.usedSeconds}) below new limit (${limitSeconds})`,
+    )
   }
   if (
     Date.now() - playtimeLastCheckpointAt >= PLAYTIME_CHECKPOINT_INTERVAL_MS &&
@@ -628,7 +702,33 @@ function quietHoursTickStep() {
   }
 }
 
+// Tracks whether forceBlock was active on the previous tick so we only call stop()
+// once on entry (not every second while it's still in effect).
+let forceBlockWasActive = false
+
 function combinedTick() {
+  if (isForceBlockActive()) {
+    if (!forceBlockWasActive) {
+      const until = readPlaybackOverrides().forceBlockUntil
+      console.log(
+        `${new Date().toLocaleString()}: [Override] Force-block engaged until ${new Date(until).toLocaleString()}`,
+      )
+      try {
+        stop()
+      } catch (e) {
+        console.error(`${new Date().toLocaleString()}: [Override] Error stopping playback:`, e)
+      }
+    }
+    forceBlockWasActive = true
+    // Skip natural ticks: we don't want playtimeState/quietHoursState mutating
+    // while force-block is in effect (it would mask the actual reason in /status).
+    writeCombinedWorking()
+    return
+  }
+  if (forceBlockWasActive) {
+    console.log(`${new Date().toLocaleString()}: [Override] Force-block ended.`)
+    forceBlockWasActive = false
+  }
   playtimeTickStep()
   quietHoursTickStep()
   writeCombinedWorking()

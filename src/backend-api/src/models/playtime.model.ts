@@ -2,11 +2,22 @@ export type PlaytimeDayKey = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'su
 
 export type PlaytimeLimitsMinutes = Partial<Record<PlaytimeDayKey, number>>
 
+export interface PlaytimeBonus {
+  date: string // YYYY-MM-DD; only honored if matches today's logical day
+  minutes: number
+}
+
 export interface PlaytimeLimitConfig {
   enabled: boolean
   resetHour?: number
   maxOverrunMinutes?: number
   limitsMinutes?: PlaytimeLimitsMinutes
+  todayBonus?: PlaytimeBonus
+}
+
+export interface PlaybackOverrideConfig {
+  allowUntil?: number // epoch ms; while now < this, all blocks are bypassed
+  forceBlockUntil?: number // epoch ms; while now < this, playback is forced-blocked
 }
 
 // === Quiet Hours ===
@@ -33,21 +44,19 @@ export interface QuietHoursConfig {
 export type PlaytimePlayState = 'normal' | 'grace' | 'blocked'
 
 // Identifies *what* is currently restricting playback (when state !== 'normal').
-// 'playtime' = daily-limit-based, 'quiet' = time-window-based.
-export type PlaybackBlockSource = 'playtime' | 'quiet'
+// 'playtime' = daily-limit-based, 'quiet' = time-window-based, 'override' = parent
+// triggered an explicit force-block (e.g. via Telegram /quietnow).
+export type PlaybackBlockSource = 'playtime' | 'quiet' | 'override'
 
-export type PlaytimeStatus = PlaytimeStatusEnabled | PlaytimeStatusDisabled
+export type PlaytimeStatus = PlaytimeStatusActive | PlaytimeStatusDisabled
 
 export interface PlaytimeStatusDisabled {
   enabled: false
 }
 
-export interface PlaytimeStatusEnabled {
-  enabled: true
+export interface PlaytimeSubStatus {
+  enabled: boolean
   state: PlaytimePlayState
-  blockSource: PlaybackBlockSource | null
-  // Set when blockSource === 'quiet' and the active window has a label.
-  quietLabel?: string
   date: string
   dayKey: PlaytimeDayKey
   limitMinutes: number
@@ -55,4 +64,24 @@ export interface PlaytimeStatusEnabled {
   remainingSeconds: number
   graceEndsInSeconds: number
   resetHour: number
+}
+
+export interface QuietHoursSubStatus {
+  enabled: boolean
+  state: PlaytimePlayState
+  inWindow: boolean
+  label?: string
+  graceEndsInSeconds: number
+}
+
+export interface PlaytimeStatusActive {
+  enabled: true
+  state: PlaytimePlayState
+  blockSource: PlaybackBlockSource | null
+  playtime: PlaytimeSubStatus
+  quiet: QuietHoursSubStatus
+  override?: {
+    allowUntil: number
+    forceBlockUntil: number
+  }
 }

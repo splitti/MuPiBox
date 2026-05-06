@@ -1,4 +1,4 @@
-import type { PlaytimeLimitConfig, QuietHoursConfig } from './playtime.model'
+import type { PlaybackOverrideConfig, PlaytimeLimitConfig, QuietHoursConfig } from './playtime.model'
 
 export interface MupiboxConfig {
   spotify?: {
@@ -7,5 +7,6 @@ export interface MupiboxConfig {
   }
   playtimeLimit?: PlaytimeLimitConfig
   quietHours?: QuietHoursConfig
+  playbackOverride?: PlaybackOverrideConfig
   [key: string]: unknown
 }
