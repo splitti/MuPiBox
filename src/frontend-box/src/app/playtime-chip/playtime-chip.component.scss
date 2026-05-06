@@ -1,6 +1,9 @@
 .playtime-chip {
   position: fixed;
-  top: 6px;
+  // Sit just below the typical ion-toolbar (56px in md mode) so the chip
+  // never overlaps the cloud/battery icons (home), the volume + track
+  // counter (player), or any other toolbar elements on other pages.
+  top: 64px;
   right: 8px;
   z-index: 9000;
   display: inline-flex;
