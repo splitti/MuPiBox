@@ -265,6 +265,19 @@
 		"idleDisplayOff": "10",
 		"pressDelay": "2"
 	    },
+	"playtimeLimit": {
+		"enabled": false,
+		"resetHour": 0,
+		"limitsMinutes": {
+			"mon": 60,
+			"tue": 60,
+			"wed": 60,
+			"thu": 60,
+			"fri": 60,
+			"sat": 60,
+			"sun": 60
+		}
+	},
 	"shim": {
 		"poweroffPin": "4",
 		"triggerPin": "17",

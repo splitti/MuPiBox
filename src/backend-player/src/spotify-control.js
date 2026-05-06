@@ -180,6 +180,177 @@ const currentMeta = {
   volume: 0,
 }
 
+// === Playtime Limit (daily listening cap) ===
+// Per-weekday limit on active playback time. Configured in mupiboxconfig.json
+// under "playtimeLimit". Working state lives in /tmp (tmpfs, no SD wear);
+// a checkpoint on the SD card persists across reboots, written at most every 60s.
+// Config changes require a player restart (consistent with other config in this file).
+const PLAYTIME_DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
+const PLAYTIME_DEFAULT_LIMITS = { mon: 60, tue: 60, wed: 60, thu: 60, fri: 60, sat: 60, sun: 60 }
+const PLAYTIME_WORKING_PATH = '/tmp/playtime.json'
+const PLAYTIME_CHECKPOINT_PATH = path.join(configBasePath, 'playtime-checkpoint.json')
+const PLAYTIME_CHECKPOINT_INTERVAL_MS = 60_000
+
+function readPlaytimeConfig() {
+  const raw = muPiBoxConfig?.playtimeLimit || {}
+  const resetHour = Number.isInteger(raw.resetHour) && raw.resetHour >= 0 && raw.resetHour < 24 ? raw.resetHour : 0
+  return {
+    enabled: raw.enabled === true,
+    resetHour,
+    limitsMinutes: { ...PLAYTIME_DEFAULT_LIMITS, ...(raw.limitsMinutes || {}) },
+  }
+}
+
+// Reset-hour shifts when "today" begins. With resetHour=4, Sunday 02:00 still counts as Saturday.
+function getLogicalDay(now, resetHour) {
+  const shifted = new Date(now.getTime() - resetHour * 3600 * 1000)
+  const y = shifted.getFullYear()
+  const m = String(shifted.getMonth() + 1).padStart(2, '0')
+  const d = String(shifted.getDate()).padStart(2, '0')
+  return { dateStr: `${y}-${m}-${d}`, dayKey: PLAYTIME_DAY_KEYS[shifted.getDay()] }
+}
+
+function isActuallyPlaying() {
+  if (!currentMeta.currentPlayer) return false
+  if (currentMeta.currentPlayer === 'spotify') return currentMeta.pause === false
+  if (currentMeta.currentPlayer === 'mplayer') return currentMeta.playing === true
+  return false
+}
+
+const playtimeState = {
+  date: '',
+  dayKey: 'mon',
+  usedSeconds: 0,
+  blocked: false,
+}
+let playtimeLastCheckpointAt = 0
+let playtimeLastCheckpointSeconds = -1
+
+function loadPlaytimeCheckpoint() {
+  try {
+    if (!fs.existsSync(PLAYTIME_CHECKPOINT_PATH)) return
+    const data = JSON.parse(fs.readFileSync(PLAYTIME_CHECKPOINT_PATH, 'utf8'))
+    const today = getLogicalDay(new Date(), readPlaytimeConfig().resetHour)
+    if (data && data.date === today.dateStr) {
+      playtimeState.date = data.date
+      playtimeState.dayKey = data.dayKey || today.dayKey
+      playtimeState.usedSeconds = Number(data.usedSeconds) || 0
+      log.info(
+        `${new Date().toLocaleString()}: [Playtime] Resumed counter: ${playtimeState.usedSeconds}s for ${playtimeState.date}`,
+      )
+    }
+  } catch (e) {
+    log.error(`${new Date().toLocaleString()}: [Playtime] Failed to load checkpoint:`, e)
+  }
+}
+
+function writePlaytimeWorking() {
+  const cfg = readPlaytimeConfig()
+  const limit = cfg.limitsMinutes[playtimeState.dayKey] ?? 60
+  const payload = {
+    enabled: cfg.enabled,
+    date: playtimeState.date,
+    dayKey: playtimeState.dayKey,
+    limitMinutes: limit,
+    usedSeconds: playtimeState.usedSeconds,
+    remainingSeconds: Math.max(0, limit * 60 - playtimeState.usedSeconds),
+    blocked: playtimeState.blocked,
+    resetHour: cfg.resetHour,
+  }
+  fs.writeFile(PLAYTIME_WORKING_PATH, JSON.stringify(payload), () => {})
+}
+
+function writePlaytimeCheckpoint() {
+  const payload = {
+    date: playtimeState.date,
+    dayKey: playtimeState.dayKey,
+    usedSeconds: playtimeState.usedSeconds,
+  }
+  fs.writeFile(PLAYTIME_CHECKPOINT_PATH, JSON.stringify(payload), (err) => {
+    if (err) log.error(`${new Date().toLocaleString()}: [Playtime] Failed to write checkpoint:`, err)
+  })
+  playtimeLastCheckpointAt = Date.now()
+  playtimeLastCheckpointSeconds = playtimeState.usedSeconds
+}
+
+function isPlaytimeBlocked() {
+  const cfg = readPlaytimeConfig()
+  if (!cfg.enabled) return false
+  const today = getLogicalDay(new Date(), cfg.resetHour)
+  const limit = cfg.limitsMinutes[today.dayKey] ?? 60
+  return playtimeState.usedSeconds >= limit * 60
+}
+
+// Commands that *start or resume* playback. These get blocked when the daily cap is hit.
+// Pause/stop/volume/system commands are NOT blocked — those should always work.
+function isPlayInitiatingCommand(command) {
+  if (command.name?.includes('spotify:')) return true
+  if (
+    command.dir &&
+    (command.dir.includes('library') ||
+      command.dir.includes('radio') ||
+      command.dir.includes('rss') ||
+      command.dir.includes('say/'))
+  ) {
+    return true
+  }
+  if (['play', 'next', 'previous', 'seek+30', 'seek-30'].includes(command.name)) return true
+  if (command.name?.startsWith('seekpos:')) return true
+  return false
+}
+
+function playtimeTick() {
+  const cfg = readPlaytimeConfig()
+  if (!cfg.enabled) {
+    if (playtimeState.blocked) playtimeState.blocked = false
+    return
+  }
+  const now = new Date()
+  const today = getLogicalDay(now, cfg.resetHour)
+  // Day rollover: reset counter
+  if (today.dateStr !== playtimeState.date) {
+    playtimeState.date = today.dateStr
+    playtimeState.dayKey = today.dayKey
+    playtimeState.usedSeconds = 0
+    playtimeState.blocked = false
+    writePlaytimeCheckpoint()
+    log.info(`${now.toLocaleString()}: [Playtime] New day: ${today.dateStr} (${today.dayKey})`)
+  }
+  // Increment counter only when actually playing
+  if (isActuallyPlaying()) {
+    playtimeState.usedSeconds++
+  }
+  // Check the limit
+  const limit = cfg.limitsMinutes[today.dayKey] ?? 60
+  const limitSeconds = limit * 60
+  const wasBlocked = playtimeState.blocked
+  playtimeState.blocked = playtimeState.usedSeconds >= limitSeconds
+  // Just-blocked transition: stop playback once
+  if (playtimeState.blocked && !wasBlocked) {
+    log.info(
+      `${now.toLocaleString()}: [Playtime] Daily limit reached (${limit} min for ${today.dayKey}). Stopping playback.`,
+    )
+    try {
+      stop()
+    } catch (e) {
+      log.error(`${now.toLocaleString()}: [Playtime] Error stopping playback:`, e)
+    }
+    writePlaytimeCheckpoint()
+  }
+  // Working state: every tick (tmpfs, no SD wear)
+  writePlaytimeWorking()
+  // SD checkpoint: every 60s if value changed
+  if (
+    Date.now() - playtimeLastCheckpointAt >= PLAYTIME_CHECKPOINT_INTERVAL_MS &&
+    playtimeState.usedSeconds !== playtimeLastCheckpointSeconds
+  ) {
+    writePlaytimeCheckpoint()
+  }
+}
+
+loadPlaytimeCheckpoint()
+setInterval(playtimeTick, 1000)
+
 function writeplayerstatePlay() {
   playerstate = 'play'
   fs.writeFile('/tmp/playerstate', playerstate, (err) => {
@@ -1029,6 +1200,17 @@ app.use((req, res) => {
   const command = path.parse(req.url)
   log.debug(`${nowDate.toLocaleString()}: [Spotify Control]name: ${command.name}`)
   log.debug(`${nowDate.toLocaleString()}: [Spotify Control]dir: ${command.dir}`)
+
+  // Playtime limit: refuse new playback when the daily cap is reached.
+  // Pause/stop/volume/system commands fall through normally.
+  if (isPlaytimeBlocked() && isPlayInitiatingCommand(command)) {
+    log.info(
+      `${new Date().toLocaleString()}: [Playtime] Rejected command (limit reached): name=${command.name} dir=${command.dir}`,
+    )
+    res.status(423).send({ status: 'blocked', error: 'playtime_limit_reached' })
+    return
+  }
+
   /*this is the first command to be received. It always includes the device id encoded in between two /*/
   /*check this if we need to transfer the playback to a new device*/
   if (command.name.includes('spotify:')) {
