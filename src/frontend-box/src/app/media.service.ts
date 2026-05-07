@@ -7,7 +7,7 @@ import type { AlbumStop } from './albumstop'
 import type { Artist } from './artist'
 import type { CurrentMPlayer } from './current.mplayer'
 import type { CurrentSpotify } from './current.spotify'
-import type { CategoryType, Media, MediaInfoCache } from './media'
+import { isResumeEntry, type CategoryType, type Media, type MediaInfoCache } from './media'
 import { Mupihat } from './mupihat'
 import type { Network } from './network'
 import { NetworkService } from './network.service'
@@ -283,18 +283,6 @@ export class MediaService {
     })
   }
 
-  editRawResumeAtIndex(index: number, data: Media) {
-    const url = `${this.getApiBackendUrl()}/editresume`
-    const body = {
-      index,
-      data,
-    }
-
-    this.http.post(url, body, { responseType: 'text' }).subscribe((response) => {
-      this.response = response
-    })
-  }
-
   addRawResume(media: Media) {
     const url = `${this.getApiBackendUrl()}/addresume`
 
@@ -472,13 +460,13 @@ export class MediaService {
                 .pipe(overwriteArtist(item)),
               iif(
                 // Get media by show
-                () => !!(item.showid && item.showid.length > 0 && item.category !== 'resume'),
+                () => !!(item.showid && item.showid.length > 0 && !isResumeEntry(item)),
                 this.spotifyService
                   .getMediaByShowID(item.showid, item.category, item.index, item)
                   .pipe(overwriteArtist(item)),
                 iif(
                   // Get media by show supporting resume
-                  () => !!(item.showid && item.showid.length > 0 && item.category === 'resume'),
+                  () => !!(item.showid && item.showid.length > 0 && isResumeEntry(item)),
                   this.spotifyService
                     .getMediaByEpisode(
                       item.showid,
@@ -513,8 +501,14 @@ export class MediaService {
                         overwriteArtist(item),
                       ),
                     iif(
-                      // Get media by rss feed
-                      () => !!(item.type === 'rss' && item.id.length > 0 && item.category !== 'resume'),
+                      // Get media by rss feed.
+                      // MED-10: previously gated on `!isResumeEntry(item)` —
+                      // RSS resume entries skipped enrichment and rendered
+                      // with whatever stale title/cover/episode-list was
+                      // saved at last play. Drop the gate so resume entries
+                      // also get fresh feed data; overwriteArtist preserves
+                      // the user-visible artist label.
+                      () => !!(item.type === 'rss' && item.id.length > 0),
                       this.rssFeedService
                         .getRssFeed(item.id, item.category, item.index, item)
                         .pipe(overwriteArtist(item)),

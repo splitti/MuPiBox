@@ -331,11 +331,15 @@ export class SpotifyService {
       }),
       catchError((err) => {
         this.logService.warn(
-          `Album info query failed for album ${id} due to API error, skipping this item:`,
+          `Album info query failed for album ${id} due to API error, returning unavailable placeholder:`,
           err?.message || err,
         )
-        // Skip failed items entirely
-        return EMPTY
+        // MED-11: previously returned EMPTY → the album silently disappeared
+        // from the resume / list view. Return a placeholder with
+        // `unavailable: true` so the slot is preserved and templates can
+        // render a "this item failed to load" badge instead of leaving the
+        // user wondering where their album went.
+        return of(this.placeholderMedia({ id, category, index, shuffle, artistcover, resumespotifyduration_ms, resumespotifyprogress_ms, resumespotifytrack_number }))
       }),
     )
   }
@@ -382,11 +386,11 @@ export class SpotifyService {
       }),
       catchError((err) => {
         this.logService.warn(
-          `Audiobook info query failed for audiobook ${id} due to API error, skipping this item:`,
+          `Audiobook info query failed for audiobook ${id} due to API error, returning unavailable placeholder:`,
           err?.message || err,
         )
-        // Skip failed items entirely
-        return EMPTY
+        // MED-11: same as getMediaByID — placeholder instead of EMPTY.
+        return of(this.placeholderMedia({ audiobookid: id, category, index, shuffle, artistcover, resumespotifyduration_ms, resumespotifyprogress_ms, resumespotifytrack_number }))
       }),
     )
   }
@@ -439,11 +443,11 @@ export class SpotifyService {
       }),
       catchError((err) => {
         this.logService.warn(
-          `Episode info query failed for episode ${id} due to API error, skipping this item:`,
+          `Episode info query failed for episode ${id} due to API error, returning unavailable placeholder:`,
           err?.message || err,
         )
-        // Skip failed items entirely
-        return EMPTY
+        // MED-11: same as getMediaByID — placeholder instead of EMPTY.
+        return of(this.placeholderMedia({ showid: id, category, index, shuffle, artistcover, resumespotifyduration_ms, resumespotifyprogress_ms, resumespotifytrack_number }))
       }),
     )
   }
@@ -463,10 +467,6 @@ export class SpotifyService {
 
     return this.http.get<any>(playlistUrl).pipe(
       timeout(60000), // 60 seconds (for scraper fallback if needed)
-      catchError((err) => {
-        this.logService.error(`Failed to fetch playlist ${id}:`, err?.message || err)
-        return EMPTY
-      }),
       map((response: any) => {
         // Check if response is from backend scraper (has different structure)
         const isFromBackend = response.playlist && response.tracks
@@ -497,7 +497,62 @@ export class SpotifyService {
         }
         return media
       }),
+      catchError((err) => {
+        this.logService.error(
+          `Failed to fetch playlist ${id}, returning unavailable placeholder:`,
+          err?.message || err,
+        )
+        // MED-11: same as the album / audiobook / episode branches —
+        // return a placeholder so the playlist's slot doesn't vanish.
+        return of(this.placeholderMedia({ playlistid: id, category, index, shuffle, artistcover, resumespotifyduration_ms, resumespotifyprogress_ms, resumespotifytrack_number }))
+      }),
     )
+  }
+
+  // ============================================================================
+  // Helpers
+  // ============================================================================
+
+  /**
+   * Build a Media item that stands in for one whose Spotify metadata fetch
+   * failed. Preserves the identifying field (`id` / `audiobookid` / `showid`
+   * / `playlistid`), category + index so list ordering stays put, plus any
+   * resume timestamps so the player can still address the entry. The
+   * `unavailable: true` flag lets templates render an "item failed to load"
+   * marker; an empty cover/title falls back to the default placeholder
+   * artwork.
+   */
+  private placeholderMedia(p: {
+    id?: string
+    audiobookid?: string
+    showid?: string
+    playlistid?: string
+    category: CategoryType
+    index: number
+    shuffle?: boolean
+    artistcover?: string
+    resumespotifyduration_ms?: number
+    resumespotifyprogress_ms?: number
+    resumespotifytrack_number?: number
+  }): Media {
+    const media: Media = {
+      type: 'spotify',
+      category: p.category,
+      index: p.index,
+      title: 'Nicht verfügbar',
+      cover: '../assets/images/nocover_mupi.png',
+      unavailable: true,
+    }
+    if (p.id) media.id = p.id
+    if (p.audiobookid) media.audiobookid = p.audiobookid
+    if (p.showid) media.showid = p.showid
+    if (p.playlistid) media.playlistid = p.playlistid
+    if (p.artistcover) media.artistcover = p.artistcover
+    if (p.shuffle) media.shuffle = p.shuffle
+    if (p.resumespotifyduration_ms) media.resumespotifyduration_ms = p.resumespotifyduration_ms
+    if (p.resumespotifyprogress_ms) media.resumespotifyprogress_ms = p.resumespotifyprogress_ms
+    if (p.resumespotifytrack_number) media.resumespotifytrack_number = p.resumespotifytrack_number
+    return media
   }
 
   // ============================================================================
