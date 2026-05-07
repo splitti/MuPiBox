@@ -27,15 +27,20 @@ add_config() {
 
 # /etc/network/interfaces
 if ! grep -q "wpa-roam /etc/wpa_supplicant/wpa_supplicant.conf" "$NETWORKINTERFACES"; then
-	rm "$NETWORKINTERFACES.bak"
+	# HIGH-13: `rm "$file.bak"` without -f errors on first run when no
+	# .bak exists. Without `set -e` it's just a stderr noise; with set -e
+	# (e.g. anyone tightening this script later) it would abort BEFORE
+	# the cp can create the new backup, leaving no backup at all. Use -f
+	# so the rm is idempotent.
+	rm -f "$NETWORKINTERFACES.bak"
 	cp "$NETWORKINTERFACES" "$NETWORKINTERFACES.bak"
 	sed -i 's|wpa-conf /etc/wpa_supplicant/wpa_supplicant.conf|wpa-roam /etc/wpa_supplicant/wpa_supplicant.conf|' $NETWORKINTERFACES
 	sed -i 's|iface wlan0 inet dhcp|iface wlan0 inet manual|' $NETWORKINTERFACES
 	echo "iface default inet dhcp" | tee -a $NETWORKINTERFACES > /dev/null
 fi
 
-# /etc/wpa_supplicant/wpa_supplicant
-rm "$WPACONF.bak"
+# /etc/wpa_supplicant/wpa_supplicant — same idempotency fix (HIGH-13).
+rm -f "$WPACONF.bak"
 cp "$WPACONF" "$WPACONF.bak"
 add_config 'bgscan="simple:30:-70:60"'
 #add_config 'roam_timeout=5'
