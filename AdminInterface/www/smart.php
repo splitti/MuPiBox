@@ -134,14 +134,56 @@
 			{
 			$command="sudo bash -c '/usr/local/bin/mupibox/./telegram_set_deviceid.sh'";
 			exec($command, $output);
-			$data["telegram"]["chatId"]=$output[0];
+			$generated_id = trim($output[0]);
+			// Append the freshly-detected chat to the existing list rather than
+			// overwriting it. New format: array of {id, label?} objects. Old
+			// format (single string) is migrated to the new format on save.
+			$existing = $data["telegram"]["chatId"] ?? "";
+			if (is_string($existing) || is_numeric($existing)) {
+				$existing = trim((string)$existing);
+				$existing = ($existing === "") ? array() : array(array("id" => $existing));
+			}
+			if (!is_array($existing)) {
+				$existing = array();
+			}
+			$already = false;
+			foreach ($existing as $entry) {
+				$entry_id = is_array($entry) ? ($entry["id"] ?? "") : (string)$entry;
+				if ((string)$entry_id === $generated_id) { $already = true; break; }
+			}
+			if (!$already && $generated_id !== "" && $generated_id !== "null") {
+				$existing[] = array("id" => $generated_id, "label" => "");
+				$CHANGE_TXT=$CHANGE_TXT."<li>Detected chat id ".$generated_id." added to the list.</li>";
+			} else {
+				$CHANGE_TXT=$CHANGE_TXT."<li>Telegram chat id detection: ".($generated_id === "" || $generated_id === "null" ? "no chat detected — write to your bot first" : "chat id already known")."</li>";
+			}
+			$data["telegram"]["chatId"] = $existing;
 			$change=3;
-			$CHANGE_TXT=$CHANGE_TXT."<li>Telegram Chat ID generation finished...</li>";
 			}
 
 		if( $_POST['change_telegram'] )
 			{
-			$data["telegram"]["chatId"]=$_POST['telegram_chatId'];
+			// New form: parallel arrays telegram_chatId_id[] + telegram_chatId_label[]
+			// (one row per chat). Filter out empty rows and store as array of
+			// {id, label?} objects. Falls back to the legacy single-input field
+			// if the array fields aren't posted.
+			$ids = $_POST['telegram_chatId_id'] ?? null;
+			$labels = $_POST['telegram_chatId_label'] ?? null;
+			if (is_array($ids)) {
+				$normalized = array();
+				foreach ($ids as $i => $raw) {
+					$id = trim((string)$raw);
+					if ($id === "") continue;
+					$entry = array("id" => $id);
+					$lbl = isset($labels[$i]) ? trim((string)$labels[$i]) : "";
+					if ($lbl !== "") $entry["label"] = $lbl;
+					$normalized[] = $entry;
+				}
+				$data["telegram"]["chatId"] = $normalized;
+			} else {
+				// Legacy single-input fallback
+				$data["telegram"]["chatId"] = $_POST['telegram_chatId'] ?? "";
+			}
 			$data["telegram"]["token"]=$_POST['telegram_token'];
 			if($_POST['telegram_active'])
 				{
@@ -378,13 +420,61 @@
 	   </li>
 
 	   <li id="li_1" >
-					<label class="description" for="telegram_chatId">Telegram ChatID</label>
-					<div>
-							<input id="telegram_chatId" name="telegram_chatId" class="element text medium" type="text" maxlength="255" value="<?php
-							print $data["telegram"]["chatId"];
-	?>"/>
-					</div><p class="guidelines" id="guide_1"><small>Please enter your telegram ChatId.</small></p>
+					<label class="description">Telegram Chat IDs</label>
+					<div id="telegram_chatId_list">
+<?php
+	// Normalize stored value to a list of {id, label} pairs for display.
+	$entries = array();
+	$stored = $data["telegram"]["chatId"] ?? "";
+	if (is_string($stored) || is_numeric($stored)) {
+		$s = trim((string)$stored);
+		if ($s !== "") $entries[] = array("id" => $s, "label" => "");
+	} elseif (is_array($stored)) {
+		foreach ($stored as $entry) {
+			if (is_array($entry)) {
+				$id = trim((string)($entry["id"] ?? ""));
+				if ($id === "") continue;
+				$entries[] = array("id" => $id, "label" => trim((string)($entry["label"] ?? "")));
+			} elseif (is_string($entry) || is_numeric($entry)) {
+				$id = trim((string)$entry);
+				if ($id !== "") $entries[] = array("id" => $id, "label" => "");
+			}
+		}
+	}
+	if (empty($entries)) {
+		// One empty row so the user has somewhere to type
+		$entries[] = array("id" => "", "label" => "");
+	}
+	foreach ($entries as $entry) {
+		echo '<div class="telegram_chatId_row" style="display:flex;gap:0.5em;margin-bottom:0.3em;align-items:center;">';
+		echo '<input name="telegram_chatId_id[]" type="text" maxlength="64" placeholder="Chat ID (z. B. -1001234567890)" style="flex:1;" value="'.htmlspecialchars($entry["id"], ENT_QUOTES).'"/>';
+		echo '<input name="telegram_chatId_label[]" type="text" maxlength="64" placeholder="Label (optional, z. B. Familie)" style="flex:1;" value="'.htmlspecialchars($entry["label"], ENT_QUOTES).'"/>';
+		echo '<button type="button" onclick="removeTelegramChat(this)">Entfernen</button>';
+		echo '</div>';
+	}
+?>
+					</div>
+					<button type="button" onclick="addTelegramChat()" style="margin-top:0.5em;">+ Chat hinzufügen</button>
+					<p class="guidelines" id="guide_1"><small>Eine Zeile pro Chat oder Gruppe. Label ist optional und nur fürs eigene Wiedererkennen. Leere Zeilen werden beim Speichern verworfen. „Generate Telegram Chat ID" hängt einen neu erkannten Chat an die Liste an.</small></p>
 	   </li>
+
+<script>
+function addTelegramChat() {
+	var list = document.getElementById('telegram_chatId_list');
+	var row = document.createElement('div');
+	row.className = 'telegram_chatId_row';
+	row.style.cssText = 'display:flex;gap:0.5em;margin-bottom:0.3em;align-items:center;';
+	row.innerHTML =
+		'<input name="telegram_chatId_id[]" type="text" maxlength="64" placeholder="Chat ID (z. B. -1001234567890)" style="flex:1;"/>' +
+		'<input name="telegram_chatId_label[]" type="text" maxlength="64" placeholder="Label (optional, z. B. Familie)" style="flex:1;"/>' +
+		'<button type="button" onclick="removeTelegramChat(this)">Entfernen</button>';
+	list.appendChild(row);
+}
+function removeTelegramChat(btn) {
+	var row = btn.closest('.telegram_chatId_row');
+	if (row && row.parentNode) row.parentNode.removeChild(row);
+}
+</script>
 
 
 	   <li class="buttons">

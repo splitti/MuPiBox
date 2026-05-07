@@ -280,6 +280,45 @@ app.post('/api/playtime/release', async (req, res) => {
   }
 })
 
+// POST /api/playtime/limit  body: { day: 'mon'|...|'sun', minutes: number }
+// Sets the daily playtime cap for one weekday in mupiboxconfig.json. Used by
+// the Telegram /limit set bot command so parents can adjust a single day
+// without opening the admin UI. Live-reload in the player picks the change up
+// within ~50 ms; no restart needed.
+const PLAYTIME_DAY_KEYS = new Set(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'])
+app.post('/api/playtime/limit', async (req, res) => {
+  const day = String(req.body?.day || '').toLowerCase()
+  const minutes = Number(req.body?.minutes)
+  if (!PLAYTIME_DAY_KEYS.has(day)) {
+    res.status(400).json({ error: 'day must be one of mon|tue|wed|thu|fri|sat|sun' })
+    return
+  }
+  if (!Number.isFinite(minutes) || minutes < 0 || minutes > 1440) {
+    res.status(400).json({ error: 'minutes must be in [0, 1440]' })
+    return
+  }
+  try {
+    await updateMupiboxConfig((cfg) => {
+      let pl = cfg.playtimeLimit as Record<string, unknown> | undefined
+      if (!pl || typeof pl !== 'object') {
+        pl = {}
+        cfg.playtimeLimit = pl
+      }
+      let limits = pl.limitsMinutes as Record<string, unknown> | undefined
+      if (!limits || typeof limits !== 'object') {
+        limits = {}
+        pl.limitsMinutes = limits
+      }
+      limits[day] = minutes
+    })
+    console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] /api/playtime/limit ${day}=${minutes} min`)
+    res.status(200).json({ ok: true, day, minutes })
+  } catch (err) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] /api/playtime/limit failed:`, err)
+    res.status(500).json({ error: 'internal error' })
+  }
+})
+
 // POST /api/quiethours/now  body: { minutes?: number }
 // Sets `playbackOverride.forceBlockUntil = now + minutes*60_000`. Forces playback
 // off immediately (kid sees the override overlay). Default 60 min.

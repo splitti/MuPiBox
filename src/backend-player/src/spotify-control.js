@@ -77,6 +77,29 @@ function setupMupiBoxConfigWatch() {
 }
 setupMupiBoxConfigWatch()
 
+// Returns true iff the Telegram integration is fully configured (active flag,
+// non-empty token, at least one chat id). Replaces the chatId.length > 1 +
+// token.length > 1 + active checks scattered throughout the file. Necessary
+// because chatId can now be a single string (legacy), or an array of strings,
+// or an array of {id, label?} objects (new admin-UI format).
+function hasConfiguredTelegram() {
+  const t = muPiBoxConfig?.telegram
+  if (!t || t.active !== true) return false
+  if (!t.token || String(t.token).length <= 1) return false
+  const chats = t.chatId
+  if (typeof chats === 'string') return chats.length > 1
+  if (typeof chats === 'number') return true
+  if (Array.isArray(chats)) {
+    return chats.some((c) => {
+      if (typeof c === 'string') return c.length > 1
+      if (typeof c === 'number') return true
+      if (c && typeof c === 'object') return c.id != null && String(c.id).length > 1
+      return false
+    })
+  }
+  return false
+}
+
 const config = require(`${configBasePath}/config.json`)
 
 const log = require('console-log-level')({ level: config.server.logLevel })
@@ -160,21 +183,9 @@ player.on('path', (val) => {
 player.on('track-change', () => player.getProps(['path']))
 
 player.on('track-change', () => {
-  if (
-    muPiBoxConfig.telegram.active &&
-    //network.onlinestate === 'online' &&
-    muPiBoxConfig.telegram.token.length > 1 &&
-    muPiBoxConfig.telegram.chatId.length > 1 &&
-    (currentMeta.currentType === 'rss' || currentMeta.currentType === 'radio')
-  )
+  if (hasConfiguredTelegram() && (currentMeta.currentType === 'rss' || currentMeta.currentType === 'radio'))
     cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_RSS_Radio.py')
-  if (
-    muPiBoxConfig.telegram.active &&
-    //network.onlinestate === 'online' &&
-    muPiBoxConfig.telegram.token.length > 1 &&
-    muPiBoxConfig.telegram.chatId.length > 1 &&
-    currentMeta.currentType === 'local'
-  )
+  if (hasConfiguredTelegram() && currentMeta.currentType === 'local')
     cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Local.py')
 })
 
@@ -541,13 +552,24 @@ function finalizePlaytimeBlock(reason) {
     console.error(`${new Date().toLocaleString()}: [Playtime] Error stopping playback:`, e)
   }
   writePlaytimeCheckpoint()
+  // Notify parents that today's listening time is up. telegram_send_message.py
+  // loops over all configured chatIds, so both Family group and individual DMs
+  // receive the message.
+  if (hasConfiguredTelegram()) {
+    cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Hörzeit aufgebraucht heute"')
+  }
 }
 
 function finalizeQuietHoursBlock(reason) {
   if (isAllowOverrideActive()) return
   console.log(`${new Date().toLocaleString()}: [QuietHours] Finalizing block (${reason})`)
+  const label = quietHoursState.activeWindow?.label
   quietHoursState.state = 'blocked'
   quietHoursState.graceEndsAt = null
+  if (hasConfiguredTelegram()) {
+    const msg = label ? `Ruhezeit gestartet: ${label}` : 'Ruhezeit gestartet'
+    cmdCall(`/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "${msg.replace(/"/g, '\\"')}"`)
+  }
   try {
     stop()
   } catch (e) {
@@ -948,12 +970,7 @@ function transferPlaybackToActiveDevice() {
 }
 
 function pause() {
-  if (
-    muPiBoxConfig.telegram.active &&
-    //network.onlinestate === 'online' &&
-    muPiBoxConfig.telegram.token.length > 1 &&
-    muPiBoxConfig.telegram.chatId.length > 1
-  )
+  if (hasConfiguredTelegram())
     cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Pause"')
   currentMeta.pause = true
   if (currentMeta.currentPlayer === 'spotify') {
@@ -980,12 +997,7 @@ function pause() {
 }
 
 function stop() {
-  if (
-    muPiBoxConfig.telegram.active &&
-    //network.onlinestate === 'online' &&
-    muPiBoxConfig.telegram.token.length > 1 &&
-    muPiBoxConfig.telegram.chatId.length > 1
-  )
+  if (hasConfiguredTelegram())
     cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Stop"')
   if (currentMeta.currentPlayer === 'spotify') {
     spotifyApi.pause().then(
@@ -1039,26 +1051,16 @@ function play() {
         handleSpotifyError(err, 'play')
       },
     )
-    if (
-      muPiBoxConfig.telegram.active &&
-      //network.onlinestate === 'online' &&
-      muPiBoxConfig.telegram.token.length > 1 &&
-      muPiBoxConfig.telegram.chatId.length > 1
-    )
+    if (hasConfiguredTelegram())
       cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Continue playing"')
-    //if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Spotify.py');
+    //if (hasConfiguredTelegram()) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Spotify.py');
   } else if (currentMeta.currentPlayer === 'mplayer') {
     if (!currentMeta.playing) {
       player.playPause()
       currentMeta.pause = false
       //currentMeta.playing = true;
       writeplayerstatePlay()
-      if (
-        muPiBoxConfig.telegram.active &&
-        //network.onlinestate === 'online' &&
-        muPiBoxConfig.telegram.token.length > 1 &&
-        muPiBoxConfig.telegram.chatId.length > 1
-      )
+      if (hasConfiguredTelegram())
         cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Continue playing"')
       // if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1 && (currentMeta.currentType === 'rss' || currentMeta.currentType === 'radio')) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Local.py');
       // if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1 && currentMeta.currentType === 'local') cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_RSS_Radio.py');
@@ -1173,14 +1175,9 @@ function playMe() {
         log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Playback started`)
         writeplayerstatePlay()
         spotifyRunning = true
-        if (
-          muPiBoxConfig.telegram.active &&
-          //network.onlinestate === 'online' &&
-          muPiBoxConfig.telegram.token.length > 1 &&
-          muPiBoxConfig.telegram.chatId.length > 1
-        )
+        if (hasConfiguredTelegram())
           cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Start playing spotify"')
-        //if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Spotify.py');
+        //if (hasConfiguredTelegram()) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Spotify.py');
       },
       (err) => {
         log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Playback error${err}`)
@@ -1205,14 +1202,9 @@ function playMe() {
         }
         writeplayerstatePlay()
         spotifyRunning = true
-        if (
-          muPiBoxConfig.telegram.active &&
-          //network.onlinestate === 'online' &&
-          muPiBoxConfig.telegram.token.length > 1 &&
-          muPiBoxConfig.telegram.chatId.length > 1
-        )
+        if (hasConfiguredTelegram())
           cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Start playing spotify"')
-        //if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Spotify.py');
+        //if (hasConfiguredTelegram()) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Spotify.py');
       },
       (err) => {
         log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Playback error${err}`)
@@ -1242,14 +1234,9 @@ function playList(playedList) {
   currentMeta.currentTracknr = 0
   currentMeta.path = playedTitelmod
 
-  if (
-    muPiBoxConfig.telegram.active &&
-    //network.onlinestate === 'online' &&
-    muPiBoxConfig.telegram.token.length > 1 &&
-    muPiBoxConfig.telegram.chatId.length > 1
-  )
+  if (hasConfiguredTelegram())
     cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Start playing local"')
-  //if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Local.py');
+  //if (hasConfiguredTelegram()) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Local.py');
 
   setTimeout(() => {
     const cmdtotalTracks = `find "/home/dietpi/MuPiBox/media/${decodeURIComponent(currentMeta.path)}" -type f -name "*.mp3" -or -name "*.flac" -or -name "*.m4a" -or -name "*.wma" -or -name "*.wav"| wc -l`
@@ -1284,14 +1271,9 @@ function playURL(playedURL) {
   player.play(playedURL)
   player.setVolume(volumeStart)
   log.debug(`${nowDate.toLocaleString()}: ${playedURL}`)
-  if (
-    muPiBoxConfig.telegram.active &&
-    //network.onlinestate === 'online' &&
-    muPiBoxConfig.telegram.token.length > 1 &&
-    muPiBoxConfig.telegram.chatId.length > 1
-  )
+  if (hasConfiguredTelegram())
     cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Start playing stream"')
-  //if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_RSS_Radio.py');
+  //if (hasConfiguredTelegram()) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_RSS_Radio.py');
 }
 
 /*seek 30 secends back or forward*/

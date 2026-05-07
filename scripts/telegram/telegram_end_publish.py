@@ -1,15 +1,15 @@
 #!/usr/bin/python3
 
-import sys
-import time
 import telepot
 import json
+from telegram_chats import normalize_chat_ids, send_to_all
 
 with open("/etc/mupibox/mupiboxconfig.json") as file:
     config = json.load(file)
 
-TOKEN = config['telegram']['token']
-bot = telepot.Bot(TOKEN)
-chat_id = config['telegram']['chatId']
+chat_ids = normalize_chat_ids(config['telegram'].get('chatId'))
+if not chat_ids:
+    quit()
 
-bot.sendMessage(chat_id, 'Sending data to telegram has been disabled!')
+bot = telepot.Bot(config['telegram']['token'])
+send_to_all(bot, 'Sending data to telegram has been disabled!', chat_ids)

@@ -15,11 +15,36 @@ with open("/etc/mupibox/mupiboxconfig.json") as file:
 if not config['telegram']['active']:
     quit()
 
-# Authorization: only respond to messages from the configured chat. Without this
+PLAYTIME_DAY_KEYS = {'mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'}
+
+def _normalize_chat_ids(value):
+    """telegram.chatId may be a single string/number (legacy), an array of
+    strings/numbers, or an array of {id, label?} objects (current format).
+    Return a list of stringified IDs."""
+    if not value:
+        return []
+    if isinstance(value, (str, int, float)):
+        s = str(value).strip()
+        return [s] if s else []
+    if isinstance(value, list):
+        out = []
+        for item in value:
+            if isinstance(item, (str, int, float)):
+                s = str(item).strip()
+                if s:
+                    out.append(s)
+            elif isinstance(item, dict):
+                cid = str(item.get('id', '')).strip()
+                if cid:
+                    out.append(cid)
+        return out
+    return []
+
+# Authorization: only respond to messages from configured chats. Without this
 # anyone who learns the bot username could send /shutdown / /quietnow / etc.
-# An empty chatId is treated as "deny all" — the user has to configure one for
+# An empty list is treated as "deny all" — the user has to configure one for
 # outbound notifications anyway.
-ALLOWED_CHAT_ID = str(config['telegram'].get('chatId', '')).strip()
+ALLOWED_CHAT_IDS = set(_normalize_chat_ids(config['telegram'].get('chatId')))
 
 # Backend-API base URL on the same host. Used for parent-control commands
 # (extend / release / quietnow / status). The player listens for config
@@ -27,10 +52,10 @@ ALLOWED_CHAT_ID = str(config['telegram'].get('chatId', '')).strip()
 API_BASE = 'http://localhost:8200/api'
 
 def is_authorized(chat_id):
-    if not ALLOWED_CHAT_ID:
+    if not ALLOWED_CHAT_IDS:
         print('Refusing message: no chatId configured in mupiboxconfig.json')
         return False
-    return str(chat_id) == ALLOWED_CHAT_ID
+    return str(chat_id) in ALLOWED_CHAT_IDS
 
 def fmt_minutes(seconds):
     if seconds <= 0:
@@ -164,6 +189,27 @@ def on_chat_message(msg):
                 bot.sendMessage(chat_id, f'⛔ Sofort-Stopp für {mins} min aktiviert.')
             else:
                 bot.sendMessage(chat_id, f'Fehler: {status_code} {body}')
+    elif command[:6] == '/limit':
+        # Usage: /limit set <day> <minutes>   (day = mon..sun, minutes = 0..1440)
+        # Mutates playtimeLimit.limitsMinutes.<day> in mupiboxconfig.json.
+        # The player picks up the change via fs.watch within ~50 ms.
+        parts = command.split()
+        if len(parts) >= 4 and parts[1] == 'set':
+            day = parts[2].lower()
+            try:
+                mins = int(parts[3])
+            except (ValueError, TypeError):
+                mins = -1
+            if day not in PLAYTIME_DAY_KEYS or mins < 0 or mins > 1440:
+                bot.sendMessage(chat_id, 'Nutzung: /limit set <mon|tue|wed|thu|fri|sat|sun> <Minuten 0..1440>')
+            else:
+                status_code, body = call_api_post('/playtime/limit', {'day': day, 'minutes': mins})
+                if status_code == 200:
+                    bot.sendMessage(chat_id, f'✅ Limit für {day} auf {mins} min gesetzt.')
+                else:
+                    bot.sendMessage(chat_id, f'Fehler: {status_code} {body}')
+        else:
+            bot.sendMessage(chat_id, 'Nutzung: /limit set <mon|tue|wed|thu|fri|sat|sun> <Minuten 0..1440>')
     elif command == '/help':
         markup = InlineKeyboardMarkup(inline_keyboard=[
                                     [InlineKeyboardButton(text="Status",callback_data='status'), InlineKeyboardButton(text="Current Screen",callback_data='screen')],
@@ -178,7 +224,7 @@ def on_chat_message(msg):
         global message_with_inline_keyboard
         message_with_inline_keyboard = bot.sendMessage(chat_id, 'Possible commands:',reply_markup = markup)
     elif command == '/command':
-        bot.sendMessage(chat_id, "<b><u>Possible commands:</u></b>\n\n<code><b>/help</b></code>\n<i>shows the inline keyboard</i>\n\n<code><b>/status</b></code>\n<i>show current playtime + quiet hours status</i>\n\n<code><b>/extend</b> <i>[minutes, default 30]</i></code>\n<i>add bonus minutes to today's playtime cap</i>\n\n<code><b>/release</b> <i>[minutes, default 60]</i></code>\n<i>bypass all blocks for N minutes</i>\n\n<code><b>/quietnow</b> <i>[minutes, default 60]</i></code>\n<i>force-block playback for N minutes</i>\n\n<code><b>/reboot</b></code>\n<code><b>/shutdown</b></code>\n<code><b>/screen</b></code>\n<code><b>/sleep</b> <i>[minutes]</i></code>\n<code><b>/vol</b> <i>[0-100]</i></code>\n<code><b>/media</b></code>\n<code><b>/finishalbum</b></code>", parse_mode='HTML')
+        bot.sendMessage(chat_id, "<b><u>Possible commands:</u></b>\n\n<code><b>/help</b></code>\n<i>shows the inline keyboard</i>\n\n<code><b>/status</b></code>\n<i>show current playtime + quiet hours status</i>\n\n<code><b>/extend</b> <i>[minutes, default 30]</i></code>\n<i>add bonus minutes to today's playtime cap</i>\n\n<code><b>/release</b> <i>[minutes, default 60]</i></code>\n<i>bypass all blocks for N minutes</i>\n\n<code><b>/quietnow</b> <i>[minutes, default 60]</i></code>\n<i>force-block playback for N minutes</i>\n\n<code><b>/limit set</b> <i>&lt;day&gt; &lt;minutes&gt;</i></code>\n<i>set the playtime limit for one weekday (mon..sun, 0..1440)</i>\n\n<code><b>/reboot</b></code>\n<code><b>/shutdown</b></code>\n<code><b>/screen</b></code>\n<code><b>/sleep</b> <i>[minutes]</i></code>\n<code><b>/vol</b> <i>[0-100]</i></code>\n<code><b>/media</b></code>\n<code><b>/finishalbum</b></code>", parse_mode='HTML')
     elif command == '/media':
         bot.sendMessage(chat_id, "Starting media data update... This take a while, please wait for complete message")
         subprocess.run(["sudo", "/usr/local/bin/mupibox/./m3u_generator.sh"])
