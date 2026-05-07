@@ -22,8 +22,16 @@ while true
 do
 	if test -f "${MUPIWIFI}"
 	then
-		SSID="$(/usr/bin/jq -r .[].ssid ${MUPIWIFI})"
-		PSK="$(/usr/bin/jq -r .[].pw ${MUPIWIFI})"
+		# HIGH-11: previous filter was `jq -r .[].ssid` which iterates and
+		# emits N newline-separated SSIDs when the array has N entries.
+		# wpa_passphrase / the "network={ ssid=…" emit below then receive
+		# a multi-line string and write garbage into wpa_supplicant.conf.
+		# The frontend always queues exactly one entry per save event, so
+		# pin to index 0; if there are leftover entries they're picked up
+		# on the next loop iteration after `sudo rm ${MUPIWIFI}` clears
+		# the file.
+		SSID="$(/usr/bin/jq -r '.[0].ssid // empty' ${MUPIWIFI})"
+		PSK="$(/usr/bin/jq -r '.[0].pw // empty' ${MUPIWIFI})"
 		if [ "${SSID}" = "" ]
 		then
 			sudo rm ${MUPIWIFI}
@@ -44,11 +52,23 @@ do
 			restart_network			
 		elif [ "${PSK}" = "" ]
 		then
-			echo 'network={' | sudo tee -a ${WPACONF}
-			echo '	ssid="'${SSID}'"' | sudo tee -a ${WPACONF}
-			echo '	scan_ssid=1' | sudo tee -a ${WPACONF}
-			echo '}' | sudo tee -a ${WPACONF}
-			restart_network
+			# HIGH-12: previous code spliced ${SSID} unquoted into a
+			# single-quoted echo, so an SSID containing `"` or a newline
+			# could escape the quoted string and inject arbitrary blocks
+			# into wpa_supplicant.conf (root-owned, security-relevant).
+			# Use wpa_passphrase's open-network shape via printf with %s,
+			# which can't be reinterpreted by the shell, then escape any
+			# embedded `"` for the JSON-style ssid field.
+			# Reject SSIDs containing characters wpa_supplicant.conf can't
+			# represent (newlines / NUL) outright.
+			if [[ "${SSID}" == *$'\n'* || "${SSID}" == *$'\0'* ]]; then
+				echo "add_wifi.sh: SSID rejected (newline / NUL in name)" >&2
+			else
+				_ESCAPED_SSID="${SSID//\\/\\\\}"
+				_ESCAPED_SSID="${_ESCAPED_SSID//\"/\\\"}"
+				printf 'network={\n\tssid="%s"\n\tscan_ssid=1\n}\n' "${_ESCAPED_SSID}" | sudo tee -a ${WPACONF} >/dev/null
+				restart_network
+			fi
 		else
 			WIFI_RESULT=$(sudo -i wpa_passphrase "${SSID}" "${PSK}") 
 			IFS=$'\n'
