@@ -44,6 +44,11 @@ cp -a "${BACKUP_DIR}/www" /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www
 echo "==> Restore backend-player"
 cp -a "${BACKUP_DIR}/spotify-control.js" /home/dietpi/.mupibox/spotifycontroller-main/spotify-control.js
 
+if [ -d "${BACKUP_DIR}/admin-www" ]; then
+  echo "==> Restore Admin-Interface (PHP)"
+  sudo rsync -a --delete "${BACKUP_DIR}/admin-www/" /var/www/
+fi
+
 echo "==> Restore Trim-Skripte"
 [ -f "${BACKUP_DIR}/remove_max_resume.sh" ] && \
   sudo install -m 755 -o root -g root "${BACKUP_DIR}/remove_max_resume.sh" /usr/local/bin/mupibox/ \

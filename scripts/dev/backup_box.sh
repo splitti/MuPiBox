@@ -26,6 +26,10 @@ cp -a /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www "${BACKUP_DIR}/www"
 echo "--> backend-player (spotify-control.js)"
 cp -a /home/dietpi/.mupibox/spotifycontroller-main/spotify-control.js "${BACKUP_DIR}/"
 
+echo "--> Admin-Interface (PHP)"
+sudo cp -a /var/www "${BACKUP_DIR}/admin-www" 2>/dev/null \
+  || echo "   (/var/www nicht vorhanden — überspringe)"
+
 echo "--> on-box Trim-Skripte"
 sudo cp -a /usr/local/bin/mupibox/remove_max_resume.sh "${BACKUP_DIR}/" 2>/dev/null \
   || echo "   (remove_max_resume.sh nicht vorhanden)"

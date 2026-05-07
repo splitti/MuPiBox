@@ -112,6 +112,14 @@ for s in remove_max_resume.sh clearresume.sh; do
   fi
 done
 
+echo "==> Admin-Interface PHP (falls smart.php in ${TRIM_SCRIPTS_DIR})"
+if [ -f "${TRIM_SCRIPTS_DIR}/smart.php" ]; then
+  sudo install -m 644 -o dietpi -g dietpi "${TRIM_SCRIPTS_DIR}/smart.php" /var/www/smart.php
+  echo "   smart.php installiert"
+else
+  echo "   (smart.php nicht in ${TRIM_SCRIPTS_DIR} — überspringe)"
+fi
+
 echo "==> Telegram-Skripte (falls in ${TRIM_SCRIPTS_DIR}/telegram_*.py)"
 shopt -s nullglob
 telegram_files=("${TRIM_SCRIPTS_DIR}"/telegram_*.py)
