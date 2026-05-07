@@ -62,28 +62,36 @@ fi
 
 #wget -q --spider http://google.com
 
+# Idempotent symlink reconciliation. Always points $link at $target —
+# if the link already points there, no-op. Replaces the previous
+# state-transition-only logic that depended on detecting a change
+# from OLDSTATE → ONLINESTATE; that logic missed the case where
+# check_network.sh starts up in a state that already matches stored
+# OLD_ONLINESTATE but where the on-disk symlink is still pointing at
+# the wrong target (e.g. after a pm2 restart while box was already
+# online — both ONLINESTATE and OLD_ONLINESTATE = "online", no flip
+# fired, but the symlink may still be pointing at offline_data.json
+# from a prior offline session). Symptom: active_data.json never
+# resolved to data.json post-reboot, so the API served the offline
+# (Spotify-less) shape even though the box was clearly online.
+ensure_symlink() {
+	local target="$1"
+	local link="$2"
+	if [ ! -L "$link" ] || [ "$(readlink "$link")" != "$target" ]; then
+		rm -f "$link"
+		ln -s "$target" "$link"
+		chown -h dietpi:dietpi "$link" 2>/dev/null || sudo chown -h dietpi:dietpi "$link"
+	fi
+}
+
 while true
 do
 	if ( $(/usr/bin/python3 /usr/local/bin/mupibox/check_network.py) == ${TRUESTATE} ); then
 		ONLINESTATE=${TRUESTATE}
-		if [ "${ONLINESTATE}" != "${OLDSTATE}" ]; then
-			if [ ! -f ${ACTIVE_FILE} ]; then
-				ln -s ${DATA_FILE} ${ACTIVE_FILE}
-				chown dietpi:dietpi ${ACTIVE_FILE}
-			elif [[ ${OLD_ONLINESTATE} != "online" ]]; then
-				rm ${ACTIVE_FILE}
-				ln -s ${DATA_FILE} ${ACTIVE_FILE}
-				chown dietpi:dietpi ${ACTIVE_FILE}
-			fi
-			if [ ! -f ${ACTIVERESUME_FILE} ]; then
-				ln -s ${RESUME_FILE} ${ACTIVERESUME_FILE}
-				chown dietpi:dietpi ${ACTIVERESUME_FILE}
-			elif [[ ${OLD_ONLINESTATE} != "online" ]]; then
-				rm ${ACTIVERESUME_FILE}
-				ln -s ${RESUME_FILE} ${ACTIVERESUME_FILE}
-				chown dietpi:dietpi ${ACTIVERESUME_FILE}
-			fi
-		fi
+		# Reconcile every tick (cheap when no-op) instead of only on
+		# state change. Self-healing if the symlink was wrong.
+		ensure_symlink "${DATA_FILE}" "${ACTIVE_FILE}"
+		ensure_symlink "${RESUME_FILE}" "${ACTIVERESUME_FILE}"
 	else
 		ONLINESTATE=${FALSESTATE}
 		if [ ! -f ${OFFLINE_FILE} ]; then
@@ -124,24 +132,9 @@ do
 			echo -n "]" >> ${OFFLINERESUME_FILE}
 			sed -i 's/} {/}, {/g' ${OFFLINERESUME_FILE}
 		fi
-		if [ "${ONLINESTATE}" != "${OLDSTATE}" ]; then
-			if [ ! -f ${ACTIVE_FILE} ]; then
-				ln -s ${OFFLINE_FILE} ${ACTIVE_FILE}
-				chown dietpi:dietpi ${ACTIVE_FILE}
-			elif [[ ${OLD_ONLINESTATE} != "offline" ]]; then
-				rm ${ACTIVE_FILE}
-				ln -s ${OFFLINE_FILE} ${ACTIVE_FILE}
-				chown dietpi:dietpi ${ACTIVE_FILE}
-			fi
-			if [ ! -f ${ACTIVERESUME_FILE} ]; then
-				ln -s ${OFFLINERESUME_FILE} ${ACTIVERESUME_FILE}
-				chown dietpi:dietpi ${ACTIVERESUME_FILE}
-			elif [[ ${OLD_ONLINESTATE} != "offline" ]]; then
-				rm ${ACTIVERESUME_FILE}
-				ln -s ${OFFLINERESUME_FILE} ${ACTIVERESUME_FILE}
-				chown dietpi:dietpi ${ACTIVERESUME_FILE}
-			fi
-		fi
+		# Self-healing reconciliation, see ensure_symlink comment above.
+		ensure_symlink "${OFFLINE_FILE}" "${ACTIVE_FILE}"
+		ensure_symlink "${OFFLINERESUME_FILE}" "${ACTIVERESUME_FILE}"
 	fi
 
 	if [ "${ONLINESTATE}" != "${OLDSTATE}" ]; then
