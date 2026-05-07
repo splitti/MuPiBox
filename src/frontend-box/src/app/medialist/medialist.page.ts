@@ -55,8 +55,24 @@ export class MedialistPage extends SwiperIonicEventsHelper {
     super()
     addIcons({ arrowBackOutline })
 
-    this.artist.set(this.router.currentNavigation()?.extras.state?.artist)
-    this.category.set(this.router.currentNavigation()?.extras.state?.category ?? 'audiobook')
+    // MED-21: router.currentNavigation() is null when this page is reached
+    // by anything OTHER than a fresh router.navigate() — e.g. browser
+    // refresh (F5), Chromium restart-kiosk preserving the URL, or
+    // Capacitor app-resume. The previous code then `set(undefined)`d
+    // both signals; the template's {{artist().name}} threw an NPE and
+    // the page crashed white-screen.
+    //
+    // Browsers persist navigation state in `history.state` across reloads,
+    // so fall back to that. If neither source has the data, redirect to
+    // home rather than render in a broken state.
+    const navState = this.router.currentNavigation()?.extras.state ?? (history.state as any) ?? {}
+    if (!navState.artist) {
+      // No artist anywhere — typical on F5 with stale URL. Bounce home.
+      void this.router.navigateByUrl('/')
+      return
+    }
+    this.artist.set(navState.artist)
+    this.category.set(navState.category ?? 'audiobook')
 
     this.media = toSignal(
       combineLatest([toObservable(this.category), toObservable(this.artist)]).pipe(
@@ -66,14 +82,23 @@ export class MedialistPage extends SwiperIonicEventsHelper {
             return of([])
           }
 
-          const sliceMedia = (media: Media[], offsetByOne = false): Media[] => {
-            if (artist.coverMedia?.aPartOfAll) {
-              const min = Math.max(0, (artist.coverMedia?.aPartOfAllMin ?? 0) - (offsetByOne ? 1 : 0))
-              const max =
-                (artist.coverMedia?.aPartOfAllMax ?? Number.parseInt(artist.albumCount, 10)) - (offsetByOne ? 1 : 0)
-              return media.slice(min, max + 1)
-            }
-            return media
+          // MED-18: previously the sort-then-slice ordering produced wrong
+          // ranges for shows/RSS. aPartOfAllMin/Max are user-input 1-indexed
+          // ranges (Eltern enter "episodes 5-10"). For audiobooks (alphabetical
+          // sort) this happened to work because filesystem readdir order
+          // matches alphabetical, so slicing post-sort with `offsetByOne=true`
+          // produced the right items. But for shows/RSS the array was sorted
+          // ReleaseDateDescending FIRST, then sliced with `offsetByOne=false` —
+          // so picking "5-10" gave you items at indices 5-10 of the descending
+          // array, i.e. the 6th-through-11th-newest episodes, not Episodes 5-10.
+          // Slice on the API's native order (chronological for RSS/shows, alpha
+          // for filesystem audiobooks), THEN sort the slice for display. Same
+          // semantics for both categories, no offsetByOne flag needed.
+          const slicePart = (media: Media[]): Media[] => {
+            if (!artist.coverMedia?.aPartOfAll) return media
+            const min = Math.max(0, (artist.coverMedia?.aPartOfAllMin ?? 1) - 1) // 1-indexed → 0-indexed
+            const max = artist.coverMedia?.aPartOfAllMax ?? Number.parseInt(artist.albumCount, 10) // 1-indexed inclusive → exclusive end for slice
+            return media.slice(min, max)
           }
 
           const isShow =
@@ -86,13 +111,10 @@ export class MedialistPage extends SwiperIonicEventsHelper {
               return of([])
             }),
             map((media) => {
-              return sliceMedia(
-                this.sortMedia(
-                  artist.coverMedia,
-                  media,
-                  isShow ? MediaSorting.ReleaseDateDescending : MediaSorting.AlphabeticalAscending,
-                ),
-                !isShow,
+              return this.sortMedia(
+                artist.coverMedia,
+                slicePart(media),
+                isShow ? MediaSorting.ReleaseDateDescending : MediaSorting.AlphabeticalAscending,
               )
             }),
           )
