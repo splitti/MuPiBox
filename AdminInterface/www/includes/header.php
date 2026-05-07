@@ -35,26 +35,36 @@
 	$commandLQ="sudo iwconfig wlan0 | awk '/Link Quality/{split($2,a,\"=|/\");print int((a[2]/a[3])*100)\"\"}' | tr -d '%'";
 	$LINKQ=exec($commandLQ);
 	
-	if ($_GET['hshutdown']) {
-		$shutdown = 1;
-		$change=99;
-		$CHANGE_TXT=$CHANGE_TXT."<li>Shutdown MuPiBox</li>";
-		}
-	if ($_GET['hreboot']) {
-		$reboot = 1;
-		$change=99;
-		$CHANGE_TXT=$CHANGE_TXT."<li>Reboot MuPiBox</li>";
-		}
-	if ($_GET['hchromerestart']) {
-		exec("sudo -i -u dietpi /usr/local/bin/mupibox/./restart_kiosk.sh");
-		$change=99;
-		$CHANGE_TXT=$CHANGE_TXT."<li>Restart Chrome kiosk</li>";
-		}
-	if ($_GET['hrefreshdatabase']) {
-		exec("sudo /usr/local/bin/mupibox/./m3u_generator.sh");
-		$change=99;
-		$CHANGE_TXT=$CHANGE_TXT."<li>Update media database finished</li>";
-		}
+	// These GET handlers reboot/shutdown the box and run privileged scripts
+	// (restart_kiosk.sh, m3u_generator.sh). They MUST be gated by the login
+	// check; otherwise an unauthenticated LAN attacker can curl
+	// `?hshutdown=1` and DoS the box, or `?hrefreshdatabase=1` to grind the
+	// SD card. The auth gate further down the file is the single source of
+	// truth for whether the caller is allowed in — mirror it here.
+	$authGatePassed = !$loginEnabled
+		|| (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true);
+	if ($authGatePassed) {
+		if (isset($_GET['hshutdown'])) {
+			$shutdown = 1;
+			$change=99;
+			$CHANGE_TXT=$CHANGE_TXT."<li>Shutdown MuPiBox</li>";
+			}
+		if (isset($_GET['hreboot'])) {
+			$reboot = 1;
+			$change=99;
+			$CHANGE_TXT=$CHANGE_TXT."<li>Reboot MuPiBox</li>";
+			}
+		if (isset($_GET['hchromerestart'])) {
+			exec("sudo -i -u dietpi /usr/local/bin/mupibox/./restart_kiosk.sh");
+			$change=99;
+			$CHANGE_TXT=$CHANGE_TXT."<li>Restart Chrome kiosk</li>";
+			}
+		if (isset($_GET['hrefreshdatabase'])) {
+			exec("sudo /usr/local/bin/mupibox/./m3u_generator.sh");
+			$change=99;
+			$CHANGE_TXT=$CHANGE_TXT."<li>Update media database finished</li>";
+			}
+	}
 		
 	$mupihat_file = '/tmp/mupihat.json';
 	$mupihat_state = false;
