@@ -88,39 +88,39 @@ do
 		ONLINESTATE=${FALSESTATE}
 		if [ ! -f ${OFFLINE_FILE} ]; then
 			echo -n "[" > ${OFFLINE_FILE}
-			echo -n $(jq '.[] | select(.type != "spotify") | select(.type != "radio" | select(.type != "rss")' < ${DATA_FILE}) >> ${OFFLINE_FILE}
+			echo -n $(jq '.[] | select(.type != "spotify" and .type != "radio" and .type != "rss")' < ${DATA_FILE}) >> ${OFFLINE_FILE}
 			echo -n "]" >> ${OFFLINE_FILE}
 			sed -i 's/} {/}, {/g' ${OFFLINE_FILE}
 			chown dietpi:dietpi ${OFFLINE_FILE}
 		elif [ ! -s ${OFFLINE_FILE} ]; then
 			rm ${OFFLINE_FILE}
 			echo -n "[" > ${OFFLINE_FILE}
-			echo -n $(jq '.[] | select(.type != "spotify") | select(.type != "radio" | select(.type != "rss")' < ${DATA_FILE}) >> ${OFFLINE_FILE}
+			echo -n $(jq '.[] | select(.type != "spotify" and .type != "radio" and .type != "rss")' < ${DATA_FILE}) >> ${OFFLINE_FILE}
 			echo -n "]" >> ${OFFLINE_FILE}
 			sed -i 's/} {/}, {/g' ${OFFLINE_FILE}
 			chown dietpi:dietpi ${OFFLINE_FILE}
 		elif [ $(stat --format='%Y' "${DATA_FILE}") -gt $(stat --format='%Y' "${OFFLINE_FILE}") ]; then
 			echo -n "[" > ${OFFLINE_FILE}
-			echo -n $(jq '.[] | select(.type != "spotify") | select(.type != "radio" | select(.type != "rss")' < ${DATA_FILE}) >> ${OFFLINE_FILE}
+			echo -n $(jq '.[] | select(.type != "spotify" and .type != "radio" and .type != "rss")' < ${DATA_FILE}) >> ${OFFLINE_FILE}
 			echo -n "]" >> ${OFFLINE_FILE}
 			sed -i 's/} {/}, {/g' ${OFFLINE_FILE}
 		fi
 		if [ ! -f ${OFFLINERESUME_FILE} ]; then
 			echo -n "[" > ${OFFLINERESUME_FILE}
-			echo -n $(jq '.[] | select(.type != "spotify") | select(.type != "radio" | select(.type != "rss")' < ${RESUME_FILE}) >> ${OFFLINERESUME_FILE}
+			echo -n $(jq '.[] | select(.type != "spotify" and .type != "radio" and .type != "rss")' < ${RESUME_FILE}) >> ${OFFLINERESUME_FILE}
 			echo -n "]" >> ${OFFLINERESUME_FILE}
 			sed -i 's/} {/}, {/g' ${OFFLINERESUME_FILE}
 			chown dietpi:dietpi ${OFFLINERESUME_FILE}
 		elif [ ! -s ${OFFLINERESUME_FILE} ]; then
 			rm ${OFFLINERESUME_FILE}
 			echo -n "[" > ${OFFLINERESUME_FILE}
-			echo -n $(jq '.[] | select(.type != "spotify") | select(.type != "radio" | select(.type != "rss")' < ${RESUME_FILE}) >> ${OFFLINERESUME_FILE}
+			echo -n $(jq '.[] | select(.type != "spotify" and .type != "radio" and .type != "rss")' < ${RESUME_FILE}) >> ${OFFLINERESUME_FILE}
 			echo -n "]" >> ${OFFLINERESUME_FILE}
 			sed -i 's/} {/}, {/g' ${OFFLINERESUME_FILE}
 			chown dietpi:dietpi ${OFFLINERESUME_FILE}
 		elif [ $(stat --format='%Y' "${RESUME_FILE}") -gt $(stat --format='%Y' "${OFFLINERESUME_FILE}") ]; then
 			echo -n "[" > ${OFFLINERESUME_FILE}
-			echo -n $(jq '.[] | select(.type != "spotify") | select(.type != "radio" | select(.type != "rss")' < ${RESUME_FILE}) >> ${OFFLINERESUME_FILE}
+			echo -n $(jq '.[] | select(.type != "spotify" and .type != "radio" and .type != "rss")' < ${RESUME_FILE}) >> ${OFFLINERESUME_FILE}
 			echo -n "]" >> ${OFFLINERESUME_FILE}
 			sed -i 's/} {/}, {/g' ${OFFLINERESUME_FILE}
 		fi
