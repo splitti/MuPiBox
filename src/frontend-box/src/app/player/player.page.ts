@@ -1,5 +1,6 @@
 import { AsyncPipe } from '@angular/common'
-import { Component, OnInit, ViewChild } from '@angular/core'
+import { Component, DestroyRef, inject, OnInit, ViewChild } from '@angular/core'
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop'
 import { FormsModule } from '@angular/forms'
 import { ActivatedRoute, Router } from '@angular/router'
 import {
@@ -91,6 +92,7 @@ export class PlayerPage implements OnInit {
   // Tracks the playtime state across ticks so we can detect transitions
   // (normal -> grace, grace -> blocked, etc.) and persist resume on time.
   private prevPlaytimeState: PlaytimePlayState | 'unknown' = 'unknown'
+  private destroyRef = inject(DestroyRef)
   public readonly spotify$: Observable<CurrentSpotify>
   public readonly local$: Observable<CurrentMPlayer>
 
@@ -136,14 +138,12 @@ export class PlayerPage implements OnInit {
       this.handleExternalPlayback()
     }
 
-    this.mediaService.current$.subscribe((spotify) => {
+    // Track player state for the lifetime of this component. takeUntilDestroyed
+    // ties the subscription to the page; previously updateProgress() and
+    // saveResumeFiles() each re-subscribed on every call without ever
+    // unsubscribing, so a 60-min listen accrued ~120 lingering subscriptions.
+    this.mediaService.current$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((spotify) => {
       this.currentPlayedSpotify = spotify
-    })
-    this.mediaService.local$.subscribe((local) => {
-      this.currentPlayedLocal = local
-    })
-    // Use cover from CurrentSpotify for Spotify content, fallback to media.cover for other types
-    this.mediaService.current$.subscribe((spotify) => {
       if (this.media?.type === 'spotify' && spotify?.item?.album?.images?.[0]?.url) {
         this.cover = spotify.item.album.images[0].url
       } else if (this.media?.cover) {
@@ -152,7 +152,10 @@ export class PlayerPage implements OnInit {
         this.cover = '../assets/images/nocover_mupi.png'
       }
     })
-    this.mediaService.albumStop$.subscribe((albumStop) => {
+    this.mediaService.local$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((local) => {
+      this.currentPlayedLocal = local
+    })
+    this.mediaService.albumStop$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((albumStop) => {
       this.albumStop = albumStop
     })
   }
@@ -176,7 +179,7 @@ export class PlayerPage implements OnInit {
       }
 
       // Subscribe to currentTrack$ to update when track info becomes available
-      this.spotifyService.currentTrack$.subscribe((track) => {
+      this.spotifyService.currentTrack$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((track) => {
         if (track && this.media.title === 'External Playback') {
           this.logService.log('[PlayerPage] Updating media object with track info:', track.name)
           this.media = this.spotifyService.createMediaFromSpotifyTrack(track)
@@ -196,13 +199,9 @@ export class PlayerPage implements OnInit {
   }
 
   updateProgress() {
-    this.mediaService.current$.subscribe((spotify) => {
-      this.currentPlayedSpotify = spotify
-    })
-    this.mediaService.local$.subscribe((local) => {
-      this.currentPlayedLocal = local
-    })
-
+    // currentPlayedSpotify / currentPlayedLocal are kept fresh by the
+    // takeUntilDestroyed-bound subscriptions in ngOnInit — read them
+    // directly here instead of re-subscribing on every tick.
     this.playing = !this.currentPlayedLocal?.pause
     if (this.playing) {
       this.resumeTimer++
@@ -381,12 +380,6 @@ export class PlayerPage implements OnInit {
 
   saveResumeFiles() {
     this.resumemedia = Object.assign({}, this.media)
-    this.mediaService.current$.subscribe((spotify) => {
-      this.currentPlayedSpotify = spotify
-    })
-    this.mediaService.local$.subscribe((local) => {
-      this.currentPlayedLocal = local
-    })
     if (this.resumemedia.type === 'spotify' && this.resumemedia?.showid) {
       this.resumemedia.resumespotifytrack_number = this.currentPlayedSpotify?.item?.track_number || 1
       this.resumemedia.resumespotifyprogress_ms = this.currentPlayedSpotify?.progress_ms || 0
