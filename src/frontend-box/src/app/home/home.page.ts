@@ -20,7 +20,7 @@ import {
   radioOutline,
   timerOutline,
 } from 'ionicons/icons'
-import { catchError, combineLatest, map, of, switchMap, tap } from 'rxjs'
+import { catchError, combineLatest, distinctUntilChanged, map, of, switchMap, tap } from 'rxjs'
 
 import type { Artist } from '../artist'
 import { ArtworkService } from '../artwork.service'
@@ -73,6 +73,17 @@ export class HomePage extends SwiperIonicEventsHelper {
     this.artists = toSignal(
       combineLatest([toObservable(this.category), toObservable(this.isOnline)]).pipe(
         map(([category, _isOnline]) => category),
+        // MED-13: combineLatest re-emits whenever EITHER input changes, so
+        // a Wi-Fi blip (online → offline → online → offline → online over
+        // a few seconds) used to trigger a fetch on every transition —
+        // a "re-fetch storm" that flooded /api/data and made the swiper
+        // jitter. distinctUntilChanged on the post-map category collapses
+        // identical-category emissions; we now only fetch when the user
+        // actually switches tabs. Trade-off: going from offline back to
+        // online no longer auto-refreshes — but fetchArtistData reads the
+        // server-side cache either way, and the user can switch tabs to
+        // force a refresh if they need to.
+        distinctUntilChanged(),
         tap(() => this.isLoading.set(true)),
         switchMap((category) => {
           return this.mediaService.fetchArtistData(category).pipe(
