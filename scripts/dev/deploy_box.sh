@@ -112,6 +112,25 @@ for s in remove_max_resume.sh clearresume.sh; do
   fi
 done
 
+echo "==> Telegram-Skripte (falls in ${TRIM_SCRIPTS_DIR}/telegram_*.py)"
+shopt -s nullglob
+telegram_files=("${TRIM_SCRIPTS_DIR}"/telegram_*.py)
+shopt -u nullglob
+if [ "${#telegram_files[@]}" -gt 0 ]; then
+  for s in "${telegram_files[@]}"; do
+    sudo install -m 755 -o root -g root "${s}" /usr/local/bin/mupibox/
+    echo "   $(basename "${s}") installiert"
+  done
+  # Restart the receiver so the new code (multi-chat-auth, /limit set) takes effect.
+  if systemctl list-unit-files mupi_telegram.service >/dev/null 2>&1; then
+    sudo systemctl restart mupi_telegram.service \
+      && echo "   mupi_telegram.service neu gestartet" \
+      || echo "   WARN: mupi_telegram.service-Restart fehlgeschlagen"
+  fi
+else
+  echo "   (keine telegram_*.py in ${TRIM_SCRIPTS_DIR} — überspringe)"
+fi
+
 echo "==> Starte Services"
 pm2 start server spotify-control
 pm2 status
