@@ -4,6 +4,7 @@ import type { ServerHttpApiConfig } from '@backend-api/server.model'
 import type { Observable } from 'rxjs'
 import { publishReplay, refCount } from 'rxjs/operators'
 import { environment } from '../environments/environment'
+import { CurrentMediaService } from './current-media.service'
 import { LogService } from './log.service'
 import type { Media } from './media'
 import { SpotifyService } from './spotify.service'
@@ -42,6 +43,7 @@ export class PlayerService {
     private http: HttpClient,
     private logService: LogService,
     private spotifyService: SpotifyService,
+    private currentMediaService: CurrentMediaService,
   ) {}
 
   getConfig() {
@@ -124,6 +126,10 @@ export class PlayerService {
       }
     }
 
+    // Snapshot the Media so the global resume-on-cap effect (AppComponent)
+    // knows what was playing if playtime/quiet stops it while the user is
+    // off the player page.
+    this.currentMediaService.set(media)
     this.sendRequest(url)
     return true
   }
@@ -148,6 +154,7 @@ export class PlayerService {
       url = `spotify/now/spotify:show:${encodeURIComponent(media.audiobookid)}:${media.resumespotifytrack_number}:${media.resumespotifyprogress_ms}`
     }
 
+    this.currentMediaService.set(media)
     this.sendRequest(url)
     return true
   }
