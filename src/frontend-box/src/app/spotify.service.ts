@@ -122,10 +122,19 @@ export class SpotifyService {
           return of(firstPageItems)
         }
 
-        // Create observables for additional pages
+        // Create observables for additional pages.
+        // MED-14: previously offset = page * pageSize, which assumed every
+        // page returned exactly pageSize items. When the first page came
+        // back short (Spotify can server-side-filter for market/availability,
+        // or the user has fewer-than-pageSize items in some categories),
+        // the second page started at pageSize instead of firstPageItems.length
+        // — every item between firstPageItems.length and pageSize was
+        // silently skipped. Anchor subsequent offsets to the actual length
+        // of the first page; if first page was full this still produces
+        // pageSize, 2*pageSize, … as before.
         const additionalPageObservables: Observable<T[]>[] = []
         for (let page = 1; page <= additionalPagesNeeded; page++) {
-          const offset = page * pageSize
+          const offset = firstPageItems.length + (page - 1) * pageSize
           additionalPageObservables.push(
             fetchPage(offset).pipe(
               map((response) => response.items),
@@ -398,7 +407,12 @@ export class SpotifyService {
       map((episode) => {
         const media: Media = {
           showid: episode.id,
-          artist: episode.show?.[0]?.name || 'Unknown Show',
+          // MED-9: episode.show is an OBJECT not an array — the original
+          // `episode.show?.[0]?.name` returned undefined for every episode,
+          // so resume entries for podcasts always rendered "Unknown Show".
+          // Spotify's /episodes/{id} response shape is `show: { name, … }`,
+          // see https://developer.spotify.com/documentation/web-api/reference/get-an-episode
+          artist: episode.show?.name || 'Unknown Show',
           title: episode.name,
           cover: episode.images?.[0]?.url || '../assets/images/nocover_mupi.png',
           type: 'spotify',
@@ -562,10 +576,19 @@ export class SpotifyService {
             })),
           })
         } else {
+          // MED-8: response.tracks.items can contain entries where
+          // item.track is null (Spotify keeps the slot for tracks that
+          // were removed from the playlist or are unavailable in the
+          // current market). The previous code threw a TypeError on
+          // item.track.id and crashed the whole getPlaylistInfo call —
+          // upstream callers then saw a rejected observable and the
+          // playlist failed to load entirely. Filter the null tracks
+          // out before mapping; the totals already exclude them.
+          const validItems = (response.tracks.items as any[]).filter((item) => item?.track != null)
           return of({
             total_tracks: response.tracks.total,
             playlist_name: response.name,
-            tracks: response.tracks.items.map((item: any) => ({
+            tracks: validItems.map((item: any) => ({
               id: item.track.id,
               uri: item.track.uri,
               name: item.track.name,

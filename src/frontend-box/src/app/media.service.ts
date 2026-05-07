@@ -699,7 +699,13 @@ export class MediaService {
           mediaType,
         }
 
-        return mediaInfo
+        // MED-7: cache-hit branch (line 645+) returns this.mediaInfoCache
+        // which has currentId + mediaType, but the previous miss-branch
+        // returned the raw mediaInfo without those fields. Callers that
+        // checked `result.mediaType` saw different shapes depending on
+        // whether the entry was already cached. Return the cache object
+        // we just wrote so the shape is consistent across hits and misses.
+        return this.mediaInfoCache
       }
     } catch (error) {
       console.warn('Failed to get media info for URI:', contextUri, error)
