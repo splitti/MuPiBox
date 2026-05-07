@@ -120,6 +120,34 @@ else
   echo "   (smart.php nicht in ${TRIM_SCRIPTS_DIR} — überspringe)"
 fi
 
+# Phase-1 Critical-Lockdown: 8 PHP files + 2 Bluetooth scripts. The PHP
+# files live partly in /var/www/ and partly in /var/www/includes/, so the
+# uploader stages everything under /tmp/admin_phase1/ preserving that
+# layout. Allowlisted by name — never blow away /var/www/* wholesale.
+echo "==> Admin-Phase-1 PHP (falls /tmp/admin_phase1/ existiert)"
+if [ -d "${TRIM_SCRIPTS_DIR}/admin_phase1" ]; then
+  for f in admin.php backup.php fullbackup.php debug.php pm2logs.php support_data.php backend.php jsoneditor.php; do
+    if [ -f "${TRIM_SCRIPTS_DIR}/admin_phase1/${f}" ]; then
+      sudo install -m 644 -o dietpi -g dietpi "${TRIM_SCRIPTS_DIR}/admin_phase1/${f}" "/var/www/${f}"
+      echo "   ${f} installiert"
+    fi
+  done
+  if [ -f "${TRIM_SCRIPTS_DIR}/admin_phase1/includes/header.php" ]; then
+    sudo install -m 644 -o dietpi -g dietpi "${TRIM_SCRIPTS_DIR}/admin_phase1/includes/header.php" /var/www/includes/header.php
+    echo "   includes/header.php installiert"
+  fi
+else
+  echo "   (admin_phase1 nicht in ${TRIM_SCRIPTS_DIR} — überspringe)"
+fi
+
+echo "==> Bluetooth-Skripte (falls ${TRIM_SCRIPTS_DIR}/{pair,remove}_bt.sh)"
+for s in pair_bt.sh remove_bt.sh; do
+  if [ -f "${TRIM_SCRIPTS_DIR}/${s}" ]; then
+    sudo install -m 755 -o root -g root "${TRIM_SCRIPTS_DIR}/${s}" /usr/local/bin/mupibox/
+    echo "   ${s} installiert"
+  fi
+done
+
 echo "==> Telegram-Skripte (falls in ${TRIM_SCRIPTS_DIR}/telegram_*.py)"
 shopt -s nullglob
 telegram_files=("${TRIM_SCRIPTS_DIR}"/telegram_*.py)
