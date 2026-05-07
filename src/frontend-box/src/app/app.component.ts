@@ -75,6 +75,9 @@ export class AppComponent {
     // work even if the user listens from the home page (player page unmounted,
     // its in-page saver inert). Backend's composite-key dedup means the entry
     // overwrites any existing resume for the same item.
+    //
+    // Gated on shouldPersistResume() so a wrong-cover-touch right before a
+    // cap doesn't leave a stale entry in the resume swiper.
     effect(() => {
       const status = playtimeService.status()
       if (!status.enabled) {
@@ -86,6 +89,7 @@ export class AppComponent {
       this.prevPlaytimeState = cur
       if (prev === 'unknown' || prev === cur) return
       if (cur !== 'grace' && cur !== 'blocked') return
+      if (!this.currentMediaService.shouldPersistResume()) return
 
       const source = this.currentMediaService.get()
       if (!source) return

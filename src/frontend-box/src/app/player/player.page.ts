@@ -34,6 +34,7 @@ import {
 } from 'ionicons/icons'
 import type { Observable } from 'rxjs'
 import type { AlbumStop } from '../albumstop'
+import { CurrentMediaService } from '../current-media.service'
 import type { CurrentMPlayer } from '../current.mplayer'
 import type { CurrentSpotify } from '../current.spotify'
 import { LogService } from '../log.service'
@@ -105,6 +106,7 @@ export class PlayerPage implements OnInit {
     private playerService: PlayerService,
     private spotifyService: SpotifyService,
     private playtimeService: PlaytimeService,
+    private currentMediaService: CurrentMediaService,
   ) {
     this.spotify$ = this.mediaService.current$
     this.local$ = this.mediaService.local$
@@ -288,9 +290,12 @@ export class PlayerPage implements OnInit {
     if (
       (this.media.type === 'spotify' || this.media.type === 'library' || this.media.type === 'rss') &&
       !this.media.shuffle &&
-      this.resumeTimer > 30 &&
       this.playing
     ) {
+      // saveResumeFiles itself enforces the listening-time threshold via
+      // CurrentMediaService.shouldPersistResume(); the local resumeTimer > 30
+      // guard that used to live here is gone — it was page-mount-scoped and
+      // wall-clock-based, both of which the central service handles better.
       this.saveResumeFiles()
     }
     this.updateProgression = false
@@ -379,6 +384,11 @@ export class PlayerPage implements OnInit {
   }
 
   saveResumeFiles() {
+    // Single gate for "is this listen worth persisting?" — covers the 30s
+    // updateProgress cadence, the on-leave save, and the cap-transition save.
+    // Resets on every new playMedia/resumeMedia, counts only active playback.
+    if (!this.currentMediaService.shouldPersistResume()) return
+
     this.resumemedia = Object.assign({}, this.media)
     if (this.resumemedia.type === 'spotify' && this.resumemedia?.showid) {
       this.resumemedia.resumespotifytrack_number = this.currentPlayedSpotify?.item?.track_number || 1
