@@ -55,11 +55,24 @@ mkdir -p "${WORK_DIR}"
 trap 'rm -rf "${WORK_DIR}"' EXIT
 
 echo "==> Entpacke ${DEPLOY_ZIP} nach ${WORK_DIR}"
+# PowerShell's Compress-Archive writes backslash separators which trips
+# unzip's exit-1 "warning" — files still extract correctly, but set -e
+# would otherwise abort the deploy. Treat exit codes 0 and 1 as success;
+# 2+ are real failures (CRC, missing files, etc.).
+set +e
 unzip -q "${DEPLOY_ZIP}" -d "${WORK_DIR}"
+unzip_rc=$?
+set -e
+if [ "${unzip_rc}" -ge 2 ]; then
+  echo "FEHLER: unzip fehlgeschlagen mit Exit-Code ${unzip_rc}"
+  exit 1
+fi
 
 for f in "${WORK_DIR}/server.js" "${WORK_DIR}/spotify-control.js" "${WORK_DIR}/www/index.html"; do
   if [ ! -f "${f}" ]; then
-    echo "FEHLER: ${f} fehlt im Deploy-ZIP — Build kaputt?"
+    echo "FEHLER: ${f} fehlt nach dem Entpacken — Build kaputt oder ZIP-Pfade falsch?"
+    echo "   Inhalt von ${WORK_DIR}:"
+    ls -la "${WORK_DIR}"
     exit 1
   fi
 done
