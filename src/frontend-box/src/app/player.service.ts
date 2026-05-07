@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
 import type { ServerHttpApiConfig } from '@backend-api/server.model'
 import type { Observable } from 'rxjs'
-import { publishReplay, refCount } from 'rxjs/operators'
+import { shareReplay } from 'rxjs/operators'
 import { environment } from '../environments/environment'
 import { LogService } from './log.service'
 import type { Media } from './media'
@@ -45,13 +45,20 @@ export class PlayerService {
   ) {}
 
   getConfig() {
-    // Observable with caching:
-    // publishReplay(1) tells rxjs to cache the last response of the request
-    // refCount() keeps the observable alive until all subscribers unsubscribed
+    // MED-20: previously used `publishReplay(1) + refCount()` which keeps
+    // the observable alive only while at least one subscriber is connected.
+    // mupihat-icon components mount-then-unmount-then-mount as the user
+    // navigates between tabs in the admin UI — each remount unsubscribed
+    // and resubscribed, which dropped to zero subscribers in between and
+    // re-fired the underlying http.get. With three mupihat-icons across
+    // the toolbar/footer/medialist views, that's three /api/sonos hits per
+    // navigation. Switch to `shareReplay({ bufferSize: 1, refCount: false })`
+    // so the cached config survives the zero-subscriber window. The config
+    // only changes via setting_update.sh (which restarts pm2 anyway), so
+    // the lifetime cache is fine.
     if (!this.config) {
       this.config = this.http.get<ServerHttpApiConfig>(`${environment.backend.apiUrl}/sonos`).pipe(
-        publishReplay(1), // cache result
-        refCount(),
+        shareReplay({ bufferSize: 1, refCount: false }),
       )
     }
 
