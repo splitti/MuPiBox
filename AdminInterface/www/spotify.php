@@ -23,6 +23,16 @@ if ($_GET['code']) {
 	$tokendata = json_decode($Tokenoutput[0], true);
 	$data["spotify"]["accessToken"] = $tokendata["access_token"];
 	$data["spotify"]["refreshToken"] = $tokendata["refresh_token"];
+	// Re-authorising via OAuth implies the user wants Spotify ON. Without this
+	// flip, an admin who turned `active` off (e.g. while debugging) and then
+	// re-ran the Connect-Spotify flow would still have Spotify hidden in the
+	// frontend — and might assume the new tokens are also broken. Only flip if
+	// we actually got both tokens back; the OAuth call could have failed and
+	// returned an error blob, in which case enabling Spotify would resurrect
+	// the loading-spinner-stuck state.
+	if (!empty($tokendata["access_token"]) && !empty($tokendata["refresh_token"])) {
+		$data["spotify"]["active"] = true;
+	}
 	$json_object = json_encode($data);
 	$save_rc = file_put_contents('/tmp/.mupiboxconfig.json', $json_object);
 	exec("sudo mv /tmp/.mupiboxconfig.json /etc/mupibox/mupiboxconfig.json");
