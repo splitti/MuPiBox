@@ -173,9 +173,14 @@
 
 	if( $_POST['delete_wifi'] )
 		{
-		if( $_POST['wifinr'] )
+		// wpa_cli wifinr is always a small non-negative integer; intval()
+		// strips anything that isn't a digit, so a POST with
+		// wifinr="0; rm -rf /" becomes 0 and the chained-command injection
+		// is gone. -1 is invalid for wpa_cli but harmless.
+		$wifinr = isset($_POST['wifinr']) ? intval($_POST['wifinr']) : -1;
+		if ($wifinr >= 0)
 			{
-			$command = "sudo wpa_cli remove_network ".$_POST['wifinr']." && sudo wpa_cli save_config";
+			$command = "sudo wpa_cli remove_network " . $wifinr . " && sudo wpa_cli save_config";
 			exec($command, $output, $result );
 			$change=1;
 			$CHANGE_TXT=$CHANGE_TXT."<li>Wifi deleted</li>";

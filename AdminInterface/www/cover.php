@@ -3,10 +3,21 @@
 
 	if( $_POST['deleteimage'] )
 		{
-		$file2delete = "/var/www/cover/".$_POST['image'];
-		exec("sudo rm " . $file2delete);
-		$change=1;
-		$CHANGE_TXT=$CHANGE_TXT."<li>Image " . $file2delete . " deleted!</li>";			
+		// `sudo rm /var/www/cover/$image` ran as root, with $image straight
+		// from POST. POSTing image=../../etc/mupibox/mupiboxconfig.json
+		// would happily wipe the box's config. basename() collapses any
+		// path components, and a name whitelist (only filename-safe chars)
+		// rejects shell metacharacters before escapeshellarg.
+		$rawName = basename($_POST['image'] ?? '');
+		if (!preg_match('/^[A-Za-z0-9._-]+$/', $rawName)) {
+			$CHANGE_TXT=$CHANGE_TXT."<li>ERROR: invalid image filename, refused</li>";
+			$change=1;
+		} else {
+			$file2delete = "/var/www/cover/" . $rawName;
+			exec("sudo rm " . escapeshellarg($file2delete));
+			$change=1;
+			$CHANGE_TXT=$CHANGE_TXT."<li>Image " . htmlspecialchars($file2delete) . " deleted!</li>";
+		}
 		}
 	if( $_POST['submitfile'] )
 		{

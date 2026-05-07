@@ -18,7 +18,17 @@ if ( $_POST['spotifyget'] ) {
 }
 
 if ($_GET['code']) {
-	$command = "curl -d client_id=" . $data["spotify"]["clientId"] . " -d client_secret=" . $data["spotify"]["clientSecret"] . " -d grant_type=authorization_code -d code=" . $_GET['code'] . " -d redirect_uri=" . $REDIRECT_URI . " https://accounts.spotify.com/api/token";
+	// All four interpolated values reach the shell. clientId / clientSecret
+	// come from mupiboxconfig.json (admin-controlled) but $_GET['code'] is
+	// echoed back from Spotify's redirect — an attacker could craft a
+	// redirect URL with `code=$(rm -rf /)` or backticks. escapeshellarg()
+	// each value so the shell sees them as a single quoted token.
+	$command = "curl -d client_id=" . escapeshellarg($data["spotify"]["clientId"])
+	         . " -d client_secret=" . escapeshellarg($data["spotify"]["clientSecret"])
+	         . " -d grant_type=authorization_code"
+	         . " -d code=" . escapeshellarg($_GET['code'])
+	         . " -d redirect_uri=" . escapeshellarg($REDIRECT_URI)
+	         . " https://accounts.spotify.com/api/token";
 	exec($command, $Tokenoutput, $result);
 	$tokendata = json_decode($Tokenoutput[0], true);
 	$data["spotify"]["accessToken"] = $tokendata["access_token"];
