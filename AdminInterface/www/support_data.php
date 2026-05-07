@@ -1,4 +1,9 @@
 <?php
+require __DIR__ . '/includes/auth_check.php';
+
+// support_data bundles config + logs + state for support. Same exposure
+// concerns as pm2logs.php / fullbackup.php — require auth via the
+// header-only gate (header.php would print HTML and corrupt the zip).
 $command = "sudo rm /var/www/support_data.zip";
 exec( $command );
 $command = "sudo rm -R /tmp/support";
