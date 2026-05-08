@@ -486,19 +486,23 @@ echo "==========================================================================
 	
 	###############################################################################################
 
-	echo -e "XXX\n${STEP}\nCopy some media files... \nXXX"	
+	echo -e "XXX\n${STEP}\nCopy some media files... \nXXX"
 	# Splash and Media
 	before=$(date +%s)
 	#mv ${MUPI_SRC}/config/templates/splash.txt /boot/splash.txt >&3 2>&3
 	wget https://gitlab.com/DarkElvenAngel/initramfs-splash/-/raw/master/boot/initramfs.img -O /boot/initramfs.img >&3 2>&3
-	cp ${MUPI_SRC}/media/images/goodbye.png /home/dietpiMuPiBox/sysmedia/images/goodbye.png >&3 2>&3
+	# MED-6: previous code had `/home/dietpiMuPiBox/sysmedia/...` (missing
+	# slash between dietpi and MuPiBox). The cp's silently failed because
+	# that path doesn't exist on a real box; the destination files never
+	# got refreshed. Fixed to /home/dietpi/MuPiBox/.
+	cp ${MUPI_SRC}/media/images/goodbye.png /home/dietpi/MuPiBox/sysmedia/images/goodbye.png >&3 2>&3
 	#mv ${MUPI_SRC}/media/images/splash.png /boot/splash.png >&3 2>&3
-	#cp ${MUPI_SRC}/media/images/MuPiLogo.jpg /home/dietpiMuPiBox/sysmedia/images/MuPiLogo.jpg >&3 2>&3
-	#cp ${MUPI_SRC}/media/sound/shutdown.wav /home/dietpiMuPiBox/sysmedia/sound/shutdown.wav >&3 2>&3
-	#cp ${MUPI_SRC}/media/sound/startup.wav /home/dietpiMuPiBox/sysmedia/sound/startup.wav >&3 2>&3
+	#cp ${MUPI_SRC}/media/images/MuPiLogo.jpg /home/dietpi/MuPiBox/sysmedia/images/MuPiLogo.jpg >&3 2>&3
+	#cp ${MUPI_SRC}/media/sound/shutdown.wav /home/dietpi/MuPiBox/sysmedia/sound/shutdown.wav >&3 2>&3
+	#cp ${MUPI_SRC}/media/sound/startup.wav /home/dietpi/MuPiBox/sysmedia/sound/startup.wav >&3 2>&3
 	cp ${MUPI_SRC}/media/sound/button_shutdown.wav /home/dietpi/MuPiBox/sysmedia/sound/button_shutdown.wav >&3 2>&3
-	cp ${MUPI_SRC}/media/sound/low.wav /home/dietpiMuPiBox/sysmedia/sound/low.wav >&3 2>&3
-	cp ${MUPI_SRC}/media/images/installation.jpg /home/dietpiMuPiBox/sysmedia/images/installation.jpg >&3 2>&3
+	cp ${MUPI_SRC}/media/sound/low.wav /home/dietpi/MuPiBox/sysmedia/sound/low.wav >&3 2>&3
+	cp ${MUPI_SRC}/media/images/installation.jpg /home/dietpi/MuPiBox/sysmedia/images/installation.jpg >&3 2>&3
 	cp ${MUPI_SRC}/media/images/battery_low.jpg /home/dietpi/MuPiBox/sysmedia/images/battery_low.jpg >&3 2>&3
 
 	after=$(date +%s)
@@ -622,13 +626,33 @@ echo "==========================================================================
 	###############################################################################################
 
 
-	echo -e "XXX\n{STEP}\nUpdate Admin-Interface... \nXXX"	
+	# MED-6: typo `{STEP}` (no $) just printed literal "{STEP}" in the
+	# update progress UI. Plus: `rm -R /var/www/*` then unzip wiped any
+	# admin-customised files (active_theme.css from the theme picker,
+	# the cover/ symlink, theme-data/ for custom-theme backgrounds).
+	# The next admin save would re-create active_theme.css, but custom
+	# themes and cover/-symlink-content were lost. Preserve them around
+	# the wipe.
+	echo -e "XXX\n${STEP}\nUpdate Admin-Interface... \nXXX"
 	before=$(date +%s)
-	rm -R /var/www/* >&3 2>&3 
+	# Stage user-customised files in /tmp so they survive the wipe.
+	UPDATE_PRESERVE=$(mktemp -d /tmp/mupibox-www-preserve.XXXXXX)
+	for item in active_theme.css cover theme-data; do
+		[ -e "/var/www/${item}" ] && cp -a "/var/www/${item}" "${UPDATE_PRESERVE}/" >&3 2>&3
+	done
+	rm -R /var/www/* >&3 2>&3
 	mv ${MUPI_SRC}/AdminInterface/release/www.zip /var/www/www.zip >&3 2>&3
 	unzip /var/www/www.zip -d /var/www/ >&3 2>&3
 	rm /var/www/www.zip >&3 2>&3
-	ln -s /home/dietpi/MuPiBox/media/cover /var/www/cover >&3 2>&3
+	# Restore preserved files after the new www/ unzipped so they
+	# overwrite anything the package would otherwise have shipped.
+	for item in active_theme.css cover theme-data; do
+		[ -e "${UPDATE_PRESERVE}/${item}" ] && cp -a "${UPDATE_PRESERVE}/${item}" /var/www/ >&3 2>&3
+	done
+	rm -rf "${UPDATE_PRESERVE}"
+	# `cover` is supposed to be a symlink to /home/dietpi/MuPiBox/media/cover —
+	# only re-create if the preserve step didn't already restore it.
+	[ -L /var/www/cover ] || ln -s /home/dietpi/MuPiBox/media/cover /var/www/cover >&3 2>&3
 	chown -R www-data:www-data /var/www/ >&3 2>&3
 	chmod -R 755 /var/www/ >&3 2>&3
 	chown -R dietpi:www-data /home/dietpi/MuPiBox/media/cover >&3 2>&3
