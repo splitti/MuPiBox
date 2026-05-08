@@ -1,6 +1,14 @@
 <!DOCTYPE html>
 <?php
 	session_start();
+
+	// CSRF helpers are defined in includes/csrf.php — pages that need
+	// CSRF protection must `require csrf.php` BEFORE include('header.php')
+	// because header.php emits HTML chrome and a post-output csrf_check()
+	// can no longer set 403 headers. Including csrf.php here too keeps
+	// the helpers available for csrf_field() calls deeper in the body.
+	require_once __DIR__ . '/csrf.php';
+
 	if (isset($_POST['spotifyget']) && $_POST['spotifyget'] === 'saving') {
 		if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
 			$http_url = 'http://' . $_SERVER['HTTP_HOST'] . $_SERVER['PHP_SELF'];

@@ -1,4 +1,8 @@
 <?php
+	// MED-16: same as service.php — csrf_check() before any output.
+	require_once __DIR__ . '/includes/csrf.php';
+	csrf_check();
+
 	$onlinejson = file_get_contents('https://raw.githubusercontent.com/splitti/MuPiBox/main/version.json');
 	$dataonline = json_decode($onlinejson, true);
 	include ('includes/header.php');
@@ -120,6 +124,7 @@
 ?>
 
 <form class="appnitro"  method="post" action="tweaks.php" id="form">
+<?= csrf_field() ?>
 	<div class="description">
 		<h2>MupiBox tweaks</h2>
 		<p>Make your box smarter and faster...</p>

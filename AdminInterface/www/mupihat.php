@@ -1,4 +1,8 @@
 <?php
+	// MED-16: same as service.php — csrf_check() before any output.
+	require_once __DIR__ . '/includes/csrf.php';
+	csrf_check();
+
 	include ('includes/header.php');
 
 	if( $_POST['save_custom'] )
@@ -131,6 +135,7 @@
 
 </script>	
 <form class="appnitro" name="mupi" method="post" action="mupihat.php" id="form">
+<?= csrf_field() ?>
 <div class="description">
 <h2>MuPiHAT</h2>
 <p>Release the power of MuPi...</p>
