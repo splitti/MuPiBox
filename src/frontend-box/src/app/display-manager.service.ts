@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
 import { interval, Subject, Subscription } from 'rxjs'
+import { throttleTime } from 'rxjs/operators'
 import { environment } from 'src/environments/environment'
 import { MupiboxConfig } from './mupibox-config.model'
 import { SpotifyService } from './spotify.service'
@@ -52,8 +53,14 @@ export class DisplayManagerService {
       document.addEventListener(eventName, () => this.activityDebouncer.next(), { passive: true })
     }
 
-    // Debounce activity events to avoid spamming resets
-    this.activitySubscription = this.activityDebouncer.subscribe(() => {
+    // LOW-4 / A23: previous comment claimed "Debounce activity events to avoid
+    // spamming resets" but the pipe was empty — every mousemove and touchstart
+    // tick fired a fresh resetIdleTimer call (which writes to a Date.now()
+    // field, so cheap, but still wakes the JS event loop hundreds of times
+    // a second on a busy screen). Add throttleTime(500ms) so we update the
+    // last-activity timestamp at most twice a second — plenty for a 1-minute
+    // idle threshold and orders of magnitude less work.
+    this.activitySubscription = this.activityDebouncer.pipe(throttleTime(500)).subscribe(() => {
       this.resetIdleTimer()
     })
   }
@@ -101,8 +108,11 @@ export class DisplayManagerService {
     })
   }
 
-  ngOnDestroy(): void {
-    this.idleCheckInterval?.unsubscribe()
-    this.activitySubscription?.unsubscribe()
-  }
+  // LOW-4 / A23: removed dead ngOnDestroy. The service is providedIn: 'root',
+  // so Angular keeps it alive for the entire app lifetime — ngOnDestroy never
+  // fires. The cleanup it claimed to do was theatre. The DOM listeners
+  // attached to `document` in setupActivityTracking() likewise stay attached
+  // for the app lifetime (which is fine — `document` lives just as long).
+  // If we ever switch to a non-root scope this needs revisiting; until then
+  // honesty beats cargo-culted lifecycle hooks.
 }

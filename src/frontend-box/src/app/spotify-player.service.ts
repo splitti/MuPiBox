@@ -1,7 +1,7 @@
 import { DOCUMENT } from '@angular/common'
 import { HttpClient } from '@angular/common/http'
 import { Inject, Injectable } from '@angular/core'
-import { BehaviorSubject } from 'rxjs'
+import { BehaviorSubject, Subject } from 'rxjs'
 import { debounceTime, filter } from 'rxjs/operators'
 import { environment } from 'src/environments/environment'
 import { LogService } from './log.service'
@@ -33,7 +33,16 @@ export class SpotifyPlayerService {
 
   // External playback detection
   private previousPlayerState: SpotifyWebPlaybackState | null = null
-  public trackChangeDetected$ = new BehaviorSubject<SpotifyWebPlaybackTrack | null>(null)
+  // LOW-4 / A24: this used to be a BehaviorSubject, which replays the last
+  // emitted value to every new subscriber. external-playback-navigator's
+  // subscribe-on-init then re-fired auto-navigate-to-/player on HMR /
+  // component re-mount with whatever track was last detected — even though
+  // the user had since navigated elsewhere. Subject (without replay) only
+  // emits to listeners attached at the moment of .next(), which is the
+  // intended "track-just-changed" fire-and-forget shape for this signal.
+  // Verified all consumers: only .next() and .subscribe() — no .value reads
+  // anywhere, so the swap is safe.
+  public trackChangeDetected$ = new Subject<SpotifyWebPlaybackTrack | null>()
 
   // Error state observable for UI feedback
   public sdkLoadError$ = new BehaviorSubject<string | null>(null)
