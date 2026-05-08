@@ -39,11 +39,23 @@ if [ ! -f ${RESUME_FILE} ]; then
 	fi
 fi
 
-if [ ! -f ${NETWORKCONFIG} ]; then
-        sudo echo -n "[]" ${NETWORKCONFIG}
-        chown dietpi:dietpi ${NETWORKCONFIG}
-        chmod 777 ${NETWORKCONFIG}
-        /usr/bin/cat <<< $(/usr/bin/jq -n --arg v "starting" '.onlinestate = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
+if [ ! -f ${NETWORKCONFIG} ] || [ ! -s ${NETWORKCONFIG} ] || ! /usr/bin/jq -e 'type == "object"' ${NETWORKCONFIG} >/dev/null 2>&1; then
+        # HIGH-14 (Phase-3) + Phase-5 follow-up: the previous "fix" piped
+        # via `sudo tee` which produced a root-owned seed file in /tmp.
+        # The next line's tempfile + mv ran as dietpi and silently failed
+        # to replace the root-owned target — leaving the wrong (empty array)
+        # seed in place forever. Drop sudo entirely (the script runs as
+        # dietpi which can write /tmp directly), and seed as an OBJECT
+        # `{}` since network.json is shaped as one (every consumer reads
+        # it via `.onlinestate` etc). The existence-or-empty-or-wrong-
+        # shape guard above also recovers from the broken state we
+        # produced earlier without manual cleanup.
+        rm -f "${NETWORKCONFIG}"
+        echo -n "{}" > "${NETWORKCONFIG}"
+        # Atomic-update (HIGH-8).
+        _TMP="${NETWORKCONFIG}.tmp.$$"
+        /usr/bin/jq -n --arg v "starting" '.onlinestate = $v' > "${_TMP}" && mv "${_TMP}" "${NETWORKCONFIG}" || rm -f "${_TMP}"
+        OLD_ONLINESTATE="starting"
 else
         OLD_ONLINESTATE=$(/usr/bin/jq -r .onlinestate ${NETWORKCONFIG})
 fi
@@ -133,7 +145,9 @@ do
 	fi
 
 	if [ "${ONLINESTATE}" != "${OLDSTATE}" ]; then
-		/usr/bin/cat <<< $(/usr/bin/jq --arg v "${ONLINESTATE}" '.onlinestate = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
+		# Atomic-update (HIGH-8).
+		_TMP="${NETWORKCONFIG}.tmp.$$"
+		/usr/bin/jq --arg v "${ONLINESTATE}" '.onlinestate = $v' "${NETWORKCONFIG}" > "${_TMP}" && mv "${_TMP}" "${NETWORKCONFIG}" || rm -f "${_TMP}"
 	#	if [ "${ONLINESTATE}" == "${FALSESTATE}" ] && [ "${OLDSTATE}" != "starting" ]; then
 	#		#sudo dhclient -r
 	#		sudo service ifup@wlan0 stop

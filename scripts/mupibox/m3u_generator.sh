@@ -65,11 +65,17 @@ else
 
 				if [ -z "${searchStrTitleCover}" ]
 				then
+					# Atomic-update (HIGH-8). m3u_generator runs after every
+					# media-tree change; previously a jq error or partial
+					# write while appending an entry truncated data.json
+					# to empty — wiping every album's metadata. Tempfile
+					# + rename preserves the original on failure.
+					_TMP="${DATA}.tmp.$$"
 					if [ $setArtistCover == 1 ]
 					then
-						/usr/bin/cat <<< $(/usr/bin/cat ${DATA} | /usr/bin/jq '. += [{"type": "library", "category": "audiobook", "artist": "'"${artist}"'", "title": "'"${title}"'", "cover": "http://'${HN}':8200/cover/audiobook/'"${artist}"'/'"${title}"'/cover.jpg", "artistcover": "http://'${HN}':8200/cover/audiobook/'"${artist}"'/cover.jpg"}]') > ${DATA}
+						/usr/bin/jq '. += [{"type": "library", "category": "audiobook", "artist": "'"${artist}"'", "title": "'"${title}"'", "cover": "http://'${HN}':8200/cover/audiobook/'"${artist}"'/'"${title}"'/cover.jpg", "artistcover": "http://'${HN}':8200/cover/audiobook/'"${artist}"'/cover.jpg"}]' "${DATA}" > "${_TMP}" && mv "${_TMP}" "${DATA}" || rm -f "${_TMP}"
 					else
-						/usr/bin/cat <<< $(/usr/bin/cat ${DATA} | /usr/bin/jq '. += [{"type": "library", "category": "audiobook", "artist": "'"${artist}"'", "title": "'"${title}"'", "cover": "http://'${HN}':8200/cover/audiobook/'"${artist}"'/'"${title}"'/cover.jpg"}]') > ${DATA}
+						/usr/bin/jq '. += [{"type": "library", "category": "audiobook", "artist": "'"${artist}"'", "title": "'"${title}"'", "cover": "http://'${HN}':8200/cover/audiobook/'"${artist}"'/'"${title}"'/cover.jpg"}]' "${DATA}" > "${_TMP}" && mv "${_TMP}" "${DATA}" || rm -f "${_TMP}"
 					fi
 				fi
 			fi
@@ -118,11 +124,13 @@ else
 
 				if [ -z "${searchStrTitleCover}" ]
 				then
+					# Atomic-update (HIGH-8) — same as the audiobook block above.
+					_TMP="${DATA}.tmp.$$"
 					if [ $setArtistCover == 1 ]
 					then
-						/usr/bin/cat <<< $(/usr/bin/cat ${DATA} | /usr/bin/jq '. += [{"type": "library", "category": "music", "artist": "'"${artist}"'", "title": "'"${title}"'", "cover": "http://'${HN}':8200/cover/music/'"${artist}"'/'"${title}"'/cover.jpg", "artistcover": "http://'${HN}':8200/cover/music/'"${artist}"'/cover.jpg"}]') > ${DATA}
+						/usr/bin/jq '. += [{"type": "library", "category": "music", "artist": "'"${artist}"'", "title": "'"${title}"'", "cover": "http://'${HN}':8200/cover/music/'"${artist}"'/'"${title}"'/cover.jpg", "artistcover": "http://'${HN}':8200/cover/music/'"${artist}"'/cover.jpg"}]' "${DATA}" > "${_TMP}" && mv "${_TMP}" "${DATA}" || rm -f "${_TMP}"
 					else
-						/usr/bin/cat <<< $(/usr/bin/cat ${DATA} | /usr/bin/jq '. += [{"type": "library", "category": "music", "artist": "'"${artist}"'", "title": "'"${title}"'", "cover": "http://'${HN}':8200/cover/music/'"${artist}"'/'"${title}"'/cover.jpg"}]') > ${DATA}
+						/usr/bin/jq '. += [{"type": "library", "category": "music", "artist": "'"${artist}"'", "title": "'"${title}"'", "cover": "http://'${HN}':8200/cover/music/'"${artist}"'/'"${title}"'/cover.jpg"}]' "${DATA}" > "${_TMP}" && mv "${_TMP}" "${DATA}" || rm -f "${_TMP}"
 					fi
 				fi
 			fi
@@ -171,11 +179,13 @@ else
 
 				if [ -z "${searchStrTitleCover}" ]
 				then
+					# Atomic-update (HIGH-8) — same as the audiobook/music blocks above.
+					_TMP="${DATA}.tmp.$$"
 					if [ $setArtistCover == 1 ]
 					then
-						/usr/bin/cat <<< $(/usr/bin/cat ${DATA} | /usr/bin/jq '. += [{"type": "library", "category": "other", "artist": "'"${artist}"'", "title": "'"${title}"'", "cover": "http://'${HN}':8200/cover/other/'"${artist}"'/'"${title}"'/cover.jpg", "artistcover": "http://'${HN}':8200/cover/other/'"${artist}"'/cover.jpg"}]') > ${DATA}
+						/usr/bin/jq '. += [{"type": "library", "category": "other", "artist": "'"${artist}"'", "title": "'"${title}"'", "cover": "http://'${HN}':8200/cover/other/'"${artist}"'/'"${title}"'/cover.jpg", "artistcover": "http://'${HN}':8200/cover/other/'"${artist}"'/cover.jpg"}]' "${DATA}" > "${_TMP}" && mv "${_TMP}" "${DATA}" || rm -f "${_TMP}"
 					else
-						/usr/bin/cat <<< $(/usr/bin/cat ${DATA} | /usr/bin/jq '. += [{"type": "library", "category": "other", "artist": "'"${artist}"'", "title": "'"${title}"'", "cover": "http://'${HN}':8200/cover/other/'"${artist}"'/'"${title}"'/cover.jpg"}]') > ${DATA}
+						/usr/bin/jq '. += [{"type": "library", "category": "other", "artist": "'"${artist}"'", "title": "'"${title}"'", "cover": "http://'${HN}':8200/cover/other/'"${artist}"'/'"${title}"'/cover.jpg"}]' "${DATA}" > "${_TMP}" && mv "${_TMP}" "${DATA}" || rm -f "${_TMP}"
 					fi
 				fi
 			fi

@@ -13,11 +13,15 @@ ledMin=$(/usr/bin/jq -r .shim.ledBrightnessMin ${MUPIBOX_CONFIG})
 ledMin=$(printf '%d' "$ledMin")
 
 echo "{}" | tee ${TMP_LEDFILE}
-/usr/bin/cat <<< $(/usr/bin/jq --argjson v ${ledPin} '.led_gpio = $v' ${TMP_LEDFILE}) >  ${TMP_LEDFILE}
-/usr/bin/cat <<< $(/usr/bin/jq --argjson v ${ledMax} '.led_max_brightness = $v' ${TMP_LEDFILE}) >  ${TMP_LEDFILE}
-/usr/bin/cat <<< $(/usr/bin/jq --argjson v ${ledMin} '.led_min_brightness = $v' ${TMP_LEDFILE}) >  ${TMP_LEDFILE}
-/usr/bin/cat <<< $(/usr/bin/jq '.led_current_brightness = 0' ${TMP_LEDFILE}) >  ${TMP_LEDFILE}
-/usr/bin/cat <<< $(/usr/bin/jq '.led_dim_mode = 0' ${TMP_LEDFILE}) >  ${TMP_LEDFILE}
+# Atomic-update (HIGH-8). Bundle five field updates into one jq invocation
+# instead of cat<<<jq five times — same result, single tempfile cycle.
+_TMP="${TMP_LEDFILE}.tmp.$$"
+/usr/bin/jq \
+    --argjson pin "${ledPin}" \
+    --argjson max "${ledMax}" \
+    --argjson min "${ledMin}" \
+    '.led_gpio = $pin | .led_max_brightness = $max | .led_min_brightness = $min | .led_current_brightness = 0 | .led_dim_mode = 0' \
+    "${TMP_LEDFILE}" > "${_TMP}" && mv "${_TMP}" "${TMP_LEDFILE}" || rm -f "${_TMP}"
 /usr/bin/python3 /usr/local/bin/mupibox/led_control.py &
 #/usr/local/bin/mupibox/./led_control &
 
@@ -63,7 +67,9 @@ do
 				wled_data='{"bri":'${wled_brightness_def}'}'
 				/usr/bin/python3 /usr/local/bin/mupibox/wled_send_data.py -s ${wled_com_port} -b ${wled_baud_rate} -j ${wled_data}
 			fi
-			/usr/bin/cat <<< $(/usr/bin/jq '.led_dim_mode = 1' ${TMP_LEDFILE}) >  ${TMP_LEDFILE}
+			# Atomic-update (HIGH-8).
+			_TMP="${TMP_LEDFILE}.tmp.$$"
+			/usr/bin/jq '.led_dim_mode = 1' "${TMP_LEDFILE}" > "${_TMP}" && mv "${_TMP}" "${TMP_LEDFILE}" || rm -f "${_TMP}"
 			OLD_STATE=${displayState}
 		elif [ ${displayState} -eq 0 ] && [ ${OLD_STATE} -ne ${displayState} ]
 		then
@@ -71,7 +77,8 @@ do
 				wled_data='{"bri":'${wled_brightness_dim}'}'
 				/usr/bin/python3 /usr/local/bin/mupibox/wled_send_data.py -s ${wled_com_port} -b ${wled_baud_rate} -j ${wled_data}
 			fi
-			/usr/bin/cat <<< $(/usr/bin/jq '.led_dim_mode = 0' ${TMP_LEDFILE}) >  ${TMP_LEDFILE}
+			_TMP="${TMP_LEDFILE}.tmp.$$"
+			/usr/bin/jq '.led_dim_mode = 0' "${TMP_LEDFILE}" > "${_TMP}" && mv "${_TMP}" "${TMP_LEDFILE}" || rm -f "${_TMP}"
 			OLD_STATE=${displayState}
 		fi
 done

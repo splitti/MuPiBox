@@ -19,45 +19,65 @@ then
  ln -s /home/dietpi/MuPiBox/themes/${NEW_THEME}.css ${THEME_FILE}
 fi
 
+# Atomic-update (HIGH-8). Read all source values first, then bundle the
+# writes into one jq invocation per target file. Each cat<<< pattern was
+# its own truncate-race window; collapsing to one pipeline per file means
+# 16+ tempfile cycles → 2 cycles, plus far less SD wear.
 deviceId=$(/usr/bin/jq -r .spotify.deviceId ${MUPIBOX_CONFIG})
-/usr/bin/cat <<< $(/usr/bin/jq --arg v "${deviceId}" '.["node-sonos-http-api"].rooms = [$v]' ${SONOS_CONFIG}) >  ${SONOS_CONFIG}
-/usr/bin/cat <<< $(/usr/bin/jq --arg v "${deviceId}" '.spotify.deviceId = $v' ${SPOTIFYCONTROLLER_CONFIG}) >  ${SPOTIFYCONTROLLER_CONFIG}
-
 clientId=$(/usr/bin/jq -r .spotify.clientId ${MUPIBOX_CONFIG})
-/usr/bin/cat <<< $(/usr/bin/jq --arg v "${clientId}" '.spotify.clientId = $v' ${SONOS_CONFIG}) >  ${SONOS_CONFIG}
-/usr/bin/cat <<< $(/usr/bin/jq --arg v "${clientId}" '.spotify.clientId = $v' ${SPOTIFYCONTROLLER_CONFIG}) >  ${SPOTIFYCONTROLLER_CONFIG}
-
 clientSecret=$(/usr/bin/jq -r .spotify.clientSecret ${MUPIBOX_CONFIG})
-/usr/bin/cat <<< $(/usr/bin/jq --arg v "${clientSecret}" '.spotify.clientSecret = $v' ${SONOS_CONFIG}) >  ${SONOS_CONFIG}
-/usr/bin/cat <<< $(/usr/bin/jq --arg v "${clientSecret}" '.spotify.clientSecret = $v' ${SPOTIFYCONTROLLER_CONFIG}) >  ${SPOTIFYCONTROLLER_CONFIG}
-
 accessToken=$(/usr/bin/jq -r .spotify.accessToken ${MUPIBOX_CONFIG})
-/usr/bin/cat <<< $(/usr/bin/jq --arg v "${accessToken}" '.spotify.accessToken = $v' ${SPOTIFYCONTROLLER_CONFIG}) >  ${SPOTIFYCONTROLLER_CONFIG}
-
 refreshToken=$(/usr/bin/jq -r .spotify.refreshToken ${MUPIBOX_CONFIG})
-/usr/bin/cat <<< $(/usr/bin/jq --arg v "$refreshToken" '.spotify.refreshToken = $v' ${SPOTIFYCONTROLLER_CONFIG}) >  ${SPOTIFYCONTROLLER_CONFIG}
-
 ttsLanguage=$(/usr/bin/jq -r .mupibox.ttsLanguage ${MUPIBOX_CONFIG})
-/usr/bin/cat <<< $(/usr/bin/jq --arg v "$ttsLanguage" '.ttsLanguage = $v' ${SPOTIFYCONTROLLER_CONFIG}) >  ${SPOTIFYCONTROLLER_CONFIG}
-
 hostname=$(/usr/bin/jq -r .mupibox.host ${MUPIBOX_CONFIG})
-/usr/bin/cat <<< $(/usr/bin/jq --arg v "${hostname}" '.["node-sonos-http-api"].server = $v' ${SONOS_CONFIG}) >  ${SONOS_CONFIG}
-
 hat_active=$(/usr/bin/jq -r .mupihat.hat_active ${MUPIBOX_CONFIG})
-/usr/bin/cat <<< $(/usr/bin/jq --argjson v "$hat_active" '.["node-sonos-http-api"].hat_active = $v' ${SONOS_CONFIG}) >  ${SONOS_CONFIG}
-
 ip_control_backend=$(/usr/bin/jq -r .mupibox.ip_control_backend ${MUPIBOX_CONFIG})
+
+# Resolve the IP once so the SONOS_CONFIG update can be a single pipeline
+# regardless of ip_control_backend. Default to "" (= same as the
+# old false-branch behaviour).
+SONOS_IP=""
 if [ "$ip_control_backend" = true ] ; then
-        IP=$(hostname -I | sed 's/ *$//')
-		if [ "$IP" = "" ] ; then
-			IP=$(/usr/bin/jq -r .ip ${NETWORK_CONFIG})
-		fi		
-        /usr/bin/cat <<< $(/usr/bin/jq --arg v "${IP}" '.["node-sonos-http-api"].ip = $v' ${SONOS_CONFIG}) >  ${SONOS_CONFIG}
+        SONOS_IP=$(hostname -I | sed 's/ *$//')
+        if [ -z "$SONOS_IP" ] ; then
+                SONOS_IP=$(/usr/bin/jq -r .ip ${NETWORK_CONFIG})
+        fi
 fi
-if [ "$ip_control_backend" = false ] ; then
-        /usr/bin/cat <<< $(/usr/bin/jq '.["node-sonos-http-api"].ip = ""' ${SONOS_CONFIG}) > ${SONOS_CONFIG}
-fi
-/usr/bin/cat <<< $(/usr/bin/jq --arg v "5005" '.["node-sonos-http-api"].port = $v' ${SONOS_CONFIG}) >  ${SONOS_CONFIG}
+
+# One atomic update for SONOS_CONFIG (was 6 cat<<<jq calls).
+_TMP="${SONOS_CONFIG}.tmp.$$"
+/usr/bin/jq \
+    --arg dev "${deviceId}" \
+    --arg cli "${clientId}" \
+    --arg sec "${clientSecret}" \
+    --arg host "${hostname}" \
+    --argjson hat "${hat_active}" \
+    --arg ip "${SONOS_IP}" \
+    '.["node-sonos-http-api"].rooms = [$dev]
+     | .spotify.clientId = $cli
+     | .spotify.clientSecret = $sec
+     | .["node-sonos-http-api"].server = $host
+     | .["node-sonos-http-api"].hat_active = $hat
+     | .["node-sonos-http-api"].ip = $ip
+     | .["node-sonos-http-api"].port = "5005"' \
+    "${SONOS_CONFIG}" > "${_TMP}" && mv "${_TMP}" "${SONOS_CONFIG}" || rm -f "${_TMP}"
+
+# One atomic update for SPOTIFYCONTROLLER_CONFIG (was 6 cat<<<jq calls).
+_TMP="${SPOTIFYCONTROLLER_CONFIG}.tmp.$$"
+/usr/bin/jq \
+    --arg dev "${deviceId}" \
+    --arg cli "${clientId}" \
+    --arg sec "${clientSecret}" \
+    --arg acc "${accessToken}" \
+    --arg ref "${refreshToken}" \
+    --arg tts "${ttsLanguage}" \
+    '.spotify.deviceId = $dev
+     | .spotify.clientId = $cli
+     | .spotify.clientSecret = $sec
+     | .spotify.accessToken = $acc
+     | .spotify.refreshToken = $ref
+     | .ttsLanguage = $tts' \
+    "${SPOTIFYCONTROLLER_CONFIG}" > "${_TMP}" && mv "${_TMP}" "${SPOTIFYCONTROLLER_CONFIG}" || rm -f "${_TMP}"
 
 #cachepath=$(/usr/bin/jq -r .spotify.cachepath ${MUPIBOX_CONFIG})
 #/usr/bin/sed -i 's@.*cache_path.*@  cache_path = "'${cachepath}'"@g' ${SPOTIFYD_CONFIG}
