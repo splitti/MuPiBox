@@ -1,4 +1,13 @@
 <?php
+require __DIR__ . '/includes/auth_check.php';
+
+// MED-17: this endpoint was unauth and shipped both info-disclosure
+// (SSID + Wi-Fi signal quality readable from the LAN, useful for
+// fingerprinting which AP the box is on) and a sudo-fork-per-request
+// pair (iwgetid + iwconfig). Browser tabs poll this every few seconds,
+// so an unauth flood was effectively a DoS amplifier on the dietpi
+// user. auth_check.php (header-only gate from CRIT-2/3/5) restricts
+// callers to authenticated admin sessions.
 	$commandSSID="sudo iwgetid -r";
 	$WIFI=exec($commandSSID);
 	$wifi_icon = "";

@@ -1,4 +1,9 @@
 <?php
+require __DIR__ . '/includes/auth_check.php';
+
+// MED-17: battery state was unauth-readable, useful for inferring the
+// box's runtime / activity pattern (powered-on hours, active vs idle).
+// Same auth_check.php gate as the other update_* polls.
 	$mupihat_file = '/tmp/mupihat.json';
 	$bat_icon = "";
 	if (file_exists($mupihat_file)) {
