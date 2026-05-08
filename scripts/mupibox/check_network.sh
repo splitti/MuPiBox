@@ -86,7 +86,17 @@ ensure_symlink() {
 
 while true
 do
-	if ( $(/usr/bin/python3 /usr/local/bin/mupibox/check_network.py) == ${TRUESTATE} ); then
+	# AR5-1: was `if ( $(python3 ...) == ${TRUESTATE} )` — that's a bash
+	# subshell executing the python output as a command (with `==` and the
+	# literal string as args), not a string comparison. Subshell exit 127
+	# made the if-condition permanently false.
+	# AR5-1.1: ALSO — check_network.py prints the string "true"/"false"
+	# (not "online"/"offline"), so even a correct string-test against
+	# ${TRUESTATE}="online" would always be false. The original bash-bug
+	# was masking this mismatch. Compare against the actual python output.
+	# ONLINESTATE keeps its "online"/"offline" values for downstream
+	# consumers of /tmp/network.json.
+	if [ "$(/usr/bin/python3 /usr/local/bin/mupibox/check_network.py)" = "true" ]; then
 		ONLINESTATE=${TRUESTATE}
 		# Reconcile every tick (cheap when no-op) instead of only on
 		# state change. Self-healing if the symlink was wrong.
