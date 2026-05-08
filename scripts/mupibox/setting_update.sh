@@ -12,11 +12,17 @@ DISPLAY_STANDBY="/etc/X11/xorg.conf.d/98-dietpi-disable_dpms.conf"
 THEME_FILE="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/active_theme.css"
 NEW_THEME=$(/usr/bin/jq -r .mupibox.theme ${MUPIBOX_CONFIG})
 
-newTheme=$(ls -l ${THEME_FILE} | grep ${NEW_THEME})
+# B4: NEW_THEME comes from mupiboxconfig.json — admin-controlled.
+# `ls -l ${THEME_FILE} | grep ${NEW_THEME}` was unquoted, so a theme
+# name with a space (or a `/`) would either truncate or pull in
+# unrelated grep flags. Quote both args, plus -F so theme names with
+# regex metachars (`.`, `*`) match literally.
+newTheme=$(ls -l "${THEME_FILE}" | grep -F -- "${NEW_THEME}")
 if (( ${#newTheme} == 0 ))
 then
- xargs rm <<< ${THEME_FILE}
- ln -s /home/dietpi/MuPiBox/themes/${NEW_THEME}.css ${THEME_FILE}
+ # Same quoting fix on the symlink replace.
+ rm -f "${THEME_FILE}"
+ ln -s "/home/dietpi/MuPiBox/themes/${NEW_THEME}.css" "${THEME_FILE}"
 fi
 
 # Atomic-update (HIGH-8). Read all source values first, then bundle the
@@ -95,11 +101,27 @@ _TMP="${SPOTIFYCONTROLLER_CONFIG}.tmp.$$"
 #/usr/bin/sed -i 's/.*username.*/  username = '\"${username}\"'/g' ${SPOTIFYD_CONFIG}
 #password=$(/usr/bin/jq -r .spotify.password ${MUPIBOX_CONFIG})
 #/usr/bin/sed -i 's/.*password.*/  password = '\"${password}\"'/g' ${SPOTIFYD_CONFIG}
+# B4: hostname/timeout get spliced into a sed `s/`-delimited pattern.
+# `/` is the default sed delimiter; if either value contained `/`
+# (legitimate for hostnames with FQDN dots — also legal in some user-
+# typed values), sed would interpret it as a delimiter and produce a
+# garbled config. Switch to `|` as the sed delimiter (extremely
+# unlikely to appear in a hostname or numeric timeout) and validate
+# the timeout numerically before splicing — sed-injection via a
+# numeric field would only happen if the config layer was already
+# compromised, but defence in depth.
 hostname=$(/usr/bin/jq -r .mupibox.host ${MUPIBOX_CONFIG})
-/usr/bin/sed -i 's/.*device_name.*/  device_name = '\"${hostname}\"'/g' ${SPOTIFYD_CONFIG}
+# Strip anything that isn't a hostname char to be belt-and-braces;
+# RFC1123 hostnames are letters, digits, `.`, `-` only.
+hostname_safe=$(printf '%s' "${hostname}" | tr -dc 'A-Za-z0-9.-')
+/usr/bin/sed -i 's|.*device_name.*|  device_name = "'"${hostname_safe}"'"|g' ${SPOTIFYD_CONFIG}
 
 timeout=$(/usr/bin/jq -r .timeout.idleDisplayOff ${MUPIBOX_CONFIG})
-/usr/bin/sed -i 's/.*Option \"BlankTime\".*/    Option \"BlankTime\" '\"${timeout}\"'/g' ${DISPLAY_STANDBY}
+# Force-numeric — empty or non-int collapses to 0 (sane "no timeout"
+# default for the X server's BlankTime).
+timeout_int=$(printf '%s' "${timeout}" | tr -dc '0-9')
+: "${timeout_int:=0}"
+/usr/bin/sed -i 's|.*Option "BlankTime".*|    Option "BlankTime" "'"${timeout_int}"'"|g' ${DISPLAY_STANDBY}
 
 #currentIP=$(hostname -I)
 #/usr/bin/cat <<< $(/usr/bin/jq --arg v "${currentIP}" '.ip = $v' ${SONOS_NETWORK}) >  ${SONOS_NETWORK}
