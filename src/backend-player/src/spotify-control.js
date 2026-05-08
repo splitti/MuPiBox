@@ -801,19 +801,61 @@ function seek(progress) {
   }
 }
 
+// HIGH-1: previously this spliced caller-controlled `deleteFile` into a
+// shell `rm -r "…"` command, then ran it through `exec()`. The two
+// `decodeURIComponent` passes meant any %-encoded backtick / quote /
+// semicolon in the path was decoded back to its literal form before
+// reaching the shell — a frontend WebSocket call with deleteFile of
+// `foo"; touch /tmp/PWN; "` broke out of the quoted argument and ran
+// arbitrary commands as the dietpi user. Auth-protected (frontend
+// only), but defence-in-depth matters here because the same
+// surface picks up RSS-fed strings from the resume-list path.
+//
+// Fix:
+//   1. Use execFile so arguments don't reach a shell at all.
+//   2. Resolve the requested path under the media root and refuse
+//      anything that escapes (`..`, absolute paths, symlink games).
+//   3. Reject the request entirely if the validated path doesn't
+//      already exist — silent no-op rather than exec'ing rm against
+//      something dubious.
 function deleteLocal(deleteFile) {
-  const deleteFilePath = decodeURI(deleteFile).replace(/:/g, '/')
-  const deleteCMD = `rm -r "/home/dietpi/MuPiBox/media/${decodeURIComponent(deleteFilePath)}"`
-  //cmdCall(deleteCMD);
-  log.debug(`${nowDate.toLocaleString()}: rm -r "/home/dietpi/MuPiBox/media/${decodeURIComponent(deleteFilePath)}"`)
-  const exec = require('node:child_process').exec
-  exec(deleteCMD, (e, stdout, stderr) => {
+  const MEDIA_ROOT = '/home/dietpi/MuPiBox/media/'
+  let decoded
+  try {
+    // Single decode — `decodeURI` then `decodeURIComponent` is a footgun
+    // (chains can re-introduce escapes). decodeURIComponent handles the
+    // standard %xx-encoding the frontend produces.
+    decoded = decodeURIComponent(deleteFile)
+  } catch (err) {
+    log.warn(`${nowDate.toLocaleString()}: [deleteLocal] decode failed for ${deleteFile}: ${err?.message || err}`)
+    return
+  }
+  // Frontend uses ':' as a path-segment separator (e.g. "audiobook:Foo:Bar")
+  // — translate to '/' before resolving.
+  const relPath = decoded.replace(/:/g, '/')
+  const fullPath = path.resolve(MEDIA_ROOT, relPath)
+  // path.resolve normalises `..` segments, so any traversal collapses
+  // to an absolute path that's no longer under MEDIA_ROOT — we just
+  // reject anything that doesn't end up inside the root.
+  if (!fullPath.startsWith(MEDIA_ROOT)) {
+    log.warn(`${nowDate.toLocaleString()}: [deleteLocal] path-traversal attempt rejected: ${relPath} → ${fullPath}`)
+    return
+  }
+  // Don't shell out to a non-existent target — that's the symptom of
+  // either a glitched frontend call or an active probe.
+  if (!fs.existsSync(fullPath)) {
+    log.warn(`${nowDate.toLocaleString()}: [deleteLocal] target does not exist, refusing: ${fullPath}`)
+    return
+  }
+  log.debug(`${nowDate.toLocaleString()}: rm -r ${fullPath}`)
+  const execFile = require('node:child_process').execFile
+  execFile('rm', ['-r', fullPath], (e, stdout, stderr) => {
     if (e instanceof Error) {
-      console.error(e)
-      throw e
+      log.warn(`${nowDate.toLocaleString()}: [deleteLocal] rm failed: ${e.message}`)
+      return
     }
-    console.log('stdout', stdout)
-    console.log('stderr', stderr)
+    if (stdout) console.log('stdout', stdout)
+    if (stderr) console.log('stderr', stderr)
   })
 }
 
