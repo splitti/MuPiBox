@@ -264,12 +264,25 @@
 
 	if ($_POST['change_cpug'])
 		{
-		$command = "sudo su - dietpi -c \". /boot/dietpi/func/dietpi-globals && G_SUDO G_CONFIG_INJECT 'CONFIG_CPU_GOVERNOR=' 'CONFIG_CPU_GOVERNOR=".$_POST['cpugovernor']."' /boot/dietpi.txt\"";
-		$test=exec($command, $output, $result );
-		$command = "sudo /boot/dietpi/func/dietpi-set_cpu";
-		exec($command, $output, $result );
-		$change=1;
-		$CHANGE_TXT=$CHANGE_TXT."<li>CPU Governor changet to  ".$_POST['cpugovernor']."</li>";
+		// H6: $_POST['cpugovernor'] floss bisher ungeprüft als Substring in
+		// einen verschachtelten `sudo su -c "...G_CONFIG_INJECT 'CONFIG_CPU_GOVERNOR=<wert>'..."`-
+		// Aufruf — post-auth Command-Injection. Whitelist gegen die vom Kernel
+		// tatsächlich angebotenen Governors aus scaling_available_governors;
+		// das ist auch genau die Liste, aus der der HTML-<select> generiert wird.
+		$available = explode(' ', trim((string)@file_get_contents(
+			'/sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors')));
+		$cpug_input = (string)($_POST['cpugovernor'] ?? '');
+		if (in_array($cpug_input, $available, true)) {
+			$command = "sudo su - dietpi -c \". /boot/dietpi/func/dietpi-globals && G_SUDO G_CONFIG_INJECT 'CONFIG_CPU_GOVERNOR=' 'CONFIG_CPU_GOVERNOR=".$cpug_input."' /boot/dietpi.txt\"";
+			$test=exec($command, $output, $result );
+			$command = "sudo /boot/dietpi/func/dietpi-set_cpu";
+			exec($command, $output, $result );
+			$change=1;
+			$CHANGE_TXT=$CHANGE_TXT."<li>CPU Governor changet to  ".htmlspecialchars($cpug_input, ENT_QUOTES, 'UTF-8')."</li>";
+		} else {
+			$change=1;
+			$CHANGE_TXT=$CHANGE_TXT."<li>CPU Governor change rejected: invalid value</li>";
+		}
 		}
 
 	if( $_POST['change_sd'] == "activate for next boot" )
