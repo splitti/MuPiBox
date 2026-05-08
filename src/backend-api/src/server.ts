@@ -102,6 +102,44 @@ if (productionServe) {
   app.use(express.static(path.join(__dirname, 'www')))
 }
 
+// MED-2: harden /api/rssfeed against SSRF.
+//
+// The endpoint takes a user-supplied URL and ky-fetches it server-side,
+// so a caller can pivot the box into reaching anything routable from
+// the box's network — most notably the LAN's internal services
+// (router admin pages, NAS shares, other boxes' admin UIs). The
+// endpoint itself is auth-protected (frontend only), but treating
+// an authenticated frontend as fully trusted means any XSS or admin-
+// CSRF leak gives the attacker LAN-pivot for free. Defence in depth:
+//
+//   1. Schema allowlist: http: and https: only. Strips file:, ftp:,
+//      gopher:, data:, javascript: etc. that ky would otherwise honour.
+//   2. Host-resolve allowlist: reject private IPv4 ranges (RFC1918,
+//      loopback, link-local, IPv4-mapped IPv6). Done by a synchronous
+//      check on the parsed hostname; we don't resolve DNS to keep the
+//      check fast and simple, but we DO block raw IP literals.
+//   3. Hard timeout (10s) + max-content-length (5 MB) — RSS feeds are
+//      small text, anything bigger is either misconfigured or hostile.
+const PRIVATE_IP_REGEXES = [
+  /^127\./,
+  /^10\./,
+  /^192\.168\./,
+  /^172\.(1[6-9]|2\d|3[0-1])\./, // 172.16.0.0/12
+  /^169\.254\./, // link-local
+  /^0\./,
+  /^::1$/,
+  /^::ffff:127\./i,
+  /^fe80:/i, // IPv6 link-local
+  /^fc00:/i, // IPv6 unique local
+  /^fd00:/i,
+]
+const isPrivateHost = (host: string): boolean => {
+  // Strip brackets from IPv6 literals
+  const h = host.replace(/^\[|\]$/g, '').toLowerCase()
+  if (h === 'localhost' || h === '0.0.0.0' || h === '::') return true
+  return PRIVATE_IP_REGEXES.some((r) => r.test(h))
+}
+
 // Routes
 app.get('/api/rssfeed', async (req, res) => {
   const rssUrl = req.query.url
@@ -109,9 +147,29 @@ app.get('/api/rssfeed', async (req, res) => {
     res.status(500).send('Given url is not a string.')
     return
   }
-  ky.get(rssUrl)
+  let parsed: URL
+  try {
+    parsed = new URL(rssUrl)
+  } catch {
+    res.status(400).send('Invalid URL')
+    return
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    res.status(400).send('Only http(s) URLs are allowed')
+    return
+  }
+  if (isPrivateHost(parsed.hostname)) {
+    res.status(403).send('Private / loopback hosts are not allowed')
+    return
+  }
+  ky.get(rssUrl, { timeout: 10000 })
     .text()
     .then((response) => {
+      // Bound the parsed payload size — RSS feeds shouldn't be megabytes.
+      if (response.length > 5_000_000) {
+        res.status(413).send('Response too large')
+        return
+      }
       res.send(xmlparser.xml2json(response, { compact: true, nativeType: true }))
     })
     .catch(() => {
