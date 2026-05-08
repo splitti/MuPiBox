@@ -209,6 +209,10 @@ export class SpotifyService {
     const artistUrl = `${environment.backend.apiUrl}/spotify/artist/${id}`
 
     return this.http.get<any>(artistUrl).pipe(
+      // B10: 15s timeout so a hung Spotify-API call doesn't block the
+      // current$ polling loop indefinitely. catchError further down
+      // catches the TimeoutError and falls back to the placeholder.
+      timeout(15000),
       switchMap((artist) => {
         const artistcover = artist.images?.[0]?.url || '../assets/images/nocover_mupi.png'
 
@@ -252,6 +256,7 @@ export class SpotifyService {
     const showEpisodesUrl = `${environment.backend.apiUrl}/spotify/show/${id}/episodes`
 
     return this.http.get<any>(showUrl).pipe(
+      timeout(15000), // B10
       switchMap((show) => {
         const showName = show.name || 'Unknown Show'
         const showcover = show.images?.[0]?.url || '../assets/images/nocover_mupi.png'
@@ -301,6 +306,7 @@ export class SpotifyService {
     const albumUrl = `${environment.backend.apiUrl}/spotify/album/${id}`
 
     return this.http.get<any>(albumUrl).pipe(
+      timeout(15000), // B10
       map((album) => {
         const media: Media = {
           id: album.id,
@@ -357,6 +363,7 @@ export class SpotifyService {
     const audiobookUrl = `${environment.backend.apiUrl}/spotify/audiobook/${id}`
 
     return this.http.get<any>(audiobookUrl).pipe(
+      timeout(15000), // B10
       map((audiobook) => {
         const media: Media = {
           audiobookid: audiobook.id,
@@ -408,6 +415,7 @@ export class SpotifyService {
     const episodeUrl = `${environment.backend.apiUrl}/spotify/episode/${id}`
 
     return this.http.get<any>(episodeUrl).pipe(
+      timeout(15000), // B10
       map((episode) => {
         const media: Media = {
           showid: episode.id,
@@ -589,6 +597,7 @@ export class SpotifyService {
     const albumUrl = `${environment.backend.apiUrl}/spotify/album/${albumId}`
 
     return this.http.get<any>(albumUrl).pipe(
+      timeout(15000), // B10
       map((album) => ({
         total_tracks: album.total_tracks,
         album_name: album.name,
@@ -666,9 +675,11 @@ export class SpotifyService {
     const showEpisodesUrl = `${environment.backend.apiUrl}/spotify/show/${showId}/episodes`
 
     return this.http.get<any>(showUrl).pipe(
+      timeout(15000), // B10
       switchMap((show) => {
         // Get all episodes for position calculation
         return this.http.get<any[]>(showEpisodesUrl).pipe(
+          timeout(15000), // B10
           map((episodesData) => ({
             total_episodes: show.total_episodes,
             show_name: show.name,
@@ -696,6 +707,7 @@ export class SpotifyService {
     const audiobookUrl = `${environment.backend.apiUrl}/spotify/audiobook/${audiobookId}`
 
     return this.http.get<any>(audiobookUrl).pipe(
+      timeout(15000), // B10
       map((audiobook) => ({
         total_chapters: audiobook.chapters?.total || 0,
         audiobook_name: audiobook.name,

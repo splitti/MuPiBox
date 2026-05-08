@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
 import { firstValueFrom, from, iif, interval, Observable, of, Subject } from 'rxjs'
-import { map, mergeAll, mergeMap, shareReplay, switchMap, toArray } from 'rxjs/operators'
+import { catchError, map, mergeAll, mergeMap, shareReplay, switchMap, toArray } from 'rxjs/operators'
 import { environment } from '../environments/environment'
 import type { AlbumStop } from './albumstop'
 import type { Artist } from './artist'
@@ -158,25 +158,52 @@ export class MediaService {
           }),
           shareReplay({ bufferSize: 1, refCount: true }),
         )
-      : // Remote: HTTP polling
+      : // Remote: HTTP polling.
+        // B11: a single HTTP failure (network blip, backend restart)
+        // would error the source observable, and shareReplay would
+        // forever replay that error to subscribers — UI stops getting
+        // state updates until the page is reloaded. Wrap the inner
+        // get in catchError(of({})) so transient failures show as
+        // "no current state" without tearing down the polling stream.
         interval(10000).pipe(
           switchMap(
-            (): Observable<CurrentSpotify> => this.http.get<CurrentSpotify>(`${this.getPlayerBackendUrl()}/state`),
+            (): Observable<CurrentSpotify> =>
+              this.http
+                .get<CurrentSpotify>(`${this.getPlayerBackendUrl()}/state`)
+                .pipe(catchError(() => of({} as CurrentSpotify))),
           ),
           shareReplay({ bufferSize: 1, refCount: true }),
         )
+    // Same B11 pattern for local$ / albumStop$ / mupihat$ — all polling
+    // streams that should swallow transient errors instead of becoming
+    // permanently broken.
     this.local$ = interval(1000).pipe(
-      switchMap((): Observable<CurrentMPlayer> => this.http.get<CurrentMPlayer>(`${this.getPlayerBackendUrl()}/local`)),
+      switchMap(
+        (): Observable<CurrentMPlayer> =>
+          this.http
+            .get<CurrentMPlayer>(`${this.getPlayerBackendUrl()}/local`)
+            .pipe(catchError(() => of({} as CurrentMPlayer))),
+      ),
       shareReplay({ bufferSize: 1, refCount: true }),
     )
 
     this.albumStop$ = interval(1000).pipe(
-      switchMap((): Observable<AlbumStop> => this.http.get<AlbumStop>(`${this.getApiBackendUrl()}/albumstop`)),
+      switchMap(
+        (): Observable<AlbumStop> =>
+          this.http
+            .get<AlbumStop>(`${this.getApiBackendUrl()}/albumstop`)
+            .pipe(catchError(() => of({} as AlbumStop))),
+      ),
       shareReplay({ bufferSize: 1, refCount: false }),
     )
     // Every 2 seconds should be enough for timely charging update.
     this.mupihat$ = interval(2000).pipe(
-      switchMap((): Observable<Mupihat> => this.http.get<Mupihat>(`${this.getApiBackendUrl()}/mupihat`)),
+      switchMap(
+        (): Observable<Mupihat> =>
+          this.http
+            .get<Mupihat>(`${this.getApiBackendUrl()}/mupihat`)
+            .pipe(catchError(() => of({} as Mupihat))),
+      ),
       shareReplay({ bufferSize: 1, refCount: false }),
     )
 

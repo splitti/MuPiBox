@@ -355,7 +355,7 @@ export class AddPage implements OnInit, AfterViewInit {
   submit(form: NgForm) {
     this.activityIndicatorService.create().then((indicator) => {
       this.activityIndicatorVisible = true
-      indicator.present().then(() => {
+      indicator.present().then(async () => {
         if (this.sourceType === 'spotifyURL' || this.sourceType === 'spotifySearch') {
           this.source = 'spotify'
         } else if (this.sourceType === 'streamURL') {
@@ -400,14 +400,24 @@ export class AddPage implements OnInit, AfterViewInit {
         if (form.form.value.streamURL?.length) {
           media.id = form.form.value.streamURL
           if (media.id.endsWith('.m3u')) {
-            this.m3uStreamfetcher(media.id)
-              .then((firstURL) => {
-                console.log('First found URL:', firstURL)
-                media.id = firstURL
-              })
-              .catch((error) => {
-                console.error('Error for extract url from m3u:', error)
-              })
+            // B12: previously this fired m3uStreamfetcher() WITHOUT
+            // awaiting and immediately fell through to this.save(media)
+            // — the save persisted the original .m3u URL while the
+            // .then() callback updated media.id LATER (post-save). The
+            // extracted stream URL was therefore never persisted, and
+            // playback later tried to play the .m3u literal in mplayer
+            // (which mplayer happens to handle but the resume path
+            // can't address). Inline the await so save() sees the
+            // resolved URL. Errors fall through silently with the
+            // original .m3u — matches the original swallow-error
+            // semantics, just without the race.
+            try {
+              const firstURL = await this.m3uStreamfetcher(media.id)
+              console.log('First found URL:', firstURL)
+              media.id = firstURL
+            } catch (error) {
+              console.error('Error for extract url from m3u:', error)
+            }
           }
           if (media.id.startsWith('https://')) {
             // Ersetze 'https' durch 'http'
