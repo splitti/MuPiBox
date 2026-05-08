@@ -73,6 +73,33 @@ def parse_int_arg(command, default=None):
             return default
     return default
 
+# AR5-2: /vol used to splice the raw post-arg into "<N>%" and pass it
+# straight to amixer — no range check, no maxVolume cap. The Hörschutz
+# clamp from MED-1 lives only in the backend-player setVolume() flow,
+# so the Telegram /vol path was an unauthenticated bypass for any
+# whitelisted chat. Plus IndexError if /vol is sent without an arg
+# crashed the receiver thread (AR5-7). This helper handles both.
+def clamp_volume(raw):
+    try:
+        v = int(raw)
+    except (ValueError, TypeError):
+        return None
+    max_vol = 100
+    try:
+        max_vol = int(config['mupibox'].get('maxVolume', 100))
+    except (ValueError, TypeError, KeyError):
+        pass
+    return max(0, min(v, max_vol))
+
+# AR5-7: /sleep <X> previously called int(split_cmd[1]) without try/except;
+# /sleep without an arg was an IndexError that killed the receiver thread.
+def clamp_sleep_minutes(raw):
+    try:
+        v = int(raw)
+    except (ValueError, TypeError):
+        return None
+    return max(1, min(v, 1440))  # 1 min … 24 h
+
 def call_api_post(path, body=None):
     try:
         r = requests.post(f'{API_BASE}{path}', json=(body or {}), timeout=5)
@@ -144,15 +171,22 @@ def on_chat_message(msg):
     elif command == '/reboot':
         subprocess.run(["sudo", "reboot"])
     elif command[:4] == '/vol':
-        split_cmd = command.split(" ")
-        volume = split_cmd[1]+"%"
-        subprocess.run(["/usr/bin/amixer", "sset", "Master", volume])
-        bot.sendMessage(chat_id, "Volume set to "+volume)
+        # AR5-2 / AR5-7: validate, clamp to [0, maxVolume]; reject missing/non-int args.
+        v = clamp_volume(parse_int_arg(command, default=None))
+        if v is None:
+            bot.sendMessage(chat_id, "Usage: /vol <0-maxVolume>")
+        else:
+            volume = f"{v}%"
+            subprocess.run(["/usr/bin/amixer", "sset", "Master", volume])
+            bot.sendMessage(chat_id, "Volume set to " + volume)
     elif command[:6] == '/sleep':
-        split_cmd = command.split(" ")
-        sleep = int(split_cmd[1]) * 60
-        subprocess.Popen(["sudo", "nohup", "/usr/local/bin/mupibox/./sleep_timer.sh", str(sleep)])
-        bot.sendMessage(chat_id, "Sleep timer set to "+split_cmd[1]+" minutes")
+        # AR5-7: validate, reject missing/non-int args.
+        mins = clamp_sleep_minutes(parse_int_arg(command, default=None))
+        if mins is None:
+            bot.sendMessage(chat_id, "Usage: /sleep <1-1440>")
+        else:
+            subprocess.Popen(["sudo", "nohup", "/usr/local/bin/mupibox/./sleep_timer.sh", str(mins * 60)])
+            bot.sendMessage(chat_id, f"Sleep timer set to {mins} minutes")
     elif command == '/status':
         status_code, body = call_api_get('/playtime')
         if status_code == 200:
@@ -302,15 +336,25 @@ def on_callback_query(msg):
         msg_idf = telepot.message_identifier(message_with_inline_keyboard)
         bot.editMessageText(msg_idf, 'In how many minutes should the MuPiBox go to sleep?', reply_markup = markup )
     elif query_data[:4] == 'vol_':
-        split_cmd = query_data.split("_")
-        volume = split_cmd[1]+"%"
-        subprocess.run(["/usr/bin/amixer", "sset", "Master", volume])
-        bot.answerCallbackQuery(query_id, text='Volume set to ' + volume, show_alert=True)
+        # Inline-keyboard values are hardcoded (10/30/50/70/100) but defense-
+        # in-depth: clamp anyway so a future button change can't bypass
+        # maxVolume. Same for /sleep_<N> below.
+        parts = query_data.split("_", 1)
+        v = clamp_volume(parts[1] if len(parts) > 1 else None)
+        if v is None:
+            bot.answerCallbackQuery(query_id, text='Invalid volume', show_alert=True)
+        else:
+            volume = f"{v}%"
+            subprocess.run(["/usr/bin/amixer", "sset", "Master", volume])
+            bot.answerCallbackQuery(query_id, text='Volume set to ' + volume, show_alert=True)
     elif query_data[:6] == 'sleep_':
-        split_cmd = query_data.split("_")
-        sleep = int(split_cmd[1]) * 60
-        subprocess.Popen(["sudo", "nohup", "/usr/local/bin/mupibox/./sleep_timer.sh", str(sleep)])
-        bot.sendMessage(from_id, "Sleep timer set to " + split_cmd[1] + " minutes")
+        parts = query_data.split("_", 1)
+        mins = clamp_sleep_minutes(parts[1] if len(parts) > 1 else None)
+        if mins is None:
+            bot.answerCallbackQuery(query_id, text='Invalid sleep value', show_alert=True)
+        else:
+            subprocess.Popen(["sudo", "nohup", "/usr/local/bin/mupibox/./sleep_timer.sh", str(mins * 60)])
+            bot.sendMessage(from_id, f"Sleep timer set to {mins} minutes")
     elif query_data == 'play':
         url = 'http://' + config['mupibox']['host'] + ':5005//play'
         bot.answerCallbackQuery(query_id, text='Play', show_alert=True)
