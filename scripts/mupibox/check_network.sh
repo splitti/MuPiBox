@@ -52,7 +52,7 @@ fi
 
 while true
 do
-	if ( $(/usr/bin/python3 /usr/local/bin/mupibox/check_network.py) == ${TRUESTATE} ); then
+	if [ $(/usr/bin/python3 /usr/local/bin/mupibox/check_network.py) == ${TRUESTATE} ]; then
 		ONLINESTATE=${TRUESTATE}
 		if [ "${ONLINESTATE}" != "${OLDSTATE}" ]; then
 			if [ ! -f ${ACTIVE_FILE} ]; then
