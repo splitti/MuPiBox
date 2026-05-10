@@ -1,5 +1,6 @@
 import { AsyncPipe } from '@angular/common'
-import { Component, OnInit, ViewChild } from '@angular/core'
+import { Component, OnInit, Signal, ViewChild } from '@angular/core'
+import { toSignal } from '@angular/core/rxjs-interop'
 import { FormsModule } from '@angular/forms'
 import { ActivatedRoute, Router } from '@angular/router'
 import {
@@ -21,6 +22,8 @@ import {
 import { addIcons } from 'ionicons'
 import {
   arrowBackOutline,
+  cloudOutline,
+  cloudOfflineOutline,
   pause,
   play,
   playBack,
@@ -86,6 +89,9 @@ export class PlayerPage implements OnInit {
   progress = 0
   shufflechanged = 0
   tmpProgressTime = 0
+  protected settingsButtonClickCount = 0
+  protected settingsClickTimer = 0
+  protected isOnline: Signal<boolean>
   public readonly spotify$: Observable<CurrentSpotify>
   public readonly local$: Observable<CurrentMPlayer>
 
@@ -100,6 +106,7 @@ export class PlayerPage implements OnInit {
   ) {
     this.spotify$ = this.mediaService.current$
     this.local$ = this.mediaService.local$
+    this.isOnline = toSignal(this.mediaService.isOnline())
 
     if (this.router.currentNavigation()?.extras.state?.media) {
       this.media = this.router.currentNavigation().extras.state.media
@@ -112,6 +119,8 @@ export class PlayerPage implements OnInit {
     }
     addIcons({
       arrowBackOutline,
+      cloudOutline,
+      cloudOfflineOutline,
       volumeLowOutline,
       pause,
       play,
@@ -447,5 +456,20 @@ export class PlayerPage implements OnInit {
 
   seekBack() {
     this.playerService.sendCmd(PlayerCmds.SEEKBACK)
+  }
+
+  protected settingsButtonPressed(): void {
+    window.clearTimeout(this.settingsClickTimer)
+
+    if (this.settingsButtonClickCount < 9) {
+      this.settingsButtonClickCount++
+
+      this.settingsClickTimer = window.setTimeout(() => {
+        this.settingsButtonClickCount = 0
+      }, 500)
+    } else {
+      this.settingsButtonClickCount = 0
+      this.router.navigate(['/settings'])
+    }
   }
 }
