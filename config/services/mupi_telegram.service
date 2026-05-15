@@ -5,6 +5,8 @@ After=network-online.target
 
 [Service]
 ExecStart=/usr/local/bin/mupibox/./telegram_start.sh
+Restart=on-failure
+RestartSec=10
 
 [Install]
 WantedBy=default.target
