@@ -172,9 +172,16 @@ def main():
         json_thread = Thread(target=periodic_json_dump, daemon=True)
         json_thread.start()
 
-    # Flask web server
+    # AR5-20: bind the debug Flask server to loopback only. No consumer on
+    # the box hits port 5000 — all consumers (frontend, admin-ui, server.ts,
+    # telegram_*.py, mqtt.py, .bashrc, fan_control.py) read /tmp/mupihat.json
+    # directly. Port 5000 is the BQ25792 register inspector at "/" and
+    # "/api/registers". With 0.0.0.0 the raw charger registers were
+    # unauthenticated for every client on the LAN; harmless on a home
+    # WLAN, problematic on guest/school networks. For remote debugging
+    # use `ssh -L 5000:127.0.0.1:5000 mupibox`.
     try:
-        app.run(host="0.0.0.0", port=5000, debug=False)
+        app.run(host="127.0.0.1", port=5000, debug=False)
     except KeyboardInterrupt:
         print("MuPiHAT stopped by Keyboard Interrupt")
         sys.exit(0)
