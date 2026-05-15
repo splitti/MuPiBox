@@ -7,28 +7,55 @@
 
 	if( $_POST['save_custom'] )
 		{
-		// Erstelle ein leeres Array für die benutzerdefinierte Batteriekonfiguration
-		$custom_battery_config = array();
+		// AR5-16: validate every voltage field before persisting. Without intval +
+		// range check, a malformed POST (browser bug, hostile actor on a shared LAN)
+		// could write non-numeric strings or out-of-range millivolts into the JSON.
+		// th_shutdown is the load-bearing one — if it ends up higher than the
+		// pack's normal operating range, the battery-protection logic will trigger
+		// a shutdown that never recovers; if it ends up at 0 or negative, the
+		// shutdown safeguard is silently disabled.
+		//
+		// Accepted range: 4000-12600 mV (covers 1S, 2S and 3S Li-Ion packs).
+		// Plus strict descending order: v_100 > v_75 > v_50 > v_25 > v_0,
+		// and v_0 >= th_warning >= th_shutdown.
+		$fields = ['v_100', 'v_75', 'v_50', 'v_25', 'v_0', 'th_warning', 'th_shutdown'];
+		$values = [];
+		$validation_error = '';
+		foreach ($fields as $field) {
+			if (!isset($_POST[$field]) || !ctype_digit((string) $_POST[$field])) {
+				$validation_error = "Field '$field' is not a positive integer";
+				break;
+			}
+			$mv = intval($_POST[$field]);
+			if ($mv < 4000 || $mv > 12600) {
+				$validation_error = "Field '$field' = $mv mV is outside 4000-12600 mV";
+				break;
+			}
+			$values[$field] = (string) $mv;
+		}
+		if ($validation_error === '' &&
+		    !($values['v_100'] > $values['v_75']
+		      && $values['v_75'] > $values['v_50']
+		      && $values['v_50'] > $values['v_25']
+		      && $values['v_25'] > $values['v_0'])) {
+			$validation_error = 'Voltages must strictly descend: v_100 > v_75 > v_50 > v_25 > v_0';
+		}
+		if ($validation_error === '' &&
+		    !($values['v_0'] >= $values['th_warning']
+		      && $values['th_warning'] >= $values['th_shutdown'])) {
+			$validation_error = 'Threshold order violated: v_0 >= th_warning >= th_shutdown required';
+		}
 
-		// Durchsuche das Array nach der benutzerdefinierten Batteriekonfiguration
-		foreach ($data["mupihat"]["battery_types"] as $key => $battery_type) {
-			if ($battery_type["name"] === "Custom") {
-				// Speichere die benutzerdefinierte Batteriekonfiguration aus dem Formular in das Array
-				$custom_battery_config["v_100"] = $_POST['v_100'];
-				$custom_battery_config["v_75"] = $_POST['v_75'];
-				$custom_battery_config["v_50"] = $_POST['v_50'];
-				$custom_battery_config["v_25"] = $_POST['v_25'];
-				$custom_battery_config["v_0"] = $_POST['v_0'];
-				$custom_battery_config["th_warning"] = $_POST['th_warning'];
-				$custom_battery_config["th_shutdown"] = $_POST['th_shutdown'];
-
-				// Aktualisiere die benutzerdefinierte Batteriekonfiguration im Datenarray
-				$data["mupihat"]["battery_types"][$key]["config"] = $custom_battery_config;
-
-				// Führe den Code zum Speichern und Aktualisieren der Konfiguration aus
-				$change = 4;
-				$CHANGE_TXT = $CHANGE_TXT . "<li>Custom battery configuration saved</li>";
-				break; // Beende die Schleife, da die Konfiguration gefunden und aktualisiert wurde
+		if ($validation_error !== '') {
+			$CHANGE_TXT = $CHANGE_TXT . "<li>Custom battery configuration rejected: " . htmlspecialchars($validation_error) . "</li>";
+		} else {
+			foreach ($data["mupihat"]["battery_types"] as $key => $battery_type) {
+				if ($battery_type["name"] === "Custom") {
+					$data["mupihat"]["battery_types"][$key]["config"] = $values;
+					$change = 4;
+					$CHANGE_TXT = $CHANGE_TXT . "<li>Custom battery configuration saved</li>";
+					break;
+				}
 			}
 		}
 		}
