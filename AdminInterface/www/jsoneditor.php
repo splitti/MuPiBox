@@ -11,14 +11,17 @@ if (empty($_SESSION['csrf_token'])) {
 $csrfToken = $_SESSION['csrf_token'];
 
 // Erlaubte Dateien
+// AR5-17: the `monitor` and `offline_monitor` keys both pointed at the
+// resume.json paths — clicking those tabs in the editor opened the
+// wrong file content. Corrected to monitor.json / offline_monitor.json.
 $files = [
     'mupiboxconfig' => '/etc/mupibox/mupiboxconfig.json',
     'data' => '/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json',
     'config' => '/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json',
     'resume' => '/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/resume.json',
-    'monitor' => '/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/resume.json',
+    'monitor' => '/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/monitor.json',
     'offline_resume' => '/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/offline_resume.json',
-    'offline_monitor' => '/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/offline_resume.json'
+    'offline_monitor' => '/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/offline_monitor.json'
 ];
 
 $key = $_GET['file'] ?? 'mupiboxconfig';

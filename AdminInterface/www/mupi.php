@@ -1461,8 +1461,16 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 ?>
 
 <?php
-        //$time2sleep=readfile("/tmp/.time2sleep");
-        $time2sleep=fgets(fopen("/tmp/.time2sleep", 'r'));
+        // M11: /tmp/.time2sleep only exists while a sleep timer is active.
+        // Without an active timer fopen() returned false and fgets(false)
+        // raised an uncaught TypeError on PHP 8+. Guard the resource open
+        // and default to empty string so the page renders cleanly either
+        // way (the JS side already handles an empty value).
+        $time2sleep = '';
+        if ($fh = @fopen("/tmp/.time2sleep", 'r')) {
+            $time2sleep = fgets($fh);
+            fclose($fh);
+        }
 ?>
 
 

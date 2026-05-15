@@ -7,6 +7,14 @@
 	default-agent
 	scan on
 	*/
+	// AR5-15: bluetooth.php was missed by the Phase-5 CSRF sweep. Every
+	// POST handler below runs `sudo systemctl` or `sudo /usr/local/bin/
+	// mupibox/*_bt.sh` — a cross-site request from another admin tab
+	// (or a logged-in admin opening a hostile page) could toggle
+	// Bluetooth, pair an attacker MAC, or remove a paired device. Gate
+	// all writes behind csrf_check() before any other code runs.
+	require_once __DIR__ . '/includes/csrf.php';
+	csrf_check();
 	include ('includes/header.php');
 
 	if( $_POST['change_btac'] == "enable & start" )
@@ -169,11 +177,20 @@
                                 foreach($pairoutput as $device)
                                 {
                                         $split_device=explode(" ", $device);
+                                        // AR5-15: the MAC comes from `bluetoothctl devices` so it's normally
+                                        // a safe AA:BB:CC:DD:EE:FF value, but a paired device with a
+                                        // hostile-name BT stack could in theory emit a forged second
+                                        // column. escapeshellarg for the shell side, htmlspecialchars
+                                        // for the form/HTML side.
+                                        $mac = $split_device[1] ?? '';
+                                        $name = $split_device[2] ?? '';
+                                        $macHtml = htmlspecialchars($mac, ENT_QUOTES);
+                                        $nameHtml = htmlspecialchars($name, ENT_QUOTES);
                                         print "<form class='appnitro'  method='post' action='bluetooth.php' id='remform'>";
-                                        print "<input type='hidden' name='remove_mac' value='".$split_device[1]."'>";
+                                        print "<input type='hidden' name='remove_mac' value='".$macHtml."'>";
                                         print "<input id='saveForm' class='button_text' type='submit' name='remove_selected' value='Remove' />&ensp;";
-                                        print $split_device[2]." [".$split_device[1]."]";
-                                        $command = "sudo -u dietpi bluetoothctl info ".$split_device[1]." | grep 'Connected: yes'";
+                                        print $nameHtml." [".$macHtml."]";
+                                        $command = "sudo -u dietpi bluetoothctl info ".escapeshellarg($mac)." | grep 'Connected: yes'";
                                         unset($connoutput);
                                         exec($command, $connoutput, $connresult );
                                         if( $connoutput[0] )
