@@ -524,6 +524,14 @@ function playtimeTickStep() {
 // Updates quietHoursState based on whether "now" falls inside any configured window.
 // Mirror of playtimeTickStep but purely time-window-driven (no counter).
 function quietHoursTickStep() {
+  // AR5-14: parent's allowUntil override suppresses ALL state transitions —
+  // not just blocked-entry. Without this, a quiet window that starts mid-
+  // override would silently mutate state to 'grace' or 'blocked'; the
+  // moment the override ended, the kid would be hit with no grace at all
+  // (state already 'blocked'). Skipping the tick keeps state at 'normal'
+  // throughout the override, so the post-override tick walks the proper
+  // normal -> grace -> blocked path again.
+  if (isAllowOverrideActive()) return
   const cfg = readQuietHoursConfig()
   if (!cfg.enabled) {
     if (quietHoursState.state !== 'normal' || quietHoursState.activeWindow !== null) {
