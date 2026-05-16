@@ -10,6 +10,7 @@ import ky from 'ky'
 import xmlparser from 'xml-js'
 import { LogRequest, LogResponse } from './models/log.model'
 import type { MupiboxConfig } from './models/mupibox-config.model'
+import type { PlaytimeStatus } from './models/playtime.model'
 import { ServerConfig } from './models/server.model'
 import type { SpotifyValidationRequest, SpotifyValidationResponse } from './models/spotify-api.model'
 import { SpotifyApiService } from './services/spotify-api.service'
@@ -62,6 +63,7 @@ const wlanFile = `${configBasePath}/wlan.json`
 const monitorFile = `${configBasePath}/monitor.json`
 const albumstopFile = `${configBasePath}/albumstop.json`
 const mupihat = '/tmp/mupihat.json'
+const playtimeFile = '/tmp/playtime.json'
 const dataLock = '/tmp/.data.lock'
 const resumeLock = '/tmp/.resume.lock'
 
@@ -160,6 +162,189 @@ app.get('/api/mupihat', (_req, res) => {
         res.json(data)
       }
     })
+  }
+})
+
+// Playback time tracking written by backend-player to /tmp/playtime.json (tmpfs).
+// Missing/unreadable file means the player hasn't ticked yet or the feature is off —
+// either way, surfaces as "disabled" so the frontend can hide the UI safely.
+app.get('/api/playtime', (_req, res) => {
+  const disabled: PlaytimeStatus = { enabled: false }
+  if (!fs.existsSync(playtimeFile)) {
+    res.json(disabled)
+    return
+  }
+  jsonfile.readFile(playtimeFile, (error, data) => {
+    if (error) {
+      console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Error /api/playtime read playtime.json`)
+      console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] ${error}`)
+      res.json(disabled)
+    } else {
+      res.json(data)
+    }
+  })
+})
+
+// Atomically apply a mutation to /etc/mupibox/mupiboxconfig.json.
+// Used by the parent-control endpoints below (extend / release / quietnow).
+// The player picks up the change ~50 ms later via fs.watch (see spotify-control.js).
+async function updateMupiboxConfig(mutate: (cfg: Record<string, unknown>) => void): Promise<void> {
+  const current = (await readJsonFile(mupiboxConfigPath)) as Record<string, unknown>
+  mutate(current)
+  const tmpPath = '/tmp/.mupiboxconfig.update.json'
+  await new Promise<void>((resolve, reject) => {
+    jsonfile.writeFile(tmpPath, current, { spaces: 2 }, (err) => (err ? reject(err) : resolve()))
+  })
+  await new Promise<void>((resolve, reject) => {
+    // sudo cp is allowed for the dietpi user on the box (same pattern as
+    // /api/shutdown / /api/reboot below). Atomic: write to a tmp on the same
+    // filesystem region, then cp into place; player's fs.watch fires once.
+    exec(`sudo cp ${tmpPath} ${mupiboxConfigPath} && sudo rm -f ${tmpPath}`, (err) => (err ? reject(err) : resolve()))
+  })
+  // Local cache invalidation (server's own mupiboxConfigCache) — fs.watch on the
+  // dir already does this, but be explicit so /api/config returns the new value
+  // immediately on the next call.
+  mupiboxConfigCache = undefined
+}
+
+// Logical-day computation must match the player's `getLogicalDay` so `todayBonus`
+// works consistently across processes (resetHour shifts when "today" begins).
+function computeLogicalDate(now: Date, resetHour: number): string {
+  const shifted = new Date(now.getTime() - resetHour * 3600 * 1000)
+  const y = shifted.getFullYear()
+  const m = String(shifted.getMonth() + 1).padStart(2, '0')
+  const d = String(shifted.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+// POST /api/playtime/extend  body: { minutes: number }
+// Adds bonus minutes to today's playtime cap. If the day rolls over at the
+// configured resetHour, the bonus auto-clears (player checks the date field).
+// Calling extend repeatedly accumulates: existing bonus for today is kept and
+// added to. Always uses the *current* day at the time of call, so e.g. an
+// /extend at 23:30 with resetHour=4 still applies to "today" until 04:00.
+app.post('/api/playtime/extend', async (req, res) => {
+  const minutes = Number(req.body?.minutes)
+  if (!Number.isFinite(minutes) || minutes <= 0 || minutes > 1440) {
+    res.status(400).json({ error: 'minutes must be a positive number <= 1440' })
+    return
+  }
+  try {
+    await updateMupiboxConfig((cfg) => {
+      let pl = cfg.playtimeLimit as Record<string, unknown> | undefined
+      if (!pl || typeof pl !== 'object') {
+        pl = {}
+        cfg.playtimeLimit = pl
+      }
+      const resetHour = Number.isInteger(pl.resetHour) ? (pl.resetHour as number) : 0
+      const today = computeLogicalDate(new Date(), resetHour)
+      const existing = (pl.todayBonus as { date?: string; minutes?: number } | undefined) || {}
+      const existingMinutes =
+        existing.date === today && Number.isFinite(existing.minutes) ? Number(existing.minutes) : 0
+      pl.todayBonus = { date: today, minutes: Math.min(1440, existingMinutes + minutes) }
+    })
+    console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] /api/playtime/extend +${minutes} min`)
+    res.status(200).json({ ok: true, addedMinutes: minutes })
+  } catch (err) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] /api/playtime/extend failed:`, err)
+    res.status(500).json({ error: 'internal error' })
+  }
+})
+
+// POST /api/playtime/release  body: { minutes?: number }
+// Sets `playbackOverride.allowUntil = now + minutes*60_000`. While that timestamp
+// is in the future, all blocks are bypassed. Default 60 min if not specified.
+app.post('/api/playtime/release', async (req, res) => {
+  const minutes = req.body?.minutes !== undefined ? Number(req.body.minutes) : 60
+  if (!Number.isFinite(minutes) || minutes <= 0 || minutes > 1440) {
+    res.status(400).json({ error: 'minutes must be a positive number <= 1440' })
+    return
+  }
+  const until = Date.now() + minutes * 60_000
+  try {
+    await updateMupiboxConfig((cfg) => {
+      let ov = cfg.playbackOverride as Record<string, unknown> | undefined
+      if (!ov || typeof ov !== 'object') {
+        ov = {}
+        cfg.playbackOverride = ov
+      }
+      ov.allowUntil = until
+    })
+    console.log(
+      `${new Date().toLocaleString()}: [MuPiBox-Server] /api/playtime/release for ${minutes} min (until ${new Date(until).toLocaleString()})`,
+    )
+    res.status(200).json({ ok: true, minutes, until })
+  } catch (err) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] /api/playtime/release failed:`, err)
+    res.status(500).json({ error: 'internal error' })
+  }
+})
+
+// POST /api/playtime/limit  body: { day: 'mon'|...|'sun', minutes: number }
+// Sets the daily playtime cap for one weekday in mupiboxconfig.json. Used by
+// the Telegram /limit set bot command so parents can adjust a single day
+// without opening the admin UI. Live-reload in the player picks the change up
+// within ~50 ms; no restart needed.
+const PLAYTIME_DAY_KEYS = new Set(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'])
+app.post('/api/playtime/limit', async (req, res) => {
+  const day = String(req.body?.day || '').toLowerCase()
+  const minutes = Number(req.body?.minutes)
+  if (!PLAYTIME_DAY_KEYS.has(day)) {
+    res.status(400).json({ error: 'day must be one of mon|tue|wed|thu|fri|sat|sun' })
+    return
+  }
+  if (!Number.isFinite(minutes) || minutes < 0 || minutes > 1440) {
+    res.status(400).json({ error: 'minutes must be in [0, 1440]' })
+    return
+  }
+  try {
+    await updateMupiboxConfig((cfg) => {
+      let pl = cfg.playtimeLimit as Record<string, unknown> | undefined
+      if (!pl || typeof pl !== 'object') {
+        pl = {}
+        cfg.playtimeLimit = pl
+      }
+      let limits = pl.limitsMinutes as Record<string, unknown> | undefined
+      if (!limits || typeof limits !== 'object') {
+        limits = {}
+        pl.limitsMinutes = limits
+      }
+      limits[day] = minutes
+    })
+    console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] /api/playtime/limit ${day}=${minutes} min`)
+    res.status(200).json({ ok: true, day, minutes })
+  } catch (err) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] /api/playtime/limit failed:`, err)
+    res.status(500).json({ error: 'internal error' })
+  }
+})
+
+// POST /api/quiethours/now  body: { minutes?: number }
+// Sets `playbackOverride.forceBlockUntil = now + minutes*60_000`. Forces playback
+// off immediately (kid sees the override overlay). Default 60 min.
+app.post('/api/quiethours/now', async (req, res) => {
+  const minutes = req.body?.minutes !== undefined ? Number(req.body.minutes) : 60
+  if (!Number.isFinite(minutes) || minutes <= 0 || minutes > 1440) {
+    res.status(400).json({ error: 'minutes must be a positive number <= 1440' })
+    return
+  }
+  const until = Date.now() + minutes * 60_000
+  try {
+    await updateMupiboxConfig((cfg) => {
+      let ov = cfg.playbackOverride as Record<string, unknown> | undefined
+      if (!ov || typeof ov !== 'object') {
+        ov = {}
+        cfg.playbackOverride = ov
+      }
+      ov.forceBlockUntil = until
+    })
+    console.log(
+      `${new Date().toLocaleString()}: [MuPiBox-Server] /api/quiethours/now for ${minutes} min (until ${new Date(until).toLocaleString()})`,
+    )
+    res.status(200).json({ ok: true, minutes, until })
+  } catch (err) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] /api/quiethours/now failed:`, err)
+    res.status(500).json({ error: 'internal error' })
   }
 })
 

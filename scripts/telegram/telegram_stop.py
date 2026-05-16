@@ -1,10 +1,9 @@
 #!/usr/bin/python3
 
-import sys
-import time
 import telepot
 import json
 import requests
+from telegram_chats import normalize_chat_ids, send_to_all
 
 with open("/etc/mupibox/mupiboxconfig.json") as file:
     config = json.load(file)
@@ -12,13 +11,14 @@ with open("/etc/mupibox/mupiboxconfig.json") as file:
 if not config['telegram']['active']:
     quit()
 
-url = 'http://127.0.0.1:5005/local'
-state = requests.get(url).json()
+chat_ids = normalize_chat_ids(config['telegram'].get('chatId'))
+if not chat_ids:
+    quit()
 
-TOKEN = config['telegram']['token']
-bot = telepot.Bot(TOKEN)
-chat_id = config['telegram']['chatId']
+# Touching /local just to keep the existing "is the player alive" probe — the
+# response value isn't used here, the side effect is that we fail fast if the
+# backend-player isn't reachable.
+requests.get('http://127.0.0.1:5005/local')
 
-msg = config['mupibox']['host'] + " stop playing"
-
-bot.sendMessage(chat_id, msg)
+bot = telepot.Bot(config['telegram']['token'])
+send_to_all(bot, config['mupibox']['host'] + " stop playing", chat_ids)

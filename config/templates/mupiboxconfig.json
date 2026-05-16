@@ -265,6 +265,37 @@
 		"idleDisplayOff": "10",
 		"pressDelay": "2"
 	    },
+	"playtimeLimit": {
+		"enabled": false,
+		"resetHour": 0,
+		"maxOverrunMinutes": 10,
+		"limitsMinutes": {
+			"mon": 60,
+			"tue": 60,
+			"wed": 60,
+			"thu": 60,
+			"fri": 60,
+			"sat": 60,
+			"sun": 60
+		}
+	},
+	"quietHours": {
+		"enabled": false,
+		"maxOverrunMinutes": 10,
+		"schedule": {
+			"mon": [],
+			"tue": [],
+			"wed": [],
+			"thu": [],
+			"fri": [],
+			"sat": [],
+			"sun": []
+		}
+	},
+	"playbackOverride": {
+		"allowUntil": 0,
+		"forceBlockUntil": 0
+	},
 	"shim": {
 		"poweroffPin": "4",
 		"triggerPin": "17",
