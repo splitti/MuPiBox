@@ -1,4 +1,7 @@
+import { createHash } from 'node:crypto'
 import fs from 'node:fs'
+import fsPromises from 'node:fs/promises'
+import os from 'node:os'
 import path from 'node:path'
 import { SpotifyApi } from '@spotify/web-api-ts-sdk'
 import type { ServerConfig } from '../models/server.model'
@@ -24,6 +27,32 @@ export class SpotifyApiService {
     dynamic: 2 * 60 * 60 * 1000, // 2 hours for Playlists
     search: 6 * 60 * 60 * 1000, // 6 hours for Search Results
   }
+
+  // H7: Hard upper bound on cache-file count. With unbounded user-controlled
+  // pagination cache-keys could fill the SD-card. Limits: at 1000 files the
+  // pruner runs and evicts the oldest 200 by mtime.
+  private static readonly CACHE_MAX_FILES = 1000
+  private static readonly CACHE_PRUNE_BATCH = 200
+
+  // M4: In-memory LRU layer sitting in front of the SD-backed JSON cache.
+  // getFromCache used to cost 3 sync syscalls (existsSync + statSync +
+  // readFileSync + JSON.parse) on every hit -- 5-30 ms of event-loop block
+  // on SD per call, hundreds of calls during a single artist click.
+  // The Map preserves insertion order; on every get/set we delete-and-
+  // reinsert to keep the most-recent at the tail, so eviction (delete first
+  // key) drops the least-recently-used. memCacheCap is auto-sized to 5% of
+  // available RAM (capped at 500 entries) so the same code stays safe on a
+  // Pi 3 (~100 MB free -> ~50 entries) and a Pi 4 (~3 GB free -> 500).
+  private memCache = new Map<string, CachedSpotifyData>()
+  private memCacheCap: number = Math.max(
+    50,
+    Math.min(
+      500,
+      Math.floor((os.freemem() * 0.05) / (10 * 1024)), // estimate ~10KB per cached entry
+    ),
+  )
+  private memHits = 0
+  private memMisses = 0
 
   // Rate limiting
   private lastRequestTime = 0
@@ -71,8 +100,64 @@ export class SpotifyApiService {
     }
   }
 
+  // H7: limit/offset come from user-controlled query string. The SDK call
+  // already gets `Math.min(limit, 10)` later, but the cache-key was built
+  // with the raw value — `?limit=999999` would produce a unique cache file
+  // for every request and the cache directory would grow without bound.
+  // Normalise once here so the cache-key sees the clamped form.
+  private normalizePagination(limit: number, offset: number): { limit: number; offset: number } {
+    const l = Math.floor(Number(limit))
+    const o = Math.floor(Number(offset))
+    return {
+      limit: Number.isFinite(l) ? Math.min(Math.max(l, 1), 50) : 10,
+      offset: Number.isFinite(o) ? Math.max(o, 0) : 0,
+    }
+  }
+
+  // H7: Lightweight LRU eviction. Called from saveToCache; runs only when
+  // the directory exceeds CACHE_MAX_FILES. We sort by mtime (oldest first)
+  // and unlink CACHE_PRUNE_BATCH files. Cheap enough to do inline.
+  private pruneCacheIfNeeded(): void {
+    try {
+      const files = fs.readdirSync(this.cacheDir)
+      if (files.length <= SpotifyApiService.CACHE_MAX_FILES) return
+      const stats = files
+        .map((name) => {
+          try {
+            return { name, mtime: fs.statSync(path.join(this.cacheDir, name)).mtimeMs }
+          } catch {
+            return null
+          }
+        })
+        .filter((x): x is { name: string; mtime: number } => x !== null)
+        .sort((a, b) => a.mtime - b.mtime)
+      const victims = stats.slice(0, SpotifyApiService.CACHE_PRUNE_BATCH)
+      for (const v of victims) {
+        try {
+          fs.unlinkSync(path.join(this.cacheDir, v.name))
+        } catch {
+          // ignore unlink errors — file may have been pruned in parallel
+        }
+      }
+      console.info(`🗑️  Cache pruned: removed ${victims.length} oldest entries (was ${files.length})`)
+    } catch (error) {
+      console.error('Error pruning cache:', error)
+    }
+  }
+
+  // MED-5: cacheKey is concatenated from user-controlled input — search
+  // queries, playlist IDs, etc. The previous implementation just appended
+  // `.json` and joined with cacheDir, so a search for `../../etc/passwd_x`
+  // would produce a path that path.join could resolve outside the cache
+  // directory (and fs.writeFile would happily write there as the dietpi
+  // user). Hash the user-controlled portion via SHA-256; the resulting
+  // 64-char hex is filesystem-safe and impossible to traverse with.
+  // Keep getCacheExpiryForKey() reading the original cacheKey since it
+  // only inspects the prefix — the on-disk filename uses the hashed
+  // form via this helper.
   private getCacheFilePath(cacheKey: string): string {
-    return path.join(this.cacheDir, `${cacheKey}.json`)
+    const hashed = createHash('sha256').update(cacheKey).digest('hex')
+    return path.join(this.cacheDir, `${hashed}.json`)
   }
 
   private getCacheExpiryForKey(cacheKey: string): number {
@@ -97,16 +182,52 @@ export class SpotifyApiService {
     return this.cacheExpiry.dynamic // Fallback
   }
 
+  // M4: LRU touch -- delete then re-insert so the entry moves to the tail.
+  // Map iteration order is insertion order in V8, so the first key is the
+  // least-recently-used and evictable.
+  private memCacheTouch(cacheKey: string, value: CachedSpotifyData): void {
+    if (this.memCache.has(cacheKey)) {
+      this.memCache.delete(cacheKey)
+    }
+    this.memCache.set(cacheKey, value)
+    while (this.memCache.size > this.memCacheCap) {
+      const oldestKey = this.memCache.keys().next().value
+      if (oldestKey === undefined) break
+      this.memCache.delete(oldestKey)
+    }
+  }
+
   private async getFromCache(cacheKey: string): Promise<{ data: any | null; isStale: boolean }> {
+    // M4: in-memory hit first. Touch-on-get keeps the LRU ordering correct.
+    const memEntry = this.memCache.get(cacheKey)
+    if (memEntry !== undefined) {
+      this.memCache.delete(cacheKey)
+      this.memCache.set(cacheKey, memEntry)
+      this.memHits++
+      const isStale = Date.now() > (memEntry.expiresAt || Date.now())
+      if (isStale) {
+        console.info(`📦 Cache stale (mem) for ${cacheKey}, will update in background`)
+      }
+      // No "Fresh cache hit" log on mem-hit to keep the log volume sane —
+      // mem-hits are the common path; only stale-mem and SD reads log.
+      return { data: memEntry.data, isStale }
+    }
+    this.memMisses++
     try {
       const cacheFile = this.getCacheFilePath(cacheKey)
 
-      if (!fs.existsSync(cacheFile)) {
-        return { data: null, isStale: false }
+      // M3: async read so the event loop stays free while the SD seeks.
+      // ENOENT is the "no cache yet" path -- swallow it and report as miss.
+      let raw: string
+      try {
+        raw = await fsPromises.readFile(cacheFile, 'utf8')
+      } catch (readErr) {
+        if ((readErr as NodeJS.ErrnoException).code === 'ENOENT') {
+          return { data: null, isStale: false }
+        }
+        throw readErr
       }
-
-      const _stats = fs.statSync(cacheFile)
-      const cachedData: CachedSpotifyData = JSON.parse(fs.readFileSync(cacheFile, 'utf8'))
+      const cachedData: CachedSpotifyData = JSON.parse(raw)
 
       const isStale = Date.now() > (cachedData.expiresAt || Date.now())
 
@@ -115,6 +236,10 @@ export class SpotifyApiService {
       } else {
         console.info(`✅ Fresh cache hit for ${cacheKey}`)
       }
+
+      // M4: populate the in-mem layer so the next hit of the same key skips
+      // the SD round-trip entirely.
+      this.memCacheTouch(cacheKey, cachedData)
 
       return { data: cachedData.data, isStale }
     } catch (error) {
@@ -135,10 +260,39 @@ export class SpotifyApiService {
         expiresAt: Date.now() + expiryTime,
       }
 
-      fs.writeFileSync(cacheFile, JSON.stringify(cachedData, null, 2))
+      // M3: async write -- the previous writeFileSync blocked the event loop
+      // 5-30 ms per save on SD, which during a "fetch all albums of an artist"
+      // burst added up to seconds of stutter under high cache-miss load.
+      // M4: also populate the in-memory layer so the next read of the same
+      // key skips the SD round-trip.
+      await fsPromises.writeFile(cacheFile, JSON.stringify(cachedData, null, 2))
+      this.memCacheTouch(cacheKey, cachedData)
       console.info(`💾 Cached data for ${cacheKey}`)
+      this.pruneCacheIfNeeded()
     } catch (error) {
       console.error(`Error saving cache for ${cacheKey}:`, error)
+    }
+  }
+
+  // B6: hard upper bound on a single Spotify SDK call. The SDK's
+  // underlying fetch has no built-in timeout, and a TCP-level stall
+  // (no FIN, no RST, just silence from the upstream) would leave this
+  // promise pending forever. The pendingRequests entry in queueRequest
+  // never settles, so every subsequent same-key request also hangs —
+  // and the queue stops processing because isProcessingQueue stays
+  // true. 20s is generous: the slowest legitimate response we see is
+  // ~3-4s for an audiobook with hundreds of chapters.
+  private static readonly SPOTIFY_REQUEST_TIMEOUT_MS = 20000
+
+  private async withTimeout<T>(operation: () => Promise<T>, ms: number): Promise<T> {
+    let timer: NodeJS.Timeout | undefined
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`Spotify request timed out after ${ms}ms`)), ms)
+    })
+    try {
+      return await Promise.race([operation(), timeoutPromise])
+    } finally {
+      if (timer) clearTimeout(timer)
     }
   }
 
@@ -153,7 +307,7 @@ export class SpotifyApiService {
 
     try {
       this.lastRequestTime = Date.now()
-      return await operation()
+      return await this.withTimeout(operation, SpotifyApiService.SPOTIFY_REQUEST_TIMEOUT_MS)
     } catch (error: any) {
       if (error.statusCode === 429) {
         // Rate limited - wait and retry
@@ -361,10 +515,11 @@ export class SpotifyApiService {
     limit = 10,
     offset = 0,
   ): Promise<{ items: SpotifyApiAlbumSearchResult[]; total: number; limit: number; offset: number }> {
-    const cacheKey = `search_albums_${query}_${limit}_${offset}`
+    const { limit: l, offset: o } = this.normalizePagination(limit, offset)
+    const cacheKey = `search_albums_${query}_${l}_${o}`
 
     return this.executeWithCache(cacheKey, async () => {
-      const result = await this.spotifyApi.search(query, ['album'], 'DE', Math.min(limit, 10) as any, offset)
+      const result = await this.spotifyApi.search(query, ['album'], 'DE', Math.min(l, 10) as any, o)
       return {
         items:
           result.albums.items.map((item) => ({
@@ -375,8 +530,8 @@ export class SpotifyApiService {
             release_date: item.release_date,
           })) || [],
         total: result.albums.total || 0,
-        limit: result.albums.limit || limit,
-        offset: result.albums.offset || offset,
+        limit: result.albums.limit || l,
+        offset: result.albums.offset || o,
       }
     })
   }
@@ -387,15 +542,16 @@ export class SpotifyApiService {
     limit = 10,
     offset = 0,
   ): Promise<{ items: SpotifyApiArtistAlbumsResult[]; total: number; limit: number; offset: number }> {
-    const cacheKey = `artist_albums_${artistId}_${albumTypes}_${limit}_${offset}`
+    const { limit: l, offset: o } = this.normalizePagination(limit, offset)
+    const cacheKey = `artist_albums_${artistId}_${albumTypes}_${l}_${o}`
 
     return this.executeWithCache(cacheKey, async () => {
       const result = await this.spotifyApi.artists.albums(
         artistId,
         'album,single,compilation',
         'DE',
-        Math.min(limit, 10) as any,
-        offset,
+        Math.min(l, 10) as any,
+        o,
       )
       return {
         items: (result.items || []).map((item: any) => ({
@@ -406,8 +562,8 @@ export class SpotifyApiService {
           release_date: item.release_date,
         })),
         total: result.total || 0,
-        limit: result.limit || limit,
-        offset: result.offset || offset,
+        limit: result.limit || l,
+        offset: result.offset || o,
       }
     })
   }
@@ -417,10 +573,11 @@ export class SpotifyApiService {
     limit = 10,
     offset = 0,
   ): Promise<{ items: SpotifyApiShowEpisodesResult[]; total: number; limit: number; offset: number }> {
-    const cacheKey = `show_episodes_${showId}_${limit}_${offset}`
+    const { limit: l, offset: o } = this.normalizePagination(limit, offset)
+    const cacheKey = `show_episodes_${showId}_${l}_${o}`
 
     return this.executeWithCache(cacheKey, async () => {
-      const result = await this.spotifyApi.shows.episodes(showId, 'DE', Math.min(limit, 10) as any, offset)
+      const result = await this.spotifyApi.shows.episodes(showId, 'DE', Math.min(l, 10) as any, o)
       return {
         items: result.items.map((item) => ({
           id: item.id,
@@ -429,8 +586,8 @@ export class SpotifyApiService {
           release_date: item.release_date,
         })),
         total: result.total || 0,
-        limit: result.limit || limit,
-        offset: result.offset || offset,
+        limit: result.limit || l,
+        offset: result.offset || o,
       }
     })
   }
@@ -474,7 +631,8 @@ export class SpotifyApiService {
   }
 
   async getPlaylistTracks(playlistId: string, limit = 10, offset = 0, forceBackgroundRefresh = false): Promise<any[]> {
-    const cacheKey = `playlist_tracks_${playlistId}_${limit}_${offset}`
+    const { limit: l, offset: o } = this.normalizePagination(limit, offset)
+    const cacheKey = `playlist_tracks_${playlistId}_${l}_${o}`
 
     return this.executeWithCache(
       cacheKey,
@@ -483,8 +641,8 @@ export class SpotifyApiService {
           playlistId,
           'DE',
           'items(track(id,uri,name))',
-          Math.min(limit, 10) as any,
-          offset,
+          Math.min(l, 10) as any,
+          o,
         )
         return result.items
       },

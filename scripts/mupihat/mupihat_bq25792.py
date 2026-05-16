@@ -139,6 +139,13 @@ class bq25792:
                                  'th_warning': 7000,
                                  'th_shutdown': 6800 }
             self._exit_on_error = exit_on_error
+            # Phase-12: VBAT history for granular-percent smoothing (5%-step display).
+            # Voltage swings 30-100 mV under load (Bass-pumping, Display wake);
+            # without smoothing the 5%-display would visibly flap. 8 samples at
+            # 4s cycle = ~32s window, well below the timescale of real SoC
+            # change but long enough to absorb the load-sag transients.
+            self._vbat_history: list[int] = []
+            self._vbat_history_max = 8
             self.i2c_device = i2c_device
             self.i2c_addr = i2c_addr
             self.busWS_ms = busWS_ms
@@ -259,17 +266,114 @@ class bq25792:
 
         VBat = self.read_Vbat()
 
-        if VBat > v_100     : Bat_SOC = "100%"
-        elif VBat > v_75    : Bat_SOC = "75%"
-        elif VBat > v_50    : Bat_SOC = "50%"
-        elif VBat > v_25    : Bat_SOC = "25%"
-        elif VBat > v_0     : Bat_SOC = "0%"
+        # Phase-12 follow-up: changed > to >= so a pack sitting exactly at
+        # the v_100 threshold (8200 mV for a freshly-finished CV charge on
+        # the 2S3P pack) renders as "100%" / Battery100.svg instead of
+        # falling through to "75%" / Battery70.svg. Without this the icon
+        # bucket disagrees with the new granular Bat_Percent text at the
+        # exact-voll-Fall (icon: 3/4-strich, text: 100%) which looks broken.
+        if VBat >= v_100    : Bat_SOC = "100%"
+        elif VBat >= v_75   : Bat_SOC = "75%"
+        elif VBat >= v_50   : Bat_SOC = "50%"
+        elif VBat >= v_25   : Bat_SOC = "25%"
+        else                : Bat_SOC = "0%"
 
         if VBat > th_warning : Bat_Stat = 'OK'
         elif (VBat < th_warning) & (VBat > th_shutdown) : Bat_Stat = 'LOW'
         elif (VBat < th_shutdown) : Bat_Stat = 'SHUTDOWN'
 
         return Bat_SOC, Bat_Stat
+
+    def record_vbat_sample(self, vbat_mv: int):
+        '''
+        Phase-12: append a VBAT reading to the smoothing ring buffer.
+        Called from mupihat.py's periodic_json_dump after read_all_register().
+        Drops the oldest sample once the buffer is full so the average always
+        reflects the most-recent ~32s window.
+        '''
+        if vbat_mv is None or vbat_mv <= 0:
+            return  # ignore invalid reads (post-reopen, etc.)
+        self._vbat_history.append(int(vbat_mv))
+        if len(self._vbat_history) > self._vbat_history_max:
+            self._vbat_history.pop(0)
+
+    def smoothed_vbat(self) -> int:
+        '''
+        Return the moving-average VBAT over the recorded samples. Falls back
+        to the current single read if the buffer is empty (cold start).
+        '''
+        if not self._vbat_history:
+            return self.read_Vbat()
+        return sum(self._vbat_history) // len(self._vbat_history)
+
+    def battery_percent_granular(self):
+        '''
+        Phase-12: piecewise-linear interpolation between the 5 thresholds for
+        a 0-100 % SoC value, rounded to 5 % steps. Returns a tuple:
+            (percent: int, source: str)
+        where source is "charging" while CC/Taper charge is running (the
+        voltage-based estimate is systematically optimistic during active
+        charge because the pack is held above its rest curve), otherwise
+        "voltage". The frontend can show a ⚡ next to the number when
+        source == "charging" to signal the disclaimer.
+
+        Uses smoothed_vbat() to absorb sub-second voltage swings -- without
+        smoothing the 5%-display would flap visibly under audio load.
+
+        Why 5% steps and not 1%: the discharge curve in the plateau region
+        (~3.7-3.9 V/cell) gives ~2-3 mV per 1 %, smaller than the BQ25792
+        ADC's noise floor (~10 mV) and far smaller than load-sag transients
+        (30-60 mV under typical box load). 1 % steps would zap-zap-zap
+        constantly; 5 % steps map cleanly to ~90 mV per step which IS
+        resolvable above the noise.
+        '''
+        try:
+            v_100 = int(self.battery_conf['v_100'])
+            v_75  = int(self.battery_conf['v_75'])
+            v_50  = int(self.battery_conf['v_50'])
+            v_25  = int(self.battery_conf['v_25'])
+            v_0   = int(self.battery_conf['v_0'])
+        except (KeyError, ValueError, TypeError):
+            return (0, "voltage")  # config not loaded yet — safe default
+
+        # USB-C mode profile has v_*=1 (sentinel for "no battery"). Don't
+        # report any percent in that case — the icon will fall back to its
+        # plug-symbol mode.
+        if v_100 <= 10:
+            return (0, "voltage")
+
+        v = self.smoothed_vbat()
+
+        # Piecewise linear: each segment maps [v_lower, v_upper] to a
+        # 25-percentage-point range linearly.
+        if v >= v_100:
+            pct = 100.0
+        elif v >= v_75:
+            pct = 75.0 + 25.0 * (v - v_75) / max(1, v_100 - v_75)
+        elif v >= v_50:
+            pct = 50.0 + 25.0 * (v - v_50) / max(1, v_75 - v_50)
+        elif v >= v_25:
+            pct = 25.0 + 25.0 * (v - v_25) / max(1, v_50 - v_25)
+        elif v >= v_0:
+            pct = 0.0  + 25.0 * (v - v_0)  / max(1, v_25 - v_0)
+        else:
+            pct = 0.0
+
+        # Round to 5 % steps -- see docstring above for why not 1 %.
+        rounded = int(round(pct / 5.0) * 5)
+        rounded = max(0, min(100, rounded))
+
+        # During active charging the voltage-based estimate is too optimistic
+        # (pack held above rest curve by CC current). Flag the source so the
+        # frontend can render a charging indicator (⚡) instead of treating
+        # the number as a settled SoC reading.
+        try:
+            _, chg_str = self.read_ChargerStatus()
+            source = "charging" if 'Charge' in chg_str and 'Done' not in chg_str else "voltage"
+        except Exception:
+            source = "voltage"
+
+        return (rounded, source)
 
     # BQ25795 Register
     class BQ25795_REGISTER:
@@ -330,7 +434,7 @@ class bq25792:
             self.VREG = self._value * 10
         def set (self, value):
             super().set(value)
-            self.VRE0G = self._value * 10
+            self.VREG = self._value * 10
 
     class REG03_Charge_Current_Limit(BQ25795_REGISTER):
         #Charge Current Limit During POR, the device reads the resistance tie to PROG pin, to identify the default battery cell count and determine the default power-on battery charging current: 1s and 2s: 3s and 4s: 1A Type : RW Range : 50mA-5000mA Fixed Offset : 0mA Bit Step Size : 10mA
@@ -5724,6 +5828,7 @@ class bq25792:
             Input Current Limit obtained from ICO or ILIM_HIZ pin setting
         '''
         bat_SOC, bat_Stat = self.battery_soc()
+        bat_Percent, bat_PercentSource = self.battery_percent_granular()
         return {
             'Charger_Status': self.read_ChargerStatus(),
             'Vbat': self.read_Vbat(),
@@ -5735,7 +5840,12 @@ class bq25792:
             'Bat_SOC' : bat_SOC,
             'Bat_Stat' : bat_Stat,
             'Bat_Type' : self.battery_conf['battery_type'],
-            'Input_Current_Limit' : self.read_InputCurrentLimit()
+            'Input_Current_Limit' : self.read_InputCurrentLimit(),
+            # Phase-12: granular 5%-step percent + charging-state hint for
+            # the frontend. Bat_SOC stays for backwards-compat (Telegram bot
+            # messages, legacy Admin-UI bits).
+            'Bat_Percent' : bat_Percent,
+            'Bat_PercentSource' : bat_PercentSource,
         }
     
     def to_json_registers(self):

@@ -1,18 +1,19 @@
 import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
 import { firstValueFrom, from, iif, interval, Observable, of, Subject } from 'rxjs'
-import { map, mergeAll, mergeMap, shareReplay, switchMap, toArray } from 'rxjs/operators'
+import { catchError, map, mergeAll, mergeMap, shareReplay, switchMap, toArray } from 'rxjs/operators'
 import { environment } from '../environments/environment'
 import type { AlbumStop } from './albumstop'
 import type { Artist } from './artist'
 import type { CurrentMPlayer } from './current.mplayer'
 import type { CurrentSpotify } from './current.spotify'
-import type { CategoryType, Media, MediaInfoCache } from './media'
+import { isResumeEntry, type CategoryType, type Media, type MediaInfoCache } from './media'
 import { Mupihat } from './mupihat'
 import type { Network } from './network'
 import { NetworkService } from './network.service'
 import { RssFeedService } from './rssfeed.service'
 import { SpotifyService } from './spotify.service'
+import type { ExtraDataMedia } from './utils'
 import type { WLAN } from './wlan'
 
 @Injectable({
@@ -158,26 +159,60 @@ export class MediaService {
           }),
           shareReplay({ bufferSize: 1, refCount: true }),
         )
-      : // Remote: HTTP polling
+      : // Remote: HTTP polling.
+        // B11: a single HTTP failure (network blip, backend restart)
+        // would error the source observable, and shareReplay would
+        // forever replay that error to subscribers — UI stops getting
+        // state updates until the page is reloaded. Wrap the inner
+        // get in catchError(of({})) so transient failures show as
+        // "no current state" without tearing down the polling stream.
         interval(10000).pipe(
           switchMap(
-            (): Observable<CurrentSpotify> => this.http.get<CurrentSpotify>(`${this.getPlayerBackendUrl()}/state`),
+            (): Observable<CurrentSpotify> =>
+              this.http
+                .get<CurrentSpotify>(`${this.getPlayerBackendUrl()}/state`)
+                .pipe(catchError(() => of({} as CurrentSpotify))),
           ),
           shareReplay({ bufferSize: 1, refCount: true }),
         )
+    // Same B11 pattern for local$ / albumStop$ / mupihat$ — all polling
+    // streams that should swallow transient errors instead of becoming
+    // permanently broken.
     this.local$ = interval(1000).pipe(
-      switchMap((): Observable<CurrentMPlayer> => this.http.get<CurrentMPlayer>(`${this.getPlayerBackendUrl()}/local`)),
+      switchMap(
+        (): Observable<CurrentMPlayer> =>
+          this.http
+            .get<CurrentMPlayer>(`${this.getPlayerBackendUrl()}/local`)
+            .pipe(catchError(() => of({} as CurrentMPlayer))),
+      ),
       shareReplay({ bufferSize: 1, refCount: true }),
     )
 
     this.albumStop$ = interval(1000).pipe(
-      switchMap((): Observable<AlbumStop> => this.http.get<AlbumStop>(`${this.getApiBackendUrl()}/albumstop`)),
+      switchMap(
+        (): Observable<AlbumStop> =>
+          this.http
+            .get<AlbumStop>(`${this.getApiBackendUrl()}/albumstop`)
+            .pipe(catchError(() => of({} as AlbumStop))),
+      ),
       shareReplay({ bufferSize: 1, refCount: false }),
     )
     // Every 2 seconds should be enough for timely charging update.
+    // M2: refCount=true so the polling stops when no UI is subscribed.
+    // Previously the stream kept hitting /api/mupihat every 2s for the
+    // entire app lifetime even when the mupihat-icon wasn't rendered
+    // (~1800 wasted req/h). The only consumer is mupihat-icon.component,
+    // which switchMaps in only when hat_active === true — so refCount
+    // ensures the upstream interval idles when that icon is unmounted
+    // (any page without the toolbar/footer rendering it).
     this.mupihat$ = interval(2000).pipe(
-      switchMap((): Observable<Mupihat> => this.http.get<Mupihat>(`${this.getApiBackendUrl()}/mupihat`)),
-      shareReplay({ bufferSize: 1, refCount: false }),
+      switchMap(
+        (): Observable<Mupihat> =>
+          this.http
+            .get<Mupihat>(`${this.getApiBackendUrl()}/mupihat`)
+            .pipe(catchError(() => of({} as Mupihat))),
+      ),
+      shareReplay({ bufferSize: 1, refCount: true }),
     )
 
     this.initTelegramNotifications()
@@ -283,18 +318,6 @@ export class MediaService {
     })
   }
 
-  editRawResumeAtIndex(index: number, data: Media) {
-    const url = `${this.getApiBackendUrl()}/editresume`
-    const body = {
-      index,
-      data,
-    }
-
-    this.http.post(url, body, { responseType: 'text' }).subscribe((response) => {
-      this.response = response
-    })
-  }
-
   addRawResume(media: Media) {
     const url = `${this.getApiBackendUrl()}/addresume`
 
@@ -314,6 +337,30 @@ export class MediaService {
 
   // Collect albums from a given artist in the current category
   public fetchMediaFromArtist(artist: Artist, category: CategoryType): Observable<Media[]> {
+    // Fast path for Spotify artists: we already know the artistid from the
+    // navigation state, so call getMediaByArtistID directly. Previously this
+    // ran fetchMedia(category) which loads EVERY item in the category — for
+    // a library with 8 spotify-artists + 7 spotify-albums + 143 library
+    // entries the page fired ~55 backend calls just to filter Benjamin
+    // Blümchen out at the end. Direct call is 6 backend calls (with QW1+QW2
+    // pagination) and no other items contend for the event loop.
+    const cm = artist.coverMedia
+    if (cm.type === 'spotify' && cm.artistid && cm.artistid.length > 0) {
+      const extra: ExtraDataMedia = {
+        artistcover: cm.artistcover,
+        shuffle: cm.shuffle,
+        aPartOfAll: cm.aPartOfAll,
+        aPartOfAllMin: cm.aPartOfAllMin,
+        aPartOfAllMax: cm.aPartOfAllMax,
+        sorting: cm.sorting,
+        lastPlayedAt: cm.lastPlayedAt,
+      }
+      return this.spotifyService.getMediaByArtistID(cm.artistid, category, 0, extra)
+    }
+    // Library/local entries fall back to the original load-then-filter path
+    // because multiple data.json rows may share the same artist name (each
+    // album its own row), and there's no single API call that retrieves
+    // them as a group.
     return this.fetchMedia(category).pipe(
       map((media: Media[]) => {
         return media.filter((currentMedia) => currentMedia.artist === artist.name)
@@ -411,9 +458,18 @@ export class MediaService {
 
   public fetchActiveResumeData(): Observable<Media[]> {
     // Category is irrelevant if 'resume' is set to true.
+    // Sort by lastPlayedAt DESC so "most recently played" is at position 1.
+    // Previously the page used a blind `.reverse()` of the array, which
+    // matches the file insertion order — but addresume updates existing
+    // entries in place (preserving their position) so a freshly-played
+    // album never moved to the top until it was a *new* entry. Items
+    // without a timestamp (legacy entries pre-migration) sort to 0 and
+    // land at the bottom; the backend back-fills synthetic stamps
+    // preserving original order on the next addresume so this is
+    // self-healing.
     return this.updateMedia(`${this.getApiBackendUrl()}/activeresume`, true, 'resume').pipe(
       map((media: Media[]) => {
-        return media.reverse()
+        return [...media].sort((a, b) => (b.lastPlayedAt ?? 0) - (a.lastPlayedAt ?? 0))
       }),
     )
   }
@@ -424,18 +480,25 @@ export class MediaService {
 
   // Get the media data for the current category from the server
   private updateMedia(url: string, resume: boolean, category: CategoryType): Observable<Media[]> {
-    // Custom rxjs pipe to override artist.
+    // Custom rxjs pipe applied to every iif-branch's service-call output.
+    // Carries the original item's user-relevant fields onto the Media that
+    // the spotify/rss/library service builds out of upstream API data:
+    // - artist: optional user-defined override
+    // - lastPlayedAt: ResumePage sorts DESC by this; spotify.service's
+    //   getMediaByID etc. don't accept it as a param, so without this carry
+    //   the field gets dropped on every resume entry that goes through a
+    //   service call. fetchActiveResumeData's sort then sees zeros and the
+    //   user's most-recently-played item ends up at a random swiper position.
+    // - isResume: marks resume entries; same loss-on-service-call risk.
     const overwriteArtist =
       (item: Media) =>
       (source$: Observable<Media[]>): Observable<Media[]> => {
         return source$.pipe(
-          // If the user entered an user-defined artist name in addition to a query,
-          // overwrite orignal artist from spotify.
           map((items) => {
-            if (item.artist?.length > 0) {
-              for (const currentItem of items) {
-                currentItem.artist = item.artist
-              }
+            for (const currentItem of items) {
+              if (item.artist?.length > 0) currentItem.artist = item.artist
+              if (typeof item.lastPlayedAt === 'number') currentItem.lastPlayedAt = item.lastPlayedAt
+              if (item.isResume === true) currentItem.isResume = true
             }
             return items
           }),
@@ -472,13 +535,13 @@ export class MediaService {
                 .pipe(overwriteArtist(item)),
               iif(
                 // Get media by show
-                () => !!(item.showid && item.showid.length > 0 && item.category !== 'resume'),
+                () => !!(item.showid && item.showid.length > 0 && !isResumeEntry(item)),
                 this.spotifyService
                   .getMediaByShowID(item.showid, item.category, item.index, item)
                   .pipe(overwriteArtist(item)),
                 iif(
                   // Get media by show supporting resume
-                  () => !!(item.showid && item.showid.length > 0 && item.category === 'resume'),
+                  () => !!(item.showid && item.showid.length > 0 && isResumeEntry(item)),
                   this.spotifyService
                     .getMediaByEpisode(
                       item.showid,
@@ -513,8 +576,19 @@ export class MediaService {
                         overwriteArtist(item),
                       ),
                     iif(
-                      // Get media by rss feed
-                      () => !!(item.type === 'rss' && item.id.length > 0 && item.category !== 'resume'),
+                      // Get media by rss feed.
+                      // MED-10 attempted to enrich RSS resume entries with
+                      // fresh feed data, but the `id` of a RSS resume entry
+                      // is the *episode's MP3 URL*, not the channel feed
+                      // URL — the enrichment fetch streamed the MP3 audio
+                      // (multi-MB) into the rss-parser path before MED-2's
+                      // size-cap aborted with 413. Six RSS resume entries
+                      // = ~24 s freeze on the resume page. Reinstate the
+                      // resume-skip gate: every persisted field needed for
+                      // the resume tile (title, cover, artistcover, release
+                      // date, duration, progress) is already on disk; no
+                      // network round-trip needed for resume rendering.
+                      () => !!(item.type === 'rss' && item.id.length > 0 && !isResumeEntry(item)),
                       this.rssFeedService
                         .getRssFeed(item.id, item.category, item.index, item)
                         .pipe(overwriteArtist(item)),
@@ -699,7 +773,13 @@ export class MediaService {
           mediaType,
         }
 
-        return mediaInfo
+        // MED-7: cache-hit branch (line 645+) returns this.mediaInfoCache
+        // which has currentId + mediaType, but the previous miss-branch
+        // returned the raw mediaInfo without those fields. Callers that
+        // checked `result.mediaType` saw different shapes depending on
+        // whether the entry was already cached. Return the cache object
+        // we just wrote so the shape is consistent across hits and misses.
+        return this.mediaInfoCache
       }
     } catch (error) {
       console.warn('Failed to get media info for URI:', contextUri, error)

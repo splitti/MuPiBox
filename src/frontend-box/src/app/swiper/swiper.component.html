@@ -1,11 +1,36 @@
-<swiper-container #swiper slides-per-view="3" scrollbar="true" scrollbar-hide="true" free-mode="false" css-mode="true">
-    @for (currentData of shownData(); track currentData) {
+<!-- Tuning for the kid-facing UI:
+     - speed=900ms (default 300): slow, fluid slide transitions match
+       a child's pace and read as "smooth" rather than "snappy".
+     - touch-ratio=0.5 (default 1.0): finger-distance × 0.5 → slide-
+       distance. A flick that previously over-shot 15 slides now
+       moves the swiper roughly half as far. User can still cover
+       lots of slides with multiple wipes, but gets fewer accidental
+       jumps.
+     - resistance + resistance-ratio: rubber-band on boundaries so a
+       wipe past the first/last slide doesn't snap to 0/end.
+     - slides-per-group=1: always one group per gesture. -->
+<swiper-container #swiper slides-per-view="3" scrollbar="true" scrollbar-hide="true" free-mode="false" css-mode="true"
+    speed="900" touch-ratio="0.5" slides-per-group="1"
+    resistance="true" resistance-ratio="0.85"
+    (slidechange)="onSlideChange($event)">
+    @for (currentData of shownData(); track currentData.name) {
       <swiper-slide>
         <ion-grid>
           <ion-row class="img-row">
             <ion-col size="12">
               <ion-card [class.circle-card]="roundImages()" (click)="this.elementClicked.emit(currentData)">
-                <img draggable="false" ondragstart="return false;" src="{{currentData.imgSrc | async}}">
+                <!-- loading="lazy" + decoding="async": only the ~3 visible
+                     slides fetch their cover up-front. Without these, an
+                     artist with 276 albums (Benjamin Blümchen) made the
+                     browser try to load 276 Spotify-CDN images at once;
+                     it serialises to ~6 per domain so the user stared at
+                     a blank swiper for several seconds while images
+                     trickled in. fetchpriority="low" tells the browser
+                     these aren't render-critical so they don't fight
+                     with the loading-spinner / page-chrome paints. -->
+                <img draggable="false" ondragstart="return false;"
+                     loading="lazy" decoding="async" fetchpriority="low"
+                     src="{{currentData.imgSrc | async}}">
               </ion-card>
             </ion-col>
           </ion-row>

@@ -35,13 +35,19 @@ import logging
 import argparse
 from datetime import datetime
 from flask import Flask, render_template, jsonify
-from threading import Thread
+from threading import Thread, Lock
 from mupihat_bq25792 import bq25792
 
 app = Flask(__name__)
 
 # Global variables
 hat = None
+# AR5-5: Flask is threaded by default — without serialising access to the
+# shared BQ25792 driver, the periodic_json_dump background thread and the
+# Flask request workers can interleave their I2C transactions on the same
+# smbus2.SMBus handle, producing "Remote I/O error" (errno 121) on the
+# Pi's i2c bus. All hat.* calls below run under this lock.
+i2c_lock = Lock()
 log_flag = False
 json_flag = False
 json_file = "/tmp/mupihat.json"
@@ -84,7 +90,9 @@ def log_register_values():
 def index():
     """Flask route to display register values."""
     try:
-        return render_template("index.html", registers=hat.to_json_registers())
+        with i2c_lock:
+            registers = hat.to_json_registers()
+        return render_template("index.html", registers=registers)
     except Exception as e:
         return f"Error reading registers: {str(e)}", 500
 
@@ -92,8 +100,10 @@ def index():
 @app.route("/api/registers")
 def api_registers():
     """Flask API endpoint to return register values as JSON."""
-    try:     
-        return jsonify(hat.to_json_registers())
+    try:
+        with i2c_lock:
+            registers = hat.to_json_registers()
+        return jsonify(registers)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -102,19 +112,36 @@ def periodic_json_dump():
     """Periodically writes the register values to a JSON file."""
     global json_flag, json_file
     while True:
-        hat.watchdog_reset()
-        time.sleep(0.1)  # Allow time for the watchdog reset
-        hat.read_all_register()
-        time.sleep(1)  # Allow time for the registers to be updated
-        if json_flag:
+        # AR5-5: serialise I2C work via i2c_lock so Flask request workers
+        # don't interleave bus transactions with this thread. Sleeps stay
+        # OUTSIDE the lock so request workers can fit between phases.
+        snapshot = None
+        try:
+            with i2c_lock:
+                hat.watchdog_reset()
+            time.sleep(0.1)  # Allow time for the watchdog reset
+            with i2c_lock:
+                hat.read_all_register()
+                # Phase-12: append the current VBAT to the smoothing ring so
+                # battery_percent_granular() sees a moving-average of the
+                # last ~32s instead of a single sample. Cheap, done inside
+                # the lock so we use the value the bulk-read just refreshed.
+                hat.record_vbat_sample(hat.read_Vbat())
+            time.sleep(1)  # Allow time for the registers to be updated
+            with i2c_lock:
+                if json_flag:
+                    snapshot = hat.to_json()
+                if log_flag:
+                    log_register_values()
+        except Exception as e:
+            logging.error("periodic_json_dump I2C cycle failed: %s", str(e))
+        if snapshot is not None:
             try:
                 with open(json_file, "w") as outfile:
-                    json.dump(hat.to_json(), outfile, indent=4)
+                    json.dump(snapshot, outfile, indent=4)
             except Exception as e:
                 logging.error("Failed to write JSON dump: %s", str(e))
-        if log_flag:
-            log_register_values()
-        time.sleep(3.9)  # Run every 4 seconds
+        time.sleep(3.9)  # Run every ~4 seconds
 
 
 def parse_arguments():
@@ -172,9 +199,16 @@ def main():
         json_thread = Thread(target=periodic_json_dump, daemon=True)
         json_thread.start()
 
-    # Flask web server
+    # AR5-20: bind the debug Flask server to loopback only. No consumer on
+    # the box hits port 5000 — all consumers (frontend, admin-ui, server.ts,
+    # telegram_*.py, mqtt.py, .bashrc, fan_control.py) read /tmp/mupihat.json
+    # directly. Port 5000 is the BQ25792 register inspector at "/" and
+    # "/api/registers". With 0.0.0.0 the raw charger registers were
+    # unauthenticated for every client on the LAN; harmless on a home
+    # WLAN, problematic on guest/school networks. For remote debugging
+    # use `ssh -L 5000:127.0.0.1:5000 mupibox`.
     try:
-        app.run(host="0.0.0.0", port=5000, debug=False)
+        app.run(host="127.0.0.1", port=5000, debug=False)
     except KeyboardInterrupt:
         print("MuPiHAT stopped by Keyboard Interrupt")
         sys.exit(0)

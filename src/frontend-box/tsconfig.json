@@ -13,6 +13,7 @@
     "target": "ES2022",
     "lib": ["es2020", "dom"],
     "useDefineForClassFields": false,
+    "noImplicitAny": true,
     "paths": {
       "@backend-api/*": ["../backend-api/src/models/*"]
     }

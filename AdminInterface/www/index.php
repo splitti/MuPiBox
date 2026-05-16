@@ -1,6 +1,42 @@
 	<?php
 			include ('includes/header.php');
-			$onlinejson = file_get_contents('https://raw.githubusercontent.com/splitti/MuPiBox/main/version.json');
+
+			// H3: index.php fired three blocking external HTTPS-requests on
+			// every render — version.json + news.txt + api.github.com. With
+			// flaky internet the page hangs 2-5s; api.github.com is also rate-
+			// limited at 60 req/h per IP. Cache to /tmp with a 60-min TTL.
+			// Use 5xx-style suppression so a transient outage doesn't break
+			// the page; we keep serving the last good response.
+			function mupibox_cached_url(string $cacheKey, int $ttlSeconds, callable $fetch): string {
+				$cacheFile = '/tmp/.mupibox.indexcache.' . $cacheKey;
+				if (is_file($cacheFile) && (time() - filemtime($cacheFile)) < $ttlSeconds) {
+					$cached = @file_get_contents($cacheFile);
+					if ($cached !== false) return $cached;
+				}
+				try {
+					$value = (string)$fetch();
+					if ($value !== '') {
+						@file_put_contents($cacheFile, $value, LOCK_EX);
+						return $value;
+					}
+				} catch (Throwable $e) {
+					// fall through
+				}
+				// Fetch failed — serve last cached value if we have one, even
+				// if expired. Beats a blank page or PHP warnings on json_decode.
+				if (is_file($cacheFile)) {
+					$stale = @file_get_contents($cacheFile);
+					if ($stale !== false) return $stale;
+				}
+				return '';
+			}
+
+			$onlinejson = mupibox_cached_url('version_json', 3600, function () {
+				$ctx = stream_context_create(['http' => ['timeout' => 5]]);
+				return @file_get_contents(
+					'https://raw.githubusercontent.com/splitti/MuPiBox/main/version.json',
+					false, $ctx);
+			});
 			$dataonline = json_decode($onlinejson, true);
 
 			exec("sudo rm /var/www/images/screenshot.png /val/www/images/temp.png /var/www/images/cpuload.png");
@@ -78,8 +114,14 @@
 							<tr>
 									<td>Development</td>
 									<td><?php
-											exec("echo $(sudo curl -s 'https://api.github.com/repos/splitti/MuPiBox' | jq -r '.pushed_at' | cut -d'T' -f1)", $devversion, $rc);
-											print "DEV " . $devversion[0];
+											// H3: cache pushed_at to avoid hitting api.github.com on every render
+											// (60 req/h rate limit). 60-min TTL is plenty for a "DEV YYYY-MM-DD" tag.
+											$devdate = mupibox_cached_url('github_pushed_at', 3600, function () {
+												$out = [];
+												exec("sudo curl -s --max-time 5 'https://api.github.com/repos/splitti/MuPiBox' | jq -r '.pushed_at' | cut -d'T' -f1", $out);
+												return $out[0] ?? '';
+											});
+											print "DEV " . htmlspecialchars($devdate, ENT_QUOTES, 'UTF-8');
 										?>
 									</td>
 									<td><?php print $dataonline["release"]["dev"][count($dataonline["release"]["dev"])-1]["releaseinfo"]; ?></td>
@@ -87,7 +129,13 @@
 							</tr>
 						</table></p>
 				<?php
-					$news = file_get_contents("https://raw.githubusercontent.com/splitti/MuPiBox/main/news.txt");
+					// H3: cache news.txt for 60min (analog version.json above)
+					$news = mupibox_cached_url('news_txt', 3600, function () {
+						$ctx = stream_context_create(['http' => ['timeout' => 5]]);
+						return @file_get_contents(
+							'https://raw.githubusercontent.com/splitti/MuPiBox/main/news.txt',
+							false, $ctx);
+					});
 					print "<p><h2>MuPiBox-News</h2>".$news."</p>"; ?>
 				</li>
 			</ul>

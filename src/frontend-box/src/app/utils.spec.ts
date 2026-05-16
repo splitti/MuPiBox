@@ -1,6 +1,6 @@
 import { createMedia } from './fixtures'
 import { MediaSorting } from './media'
-import { Utils } from './utils'
+import { type ExtraDataMedia, Utils } from './utils'
 
 describe('Utils', () => {
   it('should copy data if provided', () => {
@@ -37,11 +37,12 @@ describe('Utils', () => {
       aPartOfAllMax: 10,
       sorting: MediaSorting.AlphabeticalAscending,
     })
-    const source = {
+    // biome-ignore lint/suspicious/noExplicitAny: deliberately passing null/undefined values to exercise copyExtraMediaData's skip-on-nullish behaviour, which the strict ExtraDataMedia signature forbids
+    const source: ExtraDataMedia = {
       artistcover: 'b',
-      shuffle: null,
+      shuffle: null as any,
       aPartOfAll: undefined,
-      aPartOfAllMin: null,
+      aPartOfAllMin: null as any,
       aPartOfAllMax: undefined,
       sorting: MediaSorting.ReleaseDateAscending,
     }

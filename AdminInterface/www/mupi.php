@@ -554,19 +554,14 @@ if( $_POST['fan_control'] )
 		}  
  if( $change == 1 )
   {
-   $json_object = json_encode($data);
-   $save_rc = file_put_contents('/tmp/.mupiboxconfig.json', $json_object);
    exec("sudo rm -R " . $data["chromium"]["cachepath"]);
-   exec("sudo chmod 755 /etc/mupibox/mupiboxconfig.json");
-   exec("sudo mv /tmp/.mupiboxconfig.json /etc/mupibox/mupiboxconfig.json");
+   save_mupiboxconfig($data);
    exec("sudo /usr/local/bin/mupibox/./setting_update.sh");
    exec("sudo -i -u dietpi /usr/local/bin/mupibox/./restart_kiosk.sh");
   }
  if( $change == 2 )
   {
-   $json_object = json_encode($data);
-   $save_rc = file_put_contents('/tmp/.mupiboxconfig.json', $json_object);
-   exec("sudo mv /tmp/.mupiboxconfig.json /etc/mupibox/mupiboxconfig.json");
+   save_mupiboxconfig($data);
    exec("sudo /usr/local/bin/mupibox/./setting_update.sh");
   }
   

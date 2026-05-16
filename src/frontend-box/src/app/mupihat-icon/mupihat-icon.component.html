@@ -1,22 +1,51 @@
 @if (hat_active && mupihat() !== undefined) {
   @if (mupihat().BatteryConnected === 1) {
     @let svgBaseName = mupihat().IBus > 0 ? 'Charging' : 'Battery';
-    @switch (mupihat().Bat_SOC) {
-      @case ('100%') {
-        <ion-icon src="../../assets/icon/MuPiHAT/{{svgBaseName}}100.svg" size="large"></ion-icon>
+    <!-- Phase-12 follow-up: drive the icon bucket from Bat_Percent (5%-step
+         granular) instead of the legacy Bat_SOC string. Without this Bat_SOC
+         and Bat_Percent disagreed at threshold edges (e.g. VBat=8180,
+         Bat_SOC="75%", Bat_Percent=100 -> "100%" text next to a "75%" icon).
+         Now both come from the same source and stay consistent.
+
+         Fallback to Bat_SOC if Bat_Percent isn't present (older mupihat.py
+         backend without Phase-12 patch). -->
+    @let pct = mupihat().Bat_Percent;
+    <span class="mupihat-icon-row">
+      @if (pct !== undefined && pct !== null) {
+        @if (pct >= 95) {
+          <ion-icon src="../../assets/icon/MuPiHAT/{{svgBaseName}}100.svg" size="large"></ion-icon>
+        } @else if (pct >= 70) {
+          <ion-icon src="../../assets/icon/MuPiHAT/{{svgBaseName}}70.svg" size="large"></ion-icon>
+        } @else if (pct >= 45) {
+          <ion-icon src="../../assets/icon/MuPiHAT/{{svgBaseName}}50.svg" size="large"></ion-icon>
+        } @else if (pct >= 20) {
+          <ion-icon src="../../assets/icon/MuPiHAT/{{svgBaseName}}20.svg" size="large"></ion-icon>
+        } @else {
+          <ion-icon src="../../assets/icon/MuPiHAT/{{svgBaseName}}0.svg" size="large"></ion-icon>
+        }
+        <span class="bat-percent">
+          @if (mupihat().Bat_PercentSource === 'charging') {⚡}{{ pct }}%
+        </span>
+      } @else {
+        <!-- Backend ohne Phase-12: nur 4-Bucket-Icon wie vorher -->
+        @switch (mupihat().Bat_SOC) {
+          @case ('100%') {
+            <ion-icon src="../../assets/icon/MuPiHAT/{{svgBaseName}}100.svg" size="large"></ion-icon>
+          }
+          @case ('75%') {
+            <ion-icon src="../../assets/icon/MuPiHAT/{{svgBaseName}}70.svg" size="large"></ion-icon>
+          }
+          @case ('50%') {
+            <ion-icon src="../../assets/icon/MuPiHAT/{{svgBaseName}}50.svg" size="large"></ion-icon>
+          }
+          @case ('25%') {
+            <ion-icon src="../../assets/icon/MuPiHAT/{{svgBaseName}}20.svg" size="large"></ion-icon>
+          }
+          @default {
+            <ion-icon src="../../assets/icon/MuPiHAT/{{svgBaseName}}0.svg" size="large"></ion-icon>
+          }
+        }
       }
-      @case ('75%') {
-        <ion-icon src="../../assets/icon/MuPiHAT/{{svgBaseName}}70.svg" size="large"></ion-icon>
-      }
-      @case ('50%') {
-        <ion-icon src="../../assets/icon/MuPiHAT/{{svgBaseName}}50.svg" size="large"></ion-icon>
-      }
-      @case ('25%') {
-        <ion-icon src="../../assets/icon/MuPiHAT/{{svgBaseName}}20.svg" size="large"></ion-icon>
-      }
-      @default {
-        <ion-icon src="../../assets/icon/MuPiHAT/{{svgBaseName}}0.svg" size="large"></ion-icon>
-      }
-    }
+    </span>
   }
 }

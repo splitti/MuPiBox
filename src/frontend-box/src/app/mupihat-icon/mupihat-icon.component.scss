@@ -1,0 +1,38 @@
+// Phase-12 follow-up: stack icon over percent text instead of side-by-side.
+// Reason: the home.page toolbar slot is a fixed 70x70 px ion-button that
+// already holds the cloud-on/cloud-off internet icon + this component. A
+// horizontal "<icon> <text>" expansion of mupihat-icon pushed the cloud
+// icon off the 70 px width. Vertical stacking keeps the whole mupihat
+// component inside its old horizontal footprint while still showing the
+// granular percent below the bucket icon.
+//
+// :host is set to inline-flex too so the mupihat-icon component element
+// itself participates in its parent's flex layout (e.g. the ion-button
+// children area) as a single inline cell, no extra wrapping needed at
+// the call sites.
+:host {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.mupihat-icon-row {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  line-height: 1;
+}
+
+.bat-percent {
+  font-size: 0.55rem;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  // Tiny -1px margin pulls the percent label snugly under the icon's
+  // base — without it the line-height of the ion-icon's baseline plus
+  // the percent's own line-height left a visible gap.
+  margin-top: -2px;
+}

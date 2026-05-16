@@ -1,46 +1,113 @@
 <?php
 
+	// B8: writes go through save_mupiboxconfig() (loaded by header.php) for
+	// flock-serialised concurrent-save safety. Note that write_json() is
+	// CALLED below the header include, so the helper is loaded by then —
+	// the definition itself is parsed at file-load time and only executed
+	// when invoked.
 	function write_json($data)
 		{
-		$json_object = json_encode($data);
-		$save_rc = file_put_contents('/tmp/.mupiboxconfig.json', $json_object);
-		exec("sudo chmod 755 /etc/mupibox/mupiboxconfig.json");
-		exec("sudo mv /tmp/.mupiboxconfig.json /etc/mupibox/mupiboxconfig.json");
+		save_mupiboxconfig($data);
 		exec("sudo /usr/local/bin/mupibox/./setting_update.sh");
 		exec("sudo -i -u dietpi /usr/local/bin/mupibox/./restart_kiosk.sh");
 		}
 
+	// Narrow header-only auth gate for the submitfile upload handler below.
+	// The handler lives ABOVE `include 'includes/header.php'`, so without
+	// this an unauthenticated LAN POST can drop a crafted zip and have it
+	// extracted to / via `unzip -d /`. All other POST handlers in this
+	// file run AFTER the include — header.php's own auth gate already
+	// blocks them on unauth, so we explicitly do NOT block other POSTs
+	// here. In particular the login POST (password=...) must flow through
+	// to header.php so the user can authenticate in the first place.
+	session_start();
+	// M5: route the pre-header auth gate through the shared reader so
+	// header.php's later read hits the same static cache rather than
+	// doing a second file_get_contents + json_decode round.
+	require_once __DIR__ . '/includes/save_config.php';
+	$__authCfg  = mupibox_config();
+	$__loginRequired = !empty($__authCfg['interfacelogin']['state']);
+	$__loggedIn      = isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true;
+	if ($__loginRequired && !$__loggedIn && !empty($_POST['submitfile'])) {
+		http_response_code(403);
+		exit('Authentication required');
+	}
+
 	$shutdown=0;
 	$reboot=0;
 
-	if( $_POST['submitfile'] )
+	if( !empty($_POST['submitfile']) )
 		{
 		$target_dir = "/tmp/";
-		$target_file = $target_dir . basename($_FILES["fileToUpload"]["name"]);
+		// Strip any directory components from the user-controlled filename.
+		// The filename is later interpolated into a shell command, so even
+		// after escapeshellarg() we want the basename so the file lands in
+		// /tmp/ and not somewhere else via a relative path inside the name.
+		$rawName = basename($_FILES["fileToUpload"]["name"]);
+		// Conservative whitelist on filename: letters, digits, dot, dash,
+		// underscore. Anything else (spaces, quotes, semicolons, …) is
+		// rejected outright. Backup zips produced by backup.php/fullbackup.php
+		// match this pattern.
 		$uploadOk = 1;
-		$FileType = strtolower(pathinfo($target_file,PATHINFO_EXTENSION));
-		// Allow zip file format
-		if($FileType != "zip" )
-			{
+		if (!preg_match('/^[A-Za-z0-9._-]+\.zip$/', $rawName)) {
 			$uploadOk = 0;
-			}
+		}
+		$target_file = $target_dir . $rawName;
 		// Check if $uploadOk is set to 0 by an error
 		if ($uploadOk == 0)
 			{
-			$CHANGE_TXT=$CHANGE_TXT."<li>WARNING: Please upload a .zip-File!</li>";
+			$CHANGE_TXT=$CHANGE_TXT."<li>WARNING: Please upload a .zip-File! (only A-Z, 0-9, ._- allowed in filename)</li>";
 			$change=0;
 			}
 		else
 			{
 			if (move_uploaded_file($_FILES["fileToUpload"]["tmp_name"], $target_file))
 				{
-				$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
-				$data = json_decode($string, true);
+				// ZIP-Slip / arbitrary-path defence. backup.php and
+				// fullbackup.php only ever pack files under three roots —
+				// reject any zip entry that escapes them. Without this,
+				// `unzip -o -a -d /` happily writes anywhere on disk.
+				$allowedPrefixes = [
+					'home/dietpi/MuPiBox/media/',
+					'etc/mupibox/mupiboxconfig.json',
+					'home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json',
+				];
+				$zip = new ZipArchive();
+				$zipOk = false;
+				$badEntry = '';
+				if ($zip->open($target_file) === true) {
+					$zipOk = true;
+					for ($i = 0; $i < $zip->numFiles; $i++) {
+						$entry = $zip->getNameIndex($i);
+						// Normalise: strip leading slash, forbid `..`
+						$norm = ltrim($entry, '/');
+						if (strpos($norm, '..') !== false) {
+							$zipOk = false;
+							$badEntry = $entry;
+							break;
+						}
+						$matched = false;
+						foreach ($allowedPrefixes as $p) {
+							if (strpos($norm, $p) === 0) { $matched = true; break; }
+						}
+						if (!$matched) {
+							$zipOk = false;
+							$badEntry = $entry;
+							break;
+						}
+					}
+					$zip->close();
+				}
+				if (!$zipOk) {
+					exec("sudo rm " . escapeshellarg($target_file));
+					$CHANGE_TXT=$CHANGE_TXT."<li>ERROR: Backup rejected (entry outside whitelist: ".htmlspecialchars($badEntry).")</li>";
+					$change=0;
+				} else {
+				// M5: external command above just mutated the config -- force fresh re-read.
+				$data = mupibox_config(true);
 				$old_version = $data["mupibox"]["version"];
 
-				$command = "sudo unzip -o -a '".$target_file."' -d / >> /tmp/restore.log";
-				#$command = "sudo su - -c \"unzip -o -a '".$target_file."' -d / >> /tmp/restore.log && sleep 1\"";
-				#$command = "sudo su - -c 'tar xvzf ".$target_file." >> /tmp/restore.log'";
+				$command = "sudo unzip -o -a " . escapeshellarg($target_file) . " -d / >> /tmp/restore.log";
 				exec($command, $output, $result );
 				exec("sudo chown root:www-data /etc/mupibox/mupiboxconfig.json");
 				exec("sudo chmod 644 /etc/mupibox/mupiboxconfig.json");
@@ -50,21 +117,22 @@
 				$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/conf_update.sh | sudo bash";
 				exec($command, $output, $result );
 
-				$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
-				$data = json_decode($string, true);
+				// M5: external command above just mutated the config -- force fresh re-read.
+				$data = mupibox_config(true);
 				$data["mupibox"]["version"] = $old_version;
 				write_json($data);
 
-				$command = "sudo /boot/dietpi/func/change_hostname " . $data["mupibox"]["host"];
+				$command = "sudo /boot/dietpi/func/change_hostname " . escapeshellarg($data["mupibox"]["host"]);
 				$change_hostname = exec($command, $output, $change_hostname );
 				$command = "sudo su dietpi -c '/usr/local/bin/mupibox/./set_hostname.sh'";
 				exec($command);
-				
-				$command = "sudo rm '".$target_file."'";
+
+				$command = "sudo rm " . escapeshellarg($target_file);
 				exec($command, $output, $result );
 				$change=99;
 				$CHANGE_TXT=$CHANGE_TXT."<li>Backup-File restored! The MuPiBox will reboot now!</li>";
 				$reboot=1;
+				}
 				}
 			else
 				{
@@ -136,8 +204,8 @@
 		{
 		$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh | sudo bash -s -- stable";
 		exec($command, $output, $result );
-		$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
-		$data = json_decode($string, true);
+		// M5: external command above just mutated the config -- force fresh re-read.
+		$data = mupibox_config(true);
 		$change=3;
 		$reboot=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Update complete to Version ".$data["mupibox"]["version"]."</li>";
@@ -146,8 +214,8 @@
 		{
 		$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh | sudo bash -s -- beta";
 		exec($command, $output, $result );
-		$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
-		$data = json_decode($string, true);
+		// M5: external command above just mutated the config -- force fresh re-read.
+		$data = mupibox_config(true);
 		$change=1;
 		$reboot=1;
 		$data["mupibox"]["version"]=$data["mupibox"]["version"]." BETA";
@@ -158,8 +226,8 @@
 		$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh | sudo bash -s -- dev";
 
 		exec($command, $output, $result );
-		$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
-		$data = json_decode($string, true);
+		// M5: external command above just mutated the config -- force fresh re-read.
+		$data = mupibox_config(true);
 		$change=1;
 		$reboot=1;
 		$data["mupibox"]["version"]=$data["mupibox"]["version"]." DEVELOPMENT";
@@ -272,9 +340,7 @@
 		}
 	if( $change == 2 )
 		{
-		$json_object = json_encode($data);
-		$save_rc = file_put_contents('/tmp/.mupiboxconfig.json', $json_object);
-		exec("sudo mv /tmp/.mupiboxconfig.json /etc/mupibox/mupiboxconfig.json");
+		save_mupiboxconfig($data);
 		exec("sudo /usr/local/bin/mupibox/./setting_update.sh");
 		}
 	if( $change == 3 )

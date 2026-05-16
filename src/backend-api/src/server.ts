@@ -12,6 +12,7 @@ import { LogRequest, LogResponse } from './models/log.model'
 import type { MupiboxConfig } from './models/mupibox-config.model'
 import { ServerConfig } from './models/server.model'
 import type { SpotifyValidationRequest, SpotifyValidationResponse } from './models/spotify-api.model'
+import { CoverCacheService } from './services/cover-cache.service'
 import { SpotifyApiService } from './services/spotify-api.service'
 import { SpotifyMediaInfo } from './services/spotify-media-info.service'
 
@@ -50,6 +51,12 @@ readJsonFile(`${configBasePath}/config.json`).then((configFile) => {
     console.warn('No Spotify configuration found, Spotify API service will not be available')
   }
 })
+// Phase-X: SD-backed LRU cache for Spotify cover images. Frontend rewrites
+// i.scdn.co URLs to /api/spotify/cover/:imageId so the box serves covers
+// from its own SD+RAM after the first miss -- caps Chromium's parallel
+// connection limit to one host and saves repeat CDN round-trips.
+const coverCacheService = new CoverCacheService(path.join(process.cwd(), 'cache'))
+
 const mupiboxConfigPath = '/etc/mupibox/mupiboxconfig.json'
 const mupiboxConfigDir = path.dirname(mupiboxConfigPath)
 const mupiboxConfigFile = path.basename(mupiboxConfigPath)
@@ -147,6 +154,25 @@ app.get('/api/resume', (_req, res) => {
   } else {
     res.status(404).send(`File Not Found: ${resumeFile}`)
   }
+})
+
+// Phase-X cover proxy. Frontend converts every i.scdn.co/image/<id> URL to
+// /api/spotify/cover/<id>; we serve from the SD+RAM cache after first miss.
+// imageId is validated as alphanumeric inside CoverCacheService -- any
+// crafted path traversal attempt returns 400.
+app.get('/api/spotify/cover/:imageId', async (req, res) => {
+  const buf = await coverCacheService.get(req.params.imageId)
+  if (!buf) {
+    res.status(404).type('text/plain').send('cover not available')
+    return
+  }
+  // Long max-age + immutable since Spotify image IDs are content-addressed:
+  // a given imageId always resolves to the same bytes, so the browser can
+  // cache aggressively. ETag echoes the imageId for conditional requests.
+  res.set('Content-Type', 'image/jpeg')
+  res.set('Cache-Control', 'public, max-age=31536000, immutable')
+  res.set('ETag', `"${req.params.imageId}"`)
+  res.send(buf)
 })
 
 app.get('/api/mupihat', (_req, res) => {
