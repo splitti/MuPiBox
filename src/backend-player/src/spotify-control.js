@@ -122,6 +122,20 @@ player.on('track-change', () => {
     cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Local.py')
 })
 
+// Playtime grace period: stop at the next natural mplayer break point
+// (start of next track, or end of playlist). Spotify doesn't surface these
+// events, so for Spotify the grace timeout in playtimeTick() is the only stop trigger.
+player.on('track-change', () => {
+  if (playtimeState.state === 'grace') {
+    finalizePlaytimeBlock('next track would start during grace period')
+  }
+})
+player.on('playlist-finish', () => {
+  if (playtimeState.state === 'grace') {
+    finalizePlaytimeBlock('playlist finished during grace period')
+  }
+})
+
 setInterval(() => {
   const cmdVolume = "/usr/bin/amixer sget Master | grep 'Right:'"
   const exec = require('node:child_process').exec
@@ -179,6 +193,220 @@ const currentMeta = {
   progressTime: '',
   volume: 0,
 }
+
+// === Playtime Limit (daily listening cap) ===
+// Per-weekday limit on active playback time. Configured in mupiboxconfig.json
+// under "playtimeLimit". Working state lives in /tmp (tmpfs, no SD wear);
+// a checkpoint on the SD card persists across reboots, written at most every 60s.
+// Config changes require a player restart (consistent with other config in this file).
+const PLAYTIME_DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
+const PLAYTIME_DEFAULT_LIMITS = { mon: 60, tue: 60, wed: 60, thu: 60, fri: 60, sat: 60, sun: 60 }
+const PLAYTIME_WORKING_PATH = '/tmp/playtime.json'
+const PLAYTIME_CHECKPOINT_PATH = path.join(configBasePath, 'playtime-checkpoint.json')
+const PLAYTIME_CHECKPOINT_INTERVAL_MS = 60_000
+
+function readPlaytimeConfig() {
+  const raw = muPiBoxConfig?.playtimeLimit || {}
+  const resetHour = Number.isInteger(raw.resetHour) && raw.resetHour >= 0 && raw.resetHour < 24 ? raw.resetHour : 0
+  // Grace period in minutes after the limit is reached during which playback may
+  // continue (current track allowed to finish). 0 = stop immediately at the limit.
+  const maxOverrunMinutes =
+    Number.isInteger(raw.maxOverrunMinutes) && raw.maxOverrunMinutes >= 0 && raw.maxOverrunMinutes <= 60
+      ? raw.maxOverrunMinutes
+      : 10
+  return {
+    enabled: raw.enabled === true,
+    resetHour,
+    maxOverrunMinutes,
+    limitsMinutes: { ...PLAYTIME_DEFAULT_LIMITS, ...(raw.limitsMinutes || {}) },
+  }
+}
+
+// Reset-hour shifts when "today" begins. With resetHour=4, Sunday 02:00 still counts as Saturday.
+function getLogicalDay(now, resetHour) {
+  const shifted = new Date(now.getTime() - resetHour * 3600 * 1000)
+  const y = shifted.getFullYear()
+  const m = String(shifted.getMonth() + 1).padStart(2, '0')
+  const d = String(shifted.getDate()).padStart(2, '0')
+  return { dateStr: `${y}-${m}-${d}`, dayKey: PLAYTIME_DAY_KEYS[shifted.getDay()] }
+}
+
+function isActuallyPlaying() {
+  if (!currentMeta.currentPlayer) return false
+  if (currentMeta.currentPlayer === 'spotify') return currentMeta.pause === false
+  if (currentMeta.currentPlayer === 'mplayer') return currentMeta.playing === true
+  return false
+}
+
+// state machine: 'normal' (under limit) → 'grace' (over limit, current track finishing) → 'blocked' (stopped)
+const playtimeState = {
+  date: '',
+  dayKey: 'mon',
+  usedSeconds: 0,
+  state: 'normal',
+  graceEndsAt: null,
+}
+let playtimeLastCheckpointAt = 0
+let playtimeLastCheckpointSeconds = -1
+
+function loadPlaytimeCheckpoint() {
+  try {
+    if (!fs.existsSync(PLAYTIME_CHECKPOINT_PATH)) return
+    const data = JSON.parse(fs.readFileSync(PLAYTIME_CHECKPOINT_PATH, 'utf8'))
+    const today = getLogicalDay(new Date(), readPlaytimeConfig().resetHour)
+    if (data && data.date === today.dateStr) {
+      playtimeState.date = data.date
+      playtimeState.dayKey = data.dayKey || today.dayKey
+      playtimeState.usedSeconds = Number(data.usedSeconds) || 0
+      // console.log so it shows even when logLevel='error' (the default)
+      console.log(
+        `${new Date().toLocaleString()}: [Playtime] Resumed counter: ${playtimeState.usedSeconds}s for ${playtimeState.date}`,
+      )
+    }
+  } catch (e) {
+    console.error(`${new Date().toLocaleString()}: [Playtime] Failed to load checkpoint:`, e)
+  }
+}
+
+function writePlaytimeWorking() {
+  const cfg = readPlaytimeConfig()
+  if (!cfg.enabled) {
+    fs.writeFile(PLAYTIME_WORKING_PATH, JSON.stringify({ enabled: false }), () => {})
+    return
+  }
+  const limit = cfg.limitsMinutes[playtimeState.dayKey] ?? 60
+  const graceEndsInSeconds =
+    playtimeState.graceEndsAt !== null ? Math.max(0, Math.ceil((playtimeState.graceEndsAt - Date.now()) / 1000)) : 0
+  const payload = {
+    enabled: true,
+    state: playtimeState.state,
+    date: playtimeState.date,
+    dayKey: playtimeState.dayKey,
+    limitMinutes: limit,
+    usedSeconds: playtimeState.usedSeconds,
+    remainingSeconds: Math.max(0, limit * 60 - playtimeState.usedSeconds),
+    graceEndsInSeconds,
+    resetHour: cfg.resetHour,
+  }
+  fs.writeFile(PLAYTIME_WORKING_PATH, JSON.stringify(payload), () => {})
+}
+
+function writePlaytimeCheckpoint() {
+  const payload = {
+    date: playtimeState.date,
+    dayKey: playtimeState.dayKey,
+    usedSeconds: playtimeState.usedSeconds,
+  }
+  fs.writeFile(PLAYTIME_CHECKPOINT_PATH, JSON.stringify(payload), (err) => {
+    if (err) log.error(`${new Date().toLocaleString()}: [Playtime] Failed to write checkpoint:`, err)
+  })
+  playtimeLastCheckpointAt = Date.now()
+  playtimeLastCheckpointSeconds = playtimeState.usedSeconds
+}
+
+// Used by the catch-all to decide whether to refuse new play/resume/skip commands.
+// During grace, the *current* track is allowed to finish but no new playback may start.
+function isPlaytimeBlocked() {
+  return playtimeState.state === 'grace' || playtimeState.state === 'blocked'
+}
+
+// Transition to fully-stopped state. Called from the tick on grace timeout, from the
+// mplayer track-change/playlist-finish handlers, or directly when grace=0.
+function finalizePlaytimeBlock(reason) {
+  // console.log so it shows even when logLevel='error' (the default)
+  console.log(`${new Date().toLocaleString()}: [Playtime] Finalizing block (${reason})`)
+  playtimeState.state = 'blocked'
+  playtimeState.graceEndsAt = null
+  try {
+    stop()
+  } catch (e) {
+    console.error(`${new Date().toLocaleString()}: [Playtime] Error stopping playback:`, e)
+  }
+  writePlaytimeCheckpoint()
+}
+
+// Commands that *start or resume* playback. These get blocked when the daily cap is hit.
+// Pause/stop/volume/system commands are NOT blocked — those should always work.
+function isPlayInitiatingCommand(command) {
+  if (command.name?.includes('spotify:')) return true
+  if (
+    command.dir &&
+    (command.dir.includes('library') ||
+      command.dir.includes('radio') ||
+      command.dir.includes('rss') ||
+      command.dir.includes('say/'))
+  ) {
+    return true
+  }
+  if (['play', 'next', 'previous', 'seek+30', 'seek-30'].includes(command.name)) return true
+  if (command.name?.startsWith('seekpos:')) return true
+  return false
+}
+
+function playtimeTick() {
+  const cfg = readPlaytimeConfig()
+  if (!cfg.enabled) {
+    if (playtimeState.state !== 'normal' || playtimeState.graceEndsAt !== null) {
+      playtimeState.state = 'normal'
+      playtimeState.graceEndsAt = null
+    }
+    writePlaytimeWorking()
+    return
+  }
+  const now = new Date()
+  const today = getLogicalDay(now, cfg.resetHour)
+  // Day rollover: reset counter and state
+  if (today.dateStr !== playtimeState.date) {
+    playtimeState.date = today.dateStr
+    playtimeState.dayKey = today.dayKey
+    playtimeState.usedSeconds = 0
+    playtimeState.state = 'normal'
+    playtimeState.graceEndsAt = null
+    writePlaytimeCheckpoint()
+    console.log(`${now.toLocaleString()}: [Playtime] New day: ${today.dateStr} (${today.dayKey})`)
+  }
+  // Increment counter only when actually playing
+  if (isActuallyPlaying()) {
+    playtimeState.usedSeconds++
+  }
+  // State transitions
+  const limit = cfg.limitsMinutes[today.dayKey] ?? 60
+  const limitSeconds = limit * 60
+  const limitReached = playtimeState.usedSeconds >= limitSeconds
+  if (limitReached) {
+    if (playtimeState.state === 'normal') {
+      // Just-reached transition
+      const overrunMs = cfg.maxOverrunMinutes * 60 * 1000
+      if (overrunMs > 0) {
+        playtimeState.state = 'grace'
+        playtimeState.graceEndsAt = Date.now() + overrunMs
+        console.log(
+          `${now.toLocaleString()}: [Playtime] Daily limit reached (${limit} min for ${today.dayKey}). Entering grace period (max ${cfg.maxOverrunMinutes} min until current track ends).`,
+        )
+        writePlaytimeCheckpoint()
+      } else {
+        finalizePlaytimeBlock(`limit reached (${limit} min, no grace configured)`)
+      }
+    } else if (playtimeState.state === 'grace') {
+      if (playtimeState.graceEndsAt !== null && Date.now() >= playtimeState.graceEndsAt) {
+        finalizePlaytimeBlock(`grace period expired (${cfg.maxOverrunMinutes} min)`)
+      }
+    }
+    // else 'blocked': stay blocked
+  }
+  // Working state: every tick (tmpfs, no SD wear)
+  writePlaytimeWorking()
+  // SD checkpoint: every 60s if value changed
+  if (
+    Date.now() - playtimeLastCheckpointAt >= PLAYTIME_CHECKPOINT_INTERVAL_MS &&
+    playtimeState.usedSeconds !== playtimeLastCheckpointSeconds
+  ) {
+    writePlaytimeCheckpoint()
+  }
+}
+
+loadPlaytimeCheckpoint()
+setInterval(playtimeTick, 1000)
 
 function writeplayerstatePlay() {
   playerstate = 'play'
@@ -1029,6 +1257,17 @@ app.use((req, res) => {
   const command = path.parse(req.url)
   log.debug(`${nowDate.toLocaleString()}: [Spotify Control]name: ${command.name}`)
   log.debug(`${nowDate.toLocaleString()}: [Spotify Control]dir: ${command.dir}`)
+
+  // Playtime limit: refuse new playback when the daily cap is reached.
+  // Pause/stop/volume/system commands fall through normally.
+  if (isPlaytimeBlocked() && isPlayInitiatingCommand(command)) {
+    console.log(
+      `${new Date().toLocaleString()}: [Playtime] Rejected command (limit reached): name=${command.name} dir=${command.dir}`,
+    )
+    res.status(423).send({ status: 'blocked', error: 'playtime_limit_reached' })
+    return
+  }
+
   /*this is the first command to be received. It always includes the device id encoded in between two /*/
   /*check this if we need to transfer the playback to a new device*/
   if (command.name.includes('spotify:')) {

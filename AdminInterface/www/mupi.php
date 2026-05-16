@@ -441,6 +441,36 @@ if( $_POST['fan_control'] )
   $CHANGE_TXT=$CHANGE_TXT."<li>Press Button delay set to ".$_POST['pressDelay']. " seconds</li>";
   $change=2;
   }
+ $playtime_changed = false;
+ if( $_POST['playtime_save'] )
+  {
+  if( !isset($data["playtimeLimit"]) || !is_array($data["playtimeLimit"]) )
+   {
+   $data["playtimeLimit"] = array(
+    "enabled" => false,
+    "resetHour" => 0,
+    "maxOverrunMinutes" => 10,
+    "limitsMinutes" => array("mon"=>60,"tue"=>60,"wed"=>60,"thu"=>60,"fri"=>60,"sat"=>60,"sun"=>60),
+   );
+   }
+  if( !isset($data["playtimeLimit"]["limitsMinutes"]) || !is_array($data["playtimeLimit"]["limitsMinutes"]) )
+   {
+   $data["playtimeLimit"]["limitsMinutes"] = array("mon"=>60,"tue"=>60,"wed"=>60,"thu"=>60,"fri"=>60,"sat"=>60,"sun"=>60);
+   }
+  $data["playtimeLimit"]["enabled"] = (isset($_POST['playtime_enabled']) && $_POST['playtime_enabled'] === '1');
+  $data["playtimeLimit"]["resetHour"] = max(0, min(23, intval($_POST['playtime_resetHour'])));
+  $data["playtimeLimit"]["maxOverrunMinutes"] = max(0, min(60, intval($_POST['playtime_maxOverrunMinutes'])));
+  $playtime_days = array('mon','tue','wed','thu','fri','sat','sun');
+  foreach( $playtime_days as $d )
+   {
+   $field = 'playtime_limit_' . $d;
+   $val = isset($_POST[$field]) ? intval($_POST[$field]) : 60;
+   $data["playtimeLimit"]["limitsMinutes"][$d] = max(0, min(1440, $val));
+   }
+  $playtime_changed = true;
+  $CHANGE_TXT = $CHANGE_TXT."<li>Playtime limit settings saved (player restarting...)</li>";
+  $change = 2;
+  }
  if( $data["shim"]["ledPin"]!=$_POST['ledPin'] && $_POST['ledPin'])
   {
   $data["shim"]["ledPin"]=$_POST['ledPin'];
@@ -569,7 +599,12 @@ if( $_POST['fan_control'] )
    exec("sudo mv /tmp/.mupiboxconfig.json /etc/mupibox/mupiboxconfig.json");
    exec("sudo /usr/local/bin/mupibox/./setting_update.sh");
   }
-  
+ if( $playtime_changed )
+  {
+  // Player caches mupiboxconfig.json at startup via require(); restart so the new playtime values take effect.
+  exec("sudo -i -u dietpi pm2 restart spotify-control");
+  }
+
 $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 ?>
 
@@ -691,6 +726,68 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				<input type="hidden" name="form_id" value="37271" />
 
 				<input id="saveForm" class="button_text" type="submit" name="idletime" value="Submit idle time" />
+			</li>
+		</ul>
+	</details>
+
+	<details id="playtimelimit">
+		<summary><i class="fa-solid fa-hourglass-half"></i> Daily playtime limit</summary>
+		<ul>
+			<li id="li_1">
+				<h2>About</h2>
+				<p>Caps the total daily listening time on the box. When the limit is reached, playback stops and new playback is refused until the next day. Set a day to <b>0</b> to block playback completely on that day. Settings take effect after saving (the player is restarted automatically).</p>
+			</li>
+			<li id="li_1">
+				<h2>Status</h2>
+				<?php
+				$playtime_enabled_state = ( isset($data["playtimeLimit"]["enabled"]) && $data["playtimeLimit"]["enabled"] ) ? true : false;
+				$playtime_resetHour = isset($data["playtimeLimit"]["resetHour"]) ? intval($data["playtimeLimit"]["resetHour"]) : 0;
+				$playtime_limits = isset($data["playtimeLimit"]["limitsMinutes"]) && is_array($data["playtimeLimit"]["limitsMinutes"]) ? $data["playtimeLimit"]["limitsMinutes"] : array();
+				echo '<p>Currently: <b>'.($playtime_enabled_state ? 'ENABLED' : 'DISABLED').'</b></p>';
+				?>
+				<p>Enable / disable the daily limit:</p>
+				<select name="playtime_enabled">
+					<option value="1" <?php echo $playtime_enabled_state ? 'selected' : ''; ?>>Enabled</option>
+					<option value="0" <?php echo !$playtime_enabled_state ? 'selected' : ''; ?>>Disabled</option>
+				</select>
+			</li>
+			<li id="li_1">
+				<h2>Reset hour (0 - 23)</h2>
+				<p>Hour of day at which the counter resets to 0. <b>0</b> = midnight. Use e.g. <b>4</b> if you don't want a reset to interrupt late evening listening.</p>
+				<input type="number" name="playtime_resetHour" min="0" max="23" step="1" value="<?php echo $playtime_resetHour; ?>">
+			</li>
+			<li id="li_1">
+				<h2>Grace period (minutes)</h2>
+				<p>When the daily limit is reached, allow playback to continue for up to this many additional minutes so the current track can finish naturally. The player stops at the next track boundary (for local files / radio / RSS) or at the latest when this grace runs out. <b>0</b> = stop immediately at the limit. Default: <b>10</b>. Maximum: 60.</p>
+				<?php $playtime_maxOverrunMinutes = isset($data["playtimeLimit"]["maxOverrunMinutes"]) ? intval($data["playtimeLimit"]["maxOverrunMinutes"]) : 10; ?>
+				<input type="number" name="playtime_maxOverrunMinutes" min="0" max="60" step="1" value="<?php echo $playtime_maxOverrunMinutes; ?>"> min
+			</li>
+			<li id="li_1">
+				<h2>Daily limit per weekday (minutes)</h2>
+				<p>Set <b>0</b> to block playback entirely on that day. Maximum 1440 (= 24 h).</p>
+				<table class="version">
+					<tr><th>Day</th><th>Minutes per day</th></tr>
+					<?php
+					$playtime_day_labels = array(
+						'mon' => 'Monday',
+						'tue' => 'Tuesday',
+						'wed' => 'Wednesday',
+						'thu' => 'Thursday',
+						'fri' => 'Friday',
+						'sat' => 'Saturday',
+						'sun' => 'Sunday',
+					);
+					foreach( $playtime_day_labels as $key => $label )
+						{
+						$val = isset($playtime_limits[$key]) ? intval($playtime_limits[$key]) : 60;
+						echo '<tr><td>'.$label.'</td><td><input type="number" name="playtime_limit_'.$key.'" min="0" max="1440" step="1" value="'.$val.'"> min</td></tr>';
+						}
+					?>
+				</table>
+			</li>
+			<li class="buttons">
+				<input type="hidden" name="form_id" value="37271" />
+				<input id="saveForm" class="button_text" type="submit" name="playtime_save" value="Save playtime settings" />
 			</li>
 		</ul>
 	</details>

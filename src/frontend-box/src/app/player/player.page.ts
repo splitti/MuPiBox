@@ -1,5 +1,6 @@
 import { AsyncPipe } from '@angular/common'
-import { Component, OnInit, ViewChild } from '@angular/core'
+import { Component, DestroyRef, inject, OnInit, ViewChild } from '@angular/core'
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop'
 import { FormsModule } from '@angular/forms'
 import { ActivatedRoute, Router } from '@angular/router'
 import {
@@ -33,6 +34,7 @@ import {
 } from 'ionicons/icons'
 import type { Observable } from 'rxjs'
 import type { AlbumStop } from '../albumstop'
+import { CurrentMediaService } from '../current-media.service'
 import type { CurrentMPlayer } from '../current.mplayer'
 import type { CurrentSpotify } from '../current.spotify'
 import { LogService } from '../log.service'
@@ -40,6 +42,8 @@ import type { Media } from '../media'
 import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
 import { PlayerCmds, PlayerService } from '../player.service'
+import type { PlaytimePlayState } from '../playtime.model'
+import { PlaytimeService } from '../playtime.service'
 import { SpotifyService } from '../spotify.service'
 
 @Component({
@@ -86,6 +90,10 @@ export class PlayerPage implements OnInit {
   progress = 0
   shufflechanged = 0
   tmpProgressTime = 0
+  // Tracks the playtime state across ticks so we can detect transitions
+  // (normal -> grace, grace -> blocked, etc.) and persist resume on time.
+  private prevPlaytimeState: PlaytimePlayState | 'unknown' = 'unknown'
+  private destroyRef = inject(DestroyRef)
   public readonly spotify$: Observable<CurrentSpotify>
   public readonly local$: Observable<CurrentMPlayer>
 
@@ -97,6 +105,8 @@ export class PlayerPage implements OnInit {
     private navController: NavController,
     private playerService: PlayerService,
     private spotifyService: SpotifyService,
+    private playtimeService: PlaytimeService,
+    private currentMediaService: CurrentMediaService,
   ) {
     this.spotify$ = this.mediaService.current$
     this.local$ = this.mediaService.local$
@@ -130,14 +140,12 @@ export class PlayerPage implements OnInit {
       this.handleExternalPlayback()
     }
 
-    this.mediaService.current$.subscribe((spotify) => {
+    // Track player state for the lifetime of this component. takeUntilDestroyed
+    // ties the subscription to the page; previously updateProgress() and
+    // saveResumeFiles() each re-subscribed on every call without ever
+    // unsubscribing, so a 60-min listen accrued ~120 lingering subscriptions.
+    this.mediaService.current$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((spotify) => {
       this.currentPlayedSpotify = spotify
-    })
-    this.mediaService.local$.subscribe((local) => {
-      this.currentPlayedLocal = local
-    })
-    // Use cover from CurrentSpotify for Spotify content, fallback to media.cover for other types
-    this.mediaService.current$.subscribe((spotify) => {
       if (this.media?.type === 'spotify' && spotify?.item?.album?.images?.[0]?.url) {
         this.cover = spotify.item.album.images[0].url
       } else if (this.media?.cover) {
@@ -146,7 +154,10 @@ export class PlayerPage implements OnInit {
         this.cover = '../assets/images/nocover_mupi.png'
       }
     })
-    this.mediaService.albumStop$.subscribe((albumStop) => {
+    this.mediaService.local$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((local) => {
+      this.currentPlayedLocal = local
+    })
+    this.mediaService.albumStop$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((albumStop) => {
       this.albumStop = albumStop
     })
   }
@@ -170,7 +181,7 @@ export class PlayerPage implements OnInit {
       }
 
       // Subscribe to currentTrack$ to update when track info becomes available
-      this.spotifyService.currentTrack$.subscribe((track) => {
+      this.spotifyService.currentTrack$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((track) => {
         if (track && this.media.title === 'External Playback') {
           this.logService.log('[PlayerPage] Updating media object with track info:', track.name)
           this.media = this.spotifyService.createMediaFromSpotifyTrack(track)
@@ -190,13 +201,9 @@ export class PlayerPage implements OnInit {
   }
 
   updateProgress() {
-    this.mediaService.current$.subscribe((spotify) => {
-      this.currentPlayedSpotify = spotify
-    })
-    this.mediaService.local$.subscribe((local) => {
-      this.currentPlayedLocal = local
-    })
-
+    // currentPlayedSpotify / currentPlayedLocal are kept fresh by the
+    // takeUntilDestroyed-bound subscriptions in ngOnInit — read them
+    // directly here instead of re-subscribing on every tick.
     this.playing = !this.currentPlayedLocal?.pause
     if (this.playing) {
       this.resumeTimer++
@@ -204,6 +211,7 @@ export class PlayerPage implements OnInit {
         this.saveResumeFiles()
       }
     }
+    this.checkPlaytimeForResume()
 
     if (this.media.type === 'spotify') {
       const seek = this.currentPlayedSpotify?.progress_ms || 0
@@ -282,9 +290,12 @@ export class PlayerPage implements OnInit {
     if (
       (this.media.type === 'spotify' || this.media.type === 'library' || this.media.type === 'rss') &&
       !this.media.shuffle &&
-      this.resumeTimer > 30 &&
       this.playing
     ) {
+      // saveResumeFiles itself enforces the listening-time threshold via
+      // CurrentMediaService.shouldPersistResume(); the local resumeTimer > 30
+      // guard that used to live here is gone — it was page-mount-scoped and
+      // wall-clock-based, both of which the central service handles better.
       this.saveResumeFiles()
     }
     this.updateProgression = false
@@ -350,14 +361,35 @@ export class PlayerPage implements OnInit {
     }
   }
 
+  // The 30s saveResumeFiles cadence in updateProgress() is fine for normal use, but it
+  // can be up to 30 seconds stale when the playtime limit cuts playback off. Save
+  // immediately on the entry transition to grace and to blocked so the resume entry
+  // captures (close to) the actual stop position. In the last minute before the limit
+  // is reached, also save more frequently so the grace-entry save isn't itself stale.
+  private checkPlaytimeForResume() {
+    const status = this.playtimeService.status()
+    if (!status.enabled) {
+      this.prevPlaytimeState = 'unknown'
+      return
+    }
+    const cur = status.state
+    if (this.prevPlaytimeState !== 'unknown' && cur !== this.prevPlaytimeState) {
+      if (cur === 'grace' || cur === 'blocked') {
+        this.saveResumeFiles()
+      }
+    } else if (cur === 'normal' && this.playing && status.remainingSeconds <= 60 && this.resumeTimer % 5 === 0) {
+      this.saveResumeFiles()
+    }
+    this.prevPlaytimeState = cur
+  }
+
   saveResumeFiles() {
+    // Single gate for "is this listen worth persisting?" — covers the 30s
+    // updateProgress cadence, the on-leave save, and the cap-transition save.
+    // Resets on every new playMedia/resumeMedia, counts only active playback.
+    if (!this.currentMediaService.shouldPersistResume()) return
+
     this.resumemedia = Object.assign({}, this.media)
-    this.mediaService.current$.subscribe((spotify) => {
-      this.currentPlayedSpotify = spotify
-    })
-    this.mediaService.local$.subscribe((local) => {
-      this.currentPlayedLocal = local
-    })
     if (this.resumemedia.type === 'spotify' && this.resumemedia?.showid) {
       this.resumemedia.resumespotifytrack_number = this.currentPlayedSpotify?.item?.track_number || 1
       this.resumemedia.resumespotifyprogress_ms = this.currentPlayedSpotify?.progress_ms || 0

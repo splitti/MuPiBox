@@ -10,6 +10,7 @@ import ky from 'ky'
 import xmlparser from 'xml-js'
 import { LogRequest, LogResponse } from './models/log.model'
 import type { MupiboxConfig } from './models/mupibox-config.model'
+import type { PlaytimeStatus } from './models/playtime.model'
 import { ServerConfig } from './models/server.model'
 import type { SpotifyValidationRequest, SpotifyValidationResponse } from './models/spotify-api.model'
 import { SpotifyApiService } from './services/spotify-api.service'
@@ -62,6 +63,7 @@ const wlanFile = `${configBasePath}/wlan.json`
 const monitorFile = `${configBasePath}/monitor.json`
 const albumstopFile = `${configBasePath}/albumstop.json`
 const mupihat = '/tmp/mupihat.json'
+const playtimeFile = '/tmp/playtime.json'
 const dataLock = '/tmp/.data.lock'
 const resumeLock = '/tmp/.resume.lock'
 
@@ -161,6 +163,26 @@ app.get('/api/mupihat', (_req, res) => {
       }
     })
   }
+})
+
+// Playback time tracking written by backend-player to /tmp/playtime.json (tmpfs).
+// Missing/unreadable file means the player hasn't ticked yet or the feature is off —
+// either way, surfaces as "disabled" so the frontend can hide the UI safely.
+app.get('/api/playtime', (_req, res) => {
+  const disabled: PlaytimeStatus = { enabled: false }
+  if (!fs.existsSync(playtimeFile)) {
+    res.json(disabled)
+    return
+  }
+  jsonfile.readFile(playtimeFile, (error, data) => {
+    if (error) {
+      console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Error /api/playtime read playtime.json`)
+      console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] ${error}`)
+      res.json(disabled)
+    } else {
+      res.json(data)
+    }
+  })
 })
 
 app.get('/api/activeresume', (_req, res) => {

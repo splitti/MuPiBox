@@ -1,0 +1,38 @@
+.playtime-chip {
+  position: fixed;
+  // Sit just below the typical ion-toolbar (56px in md mode) so the chip
+  // never overlaps the cloud/battery icons (home), the volume + track
+  // counter (player), or any other toolbar elements on other pages.
+  top: 64px;
+  right: 8px;
+  z-index: 9000;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 500;
+  background: rgba(0, 0, 0, 0.55);
+  color: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  user-select: none;
+  pointer-events: none;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+
+  ion-icon {
+    font-size: 16px;
+  }
+
+  &[data-level='warning'] {
+    background: rgba(255, 193, 7, 0.9);
+    color: #1a1a1a;
+  }
+
+  &[data-level='critical'] {
+    background: rgba(244, 67, 54, 0.92);
+    color: #ffffff;
+  }
+}
