@@ -1,7 +1,7 @@
 import { DOCUMENT } from '@angular/common'
 import { HttpClient } from '@angular/common/http'
 import { Inject, Injectable } from '@angular/core'
-import { BehaviorSubject } from 'rxjs'
+import { BehaviorSubject, Subject } from 'rxjs'
 import { debounceTime, filter } from 'rxjs/operators'
 import { environment } from 'src/environments/environment'
 import { LogService } from './log.service'
@@ -33,13 +33,28 @@ export class SpotifyPlayerService {
 
   // External playback detection
   private previousPlayerState: SpotifyWebPlaybackState | null = null
-  public trackChangeDetected$ = new BehaviorSubject<SpotifyWebPlaybackTrack | null>(null)
+  // LOW-4 / A24: this used to be a BehaviorSubject, which replays the last
+  // emitted value to every new subscriber. external-playback-navigator's
+  // subscribe-on-init then re-fired auto-navigate-to-/player on HMR /
+  // component re-mount with whatever track was last detected — even though
+  // the user had since navigated elsewhere. Subject (without replay) only
+  // emits to listeners attached at the moment of .next(), which is the
+  // intended "track-just-changed" fire-and-forget shape for this signal.
+  // Verified all consumers: only .next() and .subscribe() — no .value reads
+  // anywhere, so the swap is safe.
+  public trackChangeDetected$ = new Subject<SpotifyWebPlaybackTrack | null>()
 
   // Error state observable for UI feedback
   public sdkLoadError$ = new BehaviorSubject<string | null>(null)
 
   // Lock to prevent parallel ensurePlayerReady calls
   private ensurePlayerReadyPromise: Promise<boolean> | null = null
+
+  // Single-flight guard for loadSDKScript (LOW-4): if two callers race to
+  // initialise the SDK, both should resolve off the same in-flight load
+  // instead of each registering their own onSpotifyWebPlaybackSDKReady
+  // and risking the first one being dropped.
+  private sdkLoadInflight: Promise<void> | null = null
 
   // Timeout tracking to prevent ghost callbacks
   private activeTimeouts: Set<ReturnType<typeof setTimeout>> = new Set()
@@ -385,13 +400,37 @@ export class SpotifyPlayerService {
   }
 
   /**
-   * Load the Spotify SDK script
+   * Load the Spotify SDK script.
+   *
+   * MED-12 / LOW-4: previously this could leak both a never-cleared 15s
+   * timeout and a hanging onSpotifyWebPlaybackSDKReady callback if the
+   * caller's promise was already resolved or rejected. Concurrent calls
+   * would also each register their own ready-callback, so a fast second
+   * invocation could `resolve()` the wrong promise. Single-flight the
+   * load via `sdkLoadInflight`, capture the timeout handle so we can
+   * clear it on either resolve or reject, and wrap resolve/reject so
+   * cleanup runs exactly once.
    */
   private loadSDKScript(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      // Check network
+    if (this.sdkLoadInflight) return this.sdkLoadInflight
+
+    this.sdkLoadInflight = new Promise<void>((resolve, reject) => {
+      let timeoutHandle: ReturnType<typeof setTimeout> | null = null
+      let settled = false
+      const settle = (cb: () => void) => {
+        if (settled) return
+        settled = true
+        if (timeoutHandle !== null) {
+          clearTimeout(timeoutHandle)
+          timeoutHandle = null
+        }
+        cb()
+      }
+      const ok = () => settle(resolve)
+      const fail = (err: Error) => settle(() => reject(err))
+
       if (!this.isOnline) {
-        reject(new Error('Device is offline'))
+        fail(new Error('Device is offline'))
         return
       }
 
@@ -406,38 +445,45 @@ export class SpotifyPlayerService {
         window.Spotify = undefined
       }
 
-      // Set up the ready callback
       window.onSpotifyWebPlaybackSDKReady = () => {
         this.logService.log('[Spotify SDK] onSpotifyWebPlaybackSDKReady callback fired')
         if (window.Spotify?.Player) {
-          resolve()
+          ok()
         } else {
-          reject(new Error('SDK ready callback fired but Spotify.Player not available'))
+          fail(new Error('SDK ready callback fired but Spotify.Player not available'))
         }
       }
 
-      // Create and load the script
       const script = this.document.createElement('script')
       script.src = 'https://sdk.scdn.co/spotify-player.js'
       script.async = true
-
       script.onerror = () => {
-        reject(new Error('Failed to load spotify-player.js - check internet connection'))
+        fail(new Error('Failed to load spotify-player.js - check internet connection'))
       }
-
       this.document.head.appendChild(script)
 
-      // Timeout after 15 seconds
-      setTimeout(() => {
+      timeoutHandle = setTimeout(() => {
         if (this.sdkState === 'loading') {
-          reject(new Error('SDK load timeout after 15 seconds'))
+          fail(new Error('SDK load timeout after 15 seconds'))
         }
       }, 15000)
+    }).finally(() => {
+      this.sdkLoadInflight = null
     })
+
+    return this.sdkLoadInflight
   }
 
   /**
-   * Wait for connection with timeout
+   * Wait for connection with timeout.
+   *
+   * LOW-4 / MED-12: previously the setTimeout handle was discarded so a
+   * fast resolve (connection arrived) still left the timer running until
+   * timeoutMs. With many calls in quick succession, timers piled up and
+   * each held the closure (and the subscription's last reference)
+   * alive. Capture the handle and clear it on the success path; resolve
+   * only once via a `settled` flag so a connection arriving 1ms before
+   * the timeout doesn't double-call resolve.
    */
   private waitForConnection(timeoutMs: number): Promise<boolean> {
     return new Promise((resolve) => {
@@ -446,16 +492,25 @@ export class SpotifyPlayerService {
         return
       }
 
-      const subscription = this.isConnected$.subscribe((connected) => {
-        if (connected) {
-          subscription.unsubscribe()
-          resolve(true)
+      let settled = false
+      let timeoutHandle: ReturnType<typeof setTimeout> | null = null
+      const finish = (val: boolean) => {
+        if (settled) return
+        settled = true
+        if (timeoutHandle !== null) {
+          clearTimeout(timeoutHandle)
+          timeoutHandle = null
         }
+        subscription.unsubscribe()
+        resolve(val)
+      }
+
+      const subscription = this.isConnected$.subscribe((connected) => {
+        if (connected) finish(true)
       })
 
-      setTimeout(() => {
-        subscription.unsubscribe()
-        resolve(this.isConnected$.value)
+      timeoutHandle = setTimeout(() => {
+        finish(this.isConnected$.value)
       }, timeoutMs)
     })
   }

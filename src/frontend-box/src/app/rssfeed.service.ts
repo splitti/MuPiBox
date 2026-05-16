@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
-import type { Observable } from 'rxjs'
-import { map, mergeAll, toArray } from 'rxjs/operators'
+import { type Observable, of } from 'rxjs'
+import { catchError, map, mergeAll, toArray } from 'rxjs/operators'
 import { environment } from 'src/environments/environment'
 import type { CategoryType, Media } from './media'
 import type { RssFeed } from './rssfeed'
@@ -21,7 +21,11 @@ export class RssFeedService {
     return this.http.get(this.url).pipe(
       map((response: RssFeed) => {
         return response.rss.channel.item.map((item) => {
-          console.log(item)
+          // LOW-7: removed `console.log(item)` — fired once per feed item
+          // on every load, polluting chrome_debug.log (which we already
+          // ship via debug.php for support tickets) with hundreds of lines
+          // of raw RSS data per feed. Useful for one-off debugging, not
+          // for production.
           const media: Media = {
             id: item.enclosure?._attributes?.url,
             artist: this.handleCData(response.rss?.channel?.title),
@@ -40,6 +44,11 @@ export class RssFeedService {
       }),
       mergeAll(),
       toArray(),
+      // LOW-7: previously a feed-fetch error rejected the observable, so
+      // upstream callers got an error and the medialist crashed. Return
+      // an empty array on error so the page just shows "no episodes" and
+      // the user can navigate away cleanly.
+      catchError(() => of([] as Media[])),
     )
   }
 

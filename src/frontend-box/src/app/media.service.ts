@@ -1,13 +1,13 @@
 import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
 import { firstValueFrom, from, iif, interval, Observable, of, Subject } from 'rxjs'
-import { map, mergeAll, mergeMap, shareReplay, switchMap, toArray } from 'rxjs/operators'
+import { catchError, map, mergeAll, mergeMap, shareReplay, switchMap, toArray } from 'rxjs/operators'
 import { environment } from '../environments/environment'
 import type { AlbumStop } from './albumstop'
 import type { Artist } from './artist'
 import type { CurrentMPlayer } from './current.mplayer'
 import type { CurrentSpotify } from './current.spotify'
-import type { CategoryType, Media, MediaInfoCache } from './media'
+import { isResumeEntry, type CategoryType, type Media, type MediaInfoCache } from './media'
 import { Mupihat } from './mupihat'
 import type { Network } from './network'
 import { NetworkService } from './network.service'
@@ -158,25 +158,52 @@ export class MediaService {
           }),
           shareReplay({ bufferSize: 1, refCount: true }),
         )
-      : // Remote: HTTP polling
+      : // Remote: HTTP polling.
+        // B11: a single HTTP failure (network blip, backend restart)
+        // would error the source observable, and shareReplay would
+        // forever replay that error to subscribers — UI stops getting
+        // state updates until the page is reloaded. Wrap the inner
+        // get in catchError(of({})) so transient failures show as
+        // "no current state" without tearing down the polling stream.
         interval(10000).pipe(
           switchMap(
-            (): Observable<CurrentSpotify> => this.http.get<CurrentSpotify>(`${this.getPlayerBackendUrl()}/state`),
+            (): Observable<CurrentSpotify> =>
+              this.http
+                .get<CurrentSpotify>(`${this.getPlayerBackendUrl()}/state`)
+                .pipe(catchError(() => of({} as CurrentSpotify))),
           ),
           shareReplay({ bufferSize: 1, refCount: true }),
         )
+    // Same B11 pattern for local$ / albumStop$ / mupihat$ — all polling
+    // streams that should swallow transient errors instead of becoming
+    // permanently broken.
     this.local$ = interval(1000).pipe(
-      switchMap((): Observable<CurrentMPlayer> => this.http.get<CurrentMPlayer>(`${this.getPlayerBackendUrl()}/local`)),
+      switchMap(
+        (): Observable<CurrentMPlayer> =>
+          this.http
+            .get<CurrentMPlayer>(`${this.getPlayerBackendUrl()}/local`)
+            .pipe(catchError(() => of({} as CurrentMPlayer))),
+      ),
       shareReplay({ bufferSize: 1, refCount: true }),
     )
 
     this.albumStop$ = interval(1000).pipe(
-      switchMap((): Observable<AlbumStop> => this.http.get<AlbumStop>(`${this.getApiBackendUrl()}/albumstop`)),
+      switchMap(
+        (): Observable<AlbumStop> =>
+          this.http
+            .get<AlbumStop>(`${this.getApiBackendUrl()}/albumstop`)
+            .pipe(catchError(() => of({} as AlbumStop))),
+      ),
       shareReplay({ bufferSize: 1, refCount: false }),
     )
     // Every 2 seconds should be enough for timely charging update.
     this.mupihat$ = interval(2000).pipe(
-      switchMap((): Observable<Mupihat> => this.http.get<Mupihat>(`${this.getApiBackendUrl()}/mupihat`)),
+      switchMap(
+        (): Observable<Mupihat> =>
+          this.http
+            .get<Mupihat>(`${this.getApiBackendUrl()}/mupihat`)
+            .pipe(catchError(() => of({} as Mupihat))),
+      ),
       shareReplay({ bufferSize: 1, refCount: false }),
     )
 
@@ -279,18 +306,6 @@ export class MediaService {
     const url = `${this.getApiBackendUrl()}/add`
 
     this.http.post(url, media, { responseType: 'text' }).subscribe((response) => {
-      this.response = response
-    })
-  }
-
-  editRawResumeAtIndex(index: number, data: Media) {
-    const url = `${this.getApiBackendUrl()}/editresume`
-    const body = {
-      index,
-      data,
-    }
-
-    this.http.post(url, body, { responseType: 'text' }).subscribe((response) => {
       this.response = response
     })
   }
@@ -472,13 +487,13 @@ export class MediaService {
                 .pipe(overwriteArtist(item)),
               iif(
                 // Get media by show
-                () => !!(item.showid && item.showid.length > 0 && item.category !== 'resume'),
+                () => !!(item.showid && item.showid.length > 0 && !isResumeEntry(item)),
                 this.spotifyService
                   .getMediaByShowID(item.showid, item.category, item.index, item)
                   .pipe(overwriteArtist(item)),
                 iif(
                   // Get media by show supporting resume
-                  () => !!(item.showid && item.showid.length > 0 && item.category === 'resume'),
+                  () => !!(item.showid && item.showid.length > 0 && isResumeEntry(item)),
                   this.spotifyService
                     .getMediaByEpisode(
                       item.showid,
@@ -513,8 +528,14 @@ export class MediaService {
                         overwriteArtist(item),
                       ),
                     iif(
-                      // Get media by rss feed
-                      () => !!(item.type === 'rss' && item.id.length > 0 && item.category !== 'resume'),
+                      // Get media by rss feed.
+                      // MED-10: previously gated on `!isResumeEntry(item)` —
+                      // RSS resume entries skipped enrichment and rendered
+                      // with whatever stale title/cover/episode-list was
+                      // saved at last play. Drop the gate so resume entries
+                      // also get fresh feed data; overwriteArtist preserves
+                      // the user-visible artist label.
+                      () => !!(item.type === 'rss' && item.id.length > 0),
                       this.rssFeedService
                         .getRssFeed(item.id, item.category, item.index, item)
                         .pipe(overwriteArtist(item)),
@@ -699,7 +720,13 @@ export class MediaService {
           mediaType,
         }
 
-        return mediaInfo
+        // MED-7: cache-hit branch (line 645+) returns this.mediaInfoCache
+        // which has currentId + mediaType, but the previous miss-branch
+        // returned the raw mediaInfo without those fields. Callers that
+        // checked `result.mediaType` saw different shapes depending on
+        // whether the entry was already cached. Return the cache object
+        // we just wrote so the shape is consistent across hits and misses.
+        return this.mediaInfoCache
       }
     } catch (error) {
       console.warn('Failed to get media info for URI:', contextUri, error)

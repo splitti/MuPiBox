@@ -101,6 +101,13 @@ export class LogService {
     }
   }
 
+  // B14: this method must NEVER call this.warn / this.error / this.log /
+  // this.debug — those forward to bufferLogEntry, which queues a HTTP
+  // POST, which on failure would re-enter sendBufferedLogs from
+  // catchError → infinite recursion that floods both the buffer and
+  // the backend. Use console.warn / console.error directly for any
+  // diagnostics here. The current code is already correct in this
+  // respect; the comment exists to keep it that way under future edits.
   private sendBufferedLogs(): void {
     if (this.logBuffer.length === 0) return
 
@@ -124,10 +131,12 @@ export class LogService {
       .subscribe({
         next: (response) => {
           if (!response.success) {
+            // B14: console.warn — NOT this.warn. See method comment.
             console.warn('Backend log processing failed:', response.message)
           }
         },
         error: (error) => {
+          // B14: console.warn — NOT this.warn. See method comment.
           console.warn('Error in log HTTP request:', error)
         },
       })

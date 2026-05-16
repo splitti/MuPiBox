@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core'
+import { AfterViewInit, Component, OnDestroy, OnInit, ViewChild, ViewEncapsulation } from '@angular/core'
 import type { NgForm } from '@angular/forms'
 import { FormsModule } from '@angular/forms'
 import {
@@ -49,7 +49,7 @@ import type { WLAN } from '../wlan'
     IonInput,
   ],
 })
-export class WifiPage implements OnInit, AfterViewInit {
+export class WifiPage implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('segment', { static: false }) segment: IonSegment
   @ViewChild('select', { static: false }) select: IonSelect
 
@@ -72,6 +72,15 @@ export class WifiPage implements OnInit, AfterViewInit {
   }
 
   ngOnInit() {}
+
+  // MED-19: simple-keyboard attaches several DOM listeners (mousedown,
+  // touchstart, etc.) to the document. Without an explicit destroy() these
+  // listeners pile up every time the user enters and leaves the wifi page,
+  // and the keyboard instance + its closures stay reachable, so RAM creeps
+  // up over a few mount/unmount cycles. Tear down on component destroy.
+  ngOnDestroy() {
+    this.keyboard?.destroy()
+  }
 
   ngAfterViewInit() {
     this.keyboard = new Keyboard({
@@ -128,14 +137,19 @@ export class WifiPage implements OnInit, AfterViewInit {
   focusChanged(event: any) {
     this.selectedInputElem = event.target
 
-    this.keyboard.setOptions({
+    // LOW-9: keyboard is initialised in ngAfterViewInit, so any focus event
+    // that fires before view init (rare but possible during fast navigation
+    // or if a child input auto-focuses) hit a null `keyboard` and crashed
+    // the focus handler. Guard with optional-chain.
+    this.keyboard?.setOptions({
       disableCaretPositioning: false,
       inputName: event.target.name,
     })
   }
 
   inputChanged(event: any) {
-    this.keyboard.setInput(event.target.value, event.target.name)
+    // LOW-9: same guard — inputs can fire 'change' before the keyboard is up.
+    this.keyboard?.setInput(event.target.value, event.target.name)
     this.validate()
   }
 
@@ -168,12 +182,21 @@ export class WifiPage implements OnInit, AfterViewInit {
   }
 
   submit(form: NgForm) {
+    // LOW-10: previously submit blindly built the WLAN payload from the
+    // keyboard buffers and POSTed it, even if validate() had already
+    // determined the SSID was empty or the PW was a wrong length. Run
+    // validate() at the top so a bad submission becomes a no-op instead
+    // of pushing garbage at add_wifi.sh (which now rejects bad SSIDs as
+    // of HIGH-12, but better to fail fast in the UI).
+    this.validate()
+    if (!this.valid) return
+
     const wlan: WLAN = {
       category: 'WLAN',
     }
 
-    const wlanSsid = this.keyboard.getInput('wlan_ssid') ?? ''
-    const wlanPw = this.keyboard.getInput('wlan_pw') ?? ''
+    const wlanSsid = this.keyboard?.getInput('wlan_ssid') ?? ''
+    const wlanPw = this.keyboard?.getInput('wlan_pw') ?? ''
 
     if (wlanSsid.length) {
       wlan.ssid = wlanSsid
@@ -186,8 +209,8 @@ export class WifiPage implements OnInit, AfterViewInit {
 
     form.reset()
 
-    this.keyboard.clearInput('wlan_ssid')
-    this.keyboard.clearInput('wlan_pw')
+    this.keyboard?.clearInput('wlan_ssid')
+    this.keyboard?.clearInput('wlan_pw')
 
     this.validate()
 
@@ -195,8 +218,8 @@ export class WifiPage implements OnInit, AfterViewInit {
   }
 
   validate() {
-    const wlanSsid = this.keyboard.getInput('wlan_ssid') ?? ''
-    const wlanPw = this.keyboard.getInput('wlan_pw') ?? ''
+    const wlanSsid = this.keyboard?.getInput('wlan_ssid') ?? ''
+    const wlanPw = this.keyboard?.getInput('wlan_pw') ?? ''
 
     this.valid = wlanSsid.length > 0 && (wlanPw.length === 0 || (wlanPw.length >= 8 && wlanPw.length <= 63))
   }

@@ -63,7 +63,16 @@ export class SwiperComponent<T> {
 
     effect(() => {
       if (this.pageIsShown()) {
-        this.swiper()?.slideTo(this.cachedSwiperPosition, 0)
+        // LOW-8: cachedSwiperPosition is captured on ionViewWillLeave, but
+        // when the user comes back the data set may be smaller (e.g. they
+        // edited the audiobook list and removed entries while the page was
+        // hidden). slideTo(cached) on an out-of-range index either no-ops
+        // silently or produces a blank tile area. Clamp to the visible
+        // length so we land on the last valid slide instead.
+        const len = this.shownData().length
+        if (len > 0) {
+          this.swiper()?.slideTo(Math.min(this.cachedSwiperPosition, len - 1), 0)
+        }
       }
     })
   }

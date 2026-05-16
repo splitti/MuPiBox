@@ -36,6 +36,12 @@ export interface Media {
   resumelocalcurrentTracknr?: number
   resumelocalprogressTime?: number
   resumerssprogressTime?: number
+  // Marks an item whose Spotify metadata fetch failed (network blip,
+  // region lock, removed from catalogue, etc.). Set by spotify.service's
+  // catchError fallbacks so the item still occupies its slot in the list
+  // instead of silently vanishing — callers / templates can render it
+  // greyed-out or with an "unavailable" badge later.
+  unavailable?: boolean
 }
 
 // Cache interface for storing album/playlist/show/audiobook information
