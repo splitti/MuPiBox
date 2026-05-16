@@ -1,0 +1,11 @@
+<div class="playtime-blocked-overlay" (click)="$event.stopPropagation()">
+  <div class="content">
+    <ion-icon [name]="content().iconName" class="icon" aria-hidden="true"></ion-icon>
+    <h1>{{ content().heading }}</h1>
+    <p>
+      <ion-icon name="musical-notes-outline" class="inline-icon" aria-hidden="true"></ion-icon>
+      {{ content().subheading }}
+      <ion-icon name="musical-notes-outline" class="inline-icon" aria-hidden="true"></ion-icon>
+    </p>
+  </div>
+</div>
