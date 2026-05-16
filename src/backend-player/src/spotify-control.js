@@ -122,6 +122,56 @@ player.on('track-change', () => {
     cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Local.py')
 })
 
+player.on('playlist-finish', () => {
+  // Library album finished naturally — drop its resume entry so the user
+  // isn't offered "weiterhören" at the very end next time. Spotify and RSS
+  // are skipped: Spotify gives no clean end-of-album signal via the
+  // mplayer wrapper anyway, and RSS isn't tracked with enough metadata in
+  // currentMeta to build a composite key.
+  deleteResumeForFinishedLibraryAlbum()
+})
+
+// POSTs a minimal Media-shape body to /api/deleteresume so the backend-api
+// removes the matching resume.json entry by composite key. Best-effort: a
+// failure here just leaves a stale resume entry, no playback impact.
+function deleteResumeForFinishedLibraryAlbum() {
+  if (currentMeta.currentPlayer !== 'mplayer') return
+  if (currentMeta.currentType !== 'local') return
+  const rawPath = currentMeta.path
+  if (!rawPath) return
+  const parts = String(rawPath).split('/')
+  if (parts.length < 3) return
+  const body = JSON.stringify({
+    type: 'library',
+    artist: decodeURIComponent(parts[1]),
+    title: decodeURIComponent(parts[2]),
+  })
+  const req = http.request(
+    {
+      host: '127.0.0.1',
+      port: 8200,
+      path: '/api/deleteresume',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body),
+      },
+    },
+    (response) => {
+      response.resume() // drain
+      log.debug(
+        `${nowDate.toLocaleString()}: [Spotify Control] deleteresume status=${response.statusCode} for ${rawPath}`,
+      )
+    },
+  )
+  req.on('error', (err) => {
+    log.debug(`${nowDate.toLocaleString()}: [Spotify Control] deleteresume failed: ${err.message}`)
+  })
+  req.write(body)
+  req.end()
+}
+
+
 setInterval(() => {
   const cmdVolume = "/usr/bin/amixer sget Master | grep 'Right:'"
   const exec = require('node:child_process').exec

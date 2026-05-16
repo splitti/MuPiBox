@@ -142,6 +142,28 @@ export class SpotifyApiService {
     }
   }
 
+  // B6: hard upper bound on a single Spotify SDK call. The SDK's
+  // underlying fetch has no built-in timeout, and a TCP-level stall
+  // (no FIN, no RST, just silence from the upstream) would leave this
+  // promise pending forever. The pendingRequests entry in queueRequest
+  // never settles, so every subsequent same-key request also hangs —
+  // and the queue stops processing because isProcessingQueue stays
+  // true. 20s is generous: the slowest legitimate response we see is
+  // ~3-4s for an audiobook with hundreds of chapters.
+  private static readonly SPOTIFY_REQUEST_TIMEOUT_MS = 20000
+
+  private async withTimeout<T>(operation: () => Promise<T>, ms: number): Promise<T> {
+    let timer: NodeJS.Timeout | undefined
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`Spotify request timed out after ${ms}ms`)), ms)
+    })
+    try {
+      return await Promise.race([operation(), timeoutPromise])
+    } finally {
+      if (timer) clearTimeout(timer)
+    }
+  }
+
   private async rateLimitedRequest<T>(operation: () => Promise<T>): Promise<T> {
     // Implement simple rate limiting
     const now = Date.now()
@@ -153,7 +175,7 @@ export class SpotifyApiService {
 
     try {
       this.lastRequestTime = Date.now()
-      return await operation()
+      return await this.withTimeout(operation, SpotifyApiService.SPOTIFY_REQUEST_TIMEOUT_MS)
     } catch (error: any) {
       if (error.statusCode === 429) {
         // Rate limited - wait and retry
