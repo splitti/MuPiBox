@@ -5307,15 +5307,43 @@ class bq25792:
     # class methods 
     
 
+    def _reopen_bus(self):
+        """
+        Close and re-open the SMBus handle. Used after a Remote I/O error
+        to clear a hung bus state on the BQ25792 (errno 121 leaves the bus
+        in an indeterminate state on the Pi's i2c-bcm2835 driver).
+        """
+        try:
+            self.bq.close()
+        except Exception:
+            pass
+        self.bq = smbus2.SMBus(self.i2c_device)
+
     def safe_execute(self, func, *args, **kwargs):
         """
         Executes a function safely, catching exceptions and handling errors.
+        On the first OSError (typically errno 121 "Remote I/O error" caused
+        by an interleaved I2C transaction or transient bus glitch), reopen
+        the SMBus handle and retry once. A second failure escalates to
+        I2CError so the caller can choose whether to skip the cycle.
         If `_exit_on_error` is True, the program will exit on error.
         """
         try:
             return func(*args, **kwargs)
+        except OSError as e:
+            logging.warning(f"OSError in {func.__name__}: {str(e)} — reopening I2C bus and retrying once")
+            self._reopen_bus()
+            try:
+                # Re-bind the bound method to the new bus handle if needed
+                if hasattr(func, '__self__') and func.__self__ is not None:
+                    func = getattr(self.bq, func.__name__)
+                return func(*args, **kwargs)
+            except Exception as e2:
+                logging.error(f"Error in {func.__name__} after bus reopen: {str(e2)}")
+                if self._exit_on_error:
+                    sys.exit(1)
+                raise I2CError(f"Failed to execute {func.__name__}") from e2
         except Exception as e:
-            #sys.stderr.write(f"Error in {func.__name__}: {str(e)}\n")
             logging.error(f"Error in {func.__name__}: {str(e)}")
             if self._exit_on_error:
                 sys.exit(1)

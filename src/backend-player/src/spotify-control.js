@@ -261,7 +261,7 @@ function setAccessToken(token) {
 /*called in all error cases*/
 /*token expired and no_device error are handled explicitly*/
 function handleSpotifyError(err, from) {
-  if (err.body.error?.status === 401) {
+  if (err?.body?.error?.status === 401) {
     log.debug(`${nowDate.toLocaleString()}: access token expired, refreshing...`)
     log.debug(`${nowDate.toLocaleString()}: Error from: ${from}`)
     counter.counterrorAccessToken++
@@ -271,7 +271,7 @@ function handleSpotifyError(err, from) {
     if (currentMeta.activeSpotifyId !== '0') {
       refreshToken()
     }
-  } else if (err.body.error?.status === 400) {
+  } else if (err?.body?.error?.status === 400) {
     log.debug(`${nowDate.toLocaleString()}: invalid id`)
     log.debug(`${nowDate.toLocaleString()}: Error from: ${from}`)
     log.debug(`${nowDate.toLocaleString()}: ${err}`)
@@ -282,7 +282,7 @@ function handleSpotifyError(err, from) {
     if (currentMeta.activeSpotifyId !== '0') {
       setActiveDevice()
     }
-  } else if (err.body.error?.status === 429) {
+  } else if (err?.body?.error?.status === 429) {
     log.debug(`${nowDate.toLocaleString()}: To many requests on th spotify web api`)
     log.debug(`${nowDate.toLocaleString()}: Error from: ${from}`)
     log.debug(`${nowDate.toLocaleString()}: ${err}`)
@@ -837,6 +837,22 @@ function cmdCall(cmd) {
   })
 }
 
+// Serialise setVolume calls so two rapid taps from the touchscreen
+// can't both read the same stale currentMeta.volume and double-increment
+// past maxVolume. The previous code fired exec(cmdVolume) WITHOUT
+// awaiting the callback and then immediately compared against the
+// not-yet-updated currentMeta.volume — for fast taps the comparison
+// always saw the value from before any of the in-flight operations,
+// so the maxVolume cap (Hörschutz) was bypassable. Bug class: TOCTOU.
+let _volumeOpQueue = Promise.resolve()
+const _execAsync = (cmd) =>
+  new Promise((resolve, reject) => {
+    require('node:child_process').exec(cmd, (e, stdout, stderr) => {
+      if (e) reject(e)
+      else resolve({ stdout, stderr })
+    })
+  })
+
 /*gets available devices, searches for the active one and returns its volume*/
 async function setVolume(volume) {
   const volumeUp = '/usr/bin/amixer sset Master 5%+'
@@ -844,33 +860,42 @@ async function setVolume(volume) {
   const volumeMax = `/usr/bin/amixer sset Master ${muPiBoxConfig.mupibox.maxVolume}%`
   const cmdVolume = "/usr/bin/amixer sget Master | grep 'Right:'"
 
-  const exec = require('node:child_process').exec
-  exec(cmdVolume, (e, stdout, _stderr) => {
-    if (e instanceof Error) {
-      console.error(nowDate.toLocaleString() + e)
-      throw e
+  // Chain onto the queue so concurrent invocations run strictly serially.
+  // Each invocation reads the ACTUAL current volume from amixer first,
+  // checks the cap, then writes — no stale-comparison window.
+  _volumeOpQueue = _volumeOpQueue.then(async () => {
+    let actualVolume
+    try {
+      const { stdout } = await _execAsync(cmdVolume)
+      actualVolume = Number.parseInt(stdout.split('[')[1].split('%')[0], 10)
+    } catch (e) {
+      log.warn(`${nowDate.toLocaleString()}: [setVolume] amixer read failed, skipping op:`, e?.message || e)
+      return
     }
-    currentMeta.volume = Number.parseInt(stdout.split('[')[1].split('%')[0], 10)
-    //console.log('stdout', stdout);
-    //console.log('stderr', stderr);
+    if (Number.isNaN(actualVolume)) {
+      log.warn(`${nowDate.toLocaleString()}: [setVolume] amixer returned unparseable volume, skipping op`)
+      return
+    }
+    currentMeta.volume = actualVolume
+
+    if (volume) {
+      if (actualVolume < muPiBoxConfig.mupibox.maxVolume) {
+        await cmdCall(volumeUp)
+        currentMeta.volume = Math.min(actualVolume + 5, muPiBoxConfig.mupibox.maxVolume)
+      } else {
+        currentMeta.volume = muPiBoxConfig.mupibox.maxVolume
+        await cmdCall(volumeMax)
+      }
+    } else {
+      await cmdCall(volumeDown)
+      currentMeta.volume = Math.max(actualVolume - 5, 0)
+    }
+  }).catch((err) => {
+    // Don't let one failed op poison the queue for subsequent ops.
+    log.warn(`${nowDate.toLocaleString()}: [setVolume] op failed:`, err?.message || err)
   })
 
-  if (volume) {
-    if (currentMeta.volume < muPiBoxConfig.mupibox.maxVolume) {
-      await cmdCall(volumeUp)
-      currentMeta.volume = Number.parseInt(currentMeta.volume, 10) + 5
-    } else {
-      currentMeta.volume = muPiBoxConfig.mupibox.maxVolume
-      await cmdCall(volumeMax)
-    }
-  } else {
-    await cmdCall(volumeDown)
-    if (currentMeta.volume > 0) {
-      currentMeta.volume = Number.parseInt(currentMeta.volume, 10) - 5
-    } else {
-      currentMeta.volume = 0
-    }
-  }
+  return _volumeOpQueue
 }
 
 async function transferPlayback(id) {
