@@ -7,6 +7,14 @@
 	default-agent
 	scan on
 	*/
+	// AR5-15: bluetooth.php was missed by the Phase-5 CSRF sweep. Every
+	// POST handler below runs `sudo systemctl` or `sudo /usr/local/bin/
+	// mupibox/*_bt.sh` — a cross-site request from another admin tab
+	// (or a logged-in admin opening a hostile page) could toggle
+	// Bluetooth, pair an attacker MAC, or remove a paired device. Gate
+	// all writes behind csrf_check() before any other code runs.
+	require_once __DIR__ . '/includes/csrf.php';
+	csrf_check();
 	include ('includes/header.php');
 
 	if( $_POST['change_btac'] == "enable & start" )
@@ -24,25 +32,43 @@
 		$CHANGE_TXT=$CHANGE_TXT."<li>BT-Autoconnect-Service disabled</li>";
 		}
 
+	// Both BT-handlers feed a MAC address into a shell exec. The receiving
+	// scripts (pair_bt.sh / remove_bt.sh) already validate the MAC via
+	// regex since CRIT-7, but the shell command line itself is built here
+	// — if we don't validate, an attacker (admin-authenticated, but still)
+	// could squeeze backticks or `; rm -rf` into the parameter and the
+	// shell would expand it before pair_bt.sh ever runs. Defence in depth:
+	// reject anything that isn't a canonical AA:BB:CC:DD:EE:FF MAC, then
+	// escapeshellarg() the value as well.
+	$btMacRegex = '/^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/';
 	if( $_POST['remove_selected'] )
 		{
-		$command = "sudo -u dietpi /usr/local/bin/mupibox/./remove_bt.sh ".$_POST['remove_mac'];
-		exec($command, $output, $result );
-		$CHANGE_TXT=$CHANGE_TXT."<li>Pairing removed [".$_POST['remove_mac']."</li>";
-		$command = "sudo -u dietpi /usr/local/bin/mupibox/./stop_bt.sh";
-		exec($command, $output, $result );
-		$command = "sudo -u dietpi /usr/local/bin/mupibox/./start_bt.sh";
-		exec($command, $output, $result );
-
-		$change=1;
+		$mac = $_POST['remove_mac'] ?? '';
+		if (!preg_match($btMacRegex, $mac)) {
+			$CHANGE_TXT=$CHANGE_TXT."<li>ERROR: invalid MAC, refused</li>"; $change=1;
+		} else {
+			$command = "sudo -u dietpi /usr/local/bin/mupibox/./remove_bt.sh " . escapeshellarg($mac);
+			exec($command, $output, $result );
+			$CHANGE_TXT=$CHANGE_TXT."<li>Pairing removed [" . htmlspecialchars($mac) . "]</li>";
+			$command = "sudo -u dietpi /usr/local/bin/mupibox/./stop_bt.sh";
+			exec($command, $output, $result );
+			$command = "sudo -u dietpi /usr/local/bin/mupibox/./start_bt.sh";
+			exec($command, $output, $result );
+			$change=1;
+		}
 		}
 
 	if( $_POST['pair_selected'] )
 		{
-		$command = "sudo -u dietpi /usr/local/bin/mupibox/./pair_bt.sh ".$_POST['bt_device'];
-		exec($command, $output, $result );
-		$CHANGE_TXT=$CHANGE_TXT."<li>Device is paired [".$_POST['bt_device']."</li>";
-		$change=1;
+		$mac = $_POST['bt_device'] ?? '';
+		if (!preg_match($btMacRegex, $mac)) {
+			$CHANGE_TXT=$CHANGE_TXT."<li>ERROR: invalid MAC, refused</li>"; $change=1;
+		} else {
+			$command = "sudo -u dietpi /usr/local/bin/mupibox/./pair_bt.sh " . escapeshellarg($mac);
+			exec($command, $output, $result );
+			$CHANGE_TXT=$CHANGE_TXT."<li>Device is paired [" . htmlspecialchars($mac) . "]</li>";
+			$change=1;
+		}
 		}
 
 
@@ -151,11 +177,20 @@
                                 foreach($pairoutput as $device)
                                 {
                                         $split_device=explode(" ", $device);
+                                        // AR5-15: the MAC comes from `bluetoothctl devices` so it's normally
+                                        // a safe AA:BB:CC:DD:EE:FF value, but a paired device with a
+                                        // hostile-name BT stack could in theory emit a forged second
+                                        // column. escapeshellarg for the shell side, htmlspecialchars
+                                        // for the form/HTML side.
+                                        $mac = $split_device[1] ?? '';
+                                        $name = $split_device[2] ?? '';
+                                        $macHtml = htmlspecialchars($mac, ENT_QUOTES);
+                                        $nameHtml = htmlspecialchars($name, ENT_QUOTES);
                                         print "<form class='appnitro'  method='post' action='bluetooth.php' id='remform'>";
-                                        print "<input type='hidden' name='remove_mac' value='".$split_device[1]."'>";
+                                        print "<input type='hidden' name='remove_mac' value='".$macHtml."'>";
                                         print "<input id='saveForm' class='button_text' type='submit' name='remove_selected' value='Remove' />&ensp;";
-                                        print $split_device[2]." [".$split_device[1]."]";
-                                        $command = "sudo -u dietpi bluetoothctl info ".$split_device[1]." | grep 'Connected: yes'";
+                                        print $nameHtml." [".$macHtml."]";
+                                        $command = "sudo -u dietpi bluetoothctl info ".escapeshellarg($mac)." | grep 'Connected: yes'";
                                         unset($connoutput);
                                         exec($command, $connoutput, $connresult );
                                         if( $connoutput[0] )

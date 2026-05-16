@@ -1,4 +1,10 @@
 <?php
+	// MED-16: csrf_check() must run BEFORE any output, otherwise the 403
+	// header can't be set. Pull in the helpers and validate first; only
+	// then include header.php (which renders HTML chrome).
+	require_once __DIR__ . '/includes/csrf.php';
+	csrf_check();
+
 	$onlinejson = file_get_contents('https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/mupiboxconfig.json');
 	$dataonline = json_decode($onlinejson, true);
 	include ('includes/header.php');
@@ -75,7 +81,13 @@
 		$CHANGE_TXT=$CHANGE_TXT."<li>BT-Autoconnect-Service disabled</li>";
 		}
 
-	$rc = $output[count($output)-1];
+	// On a GET request none of the POST handlers above ran, so $output is
+	// never set. PHP 8 turned count(null) into a fatal TypeError —
+	// service.php has been crashing on every plain page-load since this
+	// box upgraded to PHP 8, with the form never reaching the browser.
+	// Pre-existing bug (not introduced by Phase 5) but blocking the
+	// CSRF-token verification, so fix here.
+	$rc = !empty($output) ? $output[count($output)-1] : '';
 	$command = "sudo service smbd status | grep running";
 	exec($command, $smboutput, $smbresult );
 	if( $smboutput[0] )
@@ -132,6 +144,7 @@
 ?>
 
 <form class="appnitro"  method="post" action="service.php" id="form">
+<?= csrf_field() ?>
 	<div class="description">
 		<h2>MupiBox services</h2>
 		<p>De/Activate some helpfull services...</p>

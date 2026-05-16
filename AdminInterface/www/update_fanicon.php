@@ -1,4 +1,8 @@
 <?php
+require __DIR__ . '/includes/auth_check.php';
+
+// MED-17: fan state + CPU temperature was unauth-readable, useful for
+// fingerprinting active vs idle / load. Auth_check gates it.
 	$mupifan_file = '/tmp/fan.json';
 	$fan_icon = "";
 	if (file_exists($mupifan_file)) {

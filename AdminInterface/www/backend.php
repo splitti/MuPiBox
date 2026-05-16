@@ -1,4 +1,9 @@
 <?php
+require __DIR__ . '/includes/auth_check.php';
+
+// backend.php streams pm2 log contents and service status as plain text
+// for XHR consumers in the admin UI. Use the header-only gate so the
+// fetch() body stays free of HTML chrome.
 $logfiles = [
     'server-error' => '/home/dietpi/.pm2/logs/server-error.log',
     'server-out' => '/home/dietpi/.pm2/logs/server-out.log',

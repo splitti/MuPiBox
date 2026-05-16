@@ -1,5 +1,10 @@
 <?php
-$command = "sudo rm /var/www/pm2_logs.zip; sudo zip /var/www/pm2_logs.zip /home/dietpi/.pm2/logs/*;sudo chmod 777 /var/www/pm2_logs.zip; sudo chown www-data:www-data /var/www/pm2_logs.zip";
+require __DIR__ . '/includes/auth_check.php';
+
+// PM2 logs frequently contain stack traces with Spotify tokens / Telegram
+// chatIds / etc. auth_check.php is the header-only gate (header.php would
+// render HTML and corrupt the binary zip stream that follows).
+$command = "sudo rm /var/www/pm2_logs.zip; sudo zip /var/www/pm2_logs.zip /home/dietpi/.pm2/logs/*;sudo chmod 600 /var/www/pm2_logs.zip; sudo chown www-data:www-data /var/www/pm2_logs.zip";
 exec($command );
 
 //Define header information

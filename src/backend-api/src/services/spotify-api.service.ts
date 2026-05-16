@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { SpotifyApi } from '@spotify/web-api-ts-sdk'
@@ -71,8 +72,19 @@ export class SpotifyApiService {
     }
   }
 
+  // MED-5: cacheKey is concatenated from user-controlled input — search
+  // queries, playlist IDs, etc. The previous implementation just appended
+  // `.json` and joined with cacheDir, so a search for `../../etc/passwd_x`
+  // would produce a path that path.join could resolve outside the cache
+  // directory (and fs.writeFile would happily write there as the dietpi
+  // user). Hash the user-controlled portion via SHA-256; the resulting
+  // 64-char hex is filesystem-safe and impossible to traverse with.
+  // Keep getCacheExpiryForKey() reading the original cacheKey since it
+  // only inspects the prefix — the on-disk filename uses the hashed
+  // form via this helper.
   private getCacheFilePath(cacheKey: string): string {
-    return path.join(this.cacheDir, `${cacheKey}.json`)
+    const hashed = createHash('sha256').update(cacheKey).digest('hex')
+    return path.join(this.cacheDir, `${hashed}.json`)
   }
 
   private getCacheExpiryForKey(cacheKey: string): number {

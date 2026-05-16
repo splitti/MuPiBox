@@ -1,5 +1,12 @@
 <?php
-$command = "sudo rm /var/www/config_backup.zip; sudo zip -r /var/www/config_backup.zip /home/dietpi/MuPiBox/media/cover/* /etc/mupibox/mupiboxconfig.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json;sudo chmod 777 /var/www/config_backup.zip; sudo chown www-data:www-data /var/www/config_backup.zip";
+require __DIR__ . '/includes/auth_check.php';
+
+// The backup zip exposes the bcrypt password hash from interfacelogin and
+// every Spotify/Telegram credential in mupiboxconfig.json. auth_check.php
+// (NOT header.php — header.php would render the admin chrome HTML before
+// we get a chance to set Content-Type: application/octet-stream below)
+// short-circuits with 401 for unauthenticated callers.
+$command = "sudo rm /var/www/config_backup.zip; sudo zip -r /var/www/config_backup.zip /home/dietpi/MuPiBox/media/cover/* /etc/mupibox/mupiboxconfig.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json;sudo chmod 600 /var/www/config_backup.zip; sudo chown www-data:www-data /var/www/config_backup.zip";
 exec($command );
 
 //Define header information

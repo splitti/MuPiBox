@@ -3,19 +3,41 @@
 
 	if( $_POST['deleteimage'] )
 		{
-		$file2delete = "/var/www/cover/".$_POST['image'];
-		exec("sudo rm " . $file2delete);
-		$change=1;
-		$CHANGE_TXT=$CHANGE_TXT."<li>Image " . $file2delete . " deleted!</li>";			
+		// `sudo rm /var/www/cover/$image` ran as root, with $image straight
+		// from POST. POSTing image=../../etc/mupibox/mupiboxconfig.json
+		// would happily wipe the box's config. basename() collapses any
+		// path components, and a name whitelist (only filename-safe chars)
+		// rejects shell metacharacters before escapeshellarg.
+		$rawName = basename($_POST['image'] ?? '');
+		if (!preg_match('/^[A-Za-z0-9._-]+$/', $rawName)) {
+			$CHANGE_TXT=$CHANGE_TXT."<li>ERROR: invalid image filename, refused</li>";
+			$change=1;
+		} else {
+			$file2delete = "/var/www/cover/" . $rawName;
+			exec("sudo rm " . escapeshellarg($file2delete));
+			$change=1;
+			$CHANGE_TXT=$CHANGE_TXT."<li>Image " . htmlspecialchars($file2delete) . " deleted!</li>";
+		}
 		}
 	if( $_POST['submitfile'] )
 		{
 		$target_dir = "/var/www/cover/";
-		$target_file = $target_dir . basename($_FILES["fileToUpload"]["name"]);
+		// M10: same filename whitelist as the deleteimage branch. basename()
+		// alone strips path components but happily passes "<", quotes, "&",
+		// spaces and unicode lookalikes — those land in the file listing
+		// below and (without htmlspecialchars there) inject into the <img>
+		// tag rendered for every admin who loads cover.php afterwards.
+		// Reject anything that isn't filename-safe ASCII before we even
+		// look at the bytes.
+		$rawName = basename($_FILES["fileToUpload"]["name"] ?? '');
 		$uploadOk = 1;
-		//$FileType = strtolower(pathinfo($target_file,PATHINFO_EXTENSION));
+		if (!preg_match('/^[A-Za-z0-9._-]+\.(jpe?g|png|gif|webp)$/i', $rawName)) {
+			$CHANGE_TXT=$CHANGE_TXT."<li>ERROR: invalid image filename. Use letters, digits, dot, underscore, dash only, with .jpg/.jpeg/.png/.gif/.webp extension.</li>";
+			$uploadOk = 0;
+		}
+		$target_file = $target_dir . $rawName;
 
-		if (is_file($target_file)) {
+		if ($uploadOk && is_file($target_file)) {
 			$CHANGE_TXT=$CHANGE_TXT."<li>There is already an image with this name! This file will be overwritten!</li>";
 		}
 
@@ -93,13 +115,21 @@
 
 	$files = glob('/var/www/cover/*.{jpeg,jpg,png,gif,webp}', GLOB_BRACE);
 	print "<div style='margin:30px;'>";
+	// M10 defence-in-depth: escape every basename and the host into HTML
+	// attribute context. The upload branch now rejects unsafe names, but
+	// older files from before this patch may still live on disk — escape
+	// at render time so legacy data can't break out of the attributes.
+	$hostHtml = htmlspecialchars($data["mupibox"]["host"] ?? '', ENT_QUOTES);
 	foreach($files as $file) {
+		$name = basename($file);
+		$nameHtml = htmlspecialchars($name, ENT_QUOTES);
+		$nameUrl = rawurlencode($name);
 		print "<div style='float: left;margin-right:15px;margin-top:10px;margin-bottom:15px;' align='center'>";
 		print "<form method=\"post\" action=\"cover.php\" id=\"form\" enctype=\"multipart/form-data\">";
-		print "<img src='/cover/".basename($file)."' style='max-width:280px;'>";
+		print "<img src='/cover/".$nameUrl."' style='max-width:280px;'>";
 		print "<br>";
-		print "<p>URL: <a href='http://".$data["mupibox"]["host"]."/cover/".basename($file)."' target='_blank'>http://".$data["mupibox"]["host"]."/cover/".basename($file)."</a>";
-		print "<input type=\"hidden\" name=\"image\" value=\"" . basename($file) . "\">";
+		print "<p>URL: <a href='http://".$hostHtml."/cover/".$nameUrl."' target='_blank'>http://".$hostHtml."/cover/".$nameHtml."</a>";
+		print "<input type=\"hidden\" name=\"image\" value=\"".$nameHtml."\">";
 		print "<br><input type=\"submit\" class=\"button_text\" value=\"Delete Image\" name=\"deleteimage\" ></p>";
 		print "</form></div>";
 	}
