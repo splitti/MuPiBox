@@ -16,7 +16,13 @@ if ! $cachestate ; then
     export LIBRESPOT_NAME_DISABLE_AUDIO_CACHE=1
 fi
 username=$( jq -r .username ${LIBRESPOT_CACHE}/credentials.json )
-if [[ ! -z "$var" ]]; then
+# LOW-1: previous test was `[[ ! -z "$var" ]]` — `$var` was never set
+# anywhere in this script, so the test was always false (or always true
+# depending on shell semantics for unset-vs-empty), and LIBRESPOT_USERNAME
+# never got exported even when credentials.json had a real username.
+# Test the actual username variable, plus filter "null" since jq -r emits
+# that literal for missing keys.
+if [[ -n "$username" && "$username" != "null" ]]; then
   export LIBRESPOT_USERNAME=${username}
 fi
 

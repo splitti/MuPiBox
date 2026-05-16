@@ -3,13 +3,26 @@
 	$dataonline = json_decode($onlinejson, true);
 	include ('includes/header.php');
 
+	// LOW-3: every apt-get path here can collide with another concurrent
+	// service-toggle (admin clicks "enable VNC" while "enable Samba" is
+	// still running). dpkg has its own exclusive lock at
+	// /var/lib/dpkg/lock-frontend, so the second request fails with a
+	// confusing error in stderr but the PHP page just says "VNC enabled"
+	// — the user has no idea it didn't actually run. Serialise apt-touching
+	// commands behind a flock so the second one waits up to 120s for the
+	// first to finish, and log if the wait expires.
+	$APT_LOCK = '/tmp/.mupibox.apt.lock';
+	$aptWrap = function ($cmd) use ($APT_LOCK) {
+		return "flock -w 120 " . escapeshellarg($APT_LOCK) . " bash -c " . escapeshellarg($cmd);
+	};
+
 	if( $_POST['change_vnc'] == "stop & disable" )
 		{
 		exec("sudo systemctl stop mupi_vnc.service");
 		exec("sudo systemctl stop mupi_novnc.service");
 		exec("sudo systemctl disable mupi_vnc.service");
 		exec("sudo systemctl disable mupi_novnc.service");
-		exec("sudo apt-get remove x11vnc websockify -y");
+		exec($aptWrap("sudo apt-get remove x11vnc websockify -y"));
 		exec("sudo pkill websockify");		
 		exec("sudo rm -R /usr/share/novnc");
 		exec("sudo su - -c \"/usr/bin/cat <<< $(/usr/bin/jq --arg v \"0\" '.tweaks.vnc = $v' /etc/mupibox/mupiboxconfig.json) >  /etc/mupibox/mupiboxconfig.json\"");
@@ -18,7 +31,7 @@
 		}
 	else if( $_POST['change_vnc'] == "enable & start" )
 		{
-		exec("sudo apt-get install x11vnc websockify -y");
+		exec($aptWrap("sudo apt-get install x11vnc websockify -y"));
 		exec("sudo git clone https://github.com/novnc/noVNC.git /usr/share/novnc");
 		exec("sudo chown -R dietpi:dietpi /usr/share/novnc");
 		exec("sudo systemctl enable mupi_vnc.service");
@@ -33,14 +46,14 @@
 	if( $_POST['change_samba'] == "enable & start" )
 		{
 		$command = "sudo apt-get install samba -y && sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/smb.conf -O /etc/samba/smb.conf && sudo systemctl enable smbd.service && sudo systemctl start smbd.service";
-		exec($command, $output, $result );
+		exec($aptWrap($command), $output, $result );
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Samba enabled</li>";
 		}
 	else if( $_POST['change_samba'] == "stop & disable" )
 		{
 		$command = "sudo systemctl stop smbd.service && sudo systemctl disable smbd.service && sudo apt-get remove samba -y";
-		exec($command, $output, $result );
+		exec($aptWrap($command), $output, $result );
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Samba disabled</li>";
 		}
@@ -48,14 +61,14 @@
 	if( $_POST['change_ftp'] == "enable & start" )
 		{
 		$command = " sudo apt-get install proftpd -y && sudo apt-get install samba -y && sudo wget https://raw.githubusercontent.com/splitti/MuPiBox/main/config/templates/proftpd.conf -O /etc/proftpd/proftpd.conf && sudo systemctl restart proftpd";
-		exec($command, $output, $result );
+		exec($aptWrap($command), $output, $result );
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>FTP enabled</li>";
 		}
 	else if( $_POST['change_ftp'] == "stop & disable" )
 		{
 		$command = "sudo systemctl stop proftpd.service && sudo systemctl disable proftpd.service && sudo apt-get remove proftpd -y";
-		exec($command, $output, $result );
+		exec($aptWrap($command), $output, $result );
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>FTP disabled</li>";
 		}

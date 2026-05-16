@@ -40,12 +40,18 @@ else
 	rm ${RESUME_LOCK}
 fi
 
-if [ ! -f ${NETWORKCONFIG} ]; then
-        sudo echo -n "[]" ${NETWORKCONFIG}
-        chown dietpi:dietpi ${NETWORKCONFIG}
-        chmod 777 ${NETWORKCONFIG}
+if [ ! -f ${NETWORKCONFIG} ] || [ ! -s ${NETWORKCONFIG} ] || ! /usr/bin/jq -e 'type == "object"' ${NETWORKCONFIG} >/dev/null 2>&1; then
+        # HIGH-14 (Phase-3) + Phase-5 follow-up: same fix as in
+        # check_network.sh — drop sudo (dietpi can write /tmp) and seed
+        # as `{}` since network.json is an object. The guard also
+        # rebuilds an existing wrong-shape file from a prior broken
+        # session.
+        rm -f "${NETWORKCONFIG}"
+        echo -n "{}" > "${NETWORKCONFIG}"
         OLD_ONLINESTATE="starting"
-        /usr/bin/cat <<< $(/usr/bin/jq -n --arg v "starting" '.onlinestate = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
+        # Atomic-update (HIGH-8).
+        _TMP="${NETWORKCONFIG}.tmp.$$"
+        /usr/bin/jq -n --arg v "starting" '.onlinestate = $v' > "${_TMP}" && mv "${_TMP}" "${NETWORKCONFIG}" || rm -f "${_TMP}"
 else
         OLD_ONLINESTATE=$(/usr/bin/jq -r .onlinestate ${NETWORKCONFIG})
 fi
@@ -86,14 +92,21 @@ IPA=$(/usr/bin/hostname -I | awk '{print $1}')
 DNS=$(echo $(sudo cat /etc/resolv.conf | grep 'nameserver ') | sed 's/nameserver //g')
 SUBNET=$(/sbin/ifconfig wlan0 | awk '/netmask/{split($4,a,":"); print a[1]}')
 
-/usr/bin/cat <<< $(/usr/bin/jq --arg v "${HOSTN}" '.host = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
-/usr/bin/cat <<< $(/usr/bin/jq --arg v "${IPA}" '.ip = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
-/usr/bin/cat <<< $(/usr/bin/jq --arg v "${MAC}" '.mac = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
-/usr/bin/cat <<< $(/usr/bin/jq --arg v "${WIFI}" '.wifi = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
-/usr/bin/cat <<< $(/usr/bin/jq --arg v "${WIFILINK}" '.wifilink = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
-/usr/bin/cat <<< $(/usr/bin/jq --arg v "${WIFISIGNAL}" '.wifisignal = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
-/usr/bin/cat <<< $(/usr/bin/jq --arg v "${GW}" '.gateway = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
-/usr/bin/cat <<< $(/usr/bin/jq --arg v "${DNS}" '.dns = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
-/usr/bin/cat <<< $(/usr/bin/jq --arg v "${SUBNET}" '.subnet = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
+# Atomic-update (HIGH-8). Bundle all nine field updates into a single jq
+# pipeline so we only do one tempfile-write-rename cycle, not nine — same
+# correctness, ninth the SD-card writes.
+_TMP="${NETWORKCONFIG}.tmp.$$"
+/usr/bin/jq \
+    --arg host "${HOSTN}" \
+    --arg ip "${IPA}" \
+    --arg mac "${MAC}" \
+    --arg wifi "${WIFI}" \
+    --arg wifilink "${WIFILINK}" \
+    --arg wifisignal "${WIFISIGNAL}" \
+    --arg gateway "${GW}" \
+    --arg dns "${DNS}" \
+    --arg subnet "${SUBNET}" \
+    '.host = $host | .ip = $ip | .mac = $mac | .wifi = $wifi | .wifilink = $wifilink | .wifisignal = $wifisignal | .gateway = $gateway | .dns = $dns | .subnet = $subnet' \
+    "${NETWORKCONFIG}" > "${_TMP}" && mv "${_TMP}" "${NETWORKCONFIG}" || rm -f "${_TMP}"
 #/usr/bin/cat <<< $(/usr/bin/jq --arg v "${HOSTN}" '."node-sonos-http-api".server = $v' ${FRONTENDCONFIG}) >  ${FRONTENDCONFIG}
 #/usr/bin/cat <<< $(/usr/bin/jq --arg v "${IPA}" '."node-sonos-http-api".ip = $v' ${FRONTENDCONFIG}) >  ${FRONTENDCONFIG}

@@ -25,6 +25,22 @@ killall -s 9 -w -q -r chromium
 CONFIG="/etc/mupibox/mupiboxconfig.json"
 LOG="/boot/mupibox_update.log"
 exec 3>${LOG}
+
+# H5: previously the script ran the destructive `rm -R Sonos-Kids-
+# Controller-master/` BEFORE verifying that the downloaded archive was
+# usable. A flaky internet-dropout, a 404 response, or a corrupted
+# unzip would leave the box with no installation and no rollback path.
+# Add fail_update() to bail BEFORE any destructive op when a pre-flight
+# check fails, plus an atomic-swap pattern around the rm so a failure
+# at extract time can restore the previous install.
+fail_update() {
+	local msg=$1
+	echo "## UPDATE ABORTED: ${msg}" >&3 2>&3
+	echo "## (no destructive operation performed yet — your installation is intact)" >&3 2>&3
+	# Surface to dialog/whiptail so the user actually sees the failure
+	echo -e "XXX\n100\nUpdate aborted: ${msg}\nXXX"
+	exit 1
+}
 service mupi_idle_shutdown stop
 packages2install="lighttpd-mod-openssl gpiod git libasound2 mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt libgles2-mesa mesa-utils libsdl2-dev preload python3-smbus2 pigpio libjson-c-dev i2c-tools libi2c-dev python3-smbus python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask"
 packages2remove="jq"
@@ -232,19 +248,27 @@ echo "==========================================================================
 
 	###############################################################################################
 
-	echo -e "XXX\n${STEP}\nDownload MuPiBox Version ${VERSION_LONG}... \nXXX"	
+	echo -e "XXX\n${STEP}\nDownload MuPiBox Version ${VERSION_LONG}... \nXXX"
 	before=$(date +%s)
 	wget -q -O /home/dietpi/mupibox.zip ${MUPIBOX_URL} >&3 2>&3
+	# H5: hard-fail before any destructive step if the download didn't land.
+	[ -s /home/dietpi/mupibox.zip ] || fail_update "MuPiBox download failed (file empty or missing — check internet)"
+	unzip -t /home/dietpi/mupibox.zip >/dev/null 2>&1 || fail_update "MuPiBox download corrupted (zip integrity check failed)"
 	after=$(date +%s)
 	echo -e "## MuPiBox Download  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
 
 	###############################################################################################
 
-	echo -e "XXX\n${STEP}\nUnzip MuPiBox Version ${VERSION_LONG}... \nXXX"	
+	echo -e "XXX\n${STEP}\nUnzip MuPiBox Version ${VERSION_LONG}... \nXXX"
 	before=$(date +%s)
 	unzip -q -d /home/dietpi /home/dietpi/mupibox.zip >&3 2>&3
 	rm /home/dietpi/mupibox.zip >&3 2>&3
+	# H5: verify the source dir + the inner deploy.zip exist before we
+	# wipe the live install. If either is missing the user gets a
+	# clean abort instead of a half-installed box.
+	[ -d "${MUPI_SRC}" ] || fail_update "Expected source directory ${MUPI_SRC} not found after unzip"
+	[ -s "${MUPI_SRC}/bin/nodejs/deploy.zip" ] || fail_update "Backend deploy.zip missing or empty in update package"
 
 	#MUPI_SRC="/home/dietpi/MuPiBox-${VERSION}"
 	after=$(date +%s)
@@ -259,21 +283,44 @@ echo "==========================================================================
 	mv /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover /tmp/cover >&3 2>&3
 	#mv /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json /tmp/config.json >&3 2>&3
 	mv /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/active_theme.css /tmp/active_theme.css >&3 2>&3
+	# H5: data.json holds resume/library state — non-recoverable. cover
+	# and active_theme.css can be restored from defaults if missing,
+	# so only the data.json backup is fail-fast.
+	[ -f /tmp/data.json ] || fail_update "data.json backup failed (resume/library state would be lost)"
 	after=$(date +%s)
 	echo -e "## Backup Data  ##  finished after $((after - $before)) seconds" >&3 2>&3
-		
+
 	STEP=$(($STEP + 1))
 
 	###############################################################################################
 
 
-	echo -e "XXX\n${STEP}\nUpdate frontend, backend-api, and backend-player ... \nXXX"	
+	echo -e "XXX\n${STEP}\nUpdate frontend, backend-api, and backend-player ... \nXXX"
 	before=$(date +%s)
 	sudo -H -u dietpi bash -c "pm2 stop server" >&3 2>&3
 	#su - dietpi -c "pm2 save" >&3 2>&3
-	rm -R /home/dietpi/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
+	# H5: atomic-swap with rollback. Move old install aside instead of
+	# deleting it; if the deploy.zip extract fails, restore the backup
+	# so the box keeps running on the previous version. The .upd-bak
+	# directory is removed after a successful extract.
+	BAK_DIR="/home/dietpi/.mupibox/Sonos-Kids-Controller-master.upd-bak"
+	rm -rf "${BAK_DIR}" >&3 2>&3
+	if [ -d /home/dietpi/.mupibox/Sonos-Kids-Controller-master ]; then
+		mv /home/dietpi/.mupibox/Sonos-Kids-Controller-master "${BAK_DIR}" >&3 2>&3 || \
+			fail_update "Could not move old install aside (filesystem full?)"
+	fi
 	mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/ >&3 2>&3
-	unzip ${MUPI_SRC}/bin/nodejs/deploy.zip -d /home/dietpi/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
+	if ! unzip ${MUPI_SRC}/bin/nodejs/deploy.zip -d /home/dietpi/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3; then
+		# Rollback: remove the partially-extracted dir and restore the backup.
+		rm -rf /home/dietpi/.mupibox/Sonos-Kids-Controller-master >&3 2>&3
+		if [ -d "${BAK_DIR}" ]; then
+			mv "${BAK_DIR}" /home/dietpi/.mupibox/Sonos-Kids-Controller-master >&3 2>&3
+			sudo -H -u dietpi bash -c "pm2 start server" >&3 2>&3
+		fi
+		fail_update "deploy.zip extraction failed — rolled back to previous install"
+	fi
+	# Extract succeeded — drop the backup.
+	rm -rf "${BAK_DIR}" >&3 2>&3
 	mv ${MUPI_SRC}/config/templates/monitor.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/monitor.json >&3 2>&3
 	mv ${MUPI_SRC}/config/templates/www.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >&3 2>&3
 	chown dietpi:dietpi -R /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www >&3 2>&3
@@ -439,19 +486,23 @@ echo "==========================================================================
 	
 	###############################################################################################
 
-	echo -e "XXX\n${STEP}\nCopy some media files... \nXXX"	
+	echo -e "XXX\n${STEP}\nCopy some media files... \nXXX"
 	# Splash and Media
 	before=$(date +%s)
 	#mv ${MUPI_SRC}/config/templates/splash.txt /boot/splash.txt >&3 2>&3
 	wget https://gitlab.com/DarkElvenAngel/initramfs-splash/-/raw/master/boot/initramfs.img -O /boot/initramfs.img >&3 2>&3
-	cp ${MUPI_SRC}/media/images/goodbye.png /home/dietpiMuPiBox/sysmedia/images/goodbye.png >&3 2>&3
+	# MED-6: previous code had `/home/dietpiMuPiBox/sysmedia/...` (missing
+	# slash between dietpi and MuPiBox). The cp's silently failed because
+	# that path doesn't exist on a real box; the destination files never
+	# got refreshed. Fixed to /home/dietpi/MuPiBox/.
+	cp ${MUPI_SRC}/media/images/goodbye.png /home/dietpi/MuPiBox/sysmedia/images/goodbye.png >&3 2>&3
 	#mv ${MUPI_SRC}/media/images/splash.png /boot/splash.png >&3 2>&3
-	#cp ${MUPI_SRC}/media/images/MuPiLogo.jpg /home/dietpiMuPiBox/sysmedia/images/MuPiLogo.jpg >&3 2>&3
-	#cp ${MUPI_SRC}/media/sound/shutdown.wav /home/dietpiMuPiBox/sysmedia/sound/shutdown.wav >&3 2>&3
-	#cp ${MUPI_SRC}/media/sound/startup.wav /home/dietpiMuPiBox/sysmedia/sound/startup.wav >&3 2>&3
+	#cp ${MUPI_SRC}/media/images/MuPiLogo.jpg /home/dietpi/MuPiBox/sysmedia/images/MuPiLogo.jpg >&3 2>&3
+	#cp ${MUPI_SRC}/media/sound/shutdown.wav /home/dietpi/MuPiBox/sysmedia/sound/shutdown.wav >&3 2>&3
+	#cp ${MUPI_SRC}/media/sound/startup.wav /home/dietpi/MuPiBox/sysmedia/sound/startup.wav >&3 2>&3
 	cp ${MUPI_SRC}/media/sound/button_shutdown.wav /home/dietpi/MuPiBox/sysmedia/sound/button_shutdown.wav >&3 2>&3
-	cp ${MUPI_SRC}/media/sound/low.wav /home/dietpiMuPiBox/sysmedia/sound/low.wav >&3 2>&3
-	cp ${MUPI_SRC}/media/images/installation.jpg /home/dietpiMuPiBox/sysmedia/images/installation.jpg >&3 2>&3
+	cp ${MUPI_SRC}/media/sound/low.wav /home/dietpi/MuPiBox/sysmedia/sound/low.wav >&3 2>&3
+	cp ${MUPI_SRC}/media/images/installation.jpg /home/dietpi/MuPiBox/sysmedia/images/installation.jpg >&3 2>&3
 	cp ${MUPI_SRC}/media/images/battery_low.jpg /home/dietpi/MuPiBox/sysmedia/images/battery_low.jpg >&3 2>&3
 
 	after=$(date +%s)
@@ -575,13 +626,33 @@ echo "==========================================================================
 	###############################################################################################
 
 
-	echo -e "XXX\n{STEP}\nUpdate Admin-Interface... \nXXX"	
+	# MED-6: typo `{STEP}` (no $) just printed literal "{STEP}" in the
+	# update progress UI. Plus: `rm -R /var/www/*` then unzip wiped any
+	# admin-customised files (active_theme.css from the theme picker,
+	# the cover/ symlink, theme-data/ for custom-theme backgrounds).
+	# The next admin save would re-create active_theme.css, but custom
+	# themes and cover/-symlink-content were lost. Preserve them around
+	# the wipe.
+	echo -e "XXX\n${STEP}\nUpdate Admin-Interface... \nXXX"
 	before=$(date +%s)
-	rm -R /var/www/* >&3 2>&3 
+	# Stage user-customised files in /tmp so they survive the wipe.
+	UPDATE_PRESERVE=$(mktemp -d /tmp/mupibox-www-preserve.XXXXXX)
+	for item in active_theme.css cover theme-data; do
+		[ -e "/var/www/${item}" ] && cp -a "/var/www/${item}" "${UPDATE_PRESERVE}/" >&3 2>&3
+	done
+	rm -R /var/www/* >&3 2>&3
 	mv ${MUPI_SRC}/AdminInterface/release/www.zip /var/www/www.zip >&3 2>&3
 	unzip /var/www/www.zip -d /var/www/ >&3 2>&3
 	rm /var/www/www.zip >&3 2>&3
-	ln -s /home/dietpi/MuPiBox/media/cover /var/www/cover >&3 2>&3
+	# Restore preserved files after the new www/ unzipped so they
+	# overwrite anything the package would otherwise have shipped.
+	for item in active_theme.css cover theme-data; do
+		[ -e "${UPDATE_PRESERVE}/${item}" ] && cp -a "${UPDATE_PRESERVE}/${item}" /var/www/ >&3 2>&3
+	done
+	rm -rf "${UPDATE_PRESERVE}"
+	# `cover` is supposed to be a symlink to /home/dietpi/MuPiBox/media/cover —
+	# only re-create if the preserve step didn't already restore it.
+	[ -L /var/www/cover ] || ln -s /home/dietpi/MuPiBox/media/cover /var/www/cover >&3 2>&3
 	chown -R www-data:www-data /var/www/ >&3 2>&3
 	chmod -R 755 /var/www/ >&3 2>&3
 	chown -R dietpi:www-data /home/dietpi/MuPiBox/media/cover >&3 2>&3

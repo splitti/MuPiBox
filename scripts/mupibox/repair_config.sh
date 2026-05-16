@@ -10,5 +10,7 @@ rm ${FRONTENDCONFIG}
 wget ${SRC}/config/templates/www.json -O ${FRONTENDCONFIG}
 
 /usr/local/bin/mupibox/./set_hostname.sh
-/usr/bin/cat <<< $(/usr/bin/jq --arg v "${HOSTN}" '."node-sonos-http-api".server = $v' ${FRONTENDCONFIG}) >  ${FRONTENDCONFIG}
+# Atomic-update (HIGH-8).
+_TMP="${FRONTENDCONFIG}.tmp.$$"
+/usr/bin/jq --arg v "${HOSTN}" '."node-sonos-http-api".server = $v' "${FRONTENDCONFIG}" > "${_TMP}" && mv "${_TMP}" "${FRONTENDCONFIG}" || rm -f "${_TMP}"
 chown dietpi:dietpi ${FRONTENDCONFIG}
