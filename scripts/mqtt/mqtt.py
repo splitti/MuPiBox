@@ -714,10 +714,18 @@ def on_connect(client, userdata, flags, rc):
 # Callback function for when the client is disconnected from the broker
 def on_disconnect(client, userdata, rc):
     print("Disconnected from MQTT broker with result code: " + str(rc))
-    # Send "off" message to device topic on disconnect
     client.publish(mqtt_topic + '/' + mqtt_clientId + '/state', "offline", qos=0)
     client.publish(mqtt_topic + '/' + mqtt_clientId + '/power', "off", qos=0)
     client.publish(mqtt_topic + '/' + mqtt_clientId + '/reboot', "off", qos=0)
+    if rc != 0:
+        print("Unexpected disconnect, trying to reconnect...")
+        import time
+        time.sleep(5)
+        try:
+            client.reconnect()
+            print("Reconnect successful!")
+        except Exception as e:
+            print("Reconnect failed: ", e)
 
 
 def playback_info():
@@ -827,10 +835,10 @@ def get_screenshot():
         return img_base64
     except Exception as e:
         print("Exception: ", e)
-        return null
+        return None
 
 
-def on_message(client, flags, msg):
+def on_message(client, userdata, msg):
     #print("Topic: " + msg.topic)
     #print("Message: " + str(msg.payload.decode("utf-8")))
     if msg.topic == mqtt_topic + '/' + mqtt_clientId + '/reboot/set' and str(msg.payload.decode("utf-8")) == "reboot":
@@ -845,11 +853,11 @@ def on_message(client, flags, msg):
         os.system("/usr/bin/pactl set-sink-volume @DEFAULT_SINK@ " + msg.payload.decode("utf-8") + "%")
     if msg.topic == mqtt_topic + '/' + mqtt_clientId + '/pause/set' and str(msg.payload.decode("utf-8")) == "pause":
         print("Button: pause")
-        url = 'http://' + jsonconfig['mupibox']['host'] + ':5005/pause'
+        url = 'http://127.0.0.1:5005/pause'
         requests.get(url)
     if msg.topic == mqtt_topic + '/' + mqtt_clientId + '/play/set' and str(msg.payload.decode("utf-8")) == "play":
         print("Button: play")
-        url = 'http://' + jsonconfig['mupibox']['host'] + ':5005/play'
+        url = 'http://127.0.0.1:5005/play'
         requests.get(url)
     if msg.topic == mqtt_topic + '/' + mqtt_clientId + '/take_screenshot/set' and str(msg.payload.decode("utf-8")) == "take_screenshot":
         screenshot = get_screenshot()
@@ -867,7 +875,7 @@ def check_server_availability(host, port, retry_interval):
             time.sleep(retry_interval)
 
 def handle_shutdown(signum, frame):
-    print(f"Signal {signum} received. Service will be stopped...")
+    print(f"Exception in main loop: {e}. Service will be stopped...")
     client.loop_stop()
     client.publish(mqtt_topic + '/' + mqtt_clientId + '/state', "offline", qos=0)
     exit(0)
