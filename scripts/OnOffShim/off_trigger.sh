@@ -29,15 +29,15 @@ if [ -z "$GPIO_CHIP" ]; then
     echo "$(date) - ERROR: No GPIO chip found, aborting." >> ${LOGFILE}
     exit 1
 else
-    echo "$(date) - INFO:  GPIO chip found -> ${GPIO_CHIP}" >> ${LOGFILE}	
+    echo "$(date) - INFO:  GPIO chip found -> ${GPIO_CHIP}" >> ${LOGFILE}
 fi
 
 # Check GPIO status
-gpio_status=$(sudo gpioget ${GPIO_CHIP} ${TRIGGER_PIN})
+gpio_status=$(pinctrl lev ${TRIGGER_PIN})
 echo "$(date) - INFO:  GPIO${TRIGGER_PIN} status: ${gpio_status}" >> ${LOGFILE}
 
 check_button_pressed() {
-    local button_state=$(sudo gpioget ${GPIO_CHIP} ${TRIGGER_PIN})
+    local button_state=$(pinctrl lev ${TRIGGER_PIN})
     if [ "$button_state" = "0" ]; then
         return 0  # Button is pressed
     else
@@ -48,7 +48,7 @@ check_button_pressed() {
 # Main monitoring loop
 while true; do
     echo "$(date) - INFO:  Waiting for button press..." >> ${LOGFILE}
-    sudo gpiomon --num-events=1 --falling-edge ${GPIO_CHIP} ${TRIGGER_PIN} &>> ${LOGFILE} &
+    gpiomon --chip ${GPIO_CHIP} --num-events=1 --edges falling ${TRIGGER_PIN} &>> ${LOGFILE} &
     GPIOMON_PID=$!
     if [ $? -ne 0 ]; then
         echo "$(date) - ERROR: Failed to start gpiomon for GPIO${TRIGGER_PIN}" >> ${LOGFILE}
@@ -61,7 +61,7 @@ while true; do
     wait $GPIOMON_PID
     if [ $? -eq 0 ]; then
         echo "$(date) - INFO:  Button pressed, checking hold duration..." >> ${LOGFILE}
-        
+
         # Check if button is held for the required duration
         button_held=true
         for ((i=0; i<PRESS_DELAY; i++)); do
@@ -72,7 +72,7 @@ while true; do
             fi
             sleep 1
         done
-        
+
         if [ "$button_held" = true ]; then
             echo "$(date) - INFO:  Button held for ${PRESS_DELAY} seconds, initiating shutdown" >> ${LOGFILE}
 

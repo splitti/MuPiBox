@@ -8,10 +8,10 @@ if [ "$1" = "poweroff" ]; then
     echo "$(date): Initiating poweroff sequence"
 
     # CUT_PIN setzen (z. B. Stromzufuhr abschalten)
-    gpioset gpiochip0 ${CUT_PIN}=1
+    pinctrl set ${CUT_PIN} op dh
 
     # POWEROFF_PIN setzen (Signal an OnOff SHIM)
-    gpioset gpiochip0 ${POWEROFF_PIN}=0
+    pinctrl set ${POWEROFF_PIN} op dl
 
     echo "$(date): Poweroff sequence complete"
 fi

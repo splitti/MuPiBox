@@ -54,9 +54,9 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 	before=$(date +%s)
 	rm -f /usr/bin/jq >&3 2>&3
 	if [ "$(getconf LONG_BIT)" = "32" ]; then
-		wget -q -O /usr/bin/jq https://github.com/jqlang/jq/releases/download/jq-1.8.1/jq-linux-armhf >&3 2>&3
+		wget -q -O /usr/bin/jq https://github.com/jqlang/jq/releases/latest/download/jq-linux-armhf >&3 2>&3
 	else
-		wget -q -O /usr/bin/jq https://github.com/jqlang/jq/releases/download/jq-1.8.1/jq-linux-arm64 >&3 2>&3
+		wget -q -O /usr/bin/jq https://github.com/jqlang/jq/releases/latest/download/jq-linux-arm64 >&3 2>&3
 	fi
 	chmod 755 /usr/bin/jq >&3 2>&3
 	after=$(date +%s)
