@@ -553,6 +553,20 @@ function previous() {
   }
 }
 
+function jumpToTrack(targetPosition) {
+  if (currentMeta.currentPlayer === 'mplayer') {
+    const offset = targetPosition - currentMeta.currentTracknr
+    if (offset !== 0) {
+      log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Jumping ${offset} track(s) to position ${targetPosition}`)
+      // The player's 'metadata' event always bumps currentTracknr by exactly 1 per
+      // track-change, regardless of how many tracks pt_step actually skipped. Pre-set
+      // it here so that upcoming +1 lands exactly on targetPosition, no matter the offset.
+      currentMeta.currentTracknr = targetPosition - 1
+      player.exec('pt_step', [offset])
+    }
+  }
+}
+
 function shuffleon() {
   spotifyApi.setShuffle(true).then(
     () => {
@@ -1023,6 +1037,31 @@ app.get('/spotify/token', (_req, res) => {
   }
 })
 
+/*returns the track list of a local library album, read from its playlist.m3u*/
+app.get('/local/tracklist/:encoded', (req, res) => {
+  const playedTitelmod = decodeURI(req.params.encoded).replace(/:/g, '/')
+  const playlistFile = `/home/dietpi/MuPiBox/media/${playedTitelmod}/playlist.m3u`
+
+  fs.readFile(playlistFile, 'utf8', (err, data) => {
+    if (err) {
+      res.status(404).json({ error: 'playlist not found' })
+      return
+    }
+
+    const tracks = data
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0 && !line.startsWith('#'))
+      .map((filename, index) => {
+        const nameWithoutExt = filename.replace(/\.[^./]+$/, '')
+        const title = nameWithoutExt.replace(/^\d+\s*[-._]?\s*/, '') || nameWithoutExt
+        return { position: index + 1, name: title }
+      })
+
+    res.json(tracks)
+  })
+})
+
 /*sonos-kids-controller sends commands via http get and uses path names for encoding*/
 /*commands are as defined in sonos-kids-controller and mapped spotify calls*/
 app.use((req, res) => {
@@ -1113,10 +1152,10 @@ app.use((req, res) => {
       "sudo sed -i -e 's/dtoverlay=disable-wifi//g' /boot/config.txt && sudo head -n -1 /boot/config.txt > /tmp/config.txt && sudo mv /tmp/config.txt /boot/config.txt && sudo su - -c '/usr/local/bin/mupibox/restart.sh &'",
     )
 
-  /*   else if (command.name.includes("jumpto:")){
-    let offsetTrackNr = command.name.split(':')[1];
-    jumpTo(offsetTrackNr);
-  } */
+  else if (command.name.includes('localtrack:')) {
+    const targetPosition = Number.parseInt(command.name.split(':')[1], 10)
+    jumpToTrack(targetPosition)
+  }
 
   const resp = { status: 'ok', error: 'none' }
   res.send(resp)

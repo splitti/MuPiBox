@@ -370,6 +370,13 @@
   $change=1;
   }
 
+ if( $_POST['listviewTimer'] != $data["mupibox"]["listviewTimer"] && $_POST['mupiset'] )
+  {
+  $data["mupibox"]["listviewTimer"]=floatval($_POST['listviewTimer']);
+  $CHANGE_TXT=$CHANGE_TXT."<li>Listview timer set to  ".$data["mupibox"]["listviewTimer"]." sec</li>";
+  $change=1;
+  }
+
 
  if( $data["shim"]["ledBrightnessMax"]!=$_POST['ledmaxbrightness'] && $_POST['powerset'] )
   {
@@ -910,6 +917,21 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				<input class="range slider-progress" name="resume" type="range" min="1" max="99" step="1.0" value="<?php 
 					echo $data["mupibox"]["resume"]
 				?>" oninput="this.previousElementSibling.value = this.value">
+				</div>
+			</li>
+
+			<li id="li_1" >
+				<h2>Listview timer</h2>
+				<p>How long you need to press and hold the cover in the player to open the track list (in seconds)
+				</p>
+				<div>
+					<output id="rangeval" class="rangeval"><?php 
+					echo $data["mupibox"]["listviewTimer"]
+				?> sec</output>				
+
+				<input class="range slider-progress" name="listviewTimer" type="range" min="0.5" max="5" step="0.5" value="<?php 
+					echo $data["mupibox"]["listviewTimer"]
+				?>" oninput="this.previousElementSibling.value = this.value + ' sec'">
 				</div>
 			</li>
 

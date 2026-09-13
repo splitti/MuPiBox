@@ -244,6 +244,7 @@
 			],
 		"AudioDevice": "hifiberry-dac",
 		"resume": 9,
+		"listviewTimer": 2.5,
 		"version": ""
 	},
 	"interfacelogin": {

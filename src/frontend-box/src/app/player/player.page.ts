@@ -1,5 +1,6 @@
 import { AsyncPipe } from '@angular/common'
-import { Component, OnInit, ViewChild } from '@angular/core'
+import { HttpClient } from '@angular/common/http'
+import { AfterViewInit, Component, ElementRef, OnInit, ViewChild } from '@angular/core'
 import { FormsModule } from '@angular/forms'
 import { ActivatedRoute, Router } from '@angular/router'
 import {
@@ -12,8 +13,12 @@ import {
   IonGrid,
   IonHeader,
   IonIcon,
+  IonItem,
+  IonLabel,
+  IonList,
   IonRange,
   IonRow,
+  IonSpinner,
   IonTitle,
   IonToolbar,
   NavController,
@@ -31,16 +36,26 @@ import {
   volumeHighOutline,
   volumeLowOutline,
 } from 'ionicons/icons'
-import type { Observable } from 'rxjs'
+import { firstValueFrom, type Observable } from 'rxjs'
+import { environment } from '../../environments/environment'
 import type { AlbumStop } from '../albumstop'
 import type { CurrentMPlayer } from '../current.mplayer'
 import type { CurrentSpotify } from '../current.spotify'
 import { LogService } from '../log.service'
 import type { Media } from '../media'
 import { MediaService } from '../media.service'
+import type { MupiboxConfig } from '../mupibox-config.model'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
 import { PlayerCmds, PlayerService } from '../player.service'
 import { SpotifyService } from '../spotify.service'
+
+export interface TrackListEntry {
+  position: number
+  id: string
+  name: string
+  artist?: string
+  duration_ms?: number
+}
 
 @Component({
   selector: 'app-player',
@@ -63,10 +78,15 @@ import { SpotifyService } from '../spotify.service'
     IonRange,
     IonButton,
     IonIcon,
+    IonList,
+    IonItem,
+    IonLabel,
+    IonSpinner,
   ],
 })
-export class PlayerPage implements OnInit {
+export class PlayerPage implements OnInit, AfterViewInit {
   @ViewChild('range', { static: false }) range: IonRange
+  @ViewChild('themeFontSource', { static: false, read: ElementRef }) themeFontSource: ElementRef<HTMLElement>
 
   media: Media
   resumemedia: Media
@@ -89,9 +109,19 @@ export class PlayerPage implements OnInit {
   public readonly spotify$: Observable<CurrentSpotify>
   public readonly local$: Observable<CurrentMPlayer>
 
+  showTrackList = false
+  loadingTrackList = false
+  trackList: TrackListEntry[] = []
+  trackListTitle = ''
+  pressingCover = false
+  listViewTimerMs = 2500
+  listFontFamily = ''
+  private longPressTimer: ReturnType<typeof setTimeout> | undefined
+
   constructor(
     private logService: LogService,
     private mediaService: MediaService,
+    private http: HttpClient,
     _route: ActivatedRoute,
     private router: Router,
     private navController: NavController,
@@ -130,6 +160,18 @@ export class PlayerPage implements OnInit {
       this.handleExternalPlayback()
     }
 
+    this.http.get<MupiboxConfig>(`${environment.backend.apiUrl}/config`).subscribe({
+      next: (config) => {
+        const configuredSeconds = config?.mupibox?.listviewTimer
+        if (typeof configuredSeconds === 'number' && configuredSeconds > 0) {
+          this.listViewTimerMs = configuredSeconds * 1000
+        }
+      },
+      error: () => {
+        // Keep default listViewTimerMs if config could not be loaded.
+      },
+    })
+
     this.mediaService.current$.subscribe((spotify) => {
       this.currentPlayedSpotify = spotify
     })
@@ -149,6 +191,14 @@ export class PlayerPage implements OnInit {
     this.mediaService.albumStop$.subscribe((albumStop) => {
       this.albumStop = albumStop
     })
+  }
+
+  ngAfterViewInit() {
+    // Read whatever font the active theme applies to the header title, so the track
+    // list uses the same theme font instead of a hardcoded one.
+    if (this.themeFontSource?.nativeElement) {
+      this.listFontFamily = getComputedStyle(this.themeFontSource.nativeElement).fontFamily
+    }
   }
 
   private handleExternalPlayback(): void {
@@ -279,6 +329,8 @@ export class PlayerPage implements OnInit {
   }
 
   ionViewWillLeave() {
+    clearTimeout(this.longPressTimer)
+    this.showTrackList = false
     if (
       (this.media.type === 'spotify' || this.media.type === 'library' || this.media.type === 'rss') &&
       !this.media.shuffle &&
@@ -447,5 +499,118 @@ export class PlayerPage implements OnInit {
 
   seekBack() {
     this.playerService.sendCmd(PlayerCmds.SEEKBACK)
+  }
+
+  // --------------------------------------------
+  // Track list overlay (long-press on cover)
+  // --------------------------------------------
+
+  coverPointerDown() {
+    if (this.media.type !== 'spotify' && this.media.type !== 'library') {
+      return
+    }
+    clearTimeout(this.longPressTimer)
+    this.pressingCover = true
+    this.longPressTimer = setTimeout(() => {
+      this.pressingCover = false
+      this.openTrackList()
+    }, this.listViewTimerMs)
+  }
+
+  coverPointerUp() {
+    clearTimeout(this.longPressTimer)
+    this.pressingCover = false
+  }
+
+  async openTrackList() {
+    this.showTrackList = true
+    this.loadingTrackList = true
+    this.trackList = []
+
+    try {
+      if (this.media.type === 'library') {
+        const tracks = await firstValueFrom(this.playerService.getLocalTracklist(this.media))
+        this.trackListTitle = this.media.title
+        this.trackList = (tracks ?? []).map((track) => ({
+          position: track.position,
+          id: `${track.position}`,
+          name: track.name,
+        }))
+      } else if (this.media.playlistid) {
+        const info = await firstValueFrom(this.spotifyService.getPlaylistInfo(this.media.playlistid))
+        this.trackListTitle = info.playlist_name
+        this.trackList = (info.tracks ?? []).map((track: any, index: number) => ({
+          position: index + 1,
+          id: track.id ?? track.uri,
+          name: track.name,
+          artist: track.artist,
+          duration_ms: track.duration_ms,
+        }))
+      } else if (this.media.audiobookid) {
+        const info = await firstValueFrom(this.spotifyService.getAudiobookInfo(this.media.audiobookid))
+        this.trackListTitle = info.audiobook_name
+        this.trackList = (info.chapters ?? []).map((chapter: any, index: number) => ({
+          position: index + 1,
+          id: chapter.id,
+          name: chapter.name,
+          duration_ms: chapter.duration_ms,
+        }))
+      } else if (this.media.showid) {
+        const info = await firstValueFrom(this.spotifyService.getShowInfo(this.media.showid))
+        this.trackListTitle = info.show_name
+        this.trackList = (info.episodes ?? []).map((episode: any, index: number) => ({
+          position: index + 1,
+          id: episode.id,
+          name: episode.name,
+          duration_ms: episode.duration_ms,
+        }))
+      } else if (this.media.id) {
+        const info = await firstValueFrom(this.spotifyService.getAlbumInfo(this.media.id))
+        this.trackListTitle = info.album_name
+        this.trackList = (info.tracks ?? []).map((track: any) => ({
+          position: track.track_number,
+          id: track.id,
+          name: track.name,
+          artist: track.artist,
+          duration_ms: track.duration_ms,
+        }))
+      }
+    } finally {
+      this.loadingTrackList = false
+    }
+  }
+
+  closeTrackList() {
+    this.showTrackList = false
+  }
+
+  playTrackFromList(entry: TrackListEntry) {
+    this.playerService.playTrackAtPosition(this.media, entry)
+  }
+
+  isCurrentTrack(entry: TrackListEntry): boolean {
+    if (this.media.type === 'library') {
+      return this.currentPlayedLocal?.currentTracknr === entry.position
+    }
+    if (this.media.playlistid) {
+      return this.currentPlayedSpotify?.playlist?.current_track_position === entry.position
+    }
+    if (this.media.audiobookid) {
+      return this.currentPlayedSpotify?.audiobook?.current_chapter_position === entry.position
+    }
+    if (this.media.showid) {
+      return this.currentPlayedSpotify?.item?.id === entry.id
+    }
+    return this.currentPlayedSpotify?.item?.track_number === entry.position
+  }
+
+  formatDuration(durationMs: number | undefined): string {
+    if (!durationMs) {
+      return ''
+    }
+    const totalSeconds = Math.round(durationMs / 1000)
+    const minutes = Math.floor(totalSeconds / 60)
+    const seconds = totalSeconds % 60
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`
   }
 }

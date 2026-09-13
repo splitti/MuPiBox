@@ -152,6 +152,46 @@ export class PlayerService {
     return true
   }
 
+  /**
+   * Jump playback to a specific track/episode/chapter within the currently playing
+   * Spotify album, playlist, show or audiobook.
+   * @param media - The media object describing the currently playing context.
+   * @param entry - The track list entry to jump to. `position` is the 1-based
+   *   position within an album/playlist/audiobook; `id` is the Spotify id, used
+   *   for podcast episodes which are addressed directly rather than by position.
+   */
+  playTrackAtPosition(media: Media, entry: { position: number; id?: string }): void {
+    let url: string
+
+    if (media.type === 'library') {
+      url = `localtrack:${entry.position}`
+    } else if (media.playlistid) {
+      url = `spotify/now/spotify:playlist:${encodeURIComponent(media.playlistid)}:${entry.position}:0`
+    } else if (media.audiobookid) {
+      url = `spotify/now/spotify:show:${encodeURIComponent(media.audiobookid)}:${entry.position}:0`
+    } else if (media.showid && entry.id) {
+      // Podcast episodes are played directly by id rather than by position within the show.
+      url = `spotify/now/spotify:episode:${encodeURIComponent(entry.id)}:1:0`
+    } else if (media.id) {
+      url = `spotify/now/spotify:album:${encodeURIComponent(media.id)}:${entry.position}:0`
+    } else {
+      return
+    }
+
+    this.sendRequest(url)
+  }
+
+  /**
+   * Get the ordered list of track file names for a local library album,
+   * read from its playlist.m3u by the player backend.
+   */
+  getLocalTracklist(media: Media): Observable<{ position: number; name: string }[]> {
+    const encodedPath = `${encodeURIComponent(media.category)}:${encodeURIComponent(media.artist)}:${encodeURIComponent(media.title)}`
+    return this.http.get<{ position: number; name: string }[]>(
+      `${environment.backend.playerUrl}/local/tracklist/${encodedPath}`,
+    )
+  }
+
   private say(text: string) {
     this.getConfig().subscribe((config) => {
       let url = `say/${encodeURIComponent(text)}`

@@ -3,9 +3,7 @@
     <ion-buttons slot="start">
       <ion-back-button icon="arrow-back-outline" defaultHref="/settings"></ion-back-button>
     </ion-buttons>
-    <ion-title>
-        WiFi settings
-    </ion-title>
+    <ion-title>WiFi</ion-title>
     <ion-buttons slot="end">
       <ion-button (click)="wifiRestartButtonPressed()">
         <ion-icon slot="icon-only" name="refresh"></ion-icon>
@@ -20,50 +18,55 @@
 </ion-header>
 
 <ion-content class="wifi-content">
-  <div>
-    <div class="top">
-      <form #libraryForm="ngForm" (ngSubmit)="submit(libraryForm)">
-        <ion-grid>
-          <ion-row>
-            <ion-col size="12">
-              <div>
-                <ion-item>
-                  <ion-input #wlan_ssid name="wlan_ssid" type="text" placeholder="WLAN-SSID" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
-                </ion-item>
-              </div>
-            </ion-col>
-          </ion-row>
-          <ion-row>
-            <ion-col size="12">
-              <div>
-                <ion-item>
-                  <ion-input #wlan_pw name="wlan_pw" type="text" placeholder="WLAN-Key" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
-                </ion-item>
-              </div>
-            </ion-col>
-          </ion-row>
-          <ion-row>
-            <ion-col size="6">
-              <div>
-                <div class="add-button">
-                  <ion-button size="large" type="submit" expand="block" [disabled]="!valid">Set new WLAN</ion-button>
-                </div>
-              </div>
-            </ion-col>
-            <ion-col size="6">
-              <div>
-                <div class="cancel-button">
-                  <ion-button size="large" color="danger" (click)="cancelButtonPressed()" expand="block">Cancel</ion-button>
-                </div>
-              </div>
-            </ion-col>
-          </ion-row>
-        </ion-grid>
-      </form>
+  @let net = network();
+  <ion-card class="status-card">
+    <div class="status-row">
+      <div class="status-ssid">
+        <ion-icon name="wifi-outline"></ion-icon>
+        <div>
+          <div class="ssid-name">{{ net?.wifi ?? '—' }}</div>
+          <div class="ssid-detail">{{ net?.wifilink ?? '' }} &middot; {{ net?.wifisignal ?? '' }}</div>
+        </div>
+      </div>
+      <div class="status-ip">
+        <div class="ip-label">Box IP address</div>
+        <div class="ip-value">{{ net?.ip ?? '—' }}</div>
+        <div class="gateway-value">Router: {{ net?.gateway ?? '—' }}</div>
+      </div>
     </div>
+  </ion-card>
+
+  <div class="list-header">
+    <ion-label>Configured networks</ion-label>
+    <ion-button size="small" (click)="addNetworkButtonPressed()">
+      <ion-icon slot="start" name="add-outline"></ion-icon>
+      Add network
+    </ion-button>
   </div>
 
-  <div class="bottom">
-    <div class="simple-keyboard"></div>
-  </div>
+  @if (loading()) {
+    <div class="loading-row"><ion-spinner></ion-spinner></div>
+  } @else {
+    <ion-list class="networks-list">
+      @for (configuredNetwork of configuredNetworks(); track configuredNetwork.id) {
+        <ion-item [class.current-network]="configuredNetwork.current">
+          <ion-label>
+            <h2>
+              {{ configuredNetwork.ssid }}
+              @if (configuredNetwork.current) {
+                <span class="current-badge">&check; connected</span>
+              }
+            </h2>
+            <p>IP automatic (DHCP)</p>
+          </ion-label>
+          <ion-button slot="end" fill="outline" size="small" (click)="changeNetworkButtonPressed(configuredNetwork)">Change</ion-button>
+          <ion-button slot="end" fill="outline" color="danger" size="small" (click)="deleteNetworkButtonPressed(configuredNetwork)">Delete</ion-button>
+        </ion-item>
+      } @empty {
+        <ion-item>
+          <ion-label>No networks configured yet.</ion-label>
+        </ion-item>
+      }
+    </ion-list>
+  }
 </ion-content>

@@ -1,8 +1,9 @@
-import { exec } from 'node:child_process'
+import { exec, execFile } from 'node:child_process'
 import dns from 'node:dns'
 import fs from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
+import { promisify } from 'node:util'
 import cors from 'cors'
 import express from 'express'
 import jsonfile from 'jsonfile'
@@ -18,6 +19,8 @@ import { SpotifyMediaInfo } from './services/spotify-media-info.service'
 // Force IPv4 for DNS lookups to avoid EAI_AGAIN errors on Raspberry Pi
 // This fixes issues where IPv6 is misconfigured or not supported
 dns.setDefaultResultOrder('ipv4first')
+
+const execFileAsync = promisify(execFile)
 
 const testServe = process.env.NODE_ENV === 'test'
 const devServe = process.env.NODE_ENV === 'development'
@@ -256,6 +259,81 @@ app.post('/api/addwlan', (req, res) => {
       res.status(200).send('ok')
     })
   })
+})
+
+// --------------------------------------------
+// WiFi: already configured networks (wpa_supplicant)
+// --------------------------------------------
+
+interface WifiConfiguredNetwork {
+  id: number
+  ssid: string
+  current: boolean
+}
+
+function parseWpaCliNetworks(stdout: string): WifiConfiguredNetwork[] {
+  return stdout
+    .split('\n')
+    .slice(1) // header line: "network id / ssid / bssid / flags"
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .map((line) => {
+      const parts = line.split('\t')
+      return {
+        id: Number.parseInt(parts[0], 10),
+        ssid: parts[1] ?? '',
+        current: (parts[3] ?? '').includes('[CURRENT]'),
+      }
+    })
+    .filter((network) => !Number.isNaN(network.id))
+}
+
+app.get('/api/wifi/configured', async (_req, res) => {
+  try {
+    const { stdout } = await execFileAsync('sudo', ['wpa_cli', '-i', 'wlan0', 'list_networks'])
+    res.json(parseWpaCliNetworks(stdout))
+  } catch (error) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error listing wifi networks: ${error}`)
+    res.status(500).send('error')
+  }
+})
+
+app.delete('/api/wifi/configured/:id', async (req, res) => {
+  const id = Number.parseInt(req.params.id, 10)
+  if (Number.isNaN(id)) {
+    res.status(400).send('invalid id')
+    return
+  }
+
+  try {
+    await execFileAsync('sudo', ['wpa_cli', '-i', 'wlan0', 'remove_network', String(id)])
+    await execFileAsync('sudo', ['wpa_cli', '-i', 'wlan0', 'save_config'])
+    console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Removed wifi network ${id}`)
+    res.status(200).send('ok')
+  } catch (error) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error removing wifi network ${id}: ${error}`)
+    res.status(500).send('error')
+  }
+})
+
+app.post('/api/wifi/configured/:id/password', async (req, res) => {
+  const id = Number.parseInt(req.params.id, 10)
+  const password: string = req.body?.password ?? ''
+  if (Number.isNaN(id) || password.length < 8 || password.length > 63) {
+    res.status(400).send('invalid request')
+    return
+  }
+
+  try {
+    await execFileAsync('sudo', ['wpa_cli', '-i', 'wlan0', 'set_network', String(id), 'psk', `"${password}"`])
+    await execFileAsync('sudo', ['wpa_cli', '-i', 'wlan0', 'enable_network', String(id)])
+    await execFileAsync('sudo', ['wpa_cli', '-i', 'wlan0', 'save_config'])
+    console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Updated password for wifi network ${id}`)
+    res.status(200).send('ok')
+  } catch (error) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error updating wifi network ${id}: ${error}`)
+    res.status(500).send('error')
+  }
 })
 
 app.post('/api/add', (req, res) => {
@@ -996,6 +1074,125 @@ app.post('/api/reboot', (_req, res) => {
     console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] System restart initiated`)
     res.status(200).send('ok')
   })
+})
+
+// --------------------------------------------
+// Bluetooth
+// --------------------------------------------
+
+const macAddressPattern = /^[0-9A-Fa-f]{2}(:[0-9A-Fa-f]{2}){5}$/
+
+function isValidMac(mac: unknown): mac is string {
+  return typeof mac === 'string' && macAddressPattern.test(mac)
+}
+
+interface BluetoothDevice {
+  mac: string
+  name: string
+}
+
+app.get('/api/bluetooth/status', async (_req, res) => {
+  try {
+    const { stdout: showOutput } = await execFileAsync('bluetoothctl', ['show'])
+    const powered = /Powered:\s*yes/.test(showOutput)
+
+    if (!powered) {
+      res.json({ powered: false, paired: [] })
+      return
+    }
+
+    // Note: "paired-devices" is only available in newer bluez releases; "devices Paired" works from bluez 5.65+.
+    const { stdout: pairedOutput } = await execFileAsync('bluetoothctl', ['devices', 'Paired'])
+    const devices: BluetoothDevice[] = pairedOutput
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line.startsWith('Device '))
+      .map((line) => {
+        const [, mac, ...nameParts] = line.split(' ')
+        return { mac, name: nameParts.join(' ') || mac }
+      })
+
+    const paired = await Promise.all(
+      devices.map(async (device) => {
+        try {
+          const { stdout: infoOutput } = await execFileAsync('bluetoothctl', ['info', device.mac])
+          return { ...device, connected: /Connected:\s*yes/.test(infoOutput) }
+        } catch {
+          return { ...device, connected: false }
+        }
+      }),
+    )
+
+    res.json({ powered: true, paired })
+  } catch (error) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error reading bluetooth status: ${error}`)
+    res.status(500).send('error')
+  }
+})
+
+app.post('/api/bluetooth/power', async (req, res) => {
+  const script = req.body?.on === true ? 'start_bt.sh' : 'stop_bt.sh'
+
+  try {
+    await execFileAsync(`/usr/local/bin/mupibox/${script}`, [])
+    console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Bluetooth power: ran ${script}`)
+    res.status(200).send('ok')
+  } catch (error) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error running ${script}: ${error}`)
+    res.status(500).send('error')
+  }
+})
+
+app.post('/api/bluetooth/scan', async (_req, res) => {
+  try {
+    const { stdout } = await execFileAsync('/usr/local/bin/mupibox/scan_bt.sh', [], { timeout: 20000 })
+
+    const devices: BluetoothDevice[] = stdout
+      .split('\n')
+      .slice(1) // first line is "Scanning ..."
+      .map((line) => line.split('\t'))
+      .filter((parts) => isValidMac(parts[1]))
+      .map((parts) => ({ mac: parts[1], name: parts[2]?.trim() || parts[1] }))
+
+    res.json(devices)
+  } catch (error) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error scanning for bluetooth devices: ${error}`)
+    res.status(500).send('error')
+  }
+})
+
+app.post('/api/bluetooth/pair', async (req, res) => {
+  const mac = req.body?.mac
+  if (!isValidMac(mac)) {
+    res.status(400).send('invalid mac address')
+    return
+  }
+
+  try {
+    await execFileAsync('/usr/local/bin/mupibox/pair_bt.sh', [mac], { timeout: 25000 })
+    console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Paired bluetooth device ${mac}`)
+    res.status(200).send('ok')
+  } catch (error) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error pairing bluetooth device ${mac}: ${error}`)
+    res.status(500).send('error')
+  }
+})
+
+app.post('/api/bluetooth/remove', async (req, res) => {
+  const mac = req.body?.mac
+  if (!isValidMac(mac)) {
+    res.status(400).send('invalid mac address')
+    return
+  }
+
+  try {
+    await execFileAsync('/usr/local/bin/mupibox/remove_bt.sh', [mac], { timeout: 15000 })
+    console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Removed bluetooth device ${mac}`)
+    res.status(200).send('ok')
+  } catch (error) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error removing bluetooth device ${mac}: ${error}`)
+    res.status(500).send('error')
+  }
 })
 
 app.post('/api/telegram/screen', (req, res) => {

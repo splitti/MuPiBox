@@ -1,5 +1,3 @@
-@import 'simple-keyboard/build/css/index.css';
-
 ion-toolbar {
     ion-back-button {
         --min-height: 70px;
@@ -11,154 +9,109 @@ ion-toolbar {
         width: 70px !important;
         font-size: 20px !important;
     }
-    ion-segment-button {
-        font-size: 18px;
-        --indicator-color: red !important;
-    }
-    ion-select {
-        display: none;
-    }
-}
-
-ion-item {
-    font-size: 18px;
-}
-
-.add-button, .cancel-button {
-    margin-top: -4px;
-}
-
-.top {
-    padding-bottom: 180px;
-}
-
-.bottom {
-    position: fixed;
-    left: 0;
-    bottom: 0;
-    right: 0;
-    z-index: 9999;
-    background-color: rgba(220, 220, 220, 1.0);
-}
-
-.item .dimmed-text {
-    opacity: 0.5;
-}
-
-// Onscreen Keyboard
-.simple-keyboard {
-    max-width: 800px;
-}
-
-.hg-button {
-    color: var(--ion-color-light);
-}
-
-.simple-keyboard.hg-theme-default {
-    font-family: inherit !important;
-}
-
-.simple-keyboard.hg-theme-ios {
-    width: 800px;
-    margin: auto;
-}
-
-.simple-keyboard.hg-theme-ios.hg-theme-default .hg-row .hg-button {
-    flex-grow: 1;
-    cursor: pointer;
-    max-width: initial;
-}
-
-.simple-keyboard.hg-theme-ios .hg-row {
-    display: flex;
-}
-
-.simple-keyboard.hg-theme-ios .hg-row:not(:last-child) {
-    margin-bottom: 5px;
-}
-
-.simple-keyboard.hg-theme-ios .hg-row .hg-button:not(:last-child) {
-    margin-right: 5px;
-}
-
-.simple-keyboard.hg-theme-ios.hg-theme-default .hg-button.hg-button-shift {
-    max-width: 123px;
-    min-width: 123px;
-}
-
-.simple-keyboard.hg-theme-ios.hg-theme-default .hg-button.hg-button-shiftactivated {
-    max-width: 123px;
-    min-width: 123px;
-}
-
-.simple-keyboard.hg-theme-ios.hg-theme-default .hg-button.hg-button-bksp {
-    max-width: 126px;
-    min-width: 126px;
-}
-
-.simple-keyboard.hg-theme-ios.hg-theme-default {
-    background-color: rgba(220, 220, 220, 1.0);
-    padding: 5px;
-    border-radius: 5px;
-}
-
-.simple-keyboard.hg-theme-ios.hg-theme-default.hg-layout-custom {
-    background-color: #e5e5e5;
-    padding: 5px;
-}
-
-.simple-keyboard.hg-theme-ios.hg-theme-default .hg-button {
-    border-radius: 5px;
-    box-sizing: border-box;
-    padding: 0;
-    background: white;
-    border-bottom: 1px solid #b5b5b5;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: none;
-    font-weight: 400;
-    font-size: 18px;
-    max-width: 45px;
-    min-width: 45px;
-    height: 48px;
-    min-height: 48px;
-}
-
-.simple-keyboard.hg-theme-ios.hg-theme-default .hg-button:active,
-.simple-keyboard.hg-theme-ios.hg-theme-default .hg-button:focus {
-    background: #e4e4e4;
-}
-
-.simple-keyboard.hg-theme-ios.hg-theme-default .hg-button.hg-functionBtn {
-    background-color: #adb5bb;
-}
-
-.simple-keyboard.hg-theme-ios.hg-theme-default .hg-button.hg-button-space,
-.simple-keyboard.hg-theme-ios.hg-theme-default .hg-button.hg-button-shift,
-.simple-keyboard.hg-theme-ios.hg-theme-default .hg-button.hg-button-shiftactivated {
-    background-color: #ffffff;
-}
-
-.simple-keyboard.hg-theme-ios.hg-theme-default .hg-button-space {
-    max-width: 448px;
-    min-width: 448px;
-}
-
-.simple-keyboard.hg-theme-ios.hg-theme-default .hg-button-enter {
-    max-width: 110px;
-    min-width: 110px;
-    background-color: #356feb !important;
-    color: white;
-}
-
-.simple-keyboard.hg-theme-ios.hg-theme-default .hg-button-altright,
-.simple-keyboard.hg-theme-ios.hg-theme-default .hg-button-back {
-    min-width: 80px;
-    max-width: 80px;
 }
 
 .wifi-content {
     --ion-background-color: #000000 !important;
+    --padding-start: 16px;
+    --padding-end: 16px;
+    --padding-top: 16px;
+}
+
+.status-card {
+    --background: #16202a;
+    padding: 20px;
+    margin: 0 0 20px;
+
+    .status-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+
+    .status-ssid {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+
+        ion-icon {
+            font-size: 32px;
+            color: var(--ion-color-primary, #2dd6c7);
+        }
+
+        .ssid-name {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .ssid-detail {
+            opacity: 0.7;
+            font-size: 14px;
+        }
+    }
+
+    .status-ip {
+        text-align: right;
+
+        .ip-label {
+            font-size: 12px;
+            opacity: 0.7;
+        }
+
+        .ip-value {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--ion-color-primary, #2dd6c7);
+        }
+
+        .gateway-value {
+            font-size: 13px;
+            opacity: 0.7;
+        }
+    }
+}
+
+.list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+
+    ion-label {
+        font-size: 16px;
+        opacity: 0.8;
+    }
+}
+
+.networks-list {
+    background: transparent;
+
+    ion-item {
+        --background: #16202a;
+        margin-bottom: 8px;
+        border-radius: 8px;
+
+        &.current-network {
+            --border-color: var(--ion-color-primary, #2dd6c7);
+        }
+
+        h2 {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .current-badge {
+            font-size: 12px;
+            color: var(--ion-color-primary, #2dd6c7);
+        }
+    }
+}
+
+.loading-row {
+    display: flex;
+    justify-content: center;
+    padding: 32px;
 }

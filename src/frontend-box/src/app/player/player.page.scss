@@ -5,6 +5,7 @@ ion-back-button {
 }
 
 .cover-card {
+    position: relative;
     margin-top: 20px;
     width: 350px;
     height: 350px;
@@ -17,6 +18,59 @@ ion-back-button {
     max-width: 350px !important;
     min-width: 350px !important;
     margin: 0 auto !important;
+}
+
+.press-indicator {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 90px;
+    height: 90px;
+    transform: translate(-50%, -50%);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.1s ease-out;
+
+    svg {
+        width: 100%;
+        height: 100%;
+        transform: rotate(-90deg);
+    }
+
+    circle {
+        fill: rgba(0, 0, 0, 0.35);
+        stroke-width: 4;
+    }
+
+    .press-indicator-track {
+        fill: rgba(0, 0, 0, 0.35);
+        stroke: rgba(255, 255, 255, 0.3);
+    }
+
+    .press-indicator-progress {
+        fill: none;
+        stroke: var(--ion-color-primary, #2dd6c7);
+        stroke-linecap: round;
+        stroke-dasharray: 125.6;
+        stroke-dashoffset: 0;
+    }
+
+    &.active {
+        opacity: 1;
+
+        .press-indicator-progress {
+            animation: press-indicator-countdown var(--press-duration, 2500ms) linear forwards;
+        }
+    }
+}
+
+@keyframes press-indicator-countdown {
+    from {
+        stroke-dashoffset: 0;
+    }
+    to {
+        stroke-dashoffset: 125.6;
+    }
 }
 
 .toolbar-album {
@@ -75,4 +129,60 @@ ion-back-button {
 
 .mupihat-icon-container {
     padding-right: 20px;
+}
+
+ion-content.player-content.tracklist-active {
+    --background: #000000 !important;
+    --ion-background-color: #000000 !important;
+}
+
+.tracklist {
+    background: #000000;
+    font-size: 2rem;
+
+    ion-item {
+        --background: transparent;
+        --border-color: #d3d3d3 !important;
+        --align-items: center;
+        font-size: 2rem;
+
+        &.current-track {
+            --color: var(--ion-color-primary, #2dd6c7);
+        }
+    }
+
+    ion-label h2 {
+        font-size: 2rem;
+        white-space: nowrap;
+    }
+
+    .track-position {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        flex-shrink: 0;
+        font-size: 2rem;
+        opacity: 0.7;
+
+        ion-icon {
+            font-size: 2rem;
+            color: var(--ion-color-primary, #2dd6c7);
+        }
+    }
+
+    .track-duration {
+        opacity: 0.7;
+        font-size: 2rem;
+    }
+}
+
+:host ::ng-deep .tracklist .button-native::after {
+    display: none !important;
+}
+
+.tracklist-loading {
+    display: flex;
+    justify-content: center;
+    padding: 40px;
 }
