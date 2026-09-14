@@ -17,17 +17,16 @@ export class RssFeedService {
   constructor(private http: HttpClient) {}
 
   getRssFeed(id: string, category: CategoryType, index: number, extraDataSource: ExtraDataMedia): Observable<Media[]> {
-    this.url = `${environment.backend.apiUrl}/rssfeed?url=${id}`
+    this.url = `${environment.backend.apiUrl}/rssfeed/cached?url=${id}`
     return this.http.get(this.url).pipe(
       map((response: RssFeed) => {
         return response.rss.channel.item.map((item) => {
-          console.log(item)
           const media: Media = {
             id: item.enclosure?._attributes?.url,
             artist: this.handleCData(response.rss?.channel?.title),
             title: this.handleCData(item?.title),
-            cover: item['itunes:image']?._attributes?.href,
-            artistcover: this.handleCData(response.rss?.channel?.image?.url),
+            cover: this.proxyCoverUrl(item['itunes:image']?._attributes?.href),
+            artistcover: this.proxyCoverUrl(this.handleCData(response.rss?.channel?.image?.url)),
             release_date: this.handleCData(item?.pubDate),
             duration: this.handleCData(item?.['itunes:duration']),
             type: 'rss',
@@ -41,6 +40,22 @@ export class RssFeedService {
       mergeAll(),
       toArray(),
     )
+  }
+
+  /**
+   * Routes a remote cover image URL through the backend's on-demand cache/proxy so
+   * it's only ever downloaded once (per-episode covers can number in the hundreds
+   * for long-running podcasts). Leaves already-local paths (rewritten server-side
+   * for the channel cover) untouched.
+   */
+  private proxyCoverUrl(url?: string): string | undefined {
+    if (!url || url === 'No title') {
+      return undefined
+    }
+    if (url.startsWith('/rss-covers/')) {
+      return url
+    }
+    return `${environment.backend.apiUrl}/rssfeed/image?url=${encodeURIComponent(url)}`
   }
 
   private handleCData(text?: { _text: string } | { _cdata: string }): string {

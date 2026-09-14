@@ -1,7 +1,7 @@
 import { AsyncPipe } from '@angular/common'
 import { HttpClient } from '@angular/common/http'
 import { ChangeDetectionStrategy, Component, computed, inject, Signal } from '@angular/core'
-import { toObservable, toSignal } from '@angular/core/rxjs-interop'
+import { toSignal } from '@angular/core/rxjs-interop'
 import { Router } from '@angular/router'
 import {
   AlertController,
@@ -20,8 +20,7 @@ import {
 } from '@ionic/angular/standalone'
 import { addIcons } from 'ionicons'
 import { arrowBackOutline } from 'ionicons/icons'
-import QRCode from 'qrcode'
-import { from, Observable, of, switchMap } from 'rxjs'
+import { Observable, of } from 'rxjs'
 import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
 
@@ -81,17 +80,8 @@ export class SettingsPage {
         data: 'shutdown',
       },
     ]
-    if (this.qrCodeSrc() !== null) {
-      out.push({
-        name: 'More settings',
-        imgSrc: of(this.qrCodeSrc()),
-        data: 'more-settings',
-      })
-    }
     return out
   })
-
-  protected qrCodeSrc: Signal<string>
 
   private router = inject(Router)
   private alertController = inject(AlertController)
@@ -99,18 +89,6 @@ export class SettingsPage {
 
   public constructor() {
     addIcons({ arrowBackOutline })
-
-    this.qrCodeSrc = toSignal(
-      toObservable(this.network).pipe(
-        switchMap((network) => {
-          if (network?.ip !== undefined) {
-            return from(QRCode.toDataURL(`http://${network.ip}`, { color: { light: '#00000000' } }))
-          }
-          return of(null)
-        }),
-      ),
-      { initialValue: null },
-    )
   }
 
   protected entryClicked(entry: SettingsMenuEntry): void {
@@ -122,19 +100,7 @@ export class SettingsPage {
       this.router.navigate(['/bluetooth'])
     } else if (entry.data === 'shutdown') {
       this.shutdownMessage()
-    } else if (entry.data === 'more-settings') {
-      this.moreSettingsMessage()
     }
-  }
-
-  private async moreSettingsMessage() {
-    const msg = await this.alertController.create({
-      cssClass: 'alert',
-      header: 'More settings',
-      message: `For more settings, open 'http://${this.network()?.ip}' on your mobile device or PC. You can also scan the QR-code to open it.`,
-      buttons: ['OK'],
-    })
-    await msg.present()
   }
 
   private async shutdownMessage() {

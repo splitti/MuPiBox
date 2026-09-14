@@ -86,7 +86,7 @@
 
 <ion-content class="player-content" [class.tracklist-active]="showTrackList">
   @if (showTrackList) {
-    <ion-list class="tracklist" [style.font-family]="listFontFamily">
+    <ion-list class="tracklist" [style.font-family]="listFontFamily" [style.--ion-font-family]="listFontFamily">
       @if (loadingTrackList) {
         <div class="tracklist-loading"><ion-spinner></ion-spinner></div>
       }

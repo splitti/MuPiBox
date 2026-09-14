@@ -194,6 +194,11 @@ export class PlayerPage implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit() {
+    // Reading the theme font here can race with the theme stylesheet still loading,
+    // so the actual read happens lazily in openTrackList() instead.
+  }
+
+  private updateListFontFamily(): void {
     // Read whatever font the active theme applies to the header title, so the track
     // list uses the same theme font instead of a hardcoded one.
     if (this.themeFontSource?.nativeElement) {
@@ -523,6 +528,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
   }
 
   async openTrackList() {
+    this.updateListFontFamily()
     this.showTrackList = true
     this.loadingTrackList = true
     this.trackList = []

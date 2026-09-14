@@ -1,3 +1,4 @@
+import { HttpClient } from '@angular/common/http'
 import { ChangeDetectionStrategy, Component, computed, Signal, signal, WritableSignal } from '@angular/core'
 import { toObservable, toSignal } from '@angular/core/rxjs-interop'
 import { NavigationExtras, Router } from '@angular/router'
@@ -21,12 +22,14 @@ import {
   timerOutline,
 } from 'ionicons/icons'
 import { catchError, combineLatest, map, of, switchMap, tap } from 'rxjs'
+import { environment } from 'src/environments/environment'
 
 import type { Artist } from '../artist'
 import { ArtworkService } from '../artwork.service'
 import { LoadingComponent } from '../loading/loading.component'
 import type { CategoryType } from '../media'
 import { MediaService } from '../media.service'
+import type { MupiboxConfig } from '../mupibox-config.model'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
 import { SwiperComponent, SwiperData } from '../swiper/swiper.component'
 import { SwiperIonicEventsHelper } from '../swiper/swiper-ionic-events-helper'
@@ -51,8 +54,8 @@ import { SwiperIonicEventsHelper } from '../swiper/swiper-ionic-events-helper'
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HomePage extends SwiperIonicEventsHelper {
-  protected settingsButtonClickCount = 0
-  protected settingsClickTimer = 0
+  private settingsAccessTimerMs = 3000
+  private settingsPressTimer = 0
 
   protected artists: Signal<Artist[]>
   protected swiperData: Signal<SwiperData<Artist>[]>
@@ -64,9 +67,22 @@ export class HomePage extends SwiperIonicEventsHelper {
     private mediaService: MediaService,
     private artworkService: ArtworkService,
     private router: Router,
+    private http: HttpClient,
   ) {
     super()
     addIcons({ timerOutline, bookOutline, musicalNotesOutline, radioOutline, cloudOutline, cloudOfflineOutline })
+
+    this.http.get<MupiboxConfig>(`${environment.backend.apiUrl}/config`).subscribe({
+      next: (config) => {
+        const configuredSeconds = config?.mupibox?.settingsAccessTimer
+        if (typeof configuredSeconds === 'number' && configuredSeconds > 0) {
+          this.settingsAccessTimerMs = configuredSeconds * 1000
+        }
+      },
+      error: () => {
+        // Keep default settingsAccessTimerMs if config could not be loaded.
+      },
+    })
 
     this.isOnline = toSignal(this.mediaService.isOnline())
 
@@ -124,19 +140,15 @@ export class HomePage extends SwiperIonicEventsHelper {
     }
   }
 
-  protected settingsButtonPressed(): void {
-    window.clearTimeout(this.settingsClickTimer)
-
-    if (this.settingsButtonClickCount < 9) {
-      this.settingsButtonClickCount++
-
-      this.settingsClickTimer = window.setTimeout(() => {
-        this.settingsButtonClickCount = 0
-      }, 500)
-    } else {
-      this.settingsButtonClickCount = 0
+  protected settingsButtonPointerDown(): void {
+    window.clearTimeout(this.settingsPressTimer)
+    this.settingsPressTimer = window.setTimeout(() => {
       this.router.navigate(['/settings'])
-    }
+    }, this.settingsAccessTimerMs)
+  }
+
+  protected settingsButtonPointerUp(): void {
+    window.clearTimeout(this.settingsPressTimer)
   }
 
   protected resume(): void {

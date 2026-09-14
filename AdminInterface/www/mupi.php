@@ -377,6 +377,13 @@
   $change=1;
   }
 
+ if( $_POST['settingsAccessTimer'] != $data["mupibox"]["settingsAccessTimer"] && $_POST['mupiset'] )
+  {
+  $data["mupibox"]["settingsAccessTimer"]=floatval($_POST['settingsAccessTimer']);
+  $CHANGE_TXT=$CHANGE_TXT."<li>Access to settings set to  ".$data["mupibox"]["settingsAccessTimer"]." sec</li>";
+  $change=1;
+  }
+
 
  if( $data["shim"]["ledBrightnessMax"]!=$_POST['ledmaxbrightness'] && $_POST['powerset'] )
   {
@@ -929,8 +936,23 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 					echo $data["mupibox"]["listviewTimer"]
 				?> sec</output>				
 
-				<input class="range slider-progress" name="listviewTimer" type="range" min="0.5" max="5" step="0.5" value="<?php 
+				<input class="range slider-progress" name="listviewTimer" type="range" min="0.5" max="5" step="0.5" value="<?php
 					echo $data["mupibox"]["listviewTimer"]
+				?>" oninput="this.previousElementSibling.value = this.value + ' sec'">
+				</div>
+			</li>
+
+			<li id="li_1" >
+				<h2>Access to settings</h2>
+				<p>How long you need to press and hold the status icon on the home screen to open the secret settings menu (in seconds)
+				</p>
+				<div>
+					<output id="rangeval" class="rangeval"><?php
+					echo $data["mupibox"]["settingsAccessTimer"]
+				?> sec</output>
+
+				<input class="range slider-progress" name="settingsAccessTimer" type="range" min="1" max="10" step="1" value="<?php
+					echo $data["mupibox"]["settingsAccessTimer"]
 				?>" oninput="this.previousElementSibling.value = this.value + ' sec'">
 				</div>
 			</li>

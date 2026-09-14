@@ -5,6 +5,7 @@ export interface MupiboxConfig {
     ttsLanguage: string
     theme: string
     listviewTimer?: number
+    settingsAccessTimer?: number
     // Add other mupibox properties if needed
   }
   timeout: {
