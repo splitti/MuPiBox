@@ -12,9 +12,14 @@ elif [ "$1" = "branch" ]; then
     echo "Error: Branch name is required when using branch install"
     exit 1
   fi
-  BRANCH_EXISTS=$(curl -s -o /dev/null -w "%{http_code}" https://api.github.com/repos/splitti/MuPiBox/branches/${BRANCH})
+  # Optional 3rd/4th args let this install from a fork instead of splitti/MuPiBox,
+  # and give the resulting install a custom version label (e.g. "Beta 4.4.5")
+  # instead of the auto-generated "DEV <branch> <date>" string.
+  REPO="${3:-splitti/MuPiBox}"
+  VERSION_LABEL="$4"
+  BRANCH_EXISTS=$(curl -s -o /dev/null -w "%{http_code}" https://api.github.com/repos/${REPO}/branches/${BRANCH})
   if [ "$BRANCH_EXISTS" != "200" ]; then
-    echo "Error: Branch '${BRANCH}' does not exist on GitHub"
+    echo "Error: Branch '${BRANCH}' does not exist on GitHub repo '${REPO}'"
     exit 1
   fi
 else
@@ -42,7 +47,7 @@ if [ -z "$BRANCH" ]; then
   VERSION=$(/usr/bin/jq -r .release.${RELEASE}[-1].version ${VER_JSON})  >&3 2>&3
   MUPIBOX_URL=$(/usr/bin/jq -r .release.${RELEASE}[-1].url ${VER_JSON})  >&3 2>&3
 else
-  MUPIBOX_URL="https://github.com/splitti/MuPiBox/archive/refs/heads/${BRANCH}.zip"
+  MUPIBOX_URL="https://github.com/${REPO}/archive/refs/heads/${BRANCH}.zip"
 fi
 
 USER=$(/usr/bin/whoami) >&3 2>&3
@@ -57,7 +62,11 @@ else
 fi
 
 if [ -n "$BRANCH" ]; then
-  VERSION_LONG="DEV ${BRANCH} $(curl -s 'https://api.github.com/repos/splitti/MuPiBox/branches/'"$BRANCH" | jq -r '.commit.commit.committer.date' | cut -d'T' -f1)" >&3 2>&3
+  if [ -n "$VERSION_LABEL" ]; then
+    VERSION_LONG="${VERSION_LABEL}"
+  else
+    VERSION_LONG="DEV ${BRANCH} $(curl -s 'https://api.github.com/repos/'"$REPO"'/branches/'"$BRANCH" | jq -r '.commit.commit.committer.date' | cut -d'T' -f1)" >&3 2>&3
+  fi
 elif [ "$RELEASE" = "dev" ]; then
 	VERSION_LONG="DEV $(curl -s "https://api.github.com/repos/splitti/MuPiBox" | jq -r '.pushed_at' | cut -d'T' -f1)"  >&3 2>&3
 else
