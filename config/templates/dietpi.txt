@@ -326,3 +326,6 @@ DEV_GITOWNER=MichaIng
 #------------------------------------------------------------------------------------------------------
 ##### Settings, automatically added by dietpi-update #####
 #------------------------------------------------------------------------------------------------------
+AUTO_SETUP_APT_INSTALLS=
+AUTO_SETUP_DESKTOP=none
+CONFIG_CPU_TEMP_PATH=auto
