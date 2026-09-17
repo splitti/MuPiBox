@@ -30,8 +30,9 @@
     padding: 51px 0 40px;
 }
 
+// Bottom padding is shared with the tile row so the tile shadow (24px) has room.
 .category-section {
-    padding: 25px 0;
+    padding: 21px 0 9px;
 }
 
 .section-title {
@@ -63,7 +64,8 @@
 .tile-row {
     display: flex;
     gap: 23px;
-    padding: 4px 29px 12px;
+    // Enough vertical padding that overflow-y hidden does not clip the tile shadow.
+    padding: 8px 29px 28px;
     overflow-x: auto;
     overflow-y: hidden;
     scroll-snap-type: x mandatory;
