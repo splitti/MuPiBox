@@ -1,14 +1,35 @@
-<ion-header class="medialist-header">
-  <ion-toolbar color="light">
-    <ion-buttons slot="start">
-      <ion-back-button icon="arrow-back-outline" defaultHref="/home"></ion-back-button>
-    </ion-buttons>
-    <ion-title>{{artist().name}}</ion-title>
-    <span slot="end" class="mupihat-icon-container"><mupihat-icon></mupihat-icon></span>
-  </ion-toolbar>
-</ion-header>
+<ion-content class="medialist-content mupi-page" [scrollY]="false">
+  <mupi-status-bar slot="fixed"></mupi-status-bar>
 
-<ion-content class="medialist-content">
+  <header class="album-header" slot="fixed">
+    <button type="button" class="artist-cover" (click)="goBack()" aria-label="Zurück">
+      <img draggable="false" ondragstart="return false;" [src]="artistCover()" alt="">
+    </button>
+    <h1 class="album-title">{{artist()?.name}}</h1>
+  </header>
+
   <mupi-loading [loading]="isLoading()"></mupi-loading>
-  <mupi-swiper [data]="swiperData()" (elementClicked)="this.coverClicked($event.data)"></mupi-swiper>
+
+  <div class="album-scroll" #albumScroll (scroll)="onScroll()">
+    @for (page of pages(); track $index) {
+      <div class="album-page">
+        @for (currentMedia of page; track currentMedia) {
+          <mupi-tile
+            [imgSrc]="coverUrl(currentMedia)"
+            [title]="currentMedia.title"
+            (tileClicked)="coverClicked(currentMedia)"
+            (labelClicked)="readText(currentMedia.title)">
+          </mupi-tile>
+        }
+      </div>
+    }
+  </div>
+
+  @if (pages().length > 1) {
+    <div class="page-dots" slot="fixed">
+      @for (page of pages(); track $index) {
+        <button type="button" class="page-dot" [class.active]="$index === activePage()" (click)="scrollToPage($index)"></button>
+      }
+    </div>
+  }
 </ion-content>

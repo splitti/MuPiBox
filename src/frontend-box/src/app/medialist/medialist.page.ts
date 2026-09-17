@@ -1,62 +1,60 @@
-import { ChangeDetectionStrategy, Component, computed, Signal, signal, WritableSignal } from '@angular/core'
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  ElementRef,
+  Signal,
+  signal,
+  viewChild,
+  WritableSignal,
+} from '@angular/core'
 import { toObservable, toSignal } from '@angular/core/rxjs-interop'
 import { NavigationExtras, Router } from '@angular/router'
-import { IonBackButton, IonButtons, IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular/standalone'
-import { addIcons } from 'ionicons'
-import { arrowBackOutline } from 'ionicons/icons'
+import { IonContent } from '@ionic/angular/standalone'
 import { catchError, combineLatest, map, of, switchMap, tap } from 'rxjs'
 
 import type { Artist } from '../artist'
-import { ArtworkService } from '../artwork.service'
 import { LoadingComponent } from '../loading/loading.component'
 import { CategoryType, Media, MediaSorting } from '../media'
 import { MediaService } from '../media.service'
-import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
-import { SwiperComponent, SwiperData } from '../swiper/swiper.component'
-import { SwiperIonicEventsHelper } from '../swiper/swiper-ionic-events-helper'
+import { PlayerService } from '../player.service'
+import { StatusBarComponent } from '../status-bar/status-bar.component'
+import { TileComponent } from '../tile/tile.component'
+
+const NO_COVER = '../assets/images/nocover_mupi.png'
+/** Three columns times two rows fit on the 800x480 screen below the header. */
+const TILES_PER_PAGE = 6
 
 @Component({
   selector: 'app-medialist',
   templateUrl: './medialist.page.html',
   styleUrls: ['./medialist.page.scss'],
-  imports: [
-    MupiHatIconComponent,
-    IonHeader,
-    IonToolbar,
-    IonButtons,
-    IonBackButton,
-    IonTitle,
-    IonContent,
-    SwiperComponent,
-    LoadingComponent,
-  ],
+  imports: [IonContent, LoadingComponent, StatusBarComponent, TileComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class MedialistPage extends SwiperIonicEventsHelper {
+export class MedialistPage {
   protected isLoading: WritableSignal<boolean> = signal(false)
   protected category: WritableSignal<CategoryType> = signal('audiobook')
   protected artist: WritableSignal<Artist | undefined> = signal(undefined)
   protected media: Signal<Media[]>
-  protected swiperData: Signal<SwiperData<Media>[]> = computed(() => {
-    return this.media()?.map((media) => {
-      return {
-        name: media.title,
-        imgSrc: this.artworkService.getArtwork(media),
-        data: media,
-      }
-    })
-  })
+  protected pages: Signal<Media[][]>
+  protected activePage: WritableSignal<number> = signal(0)
+  protected artistCover: Signal<string>
+
+  private albumScroll = viewChild<ElementRef<HTMLElement>>('albumScroll')
 
   constructor(
     private router: Router,
     private mediaService: MediaService,
-    private artworkService: ArtworkService,
+    private playerService: PlayerService,
   ) {
-    super()
-    addIcons({ arrowBackOutline })
-
     this.artist.set(this.router.currentNavigation()?.extras.state?.artist)
     this.category.set(this.router.currentNavigation()?.extras.state?.category ?? 'audiobook')
+
+    this.artistCover = computed(() => {
+      const artist = this.artist()
+      return artist?.coverMedia?.artistcover || artist?.coverMedia?.cover || artist?.cover || NO_COVER
+    })
 
     this.media = toSignal(
       combineLatest([toObservable(this.category), toObservable(this.artist)]).pipe(
@@ -99,7 +97,45 @@ export class MedialistPage extends SwiperIonicEventsHelper {
         }),
         tap(() => this.isLoading.set(false)),
       ),
+      { initialValue: [] as Media[] },
     )
+
+    this.pages = computed(() => {
+      const media = this.media()
+      const pages: Media[][] = []
+      for (let i = 0; i < media.length; i += TILES_PER_PAGE) {
+        pages.push(media.slice(i, i + TILES_PER_PAGE))
+      }
+      return pages
+    })
+  }
+
+  protected coverUrl(media: Media): string {
+    return media.cover || NO_COVER
+  }
+
+  protected readText(text: string): void {
+    this.playerService.sayText(text)
+  }
+
+  protected goBack(): void {
+    this.router.navigate(['/home'])
+  }
+
+  protected onScroll(): void {
+    const element = this.albumScroll()?.nativeElement
+    if (!element || element.clientHeight === 0) {
+      return
+    }
+    this.activePage.set(Math.round(element.scrollTop / element.clientHeight))
+  }
+
+  protected scrollToPage(index: number): void {
+    const element = this.albumScroll()?.nativeElement
+    if (!element) {
+      return
+    }
+    element.scrollTo({ top: index * element.clientHeight, behavior: 'smooth' })
   }
 
   protected coverClicked(clickedMedia: Media): void {

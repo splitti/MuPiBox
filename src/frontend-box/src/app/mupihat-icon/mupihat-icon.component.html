@@ -1,21 +1,24 @@
 @if (hat_active && mupihat() !== undefined) {
   @if (mupihat().BatteryConnected === 1) {
-    @let svgBaseName = mupihat().IBus > 0 ? 'Charging' : 'Battery';
-    @switch (mupihat().Bat_SOC) {
-      @case ('100%') {
-        <ion-icon src="../../assets/icon/MuPiHAT/{{svgBaseName}}100.svg" size="large"></ion-icon>
-      }
-      @case ('75%') {
-        <ion-icon src="../../assets/icon/MuPiHAT/{{svgBaseName}}70.svg" size="large"></ion-icon>
-      }
-      @case ('50%') {
-        <ion-icon src="../../assets/icon/MuPiHAT/{{svgBaseName}}50.svg" size="large"></ion-icon>
-      }
-      @case ('25%') {
-        <ion-icon src="../../assets/icon/MuPiHAT/{{svgBaseName}}20.svg" size="large"></ion-icon>
-      }
-      @default {
-        <ion-icon src="../../assets/icon/MuPiHAT/{{svgBaseName}}0.svg" size="large"></ion-icon>
+    @if (mupihat().IBus > 0) {
+      <ion-icon name="lucide-battery-charging"></ion-icon>
+    } @else {
+      @switch (mupihat().Bat_SOC) {
+        @case ('100%') {
+          <ion-icon name="lucide-battery-full"></ion-icon>
+        }
+        @case ('75%') {
+          <ion-icon name="lucide-battery-full"></ion-icon>
+        }
+        @case ('50%') {
+          <ion-icon name="lucide-battery-medium"></ion-icon>
+        }
+        @case ('25%') {
+          <ion-icon name="lucide-battery-low"></ion-icon>
+        }
+        @default {
+          <ion-icon name="lucide-battery"></ion-icon>
+        }
       }
     }
   }

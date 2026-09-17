@@ -1,124 +1,97 @@
-import { HttpClient } from '@angular/common/http'
 import { ChangeDetectionStrategy, Component, computed, Signal, signal, WritableSignal } from '@angular/core'
 import { toObservable, toSignal } from '@angular/core/rxjs-interop'
 import { NavigationExtras, Router } from '@angular/router'
-import {
-  IonButton,
-  IonButtons,
-  IonContent,
-  IonHeader,
-  IonIcon,
-  IonSegment,
-  IonSegmentButton,
-  IonToolbar,
-} from '@ionic/angular/standalone'
-import { addIcons } from 'ionicons'
-import {
-  bookOutline,
-  cloudOfflineOutline,
-  cloudOutline,
-  musicalNotesOutline,
-  radioOutline,
-  timerOutline,
-} from 'ionicons/icons'
-import { catchError, combineLatest, map, of, switchMap, tap } from 'rxjs'
-import { environment } from 'src/environments/environment'
+import { IonContent, IonIcon, IonSpinner } from '@ionic/angular/standalone'
+import { catchError, of, switchMap, tap } from 'rxjs'
 
 import type { Artist } from '../artist'
-import { ArtworkService } from '../artwork.service'
-import { LoadingComponent } from '../loading/loading.component'
+import { registerLucideIcons } from '../icons/lucide-icons'
 import type { CategoryType } from '../media'
 import { MediaService } from '../media.service'
-import type { MupiboxConfig } from '../mupibox-config.model'
-import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
-import { SwiperComponent, SwiperData } from '../swiper/swiper.component'
-import { SwiperIonicEventsHelper } from '../swiper/swiper-ionic-events-helper'
+import { PlayerService } from '../player.service'
+import { StatusBarComponent } from '../status-bar/status-bar.component'
+import { TileComponent } from '../tile/tile.component'
+
+const NO_COVER = '../assets/images/nocover_mupi.png'
+
+interface ArtistTile {
+  artist: Artist
+  imgSrc: string
+}
+
+/** One horizontally scrollable category block on the home page. */
+interface HomeSection {
+  category: CategoryType
+  label: string
+  isLoading: WritableSignal<boolean>
+  tiles: Signal<ArtistTile[]>
+}
 
 @Component({
   selector: 'app-home',
   templateUrl: 'home.page.html',
   styleUrls: ['home.page.scss'],
-  imports: [
-    MupiHatIconComponent,
-    LoadingComponent,
-    IonHeader,
-    IonToolbar,
-    IonButtons,
-    IonButton,
-    IonIcon,
-    IonSegment,
-    IonSegmentButton,
-    SwiperComponent,
-    IonContent,
-  ],
+  imports: [IonContent, IonIcon, IonSpinner, StatusBarComponent, TileComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class HomePage extends SwiperIonicEventsHelper {
-  private settingsAccessTimerMs = 3000
-  private settingsPressTimer = 0
-
-  protected artists: Signal<Artist[]>
-  protected swiperData: Signal<SwiperData<Artist>[]>
+export class HomePage {
   protected isOnline: Signal<boolean>
-  protected isLoading: WritableSignal<boolean> = signal(false)
-  protected category: WritableSignal<CategoryType> = signal('audiobook')
+  protected sections: HomeSection[]
 
   constructor(
     private mediaService: MediaService,
-    private artworkService: ArtworkService,
+    private playerService: PlayerService,
     private router: Router,
-    private http: HttpClient,
   ) {
-    super()
-    addIcons({ timerOutline, bookOutline, musicalNotesOutline, radioOutline, cloudOutline, cloudOfflineOutline })
-
-    this.http.get<MupiboxConfig>(`${environment.backend.apiUrl}/config`).subscribe({
-      next: (config) => {
-        const configuredSeconds = config?.mupibox?.settingsAccessTimer
-        if (typeof configuredSeconds === 'number' && configuredSeconds > 0) {
-          this.settingsAccessTimerMs = configuredSeconds * 1000
-        }
-      },
-      error: () => {
-        // Keep default settingsAccessTimerMs if config could not be loaded.
-      },
-    })
+    registerLucideIcons()
 
     this.isOnline = toSignal(this.mediaService.isOnline())
 
-    this.artists = toSignal(
-      combineLatest([toObservable(this.category), toObservable(this.isOnline)]).pipe(
-        map(([category, _isOnline]) => category),
-        tap(() => this.isLoading.set(true)),
-        switchMap((category) => {
-          return this.mediaService.fetchArtistData(category).pipe(
+    this.sections = [
+      this.createSection('audiobook', 'Hörspiele'),
+      this.createSection('music', 'Musik'),
+      this.createSection('other', 'Podcasts & Radio'),
+    ]
+  }
+
+  /**
+   * Builds the data pipeline for one category. Artists are (re)loaded whenever the
+   * online state changes, the same trigger the previous tab based home page used.
+   */
+  private createSection(category: CategoryType, label: string): HomeSection {
+    const isLoading = signal(true)
+
+    const artists = toSignal(
+      toObservable(this.isOnline).pipe(
+        tap(() => isLoading.set(true)),
+        switchMap(() =>
+          this.mediaService.fetchArtistData(category).pipe(
             catchError((error) => {
               console.error(error)
-              return of([])
+              return of([] as Artist[])
             }),
-          )
-        }),
-        tap(() => this.resetSwiperPosition()),
-        tap(() => this.isLoading.set(false)),
+          ),
+        ),
+        tap(() => isLoading.set(false)),
       ),
+      { initialValue: [] as Artist[] },
     )
 
-    this.swiperData = computed(() => {
-      return this.artists()?.map((artist) => {
-        return {
-          name: artist.name,
-          imgSrc: this.artworkService.getArtistArtwork(artist.coverMedia),
-          data: artist,
-        }
-      })
-    })
+    const tiles = computed(() =>
+      artists().map((artist) => ({
+        artist,
+        imgSrc: artist.coverMedia?.artistcover || artist.coverMedia?.cover || artist.cover || NO_COVER,
+      })),
+    )
+
+    return { category, label, isLoading, tiles }
   }
 
-  protected categoryChanged(event: any): void {
-    this.category.set(event.detail.value)
+  protected readText(text: string): void {
+    this.playerService.sayText(text)
   }
 
-  protected async artistCoverClicked(artist: Artist): Promise<void> {
+  protected async artistCoverClicked(artist: Artist, category: CategoryType): Promise<void> {
     // Check if this is a standalone playlist (playlist without artist)
     if (artist.coverMedia?.playlistid && !artist.coverMedia?.artist) {
       // This is a standalone playlist - start playback directly
@@ -133,22 +106,11 @@ export class HomePage extends SwiperIonicEventsHelper {
       const navigationExtras: NavigationExtras = {
         state: {
           artist: artist,
-          category: this.category(),
+          category: category,
         },
       }
       this.router.navigate(['/medialist'], navigationExtras)
     }
-  }
-
-  protected settingsButtonPointerDown(): void {
-    window.clearTimeout(this.settingsPressTimer)
-    this.settingsPressTimer = window.setTimeout(() => {
-      this.router.navigate(['/settings'])
-    }, this.settingsAccessTimerMs)
-  }
-
-  protected settingsButtonPointerUp(): void {
-    window.clearTimeout(this.settingsPressTimer)
   }
 
   protected resume(): void {

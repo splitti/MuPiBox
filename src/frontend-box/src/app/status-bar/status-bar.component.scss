@@ -1,0 +1,34 @@
+// Figma "Frame 13": 125x54 at the top right, fill #000 60%, radius 25 bottom-left,
+// padding 10 25 10 27, gap 19, drop shadow.
+:host {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 20;
+}
+
+.status-pill {
+    display: flex;
+    align-items: center;
+    gap: 19px;
+    min-width: 125px;
+    height: 54px;
+    padding: 10px 27px 10px 25px;
+    box-sizing: border-box;
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 0 0 0 25px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    color: #ffffff;
+
+    ion-icon {
+        font-size: 30px;
+        color: #ffffff;
+    }
+
+    // Battery icon from the MuPiHAT component, same size and color as the WiFi icon.
+    mupihat-icon ion-icon {
+        font-size: 30px;
+        width: 30px;
+        height: 30px;
+    }
+}

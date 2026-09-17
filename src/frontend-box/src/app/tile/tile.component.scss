@@ -1,0 +1,87 @@
+// Values taken from the Figma board (Mupibox_Gui): 170x170 tile, corner radius
+// 20/20/20/0 (bottom-left square where the indicator bar sits), frosted label
+// band at the bottom, 10x50 indicator bar in #01AADF, Open Sans Bold 15 / 4%.
+:host {
+    --mupi-tile-size: 170px;
+    display: block;
+    width: var(--mupi-tile-size);
+    flex: 0 0 auto;
+}
+
+.tile {
+    position: relative;
+    width: var(--mupi-tile-size);
+    height: var(--mupi-tile-size);
+    border-radius: 20px 20px 20px 0;
+    overflow: hidden;
+    background: #d9d9d9;
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.28);
+    user-select: none;
+    // Keeps the rounded clipping stable for the backdrop-filter layer.
+    isolation: isolate;
+    transform: translateZ(0);
+}
+
+.tile-img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    -webkit-user-drag: none;
+}
+
+// Frosted glass band: blurs the cover behind it and brightens it with a
+// strong white gradient, so the text stays readable on any cover.
+.tile-fade {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 64px;
+    background: linear-gradient(
+        to bottom,
+        rgba(255, 255, 255, 0.1) 0%,
+        rgba(255, 255, 255, 0.7) 60%,
+        rgba(255, 255, 255, 0.8) 100%
+    );
+    -webkit-backdrop-filter: blur(5px) saturate(0.5);
+    backdrop-filter: blur(5px) saturate(0.5);
+    pointer-events: none;
+}
+
+.tile-label {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 50px;
+    display: flex;
+    align-items: center;
+}
+
+// Indicator bar in the theme's accent color. The MuPiBox themes define their
+// foreground / primary color as --ion-color-light; --mupi-accent can override it.
+.tile-bar {
+    flex: 0 0 10px;
+    width: 10px;
+    height: 50px;
+    background: var(--mupi-accent, var(--ion-color-light, #01aadf));
+    box-shadow: 2px 0 6px rgba(0, 0, 0, 0.25);
+}
+
+.tile-title {
+    flex: 1 1 auto;
+    margin-left: 14px;
+    padding-right: 10px;
+    font-family: 'Open Sans', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.04em;
+    line-height: 1.25;
+    color: #1c1c1c;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    word-break: break-word;
+}

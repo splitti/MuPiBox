@@ -1,36 +1,34 @@
-<ion-header class="home-header">
-  <ion-toolbar color="light">
-    <ion-buttons slot="start">
-      <ion-button (click)="resume()">
-        <ion-icon slot="icon-only" name="timer-outline"></ion-icon>
-      </ion-button>
-    </ion-buttons>
-    <ion-segment value="{{this.category()}}" (ionChange)="categoryChanged($event)">
-      <ion-segment-button value="audiobook">
-        <ion-icon name="book-outline"></ion-icon>
-      </ion-segment-button>
-      <ion-segment-button value="music">
-        <ion-icon name="musical-notes-outline"></ion-icon>
-      </ion-segment-button>
-      <ion-segment-button value="other">
-        <ion-icon name="radio-outline"></ion-icon>
-      </ion-segment-button>
-    </ion-segment>
-    
-    <ion-buttons slot="end">
-      <ion-button class="status-icons" (pointerdown)="settingsButtonPointerDown()" (pointerup)="settingsButtonPointerUp()" (pointerleave)="settingsButtonPointerUp()" (pointercancel)="settingsButtonPointerUp()">
-          @if (isOnline()) {
-            <ion-icon name="cloud-outline"></ion-icon>
-          } @else {
-            <ion-icon name="cloud-offline-outline"></ion-icon>
-          }
-          <mupihat-icon></mupihat-icon>
-        </ion-button>
-      </ion-buttons>
-  </ion-toolbar>
-</ion-header>
+<ion-content class="home-content mupi-page" [scrollY]="true">
+  <!-- Fixed slot: stays on top while the sections scroll underneath. -->
+  <mupi-status-bar slot="fixed"></mupi-status-bar>
+  <button slot="fixed" type="button" class="resume-pill" (click)="resume()" aria-label="Weiterhören">
+    <ion-icon name="lucide-history"></ion-icon>
+  </button>
 
-<ion-content class="home-content">
-  <mupi-loading [loading]="isLoading()"></mupi-loading>
-  <mupi-swiper [data]="swiperData()" roundImages="true" (elementClicked)="this.artistCoverClicked($event.data)"></mupi-swiper>
+  <div class="sections">
+    @for (section of sections; track section.category) {
+      <section class="category-section">
+        <h2 class="section-title">
+          <span>{{section.label}}</span>
+          @if (section.isLoading()) {
+            <ion-spinner name="crescent" class="section-spinner"></ion-spinner>
+          }
+        </h2>
+        @if (!section.isLoading() && section.tiles().length === 0) {
+          <p class="section-empty">Noch nichts eingerichtet</p>
+        } @else {
+          <div class="tile-row">
+            @for (tile of section.tiles(); track tile.artist.name) {
+              <mupi-tile
+                [imgSrc]="tile.imgSrc"
+                [title]="tile.artist.name"
+                (tileClicked)="artistCoverClicked(tile.artist, section.category)"
+                (labelClicked)="readText(tile.artist.name)">
+              </mupi-tile>
+            }
+          </div>
+        }
+      </section>
+    }
+  </div>
 </ion-content>

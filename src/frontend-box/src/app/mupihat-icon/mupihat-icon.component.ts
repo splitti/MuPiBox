@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, Signal } from '@angular/core'
 import { toObservable, toSignal } from '@angular/core/rxjs-interop'
 import { IonIcon } from '@ionic/angular/standalone'
 import { map, of, switchMap } from 'rxjs'
+import { registerLucideIcons } from '../icons/lucide-icons'
 import { MediaService } from '../media.service'
 import type { Mupihat } from '../mupihat'
 import { PlayerService } from '../player.service'
@@ -21,6 +22,7 @@ export class MupiHatIconComponent {
     private playerService: PlayerService,
     private mediaService: MediaService,
   ) {
+    registerLucideIcons()
     this.hat_active = toSignal(this.playerService.getConfig().pipe(map((config) => config.hat_active)))
     this.mupihat = toSignal(
       toObservable(this.hat_active).pipe(

@@ -1,0 +1,8 @@
+<div class="tile" (click)="tileClicked.emit()">
+  <img class="tile-img" draggable="false" ondragstart="return false;" loading="lazy" [src]="imgSrc()" alt="">
+  <div class="tile-fade"></div>
+  <div class="tile-label" (click)="onLabelClick($event)">
+    <span class="tile-bar"></span>
+    <span class="tile-title">{{title()}}</span>
+  </div>
+</div>

@@ -1,22 +1,80 @@
-ion-toolbar {
-    ion-button {
-        height: 70px !important;
-        width: 70px !important;
-        font-size: 20px !important;
-    }
+// Layout numbers from the Figma board: content starts 51px below the top edge
+// (below the status pill), section title Inter Semi Bold 20 #F5F5F5 with 25px
+// left inset, 8px between title and tiles, tiles 170px with 23px gaps, 25px
+// between the rows.
+.resume-pill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 70px;
+    height: 54px;
+    padding: 0;
+    border: 0;
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 0 0 25px 0;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    color: #ffffff;
+
     ion-icon {
-        font-size: 28px;
+        font-size: 30px;
     }
 }
 
-.status-icons {
-    --padding-start: 0px !important;
-    --padding-end: 0px !important;
+// The pills are in ion-content's fixed slot, so the sections scroll underneath
+// them; the first section just starts below the pills.
+.sections {
+    padding: 51px 0 40px;
+}
 
-    ion-icon {
-        height: 60% !important;
-        max-height: 60% !important;
-        color: rgb(255, 255, 255);
-        opacity: 1.0;
+.category-section {
+    padding: 25px 0;
+}
+
+.section-title {
+    margin: 0 0 8px 25px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 20px;
+    line-height: 25px;
+    color: #f5f5f5;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    .section-spinner {
+        width: 20px;
+        height: 20px;
+        color: #f5f5f5;
+    }
+}
+
+.section-empty {
+    margin: 6px 29px 0;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 15px;
+    color: rgba(245, 245, 245, 0.8);
+}
+
+// Native horizontal scroller with snap points. No visible scrollbar (as in the design).
+.tile-row {
+    display: flex;
+    gap: 23px;
+    padding: 4px 29px 12px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    scroll-padding-left: 29px;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+        display: none;
+    }
+
+    mupi-tile {
+        scroll-snap-align: start;
     }
 }

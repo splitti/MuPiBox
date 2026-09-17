@@ -29,6 +29,11 @@
 @import "@ionic/angular/css/text-transformation.css";
 @import "@ionic/angular/css/flex-utils.css";
 
+/* Fonts from the Figma design, bundled so the box works offline. */
+
+@import "@fontsource/inter/600.css";
+@import "@fontsource/open-sans/700.css";
+
 /* no text selection in firefox */
 
 html,
@@ -88,5 +93,31 @@ Global MuPiBox-Edit
 */
 
 html {
-  touch-action:none;
+  // Allow native panning (needed for the vertically scrolling home page and the
+  // css-mode swipers), but keep pinch zoom and double-tap zoom disabled.
+  touch-action: pan-x pan-y;
+}
+
+/*
+Page background from the Figma board: light teal base with large darker arcs
+and a darker, softly blurred band at the bottom. The colors are exposed as
+variables so a theme can override them.
+*/
+
+:root {
+  --mupi-bg-base: #82d3d3;
+  --mupi-bg-arc: #4aa9ad;
+  --mupi-bg-bottom: #2f8a90;
+  // Accent color (tile indicator bar). Falls back to the theme's --ion-color-light
+  // when a theme does not set it explicitly.
+  --mupi-accent: var(--ion-color-light);
+}
+
+ion-content.mupi-page {
+  --background: transparent;
+  background:
+    linear-gradient(to bottom, rgba(47, 138, 144, 0) 62%, var(--mupi-bg-bottom) 100%),
+    radial-gradient(circle at -6% 58%, transparent 0 34%, var(--mupi-bg-arc) 34.5% 46%, transparent 46.5%),
+    radial-gradient(circle at 34% 108%, transparent 0 40%, var(--mupi-bg-arc) 40.5% 56%, transparent 56.5%),
+    var(--mupi-bg-base);
 }

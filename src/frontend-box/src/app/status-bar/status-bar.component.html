@@ -1,0 +1,8 @@
+<div class="status-pill" (pointerdown)="pointerDown()" (pointerup)="pointerUp()" (pointerleave)="pointerUp()" (pointercancel)="pointerUp()">
+  @if (isOnline()) {
+    <ion-icon name="lucide-wifi"></ion-icon>
+  } @else {
+    <ion-icon name="lucide-wifi-off"></ion-icon>
+  }
+  <mupihat-icon></mupihat-icon>
+</div>
