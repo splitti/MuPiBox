@@ -1,13 +1,4 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  ElementRef,
-  Signal,
-  signal,
-  viewChild,
-  WritableSignal,
-} from '@angular/core'
+import { ChangeDetectionStrategy, Component, computed, Signal, signal, WritableSignal } from '@angular/core'
 import { toObservable, toSignal } from '@angular/core/rxjs-interop'
 import { NavigationExtras, Router } from '@angular/router'
 import { IonContent } from '@ionic/angular/standalone'
@@ -19,17 +10,15 @@ import { CategoryType, Media, MediaSorting } from '../media'
 import { MediaService } from '../media.service'
 import { PlayerService } from '../player.service'
 import { StatusBarComponent } from '../status-bar/status-bar.component'
-import { TileComponent } from '../tile/tile.component'
+import { TilePageItem, TilePagesComponent } from '../tile-pages/tile-pages.component'
 
 const NO_COVER = '../assets/images/nocover_mupi.png'
-/** Three columns times two rows fit on the 800x480 screen below the header. */
-const TILES_PER_PAGE = 6
 
 @Component({
   selector: 'app-medialist',
   templateUrl: './medialist.page.html',
   styleUrls: ['./medialist.page.scss'],
-  imports: [IonContent, LoadingComponent, StatusBarComponent, TileComponent],
+  imports: [IonContent, LoadingComponent, StatusBarComponent, TilePagesComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MedialistPage {
@@ -37,11 +26,8 @@ export class MedialistPage {
   protected category: WritableSignal<CategoryType> = signal('audiobook')
   protected artist: WritableSignal<Artist | undefined> = signal(undefined)
   protected media: Signal<Media[]>
-  protected pages: Signal<Media[][]>
-  protected activePage: WritableSignal<number> = signal(0)
+  protected items: Signal<TilePageItem<Media>[]>
   protected artistCover: Signal<string>
-
-  private albumScroll = viewChild<ElementRef<HTMLElement>>('albumScroll')
 
   constructor(
     private router: Router,
@@ -100,18 +86,13 @@ export class MedialistPage {
       { initialValue: [] as Media[] },
     )
 
-    this.pages = computed(() => {
-      const media = this.media()
-      const pages: Media[][] = []
-      for (let i = 0; i < media.length; i += TILES_PER_PAGE) {
-        pages.push(media.slice(i, i + TILES_PER_PAGE))
-      }
-      return pages
-    })
-  }
-
-  protected coverUrl(media: Media): string {
-    return media.cover || NO_COVER
+    this.items = computed(() =>
+      this.media().map((media) => ({
+        imgSrc: media.cover || NO_COVER,
+        title: media.title,
+        data: media,
+      })),
+    )
   }
 
   protected readText(text: string): void {
@@ -120,22 +101,6 @@ export class MedialistPage {
 
   protected goBack(): void {
     this.router.navigate(['/home'])
-  }
-
-  protected onScroll(): void {
-    const element = this.albumScroll()?.nativeElement
-    if (!element || element.clientHeight === 0) {
-      return
-    }
-    this.activePage.set(Math.round(element.scrollTop / element.clientHeight))
-  }
-
-  protected scrollToPage(index: number): void {
-    const element = this.albumScroll()?.nativeElement
-    if (!element) {
-      return
-    }
-    element.scrollTo({ top: index * element.clientHeight, behavior: 'smooth' })
   }
 
   protected coverClicked(clickedMedia: Media): void {

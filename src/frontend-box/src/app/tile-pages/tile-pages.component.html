@@ -1,0 +1,22 @@
+<div class="pages-scroll" #scroller (scroll)="onScroll()">
+  @for (page of pages(); track $index) {
+    <div class="page">
+      @for (item of page; track item) {
+        <mupi-tile
+          [imgSrc]="item.imgSrc"
+          [title]="item.title"
+          (tileClicked)="tileClicked.emit(item.data)"
+          (labelClicked)="labelClicked.emit(item.data)">
+        </mupi-tile>
+      }
+    </div>
+  }
+</div>
+
+@if (pages().length > 1) {
+  <div class="page-dots">
+    @for (page of pages(); track $index) {
+      <button type="button" class="page-dot" [class.active]="$index === activePage()" (click)="scrollToPage($index)"></button>
+    }
+  </div>
+}

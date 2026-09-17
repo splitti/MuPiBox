@@ -1,53 +1,21 @@
-import { AsyncPipe } from '@angular/common'
 import { HttpClient } from '@angular/common/http'
-import { AfterViewInit, Component, ElementRef, OnInit, ViewChild } from '@angular/core'
+import { Component, ElementRef, OnInit, ViewChild } from '@angular/core'
 import { FormsModule } from '@angular/forms'
 import { ActivatedRoute, Router } from '@angular/router'
-import {
-  IonBackButton,
-  IonButton,
-  IonButtons,
-  IonCard,
-  IonCol,
-  IonContent,
-  IonGrid,
-  IonHeader,
-  IonIcon,
-  IonItem,
-  IonLabel,
-  IonList,
-  IonRange,
-  IonRow,
-  IonSpinner,
-  IonTitle,
-  IonToolbar,
-  NavController,
-} from '@ionic/angular/standalone'
-import { addIcons } from 'ionicons'
-import {
-  arrowBackOutline,
-  pause,
-  play,
-  playBack,
-  playForward,
-  playSkipBack,
-  playSkipForward,
-  shuffleOutline,
-  volumeHighOutline,
-  volumeLowOutline,
-} from 'ionicons/icons'
+import { IonContent, IonIcon, IonRange, IonSpinner, NavController } from '@ionic/angular/standalone'
 import { firstValueFrom, type Observable } from 'rxjs'
 import { environment } from '../../environments/environment'
 import type { AlbumStop } from '../albumstop'
 import type { CurrentMPlayer } from '../current.mplayer'
 import type { CurrentSpotify } from '../current.spotify'
+import { registerLucideIcons } from '../icons/lucide-icons'
 import { LogService } from '../log.service'
 import type { Media } from '../media'
 import { MediaService } from '../media.service'
 import type { MupiboxConfig } from '../mupibox-config.model'
-import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
 import { PlayerCmds, PlayerService } from '../player.service'
 import { SpotifyService } from '../spotify.service'
+import { StatusBarComponent } from '../status-bar/status-bar.component'
 
 export interface TrackListEntry {
   position: number
@@ -57,36 +25,18 @@ export interface TrackListEntry {
   duration_ms?: number
 }
 
+/** Six rows fit into the track list panel. */
+const TRACKS_PER_PAGE = 6
+
 @Component({
   selector: 'app-player',
   templateUrl: './player.page.html',
   styleUrls: ['./player.page.scss'],
-  imports: [
-    FormsModule,
-    AsyncPipe,
-    MupiHatIconComponent,
-    IonHeader,
-    IonToolbar,
-    IonButtons,
-    IonBackButton,
-    IonTitle,
-    IonContent,
-    IonGrid,
-    IonRow,
-    IonCol,
-    IonCard,
-    IonRange,
-    IonButton,
-    IonIcon,
-    IonList,
-    IonItem,
-    IonLabel,
-    IonSpinner,
-  ],
+  imports: [FormsModule, IonContent, IonIcon, IonRange, IonSpinner, StatusBarComponent],
 })
-export class PlayerPage implements OnInit, AfterViewInit {
+export class PlayerPage implements OnInit {
   @ViewChild('range', { static: false }) range: IonRange
-  @ViewChild('themeFontSource', { static: false, read: ElementRef }) themeFontSource: ElementRef<HTMLElement>
+  @ViewChild('trackScroller', { static: false, read: ElementRef }) trackScroller: ElementRef<HTMLElement>
 
   media: Media
   resumemedia: Media
@@ -113,9 +63,10 @@ export class PlayerPage implements OnInit, AfterViewInit {
   loadingTrackList = false
   trackList: TrackListEntry[] = []
   trackListTitle = ''
+  trackPages: TrackListEntry[][] = []
+  activeTrackPage = 0
   pressingCover = false
   listViewTimerMs = 2500
-  listFontFamily = ''
   private longPressTimer: ReturnType<typeof setTimeout> | undefined
 
   constructor(
@@ -140,18 +91,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
     } else {
       this.isExternalPlayback = true
     }
-    addIcons({
-      arrowBackOutline,
-      volumeLowOutline,
-      pause,
-      play,
-      volumeHighOutline,
-      playSkipBack,
-      playSkipForward,
-      playBack,
-      shuffleOutline,
-      playForward,
-    })
+    registerLucideIcons()
   }
 
   ngOnInit() {
@@ -159,6 +99,9 @@ export class PlayerPage implements OnInit, AfterViewInit {
     if (!this.media) {
       this.handleExternalPlayback()
     }
+
+    // Show the media cover right away; the subscription below switches to the live Spotify cover.
+    this.cover = this.media?.cover || '../assets/images/nocover_mupi.png'
 
     this.http.get<MupiboxConfig>(`${environment.backend.apiUrl}/config`).subscribe({
       next: (config) => {
@@ -191,19 +134,6 @@ export class PlayerPage implements OnInit, AfterViewInit {
     this.mediaService.albumStop$.subscribe((albumStop) => {
       this.albumStop = albumStop
     })
-  }
-
-  ngAfterViewInit() {
-    // Reading the theme font here can race with the theme stylesheet still loading,
-    // so the actual read happens lazily in openTrackList() instead.
-  }
-
-  private updateListFontFamily(): void {
-    // Read whatever font the active theme applies to the header title, so the track
-    // list uses the same theme font instead of a hardcoded one.
-    if (this.themeFontSource?.nativeElement) {
-      this.listFontFamily = getComputedStyle(this.themeFontSource.nativeElement).fontFamily
-    }
   }
 
   private handleExternalPlayback(): void {
@@ -528,7 +458,6 @@ export class PlayerPage implements OnInit, AfterViewInit {
   }
 
   async openTrackList() {
-    this.updateListFontFamily()
     this.showTrackList = true
     this.loadingTrackList = true
     this.trackList = []
@@ -583,6 +512,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
       }
     } finally {
       this.loadingTrackList = false
+      this.buildTrackPages()
     }
   }
 
@@ -618,5 +548,131 @@ export class PlayerPage implements OnInit, AfterViewInit {
     const minutes = Math.floor(totalSeconds / 60)
     const seconds = totalSeconds % 60
     return `${minutes}:${seconds.toString().padStart(2, '0')}`
+  }
+
+  // --------------------------------------------
+  // Header / info lines (Figma design)
+  // --------------------------------------------
+
+  /** Cover corner: closes the track list when it is open, otherwise leads back. */
+  cornerClicked() {
+    if (this.showTrackList) {
+      this.closeTrackList()
+      return
+    }
+    this.navController.navigateBack(window.history.length > 1 ? undefined : '/home')
+  }
+
+  /** First header line: the artist, falling back to the album / media title. */
+  headerLine1(): string {
+    return this.media?.artist || this.albumName() || this.media?.title || ''
+  }
+
+  /** Second header line: the album (or show / audiobook / episode) title. */
+  headerLine2(): string {
+    const album = this.albumName()
+    return album === this.headerLine1() ? '' : album
+  }
+
+  private albumName(): string {
+    const spotify = this.currentPlayedSpotify
+    if (this.media?.type === 'spotify' && spotify?.currently_playing_type !== 'episode') {
+      return spotify?.item?.album?.name || this.media.title || ''
+    }
+    if (this.media?.showid && spotify?.show_details) {
+      return spotify.show_details.name || ''
+    }
+    if (this.media?.audiobookid && spotify?.audiobook) {
+      return spotify.audiobook.name || ''
+    }
+    if (this.media?.type === 'library') {
+      return this.currentPlayedLocal?.album || this.media.title || ''
+    }
+    return this.media?.title || ''
+  }
+
+  /** Name of the running track / chapter / episode. */
+  trackName(): string {
+    const spotify = this.currentPlayedSpotify
+    if (this.media?.type === 'spotify') {
+      return spotify?.item?.name || ''
+    }
+    if (this.media?.type === 'library') {
+      return this.currentPlayedLocal?.currentTrackname || ''
+    }
+    return ''
+  }
+
+  /** "3/12" style position within the album, playlist, show or audiobook. */
+  positionText(): string {
+    const spotify = this.currentPlayedSpotify
+    const local = this.currentPlayedLocal
+    if (this.media?.type === 'library') {
+      return local?.currentTracknr && local?.totalTracks ? `${local.currentTracknr}/${local.totalTracks}` : ''
+    }
+    if (this.media?.type !== 'spotify') {
+      return ''
+    }
+    if (this.media.playlistid && spotify?.playlist?.total_tracks > 0) {
+      return `${spotify.playlist.current_track_position}/${spotify.playlist.total_tracks}`
+    }
+    if (this.media.showid && spotify?.show_details) {
+      return `${spotify.show_details.current_episode_position}/${spotify.show_details.total_episodes}`
+    }
+    if (this.media.audiobookid && spotify?.audiobook) {
+      return `${spotify.audiobook.current_chapter_position}/${spotify.audiobook.total_chapters}`
+    }
+    if (spotify?.currently_playing_type !== 'episode' && spotify?.item?.album?.total_tracks > 0) {
+      return `${spotify.item.track_number}/${spotify.item.album.total_tracks}`
+    }
+    return ''
+  }
+
+  /** Elapsed / total time; only Spotify reports absolute times. */
+  timeText(): string {
+    const spotify = this.currentPlayedSpotify
+    if (this.media?.type === 'spotify' && spotify?.item?.duration_ms) {
+      return `${this.formatDuration(spotify.progress_ms || 0) || '0:00'} / ${this.formatDuration(spotify.item.duration_ms)}`
+    }
+    return ''
+  }
+
+  volumeText(): string {
+    const volume = this.currentPlayedLocal?.volume
+    return typeof volume === 'number' ? `${volume} %` : ''
+  }
+
+  // --------------------------------------------
+  // Track list paging (six rows per page, dots on the right)
+  // --------------------------------------------
+
+  private buildTrackPages() {
+    const pages: TrackListEntry[][] = []
+    for (let i = 0; i < this.trackList.length; i += TRACKS_PER_PAGE) {
+      pages.push(this.trackList.slice(i, i + TRACKS_PER_PAGE))
+    }
+    this.trackPages = pages
+    this.activeTrackPage = 0
+
+    const currentIndex = this.trackList.findIndex((entry) => this.isCurrentTrack(entry))
+    if (currentIndex > 0) {
+      setTimeout(() => this.scrollToTrackPage(Math.floor(currentIndex / TRACKS_PER_PAGE), false))
+    }
+  }
+
+  onTrackListScroll() {
+    const element = this.trackScroller?.nativeElement
+    if (!element || element.clientHeight === 0) {
+      return
+    }
+    this.activeTrackPage = Math.round(element.scrollTop / element.clientHeight)
+  }
+
+  scrollToTrackPage(index: number, smooth = true) {
+    const element = this.trackScroller?.nativeElement
+    if (!element) {
+      return
+    }
+    element.scrollTo({ top: index * element.clientHeight, behavior: smooth ? 'smooth' : 'auto' })
   }
 }

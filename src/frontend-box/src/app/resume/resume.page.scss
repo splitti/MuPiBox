@@ -1,9 +1,14 @@
-.mupihat-icon-container {
-    padding-right: 20px;
-}
+// Same layout as the album view: header with a dark corner button (history
+// icon, leads back home) and the paged tile grid below.
+@use '../shared/album-header';
 
-ion-button {
-    --min-height: 70px;
-    --min-width: 120px;
-    --icon-font-size: 30px;
+.resume-empty {
+    position: absolute;
+    top: 54px;
+    left: 122px;
+    margin: 27px 0 0;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 15px;
+    color: rgba(245, 245, 245, 0.8);
+    z-index: 5;
 }

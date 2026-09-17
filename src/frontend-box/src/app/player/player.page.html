@@ -1,224 +1,132 @@
-<ion-header class="player-header">
-  <ion-toolbar color="light">
-    <ion-buttons slot="start">
-      <ion-back-button icon="arrow-back-outline" defaultHref="/medialist"></ion-back-button>
-    </ion-buttons>
-    <ion-title class="toolbar-album" #themeFontSource>
-      @if (media.type ==='spotify' && currentPlayedSpotify?.currently_playing_type !== 'episode') {
-        <div>{{(spotify$ | async)?.item.album.name}}</div>
-      } @else {
-        @if (media.showid && (spotify$ | async)?.show_details) {
-          <div>{{(spotify$ | async)?.show_details?.name}}</div>
-        } @else if (media.audiobookid && (spotify$ | async)?.audiobook) {
-          <div>{{(spotify$ | async)?.audiobook?.name}}</div>
-        } @else {
-          @if (media.type ==='library') {
-            <div>{{(local$ | async)?.album}}</div>
-          } @else {
-            @if (media.type ==='rss') {
-              <div>{{media.artist}}</div>
-            } @else {
-              <div>{{media.title}}</div>
-            }
-          }
-        }
-      }
-    </ion-title>
-    <ion-title class="toolbar-tracktitle">
-      @if (media.type ==='spotify' && currentPlayedSpotify?.currently_playing_type !== 'episode') {
-        <div>{{(spotify$ | async)?.item.name}}</div>
-      } @else {
-        @if (media.showid && (spotify$ | async)?.show_details) {
-          <div>{{(spotify$ | async)?.item?.name}}</div>
-        } @else if (media.audiobookid && (spotify$ | async)?.audiobook) {
-          <div>{{(spotify$ | async)?.item?.name}}</div>
-        } @else {
-          @if (media.type ==='library') {
-            <div>{{(local$ | async)?.currentTrackname}}</div>
-          } @else {
-            @if (media.type ==='rss') {
-              <div>{{media.title}}</div>
-            } @else {
-              <div></div>
-            }
-          }
-        }
-      }
-    </ion-title>
-    @if (showTrackList) {
-      <ion-buttons slot="end">
-        <ion-button (click)="closeTrackList()">
-          <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>
-        </ion-button>
-      </ion-buttons>
-    }
-    <ion-title class="toolbar-tracknumber" slot="end">
-      <div>{{(local$ | async)?.volume}}%</div>
-      @if (media.type ==='library') {
-        <div>{{(local$ | async)?.currentTracknr}}/{{(local$ | async)?.totalTracks}}</div>
-      } @else {
-        @if (media.type ==='spotify') {
-          @if (media.playlistid && (spotify$ | async)?.playlist?.total_tracks && (spotify$ | async)?.playlist?.total_tracks > 0) {
-            <!-- Playlist -->
-            <div>{{(spotify$ | async)?.playlist?.current_track_position}}/{{(spotify$ | async)?.playlist?.total_tracks}}</div>
-          } @else if (media.showid && (spotify$ | async)?.show_details) {
-            <!-- Show/Podcast -->
-            <div>{{(spotify$ | async)?.show_details?.current_episode_position}}/{{(spotify$ | async)?.show_details?.total_episodes}}</div>
-          } @else if (media.audiobookid && (spotify$ | async)?.audiobook) {
-            <!-- Audiobook -->
-            <div>{{(spotify$ | async)?.audiobook?.current_chapter_position}}/{{(spotify$ | async)?.audiobook?.total_chapters}}</div>
-          } @else if (currentPlayedSpotify?.currently_playing_type !== 'episode' && (spotify$ | async)?.item.album.total_tracks > 0) {
-            <!-- Regular album -->
-            <div>{{(spotify$ | async)?.item.track_number}}/{{(spotify$ | async)?.item.album.total_tracks}}</div>
-          } @else {
-            <!-- Fallback - no track info available -->
-            <div></div>
-          }
-        } @else {
-          <!-- Non-Spotify content (Library) -->
-          <div></div>
-        }
-      }
-    </ion-title>
-    <span slot="end" class="mupihat-icon-container"><mupihat-icon></mupihat-icon></span>
-  </ion-toolbar>
-</ion-header>
+<ion-content class="player-content mupi-page" [scrollY]="false">
+  <mupi-status-bar slot="fixed"></mupi-status-bar>
 
-<ion-content class="player-content" [class.tracklist-active]="showTrackList">
-  @if (showTrackList) {
-    <ion-list class="tracklist" [style.font-family]="listFontFamily" [style.--ion-font-family]="listFontFamily">
-      @if (loadingTrackList) {
-        <div class="tracklist-loading"><ion-spinner></ion-spinner></div>
+  <!-- Header as in the album view: the cover in the corner leads back (or closes the track list). -->
+  <header class="album-header player-header" slot="fixed">
+    <button type="button" class="header-corner" (click)="cornerClicked()" aria-label="Zurück">
+      <img draggable="false" ondragstart="return false;" [src]="cover" alt="">
+    </button>
+    <div class="header-text">
+      <h1 class="album-title">{{ headerLine1() }}</h1>
+      @if (headerLine2()) {
+        <div class="album-subtitle">{{ headerLine2() }}</div>
       }
-      @for (entry of trackList; track entry.id) {
-        <ion-item button [class.current-track]="isCurrentTrack(entry)" (click)="playTrackFromList(entry)">
-          <div slot="start" class="track-position">
-            @if (isCurrentTrack(entry)) {
-              <ion-icon name="play"></ion-icon>
-            } @else {
-              {{ entry.position }}
+    </div>
+  </header>
+
+  @if (showTrackList) {
+    <div class="tracklist-panel">
+      @if (loadingTrackList) {
+        <div class="tracklist-loading"><ion-spinner name="crescent"></ion-spinner></div>
+      }
+      <div class="tracklist-scroll" #trackScroller (scroll)="onTrackListScroll()">
+        @for (page of trackPages; track $index) {
+          <div class="tracklist-page">
+            @for (entry of page; track entry.id) {
+              <button type="button" class="track-row" [class.current]="isCurrentTrack(entry)" (click)="playTrackFromList(entry)">
+                <span class="track-bar"></span>
+                <span class="track-position">
+                  @if (isCurrentTrack(entry)) {
+                    <ion-icon name="lucide-play"></ion-icon>
+                  } @else {
+                    {{ entry.position }}
+                  }
+                </span>
+                <span class="track-name">{{ entry.name }}</span>
+                @if (entry.duration_ms) {
+                  <span class="track-duration">{{ formatDuration(entry.duration_ms) }}</span>
+                }
+              </button>
             }
           </div>
-          <ion-label>
-            <h2>{{ entry.name }}</h2>
-            @if (entry.artist) {
-              <p>{{ entry.artist }}</p>
-            }
-          </ion-label>
-          @if (entry.duration_ms) {
-            <div slot="end" class="track-duration">{{ formatDuration(entry.duration_ms) }}</div>
+        } @empty {
+          @if (!loadingTrackList) {
+            <div class="tracklist-page"><p class="tracklist-empty">Keine Titel verfügbar</p></div>
           }
-        </ion-item>
-      } @empty {
-        @if (!loadingTrackList) {
-          <ion-item>
-            <ion-label>No tracks available.</ion-label>
-          </ion-item>
         }
-      }
-    </ion-list>
+      </div>
+    </div>
+    @if (trackPages.length > 1) {
+      <div class="page-dots">
+        @for (page of trackPages; track $index) {
+          <button type="button" class="page-dot" [class.active]="$index === activeTrackPage" (click)="scrollToTrackPage($index)"></button>
+        }
+      </div>
+    }
   } @else {
-  <ion-grid>
-    <ion-row>
-      <ion-col size="6">
-        <ion-card class="cover-card" (pointerdown)="coverPointerDown()" (pointerup)="coverPointerUp()" (pointerleave)="coverPointerUp()" (pointercancel)="coverPointerUp()">
-          <img src="{{this.cover}} " draggable="false" style="-moz-user-select: none;" ondragstart="return false;">
-          @if (media.type === 'spotify' || media.type === 'library') {
-            <div class="press-indicator" [class.active]="pressingCover" [style.--press-duration.ms]="listViewTimerMs">
-              <svg viewBox="0 0 48 48">
-                <circle class="press-indicator-track" cx="24" cy="24" r="20"></circle>
-                <circle class="press-indicator-progress" cx="24" cy="24" r="20"></circle>
-              </svg>
-            </div>
+    <!-- Cover: long press opens the track list -->
+    <div class="cover" (pointerdown)="coverPointerDown()" (pointerup)="coverPointerUp()" (pointerleave)="coverPointerUp()" (pointercancel)="coverPointerUp()" (contextmenu)="$event.preventDefault()">
+      <img [src]="cover" draggable="false" ondragstart="return false;" alt="">
+      @if (media.type === 'spotify' || media.type === 'library') {
+        <div class="press-indicator" [class.active]="pressingCover" [style.--press-duration.ms]="listViewTimerMs">
+          <svg viewBox="0 0 48 48">
+            <circle class="press-indicator-track" cx="24" cy="24" r="20"></circle>
+            <circle class="press-indicator-progress" cx="24" cy="24" r="20"></circle>
+          </svg>
+        </div>
+      }
+    </div>
+    @if (volumeText()) {
+      <div class="volume-caption">Lautstärke {{ volumeText() }}</div>
+    }
+
+    <div class="controls">
+      <div class="track-info">
+        <div class="track-title">{{ trackName() }}</div>
+        <div class="track-meta">
+          @if (positionText()) {
+            <span>{{ positionText() }}</span>
           }
-        </ion-card>
-      </ion-col>
+          @if (positionText() && timeText()) {
+            <span class="dot">&middot;</span>
+          }
+          @if (timeText()) {
+            <span>{{ timeText() }}</span>
+          }
+        </div>
+      </div>
 
-      <ion-col size="6">
-        <ion-grid class="controls">
-          <ion-row class="slider-row">
-            @if (media.type !=='radio') {
-              <ion-range #range [(ngModel)]="progress" max="100" (touchend)="seek()" (mouseup)="seek()"></ion-range>
-            }
-          </ion-row>
-          <ion-row class="controls-row">
-            <ion-col size="4" class="ion-text-center">
-              <ion-button (click)="volDown()" color="light">
-                <ion-icon slot="icon-only" name="volume-low-outline" class="small-icon"></ion-icon>
-              </ion-button>
-            </ion-col>
-            <ion-col size="4" class="ion-text-center">
-              <ion-button (click)="playPause()" color="light">
-                @if (playing) {
-                  <ion-icon slot="icon-only" name="pause" class="small-icon"></ion-icon>
-                }
-                @if (!playing) {
-                  <ion-icon slot="icon-only" name="play" class="small-icon"></ion-icon>
-                }
-              </ion-button>
-            </ion-col>
-            <ion-col size="4" class="ion-text-center">
-              <ion-button (click)="volUp()" color="light">
-                <ion-icon slot="icon-only" name="volume-high-outline" class="small-icon"></ion-icon>
-              </ion-button>
-            </ion-col>
-          </ion-row>
+      <div class="progress-row">
+        @if (media.type !== 'radio') {
+          <ion-range #range [(ngModel)]="progress" max="100" (touchend)="seek()" (mouseup)="seek()" aria-label="Position"></ion-range>
+        }
+      </div>
 
-          <ion-row class="controls-row">
-            <ion-col size="6" class="ion-text-center">
-              <ion-button [disabled]="this.media.showid" (click)="skipPrev()" color="light">
-                <ion-icon slot="icon-only" name="play-skip-back" class="small-icon"></ion-icon>
-              </ion-button>
-            </ion-col>
-            <ion-col size="6" class="ion-text-center">
-              <ion-button [disabled]="this.media.showid" (click)="skipNext()" color="light">
-                <ion-icon slot="icon-only" name="play-skip-forward" class="small-icon"></ion-icon>
-              </ion-button>
-            </ion-col>
-          </ion-row>
-
-          @if (media.type ==='spotify' && (media.category =='music' || media.category =='other')) {
-            <ion-row class="controls-row">
-              <ion-col size="4" class="ion-text-center">
-                <ion-button (click)="seekBack()" color="light">
-                  <ion-icon slot="icon-only" name="play-back" class="small-icon"></ion-icon>
-                </ion-button>
-              </ion-col>
-              <ion-col size="4" class="ion-text-center">
-                @if (!media.shuffle) {
-                  <ion-button (click)="toggleshuffle()" color="light">
-                    <ion-icon slot="icon-only" name="shuffle-outline" class="small-icon"></ion-icon>
-                  </ion-button>
-                }
-                @if (media.shuffle) {
-                  <ion-button (click)="toggleshuffle()" color="dark">
-                    <ion-icon slot="icon-only" name="shuffle-outline" class="small-icon"></ion-icon>
-                  </ion-button>
-                }
-              </ion-col>
-              <ion-col size="4" class="ion-text-center">
-                <ion-button (click)="seekForward()" color="light">
-                  <ion-icon slot="icon-only" name="play-forward" class="small-icon"></ion-icon>
-                </ion-button>
-              </ion-col>
-            </ion-row>
+      <div class="main-row">
+        <button type="button" class="pill pill-medium" (click)="volDown()" aria-label="Leiser">
+          <ion-icon name="lucide-volume-1"></ion-icon>
+        </button>
+        <button type="button" class="pill pill-play" (click)="playPause()" [attr.aria-label]="playing ? 'Pause' : 'Abspielen'">
+          @if (playing) {
+            <ion-icon name="lucide-pause"></ion-icon>
           } @else {
-            <ion-row class="controls-row">
-              <ion-col size="6" class="ion-text-center">
-                <ion-button (click)="seekBack()" color="light">
-                  <ion-icon slot="icon-only" name="play-back" class="small-icon"></ion-icon>
-                </ion-button>
-              </ion-col>
-              <ion-col size="6" class="ion-text-center">
-                <ion-button (click)="seekForward()" color="light">
-                  <ion-icon slot="icon-only" name="play-forward" class="small-icon"></ion-icon>
-                </ion-button>
-              </ion-col>
-            </ion-row>
+            <ion-icon name="lucide-play"></ion-icon>
           }
-        </ion-grid>
-      </ion-col>
-    </ion-row>
-  </ion-grid>
+        </button>
+        <button type="button" class="pill pill-medium" (click)="volUp()" aria-label="Lauter">
+          <ion-icon name="lucide-volume-2"></ion-icon>
+        </button>
+      </div>
+
+      <div class="secondary-row">
+        <button type="button" class="pill pill-small" [disabled]="media.showid" (click)="skipPrev()" aria-label="Vorheriger Titel">
+          <ion-icon name="lucide-skip-back"></ion-icon>
+        </button>
+        <button type="button" class="pill pill-small" (click)="seekBack()" aria-label="Zurückspulen">
+          <ion-icon name="lucide-rewind"></ion-icon>
+        </button>
+        @if (media.type === 'spotify' && (media.category === 'music' || media.category === 'other')) {
+          <button type="button" class="pill pill-small" [class.inactive]="!media.shuffle" (click)="toggleshuffle()" aria-label="Zufallswiedergabe">
+            <ion-icon name="lucide-shuffle"></ion-icon>
+          </button>
+        }
+        <button type="button" class="pill pill-small" (click)="seekForward()" aria-label="Vorspulen">
+          <ion-icon name="lucide-fast-forward"></ion-icon>
+        </button>
+        <button type="button" class="pill pill-small" [disabled]="media.showid" (click)="skipNext()" aria-label="Nächster Titel">
+          <ion-icon name="lucide-skip-forward"></ion-icon>
+        </button>
+      </div>
+    </div>
   }
 </ion-content>

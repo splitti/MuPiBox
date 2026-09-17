@@ -1,14 +1,22 @@
-<ion-header class="medialist-header">
-  <ion-toolbar color="light">
-    <ion-buttons slot="start">
-      <ion-back-button icon="arrow-back-outline" defaultHref="/home"></ion-back-button>
-    </ion-buttons>
-    <ion-title>Resume</ion-title>
-    <span slot="end" class="mupihat-icon-container"><mupihat-icon></mupihat-icon></span>
-  </ion-toolbar>
-</ion-header>
+<ion-content class="resume-content mupi-page" [scrollY]="false">
+  <mupi-status-bar slot="fixed"></mupi-status-bar>
 
-<ion-content class="resume-content">
+  <header class="album-header" slot="fixed">
+    <button type="button" class="header-corner header-back" (click)="goBack()" aria-label="Zurück">
+      <ion-icon name="lucide-history"></ion-icon>
+    </button>
+    <h1 class="album-title">Weiterhören</h1>
+  </header>
+
   <mupi-loading [loading]="isLoading()"></mupi-loading>
-  <mupi-swiper [data]="swiperData()" (elementClicked)="this.coverClicked($event.data)"></mupi-swiper>
+
+  @if (!isLoading() && items().length === 0) {
+    <p class="resume-empty">Noch nichts angehört</p>
+  }
+
+  <mupi-tile-pages
+    [items]="items()"
+    (tileClicked)="coverClicked($event)"
+    (labelClicked)="readText($event.title)">
+  </mupi-tile-pages>
 </ion-content>

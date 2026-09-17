@@ -5,8 +5,17 @@ import {
   BatteryFull,
   BatteryLow,
   BatteryMedium,
+  FastForward,
   History,
   type IconNode,
+  Pause,
+  Play,
+  Rewind,
+  Shuffle,
+  SkipBack,
+  SkipForward,
+  Volume1,
+  Volume2,
   Wifi,
   WifiOff,
 } from 'lucide'
@@ -41,6 +50,15 @@ export const lucideIcons = {
   'lucide-battery-medium': toIonIconUrl(BatteryMedium),
   'lucide-battery-full': toIonIconUrl(BatteryFull),
   'lucide-battery-charging': toIonIconUrl(BatteryCharging),
+  'lucide-play': toIonIconUrl(Play),
+  'lucide-pause': toIonIconUrl(Pause),
+  'lucide-skip-back': toIonIconUrl(SkipBack),
+  'lucide-skip-forward': toIonIconUrl(SkipForward),
+  'lucide-rewind': toIonIconUrl(Rewind),
+  'lucide-fast-forward': toIonIconUrl(FastForward),
+  'lucide-volume-1': toIonIconUrl(Volume1),
+  'lucide-volume-2': toIonIconUrl(Volume2),
+  'lucide-shuffle': toIonIconUrl(Shuffle),
 }
 
 let registered = false

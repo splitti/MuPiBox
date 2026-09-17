@@ -1,0 +1,75 @@
+// Figma "Album" frame: a grid of 170px tiles in three columns (23px gap, 40px
+// row gap) starting at x=122, and a column of 15px page dots (#D9D9D9) at x=729.
+$tile: 170px;
+$gap-x: 23px;
+$gap-y: 40px;
+
+// Fills the page below the header. The header height can be overridden by the
+// embedding page via --mupi-tile-pages-top.
+:host {
+    position: absolute;
+    top: var(--mupi-tile-pages-top, 54px);
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: block;
+}
+
+// Vertical scroller: every "page" is one viewport high and snaps into place,
+// so the dots on the right side can show the current page.
+.pages-scroll {
+    position: absolute;
+    inset: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scroll-snap-type: y mandatory;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+        display: none;
+    }
+}
+
+.page {
+    box-sizing: border-box;
+    height: 100%;
+    padding: 27px 0 0 122px;
+    display: grid;
+    grid-template-columns: repeat(3, $tile);
+    grid-auto-rows: $tile;
+    column-gap: $gap-x;
+    row-gap: $gap-y;
+    align-content: start;
+    scroll-snap-align: start;
+}
+
+.page-dots {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 72px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 33px;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.page-dot {
+    width: 15px;
+    height: 15px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(217, 217, 217, 0.55);
+    pointer-events: auto;
+    transition: background 150ms ease, transform 150ms ease;
+
+    &.active {
+        background: #d9d9d9;
+        transform: scale(1.25);
+    }
+}

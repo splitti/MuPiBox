@@ -2,58 +2,41 @@ import { HttpClient } from '@angular/common/http'
 import { ChangeDetectionStrategy, Component, computed, Signal, signal, WritableSignal } from '@angular/core'
 import { toObservable, toSignal } from '@angular/core/rxjs-interop'
 import { NavigationExtras, Router } from '@angular/router'
-import { IonBackButton, IonButtons, IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular/standalone'
-import { addIcons } from 'ionicons'
-import { arrowBackOutline } from 'ionicons/icons'
+import { IonContent, IonIcon } from '@ionic/angular/standalone'
 import { catchError, lastValueFrom, of, switchMap, tap } from 'rxjs'
 import { environment } from 'src/environments/environment'
-import { ArtworkService } from '../artwork.service'
+
+import { registerLucideIcons } from '../icons/lucide-icons'
 import { LoadingComponent } from '../loading/loading.component'
 import { Media } from '../media'
 import { MediaService } from '../media.service'
-import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
-import { SwiperComponent, SwiperData } from '../swiper/swiper.component'
-import { SwiperIonicEventsHelper } from '../swiper/swiper-ionic-events-helper'
+import { PlayerService } from '../player.service'
+import { StatusBarComponent } from '../status-bar/status-bar.component'
+import { TilePageItem, TilePagesComponent } from '../tile-pages/tile-pages.component'
 
+const NO_COVER = '../assets/images/nocover_mupi.png'
+
+/** "Weiterhören": the started media as a paged tile grid, laid out like the album view. */
 @Component({
   selector: 'mupi-resume',
   templateUrl: './resume.page.html',
   styleUrls: ['./resume.page.scss'],
-  imports: [
-    MupiHatIconComponent,
-    LoadingComponent,
-    IonHeader,
-    IonToolbar,
-    IonButtons,
-    IonBackButton,
-    IonTitle,
-    IonContent,
-    SwiperComponent,
-  ],
+  imports: [IonContent, IonIcon, LoadingComponent, StatusBarComponent, TilePagesComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ResumePage extends SwiperIonicEventsHelper {
+export class ResumePage {
   protected isOnline: Signal<boolean>
   protected isLoading: WritableSignal<boolean> = signal(false)
   protected media: Signal<Media[]>
-  protected swiperData: Signal<SwiperData<Media>[]> = computed(() => {
-    return this.media()?.map((media) => {
-      return {
-        name: media.title,
-        imgSrc: this.artworkService.getArtwork(media),
-        data: media,
-      }
-    })
-  })
+  protected items: Signal<TilePageItem<Media>[]>
 
   public constructor(
     private router: Router,
     private http: HttpClient,
     private mediaService: MediaService,
-    private artworkService: ArtworkService,
+    private playerService: PlayerService,
   ) {
-    super()
-    addIcons({ arrowBackOutline })
+    registerLucideIcons()
 
     this.isOnline = toSignal(this.mediaService.isOnline())
 
@@ -64,13 +47,30 @@ export class ResumePage extends SwiperIonicEventsHelper {
           return this.mediaService.fetchActiveResumeData().pipe(
             catchError((error) => {
               console.error(error)
-              return of([])
+              return of([] as Media[])
             }),
           )
         }),
         tap(() => this.isLoading.set(false)),
       ),
+      { initialValue: [] as Media[] },
     )
+
+    this.items = computed(() =>
+      this.media().map((media) => ({
+        imgSrc: media.cover || NO_COVER,
+        title: media.title,
+        data: media,
+      })),
+    )
+  }
+
+  protected readText(text: string): void {
+    this.playerService.sayText(text)
+  }
+
+  protected goBack(): void {
+    this.router.navigate(['/home'])
   }
 
   protected coverClicked(clickedMedia: Media): void {
