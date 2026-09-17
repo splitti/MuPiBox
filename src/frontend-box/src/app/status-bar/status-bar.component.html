@@ -1,4 +1,11 @@
-<div class="status-pill" (pointerdown)="pointerDown()" (pointerup)="pointerUp()" (pointerleave)="pointerUp()" (pointercancel)="pointerUp()">
+<div
+  class="status-pill"
+  (click)="tapped()"
+  (pointerdown)="pointerDown()"
+  (pointerup)="pointerUp()"
+  (pointerleave)="pointerUp()"
+  (pointercancel)="pointerUp()"
+  (contextmenu)="$event.preventDefault()">
   @if (isOnline()) {
     <ion-icon name="lucide-wifi"></ion-icon>
   } @else {
