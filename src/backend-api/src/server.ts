@@ -54,7 +54,9 @@ readJsonFile(`${configBasePath}/config.json`).then((configFile) => {
     console.warn('No Spotify configuration found, Spotify API service will not be available')
   }
 })
-const mupiboxConfigPath = '/etc/mupibox/mupiboxconfig.json'
+// In development the box config lives next to the other config files so the
+// backend can run on a normal dev machine without /etc/mupibox.
+const mupiboxConfigPath = productionServe ? '/etc/mupibox/mupiboxconfig.json' : `${configBasePath}/mupiboxconfig.json`
 const mupiboxConfigDir = path.dirname(mupiboxConfigPath)
 const mupiboxConfigFile = path.basename(mupiboxConfigPath)
 const dataFile = `${configBasePath}/data.json`
@@ -72,7 +74,10 @@ const resumeLock = '/tmp/.resume.lock'
 // RSS feed cache: persisted on disk (not /tmp) so cached podcast covers and feed
 // data survive a reboot.
 const rssCacheDataDir = `${configBasePath}/rss-cache`
-const rssCoverDir = path.join(__dirname, 'www', 'rss-covers')
+// The production bundle is CommonJS (__dirname available), the dev server runs as an
+// ES module via tsx where __dirname does not exist. In dev the package dir is the cwd.
+const serverDir = productionServe ? __dirname : process.cwd()
+const rssCoverDir = path.join(serverDir, 'www', 'rss-covers')
 const rssCoverPublicBase = '/rss-covers'
 
 let mupiboxConfigCache: MupiboxConfig | undefined
@@ -109,7 +114,10 @@ app.use(express.urlencoded({ extended: false }))
 // production.
 if (productionServe) {
   // Static path to compiled Angular app
-  app.use(express.static(path.join(__dirname, 'www')))
+  app.use(express.static(path.join(serverDir, 'www')))
+} else {
+  // Only the cached podcast covers are served by the backend in development.
+  app.use(rssCoverPublicBase, express.static(rssCoverDir))
 }
 
 // Routes
@@ -1544,7 +1552,7 @@ const getMupiboxConfig = async (): Promise<MupiboxConfig | undefined> => {
 // This must be placed after all API routes but before starting the server
 if (productionServe) {
   app.get(/.*/, (_req, res) => {
-    res.sendFile('index.html', { root: path.join(__dirname, 'www') })
+    res.sendFile('index.html', { root: path.join(serverDir, 'www') })
   })
 }
 

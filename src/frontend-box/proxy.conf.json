@@ -1,0 +1,6 @@
+{
+  "/rss-covers": {
+    "target": "http://localhost:8200",
+    "secure": false
+  }
+}

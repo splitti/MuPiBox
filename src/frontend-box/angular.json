@@ -65,7 +65,24 @@
             "development": {
               "optimization": false,
               "sourceMap": true,
-              "namedChunks": true
+              "namedChunks": true,
+              "assets": [
+                {
+                  "glob": "**/*",
+                  "input": "src/assets",
+                  "output": "assets"
+                },
+                {
+                  "glob": "**/*.jpg",
+                  "input": "./../../MuPiBox/media",
+                  "output": "cover"
+                },
+                {
+                  "glob": "active_theme.css",
+                  "input": "dev",
+                  "output": "/"
+                }
+              ]
             },
             "ci": {
               "progress": false
@@ -75,7 +92,8 @@
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
           "options": {
-            "buildTarget": "app:build"
+            "buildTarget": "app:build",
+            "proxyConfig": "proxy.conf.json"
           },
           "configurations": {
             "production": {

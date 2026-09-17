@@ -3,6 +3,12 @@ src/backend-api/config/*.json
 src/backend-player/config/*.json
 **/server/config/*.json
 
+# Local development runtime files (backend-api dev mode, dev theme).
+src/backend-api/config/rss-cache/
+src/backend-api/www/
+src/frontend-box/dev/
+.claude/
+
 # Temporary deploy files.
 src/**/*.zip
 src/deploy.zip
