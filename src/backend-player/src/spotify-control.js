@@ -217,12 +217,15 @@ let activePlaylist = null // m3u currently loaded in mplayer (local + NAS only)
 let activeDir = null // album folder of a local playlist
 let activeOrder = [] // tracks in the order mplayer holds them: {line, nas?}
 let activeOriginal = [] // tracks in their natural order
-let activeIsShuffled = false
+let activeIsShuffled = false // shuffle as wanted by the user (the button)
+let queueShuffled = false // whether mplayer's queue is shuffled right now
+let manualChangeUntil = 0 // a track change caused by next/previous/jump is not a natural one
 let lastPercentAt = Date.now()
 
 function initPlaybackModes(playlistPath, tracks, dir) {
   repeatMode = 'off'
   activeIsShuffled = false
+  queueShuffled = false
   activePlaylist = playlistPath
   activeDir = dir || null
   activeOriginal = tracks
@@ -234,6 +237,7 @@ function clearPlaybackModes() {
   activePlaylist = null
   repeatMode = 'off'
   activeIsShuffled = false
+  queueShuffled = false
 }
 
 function writeActivePlaylist(order) {
@@ -246,26 +250,41 @@ function writeActivePlaylist(order) {
   }
 }
 
-// Reloads the playlist in `order` and continues at track index `startPos` and
-// position `percent`. The player is muted meanwhile so the jump is not audible.
-function reloadActiveOrder(order, startPos, percent) {
+// Shuffle is applied without interrupting the current track: pressing the button
+// only records the wish. The queue is rebuilt at the next track change (when the
+// track ends or "next" is pressed), starting with the track that should follow.
+function shufflePending() {
+  return Boolean(activePlaylist) && activeIsShuffled !== queueShuffled
+}
+
+function applyShuffleMode(anchor, hideBlip) {
+  let order
+  if (activeIsShuffled) {
+    const rest = activeOriginal.filter((track) => track !== anchor)
+    for (let i = rest.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[rest[i], rest[j]] = [rest[j], rest[i]]
+    }
+    order = anchor ? [...rest, anchor] : rest
+  } else {
+    const at = activeOriginal.indexOf(anchor)
+    order = at >= 0 ? [...activeOriginal.slice(at + 1), ...activeOriginal.slice(0, at + 1)] : activeOriginal
+  }
+  queueShuffled = activeIsShuffled
   activeOrder = order
   writeActivePlaylist(order)
-  player.exec('mute', [1])
+  // On a natural track end the next track has just started - keep that silent.
+  if (hideBlip) player.exec('mute', [1])
   player.playList(activePlaylist)
   currentMeta.currentTracknr = 0
-  setTimeout(() => {
-    if (startPos > 0) {
-      currentMeta.currentTracknr = startPos
-      player.exec('pt_step', [startPos])
-    }
-  }, 700)
-  const seekAt = startPos > 0 ? 1600 : 1300
-  setTimeout(() => {
-    if (percent > 0) player.seekPercent(percent)
-  }, seekAt)
-  setTimeout(() => player.exec('mute', [0]), seekAt + 300)
+  if (hideBlip) setTimeout(() => player.exec('mute', [0]), 600)
 }
+
+player.on('track-change', () => {
+  if (!shufflePending() || Date.now() < manualChangeUntil) return
+  const finished = activeOrder[Number(currentMeta.currentTracknr) - 1]
+  if (finished) applyShuffleMode(finished, true)
+})
 
 // While shuffled, mplayer's queue position differs from the track's place in the
 // album. The kiosk shows and jumps by the album's own numbering.
@@ -276,22 +295,8 @@ function naturalTrackNumber() {
 }
 
 function setLocalShuffle(on) {
-  if (!activePlaylist || activeIsShuffled === on) return
-  const index = Math.max(0, Number(currentMeta.currentTracknr) - 1)
-  const current = activeOrder[index]
-  const percent = Number(currentMeta.progressTime) || 0
+  if (!activePlaylist) return
   activeIsShuffled = on
-  if (on) {
-    const rest = activeOrder.filter((_, i) => i !== index)
-    for (let i = rest.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1))
-      ;[rest[i], rest[j]] = [rest[j], rest[i]]
-    }
-    reloadActiveOrder(current ? [current, ...rest] : rest, 0, percent)
-  } else {
-    const pos = Math.max(0, activeOriginal.indexOf(current))
-    reloadActiveOrder(activeOriginal, pos, percent)
-  }
 }
 
 function setRepeat(mode) {
@@ -654,7 +659,12 @@ function next() {
   } else if (currentMeta.currentPlayer === 'mplayer') {
     //currentMeta.currentTracknr = currentMeta.currentTracknr + 1;
     //log.debug(nowDate.toLocaleString() + ': [Spotify Control] Current Tracknr: ' + currentMeta.currentTracknr);
-    player.next()
+    if (shufflePending()) {
+      // Rebuild the queue right now; the change is ours, so nothing to hide.
+      applyShuffleMode(activeOrder[Number(currentMeta.currentTracknr) - 1], false)
+    } else {
+      player.next()
+    }
   }
 }
 
@@ -677,19 +687,21 @@ function previous() {
       currentMeta.currentTracknr = currentMeta.currentTracknr - 2
     }
     log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Current Tracknr: ${currentMeta.currentTracknr}`)
+    if (shufflePending()) manualChangeUntil = Date.now() + 3000
     player.previous()
   }
 }
 
 function jumpToTrack(targetPosition) {
   if (currentMeta.currentPlayer === 'mplayer') {
-    if (activeIsShuffled && activePlaylist) {
-      // The list the kiosk shows is in album order - translate to the shuffled queue.
+    if (activePlaylist) {
+      // The list the kiosk shows is in album order - translate to mplayer's queue order.
       const queueIndex = activeOrder.indexOf(activeOriginal[targetPosition - 1])
       if (queueIndex >= 0) targetPosition = queueIndex + 1
     }
     const offset = targetPosition - currentMeta.currentTracknr
     if (offset !== 0) {
+      if (shufflePending()) manualChangeUntil = Date.now() + 3000
       log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Jumping ${offset} track(s) to position ${targetPosition}`)
       // The player's 'metadata' event always bumps currentTracknr by exactly 1 per
       // track-change, regardless of how many tracks pt_step actually skipped. Pre-set
@@ -1232,7 +1244,7 @@ app.get('/state', (_req, res) => {
 /*endpoint to return all local metainformation*/
 /*only used if sonos-kids-player is modified*/
 app.get('/local', (_req, res) => {
-  res.send(activeIsShuffled ? { ...currentMeta, currentTracknr: naturalTrackNumber() } : currentMeta)
+  res.send(queueShuffled ? { ...currentMeta, currentTracknr: naturalTrackNumber() } : currentMeta)
 })
 
 app.get('/spotify/token', (_req, res) => {
