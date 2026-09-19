@@ -10,6 +10,13 @@ if (isset($_GET['download_status'])) {
 	exit;
 }
 
+// Children of one folder for the tree view (loaded when a folder is expanded).
+if (isset($_GET['browse'])) {
+	header('Content-Type: application/json');
+	echo json_encode(synologyApiCall("$backendBase/browse?path=" . urlencode($_GET['browse']), 'GET', null, 15));
+	exit;
+}
+
 include('includes/header.php');
 
 function synologyApiCall($url, $method = 'GET', $body = null, $timeout = 30) {
@@ -159,60 +166,43 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 	</form>
 <?php } else { ?>
 	<form class="appnitro" method="post" action="synology.php" id="form">
-		<input type="hidden" name="shown_folders" value='<?= htmlspecialchars(json_encode(array_column($browseEntries, 'path'))) ?>' />
-		<ul>
-			<?php if ($browseError) { ?>
-				<li id="li_1"><p style="color:#900;"><?= htmlspecialchars($browseError) ?></p></li>
-			<?php } ?>
-			<li id="li_1">
-				<h3>
-					<a href="synology.php?path=">Home</a>
-					<?php
-					$parts = array_values(array_filter(explode('/', $currentPath)));
-					$accum = '';
-					foreach ($parts as $part) {
-						$accum .= '/' . $part;
-						echo ' / <a href="synology.php?path=' . urlencode($accum) . '">' . htmlspecialchars($part) . '</a>';
-					}
-					?>
-				</h3>
-			</li>
-			<?php if ($currentPath !== '') {
-				$parentParts = $parts;
-				array_pop($parentParts);
-				$parentPath = count($parentParts) > 0 ? '/' . implode('/', $parentParts) : '';
-			?>
-				<li id="li_1"><a href="synology.php?path=<?= urlencode($parentPath) ?>">.. (up)</a></li>
-			<?php } ?>
-			<li id="li_1">
-				<table style="width:auto; border-collapse:collapse;">
-					<thead>
-						<tr style="text-align:left;">
-							<th style="padding:4px 16px 4px 0; vertical-align:bottom;"><span style="display:inline-block; writing-mode:vertical-rl; transform:rotate(180deg); white-space:nowrap; line-height:13px;">Show in Mupibox</span></th>
-							<th style="padding:4px 16px 4px 0; vertical-align:bottom;"><span style="display:inline-block; writing-mode:vertical-rl; transform:rotate(180deg); white-space:nowrap; line-height:13px;">Download local</span></th>
-							<th style="padding:4px 0; vertical-align:bottom;">Folder</th>
-						</tr>
-					</thead>
-					<tbody>
-					<?php foreach ($browseEntries as $entry) { ?>
-						<tr>
-							<td style="padding:3px 16px 3px 0;">
-								<input type="checkbox" name="artist_folders[]" value="<?= htmlspecialchars($entry['path']) ?>" title="Import artist" <?= !empty($entry['isMarked']) ? 'checked="checked"' : '' ?> />
-							</td>
-							<td style="padding:3px 16px 3px 0;">
-								<input type="checkbox" name="download_folders[]" value="<?= htmlspecialchars($entry['path']) ?>" title="Download local" <?= !empty($entry['isDownload']) ? 'checked="checked"' : '' ?> />
-							</td>
-							<td style="padding:3px 0;">
-								<i class="fa-solid fa-folder"></i>
-								<a href="synology.php?path=<?= urlencode($entry['path']) ?>"><?= htmlspecialchars($entry['name']) ?></a>
-								<?php if (!empty($entry['isDownloaded'])) { ?><i class="fa-solid fa-circle-check" title="Downloaded"></i><?php } ?>
-							</td>
-						</tr>
-					<?php } ?>
-					</tbody>
-				</table>
-			</li>
-			<?php if (count($browseEntries) === 0 && !$browseError) { ?>
+			<input type="hidden" name="shown_folders" id="shown_folders" value="[]" />
+			<ul>
+				<?php if ($browseError) { ?>
+					<li id="li_1"><p style="color:#900;"><?= htmlspecialchars($browseError) ?></p></li>
+				<?php } ?>
+				<li id="li_1">
+					<style>
+						#nas-tree { font-family: "Segoe UI", Tahoma, sans-serif; font-size: 15px; color: #1a1a1a; max-width: 720px; }
+						.nas-head, .nas-row { display: flex; align-items: center; }
+						.nas-head { height: 110px; align-items: flex-end; border-bottom: 1px solid #e0e0e0; margin-bottom: 4px; }
+						.nas-cb { flex: 0 0 34px; text-align: center; }
+						.nas-cb input { margin: 0; }
+						.nas-head .nas-cb span { display: inline-block; writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; line-height: 13px; padding-bottom: 4px; }
+						.nas-row { height: 28px; border-radius: 3px; cursor: default; }
+						.nas-row:hover { background: #e5f3ff; }
+						.nas-name { display: flex; align-items: center; flex: 1; min-width: 0; margin-left: 20px; }
+						.nas-chevron { flex: 0 0 22px; text-align: center; color: #777; cursor: pointer; font-size: 11px; transition: transform .12s; user-select: none; }
+						.nas-chevron.open { transform: rotate(90deg); }
+						.nas-chevron.empty { visibility: hidden; }
+						.nas-chevron:hover { color: #000; }
+						.nas-folder { color: #f0c04a; margin: 0 8px 0 2px; font-size: 16px; }
+						.nas-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+						.nas-done { color: #2a9d3f; margin-left: 8px; font-size: 13px; }
+						.nas-children { display: none; }
+						.nas-children.open { display: block; }
+						.nas-msg { color: #888; font-style: italic; padding: 3px 0; }
+					</style>
+					<div id="nas-tree">
+						<div class="nas-head">
+							<div class="nas-cb"><span>Show in Mupibox</span></div>
+							<div class="nas-cb"><span>Download local</span></div>
+							<div class="nas-name"><b>Folder</b></div>
+						</div>
+						<div id="nas-root"></div>
+					</div>
+				</li>
+<?php if (count($browseEntries) === 0 && !$browseError) { ?>
 				<li id="li_1"><p>No subfolders here.</p></li>
 			<?php } ?>
 			<li id="li_1">
@@ -232,6 +222,151 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 	</form>
 	<p><a href="synology.php?relogin=1">Use a different NAS login</a></p>
 <?php } ?>
+
+<script>
+(function () {
+	var root = document.getElementById('nas-root');
+	if (!root) { return; }
+	var shownInput = document.getElementById('shown_folders');
+	var shown = {};
+	var STORE = 'nasTreeExpanded';
+
+	function readExpanded() {
+		try { return JSON.parse(localStorage.getItem(STORE) || '[]') || []; } catch (e) { return []; }
+	}
+	function writeExpanded(list) {
+		try { localStorage.setItem(STORE, JSON.stringify(list)); } catch (e) {}
+	}
+	function setExpanded(path, open) {
+		var list = readExpanded().filter(function (p) { return p !== path; });
+		if (open) { list.push(path); }
+		writeExpanded(list);
+	}
+
+	// Alphabetical like the Windows file explorer (the NAS returns them unsorted).
+	function sortEntries(list) {
+		return list.slice().sort(function (a, b) {
+			return a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true });
+		});
+	}
+
+	function checkbox(name, entry, checked, title) {
+		var cell = document.createElement('div');
+		cell.className = 'nas-cb';
+		var input = document.createElement('input');
+		input.type = 'checkbox';
+		input.name = name;
+		input.value = entry.path;
+		input.title = title;
+		input.checked = !!checked;
+		cell.appendChild(input);
+		return cell;
+	}
+
+	function addNode(container, entry, depth) {
+		shown[entry.path] = true;
+		var node = document.createElement('div');
+		var row = document.createElement('div');
+		row.className = 'nas-row';
+		row.appendChild(checkbox('artist_folders[]', entry, entry.isMarked, 'Import artist'));
+		row.appendChild(checkbox('download_folders[]', entry, entry.isDownload, 'Download local'));
+
+		var name = document.createElement('div');
+		name.className = 'nas-name';
+		name.style.paddingLeft = (depth * 22) + 'px';
+		var chevron = document.createElement('span');
+		chevron.className = 'nas-chevron';
+		chevron.innerHTML = '<i class="fa-solid fa-chevron-right"></i>';
+		var icon = document.createElement('i');
+		icon.className = 'fa-solid fa-folder nas-folder';
+		var label = document.createElement('span');
+		label.className = 'nas-label';
+		label.textContent = entry.name;
+		name.appendChild(chevron);
+		name.appendChild(icon);
+		name.appendChild(label);
+		if (entry.isDownloaded) {
+			var done = document.createElement('i');
+			done.className = 'fa-solid fa-circle-check nas-done';
+			done.title = 'Downloaded';
+			name.appendChild(done);
+		}
+		row.appendChild(name);
+
+		var children = document.createElement('div');
+		children.className = 'nas-children';
+		node.appendChild(row);
+		node.appendChild(children);
+		container.appendChild(node);
+
+		var loadedOnce = false;
+		function toggle(forceOpen) {
+			var open = forceOpen === true ? true : !children.classList.contains('open');
+			if (!open) {
+				children.classList.remove('open');
+				chevron.classList.remove('open');
+				setExpanded(entry.path, false);
+				return Promise.resolve();
+			}
+			children.classList.add('open');
+			chevron.classList.add('open');
+			setExpanded(entry.path, true);
+			if (loadedOnce) { return Promise.resolve(); }
+			loadedOnce = true;
+			var msg = document.createElement('div');
+			msg.className = 'nas-msg';
+			msg.style.paddingLeft = ((depth + 1) * 22 + 90) + 'px';
+			msg.textContent = 'Loading...';
+			children.appendChild(msg);
+			return fetch('synology.php?browse=' + encodeURIComponent(entry.path), { cache: 'no-store' })
+				.then(function (r) { return r.json(); })
+				.then(function (res) {
+					children.removeChild(msg);
+					if (!res || !res.success) { throw new Error('failed'); }
+					if (res.entries.length === 0) {
+						chevron.classList.add('empty');
+						chevron.classList.remove('open');
+						children.classList.remove('open');
+						return;
+					}
+					var chain = Promise.resolve();
+					var expandedNow = readExpanded();
+					sortEntries(res.entries).forEach(function (child) {
+						var api = addNode(children, child, depth + 1);
+						if (expandedNow.indexOf(child.path) !== -1) {
+							chain = chain.then(function () { return api.toggle(true); });
+						}
+					});
+					return chain;
+				})
+				.catch(function () {
+					msg.textContent = 'Could not load this folder.';
+					if (!msg.parentNode) { children.appendChild(msg); }
+					loadedOnce = false;
+				});
+		}
+		chevron.addEventListener('click', function () { toggle(); });
+		label.addEventListener('click', function () { toggle(); });
+		icon.addEventListener('click', function () { toggle(); });
+		return { toggle: toggle };
+	}
+
+	var initial = <?= json_encode(array_values($browseEntries)) ?>;
+	var expanded = readExpanded();
+	var chain = Promise.resolve();
+	sortEntries(initial).forEach(function (entry) {
+		var api = addNode(root, entry, 0);
+		if (expanded.indexOf(entry.path) !== -1) {
+			chain = chain.then(function () { return api.toggle(true); });
+		}
+	});
+
+	// Only folders that were actually loaded (visible in the tree) are saved.
+	document.getElementById('form').addEventListener('submit', function () {
+		shownInput.value = JSON.stringify(Object.keys(shown));
+	});
+})();
+</script>
 
 <script>
 (function () {
