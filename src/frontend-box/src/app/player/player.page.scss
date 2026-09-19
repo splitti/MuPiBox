@@ -123,22 +123,6 @@ ion-back-button {
     }
 }
 
-.repeat-button {
-    position: relative;
-}
-
-// The "1" of "repeat one" sits in the middle of the repeat arrows.
-.repeat-one-badge {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 12px;
-    font-weight: 700;
-    line-height: 1;
-    pointer-events: none;
-}
-
 .volume-button {
     --background: #262626;
 }

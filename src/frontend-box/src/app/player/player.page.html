@@ -165,29 +165,19 @@
           </ion-row>
 
           <ion-row class="controls-row">
-            <ion-col [attr.size]="showRepeatButton ? 4 : 6" class="ion-text-center">
+            <ion-col size="6" class="ion-text-center">
               <ion-button [disabled]="this.media.showid" (click)="skipPrev()" color="light">
                 <ion-icon slot="icon-only" name="play-skip-back" class="small-icon"></ion-icon>
               </ion-button>
             </ion-col>
-            @if (showRepeatButton) {
-              <ion-col size="4" class="ion-text-center">
-                <ion-button (click)="toggleRepeat()" [color]="repeatMode === 'off' ? 'light' : 'dark'" class="repeat-button">
-                  <ion-icon slot="icon-only" [name]="repeatMode === 'off' ? 'repeat-outline' : 'repeat'" class="small-icon"></ion-icon>
-                  @if (repeatMode === 'one') {
-                    <span class="repeat-one-badge">1</span>
-                  }
-                </ion-button>
-              </ion-col>
-            }
-            <ion-col [attr.size]="showRepeatButton ? 4 : 6" class="ion-text-center">
+            <ion-col size="6" class="ion-text-center">
               <ion-button [disabled]="this.media.showid" (click)="skipNext()" color="light">
                 <ion-icon slot="icon-only" name="play-skip-forward" class="small-icon"></ion-icon>
               </ion-button>
             </ion-col>
           </ion-row>
 
-          @if (showShuffleButton) {
+          @if (media.type ==='spotify' && (media.category =='music' || media.category =='other')) {
             <ion-row class="controls-row">
               <ion-col size="4" class="ion-text-center">
                 <ion-button (click)="seekBack()" color="light">
@@ -195,9 +185,16 @@
                 </ion-button>
               </ion-col>
               <ion-col size="4" class="ion-text-center">
-                <ion-button (click)="toggleshuffle()" [color]="shuffleActive ? 'dark' : 'light'">
-                  <ion-icon slot="icon-only" name="shuffle-outline" class="small-icon"></ion-icon>
-                </ion-button>
+                @if (!media.shuffle) {
+                  <ion-button (click)="toggleshuffle()" color="light">
+                    <ion-icon slot="icon-only" name="shuffle-outline" class="small-icon"></ion-icon>
+                  </ion-button>
+                }
+                @if (media.shuffle) {
+                  <ion-button (click)="toggleshuffle()" color="dark">
+                    <ion-icon slot="icon-only" name="shuffle-outline" class="small-icon"></ion-icon>
+                  </ion-button>
+                }
               </ion-col>
               <ion-col size="4" class="ion-text-center">
                 <ion-button (click)="seekForward()" color="light">
