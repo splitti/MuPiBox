@@ -114,6 +114,7 @@
 						<li>Settings menu: 2x2 layout; opened by pressing and holding the status icon (duration set with "Access to settings" in the admin) instead of clicking ten times; the "More settings" QR tile was removed.</li>
 						<li>Control system > "Hide display categorys": hide the Audiobooks / Music / NAS / Other tabs; the remaining tabs are spread evenly (at least one stays visible).</li>
 						<li>Album swiper: always visible, thicker and draggable scrollbar.</li>
+						<li>Covers load much faster: large cover pictures are shown as small thumbnails (made once with python3-pil and cached; without it the originals are used).</li>
 						<li>New theme "coverflow" (Mupi-conf > MuPiBox settings > Theme): the album/artist lists are shown like Apple's Cover Flow - the centered cover faces front, the others are tilted in 3D with a mirror image below, 300x300 covers without frames or titles. Short lists (under 10) fill the screen width. Tap a side cover to bring it to the center, tap the centered one to open it. With any other theme the lists look as before.</li>
 						<li>New option "Hide horizontal scrollbar" below the theme preview (Mupi-conf > MuPiBox settings) hides the scrollbar of the cover lists for every theme.</li>
 					</ul>

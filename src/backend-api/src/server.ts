@@ -1868,8 +1868,9 @@ function synologyFindCoverImage(files: SynologyFileEntry[]): string | undefined 
   return image?.path
 }
 
+// Only used for covers, which are asked for as small thumbnails.
 function synologyStreamUrl(filePath: string): string {
-  return `/api/synology/stream?path=${encodeURIComponent(filePath)}`
+  return `/api/synology/stream?path=${encodeURIComponent(filePath)}&w=400`
 }
 
 // A folder that holds no audio files but only subfolders is a "container": the
@@ -2133,10 +2134,18 @@ app.get('/api/synology/stream', async (req, res) => {
 
   // A downloaded copy always wins: no network needed, and it works offline.
   const localFile = nasLocalPath(filePath)
+  const thumbSize = parseThumbSize(req.query.w)
   if (localFile) {
     try {
       const info = await stat(localFile)
       if (info.isFile()) {
+        if (thumbSize && isThumbnailable(localFile)) {
+          const thumb = await getThumbnail(localFile, thumbSize, `lib|${localFile}|${info.mtimeMs}|${info.size}`)
+          if (thumb) {
+            await sendThumbnail(res, thumb)
+            return
+          }
+        }
         nasServeLocalFile(req, res, localFile, info.size)
         return
       }
@@ -2155,6 +2164,23 @@ app.get('/api/synology/stream', async (req, res) => {
     const headers: Record<string, string> = { Authorization: session.auth }
     if (req.headers.range) {
       headers.Range = req.headers.range as string
+    }
+
+    if (thumbSize && isThumbnailable(filePath) && !req.headers.range) {
+      const day = Math.floor(Date.now() / 86400000)
+      const thumb = await getThumbnail(`nas:${filePath}`, thumbSize, `nas|${filePath}|${day}`, async () => {
+        const full = await fetch(synologyUrl(session, filePath), { headers, signal: AbortSignal.timeout(20000) })
+        if (!full.ok) {
+          return undefined
+        }
+        const tmp = path.join('/tmp', `.nasthumb-${crypto.randomBytes(6).toString('hex')}${path.extname(filePath)}`)
+        await writeFile(tmp, Buffer.from(await full.arrayBuffer()))
+        return tmp
+      })
+      if (thumb) {
+        await sendThumbnail(res, thumb)
+        return
+      }
     }
 
     const upstream = await fetch(synologyUrl(session, filePath), { headers, signal: AbortSignal.timeout(15000) })
@@ -2474,8 +2500,172 @@ async function libraryFindCoverBelow(files: SynologyFileEntry[], depth: number):
   return undefined
 }
 
+// --------------------------------------------
+// Cover thumbnails
+// --------------------------------------------
+// Covers are often 1000-1400 px large, but the kiosk shows them at 300 px. Decoding and
+// uploading that many big images makes a list with many albums load slowly on the Pi.
+// Covers are therefore requested with a maximum size (&w=400) and served as small JPEGs
+// that are made once with Python's PIL (package python3-pil) and kept in a cache folder.
+// If PIL is missing or a picture cannot be converted, the original file is sent instead.
+
+const thumbDir = '/home/dietpi/.mupibox/thumbs'
+const thumbMaxParallel = 2
+let thumbsUnavailableUntil = 0
+let thumbRunning = 0
+const thumbWaiting: (() => void)[] = []
+const thumbJobs = new Map<string, Promise<string | undefined>>()
+
+const thumbScript = `
+import sys
+from PIL import Image
+src, dst, size = sys.argv[1], sys.argv[2], int(sys.argv[3])
+im = Image.open(src)
+try:
+    im.draft('RGB', (size * 2, size * 2))
+except Exception:
+    pass
+if im.mode in ('RGBA', 'LA', 'P'):
+    im = im.convert('RGBA')
+    background = Image.new('RGB', im.size, (255, 255, 255))
+    background.paste(im, mask=im.split()[-1])
+    im = background
+else:
+    im = im.convert('RGB')
+im.thumbnail((size, size), Image.LANCZOS)
+im.save(dst, 'JPEG', quality=82, optimize=True)
+`
+
+async function withThumbSlot<T>(work: () => Promise<T>): Promise<T> {
+  if (thumbRunning >= thumbMaxParallel) {
+    await new Promise<void>((resolve) => thumbWaiting.push(resolve))
+  }
+  thumbRunning++
+  try {
+    return await work()
+  } finally {
+    thumbRunning--
+    thumbWaiting.shift()?.()
+  }
+}
+
+// Returns the path of the thumbnail (created if needed), or undefined if none can be made.
+// `seed` must change whenever the source picture changes.
+function getThumbnail(
+  src: string,
+  size: number,
+  seed: string,
+  fetchSource?: () => Promise<string | undefined>,
+): Promise<string | undefined> {
+  if (Date.now() < thumbsUnavailableUntil) {
+    return Promise.resolve(undefined)
+  }
+  const key = crypto.createHash('sha1').update(`${seed}|${size}`).digest('hex')
+  const target = path.join(thumbDir, `${key}.jpg`)
+  const running = thumbJobs.get(key)
+  if (running) {
+    return running
+  }
+  const job = (async () => {
+    if (fs.existsSync(target)) {
+      return target
+    }
+    await mkdir(thumbDir, { recursive: true })
+    const temp = `${target}.${process.pid}.tmp`
+    let source = src
+    let fetched: string | undefined
+    try {
+      if (fetchSource) {
+        fetched = await fetchSource()
+        if (!fetched) {
+          return undefined
+        }
+        source = fetched
+      }
+      await withThumbSlot(() =>
+        execFileAsync('nice', ['-n', '10', 'python3', '-c', thumbScript, source, temp, String(size)], { timeout: 30000 }),
+      )
+      await rename(temp, target)
+      return target
+    } catch (error) {
+      await rm(temp, { force: true })
+      if (/No module named|ModuleNotFoundError|ENOENT/.test(String(error))) {
+        // PIL (or python3) is not installed - do not try again for a while.
+        thumbsUnavailableUntil = Date.now() + 10 * 60 * 1000
+      }
+      return undefined
+    } finally {
+      if (fetched) {
+        await rm(fetched, { force: true })
+      }
+    }
+  })().finally(() => thumbJobs.delete(key))
+  thumbJobs.set(key, job)
+  return job
+}
+
+// Thumbnails of covers that were changed or removed stay in the cache folder; drop old ones.
+async function pruneThumbnails(): Promise<void> {
+  try {
+    const limit = Date.now() - 60 * 24 * 3600 * 1000
+    for (const name of await readdir(thumbDir)) {
+      const file = path.join(thumbDir, name)
+      if ((await stat(file)).mtimeMs < limit) {
+        await rm(file, { force: true })
+      }
+    }
+  } catch {
+    // No cache folder yet.
+  }
+}
+void pruneThumbnails()
+
+// Makes the thumbnails of all local covers in the background a while after start, so that
+// the first look at a folder does not have to wait for them.
+async function warmLibraryThumbnails(dir: string, depth: number): Promise<void> {
+  let entries: fs.Dirent[]
+  try {
+    entries = await readdir(dir, { withFileTypes: true })
+  } catch {
+    return
+  }
+  for (const entry of entries) {
+    const full = path.join(dir, entry.name)
+    if (entry.isDirectory() && depth < 6 && !entry.name.startsWith('.')) {
+      await warmLibraryThumbnails(full, depth + 1)
+    } else if (entry.isFile() && isThumbnailable(entry.name)) {
+      try {
+        const info = await stat(full)
+        await getThumbnail(full, 400, `lib|${full}|${info.mtimeMs}|${info.size}`)
+      } catch {
+        // Skip unreadable files.
+      }
+    }
+  }
+}
+setTimeout(() => void warmLibraryThumbnails(libraryRoot, 0), 90 * 1000)
+
+function parseThumbSize(value: unknown): number | undefined {
+  const size = Number(value)
+  return Number.isFinite(size) && size > 0 ? Math.min(Math.max(Math.round(size), 64), 800) : undefined
+}
+
+function isThumbnailable(file: string): boolean {
+  return /\.(jpe?g|png)$/i.test(file)
+}
+
+function sendThumbnail(res: express.Response, thumb: string): Promise<void> {
+  return stat(thumb).then((info) => {
+    res.setHeader('Content-Type', 'image/jpeg')
+    res.setHeader('Content-Length', String(info.size))
+    res.setHeader('Cache-Control', 'public, max-age=86400')
+    fs.createReadStream(thumb).pipe(res)
+  })
+}
+
+// Covers are asked for as small thumbnails (see above).
 function libraryFileUrl(relPath: string): string {
-  return `/api/library/file?path=${encodeURIComponent(relPath)}`
+  return `/api/library/file?path=${encodeURIComponent(relPath)}&w=400`
 }
 
 async function libraryBuildEntry(
@@ -2577,6 +2767,14 @@ app.get('/api/library/file', async (req, res) => {
     if (!info.isFile()) {
       res.status(404).send('Not found')
       return
+    }
+    const thumbSize = parseThumbSize(req.query.w)
+    if (thumbSize && isThumbnailable(file)) {
+      const thumb = await getThumbnail(file, thumbSize, `lib|${file}|${info.mtimeMs}|${info.size}`)
+      if (thumb) {
+        await sendThumbnail(res, thumb)
+        return
+      }
     }
     nasServeLocalFile(req, res, file, info.size)
   } catch {
