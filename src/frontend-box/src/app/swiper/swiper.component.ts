@@ -1,4 +1,5 @@
 import { AsyncPipe } from '@angular/common'
+import { HttpClient } from '@angular/common/http'
 import {
   ChangeDetectionStrategy,
   Component,
@@ -13,10 +14,13 @@ import {
   viewChild,
   WritableSignal,
 } from '@angular/core'
-import { IonCard, IonCol, IonGrid, IonRow } from '@ionic/angular/standalone'
+import { IonCard, IonCardHeader, IonCardTitle, IonCol, IonGrid, IonRow } from '@ionic/angular/standalone'
 import { cloneDeep } from 'lodash-es'
 import { Observable } from 'rxjs'
 import Swiper from 'swiper'
+import { environment } from '../../environments/environment'
+import type { MupiboxConfig } from '../mupibox-config.model'
+import { PlayerService } from '../player.service'
 
 export interface SwiperData<T> {
   name: string
@@ -28,7 +32,7 @@ export interface SwiperData<T> {
   selector: 'mupi-swiper',
   templateUrl: './swiper.component.html',
   styleUrls: ['./swiper.component.scss'],
-  imports: [AsyncPipe, IonCard, IonCol, IonGrid, IonRow],
+  imports: [AsyncPipe, IonCard, IonCardHeader, IonCardTitle, IonCol, IonGrid, IonRow],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -56,7 +60,26 @@ export class SwiperComponent<T> {
   private static readonly FEW_COVERS = 10
   private selectedIndex = 0
 
-  public constructor() {
+  // The Cover Flow look belongs to the "coverflow" theme (Mupi-conf > MuPiBox settings > Theme);
+  // with any other theme the lists look like they always did. The scrollbar can be hidden
+  // for every theme. Both come from the MuPiBox config, which is loaded once.
+  protected configLoaded: WritableSignal<boolean> = signal(false)
+  protected coverflow: WritableSignal<boolean> = signal(false)
+  protected hideScrollbar: WritableSignal<boolean> = signal(false)
+
+  public constructor(
+    private playerService: PlayerService,
+    http: HttpClient,
+  ) {
+    http.get<MupiboxConfig>(`${environment.backend.apiUrl}/config`).subscribe({
+      next: (config) => {
+        this.coverflow.set(config?.mupibox?.theme === 'coverflow')
+        this.hideScrollbar.set(config?.mupibox?.hideScrollbar === true)
+        this.configLoaded.set(true)
+      },
+      error: () => this.configLoaded.set(true),
+    })
+
     this.shownData = computed(() => {
       if (this.pageIsShown()) {
         return cloneDeep(this.data())
@@ -100,6 +123,9 @@ export class SwiperComponent<T> {
   // angle towards the center, packed closely, with a gap around the centered one.
   // (Swiper's built-in coverflow effect rotates further the further away a slide is.)
   public applyCoverflow(): void {
+    if (!this.coverflow()) {
+      return
+    }
     const swiper = this.swiperContainer()?.nativeElement?.swiper as Swiper | undefined
     if (!swiper?.slides) {
       return
@@ -344,6 +370,10 @@ export class SwiperComponent<T> {
     for (const slide of Array.from(swiper.slides) as HTMLElement[]) {
       slide.style.transition = ''
     }
+  }
+
+  protected readText(text: string): void {
+    this.playerService.sayText(text)
   }
 
   // Tapping a tilted side cover brings it to the center; only the centered one opens.
