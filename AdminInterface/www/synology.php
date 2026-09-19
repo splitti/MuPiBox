@@ -117,7 +117,7 @@ if (!$forceLogin) {
 $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 ?>
 
-<div class="description">
+<div class="description" style="padding-left:25px;">
 	<h2>NAS</h2>
 	<p>Connect a NAS (Synology, QNAP, TrueNAS, ... - anything with a WebDAV server) as an additional media source. Enable WebDAV on the NAS first (Synology: package "WebDAV Server", ports 5005 http / 5006 https). Mark folders as "artist" (checkbox) to make them show up in the NAS tab on the MuPiBox - live, with no separate media update needed.</p>
 </div>
@@ -181,6 +181,8 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 						.nas-head .nas-cb span { display: inline-block; writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; line-height: 13px; padding-bottom: 4px; }
 						.nas-row { height: 28px; border-radius: 3px; cursor: default; }
 						.nas-row:hover { background: #e5f3ff; }
+						/* The admin theme pads every div inside forms by 8px at the bottom - reset it so the row content sits centered in the row. */
+						#nas-tree .nas-row, #nas-tree .nas-row div, #nas-tree .nas-row span, #nas-tree .nas-row i { padding-top: 0; padding-bottom: 0; margin-top: 0; margin-bottom: 0; line-height: 1.2; }
 						.nas-name { display: flex; align-items: center; flex: 1; min-width: 0; margin-left: 20px; }
 						.nas-chevron { flex: 0 0 22px; text-align: center; color: #777; cursor: pointer; font-size: 11px; transition: transform .12s; user-select: none; }
 						.nas-chevron.open { transform: rotate(90deg); }
