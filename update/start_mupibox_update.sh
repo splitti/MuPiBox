@@ -97,6 +97,7 @@ echo "==========================================================================
 	mkdir /home/dietpi/MuPiBox/media/audiobook >&3 2>&3	
 	mkdir /home/dietpi/MuPiBox/media/music >&3 2>&3
 	mkdir /home/dietpi/MuPiBox/media/other >&3 2>&3
+	mkdir /home/dietpi/MuPiBox/media/NAS >&3 2>&3
 	mkdir /home/dietpi/MuPiBox/media/cover >&3 2>&3
 	mkdir /home/dietpi/MuPiBox/media/youtube-dl >&3 2>&3
 	chown dietpi:dietpi /home/dietpi/MuPiBox/media/audiobook >&3 2>&3

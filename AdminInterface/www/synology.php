@@ -1,8 +1,16 @@
 <?php
 
-include('includes/header.php');
-
 $backendBase = 'http://localhost:8200/api/synology';
+
+// Progress of a running "Download selected" (polled by the page below). Answers
+// before header.php so that no HTML is sent along with the JSON.
+if (isset($_GET['download_status'])) {
+	header('Content-Type: application/json');
+	echo json_encode(synologyApiCall("$backendBase/download/status", 'GET', null, 5));
+	exit;
+}
+
+include('includes/header.php');
 
 function synologyApiCall($url, $method = 'GET', $body = null, $timeout = 30) {
 	$ch = curl_init($url);
@@ -49,15 +57,30 @@ if (isset($_POST['synology_signin'])) {
 	}
 }
 
-if (isset($_POST['synology_save_selection'])) {
-	$checked = $_POST['artist_folders'] ?? array();
+$downloadStarted = false;
+
+if (isset($_POST['synology_save_selection']) || isset($_POST['synology_download_selected'])) {
+	$checkedShow = $_POST['artist_folders'] ?? array();
+	$checkedDownload = $_POST['download_folders'] ?? array();
 	$shown = json_decode($_POST['shown_folders'] ?? '[]', true) ?? array();
 	foreach ($shown as $shownPath) {
-		$isChecked = in_array($shownPath, $checked, true);
-		synologyApiCall("$backendBase/mark", 'POST', array('path' => $shownPath, 'marked' => $isChecked), 10);
+		synologyApiCall("$backendBase/mark", 'POST', array(
+			'path' => $shownPath, 'marked' => in_array($shownPath, $checkedShow, true), 'list' => 'artist'), 10);
+		synologyApiCall("$backendBase/mark", 'POST', array(
+			'path' => $shownPath, 'marked' => in_array($shownPath, $checkedDownload, true), 'list' => 'download'), 10);
 	}
 	$CHANGE_TXT = $CHANGE_TXT . "<li>Synology folder selection saved</li>";
 	$change = 1;
+
+	if (isset($_POST['synology_download_selected'])) {
+		$syncResult = synologyApiCall("$backendBase/download/sync", 'POST', new stdClass(), 10);
+		if (!empty($syncResult['success'])) {
+			$downloadStarted = true;
+			$CHANGE_TXT = $CHANGE_TXT . "<li>Download of the selected folders started - progress is shown on this page</li>";
+		} else {
+			$CHANGE_TXT = $CHANGE_TXT . "<li>" . htmlspecialchars($syncResult['error'] ?? 'Could not start the download.') . "</li>";
+		}
+	}
 }
 
 // The real Synology session lives in the backend (it can also silently
@@ -161,25 +184,73 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 			?>
 				<li id="li_1"><a href="synology.php?path=<?= urlencode($parentPath) ?>">.. (up)</a></li>
 			<?php } ?>
-			<?php foreach ($browseEntries as $entry) { ?>
-				<li id="li_1">
-					<input type="checkbox" name="artist_folders[]" value="<?= htmlspecialchars($entry['path']) ?>" title="Import artist" <?= !empty($entry['isMarked']) ? 'checked="checked"' : '' ?> />
-					<i class="fa-solid fa-folder"></i>
-					<a href="synology.php?path=<?= urlencode($entry['path']) ?>"><?= htmlspecialchars($entry['name']) ?></a>
-				</li>
-			<?php } ?>
+			<li id="li_1">
+				<table style="width:100%; border-collapse:collapse;">
+					<thead>
+						<tr style="text-align:left;">
+							<th style="padding:4px 12px 4px 0;">Show in Mupibox</th>
+							<th style="padding:4px 12px 4px 0;">Download local</th>
+							<th style="padding:4px 0;">Folder</th>
+						</tr>
+					</thead>
+					<tbody>
+					<?php foreach ($browseEntries as $entry) { ?>
+						<tr>
+							<td style="padding:3px 12px 3px 0;">
+								<input type="checkbox" name="artist_folders[]" value="<?= htmlspecialchars($entry['path']) ?>" title="Import artist" <?= !empty($entry['isMarked']) ? 'checked="checked"' : '' ?> />
+							</td>
+							<td style="padding:3px 12px 3px 0;">
+								<input type="checkbox" name="download_folders[]" value="<?= htmlspecialchars($entry['path']) ?>" title="Download local" <?= !empty($entry['isDownload']) ? 'checked="checked"' : '' ?> />
+							</td>
+							<td style="padding:3px 0;">
+								<i class="fa-solid fa-folder"></i>
+								<a href="synology.php?path=<?= urlencode($entry['path']) ?>"><?= htmlspecialchars($entry['name']) ?></a>
+								<?php if (!empty($entry['isDownloaded'])) { ?><i class="fa-solid fa-circle-check" title="Downloaded"></i><?php } ?>
+							</td>
+						</tr>
+					<?php } ?>
+					</tbody>
+				</table>
+			</li>
 			<?php if (count($browseEntries) === 0 && !$browseError) { ?>
 				<li id="li_1"><p>No subfolders here.</p></li>
 			<?php } ?>
+			<li id="li_1">
+				<div id="nas-download-status" style="display:none;"></div>
+			</li>
 			<li class="buttons">
 				<input class="button_text" type="button" value="Select all" onclick="document.querySelectorAll('input[name=\'artist_folders[]\']').forEach(function (box) { box.checked = true; });" />
 				<input class="button_text" type="button" value="Unselect all" onclick="document.querySelectorAll('input[name=\'artist_folders[]\']').forEach(function (box) { box.checked = false; });" />
+				<input class="button_text" type="button" value="Select all downloads" onclick="document.querySelectorAll('input[name=\'download_folders[]\']').forEach(function (box) { box.checked = true; });" />
+				<input class="button_text" type="button" value="Unselect all downloads" onclick="document.querySelectorAll('input[name=\'download_folders[]\']').forEach(function (box) { box.checked = false; });" />
 				<input id="saveForm" class="button_text" type="submit" name="synology_save_selection" value="Save selection" />
+				<input class="button_text" type="submit" name="synology_download_selected" value="Download selected" onclick="return confirm('Download the checked folders to the MuPiBox and delete local copies of unchecked ones?');" />
 			</li>
 		</ul>
 	</form>
 	<p><a href="synology.php?relogin=1">Use a different NAS login</a></p>
 <?php } ?>
+
+<script>
+(function () {
+	var box = document.getElementById('nas-download-status');
+	if (!box) { return; }
+	var autoStarted = <?= $downloadStarted ? 'true' : 'false' ?>;
+
+	function refresh() {
+		fetch('synology.php?download_status=1').then(function (r) { return r.json(); }).then(function (st) {
+			if (!st || st.message === undefined) { return; }
+			if (st.running || autoStarted || st.filesTotal > 0) {
+				box.style.display = 'block';
+				var progress = st.filesTotal > 0 ? ' (' + st.filesDone + '/' + st.filesTotal + ' files)' : '';
+				box.textContent = 'Download: ' + st.message + progress;
+			}
+			if (st.running) { setTimeout(refresh, 2000); }
+		}).catch(function () {});
+	}
+	refresh();
+})();
+</script>
 
 <?php
 include('includes/footer.php');
