@@ -86,9 +86,49 @@
 									</td>
 							</tr>
 						</table></p>
-				<?php
-					$news = file_get_contents("https://raw.githubusercontent.com/splitti/MuPiBox/main/news.txt");
-					print "<p><h2>MuPiBox-News</h2>".$news."</p>"; ?>
+				<p><h2>MuPiBox-News</h2>
+					Changes compared to the stable version:
+					<br/><br/>
+					<b>NAS as a media source</b>
+					<ul>
+						<li>New "NAS" tab in the admin and on the display: connect any NAS with a WebDAV server (Synology, QNAP, TrueNAS, ...). Login with address incl. WebDAV port, account and password.</li>
+						<li>Folder list in the admin works like the Windows file explorer (expandable tree, alphabetical). Tick "Show in Mupibox" to list a folder in the NAS tab and "Download local" to keep a copy on the MuPiBox.</li>
+						<li>Any number of folder levels in the NAS tab. Changes on the NAS show up immediately - no media update needed.</li>
+						<li>Download local: "Download selected" copies the ticked folders (incl. parent covers) to ~/MuPiBox/media/NAS, skips what is already there and removes local copies that were unticked. Downloaded folders also play when the NAS or the network is not available.</li>
+						<li>Resume function works for NAS content as well.</li>
+					</ul>
+					<b>Local library</b>
+					<ul>
+						<li>Audiobooks, Music and Other read the media folders live at any folder depth - "Reload media database" is no longer needed and was removed. Spotify, podcasts and radio are unchanged.</li>
+					</ul>
+					<b>Player</b>
+					<ul>
+						<li>Track list: press and hold the cover to see all tracks of the album (Spotify, local and NAS) and jump to any of them. The hold time is set with "Listview timer" in the admin.</li>
+						<li>Album, track name and track number are shown for local and NAS content.</li>
+						<li>The track list uses the font of the active theme.</li>
+					</ul>
+					<b>Display</b>
+					<ul>
+						<li>Redesigned WiFi settings: status card with signal and IP, list of available networks sorted by signal strength (saved networks out of range are greyed out), connect, change password and delete saved networks.</li>
+						<li>New Bluetooth settings page.</li>
+						<li>Settings menu: 2x2 layout; opened by pressing and holding the status icon (duration set with "Access to settings" in the admin) instead of clicking ten times; the "More settings" QR tile was removed.</li>
+						<li>Control system > "Hide display categorys": hide the Audiobooks / Music / NAS / Other tabs; the remaining tabs are spread evenly (at least one stays visible).</li>
+						<li>Album swiper: always visible, thicker and draggable scrollbar.</li>
+					</ul>
+					<b>Podcasts</b>
+					<ul>
+						<li>Podcast feeds and covers are cached on disk (survive a reboot) and refreshed in the background; missing covers are downloaded again automatically. Episode images load on demand, long lists stay fast.</li>
+					</ul>
+					<b>Admin</b>
+					<ul>
+						<li>Control system > tab visibility: hide admin tabs (Home, MuPiBox and Admin always stay visible).</li>
+					</ul>
+					<b>Update</b>
+					<ul>
+						<li>Safer update script: files are downloaded and verified before anything is changed, config and data are backed up first, and a failed download aborts the update instead of leaving a broken installation.</li>
+						<li>The update script can install a branch of this fork directly.</li>
+					</ul>
+				</p>
 				</li>
 			</ul>
 		</details>
