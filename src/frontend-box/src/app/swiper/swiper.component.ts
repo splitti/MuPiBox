@@ -125,29 +125,59 @@ export class SwiperComponent<T> {
     }
   }
 
-  // Short lists are not scrolled by swiper: a horizontal drag selects the previous / next cover.
-  private dragStartX: number | undefined
+  // --- Short lists (fewer than FEW_COVERS covers) -------------------------------------
+  // They are not scrolled by swiper: the covers are spread over the whole width, the
+  // first at the left edge and the last at the right edge. The selected cover faces
+  // front, all others are tilted towards it. Dragging moves the selection continuously
+  // (the covers follow the finger, then glide into place); tapping a cover selects it.
+  private static readonly DRAG_PIXELS_PER_COVER = 130
+
+  private fewLayouts: { shift: number; rotate: number; z: number }[][] | undefined
+  private fewLayoutKey = ''
+  private dragging = false
+  private dragStartX = 0
+  private dragStartPosition = 0
+  private dragPosition = 0
   private suppressClick = false
 
   protected fewPointerDown(event: PointerEvent): void {
-    this.dragStartX = this.isFewCovers() ? event.clientX : undefined
+    if (!this.isFewCovers()) {
+      return
+    }
+    this.dragging = true
+    this.dragStartX = event.clientX
+    this.dragStartPosition = this.selectedIndex
+    this.dragPosition = this.selectedIndex
     this.suppressClick = false
+    ;(event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId)
   }
 
-  protected fewPointerUp(event: PointerEvent): void {
-    if (this.dragStartX === undefined) {
+  protected fewPointerMove(event: PointerEvent): void {
+    if (!this.dragging) {
       return
     }
     const distance = event.clientX - this.dragStartX
-    this.dragStartX = undefined
-    if (Math.abs(distance) < 40) {
+    if (Math.abs(distance) > 8) {
+      this.suppressClick = true // what follows is a drag, not a tap
+    }
+    const last = (this.shownData() ?? []).length - 1
+    this.dragPosition = Math.min(Math.max(this.dragStartPosition - distance / SwiperComponent.DRAG_PIXELS_PER_COVER, 0), last)
+    const swiper = this.swiperContainer()?.nativeElement?.swiper as Swiper | undefined
+    if (swiper) {
+      this.renderFewCovers(swiper, this.dragPosition, false)
+    }
+  }
+
+  protected fewPointerUp(event: PointerEvent): void {
+    if (!this.dragging) {
       return
     }
-    this.suppressClick = true // the click that follows a drag is not a tap
-    const count = (this.shownData() ?? []).length
-    const next = this.selectedIndex + (distance < 0 ? 1 : -1)
-    this.selectedIndex = Math.min(Math.max(next, 0), count - 1)
-    this.applyCoverflow()
+    this.dragging = false
+    ;(event.currentTarget as HTMLElement).releasePointerCapture?.(event.pointerId)
+    if (this.suppressClick) {
+      this.selectedIndex = Math.round(this.dragPosition)
+      this.applyCoverflow() // glides to the selected cover
+    }
   }
 
   private isFewCovers(): boolean {
@@ -155,22 +185,31 @@ export class SwiperComponent<T> {
     return count > 0 && count < SwiperComponent.FEW_COVERS
   }
 
-  // A short list is not scrolled: the covers are spread over the whole width, the first
-  // one at the left edge and the last at the right edge of the screen.
-  // The selected cover faces front, all others are tilted towards it; tapping another
-  // cover selects it. How wide a tilted cover looks depends on perspective and position,
-  // so the layout is measured and corrected a few times instead of calculated once.
   private applyFewCoversLayout(swiper: Swiper): void {
     const slides = Array.from(swiper.slides) as HTMLElement[]
-    const count = slides.length
-    if (count === 0) {
+    if (slides.length === 0) {
       return
     }
     swiper.allowTouchMove = false
     if (swiper.scrollbar?.el) {
       swiper.scrollbar.el.style.display = 'none'
     }
+    const key = `${slides.length}:${swiper.width}`
+    if (!this.fewLayouts || this.fewLayoutKey !== key) {
+      this.measureFewLayouts(swiper, slides)
+      this.fewLayoutKey = key
+    }
+    if (!this.dragging) {
+      this.selectedIndex = Math.min(this.selectedIndex, slides.length - 1)
+      this.renderFewCovers(swiper, this.selectedIndex, slides[0].style.transform !== '')
+    }
+  }
 
+  // The layout for every possible selection is measured once. How wide a tilted cover
+  // looks depends on perspective and position, so it is measured and corrected a few
+  // times instead of calculated.
+  private measureFewLayouts(swiper: Swiper, slides: HTMLElement[]): void {
+    const count = slides.length
     const margin = 0
     const flatWidth = 300
     const angle = 65
@@ -178,88 +217,111 @@ export class SwiperComponent<T> {
     const perspective = 1000
     const scale = perspective / (perspective + depth) // tilted covers are further away
     const width = swiper.width
-    const selected = Math.min(this.selectedIndex, count - 1)
 
-    const previous = slides.map((slide) => ({ transform: slide.style.transform, zIndex: slide.style.zIndex }))
-    const naturalCenters = slides.map((slide) => {
+    slides.forEach((slide) => {
       slide.style.transition = 'none'
       slide.style.transform = 'none'
+    })
+    const naturalCenters = slides.map((slide) => {
       const rect = slide.getBoundingClientRect()
       return rect.left + rect.width / 2
     })
-    const shifts = new Array<number>(count).fill(0)
-    const apply = (): void => {
-      slides.forEach((slide, index) => {
-        const tilted = index !== selected
-        const rotate = index < selected ? angle : index > selected ? -angle : 0
-        slide.style.transform = `perspective(${perspective}px) translateX(${shifts[index]}px) translateZ(${tilted ? -depth : 0}px) rotateY(${rotate}deg)`
-        slide.style.zIndex = String(1000 - Math.abs(index - selected))
-      })
-    }
     const cardRects = (): DOMRect[] =>
       slides.map((slide) => (slide.querySelector('ion-card') ?? slide).getBoundingClientRect())
 
-    // Wanted position of every cover: the left edge (flat cover and left group) or the
-    // right edge (right group), given the current widths of the tilted covers.
-    const targets = (tiltedWidths: number[]): { edge: 'left' | 'right'; pos: number }[] => {
-      const left = selected
-      const right = count - 1 - selected
-      const leftWidth = left > 0 ? tiltedWidths[left - 1] : 0
-      const rightWidth = right > 0 ? tiltedWidths[selected + 1] : 0
-      const gaps = (left > 0 ? 1 : 0) + (right > 0 ? 1 : 0)
-      const steps = Math.max(left - 1, 0) + Math.max(right - 1, 0)
-      const space = width - 2 * margin - flatWidth - leftWidth - rightWidth
-      const wantedGap = 14
-      const pitch = steps > 0 ? Math.min(Math.max((space - gaps * wantedGap) / steps, 12), 170) : 0
-      const gap = gaps > 0 ? Math.max((space - steps * pitch) / gaps, 8) : 0
-      let flatLeft = margin + (left > 0 ? (left - 1) * pitch + leftWidth + gap : 0)
-      if (count === 1) {
-        flatLeft = (width - flatWidth) / 2
+    const layouts: { shift: number; rotate: number; z: number }[][] = []
+    for (let selected = 0; selected < count; selected++) {
+      const shifts = new Array<number>(count).fill(0)
+      const apply = (): void => {
+        slides.forEach((slide, index) => {
+          const tilted = index !== selected
+          const rotate = index < selected ? angle : index > selected ? -angle : 0
+          slide.style.transform = `perspective(${perspective}px) translateX(${shifts[index]}px) translateZ(${tilted ? -depth : 0}px) rotateY(${rotate}deg)`
+        })
       }
-      return slides.map((_, index) => {
-        if (index < selected) {
-          return { edge: 'left', pos: margin + index * pitch }
-        }
-        if (index > selected) {
-          return { edge: 'right', pos: width - margin - (count - 1 - index) * pitch }
-        }
-        return { edge: 'left', pos: flatLeft }
-      })
-    }
 
-    // First guess from the natural positions, then measure and correct.
-    let widths = slides.map(() => 115)
-    let wanted = targets(widths)
-    slides.forEach((_, index) => {
-      const tilted = index !== selected
-      let center = wanted[index].pos + flatWidth / 2
-      if (tilted) {
-        center = wanted[index].edge === 'left' ? wanted[index].pos + widths[index] / 2 : wanted[index].pos - widths[index] / 2
+      // Wanted position of every cover: the left edge (flat cover and left group) or the
+      // right edge (right group), given the current widths of the tilted covers.
+      const targets = (tiltedWidths: number[]): { edge: 'left' | 'right'; pos: number }[] => {
+        const left = selected
+        const right = count - 1 - selected
+        const leftWidth = left > 0 ? tiltedWidths[left - 1] : 0
+        const rightWidth = right > 0 ? tiltedWidths[selected + 1] : 0
+        const gaps = (left > 0 ? 1 : 0) + (right > 0 ? 1 : 0)
+        const steps = Math.max(left - 1, 0) + Math.max(right - 1, 0)
+        const space = width - 2 * margin - flatWidth - leftWidth - rightWidth
+        const wantedGap = 14
+        const pitch = steps > 0 ? Math.min(Math.max((space - gaps * wantedGap) / steps, 12), 170) : 0
+        const gap = gaps > 0 ? Math.max((space - steps * pitch) / gaps, 8) : 0
+        let flatLeft = margin + (left > 0 ? (left - 1) * pitch + leftWidth + gap : 0)
+        if (count === 1) {
+          flatLeft = (width - flatWidth) / 2
+        }
+        return slides.map((_, index) => {
+          if (index < selected) {
+            return { edge: 'left', pos: margin + index * pitch }
+          }
+          if (index > selected) {
+            return { edge: 'right', pos: width - margin - (count - 1 - index) * pitch }
+          }
+          return { edge: 'left', pos: flatLeft }
+        })
       }
-      shifts[index] = (center - naturalCenters[index]) / (tilted ? scale : 1)
-    })
-    apply()
-    for (let round = 0; round < 3; round++) {
-      const rects = cardRects()
-      widths = rects.map((rect) => rect.width)
-      wanted = targets(widths)
+
+      // First guess from the natural positions, then measure and correct.
+      let widths = slides.map(() => 115)
+      let wanted = targets(widths)
       slides.forEach((_, index) => {
-        const measured = wanted[index].edge === 'left' ? rects[index].left : rects[index].right
-        shifts[index] += (wanted[index].pos - measured) / (index === selected ? 1 : scale)
+        const tilted = index !== selected
+        let center = wanted[index].pos + flatWidth / 2
+        if (tilted) {
+          center = wanted[index].edge === 'left' ? wanted[index].pos + widths[index] / 2 : wanted[index].pos - widths[index] / 2
+        }
+        shifts[index] = (center - naturalCenters[index]) / (tilted ? scale : 1)
       })
       apply()
+      for (let round = 0; round < 3; round++) {
+        const rects = cardRects()
+        widths = rects.map((rect) => rect.width)
+        wanted = targets(widths)
+        slides.forEach((_, index) => {
+          const measured = wanted[index].edge === 'left' ? rects[index].left : rects[index].right
+          shifts[index] += (wanted[index].pos - measured) / (index === selected ? 1 : scale)
+        })
+        apply()
+      }
+      layouts.push(
+        slides.map((_, index) => ({
+          shift: shifts[index],
+          rotate: index < selected ? angle : index > selected ? -angle : 0,
+          z: index === selected ? 0 : -depth,
+        })),
+      )
     }
-
-    // Measuring needed the final positions; now let the covers glide there from where they were.
-    const final = slides.map((slide) => ({ transform: slide.style.transform, zIndex: slide.style.zIndex }))
-    slides.forEach((slide, index) => {
-      slide.style.transform = previous[index].transform || final[index].transform
+    this.fewLayouts = layouts
+    slides.forEach((slide) => {
+      slide.style.transform = ''
     })
-    void swiper.el.offsetWidth // commit the start position before animating
+  }
+
+  // Shows the layout for a (fractional) selection: between two selections every cover
+  // is halfway between its two positions - that is what makes dragging follow the finger.
+  private renderFewCovers(swiper: Swiper, position: number, animate: boolean): void {
+    const layouts = this.fewLayouts
+    if (!layouts) {
+      return
+    }
+    const slides = Array.from(swiper.slides) as HTMLElement[]
+    const from = Math.min(Math.floor(position), slides.length - 1)
+    const to = Math.min(from + 1, slides.length - 1)
+    const fraction = position - from
+    const mix = (a: number, b: number): number => a + (b - a) * fraction
     slides.forEach((slide, index) => {
-      slide.style.transition = 'transform 0.4s ease'
-      slide.style.transform = final[index].transform
-      slide.style.zIndex = final[index].zIndex
+      const a = layouts[from][index]
+      const b = layouts[to][index]
+      slide.style.transition = animate ? 'transform 0.4s ease' : 'none'
+      slide.style.transform = `perspective(1000px) translateX(${mix(a.shift, b.shift)}px) translateZ(${mix(a.z, b.z)}px) rotateY(${mix(a.rotate, b.rotate)}deg)`
+      slide.style.zIndex = String(1000 - Math.round(Math.abs(index - position) * 10))
     })
   }
 
