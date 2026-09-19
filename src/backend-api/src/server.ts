@@ -550,6 +550,128 @@ app.get('/api/wifi/configured', async (_req, res) => {
   }
 })
 
+// wpa_cli prints SSIDs with non-ASCII / special bytes as \xNN escapes.
+function decodeWpaSsid(raw: string): string {
+  const bytes: number[] = []
+  for (let i = 0; i < raw.length; i++) {
+    if (raw[i] === '\\' && raw[i + 1] === 'x' && /^[0-9a-fA-F]{2}$/.test(raw.slice(i + 2, i + 4))) {
+      bytes.push(Number.parseInt(raw.slice(i + 2, i + 4), 16))
+      i += 3
+    } else if (raw[i] === '\\' && raw[i + 1] === '\\') {
+      bytes.push(0x5c)
+      i += 1
+    } else {
+      bytes.push(...Buffer.from(raw[i]))
+    }
+  }
+  return Buffer.from(bytes).toString('utf8')
+}
+
+interface WifiScanEntry {
+  signalDbm: number
+  secured: boolean
+}
+
+// "bssid / frequency / signal level / flags / ssid" per line; the strongest access
+// point wins when a network is broadcast by several.
+function parseWpaCliScanResults(stdout: string): Map<string, WifiScanEntry> {
+  const networks = new Map<string, WifiScanEntry>()
+  for (const line of stdout.split('\n').slice(1)) {
+    const parts = line.trim().split('\t')
+    if (parts.length < 5) {
+      continue
+    }
+    const signalDbm = Number.parseInt(parts[2], 10)
+    const ssid = decodeWpaSsid(parts.slice(4).join('\t'))
+    // Hidden networks show up with an empty or all-zero SSID.
+    if (Number.isNaN(signalDbm) || ssid.replaceAll('\0', '').trim() === '') {
+      continue
+    }
+    const previous = networks.get(ssid)
+    if (!previous || signalDbm > previous.signalDbm) {
+      networks.set(ssid, { signalDbm, secured: /WPA|WEP|RSN/.test(parts[3]) })
+    }
+  }
+  return networks
+}
+
+// Rough dBm -> percent (-100 dBm = 0 %, -50 dBm and better = 100 %).
+function wifiSignalPercent(signalDbm: number): number {
+  return Math.min(100, Math.max(0, 2 * (signalDbm + 100)))
+}
+
+interface WifiNetworkInfo {
+  ssid: string
+  id?: number
+  current: boolean
+  available: boolean
+  signalDbm?: number
+  signal?: number
+  secured?: boolean
+}
+
+// Networks in range (strongest first) merged with the saved ones; saved networks
+// that are not in range are listed last and marked as not available.
+app.get('/api/wifi/networks', async (req, res) => {
+  try {
+    if (req.query.refresh !== '0') {
+      try {
+        await execFileAsync('sudo', ['wpa_cli', '-i', 'wlan0', 'scan'])
+        await new Promise((resolve) => setTimeout(resolve, 3500))
+      } catch {
+        // A scan may already be running or the adapter busy - the last results are still usable.
+      }
+    }
+
+    const { stdout: configuredOutput } = await execFileAsync('sudo', ['wpa_cli', '-i', 'wlan0', 'list_networks'])
+    let scanned = new Map<string, WifiScanEntry>()
+    try {
+      const { stdout: scanOutput } = await execFileAsync('sudo', ['wpa_cli', '-i', 'wlan0', 'scan_results'])
+      scanned = parseWpaCliScanResults(scanOutput)
+    } catch (error) {
+      console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error reading wifi scan results: ${error}`)
+    }
+
+    const networks: WifiNetworkInfo[] = []
+    for (const configured of parseWpaCliNetworks(configuredOutput)) {
+      const ssid = decodeWpaSsid(configured.ssid)
+      const found = scanned.get(ssid)
+      scanned.delete(ssid)
+      networks.push({
+        ssid,
+        id: configured.id,
+        current: configured.current,
+        // The connected network is in range by definition, even if the scan missed it.
+        available: found !== undefined || configured.current,
+        signalDbm: found?.signalDbm,
+        signal: found ? wifiSignalPercent(found.signalDbm) : undefined,
+        secured: found?.secured,
+      })
+    }
+    for (const [ssid, found] of scanned) {
+      networks.push({
+        ssid,
+        current: false,
+        available: true,
+        signalDbm: found.signalDbm,
+        signal: wifiSignalPercent(found.signalDbm),
+        secured: found.secured,
+      })
+    }
+
+    networks.sort((a, b) => {
+      if (a.available !== b.available) {
+        return a.available ? -1 : 1
+      }
+      return (b.signalDbm ?? -200) - (a.signalDbm ?? -200) || a.ssid.localeCompare(b.ssid)
+    })
+    res.json(networks)
+  } catch (error) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error listing wifi networks: ${error}`)
+    res.status(500).send('error')
+  }
+})
+
 app.delete('/api/wifi/configured/:id', async (req, res) => {
   const id = Number.parseInt(req.params.id, 10)
   if (Number.isNaN(id)) {

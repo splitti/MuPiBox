@@ -6,7 +6,7 @@
     @if (editNetwork) {
       <ion-title>Change password: {{ editNetwork.ssid }}</ion-title>
     } @else {
-      <ion-title>Add WiFi network</ion-title>
+      <ion-title>{{ prefillSsid ? 'Connect: ' + prefillSsid : 'Add WiFi network' }}</ion-title>
     }
   </ion-toolbar>
 </ion-header>
@@ -21,7 +21,7 @@
               <ion-col size="12">
                 <div>
                   <ion-item>
-                    <ion-input #wlan_ssid name="wlan_ssid" type="text" placeholder="WLAN-SSID" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
+                    <ion-input #wlan_ssid name="wlan_ssid" type="text" placeholder="WLAN-SSID" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" [ngModel]="prefillSsid ?? ''"></ion-input>
                   </ion-item>
                 </div>
               </ion-col>

@@ -85,6 +85,11 @@ ion-toolbar {
     }
 }
 
+.list-actions {
+    display: flex;
+    gap: 8px;
+}
+
 .networks-list {
     background: transparent;
 
@@ -106,6 +111,45 @@ ion-toolbar {
         .current-badge {
             font-size: 12px;
             color: var(--ion-color-primary, #2dd6c7);
+        }
+
+        .saved-badge {
+            font-size: 12px;
+            opacity: 0.6;
+        }
+
+        .lock {
+            font-size: 14px;
+            opacity: 0.6;
+        }
+
+        // Saved network that is currently out of range: greyed out.
+        &.unavailable {
+            opacity: 0.45;
+        }
+
+        // Four signal bars, filled according to the signal strength.
+        .signal {
+            display: flex;
+            align-items: flex-end;
+            gap: 3px;
+            height: 24px;
+            margin-inline-end: 14px;
+
+            .bar {
+                width: 6px;
+                border-radius: 1px;
+                background: rgba(255, 255, 255, 0.22);
+
+                &:nth-child(1) { height: 6px; }
+                &:nth-child(2) { height: 11px; }
+                &:nth-child(3) { height: 17px; }
+                &:nth-child(4) { height: 24px; }
+
+                &.on {
+                    background: var(--ion-color-primary, #2dd6c7);
+                }
+            }
         }
     }
 }

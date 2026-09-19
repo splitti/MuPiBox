@@ -106,6 +106,23 @@
 		$CHANGE_TXT=$CHANGE_TXT."<li>Visible tabs saved</li>";
 		}
 
+	if( isset($_POST['display_cats_save']) )
+		{
+		$allowedCats = array('audiobook', 'music', 'nas', 'other');
+		$hiddenCats = array_values(array_intersect($allowedCats, $_POST['hide_categories'] ?? array()));
+		if( count($hiddenCats) >= count($allowedCats) )
+			{
+			$change=98;
+			$CHANGE_TXT=$CHANGE_TXT."<li>At least one display category must stay visible - nothing was changed</li>";
+			}
+		else
+			{
+			$data["mupibox"]["hiddenCategories"]=$hiddenCats;
+			$change=1;
+			$CHANGE_TXT=$CHANGE_TXT."<li>Display categories saved - the display restarts</li>";
+			}
+		}
+
 	if( $_POST['spotifydebug'] == "Controller Debugging Off - turn on" )
 		{
 		$sdcommand='sudo su -c \'sed -i "s/\"logLevel\": \"error\"/\"logLevel\": \"debug\"/g" /home/dietpi/.mupibox/spotifycontroller-main/config/config.json\'';
@@ -322,6 +339,15 @@
 				<label style="display:inline-block; margin-right:14px;"><input type="checkbox" checked="checked" disabled="disabled" /> Admin</label>
 				<br/><br/>
 				<input id="saveForm" class="button_text" type="submit" name="nav_tabs_save" value="Save tabs" />
+			</li>
+			<li class="li_norm">
+				<p><b>Hide display categorys</b><br/>Tick a category to hide its tab in the display. The remaining tabs are spread evenly. At least one must stay visible.</p>
+<?php $hiddenCatsNow = is_array($data['mupibox']['hiddenCategories'] ?? null) ? $data['mupibox']['hiddenCategories'] : array(); ?>
+<?php foreach (array('audiobook' => 'Audiobooks', 'music' => 'Music', 'nas' => 'NAS', 'other' => 'Other') as $catKey => $catLabel) { ?>
+				<label style="display:inline-block; margin-right:14px;"><input type="checkbox" name="hide_categories[]" value="<?= $catKey ?>" <?= in_array($catKey, $hiddenCatsNow, true) ? 'checked="checked"' : '' ?> /> <?= $catLabel ?></label>
+<?php } ?>
+				<br/><br/>
+				<input id="saveForm" class="button_text" type="submit" name="display_cats_save" value="Save categories" onclick="if (document.querySelectorAll('input[name=\'hide_categories[]\']:checked').length >= 4) { alert('At least one category must stay visible.'); return false; }" />
 			</li>
 		</ul>
 	</details>

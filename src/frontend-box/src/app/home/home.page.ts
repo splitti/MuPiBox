@@ -58,6 +58,17 @@ export class HomePage extends SwiperIonicEventsHelper {
   private settingsAccessTimerMs = 3000
   private settingsPressTimer = 0
 
+  // Category tabs at the top, in display order; some can be hidden in the admin.
+  protected readonly categories: { key: CategoryType; icon: string }[] = [
+    { key: 'audiobook', icon: 'book-outline' },
+    { key: 'music', icon: 'musical-notes-outline' },
+    { key: 'nas', icon: 'server-outline' },
+    { key: 'other', icon: 'radio-outline' },
+  ]
+  protected hiddenCategories: WritableSignal<string[]> = signal([])
+  protected configLoaded: WritableSignal<boolean> = signal(false)
+  protected visibleCategories = computed(() => this.categories.filter((c) => !this.hiddenCategories().includes(c.key)))
+
   protected artists: Signal<Artist[]>
   protected swiperData: Signal<SwiperData<Artist>[]>
   protected isOnline: Signal<boolean>
@@ -79,9 +90,21 @@ export class HomePage extends SwiperIonicEventsHelper {
         if (typeof configuredSeconds === 'number' && configuredSeconds > 0) {
           this.settingsAccessTimerMs = configuredSeconds * 1000
         }
+
+        const hidden = config?.mupibox?.hiddenCategories
+        if (Array.isArray(hidden)) {
+          this.hiddenCategories.set(hidden)
+        }
+        // Do not start on a category that is hidden.
+        const visible = this.visibleCategories()
+        if (visible.length > 0 && !visible.some((c) => c.key === this.category())) {
+          this.category.set(visible[0].key)
+        }
+        this.configLoaded.set(true)
       },
       error: () => {
-        // Keep default settingsAccessTimerMs if config could not be loaded.
+        // Keep default settingsAccessTimerMs / show all categories if config could not be loaded.
+        this.configLoaded.set(true)
       },
     })
 
