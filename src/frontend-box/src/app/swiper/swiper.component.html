@@ -1,5 +1,5 @@
 <!-- Cover Flow: the centered cover faces front, all others are tilted towards it (see applyCoverflow). -->
-  <swiper-container #swiper (click)="slideClicked($event)" (swiperprogress)="applyCoverflow()" (swipersettranslate)="applyCoverflow()" (swiperinit)="applyCoverflow()" watch-slides-progress="true" centered-slides="true" slides-per-view="auto" space-between="-142" grab-cursor="true" scrollbar="true" scrollbar-hide="false" scrollbar-draggable="true" scrollbar-drag-size="auto" scrollbar-snap-on-release="true">
+  <swiper-container #swiper (click)="slideClicked($event)" (swiperprogress)="applyCoverflow()" (swipersettranslate)="applyCoverflow()" (swiperinit)="applyCoverflow()" watch-slides-progress="true" centered-slides="true" slides-per-view="auto" space-between="-272" grab-cursor="true" scrollbar="true" scrollbar-hide="false" scrollbar-draggable="true" scrollbar-drag-size="auto" scrollbar-snap-on-release="true">
     @for (currentData of shownData(); track currentData) {
       <swiper-slide>
         <ion-grid>

@@ -95,9 +95,9 @@ export class SwiperComponent<T> {
     if (!swiper?.slides) {
       return
     }
-    const angle = 60
-    const centerGap = 104 // extra space between the centered cover and its neighbours (px)
-    const depth = 140
+    const angle = 65
+    const centerGap = 193 // extra space between the centered cover and its neighbours (px)
+    const depth = 100
     for (const slide of Array.from(swiper.slides) as (HTMLElement & { progress: number })[]) {
       const progress = slide.progress ?? 0
       const side = Math.sign(progress)
