@@ -176,6 +176,71 @@ function extractRssText(node: unknown): string | undefined {
   return undefined
 }
 
+function decodeXmlEntities(text: string): string {
+  return text.replace(/&(#x[0-9a-fA-F]+|#[0-9]+|amp|lt|gt|quot|apos);/g, (_m, entity: string) => {
+    if (entity.startsWith('#x')) {
+      return String.fromCodePoint(Number.parseInt(entity.slice(2), 16))
+    }
+    if (entity.startsWith('#')) {
+      return String.fromCodePoint(Number.parseInt(entity.slice(1), 10))
+    }
+    return { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" }[entity] ?? _m
+  })
+}
+
+// Text of the first <name>...</name> in `block`, in the shape xml-js gives it (_text / _cdata).
+function rssTagText(block: string, name: string): { _text: string } | { _cdata: string } | undefined {
+  const match = block.match(new RegExp(`<${name}(?:\\s[^>]*)?>([\\s\\S]*?)</${name}>`))
+  if (!match) {
+    return undefined
+  }
+  const inner = match[1].trim()
+  const cdata = inner.match(/^<!\[CDATA\[([\s\S]*?)\]\]>$/)
+  return cdata ? { _cdata: cdata[1] } : { _text: decodeXmlEntities(inner) }
+}
+
+// Value of an attribute of the first <tag ...> in `block`.
+function rssTagAttribute(block: string, tag: string, attribute: string): string | undefined {
+  const match = block.match(new RegExp(`<${tag}\\s[^>]*?\\b${attribute}\\s*=\\s*("([^"]*)"|'([^']*)')`))
+  const value = match ? (match[2] ?? match[3]) : undefined
+  return value === undefined ? undefined : decodeXmlEntities(value)
+}
+
+// Reads the channel and its episodes in the same shape as xml-js (compact) would, but with
+// only the fields the kiosk uses. Returns undefined if the text does not look like a feed.
+function parseRssFeedFast(xml: string): any | undefined {
+  const firstItem = xml.search(/<item[\s>]/)
+  if (firstItem < 0) {
+    return undefined
+  }
+  const head = xml.slice(0, firstItem)
+  const items = (xml.slice(firstItem).match(/<item[\s>][\s\S]*?<\/item>/g) ?? []).map((block) => {
+    const item: Record<string, unknown> = {}
+    const title = rssTagText(block, 'title')
+    const pubDate = rssTagText(block, 'pubDate')
+    const guid = rssTagText(block, 'guid')
+    const enclosureUrl = rssTagAttribute(block, 'enclosure', 'url')
+    const imageUrl = rssTagAttribute(block, 'itunes:image', 'href')
+    if (title) item.title = title
+    if (pubDate) item.pubDate = pubDate
+    if (guid) item.guid = guid
+    if (enclosureUrl) item.enclosure = { _attributes: { url: enclosureUrl } }
+    if (imageUrl) item['itunes:image'] = { _attributes: { href: imageUrl } }
+    return item
+  })
+  if (items.length === 0) {
+    return undefined
+  }
+  const imageBlock = head.match(/<image>[\s\S]*?<\/image>/)?.[0] ?? ''
+  const channelImage = (imageBlock && rssTagText(imageBlock, 'url')) || undefined
+  const coverUrl = channelImage ? extractRssText(channelImage) : rssTagAttribute(head, 'itunes:image', 'href')
+  const title = rssTagText(head.replace(/<image>[\s\S]*?<\/image>/, ''), 'title')
+  return {
+    _slim: true,
+    rss: { channel: { title: title ?? { _text: '' }, image: { url: { _text: coverUrl ?? '' } }, item: items } },
+  }
+}
+
 function latestEpisodeFingerprint(feed: any): string | undefined {
   const items = feed?.rss?.channel?.item
   const firstItem = Array.isArray(items) ? items[0] : items
@@ -209,6 +274,16 @@ async function downloadRssCover(coverUrl: string, cacheKey: string): Promise<str
 // but no single feed can ever stall a response past this.
 const rssFetchTimeoutMs = 5000
 
+// Long podcasts are several MB of XML, and parsing that completely (xml-js) blocks the whole
+// backend for many seconds on the Pi. The kiosk only needs the <title>, <enclosure>,
+// <pubDate> and <itunes:image> of every episode (plus the channel title and cover), so
+// those are read straight out of the text - about a hundred times faster - and only they
+// are kept in the cache. A feed is refreshed at most every rssRefreshIntervalMs and never
+// twice at once. The full parser is only a fallback for feeds that do not look as expected.
+const rssRefreshIntervalMs = 15 * 60 * 1000
+const rssLastRefresh = new Map<string, number>()
+const rssRefreshing = new Set<string>()
+
 /** A minimal, well-formed empty feed, used as a last-resort fallback so a single
  * unreachable podcast never breaks the whole category listing (the frontend
  * merges all podcasts' feeds into one Observable with no per-item error handling). */
@@ -236,13 +311,22 @@ async function refreshRssCache(rssUrl: string, cacheKey: string): Promise<any> {
   }
 
   const xml = await ky.get(rssUrl, { timeout: rssFetchTimeoutMs }).text()
-  const feed = JSON.parse(xmlparser.xml2json(xml, { compact: true, nativeType: true }))
+  const feed =
+    parseRssFeedFast(xml) ??
+    JSON.parse(
+      xmlparser.xml2json(
+        xml.replace(/<(description|content:encoded|itunes:summary|itunes:subtitle)(\s[^>]*)?>[\s\S]*?<\/\1>/g, ''),
+        { compact: true, nativeType: true },
+      ),
+    )
 
   const hasNewEpisode = latestEpisodeFingerprint(feed) !== latestEpisodeFingerprint(previousFeed)
   const previousCoverUrl = extractRssText(previousFeed?.rss?.channel?.image?.url)
   const coverMissing = rssCoverFileMissing(previousCoverUrl)
+  // A cache written by an older version holds every tag of the feed; rewrite it slim.
+  const previousIsSlim = previousFeed?._slim === true
 
-  if (previousFeed && !hasNewEpisode && !coverMissing) {
+  if (previousFeed && !hasNewEpisode && !coverMissing && previousIsSlim) {
     // Nothing changed and the cached cover file is still there - keep serving as-is.
     return previousFeed
   }
@@ -288,12 +372,20 @@ app.get('/api/rssfeed/cached', async (req, res) => {
 
   if (fs.existsSync(cacheFile)) {
     try {
-      const cached = JSON.parse(await readFile(cacheFile, 'utf8'))
-      res.json(cached)
+      // The cache file already is the JSON answer - send it as it is (no parse / stringify).
+      const cached = await readFile(cacheFile)
+      res.type('application/json').send(cached)
       // Refresh in the background for next time; don't make the caller wait for it.
-      refreshRssCache(rssUrl, cacheKey).catch((error) => {
-        console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Background RSS refresh failed: ${error}`)
-      })
+      const due = Date.now() - (rssLastRefresh.get(cacheKey) ?? 0) > rssRefreshIntervalMs
+      if (due && !rssRefreshing.has(cacheKey)) {
+        rssRefreshing.add(cacheKey)
+        rssLastRefresh.set(cacheKey, Date.now())
+        refreshRssCache(rssUrl, cacheKey)
+          .catch((error) => {
+            console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Background RSS refresh failed: ${error}`)
+          })
+          .finally(() => rssRefreshing.delete(cacheKey))
+      }
       return
     } catch (error) {
       console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to read cached RSS feed: ${error}`)

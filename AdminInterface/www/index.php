@@ -121,6 +121,7 @@
 					<b>Podcasts</b>
 					<ul>
 						<li>Podcast feeds and covers are cached on disk (survive a reboot) and refreshed in the background; missing covers are downloaded again automatically. Episode images load on demand, long lists stay fast.</li>
+						<li>Long podcasts open much faster: only title, audio file, date and image of each episode are read and cached (a 3 MB feed shrinks to about 350 KB), feeds are refreshed at most every 15 minutes, and the backend is no longer blocked while a feed is processed.</li>
 					</ul>
 					<b>Admin</b>
 					<ul>

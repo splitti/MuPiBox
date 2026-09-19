@@ -147,6 +147,20 @@ export class SwiperComponent<T> {
     const depth = 100
     for (const slide of Array.from(swiper.slides) as (HTMLElement & { progress: number })[]) {
       const progress = slide.progress ?? 0
+      // Covers far away from the center are out of sight anyway. Long lists (a podcast can have
+      // hundreds of episodes) would otherwise be restyled completely on every frame of a drag.
+      if (Math.abs(progress) > 7) {
+        if (slide.dataset['far'] !== '1') {
+          slide.dataset['far'] = '1'
+          slide.style.visibility = 'hidden'
+          slide.style.transform = 'none'
+        }
+        continue
+      }
+      if (slide.dataset['far'] === '1') {
+        slide.dataset['far'] = ''
+        slide.style.visibility = ''
+      }
       const side = Math.sign(progress)
       const amount = Math.min(Math.abs(progress), 1)
       const rotate = side * angle * amount
