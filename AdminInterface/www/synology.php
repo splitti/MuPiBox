@@ -178,7 +178,8 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 						.nas-head { height: 110px; align-items: flex-end; border-bottom: 1px solid #e0e0e0; margin-bottom: 4px; }
 						.nas-cb { flex: 0 0 34px; text-align: center; }
 						.nas-cb input { margin: 0; }
-						.nas-head .nas-cb span { display: inline-block; writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; line-height: 13px; padding-bottom: 4px; }
+						.nas-head .nas-cb { display: flex; justify-content: center; }
+						.nas-head .nas-cb span { display: inline-block; position: relative; left: 2px; writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; line-height: 13px; padding-bottom: 4px; }
 						.nas-row { height: 28px; border-radius: 3px; cursor: default; }
 						.nas-row:hover { background: #e5f3ff; }
 						/* The admin theme pads every div inside forms by 8px at the bottom - reset it so the row content sits centered in the row. */
