@@ -130,6 +130,13 @@ export class SwiperComponent<T> {
     if (!swiper?.slides) {
       return
     }
+    if (this.isFlatRow()) {
+      this.applyFlatRowLayout(swiper)
+      return
+    }
+    for (const slide of Array.from(swiper.slides) as HTMLElement[]) {
+      slide.style.transformOrigin = ''
+    }
     if (this.isFewCovers()) {
       this.applyFewCoversLayout(swiper)
       return
@@ -207,9 +214,50 @@ export class SwiperComponent<T> {
     }
   }
 
+  // Up to this many covers are simply shown in a row: same size, all facing front,
+  // no tilt, no animation and nothing to scroll.
+  private static readonly FLAT_ROW_COVERS = 3
+
+  private isFlatRow(): boolean {
+    const count = (this.shownData() ?? []).length
+    return count > 0 && count <= SwiperComponent.FLAT_ROW_COVERS
+  }
+
   private isFewCovers(): boolean {
     const count = (this.shownData() ?? []).length
-    return count > 0 && count < SwiperComponent.FEW_COVERS
+    return count > SwiperComponent.FLAT_ROW_COVERS && count < SwiperComponent.FEW_COVERS
+  }
+
+  private applyFlatRowLayout(swiper: Swiper): void {
+    const slides = Array.from(swiper.slides) as HTMLElement[]
+    const count = slides.length
+    if (count === 0) {
+      return
+    }
+    swiper.allowTouchMove = false
+    if (swiper.scrollbar?.el) {
+      swiper.scrollbar.el.style.display = 'none'
+    }
+    // As large as possible (up to 300px) with the same gap between and around the covers.
+    const minGap = 20
+    const coverSize = Math.min(300, (swiper.width - (count + 1) * minGap) / count)
+    const gap = (swiper.width - count * coverSize) / (count + 1)
+    slides.forEach((slide) => {
+      slide.style.transition = 'none'
+      slide.style.transform = 'none'
+    })
+    const naturalCenters = slides.map((slide) => {
+      const rect = slide.getBoundingClientRect()
+      return rect.left + rect.width / 2
+    })
+    slides.forEach((slide, index) => {
+      const center = gap * (index + 1) + coverSize * index + coverSize / 2
+      // A smaller cover shrinks around the middle of its top edge (20px into the slide), so that
+      // edge stays 20px below the menu bar.
+      slide.style.transformOrigin = 'center 20px'
+      slide.style.transform = `translateX(${center - naturalCenters[index]}px) scale(${coverSize / 300})`
+      slide.style.zIndex = '1'
+    })
   }
 
   private applyFewCoversLayout(swiper: Swiper): void {
@@ -387,6 +435,19 @@ export class SwiperComponent<T> {
     }
     const swiper = this.swiperContainer()?.nativeElement?.swiper as Swiper | undefined
     if (!swiper) {
+      return
+    }
+    if (this.isFlatRow()) {
+      // Every cover faces front: a tap opens it directly.
+      const slides = Array.from(swiper.slides) as HTMLElement[]
+      const index = slides.findIndex((slide) => {
+        const rect = slide.getBoundingClientRect()
+        return event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom
+      })
+      const item = (this.shownData() ?? [])[index]
+      if (item) {
+        this.elementClicked.emit(item)
+      }
       return
     }
     const few = this.isFewCovers()
