@@ -122,6 +122,7 @@ echo "= Update-URL:       ${MUPIBOX_URL}" >&3 2>&3
 echo "= Unzip-Directory:  ${MUPI_SRC}" >&3 2>&3
 echo "==========================================================================================" >&3 2>&3
 
+rm -f /tmp/mupibox-update-failed
 {
 	###############################################################################################
 
@@ -279,7 +280,30 @@ echo "==========================================================================
 
 	echo -e "XXX\n${STEP}\nDownload MuPiBox Version ${VERSION_LONG}... \nXXX"	
 	before=$(date +%s)
-	wget -q -O /home/dietpi/mupibox.zip ${MUPIBOX_URL} >&3 2>&3
+	# The source archive is large and a dropped connection leaves a truncated file, which
+	# used to be unpacked anyway (nothing) while the update went on emptying the install.
+	# Check the archive, retry, and stop BEFORE anything gets replaced if it stays broken.
+	DOWNLOAD_OK=0
+	for attempt in 1 2 3 4 5
+	do
+		rm -f /home/dietpi/mupibox.zip
+		wget -q -O /home/dietpi/mupibox.zip ${MUPIBOX_URL} >&3 2>&3
+		if unzip -tq /home/dietpi/mupibox.zip >&3 2>&3; then
+			DOWNLOAD_OK=1
+			break
+		fi
+		echo "Download attempt ${attempt} failed or is incomplete, retrying..." >&3 2>&3
+		sleep 5
+	done
+	if [ ${DOWNLOAD_OK} -ne 1 ]; then
+		echo "Error: could not download a complete MuPiBox archive - the update was stopped before anything was replaced." >&3 2>&3
+		cp ${PREFLIGHT_DIR}/jq /usr/bin/jq >&3 2>&3
+		chmod 755 /usr/bin/jq >&3 2>&3
+		rm -f /home/dietpi/mupibox.zip
+		systemctl start mupi_idle_shutdown.service >&3 2>&3
+		touch /tmp/mupibox-update-failed
+		exit 1
+	fi
 	after=$(date +%s)
 	echo -e "## MuPiBox Download  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
@@ -717,5 +741,13 @@ echo "==========================================================================
 
 
 } | whiptail --title "MuPiBox Update ${VERSION_LONG}" --gauge "Please wait while installing" 6 60 0
+
+if [ -f /tmp/mupibox-update-failed ]; then
+	rm -f /tmp/mupibox-update-failed
+	rm -rf ${PREFLIGHT_DIR}
+	echo "Update FAILED: the MuPiBox archive could not be downloaded completely (see ${LOG})."
+	echo "Nothing was replaced. Please check the network connection and run the update again."
+	exit 1
+fi
 
 echo "Update finished - please reboot system now!"
