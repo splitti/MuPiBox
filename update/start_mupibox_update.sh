@@ -25,9 +25,44 @@ elif [ "$1" = "branch" ]; then
 else
 	RELEASE="stable"
 fi
+
+# Preflight: this update replaces jq and librespot with freshly downloaded binaries and
+# rewrites the configuration with jq. Download them FIRST, so a network problem (e.g. a
+# DNS failure) stops the update before anything on the box has been changed. Before,
+# a failed download left an empty /usr/bin/jq behind, which then wiped the config files.
+PREFLIGHT_DIR=$(mktemp -d /tmp/mupibox-preflight.XXXXXX)
+if [ `getconf LONG_BIT` == 32 ]; then
+  JQ_ARCH="armhf"
+  LIBRESPOT_ARCH="32bit"
+else
+  JQ_ARCH="arm64"
+  LIBRESPOT_ARCH="64bit"
+fi
+if ! curl -fsSL --retry 3 --retry-delay 3 -m 180 -o ${PREFLIGHT_DIR}/jq https://github.com/jqlang/jq/releases/download/jq-1.8.1/jq-linux-${JQ_ARCH} \
+   || ! chmod 755 ${PREFLIGHT_DIR}/jq || ! ${PREFLIGHT_DIR}/jq --version > /dev/null 2>&1; then
+  echo "Error: could not download jq (no internet / DNS problem?). Nothing was changed - please try again."
+  rm -rf ${PREFLIGHT_DIR}
+  exit 1
+fi
+if ! curl -fsSL --retry 3 --retry-delay 3 -m 300 -o ${PREFLIGHT_DIR}/librespot https://github.com/splitti/MuPiBox/raw/refs/heads/main/bin/librespot/dev_0.6_20250806/librespot-${LIBRESPOT_ARCH} \
+   || [ ! -s ${PREFLIGHT_DIR}/librespot ]; then
+  echo "Error: could not download librespot (no internet / DNS problem?). Nothing was changed - please try again."
+  rm -rf ${PREFLIGHT_DIR}
+  exit 1
+fi
+
 killall -s 9 -w -q -r chromium
 
 CONFIG="/etc/mupibox/mupiboxconfig.json"
+
+# Keep a copy of the current settings and media list (only if they are intact), so a
+# failed update can never leave the box without a way back.
+if ${PREFLIGHT_DIR}/jq . ${CONFIG} > /dev/null 2>&1; then
+  cp ${CONFIG} /home/dietpi/mupiboxconfig.json.pre-update
+fi
+if ${PREFLIGHT_DIR}/jq . /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json > /dev/null 2>&1; then
+  cp /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json /home/dietpi/data.json.pre-update
+fi
 LOG="/boot/mupibox_update.log"
 exec 3>${LOG}
 service mupi_idle_shutdown stop
@@ -426,13 +461,13 @@ echo "==========================================================================
 
 	# Binaries
 	if [ `getconf LONG_BIT` == 32 ]; then
-		wget -O /usr/bin/jq https://github.com/jqlang/jq/releases/download/jq-1.8.1/jq-linux-armhf >&3 2>&3
-		wget -O /usr/bin/librespot https://github.com/splitti/MuPiBox/raw/refs/heads/main/bin/librespot/dev_0.6_20250806/librespot-32bit >&3 2>&3
+		cp ${PREFLIGHT_DIR}/jq /usr/bin/jq >&3 2>&3
+		cp ${PREFLIGHT_DIR}/librespot /usr/bin/librespot >&3 2>&3
 		#mv ${MUPI_SRC}/bin/librespot/dev_0.6_20250305/librespot-32bit /usr/bin/librespot >&3 2>&3
 		mv ${MUPI_SRC}/bin/fbv/fbv /usr/bin/fbv >&3 2>&3
 	else
-		wget -O /usr/bin/jq https://github.com/jqlang/jq/releases/download/jq-1.8.1/jq-linux-arm64 >&3 2>&3
-		wget -O /usr/bin/librespot https://github.com/splitti/MuPiBox/raw/refs/heads/main/bin/librespot/dev_0.6_20250806/librespot-64bit >&3 2>&3
+		cp ${PREFLIGHT_DIR}/jq /usr/bin/jq >&3 2>&3
+		cp ${PREFLIGHT_DIR}/librespot /usr/bin/librespot >&3 2>&3
 		#mv ${MUPI_SRC}/bin/librespot/dev_0.6_20250305/librespot-64bit /usr/bin/librespot >&3 2>&3
 		mv ${MUPI_SRC}/bin/fbv/fbv_64 /usr/bin/fbv >&3 2>&3
 	fi
@@ -677,6 +712,7 @@ echo "==========================================================================
 	###############################################################################################
 	echo -e "XXX\n100\nInstallation complete, please reboot the system... \nXXX"	
 	rm -R ${MUPI_SRC} >&3 2>&3
+	rm -rf ${PREFLIGHT_DIR} >&3 2>&3
 	sleep 5
 
 
