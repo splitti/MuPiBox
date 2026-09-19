@@ -12,7 +12,7 @@
         } @else if (media.audiobookid && (spotify$ | async)?.audiobook) {
           <div>{{(spotify$ | async)?.audiobook?.name}}</div>
         } @else {
-          @if (media.type ==='library') {
+          @if (media.type ==='library' || media.type ==='nas') {
             <div>{{(local$ | async)?.album}}</div>
           } @else {
             @if (media.type ==='rss') {
@@ -33,7 +33,7 @@
         } @else if (media.audiobookid && (spotify$ | async)?.audiobook) {
           <div>{{(spotify$ | async)?.item?.name}}</div>
         } @else {
-          @if (media.type ==='library') {
+          @if (media.type ==='library' || media.type ==='nas') {
             <div>{{(local$ | async)?.currentTrackname}}</div>
           } @else {
             @if (media.type ==='rss') {
@@ -54,7 +54,7 @@
     }
     <ion-title class="toolbar-tracknumber" slot="end">
       <div>{{(local$ | async)?.volume}}%</div>
-      @if (media.type ==='library') {
+      @if (media.type ==='library' || media.type ==='nas') {
         <div>{{(local$ | async)?.currentTracknr}}/{{(local$ | async)?.totalTracks}}</div>
       } @else {
         @if (media.type ==='spotify') {
