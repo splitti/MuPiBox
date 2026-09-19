@@ -185,21 +185,21 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 				<li id="li_1"><a href="synology.php?path=<?= urlencode($parentPath) ?>">.. (up)</a></li>
 			<?php } ?>
 			<li id="li_1">
-				<table style="width:100%; border-collapse:collapse;">
+				<table style="width:auto; border-collapse:collapse;">
 					<thead>
 						<tr style="text-align:left;">
-							<th style="padding:4px 12px 4px 0;">Show in Mupibox</th>
-							<th style="padding:4px 12px 4px 0;">Download local</th>
-							<th style="padding:4px 0;">Folder</th>
+							<th style="padding:4px 16px 4px 0; vertical-align:bottom;"><span style="display:inline-block; writing-mode:vertical-rl; transform:rotate(180deg); white-space:nowrap; line-height:13px;">Show in Mupibox</span></th>
+							<th style="padding:4px 16px 4px 0; vertical-align:bottom;"><span style="display:inline-block; writing-mode:vertical-rl; transform:rotate(180deg); white-space:nowrap; line-height:13px;">Download local</span></th>
+							<th style="padding:4px 0; vertical-align:bottom;">Folder</th>
 						</tr>
 					</thead>
 					<tbody>
 					<?php foreach ($browseEntries as $entry) { ?>
 						<tr>
-							<td style="padding:3px 12px 3px 0;">
+							<td style="padding:3px 16px 3px 0;">
 								<input type="checkbox" name="artist_folders[]" value="<?= htmlspecialchars($entry['path']) ?>" title="Import artist" <?= !empty($entry['isMarked']) ? 'checked="checked"' : '' ?> />
 							</td>
-							<td style="padding:3px 12px 3px 0;">
+							<td style="padding:3px 16px 3px 0;">
 								<input type="checkbox" name="download_folders[]" value="<?= htmlspecialchars($entry['path']) ?>" title="Download local" <?= !empty($entry['isDownload']) ? 'checked="checked"' : '' ?> />
 							</td>
 							<td style="padding:3px 0;">
