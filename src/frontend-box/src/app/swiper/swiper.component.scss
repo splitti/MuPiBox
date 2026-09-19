@@ -6,6 +6,7 @@ swiper-container {
 
     swiper-slide {
         width: 190px;
+        transform-style: preserve-3d;
     }
 
     // Mirror image below every cover (with its title), fading out - as in Cover Flow.
@@ -15,53 +16,31 @@ swiper-container {
     }
 
     ion-card {
-        width: 170px;
+        width: 190px;
         margin: 0 auto !important;
     }
 
+    // Rectangular covers without frame or shadow.
     .img-row {
-        padding-top: 14px;
+        padding-top: 46px; // covers sit in the vertical middle (there is no title below)
         padding-bottom: 8px;
 
         ion-card {
-            width: 170px;
-            --background: #262626;
+            width: 190px;
+            height: 190px;
+            border-radius: 0;
+            box-shadow: none;
+            border: 0;
+            --background: transparent;
 
             img {
                 -user-select: none;
+                display: block;
                 height: 100%;
                 width: 100%;
-            }
-
-            ion-card-title {
-                padding-bottom: 5px;
+                object-fit: cover;
             }
         }
     }
 
-    .title-row {
-        padding-bottom: 0;
-
-        ion-card {
-            width: 170px;
-            height: 46px;
-            --background: #262626;
-        }
-
-        ion-card-title {
-            padding-bottom: 5px;
-        }
-
-        .truncate-text {
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-    }
-}
-.circle-card {
-    width: 170px;
-    height: 170px;
-    border-radius: 50%;
-    border: 6px solid var(--ion-color-dark);
-    margin-top: 4px;
 }

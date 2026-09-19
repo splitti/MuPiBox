@@ -13,11 +13,10 @@ import {
   viewChild,
   WritableSignal,
 } from '@angular/core'
-import { IonCard, IonCardHeader, IonCardTitle, IonCol, IonGrid, IonRow } from '@ionic/angular/standalone'
+import { IonCard, IonCol, IonGrid, IonRow } from '@ionic/angular/standalone'
 import { cloneDeep } from 'lodash-es'
 import { Observable } from 'rxjs'
 import Swiper from 'swiper'
-import { PlayerService } from '../player.service'
 
 export interface SwiperData<T> {
   name: string
@@ -29,7 +28,7 @@ export interface SwiperData<T> {
   selector: 'mupi-swiper',
   templateUrl: './swiper.component.html',
   styleUrls: ['./swiper.component.scss'],
-  imports: [AsyncPipe, IonCard, IonCardHeader, IonCardTitle, IonCol, IonGrid, IonRow],
+  imports: [AsyncPipe, IonCard, IonCol, IonGrid, IonRow],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -53,7 +52,7 @@ export class SwiperComponent<T> {
   // manually cache / restore the swiper position.
   private cachedSwiperPosition = 0
 
-  public constructor(private playerService: PlayerService) {
+  public constructor() {
     this.shownData = computed(() => {
       if (this.pageIsShown()) {
         return cloneDeep(this.data())
@@ -65,6 +64,12 @@ export class SwiperComponent<T> {
       if (this.pageIsShown()) {
         this.swiper()?.slideTo(this.cachedSwiperPosition, 0)
       }
+    })
+
+    // New slides need their tilt as soon as they are rendered.
+    effect(() => {
+      this.shownData()
+      setTimeout(() => this.applyCoverflow(), 0)
     })
   }
 
@@ -82,43 +87,56 @@ export class SwiperComponent<T> {
     this.cachedSwiperPosition = 0
   }
 
-  // A tilted side cover is brought to the center first; only the centered one opens.
-  protected slideClicked(index: number, item: SwiperData<T>): void {
-    const swiper = this.swiper()
-    if (swiper && swiper.activeIndex !== index) {
-      swiper.slideTo(index, 300)
+  // Cover Flow: the centered cover faces front; every other cover is tilted by the same
+  // angle towards the center, packed closely, with a gap around the centered one.
+  // (Swiper's built-in coverflow effect rotates further the further away a slide is.)
+  public applyCoverflow(): void {
+    const swiper = this.swiperContainer()?.nativeElement?.swiper as Swiper | undefined
+    if (!swiper?.slides) {
       return
     }
-    this.elementClicked.emit(item)
+    const angle = 60
+    const centerGap = 104 // extra space between the centered cover and its neighbours (px)
+    const depth = 140
+    for (const slide of Array.from(swiper.slides) as (HTMLElement & { progress: number })[]) {
+      const progress = slide.progress ?? 0
+      const side = Math.sign(progress)
+      const amount = Math.min(Math.abs(progress), 1)
+      const rotate = side * angle * amount
+      const shift = -side * centerGap * amount
+      const z = -depth * amount
+      slide.style.transform = `perspective(1000px) translateX(${shift}px) translateZ(${z}px) rotateY(${rotate}deg)`
+      // Covers nearer to the center are drawn on top of the further ones.
+      slide.style.zIndex = String(1000 - Math.round(Math.abs(progress) * 10))
+    }
   }
 
-  // The browser does not deliver clicks on the strongly tilted side covers to the
-  // cover itself (the event lands on the swiper). Find the tapped slide by position;
-  // covers nearer to the center are on top, so they are checked first.
-  protected containerClicked(event: MouseEvent): void {
-    if (event.target !== event.currentTarget) {
-      return
-    }
-    const swiper = this.swiper()
+  // Tapping a tilted side cover brings it to the center; only the centered one opens.
+  // The browser hands taps on the overlapping, strongly tilted covers to the wrong
+  // element, so the tapped slide is found by position instead: covers nearer to the
+  // center are on top of the further ones, so they are checked first.
+  protected slideClicked(event: MouseEvent): void {
+    const swiper = this.swiperContainer()?.nativeElement?.swiper as Swiper | undefined
     if (!swiper) {
       return
     }
-    const slides = Array.from(swiper.slides) as HTMLElement[]
-    const byDistance = slides
+    const byDistance = (Array.from(swiper.slides) as HTMLElement[])
       .map((slide, index) => ({ slide, index }))
       .sort((a, b) => Math.abs(a.index - swiper.activeIndex) - Math.abs(b.index - swiper.activeIndex))
     for (const { slide, index } of byDistance) {
       const rect = slide.getBoundingClientRect()
-      if (event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom) {
-        if (index !== swiper.activeIndex) {
-          swiper.slideTo(index, 300)
-        }
+      if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) {
+        continue
+      }
+      if (index !== swiper.activeIndex) {
+        swiper.slideTo(index, 300)
         return
       }
+      const item = this.shownData()[index]
+      if (item) {
+        this.elementClicked.emit(item)
+      }
+      return
     }
-  }
-
-  protected readText(text: string): void {
-    this.playerService.sayText(text)
   }
 }
