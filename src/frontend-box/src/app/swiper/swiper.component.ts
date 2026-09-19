@@ -125,6 +125,31 @@ export class SwiperComponent<T> {
     }
   }
 
+  // Short lists are not scrolled by swiper: a horizontal drag selects the previous / next cover.
+  private dragStartX: number | undefined
+  private suppressClick = false
+
+  protected fewPointerDown(event: PointerEvent): void {
+    this.dragStartX = this.isFewCovers() ? event.clientX : undefined
+    this.suppressClick = false
+  }
+
+  protected fewPointerUp(event: PointerEvent): void {
+    if (this.dragStartX === undefined) {
+      return
+    }
+    const distance = event.clientX - this.dragStartX
+    this.dragStartX = undefined
+    if (Math.abs(distance) < 40) {
+      return
+    }
+    this.suppressClick = true // the click that follows a drag is not a tap
+    const count = (this.shownData() ?? []).length
+    const next = this.selectedIndex + (distance < 0 ? 1 : -1)
+    this.selectedIndex = Math.min(Math.max(next, 0), count - 1)
+    this.applyCoverflow()
+  }
+
   private isFewCovers(): boolean {
     const count = (this.shownData() ?? []).length
     return count > 0 && count < SwiperComponent.FEW_COVERS
@@ -155,6 +180,7 @@ export class SwiperComponent<T> {
     const width = swiper.width
     const selected = Math.min(this.selectedIndex, count - 1)
 
+    const previous = slides.map((slide) => ({ transform: slide.style.transform, zIndex: slide.style.zIndex }))
     const naturalCenters = slides.map((slide) => {
       slide.style.transition = 'none'
       slide.style.transform = 'none'
@@ -223,6 +249,18 @@ export class SwiperComponent<T> {
       })
       apply()
     }
+
+    // Measuring needed the final positions; now let the covers glide there from where they were.
+    const final = slides.map((slide) => ({ transform: slide.style.transform, zIndex: slide.style.zIndex }))
+    slides.forEach((slide, index) => {
+      slide.style.transform = previous[index].transform || final[index].transform
+    })
+    void swiper.el.offsetWidth // commit the start position before animating
+    slides.forEach((slide, index) => {
+      slide.style.transition = 'transform 0.4s ease'
+      slide.style.transform = final[index].transform
+      slide.style.zIndex = final[index].zIndex
+    })
   }
 
   // Back to the scrolling Cover Flow (e.g. when the list grows past the threshold).
@@ -241,6 +279,10 @@ export class SwiperComponent<T> {
   // element, so the tapped slide is found by position instead: covers nearer to the
   // center are on top of the further ones, so they are checked first.
   protected slideClicked(event: MouseEvent): void {
+    if (this.suppressClick) {
+      this.suppressClick = false
+      return
+    }
     const swiper = this.swiperContainer()?.nativeElement?.swiper as Swiper | undefined
     if (!swiper) {
       return
