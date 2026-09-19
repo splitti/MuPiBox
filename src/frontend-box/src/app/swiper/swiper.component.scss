@@ -15,6 +15,11 @@ swiper-container {
         -webkit-box-reflect: below 2px linear-gradient(transparent 68%, rgba(255, 255, 255, 0.3));
     }
 
+    ion-grid,
+    ion-col {
+        padding: 0;
+    }
+
     ion-card {
         width: 300px;
         margin: 0 auto !important;
@@ -22,7 +27,7 @@ swiper-container {
 
     // Rectangular covers without frame or shadow.
     .img-row {
-        padding-top: 10px; // 20px below the menu bar together with the grid padding
+        padding-top: 20px; // 20px below the menu bar
         padding-bottom: 0;
 
         ion-card {
