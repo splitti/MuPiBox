@@ -342,6 +342,7 @@ async function refreshRssCache(rssUrl: string, cacheKey: string): Promise<any> {
 
   await mkdir(rssCacheDataDir, { recursive: true })
   await writeFile(cacheFile, JSON.stringify(feed), 'utf8')
+  void warmRssEpisodeCovers(feed, 12)
 
   if (remoteCoverUrl) {
     downloadRssCover(remoteCoverUrl, cacheKey)
@@ -359,6 +360,29 @@ async function refreshRssCache(rssUrl: string, cacheKey: string): Promise<any> {
 
   return feed
 }
+
+// A minute after start: refresh every configured podcast so that its list and the pictures
+// of its newest episodes are ready before somebody opens it.
+async function warmConfiguredPodcasts(): Promise<void> {
+  try {
+    const data = JSON.parse(await readFile(dataFile, 'utf8')) as { type?: string; id?: string }[]
+    for (const entry of data) {
+      if (entry.type === 'rss' && typeof entry.id === 'string') {
+        const key = rssCacheKeyFor(entry.id)
+        rssLastRefresh.set(key, Date.now())
+        try {
+          const feed = await refreshRssCache(entry.id, key)
+          void warmRssEpisodeCovers(feed, 12)
+        } catch {
+          // Offline or feed down - it will be tried again when opened.
+        }
+      }
+    }
+  } catch {
+    // No data file yet.
+  }
+}
+setTimeout(() => void warmConfiguredPodcasts(), 60 * 1000)
 
 app.get('/api/rssfeed/cached', async (req, res) => {
   const rssUrl = req.query.url
@@ -424,47 +448,129 @@ const imageContentTypes: Record<string, string> = {
 // Served as a plain buffer (not res.sendFile) since sendFile's internal file
 // resolution intermittently reported a freshly-written, verified-to-exist file as
 // not found on this device.
+// Episode pictures come from slow CDNs and are often 2 MB each. They are fetched at most
+// rssImageParallel at a time (a list of 150 episodes must not open 150 downloads at once),
+// fetched only once per picture, and handed to the kiosk as small thumbnails (see above).
+const rssImageParallel = 3
+const rssImageTimeoutMs = 45000
+let rssImageRunning = 0
+const rssImageWaiting: (() => void)[] = []
+const rssImageJobs = new Map<string, Promise<string | undefined>>()
+
+function rssImageLocalFile(imageUrl: string): { file: string; extension: string } | undefined {
+  try {
+    const key = rssCacheKeyFor(imageUrl)
+    const extension = path.extname(new URL(imageUrl).pathname).split('?')[0] || '.jpg'
+    return { file: path.join(rssCoverDir, `${key}${extension}`), extension }
+  } catch {
+    return undefined
+  }
+}
+
+// Returns the local copy of a remote picture, downloading it first if needed.
+function ensureRssImage(imageUrl: string): Promise<string | undefined> {
+  const local = rssImageLocalFile(imageUrl)
+  if (!local) {
+    return Promise.resolve(undefined)
+  }
+  if (fs.existsSync(local.file)) {
+    return Promise.resolve(local.file)
+  }
+  const running = rssImageJobs.get(local.file)
+  if (running) {
+    return running
+  }
+  const job = (async () => {
+    if (rssImageRunning >= rssImageParallel) {
+      await new Promise<void>((resolve) => rssImageWaiting.push(resolve))
+    }
+    rssImageRunning++
+    try {
+      const buffer = Buffer.from(await ky.get(imageUrl, { timeout: rssImageTimeoutMs }).arrayBuffer())
+      await mkdir(rssCoverDir, { recursive: true })
+      const temp = `${local.file}.${process.pid}.tmp`
+      await writeFile(temp, buffer)
+      await rename(temp, local.file)
+      return local.file
+    } catch (error) {
+      console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to proxy/cache RSS episode image ${imageUrl}: ${error}`)
+      return undefined
+    } finally {
+      rssImageRunning--
+      rssImageWaiting.shift()?.()
+    }
+  })().finally(() => rssImageJobs.delete(local.file))
+  rssImageJobs.set(local.file, job)
+  return job
+}
+
+async function sendRssImage(res: express.Response, file: string, thumbSize: number | undefined): Promise<void> {
+  if (thumbSize && isThumbnailable(file)) {
+    const info = await stat(file)
+    const thumb = await getThumbnail(file, thumbSize, `rss|${file}|${info.size}`)
+    if (thumb) {
+      await sendThumbnail(res, thumb)
+      return
+    }
+  }
+  const contentType = imageContentTypes[path.extname(file).toLowerCase()] ?? 'image/jpeg'
+  res.set('Cache-Control', 'public, max-age=604800').type(contentType).send(await readFile(file))
+}
+
+// `url`: a remote picture (fetched and cached on first use); `local`: a picture that already
+// is in the cover cache (channel covers). `w`: ask for a thumbnail of at most that size.
 app.get('/api/rssfeed/image', async (req, res) => {
-  const imageUrl = req.query.url
-  if (typeof imageUrl !== 'string') {
+  const thumbSize = parseThumbSize(req.query.w)
+  let file: string | undefined
+
+  if (typeof req.query.local === 'string') {
+    const name = path.basename(req.query.local)
+    file = path.join(rssCoverDir, name)
+    if (!fs.existsSync(file)) {
+      res.status(404).send('Not found')
+      return
+    }
+  } else if (typeof req.query.url === 'string') {
+    file = await ensureRssImage(req.query.url)
+    if (!file) {
+      res.status(502).send('Failed to fetch image.')
+      return
+    }
+  } else {
     res.status(400).send('Given url is not a string.')
     return
   }
 
-  let localFile: string
-  let extension: string
   try {
-    const key = rssCacheKeyFor(imageUrl)
-    extension = path.extname(new URL(imageUrl).pathname).split('?')[0] || '.jpg'
-    localFile = path.join(rssCoverDir, `${key}${extension}`)
-  } catch {
-    res.status(400).send('Invalid image url.')
-    return
-  }
-
-  const contentType = imageContentTypes[extension.toLowerCase()] ?? 'image/jpeg'
-
-  if (fs.existsSync(localFile)) {
-    try {
-      const buffer = await readFile(localFile)
-      res.set('Cache-Control', 'public, max-age=604800').type(contentType).send(buffer)
-      return
-    } catch (error) {
-      console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to read cached RSS image ${localFile}: ${error}`)
-      // Fall through and try fetching it fresh below.
-    }
-  }
-
-  try {
-    const buffer = Buffer.from(await ky.get(imageUrl, { timeout: 8000 }).arrayBuffer())
-    await mkdir(rssCoverDir, { recursive: true })
-    await writeFile(localFile, buffer)
-    res.set('Cache-Control', 'public, max-age=604800').type(contentType).send(buffer)
+    await sendRssImage(res, file, thumbSize)
   } catch (error) {
-    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to proxy/cache RSS episode image ${imageUrl}: ${error}`)
-    res.status(502).send('Failed to fetch image.')
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to send RSS image ${file}: ${error}`)
+    res.status(500).send('Failed to read image.')
   }
 })
+
+// The newest episodes are what gets opened first: fetch their pictures ahead of time.
+async function warmRssEpisodeCovers(feed: any, count: number): Promise<void> {
+  const items = feed?.rss?.channel?.item
+  if (!Array.isArray(items)) {
+    return
+  }
+  for (const item of items.slice(0, count)) {
+    const href = item?.['itunes:image']?._attributes?.href
+    if (typeof href !== 'string') {
+      continue
+    }
+    const file = await ensureRssImage(href)
+    if (file && isThumbnailable(file)) {
+      try {
+        const info = await stat(file)
+        await getThumbnail(file, 400, `rss|${file}|${info.size}`)
+      } catch {
+        // Nothing to warm.
+      }
+    }
+  }
+}
 
 app.get('/api/data', (_req, res) => {
   if (fs.existsSync(activedataFile)) {

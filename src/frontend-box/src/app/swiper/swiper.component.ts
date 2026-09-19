@@ -130,6 +130,8 @@ export class SwiperComponent<T> {
     if (!swiper?.slides) {
       return
     }
+    this.watchCoverSources(this.swiperContainer()?.nativeElement as HTMLElement)
+    this.loadNearCovers(swiper, this.isFlatRow() || this.isFewCovers() ? undefined : 9)
     if (this.isFlatRow()) {
       this.applyFlatRowLayout(swiper)
       return
@@ -231,6 +233,35 @@ export class SwiperComponent<T> {
   // Up to this many covers are simply shown in a row: same size, all facing front,
   // no tilt, no animation and nothing to scroll.
   private static readonly FLAT_ROW_COVERS = 3
+
+  // The pictures are only fetched for covers that are (nearly) in view. A podcast has hundreds
+  // of episodes, and requesting all of their pictures at once would take minutes.
+  private coverObserver: MutationObserver | undefined
+  private observedContainer: HTMLElement | undefined
+
+  private watchCoverSources(container: HTMLElement | undefined): void {
+    if (!container || this.observedContainer === container) {
+      return
+    }
+    this.coverObserver?.disconnect()
+    this.observedContainer = container
+    // The picture addresses arrive a moment after the slides exist.
+    this.coverObserver = new MutationObserver(() => this.applyCoverflow())
+    this.coverObserver.observe(container, { subtree: true, attributes: true, attributeFilter: ['data-src'] })
+  }
+
+  private loadNearCovers(swiper: Swiper, radius: number | undefined): void {
+    for (const slide of Array.from(swiper.slides) as (HTMLElement & { progress: number })[]) {
+      if (radius !== undefined && (typeof slide.progress !== 'number' || Math.abs(slide.progress) > radius)) {
+        continue // not measured yet, or too far away
+      }
+      const img = slide.querySelector('img')
+      const source = img?.dataset['src']
+      if (img && source && !img.getAttribute('src')) {
+        img.setAttribute('src', source)
+      }
+    }
+  }
 
   private isFlatRow(): boolean {
     const count = (this.shownData() ?? []).length
