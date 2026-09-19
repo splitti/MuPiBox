@@ -95,6 +95,10 @@ export class PlayerService {
         url = `musicsearch/library/album/${encodeURIComponent(media.category)}:${encodeURIComponent(media.artist)}:${encodeURIComponent(media.title)}`
         break
       }
+      case 'nas': {
+        url = `musicsearch/nas/${encodeURIComponent(media.nasPath)}`
+        break
+      }
       case 'spotify': {
         const isHealthy = await this.spotifyService.ensurePlayerReady()
 
@@ -165,6 +169,8 @@ export class PlayerService {
 
     if (media.type === 'library') {
       url = `localtrack:${entry.position}`
+    } else if (media.type === 'nas') {
+      url = `nastrack:${entry.position}`
     } else if (media.playlistid) {
       url = `spotify/now/spotify:playlist:${encodeURIComponent(media.playlistid)}:${entry.position}:0`
     } else if (media.audiobookid) {
@@ -189,6 +195,16 @@ export class PlayerService {
     const encodedPath = `${encodeURIComponent(media.category)}:${encodeURIComponent(media.artist)}:${encodeURIComponent(media.title)}`
     return this.http.get<{ position: number; name: string }[]>(
       `${environment.backend.playerUrl}/local/tracklist/${encodedPath}`,
+    )
+  }
+
+  /**
+   * Get the ordered list of track file names for a NAS album, listed live from
+   * the Synology by the player backend (never cached).
+   */
+  getNasTracklist(media: Media): Observable<{ position: number; name: string }[]> {
+    return this.http.get<{ position: number; name: string }[]>(
+      `${environment.backend.playerUrl}/nas/tracklist/${encodeURIComponent(media.nasPath)}`,
     )
   }
 

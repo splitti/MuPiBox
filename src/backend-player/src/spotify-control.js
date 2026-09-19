@@ -73,7 +73,15 @@ player.on('metadata', (val) => {
   //currentMeta.currentTracknr = parseInt(val.Comment?.split(',').pop(), 10);
   currentMeta.currentTracknr = currentMeta.currentTracknr + 1
   log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Current Tracknr: ${currentMeta.currentTracknr}`)
-  if (currentMeta.currentType !== 'rss' && currentMeta.currentType !== 'radio') {
+  if (currentMeta.currentType === 'nas') {
+    // Mplayer would report the stream-proxy URL as "filename"/"path" for NAS
+    // tracks, so use the track name already known from the live NAS tracklist
+    // instead of trying to parse anything out of mplayer's own metadata.
+    const track = currentNasTracks[currentMeta.currentTracknr - 1]
+    if (track) {
+      currentMeta.currentTrackname = track.name.replace(/\.[^./]+$/, '')
+    }
+  } else if (currentMeta.currentType !== 'rss' && currentMeta.currentType !== 'radio') {
     currentMeta.currentTrackname = val.Title
   }
 })
@@ -97,7 +105,7 @@ player.on('track-change', () => player.getProps(['filename']))
 
 player.on('path', (val) => {
   console.log('track path is', val)
-  if (currentMeta.currentType !== 'rss' && currentMeta.currentType !== 'radio') {
+  if (currentMeta.currentType !== 'rss' && currentMeta.currentType !== 'radio' && currentMeta.currentType !== 'nas') {
     currentMeta.album = val.split('/')[7]
   }
 })
@@ -179,6 +187,10 @@ const currentMeta = {
   progressTime: '',
   volume: 0,
 }
+// Live tracklist (with real names) of the currently playing NAS folder, fetched
+// once in playNasList() - used to name each track as it plays, since mplayer
+// only ever sees the stream-proxy URL, not the real filename.
+let currentNasTracks = []
 
 function writeplayerstatePlay() {
   playerstate = 'play'
@@ -724,6 +736,46 @@ function playList(playedList) {
   }, 500)
 }
 
+// Plays a Synology NAS folder live: the tracklist and stream URLs are fetched
+// fresh from backend-api on every play (no local caching), so NAS changes
+// need no separate "update media" step. The resulting playlist is a normal
+// m3u file whose lines are HTTP(S) stream-proxy URLs - mplayer already plays
+// remote URLs from an m3u today for radio/rss, so this reuses the exact same
+// player.playList() path (and with it, track-jump/track-count handling).
+async function playNasList(nasPath) {
+  const decodedPath = decodeURIComponent(nasPath)
+  log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Starting NAS playback: ${decodedPath}`)
+
+  try {
+    const response = await fetch(`http://localhost:8200/api/synology/tracklist?path=${encodeURIComponent(decodedPath)}`)
+    const tracks = await response.json()
+    currentNasTracks = tracks
+    const folderName = decodedPath.split('/').filter(Boolean).pop() || decodedPath
+
+    // Set metadata explicitly up front (like the radio/rss branches do) rather
+    // than relying on mplayer's parsed filename/path, which would otherwise
+    // show the raw stream-proxy URL as the "now playing" name.
+    currentMeta.currentType = 'nas'
+    currentMeta.currentTrackname = tracks[0]?.name?.replace(/\.[^./]+$/, '') || folderName
+    currentMeta.album = folderName
+    currentMeta.path = decodedPath
+
+    const playlistLines = tracks.map(
+      (track) => `http://localhost:8200/api/synology/stream?path=${encodeURIComponent(track.path)}`,
+    )
+    const tmpPlaylistPath = '/tmp/nas_playlist.m3u'
+    fs.writeFileSync(tmpPlaylistPath, playlistLines.join('\n'))
+
+    writeplayerstatePlay()
+    player.playList(tmpPlaylistPath)
+    player.setVolume(volumeStart)
+    currentMeta.currentTracknr = 0
+    currentMeta.totalTracks = tracks.length
+  } catch (error) {
+    log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Error starting NAS playback: ${error}`)
+  }
+}
+
 function playFile(playedFile) {
   const playedTitel = `${playedFile}.mp3`
   log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Starting currentMeta.playing:${playedTitel}`)
@@ -1062,6 +1114,20 @@ app.get('/local/tracklist/:encoded', (req, res) => {
   })
 })
 
+/*returns the track list of a NAS folder, listed live from the Synology (no local cache)*/
+app.get('/nas/tracklist/:encoded', async (req, res) => {
+  const nasPath = decodeURIComponent(req.params.encoded)
+
+  try {
+    const response = await fetch(`http://localhost:8200/api/synology/tracklist?path=${encodeURIComponent(nasPath)}`)
+    const tracks = await response.json()
+    res.json((tracks ?? []).map((track) => ({ position: track.position, name: track.name.replace(/\.[^./]+$/, '') })))
+  } catch (error) {
+    log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Error fetching NAS tracklist for ${nasPath}: ${error}`)
+    res.status(502).json({ error: 'tracklist not available' })
+  }
+})
+
 /*sonos-kids-controller sends commands via http get and uses path names for encoding*/
 /*commands are as defined in sonos-kids-controller and mapped spotify calls*/
 app.use((req, res) => {
@@ -1078,6 +1144,12 @@ app.use((req, res) => {
     currentMeta.currentPlayer = 'mplayer'
     currentMeta.currentType = 'local'
     playList(command.name)
+  }
+
+  if (command.dir.includes('nas')) {
+    currentMeta.currentPlayer = 'mplayer'
+    currentMeta.currentType = 'nas'
+    playNasList(command.name)
   }
 
   if (command.dir.includes('radio')) {
@@ -1153,6 +1225,9 @@ app.use((req, res) => {
     )
 
   else if (command.name.includes('localtrack:')) {
+    const targetPosition = Number.parseInt(command.name.split(':')[1], 10)
+    jumpToTrack(targetPosition)
+  } else if (command.name.includes('nastrack:')) {
     const targetPosition = Number.parseInt(command.name.split(':')[1], 10)
     jumpToTrack(targetPosition)
   }

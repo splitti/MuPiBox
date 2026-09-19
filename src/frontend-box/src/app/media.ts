@@ -5,7 +5,7 @@ export enum MediaSorting {
   ReleaseDateDescending = 'ReleaseDateDescending',
 }
 
-export type CategoryType = 'audiobook' | 'music' | 'other' | 'resume'
+export type CategoryType = 'audiobook' | 'music' | 'other' | 'nas' | 'resume'
 
 export interface Media {
   index?: number
@@ -36,6 +36,9 @@ export interface Media {
   resumelocalcurrentTracknr?: number
   resumelocalprogressTime?: number
   resumerssprogressTime?: number
+  // Full Synology path of this entry's folder, used for NAS media (type: 'nas')
+  // to browse/stream it live instead of resolving a local file path.
+  nasPath?: string
 }
 
 // Cache interface for storing album/playlist/show/audiobook information

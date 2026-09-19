@@ -419,6 +419,12 @@ export class MediaService {
   }
 
   private fetchMedia(category: CategoryType): Observable<Media[]> {
+    if (category === 'nas') {
+      // NAS media is fetched live from the Synology on every call (never cached
+      // into data.json), so it bypasses the Spotify-oriented updateMedia pipeline
+      // below entirely - the backend already returns ready-to-use Media[].
+      return this.http.get<Media[]>(`${this.getApiBackendUrl()}/synology/artists`)
+    }
     return this.updateMedia(`${this.getApiBackendUrl()}/data`, false, category)
   }
 

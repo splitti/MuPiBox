@@ -511,7 +511,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
   // --------------------------------------------
 
   coverPointerDown() {
-    if (this.media.type !== 'spotify' && this.media.type !== 'library') {
+    if (this.media.type !== 'spotify' && this.media.type !== 'library' && this.media.type !== 'nas') {
       return
     }
     clearTimeout(this.longPressTimer)
@@ -536,6 +536,14 @@ export class PlayerPage implements OnInit, AfterViewInit {
     try {
       if (this.media.type === 'library') {
         const tracks = await firstValueFrom(this.playerService.getLocalTracklist(this.media))
+        this.trackListTitle = this.media.title
+        this.trackList = (tracks ?? []).map((track) => ({
+          position: track.position,
+          id: `${track.position}`,
+          name: track.name,
+        }))
+      } else if (this.media.type === 'nas') {
+        const tracks = await firstValueFrom(this.playerService.getNasTracklist(this.media))
         this.trackListTitle = this.media.title
         this.trackList = (tracks ?? []).map((track) => ({
           position: track.position,
@@ -595,7 +603,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
   }
 
   isCurrentTrack(entry: TrackListEntry): boolean {
-    if (this.media.type === 'library') {
+    if (this.media.type === 'library' || this.media.type === 'nas') {
       return this.currentPlayedLocal?.currentTracknr === entry.position
     }
     if (this.media.playlistid) {
