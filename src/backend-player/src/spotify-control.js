@@ -87,6 +87,32 @@ player.on('metadata', (val) => {
 })
 player.on('track-change', () => player.getProps(['metadata']))
 
+// --- Buffering of streams before playback starts ---
+// mplayer starts once cache-min percent of the cache are filled (see the wrapper).
+const cachePrefillPercent = 10
+let loadingTimer = null
+
+function startLoading() {
+  currentMeta.loading = true
+  currentMeta.loadProgress = 0
+  clearTimeout(loadingTimer)
+  // Never leave the display waiting for ever (unreachable stream, stream ended, ...).
+  loadingTimer = setTimeout(stopLoading, 90 * 1000)
+}
+
+function stopLoading() {
+  clearTimeout(loadingTimer)
+  currentMeta.loading = false
+  currentMeta.loadProgress = 0
+}
+
+player.on('cache-fill', (percent) => {
+  if (currentMeta.loading) {
+    currentMeta.loadProgress = Math.min(100, Math.round((percent / cachePrefillPercent) * 100))
+  }
+})
+player.on('track-change', stopLoading)
+
 //player.on('length', console.log)
 //player.on('track-change', () => player.getProps(['length']))
 
@@ -190,6 +216,9 @@ const currentMeta = {
   totalTracks: '',
   progressTime: '',
   volume: 0,
+  // Radio streams and podcasts are buffered before they start: how far along that is.
+  loading: false,
+  loadProgress: 0,
 }
 // Live tracklist (with real names) of the currently playing NAS folder, fetched
 // once in playNasList() - used to name each track as it plays, since mplayer
@@ -466,6 +495,7 @@ function stop() {
     currentMeta.pause = false
     spotifyRunning = false
   } else if (currentMeta.currentPlayer === 'mplayer') {
+    stopLoading()
     player.stop()
     //currentMeta.playing = false;
     writeplayerstatePause()
@@ -804,6 +834,7 @@ function playFile(playedFile) {
 }
 
 function playURL(playedURL) {
+  startLoading()
   log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Starting currentMeta.playing:${playedURL}`)
   //currentMeta.playing = true;
   writeplayerstatePlay()

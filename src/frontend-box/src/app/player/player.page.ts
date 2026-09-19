@@ -234,6 +234,16 @@ export class PlayerPage implements OnInit, AfterViewInit {
     }
   }
 
+  // Buffering of a stream before it starts: 0 (nothing yet) to 100 (enough to start).
+  get loadProgress(): number {
+    return Math.min(100, Math.max(0, this.currentPlayedLocal?.loadProgress ?? 0))
+  }
+
+  // The ring shrinks from the full circle (r=20) to a small dot (r=3) as the buffer fills.
+  get loadRingRadius(): number {
+    return 20 - 17 * (this.loadProgress / 100)
+  }
+
   seek() {
     const newValue = +this.range.value
     if (this.media.type === 'spotify') {

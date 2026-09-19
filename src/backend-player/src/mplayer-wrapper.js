@@ -1,6 +1,9 @@
 const { EventEmitter } = require('node:events')
 const jsStringEscape = require('js-string-escape')
 const { spawn } = require('node:child_process')
+const fs = require('node:fs')
+const os = require('node:os')
+const path = require('node:path')
 const byLine = require('byline')
 const debug = require('debug')('mplayer-wrapper')
 
@@ -9,6 +12,14 @@ const parsers = require('./parsers')
 const createPlayer = () => {
   const out = new EventEmitter()
 
+  // A 1 MB cache for http(s) streams only (local files are read directly); playback starts once
+  // 10% of it (about 100 KB) is filled. "cache=6" in the msglevel makes mplayer report the fill level.
+  const streamProfile = path.join(os.tmpdir(), 'mupibox-mplayer-streams.conf')
+  fs.writeFileSync(
+    streamProfile,
+    ['[protocol.http]', 'cache=1024', 'cache-min=10', '[protocol.https]', 'cache=1024', 'cache-min=10', ''].join('\n'),
+  )
+
   const proc = spawn(
     'mplayer',
     [
@@ -16,8 +27,11 @@ const createPlayer = () => {
       '-idle',
       '-novideo',
       '-quiet',
+      // Network streams and podcasts are buffered before they start (see streamProfile below).
+      '-include',
+      streamProfile,
       '-msglevel',
-      'all=1:global=4:cplayer=4',
+      'all=1:global=4:cplayer=4:cache=6',
     ],
     {
       env: process.env,
@@ -87,8 +101,16 @@ const createPlayer = () => {
     out.emit(prop, val)
   }
 
+  // The cache fill level arrives as status text ("Cache fill: 12.50% (131072 bytes)").
+  proc.stdout.on('data', (chunk) => {
+    const matches = [...chunk.toString('latin1').matchAll(/Cache fill:\s*([\d.]+)%/g)]
+    if (matches.length > 0) out.emit('cache-fill', Number.parseFloat(matches[matches.length - 1][1]))
+  })
+
   proc.stdout.pipe(byLine.createStream()).on('data', (line) => {
-    onLine(Buffer.isBuffer(line) ? line.toString() : line)
+    const text = Buffer.isBuffer(line) ? line.toString() : line
+    // Status text is written with carriage returns and can sit in front of an answer.
+    onLine(text.includes('\r') ? text.slice(text.lastIndexOf('\r') + 1) : text)
   })
 
   out.exec = exec
