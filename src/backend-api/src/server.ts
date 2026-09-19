@@ -1572,15 +1572,15 @@ app.post('/api/bluetooth/remove', async (req, res) => {
 // --------------------------------------------
 // Synology NAS integration
 // --------------------------------------------
-// Browses and streams media from a Synology NAS live over its File Station Web
-// API (the same API the official "DS file" app uses) - no SMB/CIFS mount, no
-// data.json caching. Every read hits the NAS directly, so changes made on the
-// NAS show up the next time a category/page is opened, with no manual "update
-// media" step required.
+// Browses and streams media from a NAS live over WebDAV (works with Synology,
+// QNAP, TrueNAS, ...) - no SMB/CIFS mount, no data.json caching. Every read hits
+// the NAS directly, so changes made on the NAS show up the next time a
+// category/page is opened, with no manual "update media" step required.
+// (Function/route names keep the historic "synology" prefix.)
 
 interface SynologySession {
-  sid: string
-  base: string
+  base: string // WebDAV base URL without trailing slash, may contain a path prefix
+  auth: string // Authorization header value (HTTP Basic)
 }
 
 let synologySessionCache: SynologySession | undefined
@@ -1597,64 +1597,62 @@ class SynologyApiError extends Error {}
 const nasLocalRoot = '/home/dietpi/MuPiBox/media/NAS'
 const nasDownloadMarker = '.mupibox-nas-download'
 
-const synologySessionErrorCodes = new Set([105, 106, 107, 119])
-
 const synologyAudioExtensions = ['.mp3', '.flac', '.wav', '.wma', '.ogg', '.m4a']
 
-// Synology's documented SYNO.API.Auth login error codes.
-const synologyAuthErrorMessages: Record<number, string> = {
-  400: 'Wrong account name or password.',
-  401: 'This account is disabled.',
-  402: 'Permission denied.',
-  403: 'Two-factor authentication is required and not supported here.',
-  404: 'Two-factor authentication code required and not supported here.',
-  406: 'Two-factor authentication enforced and not supported here.',
-  407: 'Too many failed login attempts - please try again later.',
-  408: 'Password expired - please change it in DSM first.',
-  409: 'Password must be changed - please change it in DSM first.',
-  410: 'Account not activated yet.',
+// Resolves the address field into a WebDAV base URL. Accepts "host", "host:port",
+// "host:port/path" or a complete http(s):// URL. The HTTPS checkbox picks the
+// scheme when the address itself has none.
+function synologyResolveBase(address: string, useHttps: boolean): string {
+  const trimmed = address.trim().replace(/\/+$/, '')
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed
+  }
+  return `${useHttps ? 'https' : 'http'}://${trimmed}`
 }
 
-// Resolves the "Address or QuickConnect ID" field into a base URL. MuPiBox and
-// the NAS normally live on the same home LAN, so a direct host/IP is the
-// well-supported path; an input with no dot or colon is assumed to be a
-// QuickConnect ID and gets a best-effort https://<id>.quickconnect.to URL
-// (Synology's actual QuickConnect relay handshake is not implemented).
-function synologyResolveBase(address: string, useHttps: boolean): string {
-  const looksLikeHostOrIp = /[.:]/.test(address)
-  if (!looksLikeHostOrIp) {
-    return `https://${address}.quickconnect.to`
-  }
-  const [host, port] = address.split(':')
-  const resolvedPort = port ?? (useHttps ? '5001' : '5000')
-  return `${useHttps ? 'https' : 'http'}://${host}:${resolvedPort}`
+function synologyBasicAuth(account: string, password: string): string {
+  return `Basic ${Buffer.from(`${account}:${password}`, 'utf8').toString('base64')}`
+}
+
+function synologyUrl(session: SynologySession, nasPath: string): string {
+  const encoded = nasPath
+    .split('/')
+    .filter(Boolean)
+    .map((part) => encodeURIComponent(part))
+    .join('/')
+  return `${session.base}/${encoded}`
 }
 
 async function synologyLogin(
   base: string,
   account: string,
   password: string,
-): Promise<{ success: boolean; sid?: string; error?: string }> {
+  timeoutMs = 10000,
+): Promise<{ success: boolean; session?: SynologySession; error?: string }> {
+  const session: SynologySession = { base, auth: synologyBasicAuth(account, password) }
   try {
-    const url =
-      `${base}/webapi/entry.cgi?api=SYNO.API.Auth&version=6&method=login&session=FileStation&format=sid` +
-      `&account=${encodeURIComponent(account)}&passwd=${encodeURIComponent(password)}`
-    // Synology intentionally delays the response by several seconds on wrong
-    // credentials (anti-bruteforce throttling) - the timeout must be generous
-    // or a wrong password looks like a network failure instead of a clear error.
-    const data = await ky
-      .get(url, { timeout: 25000 })
-      .json<{ success: boolean; data?: { sid: string }; error?: { code: number } }>()
-    if (data.success && data.data?.sid) {
-      return { success: true, sid: data.data.sid }
+    const response = await fetch(synologyUrl(session, '/'), {
+      method: 'PROPFIND',
+      headers: { Authorization: session.auth, Depth: '0' },
+      signal: AbortSignal.timeout(timeoutMs),
+    })
+    await response.arrayBuffer().catch(() => undefined)
+    if (response.status === 401 || response.status === 403) {
+      return { success: false, error: 'Wrong account name or password (or no WebDAV permission for this account).' }
     }
-    const code = data.error?.code
-    return { success: false, error: (code && synologyAuthErrorMessages[code]) || `Login failed (error ${code ?? 'unknown'}).` }
+    if (response.status === 207 || response.status === 200) {
+      return { success: true, session }
+    }
+    if (response.status === 404) {
+      return { success: false, error: 'WebDAV service not found at this address/port - check the address and that WebDAV is enabled on the NAS.' }
+    }
+    return { success: false, error: `The NAS answered with HTTP ${response.status}. Is this the WebDAV address/port?` }
   } catch (error) {
-    if (error instanceof Error && /certificate|SELF_SIGNED|UNABLE_TO_VERIFY/i.test(error.message)) {
+    const cause = error instanceof Error ? `${error.message} ${String((error as { cause?: unknown }).cause ?? '')}` : ''
+    if (/certificate|SELF_SIGNED|UNABLE_TO_VERIFY|CERT_/i.test(cause)) {
       return { success: false, error: 'Certificate not trusted - use HTTP, or install a valid certificate on the NAS.' }
     }
-    return { success: false, error: 'Could not reach the NAS. Check the address and network connection.' }
+    return { success: false, error: 'Could not reach the NAS. Check the address (with WebDAV port) and network connection.' }
   }
 }
 
@@ -1675,17 +1673,15 @@ async function synologyLoginWithRememberedCredentials(): Promise<SynologySession
     return undefined
   }
   const base = synologyResolveBase(syn.address, Boolean(syn.https))
-  try {
-    await ky.get(`${base}/webapi/query.cgi?api=SYNO.API.Info&version=1&method=query&query=SYNO.API.Auth`, { timeout: 3000 })
-  } catch {
-    synologyMarkOffline()
+  // Short timeout: an unreachable NAS must not hold up the kids' UI.
+  const result = await synologyLogin(base, syn.account, syn.password, 4000)
+  if (!result.success || !result.session) {
+    if (/reach/i.test(result.error ?? '')) {
+      synologyMarkOffline()
+    }
     return undefined
   }
-  const result = await synologyLogin(base, syn.account, syn.password)
-  if (!result.success || !result.sid) {
-    return undefined
-  }
-  synologySessionCache = { sid: result.sid, base }
+  synologySessionCache = result.session
   return synologySessionCache
 }
 
@@ -1737,36 +1733,64 @@ interface SynologyFileEntry {
   additional?: { size?: number }
 }
 
-async function synologyApiGet<T>(
-  session: SynologySession,
-  api: string,
-  version: number,
-  method: string,
-  params: Record<string, string>,
-): Promise<T> {
-  const query = new URLSearchParams({ api, version: String(version), method, _sid: session.sid, ...params })
-  const url = `${session.base}/webapi/entry.cgi?${query.toString()}`
-  const data = await ky.get(url, { timeout: 6000 }).json<{ success: boolean; data?: T; error?: { code: number } }>()
-  if (data.success) {
-    return data.data as T
-  }
-  if (data.error?.code && synologySessionErrorCodes.has(data.error.code)) {
-    throw new SynologySessionExpiredError()
-  }
-  throw new SynologyApiError(`Synology API error ${data.error?.code}`)
+const xmlEntities: Record<string, string> = { '&lt;': '<', '&gt;': '>', '&amp;': '&', '&quot;': '"', '&apos;': "'" }
+
+function decodeXml(text: string): string {
+  return text.replace(/&(lt|gt|amp|quot|apos);/g, (m) => xmlEntities[m] ?? m)
 }
 
-async function synologyListFiles(
-  session: SynologySession,
-  folderPath: string,
-  withSize = false,
-): Promise<SynologyFileEntry[]> {
-  const params: Record<string, string> = { folder_path: folderPath }
-  if (withSize) {
-    params.additional = '["size"]'
+// Parses a WebDAV PROPFIND (Depth: 1) answer into the children of `folderPath`.
+function parsePropfind(xml: string, session: SynologySession, folderPath: string): SynologyFileEntry[] {
+  const basePrefix = decodeURIComponent(new URL(session.base).pathname).replace(/\/+$/, '')
+  const folder = `/${folderPath.split('/').filter(Boolean).join('/')}`
+  const entries: SynologyFileEntry[] = []
+  const responses = xml.match(/<(?:\w+:)?response[\s>][\s\S]*?<\/(?:\w+:)?response>/gi) ?? []
+  for (const block of responses) {
+    const hrefMatch = block.match(/<(?:\w+:)?href[^>]*>([\s\S]*?)<\/(?:\w+:)?href>/i)
+    if (!hrefMatch) {
+      continue
+    }
+    let hrefPath = decodeXml(hrefMatch[1].trim())
+    if (/^https?:\/\//i.test(hrefPath)) {
+      hrefPath = new URL(hrefPath).pathname
+    }
+    try {
+      hrefPath = decodeURIComponent(hrefPath)
+    } catch {
+      // keep as is
+    }
+    if (basePrefix && hrefPath.startsWith(basePrefix)) {
+      hrefPath = hrefPath.slice(basePrefix.length)
+    }
+    hrefPath = `/${hrefPath.split('/').filter(Boolean).join('/')}`
+    if (hrefPath === folder) {
+      continue // the folder itself
+    }
+    const isdir = /<(?:\w+:)?collection\s*\/?>/i.test(block)
+    const sizeMatch = block.match(/<(?:\w+:)?getcontentlength[^>]*>(\d+)</i)
+    entries.push({
+      name: hrefPath.split('/').pop() ?? hrefPath,
+      path: hrefPath,
+      isdir,
+      additional: sizeMatch ? { size: Number(sizeMatch[1]) } : undefined,
+    })
   }
-  const data = await synologyApiGet<{ files?: SynologyFileEntry[] }>(session, 'SYNO.FileStation.List', 2, 'list', params)
-  return data?.files ?? []
+  return entries
+}
+
+async function synologyListFiles(session: SynologySession, folderPath: string, _withSize = false): Promise<SynologyFileEntry[]> {
+  const response = await fetch(`${synologyUrl(session, folderPath)}/`, {
+    method: 'PROPFIND',
+    headers: { Authorization: session.auth, Depth: '1', 'Content-Type': 'application/xml' },
+    body: '<?xml version="1.0"?><propfind xmlns="DAV:"><prop><resourcetype/><getcontentlength/></prop></propfind>',
+    signal: AbortSignal.timeout(8000),
+  })
+  const text = await response.text()
+  if (response.status !== 207 && response.status !== 200) {
+    // Folder gone / no permission: the NAS answered, so it is not offline.
+    throw new SynologyApiError(`WebDAV error ${response.status}`)
+  }
+  return parsePropfind(text, session, folderPath)
 }
 
 // --- Local copies ("Download local") --------------------------------------
@@ -1899,13 +1923,14 @@ app.post('/api/synology/login', async (req, res) => {
   }
 
   const base = synologyResolveBase(address, Boolean(useHttps))
-  const result = await synologyLogin(base, account, password)
-  if (!result.success || !result.sid) {
+  // A wrong password may be answered slowly by some NAS models: be generous here.
+  const result = await synologyLogin(base, account, password, 25000)
+  if (!result.success || !result.session) {
     res.json({ success: false, error: result.error })
     return
   }
 
-  synologySessionCache = { sid: result.sid, base }
+  synologySessionCache = result.session
   synologyOfflineUntil = 0
 
   if (rememberMe === true) {
@@ -1928,20 +1953,8 @@ app.get('/api/synology/browse', async (req, res) => {
       const markedFolders = new Set(config?.synology?.artistFolders ?? [])
       const downloadFolders = new Set(config?.synology?.downloadFolders ?? [])
 
-      let entries: { name: string; path: string; isDirectory: boolean }[]
-      if (!folderPath) {
-        const data = await synologyApiGet<{ shares?: SynologyFileEntry[] }>(
-          session,
-          'SYNO.FileStation.List',
-          2,
-          'list_share',
-          {},
-        )
-        entries = (data?.shares ?? []).map((s) => ({ name: s.name, path: s.path, isDirectory: true }))
-      } else {
-        const files = await synologyListFiles(session, folderPath)
-        entries = files.filter((f) => f.isdir).map((f) => ({ name: f.name, path: f.path, isDirectory: true }))
-      }
+      const files = await synologyListFiles(session, folderPath || '/')
+      const entries = files.filter((f) => f.isdir).map((f) => ({ name: f.name, path: f.path, isDirectory: true }))
 
       return entries.map((e) => ({
         ...e,
@@ -2139,25 +2152,14 @@ app.get('/api/synology/stream', async (req, res) => {
   }
 
   try {
-    const query = new URLSearchParams({
-      api: 'SYNO.FileStation.Download',
-      version: '2',
-      method: 'download',
-      mode: 'download',
-      path: filePath,
-      _sid: session.sid,
-    })
-    const url = `${session.base}/webapi/entry.cgi?${query.toString()}`
-    const headers: Record<string, string> = {}
+    const headers: Record<string, string> = { Authorization: session.auth }
     if (req.headers.range) {
       headers.Range = req.headers.range as string
     }
 
-    const upstream = await ky.get(url, { headers, timeout: 15000, throwHttpErrors: false })
-    const contentType = upstream.headers.get('content-type') ?? ''
-    if (contentType.includes('application/json')) {
-      // Synology returned an error object (e.g. expired session) instead of file bytes.
-      res.status(502).send('Failed to fetch file from NAS.')
+    const upstream = await fetch(synologyUrl(session, filePath), { headers, signal: AbortSignal.timeout(15000) })
+    if (upstream.status === 404 || upstream.status === 401 || upstream.status === 403) {
+      res.status(upstream.status === 404 ? 404 : 502).send('Failed to fetch file from NAS.')
       return
     }
 
@@ -2226,17 +2228,9 @@ async function nasDownloadFile(nasPath: string, size: number): Promise<void> {
   await mkdir(path.dirname(target), { recursive: true })
 
   const done = await withSynologySession(async (session) => {
-    const query = new URLSearchParams({
-      api: 'SYNO.FileStation.Download',
-      version: '2',
-      method: 'download',
-      mode: 'download',
-      path: nasPath,
-      _sid: session.sid,
-    })
-    const response = await ky.get(`${session.base}/webapi/entry.cgi?${query.toString()}`, { timeout: false })
-    if ((response.headers.get('content-type') ?? '').includes('application/json') || !response.body) {
-      throw new SynologySessionExpiredError()
+    const response = await fetch(synologyUrl(session, nasPath), { headers: { Authorization: session.auth } })
+    if (!response.ok || !response.body) {
+      throw new SynologyApiError(`WebDAV download error ${response.status}`)
     }
     // Write to a temp name first so a half-finished file is never mistaken for a
     // complete one (and never gets played).

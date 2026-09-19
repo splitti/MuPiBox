@@ -69,7 +69,7 @@ if (isset($_POST['synology_save_selection']) || isset($_POST['synology_download_
 		synologyApiCall("$backendBase/mark", 'POST', array(
 			'path' => $shownPath, 'marked' => in_array($shownPath, $checkedDownload, true), 'list' => 'download'), 10);
 	}
-	$CHANGE_TXT = $CHANGE_TXT . "<li>Synology folder selection saved</li>";
+	$CHANGE_TXT = $CHANGE_TXT . "<li>NAS folder selection saved</li>";
 	$change = 1;
 
 	if (isset($_POST['synology_download_selected'])) {
@@ -83,7 +83,7 @@ if (isset($_POST['synology_save_selection']) || isset($_POST['synology_download_
 	}
 }
 
-// The real Synology session lives in the backend (it can also silently
+// The real NAS session lives in the backend (it can also silently
 // re-login using remembered credentials), so PHP never tracks "logged in"
 // state itself - it just asks the backend on every page load. "Change login"
 // forces the login form to show even if the backend still has a session.
@@ -111,15 +111,15 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 ?>
 
 <div class="description">
-	<h2>Synology NAS</h2>
-	<p>Connect a Synology NAS as an additional media source. Mark folders as "artist" (checkbox) to make them show up in the NAS tab on the MuPiBox - live, with no separate media update needed.</p>
+	<h2>NAS</h2>
+	<p>Connect a NAS (Synology, QNAP, TrueNAS, ... - anything with a WebDAV server) as an additional media source. Enable WebDAV on the NAS first (Synology: package "WebDAV Server", ports 5005 http / 5006 https). Mark folders as "artist" (checkbox) to make them show up in the NAS tab on the MuPiBox - live, with no separate media update needed.</p>
 </div>
 
 <?php if (!$isLoggedIn) { ?>
 	<form class="appnitro" method="post" action="synology.php" id="form">
 		<ul>
 			<li id="li_1">
-				<label class="description" for="synology_address">Address or QuickConnect ID</label>
+				<label class="description" for="synology_address">Address incl. WebDAV port (e.g. 192.168.1.25:5006)</label>
 				<div>
 					<input id="synology_address" name="synology_address" class="element text large" type="text" maxlength="255" value="" />
 				</div>
