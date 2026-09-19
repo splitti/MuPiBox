@@ -134,6 +134,7 @@ export class SwiperComponent<T> {
 
   private fewLayouts: { shift: number; rotate: number; z: number }[][] | undefined
   private fewLayoutKey = ''
+  private fewTranslate = 0 // the swiper's own scroll position while the layouts were measured
   private dragging = false
   private dragStartX = 0
   private dragStartPosition = 0
@@ -218,6 +219,7 @@ export class SwiperComponent<T> {
     const scale = perspective / (perspective + depth) // tilted covers are further away
     const width = swiper.width
 
+    this.fewTranslate = swiper.translate
     slides.forEach((slide) => {
       slide.style.transition = 'none'
       slide.style.transform = 'none'
@@ -316,11 +318,19 @@ export class SwiperComponent<T> {
     const to = Math.min(from + 1, slides.length - 1)
     const fraction = position - from
     const mix = (a: number, b: number): number => a + (b - a) * fraction
+    // The swiper moves its slides on its own (e.g. when it centers the first slide after
+    // it has been set up). The layouts were measured at another scroll position, so the
+    // difference has to be taken out again (outside the perspective, so tilted covers keep
+    // their measured shape) or every cover would sit off to one side.
+    const moved = swiper.translate - this.fewTranslate
     slides.forEach((slide, index) => {
       const a = layouts[from][index]
       const b = layouts[to][index]
+      const z = mix(a.z, b.z)
+      const shift = mix(a.shift, b.shift)
       slide.style.transition = animate ? 'transform 0.4s ease' : 'none'
-      slide.style.transform = `perspective(1000px) translateX(${mix(a.shift, b.shift)}px) translateZ(${mix(a.z, b.z)}px) rotateY(${mix(a.rotate, b.rotate)}deg)`
+      // The outer translation moves the finished picture, so the cover keeps its shape.
+      slide.style.transform = `translateX(${-moved}px) perspective(1000px) translateX(${shift}px) translateZ(${z}px) rotateY(${mix(a.rotate, b.rotate)}deg)`
       slide.style.zIndex = String(1000 - Math.round(Math.abs(index - position) * 10))
     })
   }
