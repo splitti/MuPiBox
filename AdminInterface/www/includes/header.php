@@ -170,7 +170,6 @@
 				<a href="?hshutdown=1" onclick="confirm('Do really want to shutdown?') || stopEvent(event)" ><iconify-icon icon="ic:outline-power-settings-new" title="Shutdown" ></iconify-icon></a>
 				<a href="?hreboot=1" onclick="confirm('Do really want to reboot?') || stopEvent(event)" ><iconify-icon icon="ic:outline-restart-alt" title="Reboot" ></iconify-icon></a>
 				<a href="?hchromerestart=1" onclick="confirm('Do really want to restart chrome kiosk?') || stopEvent(event)" ><iconify-icon icon="tabler:brand-chrome"  title="Restart chrome browser" ></iconify-icon></a>
-				<a href="?hrefreshdatabase=1" onclick="confirm('Do really want to reload media database?') || stopEvent(event)" ><iconify-icon icon="mdi:database-refresh-outline"  title="Reload media database" ></iconify-icon></a>
 			</div>
 			<div class="topnav" id="myTopnav">
 				<a href="<?= $link ?>index.php"><i class="fa fa-fw fa-home"></i> Home</a>
