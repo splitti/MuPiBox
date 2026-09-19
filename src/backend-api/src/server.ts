@@ -1907,14 +1907,23 @@ async function synologyLogin(
   try {
     const response = await fetch(synologyUrl(session, '/'), {
       method: 'PROPFIND',
-      headers: { Authorization: session.auth, Depth: '0' },
+      headers: { Authorization: session.auth, Depth: '1' },
       signal: AbortSignal.timeout(timeoutMs),
     })
-    await response.arrayBuffer().catch(() => undefined)
+    const body = await response.text().catch(() => '')
     if (response.status === 401 || response.status === 403) {
       return { success: false, error: 'Wrong account name or password (or no WebDAV permission for this account).' }
     }
     if (response.status === 207 || response.status === 200) {
+      // A NAS always shows at least one folder. An empty answer means this is not the WebDAV
+      // service (e.g. the DSM web page on port 443 answers, but lists nothing), or the account
+      // may not use WebDAV.
+      if (parsePropfind(body, session, '/').length === 0) {
+        return {
+          success: false,
+          error: 'The NAS answered but lists no folders - check the WebDAV port in the address (Synology: 5006 for https, 5005 for http) and that the account may use WebDAV.',
+        }
+      }
       return { success: true, session }
     }
     if (response.status === 404) {
