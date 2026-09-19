@@ -105,6 +105,7 @@
 					<ul>
 						<li>Track list: press and hold the cover to see all tracks of the album (Spotify, local and NAS) and jump to any of them. The hold time is set with "Listview timer" in the admin.</li>
 						<li>Album, track name and track number are shown for local and NAS content.</li>
+						<li>New repeat button (off / all / one track) and shuffle button (local, NAS and Spotify music) in the player.</li>
 						<li>The track list uses the font of the active theme.</li>
 					</ul>
 					<b>Display</b>

@@ -32,6 +32,8 @@ import {
   playForward,
   playSkipBack,
   playSkipForward,
+  repeat,
+  repeatOutline,
   shuffleOutline,
   volumeHighOutline,
   volumeLowOutline,
@@ -105,6 +107,9 @@ export class PlayerPage implements OnInit, AfterViewInit {
   goBackTimer = 0
   progress = 0
   shufflechanged = 0
+  // Repeat mode and (for local/NAS playback) shuffle state shown on the buttons.
+  repeatMode: 'off' | 'all' | 'one' = 'off'
+  localShuffle = false
   tmpProgressTime = 0
   public readonly spotify$: Observable<CurrentSpotify>
   public readonly local$: Observable<CurrentMPlayer>
@@ -151,6 +156,8 @@ export class PlayerPage implements OnInit, AfterViewInit {
       playBack,
       shuffleOutline,
       playForward,
+      repeat,
+      repeatOutline,
     })
   }
 
@@ -345,6 +352,10 @@ export class PlayerPage implements OnInit, AfterViewInit {
       this.saveResumeFiles()
     }
     this.updateProgression = false
+    if (this.media.type === 'spotify' && this.repeatMode !== 'off') {
+      // Spotify remembers the repeat mode for the account - do not leave it on.
+      this.playerService.sendCmd(PlayerCmds.REPEATOFF)
+    }
     if (this.media.shuffle || this.shufflechanged) {
       this.playerService.sendCmd(PlayerCmds.SHUFFLEOFF)
     }
@@ -497,7 +508,45 @@ export class PlayerPage implements OnInit, AfterViewInit {
     }
   }
 
+  // Repeat: off -> all -> one -> off
+  toggleRepeat() {
+    if (this.repeatMode === 'off') {
+      this.repeatMode = 'all'
+      this.playerService.sendCmd(PlayerCmds.REPEATALL)
+    } else if (this.repeatMode === 'all') {
+      this.repeatMode = 'one'
+      this.playerService.sendCmd(PlayerCmds.REPEATONE)
+    } else {
+      this.repeatMode = 'off'
+      this.playerService.sendCmd(PlayerCmds.REPEATOFF)
+    }
+  }
+
+  get showRepeatButton(): boolean {
+    return (
+      (this.media.type === 'spotify' && !this.media.showid) || this.media.type === 'library' || this.media.type === 'nas'
+    )
+  }
+
+  get showShuffleButton(): boolean {
+    return (
+      (this.media.type === 'spotify' && (this.media.category === 'music' || this.media.category === 'other')) ||
+      this.media.type === 'library' ||
+      this.media.type === 'nas'
+    )
+  }
+
+  get shuffleActive(): boolean {
+    return this.media.type === 'spotify' ? !!this.media.shuffle : this.localShuffle
+  }
+
   toggleshuffle() {
+    if (this.media.type !== 'spotify') {
+      // Local / NAS: the player backend reshuffles its playlist.
+      this.localShuffle = !this.localShuffle
+      this.playerService.sendCmd(this.localShuffle ? PlayerCmds.SHUFFLEON : PlayerCmds.SHUFFLEOFF)
+      return
+    }
     if (this.media.shuffle) {
       this.shufflechanged++
       this.media.shuffle = false

@@ -56,6 +56,19 @@ const apiAccessToken = {
 player.on('percent_pos', (val) => {
   //console.log('track progress is', val);
   currentMeta.progressTime = val
+  lastPercentAt = Date.now()
+})
+
+// mplayer answers the position poll with an error once its playlist is over.
+// Repeat-all starts the list again - but only when we are on the last track and
+// no valid position came in for a while (a track that is merely loading is not the end).
+player.on('playlist-finish', () => {
+  if (repeatMode !== 'all' || !activePlaylist || currentMeta.currentPlayer !== 'mplayer') return
+  if (Date.now() - lastPercentAt < 4000) return
+  if (Number(currentMeta.currentTracknr) < Number(currentMeta.totalTracks)) return
+  lastPercentAt = Date.now()
+  currentMeta.currentTracknr = 0
+  player.playList(activePlaylist)
 })
 setInterval(() => {
   player.getProps(['percent_pos'])
@@ -195,6 +208,96 @@ const currentMeta = {
 // once in playNasList() - used to name each track as it plays, since mplayer
 // only ever sees the stream-proxy URL, not the real filename.
 let currentNasTracks = []
+
+// --- Repeat / shuffle for local and NAS playback (mplayer) -------------------
+// mplayer has no runtime shuffle, so shuffling reloads the playlist in a new
+// order (current track first) and repeat-all restarts the list when it ends.
+let repeatMode = 'off' // 'off' | 'all' | 'one'
+let activePlaylist = null // m3u currently loaded in mplayer (local + NAS only)
+let activeDir = null // album folder of a local playlist
+let activeOrder = [] // tracks in the order mplayer holds them: {line, nas?}
+let activeOriginal = [] // tracks in their natural order
+let activeIsShuffled = false
+let lastPercentAt = Date.now()
+
+function initPlaybackModes(playlistPath, tracks, dir) {
+  repeatMode = 'off'
+  activeIsShuffled = false
+  activePlaylist = playlistPath
+  activeDir = dir || null
+  activeOriginal = tracks
+  activeOrder = tracks
+  player.exec('loop', [-1, 1])
+}
+
+function clearPlaybackModes() {
+  activePlaylist = null
+  repeatMode = 'off'
+  activeIsShuffled = false
+}
+
+function writeActivePlaylist(order) {
+  const lines = order.map((track) => track.line)
+  if (activeDir) {
+    fs.writeFileSync(activePlaylist, `${lines.join('\n')}\n`)
+  } else {
+    fs.writeFileSync(activePlaylist, lines.join('\n'))
+    currentNasTracks = order.map((track) => track.nas)
+  }
+}
+
+// Reloads the playlist in `order` and continues at track index `startPos` and
+// position `percent`. The player is muted meanwhile so the jump is not audible.
+function reloadActiveOrder(order, startPos, percent) {
+  activeOrder = order
+  writeActivePlaylist(order)
+  player.exec('mute', [1])
+  player.playList(activePlaylist)
+  currentMeta.currentTracknr = 0
+  setTimeout(() => {
+    if (startPos > 0) {
+      currentMeta.currentTracknr = startPos
+      player.exec('pt_step', [startPos])
+    }
+  }, 700)
+  const seekAt = startPos > 0 ? 1600 : 1300
+  setTimeout(() => {
+    if (percent > 0) player.seekPercent(percent)
+  }, seekAt)
+  setTimeout(() => player.exec('mute', [0]), seekAt + 300)
+}
+
+function setLocalShuffle(on) {
+  if (!activePlaylist || activeIsShuffled === on) return
+  const index = Math.max(0, Number(currentMeta.currentTracknr) - 1)
+  const current = activeOrder[index]
+  const percent = Number(currentMeta.progressTime) || 0
+  activeIsShuffled = on
+  if (on) {
+    const rest = activeOrder.filter((_, i) => i !== index)
+    for (let i = rest.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[rest[i], rest[j]] = [rest[j], rest[i]]
+    }
+    reloadActiveOrder(current ? [current, ...rest] : rest, 0, percent)
+  } else {
+    const pos = Math.max(0, activeOriginal.indexOf(current))
+    reloadActiveOrder(activeOriginal, pos, percent)
+  }
+}
+
+function setRepeat(mode) {
+  if (currentMeta.currentPlayer === 'spotify') {
+    const state = mode === 'one' ? 'track' : mode === 'all' ? 'context' : 'off'
+    spotifyApi.setRepeat(state).then(
+      () => log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Repeat ${state}`),
+      (err) => handleSpotifyError(err, 'setRepeat'),
+    )
+  } else if (currentMeta.currentPlayer === 'mplayer' && activePlaylist) {
+    repeatMode = mode
+    player.exec('loop', [mode === 'one' ? 0 : -1, 1])
+  }
+}
 
 function writeplayerstatePlay() {
   playerstate = 'play'
@@ -466,6 +569,7 @@ function stop() {
     currentMeta.pause = false
     spotifyRunning = false
   } else if (currentMeta.currentPlayer === 'mplayer') {
+    clearPlaybackModes()
     player.stop()
     //currentMeta.playing = false;
     writeplayerstatePause()
@@ -584,6 +688,10 @@ function jumpToTrack(targetPosition) {
 }
 
 function shuffleon() {
+  if (currentMeta.currentPlayer === 'mplayer') {
+    setLocalShuffle(true)
+    return
+  }
   spotifyApi.setShuffle(true).then(
     () => {
       counter.countsetShuffle++
@@ -599,6 +707,10 @@ function shuffleon() {
 }
 
 function shuffleoff() {
+  if (currentMeta.currentPlayer === 'mplayer') {
+    setLocalShuffle(false)
+    return
+  }
   spotifyApi.setShuffle(false).then(
     () => {
       counter.countsetShuffle++
@@ -735,6 +847,16 @@ function playList(playedList) {
   log.debug(`${nowDate.toLocaleString()}: /home/dietpi/MuPiBox/media/${playedTitelmod}/playlist.m3u`)
   currentMeta.currentTracknr = 0
   currentMeta.path = playedTitelmod
+  try {
+    const albumDir = `/home/dietpi/MuPiBox/media/${playedTitelmod}`
+    initPlaybackModes(
+      `${albumDir}/playlist.m3u`,
+      listLocalAudioFiles(albumDir).map((name) => ({ line: name })),
+      albumDir,
+    )
+  } catch (error) {
+    clearPlaybackModes()
+  }
 
   if (
     muPiBoxConfig.telegram.active &&
@@ -788,6 +910,11 @@ async function playNasList(nasPath) {
     player.setVolume(volumeStart)
     currentMeta.currentTracknr = 0
     currentMeta.totalTracks = tracks.length
+    initPlaybackModes(
+      tmpPlaylistPath,
+      tracks.map((track, i) => ({ line: playlistLines[i], nas: track })),
+      null,
+    )
   } catch (error) {
     log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Error starting NAS playback: ${error}`)
   }
@@ -798,6 +925,7 @@ function playFile(playedFile) {
   log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Starting currentMeta.playing:${playedTitel}`)
   //currentMeta.playing = true;
   writeplayerstatePlay()
+  clearPlaybackModes()
   player.play(`/home/dietpi/MuPiBox/tts_files/${playedTitel}`)
   player.setVolume(volumeStart)
   log.debug(`${nowDate.toLocaleString()}: /home/dietpi/MuPiBox/tts_files/${playedTitel}`)
@@ -807,6 +935,7 @@ function playURL(playedURL) {
   log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Starting currentMeta.playing:${playedURL}`)
   //currentMeta.playing = true;
   writeplayerstatePlay()
+  clearPlaybackModes()
   player.play(playedURL)
   player.setVolume(volumeStart)
   log.debug(`${nowDate.toLocaleString()}: ${playedURL}`)
@@ -1116,7 +1245,12 @@ app.get('/local/tracklist/:encoded', (req, res) => {
 
   let files
   try {
-    files = listLocalAudioFiles(`/home/dietpi/MuPiBox/media/${playedTitelmod}`)
+    const albumDir = `/home/dietpi/MuPiBox/media/${playedTitelmod}`
+    // While shuffled, the list shows the order mplayer really plays.
+    files =
+      activeIsShuffled && activeDir === albumDir
+        ? activeOrder.map((track) => track.line)
+        : listLocalAudioFiles(albumDir)
   } catch (_err) {
     res.status(404).json({ error: 'album folder not found' })
     return
@@ -1136,6 +1270,10 @@ app.get('/nas/tracklist/:encoded', async (req, res) => {
   const nasPath = decodeURIComponent(req.params.encoded)
 
   try {
+    if (activeIsShuffled && !activeDir && currentMeta.path === nasPath) {
+      res.json(activeOrder.map((track, index) => ({ position: index + 1, name: track.nas.name.replace(/\.[^./]+$/, '') })))
+      return
+    }
     const response = await fetch(`http://localhost:8200/api/synology/tracklist?path=${encodeURIComponent(nasPath)}`)
     const tracks = await response.json()
     res.json((tracks ?? []).map((track) => ({ position: track.position, name: track.name.replace(/\.[^./]+$/, '') })))
@@ -1224,6 +1362,9 @@ app.use((req, res) => {
   else if (command.name === '-5') setVolume(0)
   else if (command.name === 'shuffleon') shuffleon()
   else if (command.name === 'shuffleoff') shuffleoff()
+  else if (command.name === 'repeatoff') setRepeat('off')
+  else if (command.name === 'repeatall') setRepeat('all')
+  else if (command.name === 'repeatone') setRepeat('one')
   else if (command.name === 'shutoff') cmdCall('sudo su - -c "/usr/local/bin/mupibox/./shutdown.sh &"')
   else if (command.name === 'clearresume') cmdCall('sudo bash /usr/local/bin/mupibox/clearresume.sh')
   else if (command.name === 'maxresume') cmdCall('sudo bash /usr/local/bin/mupibox/remove_max_resume.sh')
