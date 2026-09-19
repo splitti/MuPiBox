@@ -114,6 +114,7 @@
 						<li>Settings menu: 2x2 layout; opened by pressing and holding the status icon (duration set with "Access to settings" in the admin) instead of clicking ten times; the "More settings" QR tile was removed.</li>
 						<li>Control system > "Hide display categorys": hide the Audiobooks / Music / NAS / Other tabs; the remaining tabs are spread evenly (at least one stays visible).</li>
 						<li>Album swiper: always visible, thicker and draggable scrollbar.</li>
+						<li>Cover Flow: the album/artist lists are shown like Apple's Cover Flow - the centered cover faces front, the others are tilted in 3D with a mirror image below. Tap a side cover to bring it to the center, tap the centered one to open it.</li>
 					</ul>
 					<b>Podcasts</b>
 					<ul>

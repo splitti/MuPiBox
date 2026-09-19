@@ -82,6 +82,16 @@ export class SwiperComponent<T> {
     this.cachedSwiperPosition = 0
   }
 
+  // A tilted side cover is brought to the center first; only the centered one opens.
+  protected slideClicked(index: number, item: SwiperData<T>): void {
+    const swiper = this.swiper()
+    if (swiper && swiper.activeIndex !== index) {
+      swiper.slideTo(index, 300)
+      return
+    }
+    this.elementClicked.emit(item)
+  }
+
   protected readText(text: string): void {
     this.playerService.sayText(text)
   }
