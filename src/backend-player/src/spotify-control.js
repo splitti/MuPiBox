@@ -267,14 +267,6 @@ function reloadActiveOrder(order, startPos, percent) {
   setTimeout(() => player.exec('mute', [0]), seekAt + 300)
 }
 
-// While shuffled, mplayer's queue position differs from the track's place in the
-// album. The kiosk shows and jumps by the album's own numbering.
-function naturalTrackNumber() {
-  const track = activeOrder[Number(currentMeta.currentTracknr) - 1]
-  const index = track ? activeOriginal.indexOf(track) : -1
-  return index >= 0 ? index + 1 : currentMeta.currentTracknr
-}
-
 function setLocalShuffle(on) {
   if (!activePlaylist || activeIsShuffled === on) return
   const index = Math.max(0, Number(currentMeta.currentTracknr) - 1)
@@ -683,11 +675,6 @@ function previous() {
 
 function jumpToTrack(targetPosition) {
   if (currentMeta.currentPlayer === 'mplayer') {
-    if (activeIsShuffled && activePlaylist) {
-      // The list the kiosk shows is in album order - translate to the shuffled queue.
-      const queueIndex = activeOrder.indexOf(activeOriginal[targetPosition - 1])
-      if (queueIndex >= 0) targetPosition = queueIndex + 1
-    }
     const offset = targetPosition - currentMeta.currentTracknr
     if (offset !== 0) {
       log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Jumping ${offset} track(s) to position ${targetPosition}`)
@@ -1232,7 +1219,7 @@ app.get('/state', (_req, res) => {
 /*endpoint to return all local metainformation*/
 /*only used if sonos-kids-player is modified*/
 app.get('/local', (_req, res) => {
-  res.send(activeIsShuffled ? { ...currentMeta, currentTracknr: naturalTrackNumber() } : currentMeta)
+  res.send(currentMeta)
 })
 
 app.get('/spotify/token', (_req, res) => {
@@ -1259,7 +1246,11 @@ app.get('/local/tracklist/:encoded', (req, res) => {
   let files
   try {
     const albumDir = `/home/dietpi/MuPiBox/media/${playedTitelmod}`
-    files = listLocalAudioFiles(albumDir)
+    // While shuffled, the list shows the order mplayer really plays.
+    files =
+      activeIsShuffled && activeDir === albumDir
+        ? activeOrder.map((track) => track.line)
+        : listLocalAudioFiles(albumDir)
   } catch (_err) {
     res.status(404).json({ error: 'album folder not found' })
     return
@@ -1279,6 +1270,10 @@ app.get('/nas/tracklist/:encoded', async (req, res) => {
   const nasPath = decodeURIComponent(req.params.encoded)
 
   try {
+    if (activeIsShuffled && !activeDir && currentMeta.path === nasPath) {
+      res.json(activeOrder.map((track, index) => ({ position: index + 1, name: track.nas.name.replace(/\.[^./]+$/, '') })))
+      return
+    }
     const response = await fetch(`http://localhost:8200/api/synology/tracklist?path=${encodeURIComponent(nasPath)}`)
     const tracks = await response.json()
     res.json((tracks ?? []).map((track) => ({ position: track.position, name: track.name.replace(/\.[^./]+$/, '') })))
