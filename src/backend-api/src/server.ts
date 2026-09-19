@@ -453,9 +453,25 @@ const imageContentTypes: Record<string, string> = {
 // fetched only once per picture, and handed to the kiosk as small thumbnails (see above).
 const rssImageParallel = 3
 const rssImageTimeoutMs = 45000
+
+// Downloads wait in line. Whoever is looking at the list is served first: a picture that
+// somebody is waiting for goes before the ones prepared in the background, and among those the
+// newest request goes first (that is where the user has just scrolled to - the older requests
+// are for covers that were scrolled past). Requests whose browser has already given up are dropped.
+interface RssImageJob {
+  url: string
+  file: string
+  priority: number // 1 = a browser is waiting, 0 = background preparation
+  seq: number
+  watchers: (() => boolean)[] // still interested? (one per waiting browser)
+  started: boolean
+  promise: Promise<string | undefined>
+  start: () => void
+}
 let rssImageRunning = 0
-const rssImageWaiting: (() => void)[] = []
-const rssImageJobs = new Map<string, Promise<string | undefined>>()
+let rssImageSeq = 0
+const rssImageQueue: RssImageJob[] = []
+const rssImageJobs = new Map<string, RssImageJob>()
 
 function rssImageLocalFile(imageUrl: string): { file: string; extension: string } | undefined {
   try {
@@ -467,8 +483,44 @@ function rssImageLocalFile(imageUrl: string): { file: string; extension: string 
   }
 }
 
+function rssImageJobWanted(job: RssImageJob): boolean {
+  return job.priority === 0 || job.watchers.some((stillWaiting) => stillWaiting())
+}
+
+function runNextRssImage(): void {
+  while (rssImageRunning < rssImageParallel && rssImageQueue.length > 0) {
+    // Highest priority first, then the newest request.
+    let best = 0
+    for (let i = 1; i < rssImageQueue.length; i++) {
+      const a = rssImageQueue[i]
+      const b = rssImageQueue[best]
+      if (a.priority > b.priority || (a.priority === b.priority && a.seq > b.seq)) {
+        best = i
+      }
+    }
+    const [job] = rssImageQueue.splice(best, 1)
+    if (rssImageJobWanted(job)) {
+      rssImageRunning++
+      job.started = true
+      job.start()
+    } else {
+      rssImageJobs.delete(job.file)
+      job.start = () => undefined
+      cancelRssImageJob(job)
+    }
+  }
+}
+
+const cancelledRssImages = new WeakSet<RssImageJob>()
+function cancelRssImageJob(job: RssImageJob): void {
+  cancelledRssImages.add(job)
+  ;(job as RssImageJob & { cancel?: () => void }).cancel?.()
+}
+
 // Returns the local copy of a remote picture, downloading it first if needed.
-function ensureRssImage(imageUrl: string): Promise<string | undefined> {
+// `stillWaiting` tells whether the requesting browser is still there; without it the
+// request is a background preparation.
+function ensureRssImage(imageUrl: string, stillWaiting?: () => boolean): Promise<string | undefined> {
   const local = rssImageLocalFile(imageUrl)
   if (!local) {
     return Promise.resolve(undefined)
@@ -476,32 +528,52 @@ function ensureRssImage(imageUrl: string): Promise<string | undefined> {
   if (fs.existsSync(local.file)) {
     return Promise.resolve(local.file)
   }
-  const running = rssImageJobs.get(local.file)
-  if (running) {
-    return running
+  const existing = rssImageJobs.get(local.file)
+  if (existing) {
+    if (stillWaiting) {
+      existing.watchers.push(stillWaiting)
+      if (!existing.started) {
+        existing.priority = 1
+        existing.seq = ++rssImageSeq
+      }
+    }
+    return existing.promise
   }
-  const job = (async () => {
-    if (rssImageRunning >= rssImageParallel) {
-      await new Promise<void>((resolve) => rssImageWaiting.push(resolve))
+
+  const job = {
+    url: imageUrl,
+    file: local.file,
+    priority: stillWaiting ? 1 : 0,
+    seq: ++rssImageSeq,
+    watchers: stillWaiting ? [stillWaiting] : [],
+    started: false,
+  } as RssImageJob
+  job.promise = new Promise<string | undefined>((resolve) => {
+    ;(job as RssImageJob & { cancel?: () => void }).cancel = () => resolve(undefined)
+    job.start = () => {
+      void (async () => {
+        try {
+          const buffer = Buffer.from(await ky.get(imageUrl, { timeout: rssImageTimeoutMs }).arrayBuffer())
+          await mkdir(rssCoverDir, { recursive: true })
+          const temp = `${local.file}.${process.pid}.tmp`
+          await writeFile(temp, buffer)
+          await rename(temp, local.file)
+          resolve(local.file)
+        } catch (error) {
+          console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to proxy/cache RSS episode image ${imageUrl}: ${error}`)
+          resolve(undefined)
+        } finally {
+          rssImageRunning--
+          rssImageJobs.delete(local.file)
+          runNextRssImage()
+        }
+      })()
     }
-    rssImageRunning++
-    try {
-      const buffer = Buffer.from(await ky.get(imageUrl, { timeout: rssImageTimeoutMs }).arrayBuffer())
-      await mkdir(rssCoverDir, { recursive: true })
-      const temp = `${local.file}.${process.pid}.tmp`
-      await writeFile(temp, buffer)
-      await rename(temp, local.file)
-      return local.file
-    } catch (error) {
-      console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to proxy/cache RSS episode image ${imageUrl}: ${error}`)
-      return undefined
-    } finally {
-      rssImageRunning--
-      rssImageWaiting.shift()?.()
-    }
-  })().finally(() => rssImageJobs.delete(local.file))
+  })
   rssImageJobs.set(local.file, job)
-  return job
+  rssImageQueue.push(job)
+  runNextRssImage()
+  return job.promise
 }
 
 async function sendRssImage(res: express.Response, file: string, thumbSize: number | undefined): Promise<void> {
@@ -531,7 +603,11 @@ app.get('/api/rssfeed/image', async (req, res) => {
       return
     }
   } else if (typeof req.query.url === 'string') {
-    file = await ensureRssImage(req.query.url)
+    let clientGone = false
+    res.on('close', () => {
+      clientGone = !res.writableEnded
+    })
+    file = await ensureRssImage(req.query.url, () => !clientGone)
     if (!file) {
       res.status(502).send('Failed to fetch image.')
       return

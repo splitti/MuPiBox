@@ -251,14 +251,30 @@ export class SwiperComponent<T> {
   }
 
   private loadNearCovers(swiper: Swiper, radius: number | undefined): void {
-    for (const slide of Array.from(swiper.slides) as (HTMLElement & { progress: number })[]) {
-      if (radius !== undefined && (typeof slide.progress !== 'number' || Math.abs(slide.progress) > radius)) {
-        continue // not measured yet, or too far away
-      }
+    const slides = Array.from(swiper.slides) as (HTMLElement & { progress: number })[]
+    const measured = slides.filter((slide) => typeof slide.progress === 'number')
+    const wanted = radius === undefined ? slides : measured.filter((slide) => Math.abs(slide.progress) <= radius)
+    // The cover in the middle first, then outwards - that is the order the browser asks for them.
+    if (radius !== undefined) {
+      wanted.sort((a, b) => Math.abs(a.progress) - Math.abs(b.progress))
+    }
+    for (const slide of wanted) {
       const img = slide.querySelector('img')
       const source = img?.dataset['src']
       if (img && source && !img.getAttribute('src')) {
         img.setAttribute('src', source)
+      }
+    }
+    if (radius !== undefined) {
+      // Pictures the user has scrolled far away from and that are still loading are not needed
+      // any more: giving up on them frees the connection (and the server) for the new position.
+      for (const slide of measured) {
+        if (Math.abs(slide.progress) > radius + 4) {
+          const img = slide.querySelector('img')
+          if (img?.getAttribute('src') && !img.complete) {
+            img.removeAttribute('src')
+          }
+        }
       }
     }
   }
