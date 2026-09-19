@@ -170,7 +170,6 @@
 				<a href="<?= $link ?>cover.php"><i class="fa-regular fa-image"></i> Cover</a>
 				<a href="<?= $link ?>bluetooth.php"><i class="fa-brands fa-bluetooth"></i> Bluetooth</a>
 				<a href="<?= $link ?>spotify.php"><i class="fa-brands fa-spotify"></i> Spotify</a>
-				<a href="<?= $link ?>synology.php"><i class="fa-solid fa-server"></i> Synology</a>
 				<a href="<?= $link ?>network.php"><i class="fa-solid fa-wifi"></i> Network</a>
 				<a href="<?= $link ?>smart.php"><i class="fa-solid fa-share-nodes"></i> Smart</a>
 				<?php /*<a href="service.php"><i class="fa-solid fa-gear"></i> Services</a>

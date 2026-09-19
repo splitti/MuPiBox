@@ -19,7 +19,6 @@ import {
   cloudOutline,
   musicalNotesOutline,
   radioOutline,
-  serverOutline,
   timerOutline,
 } from 'ionicons/icons'
 import { catchError, combineLatest, map, of, switchMap, tap } from 'rxjs'
@@ -71,7 +70,7 @@ export class HomePage extends SwiperIonicEventsHelper {
     private http: HttpClient,
   ) {
     super()
-    addIcons({ timerOutline, bookOutline, musicalNotesOutline, radioOutline, serverOutline, cloudOutline, cloudOfflineOutline })
+    addIcons({ timerOutline, bookOutline, musicalNotesOutline, radioOutline, cloudOutline, cloudOfflineOutline })
 
     this.http.get<MupiboxConfig>(`${environment.backend.apiUrl}/config`).subscribe({
       next: (config) => {

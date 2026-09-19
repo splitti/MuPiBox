@@ -3,14 +3,5 @@ export interface MupiboxConfig {
     disableScraperForPlaylists?: boolean
     [key: string]: unknown
   }
-  synology?: {
-    address?: string
-    https?: boolean
-    account?: string
-    password?: string
-    rememberMe?: boolean
-    artistFolders?: string[]
-    [key: string]: unknown
-  }
   [key: string]: unknown
 }

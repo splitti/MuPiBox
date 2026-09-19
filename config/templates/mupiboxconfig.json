@@ -262,14 +262,6 @@
 		"cachepath": "/home/dietpi/.cache/spotify",
 		"cachestate": true
 	},
-	"synology": {
-		"address": "",
-		"https": false,
-		"account": "",
-		"password": "",
-		"rememberMe": false,
-		"artistFolders": []
-	},
 	"timeout": {
 		"idlePiShutdown": "0",
 		"idleDisplayOff": "10",
