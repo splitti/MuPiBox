@@ -122,7 +122,9 @@ export class HomePage extends SwiperIonicEventsHelper {
   protected async artistCoverClicked(artist: Artist): Promise<void> {
     // Check if this is a standalone playlist (playlist without artist)
     const isPlayableNasFolder = artist.coverMedia?.type === 'nas' && !artist.coverMedia.nasIsContainer
-    if (isPlayableNasFolder || (artist.coverMedia?.playlistid && !artist.coverMedia?.artist)) {
+    const isPlayableLibraryFolder =
+      artist.coverMedia?.type === 'library' && !!artist.coverMedia.libraryPath && !artist.coverMedia.libraryIsContainer
+    if (isPlayableNasFolder || isPlayableLibraryFolder || (artist.coverMedia?.playlistid && !artist.coverMedia?.artist)) {
       // This is a standalone playlist - start playback directly
       const navigationExtras: NavigationExtras = {
         state: {
@@ -137,8 +139,13 @@ export class HomePage extends SwiperIonicEventsHelper {
           artist: artist,
           category: this.category(),
         },
-        // NAS levels are identified by their folder path (see MedialistPage).
-        queryParams: artist.coverMedia?.type === 'nas' ? { nas: artist.coverMedia.nasPath } : undefined,
+        // NAS / local folder levels are identified by their folder path (see MedialistPage).
+        queryParams:
+          artist.coverMedia?.type === 'nas'
+            ? { nas: artist.coverMedia.nasPath }
+            : artist.coverMedia?.libraryPath
+              ? { lib: artist.coverMedia.libraryPath }
+              : undefined,
       }
       this.router.navigate(['/medialist'], navigationExtras)
     }

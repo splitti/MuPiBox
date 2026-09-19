@@ -2298,6 +2298,176 @@ app.get('/api/synology/download/status', (_req, res) => {
   res.json(nasDownloadStatus)
 })
 
+// --------------------------------------------
+// Local library (~/MuPiBox/media/<category>/...)
+// --------------------------------------------
+// The local audiobook/music/other folders are read live from disk on every
+// request, in any folder depth - the same idea as the NAS tab. Changes made in
+// the file explorer (Samba share) therefore show up the next time a tab is
+// opened, with no "reload media database" step. Spotify, podcast and radio
+// entries are not touched here; they still come from data.json.
+
+const libraryRoot = '/home/dietpi/MuPiBox/media'
+const libraryCategories = ['audiobook', 'music', 'other']
+
+// Normalizes a relative library path like "audiobook/Artist/Album"; undefined if
+// it is not inside one of the library categories (also blocks "..").
+function libraryRel(relPath: string): string | undefined {
+  const parts = nasPathParts(relPath)
+  if (!parts || parts.length === 0 || !libraryCategories.includes(parts[0])) {
+    return undefined
+  }
+  return parts.join('/')
+}
+
+async function libraryListFiles(relPath: string): Promise<SynologyFileEntry[]> {
+  const rel = libraryRel(relPath)
+  if (!rel) {
+    throw new Error(`Invalid library path: ${relPath}`)
+  }
+  const entries = await readdir(path.join(libraryRoot, rel), { withFileTypes: true })
+  return entries
+    .filter((entry) => !entry.name.startsWith('.'))
+    .map((entry) => ({ name: entry.name, path: `${rel}/${entry.name}`, isdir: entry.isDirectory() }))
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }))
+}
+
+// Prefers a file called "cover.*", otherwise the first image in the folder.
+function libraryFindCover(files: SynologyFileEntry[]): string | undefined {
+  const images = files.filter((f) => !f.isdir && /\.(jpe?g|png)$/i.test(f.name))
+  return (images.find((f) => /^cover\./i.test(f.name)) ?? images[0])?.path
+}
+
+// An artist folder without a picture of its own gets the cover of the first album
+// below it (as the old media database did) - looked up a couple of levels deep.
+async function libraryFindCoverBelow(files: SynologyFileEntry[], depth: number): Promise<string | undefined> {
+  if (depth <= 0) {
+    return undefined
+  }
+  for (const sub of files.filter((f) => f.isdir).slice(0, 5)) {
+    try {
+      const subFiles = await libraryListFiles(sub.path)
+      const cover = libraryFindCover(subFiles) ?? (await libraryFindCoverBelow(subFiles, depth - 1))
+      if (cover) {
+        return cover
+      }
+    } catch {
+      // Unreadable folder - try the next one.
+    }
+  }
+  return undefined
+}
+
+function libraryFileUrl(relPath: string): string {
+  return `/api/library/file?path=${encodeURIComponent(relPath)}`
+}
+
+async function libraryBuildEntry(
+  relPath: string,
+  artistName: string,
+  title: string,
+  fallbackCoverPath?: string,
+): Promise<Record<string, unknown>> {
+  const files = await libraryListFiles(relPath)
+  const isContainer = synologyIsContainer(files)
+  const coverPath =
+    libraryFindCover(files) ?? (isContainer ? await libraryFindCoverBelow(files, 2) : undefined) ?? fallbackCoverPath
+  return {
+    type: 'library',
+    category: relPath.split('/')[0],
+    artist: artistName,
+    title,
+    libraryPath: relPath,
+    // A folder with only subfolders (no audio files) opens the next level instead of playing.
+    libraryIsContainer: isContainer,
+    cover: coverPath ? libraryFileUrl(coverPath) : undefined,
+    artistcover: coverPath ? libraryFileUrl(coverPath) : undefined,
+  }
+}
+
+// Top-level folders of one category = the "artists" shown in that tab.
+app.get('/api/library/artists', async (req, res) => {
+  const category = typeof req.query.category === 'string' ? req.query.category : ''
+  if (!libraryCategories.includes(category)) {
+    res.json([])
+    return
+  }
+
+  try {
+    const top = await libraryListFiles(category)
+    const entries = await Promise.all(
+      top
+        .filter((f) => f.isdir)
+        .map(async (folder) => {
+          try {
+            return await libraryBuildEntry(folder.path, folder.name, folder.name)
+          } catch (error) {
+            console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Skipping unreadable folder ${folder.path}: ${error}`)
+            return undefined
+          }
+        }),
+    )
+    res.json(entries.filter((entry) => entry !== undefined))
+  } catch (error) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to list library category ${category}: ${error}`)
+    res.json([])
+  }
+})
+
+// Subfolders of one library folder, one level deeper.
+app.get('/api/library/children', async (req, res) => {
+  const folderPath = typeof req.query.path === 'string' ? req.query.path : ''
+  if (!libraryRel(folderPath)) {
+    res.status(400).json([])
+    return
+  }
+
+  try {
+    const files = await libraryListFiles(folderPath)
+    const parentName = folderPath.split('/').filter(Boolean).pop() ?? folderPath
+    const parentCoverPath = libraryFindCover(files)
+
+    const entries = await Promise.all(
+      files
+        .filter((f) => f.isdir)
+        .map(async (sub) => {
+          try {
+            return await libraryBuildEntry(sub.path, parentName, sub.name, parentCoverPath)
+          } catch (error) {
+            console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Skipping unreadable folder ${sub.path}: ${error}`)
+            return undefined
+          }
+        }),
+    )
+    res.json(entries.filter((entry) => entry !== undefined))
+  } catch (error) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to list library folder ${folderPath}: ${error}`)
+    res.json([])
+  }
+})
+
+// Cover images (and audio) of library folders, with Range support.
+app.get('/api/library/file', async (req, res) => {
+  const rel = libraryRel(typeof req.query.path === 'string' ? req.query.path : '')
+  const contentType = rel ? nasContentTypes[path.extname(rel).toLowerCase()] : undefined
+  if (!rel || !contentType) {
+    res.status(400).send('Invalid path')
+    return
+  }
+
+  const file = path.join(libraryRoot, rel)
+  try {
+    const info = await stat(file)
+    if (!info.isFile()) {
+      res.status(404).send('Not found')
+      return
+    }
+    nasServeLocalFile(req, res, file, info.size)
+  } catch {
+    res.status(404).send('Not found')
+  }
+})
+
 app.post('/api/telegram/screen', (req, res) => {
   fs.readFile(mupiboxConfigPath, 'utf8', (err, data) => {
     if (err) {

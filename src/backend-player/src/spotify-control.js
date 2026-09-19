@@ -106,7 +106,11 @@ player.on('track-change', () => player.getProps(['filename']))
 player.on('path', (val) => {
   console.log('track path is', val)
   if (currentMeta.currentType !== 'rss' && currentMeta.currentType !== 'radio' && currentMeta.currentType !== 'nas') {
-    currentMeta.album = val.split('/')[7]
+    // The folder holding the file, whatever the folder depth (was: fixed 7th segment).
+    const pathParts = val.split('/')
+    if (pathParts.length > 2) {
+      currentMeta.album = pathParts[pathParts.length - 2]
+    }
   }
 })
 player.on('track-change', () => player.getProps(['path']))
@@ -698,9 +702,30 @@ function playMe() {
   }
 }
 
+const localAudioPattern = /\.(mp3|flac|wav|wma|ogg|m4a)$/i
+
+function listLocalAudioFiles(dir) {
+  return fs
+    .readdirSync(dir)
+    .filter((name) => localAudioPattern.test(name))
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }))
+}
+
+// Local albums are read straight from their folder, so files added or removed in
+// the file explorer are picked up without any "reload media database" run.
+function refreshLocalPlaylist(albumDir) {
+  try {
+    const files = listLocalAudioFiles(albumDir)
+    fs.writeFileSync(`${albumDir}/playlist.m3u`, `${files.join('\n')}\n`)
+  } catch (error) {
+    log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Could not refresh playlist.m3u for ${albumDir}: ${error}`)
+  }
+}
+
 function playList(playedList) {
   //let playedTitel = playedList.split('album:').pop();
   playedTitelmod = decodeURI(playedList).replace(/:/g, '/')
+  refreshLocalPlaylist(`/home/dietpi/MuPiBox/media/${playedTitelmod}`)
   //playedTitelmod = playedTitel.replace(/%20/g," ");
   log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Starting currentMeta.playing:${playedTitelmod}`)
   //currentMeta.playing = true;
@@ -720,20 +745,12 @@ function playList(playedList) {
     cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Start playing local"')
   //if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Local.py');
 
-  setTimeout(() => {
-    const cmdtotalTracks = `find "/home/dietpi/MuPiBox/media/${decodeURIComponent(currentMeta.path)}" -type f -name "*.mp3" -or -name "*.flac" -or -name "*.m4a" -or -name "*.wma" -or -name "*.wav"| wc -l`
-    console.log(cmdtotalTracks)
-    const exec = require('node:child_process').exec
-    exec(cmdtotalTracks, (e, stdout, stderr) => {
-      if (e instanceof Error) {
-        console.error(e)
-        throw e
-      }
-      currentMeta.totalTracks = Number.parseInt(stdout.split(/\r?\n/)[0], 10)
-      console.log('stdout', stdout)
-      console.log('stderr', stderr)
-    })
-  }, 500)
+  // Same list as the playlist.m3u that was just written (also counts upper-case extensions).
+  try {
+    currentMeta.totalTracks = listLocalAudioFiles(`/home/dietpi/MuPiBox/media/${playedTitelmod}`).length
+  } catch (error) {
+    log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Could not count tracks: ${error}`)
+  }
 }
 
 // Plays a Synology NAS folder live: the tracklist and stream URLs are fetched
@@ -1089,29 +1106,29 @@ app.get('/spotify/token', (_req, res) => {
   }
 })
 
-/*returns the track list of a local library album, read from its playlist.m3u*/
+/*returns the track list of a local library album, read live from its folder*/
 app.get('/local/tracklist/:encoded', (req, res) => {
   const playedTitelmod = decodeURI(req.params.encoded).replace(/:/g, '/')
-  const playlistFile = `/home/dietpi/MuPiBox/media/${playedTitelmod}/playlist.m3u`
+  if (playedTitelmod.split('/').includes('..')) {
+    res.status(400).json({ error: 'invalid path' })
+    return
+  }
 
-  fs.readFile(playlistFile, 'utf8', (err, data) => {
-    if (err) {
-      res.status(404).json({ error: 'playlist not found' })
-      return
-    }
+  let files
+  try {
+    files = listLocalAudioFiles(`/home/dietpi/MuPiBox/media/${playedTitelmod}`)
+  } catch (_err) {
+    res.status(404).json({ error: 'album folder not found' })
+    return
+  }
 
-    const tracks = data
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter((line) => line.length > 0 && !line.startsWith('#'))
-      .map((filename, index) => {
-        const nameWithoutExt = filename.replace(/\.[^./]+$/, '')
-        const title = nameWithoutExt.replace(/^\d+\s*[-._]?\s*/, '') || nameWithoutExt
-        return { position: index + 1, name: title }
-      })
-
-    res.json(tracks)
+  const tracks = files.map((filename, index) => {
+    const nameWithoutExt = filename.replace(/\.[^./]+$/, '')
+    const title = nameWithoutExt.replace(/^\d+\s*[-._]?\s*/, '') || nameWithoutExt
+    return { position: index + 1, name: title }
   })
+
+  res.json(tracks)
 })
 
 /*returns the track list of a NAS folder, listed live from the Synology (no local cache)*/
@@ -1143,13 +1160,13 @@ app.use((req, res) => {
   if (command.dir.includes('library')) {
     currentMeta.currentPlayer = 'mplayer'
     currentMeta.currentType = 'local'
-    playList(command.name)
+    playList(command.base)
   }
 
   if (command.dir.includes('nas')) {
     currentMeta.currentPlayer = 'mplayer'
     currentMeta.currentType = 'nas'
-    playNasList(command.name)
+    playNasList(command.base)
   }
 
   if (command.dir.includes('radio')) {

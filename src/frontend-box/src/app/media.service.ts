@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
-import { firstValueFrom, from, iif, interval, Observable, of, Subject } from 'rxjs'
-import { map, mergeAll, mergeMap, shareReplay, switchMap, toArray } from 'rxjs/operators'
+import { firstValueFrom, forkJoin, from, iif, interval, Observable, of, Subject } from 'rxjs'
+import { catchError, map, mergeAll, mergeMap, shareReplay, switchMap, toArray } from 'rxjs/operators'
 import { environment } from '../environments/environment'
 import type { AlbumStop } from './albumstop'
 import type { Artist } from './artist'
@@ -314,6 +314,12 @@ export class MediaService {
 
   // Collect albums from a given artist in the current category
   public fetchMediaFromArtist(artist: Artist, category: CategoryType): Observable<Media[]> {
+    if (artist.coverMedia?.libraryPath) {
+      // Local folder: list one level live from disk.
+      return this.http.get<Media[]>(
+        `${this.getApiBackendUrl()}/library/children?path=${encodeURIComponent(artist.coverMedia.libraryPath)}`,
+      )
+    }
     if (category === 'nas' && artist.coverMedia?.nasPath) {
       // NAS folders can be nested any number of levels deep; every level is
       // listed live from the NAS, one level at a time.
@@ -432,7 +438,21 @@ export class MediaService {
       // below entirely - the backend already returns ready-to-use Media[].
       return this.http.get<Media[]>(`${this.getApiBackendUrl()}/synology/artists`)
     }
-    return this.updateMedia(`${this.getApiBackendUrl()}/data`, false, category)
+    const dataMedia = this.updateMedia(`${this.getApiBackendUrl()}/data`, false, category)
+
+    if (category === 'audiobook' || category === 'music' || category === 'other') {
+      // Local files are read live from the media folders (any folder depth), so
+      // changes made in the file explorer show up right away - no "reload media
+      // database" needed. Everything that is not a local file (Spotify, podcasts,
+      // radio) still comes from data.json, unchanged.
+      const localFolders = this.http
+        .get<Media[]>(`${this.getApiBackendUrl()}/library/artists?category=${category}`)
+        .pipe(catchError(() => of([] as Media[])))
+      return forkJoin([dataMedia, localFolders]).pipe(
+        map(([data, local]) => [...data.filter((item) => item.type !== 'library'), ...local]),
+      )
+    }
+    return dataMedia
   }
 
   // Get the media data for the current category from the server

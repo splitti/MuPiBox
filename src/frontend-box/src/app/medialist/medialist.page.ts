@@ -64,6 +64,27 @@ export class MedialistPage extends SwiperIonicEventsHelper {
     // driven by the `nas` query param (which also makes "back" show the level
     // above again), instead of only by the one-time navigation state above.
     this.route.queryParamMap.subscribe((params) => {
+      const libraryPath = params.get('lib')
+      if (libraryPath) {
+        // Local folder level, e.g. "audiobook/Artist" (see MediaService.fetchMediaFromArtist).
+        const parts = libraryPath.split('/').filter(Boolean)
+        const name = parts[parts.length - 1] ?? libraryPath
+        this.category.set(parts[0] as CategoryType)
+        this.artist.set({
+          name,
+          albumCount: '1',
+          cover: '',
+          coverMedia: {
+            type: 'library',
+            category: parts[0] as CategoryType,
+            artist: name,
+            title: name,
+            libraryPath,
+            libraryIsContainer: true,
+          },
+        })
+      }
+
       const nasPath = params.get('nas')
       if (nasPath) {
         const name = nasPath.split('/').filter(Boolean).pop() ?? nasPath
@@ -122,6 +143,12 @@ export class MedialistPage extends SwiperIonicEventsHelper {
   }
 
   protected coverClicked(clickedMedia: Media): void {
+    if (clickedMedia.type === 'library' && clickedMedia.libraryPath && clickedMedia.libraryIsContainer) {
+      // A local folder holding only subfolders: show its children as the next level.
+      this.router.navigate(['/medialist'], { queryParams: { lib: clickedMedia.libraryPath } })
+      return
+    }
+
     if (clickedMedia.type === 'nas' && clickedMedia.nasIsContainer) {
       // A NAS folder holding only subfolders: show its children as the next level.
       // The query param keeps the URL distinct so Angular doesn't ignore the navigation.
