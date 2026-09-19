@@ -98,6 +98,14 @@
 		$CHANGE_TXT=$CHANGE_TXT."<li>IP Control disabled - Services restarted</li>";
 		}
 
+	if( isset($_POST['nav_tabs_save']) )
+		{
+		// $navTabsHidden was already worked out from the submitted form in header.php
+		$data["mupibox"]["hiddenTabs"]=$navTabsHidden;
+		$change=2;
+		$CHANGE_TXT=$CHANGE_TXT."<li>Visible tabs saved</li>";
+		}
+
 	if( $_POST['spotifydebug'] == "Controller Debugging Off - turn on" )
 		{
 		$sdcommand='sudo su -c \'sed -i "s/\"logLevel\": \"error\"/\"logLevel\": \"debug\"/g" /home/dietpi/.mupibox/spotifycontroller-main/config/config.json\'';
@@ -303,6 +311,17 @@
 				<p>Reboot or shutdown MuPiBox...</p>
 				<input id="saveForm" class="button_text" type="submit" name="reboot" value="Reboot MuPiBox" onclick="return confirm('Do really want to reboot?');" />
 				<input id="saveForm" class="button_text" type="submit" name="shutdown" value="Shutdown MuPiBox"  onclick="return confirm('Do really want to shutdown?');" />
+			</li>
+			<li class="li_norm">
+				<p>Tabs in the top navigation - uncheck a tab to hide it. Home, MuPiBox and Admin are always shown.</p>
+				<label style="display:inline-block; margin-right:14px;"><input type="checkbox" checked="checked" disabled="disabled" /> Home</label>
+				<label style="display:inline-block; margin-right:14px;"><input type="checkbox" checked="checked" disabled="disabled" /> MuPiBox</label>
+<?php foreach ($navTabsHideable as $tabKey => $tabLabel) { ?>
+				<label style="display:inline-block; margin-right:14px;"><input type="checkbox" name="nav_tabs_show[]" value="<?= $tabKey ?>" <?= navTabHidden($tabKey) ? '' : 'checked="checked"' ?> /> <?= htmlspecialchars($tabLabel) ?></label>
+<?php } ?>
+				<label style="display:inline-block; margin-right:14px;"><input type="checkbox" checked="checked" disabled="disabled" /> Admin</label>
+				<br/><br/>
+				<input id="saveForm" class="button_text" type="submit" name="nav_tabs_save" value="Save tabs" />
 			</li>
 		</ul>
 	</details>
