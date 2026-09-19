@@ -2147,11 +2147,48 @@ async function nasPruneExcept(nasDir: string, keep: string[]): Promise<void> {
     if (keep.includes(child)) {
       continue
     }
+    // Cover images of parent folders belong to the folders below them.
+    if (!entry.isDirectory() && /\.(jpe?g|png)$/i.test(entry.name)) {
+      continue
+    }
     if (entry.isDirectory() && keep.some((k) => k.startsWith(`${child}/`))) {
       await nasPruneExcept(child, keep)
       continue
     }
     await rm(path.join(dir, entry.name), { recursive: true, force: true })
+  }
+}
+
+async function nasLocalHasImage(dir: string): Promise<boolean> {
+  try {
+    const entries = await readdir(dir, { withFileTypes: true })
+    return entries.some((entry) => entry.isFile() && /\.(jpe?g|png)$/i.test(entry.name))
+  } catch {
+    return false
+  }
+}
+
+// A downloaded folder is often shown under an artist whose cover lives in a parent
+// folder (e.g. /music/Artist/cover.jpg). Fetch those covers too, so the artist
+// still has its picture when the NAS is not reachable.
+async function nasDownloadParentCovers(folder: string, checked: Set<string>): Promise<void> {
+  const parts = nasPathParts(folder) ?? []
+  for (let length = 1; length < parts.length; length++) {
+    const ancestor = `/${parts.slice(0, length).join('/')}`
+    if (checked.has(ancestor)) {
+      continue
+    }
+    checked.add(ancestor)
+
+    const dir = nasLocalPath(ancestor)
+    if (dir && (await nasLocalHasImage(dir))) {
+      continue
+    }
+    const files = await withSynologySession((session) => synologyListFiles(session, ancestor, true))
+    const cover = files?.find((file) => !file.isdir && /\.(jpe?g|png)$/i.test(file.name))
+    if (cover) {
+      await nasDownloadFile(cover.path, cover.additional?.size ?? -1)
+    }
   }
 }
 
@@ -2172,6 +2209,18 @@ async function runNasSync(): Promise<void> {
 
     status.message = 'Removing local copies that are no longer selected...'
     await nasPruneExcept('/', desired)
+
+    if (desired.length > 0 && (await getActiveSynologySession())) {
+      status.message = 'Downloading covers of parent folders...'
+      const checkedParents = new Set<string>()
+      for (const folder of desired) {
+        try {
+          await nasDownloadParentCovers(folder, checkedParents)
+        } catch (error) {
+          console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] NAS parent cover download failed for ${folder}: ${error}`)
+        }
+      }
+    }
 
     const pending = desired.filter((folder) => !nasIsDownloaded(folder))
     if (pending.length === 0) {
