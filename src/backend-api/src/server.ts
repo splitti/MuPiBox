@@ -1609,6 +1609,38 @@ function synologyStreamUrl(filePath: string): string {
   return `/api/synology/stream?path=${encodeURIComponent(filePath)}`
 }
 
+// A folder that holds no audio files but only subfolders is a "container": the
+// kids' UI drills into it like an artist level instead of trying to play it.
+// This allows any number of nesting levels.
+function synologyIsContainer(files: SynologyFileEntry[]): boolean {
+  const hasAudio = files.some((f) => !f.isdir && synologyAudioExtensions.some((ext) => f.name.toLowerCase().endsWith(ext)))
+  const hasSubfolders = files.some((f) => f.isdir)
+  return !hasAudio && hasSubfolders
+}
+
+// Builds the ready-to-use Media entry for one NAS folder (live listing).
+async function synologyBuildMediaEntry(
+  session: SynologySession,
+  folderPath: string,
+  artistName: string,
+  title: string,
+  fallbackCoverPath?: string,
+): Promise<Record<string, unknown>> {
+  const files = await synologyListFiles(session, folderPath)
+  const ownCoverPath = synologyFindCoverImage(files)
+  const coverPath = ownCoverPath ?? fallbackCoverPath
+  return {
+    type: 'nas',
+    category: 'nas',
+    artist: artistName,
+    title,
+    nasPath: folderPath,
+    nasIsContainer: synologyIsContainer(files),
+    cover: coverPath ? synologyStreamUrl(coverPath) : undefined,
+    artistcover: coverPath ? synologyStreamUrl(coverPath) : undefined,
+  }
+}
+
 async function updateSynologyConfig(partial: Record<string, unknown>): Promise<void> {
   const current = await getMupiboxConfig()
   if (!current) {
@@ -1709,59 +1741,67 @@ app.get('/api/synology/artists', async (_req, res) => {
     const config = await getMupiboxConfig()
     const artistFolders = config?.synology?.artistFolders ?? []
 
+    // One entry per marked folder. Deeper levels are loaded on demand via
+    // /api/synology/children as the user navigates, so this stays cheap.
     const results = await withSynologySession(async (session) => {
-      const media: Record<string, unknown>[] = []
-
-      for (const artistPath of artistFolders) {
-        try {
-          const files = await synologyListFiles(session, artistPath)
-          const subfolders = files.filter((f) => f.isdir)
-          const artistName = artistPath.split('/').filter(Boolean).pop() ?? artistPath
-          const artistCoverPath = synologyFindCoverImage(files)
-          const artistcover = artistCoverPath ? synologyStreamUrl(artistCoverPath) : undefined
-
-          if (subfolders.length > 0) {
-            for (const sub of subfolders) {
-              const subFiles = await synologyListFiles(session, sub.path)
-              const coverPath = synologyFindCoverImage(subFiles) ?? artistCoverPath
-              media.push({
-                type: 'nas',
-                category: 'nas',
-                artist: artistName,
-                title: sub.name,
-                nasPath: sub.path,
-                cover: coverPath ? synologyStreamUrl(coverPath) : undefined,
-                artistcover,
-              })
-            }
-          } else {
-            // Flat folder (audio files directly inside, no album subfolders):
-            // treat the artist folder itself as its own single title too.
-            media.push({
-              type: 'nas',
-              category: 'nas',
-              artist: artistName,
-              title: artistName,
-              nasPath: artistPath,
-              cover: artistcover,
-              artistcover,
-            })
+      const entries = await Promise.all(
+        artistFolders.map(async (artistPath) => {
+          try {
+            const artistName = artistPath.split('/').filter(Boolean).pop() ?? artistPath
+            return await synologyBuildMediaEntry(session, artistPath, artistName, artistName)
+          } catch (error) {
+            // Skip just this one folder (e.g. deleted on the NAS since it was
+            // marked) instead of failing the whole NAS category.
+            console.error(
+              `${new Date().toLocaleString()}: [MuPiBox-Server] Skipping missing/unreadable NAS folder ${artistPath}: ${error}`,
+            )
+            return undefined
           }
-        } catch (error) {
-          // Skip just this one folder (e.g. deleted on the NAS since it was
-          // marked) instead of failing the whole NAS category.
-          console.error(
-            `${new Date().toLocaleString()}: [MuPiBox-Server] Skipping missing/unreadable NAS folder ${artistPath}: ${error}`,
-          )
-        }
-      }
-
-      return media
+        }),
+      )
+      return entries.filter((entry) => entry !== undefined)
     })
 
     res.json(results ?? [])
   } catch (error) {
     console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to list NAS artists: ${error}`)
+    res.json([])
+  }
+})
+
+// Lists the subfolders of one NAS folder as ready-to-use Media entries (one
+// level deeper), live from the NAS. Used by the kids' UI to drill down.
+app.get('/api/synology/children', async (req, res) => {
+  const folderPath = typeof req.query.path === 'string' ? req.query.path : ''
+  if (!folderPath) {
+    res.status(400).json([])
+    return
+  }
+
+  try {
+    const children = await withSynologySession(async (session) => {
+      const files = await synologyListFiles(session, folderPath)
+      const parentName = folderPath.split('/').filter(Boolean).pop() ?? folderPath
+      const parentCoverPath = synologyFindCoverImage(files)
+      const subfolders = files.filter((f) => f.isdir)
+
+      const entries = await Promise.all(
+        subfolders.map(async (sub) => {
+          try {
+            return await synologyBuildMediaEntry(session, sub.path, parentName, sub.name, parentCoverPath)
+          } catch (error) {
+            console.error(
+              `${new Date().toLocaleString()}: [MuPiBox-Server] Skipping unreadable NAS folder ${sub.path}: ${error}`,
+            )
+            return undefined
+          }
+        }),
+      )
+      return entries.filter((entry) => entry !== undefined)
+    })
+    res.json(children ?? [])
+  } catch (error) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to list NAS children of ${folderPath}: ${error}`)
     res.json([])
   }
 })

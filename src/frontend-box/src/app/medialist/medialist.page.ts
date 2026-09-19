@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, Signal, signal, WritableSignal } from '@angular/core'
 import { toObservable, toSignal } from '@angular/core/rxjs-interop'
-import { NavigationExtras, Router } from '@angular/router'
+import { ActivatedRoute, NavigationExtras, Router } from '@angular/router'
 import { IonBackButton, IonButtons, IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular/standalone'
 import { addIcons } from 'ionicons'
 import { arrowBackOutline } from 'ionicons/icons'
@@ -49,6 +49,7 @@ export class MedialistPage extends SwiperIonicEventsHelper {
 
   constructor(
     private router: Router,
+    private route: ActivatedRoute,
     private mediaService: MediaService,
     private artworkService: ArtworkService,
   ) {
@@ -57,6 +58,24 @@ export class MedialistPage extends SwiperIonicEventsHelper {
 
     this.artist.set(this.router.currentNavigation()?.extras.state?.artist)
     this.category.set(this.router.currentNavigation()?.extras.state?.category ?? 'audiobook')
+
+    // NAS folders can be nested several levels deep. Ionic keeps this same page
+    // instance when only the query param changes, so the current NAS level is
+    // driven by the `nas` query param (which also makes "back" show the level
+    // above again), instead of only by the one-time navigation state above.
+    this.route.queryParamMap.subscribe((params) => {
+      const nasPath = params.get('nas')
+      if (nasPath) {
+        const name = nasPath.split('/').filter(Boolean).pop() ?? nasPath
+        this.category.set('nas')
+        this.artist.set({
+          name,
+          albumCount: '1',
+          cover: '',
+          coverMedia: { type: 'nas', category: 'nas', artist: name, title: name, nasPath, nasIsContainer: true },
+        })
+      }
+    })
 
     this.media = toSignal(
       combineLatest([toObservable(this.category), toObservable(this.artist)]).pipe(
@@ -103,6 +122,13 @@ export class MedialistPage extends SwiperIonicEventsHelper {
   }
 
   protected coverClicked(clickedMedia: Media): void {
+    if (clickedMedia.type === 'nas' && clickedMedia.nasIsContainer) {
+      // A NAS folder holding only subfolders: show its children as the next level.
+      // The query param keeps the URL distinct so Angular doesn't ignore the navigation.
+      this.router.navigate(['/medialist'], { queryParams: { nas: clickedMedia.nasPath } })
+      return
+    }
+
     const navigationExtras: NavigationExtras = {
       state: {
         media: clickedMedia,

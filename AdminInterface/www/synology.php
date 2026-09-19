@@ -172,6 +172,8 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 				<li id="li_1"><p>No subfolders here.</p></li>
 			<?php } ?>
 			<li class="buttons">
+				<input class="button_text" type="button" value="Select all" onclick="document.querySelectorAll('input[name=\'artist_folders[]\']').forEach(function (box) { box.checked = true; });" />
+				<input class="button_text" type="button" value="Unselect all" onclick="document.querySelectorAll('input[name=\'artist_folders[]\']').forEach(function (box) { box.checked = false; });" />
 				<input id="saveForm" class="button_text" type="submit" name="synology_save_selection" value="Save selection" />
 			</li>
 		</ul>

@@ -314,6 +314,13 @@ export class MediaService {
 
   // Collect albums from a given artist in the current category
   public fetchMediaFromArtist(artist: Artist, category: CategoryType): Observable<Media[]> {
+    if (category === 'nas' && artist.coverMedia?.nasPath) {
+      // NAS folders can be nested any number of levels deep; every level is
+      // listed live from the NAS, one level at a time.
+      return this.http.get<Media[]>(
+        `${this.getApiBackendUrl()}/synology/children?path=${encodeURIComponent(artist.coverMedia.nasPath)}`,
+      )
+    }
     return this.fetchMedia(category).pipe(
       map((media: Media[]) => {
         return media.filter((currentMedia) => currentMedia.artist === artist.name)

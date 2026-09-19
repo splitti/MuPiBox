@@ -39,6 +39,9 @@ export interface Media {
   // Full Synology path of this entry's folder, used for NAS media (type: 'nas')
   // to browse/stream it live instead of resolving a local file path.
   nasPath?: string
+  // True for a NAS folder that only contains subfolders (no audio files): it is
+  // drilled into like an artist level instead of being played.
+  nasIsContainer?: boolean
 }
 
 // Cache interface for storing album/playlist/show/audiobook information
