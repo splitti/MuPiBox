@@ -268,11 +268,23 @@ rm -f /tmp/mupibox-update-failed
 
 	echo -e "XXX\n${STEP}\nSetup DietPi-Dashboard... \nXXX"	
 	before=$(date +%s)
-	mkdir /opt/dietpi-dashboard >&3 2>&3
-	rm /opt/dietpi-dashboard/dietpi-dashboard >&3 2>&3
-	curl -fL "$(curl -sSf 'https://api.github.com/repos/nonnorm/DietPi-Dashboard/releases/latest' | mawk -F\" "/\"browser_download_url\": \".*dietpi-dashboard-$(uname -m)\"/{print \$4}")" -o /opt/dietpi-dashboard/dietpi-dashboard >&3 2>&3
-	chmod +x /opt/dietpi-dashboard/dietpi-dashboard >&3 2>&3
-	curl -sSfL https://raw.githubusercontent.com/nonnorm/DietPi-Dashboard/v0.6.2/config.toml -o /opt/dietpi-dashboard/config.toml  >&3 2>&3
+	mkdir -p /opt/dietpi-dashboard >&3 2>&3
+	# Download to a temporary file first and replace the installed program only if that worked
+	# (before, a failed download - e.g. a DNS problem - left the dashboard without its program).
+	DD_TMP=$(mktemp /tmp/dietpi-dashboard.XXXXXX)
+	DD_URL="$(curl -sSf --retry 3 --retry-delay 2 -m 30 'https://api.github.com/repos/nonnorm/DietPi-Dashboard/releases/latest' 2>&3 | mawk -F\" "/\"browser_download_url\": \".*dietpi-dashboard-$(uname -m)\"/{print \$4}")"
+	[ -z "${DD_URL}" ] && DD_URL="https://github.com/nonnorm/DietPi-Dashboard/releases/download/v0.6.2/dietpi-dashboard-$(uname -m)"
+	if curl -fL --retry 3 --retry-delay 3 -m 180 -o "${DD_TMP}" "${DD_URL}" >&3 2>&3 && [ "$(head -c 4 "${DD_TMP}" | od -An -c | tr -d ' ')" = "177ELF" ]; then
+		install -m 755 "${DD_TMP}" /opt/dietpi-dashboard/dietpi-dashboard >&3 2>&3
+	else
+		echo "DietPi-Dashboard download failed - keeping the installed version" >&3 2>&3
+	fi
+	rm -f "${DD_TMP}"
+	DD_CONF_TMP=$(mktemp /tmp/dietpi-dashboard-conf.XXXXXX)
+	if curl -sSfL --retry 3 --retry-delay 3 -m 60 https://raw.githubusercontent.com/nonnorm/DietPi-Dashboard/v0.6.2/config.toml -o "${DD_CONF_TMP}" >&3 2>&3 && [ -s "${DD_CONF_TMP}" ]; then
+		cp -f "${DD_CONF_TMP}" /opt/dietpi-dashboard/config.toml >&3 2>&3
+	fi
+	rm -f "${DD_CONF_TMP}"
 	#bash -c 'su dietpi -c "yes \"\" | sudo /boot/dietpi/dietpi-software install 200"' >&3 2>&3
 	/usr/bin/sed -i 's/#terminal_user = "root"/terminal_user = "dietpi"/g' /opt/dietpi-dashboard/config.toml >&3 2>&3
 	#sudo /usr/bin/sed -i 's/pass = true/pass = false/g' /opt/dietpi-dashboard/config.toml >&3 2>&3
