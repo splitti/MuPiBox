@@ -222,7 +222,7 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 			</li>
 		</ul>
 	</form>
-	<p><a href="synology.php?relogin=1">Use a different NAS login</a></p>
+	<p style="padding-left:25px;"><a href="synology.php?relogin=1">Use a different NAS login</a></p>
 <?php } ?>
 
 <script>
