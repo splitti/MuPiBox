@@ -1,5 +1,5 @@
 <!-- Cover Flow: the centered cover faces front, the others are tilted in 3D like in Apple's Cover Flow. -->
-  <swiper-container #swiper effect="coverflow" centered-slides="true" slides-per-view="auto" grab-cursor="true" coverflow-effect-rotate="65" coverflow-effect-stretch="-55" coverflow-effect-depth="250" coverflow-effect-modifier="1" coverflow-effect-slide-shadows="false" scrollbar="true" scrollbar-hide="false" scrollbar-draggable="true" scrollbar-drag-size="auto" scrollbar-snap-on-release="true">
+  <swiper-container #swiper (click)="containerClicked($event)" effect="coverflow" centered-slides="true" slides-per-view="auto" grab-cursor="true" coverflow-effect-rotate="65" coverflow-effect-stretch="-55" coverflow-effect-depth="250" coverflow-effect-modifier="1" coverflow-effect-slide-shadows="false" scrollbar="true" scrollbar-hide="false" scrollbar-draggable="true" scrollbar-drag-size="auto" scrollbar-snap-on-release="true">
     @for (currentData of shownData(); track currentData; let i = $index) {
       <swiper-slide>
         <ion-grid>

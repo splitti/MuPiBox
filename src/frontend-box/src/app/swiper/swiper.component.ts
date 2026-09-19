@@ -92,6 +92,32 @@ export class SwiperComponent<T> {
     this.elementClicked.emit(item)
   }
 
+  // The browser does not deliver clicks on the strongly tilted side covers to the
+  // cover itself (the event lands on the swiper). Find the tapped slide by position;
+  // covers nearer to the center are on top, so they are checked first.
+  protected containerClicked(event: MouseEvent): void {
+    if (event.target !== event.currentTarget) {
+      return
+    }
+    const swiper = this.swiper()
+    if (!swiper) {
+      return
+    }
+    const slides = Array.from(swiper.slides) as HTMLElement[]
+    const byDistance = slides
+      .map((slide, index) => ({ slide, index }))
+      .sort((a, b) => Math.abs(a.index - swiper.activeIndex) - Math.abs(b.index - swiper.activeIndex))
+    for (const { slide, index } of byDistance) {
+      const rect = slide.getBoundingClientRect()
+      if (event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom) {
+        if (index !== swiper.activeIndex) {
+          swiper.slideTo(index, 300)
+        }
+        return
+      }
+    }
+  }
+
   protected readText(text: string): void {
     this.playerService.sayText(text)
   }
