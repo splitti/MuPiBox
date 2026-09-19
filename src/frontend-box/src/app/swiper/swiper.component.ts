@@ -156,7 +156,7 @@ export class SwiperComponent<T> {
   }
 
   // A short list is not scrolled: the covers are spread over the whole width, the first
-  // one starting 20px from the left edge and the last ending 20px from the right edge.
+  // one at the left edge and the last at the right edge of the screen.
   // The selected cover faces front, all others are tilted towards it; tapping another
   // cover selects it. How wide a tilted cover looks depends on perspective and position,
   // so the layout is measured and corrected a few times instead of calculated once.
@@ -171,7 +171,7 @@ export class SwiperComponent<T> {
       swiper.scrollbar.el.style.display = 'none'
     }
 
-    const margin = 20
+    const margin = 0
     const flatWidth = 300
     const angle = 65
     const depth = 100
