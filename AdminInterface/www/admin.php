@@ -77,14 +77,6 @@
 	$dataonline = json_decode($onlinejson, true);
 	include ('includes/header.php');
 
-	if( $_POST['id3tags'] )
-		{
-		$command = "sudo /usr/local/bin/mupibox/./id3tag_converter.sh";
-		exec($command);
-		$CHANGE_TXT=$CHANGE_TXT."<li>ID3-Tags converted</li>";
-		$change=4;
-		}
-
 	if( $_POST['ip_control_backend'] == "enable" )
 		{
 		$data["mupibox"]["ip_control_backend"]=true;
@@ -204,13 +196,6 @@
 		exec($command, $output, $result );
 		$change=3;
 		$CHANGE_TXT=$CHANGE_TXT."<li>OS is up to date.</li>";
-		}
-	if( $_POST['m3u'] )
-		{
-		$command = "sudo /usr/local/bin/mupibox/./m3u_generator.sh";
-		exec($command, $output, $result );
-		$change=3;
-		$CHANGE_TXT=$CHANGE_TXT."<li>Cleaning and updating media data complete</li>";
 		}
 	if( $_POST['shutdown'] )
 		{
@@ -348,21 +333,6 @@
 <?php } ?>
 				<br/><br/>
 				<input id="saveForm" class="button_text" type="submit" name="display_cats_save" value="Save categories" onclick="if (document.querySelectorAll('input[name=\'hide_categories[]\']:checked').length >= 4) { alert('At least one category must stay visible.'); return false; }" />
-			</li>
-		</ul>
-	</details>
-
-	<details  id="musicdatabase">
-		<summary><i class="fa-sharp fa-solid fa-music"></i> Music database</summary>
-		<ul>
-			<li class="li_norm"><h2>Clean and update music database</h2>
-				<p>This job generates offline playlists, cleans up old data and links local covers to playlists. Run this job after adding or deleting local media.</p>
-				<input id="saveForm" class="button_text" type="submit" name="m3u" value="Update mediadata" />
-			</li>
-
-			<li class="li_norm"><h2>Convert ID3-Tags</h2>
-				<p>Sometimes ID3 tags are not displayed correctly (for example the German umlauts). This converter can help displaying the characters correctly.</p>
-				<input id="saveForm" class="button_text" type="submit" name="id3tags" value="Update ID3-Tags" />
 			</li>
 		</ul>
 	</details>

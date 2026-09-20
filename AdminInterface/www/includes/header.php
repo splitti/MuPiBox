@@ -69,11 +69,6 @@
 		$change=99;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Restart Chrome kiosk</li>";
 		}
-	if ($_GET['hrefreshdatabase']) {
-		exec("sudo /usr/local/bin/mupibox/./m3u_generator.sh");
-		$change=99;
-		$CHANGE_TXT=$CHANGE_TXT."<li>Update media database finished</li>";
-		}
 		
 	$mupihat_file = '/tmp/mupihat.json';
 	$mupihat_state = false;
