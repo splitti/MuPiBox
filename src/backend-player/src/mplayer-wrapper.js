@@ -4,7 +4,6 @@ const { spawn } = require('node:child_process')
 const fs = require('node:fs')
 const os = require('node:os')
 const path = require('node:path')
-const byLine = require('byline')
 const debug = require('debug')('mplayer-wrapper')
 
 const parsers = require('./parsers')
@@ -107,10 +106,21 @@ const createPlayer = () => {
     if (matches.length > 0) out.emit('cache-fill', Number.parseFloat(matches[matches.length - 1][1]))
   })
 
-  proc.stdout.pipe(byLine.createStream()).on('data', (line) => {
-    const text = Buffer.isBuffer(line) ? line.toString() : line
-    // Status text is written with carriage returns and can sit in front of an answer.
-    onLine(text.includes('\r') ? text.slice(text.lastIndexOf('\r') + 1) : text)
+  // Lines are split from the raw bytes (byline would turn them into UTF-8 text first and
+  // destroy Latin-1 characters before decodeLine sees them).
+  let pending = Buffer.alloc(0)
+  proc.stdout.on('data', (chunk) => {
+    pending = Buffer.concat([pending, chunk])
+    let end = pending.indexOf(10)
+    while (end >= 0) {
+      const text = decodeLine(pending.subarray(0, end))
+      pending = pending.subarray(end + 1)
+      // Status text is written with carriage returns and can sit in front of an answer.
+      onLine(text.includes('\r') ? text.slice(text.lastIndexOf('\r') + 1) : text)
+      end = pending.indexOf(10)
+    }
+    // Status text without a line break must not pile up.
+    if (pending.length > 65536) pending = Buffer.alloc(0)
   })
 
   out.exec = exec
@@ -127,6 +137,19 @@ const createPlayer = () => {
   out.stop = stop
   out.close = close
   return out
+}
+
+// mplayer prints tag text (ID3 title, ...) exactly as it is stored. Many files carry it in
+// Latin-1/Windows-1252 (umlauts, sharp s, ...), which is not valid UTF-8 and used to
+// turn into replacement characters. So: UTF-8 if the bytes are valid UTF-8, else Windows-1252.
+const utf8Strict = new TextDecoder('utf-8', { fatal: true })
+const windows1252 = new TextDecoder('windows-1252')
+function decodeLine(buffer) {
+  try {
+    return utf8Strict.decode(buffer)
+  } catch {
+    return windows1252.decode(buffer)
+  }
 }
 
 module.exports = createPlayer
