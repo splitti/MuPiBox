@@ -2,5 +2,5 @@
   @if (monitorOff()) {
     <div class="mupi-monitor-blocker" (click)="$event.stopPropagation()"></div>
   }
-  <ion-router-outlet></ion-router-outlet>
+  <ion-router-outlet [animated]="animatePages()"></ion-router-outlet>
 </ion-app>
