@@ -60,6 +60,7 @@ export class SwiperComponent<T> {
   private static readonly FEW_COVERS = 10
   private selectedIndex = 0
   private snapUntil = 0
+  private introDone = false
 
   // The Cover Flow look belongs to the "coverflow" theme (Mupi-conf > MuPiBox settings > Theme);
   // with any other theme the lists look like they always did. The scrollbar can be hidden
@@ -102,6 +103,7 @@ export class SwiperComponent<T> {
       // gliding there from whatever layout they had before looked like shaking while a page
       // change was animating.
       this.snapUntil = Date.now() + 900
+      this.introDone = false
       setTimeout(() => this.applyCoverflow(), 0)
       // The swiper's scrollbar only exists a moment later.
       setTimeout(() => this.applyCoverflow(), 400)
@@ -342,7 +344,16 @@ export class SwiperComponent<T> {
     }
     if (!this.dragging) {
       this.selectedIndex = Math.min(this.selectedIndex, slides.length - 1)
-      this.renderFewCovers(swiper, this.selectedIndex, slides[0].style.transform !== '' && Date.now() > this.snapUntil)
+      if (Date.now() <= this.snapUntil) {
+        // Fresh slides: they fade in and rise into their final place, starting from a clean
+        // state. Later calls in this window must not disturb that.
+        if (!this.introDone && this.fewLayouts) {
+          this.introDone = true
+          this.playFewCoversIntro(swiper, slides)
+        }
+        return
+      }
+      this.renderFewCovers(swiper, this.selectedIndex, slides[0].style.transform !== '')
     }
   }
 
@@ -473,6 +484,25 @@ export class SwiperComponent<T> {
       slide.style.transform = `translateX(${-moved}px) perspective(1000px) translateX(${shift}px) translateZ(${z}px) rotateY(${mix(a.rotate, b.rotate)}deg)`
       slide.style.zIndex = String(1000 - Math.round(Math.abs(index - position) * 10))
     })
+  }
+
+  private playFewCoversIntro(swiper: Swiper, slides: HTMLElement[]): void {
+    // Start state: final layout, 40px lower and invisible, without any transition.
+    this.renderFewCovers(swiper, this.selectedIndex, false)
+    slides.forEach((slide) => {
+      slide.style.opacity = '0'
+      slide.style.transform = `translateY(40px) ${slide.style.transform}`
+    })
+    // Two frames later the start state has been painted; now everything glides to its place.
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        this.renderFewCovers(swiper, this.selectedIndex, true)
+        slides.forEach((slide) => {
+          slide.style.transition = 'transform 0.45s ease-out, opacity 0.45s ease-out'
+          slide.style.opacity = '1'
+        })
+      }),
+    )
   }
 
   // Back to the scrolling Cover Flow (e.g. when the list grows past the threshold).
