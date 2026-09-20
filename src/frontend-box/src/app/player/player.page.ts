@@ -135,6 +135,10 @@ export class PlayerPage implements OnInit, AfterViewInit {
 
     if (this.router.currentNavigation()?.extras.state?.media) {
       this.media = this.router.currentNavigation().extras.state.media
+      // Known right away, so the cover is there when the page opens (see CoverFlipService).
+      if (this.media.cover && this.media.type !== 'spotify') {
+        this.cover = this.artworkService.cachedCoverUrl(this.media, this.media.cover)
+      }
       if (this.media.category === 'resume') {
         this.resumePlay = true
       }

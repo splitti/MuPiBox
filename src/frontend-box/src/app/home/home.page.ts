@@ -11,6 +11,7 @@ import {
   IonSegment,
   IonSegmentButton,
   IonToolbar,
+  NavController,
 } from '@ionic/angular/standalone'
 import { addIcons } from 'ionicons'
 import {
@@ -27,6 +28,7 @@ import { environment } from 'src/environments/environment'
 
 import type { Artist } from '../artist'
 import { ArtworkService } from '../artwork.service'
+import { CoverFlipService } from '../cover-flip.service'
 import { LoadingComponent } from '../loading/loading.component'
 import type { CategoryType } from '../media'
 import { MediaService } from '../media.service'
@@ -80,6 +82,8 @@ export class HomePage extends SwiperIonicEventsHelper {
     private artworkService: ArtworkService,
     private router: Router,
     private http: HttpClient,
+    private navController: NavController,
+    private coverFlip: CoverFlipService,
   ) {
     super()
     addIcons({ timerOutline, bookOutline, musicalNotesOutline, radioOutline, serverOutline, cloudOutline, cloudOfflineOutline })
@@ -154,7 +158,7 @@ export class HomePage extends SwiperIonicEventsHelper {
           media: artist.coverMedia,
         },
       }
-      this.router.navigate(['/player'], navigationExtras)
+      void this.navController.navigateForward(['/player'], { ...navigationExtras, animation: this.coverFlip.animation })
     } else {
       // This is a regular artist - navigate to medialist
       const navigationExtras: NavigationExtras = {

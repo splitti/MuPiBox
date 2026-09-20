@@ -20,6 +20,7 @@ import { Observable } from 'rxjs'
 import Swiper from 'swiper'
 import { environment } from '../../environments/environment'
 import type { MupiboxConfig } from '../mupibox-config.model'
+import { CoverFlipService } from '../cover-flip.service'
 import { PlayerService } from '../player.service'
 
 export interface SwiperData<T> {
@@ -71,6 +72,7 @@ export class SwiperComponent<T> {
 
   public constructor(
     private playerService: PlayerService,
+    private coverFlip: CoverFlipService,
     http: HttpClient,
   ) {
     http.get<MupiboxConfig>(`${environment.backend.apiUrl}/config`).subscribe({
@@ -559,6 +561,7 @@ export class SwiperComponent<T> {
       })
       const item = (this.shownData() ?? [])[index]
       if (item) {
+        this.coverFlip.capture(slides[index])
         this.elementClicked.emit(item)
       }
       return
@@ -584,6 +587,7 @@ export class SwiperComponent<T> {
       }
       const item = (this.shownData() ?? [])[index]
       if (item) {
+        this.coverFlip.capture(slide)
         this.elementClicked.emit(item)
       }
       return

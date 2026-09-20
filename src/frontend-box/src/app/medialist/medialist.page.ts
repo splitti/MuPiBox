@@ -17,6 +17,7 @@ import { catchError, combineLatest, map, of, switchMap, tap } from 'rxjs'
 
 import type { Artist } from '../artist'
 import { ArtworkService } from '../artwork.service'
+import { CoverFlipService } from '../cover-flip.service'
 import { LoadingComponent } from '../loading/loading.component'
 import { CategoryType, Media, MediaSorting } from '../media'
 import { MediaService } from '../media.service'
@@ -71,6 +72,7 @@ export class MedialistPage extends SwiperIonicEventsHelper {
     private mediaService: MediaService,
     private artworkService: ArtworkService,
     private navController: NavController,
+    private coverFlip: CoverFlipService,
   ) {
     super()
     addIcons({ arrowBackOutline })
@@ -200,7 +202,7 @@ export class MedialistPage extends SwiperIonicEventsHelper {
         media: clickedMedia,
       },
     }
-    this.router.navigate(['/player'], navigationExtras)
+    void this.navController.navigateForward(['/player'], { ...navigationExtras, animation: this.coverFlip.animation })
   }
 
   private sortMedia(coverMedia: Media, media: Media[], defaultSorting: MediaSorting): Media[] {
