@@ -1,3 +1,14 @@
+<h3>Custom NAS version (Beta 5.0.0) - this fork</h3>
+Changes compared to the stable version. The complete list is in the admin under Home > MuPiBox-News.
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>New: NAS tab (WebDAV), folder tree in the admin, "Download local", resume for NAS content.</li>
+<li id='linews' class='linews'>New: theme "coverflow" - 3D Cover Flow lists, cover flip animation to the player and back, scrollbar option.</li>
+<li id='linews' class='linews'>Update: podcasts open much faster, cover pictures are cached as thumbnails, radio covers are saved on the box, loading ring while streams buffer.</li>
+<li id='linews' class='linews'>Update: live local library (no media database update), track list, back arrow goes up one level, correct umlauts in track titles.</li>
+<li id='linews' class='linews'>Update: WiFi list with signal and band (2.4/5 GHz), tolerant WiFi monitor, new Bluetooth and settings pages.</li>
+<li id='linews' class='linews'>Update: safer update script, unused packages removed (see DEPENDENCIES.md), "Music database" section removed from the admin.</li>
+</ul>
+
 <h3>OS-Support</h3>
 We will focus on <b>bookworm</b> and recommend you to update, or reinstall. See also this dietpi-article: <a href=https://dietpi.com/blog/?p=3128>https://dietpi.com/blog/?p=3128</a>
 

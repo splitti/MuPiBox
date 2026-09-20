@@ -107,6 +107,7 @@
 						<li>Album, track name and track number are shown for local and NAS content.</li>
 						<li>Radio streams and podcasts show a loading ring in the middle of the cover while they are buffered: the ring gets smaller as the buffer fills and disappears when playback starts.</li>
 						<li>The track list uses the font of the active theme.</li>
+						<li>Track titles with umlauts, sharp s and a-ring (ID3 tags stored as Latin-1) are shown correctly instead of question marks.</li>
 					</ul>
 					<b>Display</b>
 					<ul>
@@ -118,21 +119,32 @@
 						<li>Covers load much faster: large cover pictures are shown as small thumbnails (made once with python3-pil and cached; without it the originals are used).</li>
 						<li>New theme "coverflow" (Mupi-conf > MuPiBox settings > Theme): the album/artist lists are shown like Apple's Cover Flow - the centered cover faces front, the others are tilted in 3D with a mirror image below, 300x300 covers without frames or titles. Short lists (under 10) fill the screen width. Tap a side cover to bring it to the center, tap the centered one to open it. With any other theme the lists look as before.</li>
 						<li>New option "Hide horizontal scrollbar" below the theme preview (Mupi-conf > MuPiBox settings) hides the scrollbar of the cover lists for every theme.</li>
+						<li>Cover Flow, opening a title: the tapped cover turns around by 180 degrees and settles on the place of the cover in the player while the player fades in. Leaving the player with the arrow plays it in reverse order.</li>
+						<li>Cover Flow, short lists: 4 to 9 covers reach the screen edges and follow the finger, 3 or fewer are a plain row of equal covers. New lists fade in without shaking; the scrollbar shows the position.</li>
+						<li>The back arrow of a list goes up one folder level (it no longer jumps back to the player). A list that has been loading for a minute is reloaded automatically.</li>
+						<li>The WiFi list shows the band next to the signal: 2.4 GHz, 5 GHz or both (for the connected network also the band in use).</li>
 					</ul>
-					<b>Podcasts</b>
+					<b>Podcasts and radio</b>
 					<ul>
 						<li>Podcast feeds and covers are cached on disk (survive a reboot) and refreshed in the background; missing covers are downloaded again automatically. Episode images load on demand, long lists stay fast.</li>
 						<li>Long podcasts open much faster: only title, audio file, date and image of each episode are read and cached (a 3 MB feed shrinks to about 350 KB), feeds are refreshed at most every 15 minutes, and the backend is no longer blocked while a feed is processed.</li>
 						<li>Podcast pictures: episode covers (often 2 MB) are shown as small thumbnails, downloaded at most three at a time, and only for the covers that are in view; the newest episodes are prepared in the background after start.</li>
+						<li>Radio streams: cover pictures are saved on the box and shown from there. If the cover address changes, the new picture is downloaded again.</li>
 					</ul>
 					<b>Admin</b>
 					<ul>
 						<li>Control system > tab visibility: hide admin tabs (Home, MuPiBox and Admin always stay visible).</li>
+						<li>The "Music database" section (update mediadata, ID3 converter) was removed - the lists read the folders live, and title tags are decoded correctly by the player.</li>
+					</ul>
+					<b>Network</b>
+					<ul>
+						<li>Tolerant WiFi monitor: DietPi re-connected the WiFi (about 15 seconds without network) as soon as one ping to the router was lost. Now three pings are sent per check and it only re-connects after three failed checks in a row, so podcasts and NAS content no longer disappear for short dropouts.</li>
 					</ul>
 					<b>Update</b>
 					<ul>
 						<li>Safer update script: files are downloaded and verified before anything is changed, config and data are backed up first, and a failed download aborts the update instead of leaving a broken installation.</li>
 						<li>The update script can install a branch of this fork directly.</li>
+						<li>Packages nothing uses any more are no longer installed; DEPENDENCIES.md in the project lists what MuPiBox needs and why (including librespot, which is only needed for Spotify).</li>
 					</ul>
 				</p>
 				</li>
