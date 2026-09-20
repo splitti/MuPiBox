@@ -80,7 +80,12 @@ service mupi_idle_shutdown stop
 #   libwidevinecdm0 - Widevine is only needed for DRM playback in the browser; the code has no Spotify web player (Spotify plays through librespot)
 #   autoconf - only needed to compile fbv (dev/compile_scripts/fbv.sh); fbv ships prebuilt in bin/fbv
 #   automake - only needed to compile fbv (dev/compile_scripts/fbv.sh); fbv ships prebuilt in bin/fbv
-packages2install="lighttpd-mod-openssl gpiod git libasound2 mplayer pulseaudio-module-bluetooth pip bluez zip rrdtool scrot net-tools wireless-tools bc build-essential python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt libgles2-mesa preload python3-smbus2 pigpio libjson-c-dev libi2c-dev python3-alsaaudio python3-netifaces python3-flask python3-pil"
+# The changes of this list apply to DEV installs only; stable and beta keep the list they always had.
+if [ "$RELEASE" != "dev" ]; then
+  packages2install="lighttpd-mod-openssl gpiod git libasound2 mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt libgles2-mesa mesa-utils libsdl2-dev preload python3-smbus2 pigpio libjson-c-dev i2c-tools libi2c-dev python3-smbus python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask"
+else
+  packages2install="lighttpd-mod-openssl gpiod git libasound2 mplayer pulseaudio-module-bluetooth pip bluez zip rrdtool scrot net-tools wireless-tools bc build-essential python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt libgles2-mesa preload python3-smbus2 pigpio libjson-c-dev libi2c-dev python3-alsaaudio python3-netifaces python3-flask python3-pil"
+fi
 packages2remove="jq"
 STEP=0
 VER_JSON="/tmp/version.json"
@@ -147,7 +152,9 @@ rm -f /tmp/mupibox-update-failed
 	mkdir /home/dietpi/MuPiBox/media/audiobook >&3 2>&3	
 	mkdir /home/dietpi/MuPiBox/media/music >&3 2>&3
 	mkdir /home/dietpi/MuPiBox/media/other >&3 2>&3
-	mkdir /home/dietpi/MuPiBox/media/NAS >&3 2>&3
+	if [ "$RELEASE" = "dev" ]; then
+		mkdir /home/dietpi/MuPiBox/media/NAS >&3 2>&3
+	fi
 	mkdir /home/dietpi/MuPiBox/media/cover >&3 2>&3
 	mkdir /home/dietpi/MuPiBox/media/youtube-dl >&3 2>&3
 	chown dietpi:dietpi /home/dietpi/MuPiBox/media/audiobook >&3 2>&3
@@ -595,9 +602,11 @@ rm -f /tmp/mupibox-update-failed
 	mv -f ${MUPI_SRC}/config/services/mupi_autoconnect-wifi.service /etc/systemd/system/mupi_autoconnect-wifi.service  >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/mupi_mqtt.service /etc/systemd/system/mupi_mqtt.service  >&3 2>&3
 
-	# Tolerant replacement for DietPi's WiFi monitor (see scripts/mupibox/wifi_monitor.sh)
-	mkdir -p /etc/systemd/system/dietpi-wifi-monitor.service.d >&3 2>&3
-	cp -f ${MUPI_SRC}/config/services/dietpi-wifi-monitor-override.conf /etc/systemd/system/dietpi-wifi-monitor.service.d/override.conf >&3 2>&3
+	# Tolerant replacement for DietPi's WiFi monitor (see scripts/mupibox/wifi_monitor.sh): only versions that ship it
+	if [ "$RELEASE" = "dev" ] && [ -f ${MUPI_SRC}/config/services/dietpi-wifi-monitor-override.conf ]; then
+		mkdir -p /etc/systemd/system/dietpi-wifi-monitor.service.d >&3 2>&3
+		cp -f ${MUPI_SRC}/config/services/dietpi-wifi-monitor-override.conf /etc/systemd/system/dietpi-wifi-monitor.service.d/override.conf >&3 2>&3
+	fi
 
 	systemctl daemon-reload >&3 2>&3
 	if systemctl list-unit-files dietpi-wifi-monitor.service 2>/dev/null | grep -q dietpi-wifi-monitor; then
