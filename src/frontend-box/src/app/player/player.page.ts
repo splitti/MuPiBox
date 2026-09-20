@@ -41,6 +41,7 @@ import { environment } from '../../environments/environment'
 import type { AlbumStop } from '../albumstop'
 import type { CurrentMPlayer } from '../current.mplayer'
 import type { CurrentSpotify } from '../current.spotify'
+import { ArtworkService } from '../artwork.service'
 import { LogService } from '../log.service'
 import type { Media } from '../media'
 import { MediaService } from '../media.service'
@@ -127,6 +128,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
     private navController: NavController,
     private playerService: PlayerService,
     private spotifyService: SpotifyService,
+    private artworkService: ArtworkService,
   ) {
     this.spotify$ = this.mediaService.current$
     this.local$ = this.mediaService.local$
@@ -183,7 +185,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
       if (this.media?.type === 'spotify' && spotify?.item?.album?.images?.[0]?.url) {
         this.cover = spotify.item.album.images[0].url
       } else if (this.media?.cover) {
-        this.cover = this.media.cover
+        this.cover = this.artworkService.cachedCoverUrl(this.media, this.media.cover)
       } else {
         this.cover = '../assets/images/nocover_mupi.png'
       }
