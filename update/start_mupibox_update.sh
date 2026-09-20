@@ -585,7 +585,14 @@ rm -f /tmp/mupibox-update-failed
 	mv -f ${MUPI_SRC}/config/services/mupi_autoconnect-wifi.service /etc/systemd/system/mupi_autoconnect-wifi.service  >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/mupi_mqtt.service /etc/systemd/system/mupi_mqtt.service  >&3 2>&3
 
+	# Tolerant replacement for DietPi's WiFi monitor (see scripts/mupibox/wifi_monitor.sh)
+	mkdir -p /etc/systemd/system/dietpi-wifi-monitor.service.d >&3 2>&3
+	cp -f ${MUPI_SRC}/config/services/dietpi-wifi-monitor-override.conf /etc/systemd/system/dietpi-wifi-monitor.service.d/override.conf >&3 2>&3
+
 	systemctl daemon-reload >&3 2>&3
+	if systemctl list-unit-files dietpi-wifi-monitor.service 2>/dev/null | grep -q dietpi-wifi-monitor; then
+		systemctl restart dietpi-wifi-monitor.service >&3 2>&3
+	fi
 	if [ "$RELEASE" != "dev" ]; then
 		systemctl enable librespot.service >&3 2>&3
 		systemctl start librespot.service >&3 2>&3
