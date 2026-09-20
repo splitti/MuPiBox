@@ -22,7 +22,7 @@
 </ul>
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>Redesigned WiFi settings: status card with signal and IP, list of available networks sorted by signal strength (saved networks out of range are greyed out), connect, change password and delete saved networks.</li>
-<li id='linews' class='linews'>Open hidden settings by pressing and holding the status icon for 6 seconds (duration set with "Access to settings" in the admin) instead of clicking ten times.</li>
+<li id='linews' class='linews'><b>Open hidden settings by pressing and holding the status icon for 6 seconds (duration set with "Access to settings" in the admin) instead of clicking ten times.</b></li>
 <li id='linews' class='linews'>The WiFi list shows the band next to the signal: 2.4 GHz, 5 GHz or both (for the connected network also the band in use).</li>
 <li id='linews' class='linews'>New Bluetooth settings page.</li>
 </ul>
