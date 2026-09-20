@@ -335,7 +335,8 @@ export class SwiperComponent<T> {
     }
     swiper.allowTouchMove = false
     if (swiper.scrollbar?.el) {
-      swiper.scrollbar.el.style.display = 'none'
+      swiper.scrollbar.el.style.display = ''
+      swiper.scrollbar.el.style.pointerEvents = 'none' // only shows where the selection is
     }
     const key = `${slides.length}:${swiper.width}`
     if (!this.fewLayouts || this.fewLayoutKey !== key) {
@@ -345,7 +346,7 @@ export class SwiperComponent<T> {
     if (!this.dragging) {
       this.selectedIndex = Math.min(this.selectedIndex, slides.length - 1)
       if (Date.now() <= this.snapUntil) {
-        // Fresh slides: they fade in and rise into their final place, starting from a clean
+        // Fresh slides: they fade in at their final place, starting from a clean
         // state. Later calls in this window must not disturb that.
         if (!this.introDone && this.fewLayouts) {
           this.introDone = true
@@ -484,15 +485,28 @@ export class SwiperComponent<T> {
       slide.style.transform = `translateX(${-moved}px) perspective(1000px) translateX(${shift}px) translateZ(${z}px) rotateY(${mix(a.rotate, b.rotate)}deg)`
       slide.style.zIndex = String(1000 - Math.round(Math.abs(index - position) * 10))
     })
+    this.showFewCoversScrollbar(swiper, position, slides.length, animate)
+  }
+
+  // The swiper does not scroll in this mode, so its scrollbar is driven by hand: the thumb
+  // moves along the track with the (fractional) selection.
+  private showFewCoversScrollbar(swiper: Swiper, position: number, count: number, animate: boolean): void {
+    const track = swiper.scrollbar?.el as HTMLElement | undefined
+    const thumb = swiper.scrollbar?.dragEl as HTMLElement | undefined
+    if (!track || !thumb || count < 2) {
+      return
+    }
+    const trackWidth = track.clientWidth
+    const thumbWidth = Math.max(trackWidth / count, 40)
+    thumb.style.transition = animate ? 'transform 0.4s ease' : 'none'
+    thumb.style.width = `${thumbWidth}px`
+    thumb.style.transform = `translate3d(${(position / (count - 1)) * (trackWidth - thumbWidth)}px, 0, 0)`
   }
 
   private playFewCoversIntro(swiper: Swiper, slides: HTMLElement[]): void {
-    // Start state: final layout, 40px lower and invisible, without any transition.
+    // Start state: final layout, invisible, without any transition.
     this.renderFewCovers(swiper, this.selectedIndex, false)
-    slides.forEach((slide) => {
-      slide.style.opacity = '0'
-      slide.style.transform = `translateY(40px) ${slide.style.transform}`
-    })
+    slides.forEach((slide) => (slide.style.opacity = '0'))
     // Two frames later the start state has been painted; now everything glides to its place.
     requestAnimationFrame(() =>
       requestAnimationFrame(() => {
@@ -510,6 +524,9 @@ export class SwiperComponent<T> {
     swiper.allowTouchMove = true
     if (swiper.scrollbar?.el) {
       swiper.scrollbar.el.style.display = ''
+    }
+    if (swiper.scrollbar?.el) {
+      swiper.scrollbar.el.style.pointerEvents = ''
     }
     for (const slide of Array.from(swiper.slides) as HTMLElement[]) {
       slide.style.transition = ''
