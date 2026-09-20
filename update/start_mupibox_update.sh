@@ -13,14 +13,10 @@ elif [ "$1" = "branch" ]; then
     exit 1
   fi
   # Optional 3rd/4th args let this install from a fork instead of splitti/MuPiBox,
-  # and give the resulting install a custom version label (e.g. "Beta 5.0.0 Custom NAS version")
+  # and give the resulting install a custom version label (e.g. "DEV 5.0.0")
   # instead of the auto-generated "DEV <branch> <date>" string.
   REPO="${3:-splitti/MuPiBox}"
   VERSION_LABEL="$4"
-  # The branches of this fork share one version name.
-  if [ -z "$VERSION_LABEL" ] && { [ "$BRANCH" = "synology-nas" ] || [ "$BRANCH" = "custom-changes" ]; } && [ "$REPO" = "Lippsson/MuPiBox" ]; then
-    VERSION_LABEL="Beta 5.0.0 Custom NAS version"
-  fi
   BRANCH_EXISTS=$(curl -s -o /dev/null -w "%{http_code}" https://api.github.com/repos/${REPO}/branches/${BRANCH})
   if [ "$BRANCH_EXISTS" != "200" ]; then
     echo "Error: Branch '${BRANCH}' does not exist on GitHub repo '${REPO}'"
@@ -122,7 +118,7 @@ if [ -n "$BRANCH" ]; then
     VERSION_LONG="DEV ${BRANCH} $(curl -s 'https://api.github.com/repos/'"$REPO"'/branches/'"$BRANCH" | jq -r '.commit.commit.committer.date' | cut -d'T' -f1)" >&3 2>&3
   fi
 elif [ "$RELEASE" = "dev" ]; then
-	VERSION_LONG="DEV $(curl -s "https://api.github.com/repos/splitti/MuPiBox" | jq -r '.pushed_at' | cut -d'T' -f1)"  >&3 2>&3
+	VERSION_LONG="DEV ${VERSION} $(curl -s "https://api.github.com/repos/splitti/MuPiBox" | jq -r '.pushed_at' | cut -d'T' -f1)"  >&3 2>&3
 else
 	VERSION_LONG="${VERSION} ${RELEASE}"
 fi

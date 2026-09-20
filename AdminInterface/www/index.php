@@ -88,11 +88,11 @@
 						</table></p>
 				<p><h2>MuPiBox-News</h2>
 					<?php
-						// The changelog text comes from news.txt of this fork on GitHub - there is no copy of it in the admin.
-						$news_url = 'https://raw.githubusercontent.com/Lippsson/MuPiBox/custom-changes/news.txt';
+						// The changelog text comes from news.txt on GitHub - there is no copy of it in the admin.
+						$news_url = 'https://raw.githubusercontent.com/splitti/MuPiBox/main/news.txt';
 						$news_text = @file_get_contents($news_url, false, stream_context_create(['http' => ['timeout' => 8]]));
 						if ($news_text === false || trim($news_text) === '') {
-							print 'The news could not be loaded (no connection to GitHub). See <a href="https://github.com/Lippsson/MuPiBox/blob/custom-changes/news.txt" target="_blank">news.txt</a>.';
+							print 'The news could not be loaded (no connection to GitHub). See <a href="https://github.com/splitti/MuPiBox/blob/main/news.txt" target="_blank">news.txt</a>.';
 						} else {
 							print $news_text;
 						}

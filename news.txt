@@ -1,4 +1,4 @@
-<h3>Custom NAS version (Beta 5.0.0) - changes compared to the stable version</h3>
+<h3>DEV 5.0.0 - changes compared to the stable version</h3>
 <b>NAS as a media source</b>
 </ul>
 <ul id='ulnews' class='ulnews'>
