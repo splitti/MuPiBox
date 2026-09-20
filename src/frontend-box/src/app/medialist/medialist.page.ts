@@ -175,7 +175,7 @@ export class MedialistPage extends SwiperIonicEventsHelper {
     if (above !== undefined) {
       this.router.navigate(['/medialist'], { queryParams: above, replaceUrl: true })
     } else {
-      this.navController.back()
+      this.navController.pop()
     }
   }
 
