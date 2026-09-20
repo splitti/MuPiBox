@@ -42,6 +42,7 @@ import type { AlbumStop } from '../albumstop'
 import type { CurrentMPlayer } from '../current.mplayer'
 import type { CurrentSpotify } from '../current.spotify'
 import { ArtworkService } from '../artwork.service'
+import { CoverFlipService } from '../cover-flip.service'
 import { LogService } from '../log.service'
 import type { Media } from '../media'
 import { MediaService } from '../media.service'
@@ -129,6 +130,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
     private playerService: PlayerService,
     private spotifyService: SpotifyService,
     private artworkService: ArtworkService,
+    protected coverFlip: CoverFlipService,
   ) {
     this.spotify$ = this.mediaService.current$
     this.local$ = this.mediaService.local$

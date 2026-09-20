@@ -1,7 +1,7 @@
 <ion-header class="player-header">
   <ion-toolbar color="light">
     <ion-buttons slot="start">
-      <ion-back-button icon="arrow-back-outline" defaultHref="/medialist"></ion-back-button>
+      <ion-back-button icon="arrow-back-outline" defaultHref="/medialist" [routerAnimation]="coverFlip.returnAnimation"></ion-back-button>
     </ion-buttons>
     <ion-title class="toolbar-album" #themeFontSource>
       @if (media.type ==='spotify' && currentPlayedSpotify?.currently_playing_type !== 'episode') {
