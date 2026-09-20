@@ -17,8 +17,8 @@ elif [ "$1" = "branch" ]; then
   # instead of the auto-generated "DEV <branch> <date>" string.
   REPO="${3:-splitti/MuPiBox}"
   VERSION_LABEL="$4"
-  # The NAS branch of this fork has its own version name.
-  if [ -z "$VERSION_LABEL" ] && [ "$BRANCH" = "synology-nas" ] && [ "$REPO" = "Lippsson/MuPiBox" ]; then
+  # The branches of this fork share one version name.
+  if [ -z "$VERSION_LABEL" ] && { [ "$BRANCH" = "synology-nas" ] || [ "$BRANCH" = "custom-changes" ]; } && [ "$REPO" = "Lippsson/MuPiBox" ]; then
     VERSION_LABEL="Beta 5.0.0 Custom NAS version"
   fi
   BRANCH_EXISTS=$(curl -s -o /dev/null -w "%{http_code}" https://api.github.com/repos/${REPO}/branches/${BRANCH})
