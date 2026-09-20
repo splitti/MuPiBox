@@ -70,7 +70,17 @@ fi
 LOG="/boot/mupibox_update.log"
 exec 3>${LOG}
 service mupi_idle_shutdown stop
-packages2install="lighttpd-mod-openssl gpiod git libasound2 mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt libgles2-mesa mesa-utils libsdl2-dev preload python3-smbus2 pigpio libjson-c-dev i2c-tools libi2c-dev python3-smbus python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask python3-pil"
+# 2026-09-20: no longer installed (nothing in MuPiBox uses them any more):
+#   id3tool - only the ID3 converter used it; that converter was removed from the admin
+#   python3-gpiozero - no script imports gpiozero (GPIO is done with RPi.GPIO / pigpio / gpiod)
+#   mesa-utils - only diagnostic tools (glxinfo); nothing calls them
+#   libsdl2-dev - no SDL code is built or used (fbv ships as a prebuilt binary)
+#   python3-smbus - unused; the mupihat scripts use python3-smbus2
+#   i2c-tools - no script calls i2cdetect/i2cget/i2cset (I2C is used through python3-smbus2)
+#   libwidevinecdm0 - Widevine is only needed for DRM playback in the browser; the code has no Spotify web player (Spotify plays through librespot)
+#   autoconf - only needed to compile fbv (dev/compile_scripts/fbv.sh); fbv ships prebuilt in bin/fbv
+#   automake - only needed to compile fbv (dev/compile_scripts/fbv.sh); fbv ships prebuilt in bin/fbv
+packages2install="lighttpd-mod-openssl gpiod git libasound2 mplayer pulseaudio-module-bluetooth pip bluez zip rrdtool scrot net-tools wireless-tools bc build-essential python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt libgles2-mesa preload python3-smbus2 pigpio libjson-c-dev libi2c-dev python3-alsaaudio python3-netifaces python3-flask python3-pil"
 packages2remove="jq"
 STEP=0
 VER_JSON="/tmp/version.json"
