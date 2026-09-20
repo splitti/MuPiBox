@@ -24,6 +24,9 @@ Please visit official website  https://mupibox.de/anleitungen/installationsanlei
 ## Dependencies
 See [DEPENDENCIES.md](DEPENDENCIES.md) for what MuPiBox needs (npm packages, system packages, binaries such as librespot, services) and what is no longer used.
 
+## Cover Flow prompt
+[docs/COVERFLOW_PROMPT.md](docs/COVERFLOW_PROMPT.md) is a prompt for an AI coding assistant that rebuilds the Cover Flow theme of this fork in your own MuPiBox project.
+
 ## Based on
 - DietPi (https://dietpi.com/)
 - fbv by godspeed (https://github.com/godspeed1989/fbv)
