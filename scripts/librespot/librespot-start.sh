@@ -1,4 +1,6 @@
 #!/bin/bash
+# DEPRECATED 2026-09-20: replaced by config/services/librespot.service + config/templates/env-librespot, which start librespot now.
+# Kept for reference; nothing in MuPiBox calls it. Safe to delete.
 #
 
 MUPIBOX_CONFIG="/etc/mupibox/mupiboxconfig.json"

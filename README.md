@@ -21,6 +21,9 @@ Please visit official website  https://mupibox.de/anleitungen/installationsanlei
 - <a href="https://paypal.me/EGerhardt" target="_blank">nero</a>
 - <a href="https://paypal.me/splittscheid" target="_blank">splitti</a>
 
+## Dependencies
+See [DEPENDENCIES.md](DEPENDENCIES.md) for what MuPiBox needs (npm packages, system packages, binaries such as librespot, services) and what is no longer used.
+
 ## Based on
 - DietPi (https://dietpi.com/)
 - fbv by godspeed (https://github.com/godspeed1989/fbv)
