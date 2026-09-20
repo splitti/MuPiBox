@@ -59,6 +59,7 @@ export class SwiperComponent<T> {
   // Lists with fewer covers than this are spread over the whole screen instead of scrolled.
   private static readonly FEW_COVERS = 10
   private selectedIndex = 0
+  private snapUntil = 0
 
   // The Cover Flow look belongs to the "coverflow" theme (Mupi-conf > MuPiBox settings > Theme);
   // with any other theme the lists look like they always did. The scrollbar can be hidden
@@ -97,6 +98,10 @@ export class SwiperComponent<T> {
     // New slides need their tilt as soon as they are rendered.
     effect(() => {
       this.shownData()
+      // New slides (or slides that were reused for other content) take their place at once;
+      // gliding there from whatever layout they had before looked like shaking while a page
+      // change was animating.
+      this.snapUntil = Date.now() + 900
       setTimeout(() => this.applyCoverflow(), 0)
       // The swiper's scrollbar only exists a moment later.
       setTimeout(() => this.applyCoverflow(), 400)
@@ -337,7 +342,7 @@ export class SwiperComponent<T> {
     }
     if (!this.dragging) {
       this.selectedIndex = Math.min(this.selectedIndex, slides.length - 1)
-      this.renderFewCovers(swiper, this.selectedIndex, slides[0].style.transform !== '')
+      this.renderFewCovers(swiper, this.selectedIndex, slides[0].style.transform !== '' && Date.now() > this.snapUntil)
     }
   }
 

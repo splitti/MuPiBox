@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http'
-import { ChangeDetectionStrategy, Component, Signal, signal, WritableSignal } from '@angular/core'
+import { ChangeDetectionStrategy, Component, Signal } from '@angular/core'
 import { toSignal } from '@angular/core/rxjs-interop'
 import { IonApp, IonRouterOutlet } from '@ionic/angular/standalone'
 import { distinctUntilChanged, interval, map, Observable, switchMap } from 'rxjs'
@@ -7,7 +7,6 @@ import { environment } from 'src/environments/environment'
 import { DisplayManagerService } from './display-manager.service'
 import { ExternalPlaybackNavigatorService } from './external-playback-navigator.service'
 import { Monitor } from './monitor'
-import { MupiboxConfig } from './mupibox-config.model'
 
 @Component({
   selector: 'app-root',
@@ -18,19 +17,12 @@ import { MupiboxConfig } from './mupibox-config.model'
 })
 export class AppComponent {
   protected monitorOff: Signal<boolean>
-  // The animated page change makes the tilted Cover Flow covers shake on the kiosk's weak GPU,
-  // so the Cover Flow theme switches pages without animation.
-  protected animatePages: WritableSignal<boolean> = signal(true)
 
   public constructor(
     private http: HttpClient,
     _externalPlaybackNavigator: ExternalPlaybackNavigatorService,
     _displayManager: DisplayManagerService,
   ) {
-    this.http.get<MupiboxConfig>(`${environment.backend.apiUrl}/config`).subscribe({
-      next: (config) => this.animatePages.set(config?.mupibox?.theme !== 'coverflow'),
-    })
-
     this.monitorOff = toSignal(
       // 1.5s should be enough to be somewhat "recent".
       interval(1500).pipe(
