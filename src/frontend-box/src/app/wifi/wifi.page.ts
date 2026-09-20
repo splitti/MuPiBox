@@ -87,6 +87,17 @@ export class WifiPage {
     return signal >= 75 ? 4 : signal >= 50 ? 3 : signal >= 25 ? 2 : 1
   }
 
+  // "2.4 GHz", "5 GHz" or "2.4 + 5 GHz" (both). For the connected network the band in use is added
+  // when the network is available on more than one.
+  protected bandText(network: WifiNetwork): string {
+    const bands = [...(network.bands ?? [])].sort((x, y) => Number(x) - Number(y))
+    if (bands.length === 0) {
+      return ''
+    }
+    const text = `${bands.join(' + ')} GHz`
+    return network.current && network.connectedBand && bands.length > 1 ? `${text} (connected on ${network.connectedBand} GHz)` : text
+  }
+
   addNetworkButtonPressed() {
     this.router.navigate(['/wifi/add'])
   }

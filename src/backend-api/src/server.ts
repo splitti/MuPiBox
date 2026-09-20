@@ -844,6 +844,20 @@ function decodeWpaSsid(raw: string): string {
 interface WifiScanEntry {
   signalDbm: number
   secured: boolean
+  bands: string[] // "2.4", "5" (and "6"): every band the network is broadcast on
+}
+
+function wifiBandOf(frequencyMhz: number): string | undefined {
+  if (frequencyMhz >= 2400 && frequencyMhz < 2500) {
+    return '2.4'
+  }
+  if (frequencyMhz >= 4900 && frequencyMhz < 5900) {
+    return '5'
+  }
+  if (frequencyMhz >= 5925) {
+    return '6'
+  }
+  return undefined
 }
 
 // "bssid / frequency / signal level / flags / ssid" per line; the strongest access
@@ -861,9 +875,16 @@ function parseWpaCliScanResults(stdout: string): Map<string, WifiScanEntry> {
     if (Number.isNaN(signalDbm) || ssid.replaceAll('\0', '').trim() === '') {
       continue
     }
+    const band = wifiBandOf(Number.parseInt(parts[1], 10))
     const previous = networks.get(ssid)
+    const bands = new Set(previous?.bands ?? [])
+    if (band) {
+      bands.add(band)
+    }
     if (!previous || signalDbm > previous.signalDbm) {
-      networks.set(ssid, { signalDbm, secured: /WPA|WEP|RSN/.test(parts[3]) })
+      networks.set(ssid, { signalDbm, secured: /WPA|WEP|RSN/.test(parts[3]), bands: [...bands] })
+    } else {
+      previous.bands = [...bands]
     }
   }
   return networks
@@ -882,6 +903,8 @@ interface WifiNetworkInfo {
   signalDbm?: number
   signal?: number
   secured?: boolean
+  bands?: string[] // bands the network is available on ("2.4", "5", "6")
+  connectedBand?: string // the band in use, for the connected network only
 }
 
 // Networks in range (strongest first) merged with the saved ones; saved networks
@@ -906,6 +929,16 @@ app.get('/api/wifi/networks', async (req, res) => {
       console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error reading wifi scan results: ${error}`)
     }
 
+    // The band the box is connected on right now.
+    let connectedBand: string | undefined
+    try {
+      const { stdout: statusOutput } = await execFileAsync('sudo', ['wpa_cli', '-i', 'wlan0', 'status'])
+      const frequency = /^freq=(\d+)/m.exec(statusOutput)?.[1]
+      connectedBand = frequency ? wifiBandOf(Number.parseInt(frequency, 10)) : undefined
+    } catch {
+      // Not connected or wpa_cli busy: no band to show.
+    }
+
     const networks: WifiNetworkInfo[] = []
     for (const configured of parseWpaCliNetworks(configuredOutput)) {
       const ssid = decodeWpaSsid(configured.ssid)
@@ -920,6 +953,8 @@ app.get('/api/wifi/networks', async (req, res) => {
         signalDbm: found?.signalDbm,
         signal: found ? wifiSignalPercent(found.signalDbm) : undefined,
         secured: found?.secured,
+        bands: found?.bands,
+        connectedBand: configured.current ? connectedBand : undefined,
       })
     }
     for (const [ssid, found] of scanned) {
@@ -930,6 +965,7 @@ app.get('/api/wifi/networks', async (req, res) => {
         signalDbm: found.signalDbm,
         signal: wifiSignalPercent(found.signalDbm),
         secured: found.secured,
+        bands: found.bands,
       })
     }
 

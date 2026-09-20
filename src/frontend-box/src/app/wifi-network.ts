@@ -9,6 +9,10 @@ export interface WifiNetwork {
   /** Signal strength in percent, only for networks in range. */
   signal?: number
   secured?: boolean
+  /** Bands the network is available on: "2.4", "5" (and "6"). */
+  bands?: string[]
+  /** The band in use, for the connected network only. */
+  connectedBand?: string
 }
 
 export interface WifiConfiguredNetwork {

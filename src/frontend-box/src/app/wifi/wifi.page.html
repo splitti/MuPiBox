@@ -75,7 +75,7 @@
             </h2>
             <p>
               @if (wifi.available && wifi.signal !== undefined) {
-                Signal {{ wifi.signal }} % ({{ wifi.signalDbm }} dBm)
+                Signal {{ wifi.signal }} % ({{ wifi.signalDbm }} dBm)@if (bandText(wifi); as band) { &nbsp;&middot;&nbsp;{{ band }}}
               } @else if (wifi.available) {
                 In range
               } @else {
