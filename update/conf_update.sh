@@ -58,6 +58,10 @@ CINEMA=$(/usr/bin/cat ${CONFIG} | grep cinema)
 if [[ -z ${CINEMA} ]]; then 
 	/usr/bin/cat <<< $(/usr/bin/jq --arg v "cinema" '.mupibox.installedThemes? += [$v]' ${CONFIG}) >  ${CONFIG}
 fi
+COVERFLOW=$(/usr/bin/jq -r '.mupibox.installedThemes // [] | index("coverflow")' ${CONFIG})
+if [ "${COVERFLOW}" == "null" ]; then
+	/usr/bin/cat <<< $(/usr/bin/jq --arg v "coverflow" '.mupibox.installedThemes? += [$v]' ${CONFIG}) >  ${CONFIG}
+fi
 
 #2.1.0
 LEDMAX=$(/usr/bin/jq -r .shim.ledBrightnessMax ${CONFIG})

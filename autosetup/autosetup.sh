@@ -37,7 +37,17 @@ fi
 rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 
 {
-	packages2install="lighttpd-mod-openssl gpiod git libasound2 mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt libgles2-mesa mesa-utils libsdl2-dev preload python3-smbus2 pigpio libjson-c-dev i2c-tools libi2c-dev python3-smbus python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask"
+	# 2026-09-20: no longer installed (nothing in MuPiBox uses them any more):
+	#   id3tool - only the ID3 converter used it; that converter was removed from the admin
+	#   python3-gpiozero - no script imports gpiozero (GPIO is done with RPi.GPIO / pigpio / gpiod)
+	#   mesa-utils - only diagnostic tools (glxinfo); nothing calls them
+	#   libsdl2-dev - no SDL code is built or used (fbv ships as a prebuilt binary)
+	#   python3-smbus - unused; the mupihat scripts use python3-smbus2
+	#   i2c-tools - no script calls i2cdetect/i2cget/i2cset (I2C is used through python3-smbus2)
+	#   libwidevinecdm0 - Widevine is only needed for DRM playback in the browser; the code has no Spotify web player (Spotify plays through librespot)
+	#   autoconf - only needed to compile fbv (dev/compile_scripts/fbv.sh); fbv ships prebuilt in bin/fbv
+	#   automake - only needed to compile fbv (dev/compile_scripts/fbv.sh); fbv ships prebuilt in bin/fbv
+	packages2install="lighttpd-mod-openssl gpiod git libasound2 mplayer pulseaudio-module-bluetooth pip bluez zip rrdtool scrot net-tools wireless-tools bc build-essential python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt libgles2-mesa preload python3-smbus2 pigpio libjson-c-dev libi2c-dev python3-alsaaudio python3-netifaces python3-flask python3-pil"
 
 	###############################################################################################
 
@@ -80,12 +90,13 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 	###############################################################################################
 
 	if [ "$OS" = "bullseye" ]; then
-		echo -e "XXX\n${STEP}\nInstall package mutagen\nXXX"
-		before=$(date +%s)
-		pip install mutagen >&3 2>&3
-		after=$(date +%s)
-		echo -e "## pip install mutagen ## finished after $((after - before)) seconds" >&3 2>&3
-		STEP=$((STEP + 1))
+		# 2026-09-20: pip mutagen is no longer installed - only the (removed) ID3 converter used it.
+		# echo -e "XXX\n${STEP}\nInstall package mutagen\nXXX"
+		# before=$(date +%s)
+		# pip install mutagen >&3 2>&3
+		# after=$(date +%s)
+		# echo -e "## pip install mutagen ## finished after $((after - before)) seconds" >&3 2>&3
+		# STEP=$((STEP + 1))
 
 		echo -e "XXX\n${STEP}\nInstall package pip requests\nXXX"
 		before=$(date +%s)
@@ -107,8 +118,9 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 		echo -e "## pip install pyserial ## finished after $((after - before)) seconds" >&3 2>&3
 		STEP=$((STEP + 1))
 	else
-		echo -e "XXX\n${STEP}\nInstall package python3-mutagen/python3-dev\nXXX"
-		for package in python3-mutagen python3-dev; do
+		echo -e "XXX\n${STEP}\nInstall package python3-dev\nXXX"
+		# 2026-09-20: python3-mutagen is no longer installed (only the removed ID3 converter used it).
+		for package in python3-dev; do
 			before=$(date +%s)
 			echo -e "XXX\n${STEP}\nInstall ${package}\nXXX"
 			PKG_OK=$(dpkg -l ${package} 2>/dev/null | egrep '^ii' | wc -l)
@@ -236,6 +248,7 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 	mkdir -p /home/dietpi/MuPiBox/media/audiobook >&3 2>&3
 	mkdir -p /home/dietpi/MuPiBox/media/music >&3 2>&3
 	mkdir -p /home/dietpi/MuPiBox/media/other >&3 2>&3
+	mkdir -p /home/dietpi/MuPiBox/media/NAS >&3 2>&3
 	mkdir -p /home/dietpi/MuPiBox/media/cover >&3 2>&3
 	mkdir -p /home/dietpi/MuPiBox/media/youtube-dl >&3 2>&3
 	mkdir -p /home/dietpi/MuPiBox/themes >&3 2>&3
@@ -541,6 +554,9 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/mupi_hat.service /etc/systemd/system/mupi_hat.service >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/mupi_hat_control.service /etc/systemd/system/mupi_hat_control.service >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/mupi_autoconnect-wifi.service /etc/systemd/system/mupi_autoconnect-wifi.service >&3 2>&3
+	# Tolerant replacement for DietPi's WiFi monitor (see scripts/mupibox/wifi_monitor.sh)
+	mkdir -p /etc/systemd/system/dietpi-wifi-monitor.service.d >&3 2>&3
+	cp -f ${MUPI_SRC}/config/services/dietpi-wifi-monitor-override.conf /etc/systemd/system/dietpi-wifi-monitor.service.d/override.conf >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/mupi_mqtt.service /etc/systemd/system/mupi_mqtt.service >&3 2>&3
 	systemctl daemon-reload >&3 2>&3
 	for service in mupi_wifi mupi_check_internet mupi_check_monitor mupi_idle_shutdown librespot smbd mupi_startstop pulseaudio mupi_splash mupi_powerled dietpi-dashboard; do

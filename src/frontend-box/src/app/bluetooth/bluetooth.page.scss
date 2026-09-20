@@ -1,0 +1,67 @@
+ion-toolbar {
+    ion-back-button {
+        --min-height: 70px;
+        --min-width: 120px;
+        --icon-font-size: 30px;
+    }
+}
+
+.bluetooth-content {
+    --ion-background-color: #000000 !important;
+    --padding-start: 16px;
+    --padding-end: 16px;
+    --padding-top: 16px;
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding-top: 80px;
+    opacity: 0.8;
+
+    ion-icon {
+        font-size: 64px;
+        margin-bottom: 16px;
+    }
+
+    .hint {
+        opacity: 0.6;
+        font-size: 14px;
+    }
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 16px 0 8px;
+
+    ion-label {
+        font-size: 16px;
+        opacity: 0.8;
+    }
+}
+
+.devices-list {
+    background: transparent;
+
+    ion-item {
+        --background: #16202a;
+        margin-bottom: 8px;
+        border-radius: 8px;
+
+        h2 {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .connected-badge {
+            font-size: 12px;
+            color: var(--ion-color-primary, #2dd6c7);
+        }
+    }
+}

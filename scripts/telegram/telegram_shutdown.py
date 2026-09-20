@@ -1,4 +1,6 @@
 #!/usr/bin/python3
+# DEPRECATED 2026-09-20: no service, script or admin page starts it (shutdown messages use telegram_send_message.py).
+# Kept for reference; nothing in MuPiBox calls it. Safe to delete.
 
 import sys
 import time

@@ -1,20 +1,56 @@
+<h3>DEV 5.0.0 - changes compared to the stable version</h3>
+<b>NAS as a media source</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>New "NAS" tab in the admin and on the display: connect any NAS with a WebDAV server (Synology, QNAP, TrueNAS, ...). Login with address incl. WebDAV port, account and password.</li>
+<li id='linews' class='linews'>Folder list in the admin works like the Windows file explorer (expandable tree, alphabetical). Tick "Show in Mupibox" to list a folder in the NAS tab and "Download local" to keep a copy on the MuPiBox.</li>
+<li id='linews' class='linews'>Any number of folder levels in the NAS tab. Changes on the NAS show up immediately - no media update needed.</li>
+<li id='linews' class='linews'>Download local: "Download selected" copies the ticked folders (incl. parent covers) to ~/MuPiBox/media/NAS, skips what is already there and removes local copies that were unticked. Downloaded folders also play when the NAS or the network is not available.</li>
+</ul>
+<b>Player</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Track list: press and hold the cover to see all tracks of the album (Spotify, local and NAS) and jump to any of them. The hold time is set with "Listview timer" in the admin.</li>
+<li id='linews' class='linews'>Audiobooks, Music and Other read the media folders live at any folder depth - "Reload media database" is no longer needed and was removed.</li>
+<li id='linews' class='linews'>Radio streams and podcasts show a loading ring in the middle of the cover while they are buffered: the ring gets smaller as the buffer fills and disappears when playback starts.</li>
+<li id='linews' class='linews'>Track titles with umlauts, sharp s and a-ring (ID3 tags stored as Latin-1) are shown correctly instead of question marks.</li>
+<li id='linews' class='linews'>New option "Hide horizontal scrollbar" below the theme preview (Mupi-conf &gt; MuPiBox settings) hides the new draggable scrollbar of the cover lists for every theme.</li>
+<li id='linews' class='linews'>Covers load much faster: large cover pictures are shown as small thumbnails (made once with python3-pil and cached; without it the originals are used).</li>
+<li id='linews' class='linews'>New theme "coverflow" (Mupi-conf &gt; MuPiBox settings &gt; Theme): 
+</ul>
+<b>Hidden Menu</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Redesigned WiFi settings: status card with signal and IP, list of available networks sorted by signal strength (saved networks out of range are greyed out), connect, change password and delete saved networks.</li>
+<li id='linews' class='linews'><b>Open hidden settings by pressing and holding the status icon for 6 seconds (duration set with "Access to settings" in the admin) instead of clicking ten times.</b></li>
+<li id='linews' class='linews'>The WiFi list shows the band next to the signal: 2.4 GHz, 5 GHz or both (for the connected network also the band in use).</li>
+<li id='linews' class='linews'>New Bluetooth settings page.</li>
+</ul>
+<b>Podcasts and radio</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Podcast feeds and covers are cached on disk (survive a reboot) and refreshed in the background; missing covers are downloaded again automatically. Episode images load on demand, long lists stay fast.</li>
+<li id='linews' class='linews'>Long podcasts open much faster: only title, audio file, date and image of each episode are read and cached (a 3 MB feed shrinks to about 350 KB), feeds are refreshed at most every 15 minutes, and the backend is no longer blocked while a feed is processed.</li>
+<li id='linews' class='linews'>Radio streams: cover pictures are saved on the box and shown from there. If the cover address changes, the new picture is downloaded again.</li>
+</ul>
+<b>Admin</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Control system &gt; tab visibility: hide admin tabs (Home, MuPiBox and Admin always stay visible).</li>
+<li id='linews' class='linews'>The "Music database" section (update mediadata, ID3 converter) was removed - the lists read the folders live, and title tags are decoded correctly by the player.</li>
+<li id='linews' class='linews'>Control system &gt; "Hide display categorys": hide the Audiobooks / Music / NAS / Other tabs; the remaining tabs are spread evenly (at least one stays visible).</li>
+</ul>
+<b>Network</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Tolerant WiFi monitor: DietPi re-connected the WiFi (about 15 seconds without network) as soon as one ping to the router was lost. Now three pings are sent per check and it only re-connects after three failed checks in a row, so podcasts and NAS content no longer disappear for short dropouts.</li>
+</ul>
+<b>Update</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Safer update script: files are downloaded and verified before anything is changed, config and data are backed up first, and a failed download aborts the update instead of leaving a broken installation.</li>
+<li id='linews' class='linews'>The update script can install a branch of this fork directly.</li>
+</ul>
+
 <h3>OS-Support</h3>
 We will focus on <b>bookworm</b> and recommend you to update, or reinstall. See also this dietpi-article: <a href=https://dietpi.com/blog/?p=3128>https://dietpi.com/blog/?p=3128</a>
-
-<h3>Stable Release 4.2.4</h3>
-<ul id='ulnews' class='ulnews'>
-<li id='linews' class='linews'>State: Stable Spotify support.</li>
-</ul>
-
-<h3>Next Release</h3>
-<ul id='ulnews' class='ulnews'>
-</ul>
-<h3>Next Release (DEV/BETA/STABLE)</h3>
-<ul id='ulnews' class='ulnews'>
-<li id='linews' class='linews'>Update: The settings page on the box got a design update.</li>
-<li id='linews' class='linews'>Update: Since sysfs-gpio is no longer integrated in debian, we switched to the current and modern libgpiod</li>
-<li id='linews' class='linews'>Update: Since Spotify only allows third-party apps to register via websites with a certificate, the MuPiBox receives a self-signed certificate.</li>
-<li id='linews' class='linews'>Update: Librespot Version dev_0.6 build on 2025-03-05.</li>
-<li id='linews' class='linews'>New: You can edit the important JSON files in the Admin Panel</li>
-<li id='linews' class='linews'>New: You can view Logs and Service States (realtime) in the Admin Panel</li>
-</ul>
