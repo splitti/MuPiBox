@@ -2,8 +2,10 @@ import { exec, execFile } from 'node:child_process'
 import crypto from 'node:crypto'
 import dns from 'node:dns'
 import fs from 'node:fs'
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
+import { Readable } from 'node:stream'
+import { pipeline } from 'node:stream/promises'
 import { promisify } from 'node:util'
 import cors from 'cors'
 import express from 'express'
@@ -174,6 +176,71 @@ function extractRssText(node: unknown): string | undefined {
   return undefined
 }
 
+function decodeXmlEntities(text: string): string {
+  return text.replace(/&(#x[0-9a-fA-F]+|#[0-9]+|amp|lt|gt|quot|apos);/g, (_m, entity: string) => {
+    if (entity.startsWith('#x')) {
+      return String.fromCodePoint(Number.parseInt(entity.slice(2), 16))
+    }
+    if (entity.startsWith('#')) {
+      return String.fromCodePoint(Number.parseInt(entity.slice(1), 10))
+    }
+    return { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" }[entity] ?? _m
+  })
+}
+
+// Text of the first <name>...</name> in `block`, in the shape xml-js gives it (_text / _cdata).
+function rssTagText(block: string, name: string): { _text: string } | { _cdata: string } | undefined {
+  const match = block.match(new RegExp(`<${name}(?:\\s[^>]*)?>([\\s\\S]*?)</${name}>`))
+  if (!match) {
+    return undefined
+  }
+  const inner = match[1].trim()
+  const cdata = inner.match(/^<!\[CDATA\[([\s\S]*?)\]\]>$/)
+  return cdata ? { _cdata: cdata[1] } : { _text: decodeXmlEntities(inner) }
+}
+
+// Value of an attribute of the first <tag ...> in `block`.
+function rssTagAttribute(block: string, tag: string, attribute: string): string | undefined {
+  const match = block.match(new RegExp(`<${tag}\\s[^>]*?\\b${attribute}\\s*=\\s*("([^"]*)"|'([^']*)')`))
+  const value = match ? (match[2] ?? match[3]) : undefined
+  return value === undefined ? undefined : decodeXmlEntities(value)
+}
+
+// Reads the channel and its episodes in the same shape as xml-js (compact) would, but with
+// only the fields the kiosk uses. Returns undefined if the text does not look like a feed.
+function parseRssFeedFast(xml: string): any | undefined {
+  const firstItem = xml.search(/<item[\s>]/)
+  if (firstItem < 0) {
+    return undefined
+  }
+  const head = xml.slice(0, firstItem)
+  const items = (xml.slice(firstItem).match(/<item[\s>][\s\S]*?<\/item>/g) ?? []).map((block) => {
+    const item: Record<string, unknown> = {}
+    const title = rssTagText(block, 'title')
+    const pubDate = rssTagText(block, 'pubDate')
+    const guid = rssTagText(block, 'guid')
+    const enclosureUrl = rssTagAttribute(block, 'enclosure', 'url')
+    const imageUrl = rssTagAttribute(block, 'itunes:image', 'href')
+    if (title) item.title = title
+    if (pubDate) item.pubDate = pubDate
+    if (guid) item.guid = guid
+    if (enclosureUrl) item.enclosure = { _attributes: { url: enclosureUrl } }
+    if (imageUrl) item['itunes:image'] = { _attributes: { href: imageUrl } }
+    return item
+  })
+  if (items.length === 0) {
+    return undefined
+  }
+  const imageBlock = head.match(/<image>[\s\S]*?<\/image>/)?.[0] ?? ''
+  const channelImage = (imageBlock && rssTagText(imageBlock, 'url')) || undefined
+  const coverUrl = channelImage ? extractRssText(channelImage) : rssTagAttribute(head, 'itunes:image', 'href')
+  const title = rssTagText(head.replace(/<image>[\s\S]*?<\/image>/, ''), 'title')
+  return {
+    _slim: true,
+    rss: { channel: { title: title ?? { _text: '' }, image: { url: { _text: coverUrl ?? '' } }, item: items } },
+  }
+}
+
 function latestEpisodeFingerprint(feed: any): string | undefined {
   const items = feed?.rss?.channel?.item
   const firstItem = Array.isArray(items) ? items[0] : items
@@ -207,6 +274,16 @@ async function downloadRssCover(coverUrl: string, cacheKey: string): Promise<str
 // but no single feed can ever stall a response past this.
 const rssFetchTimeoutMs = 5000
 
+// Long podcasts are several MB of XML, and parsing that completely (xml-js) blocks the whole
+// backend for many seconds on the Pi. The kiosk only needs the <title>, <enclosure>,
+// <pubDate> and <itunes:image> of every episode (plus the channel title and cover), so
+// those are read straight out of the text - about a hundred times faster - and only they
+// are kept in the cache. A feed is refreshed at most every rssRefreshIntervalMs and never
+// twice at once. The full parser is only a fallback for feeds that do not look as expected.
+const rssRefreshIntervalMs = 15 * 60 * 1000
+const rssLastRefresh = new Map<string, number>()
+const rssRefreshing = new Set<string>()
+
 /** A minimal, well-formed empty feed, used as a last-resort fallback so a single
  * unreachable podcast never breaks the whole category listing (the frontend
  * merges all podcasts' feeds into one Observable with no per-item error handling). */
@@ -234,13 +311,22 @@ async function refreshRssCache(rssUrl: string, cacheKey: string): Promise<any> {
   }
 
   const xml = await ky.get(rssUrl, { timeout: rssFetchTimeoutMs }).text()
-  const feed = JSON.parse(xmlparser.xml2json(xml, { compact: true, nativeType: true }))
+  const feed =
+    parseRssFeedFast(xml) ??
+    JSON.parse(
+      xmlparser.xml2json(
+        xml.replace(/<(description|content:encoded|itunes:summary|itunes:subtitle)(\s[^>]*)?>[\s\S]*?<\/\1>/g, ''),
+        { compact: true, nativeType: true },
+      ),
+    )
 
   const hasNewEpisode = latestEpisodeFingerprint(feed) !== latestEpisodeFingerprint(previousFeed)
   const previousCoverUrl = extractRssText(previousFeed?.rss?.channel?.image?.url)
   const coverMissing = rssCoverFileMissing(previousCoverUrl)
+  // A cache written by an older version holds every tag of the feed; rewrite it slim.
+  const previousIsSlim = previousFeed?._slim === true
 
-  if (previousFeed && !hasNewEpisode && !coverMissing) {
+  if (previousFeed && !hasNewEpisode && !coverMissing && previousIsSlim) {
     // Nothing changed and the cached cover file is still there - keep serving as-is.
     return previousFeed
   }
@@ -256,6 +342,7 @@ async function refreshRssCache(rssUrl: string, cacheKey: string): Promise<any> {
 
   await mkdir(rssCacheDataDir, { recursive: true })
   await writeFile(cacheFile, JSON.stringify(feed), 'utf8')
+  void warmRssEpisodeCovers(feed, 12)
 
   if (remoteCoverUrl) {
     downloadRssCover(remoteCoverUrl, cacheKey)
@@ -274,6 +361,29 @@ async function refreshRssCache(rssUrl: string, cacheKey: string): Promise<any> {
   return feed
 }
 
+// A minute after start: refresh every configured podcast so that its list and the pictures
+// of its newest episodes are ready before somebody opens it.
+async function warmConfiguredPodcasts(): Promise<void> {
+  try {
+    const data = JSON.parse(await readFile(dataFile, 'utf8')) as { type?: string; id?: string }[]
+    for (const entry of data) {
+      if (entry.type === 'rss' && typeof entry.id === 'string') {
+        const key = rssCacheKeyFor(entry.id)
+        rssLastRefresh.set(key, Date.now())
+        try {
+          const feed = await refreshRssCache(entry.id, key)
+          void warmRssEpisodeCovers(feed, 12)
+        } catch {
+          // Offline or feed down - it will be tried again when opened.
+        }
+      }
+    }
+  } catch {
+    // No data file yet.
+  }
+}
+setTimeout(() => void warmConfiguredPodcasts(), 60 * 1000)
+
 app.get('/api/rssfeed/cached', async (req, res) => {
   const rssUrl = req.query.url
   if (typeof rssUrl !== 'string') {
@@ -286,12 +396,20 @@ app.get('/api/rssfeed/cached', async (req, res) => {
 
   if (fs.existsSync(cacheFile)) {
     try {
-      const cached = JSON.parse(await readFile(cacheFile, 'utf8'))
-      res.json(cached)
+      // The cache file already is the JSON answer - send it as it is (no parse / stringify).
+      const cached = await readFile(cacheFile)
+      res.type('application/json').send(cached)
       // Refresh in the background for next time; don't make the caller wait for it.
-      refreshRssCache(rssUrl, cacheKey).catch((error) => {
-        console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Background RSS refresh failed: ${error}`)
-      })
+      const due = Date.now() - (rssLastRefresh.get(cacheKey) ?? 0) > rssRefreshIntervalMs
+      if (due && !rssRefreshing.has(cacheKey)) {
+        rssRefreshing.add(cacheKey)
+        rssLastRefresh.set(cacheKey, Date.now())
+        refreshRssCache(rssUrl, cacheKey)
+          .catch((error) => {
+            console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Background RSS refresh failed: ${error}`)
+          })
+          .finally(() => rssRefreshing.delete(cacheKey))
+      }
       return
     } catch (error) {
       console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to read cached RSS feed: ${error}`)
@@ -330,47 +448,205 @@ const imageContentTypes: Record<string, string> = {
 // Served as a plain buffer (not res.sendFile) since sendFile's internal file
 // resolution intermittently reported a freshly-written, verified-to-exist file as
 // not found on this device.
+// Episode pictures come from slow CDNs and are often 2 MB each. They are fetched at most
+// rssImageParallel at a time (a list of 150 episodes must not open 150 downloads at once),
+// fetched only once per picture, and handed to the kiosk as small thumbnails (see above).
+const rssImageParallel = 3
+const rssImageTimeoutMs = 45000
+
+// Downloads wait in line. Whoever is looking at the list is served first: a picture that
+// somebody is waiting for goes before the ones prepared in the background, and among those the
+// newest request goes first (that is where the user has just scrolled to - the older requests
+// are for covers that were scrolled past). Requests whose browser has already given up are dropped.
+interface RssImageJob {
+  url: string
+  file: string
+  priority: number // 1 = a browser is waiting, 0 = background preparation
+  seq: number
+  watchers: (() => boolean)[] // still interested? (one per waiting browser)
+  started: boolean
+  promise: Promise<string | undefined>
+  start: () => void
+}
+let rssImageRunning = 0
+let rssImageSeq = 0
+const rssImageQueue: RssImageJob[] = []
+const rssImageJobs = new Map<string, RssImageJob>()
+
+function rssImageLocalFile(imageUrl: string): { file: string; extension: string } | undefined {
+  try {
+    const key = rssCacheKeyFor(imageUrl)
+    const extension = path.extname(new URL(imageUrl).pathname).split('?')[0] || '.jpg'
+    return { file: path.join(rssCoverDir, `${key}${extension}`), extension }
+  } catch {
+    return undefined
+  }
+}
+
+function rssImageJobWanted(job: RssImageJob): boolean {
+  return job.priority === 0 || job.watchers.some((stillWaiting) => stillWaiting())
+}
+
+function runNextRssImage(): void {
+  while (rssImageRunning < rssImageParallel && rssImageQueue.length > 0) {
+    // Highest priority first, then the newest request.
+    let best = 0
+    for (let i = 1; i < rssImageQueue.length; i++) {
+      const a = rssImageQueue[i]
+      const b = rssImageQueue[best]
+      if (a.priority > b.priority || (a.priority === b.priority && a.seq > b.seq)) {
+        best = i
+      }
+    }
+    const [job] = rssImageQueue.splice(best, 1)
+    if (rssImageJobWanted(job)) {
+      rssImageRunning++
+      job.started = true
+      job.start()
+    } else {
+      rssImageJobs.delete(job.file)
+      job.start = () => undefined
+      cancelRssImageJob(job)
+    }
+  }
+}
+
+const cancelledRssImages = new WeakSet<RssImageJob>()
+function cancelRssImageJob(job: RssImageJob): void {
+  cancelledRssImages.add(job)
+  ;(job as RssImageJob & { cancel?: () => void }).cancel?.()
+}
+
+// Returns the local copy of a remote picture, downloading it first if needed.
+// `stillWaiting` tells whether the requesting browser is still there; without it the
+// request is a background preparation.
+function ensureRssImage(imageUrl: string, stillWaiting?: () => boolean): Promise<string | undefined> {
+  const local = rssImageLocalFile(imageUrl)
+  if (!local) {
+    return Promise.resolve(undefined)
+  }
+  if (fs.existsSync(local.file)) {
+    return Promise.resolve(local.file)
+  }
+  const existing = rssImageJobs.get(local.file)
+  if (existing) {
+    if (stillWaiting) {
+      existing.watchers.push(stillWaiting)
+      if (!existing.started) {
+        existing.priority = 1
+        existing.seq = ++rssImageSeq
+      }
+    }
+    return existing.promise
+  }
+
+  const job = {
+    url: imageUrl,
+    file: local.file,
+    priority: stillWaiting ? 1 : 0,
+    seq: ++rssImageSeq,
+    watchers: stillWaiting ? [stillWaiting] : [],
+    started: false,
+  } as RssImageJob
+  job.promise = new Promise<string | undefined>((resolve) => {
+    ;(job as RssImageJob & { cancel?: () => void }).cancel = () => resolve(undefined)
+    job.start = () => {
+      void (async () => {
+        try {
+          const buffer = Buffer.from(await ky.get(imageUrl, { timeout: rssImageTimeoutMs }).arrayBuffer())
+          await mkdir(rssCoverDir, { recursive: true })
+          const temp = `${local.file}.${process.pid}.tmp`
+          await writeFile(temp, buffer)
+          await rename(temp, local.file)
+          resolve(local.file)
+        } catch (error) {
+          console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to proxy/cache RSS episode image ${imageUrl}: ${error}`)
+          resolve(undefined)
+        } finally {
+          rssImageRunning--
+          rssImageJobs.delete(local.file)
+          runNextRssImage()
+        }
+      })()
+    }
+  })
+  rssImageJobs.set(local.file, job)
+  rssImageQueue.push(job)
+  runNextRssImage()
+  return job.promise
+}
+
+async function sendRssImage(res: express.Response, file: string, thumbSize: number | undefined): Promise<void> {
+  if (thumbSize && isThumbnailable(file)) {
+    const info = await stat(file)
+    const thumb = await getThumbnail(file, thumbSize, `rss|${file}|${info.size}`)
+    if (thumb) {
+      await sendThumbnail(res, thumb)
+      return
+    }
+  }
+  const contentType = imageContentTypes[path.extname(file).toLowerCase()] ?? 'image/jpeg'
+  res.set('Cache-Control', 'public, max-age=604800').type(contentType).send(await readFile(file))
+}
+
+// `url`: a remote picture (fetched and cached on first use); `local`: a picture that already
+// is in the cover cache (channel covers). `w`: ask for a thumbnail of at most that size.
 app.get('/api/rssfeed/image', async (req, res) => {
-  const imageUrl = req.query.url
-  if (typeof imageUrl !== 'string') {
+  const thumbSize = parseThumbSize(req.query.w)
+  let file: string | undefined
+
+  if (typeof req.query.local === 'string') {
+    const name = path.basename(req.query.local)
+    file = path.join(rssCoverDir, name)
+    if (!fs.existsSync(file)) {
+      res.status(404).send('Not found')
+      return
+    }
+  } else if (typeof req.query.url === 'string') {
+    let clientGone = false
+    res.on('close', () => {
+      clientGone = !res.writableEnded
+    })
+    file = await ensureRssImage(req.query.url, () => !clientGone)
+    if (!file) {
+      res.status(502).send('Failed to fetch image.')
+      return
+    }
+  } else {
     res.status(400).send('Given url is not a string.')
     return
   }
 
-  let localFile: string
-  let extension: string
   try {
-    const key = rssCacheKeyFor(imageUrl)
-    extension = path.extname(new URL(imageUrl).pathname).split('?')[0] || '.jpg'
-    localFile = path.join(rssCoverDir, `${key}${extension}`)
-  } catch {
-    res.status(400).send('Invalid image url.')
-    return
-  }
-
-  const contentType = imageContentTypes[extension.toLowerCase()] ?? 'image/jpeg'
-
-  if (fs.existsSync(localFile)) {
-    try {
-      const buffer = await readFile(localFile)
-      res.set('Cache-Control', 'public, max-age=604800').type(contentType).send(buffer)
-      return
-    } catch (error) {
-      console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to read cached RSS image ${localFile}: ${error}`)
-      // Fall through and try fetching it fresh below.
-    }
-  }
-
-  try {
-    const buffer = Buffer.from(await ky.get(imageUrl, { timeout: 8000 }).arrayBuffer())
-    await mkdir(rssCoverDir, { recursive: true })
-    await writeFile(localFile, buffer)
-    res.set('Cache-Control', 'public, max-age=604800').type(contentType).send(buffer)
+    await sendRssImage(res, file, thumbSize)
   } catch (error) {
-    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to proxy/cache RSS episode image ${imageUrl}: ${error}`)
-    res.status(502).send('Failed to fetch image.')
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to send RSS image ${file}: ${error}`)
+    res.status(500).send('Failed to read image.')
   }
 })
+
+// The newest episodes are what gets opened first: fetch their pictures ahead of time.
+async function warmRssEpisodeCovers(feed: any, count: number): Promise<void> {
+  const items = feed?.rss?.channel?.item
+  if (!Array.isArray(items)) {
+    return
+  }
+  for (const item of items.slice(0, count)) {
+    const href = item?.['itunes:image']?._attributes?.href
+    if (typeof href !== 'string') {
+      continue
+    }
+    const file = await ensureRssImage(href)
+    if (file && isThumbnailable(file)) {
+      try {
+        const info = await stat(file)
+        await getThumbnail(file, 400, `rss|${file}|${info.size}`)
+      } catch {
+        // Nothing to warm.
+      }
+    }
+  }
+}
 
 app.get('/api/data', (_req, res) => {
   if (fs.existsSync(activedataFile)) {
@@ -542,6 +818,164 @@ app.get('/api/wifi/configured', async (_req, res) => {
   try {
     const { stdout } = await execFileAsync('sudo', ['wpa_cli', '-i', 'wlan0', 'list_networks'])
     res.json(parseWpaCliNetworks(stdout))
+  } catch (error) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error listing wifi networks: ${error}`)
+    res.status(500).send('error')
+  }
+})
+
+// wpa_cli prints SSIDs with non-ASCII / special bytes as \xNN escapes.
+function decodeWpaSsid(raw: string): string {
+  const bytes: number[] = []
+  for (let i = 0; i < raw.length; i++) {
+    if (raw[i] === '\\' && raw[i + 1] === 'x' && /^[0-9a-fA-F]{2}$/.test(raw.slice(i + 2, i + 4))) {
+      bytes.push(Number.parseInt(raw.slice(i + 2, i + 4), 16))
+      i += 3
+    } else if (raw[i] === '\\' && raw[i + 1] === '\\') {
+      bytes.push(0x5c)
+      i += 1
+    } else {
+      bytes.push(...Buffer.from(raw[i]))
+    }
+  }
+  return Buffer.from(bytes).toString('utf8')
+}
+
+interface WifiScanEntry {
+  signalDbm: number
+  secured: boolean
+  bands: string[] // "2.4", "5" (and "6"): every band the network is broadcast on
+}
+
+function wifiBandOf(frequencyMhz: number): string | undefined {
+  if (frequencyMhz >= 2400 && frequencyMhz < 2500) {
+    return '2.4'
+  }
+  if (frequencyMhz >= 4900 && frequencyMhz < 5900) {
+    return '5'
+  }
+  if (frequencyMhz >= 5925) {
+    return '6'
+  }
+  return undefined
+}
+
+// "bssid / frequency / signal level / flags / ssid" per line; the strongest access
+// point wins when a network is broadcast by several.
+function parseWpaCliScanResults(stdout: string): Map<string, WifiScanEntry> {
+  const networks = new Map<string, WifiScanEntry>()
+  for (const line of stdout.split('\n').slice(1)) {
+    const parts = line.trim().split('\t')
+    if (parts.length < 5) {
+      continue
+    }
+    const signalDbm = Number.parseInt(parts[2], 10)
+    const ssid = decodeWpaSsid(parts.slice(4).join('\t'))
+    // Hidden networks show up with an empty or all-zero SSID.
+    if (Number.isNaN(signalDbm) || ssid.replaceAll('\0', '').trim() === '') {
+      continue
+    }
+    const band = wifiBandOf(Number.parseInt(parts[1], 10))
+    const previous = networks.get(ssid)
+    const bands = new Set(previous?.bands ?? [])
+    if (band) {
+      bands.add(band)
+    }
+    if (!previous || signalDbm > previous.signalDbm) {
+      networks.set(ssid, { signalDbm, secured: /WPA|WEP|RSN/.test(parts[3]), bands: [...bands] })
+    } else {
+      previous.bands = [...bands]
+    }
+  }
+  return networks
+}
+
+// Rough dBm -> percent (-100 dBm = 0 %, -50 dBm and better = 100 %).
+function wifiSignalPercent(signalDbm: number): number {
+  return Math.min(100, Math.max(0, 2 * (signalDbm + 100)))
+}
+
+interface WifiNetworkInfo {
+  ssid: string
+  id?: number
+  current: boolean
+  available: boolean
+  signalDbm?: number
+  signal?: number
+  secured?: boolean
+  bands?: string[] // bands the network is available on ("2.4", "5", "6")
+  connectedBand?: string // the band in use, for the connected network only
+}
+
+// Networks in range (strongest first) merged with the saved ones; saved networks
+// that are not in range are listed last and marked as not available.
+app.get('/api/wifi/networks', async (req, res) => {
+  try {
+    if (req.query.refresh !== '0') {
+      try {
+        await execFileAsync('sudo', ['wpa_cli', '-i', 'wlan0', 'scan'])
+        await new Promise((resolve) => setTimeout(resolve, 3500))
+      } catch {
+        // A scan may already be running or the adapter busy - the last results are still usable.
+      }
+    }
+
+    const { stdout: configuredOutput } = await execFileAsync('sudo', ['wpa_cli', '-i', 'wlan0', 'list_networks'])
+    let scanned = new Map<string, WifiScanEntry>()
+    try {
+      const { stdout: scanOutput } = await execFileAsync('sudo', ['wpa_cli', '-i', 'wlan0', 'scan_results'])
+      scanned = parseWpaCliScanResults(scanOutput)
+    } catch (error) {
+      console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error reading wifi scan results: ${error}`)
+    }
+
+    // The band the box is connected on right now.
+    let connectedBand: string | undefined
+    try {
+      const { stdout: statusOutput } = await execFileAsync('sudo', ['wpa_cli', '-i', 'wlan0', 'status'])
+      const frequency = /^freq=(\d+)/m.exec(statusOutput)?.[1]
+      connectedBand = frequency ? wifiBandOf(Number.parseInt(frequency, 10)) : undefined
+    } catch {
+      // Not connected or wpa_cli busy: no band to show.
+    }
+
+    const networks: WifiNetworkInfo[] = []
+    for (const configured of parseWpaCliNetworks(configuredOutput)) {
+      const ssid = decodeWpaSsid(configured.ssid)
+      const found = scanned.get(ssid)
+      scanned.delete(ssid)
+      networks.push({
+        ssid,
+        id: configured.id,
+        current: configured.current,
+        // The connected network is in range by definition, even if the scan missed it.
+        available: found !== undefined || configured.current,
+        signalDbm: found?.signalDbm,
+        signal: found ? wifiSignalPercent(found.signalDbm) : undefined,
+        secured: found?.secured,
+        bands: found?.bands,
+        connectedBand: configured.current ? connectedBand : undefined,
+      })
+    }
+    for (const [ssid, found] of scanned) {
+      networks.push({
+        ssid,
+        current: false,
+        available: true,
+        signalDbm: found.signalDbm,
+        signal: wifiSignalPercent(found.signalDbm),
+        secured: found.secured,
+        bands: found.bands,
+      })
+    }
+
+    networks.sort((a, b) => {
+      if (a.available !== b.available) {
+        return a.available ? -1 : 1
+      }
+      return (b.signalDbm ?? -200) - (a.signalDbm ?? -200) || a.ssid.localeCompare(b.ssid)
+    })
+    res.json(networks)
   } catch (error) {
     console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error listing wifi networks: ${error}`)
     res.status(500).send('error')
@@ -1442,6 +1876,1228 @@ app.post('/api/bluetooth/remove', async (req, res) => {
   } catch (error) {
     console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error removing bluetooth device ${mac}: ${error}`)
     res.status(500).send('error')
+  }
+})
+
+// --------------------------------------------
+// Synology NAS integration
+// --------------------------------------------
+// Browses and streams media from a NAS live over WebDAV (works with Synology,
+// QNAP, TrueNAS, ...) - no SMB/CIFS mount, no data.json caching. Every read hits
+// the NAS directly, so changes made on the NAS show up the next time a
+// category/page is opened, with no manual "update media" step required.
+// (Function/route names keep the historic "synology" prefix.)
+
+interface SynologySession {
+  base: string // WebDAV base URL without trailing slash, may contain a path prefix
+  auth: string // Authorization header value (HTTP Basic)
+}
+
+let synologySessionCache: SynologySession | undefined
+
+class SynologySessionExpiredError extends Error {}
+
+// The NAS answered, but with an API-level error (e.g. folder no longer exists) -
+// unlike a network failure this does not mean the NAS is offline.
+class SynologyApiError extends Error {}
+
+// Local copies of NAS folders ("Download local") live here, mirroring the NAS
+// path (e.g. /music/Artist/Album -> <root>/music/Artist/Album), so they stay
+// playable when the NAS or the network is not available.
+const nasLocalRoot = '/home/dietpi/MuPiBox/media/NAS'
+const nasDownloadMarker = '.mupibox-nas-download'
+
+const synologyAudioExtensions = ['.mp3', '.flac', '.wav', '.wma', '.ogg', '.m4a']
+
+// Resolves the address field into a WebDAV base URL. Accepts "host", "host:port",
+// "host:port/path" or a complete http(s):// URL. The HTTPS checkbox picks the
+// scheme when the address itself has none.
+function synologyResolveBase(address: string, useHttps: boolean): string {
+  const trimmed = address.trim().replace(/\/+$/, '')
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed
+  }
+  return `${useHttps ? 'https' : 'http'}://${trimmed}`
+}
+
+function synologyBasicAuth(account: string, password: string): string {
+  return `Basic ${Buffer.from(`${account}:${password}`, 'utf8').toString('base64')}`
+}
+
+function synologyUrl(session: SynologySession, nasPath: string): string {
+  const encoded = nasPath
+    .split('/')
+    .filter(Boolean)
+    .map((part) => encodeURIComponent(part))
+    .join('/')
+  return `${session.base}/${encoded}`
+}
+
+async function synologyLogin(
+  base: string,
+  account: string,
+  password: string,
+  timeoutMs = 10000,
+): Promise<{ success: boolean; session?: SynologySession; error?: string }> {
+  const session: SynologySession = { base, auth: synologyBasicAuth(account, password) }
+  try {
+    const response = await fetch(synologyUrl(session, '/'), {
+      method: 'PROPFIND',
+      headers: { Authorization: session.auth, Depth: '1' },
+      signal: AbortSignal.timeout(timeoutMs),
+    })
+    const body = await response.text().catch(() => '')
+    if (response.status === 401 || response.status === 403) {
+      return { success: false, error: 'Wrong account name or password (or no WebDAV permission for this account).' }
+    }
+    if (response.status === 207 || response.status === 200) {
+      // A NAS always shows at least one folder. An empty answer means this is not the WebDAV
+      // service (e.g. the DSM web page on port 443 answers, but lists nothing), or the account
+      // may not use WebDAV.
+      if (parsePropfind(body, session, '/').length === 0) {
+        return {
+          success: false,
+          error: 'The NAS answered but lists no folders - check the WebDAV port in the address (Synology: 5006 for https, 5005 for http) and that the account may use WebDAV.',
+        }
+      }
+      return { success: true, session }
+    }
+    if (response.status === 404) {
+      return { success: false, error: 'WebDAV service not found at this address/port - check the address and that WebDAV is enabled on the NAS.' }
+    }
+    return { success: false, error: `The NAS answered with HTTP ${response.status}. Is this the WebDAV address/port?` }
+  } catch (error) {
+    const cause = error instanceof Error ? `${error.message} ${String((error as { cause?: unknown }).cause ?? '')}` : ''
+    if (/certificate|SELF_SIGNED|UNABLE_TO_VERIFY|CERT_/i.test(cause)) {
+      return { success: false, error: 'Certificate not trusted - use HTTP, or install a valid certificate on the NAS.' }
+    }
+    return { success: false, error: 'Could not reach the NAS. Check the address (with WebDAV port) and network connection.' }
+  }
+}
+
+let synologySessionPromise: Promise<SynologySession | undefined> | undefined
+let synologyOfflineUntil = 0
+
+// After a network failure, skip the NAS for a short while so the kids' UI can fall
+// back to the local downloads immediately instead of waiting on timeouts every time.
+function synologyMarkOffline(): void {
+  synologyOfflineUntil = Date.now() + 30000
+  synologySessionCache = undefined
+}
+
+async function synologyLoginWithRememberedCredentials(): Promise<SynologySession | undefined> {
+  const config = await getMupiboxConfig()
+  const syn = config?.synology
+  if (!syn?.rememberMe || !syn.address || !syn.account || !syn.password) {
+    return undefined
+  }
+  const base = synologyResolveBase(syn.address, Boolean(syn.https))
+  // Short timeout: an unreachable NAS must not hold up the kids' UI.
+  const result = await synologyLogin(base, syn.account, syn.password, 4000)
+  if (!result.success || !result.session) {
+    if (/reach/i.test(result.error ?? '')) {
+      synologyMarkOffline()
+    }
+    return undefined
+  }
+  synologySessionCache = result.session
+  return synologySessionCache
+}
+
+// Returns a cached session, or transparently logs back in using the
+// remembered credentials (if any) - existing installs won't have a
+// "synology" config section at all, so every field is read defensively.
+async function getActiveSynologySession(): Promise<SynologySession | undefined> {
+  if (synologySessionCache) {
+    return synologySessionCache
+  }
+  if (Date.now() < synologyOfflineUntil) {
+    return undefined
+  }
+  // Several requests often arrive at once (e.g. one per artist): share one login.
+  if (!synologySessionPromise) {
+    synologySessionPromise = synologyLoginWithRememberedCredentials().finally(() => {
+      synologySessionPromise = undefined
+    })
+  }
+  return await synologySessionPromise
+}
+
+// Runs `fn` with an active session, retrying exactly once (with a fresh
+// login) if the session turned out to be expired.
+async function withSynologySession<T>(fn: (session: SynologySession) => Promise<T>): Promise<T | undefined> {
+  let session = await getActiveSynologySession()
+  if (!session) {
+    return undefined
+  }
+  try {
+    return await fn(session)
+  } catch (error) {
+    if (error instanceof SynologySessionExpiredError) {
+      synologySessionCache = undefined
+      session = await getActiveSynologySession()
+      if (!session) {
+        return undefined
+      }
+      return await fn(session)
+    }
+    throw error
+  }
+}
+
+interface SynologyFileEntry {
+  name: string
+  path: string
+  isdir: boolean
+  additional?: { size?: number }
+}
+
+const xmlEntities: Record<string, string> = { '&lt;': '<', '&gt;': '>', '&amp;': '&', '&quot;': '"', '&apos;': "'" }
+
+function decodeXml(text: string): string {
+  return text.replace(/&(lt|gt|amp|quot|apos);/g, (m) => xmlEntities[m] ?? m)
+}
+
+// Parses a WebDAV PROPFIND (Depth: 1) answer into the children of `folderPath`.
+function parsePropfind(xml: string, session: SynologySession, folderPath: string): SynologyFileEntry[] {
+  const basePrefix = decodeURIComponent(new URL(session.base).pathname).replace(/\/+$/, '')
+  const folder = `/${folderPath.split('/').filter(Boolean).join('/')}`
+  const entries: SynologyFileEntry[] = []
+  const responses = xml.match(/<(?:\w+:)?response[\s>][\s\S]*?<\/(?:\w+:)?response>/gi) ?? []
+  for (const block of responses) {
+    const hrefMatch = block.match(/<(?:\w+:)?href[^>]*>([\s\S]*?)<\/(?:\w+:)?href>/i)
+    if (!hrefMatch) {
+      continue
+    }
+    let hrefPath = decodeXml(hrefMatch[1].trim())
+    if (/^https?:\/\//i.test(hrefPath)) {
+      hrefPath = new URL(hrefPath).pathname
+    }
+    try {
+      hrefPath = decodeURIComponent(hrefPath)
+    } catch {
+      // keep as is
+    }
+    if (basePrefix && hrefPath.startsWith(basePrefix)) {
+      hrefPath = hrefPath.slice(basePrefix.length)
+    }
+    hrefPath = `/${hrefPath.split('/').filter(Boolean).join('/')}`
+    if (hrefPath === folder) {
+      continue // the folder itself
+    }
+    const isdir = /<(?:\w+:)?collection\s*\/?>/i.test(block)
+    const sizeMatch = block.match(/<(?:\w+:)?getcontentlength[^>]*>(\d+)</i)
+    entries.push({
+      name: hrefPath.split('/').pop() ?? hrefPath,
+      path: hrefPath,
+      isdir,
+      additional: sizeMatch ? { size: Number(sizeMatch[1]) } : undefined,
+    })
+  }
+  return entries
+}
+
+async function synologyListFiles(session: SynologySession, folderPath: string, _withSize = false): Promise<SynologyFileEntry[]> {
+  const response = await fetch(`${synologyUrl(session, folderPath)}/`, {
+    method: 'PROPFIND',
+    headers: { Authorization: session.auth, Depth: '1', 'Content-Type': 'application/xml' },
+    body: '<?xml version="1.0"?><propfind xmlns="DAV:"><prop><resourcetype/><getcontentlength/></prop></propfind>',
+    signal: AbortSignal.timeout(8000),
+  })
+  const text = await response.text()
+  if (response.status !== 207 && response.status !== 200) {
+    // Folder gone / no permission: the NAS answered, so it is not offline.
+    throw new SynologyApiError(`WebDAV error ${response.status}`)
+  }
+  return parsePropfind(text, session, folderPath)
+}
+
+// --- Local copies ("Download local") --------------------------------------
+
+function nasPathParts(nasPath: string): string[] | undefined {
+  const parts = nasPath.split('/').filter(Boolean)
+  return parts.some((part) => part === '..' || part === '.') ? undefined : parts
+}
+
+function normalizeNasPath(nasPath: string): string {
+  return `/${(nasPathParts(nasPath) ?? []).join('/')}`
+}
+
+function nasLocalPath(nasPath: string): string | undefined {
+  const parts = nasPathParts(nasPath)
+  return parts ? path.join(nasLocalRoot, ...parts) : undefined
+}
+
+// True if this NAS folder (or one of its parents) was completely downloaded.
+function nasIsDownloaded(nasPath: string): boolean {
+  const parts = nasPathParts(nasPath)
+  const target = nasLocalPath(nasPath)
+  if (!parts || !target || !fs.existsSync(target)) {
+    return false
+  }
+  for (let length = parts.length; length >= 1; length--) {
+    const dir = path.join(nasLocalRoot, ...parts.slice(0, length))
+    if (fs.existsSync(path.join(dir, nasDownloadMarker))) {
+      return true
+    }
+  }
+  return false
+}
+
+async function nasLocalListFiles(nasPath: string): Promise<SynologyFileEntry[] | undefined> {
+  const dir = nasLocalPath(nasPath)
+  if (!dir || !fs.existsSync(dir)) {
+    return undefined
+  }
+  const normalized = normalizeNasPath(nasPath)
+  const entries = await readdir(dir, { withFileTypes: true })
+  return entries
+    .filter((entry) => !entry.name.startsWith('.') && !entry.name.endsWith('.part'))
+    .map((entry) => ({ name: entry.name, path: `${normalized}/${entry.name}`, isdir: entry.isDirectory() }))
+}
+
+// Lists a NAS folder: from the local copy if it was downloaded, otherwise live
+// from the NAS, and from whatever is stored locally if the NAS is unreachable.
+async function nasListFiles(folderPath: string): Promise<SynologyFileEntry[]> {
+  if (nasIsDownloaded(folderPath)) {
+    const local = await nasLocalListFiles(folderPath)
+    if (local) {
+      return local
+    }
+  }
+  try {
+    const live = await withSynologySession((session) => synologyListFiles(session, folderPath))
+    if (live !== undefined) {
+      return live
+    }
+  } catch (error) {
+    if (!(error instanceof SynologyApiError || error instanceof SynologySessionExpiredError)) {
+      synologyMarkOffline()
+    }
+  }
+  const local = await nasLocalListFiles(folderPath)
+  if (local) {
+    return local
+  }
+  throw new Error(`NAS folder not available: ${folderPath}`)
+}
+
+function synologyFindCoverImage(files: SynologyFileEntry[]): string | undefined {
+  const image = files.find((f) => !f.isdir && /\.(jpe?g|png)$/i.test(f.name))
+  return image?.path
+}
+
+// Only used for covers, which are asked for as small thumbnails.
+function synologyStreamUrl(filePath: string): string {
+  return `/api/synology/stream?path=${encodeURIComponent(filePath)}&w=400`
+}
+
+// A folder that holds no audio files but only subfolders is a "container": the
+// kids' UI drills into it like an artist level instead of trying to play it.
+// This allows any number of nesting levels.
+function synologyIsContainer(files: SynologyFileEntry[]): boolean {
+  const hasAudio = files.some((f) => !f.isdir && synologyAudioExtensions.some((ext) => f.name.toLowerCase().endsWith(ext)))
+  const hasSubfolders = files.some((f) => f.isdir)
+  return !hasAudio && hasSubfolders
+}
+
+// Builds the ready-to-use Media entry for one NAS folder (live listing).
+async function synologyBuildMediaEntry(
+  folderPath: string,
+  artistName: string,
+  title: string,
+  fallbackCoverPath?: string,
+): Promise<Record<string, unknown>> {
+  const files = await nasListFiles(folderPath)
+  const ownCoverPath = synologyFindCoverImage(files)
+  const coverPath = ownCoverPath ?? fallbackCoverPath
+  return {
+    type: 'nas',
+    category: 'nas',
+    artist: artistName,
+    title,
+    nasPath: folderPath,
+    nasIsContainer: synologyIsContainer(files),
+    cover: coverPath ? synologyStreamUrl(coverPath) : undefined,
+    artistcover: coverPath ? synologyStreamUrl(coverPath) : undefined,
+  }
+}
+
+async function updateSynologyConfig(partial: Record<string, unknown>): Promise<void> {
+  const current = await getMupiboxConfig()
+  if (!current) {
+    throw new Error('Cannot update config: current mupibox config could not be read.')
+  }
+  const updated = { ...current, synology: { ...(current.synology ?? {}), ...partial } }
+  const tmpPath = '/tmp/.mupiboxconfig-synology.json'
+  await writeFile(tmpPath, JSON.stringify(updated))
+  await execFileAsync('sudo', ['mv', tmpPath, mupiboxConfigPath])
+  mupiboxConfigCache = updated as MupiboxConfig
+}
+
+app.post('/api/synology/login', async (req, res) => {
+  const { address, https: useHttps, account, password, rememberMe } = req.body ?? {}
+  if (typeof address !== 'string' || !address || typeof account !== 'string' || typeof password !== 'string') {
+    res.status(400).json({ success: false, error: 'address, account and password are required.' })
+    return
+  }
+
+  const base = synologyResolveBase(address, Boolean(useHttps))
+  // A wrong password may be answered slowly by some NAS models: be generous here.
+  const result = await synologyLogin(base, account, password, 25000)
+  if (!result.success || !result.session) {
+    res.json({ success: false, error: result.error })
+    return
+  }
+
+  synologySessionCache = result.session
+  synologyOfflineUntil = 0
+
+  if (rememberMe === true) {
+    try {
+      await updateSynologyConfig({ address, https: Boolean(useHttps), account, password, rememberMe: true })
+    } catch (error) {
+      console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to save Synology login: ${error}`)
+    }
+  }
+
+  res.json({ success: true })
+})
+
+app.get('/api/synology/browse', async (req, res) => {
+  const folderPath = typeof req.query.path === 'string' ? req.query.path : ''
+
+  try {
+    const result = await withSynologySession(async (session) => {
+      const config = await getMupiboxConfig()
+      const markedFolders = new Set(config?.synology?.artistFolders ?? [])
+      const downloadFolders = new Set(config?.synology?.downloadFolders ?? [])
+
+      const files = await synologyListFiles(session, folderPath || '/')
+      const entries = files.filter((f) => f.isdir).map((f) => ({ name: f.name, path: f.path, isDirectory: true }))
+
+      return entries.map((e) => ({
+        ...e,
+        isMarked: markedFolders.has(e.path),
+        isDownload: downloadFolders.has(e.path),
+        isDownloaded: nasIsDownloaded(e.path),
+      }))
+    })
+
+    if (result === undefined) {
+      res.status(401).json({ success: false, error: 'not_logged_in' })
+      return
+    }
+    res.json({ success: true, path: folderPath, entries: result })
+  } catch (error) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to browse Synology path ${folderPath}: ${error}`)
+    res.status(502).json({ success: false, error: 'nas_unreachable' })
+  }
+})
+
+// `list` selects which selection is changed: "artist" (Show in MuPiBox, default)
+// or "download" (Download local).
+app.post('/api/synology/mark', async (req, res) => {
+  const { path: folderPath, marked, list } = req.body ?? {}
+  if (typeof folderPath !== 'string' || typeof marked !== 'boolean') {
+    res.status(400).json({ success: false, error: 'path and marked are required.' })
+    return
+  }
+  const key = list === 'download' ? 'downloadFolders' : 'artistFolders'
+
+  try {
+    const config = await getMupiboxConfig()
+    const existing = (config?.synology?.[key] as string[] | undefined) ?? []
+    const next = marked ? Array.from(new Set([...existing, folderPath])) : existing.filter((p) => p !== folderPath)
+    await updateSynologyConfig({ [key]: next })
+    res.json({ success: true, [key]: next })
+  } catch (error) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to save Synology selection: ${error}`)
+    res.status(500).json({ success: false })
+  }
+})
+
+app.get('/api/synology/artists', async (_req, res) => {
+  try {
+    const config = await getMupiboxConfig()
+    const artistFolders = config?.synology?.artistFolders ?? []
+
+    // One entry per marked folder. Deeper levels are loaded on demand via
+    // /api/synology/children as the user navigates, so this stays cheap.
+    const entries = await Promise.all(
+      artistFolders.map(async (artistPath) => {
+        try {
+          const artistName = artistPath.split('/').filter(Boolean).pop() ?? artistPath
+          return await synologyBuildMediaEntry(artistPath, artistName, artistName)
+        } catch (error) {
+          // Skip just this one folder (deleted on the NAS since it was marked, or
+          // NAS offline and never downloaded) instead of failing the whole category.
+          console.error(
+            `${new Date().toLocaleString()}: [MuPiBox-Server] Skipping unavailable NAS folder ${artistPath}: ${error}`,
+          )
+          return undefined
+        }
+      }),
+    )
+    res.json(entries.filter((entry) => entry !== undefined))
+  } catch (error) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to list NAS artists: ${error}`)
+    res.json([])
+  }
+})
+
+// Lists the subfolders of one NAS folder as ready-to-use Media entries (one
+// level deeper). Live from the NAS, or from the local copy when downloaded /
+// when the NAS is not reachable. Used by the kids' UI to drill down.
+app.get('/api/synology/children', async (req, res) => {
+  const folderPath = typeof req.query.path === 'string' ? req.query.path : ''
+  if (!folderPath) {
+    res.status(400).json([])
+    return
+  }
+
+  try {
+    const files = await nasListFiles(folderPath)
+    const parentName = folderPath.split('/').filter(Boolean).pop() ?? folderPath
+    const parentCoverPath = synologyFindCoverImage(files)
+
+    const entries = await Promise.all(
+      files
+        .filter((f) => f.isdir)
+        .map(async (sub) => {
+          try {
+            return await synologyBuildMediaEntry(sub.path, parentName, sub.name, parentCoverPath)
+          } catch (error) {
+            console.error(
+              `${new Date().toLocaleString()}: [MuPiBox-Server] Skipping unreadable NAS folder ${sub.path}: ${error}`,
+            )
+            return undefined
+          }
+        }),
+    )
+    res.json(entries.filter((entry) => entry !== undefined))
+  } catch (error) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to list NAS children of ${folderPath}: ${error}`)
+    res.json([])
+  }
+})
+
+app.get('/api/synology/tracklist', async (req, res) => {
+  const folderPath = typeof req.query.path === 'string' ? req.query.path : ''
+  if (!folderPath) {
+    res.status(400).json({ error: 'path is required' })
+    return
+  }
+
+  try {
+    const files = await nasListFiles(folderPath)
+    const tracks = files
+      .filter((f) => !f.isdir && synologyAudioExtensions.some((ext) => f.name.toLowerCase().endsWith(ext)))
+      .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
+      .map((f, index) => ({ position: index + 1, name: f.name, path: f.path }))
+    res.json(tracks)
+  } catch (error) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to list NAS tracklist for ${folderPath}: ${error}`)
+    res.status(502).json([])
+  }
+})
+
+const nasContentTypes: Record<string, string> = {
+  '.mp3': 'audio/mpeg',
+  '.flac': 'audio/flac',
+  '.wav': 'audio/wav',
+  '.wma': 'audio/x-ms-wma',
+  '.ogg': 'audio/ogg',
+  '.m4a': 'audio/mp4',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png': 'image/png',
+}
+
+// Serves a downloaded file from disk, including HTTP Range support (seeking).
+function nasServeLocalFile(req: express.Request, res: express.Response, file: string, size: number): void {
+  res.setHeader('Content-Type', nasContentTypes[path.extname(file).toLowerCase()] ?? 'application/octet-stream')
+  res.setHeader('Accept-Ranges', 'bytes')
+
+  let start = 0
+  let end = size - 1
+  const match = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range ?? '')
+  if (match && (match[1] !== '' || match[2] !== '')) {
+    if (match[1] === '') {
+      start = Math.max(0, size - Number(match[2]))
+    } else {
+      start = Number(match[1])
+      if (match[2] !== '') {
+        end = Math.min(end, Number(match[2]))
+      }
+    }
+    if (start > end) {
+      res.status(416).setHeader('Content-Range', `bytes */${size}`)
+      res.end()
+      return
+    }
+    res.status(206)
+    res.setHeader('Content-Range', `bytes ${start}-${end}/${size}`)
+  }
+
+  res.setHeader('Content-Length', String(end - start + 1))
+  fs.createReadStream(file, { start, end }).pipe(res)
+}
+
+app.get('/api/synology/stream', async (req, res) => {
+  const filePath = typeof req.query.path === 'string' ? req.query.path : ''
+  if (!filePath) {
+    res.status(400).send('path is required')
+    return
+  }
+
+  // A downloaded copy always wins: no network needed, and it works offline.
+  const localFile = nasLocalPath(filePath)
+  const thumbSize = parseThumbSize(req.query.w)
+  if (localFile) {
+    try {
+      const info = await stat(localFile)
+      if (info.isFile()) {
+        if (thumbSize && isThumbnailable(localFile)) {
+          const thumb = await getThumbnail(localFile, thumbSize, `lib|${localFile}|${info.mtimeMs}|${info.size}`)
+          if (thumb) {
+            await sendThumbnail(res, thumb)
+            return
+          }
+        }
+        nasServeLocalFile(req, res, localFile, info.size)
+        return
+      }
+    } catch {
+      // Not downloaded - fall through to the NAS.
+    }
+  }
+
+  const session = await getActiveSynologySession()
+  if (!session) {
+    res.status(401).send('Not logged in to Synology, or the NAS is not reachable.')
+    return
+  }
+
+  try {
+    const headers: Record<string, string> = { Authorization: session.auth }
+    if (req.headers.range) {
+      headers.Range = req.headers.range as string
+    }
+
+    if (thumbSize && isThumbnailable(filePath) && !req.headers.range) {
+      const day = Math.floor(Date.now() / 86400000)
+      const thumb = await getThumbnail(`nas:${filePath}`, thumbSize, `nas|${filePath}|${day}`, async () => {
+        const full = await fetch(synologyUrl(session, filePath), { headers, signal: AbortSignal.timeout(20000) })
+        if (!full.ok) {
+          return undefined
+        }
+        const tmp = path.join('/tmp', `.nasthumb-${crypto.randomBytes(6).toString('hex')}${path.extname(filePath)}`)
+        await writeFile(tmp, Buffer.from(await full.arrayBuffer()))
+        return tmp
+      })
+      if (thumb) {
+        await sendThumbnail(res, thumb)
+        return
+      }
+    }
+
+    const upstream = await fetch(synologyUrl(session, filePath), { headers, signal: AbortSignal.timeout(15000) })
+    if (upstream.status === 404 || upstream.status === 401 || upstream.status === 403) {
+      res.status(upstream.status === 404 ? 404 : 502).send('Failed to fetch file from NAS.')
+      return
+    }
+
+    res.status(upstream.status)
+    for (const header of ['content-type', 'content-length', 'content-range', 'accept-ranges']) {
+      const value = upstream.headers.get(header)
+      if (value) {
+        res.setHeader(header, value)
+      }
+    }
+
+    if (upstream.body) {
+      Readable.fromWeb(upstream.body as import('node:stream/web').ReadableStream).pipe(res)
+    } else {
+      res.end()
+    }
+  } catch (error) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to stream NAS file ${filePath}: ${error}`)
+    res.status(502).send('Failed to fetch file from NAS.')
+  }
+})
+
+// --- Download local ("Download selected") ---------------------------------
+
+const nasDownloadExtensions = [...synologyAudioExtensions, '.jpg', '.jpeg', '.png']
+
+interface NasDownloadStatus {
+  running: boolean
+  message: string
+  filesDone: number
+  filesTotal: number
+  error?: string
+}
+
+const nasDownloadStatus: NasDownloadStatus = { running: false, message: 'Idle', filesDone: 0, filesTotal: 0 }
+
+interface NasFileToDownload {
+  nasPath: string
+  size: number
+}
+
+async function nasCollectFiles(session: SynologySession, folderPath: string, out: NasFileToDownload[]): Promise<void> {
+  const files = await synologyListFiles(session, folderPath, true)
+  for (const file of files) {
+    if (file.isdir) {
+      await nasCollectFiles(session, file.path, out)
+    } else if (nasDownloadExtensions.some((ext) => file.name.toLowerCase().endsWith(ext))) {
+      out.push({ nasPath: file.path, size: file.additional?.size ?? -1 })
+    }
+  }
+}
+
+async function nasDownloadFile(nasPath: string, size: number): Promise<void> {
+  const target = nasLocalPath(nasPath)
+  if (!target) {
+    return
+  }
+  try {
+    const existing = await stat(target)
+    if (size < 0 || existing.size === size) {
+      return
+    }
+  } catch {
+    // Not downloaded yet.
+  }
+  await mkdir(path.dirname(target), { recursive: true })
+
+  const done = await withSynologySession(async (session) => {
+    const response = await fetch(synologyUrl(session, nasPath), { headers: { Authorization: session.auth } })
+    if (!response.ok || !response.body) {
+      throw new SynologyApiError(`WebDAV download error ${response.status}`)
+    }
+    // Write to a temp name first so a half-finished file is never mistaken for a
+    // complete one (and never gets played).
+    const partFile = `${target}.part`
+    await pipeline(Readable.fromWeb(response.body as import('node:stream/web').ReadableStream), fs.createWriteStream(partFile))
+    await rename(partFile, target)
+    return true
+  })
+  if (!done) {
+    throw new Error('NAS not reachable')
+  }
+}
+
+// Deletes everything under the local NAS folder that is not inside (or on the
+// way to) one of the folders in `keep`. Never touches anything outside nasLocalRoot.
+async function nasPruneExcept(nasDir: string, keep: string[]): Promise<void> {
+  const dir = nasLocalPath(nasDir)
+  if (!dir) {
+    return
+  }
+  let entries: fs.Dirent[]
+  try {
+    entries = await readdir(dir, { withFileTypes: true })
+  } catch {
+    return
+  }
+  const base = nasDir === '/' ? '' : nasDir
+  for (const entry of entries) {
+    const child = `${base}/${entry.name}`
+    if (keep.includes(child)) {
+      continue
+    }
+    // Cover images of parent folders belong to the folders below them.
+    if (!entry.isDirectory() && /\.(jpe?g|png)$/i.test(entry.name)) {
+      continue
+    }
+    if (entry.isDirectory() && keep.some((k) => k.startsWith(`${child}/`))) {
+      await nasPruneExcept(child, keep)
+      continue
+    }
+    await rm(path.join(dir, entry.name), { recursive: true, force: true })
+  }
+}
+
+async function nasLocalHasImage(dir: string): Promise<boolean> {
+  try {
+    const entries = await readdir(dir, { withFileTypes: true })
+    return entries.some((entry) => entry.isFile() && /\.(jpe?g|png)$/i.test(entry.name))
+  } catch {
+    return false
+  }
+}
+
+// A downloaded folder is often shown under an artist whose cover lives in a parent
+// folder (e.g. /music/Artist/cover.jpg). Fetch those covers too, so the artist
+// still has its picture when the NAS is not reachable.
+async function nasDownloadParentCovers(folder: string, checked: Set<string>): Promise<void> {
+  const parts = nasPathParts(folder) ?? []
+  for (let length = 1; length < parts.length; length++) {
+    const ancestor = `/${parts.slice(0, length).join('/')}`
+    if (checked.has(ancestor)) {
+      continue
+    }
+    checked.add(ancestor)
+
+    const dir = nasLocalPath(ancestor)
+    if (dir && (await nasLocalHasImage(dir))) {
+      continue
+    }
+    const files = await withSynologySession((session) => synologyListFiles(session, ancestor, true))
+    const cover = files?.find((file) => !file.isdir && /\.(jpe?g|png)$/i.test(file.name))
+    if (cover) {
+      await nasDownloadFile(cover.path, cover.additional?.size ?? -1)
+    }
+  }
+}
+
+async function runNasSync(): Promise<void> {
+  const status = nasDownloadStatus
+  Object.assign(status, { running: true, message: 'Checking selection...', filesDone: 0, filesTotal: 0, error: undefined })
+
+  try {
+    const config = await getMupiboxConfig()
+    if (!config) {
+      // Without the selection we cannot tell what to keep - never delete blindly.
+      throw new Error('Could not read the MuPiBox configuration.')
+    }
+    const desired = Array.from(new Set((config.synology?.downloadFolders ?? []).map(normalizeNasPath))).filter(
+      (folder) => folder !== '/',
+    )
+    await mkdir(nasLocalRoot, { recursive: true })
+
+    status.message = 'Removing local copies that are no longer selected...'
+    await nasPruneExcept('/', desired)
+
+    if (desired.length > 0 && (await getActiveSynologySession())) {
+      status.message = 'Downloading covers of parent folders...'
+      const checkedParents = new Set<string>()
+      for (const folder of desired) {
+        try {
+          await nasDownloadParentCovers(folder, checkedParents)
+        } catch (error) {
+          console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] NAS parent cover download failed for ${folder}: ${error}`)
+        }
+      }
+    }
+
+    const pending = desired.filter((folder) => !nasIsDownloaded(folder))
+    if (pending.length === 0) {
+      status.message = 'Everything selected is already downloaded.'
+      return
+    }
+
+    if (!(await getActiveSynologySession())) {
+      throw new Error('The NAS is not reachable - nothing was downloaded.')
+    }
+
+    status.message = 'Reading folders on the NAS...'
+    const plan: { folder: string; files: NasFileToDownload[] }[] = []
+    for (const folder of pending) {
+      const files: NasFileToDownload[] = []
+      await withSynologySession(async (session) => {
+        files.length = 0
+        await nasCollectFiles(session, folder, files)
+      })
+      plan.push({ folder, files })
+      status.filesTotal += files.length
+    }
+
+    let failed = 0
+    for (const { folder, files } of plan) {
+      let folderFailed = 0
+      for (const file of files) {
+        status.message = `Downloading ${file.nasPath}`
+        try {
+          await nasDownloadFile(file.nasPath, file.size)
+        } catch (error) {
+          folderFailed++
+          failed++
+          console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] NAS download failed for ${file.nasPath}: ${error}`)
+        }
+        status.filesDone++
+      }
+
+      // The marker is only written once the whole folder is complete, which is
+      // how later runs know to skip it.
+      const localDir = nasLocalPath(folder)
+      if (folderFailed === 0 && localDir) {
+        await mkdir(localDir, { recursive: true })
+        await writeFile(
+          path.join(localDir, nasDownloadMarker),
+          JSON.stringify({ nasPath: folder, completedAt: new Date().toISOString() }),
+        )
+      }
+    }
+
+    status.message =
+      failed === 0
+        ? `Done - ${status.filesDone} files downloaded.`
+        : `Finished with ${failed} failed files - run "Download selected" again to retry.`
+  } catch (error) {
+    status.error = error instanceof Error ? error.message : String(error)
+    status.message = `Failed: ${status.error}`
+  } finally {
+    status.running = false
+  }
+}
+
+app.post('/api/synology/download/sync', (_req, res) => {
+  if (nasDownloadStatus.running) {
+    res.status(409).json({ success: false, error: 'A download is already running.' })
+    return
+  }
+  runNasSync().catch((error) => {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] NAS sync crashed: ${error}`)
+  })
+  res.json({ success: true })
+})
+
+app.get('/api/synology/download/status', (_req, res) => {
+  res.json(nasDownloadStatus)
+})
+
+// --------------------------------------------
+// Local library (~/MuPiBox/media/<category>/...)
+// --------------------------------------------
+// The local audiobook/music/other folders are read live from disk on every
+// request, in any folder depth - the same idea as the NAS tab. Changes made in
+// the file explorer (Samba share) therefore show up the next time a tab is
+// opened, with no "reload media database" step. Spotify, podcast and radio
+// entries are not touched here; they still come from data.json.
+
+const libraryRoot = '/home/dietpi/MuPiBox/media'
+const libraryCategories = ['audiobook', 'music', 'other']
+
+// Normalizes a relative library path like "audiobook/Artist/Album"; undefined if
+// it is not inside one of the library categories (also blocks "..").
+function libraryRel(relPath: string): string | undefined {
+  const parts = nasPathParts(relPath)
+  if (!parts || parts.length === 0 || !libraryCategories.includes(parts[0])) {
+    return undefined
+  }
+  return parts.join('/')
+}
+
+async function libraryListFiles(relPath: string): Promise<SynologyFileEntry[]> {
+  const rel = libraryRel(relPath)
+  if (!rel) {
+    throw new Error(`Invalid library path: ${relPath}`)
+  }
+  const entries = await readdir(path.join(libraryRoot, rel), { withFileTypes: true })
+  return entries
+    .filter((entry) => !entry.name.startsWith('.'))
+    .map((entry) => ({ name: entry.name, path: `${rel}/${entry.name}`, isdir: entry.isDirectory() }))
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }))
+}
+
+// Prefers a file called "cover.*", otherwise the first image in the folder.
+function libraryFindCover(files: SynologyFileEntry[]): string | undefined {
+  const images = files.filter((f) => !f.isdir && /\.(jpe?g|png)$/i.test(f.name))
+  return (images.find((f) => /^cover\./i.test(f.name)) ?? images[0])?.path
+}
+
+// An artist folder without a picture of its own gets the cover of the first album
+// below it (as the old media database did) - looked up a couple of levels deep.
+async function libraryFindCoverBelow(files: SynologyFileEntry[], depth: number): Promise<string | undefined> {
+  if (depth <= 0) {
+    return undefined
+  }
+  for (const sub of files.filter((f) => f.isdir).slice(0, 5)) {
+    try {
+      const subFiles = await libraryListFiles(sub.path)
+      const cover = libraryFindCover(subFiles) ?? (await libraryFindCoverBelow(subFiles, depth - 1))
+      if (cover) {
+        return cover
+      }
+    } catch {
+      // Unreadable folder - try the next one.
+    }
+  }
+  return undefined
+}
+
+// --------------------------------------------
+// Cover thumbnails
+// --------------------------------------------
+// Covers are often 1000-1400 px large, but the kiosk shows them at 300 px. Decoding and
+// uploading that many big images makes a list with many albums load slowly on the Pi.
+// Covers are therefore requested with a maximum size (&w=400) and served as small JPEGs
+// that are made once with Python's PIL (package python3-pil) and kept in a cache folder.
+// If PIL is missing or a picture cannot be converted, the original file is sent instead.
+
+const thumbDir = '/home/dietpi/.mupibox/thumbs'
+const thumbMaxParallel = 2
+let thumbsUnavailableUntil = 0
+let thumbRunning = 0
+const thumbWaiting: (() => void)[] = []
+const thumbJobs = new Map<string, Promise<string | undefined>>()
+
+const thumbScript = `
+import sys
+from PIL import Image
+src, dst, size = sys.argv[1], sys.argv[2], int(sys.argv[3])
+im = Image.open(src)
+try:
+    im.draft('RGB', (size * 2, size * 2))
+except Exception:
+    pass
+if im.mode in ('RGBA', 'LA', 'P'):
+    im = im.convert('RGBA')
+    background = Image.new('RGB', im.size, (255, 255, 255))
+    background.paste(im, mask=im.split()[-1])
+    im = background
+else:
+    im = im.convert('RGB')
+im.thumbnail((size, size), Image.LANCZOS)
+im.save(dst, 'JPEG', quality=82, optimize=True)
+`
+
+async function withThumbSlot<T>(work: () => Promise<T>): Promise<T> {
+  if (thumbRunning >= thumbMaxParallel) {
+    await new Promise<void>((resolve) => thumbWaiting.push(resolve))
+  }
+  thumbRunning++
+  try {
+    return await work()
+  } finally {
+    thumbRunning--
+    thumbWaiting.shift()?.()
+  }
+}
+
+// Returns the path of the thumbnail (created if needed), or undefined if none can be made.
+// `seed` must change whenever the source picture changes.
+function getThumbnail(
+  src: string,
+  size: number,
+  seed: string,
+  fetchSource?: () => Promise<string | undefined>,
+): Promise<string | undefined> {
+  if (Date.now() < thumbsUnavailableUntil) {
+    return Promise.resolve(undefined)
+  }
+  const key = crypto.createHash('sha1').update(`${seed}|${size}`).digest('hex')
+  const target = path.join(thumbDir, `${key}.jpg`)
+  const running = thumbJobs.get(key)
+  if (running) {
+    return running
+  }
+  const job = (async () => {
+    if (fs.existsSync(target)) {
+      return target
+    }
+    await mkdir(thumbDir, { recursive: true })
+    const temp = `${target}.${process.pid}.tmp`
+    let source = src
+    let fetched: string | undefined
+    try {
+      if (fetchSource) {
+        fetched = await fetchSource()
+        if (!fetched) {
+          return undefined
+        }
+        source = fetched
+      }
+      await withThumbSlot(() =>
+        execFileAsync('nice', ['-n', '10', 'python3', '-c', thumbScript, source, temp, String(size)], { timeout: 30000 }),
+      )
+      await rename(temp, target)
+      return target
+    } catch (error) {
+      await rm(temp, { force: true })
+      if (/No module named|ModuleNotFoundError|ENOENT/.test(String(error))) {
+        // PIL (or python3) is not installed - do not try again for a while.
+        thumbsUnavailableUntil = Date.now() + 10 * 60 * 1000
+      }
+      return undefined
+    } finally {
+      if (fetched) {
+        await rm(fetched, { force: true })
+      }
+    }
+  })().finally(() => thumbJobs.delete(key))
+  thumbJobs.set(key, job)
+  return job
+}
+
+// Thumbnails of covers that were changed or removed stay in the cache folder; drop old ones.
+async function pruneThumbnails(): Promise<void> {
+  try {
+    const limit = Date.now() - 60 * 24 * 3600 * 1000
+    for (const name of await readdir(thumbDir)) {
+      const file = path.join(thumbDir, name)
+      if ((await stat(file)).mtimeMs < limit) {
+        await rm(file, { force: true })
+      }
+    }
+  } catch {
+    // No cache folder yet.
+  }
+}
+void pruneThumbnails()
+
+// Makes the thumbnails of all local covers in the background a while after start, so that
+// the first look at a folder does not have to wait for them.
+async function warmLibraryThumbnails(dir: string, depth: number): Promise<void> {
+  let entries: fs.Dirent[]
+  try {
+    entries = await readdir(dir, { withFileTypes: true })
+  } catch {
+    return
+  }
+  for (const entry of entries) {
+    const full = path.join(dir, entry.name)
+    if (entry.isDirectory() && depth < 6 && !entry.name.startsWith('.')) {
+      await warmLibraryThumbnails(full, depth + 1)
+    } else if (entry.isFile() && isThumbnailable(entry.name)) {
+      try {
+        const info = await stat(full)
+        await getThumbnail(full, 400, `lib|${full}|${info.mtimeMs}|${info.size}`)
+      } catch {
+        // Skip unreadable files.
+      }
+    }
+  }
+}
+setTimeout(() => void warmLibraryThumbnails(libraryRoot, 0), 90 * 1000)
+
+function parseThumbSize(value: unknown): number | undefined {
+  const size = Number(value)
+  return Number.isFinite(size) && size > 0 ? Math.min(Math.max(Math.round(size), 64), 800) : undefined
+}
+
+function isThumbnailable(file: string): boolean {
+  return /\.(jpe?g|png)$/i.test(file)
+}
+
+function sendThumbnail(res: express.Response, thumb: string): Promise<void> {
+  return stat(thumb).then((info) => {
+    res.setHeader('Content-Type', 'image/jpeg')
+    res.setHeader('Content-Length', String(info.size))
+    res.setHeader('Cache-Control', 'public, max-age=86400')
+    fs.createReadStream(thumb).pipe(res)
+  })
+}
+
+// Covers are asked for as small thumbnails (see above).
+function libraryFileUrl(relPath: string): string {
+  return `/api/library/file?path=${encodeURIComponent(relPath)}&w=400`
+}
+
+async function libraryBuildEntry(
+  relPath: string,
+  artistName: string,
+  title: string,
+  fallbackCoverPath?: string,
+): Promise<Record<string, unknown>> {
+  const files = await libraryListFiles(relPath)
+  const isContainer = synologyIsContainer(files)
+  const coverPath =
+    libraryFindCover(files) ?? (isContainer ? await libraryFindCoverBelow(files, 2) : undefined) ?? fallbackCoverPath
+  return {
+    type: 'library',
+    category: relPath.split('/')[0],
+    artist: artistName,
+    title,
+    libraryPath: relPath,
+    // A folder with only subfolders (no audio files) opens the next level instead of playing.
+    libraryIsContainer: isContainer,
+    cover: coverPath ? libraryFileUrl(coverPath) : undefined,
+    artistcover: coverPath ? libraryFileUrl(coverPath) : undefined,
+  }
+}
+
+// Top-level folders of one category = the "artists" shown in that tab.
+app.get('/api/library/artists', async (req, res) => {
+  const category = typeof req.query.category === 'string' ? req.query.category : ''
+  if (!libraryCategories.includes(category)) {
+    res.json([])
+    return
+  }
+
+  try {
+    const top = await libraryListFiles(category)
+    const entries = await Promise.all(
+      top
+        .filter((f) => f.isdir)
+        .map(async (folder) => {
+          try {
+            return await libraryBuildEntry(folder.path, folder.name, folder.name)
+          } catch (error) {
+            console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Skipping unreadable folder ${folder.path}: ${error}`)
+            return undefined
+          }
+        }),
+    )
+    res.json(entries.filter((entry) => entry !== undefined))
+  } catch (error) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to list library category ${category}: ${error}`)
+    res.json([])
+  }
+})
+
+// Subfolders of one library folder, one level deeper.
+app.get('/api/library/children', async (req, res) => {
+  const folderPath = typeof req.query.path === 'string' ? req.query.path : ''
+  if (!libraryRel(folderPath)) {
+    res.status(400).json([])
+    return
+  }
+
+  try {
+    const files = await libraryListFiles(folderPath)
+    const parentName = folderPath.split('/').filter(Boolean).pop() ?? folderPath
+    const parentCoverPath = libraryFindCover(files)
+
+    const entries = await Promise.all(
+      files
+        .filter((f) => f.isdir)
+        .map(async (sub) => {
+          try {
+            return await libraryBuildEntry(sub.path, parentName, sub.name, parentCoverPath)
+          } catch (error) {
+            console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Skipping unreadable folder ${sub.path}: ${error}`)
+            return undefined
+          }
+        }),
+    )
+    res.json(entries.filter((entry) => entry !== undefined))
+  } catch (error) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to list library folder ${folderPath}: ${error}`)
+    res.json([])
+  }
+})
+
+// Cover images (and audio) of library folders, with Range support.
+app.get('/api/library/file', async (req, res) => {
+  const rel = libraryRel(typeof req.query.path === 'string' ? req.query.path : '')
+  const contentType = rel ? nasContentTypes[path.extname(rel).toLowerCase()] : undefined
+  if (!rel || !contentType) {
+    res.status(400).send('Invalid path')
+    return
+  }
+
+  const file = path.join(libraryRoot, rel)
+  try {
+    const info = await stat(file)
+    if (!info.isFile()) {
+      res.status(404).send('Not found')
+      return
+    }
+    const thumbSize = parseThumbSize(req.query.w)
+    if (thumbSize && isThumbnailable(file)) {
+      const thumb = await getThumbnail(file, thumbSize, `lib|${file}|${info.mtimeMs}|${info.size}`)
+      if (thumb) {
+        await sendThumbnail(res, thumb)
+        return
+      }
+    }
+    nasServeLocalFile(req, res, file, info.size)
+  } catch {
+    res.status(404).send('Not found')
   }
 })
 

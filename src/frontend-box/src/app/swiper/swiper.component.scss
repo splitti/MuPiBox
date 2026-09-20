@@ -55,3 +55,56 @@ swiper-container {
     border: 6px solid var(--ion-color-dark);
     margin-top: 32px;
 }
+
+// --- Cover Flow theme ---------------------------------------------------------
+swiper-container.coverflow {
+    --swiper-scrollbar-bg-color: rgba(255, 255, 255, 0.2);
+    --swiper-scrollbar-drag-bg-color: rgba(255, 255, 255, 0.8);
+    --swiper-scrollbar-size: 8px;
+    --swiper-scrollbar-bottom: 8px;
+
+    swiper-slide {
+        width: 300px;
+        transform-style: preserve-3d;
+    }
+
+    // Mirror image below every cover (with its title), fading out - as in Cover Flow.
+    ion-grid {
+        margin-bottom: 76px; // room for the reflection
+        -webkit-box-reflect: below 2px linear-gradient(transparent 68%, rgba(255, 255, 255, 0.3));
+    }
+
+    ion-grid,
+    ion-col {
+        padding: 0;
+    }
+
+    ion-card {
+        width: 300px;
+        margin: 0 auto !important;
+    }
+
+    // Rectangular covers without frame or shadow.
+    .img-row {
+        padding-top: 20px; // 20px below the menu bar
+        padding-bottom: 0;
+
+        ion-card {
+            width: 300px;
+            height: 300px;
+            border-radius: 0;
+            box-shadow: none;
+            border: 0;
+            --background: transparent;
+
+            img {
+                -user-select: none;
+                display: block;
+                height: 100%;
+                width: 100%;
+                object-fit: cover;
+            }
+        }
+    }
+
+}

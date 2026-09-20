@@ -1,7 +1,7 @@
 <ion-header class="player-header">
   <ion-toolbar color="light">
     <ion-buttons slot="start">
-      <ion-back-button icon="arrow-back-outline" defaultHref="/medialist"></ion-back-button>
+      <ion-back-button icon="arrow-back-outline" defaultHref="/medialist" [routerAnimation]="coverFlip.returnAnimation"></ion-back-button>
     </ion-buttons>
     <ion-title class="toolbar-album" #themeFontSource>
       @if (media.type ==='spotify' && currentPlayedSpotify?.currently_playing_type !== 'episode') {
@@ -12,7 +12,7 @@
         } @else if (media.audiobookid && (spotify$ | async)?.audiobook) {
           <div>{{(spotify$ | async)?.audiobook?.name}}</div>
         } @else {
-          @if (media.type ==='library') {
+          @if (media.type ==='library' || media.type ==='nas') {
             <div>{{(local$ | async)?.album}}</div>
           } @else {
             @if (media.type ==='rss') {
@@ -33,7 +33,7 @@
         } @else if (media.audiobookid && (spotify$ | async)?.audiobook) {
           <div>{{(spotify$ | async)?.item?.name}}</div>
         } @else {
-          @if (media.type ==='library') {
+          @if (media.type ==='library' || media.type ==='nas') {
             <div>{{(local$ | async)?.currentTrackname}}</div>
           } @else {
             @if (media.type ==='rss') {
@@ -54,7 +54,7 @@
     }
     <ion-title class="toolbar-tracknumber" slot="end">
       <div>{{(local$ | async)?.volume}}%</div>
-      @if (media.type ==='library') {
+      @if (media.type ==='library' || media.type ==='nas') {
         <div>{{(local$ | async)?.currentTracknr}}/{{(local$ | async)?.totalTracks}}</div>
       } @else {
         @if (media.type ==='spotify') {
@@ -123,7 +123,16 @@
       <ion-col size="6">
         <ion-card class="cover-card" (pointerdown)="coverPointerDown()" (pointerup)="coverPointerUp()" (pointerleave)="coverPointerUp()" (pointercancel)="coverPointerUp()">
           <img src="{{this.cover}} " draggable="false" style="-moz-user-select: none;" ondragstart="return false;">
-          @if (media.type === 'spotify' || media.type === 'library') {
+          @if ((media.type === 'radio' || media.type === 'rss') && currentPlayedLocal?.loading) {
+            <!-- Stream is being buffered: a ring in the middle of the cover that gets smaller until playback starts. -->
+            <div class="load-indicator">
+              <svg viewBox="0 0 48 48">
+                <circle class="load-indicator-track" cx="24" cy="24" r="20"></circle>
+                <circle class="load-indicator-ring" [class.waiting]="loadProgress === 0" cx="24" cy="24" [attr.r]="loadRingRadius"></circle>
+              </svg>
+            </div>
+          }
+          @if (media.type === 'spotify' || media.type === 'library' || media.type === 'nas') {
             <div class="press-indicator" [class.active]="pressingCover" [style.--press-duration.ms]="listViewTimerMs">
               <svg viewBox="0 0 48 48">
                 <circle class="press-indicator-track" cx="24" cy="24" r="20"></circle>

@@ -5,17 +5,17 @@
         <ion-icon slot="icon-only" name="timer-outline"></ion-icon>
       </ion-button>
     </ion-buttons>
-    <ion-segment value="{{this.category()}}" (ionChange)="categoryChanged($event)">
-      <ion-segment-button value="audiobook">
-        <ion-icon name="book-outline"></ion-icon>
-      </ion-segment-button>
-      <ion-segment-button value="music">
-        <ion-icon name="musical-notes-outline"></ion-icon>
-      </ion-segment-button>
-      <ion-segment-button value="other">
-        <ion-icon name="radio-outline"></ion-icon>
-      </ion-segment-button>
-    </ion-segment>
+    @if (configLoaded()) {
+      <!-- Hidden categories are left out; the remaining buttons share the width equally,
+           so their icons stay evenly spaced and centered. -->
+      <ion-segment value="{{this.category()}}" (ionChange)="categoryChanged($event)">
+        @for (cat of visibleCategories(); track cat.key) {
+          <ion-segment-button [value]="cat.key">
+            <ion-icon [name]="cat.icon"></ion-icon>
+          </ion-segment-button>
+        }
+      </ion-segment>
+    }
     
     <ion-buttons slot="end">
       <ion-button class="status-icons" (pointerdown)="settingsButtonPointerDown()" (pointerup)="settingsButtonPointerUp()" (pointerleave)="settingsButtonPointerUp()" (pointercancel)="settingsButtonPointerUp()">

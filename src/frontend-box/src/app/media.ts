@@ -5,7 +5,7 @@ export enum MediaSorting {
   ReleaseDateDescending = 'ReleaseDateDescending',
 }
 
-export type CategoryType = 'audiobook' | 'music' | 'other' | 'resume'
+export type CategoryType = 'audiobook' | 'music' | 'other' | 'nas' | 'resume'
 
 export interface Media {
   index?: number
@@ -36,6 +36,18 @@ export interface Media {
   resumelocalcurrentTracknr?: number
   resumelocalprogressTime?: number
   resumerssprogressTime?: number
+  // Full Synology path of this entry's folder, used for NAS media (type: 'nas')
+  // to browse/stream it live instead of resolving a local file path.
+  nasPath?: string
+  // True for a NAS folder that only contains subfolders (no audio files): it is
+  // drilled into like an artist level instead of being played.
+  nasIsContainer?: boolean
+  // Local files (type: 'library'): folder below ~/MuPiBox/media, e.g.
+  // "audiobook/Artist/Album", read live from disk at any depth. Entries without
+  // it are old-style library entries from data.json (category/artist/title).
+  libraryPath?: string
+  // True for a local folder that only contains subfolders: it opens the next level.
+  libraryIsContainer?: boolean
 }
 
 // Cache interface for storing album/playlist/show/audiobook information

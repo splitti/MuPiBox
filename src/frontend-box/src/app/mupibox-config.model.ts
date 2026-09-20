@@ -6,6 +6,10 @@ export interface MupiboxConfig {
     theme: string
     listviewTimer?: number
     settingsAccessTimer?: number
+    // Display categories hidden in the kiosk (Admin > Control system > Hide display categorys)
+    hiddenCategories?: string[]
+    // Hides the horizontal scrollbar of the cover lists (Admin > Mupi-conf > Theme)
+    hideScrollbar?: boolean
     // Add other mupibox properties if needed
   }
   timeout: {

@@ -13,10 +13,14 @@ elif [ "$1" = "branch" ]; then
     exit 1
   fi
   # Optional 3rd/4th args let this install from a fork instead of splitti/MuPiBox,
-  # and give the resulting install a custom version label (e.g. "Beta 4.4.5")
+  # and give the resulting install a custom version label (e.g. "Beta 5.0.0 Custom NAS version")
   # instead of the auto-generated "DEV <branch> <date>" string.
   REPO="${3:-splitti/MuPiBox}"
   VERSION_LABEL="$4"
+  # The branches of this fork share one version name.
+  if [ -z "$VERSION_LABEL" ] && { [ "$BRANCH" = "synology-nas" ] || [ "$BRANCH" = "custom-changes" ]; } && [ "$REPO" = "Lippsson/MuPiBox" ]; then
+    VERSION_LABEL="Beta 5.0.0 Custom NAS version"
+  fi
   BRANCH_EXISTS=$(curl -s -o /dev/null -w "%{http_code}" https://api.github.com/repos/${REPO}/branches/${BRANCH})
   if [ "$BRANCH_EXISTS" != "200" ]; then
     echo "Error: Branch '${BRANCH}' does not exist on GitHub repo '${REPO}'"
@@ -66,7 +70,7 @@ fi
 LOG="/boot/mupibox_update.log"
 exec 3>${LOG}
 service mupi_idle_shutdown stop
-packages2install="lighttpd-mod-openssl gpiod git libasound2 mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt libgles2-mesa mesa-utils libsdl2-dev preload python3-smbus2 pigpio libjson-c-dev i2c-tools libi2c-dev python3-smbus python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask"
+packages2install="lighttpd-mod-openssl gpiod git libasound2 mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt libgles2-mesa mesa-utils libsdl2-dev preload python3-smbus2 pigpio libjson-c-dev i2c-tools libi2c-dev python3-smbus python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask python3-pil"
 packages2remove="jq"
 STEP=0
 VER_JSON="/tmp/version.json"
@@ -133,6 +137,7 @@ rm -f /tmp/mupibox-update-failed
 	mkdir /home/dietpi/MuPiBox/media/audiobook >&3 2>&3	
 	mkdir /home/dietpi/MuPiBox/media/music >&3 2>&3
 	mkdir /home/dietpi/MuPiBox/media/other >&3 2>&3
+	mkdir /home/dietpi/MuPiBox/media/NAS >&3 2>&3
 	mkdir /home/dietpi/MuPiBox/media/cover >&3 2>&3
 	mkdir /home/dietpi/MuPiBox/media/youtube-dl >&3 2>&3
 	chown dietpi:dietpi /home/dietpi/MuPiBox/media/audiobook >&3 2>&3
@@ -580,7 +585,14 @@ rm -f /tmp/mupibox-update-failed
 	mv -f ${MUPI_SRC}/config/services/mupi_autoconnect-wifi.service /etc/systemd/system/mupi_autoconnect-wifi.service  >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/mupi_mqtt.service /etc/systemd/system/mupi_mqtt.service  >&3 2>&3
 
+	# Tolerant replacement for DietPi's WiFi monitor (see scripts/mupibox/wifi_monitor.sh)
+	mkdir -p /etc/systemd/system/dietpi-wifi-monitor.service.d >&3 2>&3
+	cp -f ${MUPI_SRC}/config/services/dietpi-wifi-monitor-override.conf /etc/systemd/system/dietpi-wifi-monitor.service.d/override.conf >&3 2>&3
+
 	systemctl daemon-reload >&3 2>&3
+	if systemctl list-unit-files dietpi-wifi-monitor.service 2>/dev/null | grep -q dietpi-wifi-monitor; then
+		systemctl restart dietpi-wifi-monitor.service >&3 2>&3
+	fi
 	if [ "$RELEASE" != "dev" ]; then
 		systemctl enable librespot.service >&3 2>&3
 		systemctl start librespot.service >&3 2>&3

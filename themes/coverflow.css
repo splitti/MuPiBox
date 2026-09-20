@@ -1,0 +1,31 @@
+/*
+Cover Flow theme: black background, cover lists shown as Cover Flow
+(the centered cover faces front, the others are tilted towards it, with a mirror image below).
+The Cover Flow itself is drawn by the MuPiBox app whenever this theme is active.
+BG body{--ion-background-color: #000000;
+FG --ion-color-light: #1c1c1e;
+*/
+
+ion-range{
+    --knob-background: #ffffff;
+    --bar-background-active: #8e8e93;
+    --bar-background: #3a3a3c;
+}
+
+body{
+	--ion-color-light: #1c1c1e !important;
+	--ion-color-light-contrast: #ffffff !important;
+	--ion-item-background: transparent !important;
+}
+
+.md body{
+	--ion-background-color: #000000 !important;
+}
+
+ion-card {
+    --background: #1c1c1e !important;
+}
+
+ion-spinner{
+        color: #8e8e93 !important;
+}

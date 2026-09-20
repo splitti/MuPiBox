@@ -37,34 +37,62 @@
   </ion-card>
 
   <div class="list-header">
-    <ion-label>Configured networks</ion-label>
-    <ion-button size="small" (click)="addNetworkButtonPressed()">
-      <ion-icon slot="start" name="add-outline"></ion-icon>
-      Add network
-    </ion-button>
+    <ion-label>Networks in range</ion-label>
+    <div class="list-actions">
+      <ion-button size="small" fill="outline" (click)="loadNetworks()" [disabled]="loading()">
+        <ion-icon slot="start" name="scan-outline"></ion-icon>
+        Scan
+      </ion-button>
+      <ion-button size="small" (click)="addNetworkButtonPressed()">
+        <ion-icon slot="start" name="add-outline"></ion-icon>
+        Add network
+      </ion-button>
+    </div>
   </div>
 
   @if (loading()) {
     <div class="loading-row"><ion-spinner></ion-spinner></div>
   } @else {
     <ion-list class="networks-list">
-      @for (configuredNetwork of configuredNetworks(); track configuredNetwork.id) {
-        <ion-item [class.current-network]="configuredNetwork.current">
+      @for (wifi of networks(); track wifi.ssid + '/' + wifi.id) {
+        <ion-item [class.current-network]="wifi.current" [class.unavailable]="!wifi.available">
+          <div slot="start" class="signal" [attr.title]="wifi.available && wifi.signal !== undefined ? wifi.signal + ' %' : 'not in range'">
+            @for (bar of signalBars; track bar) {
+              <span class="bar" [class.on]="bar <= signalLevel(wifi)"></span>
+            }
+          </div>
           <ion-label>
             <h2>
-              {{ configuredNetwork.ssid }}
-              @if (configuredNetwork.current) {
+              {{ wifi.ssid }}
+              @if (wifi.secured) {
+                <ion-icon class="lock" name="lock-closed-outline"></ion-icon>
+              }
+              @if (wifi.current) {
                 <span class="current-badge">&check; connected</span>
+              } @else if (wifi.id !== undefined) {
+                <span class="saved-badge">saved</span>
               }
             </h2>
-            <p>IP automatic (DHCP)</p>
+            <p>
+              @if (wifi.available && wifi.signal !== undefined) {
+                Signal {{ wifi.signal }} % ({{ wifi.signalDbm }} dBm)@if (bandText(wifi); as band) { &nbsp;&middot;&nbsp;{{ band }}}
+              } @else if (wifi.available) {
+                In range
+              } @else {
+                Not in range
+              }
+            </p>
           </ion-label>
-          <ion-button slot="end" fill="outline" size="small" (click)="changeNetworkButtonPressed(configuredNetwork)">Change</ion-button>
-          <ion-button slot="end" fill="outline" color="danger" size="small" (click)="deleteNetworkButtonPressed(configuredNetwork)">Delete</ion-button>
+          @if (wifi.id !== undefined) {
+            <ion-button slot="end" fill="outline" size="small" (click)="changeNetworkButtonPressed(wifi)">Change</ion-button>
+            <ion-button slot="end" fill="outline" color="danger" size="small" (click)="deleteNetworkButtonPressed(wifi)">Delete</ion-button>
+          } @else {
+            <ion-button slot="end" fill="outline" size="small" (click)="connectNetworkButtonPressed(wifi)">Connect</ion-button>
+          }
         </ion-item>
       } @empty {
         <ion-item>
-          <ion-label>No networks configured yet.</ion-label>
+          <ion-label>No networks found. Tap "Scan" to search again.</ion-label>
         </ion-item>
       }
     </ion-list>

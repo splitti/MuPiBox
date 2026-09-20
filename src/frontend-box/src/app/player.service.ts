@@ -92,7 +92,11 @@ export class PlayerService {
         if (!media.id) {
           media.id = media.title
         }
-        url = `musicsearch/library/album/${encodeURIComponent(media.category)}:${encodeURIComponent(media.artist)}:${encodeURIComponent(media.title)}`
+        url = `musicsearch/library/album/${this.libraryFolderParam(media)}`
+        break
+      }
+      case 'nas': {
+        url = `musicsearch/nas/${encodeURIComponent(media.nasPath)}`
         break
       }
       case 'spotify': {
@@ -165,6 +169,8 @@ export class PlayerService {
 
     if (media.type === 'library') {
       url = `localtrack:${entry.position}`
+    } else if (media.type === 'nas') {
+      url = `nastrack:${entry.position}`
     } else if (media.playlistid) {
       url = `spotify/now/spotify:playlist:${encodeURIComponent(media.playlistid)}:${entry.position}:0`
     } else if (media.audiobookid) {
@@ -186,9 +192,28 @@ export class PlayerService {
    * read from its playlist.m3u by the player backend.
    */
   getLocalTracklist(media: Media): Observable<{ position: number; name: string }[]> {
-    const encodedPath = `${encodeURIComponent(media.category)}:${encodeURIComponent(media.artist)}:${encodeURIComponent(media.title)}`
     return this.http.get<{ position: number; name: string }[]>(
-      `${environment.backend.playerUrl}/local/tracklist/${encodedPath}`,
+      `${environment.backend.playerUrl}/local/tracklist/${this.libraryFolderParam(media)}`,
+    )
+  }
+
+  // Folder of a local album as the player backend expects it: the path segments
+  // below ~/MuPiBox/media, each URL-encoded and joined by ":". Live entries carry
+  // their full folder path (any depth); old data.json entries are category/artist/title.
+  private libraryFolderParam(media: Media): string {
+    if (media.libraryPath) {
+      return media.libraryPath.split('/').filter(Boolean).map(encodeURIComponent).join(':')
+    }
+    return `${encodeURIComponent(media.category)}:${encodeURIComponent(media.artist)}:${encodeURIComponent(media.title)}`
+  }
+
+  /**
+   * Get the ordered list of track file names for a NAS album, listed live from
+   * the Synology by the player backend (never cached).
+   */
+  getNasTracklist(media: Media): Observable<{ position: number; name: string }[]> {
+    return this.http.get<{ position: number; name: string }[]>(
+      `${environment.backend.playerUrl}/nas/tracklist/${encodeURIComponent(media.nasPath)}`,
     )
   }
 
