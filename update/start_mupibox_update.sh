@@ -254,7 +254,8 @@ echo "==========================================================================
 
 	echo -e "XXX\n${STEP}\nUnzip MuPiBox Version ${VERSION_LONG}... \nXXX"	
 	before=$(date +%s)
-	unzip -q -d /home/dietpi /home/dietpi/mupibox.zip >&3 2>&3
+	# -o: overwrite without prompting, in case a previous run left the source folder behind
+	unzip -q -o -d /home/dietpi /home/dietpi/mupibox.zip >&3 2>&3
 	rm /home/dietpi/mupibox.zip >&3 2>&3
 
 	#MUPI_SRC="/home/dietpi/MuPiBox-${VERSION}"
