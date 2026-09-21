@@ -16,3 +16,6 @@ node_modules
 # Other files.
 *.bak
 
+
+__pycache__/
+*.pyc
