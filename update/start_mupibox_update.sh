@@ -26,27 +26,19 @@ else
 	RELEASE="stable"
 fi
 
-# Preflight: this update replaces jq and librespot with freshly downloaded binaries and
-# rewrites the configuration with jq. Download them FIRST, so a network problem (e.g. a
+# Preflight: this update replaces jq with a freshly downloaded binary and rewrites the
+# configuration with jq. Download it FIRST, so a network problem (e.g. a
 # DNS failure) stops the update before anything on the box has been changed. Before,
 # a failed download left an empty /usr/bin/jq behind, which then wiped the config files.
 PREFLIGHT_DIR=$(mktemp -d /tmp/mupibox-preflight.XXXXXX)
 if [ `getconf LONG_BIT` == 32 ]; then
   JQ_ARCH="armhf"
-  LIBRESPOT_ARCH="32bit"
 else
   JQ_ARCH="arm64"
-  LIBRESPOT_ARCH="64bit"
 fi
 if ! curl -fsSL --retry 3 --retry-delay 3 -m 180 -o ${PREFLIGHT_DIR}/jq https://github.com/jqlang/jq/releases/download/jq-1.8.1/jq-linux-${JQ_ARCH} \
    || ! chmod 755 ${PREFLIGHT_DIR}/jq || ! ${PREFLIGHT_DIR}/jq --version > /dev/null 2>&1; then
   echo "Error: could not download jq (no internet / DNS problem?). Nothing was changed - please try again."
-  rm -rf ${PREFLIGHT_DIR}
-  exit 1
-fi
-if ! curl -fsSL --retry 3 --retry-delay 3 -m 300 -o ${PREFLIGHT_DIR}/librespot https://github.com/splitti/MuPiBox/raw/refs/heads/main/bin/librespot/dev_0.6_20250806/librespot-${LIBRESPOT_ARCH} \
-   || [ ! -s ${PREFLIGHT_DIR}/librespot ]; then
-  echo "Error: could not download librespot (no internet / DNS problem?). Nothing was changed - please try again."
   rm -rf ${PREFLIGHT_DIR}
   exit 1
 fi
@@ -346,7 +338,7 @@ rm -f /tmp/mupibox-update-failed
 	# guessing it: a wrong guess sent every following step (scripts, services, admin interface,
 	# after /var/www had been emptied) to a folder that does not exist.
 	UNPACKED_DIR=$(unzip -Z1 /home/dietpi/mupibox.zip 2>/dev/null | head -n 1 | cut -d/ -f1)
-	unzip -q -d /home/dietpi /home/dietpi/mupibox.zip >&3 2>&3
+	unzip -q -o -d /home/dietpi /home/dietpi/mupibox.zip >&3 2>&3
 	rm /home/dietpi/mupibox.zip >&3 2>&3
 	if [ -n "${UNPACKED_DIR}" ]; then
 		MUPI_SRC="/home/dietpi/${UNPACKED_DIR}"
@@ -533,24 +525,18 @@ rm -f /tmp/mupibox-update-failed
 	
 	service spotifyd stop >&3 2>&3
 	systemctl disable spotifyd >&3 2>&3
-	service librespot stop >&3 2>&3
-	if [ "$RELEASE" = "dev" ]; then
-		systemctl disable librespot >&3 2>&3
+	if systemctl cat librespot.service > /dev/null 2>&1; then
+		systemctl disable --now librespot.service >&3 2>&3
 	fi
 
 	# Binaries
+	cp ${PREFLIGHT_DIR}/jq /usr/bin/jq >&3 2>&3
 	if [ `getconf LONG_BIT` == 32 ]; then
-		cp ${PREFLIGHT_DIR}/jq /usr/bin/jq >&3 2>&3
-		cp ${PREFLIGHT_DIR}/librespot /usr/bin/librespot >&3 2>&3
-		#mv ${MUPI_SRC}/bin/librespot/dev_0.6_20250305/librespot-32bit /usr/bin/librespot >&3 2>&3
 		mv ${MUPI_SRC}/bin/fbv/fbv /usr/bin/fbv >&3 2>&3
 	else
-		cp ${PREFLIGHT_DIR}/jq /usr/bin/jq >&3 2>&3
-		cp ${PREFLIGHT_DIR}/librespot /usr/bin/librespot >&3 2>&3
-		#mv ${MUPI_SRC}/bin/librespot/dev_0.6_20250305/librespot-64bit /usr/bin/librespot >&3 2>&3
 		mv ${MUPI_SRC}/bin/fbv/fbv_64 /usr/bin/fbv >&3 2>&3
 	fi
-	chmod 755 /usr/bin/fbv /usr/bin/jq /usr/bin/librespot >&3 2>&3
+	chmod 755 /usr/bin/fbv /usr/bin/jq >&3 2>&3
 	#mv ${MUPI_SRC}/config/templates/librespot.conf /etc/spotifyd/spotifyd.conf >&3 2>&3
 	
 	mkdir /etc/librespot/ >&3 2>&3
@@ -633,10 +619,6 @@ rm -f /tmp/mupibox-update-failed
 	systemctl daemon-reload >&3 2>&3
 	if systemctl list-unit-files dietpi-wifi-monitor.service 2>/dev/null | grep -q dietpi-wifi-monitor; then
 		systemctl restart dietpi-wifi-monitor.service >&3 2>&3
-	fi
-	if [ "$RELEASE" != "dev" ]; then
-		systemctl enable librespot.service >&3 2>&3
-		systemctl start librespot.service >&3 2>&3
 	fi
 	systemctl enable mupi_check_internet.service >&3 2>&3
 	systemctl start mupi_check_internet.service >&3 2>&3
@@ -786,7 +768,6 @@ rm -f /tmp/mupibox-update-failed
 	rm /etc/systemd/system/mupi_change_checker.service >&3 2>&3
 	/usr/local/bin/mupibox/./m3u_generator.sh >&3 2>&3
 	/usr/local/bin/mupibox/./setting_update.sh >&3 2>&3
-	service librespot restart >&3 2>&3
 	
 	mv ${LOG} /boot/$(date +%F)_update_${VERSION}.log >&3 2>&3
 	chown dietpi:dietpi ${CONFIG} >&3 2>&3
