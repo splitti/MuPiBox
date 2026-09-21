@@ -25,6 +25,25 @@
 
 	$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
 	$data = json_decode($string, true);
+
+	// Tabs that can be hidden from the top navigation (Admin > Control system).
+	// Home, MuPiBox and Admin are always shown and are not part of this list.
+	$navTabsHideable = array(
+		'mupi' => 'MuPi-Conf', 'mupihat' => 'MuPiHAT', 'media' => 'Media', 'cover' => 'Cover',
+		'bluetooth' => 'Bluetooth', 'spotify' => 'Spotify', 'synology' => 'NAS', 'network' => 'Network',
+		'smart' => 'Smart', 'vnc' => 'VNC', 'dietpidash' => 'DietPi-Dash', 'logs' => 'Logs', 'json' => 'JSON',
+	);
+	$navTabsHidden = is_array($data['mupibox']['hiddenTabs'] ?? null) ? $data['mupibox']['hiddenTabs'] : array();
+	if (isset($_POST['nav_tabs_save'])) {
+		// The navigation is printed before admin.php handles the form, so read the
+		// submitted choice here already - the change is then visible immediately.
+		$navTabsShown = $_POST['nav_tabs_show'] ?? array();
+		$navTabsHidden = array_values(array_diff(array_keys($navTabsHideable), $navTabsShown));
+	}
+	function navTabHidden($key) {
+		global $navTabsHidden;
+		return in_array($key, $navTabsHidden, true);
+	}
 	$loginEnabled = $data['interfacelogin']['state'];
 	$hashedPassword = $data['interfacelogin']['password'];
 
@@ -49,11 +68,6 @@
 		exec("sudo -i -u dietpi /usr/local/bin/mupibox/./restart_kiosk.sh");
 		$change=99;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Restart Chrome kiosk</li>";
-		}
-	if ($_GET['hrefreshdatabase']) {
-		exec("sudo /usr/local/bin/mupibox/./m3u_generator.sh");
-		$change=99;
-		$CHANGE_TXT=$CHANGE_TXT."<li>Update media database finished</li>";
 		}
 		
 	$mupihat_file = '/tmp/mupihat.json';
@@ -151,7 +165,6 @@
 				<a href="?hshutdown=1" onclick="confirm('Do really want to shutdown?') || stopEvent(event)" ><iconify-icon icon="ic:outline-power-settings-new" title="Shutdown" ></iconify-icon></a>
 				<a href="?hreboot=1" onclick="confirm('Do really want to reboot?') || stopEvent(event)" ><iconify-icon icon="ic:outline-restart-alt" title="Reboot" ></iconify-icon></a>
 				<a href="?hchromerestart=1" onclick="confirm('Do really want to restart chrome kiosk?') || stopEvent(event)" ><iconify-icon icon="tabler:brand-chrome"  title="Restart chrome browser" ></iconify-icon></a>
-				<a href="?hrefreshdatabase=1" onclick="confirm('Do really want to reload media database?') || stopEvent(event)" ><iconify-icon icon="mdi:database-refresh-outline"  title="Reload media database" ></iconify-icon></a>
 			</div>
 			<div class="topnav" id="myTopnav">
 				<a href="<?= $link ?>index.php"><i class="fa fa-fw fa-home"></i> Home</a>
@@ -159,25 +172,26 @@
 <?php
 	$command = "ps -ef | grep websockify | grep -v grep";
 	exec($command, $vncoutput, $vncresult );
-	if( $vncoutput[0] )
+	if( $vncoutput[0] && !navTabHidden('vnc') )
 	{
 		echo '<a href="' . $link . 'vnc.php"><i class="fa-solid fa-display"></i> VNC</a>';
 	}
 ?>
-				<a href="<?= $link ?>mupi.php"><i class="fa-solid fa-headphones"></i> MuPi-Conf</a>
-				<a href="<?= $link ?>mupihat.php"><i class="fa-solid fa-hat-wizard"></i> MuPiHAT</a>
-				<a href="<?= $link ?>media.php"><i class="fa-solid fa-list"></i> Media</a>
-				<a href="<?= $link ?>cover.php"><i class="fa-regular fa-image"></i> Cover</a>
-				<a href="<?= $link ?>bluetooth.php"><i class="fa-brands fa-bluetooth"></i> Bluetooth</a>
-				<a href="<?= $link ?>spotify.php"><i class="fa-brands fa-spotify"></i> Spotify</a>
-				<a href="<?= $link ?>network.php"><i class="fa-solid fa-wifi"></i> Network</a>
-				<a href="<?= $link ?>smart.php"><i class="fa-solid fa-share-nodes"></i> Smart</a>
+				<?php if (!navTabHidden('mupi')) { ?><a href="<?= $link ?>mupi.php"><i class="fa-solid fa-headphones"></i> MuPi-Conf</a><?php } ?>
+				<?php if (!navTabHidden('mupihat')) { ?><a href="<?= $link ?>mupihat.php"><i class="fa-solid fa-hat-wizard"></i> MuPiHAT</a><?php } ?>
+				<?php if (!navTabHidden('media')) { ?><a href="<?= $link ?>media.php"><i class="fa-solid fa-list"></i> Media</a><?php } ?>
+				<?php if (!navTabHidden('cover')) { ?><a href="<?= $link ?>cover.php"><i class="fa-regular fa-image"></i> Cover</a><?php } ?>
+				<?php if (!navTabHidden('bluetooth')) { ?><a href="<?= $link ?>bluetooth.php"><i class="fa-brands fa-bluetooth"></i> Bluetooth</a><?php } ?>
+				<?php if (!navTabHidden('spotify')) { ?><a href="<?= $link ?>spotify.php"><i class="fa-brands fa-spotify"></i> Spotify</a><?php } ?>
+				<?php if (!navTabHidden('synology')) { ?><a href="<?= $link ?>synology.php"><i class="fa-solid fa-server"></i> NAS</a><?php } ?>
+				<?php if (!navTabHidden('network')) { ?><a href="<?= $link ?>network.php"><i class="fa-solid fa-wifi"></i> Network</a><?php } ?>
+				<?php if (!navTabHidden('smart')) { ?><a href="<?= $link ?>smart.php"><i class="fa-solid fa-share-nodes"></i> Smart</a><?php } ?>
 				<?php /*<a href="service.php"><i class="fa-solid fa-gear"></i> Services</a>
 				<a href="tweaks.php"><i class="fa-solid fa-rocket"></i> Performance</a>*/ ?>
-				<a href="<?= $link ?>" onmouseover="javascript:event.target.port=5252" target="_blank"><i class="fa-brands fa-raspberry-pi"></i> DietPi-Dash</a>
+				<?php if (!navTabHidden('dietpidash')) { ?><a href="<?= $link ?>" onmouseover="javascript:event.target.port=5252" target="_blank"><i class="fa-brands fa-raspberry-pi"></i> DietPi-Dash</a><?php } ?>
 				<?php /*<a href="/" onmouseover="javascript:event.target.port=8081" target="_blank"><i class="fa-brands fa-youtube"></i> Youtube</a>*/ ?>
-				<a href="<?= $link ?>logviewer.php"><i class="fa-solid fa-file-lines"></i> Logs</a>
-				<a href="<?= $link ?>jsoneditor.php"><i class="fa-solid fa-code"></i> JSON</a>
+				<?php if (!navTabHidden('logs')) { ?><a href="<?= $link ?>logviewer.php"><i class="fa-solid fa-file-lines"></i> Logs</a><?php } ?>
+				<?php if (!navTabHidden('json')) { ?><a href="<?= $link ?>jsoneditor.php"><i class="fa-solid fa-code"></i> JSON</a><?php } ?>
 				<a href="<?= $link ?>admin.php"><i class="fa-solid fa-screwdriver-wrench"></i> Admin</a>
 				<a href="javascript:void(0);" class="icon" onclick="myFunction()"><i class="fa fa-bars"></i></a>
 			</div>

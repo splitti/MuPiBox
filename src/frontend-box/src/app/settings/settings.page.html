@@ -13,5 +13,18 @@
   </ion-toolbar>
 </ion-header>
 <ion-content>
-  <mupi-swiper [data]="swiperData()" (elementClicked)="entryClicked($event)"></mupi-swiper>
+  <ion-grid class="settings-grid">
+    <ion-row>
+      @for (entry of menuEntries(); track entry.data) {
+        <ion-col size="6">
+          <ion-card class="settings-tile" (click)="entryClicked(entry)">
+            <img draggable="false" ondragstart="return false;" [src]="entry.imgSrc | async" />
+            <ion-card-header>
+              <ion-card-title class="ion-text-nowrap truncate-text ion-text-center">{{ entry.name }}</ion-card-title>
+            </ion-card-header>
+          </ion-card>
+        </ion-col>
+      }
+    </ion-row>
+  </ion-grid>
 </ion-content>

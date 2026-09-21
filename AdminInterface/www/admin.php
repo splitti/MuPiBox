@@ -77,14 +77,6 @@
 	$dataonline = json_decode($onlinejson, true);
 	include ('includes/header.php');
 
-	if( $_POST['id3tags'] )
-		{
-		$command = "sudo /usr/local/bin/mupibox/./id3tag_converter.sh";
-		exec($command);
-		$CHANGE_TXT=$CHANGE_TXT."<li>ID3-Tags converted</li>";
-		$change=4;
-		}
-
 	if( $_POST['ip_control_backend'] == "enable" )
 		{
 		$data["mupibox"]["ip_control_backend"]=true;
@@ -96,6 +88,31 @@
 		$data["mupibox"]["ip_control_backend"]=false;
 		$change=2;
 		$CHANGE_TXT=$CHANGE_TXT."<li>IP Control disabled - Services restarted</li>";
+		}
+
+	if( isset($_POST['nav_tabs_save']) )
+		{
+		// $navTabsHidden was already worked out from the submitted form in header.php
+		$data["mupibox"]["hiddenTabs"]=$navTabsHidden;
+		$change=2;
+		$CHANGE_TXT=$CHANGE_TXT."<li>Visible tabs saved</li>";
+		}
+
+	if( isset($_POST['display_cats_save']) )
+		{
+		$allowedCats = array('audiobook', 'music', 'nas', 'other');
+		$hiddenCats = array_values(array_intersect($allowedCats, $_POST['hide_categories'] ?? array()));
+		if( count($hiddenCats) >= count($allowedCats) )
+			{
+			$change=98;
+			$CHANGE_TXT=$CHANGE_TXT."<li>At least one display category must stay visible - nothing was changed</li>";
+			}
+		else
+			{
+			$data["mupibox"]["hiddenCategories"]=$hiddenCats;
+			$change=1;
+			$CHANGE_TXT=$CHANGE_TXT."<li>Display categories saved - the display restarts</li>";
+			}
 		}
 
 	if( $_POST['spotifydebug'] == "Controller Debugging Off - turn on" )
@@ -179,13 +196,6 @@
 		exec($command, $output, $result );
 		$change=3;
 		$CHANGE_TXT=$CHANGE_TXT."<li>OS is up to date.</li>";
-		}
-	if( $_POST['m3u'] )
-		{
-		$command = "sudo /usr/local/bin/mupibox/./m3u_generator.sh";
-		exec($command, $output, $result );
-		$change=3;
-		$CHANGE_TXT=$CHANGE_TXT."<li>Cleaning and updating media data complete</li>";
 		}
 	if( $_POST['shutdown'] )
 		{
@@ -304,20 +314,25 @@
 				<input id="saveForm" class="button_text" type="submit" name="reboot" value="Reboot MuPiBox" onclick="return confirm('Do really want to reboot?');" />
 				<input id="saveForm" class="button_text" type="submit" name="shutdown" value="Shutdown MuPiBox"  onclick="return confirm('Do really want to shutdown?');" />
 			</li>
-		</ul>
-	</details>
-
-	<details  id="musicdatabase">
-		<summary><i class="fa-sharp fa-solid fa-music"></i> Music database</summary>
-		<ul>
-			<li class="li_norm"><h2>Clean and update music database</h2>
-				<p>This job generates offline playlists, cleans up old data and links local covers to playlists. Run this job after adding or deleting local media.</p>
-				<input id="saveForm" class="button_text" type="submit" name="m3u" value="Update mediadata" />
+			<li class="li_norm">
+				<p>Tabs in the top navigation - uncheck a tab to hide it. Home, MuPiBox and Admin are always shown.</p>
+				<label style="display:inline-block; margin-right:14px;"><input type="checkbox" checked="checked" disabled="disabled" /> Home</label>
+				<label style="display:inline-block; margin-right:14px;"><input type="checkbox" checked="checked" disabled="disabled" /> MuPiBox</label>
+<?php foreach ($navTabsHideable as $tabKey => $tabLabel) { ?>
+				<label style="display:inline-block; margin-right:14px;"><input type="checkbox" name="nav_tabs_show[]" value="<?= $tabKey ?>" <?= navTabHidden($tabKey) ? '' : 'checked="checked"' ?> /> <?= htmlspecialchars($tabLabel) ?></label>
+<?php } ?>
+				<label style="display:inline-block; margin-right:14px;"><input type="checkbox" checked="checked" disabled="disabled" /> Admin</label>
+				<br/><br/>
+				<input id="saveForm" class="button_text" type="submit" name="nav_tabs_save" value="Save tabs" />
 			</li>
-
-			<li class="li_norm"><h2>Convert ID3-Tags</h2>
-				<p>Sometimes ID3 tags are not displayed correctly (for example the German umlauts). This converter can help displaying the characters correctly.</p>
-				<input id="saveForm" class="button_text" type="submit" name="id3tags" value="Update ID3-Tags" />
+			<li class="li_norm">
+				<p><b>Hide display categorys</b><br/>Tick a category to hide its tab in the display. The remaining tabs are spread evenly. At least one must stay visible.</p>
+<?php $hiddenCatsNow = is_array($data['mupibox']['hiddenCategories'] ?? null) ? $data['mupibox']['hiddenCategories'] : array(); ?>
+<?php foreach (array('audiobook' => 'Audiobooks', 'music' => 'Music', 'nas' => 'NAS', 'other' => 'Other') as $catKey => $catLabel) { ?>
+				<label style="display:inline-block; margin-right:14px;"><input type="checkbox" name="hide_categories[]" value="<?= $catKey ?>" <?= in_array($catKey, $hiddenCatsNow, true) ? 'checked="checked"' : '' ?> /> <?= $catLabel ?></label>
+<?php } ?>
+				<br/><br/>
+				<input id="saveForm" class="button_text" type="submit" name="display_cats_save" value="Save categories" onclick="if (document.querySelectorAll('input[name=\'hide_categories[]\']:checked').length >= 4) { alert('At least one category must stay visible.'); return false; }" />
 			</li>
 		</ul>
 	</details>

@@ -1,5 +1,6 @@
 import { AsyncPipe } from '@angular/common'
-import { Component, OnInit, ViewChild } from '@angular/core'
+import { HttpClient } from '@angular/common/http'
+import { AfterViewInit, Component, ElementRef, OnInit, ViewChild } from '@angular/core'
 import { FormsModule } from '@angular/forms'
 import { ActivatedRoute, Router } from '@angular/router'
 import {
@@ -12,8 +13,12 @@ import {
   IonGrid,
   IonHeader,
   IonIcon,
+  IonItem,
+  IonLabel,
+  IonList,
   IonRange,
   IonRow,
+  IonSpinner,
   IonTitle,
   IonToolbar,
   NavController,
@@ -31,16 +36,28 @@ import {
   volumeHighOutline,
   volumeLowOutline,
 } from 'ionicons/icons'
-import type { Observable } from 'rxjs'
+import { firstValueFrom, type Observable } from 'rxjs'
+import { environment } from '../../environments/environment'
 import type { AlbumStop } from '../albumstop'
 import type { CurrentMPlayer } from '../current.mplayer'
 import type { CurrentSpotify } from '../current.spotify'
+import { ArtworkService } from '../artwork.service'
+import { CoverFlipService } from '../cover-flip.service'
 import { LogService } from '../log.service'
 import type { Media } from '../media'
 import { MediaService } from '../media.service'
+import type { MupiboxConfig } from '../mupibox-config.model'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
 import { PlayerCmds, PlayerService } from '../player.service'
 import { SpotifyService } from '../spotify.service'
+
+export interface TrackListEntry {
+  position: number
+  id: string
+  name: string
+  artist?: string
+  duration_ms?: number
+}
 
 @Component({
   selector: 'app-player',
@@ -63,10 +80,15 @@ import { SpotifyService } from '../spotify.service'
     IonRange,
     IonButton,
     IonIcon,
+    IonList,
+    IonItem,
+    IonLabel,
+    IonSpinner,
   ],
 })
-export class PlayerPage implements OnInit {
+export class PlayerPage implements OnInit, AfterViewInit {
   @ViewChild('range', { static: false }) range: IonRange
+  @ViewChild('themeFontSource', { static: false, read: ElementRef }) themeFontSource: ElementRef<HTMLElement>
 
   media: Media
   resumemedia: Media
@@ -89,20 +111,36 @@ export class PlayerPage implements OnInit {
   public readonly spotify$: Observable<CurrentSpotify>
   public readonly local$: Observable<CurrentMPlayer>
 
+  showTrackList = false
+  loadingTrackList = false
+  trackList: TrackListEntry[] = []
+  trackListTitle = ''
+  pressingCover = false
+  listViewTimerMs = 2500
+  listFontFamily = ''
+  private longPressTimer: ReturnType<typeof setTimeout> | undefined
+
   constructor(
     private logService: LogService,
     private mediaService: MediaService,
+    private http: HttpClient,
     _route: ActivatedRoute,
     private router: Router,
     private navController: NavController,
     private playerService: PlayerService,
     private spotifyService: SpotifyService,
+    private artworkService: ArtworkService,
+    protected coverFlip: CoverFlipService,
   ) {
     this.spotify$ = this.mediaService.current$
     this.local$ = this.mediaService.local$
 
     if (this.router.currentNavigation()?.extras.state?.media) {
       this.media = this.router.currentNavigation().extras.state.media
+      // Known right away, so the cover is there when the page opens (see CoverFlipService).
+      if (this.media.cover && this.media.type !== 'spotify') {
+        this.cover = this.artworkService.cachedCoverUrl(this.media, this.media.cover)
+      }
       if (this.media.category === 'resume') {
         this.resumePlay = true
       }
@@ -130,6 +168,18 @@ export class PlayerPage implements OnInit {
       this.handleExternalPlayback()
     }
 
+    this.http.get<MupiboxConfig>(`${environment.backend.apiUrl}/config`).subscribe({
+      next: (config) => {
+        const configuredSeconds = config?.mupibox?.listviewTimer
+        if (typeof configuredSeconds === 'number' && configuredSeconds > 0) {
+          this.listViewTimerMs = configuredSeconds * 1000
+        }
+      },
+      error: () => {
+        // Keep default listViewTimerMs if config could not be loaded.
+      },
+    })
+
     this.mediaService.current$.subscribe((spotify) => {
       this.currentPlayedSpotify = spotify
     })
@@ -141,7 +191,7 @@ export class PlayerPage implements OnInit {
       if (this.media?.type === 'spotify' && spotify?.item?.album?.images?.[0]?.url) {
         this.cover = spotify.item.album.images[0].url
       } else if (this.media?.cover) {
-        this.cover = this.media.cover
+        this.cover = this.artworkService.cachedCoverUrl(this.media, this.media.cover)
       } else {
         this.cover = '../assets/images/nocover_mupi.png'
       }
@@ -149,6 +199,19 @@ export class PlayerPage implements OnInit {
     this.mediaService.albumStop$.subscribe((albumStop) => {
       this.albumStop = albumStop
     })
+  }
+
+  ngAfterViewInit() {
+    // Reading the theme font here can race with the theme stylesheet still loading,
+    // so the actual read happens lazily in openTrackList() instead.
+  }
+
+  private updateListFontFamily(): void {
+    // Read whatever font the active theme applies to the header title, so the track
+    // list uses the same theme font instead of a hardcoded one.
+    if (this.themeFontSource?.nativeElement) {
+      this.listFontFamily = getComputedStyle(this.themeFontSource.nativeElement).fontFamily
+    }
   }
 
   private handleExternalPlayback(): void {
@@ -179,12 +242,22 @@ export class PlayerPage implements OnInit {
     }
   }
 
+  // Buffering of a stream before it starts: 0 (nothing yet) to 100 (enough to start).
+  get loadProgress(): number {
+    return Math.min(100, Math.max(0, this.currentPlayedLocal?.loadProgress ?? 0))
+  }
+
+  // The ring shrinks from the full circle (r=20) to a small dot (r=3) as the buffer fills.
+  get loadRingRadius(): number {
+    return 20 - 17 * (this.loadProgress / 100)
+  }
+
   seek() {
     const newValue = +this.range.value
     if (this.media.type === 'spotify') {
       const duration = this.currentPlayedSpotify?.item.duration_ms
       this.playerService.seekPosition(duration * (newValue / 100))
-    } else if (this.media.type === 'library' || this.media.type === 'rss') {
+    } else if (this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'rss') {
       this.playerService.seekPosition(newValue)
     }
   }
@@ -221,11 +294,11 @@ export class PlayerPage implements OnInit {
           this.updateProgress()
         }
       }, 1000)
-    } else if (this.media.type === 'library' || this.media.type === 'rss') {
+    } else if (this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'rss') {
       const seek = this.currentPlayedLocal?.progressTime || 0
       this.progress = seek || 0
       if (
-        this.media.type === 'library' &&
+        (this.media.type === 'library' || this.media.type === 'nas') &&
         this.playing &&
         !this.currentPlayedLocal?.playing &&
         this.currentPlayedLocal?.currentTracknr === this.currentPlayedLocal?.totalTracks
@@ -279,8 +352,10 @@ export class PlayerPage implements OnInit {
   }
 
   ionViewWillLeave() {
+    clearTimeout(this.longPressTimer)
+    this.showTrackList = false
     if (
-      (this.media.type === 'spotify' || this.media.type === 'library' || this.media.type === 'rss') &&
+      (this.media.type === 'spotify' || this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'rss') &&
       !this.media.shuffle &&
       this.resumeTimer > 30 &&
       this.playing
@@ -338,6 +413,25 @@ export class PlayerPage implements OnInit {
           this.playerService.seekPosition(this.media.resumelocalprogressTime)
         }, 2000)
       }
+    } else if (this.media.type === 'nas') {
+      const success = await this.playerService.playMedia(this.media)
+      if (!success) {
+        this.logService.error('[PlayerPage] Failed to start NAS playback')
+        return
+      }
+      // Jump to the saved track and position once the playlist is loaded.
+      const track = this.media.resumelocalcurrentTracknr || 1
+      const progress = this.media.resumelocalprogressTime || 0
+      setTimeout(() => {
+        if (track > 1) {
+          this.playerService.playTrackAtPosition(this.media, { position: track })
+        }
+        setTimeout(() => {
+          if (progress > 0) {
+            this.playerService.seekPosition(progress)
+          }
+        }, 2000)
+      }, 2500)
     } else if (this.media.type === 'rss') {
       const success = await this.playerService.playMedia(this.media)
       if (!success) {
@@ -368,6 +462,11 @@ export class PlayerPage implements OnInit {
       this.resumemedia.resumespotifyduration_ms = this.currentPlayedSpotify?.item.duration_ms || 0
     } else if (this.resumemedia.type === 'library') {
       this.resumemedia.resumelocalalbum = this.resumemedia.category
+      this.resumemedia.resumelocalcurrentTracknr = this.currentPlayedLocal?.currentTracknr || 0
+      this.resumemedia.resumelocalprogressTime = this.currentPlayedLocal?.progressTime || 0
+    } else if (this.resumemedia.type === 'nas') {
+      // NAS entries have no id of their own; the path identifies them in resume.json.
+      this.resumemedia.id = `nas:${this.resumemedia.nasPath}`
       this.resumemedia.resumelocalcurrentTracknr = this.currentPlayedLocal?.currentTracknr || 0
       this.resumemedia.resumelocalprogressTime = this.currentPlayedLocal?.progressTime || 0
     } else if (this.resumemedia.type === 'rss') {
@@ -432,7 +531,7 @@ export class PlayerPage implements OnInit {
     if (this.playing) {
       //this.playing = false;
       this.playerService.sendCmd(PlayerCmds.PAUSE)
-      if (this.media.type === 'spotify' || this.media.type === 'library' || this.media.type === 'rss') {
+      if (this.media.type === 'spotify' || this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'rss') {
         this.saveResumeFiles()
       }
     } else {
@@ -447,5 +546,127 @@ export class PlayerPage implements OnInit {
 
   seekBack() {
     this.playerService.sendCmd(PlayerCmds.SEEKBACK)
+  }
+
+  // --------------------------------------------
+  // Track list overlay (long-press on cover)
+  // --------------------------------------------
+
+  coverPointerDown() {
+    if (this.media.type !== 'spotify' && this.media.type !== 'library' && this.media.type !== 'nas') {
+      return
+    }
+    clearTimeout(this.longPressTimer)
+    this.pressingCover = true
+    this.longPressTimer = setTimeout(() => {
+      this.pressingCover = false
+      this.openTrackList()
+    }, this.listViewTimerMs)
+  }
+
+  coverPointerUp() {
+    clearTimeout(this.longPressTimer)
+    this.pressingCover = false
+  }
+
+  async openTrackList() {
+    this.updateListFontFamily()
+    this.showTrackList = true
+    this.loadingTrackList = true
+    this.trackList = []
+
+    try {
+      if (this.media.type === 'library') {
+        const tracks = await firstValueFrom(this.playerService.getLocalTracklist(this.media))
+        this.trackListTitle = this.media.title
+        this.trackList = (tracks ?? []).map((track) => ({
+          position: track.position,
+          id: `${track.position}`,
+          name: track.name,
+        }))
+      } else if (this.media.type === 'nas') {
+        const tracks = await firstValueFrom(this.playerService.getNasTracklist(this.media))
+        this.trackListTitle = this.media.title
+        this.trackList = (tracks ?? []).map((track) => ({
+          position: track.position,
+          id: `${track.position}`,
+          name: track.name,
+        }))
+      } else if (this.media.playlistid) {
+        const info = await firstValueFrom(this.spotifyService.getPlaylistInfo(this.media.playlistid))
+        this.trackListTitle = info.playlist_name
+        this.trackList = (info.tracks ?? []).map((track: any, index: number) => ({
+          position: index + 1,
+          id: track.id ?? track.uri,
+          name: track.name,
+          artist: track.artist,
+          duration_ms: track.duration_ms,
+        }))
+      } else if (this.media.audiobookid) {
+        const info = await firstValueFrom(this.spotifyService.getAudiobookInfo(this.media.audiobookid))
+        this.trackListTitle = info.audiobook_name
+        this.trackList = (info.chapters ?? []).map((chapter: any, index: number) => ({
+          position: index + 1,
+          id: chapter.id,
+          name: chapter.name,
+          duration_ms: chapter.duration_ms,
+        }))
+      } else if (this.media.showid) {
+        const info = await firstValueFrom(this.spotifyService.getShowInfo(this.media.showid))
+        this.trackListTitle = info.show_name
+        this.trackList = (info.episodes ?? []).map((episode: any, index: number) => ({
+          position: index + 1,
+          id: episode.id,
+          name: episode.name,
+          duration_ms: episode.duration_ms,
+        }))
+      } else if (this.media.id) {
+        const info = await firstValueFrom(this.spotifyService.getAlbumInfo(this.media.id))
+        this.trackListTitle = info.album_name
+        this.trackList = (info.tracks ?? []).map((track: any) => ({
+          position: track.track_number,
+          id: track.id,
+          name: track.name,
+          artist: track.artist,
+          duration_ms: track.duration_ms,
+        }))
+      }
+    } finally {
+      this.loadingTrackList = false
+    }
+  }
+
+  closeTrackList() {
+    this.showTrackList = false
+  }
+
+  playTrackFromList(entry: TrackListEntry) {
+    this.playerService.playTrackAtPosition(this.media, entry)
+  }
+
+  isCurrentTrack(entry: TrackListEntry): boolean {
+    if (this.media.type === 'library' || this.media.type === 'nas') {
+      return this.currentPlayedLocal?.currentTracknr === entry.position
+    }
+    if (this.media.playlistid) {
+      return this.currentPlayedSpotify?.playlist?.current_track_position === entry.position
+    }
+    if (this.media.audiobookid) {
+      return this.currentPlayedSpotify?.audiobook?.current_chapter_position === entry.position
+    }
+    if (this.media.showid) {
+      return this.currentPlayedSpotify?.item?.id === entry.id
+    }
+    return this.currentPlayedSpotify?.item?.track_number === entry.position
+  }
+
+  formatDuration(durationMs: number | undefined): string {
+    if (!durationMs) {
+      return ''
+    }
+    const totalSeconds = Math.round(durationMs / 1000)
+    const minutes = Math.floor(totalSeconds / 60)
+    const seconds = totalSeconds % 60
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`
   }
 }

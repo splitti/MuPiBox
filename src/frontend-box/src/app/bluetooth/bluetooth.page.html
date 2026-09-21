@@ -1,0 +1,82 @@
+<ion-header class="bluetooth-header">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button icon="arrow-back-outline" defaultHref="/settings"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Bluetooth</ion-title>
+    <ion-buttons slot="end">
+      <ion-toggle [checked]="status().powered" (ionChange)="togglePower($event)"></ion-toggle>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="bluetooth-content">
+  @if (!status().powered) {
+    <div class="empty-state">
+      <ion-icon name="bluetooth-outline"></ion-icon>
+      <p>Bluetooth is turned off.</p>
+      <p class="hint">Turn it on above to pair headphones or speakers.</p>
+    </div>
+  } @else {
+    <div class="section-header">
+      <ion-label>Paired devices</ion-label>
+    </div>
+    <ion-list class="devices-list">
+      @for (device of status().paired; track device.mac) {
+        <ion-item>
+          <ion-label>
+            <h2>
+              {{ device.name }}
+              @if (device.connected) {
+                <span class="connected-badge">&middot; connected</span>
+              }
+            </h2>
+            <p>{{ device.mac }}</p>
+          </ion-label>
+          <ion-button slot="end" fill="outline" color="danger" size="small" (click)="removeDeviceButtonPressed(device)">
+            <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+          </ion-button>
+        </ion-item>
+      } @empty {
+        <ion-item>
+          <ion-label>No paired devices yet.</ion-label>
+        </ion-item>
+      }
+    </ion-list>
+
+    <div class="section-header">
+      <ion-label>Find new headphones</ion-label>
+      <ion-button size="small" [disabled]="scanning()" (click)="scanForDevices()">
+        @if (scanning()) {
+          <ion-spinner name="dots"></ion-spinner>
+        } @else {
+          <ion-icon slot="start" name="search-outline"></ion-icon>
+          Scan
+        }
+      </ion-button>
+    </div>
+    <ion-list class="devices-list">
+      @for (device of foundDevices(); track device.mac) {
+        <ion-item>
+          <ion-label>
+            <h2>{{ device.name }}</h2>
+            <p>{{ device.mac }}</p>
+          </ion-label>
+          <ion-button slot="end" size="small" [disabled]="pairingMac() === device.mac" (click)="pairDeviceButtonPressed(device)">
+            @if (pairingMac() === device.mac) {
+              <ion-spinner name="dots"></ion-spinner>
+            } @else {
+              Pair
+            }
+          </ion-button>
+        </ion-item>
+      } @empty {
+        @if (!scanning()) {
+          <ion-item>
+            <ion-label>No new devices found yet. Put your headphones in pairing mode and tap Scan.</ion-label>
+          </ion-item>
+        }
+      }
+    </ion-list>
+  }
+</ion-content>
