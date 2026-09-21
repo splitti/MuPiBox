@@ -1,3 +1,4 @@
+import { HttpClient } from '@angular/common/http'
 import { ChangeDetectionStrategy, Component, computed, Signal, signal, WritableSignal } from '@angular/core'
 import { toObservable, toSignal } from '@angular/core/rxjs-interop'
 import { NavigationExtras, Router } from '@angular/router'
@@ -10,6 +11,7 @@ import {
   IonSegment,
   IonSegmentButton,
   IonToolbar,
+  NavController,
 } from '@ionic/angular/standalone'
 import { addIcons } from 'ionicons'
 import {
@@ -18,15 +20,19 @@ import {
   cloudOutline,
   musicalNotesOutline,
   radioOutline,
+  serverOutline,
   timerOutline,
 } from 'ionicons/icons'
 import { catchError, combineLatest, map, of, switchMap, tap } from 'rxjs'
+import { environment } from 'src/environments/environment'
 
 import type { Artist } from '../artist'
 import { ArtworkService } from '../artwork.service'
+import { CoverFlipService } from '../cover-flip.service'
 import { LoadingComponent } from '../loading/loading.component'
 import type { CategoryType } from '../media'
 import { MediaService } from '../media.service'
+import type { MupiboxConfig } from '../mupibox-config.model'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
 import { SwiperComponent, SwiperData } from '../swiper/swiper.component'
 import { SwiperIonicEventsHelper } from '../swiper/swiper-ionic-events-helper'
@@ -51,8 +57,19 @@ import { SwiperIonicEventsHelper } from '../swiper/swiper-ionic-events-helper'
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HomePage extends SwiperIonicEventsHelper {
-  protected settingsButtonClickCount = 0
-  protected settingsClickTimer = 0
+  private settingsAccessTimerMs = 3000
+  private settingsPressTimer = 0
+
+  // Category tabs at the top, in display order; some can be hidden in the admin.
+  protected readonly categories: { key: CategoryType; icon: string }[] = [
+    { key: 'audiobook', icon: 'book-outline' },
+    { key: 'music', icon: 'musical-notes-outline' },
+    { key: 'nas', icon: 'server-outline' },
+    { key: 'other', icon: 'radio-outline' },
+  ]
+  protected hiddenCategories: WritableSignal<string[]> = signal([])
+  protected configLoaded: WritableSignal<boolean> = signal(false)
+  protected visibleCategories = computed(() => this.categories.filter((c) => !this.hiddenCategories().includes(c.key)))
 
   protected artists: Signal<Artist[]>
   protected swiperData: Signal<SwiperData<Artist>[]>
@@ -64,9 +81,36 @@ export class HomePage extends SwiperIonicEventsHelper {
     private mediaService: MediaService,
     private artworkService: ArtworkService,
     private router: Router,
+    private http: HttpClient,
+    private navController: NavController,
+    private coverFlip: CoverFlipService,
   ) {
     super()
-    addIcons({ timerOutline, bookOutline, musicalNotesOutline, radioOutline, cloudOutline, cloudOfflineOutline })
+    addIcons({ timerOutline, bookOutline, musicalNotesOutline, radioOutline, serverOutline, cloudOutline, cloudOfflineOutline })
+
+    this.http.get<MupiboxConfig>(`${environment.backend.apiUrl}/config`).subscribe({
+      next: (config) => {
+        const configuredSeconds = config?.mupibox?.settingsAccessTimer
+        if (typeof configuredSeconds === 'number' && configuredSeconds > 0) {
+          this.settingsAccessTimerMs = configuredSeconds * 1000
+        }
+
+        const hidden = config?.mupibox?.hiddenCategories
+        if (Array.isArray(hidden)) {
+          this.hiddenCategories.set(hidden)
+        }
+        // Do not start on a category that is hidden.
+        const visible = this.visibleCategories()
+        if (visible.length > 0 && !visible.some((c) => c.key === this.category())) {
+          this.category.set(visible[0].key)
+        }
+        this.configLoaded.set(true)
+      },
+      error: () => {
+        // Keep default settingsAccessTimerMs / show all categories if config could not be loaded.
+        this.configLoaded.set(true)
+      },
+    })
 
     this.isOnline = toSignal(this.mediaService.isOnline())
 
@@ -104,14 +148,17 @@ export class HomePage extends SwiperIonicEventsHelper {
 
   protected async artistCoverClicked(artist: Artist): Promise<void> {
     // Check if this is a standalone playlist (playlist without artist)
-    if (artist.coverMedia?.playlistid && !artist.coverMedia?.artist) {
+    const isPlayableNasFolder = artist.coverMedia?.type === 'nas' && !artist.coverMedia.nasIsContainer
+    const isPlayableLibraryFolder =
+      artist.coverMedia?.type === 'library' && !!artist.coverMedia.libraryPath && !artist.coverMedia.libraryIsContainer
+    if (isPlayableNasFolder || isPlayableLibraryFolder || (artist.coverMedia?.playlistid && !artist.coverMedia?.artist)) {
       // This is a standalone playlist - start playback directly
       const navigationExtras: NavigationExtras = {
         state: {
           media: artist.coverMedia,
         },
       }
-      this.router.navigate(['/player'], navigationExtras)
+      void this.navController.navigateForward(['/player'], { ...navigationExtras, animation: this.coverFlip.animation })
     } else {
       // This is a regular artist - navigate to medialist
       const navigationExtras: NavigationExtras = {
@@ -119,24 +166,27 @@ export class HomePage extends SwiperIonicEventsHelper {
           artist: artist,
           category: this.category(),
         },
+        // NAS / local folder levels are identified by their folder path (see MedialistPage).
+        queryParams:
+          artist.coverMedia?.type === 'nas'
+            ? { nas: artist.coverMedia.nasPath }
+            : artist.coverMedia?.libraryPath
+              ? { lib: artist.coverMedia.libraryPath }
+              : undefined,
       }
       this.router.navigate(['/medialist'], navigationExtras)
     }
   }
 
-  protected settingsButtonPressed(): void {
-    window.clearTimeout(this.settingsClickTimer)
-
-    if (this.settingsButtonClickCount < 9) {
-      this.settingsButtonClickCount++
-
-      this.settingsClickTimer = window.setTimeout(() => {
-        this.settingsButtonClickCount = 0
-      }, 500)
-    } else {
-      this.settingsButtonClickCount = 0
+  protected settingsButtonPointerDown(): void {
+    window.clearTimeout(this.settingsPressTimer)
+    this.settingsPressTimer = window.setTimeout(() => {
       this.router.navigate(['/settings'])
-    }
+    }, this.settingsAccessTimerMs)
+  }
+
+  protected settingsButtonPointerUp(): void {
+    window.clearTimeout(this.settingsPressTimer)
   }
 
   protected resume(): void {

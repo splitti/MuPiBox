@@ -1,3 +1,5 @@
+# DEPRECATED 2026-09-20: spotifyd was replaced by librespot; the update script only stops and disables this unit, nothing installs it.
+# Kept for reference; nothing in MuPiBox calls it. Safe to delete.
 [Unit]
 Description=A spotify playing daemon
 Documentation=https://github.com/Spotifyd/spotifyd

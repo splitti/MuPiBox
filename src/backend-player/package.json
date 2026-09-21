@@ -13,22 +13,24 @@
   },
   "dependencies": {
     "body-parser": "^1.19.0",
-    "byline": "^5.0.0",
     "console-log-level": "^1.4.1",
     "debug": "^4.3.4",
     "express": "^4.17.1",
     "google-tts-api": "2.0.2",
-    "http": "0.0.1-security",
     "js-string-escape": "^1.0.1",
-    "nodemon": "^2.0.7",
-    "path": "^0.12.7",
-    "protobufjs": "^7.4.0",
-    "protobufjs-cli": "^1.1.3",
     "spotify-web-api-node": "^5.0.0"
   },
   "devDependencies": {
     "esbuild": "*"
   },
   "description": "Playback backend for the MupiBox.",
-  "private": true
+  "private": true,
+  "_unusedDependencies": {
+    "byline": "2026-09-20: line splitting of the mplayer output is done by hand now (raw bytes, see mplayer-wrapper.js)",
+    "protobufjs": "2026-09-20: only the never-finished Spotify login protocol (build-proto script) used it; no proto/ folder or generated file exists",
+    "protobufjs-cli": "2026-09-20: only the build-proto script used it (see protobufjs)",
+    "nodemon": "2026-09-20: the serve script starts node directly",
+    "http": "2026-09-20: Node.js built-in module, no npm package needed",
+    "path": "2026-09-20: Node.js built-in module, no npm package needed"
+  }
 }

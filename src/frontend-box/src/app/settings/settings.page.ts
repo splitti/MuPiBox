@@ -1,49 +1,64 @@
+import { AsyncPipe } from '@angular/common'
 import { HttpClient } from '@angular/common/http'
 import { ChangeDetectionStrategy, Component, computed, inject, Signal } from '@angular/core'
-import { toObservable, toSignal } from '@angular/core/rxjs-interop'
+import { toSignal } from '@angular/core/rxjs-interop'
 import { Router } from '@angular/router'
 import {
   AlertController,
   IonBackButton,
   IonButtons,
+  IonCard,
+  IonCardHeader,
+  IonCardTitle,
+  IonCol,
   IonContent,
+  IonGrid,
   IonHeader,
+  IonRow,
   IonTitle,
   IonToolbar,
 } from '@ionic/angular/standalone'
 import { addIcons } from 'ionicons'
 import { arrowBackOutline } from 'ionicons/icons'
-import QRCode from 'qrcode'
-import { from, of, switchMap } from 'rxjs'
+import { Observable, of } from 'rxjs'
 import { MediaService } from '../media.service'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
-import { SwiperComponent, SwiperData } from '../swiper/swiper.component'
-import { SwiperIonicEventsHelper } from '../swiper/swiper-ionic-events-helper'
+
+export interface SettingsMenuEntry {
+  name: string
+  imgSrc: Observable<string>
+  data: string
+}
 
 @Component({
   selector: 'app-settings',
   templateUrl: 'settings.page.html',
   styleUrls: ['settings.page.scss'],
   imports: [
+    AsyncPipe,
     IonBackButton,
     IonTitle,
     MupiHatIconComponent,
     IonHeader,
     IonToolbar,
     IonButtons,
-    SwiperComponent,
     IonContent,
-    MupiHatIconComponent,
+    IonGrid,
+    IonRow,
+    IonCol,
+    IonCard,
+    IonCardHeader,
+    IonCardTitle,
   ],
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class SettingsPage extends SwiperIonicEventsHelper {
+export class SettingsPage {
   private mediaService = inject(MediaService)
   protected network = toSignal(this.mediaService.network$, { initialValue: null })
 
-  protected swiperData = computed(() => {
-    const out = [
+  protected menuEntries: Signal<SettingsMenuEntry[]> = computed(() => {
+    const out: SettingsMenuEntry[] = [
       {
         name: 'Add media',
         imgSrc: of('../../assets/plus-box-outline.svg'),
@@ -55,64 +70,37 @@ export class SettingsPage extends SwiperIonicEventsHelper {
         data: 'wifi',
       },
       {
+        name: 'Bluetooth settings',
+        imgSrc: of('../../assets/bluetooth.svg'),
+        data: 'bluetooth',
+      },
+      {
         name: 'Reboot / Shutdown',
         imgSrc: of('../../assets/power.svg'),
         data: 'shutdown',
       },
     ]
-    if (this.qrCodeSrc() !== null) {
-      out.push({
-        name: 'More settings',
-        imgSrc: of(this.qrCodeSrc()),
-        data: 'more-settings',
-      })
-    }
     return out
   })
-
-  protected qrCodeSrc: Signal<string>
 
   private router = inject(Router)
   private alertController = inject(AlertController)
   private http = inject(HttpClient)
 
   public constructor() {
-    super()
     addIcons({ arrowBackOutline })
-
-    this.qrCodeSrc = toSignal(
-      toObservable(this.network).pipe(
-        switchMap((network) => {
-          if (network?.ip !== undefined) {
-            return from(QRCode.toDataURL(`http://${network.ip}`, { color: { light: '#00000000' } }))
-          }
-          return of(null)
-        }),
-      ),
-      { initialValue: null },
-    )
   }
 
-  protected entryClicked(entryData: SwiperData<string>): void {
-    if (entryData.data === 'add-media') {
+  protected entryClicked(entry: SettingsMenuEntry): void {
+    if (entry.data === 'add-media') {
       this.router.navigate(['/edit'])
-    } else if (entryData.data === 'wifi') {
+    } else if (entry.data === 'wifi') {
       this.router.navigate(['/wifi'])
-    } else if (entryData.data === 'shutdown') {
+    } else if (entry.data === 'bluetooth') {
+      this.router.navigate(['/bluetooth'])
+    } else if (entry.data === 'shutdown') {
       this.shutdownMessage()
-    } else if (entryData.data === 'more-settings') {
-      this.moreSettingsMessage()
     }
-  }
-
-  private async moreSettingsMessage() {
-    const msg = await this.alertController.create({
-      cssClass: 'alert',
-      header: 'More settings',
-      message: `For more settings, open 'http://${this.network()?.ip}' on your mobile device or PC. You can also scan the QR-code to open it.`,
-      buttons: ['OK'],
-    })
-    await msg.present()
   }
 
   private async shutdownMessage() {

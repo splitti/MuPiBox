@@ -35,6 +35,14 @@ export const routes: Routes = [
     loadComponent: () => import('./wifi/wifi.page').then((m) => m.WifiPage),
   },
   {
+    path: 'wifi/add',
+    loadComponent: () => import('./wifi/wifi-add.page').then((m) => m.WifiAddPage),
+  },
+  {
+    path: 'bluetooth',
+    loadComponent: () => import('./bluetooth/bluetooth.page').then((m) => m.BluetoothPage),
+  },
+  {
     path: 'add',
     loadComponent: () => import('./add/add.page').then((m) => m.AddPage),
   },

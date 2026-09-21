@@ -1,7 +1,9 @@
 <ion-header class="medialist-header">
   <ion-toolbar color="light">
     <ion-buttons slot="start">
-      <ion-back-button icon="arrow-back-outline" defaultHref="/home"></ion-back-button>
+      <ion-button (click)="goBack()">
+        <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>
+      </ion-button>
     </ion-buttons>
     <ion-title>{{artist().name}}</ion-title>
     <span slot="end" class="mupihat-icon-container"><mupihat-icon></mupihat-icon></span>

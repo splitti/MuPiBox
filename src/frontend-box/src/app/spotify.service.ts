@@ -528,6 +528,8 @@ export class SpotifyService {
           uri: track.uri,
           name: track.name,
           track_number: track.track_number,
+          duration_ms: track.duration_ms,
+          artist: track.artists?.map((artist: any) => artist.name).join(', '),
         })),
       })),
       catchError((error) => {
@@ -559,6 +561,8 @@ export class SpotifyService {
               id: track.id,
               uri: track.uri,
               name: track.name,
+              duration_ms: track.duration_ms,
+              artist: track.artists?.map((artist: any) => artist.name).join(', '),
             })),
           })
         } else {
@@ -569,6 +573,8 @@ export class SpotifyService {
               id: item.track.id,
               uri: item.track.uri,
               name: item.track.name,
+              duration_ms: item.track.duration_ms,
+              artist: item.track.artists?.map((artist: any) => artist.name).join(', '),
             })),
           })
         }
@@ -598,6 +604,7 @@ export class SpotifyService {
               id: episode.id,
               uri: episode.uri || `spotify:episode:${episode.id}`,
               name: episode.name,
+              duration_ms: episode.duration_ms,
             })),
           })),
         )
@@ -626,6 +633,7 @@ export class SpotifyService {
             id: chapter.id,
             uri: chapter.uri,
             name: chapter.name,
+            duration_ms: chapter.duration_ms,
           })) || [],
       })),
       catchError((error) => {

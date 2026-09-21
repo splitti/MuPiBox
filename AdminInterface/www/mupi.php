@@ -354,6 +354,16 @@
   $CHANGE_TXT=$CHANGE_TXT."<li>New Theme  ".$data["mupibox"]["theme"]."  is active</li>";
   $change=1;
   }
+ if( $_POST['mupiset'] )
+  {
+  $hideScrollbar = isset($_POST['hideScrollbar']);
+  if( $hideScrollbar !== (($data["mupibox"]["hideScrollbar"] ?? false) === true) )
+   {
+   $data["mupibox"]["hideScrollbar"] = $hideScrollbar;
+   $CHANGE_TXT=$CHANGE_TXT."<li>Horizontal scrollbar is now ".($hideScrollbar ? "hidden" : "shown")."</li>";
+   $change=1;
+   }
+  }
  if( $_POST['tts'] != $data["mupibox"]["ttsLanguage"] && $_POST['mupiset'] )
   {
   $data["mupibox"]["ttsLanguage"]=$_POST['tts'];
@@ -367,6 +377,20 @@
   {
   $data["mupibox"]["resume"]=intval($_POST['resume']);
   $CHANGE_TXT=$CHANGE_TXT."<li>Max resume entries  ".$data["mupibox"]["ttsLanguage"]."</li>";
+  $change=1;
+  }
+
+ if( $_POST['listviewTimer'] != $data["mupibox"]["listviewTimer"] && $_POST['mupiset'] )
+  {
+  $data["mupibox"]["listviewTimer"]=floatval($_POST['listviewTimer']);
+  $CHANGE_TXT=$CHANGE_TXT."<li>Listview timer set to  ".$data["mupibox"]["listviewTimer"]." sec</li>";
+  $change=1;
+  }
+
+ if( $_POST['settingsAccessTimer'] != $data["mupibox"]["settingsAccessTimer"] && $_POST['mupiset'] )
+  {
+  $data["mupibox"]["settingsAccessTimer"]=floatval($_POST['settingsAccessTimer']);
+  $CHANGE_TXT=$CHANGE_TXT."<li>Access to settings set to  ".$data["mupibox"]["settingsAccessTimer"]." sec</li>";
   $change=1;
   }
 
@@ -876,6 +900,22 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				</select>
 				</div>
 				<div class="themePrev"><img src="images/<?php print $data["mupibox"]["theme"]; ?>.png" width="250" height="150" name="selectedTheme" /></div>
+				<style>
+					.mupi-toggle { display:inline-flex; align-items:center; gap:10px; margin-top:12px; cursor:pointer; }
+					.mupi-toggle input { position:absolute; opacity:0; width:0; height:0; }
+					.mupi-toggle .track { position:relative; width:44px; height:24px; border-radius:12px; background:#bbb; transition:background .15s; flex:0 0 auto; }
+					.mupi-toggle .track::after { content:""; position:absolute; top:2px; left:2px; width:20px; height:20px; border-radius:50%; background:#fff; transition:transform .15s; box-shadow:0 1px 3px rgba(0,0,0,.35); }
+					.mupi-toggle input:checked + .track { background:#2a9d3f; }
+					.mupi-toggle input:checked + .track::after { transform:translateX(20px); }
+					.mupi-toggle input:focus-visible + .track { outline:2px solid #4a90e2; outline-offset:2px; }
+				</style>
+				<div>
+					<label class="mupi-toggle" for="hideScrollbar">
+						<input type="checkbox" id="hideScrollbar" name="hideScrollbar" value="1" <?= (($data["mupibox"]["hideScrollbar"] ?? false) === true) ? 'checked="checked"' : '' ?> />
+						<span class="track"></span>
+						<span>Hide horizontal scrollbar</span>
+					</label>
+				</div>
 
 			</li>
 			<li id="li_1" >
@@ -910,6 +950,36 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				<input class="range slider-progress" name="resume" type="range" min="1" max="99" step="1.0" value="<?php 
 					echo $data["mupibox"]["resume"]
 				?>" oninput="this.previousElementSibling.value = this.value">
+				</div>
+			</li>
+
+			<li id="li_1" >
+				<h2>Listview timer</h2>
+				<p>How long you need to press and hold the cover in the player to open the track list (in seconds)
+				</p>
+				<div>
+					<output id="rangeval" class="rangeval"><?php 
+					echo $data["mupibox"]["listviewTimer"]
+				?> sec</output>				
+
+				<input class="range slider-progress" name="listviewTimer" type="range" min="0.5" max="5" step="0.5" value="<?php
+					echo $data["mupibox"]["listviewTimer"]
+				?>" oninput="this.previousElementSibling.value = this.value + ' sec'">
+				</div>
+			</li>
+
+			<li id="li_1" >
+				<h2>Access to settings</h2>
+				<p>How long you need to press and hold the status icon on the home screen to open the secret settings menu (in seconds)
+				</p>
+				<div>
+					<output id="rangeval" class="rangeval"><?php
+					echo $data["mupibox"]["settingsAccessTimer"]
+				?> sec</output>
+
+				<input class="range slider-progress" name="settingsAccessTimer" type="range" min="1" max="10" step="1" value="<?php
+					echo $data["mupibox"]["settingsAccessTimer"]
+				?>" oninput="this.previousElementSibling.value = this.value + ' sec'">
 				</div>
 			</li>
 
