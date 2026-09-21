@@ -54,7 +54,9 @@ USER=$(/usr/bin/whoami) >&3 2>&3
 RASPPI=$(/usr/bin/cat /sys/firmware/devicetree/base/model | tr -d '\0' ) >&3 2>&3
 
 if [ -n "$BRANCH" ]; then
-	MUPI_SRC="/home/dietpi/MuPiBox-${BRANCH}" >&3 2>&3
+	# GitHub names the archive folder "<repo name>-<branch>", so a fork that is
+	# not called "MuPiBox" (e.g. "MuPiBox-custom") unpacks somewhere else.
+	MUPI_SRC="/home/dietpi/${REPO##*/}-${BRANCH}" >&3 2>&3
 elif [ "$RELEASE" = "dev" ]; then
 	MUPI_SRC="/home/dietpi/MuPiBox-main" >&3 2>&3
 else
