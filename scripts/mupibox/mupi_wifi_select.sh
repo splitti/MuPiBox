@@ -18,6 +18,20 @@ flock -w 180 9 || exit 0
 log() { echo "$(date '+%F %T') $*" >> "${LOG}"; }
 has_ip() { ip -4 addr show dev "$1" 2>/dev/null | grep -q "inet "; }
 
+# ifupdown keeps its own idea of what is up ("ifup: interface wlan0 already configured") and refuses to
+# start an interface it thinks is up, even if the link is dead - which is exactly the state after an
+# adapter was taken down or unplugged. Clear that state first, then start the interface.
+bring_up() {
+	ifdown --force "$1" >> "${LOG}" 2>&1
+	ifup "$1" >> "${LOG}" 2>&1
+	for ((n = 0; n < 40; n += 2)); do
+		has_ip "$1" && return 0
+		sleep 2
+	done
+	log "$1 got no address within 40 s"
+	return 1
+}
+
 # The router: from any default route, else from a DHCP lease (a second adapter in the same network does
 # not get its own default route while the first one still has it).
 router_address() {
@@ -43,7 +57,7 @@ if [ -z "${usb}" ]; then
 	# No USB adapter: the onboard WiFi has to be up.
 	if [ -n "${onboard}" ] && ! has_ip "${onboard}"; then
 		log "no USB adapter - bringing up ${onboard}"
-		ifup "${onboard}" >> "${LOG}" 2>&1
+		bring_up "${onboard}"
 	fi
 	exit 0
 fi
@@ -51,7 +65,7 @@ fi
 # USB adapter present: connect it first.
 if ! has_ip "${usb}"; then
 	log "bringing up ${usb}"
-	ifup "${usb}" >> "${LOG}" 2>&1
+	bring_up "${usb}"
 fi
 for ((i = 0; i < WAIT_SECONDS; i += 2)); do
 	if has_ip "${usb}" && reaches_router "${usb}"; then
@@ -64,7 +78,7 @@ if ! { has_ip "${usb}" && reaches_router "${usb}"; }; then
 	# The USB adapter did not connect (no known network in reach): the onboard WiFi stays as it is.
 	log "${usb} did not connect within ${WAIT_SECONDS} s - keeping ${onboard:-nothing} up"
 	if [ -n "${onboard}" ] && ! has_ip "${onboard}"; then
-		ifup "${onboard}" >> "${LOG}" 2>&1
+		bring_up "${onboard}"
 	fi
 	exit 0
 fi
@@ -86,7 +100,7 @@ if [ -n "${onboard}" ] && [ "${onboard}" != "${usb}" ] && has_ip "${onboard}"; t
 	done
 	if [ "${reachable}" -ne 1 ]; then
 		log "${usb} does not reach the router without ${onboard} - bringing ${onboard} back"
-		ifup "${onboard}" >> "${LOG}" 2>&1
+		bring_up "${onboard}"
 	fi
 elif [ -n "${gw:=$(router_address)}" ] && ! ip -4 route show default dev "${usb}" | grep -q default; then
 	# Only the USB adapter is up: it needs the default route itself.
