@@ -186,14 +186,14 @@
 		}
 	if( $_POST['change_wifi'] == "disable" )
 		{
-		$command = "echo 'dtoverlay=disable-wifi' | sudo tee -a /boot/config.txt";
+		$command = "sudo /usr/local/bin/mupibox/set_onboard_wifi.sh off";
 		exec($command, $output, $result );
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>OnBoard Wifi disabled [restart necessary]</li>";
 		}
 	else if( $_POST['change_wifi'] == "enable" )
 		{
-		$command = "sudo sed -i -e 's/dtoverlay=disable-wifi//g' /boot/config.txt && sudo head -n -1 /boot/config.txt > /tmp/config.txt && sudo mv /tmp/config.txt /boot/config.txt";
+		$command = "sudo /usr/local/bin/mupibox/set_onboard_wifi.sh on";
 		exec($command, $output, $result );
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>OnBoard Wifi enabled [restart necessary]</li>";
@@ -414,7 +414,7 @@
  echo "net.ipv6.conf.default.disable_ipv6 = 1" >> /etc/sysctl.conf
  echo "net.ipv6.conf.lo.disable_ipv6 = 1" >> /etc/sysctl.conf
 			*/
-			$command = "cat /boot/config.txt | grep 'dtoverlay=disable-wifi'";
+			$command = "grep '^dtoverlay=disable-wifi' /boot/config.txt";
 			$wifionoff = exec($command, $output);
 			if($wifionoff == "")
 				{
