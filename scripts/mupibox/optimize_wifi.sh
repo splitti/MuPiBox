@@ -34,6 +34,18 @@ if ! grep -q "wpa-roam /etc/wpa_supplicant/wpa_supplicant.conf" "$NETWORKINTERFA
 	echo "iface default inet dhcp" | tee -a $NETWORKINTERFACES > /dev/null
 fi
 
+# A second WiFi adapter (a USB one) is called wlan1: it is set up like the onboard one. Which of the two
+# is used is decided by mupi_wifi_select.sh (USB preferred, onboard as fallback).
+if ! grep -q "allow-hotplug wlan1" "$NETWORKINTERFACES"; then
+	{
+		echo ""
+		echo "allow-hotplug wlan1"
+		echo "iface wlan1 inet manual"
+		echo "wireless-power off"
+		echo "wpa-roam /etc/wpa_supplicant/wpa_supplicant.conf"
+	} >> "$NETWORKINTERFACES"
+fi
+
 # /etc/wpa_supplicant/wpa_supplicant
 rm "$WPACONF.bak"
 cp "$WPACONF" "$WPACONF.bak"

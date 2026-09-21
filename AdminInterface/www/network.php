@@ -1,8 +1,11 @@
 <?php
 	include ('includes/header.php');
-	$commandM0="cat /sys/class/net/wlan0/address";
+	// the WiFi adapter in use (a USB adapter if there is one, else the onboard one)
+	$WIFI_IF = trim((string) shell_exec('/usr/local/bin/mupibox/mupi_wifi_iface.sh'));
+	if ($WIFI_IF === '') { $WIFI_IF = 'wlan0'; }
+	$commandM0="cat /sys/class/net/".$WIFI_IF."/address";
 	$MAC0=exec($commandM0);
-	$commandS0="/sbin/ifconfig wlan0 | awk '/netmask/{split($4,a,\":\"); print a[1]}'";
+	$commandS0="/sbin/ifconfig ".$WIFI_IF." | awk '/netmask/{split($4,a,\":\"); print a[1]}'";
 	$SUBNET0=exec($commandS0);
 	$commandG0="sudo route -n | grep 'UG[ \t]' | awk '{print $2}'";
 	$GATEWAY0=exec($commandG0);
@@ -10,11 +13,11 @@
 	$DNS=exec($commandD);
 	/*$commandW="sudo iwgetid -r";
 	$WIFI=exec($commandW);
-	$commandL="sudo iwconfig wlan0 | awk '/Link Quality/{split($2,a,\"=|/\");print int((a[2]/a[3])*100)\"%\"}'";
+	$commandL="sudo iwconfig ".$WIFI_IF." | awk '/Link Quality/{split($2,a,\"=|/\");print int((a[2]/a[3])*100)\"%\"}'";
 	$LINKQ=exec($commandL);*/
-	$commandS="sudo iwconfig wlan0 | awk '/Signal level/{split($4,a,\"=|/\");print a[2]\" dBm\"}'";
+	$commandS="sudo iwconfig ".$WIFI_IF." | awk '/Signal level/{split($4,a,\"=|/\");print a[2]\" dBm\"}'";
 	$SIGNAL=exec($commandS);
-	$commandB="sudo iwconfig wlan0 | awk '/Bit Rate/{split($2,a,\"=|/\");print a[2]\" Mb/s\"}'";
+	$commandB="sudo iwconfig ".$WIFI_IF." | awk '/Bit Rate/{split($2,a,\"=|/\");print a[2]\" Mb/s\"}'";
 	$BITRATE=exec($commandB);
 
 	if( $_POST['RTL88X2BU'] == "Install driver" )
@@ -197,14 +200,14 @@
 		}
 	if( $_POST['restart_wifi'] )
 		{
-		$command = "sudo service ifup@wlan0 stop && sudo service ifup@wlan0 start";
+		$command = "sudo service ifup@".$WIFI_IF." stop && sudo service ifup@".$WIFI_IF." start";
 		exec($command);
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Wifi-Device was restarted</li>";
 		}
 	if( $_POST['renew_dhcp'] )
 		{
-		$command = "sudo dhclient -r && sudo service ifup@wlan0 stop && sudo service ifup@wlan0 start && sudo dhclient";
+		$command = "sudo dhclient -r && sudo service ifup@".$WIFI_IF." stop && sudo service ifup@".$WIFI_IF." start && sudo dhclient";
 		exec($command);
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>DHCP-Lease is released. Try to renew the Lease...</li>";
@@ -455,7 +458,7 @@
 
 		<li class="li_1"><h2>Restart Wifi-Device</h2>
 			<p>
-			Restarts the wlan0-Device.
+			Restarts the WiFi device in use.
 			</p>
 			<input id="saveForm" class="button_text" type="submit" name="restart_wifi" value="Restart Wifi-Device" />
 		</li>

@@ -631,6 +631,11 @@ rm -f /tmp/mupibox-update-failed
 		mkdir -p /etc/systemd/system/dietpi-wifi-monitor.service.d >&3 2>&3
 		cp -f ${MUPI_SRC}/config/services/dietpi-wifi-monitor-override.conf /etc/systemd/system/dietpi-wifi-monitor.service.d/override.conf >&3 2>&3
 	fi
+	# USB WiFi adapter preferred, onboard WiFi as fallback (see scripts/mupibox/mupi_wifi_select.sh): only versions that ship it
+	if [ "$RELEASE" = "dev" ] && [ -f ${MUPI_SRC}/config/udev/99-mupibox-wifi.rules ]; then
+		cp -f ${MUPI_SRC}/config/udev/99-mupibox-wifi.rules /etc/udev/rules.d/99-mupibox-wifi.rules >&3 2>&3
+		udevadm control --reload >&3 2>&3
+	fi
 
 	systemctl daemon-reload >&3 2>&3
 	if systemctl list-unit-files dietpi-wifi-monitor.service 2>/dev/null | grep -q dietpi-wifi-monitor; then

@@ -1,0 +1,3 @@
+# A WiFi interface appeared or disappeared (e.g. a USB WiFi adapter was plugged in or removed):
+# let MuPiBox choose again which adapter to use (USB preferred, onboard as fallback).
+ACTION=="add|remove", SUBSYSTEM=="net", KERNEL=="wlan*", RUN+="/usr/bin/systemd-run --no-block /usr/local/bin/mupibox/mupi_wifi_select.sh"
