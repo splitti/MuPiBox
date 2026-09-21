@@ -8,29 +8,17 @@
 # the router; if the USB link does not hold up afterwards, the onboard WiFi is brought back.
 
 IFACE_TOOL="/usr/local/bin/mupibox/mupi_wifi_iface.sh"
-LOG="/var/log/mupi_wifi_select.log" # not in /tmp: it has to survive a reboot
+LOG="/home/dietpi/mupi_wifi_select.log" # not in /tmp or /var/log: both are RAM disks that are emptied at every boot
 WAIT_SECONDS=60
 
 # Events for both adapters arrive within a moment: run one after the other, the last one sees the final state.
-exec 9> /run/mupi_wifi_select.lock
+# The lock file is closed again (9>&-) for everything started below: the WiFi programs that ifup starts in the
+# background (wpa_supplicant, dhclient) keep running after this script, and would keep the lock for ever.
+exec 9> /run/mupi-wifi-select.lock
 flock -w 180 9 || exit 0
 
 log() { echo "$(date '+%F %T') $*" >> "${LOG}"; }
 has_ip() { ip -4 addr show dev "$1" 2>/dev/null | grep -q "inet "; }
-
-# ifupdown keeps its own idea of what is up ("ifup: interface wlan0 already configured") and refuses to
-# start an interface it thinks is up, even if the link is dead - which is exactly the state after an
-# adapter was taken down or unplugged. Clear that state first, then start the interface.
-bring_up() {
-	ifdown --force "$1" >> "${LOG}" 2>&1
-	ifup "$1" >> "${LOG}" 2>&1
-	for ((n = 0; n < 40; n += 2)); do
-		has_ip "$1" && return 0
-		sleep 2
-	done
-	log "$1 got no address within 40 s"
-	return 1
-}
 
 # The router: from any default route, else from a DHCP lease (a second adapter in the same network does
 # not get its own default route while the first one still has it).
@@ -46,6 +34,45 @@ reaches_router() {
 	local gw
 	gw=$(router_address)
 	[ -n "${gw}" ] && ping -nqc 2 -W 2 -I "$1" "${gw}" > /dev/null 2>&1
+}
+
+wait_for_ip() {
+	local i="$1" seconds="$2" n
+	for ((n = 0; n < seconds; n += 2)); do
+		has_ip "$i" && return 0
+		sleep 2
+	done
+	return 1
+}
+
+# Brings an interface up and waits for an address.
+# - An adapter that is already being brought up (its wpa_supplicant runs: hotplug at boot, or another
+#   udev event for the same adapter) is NOT restarted - that broke a link that was just coming up.
+#   It is waited for; if it is connected but got no address, the address request is started here
+#   (in roaming mode it comes from the wpa_action hook, "ifup <interface>=default").
+# - ifupdown keeps its own idea of what is up ("ifup: interface wlan0 already configured") and refuses to
+#   start an interface it thinks is up even if the link is dead - the state after an adapter was taken
+#   down or unplugged. Only then the state is cleared first (ifdown --force) and the interface started.
+bring_up() {
+	local i="$1"
+	if has_ip "$i"; then
+		return 0
+	fi
+	if pgrep -f "wpa_supplicant.* -i ${i} " > /dev/null; then
+		log "$i is being brought up - waiting"
+		wait_for_ip "$i" 30 && return 0
+		if wpa_cli -i "$i" status 2>/dev/null | grep -q "wpa_state=COMPLETED"; then
+			log "$i is connected but has no address - requesting one"
+			ifup "$i=default" >> "${LOG}" 2>&1 9>&-
+			wait_for_ip "$i" 20 && return 0
+		fi
+	else
+		ifdown --force "$i" >> "${LOG}" 2>&1 9>&-
+		ifup "$i" >> "${LOG}" 2>&1 9>&-
+		wait_for_ip "$i" 40 && return 0
+	fi
+	log "$i got no address"
+	return 1
 }
 
 sleep 3 # let the driver finish setting up the adapter
@@ -87,7 +114,7 @@ if [ -n "${onboard}" ] && [ "${onboard}" != "${usb}" ] && has_ip "${onboard}"; t
 	gw=$(router_address)
 	log "${usb} is connected - default route to ${gw} via ${usb}, taking ${onboard} down"
 	ip route replace default via "${gw}" dev "${usb}" >> "${LOG}" 2>&1
-	ifdown "${onboard}" >> "${LOG}" 2>&1
+	ifdown "${onboard}" >> "${LOG}" 2>&1 9>&-
 	# The onboard link is gone: is the box still reachable through the USB adapter? A short outage
 	# (something else may restart the link right now) is waited for before the onboard WiFi is brought back.
 	reachable=0

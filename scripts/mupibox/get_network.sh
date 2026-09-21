@@ -88,6 +88,17 @@ MAC=$(cat /sys/class/net/${WIFI_IF}/address)
 WIFI=$(sudo iw dev ${WIFI_IF} info | grep ssid | awk '{print $2}')
 WIFILINK=$(sudo iwconfig ${WIFI_IF} | awk '/Link Quality/{split($2,a,"=|/");print int((a[2]/a[3])*100)"%"}')
 WIFISIGNAL=$(sudo iwconfig ${WIFI_IF} | awk '/Signal level/{split($4,a,"=|/");print a[2]" dBm"}')
+# Some drivers (e.g. the USB adapter's) report "Signal level" as a percentage, not in dBm: then the real
+# value comes from the WiFi supplicant.
+case "${WIFISIGNAL}" in
+	-*) ;;
+	*)
+		RSSI=$(sudo wpa_cli -i ${WIFI_IF} signal_poll 2>/dev/null | awk -F= '/^RSSI=/{print $2}')
+		if [ -n "${RSSI}" ]; then
+			WIFISIGNAL="${RSSI} dBm"
+		fi
+		;;
+esac
 HOSTN=$(/usr/bin/hostname)
 IPA=$(/usr/bin/hostname -I | awk '{print $1}')
 DNS=$(echo $(sudo cat /etc/resolv.conf | grep 'nameserver ') | sed 's/nameserver //g')
@@ -102,5 +113,7 @@ SUBNET=$(/sbin/ifconfig ${WIFI_IF} | awk '/netmask/{split($4,a,":"); print a[1]}
 /usr/bin/cat <<< $(/usr/bin/jq --arg v "${GW}" '.gateway = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
 /usr/bin/cat <<< $(/usr/bin/jq --arg v "${DNS}" '.dns = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
 /usr/bin/cat <<< $(/usr/bin/jq --arg v "${SUBNET}" '.subnet = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
+# the WiFi adapter in use (shown next to the title of the WiFi page)
+/usr/bin/cat <<< $(/usr/bin/jq --arg v "${WIFI_IF}" '.interface = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
 #/usr/bin/cat <<< $(/usr/bin/jq --arg v "${HOSTN}" '."node-sonos-http-api".server = $v' ${FRONTENDCONFIG}) >  ${FRONTENDCONFIG}
 #/usr/bin/cat <<< $(/usr/bin/jq --arg v "${IPA}" '."node-sonos-http-api".ip = $v' ${FRONTENDCONFIG}) >  ${FRONTENDCONFIG}
