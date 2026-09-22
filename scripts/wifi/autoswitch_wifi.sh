@@ -12,12 +12,30 @@
 # switched on any margin at all, which flaps between two similarly-strong networks. Now uses
 # ifdown/ifup (the same safe, idempotent restart used by mupi_wifi_select.sh - no manual process
 # lifecycle to get wrong) and only switches when the best network is a real margin ahead.
+#
+# v1.2: switching takes several seconds (association + DHCP). The old loop scanned again after a
+# fixed 20s regardless, and while the switch was still settling iwgetid returned nothing, which read
+# as "current network -100 dBm" - beaten by anything - triggering another switch before the first one
+# had even finished. Found on a live box: it chained through three networks, each weaker than the
+# last, leaking a dhclient at each hop. Now waits for the new link to actually get an address (or a
+# timeout) before it scans again.
 
 sleep 60
 
 LOG="/home/dietpi/autoswitch_wifi.log" # not /tmp: tmpfs, wiped every boot
 MARGIN=10 # dBm the best network must beat the current one by before switching (avoids flapping)
+SETTLE_SECONDS=40 # time given to a fresh switch to associate and get an address before scanning again
 echo $$ > /run/mupi_autoconnect-wifi.pid
+
+has_ip() { ip -4 addr show dev "$1" 2>/dev/null | grep -q "inet "; }
+wait_for_ip() {
+	local i="$1" seconds="$2" n
+	for ((n = 0; n < seconds; n += 2)); do
+		has_ip "$i" && return 0
+		sleep 2
+	done
+	return 1
+}
 
 while true; do
 
@@ -69,8 +87,16 @@ while true; do
 			ifdown --force "${WIFI_IF}" >> "${LOG}" 2>&1
 			ifup "${WIFI_IF}" >> "${LOG}" 2>&1
 		)
+		# Let the switch settle (association + DHCP) before the next scan judges it - otherwise a
+		# still-connecting link looks like "-100 dBm, beaten by anything" and gets switched away from
+		# again before it ever had a chance.
+		if wait_for_ip "${WIFI_IF}" "${SETTLE_SECONDS}"; then
+			echo "$(date '+%F %T') ${WIFI_IF} settled with an address" >> "${LOG}"
+		else
+			echo "$(date '+%F %T') ${WIFI_IF} did not get an address within ${SETTLE_SECONDS}s" >> "${LOG}"
+		fi
 	else
 		echo "$(date '+%F %T') no switch needed" >> "${LOG}"
+		sleep 20
 	fi
-	sleep 20
 done
