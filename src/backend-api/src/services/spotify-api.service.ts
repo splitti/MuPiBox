@@ -25,9 +25,23 @@ export class SpotifyApiService {
     search: 6 * 60 * 60 * 1000, // 6 hours for Search Results
   }
 
-  // Rate limiting
-  private lastRequestTime = 0
-  private readonly minRequestInterval = 100 // 100ms between requests
+  // Rate limiting: every request reserves the next free slot before it runs, which
+  // keeps the pacing correct even when several queue workers run in parallel. 300ms
+  // (~3 requests/s) stays under the rolling 30 second window Spotify grants apps in
+  // development mode; with the serial queue the latency paced the requests anyway,
+  // with workers the slot has to do it.
+  private nextRequestSlot = 0
+  private readonly minRequestInterval = 300
+  // First pause after a rate limit answer; doubles per attempt (2s, 4s, 8s). More
+  // attempts are not worth blocking a queue worker for - a lookup that still fails
+  // is retried by the frontend's media refresh a few seconds later anyway.
+  private readonly rateLimitBackoffMs = 2000
+  private readonly maxRateLimitRetries = 3
+  // Once a request has given up on the rate limit, the window is exhausted for
+  // everyone: remaining lookups fail fast instead of each burning through the same
+  // backoffs, and the frontend asks again after the cool-down.
+  private readonly rateLimitCooldownMs = 20000
+  private rateLimitUntil = 0
 
   // Upper bound for one Spotify request (API call or token refresh). Without it a
   // box without internet keeps the sequential request queue hanging on the first
@@ -54,6 +68,9 @@ export class SpotifyApiService {
     reject: (error: Error) => void
   }> = []
   private isProcessingQueue = false
+  // How many uncached lookups run at the same time. The rate limiter keeps the
+  // Spotify request spacing, so this mainly overlaps network latency.
+  private readonly maxConcurrentRequests = 3
 
   // Track pending requests to enable de-duplication
   private pendingRequests = new Map<
@@ -184,21 +201,41 @@ export class SpotifyApiService {
     return Promise.race([operation(), timeout]).finally(() => clearTimeout(timer))
   }
 
-  private async rateLimitedRequest<T>(operation: () => Promise<T>, timeoutMs = this.requestTimeoutMs): Promise<T> {
+  /**
+   * The Spotify library reports a 429 as a plain Error with this message and no
+   * status code or retry-after header, so matching the message is the only way to
+   * notice it. Missing it meant every rate limited lookup failed outright - on a
+   * cold cache that quietly cost entries on the home screen.
+   */
+  private isRateLimitError(error: any): boolean {
+    return (
+      error?.statusCode === 429 ||
+      /exceeded its rate limits/i.test(error instanceof Error ? error.message : String(error))
+    )
+  }
+
+  private async rateLimitedRequest<T>(
+    operation: () => Promise<T>,
+    timeoutMs = this.requestTimeoutMs,
+    rateLimitAttempt = 0,
+  ): Promise<T> {
     if (Date.now() < this.networkFailureUntil) {
       throw new Error('Spotify is unreachable (recent network failure), request skipped')
     }
+    if (Date.now() < this.rateLimitUntil) {
+      throw new Error('Spotify rate limit window is exhausted, request skipped')
+    }
 
-    // Implement simple rate limiting
+    // Reserve the next free time slot synchronously (no await in between), so
+    // parallel workers cannot grab the same slot and burst at Spotify together.
     const now = Date.now()
-    const timeSinceLastRequest = now - this.lastRequestTime
-
-    if (timeSinceLastRequest < this.minRequestInterval) {
-      await new Promise((resolve) => setTimeout(resolve, this.minRequestInterval - timeSinceLastRequest))
+    const slot = Math.max(now, this.nextRequestSlot)
+    this.nextRequestSlot = slot + this.minRequestInterval
+    if (slot > now) {
+      await new Promise((resolve) => setTimeout(resolve, slot - now))
     }
 
     try {
-      this.lastRequestTime = Date.now()
       return await this.withTimeout(operation, timeoutMs)
     } catch (error: any) {
       if (this.isNetworkError(error)) {
@@ -208,14 +245,24 @@ export class SpotifyApiService {
         )
         throw error
       }
-      if (error.statusCode === 429) {
-        // Rate limited - wait and retry
+      if (this.isRateLimitError(error)) {
+        if (rateLimitAttempt >= this.maxRateLimitRetries) {
+          console.warn(
+            `Rate limited by Spotify API, giving up after ${rateLimitAttempt} retries and cooling down for ${this.rateLimitCooldownMs / 1000}s`,
+          )
+          this.rateLimitUntil = Date.now() + this.rateLimitCooldownMs
+          throw error
+        }
+        // Wait and retry, doubling the pause each attempt. The library exposes no
+        // retry-after header, so the pause is our own. Pushing nextRequestSlot out
+        // holds every worker back - one 429 means the whole window is exhausted.
         const retryAfter = error.headers?.['retry-after']
           ? Number.parseInt(error.headers['retry-after'], 10) * 1000
-          : 1000
+          : this.rateLimitBackoffMs * 2 ** rateLimitAttempt
         console.warn(`Rate limited by Spotify API. Retrying after ${retryAfter}ms`)
+        this.nextRequestSlot = Math.max(this.nextRequestSlot, Date.now() + retryAfter)
         await new Promise((resolve) => setTimeout(resolve, retryAfter))
-        return this.rateLimitedRequest(operation, timeoutMs)
+        return this.rateLimitedRequest(operation, timeoutMs, rateLimitAttempt + 1)
       }
       // Let the library handle 401 errors and token refresh automatically
       throw error
@@ -309,21 +356,37 @@ export class SpotifyApiService {
     this.isProcessingQueue = true
     console.debug(`🏃 Starting request queue processing (${this.requestQueue.length} requests)`)
 
-    while (this.requestQueue.length > 0) {
-      const queueEntry = this.requestQueue.shift()
-      if (!queueEntry) break
+    // A few workers drain the queue in parallel. One request at a time made a cold
+    // start crawl: a media list asks for dozens of artist/show lookups at once, and
+    // everything behind the first handful ran into the frontend's per-entry time
+    // limit and was dropped. The rate limiter above still paces the actual Spotify
+    // calls, so this only overlaps waiting, it does not hammer the API.
+    const worker = async (): Promise<void> => {
+      for (;;) {
+        const queueEntry = this.requestQueue.shift()
+        if (!queueEntry) return
 
-      const { key, operation, resolve, reject } = queueEntry
+        const { key, operation, resolve, reject } = queueEntry
 
-      try {
-        console.debug(`⚡ Processing request for ${key}`)
-        const result = await operation()
-        resolve(result)
-        console.debug(`✅ Completed request for ${key}`)
-      } catch (error) {
-        console.error(`❌ Failed request for ${key}:`, error instanceof Error ? error.message : String(error))
-        reject(error instanceof Error ? error : new Error(String(error)))
+        try {
+          console.debug(`⚡ Processing request for ${key}`)
+          const result = await operation()
+          resolve(result)
+          console.debug(`✅ Completed request for ${key}`)
+        } catch (error) {
+          console.error(`❌ Failed request for ${key}:`, error instanceof Error ? error.message : String(error))
+          reject(error instanceof Error ? error : new Error(String(error)))
+        }
       }
+    }
+
+    // New entries queued while the workers run are picked up by whichever worker
+    // frees up first; only when all workers have exited is the queue idle again.
+    while (this.requestQueue.length > 0) {
+      const workers = Array.from({ length: Math.min(this.maxConcurrentRequests, this.requestQueue.length) }, () =>
+        worker(),
+      )
+      await Promise.all(workers)
     }
 
     this.isProcessingQueue = false
@@ -417,22 +480,24 @@ export class SpotifyApiService {
 
   async searchAlbums(
     query: string,
-    limit = 10,
+    limit = 50,
     offset = 0,
   ): Promise<{ items: SpotifyApiAlbumSearchResult[]; total: number; limit: number; offset: number }> {
     const cacheKey = `search_albums_${query}_${limit}_${offset}`
 
     return this.executeWithCache(cacheKey, async () => {
-      const result = await this.spotifyApi.search(query, ['album'], 'DE', Math.min(limit, 10) as any, offset)
+      const result = await this.spotifyApi.search(query, ['album'], 'DE', Math.min(limit, 50) as any, offset)
       return {
         items:
-          result.albums.items.map((item) => ({
-            id: item.id,
-            name: item.name,
-            artists: item.artists,
-            images: item.images,
-            release_date: item.release_date,
-          })) || [],
+          result.albums.items
+            .filter((item) => item != null)
+            .map((item) => ({
+              id: item.id,
+              name: item.name,
+              artists: item.artists,
+              images: item.images,
+              release_date: item.release_date,
+            })) || [],
         total: result.albums.total || 0,
         limit: result.albums.limit || limit,
         offset: result.albums.offset || offset,
@@ -443,7 +508,7 @@ export class SpotifyApiService {
   async getArtistAlbums(
     artistId: string,
     albumTypes = 'album,single,compilation',
-    limit = 10,
+    limit = 50,
     offset = 0,
   ): Promise<{ items: SpotifyApiArtistAlbumsResult[]; total: number; limit: number; offset: number }> {
     const cacheKey = `artist_albums_${artistId}_${albumTypes}_${limit}_${offset}`
@@ -453,17 +518,19 @@ export class SpotifyApiService {
         artistId,
         'album,single,compilation',
         'DE',
-        Math.min(limit, 10) as any,
+        Math.min(limit, 50) as any,
         offset,
       )
       return {
-        items: (result.items || []).map((item: any) => ({
-          id: item.id,
-          name: item.name,
-          artists: item.artists,
-          images: item.images,
-          release_date: item.release_date,
-        })),
+        items: (result.items || [])
+          .filter((item: any) => item != null)
+          .map((item: any) => ({
+            id: item.id,
+            name: item.name,
+            artists: item.artists,
+            images: item.images,
+            release_date: item.release_date,
+          })),
         total: result.total || 0,
         limit: result.limit || limit,
         offset: result.offset || offset,
@@ -473,20 +540,24 @@ export class SpotifyApiService {
 
   async getShowEpisodes(
     showId: string,
-    limit = 10,
+    limit = 50,
     offset = 0,
   ): Promise<{ items: SpotifyApiShowEpisodesResult[]; total: number; limit: number; offset: number }> {
     const cacheKey = `show_episodes_${showId}_${limit}_${offset}`
 
     return this.executeWithCache(cacheKey, async () => {
-      const result = await this.spotifyApi.shows.episodes(showId, 'DE', Math.min(limit, 10) as any, offset)
+      const result = await this.spotifyApi.shows.episodes(showId, 'DE', Math.min(limit, 50) as any, offset)
       return {
-        items: result.items.map((item) => ({
-          id: item.id,
-          name: item.name,
-          images: item.images,
-          release_date: item.release_date,
-        })),
+        // Spotify returns null for episodes that are unavailable in the market;
+        // they must not crash the whole page of an otherwise fine show.
+        items: result.items
+          .filter((item) => item != null)
+          .map((item) => ({
+            id: item.id,
+            name: item.name,
+            images: item.images,
+            release_date: item.release_date,
+          })),
         total: result.total || 0,
         limit: result.limit || limit,
         offset: result.offset || offset,
@@ -603,7 +674,7 @@ export class SpotifyApiService {
     return /Bad OAuth request|response code: 40[34]/.test(message)
   }
 
-  async getPlaylistTracks(playlistId: string, limit = 10, offset = 0, forceBackgroundRefresh = false): Promise<any[]> {
+  async getPlaylistTracks(playlistId: string, limit = 50, offset = 0, forceBackgroundRefresh = false): Promise<any[]> {
     const cacheKey = `playlist_tracks_${playlistId}_${limit}_${offset}`
 
     return this.executeWithCache(
@@ -613,7 +684,7 @@ export class SpotifyApiService {
           playlistId,
           'DE',
           'items(track(id,uri,name))',
-          Math.min(limit, 10) as any,
+          Math.min(limit, 50) as any,
           offset,
         )
         return result.items

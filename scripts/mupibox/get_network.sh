@@ -40,14 +40,11 @@ else
 	rm ${RESUME_LOCK}
 fi
 
-if [ ! -f ${NETWORKCONFIG} ]; then
-        sudo echo -n "[]" ${NETWORKCONFIG}
-        chown dietpi:dietpi ${NETWORKCONFIG}
-        chmod 777 ${NETWORKCONFIG}
+# Keep the online state that check_network.sh maintains. A missing or half written
+# file falls back to "starting" instead of aborting - the write below rebuilds it.
+OLD_ONLINESTATE=$(/usr/bin/jq -r '.onlinestate // empty' ${NETWORKCONFIG} 2>/dev/null)
+if [ -z "${OLD_ONLINESTATE}" ]; then
         OLD_ONLINESTATE="starting"
-        /usr/bin/cat <<< $(/usr/bin/jq -n --arg v "starting" '.onlinestate = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
-else
-        OLD_ONLINESTATE=$(/usr/bin/jq -r .onlinestate ${NETWORKCONFIG})
 fi
 
 if [ ! -f ${OFFLINE_FILE} ]; then
@@ -86,14 +83,28 @@ IPA=$(/usr/bin/hostname -I | awk '{print $1}')
 DNS=$(echo $(sudo cat /etc/resolv.conf | grep 'nameserver ') | sed 's/nameserver //g')
 SUBNET=$(/sbin/ifconfig wlan0 | awk '/netmask/{split($4,a,":"); print a[1]}')
 
-/usr/bin/cat <<< $(/usr/bin/jq --arg v "${HOSTN}" '.host = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
-/usr/bin/cat <<< $(/usr/bin/jq --arg v "${IPA}" '.ip = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
-/usr/bin/cat <<< $(/usr/bin/jq --arg v "${MAC}" '.mac = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
-/usr/bin/cat <<< $(/usr/bin/jq --arg v "${WIFI}" '.wifi = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
-/usr/bin/cat <<< $(/usr/bin/jq --arg v "${WIFILINK}" '.wifilink = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
-/usr/bin/cat <<< $(/usr/bin/jq --arg v "${WIFISIGNAL}" '.wifisignal = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
-/usr/bin/cat <<< $(/usr/bin/jq --arg v "${GW}" '.gateway = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
-/usr/bin/cat <<< $(/usr/bin/jq --arg v "${DNS}" '.dns = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
-/usr/bin/cat <<< $(/usr/bin/jq --arg v "${SUBNET}" '.subnet = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
+# One atomic write instead of nine read-modify-write cycles on the live file: a
+# reader used to catch the file half written, and a single failing jq (for example
+# because check_network.sh wrote at the same moment) emptied it for good, which left
+# the box showing "no connection" until the next reboot.
+NETWORK_TMP=$(/usr/bin/mktemp "${NETWORKCONFIG}.XXXXXX")
+if /usr/bin/jq -n \
+        --arg host "${HOSTN}" \
+        --arg ip "${IPA}" \
+        --arg mac "${MAC}" \
+        --arg wifi "${WIFI}" \
+        --arg wifilink "${WIFILINK}" \
+        --arg wifisignal "${WIFISIGNAL}" \
+        --arg gateway "${GW}" \
+        --arg dns "${DNS}" \
+        --arg subnet "${SUBNET}" \
+        --arg onlinestate "${OLD_ONLINESTATE}" \
+        '{host: $host, ip: $ip, mac: $mac, wifi: $wifi, wifilink: $wifilink, wifisignal: $wifisignal, gateway: $gateway, dns: $dns, subnet: $subnet, onlinestate: $onlinestate}' \
+        > "${NETWORK_TMP}"; then
+        chmod 666 "${NETWORK_TMP}" 2>/dev/null
+        mv -f "${NETWORK_TMP}" "${NETWORKCONFIG}"
+else
+        rm -f "${NETWORK_TMP}"
+fi
 #/usr/bin/cat <<< $(/usr/bin/jq --arg v "${HOSTN}" '."node-sonos-http-api".server = $v' ${FRONTENDCONFIG}) >  ${FRONTENDCONFIG}
 #/usr/bin/cat <<< $(/usr/bin/jq --arg v "${IPA}" '."node-sonos-http-api".ip = $v' ${FRONTENDCONFIG}) >  ${FRONTENDCONFIG}

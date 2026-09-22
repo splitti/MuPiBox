@@ -8,8 +8,10 @@ import type { BluetoothStatus } from '../bluetooth'
 import { BluetoothService } from '../bluetooth.service'
 import { registerLucideIcons } from '../icons/lucide-icons'
 import { MediaService } from '../media.service'
+import { MediaRefreshService } from '../media-refresh.service'
 import type { Mupihat } from '../mupihat'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
+import { NetworkService } from '../network.service'
 import { PlayerService } from '../player.service'
 import { SettingsHeaderComponent } from '../settings-header/settings-header.component'
 
@@ -23,6 +25,8 @@ import { SettingsHeaderComponent } from '../settings-header/settings-header.comp
 })
 export class SettingsPage {
   private readonly mediaService = inject(MediaService)
+  private readonly mediaRefresh = inject(MediaRefreshService)
+  private readonly networkService = inject(NetworkService)
   private readonly playerService = inject(PlayerService)
   private readonly bluetoothService = inject(BluetoothService)
   private readonly router = inject(Router)
@@ -31,6 +35,8 @@ export class SettingsPage {
 
   protected readonly network = toSignal(this.mediaService.network$, { initialValue: null })
   protected readonly bluetooth = signal<BluetoothStatus | undefined>(undefined)
+  /** Turns into a confirmation for a moment after the reload was started. */
+  protected readonly mediaReloading = signal(false)
 
   private readonly hatActive = toSignal(this.playerService.getConfig().pipe(map((config) => config.hat_active)))
   private readonly mupihat: Signal<Mupihat | undefined> = toSignal(
@@ -64,10 +70,23 @@ export class SettingsPage {
   }
 
   ionViewWillEnter() {
+    // Do not make anyone wait up to five seconds for the current WLAN state.
+    this.networkService.refresh()
+
     this.bluetoothService.getStatus().subscribe({
       next: (status) => this.bluetooth.set(status),
       error: () => this.bluetooth.set(undefined),
     })
+  }
+
+  /**
+   * "Medien neu laden": fetches every list again. The box does this on its own when
+   * entries are missing; this is the way to force it, e.g. right after adding media.
+   */
+  protected reloadMedia(): void {
+    this.mediaRefresh.reload()
+    this.mediaReloading.set(true)
+    setTimeout(() => this.mediaReloading.set(false), 3000)
   }
 
   protected openWifi(): void {

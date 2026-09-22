@@ -39,11 +39,27 @@ if [ ! -f ${RESUME_FILE} ]; then
 	fi
 fi
 
+# Writes the online state without disturbing the fields get_network.sh fills in.
+# The update goes through a temporary file, so a reader never catches the file half
+# written, and a file that is no longer valid JSON is rebuilt instead of staying
+# broken for the rest of the uptime - that used to leave the box showing
+# "no connection" until it was rebooted.
+write_onlinestate() {
+	local tmp
+	tmp=$(/usr/bin/mktemp "${NETWORKCONFIG}.XXXXXX")
+	if /usr/bin/jq --arg v "$1" '.onlinestate = $v' "${NETWORKCONFIG}" > "${tmp}" 2>/dev/null; then
+		chmod 666 "${tmp}" 2>/dev/null
+		mv -f "${tmp}" "${NETWORKCONFIG}"
+	elif /usr/bin/jq -n --arg v "$1" '{onlinestate: $v}' > "${tmp}" 2>/dev/null; then
+		chmod 666 "${tmp}" 2>/dev/null
+		mv -f "${tmp}" "${NETWORKCONFIG}"
+	else
+		rm -f "${tmp}"
+	fi
+}
+
 if [ ! -f ${NETWORKCONFIG} ]; then
-        sudo echo -n "[]" ${NETWORKCONFIG}
-        chown dietpi:dietpi ${NETWORKCONFIG}
-        chmod 777 ${NETWORKCONFIG}
-        /usr/bin/cat <<< $(/usr/bin/jq -n --arg v "starting" '.onlinestate = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
+        write_onlinestate "starting"
 fi
 
 #wget -q --spider http://google.com
@@ -110,8 +126,13 @@ do
 		fi
 	fi
 
+	# Written on every pass, not only when the state changes: should a parallel
+	# get_network.sh run have overwritten it, this puts it back within ten seconds
+	# instead of leaving a wrong state behind until the next real change.
+	write_onlinestate "${ONLINESTATE}"
+
 	if [ "${ONLINESTATE}" != "${OLDSTATE}" ]; then
-		/usr/bin/cat <<< $(/usr/bin/jq --arg v "${ONLINESTATE}" '.onlinestate = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
+		echo "Online state changed to ${ONLINESTATE}."
 	#	if [ "${ONLINESTATE}" == "${FALSESTATE}" ] && [ "${OLDSTATE}" != "starting" ]; then
 	#		#sudo dhclient -r
 	#		sudo service ifup@wlan0 stop

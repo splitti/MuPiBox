@@ -1,15 +1,16 @@
 import { HttpClient } from '@angular/common/http'
 import { ChangeDetectionStrategy, Component, computed, Signal, signal, WritableSignal } from '@angular/core'
-import { toObservable, toSignal } from '@angular/core/rxjs-interop'
+import { toSignal } from '@angular/core/rxjs-interop'
 import { NavigationExtras, Router } from '@angular/router'
 import { IonContent, IonIcon } from '@ionic/angular/standalone'
-import { catchError, lastValueFrom, of, switchMap, tap } from 'rxjs'
+import { catchError, lastValueFrom, map, of, scan, switchMap, tap } from 'rxjs'
 import { environment } from 'src/environments/environment'
 
 import { registerLucideIcons } from '../icons/lucide-icons'
 import { LoadingComponent } from '../loading/loading.component'
 import { Media } from '../media'
 import { MediaService } from '../media.service'
+import { MediaRefreshReason, MediaRefreshService } from '../media-refresh.service'
 import { PlayerService } from '../player.service'
 import { StatusBarComponent } from '../status-bar/status-bar.component'
 import { TilePageItem, TilePagesComponent } from '../tile-pages/tile-pages.component'
@@ -25,7 +26,6 @@ const NO_COVER = '../assets/images/nocover_mupi.png'
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ResumePage {
-  protected isOnline: Signal<boolean>
   protected isLoading: WritableSignal<boolean> = signal(false)
   protected media: Signal<Media[]>
   protected items: Signal<TilePageItem<Media>[]>
@@ -34,24 +34,31 @@ export class ResumePage {
     private router: Router,
     private http: HttpClient,
     private mediaService: MediaService,
+    private mediaRefresh: MediaRefreshService,
     private playerService: PlayerService,
   ) {
     registerLucideIcons()
 
-    this.isOnline = toSignal(this.mediaService.isOnline())
-
     this.media = toSignal(
-      toObservable(this.isOnline).pipe(
+      this.mediaRefresh.refresh$.pipe(
         tap(() => this.isLoading.set(true)),
-        switchMap((_isOnline) => {
+        switchMap((reason) => {
           return this.mediaService.fetchActiveResumeData().pipe(
             catchError((error) => {
               console.error(error)
               return of([] as Media[])
             }),
+            map((loaded) => ({ reason, loaded })),
           )
         }),
         tap(() => this.isLoading.set(false)),
+        // Keep what is on screen when an automatic retry comes back empty.
+        scan((previous: Media[], { reason, loaded }: { reason: MediaRefreshReason; loaded: Media[] }) => {
+          if (reason === 'retry' && loaded.length === 0 && previous.length > 0) {
+            return previous
+          }
+          return loaded
+        }, [] as Media[]),
       ),
       { initialValue: [] as Media[] },
     )

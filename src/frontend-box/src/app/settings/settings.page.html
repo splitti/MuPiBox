@@ -27,6 +27,14 @@
       <ion-icon class="row-chevron" name="lucide-chevron-right"></ion-icon>
     </button>
 
+    <button type="button" class="settings-row tappable" (click)="reloadMedia()">
+      <ion-icon class="row-icon" name="lucide-refresh-cw"></ion-icon>
+      <span class="row-main"><span class="row-title">Medien neu laden</span></span>
+      @if (mediaReloading()) {
+        <span class="row-value">Wird geladen …</span>
+      }
+    </button>
+
     @if (batteryText()) {
       <div class="settings-row">
         <mupihat-icon class="row-icon"></mupihat-icon>

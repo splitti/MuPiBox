@@ -719,6 +719,11 @@ app.get('/api/activeresume', (_req, res) => {
   }
 })
 
+// /tmp/network.json is written by background scripts and is missing for the first
+// seconds after a boot, or half written while a script updates it. Answer with a
+// plain state instead of an error: the frontend polls this every few seconds, and an
+// error there used to leave the box showing "no connection" and never reloading its
+// media until the kiosk browser was restarted.
 app.get('/api/network', (_req, res) => {
   if (fs.existsSync(networkFile)) {
     tryReadFile(networkFile)
@@ -728,10 +733,10 @@ app.get('/api/network', (_req, res) => {
       .catch((error) => {
         console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Error /api/network read network.json`)
         console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] ${error}`)
-        res.status(500).send('Internal Server Error')
+        res.json({ onlinestate: 'offline' })
       })
   } else {
-    res.status(404).send(`File Not Found: ${networkFile}`)
+    res.json({ onlinestate: 'starting' })
   }
 })
 
@@ -1391,7 +1396,7 @@ app.get('/api/spotify/artist/:artistId/albums', async (req, res) => {
 
   const artistId = req.params.artistId
   const albumTypes = (req.query.album_type as string) || 'album,single,compilation'
-  const limit = Number.parseInt(req.query.limit as string, 10) || 5
+  const limit = Number.parseInt(req.query.limit as string, 10) || 50
   const offset = Number.parseInt(req.query.offset as string, 10) || 0
 
   if (!artistId) {

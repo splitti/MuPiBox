@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
-import { catchError, EMPTY, firstValueFrom, from, Observable, of } from 'rxjs'
-import { concatMap, map, scan, switchMap, take, takeLast, timeout } from 'rxjs/operators'
+import { catchError, firstValueFrom, from, Observable, of, throwError, timer } from 'rxjs'
+import { concatMap, map, retry, scan, switchMap, take, takeLast, timeout } from 'rxjs/operators'
 import { environment } from 'src/environments/environment'
 import { LogService } from './log.service'
 import type { CategoryType, Media } from './media'
@@ -79,7 +79,13 @@ export class SpotifyService {
     const spotifyConfigUrl = `${environment.backend.apiUrl}/spotify/config`
     this.http
       .get<SpotifyConfig>(spotifyConfigUrl)
-      .pipe(take(1))
+      .pipe(
+        // At boot the kiosk browser is often up before the backend answers. One
+        // failed request here used to leave the Spotify player uninitialized for
+        // the whole session - nothing played until the browser was restarted.
+        retry({ delay: () => timer(5000) }),
+        take(1),
+      )
       .subscribe({
         next: (spotifyConfig: SpotifyConfig) => {
           this.deviceName = spotifyConfig.deviceName
@@ -96,9 +102,12 @@ export class SpotifyService {
   // ============================================================================
 
   /**
-   * Helper method to fetch all paginated results from the backend API using total count
+   * Helper method to fetch all paginated results from the backend API using total count.
+   * 50 per page is the Spotify API maximum for these endpoints; larger pages mean a
+   * fraction of the requests, which matters because uncached lookups share one
+   * rate-limited queue in the backend.
    */
-  private fetchAllPaginatedResults<T>(url: string, baseParams: any, pageSize = 10): Observable<T[]> {
+  private fetchAllPaginatedResults<T>(url: string, baseParams: any, pageSize = 50): Observable<T[]> {
     const fetchPage = (offset: number): Observable<{ items: T[]; total: number; limit: number; offset: number }> => {
       const params = { ...baseParams, limit: pageSize.toString(), offset: offset.toString() }
       return this.http.get<{ items: T[]; total: number; limit: number; offset: number }>(url, { params })
@@ -126,15 +135,7 @@ export class SpotifyService {
         const additionalPageObservables: Observable<T[]>[] = []
         for (let page = 1; page <= additionalPagesNeeded; page++) {
           const offset = page * pageSize
-          additionalPageObservables.push(
-            fetchPage(offset).pipe(
-              map((response) => response.items),
-              catchError((error) => {
-                this.logService.warn(`Failed to fetch page at offset ${offset}:`, error?.message || error)
-                return of([] as T[])
-              }),
-            ),
-          )
+          additionalPageObservables.push(fetchPage(offset).pipe(map((response) => response.items)))
         }
 
         // Combine first page with all additional pages
@@ -144,10 +145,8 @@ export class SpotifyService {
           takeLast(1),
         )
       }),
-      catchError((error) => {
-        this.logService.warn('Pagination fetch failed:', error?.message || error)
-        return of([])
-      }),
+      // Errors (also on later pages) are passed on: the caller counts the entry as
+      // skipped and the media list is retried, instead of a quietly shortened list.
     )
   }
 
@@ -182,10 +181,10 @@ export class SpotifyService {
       }),
       catchError((err) => {
         this.logService.warn(
-          `Search query failed for "${query}" due to API error, returning empty results:`,
+          `Search query failed for "${query}" due to API error, entry will be retried:`,
           err?.message || err,
         )
-        return of([])
+        return throwError(() => err)
       }),
     )
   }
@@ -225,10 +224,10 @@ export class SpotifyService {
       }),
       catchError((err) => {
         this.logService.warn(
-          `Artist albums query failed for artist ${id} due to API error, returning empty results:`,
+          `Artist albums query failed for artist ${id} due to API error, entry will be retried:`,
           err?.message || err,
         )
-        return of([])
+        return throwError(() => err)
       }),
     )
   }
@@ -271,10 +270,10 @@ export class SpotifyService {
       }),
       catchError((err) => {
         this.logService.warn(
-          `Show episodes query failed for show ${id} due to API error, returning empty results:`,
+          `Show episodes query failed for show ${id} due to API error, entry will be retried:`,
           err?.message || err,
         )
-        return of([])
+        return throwError(() => err)
       }),
     )
   }
@@ -322,11 +321,11 @@ export class SpotifyService {
       }),
       catchError((err) => {
         this.logService.warn(
-          `Album info query failed for album ${id} due to API error, skipping this item:`,
+          `Album info query failed for album ${id} due to API error, entry will be retried:`,
           err?.message || err,
         )
-        // Skip failed items entirely
-        return EMPTY
+        // Pass the error on: the caller counts the entry as skipped and retries it.
+        return throwError(() => err)
       }),
     )
   }
@@ -373,11 +372,11 @@ export class SpotifyService {
       }),
       catchError((err) => {
         this.logService.warn(
-          `Audiobook info query failed for audiobook ${id} due to API error, skipping this item:`,
+          `Audiobook info query failed for audiobook ${id} due to API error, entry will be retried:`,
           err?.message || err,
         )
-        // Skip failed items entirely
-        return EMPTY
+        // Pass the error on: the caller counts the entry as skipped and retries it.
+        return throwError(() => err)
       }),
     )
   }
@@ -425,11 +424,11 @@ export class SpotifyService {
       }),
       catchError((err) => {
         this.logService.warn(
-          `Episode info query failed for episode ${id} due to API error, skipping this item:`,
+          `Episode info query failed for episode ${id} due to API error, entry will be retried:`,
           err?.message || err,
         )
-        // Skip failed items entirely
-        return EMPTY
+        // Pass the error on: the caller counts the entry as skipped and retries it.
+        return throwError(() => err)
       }),
     )
   }
@@ -451,7 +450,7 @@ export class SpotifyService {
       timeout(60000), // 60 seconds (for scraper fallback if needed)
       catchError((err) => {
         this.logService.error(`Failed to fetch playlist ${id}:`, err?.message || err)
-        return EMPTY
+        return throwError(() => err)
       }),
       map((response: any) => {
         // Check if response is from backend scraper (has different structure)

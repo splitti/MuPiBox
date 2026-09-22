@@ -6,6 +6,13 @@
   </button>
 
   <div class="sections">
+    @if (mediaIncomplete()) {
+      <button type="button" class="reload-banner" (click)="reloadMedia()">
+        <ion-icon name="lucide-refresh-cw"></ion-icon>
+        <span>Es fehlen noch Inhalte. Zum neu Laden tippen.</span>
+      </button>
+    }
+
     @for (section of sections(); track section.category) {
       <section class="category-section">
         <h2 class="section-title">
