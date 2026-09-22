@@ -14,11 +14,14 @@ MUPIHAT_JSON="/tmp/mupihat.json"
 #fi
 
 restart_network() {
-	sudo service ifup@wlan0 stop
-	sudo service ifup@wlan0 start
+	# the WiFi adapter in use (a USB adapter if there is one, else the onboard one)
+	local WIFI_IF
+	WIFI_IF=$(/usr/local/bin/mupibox/mupi_wifi_iface.sh)
+	sudo service ifup@${WIFI_IF} stop
+	sudo service ifup@${WIFI_IF} start
 	#sudo dhclient -r
 	#sudo dhclient
-	sudo wpa_cli -i wlan0 reconfigure
+	sudo wpa_cli -i ${WIFI_IF} reconfigure
 }
 
 init_add_wifi () {

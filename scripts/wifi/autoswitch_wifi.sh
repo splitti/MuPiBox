@@ -18,6 +18,9 @@ while true; do
 	# Extract SSIDs from wpa_supplicant.conf
 	configured_ssids=$(grep -oP '(?<=ssid=").*?(?=")' /etc/wpa_supplicant/wpa_supplicant.conf)
 
+	# The WiFi adapter in use (a USB adapter if there is one, else the onboard one)
+	WIFI_IF=$(/usr/local/bin/mupibox/mupi_wifi_iface.sh)
+
 	# Get currently connected network
 	current_ssid=$(iwgetid -r)
 
@@ -43,7 +46,7 @@ while true; do
 				fi
 			fi
 		done
-	done < <(wpa_cli -i wlan0 scan && wpa_cli -i wlan0 scan_results)
+	done < <(wpa_cli -i ${WIFI_IF} scan && wpa_cli -i ${WIFI_IF} scan_results)
 
 	# Print results
 	echo "Current network:  $current_ssid / $current_quality" > ${LOG}
@@ -52,11 +55,11 @@ while true; do
 	# Connect to the best network
 	if [[ -n $best_ssid ]]; then
 		if [[ "$best_ssid" != "$current_ssid" ]]; then
-			killall wpa_supplicant >> ${LOG}
-			rm /run/wpa_supplicant.wlan0.pid >> ${LOG}
-			/sbin/wpa_supplicant -s -B -P /run/wpa_supplicant.wlan0.pid -i wlan0 -D nl80211,wext -c /etc/wpa_supplicant/wpa_supplicant.conf & >> /tmp/autoswitch_wifi.log
+			pkill -f "wpa_supplicant.* -i ${WIFI_IF} " >> ${LOG}
+			rm /run/wpa_supplicant.${WIFI_IF}.pid >> ${LOG}
+			/sbin/wpa_supplicant -s -B -P /run/wpa_supplicant.${WIFI_IF}.pid -i ${WIFI_IF} -D nl80211,wext -c /etc/wpa_supplicant/wpa_supplicant.conf & >> /tmp/autoswitch_wifi.log
 			#wpa_supplicant -B -i wlan0 -c /etc/wpa_supplicant/wpa_supplicant.conf -D wext -W -B & >> /tmp/autoswitch_wifi.log
-			dhclient wlan0 >> ${LOG}
+			dhclient ${WIFI_IF} >> ${LOG}
 			echo "Switching to $best_ssid" >> ${LOG}
 		else
 			echo "No switch needed" >> ${LOG}

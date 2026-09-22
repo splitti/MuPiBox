@@ -503,7 +503,9 @@ rm -f /tmp/mupibox-update-failed
 	mv ${MUPI_SRC}/scripts/telegram/* /usr/local/bin/mupibox/ >&3 2>&3
 	#mv ${MUPI_SRC}/config/templates/www.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >&3 2>&3
 	mv ${MUPI_SRC}/config/templates/.bashrc /home/dietpi/.bashrc >&3 2>&3
-	mv ${MUPI_SRC}/scripts/mupihat/* /usr/local/bin/mupibox/ >&3 2>&3
+	# cp -rf instead of mv: mv cannot replace the existing, non-empty templates folder ("Directory not empty"),
+	# so the MuPiHAT templates were never updated
+	cp -rf ${MUPI_SRC}/scripts/mupihat/* /usr/local/bin/mupibox/ >&3 2>&3
 	mv ${MUPI_SRC}/scripts/fan/* /usr/local/bin/mupibox/ >&3 2>&3
 	mv ${MUPI_SRC}/scripts/wifi/* /usr/local/bin/mupibox/ >&3 2>&3
 	mv ${MUPI_SRC}/scripts/mqtt/* /usr/local/bin/mupibox/ >&3 2>&3
@@ -554,14 +556,14 @@ rm -f /tmp/mupibox-update-failed
 	before=$(date +%s)
 	#mv ${MUPI_SRC}/config/templates/splash.txt /boot/splash.txt >&3 2>&3
 	wget https://gitlab.com/DarkElvenAngel/initramfs-splash/-/raw/master/boot/initramfs.img -O /boot/initramfs.img >&3 2>&3
-	cp ${MUPI_SRC}/media/images/goodbye.png /home/dietpiMuPiBox/sysmedia/images/goodbye.png >&3 2>&3
+	cp ${MUPI_SRC}/media/images/goodbye.png /home/dietpi/MuPiBox/sysmedia/images/goodbye.png >&3 2>&3
 	#mv ${MUPI_SRC}/media/images/splash.png /boot/splash.png >&3 2>&3
-	#cp ${MUPI_SRC}/media/images/MuPiLogo.jpg /home/dietpiMuPiBox/sysmedia/images/MuPiLogo.jpg >&3 2>&3
-	#cp ${MUPI_SRC}/media/sound/shutdown.wav /home/dietpiMuPiBox/sysmedia/sound/shutdown.wav >&3 2>&3
-	#cp ${MUPI_SRC}/media/sound/startup.wav /home/dietpiMuPiBox/sysmedia/sound/startup.wav >&3 2>&3
+	#cp ${MUPI_SRC}/media/images/MuPiLogo.jpg /home/dietpi/MuPiBox/sysmedia/images/MuPiLogo.jpg >&3 2>&3
+	#cp ${MUPI_SRC}/media/sound/shutdown.wav /home/dietpi/MuPiBox/sysmedia/sound/shutdown.wav >&3 2>&3
+	#cp ${MUPI_SRC}/media/sound/startup.wav /home/dietpi/MuPiBox/sysmedia/sound/startup.wav >&3 2>&3
 	cp ${MUPI_SRC}/media/sound/button_shutdown.wav /home/dietpi/MuPiBox/sysmedia/sound/button_shutdown.wav >&3 2>&3
-	cp ${MUPI_SRC}/media/sound/low.wav /home/dietpiMuPiBox/sysmedia/sound/low.wav >&3 2>&3
-	cp ${MUPI_SRC}/media/images/installation.jpg /home/dietpiMuPiBox/sysmedia/images/installation.jpg >&3 2>&3
+	cp ${MUPI_SRC}/media/sound/low.wav /home/dietpi/MuPiBox/sysmedia/sound/low.wav >&3 2>&3
+	cp ${MUPI_SRC}/media/images/installation.jpg /home/dietpi/MuPiBox/sysmedia/images/installation.jpg >&3 2>&3
 	cp ${MUPI_SRC}/media/images/battery_low.jpg /home/dietpi/MuPiBox/sysmedia/images/battery_low.jpg >&3 2>&3
 
 	after=$(date +%s)
@@ -614,6 +616,11 @@ rm -f /tmp/mupibox-update-failed
 	if [ "$RELEASE" = "dev" ] && [ -f ${MUPI_SRC}/config/services/dietpi-wifi-monitor-override.conf ]; then
 		mkdir -p /etc/systemd/system/dietpi-wifi-monitor.service.d >&3 2>&3
 		cp -f ${MUPI_SRC}/config/services/dietpi-wifi-monitor-override.conf /etc/systemd/system/dietpi-wifi-monitor.service.d/override.conf >&3 2>&3
+	fi
+	# USB WiFi adapter preferred, onboard WiFi as fallback (see scripts/mupibox/mupi_wifi_select.sh): only versions that ship it
+	if [ "$RELEASE" = "dev" ] && [ -f ${MUPI_SRC}/config/udev/99-mupibox-wifi.rules ]; then
+		cp -f ${MUPI_SRC}/config/udev/99-mupibox-wifi.rules /etc/udev/rules.d/99-mupibox-wifi.rules >&3 2>&3
+		udevadm control --reload >&3 2>&3
 	fi
 
 	systemctl daemon-reload >&3 2>&3

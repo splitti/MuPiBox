@@ -1,8 +1,39 @@
 <?php
+	// USB WiFi drivers offered on the Network page: which chipset, where it lands once
+	// installed (used to show install state), and where the install/remove scripts live.
+	$usb_wifi_drivers = array(
+		'RTL88X2BU' => array(
+			'label' => 'RTL88X2BU',
+			'path' => '/home/dietpi/.driver/network/88x2bu-20210702',
+			'install_url' => 'https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/online/install_rtl88x2bu.sh',
+			'remove_url' => 'https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/online/remove_rtl88x2bu.sh',
+			),
+		'RTL8821AU' => array(
+			'label' => 'RTL8821AU',
+			'path' => '/home/dietpi/.driver/network/8821au-20210708',
+			'install_url' => 'https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/online/install_rtl8821au.sh',
+			'remove_url' => 'https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/online/remove_rtl8821au.sh',
+			),
+		);
+
+	// Asked by the driver dropdown's onchange (fetch, not a form submit) so picking a
+	// different driver updates "State: ..." and the button label without reloading the
+	// whole page (that used to also re-scan the embedded WiFi iframe and jump the scroll).
+	if (isset($_GET['check_usb_wifi_driver'])) {
+		$checked_driver = $_GET['check_usb_wifi_driver'];
+		$installed = isset($usb_wifi_drivers[$checked_driver]) && is_dir($usb_wifi_drivers[$checked_driver]['path']);
+		header('Content-Type: application/json');
+		echo json_encode(array('installed' => $installed));
+		exit;
+	}
+
 	include ('includes/header.php');
-	$commandM0="cat /sys/class/net/wlan0/address";
+	// the WiFi adapter in use (a USB adapter if there is one, else the onboard one)
+	$WIFI_IF = trim((string) shell_exec('/usr/local/bin/mupibox/mupi_wifi_iface.sh'));
+	if ($WIFI_IF === '') { $WIFI_IF = 'wlan0'; }
+	$commandM0="cat /sys/class/net/".$WIFI_IF."/address";
 	$MAC0=exec($commandM0);
-	$commandS0="/sbin/ifconfig wlan0 | awk '/netmask/{split($4,a,\":\"); print a[1]}'";
+	$commandS0="/sbin/ifconfig ".$WIFI_IF." | awk '/netmask/{split($4,a,\":\"); print a[1]}'";
 	$SUBNET0=exec($commandS0);
 	$commandG0="sudo route -n | grep 'UG[ \t]' | awk '{print $2}'";
 	$GATEWAY0=exec($commandG0);
@@ -10,16 +41,18 @@
 	$DNS=exec($commandD);
 	/*$commandW="sudo iwgetid -r";
 	$WIFI=exec($commandW);
-	$commandL="sudo iwconfig wlan0 | awk '/Link Quality/{split($2,a,\"=|/\");print int((a[2]/a[3])*100)\"%\"}'";
+	$commandL="sudo iwconfig ".$WIFI_IF." | awk '/Link Quality/{split($2,a,\"=|/\");print int((a[2]/a[3])*100)\"%\"}'";
 	$LINKQ=exec($commandL);*/
-	$commandS="sudo iwconfig wlan0 | awk '/Signal level/{split($4,a,\"=|/\");print a[2]\" dBm\"}'";
+	$commandS="sudo iwconfig ".$WIFI_IF." | awk '/Signal level/{split($4,a,\"=|/\");print a[2]\" dBm\"}'";
 	$SIGNAL=exec($commandS);
-	$commandB="sudo iwconfig wlan0 | awk '/Bit Rate/{split($2,a,\"=|/\");print a[2]\" Mb/s\"}'";
+	$commandB="sudo iwconfig ".$WIFI_IF." | awk '/Bit Rate/{split($2,a,\"=|/\");print a[2]\" Mb/s\"}'";
 	$BITRATE=exec($commandB);
 
-	if( $_POST['RTL88X2BU'] == "Install driver" )
+	$usb_wifi_driver = isset($_POST['usb_wifi_driver']) && isset($usb_wifi_drivers[$_POST['usb_wifi_driver']]) ? $_POST['usb_wifi_driver'] : 'RTL88X2BU';
+
+	if( $_POST['USB_WIFI_DRIVER'] == "Install driver" )
 		{
-		$command = "cd; curl -L https://raw.githubusercontent.com/friebi/MuPiBox/develop/scripts/online/install_rtl88x2bu.sh | sudo su dietpi -c bash";
+		$command = "cd; curl -L ".$usb_wifi_drivers[$usb_wifi_driver]['install_url']." | sudo su dietpi -c bash";
 		exec($command, $output, $result );
 
 		$change=1;
@@ -32,9 +65,9 @@
 			$CHANGE_TXT=$CHANGE_TXT."<li>Driver installed</li>";
 			}
 		}
-	if( $_POST['RTL88X2BU'] == "Remove driver" )
+	if( $_POST['USB_WIFI_DRIVER'] == "Remove driver" )
 		{
-		$command = "cd; curl -L https://raw.githubusercontent.com/friebi/MuPiBox/develop/scripts/online/remove_rtl88x2bu.sh | sudo su dietpi -c bash";
+		$command = "cd; curl -L ".$usb_wifi_drivers[$usb_wifi_driver]['remove_url']." | sudo su dietpi -c bash";
 		exec($command, $output, $result );
 
 		$change=1;
@@ -183,28 +216,28 @@
 		}
 	if( $_POST['change_wifi'] == "disable" )
 		{
-		$command = "echo 'dtoverlay=disable-wifi' | sudo tee -a /boot/config.txt";
+		$command = "sudo /usr/local/bin/mupibox/set_onboard_wifi.sh off";
 		exec($command, $output, $result );
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>OnBoard Wifi disabled [restart necessary]</li>";
 		}
 	else if( $_POST['change_wifi'] == "enable" )
 		{
-		$command = "sudo sed -i -e 's/dtoverlay=disable-wifi//g' /boot/config.txt && sudo head -n -1 /boot/config.txt > /tmp/config.txt && sudo mv /tmp/config.txt /boot/config.txt";
+		$command = "sudo /usr/local/bin/mupibox/set_onboard_wifi.sh on";
 		exec($command, $output, $result );
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>OnBoard Wifi enabled [restart necessary]</li>";
 		}
 	if( $_POST['restart_wifi'] )
 		{
-		$command = "sudo service ifup@wlan0 stop && sudo service ifup@wlan0 start";
+		$command = "sudo service ifup@".$WIFI_IF." stop && sudo service ifup@".$WIFI_IF." start";
 		exec($command);
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Wifi-Device was restarted</li>";
 		}
 	if( $_POST['renew_dhcp'] )
 		{
-		$command = "sudo dhclient -r && sudo service ifup@wlan0 stop && sudo service ifup@wlan0 start && sudo dhclient";
+		$command = "sudo dhclient -r && sudo service ifup@".$WIFI_IF." stop && sudo service ifup@".$WIFI_IF." start && sudo dhclient";
 		exec($command);
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>DHCP-Lease is released. Try to renew the Lease...</li>";
@@ -288,107 +321,15 @@
 	<p>Network informations, options and so on...</p>
 </div>
 
-	<details id="networkinformation">
-		<summary><i class="fa-solid fa-wifi"></i> Network Information</summary>
+	<details id="wifisettingsdisplay" open>
+		<summary><i class="fa-solid fa-wifi"></i> WiFi Settings</summary>
 		<ul>
 			<li class="li_norm">
-
-        <h2>Network Information</h2>
-        <table class="version">
-        <tr><td>IP-Address:</td><td><?php print $_SERVER['SERVER_ADDR']; ?></td></tr>
-        <tr><td>MAC-Address:</td><td><?php print $MAC0; ?></td></tr>
-        <tr><td>Subnet-Adresss:</td><td><?php print $SUBNET0; ?></td></tr>
-        <tr><td>Gateway:</td><td><?php print $GATEWAY0; ?></td></tr>
-        <tr><td>Nameserver:</td><td><?php print $DNS; ?></td></tr>
-        <tr><td>Wifi SSID:</td><td><?php print $WIFI; ?></td></tr>
-        <tr><td>Wifi Link Quality:</td><td><?php print $LINKQ; ?>%	</td></tr>
-        <tr><td>Wifi Signal Level:</td><td><?php print $SIGNAL; ?></td></tr>
-        <tr><td>Bitrate:</td><td><?php print $BITRATE ?></td></tr>
-        </table>
-		</li></ul></details>
-
-	<details id="deletewifi">
-		<summary><i class="fa-regular fa-trash-can"></i> Delete Wifi-Network</summary>
-
-	<ul>
-		<li class="li_1"><h2>Delete Wifi-Network</h2>
-			<p>
-			Delete the selected network:
-			</p>
-		</li>
-		<li class="li_1">
-  <fieldset>
-<?php
-	$command = "sudo wpa_cli list_networks | tail -n +3";
-	exec($command, $wifis, $result );
-	foreach ($wifis as $thiswifi) {
-		$wifidetails = explode("\t", $thiswifi);
-		if( $wifidetails[3] )
-			{
-				$connection=" [connected]";
-			}
-		else
-			{
-				$connection="";
-			}
-
-		echo "<input type=\"radio\" id=\"".$wifidetails[0]."\" name=\"wifinr\" value=\"".$wifidetails[0]."\"> ";
-		echo "<label for=\"".$wifidetails[0]."\"> ".$wifidetails[1].$connection."</label></input><br/>";
-		}
-
-?>
-</fieldset>
-</li>
-		<li class="li_1">
-				<input id="saveForm" class="button_text_red" type="submit" name="delete_wifi" value="Delete selected Wifi"  onclick="return confirm('Do really want to delete selected Wifi-Network?');" />
-		</li>
-	</ul>
-	</details>
-
-	<details id="addwifi">
-	<summary><i class="fa-solid fa-tower-broadcast"></i> Add Wifi-Network</summary>
-	<ul>
-	<li class="li_1"><h2>Search and Add Wifi</h2>
-		<p>You can search for WLAN or enter it manually</p>
-	</li>
-
-	<?php
-	if ( $wifi_networks )
-		{
-				?>
-				<li class="li_1">
-				<h2>SSID-Name</h2>
-
-				<div><select id="wifi_name" name="wifi_name" class="element text small">
-
-				<?php
-				foreach($wifi_cleaned as $wifiname) {
-					print "<option value=\"". $wifiname . "\">" . $wifiname . "</option>";
-				}
-				?>
-				"</select></li>
-
-	<?php
-		}
-	else
-		{
-	?>
-		<li class="li_1">
-			<h2>SSID-Name</h2>
-			<input id="wifi_name" name="wifi_name" class="element text medium" type="text" maxlength="255" value=""/>
-        </li>
-	<?php
-		}
-	?>
-        <li class="li_1" >
-			<h2>Wifi-Password</h2>
-			<input id="wifi_pwd" name="wifi_pwd" class="element text medium" type="password" maxlength="255" value="" minlength="8">
-		</li>
-		<li class="li_1">
-		<input id="saveForm" class="button_text" type="submit" name="save_wifi" value="Save Wifi" />
-		<input id="saveForm" class="button_text" type="submit" name="scan_wifi" value="Scan Wifi-Networks" />
-		</li>
-	</ul>
+			<p>The same WiFi settings page as on the display: networks in range, signal, band, connect/change/delete.</p>
+			<iframe src="http://<?php print $_SERVER['SERVER_ADDR']; ?>:8200/wifi" width="800" height="480" style="border:0;"></iframe>
+			<p><a href="http://<?php print $_SERVER['SERVER_ADDR']; ?>:8200/wifi" target="_blank">If it doesn't display properly, try this Link and click me...</a></p>
+			</li>
+		</ul>
 	</details>
 
 	<details id="miscwifioptions">
@@ -408,7 +349,7 @@
  echo "net.ipv6.conf.default.disable_ipv6 = 1" >> /etc/sysctl.conf
  echo "net.ipv6.conf.lo.disable_ipv6 = 1" >> /etc/sysctl.conf
 			*/
-			$command = "cat /boot/config.txt | grep 'dtoverlay=disable-wifi'";
+			$command = "grep '^dtoverlay=disable-wifi' /boot/config.txt";
 			$wifionoff = exec($command, $output);
 			if($wifionoff == "")
 				{
@@ -452,7 +393,7 @@
 
 		<li class="li_1"><h2>Restart Wifi-Device</h2>
 			<p>
-			Restarts the wlan0-Device.
+			Restarts the WiFi device in use.
 			</p>
 			<input id="saveForm" class="button_text" type="submit" name="restart_wifi" value="Restart Wifi-Device" />
 		</li>
@@ -462,31 +403,49 @@
 			</p>
 			<input id="saveForm" class="button_text" type="submit" name="renew_dhcp" value="Renew DHCP-Lease" />
 		</li>
-		<li class="li_1"><h2>Install RTL88X2BU-Drivers</h2>
+		<li class="li_1"><h2>Install USB-Wlan drivers</h2>
 			<p>
 			These drivers are for several network cards like these:
-			<ul style="list-style-type:'• '; margin-left:20px;"><li>			<a href="https://amzn.to/3vj2Ubn" target="_blank">Referal link to Amazon.com (US)</a></li>
-			<li><a href="https://amzn.to/3U4ID3Z" target="_blank">Referal link to Amazon.de (GER)</a></li></ul>
+			<ul style="list-style-type:'• '; margin-left:20px;"><li>			<a href="https://amzn.to/3vj2Ubn" target="_blank">Referal link to Amazon.com (US) (→ amzn.to)</a></li>
+			<li><a href="https://amzn.to/3U4ID3Z" target="_blank">Referal link to Amazon.de (GER) (→ amzn.to)</a></li>
+			<li><a href="https://www.tp-link.com/uk/home-networking/adapter/archer-t2u-plus/" target="_blank">Archer T2U Plus</a></li></ul>
+			</p>
+			<p>
+			<select id="usb_wifi_driver" name="usb_wifi_driver" onchange="updateUsbWifiDriverState(this)">
+				<?php foreach ($usb_wifi_drivers as $key => $driver) { ?>
+				<option value="<?php print $key; ?>" <?php if ($usb_wifi_driver === $key) print 'selected'; ?>><?php print $driver['label']; ?></option>
+				<?php } ?>
+			</select>
 			</p>
 			<p>
 
 			<?php
-			$path="/home/dietpi/.driver/network/88x2bu-20210702";
+			$path=$usb_wifi_drivers[$usb_wifi_driver]['path'];
 		    if($path !== false AND is_dir($path))
 				{
-				$change_rtl88x2bu="Remove driver";
-				$state_rtl88x2bu="installed";
+				$change_usb_wifi_driver="Remove driver";
+				$state_usb_wifi_driver="installed";
 				}
 			else
 				{
-				$change_rtl88x2bu="Install driver";
-				$state_rtl88x2bu="not installed";
+				$change_usb_wifi_driver="Install driver";
+				$state_usb_wifi_driver="not installed";
 				}
-			print("<b>State: ".$state_rtl88x2bu);
+			print("<b>State: <span id=\"usb_wifi_driver_state\">".$state_usb_wifi_driver."</span>");
 			?>
 			</b></p><p>Please notice: Installation takes a long long time! If you want to install manually and see the installation status, check out this blog post: <a href="https://mupibox.de/pimp-die-mupibox-mit-schneller-netzwerkkarte/" target="_blank">Blog Post</a></p>
-			<input id="saveForm" class="button_text" type="submit" name="RTL88X2BU" value="<?php print $change_rtl88x2bu; ?>" />
+			<input id="usb_wifi_driver_button" class="button_text" type="submit" name="USB_WIFI_DRIVER" value="<?php print $change_usb_wifi_driver; ?>" />
 		</li>
+		<script>
+		function updateUsbWifiDriverState(select) {
+			fetch('network.php?check_usb_wifi_driver=' + encodeURIComponent(select.value))
+				.then(function (response) { return response.json(); })
+				.then(function (data) {
+					document.getElementById('usb_wifi_driver_state').textContent = data.installed ? 'installed' : 'not installed';
+					document.getElementById('usb_wifi_driver_button').value = data.installed ? 'Remove driver' : 'Install driver';
+				});
+		}
+		</script>
 
 	</ul>
 	</details>

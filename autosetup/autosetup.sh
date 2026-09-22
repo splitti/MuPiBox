@@ -557,6 +557,9 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 	# Tolerant replacement for DietPi's WiFi monitor (see scripts/mupibox/wifi_monitor.sh)
 	mkdir -p /etc/systemd/system/dietpi-wifi-monitor.service.d >&3 2>&3
 	cp -f ${MUPI_SRC}/config/services/dietpi-wifi-monitor-override.conf /etc/systemd/system/dietpi-wifi-monitor.service.d/override.conf >&3 2>&3
+	# USB WiFi adapter preferred, onboard WiFi as fallback (see scripts/mupibox/mupi_wifi_select.sh)
+	cp -f ${MUPI_SRC}/config/udev/99-mupibox-wifi.rules /etc/udev/rules.d/99-mupibox-wifi.rules >&3 2>&3
+	udevadm control --reload >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/mupi_mqtt.service /etc/systemd/system/mupi_mqtt.service >&3 2>&3
 	systemctl daemon-reload >&3 2>&3
 	for service in mupi_wifi mupi_check_internet mupi_check_monitor mupi_idle_shutdown librespot smbd mupi_startstop pulseaudio mupi_splash mupi_powerled dietpi-dashboard; do

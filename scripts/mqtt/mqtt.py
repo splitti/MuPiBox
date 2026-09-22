@@ -671,6 +671,15 @@ def mqtt_publish_ha():
 
 
 
+def wifi_interface():
+    # the WiFi adapter in use (a USB adapter if there is one, else the onboard one)
+    try:
+        name = subprocess.check_output(['/usr/local/bin/mupibox/mupi_wifi_iface.sh']).decode('utf-8').strip()
+        return name if name else 'wlan0'
+    except Exception:
+        return 'wlan0'
+
+
 def get_ip_address(interface):
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -699,11 +708,11 @@ def mqtt_systeminfo():
     client.publish(mqtt_topic + '/' + mqtt_clientId + '/raspi', raspi, qos=0, retain=False)
     hostname = subprocess.check_output(["hostname"]).decode("utf-8")
     client.publish(mqtt_topic + '/' + mqtt_clientId + '/hostname', hostname, qos=0, retain=False)
-    ip = get_ip_address('wlan0')
+    ip = get_ip_address(wifi_interface())
     client.publish(mqtt_topic + '/' + mqtt_clientId + '/ip', ip, qos=0, retain=False)
     architecture = subprocess.check_output(["uname", "-m"]).decode("utf-8")
     client.publish(mqtt_topic + '/' + mqtt_clientId + '/architecture', architecture, qos=0, retain=False)
-    client.publish(mqtt_topic + '/' + mqtt_clientId + '/mac', get_mac_address('wlan0'), qos=0, retain=False)
+    client.publish(mqtt_topic + '/' + mqtt_clientId + '/mac', get_mac_address(wifi_interface()), qos=0, retain=False)
     client.publish(mqtt_topic + '/' + mqtt_clientId + '/version', mupi_version, qos=0)
     client.publish(mqtt_topic + '/' + mqtt_clientId + '/admininterface', 'http://' + ip, qos=0)
 
@@ -740,12 +749,12 @@ def get_cputemp():
 def get_wifi():
     #ssid = subprocess.check_output(["iwgetid", "-r"]).decode("utf-8")
     try:
-        result = subprocess.check_output(['iwconfig', 'wlan0'], universal_newlines=True)
+        result = subprocess.check_output(['iwconfig', wifi_interface()], universal_newlines=True)
         ssid_match = re.search(r'ESSID:"(.+?)"', result)
         ssid = ssid_match.group(1) if ssid_match else None
         signal_strength_match = re.search(r'Signal level=(-\d+)', result)
         signal_strength = int(signal_strength_match.group(1)) if signal_strength_match else None
-        signal_quality = int(subprocess.check_output("sudo iwconfig wlan0 | awk '/Link Quality/{split($2,a,\"=|/\");print int((a[2]/a[3])*100)\"\"}' | tr -d '%'", shell=True))
+        signal_quality = int(subprocess.check_output("sudo iwconfig " + wifi_interface() + " | awk '/Link Quality/{split($2,a,\"=|/\");print int((a[2]/a[3])*100)\"\"}' | tr -d '%'", shell=True))
 
         return ssid, signal_strength, signal_quality
     except subprocess.CalledProcessError as e:

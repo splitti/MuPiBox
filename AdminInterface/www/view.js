@@ -153,6 +153,8 @@ imageList['axolotl'] = new Image(150, 250);
 imageList['axolotl'].src = "images/axolotl.png";
 imageList['custom'] = new Image(150, 250);
 imageList['custom'].src = "images/custom.png";
+imageList['coverflow'] = new Image(150, 250);
+imageList['coverflow'].src = "images/coverflow.png";
 
 function switchImage() {
     var selectedImage = document.mupi.theme.options[document.mupi.theme.selectedIndex].value;
