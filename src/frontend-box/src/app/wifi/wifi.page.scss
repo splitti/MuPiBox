@@ -1,3 +1,8 @@
+// Which adapter carries the connection: wlan0 (onboard) or wlan1 (USB adapter). Same size and style as the title.
+.wifi-interface {
+    margin-left: 30px;
+}
+
 ion-toolbar {
     ion-back-button {
         --min-height: 70px;

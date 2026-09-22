@@ -15,7 +15,7 @@ restart_network() {
 	#sudo service ifup@wlan0 start
 	#sudo dhclient -r
 	#sudo dhclient
-	sudo wpa_cli -i wlan0 reconfigure
+	sudo wpa_cli -i $(/usr/local/bin/mupibox/mupi_wifi_iface.sh) reconfigure
 }
 
 while true

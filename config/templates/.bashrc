@@ -96,7 +96,7 @@ alias reboot='sudo reboot'
 function mupi-update-webinterface() {
 	# Download and check first, replace /var/www only afterwards (a failed download used to leave it empty)
 	sudo rm -f /tmp/www.zip
-	sudo wget -q -O /tmp/www.zip https://github.com/splitti/MuPiBox/raw/main/AdminInterface/release/www.zip
+	sudo wget -q -O /tmp/www.zip https://github.com/friebi/MuPiBox/raw/main/AdminInterface/release/www.zip
 	if ! unzip -tq /tmp/www.zip > /dev/null 2>&1; then
 		echo "Download of the web interface failed or is incomplete - nothing was changed."
 		sudo rm -f /tmp/www.zip

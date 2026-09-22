@@ -39,8 +39,13 @@ if [ ! -f ${RESUME_FILE} ]; then
 	fi
 fi
 
-if [ ! -f ${NETWORKCONFIG} ]; then
-	sudo echo -n "[]" ${NETWORKCONFIG}
+# The file lives in /tmp and is gone after a reboot. It must be created when it is missing AND when
+# it is empty or not a JSON object: every writer below uses jq on the existing file, so once an empty
+# file exists nothing would ever fill it again (the display then shows no network state at all).
+# (Before: `sudo echo -n "[]" file` had no redirect and wrote nothing.)
+if [ ! -s ${NETWORKCONFIG} ] || ! /usr/bin/jq -e 'type == "object"' ${NETWORKCONFIG} > /dev/null 2>&1; then
+        sudo rm -f ${NETWORKCONFIG}
+        echo -n "{}" > ${NETWORKCONFIG}
 	chown dietpi:dietpi ${NETWORKCONFIG}
 	chmod 777 ${NETWORKCONFIG}
 	/usr/bin/cat <<<$(/usr/bin/jq -n --arg v "starting" '.onlinestate = $v' ${NETWORKCONFIG}) >${NETWORKCONFIG}

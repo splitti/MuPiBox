@@ -1,6 +1,6 @@
 # MuPiBox dependencies
 
-What MuPiBox needs to build and run, and what for. Audited on **2026-09-20** by searching the
+What MuPiBox needs to build and run, and what for. Audited on **2026-09-22** by searching the
 repository for every use (imports, commands, services, install scripts). "Unused" means nothing in
 this repository uses it; a package the box happens to have from DietPi is not listed as a MuPiBox
 dependency.
@@ -92,6 +92,7 @@ Kept, with what uses them:
 | `rrdtool` | system graphs (`save_rrd.sh`, admin start page) |
 | `scrot` | screenshots (Telegram `/screen`, admin) |
 | `net-tools`, `wireless-tools` | `ifconfig`, `iwconfig`/`iwgetid` for network status and WiFi icons |
+| `raspberrypi-kernel-headers`, `dkms` | USB WiFi driver installers (`scripts/online/install_rtl88x2bu.sh`, `install_rtl8821au.sh`), installed on demand from the Network admin page - not by autosetup/update |
 | `bc` | `mupi_start_led.sh` |
 | `build-essential`, `pigpio`, `libjson-c-dev` | autosetup compiles `scripts/led/led_control.c` (`-lpigpio -ljson-c`) |
 | `gpiod` | power button/shim scripts (`scripts/OnOffShim`) |

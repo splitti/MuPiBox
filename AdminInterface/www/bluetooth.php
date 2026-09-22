@@ -68,6 +68,20 @@
 		$CHANGE_TXT=$CHANGE_TXT."<li>Bluetooth is deactivated [just Software for connecting, Service and Hardware continue runnung]</li>";
 		$change=1;
 		}
+	if( $_POST['change_bt_chip'] == "Deactivate Bluetooth-Chip" )
+		{
+		$command = "sudo /usr/local/bin/mupibox/set_bluetooth_chip.sh off";
+		exec($command, $output, $result );
+		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>Bluetooth-Chip disabled [restart necessary]</li>";
+		}
+	else if( $_POST['change_bt_chip'] == "Activate Bluetooth-Chip" )
+		{
+		$command = "sudo /usr/local/bin/mupibox/set_bluetooth_chip.sh on";
+		exec($command, $output, $result );
+		$change=1;
+		$CHANGE_TXT=$CHANGE_TXT."<li>Bluetooth-Chip enabled [restart necessary]</li>";
+		}
 
 	$command = "sudo -u dietpi bluetoothctl show | grep 'Powered: yes'";
 	exec($command, $btoutput, $btresult );
@@ -172,9 +186,32 @@
 	<details id="bluetoothservice">
 		<summary><i class="fa-brands fa-bluetooth"></i> Bluetooth-Service</summary>
 	<ul>
+		<li class="li_1"><h2>Enable/Disable Bluetooth-Chip</h2>
+			<p>
+			Disables the onboard Bluetooth chip completely (its firmware is not loaded at boot). Please be sure what you do!
+			</p>
+			<p>
+			<?php
+			$command = "systemctl is-enabled hciuart.service 2>/dev/null";
+			$bt_chip_state = exec($command, $output);
+			if($bt_chip_state == "masked")
+				{
+				$change_bt_chip="Activate Bluetooth-Chip";
+				$bt_chip="disabled";
+				}
+			else
+				{
+				$change_bt_chip="Deactivate Bluetooth-Chip";
+				$bt_chip="enabled";
+				}
+			print "Bluetooth-Chip: <b>".$bt_chip;
+			?>
+			</b></p>
+			<input id="saveForm" class="button_text" type="submit" name="change_bt_chip" value="<?php print $change_bt_chip; ?>" />
+		</li>
 		<li class="li_1"><h2>Bluetooth-Autoconnect-Helper (Just if automatic reconnect won't work)</h2>
 			<p>
-			<?php 
+			<?php
 			echo "BT-Autoconnect-Service Status: <b>".$btac_state."</b>";
 			?>
 			</p>

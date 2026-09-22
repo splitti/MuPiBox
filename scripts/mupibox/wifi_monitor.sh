@@ -9,7 +9,10 @@
 	readonly G_PROGRAM_NAME='MuPiBox-WiFi_Monitor'
 	G_CHECK_ROOT_USER
 	G_INIT
-	readonly ADAPTER=$(G_GET_NET -t wlan iface)
+	# The adapter in use: a USB adapter if there is one, else the onboard one (see mupi_wifi_iface.sh).
+	# It is asked again for every check - the adapters can come and go.
+	IFACE_TOOL="/usr/local/bin/mupibox/mupi_wifi_iface.sh"
+	ADAPTER=$("${IFACE_TOOL}")
 	[[ $ADAPTER ]] || { G_DIETPI-NOTIFY 1 'No WiFi adapter has been found. Exiting...'; exit 1; }
 	readonly TICKRATE=10       # seconds between two checks
 	readonly PINGS=3           # packets per check; one answer is enough
@@ -18,10 +21,12 @@
 	G_DIETPI-NOTIFY 2 "Checking connection for $ADAPTER via ping to default gateway every $TICKRATE seconds (re-connect after $FAILS_ALLOWED failed checks)"
 	while G_SLEEP "$TICKRATE"
 	do
+		ADAPTER=$("${IFACE_TOOL}")
 		if [[ ! -e /sys/class/net/$ADAPTER ]]
 		then
-			G_DIETPI-NOTIFY 1 "WiFi adapter $ADAPTER has been unplugged. Exiting..."
-			exit 1
+			# An adapter that has been unplugged: mupi_wifi_select.sh brings up the other one.
+			FAILS=0
+			continue
 		fi
 		if GATEWAY=$(G_GET_NET -i "$ADAPTER" gateway) && ping -nq -c "$PINGS" -W 2 -I "$ADAPTER" "$GATEWAY" &> /dev/null
 		then

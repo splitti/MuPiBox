@@ -49,9 +49,12 @@
 
 	$change=0;
 	$CHANGE_TXT="<div id='lbinfo'><ul id='lbinfo'>";
+	// the WiFi adapter in use (a USB adapter if there is one, else the onboard one)
+	$WIFI_IF = trim((string) shell_exec('/usr/local/bin/mupibox/mupi_wifi_iface.sh'));
+	if ($WIFI_IF === '') { $WIFI_IF = 'wlan0'; }
 	$commandSSID="sudo iwgetid -r";
 	$WIFI=exec($commandSSID);
-	$commandLQ="sudo iwconfig wlan0 | awk '/Link Quality/{split($2,a,\"=|/\");print int((a[2]/a[3])*100)\"\"}' | tr -d '%'";
+	$commandLQ="sudo iwconfig ".$WIFI_IF." | awk '/Link Quality/{split($2,a,\"=|/\");print int((a[2]/a[3])*100)\"\"}' | tr -d '%'";
 	$LINKQ=exec($commandLQ);
 	
 	if ($_GET['hshutdown']) {

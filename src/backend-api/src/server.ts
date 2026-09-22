@@ -814,9 +814,29 @@ function parseWpaCliNetworks(stdout: string): WifiConfiguredNetwork[] {
     .filter((network) => !Number.isNaN(network.id))
 }
 
+// The WiFi adapter in use: a USB adapter if there is one, else the onboard one (mupi_wifi_iface.sh).
+// The name is asked for at most every few seconds, an adapter can be plugged in or removed at any time.
+let wifiInterfaceCache: { name: string; at: number } | undefined
+async function wifiInterface(): Promise<string> {
+  if (wifiInterfaceCache && Date.now() - wifiInterfaceCache.at < 3000) {
+    return wifiInterfaceCache.name
+  }
+  let name = 'wlan0'
+  try {
+    const { stdout } = await execFileAsync('/usr/local/bin/mupibox/mupi_wifi_iface.sh', [])
+    if (/^wl[\w.-]+$/.test(stdout.trim())) {
+      name = stdout.trim()
+    }
+  } catch {
+    // Without the script the onboard adapter is used, as before.
+  }
+  wifiInterfaceCache = { name, at: Date.now() }
+  return name
+}
+
 app.get('/api/wifi/configured', async (_req, res) => {
   try {
-    const { stdout } = await execFileAsync('sudo', ['wpa_cli', '-i', 'wlan0', 'list_networks'])
+    const { stdout } = await execFileAsync('sudo', ['wpa_cli', '-i', await wifiInterface(), 'list_networks'])
     res.json(parseWpaCliNetworks(stdout))
   } catch (error) {
     console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error listing wifi networks: ${error}`)
@@ -913,17 +933,17 @@ app.get('/api/wifi/networks', async (req, res) => {
   try {
     if (req.query.refresh !== '0') {
       try {
-        await execFileAsync('sudo', ['wpa_cli', '-i', 'wlan0', 'scan'])
+        await execFileAsync('sudo', ['wpa_cli', '-i', await wifiInterface(), 'scan'])
         await new Promise((resolve) => setTimeout(resolve, 3500))
       } catch {
         // A scan may already be running or the adapter busy - the last results are still usable.
       }
     }
 
-    const { stdout: configuredOutput } = await execFileAsync('sudo', ['wpa_cli', '-i', 'wlan0', 'list_networks'])
+    const { stdout: configuredOutput } = await execFileAsync('sudo', ['wpa_cli', '-i', await wifiInterface(), 'list_networks'])
     let scanned = new Map<string, WifiScanEntry>()
     try {
-      const { stdout: scanOutput } = await execFileAsync('sudo', ['wpa_cli', '-i', 'wlan0', 'scan_results'])
+      const { stdout: scanOutput } = await execFileAsync('sudo', ['wpa_cli', '-i', await wifiInterface(), 'scan_results'])
       scanned = parseWpaCliScanResults(scanOutput)
     } catch (error) {
       console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error reading wifi scan results: ${error}`)
@@ -932,7 +952,7 @@ app.get('/api/wifi/networks', async (req, res) => {
     // The band the box is connected on right now.
     let connectedBand: string | undefined
     try {
-      const { stdout: statusOutput } = await execFileAsync('sudo', ['wpa_cli', '-i', 'wlan0', 'status'])
+      const { stdout: statusOutput } = await execFileAsync('sudo', ['wpa_cli', '-i', await wifiInterface(), 'status'])
       const frequency = /^freq=(\d+)/m.exec(statusOutput)?.[1]
       connectedBand = frequency ? wifiBandOf(Number.parseInt(frequency, 10)) : undefined
     } catch {
@@ -990,8 +1010,8 @@ app.delete('/api/wifi/configured/:id', async (req, res) => {
   }
 
   try {
-    await execFileAsync('sudo', ['wpa_cli', '-i', 'wlan0', 'remove_network', String(id)])
-    await execFileAsync('sudo', ['wpa_cli', '-i', 'wlan0', 'save_config'])
+    await execFileAsync('sudo', ['wpa_cli', '-i', await wifiInterface(), 'remove_network', String(id)])
+    await execFileAsync('sudo', ['wpa_cli', '-i', await wifiInterface(), 'save_config'])
     console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Removed wifi network ${id}`)
     res.status(200).send('ok')
   } catch (error) {
@@ -1009,9 +1029,9 @@ app.post('/api/wifi/configured/:id/password', async (req, res) => {
   }
 
   try {
-    await execFileAsync('sudo', ['wpa_cli', '-i', 'wlan0', 'set_network', String(id), 'psk', `"${password}"`])
-    await execFileAsync('sudo', ['wpa_cli', '-i', 'wlan0', 'enable_network', String(id)])
-    await execFileAsync('sudo', ['wpa_cli', '-i', 'wlan0', 'save_config'])
+    await execFileAsync('sudo', ['wpa_cli', '-i', await wifiInterface(), 'set_network', String(id), 'psk', `"${password}"`])
+    await execFileAsync('sudo', ['wpa_cli', '-i', await wifiInterface(), 'enable_network', String(id)])
+    await execFileAsync('sudo', ['wpa_cli', '-i', await wifiInterface(), 'save_config'])
     console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Updated password for wifi network ${id}`)
     res.status(200).send('ok')
   } catch (error) {
