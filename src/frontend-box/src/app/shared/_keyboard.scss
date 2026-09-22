@@ -1,0 +1,105 @@
+// On-screen keyboard (simple-keyboard) in the settings look: frosted panel at
+// the bottom of the page, white keys with dark text, grey function keys.
+@import 'simple-keyboard/build/css/index.css';
+
+.keyboard-panel {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 50;
+    padding: 6px 0 4px;
+    background: rgba(255, 255, 255, 0.35);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+}
+
+.simple-keyboard.hg-theme-default {
+    font-family: var(--mupi-font) !important;
+}
+
+.simple-keyboard.hg-theme-ios {
+    width: 790px;
+    margin: auto;
+}
+
+.simple-keyboard.hg-theme-ios.hg-theme-default {
+    background: transparent;
+    padding: 0 5px;
+    border-radius: 0;
+}
+
+.simple-keyboard.hg-theme-ios .hg-row {
+    display: flex;
+}
+
+.simple-keyboard.hg-theme-ios .hg-row:not(:last-child) {
+    margin-bottom: 5px;
+}
+
+.simple-keyboard.hg-theme-ios .hg-row .hg-button:not(:last-child) {
+    margin-right: 5px;
+}
+
+.simple-keyboard.hg-theme-ios.hg-theme-default .hg-row .hg-button {
+    flex-grow: 1;
+    cursor: pointer;
+    max-width: initial;
+}
+
+.simple-keyboard.hg-theme-ios.hg-theme-default .hg-button {
+    border-radius: 8px;
+    box-sizing: border-box;
+    padding: 0;
+    background: #ffffff;
+    border: 0;
+    color: var(--mupi-settings-text);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12);
+    font-weight: 700;
+    font-size: 18px;
+    max-width: 45px;
+    min-width: 45px;
+    height: 46px;
+    min-height: 46px;
+}
+
+.simple-keyboard.hg-theme-ios.hg-theme-default .hg-button:active,
+.simple-keyboard.hg-theme-ios.hg-theme-default .hg-button:focus {
+    background: #dfe9ea;
+}
+
+.simple-keyboard.hg-theme-ios.hg-theme-default .hg-button.hg-functionBtn {
+    background: #c9d8da;
+}
+
+.simple-keyboard.hg-theme-ios.hg-theme-default .hg-button.hg-button-shift,
+.simple-keyboard.hg-theme-ios.hg-theme-default .hg-button.hg-button-shiftactivated {
+    max-width: 123px;
+    min-width: 123px;
+}
+
+.simple-keyboard.hg-theme-ios.hg-theme-default .hg-button.hg-button-shiftactivated {
+    background: var(--mupi-settings-text);
+    color: #ffffff;
+}
+
+.simple-keyboard.hg-theme-ios.hg-theme-default .hg-button.hg-button-bksp {
+    max-width: 126px;
+    min-width: 126px;
+}
+
+.simple-keyboard.hg-theme-ios.hg-theme-default .hg-button-space {
+    max-width: 448px;
+    min-width: 448px;
+    background: #ffffff;
+}
+
+.simple-keyboard.hg-theme-ios.hg-theme-default .hg-button-altright,
+.simple-keyboard.hg-theme-ios.hg-theme-default .hg-button-back {
+    min-width: 80px;
+    max-width: 80px;
+}

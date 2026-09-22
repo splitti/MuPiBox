@@ -1,128 +1,107 @@
-import { AsyncPipe } from '@angular/common'
 import { HttpClient } from '@angular/common/http'
-import { ChangeDetectionStrategy, Component, computed, inject, Signal } from '@angular/core'
-import { toSignal } from '@angular/core/rxjs-interop'
+import { ChangeDetectionStrategy, Component, computed, inject, Signal, signal } from '@angular/core'
+import { toObservable, toSignal } from '@angular/core/rxjs-interop'
 import { Router } from '@angular/router'
-import {
-  AlertController,
-  IonBackButton,
-  IonButtons,
-  IonCard,
-  IonCardHeader,
-  IonCardTitle,
-  IonCol,
-  IonContent,
-  IonGrid,
-  IonHeader,
-  IonRow,
-  IonTitle,
-  IonToolbar,
-} from '@ionic/angular/standalone'
-import { addIcons } from 'ionicons'
-import { arrowBackOutline } from 'ionicons/icons'
-import { Observable, of } from 'rxjs'
+import { AlertController, IonContent, IonIcon } from '@ionic/angular/standalone'
+import { map, of, switchMap } from 'rxjs'
+import type { BluetoothStatus } from '../bluetooth'
+import { BluetoothService } from '../bluetooth.service'
+import { registerLucideIcons } from '../icons/lucide-icons'
 import { MediaService } from '../media.service'
+import type { Mupihat } from '../mupihat'
 import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
+import { PlayerService } from '../player.service'
+import { SettingsHeaderComponent } from '../settings-header/settings-header.component'
 
-export interface SettingsMenuEntry {
-  name: string
-  imgSrc: Observable<string>
-  data: string
-}
-
+/** "Secret menu": one card with the settings entries, laid out as in the settings mockup. */
 @Component({
   selector: 'app-settings',
   templateUrl: 'settings.page.html',
   styleUrls: ['settings.page.scss'],
-  imports: [
-    AsyncPipe,
-    IonBackButton,
-    IonTitle,
-    MupiHatIconComponent,
-    IonHeader,
-    IonToolbar,
-    IonButtons,
-    IonContent,
-    IonGrid,
-    IonRow,
-    IonCol,
-    IonCard,
-    IonCardHeader,
-    IonCardTitle,
-  ],
-  standalone: true,
+  imports: [IonContent, IonIcon, MupiHatIconComponent, SettingsHeaderComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SettingsPage {
-  private mediaService = inject(MediaService)
-  protected network = toSignal(this.mediaService.network$, { initialValue: null })
+  private readonly mediaService = inject(MediaService)
+  private readonly playerService = inject(PlayerService)
+  private readonly bluetoothService = inject(BluetoothService)
+  private readonly router = inject(Router)
+  private readonly alertController = inject(AlertController)
+  private readonly http = inject(HttpClient)
 
-  protected menuEntries: Signal<SettingsMenuEntry[]> = computed(() => {
-    const out: SettingsMenuEntry[] = [
-      {
-        name: 'Add media',
-        imgSrc: of('../../assets/plus-box-outline.svg'),
-        data: 'add-media',
-      },
-      {
-        name: 'WiFi settings',
-        imgSrc: of('../../assets/wifi.svg'),
-        data: 'wifi',
-      },
-      {
-        name: 'Bluetooth settings',
-        imgSrc: of('../../assets/bluetooth.svg'),
-        data: 'bluetooth',
-      },
-      {
-        name: 'Reboot / Shutdown',
-        imgSrc: of('../../assets/power.svg'),
-        data: 'shutdown',
-      },
-    ]
-    return out
+  protected readonly network = toSignal(this.mediaService.network$, { initialValue: null })
+  protected readonly bluetooth = signal<BluetoothStatus | undefined>(undefined)
+
+  private readonly hatActive = toSignal(this.playerService.getConfig().pipe(map((config) => config.hat_active)))
+  private readonly mupihat: Signal<Mupihat | undefined> = toSignal(
+    toObservable(this.hatActive).pipe(switchMap((active) => (active ? this.mediaService.mupihat$ : of(undefined)))),
+  )
+
+  /** "62 % · wird geladen" when a MuPiHAT with battery is present. */
+  protected readonly batteryText = computed(() => {
+    const hat = this.mupihat()
+    if (!hat || hat.BatteryConnected !== 1) {
+      return ''
+    }
+    const level = hat.Bat_SOC ? hat.Bat_SOC.replace('%', ' %') : ''
+    return hat.IBus > 0 ? `${level} · wird geladen` : level
   })
 
-  private router = inject(Router)
-  private alertController = inject(AlertController)
-  private http = inject(HttpClient)
+  /** Connected device, otherwise whether Bluetooth is on. */
+  protected readonly bluetoothText = computed(() => {
+    const status = this.bluetooth()
+    if (!status) {
+      return ''
+    }
+    if (!status.powered) {
+      return 'Aus'
+    }
+    return status.paired.find((device) => device.connected)?.name ?? 'Ein'
+  })
 
   public constructor() {
-    addIcons({ arrowBackOutline })
+    registerLucideIcons()
   }
 
-  protected entryClicked(entry: SettingsMenuEntry): void {
-    if (entry.data === 'add-media') {
-      this.router.navigate(['/edit'])
-    } else if (entry.data === 'wifi') {
-      this.router.navigate(['/wifi'])
-    } else if (entry.data === 'bluetooth') {
-      this.router.navigate(['/bluetooth'])
-    } else if (entry.data === 'shutdown') {
-      this.shutdownMessage()
-    }
+  ionViewWillEnter() {
+    this.bluetoothService.getStatus().subscribe({
+      next: (status) => this.bluetooth.set(status),
+      error: () => this.bluetooth.set(undefined),
+    })
   }
 
-  private async shutdownMessage() {
+  protected openWifi(): void {
+    this.router.navigate(['/wifi'])
+  }
+
+  protected openBluetooth(): void {
+    this.router.navigate(['/bluetooth'])
+  }
+
+  protected openMedia(): void {
+    this.router.navigate(['/edit'])
+  }
+
+  protected async shutdownMessage() {
     const alert = await this.alertController.create({
       cssClass: 'alert',
-      header: 'Reboot / Shutdown',
-      message: 'Do you want to reboot or shutdown the MuPiBox?',
+      header: 'Neustart / Ausschalten',
+      message: 'Soll die MuPiBox neu gestartet oder ausgeschaltet werden?',
       buttons: [
         {
-          text: 'Shutdown',
+          text: 'Ausschalten',
           handler: () => {
             this.http.post('/api/shutdown', {}).subscribe()
           },
         },
         {
-          text: 'Reboot',
+          text: 'Neustart',
           handler: () => {
             this.http.post('/api/reboot', {}).subscribe()
           },
         },
         {
-          text: 'Cancel',
+          text: 'Abbrechen',
         },
       ],
     })

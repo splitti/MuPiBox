@@ -1,0 +1,303 @@
+// Shared look of the settings pages (settings mockups): dark teal text on the
+// page background, white cards with 66px rows, dark pill buttons and outlined
+// secondary buttons. Colors come from the variables in global.scss.
+$text: var(--mupi-settings-text);
+$muted: var(--mupi-settings-muted);
+$danger: var(--mupi-settings-danger);
+$ok: var(--mupi-settings-ok);
+
+.settings-content {
+    --padding-start: 24px;
+    --padding-end: 24px;
+    --padding-bottom: 24px;
+    // ion-content applies --color to its scroll area, so plain color would not reach the content.
+    --color: #{$text};
+    font-family: var(--mupi-font);
+    color: $text;
+}
+
+// White card with rows.
+.settings-card {
+    margin: 0 0 20px;
+    border-radius: 18px;
+    background: #ffffff;
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.14);
+    overflow: hidden;
+}
+
+.settings-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    min-height: 66px;
+    padding: 10px 20px;
+    border: 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    background: transparent;
+    text-align: left;
+    font-family: var(--mupi-font);
+    color: $text;
+
+    &:last-child {
+        border-bottom: 0;
+    }
+
+    &.tappable:active {
+        background: rgba(0, 0, 0, 0.04);
+    }
+
+    // Accent bar at the left edge (active entry) as on the tiles.
+    .row-bar {
+        flex: 0 0 5px;
+        width: 5px;
+        height: 36px;
+        margin: 0 4px 0 -8px;
+        border-radius: 3px;
+        background: rgba(0, 0, 0, 0.12);
+
+        &.active {
+            background: var(--mupi-accent);
+        }
+    }
+
+    .row-icon {
+        flex: 0 0 auto;
+        font-size: 26px;
+        color: $text;
+
+        &.muted {
+            color: $muted;
+        }
+    }
+
+    .row-main {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .row-title {
+        font-weight: 800;
+        font-size: 18px;
+        line-height: 24px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .row-sub {
+        margin-top: 2px;
+        font-weight: 700;
+        font-size: 14px;
+        line-height: 18px;
+        color: $muted;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .row-value {
+        flex: 0 1 auto;
+        min-width: 0;
+        font-weight: 700;
+        font-size: 16px;
+        color: $muted;
+        text-align: right;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .row-chevron {
+        flex: 0 0 auto;
+        font-size: 24px;
+        color: $muted;
+    }
+
+    .row-actions {
+        flex: 0 0 auto;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    &.danger {
+        .row-title,
+        .row-icon,
+        .row-chevron {
+            color: $danger;
+        }
+    }
+}
+
+.row-status {
+    font-weight: 700;
+    font-size: 15px;
+    color: $ok;
+    white-space: nowrap;
+}
+
+// Section label above a card ("GESPEICHERTE NETZWERKE").
+.section-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 40px;
+    margin: 4px 0 10px;
+    font-weight: 800;
+    font-size: 13px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: $text;
+}
+
+// Dark pill button ("Netzwerk hinzufügen", "Suchen").
+.pill-dark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 46px;
+    padding: 0 22px;
+    border: 0;
+    border-radius: 23px;
+    background: $text;
+    color: #ffffff;
+    font-family: var(--mupi-font);
+    font-weight: 800;
+    font-size: 16px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.18);
+    white-space: nowrap;
+
+    ion-icon {
+        font-size: 20px;
+    }
+
+    ion-spinner {
+        width: 20px;
+        height: 20px;
+        color: #ffffff;
+    }
+
+    &:disabled {
+        opacity: 0.5;
+    }
+
+    &:active {
+        transform: scale(0.97);
+    }
+}
+
+// Outlined secondary button ("Ändern") and its red variant ("Löschen").
+.btn-outline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 44px;
+    padding: 0 20px;
+    border: 2px solid $text;
+    border-radius: 22px;
+    background: #ffffff;
+    color: $text;
+    font-family: var(--mupi-font);
+    font-weight: 800;
+    font-size: 15px;
+    white-space: nowrap;
+
+    &.danger {
+        border-color: $danger;
+        color: $danger;
+    }
+
+    &:disabled {
+        opacity: 0.4;
+    }
+
+    &:active {
+        background: rgba(0, 0, 0, 0.05);
+    }
+
+    ion-icon {
+        font-size: 20px;
+    }
+
+    ion-spinner {
+        width: 18px;
+        height: 18px;
+    }
+}
+
+// Translucent hint box ("Kopfhörer in den Kopplungsmodus bringen ...").
+.hint-box {
+    margin: 0 0 20px;
+    padding: 22px 24px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.35);
+    font-weight: 700;
+    font-size: 16px;
+    line-height: 22px;
+    color: $text;
+}
+
+// Meta text on the right of the header (host · IP).
+.header-meta {
+    font-weight: 700;
+    font-size: 16px;
+    color: $text;
+}
+
+.settings-empty {
+    padding: 22px 20px;
+    font-weight: 700;
+    font-size: 16px;
+    color: $muted;
+}
+
+.loading-row {
+    display: flex;
+    justify-content: center;
+    padding: 24px;
+    color: $text;
+}
+
+// Text inputs in a white card (WLAN, add media).
+.settings-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 14px 20px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+
+    &:last-child {
+        border-bottom: 0;
+    }
+
+    > label {
+        font-weight: 800;
+        font-size: 13px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: $muted;
+    }
+
+    ion-input,
+    ion-select {
+        --color: #{$text};
+        --placeholder-color: #{$muted};
+        --placeholder-opacity: 0.7;
+        --padding-start: 0;
+        --padding-end: 0;
+        min-height: 36px;
+        font-family: var(--mupi-font);
+        font-weight: 700;
+        font-size: 18px;
+        color: $text;
+    }
+}
+
+// Square outlined icon button (edit / delete in lists).
+.btn-outline.icon-only {
+    width: 44px;
+    padding: 0;
+}

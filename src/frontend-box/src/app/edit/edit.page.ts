@@ -1,67 +1,30 @@
 import { AsyncPipe } from '@angular/common'
 import { Component, OnInit } from '@angular/core'
 import { NavigationExtras, Router } from '@angular/router'
-import {
-  AlertController,
-  IonBackButton,
-  IonButton,
-  IonButtons,
-  IonCol,
-  IonContent,
-  IonGrid,
-  IonHeader,
-  IonIcon,
-  IonItem,
-  IonLabel,
-  IonList,
-  IonRow,
-  IonTitle,
-  IonToolbar,
-} from '@ionic/angular/standalone'
-import { addIcons } from 'ionicons'
-import {
-  addOutline,
-  arrowBackOutline,
-  brushOutline,
-  close,
-  powerOutline,
-  trashOutline,
-  wifiOutline,
-} from 'ionicons/icons'
+import { AlertController, IonContent, IonIcon } from '@ionic/angular/standalone'
 import type { Observable } from 'rxjs'
 import { ActivityIndicatorService } from '../activity-indicator.service'
+import { registerLucideIcons } from '../icons/lucide-icons'
 import type { Media } from '../media'
 import { MediaService } from '../media.service'
-import type { Network } from '../network'
 import { PlayerCmds, PlayerService } from '../player.service'
+import { SettingsHeaderComponent } from '../settings-header/settings-header.component'
+
+const CATEGORY_LABELS: Record<string, string> = {
+  audiobook: 'Hörspiele',
+  music: 'Musik',
+  other: 'Podcasts & Radio',
+}
 
 @Component({
   selector: 'app-edit',
   templateUrl: './edit.page.html',
   styleUrls: ['./edit.page.scss'],
-  imports: [
-    AsyncPipe,
-    IonHeader,
-    IonToolbar,
-    IonButtons,
-    IonBackButton,
-    IonTitle,
-    IonButton,
-    IonIcon,
-    IonContent,
-    IonList,
-    IonItem,
-    IonGrid,
-    IonRow,
-    IonCol,
-    IonLabel,
-  ],
+  imports: [AsyncPipe, IonContent, IonIcon, SettingsHeaderComponent],
 })
 export class EditPage implements OnInit {
   media: Observable<Media[]>
   activityIndicatorVisible = false
-
-  protected network$: Observable<Network>
 
   constructor(
     private mediaService: MediaService,
@@ -70,22 +33,67 @@ export class EditPage implements OnInit {
     private router: Router,
     private activityIndicatorService: ActivityIndicatorService,
   ) {
-    addIcons({ addOutline, arrowBackOutline, wifiOutline, trashOutline, powerOutline, brushOutline, close })
-    this.network$ = this.mediaService.network$
+    registerLucideIcons()
   }
 
   ngOnInit() {
     this.media = this.mediaService.fetchRawMedia()
   }
 
+  /** Icon for the source of an entry. */
+  protected typeIcon(item: Media): string {
+    switch (item.type) {
+      case 'rss':
+        return 'lucide-podcast'
+      case 'radio':
+        return 'lucide-radio'
+      case 'library':
+        return 'lucide-headphones'
+      default:
+        return 'lucide-music'
+    }
+  }
+
+  /** Summary line: label and title, or what the entry searches for. */
+  protected primaryText(item: Media): string {
+    const parts = [item.artist, item.title].filter((part) => part)
+    if (parts.length > 0) {
+      return parts.join(' – ')
+    }
+    return (
+      item.query ||
+      item.id ||
+      item.artistid ||
+      item.showid ||
+      item.playlistid ||
+      item.audiobookid ||
+      `Eintrag ${item.index}`
+    )
+  }
+
+  /** Details line: category, source and the ids / options that are set. */
+  protected detailText(item: Media): string {
+    const parts: string[] = [CATEGORY_LABELS[item.category || 'audiobook'] ?? item.category, item.type]
+    if (item.query) parts.push(`Suche: ${item.query}`)
+    if (item.id) parts.push(`ID: ${item.id}`)
+    if (item.artistid) parts.push(`Artist: ${item.artistid}`)
+    if (item.showid) parts.push(`Show: ${item.showid}`)
+    if (item.audiobookid) parts.push(`Hörbuch: ${item.audiobookid}`)
+    if (item.playlistid) parts.push(`Playlist: ${item.playlistid}`)
+    if (item.shuffle) parts.push('Zufall')
+    if (item.aPartOfAll) parts.push(`Intervall ${item.aPartOfAllMin ?? 0} – ${item.aPartOfAllMax || 'Ende'}`)
+    if (item.sorting) parts.push(`Sortierung: ${item.sorting}`)
+    return parts.join(' · ')
+  }
+
   async deleteButtonPressed(item: Media) {
     const alert = await this.alertController.create({
       cssClass: 'alert',
-      header: 'Warning',
-      message: 'Do you want to delete the selected item from your library and local storage?',
+      header: 'Eintrag löschen',
+      message: 'Soll der Eintrag aus der Bibliothek (und bei lokalen Medien vom Speicher) gelöscht werden?',
       buttons: [
         {
-          text: 'Ok',
+          text: 'Löschen',
           handler: () => {
             this.activityIndicatorService.create().then((indicator) => {
               this.activityIndicatorVisible = true
@@ -100,11 +108,11 @@ export class EditPage implements OnInit {
                     if (check === 'error') {
                       const alert = await this.alertController.create({
                         cssClass: 'alert',
-                        header: 'Warning',
-                        message: 'Error to delet the entry.',
+                        header: 'Fehler',
+                        message: 'Der Eintrag konnte nicht gelöscht werden.',
                         buttons: [
                           {
-                            text: 'Okay',
+                            text: 'OK',
                           },
                         ],
                       })
@@ -112,11 +120,11 @@ export class EditPage implements OnInit {
                     } else if (check === 'locked') {
                       const alert = await this.alertController.create({
                         cssClass: 'alert',
-                        header: 'Warning',
-                        message: 'File locked, please try in a moment again.',
+                        header: 'Fehler',
+                        message: 'Datei gesperrt, bitte gleich noch einmal versuchen.',
                         buttons: [
                           {
-                            text: 'Okay',
+                            text: 'OK',
                           },
                         ],
                       })
@@ -140,7 +148,7 @@ export class EditPage implements OnInit {
           },
         },
         {
-          text: 'Cancel',
+          text: 'Abbrechen',
         },
       ],
     })
@@ -180,11 +188,11 @@ export class EditPage implements OnInit {
   async clearResumePressed() {
     const alert = await this.alertController.create({
       cssClass: 'alert',
-      header: 'Resume',
-      message: 'Do you want to clear all resume media?',
+      header: 'Weiterhören leeren',
+      message: 'Sollen alle Weiterhören-Einträge gelöscht werden?',
       buttons: [
         {
-          text: 'Clear',
+          text: 'Leeren',
           handler: () => {
             this.playerService.sendCmd(PlayerCmds.CLEARRESUME)
             setTimeout(() => {
@@ -193,7 +201,7 @@ export class EditPage implements OnInit {
           },
         },
         {
-          text: 'Cancel',
+          text: 'Abbrechen',
         },
       ],
     })

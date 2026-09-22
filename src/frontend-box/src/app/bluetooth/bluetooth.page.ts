@@ -1,44 +1,15 @@
 import { Component, signal } from '@angular/core'
-import {
-  AlertController,
-  IonBackButton,
-  IonButton,
-  IonButtons,
-  IonContent,
-  IonHeader,
-  IonIcon,
-  IonItem,
-  IonLabel,
-  IonList,
-  IonSpinner,
-  IonTitle,
-  IonToggle,
-  IonToolbar,
-} from '@ionic/angular/standalone'
-import { addIcons } from 'ionicons'
-import { arrowBackOutline, bluetoothOutline, searchOutline, trashOutline } from 'ionicons/icons'
+import { AlertController, IonContent, IonIcon, IonSpinner, IonToggle } from '@ionic/angular/standalone'
 import type { BluetoothDevice, BluetoothStatus } from '../bluetooth'
 import { BluetoothService } from '../bluetooth.service'
+import { registerLucideIcons } from '../icons/lucide-icons'
+import { SettingsHeaderComponent } from '../settings-header/settings-header.component'
 
 @Component({
   selector: 'app-bluetooth',
   templateUrl: './bluetooth.page.html',
   styleUrls: ['./bluetooth.page.scss'],
-  imports: [
-    IonHeader,
-    IonToolbar,
-    IonTitle,
-    IonButtons,
-    IonBackButton,
-    IonButton,
-    IonIcon,
-    IonToggle,
-    IonContent,
-    IonList,
-    IonItem,
-    IonLabel,
-    IonSpinner,
-  ],
+  imports: [IonContent, IonIcon, IonSpinner, IonToggle, SettingsHeaderComponent],
 })
 export class BluetoothPage {
   protected status = signal<BluetoothStatus>({ powered: false, paired: [] })
@@ -51,7 +22,7 @@ export class BluetoothPage {
     private bluetoothService: BluetoothService,
     private alertController: AlertController,
   ) {
-    addIcons({ arrowBackOutline, bluetoothOutline, searchOutline, trashOutline })
+    registerLucideIcons()
   }
 
   ionViewWillEnter() {
@@ -99,11 +70,11 @@ export class BluetoothPage {
   async pairDeviceButtonPressed(device: BluetoothDevice) {
     const alert = await this.alertController.create({
       cssClass: 'alert',
-      header: 'Pair device',
-      message: `Do you want to pair with "${device.name}"?`,
+      header: 'Gerät koppeln',
+      message: `Mit "${device.name}" koppeln?`,
       buttons: [
         {
-          text: 'Pair',
+          text: 'Koppeln',
           handler: () => {
             this.pairingMac.set(device.mac)
             this.bluetoothService.pair(device.mac).subscribe({
@@ -119,7 +90,7 @@ export class BluetoothPage {
           },
         },
         {
-          text: 'Cancel',
+          text: 'Abbrechen',
         },
       ],
     })
@@ -130,11 +101,11 @@ export class BluetoothPage {
   async removeDeviceButtonPressed(device: BluetoothDevice) {
     const alert = await this.alertController.create({
       cssClass: 'alert',
-      header: 'Remove device',
-      message: `Do you want to remove "${device.name}"?`,
+      header: 'Gerät entfernen',
+      message: `Soll "${device.name}" entfernt werden?`,
       buttons: [
         {
-          text: 'Remove',
+          text: 'Entfernen',
           handler: () => {
             this.bluetoothService.remove(device.mac).subscribe(() => {
               this.loadStatus()
@@ -142,7 +113,7 @@ export class BluetoothPage {
           },
         },
         {
-          text: 'Cancel',
+          text: 'Abbrechen',
         },
       ],
     })

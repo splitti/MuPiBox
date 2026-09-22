@@ -1,0 +1,9 @@
+<header class="settings-header">
+  <button type="button" class="settings-back" (click)="back()" aria-label="Zurück">
+    <ion-icon name="lucide-chevron-left"></ion-icon>
+  </button>
+  <h1 class="settings-title">{{ title() }}</h1>
+  <div class="settings-header-end">
+    <ng-content></ng-content>
+  </div>
+</header>

@@ -1,117 +1,61 @@
-ion-toolbar {
-    ion-back-button {
-        --min-height: 70px;
-        --min-width: 120px;
-        --icon-font-size: 30px;
-    }
-    ion-button {
-        height: 70px !important;
-        width: 70px !important;
-        font-size: 20px !important;
-    }
-}
-
-.wifi-content {
-    --ion-background-color: #000000 !important;
-    --padding-start: 16px;
-    --padding-end: 16px;
-    --padding-top: 16px;
-}
+// WLAN mockup: connection card, "Gespeicherte Netzwerke" list with the
+// active bar, "Ändern" / "Löschen" per network; maintenance buttons below.
+@use '../shared/settings';
 
 .status-card {
-    --background: #16202a;
-    padding: 20px;
-    margin: 0 0 20px;
-
-    .status-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        flex-wrap: wrap;
-        gap: 16px;
-    }
-
-    .status-ssid {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-
-        ion-icon {
-            font-size: 32px;
-            color: var(--ion-color-primary, #2dd6c7);
-        }
-
-        .ssid-name {
-            font-size: 20px;
-            font-weight: 600;
-        }
-
-        .ssid-detail {
-            opacity: 0.7;
-            font-size: 14px;
-        }
-    }
-
-    .status-ip {
-        text-align: right;
-
-        .ip-label {
-            font-size: 12px;
-            opacity: 0.7;
-        }
-
-        .ip-value {
-            font-size: 20px;
-            font-weight: 600;
-            color: var(--ion-color-primary, #2dd6c7);
-        }
-
-        .gateway-value {
-            font-size: 13px;
-            opacity: 0.7;
-        }
-    }
-}
-
-.list-header {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    margin-bottom: 8px;
-
-    ion-label {
-        font-size: 16px;
-        opacity: 0.8;
-    }
+    justify-content: space-between;
+    gap: 20px;
+    padding: 16px 20px;
 }
 
-.networks-list {
-    background: transparent;
-
-    ion-item {
-        --background: #16202a;
-        margin-bottom: 8px;
-        border-radius: 8px;
-
-        &.current-network {
-            --border-color: var(--ion-color-primary, #2dd6c7);
-        }
-
-        h2 {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .current-badge {
-            font-size: 12px;
-            color: var(--ion-color-primary, #2dd6c7);
-        }
-    }
-}
-
-.loading-row {
+.status-main {
     display: flex;
-    justify-content: center;
-    padding: 32px;
+    align-items: center;
+    gap: 16px;
+    min-width: 0;
+
+    .row-icon {
+        font-size: 28px;
+        color: var(--mupi-settings-text);
+    }
+
+    .row-title {
+        font-weight: 800;
+        font-size: 18px;
+        line-height: 24px;
+    }
+
+    .row-sub {
+        margin-top: 2px;
+        font-weight: 700;
+        font-size: 14px;
+        color: var(--mupi-settings-muted);
+    }
+}
+
+.status-addresses {
+    flex: 0 0 auto;
+    text-align: right;
+
+    .ip-label {
+        font-weight: 700;
+        font-size: 14px;
+        line-height: 18px;
+        color: var(--mupi-settings-muted);
+    }
+
+    .ip-value {
+        font-weight: 800;
+        font-size: 20px;
+        line-height: 26px;
+        color: var(--mupi-settings-text);
+    }
+}
+
+.wifi-tools {
+    display: flex;
+    gap: 12px;
+    padding-bottom: 8px;
 }

@@ -4,32 +4,21 @@ import { FormsModule } from '@angular/forms'
 import { ActivatedRoute, Router } from '@angular/router'
 import {
   AlertController,
-  IonButton,
-  IonButtons,
   IonCheckbox,
-  IonCol,
   IonContent,
-  IonGrid,
-  IonHeader,
   IonIcon,
   IonInput,
-  IonItem,
-  IonLabel,
-  IonRow,
-  IonSegment,
-  IonSegmentButton,
   IonSelect,
   IonSelectOption,
-  IonToolbar,
   NavController,
 } from '@ionic/angular/standalone'
-import { addIcons } from 'ionicons'
-import { arrowBackOutline, saveOutline } from 'ionicons/icons'
 import Keyboard from 'simple-keyboard'
 import { ActivityIndicatorService } from '../activity-indicator.service'
+import { registerLucideIcons } from '../icons/lucide-icons'
 import { CategoryType, Media, MediaSorting } from '../media'
 import { MediaService } from '../media.service'
 import { PlayerCmds, PlayerService } from '../player.service'
+import { SettingsHeaderComponent } from '../settings-header/settings-header.component'
 import { SpotifyService } from '../spotify.service'
 
 @Component({
@@ -39,23 +28,13 @@ import { SpotifyService } from '../spotify.service'
   styleUrls: ['./add.page.scss'],
   imports: [
     FormsModule,
-    IonHeader,
-    IonToolbar,
-    IonButtons,
-    IonButton,
-    IonIcon,
-    IonSegment,
-    IonSegmentButton,
-    IonLabel,
+    IonCheckbox,
     IonContent,
-    IonGrid,
-    IonRow,
-    IonCol,
-    IonItem,
+    IonIcon,
+    IonInput,
     IonSelect,
     IonSelectOption,
-    IonInput,
-    IonCheckbox,
+    SettingsHeaderComponent,
   ],
 })
 export class AddPage implements OnInit, AfterViewInit {
@@ -92,7 +71,7 @@ export class AddPage implements OnInit, AfterViewInit {
       this.editMedia = this.router.currentNavigation().extras.state.media
       this.edit = true
     }
-    addIcons({ arrowBackOutline, saveOutline })
+    registerLucideIcons()
   }
 
   ngOnInit() {
@@ -183,7 +162,7 @@ export class AddPage implements OnInit, AfterViewInit {
     })
 
     this.hideKeyboard()
-    this.selectedInputElem = document.querySelector('ion-input:first-child')
+    this.selectedInputElem = document.querySelector('.add-form ion-input')
 
     this.validate()
   }
@@ -306,8 +285,6 @@ export class AddPage implements OnInit, AfterViewInit {
     this.shuffle = false
     this.validate()
   }
-
-  segmentChanged(_event: any) {}
 
   spotifyIDfetcher(url: string, keyword: string) {
     const keywordIndex = url.indexOf(keyword)
@@ -445,19 +422,19 @@ export class AddPage implements OnInit, AfterViewInit {
         this.activityIndicatorService.dismiss()
         this.activityIndicatorVisible = false
 
-        let spotifyError = 'The id is not valid or you have no internet connection!'
+        let spotifyError = 'Die ID ist ungültig oder es besteht keine Internetverbindung.'
         if (!media.playlistid && !media.artistid && !media.id && !media.showid) {
           spotifyError =
-            'URL is not valid! It should start with "https://open.spotify.com/" and contain "playlist/", "artist/", "album/" or "show/".'
+            'Die URL ist ungültig. Sie muss mit "https://open.spotify.com/" beginnen und "playlist/", "artist/", "album/" oder "show/" enthalten.'
         }
 
         const alert = await this.alertController.create({
           cssClass: 'alert',
-          header: 'Warning',
+          header: 'Hinweis',
           message: spotifyError,
           buttons: [
             {
-              text: 'Okay',
+              text: 'OK',
             },
           ],
         })
@@ -484,11 +461,11 @@ export class AddPage implements OnInit, AfterViewInit {
           if (check === 'error') {
             const alert = await this.alertController.create({
               cssClass: 'alert',
-              header: 'Warning',
-              message: 'Error to write edit entry.',
+              header: 'Hinweis',
+              message: 'Der Eintrag konnte nicht gespeichert werden.',
               buttons: [
                 {
-                  text: 'Okay',
+                  text: 'OK',
                 },
               ],
             })
@@ -496,11 +473,11 @@ export class AddPage implements OnInit, AfterViewInit {
           } else if (check === 'locked') {
             const alert = await this.alertController.create({
               cssClass: 'alert',
-              header: 'Warning',
-              message: 'File locked, please try again in a moment.',
+              header: 'Hinweis',
+              message: 'Datei gesperrt, bitte gleich noch einmal versuchen.',
               buttons: [
                 {
-                  text: 'Okay',
+                  text: 'OK',
                 },
               ],
             })
@@ -538,11 +515,11 @@ export class AddPage implements OnInit, AfterViewInit {
           if (check === 'error') {
             const alert = await this.alertController.create({
               cssClass: 'alert',
-              header: 'Warning',
-              message: 'Error to write new entry.',
+              header: 'Hinweis',
+              message: 'Der Eintrag konnte nicht gespeichert werden.',
               buttons: [
                 {
-                  text: 'Okay',
+                  text: 'OK',
                 },
               ],
             })
@@ -550,11 +527,11 @@ export class AddPage implements OnInit, AfterViewInit {
           } else if (check === 'locked') {
             const alert = await this.alertController.create({
               cssClass: 'alert',
-              header: 'Warning',
-              message: 'File locked, please try again in a moment.',
+              header: 'Hinweis',
+              message: 'Datei gesperrt, bitte gleich noch einmal versuchen.',
               buttons: [
                 {
-                  text: 'Okay',
+                  text: 'OK',
                 },
               ],
             })
@@ -654,18 +631,19 @@ export class AddPage implements OnInit, AfterViewInit {
     }
   }
 
+  /** The keyboard is docked in its own panel; the whole panel is shown or hidden. */
   private showKeyboard() {
-    const keyboardElement = document.querySelector('.simple-keyboard') as HTMLElement
-    if (keyboardElement) {
-      keyboardElement.style.display = 'block'
+    const panel = document.querySelector('.keyboard-panel') as HTMLElement
+    if (panel) {
+      panel.style.display = 'block'
       this.isKeyboardVisible = true
     }
   }
 
   private hideKeyboard() {
-    const keyboardElement = document.querySelector('.simple-keyboard') as HTMLElement
-    if (keyboardElement) {
-      keyboardElement.style.display = 'none'
+    const panel = document.querySelector('.keyboard-panel') as HTMLElement
+    if (panel) {
+      panel.style.display = 'none'
       this.isKeyboardVisible = false
     }
   }

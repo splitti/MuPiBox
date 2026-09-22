@@ -1,0 +1,57 @@
+// Settings mockup: round white back button, dark title, the right side holds
+// meta text (host · IP) or an action button.
+:host {
+    display: block;
+}
+
+.settings-header {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    height: 96px;
+    padding: 0 24px;
+}
+
+.settings-back {
+    flex: 0 0 56px;
+    width: 56px;
+    height: 56px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: #ffffff;
+    color: var(--mupi-settings-text);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    ion-icon {
+        font-size: 30px;
+    }
+
+    &:active {
+        transform: scale(0.94);
+    }
+}
+
+.settings-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    font-family: var(--mupi-font);
+    font-weight: 800;
+    font-size: 26px;
+    line-height: 34px;
+    color: var(--mupi-settings-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.settings-header-end {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}

@@ -1,181 +1,106 @@
-<ion-header class="add-header">
-  <ion-toolbar color="light">
-    <ion-buttons slot="start">
-      <ion-button (click)="cancelButtonPressed()" expand="block"><ion-icon name="arrow-back-outline"></ion-icon></ion-button>
-    </ion-buttons>
-    <ion-segment #segment value="Add media" (ionChange)="segmentChanged($event)">
-      <ion-segment-button #wlan_segment value="Add media">
-        <ion-label>Add media</ion-label>
-      </ion-segment-button>
-    </ion-segment>
-    <ion-buttons slot="end">
-      <ion-button size="large" type="submit" expand="block" [disabled]="!valid" (click)="submit(addMediaForm)"><ion-icon slot="icon-only" name="save-outline"></ion-icon></ion-button>
-    </ion-buttons>
-  </ion-toolbar>
-</ion-header>
+<ion-content class="settings-content mupi-page add-content">
+  <mupi-settings-header [title]="edit ? 'Medium bearbeiten' : 'Medium hinzufügen'" backHref="/edit">
+    <button type="button" class="btn-outline" (click)="cancelButtonPressed()">Abbrechen</button>
+    <button type="button" class="pill-dark" [disabled]="!valid" (click)="submit(addMediaForm)">
+      <ion-icon name="lucide-save"></ion-icon>
+      Speichern
+    </button>
+  </mupi-settings-header>
 
-<ion-content class="add-content">
-  <form #addMediaForm="ngForm" (ngSubmit)="submit(addMediaForm)">
-    <ion-grid>
-      <ion-row>
-        <ion-col size="4">
-          <div>
-            <ion-item>
-              <ion-label class="dimmed-text">Category</ion-label>
-              <ion-select #categorySelect interface="popover" [(ngModel)]="category" name="category" (ionChange)="categoryChanged($event)">
-                <ion-select-option value="audiobook">audiobook</ion-select-option>
-                <ion-select-option value="music">music</ion-select-option>
-                <ion-select-option value="other">other</ion-select-option>
-              </ion-select>
-            </ion-item>
-          </div>
-        </ion-col>
-        <ion-col size="4">
-          <div>
-            <ion-item>
-              <ion-label class="dimmed-text">Source</ion-label>
-              <ion-select #sourceTypeSelect interface="popover" [(ngModel)]="sourceType" name="sourceType" (ionChange)="sourceTypeChanged($event)">
-                <ion-select-option value="spotifyURL">Spotify URL</ion-select-option>
-                <ion-select-option value="spotifySearch">Spotify Search Query</ion-select-option>
-                <ion-select-option value="rssURL">RSS/Podcast URL</ion-select-option>
-                <ion-select-option value="streamURL">Stream/Radio URL</ion-select-option>
-              </ion-select>
-            </ion-item>
-          </div>
-        </ion-col>
-        <ion-col size="4">
-          <div>
-            <ion-item>
-              <ion-input #label [ngModel]="editMedia?.artist" name="label" type="text" placeholder="Label" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
-            </ion-item>
-          </div>
-        </ion-col>
-      </ion-row>
+  <form #addMediaForm="ngForm" (ngSubmit)="submit(addMediaForm)" class="add-form">
+    <div class="settings-card fields-grid">
+      <div class="settings-field">
+        <label>Kategorie</label>
+        <ion-select #categorySelect interface="popover" [(ngModel)]="category" name="category" (ionChange)="categoryChanged($event)">
+          <ion-select-option value="audiobook">Hörspiele</ion-select-option>
+          <ion-select-option value="music">Musik</ion-select-option>
+          <ion-select-option value="other">Podcasts &amp; Radio</ion-select-option>
+        </ion-select>
+      </div>
+      <div class="settings-field">
+        <label>Quelle</label>
+        <ion-select #sourceTypeSelect interface="popover" [(ngModel)]="sourceType" name="sourceType" (ionChange)="sourceTypeChanged($event)">
+          <ion-select-option value="spotifyURL">Spotify-URL</ion-select-option>
+          <ion-select-option value="spotifySearch">Spotify-Suche</ion-select-option>
+          <ion-select-option value="rssURL">RSS / Podcast-URL</ion-select-option>
+          <ion-select-option value="streamURL">Stream / Radio-URL</ion-select-option>
+        </ion-select>
+      </div>
+      <div class="settings-field">
+        <label>Label</label>
+        <ion-input #label [ngModel]="editMedia?.artist" name="label" type="text" placeholder="z. B. Bibi Blocksberg" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
+      </div>
 
-      <ion-row>
-        <ion-col size="3">
-          @if (sourceType === 'streamURL') {
-            <div>
-              <ion-item>
-                <ion-input #title [ngModel]="editMedia?.title" name="title" type="text" placeholder="Title" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
-              </ion-item>
-            </div>
+      <div class="settings-field">
+        @switch (sourceType) {
+          @case ('spotifyURL') {
+            <label>Spotify-URL</label>
+            <ion-input #spotifyURL [ngModel]="editMedia?.spotify_url" name="spotifyURL" type="text" placeholder="https://open.spotify.com/…" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
           }
-        </ion-col>
-        <ion-col size="3">
-          <div>
-            <ion-item>
-              <ion-input #cover [ngModel]="editMedia?.cover" name="cover" type="text" placeholder="opt. Cover URL" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
-            </ion-item>
-          </div>
-        </ion-col>
-        <ion-col size="3">
-          <div>
-            <ion-item>
-              @switch (sourceType) {
-                @case ('spotifyURL') {
-                  <ion-input #spotifyURL [ngModel]="editMedia?.spotify_url" name="spotifyURL" type="text" placeholder="Spotify URL" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
-                }
-                @case ('spotifySearch') {
-                  <ion-input #spotifySearch [ngModel]="editMedia?.query" name="spotifySearch" type="text" placeholder="Spotify Search Query" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
-                }
-                @case ('rssURL') {
-                  <ion-input #rssURL [ngModel]="editMedia?.id" name="rssURL" type="text" placeholder="RSS/Podcast URL" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
-                }
-                @case ('streamURL') {
-                  <ion-input #streamURL [ngModel]="editMedia?.id" name="streamURL" type="text" placeholder="Stream/Radio URL" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
-                }
-              }
-            </ion-item>
-          </div>
-        </ion-col>
-        <ion-col size="3">
-          <div>
-            <ion-item>
-              <ion-input #labelcover [ngModel]="editMedia?.artistcover" name="labelcover" type="text" placeholder="opt. Label Cover URL" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
-            </ion-item>
-          </div>
-        </ion-col>
-      </ion-row>
-
-      <ion-row>
-        <ion-col size="2">
-          @if ((sourceType === 'spotifyURL' || sourceType === 'spotifySearch') &&
-        (category === 'music' || category === 'other')) {
-            <div>
-              <ion-item>
-                <ion-label class="ion-padding-end">Shuffle</ion-label>
-                <ion-checkbox #spotify_shuffle name="spotify_shuffle" [(ngModel)]="shuffle" (ionChange)="validate()"></ion-checkbox>
-              </ion-item>
-            </div>
+          @case ('spotifySearch') {
+            <label>Spotify-Suche</label>
+            <ion-input #spotifySearch [ngModel]="editMedia?.query" name="spotifySearch" type="text" placeholder="Suchbegriff" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
           }
-        </ion-col>
-        <ion-col size="2">
-          <div>
-            <ion-item>
-              <ion-label class="dimmed-text">Sort</ion-label>
-              <ion-select #sortingSelect interface="popover" [(ngModel)]="sorting" name="sorting">
-                <ion-select-option value="AlphabeticalAscending">alphabetical asc.</ion-select-option>
-                <ion-select-option value="AlphabeticalDescending">alphabetical desc.</ion-select-option>
-                <ion-select-option value="ReleaseDateAscending">release date asc.</ion-select-option>
-                <ion-select-option value="ReleaseDateDescending">release date desc.</ion-select-option>
-              </ion-select>
-            </ion-item>
-          </div>
-        </ion-col>
-        <ion-col size="2">
-          @if (sourceType !== 'streamURL') {
-            <div>
-              <ion-item>
-                <ion-label style="padding-right: 10px;">Interval</ion-label>
-                <ion-checkbox #spotify_aPartOfAll name="spotify_aPartOfAll" [(ngModel)]="aPartOfAll" (ionChange)="validate()"></ion-checkbox>
-              </ion-item>
-            </div>
+          @case ('rssURL') {
+            <label>RSS / Podcast-URL</label>
+            <ion-input #rssURL [ngModel]="editMedia?.id" name="rssURL" type="text" placeholder="https://…" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
           }
-        </ion-col>
-        @if (aPartOfAll && sourceType !== 'streamURL') {
-          <ion-col size="3">
-            <div class="mupi-inline-label">
-              <ion-label>Start:</ion-label>
-              <ion-item>
-                <ion-input #spotify_aPartOfAllMin [(ngModel)]="aPartOfAllMin" name="spotify_aPartOfAllMin" type="number" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
-              </ion-item>
-            </div>
-          </ion-col>
-          <ion-col size="3">
-            <div class="mupi-inline-label">
-              <ion-label>End:</ion-label>
-              <ion-item>
-                <ion-input #spotify_aPartOfAllMax [(ngModel)]="aPartOfAllMax" name="spotify_aPartOfAllMax" type="number" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
-              </ion-item>
-            </div>
-          </ion-col>
+          @case ('streamURL') {
+            <label>Stream / Radio-URL</label>
+            <ion-input #streamURL [ngModel]="editMedia?.id" name="streamURL" type="text" placeholder="https://…" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
+          }
         }
-      </ion-row>
+      </div>
+      @if (sourceType === 'streamURL') {
+        <div class="settings-field">
+          <label>Titel</label>
+          <ion-input #title [ngModel]="editMedia?.title" name="title" type="text" placeholder="Sendername" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
+        </div>
+      }
+      <div class="settings-field">
+        <label>Cover-URL (optional)</label>
+        <ion-input #cover [ngModel]="editMedia?.cover" name="cover" type="text" placeholder="https://…" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
+      </div>
+      <div class="settings-field">
+        <label>Label-Cover-URL (optional)</label>
+        <ion-input #labelcover [ngModel]="editMedia?.artistcover" name="labelcover" type="text" placeholder="https://…" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
+      </div>
 
-      <ion-row>
-        <ion-col size="6">
-          <div>
-            <div class="add-button">
-              @if (edit) {
-                <ion-button size="large" type="submit" expand="block" [disabled]="!valid">Edit</ion-button>
-              } @else {
-                <ion-button size="large" type="submit" expand="block" [disabled]="!valid">Add</ion-button>
-              }
-            </div>
+      <div class="settings-field">
+        <label>Sortierung</label>
+        <ion-select #sortingSelect interface="popover" [(ngModel)]="sorting" name="sorting">
+          <ion-select-option value="AlphabeticalAscending">Alphabetisch aufsteigend</ion-select-option>
+          <ion-select-option value="AlphabeticalDescending">Alphabetisch absteigend</ion-select-option>
+          <ion-select-option value="ReleaseDateAscending">Erscheinungsdatum aufsteigend</ion-select-option>
+          <ion-select-option value="ReleaseDateDescending">Erscheinungsdatum absteigend</ion-select-option>
+        </ion-select>
+      </div>
+      @if ((sourceType === 'spotifyURL' || sourceType === 'spotifySearch') && (category === 'music' || category === 'other')) {
+        <div class="settings-field check-field">
+          <label>Zufallswiedergabe</label>
+          <ion-checkbox #spotify_shuffle name="spotify_shuffle" [(ngModel)]="shuffle" (ionChange)="validate()">Titel mischen</ion-checkbox>
+        </div>
+      }
+      @if (sourceType !== 'streamURL') {
+        <div class="settings-field check-field">
+          <label>Intervall</label>
+          <ion-checkbox #spotify_aPartOfAll name="spotify_aPartOfAll" [(ngModel)]="aPartOfAll" (ionChange)="validate()">Nur einen Teil verwenden</ion-checkbox>
+        </div>
+        @if (aPartOfAll) {
+          <div class="settings-field">
+            <label>Start</label>
+            <ion-input #spotify_aPartOfAllMin [(ngModel)]="aPartOfAllMin" name="spotify_aPartOfAllMin" type="number" placeholder="0" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
           </div>
-        </ion-col>
-        <ion-col size="6">
-          <div>
-            <div class="cancel-button">
-              <ion-button size="large" color="danger" (click)="cancelButtonPressed()" expand="block">Cancel</ion-button>
-            </div>
+          <div class="settings-field">
+            <label>Ende</label>
+            <ion-input #spotify_aPartOfAllMax [(ngModel)]="aPartOfAllMax" name="spotify_aPartOfAllMax" type="number" placeholder="Ende" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
           </div>
-        </ion-col>
-      </ion-row>
-    </ion-grid>
+        }
+      }
+    </div>
   </form>
-  <div class="bottom">
+
+  <div class="keyboard-panel" slot="fixed">
     <div class="simple-keyboard"></div>
   </div>
 </ion-content>

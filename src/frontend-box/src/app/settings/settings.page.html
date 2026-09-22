@@ -1,30 +1,44 @@
-<ion-header class="settings-header">
-  <ion-toolbar color="light">
-    <ion-buttons slot="start">
-      <ion-back-button icon="arrow-back-outline" defaultHref="/home"></ion-back-button>
-    </ion-buttons>
+<ion-content class="settings-content mupi-page">
+  <mupi-settings-header title="Einstellungen" backHref="/home">
     @let networkVar = network();
-    @if (networkVar?.host !== undefined && networkVar?.ip !== undefined) {
-      <ion-title>Settings: {{ networkVar?.host }} - {{ networkVar?.ip }}</ion-title>
-    } @else {
-      <ion-title>Settings</ion-title>
+    @if (networkVar?.host || networkVar?.ip) {
+      <span class="header-meta">{{ networkVar?.host }}@if (networkVar?.host && networkVar?.ip) { &middot; }{{ networkVar?.ip }}</span>
     }
-    <span slot="end" class="mupihat-icon-container"><mupihat-icon></mupihat-icon></span>
-  </ion-toolbar>
-</ion-header>
-<ion-content>
-  <ion-grid class="settings-grid">
-    <ion-row>
-      @for (entry of menuEntries(); track entry.data) {
-        <ion-col size="6">
-          <ion-card class="settings-tile" (click)="entryClicked(entry)">
-            <img draggable="false" ondragstart="return false;" [src]="entry.imgSrc | async" />
-            <ion-card-header>
-              <ion-card-title class="ion-text-nowrap truncate-text ion-text-center">{{ entry.name }}</ion-card-title>
-            </ion-card-header>
-          </ion-card>
-        </ion-col>
-      }
-    </ion-row>
-  </ion-grid>
+  </mupi-settings-header>
+
+  <div class="settings-card">
+    <button type="button" class="settings-row tappable" (click)="openWifi()">
+      <ion-icon class="row-icon" [name]="networkVar?.onlinestate === 'online' ? 'lucide-wifi' : 'lucide-wifi-off'"></ion-icon>
+      <span class="row-main"><span class="row-title">WLAN</span></span>
+      <span class="row-value">{{ networkVar?.wifi || 'Nicht verbunden' }}</span>
+      <ion-icon class="row-chevron" name="lucide-chevron-right"></ion-icon>
+    </button>
+
+    <button type="button" class="settings-row tappable" (click)="openBluetooth()">
+      <ion-icon class="row-icon" name="lucide-bluetooth"></ion-icon>
+      <span class="row-main"><span class="row-title">Bluetooth</span></span>
+      <span class="row-value">{{ bluetoothText() }}</span>
+      <ion-icon class="row-chevron" name="lucide-chevron-right"></ion-icon>
+    </button>
+
+    <button type="button" class="settings-row tappable" (click)="openMedia()">
+      <ion-icon class="row-icon" name="lucide-square-plus"></ion-icon>
+      <span class="row-main"><span class="row-title">Medien hinzufügen</span></span>
+      <ion-icon class="row-chevron" name="lucide-chevron-right"></ion-icon>
+    </button>
+
+    @if (batteryText()) {
+      <div class="settings-row">
+        <mupihat-icon class="row-icon"></mupihat-icon>
+        <span class="row-main"><span class="row-title">Akku</span></span>
+        <span class="row-value battery">{{ batteryText() }}</span>
+      </div>
+    }
+
+    <button type="button" class="settings-row tappable danger" (click)="shutdownMessage()">
+      <ion-icon class="row-icon" name="lucide-power"></ion-icon>
+      <span class="row-main"><span class="row-title">Neustart / Ausschalten</span></span>
+      <ion-icon class="row-chevron" name="lucide-chevron-right"></ion-icon>
+    </button>
+  </div>
 </ion-content>

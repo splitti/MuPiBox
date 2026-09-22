@@ -1,72 +1,62 @@
-<ion-header class="wifi-header">
-  <ion-toolbar>
-    <ion-buttons slot="start">
-      <ion-back-button icon="arrow-back-outline" defaultHref="/settings"></ion-back-button>
-    </ion-buttons>
-    <ion-title>WiFi</ion-title>
-    <ion-buttons slot="end">
-      <ion-button (click)="wifiRestartButtonPressed()">
-        <ion-icon slot="icon-only" name="refresh"></ion-icon>
-      </ion-button>
-    </ion-buttons>
-    <ion-buttons slot="end">
-      <ion-button (click)="enableWifiOnButtonPressed()">
-        <ion-icon slot="icon-only" name="wifi-outline"></ion-icon>
-      </ion-button>
-    </ion-buttons>
-  </ion-toolbar>
-</ion-header>
+<ion-content class="settings-content mupi-page">
+  <mupi-settings-header title="WLAN">
+    <button type="button" class="pill-dark" (click)="addNetworkButtonPressed()">Netzwerk hinzufügen</button>
+  </mupi-settings-header>
 
-<ion-content class="wifi-content">
   @let net = network();
-  <ion-card class="status-card">
-    <div class="status-row">
-      <div class="status-ssid">
-        <ion-icon name="wifi-outline"></ion-icon>
-        <div>
-          <div class="ssid-name">{{ net?.wifi ?? '—' }}</div>
-          <div class="ssid-detail">{{ net?.wifilink ?? '' }} &middot; {{ net?.wifisignal ?? '' }}</div>
-        </div>
-      </div>
-      <div class="status-ip">
-        <div class="ip-label">Box IP address</div>
-        <div class="ip-value">{{ net?.ip ?? '—' }}</div>
-        <div class="gateway-value">Router: {{ net?.gateway ?? '—' }}</div>
+  <!-- Current connection: SSID with link quality on the left, addresses on the right -->
+  <div class="settings-card status-card">
+    <div class="status-main">
+      <ion-icon class="row-icon" [name]="net?.wifi ? 'lucide-wifi' : 'lucide-wifi-off'"></ion-icon>
+      <div class="row-main">
+        <div class="row-title">{{ net?.wifi || 'Nicht verbunden' }}</div>
+        @if (net?.wifilink || net?.wifisignal) {
+          <div class="row-sub">Signal {{ net?.wifilink }}@if (net?.wifilink && net?.wifisignal) { &middot; }{{ net?.wifisignal }}</div>
+        }
       </div>
     </div>
-  </ion-card>
-
-  <div class="list-header">
-    <ion-label>Configured networks</ion-label>
-    <ion-button size="small" (click)="addNetworkButtonPressed()">
-      <ion-icon slot="start" name="add-outline"></ion-icon>
-      Add network
-    </ion-button>
+    <div class="status-addresses">
+      <div class="ip-label">IP der Box</div>
+      <div class="ip-value">{{ net?.ip || '—' }}</div>
+      <div class="ip-label">Router {{ net?.gateway || '—' }}</div>
+    </div>
   </div>
 
-  @if (loading()) {
-    <div class="loading-row"><ion-spinner></ion-spinner></div>
-  } @else {
-    <ion-list class="networks-list">
+  <div class="section-label">Gespeicherte Netzwerke</div>
+  <div class="settings-card">
+    @if (loading()) {
+      <div class="loading-row"><ion-spinner name="crescent"></ion-spinner></div>
+    } @else {
       @for (configuredNetwork of configuredNetworks(); track configuredNetwork.id) {
-        <ion-item [class.current-network]="configuredNetwork.current">
-          <ion-label>
-            <h2>
-              {{ configuredNetwork.ssid }}
-              @if (configuredNetwork.current) {
-                <span class="current-badge">&check; connected</span>
-              }
-            </h2>
-            <p>IP automatic (DHCP)</p>
-          </ion-label>
-          <ion-button slot="end" fill="outline" size="small" (click)="changeNetworkButtonPressed(configuredNetwork)">Change</ion-button>
-          <ion-button slot="end" fill="outline" color="danger" size="small" (click)="deleteNetworkButtonPressed(configuredNetwork)">Delete</ion-button>
-        </ion-item>
+        <div class="settings-row">
+          <span class="row-bar" [class.active]="configuredNetwork.current"></span>
+          <div class="row-main">
+            <div class="row-title">{{ configuredNetwork.ssid }}</div>
+            <div class="row-sub">IP automatisch (DHCP)</div>
+          </div>
+          @if (configuredNetwork.current) {
+            <span class="row-status">verbunden</span>
+          }
+          <div class="row-actions">
+            <button type="button" class="btn-outline" (click)="changeNetworkButtonPressed(configuredNetwork)">Ändern</button>
+            <button type="button" class="btn-outline danger" (click)="deleteNetworkButtonPressed(configuredNetwork)">Löschen</button>
+          </div>
+        </div>
       } @empty {
-        <ion-item>
-          <ion-label>No networks configured yet.</ion-label>
-        </ion-item>
+        <div class="settings-empty">Noch kein Netzwerk gespeichert.</div>
       }
-    </ion-list>
-  }
+    }
+  </div>
+
+  <!-- Maintenance actions that used to sit in the toolbar -->
+  <div class="wifi-tools">
+    <button type="button" class="btn-outline" (click)="wifiRestartButtonPressed()">
+      <ion-icon name="lucide-refresh-cw"></ion-icon>
+      WLAN neu starten
+    </button>
+    <button type="button" class="btn-outline" (click)="enableWifiOnButtonPressed()">
+      <ion-icon name="lucide-wifi"></ion-icon>
+      Onboard-WLAN aktivieren
+    </button>
+  </div>
 </ion-content>

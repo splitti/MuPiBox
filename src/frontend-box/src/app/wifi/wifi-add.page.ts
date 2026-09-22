@@ -2,28 +2,13 @@ import { AfterViewInit, Component, OnInit, ViewEncapsulation } from '@angular/co
 import type { NgForm } from '@angular/forms'
 import { FormsModule } from '@angular/forms'
 import { Router } from '@angular/router'
-import {
-  AlertController,
-  IonBackButton,
-  IonButton,
-  IonButtons,
-  IonCol,
-  IonContent,
-  IonGrid,
-  IonHeader,
-  IonInput,
-  IonItem,
-  IonRow,
-  IonTitle,
-  IonToolbar,
-  NavController,
-} from '@ionic/angular/standalone'
-import { addIcons } from 'ionicons'
-import { arrowBackOutline } from 'ionicons/icons'
+import { AlertController, IonContent, IonIcon, IonInput, NavController } from '@ionic/angular/standalone'
 import Keyboard from 'simple-keyboard'
+import { registerLucideIcons } from '../icons/lucide-icons'
 import { MediaService } from '../media.service'
-import type { WLAN } from '../wlan'
+import { SettingsHeaderComponent } from '../settings-header/settings-header.component'
 import { WifiService } from '../wifi.service'
+import type { WLAN } from '../wlan'
 
 interface EditNetworkState {
   id: number
@@ -35,21 +20,7 @@ interface EditNetworkState {
   encapsulation: ViewEncapsulation.None,
   templateUrl: './wifi-add.page.html',
   styleUrls: ['./wifi-add.page.scss'],
-  imports: [
-    IonTitle,
-    FormsModule,
-    IonHeader,
-    IonToolbar,
-    IonButtons,
-    IonBackButton,
-    IonButton,
-    IonContent,
-    IonGrid,
-    IonRow,
-    IonCol,
-    IonItem,
-    IonInput,
-  ],
+  imports: [FormsModule, IonContent, IonIcon, IonInput, SettingsHeaderComponent],
 })
 export class WifiAddPage implements OnInit, AfterViewInit {
   keyboard: Keyboard
@@ -68,7 +39,7 @@ export class WifiAddPage implements OnInit, AfterViewInit {
   ) {
     const state = this.router.currentNavigation()?.extras.state as { editNetwork?: EditNetworkState } | undefined
     this.editNetwork = state?.editNetwork
-    addIcons({ arrowBackOutline })
+    registerLucideIcons()
   }
 
   ngOnInit() {}
@@ -118,7 +89,7 @@ export class WifiAddPage implements OnInit, AfterViewInit {
       },
     })
 
-    this.selectedInputElem = document.querySelector('ion-input:first-child')
+    this.selectedInputElem = document.querySelector('.wifi-form ion-input')
   }
 
   cancelButtonPressed() {

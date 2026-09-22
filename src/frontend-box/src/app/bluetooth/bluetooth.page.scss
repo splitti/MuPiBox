@@ -1,67 +1,14 @@
-ion-toolbar {
-    ion-back-button {
-        --min-height: 70px;
-        --min-width: 120px;
-        --icon-font-size: 30px;
-    }
-}
+// Bluetooth mockup: power toggle in the header, "Gekoppelte Geräte" card,
+// "Neue Geräte" with the search pill and a hint box.
+@use '../shared/settings';
 
-.bluetooth-content {
-    --ion-background-color: #000000 !important;
-    --padding-start: 16px;
-    --padding-end: 16px;
-    --padding-top: 16px;
-}
-
-.empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding-top: 80px;
-    opacity: 0.8;
-
-    ion-icon {
-        font-size: 64px;
-        margin-bottom: 16px;
-    }
-
-    .hint {
-        opacity: 0.6;
-        font-size: 14px;
-    }
-}
-
-.section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin: 16px 0 8px;
-
-    ion-label {
-        font-size: 16px;
-        opacity: 0.8;
-    }
-}
-
-.devices-list {
-    background: transparent;
-
-    ion-item {
-        --background: #16202a;
-        margin-bottom: 8px;
-        border-radius: 8px;
-
-        h2 {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .connected-badge {
-            font-size: 12px;
-            color: var(--ion-color-primary, #2dd6c7);
-        }
-    }
+// iOS style toggle: filled dark track with a white knob as in the mockup.
+.power-toggle {
+    --track-background: rgba(0, 0, 0, 0.25);
+    --track-background-checked: var(--mupi-settings-text);
+    --handle-background: #ffffff;
+    --handle-background-checked: #ffffff;
+    --handle-box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+    transform: scale(1.2);
+    transform-origin: right center;
 }

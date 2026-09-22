@@ -1,48 +1,20 @@
 import { Component, signal } from '@angular/core'
 import { toSignal } from '@angular/core/rxjs-interop'
 import { Router } from '@angular/router'
-import {
-  AlertController,
-  IonBackButton,
-  IonButton,
-  IonButtons,
-  IonCard,
-  IonContent,
-  IonHeader,
-  IonIcon,
-  IonItem,
-  IonLabel,
-  IonList,
-  IonSpinner,
-  IonTitle,
-  IonToolbar,
-} from '@ionic/angular/standalone'
-import { addIcons } from 'ionicons'
-import { addOutline, arrowBackOutline, refresh, wifiOutline } from 'ionicons/icons'
+import { AlertController, IonContent, IonIcon, IonSpinner } from '@ionic/angular/standalone'
+import { registerLucideIcons } from '../icons/lucide-icons'
 import { MediaService } from '../media.service'
 import { PlayerCmds, PlayerService } from '../player.service'
+import { SettingsHeaderComponent } from '../settings-header/settings-header.component'
 import { WifiService } from '../wifi.service'
 import type { WifiConfiguredNetwork } from '../wifi-network'
 
+/** WLAN settings in the settings mockup layout. */
 @Component({
   selector: 'app-wifi',
   templateUrl: './wifi.page.html',
   styleUrls: ['./wifi.page.scss'],
-  imports: [
-    IonTitle,
-    IonHeader,
-    IonToolbar,
-    IonButtons,
-    IonBackButton,
-    IonButton,
-    IonIcon,
-    IonContent,
-    IonCard,
-    IonList,
-    IonItem,
-    IonLabel,
-    IonSpinner,
-  ],
+  imports: [IonContent, IonIcon, IonSpinner, SettingsHeaderComponent],
 })
 export class WifiPage {
   protected network = toSignal(this.mediaService.network$, { initialValue: null })
@@ -56,7 +28,7 @@ export class WifiPage {
     private playerService: PlayerService,
     private router: Router,
   ) {
-    addIcons({ refresh, wifiOutline, addOutline, arrowBackOutline })
+    registerLucideIcons()
   }
 
   ionViewWillEnter() {
@@ -87,11 +59,11 @@ export class WifiPage {
   async deleteNetworkButtonPressed(network: WifiConfiguredNetwork) {
     const alert = await this.alertController.create({
       cssClass: 'alert',
-      header: 'Delete network',
-      message: `Do you want to remove the saved network "${network.ssid}"?`,
+      header: 'Netzwerk löschen',
+      message: `Soll das gespeicherte Netzwerk "${network.ssid}" entfernt werden?`,
       buttons: [
         {
-          text: 'Delete',
+          text: 'Löschen',
           handler: () => {
             this.wifiService.removeNetwork(network.id).subscribe(() => {
               this.loadConfiguredNetworks()
@@ -99,7 +71,7 @@ export class WifiPage {
           },
         },
         {
-          text: 'Cancel',
+          text: 'Abbrechen',
         },
       ],
     })
@@ -110,17 +82,17 @@ export class WifiPage {
   async wifiRestartButtonPressed() {
     const alert = await this.alertController.create({
       cssClass: 'alert',
-      header: 'Restart Wifi',
-      message: 'Do you want to restart the wifi network?',
+      header: 'WLAN neu starten',
+      message: 'Soll das WLAN neu gestartet werden?',
       buttons: [
         {
-          text: 'Restart',
+          text: 'Neu starten',
           handler: () => {
             this.playerService.sendCmd(PlayerCmds.NETWORKRESTART)
           },
         },
         {
-          text: 'Cancel',
+          text: 'Abbrechen',
         },
       ],
     })
@@ -131,17 +103,17 @@ export class WifiPage {
   async enableWifiOnButtonPressed() {
     const alert = await this.alertController.create({
       cssClass: 'alert',
-      header: 'OnBoard-Wifi',
-      message: 'Enable OnBoard-Wifi.',
+      header: 'Onboard-WLAN',
+      message: 'Onboard-WLAN des Raspberry Pi aktivieren?',
       buttons: [
         {
-          text: 'Enable',
+          text: 'Aktivieren',
           handler: () => {
             this.playerService.sendCmd(PlayerCmds.ENABLEWIFI)
           },
         },
         {
-          text: 'Cancel',
+          text: 'Abbrechen',
         },
       ],
     })
