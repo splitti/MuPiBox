@@ -47,6 +47,8 @@ export class SpotifyMediaInfo {
 
       const embedUrl = `https://open.spotify.com/embed/playlist/${playlistId}`
       const response = await fetch(embedUrl, {
+        // A box without internet must not hold the scraper queue open indefinitely.
+        signal: AbortSignal.timeout(15000),
         headers: {
           'user-agent':
             'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36',

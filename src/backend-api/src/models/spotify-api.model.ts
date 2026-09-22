@@ -59,9 +59,13 @@ export interface SpotifyApiPlaylistDetails {
         id: string
         uri: string
         name: string
+        duration_ms: number
+        artists: Array<{ name: string }>
       }
     }>
   }
+  /** False when the API delivered fewer tracks than the playlist holds. */
+  tracksComplete: boolean
 }
 
 export interface SpotifyApiShowDetails {

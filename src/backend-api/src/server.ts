@@ -13,7 +13,12 @@ import xmlparser from 'xml-js'
 import { LogRequest, LogResponse } from './models/log.model'
 import type { MupiboxConfig } from './models/mupibox-config.model'
 import { ServerConfig } from './models/server.model'
-import type { SpotifyValidationRequest, SpotifyValidationResponse } from './models/spotify-api.model'
+import type {
+  SpotifyApiPlaylistDetails,
+  SpotifyValidationRequest,
+  SpotifyValidationResponse,
+} from './models/spotify-api.model'
+import type { SpotifyPlaylistData } from './models/spotify-media-info.model'
 import { SpotifyApiService } from './services/spotify-api.service'
 import { SpotifyMediaInfo } from './services/spotify-media-info.service'
 
@@ -834,65 +839,86 @@ app.get('/api/spotify/playlist/:playlistId', async (req, res) => {
     return
   }
 
-  // Step 1: Check scraper cache first (fastest - no API call needed)
-  const cachedScraperData = await spotifyMediaInfo.getCachedPlaylistData(playlistId)
-
-  if (cachedScraperData) {
-    // Return cached data immediately for best performance
+  // Step 1: The API is the only source that knows every track of a playlist with more
+  // than 100 entries (the embed page the scraper reads stops at 100). Cached answers
+  // return at once; a refusal (Spotify-owned playlists, development mode) is remembered.
+  let apiData: SpotifyApiPlaylistDetails | undefined
+  try {
+    apiData = await spotifyApiService.getPlaylist(playlistId, forceRefresh)
+    if (apiData.tracksComplete && apiData.tracks.items.length > 0) {
+      console.log(
+        `${new Date().toLocaleString()}: [MuPiBox-Server] Playlist via API: ${apiData.name} (${apiData.tracks.items.length} tracks)`,
+      )
+      res.status(200).json(apiData)
+      return
+    }
     console.log(
-      `${new Date().toLocaleString()}: [MuPiBox-Server] ⚡ Returning cached scraper data for playlist: ${cachedScraperData.playlist.name}`,
+      `${new Date().toLocaleString()}: [MuPiBox-Server] API delivered ${apiData.tracks.items.length}/${apiData.tracks.total} tracks for playlist ${playlistId}, completing via scraper`,
     )
-    res.status(200).json(cachedScraperData)
-
-    // Trigger background update (fire-and-forget) to keep cache fresh
-    // This runs async after response is sent
-    setImmediate(async () => {
-      console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] API failed in background, updating via scraper`)
-      await spotifyMediaInfo.fetchPlaylistData(playlistId)
-    })
-
-    return
+  } catch (apiError) {
+    console.log(
+      `${new Date().toLocaleString()}: [MuPiBox-Server] API failed for playlist ${playlistId}, trying scraper: ${apiError instanceof Error ? apiError.message : apiError}`,
+    )
   }
 
-  // Step 2: No cache exists - fetch synchronously (try API first, then scraper)
-  try {
-    console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Fetching playlist via API: ${playlistId}`)
-
-    // Try API first (fast for public/accessible playlists)
-    const apiData = await spotifyApiService.getPlaylist(playlistId, forceRefresh)
-    res.status(200).json(apiData)
-
-    console.log(
-      `${new Date().toLocaleString()}: [MuPiBox-Server] Successfully fetched playlist via API: ${apiData.name}`,
-    )
-
-    // Always try to fetch playlist via scraper
-    await spotifyMediaInfo.fetchPlaylistData(playlistId)
-  } catch (_apiError) {
-    console.log(
-      `${new Date().toLocaleString()}: [MuPiBox-Server] API failed for playlist ${playlistId}, trying scraper fallback...`,
-    )
-
-    // API failed - use scraper immediately
+  // Step 2: Scraper cache (refreshed in the background when stale), otherwise a live scrape.
+  let scraperData = await spotifyMediaInfo.getCachedPlaylistData(playlistId)
+  if (scraperData) {
+    setImmediate(() => {
+      spotifyMediaInfo.fetchPlaylistData(playlistId).catch(() => {
+        // Logged by the scraper itself; the cached copy stays in use.
+      })
+    })
+  } else {
     try {
-      const scraperData = await spotifyMediaInfo.fetchPlaylistData(playlistId)
-      res.status(200).json(scraperData)
-
+      scraperData = await spotifyMediaInfo.fetchPlaylistData(playlistId)
       console.log(
-        `${new Date().toLocaleString()}: [MuPiBox-Server] Successfully fetched playlist via scraper: ${scraperData.playlist.name}`,
+        `${new Date().toLocaleString()}: [MuPiBox-Server] Playlist via scraper: ${scraperData.playlist.name} (${scraperData.tracks.length} tracks)`,
       )
     } catch (scraperError) {
       console.error(
-        `${new Date().toLocaleString()}: [MuPiBox-Server] Both API and scraper failed for playlist ${playlistId}:`,
-        scraperError,
+        `${new Date().toLocaleString()}: [MuPiBox-Server] Scraper failed for playlist ${playlistId}:`,
+        scraperError instanceof Error ? scraperError.message : scraperError,
       )
-      res.status(500).json({
-        error: 'Failed to fetch playlist data',
-        message: scraperError instanceof Error ? scraperError.message : 'Unknown error',
-      })
+      if (!apiData) {
+        res.status(500).json({
+          error: 'Failed to fetch playlist data',
+          message: scraperError instanceof Error ? scraperError.message : 'Unknown error',
+        })
+        return
+      }
     }
   }
+
+  res.status(200).json(scraperData ? mergePlaylistSources(scraperData, apiData) : apiData)
 })
+
+/**
+ * Combines the scraper result with a partial API result: the longer track list wins
+ * and the playlist size is the largest count any source reported, so a playlist with
+ * more than 100 tracks is not presented as one with exactly 100.
+ */
+function mergePlaylistSources(
+  scraperData: SpotifyPlaylistData,
+  apiData: SpotifyApiPlaylistDetails | undefined,
+): SpotifyPlaylistData {
+  if (!apiData) {
+    return scraperData
+  }
+  const apiTracks = apiData.tracks.items.map((item) => ({
+    name: item.track.name,
+    uri: item.track.uri,
+    duration_ms: item.track.duration_ms,
+    artists: item.track.artists.map((artist) => ({ name: artist.name, uri: '' })),
+    album: { name: '', uri: '', images: [] },
+  }))
+  const tracks = apiTracks.length > scraperData.tracks.length ? apiTracks : scraperData.tracks
+  const total = Math.max(apiData.tracks.total, scraperData.playlist.tracks?.total ?? 0, tracks.length)
+  return {
+    playlist: { ...scraperData.playlist, tracks: { total } },
+    tracks,
+  }
+}
 
 // Search albums
 app.get('/api/spotify/search/albums', async (req, res) => {

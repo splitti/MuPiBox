@@ -29,6 +29,23 @@ export class SpotifyApiService {
   private lastRequestTime = 0
   private readonly minRequestInterval = 100 // 100ms between requests
 
+  // Upper bound for one Spotify request (API call or token refresh). Without it a
+  // box without internet keeps the sequential request queue hanging on the first
+  // request and every other lookup behind it never answers.
+  private readonly requestTimeoutMs = 10000
+  // A playlist is paged through several requests; each page is still cut off after
+  // requestTimeoutMs by the fetch signal.
+  private readonly playlistTimeoutMs = 60000
+  // After a network failure every uncached request fails immediately for this long,
+  // so an offline box answers all lookups at once instead of one timeout at a time.
+  private readonly networkFailureBackoffMs = 30000
+  private networkFailureUntil = 0
+
+  // Playlists whose track list the API refused (e.g. Spotify-owned playlists for apps
+  // in development mode) are not retried on every media list load.
+  private readonly playlistApiDeniedMs = 6 * 60 * 60 * 1000
+  private playlistApiDeniedUntil = new Map<string, number>()
+
   // Queue management for concurrent requests
   private requestQueue: Array<{
     key: string
@@ -52,7 +69,7 @@ export class SpotifyApiService {
 
   // Background cache update tracking
   private backgroundUpdates = new Set<string>()
-  private backgroundQueue: Array<{ key: string; operation: () => Promise<any> }> = []
+  private backgroundQueue: Array<{ key: string; operation: () => Promise<any>; timeoutMs: number }> = []
   private isProcessingBackground = false
   private readonly maxConcurrentBackground = 1
   private readonly backgroundUpdateDelay = 10000 // 10 seconds between updates
@@ -61,6 +78,11 @@ export class SpotifyApiService {
     this.spotifyApi = SpotifyApi.withClientCredentials(
       this.config.spotify?.clientId || '',
       this.config.spotify?.clientSecret || '',
+      [],
+      {
+        // Abort API calls that do not answer instead of holding the socket open.
+        fetch: (url, init) => fetch(url, { ...init, signal: AbortSignal.timeout(this.requestTimeoutMs) }),
+      },
     )
     console.info('Spotify API service initialized - token management handled by library')
   }
@@ -142,7 +164,31 @@ export class SpotifyApiService {
     }
   }
 
-  private async rateLimitedRequest<T>(operation: () => Promise<T>): Promise<T> {
+  private isNetworkError(error: unknown): boolean {
+    if (!(error instanceof Error)) {
+      return false
+    }
+    const cause = error.cause instanceof Error ? error.cause.message : ''
+    const message = `${error.name}: ${error.message} ${cause}`
+    return /TimeoutError|AbortError|timed out|fetch failed|ENOTFOUND|EAI_AGAIN|ECONNREFUSED|ECONNRESET|ETIMEDOUT|ENETUNREACH/i.test(
+      message,
+    )
+  }
+
+  /** Runs one operation with the request time limit; the operation itself keeps running. */
+  private withTimeout<T>(operation: () => Promise<T>, timeoutMs: number): Promise<T> {
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const timeout = new Promise<never>((_resolve, reject) => {
+      timer = setTimeout(() => reject(new Error(`Spotify request timed out after ${timeoutMs}ms`)), timeoutMs)
+    })
+    return Promise.race([operation(), timeout]).finally(() => clearTimeout(timer))
+  }
+
+  private async rateLimitedRequest<T>(operation: () => Promise<T>, timeoutMs = this.requestTimeoutMs): Promise<T> {
+    if (Date.now() < this.networkFailureUntil) {
+      throw new Error('Spotify is unreachable (recent network failure), request skipped')
+    }
+
     // Implement simple rate limiting
     const now = Date.now()
     const timeSinceLastRequest = now - this.lastRequestTime
@@ -153,8 +199,15 @@ export class SpotifyApiService {
 
     try {
       this.lastRequestTime = Date.now()
-      return await operation()
+      return await this.withTimeout(operation, timeoutMs)
     } catch (error: any) {
+      if (this.isNetworkError(error)) {
+        this.networkFailureUntil = Date.now() + this.networkFailureBackoffMs
+        console.warn(
+          `Spotify unreachable (${error instanceof Error ? error.message : String(error)}), skipping requests for ${this.networkFailureBackoffMs / 1000}s`,
+        )
+        throw error
+      }
       if (error.statusCode === 429) {
         // Rate limited - wait and retry
         const retryAfter = error.headers?.['retry-after']
@@ -162,7 +215,7 @@ export class SpotifyApiService {
           : 1000
         console.warn(`Rate limited by Spotify API. Retrying after ${retryAfter}ms`)
         await new Promise((resolve) => setTimeout(resolve, retryAfter))
-        return this.rateLimitedRequest(operation)
+        return this.rateLimitedRequest(operation, timeoutMs)
       }
       // Let the library handle 401 errors and token refresh automatically
       throw error
@@ -173,6 +226,7 @@ export class SpotifyApiService {
     cacheKey: string,
     operation: () => Promise<T>,
     forceBackgroundRefresh = false,
+    timeoutMs = this.requestTimeoutMs,
   ): Promise<T> {
     const cacheResult = await this.getFromCache(cacheKey)
 
@@ -181,17 +235,17 @@ export class SpotifyApiService {
       if (cacheResult.isStale || forceBackgroundRefresh) {
         // Trigger background update if cache is stale or refresh is forced
         // Prioritize forced refreshes (e.g., when actively playing content)
-        this.triggerBackgroundUpdate(cacheKey, operation, forceBackgroundRefresh)
+        this.triggerBackgroundUpdate(cacheKey, operation, forceBackgroundRefresh, timeoutMs)
       }
       return cacheResult.data as T
     }
 
     // No cache exists - queue for synchronous processing
     console.info(`🔍 No cache for ${cacheKey}, executing request...`)
-    return this.queueRequest(cacheKey, operation)
+    return this.queueRequest(cacheKey, operation, timeoutMs)
   }
 
-  private async queueRequest<T>(key: string, operation: () => Promise<T>): Promise<T> {
+  private async queueRequest<T>(key: string, operation: () => Promise<T>, timeoutMs: number): Promise<T> {
     // Check if there's already a pending request for this key
     const existingRequest = this.pendingRequests.get(key)
     if (existingRequest) {
@@ -211,7 +265,7 @@ export class SpotifyApiService {
         this.requestQueue.push({
           key,
           operation: async () => {
-            const result = await this.rateLimitedRequest(operation)
+            const result = await this.rateLimitedRequest(operation, timeoutMs)
             await this.saveToCache(key, result)
             return result
           },
@@ -276,7 +330,12 @@ export class SpotifyApiService {
     console.debug('🏁 Finished processing request queue')
   }
 
-  private triggerBackgroundUpdate(cacheKey: string, operation: () => Promise<any>, prioritize = false): void {
+  private triggerBackgroundUpdate(
+    cacheKey: string,
+    operation: () => Promise<any>,
+    prioritize = false,
+    timeoutMs = this.requestTimeoutMs,
+  ): void {
     if (this.backgroundUpdates.has(cacheKey)) {
       console.debug(`🔄 Background update already in progress for ${cacheKey}`)
       return
@@ -289,11 +348,11 @@ export class SpotifyApiService {
 
     if (prioritize) {
       // Add to front of queue for immediate processing
-      this.backgroundQueue.unshift({ key: cacheKey, operation })
+      this.backgroundQueue.unshift({ key: cacheKey, operation, timeoutMs })
       console.debug(`⚡ Prioritized background update for ${cacheKey} (added to front of queue)`)
     } else {
       // Add to end of queue
-      this.backgroundQueue.push({ key: cacheKey, operation })
+      this.backgroundQueue.push({ key: cacheKey, operation, timeoutMs })
       console.debug(`📋 Queued background update for ${cacheKey}`)
     }
 
@@ -315,7 +374,7 @@ export class SpotifyApiService {
         const queueItem = this.backgroundQueue.shift()
         if (!queueItem) break
 
-        const { key, operation } = queueItem
+        const { key, operation, timeoutMs } = queueItem
 
         if (this.backgroundUpdates.has(key)) {
           console.debug(`⏭️ Skipping ${key} - already in progress`)
@@ -324,7 +383,7 @@ export class SpotifyApiService {
 
         this.backgroundUpdates.add(key)
 
-        const updatePromise = this.rateLimitedRequest(operation)
+        const updatePromise = this.rateLimitedRequest(operation, timeoutMs)
           .then(async (result) => {
             await this.saveToCache(key, result)
             console.debug(`✅ [BG] Background update completed for ${key}`)
@@ -452,25 +511,96 @@ export class SpotifyApiService {
     })
   }
 
+  /**
+   * Playlist metadata plus the complete track list. The list is paged through the
+   * API (the embed scraper only ever sees the first 100 tracks), so the player can
+   * tell the position of any track and the real size of the playlist. When the API
+   * refuses the tracks (development mode apps and Spotify-owned playlists) the
+   * result carries what the API did return and `tracksComplete: false`.
+   */
   async getPlaylist(playlistId: string, forceBackgroundRefresh = false): Promise<SpotifyApiPlaylistDetails> {
-    const cacheKey = `playlist_${playlistId}`
+    const cacheKey = `playlist_v2_${playlistId}`
+    if (Date.now() < (this.playlistApiDeniedUntil.get(playlistId) ?? 0)) {
+      throw new Error(`Playlist ${playlistId} is not available through the API (cached refusal)`)
+    }
 
-    return this.executeWithCache(
-      cacheKey,
-      async () => {
-        const result = await this.spotifyApi.playlists.getPlaylist(playlistId, 'DE')
-        return {
-          id: result.id,
-          name: result.name,
-          images: result.images,
-          tracks: {
-            total: 0,
-            items: [],
-          },
-        }
-      },
-      forceBackgroundRefresh,
-    )
+    try {
+      return await this.executeWithCache(
+        cacheKey,
+        async () => {
+          const trackFields = 'items(track(id,uri,name,duration_ms,artists(name)))'
+          const result = await this.spotifyApi.playlists.getPlaylist(
+            playlistId,
+            'DE',
+            `id,name,images,tracks(total,${trackFields})`,
+          )
+          const total = result.tracks?.total ?? 0
+          const items = this.mapPlaylistItems(result.tracks?.items)
+          let tracksComplete = true
+
+          // Page through the rest; keep a partial list if a page fails.
+          try {
+            while (items.length < total) {
+              const page = await this.spotifyApi.playlists.getPlaylistItems(
+                playlistId,
+                'DE',
+                trackFields,
+                50,
+                items.length,
+              )
+              const pageItems = this.mapPlaylistItems(page.items)
+              if (pageItems.length === 0) {
+                tracksComplete = false
+                break
+              }
+              items.push(...pageItems)
+              await new Promise((resolve) => setTimeout(resolve, this.minRequestInterval))
+            }
+          } catch (error) {
+            console.warn(
+              `Playlist ${playlistId}: only ${items.length}/${total} tracks available through the API:`,
+              error instanceof Error ? error.message : String(error),
+            )
+            tracksComplete = false
+          }
+
+          return {
+            id: result.id,
+            name: result.name,
+            images: result.images,
+            tracks: { total: Math.max(total, items.length), items },
+            tracksComplete,
+          }
+        },
+        forceBackgroundRefresh,
+        this.playlistTimeoutMs,
+      )
+    } catch (error) {
+      if (this.isApiRefusal(error)) {
+        this.playlistApiDeniedUntil.set(playlistId, Date.now() + this.playlistApiDeniedMs)
+      }
+      throw error
+    }
+  }
+
+  private mapPlaylistItems(items: Array<{ track?: any }> | undefined): SpotifyApiPlaylistDetails['tracks']['items'] {
+    return (items || [])
+      .filter((item) => item?.track?.uri)
+      .map((item) => ({
+        track: {
+          id: item.track.id || '',
+          uri: item.track.uri,
+          name: item.track.name || '',
+          duration_ms: item.track.duration_ms || 0,
+          artists: (item.track.artists || []).map((artist: any) => ({ name: artist?.name || '' })),
+        },
+      }))
+  }
+
+  /** 403/404 from the API: the resource is out of reach for this app, retrying will not help. */
+  private isApiRefusal(error: unknown): boolean {
+    const message = error instanceof Error ? error.message : ''
+    return /Bad OAuth request|response code: 40[34]/.test(message)
   }
 
   async getPlaylistTracks(playlistId: string, limit = 10, offset = 0, forceBackgroundRefresh = false): Promise<any[]> {
