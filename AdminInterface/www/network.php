@@ -24,7 +24,7 @@
 	// installed (used to show install state), and where the install/remove scripts live.
 	$usb_wifi_drivers = array(
 		'RTL88X2BU' => array(
-			'label' => 'RTL88X2BU-Treiber',
+			'label' => 'RTL88X2BU',
 			'path' => '/home/dietpi/.driver/network/88x2bu-20210702',
 			'install_url' => 'https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/online/install_rtl88x2bu.sh',
 			'remove_url' => 'https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/online/remove_rtl88x2bu.sh',
@@ -491,7 +491,7 @@
 			These drivers are for several network cards like these:
 			<ul style="list-style-type:'• '; margin-left:20px;"><li>			<a href="https://amzn.to/3vj2Ubn" target="_blank">Referal link to Amazon.com (US) (→ amzn.to)</a></li>
 			<li><a href="https://amzn.to/3U4ID3Z" target="_blank">Referal link to Amazon.de (GER) (→ amzn.to)</a></li>
-			<li>(RTL8821AU)</li></ul>
+			<li><a href="https://www.tp-link.com/uk/home-networking/adapter/archer-t2u-plus/" target="_blank">Archer T2U Plus</a></li></ul>
 			</p>
 			<p>
 			<select id="usb_wifi_driver" name="usb_wifi_driver" onchange="this.form.submit()">
