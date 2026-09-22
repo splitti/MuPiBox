@@ -20,13 +20,31 @@
 	$commandB="sudo iwconfig ".$WIFI_IF." | awk '/Bit Rate/{split($2,a,\"=|/\");print a[2]\" Mb/s\"}'";
 	$BITRATE=exec($commandB);
 
-	if( $_POST['RTL88X2BU'] == "Install driver" )
+	// USB WiFi drivers offered on the Network page: which chipset, where it lands once
+	// installed (used to show install state), and where the install/remove scripts live.
+	$usb_wifi_drivers = array(
+		'RTL88X2BU' => array(
+			'label' => 'RTL88X2BU-Treiber',
+			'path' => '/home/dietpi/.driver/network/88x2bu-20210702',
+			'install_url' => 'https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/online/install_rtl88x2bu.sh',
+			'remove_url' => 'https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/online/remove_rtl88x2bu.sh',
+			),
+		'RTL8821AU' => array(
+			'label' => 'RTL8821AU',
+			'path' => '/home/dietpi/.driver/network/8821au-20210708',
+			'install_url' => 'https://raw.githubusercontent.com/Lippsson/MuPiBox/custom-changes/scripts/online/install_rtl8821au.sh',
+			'remove_url' => 'https://raw.githubusercontent.com/Lippsson/MuPiBox/custom-changes/scripts/online/remove_rtl8821au.sh',
+			),
+		);
+	$usb_wifi_driver = isset($_POST['usb_wifi_driver']) && isset($usb_wifi_drivers[$_POST['usb_wifi_driver']]) ? $_POST['usb_wifi_driver'] : 'RTL88X2BU';
+
+	if( $_POST['USB_WIFI_DRIVER'] == "Install driver" )
 		{
-		$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/online/install_rtl88x2bu.sh | sudo su dietpi -c bash";
+		$command = "cd; curl -L ".$usb_wifi_drivers[$usb_wifi_driver]['install_url']." | sudo su dietpi -c bash";
 		exec($command, $output, $result );
 
 		$change=1;
-		if (file_exists("/tmp/driver-install.txt")) 
+		if (file_exists("/tmp/driver-install.txt"))
 			{
 			$CHANGE_TXT=$CHANGE_TXT."<li>Kernel-headers not installed. Please check correct arm_64bit-setting in /boot/config.txt (in V7, the setting must be 0).</li>";
 			}
@@ -35,9 +53,9 @@
 			$CHANGE_TXT=$CHANGE_TXT."<li>Driver installed</li>";
 			}
 		}
-	if( $_POST['RTL88X2BU'] == "Remove driver" )
+	if( $_POST['USB_WIFI_DRIVER'] == "Remove driver" )
 		{
-		$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/online/remove_rtl88x2bu.sh | sudo su dietpi -c bash";
+		$command = "cd; curl -L ".$usb_wifi_drivers[$usb_wifi_driver]['remove_url']." | sudo su dietpi -c bash";
 		exec($command, $output, $result );
 
 		$change=1;
@@ -468,30 +486,38 @@
 			</p>
 			<input id="saveForm" class="button_text" type="submit" name="renew_dhcp" value="Renew DHCP-Lease" />
 		</li>
-		<li class="li_1"><h2>Install RTL88X2BU-Drivers</h2>
+		<li class="li_1"><h2>Install USB-Wlan drivers</h2>
 			<p>
-			These drivers are for several network cards like these: 
-			<ul style="list-style-type:'• '; margin-left:20px;"><li>			<a href="https://amzn.to/3vj2Ubn" target="_blank">Referal link to Amazon.com (US)</a></li>
-			<li><a href="https://amzn.to/3U4ID3Z" target="_blank">Referal link to Amazon.de (GER)</a></li></ul>
+			These drivers are for several network cards like these:
+			<ul style="list-style-type:'• '; margin-left:20px;"><li>			<a href="https://amzn.to/3vj2Ubn" target="_blank">Referal link to Amazon.com (US) (→ amzn.to)</a></li>
+			<li><a href="https://amzn.to/3U4ID3Z" target="_blank">Referal link to Amazon.de (GER) (→ amzn.to)</a></li>
+			<li>(RTL8821AU)</li></ul>
 			</p>
 			<p>
-			
+			<select id="usb_wifi_driver" name="usb_wifi_driver" onchange="this.form.submit()">
+				<?php foreach ($usb_wifi_drivers as $key => $driver) { ?>
+				<option value="<?php print $key; ?>" <?php if ($usb_wifi_driver === $key) print 'selected'; ?>><?php print $driver['label']; ?></option>
+				<?php } ?>
+			</select>
+			</p>
+			<p>
+
 			<?php
-			$path="/home/dietpi/.driver/network/88x2bu-20210702";
+			$path=$usb_wifi_drivers[$usb_wifi_driver]['path'];
 		    if($path !== false AND is_dir($path))
 				{
-				$change_rtl88x2bu="Remove driver";
-				$state_rtl88x2bu="installed";
+				$change_usb_wifi_driver="Remove driver";
+				$state_usb_wifi_driver="installed";
 				}
 			else
 				{
-				$change_rtl88x2bu="Install driver";
-				$state_rtl88x2bu="not installed";
+				$change_usb_wifi_driver="Install driver";
+				$state_usb_wifi_driver="not installed";
 				}
-			print("<b>State: ".$state_rtl88x2bu);
+			print("<b>State: ".$state_usb_wifi_driver);
 			?>
 			</b></p><p>Please notice: Installation takes a long long time! If you want to install manually and see the installation status, check out this blog post: <a href="https://mupibox.de/pimp-die-mupibox-mit-schneller-netzwerkkarte/" target="_blank">Blog Post</a></p>
-			<input id="saveForm" class="button_text" type="submit" name="RTL88X2BU" value="<?php print $change_rtl88x2bu; ?>" />
+			<input id="saveForm" class="button_text" type="submit" name="USB_WIFI_DRIVER" value="<?php print $change_usb_wifi_driver; ?>" />
 		</li>
 
 
