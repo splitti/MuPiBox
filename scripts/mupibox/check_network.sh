@@ -44,32 +44,20 @@ if [ ! -f ${NETWORKCONFIG} ]; then
 	chown dietpi:dietpi ${NETWORKCONFIG}
 	chmod 777 ${NETWORKCONFIG}
 	/usr/bin/cat <<<$(/usr/bin/jq -n --arg v "starting" '.onlinestate = $v' ${NETWORKCONFIG}) >${NETWORKCONFIG}
-else
-	OLD_ONLINESTATE=$(/usr/bin/jq -r .onlinestate ${NETWORKCONFIG})
 fi
 
 /usr/local/bin/mupibox/./get_network.sh
 
 while true; do
-	if ($(/usr/bin/python3 /usr/local/bin/mupibox/check_network.py) == ${TRUESTATE}); then
+	if /usr/bin/python3 /usr/local/bin/mupibox/check_network.py; then
 		ONLINESTATE=${TRUESTATE}
 		if [ "${ONLINESTATE}" != "${OLDSTATE}" ]; then
-			if [ ! -f ${ACTIVE_FILE} ]; then
-				ln -s ${DATA_FILE} ${ACTIVE_FILE}
-				chown dietpi:dietpi ${ACTIVE_FILE}
-			elif [[ ${OLD_ONLINESTATE} != "online" ]]; then
-				rm ${ACTIVE_FILE}
-				ln -s ${DATA_FILE} ${ACTIVE_FILE}
-				chown dietpi:dietpi ${ACTIVE_FILE}
-			fi
-			if [ ! -f ${ACTIVERESUME_FILE} ]; then
-				ln -s ${RESUME_FILE} ${ACTIVERESUME_FILE}
-				chown dietpi:dietpi ${ACTIVERESUME_FILE}
-			elif [[ ${OLD_ONLINESTATE} != "online" ]]; then
-				rm ${ACTIVERESUME_FILE}
-				ln -s ${RESUME_FILE} ${ACTIVERESUME_FILE}
-				chown dietpi:dietpi ${ACTIVERESUME_FILE}
-			fi
+			rm -f "${ACTIVE_FILE}"
+			ln -s "${DATA_FILE}" "${ACTIVE_FILE}"
+			chown dietpi:dietpi "${ACTIVE_FILE}"
+			rm -f "${ACTIVERESUME_FILE}"
+			ln -s "${RESUME_FILE}" "${ACTIVERESUME_FILE}"
+			chown dietpi:dietpi "${ACTIVERESUME_FILE}"
 		fi
 	else
 		ONLINESTATE=${FALSESTATE}
@@ -112,22 +100,12 @@ while true; do
 			sed -i 's/} {/}, {/g' ${OFFLINERESUME_FILE}
 		fi
 		if [ "${ONLINESTATE}" != "${OLDSTATE}" ]; then
-			if [ ! -f ${ACTIVE_FILE} ]; then
-				ln -s ${OFFLINE_FILE} ${ACTIVE_FILE}
-				chown dietpi:dietpi ${ACTIVE_FILE}
-			elif [[ ${OLD_ONLINESTATE} != "offline" ]]; then
-				rm ${ACTIVE_FILE}
-				ln -s ${OFFLINE_FILE} ${ACTIVE_FILE}
-				chown dietpi:dietpi ${ACTIVE_FILE}
-			fi
-			if [ ! -f ${ACTIVERESUME_FILE} ]; then
-				ln -s ${OFFLINERESUME_FILE} ${ACTIVERESUME_FILE}
-				chown dietpi:dietpi ${ACTIVERESUME_FILE}
-			elif [[ ${OLD_ONLINESTATE} != "offline" ]]; then
-				rm ${ACTIVERESUME_FILE}
-				ln -s ${OFFLINERESUME_FILE} ${ACTIVERESUME_FILE}
-				chown dietpi:dietpi ${ACTIVERESUME_FILE}
-			fi
+			rm -f "${ACTIVE_FILE}"
+			ln -s "${OFFLINE_FILE}" "${ACTIVE_FILE}"
+			chown dietpi:dietpi "${ACTIVE_FILE}"
+			rm -f "${ACTIVERESUME_FILE}"
+			ln -s "${OFFLINERESUME_FILE}" "${ACTIVERESUME_FILE}"
+			chown dietpi:dietpi "${ACTIVERESUME_FILE}"
 		fi
 	fi
 
