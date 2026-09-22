@@ -5,14 +5,14 @@
 		'RTL88X2BU' => array(
 			'label' => 'RTL88X2BU',
 			'path' => '/home/dietpi/.driver/network/88x2bu-20210702',
-			'install_url' => 'https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/online/install_rtl88x2bu.sh',
-			'remove_url' => 'https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/online/remove_rtl88x2bu.sh',
+			'install_url' => 'https://raw.githubusercontent.com/friebi/MuPiBox/main/scripts/online/install_rtl88x2bu.sh',
+			'remove_url' => 'https://raw.githubusercontent.com/friebi/MuPiBox/main/scripts/online/remove_rtl88x2bu.sh',
 			),
 		'RTL8821AU' => array(
 			'label' => 'RTL8821AU',
 			'path' => '/home/dietpi/.driver/network/8821au-20210708',
-			'install_url' => 'https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/online/install_rtl8821au.sh',
-			'remove_url' => 'https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/online/remove_rtl8821au.sh',
+			'install_url' => 'https://raw.githubusercontent.com/friebi/MuPiBox/main/scripts/online/install_rtl8821au.sh',
+			'remove_url' => 'https://raw.githubusercontent.com/friebi/MuPiBox/main/scripts/online/remove_rtl8821au.sh',
 			),
 		);
 
