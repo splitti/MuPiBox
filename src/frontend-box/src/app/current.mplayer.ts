@@ -12,5 +12,8 @@ export interface CurrentMPlayer {
   currentTracknr?: number
   totalTracks?: number
   progressTime?: number
+  /** Position and length of the running track in seconds (local player only). */
+  timePos?: number
+  length?: number
   volume?: number
 }

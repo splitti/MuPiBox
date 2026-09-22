@@ -13,10 +13,4 @@
   }
 </div>
 
-@if (pages().length > 1) {
-  <div class="page-dots">
-    @for (page of pages(); track $index) {
-      <button type="button" class="page-dot" [class.active]="$index === activePage()" (click)="scrollToPage($index)"></button>
-    }
-  </div>
-}
+<mupi-page-dots [count]="pages().length" [active]="activePage()" (dotClicked)="scrollToPage($event)"></mupi-page-dots>

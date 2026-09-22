@@ -44,33 +44,12 @@ $gap-y: 38px;
     scroll-snap-align: start;
 }
 
-.page-dots {
+// Dot column on the right, vertically centered over the whole grid height.
+mupi-page-dots {
     position: absolute;
     right: 0;
     top: 0;
     bottom: 0;
     width: 72px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 33px;
     z-index: 10;
-    pointer-events: none;
-}
-
-.page-dot {
-    width: 15px;
-    height: 15px;
-    padding: 0;
-    border: 0;
-    border-radius: 50%;
-    background: rgba(217, 217, 217, 0.55);
-    pointer-events: auto;
-    transition: background 150ms ease, transform 150ms ease;
-
-    &.active {
-        background: #d9d9d9;
-        transform: scale(1.25);
-    }
 }

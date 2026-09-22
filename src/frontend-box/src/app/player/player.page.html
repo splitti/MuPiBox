@@ -1,10 +1,10 @@
 <ion-content class="player-content mupi-page" [scrollY]="false">
   <mupi-status-bar slot="fixed"></mupi-status-bar>
 
-  <!-- Header as in the album view: the cover in the corner leads back (or closes the track list). -->
+  <!-- Header as in the album view: the artist cover in the corner leads back to the album view (or closes the track list). -->
   <header class="album-header player-header" slot="fixed">
-    <button type="button" class="header-corner" (click)="cornerClicked()" aria-label="Zurück">
-      <img draggable="false" ondragstart="return false;" [src]="cover" alt="">
+    <button type="button" class="header-corner" (click)="cornerClicked()" aria-label="Zurück zur Albumübersicht">
+      <img draggable="false" ondragstart="return false;" [src]="artistCover()" alt="">
     </button>
     <div class="header-text">
       <h1 class="album-title">{{ headerLine1() }}</h1>
@@ -14,13 +14,13 @@
     </div>
   </header>
 
-  @if (showTrackList) {
+  @if (showTrackList()) {
     <div class="tracklist-panel">
-      @if (loadingTrackList) {
+      @if (loadingTrackList()) {
         <div class="tracklist-loading"><ion-spinner name="crescent"></ion-spinner></div>
       }
       <div class="tracklist-scroll" #trackScroller (scroll)="onTrackListScroll()">
-        @for (page of trackPages; track $index) {
+        @for (page of trackPages(); track $index) {
           <div class="tracklist-page">
             @for (entry of page; track entry.id) {
               <button type="button" class="track-row" [class.current]="isCurrentTrack(entry)" (click)="playTrackFromList(entry)">
@@ -40,90 +40,76 @@
             }
           </div>
         } @empty {
-          @if (!loadingTrackList) {
+          @if (!loadingTrackList()) {
             <div class="tracklist-page"><p class="tracklist-empty">Keine Titel verfügbar</p></div>
           }
         }
       </div>
     </div>
-    @if (trackPages.length > 1) {
-      <div class="page-dots">
-        @for (page of trackPages; track $index) {
-          <button type="button" class="page-dot" [class.active]="$index === activeTrackPage" (click)="scrollToTrackPage($index)"></button>
-        }
-      </div>
-    }
+    <mupi-page-dots
+      class="tracklist-dots"
+      [count]="trackPages().length"
+      [active]="activeTrackPage()"
+      (dotClicked)="scrollToTrackPage($event)">
+    </mupi-page-dots>
   } @else {
-    <!-- Cover: long press opens the track list -->
+    <!-- Left: album cover (long press opens the track list) and the volume row -->
     <div class="cover" (pointerdown)="coverPointerDown()" (pointerup)="coverPointerUp()" (pointerleave)="coverPointerUp()" (pointercancel)="coverPointerUp()" (contextmenu)="$event.preventDefault()">
-      <img [src]="cover" draggable="false" ondragstart="return false;" alt="">
+      <img [src]="cover()" draggable="false" ondragstart="return false;" alt="">
       @if (media.type === 'spotify' || media.type === 'library') {
-        <div class="press-indicator" [class.active]="pressingCover" [style.--press-duration.ms]="listViewTimerMs">
+        <div class="press-indicator" [class.active]="pressingCover()" [style.--press-duration.ms]="listViewTimerMs()">
           <svg viewBox="0 0 48 48">
             <circle class="press-indicator-track" cx="24" cy="24" r="20"></circle>
             <circle class="press-indicator-progress" cx="24" cy="24" r="20"></circle>
           </svg>
+          <ion-icon class="press-indicator-icon" name="lucide-list-music"></ion-icon>
         </div>
       }
     </div>
-    @if (volumeText()) {
-      <div class="volume-caption">Lautstärke {{ volumeText() }}</div>
-    }
+    <div class="volume-row">
+      <button type="button" class="round round-small" (click)="volDown()" aria-label="Leiser">
+        <ion-icon name="lucide-minus"></ion-icon>
+      </button>
+      <div class="volume-bar" role="meter" aria-label="Lautstärke" [attr.aria-valuenow]="volumePercent()">
+        <div class="volume-fill" [style.width.%]="volumePercent()"></div>
+      </div>
+      <button type="button" class="round round-small" (click)="volUp()" aria-label="Lauter">
+        <ion-icon name="lucide-plus"></ion-icon>
+      </button>
+    </div>
 
+    <!-- Right: title, position, progress with times (seeking happens on the bar) and the control row -->
     <div class="controls">
-      <div class="track-info">
-        <div class="track-title">{{ trackName() }}</div>
-        <div class="track-meta">
-          @if (positionText()) {
-            <span>{{ positionText() }}</span>
-          }
-          @if (positionText() && timeText()) {
-            <span class="dot">&middot;</span>
-          }
-          @if (timeText()) {
-            <span>{{ timeText() }}</span>
-          }
-        </div>
-      </div>
+      <div class="track-title">{{ trackName() }}</div>
+      <div class="track-meta">{{ positionText() }}</div>
 
-      <div class="progress-row">
-        @if (media.type !== 'radio') {
-          <ion-range #range [(ngModel)]="progress" max="100" (touchend)="seek()" (mouseup)="seek()" aria-label="Position"></ion-range>
-        }
-      </div>
+      @if (media.type !== 'radio') {
+        <div class="progress-row">
+          <ion-range #range [value]="progress()" max="100" (touchend)="seek()" (mouseup)="seek()" aria-label="Position"></ion-range>
+        </div>
+        <div class="time-row">
+          <span>{{ elapsedText() }}</span>
+          @if (media.type === 'spotify' && (media.category === 'music' || media.category === 'other')) {
+            <button type="button" class="shuffle-toggle" [class.active]="media.shuffle" (click)="toggleshuffle()" aria-label="Zufallswiedergabe">
+              <ion-icon name="lucide-shuffle"></ion-icon>
+            </button>
+          }
+          <span>{{ totalText() }}</span>
+        </div>
+      }
 
       <div class="main-row">
-        <button type="button" class="pill pill-medium" (click)="volDown()" aria-label="Leiser">
-          <ion-icon name="lucide-volume-1"></ion-icon>
+        <button type="button" class="round round-medium" [disabled]="media.showid" (click)="skipPrev()" aria-label="Vorheriger Titel">
+          <ion-icon name="lucide-skip-back"></ion-icon>
         </button>
-        <button type="button" class="pill pill-play" (click)="playPause()" [attr.aria-label]="playing ? 'Pause' : 'Abspielen'">
-          @if (playing) {
+        <button type="button" class="round round-play" (click)="playPause()" [attr.aria-label]="playing() ? 'Pause' : 'Abspielen'">
+          @if (playing()) {
             <ion-icon name="lucide-pause"></ion-icon>
           } @else {
             <ion-icon name="lucide-play"></ion-icon>
           }
         </button>
-        <button type="button" class="pill pill-medium" (click)="volUp()" aria-label="Lauter">
-          <ion-icon name="lucide-volume-2"></ion-icon>
-        </button>
-      </div>
-
-      <div class="secondary-row">
-        <button type="button" class="pill pill-small" [disabled]="media.showid" (click)="skipPrev()" aria-label="Vorheriger Titel">
-          <ion-icon name="lucide-skip-back"></ion-icon>
-        </button>
-        <button type="button" class="pill pill-small" (click)="seekBack()" aria-label="Zurückspulen">
-          <ion-icon name="lucide-rewind"></ion-icon>
-        </button>
-        @if (media.type === 'spotify' && (media.category === 'music' || media.category === 'other')) {
-          <button type="button" class="pill pill-small" [class.inactive]="!media.shuffle" (click)="toggleshuffle()" aria-label="Zufallswiedergabe">
-            <ion-icon name="lucide-shuffle"></ion-icon>
-          </button>
-        }
-        <button type="button" class="pill pill-small" (click)="seekForward()" aria-label="Vorspulen">
-          <ion-icon name="lucide-fast-forward"></ion-icon>
-        </button>
-        <button type="button" class="pill pill-small" [disabled]="media.showid" (click)="skipNext()" aria-label="Nächster Titel">
+        <button type="button" class="round round-medium" [disabled]="media.showid" (click)="skipNext()" aria-label="Nächster Titel">
           <ion-icon name="lucide-skip-forward"></ion-icon>
         </button>
       </div>

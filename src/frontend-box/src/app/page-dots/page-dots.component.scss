@@ -1,0 +1,31 @@
+// 15px dots in #D9D9D9 as on the Figma board. The host is positioned by the
+// embedding component; it lets touches through so the content behind it can
+// still be scrolled, only the dots themselves are tappable.
+:host {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--mupi-dot-gap, 33px);
+    pointer-events: none;
+}
+
+.page-dot {
+    width: 15px;
+    height: 15px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(217, 217, 217, 0.55);
+    pointer-events: auto;
+    transition: background 150ms ease, transform 150ms ease;
+
+    &.small {
+        transform: scale(0.6);
+    }
+
+    &.active {
+        background: #d9d9d9;
+        transform: scale(1.25);
+    }
+}

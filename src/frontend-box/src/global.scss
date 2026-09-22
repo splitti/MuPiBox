@@ -29,10 +29,10 @@
 @import "@ionic/angular/css/text-transformation.css";
 @import "@ionic/angular/css/flex-utils.css";
 
-/* Fonts from the Figma design, bundled so the box works offline. */
+/* Nunito as the UI font, bundled so the box works offline. */
 
-@import "@fontsource/inter/600.css";
-@import "@fontsource/open-sans/700.css";
+@import "@fontsource/nunito/700.css";
+@import "@fontsource/nunito/800.css";
 
 /* no text selection in firefox */
 
@@ -111,6 +111,9 @@ variables so a theme can override them.
   // Accent color (tile indicator bar). Falls back to the theme's --ion-color-light
   // when a theme does not set it explicitly.
   --mupi-accent: var(--ion-color-light);
+  // UI font and the accent of the category icons on the home page.
+  --mupi-font: 'Nunito', sans-serif;
+  --mupi-icon-accent: #e8593f;
 }
 
 ion-content.mupi-page {
@@ -120,4 +123,23 @@ ion-content.mupi-page {
     radial-gradient(circle at -6% 58%, transparent 0 34%, var(--mupi-bg-arc) 34.5% 46%, transparent 46.5%),
     radial-gradient(circle at 34% 108%, transparent 0 40%, var(--mupi-bg-arc) 40.5% 56%, transparent 56.5%),
     var(--mupi-bg-base);
+}
+
+// The pages scroll (home) or page (album view, track list) without a visible
+// scrollbar, as on the Figma board. ion-content's scroll element lives in its
+// shadow DOM and is reachable through the "scroll" part.
+ion-content.mupi-page::part(scroll) {
+  scrollbar-width: none;
+}
+
+ion-content.mupi-page::part(scroll)::-webkit-scrollbar {
+  display: none;
+}
+
+// Settings pages (dark text on the page background, white cards).
+:root {
+  --mupi-settings-text: #143c41;
+  --mupi-settings-muted: #4f6f72;
+  --mupi-settings-danger: #c8452c;
+  --mupi-settings-ok: #2e8b57;
 }

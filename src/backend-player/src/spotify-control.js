@@ -57,8 +57,15 @@ player.on('percent_pos', (val) => {
   //console.log('track progress is', val);
   currentMeta.progressTime = val
 })
+// Absolute position and length of the running track in seconds (shown by the frontend player).
+player.on('time_pos', (val) => {
+  currentMeta.timePos = val
+})
+player.on('length', (val) => {
+  currentMeta.length = val
+})
 setInterval(() => {
-  player.getProps(['percent_pos'])
+  player.getProps(['percent_pos', 'time_pos', 'length'])
 }, 1000)
 
 player.on('pause', (val) => {
@@ -177,6 +184,8 @@ const currentMeta = {
   currentTracknr: 0,
   totalTracks: '',
   progressTime: '',
+  timePos: 0,
+  length: 0,
   volume: 0,
 }
 
@@ -455,6 +464,8 @@ function stop() {
     writeplayerstatePause()
     currentMeta.currentTrackname = ''
     currentMeta.progressTime = ''
+    currentMeta.timePos = 0
+    currentMeta.length = 0
     currentMeta.album = ''
     currentMeta.path = ''
     currentMeta.currentTracknr = ''

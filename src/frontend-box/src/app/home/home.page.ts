@@ -23,6 +23,8 @@ interface ArtistTile {
 interface HomeSection {
   category: CategoryType
   label: string
+  /** Lucide icon shown in the white badge in front of the title. */
+  icon: string
   isLoading: WritableSignal<boolean>
   tiles: Signal<ArtistTile[]>
 }
@@ -48,9 +50,9 @@ export class HomePage {
     this.isOnline = toSignal(this.mediaService.isOnline())
 
     this.sections = [
-      this.createSection('audiobook', 'Hörspiele'),
-      this.createSection('music', 'Musik'),
-      this.createSection('other', 'Podcasts & Radio'),
+      this.createSection('audiobook', 'Hörspiele', 'lucide-headphones'),
+      this.createSection('music', 'Musik', 'lucide-music'),
+      this.createSection('other', 'Podcasts & Radio', 'lucide-podcast'),
     ]
   }
 
@@ -58,7 +60,7 @@ export class HomePage {
    * Builds the data pipeline for one category. Artists are (re)loaded whenever the
    * online state changes, the same trigger the previous tab based home page used.
    */
-  private createSection(category: CategoryType, label: string): HomeSection {
+  private createSection(category: CategoryType, label: string, icon: string): HomeSection {
     const isLoading = signal(true)
 
     const artists = toSignal(
@@ -84,7 +86,7 @@ export class HomePage {
       })),
     )
 
-    return { category, label, isLoading, tiles }
+    return { category, label, icon, isLoading, tiles }
   }
 
   protected readText(text: string): void {

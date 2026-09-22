@@ -1,6 +1,6 @@
 // Values taken from the Figma board (Mupibox_Gui): 170x170 tile, corner radius
 // 20/20/20/0 (bottom-left square where the indicator bar sits), frosted label
-// band at the bottom, 10x50 indicator bar in #01AADF, Open Sans Bold 15 / 4%.
+// band at the bottom, 10x50 indicator bar in #01AADF, Nunito Bold 16 / 4%.
 :host {
     --mupi-tile-size: 170px;
     display: block;
@@ -30,20 +30,15 @@
     -webkit-user-drag: none;
 }
 
-// Frosted glass band: blurs the cover behind it and brightens it with a
-// strong white gradient, so the text stays readable on any cover.
+// Frosted glass band: blurs the cover behind it and lightens it with an even
+// half transparent white, so the text stays readable on any cover.
 .tile-fade {
     position: absolute;
     left: 0;
     right: 0;
     bottom: 0;
     height: 50px;
-    background: linear-gradient(
-        to bottom,
-        rgba(255, 255, 255, 0.1) 0%,
-        rgba(255, 255, 255, 0.7) 60%,
-        rgba(255, 255, 255, 0.8) 100%
-    );
+    background: rgba(255, 255, 255, 0.5);
     -webkit-backdrop-filter: blur(5px) saturate(0.5);
     backdrop-filter: blur(5px) saturate(0.5);
     pointer-events: none;
@@ -73,9 +68,9 @@
     flex: 1 1 auto;
     margin-left: 14px;
     padding-right: 10px;
-    font-family: 'Open Sans', sans-serif;
+    font-family: var(--mupi-font);
     font-weight: 700;
-    font-size: 15px;
+    font-size: 16px;
     letter-spacing: 0.04em;
     line-height: 1.25;
     color: #1c1c1c;

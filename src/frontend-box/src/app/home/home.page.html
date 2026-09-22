@@ -1,7 +1,7 @@
 <ion-content class="home-content mupi-page" [scrollY]="true">
   <!-- Fixed slot: stays on top while the sections scroll underneath. -->
   <mupi-status-bar slot="fixed"></mupi-status-bar>
-  <button slot="fixed" type="button" class="resume-pill" (click)="resume()" aria-label="Weiterhören">
+  <button slot="fixed" type="button" class="resume-corner" (click)="resume()" aria-label="Weiterhören">
     <ion-icon name="lucide-history"></ion-icon>
   </button>
 
@@ -9,9 +9,12 @@
     @for (section of sections; track section.category) {
       <section class="category-section">
         <h2 class="section-title">
+          <span class="section-icon"><ion-icon [name]="section.icon"></ion-icon></span>
           <span>{{section.label}}</span>
           @if (section.isLoading()) {
             <ion-spinner name="crescent" class="section-spinner"></ion-spinner>
+          } @else if (section.tiles().length > 0) {
+            <span class="section-count">{{section.tiles().length}}</span>
           }
         </h2>
         @if (!section.isLoading() && section.tiles().length === 0) {

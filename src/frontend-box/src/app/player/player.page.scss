@@ -1,6 +1,7 @@
-// Player in the Figma home design: album style header with the cover in the
-// corner (two text lines), plain 290px cover on the left, controls as dark
-// pills on the right, play/pause as a big round accent button.
+// Player in the Figma home design: album style header with the artist cover in
+// the corner (leads back, two text lines). Below it the mockup layout: album
+// cover with the volume row underneath on the left, title, position, progress
+// bar with times and one row of round controls on the right.
 @use '../shared/album-header';
 
 $accent: var(--mupi-accent, var(--ion-color-light, #01aadf));
@@ -24,10 +25,10 @@ $accent: var(--mupi-accent, var(--ion-color-light, #01aadf));
 }
 
 .album-subtitle {
-    font-family: 'Open Sans', sans-serif;
+    font-family: var(--mupi-font);
     font-weight: 700;
-    font-size: 15px;
-    line-height: 20px;
+    font-size: 16px;
+    line-height: 21px;
     letter-spacing: 0.04em;
     color: rgba(245, 245, 245, 0.9);
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
@@ -36,12 +37,13 @@ $accent: var(--mupi-accent, var(--ion-color-light, #01aadf));
     text-overflow: ellipsis;
 }
 
+// Left column: album cover, long press opens the track list.
 .cover {
     position: absolute;
-    top: 118px;
+    top: 104px;
     left: 40px;
-    width: 290px;
-    height: 290px;
+    width: 260px;
+    height: 260px;
     border-radius: 20px 20px 20px 0;
     overflow: hidden;
     background: #d9d9d9;
@@ -57,17 +59,31 @@ $accent: var(--mupi-accent, var(--ion-color-light, #01aadf));
     }
 }
 
-.volume-caption {
+// Volume: minus / bar / plus underneath the cover.
+.volume-row {
     position: absolute;
+    top: 384px;
     left: 40px;
-    top: 420px;
-    width: 290px;
-    text-align: center;
-    font-family: 'Open Sans', sans-serif;
-    font-weight: 700;
-    font-size: 13px;
-    letter-spacing: 0.04em;
-    color: rgba(245, 245, 245, 0.85);
+    width: 260px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.volume-bar {
+    flex: 1 1 auto;
+    height: 10px;
+    border-radius: 5px;
+    background: rgba(0, 0, 0, 0.35);
+    overflow: hidden;
+}
+
+.volume-fill {
+    height: 100%;
+    border-radius: 5px;
+    background: rgba(245, 245, 245, 0.9);
+    transition: width 150ms ease;
 }
 
 .press-indicator {
@@ -104,6 +120,16 @@ $accent: var(--mupi-accent, var(--ion-color-light, #01aadf));
         stroke-dashoffset: 0;
     }
 
+    // Track list icon in the middle of the ring while the cover is held.
+    .press-indicator-icon {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 36px;
+        color: #ffffff;
+    }
+
     &.active {
         opacity: 1;
 
@@ -122,29 +148,22 @@ $accent: var(--mupi-accent, var(--ion-color-light, #01aadf));
     }
 }
 
+// Right column: track info, progress and the control row.
 .controls {
     position: absolute;
-    top: 118px;
-    left: 370px;
-    width: 400px;
+    top: 108px;
+    left: 340px;
+    width: 420px;
     display: flex;
     flex-direction: column;
-    gap: 18px;
-}
-
-.track-info {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    min-width: 0;
 }
 
 .track-title {
-    min-height: 28px;
-    font-family: 'Inter', sans-serif;
-    font-weight: 600;
-    font-size: 22px;
-    line-height: 28px;
+    min-height: 34px;
+    font-family: var(--mupi-font);
+    font-weight: 800;
+    font-size: 26px;
+    line-height: 34px;
     color: #f5f5f5;
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
     white-space: nowrap;
@@ -153,18 +172,19 @@ $accent: var(--mupi-accent, var(--ion-color-light, #01aadf));
 }
 
 .track-meta {
-    min-height: 20px;
-    display: flex;
-    gap: 8px;
-    font-family: 'Open Sans', sans-serif;
+    min-height: 22px;
+    margin-top: 2px;
+    font-family: var(--mupi-font);
     font-weight: 700;
-    font-size: 15px;
-    letter-spacing: 0.04em;
+    font-size: 16px;
+    line-height: 22px;
+    letter-spacing: 0.02em;
     color: rgba(245, 245, 245, 0.85);
 }
 
 .progress-row {
     height: 26px;
+    margin-top: 12px;
     display: flex;
     align-items: center;
 
@@ -182,30 +202,61 @@ $accent: var(--mupi-accent, var(--ion-color-light, #01aadf));
     }
 }
 
+// Elapsed time on the left, total on the right, shuffle toggle in between.
+.time-row {
+    min-height: 26px;
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-family: var(--mupi-font);
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 0.02em;
+    color: rgba(245, 245, 245, 0.85);
+}
+
+.shuffle-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 26px;
+    padding: 0;
+    border: 0;
+    border-radius: 13px;
+    background: rgba(0, 0, 0, 0.35);
+    color: rgba(245, 245, 245, 0.6);
+
+    ion-icon {
+        font-size: 18px;
+    }
+
+    &.active {
+        background: var(--mupi-icon-accent);
+        color: #ffffff;
+    }
+}
+
 .main-row {
+    margin-top: 22px;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 34px;
 }
 
-.secondary-row {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 18px;
-}
-
-// Dark pills as in the status bar / resume pill on the home page.
-.pill {
+// Round white buttons as in the mockup, play/pause in the same accent as the category icons.
+.round {
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 0;
     border: 0;
-    color: #ffffff;
-    background: rgba(0, 0, 0, 0.6);
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    border-radius: 50%;
+    color: #1c1c1c;
+    background: #ffffff;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.22);
     transition: transform 100ms ease, opacity 150ms ease;
 
     &:active {
@@ -215,41 +266,35 @@ $accent: var(--mupi-accent, var(--ion-color-light, #01aadf));
     &:disabled {
         opacity: 0.3;
     }
-
-    &.inactive {
-        opacity: 0.55;
-    }
 }
 
-.pill-medium {
-    width: 70px;
-    height: 70px;
-    border-radius: 25px;
+.round-small {
+    width: 50px;
+    height: 50px;
 
     ion-icon {
-        font-size: 34px;
+        font-size: 24px;
     }
 }
 
-.pill-play {
-    width: 100px;
-    height: 100px;
-    border-radius: 50%;
-    background: $accent;
+.round-medium {
+    width: 60px;
+    height: 60px;
+
+    ion-icon {
+        font-size: 28px;
+    }
+}
+
+.round-play {
+    width: 90px;
+    height: 90px;
+    color: #ffffff;
+    background: var(--mupi-icon-accent);
     box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3);
 
     ion-icon {
-        font-size: 52px;
-    }
-}
-
-.pill-small {
-    width: 62px;
-    height: 62px;
-    border-radius: 20px;
-
-    ion-icon {
-        font-size: 30px;
+        font-size: 44px;
     }
 }
 
@@ -297,9 +342,9 @@ $accent: var(--mupi-accent, var(--ion-color-light, #01aadf));
 .tracklist-empty {
     margin: 0;
     padding: 24px;
-    font-family: 'Open Sans', sans-serif;
+    font-family: var(--mupi-font);
     font-weight: 700;
-    font-size: 18px;
+    font-size: 19px;
     color: rgba(245, 245, 245, 0.8);
 }
 
@@ -314,9 +359,9 @@ $accent: var(--mupi-accent, var(--ion-color-light, #01aadf));
     border-bottom: 1px solid rgba(255, 255, 255, 0.12);
     background: transparent;
     text-align: left;
-    font-family: 'Open Sans', sans-serif;
+    font-family: var(--mupi-font);
     font-weight: 700;
-    font-size: 18px;
+    font-size: 19px;
     letter-spacing: 0.02em;
     color: #f5f5f5;
 
@@ -371,31 +416,12 @@ $accent: var(--mupi-accent, var(--ion-color-light, #01aadf));
     }
 }
 
-.page-dots {
+.tracklist-dots {
     position: absolute;
     right: 0;
     top: 100px;
     height: 350px;
     width: 40px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 22px;
+    --mupi-dot-gap: 22px;
     z-index: 10;
-}
-
-.page-dot {
-    width: 15px;
-    height: 15px;
-    padding: 0;
-    border: 0;
-    border-radius: 50%;
-    background: rgba(217, 217, 217, 0.55);
-    transition: background 150ms ease, transform 150ms ease;
-
-    &.active {
-        background: #d9d9d9;
-        transform: scale(1.25);
-    }
 }

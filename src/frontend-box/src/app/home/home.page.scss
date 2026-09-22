@@ -1,8 +1,11 @@
-// Layout numbers from the Figma board: content starts 51px below the top edge
-// (below the status pill), section title Inter Semi Bold 20 #F5F5F5 with 25px
-// left inset, 8px between title and tiles, tiles 170px with 23px gaps, 25px
-// between the rows.
-.resume-pill {
+// Layout numbers from the Figma board: section title Nunito Extra Bold 20
+// #F5F5F5 with 25px left inset, a white 40px badge with the category icon in
+// front of it and the number of entries behind it, 8px between title and tiles,
+// tiles 170px with 23px gaps, 25px between the rows.
+
+// "Weiterhören" corner button: same size and shape as the artist cover corner
+// in the album view (82x82, bottom right corner rounded), dark frosted look.
+.resume-corner {
     position: absolute;
     top: 0;
     left: 0;
@@ -10,24 +13,24 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 70px;
-    height: 54px;
+    width: 82px;
+    height: 82px;
     padding: 0;
     border: 0;
     background: rgba(0, 0, 0, 0.6);
-    border-radius: 0 0 25px 0;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    border-radius: 0 0 20px 0;
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.28);
     color: #ffffff;
 
     ion-icon {
-        font-size: 30px;
+        font-size: 34px;
     }
 }
 
-// The pills are in ion-content's fixed slot, so the sections scroll underneath
-// them; the first section just starts below the pills.
+// The corner button and the status pill are in ion-content's fixed slot, so the
+// sections scroll underneath them; the first section starts below the corner.
 .sections {
-    padding: 51px 0 40px;
+    padding: 75px 0 40px;
 }
 
 // Bottom padding is shared with the tile row so the tile shadow (24px) has room.
@@ -37,14 +40,14 @@
 
 .section-title {
     margin: 0 0 8px 25px;
-    font-family: 'Inter', sans-serif;
-    font-weight: 600;
-    font-size: 20px;
-    line-height: 25px;
+    font-family: var(--mupi-font);
+    font-weight: 800;
+    font-size: 22px;
+    line-height: 27px;
     color: #f5f5f5;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
 
     .section-spinner {
         width: 20px;
@@ -53,10 +56,34 @@
     }
 }
 
+// White rounded badge with the category icon in the accent color.
+.section-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.18);
+    color: var(--mupi-icon-accent);
+
+    ion-icon {
+        font-size: 24px;
+    }
+}
+
+// Number of entries in the category, lighter than the title.
+.section-count {
+    font-weight: 700;
+    font-size: 17px;
+    color: rgba(245, 245, 245, 0.8);
+}
+
 .section-empty {
     margin: 6px 29px 0;
-    font-family: 'Open Sans', sans-serif;
-    font-size: 15px;
+    font-family: var(--mupi-font);
+    font-size: 16px;
     color: rgba(245, 245, 245, 0.8);
 }
 

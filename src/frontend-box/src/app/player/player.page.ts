@@ -1,9 +1,19 @@
 import { HttpClient } from '@angular/common/http'
-import { Component, ElementRef, OnInit, ViewChild } from '@angular/core'
-import { FormsModule } from '@angular/forms'
+import {
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  OnInit,
+  Signal,
+  signal,
+  ViewChild,
+  WritableSignal,
+} from '@angular/core'
+import { toSignal } from '@angular/core/rxjs-interop'
 import { ActivatedRoute, Router } from '@angular/router'
-import { IonContent, IonIcon, IonRange, IonSpinner, NavController } from '@ionic/angular/standalone'
-import { firstValueFrom, type Observable } from 'rxjs'
+import { IonContent, IonIcon, IonRange, IonRouterOutlet, IonSpinner, NavController } from '@ionic/angular/standalone'
+import { firstValueFrom } from 'rxjs'
 import { environment } from '../../environments/environment'
 import type { AlbumStop } from '../albumstop'
 import type { CurrentMPlayer } from '../current.mplayer'
@@ -13,6 +23,7 @@ import { LogService } from '../log.service'
 import type { Media } from '../media'
 import { MediaService } from '../media.service'
 import type { MupiboxConfig } from '../mupibox-config.model'
+import { PageDotsComponent } from '../page-dots/page-dots.component'
 import { PlayerCmds, PlayerService } from '../player.service'
 import { SpotifyService } from '../spotify.service'
 import { StatusBarComponent } from '../status-bar/status-bar.component'
@@ -25,14 +36,21 @@ export interface TrackListEntry {
   duration_ms?: number
 }
 
+const NO_COVER = '../assets/images/nocover_mupi.png'
+
 /** Six rows fit into the track list panel. */
 const TRACKS_PER_PAGE = 6
 
+/**
+ * Player page. The live player state (Spotify / local player) and everything the
+ * template shows are signals: the app root is OnPush, so plain fields updated
+ * from timers or subscriptions would only be rendered after the next touch.
+ */
 @Component({
   selector: 'app-player',
   templateUrl: './player.page.html',
   styleUrls: ['./player.page.scss'],
-  imports: [FormsModule, IonContent, IonIcon, IonRange, IonSpinner, StatusBarComponent],
+  imports: [IonContent, IonIcon, IonRange, IonSpinner, PageDotsComponent, StatusBarComponent],
 })
 export class PlayerPage implements OnInit {
   @ViewChild('range', { static: false }) range: IonRange
@@ -45,29 +63,33 @@ export class PlayerPage implements OnInit {
   resumeIndex: number
   resumeTimer = 0
   resumeAdded = false
-  cover = ''
-  playing = true
   updateProgression = false
   private isExternalPlayback = false
-  currentPlayedSpotify: CurrentSpotify
-  currentPlayedLocal: CurrentMPlayer
-  showTrackNr = 0
   goBackTimer = 0
-  progress = 0
   shufflechanged = 0
-  tmpProgressTime = 0
-  public readonly spotify$: Observable<CurrentSpotify>
-  public readonly local$: Observable<CurrentMPlayer>
 
-  showTrackList = false
-  loadingTrackList = false
+  /** Polled player state from the media service. */
+  protected readonly spotify: Signal<CurrentSpotify | undefined>
+  protected readonly local: Signal<CurrentMPlayer | undefined>
+
+  protected readonly playing: WritableSignal<boolean> = signal(true)
+  /** Position within the track in percent (Spotify) or as reported by the local player. */
+  protected readonly progress: Signal<number>
+  /** Cover of the running album: the live Spotify cover, otherwise the media cover. */
+  protected readonly cover: Signal<string>
+
+  protected readonly showTrackList: WritableSignal<boolean> = signal(false)
+  protected readonly loadingTrackList: WritableSignal<boolean> = signal(false)
+  protected readonly trackPages: WritableSignal<TrackListEntry[][]> = signal([])
+  protected readonly activeTrackPage: WritableSignal<number> = signal(0)
+  protected readonly pressingCover: WritableSignal<boolean> = signal(false)
+  protected readonly listViewTimerMs: WritableSignal<number> = signal(2500)
   trackList: TrackListEntry[] = []
   trackListTitle = ''
-  trackPages: TrackListEntry[][] = []
-  activeTrackPage = 0
-  pressingCover = false
-  listViewTimerMs = 2500
   private longPressTimer: ReturnType<typeof setTimeout> | undefined
+
+  /** Outlet that opened this page; tells whether there is a page to go back to. */
+  private readonly routerOutlet = inject(IonRouterOutlet, { optional: true })
 
   constructor(
     private logService: LogService,
@@ -79,8 +101,28 @@ export class PlayerPage implements OnInit {
     private playerService: PlayerService,
     private spotifyService: SpotifyService,
   ) {
-    this.spotify$ = this.mediaService.current$
-    this.local$ = this.mediaService.local$
+    this.spotify = toSignal(this.mediaService.current$)
+    this.local = toSignal(this.mediaService.local$)
+
+    this.progress = computed(() => {
+      if (this.media?.type === 'spotify') {
+        const spotify = this.spotify()
+        const duration = spotify?.item?.duration_ms
+        return duration ? ((spotify.progress_ms || 0) / duration) * 100 : 0
+      }
+      if (this.media?.type === 'library' || this.media?.type === 'rss') {
+        return this.local()?.progressTime || 0
+      }
+      return 0
+    })
+
+    this.cover = computed(() => {
+      const spotifyCover = this.spotify()?.item?.album?.images?.[0]?.url
+      if (this.media?.type === 'spotify' && spotifyCover) {
+        return spotifyCover
+      }
+      return this.media?.cover || NO_COVER
+    })
 
     if (this.router.currentNavigation()?.extras.state?.media) {
       this.media = this.router.currentNavigation().extras.state.media
@@ -100,14 +142,11 @@ export class PlayerPage implements OnInit {
       this.handleExternalPlayback()
     }
 
-    // Show the media cover right away; the subscription below switches to the live Spotify cover.
-    this.cover = this.media?.cover || '../assets/images/nocover_mupi.png'
-
     this.http.get<MupiboxConfig>(`${environment.backend.apiUrl}/config`).subscribe({
       next: (config) => {
         const configuredSeconds = config?.mupibox?.listviewTimer
         if (typeof configuredSeconds === 'number' && configuredSeconds > 0) {
-          this.listViewTimerMs = configuredSeconds * 1000
+          this.listViewTimerMs.set(configuredSeconds * 1000)
         }
       },
       error: () => {
@@ -115,22 +154,6 @@ export class PlayerPage implements OnInit {
       },
     })
 
-    this.mediaService.current$.subscribe((spotify) => {
-      this.currentPlayedSpotify = spotify
-    })
-    this.mediaService.local$.subscribe((local) => {
-      this.currentPlayedLocal = local
-    })
-    // Use cover from CurrentSpotify for Spotify content, fallback to media.cover for other types
-    this.mediaService.current$.subscribe((spotify) => {
-      if (this.media?.type === 'spotify' && spotify?.item?.album?.images?.[0]?.url) {
-        this.cover = spotify.item.album.images[0].url
-      } else if (this.media?.cover) {
-        this.cover = this.media.cover
-      } else {
-        this.cover = '../assets/images/nocover_mupi.png'
-      }
-    })
     this.mediaService.albumStop$.subscribe((albumStop) => {
       this.albumStop = albumStop
     })
@@ -151,7 +174,7 @@ export class PlayerPage implements OnInit {
         category: 'music',
         title: 'External Playback',
         artist: 'Unknown',
-        cover: '../assets/images/nocover_mupi.png',
+        cover: NO_COVER,
       }
 
       // Subscribe to currentTrack$ to update when track info becomes available
@@ -167,23 +190,20 @@ export class PlayerPage implements OnInit {
   seek() {
     const newValue = +this.range.value
     if (this.media.type === 'spotify') {
-      const duration = this.currentPlayedSpotify?.item.duration_ms
+      const duration = this.spotify()?.item?.duration_ms
       this.playerService.seekPosition(duration * (newValue / 100))
     } else if (this.media.type === 'library' || this.media.type === 'rss') {
       this.playerService.seekPosition(newValue)
     }
   }
 
+  /** One second tick: play state, resume bookkeeping and the automatic return when playback ends. */
   updateProgress() {
-    this.mediaService.current$.subscribe((spotify) => {
-      this.currentPlayedSpotify = spotify
-    })
-    this.mediaService.local$.subscribe((local) => {
-      this.currentPlayedLocal = local
-    })
+    const spotify = this.spotify()
+    const local = this.local()
 
-    this.playing = !this.currentPlayedLocal?.pause
-    if (this.playing) {
+    this.playing.set(!local?.pause)
+    if (this.playing()) {
       this.resumeTimer++
       if (this.resumeTimer % 30 === 0) {
         this.saveResumeFiles()
@@ -191,47 +211,37 @@ export class PlayerPage implements OnInit {
     }
 
     if (this.media.type === 'spotify') {
-      const seek = this.currentPlayedSpotify?.progress_ms || 0
-      if (this.currentPlayedSpotify?.item != null) {
-        this.progress = (seek / this.currentPlayedSpotify?.item.duration_ms) * 100 || 0
-      }
-      if (this.playing && !this.currentPlayedSpotify?.is_playing) {
+      if (this.playing() && !spotify?.is_playing) {
         this.goBackTimer++
         if (this.goBackTimer > 10) {
           this.navController.back()
         }
       }
-      setTimeout(() => {
-        if (this.updateProgression) {
-          this.updateProgress()
-        }
-      }, 1000)
     } else if (this.media.type === 'library' || this.media.type === 'rss') {
-      const seek = this.currentPlayedLocal?.progressTime || 0
-      this.progress = seek || 0
       if (
         this.media.type === 'library' &&
-        this.playing &&
-        !this.currentPlayedLocal?.playing &&
-        this.currentPlayedLocal?.currentTracknr === this.currentPlayedLocal?.totalTracks
+        this.playing() &&
+        !local?.playing &&
+        local?.currentTracknr === local?.totalTracks
       ) {
         this.goBackTimer++
         if (this.goBackTimer > 10) {
           this.navController.back()
         }
       }
-      if (this.media.type === 'rss' && this.playing && !this.currentPlayedLocal?.playing) {
+      if (this.media.type === 'rss' && this.playing() && !local?.playing) {
         this.goBackTimer++
         if (this.goBackTimer > 100) {
           this.navController.back()
         }
       }
-      setTimeout(() => {
-        if (this.updateProgression) {
-          this.updateProgress()
-        }
-      }, 1000)
     }
+
+    setTimeout(() => {
+      if (this.updateProgression) {
+        this.updateProgress()
+      }
+    }, 1000)
   }
 
   async ionViewWillEnter() {
@@ -244,7 +254,7 @@ export class PlayerPage implements OnInit {
       if (!success && this.media.type === 'spotify') {
         this.logService.error('[PlayerPage] Failed to start Spotify playback - player health check failed')
         // Mark as not playing and navigate back
-        this.playing = false
+        this.playing.set(false)
         this.updateProgression = false
         this.navController.back()
         return
@@ -265,12 +275,12 @@ export class PlayerPage implements OnInit {
 
   ionViewWillLeave() {
     clearTimeout(this.longPressTimer)
-    this.showTrackList = false
+    this.showTrackList.set(false)
     if (
       (this.media.type === 'spotify' || this.media.type === 'library' || this.media.type === 'rss') &&
       !this.media.shuffle &&
       this.resumeTimer > 30 &&
-      this.playing
+      this.playing()
     ) {
       this.saveResumeFiles()
     }
@@ -296,7 +306,7 @@ export class PlayerPage implements OnInit {
       if (!success) {
         this.logService.error('[PlayerPage] Failed to resume Spotify playback - player health check failed')
         // Mark as not playing and navigate back
-        this.playing = false
+        this.playing.set(false)
         this.updateProgression = false
         this.navController.back()
         return
@@ -339,26 +349,22 @@ export class PlayerPage implements OnInit {
 
   saveResumeFiles() {
     this.resumemedia = Object.assign({}, this.media)
-    this.mediaService.current$.subscribe((spotify) => {
-      this.currentPlayedSpotify = spotify
-    })
-    this.mediaService.local$.subscribe((local) => {
-      this.currentPlayedLocal = local
-    })
+    const spotify = this.spotify()
+    const local = this.local()
     if (this.resumemedia.type === 'spotify' && this.resumemedia?.showid) {
-      this.resumemedia.resumespotifytrack_number = this.currentPlayedSpotify?.item?.track_number || 1
-      this.resumemedia.resumespotifyprogress_ms = this.currentPlayedSpotify?.progress_ms || 0
-      this.resumemedia.resumespotifyduration_ms = this.currentPlayedSpotify?.item?.duration_ms || 0
+      this.resumemedia.resumespotifytrack_number = spotify?.item?.track_number || 1
+      this.resumemedia.resumespotifyprogress_ms = spotify?.progress_ms || 0
+      this.resumemedia.resumespotifyduration_ms = spotify?.item?.duration_ms || 0
     } else if (this.resumemedia.type === 'spotify') {
-      this.resumemedia.resumespotifytrack_number = this.currentPlayedSpotify?.item.track_number || 0
-      this.resumemedia.resumespotifyprogress_ms = this.currentPlayedSpotify?.progress_ms || 0
-      this.resumemedia.resumespotifyduration_ms = this.currentPlayedSpotify?.item.duration_ms || 0
+      this.resumemedia.resumespotifytrack_number = spotify?.item?.track_number || 0
+      this.resumemedia.resumespotifyprogress_ms = spotify?.progress_ms || 0
+      this.resumemedia.resumespotifyduration_ms = spotify?.item?.duration_ms || 0
     } else if (this.resumemedia.type === 'library') {
       this.resumemedia.resumelocalalbum = this.resumemedia.category
-      this.resumemedia.resumelocalcurrentTracknr = this.currentPlayedLocal?.currentTracknr || 0
-      this.resumemedia.resumelocalprogressTime = this.currentPlayedLocal?.progressTime || 0
+      this.resumemedia.resumelocalcurrentTracknr = local?.currentTracknr || 0
+      this.resumemedia.resumelocalprogressTime = local?.progressTime || 0
     } else if (this.resumemedia.type === 'rss') {
-      this.resumemedia.resumerssprogressTime = this.currentPlayedLocal?.progressTime || 0
+      this.resumemedia.resumerssprogressTime = local?.progressTime || 0
     }
     this.resumemedia.category = 'resume'
     if (this.resumemedia.index !== undefined) {
@@ -386,21 +392,13 @@ export class PlayerPage implements OnInit {
   }
 
   skipPrev() {
-    if (this.playing) {
-      this.playerService.sendCmd(PlayerCmds.PREVIOUS)
-    } else {
-      this.playing = true
-      this.playerService.sendCmd(PlayerCmds.PREVIOUS)
-    }
+    this.playing.set(true)
+    this.playerService.sendCmd(PlayerCmds.PREVIOUS)
   }
 
   skipNext() {
-    if (this.playing) {
-      this.playerService.sendCmd(PlayerCmds.NEXT)
-    } else {
-      this.playing = true
-      this.playerService.sendCmd(PlayerCmds.NEXT)
-    }
+    this.playing.set(true)
+    this.playerService.sendCmd(PlayerCmds.NEXT)
   }
 
   toggleshuffle() {
@@ -416,24 +414,14 @@ export class PlayerPage implements OnInit {
   }
 
   playPause() {
-    if (this.playing) {
-      //this.playing = false;
+    if (this.playing()) {
       this.playerService.sendCmd(PlayerCmds.PAUSE)
       if (this.media.type === 'spotify' || this.media.type === 'library' || this.media.type === 'rss') {
         this.saveResumeFiles()
       }
     } else {
-      //this.playing = true;
       this.playerService.sendCmd(PlayerCmds.PLAY)
     }
-  }
-
-  seekForward() {
-    this.playerService.sendCmd(PlayerCmds.SEEKFORWARD)
-  }
-
-  seekBack() {
-    this.playerService.sendCmd(PlayerCmds.SEEKBACK)
   }
 
   // --------------------------------------------
@@ -445,21 +433,21 @@ export class PlayerPage implements OnInit {
       return
     }
     clearTimeout(this.longPressTimer)
-    this.pressingCover = true
+    this.pressingCover.set(true)
     this.longPressTimer = setTimeout(() => {
-      this.pressingCover = false
+      this.pressingCover.set(false)
       this.openTrackList()
-    }, this.listViewTimerMs)
+    }, this.listViewTimerMs())
   }
 
   coverPointerUp() {
     clearTimeout(this.longPressTimer)
-    this.pressingCover = false
+    this.pressingCover.set(false)
   }
 
   async openTrackList() {
-    this.showTrackList = true
-    this.loadingTrackList = true
+    this.showTrackList.set(true)
+    this.loadingTrackList.set(true)
     this.trackList = []
 
     try {
@@ -511,33 +499,36 @@ export class PlayerPage implements OnInit {
         }))
       }
     } finally {
-      this.loadingTrackList = false
+      this.loadingTrackList.set(false)
       this.buildTrackPages()
     }
   }
 
   closeTrackList() {
-    this.showTrackList = false
+    this.showTrackList.set(false)
   }
 
+  /** Starts the chosen track and returns to the player controls. */
   playTrackFromList(entry: TrackListEntry) {
     this.playerService.playTrackAtPosition(this.media, entry)
+    this.closeTrackList()
   }
 
   isCurrentTrack(entry: TrackListEntry): boolean {
+    const spotify = this.spotify()
     if (this.media.type === 'library') {
-      return this.currentPlayedLocal?.currentTracknr === entry.position
+      return this.local()?.currentTracknr === entry.position
     }
     if (this.media.playlistid) {
-      return this.currentPlayedSpotify?.playlist?.current_track_position === entry.position
+      return spotify?.playlist?.current_track_position === entry.position
     }
     if (this.media.audiobookid) {
-      return this.currentPlayedSpotify?.audiobook?.current_chapter_position === entry.position
+      return spotify?.audiobook?.current_chapter_position === entry.position
     }
     if (this.media.showid) {
-      return this.currentPlayedSpotify?.item?.id === entry.id
+      return spotify?.item?.id === entry.id
     }
-    return this.currentPlayedSpotify?.item?.track_number === entry.position
+    return spotify?.item?.track_number === entry.position
   }
 
   formatDuration(durationMs: number | undefined): string {
@@ -554,13 +545,27 @@ export class PlayerPage implements OnInit {
   // Header / info lines (Figma design)
   // --------------------------------------------
 
-  /** Cover corner: closes the track list when it is open, otherwise leads back. */
+  /** Cover corner: closes the track list when it is open, otherwise leads back to the album view. */
   cornerClicked() {
-    if (this.showTrackList) {
+    if (this.showTrackList()) {
       this.closeTrackList()
       return
     }
-    this.navController.navigateBack(window.history.length > 1 ? undefined : '/home')
+    this.goBack()
+  }
+
+  /** Back to the page that opened the player (album or resume view); home when there is none. */
+  private goBack() {
+    if (this.routerOutlet?.canGoBack()) {
+      this.navController.back()
+    } else {
+      this.navController.navigateBack('/home')
+    }
+  }
+
+  /** Artist cover for the header corner, as in the album view. */
+  artistCover(): string {
+    return this.media?.artistcover || this.media?.cover || NO_COVER
   }
 
   /** First header line: the artist, falling back to the album / media title. */
@@ -575,7 +580,7 @@ export class PlayerPage implements OnInit {
   }
 
   private albumName(): string {
-    const spotify = this.currentPlayedSpotify
+    const spotify = this.spotify()
     if (this.media?.type === 'spotify' && spotify?.currently_playing_type !== 'episode') {
       return spotify?.item?.album?.name || this.media.title || ''
     }
@@ -586,60 +591,83 @@ export class PlayerPage implements OnInit {
       return spotify.audiobook.name || ''
     }
     if (this.media?.type === 'library') {
-      return this.currentPlayedLocal?.album || this.media.title || ''
+      return this.local()?.album || this.media.title || ''
     }
     return this.media?.title || ''
   }
 
   /** Name of the running track / chapter / episode. */
   trackName(): string {
-    const spotify = this.currentPlayedSpotify
     if (this.media?.type === 'spotify') {
-      return spotify?.item?.name || ''
+      return this.spotify()?.item?.name || ''
     }
     if (this.media?.type === 'library') {
-      return this.currentPlayedLocal?.currentTrackname || ''
+      return this.local()?.currentTrackname || ''
     }
     return ''
   }
 
-  /** "3/12" style position within the album, playlist, show or audiobook. */
+  /** "Teil 2 von 22" style position within the album, playlist, show or audiobook. */
   positionText(): string {
-    const spotify = this.currentPlayedSpotify
-    const local = this.currentPlayedLocal
+    const spotify = this.spotify()
+    const local = this.local()
+    const text = (noun: string, current: number | undefined, total: number | undefined): string =>
+      current && total ? `${noun} ${current} von ${total}` : ''
+
     if (this.media?.type === 'library') {
-      return local?.currentTracknr && local?.totalTracks ? `${local.currentTracknr}/${local.totalTracks}` : ''
+      return text(this.itemNoun(), local?.currentTracknr, local?.totalTracks)
     }
     if (this.media?.type !== 'spotify') {
       return ''
     }
-    if (this.media.playlistid && spotify?.playlist?.total_tracks > 0) {
-      return `${spotify.playlist.current_track_position}/${spotify.playlist.total_tracks}`
+    if (this.media.playlistid) {
+      return text('Titel', spotify?.playlist?.current_track_position, spotify?.playlist?.total_tracks)
     }
-    if (this.media.showid && spotify?.show_details) {
-      return `${spotify.show_details.current_episode_position}/${spotify.show_details.total_episodes}`
+    if (this.media.showid) {
+      return text('Folge', spotify?.show_details?.current_episode_position, spotify?.show_details?.total_episodes)
     }
-    if (this.media.audiobookid && spotify?.audiobook) {
-      return `${spotify.audiobook.current_chapter_position}/${spotify.audiobook.total_chapters}`
+    if (this.media.audiobookid) {
+      return text('Kapitel', spotify?.audiobook?.current_chapter_position, spotify?.audiobook?.total_chapters)
     }
-    if (spotify?.currently_playing_type !== 'episode' && spotify?.item?.album?.total_tracks > 0) {
-      return `${spotify.item.track_number}/${spotify.item.album.total_tracks}`
-    }
-    return ''
-  }
-
-  /** Elapsed / total time; only Spotify reports absolute times. */
-  timeText(): string {
-    const spotify = this.currentPlayedSpotify
-    if (this.media?.type === 'spotify' && spotify?.item?.duration_ms) {
-      return `${this.formatDuration(spotify.progress_ms || 0) || '0:00'} / ${this.formatDuration(spotify.item.duration_ms)}`
+    if (spotify?.currently_playing_type !== 'episode') {
+      return text(this.itemNoun(), spotify?.item?.track_number, spotify?.item?.album?.total_tracks)
     }
     return ''
   }
 
-  volumeText(): string {
-    const volume = this.currentPlayedLocal?.volume
-    return typeof volume === 'number' ? `${volume} %` : ''
+  /** What one entry of the running album is called, by category. */
+  private itemNoun(): string {
+    switch (this.media?.category) {
+      case 'audiobook':
+        return 'Teil'
+      case 'other':
+        return 'Folge'
+      default:
+        return 'Titel'
+    }
+  }
+
+  /** Elapsed time of the running track; Spotify reports milliseconds, the local player seconds. */
+  elapsedText(): string {
+    if (this.media?.type === 'spotify') {
+      return this.spotify()?.item?.duration_ms ? this.formatDuration(this.spotify().progress_ms || 0) || '0:00' : ''
+    }
+    const local = this.local()
+    return local?.length ? this.formatDuration((local.timePos || 0) * 1000) || '0:00' : ''
+  }
+
+  /** Total length of the running track. */
+  totalText(): string {
+    if (this.media?.type === 'spotify') {
+      return this.formatDuration(this.spotify()?.item?.duration_ms)
+    }
+    return this.formatDuration((this.local()?.length || 0) * 1000)
+  }
+
+  /** Volume of the box in percent for the volume bar. */
+  volumePercent(): number {
+    const volume = this.local()?.volume
+    return typeof volume === 'number' ? Math.max(0, Math.min(100, volume)) : 0
   }
 
   // --------------------------------------------
@@ -651,8 +679,8 @@ export class PlayerPage implements OnInit {
     for (let i = 0; i < this.trackList.length; i += TRACKS_PER_PAGE) {
       pages.push(this.trackList.slice(i, i + TRACKS_PER_PAGE))
     }
-    this.trackPages = pages
-    this.activeTrackPage = 0
+    this.trackPages.set(pages)
+    this.activeTrackPage.set(0)
 
     const currentIndex = this.trackList.findIndex((entry) => this.isCurrentTrack(entry))
     if (currentIndex > 0) {
@@ -665,7 +693,7 @@ export class PlayerPage implements OnInit {
     if (!element || element.clientHeight === 0) {
       return
     }
-    this.activeTrackPage = Math.round(element.scrollTop / element.clientHeight)
+    this.activeTrackPage.set(Math.round(element.scrollTop / element.clientHeight))
   }
 
   scrollToTrackPage(index: number, smooth = true) {

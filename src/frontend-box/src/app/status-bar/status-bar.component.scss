@@ -32,10 +32,9 @@
         color: #ffffff;
     }
 
-    // Battery icon from the MuPiHAT component, same size and color as the WiFi icon.
-    mupihat-icon ion-icon {
+    // Battery icon from the MuPiHAT component: sized via font-size, so it renders
+    // like the WiFi icon (the component's own styles cannot reach into its view).
+    mupihat-icon {
         font-size: 30px;
-        width: 30px;
-        height: 30px;
     }
 }

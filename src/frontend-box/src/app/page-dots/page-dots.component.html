@@ -1,0 +1,11 @@
+@if (count() > 1) {
+  @for (dot of dots(); track dot.index) {
+    <button
+      type="button"
+      class="page-dot"
+      [class.active]="dot.index === active()"
+      [class.small]="dot.small"
+      (click)="dotClicked.emit(dot.index)"
+      [attr.aria-label]="'Seite ' + (dot.index + 1)"></button>
+  }
+}

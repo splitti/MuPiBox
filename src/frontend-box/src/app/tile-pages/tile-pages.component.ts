@@ -9,6 +9,7 @@ import {
   viewChild,
 } from '@angular/core'
 
+import { PageDotsComponent } from '../page-dots/page-dots.component'
 import { TileComponent } from '../tile/tile.component'
 
 /** One tile of a paged grid: what to show plus the payload handed back on click. */
@@ -30,7 +31,7 @@ const TILES_PER_PAGE = 6
   selector: 'mupi-tile-pages',
   templateUrl: './tile-pages.component.html',
   styleUrls: ['./tile-pages.component.scss'],
-  imports: [TileComponent],
+  imports: [PageDotsComponent, TileComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TilePagesComponent<T> {
