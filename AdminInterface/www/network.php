@@ -11,8 +11,8 @@
 		'RTL8821AU' => array(
 			'label' => 'RTL8821AU',
 			'path' => '/home/dietpi/.driver/network/8821au-20210708',
-			'install_url' => 'https://raw.githubusercontent.com/Lippsson/MuPiBox/custom-changes/scripts/online/install_rtl8821au.sh',
-			'remove_url' => 'https://raw.githubusercontent.com/Lippsson/MuPiBox/custom-changes/scripts/online/remove_rtl8821au.sh',
+			'install_url' => 'https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/online/install_rtl8821au.sh',
+			'remove_url' => 'https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/online/remove_rtl8821au.sh',
 			),
 		);
 
