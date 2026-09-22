@@ -66,6 +66,22 @@ swiper-container.coverflow {
     swiper-slide {
         width: 300px;
         transform-style: preserve-3d;
+        position: relative; // anchors .coverflow-name to the actual cover, not the reflected ion-grid
+    }
+
+    // Album/folder name under the cover (Mupi-conf > Theme > "Ordner/Albumnamen einblenden").
+    // Fixed offset, matching this theme's fixed 300px cover / 20px top padding used throughout.
+    .coverflow-name {
+        position: absolute;
+        top: 323px; // 20px .img-row padding-top + 300px cover height + 3px gap
+        left: 0;
+        width: 300px;
+        color: #fff;
+        font-size: 18px;
+        text-align: left;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     // Mirror image below every cover (with its title), fading out - as in Cover Flow.

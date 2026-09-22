@@ -69,6 +69,9 @@ export class SwiperComponent<T> {
   protected configLoaded: WritableSignal<boolean> = signal(false)
   protected coverflow: WritableSignal<boolean> = signal(false)
   protected hideScrollbar: WritableSignal<boolean> = signal(false)
+  // Coverflow theme only: shows currentData.name (album name, falling back to the folder name -
+  // the same value the non-Coverflow list already shows under each cover) below the cover.
+  protected coverflowShowNames: WritableSignal<boolean> = signal(false)
 
   public constructor(
     private playerService: PlayerService,
@@ -79,6 +82,7 @@ export class SwiperComponent<T> {
       next: (config) => {
         this.coverflow.set(config?.mupibox?.theme === 'coverflow')
         this.hideScrollbar.set(config?.mupibox?.hideScrollbar === true)
+        this.coverflowShowNames.set(config?.mupibox?.coverflowShowNames === true)
         this.configLoaded.set(true)
       },
       error: () => this.configLoaded.set(true),
