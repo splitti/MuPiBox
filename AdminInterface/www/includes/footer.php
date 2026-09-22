@@ -130,6 +130,19 @@ document.addEventListener("DOMContentLoaded", function () {
             localStorage.setItem("details-" + id, detail.open);
         });
     });
+
+    // Scrollposition wiederherstellen, die vor dem letzten Formular-Submit (z.B. ein
+    // Dropdown mit onchange="this.form.submit()") gespeichert wurde - ohne das springt
+    // die Seite nach jedem Submit an den Anfang zurück.
+    const savedScroll = sessionStorage.getItem("mupibox-scroll");
+    if (savedScroll !== null) {
+        sessionStorage.removeItem("mupibox-scroll");
+        window.scrollTo(0, parseInt(savedScroll, 10));
+    }
+});
+
+document.addEventListener("submit", function () {
+    sessionStorage.setItem("mupibox-scroll", window.scrollY);
 });
 
 </script>
