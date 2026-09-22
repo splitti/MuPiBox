@@ -1,4 +1,32 @@
 <?php
+	// USB WiFi drivers offered on the Network page: which chipset, where it lands once
+	// installed (used to show install state), and where the install/remove scripts live.
+	$usb_wifi_drivers = array(
+		'RTL88X2BU' => array(
+			'label' => 'RTL88X2BU',
+			'path' => '/home/dietpi/.driver/network/88x2bu-20210702',
+			'install_url' => 'https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/online/install_rtl88x2bu.sh',
+			'remove_url' => 'https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/online/remove_rtl88x2bu.sh',
+			),
+		'RTL8821AU' => array(
+			'label' => 'RTL8821AU',
+			'path' => '/home/dietpi/.driver/network/8821au-20210708',
+			'install_url' => 'https://raw.githubusercontent.com/Lippsson/MuPiBox/custom-changes/scripts/online/install_rtl8821au.sh',
+			'remove_url' => 'https://raw.githubusercontent.com/Lippsson/MuPiBox/custom-changes/scripts/online/remove_rtl8821au.sh',
+			),
+		);
+
+	// Asked by the driver dropdown's onchange (fetch, not a form submit) so picking a
+	// different driver updates "State: ..." and the button label without reloading the
+	// whole page (that used to also re-scan the embedded WiFi iframe and jump the scroll).
+	if (isset($_GET['check_usb_wifi_driver'])) {
+		$checked_driver = $_GET['check_usb_wifi_driver'];
+		$installed = isset($usb_wifi_drivers[$checked_driver]) && is_dir($usb_wifi_drivers[$checked_driver]['path']);
+		header('Content-Type: application/json');
+		echo json_encode(array('installed' => $installed));
+		exit;
+	}
+
 	include ('includes/header.php');
 	// the WiFi adapter in use (a USB adapter if there is one, else the onboard one)
 	$WIFI_IF = trim((string) shell_exec('/usr/local/bin/mupibox/mupi_wifi_iface.sh'));
@@ -20,22 +48,6 @@
 	$commandB="sudo iwconfig ".$WIFI_IF." | awk '/Bit Rate/{split($2,a,\"=|/\");print a[2]\" Mb/s\"}'";
 	$BITRATE=exec($commandB);
 
-	// USB WiFi drivers offered on the Network page: which chipset, where it lands once
-	// installed (used to show install state), and where the install/remove scripts live.
-	$usb_wifi_drivers = array(
-		'RTL88X2BU' => array(
-			'label' => 'RTL88X2BU',
-			'path' => '/home/dietpi/.driver/network/88x2bu-20210702',
-			'install_url' => 'https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/online/install_rtl88x2bu.sh',
-			'remove_url' => 'https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/online/remove_rtl88x2bu.sh',
-			),
-		'RTL8821AU' => array(
-			'label' => 'RTL8821AU',
-			'path' => '/home/dietpi/.driver/network/8821au-20210708',
-			'install_url' => 'https://raw.githubusercontent.com/Lippsson/MuPiBox/custom-changes/scripts/online/install_rtl8821au.sh',
-			'remove_url' => 'https://raw.githubusercontent.com/Lippsson/MuPiBox/custom-changes/scripts/online/remove_rtl8821au.sh',
-			),
-		);
 	$usb_wifi_driver = isset($_POST['usb_wifi_driver']) && isset($usb_wifi_drivers[$_POST['usb_wifi_driver']]) ? $_POST['usb_wifi_driver'] : 'RTL88X2BU';
 
 	if( $_POST['USB_WIFI_DRIVER'] == "Install driver" )
@@ -400,7 +412,7 @@
 			<li><a href="https://www.tp-link.com/uk/home-networking/adapter/archer-t2u-plus/" target="_blank">Archer T2U Plus</a></li></ul>
 			</p>
 			<p>
-			<select id="usb_wifi_driver" name="usb_wifi_driver" onchange="this.form.submit()">
+			<select id="usb_wifi_driver" name="usb_wifi_driver" onchange="updateUsbWifiDriverState(this)">
 				<?php foreach ($usb_wifi_drivers as $key => $driver) { ?>
 				<option value="<?php print $key; ?>" <?php if ($usb_wifi_driver === $key) print 'selected'; ?>><?php print $driver['label']; ?></option>
 				<?php } ?>
@@ -420,11 +432,21 @@
 				$change_usb_wifi_driver="Install driver";
 				$state_usb_wifi_driver="not installed";
 				}
-			print("<b>State: ".$state_usb_wifi_driver);
+			print("<b>State: <span id=\"usb_wifi_driver_state\">".$state_usb_wifi_driver."</span>");
 			?>
 			</b></p><p>Please notice: Installation takes a long long time! If you want to install manually and see the installation status, check out this blog post: <a href="https://mupibox.de/pimp-die-mupibox-mit-schneller-netzwerkkarte/" target="_blank">Blog Post</a></p>
-			<input id="saveForm" class="button_text" type="submit" name="USB_WIFI_DRIVER" value="<?php print $change_usb_wifi_driver; ?>" />
+			<input id="usb_wifi_driver_button" class="button_text" type="submit" name="USB_WIFI_DRIVER" value="<?php print $change_usb_wifi_driver; ?>" />
 		</li>
+		<script>
+		function updateUsbWifiDriverState(select) {
+			fetch('network.php?check_usb_wifi_driver=' + encodeURIComponent(select.value))
+				.then(function (response) { return response.json(); })
+				.then(function (data) {
+					document.getElementById('usb_wifi_driver_state').textContent = data.installed ? 'installed' : 'not installed';
+					document.getElementById('usb_wifi_driver_button').value = data.installed ? 'Remove driver' : 'Install driver';
+				});
+		}
+		</script>
 
 
 	</ul>
