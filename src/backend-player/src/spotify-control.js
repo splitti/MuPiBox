@@ -1258,7 +1258,7 @@ app.use((req, res) => {
   else if (command.name === 'shutoff') cmdCall('sudo su - -c "/usr/local/bin/mupibox/./shutdown.sh &"')
   else if (command.name === 'clearresume') cmdCall('sudo bash /usr/local/bin/mupibox/clearresume.sh')
   else if (command.name === 'maxresume') cmdCall('sudo bash /usr/local/bin/mupibox/remove_max_resume.sh')
-  else if (command.name === 'networkrestart') cmdCall('sudo service ifup@wlan0 stop && sudo service ifup@wlan0 start')
+  else if (command.name === 'networkrestart') cmdCall('WIFI_IF=$(/usr/local/bin/mupibox/mupi_wifi_iface.sh); sudo service ifup@$WIFI_IF stop && sudo service ifup@$WIFI_IF start')
   else if (command.name === 'reboot') cmdCall('sudo su - -c "/usr/local/bin/mupibox/./restart.sh &"')
   else if (command.name === 'index') cmdCall('sudo bash /usr/local/bin/mupibox/add_index.sh')
   else if (command.name === 'seek+30') seek(1)

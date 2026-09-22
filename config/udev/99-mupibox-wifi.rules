@@ -1,0 +1,5 @@
+# A WiFi interface appeared or disappeared (e.g. a USB WiFi adapter was plugged in or removed):
+# let MuPiBox choose again which adapter to use (USB preferred, onboard as fallback).
+# KillMode=process: the script starts the WiFi (wpa_supplicant, dhclient run in the background); systemd must
+# not stop those together with the script when it ends, otherwise the link that was just set up goes down again.
+ACTION=="add|remove", SUBSYSTEM=="net", KERNEL=="wlan*", RUN+="/usr/bin/systemd-run --no-block --property=KillMode=process /usr/local/bin/mupibox/mupi_wifi_select.sh"

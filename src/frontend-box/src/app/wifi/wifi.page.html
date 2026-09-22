@@ -3,7 +3,7 @@
     <ion-buttons slot="start">
       <ion-back-button icon="arrow-back-outline" defaultHref="/settings"></ion-back-button>
     </ion-buttons>
-    <ion-title>WiFi</ion-title>
+    <ion-title>WiFi@if (network()?.interface) {<span class="wifi-interface">{{ network()?.interface }}</span>}</ion-title>
     <ion-buttons slot="end">
       <ion-button (click)="wifiRestartButtonPressed()">
         <ion-icon slot="icon-only" name="refresh"></ion-icon>

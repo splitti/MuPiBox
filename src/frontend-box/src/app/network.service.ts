@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
-import { Observable, timer } from 'rxjs'
-import { distinctUntilChanged, filter, map, shareReplay, switchMap } from 'rxjs/operators'
+import { EMPTY, Observable, timer } from 'rxjs'
+import { catchError, distinctUntilChanged, filter, map, shareReplay, switchMap } from 'rxjs/operators'
 import { environment } from '../environments/environment'
 import type { Network } from './network'
 
@@ -17,7 +17,9 @@ export class NetworkService {
 
   constructor(private http: HttpClient) {
     this.network$ = timer(300, 5000).pipe(
-      switchMap((): Observable<Network> => this.http.get<Network>(`${environment.backend.apiUrl}/network`)),
+      // A failed request (e.g. the state file is being rewritten) must not end the polling for good:
+      // the last known state stays and the next poll tries again.
+      switchMap((): Observable<Network> => this.http.get<Network>(`${environment.backend.apiUrl}/network`).pipe(catchError(() => EMPTY))),
       shareReplay({ bufferSize: 1, refCount: false }),
     )
   }
