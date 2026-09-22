@@ -7,7 +7,7 @@ import { MediaService } from '../media.service'
 import { PlayerCmds, PlayerService } from '../player.service'
 import { SettingsHeaderComponent } from '../settings-header/settings-header.component'
 import { WifiService } from '../wifi.service'
-import type { WifiConfiguredNetwork } from '../wifi-network'
+import type { WifiNetwork } from '../wifi-network'
 
 /** WLAN settings in the settings mockup layout. */
 @Component({
@@ -18,8 +18,9 @@ import type { WifiConfiguredNetwork } from '../wifi-network'
 })
 export class WifiPage {
   protected network = toSignal(this.mediaService.network$, { initialValue: null })
-  protected configuredNetworks = signal<WifiConfiguredNetwork[]>([])
+  protected networks = signal<WifiNetwork[]>([])
   protected loading = signal(true)
+  protected readonly signalBars = [1, 2, 3, 4]
 
   constructor(
     private mediaService: MediaService,
@@ -32,14 +33,15 @@ export class WifiPage {
   }
 
   ionViewWillEnter() {
-    this.loadConfiguredNetworks()
+    this.loadNetworks()
   }
 
-  private loadConfiguredNetworks() {
+  // Scans for networks in range (takes a few seconds) and merges them with the saved ones.
+  protected loadNetworks() {
     this.loading.set(true)
-    this.wifiService.getConfiguredNetworks().subscribe({
+    this.wifiService.getNetworks().subscribe({
       next: (networks) => {
-        this.configuredNetworks.set(networks)
+        this.networks.set(networks)
         this.loading.set(false)
       },
       error: () => {
@@ -48,15 +50,42 @@ export class WifiPage {
     })
   }
 
+  // 0-4 lit bars for the signal strength in percent.
+  protected signalLevel(network: WifiNetwork): number {
+    const signal = network.signal ?? 0
+    if (!network.available || signal <= 0) {
+      return 0
+    }
+    return signal >= 75 ? 4 : signal >= 50 ? 3 : signal >= 25 ? 2 : 1
+  }
+
+  // "2.4 GHz", "5 GHz" or "2.4 + 5 GHz" (both). For the connected network the band in use is added
+  // when the network is available on more than one.
+  protected bandText(network: WifiNetwork): string {
+    const bands = [...(network.bands ?? [])].sort((x, y) => Number(x) - Number(y))
+    if (bands.length === 0) {
+      return ''
+    }
+    const text = `${bands.join(' + ')} GHz`
+    return network.current && network.connectedBand && bands.length > 1
+      ? `${text} (connected on ${network.connectedBand} GHz)`
+      : text
+  }
+
   addNetworkButtonPressed() {
     this.router.navigate(['/wifi/add'])
   }
 
-  changeNetworkButtonPressed(network: WifiConfiguredNetwork) {
+  // A network in range that is not saved yet: add it with the name already filled in.
+  connectNetworkButtonPressed(network: WifiNetwork) {
+    this.router.navigate(['/wifi/add'], { state: { newNetworkSsid: network.ssid } })
+  }
+
+  changeNetworkButtonPressed(network: WifiNetwork) {
     this.router.navigate(['/wifi/add'], { state: { editNetwork: { id: network.id, ssid: network.ssid } } })
   }
 
-  async deleteNetworkButtonPressed(network: WifiConfiguredNetwork) {
+  async deleteNetworkButtonPressed(network: WifiNetwork) {
     const alert = await this.alertController.create({
       cssClass: 'alert',
       header: 'Netzwerk löschen',
@@ -66,7 +95,7 @@ export class WifiPage {
           text: 'Löschen',
           handler: () => {
             this.wifiService.removeNetwork(network.id).subscribe(() => {
-              this.loadConfiguredNetworks()
+              this.loadNetworks()
             })
           },
         },

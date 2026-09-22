@@ -52,10 +52,11 @@ export class RssFeedService {
     if (!url || url === 'No title') {
       return undefined
     }
+    // Covers are asked for as small thumbnails (episode pictures are often 2 MB).
     if (url.startsWith('/rss-covers/')) {
-      return url
+      return `${environment.backend.apiUrl}/rssfeed/image?local=${encodeURIComponent(url.slice('/rss-covers/'.length))}&w=400`
     }
-    return `${environment.backend.apiUrl}/rssfeed/image?url=${encodeURIComponent(url)}`
+    return `${environment.backend.apiUrl}/rssfeed/image?url=${encodeURIComponent(url)}&w=400`
   }
 
   private handleCData(text?: { _text: string } | { _cdata: string }): string {

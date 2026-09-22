@@ -6,7 +6,7 @@
   </button>
 
   <div class="sections">
-    @for (section of sections; track section.category) {
+    @for (section of sections(); track section.category) {
       <section class="category-section">
         <h2 class="section-title">
           <span class="section-icon"><ion-icon [name]="section.icon"></ion-icon></span>

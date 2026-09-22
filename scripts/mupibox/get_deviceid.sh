@@ -1,4 +1,6 @@
 #!/bin/bash
+# DEPRECATED 2026-09-20: no script, service or admin page runs it any more (Spotify devices are read by the player backend itself).
+# Kept for reference; nothing in MuPiBox calls it. Safe to delete.
 #
 # HOSTNAME
 

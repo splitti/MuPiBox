@@ -1,13 +1,16 @@
+import { HttpClient } from '@angular/common/http'
 import { ChangeDetectionStrategy, Component, computed, Signal, signal, WritableSignal } from '@angular/core'
 import { toObservable, toSignal } from '@angular/core/rxjs-interop'
 import { NavigationExtras, Router } from '@angular/router'
 import { IonContent, IonIcon, IonSpinner } from '@ionic/angular/standalone'
 import { catchError, of, switchMap, tap } from 'rxjs'
+import { environment } from '../../environments/environment'
 
 import type { Artist } from '../artist'
 import { registerLucideIcons } from '../icons/lucide-icons'
 import type { CategoryType } from '../media'
 import { MediaService } from '../media.service'
+import type { MupiboxConfig } from '../mupibox-config.model'
 import { PlayerService } from '../player.service'
 import { StatusBarComponent } from '../status-bar/status-bar.component'
 import { TileComponent } from '../tile/tile.component'
@@ -38,18 +41,33 @@ interface HomeSection {
 })
 export class HomePage {
   protected isOnline: Signal<boolean>
-  protected sections: HomeSection[]
+  /** Categories the admin has hidden (Admin > Control system > Hide display categorys). */
+  private hiddenCategories: WritableSignal<string[]> = signal([])
+  private allSections: HomeSection[]
+  protected sections = computed(() => this.allSections.filter((s) => !this.hiddenCategories().includes(s.category)))
 
   constructor(
     private mediaService: MediaService,
     private playerService: PlayerService,
     private router: Router,
+    private http: HttpClient,
   ) {
     registerLucideIcons()
 
+    this.http.get<MupiboxConfig>(`${environment.backend.apiUrl}/config`).subscribe({
+      next: (config) => {
+        const hidden = config?.mupibox?.hiddenCategories
+        if (Array.isArray(hidden)) {
+          this.hiddenCategories.set(hidden)
+        }
+      },
+      // Show all sections when the config could not be loaded.
+      error: () => {},
+    })
+
     this.isOnline = toSignal(this.mediaService.isOnline())
 
-    this.sections = [
+    this.allSections = [
       this.createSection('audiobook', 'Hörspiele', 'lucide-headphones'),
       this.createSection('music', 'Musik', 'lucide-music'),
       this.createSection('other', 'Podcasts & Radio', 'lucide-podcast'),
@@ -94,9 +112,16 @@ export class HomePage {
   }
 
   protected async artistCoverClicked(artist: Artist, category: CategoryType): Promise<void> {
-    // Check if this is a standalone playlist (playlist without artist)
-    if (artist.coverMedia?.playlistid && !artist.coverMedia?.artist) {
-      // This is a standalone playlist - start playback directly
+    // NAS and local folders that hold tracks (not further folders) play right away, as do
+    // standalone playlists that carry no artist.
+    const isPlayableNasFolder = artist.coverMedia?.type === 'nas' && !artist.coverMedia.nasIsContainer
+    const isPlayableLibraryFolder =
+      artist.coverMedia?.type === 'library' && !!artist.coverMedia.libraryPath && !artist.coverMedia.libraryIsContainer
+    if (
+      isPlayableNasFolder ||
+      isPlayableLibraryFolder ||
+      (artist.coverMedia?.playlistid && !artist.coverMedia?.artist)
+    ) {
       const navigationExtras: NavigationExtras = {
         state: {
           media: artist.coverMedia,
@@ -110,6 +135,13 @@ export class HomePage {
           artist: artist,
           category: category,
         },
+        // NAS / local folder levels are identified by their folder path (see MedialistPage).
+        queryParams:
+          artist.coverMedia?.type === 'nas'
+            ? { nas: artist.coverMedia.nasPath }
+            : artist.coverMedia?.libraryPath
+              ? { lib: artist.coverMedia.libraryPath }
+              : undefined,
       }
       this.router.navigate(['/medialist'], navigationExtras)
     }

@@ -86,9 +86,18 @@
 									</td>
 							</tr>
 						</table></p>
-				<?php
-					$news = file_get_contents("https://raw.githubusercontent.com/splitti/MuPiBox/main/news.txt");
-					print "<p><h2>MuPiBox-News</h2>".$news."</p>"; ?>
+				<p><h2>MuPiBox-News</h2>
+					<?php
+						// The changelog text comes from news.txt on GitHub - there is no copy of it in the admin.
+						$news_url = 'https://raw.githubusercontent.com/splitti/MuPiBox/main/news.txt';
+						$news_text = @file_get_contents($news_url, false, stream_context_create(['http' => ['timeout' => 8]]));
+						if ($news_text === false || trim($news_text) === '') {
+							print 'The news could not be loaded (no connection to GitHub). See <a href="https://github.com/splitti/MuPiBox/blob/main/news.txt" target="_blank">news.txt</a>.';
+						} else {
+							print $news_text;
+						}
+					?>
+				</p>
 				</li>
 			</ul>
 		</details>

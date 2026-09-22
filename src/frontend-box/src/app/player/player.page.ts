@@ -16,6 +16,7 @@ import { IonContent, IonIcon, IonRange, IonRouterOutlet, IonSpinner, NavControll
 import { firstValueFrom } from 'rxjs'
 import { environment } from '../../environments/environment'
 import type { AlbumStop } from '../albumstop'
+import { ArtworkService } from '../artwork.service'
 import type { CurrentMPlayer } from '../current.mplayer'
 import type { CurrentSpotify } from '../current.spotify'
 import { registerLucideIcons } from '../icons/lucide-icons'
@@ -100,6 +101,7 @@ export class PlayerPage implements OnInit {
     private navController: NavController,
     private playerService: PlayerService,
     private spotifyService: SpotifyService,
+    private artworkService: ArtworkService,
   ) {
     this.spotify = toSignal(this.mediaService.current$)
     this.local = toSignal(this.mediaService.local$)
@@ -110,7 +112,7 @@ export class PlayerPage implements OnInit {
         const duration = spotify?.item?.duration_ms
         return duration ? ((spotify.progress_ms || 0) / duration) * 100 : 0
       }
-      if (this.media?.type === 'library' || this.media?.type === 'rss') {
+      if (this.media?.type === 'library' || this.media?.type === 'nas' || this.media?.type === 'rss') {
         return this.local()?.progressTime || 0
       }
       return 0
@@ -121,7 +123,8 @@ export class PlayerPage implements OnInit {
       if (this.media?.type === 'spotify' && spotifyCover) {
         return spotifyCover
       }
-      return this.media?.cover || NO_COVER
+      // Radio covers are served from the copy cached on the box (see ArtworkService).
+      return this.media ? this.artworkService.cachedCoverUrl(this.media, this.media.cover || NO_COVER) : NO_COVER
     })
 
     if (this.router.currentNavigation()?.extras.state?.media) {
@@ -187,12 +190,22 @@ export class PlayerPage implements OnInit {
     }
   }
 
+  // Buffering of a stream before it starts: 0 (nothing yet) to 100 (enough to start).
+  get loadProgress(): number {
+    return Math.min(100, Math.max(0, this.local()?.loadProgress ?? 0))
+  }
+
+  // The ring shrinks from the full circle (r=20) to a small dot (r=3) as the buffer fills.
+  get loadRingRadius(): number {
+    return 20 - 17 * (this.loadProgress / 100)
+  }
+
   seek() {
     const newValue = +this.range.value
     if (this.media.type === 'spotify') {
       const duration = this.spotify()?.item?.duration_ms
       this.playerService.seekPosition(duration * (newValue / 100))
-    } else if (this.media.type === 'library' || this.media.type === 'rss') {
+    } else if (this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'rss') {
       this.playerService.seekPosition(newValue)
     }
   }
@@ -217,9 +230,9 @@ export class PlayerPage implements OnInit {
           this.navController.back()
         }
       }
-    } else if (this.media.type === 'library' || this.media.type === 'rss') {
+    } else if (this.media.type === 'library' || this.media.type === 'nas' || this.media.type === 'rss') {
       if (
-        this.media.type === 'library' &&
+        (this.media.type === 'library' || this.media.type === 'nas') &&
         this.playing() &&
         !local?.playing &&
         local?.currentTracknr === local?.totalTracks
@@ -277,7 +290,10 @@ export class PlayerPage implements OnInit {
     clearTimeout(this.longPressTimer)
     this.showTrackList.set(false)
     if (
-      (this.media.type === 'spotify' || this.media.type === 'library' || this.media.type === 'rss') &&
+      (this.media.type === 'spotify' ||
+        this.media.type === 'library' ||
+        this.media.type === 'nas' ||
+        this.media.type === 'rss') &&
       !this.media.shuffle &&
       this.resumeTimer > 30 &&
       this.playing()
@@ -335,6 +351,25 @@ export class PlayerPage implements OnInit {
           this.playerService.seekPosition(this.media.resumelocalprogressTime)
         }, 2000)
       }
+    } else if (this.media.type === 'nas') {
+      const success = await this.playerService.playMedia(this.media)
+      if (!success) {
+        this.logService.error('[PlayerPage] Failed to start NAS playback')
+        return
+      }
+      // Jump to the saved track and position once the playlist is loaded.
+      const track = this.media.resumelocalcurrentTracknr || 1
+      const progress = this.media.resumelocalprogressTime || 0
+      setTimeout(() => {
+        if (track > 1) {
+          this.playerService.playTrackAtPosition(this.media, { position: track })
+        }
+        setTimeout(() => {
+          if (progress > 0) {
+            this.playerService.seekPosition(progress)
+          }
+        }, 2000)
+      }, 2500)
     } else if (this.media.type === 'rss') {
       const success = await this.playerService.playMedia(this.media)
       if (!success) {
@@ -363,6 +398,11 @@ export class PlayerPage implements OnInit {
       this.resumemedia.resumelocalalbum = this.resumemedia.category
       this.resumemedia.resumelocalcurrentTracknr = local?.currentTracknr || 0
       this.resumemedia.resumelocalprogressTime = local?.progressTime || 0
+    } else if (this.resumemedia.type === 'nas') {
+      // NAS entries have no id of their own; the path identifies them in resume.json.
+      this.resumemedia.id = `nas:${this.resumemedia.nasPath}`
+      this.resumemedia.resumelocalcurrentTracknr = this.local()?.currentTracknr || 0
+      this.resumemedia.resumelocalprogressTime = this.local()?.progressTime || 0
     } else if (this.resumemedia.type === 'rss') {
       this.resumemedia.resumerssprogressTime = local?.progressTime || 0
     }
@@ -416,7 +456,12 @@ export class PlayerPage implements OnInit {
   playPause() {
     if (this.playing()) {
       this.playerService.sendCmd(PlayerCmds.PAUSE)
-      if (this.media.type === 'spotify' || this.media.type === 'library' || this.media.type === 'rss') {
+      if (
+        this.media.type === 'spotify' ||
+        this.media.type === 'library' ||
+        this.media.type === 'nas' ||
+        this.media.type === 'rss'
+      ) {
         this.saveResumeFiles()
       }
     } else {
@@ -429,7 +474,7 @@ export class PlayerPage implements OnInit {
   // --------------------------------------------
 
   coverPointerDown() {
-    if (this.media.type !== 'spotify' && this.media.type !== 'library') {
+    if (this.media.type !== 'spotify' && this.media.type !== 'library' && this.media.type !== 'nas') {
       return
     }
     clearTimeout(this.longPressTimer)
@@ -453,6 +498,14 @@ export class PlayerPage implements OnInit {
     try {
       if (this.media.type === 'library') {
         const tracks = await firstValueFrom(this.playerService.getLocalTracklist(this.media))
+        this.trackListTitle = this.media.title
+        this.trackList = (tracks ?? []).map((track) => ({
+          position: track.position,
+          id: `${track.position}`,
+          name: track.name,
+        }))
+      } else if (this.media.type === 'nas') {
+        const tracks = await firstValueFrom(this.playerService.getNasTracklist(this.media))
         this.trackListTitle = this.media.title
         this.trackList = (tracks ?? []).map((track) => ({
           position: track.position,
@@ -516,7 +569,7 @@ export class PlayerPage implements OnInit {
 
   isCurrentTrack(entry: TrackListEntry): boolean {
     const spotify = this.spotify()
-    if (this.media.type === 'library') {
+    if (this.media.type === 'library' || this.media.type === 'nas') {
       return this.local()?.currentTracknr === entry.position
     }
     if (this.media.playlistid) {

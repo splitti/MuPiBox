@@ -56,7 +56,16 @@
     <!-- Left: album cover (long press opens the track list) and the volume row -->
     <div class="cover" (pointerdown)="coverPointerDown()" (pointerup)="coverPointerUp()" (pointerleave)="coverPointerUp()" (pointercancel)="coverPointerUp()" (contextmenu)="$event.preventDefault()">
       <img [src]="cover()" draggable="false" ondragstart="return false;" alt="">
-      @if (media.type === 'spotify' || media.type === 'library') {
+      @if ((media.type === 'radio' || media.type === 'rss') && local()?.loading) {
+        <!-- Stream is being buffered: a ring in the middle of the cover that gets smaller until playback starts. -->
+        <div class="load-indicator">
+          <svg viewBox="0 0 48 48">
+            <circle class="load-indicator-track" cx="24" cy="24" r="20"></circle>
+            <circle class="load-indicator-ring" [class.waiting]="loadProgress === 0" cx="24" cy="24" [attr.r]="loadRingRadius"></circle>
+          </svg>
+        </div>
+      }
+      @if (media.type === 'spotify' || media.type === 'library' || media.type === 'nas') {
         <div class="press-indicator" [class.active]="pressingCover()" [style.--press-duration.ms]="listViewTimerMs()">
           <svg viewBox="0 0 48 48">
             <circle class="press-indicator-track" cx="24" cy="24" r="20"></circle>

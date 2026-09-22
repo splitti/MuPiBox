@@ -139,6 +139,53 @@ $accent: var(--mupi-accent, var(--ion-color-light, #01aadf));
     }
 }
 
+// Loading ring of a radio stream / podcast: same look and place as the long-press ring.
+.load-indicator {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 90px;
+    height: 90px;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+
+    svg {
+        width: 100%;
+        height: 100%;
+    }
+
+    circle {
+        stroke-width: 4;
+    }
+
+    .load-indicator-track {
+        fill: rgba(0, 0, 0, 0.35);
+        stroke: rgba(255, 255, 255, 0.3);
+    }
+
+    .load-indicator-ring {
+        fill: none;
+        stroke: var(--ion-color-primary, #2dd6c7);
+        stroke-linecap: round;
+        transition: r 0.9s linear;
+
+        // Still connecting (nothing buffered yet): the full ring breathes.
+        &.waiting {
+            animation: load-indicator-waiting 1.2s ease-in-out infinite;
+        }
+    }
+}
+
+@keyframes load-indicator-waiting {
+    0%,
+    100% {
+        opacity: 0.35;
+    }
+    50% {
+        opacity: 1;
+    }
+}
+
 @keyframes press-indicator-countdown {
     from {
         stroke-dashoffset: 0;

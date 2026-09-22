@@ -16,4 +16,7 @@ export interface CurrentMPlayer {
   timePos?: number
   length?: number
   volume?: number
+  // Radio streams and podcasts are buffered before they start: how far that is (0-100).
+  loading?: boolean
+  loadProgress?: number
 }

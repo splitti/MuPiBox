@@ -1,5 +1,5 @@
 <ion-content class="settings-content mupi-page wifi-add-content" [scrollY]="false">
-  <mupi-settings-header [title]="editNetwork ? 'Passwort ändern' : 'Netzwerk hinzufügen'" backHref="/wifi">
+  <mupi-settings-header [title]="editNetwork ? 'Passwort ändern' : (prefillSsid ? 'Verbinden: ' + prefillSsid : 'Netzwerk hinzufügen')" backHref="/wifi">
     <button type="button" class="btn-outline" (click)="cancelButtonPressed()">Abbrechen</button>
     <button type="button" class="pill-dark" [disabled]="!valid" (click)="submit(libraryForm)">
       <ion-icon name="lucide-save"></ion-icon>
@@ -17,7 +17,7 @@
       } @else {
         <div class="settings-field">
           <label for="wlan_ssid">Netzwerkname (SSID)</label>
-          <ion-input id="wlan_ssid" #wlan_ssid name="wlan_ssid" type="text" placeholder="WLAN-Name eingeben" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
+          <ion-input id="wlan_ssid" #wlan_ssid name="wlan_ssid" type="text" placeholder="WLAN-Name eingeben" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" [ngModel]="prefillSsid ?? ''"></ion-input>
         </div>
       }
       <div class="settings-field">

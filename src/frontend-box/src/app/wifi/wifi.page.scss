@@ -59,3 +59,41 @@
     gap: 12px;
     padding-bottom: 8px;
 }
+
+// Four bars for the signal strength, filled according to the percentage.
+.signal {
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 24px;
+    flex: 0 0 auto;
+
+    .bar {
+        width: 6px;
+        border-radius: 2px;
+        background: var(--mupi-settings-muted);
+        opacity: 0.3;
+
+        &:nth-child(1) { height: 7px; }
+        &:nth-child(2) { height: 12px; }
+        &:nth-child(3) { height: 18px; }
+        &:nth-child(4) { height: 24px; }
+
+        &.on {
+            background: var(--mupi-settings-text);
+            opacity: 1;
+        }
+    }
+}
+
+// Saved network that is currently out of range.
+.settings-row.unavailable {
+    opacity: 0.45;
+}
+
+.row-lock {
+    font-size: 15px;
+    margin-inline-start: 6px;
+    color: var(--mupi-settings-muted);
+    vertical-align: -2px;
+}

@@ -30,6 +30,9 @@ export class WifiAddPage implements OnInit, AfterViewInit {
   /** When set, the page edits the password of an already configured network instead of adding a new one. */
   editNetwork: EditNetworkState | undefined
 
+  /** SSID of a network in range that was picked from the list (only the password is still needed). */
+  prefillSsid: string | undefined
+
   constructor(
     private mediaService: MediaService,
     private wifiService: WifiService,
@@ -37,8 +40,11 @@ export class WifiAddPage implements OnInit, AfterViewInit {
     public alertController: AlertController,
     private router: Router,
   ) {
-    const state = this.router.currentNavigation()?.extras.state as { editNetwork?: EditNetworkState } | undefined
+    const state = this.router.currentNavigation()?.extras.state as
+      | { editNetwork?: EditNetworkState; newNetworkSsid?: string }
+      | undefined
     this.editNetwork = state?.editNetwork
+    this.prefillSsid = state?.newNetworkSsid
     registerLucideIcons()
   }
 
@@ -90,6 +96,17 @@ export class WifiAddPage implements OnInit, AfterViewInit {
     })
 
     this.selectedInputElem = document.querySelector('.wifi-form ion-input')
+
+    if (this.prefillSsid) {
+      // Name already known: fill it in and let the keyboard type into the password field.
+      this.keyboard.setInput(this.prefillSsid, 'wlan_ssid')
+      const passwordInput = document.querySelector('ion-input[name="wlan_pw"]') as any
+      if (passwordInput) {
+        this.selectedInputElem = passwordInput
+        this.keyboard.setOptions({ disableCaretPositioning: false, inputName: 'wlan_pw' })
+      }
+      this.validate()
+    }
   }
 
   cancelButtonPressed() {

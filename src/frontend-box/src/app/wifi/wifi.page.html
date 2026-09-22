@@ -1,5 +1,9 @@
 <ion-content class="settings-content mupi-page">
   <mupi-settings-header title="WLAN">
+    <button type="button" class="btn-outline" (click)="loadNetworks()" [disabled]="loading()">
+      <ion-icon name="lucide-search"></ion-icon>
+      Suchen
+    </button>
     <button type="button" class="pill-dark" (click)="addNetworkButtonPressed()">Netzwerk hinzufügen</button>
   </mupi-settings-header>
 
@@ -22,28 +26,52 @@
     </div>
   </div>
 
-  <div class="section-label">Gespeicherte Netzwerke</div>
+  <div class="section-label">Netzwerke</div>
   <div class="settings-card">
     @if (loading()) {
       <div class="loading-row"><ion-spinner name="crescent"></ion-spinner></div>
     } @else {
-      @for (configuredNetwork of configuredNetworks(); track configuredNetwork.id) {
-        <div class="settings-row">
-          <span class="row-bar" [class.active]="configuredNetwork.current"></span>
-          <div class="row-main">
-            <div class="row-title">{{ configuredNetwork.ssid }}</div>
-            <div class="row-sub">IP automatisch (DHCP)</div>
+      <!-- Networks in range merged with the ones saved on the box; out of range rows are greyed out. -->
+      @for (wifi of networks(); track wifi.ssid + '/' + wifi.id) {
+        <div class="settings-row" [class.unavailable]="!wifi.available">
+          <span class="row-bar" [class.active]="wifi.current"></span>
+          <div class="signal" [class.off]="!wifi.available">
+            @for (bar of signalBars; track bar) {
+              <span class="bar" [class.on]="bar <= signalLevel(wifi)"></span>
+            }
           </div>
-          @if (configuredNetwork.current) {
+          <div class="row-main">
+            <div class="row-title">
+              {{ wifi.ssid }}
+              @if (wifi.secured) {
+                <ion-icon class="row-lock" name="lucide-lock"></ion-icon>
+              }
+            </div>
+            <div class="row-sub">
+              @if (wifi.available && wifi.signal !== undefined) {
+                Signal {{ wifi.signal }} %@if (bandText(wifi); as band) { &middot; {{ band }}}
+              } @else if (wifi.available) {
+                In Reichweite
+              } @else {
+                Nicht in Reichweite
+              }
+              @if (wifi.id !== undefined && !wifi.current) { &middot; gespeichert }
+            </div>
+          </div>
+          @if (wifi.current) {
             <span class="row-status">verbunden</span>
           }
           <div class="row-actions">
-            <button type="button" class="btn-outline" (click)="changeNetworkButtonPressed(configuredNetwork)">Ändern</button>
-            <button type="button" class="btn-outline danger" (click)="deleteNetworkButtonPressed(configuredNetwork)">Löschen</button>
+            @if (wifi.id !== undefined) {
+              <button type="button" class="btn-outline" (click)="changeNetworkButtonPressed(wifi)">Ändern</button>
+              <button type="button" class="btn-outline danger" (click)="deleteNetworkButtonPressed(wifi)">Löschen</button>
+            } @else {
+              <button type="button" class="btn-outline" (click)="connectNetworkButtonPressed(wifi)">Verbinden</button>
+            }
           </div>
         </div>
       } @empty {
-        <div class="settings-empty">Noch kein Netzwerk gespeichert.</div>
+        <div class="settings-empty">Kein Netzwerk gefunden. Mit „Suchen“ erneut scannen.</div>
       }
     }
   </div>

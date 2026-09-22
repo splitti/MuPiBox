@@ -24,6 +24,7 @@
 			"mint",
 			"danger",
 			"cinema",
+			"coverflow",
 			"earth",
 			"steampunk",
 			"fantasybutterflies",
@@ -261,6 +262,14 @@
 		"maxcachesize": 1073741824,
 		"cachepath": "/home/dietpi/.cache/spotify",
 		"cachestate": true
+	},
+	"synology": {
+		"address": "",
+		"https": false,
+		"account": "",
+		"password": "",
+		"rememberMe": false,
+		"artistFolders": []
 	},
 	"timeout": {
 		"idlePiShutdown": "0",
