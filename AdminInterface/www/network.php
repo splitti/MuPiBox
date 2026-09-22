@@ -309,109 +309,15 @@
 	<p>Network informations, options and so on...</p>
 </div>
 
-	<details id="networkinformation">
-		<summary><i class="fa-solid fa-wifi"></i> Network Information</summary>
+	<details id="wifisettingsdisplay" open>
+		<summary><i class="fa-solid fa-wifi"></i> WiFi Settings</summary>
 		<ul>
 			<li class="li_norm">
-
-        <h2>Network Information</h2>
-        <table class="version">
-        <tr><td>IP-Address:</td><td><?php print $_SERVER['SERVER_ADDR']; ?></td></tr>
-        <tr><td>MAC-Address:</td><td><?php print $MAC0; ?></td></tr>
-        <tr><td>Subnet-Adresss:</td><td><?php print $SUBNET0; ?></td></tr>
-        <tr><td>Gateway:</td><td><?php print $GATEWAY0; ?></td></tr>
-        <tr><td>Nameserver:</td><td><?php print $DNS; ?></td></tr>
-        <tr><td>Wifi SSID:</td><td><?php print $WIFI; ?></td></tr>
-        <tr><td>Wifi Link Quality:</td><td><?php print $LINKQ; ?>%	</td></tr>
-        <tr><td>Wifi Signal Level:</td><td><?php print $SIGNAL; ?></td></tr>
-        <tr><td>Bitrate:</td><td><?php print $BITRATE ?></td></tr>
-        </table>
-		</li></ul></details>
-		
-	<details id="deletewifi">
-		<summary><i class="fa-regular fa-trash-can"></i> Delete Wifi-Network</summary>
-
-	<ul>
-		<li class="li_1"><h2>Delete Wifi-Network</h2>
-			<p>
-			Delete the selected network:
-			</p>
-		</li>
-		<li class="li_1">
-  <fieldset>
-<?php
-	$command = "sudo wpa_cli list_networks | tail -n +3";
-	exec($command, $wifis, $result );
-	foreach ($wifis as $thiswifi) {
-		$wifidetails = explode("\t", $thiswifi);
-		if( $wifidetails[3] )
-			{
-				$connection=" [connected]";
-			}
-		else 
-			{
-				$connection="";
-			}
-		
-		echo "<input type=\"radio\" id=\"".$wifidetails[0]."\" name=\"wifinr\" value=\"".$wifidetails[0]."\"> ";
-		echo "<label for=\"".$wifidetails[0]."\"> ".$wifidetails[1].$connection."</label></input><br/>";
-		}
-
-?>
-</fieldset>
-</li>
-		<li class="li_1">
-				<input id="saveForm" class="button_text_red" type="submit" name="delete_wifi" value="Delete selected Wifi"  onclick="return confirm('Do really want to delete selected Wifi-Network?');" />
-		</li>
-	</ul>
-	</details>
-		
-		
-		
-	<details id="addwifi">
-	<summary><i class="fa-solid fa-tower-broadcast"></i> Add Wifi-Network</summary>
-	<ul>
-	<li class="li_1"><h2>Search and Add Wifi</h2>
-		<p>You can search for WLAN or enter it manually</p>
-	</li>
-
-	<?php
-	if ( $wifi_networks )
-		{	
-				?>
-				<li class="li_1">
-				<h2>SSID-Name</h2>
-
-				<div><select id="wifi_name" name="wifi_name" class="element text small">
-				
-				<?php
-				foreach($wifi_cleaned as $wifiname) {
-					print "<option value=\"". $wifiname . "\">" . $wifiname . "</option>";
-				}
-				?>
-				"</select></li>
-
-	<?php	
-		}
-	else
-		{
-	?>
-		<li class="li_1">
-			<h2>SSID-Name</h2>
-			<input id="wifi_name" name="wifi_name" class="element text medium" type="text" maxlength="255" value=""/>
-        </li>
-	<?php
-		}
-	?>
-        <li class="li_1" >
-			<h2>Wifi-Password</h2>
-			<input id="wifi_pwd" name="wifi_pwd" class="element text medium" type="password" maxlength="255" value="" minlength="8">
-		</li>
-		<li class="li_1">
-		<input id="saveForm" class="button_text" type="submit" name="save_wifi" value="Save Wifi" />
-		<input id="saveForm" class="button_text" type="submit" name="scan_wifi" value="Scan Wifi-Networks" />
-		</li>
-	</ul>
+			<p>The same WiFi settings page as on the display: networks in range, signal, band, connect/change/delete.</p>
+			<iframe src="http://<?php print $_SERVER['SERVER_ADDR']; ?>:8200/wifi" width="800" height="480" style="border:0;"></iframe>
+			<p><a href="http://<?php print $_SERVER['SERVER_ADDR']; ?>:8200/wifi" target="_blank">If it doesn't display properly, try this Link and click me...</a></p>
+			</li>
+		</ul>
 	</details>
 
 
