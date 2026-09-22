@@ -2224,6 +2224,25 @@ function synologyFindCoverImage(files: SynologyFileEntry[]): string | undefined 
   return image?.path
 }
 
+// A folder without a picture of its own (e.g. an artist folder holding only album subfolders)
+// gets the first cover found one level below it, in listing order - checked one subfolder at a
+// time (not in parallel) and stops at the first hit, so this stays cheap even for a folder with
+// many subfolders. Only one level deep, unlike the local library's multi-level version.
+async function synologyFindCoverBelow(files: SynologyFileEntry[]): Promise<string | undefined> {
+  for (const sub of files.filter((f) => f.isdir).slice(0, 5)) {
+    try {
+      const subFiles = await nasListFiles(sub.path)
+      const cover = synologyFindCoverImage(subFiles)
+      if (cover) {
+        return cover
+      }
+    } catch {
+      // Unreadable folder - try the next one.
+    }
+  }
+  return undefined
+}
+
 // Only used for covers, which are asked for as small thumbnails.
 function synologyStreamUrl(filePath: string): string {
   return `/api/synology/stream?path=${encodeURIComponent(filePath)}&w=400`
@@ -2246,7 +2265,7 @@ async function synologyBuildMediaEntry(
   fallbackCoverPath?: string,
 ): Promise<Record<string, unknown>> {
   const files = await nasListFiles(folderPath)
-  const ownCoverPath = synologyFindCoverImage(files)
+  const ownCoverPath = synologyFindCoverImage(files) ?? (await synologyFindCoverBelow(files))
   const coverPath = ownCoverPath ?? fallbackCoverPath
   return {
     type: 'nas',
