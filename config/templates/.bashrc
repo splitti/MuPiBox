@@ -94,10 +94,17 @@ alias mountedinfo='df -hT'
 alias reboot='sudo reboot'
 
 function mupi-update-webinterface() {
+	# Download and check first, replace /var/www only afterwards (a failed download used to leave it empty)
+	sudo rm -f /tmp/www.zip
+	sudo wget -q -O /tmp/www.zip https://github.com/splitti/MuPiBox/raw/main/AdminInterface/release/www.zip
+	if ! unzip -tq /tmp/www.zip > /dev/null 2>&1; then
+		echo "Download of the web interface failed or is incomplete - nothing was changed."
+		sudo rm -f /tmp/www.zip
+		return 1
+	fi
 	sudo rm -R /var/www/*
-	sudo wget -o /var/www/www.zip https://github.com/splitti/MuPiBox/raw/main/AdminInterface/release/www.zip
-	sudo unzip /var/www/www.zip -d /var/www/
-	sudo rm /var/www/www.zip
+	sudo unzip /tmp/www.zip -d /var/www/
+	sudo rm /tmp/www.zip
 	sudo ln -s /home/dietpi/MuPiBox/media/cover /var/www/cover
 	sudo chown -R www-data:www-data /var/www/
 	sudo chmod -R 755 /var/www/

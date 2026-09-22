@@ -341,10 +341,36 @@ rm -f /tmp/mupibox-update-failed
 
 	echo -e "XXX\n${STEP}\nUnzip MuPiBox Version ${VERSION_LONG}... \nXXX"
 	before=$(date +%s)
+	# The folder the archive unpacks to depends on where it comes from (a branch archive is
+	# "MuPiBox-<branch>", a tag archive "MuPiBox-<tag>", ...). Read it from the archive instead of
+	# guessing it: a wrong guess sent every following step (scripts, services, admin interface,
+	# after /var/www had been emptied) to a folder that does not exist.
+	UNPACKED_DIR=$(unzip -Z1 /home/dietpi/mupibox.zip 2>/dev/null | head -n 1 | cut -d/ -f1)
 	unzip -q -d /home/dietpi /home/dietpi/mupibox.zip >&3 2>&3
 	rm /home/dietpi/mupibox.zip >&3 2>&3
+	if [ -n "${UNPACKED_DIR}" ]; then
+		MUPI_SRC="/home/dietpi/${UNPACKED_DIR}"
+	fi
 
-	#MUPI_SRC="/home/dietpi/MuPiBox-${VERSION}"
+	# Everything the update copies must be there before anything is replaced. If not, stop here:
+	# a half update (admin interface removed, scripts missing) is worse than no update.
+	SOURCE_OK=1
+	for required in scripts/mupibox config/services config/templates update/conf_update.sh AdminInterface/release/www.zip bin/nodejs/deploy.zip
+	do
+		if [ ! -e "${MUPI_SRC}/${required}" ]; then
+			echo "Error: ${MUPI_SRC}/${required} is missing in the downloaded MuPiBox archive." >&3 2>&3
+			SOURCE_OK=0
+		fi
+	done
+	if [ ${SOURCE_OK} -ne 1 ]; then
+		echo "Error: the downloaded MuPiBox archive is incomplete or has an unexpected layout - the update was stopped before anything was replaced." >&3 2>&3
+		cp ${PREFLIGHT_DIR}/jq /usr/bin/jq >&3 2>&3
+		chmod 755 /usr/bin/jq >&3 2>&3
+		[ -n "${UNPACKED_DIR}" ] && rm -rf "/home/dietpi/${UNPACKED_DIR}"
+		systemctl start mupi_idle_shutdown.service >&3 2>&3
+		touch /tmp/mupibox-update-failed
+		exit 1
+	fi
 	after=$(date +%s)
 	echo -e "## Unzip Mupibox Download  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
