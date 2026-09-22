@@ -145,6 +145,17 @@ document.addEventListener("submit", function () {
     sessionStorage.setItem("mupibox-scroll", window.scrollY);
 });
 
+// A real submit-button click fires the "submit" event above, but calling form.submit()
+// from JS (e.g. a <select onchange="this.form.submit()">) does not - patch it directly
+// so a dropdown reload also keeps the scroll position.
+(function () {
+    const nativeSubmit = HTMLFormElement.prototype.submit;
+    HTMLFormElement.prototype.submit = function () {
+        sessionStorage.setItem("mupibox-scroll", window.scrollY);
+        nativeSubmit.call(this);
+    };
+})();
+
 </script>
 
 	</body>
