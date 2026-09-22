@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
 import { firstValueFrom, from, iif, interval, Observable, of, Subject } from 'rxjs'
-import { map, mergeAll, mergeMap, shareReplay, switchMap, toArray } from 'rxjs/operators'
+import { catchError, map, mergeAll, mergeMap, shareReplay, switchMap, timeout, toArray } from 'rxjs/operators'
 import { environment } from '../environments/environment'
 import type { AlbumStop } from './albumstop'
 import type { Artist } from './artist'
@@ -14,6 +14,9 @@ import { NetworkService } from './network.service'
 import { RssFeedService } from './rssfeed.service'
 import { SpotifyService } from './spotify.service'
 import type { WLAN } from './wlan'
+
+/** Upper bound for resolving one data.json entry (Spotify / RSS lookups). */
+const MEDIA_LOOKUP_TIMEOUT_MS = 10000
 
 @Injectable({
   providedIn: 'root',
@@ -564,7 +567,17 @@ export class MediaService {
             ),
           ),
       ),
-      mergeMap((items) => from(items)), // seperate arrays to single observables
+      // Resolve every entry on its own with a time limit: a single hanging lookup (e.g.
+      // Spotify without internet) must not block the whole list; that entry is skipped.
+      mergeMap((items) =>
+        from(items).pipe(
+          timeout(MEDIA_LOOKUP_TIMEOUT_MS),
+          catchError((error) => {
+            console.warn('Media lookup skipped:', error?.message ?? error)
+            return of([] as Media[])
+          }),
+        ),
+      ),
       mergeAll(), // merge everything together
       toArray(), // convert to array
       map((media) => {

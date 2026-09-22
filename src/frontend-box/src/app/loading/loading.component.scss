@@ -1,11 +1,15 @@
+// Dims the page while media is loading. Purely visual: taps go through, so
+// the back button in the header stays usable even if a request hangs
+// (e.g. Spotify lookups without internet).
 .mupi-loading {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    z-index: 50; // 100 is the monitor div, so we are lower here.
-    background-color: rgba(0, 0, 0, 0.3);
+    z-index: 10;
+    background-color: rgba(0, 0, 0, 0.2);
+    pointer-events: none;
 }
 
 .mupi-loading-spinner {
@@ -14,6 +18,7 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
+    color: #f5f5f5;
 
     ion-spinner {
         width: 80px;
