@@ -141,7 +141,8 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 
 <?php if ($isLoggedIn) { ?>
 	<style>
-		#nas-filter-row { display: flex; align-items: center; gap: 16px; margin: 0 0 0 25px; }
+		/* 21px between the line above and the box = 21px between the "S" of "Show in Mupibox" and the line below the header */
+		#nas-filter-row { display: flex; align-items: center; gap: 16px; margin: 21px 0 0 25px; }
 		#nas-filter-row .button_text { margin: 0; flex: 0 0 auto; }
 		#nas-filter-wrap { position: relative; flex: 0 1 360px; min-width: 0; }
 		#nas-filter-wrap i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #222; font-size: 15px; pointer-events: none; }
