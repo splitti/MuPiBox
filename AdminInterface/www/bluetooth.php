@@ -9,6 +9,17 @@
 	*/
 	include ('includes/header.php');
 
+	// Without a Bluetooth controller (e.g. the chip is switched off) bluetoothctl, and the scripts built on it,
+	// wait for one forever - while this request holds the PHP session lock. Every other admin page of the same
+	// browser then queues behind it until php-fpm has no free worker left and the whole admin stops answering.
+	// So nothing that talks to Bluetooth is started in that case (and each call is time-limited anyway).
+	$bt_present = count(glob('/sys/class/bluetooth/hci*')) > 0;
+	if( !$bt_present && ($_POST['remove_selected'] || $_POST['pair_selected'] || $_POST['scan_new'] || $_POST['change_bt']) )
+		{
+		$CHANGE_TXT=$CHANGE_TXT."<li>No Bluetooth controller found - is the Bluetooth chip switched off?</li>";
+		$change=1;
+		}
+
 	if( $_POST['change_btac'] == "enable & start" )
 		{
 		$command = "sudo systemctl enable mupi_autoconnect_bt; sudo systemctl start mupi_autoconnect_bt";
@@ -24,46 +35,46 @@
 		$CHANGE_TXT=$CHANGE_TXT."<li>BT-Autoconnect-Service disabled</li>";
 		}
 
-	if( $_POST['remove_selected'] )
+	if( $bt_present && $_POST['remove_selected'] )
 		{
-		$command = "sudo -u dietpi /usr/local/bin/mupibox/./remove_bt.sh ".$_POST['remove_mac'];
+		$command = "timeout -k 1 60 sudo -u dietpi /usr/local/bin/mupibox/./remove_bt.sh ".$_POST['remove_mac'];
 		exec($command, $output, $result );
 		$CHANGE_TXT=$CHANGE_TXT."<li>Pairing removed [".$_POST['remove_mac']."</li>";
-		$command = "sudo -u dietpi /usr/local/bin/mupibox/./stop_bt.sh";
+		$command = "timeout -k 1 60 sudo -u dietpi /usr/local/bin/mupibox/./stop_bt.sh";
 		exec($command, $output, $result );
-		$command = "sudo -u dietpi /usr/local/bin/mupibox/./start_bt.sh";
+		$command = "timeout -k 1 60 sudo -u dietpi /usr/local/bin/mupibox/./start_bt.sh";
 		exec($command, $output, $result );
 
 		$change=1;
 		}
 
-	if( $_POST['pair_selected'] )
+	if( $bt_present && $_POST['pair_selected'] )
 		{
-		$command = "sudo -u dietpi /usr/local/bin/mupibox/./pair_bt.sh ".$_POST['bt_device'];
+		$command = "timeout -k 1 60 sudo -u dietpi /usr/local/bin/mupibox/./pair_bt.sh ".$_POST['bt_device'];
 		exec($command, $output, $result );
 		$CHANGE_TXT=$CHANGE_TXT."<li>Device is paired [".$_POST['bt_device']."</li>";
 		$change=1;
 		}
 
 
-	if( $_POST['scan_new'] )
+	if( $bt_present && $_POST['scan_new'] )
 		{
 		/*$command = "sudo hcitool scan > /tmp/bt_scan";*/
-		$command = "sudo -u dietpi /usr/local/bin/mupibox/./scan_bt.sh";
+		$command = "timeout -k 1 60 sudo -u dietpi /usr/local/bin/mupibox/./scan_bt.sh";
 		exec($command, $output, $result );
 		$change=1;
 		}
 
-	if( $_POST['change_bt'] == "turn on" )
+	if( $bt_present && $_POST['change_bt'] == "turn on" )
 		{
-		$command = "sudo -u dietpi /usr/local/bin/mupibox/./start_bt.sh";
+		$command = "timeout -k 1 60 sudo -u dietpi /usr/local/bin/mupibox/./start_bt.sh";
 		exec($command, $output, $result );
 		$CHANGE_TXT=$CHANGE_TXT."<li>Bluetooth is ready now</li>";
 		$change=1;
 		}
-	if( $_POST['change_bt'] == "turn off" )
+	if( $bt_present && $_POST['change_bt'] == "turn off" )
 		{
-		$command = "sudo -u dietpi /usr/local/bin/mupibox/./stop_bt.sh";
+		$command = "timeout -k 1 60 sudo -u dietpi /usr/local/bin/mupibox/./stop_bt.sh";
 		exec($command, $output, $result );
 		$CHANGE_TXT=$CHANGE_TXT."<li>Bluetooth is deactivated [just Software for connecting, Service and Hardware continue runnung]</li>";
 		$change=1;
@@ -83,15 +94,19 @@
 		$CHANGE_TXT=$CHANGE_TXT."<li>Bluetooth-Chip enabled [restart necessary]</li>";
 		}
 
-	$command = "sudo -u dietpi bluetoothctl show | grep 'Powered: yes'";
-	exec($command, $btoutput, $btresult );
+	$btoutput = array();
+	if( $bt_present )
+		{
+		$command = "timeout -k 1 5 sudo -u dietpi bluetoothctl show | grep 'Powered: yes'";
+		exec($command, $btoutput, $btresult );
+		}
 	if( $btoutput[0] )
 		{
 		$bt_state = "ON";
 		$change_bt = "turn off";
-		$command = "sudo -u dietpi bluetoothctl devices";
+		$command = "timeout -k 1 5 sudo -u dietpi bluetoothctl devices";
 		exec($command, $pairoutput, $pairresult );
-		$command = "sudo -u dietpi bluetoothctl list";
+		$command = "timeout -k 1 5 sudo -u dietpi bluetoothctl list";
 		exec($command, $listoutput, $listresult );
 		}
 	else
@@ -140,7 +155,7 @@
                      </p><input id="saveForm" class="button_text" type="submit" name="scan_new" value="Scan new devices" /></p>
                         <select id="bt_device" name="bt_device" class="element text medium">
 <?php
-        if( $_POST['scan_new'] )
+        if( $bt_present && $_POST['scan_new'] && is_readable('/tmp/bt_scan') )
         {
                                                 $string = fopen('/tmp/bt_scan','r' );
                                                 $bt=1;
@@ -169,7 +184,7 @@
                                         print "<input type='hidden' name='remove_mac' value='".$split_device[1]."'>";
                                         print "<input id='saveForm' class='button_text' type='submit' name='remove_selected' value='Remove' />&ensp;";
                                         print $split_device[2]." [".$split_device[1]."]";
-                                        $command = "sudo -u dietpi bluetoothctl info ".$split_device[1]." | grep 'Connected: yes'";
+                                        $command = "timeout -k 1 5 sudo -u dietpi bluetoothctl info ".$split_device[1]." | grep 'Connected: yes'";
                                         unset($connoutput);
                                         exec($command, $connoutput, $connresult );
                                         if( $connoutput[0] )
