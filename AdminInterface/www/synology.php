@@ -17,6 +17,23 @@ if (isset($_GET['browse'])) {
 	exit;
 }
 
+// Folder index (built by the backend) behind the "Filter folders" box.
+if (isset($_GET['index_status'])) {
+	header('Content-Type: application/json');
+	echo json_encode(synologyApiCall("$backendBase/index/status", 'GET', null, 10));
+	exit;
+}
+if (isset($_GET['index_search'])) {
+	header('Content-Type: application/json');
+	echo json_encode(synologyApiCall("$backendBase/index/search?q=" . urlencode((string)$_GET['index_search']), 'GET', null, 10));
+	exit;
+}
+if (isset($_GET['index_refresh']) && $_SERVER['REQUEST_METHOD'] === 'POST') {
+	header('Content-Type: application/json');
+	echo json_encode(synologyApiCall("$backendBase/index/refresh", 'POST', new stdClass(), 10));
+	exit;
+}
+
 include('includes/header.php');
 
 function synologyApiCall($url, $method = 'GET', $body = null, $timeout = 30) {
@@ -136,6 +153,7 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 		<input id="nas-filter" type="text" title="Filter Folders" placeholder="Filter folders" autocomplete="off" />
 		<span id="nas-filter-status" style="display:none;">searching...</span>
 	</div>
+	<div id="nas-index-line" style="margin: -14px 0 14px 25px; font-size: 13px; color: #666;"></div>
 <?php } ?>
 
 <?php if (!$isLoggedIn) { ?>
@@ -269,47 +287,71 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 		});
 	}
 
-	// Live folder filter: a folder stays visible if its name contains the text, if one of its
-	// (already loaded) subfolders does, or if a parent folder matches. Hidden rows keep their
-	// checkboxes, so saving is not affected by the filter.
+	// Live folder filter. Two modes:
+	//  - Index mode: the backend keeps an index of all folder paths (built in the background, renewed
+	//    daily or with "Refresh index"), so a filter text is answered at once. Only the folders on the
+	//    way to a match are loaded into the tree and shown open.
+	//  - Fallback (no index yet): match on the folders already loaded and load all subfolders from the NAS.
+	// Hidden rows keep their checkboxes, so saving is not affected by the filter.
 	var filterInput = document.getElementById('nas-filter');
+	var statusEl = document.getElementById('nas-filter-status');
+	var infoEl = document.getElementById('nas-index-line');
+	var idx = null;            // { matches, ancestors } (path lookups) while an index answer is applied
+	var indexExists = false;
+	var filterToken = 0, filterTimer = null;
+
+	function kidsOf(div) { return div.querySelector(':scope > .nas-children'); }
+	function chevronOf(div) { return div.querySelector(':scope > .nas-row .nas-chevron'); }
+	function isNode(el) { return el.dataset && el.dataset.name !== undefined; }
+	function setOpenForFilter(div, open) {
+		var kids = kidsOf(div), chev = chevronOf(div);
+		if (kids) { kids.classList.toggle('filter-open', open); }
+		if (chev) { chev.classList.toggle('filter-open', open); }
+	}
+
 	function filterNode(div, forced, q) {
-		var kids = div.querySelector(':scope > .nas-children');
-		var chev = div.querySelector(':scope > .nas-row .nas-chevron');
+		var kids = kidsOf(div);
 		var self = q === '' || div.dataset.name.indexOf(q) !== -1;
 		var any = false;
 		if (kids) {
 			Array.prototype.forEach.call(kids.children, function (kid) {
-				if (kid.dataset && kid.dataset.name !== undefined && filterNode(kid, forced || self, q)) { any = true; }
+				if (isNode(kid) && filterNode(kid, forced || self, q)) { any = true; }
 			});
-			// A folder with a matching subfolder is shown open while filtering (its normal open/closed state is untouched).
-			var openForFilter = q !== '' && any;
-			kids.classList.toggle('filter-open', openForFilter);
-			if (chev) { chev.classList.toggle('filter-open', openForFilter); }
 		}
+		// A folder with a matching subfolder is shown open while filtering (its normal open/closed state is untouched).
+		setOpenForFilter(div, q !== '' && any);
 		var matched = self || any;
 		div.style.display = (forced || matched) ? '' : 'none';
 		return matched;
+	}
+	function filterNodeIdx(div, forced) {
+		var p = div.dataset.path;
+		var self = idx.matches.has(p);
+		var open = idx.ancestors.has(p);
+		var kids = kidsOf(div);
+		if (kids) {
+			Array.prototype.forEach.call(kids.children, function (kid) {
+				if (isNode(kid)) { filterNodeIdx(kid, forced || self); }
+			});
+		}
+		setOpenForFilter(div, open);
+		div.style.display = (forced || self || open) ? '' : 'none';
 	}
 	function applyFilter() {
 		if (!filterInput) { return; }
 		var q = filterInput.value.trim().toLowerCase();
 		Array.prototype.forEach.call(root.children, function (div) {
-			if (div.dataset && div.dataset.name !== undefined) { filterNode(div, false, q); }
+			if (!isNode(div)) { return; }
+			if (idx && q !== '') { filterNodeIdx(div, false); } else { filterNode(div, false, q); }
 		});
 	}
 
-	// Matches can be in folders that were never opened, so while a filter text is entered the
-	// subfolders of all folders are loaded from the NAS in the background (4 at a time).
-	// Folders whose own name matches are not searched further; their content is shown anyway.
-	var filterToken = 0, filterTimer = null;
-	var statusEl = document.getElementById('nas-filter-status');
-	function crawl(q, token) {
+	// Loads the subfolders of every folder for which shouldLoad(div) is true (4 requests at a time),
+	// so the matches become part of the tree. Stops when the filter text changed (token).
+	function crawl(shouldLoad, token) {
 		var queue = [];
 		function enqueue(container) {
-			Array.prototype.forEach.call(container.children, function (d) {
-				if (d.dataset && d.dataset.name !== undefined) { queue.push(d); }
-			});
+			Array.prototype.forEach.call(container.children, function (d) { if (isNode(d)) { queue.push(d); } });
 		}
 		enqueue(root);
 		var active = 0;
@@ -317,11 +359,11 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 			function next() {
 				while (active < 4 && queue.length && token === filterToken) {
 					var d = queue.shift();
-					if (!d._load || d.dataset.name.indexOf(q) !== -1) { continue; }
+					if (!d._load || !shouldLoad(d)) { continue; }
 					active++;
 					(function (node) {
 						node._load().then(function () {
-							var kids = node.querySelector(':scope > .nas-children');
+							var kids = kidsOf(node);
 							if (kids) { enqueue(kids); }
 							active--;
 							next();
@@ -333,22 +375,102 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 			next();
 		});
 	}
-	if (filterInput) {
-		filterInput.addEventListener('input', function () {
-			applyFilter();
-			var token = ++filterToken;
-			clearTimeout(filterTimer);
-			if (statusEl) { statusEl.style.display = 'none'; }
-			var q = filterInput.value.trim().toLowerCase();
-			if (q === '') { return; }
-			filterTimer = setTimeout(function () {
-				if (statusEl) { statusEl.style.display = ''; }
-				crawl(q, token).then(function () {
-					if (token === filterToken && statusEl) { statusEl.style.display = 'none'; }
+	function showSearching(on) { if (statusEl) { statusEl.style.display = on ? '' : 'none'; } }
+
+	// Fallback without index: folders whose own name matches are not searched further (shown anyway).
+	function runNameCrawl(q, token) {
+		filterTimer = setTimeout(function () {
+			showSearching(true);
+			crawl(function (d) { return d.dataset.name.indexOf(q) === -1; }, token).then(function () {
+				if (token === filterToken) { showSearching(false); }
+				applyFilter();
+			});
+		}, 300);
+	}
+	function runIndexSearch(q, token) {
+		filterTimer = setTimeout(function () {
+			fetch('synology.php?index_search=' + encodeURIComponent(q), { cache: 'no-store' })
+				.then(function (r) { return r.json(); })
+				.then(function (res) {
+					if (token !== filterToken) { return; }
+					if (!res || !res.success) { idx = null; applyFilter(); runNameCrawl(q, token); return; }
+					var matches = {}, ancestors = {};
+					res.paths.forEach(function (p) {
+						matches[p] = true;
+						var parts = p.split('/').filter(Boolean);
+						for (var n = 1; n < parts.length; n++) { ancestors['/' + parts.slice(0, n).join('/')] = true; }
+					});
+					idx = {
+						matches: { has: function (p) { return matches[p] === true; } },
+						ancestors: { has: function (p) { return ancestors[p] === true; } }
+					};
 					applyFilter();
-				});
-			}, 300);
+					showSearching(true);
+					crawl(function (d) { return ancestors[d.dataset.path] === true; }, token).then(function () {
+						if (token === filterToken) { showSearching(false); }
+						applyFilter();
+					});
+				})
+				.catch(function () { if (token === filterToken) { idx = null; applyFilter(); runNameCrawl(q, token); } });
+		}, 150);
+	}
+	function runFilter() {
+		var token = ++filterToken;
+		clearTimeout(filterTimer);
+		showSearching(false);
+		var q = filterInput.value.trim().toLowerCase();
+		if (q === '') { idx = null; applyFilter(); return; }
+		if (indexExists) {
+			runIndexSearch(q, token); // keeps the previous answer on screen until the new one arrives
+		} else {
+			idx = null;
+			applyFilter();
+			runNameCrawl(q, token);
+		}
+	}
+	if (filterInput) { filterInput.addEventListener('input', runFilter); }
+
+	// Index status line ("Folder index: 3412 folders, updated ...  Refresh index").
+	var wasBuilding = false;
+	function safeText(t) { return String(t).replace(/[<>&]/g, ''); }
+	function renderIndexInfo(st) {
+		if (!infoEl) { return; }
+		var text;
+		if (st.running) {
+			text = 'Building folder index... ' + st.folders + ' folders found so far' + (st.exists ? ' (the previous index is used meanwhile)' : '');
+		} else if (st.exists) {
+			text = 'Folder index: ' + st.count + ' folders, updated ' + new Date(st.updated).toLocaleString() + ' - <a href="#" id="nas-index-refresh">Refresh index</a>';
+			if (st.error) { text += ' (last refresh failed: ' + safeText(st.error) + ')'; }
+		} else {
+			text = 'No folder index yet' + (st.error ? ' (last try failed: ' + safeText(st.error) + ')' : '') + ' - <a href="#" id="nas-index-refresh">Build index</a>';
+		}
+		infoEl.innerHTML = text;
+	}
+	function pollIndex() {
+		fetch('synology.php?index_status=1', { cache: 'no-store' })
+			.then(function (r) { return r.json(); })
+			.then(function (st) {
+				if (!st || !st.success) { return; }
+				indexExists = !!st.exists;
+				renderIndexInfo(st);
+				if (st.running) {
+					wasBuilding = true;
+					setTimeout(pollIndex, 2000);
+				} else if (wasBuilding) {
+					wasBuilding = false;
+					if (filterInput && filterInput.value.trim() !== '') { runFilter(); }
+				}
+			})
+			.catch(function () {});
+	}
+	if (infoEl) {
+		infoEl.addEventListener('click', function (e) {
+			if (e.target && e.target.id === 'nas-index-refresh') {
+				e.preventDefault();
+				fetch('synology.php?index_refresh=1', { method: 'POST' }).then(function () { setTimeout(pollIndex, 300); });
+			}
 		});
+		pollIndex();
 	}
 
 	function checkbox(name, entry, checked, title) {
@@ -367,6 +489,7 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 	function addNode(container, entry, depth) {
 		shown[entry.path] = true;
 		var node = document.createElement('div');
+		node.dataset.path = entry.path;
 		node.dataset.name = entry.name.toLowerCase();
 		node._load = function () { return load(); };
 		var row = document.createElement('div');

@@ -2320,6 +2320,155 @@ app.post('/api/synology/login', async (req, res) => {
   res.json({ success: true })
 })
 
+// --- Folder index for the admin page's "Filter folders" ----------------------
+// Walking a big NAS folder by folder takes minutes, so the admin page filters against an index
+// (folder paths only, no files) that the backend builds in the background and keeps on disk.
+// It is only used for that filter - the tree and the kids' NAS tab always list the NAS live.
+// Rebuilt on demand ("Refresh index") and automatically once it is older than a day.
+
+const nasIndexPath = '/home/dietpi/.mupibox/nas-folder-index.json'
+const nasIndexMaxAgeMs = 24 * 60 * 60 * 1000
+const nasIndexRetryMs = 10 * 60 * 1000
+const nasIndexMaxDepth = 12
+const nasIndexMaxFolders = 200000
+
+interface NasFolderIndex {
+  updated: number
+  folders: string[]
+}
+
+let nasIndexCache: NasFolderIndex | undefined
+let nasIndexLoaded = false
+let nasIndexLastAttempt = 0
+const nasIndexJob = { running: false, folders: 0, error: '' }
+
+async function loadNasIndex(): Promise<NasFolderIndex | undefined> {
+  if (!nasIndexLoaded) {
+    nasIndexLoaded = true
+    try {
+      const parsed = JSON.parse(await readFile(nasIndexPath, 'utf8'))
+      if (Array.isArray(parsed?.folders) && typeof parsed.updated === 'number') {
+        nasIndexCache = parsed
+      }
+    } catch {
+      // No index yet.
+    }
+  }
+  return nasIndexCache
+}
+
+// Recycle bins, snapshots and DSM's "@eaDir" thumbnail folders are noise for the filter.
+function nasIndexSkip(name: string): boolean {
+  return name.startsWith('@') || name === '#recycle' || name === '#snapshot'
+}
+
+async function buildNasIndex(): Promise<void> {
+  if (nasIndexJob.running) {
+    return
+  }
+  nasIndexJob.running = true
+  nasIndexJob.folders = 0
+  nasIndexJob.error = ''
+  nasIndexLastAttempt = Date.now()
+  try {
+    const found: string[] = []
+    let skipped = 0
+    let level = ['/']
+    // Level by level, at most 4 requests in flight (same limit as elsewhere: a big NAS behind a
+    // DDNS address does not cope with bursts).
+    for (let depth = 0; level.length > 0 && depth < nasIndexMaxDepth && found.length < nasIndexMaxFolders; depth++) {
+      const listings = await mapWithConcurrency(level, 4, async (folder) => {
+        try {
+          const files = await withSynologySession((session) => synologyListFiles(session, folder))
+          if (files === undefined) {
+            throw new Error('Not logged in to the NAS')
+          }
+          return files
+        } catch (error) {
+          if (folder === '/') {
+            throw error
+          }
+          skipped++ // one unreadable folder must not fail the whole run
+          return []
+        }
+      })
+      const next: string[] = []
+      for (const files of listings) {
+        for (const file of files) {
+          if (file.isdir && !nasIndexSkip(file.name)) {
+            found.push(file.path)
+            next.push(file.path)
+          }
+        }
+      }
+      nasIndexJob.folders = found.length
+      level = next
+    }
+    const index: NasFolderIndex = { updated: Date.now(), folders: found }
+    await mkdir(path.dirname(nasIndexPath), { recursive: true })
+    const tmp = `${nasIndexPath}.tmp`
+    await writeFile(tmp, JSON.stringify(index), 'utf8')
+    await rename(tmp, nasIndexPath)
+    nasIndexCache = index
+    nasIndexLoaded = true
+    console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] NAS folder index built: ${found.length} folders (${skipped} unreadable skipped)`)
+  } catch (error) {
+    nasIndexJob.error = error instanceof Error ? error.message : String(error)
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] NAS folder index failed: ${nasIndexJob.error}`)
+  } finally {
+    nasIndexJob.running = false
+  }
+}
+
+app.get('/api/synology/index/status', async (_req, res) => {
+  const index = await loadNasIndex()
+  const stale = !index || Date.now() - index.updated > nasIndexMaxAgeMs
+  if (stale && !nasIndexJob.running && Date.now() - nasIndexLastAttempt > nasIndexRetryMs && (await getActiveSynologySession())) {
+    void buildNasIndex()
+  }
+  res.json({
+    success: true,
+    exists: Boolean(index),
+    updated: index?.updated ?? 0,
+    count: index?.folders.length ?? 0,
+    running: nasIndexJob.running,
+    folders: nasIndexJob.folders,
+    error: nasIndexJob.running ? '' : nasIndexJob.error,
+  })
+})
+
+app.post('/api/synology/index/refresh', async (_req, res) => {
+  if (!(await getActiveSynologySession())) {
+    res.status(401).json({ success: false, error: 'not_logged_in' })
+    return
+  }
+  void buildNasIndex()
+  res.json({ success: true, running: true })
+})
+
+// Folders whose own name contains q (case-insensitive), as full paths.
+app.get('/api/synology/index/search', async (req, res) => {
+  const q = typeof req.query.q === 'string' ? req.query.q.trim().toLowerCase() : ''
+  const index = await loadNasIndex()
+  if (!index || q === '') {
+    res.json({ success: Boolean(index), paths: [], truncated: false })
+    return
+  }
+  const limit = 3000
+  const paths: string[] = []
+  let truncated = false
+  for (const folder of index.folders) {
+    if (folder.slice(folder.lastIndexOf('/') + 1).toLowerCase().includes(q)) {
+      if (paths.length >= limit) {
+        truncated = true
+        break
+      }
+      paths.push(folder)
+    }
+  }
+  res.json({ success: true, paths, truncated })
+})
+
 app.get('/api/synology/browse', async (req, res) => {
   const folderPath = typeof req.query.path === 'string' ? req.query.path : ''
 
