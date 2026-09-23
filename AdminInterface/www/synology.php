@@ -141,20 +141,24 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 
 <?php if ($isLoggedIn) { ?>
 	<style>
-		#nas-filter-wrap { position: relative; max-width: 360px; margin: 0 0 0 25px; }
+		#nas-filter-row { display: flex; align-items: center; gap: 16px; margin: 0 0 0 25px; }
+		#nas-filter-row .button_text { margin: 0; flex: 0 0 auto; }
+		#nas-filter-wrap { position: relative; flex: 0 1 360px; min-width: 0; }
 		#nas-filter-wrap i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #222; font-size: 15px; pointer-events: none; }
 		#nas-filter { box-sizing: border-box; width: 100%; height: 42px; padding: 0 130px 0 40px; font-size: 16px; color: #222; background: #fff; border: 1px solid #9a9a9a; border-radius: 10px; outline: none; }
 		#nas-filter:focus { border-color: #555; }
 		#nas-filter::placeholder { color: #777; }
 		#nas-filter-status { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: #777; font-size: 13px; pointer-events: none; }
 	</style>
+	<div id="nas-filter-row">
 	<div id="nas-filter-wrap">
 		<i class="fa-solid fa-magnifying-glass"></i>
 		<input id="nas-filter" type="text" title="Filter Folders" placeholder="Filter folders" autocomplete="off" />
 		<span id="nas-filter-status" style="display:none;">searching...</span>
 	</div>
+	<input type="button" id="nas-index-refresh" class="button_text" value="Refresh index" />
+	</div>
 	<div id="nas-index-line" style="margin: 6px 0 0 25px; font-size: 13px; color: #666;"></div>
-	<div style="text-align: center; margin: 14px 0 0 0;"><input type="button" id="nas-index-refresh" class="button_text" value="Refresh index" /></div>
 <?php } ?>
 
 <?php if (!$isLoggedIn) { ?>
