@@ -123,8 +123,16 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 </div>
 
 <?php if ($isLoggedIn) { ?>
-	<div style="padding-left:25px; margin-bottom:10px;">
-		<input id="nas-filter" type="text" class="element text large" title="Filter Folders" placeholder="Filter Folders" autocomplete="off" />
+	<style>
+		#nas-filter-wrap { position: relative; max-width: 360px; margin: 0 0 20px 25px; }
+		#nas-filter-wrap i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #222; font-size: 15px; pointer-events: none; }
+		#nas-filter { box-sizing: border-box; width: 100%; height: 42px; padding: 0 14px 0 40px; font-size: 16px; color: #222; background: #fff; border: 1px solid #9a9a9a; border-radius: 10px; outline: none; }
+		#nas-filter:focus { border-color: #555; }
+		#nas-filter::placeholder { color: #777; }
+	</style>
+	<div id="nas-filter-wrap">
+		<i class="fa-solid fa-magnifying-glass"></i>
+		<input id="nas-filter" type="text" title="Filter Folders" placeholder="Filter folders" autocomplete="off" />
 	</div>
 <?php } ?>
 
