@@ -119,8 +119,14 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 
 <div class="description" style="padding-left:25px;">
 	<h2>NAS</h2>
-	<p>Connect a NAS (Synology, QNAP, TrueNAS, ... - anything with a WebDAV server) as an additional media source. Enable WebDAV on the NAS first (Synology: package "WebDAV Server", ports 5005 http / 5006 https). Mark folders as "artist" (checkbox) to make them show up in the NAS tab on the MuPiBox - live, with no separate media update needed.</p>
+	<p>Connect a NAS (Synology, QNAP, TrueNAS, ... - anything with a WebDAV server) as an additional media source. Enable WebDAV on the NAS first (Synology: package "WebDAV Server", ports 5005 http / 5006 https). Every folder with a checkmark under "Show in Mupibox" appears in the NAS tab on the MuPiBox together with all of its subfolders - so you only need to tick the top-level folder, not every subfolder. Changes on the NAS show up live, with no separate media update needed.</p>
 </div>
+
+<?php if ($isLoggedIn) { ?>
+	<div style="padding-left:25px; margin-bottom:10px;">
+		<input id="nas-filter" type="text" class="element text large" title="Filter Folders" placeholder="Filter Folders" autocomplete="off" />
+	</div>
+<?php } ?>
 
 <?php if (!$isLoggedIn) { ?>
 	<form class="appnitro" method="post" action="synology.php" id="form">
@@ -253,6 +259,32 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 		});
 	}
 
+	// Live folder filter: a folder stays visible if its name contains the text, if one of its
+	// (already loaded) subfolders does, or if a parent folder matches. Hidden rows keep their
+	// checkboxes, so saving is not affected by the filter.
+	var filterInput = document.getElementById('nas-filter');
+	function filterNode(div, forced, q) {
+		var kids = div.querySelector(':scope > .nas-children');
+		var self = q === '' || div.dataset.name.indexOf(q) !== -1;
+		var any = false;
+		if (kids) {
+			Array.prototype.forEach.call(kids.children, function (kid) {
+				if (kid.dataset && kid.dataset.name !== undefined && filterNode(kid, forced || self, q)) { any = true; }
+			});
+		}
+		var visible = forced || self || any;
+		div.style.display = visible ? '' : 'none';
+		return visible;
+	}
+	function applyFilter() {
+		if (!filterInput) { return; }
+		var q = filterInput.value.trim().toLowerCase();
+		Array.prototype.forEach.call(root.children, function (div) {
+			if (div.dataset && div.dataset.name !== undefined) { filterNode(div, false, q); }
+		});
+	}
+	if (filterInput) { filterInput.addEventListener('input', applyFilter); }
+
 	function checkbox(name, entry, checked, title) {
 		var cell = document.createElement('div');
 		cell.className = 'nas-cb';
@@ -269,6 +301,7 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 	function addNode(container, entry, depth) {
 		shown[entry.path] = true;
 		var node = document.createElement('div');
+		node.dataset.name = entry.name.toLowerCase();
 		var row = document.createElement('div');
 		row.className = 'nas-row';
 		row.appendChild(checkbox('artist_folders[]', entry, entry.isMarked, 'Import artist'));
@@ -340,7 +373,7 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 							chain = chain.then(function () { return api.toggle(true); });
 						}
 					});
-					return chain;
+					return chain.then(applyFilter);
 				})
 				.catch(function () {
 					msg.textContent = 'Could not load this folder.';
