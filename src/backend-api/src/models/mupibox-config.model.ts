@@ -11,6 +11,7 @@ export interface MupiboxConfig {
     rememberMe?: boolean
     artistFolders?: string[]
     downloadFolders?: string[]
+    hiddenFolders?: string[]
     [key: string]: unknown
   }
   [key: string]: unknown

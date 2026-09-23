@@ -2469,6 +2469,11 @@ app.get('/api/synology/index/search', async (req, res) => {
   res.json({ success: true, paths, truncated })
 })
 
+// A folder marked "Hide in MuPiBox" is left out of the NAS tab together with everything below it.
+function nasIsHidden(folderPath: string, hidden: string[]): boolean {
+  return hidden.some((h) => folderPath === h || folderPath.startsWith(`${h}/`))
+}
+
 app.get('/api/synology/browse', async (req, res) => {
   const folderPath = typeof req.query.path === 'string' ? req.query.path : ''
 
@@ -2477,6 +2482,7 @@ app.get('/api/synology/browse', async (req, res) => {
       const config = await getMupiboxConfig()
       const markedFolders = new Set(config?.synology?.artistFolders ?? [])
       const downloadFolders = new Set(config?.synology?.downloadFolders ?? [])
+      const hiddenFolders = new Set(config?.synology?.hiddenFolders ?? [])
 
       const files = await synologyListFiles(session, folderPath || '/')
       const entries = files.filter((f) => f.isdir).map((f) => ({ name: f.name, path: f.path, isDirectory: true }))
@@ -2484,6 +2490,7 @@ app.get('/api/synology/browse', async (req, res) => {
       return entries.map((e) => ({
         ...e,
         isMarked: markedFolders.has(e.path),
+        isHidden: hiddenFolders.has(e.path),
         isDownload: downloadFolders.has(e.path),
         isDownloaded: nasIsDownloaded(e.path),
       }))
@@ -2500,21 +2507,30 @@ app.get('/api/synology/browse', async (req, res) => {
   }
 })
 
-// `list` selects which selection is changed: "artist" (Show in MuPiBox, default)
-// or "download" (Download local).
+// `list` selects which selection is changed: "artist" (Show in MuPiBox, default),
+// "hidden" (Hide in MuPiBox) or "download" (Download local). A folder is either shown or
+// hidden, never both: setting one removes the other.
 app.post('/api/synology/mark', async (req, res) => {
   const { path: folderPath, marked, list } = req.body ?? {}
   if (typeof folderPath !== 'string' || typeof marked !== 'boolean') {
     res.status(400).json({ success: false, error: 'path and marked are required.' })
     return
   }
-  const key = list === 'download' ? 'downloadFolders' : 'artistFolders'
+  const key = list === 'download' ? 'downloadFolders' : list === 'hidden' ? 'hiddenFolders' : 'artistFolders'
+  const opposite = key === 'artistFolders' ? 'hiddenFolders' : key === 'hiddenFolders' ? 'artistFolders' : undefined
 
   try {
     const config = await getMupiboxConfig()
     const existing = (config?.synology?.[key] as string[] | undefined) ?? []
     const next = marked ? Array.from(new Set([...existing, folderPath])) : existing.filter((p) => p !== folderPath)
-    await updateSynologyConfig({ [key]: next })
+    const update: Record<string, unknown> = { [key]: next }
+    if (marked && opposite) {
+      const other = (config?.synology?.[opposite] as string[] | undefined) ?? []
+      if (other.includes(folderPath)) {
+        update[opposite] = other.filter((p) => p !== folderPath)
+      }
+    }
+    await updateSynologyConfig(update)
     res.json({ success: true, [key]: next })
   } catch (error) {
     console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to save Synology selection: ${error}`)
@@ -2525,7 +2541,8 @@ app.post('/api/synology/mark', async (req, res) => {
 app.get('/api/synology/artists', async (_req, res) => {
   try {
     const config = await getMupiboxConfig()
-    const artistFolders = config?.synology?.artistFolders ?? []
+    const hiddenFolders = config?.synology?.hiddenFolders ?? []
+    const artistFolders = (config?.synology?.artistFolders ?? []).filter((p) => !nasIsHidden(p, hiddenFolders))
 
     // One entry per marked folder. Deeper levels are loaded on demand via
     // /api/synology/children as the user navigates, so this stays cheap.
@@ -2561,11 +2578,12 @@ app.get('/api/synology/children', async (req, res) => {
 
   try {
     const files = await nasListFiles(folderPath)
+    const hiddenFolders = (await getMupiboxConfig())?.synology?.hiddenFolders ?? []
     const parentName = folderPath.split('/').filter(Boolean).pop() ?? folderPath
     const parentCoverPath = synologyFindCoverImage(files)
 
     const entries = await mapWithConcurrency(
-      files.filter((f) => f.isdir),
+      files.filter((f) => f.isdir && !nasIsHidden(f.path, hiddenFolders)),
       4,
       async (sub) => {
         try {

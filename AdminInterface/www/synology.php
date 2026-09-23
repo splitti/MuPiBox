@@ -85,11 +85,16 @@ $downloadStarted = false;
 
 if (isset($_POST['synology_save_selection']) || isset($_POST['synology_download_selected'])) {
 	$checkedShow = $_POST['artist_folders'] ?? array();
+	$checkedHide = $_POST['hide_folders'] ?? array();
 	$checkedDownload = $_POST['download_folders'] ?? array();
 	$shown = json_decode($_POST['shown_folders'] ?? '[]', true) ?? array();
 	foreach ($shown as $shownPath) {
+		// A folder is either shown or hidden; hidden wins if both were sent.
+		$isHidden = in_array($shownPath, $checkedHide, true);
 		synologyApiCall("$backendBase/mark", 'POST', array(
-			'path' => $shownPath, 'marked' => in_array($shownPath, $checkedShow, true), 'list' => 'artist'), 10);
+			'path' => $shownPath, 'marked' => !$isHidden && in_array($shownPath, $checkedShow, true), 'list' => 'artist'), 10);
+		synologyApiCall("$backendBase/mark", 'POST', array(
+			'path' => $shownPath, 'marked' => $isHidden, 'list' => 'hidden'), 10);
 		synologyApiCall("$backendBase/mark", 'POST', array(
 			'path' => $shownPath, 'marked' => in_array($shownPath, $checkedDownload, true), 'list' => 'download'), 10);
 	}
@@ -136,7 +141,7 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 
 <div class="description" style="padding-left:25px;">
 	<h2>NAS</h2>
-	<p>Connect a NAS (Synology, QNAP, TrueNAS, ... - anything with a WebDAV server) as an additional media source. Enable WebDAV on the NAS first (Synology: package "WebDAV Server", ports 5005 http / 5006 https). Every folder with a checkmark under "Show in Mupibox" appears in the NAS tab on the MuPiBox together with all of its subfolders - so you only need to tick the top-level folder, not every subfolder. Changes on the NAS show up live, with no separate media update needed.</p>
+	<p>Connect a NAS (Synology, QNAP, TrueNAS, ... - anything with a WebDAV server) as an additional media source. Enable WebDAV on the NAS first (Synology: package "WebDAV Server", ports 5005 http / 5006 https). Every folder with a checkmark under "Show in Mupibox" appears in the NAS tab on the MuPiBox together with all of its subfolders - so you only need to tick the top-level folder, not every subfolder. To leave out a single folder (and everything in it), tick "Hide in Mupibox" for it instead - a folder is either shown or hidden. Changes on the NAS show up live, with no separate media update needed.</p>
 </div>
 
 <?php if ($isLoggedIn) { ?>
@@ -218,6 +223,7 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 						.nas-head { /* auto height: the vertical "Show in Mupibox" text must not overlap the filter box; the form li above adds ~20px, so 1px more gives the same ~21px gap as between the "S" and the line below */ height: auto; padding-top: 1px; align-items: flex-end; border-bottom: 1px solid #e0e0e0; margin-bottom: 4px; }
 						.nas-cb { flex: 0 0 34px; text-align: center; }
 						.nas-cb input { margin: 0; }
+						.nas-cb input:disabled { opacity: .3; cursor: not-allowed; }
 						.nas-head .nas-cb { display: flex; justify-content: center; }
 						.nas-head .nas-cb span { display: inline-block; position: relative; left: 2px; writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; line-height: 13px; padding-bottom: 4px; }
 						.nas-row { height: 28px; border-radius: 3px; cursor: default; }
@@ -239,6 +245,7 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 					<div id="nas-tree">
 						<div class="nas-head">
 							<div class="nas-cb"><span>Show in Mupibox</span></div>
+							<div class="nas-cb"><span>Hide in Mupibox</span></div>
 							<div class="nas-cb"><span>Download local</span></div>
 							<div class="nas-name"><b>Folder</b></div>
 						</div>
@@ -252,8 +259,8 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 				<div id="nas-download-status" style="display:none;"></div>
 			</li>
 			<li class="buttons">
-				<input class="button_text" type="button" value="Select all" onclick="document.querySelectorAll('input[name=\'artist_folders[]\']').forEach(function (box) { box.checked = true; });" />
-				<input class="button_text" type="button" value="Unselect all" onclick="document.querySelectorAll('input[name=\'artist_folders[]\']').forEach(function (box) { box.checked = false; });" />
+				<input class="button_text" type="button" value="Select all" onclick="document.querySelectorAll('input[name=\'artist_folders[]\']').forEach(function (box) { if (!box.disabled) { box.checked = true; box.dispatchEvent(new Event('change')); } });" />
+				<input class="button_text" type="button" value="Unselect all" onclick="document.querySelectorAll('input[name=\'artist_folders[]\']').forEach(function (box) { box.checked = false; box.dispatchEvent(new Event('change')); });" />
 				<input id="saveForm" class="button_text" type="submit" name="synology_save_selection" value="Save selection" />
 			</li>
 			<li class="buttons">
@@ -506,7 +513,16 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 		node._load = function () { return load(); };
 		var row = document.createElement('div');
 		row.className = 'nas-row';
-		row.appendChild(checkbox('artist_folders[]', entry, entry.isMarked, 'Import artist'));
+		var showCell = checkbox('artist_folders[]', entry, entry.isMarked, 'Show in Mupibox');
+		var hideCell = checkbox('hide_folders[]', entry, entry.isHidden, 'Hide in Mupibox');
+		var showBox = showCell.firstChild, hideBox = hideCell.firstChild;
+		// A folder is either shown or hidden: while one box is checked the other one is inactive.
+		function syncShowHide() { showBox.disabled = hideBox.checked; hideBox.disabled = showBox.checked; }
+		showBox.addEventListener('change', syncShowHide);
+		hideBox.addEventListener('change', syncShowHide);
+		syncShowHide();
+		row.appendChild(showCell);
+		row.appendChild(hideCell);
 		row.appendChild(checkbox('download_folders[]', entry, entry.isDownload, 'Download local'));
 
 		var name = document.createElement('div');
