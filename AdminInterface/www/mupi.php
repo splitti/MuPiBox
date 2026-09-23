@@ -364,6 +364,16 @@
    $change=1;
    }
   }
+ if( $_POST['mupiset'] )
+  {
+  $coverflowShowNames = isset($_POST['coverflowShowNames']);
+  if( $coverflowShowNames !== (($data["mupibox"]["coverflowShowNames"] ?? false) === true) )
+   {
+   $data["mupibox"]["coverflowShowNames"] = $coverflowShowNames;
+   $CHANGE_TXT=$CHANGE_TXT."<li>Album/folder names under Coverflow covers are now ".($coverflowShowNames ? "shown" : "hidden")."</li>";
+   $change=1;
+   }
+  }
  if( $_POST['tts'] != $data["mupibox"]["ttsLanguage"] && $_POST['mupiset'] )
   {
   $data["mupibox"]["ttsLanguage"]=$_POST['tts'];
@@ -881,7 +891,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 			<li id="li_1" >
 				<h2>Theme </h2>
 				<div>
-				<select id="theme" name="theme" class="element text medium" onchange="switchImage();">
+				<select id="theme" name="theme" class="element text medium" onchange="switchImage(); toggleCoverflowNameOption();">
 				<?php
 				$Themes = $data["mupibox"]["installedThemes"];
 				asort($Themes);
@@ -916,6 +926,22 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 						<span>Hide horizontal scrollbar</span>
 					</label>
 				</div>
+				<div id="coverflowNameToggleWrap" style="<?= ($data["mupibox"]["theme"] === 'coverflow') ? '' : 'display:none;' ?>">
+					<label class="mupi-toggle" for="coverflowShowNames">
+						<input type="checkbox" id="coverflowShowNames" name="coverflowShowNames" value="1" <?= (($data["mupibox"]["coverflowShowNames"] ?? false) === true) ? 'checked="checked"' : '' ?> />
+						<span class="track"></span>
+						<span>Ordner/Albumnamen einblenden</span>
+					</label>
+				</div>
+				<script>
+					function toggleCoverflowNameOption() {
+						var sel = document.getElementById('theme');
+						var wrap = document.getElementById('coverflowNameToggleWrap');
+						if (sel && wrap) {
+							wrap.style.display = (sel.value === 'coverflow') ? '' : 'none';
+						}
+					}
+				</script>
 
 			</li>
 			<li id="li_1" >

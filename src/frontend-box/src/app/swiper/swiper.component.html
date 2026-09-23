@@ -13,6 +13,11 @@
               </ion-col>
             </ion-row>
           </ion-grid>
+          @if (coverflowShowNames()) {
+            <!-- Outside ion-grid on purpose: ion-grid has the Cover Flow mirror reflection
+                 (-webkit-box-reflect), which would duplicate this text into a faded reflection too. -->
+            <div class="coverflow-name">{{currentData.name}}</div>
+          }
         </swiper-slide>
       }
     </swiper-container>

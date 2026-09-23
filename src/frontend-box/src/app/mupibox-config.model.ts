@@ -10,6 +10,8 @@ export interface MupiboxConfig {
     hiddenCategories?: string[]
     // Hides the horizontal scrollbar of the cover lists (Admin > Mupi-conf > Theme)
     hideScrollbar?: boolean
+    // Coverflow theme only: shows the album/folder name under each cover (Admin > Mupi-conf > Theme)
+    coverflowShowNames?: boolean
     // Add other mupibox properties if needed
   }
   timeout: {

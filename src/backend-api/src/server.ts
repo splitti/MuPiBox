@@ -1908,6 +1908,23 @@ app.post('/api/bluetooth/remove', async (req, res) => {
 // category/page is opened, with no manual "update media" step required.
 // (Function/route names keep the historic "synology" prefix.)
 
+// Runs fn over items with at most `limit` calls in flight at once. An artist folder with two
+// dozen albums used to fire one WebDAV request per album (plus one more for each album's cover)
+// all at the same instant - fine on a LAN, but over the internet (a QuickConnect/DDNS address,
+// not a local NAS) that burst blew past the server's concurrent-connection handling and most
+// requests timed out, so covers (and sometimes whole albums) silently failed to load.
+async function mapWithConcurrency<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const results: R[] = new Array(items.length)
+  let next = 0
+  async function worker() {
+    for (let i = next++; i < items.length; i = next++) {
+      results[i] = await fn(items[i])
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker))
+  return results
+}
+
 interface SynologySession {
   base: string // WebDAV base URL without trailing slash, may contain a path prefix
   auth: string // Authorization header value (HTTP Basic)
@@ -2207,6 +2224,25 @@ function synologyFindCoverImage(files: SynologyFileEntry[]): string | undefined 
   return image?.path
 }
 
+// A folder without a picture of its own (e.g. an artist folder holding only album subfolders)
+// gets the first cover found one level below it, in listing order - checked one subfolder at a
+// time (not in parallel) and stops at the first hit, so this stays cheap even for a folder with
+// many subfolders. Only one level deep, unlike the local library's multi-level version.
+async function synologyFindCoverBelow(files: SynologyFileEntry[]): Promise<string | undefined> {
+  for (const sub of files.filter((f) => f.isdir).slice(0, 5)) {
+    try {
+      const subFiles = await nasListFiles(sub.path)
+      const cover = synologyFindCoverImage(subFiles)
+      if (cover) {
+        return cover
+      }
+    } catch {
+      // Unreadable folder - try the next one.
+    }
+  }
+  return undefined
+}
+
 // Only used for covers, which are asked for as small thumbnails.
 function synologyStreamUrl(filePath: string): string {
   return `/api/synology/stream?path=${encodeURIComponent(filePath)}&w=400`
@@ -2229,7 +2265,7 @@ async function synologyBuildMediaEntry(
   fallbackCoverPath?: string,
 ): Promise<Record<string, unknown>> {
   const files = await nasListFiles(folderPath)
-  const ownCoverPath = synologyFindCoverImage(files)
+  const ownCoverPath = synologyFindCoverImage(files) ?? (await synologyFindCoverBelow(files))
   const coverPath = ownCoverPath ?? fallbackCoverPath
   return {
     type: 'nas',
@@ -2344,21 +2380,19 @@ app.get('/api/synology/artists', async (_req, res) => {
 
     // One entry per marked folder. Deeper levels are loaded on demand via
     // /api/synology/children as the user navigates, so this stays cheap.
-    const entries = await Promise.all(
-      artistFolders.map(async (artistPath) => {
-        try {
-          const artistName = artistPath.split('/').filter(Boolean).pop() ?? artistPath
-          return await synologyBuildMediaEntry(artistPath, artistName, artistName)
-        } catch (error) {
-          // Skip just this one folder (deleted on the NAS since it was marked, or
-          // NAS offline and never downloaded) instead of failing the whole category.
-          console.error(
-            `${new Date().toLocaleString()}: [MuPiBox-Server] Skipping unavailable NAS folder ${artistPath}: ${error}`,
-          )
-          return undefined
-        }
-      }),
-    )
+    const entries = await mapWithConcurrency(artistFolders, 4, async (artistPath) => {
+      try {
+        const artistName = artistPath.split('/').filter(Boolean).pop() ?? artistPath
+        return await synologyBuildMediaEntry(artistPath, artistName, artistName)
+      } catch (error) {
+        // Skip just this one folder (deleted on the NAS since it was marked, or
+        // NAS offline and never downloaded) instead of failing the whole category.
+        console.error(
+          `${new Date().toLocaleString()}: [MuPiBox-Server] Skipping unavailable NAS folder ${artistPath}: ${error}`,
+        )
+        return undefined
+      }
+    })
     res.json(entries.filter((entry) => entry !== undefined))
   } catch (error) {
     console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to list NAS artists: ${error}`)
@@ -2381,19 +2415,19 @@ app.get('/api/synology/children', async (req, res) => {
     const parentName = folderPath.split('/').filter(Boolean).pop() ?? folderPath
     const parentCoverPath = synologyFindCoverImage(files)
 
-    const entries = await Promise.all(
-      files
-        .filter((f) => f.isdir)
-        .map(async (sub) => {
-          try {
-            return await synologyBuildMediaEntry(sub.path, parentName, sub.name, parentCoverPath)
-          } catch (error) {
-            console.error(
-              `${new Date().toLocaleString()}: [MuPiBox-Server] Skipping unreadable NAS folder ${sub.path}: ${error}`,
-            )
-            return undefined
-          }
-        }),
+    const entries = await mapWithConcurrency(
+      files.filter((f) => f.isdir),
+      4,
+      async (sub) => {
+        try {
+          return await synologyBuildMediaEntry(sub.path, parentName, sub.name, parentCoverPath)
+        } catch (error) {
+          console.error(
+            `${new Date().toLocaleString()}: [MuPiBox-Server] Skipping unreadable NAS folder ${sub.path}: ${error}`,
+          )
+          return undefined
+        }
+      },
     )
     res.json(entries.filter((entry) => entry !== undefined))
   } catch (error) {

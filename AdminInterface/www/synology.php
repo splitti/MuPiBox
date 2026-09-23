@@ -119,8 +119,24 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 
 <div class="description" style="padding-left:25px;">
 	<h2>NAS</h2>
-	<p>Connect a NAS (Synology, QNAP, TrueNAS, ... - anything with a WebDAV server) as an additional media source. Enable WebDAV on the NAS first (Synology: package "WebDAV Server", ports 5005 http / 5006 https). Mark folders as "artist" (checkbox) to make them show up in the NAS tab on the MuPiBox - live, with no separate media update needed.</p>
+	<p>Connect a NAS (Synology, QNAP, TrueNAS, ... - anything with a WebDAV server) as an additional media source. Enable WebDAV on the NAS first (Synology: package "WebDAV Server", ports 5005 http / 5006 https). Every folder with a checkmark under "Show in Mupibox" appears in the NAS tab on the MuPiBox together with all of its subfolders - so you only need to tick the top-level folder, not every subfolder. Changes on the NAS show up live, with no separate media update needed.</p>
 </div>
+
+<?php if ($isLoggedIn) { ?>
+	<style>
+		#nas-filter-wrap { position: relative; max-width: 360px; margin: 0 0 0 25px; }
+		#nas-filter-wrap i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #222; font-size: 15px; pointer-events: none; }
+		#nas-filter { box-sizing: border-box; width: 100%; height: 42px; padding: 0 130px 0 40px; font-size: 16px; color: #222; background: #fff; border: 1px solid #9a9a9a; border-radius: 10px; outline: none; }
+		#nas-filter:focus { border-color: #555; }
+		#nas-filter::placeholder { color: #777; }
+		#nas-filter-status { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: #777; font-size: 13px; pointer-events: none; }
+	</style>
+	<div id="nas-filter-wrap">
+		<i class="fa-solid fa-magnifying-glass"></i>
+		<input id="nas-filter" type="text" title="Filter Folders" placeholder="Filter folders" autocomplete="off" />
+		<span id="nas-filter-status" style="display:none;">searching...</span>
+	</div>
+<?php } ?>
 
 <?php if (!$isLoggedIn) { ?>
 	<form class="appnitro" method="post" action="synology.php" id="form">
@@ -175,7 +191,7 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 					<style>
 						#nas-tree { font-family: "Segoe UI", Tahoma, sans-serif; font-size: 15px; color: #1a1a1a; max-width: 720px; }
 						.nas-head, .nas-row { display: flex; align-items: center; }
-						.nas-head { height: 110px; align-items: flex-end; border-bottom: 1px solid #e0e0e0; margin-bottom: 4px; }
+						.nas-head { /* auto height: the vertical "Show in Mupibox" text must not overlap the filter box; the form li above adds ~20px, so 1px more gives the same ~21px gap as between the "S" and the line below */ height: auto; padding-top: 1px; align-items: flex-end; border-bottom: 1px solid #e0e0e0; margin-bottom: 4px; }
 						.nas-cb { flex: 0 0 34px; text-align: center; }
 						.nas-cb input { margin: 0; }
 						.nas-head .nas-cb { display: flex; justify-content: center; }
@@ -186,14 +202,14 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 						#nas-tree .nas-row, #nas-tree .nas-row div, #nas-tree .nas-row span, #nas-tree .nas-row i { padding-top: 0; padding-bottom: 0; margin-top: 0; margin-bottom: 0; line-height: 1.2; }
 						.nas-name { display: flex; align-items: center; flex: 1; min-width: 0; margin-left: 20px; }
 						.nas-chevron { flex: 0 0 22px; text-align: center; color: #777; cursor: pointer; font-size: 11px; transition: transform .12s; user-select: none; }
-						.nas-chevron.open { transform: rotate(90deg); }
+						.nas-chevron.open, .nas-chevron.filter-open { transform: rotate(90deg); }
 						.nas-chevron.empty { visibility: hidden; }
 						.nas-chevron:hover { color: #000; }
 						.nas-folder { color: #f0c04a; margin: 0 8px 0 2px; font-size: 16px; }
 						.nas-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
 						.nas-done { color: #2a9d3f; margin-left: 8px; font-size: 13px; }
 						.nas-children { display: none; }
-						.nas-children.open { display: block; }
+						.nas-children.open, .nas-children.filter-open { display: block; }
 						.nas-msg { color: #888; font-style: italic; padding: 3px 0; }
 					</style>
 					<div id="nas-tree">
@@ -253,6 +269,88 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 		});
 	}
 
+	// Live folder filter: a folder stays visible if its name contains the text, if one of its
+	// (already loaded) subfolders does, or if a parent folder matches. Hidden rows keep their
+	// checkboxes, so saving is not affected by the filter.
+	var filterInput = document.getElementById('nas-filter');
+	function filterNode(div, forced, q) {
+		var kids = div.querySelector(':scope > .nas-children');
+		var chev = div.querySelector(':scope > .nas-row .nas-chevron');
+		var self = q === '' || div.dataset.name.indexOf(q) !== -1;
+		var any = false;
+		if (kids) {
+			Array.prototype.forEach.call(kids.children, function (kid) {
+				if (kid.dataset && kid.dataset.name !== undefined && filterNode(kid, forced || self, q)) { any = true; }
+			});
+			// A folder with a matching subfolder is shown open while filtering (its normal open/closed state is untouched).
+			var openForFilter = q !== '' && any;
+			kids.classList.toggle('filter-open', openForFilter);
+			if (chev) { chev.classList.toggle('filter-open', openForFilter); }
+		}
+		var matched = self || any;
+		div.style.display = (forced || matched) ? '' : 'none';
+		return matched;
+	}
+	function applyFilter() {
+		if (!filterInput) { return; }
+		var q = filterInput.value.trim().toLowerCase();
+		Array.prototype.forEach.call(root.children, function (div) {
+			if (div.dataset && div.dataset.name !== undefined) { filterNode(div, false, q); }
+		});
+	}
+
+	// Matches can be in folders that were never opened, so while a filter text is entered the
+	// subfolders of all folders are loaded from the NAS in the background (4 at a time).
+	// Folders whose own name matches are not searched further; their content is shown anyway.
+	var filterToken = 0, filterTimer = null;
+	var statusEl = document.getElementById('nas-filter-status');
+	function crawl(q, token) {
+		var queue = [];
+		function enqueue(container) {
+			Array.prototype.forEach.call(container.children, function (d) {
+				if (d.dataset && d.dataset.name !== undefined) { queue.push(d); }
+			});
+		}
+		enqueue(root);
+		var active = 0;
+		return new Promise(function (resolve) {
+			function next() {
+				while (active < 4 && queue.length && token === filterToken) {
+					var d = queue.shift();
+					if (!d._load || d.dataset.name.indexOf(q) !== -1) { continue; }
+					active++;
+					(function (node) {
+						node._load().then(function () {
+							var kids = node.querySelector(':scope > .nas-children');
+							if (kids) { enqueue(kids); }
+							active--;
+							next();
+						});
+					})(d);
+				}
+				if (active === 0 && (!queue.length || token !== filterToken)) { resolve(); }
+			}
+			next();
+		});
+	}
+	if (filterInput) {
+		filterInput.addEventListener('input', function () {
+			applyFilter();
+			var token = ++filterToken;
+			clearTimeout(filterTimer);
+			if (statusEl) { statusEl.style.display = 'none'; }
+			var q = filterInput.value.trim().toLowerCase();
+			if (q === '') { return; }
+			filterTimer = setTimeout(function () {
+				if (statusEl) { statusEl.style.display = ''; }
+				crawl(q, token).then(function () {
+					if (token === filterToken && statusEl) { statusEl.style.display = 'none'; }
+					applyFilter();
+				});
+			}, 300);
+		});
+	}
+
 	function checkbox(name, entry, checked, title) {
 		var cell = document.createElement('div');
 		cell.className = 'nas-cb';
@@ -269,6 +367,8 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 	function addNode(container, entry, depth) {
 		shown[entry.path] = true;
 		var node = document.createElement('div');
+		node.dataset.name = entry.name.toLowerCase();
+		node._load = function () { return load(); };
 		var row = document.createElement('div');
 		row.className = 'nas-row';
 		row.appendChild(checkbox('artist_folders[]', entry, entry.isMarked, 'Import artist'));
@@ -303,6 +403,7 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 		container.appendChild(node);
 
 		var loadedOnce = false;
+		var loadPromise = null;
 		function toggle(forceOpen) {
 			var open = forceOpen === true ? true : !children.classList.contains('open');
 			if (!open) {
@@ -314,14 +415,18 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 			children.classList.add('open');
 			chevron.classList.add('open');
 			setExpanded(entry.path, true);
-			if (loadedOnce) { return Promise.resolve(); }
-			loadedOnce = true;
+				return load();
+			}
+			// Loads the subfolders once (also used by the filter, which does not open the folder itself).
+			function load() {
+				if (loadedOnce) { return loadPromise || Promise.resolve(); }
+				loadedOnce = true;
 			var msg = document.createElement('div');
 			msg.className = 'nas-msg';
 			msg.style.paddingLeft = ((depth + 1) * 22 + 90) + 'px';
 			msg.textContent = 'Loading...';
 			children.appendChild(msg);
-			return fetch('synology.php?browse=' + encodeURIComponent(entry.path), { cache: 'no-store' })
+			loadPromise = fetch('synology.php?browse=' + encodeURIComponent(entry.path), { cache: 'no-store' })
 				.then(function (r) { return r.json(); })
 				.then(function (res) {
 					children.removeChild(msg);
@@ -340,14 +445,15 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 							chain = chain.then(function () { return api.toggle(true); });
 						}
 					});
-					return chain;
+					return chain.then(applyFilter);
 				})
 				.catch(function () {
 					msg.textContent = 'Could not load this folder.';
 					if (!msg.parentNode) { children.appendChild(msg); }
 					loadedOnce = false;
 				});
-		}
+				return loadPromise;
+			}
 		chevron.addEventListener('click', function () { toggle(); });
 		label.addEventListener('click', function () { toggle(); });
 		icon.addEventListener('click', function () { toggle(); });
