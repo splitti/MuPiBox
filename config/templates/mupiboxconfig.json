@@ -263,7 +263,7 @@
 		"cachepath": "/home/dietpi/.cache/spotify",
 		"cachestate": true
 	},
-	"synology": {
+	"nas": {
 		"address": "",
 		"https": false,
 		"account": "",

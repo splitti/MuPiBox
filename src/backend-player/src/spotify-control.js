@@ -783,7 +783,7 @@ function playList(playedList) {
   }
 }
 
-// Plays a Synology NAS folder live: the tracklist and stream URLs are fetched
+// Plays a NAS folder live: the tracklist and stream URLs are fetched
 // fresh from backend-api on every play (no local caching), so NAS changes
 // need no separate "update media" step. The resulting playlist is a normal
 // m3u file whose lines are HTTP(S) stream-proxy URLs - mplayer already plays
@@ -794,7 +794,7 @@ async function playNasList(nasPath) {
   log.debug(`${nowDate.toLocaleString()}: [Spotify Control] Starting NAS playback: ${decodedPath}`)
 
   try {
-    const response = await fetch(`http://localhost:8200/api/synology/tracklist?path=${encodeURIComponent(decodedPath)}`)
+    const response = await fetch(`http://localhost:8200/api/nas/tracklist?path=${encodeURIComponent(decodedPath)}`)
     const tracks = await response.json()
     currentNasTracks = tracks
     const folderName = decodedPath.split('/').filter(Boolean).pop() || decodedPath
@@ -808,7 +808,7 @@ async function playNasList(nasPath) {
     currentMeta.path = decodedPath
 
     const playlistLines = tracks.map(
-      (track) => `http://localhost:8200/api/synology/stream?path=${encodeURIComponent(track.path)}`,
+      (track) => `http://localhost:8200/api/nas/stream?path=${encodeURIComponent(track.path)}`,
     )
     const tmpPlaylistPath = '/tmp/nas_playlist.m3u'
     fs.writeFileSync(tmpPlaylistPath, playlistLines.join('\n'))
@@ -1162,12 +1162,12 @@ app.get('/local/tracklist/:encoded', (req, res) => {
   res.json(tracks)
 })
 
-/*returns the track list of a NAS folder, listed live from the Synology (no local cache)*/
+/*returns the track list of a NAS folder, listed live from the NAS (no local cache)*/
 app.get('/nas/tracklist/:encoded', async (req, res) => {
   const nasPath = decodeURIComponent(req.params.encoded)
 
   try {
-    const response = await fetch(`http://localhost:8200/api/synology/tracklist?path=${encodeURIComponent(nasPath)}`)
+    const response = await fetch(`http://localhost:8200/api/nas/tracklist?path=${encodeURIComponent(nasPath)}`)
     const tracks = await response.json()
     res.json((tracks ?? []).map((track) => ({ position: track.position, name: track.name.replace(/\.[^./]+$/, '') })))
   } catch (error) {

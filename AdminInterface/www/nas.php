@@ -1,42 +1,42 @@
 <?php
 
-$backendBase = 'http://localhost:8200/api/synology';
+$backendBase = 'http://localhost:8200/api/nas';
 
 // Progress of a running "Download selected" (polled by the page below). Answers
 // before header.php so that no HTML is sent along with the JSON.
 if (isset($_GET['download_status'])) {
 	header('Content-Type: application/json');
-	echo json_encode(synologyApiCall("$backendBase/download/status", 'GET', null, 5));
+	echo json_encode(nasApiCall("$backendBase/download/status", 'GET', null, 5));
 	exit;
 }
 
 // Children of one folder for the tree view (loaded when a folder is expanded).
 if (isset($_GET['browse'])) {
 	header('Content-Type: application/json');
-	echo json_encode(synologyApiCall("$backendBase/browse?path=" . urlencode($_GET['browse']), 'GET', null, 15));
+	echo json_encode(nasApiCall("$backendBase/browse?path=" . urlencode($_GET['browse']), 'GET', null, 15));
 	exit;
 }
 
 // Folder index (built by the backend) behind the "Filter folders" box.
 if (isset($_GET['index_status'])) {
 	header('Content-Type: application/json');
-	echo json_encode(synologyApiCall("$backendBase/index/status", 'GET', null, 10));
+	echo json_encode(nasApiCall("$backendBase/index/status", 'GET', null, 10));
 	exit;
 }
 if (isset($_GET['index_search'])) {
 	header('Content-Type: application/json');
-	echo json_encode(synologyApiCall("$backendBase/index/search?q=" . urlencode((string)$_GET['index_search']), 'GET', null, 10));
+	echo json_encode(nasApiCall("$backendBase/index/search?q=" . urlencode((string)$_GET['index_search']), 'GET', null, 10));
 	exit;
 }
 if (isset($_GET['index_refresh']) && $_SERVER['REQUEST_METHOD'] === 'POST') {
 	header('Content-Type: application/json');
-	echo json_encode(synologyApiCall("$backendBase/index/refresh", 'POST', new stdClass(), 10));
+	echo json_encode(nasApiCall("$backendBase/index/refresh", 'POST', new stdClass(), 10));
 	exit;
 }
 
 include('includes/header.php');
 
-function synologyApiCall($url, $method = 'GET', $body = null, $timeout = 30) {
+function nasApiCall($url, $method = 'GET', $body = null, $timeout = 30) {
 	$ch = curl_init($url);
 	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 	curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
@@ -61,14 +61,14 @@ function synologyApiCall($url, $method = 'GET', $body = null, $timeout = 30) {
 
 $loginError = '';
 
-if (isset($_POST['synology_signin'])) {
-	$address = trim($_POST['synology_address'] ?? '');
-	$account = trim($_POST['synology_account'] ?? '');
-	$password = $_POST['synology_password'] ?? '';
-	$useHttps = isset($_POST['synology_https']);
-	$rememberMe = isset($_POST['synology_remember']);
+if (isset($_POST['nas_signin'])) {
+	$address = trim($_POST['nas_address'] ?? '');
+	$account = trim($_POST['nas_account'] ?? '');
+	$password = $_POST['nas_password'] ?? '';
+	$useHttps = isset($_POST['nas_https']);
+	$rememberMe = isset($_POST['nas_remember']);
 
-	$result = synologyApiCall("$backendBase/login", 'POST', array(
+	$result = nasApiCall("$backendBase/login", 'POST', array(
 		'address' => $address,
 		'https' => $useHttps,
 		'account' => $account,
@@ -83,7 +83,7 @@ if (isset($_POST['synology_signin'])) {
 
 $downloadStarted = false;
 
-if (isset($_POST['synology_save_selection']) || isset($_POST['synology_download_selected'])) {
+if (isset($_POST['nas_save_selection']) || isset($_POST['nas_download_selected'])) {
 	$checkedShow = $_POST['artist_folders'] ?? array();
 	$checkedHide = $_POST['hide_folders'] ?? array();
 	$checkedDownload = $_POST['download_folders'] ?? array();
@@ -91,18 +91,18 @@ if (isset($_POST['synology_save_selection']) || isset($_POST['synology_download_
 	foreach ($shown as $shownPath) {
 		// A folder is either shown or hidden; hidden wins if both were sent.
 		$isHidden = in_array($shownPath, $checkedHide, true);
-		synologyApiCall("$backendBase/mark", 'POST', array(
+		nasApiCall("$backendBase/mark", 'POST', array(
 			'path' => $shownPath, 'marked' => !$isHidden && in_array($shownPath, $checkedShow, true), 'list' => 'artist'), 10);
-		synologyApiCall("$backendBase/mark", 'POST', array(
+		nasApiCall("$backendBase/mark", 'POST', array(
 			'path' => $shownPath, 'marked' => $isHidden, 'list' => 'hidden'), 10);
-		synologyApiCall("$backendBase/mark", 'POST', array(
+		nasApiCall("$backendBase/mark", 'POST', array(
 			'path' => $shownPath, 'marked' => in_array($shownPath, $checkedDownload, true), 'list' => 'download'), 10);
 	}
 	$CHANGE_TXT = $CHANGE_TXT . "<li>NAS folder selection saved</li>";
 	$change = 1;
 
-	if (isset($_POST['synology_download_selected'])) {
-		$syncResult = synologyApiCall("$backendBase/download/sync", 'POST', new stdClass(), 10);
+	if (isset($_POST['nas_download_selected'])) {
+		$syncResult = nasApiCall("$backendBase/download/sync", 'POST', new stdClass(), 10);
 		if (!empty($syncResult['success'])) {
 			$downloadStarted = true;
 			$CHANGE_TXT = $CHANGE_TXT . "<li>Download of the selected folders started - progress is shown on this page</li>";
@@ -124,7 +124,7 @@ $browseEntries = array();
 $browseError = '';
 
 if (!$forceLogin) {
-	$browseResult = synologyApiCall("$backendBase/browse?path=" . urlencode($currentPath), 'GET', null, 15);
+	$browseResult = nasApiCall("$backendBase/browse?path=" . urlencode($currentPath), 'GET', null, 15);
 	if (!empty($browseResult['success'])) {
 		$isLoggedIn = true;
 		$browseEntries = $browseResult['entries'] ?? array();
@@ -168,36 +168,36 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 <?php } ?>
 
 <?php if (!$isLoggedIn) { ?>
-	<form class="appnitro" method="post" action="synology.php" id="form">
+	<form class="appnitro" method="post" action="nas.php" id="form">
 		<ul>
 			<li id="li_1">
-				<label class="description" for="synology_address">Address incl. WebDAV port (e.g. 192.168.1.25:5006)</label>
+				<label class="description" for="nas_address">Address incl. WebDAV port (e.g. 192.168.1.25:5006)</label>
 				<div>
-					<input id="synology_address" name="synology_address" class="element text large" type="text" maxlength="255" value="" />
+					<input id="nas_address" name="nas_address" class="element text large" type="text" maxlength="255" value="" />
 				</div>
 			</li>
 			<li id="li_1">
-				<label class="description" for="synology_account">Account</label>
+				<label class="description" for="nas_account">Account</label>
 				<div>
-					<input id="synology_account" name="synology_account" class="element text large" type="text" maxlength="255" value="" />
+					<input id="nas_account" name="nas_account" class="element text large" type="text" maxlength="255" value="" />
 				</div>
 			</li>
 			<li id="li_1">
-				<label class="description" for="synology_password">Password</label>
+				<label class="description" for="nas_password">Password</label>
 				<div>
-					<input id="synology_password" name="synology_password" class="element text large" type="password" maxlength="255" value="" />
+					<input id="nas_password" name="nas_password" class="element text large" type="password" maxlength="255" value="" />
 				</div>
 			</li>
 			<li id="li_1">
-				<label class="description" for="synology_https">HTTPS</label>
+				<label class="description" for="nas_https">HTTPS</label>
 				<div>
-					<input id="synology_https" name="synology_https" type="checkbox" value="1" />
+					<input id="nas_https" name="nas_https" type="checkbox" value="1" />
 				</div>
 			</li>
 			<li id="li_1">
-				<label class="description" for="synology_remember">Remember me</label>
+				<label class="description" for="nas_remember">Remember me</label>
 				<div>
-					<input id="synology_remember" name="synology_remember" type="checkbox" value="1" checked="checked" />
+					<input id="nas_remember" name="nas_remember" type="checkbox" value="1" checked="checked" />
 				</div>
 			</li>
 			<?php if ($loginError) { ?>
@@ -205,12 +205,12 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 			<?php } ?>
 			<li class="buttons">
 				<p><small>Signing in can take up to ~15 seconds.</small></p>
-				<input id="saveForm" class="button_text" type="submit" name="synology_signin" value="Sign In" />
+				<input id="saveForm" class="button_text" type="submit" name="nas_signin" value="Sign In" />
 			</li>
 		</ul>
 	</form>
 <?php } else { ?>
-	<form class="appnitro" method="post" action="synology.php" id="form">
+	<form class="appnitro" method="post" action="nas.php" id="form">
 			<input type="hidden" name="shown_folders" id="shown_folders" value="[]" />
 			<ul>
 				<?php if ($browseError) { ?>
@@ -261,16 +261,16 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 			<li class="buttons">
 				<input class="button_text" type="button" value="Select all" onclick="document.querySelectorAll('input[name=\'artist_folders[]\']').forEach(function (box) { if (!box.disabled) { box.checked = true; box.dispatchEvent(new Event('change')); } });" />
 				<input class="button_text" type="button" value="Unselect all" onclick="document.querySelectorAll('input[name=\'artist_folders[]\']').forEach(function (box) { box.checked = false; box.dispatchEvent(new Event('change')); });" />
-				<input id="saveForm" class="button_text" type="submit" name="synology_save_selection" value="Save selection" />
+				<input id="saveForm" class="button_text" type="submit" name="nas_save_selection" value="Save selection" />
 			</li>
 			<li class="buttons">
 				<input class="button_text" type="button" value="Select all downloads" onclick="document.querySelectorAll('input[name=\'download_folders[]\']').forEach(function (box) { box.checked = true; });" />
 				<input class="button_text" type="button" value="Unselect all downloads" onclick="document.querySelectorAll('input[name=\'download_folders[]\']').forEach(function (box) { box.checked = false; });" />
-				<input class="button_text" type="submit" name="synology_download_selected" value="Download selected" onclick="return confirm('Download the checked folders to the MuPiBox and delete local copies of unchecked ones?');" />
+				<input class="button_text" type="submit" name="nas_download_selected" value="Download selected" onclick="return confirm('Download the checked folders to the MuPiBox and delete local copies of unchecked ones?');" />
 			</li>
 		</ul>
 	</form>
-	<p style="padding-left:25px;"><a href="synology.php?relogin=1">Use a different NAS login</a></p>
+	<p style="padding-left:25px;"><a href="nas.php?relogin=1">Use a different NAS login</a></p>
 <?php } ?>
 
 <script>
@@ -402,7 +402,7 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 	}
 	function runIndexSearch(q, token) {
 		filterTimer = setTimeout(function () {
-			fetch('synology.php?index_search=' + encodeURIComponent(q), { cache: 'no-store' })
+			fetch('nas.php?index_search=' + encodeURIComponent(q), { cache: 'no-store' })
 				.then(function (r) { return r.json(); })
 				.then(function (res) {
 					if (token !== filterToken) { return; }
@@ -465,7 +465,7 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 		}
 	}
 	function pollIndex() {
-		fetch('synology.php?index_status=1', { cache: 'no-store' })
+		fetch('nas.php?index_status=1', { cache: 'no-store' })
 			.then(function (r) { return r.json(); })
 			.then(function (st) {
 				if (!st || !st.success) { return; }
@@ -486,7 +486,7 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 		if (refreshBtn) {
 			refreshBtn.addEventListener('click', function () {
 				refreshBtn.disabled = true;
-				fetch('synology.php?index_refresh=1', { method: 'POST' }).then(function () { setTimeout(pollIndex, 300); });
+				fetch('nas.php?index_refresh=1', { method: 'POST' }).then(function () { setTimeout(pollIndex, 300); });
 			});
 		}
 		pollIndex();
@@ -577,7 +577,7 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 			msg.style.paddingLeft = ((depth + 1) * 22 + 90) + 'px';
 			msg.textContent = 'Loading...';
 			children.appendChild(msg);
-			loadPromise = fetch('synology.php?browse=' + encodeURIComponent(entry.path), { cache: 'no-store' })
+			loadPromise = fetch('nas.php?browse=' + encodeURIComponent(entry.path), { cache: 'no-store' })
 				.then(function (r) { return r.json(); })
 				.then(function (res) {
 					children.removeChild(msg);
@@ -635,7 +635,7 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 	var autoStarted = <?= $downloadStarted ? 'true' : 'false' ?>;
 
 	function refresh() {
-		fetch('synology.php?download_status=1').then(function (r) { return r.json(); }).then(function (st) {
+		fetch('nas.php?download_status=1').then(function (r) { return r.json(); }).then(function (st) {
 			if (!st || st.message === undefined) { return; }
 			if (st.running || autoStarted || st.filesTotal > 0) {
 				box.style.display = 'block';

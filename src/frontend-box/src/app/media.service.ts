@@ -324,7 +324,7 @@ export class MediaService {
       // NAS folders can be nested any number of levels deep; every level is
       // listed live from the NAS, one level at a time.
       return this.http.get<Media[]>(
-        `${this.getApiBackendUrl()}/synology/children?path=${encodeURIComponent(artist.coverMedia.nasPath)}`,
+        `${this.getApiBackendUrl()}/nas/children?path=${encodeURIComponent(artist.coverMedia.nasPath)}`,
       )
     }
     return this.fetchMedia(category).pipe(
@@ -433,10 +433,10 @@ export class MediaService {
 
   private fetchMedia(category: CategoryType): Observable<Media[]> {
     if (category === 'nas') {
-      // NAS media is fetched live from the Synology on every call (never cached
+      // NAS media is fetched live from the NAS on every call (never cached
       // into data.json), so it bypasses the Spotify-oriented updateMedia pipeline
       // below entirely - the backend already returns ready-to-use Media[].
-      return this.http.get<Media[]>(`${this.getApiBackendUrl()}/synology/artists`)
+      return this.http.get<Media[]>(`${this.getApiBackendUrl()}/nas/artists`)
     }
     const dataMedia = this.updateMedia(`${this.getApiBackendUrl()}/data`, false, category)
 

@@ -13,7 +13,7 @@ import jsonfile from 'jsonfile'
 import ky from 'ky'
 import xmlparser from 'xml-js'
 import { LogRequest, LogResponse } from './models/log.model'
-import type { MupiboxConfig } from './models/mupibox-config.model'
+import type { MupiboxConfig, NasConfig } from './models/mupibox-config.model'
 import { ServerConfig } from './models/server.model'
 import type { SpotifyValidationRequest, SpotifyValidationResponse } from './models/spotify-api.model'
 import { SpotifyApiService } from './services/spotify-api.service'
@@ -1900,13 +1900,12 @@ app.post('/api/bluetooth/remove', async (req, res) => {
 })
 
 // --------------------------------------------
-// Synology NAS integration
+// NAS integration
 // --------------------------------------------
 // Browses and streams media from a NAS live over WebDAV (works with Synology,
 // QNAP, TrueNAS, ...) - no SMB/CIFS mount, no data.json caching. Every read hits
 // the NAS directly, so changes made on the NAS show up the next time a
 // category/page is opened, with no manual "update media" step required.
-// (Function/route names keep the historic "synology" prefix.)
 
 // Runs fn over items with at most `limit` calls in flight at once. An artist folder with two
 // dozen albums used to fire one WebDAV request per album (plus one more for each album's cover)
@@ -1925,18 +1924,27 @@ async function mapWithConcurrency<T, R>(items: T[], limit: number, fn: (item: T)
   return results
 }
 
-interface SynologySession {
+// The NAS settings. Configs written before the rename still have them under "synology"; a "nas" section
+// that only holds the template defaults (no address) must not hide those.
+function nasSettings(config: MupiboxConfig | undefined): NasConfig | undefined {
+  if (config?.nas?.address) {
+    return config.nas
+  }
+  return config?.synology ?? config?.nas
+}
+
+interface NasSession {
   base: string // WebDAV base URL without trailing slash, may contain a path prefix
   auth: string // Authorization header value (HTTP Basic)
 }
 
-let synologySessionCache: SynologySession | undefined
+let nasSessionCache: NasSession | undefined
 
-class SynologySessionExpiredError extends Error {}
+class NasSessionExpiredError extends Error {}
 
 // The NAS answered, but with an API-level error (e.g. folder no longer exists) -
 // unlike a network failure this does not mean the NAS is offline.
-class SynologyApiError extends Error {}
+class NasApiError extends Error {}
 
 // Local copies of NAS folders ("Download local") live here, mirroring the NAS
 // path (e.g. /music/Artist/Album -> <root>/music/Artist/Album), so they stay
@@ -1944,12 +1952,12 @@ class SynologyApiError extends Error {}
 const nasLocalRoot = '/home/dietpi/MuPiBox/media/NAS'
 const nasDownloadMarker = '.mupibox-nas-download'
 
-const synologyAudioExtensions = ['.mp3', '.flac', '.wav', '.wma', '.ogg', '.m4a']
+const nasAudioExtensions = ['.mp3', '.flac', '.wav', '.wma', '.ogg', '.m4a']
 
 // Resolves the address field into a WebDAV base URL. Accepts "host", "host:port",
 // "host:port/path" or a complete http(s):// URL. The HTTPS checkbox picks the
 // scheme when the address itself has none.
-function synologyResolveBase(address: string, useHttps: boolean): string {
+function nasResolveBase(address: string, useHttps: boolean): string {
   const trimmed = address.trim().replace(/\/+$/, '')
   if (/^https?:\/\//i.test(trimmed)) {
     return trimmed
@@ -1957,11 +1965,11 @@ function synologyResolveBase(address: string, useHttps: boolean): string {
   return `${useHttps ? 'https' : 'http'}://${trimmed}`
 }
 
-function synologyBasicAuth(account: string, password: string): string {
+function nasBasicAuth(account: string, password: string): string {
   return `Basic ${Buffer.from(`${account}:${password}`, 'utf8').toString('base64')}`
 }
 
-function synologyUrl(session: SynologySession, nasPath: string): string {
+function nasUrl(session: NasSession, nasPath: string): string {
   const encoded = nasPath
     .split('/')
     .filter(Boolean)
@@ -1970,15 +1978,15 @@ function synologyUrl(session: SynologySession, nasPath: string): string {
   return `${session.base}/${encoded}`
 }
 
-async function synologyLogin(
+async function nasLogin(
   base: string,
   account: string,
   password: string,
   timeoutMs = 10000,
-): Promise<{ success: boolean; session?: SynologySession; error?: string }> {
-  const session: SynologySession = { base, auth: synologyBasicAuth(account, password) }
+): Promise<{ success: boolean; session?: NasSession; error?: string }> {
+  const session: NasSession = { base, auth: nasBasicAuth(account, password) }
   try {
-    const response = await fetch(synologyUrl(session, '/'), {
+    const response = await fetch(nasUrl(session, '/'), {
       method: 'PROPFIND',
       headers: { Authorization: session.auth, Depth: '1' },
       signal: AbortSignal.timeout(timeoutMs),
@@ -2012,67 +2020,67 @@ async function synologyLogin(
   }
 }
 
-let synologySessionPromise: Promise<SynologySession | undefined> | undefined
-let synologyOfflineUntil = 0
+let nasSessionPromise: Promise<NasSession | undefined> | undefined
+let nasOfflineUntil = 0
 
 // After a network failure, skip the NAS for a short while so the kids' UI can fall
 // back to the local downloads immediately instead of waiting on timeouts every time.
-function synologyMarkOffline(): void {
-  synologyOfflineUntil = Date.now() + 30000
-  synologySessionCache = undefined
+function nasMarkOffline(): void {
+  nasOfflineUntil = Date.now() + 30000
+  nasSessionCache = undefined
 }
 
-async function synologyLoginWithRememberedCredentials(): Promise<SynologySession | undefined> {
+async function nasLoginWithRememberedCredentials(): Promise<NasSession | undefined> {
   const config = await getMupiboxConfig()
-  const syn = config?.synology
+  const syn = nasSettings(config)
   if (!syn?.rememberMe || !syn.address || !syn.account || !syn.password) {
     return undefined
   }
-  const base = synologyResolveBase(syn.address, Boolean(syn.https))
+  const base = nasResolveBase(syn.address, Boolean(syn.https))
   // Short timeout: an unreachable NAS must not hold up the kids' UI.
-  const result = await synologyLogin(base, syn.account, syn.password, 4000)
+  const result = await nasLogin(base, syn.account, syn.password, 4000)
   if (!result.success || !result.session) {
     if (/reach/i.test(result.error ?? '')) {
-      synologyMarkOffline()
+      nasMarkOffline()
     }
     return undefined
   }
-  synologySessionCache = result.session
-  return synologySessionCache
+  nasSessionCache = result.session
+  return nasSessionCache
 }
 
 // Returns a cached session, or transparently logs back in using the
 // remembered credentials (if any) - existing installs won't have a
-// "synology" config section at all, so every field is read defensively.
-async function getActiveSynologySession(): Promise<SynologySession | undefined> {
-  if (synologySessionCache) {
-    return synologySessionCache
+// "nas" config section at all, so every field is read defensively.
+async function getActiveNasSession(): Promise<NasSession | undefined> {
+  if (nasSessionCache) {
+    return nasSessionCache
   }
-  if (Date.now() < synologyOfflineUntil) {
+  if (Date.now() < nasOfflineUntil) {
     return undefined
   }
   // Several requests often arrive at once (e.g. one per artist): share one login.
-  if (!synologySessionPromise) {
-    synologySessionPromise = synologyLoginWithRememberedCredentials().finally(() => {
-      synologySessionPromise = undefined
+  if (!nasSessionPromise) {
+    nasSessionPromise = nasLoginWithRememberedCredentials().finally(() => {
+      nasSessionPromise = undefined
     })
   }
-  return await synologySessionPromise
+  return await nasSessionPromise
 }
 
 // Runs `fn` with an active session, retrying exactly once (with a fresh
 // login) if the session turned out to be expired.
-async function withSynologySession<T>(fn: (session: SynologySession) => Promise<T>): Promise<T | undefined> {
-  let session = await getActiveSynologySession()
+async function withNasSession<T>(fn: (session: NasSession) => Promise<T>): Promise<T | undefined> {
+  let session = await getActiveNasSession()
   if (!session) {
     return undefined
   }
   try {
     return await fn(session)
   } catch (error) {
-    if (error instanceof SynologySessionExpiredError) {
-      synologySessionCache = undefined
-      session = await getActiveSynologySession()
+    if (error instanceof NasSessionExpiredError) {
+      nasSessionCache = undefined
+      session = await getActiveNasSession()
       if (!session) {
         return undefined
       }
@@ -2082,7 +2090,7 @@ async function withSynologySession<T>(fn: (session: SynologySession) => Promise<
   }
 }
 
-interface SynologyFileEntry {
+interface NasFileEntry {
   name: string
   path: string
   isdir: boolean
@@ -2096,10 +2104,10 @@ function decodeXml(text: string): string {
 }
 
 // Parses a WebDAV PROPFIND (Depth: 1) answer into the children of `folderPath`.
-function parsePropfind(xml: string, session: SynologySession, folderPath: string): SynologyFileEntry[] {
+function parsePropfind(xml: string, session: NasSession, folderPath: string): NasFileEntry[] {
   const basePrefix = decodeURIComponent(new URL(session.base).pathname).replace(/\/+$/, '')
   const folder = `/${folderPath.split('/').filter(Boolean).join('/')}`
-  const entries: SynologyFileEntry[] = []
+  const entries: NasFileEntry[] = []
   const responses = xml.match(/<(?:\w+:)?response[\s>][\s\S]*?<\/(?:\w+:)?response>/gi) ?? []
   for (const block of responses) {
     const hrefMatch = block.match(/<(?:\w+:)?href[^>]*>([\s\S]*?)<\/(?:\w+:)?href>/i)
@@ -2134,8 +2142,8 @@ function parsePropfind(xml: string, session: SynologySession, folderPath: string
   return entries
 }
 
-async function synologyListFiles(session: SynologySession, folderPath: string, _withSize = false): Promise<SynologyFileEntry[]> {
-  const response = await fetch(`${synologyUrl(session, folderPath)}/`, {
+async function nasListFilesLive(session: NasSession, folderPath: string, _withSize = false): Promise<NasFileEntry[]> {
+  const response = await fetch(`${nasUrl(session, folderPath)}/`, {
     method: 'PROPFIND',
     headers: { Authorization: session.auth, Depth: '1', 'Content-Type': 'application/xml' },
     body: '<?xml version="1.0"?><propfind xmlns="DAV:"><prop><resourcetype/><getcontentlength/></prop></propfind>',
@@ -2144,7 +2152,7 @@ async function synologyListFiles(session: SynologySession, folderPath: string, _
   const text = await response.text()
   if (response.status !== 207 && response.status !== 200) {
     // Folder gone / no permission: the NAS answered, so it is not offline.
-    throw new SynologyApiError(`WebDAV error ${response.status}`)
+    throw new NasApiError(`WebDAV error ${response.status}`)
   }
   return parsePropfind(text, session, folderPath)
 }
@@ -2181,7 +2189,7 @@ function nasIsDownloaded(nasPath: string): boolean {
   return false
 }
 
-async function nasLocalListFiles(nasPath: string): Promise<SynologyFileEntry[] | undefined> {
+async function nasLocalListFiles(nasPath: string): Promise<NasFileEntry[] | undefined> {
   const dir = nasLocalPath(nasPath)
   if (!dir || !fs.existsSync(dir)) {
     return undefined
@@ -2195,7 +2203,7 @@ async function nasLocalListFiles(nasPath: string): Promise<SynologyFileEntry[] |
 
 // Lists a NAS folder: from the local copy if it was downloaded, otherwise live
 // from the NAS, and from whatever is stored locally if the NAS is unreachable.
-async function nasListFiles(folderPath: string): Promise<SynologyFileEntry[]> {
+async function nasListFiles(folderPath: string): Promise<NasFileEntry[]> {
   if (nasIsDownloaded(folderPath)) {
     const local = await nasLocalListFiles(folderPath)
     if (local) {
@@ -2203,13 +2211,13 @@ async function nasListFiles(folderPath: string): Promise<SynologyFileEntry[]> {
     }
   }
   try {
-    const live = await withSynologySession((session) => synologyListFiles(session, folderPath))
+    const live = await withNasSession((session) => nasListFilesLive(session, folderPath))
     if (live !== undefined) {
       return live
     }
   } catch (error) {
-    if (!(error instanceof SynologyApiError || error instanceof SynologySessionExpiredError)) {
-      synologyMarkOffline()
+    if (!(error instanceof NasApiError || error instanceof NasSessionExpiredError)) {
+      nasMarkOffline()
     }
   }
   const local = await nasLocalListFiles(folderPath)
@@ -2219,7 +2227,7 @@ async function nasListFiles(folderPath: string): Promise<SynologyFileEntry[]> {
   throw new Error(`NAS folder not available: ${folderPath}`)
 }
 
-function synologyFindCoverImage(files: SynologyFileEntry[]): string | undefined {
+function nasFindCoverImage(files: NasFileEntry[]): string | undefined {
   const image = files.find((f) => !f.isdir && /\.(jpe?g|png)$/i.test(f.name))
   return image?.path
 }
@@ -2228,11 +2236,11 @@ function synologyFindCoverImage(files: SynologyFileEntry[]): string | undefined 
 // gets the first cover found one level below it, in listing order - checked one subfolder at a
 // time (not in parallel) and stops at the first hit, so this stays cheap even for a folder with
 // many subfolders. Only one level deep, unlike the local library's multi-level version.
-async function synologyFindCoverBelow(files: SynologyFileEntry[]): Promise<string | undefined> {
+async function nasFindCoverBelow(files: NasFileEntry[]): Promise<string | undefined> {
   for (const sub of files.filter((f) => f.isdir).slice(0, 5)) {
     try {
       const subFiles = await nasListFiles(sub.path)
-      const cover = synologyFindCoverImage(subFiles)
+      const cover = nasFindCoverImage(subFiles)
       if (cover) {
         return cover
       }
@@ -2244,28 +2252,28 @@ async function synologyFindCoverBelow(files: SynologyFileEntry[]): Promise<strin
 }
 
 // Only used for covers, which are asked for as small thumbnails.
-function synologyStreamUrl(filePath: string): string {
-  return `/api/synology/stream?path=${encodeURIComponent(filePath)}&w=400`
+function nasStreamUrl(filePath: string): string {
+  return `/api/nas/stream?path=${encodeURIComponent(filePath)}&w=400`
 }
 
 // A folder that holds no audio files but only subfolders is a "container": the
 // kids' UI drills into it like an artist level instead of trying to play it.
 // This allows any number of nesting levels.
-function synologyIsContainer(files: SynologyFileEntry[]): boolean {
-  const hasAudio = files.some((f) => !f.isdir && synologyAudioExtensions.some((ext) => f.name.toLowerCase().endsWith(ext)))
+function nasIsContainer(files: NasFileEntry[]): boolean {
+  const hasAudio = files.some((f) => !f.isdir && nasAudioExtensions.some((ext) => f.name.toLowerCase().endsWith(ext)))
   const hasSubfolders = files.some((f) => f.isdir)
   return !hasAudio && hasSubfolders
 }
 
 // Builds the ready-to-use Media entry for one NAS folder (live listing).
-async function synologyBuildMediaEntry(
+async function nasBuildMediaEntry(
   folderPath: string,
   artistName: string,
   title: string,
   fallbackCoverPath?: string,
 ): Promise<Record<string, unknown>> {
   const files = await nasListFiles(folderPath)
-  const ownCoverPath = synologyFindCoverImage(files) ?? (await synologyFindCoverBelow(files))
+  const ownCoverPath = nasFindCoverImage(files) ?? (await nasFindCoverBelow(files))
   const coverPath = ownCoverPath ?? fallbackCoverPath
   return {
     type: 'nas',
@@ -2273,47 +2281,49 @@ async function synologyBuildMediaEntry(
     artist: artistName,
     title,
     nasPath: folderPath,
-    nasIsContainer: synologyIsContainer(files),
-    cover: coverPath ? synologyStreamUrl(coverPath) : undefined,
-    artistcover: coverPath ? synologyStreamUrl(coverPath) : undefined,
+    nasIsContainer: nasIsContainer(files),
+    cover: coverPath ? nasStreamUrl(coverPath) : undefined,
+    artistcover: coverPath ? nasStreamUrl(coverPath) : undefined,
   }
 }
 
-async function updateSynologyConfig(partial: Record<string, unknown>): Promise<void> {
+async function updateNasConfig(partial: Record<string, unknown>): Promise<void> {
   const current = await getMupiboxConfig()
   if (!current) {
     throw new Error('Cannot update config: current mupibox config could not be read.')
   }
-  const updated = { ...current, synology: { ...(current.synology ?? {}), ...partial } }
-  const tmpPath = '/tmp/.mupiboxconfig-synology.json'
+  // Old config files call this section "synology": carry its values over to "nas" and drop the old key.
+  const { synology: _oldSection, ...rest } = current
+  const updated = { ...rest, nas: { ...(nasSettings(current) ?? {}), ...partial } }
+  const tmpPath = '/tmp/.mupiboxconfig-nas.json'
   await writeFile(tmpPath, JSON.stringify(updated))
   await execFileAsync('sudo', ['mv', tmpPath, mupiboxConfigPath])
   mupiboxConfigCache = updated as MupiboxConfig
 }
 
-app.post('/api/synology/login', async (req, res) => {
+app.post('/api/nas/login', async (req, res) => {
   const { address, https: useHttps, account, password, rememberMe } = req.body ?? {}
   if (typeof address !== 'string' || !address || typeof account !== 'string' || typeof password !== 'string') {
     res.status(400).json({ success: false, error: 'address, account and password are required.' })
     return
   }
 
-  const base = synologyResolveBase(address, Boolean(useHttps))
+  const base = nasResolveBase(address, Boolean(useHttps))
   // A wrong password may be answered slowly by some NAS models: be generous here.
-  const result = await synologyLogin(base, account, password, 25000)
+  const result = await nasLogin(base, account, password, 25000)
   if (!result.success || !result.session) {
     res.json({ success: false, error: result.error })
     return
   }
 
-  synologySessionCache = result.session
-  synologyOfflineUntil = 0
+  nasSessionCache = result.session
+  nasOfflineUntil = 0
 
   if (rememberMe === true) {
     try {
-      await updateSynologyConfig({ address, https: Boolean(useHttps), account, password, rememberMe: true })
+      await updateNasConfig({ address, https: Boolean(useHttps), account, password, rememberMe: true })
     } catch (error) {
-      console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to save Synology login: ${error}`)
+      console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to save NAS login: ${error}`)
     }
   }
 
@@ -2379,7 +2389,7 @@ async function buildNasIndex(): Promise<void> {
     for (let depth = 0; level.length > 0 && depth < nasIndexMaxDepth && found.length < nasIndexMaxFolders; depth++) {
       const listings = await mapWithConcurrency(level, 4, async (folder) => {
         try {
-          const files = await withSynologySession((session) => synologyListFiles(session, folder))
+          const files = await withNasSession((session) => nasListFilesLive(session, folder))
           if (files === undefined) {
             throw new Error('Not logged in to the NAS')
           }
@@ -2420,10 +2430,10 @@ async function buildNasIndex(): Promise<void> {
   }
 }
 
-app.get('/api/synology/index/status', async (_req, res) => {
+app.get('/api/nas/index/status', async (_req, res) => {
   const index = await loadNasIndex()
   const stale = !index || Date.now() - index.updated > nasIndexMaxAgeMs
-  if (stale && !nasIndexJob.running && Date.now() - nasIndexLastAttempt > nasIndexRetryMs && (await getActiveSynologySession())) {
+  if (stale && !nasIndexJob.running && Date.now() - nasIndexLastAttempt > nasIndexRetryMs && (await getActiveNasSession())) {
     void buildNasIndex()
   }
   res.json({
@@ -2437,8 +2447,8 @@ app.get('/api/synology/index/status', async (_req, res) => {
   })
 })
 
-app.post('/api/synology/index/refresh', async (_req, res) => {
-  if (!(await getActiveSynologySession())) {
+app.post('/api/nas/index/refresh', async (_req, res) => {
+  if (!(await getActiveNasSession())) {
     res.status(401).json({ success: false, error: 'not_logged_in' })
     return
   }
@@ -2447,7 +2457,7 @@ app.post('/api/synology/index/refresh', async (_req, res) => {
 })
 
 // Folders whose own name contains q (case-insensitive), as full paths.
-app.get('/api/synology/index/search', async (req, res) => {
+app.get('/api/nas/index/search', async (req, res) => {
   const q = typeof req.query.q === 'string' ? req.query.q.trim().toLowerCase() : ''
   const index = await loadNasIndex()
   if (!index || q === '') {
@@ -2474,17 +2484,17 @@ function nasIsHidden(folderPath: string, hidden: string[]): boolean {
   return hidden.some((h) => folderPath === h || folderPath.startsWith(`${h}/`))
 }
 
-app.get('/api/synology/browse', async (req, res) => {
+app.get('/api/nas/browse', async (req, res) => {
   const folderPath = typeof req.query.path === 'string' ? req.query.path : ''
 
   try {
-    const result = await withSynologySession(async (session) => {
+    const result = await withNasSession(async (session) => {
       const config = await getMupiboxConfig()
-      const markedFolders = new Set(config?.synology?.artistFolders ?? [])
-      const downloadFolders = new Set(config?.synology?.downloadFolders ?? [])
-      const hiddenFolders = new Set(config?.synology?.hiddenFolders ?? [])
+      const markedFolders = new Set(nasSettings(config)?.artistFolders ?? [])
+      const downloadFolders = new Set(nasSettings(config)?.downloadFolders ?? [])
+      const hiddenFolders = new Set(nasSettings(config)?.hiddenFolders ?? [])
 
-      const files = await synologyListFiles(session, folderPath || '/')
+      const files = await nasListFilesLive(session, folderPath || '/')
       const entries = files.filter((f) => f.isdir).map((f) => ({ name: f.name, path: f.path, isDirectory: true }))
 
       return entries.map((e) => ({
@@ -2502,7 +2512,7 @@ app.get('/api/synology/browse', async (req, res) => {
     }
     res.json({ success: true, path: folderPath, entries: result })
   } catch (error) {
-    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to browse Synology path ${folderPath}: ${error}`)
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to browse NAS path ${folderPath}: ${error}`)
     res.status(502).json({ success: false, error: 'nas_unreachable' })
   }
 })
@@ -2510,7 +2520,7 @@ app.get('/api/synology/browse', async (req, res) => {
 // `list` selects which selection is changed: "artist" (Show in MuPiBox, default),
 // "hidden" (Hide in MuPiBox) or "download" (Download local). A folder is either shown or
 // hidden, never both: setting one removes the other.
-app.post('/api/synology/mark', async (req, res) => {
+app.post('/api/nas/mark', async (req, res) => {
   const { path: folderPath, marked, list } = req.body ?? {}
   if (typeof folderPath !== 'string' || typeof marked !== 'boolean') {
     res.status(400).json({ success: false, error: 'path and marked are required.' })
@@ -2521,35 +2531,35 @@ app.post('/api/synology/mark', async (req, res) => {
 
   try {
     const config = await getMupiboxConfig()
-    const existing = (config?.synology?.[key] as string[] | undefined) ?? []
+    const existing = (nasSettings(config)?.[key] as string[] | undefined) ?? []
     const next = marked ? Array.from(new Set([...existing, folderPath])) : existing.filter((p) => p !== folderPath)
     const update: Record<string, unknown> = { [key]: next }
     if (marked && opposite) {
-      const other = (config?.synology?.[opposite] as string[] | undefined) ?? []
+      const other = (nasSettings(config)?.[opposite] as string[] | undefined) ?? []
       if (other.includes(folderPath)) {
         update[opposite] = other.filter((p) => p !== folderPath)
       }
     }
-    await updateSynologyConfig(update)
+    await updateNasConfig(update)
     res.json({ success: true, [key]: next })
   } catch (error) {
-    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to save Synology selection: ${error}`)
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to save NAS selection: ${error}`)
     res.status(500).json({ success: false })
   }
 })
 
-app.get('/api/synology/artists', async (_req, res) => {
+app.get('/api/nas/artists', async (_req, res) => {
   try {
     const config = await getMupiboxConfig()
-    const hiddenFolders = config?.synology?.hiddenFolders ?? []
-    const artistFolders = (config?.synology?.artistFolders ?? []).filter((p) => !nasIsHidden(p, hiddenFolders))
+    const hiddenFolders = nasSettings(config)?.hiddenFolders ?? []
+    const artistFolders = (nasSettings(config)?.artistFolders ?? []).filter((p) => !nasIsHidden(p, hiddenFolders))
 
     // One entry per marked folder. Deeper levels are loaded on demand via
-    // /api/synology/children as the user navigates, so this stays cheap.
+    // /api/nas/children as the user navigates, so this stays cheap.
     const entries = await mapWithConcurrency(artistFolders, 4, async (artistPath) => {
       try {
         const artistName = artistPath.split('/').filter(Boolean).pop() ?? artistPath
-        return await synologyBuildMediaEntry(artistPath, artistName, artistName)
+        return await nasBuildMediaEntry(artistPath, artistName, artistName)
       } catch (error) {
         // Skip just this one folder (deleted on the NAS since it was marked, or
         // NAS offline and never downloaded) instead of failing the whole category.
@@ -2569,7 +2579,7 @@ app.get('/api/synology/artists', async (_req, res) => {
 // Lists the subfolders of one NAS folder as ready-to-use Media entries (one
 // level deeper). Live from the NAS, or from the local copy when downloaded /
 // when the NAS is not reachable. Used by the kids' UI to drill down.
-app.get('/api/synology/children', async (req, res) => {
+app.get('/api/nas/children', async (req, res) => {
   const folderPath = typeof req.query.path === 'string' ? req.query.path : ''
   if (!folderPath) {
     res.status(400).json([])
@@ -2578,16 +2588,16 @@ app.get('/api/synology/children', async (req, res) => {
 
   try {
     const files = await nasListFiles(folderPath)
-    const hiddenFolders = (await getMupiboxConfig())?.synology?.hiddenFolders ?? []
+    const hiddenFolders = nasSettings(await getMupiboxConfig())?.hiddenFolders ?? []
     const parentName = folderPath.split('/').filter(Boolean).pop() ?? folderPath
-    const parentCoverPath = synologyFindCoverImage(files)
+    const parentCoverPath = nasFindCoverImage(files)
 
     const entries = await mapWithConcurrency(
       files.filter((f) => f.isdir && !nasIsHidden(f.path, hiddenFolders)),
       4,
       async (sub) => {
         try {
-          return await synologyBuildMediaEntry(sub.path, parentName, sub.name, parentCoverPath)
+          return await nasBuildMediaEntry(sub.path, parentName, sub.name, parentCoverPath)
         } catch (error) {
           console.error(
             `${new Date().toLocaleString()}: [MuPiBox-Server] Skipping unreadable NAS folder ${sub.path}: ${error}`,
@@ -2603,7 +2613,7 @@ app.get('/api/synology/children', async (req, res) => {
   }
 })
 
-app.get('/api/synology/tracklist', async (req, res) => {
+app.get('/api/nas/tracklist', async (req, res) => {
   const folderPath = typeof req.query.path === 'string' ? req.query.path : ''
   if (!folderPath) {
     res.status(400).json({ error: 'path is required' })
@@ -2613,7 +2623,7 @@ app.get('/api/synology/tracklist', async (req, res) => {
   try {
     const files = await nasListFiles(folderPath)
     const tracks = files
-      .filter((f) => !f.isdir && synologyAudioExtensions.some((ext) => f.name.toLowerCase().endsWith(ext)))
+      .filter((f) => !f.isdir && nasAudioExtensions.some((ext) => f.name.toLowerCase().endsWith(ext)))
       .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
       .map((f, index) => ({ position: index + 1, name: f.name, path: f.path }))
     res.json(tracks)
@@ -2665,7 +2675,7 @@ function nasServeLocalFile(req: express.Request, res: express.Response, file: st
   fs.createReadStream(file, { start, end }).pipe(res)
 }
 
-app.get('/api/synology/stream', async (req, res) => {
+app.get('/api/nas/stream', async (req, res) => {
   const filePath = typeof req.query.path === 'string' ? req.query.path : ''
   if (!filePath) {
     res.status(400).send('path is required')
@@ -2694,9 +2704,9 @@ app.get('/api/synology/stream', async (req, res) => {
     }
   }
 
-  const session = await getActiveSynologySession()
+  const session = await getActiveNasSession()
   if (!session) {
-    res.status(401).send('Not logged in to Synology, or the NAS is not reachable.')
+    res.status(401).send('Not logged in to the NAS, or the NAS is not reachable.')
     return
   }
 
@@ -2709,7 +2719,7 @@ app.get('/api/synology/stream', async (req, res) => {
     if (thumbSize && isThumbnailable(filePath) && !req.headers.range) {
       const day = Math.floor(Date.now() / 86400000)
       const thumb = await getThumbnail(`nas:${filePath}`, thumbSize, `nas|${filePath}|${day}`, async () => {
-        const full = await fetch(synologyUrl(session, filePath), { headers, signal: AbortSignal.timeout(20000) })
+        const full = await fetch(nasUrl(session, filePath), { headers, signal: AbortSignal.timeout(20000) })
         if (!full.ok) {
           return undefined
         }
@@ -2723,7 +2733,7 @@ app.get('/api/synology/stream', async (req, res) => {
       }
     }
 
-    const upstream = await fetch(synologyUrl(session, filePath), { headers, signal: AbortSignal.timeout(15000) })
+    const upstream = await fetch(nasUrl(session, filePath), { headers, signal: AbortSignal.timeout(15000) })
     if (upstream.status === 404 || upstream.status === 401 || upstream.status === 403) {
       res.status(upstream.status === 404 ? 404 : 502).send('Failed to fetch file from NAS.')
       return
@@ -2750,7 +2760,7 @@ app.get('/api/synology/stream', async (req, res) => {
 
 // --- Download local ("Download selected") ---------------------------------
 
-const nasDownloadExtensions = [...synologyAudioExtensions, '.jpg', '.jpeg', '.png']
+const nasDownloadExtensions = [...nasAudioExtensions, '.jpg', '.jpeg', '.png']
 
 interface NasDownloadStatus {
   running: boolean
@@ -2767,8 +2777,8 @@ interface NasFileToDownload {
   size: number
 }
 
-async function nasCollectFiles(session: SynologySession, folderPath: string, out: NasFileToDownload[]): Promise<void> {
-  const files = await synologyListFiles(session, folderPath, true)
+async function nasCollectFiles(session: NasSession, folderPath: string, out: NasFileToDownload[]): Promise<void> {
+  const files = await nasListFilesLive(session, folderPath, true)
   for (const file of files) {
     if (file.isdir) {
       await nasCollectFiles(session, file.path, out)
@@ -2793,10 +2803,10 @@ async function nasDownloadFile(nasPath: string, size: number): Promise<void> {
   }
   await mkdir(path.dirname(target), { recursive: true })
 
-  const done = await withSynologySession(async (session) => {
-    const response = await fetch(synologyUrl(session, nasPath), { headers: { Authorization: session.auth } })
+  const done = await withNasSession(async (session) => {
+    const response = await fetch(nasUrl(session, nasPath), { headers: { Authorization: session.auth } })
     if (!response.ok || !response.body) {
-      throw new SynologyApiError(`WebDAV download error ${response.status}`)
+      throw new NasApiError(`WebDAV download error ${response.status}`)
     }
     // Write to a temp name first so a half-finished file is never mistaken for a
     // complete one (and never gets played).
@@ -2866,7 +2876,7 @@ async function nasDownloadParentCovers(folder: string, checked: Set<string>): Pr
     if (dir && (await nasLocalHasImage(dir))) {
       continue
     }
-    const files = await withSynologySession((session) => synologyListFiles(session, ancestor, true))
+    const files = await withNasSession((session) => nasListFilesLive(session, ancestor, true))
     const cover = files?.find((file) => !file.isdir && /\.(jpe?g|png)$/i.test(file.name))
     if (cover) {
       await nasDownloadFile(cover.path, cover.additional?.size ?? -1)
@@ -2884,7 +2894,7 @@ async function runNasSync(): Promise<void> {
       // Without the selection we cannot tell what to keep - never delete blindly.
       throw new Error('Could not read the MuPiBox configuration.')
     }
-    const desired = Array.from(new Set((config.synology?.downloadFolders ?? []).map(normalizeNasPath))).filter(
+    const desired = Array.from(new Set((nasSettings(config)?.downloadFolders ?? []).map(normalizeNasPath))).filter(
       (folder) => folder !== '/',
     )
     await mkdir(nasLocalRoot, { recursive: true })
@@ -2892,7 +2902,7 @@ async function runNasSync(): Promise<void> {
     status.message = 'Removing local copies that are no longer selected...'
     await nasPruneExcept('/', desired)
 
-    if (desired.length > 0 && (await getActiveSynologySession())) {
+    if (desired.length > 0 && (await getActiveNasSession())) {
       status.message = 'Downloading covers of parent folders...'
       const checkedParents = new Set<string>()
       for (const folder of desired) {
@@ -2910,7 +2920,7 @@ async function runNasSync(): Promise<void> {
       return
     }
 
-    if (!(await getActiveSynologySession())) {
+    if (!(await getActiveNasSession())) {
       throw new Error('The NAS is not reachable - nothing was downloaded.')
     }
 
@@ -2918,7 +2928,7 @@ async function runNasSync(): Promise<void> {
     const plan: { folder: string; files: NasFileToDownload[] }[] = []
     for (const folder of pending) {
       const files: NasFileToDownload[] = []
-      await withSynologySession(async (session) => {
+      await withNasSession(async (session) => {
         files.length = 0
         await nasCollectFiles(session, folder, files)
       })
@@ -2965,7 +2975,7 @@ async function runNasSync(): Promise<void> {
   }
 }
 
-app.post('/api/synology/download/sync', (_req, res) => {
+app.post('/api/nas/download/sync', (_req, res) => {
   if (nasDownloadStatus.running) {
     res.status(409).json({ success: false, error: 'A download is already running.' })
     return
@@ -2976,7 +2986,7 @@ app.post('/api/synology/download/sync', (_req, res) => {
   res.json({ success: true })
 })
 
-app.get('/api/synology/download/status', (_req, res) => {
+app.get('/api/nas/download/status', (_req, res) => {
   res.json(nasDownloadStatus)
 })
 
@@ -3002,7 +3012,7 @@ function libraryRel(relPath: string): string | undefined {
   return parts.join('/')
 }
 
-async function libraryListFiles(relPath: string): Promise<SynologyFileEntry[]> {
+async function libraryListFiles(relPath: string): Promise<NasFileEntry[]> {
   const rel = libraryRel(relPath)
   if (!rel) {
     throw new Error(`Invalid library path: ${relPath}`)
@@ -3015,14 +3025,14 @@ async function libraryListFiles(relPath: string): Promise<SynologyFileEntry[]> {
 }
 
 // Prefers a file called "cover.*", otherwise the first image in the folder.
-function libraryFindCover(files: SynologyFileEntry[]): string | undefined {
+function libraryFindCover(files: NasFileEntry[]): string | undefined {
   const images = files.filter((f) => !f.isdir && /\.(jpe?g|png)$/i.test(f.name))
   return (images.find((f) => /^cover\./i.test(f.name)) ?? images[0])?.path
 }
 
 // An artist folder without a picture of its own gets the cover of the first album
 // below it (as the old media database did) - looked up a couple of levels deep.
-async function libraryFindCoverBelow(files: SynologyFileEntry[], depth: number): Promise<string | undefined> {
+async function libraryFindCoverBelow(files: NasFileEntry[], depth: number): Promise<string | undefined> {
   if (depth <= 0) {
     return undefined
   }
@@ -3215,7 +3225,7 @@ async function libraryBuildEntry(
   fallbackCoverPath?: string,
 ): Promise<Record<string, unknown>> {
   const files = await libraryListFiles(relPath)
-  const isContainer = synologyIsContainer(files)
+  const isContainer = nasIsContainer(files)
   const coverPath =
     libraryFindCover(files) ?? (isContainer ? await libraryFindCoverBelow(files, 2) : undefined) ?? fallbackCoverPath
   return {
