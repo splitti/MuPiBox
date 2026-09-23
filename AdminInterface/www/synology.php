@@ -124,7 +124,7 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 
 <?php if ($isLoggedIn) { ?>
 	<style>
-		#nas-filter-wrap { position: relative; max-width: 360px; margin: 0 0 20px 25px; }
+		#nas-filter-wrap { position: relative; max-width: 360px; margin: 0 0 0 25px; }
 		#nas-filter-wrap i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #222; font-size: 15px; pointer-events: none; }
 		#nas-filter { box-sizing: border-box; width: 100%; height: 42px; padding: 0 14px 0 40px; font-size: 16px; color: #222; background: #fff; border: 1px solid #9a9a9a; border-radius: 10px; outline: none; }
 		#nas-filter:focus { border-color: #555; }
@@ -189,7 +189,7 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 					<style>
 						#nas-tree { font-family: "Segoe UI", Tahoma, sans-serif; font-size: 15px; color: #1a1a1a; max-width: 720px; }
 						.nas-head, .nas-row { display: flex; align-items: center; }
-						.nas-head { height: 110px; align-items: flex-end; border-bottom: 1px solid #e0e0e0; margin-bottom: 4px; }
+						.nas-head { /* auto height: the vertical "Show in Mupibox" text must not overlap the filter box; the form li above adds ~20px, so 1px more gives the same ~21px gap as between the "S" and the line below */ height: auto; padding-top: 1px; align-items: flex-end; border-bottom: 1px solid #e0e0e0; margin-bottom: 4px; }
 						.nas-cb { flex: 0 0 34px; text-align: center; }
 						.nas-cb input { margin: 0; }
 						.nas-head .nas-cb { display: flex; justify-content: center; }
