@@ -153,7 +153,8 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 		<input id="nas-filter" type="text" title="Filter Folders" placeholder="Filter folders" autocomplete="off" />
 		<span id="nas-filter-status" style="display:none;">searching...</span>
 	</div>
-	<div id="nas-index-line" style="margin: -14px 0 14px 25px; font-size: 13px; color: #666;"></div>
+	<div id="nas-index-line" style="margin: 6px 0 0 25px; font-size: 13px; color: #666;"></div>
+	<div style="text-align: center; margin: 14px 0 0 0;"><input type="button" id="nas-index-refresh" class="button_text" value="Refresh index" /></div>
 <?php } ?>
 
 <?php if (!$isLoggedIn) { ?>
@@ -435,16 +436,21 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 	function safeText(t) { return String(t).replace(/[<>&]/g, ''); }
 	function renderIndexInfo(st) {
 		if (!infoEl) { return; }
+		var btn = document.getElementById('nas-index-refresh');
 		var text;
 		if (st.running) {
 			text = 'Building folder index... ' + st.folders + ' folders found so far' + (st.exists ? ' (the previous index is used meanwhile)' : '');
 		} else if (st.exists) {
-			text = 'Folder index: ' + st.count + ' folders, updated ' + new Date(st.updated).toLocaleString() + ' - <a href="#" id="nas-index-refresh">Refresh index</a>';
+			text = 'Folder index: ' + st.count + ' folders, updated ' + new Date(st.updated).toLocaleString();
 			if (st.error) { text += ' (last refresh failed: ' + safeText(st.error) + ')'; }
 		} else {
-			text = 'No folder index yet' + (st.error ? ' (last try failed: ' + safeText(st.error) + ')' : '') + ' - <a href="#" id="nas-index-refresh">Build index</a>';
+			text = 'No folder index yet' + (st.error ? ' (last try failed: ' + safeText(st.error) + ')' : '');
 		}
-		infoEl.innerHTML = text;
+		infoEl.textContent = text;
+		if (btn) {
+			btn.disabled = !!st.running;
+			btn.value = st.running ? 'Building index...' : (st.exists ? 'Refresh index' : 'Build index');
+		}
 	}
 	function pollIndex() {
 		fetch('synology.php?index_status=1', { cache: 'no-store' })
@@ -464,12 +470,13 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 			.catch(function () {});
 	}
 	if (infoEl) {
-		infoEl.addEventListener('click', function (e) {
-			if (e.target && e.target.id === 'nas-index-refresh') {
-				e.preventDefault();
+		var refreshBtn = document.getElementById('nas-index-refresh');
+		if (refreshBtn) {
+			refreshBtn.addEventListener('click', function () {
+				refreshBtn.disabled = true;
 				fetch('synology.php?index_refresh=1', { method: 'POST' }).then(function () { setTimeout(pollIndex, 300); });
-			}
-		});
+			});
+		}
 		pollIndex();
 	}
 
