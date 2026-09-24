@@ -221,20 +221,28 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 	<div id="nas-index-line" style="margin: 6px 0 0 25px; font-size: 13px; color: #666;"></div>
 <?php } ?>
 
-<?php if (!$isLoggedIn) { ?>
+<?php if (!$isLoggedIn) {
+	// The last used login stays in the config after "Logout" (never the password): offer it again.
+	// (a "nas" section that only holds the template defaults must not hide an old "synology" one)
+	$lastNas = !empty($data['nas']['address']) ? $data['nas'] : ($data['synology'] ?? ($data['nas'] ?? array()));
+	$formAddress = isset($_POST['nas_address']) ? (string)$_POST['nas_address'] : (string)($lastNas['address'] ?? '');
+	$formAccount = isset($_POST['nas_account']) ? (string)$_POST['nas_account'] : (string)($lastNas['account'] ?? '');
+	$formHttps = isset($_POST['nas_signin']) ? isset($_POST['nas_https']) : !empty($lastNas['https']);
+	$formRemember = isset($_POST['nas_signin']) ? isset($_POST['nas_remember']) : (!isset($lastNas['rememberMe']) || !empty($lastNas['rememberMe']));
+?>
 	<p style="padding-left:25px;"><span class="nas-info" data-info="nas-info-nas" title="About the NAS tab" role="button" tabindex="0"><i class="fa-solid fa-circle-info"></i></span></p>
 	<form class="appnitro" method="post" action="nas.php" id="form">
 		<ul>
 			<li id="li_1">
 				<label class="description" for="nas_address">Address incl. WebDAV port (e.g. 192.168.1.25:5006)</label>
 				<div>
-					<input id="nas_address" name="nas_address" class="element text large" type="text" maxlength="255" value="" />
+					<input id="nas_address" name="nas_address" class="element text large" type="text" maxlength="255" value="<?= htmlspecialchars($formAddress, ENT_QUOTES) ?>" />
 				</div>
 			</li>
 			<li id="li_1">
 				<label class="description" for="nas_account">Account</label>
 				<div>
-					<input id="nas_account" name="nas_account" class="element text large" type="text" maxlength="255" value="" />
+					<input id="nas_account" name="nas_account" class="element text large" type="text" maxlength="255" value="<?= htmlspecialchars($formAccount, ENT_QUOTES) ?>" />
 				</div>
 			</li>
 			<li id="li_1">
@@ -246,13 +254,13 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 			<li id="li_1">
 				<label class="description" for="nas_https">HTTPS</label>
 				<div>
-					<input id="nas_https" name="nas_https" type="checkbox" value="1" />
+					<input id="nas_https" name="nas_https" type="checkbox" value="1"<?= $formHttps ? ' checked="checked"' : '' ?> />
 				</div>
 			</li>
 			<li id="li_1">
 				<label class="description" for="nas_remember">Remember me</label>
 				<div>
-					<input id="nas_remember" name="nas_remember" type="checkbox" value="1" checked="checked" />
+					<input id="nas_remember" name="nas_remember" type="checkbox" value="1"<?= $formRemember ? ' checked="checked"' : '' ?> />
 				</div>
 			</li>
 			<?php if ($loginError) { ?>
@@ -345,7 +353,7 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 	</form>
 	<?php
 	// The NAS this MuPiBox is logged in to (an old config still calls the section "synology").
-	$nasLoginAddress = $data['nas']['address'] ?? ($data['synology']['address'] ?? '');
+	$nasLoginAddress = !empty($data['nas']['address']) ? $data['nas']['address'] : ($data['synology']['address'] ?? '');
 ?>
 	<div style="padding-left:25px; display:flex; align-items:center; gap:12px; margin: 8px 0;">
 		<span class="nas-info" data-info="nas-info-nas" title="About the NAS tab" role="button" tabindex="0"><i class="fa-solid fa-circle-info"></i></span>
