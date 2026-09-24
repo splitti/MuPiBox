@@ -204,10 +204,10 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 		#nas-filter-row { display: flex; align-items: center; gap: 16px; margin: 21px 0 0 25px; }
 		#nas-filter-row .button_text { margin: 0; flex: 0 0 auto; }
 		#nas-filter-wrap { position: relative; flex: 0 1 360px; min-width: 0; }
-		#nas-filter-wrap i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #222; font-size: 15px; pointer-events: none; }
-		#nas-filter { box-sizing: border-box; width: 100%; height: 42px; padding: 0 130px 0 40px; font-size: 16px; color: #222; background: #fff; border: 1px solid #9a9a9a; border-radius: 10px; outline: none; }
-		#nas-filter:focus { border-color: #555; }
-		#nas-filter::placeholder { color: #777; }
+		#nas-filter-wrap i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #8a8a8a; font-size: 15px; pointer-events: none; }
+		#nas-filter { box-sizing: border-box; width: 100%; height: 42px; padding: 0 130px 0 40px; font-size: 16px; color: #222; background: #f9f9f9; border: 1px solid #dcdcdc; border-radius: 6px; outline: none; }
+		#nas-filter:focus { border-color: #b5b5b5; background: #fbfbfb; }
+		#nas-filter::placeholder { color: #aaa; }
 		#nas-filter-status { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: #777; font-size: 13px; pointer-events: none; }
 	</style>
 	<div id="nas-filter-row">
