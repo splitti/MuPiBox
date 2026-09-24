@@ -13,7 +13,7 @@ import jsonfile from 'jsonfile'
 import ky from 'ky'
 import xmlparser from 'xml-js'
 import { LogRequest, LogResponse } from './models/log.model'
-import type { MupiboxConfig, NasConfig } from './models/mupibox-config.model'
+import type { MupiboxConfig, NasConfig, NasProfile } from './models/mupibox-config.model'
 import { ServerConfig } from './models/server.model'
 import type { SpotifyValidationRequest, SpotifyValidationResponse } from './models/spotify-api.model'
 import { SpotifyApiService } from './services/spotify-api.service'
@@ -2036,9 +2036,14 @@ async function nasLoginWithRememberedCredentials(): Promise<NasSession | undefin
   if (!syn?.rememberMe || !syn.address || !syn.account || !syn.password) {
     return undefined
   }
+  const password = nasDecrypt(syn.password)
+  if (password === undefined) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] The stored NAS password can not be decrypted on this box - please sign in to the NAS again.`)
+    return undefined
+  }
   const base = nasResolveBase(syn.address, Boolean(syn.https))
   // Short timeout: an unreachable NAS must not hold up the kids' UI.
-  const result = await nasLogin(base, syn.account, syn.password, 4000)
+  const result = await nasLogin(base, syn.account, password, 4000)
   if (!result.success || !result.session) {
     if (/reach/i.test(result.error ?? '')) {
       nasMarkOffline()
@@ -2046,6 +2051,10 @@ async function nasLoginWithRememberedCredentials(): Promise<NasSession | undefin
     return undefined
   }
   nasSessionCache = result.session
+  if (!syn.password.startsWith(nasSecretPrefix)) {
+    // A clear-text password from an older config: store it encrypted from now on.
+    updateNasConfig({ password: nasEncrypt(password) }).catch(() => undefined)
+  }
   return nasSessionCache
 }
 
@@ -2287,19 +2296,351 @@ async function nasBuildMediaEntry(
   }
 }
 
-async function updateNasConfig(partial: Record<string, unknown>): Promise<void> {
-  const current = await getMupiboxConfig()
-  if (!current) {
-    throw new Error('Cannot update config: current mupibox config could not be read.')
+// The NAS login password is kept in the config file encrypted (AES-256-GCM), so the configuration
+// backup does not carry it in clear text. The key is derived from this box's hardware serial: a backup
+// restored on the same box keeps working, on another box the password can not be read and the NAS
+// login has to be entered again. A clear-text password from an older config is still accepted and is
+// encrypted the next time the login is saved.
+const nasSecretPrefix = 'enc:v1:'
+let nasKeyCache: Buffer | undefined
+
+function nasKey(): Buffer {
+  if (!nasKeyCache) {
+    let seed = ''
+    try {
+      seed = fs.readFileSync('/proc/cpuinfo', 'utf8').match(/^Serial\s*:\s*(\S+)/m)?.[1] ?? ''
+    } catch {
+      // not a Raspberry Pi
+    }
+    if (!seed) {
+      try {
+        seed = fs.readFileSync('/etc/machine-id', 'utf8').trim()
+      } catch {
+        // no machine id either
+      }
+    }
+    nasKeyCache = crypto.scryptSync(`mupibox-nas:${seed}`, 'mupibox-nas-login-v1', 32)
   }
-  // Old config files call this section "synology": carry its values over to "nas" and drop the old key.
-  const { synology: _oldSection, ...rest } = current
-  const updated = { ...rest, nas: { ...(nasSettings(current) ?? {}), ...partial } }
-  const tmpPath = '/tmp/.mupiboxconfig-nas.json'
-  await writeFile(tmpPath, JSON.stringify(updated))
-  await execFileAsync('sudo', ['mv', tmpPath, mupiboxConfigPath])
-  mupiboxConfigCache = updated as MupiboxConfig
+  return nasKeyCache
 }
+
+function nasEncrypt(plain: string): string {
+  const iv = crypto.randomBytes(12)
+  const cipher = crypto.createCipheriv('aes-256-gcm', nasKey(), iv)
+  const data = Buffer.concat([cipher.update(plain, 'utf8'), cipher.final()])
+  return nasSecretPrefix + Buffer.concat([iv, cipher.getAuthTag(), data]).toString('base64')
+}
+
+// Returns the clear text, or undefined if the value can not be decrypted (e.g. config from another box).
+function nasDecrypt(value: string): string | undefined {
+  if (!value.startsWith(nasSecretPrefix)) {
+    return value
+  }
+  try {
+    const raw = Buffer.from(value.slice(nasSecretPrefix.length), 'base64')
+    const decipher = crypto.createDecipheriv('aes-256-gcm', nasKey(), raw.subarray(0, 12))
+    decipher.setAuthTag(raw.subarray(12, 28))
+    return Buffer.concat([decipher.update(raw.subarray(28)), decipher.final()]).toString('utf8')
+  } catch {
+    return undefined
+  }
+}
+
+let nasConfigWriteChain: Promise<void> = Promise.resolve()
+
+// Changes are applied one after another: several requests at once (e.g. one per folder when "Save
+// selection" is pressed) must not overwrite each other's read-modify-write. `change` is either the
+// values to set or a function that computes them from the current settings (returning undefined = no write).
+function updateNasConfig(
+  change: Record<string, unknown> | ((settings: NasConfig | undefined) => Record<string, unknown> | undefined),
+): Promise<void> {
+  const run = nasConfigWriteChain.then(async () => {
+    const current = await getMupiboxConfig()
+    if (!current) {
+      throw new Error('Cannot update config: current mupibox config could not be read.')
+    }
+    const partial = typeof change === 'function' ? change(nasSettings(current)) : change
+    if (!partial) {
+      return
+    }
+    // Old config files call this section "synology": carry its values over to "nas" and drop the old key.
+    const { synology: _oldSection, ...rest } = current
+    const updated = { ...rest, nas: { ...(nasSettings(current) ?? {}), ...partial } }
+    const tmpPath = '/tmp/.mupiboxconfig-nas.json'
+    await writeFile(tmpPath, JSON.stringify(updated))
+    await execFileAsync('sudo', ['mv', tmpPath, mupiboxConfigPath])
+    mupiboxConfigCache = updated as MupiboxConfig
+  })
+  nasConfigWriteChain = run.catch(() => undefined)
+  return run
+}
+
+// --- Profiles: named selections of the NAS tab ---------------------------------------------------
+// Every profile remembers the "Show", "Hide" and "Download local" folders and the NAS login (address +
+// account, never the password) it was made with. Exactly one profile is active; saving the selection
+// updates it. A profile can only be loaded while the same NAS/account is connected. They live in the
+// config file, so the configuration backup contains them.
+
+const nasDefaultProfile = 'standard'
+const nasProfileNamePattern = /^[\p{L}\p{N}][\p{L}\p{N} .()-]{0,39}$/u
+
+function nasAddressKey(address: string | undefined): string {
+  return (address ?? '').trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '').toLowerCase()
+}
+
+// A profile created before any login (no address/account yet) is not bound to a NAS and fits any login.
+function nasProfileMatchesLogin(profile: NasProfile, settings: NasConfig | undefined): boolean {
+  if (!profile.address && !profile.account) {
+    return true
+  }
+  return (
+    nasAddressKey(profile.address) === nasAddressKey(settings?.address) &&
+    profile.account.trim().toLowerCase() === (settings?.account ?? '').trim().toLowerCase()
+  )
+}
+
+function nasGetProfile(profiles: Record<string, NasProfile>, name: string): NasProfile | undefined {
+  return Object.hasOwn(profiles, name) ? profiles[name] : undefined
+}
+
+function nasProfileSnapshot(settings: NasConfig | undefined, created = Date.now()): NasProfile {
+  return {
+    created,
+    address: settings?.address ?? '',
+    account: settings?.account ?? '',
+    artistFolders: [...(settings?.artistFolders ?? [])],
+    hiddenFolders: [...(settings?.hiddenFolders ?? [])],
+    downloadFolders: [...(settings?.downloadFolders ?? [])],
+  }
+}
+
+// The profiles of the config; "standard" always exists (made from the current selection if it is missing).
+function nasProfilesOf(settings: NasConfig | undefined): { profiles: Record<string, NasProfile>; active: string } {
+  const profiles = { ...(settings?.profiles ?? {}) }
+  if (!nasGetProfile(profiles, nasDefaultProfile)) {
+    profiles[nasDefaultProfile] = nasProfileSnapshot(settings)
+  }
+  const active = settings?.activeProfile && nasGetProfile(profiles, settings.activeProfile) ? settings.activeProfile : nasDefaultProfile
+  return { profiles, active }
+}
+
+// Keeps the active profile in step with a change of the selection (used by /mark). Also stores the
+// profile list the first time, so "standard" is part of the config from then on.
+function nasTrackActiveProfile(settings: NasConfig | undefined, changes: Record<string, unknown>): Record<string, unknown> {
+  const { profiles, active } = nasProfilesOf(settings)
+  const profile = nasGetProfile(profiles, active)
+  if (!profile || !nasProfileMatchesLogin(profile, settings)) {
+    return { profiles, activeProfile: active } // other NAS/login than the profile: leave the profile as it is
+  }
+  const pick = (key: 'artistFolders' | 'hiddenFolders' | 'downloadFolders'): string[] =>
+    (changes[key] as string[] | undefined) ?? settings?.[key] ?? []
+  return {
+    profiles: {
+      ...profiles,
+      [active]: {
+        ...profile,
+        address: profile.address || (settings?.address ?? ''),
+        account: profile.account || (settings?.account ?? ''),
+        artistFolders: pick('artistFolders'),
+        hiddenFolders: pick('hiddenFolders'),
+        downloadFolders: pick('downloadFolders'),
+      },
+    },
+    activeProfile: active,
+  }
+}
+
+async function nasFolderExists(session: NasSession, folderPath: string): Promise<boolean> {
+  const response = await fetch(`${nasUrl(session, folderPath)}/`, {
+    method: 'PROPFIND',
+    headers: { Authorization: session.auth, Depth: '0' },
+    signal: AbortSignal.timeout(8000),
+  })
+  await response.text().catch(() => '')
+  // A folder that is gone is a 404; a share (top level) that does not exist is answered with 405 by Synology.
+  const topLevel = folderPath.split('/').filter(Boolean).length <= 1
+  if (response.status === 404 || response.status === 410 || (response.status === 405 && topLevel)) {
+    return false
+  }
+  if (response.status === 207 || response.status === 200) {
+    return true
+  }
+  throw new NasApiError(`WebDAV error ${response.status}`)
+}
+
+app.get('/api/nas/profiles', async (_req, res) => {
+  try {
+    // Store the profile list once, so "standard" exists in the config (and thus in the backup).
+    await updateNasConfig((settings) => {
+      const { profiles, active } = nasProfilesOf(settings)
+      return settings?.profiles && nasGetProfile(settings.profiles, nasDefaultProfile) ? undefined : { profiles, activeProfile: active }
+    })
+    const settings = nasSettings(await getMupiboxConfig())
+    const { profiles, active } = nasProfilesOf(settings)
+    const list = Object.keys(profiles)
+      .sort((x, y) => (x === nasDefaultProfile ? -1 : y === nasDefaultProfile ? 1 : x.localeCompare(y)))
+      .map((name) => ({
+        name,
+        active: name === active,
+        created: profiles[name].created,
+        address: profiles[name].address,
+        account: profiles[name].account,
+        matchesLogin: nasProfileMatchesLogin(profiles[name], settings),
+        shown: profiles[name].artistFolders.length,
+        hidden: profiles[name].hiddenFolders.length,
+        download: profiles[name].downloadFolders.length,
+      }))
+    res.json({ success: true, active, profiles: list })
+  } catch (error) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to list NAS profiles: ${error}`)
+    res.status(500).json({ success: false })
+  }
+})
+
+// Stores the current (saved) selection under `name` and makes it the active profile. An existing name is
+// only replaced with overwrite: true.
+app.post('/api/nas/profiles/create', async (req, res) => {
+  const name = typeof req.body?.name === 'string' ? req.body.name.trim() : ''
+  if (!nasProfileNamePattern.test(name)) {
+    res.status(400).json({ success: false, error: 'invalid_name' })
+    return
+  }
+  if (!(await getActiveNasSession())) {
+    res.status(401).json({ success: false, error: 'not_logged_in' })
+    return
+  }
+  try {
+    let exists = false
+    await updateNasConfig((settings) => {
+      const { profiles } = nasProfilesOf(settings)
+      const old = nasGetProfile(profiles, name)
+      if (old && req.body?.overwrite !== true) {
+        exists = true
+        return undefined
+      }
+      return { profiles: { ...profiles, [name]: nasProfileSnapshot(settings, old?.created) }, activeProfile: name }
+    })
+    res.json(exists ? { success: false, error: 'exists' } : { success: true })
+  } catch (error) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to create NAS profile: ${error}`)
+    res.status(500).json({ success: false })
+  }
+})
+
+// Makes a profile the active selection. Refused if another NAS/account is connected than the one the
+// profile was made with. Folders that no longer exist on the NAS are reported (`missing`), not removed.
+app.post('/api/nas/profiles/load', async (req, res) => {
+  const name = typeof req.body?.name === 'string' ? req.body.name : ''
+  const session = await getActiveNasSession()
+  if (!session) {
+    res.status(401).json({ success: false, error: 'not_logged_in' })
+    return
+  }
+  try {
+    const before = nasSettings(await getMupiboxConfig())
+    const profile = nasGetProfile(nasProfilesOf(before).profiles, name)
+    if (!profile) {
+      res.status(404).json({ success: false, error: 'unknown_profile' })
+      return
+    }
+    if (!nasProfileMatchesLogin(profile, before)) {
+      res.json({ success: false, error: 'different_login' })
+      return
+    }
+    await updateNasConfig((settings) => {
+      const { profiles } = nasProfilesOf(settings)
+      const bound = { ...profile, address: profile.address || (settings?.address ?? ''), account: profile.account || (settings?.account ?? '') }
+      return {
+        artistFolders: [...bound.artistFolders],
+        hiddenFolders: [...bound.hiddenFolders],
+        downloadFolders: [...bound.downloadFolders],
+        profiles: { ...profiles, [name]: bound },
+        activeProfile: name,
+      }
+    })
+    const paths = Array.from(new Set([...profile.artistFolders, ...profile.hiddenFolders, ...profile.downloadFolders]))
+    let unverified = 0
+    const exists = await mapWithConcurrency(paths, 4, async (folderPath) => {
+      try {
+        return await nasFolderExists(session, folderPath)
+      } catch {
+        unverified++ // could not be checked (network) - not reported as missing
+        return true
+      }
+    })
+    res.json({ success: true, missing: paths.filter((_, index) => !exists[index]), unverified })
+  } catch (error) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to load NAS profile: ${error}`)
+    res.status(500).json({ success: false })
+  }
+})
+
+// Takes folders that no longer exist out of a profile (and out of the selection if it is the active one).
+app.post('/api/nas/profiles/remove-missing', async (req, res) => {
+  const name = typeof req.body?.name === 'string' ? req.body.name : ''
+  const drop = new Set(Array.isArray(req.body?.paths) ? req.body.paths.filter((p: unknown) => typeof p === 'string') : [])
+  try {
+    let found = false
+    await updateNasConfig((settings) => {
+      const { profiles, active } = nasProfilesOf(settings)
+      const profile = nasGetProfile(profiles, name)
+      if (!profile) {
+        return undefined
+      }
+      found = true
+      const strip = (list: string[] | undefined): string[] => (list ?? []).filter((p) => !drop.has(p))
+      const change: Record<string, unknown> = {
+        profiles: {
+          ...profiles,
+          [name]: {
+            ...profile,
+            artistFolders: strip(profile.artistFolders),
+            hiddenFolders: strip(profile.hiddenFolders),
+            downloadFolders: strip(profile.downloadFolders),
+          },
+        },
+      }
+      if (name === active) {
+        change.artistFolders = strip(settings?.artistFolders)
+        change.hiddenFolders = strip(settings?.hiddenFolders)
+        change.downloadFolders = strip(settings?.downloadFolders)
+      }
+      return change
+    })
+    res.json({ success: found })
+  } catch (error) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to clean NAS profile: ${error}`)
+    res.status(500).json({ success: false })
+  }
+})
+
+app.post('/api/nas/profiles/delete', async (req, res) => {
+  const name = typeof req.body?.name === 'string' ? req.body.name : ''
+  if (name === nasDefaultProfile) {
+    res.json({ success: false, error: 'standard' })
+    return
+  }
+  try {
+    let error: string | undefined
+    await updateNasConfig((settings) => {
+      const { profiles, active } = nasProfilesOf(settings)
+      if (!nasGetProfile(profiles, name)) {
+        error = 'unknown_profile'
+        return undefined
+      }
+      if (name === active) {
+        error = 'active'
+        return undefined
+      }
+      const { [name]: _removed, ...others } = profiles
+      return { profiles: others, activeProfile: active }
+    })
+    res.json(error ? { success: false, error } : { success: true })
+  } catch (error) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to delete NAS profile: ${error}`)
+    res.status(500).json({ success: false })
+  }
+})
 
 app.post('/api/nas/login', async (req, res) => {
   const { address, https: useHttps, account, password, rememberMe } = req.body ?? {}
@@ -2321,7 +2662,7 @@ app.post('/api/nas/login', async (req, res) => {
 
   if (rememberMe === true) {
     try {
-      await updateNasConfig({ address, https: Boolean(useHttps), account, password, rememberMe: true })
+      await updateNasConfig({ address, https: Boolean(useHttps), account, password: nasEncrypt(password), rememberMe: true })
     } catch (error) {
       console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to save NAS login: ${error}`)
     }
@@ -2530,17 +2871,19 @@ app.post('/api/nas/mark', async (req, res) => {
   const opposite = key === 'artistFolders' ? 'hiddenFolders' : key === 'hiddenFolders' ? 'artistFolders' : undefined
 
   try {
-    const config = await getMupiboxConfig()
-    const existing = (nasSettings(config)?.[key] as string[] | undefined) ?? []
-    const next = marked ? Array.from(new Set([...existing, folderPath])) : existing.filter((p) => p !== folderPath)
-    const update: Record<string, unknown> = { [key]: next }
-    if (marked && opposite) {
-      const other = (nasSettings(config)?.[opposite] as string[] | undefined) ?? []
-      if (other.includes(folderPath)) {
-        update[opposite] = other.filter((p) => p !== folderPath)
+    let next: string[] = []
+    await updateNasConfig((settings) => {
+      const existing = (settings?.[key] as string[] | undefined) ?? []
+      next = marked ? Array.from(new Set([...existing, folderPath])) : existing.filter((p) => p !== folderPath)
+      const update: Record<string, unknown> = { [key]: next }
+      if (marked && opposite) {
+        const other = (settings?.[opposite] as string[] | undefined) ?? []
+        if (other.includes(folderPath)) {
+          update[opposite] = other.filter((p) => p !== folderPath)
+        }
       }
-    }
-    await updateNasConfig(update)
+      return { ...update, ...nasTrackActiveProfile(settings, update) }
+    })
     res.json({ success: true, [key]: next })
   } catch (error) {
     console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to save NAS selection: ${error}`)

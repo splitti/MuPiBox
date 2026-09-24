@@ -34,6 +34,23 @@ if (isset($_GET['index_refresh']) && $_SERVER['REQUEST_METHOD'] === 'POST') {
 	exit;
 }
 
+// Profiles of the NAS tab (kept by the backend in the config).
+if (isset($_GET['profile_api'])) {
+	header('Content-Type: application/json');
+	$profileAction = (string)$_GET['profile_api'];
+	if ($profileAction === 'list') {
+		echo json_encode(nasApiCall("$backendBase/profiles", 'GET', null, 10));
+	} elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array($profileAction, array('create', 'load', 'remove-missing', 'delete'), true)) {
+		$profileBody = json_decode(file_get_contents('php://input'), true);
+		// Loading checks every folder of the profile on the NAS, which can take a while.
+		echo json_encode(nasApiCall("$backendBase/profiles/$profileAction", 'POST', is_array($profileBody) ? $profileBody : new stdClass(), $profileAction === 'load' ? 120 : 15));
+	} else {
+		http_response_code(400);
+		echo json_encode(array('success' => false));
+	}
+	exit;
+}
+
 include('includes/header.php');
 
 function nasApiCall($url, $method = 'GET', $body = null, $timeout = 30) {
@@ -145,6 +162,31 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 </div>
 
 <?php if ($isLoggedIn) { ?>
+	<style>
+		#nas-profile-row { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin: 10px 0 0 0; }
+		#nas-profile-row .button_text { margin: 0; flex: 0 0 auto; }
+		#nas-profile-select { box-sizing: border-box; height: 42px; min-width: 220px; padding: 0 12px; font-size: 16px; color: #222; background: #fff; border: 1px solid #9a9a9a; border-radius: 10px; }
+		#nas-profile-info { font-size: 13px; color: #666; margin: 8px 0 12px 0; max-width: 720px; }
+		.nas-modal-back { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, .45); z-index: 9999; display: flex; align-items: center; justify-content: center; }
+		.nas-modal { box-sizing: border-box; background: #fff; color: #222; border-radius: 12px; padding: 22px 24px; max-width: 480px; width: calc(100% - 32px); box-shadow: 0 8px 30px rgba(0, 0, 0, .35); font-size: 15px; line-height: 1.4; }
+		.nas-modal h3 { margin: 0 0 10px 0; font-size: 18px; }
+		.nas-modal p { margin: 0 0 10px 0; }
+		.nas-modal ul { margin: 0 0 10px 0; padding: 6px 6px 6px 22px; max-height: 180px; overflow: auto; background: #f4f4f4; border-radius: 6px; font-size: 13px; }
+		.nas-modal input[type=text] { box-sizing: border-box; width: 100%; height: 40px; padding: 0 12px; font-size: 16px; border: 1px solid #9a9a9a; border-radius: 8px; margin: 4px 0 6px 0; }
+		.nas-modal-buttons { display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; }
+		.nas-modal-buttons .button_text { margin: 0; }
+	</style>
+	<div class="description" style="padding-left:25px;" id="nas-profiles">
+		<h2>Profiles</h2>
+		<p>A profile remembers which folders are set to "Show", "Hide" and "Download local", together with the NAS login it was made with. Saving the selection updates the active profile. A profile can only be loaded while the same NAS and account are connected. Profiles and the NAS login (the password encrypted) are part of the configuration backup.</p>
+		<div id="nas-profile-row">
+			<select id="nas-profile-select" title="Profiles"></select>
+			<input type="button" class="button_text" id="nas-profile-create" value="Create profile" />
+			<input type="button" class="button_text" id="nas-profile-load" value="Load profile" />
+			<input type="button" class="button_text" id="nas-profile-delete" value="Delete profile" />
+		</div>
+		<div id="nas-profile-info"></div>
+	</div>
 	<style>
 		/* 21px between the line above and the box = 21px between the "S" of "Show in Mupibox" and the line below the header */
 		#nas-filter-row { display: flex; align-items: center; gap: 16px; margin: 21px 0 0 25px; }
@@ -625,6 +667,208 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 	document.getElementById('form').addEventListener('submit', function () {
 		shownInput.value = JSON.stringify(Object.keys(shown));
 	});
+})();
+</script>
+
+<script>
+(function () {
+	var select = document.getElementById('nas-profile-select');
+	if (!select) { return; }
+	var info = document.getElementById('nas-profile-info');
+	var btnCreate = document.getElementById('nas-profile-create');
+	var btnLoad = document.getElementById('nas-profile-load');
+	var btnDelete = document.getElementById('nas-profile-delete');
+	var profiles = [];
+	var DEFAULT = 'standard';
+
+	// A simple popup: resolves with { value, text } of the clicked button (text = the input field, if any).
+	function popup(o) {
+		return new Promise(function (resolve) {
+			var back = document.createElement('div');
+			back.className = 'nas-modal-back';
+			var box = document.createElement('div');
+			box.className = 'nas-modal';
+			var h = document.createElement('h3');
+			h.textContent = o.title;
+			box.appendChild(h);
+			(o.paragraphs || []).forEach(function (t) {
+				var p = document.createElement('p');
+				p.textContent = t;
+				box.appendChild(p);
+			});
+			if (o.list && o.list.length) {
+				var ul = document.createElement('ul');
+				o.list.forEach(function (t) { var li = document.createElement('li'); li.textContent = t; ul.appendChild(li); });
+				box.appendChild(ul);
+			}
+			if (o.after) {
+				var pa = document.createElement('p');
+				pa.textContent = o.after;
+				box.appendChild(pa);
+			}
+			var input = null;
+			if (o.input) {
+				input = document.createElement('input');
+				input.type = 'text';
+				input.maxLength = 40;
+				input.placeholder = o.input;
+				box.appendChild(input);
+			}
+			var row = document.createElement('div');
+			row.className = 'nas-modal-buttons';
+			function close(value) {
+				document.body.removeChild(back);
+				document.removeEventListener('keydown', onKey);
+				resolve({ value: value, text: input ? input.value : '' });
+			}
+			function onKey(e) { if (e.key === 'Escape') { close(o.buttons[0].value); } if (e.key === 'Enter' && input) { close(o.buttons[o.buttons.length - 1].value); } }
+			o.buttons.forEach(function (b) {
+				var btn = document.createElement('input');
+				btn.type = 'button';
+				btn.className = 'button_text';
+				btn.value = b.label;
+				btn.addEventListener('click', function () { close(b.value); });
+				row.appendChild(btn);
+			});
+			box.appendChild(row);
+			back.appendChild(box);
+			document.body.appendChild(back);
+			document.addEventListener('keydown', onKey);
+			if (input) { input.focus(); }
+		});
+	}
+	function notice(title, text, extra) {
+		return popup({ title: title, paragraphs: [text].concat(extra || []), buttons: [{ label: 'OK', value: 'ok' }] });
+	}
+
+	function api(action, body) {
+		var opt = body === undefined ? { cache: 'no-store' } : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
+		return fetch('nas.php?profile_api=' + encodeURIComponent(action), opt).then(function (r) { return r.json(); });
+	}
+	var working = false;
+	function busy(on, text) {
+		[btnCreate, btnLoad, btnDelete, select].forEach(function (e) { e.disabled = on; });
+		if (on && text) { info.textContent = text; working = true; }
+		if (!on) { updateButtons(); if (working) { working = false; refresh(); } }
+	}
+	function updateButtons() { btnDelete.disabled = select.value === DEFAULT; }
+
+	function refresh(selectName) {
+		return api('list').then(function (res) {
+			if (!res || !res.success) { info.textContent = 'Profiles could not be read.'; return; }
+			profiles = res.profiles;
+			var wanted = selectName || select.value || res.active;
+			select.innerHTML = '';
+			profiles.forEach(function (p) {
+				var o = document.createElement('option');
+				o.value = p.name;
+				o.textContent = p.name + (p.active ? '  (active)' : '');
+				select.appendChild(o);
+			});
+			select.value = profiles.some(function (p) { return p.name === wanted; }) ? wanted : res.active;
+			var act = profiles.filter(function (p) { return p.active; })[0];
+			var text = 'Active profile: ' + res.active;
+			if (act) {
+				text += ' (' + act.shown + ' shown, ' + act.hidden + ' hidden, ' + act.download + ' download)';
+				if (!act.matchesLogin) { text += ' - it belongs to another NAS/login, so changes to the selection are not saved into it.'; }
+			}
+			info.textContent = text;
+			updateButtons();
+		}).catch(function () { info.textContent = 'Profiles could not be read.'; });
+	}
+
+	function notLoggedIn() { return notice('Not connected', 'Not connected to the NAS. Please sign in again.'); }
+
+	function create() {
+		popup({
+			title: 'Create profile',
+			paragraphs: ['Stores the current saved selection (Show / Hide / Download local) as a profile and makes it the active one. Changes to the checkboxes have to be saved with "Save selection" first.'],
+			input: 'Profile name',
+			buttons: [{ label: 'Cancel', value: 'cancel' }, { label: 'Create', value: 'create' }]
+		}).then(function (r) {
+			if (r.value !== 'create') { return; }
+			var name = r.text.trim();
+			return submitCreate(name, false);
+		});
+	}
+	function submitCreate(name, overwrite) {
+		busy(true, 'Saving the profile...');
+		return api('create', { name: name, overwrite: overwrite }).then(function (res) {
+			busy(false);
+			if (res.success) {
+				return notice('Profile created', 'Profile "' + name + '" was created and is now active.').then(function () { return refresh(name); });
+			}
+			if (res.error === 'exists') {
+				return popup({
+					title: 'Profile exists',
+					paragraphs: ['A profile named "' + name + '" already exists. Replace it with the current selection?'],
+					buttons: [{ label: 'Cancel', value: 'cancel' }, { label: 'Replace', value: 'replace' }]
+				}).then(function (r) { if (r.value === 'replace') { return submitCreate(name, true); } });
+			}
+			if (res.error === 'invalid_name') {
+				return notice('Invalid name', 'Please use 1-40 letters, digits, spaces, dots, dashes or brackets, starting with a letter or digit.');
+			}
+			if (res.error === 'not_logged_in') { return notLoggedIn(); }
+			return notice('Error', 'The profile could not be created.');
+		}).catch(function () { busy(false); return notice('Error', 'The profile could not be created.'); });
+	}
+
+	function loadProfile() {
+		var name = select.value;
+		busy(true, 'Loading the profile and checking its folders on the NAS...');
+		api('load', { name: name }).then(function (res) {
+			busy(false);
+			if (res.success) {
+				var missing = res.missing || [];
+				var extra = res.unverified > 0 ? res.unverified + ' folder(s) could not be checked because the NAS did not answer.' : '';
+				if (missing.length === 0) {
+					return notice('Profile loaded', 'Profile loaded successfully.', extra ? [extra] : []).then(function () { location.reload(); });
+				}
+				return popup({
+					title: 'Profile loaded successfully',
+					paragraphs: ['Profile "' + name + '" was loaded, but ' + missing.length + ' folder(s) no longer exist on the NAS:'],
+					list: missing,
+					after: 'Remove them from the list, or ignore them?' + (extra ? ' ' + extra : ''),
+					buttons: [{ label: 'Ignore', value: 'ignore' }, { label: 'Remove from list', value: 'remove' }]
+				}).then(function (r) {
+					if (r.value !== 'remove') { location.reload(); return; }
+					return api('remove-missing', { name: name, paths: missing }).then(function () { location.reload(); });
+				});
+			}
+			if (res.error === 'different_login') {
+				var p = profiles.filter(function (x) { return x.name === name; })[0];
+				return notice('Profile not loaded', 'Profile could not be loaded because a different NAS IP / a different login was used.',
+					p && (p.address || p.account) ? ['The profile was made for ' + p.address + ' with the account "' + p.account + '".'] : []);
+			}
+			if (res.error === 'not_logged_in') { return notLoggedIn(); }
+			return notice('Error', 'The profile could not be loaded.');
+		}).catch(function () { busy(false); return notice('Error', 'The profile could not be loaded.'); });
+	}
+
+	function deleteProfile() {
+		var name = select.value;
+		popup({
+			title: 'Delete profile',
+			paragraphs: ['Delete the profile "' + name + '"? The folders themselves are not touched.'],
+			buttons: [{ label: 'Cancel', value: 'cancel' }, { label: 'Delete', value: 'delete' }]
+		}).then(function (r) {
+			if (r.value !== 'delete') { return; }
+			busy(true);
+			return api('delete', { name: name }).then(function (res) {
+				busy(false);
+				if (res.success) { return refresh(); }
+				if (res.error === 'standard') { return notice('Not possible', 'The profile "' + DEFAULT + '" cannot be deleted.'); }
+				if (res.error === 'active') { return notice('Not possible', 'The active profile cannot be deleted. Load another profile first.'); }
+				return notice('Error', 'The profile could not be deleted.');
+			}).catch(function () { busy(false); return notice('Error', 'The profile could not be deleted.'); });
+		});
+	}
+
+	select.addEventListener('change', updateButtons);
+	btnCreate.addEventListener('click', create);
+	btnLoad.addEventListener('click', loadProfile);
+	btnDelete.addEventListener('click', deleteProfile);
+	refresh();
 })();
 </script>
 

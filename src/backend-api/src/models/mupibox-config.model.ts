@@ -1,3 +1,13 @@
+// A saved selection of the NAS tab ("Show", "Hide", "Download local"), bound to the NAS login it was made with.
+export interface NasProfile {
+  created: number
+  address: string
+  account: string
+  artistFolders: string[]
+  hiddenFolders: string[]
+  downloadFolders: string[]
+}
+
 export interface NasConfig {
   address?: string
   https?: boolean
@@ -7,6 +17,8 @@ export interface NasConfig {
   artistFolders?: string[]
   downloadFolders?: string[]
   hiddenFolders?: string[]
+  profiles?: Record<string, NasProfile>
+  activeProfile?: string
   [key: string]: unknown
 }
 
