@@ -2644,7 +2644,7 @@ app.post('/api/nas/profiles/delete', async (req, res) => {
 
 app.post('/api/nas/login', async (req, res) => {
   const { address, https: useHttps, account, password, rememberMe } = req.body ?? {}
-  if (typeof address !== 'string' || !address || typeof account !== 'string' || typeof password !== 'string') {
+  if (typeof address !== 'string' || !address || typeof account !== 'string' || !account || typeof password !== 'string' || !password) {
     res.status(400).json({ success: false, error: 'address, account and password are required.' })
     return
   }

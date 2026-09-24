@@ -90,16 +90,24 @@ if (isset($_POST['nas_signin'])) {
 	$useHttps = isset($_POST['nas_https']);
 	$rememberMe = isset($_POST['nas_remember']);
 
-	$result = nasApiCall("$backendBase/login", 'POST', array(
-		'address' => $address,
-		'https' => $useHttps,
-		'account' => $account,
-		'password' => $password,
-		'rememberMe' => $rememberMe,
-	), 30);
+	if ($address === '') {
+		$loginError = 'Address not filled in.';
+	} elseif ($account === '') {
+		$loginError = 'Account not filled in.';
+	} elseif ($password === '') {
+		$loginError = 'Password not filled in.';
+	} else {
+		$result = nasApiCall("$backendBase/login", 'POST', array(
+			'address' => $address,
+			'https' => $useHttps,
+			'account' => $account,
+			'password' => $password,
+			'rememberMe' => $rememberMe,
+		), 30);
 
-	if (empty($result['success'])) {
-		$loginError = $result['error'] ?? 'Login failed.';
+		if (empty($result['success'])) {
+			$loginError = $result['error'] ?? 'Login failed.';
+		}
 	}
 }
 
@@ -140,7 +148,7 @@ if (isset($_POST['nas_save_selection']) || isset($_POST['nas_download_selected']
 // re-login using remembered credentials), so PHP never tracks "logged in"
 // state itself - it just asks the backend on every page load. "Change login"
 // forces the login form to show even if the backend still has a session.
-$forceLogin = isset($_GET['relogin']);
+$forceLogin = isset($_GET['relogin']) || $loginError !== '';
 $currentPath = isset($_GET['path']) ? $_GET['path'] : '';
 
 $isLoggedIn = false;
