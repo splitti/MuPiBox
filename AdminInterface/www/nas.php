@@ -279,8 +279,7 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 				<li id="li_1"><p style="color:#900;"><?= htmlspecialchars($loginError) ?></p></li>
 			<?php } ?>
 			<li class="buttons">
-				<p><small>Signing in can take up to ~15 seconds.</small></p>
-				<input id="saveForm" class="button_text" type="submit" name="nas_signin" value="Sign In" />
+				<input id="saveForm" class="button_text" type="submit" name="nas_signin" value="Sign In" title="Signing in can take up to ~15 seconds." />
 			</li>
 		</ul>
 	</form>
