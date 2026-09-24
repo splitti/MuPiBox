@@ -105,6 +105,8 @@ if (isset($_POST['nas_signin'])) {
 
 $downloadStarted = false;
 
+$nasFlash = '';
+$nasFlashError = '';
 if (isset($_POST['nas_save_selection']) || isset($_POST['nas_download_selected'])) {
 	$checkedShow = $_POST['artist_folders'] ?? array();
 	$checkedHide = $_POST['hide_folders'] ?? array();
@@ -120,16 +122,16 @@ if (isset($_POST['nas_save_selection']) || isset($_POST['nas_download_selected']
 		nasApiCall("$backendBase/mark", 'POST', array(
 			'path' => $shownPath, 'marked' => in_array($shownPath, $checkedDownload, true), 'list' => 'download'), 10);
 	}
-	$CHANGE_TXT = $CHANGE_TXT . "<li>NAS folder selection saved</li>";
-	$change = 1;
+	// No lightbox of the site-wide change notice here: the save shows a short line, the download its progress bar.
+	$nasFlash = 'Selection saved.';
 
 	if (isset($_POST['nas_download_selected'])) {
 		$syncResult = nasApiCall("$backendBase/download/sync", 'POST', new stdClass(), 10);
 		if (!empty($syncResult['success'])) {
 			$downloadStarted = true;
-			$CHANGE_TXT = $CHANGE_TXT . "<li>Download of the selected folders started - progress is shown on this page</li>";
+			$nasFlash = '';
 		} else {
-			$CHANGE_TXT = $CHANGE_TXT . "<li>" . htmlspecialchars($syncResult['error'] ?? 'Could not start the download.') . "</li>";
+			$nasFlashError = (string)($syncResult['error'] ?? 'Could not start the download.');
 		}
 	}
 }
@@ -308,9 +310,6 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 <?php if (count($browseEntries) === 0 && !$browseError) { ?>
 				<li id="li_1"><p>No subfolders here.</p></li>
 			<?php } ?>
-			<li id="li_1">
-				<div id="nas-download-status" style="display:none;"></div>
-			</li>
 			<li class="buttons">
 				<style>
 					/* Three columns of the same width, so the buttons of both rows line up. */
@@ -338,9 +337,20 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 					<input class="button_text" type="button" id="nas-download-cancel" value="Cancel" />
 				</div>
 			</li>
+			<li id="li_1" style="padding-top:6px;">
+				<div id="nas-flash" style="display:none; color:#2a7d3f; font-size:14px; margin-bottom:6px;"></div>
+				<div id="nas-download-status" style="display:none;"></div>
+			</li>
 		</ul>
 	</form>
-	<p style="padding-left:25px;"><span class="nas-info" data-info="nas-info-nas" title="About the NAS tab" role="button" tabindex="0"><i class="fa-solid fa-circle-info"></i></span> <a href="nas.php?relogin=1">Use a different NAS login</a></p>
+	<?php
+	// The NAS this MuPiBox is logged in to (an old config still calls the section "synology").
+	$nasLoginAddress = $data['nas']['address'] ?? ($data['synology']['address'] ?? '');
+?>
+	<div style="padding-left:25px; display:flex; align-items:center; gap:12px; margin: 8px 0;">
+		<span class="nas-info" data-info="nas-info-nas" title="About the NAS tab" role="button" tabindex="0"><i class="fa-solid fa-circle-info"></i></span>
+		<input type="button" class="button_text" id="nas-logout" value="Logout" style="margin:0;" title="<?= htmlspecialchars('Logout from NAS - ' . $nasLoginAddress, ENT_QUOTES) ?>" onclick="location.href='nas.php?relogin=1';" />
+	</div>
 <?php } ?>
 
 <script>
@@ -944,6 +954,15 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 	var box = document.getElementById('nas-download-status');
 	if (!box) { return; }
 	var autoStarted = <?= $downloadStarted ? 'true' : 'false' ?>;
+	var flash = <?= json_encode($nasFlash) ?>;
+	var flashError = <?= json_encode($nasFlashError) ?>;
+	var flashBox = document.getElementById('nas-flash');
+	if (flash && flashBox) {
+		flashBox.textContent = flash;
+		flashBox.style.display = 'block';
+		setTimeout(function () { flashBox.style.display = 'none'; }, 5000);
+	}
+	if (flashError && window.nasNotice) { window.nasNotice('Download not started', flashError); }
 	var bar = document.getElementById('nas-progress');
 	var fill = document.getElementById('nas-progress-fill');
 	var barText = document.getElementById('nas-progress-text');
