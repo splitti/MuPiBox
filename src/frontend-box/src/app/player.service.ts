@@ -209,7 +209,7 @@ export class PlayerService {
 
   /**
    * Get the ordered list of track file names for a NAS album, listed live from
-   * the Synology by the player backend (never cached).
+   * the NAS by the player backend (never cached).
    */
   getNasTracklist(media: Media): Observable<{ position: number; name: string }[]> {
     return this.http.get<{ position: number; name: string }[]>(

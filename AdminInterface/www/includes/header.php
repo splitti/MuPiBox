@@ -30,10 +30,12 @@
 	// Home, MuPiBox and Admin are always shown and are not part of this list.
 	$navTabsHideable = array(
 		'mupi' => 'MuPi-Conf', 'mupihat' => 'MuPiHAT', 'media' => 'Media', 'cover' => 'Cover',
-		'bluetooth' => 'Bluetooth', 'spotify' => 'Spotify', 'synology' => 'NAS', 'network' => 'Network',
+		'bluetooth' => 'Bluetooth', 'spotify' => 'Spotify', 'nas' => 'NAS', 'network' => 'Network',
 		'smart' => 'Smart', 'vnc' => 'VNC', 'dietpidash' => 'DietPi-Dash', 'logs' => 'Logs', 'json' => 'JSON',
 	);
 	$navTabsHidden = is_array($data['mupibox']['hiddenTabs'] ?? null) ? $data['mupibox']['hiddenTabs'] : array();
+	// The NAS tab was called "synology" before: keep an old "hidden" choice.
+	$navTabsHidden = array_map(function ($tab) { return $tab === 'synology' ? 'nas' : $tab; }, $navTabsHidden);
 	if (isset($_POST['nav_tabs_save'])) {
 		// The navigation is printed before admin.php handles the form, so read the
 		// submitted choice here already - the change is then visible immediately.
@@ -186,7 +188,7 @@
 				<?php if (!navTabHidden('cover')) { ?><a href="<?= $link ?>cover.php"><i class="fa-regular fa-image"></i> Cover</a><?php } ?>
 				<?php if (!navTabHidden('bluetooth')) { ?><a href="<?= $link ?>bluetooth.php"><i class="fa-brands fa-bluetooth"></i> Bluetooth</a><?php } ?>
 				<?php if (!navTabHidden('spotify')) { ?><a href="<?= $link ?>spotify.php"><i class="fa-brands fa-spotify"></i> Spotify</a><?php } ?>
-				<?php if (!navTabHidden('synology')) { ?><a href="<?= $link ?>synology.php"><i class="fa-solid fa-server"></i> NAS</a><?php } ?>
+				<?php if (!navTabHidden('nas')) { ?><a href="<?= $link ?>nas.php"><i class="fa-solid fa-server"></i> NAS</a><?php } ?>
 				<?php if (!navTabHidden('network')) { ?><a href="<?= $link ?>network.php"><i class="fa-solid fa-wifi"></i> Network</a><?php } ?>
 				<?php if (!navTabHidden('smart')) { ?><a href="<?= $link ?>smart.php"><i class="fa-solid fa-share-nodes"></i> Smart</a><?php } ?>
 				<?php /*<a href="service.php"><i class="fa-solid fa-gear"></i> Services</a>
