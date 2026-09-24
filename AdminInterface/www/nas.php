@@ -230,6 +230,11 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 	$formHttps = isset($_POST['nas_signin']) ? isset($_POST['nas_https']) : !empty($lastNas['https']);
 	$formRemember = isset($_POST['nas_signin']) ? isset($_POST['nas_remember']) : (!isset($lastNas['rememberMe']) || !empty($lastNas['rememberMe']));
 ?>
+	<style>
+		/* Same flat look as the "Filter folders" box. */
+		#nas_address, #nas_account, #nas_password { box-sizing: border-box; height: 42px; padding: 0 12px; font-size: 16px; color: #222; background: #f9f9f9; border: 1px solid #dcdcdc; border-radius: 6px; outline: none; }
+		#nas_address:focus, #nas_account:focus, #nas_password:focus { border-color: #b5b5b5; background: #fbfbfb; }
+	</style>
 	<form class="appnitro" method="post" action="nas.php" id="form">
 		<ul>
 			<li id="li_1">
