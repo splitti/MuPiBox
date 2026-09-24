@@ -230,7 +230,6 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 	$formHttps = isset($_POST['nas_signin']) ? isset($_POST['nas_https']) : !empty($lastNas['https']);
 	$formRemember = isset($_POST['nas_signin']) ? isset($_POST['nas_remember']) : (!isset($lastNas['rememberMe']) || !empty($lastNas['rememberMe']));
 ?>
-	<p style="padding-left:25px;"><span class="nas-info" data-info="nas-info-nas" title="About the NAS tab" role="button" tabindex="0"><i class="fa-solid fa-circle-info"></i></span></p>
 	<form class="appnitro" method="post" action="nas.php" id="form">
 		<ul>
 			<li id="li_1">
