@@ -181,7 +181,7 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 		.nas-modal-buttons { display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; }
 		.nas-modal-buttons .button_text { margin: 0; }
 	</style>
-	<div class="description" style="padding-left:25px;" id="nas-profiles">
+	<div class="description" style="padding-left:25px; margin-top:21px;" id="nas-profiles">
 		<h2>Profiles</h2>
 		<div id="nas-profile-row">
 			<select id="nas-profile-select" title="Profiles"></select>
