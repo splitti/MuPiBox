@@ -156,9 +156,14 @@ if (!$forceLogin) {
 $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 ?>
 
-<div class="description" style="padding-left:25px;">
-	<h2>NAS</h2>
-	<p>Connect a NAS (Synology, QNAP, TrueNAS, ... - anything with a WebDAV server) as an additional media source. Enable WebDAV on the NAS first (Synology: package "WebDAV Server", ports 5005 http / 5006 https). Every folder with a checkmark under "Show in Mupibox" appears in the NAS tab on the MuPiBox together with all of its subfolders - so you only need to tick the top-level folder, not every subfolder. To leave out a single folder (and everything in it), tick "Hide in Mupibox" for it instead - a folder is either shown or hidden. Changes on the NAS show up live, with no separate media update needed.</p>
+<style>
+	.nas-info { display: inline-block; vertical-align: middle; cursor: pointer; color: #0d5a80; font-size: 22px; line-height: 1; user-select: none; }
+	.nas-info:hover { color: #0a3d57; }
+	.nas-pop { text-align: left; position: fixed; z-index: 10000; box-sizing: border-box; max-width: 440px; width: calc(100vw - 32px); background: #fff; color: #222; border-radius: 10px; padding: 14px 16px; font-size: 14px; line-height: 1.45; box-shadow: 0 6px 24px rgba(0, 0, 0, .35); }
+</style>
+<div style="display:none;">
+	<div id="nas-info-nas">Connect a NAS (Synology, QNAP, TrueNAS, ... - anything with a WebDAV server) as an additional media source. Enable WebDAV on the NAS first (Synology: package "WebDAV Server", ports 5005 http / 5006 https). Every folder with a checkmark under "Show in Mupibox" appears in the NAS tab on the MuPiBox together with all of its subfolders - so you only need to tick the top-level folder, not every subfolder. To leave out a single folder (and everything in it), tick "Hide in Mupibox" for it instead - a folder is either shown or hidden. Changes on the NAS show up live, with no separate media update needed.</div>
+	<div id="nas-info-profiles">A profile remembers which folders are set to "Show", "Hide" and "Download local", together with the NAS login it was made with. Saving the selection updates the active profile. A profile can only be loaded while the same NAS and account are connected. Profiles and the NAS login (the password encrypted) are part of the configuration backup.</div>
 </div>
 
 <?php if ($isLoggedIn) { ?>
@@ -178,12 +183,12 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 	</style>
 	<div class="description" style="padding-left:25px;" id="nas-profiles">
 		<h2>Profiles</h2>
-		<p>A profile remembers which folders are set to "Show", "Hide" and "Download local", together with the NAS login it was made with. Saving the selection updates the active profile. A profile can only be loaded while the same NAS and account are connected. Profiles and the NAS login (the password encrypted) are part of the configuration backup.</p>
 		<div id="nas-profile-row">
 			<select id="nas-profile-select" title="Profiles"></select>
 			<input type="button" class="button_text" id="nas-profile-create" value="Create profile" />
 			<input type="button" class="button_text" id="nas-profile-load" value="Load profile" />
 			<input type="button" class="button_text" id="nas-profile-delete" value="Delete profile" />
+			<span class="nas-info" data-info="nas-info-profiles" title="About profiles" role="button" tabindex="0"><i class="fa-solid fa-circle-info"></i></span>
 		</div>
 		<div id="nas-profile-info"></div>
 	</div>
@@ -210,6 +215,7 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 <?php } ?>
 
 <?php if (!$isLoggedIn) { ?>
+	<p style="padding-left:25px;"><span class="nas-info" data-info="nas-info-nas" title="About the NAS tab" role="button" tabindex="0"><i class="fa-solid fa-circle-info"></i></span></p>
 	<form class="appnitro" method="post" action="nas.php" id="form">
 		<ul>
 			<li id="li_1">
@@ -312,7 +318,7 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 			</li>
 		</ul>
 	</form>
-	<p style="padding-left:25px;"><a href="nas.php?relogin=1">Use a different NAS login</a></p>
+	<p style="padding-left:25px;"><span class="nas-info" data-info="nas-info-nas" title="About the NAS tab" role="button" tabindex="0"><i class="fa-solid fa-circle-info"></i></span> <a href="nas.php?relogin=1">Use a different NAS login</a></p>
 <?php } ?>
 
 <script>
@@ -869,6 +875,44 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 	btnLoad.addEventListener('click', loadProfile);
 	btnDelete.addEventListener('click', deleteProfile);
 	refresh();
+})();
+</script>
+
+<script>
+(function () {
+	var pop = null;
+	function closePop() { if (pop) { document.body.removeChild(pop); pop = null; } }
+	function openPop(icon) {
+		var src = document.getElementById(icon.getAttribute('data-info'));
+		if (!src) { return; }
+		var same = pop && pop.__icon === icon;
+		closePop();
+		if (same) { return; }
+		pop = document.createElement('div');
+		pop.className = 'nas-pop';
+		pop.__icon = icon;
+		pop.textContent = src.textContent.trim();
+		document.body.appendChild(pop);
+		var r = icon.getBoundingClientRect();
+		var w = pop.offsetWidth, h = pop.offsetHeight;
+		var left = Math.max(16, Math.min(r.left - 8, window.innerWidth - w - 16));
+		// below the icon; above it if there is no room underneath
+		var top = r.bottom + 8;
+		if (top + h > window.innerHeight - 8 && r.top - h - 8 > 8) { top = r.top - h - 8; }
+		pop.style.left = left + 'px';
+		pop.style.top = top + 'px';
+	}
+	document.addEventListener('click', function (e) {
+		var icon = e.target.closest ? e.target.closest('.nas-info') : null;
+		if (icon) { openPop(icon); return; }
+		if (pop && !pop.contains(e.target)) { closePop(); }
+	});
+	document.addEventListener('keydown', function (e) {
+		if (e.key === 'Escape') { closePop(); return; }
+		if ((e.key === 'Enter' || e.key === ' ') && e.target.classList && e.target.classList.contains('nas-info')) { e.preventDefault(); openPop(e.target); }
+	});
+	window.addEventListener('scroll', closePop, true);
+	window.addEventListener('resize', closePop);
 })();
 </script>
 
