@@ -4,6 +4,11 @@ $backendBase = 'http://localhost:8200/api/nas';
 
 // Progress of a running "Download selected" (polled by the page below). Answers
 // before header.php so that no HTML is sent along with the JSON.
+if (isset($_GET['download_cancel']) && $_SERVER['REQUEST_METHOD'] === 'POST') {
+	header('Content-Type: application/json');
+	echo json_encode(nasApiCall("$backendBase/download/cancel", 'POST', new stdClass(), 10));
+	exit;
+}
 if (isset($_GET['download_status'])) {
 	header('Content-Type: application/json');
 	echo json_encode(nasApiCall("$backendBase/download/status", 'GET', null, 5));
@@ -307,14 +312,31 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 				<div id="nas-download-status" style="display:none;"></div>
 			</li>
 			<li class="buttons">
-				<input class="button_text" type="button" value="Select all" onclick="document.querySelectorAll('input[name=\'artist_folders[]\']').forEach(function (box) { if (!box.disabled) { box.checked = true; box.dispatchEvent(new Event('change')); } });" />
-				<input class="button_text" type="button" value="Unselect all" onclick="document.querySelectorAll('input[name=\'artist_folders[]\']').forEach(function (box) { box.checked = false; box.dispatchEvent(new Event('change')); });" />
-				<input id="saveForm" class="button_text" type="submit" name="nas_save_selection" value="Save selection" />
-			</li>
-			<li class="buttons">
-				<input class="button_text" type="button" value="Select all downloads" onclick="document.querySelectorAll('input[name=\'download_folders[]\']').forEach(function (box) { box.checked = true; });" />
-				<input class="button_text" type="button" value="Unselect all downloads" onclick="document.querySelectorAll('input[name=\'download_folders[]\']').forEach(function (box) { box.checked = false; });" />
-				<input class="button_text" type="submit" name="nas_download_selected" value="Download selected" onclick="return confirm('Download the checked folders to the MuPiBox and delete local copies of unchecked ones?');" />
+				<style>
+					/* Three columns of the same width, so the buttons of both rows line up. */
+					#nas-actions { display: grid; grid-template-columns: repeat(3, 200px) minmax(220px, 1fr) auto; gap: 10px; align-items: center; max-width: 1000px; }
+					#nas-actions input.button_text { box-sizing: border-box; width: 100%; min-width: 0; margin: 0; }
+					#nas-actions > :nth-child(-n+3) { grid-row: 1; }
+					#nas-actions > :nth-child(n+4) { grid-row: 2; }
+					#nas-progress { display: none; position: relative; box-sizing: border-box; height: 28px; border-radius: 8px; background: #d9e3ea; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0, 0, 0, .25); }
+					#nas-progress-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background-image: linear-gradient(144deg, #024364, #00689C 50%, #44afe2); transition: width .4s; }
+					#nas-progress-text { position: relative; display: block; text-align: center; line-height: 28px; font-size: 13px; font-weight: bold; color: #fff; text-shadow: 0 0 3px rgba(0, 0, 0, .7); white-space: nowrap; }
+					#nas-download-cancel { display: none; }
+					@media (max-width: 900px) {
+						#nas-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+						#nas-actions > :nth-child(n+7) { grid-row: auto; grid-column: 1 / -1; }
+					}
+				</style>
+				<div id="nas-actions">
+					<input class="button_text" type="button" value="Select all" onclick="document.querySelectorAll('input[name=\'artist_folders[]\']').forEach(function (box) { if (!box.disabled) { box.checked = true; box.dispatchEvent(new Event('change')); } });" />
+					<input class="button_text" type="button" value="Unselect all" onclick="document.querySelectorAll('input[name=\'artist_folders[]\']').forEach(function (box) { box.checked = false; box.dispatchEvent(new Event('change')); });" />
+					<input id="saveForm" class="button_text" type="submit" name="nas_save_selection" value="Save selection" />
+					<input class="button_text" type="button" value="Select all downloads" onclick="document.querySelectorAll('input[name=\'download_folders[]\']').forEach(function (box) { box.checked = true; });" />
+					<input class="button_text" type="button" value="Unselect all downloads" onclick="document.querySelectorAll('input[name=\'download_folders[]\']').forEach(function (box) { box.checked = false; });" />
+					<input class="button_text" type="submit" name="nas_download_selected" value="Download selected" onclick="return confirm('Download the checked folders to the MuPiBox and delete local copies of unchecked ones?');" />
+					<div id="nas-progress"><div id="nas-progress-fill"></div><span id="nas-progress-text"></span></div>
+					<input class="button_text" type="button" id="nas-download-cancel" value="Cancel" />
+				</div>
 			</li>
 		</ul>
 	</form>
@@ -746,6 +768,7 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 	function notice(title, text, extra) {
 		return popup({ title: title, paragraphs: [text].concat(extra || []), buttons: [{ label: 'OK', value: 'ok' }] });
 	}
+	window.nasNotice = notice;
 
 	function api(action, body) {
 		var opt = body === undefined ? { cache: 'no-store' } : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
@@ -921,17 +944,53 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 	var box = document.getElementById('nas-download-status');
 	if (!box) { return; }
 	var autoStarted = <?= $downloadStarted ? 'true' : 'false' ?>;
+	var bar = document.getElementById('nas-progress');
+	var fill = document.getElementById('nas-progress-fill');
+	var barText = document.getElementById('nas-progress-text');
+	var cancelBtn = document.getElementById('nas-download-cancel');
+	var spaceShown = false;
+	var keepPolling = autoStarted; // a failed request must not end the polling while a download is running
+
+	function fmt(bytes) {
+		var units = ['B', 'KB', 'MB', 'GB', 'TB'], v = bytes, u = 0;
+		while (v >= 1024 && u < units.length - 1) { v /= 1024; u++; }
+		return v.toFixed(u === 0 ? 0 : 1) + ' ' + units[u];
+	}
+	function showBar(on) {
+		bar.style.display = on ? 'block' : 'none';
+		cancelBtn.style.display = on ? 'block' : 'none';
+		if (!on) { cancelBtn.disabled = false; cancelBtn.value = 'Cancel'; }
+	}
 
 	function refresh() {
-		fetch('nas.php?download_status=1').then(function (r) { return r.json(); }).then(function (st) {
+		fetch('nas.php?download_status=1', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (st) {
 			if (!st || st.message === undefined) { return; }
+			keepPolling = !!st.running;
 			if (st.running || autoStarted || st.filesTotal > 0) {
 				box.style.display = 'block';
 				var progress = st.filesTotal > 0 ? ' (' + st.filesDone + '/' + st.filesTotal + ' files)' : '';
 				box.textContent = 'Download: ' + st.message + progress;
 			}
-			if (st.running) { setTimeout(refresh, 2000); }
-		}).catch(function () {});
+			showBar(!!st.running);
+			if (st.running) {
+				var pct = st.bytesTotal > 0 ? Math.min(100, Math.round(st.bytesDone * 100 / st.bytesTotal)) : 0;
+				fill.style.width = pct + '%';
+				barText.textContent = st.bytesTotal > 0 ? fmt(st.bytesDone) + ' of ' + fmt(st.bytesTotal) + ' (' + pct + '%)' : 'Preparing...';
+				setTimeout(refresh, 1000);
+			} else if (st.spaceError && autoStarted && !spaceShown && window.nasNotice) {
+				spaceShown = true;
+				window.nasNotice('Not enough free space',
+					'The selected folders need ' + fmt(st.spaceError.needed) + ', but only ' + fmt(st.spaceError.free) + ' are free on this MuPiBox (' + fmt(st.spaceError.reserve) + ' stay reserved for the system).',
+					['The download was not started. Deselect some folders under "Download local" or free up space, then try again.']);
+			}
+		}).catch(function () { if (keepPolling) { setTimeout(refresh, 2000); } });
+	}
+	if (cancelBtn) {
+		cancelBtn.addEventListener('click', function () {
+			cancelBtn.disabled = true;
+			cancelBtn.value = 'Cancelling...';
+			fetch('nas.php?download_cancel=1', { method: 'POST' }).catch(function () {});
+		});
 	}
 	refresh();
 })();

@@ -2,9 +2,9 @@ import { exec, execFile } from 'node:child_process'
 import crypto from 'node:crypto'
 import dns from 'node:dns'
 import fs from 'node:fs'
-import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, readFile, rename, rm, stat, statfs, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import { Readable } from 'node:stream'
+import { Readable, Transform } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 import { promisify } from 'node:util'
 import cors from 'cors'
@@ -3110,10 +3110,67 @@ interface NasDownloadStatus {
   message: string
   filesDone: number
   filesTotal: number
+  // Data that still has to be copied (files already present in full are not counted) and what was copied so far.
+  bytesDone: number
+  bytesTotal: number
+  cancelRequested: boolean
+  cancelled: boolean
+  // Set when the download was not started because the selection does not fit on this MuPiBox.
+  spaceError?: { needed: number; free: number; reserve: number }
   error?: string
 }
 
-const nasDownloadStatus: NasDownloadStatus = { running: false, message: 'Idle', filesDone: 0, filesTotal: 0 }
+const nasDownloadStatus: NasDownloadStatus = {
+  running: false,
+  message: 'Idle',
+  filesDone: 0,
+  filesTotal: 0,
+  bytesDone: 0,
+  bytesTotal: 0,
+  cancelRequested: false,
+  cancelled: false,
+}
+let nasDownloadAbort: AbortController | undefined
+
+// This much stays free for the system (logs, caches, updates): the download only starts if the
+// selection fits in the free space minus this reserve.
+const nasDownloadReserveBytes = 512 * 1024 * 1024
+
+async function nasFreeBytes(): Promise<number> {
+  const info = await statfs(nasLocalRoot)
+  return Number(info.bavail) * Number(info.bsize)
+}
+
+// How much data would really be copied: files that already exist locally in full are skipped.
+async function nasBytesNeeded(files: NasFileToDownload[]): Promise<number> {
+  let needed = 0
+  for (const file of files) {
+    if (file.size < 0) {
+      continue // size not known: can not be counted
+    }
+    const target = nasLocalPath(file.nasPath)
+    try {
+      if (target && (await stat(target)).size === file.size) {
+        continue
+      }
+    } catch {
+      // not downloaded yet
+    }
+    needed += file.size
+  }
+  return needed
+}
+
+function nasFormatBytes(bytes: number): string {
+  const units = ['B', 'KB', 'MB', 'GB', 'TB']
+  let value = bytes
+  let unit = 0
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024
+    unit++
+  }
+  return `${value.toFixed(unit === 0 ? 0 : 1)} ${units[unit]}`
+}
 
 interface NasFileToDownload {
   nasPath: string
@@ -3147,14 +3204,29 @@ async function nasDownloadFile(nasPath: string, size: number): Promise<void> {
   await mkdir(path.dirname(target), { recursive: true })
 
   const done = await withNasSession(async (session) => {
-    const response = await fetch(nasUrl(session, nasPath), { headers: { Authorization: session.auth } })
+    const response = await fetch(nasUrl(session, nasPath), { headers: { Authorization: session.auth }, signal: nasDownloadAbort?.signal })
     if (!response.ok || !response.body) {
       throw new NasApiError(`WebDAV download error ${response.status}`)
     }
     // Write to a temp name first so a half-finished file is never mistaken for a
     // complete one (and never gets played).
     const partFile = `${target}.part`
-    await pipeline(Readable.fromWeb(response.body as import('node:stream/web').ReadableStream), fs.createWriteStream(partFile))
+    const counter = new Transform({
+      transform(chunk, _encoding, callback) {
+        nasDownloadStatus.bytesDone += chunk.length
+        callback(null, chunk)
+      },
+    })
+    try {
+      await pipeline(
+        Readable.fromWeb(response.body as import('node:stream/web').ReadableStream),
+        counter,
+        fs.createWriteStream(partFile),
+      )
+    } catch (error) {
+      await rm(partFile, { force: true }) // cancelled or failed: no half file is left behind
+      throw error
+    }
     await rename(partFile, target)
     return true
   })
@@ -3229,7 +3301,19 @@ async function nasDownloadParentCovers(folder: string, checked: Set<string>): Pr
 
 async function runNasSync(): Promise<void> {
   const status = nasDownloadStatus
-  Object.assign(status, { running: true, message: 'Checking selection...', filesDone: 0, filesTotal: 0, error: undefined })
+  Object.assign(status, {
+    running: true,
+    message: 'Checking selection...',
+    filesDone: 0,
+    filesTotal: 0,
+    bytesDone: 0,
+    bytesTotal: 0,
+    cancelRequested: false,
+    cancelled: false,
+    spaceError: undefined,
+    error: undefined,
+  })
+  nasDownloadAbort = new AbortController()
 
   try {
     const config = await getMupiboxConfig()
@@ -3245,7 +3329,12 @@ async function runNasSync(): Promise<void> {
     status.message = 'Removing local copies that are no longer selected...'
     await nasPruneExcept('/', desired)
 
-    if (desired.length > 0 && (await getActiveNasSession())) {
+    // The (small) covers of the parent folders are fetched after the space check below, so a
+    // download that does not fit really leaves nothing behind.
+    const downloadParentCovers = async (): Promise<void> => {
+      if (desired.length === 0 || !(await getActiveNasSession())) {
+        return
+      }
       status.message = 'Downloading covers of parent folders...'
       const checkedParents = new Set<string>()
       for (const folder of desired) {
@@ -3259,6 +3348,7 @@ async function runNasSync(): Promise<void> {
 
     const pending = desired.filter((folder) => !nasIsDownloaded(folder))
     if (pending.length === 0) {
+      await downloadParentCovers()
       status.message = 'Everything selected is already downloaded.'
       return
     }
@@ -3270,6 +3360,9 @@ async function runNasSync(): Promise<void> {
     status.message = 'Reading folders on the NAS...'
     const plan: { folder: string; files: NasFileToDownload[] }[] = []
     for (const folder of pending) {
+      if (status.cancelRequested) {
+        break
+      }
       const files: NasFileToDownload[] = []
       await withNasSession(async (session) => {
         files.length = 0
@@ -3279,19 +3372,47 @@ async function runNasSync(): Promise<void> {
       status.filesTotal += files.length
     }
 
+    if (status.cancelRequested) {
+      status.cancelled = true
+      status.message = 'Cancelled - nothing was downloaded.'
+      return
+    }
+
+    // Does the selection fit? Nothing is downloaded if it does not.
+    const needed = await nasBytesNeeded(plan.flatMap((entry) => entry.files))
+    const free = await nasFreeBytes()
+    status.bytesTotal = needed
+    if (needed > free - nasDownloadReserveBytes) {
+      status.spaceError = { needed, free, reserve: nasDownloadReserveBytes }
+      status.message = `Not enough free space: the selection needs ${nasFormatBytes(needed)}, only ${nasFormatBytes(free)} are free (${nasFormatBytes(nasDownloadReserveBytes)} stay reserved for the system). Nothing was downloaded.`
+      status.error = status.message
+      return
+    }
+
+    await downloadParentCovers()
+
     let failed = 0
     for (const { folder, files } of plan) {
       let folderFailed = 0
       for (const file of files) {
+        if (status.cancelRequested) {
+          break
+        }
         status.message = `Downloading ${file.nasPath}`
         try {
           await nasDownloadFile(file.nasPath, file.size)
         } catch (error) {
+          if (status.cancelRequested) {
+            break
+          }
           folderFailed++
           failed++
           console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] NAS download failed for ${file.nasPath}: ${error}`)
         }
         status.filesDone++
+      }
+      if (status.cancelRequested) {
+        break // this folder is incomplete: no marker
       }
 
       // The marker is only written once the whole folder is complete, which is
@@ -3306,6 +3427,11 @@ async function runNasSync(): Promise<void> {
       }
     }
 
+    if (status.cancelRequested) {
+      status.cancelled = true
+      status.message = `Cancelled - ${status.filesDone} of ${status.filesTotal} files were downloaded (${nasFormatBytes(status.bytesDone)}). Run "Download selected" again to continue.`
+      return
+    }
     status.message =
       failed === 0
         ? `Done - ${status.filesDone} files downloaded.`
@@ -3315,8 +3441,20 @@ async function runNasSync(): Promise<void> {
     status.message = `Failed: ${status.error}`
   } finally {
     status.running = false
+    nasDownloadAbort = undefined
   }
 }
+
+app.post('/api/nas/download/cancel', (_req, res) => {
+  if (!nasDownloadStatus.running) {
+    res.json({ success: false, error: 'No download is running.' })
+    return
+  }
+  nasDownloadStatus.cancelRequested = true
+  nasDownloadStatus.message = 'Cancelling...'
+  nasDownloadAbort?.abort()
+  res.json({ success: true })
+})
 
 app.post('/api/nas/download/sync', (_req, res) => {
   if (nasDownloadStatus.running) {
