@@ -113,6 +113,19 @@ export class PlayerPage implements OnInit, AfterViewInit {
   protected readonly km = this.kmTheme.isKm
   protected readonly displayTexts = inject(DisplayTextsService)
 
+  /** The cover as shown: km themes show their placeholder instead of the default bear (and for a cover that does not load) */
+  protected shownCover(): string {
+    if (this.km() && (!this.cover || this.cover.includes('nocover') || this.failedCovers.has(this.cover))) {
+      return this.kmTheme.coverPlaceholder()
+    }
+    return this.cover
+  }
+
+  private readonly failedCovers = new Set<string>()
+  protected coverFailed(): void {
+    if (this.km() && this.cover) this.failedCovers.add(this.cover)
+  }
+
   /** km themes: position and length under the progress bar (Spotify, and mplayer when it knows the length) */
   protected kmTimes(): { position: string; duration: string } | undefined {
     const format = (ms: number) => {

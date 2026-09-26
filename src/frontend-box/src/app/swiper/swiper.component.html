@@ -35,7 +35,7 @@
             }
             <div class="km-stage-card" [class.km-round]="roundImages()">
               @if (coverMissing(it.data.name, src)) {
-                <div class="km-missing"><img [src]="kmMascotAwake()" alt=""></div>
+                <img class="km-placeholder" draggable="false" [src]="kmCoverPlaceholder()" alt="">
               } @else {
                 <img draggable="false" ondragstart="return false;" [src]="src" alt="" (error)="onCoverError(it.data.name)">
               }
@@ -79,7 +79,7 @@
                       <span class="km-stack"></span><span class="km-stack"></span>
                     }
                     @if (coverMissing(currentData.name, src)) {
-                      <div class="km-missing"><img [src]="kmMascotAwake()" alt=""></div>
+                      <img class="km-placeholder" draggable="false" [src]="kmCoverPlaceholder()" alt="">
                     } @else {
                       <img draggable="false" ondragstart="return false;" loading="lazy" [src]="src" (error)="onCoverError(currentData.name)">
                     }

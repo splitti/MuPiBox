@@ -40,7 +40,8 @@
         "km-spring": "cubic-bezier(.3, 1.4, .6, 1)",
         "km-ease": "cubic-bezier(.2, .7, .2, 1)"
       },
-      "designReference": "design-reference/Mupi Screen.dc.html"
+      "designReference": "design-reference/Mupi Screen.dc.html",
+      "coverPlaceholder": "/theme-data/kuschelmond/cover-platzhalter.svg"
     },
     {
       "id": "moosnest",
@@ -80,7 +81,8 @@
         "km-spring": "cubic-bezier(.3, 1.4, .6, 1)",
         "km-ease": "cubic-bezier(.2, .7, .2, 1)"
       },
-      "designReference": "design-reference/Mupi Screen Moosnest.dc.html"
+      "designReference": "design-reference/Mupi Screen Moosnest.dc.html",
+      "coverPlaceholder": "/theme-data/moosnest/cover-platzhalter.svg"
     },
     {
       "id": "sonnenhof",
@@ -120,7 +122,8 @@
         "km-spring": "cubic-bezier(.3, 1.4, .6, 1)",
         "km-ease": "cubic-bezier(.2, .7, .2, 1)"
       },
-      "designReference": "design-reference/Mupi Screen Sonnenhof.dc.html"
+      "designReference": "design-reference/Mupi Screen Sonnenhof.dc.html",
+      "coverPlaceholder": "/theme-data/sonnenhof/cover-platzhalter.svg"
     },
     {
       "id": "pferdehof",
@@ -160,7 +163,8 @@
         "km-spring": "cubic-bezier(.3, 1.4, .6, 1)",
         "km-ease": "cubic-bezier(.2, .7, .2, 1)"
       },
-      "designReference": "design-reference/Mupi Screen Pferdehof.dc.html"
+      "designReference": "design-reference/Mupi Screen Pferdehof.dc.html",
+      "coverPlaceholder": "/theme-data/pferdehof/cover-platzhalter.svg"
     },
     {
       "id": "fussball",
@@ -200,7 +204,8 @@
         "km-spring": "cubic-bezier(.3, 1.4, .6, 1)",
         "km-ease": "cubic-bezier(.2, .7, .2, 1)"
       },
-      "designReference": "design-reference/Mupi Screen Fussball.dc.html"
+      "designReference": "design-reference/Mupi Screen Fussball.dc.html",
+      "coverPlaceholder": "/theme-data/fussball/cover-platzhalter.svg"
     },
     {
       "id": "fahrzeuge",
@@ -240,7 +245,8 @@
         "km-spring": "cubic-bezier(.3, 1.4, .6, 1)",
         "km-ease": "cubic-bezier(.2, .7, .2, 1)"
       },
-      "designReference": "design-reference/Mupi Screen Fahrzeuge.dc.html"
+      "designReference": "design-reference/Mupi Screen Fahrzeuge.dc.html",
+      "coverPlaceholder": "/theme-data/fahrzeuge/cover-platzhalter.svg"
     },
     {
       "id": "buecherregal",
@@ -280,7 +286,8 @@
         "km-spring": "cubic-bezier(.3, 1.4, .6, 1)",
         "km-ease": "cubic-bezier(.2, .7, .2, 1)"
       },
-      "designReference": "design-reference/Mupi Screen Buecherregal.dc.html"
+      "designReference": "design-reference/Mupi Screen Buecherregal.dc.html",
+      "coverPlaceholder": "/theme-data/buecherregal/cover-platzhalter.svg"
     },
     {
       "id": "kassettenrekorder",
@@ -320,7 +327,8 @@
         "km-spring": "cubic-bezier(.3, 1.4, .6, 1)",
         "km-ease": "cubic-bezier(.2, .7, .2, 1)"
       },
-      "designReference": "design-reference/Mupi Screen Kassettenrekorder.dc.html"
+      "designReference": "design-reference/Mupi Screen Kassettenrekorder.dc.html",
+      "coverPlaceholder": "/theme-data/kassettenrekorder/cover-platzhalter.svg"
     },
     {
       "id": "unterwasser",
@@ -360,7 +368,8 @@
         "km-spring": "cubic-bezier(.3, 1.4, .6, 1)",
         "km-ease": "cubic-bezier(.2, .7, .2, 1)"
       },
-      "designReference": "design-reference/Mupi Screen Unterwasser.dc.html"
+      "designReference": "design-reference/Mupi Screen Unterwasser.dc.html",
+      "coverPlaceholder": "/theme-data/unterwasser/cover-platzhalter.svg"
     },
     {
       "id": "bastelpapier",
@@ -400,7 +409,8 @@
         "km-spring": "cubic-bezier(.3, 1.4, .6, 1)",
         "km-ease": "cubic-bezier(.2, .7, .2, 1)"
       },
-      "designReference": "design-reference/Mupi Screen Bastelpapier.dc.html"
+      "designReference": "design-reference/Mupi Screen Bastelpapier.dc.html",
+      "coverPlaceholder": "/theme-data/bastelpapier/cover-platzhalter.svg"
     },
     {
       "id": "prinzessin",
@@ -440,7 +450,8 @@
         "km-spring": "cubic-bezier(.3, 1.4, .6, 1)",
         "km-ease": "cubic-bezier(.2, .7, .2, 1)"
       },
-      "designReference": "design-reference/Mupi Screen Prinzessin.dc.html"
+      "designReference": "design-reference/Mupi Screen Prinzessin.dc.html",
+      "coverPlaceholder": "/theme-data/prinzessin/cover-platzhalter.svg"
     },
     {
       "id": "einhorn",
@@ -480,7 +491,8 @@
         "km-spring": "cubic-bezier(.3, 1.4, .6, 1)",
         "km-ease": "cubic-bezier(.2, .7, .2, 1)"
       },
-      "designReference": "design-reference/Mupi Screen Einhorn.dc.html"
+      "designReference": "design-reference/Mupi Screen Einhorn.dc.html",
+      "coverPlaceholder": "/theme-data/einhorn/cover-platzhalter.svg"
     },
     {
       "id": "feenschloss",
@@ -520,7 +532,8 @@
         "km-spring": "cubic-bezier(.3, 1.4, .6, 1)",
         "km-ease": "cubic-bezier(.2, .7, .2, 1)"
       },
-      "designReference": "design-reference/Mupi Screen Feenschloss.dc.html"
+      "designReference": "design-reference/Mupi Screen Feenschloss.dc.html",
+      "coverPlaceholder": "/theme-data/feenschloss/cover-platzhalter.svg"
     },
     {
       "id": "weltraum",
@@ -560,7 +573,8 @@
         "km-spring": "cubic-bezier(.3, 1.4, .6, 1)",
         "km-ease": "cubic-bezier(.2, .7, .2, 1)"
       },
-      "designReference": "design-reference/Mupi Screen Weltraum.dc.html"
+      "designReference": "design-reference/Mupi Screen Weltraum.dc.html",
+      "coverPlaceholder": "/theme-data/weltraum/cover-platzhalter.svg"
     },
     {
       "id": "dinoland",
@@ -600,7 +614,8 @@
         "km-spring": "cubic-bezier(.3, 1.4, .6, 1)",
         "km-ease": "cubic-bezier(.2, .7, .2, 1)"
       },
-      "designReference": "design-reference/Mupi Screen Dinoland.dc.html"
+      "designReference": "design-reference/Mupi Screen Dinoland.dc.html",
+      "coverPlaceholder": "/theme-data/dinoland/cover-platzhalter.svg"
     },
     {
       "id": "piratenbucht",
@@ -640,7 +655,8 @@
         "km-spring": "cubic-bezier(.3, 1.4, .6, 1)",
         "km-ease": "cubic-bezier(.2, .7, .2, 1)"
       },
-      "designReference": "design-reference/Mupi Screen Piratenbucht.dc.html"
+      "designReference": "design-reference/Mupi Screen Piratenbucht.dc.html",
+      "coverPlaceholder": "/theme-data/piratenbucht/cover-platzhalter.svg"
     },
     {
       "id": "tagundnacht",
@@ -712,7 +728,9 @@
         "km-spring": "cubic-bezier(.3, 1.4, .6, 1)",
         "km-ease": "cubic-bezier(.2, .7, .2, 1)"
       },
-      "designReference": "design-reference/Mupi Tag Nacht.dc.html"
+      "designReference": "design-reference/Mupi Tag Nacht.dc.html",
+      "coverPlaceholder": "/theme-data/tagundnacht/cover-platzhalter.svg",
+      "coverPlaceholderNight": "/theme-data/tagundnacht/cover-platzhalter-nacht.svg"
     }
   ]
 }

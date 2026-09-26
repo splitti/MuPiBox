@@ -27,9 +27,10 @@ Die Dateien in `box/` sind dagegen **direkt verwendbar**: Theme-CSS, SVG-Assets,
 box/
   themes/<id>.css            17 Theme-Dateien (Variablen + gemeinsamer Teil + Besonderheiten)
   themes/km-themes.json      Metadaten + alle Tokens aller Themes (für Registry/MuPi-Conf)
-  theme-data/<id>/background.svg, maskottchen.svg (schlafend), maskottchen-wach.svg
+  theme-data/<id>/background.svg, maskottchen.svg (schlafend), maskottchen-wach.svg, cover-platzhalter.svg
   theme-data/tagundnacht/    zusätzlich background-nacht.svg, maskottchen-nacht(-wach).svg
 design-reference/            HTML-Prototypen (Referenz)
+screens/<id>/                22 Bildschirmfotos aller Zustände pro Theme (siehe Kapitel 11)
 original-brief/              ursprüngliche Anforderungen (Bildschirme, Technik)
 ```
 
@@ -322,7 +323,7 @@ Alle Werte stehen zusätzlich maschinenlesbar in `box/themes/km-themes.json` und
 - **Grund:** hell → Kopfleisten-Text, Statussymbole und Overlay-Texte dunkel (`--km-on-bg` = Ink)
 - **Schrift:** Fredoka (`/theme-data/_fonts/Fredoka-Variable.ttf`)
 - **Maskottchen:** Pünktchen – weißes Pony mit hellgrauer Mähne und rosa Schleife. Schlafend: `/theme-data/pferdehof/maskottchen.svg` (Tageslimit, Ruhezeit) · wach: `/theme-data/pferdehof/maskottchen-wach.svg` (Nicht erreichbar, Cover fehlt)
-
+- **Hintergrund:** `/theme-data/pferdehof/background.svg` (SVG, viewBox 800 × 480, `cover`, unten verankert). Motive: Pastell-Koppel: Flieder-Himmel mit Sonne und Wolken, weißer Stall mit rosa Dach, großes braunes Pferd hinter dem Zaun (schaut zwischen 2. und 3. Karte hervor), kleine Stute mit Fohlen, Heuballen, Hufeisen, Herz, Blumen, Schmetterlinge.
 - **Referenz:** `design-reference/Mupi Screen Pferdehof.dc.html`
 - **Theme-Datei:** `box/themes/pferdehof.css`
 
@@ -714,7 +715,7 @@ Alle Werte stehen zusätzlich maschinenlesbar in `box/themes/km-themes.json` und
 - **Grund:** hell → Kopfleisten-Text, Statussymbole und Overlay-Texte dunkel (`--km-on-bg` = Ink)
 - **Schrift:** Fredoka (`/theme-data/_fonts/Fredoka-Variable.ttf`)
 - **Maskottchen:** Glitzer – weißes Einhorn mit Regenbogenmähne. Schlafend: `/theme-data/einhorn/maskottchen.svg` (Tageslimit, Ruhezeit) · wach: `/theme-data/einhorn/maskottchen-wach.svg` (Nicht erreichbar, Cover fehlt)
-
+- **Hintergrund:** `/theme-data/einhorn/background.svg` (SVG, viewBox 800 × 480, `cover`, unten verankert). Motive: Flieder-Himmel über Mintwiese: großes Einhorn (schaut zwischen den ersten beiden Karten hervor), Regenbogen auf Wolken rechts, Luftballons, Blumen, Schmetterlinge, Herzen, Sterne.
 - **Referenz:** `design-reference/Mupi Screen Einhorn.dc.html`
 - **Theme-Datei:** `box/themes/einhorn.css`
 
@@ -1026,3 +1027,42 @@ Alle Werte stehen zusätzlich maschinenlesbar in `box/themes/km-themes.json` und
 ## 10. Hinweise
 - Die CSS-Selektoren wurden gegen die mitgelieferten Quell-Ausschnitte geschrieben, nicht gegen die laufende App – bei Ionic-Shadow-DOM ggf. auf `::part()`/CSS-Variablen umstellen. Der **Maßstab ist die Referenz** (`design-reference/`), nicht der exakte Selektor.
 - Die Motive in den Hintergründen liegen bewusst im unteren Streifen und in den Lücken; die Cover verdecken den Rest.
+
+## 11. Bildschirmfotos aller Zustände (`screens/`)
+Pro Theme ein Ordner `screens/<id>/` mit 22 Bildern (800 × 480, JPG, aus den Referenz-Prototypen). `tagundnacht/` enthält beide Sätze mit Präfix `tag-` (= Sonnenhof) und `nacht-`. Cover sind Platzhalter.
+
+| Datei | Zustand |
+|---|---|
+| 01-startseite | Startseite, Hörspiele, Hörzeit „wird knapp“ (8 min) |
+| 02-startseite-vorlesen | Namensleiste liest vor (mondgelb, scale 1.05) |
+| 03-startseite-antippen | Bild wird angetippt (scale .93) |
+| 04-startseite-buehne | Cover-Flow-Ansicht „Bühne“ auf der Startseite |
+| 05-albumliste-ordner-alle-titel | „Alle Titel hier“ + Ordner (Kartenstapel, Badge) + Sync-Abzeichen |
+| 06-albumliste-hochformat-cover-fehlt | Ordner, Hochformat-Cover, Cover fehlt (Maskottchen) |
+| 07-albumliste-viele-sync | 190 Einträge (TKKG), Hochformat, Sync, Scrollbalken |
+| 08-albumliste-wenige | Weiterhören-Liste, wenige Einträge |
+| 09-albumliste-buehne-ordner | Bühne in der Albumliste, Ordner in der Mitte |
+| 10-player-spielt | Player spielt (Hörspiel) |
+| 11-player-pausiert | Player pausiert |
+| 12-player-musik-zufall | Musik, Zufall an |
+| 13-player-langes-druecken | Langes Drücken aufs Cover, Ring füllt sich |
+| 14-player-titelliste | Titelliste mit Mini-Cover und „Zu“ |
+| 15-player-radio-puffert | Radio, Stream puffert („Verbinde …“) |
+| 16-player-radio-live-hoerzeit-kritisch | Radio live, Hörzeit fast vorbei (2 min) |
+| 17-hoerzeit-normal-2-kategorien | Musik, nur 2 Kategorien, Hörzeit normal (25 min) |
+| 18-laden | Laden (drei Punkte) |
+| 19-nas-nicht-erreichbar | NAS nicht erreichbar |
+| 20-tageslimit | Tageslimit erreicht |
+| 21-ruhezeit | Ruhezeit („Schlafenszeit“, frei wählbar) |
+| 22-eltern-qr | Eltern-QR-Code |
+
+„Bildschirm aus“ ist reines Schwarz und nicht abgebildet.
+
+## 12. Cover-Platzhalter im Player (ersetzt den Bären mit Kopfhörer)
+Heute zeigt der Player für Titel ohne Cover einen Bären mit Kopfhörer. Bei km-Themes stattdessen das Maskottchen des Themes (ohne Kopfhörer):
+
+- Datei: `/theme-data/<id>/cover-platzhalter.svg` (quadratisch, viewBox 100 × 100, Ausgabe 640 × 640). Pfad auch in `km-themes.json` → `coverPlaceholder`.
+- `tagundnacht`: tagsüber `cover-platzhalter.svg` (Sonni), nachts (`body.km-night`) `cover-platzhalter-nacht.svg` (Mondi) → `coverPlaceholderNight`.
+- Aufbau: Grund `--km-night-4` mit Pünktchen in `--km-moon`, zwei helle Kreise, Maskottchen (wach) mittig, drei Noten in `--km-moon`.
+- **Umsetzung:** die Stelle im Code finden, an der das Standard-Cover (Bär) gesetzt wird (Suche nach dem Bilddateinamen bzw. dem Fallback bei fehlendem `imgSrc` im Player und im Cover-Dienst). Bei `isKmTheme()` dort `kmCoverPlaceholder()` aus dem ThemeService liefern (bei `tagundnacht` nachts die Nacht-Datei). Gilt auch für das Mini-Cover in der Titelliste und – empfohlen – für die Albumliste/Bühne statt `.km-missing` (dann dieselbe Datei als `img`, `object-fit: cover`).
+- Nicht-km-Themes behalten den Bären.

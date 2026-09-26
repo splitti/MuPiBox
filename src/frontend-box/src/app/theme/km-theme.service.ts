@@ -54,6 +54,13 @@ export class KmThemeService {
     })
   }
 
+  /** Picture for a title without a cover (instead of the default bear with headphones); Tag & Nacht: at night its own */
+  readonly coverPlaceholder = computed(() => {
+    const theme = this.theme()
+    if (!theme) return ''
+    return this.night() && theme.coverPlaceholderNight ? theme.coverPlaceholderNight : theme.coverPlaceholder
+  })
+
   /** The mascot picture of the active km theme ('sleeping': playtime/quiet overlay, 'awake': not reachable, no cover). */
   kmMascot(state: 'sleeping' | 'awake'): string {
     const theme = this.theme()

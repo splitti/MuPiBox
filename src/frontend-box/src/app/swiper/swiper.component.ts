@@ -98,7 +98,8 @@ export class SwiperComponent<T> {
   // km themes (see theme/km-theme.service.ts): extra markup only while one of them is active
   private readonly kmTheme = inject(KmThemeService)
   protected readonly km = this.kmTheme.isKm
-  protected readonly kmMascotAwake = computed(() => this.kmTheme.kmMascot('awake'))
+  // a cover that is missing (or does not load): the theme's placeholder picture
+  protected readonly kmCoverPlaceholder = this.kmTheme.coverPlaceholder
   protected readonly displayTexts = inject(DisplayTextsService)
   protected readonly speakingName = signal<string | undefined>(undefined)
   private speakingTimer: ReturnType<typeof setTimeout> | undefined

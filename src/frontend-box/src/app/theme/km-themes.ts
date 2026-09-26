@@ -8,6 +8,10 @@ export interface KmTheme {
   /** light background: header text and status icons are dark */
   light: boolean
   mascot: { sleeping: string; awake: string }
+  /** shown instead of the default cover (bear with headphones) when a title has no cover of its own */
+  coverPlaceholder: string
+  /** Tag & Nacht: the placeholder at night */
+  coverPlaceholderNight?: string
   /** Tag & Nacht: night look between nightFrom and nightUntil (and during quiet time) */
   dayNight?: {
     nightFrom: string
@@ -27,6 +31,7 @@ export const KM_THEMES: readonly KmTheme[] = [
       sleeping: '/theme-data/kuschelmond/maskottchen.svg',
       awake: '/theme-data/kuschelmond/maskottchen-wach.svg',
     },
+    coverPlaceholder: '/theme-data/kuschelmond/cover-platzhalter.svg',
   },
   {
     id: 'moosnest',
@@ -36,6 +41,7 @@ export const KM_THEMES: readonly KmTheme[] = [
       sleeping: '/theme-data/moosnest/maskottchen.svg',
       awake: '/theme-data/moosnest/maskottchen-wach.svg',
     },
+    coverPlaceholder: '/theme-data/moosnest/cover-platzhalter.svg',
   },
   {
     id: 'sonnenhof',
@@ -45,6 +51,7 @@ export const KM_THEMES: readonly KmTheme[] = [
       sleeping: '/theme-data/sonnenhof/maskottchen.svg',
       awake: '/theme-data/sonnenhof/maskottchen-wach.svg',
     },
+    coverPlaceholder: '/theme-data/sonnenhof/cover-platzhalter.svg',
   },
   {
     id: 'pferdehof',
@@ -54,6 +61,7 @@ export const KM_THEMES: readonly KmTheme[] = [
       sleeping: '/theme-data/pferdehof/maskottchen.svg',
       awake: '/theme-data/pferdehof/maskottchen-wach.svg',
     },
+    coverPlaceholder: '/theme-data/pferdehof/cover-platzhalter.svg',
   },
   {
     id: 'fussball',
@@ -63,6 +71,7 @@ export const KM_THEMES: readonly KmTheme[] = [
       sleeping: '/theme-data/fussball/maskottchen.svg',
       awake: '/theme-data/fussball/maskottchen-wach.svg',
     },
+    coverPlaceholder: '/theme-data/fussball/cover-platzhalter.svg',
   },
   {
     id: 'fahrzeuge',
@@ -72,6 +81,7 @@ export const KM_THEMES: readonly KmTheme[] = [
       sleeping: '/theme-data/fahrzeuge/maskottchen.svg',
       awake: '/theme-data/fahrzeuge/maskottchen-wach.svg',
     },
+    coverPlaceholder: '/theme-data/fahrzeuge/cover-platzhalter.svg',
   },
   {
     id: 'buecherregal',
@@ -81,6 +91,7 @@ export const KM_THEMES: readonly KmTheme[] = [
       sleeping: '/theme-data/buecherregal/maskottchen.svg',
       awake: '/theme-data/buecherregal/maskottchen-wach.svg',
     },
+    coverPlaceholder: '/theme-data/buecherregal/cover-platzhalter.svg',
   },
   {
     id: 'kassettenrekorder',
@@ -90,6 +101,7 @@ export const KM_THEMES: readonly KmTheme[] = [
       sleeping: '/theme-data/kassettenrekorder/maskottchen.svg',
       awake: '/theme-data/kassettenrekorder/maskottchen-wach.svg',
     },
+    coverPlaceholder: '/theme-data/kassettenrekorder/cover-platzhalter.svg',
   },
   {
     id: 'unterwasser',
@@ -99,6 +111,7 @@ export const KM_THEMES: readonly KmTheme[] = [
       sleeping: '/theme-data/unterwasser/maskottchen.svg',
       awake: '/theme-data/unterwasser/maskottchen-wach.svg',
     },
+    coverPlaceholder: '/theme-data/unterwasser/cover-platzhalter.svg',
   },
   {
     id: 'bastelpapier',
@@ -108,6 +121,7 @@ export const KM_THEMES: readonly KmTheme[] = [
       sleeping: '/theme-data/bastelpapier/maskottchen.svg',
       awake: '/theme-data/bastelpapier/maskottchen-wach.svg',
     },
+    coverPlaceholder: '/theme-data/bastelpapier/cover-platzhalter.svg',
   },
   {
     id: 'prinzessin',
@@ -117,6 +131,7 @@ export const KM_THEMES: readonly KmTheme[] = [
       sleeping: '/theme-data/prinzessin/maskottchen.svg',
       awake: '/theme-data/prinzessin/maskottchen-wach.svg',
     },
+    coverPlaceholder: '/theme-data/prinzessin/cover-platzhalter.svg',
   },
   {
     id: 'einhorn',
@@ -126,6 +141,7 @@ export const KM_THEMES: readonly KmTheme[] = [
       sleeping: '/theme-data/einhorn/maskottchen.svg',
       awake: '/theme-data/einhorn/maskottchen-wach.svg',
     },
+    coverPlaceholder: '/theme-data/einhorn/cover-platzhalter.svg',
   },
   {
     id: 'feenschloss',
@@ -135,6 +151,7 @@ export const KM_THEMES: readonly KmTheme[] = [
       sleeping: '/theme-data/feenschloss/maskottchen.svg',
       awake: '/theme-data/feenschloss/maskottchen-wach.svg',
     },
+    coverPlaceholder: '/theme-data/feenschloss/cover-platzhalter.svg',
   },
   {
     id: 'weltraum',
@@ -144,6 +161,7 @@ export const KM_THEMES: readonly KmTheme[] = [
       sleeping: '/theme-data/weltraum/maskottchen.svg',
       awake: '/theme-data/weltraum/maskottchen-wach.svg',
     },
+    coverPlaceholder: '/theme-data/weltraum/cover-platzhalter.svg',
   },
   {
     id: 'dinoland',
@@ -153,6 +171,7 @@ export const KM_THEMES: readonly KmTheme[] = [
       sleeping: '/theme-data/dinoland/maskottchen.svg',
       awake: '/theme-data/dinoland/maskottchen-wach.svg',
     },
+    coverPlaceholder: '/theme-data/dinoland/cover-platzhalter.svg',
   },
   {
     id: 'piratenbucht',
@@ -162,6 +181,7 @@ export const KM_THEMES: readonly KmTheme[] = [
       sleeping: '/theme-data/piratenbucht/maskottchen.svg',
       awake: '/theme-data/piratenbucht/maskottchen-wach.svg',
     },
+    coverPlaceholder: '/theme-data/piratenbucht/cover-platzhalter.svg',
   },
   {
     id: 'tagundnacht',
@@ -171,6 +191,8 @@ export const KM_THEMES: readonly KmTheme[] = [
       sleeping: '/theme-data/tagundnacht/maskottchen.svg',
       awake: '/theme-data/tagundnacht/maskottchen-wach.svg',
     },
+    coverPlaceholder: '/theme-data/tagundnacht/cover-platzhalter.svg',
+    coverPlaceholderNight: '/theme-data/tagundnacht/cover-platzhalter-nacht.svg',
     dayNight: {
       nightFrom: '18:00',
       nightUntil: '07:00',
