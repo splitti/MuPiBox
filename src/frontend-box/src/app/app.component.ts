@@ -28,6 +28,9 @@ import { KmThemeService } from './theme/km-theme.service'
 })
 export class AppComponent {
   protected monitorOff: Signal<boolean>
+  // The admin interface shows /text-preview in a frame (Display texts): only the previewed screen there - not the
+  // box's own state (display off, a real playtime lock, the playtime chip).
+  protected readonly textPreview = window.location.pathname.startsWith('/text-preview')
   protected playtimeBlocked: Signal<boolean>
 
   // Track previous playtime state to detect normal -> grace/blocked transitions.

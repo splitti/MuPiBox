@@ -121,6 +121,8 @@ export class ExternalPlaybackNavigatorService {
       )
       .subscribe((data) => {
         this.checkThemeReload(data.themeReloadAt)
+        // the admin interface's text preview (a frame on another device): no jump to the player page there
+        if (window.location.pathname.startsWith('/text-preview')) return
         const at = data.triggerAt ?? 0
         const src = data.triggerSource ?? 'box'
         // Baseline-Tick: erstes Polling-Ergebnis nur lastSeen setzen, nicht
