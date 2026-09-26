@@ -253,9 +253,10 @@ swiper-container.coverflow {
             }
 
             // ion-card-header is a column flexbox: the title is centred vertically by justify-content
+            // 10 px to the edge of the bar: longer names fit (the round ends leave room anyway)
             ion-card-header {
                 height: 60px;
-                padding: 0 20px;
+                padding: 0 10px;
                 display: flex;
                 flex-direction: column;
                 align-items: stretch;
@@ -400,7 +401,7 @@ swiper-container.coverflow {
         top: 300px;
         width: 440px;
         height: 72px;
-        padding: 0 28px;
+        padding: 0 10px;
         box-sizing: border-box;
         border: 0;
         border-radius: 36px;

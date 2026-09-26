@@ -1574,14 +1574,13 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				<?php $kmSelected = isset($kmNames[$data["mupibox"]["theme"]]); $kmStageOn = (($data["mupibox"]["themeStage"] ?? false) === true); ?>
 				<div id="kmStageToggleWrap" style="<?= $kmSelected ? '' : 'display:none;' ?>">
 					<input type="hidden" name="kmStageShown" value="1" />
-					<label class="mupi-toggle" for="themeStage">
+					<label class="mupi-toggle" for="themeStage" title="Großes Cover in der Mitte, Nachbarn kleiner. Wischen oder Nachbar antippen holt ihn in die Mitte.">
 						<input type="checkbox" id="themeStage" name="themeStage" value="1" <?= $kmStageOn ? 'checked="checked"' : '' ?> onchange="toggleKmStageOption();" />
 						<span class="track"></span>
 						<span>Cover-Flow-Ansicht (Bühne)</span>
 					</label>
-					<p style="margin:4px 0 0 54px; font-size:90%; color:#555;">Großes Cover in der Mitte, Nachbarn kleiner. Wischen oder Nachbar antippen holt ihn in die Mitte.</p>
 					<div id="kmAutoReadWrap" style="<?= $kmStageOn ? '' : 'display:none;' ?>">
-						<label class="mupi-toggle" for="themeStageAutoRead">
+						<label class="mupi-toggle" for="themeStageAutoRead" title="Bleibt die Bühne auf einem Cover stehen, liest die Box seinen Namen vor.">
 							<input type="checkbox" id="themeStageAutoRead" name="themeStageAutoRead" value="1" <?= (($data["mupibox"]["themeStageAutoRead"] ?? false) === true) ? 'checked="checked"' : '' ?> />
 							<span class="track"></span>
 							<span>Name beim Anhalten vorlesen</span>
