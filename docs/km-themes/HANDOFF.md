@@ -322,7 +322,7 @@ Alle Werte stehen zusätzlich maschinenlesbar in `box/themes/km-themes.json` und
 - **Grund:** hell → Kopfleisten-Text, Statussymbole und Overlay-Texte dunkel (`--km-on-bg` = Ink)
 - **Schrift:** Fredoka (`/theme-data/_fonts/Fredoka-Variable.ttf`)
 - **Maskottchen:** Pünktchen – weißes Pony mit hellgrauer Mähne und rosa Schleife. Schlafend: `/theme-data/pferdehof/maskottchen.svg` (Tageslimit, Ruhezeit) · wach: `/theme-data/pferdehof/maskottchen-wach.svg` (Nicht erreichbar, Cover fehlt)
-- **Hintergrund:** `/theme-data/pferdehof/background.svg` (SVG, viewBox 800 × 480, `cover`, unten verankert). Motive: Pastell-Koppel: Flieder-Himmel, Wiese, weißer Koppelzaun mit Blümchen, braune Stute mit Fohlen, Schimmel.
+
 - **Referenz:** `design-reference/Mupi Screen Pferdehof.dc.html`
 - **Theme-Datei:** `box/themes/pferdehof.css`
 
@@ -714,7 +714,7 @@ Alle Werte stehen zusätzlich maschinenlesbar in `box/themes/km-themes.json` und
 - **Grund:** hell → Kopfleisten-Text, Statussymbole und Overlay-Texte dunkel (`--km-on-bg` = Ink)
 - **Schrift:** Fredoka (`/theme-data/_fonts/Fredoka-Variable.ttf`)
 - **Maskottchen:** Glitzer – weißes Einhorn mit Regenbogenmähne. Schlafend: `/theme-data/einhorn/maskottchen.svg` (Tageslimit, Ruhezeit) · wach: `/theme-data/einhorn/maskottchen-wach.svg` (Nicht erreichbar, Cover fehlt)
-- **Hintergrund:** `/theme-data/einhorn/background.svg` (SVG, viewBox 800 × 480, `cover`, unten verankert). Motive: Flieder-Himmel über Mintwiese: Regenbogen auf Wolken, grasendes Einhorn, Luftballons, Blumen, Schmetterlinge, Herzen, Sterne.
+
 - **Referenz:** `design-reference/Mupi Screen Einhorn.dc.html`
 - **Theme-Datei:** `box/themes/einhorn.css`
 
