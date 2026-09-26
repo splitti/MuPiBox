@@ -201,8 +201,9 @@ export class HomePage extends SwiperIonicEventsHelper {
     const isPlayableNasFolder = artist.coverMedia?.type === 'nas' && !artist.coverMedia.nasIsContainer
     const isPlayableLibraryFolder =
       artist.coverMedia?.type === 'library' && !!artist.coverMedia.libraryPath && !artist.coverMedia.libraryIsContainer
-    if (isPlayableNasFolder || isPlayableLibraryFolder || (artist.coverMedia?.playlistid && !artist.coverMedia?.artist)) {
-      // This is a standalone playlist - start playback directly
+    const isStandalone = (!!artist.coverMedia?.playlistid || artist.coverMedia?.type === 'radio') && !artist.coverMedia?.artist
+    if (isPlayableNasFolder || isPlayableLibraryFolder || isStandalone) {
+      // This is a standalone playlist or radio station - start playback directly
       const navigationExtras: NavigationExtras = {
         state: {
           media: artist.coverMedia,

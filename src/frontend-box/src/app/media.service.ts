@@ -496,10 +496,11 @@ export class MediaService {
         const standalonePlaylistsData: Artist[] = []
 
         for (const currentMedia of media) {
-          // If it's a playlist without an artist, create a direct Artist entry
-          if (currentMedia.playlistid && !currentMedia.artist) {
+          // A playlist or a radio station without an artist gets an entry of its own (a tap plays it right away).
+          // Without this a station added without a label was not shown at all.
+          if ((currentMedia.playlistid || currentMedia.type === 'radio') && !currentMedia.artist) {
             standalonePlaylistsData.push({
-              name: currentMedia.title || 'Unknown Playlist',
+              name: currentMedia.title || (currentMedia.type === 'radio' ? 'Radio' : 'Unknown Playlist'),
               albumCount: '1', // Playlists have 1 "album" (themselves)
               cover: currentMedia.cover || '../assets/images/nocover_mupi.png',
               coverMedia: currentMedia,
@@ -508,7 +509,7 @@ export class MediaService {
             // Regular media with artist - include in normal grouping
             regularMedia.push(currentMedia)
           }
-          // Skip media without artist that aren't playlists (they would cause undefined grouping)
+          // Skip other media without artist (they would cause undefined grouping)
         }
 
         // Process regular media with artist grouping
@@ -656,6 +657,8 @@ export class MediaService {
         // Else: !resume.
         for (const item of items) {
           item.category = item.category === undefined ? 'audiobook' : item.category
+          // Older entries have the category 'radio', which has no tab of its own: they belong to the radio tab ('other').
+          if ((item.category as string) === 'radio') item.category = 'other'
         }
         return items.filter(
           (item) =>
