@@ -1998,6 +1998,8 @@ const playState = {
   nasStack: [],     // the opened folders, [{ title, path }]; empty = the top level
   nasItems: null,   // entries of the current level (null = not loaded yet)
   nasError: '',
+  // "All" shows the NAS folders too (the top level, read live like the NAS tab): null = not loaded yet
+  nasTop: null,
 }
 
 /** Loads one NAS level: the selected folders (top) or the subfolders of `path`. */
@@ -2054,17 +2056,22 @@ function renderNas(grid, q) {
     grid.innerHTML = emptyStateHtml('🗄️', q ? t('play.noSearchResults') : playState.nasStack.length ? t('play.emptyCategory') : t('play.nasEmpty'))
     return
   }
-  grid.innerHTML = entries.map(({ item, idx }) => {
-    const title = escapeHtml(String(item.title ?? '—'))
-    const artist = escapeHtml(String(item.artist ?? ''))
-    const cover = item.cover ? escapeHtml(String(item.cover)) : ''
-    const isFolder = item.nasIsContainer === true
-    const coverEl = cover
-      ? `<img class="play-tile-cover" src="${cover}" alt="" loading="lazy">`
-      : `<div class="play-tile-cover-placeholder">${isFolder ? '📁' : '🎧'}</div>`
-    const aria = isFolder ? t('play.openAria', { title }) : t('play.playAria', { title })
-    return `
-      <button class="play-tile" data-nas-idx="${idx}" aria-label="${aria}">
+  grid.innerHTML = entries.map(({ item, idx }) => nasTileHtml(item, `data-nas-idx="${idx}"`)).join('')
+  nasCoverFallbacks(grid)
+}
+
+/** A NAS tile (folder or album); `dataAttr` tells the click handler which list it belongs to. */
+function nasTileHtml(item, dataAttr) {
+  const title = escapeHtml(String(item.title ?? '—'))
+  const artist = escapeHtml(String(item.artist ?? ''))
+  const cover = item.cover ? escapeHtml(String(item.cover)) : ''
+  const isFolder = item.nasIsContainer === true
+  const coverEl = cover
+    ? `<img class="play-tile-cover" src="${cover}" alt="" loading="lazy">`
+    : `<div class="play-tile-cover-placeholder">${isFolder ? '📁' : '🎧'}</div>`
+  const aria = isFolder ? t('play.openAria', { title }) : t('play.playAria', { title })
+  return `
+      <button class="play-tile" ${dataAttr} data-nas-folder="${isFolder ? '1' : ''}" aria-label="${aria}">
         ${coverEl}
         <span class="play-tile-badge">${isFolder ? `📁 ${t('play.nasFolder')}` : 'NAS'}</span>
         <div class="play-tile-overlay">
@@ -2072,16 +2079,47 @@ function renderNas(grid, q) {
           <div class="play-tile-artist">${artist}</div>
         </div>
       </button>`
-  }).join('')
-  for (const img of grid.querySelectorAll('img.play-tile-cover')) {
+}
+
+/** NAS covers that can't be loaded become the folder / headphones placeholder. */
+function nasCoverFallbacks(grid) {
+  for (const img of grid.querySelectorAll('.play-tile[data-nas-folder] img.play-tile-cover')) {
     img.addEventListener('error', () => {
-      const item = playState.nasItems?.[Number(img.closest('.play-tile')?.dataset.nasIdx)]
       const ph = document.createElement('div')
       ph.className = 'play-tile-cover-placeholder'
-      ph.textContent = item?.nasIsContainer ? '📁' : '🎧'
+      ph.textContent = img.closest('.play-tile')?.dataset.nasFolder ? '📁' : '🎧'
       img.replaceWith(ph)
     }, { once: true })
   }
+}
+
+/** "All": the NAS folders selected in the admin interface (top level), read live once per visit. */
+async function loadNasTop() {
+  try {
+    const res = await fetch('/api/nas/artists', { credentials: 'same-origin' })
+    const data = res.ok ? await res.json() : []
+    playState.nasTop = Array.isArray(data) ? data : []
+  } catch {
+    playState.nasTop = [] // NAS not reachable: "All" shows the rest (the NAS tab says what is wrong)
+  }
+  if (playState.category === 'all') renderPlay()
+}
+
+/** A NAS tile under "All": a folder opens in the NAS tab, an album plays on the box. */
+function onNasTopTile(idx) {
+  const item = playState.nasTop?.[idx]
+  if (!item?.nasPath) return
+  if (item.nasIsContainer) {
+    playState.category = 'nas'
+    for (const pill of $('.play-pill')) pill.classList.toggle('is-active', pill.dataset.cat === 'nas')
+    playState.nasStack = [{ title: String(item.title ?? ''), path: item.nasPath }]
+    playState.search = ''
+    const search = $('#play-search')
+    if (search) search.value = ''
+    loadNasLevel()
+    return
+  }
+  startPlayback(String(item.title ?? t('play.newTrack')), `${API}/library/play-nas`, { path: item.nasPath })
 }
 
 /** A NAS tile: a folder with subfolders opens, an album plays on the box. */
@@ -2111,6 +2149,8 @@ async function loadPlay() {
     }
     const data = await res.json()
     playState.items = Array.isArray(data) ? data : []
+    playState.nasTop = null
+    loadNasTop()
     renderPlay()
   } catch (err) {
     grid.innerHTML = emptyStateHtml('⚠️', `${escapeHtml(t('common.errorMsg', { msg: err.message }))}`)
@@ -2149,7 +2189,12 @@ function renderPlay() {
       }
       return true
     })
-  if (filtered.length === 0) {
+  const nasTop = cat === 'all'
+    ? (playState.nasTop ?? [])
+        .map((item, idx) => ({ item, idx }))
+        .filter(({ item }) => !q || `${item.title ?? ''} ${item.artist ?? ''}`.toLowerCase().includes(q))
+    : []
+  if (filtered.length === 0 && nasTop.length === 0) {
     grid.innerHTML = emptyStateHtml('🎧', q ? t('play.noSearchResults') : t('play.emptyCategory'))
     return
   }
@@ -2171,9 +2216,10 @@ function renderPlay() {
           <div class="play-tile-artist">${artist}</div>
         </div>
       </button>`
-  }).join('')
+  }).join('') + nasTop.map(({ item, idx }) => nasTileHtml(item, `data-nas-top-idx="${idx}"`)).join('')
+  nasCoverFallbacks(grid)
   // a cover that can't be loaded (no picture on Spotify, box offline) becomes the placeholder
-  for (const img of grid.querySelectorAll('img.play-tile-cover')) {
+  for (const img of grid.querySelectorAll('.play-tile[data-idx] img.play-tile-cover')) {
     img.addEventListener('error', () => {
       const idx = Number(img.closest('.play-tile')?.dataset.idx)
       const ph = document.createElement('div')
@@ -3534,6 +3580,10 @@ function wire() {
     if (!tile) return
     if (tile.dataset.nasIdx !== undefined) {
       onNasTile(Number(tile.dataset.nasIdx))
+      return
+    }
+    if (tile.dataset.nasTopIdx !== undefined) {
+      onNasTopTile(Number(tile.dataset.nasTopIdx))
       return
     }
     const idx = Number(tile.dataset.idx)
