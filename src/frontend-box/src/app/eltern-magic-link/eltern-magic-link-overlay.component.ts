@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, effect, inject } from '@angular/core'
+import { ChangeDetectionStrategy, Component, effect, inject, input, signal } from '@angular/core'
+import QRCode from 'qrcode'
 import { DisplayTextsService } from '../display-texts.service'
 import { ElternMagicLinkService } from '../eltern-magic-link.service'
 
@@ -15,8 +16,15 @@ import { ElternMagicLinkService } from '../eltern-magic-link.service'
 export class ElternMagicLinkOverlayComponent {
   protected readonly svc = inject(ElternMagicLinkService)
   protected readonly texts = inject(DisplayTextsService)
+  // Preview of the admin interface (text-preview page): the overlay is shown with a sample QR code.
+  public readonly preview = input(false)
+  protected readonly previewUrl = `http://${location.hostname}:8200/parents`
+  protected readonly previewQr = signal<string | null>(null)
 
   constructor() {
+    effect(() => {
+      if (this.preview()) void QRCode.toDataURL(this.previewUrl, { margin: 2, width: 320 }).then((url) => this.previewQr.set(url))
+    })
     // pick up texts changed in the parents' web app since the box started
     effect(() => {
       if (this.svc.visible()) this.texts.refresh()

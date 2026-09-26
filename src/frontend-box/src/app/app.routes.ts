@@ -11,6 +11,11 @@ export const routes: Routes = [
     pathMatch: 'full',
   },
   {
+    // preview of the overlay texts for the admin interface (Display texts): /text-preview?screen=blocked|quiet|parents
+    path: 'text-preview',
+    loadComponent: () => import('./text-preview/text-preview.page').then((m) => m.TextPreviewPage),
+  },
+  {
     path: 'resume',
     loadComponent: () => import('./resume/resume.page').then((m) => m.ResumePage),
   },

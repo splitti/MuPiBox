@@ -65,8 +65,20 @@ export class DisplayTextsService {
     this.refresh()
   }
 
+  // The preview page of the admin interface shows texts that are typed but not saved yet: from then on the
+  // saved settings are no longer read (they would replace the preview).
+  private previewActive = false
+
+  /** Preview of the admin interface: shows the given language and own texts instead of the saved ones. */
+  public applyPreview(language: unknown, texts: Record<string, unknown> | undefined): void {
+    this.previewActive = true
+    this.custom.set(pickTexts(texts))
+    if (typeof language === 'string' && language) this.language.set(language)
+  }
+
   /** Reads the settings again (called when an overlay appears, so a change shows up without a reload). */
   public refresh(): void {
+    if (this.previewActive) return
     this.http
       .get<{ displayTexts?: Record<string, unknown>; displayLanguage?: unknown }>(`${environment.backend.apiUrl}/config`)
       .subscribe({
