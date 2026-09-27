@@ -5,6 +5,7 @@ import fs from 'node:fs'
 import https from 'node:https'
 import { mkdir, readdir, readFile, rename, rm, stat, statfs, writeFile } from 'node:fs/promises'
 import net from 'node:net'
+import os from 'node:os'
 import path from 'node:path'
 import { Readable, Transform } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
@@ -319,6 +320,7 @@ export const app = express()
 // itself only (was: cors() for every origin). See request-guard.ts.
 app.use(browserGuard)
 app.use(cors(corsOptionsFor))
+
 app.use(express.json())
 app.use(express.urlencoded({ extended: false }))
 
@@ -5358,6 +5360,13 @@ async function nasReadTextFile(nasPath: string): Promise<string | undefined> {
   return buffer ? nasDecodeText(buffer) : undefined
 }
 
+// The audio files of a NAS folder in the order they are played (the track list, and the next track to load ahead).
+function nasFolderTracks(files: NasFileEntry[]): NasFileEntry[] {
+  return files
+    .filter((f) => !f.isdir && nasAudioExtensions.some((ext) => f.name.toLowerCase().endsWith(ext)))
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
+}
+
 app.get('/api/nas/tracklist', nasPathWithinSelection, async (req, res) => {
   const folderPath = typeof req.query.path === 'string' ? req.query.path : ''
   if (!folderPath) {
@@ -5367,9 +5376,7 @@ app.get('/api/nas/tracklist', nasPathWithinSelection, async (req, res) => {
 
   try {
     const files = await nasListFiles(folderPath)
-    const audio = files
-      .filter((f) => !f.isdir && nasAudioExtensions.some((ext) => f.name.toLowerCase().endsWith(ext)))
-      .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
+    const audio = nasFolderTracks(files)
 
     // One audio file plus a cue sheet: the tracks come from the cue (played by seeking in the file).
     const cues = files.filter((f) => !f.isdir && f.name.toLowerCase().endsWith('.cue'))
@@ -5417,8 +5424,9 @@ const nasContentTypes: Record<string, string> = {
   '.webp': 'image/webp',
 }
 
-// Serves a downloaded file from disk, including HTTP Range support (seeking).
-function nasServeLocalFile(req: express.Request, res: express.Response, file: string, size: number): void {
+// The headers of an answer with HTTP Range support (seeking) for a file of this size: the bytes to send, or
+// undefined when the range cannot be served (416 is sent then).
+function nasAnswerRange(req: express.Request, res: express.Response, file: string, size: number): { start: number; end: number } | undefined {
   res.setHeader('Content-Type', nasContentTypes[path.extname(file).toLowerCase()] ?? 'application/octet-stream')
   res.setHeader('Accept-Ranges', 'bytes')
 
@@ -5437,16 +5445,129 @@ function nasServeLocalFile(req: express.Request, res: express.Response, file: st
     if (start > end) {
       res.status(416).setHeader('Content-Range', `bytes */${size}`)
       res.end()
-      return
+      return undefined
     }
     res.status(206)
     res.setHeader('Content-Range', `bytes ${start}-${end}/${size}`)
   }
 
   res.setHeader('Content-Length', String(end - start + 1))
+  return { start, end }
+}
+
+// Serves a downloaded file from disk, including HTTP Range support (seeking).
+function nasServeLocalFile(req: express.Request, res: express.Response, file: string, size: number): void {
+  const range = nasAnswerRange(req, res, file, size)
+  if (!range) return
   // pipeline: a read error (file deleted meanwhile, SD error) must not become an uncaught exception that ends the
   // backend, and the file is closed when the player drops the connection (every seek).
-  pipeline(fs.createReadStream(file, { start, end }), res).catch(() => undefined)
+  pipeline(fs.createReadStream(file, range), res).catch(() => undefined)
+}
+
+// --- The next NAS track in memory ---------------------------------------
+//
+// Between two NAS tracks there was 1-3 s of silence: to open a track, mplayer asks for the file three times (start,
+// end for the ID3 tag, start again), each one a round trip to the NAS, and then fills its buffer in small steps.
+// While a track plays, the next one of its folder is therefore loaded into memory, and the player's requests for it
+// are answered from there at once - as fast as a local file. Only the track playing and the next one are kept
+// (nothing is written to the SD), a track bigger than NAS_PREFETCH_MAX_BYTES or one that would leave the box short
+// of memory is streamed from the NAS as before.
+const NAS_PREFETCH_MAX_BYTES = 100 * 1024 * 1024
+const NAS_PREFETCH_KEEP_FREE_BYTES = 400 * 1024 * 1024
+const NAS_PREFETCH_IDLE_MS = 30 * 60 * 1000
+
+type NasPrefetch = { path: string; data?: Buffer; loading?: AbortController }
+let nasPrefetched: NasPrefetch[] = []
+let nasPrefetchIdle: NodeJS.Timeout | undefined
+
+// Memory still available to programs (MemAvailable: free plus what the page cache would give back).
+function availableMemoryBytes(): number {
+  try {
+    const kb = /^MemAvailable:\s+(\d+)\s+kB/m.exec(fs.readFileSync('/proc/meminfo', 'utf8'))?.[1]
+    if (kb) return Number(kb) * 1024
+  } catch {
+    // not Linux
+  }
+  return os.freemem()
+}
+
+// Everything loaded is given back once no NAS track was asked for a while (playback stopped).
+function nasPrefetchTouch(): void {
+  clearTimeout(nasPrefetchIdle)
+  nasPrefetchIdle = setTimeout(() => {
+    for (const entry of nasPrefetched) entry.loading?.abort()
+    nasPrefetched = []
+  }, NAS_PREFETCH_IDLE_MS)
+  nasPrefetchIdle.unref()
+}
+
+// The track from memory, when it is loaded completely.
+function nasPrefetchedData(filePath: string): Buffer | undefined {
+  const normalized = normalizeNasPath(filePath)
+  return nasPrefetched.find((entry) => entry.path === normalized && entry.data)?.data
+}
+
+// The player asked for filePath: keep it (if it is in memory) and load the track after it.
+async function nasPrefetchNext(filePath: string): Promise<void> {
+  nasPrefetchTouch()
+  const current = normalizeNasPath(filePath)
+  const folder = current.split('/').slice(0, -1).join('/') || '/'
+  let next: NasFileEntry | undefined
+  try {
+    const tracks = nasFolderTracks(await nasListFiles(folder))
+    const index = tracks.findIndex((f) => normalizeNasPath(f.path) === current)
+    next = index >= 0 ? tracks[index + 1] : undefined
+  } catch {
+    return
+  }
+  const nextPath = next ? normalizeNasPath(next.path) : undefined
+  // only the track playing and the next one stay (a jump to another track or folder drops the rest)
+  for (const entry of nasPrefetched) {
+    if (entry.path !== current && entry.path !== nextPath) entry.loading?.abort()
+  }
+  nasPrefetched = nasPrefetched.filter((entry) => entry.path === current || entry.path === nextPath)
+  // a downloaded copy is read from the SD anyway
+  const nextLocal = nextPath ? nasLocalPath(nextPath) : undefined
+  if (!nextPath || nasPrefetched.some((entry) => entry.path === nextPath) || (nextLocal && fs.existsSync(nextLocal))) return
+
+  const session = (await getActiveNasSession()) ?? nasLastSession
+  if (!session) return
+  const entry: NasPrefetch = { path: nextPath, loading: new AbortController() }
+  nasPrefetched.push(entry)
+  const abort = entry.loading as AbortController
+  let stall: NodeJS.Timeout | undefined
+  const armStall = () => {
+    clearTimeout(stall)
+    stall = setTimeout(() => abort.abort(), NAS_STALL_MS)
+  }
+  try {
+    armStall()
+    const response = await nasFetch(session, nasUrl(session, nextPath), { headers: { Authorization: session.auth }, signal: abort.signal })
+    const size = Number(response.headers.get('content-length'))
+    if (response.status !== 200 || !response.body || !Number.isFinite(size) || size <= 0 || size > NAS_PREFETCH_MAX_BYTES || availableMemoryBytes() - size < NAS_PREFETCH_KEEP_FREE_BYTES) {
+      abort.abort()
+      throw new Error(`not loaded ahead (answer ${response.status}, ${size} bytes)`)
+    }
+    const data = Buffer.allocUnsafe(size)
+    let filled = 0
+    for await (const chunk of Readable.fromWeb(response.body as import('node:stream/web').ReadableStream)) {
+      armStall()
+      const piece = chunk as Buffer
+      if (filled + piece.length > size) throw new Error('longer than announced')
+      piece.copy(data, filled)
+      filled += piece.length
+    }
+    if (filled !== size) throw new Error(`only ${filled} of ${size} bytes`)
+    entry.data = data
+    entry.loading = undefined
+  } catch (error) {
+    nasPrefetched = nasPrefetched.filter((e) => e !== entry)
+    if (!abort.signal.aborted) {
+      console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Could not load the next NAS track ${nextPath} ahead: ${error}`)
+    }
+  } finally {
+    clearTimeout(stall)
+  }
 }
 
 // Streams a NAS file to the player and carries on where it left off when the connection to the NAS breaks.
@@ -5629,6 +5750,18 @@ app.get('/api/nas/stream', nasPathWithinSelection, async (req, res) => {
       }
     } catch {
       // Not downloaded - fall through to the NAS.
+    }
+  }
+
+  // A track the player plays: from memory when it was loaded ahead, and the one after it is loaded now.
+  const isTrack = !thumbSize && nasAudioExtensions.some((ext) => filePath.toLowerCase().endsWith(ext))
+  if (isTrack) {
+    void nasPrefetchNext(filePath)
+    const data = nasPrefetchedData(filePath)
+    if (data) {
+      const range = nasAnswerRange(req, res, filePath, data.length)
+      if (range) res.end(data.subarray(range.start, range.end + 1))
+      return
     }
   }
 
