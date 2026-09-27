@@ -321,6 +321,50 @@ export const app = express()
 app.use(browserGuard)
 app.use(cors(corsOptionsFor))
 
+// --- Lists of the home page, kept for the display ---------------------------
+//
+// Switching a category on the display waited for the whole list to be made again: every data.json entry of the
+// category looked up (Spotify artists with all their album pages, podcasts, playlists). The display now keeps the
+// resolved entries of each category (with the data.json version they belong to) and shows them at once; it makes
+// them again in the background when data.json changed or they are old. They are kept here as well, so a display
+// that starts (or is reloaded) has them from the first tap. Only the display writes them; one file on the SD,
+// written when a list was made again (not on every switch).
+const homeCacheFile = path.join(process.cwd(), 'cache', 'home-lists.json')
+const homeCacheCategories = ['audiobook', 'music', 'other']
+let homeCache: Record<string, { version: string; at: number; media: unknown[] }> = {}
+try {
+  homeCache = JSON.parse(fs.readFileSync(homeCacheFile, 'utf8'))
+} catch {
+  // none yet
+}
+let homeCacheWrite: Promise<void> = Promise.resolve()
+
+app.get('/api/home-lists', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store')
+  res.json(homeCache)
+})
+
+app.put('/api/home-lists/:category', express.json({ limit: '20mb' }), (req, res) => {
+  const category = String(req.params.category)
+  const body = req.body as { version?: unknown; media?: unknown }
+  if (!homeCacheCategories.includes(category) || typeof body?.version !== 'string' || !Array.isArray(body.media)) {
+    res.status(400).json({ error: 'category, version and media are needed' })
+    return
+  }
+  homeCache[category] = { version: body.version, at: Date.now(), media: body.media }
+  // one write after the other, each to a new file that then replaces the old one (never half a file)
+  homeCacheWrite = homeCacheWrite.then(async () => {
+    try {
+      await mkdir(path.dirname(homeCacheFile), { recursive: true })
+      await writeFile(`${homeCacheFile}.tmp`, JSON.stringify(homeCache))
+      await rename(`${homeCacheFile}.tmp`, homeCacheFile)
+    } catch (error) {
+      console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Could not keep the home lists: ${error}`)
+    }
+  })
+  res.json({ ok: true })
+})
+
 app.use(express.json())
 app.use(express.urlencoded({ extended: false }))
 

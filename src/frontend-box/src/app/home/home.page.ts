@@ -123,6 +123,8 @@ export class HomePage extends SwiperIonicEventsHelper {
     })
 
     this.isOnline = toSignal(this.mediaService.isOnline())
+    // the other categories are made ready in the background, so switching shows them at once
+    this.mediaService.keepHomeListsWarm(() => this.visibleCategories().map((c) => c.key))
 
     this.artists = toSignal(
       combineLatest([

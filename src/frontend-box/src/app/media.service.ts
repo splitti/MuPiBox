@@ -1,9 +1,29 @@
 import { HttpClient } from '@angular/common/http'
 import { Injectable, signal } from '@angular/core'
-import { defer, firstValueFrom, forkJoin, from, iif, interval, Observable, of, Subject, throwError, timer } from 'rxjs'
+import {
+  combineLatest,
+  concat,
+  defer,
+  EMPTY,
+  firstValueFrom,
+  forkJoin,
+  from,
+  iif,
+  interval,
+  Observable,
+  of,
+  Subject,
+  type Subscription,
+  throwError,
+  timer,
+} from 'rxjs'
 import {
   catchError,
+  concatMap,
+  debounceTime,
   distinctUntilChanged,
+  exhaustMap,
+  finalize,
   map,
   mergeAll,
   mergeMap,
@@ -11,6 +31,9 @@ import {
   shareReplay,
   startWith,
   switchMap,
+  take,
+  tap,
+  timeout,
   toArray,
 } from 'rxjs/operators'
 import { environment } from '../environments/environment'
@@ -488,8 +511,9 @@ export class MediaService {
     )
   }
 
+  // The home page: the kept list at once and, when it is out of date, the new one after it (see homeListMedia).
   public fetchArtistData(category: CategoryType): Observable<Artist[]> {
-    return this.fetchMedia(category).pipe(
+    return this.fetchMedia(category, undefined, true).pipe(
       map((media: Media[]) => {
         // Separate playlists without artists from regular media
         const regularMedia: Media[] = []
@@ -585,7 +609,116 @@ export class MediaService {
   // true when the NAS list could not be loaded even after the retries (the home page shows the placeholder)
   public readonly nasUnavailable = signal(false)
 
-  private fetchMedia(category: CategoryType, onlyArtist?: string): Observable<Media[]> {
+  // --- Lists of the home page (see /api/home-lists in the backend) ---------------------------------------------
+  // The data.json part of a category (Spotify, podcasts, playlists, radio) as resolved Media, per data.json version.
+  // Resolving it again on every switch took seconds (e.g. all album pages of every Spotify artist); it is kept here
+  // and on the box, shown at once, and made again in the background when data.json changed or it is older than
+  // HOME_LIST_MAX_AGE_MS (new albums of an artist on Spotify). Local folders are still read live on every switch
+  // (fast, and new files show up at once), the NAS has its own index.
+  private static readonly HOME_LIST_MAX_AGE_MS = 6 * 60 * 60 * 1000
+  private static readonly HOME_LIST_CATEGORIES: CategoryType[] = ['audiobook', 'music', 'other']
+  private homeLists = new Map<CategoryType, { version: string; at: number; media: Media[] }>()
+  private homeListsLoaded$?: Observable<void>
+  private homeListRuns = new Map<CategoryType, Observable<Media[]>>()
+  private homeListsWarming?: Subscription
+
+  // the lists the box kept (once per start of the display)
+  private loadHomeLists(): Observable<void> {
+    if (!this.homeListsLoaded$) {
+      this.homeListsLoaded$ = this.http
+        .get<Record<string, { version: string; at: number; media: Media[] }>>(`${this.getApiBackendUrl()}/home-lists`)
+        .pipe(
+          timeout(5000),
+          map((lists) => {
+            for (const category of MediaService.HOME_LIST_CATEGORIES) {
+              const list = lists?.[category]
+              if (list && typeof list.version === 'string' && Array.isArray(list.media) && !this.homeLists.has(category)) {
+                this.homeLists.set(category, list)
+              }
+            }
+          }),
+          catchError(() => of(undefined)),
+          shareReplay({ bufferSize: 1, refCount: false }),
+        )
+    }
+    return this.homeListsLoaded$
+  }
+
+  private homeListIsCurrent(category: CategoryType, version: string): boolean {
+    const kept = this.homeLists.get(category)
+    return !!kept && version !== '' && kept.version === version && Date.now() - kept.at < MediaService.HOME_LIST_MAX_AGE_MS
+  }
+
+  // made again from data.json (one run per category at a time), then kept here and on the box
+  private remakeHomeList(category: CategoryType, version: string): Observable<Media[]> {
+    let run = this.homeListRuns.get(category)
+    if (!run) {
+      run = this.updateMedia(`${this.getApiBackendUrl()}/data`, false, category).pipe(
+        tap((media) => {
+          this.homeLists.set(category, { version, at: Date.now(), media })
+          if (version !== '') {
+            this.http.put(`${this.getApiBackendUrl()}/home-lists/${category}`, { version, media }).subscribe({ error: () => undefined })
+          }
+        }),
+        finalize(() => this.homeListRuns.delete(category)),
+        shareReplay({ bufferSize: 1, refCount: false }),
+      )
+      this.homeListRuns.set(category, run)
+    }
+    return run
+  }
+
+  // The data.json part of a category. showKept (home page): the kept list at once, and the new one after it when
+  // the kept one is out of date. Otherwise one answer: the kept list when it belongs to the current data.json,
+  // else a new one.
+  // onlyArtist (album page of an artist): the kept list when it is current, else only that artist's rows looked up.
+  private homeListMedia(category: CategoryType, showKept: boolean, onlyArtist?: string): Observable<Media[]> {
+    const copy = (list: Media[]) => {
+      try {
+        return structuredClone(list) // the pages change entries (resume, shuffle): never the kept ones
+      } catch {
+        return list.map((m) => ({ ...m }))
+      }
+    }
+    return forkJoin([this.loadHomeLists(), this.getLibraryVersion().pipe(take(1))]).pipe(
+      switchMap(([, version]) => {
+        const kept = this.homeLists.get(category)
+        if (kept && this.homeListIsCurrent(category, version)) {
+          return of(copy(kept.media))
+        }
+        if (onlyArtist !== undefined) {
+          return this.updateMedia(`${this.getApiBackendUrl()}/data`, false, category, onlyArtist)
+        }
+        if (kept && showKept) {
+          // a failed remake keeps what is shown
+          return concat(of(copy(kept.media)), this.remakeHomeList(category, version).pipe(map(copy), catchError(() => EMPTY)))
+        }
+        return this.remakeHomeList(category, version).pipe(map(copy))
+      }),
+    )
+  }
+
+  // Keeps the lists of the given categories up to date in the background, so a switch to another category shows
+  // it at once already the first time: shortly after the start, after every change of data.json and when they get
+  // old. One category after the other, only the ones out of date.
+  public keepHomeListsWarm(categories: () => CategoryType[]): void {
+    if (this.homeListsWarming) return
+    this.homeListsWarming = combineLatest([this.getLibraryVersion(), timer(15_000, MediaService.HOME_LIST_MAX_AGE_MS / 4)])
+      .pipe(
+        debounceTime(5_000),
+        exhaustMap(([version]) =>
+          this.loadHomeLists().pipe(
+            switchMap(() => from(categories().filter((c) => MediaService.HOME_LIST_CATEGORIES.includes(c)))),
+            concatMap((category) =>
+              this.homeListIsCurrent(category, version) ? EMPTY : this.remakeHomeList(category, version).pipe(catchError(() => EMPTY)),
+            ),
+          ),
+        ),
+      )
+      .subscribe()
+  }
+
+  private fetchMedia(category: CategoryType, onlyArtist?: string, showKept = false): Observable<Media[]> {
     if (category === 'nas') {
       // NAS media is fetched live from the NAS on every call (never cached
       // into data.json), so it bypasses the Spotify-oriented updateMedia pipeline
@@ -604,7 +737,9 @@ export class MediaService {
         }),
       )
     }
-    const dataMedia = this.updateMedia(`${this.getApiBackendUrl()}/data`, false, category, onlyArtist)
+    const dataMedia = MediaService.HOME_LIST_CATEGORIES.includes(category)
+      ? this.homeListMedia(category, showKept, onlyArtist)
+      : this.updateMedia(`${this.getApiBackendUrl()}/data`, false, category, onlyArtist)
 
     if (category === 'audiobook' || category === 'music' || category === 'other') {
       // Local files are read live from the media folders (any folder depth), so
@@ -614,7 +749,8 @@ export class MediaService {
       const localFolders = this.http
         .get<Media[]>(`${this.getApiBackendUrl()}/library/artists?category=${category}`)
         .pipe(catchError(() => of([] as Media[])))
-      return forkJoin([dataMedia, localFolders]).pipe(
+      // combineLatest: the data.json part may come twice (kept list, then the new one), each time with the folders
+      return combineLatest([dataMedia, localFolders]).pipe(
         map(([data, local]) => [...data.filter((item) => item.type !== 'library'), ...local]),
       )
     }
