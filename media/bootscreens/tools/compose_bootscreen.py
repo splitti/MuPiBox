@@ -111,26 +111,13 @@ def b_name(name):
     name = (name or "").strip()[: CFG["nameMaxLength"]]
     return name or CFG["defaultName"]
 
-BATTERY_W, BATTERY_H = 92, 40  # the empty battery incl. its pole
-
-def battery_icon(left, y, color, sh):
-    """An empty battery (so the picture needs no reading): outline in the text colour, a red rest at the left."""
-    w, h, r = 84, 40, 10
-    def body(dx, dy, c, fill_rest):
-        g = f'<rect x="{left+dx+2.5}" y="{y+dy+2.5}" width="{w-5}" height="{h-5}" rx="{r}" fill="none" stroke="{c}" stroke-width="5"/>'
-        g += f'<rect x="{left+dx+w+2}" y="{y+dy+h/2-8}" width="7" height="16" rx="3" fill="{c}"/>'
-        if fill_rest:
-            g += f'<rect x="{left+dx+9}" y="{y+dy+9}" width="12" height="{h-18}" rx="3" fill="#E5484D"/>'
-        return g
-    out = "".join(body(dx, dy, c, False) for dx, dy, c in reversed(sh))
-    return out + body(0, 0, color, True)
-
-def wartung(bid, kind, lang, out, scene="maintenance"):
-    """Title + line of text at the maintenance text's place: the maintenance screens (update, install, wlan) on the
-    scene with the hard hat, goodbye and battery on the boot screen's scene (the battery with an empty battery)."""
-    b = bs(bid); m = dict(b["maintenanceText"])
-    if scene == "scene" and b.get("sceneTextMaxWidth"):  # on the boot screen's scene MuPi can stand in the text area
-        m["maxWidth"] = min(m["maxWidth"], b["sceneTextMaxWidth"])
+def wartung(bid, kind, lang, out):
+    """Title + line of text on the scene of the kind: the maintenance screens (update, install, wlan) on the scene
+    with the hard hat, goodbye and battery on their own scenes. Text area: <kind>Text of the scene, else the
+    maintenance text's (the same place as the name in the boot screen)."""
+    b = bs(bid)
+    scene = kind if kind in ("goodbye", "battery") else "maintenance"
+    m = b.get(kind + "Text") or b["maintenanceText"]
     title, sub = CFG["texts"][kind].get(lang) or CFG["texts"][kind]["en"]
     use_family_for(title, sub)
     center = m["align"] == "center"; x = 400 if center else m["x"]; anchor = "middle" if center else "start"
@@ -139,20 +126,8 @@ def wartung(bid, kind, lang, out, scene="maintenance"):
     tlines = wrap(title, ft, m["maxWidth"], 2)
     tscale = min(1.0, m["maxWidth"] / max(1, max(ft.getlength(l) for l in tlines)))
     y = m["y"]; ov = ""
-    # battery: the empty battery right of the (first) title line when it fits there (below the text it could cover
-    # MuPi or leave the picture)
-    icon_inline = False
-    if kind == "battery":
-        tw = ft.getlength(tlines[0]) * tscale
-        icon_inline = tw + 18 + BATTERY_W <= m["maxWidth"]
-    for i, l in enumerate(tlines):
-        if i == 0 and icon_inline:
-            tx = x - (18 + BATTERY_W) / 2 if center else x  # the pair centred together
-            ov += text_el(l, tx, y, m["titleSize"], m["titleWeight"], m["color"], anchor, -1, sh, tscale, tx)
-            icon_left = (tx + tw / 2 + 18) if center else (x + tw + 18)
-            ov += battery_icon(icon_left, y + (m["titleSize"] * tscale - BATTERY_H) / 2 + 4, m["color"], sh)
-        else:
-            ov += text_el(l, x, y, m["titleSize"], m["titleWeight"], m["color"], anchor, -1, sh, tscale, x)
+    for l in tlines:
+        ov += text_el(l, x, y, m["titleSize"], m["titleWeight"], m["color"], anchor, -1, sh, tscale, x)
         y += m["titleSize"] * 1.05 * tscale
     y += m["gap"]
     p = m["subPill"]
@@ -171,8 +146,6 @@ def wartung(bid, kind, lang, out, scene="maintenance"):
         tx = x if center else x + p["padX"]
         ov += text_el(line, tx, y + p["padY"], sub_size, m["subWeight"], p["color"], anchor, 0, [])
         y += lh + p["lineGap"]
-    if kind == "battery" and not icon_inline:
-        ov += battery_icon(x - BATTERY_W / 2 if center else x, y + 6, m["color"], sh)
     render(os.path.join(BASE, "..", b[scene]), ov, out)
 
 def apply(outdir):
@@ -200,10 +173,10 @@ def apply(outdir):
     for bid in maint_ids:
         for kind in ("update", "install", "wlan"):
             wartung(bid, kind, lang, os.path.join(outdir, f"maintenance-{bid}-{kind}.png"))
-    # goodbye and battery empty (the box switches off): on the scene of the boot screen shown at that start
+    # goodbye and battery empty (the box switches off): the scenes that belong to the boot screen shown at that start
     for bid in boot_ids:
         for kind in ("goodbye", "battery"):
-            wartung(bid, kind, lang, os.path.join(outdir, f"{kind}-{bid}.png"), "scene")
+            wartung(bid, kind, lang, os.path.join(outdir, f"{kind}-{bid}.png"))
     colors = {b["id"]: b["baseColor"] for b in CFG["bootscreens"]}
     with open(os.path.join(outdir, "colors.txt"), "w") as f:
         f.write("".join(f"{bid} {colors[bid]}" + chr(10) for bid in ids))
@@ -216,7 +189,7 @@ if __name__ == "__main__":
     elif a[:1] == ["wartung"] and len(a) == 5:
         wartung(a[1], a[2], a[3], a[4])
     elif a[:1] == ["screen"] and len(a) == 5:
-        wartung(a[1], a[2], a[3], a[4], "scene")
+        wartung(a[1], a[2], a[3], a[4])
     elif a[:1] == ["apply"] and len(a) <= 2:
         apply(a[1] if len(a) == 2 else "/home/dietpi/MuPiBox/sysmedia/images/bootscreen")
     else:

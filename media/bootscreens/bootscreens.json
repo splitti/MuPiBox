@@ -372,6 +372,8 @@
       "baseColor": "#EE9E86",
       "scene": "screens/abendhuegel/splash.svg",
       "maintenance": "screens/abendhuegel/wartung.svg",
+      "goodbye": "screens/abendhuegel/goodbye.svg",
+      "battery": "screens/abendhuegel/battery.svg",
       "name": {
         "x": 446,
         "y": 68,
@@ -414,6 +416,8 @@
       "baseColor": "#CFE9F7",
       "scene": "screens/knete/splash.svg",
       "maintenance": "screens/knete/wartung.svg",
+      "goodbye": "screens/knete/goodbye.svg",
+      "battery": "screens/knete/battery.svg",
       "name": {
         "x": 435,
         "y": 114,
@@ -456,6 +460,8 @@
       "baseColor": "#F6EBD7",
       "scene": "screens/papier/splash.svg",
       "maintenance": "screens/papier/wartung.svg",
+      "goodbye": "screens/papier/goodbye.svg",
+      "battery": "screens/papier/battery.svg",
       "name": {
         "x": 41,
         "y": 46,
@@ -498,6 +504,8 @@
       "baseColor": "#1E2A44",
       "scene": "screens/plakativ/splash.svg",
       "maintenance": "screens/plakativ/wartung.svg",
+      "goodbye": "screens/plakativ/goodbye.svg",
+      "battery": "screens/plakativ/battery.svg",
       "name": {
         "x": 46,
         "y": 203,
@@ -531,7 +539,50 @@
           "lineGap": 6
         }
       },
-      "sceneTextMaxWidth": 390
+      "goodbyeText": {
+        "x": 46,
+        "y": 203,
+        "maxWidth": 390,
+        "align": "left",
+        "color": "#FFF4E6",
+        "textShadow": "none",
+        "titleSize": 52,
+        "titleWeight": 600,
+        "subSize": 21,
+        "subWeight": 500,
+        "gap": 10,
+        "subMaxLines": 2,
+        "subPill": {
+          "background": "rgba(255,255,255,0.92)",
+          "color": "#1E2A44",
+          "padX": 14,
+          "padY": 6,
+          "radius": 16,
+          "lineGap": 6
+        }
+      },
+      "batteryText": {
+        "x": 46,
+        "y": 203,
+        "maxWidth": 390,
+        "align": "left",
+        "color": "#FFF4E6",
+        "textShadow": "none",
+        "titleSize": 52,
+        "titleWeight": 600,
+        "subSize": 21,
+        "subWeight": 500,
+        "gap": 10,
+        "subMaxLines": 2,
+        "subPill": {
+          "background": "rgba(255,255,255,0.92)",
+          "color": "#1E2A44",
+          "padX": 14,
+          "padY": 6,
+          "radius": 16,
+          "lineGap": 6
+        }
+      }
     },
     {
       "id": "kinderbuch",
@@ -541,6 +592,8 @@
       "baseColor": "#FBF3E4",
       "scene": "screens/kinderbuch/splash.svg",
       "maintenance": "screens/kinderbuch/wartung.svg",
+      "goodbye": "screens/kinderbuch/goodbye.svg",
+      "battery": "screens/kinderbuch/battery.svg",
       "name": {
         "x": 46,
         "y": 50,
@@ -583,6 +636,8 @@
       "baseColor": "#F7D9A8",
       "scene": "screens/retro/splash.svg",
       "maintenance": "screens/retro/wartung.svg",
+      "goodbye": "screens/retro/goodbye.svg",
+      "battery": "screens/retro/battery.svg",
       "name": {
         "x": 40,
         "y": 46,
@@ -625,6 +680,8 @@
       "baseColor": "#141A40",
       "scene": "screens/weltraum/splash.svg",
       "maintenance": "screens/weltraum/wartung.svg",
+      "goodbye": "screens/weltraum/goodbye.svg",
+      "battery": "screens/weltraum/battery.svg",
       "name": {
         "x": 259,
         "y": 41,
@@ -667,6 +724,8 @@
       "baseColor": "#1678A6",
       "scene": "screens/unterwasser/splash.svg",
       "maintenance": "screens/unterwasser/wartung.svg",
+      "goodbye": "screens/unterwasser/goodbye.svg",
+      "battery": "screens/unterwasser/battery.svg",
       "name": {
         "x": 41,
         "y": 35,
@@ -709,6 +768,8 @@
       "baseColor": "#1C2A5A",
       "scene": "screens/winter/splash.svg",
       "maintenance": "screens/winter/wartung.svg",
+      "goodbye": "screens/winter/goodbye.svg",
+      "battery": "screens/winter/battery.svg",
       "name": {
         "x": 435,
         "y": 41,
@@ -751,6 +812,8 @@
       "baseColor": "#1E2447",
       "scene": "screens/lagerfeuer/splash.svg",
       "maintenance": "screens/lagerfeuer/wartung.svg",
+      "goodbye": "screens/lagerfeuer/goodbye.svg",
+      "battery": "screens/lagerfeuer/battery.svg",
       "name": {
         "x": 456,
         "y": 50,
@@ -793,6 +856,8 @@
       "baseColor": "#BFE6F7",
       "scene": "screens/ballon/splash.svg",
       "maintenance": "screens/ballon/wartung.svg",
+      "goodbye": "screens/ballon/goodbye.svg",
+      "battery": "screens/ballon/battery.svg",
       "name": {
         "x": 446,
         "y": 280,
@@ -835,6 +900,8 @@
       "baseColor": "#F6D8C2",
       "scene": "screens/zimmer/splash.svg",
       "maintenance": "screens/zimmer/wartung.svg",
+      "goodbye": "screens/zimmer/goodbye.svg",
+      "battery": "screens/zimmer/battery.svg",
       "name": {
         "x": 218,
         "y": 41,
@@ -877,6 +944,8 @@
       "baseColor": "#FDE7F0",
       "scene": "screens/regenbogen/splash.svg",
       "maintenance": "screens/regenbogen/wartung.svg",
+      "goodbye": "screens/regenbogen/goodbye.svg",
+      "battery": "screens/regenbogen/battery.svg",
       "name": {
         "x": 40,
         "y": 10,
@@ -919,6 +988,8 @@
       "baseColor": "#2A1840",
       "scene": "screens/konzert/splash.svg",
       "maintenance": "screens/konzert/wartung.svg",
+      "goodbye": "screens/konzert/goodbye.svg",
+      "battery": "screens/konzert/battery.svg",
       "name": {
         "x": 40,
         "y": 75,
@@ -961,6 +1032,8 @@
       "baseColor": "#BFE3C6",
       "scene": "screens/baumhaus/splash.svg",
       "maintenance": "screens/baumhaus/wartung.svg",
+      "goodbye": "screens/baumhaus/goodbye.svg",
+      "battery": "screens/baumhaus/battery.svg",
       "name": {
         "x": 41,
         "y": 35,
