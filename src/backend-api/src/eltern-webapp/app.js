@@ -2390,6 +2390,8 @@ async function loadTheme() {
   const available = res.body?.available ?? []
   // children's themes: German names only while the web app is in German
   const labels = (getLang() === 'de' ? res.body?.labelsDe : res.body?.labels) ?? {}
+  // in the order of the names shown (the kids' themes by their name in the active language)
+  available.sort((a, b) => String(labels[a] ?? a).localeCompare(String(labels[b] ?? b), localeTag(), { sensitivity: 'base' }))
   showThemeStage(res.body, current in (res.body?.labels ?? {}))
   if (!available.length) {
     wrap.innerHTML = `<p class="dim">${t('theme.none')}</p>`

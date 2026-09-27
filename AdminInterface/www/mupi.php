@@ -1601,11 +1601,14 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 					$selected = ($key == $data["mupibox"]["theme"]) ? " selected=\"selected\"" : "";
 					return "<option value=\"" . htmlspecialchars($key, ENT_QUOTES) . "\"" . $selected . ">" . htmlspecialchars($label) . "</option>";
 				};
-				$kmOptions = '';
+				$kmOptions = array();
 				foreach($Themes as $key) {
-					if (isset($kmNames[$key])) { $kmOptions .= $themeOption($key, $kmNames[$key]); continue; }
+					if (isset($kmNames[$key])) { $kmOptions[$kmNames[$key]] = $themeOption($key, $kmNames[$key]); continue; }
 					print $themeOption($key, $key);
 				}
+				// kids' themes in the order of their names
+				ksort($kmOptions, SORT_NATURAL | SORT_FLAG_CASE);
+				$kmOptions = implode('', $kmOptions);
 				if ($kmOptions !== '') print "<optgroup label=\"Kids' themes\">" . $kmOptions . "</optgroup>";
 				?>
 				</select>
