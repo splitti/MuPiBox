@@ -327,6 +327,12 @@ for km_theme in kuschelmond moosnest sonnenhof pferdehof fussball fahrzeuge buec
 done
 update_config '.mupibox.themeStage = (.mupibox.themeStage // false)'
 update_config '.mupibox.themeStageAutoRead = (.mupibox.themeStageAutoRead // false)'
+# boot and maintenance screens (MuPi-Conf): scene of the boot screen (or "random"), maintenance scene ("same" = the
+# boot screen's), box name in the boot screen (empty = MuPiBox), language of the maintenance texts
+update_config '.mupibox.bootscreen = (.mupibox.bootscreen // "abendhuegel")'
+update_config '.mupibox.maintenanceScreen = (.mupibox.maintenanceScreen // "same")'
+update_config '.mupibox.boxName = (.mupibox.boxName // "")'
+update_config '.mupibox.bootscreenLanguage = (.mupibox.bootscreenLanguage // "en")'
 
 CUSTOMTHEME=$(/usr/bin/jq -r '.mupibox.customTheme' ${CONFIG})
 if [ "$CUSTOMTHEME" == "null" ]; then

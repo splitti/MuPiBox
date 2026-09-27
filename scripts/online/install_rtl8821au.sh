@@ -3,8 +3,11 @@
 sudo killall -s 9 -w -q -r chromium
 sleep 0.5
 sudo rm /tmp/driver-install.txt
-sudo wget -O /tmp/installation.jpg https://raw.githubusercontent.com/splitti/MuPiBox/main/media/images/installation.jpg
-sudo /usr/bin/fbv /tmp/installation.jpg &
+if [ -x /usr/local/bin/mupibox/maintenance_screen.sh ]; then
+	sudo /usr/local/bin/mupibox/maintenance_screen.sh install
+else
+	sudo /usr/bin/fbv /home/dietpi/MuPiBox/sysmedia/images/installation.jpg &
+fi
 
 sudo apt-get update
 sudo apt-get reinstall -y raspberrypi-kernel-headers dkms

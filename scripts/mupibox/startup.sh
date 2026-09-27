@@ -56,7 +56,7 @@ if [ -f "$WIFI_FILE" ]; then
 		restart_network
 	elif [ "${SSID}" != "Your Wifi-Name" ]; then
 		killall -s 9 -w -q -r chromium
-		/usr/bin/fbv /home/dietpi/MuPiBox/sysmedia/images/installation.jpg &
+		/usr/local/bin/mupibox/maintenance_screen.sh wlan
 		#sudo wget -q -O ${WIFI_FILE} ${JSON_TEMPLATE}
 		WIFI_RESULT=$(sudo -i wpa_passphrase "${SSID}" "${PSK}") 
 		IFS=$'\n'

@@ -52,7 +52,10 @@ CHROMIUM_OPTS="${CHROMIUM_OPTS} --noerrdialogs"
 # Window Settings
 CHROMIUM_OPTS="${CHROMIUM_OPTS} --window-size=${RES_X:-1280},${RES_Y:-720} --window-position=0,0"
 # COLOR Parameters
-CHROMIUM_OPTS="${CHROMIUM_OPTS} --cast-app-background-color=44afe2ff --default-background-color=44afe2ff"
+# start background in the base colour of the boot screen (see bootscreen_color.sh), MuPi blue without one
+BOOT_BG=$(cat /home/dietpi/MuPiBox/sysmedia/images/bootscreen/color 2>/dev/null | tr -cd '0-9a-f' | cut -c1-6)
+[ ${#BOOT_BG} -eq 6 ] || BOOT_BG="44afe2"
+CHROMIUM_OPTS="${CHROMIUM_OPTS} --cast-app-background-color=${BOOT_BG}ff --default-background-color=${BOOT_BG}ff"
 # KIOSK Parameters
 if ${KIOSK} ; then
 	CHROMIUM_OPTS="${CHROMIUM_OPTS} --kiosk --start-fullscreen --start-maximized"
