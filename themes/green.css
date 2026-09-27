@@ -28,3 +28,9 @@ ion-card-title.ion-text-nowrap.truncate-text {
 ion-spinner{
         color: #a7d1a7 !important;
 }
+
+/* Statusanzeige (WLAN + Akku, siehe src/frontend-box/src/app/status): Farben dieses Themes */
+:root {
+  --st-on: #FFFFFF; --st-track: rgba(255, 255, 255, 0.42); --st-full: #FFFFFF; --st-num: #235223;
+  --st-low: #FF314C; --st-charge: #428CFF; --st-bolt-edge: #439C43;
+}

@@ -105,3 +105,9 @@ body .wifi-header {
 ion-spinner {
   color: #fdcb01 !important;
 }
+
+/* Statusanzeige (WLAN + Akku, siehe src/frontend-box/src/app/status): Farben dieses Themes */
+:root {
+  --st-on: #FFFFFF; --st-track: rgba(255, 255, 255, 0.42); --st-full: #FFFFFF; --st-num: #755E01;
+  --st-low: #FF314C; --st-charge: #428CFF; --st-bolt-edge: #FDCB01;
+}

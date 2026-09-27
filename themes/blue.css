@@ -41,3 +41,9 @@ ion-spinner{
         #background-repeat: no-repeat;
         #background-attachment: fixed;
 }
+
+/* Statusanzeige (WLAN + Akku, siehe src/frontend-box/src/app/status): Farben dieses Themes */
+:root {
+  --st-on: #FFFFFF; --st-track: rgba(255, 255, 255, 0.42); --st-full: #FFFFFF; --st-num: #042D3A;
+  --st-low: #FF314C; --st-charge: #428CFF; --st-bolt-edge: #054B61;
+}

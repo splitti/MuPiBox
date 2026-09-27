@@ -10,6 +10,48 @@ import { PlayerService } from '../player.service'
 // kids' themes set them in theme/km.scss, the other themes in their theme file).
 // Nothing in here takes pointer events: a press anywhere on the group reaches the element around it (on the start
 // page the button that opens the admin menu when held).
+//
+// Colours of the other themes (set in each theme file; measured on the box: the colour of the toolbar text and the
+// background behind the status; contrast of the number against the fill / the track, both >= 4.5):
+//   theme               on       track full     num      low      charge   bolt edge  contrast
+//   axolotl             #FFFFFF  42 %  #FFFFFF  #213132  #FF314C  #428CFF  #365354   13.5/4.7
+//   blue                #FFFFFF  42 %  #FFFFFF  #042D3A  #FF314C  #428CFF  #054B61   14.6/4.6
+//   captainamerica      #FFFFFF  42 %  #FFFFFF  #001B37  #FF314C  #428CFF  #002D5C   17.3/4.5
+//   chocolate           #FFFFFF  42 %  #FFFFFF  #33241A  #FF314C  #428CFF  #553C2B   14.9/4.7
+//   cinema              #FFFFFF  42 %  #FFFFFF  #564800  #FF314C  #428CFF  #A38800   9/4.6
+//   clone-wars          #FFFFFF  42 %  #FFFFFF  #333942  #FF314C  #428CFF  #616D7D   11.6/5
+//   comic               #FFFFFF  42 %  #FFFFFF  #182A2A  #FF314C  #428CFF  #284546   15/4.7
+//   coverflow           #FFFFFF  42 %  #FFFFFF  #0F0F10  #FF314C  #428CFF  #1C1C1E   19.2/4.5
+//   custom              #FFFFFF  42 %  #FFFFFF  #494543  #FF314C  #428CFF  #8B837E   9.5/4.8
+//   danger              #FFFFFF  42 %  #FFFFFF  #070A0D  #FF314C  #428CFF  #101820   19.8/4.5
+//   dark                #FFFFFF  42 %  #FFFFFF  #1A1A1A  #FF314C  #428CFF  #2A2A2A   17.4/4.6
+//   darkred             #FFFFFF  42 %  #FFFFFF  #380000  #FF314C  #428CFF  #8B0000   18/4.7
+//   deepblue            #FFFFFF  42 %  #FFFFFF  #160057  #FF314C  #428CFF  #3500D3   17.9/4.5
+//   dinosaur            #FFFFFF  46 %  #FFFFFF  #04080B  #FF314C  #428CFF  #0D151E   20.1/5.1
+//   earth               #FFFFFF  46 %  #FFFFFF  #000000  #FF314C  #428CFF  #000000   21/4.6
+//   enterprise          #FFFFFF  46 %  #FFFFFF  #0A0512  #FF314C  #428CFF  #170C2C   20.1/5
+//   fantasybutterflies  #FFFFFF  46 %  #FFFFFF  #020811  #FF314C  #428CFF  #020E20   20.1/4.8
+//   forms               #FFFFFF  42 %  #FFFFFF  #191919  #FF314C  #428CFF  #292929   17.6/4.6
+//   green               #FFFFFF  42 %  #FFFFFF  #235223  #FF314C  #428CFF  #439C43   9.1/4.7
+//   ironman             #FFFFFF  42 %  #FFFFFF  #530000  #FF314C  #428CFF  #CC0000   15.4/4.8
+//   light               #FFFFFF  42 %  #FFFFFF  #484848  #FF314C  #428CFF  #888888   9.1/4.7
+//   lines               #FFFFFF  42 %  #FFFFFF  #755E01  #FF314C  #428CFF  #FDCB01   6.3/4.8
+//   matrix              #FFFFFF  46 %  #FFFFFF  #000000  #FF314C  #428CFF  #000000   21/4.6
+//   mint                #FFFFFF  42 %  #FFFFFF  #001121  #FF314C  #428CFF  #00203F   19.1/4.5
+//   mystic              #FFFFFF  42 %  #FFFFFF  #10211C  #FF314C  #428CFF  #1A372F   16.7/4.7
+//   orange              #FFFFFF  42 %  #FFFFFF  #762A00  #FF314C  #428CFF  #FF5900   10/5
+//   pikachu             #FFFFFF  42 %  #FFFFFF  #574D20  #FF314C  #428CFF  #BBA744   8.4/5.2
+//   pink                #FFFFFF  42 %  #FFFFFF  #743041  #FF314C  #428CFF  #F9688D   9.4/5.1
+//   purple              #FFFFFF  42 %  #FFFFFF  #2A0733  #FF314C  #428CFF  #4F0D61   17.8/4.5
+//   red                 #FFFFFF  42 %  #FFFFFF  #55151A  #FF314C  #428CFF  #A12830   13.9/4.6
+//   spiderman           #FFFFFF  42 %  #FFFFFF  #30141F  #FF314C  #428CFF  #4F2233   16.9/4.6
+//   steampunk           #FFFFFF  42 %  #FFFFFF  #23190F  #FF314C  #428CFF  #3A2919   17.2/4.6
+//   supermario          #FFFFFF  42 %  #FFFFFF  #171058  #FF314C  #428CFF  #2C1EA7   16.8/4.6
+//   unicorn             #FFFFFF  42 %  #FFFFFF  #1A1513  #FF314C  #428CFF  #2C2320   18.1/4.6
+//   vintage             #FFFFFF  42 %  #FFFFFF  #692821  #FF314C  #428CFF  #E15546   10.9/5.1
+//   wall-e              #FFFFFF  42 %  #FFFFFF  #1A1A1A  #FF314C  #428CFF  #2A2A2A   17.4/4.6
+//   wood                #FFFFFF  42 %  #FFFFFF  #613B11  #FF314C  #428CFF  #B76F20   9.8/4.6
+//   xmas                #FFFFFF  42 %  #FFFFFF  #5B0000  #FF314C  #428CFF  #DE0000   14.5/4.8
 
 // dBm -> 1..3 lit arcs
 export function wifiLevelOf(signalDbm: number | undefined): number {
