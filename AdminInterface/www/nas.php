@@ -534,20 +534,27 @@ var NAS_CSRF = <?= json_encode(csrf_token()) ?>;
 
 	// "Show only selected": a folder stays if one of its own boxes is checked or something below it stays;
 	// the folders leading to a selected one are shown open. Folders hidden by the text filter stay hidden.
+	// Once the view is ready the folders can be opened by hand: a folder opened that way shows everything inside
+	// it (data-show-all), so more folders can be ticked. Closing it again brings back the selected-only view.
 	var onlySelected = false;
-	function selectedOnlyNode(div) {
+	function selectedOnlyNode(div, forced) {
 		if (div.style.display === 'none') { return false; }
 		var kids = kidsOf(div), any = false;
+		var showAllInside = div.dataset.showAll === '1';
 		if (kids) {
 			Array.prototype.forEach.call(kids.children, function (kid) {
-				if (isNode(kid) && selectedOnlyNode(kid)) { any = true; }
+				if (isNode(kid) && selectedOnlyNode(kid, showAllInside)) { any = true; }
 			});
 		}
 		var row = div.querySelector(':scope > .nas-row');
 		var own = !!(row && row.querySelector('input[type="checkbox"]:checked'));
 		setOpenForFilter(div, any);
-		div.style.display = (own || any) ? '' : 'none';
-		return own || any;
+		var keep = forced || own || any;
+		div.style.display = keep ? '' : 'none';
+		return keep;
+	}
+	function clearShowAll() {
+		Array.prototype.forEach.call(root.querySelectorAll('[data-show-all]'), function (el) { delete el.dataset.showAll; });
 	}
 
 	// Loads the subfolders of every folder for which shouldLoad(div) is true (4 requests at a time),
@@ -639,6 +646,7 @@ var NAS_CSRF = <?= json_encode(csrf_token()) ?>;
 		onlySelectedBtn.addEventListener('click', function () {
 			onlySelected = !onlySelected;
 			onlySelectedBtn.value = onlySelected ? 'Show all' : 'Show only selected';
+			clearShowAll();
 			if (!onlySelected) { applyFilter(); return; }
 			// First load the folders that lead to the saved selections (they may not be opened yet), then filter.
 			var token = ++filterToken;
@@ -817,9 +825,18 @@ var NAS_CSRF = <?= json_encode(csrf_token()) ?>;
 				});
 				return loadPromise;
 			}
-		chevron.addEventListener('click', function () { toggle(); });
-		label.addEventListener('click', function () { toggle(); });
-		icon.addEventListener('click', function () { toggle(); });
+		// A click by hand (not the restore of the opened folders while loading). In "Show only selected" a folder
+		// opened by hand shows everything inside it, so more can be ticked; closing it goes back to the selection.
+		function userToggle() {
+			var wasOpen = children.classList.contains('open');
+			var done = toggle();
+			if (!onlySelected) { return; }
+			if (wasOpen) { delete node.dataset.showAll; } else { node.dataset.showAll = '1'; }
+			Promise.resolve(done).then(applyFilter);
+		}
+		chevron.addEventListener('click', userToggle);
+		label.addEventListener('click', userToggle);
+		icon.addEventListener('click', userToggle);
 		return { toggle: toggle };
 	}
 
