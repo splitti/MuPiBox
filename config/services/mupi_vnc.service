@@ -13,7 +13,9 @@ Environment=DISPLAY=:0
 # display" and the service stayed failed. Wait for the display (up to 3 minutes), and start again after a failure.
 # (chromium-autostart.sh used to start a second x11vnc of its own - also when VNC was switched off in the admin
 # interface; this service is the only one now.)
-ExecStartPre=/bin/sh -c 'for i in $(seq 1 180); do [ -S /tmp/.X11-unix/X0 ] && exit 0; sleep 1; done; exit 1'
-ExecStart=/usr/bin/x11vnc -ncache 10 -forever -display :0
+# At boot x11vnc started just as Chromium loaded the display and slowed it down: it starts 60 s after the start of
+# the box now (switched on later in the admin interface: at once). The waiting happens in ExecStart, so the service
+# counts as started at once and holds nothing up. ($$ = a $ for the shell, not for systemd)
+ExecStart=/bin/sh -c 'u=$$(cut -d. -f1 /proc/uptime); [ "$$u" -lt 60 ] && sleep $$((60 - u)); for i in $$(seq 1 180); do [ -S /tmp/.X11-unix/X0 ] && exec /usr/bin/x11vnc -ncache 10 -forever -display :0; sleep 1; done; exit 1'
 Restart=on-failure
 RestartSec=10

@@ -1,8 +1,8 @@
 #!/bin/sh
 #
 # 1. Shows Shutdown Splash
-# 2. Update settings
-# 3. Plays shutdown sound
+# 2. Plays shutdown sound (while the splash is shown)
+# 3. Update settings
 
 CONFIG="/etc/mupibox/mupiboxconfig.json"
 SHUT_SOUND=$(/usr/bin/jq -r .mupibox.shutSound ${CONFIG})
@@ -14,8 +14,7 @@ if [ $(head -n1 ${PLAYERSTATE}) = "play" ]; then
   curl -s http://127.0.0.1:5005/pause
 fi
 
-sudo -i -u dietpi /usr/local/bin/mupibox/./shutdown_sound.sh
-#/usr/bin/pactl set-sink-volume @DEFAULT_SINK@ ${START_VOLUME}% 
+#/usr/bin/pactl set-sink-volume @DEFAULT_SINK@ ${START_VOLUME}%
 #/usr/bin/aplay ${SHUT_SOUND}
 
 CONFIG="/etc/mupibox/mupiboxconfig.json"
@@ -41,6 +40,10 @@ elif [ -n "$1" ]; then
 else
     /usr/bin/fbv ${SHUT_SPLASH} &
 fi
+# The sound plays while the goodbye picture is shown (it used to play first, 4 s with the display still on, and the
+# picture came after it). Waited for at the end, so it is not cut off.
+sudo -i -u dietpi /usr/local/bin/mupibox/./shutdown_sound.sh &
+SOUND_PID=$!
 wled_shut_active=$(/usr/bin/jq -r .wled.shutdown_active ${CONFIG})
 wled_shut_id=$(/usr/bin/jq -r .wled.shutdown_id ${CONFIG})
 wled_baud_rate=$(/usr/bin/jq -r .wled.baud_rate ${CONFIG})
@@ -67,6 +70,8 @@ systemctl --no-block stop mupi_powerled
 
 # disable execution of mupi_startstop service on shutdown again
 systemctl set-environment DISABLE_MUPI_START_STOP=1
+
+wait ${SOUND_PID}
 
 #sudo /usr/local/bin/mupibox/./setting_update.sh
 #sudo sh -c 'su - dietpi -s /usr/local/bin/mupibox/shutdown_sound.sh'

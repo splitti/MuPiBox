@@ -20,6 +20,53 @@ import RPi.GPIO as GPIO
 DEFAULT_PWM_FREQUENCY = 3000
 
 
+class HardwarePwm:
+    """The LED on the Pi's own PWM (config.txt: dtoverlay=pwm,pin=<12|13>,func=4, set by the install/update when the
+    LED is on one of these pins): the chip makes the signal. The software PWM of RPi.GPIO took about 9 % of a CPU
+    core at 3000 Hz, all the time the LED is dimmed (i.e. always). Same calls as RPi.GPIO's PWM."""
+
+    CHANNEL = {12: 0, 13: 1}
+    CHIP = "/sys/class/pwm/pwmchip0"
+
+    @staticmethod
+    def available(gpio):
+        if gpio not in HardwarePwm.CHANNEL or not os.path.isdir(HardwarePwm.CHIP):
+            return False
+        for config in ("/boot/firmware/config.txt", "/boot/config.txt"):
+            try:
+                with open(config) as file:
+                    lines = [line.strip() for line in file]
+            except OSError:
+                continue
+            return any(line.startswith("dtoverlay=pwm,pin=" + str(gpio) + ",") for line in lines)
+        return False
+
+    def __init__(self, gpio, frequency):
+        self.path = HardwarePwm.CHIP + "/pwm" + str(HardwarePwm.CHANNEL[gpio])
+        if not os.path.isdir(self.path):
+            self._write(HardwarePwm.CHIP + "/export", HardwarePwm.CHANNEL[gpio])
+            for _ in range(50):  # the channel's files appear a moment later
+                if os.path.exists(self.path + "/enable"):
+                    break
+                sleep(0.02)
+        self.period = int(1000000000 / frequency)
+        self._write(self.path + "/enable", 0)
+        self._write(self.path + "/duty_cycle", 0)
+        self._write(self.path + "/period", self.period)
+
+    @staticmethod
+    def _write(path, value):
+        with open(path, "w") as file:
+            file.write(str(value))
+
+    def start(self, duty):
+        self.ChangeDutyCycle(duty)
+        self._write(self.path + "/enable", 1)
+
+    def ChangeDutyCycle(self, duty):
+        self._write(self.path + "/duty_cycle", int(self.period * max(0, min(100, duty)) / 100))
+
+
 def read_json():
     try:
         with open(JSON_DATA_FILE) as file:
@@ -54,9 +101,10 @@ def sigterm_handler(*_):
     sys.exit(0)
 
 def init():
-    GPIO.setup(JSON_DATA["led_gpio"], GPIO.OUT)
-    GPIO.output(JSON_DATA["led_gpio"], GPIO.HIGH)
-    tmp = os.popen("ps -ef | grep chromium-browser | grep http | grep -v grep").read()
+    if not HARDWARE_PWM:  # (with the PWM hardware the pin must stay on its PWM function)
+        GPIO.setup(JSON_DATA["led_gpio"], GPIO.OUT)
+        GPIO.output(JSON_DATA["led_gpio"], GPIO.HIGH)
+    tmp =os.popen("ps -ef | grep chromium-browser | grep http | grep -v grep").read()
     while tmp == "":
         for x in range(0, 10, +1):
             led_control(0, int(JSON_DATA["led_max_brightness"]), 0.003)
@@ -85,9 +133,17 @@ if __name__ == "__main__":
         JSON_DATA = read_json()
 
     pwm_frequency = int(JSON_DATA.get("pwm_frequency", DEFAULT_PWM_FREQUENCY))
-    GPIO.setmode(GPIO.BCM)
-    GPIO.setup(JSON_DATA["led_gpio"], GPIO.OUT)
-    POWER_LED = GPIO.PWM(JSON_DATA["led_gpio"], pwm_frequency)
+    HARDWARE_PWM = False
+    if HardwarePwm.available(JSON_DATA["led_gpio"]):
+        try:
+            POWER_LED = HardwarePwm(JSON_DATA["led_gpio"], pwm_frequency)
+            HARDWARE_PWM = True
+        except OSError as error:
+            print("PWM hardware not usable, software PWM: " + str(error))
+    if not HARDWARE_PWM:
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(JSON_DATA["led_gpio"], GPIO.OUT)
+        POWER_LED = GPIO.PWM(JSON_DATA["led_gpio"], pwm_frequency)
     POWER_LED.start(0)
     init()
     signal.signal(signal.SIGTERM, sigterm_handler)

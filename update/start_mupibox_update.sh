@@ -680,6 +680,16 @@ rm -f /tmp/mupibox-update-failed
 	mv -f ${MUPI_SRC}/config/services/mupi_autoconnect-wifi.service /etc/systemd/system/mupi_autoconnect-wifi.service  >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/mupi_mqtt.service /etc/systemd/system/mupi_mqtt.service  >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/mupi_rotary.service /etc/systemd/system/mupi_rotary.service  >&3 2>&3
+	# LAN without waiting at boot, and an address at once when a cable is plugged in (see scripts/mupibox/mupi_ethernet.sh)
+	if [ -f ${MUPI_SRC}/config/services/mupi_ethernet.service ]; then
+		mv -f ${MUPI_SRC}/config/services/mupi_ethernet.service /etc/systemd/system/mupi_ethernet.service >&3 2>&3
+		mkdir -p "/etc/systemd/system/ifup@eth0.service.d" >&3 2>&3
+		cp -f "${MUPI_SRC}/config/services/ifup@eth0.service.d/mupibox.conf" "/etc/systemd/system/ifup@eth0.service.d/mupibox.conf" >&3 2>&3
+		MUPI_ETHERNET=1
+	fi
+	# The Samba share is a standalone server (smbd); the Active Directory domain controller came with the package and
+	# is not needed
+	systemctl disable --now samba-ad-dc.service >&3 2>&3
 
 	# Tolerant replacement for DietPi's WiFi monitor (see scripts/mupibox/wifi_monitor.sh): only versions that ship it
 	if [ "$RELEASE" = "dev" ] && [ -f ${MUPI_SRC}/config/services/dietpi-wifi-monitor-override.conf ]; then
@@ -704,6 +714,10 @@ rm -f /tmp/mupibox-update-failed
 	systemctl start mupi_powerled.service >&3 2>&3
 	systemctl enable dietpi-dashboard.service >&3 2>&3
 	systemctl start dietpi-dashboard.service >&3 2>&3
+	if [ "${MUPI_ETHERNET}" = "1" ]; then
+		systemctl enable mupi_ethernet.service >&3 2>&3
+		systemctl start mupi_ethernet.service >&3 2>&3
+	fi
 	after=$(date +%s)
 	echo -e "## Restarting services  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
@@ -738,6 +752,13 @@ rm -f /tmp/mupibox-update-failed
 	else
 	  echo '' | tee -a /boot/config.txt >&3 2>&3
 	  echo 'dtoverlay=gpio-poweroff,gpiopin=4,active_low=1' | tee -a /boot/config.txt >&3 2>&3
+	fi
+
+	# Power LED on the Pi's PWM hardware (see led_control.py; the software PWM took about 9 % of a CPU core all the
+	# time): only for GPIO 12/13 and with the analog audio off (it uses the same PWM unit). Active from the next start.
+	LED_PIN=$(/usr/bin/jq -r '.shim.ledPin // empty' ${CONFIG} 2>/dev/null)
+	if { [ "${LED_PIN}" = "12" ] || [ "${LED_PIN}" = "13" ]; } && grep -q '^dtparam=audio=off' /boot/config.txt && ! grep -q '^dtoverlay=pwm' /boot/config.txt; then
+	  echo "dtoverlay=pwm,pin=${LED_PIN},func=4" | tee -a /boot/config.txt >&3 2>&3
 	fi
 
 	#if grep -q '^initramfs initramfs.img' /boot/config.txt; then
