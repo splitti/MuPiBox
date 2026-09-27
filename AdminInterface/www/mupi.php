@@ -1872,16 +1872,18 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 							<option value="update">Update running</option>
 							<option value="install">Installation running</option>
 							<option value="wlan">New Wi-Fi being set up</option>
+							<option value="goodbye">Goodbye (switching off)</option>
+							<option value="battery">Battery empty (switching off)</option>
 						</select>
 					</div>
 					<div>
 						<h2>Boot screen</h2>
 						<div class="bs-preview" id="bsBootPreview"><img alt="" /><span class="bs-text"></span></div>
-						<h2>Maintenance screen</h2>
+						<h2 id="bsMaintTitle">Maintenance screen</h2>
 						<div class="bs-preview" id="bsMaintPreview"><img alt="" /><div class="bs-maint"></div></div>
 					</div>
 				</div>
-				<p>The pictures are put together on the box when you save; they are shown from the next start (the maintenance screen at the next update, installation or new Wi-Fi).</p>
+				<p>The pictures are put together on the box when you save; they are shown from the next start (the maintenance screen at the next update, installation or new Wi-Fi). Goodbye and "battery empty" (shown when the box switches off) use the scene of the boot screen.</p>
 				<input type="submit" class="button_text" name="bootscreen_save" value="Save" />
 			</li>
 			<script>
@@ -1922,8 +1924,9 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 					el.style.transformOrigin = center ? 'center top' : 'left top';
 					el.style.transform = (center ? 'translateX(-50%) ' : '') + 'scale(' + scale + ')';
 				}
-				function placeMaint(box, b, width) {
-					var s = width / 800, m = b.maintenanceText, p = m.subPill;
+				function placeMaint(box, b, width, onScene) {
+					var s = width / 800, m = Object.assign({}, b.maintenanceText), p = m.subPill;
+					if (onScene && b.sceneTextMaxWidth) m.maxWidth = Math.min(m.maxWidth, b.sceneTextMaxWidth);
 					var texts = (cfg.texts[kindSel.value] || {})[langSel.value] || (cfg.texts[kindSel.value] || {}).en || ['', ''];
 					box.innerHTML = '';
 					box.style.left = m.align === 'center' ? ((400 - m.maxWidth / 2) * s) + 'px' : (m.x * s) + 'px';
@@ -1938,6 +1941,12 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 					sub.className = 's';
 					sub.textContent = texts[1];
 					sub.style.cssText = 'font-size:' + (m.subSize * s) + 'px;font-weight:' + m.subWeight + ';color:' + p.color + ';background:' + p.background + ';border-radius:' + (p.radius * s) + 'px;padding:' + (p.padY * s) + 'px ' + (p.padX * s) + 'px';
+					if (kindSel.value === 'battery') {
+						// the empty battery next to the heading (as on the box)
+						var bat = document.createElement('span');
+						bat.style.cssText = 'display:inline-block;vertical-align:middle;margin-left:' + (18 * s) + 'px;width:' + (84 * s) + 'px;height:' + (40 * s) + 'px;box-sizing:border-box;border:' + (5 * s) + 'px solid ' + m.color + ';border-radius:' + (10 * s) + 'px;background:linear-gradient(90deg,transparent ' + (4 * s) + 'px,#E5484D ' + (4 * s) + 'px,#E5484D ' + (16 * s) + 'px,transparent ' + (16 * s) + 'px) content-box;padding:' + (4 * s) + 'px 0';
+						t.appendChild(bat);
+					}
 					box.appendChild(t);
 					box.appendChild(sub);
 				}
@@ -1947,12 +1956,14 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 					shownBoot = bootId === 'random' ? cfg.bootscreens[0].id : bootId;
 					var b = byId[shownBoot];
 					bootPreview.querySelector('img').src = 'images/bootscreens/' + b.scene;
-					var maintId = maintSel.value === 'same' ? shownBoot : maintSel.value;
+					var onScene = kindSel.value === 'goodbye' || kindSel.value === 'battery';
+					var maintId = onScene || maintSel.value === 'same' ? shownBoot : maintSel.value;
 					var mb = byId[maintId] || b;
-					maintPreview.querySelector('img').src = 'images/bootscreens/' + mb.maintenance;
+					maintPreview.querySelector('img').src = 'images/bootscreens/' + (onScene ? mb.scene : mb.maintenance);
+					document.getElementById('bsMaintTitle').textContent = onScene ? 'Switching off' : 'Maintenance screen';
 					var w = bootPreview.clientWidth || 400;
 					placeName(bootPreview.querySelector('.bs-text'), b, w);
-					placeMaint(maintPreview.querySelector('.bs-maint'), mb, maintPreview.clientWidth || 400);
+					placeMaint(maintPreview.querySelector('.bs-maint'), mb, maintPreview.clientWidth || 400, onScene);
 					// the name in every tile of the grid
 					document.querySelectorAll('#bsGrid [data-bs-name]').forEach(function (el) { placeName(el, byId[el.getAttribute('data-bs-name')], 160); });
 				}

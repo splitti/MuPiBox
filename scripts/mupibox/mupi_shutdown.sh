@@ -21,8 +21,20 @@ sudo -i -u dietpi /usr/local/bin/mupibox/./shutdown_sound.sh
 CONFIG="/etc/mupibox/mupiboxconfig.json"
 SHUT_SPLASH=$(/usr/bin/jq -r .mupibox.shutSplash ${CONFIG})
 
+# goodbye / battery empty: the pictures of the boot screen's scene of this start (bootscreen_update.sh), else as before
+BS_OUT="/home/dietpi/MuPiBox/sysmedia/images/bootscreen"
+BS_SCENE=$(cat ${BS_OUT}/current 2>/dev/null)
+case "$1" in
+	*battery_low*) BS_KIND="battery" ;;
+	"") BS_KIND="goodbye" ;;
+	*) BS_KIND="" ;;
+esac
+BS_PIC="${BS_OUT}/${BS_KIND}-${BS_SCENE}.png"
+
 killall -s 9 -w -q -r chromium
-if [ -n "$1" ]; then
+if [ -n "${BS_KIND}" ] && [ -n "${BS_SCENE}" ] && [ -f "${BS_PIC}" ]; then
+    /usr/bin/fbv "${BS_PIC}" &
+elif [ -n "$1" ]; then
     /usr/bin/fbv $1 &
 else
     /usr/bin/fbv ${SHUT_SPLASH} &

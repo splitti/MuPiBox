@@ -221,6 +221,146 @@
         "Ρύθμιση νέου Wi-Fi",
         "Η συσκευή θα επανεκκινηθεί σύντομα"
       ]
+    },
+    "goodbye": {
+      "en": [
+        "Goodbye!",
+        "See you soon"
+      ],
+      "de": [
+        "Tschüss!",
+        "Bis bald"
+      ],
+      "fr": [
+        "Au revoir !",
+        "À bientôt"
+      ],
+      "es": [
+        "¡Adiós!",
+        "Hasta pronto"
+      ],
+      "it": [
+        "Ciao ciao!",
+        "A presto"
+      ],
+      "nl": [
+        "Doei!",
+        "Tot snel"
+      ],
+      "sv": [
+        "Hej då!",
+        "Vi ses snart"
+      ],
+      "da": [
+        "Farvel!",
+        "Vi ses snart"
+      ],
+      "nb": [
+        "Ha det!",
+        "Vi ses snart"
+      ],
+      "fi": [
+        "Heippa!",
+        "Nähdään pian"
+      ],
+      "pl": [
+        "Pa pa!",
+        "Do zobaczenia"
+      ],
+      "pt": [
+        "Adeus!",
+        "Até breve"
+      ],
+      "tr": [
+        "Hoşça kal!",
+        "Görüşmek üzere"
+      ],
+      "uk": [
+        "Бувай!",
+        "До зустрічі"
+      ],
+      "ru": [
+        "Пока!",
+        "До встречи"
+      ],
+      "cs": [
+        "Ahoj!",
+        "Brzy na viděnou"
+      ],
+      "el": [
+        "Γεια σου!",
+        "Τα λέμε σύντομα"
+      ]
+    },
+    "battery": {
+      "en": [
+        "Battery empty",
+        "Please charge me – the box is switching off"
+      ],
+      "de": [
+        "Akku leer",
+        "Bitte aufladen – die Box schaltet sich aus"
+      ],
+      "fr": [
+        "Batterie vide",
+        "Recharge-moi – la box s'éteint"
+      ],
+      "es": [
+        "Batería vacía",
+        "Cárgame, por favor – la caja se apaga"
+      ],
+      "it": [
+        "Batteria scarica",
+        "Ricaricami – la box si spegne"
+      ],
+      "nl": [
+        "Batterij leeg",
+        "Laad me op – de box gaat uit"
+      ],
+      "sv": [
+        "Batteriet är slut",
+        "Ladda mig – boxen stängs av"
+      ],
+      "da": [
+        "Batteriet er tomt",
+        "Oplad mig – boksen slukker"
+      ],
+      "nb": [
+        "Batteriet er tomt",
+        "Lad meg opp – boksen slår seg av"
+      ],
+      "fi": [
+        "Akku on tyhjä",
+        "Lataa minut – laite sammuu"
+      ],
+      "pl": [
+        "Bateria pusta",
+        "Naładuj mnie – urządzenie się wyłącza"
+      ],
+      "pt": [
+        "Bateria vazia",
+        "Carrega-me – a caixa vai desligar"
+      ],
+      "tr": [
+        "Pil bitti",
+        "Beni şarj et – kutu kapanıyor"
+      ],
+      "uk": [
+        "Батарея розряджена",
+        "Зарядіть мене – пристрій вимикається"
+      ],
+      "ru": [
+        "Батарея разряжена",
+        "Зарядите меня – устройство выключается"
+      ],
+      "cs": [
+        "Baterie je vybitá",
+        "Nabij mě – box se vypíná"
+      ],
+      "el": [
+        "Η μπαταρία άδειασε",
+        "Φόρτισέ με – η συσκευή σβήνει"
+      ]
     }
   },
   "bootscreens": [
@@ -390,7 +530,8 @@
           "radius": 16,
           "lineGap": 6
         }
-      }
+      },
+      "sceneTextMaxWidth": 390
     },
     {
       "id": "kinderbuch",
