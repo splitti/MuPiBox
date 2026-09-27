@@ -1,4 +1,4 @@
-# Handoff: MuPiBox km-Themes (17 Designs + Cover-Flow-Variante „Bühne“)
+# Handoff: MuPiBox km-Themes (30 Designs + Cover-Flow-Variante „Bühne“)
 
 ## Überblick
 Neue Theme-Familie für die MuPiBox-Kinderoberfläche (Angular 20 + Ionic 8, Chromium-Kiosk, Pi 4, Touch 800 × 480). Alle Themes teilen **einen Aufbau** (Maße, Bedienung, Zustände) und unterscheiden sich in Farben, Hintergrundmotiv, Maskottchen und ggf. Schrift.
@@ -6,8 +6,8 @@ Neue Theme-Familie für die MuPiBox-Kinderoberfläche (Angular 20 + Ionic 8, Chr
 **Themes (Id → Anzeigename):** `kuschelmond` → Kuschelmond · `moosnest` → Moosnest · `sonnenhof` → Sonnenhof · `pferdehof` → Pferdehof · `fussball` → Fußball · `fahrzeuge` → Fahrzeuge · `buecherregal` → Bücherregal · `kassettenrekorder` → Kassettenrekorder · `unterwasser` → Unterwasser · `bastelpapier` → Bastelpapier · `prinzessin` → Prinzessin · `einhorn` → Einhorn · `feenschloss` → Feenschloss · `weltraum` → Weltraum · `dinoland` → Dinoland · `piratenbucht` → Piratenbucht · `tagundnacht` → Tag & Nacht
 
 **Ziel dieser Umsetzung**
-1. Alle 17 Themes vollständig übernehmen (CSS, Assets, Aufbau-Änderungen in Angular).
-2. In **MuPi-Conf → Theme** sind alle 17 auswählbar (zusätzlich zu den bestehenden Themes).
+1. Alle 30 Themes vollständig übernehmen (CSS, Assets, Aufbau-Änderungen in Angular).
+2. In **MuPi-Conf → Theme** sind alle 30 auswählbar (zusätzlich zu den bestehenden Themes).
 3. Für diese Themes gibt es in MuPi-Conf einen **Schieberegler „Cover-Flow-Ansicht“** (an/aus). Aus = normale Reihe (3 Einträge), an = **Bühne** (großes Cover in der Mitte, Nachbarn kleiner). Der Regler ist nur sichtbar, wenn ein km-Theme gewählt ist.
 4. Bestehende Themes (inkl. dem alten `coverflow`) bleiben unverändert funktionsfähig.
 
@@ -25,7 +25,7 @@ Die Dateien in `box/` sind dagegen **direkt verwendbar**: Theme-CSS, SVG-Assets,
 
 ```
 box/
-  themes/<id>.css            17 Theme-Dateien (Variablen + gemeinsamer Teil + Besonderheiten)
+  themes/<id>.css            30 Theme-Dateien (Variablen + gemeinsamer Teil + Besonderheiten)
   themes/km-themes.json      Metadaten + alle Tokens aller Themes (für Registry/MuPi-Conf)
   theme-data/<id>/background.svg, maskottchen.svg (schlafend), maskottchen-wach.svg, cover-platzhalter.svg
   theme-data/tagundnacht/    zusätzlich background-nacht.svg, maskottchen-nacht(-wach).svg
@@ -61,7 +61,7 @@ Beim Laden der Konfiguration und bei jeder Änderung:
 
 ### 2.4 MuPi-Conf (Admin-Oberfläche)
 Die Stelle finden, an der die Theme-Auswahl gebaut wird (z. B. im Admin-Quellcode nach `steampunk` / `coverflow` suchen).
-- Alle 17 Ids mit Anzeigenamen aus `km-themes.json` ergänzen; optional als eigene Gruppe „Kinder-Themes (km)“.
+- Alle 30 Ids mit Anzeigenamen aus `km-themes.json` ergänzen; optional als eigene Gruppe „Kinder-Themes (km)“.
 - Darunter ein **Schieberegler/Toggle „Cover-Flow-Ansicht“** mit Hilfetext: „Großes Cover in der Mitte, Nachbarn kleiner. Wischen oder Nachbar antippen holt ihn in die Mitte.“ Nur einblenden, wenn ein km-Theme gewählt ist; speichert `themeStage`.
 - Optional (empfohlen) zweiter Toggle „Name beim Anhalten vorlesen“ (`themeStageAutoRead`, Standard aus) – nur bei aktiver Bühne sichtbar.
 - Beim Speichern denselben Weg wie bei der bisherigen Theme-Auswahl gehen (Konfig schreiben, Theme-Datei kopieren/verlinken, ggf. Dienst neu laden).
@@ -1006,6 +1006,383 @@ Alle Werte stehen zusätzlich maschinenlesbar in `box/themes/km-themes.json` und
 | **Eltern-QR** | Scrim (siehe CSS) | Karte `#FFFFFF` | `#3B2F2A`, Knopf `#3B2F2A` |
 | **Bildschirm aus** | `#000000` | – | – |
 
+
+### Feuerwehr / Fire Station — `feuerwehr`
+- **Grund:** hell → `km-light`, Kopfleisten-Text/Status dunkel (`--km-on-bg` = Ink)
+- **Schrift:** Baloo 2 (`/theme-data/_fonts/Baloo2-Variable.ttf`)
+- **Maskottchen:** Tupfi – Dalmatiner-Welpe mit rotem Feuerwehrhelm
+- **Hintergrund-Motive:** Feuerwache mit zwei Toren und Glocke, Löschfahrzeug mit Leiter, Hydrant, Leiter in der Lücke zwischen Karte 1 und 2, Straße mit Mittelstreifen, Helm und Leitkegel, Wolken.
+- **Referenz:** `design-reference/Mupi Screen Feuerwehr.dc.html`
+
+| Variable | Wert | Rolle |
+|---|---|---|
+| `--km-night` | `#CFE6F5` | Hintergrund (Grundfarbe) |
+| `--km-night-2` | `#FFFFFF` | Reiterleiste, Titelliste-Panel, Spul-/Zufall-Knöpfe, Pillen |
+| `--km-night-3` | `#C8372D` | Runde Knöpfe, Hörzeit normal, Balken-Spur, Abzeichen-Grund |
+| `--km-night-4` | `#A42A22` | Gedrückt, Cover-Füllung, Platzhalter-Grund |
+| `--km-stack-1` | `#FFFFFF` | Ordner-Stapel vorne |
+| `--km-stack-2` | `#F3C7C1` | Ordner-Stapel hinten |
+| `--km-shadow` | `#9DBFD8` | Harte Versatz-Schatten |
+| `--km-overlay` | `#FFF2E8` | Tageslimit/Ruhezeit/Eltern-Pause (einfarbig) |
+| `--km-cream` | `#FFFFFF` | Namensleiste, Karten |
+| `--km-ring` | `#FFFFFF` | Ring um runde Bilder |
+| `--km-ink` | `#2B2230` | Text auf hellen Flächen |
+| `--km-lavender` | `#4A3B48` | Sekundärtext, Zeiten, Akku-Prozent |
+| `--km-apricot` | `#FFC23D` | Akzent: aktiver Reiter, Play, Badges, Fortschritt |
+| `--km-apricot-shadow` | `#C98E12` | Schatten unter Play |
+| `--km-moon` | `#FFE27A` | Namensleiste „liest vor“, Lade-Punkte, Overlay-Abzeichen-Inhalt |
+| `--km-rose` | `#E8503F` | Hörzeit < 5 min, Live-Punkt, Akku fast leer |
+| `--km-on-bg` | `#2B2230` | Text/Symbole direkt auf dem Hintergrund |
+| `--km-sync-bg` | `#A42A22` | Sync-Abzeichen Grund |
+| `--km-sync-fg` | `#FFFFFF` | Sync-Abzeichen Symbol |
+
+### Ritterburg / Knight Castle — `ritterburg`
+- **Grund:** hell → `km-light`, Kopfleisten-Text/Status dunkel (`--km-on-bg` = Ink)
+- **Schrift:** Fredoka (`/theme-data/_fonts/Fredoka-Variable.ttf`)
+- **Maskottchen:** Drako – kleiner grüner Drache mit Hörnchen
+- **Hintergrund-Motive:** Burg bei Tag: zwei Türme mit Fahnen in den Lücken zwischen den Karten, Burgmauer mit Zinnen und Holztor, grüne Hügel, Wappenschilde, Schwert, Krone, Blümchen, Wolken.
+- **Referenz:** `design-reference/Mupi Screen Ritterburg.dc.html`
+
+| Variable | Wert | Rolle |
+|---|---|---|
+| `--km-night` | `#D7E9F7` | Hintergrund (Grundfarbe) |
+| `--km-night-2` | `#FFFFFF` | Reiterleiste, Titelliste-Panel, Spul-/Zufall-Knöpfe, Pillen |
+| `--km-night-3` | `#3F6FB5` | Runde Knöpfe, Hörzeit normal, Balken-Spur, Abzeichen-Grund |
+| `--km-night-4` | `#325A96` | Gedrückt, Cover-Füllung, Platzhalter-Grund |
+| `--km-stack-1` | `#FFFFFF` | Ordner-Stapel vorne |
+| `--km-stack-2` | `#C9D8EE` | Ordner-Stapel hinten |
+| `--km-shadow` | `#A6C1DD` | Harte Versatz-Schatten |
+| `--km-overlay` | `#F3F6FB` | Tageslimit/Ruhezeit/Eltern-Pause (einfarbig) |
+| `--km-cream` | `#FFFFFF` | Namensleiste, Karten |
+| `--km-ring` | `#FFFFFF` | Ring um runde Bilder |
+| `--km-ink` | `#22283A` | Text auf hellen Flächen |
+| `--km-lavender` | `#3D4A66` | Sekundärtext, Zeiten, Akku-Prozent |
+| `--km-apricot` | `#F2B134` | Akzent: aktiver Reiter, Play, Badges, Fortschritt |
+| `--km-apricot-shadow` | `#B7801A` | Schatten unter Play |
+| `--km-moon` | `#FFE08A` | Namensleiste „liest vor“, Lade-Punkte, Overlay-Abzeichen-Inhalt |
+| `--km-rose` | `#E0524A` | Hörzeit < 5 min, Live-Punkt, Akku fast leer |
+| `--km-on-bg` | `#22283A` | Text/Symbole direkt auf dem Hintergrund |
+| `--km-sync-bg` | `#325A96` | Sync-Abzeichen Grund |
+| `--km-sync-fg` | `#FFFFFF` | Sync-Abzeichen Symbol |
+
+### Eisenbahn / Railway — `eisenbahn`
+- **Grund:** hell → `km-light`, Kopfleisten-Text/Status dunkel (`--km-on-bg` = Ink)
+- **Schrift:** Fredoka (`/theme-data/_fonts/Fredoka-Variable.ttf`)
+- **Maskottchen:** Tuffi – kleine grüne Lok mit Gesicht (wach mit Dampfwölkchen)
+- **Hintergrund-Motive:** Grüne Hügel mit Tunnel, Gleis mit Holzschwellen am unteren Rand, grüne Dampflok mit zwei bunten Waggons und Dampfwolken, Signal in der Lücke zwischen Karte 2 und 3, Bäume, Blumen, Wolken.
+- **Referenz:** `design-reference/Mupi Screen Eisenbahn.dc.html`
+
+| Variable | Wert | Rolle |
+|---|---|---|
+| `--km-night` | `#CDEBF2` | Hintergrund (Grundfarbe) |
+| `--km-night-2` | `#FFFFFF` | Reiterleiste, Titelliste-Panel, Spul-/Zufall-Knöpfe, Pillen |
+| `--km-night-3` | `#2F7A5A` | Runde Knöpfe, Hörzeit normal, Balken-Spur, Abzeichen-Grund |
+| `--km-night-4` | `#256248` | Gedrückt, Cover-Füllung, Platzhalter-Grund |
+| `--km-stack-1` | `#FFFFFF` | Ordner-Stapel vorne |
+| `--km-stack-2` | `#CFE6D8` | Ordner-Stapel hinten |
+| `--km-shadow` | `#9CCBD6` | Harte Versatz-Schatten |
+| `--km-overlay` | `#F4F8EE` | Tageslimit/Ruhezeit/Eltern-Pause (einfarbig) |
+| `--km-cream` | `#FFFFFF` | Namensleiste, Karten |
+| `--km-ring` | `#FFFFFF` | Ring um runde Bilder |
+| `--km-ink` | `#26302B` | Text auf hellen Flächen |
+| `--km-lavender` | `#3A5147` | Sekundärtext, Zeiten, Akku-Prozent |
+| `--km-apricot` | `#F2663B` | Akzent: aktiver Reiter, Play, Badges, Fortschritt |
+| `--km-apricot-shadow` | `#B8452A` | Schatten unter Play |
+| `--km-moon` | `#FFD65C` | Namensleiste „liest vor“, Lade-Punkte, Overlay-Abzeichen-Inhalt |
+| `--km-rose` | `#E0463C` | Hörzeit < 5 min, Live-Punkt, Akku fast leer |
+| `--km-on-bg` | `#26302B` | Text/Symbole direkt auf dem Hintergrund |
+| `--km-sync-bg` | `#256248` | Sync-Abzeichen Grund |
+| `--km-sync-fg` | `#FFFFFF` | Sync-Abzeichen Symbol |
+
+### Roboterwerkstatt / Robot Workshop — `roboter`
+- **Grund:** dunkel → Kopfleisten-Text/Status hell (`--km-on-bg` = Creme)
+- **Schrift:** Baloo 2 (`/theme-data/_fonts/Baloo2-Variable.ttf`)
+- **Maskottchen:** Bolti – runder Roboter mit Bildschirm-Gesicht und Antenne
+- **Hintergrund-Motive:** Werkstatt in Petrol: Rasterwand, Zahnräder, Greifarm in der Lücke zwischen Karte 1 und 2, Zahnradpaar, kleiner Roboter auf Rädern, Messgerät mit Kurve, Schraubenschlüssel, Förderband mit Warnstreifen.
+- **Referenz:** `design-reference/Mupi Screen Roboter.dc.html`
+
+| Variable | Wert | Rolle |
+|---|---|---|
+| `--km-night` | `#15303A` | Hintergrund (Grundfarbe) |
+| `--km-night-2` | `#1C3E4A` | Reiterleiste, Titelliste-Panel, Spul-/Zufall-Knöpfe, Pillen |
+| `--km-night-3` | `#28525F` | Runde Knöpfe, Hörzeit normal, Balken-Spur, Abzeichen-Grund |
+| `--km-night-4` | `#336473` | Gedrückt, Cover-Füllung, Platzhalter-Grund |
+| `--km-stack-1` | `#6FB7C4` | Ordner-Stapel vorne |
+| `--km-stack-2` | `#3F7F8C` | Ordner-Stapel hinten |
+| `--km-shadow` | `#0C1F26` | Harte Versatz-Schatten |
+| `--km-overlay` | `#10262E` | Tageslimit/Ruhezeit/Eltern-Pause (einfarbig) |
+| `--km-cream` | `#EAF7F5` | Namensleiste, Karten |
+| `--km-ring` | `#CFEFEA` | Ring um runde Bilder |
+| `--km-ink` | `#15262B` | Text auf hellen Flächen |
+| `--km-lavender` | `#A9CFD2` | Sekundärtext, Zeiten, Akku-Prozent |
+| `--km-apricot` | `#FF9F43` | Akzent: aktiver Reiter, Play, Badges, Fortschritt |
+| `--km-apricot-shadow` | `#B86A1F` | Schatten unter Play |
+| `--km-moon` | `#7FF0DC` | Namensleiste „liest vor“, Lade-Punkte, Overlay-Abzeichen-Inhalt |
+| `--km-rose` | `#FF6B6B` | Hörzeit < 5 min, Live-Punkt, Akku fast leer |
+| `--km-on-bg` | `#EAF7F5` | Text/Symbole direkt auf dem Hintergrund |
+| `--km-sync-bg` | `#15303A` | Sync-Abzeichen Grund |
+| `--km-sync-fg` | `#EAF7F5` | Sync-Abzeichen Symbol |
+
+### Heldenstadt / Hero City — `heldenstadt`
+- **Grund:** dunkel → Kopfleisten-Text/Status hell (`--km-on-bg` = Creme)
+- **Schrift:** Baloo 2 (`/theme-data/_fonts/Baloo2-Variable.ttf`)
+- **Maskottchen:** Kapi – runder kleiner Held mit Maske, Stern und rotem Umhang
+- **Hintergrund-Motive:** Stadt bei Nacht: Sterne, Mondsichel, Suchscheinwerfer-Kegel, Hochhäuser mit leuchtenden Fenstern (zwei schmale Türme in den Kartenlücken mit Antennen-Lichtern), Straße, Held fliegt am Himmel, Blitz-Symbol, Heldenwagen, Stern-Umhang.
+- **Referenz:** `design-reference/Mupi Screen Heldenstadt.dc.html`
+
+| Variable | Wert | Rolle |
+|---|---|---|
+| `--km-night` | `#1A2150` | Hintergrund (Grundfarbe) |
+| `--km-night-2` | `#232C66` | Reiterleiste, Titelliste-Panel, Spul-/Zufall-Knöpfe, Pillen |
+| `--km-night-3` | `#2F3A80` | Runde Knöpfe, Hörzeit normal, Balken-Spur, Abzeichen-Grund |
+| `--km-night-4` | `#3B4796` | Gedrückt, Cover-Füllung, Platzhalter-Grund |
+| `--km-stack-1` | `#8C98E8` | Ordner-Stapel vorne |
+| `--km-stack-2` | `#5663B8` | Ordner-Stapel hinten |
+| `--km-shadow` | `#10153A` | Harte Versatz-Schatten |
+| `--km-overlay` | `#141A42` | Tageslimit/Ruhezeit/Eltern-Pause (einfarbig) |
+| `--km-cream` | `#FFF6E8` | Namensleiste, Karten |
+| `--km-ring` | `#FFE28A` | Ring um runde Bilder |
+| `--km-ink` | `#1E1A33` | Text auf hellen Flächen |
+| `--km-lavender` | `#C3C8F0` | Sekundärtext, Zeiten, Akku-Prozent |
+| `--km-apricot` | `#FFC53D` | Akzent: aktiver Reiter, Play, Badges, Fortschritt |
+| `--km-apricot-shadow` | `#B8861A` | Schatten unter Play |
+| `--km-moon` | `#FFE28A` | Namensleiste „liest vor“, Lade-Punkte, Overlay-Abzeichen-Inhalt |
+| `--km-rose` | `#FF5C6C` | Hörzeit < 5 min, Live-Punkt, Akku fast leer |
+| `--km-on-bg` | `#FFF6E8` | Text/Symbole direkt auf dem Hintergrund |
+| `--km-sync-bg` | `#1A2150` | Sync-Abzeichen Grund |
+| `--km-sync-fg` | `#FFF6E8` | Sync-Abzeichen Symbol |
+
+### Safari / Safari Trail — `safari`
+- **Grund:** hell → `km-light`, Kopfleisten-Text/Status dunkel (`--km-on-bg` = Ink)
+- **Schrift:** Fredoka (`/theme-data/_fonts/Fredoka-Variable.ttf`)
+- **Maskottchen:** Leo – Löwenjunges mit runder Mähne
+- **Hintergrund-Motive:** Savanne am Nachmittag: warme Sonne, Vögel, Sandhügel, zwei Akazien, Giraffe mit langem Hals in der Lücke zwischen Karte 1 und 2, Elefant, Zebra, Grasbüschel.
+- **Referenz:** `design-reference/Mupi Screen Safari.dc.html`
+
+| Variable | Wert | Rolle |
+|---|---|---|
+| `--km-night` | `#FBE7B5` | Hintergrund (Grundfarbe) |
+| `--km-night-2` | `#FFFFFF` | Reiterleiste, Titelliste-Panel, Spul-/Zufall-Knöpfe, Pillen |
+| `--km-night-3` | `#A0602E` | Runde Knöpfe, Hörzeit normal, Balken-Spur, Abzeichen-Grund |
+| `--km-night-4` | `#874E22` | Gedrückt, Cover-Füllung, Platzhalter-Grund |
+| `--km-stack-1` | `#FFFFFF` | Ordner-Stapel vorne |
+| `--km-stack-2` | `#F2D28E` | Ordner-Stapel hinten |
+| `--km-shadow` | `#E0C27F` | Harte Versatz-Schatten |
+| `--km-overlay` | `#FFF6E0` | Tageslimit/Ruhezeit/Eltern-Pause (einfarbig) |
+| `--km-cream` | `#FFFFFF` | Namensleiste, Karten |
+| `--km-ring` | `#FFFFFF` | Ring um runde Bilder |
+| `--km-ink` | `#33261B` | Text auf hellen Flächen |
+| `--km-lavender` | `#5E4631` | Sekundärtext, Zeiten, Akku-Prozent |
+| `--km-apricot` | `#6FB24A` | Akzent: aktiver Reiter, Play, Badges, Fortschritt |
+| `--km-apricot-shadow` | `#4A8430` | Schatten unter Play |
+| `--km-moon` | `#FFD23F` | Namensleiste „liest vor“, Lade-Punkte, Overlay-Abzeichen-Inhalt |
+| `--km-rose` | `#E2553B` | Hörzeit < 5 min, Live-Punkt, Akku fast leer |
+| `--km-on-bg` | `#33261B` | Text/Symbole direkt auf dem Hintergrund |
+| `--km-sync-bg` | `#874E22` | Sync-Abzeichen Grund |
+| `--km-sync-fg` | `#FFFFFF` | Sync-Abzeichen Symbol |
+
+### Pinguin-Eiswelt / Penguin Ice — `eiswelt`
+- **Grund:** hell → `km-light`, Kopfleisten-Text/Status dunkel (`--km-on-bg` = Ink)
+- **Schrift:** Fredoka (`/theme-data/_fonts/Fredoka-Variable.ttf`)
+- **Maskottchen:** Pingo – Pinguin mit oranger Wollmütze
+- **Hintergrund-Motive:** Eislandschaft: blasse Sonne, Schneeflocken, Eisberge, zwei Eiszapfen-Spitzen in den Kartenlücken, Iglu, drei Pinguine, Eisloch, Robbe, Schneefeld.
+- **Referenz:** `design-reference/Mupi Screen Eiswelt.dc.html`
+
+| Variable | Wert | Rolle |
+|---|---|---|
+| `--km-night` | `#DDF1FB` | Hintergrund (Grundfarbe) |
+| `--km-night-2` | `#FFFFFF` | Reiterleiste, Titelliste-Panel, Spul-/Zufall-Knöpfe, Pillen |
+| `--km-night-3` | `#2E7DB5` | Runde Knöpfe, Hörzeit normal, Balken-Spur, Abzeichen-Grund |
+| `--km-night-4` | `#236795` | Gedrückt, Cover-Füllung, Platzhalter-Grund |
+| `--km-stack-1` | `#FFFFFF` | Ordner-Stapel vorne |
+| `--km-stack-2` | `#C8E4F4` | Ordner-Stapel hinten |
+| `--km-shadow` | `#A9D2EA` | Harte Versatz-Schatten |
+| `--km-overlay` | `#F2FAFE` | Tageslimit/Ruhezeit/Eltern-Pause (einfarbig) |
+| `--km-cream` | `#FFFFFF` | Namensleiste, Karten |
+| `--km-ring` | `#FFFFFF` | Ring um runde Bilder |
+| `--km-ink` | `#1E2C3A` | Text auf hellen Flächen |
+| `--km-lavender` | `#355468` | Sekundärtext, Zeiten, Akku-Prozent |
+| `--km-apricot` | `#FF8A5C` | Akzent: aktiver Reiter, Play, Badges, Fortschritt |
+| `--km-apricot-shadow` | `#C75A32` | Schatten unter Play |
+| `--km-moon` | `#FFE07A` | Namensleiste „liest vor“, Lade-Punkte, Overlay-Abzeichen-Inhalt |
+| `--km-rose` | `#E8505B` | Hörzeit < 5 min, Live-Punkt, Akku fast leer |
+| `--km-on-bg` | `#1E2C3A` | Text/Symbole direkt auf dem Hintergrund |
+| `--km-sync-bg` | `#236795` | Sync-Abzeichen Grund |
+| `--km-sync-fg` | `#FFFFFF` | Sync-Abzeichen Symbol |
+
+### Zirkus / Circus Tent — `zirkus`
+- **Grund:** dunkel → Kopfleisten-Text/Status hell (`--km-on-bg` = Creme)
+- **Schrift:** Fredoka (`/theme-data/_fonts/Fredoka-Variable.ttf`)
+- **Maskottchen:** Trööt – kleiner Elefant mit rotem Zirkushütchen
+- **Hintergrund-Motive:** Im Zirkuszelt am Abend: rot-weiße Zeltbahnen, Wimpel oben, Lichterkette, runde Manege, zwei Podeste mit Bällen in den Kartenlücken, Trommel, Ball, Luftballons, goldene Sterne.
+- **Referenz:** `design-reference/Mupi Screen Zirkus.dc.html`
+
+| Variable | Wert | Rolle |
+|---|---|---|
+| `--km-night` | `#2A1838` | Hintergrund (Grundfarbe) |
+| `--km-night-2` | `#37204A` | Reiterleiste, Titelliste-Panel, Spul-/Zufall-Knöpfe, Pillen |
+| `--km-night-3` | `#4A2C60` | Runde Knöpfe, Hörzeit normal, Balken-Spur, Abzeichen-Grund |
+| `--km-night-4` | `#5C3876` | Gedrückt, Cover-Füllung, Platzhalter-Grund |
+| `--km-stack-1` | `#E86A6A` | Ordner-Stapel vorne |
+| `--km-stack-2` | `#A9477A` | Ordner-Stapel hinten |
+| `--km-shadow` | `#190E22` | Harte Versatz-Schatten |
+| `--km-overlay` | `#221430` | Tageslimit/Ruhezeit/Eltern-Pause (einfarbig) |
+| `--km-cream` | `#FFF4E4` | Namensleiste, Karten |
+| `--km-ring` | `#FFD36B` | Ring um runde Bilder |
+| `--km-ink` | `#2A1A2E` | Text auf hellen Flächen |
+| `--km-lavender` | `#E3C9E8` | Sekundärtext, Zeiten, Akku-Prozent |
+| `--km-apricot` | `#FFD36B` | Akzent: aktiver Reiter, Play, Badges, Fortschritt |
+| `--km-apricot-shadow` | `#B8912A` | Schatten unter Play |
+| `--km-moon` | `#FFE7A8` | Namensleiste „liest vor“, Lade-Punkte, Overlay-Abzeichen-Inhalt |
+| `--km-rose` | `#FF6B7A` | Hörzeit < 5 min, Live-Punkt, Akku fast leer |
+| `--km-on-bg` | `#FFF4E4` | Text/Symbole direkt auf dem Hintergrund |
+| `--km-sync-bg` | `#2A1838` | Sync-Abzeichen Grund |
+| `--km-sync-fg` | `#FFF4E4` | Sync-Abzeichen Symbol |
+
+### Meerjungfrau-Lagune / Mermaid Lagoon — `meerjungfrau`
+- **Grund:** hell → `km-light`, Kopfleisten-Text/Status dunkel (`--km-on-bg` = Ink)
+- **Schrift:** Fredoka (`/theme-data/_fonts/Fredoka-Variable.ttf`)
+- **Maskottchen:** Perla – rosa Muschel mit Perle als Gesicht
+- **Hintergrund-Motive:** Helle Lagune: Lichtwellen oben, Luftblasen, bunte Fische, zwei Seegrashalme in den Kartenlücken, Sandboden, rosa Koralle, offene Muschel mit Perle, Seestern, Muschel.
+- **Referenz:** `design-reference/Mupi Screen Meerjungfrau.dc.html`
+
+| Variable | Wert | Rolle |
+|---|---|---|
+| `--km-night` | `#C9F0EC` | Hintergrund (Grundfarbe) |
+| `--km-night-2` | `#FFFFFF` | Reiterleiste, Titelliste-Panel, Spul-/Zufall-Knöpfe, Pillen |
+| `--km-night-3` | `#2A9A9A` | Runde Knöpfe, Hörzeit normal, Balken-Spur, Abzeichen-Grund |
+| `--km-night-4` | `#1F7F80` | Gedrückt, Cover-Füllung, Platzhalter-Grund |
+| `--km-stack-1` | `#FFFFFF` | Ordner-Stapel vorne |
+| `--km-stack-2` | `#BDE7E2` | Ordner-Stapel hinten |
+| `--km-shadow` | `#94D2CC` | Harte Versatz-Schatten |
+| `--km-overlay` | `#F0FBF9` | Tageslimit/Ruhezeit/Eltern-Pause (einfarbig) |
+| `--km-cream` | `#FFFFFF` | Namensleiste, Karten |
+| `--km-ring` | `#FFFFFF` | Ring um runde Bilder |
+| `--km-ink` | `#1F2E3A` | Text auf hellen Flächen |
+| `--km-lavender` | `#2F5A60` | Sekundärtext, Zeiten, Akku-Prozent |
+| `--km-apricot` | `#FF8FB1` | Akzent: aktiver Reiter, Play, Badges, Fortschritt |
+| `--km-apricot-shadow` | `#CF5C82` | Schatten unter Play |
+| `--km-moon` | `#FFE58A` | Namensleiste „liest vor“, Lade-Punkte, Overlay-Abzeichen-Inhalt |
+| `--km-rose` | `#EF5A6A` | Hörzeit < 5 min, Live-Punkt, Akku fast leer |
+| `--km-on-bg` | `#1F2E3A` | Text/Symbole direkt auf dem Hintergrund |
+| `--km-sync-bg` | `#1F7F80` | Sync-Abzeichen Grund |
+| `--km-sync-fg` | `#FFFFFF` | Sync-Abzeichen Symbol |
+
+### Ballettbühne / Ballet Stage — `ballett`
+- **Grund:** dunkel → Kopfleisten-Text/Status hell (`--km-on-bg` = Creme)
+- **Schrift:** Fredoka (`/theme-data/_fonts/Fredoka-Variable.ttf`)
+- **Maskottchen:** Tutu – weißes Häschen mit rosa Schleife
+- **Hintergrund-Motive:** Bühne am Abend: roter Samtvorhang links und rechts, Volant mit Goldkante oben, Scheinwerferkegel, Holzbühne mit Lichtpunkten, Ballerina in der Lücke zwischen Karte 2 und 3, Ballettschuhe, Rosenstrauß, Krönchen.
+- **Referenz:** `design-reference/Mupi Screen Ballett.dc.html`
+
+| Variable | Wert | Rolle |
+|---|---|---|
+| `--km-night` | `#2B1A3A` | Hintergrund (Grundfarbe) |
+| `--km-night-2` | `#38224C` | Reiterleiste, Titelliste-Panel, Spul-/Zufall-Knöpfe, Pillen |
+| `--km-night-3` | `#4B2E64` | Runde Knöpfe, Hörzeit normal, Balken-Spur, Abzeichen-Grund |
+| `--km-night-4` | `#5E3A7C` | Gedrückt, Cover-Füllung, Platzhalter-Grund |
+| `--km-stack-1` | `#E7A6D0` | Ordner-Stapel vorne |
+| `--km-stack-2` | `#A86A9E` | Ordner-Stapel hinten |
+| `--km-shadow` | `#1A0F24` | Harte Versatz-Schatten |
+| `--km-overlay` | `#22142E` | Tageslimit/Ruhezeit/Eltern-Pause (einfarbig) |
+| `--km-cream` | `#FFF3F6` | Namensleiste, Karten |
+| `--km-ring` | `#F7C6DA` | Ring um runde Bilder |
+| `--km-ink` | `#2B1A33` | Text auf hellen Flächen |
+| `--km-lavender` | `#E2CBEA` | Sekundärtext, Zeiten, Akku-Prozent |
+| `--km-apricot` | `#FF9EC2` | Akzent: aktiver Reiter, Play, Badges, Fortschritt |
+| `--km-apricot-shadow` | `#C4628A` | Schatten unter Play |
+| `--km-moon` | `#FFE3A8` | Namensleiste „liest vor“, Lade-Punkte, Overlay-Abzeichen-Inhalt |
+| `--km-rose` | `#FF6B7E` | Hörzeit < 5 min, Live-Punkt, Akku fast leer |
+| `--km-on-bg` | `#FFF3F6` | Text/Symbole direkt auf dem Hintergrund |
+| `--km-sync-bg` | `#2B1A3A` | Sync-Abzeichen Grund |
+| `--km-sync-fg` | `#FFF3F6` | Sync-Abzeichen Symbol |
+
+### Kätzchenzimmer / Kitten Room — `kaetzchen`
+- **Grund:** hell → `km-light`, Kopfleisten-Text/Status dunkel (`--km-on-bg` = Ink)
+- **Schrift:** Fredoka (`/theme-data/_fonts/Fredoka-Variable.ttf`)
+- **Maskottchen:** Mimi – rotgetigertes Kätzchen mit Schnurrhaaren
+- **Hintergrund-Motive:** Gemütliches Zimmer: Fenster mit Vorhang und Sonne, Rautentapete, Holzboden, blauer Teppich, Kratzbaum mit Wollball in der Lücke zwischen Karte 1 und 2, Wollknäuel, Katzenkorb mit schlafendem Kätzchen, Napf, Spielmaus.
+- **Referenz:** `design-reference/Mupi Screen Kaetzchen.dc.html`
+
+| Variable | Wert | Rolle |
+|---|---|---|
+| `--km-night` | `#FCE3D2` | Hintergrund (Grundfarbe) |
+| `--km-night-2` | `#FFFFFF` | Reiterleiste, Titelliste-Panel, Spul-/Zufall-Knöpfe, Pillen |
+| `--km-night-3` | `#C9694A` | Runde Knöpfe, Hörzeit normal, Balken-Spur, Abzeichen-Grund |
+| `--km-night-4` | `#A9543A` | Gedrückt, Cover-Füllung, Platzhalter-Grund |
+| `--km-stack-1` | `#FFFFFF` | Ordner-Stapel vorne |
+| `--km-stack-2` | `#F6CDB6` | Ordner-Stapel hinten |
+| `--km-shadow` | `#E8BFA6` | Harte Versatz-Schatten |
+| `--km-overlay` | `#FFF5EE` | Tageslimit/Ruhezeit/Eltern-Pause (einfarbig) |
+| `--km-cream` | `#FFFFFF` | Namensleiste, Karten |
+| `--km-ring` | `#FFFFFF` | Ring um runde Bilder |
+| `--km-ink` | `#35242A` | Text auf hellen Flächen |
+| `--km-lavender` | `#6A4A48` | Sekundärtext, Zeiten, Akku-Prozent |
+| `--km-apricot` | `#7FB8E0` | Akzent: aktiver Reiter, Play, Badges, Fortschritt |
+| `--km-apricot-shadow` | `#4E88B0` | Schatten unter Play |
+| `--km-moon` | `#FFD970` | Namensleiste „liest vor“, Lade-Punkte, Overlay-Abzeichen-Inhalt |
+| `--km-rose` | `#E5566A` | Hörzeit < 5 min, Live-Punkt, Akku fast leer |
+| `--km-on-bg` | `#35242A` | Text/Symbole direkt auf dem Hintergrund |
+| `--km-sync-bg` | `#A9543A` | Sync-Abzeichen Grund |
+| `--km-sync-fg` | `#FFFFFF` | Sync-Abzeichen Symbol |
+
+### Zuckerland / Candy Land — `zuckerland`
+- **Grund:** hell → `km-light`, Kopfleisten-Text/Status dunkel (`--km-on-bg` = Ink)
+- **Schrift:** Fredoka (`/theme-data/_fonts/Fredoka-Variable.ttf`)
+- **Maskottchen:** Muffi – Cupcake mit Sahnehaube und Kirsche
+- **Hintergrund-Motive:** Süßigkeitenland: Zuckerwolken, Streusel, Zuckerguss-Hügel mit Schokoboden, Zuckerstange und Lolli in den Kartenlücken, Lebkuchenhaus, Törtchen, Eis in der Waffel, Bonbon.
+- **Referenz:** `design-reference/Mupi Screen Zuckerland.dc.html`
+
+| Variable | Wert | Rolle |
+|---|---|---|
+| `--km-night` | `#FDE0EC` | Hintergrund (Grundfarbe) |
+| `--km-night-2` | `#FFFFFF` | Reiterleiste, Titelliste-Panel, Spul-/Zufall-Knöpfe, Pillen |
+| `--km-night-3` | `#D0508A` | Runde Knöpfe, Hörzeit normal, Balken-Spur, Abzeichen-Grund |
+| `--km-night-4` | `#B03E74` | Gedrückt, Cover-Füllung, Platzhalter-Grund |
+| `--km-stack-1` | `#FFFFFF` | Ordner-Stapel vorne |
+| `--km-stack-2` | `#F7C6DB` | Ordner-Stapel hinten |
+| `--km-shadow` | `#EDB6CE` | Harte Versatz-Schatten |
+| `--km-overlay` | `#FFF4F8` | Tageslimit/Ruhezeit/Eltern-Pause (einfarbig) |
+| `--km-cream` | `#FFFFFF` | Namensleiste, Karten |
+| `--km-ring` | `#FFFFFF` | Ring um runde Bilder |
+| `--km-ink` | `#3A2030` | Text auf hellen Flächen |
+| `--km-lavender` | `#6C3A55` | Sekundärtext, Zeiten, Akku-Prozent |
+| `--km-apricot` | `#6FCDB8` | Akzent: aktiver Reiter, Play, Badges, Fortschritt |
+| `--km-apricot-shadow` | `#3E9E8A` | Schatten unter Play |
+| `--km-moon` | `#FFE27A` | Namensleiste „liest vor“, Lade-Punkte, Overlay-Abzeichen-Inhalt |
+| `--km-rose` | `#E8455A` | Hörzeit < 5 min, Live-Punkt, Akku fast leer |
+| `--km-on-bg` | `#3A2030` | Text/Symbole direkt auf dem Hintergrund |
+| `--km-sync-bg` | `#B03E74` | Sync-Abzeichen Grund |
+| `--km-sync-fg` | `#FFFFFF` | Sync-Abzeichen Symbol |
+
+### Schmetterlingsgarten / Butterfly Garden — `schmetterlinge`
+- **Grund:** hell → `km-light`, Kopfleisten-Text/Status dunkel (`--km-on-bg` = Ink)
+- **Schrift:** Fredoka (`/theme-data/_fonts/Fredoka-Variable.ttf`)
+- **Maskottchen:** Flatter – lila-oranger Schmetterling mit Fühlern
+- **Hintergrund-Motive:** Sommergarten: Sonne, bunte Schmetterlinge, grüne Hügel, zwei hohe Blumen in den Kartenlücken, Rosenbogen aus Gitter, kleine Blumen, Marienkäfer, Blatt.
+- **Referenz:** `design-reference/Mupi Screen Schmetterlinge.dc.html`
+
+| Variable | Wert | Rolle |
+|---|---|---|
+| `--km-night` | `#E4F4DC` | Hintergrund (Grundfarbe) |
+| `--km-night-2` | `#FFFFFF` | Reiterleiste, Titelliste-Panel, Spul-/Zufall-Knöpfe, Pillen |
+| `--km-night-3` | `#7A5CB8` | Runde Knöpfe, Hörzeit normal, Balken-Spur, Abzeichen-Grund |
+| `--km-night-4` | `#654A9C` | Gedrückt, Cover-Füllung, Platzhalter-Grund |
+| `--km-stack-1` | `#FFFFFF` | Ordner-Stapel vorne |
+| `--km-stack-2` | `#D7CCEF` | Ordner-Stapel hinten |
+| `--km-shadow` | `#BFDDB0` | Harte Versatz-Schatten |
+| `--km-overlay` | `#F6FBF2` | Tageslimit/Ruhezeit/Eltern-Pause (einfarbig) |
+| `--km-cream` | `#FFFFFF` | Namensleiste, Karten |
+| `--km-ring` | `#FFFFFF` | Ring um runde Bilder |
+| `--km-ink` | `#2C2838` | Text auf hellen Flächen |
+| `--km-lavender` | `#4E4668` | Sekundärtext, Zeiten, Akku-Prozent |
+| `--km-apricot` | `#FFA64D` | Akzent: aktiver Reiter, Play, Badges, Fortschritt |
+| `--km-apricot-shadow` | `#C4731F` | Schatten unter Play |
+| `--km-moon` | `#FFE066` | Namensleiste „liest vor“, Lade-Punkte, Overlay-Abzeichen-Inhalt |
+| `--km-rose` | `#E8506A` | Hörzeit < 5 min, Live-Punkt, Akku fast leer |
+| `--km-on-bg` | `#2C2838` | Text/Symbole direkt auf dem Hintergrund |
+| `--km-sync-bg` | `#654A9C` | Sync-Abzeichen Grund |
+| `--km-sync-fg` | `#FFFFFF` | Sync-Abzeichen Symbol |
 
 ## 8. Assets & Lizenzen
 - Alle SVGs in `theme-data/` (Hintergründe, Maskottchen) sind eigene Werke aus diesem Design, frei nutzbar (CC0). Hintergründe 1600 × 960 Ausgabegröße, wenige KB.

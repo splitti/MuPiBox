@@ -204,6 +204,136 @@ export const KM_THEMES: readonly KmTheme[] = [
       },
     },
   },
+  {
+    id: 'feuerwehr',
+    label: 'Feuerwehr',
+    light: true,
+    mascot: {
+      sleeping: '/theme-data/feuerwehr/maskottchen.svg',
+      awake: '/theme-data/feuerwehr/maskottchen-wach.svg',
+    },
+    coverPlaceholder: '/theme-data/feuerwehr/cover-platzhalter.svg',
+  },
+  {
+    id: 'ritterburg',
+    label: 'Ritterburg',
+    light: true,
+    mascot: {
+      sleeping: '/theme-data/ritterburg/maskottchen.svg',
+      awake: '/theme-data/ritterburg/maskottchen-wach.svg',
+    },
+    coverPlaceholder: '/theme-data/ritterburg/cover-platzhalter.svg',
+  },
+  {
+    id: 'eisenbahn',
+    label: 'Eisenbahn',
+    light: true,
+    mascot: {
+      sleeping: '/theme-data/eisenbahn/maskottchen.svg',
+      awake: '/theme-data/eisenbahn/maskottchen-wach.svg',
+    },
+    coverPlaceholder: '/theme-data/eisenbahn/cover-platzhalter.svg',
+  },
+  {
+    id: 'roboter',
+    label: 'Roboterwerkstatt',
+    light: false,
+    mascot: {
+      sleeping: '/theme-data/roboter/maskottchen.svg',
+      awake: '/theme-data/roboter/maskottchen-wach.svg',
+    },
+    coverPlaceholder: '/theme-data/roboter/cover-platzhalter.svg',
+  },
+  {
+    id: 'heldenstadt',
+    label: 'Heldenstadt',
+    light: false,
+    mascot: {
+      sleeping: '/theme-data/heldenstadt/maskottchen.svg',
+      awake: '/theme-data/heldenstadt/maskottchen-wach.svg',
+    },
+    coverPlaceholder: '/theme-data/heldenstadt/cover-platzhalter.svg',
+  },
+  {
+    id: 'safari',
+    label: 'Safari',
+    light: true,
+    mascot: {
+      sleeping: '/theme-data/safari/maskottchen.svg',
+      awake: '/theme-data/safari/maskottchen-wach.svg',
+    },
+    coverPlaceholder: '/theme-data/safari/cover-platzhalter.svg',
+  },
+  {
+    id: 'eiswelt',
+    label: 'Pinguin-Eiswelt',
+    light: true,
+    mascot: {
+      sleeping: '/theme-data/eiswelt/maskottchen.svg',
+      awake: '/theme-data/eiswelt/maskottchen-wach.svg',
+    },
+    coverPlaceholder: '/theme-data/eiswelt/cover-platzhalter.svg',
+  },
+  {
+    id: 'zirkus',
+    label: 'Zirkus',
+    light: false,
+    mascot: {
+      sleeping: '/theme-data/zirkus/maskottchen.svg',
+      awake: '/theme-data/zirkus/maskottchen-wach.svg',
+    },
+    coverPlaceholder: '/theme-data/zirkus/cover-platzhalter.svg',
+  },
+  {
+    id: 'meerjungfrau',
+    label: 'Meerjungfrau-Lagune',
+    light: true,
+    mascot: {
+      sleeping: '/theme-data/meerjungfrau/maskottchen.svg',
+      awake: '/theme-data/meerjungfrau/maskottchen-wach.svg',
+    },
+    coverPlaceholder: '/theme-data/meerjungfrau/cover-platzhalter.svg',
+  },
+  {
+    id: 'ballett',
+    label: 'Ballettbühne',
+    light: false,
+    mascot: {
+      sleeping: '/theme-data/ballett/maskottchen.svg',
+      awake: '/theme-data/ballett/maskottchen-wach.svg',
+    },
+    coverPlaceholder: '/theme-data/ballett/cover-platzhalter.svg',
+  },
+  {
+    id: 'kaetzchen',
+    label: 'Kätzchenzimmer',
+    light: true,
+    mascot: {
+      sleeping: '/theme-data/kaetzchen/maskottchen.svg',
+      awake: '/theme-data/kaetzchen/maskottchen-wach.svg',
+    },
+    coverPlaceholder: '/theme-data/kaetzchen/cover-platzhalter.svg',
+  },
+  {
+    id: 'zuckerland',
+    label: 'Zuckerland',
+    light: true,
+    mascot: {
+      sleeping: '/theme-data/zuckerland/maskottchen.svg',
+      awake: '/theme-data/zuckerland/maskottchen-wach.svg',
+    },
+    coverPlaceholder: '/theme-data/zuckerland/cover-platzhalter.svg',
+  },
+  {
+    id: 'schmetterlinge',
+    label: 'Schmetterlingsgarten',
+    light: true,
+    mascot: {
+      sleeping: '/theme-data/schmetterlinge/maskottchen.svg',
+      awake: '/theme-data/schmetterlinge/maskottchen-wach.svg',
+    },
+    coverPlaceholder: '/theme-data/schmetterlinge/cover-platzhalter.svg',
+  },
 ]
 
 export function kmTheme(id: string | undefined): KmTheme | undefined {

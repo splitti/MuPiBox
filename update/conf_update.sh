@@ -322,7 +322,7 @@ ensure_theme unicorn
 ensure_theme axolotl
 
 # km themes (children's themes of one design, see themes/km-themes.json)
-for km_theme in kuschelmond moosnest sonnenhof pferdehof fussball fahrzeuge buecherregal kassettenrekorder unterwasser bastelpapier prinzessin einhorn feenschloss weltraum dinoland piratenbucht tagundnacht; do
+for km_theme in kuschelmond moosnest sonnenhof pferdehof fussball fahrzeuge buecherregal kassettenrekorder unterwasser bastelpapier prinzessin einhorn feenschloss weltraum dinoland piratenbucht tagundnacht feuerwehr ritterburg eisenbahn roboter heldenstadt safari eiswelt zirkus meerjungfrau ballett kaetzchen zuckerland schmetterlinge; do
 	ensure_theme "${km_theme}"
 done
 update_config '.mupibox.themeStage = (.mupibox.themeStage // false)'

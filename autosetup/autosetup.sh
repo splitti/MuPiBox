@@ -400,7 +400,7 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 
 	# km themes (children's themes of one design): pictures per theme, shared fonts, and the list with their names
 	# (the admin interface shows those). New ones: add the id here, in conf_update.sh and in autosetup.sh.
-	KM_THEMES="kuschelmond moosnest sonnenhof pferdehof fussball fahrzeuge buecherregal kassettenrekorder unterwasser bastelpapier prinzessin einhorn feenschloss weltraum dinoland piratenbucht tagundnacht"
+	KM_THEMES="kuschelmond moosnest sonnenhof pferdehof fussball fahrzeuge buecherregal kassettenrekorder unterwasser bastelpapier prinzessin einhorn feenschloss weltraum dinoland piratenbucht tagundnacht feuerwehr ritterburg eisenbahn roboter heldenstadt safari eiswelt zirkus meerjungfrau ballett kaetzchen zuckerland schmetterlinge"
 	for theme in ${KM_THEMES} _fonts; do
 		mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/${theme} >&3 2>&3
 		cp -f ${MUPI_SRC}/themes/${theme}/* /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/${theme}/ >&3 2>&3
