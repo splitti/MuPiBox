@@ -23,8 +23,7 @@ import { arrowBackOutline } from 'ionicons/icons'
 import { Observable, of } from 'rxjs'
 import { ElternMagicLinkService } from '../eltern-magic-link.service'
 import { MediaService } from '../media.service'
-import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
-import { WifiIconComponent } from '../wifi-icon/wifi-icon.component'
+import { StatusComponent } from '../status/status.component'
 
 export interface SettingsMenuEntry {
   name: string
@@ -40,8 +39,7 @@ export interface SettingsMenuEntry {
     AsyncPipe,
     IonBackButton,
     IonTitle,
-    MupiHatIconComponent,
-    WifiIconComponent,
+    StatusComponent,
     IonHeader,
     IonToolbar,
     IonButtons,

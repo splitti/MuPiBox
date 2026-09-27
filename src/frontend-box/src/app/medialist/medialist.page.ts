@@ -22,8 +22,7 @@ import { LoadingComponent } from '../loading/loading.component'
 import { CategoryType, isSyncManaged, Media, MediaSorting } from '../media'
 import { MediaService } from '../media.service'
 import { MediaUnavailableComponent } from '../media-unavailable/media-unavailable.component'
-import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
-import { WifiIconComponent } from '../wifi-icon/wifi-icon.component'
+import { StatusComponent } from '../status/status.component'
 import { SwiperComponent, SwiperData } from '../swiper/swiper.component'
 import { SwiperIonicEventsHelper } from '../swiper/swiper-ionic-events-helper'
 
@@ -32,8 +31,7 @@ import { SwiperIonicEventsHelper } from '../swiper/swiper-ionic-events-helper'
   templateUrl: './medialist.page.html',
   styleUrls: ['./medialist.page.scss'],
   imports: [
-    MupiHatIconComponent,
-    WifiIconComponent,
+    StatusComponent,
     IonHeader,
     IonToolbar,
     IonButtons,

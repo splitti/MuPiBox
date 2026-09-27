@@ -3,6 +3,23 @@
 // with body.km; colours come from the active theme's --km-* variables. !important where the pages' own rules
 // (e.g. 70 px toolbar buttons) would win otherwise.
 
+// status (WiFi + battery, see app/status): the colours of all kids' themes
+body.km {
+  --st-on: var(--km-on-bg);
+  --st-track: color-mix(in srgb, var(--km-on-bg) 42%, transparent);
+  --st-full: var(--km-on-bg);
+  --st-num: var(--km-night);
+  --st-low: var(--km-rose);
+  --st-charge: var(--km-apricot);
+  --st-bolt-edge: var(--km-night);
+}
+
+body.km.km-light {
+  --st-track: color-mix(in srgb, var(--km-on-bg) 30%, transparent);
+  --st-full: #ffffff;
+  --st-num: var(--km-on-bg);
+}
+
 body.km {
   // ---------- header: 72 px, transparent, round 64 px buttons ----------
   .home-header,
@@ -62,10 +79,6 @@ body.km {
       --background: transparent;
       --color: var(--km-on-bg);
       color: var(--km-on-bg);
-
-      ion-icon {
-        color: var(--km-on-bg);
-      }
     }
   }
 

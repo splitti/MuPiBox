@@ -32,8 +32,7 @@ import type { CategoryType } from '../media'
 import { MediaService } from '../media.service'
 import { MediaUnavailableComponent } from '../media-unavailable/media-unavailable.component'
 import type { MupiboxConfig } from '../mupibox-config.model'
-import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
-import { WifiIconComponent } from '../wifi-icon/wifi-icon.component'
+import { StatusComponent } from '../status/status.component'
 import { SwiperComponent, SwiperData } from '../swiper/swiper.component'
 import { SwiperIonicEventsHelper } from '../swiper/swiper-ionic-events-helper'
 import { KmThemeService } from '../theme/km-theme.service'
@@ -43,8 +42,7 @@ import { KmThemeService } from '../theme/km-theme.service'
   templateUrl: 'home.page.html',
   styleUrls: ['home.page.scss'],
   imports: [
-    MupiHatIconComponent,
-    WifiIconComponent,
+    StatusComponent,
     LoadingComponent,
     MediaUnavailableComponent,
     IonHeader,

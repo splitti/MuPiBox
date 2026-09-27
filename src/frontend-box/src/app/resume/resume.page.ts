@@ -12,8 +12,7 @@ import { DisplayTextsService } from '../display-texts.service'
 import { LoadingComponent } from '../loading/loading.component'
 import { Media } from '../media'
 import { MediaService } from '../media.service'
-import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
-import { WifiIconComponent } from '../wifi-icon/wifi-icon.component'
+import { StatusComponent } from '../status/status.component'
 import { SwiperComponent, SwiperData } from '../swiper/swiper.component'
 import { SwiperIonicEventsHelper } from '../swiper/swiper-ionic-events-helper'
 import { KmThemeService } from '../theme/km-theme.service'
@@ -23,8 +22,7 @@ import { KmThemeService } from '../theme/km-theme.service'
   templateUrl: './resume.page.html',
   styleUrls: ['./resume.page.scss'],
   imports: [
-    MupiHatIconComponent,
-    WifiIconComponent,
+    StatusComponent,
     LoadingComponent,
     IonHeader,
     IonToolbar,

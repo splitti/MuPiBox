@@ -54,8 +54,7 @@ import { LogService } from '../log.service'
 import { isResumeEntry, type Media } from '../media'
 import { MediaService } from '../media.service'
 import type { MupiboxConfig } from '../mupibox-config.model'
-import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
-import { WifiIconComponent } from '../wifi-icon/wifi-icon.component'
+import { StatusComponent } from '../status/status.component'
 import { PlayerCmds, PlayerService } from '../player.service'
 import type { PlaytimePlayState } from '../playtime.model'
 import { PlaytimeService } from '../playtime.service'
@@ -76,8 +75,7 @@ export interface TrackListEntry {
   imports: [
     FormsModule,
     AsyncPipe,
-    MupiHatIconComponent,
-    WifiIconComponent,
+    StatusComponent,
     IonHeader,
     IonToolbar,
     IonButtons,
