@@ -1812,7 +1812,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				.bs-grid { display: flex; flex-wrap: wrap; gap: 10px; margin: 8px 0 4px; }
 				.bs-tile { position: relative; display: block; width: 160px; cursor: pointer; margin: 0; float: none; }
 				.bs-tile input { position: absolute; opacity: 0; width: 0; height: 0; }
-				.bs-thumb { position: relative; width: 160px; height: 96px; border-radius: 8px; overflow: hidden; border: 3px solid transparent; box-sizing: content-box; background: #ddd; }
+				.bs-thumb { position: relative; display: block; width: 160px; height: 96px; border-radius: 8px; overflow: hidden; border: 3px solid transparent; box-sizing: content-box; background: #ddd; }
 				.bs-tile input:checked + .bs-thumb { border-color: #0d5a80; }
 				.bs-tile input:focus-visible + .bs-thumb { outline: 2px solid #4a90e2; }
 				.bs-thumb img { display: block; width: 100%; height: 100%; }
