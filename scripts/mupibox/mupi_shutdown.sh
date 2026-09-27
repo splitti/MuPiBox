@@ -30,6 +30,8 @@ case "$1" in
 	*) BS_KIND="" ;;
 esac
 BS_PIC="${BS_OUT}/${BS_KIND}-${BS_SCENE}.png"
+# not put together yet: the default's ready-made picture
+[ -f "${BS_PIC}" ] && [ -n "${BS_SCENE}" ] || { BS_SCENE="karte"; BS_PIC="/home/dietpi/MuPiBox/sysmedia/bootscreens/prerendered/en/${BS_KIND}-karte.png"; }
 
 killall -s 9 -w -q -r chromium
 if [ -n "${BS_KIND}" ] && [ -n "${BS_SCENE}" ] && [ -f "${BS_PIC}" ]; then

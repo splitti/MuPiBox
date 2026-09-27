@@ -24,5 +24,11 @@ if [ -n "${NEXT}" ] && [ -f "${OUT}/splash-${NEXT}.png" ]; then
 	exit 0
 fi
 
+# not put together yet (e.g. first start after the installation): the default's ready-made picture, else as before
+READY="/home/dietpi/MuPiBox/sysmedia/bootscreens/prerendered/en/splash-karte.png"
+if [ -f "${READY}" ]; then
+	/usr/bin/fbv "${READY}"
+	exit 0
+fi
 START_SPLASH=`/usr/bin/jq -r .mupibox.startSplash ${CONFIG}`
 /usr/bin/fbv ${START_SPLASH}

@@ -10,7 +10,7 @@
   },
   "defaultName": "MuPiBox",
   "nameMaxLength": 14,
-  "defaultBootscreen": "abendhuegel",
+  "defaultBootscreen": "karte",
   "texts": {
     "update": {
       "de": [
@@ -364,6 +364,94 @@
     }
   },
   "bootscreens": [
+    {
+      "id": "karte",
+      "code": "3f",
+      "label": "Karte",
+      "labelEn": "Card",
+      "baseColor": "#44AFE2",
+      "scene": "screens/karte/splash.svg",
+      "maintenance": "screens/karte/wartung.svg",
+      "goodbye": "screens/karte/goodbye.svg",
+      "battery": "screens/karte/battery.svg",
+      "name": {
+        "x": 366,
+        "y": 196,
+        "maxWidth": 346,
+        "align": "left",
+        "fontSize": 80,
+        "fontWeight": 600,
+        "letterSpacing": -2,
+        "color": "#1E2A44",
+        "textShadow": "none"
+      },
+      "maintenanceText": {
+        "x": 366,
+        "maxWidth": 346,
+        "align": "left",
+        "color": "#1E2A44",
+        "textShadow": "none",
+        "titleSize": 48,
+        "titleWeight": 600,
+        "subSize": 21,
+        "subWeight": 500,
+        "gap": 12,
+        "subMaxLines": 2,
+        "y": 150,
+        "subPill": {
+          "background": "#FFF1CC",
+          "color": "#1E2A44",
+          "padX": 14,
+          "padY": 6,
+          "radius": 16,
+          "lineGap": 6
+        }
+      },
+      "goodbyeText": {
+        "x": 366,
+        "maxWidth": 346,
+        "align": "left",
+        "color": "#1E2A44",
+        "textShadow": "none",
+        "titleSize": 48,
+        "titleWeight": 600,
+        "subSize": 21,
+        "subWeight": 500,
+        "gap": 12,
+        "subMaxLines": 2,
+        "y": 150,
+        "subPill": {
+          "background": "#ECE9FB",
+          "color": "#1E2A44",
+          "padX": 14,
+          "padY": 6,
+          "radius": 16,
+          "lineGap": 6
+        }
+      },
+      "batteryText": {
+        "x": 366,
+        "maxWidth": 346,
+        "align": "left",
+        "color": "#1E2A44",
+        "textShadow": "none",
+        "titleSize": 48,
+        "titleWeight": 600,
+        "subSize": 21,
+        "subWeight": 500,
+        "gap": 12,
+        "subMaxLines": 2,
+        "y": 164,
+        "subPill": {
+          "background": "#E6E8EF",
+          "color": "#1E2A44",
+          "padX": 14,
+          "padY": 6,
+          "radius": 16,
+          "lineGap": 6
+        }
+      }
+    },
     {
       "id": "abendhuegel",
       "code": "4a",

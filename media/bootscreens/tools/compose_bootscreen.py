@@ -123,12 +123,20 @@ def wartung(bid, kind, lang, out):
     center = m["align"] == "center"; x = 400 if center else m["x"]; anchor = "middle" if center else "start"
     ft = font(m["titleSize"], m["titleWeight"]); fs = font(m["subSize"], m["subWeight"])
     sh = shadows(m["textShadow"])
-    tlines = wrap(title, ft, m["maxWidth"], 2)
+    # the title in at most 2 lines: smaller when it needs more (nothing is cut off)
+    title_size = m["titleSize"]
+    while True:
+        tlines = wrap(title, ft, m["maxWidth"], 99)
+        if len(tlines) <= 2 or title_size <= 24:
+            break
+        title_size -= 1
+        ft = font(title_size, m["titleWeight"])
+    tlines = tlines[:2]
     tscale = min(1.0, m["maxWidth"] / max(1, max(ft.getlength(l) for l in tlines)))
     y = m["y"]; ov = ""
     for l in tlines:
-        ov += text_el(l, x, y, m["titleSize"], m["titleWeight"], m["color"], anchor, -1, sh, tscale, x)
-        y += m["titleSize"] * 1.05 * tscale
+        ov += text_el(l, x, y, title_size, m["titleWeight"], m["color"], anchor, -1, sh, tscale, x)
+        y += title_size * 1.05 * tscale
     y += m["gap"]
     p = m["subPill"]
     # the line of text in at most subMaxLines lines: smaller when it needs more (nothing is cut off)

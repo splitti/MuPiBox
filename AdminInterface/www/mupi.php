@@ -675,7 +675,9 @@ if( $_POST['fan_control'] )
   // the name: 14 characters at most, no control characters, spaces at the ends removed
   $bsName = trim(preg_replace('/[\x00-\x1F\x7F]/u', '', (string)($_POST['boxName'] ?? '')));
   $bsName = mb_substr($bsName, 0, (int)($bootscreen_json['nameMaxLength'] ?? 14), 'UTF-8');
-  if( $bsBoot !== 'random' && !in_array($bsBoot, $bootscreen_ids, true) ) $bsBoot = $bootscreen_json['defaultBootscreen'] ?? 'abendhuegel';
+  // the default boot screen is not written down (empty = default): a later change of the default then reaches the box
+  if( $bsBoot !== 'random' && !in_array($bsBoot, $bootscreen_ids, true) ) $bsBoot = '';
+  if( $bsBoot === ($bootscreen_json['defaultBootscreen'] ?? '') ) $bsBoot = '';
   if( $bsMaint !== 'same' && !in_array($bsMaint, $bootscreen_ids, true) ) $bsMaint = 'same';
   if( !isset($display_languages[$bsLang]) ) $bsLang = 'en';
   $bsNew = array('bootscreen' => $bsBoot, 'maintenanceScreen' => $bsMaint, 'boxName' => $bsName, 'bootscreenLanguage' => $bsLang);
@@ -1795,7 +1797,10 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 	</details>
 
 <?php
-	$bsCurBoot = (string)($data["mupibox"]["bootscreen"] ?? ($bootscreen_json['defaultBootscreen'] ?? 'abendhuegel'));
+	// empty, missing or unknown: the default boot screen (bootscreens.json)
+	$bsDefault = (string)($bootscreen_json['defaultBootscreen'] ?? '');
+	$bsCurBoot = (string)($data["mupibox"]["bootscreen"] ?? '');
+	if( $bsCurBoot !== 'random' && !in_array($bsCurBoot, $bootscreen_ids, true) ) $bsCurBoot = $bsDefault;
 	$bsCurMaint = (string)($data["mupibox"]["maintenanceScreen"] ?? 'same');
 	$bsCurName = (string)($data["mupibox"]["boxName"] ?? '');
 	$bsCurLang = (string)($data["mupibox"]["bootscreenLanguage"] ?? 'en');
@@ -1824,8 +1829,11 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				.bs-maint { position: absolute; font-family: "FredokaBS", "DejaVu Sans", sans-serif; }
 				.bs-maint .t { display: block; line-height: 1.05; }
 				.bs-maint .s { display: inline; line-height: 1.9; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
-				/* the form styles of the page float spans to the left: not in the previews */
-				.bs-thumb, .bs-caption, .bs-text, .bs-maint span { float: none; margin: 0; }
+				/* the form styles of the page (view.css) float spans to the left with 8px below them and give labels in a
+				   div a 9px line: not in the previews */
+				.bs-thumb, .bs-caption, .bs-text, .bs-maint span { float: none; margin: 0; padding: 0; }
+				.bs-tile { font-size: inherit; line-height: normal; padding: 0; color: inherit; }
+				.bs-caption { margin-top: 6px; line-height: 1.3; }
 				.bs-row { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
 				.bs-row > div { flex: 0 1 400px; }
 			</style>
@@ -1846,7 +1854,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 					<label class="bs-tile">
 						<input type="radio" name="bootscreen" value="<?= htmlspecialchars($bs['id'], ENT_QUOTES) ?>" <?= $bsCurBoot === $bs['id'] ? 'checked' : '' ?> />
 						<span class="bs-thumb"><img src="images/bootscreens/<?= htmlspecialchars($bs['scene'], ENT_QUOTES) ?>" alt="" loading="lazy" /><span class="bs-text" data-bs-name="<?= htmlspecialchars($bs['id'], ENT_QUOTES) ?>"></span></span>
-						<span class="bs-caption"><?= htmlspecialchars($bs['labelEn'] ?? $bs['id']) ?></span>
+						<span class="bs-caption"><?= htmlspecialchars($bs['labelEn'] ?? $bs['id']) ?><?= $bs['id'] === $bsDefault ? ' (default)' : '' ?></span>
 					</label>
 					<?php } ?>
 				</div>
@@ -1943,6 +1951,8 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 					sub.style.cssText = 'font-size:' + (m.subSize * s) + 'px;font-weight:' + m.subWeight + ';color:' + p.color + ';background:' + p.background + ';border-radius:' + (p.radius * s) + 'px;padding:' + (p.padY * s) + 'px ' + (p.padX * s) + 'px';
 					box.appendChild(t);
 					box.appendChild(sub);
+					// the title in at most 2 lines: smaller when it needs more, as on the box
+					for (var ts = m.titleSize; ts > 24 && t.getBoundingClientRect().height > 2.2 * ts * 1.05 * s; ts--) t.style.fontSize = ((ts - 1) * s) + 'px';
 				}
 				function update() {
 					var checked = document.querySelector('#bsGrid input:checked');
