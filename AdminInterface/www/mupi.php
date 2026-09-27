@@ -662,6 +662,38 @@ if( $_POST['fan_control'] )
  $display_lang_json = $display_lang_file ? json_decode($display_lang_file, true) : null;
  if( is_array($display_lang_json) && isset($display_lang_json['languages']) && is_array($display_lang_json['languages']) ) $display_languages = $display_lang_json['languages'];
 
+ // Boot and maintenance screens: scenes, texts and text positions from the installed bootscreens.json; the box puts
+ // the pictures together (bootscreen_update.sh) after a change.
+ $bootscreen_json = @json_decode(@file_get_contents('/home/dietpi/MuPiBox/sysmedia/bootscreens/bootscreens.json'), true);
+ $bootscreen_ids = array();
+ foreach( (is_array($bootscreen_json) ? ($bootscreen_json['bootscreens'] ?? array()) : array()) as $bs ) { if( !empty($bs['id']) ) $bootscreen_ids[] = $bs['id']; }
+ if( !empty($_POST['bootscreen_save']) && $bootscreen_ids )
+  {
+  $bsBoot = (string)($_POST['bootscreen'] ?? '');
+  $bsMaint = (string)($_POST['maintenanceScreen'] ?? '');
+  $bsLang = (string)($_POST['bootscreenLanguage'] ?? '');
+  // the name: 14 characters at most, no control characters, spaces at the ends removed
+  $bsName = trim(preg_replace('/[\x00-\x1F\x7F]/u', '', (string)($_POST['boxName'] ?? '')));
+  $bsName = mb_substr($bsName, 0, (int)($bootscreen_json['nameMaxLength'] ?? 14), 'UTF-8');
+  if( $bsBoot !== 'random' && !in_array($bsBoot, $bootscreen_ids, true) ) $bsBoot = $bootscreen_json['defaultBootscreen'] ?? 'abendhuegel';
+  if( $bsMaint !== 'same' && !in_array($bsMaint, $bootscreen_ids, true) ) $bsMaint = 'same';
+  if( !isset($display_languages[$bsLang]) ) $bsLang = 'en';
+  $bsNew = array('bootscreen' => $bsBoot, 'maintenanceScreen' => $bsMaint, 'boxName' => $bsName, 'bootscreenLanguage' => $bsLang);
+  $bsChanged = false;
+  foreach( $bsNew as $bsKey => $bsValue )
+   {
+   if( ($data["mupibox"][$bsKey] ?? null) !== $bsValue ) { $data["mupibox"][$bsKey] = $bsValue; $bsChanged = true; }
+   }
+  if( $bsChanged )
+   {
+   save_mupiboxconfig($data);
+   // putting the pictures together takes a few seconds (all 15 scenes for "Random"): in the background
+   exec("sudo nohup /usr/local/bin/mupibox/bootscreen_update.sh > /dev/null 2>&1 &");
+   $CHANGE_TXT = $CHANGE_TXT."<li>Boot and maintenance screens saved - the new boot screen is shown at the next start</li>";
+   $change = 3;
+   }
+  }
+
  if( $_POST['quiethours_save'] )
   {
   if( !isset($data["quietHours"]) || !is_array($data["quietHours"]) )
@@ -1759,6 +1791,182 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				<input type="file" class="button_text_upload" name="fileToUpload" id="fileToUpload">
 				<input type="submit" class="button_text" value="Upload Image" name="submitfile" >
 			</li>
+		</ul>
+	</details>
+
+<?php
+	$bsCurBoot = (string)($data["mupibox"]["bootscreen"] ?? ($bootscreen_json['defaultBootscreen'] ?? 'abendhuegel'));
+	$bsCurMaint = (string)($data["mupibox"]["maintenanceScreen"] ?? 'same');
+	$bsCurName = (string)($data["mupibox"]["boxName"] ?? '');
+	$bsCurLang = (string)($data["mupibox"]["bootscreenLanguage"] ?? 'en');
+	if( !isset($display_languages[$bsCurLang]) ) $bsCurLang = 'en';
+?>
+	<details id="bootscreens">
+		<summary><i class="fa-solid fa-image"></i> Boot &amp; maintenance screens</summary>
+		<ul>
+		<?php if( !$bootscreen_ids ) { ?>
+			<li><p>The boot screens are not installed yet (they come with the next update).</p></li>
+		<?php } else { ?>
+			<style>
+				@font-face { font-family: "FredokaBS"; src: url("fonts/Fredoka-Variable.ttf") format("truetype"); font-weight: 300 700; }
+				.bs-grid { display: flex; flex-wrap: wrap; gap: 10px; margin: 8px 0 4px; }
+				.bs-tile { position: relative; display: block; width: 160px; cursor: pointer; margin: 0; float: none; }
+				.bs-tile input { position: absolute; opacity: 0; width: 0; height: 0; }
+				.bs-thumb { position: relative; width: 160px; height: 96px; border-radius: 8px; overflow: hidden; border: 3px solid transparent; box-sizing: content-box; background: #ddd; }
+				.bs-tile input:checked + .bs-thumb { border-color: #0d5a80; }
+				.bs-tile input:focus-visible + .bs-thumb { outline: 2px solid #4a90e2; }
+				.bs-thumb img { display: block; width: 100%; height: 100%; }
+				.bs-caption { display: block; font-size: 12px; margin-top: 3px; text-align: center; color: #212529; }
+				.bs-random { display: grid; place-items: center; font-size: 34px; color: #0d5a80; background: repeating-linear-gradient(45deg, #eef4f8, #eef4f8 10px, #dde9f1 10px, #dde9f1 20px); }
+				.bs-preview { position: relative; width: 400px; max-width: 100%; aspect-ratio: 800 / 480; border-radius: 10px; overflow: hidden; background: #ddd; margin: 8px 0; container-type: inline-size; }
+				.bs-preview img { display: block; width: 100%; height: 100%; }
+				.bs-text { position: absolute; white-space: nowrap; font-family: "FredokaBS", "DejaVu Sans", sans-serif; line-height: 1; }
+				.bs-maint { position: absolute; font-family: "FredokaBS", "DejaVu Sans", sans-serif; }
+				.bs-maint .t { display: block; line-height: 1.05; }
+				.bs-maint .s { display: inline; line-height: 1.9; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+				/* the form styles of the page float spans to the left: not in the previews */
+				.bs-thumb, .bs-caption, .bs-text, .bs-maint span { float: none; margin: 0; }
+				.bs-row { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
+				.bs-row > div { flex: 0 1 400px; }
+			</style>
+			<li>
+				<h2>Box name</h2>
+				<input type="text" class="element text medium" name="boxName" id="bsName" maxlength="<?= (int)($bootscreen_json['nameMaxLength'] ?? 14) ?>" placeholder="MuPiBox" value="<?= htmlspecialchars($bsCurName, ENT_QUOTES) ?>" title="Shown in the boot screen. Empty = MuPiBox." />
+				<p>Shown in the boot screen (at most <?= (int)($bootscreen_json['nameMaxLength'] ?? 14) ?> characters). Empty = "MuPiBox".</p>
+			</li>
+			<li>
+				<h2>Boot screen</h2>
+				<div class="bs-grid" id="bsGrid">
+					<label class="bs-tile" title="A different boot screen at every start">
+						<input type="radio" name="bootscreen" value="random" <?= $bsCurBoot === 'random' ? 'checked' : '' ?> />
+						<span class="bs-thumb bs-random"><i class="fa-solid fa-shuffle"></i></span>
+						<span class="bs-caption">Random</span>
+					</label>
+					<?php foreach( $bootscreen_json['bootscreens'] as $bs ) { ?>
+					<label class="bs-tile">
+						<input type="radio" name="bootscreen" value="<?= htmlspecialchars($bs['id'], ENT_QUOTES) ?>" <?= $bsCurBoot === $bs['id'] ? 'checked' : '' ?> />
+						<span class="bs-thumb"><img src="images/bootscreens/<?= htmlspecialchars($bs['scene'], ENT_QUOTES) ?>" alt="" loading="lazy" /><span class="bs-text" data-bs-name="<?= htmlspecialchars($bs['id'], ENT_QUOTES) ?>"></span></span>
+						<span class="bs-caption"><?= htmlspecialchars($bs['labelEn'] ?? $bs['id']) ?></span>
+					</label>
+					<?php } ?>
+				</div>
+			</li>
+			<li>
+				<div class="bs-row">
+					<div>
+						<h2>Maintenance screen</h2>
+						<select class="element select medium" name="maintenanceScreen" id="bsMaint" title="Shown during updates, installations and when a new Wi-Fi is set up">
+							<option value="same" <?= $bsCurMaint === 'same' ? 'selected' : '' ?>>Same as the boot screen</option>
+							<?php foreach( $bootscreen_json['bootscreens'] as $bs ) { ?>
+							<option value="<?= htmlspecialchars($bs['id'], ENT_QUOTES) ?>" <?= $bsCurMaint === $bs['id'] ? 'selected' : '' ?>><?= htmlspecialchars($bs['labelEn'] ?? $bs['id']) ?></option>
+							<?php } ?>
+						</select>
+						<h2>Language</h2>
+						<select class="element select medium" name="bootscreenLanguage" id="bsLang" title="Language of the maintenance texts">
+							<?php foreach( $display_languages as $dl_code => $dl ) { ?>
+							<option value="<?= htmlspecialchars($dl_code, ENT_QUOTES) ?>" <?= $dl_code === $bsCurLang ? 'selected' : '' ?>><?= htmlspecialchars($dl['name'] ?? $dl_code) ?></option>
+							<?php } ?>
+						</select>
+						<h2>Preview</h2>
+						<select class="element select medium" id="bsKind" title="Which maintenance screen the preview shows">
+							<option value="update">Update running</option>
+							<option value="install">Installation running</option>
+							<option value="wlan">New Wi-Fi being set up</option>
+						</select>
+					</div>
+					<div>
+						<h2>Boot screen</h2>
+						<div class="bs-preview" id="bsBootPreview"><img alt="" /><span class="bs-text"></span></div>
+						<h2>Maintenance screen</h2>
+						<div class="bs-preview" id="bsMaintPreview"><img alt="" /><div class="bs-maint"></div></div>
+					</div>
+				</div>
+				<p>The pictures are put together on the box when you save; they are shown from the next start (the maintenance screen at the next update, installation or new Wi-Fi).</p>
+				<input type="submit" class="button_text" name="bootscreen_save" value="Save" />
+			</li>
+			<script>
+			(function () {
+				var cfg = <?= json_encode($bootscreen_json, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE) ?>;
+				var byId = {};
+				cfg.bootscreens.forEach(function (b) { byId[b.id] = b; });
+				var nameInput = document.getElementById('bsName');
+				var maintSel = document.getElementById('bsMaint');
+				var langSel = document.getElementById('bsLang');
+				var kindSel = document.getElementById('bsKind');
+				var bootPreview = document.getElementById('bsBootPreview');
+				var maintPreview = document.getElementById('bsMaintPreview');
+				var shownBoot = null; // the scene the previews show (for "Random" the first one)
+
+				function boxName() {
+					var n = nameInput.value.trim().slice(0, cfg.nameMaxLength || 14);
+					return n || cfg.defaultName || 'MuPiBox';
+				}
+				function scaledShadow(spec, s) {
+					if (!spec || spec === 'none') return 'none';
+					return spec.replace(/(-?[\d.]+)px/g, function (m, v) { return (parseFloat(v) * s) + 'px'; });
+				}
+				// the name at its place, as the box puts it in: the given size, made smaller when it is wider than maxWidth
+				function placeName(el, b, width) {
+					var s = width / 800, n = b.name;
+					el.textContent = boxName();
+					el.style.fontSize = (n.fontSize * s) + 'px';
+					el.style.fontWeight = n.fontWeight;
+					el.style.letterSpacing = (n.letterSpacing * s) + 'px';
+					el.style.color = n.color;
+					el.style.textShadow = scaledShadow(n.textShadow, s);
+					el.style.top = (n.y * s) + 'px';
+					el.style.transform = 'none';
+					var center = n.align === 'center';
+					el.style.left = center ? '50%' : (n.x * s) + 'px';
+					var scale = Math.min(1, (n.maxWidth * s) / Math.max(1, el.scrollWidth));
+					el.style.transformOrigin = center ? 'center top' : 'left top';
+					el.style.transform = (center ? 'translateX(-50%) ' : '') + 'scale(' + scale + ')';
+				}
+				function placeMaint(box, b, width) {
+					var s = width / 800, m = b.maintenanceText, p = m.subPill;
+					var texts = (cfg.texts[kindSel.value] || {})[langSel.value] || (cfg.texts[kindSel.value] || {}).en || ['', ''];
+					box.innerHTML = '';
+					box.style.left = m.align === 'center' ? ((400 - m.maxWidth / 2) * s) + 'px' : (m.x * s) + 'px';
+					box.style.top = (m.y * s) + 'px';
+					box.style.width = (m.maxWidth * s) + 'px';
+					box.style.setProperty('text-align', m.align === 'center' ? 'center' : 'left', 'important'); // the admin page sets text-align for its list items
+					var t = document.createElement('span');
+					t.className = 't';
+					t.textContent = texts[0];
+					t.style.cssText = 'font-size:' + (m.titleSize * s) + 'px;font-weight:' + m.titleWeight + ';color:' + m.color + ';text-shadow:' + scaledShadow(m.textShadow, s) + ';letter-spacing:' + (-1 * s) + 'px;margin-bottom:' + (m.gap * s) + 'px';
+					var sub = document.createElement('span');
+					sub.className = 's';
+					sub.textContent = texts[1];
+					sub.style.cssText = 'font-size:' + (m.subSize * s) + 'px;font-weight:' + m.subWeight + ';color:' + p.color + ';background:' + p.background + ';border-radius:' + (p.radius * s) + 'px;padding:' + (p.padY * s) + 'px ' + (p.padX * s) + 'px';
+					box.appendChild(t);
+					box.appendChild(sub);
+				}
+				function update() {
+					var checked = document.querySelector('#bsGrid input:checked');
+					var bootId = checked ? checked.value : cfg.defaultBootscreen;
+					shownBoot = bootId === 'random' ? cfg.bootscreens[0].id : bootId;
+					var b = byId[shownBoot];
+					bootPreview.querySelector('img').src = 'images/bootscreens/' + b.scene;
+					var maintId = maintSel.value === 'same' ? shownBoot : maintSel.value;
+					var mb = byId[maintId] || b;
+					maintPreview.querySelector('img').src = 'images/bootscreens/' + mb.maintenance;
+					var w = bootPreview.clientWidth || 400;
+					placeName(bootPreview.querySelector('.bs-text'), b, w);
+					placeMaint(maintPreview.querySelector('.bs-maint'), mb, maintPreview.clientWidth || 400);
+					// the name in every tile of the grid
+					document.querySelectorAll('#bsGrid [data-bs-name]').forEach(function (el) { placeName(el, byId[el.getAttribute('data-bs-name')], 160); });
+				}
+				['input', 'change'].forEach(function (ev) { nameInput.addEventListener(ev, update); });
+				[maintSel, langSel, kindSel].forEach(function (el) { el.addEventListener('change', update); });
+				document.querySelectorAll('#bsGrid input').forEach(function (el) { el.addEventListener('change', update); });
+				// the section may be closed at first (size 0): update when it is opened, and once the font is there
+				var details = document.getElementById('bootscreens');
+				if (details) details.addEventListener('toggle', function () { if (details.open) update(); });
+				if (document.fonts && document.fonts.load) document.fonts.load('600 20px FredokaBS').then(update, update);
+				update();
+			})();
+			</script>
+		<?php } ?>
 		</ul>
 	</details>
 
