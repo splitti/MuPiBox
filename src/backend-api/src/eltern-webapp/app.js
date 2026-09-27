@@ -47,7 +47,7 @@ const SECTIONS = {
   bluetooth: { titleKey: 'section.bluetooth', parent: 'hub', loader: () => loadBluetooth() },
   telegram:  { titleKey: 'section.telegram',  parent: 'hub', loader: () => loadTelegram() },
   system:    { titleKey: 'section.system',    parent: 'hub', loader: () => loadSystem() },
-  theme:     { titleKey: 'section.theme',     parent: 'hub', loader: () => loadTheme() },
+  theme:     { titleKey: 'section.theme',     parent: 'hub', loader: () => { loadTheme(); loadBootscreen() } },
   history:   { titleKey: 'section.history',   parent: 'hub', loader: () => loadHistory() },
 }
 
@@ -2423,6 +2423,187 @@ async function loadTheme() {
     }
     wrap.appendChild(card)
   }
+}
+
+/* ---------- Start- und Wartungsbild (wie MuPi-Conf > Boot & maintenance screens) ---------- */
+
+// The scenes (bootscreens.json), the settings and the languages of the display texts, as the box has them.
+const bsState = { screens: null, byId: {}, languages: {}, selected: '' }
+
+async function loadBootscreen() {
+  const card = $('#bootscreen-card')
+  if (!card) return
+  const res = await api(`${API}/bootscreen`)
+  // boot screens not installed yet (older box): the card stays hidden
+  card.hidden = !res.ok
+  if (!res.ok) return
+  const { screens, languages, current } = res.body
+  bsState.screens = screens
+  bsState.languages = languages ?? {}
+  bsState.byId = {}
+  for (const b of screens.bootscreens) bsState.byId[b.id] = b
+  bsState.selected = current.bootscreen || screens.defaultBootscreen
+
+  const name = $('#bs-name')
+  name.maxLength = screens.nameMaxLength || 14
+  name.placeholder = screens.defaultName || 'MuPiBox'
+  name.value = current.boxName ?? ''
+  name.oninput = bsUpdate
+
+  const label = (b) => (getLang() === 'de' ? b.label : b.labelEn) ?? b.label ?? b.id
+  const maint = $('#bs-maint')
+  maint.innerHTML = ''
+  maint.append(new Option(t('bs.maintSame'), 'same'))
+  for (const b of screens.bootscreens) maint.append(new Option(label(b), b.id))
+  maint.value = current.maintenanceScreen || 'same'
+  maint.onchange = bsUpdate
+
+  const lang = $('#bs-lang')
+  lang.innerHTML = ''
+  for (const [code, l] of Object.entries(bsState.languages)) lang.append(new Option(l.name ?? code, code))
+  lang.value = current.bootscreenLanguage || 'en'
+  lang.onchange = bsUpdate
+  $('#bs-kind').onchange = bsUpdate
+
+  const grid = $('#bs-grid')
+  grid.innerHTML = ''
+  const tile = (id, caption, thumb) => {
+    const b = document.createElement('button')
+    b.type = 'button'
+    b.className = 'bs-tile'
+    b.dataset.id = id
+    b.append(thumb)
+    const cap = document.createElement('span')
+    cap.className = 'bs-caption'
+    cap.textContent = caption
+    b.append(cap)
+    b.addEventListener('click', () => {
+      bsState.selected = id
+      bsUpdate()
+    })
+    grid.append(b)
+  }
+  const random = document.createElement('span')
+  random.className = 'bs-thumb bs-random'
+  random.textContent = '🔀'
+  tile('random', t('bs.random'), random)
+  for (const b of screens.bootscreens) {
+    const thumb = document.createElement('span')
+    thumb.className = 'bs-thumb'
+    const img = document.createElement('img')
+    img.src = bsScene(b.id, 'scene')
+    img.alt = ''
+    const text = document.createElement('span')
+    text.className = 'bs-text'
+    text.dataset.bsName = b.id
+    thumb.append(img, text)
+    tile(b.id, b.id === screens.defaultBootscreen ? `${label(b)} (${t('bs.default')})` : label(b), thumb)
+  }
+  $('#bs-save-btn').onclick = saveBootscreen
+  bsUpdate()
+  // the names are laid out in the font of the box: again once it is loaded
+  document.fonts?.load?.('600 20px FredokaBS').then(bsUpdate, bsUpdate)
+}
+
+function bsScene(id, kind) {
+  return `${API}/bootscreen-scene/${encodeURIComponent(id)}/${kind}`
+}
+
+function bsBoxName() {
+  const s = bsState.screens
+  const n = Array.from($('#bs-name').value.trim()).slice(0, s.nameMaxLength || 14).join('')
+  return n || s.defaultName || 'MuPiBox'
+}
+
+function bsScaledShadow(spec, s) {
+  if (!spec || spec === 'none') return 'none'
+  return spec.replace(/(-?[\d.]+)px/g, (m, v) => `${parseFloat(v) * s}px`)
+}
+
+// the name at its place, as the box puts it in: the given size, made smaller when it is wider than maxWidth
+function bsPlaceName(el, b, width) {
+  const s = width / 800
+  const n = b.name
+  el.textContent = bsBoxName()
+  el.style.fontSize = `${n.fontSize * s}px`
+  el.style.fontWeight = n.fontWeight
+  el.style.letterSpacing = `${n.letterSpacing * s}px`
+  el.style.color = n.color
+  el.style.textShadow = bsScaledShadow(n.textShadow, s)
+  el.style.top = `${n.y * s}px`
+  el.style.transform = 'none'
+  const center = n.align === 'center'
+  el.style.left = center ? '50%' : `${n.x * s}px`
+  const scale = Math.min(1, (n.maxWidth * s) / Math.max(1, el.scrollWidth))
+  el.style.transformOrigin = center ? 'center top' : 'left top'
+  el.style.transform = `${center ? 'translateX(-50%) ' : ''}scale(${scale})`
+}
+
+// title and line of text of the maintenance / goodbye / battery screen at their place
+function bsPlaceMaint(box, b, width, kind, lang) {
+  const s = width / 800
+  const m = b[`${kind}Text`] || b.maintenanceText
+  const p = m.subPill
+  const texts = bsState.screens.texts[kind] ?? {}
+  const [title, sub] = texts[lang] ?? texts.en ?? ['', '']
+  box.innerHTML = ''
+  box.style.left = m.align === 'center' ? `${(400 - m.maxWidth / 2) * s}px` : `${m.x * s}px`
+  box.style.top = `${m.y * s}px`
+  box.style.width = `${m.maxWidth * s}px`
+  box.style.textAlign = m.align === 'center' ? 'center' : 'left'
+  const t1 = document.createElement('span')
+  t1.className = 't'
+  t1.textContent = title
+  t1.style.cssText = `font-size:${m.titleSize * s}px;font-weight:${m.titleWeight};color:${m.color};text-shadow:${bsScaledShadow(m.textShadow, s)};letter-spacing:${-1 * s}px;margin-bottom:${m.gap * s}px`
+  const t2 = document.createElement('span')
+  t2.className = 's'
+  t2.textContent = sub
+  t2.style.cssText = `font-size:${m.subSize * s}px;font-weight:${m.subWeight};color:${p.color};background:${p.background};border-radius:${p.radius * s}px;padding:${p.padY * s}px ${p.padX * s}px`
+  box.append(t1, t2)
+  // the title in at most 2 lines: smaller when it needs more, as on the box
+  for (let ts = m.titleSize; ts > 24 && t1.getBoundingClientRect().height > 2.2 * ts * 1.05 * s; ts--) t1.style.fontSize = `${(ts - 1) * s}px`
+}
+
+function bsUpdate() {
+  const s = bsState.screens
+  if (!s || $('#bootscreen-card').hidden) return
+  for (const tile of document.querySelectorAll('#bs-grid .bs-tile')) tile.classList.toggle('active', tile.dataset.id === bsState.selected)
+  // "random": the previews show the first scene
+  const shown = bsState.byId[bsState.selected] ?? s.bootscreens[0]
+  const kind = $('#bs-kind').value
+  const lang = $('#bs-lang').value
+  const onScene = kind === 'goodbye' || kind === 'battery'
+  const maintId = $('#bs-maint').value
+  const mb = onScene || maintId === 'same' ? shown : bsState.byId[maintId] ?? shown
+  const boot = $('#bs-boot-preview')
+  const maint = $('#bs-maint-preview')
+  boot.querySelector('img').src = bsScene(shown.id, 'scene')
+  maint.querySelector('img').src = bsScene(mb.id, onScene ? kind : 'maintenance')
+  $('#bs-maint-title').textContent = onScene ? t('bs.previewOff') : t('bs.previewMaint')
+  bsPlaceName(boot.querySelector('.bs-text'), shown, boot.clientWidth || 400)
+  bsPlaceMaint(maint.querySelector('.bs-maint'), mb, maint.clientWidth || 400, kind, lang)
+  // the name in every tile, at the size the tile has on this screen
+  for (const el of document.querySelectorAll('#bs-grid [data-bs-name]')) {
+    bsPlaceName(el, bsState.byId[el.dataset.bsName], el.parentElement.clientWidth || 130)
+  }
+}
+window.addEventListener('resize', () => bsUpdate())
+
+async function saveBootscreen() {
+  const body = {
+    bootscreen: bsState.selected,
+    maintenanceScreen: $('#bs-maint').value,
+    boxName: $('#bs-name').value,
+    bootscreenLanguage: $('#bs-lang').value,
+  }
+  const res = await api(`${API}/bootscreen`, { method: 'POST', body })
+  if (!res.ok) {
+    feedback('#bs-feedback', 'error', res.body?.error ?? t('common.errorStatus', { status: res.status }))
+    return
+  }
+  $('#bs-name').value = res.body?.current?.boxName ?? body.boxName
+  feedback('#bs-feedback', 'success', t('bs.saved'))
+  bsUpdate()
 }
 
 // Children's themes: the Cover Flow view ("stage") and reading the name aloud when it stops - only offered while

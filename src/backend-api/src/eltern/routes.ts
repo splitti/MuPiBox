@@ -81,6 +81,37 @@ function buildClearCookie(): string {
 /** Canonical BT MAC (AA:BB:CC:DD:EE:FF). */
 const BT_MAC_RE = /^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/
 
+// Boot and maintenance screens (see media/bootscreens and MuPi-Conf): the installed scenes and their settings file.
+const BOOTSCREENS_DIR = '/home/dietpi/MuPiBox/sysmedia/bootscreens'
+type BootscreensFile = { bootscreens: Record<string, unknown>[]; defaultBootscreen?: string; nameMaxLength?: number }
+
+function readBootscreens(): BootscreensFile | undefined {
+  try {
+    const json = JSON.parse(readFileSync(`${BOOTSCREENS_DIR}/bootscreens.json`, 'utf8')) as BootscreensFile
+    return Array.isArray(json.bootscreens) ? json : undefined
+  } catch {
+    return undefined
+  }
+}
+
+function bootscreenIds(screens: BootscreensFile): string[] {
+  return screens.bootscreens.map((b) => b.id).filter((id): id is string => typeof id === 'string')
+}
+
+// The languages of the display texts ({code: {name, ...}}), the same list MuPi-Conf offers for the boot screens.
+function readDisplayLanguages(): Record<string, { name?: string }> {
+  try {
+    const json = JSON.parse(readFileSync('/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/assets/i18n/display-texts.json', 'utf8')) as {
+      languages?: Record<string, { name?: string }>
+    }
+    const languages: Record<string, { name?: string }> = {}
+    for (const [code, language] of Object.entries(json.languages ?? {})) languages[code] = { name: language?.name ?? code }
+    return languages
+  } catch {
+    return { en: { name: 'English' } }
+  }
+}
+
 /** Run a command (no shell — execFile is injection-safe) and capture stdout.
  *  Never rejects: failures resolve with ok:false so handlers stay simple. */
 function execCapture(cmd: string, args: string[], timeoutMs = 8000): Promise<{ ok: boolean; stdout: string }> {
@@ -1628,6 +1659,89 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       res.sendFile(`/var/www/images/km/${name}.svg`, cached, (err2) => {
         if (err2 && !res.headersSent) res.status(404).setHeader('Cache-Control', 'no-store').end()
       })
+    })
+  })
+
+  /**
+   * GET /api/eltern/bootscreen
+   * Boot and maintenance screens (as in MuPi-Conf): the installed scenes with their text places and texts
+   * (bootscreens.json), the settings (empty bootscreen = the default scene) and the languages of the display texts.
+   */
+  router.get('/bootscreen', requireSession, (_req, res) => {
+    const screens = readBootscreens()
+    if (!screens) {
+      res.status(404).json({ error: 'boot screens are not installed' })
+      return
+    }
+    const mb = (deps.getMupiboxConfig()?.mupibox as Record<string, unknown> | undefined) ?? {}
+    const ids = bootscreenIds(screens)
+    const boot = typeof mb.bootscreen === 'string' && (mb.bootscreen === 'random' || ids.includes(mb.bootscreen)) ? mb.bootscreen : ''
+    const maint = typeof mb.maintenanceScreen === 'string' && ids.includes(mb.maintenanceScreen) ? mb.maintenanceScreen : 'same'
+    const languages = readDisplayLanguages()
+    const lang = typeof mb.bootscreenLanguage === 'string' && languages[mb.bootscreenLanguage] ? mb.bootscreenLanguage : 'en'
+    res.json({
+      screens,
+      languages,
+      current: { bootscreen: boot, maintenanceScreen: maint, boxName: typeof mb.boxName === 'string' ? mb.boxName : '', bootscreenLanguage: lang },
+    })
+  })
+
+  /**
+   * POST /api/eltern/bootscreen  {bootscreen, maintenanceScreen, boxName, bootscreenLanguage}
+   * Checked as in MuPi-Conf (the default scene is stored empty, so a later change of the default reaches the box);
+   * the box then puts the pictures together in the background (bootscreen_update.sh).
+   */
+  router.post('/bootscreen', requireSession, requireCsrf, async (req, res) => {
+    const screens = readBootscreens()
+    if (!screens) {
+      res.status(404).json({ error: 'boot screens are not installed' })
+      return
+    }
+    const body = (req.body ?? {}) as Record<string, unknown>
+    const ids = bootscreenIds(screens)
+    let boot = typeof body.bootscreen === 'string' ? body.bootscreen : ''
+    if (boot !== 'random' && !ids.includes(boot)) boot = ''
+    if (boot === screens.defaultBootscreen) boot = ''
+    let maint = typeof body.maintenanceScreen === 'string' ? body.maintenanceScreen : 'same'
+    if (maint !== 'same' && !ids.includes(maint)) maint = 'same'
+    const maxLength = typeof screens.nameMaxLength === 'number' ? screens.nameMaxLength : 14
+    // the name: no control characters, spaces at the ends removed, at most maxLength characters
+    const name = Array.from(String(typeof body.boxName === 'string' ? body.boxName : '').replace(/\p{Cc}/gu, '').trim())
+      .slice(0, maxLength)
+      .join('')
+      .trim()
+    let lang = typeof body.bootscreenLanguage === 'string' ? body.bootscreenLanguage : 'en'
+    if (!readDisplayLanguages()[lang]) lang = 'en'
+    await deps.updateMupiboxConfig((c) => {
+      const m = ((c.mupibox as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
+      m.bootscreen = boot
+      m.maintenanceScreen = maint
+      m.boxName = name
+      m.bootscreenLanguage = lang
+      c.mupibox = m
+    })
+    // putting the pictures together takes a few seconds (all scenes for "random"): in the background
+    const child = spawn('sudo', ['/usr/local/bin/mupibox/bootscreen_update.sh'], { detached: true, stdio: 'ignore' })
+    child.on('error', () => undefined)
+    child.unref()
+    res.json({ ok: true, current: { bootscreen: boot, maintenanceScreen: maint, boxName: name, bootscreenLanguage: lang } })
+  })
+
+  /**
+   * GET /api/eltern/bootscreen-scene/:id/:kind
+   * A scene picture for the preview (kind: scene | maintenance | goodbye | battery), only of an installed scene.
+   */
+  router.get('/bootscreen-scene/:id/:kind', requireSession, (req, res) => {
+    const screens = readBootscreens()
+    const kind = String(req.params.kind ?? '')
+    const entry = screens?.bootscreens.find((b) => b.id === req.params.id)
+    const file = entry && ['scene', 'maintenance', 'goodbye', 'battery'].includes(kind) ? entry[kind] : undefined
+    if (typeof file !== 'string' || !/^screens\/[a-z0-9-]+\/[a-z0-9-]+\.svg$/.test(file)) {
+      res.status(404).end()
+      return
+    }
+    res.sendFile(`${BOOTSCREENS_DIR}/${file}`, { headers: { 'Cache-Control': 'public, max-age=3600' } }, (err) => {
+      if (err && !res.headersSent) res.status(404).end()
     })
   })
 

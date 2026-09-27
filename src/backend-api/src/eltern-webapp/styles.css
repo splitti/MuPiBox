@@ -1483,6 +1483,51 @@ select:focus, textarea:focus {
 .theme-name { font-size: 13px; margin-top: 6px; word-break: break-word; }
 .theme-badge { font-size: 11px; color: var(--primary); min-height: 1em; margin-top: 2px; }
 
+/* Start- und Wartungsbild: scenes with the box name / texts laid over them as the box puts them in */
+@font-face {
+  font-family: "FredokaBS";
+  src: url("/theme-data/_fonts/Fredoka-Variable.ttf") format("truetype");
+  font-weight: 300 700;
+}
+.bs-label { font-size: 13px; color: var(--text-dim, #a9a293); margin: 14px 0 6px; }
+.bs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px;
+}
+.bs-tile {
+  background: var(--card-elevated);
+  border: 0;
+  border-radius: 8px;
+  padding: 6px;
+  color: var(--text);
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+  outline: 2px solid transparent;
+  transition: transform 0.1s, outline-color 0.1s;
+}
+.bs-tile.active { outline-color: var(--primary); }
+.bs-thumb {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 800 / 480;
+  border-radius: 5px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.06);
+}
+.bs-thumb img { display: block; width: 100%; height: 100%; }
+.bs-thumb.bs-random { display: grid; place-items: center; font-size: 30px; }
+.bs-caption { display: block; font-size: 12px; margin-top: 6px; line-height: 1.3; }
+.bs-previews { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.bs-preview { position: relative; width: 100%; aspect-ratio: 800 / 480; border-radius: 8px; overflow: hidden; background: rgba(255, 255, 255, 0.06); }
+.bs-preview img { display: block; width: 100%; height: 100%; }
+.bs-text { position: absolute; white-space: nowrap; font-family: "FredokaBS", "DejaVu Sans", sans-serif; line-height: 1; }
+.bs-maint { position: absolute; font-family: "FredokaBS", "DejaVu Sans", sans-serif; }
+.bs-maint .t { display: block; line-height: 1.05; }
+.bs-maint .s { display: inline; line-height: 1.9; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+
 /* WLAN list rows (Phase 18 Item 2) */
 .wlan-list { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
 .wlan-row {

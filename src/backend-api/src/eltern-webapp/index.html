@@ -1100,6 +1100,49 @@
         </div>
         <div id="theme-stage-feedback" class="feedback" hidden></div>
       </div>
+      <!-- Start- und Wartungsbild (wie MuPi-Conf > Boot & maintenance screens) -->
+      <div class="card" id="bootscreen-card" hidden>
+        <h3 data-i18n="bs.title"></h3>
+        <p class="dim" data-i18n="bs.hint"></p>
+        <div class="form-row">
+          <label for="bs-name" data-i18n="bs.name"></label>
+          <input type="text" id="bs-name" maxlength="14" placeholder="MuPiBox" autocomplete="off">
+        </div>
+        <div class="bs-label" data-i18n="bs.boot"></div>
+        <div id="bs-grid" class="bs-grid"></div>
+        <div class="form-row">
+          <label for="bs-maint" data-i18n="bs.maint"></label>
+          <select id="bs-maint"></select>
+        </div>
+        <div class="form-row">
+          <label for="bs-lang" data-i18n="bs.lang"></label>
+          <select id="bs-lang"></select>
+        </div>
+        <div class="form-row">
+          <label for="bs-kind" data-i18n="bs.previewKind"></label>
+          <select id="bs-kind">
+            <option value="update" data-i18n="bs.kind.update"></option>
+            <option value="install" data-i18n="bs.kind.install"></option>
+            <option value="wlan" data-i18n="bs.kind.wlan"></option>
+            <option value="goodbye" data-i18n="bs.kind.goodbye"></option>
+            <option value="battery" data-i18n="bs.kind.battery"></option>
+          </select>
+        </div>
+        <div class="bs-previews">
+          <div>
+            <div class="bs-label" data-i18n="bs.previewBoot"></div>
+            <div class="bs-preview" id="bs-boot-preview"><img alt=""><span class="bs-text"></span></div>
+          </div>
+          <div>
+            <div class="bs-label" id="bs-maint-title"></div>
+            <div class="bs-preview" id="bs-maint-preview"><img alt=""><div class="bs-maint"></div></div>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="primary" id="bs-save-btn" data-i18n="bs.save"></button>
+        </div>
+        <div id="bs-feedback" class="feedback" hidden></div>
+      </div>
     </section>
   </main>
 
