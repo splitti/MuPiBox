@@ -1,0 +1,98 @@
+/* MuPiBox Eltern-App – Design-Tokens (gemeinsame Familie mit dem Admin-Interface)
+   Dunkel = Standard. Umschalten über [data-theme] am <html>. "auto" folgt prefers-color-scheme. */
+:root, [data-theme="dark"] {
+  --mp-warn-soft: #3A2C17;
+  --mp-scrim: rgba(4,8,16,.6);
+  --mp-bg: #0F1522;
+  --mp-surface: #172033;
+  --mp-border: #27334B;
+  --mp-text: #E8EEF6;
+  --mp-muted: #A1AEC2;
+  --mp-primary: #56B6EA;
+  --mp-on-primary: #0B1220;
+  --mp-primary-soft: #1A3451;
+  --mp-primary-text: #94D2F4;
+  --mp-field: #101A2B;
+  --mp-chip: #1D2940;
+  --mp-track: #2A3854;
+  --mp-danger: #F26B61;
+  --mp-danger-soft: #3A1E24;
+  --mp-success: #4CC47F;
+  --mp-success-soft: #17362A;
+  --mp-warn: #F0A04B;
+  --mp-accent: #F2B45A;
+  --mp-on-accent: #2A1806;
+  --mp-accent-text: #F6C77E;
+  --mp-accent-soft: #3A2C17;
+  --mp-accent-glow: rgba(242,180,90,.30);
+  --mp-hero: linear-gradient(160deg,#243152 0%,#172033 65%);
+  color-scheme: dark;
+}
+[data-theme="light"] {
+  --mp-warn-soft: #FDF1E0;
+  --mp-scrim: rgba(20,30,45,.45);
+  --mp-bg: #F3F6F9;
+  --mp-surface: #FFFFFF;
+  --mp-border: #E1E7EE;
+  --mp-text: #1B2733;
+  --mp-muted: #566676;
+  --mp-primary: #1A86BF;
+  --mp-on-primary: #FFFFFF;
+  --mp-primary-soft: #E2F1FA;
+  --mp-primary-text: #136E9E;
+  --mp-field: #FFFFFF;
+  --mp-chip: #F0F4F8;
+  --mp-track: #DCE4EC;
+  --mp-danger: #C9372F;
+  --mp-danger-soft: #FCE9E7;
+  --mp-success: #23874C;
+  --mp-success-soft: #E3F4EA;
+  --mp-warn: #B8620E;
+  --mp-accent: #E0962E;
+  --mp-on-accent: #3A2206;
+  --mp-accent-text: #9A5A0C;
+  --mp-accent-soft: #FDF1E0;
+  --mp-accent-glow: rgba(224,150,46,.35);
+  --mp-hero: linear-gradient(160deg,#FFF7EC 0%,#FFFFFF 60%);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: light) { [data-theme="auto"] {
+  --mp-warn-soft: #FDF1E0;
+  --mp-scrim: rgba(20,30,45,.45);
+  --mp-bg: #F3F6F9;
+  --mp-surface: #FFFFFF;
+  --mp-border: #E1E7EE;
+  --mp-text: #1B2733;
+  --mp-muted: #566676;
+  --mp-primary: #1A86BF;
+  --mp-on-primary: #FFFFFF;
+  --mp-primary-soft: #E2F1FA;
+  --mp-primary-text: #136E9E;
+  --mp-field: #FFFFFF;
+  --mp-chip: #F0F4F8;
+  --mp-track: #DCE4EC;
+  --mp-danger: #C9372F;
+  --mp-danger-soft: #FCE9E7;
+  --mp-success: #23874C;
+  --mp-success-soft: #E3F4EA;
+  --mp-warn: #B8620E;
+  --mp-accent: #E0962E;
+  --mp-on-accent: #3A2206;
+  --mp-accent-text: #9A5A0C;
+  --mp-accent-soft: #FDF1E0;
+  --mp-accent-glow: rgba(224,150,46,.35);
+  --mp-hero: linear-gradient(160deg,#FFF7EC 0%,#FFFFFF 60%);
+  color-scheme: light;
+} }
+:root {
+  --mp-font: "Nunito Sans", system-ui, sans-serif;      /* Fließtext, Bedienung */
+  --mp-font-display: "Fredoka", "Nunito Sans", sans-serif; /* Titel, Zahlen im Ring, Marke */
+  --mp-r-sm: 10px; --mp-r: 12px; --mp-r-card: 16px; --mp-r-hero: 24px; --mp-r-sheet: 24px;
+  --mp-hit: 44px;          /* Mindestgröße Tippziel */
+  --mp-field-h: 48px;      /* Eingabefelder, Haupt-Buttons */
+  --mp-tab-h: 76px;        /* untere Tab-Leiste inkl. Safe-Area-Puffer */
+  --mp-head-h: 70px;
+  --mp-gap: 14px;
+  --mp-maxw: 480px;        /* Inhaltsbreite Handy/Tablet */
+  --mp-maxw-wide: 1000px;  /* PC (≥ 960 px) */
+}
