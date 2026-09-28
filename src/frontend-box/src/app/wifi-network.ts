@@ -37,3 +37,31 @@ export interface WifiConfiguredNetwork {
   ssid: string
   current: boolean
 }
+
+/** Which link carries the default route right now. */
+export interface NetworkLink {
+  type: 'wifi' | 'ethernet' | 'none'
+  interface?: string
+}
+
+/** The ethernet stanza of /etc/network/interfaces, for the LAN view of the WiFi settings page. */
+export interface EthernetConfig {
+  interface: string
+  dhcp: boolean
+  ip: string
+  mask: string
+  gateway: string
+  dns: string
+  /** The live address/gateway, may differ from ip/gateway right after a config change until restart. */
+  currentIp?: string
+  currentGateway?: string
+  /** Whether the port itself is administratively up (see /api/network/ethernet/power). */
+  linkUp?: boolean
+}
+
+/** Whether the onboard WiFi radio is on or off (rfkill), independent of a USB WiFi adapter. */
+export interface OnboardWifiStatus {
+  /** False when the box has no onboard WiFi adapter at all. */
+  available: boolean
+  enabled: boolean
+}

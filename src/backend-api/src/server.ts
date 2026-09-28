@@ -2160,6 +2160,57 @@ async function wifiInterface(): Promise<string> {
   return name
 }
 
+// Which link carries the default route right now: WiFi, ethernet (a network cable), or none. The WiFi
+// settings page uses this to switch itself into a LAN view when the box is connected by cable.
+async function activeLink(): Promise<{ type: 'wifi' | 'ethernet' | 'none'; interface?: string }> {
+  try {
+    const { stdout } = await execFileAsync('ip', ['-4', 'route', 'show', 'default'])
+    const routed = /\bdev (\S+)/.exec(stdout)?.[1]
+    if (!routed) {
+      return { type: 'none' }
+    }
+    const isWireless = fs.existsSync(`/sys/class/net/${routed}/wireless`)
+    return { type: isWireless ? 'wifi' : 'ethernet', interface: routed }
+  } catch {
+    return { type: 'none' }
+  }
+}
+
+app.get('/api/network/link', async (_req, res) => {
+  try {
+    res.json(await activeLink())
+  } catch (error) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error reading the active link: ${error}`)
+    res.status(500).send('error')
+  }
+})
+
+// Turns the onboard WiFi radio on or off via rfkill (mupi_onboard_wifi.sh), independent of a USB WiFi
+// adapter that may also be plugged in. Immediate, no reboot needed.
+const ONBOARD_WIFI_SCRIPT = '/usr/local/bin/mupibox/mupi_onboard_wifi.sh'
+
+app.get('/api/network/onboard-wifi', async (_req, res) => {
+  try {
+    const { stdout } = await execFileAsync(ONBOARD_WIFI_SCRIPT, ['status'])
+    const status = stdout.trim()
+    res.json({ available: status !== 'unavailable', enabled: status === 'on' })
+  } catch (error) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error reading onboard WiFi state: ${error}`)
+    res.status(500).send('error')
+  }
+})
+
+app.post('/api/network/onboard-wifi', async (req, res) => {
+  try {
+    const enabled = Boolean(req.body?.enabled)
+    await execFileAsync('sudo', [ONBOARD_WIFI_SCRIPT, enabled ? 'on' : 'off'])
+    res.send('ok')
+  } catch (error) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error toggling onboard WiFi: ${error}`)
+    res.status(500).send('error')
+  }
+})
+
 app.get('/api/wifi/configured', async (_req, res) => {
   try {
     const { stdout } = await execFileAsync('sudo', ['wpa_cli', '-i', await wifiInterface(), 'list_networks'])
@@ -2399,6 +2450,212 @@ async function wifiBandChoices(ssidsInOrder: string[]): Promise<WifiBandChoice[]
     return bands.size === 1 && bands.has('2.4') ? '2.4' : bands.size === 1 && bands.has('5') ? '5' : 'auto'
   })
 }
+
+// The ethernet stanza of /etc/network/interfaces (DietPi's ifupdown config), for the LAN view of the WiFi
+// settings page. address/netmask/gateway are kept even in dhcp mode (ifupdown ignores them there) so DietPi's
+// own dietpi-config screen and MuPiBox's admin UI recall the same values when switching back to static.
+const INTERFACES_FILE = '/etc/network/interfaces'
+interface EthernetConfig {
+  iface: string
+  dhcp: boolean
+  ip: string
+  mask: string
+  gateway: string
+  dns: string
+}
+
+async function readInterfacesFile(): Promise<string> {
+  const { stdout } = await execFileAsync('sudo', ['cat', INTERFACES_FILE])
+  return stdout
+}
+
+// Finds the "iface ethN inet dhcp|static" line and the address/netmask/gateway/dns-nameservers lines that
+// follow it (dns-nameservers may be commented out, DietPi's way of disabling it without losing the value).
+function parseEthernetStanza(text: string): (EthernetConfig & { blockStart: number; blockEnd: number }) | null {
+  const ifaceMatch = /^iface[ \t]+(eth\w*)[ \t]+inet[ \t]+(dhcp|static)[ \t]*$/m.exec(text)
+  if (!ifaceMatch || ifaceMatch.index === undefined) {
+    return null
+  }
+  const blockStart = ifaceMatch.index
+  const rest = text.slice(blockStart + ifaceMatch[0].length)
+  const bodyMatch = /^((?:\n[ \t]*#?[ \t]*(?:address|netmask|gateway|dns-nameservers)[ \t]+\S+)*)/.exec(rest)
+  const body = bodyMatch?.[0] ?? ''
+  const field = (name: string) => new RegExp(`^[ \t]*#?[ \t]*${name}[ \t]+(\\S+)`, 'm').exec(body)?.[1] ?? ''
+  return {
+    iface: ifaceMatch[1],
+    dhcp: ifaceMatch[2] === 'dhcp',
+    ip: field('address'),
+    mask: field('netmask'),
+    gateway: field('gateway'),
+    dns: field('dns-nameservers'),
+    blockStart,
+    blockEnd: blockStart + ifaceMatch[0].length + body.length,
+  }
+}
+
+function renderEthernetStanza(cfg: EthernetConfig): string {
+  const lines = [`iface ${cfg.iface} inet ${cfg.dhcp ? 'dhcp' : 'static'}`]
+  if (cfg.ip) lines.push(`address ${cfg.ip}`)
+  if (cfg.mask) lines.push(`netmask ${cfg.mask}`)
+  if (cfg.gateway) lines.push(`gateway ${cfg.gateway}`)
+  // Kept but commented out under dhcp, same as DietPi does, so a later switch to static recalls it.
+  if (cfg.dns) lines.push(`${cfg.dhcp ? '#' : ''}dns-nameservers ${cfg.dns}`)
+  return lines.join('\n')
+}
+
+async function writeEthernetConfig(next: EthernetConfig): Promise<void> {
+  const text = await readInterfacesFile()
+  const parsed = parseEthernetStanza(text)
+  if (!parsed) {
+    throw new Error('no ethernet interface configured in /etc/network/interfaces')
+  }
+  const updated = text.slice(0, parsed.blockStart) + renderEthernetStanza({ ...next, iface: parsed.iface }) + text.slice(parsed.blockEnd)
+  if (updated === text) {
+    return
+  }
+  const tmpPath = `/tmp/.interfaces.${process.pid}.${Date.now()}`
+  const nextPath = `${INTERFACES_FILE}.mupibox-new`
+  await writeFile(tmpPath, updated, { mode: 0o644 })
+  try {
+    // Same atomic replace as the WPA config (new file next to it, same owner and mode, then rename) so a
+    // power cut mid-write cannot leave the box without a valid interfaces file.
+    await execFileAsync('sudo', ['cp', tmpPath, nextPath])
+    await execFileAsync('sudo', ['chown', '--reference', INTERFACES_FILE, nextPath])
+    await execFileAsync('sudo', ['chmod', '--reference', INTERFACES_FILE, nextPath])
+    await execFileAsync('sudo', ['mv', '-f', nextPath, INTERFACES_FILE])
+  } finally {
+    await fs.promises.rm(tmpPath, { force: true })
+  }
+}
+
+// One save at a time, same reasoning as wifiSaveConfig: two requests at once could read and write the file
+// over each other.
+let ethernetSaveChain: Promise<unknown> = Promise.resolve()
+function saveEthernetConfig(next: EthernetConfig): Promise<void> {
+  const run = ethernetSaveChain.then(() => writeEthernetConfig(next))
+  ethernetSaveChain = run.catch(() => undefined)
+  return run
+}
+
+const IPV4_PATTERN = /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/
+
+app.get('/api/network/ethernet', async (_req, res) => {
+  try {
+    const parsed = parseEthernetStanza(await readInterfacesFile())
+    if (!parsed) {
+      res.status(404).send('no ethernet interface configured')
+      return
+    }
+    let currentIp: string | undefined
+    let currentGateway: string | undefined
+    try {
+      const { stdout } = await execFileAsync('ip', ['-4', 'addr', 'show', parsed.iface])
+      currentIp = /inet (\S+)\//.exec(stdout)?.[1]
+    } catch {
+      // interface down or unknown
+    }
+    try {
+      const { stdout } = await execFileAsync('ip', ['-4', 'route', 'show', 'default', 'dev', parsed.iface])
+      currentGateway = /via (\S+)/.exec(stdout)?.[1]
+    } catch {
+      // no default route on this interface
+    }
+    let linkUp = false
+    try {
+      const { stdout } = await execFileAsync('ip', ['link', 'show', parsed.iface])
+      linkUp = /<[^>]*\bUP\b[^>]*>/.test(stdout)
+    } catch {
+      // interface unknown
+    }
+    res.json({
+      interface: parsed.iface,
+      dhcp: parsed.dhcp,
+      ip: parsed.ip,
+      mask: parsed.mask,
+      gateway: parsed.gateway,
+      dns: parsed.dns,
+      currentIp,
+      currentGateway,
+      linkUp,
+    })
+  } catch (error) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error reading ethernet config: ${error}`)
+    res.status(500).send('error')
+  }
+})
+
+app.post('/api/network/ethernet', async (req, res) => {
+  try {
+    const dhcp = Boolean(req.body?.dhcp)
+    const ip = String(req.body?.ip ?? '').trim()
+    const mask = String(req.body?.mask ?? '').trim()
+    const gateway = String(req.body?.gateway ?? '').trim()
+    const dns = String(req.body?.dns ?? '').trim()
+    if (!dhcp) {
+      const required: [string, string][] = [
+        ['Static IP', ip],
+        ['Static mask', mask],
+        ['Static gateway', gateway],
+      ]
+      for (const [label, value] of required) {
+        if (!IPV4_PATTERN.test(value)) {
+          res.status(400).send(`${label} is not a valid IPv4 address`)
+          return
+        }
+      }
+    }
+    if (dns && !IPV4_PATTERN.test(dns)) {
+      res.status(400).send('Static DNS is not a valid IPv4 address')
+      return
+    }
+    const parsed = parseEthernetStanza(await readInterfacesFile())
+    if (!parsed) {
+      res.status(404).send('no ethernet interface configured')
+      return
+    }
+    await saveEthernetConfig({ iface: parsed.iface, dhcp, ip, mask, gateway, dns })
+    res.send('ok')
+  } catch (error) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error saving ethernet config: ${error}`)
+    res.status(500).send('error')
+  }
+})
+
+// Brings the ethernet port itself up or down (administratively), independent of its DHCP/STATIC config.
+// Immediate - unlike /restart above, this can cut a connection that is currently going over this same
+// interface (e.g. the admin page reached through the LAN cable) with no way to undo it remotely.
+app.post('/api/network/ethernet/power', async (req, res) => {
+  try {
+    const enabled = Boolean(req.body?.enabled)
+    const parsed = parseEthernetStanza(await readInterfacesFile())
+    if (!parsed) {
+      res.status(404).send('no ethernet interface configured')
+      return
+    }
+    await execFileAsync('sudo', ['ip', 'link', 'set', parsed.iface, enabled ? 'up' : 'down'])
+    res.send('ok')
+  } catch (error) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error powering ethernet ${req.body?.enabled ? 'up' : 'down'}: ${error}`)
+    res.status(500).send('error')
+  }
+})
+
+// Restarts the ethernet interface so a saved config takes effect, mirroring the WiFi "Restart" button.
+app.post('/api/network/ethernet/restart', async (_req, res) => {
+  try {
+    const parsed = parseEthernetStanza(await readInterfacesFile())
+    if (!parsed) {
+      res.status(404).send('no ethernet interface configured')
+      return
+    }
+    await execFileAsync('sudo', ['service', `ifup@${parsed.iface}`, 'stop'])
+    await execFileAsync('sudo', ['service', `ifup@${parsed.iface}`, 'start'])
+    res.send('ok')
+  } catch (error) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error restarting ethernet: ${error}`)
+    res.status(500).send('error')
+  }
+})
 
 interface WifiNetworkInfo {
   ssid: string
