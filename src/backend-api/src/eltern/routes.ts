@@ -34,6 +34,7 @@ import { ipRateLimit, localNetworkOnly, requireCsrf, requireSession } from './mi
 import { registerCustomCoverRoutes } from './covers'
 import { registerDisplayRoutes } from './display'
 import { registerHardwareRoutes } from './hardware'
+import { registerServicesRoutes } from './services'
 import { type LocalLibraryDeps, registerLocalUploadRoutes } from './upload'
 import { localOnly } from '../request-guard'
 import {
@@ -211,6 +212,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   if (deps.localLibrary) registerLocalUploadRoutes(router, deps.localLibrary)
   registerDisplayRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerHardwareRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
+  registerServicesRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerCustomCoverRoutes(router, {
     dir: '/home/dietpi/MuPiBox/media/cover',
     host: () => String((deps.getMupiboxConfig()?.mupibox as { host?: string } | undefined)?.host || os.hostname()),
@@ -1348,7 +1350,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
    * das zuletzt aktive Connect-Device (typisch die Box).
    */
   router.post('/library/play', requireSession, requireCsrf, async (req, res) => {
-    const body = (req.body as { index?: unknown } | undefined) ?? {}
+    const body = (req.body as { index?: unknown; albumId?: unknown } | undefined) ?? {}
     const idx = Number(body.index)
     if (!Number.isInteger(idx) || idx < 0) {
       res.status(400).json({ error: 'invalid_index' })
@@ -1377,7 +1379,16 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     const enc = encodeURIComponent
     const type = String(item.type ?? '')
     let url = ''
-    switch (type) {
+    // One album of an entry that subscribes a whole Spotify artist (only artistid): the app lists the artist's albums
+    // and plays the one tapped - only for an artist that is in the library.
+    const albumId = body.albumId
+    if (albumId !== undefined) {
+      if (typeof albumId !== 'string' || !/^[A-Za-z0-9]{10,40}$/.test(albumId) || type !== 'spotify' || !item.artistid) {
+        res.status(400).json({ error: 'invalid_album' })
+        return
+      }
+      url = `spotify/now/spotify:album:${enc(albumId)}:0:0`
+    } else switch (type) {
       case 'library': {
         const cat = String(item.category ?? '')
         const artist = String(item.artist ?? '')
@@ -2172,8 +2183,12 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     })
     // Apply immediately — fire-and-forget; the HTTP response shouldn't block
     // on systemd. NOPASSWD sudo is configured for the box user.
-    execFile('sudo', ['systemctl', 'restart', 'mupi_telegram'], { timeout: 15000 }, (err) => {
-      if (err) console.warn(`${new Date().toLocaleString()}: [eltern] mupi_telegram restart failed: ${err.message}`)
+    // Switching on / off also enables / disables the service, as the admin interface does: with only a restart, a bot
+    // the admin interface had disabled ran now, but no longer after the next start of the box.
+    const tgActive = (deps.getMupiboxConfig()?.telegram as Record<string, unknown> | undefined)?.active === true
+    const tgScript = tgActive ? 'systemctl enable mupi_telegram && systemctl restart mupi_telegram' : 'systemctl stop mupi_telegram; systemctl disable mupi_telegram'
+    execFile('sudo', ['sh', '-c', tgScript], { timeout: 20000 }, (err) => {
+      if (err) console.warn(`${new Date().toLocaleString()}: [eltern] mupi_telegram ${tgActive ? 'start' : 'stop'} failed: ${err.message}`)
     })
     res.json({ ok: true })
   })

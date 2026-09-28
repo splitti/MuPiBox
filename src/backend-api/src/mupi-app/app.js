@@ -1104,6 +1104,18 @@ function spotifyCover(it) {
 const coverOf = (it) => it.cover_override ?? it.cover ?? spotifyCover(it) ?? ''
 
 // Spotify entries that only name an artist are not playable on their own (the box looks their albums up itself)
+// Entries that subscribe a whole Spotify artist (only artistid): a folder of that artist's albums (as on the box)
+const isSpotifyArtist = (it) => it && it.type === 'spotify' && !!it.artistid && !it.id && !it.playlistid && !it.showid && !it.audiobookid && !it.isResume
+const spotifyArtistTile = (it) => ({
+  kind: 'spartist',
+  title: itemArtist(it) || itemTitle(it),
+  sub: 'alle Folgen',
+  cover: it.artistcover_override ?? it.artistcover ?? it.cover_override ?? it.cover ?? `/api/spotify/cover-for/artist/${encodeURIComponent(it.artistid)}`,
+  badge: 'Spotify',
+  folder: true,
+  path: it.artistid,
+  index: it._index,
+})
 const playable = (it) => it && typeof it === 'object' && !it.isResume && it.category !== 'resume' && it.type !== 'library' && !(it.type === 'spotify' && !it.id && !it.playlistid && !it.showid && !it.audiobookid)
 
 async function loadHear() {
@@ -1126,6 +1138,9 @@ function topTiles() {
   const tiles = []
   if (cat !== 'nas') {
     const items = hear.items.filter((it) => playable(it) && (cat === 'all' || catOf(it) === cat))
+    for (const it of hear.items) {
+      if (isSpotifyArtist(it) && (cat === 'all' || catOf(it) === cat) && match(`${itemArtist(it)} ${itemTitle(it)}`)) tiles.push(spotifyArtistTile(it))
+    }
     if (q) {
       for (const it of items) if (match(`${itemTitle(it)} ${itemArtist(it)}`)) tiles.push(entryTile(it))
     } else {
@@ -1170,6 +1185,12 @@ function levelTiles() {
       .map(entryTile)
       .sort((a, b) => a.title.localeCompare(b.title, 'de', { numeric: true }))
   }
+  if (top.kind === 'spartist') {
+    return (hear.level ?? [])
+      .filter((a) => a?.id && match(a.name ?? ''))
+      .map((a) => ({ kind: 'spalbum', title: String(a.name ?? '—'), sub: '', cover: a.images?.[1]?.url ?? a.images?.[0]?.url ?? '', badge: 'Spotify', index: top.index, albumId: a.id }))
+      .sort((x, y) => x.title.localeCompare(y.title, 'de', { numeric: true }))
+  }
   return (hear.level ?? []).filter((f) => match(`${f.title} ${f.artist}`)).map(top.kind === 'nas' ? nasTile : localTile)
 }
 
@@ -1179,6 +1200,29 @@ async function openLevel() {
   hear.levelError = ''
   drawHear()
   if (!top || top.kind === 'artist') return
+  if (top.kind === 'spartist') {
+    // the artist's albums from Spotify: the box's backend gives at most 10 at a time (Benjamin Blümchen has more than
+    // 280), so the pages after the first are asked for six at a time, and the grid fills as they come
+    const page = (offset) => api(`/api/spotify/artist/${encodeURIComponent(top.path)}/albums?limit=50&offset=${offset}`)
+    const first = await page(0)
+    if (hear.stack.at(-1) !== top) return
+    if (!first.ok) hear.levelError = 'Spotify antwortet gerade nicht.'
+    const all = [...(first.body?.items ?? [])]
+    hear.level = [...all]
+    drawHear()
+    const step = first.body?.items?.length || 10
+    const total = Math.min(1000, Number(first.body?.total) || 0)
+    const offsets = []
+    for (let o = step; o < total; o += step) offsets.push(o)
+    for (let i = 0; i < offsets.length; i += 6) {
+      const pages = await Promise.all(offsets.slice(i, i + 6).map(page))
+      if (hear.stack.at(-1) !== top) return
+      for (const p of pages) all.push(...(p.body?.items ?? []))
+      hear.level = [...all]
+      drawHear()
+    }
+    return
+  }
   const r = await api(top.kind === 'nas' ? `/api/nas/children?path=${encodeURIComponent(top.path)}` : `/api/library/children?path=${encodeURIComponent(top.path)}`)
   if (hear.stack.at(-1) !== top) return // the user went on meanwhile
   hear.level = Array.isArray(r.body) ? r.body : []
@@ -1232,7 +1276,7 @@ function drawHear() {
 function onTile(t) {
   if (!t) return
   if (t.folder) {
-    hear.stack.push({ kind: t.kind, title: t.title, path: t.path })
+    hear.stack.push({ kind: t.kind, title: t.title, path: t.path, index: t.index })
     hear.q = ''
     $('#hear-q').value = ''
     openLevel()
@@ -1240,6 +1284,7 @@ function onTile(t) {
     return
   }
   if (t.kind === 'entry') return startPlay(t.title, `${API}/library/play`, { index: t.index })
+  if (t.kind === 'spalbum') return startPlay(t.title, `${API}/library/play`, { index: t.index, albumId: t.albumId })
   if (t.kind === 'nas') return startPlay(t.title, `${API}/library/play-nas`, { path: t.path })
   return startPlay(t.title, `${API}/library/play-local`, { path: t.path })
 }
@@ -1282,16 +1327,27 @@ const catFromLabel = (label) => CATS.find(([, , long]) => long === label)?.[0] ?
 const SYNC_API = '/api/spotify-sync'
 
 // items: /api/data; local: category -> artist folders; cat / src / q: the filters
-const lib = { items: null, local: {}, cat: 'all', src: 'all', q: '', sync: null }
+// items: /api/data; local: category -> folders of the SD card; nas: the NAS folders shown on the box;
+// cat / src / q: the filters; subs, nasProfile, covers: the numbers of the tiles
+const lib = { items: null, local: {}, nas: [], cat: 'all', src: 'all', q: '', sync: null, subs: null, nasProfile: '', covers: null }
 
 async function loadLib() {
-  const [data, sync, ...local] = await Promise.all([
+  const [data, sync, nas, subs, profiles, covers, ...local] = await Promise.all([
     api('/api/data'),
     api(`${SYNC_API}/status`),
+    api('/api/nas/artists'),
+    api(`${API}/library/subscriptions`),
+    api('/api/nas/profiles'),
+    api('/api/online-covers'),
     ...CATS.map(([c]) => api(`/api/library/artists?category=${c}`)),
   ])
   lib.items = Array.isArray(data.body) ? data.body : []
   lib.sync = sync.ok ? sync.body : null
+  lib.nas = Array.isArray(nas.body) ? nas.body : []
+  lib.subs = subs.ok ? subs.body : null
+  const active = (profiles.body?.profiles ?? []).find((p) => p.active)
+  lib.nasProfile = active ? (active.name === 'standard' ? 'Standard' : active.name) : ''
+  lib.covers = covers.ok ? (covers.body?.entries ?? []).filter((e) => e.status === 'found').length : null
   CATS.forEach(([c], i) => (lib.local[c] = Array.isArray(local[i].body) ? local[i].body : []))
 }
 
@@ -1301,51 +1357,70 @@ function libChanged() {
   hear.loadedAt = 0
 }
 
+const LIB_SOURCES = [
+  ['all', 'Alle Quellen'],
+  ['manual', 'Manuell'],
+  ['spotify-sync', 'Sync'],
+  ['local', 'SD-Karte'],
+  ['nas', 'NAS'],
+]
+const SOURCE_LABEL = { manual: 'Manuell', 'spotify-sync': 'Sync', local: 'SD-Karte', nas: 'NAS' }
+const CAT_SHORT = { audiobook: 'Hörspiel', music: 'Musik', other: 'Sonstiges' }
+const AVATAR_COLORS = ['#F2B45A', '#7FC7F0', '#9ED8A6', '#F4A3B4', '#C9B6F2', '#8FD6C8', '#F6C58A', '#A8C6F5']
+const avatarColor = (name) => AVATAR_COLORS[[...String(name)].reduce((h, ch) => (h * 31 + ch.codePointAt(0)) >>> 0, 7) % AVATAR_COLORS.length]
+
 function libTop() {
   return [
-    `<div class="card wide lib-head"><div class="btns"><button class="btn primary" id="lib-add">${icon('plus', 18)}Hinzufügen</button>
-      <button class="btn" id="lib-sync">${icon('sync', 18)}Jetzt synchronisieren</button></div><p class="help" id="lib-sync-line"></p></div>`,
-    `<div class="card nav-card wide"><div class="navlist">${['verwaltet', 'spotify', 'nas', 'cover']
-      .map((id) => state.pages.get(id))
-      .filter(Boolean)
-      .map((p) => navRow(p.id, p.title, NAV_SUB[p.id], p.icon))
-      .join('')}</div></div>`,
-    `<section class="card wide">
-      <div class="search">${icon('search')}<input class="input" id="lib-q" type="search" placeholder="In der Bibliothek suchen" autocomplete="off" value="${esc(lib.q)}"></div>
-      <div class="pills" id="lib-cat">${[['all', 'Alle'], ...CATS].map(([id, t]) => `<button aria-selected="${lib.cat === id}" data-v="${id}">${t}</button>`).join('')}</div>
-      <div class="seg" id="lib-src">${[['all', 'Alle'], ['manual', 'Manuell'], ['spotify-sync', 'Sync'], ['local', 'SD-Karte']]
-        .map(([id, t]) => `<button aria-pressed="${lib.src === id}" data-v="${id}">${t}</button>`)
-        .join('')}</div>
-      <p class="help" id="lib-count"></p>
-      <div class="rows lib-list" id="lib-list"><div class="loading"><p>Lade …</p></div></div>
-    </section>`,
+    `<button class="btn primary block lib-add" id="lib-add">${icon('plus', 18)}Hinzufügen</button>`,
+    `<div class="lib-tiles wide" id="lib-tiles"></div>`,
+    `<div class="search wide">${icon('search')}<input class="input" id="lib-q" type="search" placeholder="In der Bibliothek suchen" autocomplete="off" value="${esc(lib.q)}"></div>`,
+    `<div class="pills wide" id="lib-cat">${[['all', 'Alle'], ...CATS.map(([c]) => [c, CAT_SHORT[c]])].map(([id, t]) => `<button aria-selected="${lib.cat === id}" data-v="${id}">${t}</button>`).join('')}</div>`,
+    `<div class="pills small wide" id="lib-src">${LIB_SOURCES.map(([id, t]) => `<button aria-selected="${lib.src === id}" data-v="${id}">${t}</button>`).join('')}</div>`,
+    `<p class="help wide lib-count" id="lib-count"></p>`,
+    `<section class="card wide lib-card"><div class="rows lib-list" id="lib-list"><div class="loading"><p>Lade …</p></div></div></section>`,
   ]
 }
-const NAV_SUB = {
-  verwaltet: 'Künstler-Abos und Alben aus der Suche',
-  spotify: 'Smart-Sync und Spotify-Konto',
-  nas: 'Ordner vom Netzwerkspeicher',
-  cover: 'Eigene Bilder und Online-Cover',
+
+// The four tiles: where the content comes from, each with its state in a few words
+function drawLibTiles() {
+  const box = $('#lib-tiles')
+  if (!box) return
+  const s = lib.sync
+  const spotify = !s ? '' : !s.token?.configured ? 'nicht eingerichtet' : `Smart-Sync ${s.enabled ? (s.state?.last_sync_end ? relTime(s.state.last_sync_end) : 'an') : 'aus'}${s.token?.scopes_ok ? ' · Zugang ok' : ' · neu anmelden'}`
+  const a = lib.subs?.artists?.length ?? 0
+  const al = lib.subs?.explicit_albums?.length ?? 0
+  const tiles = [
+    ['spotify', 'music', 'Spotify', spotify],
+    ['verwaltet', 'lib', 'Verwaltete Inhalte', lib.subs ? `${a} ${a === 1 ? 'Abo' : 'Abos'} · ${al} ${al === 1 ? 'Album' : 'Alben'}` : ''],
+    ['nas', 'server', 'NAS', lib.nasProfile ? `Profil ${lib.nasProfile}` : `${lib.nas.length} Ordner`],
+    ['cover', 'image', 'Cover', lib.covers != null ? `${lib.covers} gefunden` : 'Eigene Bilder'],
+  ]
+  box.innerHTML = tiles
+    .map(([id, ic, t, sub]) => `<button class="lib-tile" data-go="${id}"><span class="tile">${icon(ic, 18)}</span><span class="lbl"><b>${esc(t)}</b><small>${esc(sub)}</small></span></button>`)
+    .join('')
+  for (const b of box.querySelectorAll('[data-go]')) b.onclick = () => go(b.dataset.go)
 }
 
-function libRows() {
+// The list: everything grouped by artist (as the box shows it), per source; a group opens its entries
+function libGroups() {
   const q = norm(lib.q.trim())
-  const rows = []
-  if (lib.src !== 'local') {
+  const groups = new Map()
+  const add = (key, g) => {
+    if (!groups.has(key)) groups.set(key, { ...g, entries: [] })
+    return groups.get(key)
+  }
+  if (lib.src === 'all' || lib.src === 'manual' || lib.src === 'spotify-sync') {
     for (const it of lib.items) {
       if (!it || it.isResume === true || it.category === 'resume' || it.type === 'library') continue
-      const cat = it.category === 'radio' ? 'other' : it.category
+      const cat = it.category_override ?? (it.category === 'radio' ? 'other' : it.category)
       if (lib.cat !== 'all' && cat !== lib.cat) continue
       const src = it.source ?? 'manual'
       if (lib.src !== 'all' && src !== lib.src) continue
       const title = String(it.title_override ?? it.title ?? it.artist_override ?? it.artist ?? '—')
-      const artist = String(it.artist_override ?? it.artist ?? '')
+      const artist = String(it.artist_override ?? it.artist ?? title)
       if (q && !norm(`${title} ${artist}`).includes(q)) continue
-      const tags = [catLabel(it.category_override ?? cat)]
-      if (src === 'spotify-sync') tags.push('Sync')
-      else if (badgeOf(it)) tags.push(badgeOf(it))
-      if (it.type === 'spotify' && !it.id && !it.playlistid && !it.showid && !it.audiobookid && it.artistid) tags.push('Alle Folgen')
-      rows.push({ kind: 'entry', item: it, title, sub: artist === title ? '' : artist, cover: it.cover_override ?? it.cover ?? it.artistcover_override ?? it.artistcover ?? spotifyCover(it), tags })
+      const g = add(`${src}|${cat}|${artist}`, { kind: 'entries', artist, src, cat, cover: it.artistcover_override ?? it.artistcover ?? it.cover_override ?? it.cover ?? spotifyCover(it) })
+      g.entries.push({ item: it, title })
     }
   }
   if (lib.src === 'all' || lib.src === 'local') {
@@ -1353,49 +1428,79 @@ function libRows() {
       if (lib.cat !== 'all' && lib.cat !== c) continue
       for (const f of lib.local[c] ?? []) {
         if (q && !norm(`${f.title} ${f.artist}`).includes(q)) continue
-        rows.push({ kind: 'local', folder: f, title: String(f.title ?? '—'), sub: '', cover: f.cover, tags: [catLabel(c), 'SD-Karte'] })
+        add(`local|${c}|${f.libraryPath}`, { kind: 'local', artist: String(f.title ?? '—'), src: 'local', cat: c, cover: f.cover, folder: f })
       }
     }
   }
-  return rows.sort((a, b) => a.title.localeCompare(b.title, 'de', { numeric: true }))
+  if ((lib.src === 'all' || lib.src === 'nas') && (lib.cat === 'all' || lib.cat === 'audiobook')) {
+    for (const f of lib.nas) {
+      if (q && !norm(`${f.title} ${f.artist}`).includes(q)) continue
+      add(`nas|${f.nasPath}`, { kind: 'nas', artist: String(f.title ?? '—'), src: 'nas', cat: '', cover: f.cover, folder: f })
+    }
+  }
+  return [...groups.values()].sort((a, b) => a.artist.localeCompare(b.artist, 'de', { numeric: true }))
 }
 
 let libShown = []
 
+function libSub(g) {
+  const src = SOURCE_LABEL[g.src] ?? ''
+  if (g.kind === 'local') return `${g.folder.libraryIsContainer ? 'Ordner' : 'Album'} · ${src}`
+  if (g.kind === 'nas') return `${g.folder.nasIsContainer ? 'Ordner' : 'Album'} · ${src}`
+  if (g.entries.length === 1) {
+    const e = g.entries[0]
+    const whole = e.item.type === 'spotify' && !e.item.id && !e.item.playlistid && !e.item.showid && !e.item.audiobookid
+    return `${whole ? 'alle Folgen' : e.title !== g.artist ? e.title : badgeOf(e.item) || 'Eintrag'} · ${src}`
+  }
+  return `${g.entries.length} ${g.cat === 'music' ? 'Alben' : 'Folgen'} · ${src}`
+}
+
 function drawLib() {
   const list = $('#lib-list')
   if (!list || !lib.items) return
-  libShown = libRows()
-  $('#lib-count').textContent = `${libShown.length} ${libShown.length === 1 ? 'Eintrag' : 'Einträge'}`
+  drawLibTiles()
+  libShown = libGroups()
+  const total = libShown.reduce((n, g) => n + (g.entries?.length || 1), 0)
+  const all = lib.items.filter((it) => it && !it.isResume && it.category !== 'resume' && it.type !== 'library').length + Object.values(lib.local).reduce((n, l) => n + l.length, 0) + lib.nas.length
+  const end = lib.sync?.state?.last_sync_end
+  $('#lib-count').textContent = `${total} von ${all} Inhalten${end ? ` · letzter Sync ${hhmm(Date.parse(end))}` : ''}`
   if (libShown.length === 0) {
     list.innerHTML = `<p class="help covers-empty">${lib.q ? 'Nichts gefunden.' : 'Hier ist noch nichts.'}</p>`
     return
   }
   list.innerHTML = libShown
     .map(
-      (r, i) => `<button class="entry lib-row" data-i="${i}"><span class="lib-thumb">${r.cover ? `<img src="${esc(r.cover)}" alt="" loading="lazy">` : ''}${icon(r.kind === 'local' ? 'folder' : 'music', 18)}</span>
-        <span class="lbl"><b>${esc(r.title)}</b>${r.sub ? `<small>${esc(r.sub)}</small>` : ''}<span class="tags">${r.tags.filter(Boolean).map((t) => `<span class="chip${t === 'Sync' ? ' ok' : ''}">${esc(t)}</span>`).join('')}</span></span>
-        <span class="chev">${icon('chevron', 18)}</span></button>`,
+      (g, i) => `<button class="entry lib-row" data-i="${i}"><span class="lib-thumb" style="background:${avatarColor(g.artist)}"><b>${esc(initials(g.artist))}</b>${g.cover ? `<img src="${esc(g.cover)}" alt="" loading="lazy">` : ''}</span>
+        <span class="lbl"><b>${esc(g.artist)}</b><small>${esc(libSub(g))}</small></span>
+        ${g.cat ? `<span class="chip cat-${g.cat}">${esc(CAT_SHORT[g.cat] ?? '')}</span>` : ''}<span class="chev">${icon('chevron', 18)}</span></button>`,
     )
     .join('')
   for (const img of list.querySelectorAll('img')) img.addEventListener('error', () => img.remove(), { once: true })
-  for (const b of list.querySelectorAll('.lib-row')) {
-    b.onclick = () => {
-      const r = libShown[Number(b.dataset.i)]
-      if (r.kind === 'local') openLocalSheet(r.folder)
-      else openEntrySheet(r.item)
-    }
-  }
+  for (const b of list.querySelectorAll('.lib-row')) b.onclick = () => openLibGroup(libShown[Number(b.dataset.i)])
 }
 
-function drawSyncLine() {
-  const el = $('#lib-sync-line')
-  if (!el) return
-  const s = lib.sync
-  const end = s?.state?.last_sync_end
-  el.textContent = !s ? '' : !s.enabled ? 'Smart-Sync ist aus (Bibliothek › Spotify).' : s.state?.current_state && s.state.current_state !== 'IDLE' ? 'Synchronisiert gerade …' : end ? `Zuletzt synchronisiert um ${hhmm(Date.parse(end))} Uhr.` : 'Noch nicht synchronisiert.'
-  const btn = $('#lib-sync')
-  if (btn) btn.hidden = !s?.enabled
+// A group: one entry opens right away, several are listed first
+function openLibGroup(g) {
+  if (g.kind === 'local') return openLocalSheet(g.folder)
+  if (g.kind === 'nas') return go('nas')
+  if (g.entries.length === 1) return openEntrySheet(g.entries[0].item)
+  const entries = [...g.entries].sort((a, b) => a.title.localeCompare(b.title, 'de', { numeric: true }))
+  openSheet(
+    `<h2>${esc(g.artist)}</h2><p class="help" style="margin:0">${esc(libSub(g))}${g.src === 'spotify-sync' ? ' – kommt vom Spotify-Sync, Abo und Bereich unter „Verwaltete Inhalte“.' : ''}</p>
+     <div class="rows">${entries
+       .map((e, i) => `<button class="entry lib-row" data-e="${i}"><span class="lbl"><b>${esc(e.title)}</b></span><span class="chev">${icon('chevron', 18)}</span></button>`)
+       .join('')}</div>
+     <div class="btns"><button class="btn" data-close>Schließen</button></div>`,
+    (sheet, close) => {
+      sheet.querySelector('[data-close]').onclick = close
+      for (const b of sheet.querySelectorAll('[data-e]')) {
+        b.onclick = () => {
+          close()
+          openEntrySheet(entries[Number(b.dataset.e)].item)
+        }
+      }
+    },
+  )
 }
 
 // Starts a sync run and says what happens; used after every change of the managed content
@@ -2400,7 +2505,7 @@ function mountCovers(root, page) {
 /* NAS: login, profiles, the folders the box shows / hides / keeps on the SD card */
 
 // st: /api/nas/state; path: the folder shown (''= top); entries: its subfolders; edits: path -> {show, hide, download}
-const nas = { st: null, profiles: [], index: null, dl: null, path: '', entries: null, err: '', edits: new Map(), q: '', hits: null, onlySel: false, loginOpen: false }
+const nas = { st: null, profiles: [], index: null, dl: null, path: '', tree: new Map(), open: new Set(), autoOpened: false, err: '', edits: new Map(), q: '', hits: null, onlySel: false, loginOpen: false }
 
 async function loadNas() {
   const [st, profiles, index, dl] = await Promise.all([api('/api/nas/state'), api('/api/nas/profiles'), api('/api/nas/index/status'), api('/api/nas/download/status')])
@@ -2411,14 +2516,36 @@ async function loadNas() {
   nas.dl = dl.ok ? dl.body : null
 }
 
+// The folder tree as the admin interface shows it: children per folder (null = loading), the folders opened.
+// At first the folders leading to the selection are open, so what the box shows is in sight.
+async function loadNasChildren(path) {
+  if (nas.tree.has(path)) return
+  nas.tree.set(path, null)
+  const r = await api(`/api/nas/browse?path=${encodeURIComponent(path)}`)
+  if (r.ok) nas.tree.set(path, r.body?.entries ?? [])
+  else {
+    nas.tree.delete(path)
+    nas.err = r.status === 401 ? 'Die Box ist nicht beim NAS angemeldet.' : 'Das NAS antwortet gerade nicht.'
+  }
+  drawNasFolders()
+}
+
+function openNasPath(path) {
+  const parts = path.split('/').filter(Boolean)
+  for (let i = 1; i < parts.length; i++) nas.open.add(`/${parts.slice(0, i).join('/')}`)
+}
+
+// (Re)loads the tree: the top level and every folder that is open
 async function loadNasFolder() {
-  nas.entries = null
+  nas.tree = new Map()
   nas.err = ''
+  if (!nas.autoOpened && nas.st) {
+    nas.autoOpened = true
+    for (const p of [...nas.st.artistFolders, ...nas.st.hiddenFolders, ...nas.st.downloadFolders]) openNasPath(p)
+  }
   drawNasFolders()
-  const r = await api(`/api/nas/browse?path=${encodeURIComponent(nas.path || '/')}`)
-  nas.entries = r.ok ? r.body?.entries ?? [] : []
-  if (!r.ok) nas.err = r.status === 401 ? 'Die Box ist nicht beim NAS angemeldet.' : 'Das NAS antwortet gerade nicht.'
-  drawNasFolders()
+  await loadNasChildren('/')
+  for (const p of nas.open) loadNasChildren(p)
 }
 
 function nasTop() {
@@ -2456,7 +2583,6 @@ function nasTop() {
         <div class="search">${icon('search')}<input class="input" id="n-q" type="search" placeholder="Ordner auf dem ganzen NAS suchen" autocomplete="off" value="${esc(nas.q)}"></div>
         <p class="help" id="n-index" style="margin:0"></p>
         ${sw('n-only', 'Nur die Auswahl zeigen', nas.onlySel)}
-        <nav class="crumbs" id="n-crumbs"></nav>
         <div class="rows" id="n-list"><div class="loading"><p>Lade …</p></div></div>
         <div class="btns"><button class="btn sm" data-bulk="show1">Alle anzeigen</button><button class="btn sm" data-bulk="show0">Keine anzeigen</button><button class="btn sm" data-bulk="dl1">Alle laden</button><button class="btn sm" data-bulk="dl0">Keine laden</button></div>
         <p class="help" id="n-changes" style="margin:0"></p>
@@ -2468,14 +2594,30 @@ function nasTop() {
   ]
 }
 
-// The rows shown: search hits, the saved selection, or the subfolders of the open folder
+// The rows shown: search hits or the saved selection (flat), else the tree (with its depth)
+function nasTreeRows(path, depth, out) {
+  const kids = nas.tree.get(path)
+  if (!kids) {
+    out.push({ loading: true, depth })
+    if (kids === undefined) loadNasChildren(path)
+    return out
+  }
+  if (depth > 0 && kids.length === 0) out.push({ empty: true, depth })
+  for (const k of kids) {
+    out.push({ ...k, depth, isOpen: nas.open.has(k.path) })
+    if (nas.open.has(k.path)) nasTreeRows(k.path, depth + 1, out)
+  }
+  return out
+}
+
 function nasRows() {
   const st = nas.st ?? {}
   const flags = (p) => ({ isMarked: st.artistFolders.includes(p), isHidden: st.hiddenFolders.includes(p), isDownload: st.downloadFolders.includes(p) })
-  const of = (p) => ({ name: p.slice(p.lastIndexOf('/') + 1) || p, path: p, sub: p.slice(0, p.lastIndexOf('/')) || '/', flat: true, ...flags(p) })
+  const of = (p) => ({ name: p.slice(p.lastIndexOf('/') + 1) || p, path: p, sub: p.slice(0, p.lastIndexOf('/')) || '/', flat: true, depth: 0, ...flags(p) })
   if (nas.q.trim().length >= 2) return nas.hits === null ? null : nas.hits.map(of)
   if (nas.onlySel) return [...new Set([...st.artistFolders, ...st.hiddenFolders, ...st.downloadFolders])].sort((a, b) => a.localeCompare(b, 'de')).map(of)
-  return nas.entries
+  if (nas.tree.get('/') === undefined && nas.err) return []
+  return nasTreeRows('/', 0, [])
 }
 
 const nasFlag = (row, key) => {
@@ -2498,36 +2640,31 @@ let nasShown = []
 function drawNasFolders() {
   const list = $('#n-list')
   if (!list) return
-  const crumbs = $('#n-crumbs')
   const flat = nas.q.trim().length >= 2 || nas.onlySel
-  crumbs.hidden = flat
-  const parts = nas.path.split('/').filter(Boolean)
-  crumbs.innerHTML = [{ t: 'NAS', p: '' }, ...parts.map((t, i) => ({ t, p: `/${parts.slice(0, i + 1).join('/')}` }))]
-    .map((c, i, all) => (i === all.length - 1 ? `<span aria-current="page">${esc(c.t)}</span>` : `<button data-crumb="${esc(c.p)}">${esc(c.t)}</button><span class="sep">›</span>`))
-    .join('')
-  for (const b of crumbs.querySelectorAll('[data-crumb]')) {
-    b.onclick = () => {
-      nas.path = b.dataset.crumb
-      loadNasFolder()
-    }
-  }
   const rows = nasRows()
-  $('#n-changes').textContent = nas.edits.size ? `${nas.edits.size} ${nas.edits.size === 1 ? 'Ordner geändert' : 'Ordner geändert'} – noch nicht gespeichert.` : ''
+  $('#n-changes').textContent = nas.edits.size ? `${nas.edits.size} Ordner geändert – noch nicht gespeichert.` : ''
   if (rows === null) {
     list.innerHTML = `<div class="loading"><p>Lade …</p></div>`
     return
   }
-  nasShown = rows
+  nasShown = rows.filter((r) => r.path)
   if (!rows.length) {
-    list.innerHTML = `<p class="help">${esc(nas.err || (flat ? 'Nichts gefunden.' : 'Keine Unterordner.'))}</p>`
+    list.innerHTML = `<p class="help">${esc(nas.err || (flat ? 'Nichts gefunden.' : 'Keine Ordner.'))}</p>`
     return
   }
   const chip = (i, key, label, row) => `<button class="tog" data-i="${i}" data-k="${key}" aria-pressed="${nasFlag(row, key)}">${label}</button>`
+  let i = -1
   list.innerHTML = rows
-    .map(
-      (r, i) => `<div class="entry nas-row${nas.edits.has(r.path) ? ' changed' : ''}"><button class="lbl nas-open" data-open="${i}"><b>${icon('folder', 16)} ${esc(r.name)}</b>${r.flat ? `<small>${esc(r.sub)}</small>` : ''}${r.isDownloaded ? '<small class="ok-text">✓ auf der Box</small>' : ''}</button>
-        <span class="togs">${chip(i, 'show', 'Anzeigen', r)}${chip(i, 'hide', 'Ausblenden', r)}${chip(i, 'download', 'Laden', r)}</span></div>`,
-    )
+    .map((r) => {
+      const pad = `style="--depth:${r.depth}"`
+      if (r.loading) return `<div class="nas-note" ${pad}>Lade …</div>`
+      if (r.empty) return `<div class="nas-note" ${pad}>Keine Unterordner</div>`
+      i++
+      return `<div class="entry nas-row${nas.edits.has(r.path) ? ' changed' : ''}" ${pad}>
+        ${flat ? '' : `<button class="nas-chev" data-toggle="${i}" aria-expanded="${r.isOpen}" aria-label="${r.isOpen ? 'Zuklappen' : 'Aufklappen'}">${icon('chevron', 16)}</button>`}
+        <button class="lbl nas-open" data-open="${i}"><b>${icon('folder', 16)} ${esc(r.name)}</b>${r.flat ? `<small>${esc(r.sub)}</small>` : ''}${r.isDownloaded ? '<small class="ok-text">✓ auf der Box</small>' : ''}</button>
+        <span class="togs">${chip(i, 'show', 'Anzeigen', r)}${chip(i, 'hide', 'Ausblenden', r)}${chip(i, 'download', 'Laden', r)}</span></div>`
+    })
     .join('')
   for (const b of list.querySelectorAll('.tog')) {
     b.onclick = () => {
@@ -2536,16 +2673,25 @@ function drawNasFolders() {
       drawNasFolders()
     }
   }
+  const toggle = (row) => {
+    if (nas.open.has(row.path)) nas.open.delete(row.path)
+    else nas.open.add(row.path)
+    drawNasFolders()
+  }
+  for (const b of list.querySelectorAll('[data-toggle]')) b.onclick = () => toggle(nasShown[Number(b.dataset.toggle)])
   for (const b of list.querySelectorAll('[data-open]')) {
     b.onclick = () => {
-      nas.path = nasShown[Number(b.dataset.open)].path
+      const row = nasShown[Number(b.dataset.open)]
+      if (!flat) return toggle(row)
+      // from the search or the selection into the tree, at that folder
       nas.q = ''
       nas.onlySel = false
       const q = $('#n-q')
       if (q) q.value = ''
       const only = $('#n-only')
       if (only) only.checked = false
-      loadNasFolder()
+      openNasPath(row.path)
+      drawNasFolders()
     }
   }
 }
@@ -3527,14 +3673,6 @@ const CONTROLLERS = {
     ownNav: true,
     mount(root) {
       $('#lib-add', root).onclick = openAdd
-      $('#lib-sync', root).onclick = async () => {
-        toast(await fireSync())
-        setTimeout(async () => {
-          const s = await api(`${SYNC_API}/status`)
-          if (s.ok) lib.sync = s.body
-          drawSyncLine()
-        }, 2500)
-      }
       const q = $('#lib-q', root)
       q.addEventListener('input', () => {
         lib.q = q.value
@@ -3552,18 +3690,17 @@ const CONTROLLERS = {
         const b = e.target.closest('button')
         if (!b) return
         lib.src = b.dataset.v
-        for (const x of b.parentElement.children) x.setAttribute('aria-pressed', String(x === b))
+        for (const x of b.parentElement.children) x.setAttribute('aria-selected', String(x === b))
+        b.scrollIntoView({ block: 'nearest', inline: 'nearest' })
         drawLib()
       }
       drawLib()
-      drawSyncLine()
       // known state first, then read again (the sync or the box may have changed it)
       if (Date.now() - (lib.loadedAt ?? 0) > 5000) {
         lib.loadedAt = Date.now()
         loadLib().then(() => {
           if (currentPage()?.id !== 'bibliothek') return
           drawLib()
-          drawSyncLine()
         })
       }
     },

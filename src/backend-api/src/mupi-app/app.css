@@ -95,7 +95,7 @@ a { color: var(--mp-primary-text); }
 }
 /* PC from 1200 px: pages with several cards in two columns; wide blocks across both */
 @media (min-width: 1200px) {
-  .content.cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+  .content.cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; align-content: start; }
   .content.cols > .wide, .content.cols > .preview-note, .content.cols > .page-intro { grid-column: 1 / -1; }
 }
 
@@ -265,7 +265,7 @@ input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border-radius
 .hits .navrow small { color: var(--mp-muted); }
 
 /* ---------- start page ---------- */
-.content.start { display: grid; grid-template-columns: minmax(0, 1fr); }
+.content.start { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; }
 .start-side { display: flex; flex-direction: column; gap: var(--mp-gap); min-width: 0; }
 @media (min-width: 960px) {
   .content.start { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); align-items: start; }
@@ -434,9 +434,12 @@ select.input { appearance: auto; }
 .drop.over { border-color: var(--mp-primary); background: var(--mp-primary-soft); color: var(--mp-primary-text); }
 
 /* ---------- NAS ---------- */
-.nas-row { flex-wrap: wrap; gap: 8px 12px; }
-.nas-row.changed { box-shadow: inset 3px 0 0 var(--mp-accent); padding-left: 10px; }
-.nas-row .nas-open { flex: 1 0 180px; min-width: 0; border: 0; background: none; padding: 4px 0; text-align: left; color: inherit; display: flex; flex-direction: column; gap: 2px; }
+.nas-row { flex-wrap: wrap; gap: 8px 12px; padding-left: calc(var(--depth, 0) * 22px); }
+.nas-note { padding: 8px 0 8px calc(var(--depth, 0) * 22px + 34px); color: var(--mp-muted); font-size: 13px; }
+.nas-chev { width: 28px; height: 28px; flex: none; display: grid; place-items: center; border: 0; background: none; color: var(--mp-muted); border-radius: 8px; transition: transform .15s; }
+.nas-chev[aria-expanded="true"] { transform: rotate(90deg); }
+.nas-row.changed { box-shadow: inset 3px 0 0 var(--mp-accent); }
+.nas-row .nas-open { flex: 1 0 150px; min-width: 0; border: 0; background: none; padding: 4px 0; text-align: left; color: inherit; display: flex; flex-direction: column; gap: 2px; }
 .nas-open b { display: flex; align-items: center; gap: 6px; font-weight: 700; overflow-wrap: anywhere; }
 .nas-open small { color: var(--mp-muted); font-size: 12px; overflow-wrap: anywhere; }
 .nas-open small.ok-text { color: var(--mp-success); }
@@ -485,6 +488,22 @@ select.input { appearance: auto; }
 .dt-frame iframe { position: absolute; left: 0; top: 0; width: 800px; height: 480px; border: 0; transform: scale(var(--s)); transform-origin: 0 0; pointer-events: none; }
 .live-shot { aspect-ratio: 800 / 480; border-radius: var(--mp-r-sm); overflow: hidden; background: #000; }
 .live-shot img { display: block; width: 100%; height: 100%; object-fit: contain; }
+
+/* ---------- Bibliothek (as the design: tiles, pills, the list grouped by artist) ---------- */
+.lib-add { width: 100%; }
+.content.cols > .lib-add { grid-column: 1 / -1; }
+.lib-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@media (min-width: 960px) { .lib-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.lib-tile { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 12px; border: 1px solid var(--mp-border); border-radius: var(--mp-r-card); background: var(--mp-surface); text-align: left; color: inherit; }
+.lib-tile .lbl { display: flex; flex-direction: column; min-width: 0; }
+.lib-tile b { font-size: 14px; }
+.lib-tile small { color: var(--mp-muted); font-size: 12px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.pills.small button { height: 32px; padding: 0 12px; font-size: 13px; }
+.lib-count { margin: -4px 2px 0; }
+.lib-card { padding-top: 4px; padding-bottom: 4px; }
+.lib-thumb > b { font-size: 14px; font-weight: 800; color: #1B2733; }
+.chip.cat-audiobook { background: var(--mp-accent-soft); color: var(--mp-accent-text); }
+.chip.cat-music { background: var(--mp-primary-soft); color: var(--mp-primary-text); }
 
 /* login */
 .login { max-width: 400px; margin: 8vh auto 0; display: flex; flex-direction: column; gap: 16px; text-align: center; }
