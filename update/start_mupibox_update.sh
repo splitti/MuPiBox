@@ -696,8 +696,10 @@ rm -f /tmp/mupibox-update-failed
 	# is not needed
 	systemctl disable --now samba-ad-dc.service >&3 2>&3
 
-	# Tolerant replacement for DietPi's WiFi monitor (see scripts/mupibox/wifi_monitor.sh): only versions that ship it
-	if [ "$RELEASE" = "dev" ] && [ -f ${MUPI_SRC}/config/services/dietpi-wifi-monitor-override.conf ]; then
+	# Tolerant replacement for DietPi's WiFi monitor (see scripts/mupibox/wifi_monitor.sh): the original re-connected at
+	# the first lost ping - also while the box roams between access points, 5-15 s without network each time. For
+	# every version that ships it (it was only set up for dev versions).
+	if [ -f ${MUPI_SRC}/config/services/dietpi-wifi-monitor-override.conf ] && [ -x /usr/local/bin/mupibox/wifi_monitor.sh ]; then
 		mkdir -p /etc/systemd/system/dietpi-wifi-monitor.service.d >&3 2>&3
 		cp -f ${MUPI_SRC}/config/services/dietpi-wifi-monitor-override.conf /etc/systemd/system/dietpi-wifi-monitor.service.d/override.conf >&3 2>&3
 	fi
