@@ -736,6 +736,15 @@ async function loadNotices(root) {
   }
   const box = $('#notices', root)
   if (!box) return
+  drawNotices(box, notes)
+  const u = await api(`${API}/updates`)
+  if (u.body?.job?.phase === 'running') notes.push(['sync', 'Update läuft', `${JOB_LABEL[u.body.job.kind] ?? 'Update'} – ${u.body.job.percent} %`, 'updates'])
+  else if (u.body?.update) notes.push(['sync', 'Update verfügbar', `MuPiBox ${u.body.update.version} – aus dem offiziellen Repository`, 'updates'])
+  else return
+  if (box.isConnected) drawNotices(box, notes)
+}
+
+function drawNotices(box, notes) {
   box.innerHTML = notes
     .map(([ic, t, s, target]) => `<div class="notice"><button class="notice-body" data-go="${target}">${icon(ic, 20)}<span><b>${esc(t)}</b><small>${esc(s)}</small></span></button><button class="notice-x" aria-label="Schließen">${icon('close', 16)}</button></div>`)
     .join('')
@@ -4527,14 +4536,152 @@ function mountBackup(root) {
 
 /* Updates */
 
+/* Updates */
+
+const upd = { info: null, job: null, offline: false, showOut: false }
+const CHANNEL_LABEL = { stable: 'Stabil', beta: 'Beta', dev: 'Entwicklung' }
+const JOB_LABEL = { stable: 'MuPiBox-Update · Stabil', beta: 'MuPiBox-Update · Beta', dev: 'MuPiBox-Update · Entwicklung', os: 'Betriebssystem-Update' }
+const jobRunning = () => upd.job?.phase === 'running' || upd.job?.phase === 'rebooting'
+
+function cmpVersion(a, b) {
+  const pa = String(a).split('.').map(Number)
+  const pb = String(b).split('.').map(Number)
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const d = (pa[i] ?? 0) - (pb[i] ?? 0)
+    if (d) return d > 0 ? 1 : -1
+  }
+  return 0
+}
+const installedNumber = () => /\d+(?:\.\d+)+/.exec(upd.info?.installed ?? '')?.[0] ?? null
+
+async function loadUpdates() {
+  const r = await api(`${API}/updates`)
+  if (!r.ok) throw new Error(`updates ${r.status}`)
+  upd.info = r.body
+  upd.job = r.body.job
+  upd.offline = false
+}
+
+function updJobCard() {
+  const j = upd.job
+  if (!j) return ''
+  const when = (t) => (t ? new Date(t).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' }) : '')
+  const head = {
+    running: 'Läuft …',
+    rebooting: 'Fertig – die Box startet neu',
+    ok: `Fertig${j.finished ? ` am ${when(j.finished)}` : ''}`,
+    failed: `Nicht geklappt${j.finished ? ` (${when(j.finished)})` : ''}`,
+  }[j.phase] ?? j.phase
+  const pct = j.phase === 'running' ? j.percent : 100
+  const note = upd.offline
+    ? `<div class="note">${icon('info', 18)}<span>Die Box antwortet gerade nicht. Beim MuPiBox-Update ist das normal, der Server wird ausgetauscht. Die Seite fragt weiter nach.</span></div>`
+    : j.phase === 'failed'
+      ? `<div class="note warn">${icon('info', 18)}<span>${j.kind === 'os' ? 'Das Betriebssystem-Update ist abgebrochen.' : 'Das Update ist abgebrochen. Die bisherige Installation ist noch da; Einstellungen und Bibliothek liegen zusätzlich in /home/dietpi/mupibox-backups.'} Details in der Ausgabe.</span></div>`
+      : ''
+  return `<section class="card wide" id="upd-job"><h2>${esc(JOB_LABEL[j.kind] ?? 'Update')}</h2>
+    <div class="bar"><div class="slider-head"><b>${esc(head)}</b><span class="value-pill">${pct} %</span></div>
+      <div class="track"><i style="--w:${pct}%"></i></div>${j.step && j.phase === 'running' ? `<small>${esc(j.step)}</small>` : ''}</div>
+    ${note}
+    ${j.phase === 'ok' && j.kind === 'os' ? `<div class="btns"><button class="btn primary" id="upd-reboot">Box neu starten</button></div>` : ''}
+    ${j.output ? `<details id="upd-out"${upd.showOut ? ' open' : ''}><summary class="help">Ausgabe</summary><pre class="logview" style="height:240px">${esc(j.output)}</pre></details>` : ''}</section>`
+}
+
 function updatesTop() {
+  const i = upd.info
+  const mine = installedNumber()
+  const busy = jobRunning()
+  const rows = ['stable', 'beta', 'dev']
+    .map((c) => {
+      const rel = i?.latest?.[c]
+      if (!rel) return ''
+      const same = mine && cmpVersion(rel.version, mine) === 0 && i.channel === c
+      const older = mine && cmpVersion(rel.version, mine) < 0
+      const label = same ? 'Neu installieren' : older ? 'Installieren (älter)' : 'Installieren'
+      const kind = c === 'dev' ? 'danger' : c === 'stable' && !same && !older ? 'primary' : ''
+      const ver = c === 'dev' && i.devDate ? `${rel.version} · Stand ${i.devDate}` : rel.version
+      return `<div class="row"><span class="lbl"><b>${esc(CHANNEL_LABEL[c])} · ${esc(ver)}</b><small>${esc(rel.info)}</small></span>
+        <button class="btn ${kind}" data-upd="${c}" ${busy ? 'disabled' : ''}>${label}</button></div>`
+    })
+    .join('')
   return [
-    `<section class="card"><h2>MuPiBox</h2><dl class="kv"><div><dt>Installiert</dt><dd>${esc(sys.version || '–')}</dd></div></dl>
-      <p class="help" style="margin:0">Updates laufen vorerst über das bisherige Admin-Interface. In der App kommen sie, sobald mit splitti abgestimmt ist, welche Versionen angeboten werden.</p>
-      <div class="note warn">${icon('info', 18)}<span>Vor jedem Update ein Backup ziehen (System › Backup).</span></div></section>`,
-    `<div class="card nav-card"><div class="navlist">${navRow('ext:admin', 'Updates im Admin-Interface', 'MuPiBox und Betriebssystem', 'ext')}${navRow('backup', 'Backup', 'Vorher sichern', 'save')}</div></div>`,
+    updJobCard(),
+    `<section class="card"><h2>MuPiBox</h2><dl class="kv"><div><dt>Installiert</dt><dd>${esc(i?.installed || '–')}</dd></div></dl>
+      ${i?.update ? `<div class="note">${icon('sync', 18)}<span>Neue Version ${esc(i.update.version)} verfügbar.</span></div>` : ''}
+      ${rows || `<p class="help">Die Versionen des offiziellen Repositorys ließen sich nicht laden (keine Internetverbindung?).</p>`}
+      <p class="help" style="margin:0">Aus dem offiziellen MuPiBox-Repository (splitti/MuPiBox). Die Box ist dabei 10–30 Minuten nicht nutzbar und startet danach von selbst neu. Einstellungen und Bibliothek bleiben erhalten und werden vorher zusätzlich auf der Box gesichert.</p></section>`,
+    `<section class="card"><h2>Betriebssystem</h2><p class="help">Aktualisiert die Pakete des Systems (apt). Dauert auf älteren Raspberry Pis bis zu 30 Minuten; die Box läuft dabei weiter. Danach neu starten.</p>
+      <div class="btns"><button class="btn" data-upd="os" ${busy ? 'disabled' : ''}>Betriebssystem aktualisieren</button></div></section>`,
+    `<div class="card nav-card"><div class="navlist">${navRow('backup', 'Backup', 'Vorher herunterladen', 'save')}</div></div>`,
   ]
 }
+
+async function startUpdate(kind, page) {
+  const i = upd.info
+  const rel = i?.latest?.[kind]
+  const mine = installedNumber()
+  let title
+  let text
+  if (kind === 'os') {
+    title = 'Betriebssystem aktualisieren?'
+    text = 'Die Pakete des Systems werden aktualisiert. Das dauert einige Minuten bis eine halbe Stunde; die Box läuft dabei weiter. Am besten am Netzteil.'
+  } else {
+    title = `MuPiBox ${rel.version} installieren?`
+    text = `${CHANNEL_LABEL[kind]}-Version aus dem offiziellen Repository. Die Box zeigt 10–30 Minuten eine Wartungsanzeige und startet danach von selbst neu. Am besten am Netzteil.`
+    if (kind === 'dev') text += ' Die Entwicklungsversion kann die Installation beschädigen.'
+    if (mine && cmpVersion(rel.version, mine) < 0) text += ` Das ist eine ältere Version als die installierte (${mine}).`
+  }
+  if (!(await ask(title, text, kind === 'os' ? 'Aktualisieren' : 'Installieren'))) return
+  const r = await api(`${API}/updates/start`, { method: 'POST', body: { kind } })
+  if (!r.ok) return toast(r.status === 409 ? 'Es läuft schon ein Update' : 'Das Update ließ sich nicht starten', 'info')
+  upd.job = { kind, phase: 'running', percent: 0, step: 'Start', output: '' }
+  upd.showOut = false
+  renderPage(page, false)
+}
+
+// the running update: its state every 3 s (the box may not answer for a while), the page again when it is done
+function pollUpdate(page) {
+  stopPageTimers()
+  every(3000, async () => {
+    const r = await api(`${API}/updates/job`)
+    if (!r.ok || !r.body?.job) {
+      if (!upd.offline) {
+        upd.offline = true
+        drawUpdJob()
+      }
+      return
+    }
+    const was = upd.job?.phase
+    upd.job = r.body.job
+    upd.offline = false
+    if (jobRunning()) return drawUpdJob()
+    stopPageTimers()
+    if (was !== upd.job.phase && currentPage()?.id === page.id) {
+      await loadUpdates().catch(() => undefined)
+      renderPage(page, false)
+    }
+  })
+}
+
+function drawUpdJob() {
+  const card = $('#upd-job')
+  if (!card) return
+  card.outerHTML = updJobCard()
+  bindUpdJob()
+}
+
+function bindUpdJob() {
+  const out = $('#upd-out')
+  if (out) out.ontoggle = () => (upd.showOut = out.open)
+  const reboot = $('#upd-reboot')
+  if (reboot) reboot.onclick = () => offerReboot('Das Betriebssystem ist aktualisiert.')
+}
+
+function mountUpdates(root, page) {
+  for (const b of root.querySelectorAll('[data-upd]')) b.onclick = () => startUpdate(b.dataset.upd, page)
+  bindUpdJob()
+  if (jobRunning()) pollUpdate(page)
+}
+
 
 /* the controllers: load(page) reads the box before drawing, mount(root, page) runs after it, change(key, value)
    saves a setting, act / byLabel run the buttons, sections(page) gives the building blocks with the box's values,
@@ -5278,15 +5425,7 @@ const CONTROLLERS = {
   wlanopt: netOptionsCtrl,
   experten: { load: loadExperts, top: expertsTop, sections: () => [], ownNav: true, mount: mountExperts },
   backup: { top: backupTop, sections: () => [], mount: mountBackup },
-  updates: {
-    async load() {
-      const r = await api(`${API}/version`)
-      sys.version = r.body?.version ?? ''
-    },
-    top: updatesTop,
-    sections: () => [],
-    ownNav: true,
-  },
+  updates: { load: loadUpdates, top: updatesTop, sections: () => [], ownNav: true, mount: mountUpdates },
   nas: {
     load: loadNas,
     top: nasTop,

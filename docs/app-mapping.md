@@ -14,10 +14,10 @@ freigegeben (`localOnly`) – Guard umstellen · `⚙ PHP` kann heute nur das PH
 
 | Teil | Seiten | ✓ API | ✓ API° | ⚙ PHP | ＋ neu | — statisch |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 Start, Hören, Spielzeit, Bibliothek | 14 | 142 | – | 1 | 4 | – |
+| 1 Start, Hören, Spielzeit, Bibliothek | 14 | 143 | – | 0 | 4 | – |
 | 2 Aussehen, Display, Audio, Akku & Strom | 18 | 73 | – | 0 | 2 | – |
-| 3 Netzwerk, Dienste, Sicherheit, System | 16 | 99 | – | 2 | 2 | 5 |
-| **Summe** | **48** | **314** | **–** | **3** | **8** | **5** |
+| 3 Netzwerk, Dienste, Sicherheit, System | 16 | 101 | – | 0 | 2 | 5 |
+| **Summe** | **48** | **317** | **–** | **0** | **8** | **5** |
 
 Alle 156 Schlüssel aus `app-schema.json` (157 Einstellungen, der Playlist-Präfix steht zweimal), alle Aktionen und
 Anzeigen sind zugeordnet; keine Zeile ist unklar. Die Bereiche Start, Hören, Spielzeit und Bibliothek laufen schon
@@ -28,7 +28,7 @@ WLED, Updates, Backup, Protokolle, Systemoptionen, Browser, Experten) kann heute
 
 1. **Guards umstellen:** erledigt – die NAS-Verwaltung (`/api/nas/profiles*`, `login`, `index/*`, `browse`,
    `selection`, `mark`, `download/*`, `covers/refresh`) und `/api/online-covers*` nehmen `localOrElternSession`.
-2. **Neue Endpunkte für heutige PHP-Funktionen (⚙ PHP, 3 Zeilen)**, jeweils mit der Logik und den Skripten, die PHP
+2. **Neue Endpunkte für heutige PHP-Funktionen (⚙ PHP, 0 Zeilen – alle erledigt)**, jeweils mit der Logik und den Skripten, die PHP
    heute nutzt (Details in den Tabellen):
    - Bibliothek: „Update verfügbar“
    - Netzwerk & Dienste: Netzwerk-Optionen (Onboard-WLAN, USB-Treiber, Stromsparen, DHCP, Wächter, neu verbinden,
@@ -62,8 +62,9 @@ WLED, Updates, Backup, Protokolle, Systemoptionen, Browser, Experten) kann heute
    sich nur mit dem alten).
 5. **Anmeldung bleibt abschaltbar** (Schalter „Anmeldung verlangen“ wie heute, `interfacelogin.state`).
 6. **Sitzung 24 Stunden.**
-7. **Updates und Reparatur-Skripte** kommen aus dem installierten Stand bzw. dem Paket der gewählten Version, nicht
-   mehr live von Upstream-`main`. Welche Versionen angeboten werden, wird mit splitti abgestimmt.
+7. **Reparatur-Skripte** kommen aus dem installierten Stand, nicht mehr live von Upstream-`main`. **Updates** kommen
+   aus dem offiziellen Repository (splitti/MuPiBox: `version.json`, `update/start_mupibox_update.sh`), entschieden
+   am 28.09.
 
 Ohne Rückfrage festgelegt: Standardwerte kommen aus dem Code bzw. der Konfig-Vorlage (nicht aus dem Prototyp);
 NAS-Feld „Freigabe“ entfällt; „Ausgewählte herunterladen“ bekommt eine Rückfrage; „Strg+Alt+Entf senden“ entfällt.
@@ -175,7 +176,7 @@ Stand: Code auf Branch `upstream-v5-pr` (28.09.2026), nur gelesen, nichts auf de
 | `▶ +15 min` | Schnell | E: nur Spielzeit (`capsExtend` app.js:973 mit beliebigen Minuten) | `playtimeLimit.todayBonus {date, minutes}` | /api/playtime | POST `/api/playtime/extend {minutes:15}` s.ts:1858 (Session + CSRF) | Player live per fs.watch; wird aufsummiert (max. 1440); verfällt am logischen Tageswechsel (`resetHour`) | ✓ API |
 | `▶ Ruhe sofort` | Schnell | E: `capsQuietNow` app.js:999 | `playbackOverride.forceBlockUntil` (+ `allowUntil=0`) | /api/playtime `override` | POST `/api/quiethours/now {minutes}` s.ts:1960 (ohne Angabe 60 min) | stoppt sofort, Kind sieht das Overlay | ✓ API |
 | `▶ Schlaftimer` | Schnell | E: `startSleepTimer` app.js:3352 | `/tmp/.time2sleep` | GET `/api/eltern/sleeptimer` r.ts:710 | POST `/api/eltern/sleeptimer/start {minutes}` r.ts:732 | Minuten müssen gewählt werden (Blatt/Standard) | ✓ API |
-| `◉ Hinweis: Update verfügbar` | Hinweis-Karte | A: `index.php:34` (GitHub `version.json`, 1 h Cache per `mupibox_cached_url` index.php:10) gegen `mupibox.version` | PHP-Cache + `mupibox.version` | nur PHP | — | Endpoint mit derselben Abfrage und Cache anlegen (GitHub raw, Timeout) | ⚙ PHP |
+| `◉ Hinweis: Update verfügbar` | Hinweis-Karte | A: `index.php:34` (GitHub `version.json`, 1 h Cache per `mupibox_cached_url` index.php:10) gegen `mupibox.version` | PHP-Cache + `mupibox.version` | nur PHP | — | Endpoint mit derselben Abfrage und Cache anlegen (GitHub raw, Timeout) | ✓ API |
 | `◉ Hinweis: Akku fast leer` | Hinweis-Karte | (Box-Display) | `/tmp/mupihat.json` `Bat_Stat` = OK/LOW/SHUTDOWN (`mupihat_bq25792.py:317`) | GET `/api/mupihat` | — | | ✓ API |
 | `◉ Hinweis: Spotify-Anmeldung abgelaufen` | Hinweis-Karte | E: Hub-Karte Sync app.js:3400 | `spotify.*` + `/tmp/.spotify_sync_state.json` | GET `/api/spotify-sync/status` ss.ts:34 → `token.configured`, `token.scopes_ok`, `state.last_sync_status` = `AUTH_FAILED`/`AUTH_NEEDS_REAUTH` | — | `token.valid` heißt nur „Access-Token noch >5 min gültig“ und ist **kein** Signal für „abgelaufen“ | ✓ API |
 | `▶ Hinweis schließen` | × | – | – | – | – | nur im Client (z. B. localStorage je Hinweis) | ＋ neu |
@@ -765,9 +766,9 @@ Alles liegt in `smart.php`: Formular :515-700, Handler `change_wled` :101-162 �
 
 | Schlüssel / Aktion | Beschriftung | Heute | Speicherort | Lesen | Schreiben / Ausführen | Nebenwirkung / Hinweis | Status |
 |---|---|---|---|---|---|---|---|
-| `◉ versions` (Stable/Beta/Dev + Knöpfe) | MuPiBox | A: admin.php:587-641, Handler :251-283 (`mupibox_update`, `_beta`, `_dev`) · Anzeige auch index.php:90-130 | installiert: `mupibox.version`; verfügbar: `version.json` auf GitHub `splitti/MuPiBox/main` (admin.php:175, bei **jedem** Aufruf von admin.php ohne Zwischenspeicher); Dev-Datum per `api.github.com` (:629) | wie links | `curl -L …/main/update/start_mupibox_update.sh \| sudo bash -s -- stable\|beta\|dev` **synchron** im PHP-Request, danach `$reboot=1`. Bei beta/dev wird an die Version „ BETA“/„ DEVELOPMENT“ angehängt (write_json = save + setting_update + restart_kiosk) | 🔒🔒 Root-Ausführung eines live geladenen Upstream-Skripts, kein Fork-/Release-Pinning. Dauert Minuten, Webserver-Timeout möglich. Neuer Endpunkt: lokal installiertes Skript mit `setsid`/`systemd-run` im Hintergrund, Log `/boot/mupibox_update.log` abfragen (das Skript schreibt es, start_mupibox_update.sh:58-59). Vorher ein Backup | ⚙ PHP |
+| `◉ versions` (Stable/Beta/Dev + Knöpfe) | MuPiBox | A: admin.php:587-641, Handler :251-283 (`mupibox_update`, `_beta`, `_dev`) · Anzeige auch index.php:90-130 | installiert: `mupibox.version`; verfügbar: `version.json` auf GitHub `splitti/MuPiBox/main` (admin.php:175, bei **jedem** Aufruf von admin.php ohne Zwischenspeicher); Dev-Datum per `api.github.com` (:629) | wie links | `curl -L …/main/update/start_mupibox_update.sh \| sudo bash -s -- stable\|beta\|dev` **synchron** im PHP-Request, danach `$reboot=1`. Bei beta/dev wird an die Version „ BETA“/„ DEVELOPMENT“ angehängt (write_json = save + setting_update + restart_kiosk) | 🔒🔒 Root-Ausführung eines live geladenen Upstream-Skripts, kein Fork-/Release-Pinning. Dauert Minuten, Webserver-Timeout möglich. Neuer Endpunkt: lokal installiertes Skript mit `setsid`/`systemd-run` im Hintergrund, Log `/boot/mupibox_update.log` abfragen (das Skript schreibt es, start_mupibox_update.sh:58-59). Vorher ein Backup | ✓ API |
 | `◉ warn` (vorher Backup) | Betriebssystem | A: admin.php:643-645 | — | — | — | statischer Hinweis | — statisch |
-| `▶ Betriebssystem aktualisieren` | Betriebssystem aktualisieren | A: admin.php:647-648 (`os_update`), Handler :294-300 → `$change=3` | — | — | `sudo apt-get -y … update && … upgrade` (force-confdef/confold) **synchron**, danach setting_update.sh + set_hostname.sh + restart_kiosk.sh | 🔒 apt als root, bis zu 30 min. Keine apt-Sperre (anders als service.php:20-23). Kein automatischer Neustart, obwohl der Text „auf den Neustart warten“ sagt | ⚙ PHP |
+| `▶ Betriebssystem aktualisieren` | Betriebssystem aktualisieren | A: admin.php:647-648 (`os_update`), Handler :294-300 → `$change=3` | — | — | `sudo apt-get -y … update && … upgrade` (force-confdef/confold) **synchron**, danach setting_update.sh + set_hostname.sh + restart_kiosk.sh | 🔒 apt als root, bis zu 30 min. Keine apt-Sperre (anders als service.php:20-23). Kein automatischer Neustart, obwohl der Text „auf den Neustart warten“ sagt | ✓ API |
 
 ### Einstellungen › System › Backup [backup]
 
@@ -808,7 +809,14 @@ Alles liegt in `smart.php`: Formular :515-700, Handler `change_wled` :101-162 �
 > die Sperre von `updateMupiboxConfig`, `interfacelogin` bleibt), POST `/reset {config|library|server}` (Vorlagen aus dem
 > installierten Stand: `templates/` neben server.js, kein wget von Upstream, kein chmod 777), POST `/apply-settings`, GET
 > `/backup?kind=config|full`, PUT `/backup/restore` (Whitelist wie admin.php, symbolische Links abgelehnt, ohne `unzip -a`).
-> Updates: noch über das Admin-Interface, bis die Versionen mit splitti abgestimmt sind.
+> Updates (eltern/updates.ts): GET `/api/eltern/updates` (installiert, offizielle Versionen je Kanal, 1 h zwischengespeichert,
+> `update` = neuere Version im installierten Kanal, letzter Lauf), GET `/updates/job`, POST `/updates/start
+> {stable|beta|dev|os}`. Läuft als eigene systemd-Unit `mupibox-update` (der Server wird beim MuPiBox-Update selbst
+> ausgetauscht), Zustand in `/var/lib/mupibox-update`. Das Update-Skript bekommt statt `whiptail` einen Stellvertreter,
+> der den Fortschritt in eine Datei schreibt: `whiptail` beendet sich ohne Terminal sofort, und das Skript brach danach
+> nach dem ersten Schritt ab. Vorher eine Sicherung nach `/home/dietpi/mupibox-backups` (die letzten drei), danach
+> startet die Box von selbst neu; ein Abbruch startet Server und Anzeige wieder. Betriebssystem: apt mit Sperr-Wartezeit,
+> ohne Neustart (die App bietet ihn an). Beide halten die Leerlauf-Abschaltung so lange an.
 
 ### Einstellungen › System › Systemoptionen [systemopt]
 
