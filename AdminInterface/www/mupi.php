@@ -1625,9 +1625,14 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 				<?php
 				// km themes (children's themes of one design): English names from km-themes.json, in a group of their own
 				$kmNames = array();
+				// the old themes of the box in the km layout (legacy): they keep their names, their place in the list and
+				// their preview picture - only the Cover Flow switch below is theirs too
+				$kmLegacy = array();
 				$kmJson = @json_decode(@file_get_contents('/home/dietpi/MuPiBox/themes/km-themes.json'), true);
 				foreach (($kmJson['themes'] ?? array()) as $kmTheme) {
-					if (!empty($kmTheme['id'])) $kmNames[$kmTheme['id']] = (string)($kmTheme['labelEn'] ?? $kmTheme['label'] ?? $kmTheme['id']);
+					if (empty($kmTheme['id'])) continue;
+					if (!empty($kmTheme['legacy'])) { $kmLegacy[$kmTheme['id']] = true; continue; }
+					$kmNames[$kmTheme['id']] = (string)($kmTheme['labelEn'] ?? $kmTheme['label'] ?? $kmTheme['id']);
 				}
 				$Themes = $data["mupibox"]["installedThemes"];
 				asort($Themes);
@@ -1673,7 +1678,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 						<span>Show folder/album names</span>
 					</label>
 				</div>
-				<?php $kmSelected = isset($kmNames[$data["mupibox"]["theme"]]); $kmStageOn = (($data["mupibox"]["themeStage"] ?? false) === true); ?>
+				<?php $kmSelected = isset($kmNames[$data["mupibox"]["theme"]]) || isset($kmLegacy[$data["mupibox"]["theme"]]); $kmStageOn = (($data["mupibox"]["themeStage"] ?? false) === true); ?>
 				<div id="kmStageToggleWrap" style="<?= $kmSelected ? '' : 'display:none;' ?>">
 					<input type="hidden" name="kmStageShown" value="1" />
 					<label class="mupi-toggle" for="themeStage" title="Big cover in the middle, neighbours smaller. Swipe, or tap a neighbour to bring it to the middle.">
@@ -1690,13 +1695,14 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 					</div>
 				</div>
 				<script>
-					var kmThemeIds = <?= json_encode(array_keys($kmNames)) ?>;
+					var kmThemeIds = <?= json_encode(array_keys($kmNames)) ?>; // the kids' themes (their preview picture, see view.js)
+					var kmStageIds = <?= json_encode(array_merge(array_keys($kmNames), array_keys($kmLegacy))) ?>; // all themes in the km layout
 					function toggleKmStageOption() {
 						var sel = document.getElementById('theme');
 						var wrap = document.getElementById('kmStageToggleWrap');
 						var stage = document.getElementById('themeStage');
 						var autoRead = document.getElementById('kmAutoReadWrap');
-						if (sel && wrap) wrap.style.display = (kmThemeIds.indexOf(sel.value) >= 0) ? '' : 'none';
+						if (sel && wrap) wrap.style.display = (kmStageIds.indexOf(sel.value) >= 0) ? '' : 'none';
 						if (stage && autoRead) autoRead.style.display = stage.checked ? '' : 'none';
 					}
 					function toggleCoverflowNameOption() {
