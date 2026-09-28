@@ -8,6 +8,7 @@
 // strings. Single-use enforcement on magic links blocks replay attacks;
 // session lifetime is enforced on every check via timestamp comparison.
 
+import bcrypt from 'bcryptjs'
 import { randomBytes, scrypt as scryptCb, timingSafeEqual } from 'node:crypto'
 import * as fs from 'node:fs'
 import { promisify } from 'node:util'
@@ -279,3 +280,56 @@ export async function setElternPassword(
 }
 
 export const ELTERN_PASSWORD_MIN_LENGTH = MIN_PASSWORD_LENGTH
+
+// --- One password for the whole app (decision of 28.09.2026) -----------------------------------------------------
+// The admin interface's password (interfacelogin.password, bcrypt from PHP's password_hash) is valid in the app too;
+// a parents' password (eltern.password, scrypt) set in the parents' web app stays valid as well. A new password is
+// written as bcrypt into interfacelogin.password (with PHP's "$2y$" prefix, so the admin interface keeps working
+// with it) and replaces the parents' password. "Anmeldung verlangen" is interfacelogin.state, as in the admin
+// interface: when it is off, the app asks for no login on the home network.
+
+export const APP_PASSWORD_MIN_LENGTH = 6
+
+function adminHash(cfg: unknown): string | undefined {
+  const h = (cfg as { interfacelogin?: { password?: unknown } } | undefined)?.interfacelogin?.password
+  return typeof h === 'string' && /^\$2[abxy]\$\d\d\$.{53}$/.test(h) ? h : undefined
+}
+
+/** Is any password set (the admin interface's or the parents')? */
+export function hasAppPassword(cfg: unknown): boolean {
+  return adminHash(cfg) !== undefined || hasElternPassword(cfg)
+}
+
+/** Does the app ask for a login? (interfacelogin.state; without any password there is nothing to ask for) */
+export function appLoginRequired(cfg: unknown): boolean {
+  return (cfg as { interfacelogin?: { state?: unknown } } | undefined)?.interfacelogin?.state === true && hasAppPassword(cfg)
+}
+
+/** Checks a password against the admin interface's and the parents' password. */
+export async function verifyAppPassword(plain: string, cfg: unknown): Promise<boolean> {
+  if (!plain) return false
+  if (await verifyElternPassword(plain, cfg)) return true
+  const h = adminHash(cfg)
+  if (!h) return false
+  try {
+    return await bcrypt.compare(plain, h)
+  } catch {
+    return false
+  }
+}
+
+/** Sets the one password (bcrypt, readable by the admin interface too); the old parents' password goes. */
+export async function setAppPassword(
+  plain: string,
+  updateMupiboxConfig: (mutate: (cfg: Record<string, unknown>) => void) => Promise<void>,
+): Promise<void> {
+  const hash = `$2y${(await bcrypt.hash(plain, 10)).slice(3)}`
+  await updateMupiboxConfig((cfg) => {
+    const login = ((cfg.interfacelogin as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
+    login.password = hash
+    cfg.interfacelogin = login
+    const e = ((cfg.eltern as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
+    delete e.password
+    cfg.eltern = e
+  })
+}

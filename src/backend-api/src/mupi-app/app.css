@@ -510,5 +510,6 @@ select.input { appearance: auto; }
 .login .logo { width: 96px; height: 96px; border-radius: 50%; background: var(--mp-primary-soft); display: grid; place-items: center; margin: 0 auto; }
 .login h1 { margin: 0; font: 600 28px/1.2 var(--mp-font-display); }
 .login .card { text-align: left; }
+.login-ways .entry .avatar { background: var(--mp-primary-soft); color: var(--mp-primary-text); }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }

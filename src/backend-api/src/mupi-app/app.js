@@ -3862,6 +3862,96 @@ function mountWled(root, page) {
   }
 }
 
+/* Einstellungen › Sicherheit: one password for the app and the admin interface, "Anmeldung verlangen" */
+
+const sec = { st: null }
+
+async function loadAuthState() {
+  const r = await api(`${API}/auth-state`)
+  if (!r.ok) throw new Error(`auth-state ${r.status}`)
+  sec.st = r.body
+}
+
+// Asks for the current password in a sheet: the text, or null when cancelled
+function askPassword(title, text, okLabel) {
+  return new Promise((resolve) => {
+    let answer = null
+    openSheet(
+      `<h2>${esc(title)}</h2><p class="help" style="margin:0">${esc(text)}</p>
+       <div class="field"><label for="ap-pw">Aktuelles Passwort</label><div class="input-wrap"><input class="input has-eye" id="ap-pw" type="password" autocomplete="current-password"><button class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div></div>
+       <div class="btns"><button class="btn" data-close>Abbrechen</button><button class="btn primary" data-ok>${esc(okLabel)}</button></div>`,
+      (sheet, close) => {
+        const input = sheet.querySelector('#ap-pw')
+        sheet.querySelector('[data-eye]').onclick = () => (input.type = input.type === 'password' ? 'text' : 'password')
+        sheet.querySelector('[data-close]').onclick = close
+        const ok = () => {
+          answer = input.value
+          close()
+        }
+        sheet.querySelector('[data-ok]').onclick = ok
+        input.addEventListener('keydown', (e) => e.key === 'Enter' && ok())
+        setTimeout(() => input.focus(), 50)
+      },
+      () => setTimeout(() => resolve(answer)),
+    )
+  })
+}
+
+function securityTop() {
+  const st = sec.st
+  const sw = `<div class="row"><span class="lbl"><b>Anmeldung verlangen</b><small>Aus = im Heimnetz ohne Passwort, wie beim Admin-Interface. Der QR-Code am Display und der Telegram-Link gehen immer.</small></span>
+    <label class="switch"><input type="checkbox" id="sec-login" ${st.loginSwitch ? 'checked' : ''} ${st.passwordSet ? '' : 'disabled'} aria-label="Anmeldung verlangen"><span></span></label></div>`
+  return [
+    `<section class="card"><h2>Passwort</h2>
+      <p class="help">Ein Passwort für diese App und das bisherige Admin-Interface.</p>
+      <dl class="kv"><div><dt>Status</dt><dd>${st.passwordSet ? (st.defaultPassword ? 'Standardpasswort' : 'gesetzt') : 'nicht gesetzt'}</dd></div></dl>
+      ${st.defaultPassword ? `<div class="note warn">${icon('info', 18)}<span>Es gilt noch das Standardpasswort, das im Admin-Interface steht. Bitte ein eigenes festlegen.</span></div>` : ''}
+      ${st.passwordSet ? `<div class="field"><label for="sec-cur">Aktuelles Passwort</label><div class="input-wrap"><input class="input has-eye" id="sec-cur" type="password" autocomplete="current-password"><button class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div></div>` : ''}
+      <div class="field"><label for="sec-new">Neues Passwort (mindestens 6 Zeichen)</label><div class="input-wrap"><input class="input has-eye" id="sec-new" type="password" autocomplete="new-password"><button class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div></div>
+      <div class="field"><label for="sec-new2">Neues Passwort wiederholen</label><input class="input" id="sec-new2" type="password" autocomplete="new-password"></div>
+      <div class="btns"><button class="btn primary" id="sec-save">${st.passwordSet ? 'Passwort ändern' : 'Passwort festlegen'}</button></div></section>`,
+    `<section class="card"><h2>Anmeldung</h2>${sw}
+      ${st.passwordSet ? '' : '<p class="help" style="margin:0">Erst ein Passwort festlegen, dann lässt sich die Anmeldung einschalten.</p>'}
+      <p class="help" style="margin:0">${st.loginRequired ? 'Die App fragt im Heimnetz nach dem Passwort.' : 'Die App ist im Heimnetz ohne Passwort offen.'}</p></section>`,
+  ]
+}
+
+function mountSecurity(root, page) {
+  for (const b of root.querySelectorAll('[data-eye]')) {
+    b.onclick = () => {
+      const i = b.parentElement.querySelector('input')
+      i.type = i.type === 'password' ? 'text' : 'password'
+    }
+  }
+  $('#sec-save', root).onclick = async () => {
+    const current = $('#sec-cur', root)?.value ?? ''
+    const password = $('#sec-new', root).value
+    if (password.length < 6) return toast('Das neue Passwort braucht mindestens 6 Zeichen', 'info')
+    if (password !== $('#sec-new2', root).value) return toast('Die beiden neuen Passwörter sind verschieden', 'info')
+    const r = await api(`${API}/auth/password`, { method: 'POST', body: { current, password } })
+    if (!r.ok) return toast(r.body?.error === 'wrong_password' ? 'Das aktuelle Passwort stimmt nicht' : r.status === 429 ? 'Zu viele Versuche – bitte kurz warten' : 'Nicht gespeichert', 'info')
+    toast('Passwort gespeichert – es gilt auch im Admin-Interface')
+    await loadAuthState()
+    renderPage(page, false)
+  }
+  $('#sec-login', root).onchange = async (e) => {
+    const required = e.target.checked
+    const current = await askPassword(required ? 'Anmeldung einschalten' : 'Anmeldung ausschalten', required ? 'Die App und das Admin-Interface fragen dann nach dem Passwort.' : 'Dann kommt jeder im Heimnetz ohne Passwort in die App und das Admin-Interface.', required ? 'Einschalten' : 'Ausschalten')
+    if (current === null) {
+      e.target.checked = !required
+      return
+    }
+    const r = await api(`${API}/auth/login-required`, { method: 'POST', body: { required, current } })
+    if (!r.ok) {
+      e.target.checked = !required
+      return toast(r.body?.error === 'wrong_password' ? 'Das Passwort stimmt nicht' : r.status === 429 ? 'Zu viele Versuche – bitte kurz warten' : 'Nicht gespeichert', 'info')
+    }
+    toast(required ? 'Anmeldung eingeschaltet' : 'Anmeldung ausgeschaltet')
+    await loadAuthState()
+    renderPage(page, false)
+  }
+}
+
 /* the controllers: load(page) reads the box before drawing, mount(root, page) runs after it, change(key, value)
    saves a setting, act / byLabel run the buttons, sections(page) gives the building blocks with the box's values,
    top(page) draws the page's own top part (instead of customTop's), ownNav: the page shows its sub pages itself */
@@ -4510,6 +4600,7 @@ const CONTROLLERS = {
     },
   },
   wled: { load: loadWled, top: wledTop, sections: () => [], mount: mountWled },
+  passwort: { load: loadAuthState, top: securityTop, sections: () => [], mount: mountSecurity },
   nas: {
     load: loadNas,
     top: nasTop,
@@ -4751,15 +4842,34 @@ function toast(text, kind = 'ok') {
 
 /* ---------- login ---------- */
 
-function renderLogin() {
+async function renderLogin() {
   $('#topbar').innerHTML = ''
   $('#tabbar').hidden = true
   $('#sidebar').hidden = true
+  // Without a parents' password there is nothing to type in: the page says how to get in instead (a password field
+  // that can only fail made people think there was a default password)
+  const info = await fetch(`${API}/auth-info`, { credentials: 'same-origin' }).then((r) => (r.ok ? r.json() : null), () => null)
+  if (info && info.passwordConfigured === false) {
+    $('#content').innerHTML = `
+    <div class="login">
+      <div class="logo"><img src="mupi.svg" alt="" width="64" height="67"></div>
+      <h1>Anmelden</h1>
+      <p class="help" style="margin:0">Auf dieser Box ist noch kein Passwort gesetzt. So kommst du hinein:</p>
+      <div class="card login-ways">
+        <div class="entry"><span class="avatar">1</span><span class="lbl"><b>QR-Code am Display</b><small>Die Status-Symbole oben am Display lange drücken, dann „Eltern“ – den Code mit diesem Gerät scannen.</small></span></div>
+        <div class="entry"><span class="avatar">2</span><span class="lbl"><b>Telegram</b><small>Dem Bot der Box <b>/login</b> schicken und den Link öffnen.</small></span></div>
+        <p class="help" style="margin:0">Danach diese Seite (<b>${esc(location.host)}/app</b>) im selben Browser neu laden. Ein Passwort für später legst du dann unter Einstellungen › Sicherheit fest.</p>
+        <button class="btn primary block" id="login-reload">Neu laden</button>
+      </div>
+    </div>`
+    $('#login-reload').onclick = () => location.reload()
+    return
+  }
   $('#content').innerHTML = `
     <div class="login">
       <div class="logo"><img src="mupi.svg" alt="" width="64" height="67"></div>
       <h1>Willkommen zurück</h1>
-      <p class="help" style="margin:0">Melde dich mit dem Passwort an – oder scanne den QR-Code am Display (Statusanzeige lange drücken) bzw. nutze den Link aus Telegram.</p>
+      <p class="help" style="margin:0">Melde dich mit dem Passwort an – es ist dasselbe wie im Admin-Interface. Oder scanne den QR-Code am Display (Statusanzeige lange drücken) bzw. schick dem Telegram-Bot /login.</p>
       <form class="card" id="login-form">
         <div class="field"><label for="pw">Passwort</label>
           <div class="input-wrap"><input class="input has-eye" id="pw" type="password" autocomplete="current-password" required><button type="button" class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div></div>
@@ -4785,7 +4895,7 @@ function renderLogin() {
       return
     }
     msg.hidden = false
-    msg.textContent = r?.status === 429 ? 'Zu viele Versuche – bitte kurz warten.' : r?.status === 401 ? 'Das Passwort stimmt nicht (oder es ist keins gesetzt – dann den QR-Code nutzen).' : 'Die Box ist gerade nicht erreichbar.'
+    msg.textContent = r?.status === 429 ? 'Zu viele Versuche – bitte kurz warten.' : r?.status === 401 ? 'Das Passwort stimmt nicht.' : 'Die Box ist gerade nicht erreichbar.'
   })
 }
 

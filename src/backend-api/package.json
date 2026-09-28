@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@spotify/web-api-ts-sdk": "^1.2.0",
+    "bcryptjs": "3.0.3",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "jsonfile": "^6.2.0",

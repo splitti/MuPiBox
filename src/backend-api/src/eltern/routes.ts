@@ -29,8 +29,13 @@ import {
   setElternPassword,
   validateSession,
   verifyElternPassword,
+  APP_PASSWORD_MIN_LENGTH,
+  appLoginRequired,
+  hasAppPassword,
+  setAppPassword,
+  verifyAppPassword,
 } from './auth'
-import { ipRateLimit, localNetworkOnly, requireCsrf, requireSession } from './middleware'
+import { ipRateLimit, localNetworkOnly, parseCookie, requireCsrf, requireSession } from './middleware'
 import { registerCustomCoverRoutes } from './covers'
 import { registerDisplayRoutes } from './display'
 import { registerHardwareRoutes } from './hardware'
@@ -312,12 +317,19 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   /** GET /api/eltern/session  — does the current request carry a valid
    *  session? Used by the WebApp on load to decide login vs. dashboard.
    *  Also tells the System screen whether a parent password is configured. */
-  router.get('/session', requireSession, (req, res) => {
+  router.get('/session', (req, res, next) => {
+    // "Anmeldung verlangen" off (as the admin interface's switch): no login on the home network (localNetworkOnly
+    // above), the app gets its session and CSRF token right away
+    if (appLoginRequired(deps.getMupiboxConfig()) || validateSession(parseCookie(req, SESSION_COOKIE))) return next()
+    const session = issueSession(req.ip ?? req.socket.remoteAddress ?? '')
+    res.setHeader('Set-Cookie', buildSessionCookie(session.sessionId, 24 * 60 * 60))
+    res.json({ authenticated: true, open: true, csrf_header: CSRF_HEADER, csrf_token: session.csrf, passwordConfigured: hasAppPassword(deps.getMupiboxConfig()) })
+  }, requireSession, (req, res) => {
     res.json({
       authenticated: true,
       csrf_header: CSRF_HEADER,
       csrf_token: req.elternSessionCsrf,
-      passwordConfigured: hasElternPassword(deps.getMupiboxConfig()),
+      passwordConfigured: hasAppPassword(deps.getMupiboxConfig()),
     })
   })
 
@@ -325,7 +337,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
    *  screen can decide whether to offer a password-login form. Returns only
    *  a boolean; never the hash. */
   router.get('/auth-info', (_req, res) => {
-    res.json({ passwordConfigured: hasElternPassword(deps.getMupiboxConfig()) })
+    res.json({ passwordConfigured: hasAppPassword(deps.getMupiboxConfig()), loginRequired: appLoginRequired(deps.getMupiboxConfig()) })
   })
 
   /** POST /api/eltern/login  {password}  (Phase 17h)
@@ -336,11 +348,11 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     const body = (req.body as { password?: unknown } | undefined) ?? {}
     const pw = typeof body.password === 'string' ? body.password : ''
     const mupibox = deps.getMupiboxConfig()
-    if (!hasElternPassword(mupibox)) {
+    if (!hasAppPassword(mupibox)) {
       res.status(401).json({ error: 'password login not enabled' })
       return
     }
-    const ok = await verifyElternPassword(pw, mupibox)
+    const ok = await verifyAppPassword(pw, mupibox)
     if (!ok) {
       res.status(401).json({ error: 'invalid password' })
       return
@@ -363,6 +375,60 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     }
     await setElternPassword(pw, deps.updateMupiboxConfig)
     res.json({ ok: true, configured: hasElternPassword(deps.getMupiboxConfig()) })
+  })
+
+  /** GET /api/eltern/auth-state - the Sicherheit page: is a password set, is the login required, is it still the
+   *  admin interface's well-known default password. */
+  router.get('/auth-state', requireSession, async (_req, res) => {
+    const cfg = deps.getMupiboxConfig()
+    res.json({
+      passwordSet: hasAppPassword(cfg),
+      loginRequired: appLoginRequired(cfg),
+      loginSwitch: (cfg as { interfacelogin?: { state?: unknown } } | undefined)?.interfacelogin?.state === true,
+      defaultPassword: await verifyAppPassword('MuP1B0x', cfg),
+    })
+  })
+
+  /** POST /api/eltern/auth/password {current, password} - the one password; the current one is needed when one is set. */
+  router.post('/auth/password', requireSession, requireCsrf, ipRateLimit(5), async (req, res) => {
+    const body = (req.body ?? {}) as { current?: unknown; password?: unknown }
+    const current = typeof body.current === 'string' ? body.current : ''
+    const next = typeof body.password === 'string' ? body.password : ''
+    const cfg = deps.getMupiboxConfig()
+    if (hasAppPassword(cfg) && !(await verifyAppPassword(current, cfg))) {
+      res.status(403).json({ error: 'wrong_password' })
+      return
+    }
+    if (next.length < APP_PASSWORD_MIN_LENGTH || next.length > 200) {
+      res.status(400).json({ error: 'too_short', min: APP_PASSWORD_MIN_LENGTH })
+      return
+    }
+    await setAppPassword(next, deps.updateMupiboxConfig)
+    res.json({ ok: true })
+  })
+
+  /** POST /api/eltern/auth/login-required {required, current} - "Anmeldung verlangen" (interfacelogin.state). */
+  router.post('/auth/login-required', requireSession, requireCsrf, ipRateLimit(5), async (req, res) => {
+    const body = (req.body ?? {}) as { required?: unknown; current?: unknown }
+    if (typeof body.required !== 'boolean') {
+      res.status(400).json({ error: 'required must be true or false' })
+      return
+    }
+    const cfg = deps.getMupiboxConfig()
+    if (!hasAppPassword(cfg)) {
+      res.status(409).json({ error: 'no_password' })
+      return
+    }
+    if (!(await verifyAppPassword(typeof body.current === 'string' ? body.current : '', cfg))) {
+      res.status(403).json({ error: 'wrong_password' })
+      return
+    }
+    await deps.updateMupiboxConfig((c) => {
+      const login = ((c.interfacelogin as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
+      login.state = body.required
+      c.interfacelogin = login
+    })
+    res.json({ ok: true })
   })
 
   /** POST /api/eltern/logout  — destroys the session, clears the cookie. */

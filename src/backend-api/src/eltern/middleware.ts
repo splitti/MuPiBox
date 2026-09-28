@@ -51,7 +51,7 @@ export const localNetworkOnly: RequestHandler = (req, res, next) => {
 }
 
 /** Minimal cookie-header parser; mutates Request to add a typed accessor. */
-function parseCookie(req: Request, name: string): string | undefined {
+export function parseCookie(req: Request, name: string): string | undefined {
   const header = req.headers.cookie
   if (!header) return undefined
   // Split on '; ', take name=value pairs. Don't decode — session ids are
