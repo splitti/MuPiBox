@@ -135,6 +135,32 @@ function execCapture(cmd: string, args: string[], timeoutMs = 8000): Promise<{ o
   })
 }
 
+// The player reads its Spotify access from its own config (spotifycontroller-main/config/config.json), which
+// setting_update.sh writes from mupiboxconfig.json. After a login or a reset the player is restarted too, as the admin
+// interface's Spotify page does - but not this process (spotify_restart.sh restarts both): it reads the config live.
+function applySpotifyAccessToPlayer(restartPlayer: boolean): void {
+  const restart = restartPlayer ? '; PM2=$(command -v pm2 || echo /usr/local/bin/pm2); "$PM2" restart spotify-control >/dev/null 2>&1' : ''
+  const child = spawn('sh', ['-c', `sudo /usr/local/bin/mupibox/setting_update.sh >/dev/null 2>&1${restart}`], { detached: true, stdio: 'ignore' })
+  child.on('error', () => undefined)
+  child.unref()
+}
+
+// The backend's Spotify caches (see /spotify-access/clear-cache); true when all of them are gone
+async function clearSpotifyCache(): Promise<boolean> {
+  const dir = `${process.cwd()}/cache`
+  let ok = true
+  for (const name of ['spotify', 'spotify-api', 'covers', 'home-lists.json']) {
+    const target = `${dir}/${name}`
+    try {
+      await fsp.rm(target, { recursive: true, force: true })
+    } catch {
+      // written by another user once: as the admin interface, with sudo
+      if (!(await execCapture('sudo', ['rm', '-rf', target], 20000)).ok) ok = false
+    }
+  }
+  return ok
+}
+
 // The WiFi adapter in use (a USB adapter if there is one, else the onboard one - see
 // mupi_wifi_iface.sh). These routes had wlan0 hard-coded: with a USB adapter the scan, the list
 // of saved networks and "remove" looked at the wrong adapter. Asked at most every 3 s.
@@ -321,7 +347,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     // Only a page of the parents' app: the value ends up in res.redirect() after the login, and
     // "https://elsewhere" or "//elsewhere" made that an open redirect.
     const ret =
-      typeof req.query.return === 'string' && /^\/(?:parents|eltern)(?:[/?#]|$)/.test(req.query.return)
+      typeof req.query.return === 'string' && /^\/(?:parents|eltern|app)(?:[/?#]|$)/.test(req.query.return)
         ? req.query.return
         : '/parents'
     const result = buildAuthorizeUrl({
@@ -363,7 +389,9 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     const code = typeof req.query.code === 'string' ? req.query.code : ''
     const error = typeof req.query.error === 'string' ? req.query.error : ''
     if (error) {
-      res.redirect(`/parents?spotify_error=${encodeURIComponent(error)}`)
+      // (back to the page that started the login, when the state is still known)
+      const started = state ? consumeOauthState(state) : undefined
+      res.redirect(`${started?.redirectAfter ?? '/parents'}?spotify_error=${encodeURIComponent(error)}`)
       return
     }
     if (!state || !code) {
@@ -388,9 +416,16 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       updateMupiboxConfig: deps.updateMupiboxConfig,
     })
     if (!exchange.ok) {
-      res.redirect(`/parents?spotify_error=${encodeURIComponent(exchange.reason)}`)
+      res.redirect(`${original.redirectAfter}?spotify_error=${encodeURIComponent(exchange.reason)}`)
       return
     }
+    // As the admin interface's Spotify page: logging in means Spotify is wanted, and the player gets the new access
+    await deps.updateMupiboxConfig((cfg) => {
+      const spotify = ((cfg.spotify as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
+      spotify.active = true
+      cfg.spotify = spotify
+    })
+    applySpotifyAccessToPlayer(true)
     res.redirect(`${original.redirectAfter}?spotify_connected=1`)
   })
 
@@ -1825,6 +1860,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     const body = (req.body ?? {}) as { clientId?: unknown; clientSecret?: unknown }
     const clientId = typeof body.clientId === 'string' ? body.clientId.trim() : ''
     const clientSecret = typeof body.clientSecret === 'string' ? body.clientSecret.trim() : ''
+    // (no clientSecret in the body: the stored one stays - the new app sends it only when one was typed)
+    const keepSecret = body.clientSecret === undefined
     if (clientId.length < 16 || clientId.length > 64 || !/^[A-Za-z0-9]+$/.test(clientId)) {
       res.status(400).json({ error: 'clientId must be 16-64 alphanumeric characters' })
       return
@@ -1840,10 +1877,78 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       // src/spotify-sync/auth.ts picks it up; don't write `undefined`,
       // because jsonfile collapses that into a missing key and existing
       // code reads via typeof === 'string'.
-      spotify.clientSecret = clientSecret
+      if (!keepSecret) spotify.clientSecret = clientSecret
       cfg.spotify = spotify
     })
-    res.json({ ok: true, mode: clientSecret ? 'classic' : 'pkce' })
+    applySpotifyAccessToPlayer(false)
+    const secret = keepSecret ? deps.getMupiboxConfig()?.spotify?.clientSecret : clientSecret
+    res.json({ ok: true, mode: secret ? 'classic' : 'pkce' })
+  })
+
+  /**
+   * GET /api/eltern/spotify-access
+   * What the player's Spotify access looks like, without the secrets themselves (the admin interface showed them in
+   * plain text): the client id, whether a secret and tokens are stored, and "process playlists".
+   */
+  router.get('/spotify-access', requireSession, (_req, res) => {
+    const sp = (deps.getMupiboxConfig()?.spotify ?? {}) as Record<string, unknown>
+    const str = (v: unknown) => (typeof v === 'string' ? v : '')
+    res.json({
+      clientId: str(sp.clientId),
+      hasSecret: str(sp.clientSecret) !== '',
+      connected: str(sp.accessToken) !== '' && str(sp.refreshToken) !== '',
+      tokenUpdatedAt: str(sp.tokenUpdatedAt) || null,
+      scopes: Array.isArray(sp.tokenScopes) ? sp.tokenScopes : [],
+      processPlaylists: sp.disableScraperForPlaylists !== true,
+    })
+  })
+
+  /** POST /api/eltern/spotify-access/playlists {enabled} - "process playlists" (read live by the backend, no restart). */
+  router.post('/spotify-access/playlists', requireSession, requireCsrf, async (req, res) => {
+    const enabled = (req.body as { enabled?: unknown } | undefined)?.enabled
+    if (typeof enabled !== 'boolean') {
+      res.status(400).json({ error: 'enabled must be true or false' })
+      return
+    }
+    await deps.updateMupiboxConfig((cfg) => {
+      const spotify = ((cfg.spotify as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
+      spotify.disableScraperForPlaylists = !enabled
+      cfg.spotify = spotify
+    })
+    res.json({ ok: true })
+  })
+
+  /**
+   * POST /api/eltern/spotify-access/clear-cache
+   * Empties the backend's Spotify caches (album and artist data, Spotify covers, the kept home lists). Unlike the
+   * admin interface (rm -r cache/*) the online covers, the NAS folder lists and the cover shapes stay: they have
+   * nothing to do with Spotify, and the online covers' found and discarded lists would be lost.
+   */
+  router.post('/spotify-access/clear-cache', requireSession, requireCsrf, async (_req, res) => {
+    res.json({ ok: await clearSpotifyCache() })
+  })
+
+  /**
+   * POST /api/eltern/spotify-access/reset
+   * As the admin interface's "Reset data": deletes the player's Spotify access (ids, tokens, device, the librespot
+   * login in spotify.cachepath) and the Spotify caches; the player is restarted with the empty access.
+   */
+  router.post('/spotify-access/reset', requireSession, requireCsrf, async (_req, res) => {
+    const cachePath = String(deps.getMupiboxConfig()?.spotify?.cachepath ?? '')
+    await clearSpotifyCache()
+    // (only below /home/dietpi, as the admin interface's remove_config_cache_dir)
+    const real = cachePath ? await fsp.realpath(cachePath).catch(() => '') : ''
+    if (real.startsWith('/home/dietpi/') && real.split('/').length >= 4) {
+      await execCapture('sudo', ['find', real, '-mindepth', '1', '-delete'], 20000)
+    }
+    await deps.updateMupiboxConfig((cfg) => {
+      const spotify = ((cfg.spotify as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
+      for (const key of ['username', 'password', 'deviceId', 'accessToken', 'refreshToken', 'clientId', 'clientSecret']) spotify[key] = ''
+      spotify.tokenScopes = []
+      cfg.spotify = spotify
+    })
+    applySpotifyAccessToPlayer(true)
+    res.json({ ok: true })
   })
 
   /**

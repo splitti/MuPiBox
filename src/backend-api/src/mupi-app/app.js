@@ -53,6 +53,11 @@ async function boot() {
     return
   }
   state.csrf = session.csrf_token
+  const back = new URLSearchParams(location.search)
+  if (back.has('spotify_connected') || back.has('spotify_error')) {
+    history.replaceState(null, '', `${location.pathname.replace(/\/?$/, '/')}#/spotify`)
+    setTimeout(() => toast(back.has('spotify_connected') ? 'Mit Spotify verbunden' : `Spotify-Anmeldung fehlgeschlagen (${back.get('spotify_error')})`, back.has('spotify_connected') ? 'ok' : 'info'), 300)
+  }
   loadBoxName()
   window.addEventListener('hashchange', route)
   route()
@@ -2026,6 +2031,204 @@ window.addEventListener('beforeunload', (e) => {
   if (up.running) e.preventDefault()
 })
 
+/* Spotify: Smart-Sync (playlists land on the box by themselves) and the player's access */
+
+const spot = { status: null, access: null }
+
+function relTime(iso) {
+  const t = Date.parse(iso ?? '')
+  if (!t) return '–'
+  const min = Math.round((t - Date.now()) / 60000)
+  if (Math.abs(min) < 1) return 'gerade eben'
+  if (min < 0) return -min < 60 ? `vor ${-min} min` : -min < 1440 ? `vor ${Math.round(-min / 60)} h` : `am ${new Date(t).toLocaleDateString('de-DE')}`
+  return min < 60 ? `in ${min} min` : `in ${Math.round(min / 60)} h`
+}
+
+async function loadSpotify() {
+  const [status, access] = await Promise.all([api(`${SYNC_API}/status`), api(`${API}/spotify-access`)])
+  if (!status.ok && !access.ok) throw new Error(`spotify ${status.status}`)
+  spot.status = status.ok ? status.body : null
+  spot.access = access.ok ? access.body : null
+}
+
+// Starts the Spotify login; Spotify comes back to /app (see boot)
+async function connectSpotify() {
+  const r = await api(`${API}/spotify-oauth/init?return=${encodeURIComponent('/app')}`)
+  if (r.ok && r.body?.authorize_url) {
+    location.href = r.body.authorize_url
+    return
+  }
+  if (r.body?.error === 'no_client_id') {
+    toast('Erst die Client ID eintragen (Assistent, Schritt 3)', 'info')
+    return go('wizard')
+  }
+  toast('Die Anmeldung ließ sich nicht starten', 'info')
+}
+
+function spotifyTop() {
+  const s = spot.status ?? {}
+  const a = spot.access ?? {}
+  const st = s.state ?? {}
+  const tok = s.token ?? {}
+  const connection = !tok.configured ? ['warn', 'Nicht eingerichtet'] : !tok.scopes_ok ? ['warn', 'Bitte neu anmelden (fehlende Rechte)'] : ['ok', 'Verbunden']
+  const last = st.last_sync_status === 'COMPLETED' ? `+${st.additions_count ?? 0} neu · ${st.updates_count ?? 0} geändert · ${st.removals_count ?? 0} entfernt` : st.last_sync_status ?? '–'
+  const running = st.current_state && st.current_state !== 'IDLE' && st.current_state !== 'COMPLETED'
+  const playlists = st.playlists_seen ?? []
+  const conflicts = st.conflicts ?? []
+  const kv = (rows) => `<dl class="kv">${rows.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>`
+  return [
+    `<p class="page-intro">Oben Smart-Sync (Playlists landen automatisch auf der Box), darunter der Zugang, mit dem der Player Spotify abspielt.</p>`,
+    `<section class="card"><h2>Smart-Sync</h2><p class="help">Playlists, deren Name mit dem Playlist-Präfix beginnt, landen automatisch auf der Box.</p>
+      <div class="chips"><span class="chip ${connection[0]}">${esc(connection[1])}</span><span class="chip${s.enabled ? ' ok' : ''}">${s.enabled ? 'Sync an' : 'Sync aus'}</span></div>
+      ${kv([
+        ['Letzter Sync', running ? 'läuft gerade …' : relTime(st.last_sync_end)],
+        ['Ergebnis', last],
+        ['Nächster Sync', s.enabled ? relTime(st.next_scheduled_sync) : '–'],
+        ['Playlist-Präfix', s.playlist_prefix ?? '–'],
+      ])}
+      <div class="btns">${s.enabled ? `<button class="btn primary" data-sp="sync">${icon('sync', 18)}Jetzt synchronisieren</button>` : ''}
+        ${tok.configured && tok.scopes_ok ? `<button class="btn" data-sp="toggle">${s.enabled ? 'Smart-Sync ausschalten' : 'Smart-Sync einschalten'}</button>` : `<button class="btn primary" data-sp="connect">Mit Spotify verbinden</button>`}
+        ${tok.configured ? `<button class="btn" data-sp="disconnect">Trennen</button>` : ''}</div></section>`,
+    `<section class="card"><h2>Gefundene Playlists</h2>${
+      playlists.length
+        ? `<div class="rows">${playlists.map((p) => `<div class="entry"><span class="avatar">${icon('music', 16)}</span><span class="lbl"><b>${esc(p.name)}</b></span><span class="chip">${esc(p.items)} Einträge</span></div>`).join('')}</div>`
+        : `<p class="help" style="margin:0">Noch keine. Lege in Spotify eine Playlist an, deren Name mit „${esc(s.playlist_prefix ?? 'MuPiBox')}“ beginnt.</p>`
+    }</section>`,
+    conflicts.length
+      ? `<section class="card"><h2>Konflikte</h2><p class="help">Inhalte, die schon von Hand auf der Box sind und auch in einer Playlist stehen.</p><div class="rows">${conflicts
+          .map((c, i) => `<div class="entry"><span class="lbl"><b>${esc(`${c.manualArtist ?? '?'} – ${c.manualTitle ?? '?'}`)}</b><small>auch in ${esc((c.inPlaylists ?? []).join(', '))}</small></span><button class="btn sm" data-conflict="${i}">Vom Sync verwalten</button></div>`)
+          .join('')}</div></section>`
+      : '',
+    `<div class="card nav-card"><div class="navlist">${navRow('syncopt', 'Sync-Einstellungen', 'Playlist-Präfix, Intervall, an/aus', 'gear')}${navRow('wizard', 'Einrichtungs-Assistent', 'Spotify neu verbinden in 5 Schritten', 'sync')}</div></div>`,
+    `<section class="card"><h2>Zugang des Players</h2><p class="help">Damit der Player auf der Box Spotify abspielen kann. Die Spotify-App legst du auf developer.spotify.com an (siehe Assistent).</p>
+      <div class="field"><label for="sp-id">Client ID</label><input class="input mono" id="sp-id" value="${esc(a.clientId ?? '')}" autocomplete="off" spellcheck="false"></div>
+      <div class="field"><label for="sp-secret">Client Secret</label><div class="input-wrap"><input class="input has-eye mono" id="sp-secret" type="password" autocomplete="off" placeholder="${a.hasSecret ? 'gespeichert – leer lassen = behalten' : 'nicht gesetzt (optional)'}"><button class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div></div>
+      ${kv([['Anmeldung', a.connected ? `angemeldet${a.tokenUpdatedAt ? ` (${relTime(a.tokenUpdatedAt)})` : ''}` : 'nicht angemeldet']])}
+      <div class="btns"><button class="btn primary" data-sp="save">Speichern</button><button class="btn" data-sp="connect">${a.connected ? 'Neu anmelden' : 'Bei Spotify anmelden'}</button></div></section>`,
+    `<section class="card"><h2>Playlists & Cache</h2>
+      <div class="row"><span class="lbl"><b>Playlists verarbeiten</b><small>Titel von Spotify-Playlists einzeln lesen. Aus = schneller, aber ohne Titelliste.</small></span>
+        <label class="switch"><input type="checkbox" id="sp-pl" ${a.processPlaylists !== false ? 'checked' : ''} aria-label="Playlists verarbeiten"><span></span></label></div>
+      <div class="btns"><button class="btn" data-sp="cache">Spotify-Cache leeren</button></div></section>`,
+    `<section class="card"><h2>Zugang zurücksetzen</h2><p class="help">Löscht die Spotify-Zugangsdaten des Players (Client ID, Secret, Anmeldung, Spotify-Connect-Login).</p>
+      <div class="btns"><button class="btn danger" data-sp="reset">Spotify-Zugang zurücksetzen</button></div></section>`,
+  ]
+}
+
+function mountSpotify(root, page) {
+  const again = async (text, delay = 0) => {
+    if (text) toast(text)
+    setTimeout(async () => {
+      await loadSpotify().catch(() => undefined)
+      if (currentPage()?.id === page.id) renderPage(page, false)
+    }, delay)
+  }
+  const acts = {
+    sync: async () => again(await fireSync(), 3000),
+    toggle: async () => {
+      const on = !spot.status?.enabled
+      const done = async () => {
+        const r = await api(`${SYNC_API}/config`, { method: 'POST', body: { enabled: on } })
+        if (!r.ok) return toast(r.body?.error ?? 'Das hat nicht geklappt', 'info')
+        again(on ? 'Smart-Sync ist an' : 'Smart-Sync ist aus')
+      }
+      if (on) return done()
+      confirmSheet('Ausschalten', 'Smart-Sync ausschalten? Dann gibt es auch keinen Sync von Hand (Knopf, Telegram) – die Inhalte auf der Box bleiben.', done)
+    },
+    connect: connectSpotify,
+    disconnect: () =>
+      confirmSheet('Trennen', 'Die Spotify-Anmeldung löschen? Smart-Sync hört auf, und der Player verliert beim nächsten Neustart den Zugang zu Spotify.', async () => {
+        const r = await api(`${API}/spotify-oauth/disconnect`, { method: 'POST' })
+        if (!r.ok) return toast('Das hat nicht geklappt', 'info')
+        again('Getrennt')
+      }),
+    save: async () => {
+      const clientId = $('#sp-id', root).value.trim()
+      const secret = $('#sp-secret', root).value.trim()
+      if (!/^[A-Za-z0-9]{16,64}$/.test(clientId)) return toast('Die Client ID hat 16–64 Buchstaben und Ziffern', 'info')
+      if (secret && !/^[A-Za-z0-9]{16,64}$/.test(secret)) return toast('Das Secret hat 16–64 Buchstaben und Ziffern', 'info')
+      const r = await api(`${API}/spotify-credentials`, { method: 'POST', body: secret ? { clientId, clientSecret: secret } : { clientId } })
+      if (!r.ok) return toast(r.body?.error ?? 'Nicht gespeichert', 'info')
+      again('Gespeichert')
+    },
+    cache: () =>
+      confirmSheet('Leeren', 'Die zwischengespeicherten Spotify-Daten (Alben, Künstler, Cover) löschen? Sie werden beim nächsten Aufruf neu geladen – die Box ist dann kurz langsamer.', async () => {
+        const r = await api(`${API}/spotify-access/clear-cache`, { method: 'POST' })
+        toast(r.ok && r.body?.ok ? 'Spotify-Cache geleert' : 'Nicht alles ließ sich löschen', r.ok && r.body?.ok ? 'ok' : 'info')
+      }),
+    reset: () =>
+      confirmSheet('Zurücksetzen', 'Alle Spotify-Zugangsdaten des Players löschen? Spotify spielt danach erst nach einer neuen Einrichtung wieder; der Player startet neu.', async () => {
+        const r = await api(`${API}/spotify-access/reset`, { method: 'POST' })
+        if (!r.ok) return toast('Das hat nicht geklappt', 'info')
+        again('Spotify-Zugang zurückgesetzt')
+      }),
+  }
+  for (const b of root.querySelectorAll('[data-sp]')) b.onclick = () => acts[b.dataset.sp]()
+  $('#sp-pl', root).onchange = async (e) => {
+    const r = await api(`${API}/spotify-access/playlists`, { method: 'POST', body: { enabled: e.target.checked } })
+    if (!r.ok) {
+      e.target.checked = !e.target.checked
+      return toast('Nicht gespeichert', 'info')
+    }
+    toast(e.target.checked ? 'Playlists werden verarbeitet' : 'Playlists werden nicht verarbeitet')
+  }
+  for (const b of root.querySelectorAll('[data-conflict]')) {
+    const c = spot.status.state.conflicts[Number(b.dataset.conflict)]
+    b.onclick = () => {
+      const key = String(c.groupKey ?? '')
+      const value = key.startsWith('compilation:') ? key.split(':').at(-1) : key.includes(':') ? key.slice(key.indexOf(':') + 1) : key
+      if (!c.identifierField || !value) return toast('Dieser Konflikt lässt sich hier nicht auflösen', 'info')
+      confirmSheet('Übergeben', `„${c.manualArtist ?? '?'} – ${c.manualTitle ?? '?'}“ vom Sync verwalten lassen? Er hält den Eintrag dann aktuell und nimmt ihn weg, wenn er aus der Playlist fliegt.`, async () => {
+        const r = await api(`${SYNC_API}/conflicts/promote`, { method: 'POST', body: { identifierField: c.identifierField, identifierValue: value } })
+        if (!r.ok) return toast(r.body?.error ?? 'Das hat nicht geklappt', 'info')
+        libChanged()
+        again('Wird jetzt vom Sync verwaltet')
+      })
+    }
+  }
+  // a running sync: look again until it is done
+  const st = spot.status?.state
+  if (st?.current_state && st.current_state !== 'IDLE' && st.current_state !== 'COMPLETED') again('', 3000)
+}
+
+/* Sync-Einstellungen and the setup assistant */
+
+async function loadSyncConfig() {
+  const r = await api(`${SYNC_API}/config`)
+  if (!r.ok) throw new Error(`sync config ${r.status}`)
+  const c = r.body ?? {}
+  // the prefix is prefilled with the box's name
+  state.values.set('prefix', c.playlist_prefix || state.boxName)
+  state.values.set('syncInt', Math.max(5, Math.min(60, Math.round((c.polling_interval_seconds ?? 900) / 60 / 5) * 5)))
+  state.values.set('syncOn', !!c.enabled)
+}
+
+function prefixOk(p) {
+  if (p.length < 2 || p.length > 30) {
+    toast('Der Präfix hat 2 bis 30 Zeichen', 'info')
+    return false
+  }
+  return true
+}
+
+function wizardSections(page) {
+  const redirect = `${location.protocol}//${location.host}/api/eltern/spotify-oauth/callback`
+  const [s1, s2, s3, s4, s5] = page.sections
+  return [
+    { ...s1, items: [{ type: 'buttons', buttons: [['developer.spotify.com öffnen', 'ghost', 'devsite']] }] },
+    {
+      ...s2,
+      items: [
+        { type: 'kv', rows: [['App name', state.boxName], ['Description', 'MuPiBox Smart-Sync'], ['Redirect URI', redirect]] },
+        { type: 'note', text: 'Bei „Which API/SDKs are you planning to use?“ die „Web API“ und das „Web Playback SDK“ ankreuzen.' },
+        { type: 'buttons', buttons: [['Redirect URI kopieren', 'ghost', 'copy']] },
+      ],
+    },
+    { ...s3, items: [{ ...s3.items[0], default: spot.access?.clientId ?? '' }, { type: 'buttons', buttons: [['Speichern + weiter', 'primary', 'saveid']] }] },
+    { ...s4, help: 'Öffnet Spotify; nach der Anmeldung kommst du hierher zurück.', items: [{ type: 'buttons', buttons: [['Mit Spotify verbinden', 'primary', 'connect']] }] },
+    { ...s5, items: [s5.items[0], { type: 'buttons', buttons: [['Fertig', 'primary', 'finish']] }] },
+  ]
+}
+
 /* the controllers: load(page) reads the box before drawing, mount(root, page) runs after it, change(key, value)
    saves a setting, act / byLabel run the buttons, sections(page) gives the building blocks with the box's values,
    top(page) draws the page's own top part (instead of customTop's), ownNav: the page shows its sub pages itself */
@@ -2201,6 +2404,61 @@ const CONTROLLERS = {
     },
     byLabel: {
       Hinzufügen: (_arg, _label, page) => addLink(page),
+    },
+  },
+  spotify: {
+    load: loadSpotify,
+    top: spotifyTop,
+    sections: () => [],
+    ownNav: true,
+    mount: mountSpotify,
+  },
+  syncopt: {
+    load: loadSyncConfig,
+    // (the prototype said a manual sync stays possible: it does not, see the scheduler)
+    sections: (page) =>
+      page.sections.map((sec) => ({
+        ...sec,
+        items: sec.items.map((it) => (it.key === 'syncOn' ? { ...it, help: 'Aus = gar kein Sync, auch nicht von Hand (Knopf, Telegram /resync). Die Inhalte auf der Box bleiben.' } : it)),
+      })),
+    byLabel: {
+      async Speichern() {
+        const prefix = String(state.values.get('prefix') ?? '').trim()
+        const minutes = Number(state.values.get('syncInt'))
+        if (!prefixOk(prefix)) return
+        const r = await api(`${SYNC_API}/config`, {
+          method: 'POST',
+          body: { enabled: !!state.values.get('syncOn'), playlist_prefix: prefix, polling_interval_seconds: minutes * 60 },
+        })
+        toast(r.ok ? 'Gespeichert' : r.body?.error ?? 'Nicht gespeichert', r.ok ? 'ok' : 'info')
+      },
+    },
+  },
+  wizard: {
+    async load() {
+      await Promise.all([loadSpotify().catch(() => undefined), state.values.has('prefix') ? null : loadSyncConfig().catch(() => undefined)])
+    },
+    sections: wizardSections,
+    act: {
+      devsite: () => window.open('https://developer.spotify.com/dashboard', '_blank', 'noopener'),
+      copy: () => copyText(`${location.protocol}//${location.host}/api/eltern/spotify-oauth/callback`),
+      async saveid() {
+        const clientId = String(state.values.get('wzClient') ?? spot.access?.clientId ?? '').trim()
+        if (!/^[A-Za-z0-9]{16,64}$/.test(clientId)) return toast('Die Client ID hat 16–64 Buchstaben und Ziffern', 'info')
+        const r = await api(`${API}/spotify-credentials`, { method: 'POST', body: { clientId } })
+        if (!r.ok) return toast(r.body?.error ?? 'Nicht gespeichert', 'info')
+        toast('Client ID gespeichert – weiter mit Schritt 4')
+        spot.access = { ...(spot.access ?? {}), clientId }
+      },
+      connect: connectSpotify,
+      async finish() {
+        const prefix = String(state.values.get('prefix') ?? '').trim()
+        if (!prefixOk(prefix)) return
+        const r = await api(`${SYNC_API}/config`, { method: 'POST', body: { enabled: true, playlist_prefix: prefix } })
+        if (!r.ok) return toast(r.body?.error ?? 'Nicht gespeichert', 'info')
+        toast('Smart-Sync ist eingerichtet')
+        go('spotify')
+      },
     },
   },
   upload: {
@@ -2388,6 +2646,18 @@ function confirmSheet(title, text, onOk) {
       }
     },
   )
+}
+
+function copyText(text) {
+  const done = () => toast('Kopiert')
+  if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text).then(done, () => toast('Kopieren ging nicht', 'info'))
+  const ta = Object.assign(document.createElement('textarea'), { value: text })
+  ta.style.cssText = 'position:fixed;opacity:0'
+  document.body.append(ta)
+  ta.select()
+  const ok = document.execCommand('copy')
+  ta.remove()
+  ok ? done() : toast(`Bitte von Hand kopieren: ${text}`, 'info')
 }
 
 function toast(text, kind = 'ok') {

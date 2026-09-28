@@ -14,10 +14,10 @@ freigegeben (`localOnly`) – Guard umstellen · `⚙ PHP` kann heute nur das PH
 
 | Teil | Seiten | ✓ API | ✓ API° | ⚙ PHP | ＋ neu | — statisch |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 Start, Hören, Spielzeit, Bibliothek | 14 | 110 | 21 | 9 | 7 | – |
+| 1 Start, Hören, Spielzeit, Bibliothek | 14 | 114 | 21 | 6 | 6 | – |
 | 2 Aussehen, Display, Audio, Akku & Strom | 18 | 36 | – | 37 | 2 | – |
 | 3 Netzwerk, Dienste, Sicherheit, System | 16 | 25 | – | 75 | 2 | 5 |
-| **Summe** | **48** | **171** | **21** | **121** | **11** | **5** |
+| **Summe** | **48** | **175** | **21** | **118** | **10** | **5** |
 
 Alle 156 Schlüssel aus `app-schema.json` (157 Einstellungen, der Playlist-Präfix steht zweimal), alle Aktionen und
 Anzeigen sind zugeordnet; keine Zeile ist unklar. Die Bereiche Start, Hören, Spielzeit und Bibliothek laufen schon
@@ -29,22 +29,21 @@ WLED, Updates, Backup, Protokolle, Systemoptionen, Browser, Experten) kann heute
 1. **Guards umstellen (✓ API°, 21 Zeilen):** alle NAS-Endpunkte (`/api/nas/profiles*`, `login`, `index/*`,
    `browse`, `selection`, `mark`, `download/*`, `covers/refresh`) und `/api/online-covers*` von `localOnly` auf
    `localOrElternSession`.
-2. **Neue Endpunkte für heutige PHP-Funktionen (⚙ PHP, 121 Zeilen)**, jeweils mit der Logik und den Skripten, die PHP
+2. **Neue Endpunkte für heutige PHP-Funktionen (⚙ PHP, 118 Zeilen)**, jeweils mit der Logik und den Skripten, die PHP
    heute nutzt (Details in den Tabellen):
    - Aussehen & Display: eigenes Hintergrundbild, Namen anzeigen, Scrollleiste, Vorlese-Sprache, Helligkeit (neu
      speichern und beim Start setzen), Drehungen (`/boot/config.txt`), Auflösung, Kategorien ausblenden,
      Fortsetzen-Anzahl, Haltezeiten, Display live (Screenshot, VNC)
    - Audio & Hardware: Soundkarte, Drehregler/Taster, MuPiHAT an/aus, Akku-Auswahl, Taster-Verzögerung, LED, Lüfter
-   - Spielzeit & Bibliothek: Spotify-Playlists verarbeiten, Cache leeren
-     (gezielt), Zugang zurücksetzen, eigene Cover, Online-Cover-Schalter, „Update verfügbar“
+   - Bibliothek: eigene Cover, Online-Cover-Schalter, „Update verfügbar“
    - Netzwerk & Dienste: Netzwerk-Optionen (Onboard-WLAN, USB-Treiber, Stromsparen, DHCP, Wächter, neu verbinden,
      IP-Steuerung), Freigaben (Samba, FTP, VNC), Telegram-Chat-ID ermitteln, MQTT, WLED
    - System: Neuigkeiten, Support-Infos, Updates (MuPiBox, Betriebssystem), Backup/Einspielen, Neustart von
      Display/Diensten, Protokolle, Systemoptionen, Browser, Hostname, JSON-Editor, Zurücksetzen
-3. **Neu zu bauen (＋ neu, 11 Zeilen):**
+3. **Neu zu bauen (＋ neu, 10 Zeilen):**
    Kategorie und Fortschritt im „Läuft gerade“ auch für lokal/NAS/Radio, nächstes Ruhezeit-Fenster, ein
    Bluetooth-Schalter (Funk + Chip), „Sprache der Box“ (setzt `displayLanguage` und `bootscreenLanguage`), App in
-   17 Sprachen, echter NAS-Logout, Playlist-Präfix aus dem Box-Namen vorbelegen, ein gemeinsamer Login.
+   17 Sprachen, echter NAS-Logout, ein gemeinsamer Login.
 4. **Doppelte Wege vereinheitlichen** (heute speichern PHP und Node dieselbe Einstellung verschieden):
    - `mupibox.maxVolume` als Zahl lesen und schreiben (PHP speichert Text → Node ignoriert den Hörschutz)
    - Startlautstärke: ein Schlüssel statt `startVolume` (PHP) und `startupVolume` (Node)
@@ -303,15 +302,15 @@ Stand: Code auf Branch `upstream-v5-pr` (28.09.2026), nur gelesen, nichts auf de
 | `spSecret` | Client Secret | A: spotify.php:163 (steht im Klartext da) → :93; E: /spotify-credentials (optional) | `spotify.clientSecret` | über Node nicht lesbar (`/api/config` blendet Geheimnisse aus) → nur „gesetzt / nicht gesetzt“ zeigen | POST /spotify-credentials | ein leerer Wert **überschreibt** das Secret mit `''` (r.ts:1782) | ✓ API |
 | `spAcc` | Access Token | A: spotify.php:201 (nur lesen); gesetzt nur über OAuth: Link :189 → Callback :31–80 | `spotify.accessToken` (+ `tokenExpiresAt`, `tokenUpdatedAt`) | nicht über Node (ausgeblendet) | E: GET `/api/eltern/spotify-oauth/init` r.ts:305 → `/callback` r.ts:351 | Prototyp: Eingabefeld → der Code erlaubt keine Eingabe, nur anzeigen/neu anmelden. PHP-Callback setzt `spotify.active=true` und ruft `setting_update.sh` + `spotify_restart.sh` auf; der Node-Callback tut **beides nicht** | ✓ API |
 | `spRef` | Refresh Token | A: spotify.php:210 (nur lesen), s.o. | `spotify.refreshToken` (+ `tokenScopes`) | dto. | dto. | dto. | ✓ API |
-| `spPl` | Playlists verarbeiten | A: spotify.php:237 → :100 (Umschalt-Knopf, **umgekehrt**) | `spotify.disableScraperForPlaylists` (true = aus) | PHP / `/api/config` | nur PHP | wird pro Request live gelesen (s.ts:3048), kein Neustart; PHP ruft trotzdem `setting_update.sh` | ⚙ PHP |
-| `▶ Metadaten-Cache leeren` | ghost | A: spotify.php:12/252 `sudo rm -r …/Sonos-Kids-Controller-master/cache/*` | `cache/` | — | nur PHP | löscht das **ganze** Cache-Verzeichnis des Backends: `spotify/`, `spotify-api/`, `covers/`, `online-covers/` (Funde **und** Verworfen-Liste), `home-lists.json`, `nas-folders.json`, `cover-shapes.json` | ⚙ PHP |
-| `▶ Spotify-Zugang zurücksetzen` | danger | A: spotify.php:106/268 | `spotify.username/password/deviceId/accessToken/refreshToken/clientId/clientSecret=''`; `cache/*`; Inhalt von `spotify.cachepath` (`/home/dietpi/.cache/spotify`, u. a. librespot `credentials.json`) | — | nur PHP (+ `setting_update.sh` + `spotify_restart.sh`) | Spotify Connect braucht danach eine neue librespot-OAuth-Anmeldung | ⚙ PHP |
+| `spPl` | Playlists verarbeiten | A: spotify.php:237 → :100 (Umschalt-Knopf, **umgekehrt**) | `spotify.disableScraperForPlaylists` (true = aus) | PHP / `/api/config` | POST `/api/eltern/spotify-access/playlists {enabled}` (GET `/spotify-access` → `processPlaylists`) | wird pro Request live gelesen (s.ts:3048), kein Neustart | ✓ API |
+| `▶ Metadaten-Cache leeren` | ghost | A: spotify.php:12/252 `sudo rm -r …/Sonos-Kids-Controller-master/cache/*` | `cache/` | — | POST `/api/eltern/spotify-access/clear-cache` | PHP löscht das **ganze** Cache-Verzeichnis (auch `online-covers/` mit Funden und Verworfen-Liste, `nas-folders.json`, `cover-shapes.json`); die App löscht nur die Spotify-Teile `spotify/`, `spotify-api/`, `covers/`, `home-lists.json` | ✓ API |
+| `▶ Spotify-Zugang zurücksetzen` | danger | A: spotify.php:106/268 | `spotify.username/password/deviceId/accessToken/refreshToken/clientId/clientSecret=''`; `cache/*`; Inhalt von `spotify.cachepath` (`/home/dietpi/.cache/spotify`, u. a. librespot `credentials.json`) | — | POST `/api/eltern/spotify-access/reset` (+ `setting_update.sh`, Neustart nur des Players) | Spotify Connect braucht danach eine neue librespot-OAuth-Anmeldung | ✓ API |
 
 ### Bibliothek › Spotify › Sync-Einstellungen [syncopt]
 | Schlüssel / Aktion | Beschriftung | Heute | Speicherort | Lesen | Schreiben / Ausführen | Nebenwirkung / Hinweis | Status |
 |---|---|---|---|---|---|---|---|
 | `prefix` | Playlist-Präfix | E: `#settings-prefix`, `loadSettings` app.js:3780 / `saveSettings` app.js:3800 | `spotify_sync.playlist_prefix` (Standard „MuPiBox“, types.ts:77) | GET `/api/spotify-sync/config` ss.ts:69 | POST `/api/spotify-sync/config` ss.ts:138 | Server: mindestens 2 Zeichen; Client: 2–30 | ✓ API |
-| `◉ Vorbelegung mit dem Box-Namen` | (Hilfetext) | – | `mupibox.boxName` | GET `/api/eltern/bootscreen` r.ts:1675 (liefert `boxName`) | — | wird heute nicht vorbelegt (Platzhalter mit festem Beispiel-Boxnamen) | ＋ neu |
+| `◉ Vorbelegung mit dem Box-Namen` | (Hilfetext) | – | `mupibox.boxName` | GET `/api/eltern/bootscreen` r.ts:1675 (liefert `boxName`) | — | Neue App: leerer Präfix wird mit dem Box-Namen vorbelegt | ✓ API |
 | `syncInt` | Minuten zwischen Syncs 5–60 | E: `#settings-interval` (Zahl 5–60) | `spotify_sync.polling_interval_seconds` = min×60 (Standard 900) | GET /config | POST /config | Server begrenzt auf 300–3600 s (types.ts:113); gilt ab dem **nächsten** Scheduler-Durchlauf | ✓ API |
 | `syncOn` | Automatischer Sync | E: `#settings-enabled` | `spotify_sync.enabled` (Standard false) | GET /config | POST /config | Prototyp sagt „manuell bleibt möglich“ → **falsch**: aus sperrt auch Knopf und Telegram-`/resync` (sched.ts:97) | ✓ API |
 
