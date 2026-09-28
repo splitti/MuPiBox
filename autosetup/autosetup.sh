@@ -582,10 +582,15 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 	cp -f ${MUPI_SRC}/config/services/dietpi-wifi-monitor-override.conf /etc/systemd/system/dietpi-wifi-monitor.service.d/override.conf >&3 2>&3
 	# USB WiFi adapter preferred, onboard WiFi as fallback (see scripts/mupibox/mupi_wifi_select.sh)
 	cp -f ${MUPI_SRC}/config/udev/99-mupibox-wifi.rules /etc/udev/rules.d/99-mupibox-wifi.rules >&3 2>&3
+	# LAN takes over from WiFi again on carrier loss/return of the ethernet cable (same script)
+	cp -f ${MUPI_SRC}/config/udev/99-mupibox-eth.rules /etc/udev/rules.d/99-mupibox-eth.rules >&3 2>&3
 	udevadm control --reload >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/mupi_mqtt.service /etc/systemd/system/mupi_mqtt.service >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/mupi_rotary.service /etc/systemd/system/mupi_rotary.service >&3 2>&3
-	# LAN without waiting at boot, and an address at once when a cable is plugged in (see scripts/mupibox/mupi_ethernet.sh)
+	# LAN without waiting at boot, and an address at once when a cable is plugged in (see scripts/mupibox/mupi_ethernet.sh).
+	# Also re-evaluates LAN vs WiFi priority (mupi_wifi_select.sh) on every carrier change - the udev rule above
+	# does not fire on every board (some onboard ethernet drivers never emit a uevent for it), and this script
+	# already reacts to the exact same "ip monitor link" event, so it is the more reliable place to trigger it.
 	mv -f ${MUPI_SRC}/config/services/mupi_ethernet.service /etc/systemd/system/mupi_ethernet.service >&3 2>&3
 	# the goodbye picture until the power is off (see config/services/mupi_goodbye.service)
 	mv -f ${MUPI_SRC}/config/services/mupi_goodbye.service /etc/systemd/system/mupi_goodbye.service >&3 2>&3

@@ -1,0 +1,8 @@
+# The ethernet cable was plugged in or unplugged (the onboard eth0 device itself never appears or
+# disappears, only its carrier - unlike a USB WiFi adapter - so this watches ATTR{carrier} on a
+# "change" event instead of ACTION=="add|remove"). Either way, mupi_wifi_select.sh re-evaluates
+# whether WiFi should carry the default route: on carrier loss it takes over immediately instead of
+# leaving a now-dead default route via eth0 in place; on carrier return it hands priority back to LAN.
+# KillMode=process: same reason as the WiFi rule (99-mupibox-wifi.rules) - the script starts long-running
+# WiFi programs in the background that must not be stopped together with it when it ends.
+SUBSYSTEM=="net", KERNEL=="eth0", ACTION=="change", ATTR{carrier}=="0|1", RUN+="/usr/bin/systemd-run --no-block --property=KillMode=process /usr/local/bin/mupibox/mupi_wifi_select.sh"
