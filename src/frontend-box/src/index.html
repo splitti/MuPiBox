@@ -18,8 +18,10 @@
 
     <!-- The boot screen until the start page has loaded its list (see home.page.ts, class mupi-ready): between the
          boot screen and the display it was black and white for seconds. At the latest after 30 s the page shows. -->
+    <link rel="preload" as="image" href="/api/bootscreen/current-splash" />
     <style>
-      html:not(.mupi-ready) { background: #000 url('/api/bootscreen/current-splash') center / cover no-repeat; }
+      /* transparent under the picture: until it is there, Chromium's own background (the boot screen's colour) */
+      html:not(.mupi-ready) { background: transparent url('/api/bootscreen/current-splash') center / cover no-repeat; }
       html:not(.mupi-ready) body { background: transparent !important; }
       html:not(.mupi-ready) app-root { visibility: hidden; }
     </style>
