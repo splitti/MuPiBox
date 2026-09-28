@@ -83,7 +83,8 @@ while true; do
             /usr/bin/aplay /home/dietpi/MuPiBox/sysmedia/sound/button_shutdown.wav
 
             echo "$(date) - INFO:  Stopping services" >> ${LOGFILE}
-            sudo service mupi_startstop stop
+            # (systemctl, not service: for stop, service asks every socket unit of the system first - 2.3 s)
+            sudo systemctl stop mupi_startstop
             # (--no-block: the LED's goodbye animation takes about 2 s and runs on while the box shuts down)
             sudo systemctl --no-block stop mupi_powerled
 

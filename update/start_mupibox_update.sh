@@ -687,6 +687,11 @@ rm -f /tmp/mupibox-update-failed
 		cp -f "${MUPI_SRC}/config/services/ifup@eth0.service.d/mupibox.conf" "/etc/systemd/system/ifup@eth0.service.d/mupibox.conf" >&3 2>&3
 		MUPI_ETHERNET=1
 	fi
+	# the goodbye picture until the power is off (see config/services/mupi_goodbye.service)
+	if [ -f ${MUPI_SRC}/config/services/mupi_goodbye.service ]; then
+		mv -f ${MUPI_SRC}/config/services/mupi_goodbye.service /etc/systemd/system/mupi_goodbye.service >&3 2>&3
+		MUPI_GOODBYE=1
+	fi
 	# The Samba share is a standalone server (smbd); the Active Directory domain controller came with the package and
 	# is not needed
 	systemctl disable --now samba-ad-dc.service >&3 2>&3
@@ -717,6 +722,9 @@ rm -f /tmp/mupibox-update-failed
 	if [ "${MUPI_ETHERNET}" = "1" ]; then
 		systemctl enable mupi_ethernet.service >&3 2>&3
 		systemctl start mupi_ethernet.service >&3 2>&3
+	fi
+	if [ "${MUPI_GOODBYE}" = "1" ]; then
+		systemctl enable --now mupi_goodbye.service >&3 2>&3
 	fi
 	after=$(date +%s)
 	echo -e "## Restarting services  ##  finished after $((after - $before)) seconds" >&3 2>&3

@@ -585,12 +585,14 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/mupi_rotary.service /etc/systemd/system/mupi_rotary.service >&3 2>&3
 	# LAN without waiting at boot, and an address at once when a cable is plugged in (see scripts/mupibox/mupi_ethernet.sh)
 	mv -f ${MUPI_SRC}/config/services/mupi_ethernet.service /etc/systemd/system/mupi_ethernet.service >&3 2>&3
+	# the goodbye picture until the power is off (see config/services/mupi_goodbye.service)
+	mv -f ${MUPI_SRC}/config/services/mupi_goodbye.service /etc/systemd/system/mupi_goodbye.service >&3 2>&3
 	mkdir -p "/etc/systemd/system/ifup@eth0.service.d" >&3 2>&3
 	cp -f "${MUPI_SRC}/config/services/ifup@eth0.service.d/mupibox.conf" "/etc/systemd/system/ifup@eth0.service.d/mupibox.conf" >&3 2>&3
 	# The Samba share is a standalone server (smbd); the Active Directory domain controller is not needed
 	systemctl disable --now samba-ad-dc.service >&3 2>&3
 	systemctl daemon-reload >&3 2>&3
-	for service in mupi_wifi mupi_check_internet mupi_check_monitor mupi_idle_shutdown librespot smbd mupi_startstop pulseaudio mupi_splash mupi_powerled dietpi-dashboard mupi_ethernet; do
+	for service in mupi_wifi mupi_check_internet mupi_check_monitor mupi_idle_shutdown librespot smbd mupi_startstop pulseaudio mupi_splash mupi_powerled dietpi-dashboard mupi_ethernet mupi_goodbye; do
 		systemctl enable ${service}.service >&3 2>&3
 		systemctl start ${service}.service >&3 2>&3
 	done
