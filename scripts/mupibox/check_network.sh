@@ -152,7 +152,19 @@ do
 	#		#sudo dhclient
 	#	fi
 	fi
+	# The display counts the box as offline until the network file has an address (get_network.sh, from cron every
+	# 30 s): after a start that took up to a minute, and the display set up nothing that needs the internet (the
+	# Spotify player) until then. Online without an address: filled in now.
+	if [ "${ONLINESTATE}" = "${TRUESTATE}" ] && ! /usr/bin/jq -e '.ip' "${NETWORKCONFIG}" > /dev/null 2>&1; then
+		/usr/local/bin/mupibox/get_network.sh > /dev/null 2>&1
+	fi
 	OLDSTATE=${ONLINESTATE}
-	
-	sleep 10
+
+	# Every 2 s instead of 10 s while the box is not online yet in its first minute (the WiFi connects a few seconds
+	# after this service started; the next check came 10 s later).
+	if [ "${ONLINESTATE}" != "${TRUESTATE}" ] && [ "${SECONDS}" -lt 60 ]; then
+		sleep 2
+	else
+		sleep 10
+	fi
 done
