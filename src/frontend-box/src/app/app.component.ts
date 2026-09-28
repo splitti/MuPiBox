@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http'
-import { ChangeDetectionStrategy, Component, computed, effect, Signal } from '@angular/core'
+import { ChangeDetectionStrategy, Component, computed, effect, Signal, signal } from '@angular/core'
 import { toSignal } from '@angular/core/rxjs-interop'
 import { IonApp, IonRouterOutlet } from '@ionic/angular/standalone'
 import { catchError, distinctUntilChanged, firstValueFrom, interval, map, Observable, of, switchMap, timeout } from 'rxjs'
@@ -28,6 +28,9 @@ import { KmThemeService } from './theme/km-theme.service'
 })
 export class AppComponent {
   protected monitorOff: Signal<boolean>
+  // what the box reports (polled), and whether the tap that woke the display has been swallowed already
+  private monitorReportedOff: Signal<boolean>
+  private readonly wakeReleased = signal(false)
   // The admin interface shows /text-preview in a frame (Display texts): only the previewed screen there - not the
   // box's own state (display off, a real playtime lock, the playtime chip).
   protected readonly textPreview = window.location.pathname.startsWith('/text-preview')
@@ -47,7 +50,7 @@ export class AppComponent {
     private mediaService: MediaService,
     private currentMediaService: CurrentMediaService,
   ) {
-    this.monitorOff = toSignal(
+    this.monitorReportedOff = toSignal(
       // 1.5s should be enough to be somewhat "recent".
       // M1: per-tick timeout + catchError so a single 5xx or stalled response
       // doesn't kill the toSignal observable forever. B11-pattern shared with
@@ -66,6 +69,12 @@ export class AppComponent {
       ),
       { initialValue: false },
     )
+    this.monitorOff = computed(() => this.monitorReportedOff() && !this.wakeReleased())
+    // the display reports "on" again: the next time it goes off the wake tap is swallowed again
+    effect(() => {
+      if (!this.monitorReportedOff()) this.wakeReleased.set(false)
+    })
+    this.watchWakeTaps()
     this.playtimeBlocked = computed(() => {
       const s = playtimeService.status()
       return s.enabled === true && s.state === 'blocked'
@@ -101,6 +110,41 @@ export class AppComponent {
       if (!this.currentMediaService.shouldPersistResume()) return
       void this.persistResumeOnCap()
     })
+  }
+
+  // Waking the display by a tap: the panel showed only what was drawn anew after it came on - black, apart from
+  // the playtime chip that changes every second - until the blocker went away (the display's state is only
+  // polled: up to about 6 s) and the whole page was drawn again. Now a tap after a quiet spell draws the whole page
+  // at once (and twice more while the panel settles), and the blocker, once it has swallowed the waking tap, lets
+  // go right away instead of waiting for the poll.
+  private watchWakeTaps(): void {
+    let lastTap = Date.now()
+    document.addEventListener(
+      'pointerdown',
+      () => {
+        const quiet = Date.now() - lastTap
+        lastTap = Date.now()
+        if (this.monitorReportedOff() || quiet > 30_000) {
+          for (const delay of [0, 250, 700]) window.setTimeout(() => this.repaintWholePage(), delay)
+        }
+      },
+      { capture: true, passive: true },
+    )
+    document.addEventListener(
+      'pointerup',
+      () => {
+        // after the click of this tap (which the blocker swallows)
+        if (this.monitorReportedOff() && !this.wakeReleased()) window.setTimeout(() => this.wakeReleased.set(true), 150)
+      },
+      { capture: true, passive: true },
+    )
+  }
+
+  // A change of the page's opacity makes Chromium draw and hand over the whole page, not only what changed.
+  private repaintWholePage(): void {
+    const body = document.body
+    body.style.opacity = '0.999'
+    requestAnimationFrame(() => requestAnimationFrame(() => body.style.removeProperty('opacity')))
   }
 
   private async persistResumeOnCap(): Promise<void> {
