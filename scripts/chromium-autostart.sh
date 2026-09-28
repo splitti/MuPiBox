@@ -92,8 +92,9 @@ STARTX='xinit'
 
 #sudo nice -n -19 sudo -u dietpi xinit "$FP_CHROMIUM" $CHROMIUM_OPTS --homepage "${URL:-http://MuPiBox:8200}" -- -nocursor tty2 &
 # kiosk_start.sh shows the boot screen again once X runs, then starts Chromium. -background none: X leaves the screen
-# as it is (the boot screen) instead of painting it black first.
-exec "$STARTX" /usr/local/bin/mupibox/kiosk_start.sh "$FP_CHROMIUM" $CHROMIUM_OPTS --homepage "http://localhost:8200" -- -nocursor -background none tty2 &
+# as it is (the boot screen) instead of painting it black first. vt1: the console the boot screen is on - on tty2 the
+# switch to it showed the empty console for 2-3 s until X was ready.
+exec "$STARTX" /usr/local/bin/mupibox/kiosk_start.sh "$FP_CHROMIUM" $CHROMIUM_OPTS --homepage "http://localhost:8200" -- -nocursor -background none vt1 -keeptty &
 
 # BLUETOOTH
 pactl load-module module-bluetooth-discover
