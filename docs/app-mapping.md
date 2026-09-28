@@ -55,7 +55,26 @@ WLED, Updates, Backup, Protokolle, Systemoptionen, Browser, Experten) kann heute
    - Telegram: Dienst beim Aktivieren auch `enable`n
    - Passwortregeln (Länge, aktuelles Passwort nötig)
 
-## Vor dem Bau zu entscheiden
+## Entscheidungen (28.09.2026)
+
+1. **Smart-Sync aus** stoppt nur den automatischen Sync. „Jetzt synchronisieren“, Telegram `/resync` und Inhalte
+   aus der Suche funktionieren weiter.
+2. **Spotify-Anmeldung** läuft über HTTPS (Zertifikat von lighttpd; einmalige Warnung des Browsers beim Einrichten).
+3. **Ein Passwort** für die ganze App. Das bisherige Admin-Passwort bleibt gültig (ist nur das Eltern-Passwort
+   gesetzt, gilt dieses). Mindestens 6 Zeichen, Ändern nur mit dem alten Passwort. Node prüft bcrypt (PHP) und
+   scrypt (Eltern-App) und schreibt beim nächsten Ändern scrypt.
+4. **QR-Code- und Telegram-Link** öffnen die ganze App. Kritische Aktionen (Update, Backup einspielen,
+   JSON-Editor, Zurücksetzen) fragen zusätzlich nach dem Passwort.
+5. **Anmeldung bleibt abschaltbar** (Schalter „Anmeldung verlangen“ wie heute). Ist ein Passwort gesetzt, fragen die
+   kritischen Aktionen auch bei abgeschalteter Anmeldung danach.
+6. **Sitzung 24 Stunden.**
+7. **Updates und Reparatur-Skripte** kommen aus dem installierten Stand bzw. dem Paket der gewählten Version, nicht
+   mehr live von Upstream-`main`. Welche Versionen angeboten werden, wird mit splitti abgestimmt.
+
+Ohne Rückfrage festgelegt: Standardwerte kommen aus dem Code bzw. der Konfig-Vorlage (nicht aus dem Prototyp);
+NAS-Feld „Freigabe“ entfällt; „Ausgewählte herunterladen“ bekommt eine Rückfrage; „Strg+Alt+Entf senden“ entfällt.
+
+## Vor dem Bau zu entscheiden (Stand vor den Entscheidungen oben)
 
 - **Login:** ein Passwort für alles. Vorschlag: Node prüft beide Hash-Formate (bcrypt aus PHP, scrypt aus der
   Eltern-App) und schreibt beim nächsten Ändern scrypt; Mindestlänge 6; Ändern nur mit aktuellem Passwort. Offen:
