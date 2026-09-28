@@ -77,6 +77,8 @@ while true; do
             echo "$(date) - INFO:  Button held for ${PRESS_DELAY} seconds, initiating shutdown" >> ${LOGFILE}
 
             # Actions when button is pressed
+            # the goodbye picture before anything else (the sounds and the shutdown come after it)
+            /usr/local/bin/mupibox/show_goodbye.sh
             /usr/bin/pactl set-sink-volume @DEFAULT_SINK@ ${START_VOLUME}%
             /usr/bin/aplay /home/dietpi/MuPiBox/sysmedia/sound/button_shutdown.wav
 
