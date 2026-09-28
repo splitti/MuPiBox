@@ -33,7 +33,18 @@
     <script>
       (function () {
         var done = {}
-        function ready() { document.documentElement.classList.add('mupi-ready') }
+        function ready() {
+          if (document.documentElement.classList.contains('mupi-ready')) return
+          document.documentElement.classList.add('mupi-ready')
+          // for measuring the start: when the list, the player and the page were there (ms after the page started)
+          var t = function (v) { return v ? Math.round(v - performance.timeOrigin) : '-' }
+          try {
+            fetch('/api/logs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ entries: [{
+              level: 'log', source: 'Boot', timestamp: new Date().toISOString(),
+              message: 'boot screen gone: list ' + t(done.list) + ' ms, player ' + t(done.sdk) + ' ms, page ' + t(Date.now()) + ' ms after the page started at ' + new Date(performance.timeOrigin).toISOString()
+            }] }) })
+          } catch (e) {}
+        }
         function check() { if (done.list && (done.sdk || Date.now() - done.list > 1500)) ready() }
         window.mupiBootDone = function (what) { done[what] = done[what] || Date.now(); check() }
         var timer = setInterval(function () { check(); if (document.documentElement.classList.contains('mupi-ready')) clearInterval(timer) }, 500)
