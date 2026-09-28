@@ -14,10 +14,10 @@ freigegeben (`localOnly`) – Guard umstellen · `⚙ PHP` kann heute nur das PH
 
 | Teil | Seiten | ✓ API | ✓ API° | ⚙ PHP | ＋ neu | — statisch |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 Start, Hören, Spielzeit, Bibliothek | 14 | 105 | 21 | 10 | 11 | – |
+| 1 Start, Hören, Spielzeit, Bibliothek | 14 | 108 | 21 | 9 | 9 | – |
 | 2 Aussehen, Display, Audio, Akku & Strom | 18 | 36 | – | 37 | 2 | – |
 | 3 Netzwerk, Dienste, Sicherheit, System | 16 | 25 | – | 75 | 2 | 5 |
-| **Summe** | **48** | **166** | **21** | **122** | **15** | **5** |
+| **Summe** | **48** | **169** | **21** | **121** | **13** | **5** |
 
 Alle 156 Schlüssel aus `app-schema.json` (157 Einstellungen, der Playlist-Präfix steht zweimal), alle Aktionen und
 Anzeigen sind zugeordnet; keine Zeile ist unklar. Die Bereiche Start, Hören, Spielzeit und Bibliothek laufen schon
@@ -29,19 +29,19 @@ WLED, Updates, Backup, Protokolle, Systemoptionen, Browser, Experten) kann heute
 1. **Guards umstellen (✓ API°, 21 Zeilen):** alle NAS-Endpunkte (`/api/nas/profiles*`, `login`, `index/*`,
    `browse`, `selection`, `mark`, `download/*`, `covers/refresh`) und `/api/online-covers*` von `localOnly` auf
    `localOrElternSession`.
-2. **Neue Endpunkte für heutige PHP-Funktionen (⚙ PHP, 122 Zeilen)**, jeweils mit der Logik und den Skripten, die PHP
+2. **Neue Endpunkte für heutige PHP-Funktionen (⚙ PHP, 121 Zeilen)**, jeweils mit der Logik und den Skripten, die PHP
    heute nutzt (Details in den Tabellen):
    - Aussehen & Display: eigenes Hintergrundbild, Namen anzeigen, Scrollleiste, Vorlese-Sprache, Helligkeit (neu
      speichern und beim Start setzen), Drehungen (`/boot/config.txt`), Auflösung, Kategorien ausblenden,
      Fortsetzen-Anzahl, Haltezeiten, Display live (Screenshot, VNC)
    - Audio & Hardware: Soundkarte, Drehregler/Taster, MuPiHAT an/aus, Akku-Auswahl, Taster-Verzögerung, LED, Lüfter
-   - Spielzeit & Bibliothek: Tageswechsel (`resetHour` im POST), Spotify-Playlists verarbeiten, Cache leeren
+   - Spielzeit & Bibliothek: Spotify-Playlists verarbeiten, Cache leeren
      (gezielt), Zugang zurücksetzen, eigene Cover, Online-Cover-Schalter, „Update verfügbar“
    - Netzwerk & Dienste: Netzwerk-Optionen (Onboard-WLAN, USB-Treiber, Stromsparen, DHCP, Wächter, neu verbinden,
      IP-Steuerung), Freigaben (Samba, FTP, VNC), Telegram-Chat-ID ermitteln, MQTT, WLED
    - System: Neuigkeiten, Support-Infos, Updates (MuPiBox, Betriebssystem), Backup/Einspielen, Neustart von
      Display/Diensten, Protokolle, Systemoptionen, Browser, Hostname, JSON-Editor, Zurücksetzen
-3. **Neu zu bauen (＋ neu, 15 Zeilen):** lokale SD-Ordner in Hören und Bibliothek (Abspielen, Löschen),
+3. **Neu zu bauen (＋ neu, 13 Zeilen):** lokale SD-Ordner in der Bibliothek (Löschen),
    Kategorie und Fortschritt im „Läuft gerade“ auch für lokal/NAS/Radio, nächstes Ruhezeit-Fenster, ein
    Bluetooth-Schalter (Funk + Chip), „Sprache der Box“ (setzt `displayLanguage` und `bootscreenLanguage`), App in
    17 Sprachen, echter NAS-Logout, Playlist-Präfix aus dem Box-Namen vorbelegen, ein gemeinsamer Login.
@@ -194,10 +194,10 @@ Stand: Code auf Branch `upstream-v5-pr` (28.09.2026), nur gelesen, nichts auf de
 | `S Filter-Pillen` | Alle / Hörspiel / Musik / Radio / NAS | E: html:1146, app.js:2477 | `category`/`type` in data.json | — | — | Radio = `category='radio'` **oder** `type='radio'`; reine Künstler-Abos (nur `artistid`) werden ausgeblendet (app.js:2486) | ✓ API |
 | `◉ Cover-Raster` | Kacheln + Quell-Etikett | E: `loadPlay` app.js:2442, `playTypeLabel` app.js:2535 | data.json | GET `/api/data` s.ts:1121; Cover `cover_override`/`cover`, sonst GET `/api/spotify/cover-for/:kind/:id` s.ts:1407 | — | „Alle“ zeigt zusätzlich die NAS-Ordner der obersten Ebene | ✓ API |
 | `◉ NAS-Ordner + Brotkrümel` | Ordner-Navigation | E: `loadNasLevel` app.js:2308, `renderNasCrumbs` app.js:2330 | `nas.artistFolders`/`hiddenFolders` | GET `/api/nas/artists` s.ts:5255, `/api/nas/children?path=` s.ts:5293 (nur ausgewählte Ordner) | — | 503, wenn das NAS nicht erreichbar ist | ✓ API |
-| `◉ Lokale Ordner` | (Hörspiel/Musik vom SD) | nur Box-Display: GET `/api/library/artists?category=` s.ts:6858, `/api/library/children?path=` s.ts:6887 | `/home/dietpi/MuPiBox/media/<cat>/…` | Endpoints vorhanden (ohne Login) | — | In der Eltern-App fehlen lokale Ordner, sie stehen nicht in data.json | ＋ neu |
+| `◉ Lokale Ordner` | (Hörspiel/Musik vom SD) | nur Box-Display: GET `/api/library/artists?category=` s.ts:6858, `/api/library/children?path=` s.ts:6887 | `/home/dietpi/MuPiBox/media/<cat>/…` | Endpoints vorhanden (ohne Login) | — | Neue App: Ordner-Kacheln „SD-Karte“ je Kategorie, Unterordner mit Brotkrümeln; die `library`-Einträge aus data.json blendet sie wie die Box aus | ✓ API |
 | `▶ Tippen (Eintrag aus data.json)` | spielt auf der Box | E: `playLibraryItem` app.js:2553 → `startPlayback` app.js:2560 (fragt nach, wenn schon etwas läuft) | — | — | POST `/api/eltern/library/play {index}` r.ts:1241 → :5005 `/current/<spotify…/radio…/rss…/musicsearch/library…>` | `index` = Position in `active_data.json`; 423 bei Limit/Ruhe | ✓ API |
 | `▶ Tippen (NAS-Album)` | spielt | E: `onNasTile` app.js:2428 | — | — | POST `/api/eltern/library/play-nas {path}` r.ts:1334 | nur ausgewählte, nicht versteckte Ordner (403 `nas_path_not_selected`) | ✓ API |
-| `▶ Tippen (lokaler Ordner)` | spielt | nur Box: `player.service.ts:104` `musicsearch/library/album/<Pfad mit ":">` | — | — | fehlt als Eltern-Route | Route wie `play-nas` mit `libraryPath` anlegen | ＋ neu |
+| `▶ Tippen (lokaler Ordner)` | spielt | nur Box: `player.service.ts:104` `musicsearch/library/album/<Pfad mit ":">` | — | — | POST `/api/eltern/library/play-local {path}` (Kategorie geprüft, Ordner muss existieren) | wie die Box (`musicsearch/library/album/<Pfad mit ":">`) | ✓ API |
 
 ### Hören › Hör-Verlauf [verlauf]
 | Schlüssel / Aktion | Beschriftung | Heute | Speicherort | Lesen | Schreiben / Ausführen | Nebenwirkung / Hinweis | Status |
@@ -222,10 +222,10 @@ Stand: Code auf Branch `upstream-v5-pr` (28.09.2026), nur gelesen, nichts auf de
 | `◉ Countdown` | läuft noch … | A: parental.php:569ff (JS-Ring); E: `loadSleepTimer` app.js:3315 (5 s/30 s) | `/tmp/.time2sleep` | GET `/api/eltern/sleeptimer` → `remaining_seconds`, `until_iso` | — | | ✓ API |
 | `limitOn` | Tageslimits aktiv | A: parental.php:246/247 (verstecktes Feld + Umschalt-Knopf) → Handler :60–89; E: `#caps-playtime-toggle`, `saveCapsConfig` app.js:936 | `playtimeLimit.enabled` | GET `/api/eltern/caps-config` r.ts:449 | POST `/api/eltern/caps-config` r.ts:478 | live per fs.watch; PHP ruft zusätzlich `setting_update.sh` (parental.php:137, hier unnötig); Vorlage: `false` (Prototyp: an) | ✓ API |
 | `◉ days (lim0–lim6)` | Wochenbalken Mo–So | A: parental.php:282 (`playtime_limit_<day>`, 0–1440); E: `renderCapsDayGrid` app.js:749 | `playtimeLimit.limitsMinutes.{mon,tue,wed,thu,fri,sat,sun}` | GET /caps-config (Standard 60) | POST /caps-config (alle Tage) oder POST `/api/playtime/limit {day, minutes}` s.ts:1924 (ein Tag) | 0 = gesperrt; `lim0..6` über **Namen** zuordnen (der Player nutzt `getDay()` mit So=0) | ✓ API |
-| `resetHour` | Tageswechsel um (0–23) | A: parental.php:252 → :76 (auf 0–23 begrenzt); E: nur gelesen (r.ts:457) | `playtimeLimit.resetHour` | GET /caps-config | POST /caps-config **ignoriert** `resetHour` (r.ts:478–572) | Player liest live (`sc.js:595`); Node-POST um eine ganze Zahl 0–23 erweitern | ⚙ PHP |
+| `resetHour` | Tageswechsel um (0–23) | A: parental.php:252 → :76 (auf 0–23 begrenzt); E: nur gelesen (r.ts:457) | `playtimeLimit.resetHour` | GET /caps-config | POST /caps-config `playtimeLimit.resetHour` (ganze Zahl 0–23, sonst 400) | Player liest live (`sc.js:595`) | ✓ API |
 | `limitGrace` | Wenn das Limit erreicht ist | A: parental.php:258 → :77 (stop/track/album); E: nur Anzeige `#caps-overrun-info` app.js:746 | `playtimeLimit.graceMode` (altes `maxOverrunMinutes` wird gelöscht) | GET /caps-config (`graceModeOf` r.ts:160) | POST /caps-config nimmt `graceMode` an (r.ts:545) | Nachspielzeit höchstens 30 min (Titel) / 3 h (Album) (`sc.js:591`); Podcast darf die Folge beenden, Radio stoppt sofort; die Eltern-App hat dafür keine Auswahl | ✓ API |
 | `quietOn` | Ruhezeiten aktiv | A: parental.php:318/319 → :101; E: `#caps-quiet-toggle` → saveCapsConfig | `quietHours.enabled` | GET /caps-config | POST /caps-config | live | ✓ API |
-| `◉ rules` | Tag · von–bis · Bezeichnung | A: parental.php:388–560 (Tabelle + Popup, versteckte Felder `quiet_windows[day][n][from/to/label]` → :104–129); E: `renderQuietSchedule` app.js:778 | `quietHours.schedule.{mon..sun}[] = {from, to, label?}` | GET /caps-config | POST /caps-config (HH:MM geprüft, `label` auf 80 Zeichen gekürzt, r.ts:510–539; je gesendeter Tag wird ersetzt) | Fenster gehört zum Starttag, `from>to` läuft über Mitternacht, `from==to` wird ignoriert (`sc.js:662`). PHP: 15-min-Raster, Label ≤60, from≠to, kein Duplikat; Node prüft davon nichts. Blatt „rule“ mit mehreren Tagen → Client legt je Tag einen Eintrag an | ✓ API |
+| `◉ rules` | Tag · von–bis · Bezeichnung | A: parental.php:388–560 (Tabelle + Popup, versteckte Felder `quiet_windows[day][n][from/to/label]` → :104–129); E: `renderQuietSchedule` app.js:778 | `quietHours.schedule.{mon..sun}[] = {from, to, label?}` | GET /caps-config | POST /caps-config (HH:MM geprüft, `label` auf 80 Zeichen gekürzt, r.ts:510–539; je gesendeter Tag wird ersetzt) | Fenster gehört zum Starttag, `from>to` läuft über Mitternacht, `from==to` wird ignoriert (`sc.js:662`). PHP: 15-min-Raster, Label ≤60, from≠to, kein Duplikat; Node prüft from≠to (400), die App bietet das 15-min-Raster an. Blatt „rule“ mit mehreren Tagen → Client legt je Tag einen Eintrag an | ✓ API |
 | `▶ + Zeitfenster` | Ruhezeiten | A: parental.php:491 (Popup, speichert sofort per Submit); E: app.js:795 (Vorgabe 20:00→07:00) | dto. | — | POST /caps-config | | ✓ API |
 | `quietGrace` | Wenn eine Ruhezeit beginnt | A: parental.php:325 → :102; E: keine Auswahl | `quietHours.graceMode` | GET /caps-config | POST /caps-config nimmt `graceMode` an (r.ts:559) | wie `limitGrace` | ✓ API |
 

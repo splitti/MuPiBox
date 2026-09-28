@@ -491,6 +491,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
         enabled?: unknown
         limitsMinutes?: Record<string, unknown>
         graceMode?: unknown
+        resetHour?: unknown
       }
       quietHours?: {
         enabled?: unknown
@@ -541,6 +542,11 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
             res.status(400).json({ error: `schedule.${day} times must be HH:MM strings (fields: from, to)` })
             return
           }
+          // (from == to is no window: the player ignored it silently; the admin interface refused it too)
+          if (from === to) {
+            res.status(400).json({ error: `schedule.${day}: from and to must differ` })
+            return
+          }
           const entry: QuietWindow = { from, to }
           if (typeof rec.label === 'string' && rec.label.trim()) entry.label = rec.label.trim().slice(0, 80)
           accepted.push(entry)
@@ -548,10 +554,21 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
         validatedSchedule[day] = accepted
       }
     }
+    // The hour at which a new playtime day starts (0-23); the GET above returned it, the save ignored it
+    let resetHour: number | undefined
+    if (body.playtimeLimit?.resetHour !== undefined) {
+      const h = Number(body.playtimeLimit.resetHour)
+      if (!Number.isInteger(h) || h < 0 || h > 23) {
+        res.status(400).json({ error: 'resetHour must be a whole hour 0-23' })
+        return
+      }
+      resetHour = h
+    }
     await deps.updateMupiboxConfig((cfg) => {
       if (body.playtimeLimit) {
         const block = ((cfg.playtimeLimit as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
         if (typeof body.playtimeLimit.enabled === 'boolean') block.enabled = body.playtimeLimit.enabled
+        if (resetHour !== undefined) block.resetHour = resetHour
         if (isGraceMode(body.playtimeLimit.graceMode)) {
           block.graceMode = body.playtimeLimit.graceMode
           delete block.maxOverrunMinutes
@@ -1341,6 +1358,40 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
    * folders the admin selected ("Show in MuPiBox" / "Download local") and did not hide can be played,
    * like everything else the box offers from the NAS.
    */
+  /**
+   * POST /api/eltern/library/play-local  {path}  – plays a folder of the SD card's media library
+   * (<category>/<artist>/<album…>, as /api/library/artists|children list it) on the box, like the display does
+   * (player: musicsearch/library/album/<segments joined by ":">).
+   */
+  router.post('/library/play-local', requireSession, requireCsrf, async (req, res) => {
+    const raw = typeof (req.body as { path?: unknown } | undefined)?.path === 'string' ? (req.body as { path: string }).path : ''
+    const parts = raw.split('/').filter(Boolean)
+    const lib = deps.localLibrary
+    if (!lib || parts.length < 2 || !lib.categories.includes(parts[0]) || parts.some((p) => p === '.' || p === '..' || p.includes('\\'))) {
+      res.status(400).json({ error: 'invalid_path' })
+      return
+    }
+    try {
+      const st = await fsp.stat(`${lib.root}/${parts.join('/')}`)
+      if (!st.isDirectory()) throw new Error('not a folder')
+    } catch {
+      res.status(404).json({ error: 'item_not_found' })
+      return
+    }
+    try {
+      const param = parts.map(encodeURIComponent).join(':')
+      const r = await fetch(`http://127.0.0.1:5005/current/musicsearch/library/album/${param}?src=eltern`, { signal: AbortSignal.timeout(5000) })
+      if (!r.ok) {
+        const errBody = await r.json().catch(() => ({ error: `player rejected play (HTTP ${r.status})` }))
+        res.status(r.status).json(errBody)
+        return
+      }
+      res.json({ ok: true, item: { type: 'library', artist: parts.at(-2) ?? null, title: parts.at(-1) ?? null } })
+    } catch (err) {
+      res.status(502).json({ error: `player unreachable: ${(err as Error).message}` })
+    }
+  })
+
   router.post('/library/play-nas', requireSession, requireCsrf, async (req, res) => {
     const nasPath = typeof (req.body as { path?: unknown } | undefined)?.path === 'string' ? (req.body as { path: string }).path : ''
     if (!nasPath || !deps.nasPathSelected || !(await deps.nasPathSelected(nasPath))) {
