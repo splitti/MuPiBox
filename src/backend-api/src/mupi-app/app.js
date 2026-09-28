@@ -192,7 +192,10 @@ async function renderPage(page, reload = true) {
   }
   parts.push(...customTop(page))
   // a connected page may put its own values into the schema's building blocks (lists, charts, …)
-  for (const sec of ctrl?.sections?.(page) ?? page.sections ?? []) parts.push(renderSection(sec))
+  const sections = ctrl?.sections?.(page) ?? page.sections ?? []
+  // (kept for the handlers: a select's options may come from the box, see findItem)
+  state.shown = { id: page.id, sections }
+  for (const sec of sections) parts.push(renderSection(sec))
   parts.push(...childNav(page))
   // a redraw with the values already loaded (after a change) stays where the user is
   const keepScroll = !reload && main.dataset.page === page.id ? window.scrollY : null
@@ -429,8 +432,9 @@ function openExternal(which) {
   window.open(url, '_blank', 'noopener')
 }
 
+// the building block as shown (a connected page may have filled in its own options), else the schema's
 function findItem(page, key) {
-  for (const s of page.sections || []) for (const i of s.items || []) if (i.key === key) return i
+  for (const s of (state.shown?.id === page.id ? state.shown.sections : page.sections) || []) for (const i of s.items || []) if (i.key === key) return i
   return {}
 }
 
@@ -4159,6 +4163,216 @@ function rebootHint(text) {
   offerReboot(`${text} Das gilt erst nach einem Neustart der Box.`)
 }
 
+/* Netzwerk-Optionen */
+
+const nopt = { opts: null, lan: null, drv: 'RTL88X2BU' }
+const POWER_LABEL = { 0: 'Aus', 1: 'Minimal', 2: 'Maximal' }
+const LAN_FIELDS = [
+  ['lanIp', 'ip', 'IP-Adresse', 'z. B. 192.168.1.50'],
+  ['lanMask', 'mask', 'Netzmaske', '255.255.255.0'],
+  ['lanGw', 'gateway', 'Router (Gateway)', 'z. B. 192.168.1.1'],
+  ['lanDns', 'dns', 'DNS-Server (optional)', 'leer = der Router'],
+]
+const netDriver = () => nopt.opts?.drivers?.find((d) => d.id === nopt.drv)
+
+async function loadNetOptions() {
+  const [r, lan] = await Promise.all([api(`${API}/network-options`), api('/api/network/ethernet')])
+  if (!r.ok) throw new Error(`network-options ${r.status}`)
+  nopt.opts = r.body
+  nopt.lan = lan.ok ? lan.body : null
+  const v = state.values
+  v.set('wOnboard', r.body.onboard)
+  v.set('dhcpTo', r.body.dhcpTimeout)
+  v.set('wMon', r.body.wifiMonitor)
+  v.set('wBest', r.body.bestConnection)
+  v.set('ipCtl', r.body.ipControl)
+  v.set('usbDrv', nopt.drv)
+  v.set('usbPm', POWER_LABEL[netDriver()?.power] ?? 'Standard')
+  if (nopt.lan) {
+    v.set('lanOn', !nopt.lan.off && nopt.lan.linkUp)
+    v.set('lanMode', nopt.lan.dhcp ? 'DHCP' : 'Statisch')
+    for (const [key, field] of LAN_FIELDS) v.set(key, nopt.lan[field] ?? '')
+  }
+}
+
+function netSections() {
+  const o = nopt.opts
+  const d = netDriver()
+  const job = d?.job ?? {}
+  const onboardHelp = o.onboardBootDisabled
+    ? 'Im Moment ganz abgeschaltet – Einschalten gilt nach einem Neustart der Box.'
+    : o.onboardRadio === 'unavailable'
+      ? 'Kein eingebautes WLAN gefunden.'
+      : o.onboardIface && o.onboardIface === o.wifiIface
+        ? 'Die Box ist gerade darüber verbunden.'
+        : 'Das eingebaute WLAN des Raspberry Pi. Ein USB-WLAN-Adapter bleibt davon unberührt.'
+  const driverState = job.running
+    ? `Wird gerade ${job.action === 'remove' ? 'entfernt' : 'installiert'} – das dauert einige Minuten.`
+    : d?.installed
+      ? `Installiert${o.usbIface ? ` · Adapter ${o.usbIface} erkannt` : ''}`
+      : 'Nicht installiert'
+  const hardware = [
+    { type: 'toggle', label: 'Onboard-WLAN an', key: 'wOnboard', help: onboardHelp },
+    { type: 'select', label: 'USB-WLAN-Treiber', key: 'usbDrv', options: (o.drivers ?? []).map((x) => x.id), help: driverState },
+  ]
+  if (job.headersMissing) hardware.push({ type: 'warn', text: 'Die Kernel-Header fehlen, der Treiber ließ sich nicht bauen. In /boot/config.txt muss arm_64bit zum System passen.' })
+  else if (job.ok === false && !job.running) hardware.push({ type: 'warn', text: 'Das hat nicht geklappt – Details unter System › Protokolle.' })
+  if (!job.running) hardware.push({ type: 'buttons', buttons: [[d?.installed ? 'Treiber entfernen' : 'Treiber installieren', d?.installed ? 'danger' : 'ghost', 'driver']] })
+  if (d?.installed) {
+    hardware.push({ type: 'select', label: 'Stromsparen des USB-Adapters', key: 'usbPm', options: ['Aus', 'Minimal', 'Maximal'], help: 'Aus = stabilere Verbindung bei manchen Adaptern. Gilt nach einem Neustart.' })
+  }
+  const sections = [
+    { title: 'WLAN-Hardware', items: hardware },
+    {
+      title: 'Verbindung',
+      items: [
+        { type: 'toggle', label: 'DHCP-Timeout', key: 'dhcpTo', help: 'Beim Start höchstens 10 Sekunden auf eine IP-Adresse warten.' },
+        { type: 'toggle', label: 'WLAN-Wächter (DietPi-WiFi-Monitor)', key: 'wMon', help: 'Baut die Verbindung neu auf, wenn sie abreißt.' },
+        { type: 'toggle', label: 'Beste Verbindung suchen', key: 'wBest', help: 'Wechselt bei mehreren gespeicherten Netzen zum stärksten.' },
+        { type: 'buttons', buttons: [['WLAN neu starten', 'ghost', 'wifirestart'], ['DHCP erneuern', 'ghost', 'dhcprenew']] },
+      ],
+    },
+  ]
+  if (nopt.lan) {
+    const l = nopt.lan
+    const lan = [
+      { type: 'toggle', label: 'LAN an', key: 'lanOn', help: l.off ? 'Ausgeschaltet – bleibt aus, bis es hier wieder eingeschaltet wird.' : 'Mit Kabel hat LAN Vorrang vor dem WLAN.' },
+      { type: 'kv', rows: [['Adresse', l.currentIp ?? '–'], ['Router', l.currentGateway ?? '–']] },
+      { type: 'seg', label: 'Adresse beziehen', key: 'lanMode', options: ['DHCP', 'Statisch'] },
+    ]
+    if (state.values.get('lanMode') === 'Statisch') {
+      for (const [key, , label, placeholder] of LAN_FIELDS) lan.push({ type: 'text', label, key, placeholder })
+    }
+    lan.push({ type: 'buttons', buttons: [['Speichern', 'primary', 'lansave'], ['LAN neu starten', 'ghost', 'lanrestart']] })
+    sections.push({ title: `LAN (${l.interface})`, help: 'Der Kabelanschluss der Box.', items: lan })
+  }
+  sections.push({
+    title: 'Fernsteuerung per IP',
+    help: 'Falls die Box sich über den Hostnamen nicht richtig erreicht, stattdessen die IP-Adresse verwenden.',
+    items: [{ type: 'toggle', label: 'Backend-Steuerung per IP', key: 'ipCtl', help: 'Der Server startet dafür kurz neu.' }],
+  })
+  return sections
+}
+
+// while a driver is built or removed: its state every 5 s, the page again when it is done
+function pollDriverJob(page) {
+  stopPageTimers()
+  every(5000, async () => {
+    const r = await api(`${API}/network-options`)
+    if (!r.ok || r.body.drivers.some((x) => x.job.running)) return
+    stopPageTimers()
+    const job = r.body.drivers.find((x) => x.id === nopt.drv)?.job ?? {}
+    if (currentPage()?.id !== page.id) return
+    await loadNetOptions().catch(() => undefined)
+    renderPage(page, false)
+    if (job.ok) offerReboot(`Treiber ${job.action === 'remove' ? 'entfernt' : 'installiert'}. Das gilt erst nach einem Neustart der Box.`)
+  })
+}
+
+const NET_OPTION = { wOnboard: 'onboard', dhcpTo: 'dhcpTimeout', wMon: 'wifiMonitor', wBest: 'bestConnection', ipCtl: 'ipControl' }
+
+async function changeNetOption(key, v, page) {
+  const back = async () => {
+    await loadNetOptions().catch(() => undefined)
+    renderPage(page, false)
+  }
+  if (key === 'usbDrv') {
+    nopt.drv = v
+    state.values.set('usbPm', POWER_LABEL[netDriver()?.power] ?? 'Standard')
+    return renderPage(page, false)
+  }
+  if (key === 'lanMode') return renderPage(page, false)
+  if (key.startsWith('lan') && key !== 'lanOn') return // saved with "Speichern"
+  if (key === 'usbPm') {
+    const level = Object.keys(POWER_LABEL).find((k) => POWER_LABEL[k] === v)
+    const r = await api(`${API}/usb-wifi-power`, { method: 'POST', body: { driver: nopt.drv, level } })
+    return r.ok ? rebootHint('Gespeichert.') : toast('Nicht gespeichert', 'info')
+  }
+  if (key === 'lanOn') {
+    const text = 'Der Anschluss bleibt aus, auch nach einem Neustart, bis er hier wieder eingeschaltet wird. Die Box ist dann nur noch über WLAN erreichbar.'
+    if (!v && !(await ask('LAN ausschalten?', text, 'Ausschalten'))) return back()
+    const r = await api('/api/network/ethernet/power', { method: 'POST', body: { enabled: v } })
+    toast(r.ok ? (v ? 'LAN an' : 'LAN aus') : 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
+    return setTimeout(back, 2000)
+  }
+  if (key === 'wOnboard' && !v && nopt.opts.onboardIface && nopt.opts.onboardIface === nopt.opts.wifiIface) {
+    const text = 'Die Box ist gerade über das eingebaute WLAN verbunden. Ohne LAN-Kabel oder USB-WLAN ist sie danach nicht mehr erreichbar.'
+    if (!(await ask('Onboard-WLAN ausschalten?', text, 'Ausschalten'))) return back()
+  }
+  const r = await api(`${API}/network-options`, { method: 'POST', body: { key: NET_OPTION[key], value: v } })
+  if (!r.ok) {
+    toast('Das hat nicht geklappt', 'info')
+    return back()
+  }
+  if (r.body?.rebootNeeded) rebootHint('Eingeschaltet.')
+  else toast(key === 'ipCtl' ? 'Gespeichert – der Server startet neu' : 'Gespeichert')
+  if (key === 'wOnboard') back()
+}
+
+const LAN_ERROR = {
+  'Static IP is not a valid IPv4 address': 'Die IP-Adresse stimmt nicht (Form 192.168.1.50)',
+  'Static mask is not a valid IPv4 address': 'Die Netzmaske stimmt nicht (meist 255.255.255.0)',
+  'Static gateway is not a valid IPv4 address': 'Die Router-Adresse stimmt nicht',
+  'Static DNS is not a valid IPv4 address': 'Die DNS-Adresse stimmt nicht',
+}
+
+async function saveLan(page) {
+  const dhcp = state.values.get('lanMode') !== 'Statisch'
+  const body = { dhcp }
+  for (const [key, field] of LAN_FIELDS) body[field] = dhcp ? '' : String(state.values.get(key) ?? '').trim()
+  const r = await api('/api/network/ethernet', { method: 'POST', body })
+  if (!r.ok) return toast(LAN_ERROR[r.text] ?? 'Nicht gespeichert', 'info')
+  // the new config only takes effect with the port taken down and up
+  await api('/api/network/ethernet/restart', { method: 'POST' })
+  toast('Gespeichert – LAN startet neu')
+  setTimeout(async () => {
+    await loadNetOptions().catch(() => undefined)
+    if (currentPage()?.id === page.id) renderPage(page, false)
+  }, 5000)
+}
+
+const netOptionsCtrl = {
+  load: loadNetOptions,
+  sections: netSections,
+  mount(_root, page) {
+    if (nopt.opts?.drivers?.some((x) => x.job.running)) pollDriverJob(page)
+  },
+  change: changeNetOption,
+  act: {
+    async driver(_arg, _label, page) {
+      const d = netDriver()
+      const install = !d.installed
+      const ok = await ask(
+        install ? `Treiber ${d.label} installieren?` : `Treiber ${d.label} entfernen?`,
+        install
+          ? 'Der Treiber wird auf der Box gebaut. Das dauert einige Minuten, so lange zeigt die Box eine Wartungsanzeige. Danach die Box neu starten.'
+          : 'Ein USB-WLAN-Adapter mit diesem Chip funktioniert danach nicht mehr.',
+        install ? 'Installieren' : 'Entfernen',
+      )
+      if (!ok) return
+      const r = await api(`${API}/usb-wifi-driver`, { method: 'POST', body: { driver: d.id, action: install ? 'install' : 'remove' } })
+      if (!r.ok) return toast(r.status === 409 ? 'Es läuft schon eine Treiber-Installation' : 'Das hat nicht geklappt', 'info')
+      d.job = { running: true, action: install ? 'install' : 'remove' }
+      renderPage(page, false)
+    },
+    async wifirestart() {
+      if (!(await ask('WLAN neu starten?', 'Die Verbindung ist für einen Moment weg, die App meldet sich danach von selbst wieder.', 'Neu starten'))) return
+      const r = await api(`${API}/wifi/restart`, { method: 'POST' })
+      toast(r.ok ? 'WLAN startet neu' : 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
+    },
+    async dhcprenew() {
+      if (!(await ask('DHCP erneuern?', 'Die Box holt sich ihre Adresse neu vom Router. Die Verbindung ist für einen Moment weg.', 'Erneuern'))) return
+      const r = await api(`${API}/dhcp/renew`, { method: 'POST' })
+      toast(r.ok ? 'Wird erneuert' : 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
+    },
+    lansave: (_arg, _label, page) => saveLan(page),
+    async lanrestart() {
+      const r = await api('/api/network/ethernet/restart', { method: 'POST' })
+      toast(r.ok ? 'LAN startet neu' : 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
+    },
+  },
+}
+
 /* Experten */
 
 async function loadExperts() {
@@ -5061,6 +5275,7 @@ const CONTROLLERS = {
       else toast('Gespeichert')
     },
   },
+  wlanopt: netOptionsCtrl,
   experten: { load: loadExperts, top: expertsTop, sections: () => [], ownNav: true, mount: mountExperts },
   backup: { top: backupTop, sections: () => [], mount: mountBackup },
   updates: {

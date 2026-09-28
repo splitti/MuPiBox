@@ -16,8 +16,8 @@ freigegeben (`localOnly`) – Guard umstellen · `⚙ PHP` kann heute nur das PH
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 Start, Hören, Spielzeit, Bibliothek | 14 | 142 | – | 1 | 4 | – |
 | 2 Aussehen, Display, Audio, Akku & Strom | 18 | 73 | – | 0 | 2 | – |
-| 3 Netzwerk, Dienste, Sicherheit, System | 16 | 89 | – | 12 | 1 | 5 |
-| **Summe** | **48** | **304** | **–** | **13** | **7** | **5** |
+| 3 Netzwerk, Dienste, Sicherheit, System | 16 | 99 | – | 2 | 2 | 5 |
+| **Summe** | **48** | **314** | **–** | **3** | **8** | **5** |
 
 Alle 156 Schlüssel aus `app-schema.json` (157 Einstellungen, der Playlist-Präfix steht zweimal), alle Aktionen und
 Anzeigen sind zugeordnet; keine Zeile ist unklar. Die Bereiche Start, Hören, Spielzeit und Bibliothek laufen schon
@@ -28,7 +28,7 @@ WLED, Updates, Backup, Protokolle, Systemoptionen, Browser, Experten) kann heute
 
 1. **Guards umstellen:** erledigt – die NAS-Verwaltung (`/api/nas/profiles*`, `login`, `index/*`, `browse`,
    `selection`, `mark`, `download/*`, `covers/refresh`) und `/api/online-covers*` nehmen `localOrElternSession`.
-2. **Neue Endpunkte für heutige PHP-Funktionen (⚙ PHP, 13 Zeilen)**, jeweils mit der Logik und den Skripten, die PHP
+2. **Neue Endpunkte für heutige PHP-Funktionen (⚙ PHP, 3 Zeilen)**, jeweils mit der Logik und den Skripten, die PHP
    heute nutzt (Details in den Tabellen):
    - Bibliothek: „Update verfügbar“
    - Netzwerk & Dienste: Netzwerk-Optionen (Onboard-WLAN, USB-Treiber, Stromsparen, DHCP, Wächter, neu verbinden,
@@ -651,22 +651,29 @@ Allgemein zur Node-Seite: `rt`-Routen laufen alle hinter `localNetworkOnly` (nur
 
 | Schlüssel / Aktion | Beschriftung | Heute | Speicherort | Lesen | Schreiben / Ausführen | Nebenwirkung / Hinweis | Status |
 |---|---|---|---|---|---|---|---|
-| `wOnboard` | Onboard-WLAN an | A: network.php:399-428 (Knopf `change_wifi`), Handler :276-289 | `/boot/config.txt` Zeile `dtoverlay=disable-wifi` | `grep '^dtoverlay=disable-wifi' /boot/config.txt` network.php:412 | `sudo set_onboard_wifi.sh on\|off` | Neustart nötig. 🔒 sudo, schreibt config.txt (das Skript arbeitet sauber mit einer temporären Datei). Ohne USB-Adapter ist die Box danach offline | ⚙ PHP |
-| `usbDrv` | USB-WLAN-Treiber | A: network.php:474-479 (Select), Liste :4-19, Status-Abfrage per GET `?check_usb_wifi_driver=` :24-32 | Treiber-Ordner `/home/dietpi/.driver/network/88x2bu-20210702` bzw. `8821au-20210708` | `is_dir(path)` | — | nur die Auswahl, installiert noch nichts | ⚙ PHP |
-| `▶ Treiber installieren` | Treiber installieren | A: network.php:497 (`USB_WIFI_DRIVER`), Handler :57-79 (auch „Remove driver“) | wie oben + Kernelmodul | wie oben; Fehlerhinweis über `/tmp/driver-install.txt` | `curl -L <raw.githubusercontent.com/splitti/MuPiBox/main/scripts/online/install_*.sh> \| sudo su dietpi -c bash` | 🔒 lädt ein Skript live vom Upstream-`main` und führt es aus (nicht die Fork-Version). Läuft sehr lange synchron im PHP-Request. Neuer Endpunkt: lokale Kopie `scripts/online/install_rtl*.sh` im Hintergrund starten, Fortschritt abfragen | ⚙ PHP |
-| `usbPm` | Stromsparen des USB-Adapters | A: network.php:499-550 (Select Off/Minimal/Maximum je installiertem Treiber), Handler :84-117 | `/etc/modprobe.d/<88x2bu\|8821au>.conf` Option `rtw_power_mgnt=0\|1\|2`; laufender Wert in `/sys/module/<mod>/parameters/rtw_power_mgnt` | Regex auf die conf-Datei :514 | `sudo tee`/`sudo sed -i` (Werte vorher mit escapeshellarg bzw. Whitelist 0/1/2 geprüft) | wirkt erst nach Neustart. Der Prototyp hat einen Schalter, PHP drei Stufen je Treiber: festlegen, was an/aus bedeutet (Vorschlag: aus = 0, an = 2) | ⚙ PHP |
-| `dhcpTo` | DHCP-Timeout | A: network.php:430-452, Handler :146-159 | `/etc/dhcp/dhclient.conf` (`timeout 10;` gegen `#timeout 60;`) | `grep 'timeout 10;'` :436 | `sudo sed -i` | wirkt beim nächsten DHCP-Lauf oder Start | ⚙ PHP |
-| `wMon` | WLAN-Wächter (DietPi-WiFi-Monitor) | A: network.php:569-577, Handler :176-189 | systemd `dietpi-wifi-monitor` | `sudo service dietpi-wifi-monitor status \| grep running` :322 | `sudo systemctl enable\|disable --now dietpi-wifi-monitor` | 🔒 sudo systemctl | ⚙ PHP |
-| `wBest` | Beste Verbindung suchen | A: network.php:578-586, Handler :191-204 | systemd `mupi_autoconnect-wifi` (→ `scripts/wifi/autoswitch_wifi.sh`, prüft alle 10 s) | `service … status \| grep running` :335 | `sudo systemctl enable\|disable --now mupi_autoconnect-wifi` | kann Verbindungsabbrüche verursachen (Hinweis in PHP :579) | ⚙ PHP |
-| `▶ WLAN neu starten` | WLAN neu starten | A: network.php:454-459, Handler :290-296 | — | — | `sudo service ifup@<if> stop && … start` (if aus `mupi_wifi_iface.sh`) | Verbindung kurz weg: die App verliert kurz die Verbindung | ⚙ PHP |
-| `▶ DHCP erneuern` | DHCP erneuern | A: network.php:460-465, Handler :297-303 | — | — | `sudo dhclient -r && ifup@<if> stop/start && sudo dhclient` | neue IP möglich: die App findet die Box danach vielleicht nicht mehr | ⚙ PHP |
-| `ipCtl` | Backend-Steuerung per IP | A: admin.php:559-577 (`ip_control_backend`), Handler :179-190 → `$change=2` :428-432 | `mupibox.ip_control_backend` (bool) | `$data` | `save_mupiboxconfig()` + `sudo setting_update.sh` (schreibt `node-sonos-http-api.ip` in `…/server/config/config.json`, setting_update.sh:40-65) | der Server liest config.json nur beim Start (srv:64-66). PHP meldet „Services restarted“, startet aber nichts neu: nötig ist ein Neustart von `pm2 restart server` bzw. der Box | ⚙ PHP |
+| `wOnboard` | Onboard-WLAN an | A: network.php:399-428 (Knopf `change_wifi`), Handler :276-289 | `/boot/config.txt` Zeile `dtoverlay=disable-wifi` | `grep '^dtoverlay=disable-wifi' /boot/config.txt` network.php:412 | `sudo set_onboard_wifi.sh on\|off` | Neustart nötig. 🔒 sudo, schreibt config.txt (das Skript arbeitet sauber mit einer temporären Datei). Ohne USB-Adapter ist die Box danach offline | ✓ API |
+| `usbDrv` | USB-WLAN-Treiber | A: network.php:474-479 (Select), Liste :4-19, Status-Abfrage per GET `?check_usb_wifi_driver=` :24-32 | Treiber-Ordner `/home/dietpi/.driver/network/88x2bu-20210702` bzw. `8821au-20210708` | `is_dir(path)` | — | nur die Auswahl, installiert noch nichts | ✓ API |
+| `▶ Treiber installieren` | Treiber installieren | A: network.php:497 (`USB_WIFI_DRIVER`), Handler :57-79 (auch „Remove driver“) | wie oben + Kernelmodul | wie oben; Fehlerhinweis über `/tmp/driver-install.txt` | `curl -L <raw.githubusercontent.com/splitti/MuPiBox/main/scripts/online/install_*.sh> \| sudo su dietpi -c bash` | 🔒 lädt ein Skript live vom Upstream-`main` und führt es aus (nicht die Fork-Version). Läuft sehr lange synchron im PHP-Request. Neuer Endpunkt: lokale Kopie `scripts/online/install_rtl*.sh` im Hintergrund starten, Fortschritt abfragen | ✓ API |
+| `usbPm` | Stromsparen des USB-Adapters | A: network.php:499-550 (Select Off/Minimal/Maximum je installiertem Treiber), Handler :84-117 | `/etc/modprobe.d/<88x2bu\|8821au>.conf` Option `rtw_power_mgnt=0\|1\|2`; laufender Wert in `/sys/module/<mod>/parameters/rtw_power_mgnt` | Regex auf die conf-Datei :514 | `sudo tee`/`sudo sed -i` (Werte vorher mit escapeshellarg bzw. Whitelist 0/1/2 geprüft) | wirkt erst nach Neustart. Der Prototyp hat einen Schalter, PHP drei Stufen je Treiber: festlegen, was an/aus bedeutet (Vorschlag: aus = 0, an = 2) | ✓ API |
+| `dhcpTo` | DHCP-Timeout | A: network.php:430-452, Handler :146-159 | `/etc/dhcp/dhclient.conf` (`timeout 10;` gegen `#timeout 60;`) | `grep 'timeout 10;'` :436 | `sudo sed -i` | wirkt beim nächsten DHCP-Lauf oder Start | ✓ API |
+| `wMon` | WLAN-Wächter (DietPi-WiFi-Monitor) | A: network.php:569-577, Handler :176-189 | systemd `dietpi-wifi-monitor` | `sudo service dietpi-wifi-monitor status \| grep running` :322 | `sudo systemctl enable\|disable --now dietpi-wifi-monitor` | 🔒 sudo systemctl | ✓ API |
+| `wBest` | Beste Verbindung suchen | A: network.php:578-586, Handler :191-204 | systemd `mupi_autoconnect-wifi` (→ `scripts/wifi/autoswitch_wifi.sh`, prüft alle 10 s) | `service … status \| grep running` :335 | `sudo systemctl enable\|disable --now mupi_autoconnect-wifi` | kann Verbindungsabbrüche verursachen (Hinweis in PHP :579) | ✓ API |
+| `▶ WLAN neu starten` | WLAN neu starten | A: network.php:454-459, Handler :290-296 | — | — | `sudo service ifup@<if> stop && … start` (if aus `mupi_wifi_iface.sh`) | Verbindung kurz weg: die App verliert kurz die Verbindung | ✓ API |
+| `▶ DHCP erneuern` | DHCP erneuern | A: network.php:460-465, Handler :297-303 | — | — | `sudo dhclient -r && ifup@<if> stop/start && sudo dhclient` | neue IP möglich: die App findet die Box danach vielleicht nicht mehr | ✓ API |
+| `ipCtl` | Backend-Steuerung per IP | A: admin.php:559-577 (`ip_control_backend`), Handler :179-190 → `$change=2` :428-432 | `mupibox.ip_control_backend` (bool) | `$data` | `save_mupiboxconfig()` + `sudo setting_update.sh` (schreibt `node-sonos-http-api.ip` in `…/server/config/config.json`, setting_update.sh:40-65) | der Server liest config.json nur beim Start (srv:64-66). PHP meldet „Services restarted“, startet aber nichts neu: nötig ist ein Neustart von `pm2 restart server` bzw. der Box | ✓ API |
 
+| `lanOn`, `lanMode`, `lanIp` … | LAN (eth0): an/aus, DHCP/statisch, Neustart | – (bisher nur auf der Anzeige der Box, von Andreas) | `/etc/network/interfaces` (eth0-Abschnitt), Schalter `/etc/mupibox/lan.off` | GET `/api/network/ethernet` (mit `off`) | POST `/api/network/ethernet`, `/ethernet/power`, `/ethernet/restart` (localOrElternSession) | Speichern startet den Anschluss gleich neu; LAN aus bleibt aus, auch nach einem Neustart | ＋ neu |
 > Neue App (eltern/services.ts): GET/POST `/api/eltern/shares` (an = fehlende Pakete installieren + Dienst starten, aus = nur
 > stoppen/deaktivieren, läuft im Hintergrund), POST `/telegram/detect-chats` (Bot kurz anhalten, `getUpdates` bis 40 s, wieder
 > starten), GET/POST `/mqtt` (Werte geprüft, Passwort nur schreibbar, `mupi_mqtt` enable+restart bzw. stop+disable),
 > GET/POST `/wled` (Gerät + Preset-Namen über wled_get_data.py, Start-Preset auch ins Gerät). Telegram an/aus aktiviert bzw.
-> deaktiviert den Dienst jetzt auch. **Netzwerk-Optionen** zurückgestellt, bis die LAN/WLAN-Änderungen von Andreas da sind.
+> deaktiviert den Dienst jetzt auch. 
+>
+> Netzwerk-Optionen (eltern/network.ts): GET/POST `/api/eltern/network-options` (Onboard-WLAN als ein Schalter für beides:
+> `dtoverlay=disable-wifi` beim Start und rfkill jetzt; DHCP-Timeout, Wächter, beste Verbindung, IP-Steuerung mit
+> setting_update + Neustart des Servers), POST `/usb-wifi-power` (0/1/2 in `/etc/modprobe.d/<modul>.conf`), POST
+> `/usb-wifi-driver` (Skripte aus dem installierten Stand, `drivers/` neben server.js, im Hintergrund, danach Kiosk neu),
+> POST `/wifi/restart`, `/dhcp/renew`. Dazu die LAN-Karte über die Routen von Andreas.
 
 ### Einstellungen › Netzwerk › Freigaben & Fernzugriff [freigaben]
 

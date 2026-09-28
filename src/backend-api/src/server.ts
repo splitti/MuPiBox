@@ -2577,6 +2577,8 @@ app.get('/api/network/ethernet', async (_req, res) => {
       currentIp,
       currentGateway,
       linkUp,
+      // switched off (POST /power): stays down, also after a restart
+      off: fs.existsSync(LAN_OFF_FILE),
     })
   } catch (error) {
     console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error reading ethernet config: ${error}`)
