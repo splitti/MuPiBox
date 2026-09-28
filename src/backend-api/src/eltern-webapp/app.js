@@ -1542,6 +1542,8 @@ async function loadTelegram() {
   const cfg = res.body ?? {}
   const active = $('#tg-active')
   if (active) active.checked = cfg.active === true
+  const playback = $('#tg-notify-playback')
+  if (playback) playback.checked = cfg.notifyPlayback === true
   setText('#tg-token-status', cfg.token_configured ? t('tg.tokenSet') : t('tg.tokenUnset'))
   const tok = $('#tg-token')
   if (tok) tok.value = ''
@@ -1591,7 +1593,7 @@ async function saveTelegram() {
       return
     }
   }
-  const body = { active: $('#tg-active').checked, chatIds: telegramState.chatIds }
+  const body = { active: $('#tg-active').checked, notifyPlayback: $('#tg-notify-playback')?.checked === true, chatIds: telegramState.chatIds }
   const tok = $('#tg-token').value.trim()
   if (tok) body.token = tok
   const res = await api(`${API}/telegram-config`, { method: 'POST', body })

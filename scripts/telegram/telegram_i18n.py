@@ -124,7 +124,9 @@ TEXTS = {
     # ── messages sent by the box (telegram_send_message.py) ────────────────
     'n_box_starting': {'de': 'MuPiBox startet', 'en': 'MuPiBox is starting'},
     'n_box_shutdown': {'de': 'MuPiBox wird ausgeschaltet', 'en': 'MuPiBox is shutting down'},
-    'n_box_idle': {'de': 'MuPiBox war zu lange unbenutzt', 'en': 'MuPiBox has been idle too long'},
+    'n_box_idle': {'de': 'MuPiBox war zu lange unbenutzt und wird ausgeschaltet', 'en': 'MuPiBox has been idle too long and is shutting down'},
+    'n_box_shutdown_battery': {'de': '🪫 Der Akku ist leer – MuPiBox wird ausgeschaltet', 'en': '🪫 The battery is empty – MuPiBox is shutting down'},
+    'n_battery_low': {'de': '🪫 Der MuPiBox-Akku ist fast leer ({soc}) – bitte bald laden', 'en': '🪫 The MuPiBox battery is almost empty ({soc}) – please charge it soon'},
     'n_telegram_enabled': {'de': 'Telegram eingeschaltet', 'en': 'Telegram enabled'},
     'n_telegram_disabled': {'de': 'Telegram ausgeschaltet', 'en': 'Telegram disabled'},
     'n_pause': {'de': 'Pause', 'en': 'Pause'},

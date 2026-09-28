@@ -25,6 +25,9 @@ import type { RunSyncResult } from './state-machine'
 
 const TELEGRAM_SCRIPT = '/usr/local/bin/mupibox/telegram_send_message.py'
 
+// The number of conflicts of the last conflict message (goes down with them, so new ones are reported again)
+let lastReportedConflicts = 0
+
 /** Best-effort message send via the existing Python helper. `key` is a text of telegram_i18n.py's TEXTS: the
  *  script sends it in the bot's language (German/English) with the values filled in. */
 function pushMessage(key: string, values: Record<string, string | number> = {}): void {
@@ -89,12 +92,16 @@ export function maybeNotifyAfterRun(
 
   // Conflicts: notify when this run produced new conflicts (count up vs.
   // previous state file's conflict count). Only fires if user opted in.
-  if (config.notify_on_conflict && result.state === 'COMPLETED' && result.conflictsCount > 0) {
-    // Suppressed if it's the same set as last time — Phase 14e will add
-    // per-conflict diffing; for now we send once and rely on the user
-    // disabling notify_on_conflict if they don't want it.
-    pushMessage('n_sync_conflicts', { count: result.conflictsCount })
-    return
+  // Only when there are more than at the last message: the same conflicts used to be reported again after every run
+  // (every 15 min) for as long as they stood.
+  if (result.state === 'COMPLETED') {
+    const reported = lastReportedConflicts
+    lastReportedConflicts = Math.min(reported, result.conflictsCount)
+    if (config.notify_on_conflict && result.conflictsCount > reported) {
+      lastReportedConflicts = result.conflictsCount
+      pushMessage('n_sync_conflicts', { count: result.conflictsCount })
+      return
+    }
   }
 
   // Completed sync summary — opt-in only.

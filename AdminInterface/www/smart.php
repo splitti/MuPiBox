@@ -215,6 +215,7 @@
 				$data["telegram"]["chatId"] = $_POST['telegram_chatId'] ?? "";
 			}
 			$data["telegram"]["token"]=$_POST['telegram_token'];
+			$data["telegram"]["notifyPlayback"] = !empty($_POST['telegram_notifyPlayback']);
 			if($_POST['telegram_active'])
 				{
 				if (empty($data["telegram"]["chatId"]) or empty($data["telegram"]["token"]))
@@ -229,8 +230,7 @@
 				else
 					{
 					$data["telegram"]["active"]=true;
-					$command="sudo su dietpi -c '/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py \"Telegram enabled\"'";
-					exec($command);
+					// (no "Telegram enabled" message to all chats on every save any more)
 					$command="sudo systemctl enable mupi_telegram.service";
 					exec($command);
 					$command="sudo systemctl restart mupi_telegram.service";
@@ -240,8 +240,6 @@
 			else
 				{
 				$data["telegram"]["active"]=false;
-				$command="sudo su dietpi -c '/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py \"Telegram disabled\"'";
-				exec($command);
 				$command="sudo systemctl stop mupi_telegram.service";
 				exec($command);
 				$command="sudo systemctl disable mupi_telegram.service";
@@ -429,6 +427,16 @@
 		  print "checked";
 		  }
 	?> /></label></div>
+	   </li>
+
+	   <li id="li_1" ><div>
+		 <label class="labelchecked" for="telegram_notifyPlayback">Report playback:&nbsp; &nbsp; <input type="checkbox" id="telegram_notifyPlayback"  name="telegram_notifyPlayback" <?php
+		 if( !empty($data["telegram"]["notifyPlayback"]) )
+		  {
+		  print "checked";
+		  }
+	?> /></label></div>
+		<p class="guidelines"><small>Off: the bot only reports what matters (listening time used up, quiet time, low battery, start and shutdown) and is there for the commands. On: also every start, every track (with a screenshot), pause, stop and continue.</small></p>
 	   </li>
 
 	   <li id="li_1" >

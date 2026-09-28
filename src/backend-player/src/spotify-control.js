@@ -132,6 +132,13 @@ setupMupiBoxConfigWatch()
 // token.length > 1 + active checks scattered throughout the file. Necessary
 // because chatId can now be a single string (legacy), or an array of strings,
 // or an array of {id, label?} objects (new admin-UI format).
+// Messages about playback (start, every track with a screenshot, pause, stop, continue) only when the parents asked
+// for them (telegram.notifyPlayback, off by default): they came by the dozen a day and buried the important ones
+// (listening time used up, quiet time, shutdown). The bot's commands do not depend on them.
+function telegramPlaybackNotices() {
+  return hasConfiguredTelegram() && muPiBoxConfig?.telegram?.notifyPlayback === true
+}
+
 function hasConfiguredTelegram() {
   const t = muPiBoxConfig?.telegram
   if (!t || t.active !== true) return false
@@ -370,9 +377,9 @@ player.on('path', (val) => {
 player.on('track-change', () => player.getProps(['path']))
 
 player.on('track-change', () => {
-  if (hasConfiguredTelegram() && (currentMeta.currentType === 'rss' || currentMeta.currentType === 'radio'))
+  if (telegramPlaybackNotices() && (currentMeta.currentType === 'rss' || currentMeta.currentType === 'radio'))
     cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_RSS_Radio.py')
-  if (hasConfiguredTelegram() && currentMeta.currentType === 'local')
+  if (telegramPlaybackNotices() && currentMeta.currentType === 'local')
     cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Local.py')
 })
 
@@ -1415,7 +1422,7 @@ function transferPlaybackToActiveDevice() {
 }
 
 function pause() {
-  if (hasConfiguredTelegram())
+  if (telegramPlaybackNotices())
     cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Pause"')
   currentMeta.pause = true
   if (currentMeta.currentPlayer === 'spotify') {
@@ -1464,7 +1471,7 @@ function switchToMplayer() {
 function stop() {
   playbackGeneration++
   clearLibraryResumeTimers()
-  if (hasConfiguredTelegram())
+  if (telegramPlaybackNotices())
     cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Stop"')
   if (currentMeta.currentPlayer === 'spotify') {
     spotifyApi.pause().then(
@@ -1535,7 +1542,7 @@ function play() {
         handleSpotifyError(err, 'play')
       },
     )
-    if (hasConfiguredTelegram())
+    if (telegramPlaybackNotices())
       cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Continue playing"')
     //if (hasConfiguredTelegram()) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Spotify.py');
   } else if (currentMeta.currentPlayer === 'mplayer') {
@@ -1544,7 +1551,7 @@ function play() {
       currentMeta.pause = false
       //currentMeta.playing = true;
       writeplayerstatePlay()
-      if (hasConfiguredTelegram())
+      if (telegramPlaybackNotices())
         cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Continue playing"')
       // if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1 && (currentMeta.currentType === 'rss' || currentMeta.currentType === 'radio')) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Local.py');
       // if (muPiBoxConfig.telegram.active && muPiBoxConfig.telegram.token.length > 1 && muPiBoxConfig.telegram.chatId.length > 1 && currentMeta.currentType === 'local') cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_RSS_Radio.py');
@@ -1699,7 +1706,7 @@ function playMe() {
         log.debug(`${now()}: [Spotify Control] Playback started`)
         writeplayerstatePlay()
         spotifyRunning = true
-        if (hasConfiguredTelegram())
+        if (telegramPlaybackNotices())
           cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Start playing spotify"')
         //if (hasConfiguredTelegram()) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Spotify.py');
       },
@@ -1726,7 +1733,7 @@ function playMe() {
         }
         writeplayerstatePlay()
         spotifyRunning = true
-        if (hasConfiguredTelegram())
+        if (telegramPlaybackNotices())
           cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Start playing spotify"')
         //if (hasConfiguredTelegram()) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Spotify.py');
       },
@@ -1841,7 +1848,7 @@ function playList(playedList) {
   currentMeta.currentTracknr = 0
   currentMeta.path = playedTitelmod
 
-  if (hasConfiguredTelegram())
+  if (telegramPlaybackNotices())
     cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Start playing local"')
   //if (hasConfiguredTelegram()) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Local.py');
 
@@ -1970,7 +1977,7 @@ function playURL(playedURL) {
   player.play(playedURL)
   player.setVolume(volumeStart)
   log.debug(`${now()}: ${playedURL}`)
-  if (hasConfiguredTelegram())
+  if (telegramPlaybackNotices())
     cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Start playing stream"')
   //if (hasConfiguredTelegram()) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_RSS_Radio.py');
 }

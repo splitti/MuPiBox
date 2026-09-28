@@ -544,6 +544,8 @@ export const I18N = {
     // Telegram
     'tg.bot': 'Eltern-Bot',
     'tg.active': 'Bot aktiv',
+    'tg.notifyPlayback': 'Wiedergabe melden',
+    'tg.notifyPlaybackHint': 'Aus: Der Bot meldet nur Wichtiges (Hörzeit aufgebraucht, Ruhezeit, Akku fast leer, Start und Ausschalten) und ist für die Befehle da. An: zusätzlich jeden Start, jeden Titel mit Bildschirmfoto, Pause, Stopp und Weiter.',
     'tg.newToken': 'Neuen Token setzen (leer lassen = unverändert)',
     'tg.chats': 'Erlaubte Chats',
     'tg.chatsHint':
@@ -1191,6 +1193,8 @@ export const I18N = {
     // Telegram
     'tg.bot': 'Parent bot',
     'tg.active': 'Bot active',
+    'tg.notifyPlayback': 'Report playback',
+    'tg.notifyPlaybackHint': 'Off: the bot only reports what matters (listening time used up, quiet time, low battery, start and shutdown) and is there for the commands. On: also every start, every track with a screenshot, pause, stop and continue.',
     'tg.newToken': 'Set a new token (leave empty = unchanged)',
     'tg.chats': 'Allowed chats',
     'tg.chatsHint':

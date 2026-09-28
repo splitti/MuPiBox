@@ -48,8 +48,19 @@ TELEGRAM=$(/usr/bin/jq -r .telegram.active ${CONFIG})
 TELEGRAM_CHATID=$(/usr/bin/jq -r .telegram.chatId ${CONFIG})
 TELEGRAM_TOKEN=$(/usr/bin/jq -r .telegram.token ${CONFIG})
 
+# One message with the reason: the battery is empty (mupihat_automation.sh passes the battery picture), the box was
+# idle too long (idle_shutdown.sh leaves the reason in /run) or any other shutdown.
+REASON=$(cat /run/mupibox-shutdown-reason 2>/dev/null)
+rm -f /run/mupibox-shutdown-reason
+if [ "$1" = "/home/dietpi/MuPiBox/sysmedia/images/battery_low.jpg" ]; then
+	TELEGRAM_KEY="n_box_shutdown_battery"
+elif [ "${REASON}" = "idle" ]; then
+	TELEGRAM_KEY="n_box_idle"
+else
+	TELEGRAM_KEY="n_box_shutdown"
+fi
 if [ "${TELEGRAM}" = true ] && [ ${#TELEGRAM_CHATID} -ge 1 ] && [ ${#TELEGRAM_TOKEN} -ge 1 ]; then
-	/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "MuPiBox shutdown" &
+	/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py --key "${TELEGRAM_KEY}" &
 fi
 
 systemctl --no-block stop mupi_powerled

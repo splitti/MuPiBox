@@ -6973,6 +6973,12 @@ app.post('/api/telegram/screen', (req, res) => {
         res.status(400).send('telegram_not_configured')
         return
       }
+      // every track with a screenshot only when the parents asked for playback messages (see the player's
+      // telegramPlaybackNotices)
+      if (mupiboxConfig.telegram.notifyPlayback !== true) {
+        res.status(204).end()
+        return
+      }
 
       // One argument per line, passed without a shell: the old code wrapped each line in "..." and
       // ran it through exec(), where $(...) and backticks inside double quotes are still executed.

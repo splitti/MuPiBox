@@ -1890,6 +1890,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       .filter((c) => c.id)
     res.json({
       active: tg.active === true,
+      notifyPlayback: tg.notifyPlayback === true,
       token_configured: typeof tg.token === 'string' && tg.token.length > 0,
       chatIds,
     })
@@ -1903,7 +1904,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
    * is restarted afterwards to apply changes immediately.
    */
   router.post('/telegram-config', requireSession, requireCsrf, async (req, res) => {
-    const body = (req.body ?? {}) as { active?: unknown; token?: unknown; chatIds?: unknown }
+    const body = (req.body ?? {}) as { active?: unknown; notifyPlayback?: unknown; token?: unknown; chatIds?: unknown }
     let validatedChats: Array<{ id: string; label: string }> | undefined
     if (body.chatIds !== undefined) {
       if (!Array.isArray(body.chatIds)) {
@@ -1938,6 +1939,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     await deps.updateMupiboxConfig((cfg) => {
       const tg = ((cfg.telegram as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
       if (typeof body.active === 'boolean') tg.active = body.active
+      // playback messages (every start, track, pause, stop): off unless the parents turn them on
+      if (typeof body.notifyPlayback === 'boolean') tg.notifyPlayback = body.notifyPlayback
       if (validatedChats !== undefined) tg.chatId = validatedChats
       if (newToken !== undefined) tg.token = newToken
       cfg.telegram = tg
