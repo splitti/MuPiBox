@@ -14,10 +14,10 @@ freigegeben (`localOnly`) – Guard umstellen · `⚙ PHP` kann heute nur das PH
 
 | Teil | Seiten | ✓ API | ✓ API° | ⚙ PHP | ＋ neu | — statisch |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 Start, Hören, Spielzeit, Bibliothek | 14 | 125 | 15 | 1 | 6 | – |
+| 1 Start, Hören, Spielzeit, Bibliothek | 14 | 142 | – | 1 | 4 | – |
 | 2 Aussehen, Display, Audio, Akku & Strom | 18 | 36 | – | 37 | 2 | – |
 | 3 Netzwerk, Dienste, Sicherheit, System | 16 | 25 | – | 75 | 2 | 5 |
-| **Summe** | **48** | **186** | **15** | **113** | **10** | **5** |
+| **Summe** | **48** | **203** | **–** | **113** | **8** | **5** |
 
 Alle 156 Schlüssel aus `app-schema.json` (157 Einstellungen, der Playlist-Präfix steht zweimal), alle Aktionen und
 Anzeigen sind zugeordnet; keine Zeile ist unklar. Die Bereiche Start, Hören, Spielzeit und Bibliothek laufen schon
@@ -26,9 +26,8 @@ WLED, Updates, Backup, Protokolle, Systemoptionen, Browser, Experten) kann heute
 
 ## Was für die neue App gebaut werden muss
 
-1. **Guards umstellen (✓ API°, 15 Zeilen):** alle NAS-Endpunkte (`/api/nas/profiles*`, `login`, `index/*`,
-   `browse`, `selection`, `mark`, `download/*`, `covers/refresh`) von `localOnly` auf `localOrElternSession`
-   (`/api/online-covers*` ist erledigt).
+1. **Guards umstellen:** erledigt – die NAS-Verwaltung (`/api/nas/profiles*`, `login`, `index/*`, `browse`,
+   `selection`, `mark`, `download/*`, `covers/refresh`) und `/api/online-covers*` nehmen `localOrElternSession`.
 2. **Neue Endpunkte für heutige PHP-Funktionen (⚙ PHP, 113 Zeilen)**, jeweils mit der Logik und den Skripten, die PHP
    heute nutzt (Details in den Tabellen):
    - Aussehen & Display: eigenes Hintergrundbild, Namen anzeigen, Scrollleiste, Vorlese-Sprache, Helligkeit (neu
@@ -40,10 +39,10 @@ WLED, Updates, Backup, Protokolle, Systemoptionen, Browser, Experten) kann heute
      IP-Steuerung), Freigaben (Samba, FTP, VNC), Telegram-Chat-ID ermitteln, MQTT, WLED
    - System: Neuigkeiten, Support-Infos, Updates (MuPiBox, Betriebssystem), Backup/Einspielen, Neustart von
      Display/Diensten, Protokolle, Systemoptionen, Browser, Hostname, JSON-Editor, Zurücksetzen
-3. **Neu zu bauen (＋ neu, 10 Zeilen):**
+3. **Neu zu bauen (＋ neu, 8 Zeilen):**
    Kategorie und Fortschritt im „Läuft gerade“ auch für lokal/NAS/Radio, nächstes Ruhezeit-Fenster, ein
    Bluetooth-Schalter (Funk + Chip), „Sprache der Box“ (setzt `displayLanguage` und `bootscreenLanguage`), App in
-   17 Sprachen, echter NAS-Logout, ein gemeinsamer Login.
+   17 Sprachen, ein gemeinsamer Login.
 4. **Doppelte Wege vereinheitlichen** (heute speichern PHP und Node dieselbe Einstellung verschieden):
    - `mupibox.maxVolume` als Zahl lesen und schreiben (PHP speichert Text → Node ignoriert den Hörschutz)
    - Startlautstärke: ein Schlüssel statt `startVolume` (PHP) und `startupVolume` (Node)
@@ -329,25 +328,25 @@ Stand: Code auf Branch `upstream-v5-pr` (28.09.2026), nur gelesen, nichts auf de
 ### Bibliothek › NAS [nas]
 | Schlüssel / Aktion | Beschriftung | Heute | Speicherort | Lesen | Schreiben / Ausführen | Nebenwirkung / Hinweis | Status |
 |---|---|---|---|---|---|---|---|
-| `nasProf` | Profil | A: nas.php:243 (`#nas-profile-select`, gefüllt über `?profile_api=list` :73) | `nas.profiles{name:{created, address, account, artistFolders, hiddenFolders, downloadFolders}}`, `nas.activeProfile` (Standard `standard`) | GET `/api/nas/profiles` s.ts:4768 | — | ein Profil speichert **Ordnerauswahl + Adresse/Konto, kein Passwort** (Prototyp-Text falsch); Laden nur bei gleichem NAS/Konto | ✓ API° |
-| `▶ Profil anlegen` | ghost | A: nas.php:244/865 | dto. | — | POST `/api/nas/profiles/create {name, overwrite?}` s.ts:4799 | Name 1–40 Zeichen (Buchstaben/Ziffern/` .()-`) | ✓ API° |
-| `▶ Laden` | ghost | A: nas.php:866 | setzt `nas.artistFolders/hiddenFolders/downloadFolders` | — | POST `/api/nas/profiles/load {name}` s.ts:4829 (braucht NAS-Login; fehlende Ordner → `remove-missing` s.ts:4876, nas.php:1023) | `different_login`, wenn anderes NAS/Konto | ✓ API° |
-| `▶ Löschen` | danger | A: nas.php:867 | dto. | — | POST `/api/nas/profiles/delete {name}` s.ts:4914 | `standard` ist nicht löschbar | ✓ API° |
-| `nasHost` | Server | A: nas.php:292 (`nas_address`) + Checkbox HTTPS :310 | `nas.address` (z. B. `10.4.1.51:5005`, WebDAV), `nas.https` | PHP aus `cfg` (`$lastNas`) | POST `/api/nas/login` s.ts:4945 | Prototyp ohne HTTPS-Schalter, „Anmeldung merken“ (:316) und Zertifikats-Bestätigung (`certFingerprint`, :331) | ✓ API° |
-| `nasShare` | Freigabe | – | gibt es nicht: Anmeldung per WebDAV mit Adresse + Konto; Freigaben sind die obersten Ordner im Baum | — | — | Feld streichen (oder als Startordner neu bauen) | ＋ neu |
-| `nasUser` | Benutzer | A: nas.php:298 | `nas.account` | PHP | /api/nas/login | | ✓ API° |
-| `nasPw` | Passwort | A: nas.php:304 | `nas.password` (AES-256-GCM `enc:v1:`, Schlüssel aus der CPU-Seriennummer, s.ts:4604ff) – nur mit `rememberMe` | wird nie zurückgegeben | /api/nas/login | eine Backup-Kopie auf einer anderen Box kann es nicht entschlüsseln | ✓ API° |
-| `▶ Anmelden` | primary | A: nas.php:116–150 (`nas_signin`) | Sitzung im RAM (`nasSessionCache`); mit `rememberMe` Login in `cfg.nas` | — | POST `/api/nas/login {address, https, account, password, rememberMe, certFingerprint}` s.ts:4945 | Timeout 25 s; bei selbstsigniertem Zertifikat kommt ein Fingerprint zur Bestätigung zurück | ✓ API° |
-| `▶ Abmelden` | ghost | A: nas.php:434 `?relogin=1` zeigt nur das Login-Formular | — | — | – | Backend-Sitzung **und** gespeichertes Passwort bleiben; Logout-Endpoint nötig (Sitzung verwerfen, optional `password/rememberMe` löschen) | ＋ neu |
-| `nasFilter` | Ordner filtern | A: nas.php:265, JS `runIndexSearch` :601 | Index `/home/dietpi/.mupibox/nas-folder-index.json` (ohne Knopf täglich neu) | GET `/api/nas/index/search?q=` s.ts:5115; ohne Index: Baum über `/api/nas/browse` durchsuchen | — | | ✓ API° |
-| `◉ checks` | Baum: Anzeigen / Ausblenden / Herunterladen | A: nas.php:715–850 (`artist_folders[]`, `hide_folders[]`, `download_folders[]`) | `nas.artistFolders`, `nas.hiddenFolders`, `nas.downloadFolders` | GET `/api/nas/browse?path=` s.ts:5142 → `isMarked, isHidden, isDownload, isDownloaded` | (über „Auswahl speichern“) | Anzeigen und Ausblenden schließen sich aus (Ausblenden gewinnt) | ✓ API° |
-| `▶ Index aktualisieren` | ghost | A: nas.php:268/705 | Index-Datei (s.o.) | GET `/api/nas/index/status` s.ts:5088 | POST `/api/nas/index/refresh` s.ts:5105 | läuft im Hintergrund | ✓ API° |
-| `▶ Nur Auswahl anzeigen` | ghost | A: nas.php:409/644 | — | Client (lädt die Pfade der gespeicherten Auswahl über browse nach) | — | | ✓ API° |
+| `nasProf` | Profil | A: nas.php:243 (`#nas-profile-select`, gefüllt über `?profile_api=list` :73) | `nas.profiles{name:{created, address, account, artistFolders, hiddenFolders, downloadFolders}}`, `nas.activeProfile` (Standard `standard`) | GET `/api/nas/profiles` s.ts:4768 | — | ein Profil speichert **Ordnerauswahl + Adresse/Konto, kein Passwort** (Prototyp-Text falsch); Laden nur bei gleichem NAS/Konto | ✓ API |
+| `▶ Profil anlegen` | ghost | A: nas.php:244/865 | dto. | — | POST `/api/nas/profiles/create {name, overwrite?}` s.ts:4799 | Name 1–40 Zeichen (Buchstaben/Ziffern/` .()-`) | ✓ API |
+| `▶ Laden` | ghost | A: nas.php:866 | setzt `nas.artistFolders/hiddenFolders/downloadFolders` | — | POST `/api/nas/profiles/load {name}` s.ts:4829 (braucht NAS-Login; fehlende Ordner → `remove-missing` s.ts:4876, nas.php:1023) | `different_login`, wenn anderes NAS/Konto | ✓ API |
+| `▶ Löschen` | danger | A: nas.php:867 | dto. | — | POST `/api/nas/profiles/delete {name}` s.ts:4914 | `standard` ist nicht löschbar | ✓ API |
+| `nasHost` | Server | A: nas.php:292 (`nas_address`) + Checkbox HTTPS :310 | `nas.address` (z. B. `10.4.1.51:5005`, WebDAV), `nas.https` | PHP aus `cfg` (`$lastNas`) | POST `/api/nas/login` s.ts:4945 | Prototyp ohne HTTPS-Schalter, „Anmeldung merken“ (:316) und Zertifikats-Bestätigung (`certFingerprint`, :331) | ✓ API |
+| `nasShare` | Freigabe | – | gibt es nicht: Anmeldung per WebDAV mit Adresse + Konto; Freigaben sind die obersten Ordner im Baum | — | — | Neue App: Feld entfällt (die Adresse enthält Port und ggf. Pfad) | ✓ API |
+| `nasUser` | Benutzer | A: nas.php:298 | `nas.account` | PHP | /api/nas/login | | ✓ API |
+| `nasPw` | Passwort | A: nas.php:304 | `nas.password` (AES-256-GCM `enc:v1:`, Schlüssel aus der CPU-Seriennummer, s.ts:4604ff) – nur mit `rememberMe` | wird nie zurückgegeben | /api/nas/login | eine Backup-Kopie auf einer anderen Box kann es nicht entschlüsseln | ✓ API |
+| `▶ Anmelden` | primary | A: nas.php:116–150 (`nas_signin`) | Sitzung im RAM (`nasSessionCache`); mit `rememberMe` Login in `cfg.nas` | — | POST `/api/nas/login {address, https, account, password, rememberMe, certFingerprint}` s.ts:4945 | Timeout 25 s; bei selbstsigniertem Zertifikat kommt ein Fingerprint zur Bestätigung zurück | ✓ API |
+| `▶ Abmelden` | ghost | A: nas.php:434 `?relogin=1` zeigt nur das Login-Formular | — | — | – | POST `/api/nas/logout` verwirft die Sitzung **und** das gespeicherte Passwort (sonst meldet sich die Box sofort wieder an); Adresse und Konto bleiben. Neue App: GET `/api/nas/state` für den Anmeldestand | ✓ API |
+| `nasFilter` | Ordner filtern | A: nas.php:265, JS `runIndexSearch` :601 | Index `/home/dietpi/.mupibox/nas-folder-index.json` (ohne Knopf täglich neu) | GET `/api/nas/index/search?q=` s.ts:5115; ohne Index: Baum über `/api/nas/browse` durchsuchen | — | | ✓ API |
+| `◉ checks` | Baum: Anzeigen / Ausblenden / Herunterladen | A: nas.php:715–850 (`artist_folders[]`, `hide_folders[]`, `download_folders[]`) | `nas.artistFolders`, `nas.hiddenFolders`, `nas.downloadFolders` | GET `/api/nas/browse?path=` s.ts:5142 → `isMarked, isHidden, isDownload, isDownloaded` | (über „Auswahl speichern“) | Anzeigen und Ausblenden schließen sich aus (Ausblenden gewinnt) | ✓ API |
+| `▶ Index aktualisieren` | ghost | A: nas.php:268/705 | Index-Datei (s.o.) | GET `/api/nas/index/status` s.ts:5088 | POST `/api/nas/index/refresh` s.ts:5105 | läuft im Hintergrund | ✓ API |
+| `▶ Nur Auswahl anzeigen` | ghost | A: nas.php:409/644 | — | Client (lädt die Pfade der gespeicherten Auswahl über browse nach) | — | | ✓ API |
 | `▶ Alle` / `▶ Keine` | ghost | A: nas.php:410/411 | — | — | Client (Häkchen „Anzeigen“) | | ✓ API |
-| `▶ Auswahl speichern` | primary | A: nas.php:412 → Handler :155–174 | `nas.artistFolders/hiddenFolders/downloadFolders` + aktives Profil (`nasTrackActiveProfile`) | — | POST `/api/nas/selection {shown, show, hide, download}` s.ts:5183 (ein einziger Config-Write) | der NAS-Reiter der Box liest live | ✓ API° |
+| `▶ Auswahl speichern` | primary | A: nas.php:412 → Handler :155–174 | `nas.artistFolders/hiddenFolders/downloadFolders` + aktives Profil (`nasTrackActiveProfile`) | — | POST `/api/nas/selection {shown, show, hide, download}` s.ts:5183 (ein einziger Config-Write) | der NAS-Reiter der Box liest live | ✓ API |
 | `▶ Alle Downloads` / `▶ Keine Downloads` | ghost | A: nas.php:413/414 | — | — | Client (Häkchen „Herunterladen“) | | ✓ API |
-| `▶ Ausgewählte herunterladen` | ghost | A: nas.php:415 → Speichern + :176 | Ziel `/home/dietpi/MuPiBox/media/NAS` (s.ts:3931, Marker `.mupibox-nas-download`) | GET `/api/nas/download/status` s.ts:6432 (nas.php:1157); Abbrechen POST `/api/nas/download/cancel` s.ts:6326 | POST `/api/nas/selection` + POST `/api/nas/download/sync` s.ts:6337 | löscht **lokale Kopien** der nicht angehakten Ordner (Rückfrage :415); 512 MB Reserve | ✓ API° |
-| `▶ Cover neu laden` | ghost | A: nas.php:416/1104 | Thumbnails + Cover heruntergeladener Ordner | — | POST `/api/nas/covers/refresh` s.ts:6411 (PHP-Timeout 240 s) | | ✓ API° |
+| `▶ Ausgewählte herunterladen` | ghost | A: nas.php:415 → Speichern + :176 | Ziel `/home/dietpi/MuPiBox/media/NAS` (s.ts:3931, Marker `.mupibox-nas-download`) | GET `/api/nas/download/status` s.ts:6432 (nas.php:1157); Abbrechen POST `/api/nas/download/cancel` s.ts:6326 | POST `/api/nas/selection` + POST `/api/nas/download/sync` s.ts:6337 | löscht **lokale Kopien** der nicht angehakten Ordner (Rückfrage :415); 512 MB Reserve | ✓ API |
+| `▶ Cover neu laden` | ghost | A: nas.php:416/1104 | Thumbnails + Cover heruntergeladener Ordner | — | POST `/api/nas/covers/refresh` s.ts:6411 (PHP-Timeout 240 s) | | ✓ API |
 
 ### Bibliothek › Cover [cover]
 | Schlüssel / Aktion | Beschriftung | Heute | Speicherort | Lesen | Schreiben / Ausführen | Nebenwirkung / Hinweis | Status |

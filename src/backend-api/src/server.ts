@@ -4765,7 +4765,7 @@ async function nasFolderExists(session: NasSession, folderPath: string): Promise
   throw new NasApiError(`WebDAV error ${response.status}`)
 }
 
-app.get('/api/nas/profiles', localOnly, async (_req, res) => {
+app.get('/api/nas/profiles', localOrElternSession, async (_req, res) => {
   try {
     // Store the profile list once, so "standard" exists in the config (and thus in the backup).
     await updateNasConfig((settings) => {
@@ -4796,7 +4796,7 @@ app.get('/api/nas/profiles', localOnly, async (_req, res) => {
 
 // Stores the current (saved) selection under `name` and makes it the active profile. An existing name is
 // only replaced with overwrite: true.
-app.post('/api/nas/profiles/create', localOnly, async (req, res) => {
+app.post('/api/nas/profiles/create', localOrElternSession, async (req, res) => {
   const name = typeof req.body?.name === 'string' ? req.body.name.trim() : ''
   if (!nasProfileNamePattern.test(name)) {
     res.status(400).json({ success: false, error: 'invalid_name' })
@@ -4826,7 +4826,7 @@ app.post('/api/nas/profiles/create', localOnly, async (req, res) => {
 
 // Makes a profile the active selection. Refused if another NAS/account is connected than the one the
 // profile was made with. Folders that no longer exist on the NAS are reported (`missing`), not removed.
-app.post('/api/nas/profiles/load', localOnly, async (req, res) => {
+app.post('/api/nas/profiles/load', localOrElternSession, async (req, res) => {
   const name = typeof req.body?.name === 'string' ? req.body.name : ''
   const session = await getActiveNasSession()
   if (!session) {
@@ -4873,7 +4873,7 @@ app.post('/api/nas/profiles/load', localOnly, async (req, res) => {
 })
 
 // Takes folders that no longer exist out of a profile (and out of the selection if it is the active one).
-app.post('/api/nas/profiles/remove-missing', localOnly, async (req, res) => {
+app.post('/api/nas/profiles/remove-missing', localOrElternSession, async (req, res) => {
   const name = typeof req.body?.name === 'string' ? req.body.name : ''
   const drop = new Set(Array.isArray(req.body?.paths) ? req.body.paths.filter((p: unknown) => typeof p === 'string') : [])
   try {
@@ -4911,7 +4911,7 @@ app.post('/api/nas/profiles/remove-missing', localOnly, async (req, res) => {
   }
 })
 
-app.post('/api/nas/profiles/delete', localOnly, async (req, res) => {
+app.post('/api/nas/profiles/delete', localOrElternSession, async (req, res) => {
   const name = typeof req.body?.name === 'string' ? req.body.name : ''
   if (name === nasDefaultProfile) {
     res.json({ success: false, error: 'standard' })
@@ -4939,10 +4939,10 @@ app.post('/api/nas/profiles/delete', localOnly, async (req, res) => {
   }
 })
 
-// NAS administration (login, browsing the whole NAS, profiles, index, selecting folders, downloads)
-// is done by the admin interface, which calls these routes server-side through localhost (nas.php).
-// From the LAN they exposed the box's NAS login and the whole NAS to anyone.
-app.post('/api/nas/login', localOnly, async (req, res) => {
+// NAS administration (login, browsing the whole NAS, profiles, index, selecting folders, downloads): the admin
+// interface calls these routes server-side through localhost (nas.php), the new app with its parents' session and
+// CSRF token (localOrElternSession). Open to the LAN they exposed the box's NAS login and the whole NAS to anyone.
+app.post('/api/nas/login', localOrElternSession, async (req, res) => {
   const { address, https: useHttps, account, password, rememberMe, certFingerprint } = req.body ?? {}
   if (typeof address !== 'string' || !address || typeof account !== 'string' || !account || typeof password !== 'string' || !password) {
     res.status(400).json({ success: false, error: 'address, account and password are required.' })
@@ -5085,7 +5085,45 @@ async function buildNasIndex(): Promise<void> {
   }
 }
 
-app.get('/api/nas/index/status', localOnly, async (_req, res) => {
+// The NAS login as it is stored (never the password) and whether the box is signed in, plus the saved selection,
+// for the NAS page of the app. A remembered login is tried here if there is no session yet (at most 8 s).
+app.get('/api/nas/state', localOrElternSession, async (_req, res) => {
+  const syn = nasSettings(await getMupiboxConfig())
+  const session = nasSessionCache ?? (await Promise.race([getActiveNasSession(), new Promise<undefined>((r) => setTimeout(() => r(undefined), 8000))]))
+  res.json({
+    success: true,
+    address: syn?.address ?? '',
+    https: syn?.https === true,
+    account: syn?.account ?? '',
+    rememberMe: syn?.rememberMe === true,
+    hasPassword: Boolean(syn?.password),
+    loggedIn: Boolean(session),
+    offline: Date.now() < nasOfflineUntil,
+    artistFolders: syn?.artistFolders ?? [],
+    hiddenFolders: syn?.hiddenFolders ?? [],
+    downloadFolders: syn?.downloadFolders ?? [],
+  })
+})
+
+// Signs the box off the NAS: the session is dropped and the remembered password deleted (with it kept, the next
+// request would just sign in again). Address and account stay for the next login; the NAS tab of the box is empty
+// until then, the downloaded folders stay playable.
+app.post('/api/nas/logout', localOrElternSession, async (_req, res) => {
+  nasSessionCache = undefined
+  nasLastSession = undefined
+  nasListCacheClear()
+  try {
+    await updateNasConfig({ password: '', rememberMe: false })
+  } catch (error) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] NAS logout: ${error}`)
+    res.status(500).json({ success: false })
+    return
+  }
+  console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] NAS: signed out, remembered password deleted`)
+  res.json({ success: true })
+})
+
+app.get('/api/nas/index/status', localOrElternSession, async (_req, res) => {
   const index = await loadNasIndex()
   const stale = !index || Date.now() - index.updated > nasIndexMaxAgeMs
   if (stale && !nasIndexJob.running && Date.now() - nasIndexLastAttempt > nasIndexRetryMs && (await getActiveNasSession())) {
@@ -5102,7 +5140,7 @@ app.get('/api/nas/index/status', localOnly, async (_req, res) => {
   })
 })
 
-app.post('/api/nas/index/refresh', localOnly, async (_req, res) => {
+app.post('/api/nas/index/refresh', localOrElternSession, async (_req, res) => {
   if (!(await getActiveNasSession())) {
     res.status(401).json({ success: false, error: 'not_logged_in' })
     return
@@ -5112,7 +5150,7 @@ app.post('/api/nas/index/refresh', localOnly, async (_req, res) => {
 })
 
 // Folders whose own name contains q (case-insensitive), as full paths.
-app.get('/api/nas/index/search', localOnly, async (req, res) => {
+app.get('/api/nas/index/search', localOrElternSession, async (req, res) => {
   const q = typeof req.query.q === 'string' ? req.query.q.trim().toLowerCase() : ''
   const index = await loadNasIndex()
   if (!index || q === '') {
@@ -5139,7 +5177,7 @@ function nasIsHidden(folderPath: string, hidden: string[]): boolean {
   return hidden.some((h) => folderPath === h || folderPath.startsWith(`${h}/`))
 }
 
-app.get('/api/nas/browse', localOnly, async (req, res) => {
+app.get('/api/nas/browse', localOrElternSession, async (req, res) => {
   const folderPath = typeof req.query.path === 'string' ? req.query.path : ''
 
   try {
@@ -5180,7 +5218,7 @@ app.get('/api/nas/browse', localOnly, async (req, res) => {
 // dozen folders in the tree that took a long time on a Pi, whatever was ticked.
 //   shown: the folders that were on the page; show / hide / download: which of them are ticked.
 // Folders that were not on the page keep their state. A folder is either shown or hidden (hidden wins).
-app.post('/api/nas/selection', localOnly, async (req, res) => {
+app.post('/api/nas/selection', localOrElternSession, async (req, res) => {
   const list = (value: unknown): string[] | undefined =>
     Array.isArray(value) && value.every((entry) => typeof entry === 'string') ? (value as string[]) : undefined
   const shown = list(req.body?.shown)
@@ -5222,7 +5260,7 @@ app.post('/api/nas/selection', localOnly, async (req, res) => {
   }
 })
 
-app.post('/api/nas/mark', localOnly, async (req, res) => {
+app.post('/api/nas/mark', localOrElternSession, async (req, res) => {
   const { path: folderPath, marked, list } = req.body ?? {}
   if (typeof folderPath !== 'string' || typeof marked !== 'boolean') {
     res.status(400).json({ success: false, error: 'path and marked are required.' })
@@ -6323,7 +6361,7 @@ async function runNasSync(): Promise<void> {
   }
 }
 
-app.post('/api/nas/download/cancel', localOnly, (_req, res) => {
+app.post('/api/nas/download/cancel', localOrElternSession, (_req, res) => {
   if (!nasDownloadStatus.running) {
     res.json({ success: false, error: 'No download is running.' })
     return
@@ -6334,7 +6372,7 @@ app.post('/api/nas/download/cancel', localOnly, (_req, res) => {
   res.json({ success: true })
 })
 
-app.post('/api/nas/download/sync', localOnly, (_req, res) => {
+app.post('/api/nas/download/sync', localOrElternSession, (_req, res) => {
   // both write into the same .part files, so not at the same time as "Reload covers" either
   if (nasDownloadStatus.running || nasCoverRefreshRunning) {
     res.status(409).json({ success: false, error: 'A download or a cover reload is already running.' })
@@ -6408,7 +6446,7 @@ async function nasRefreshLocalCovers(): Promise<{ updated: number; reachable: bo
   return { updated, reachable: true }
 }
 
-app.post('/api/nas/covers/refresh', localOnly, async (_req, res) => {
+app.post('/api/nas/covers/refresh', localOrElternSession, async (_req, res) => {
   if (nasCoverRefreshRunning || nasDownloadStatus.running) {
     res.status(409).json({ success: false, error: 'A download or a cover reload is already running.' })
     return
@@ -6429,7 +6467,7 @@ app.post('/api/nas/covers/refresh', localOnly, async (_req, res) => {
   }
 })
 
-app.get('/api/nas/download/status', localOnly, (_req, res) => {
+app.get('/api/nas/download/status', localOrElternSession, (_req, res) => {
   res.json(nasDownloadStatus)
 })
 

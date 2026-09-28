@@ -429,6 +429,19 @@ select.input { appearance: auto; }
 .u-list:empty { display: none; }
 .drop.over { border-color: var(--mp-primary); background: var(--mp-primary-soft); color: var(--mp-primary-text); }
 
+/* ---------- NAS ---------- */
+.nas-row { flex-wrap: wrap; gap: 8px 12px; }
+.nas-row.changed { box-shadow: inset 3px 0 0 var(--mp-accent); padding-left: 10px; }
+.nas-row .nas-open { flex: 1 0 180px; min-width: 0; border: 0; background: none; padding: 4px 0; text-align: left; color: inherit; display: flex; flex-direction: column; gap: 2px; }
+.nas-open b { display: flex; align-items: center; gap: 6px; font-weight: 700; overflow-wrap: anywhere; }
+.nas-open small { color: var(--mp-muted); font-size: 12px; overflow-wrap: anywhere; }
+.nas-open small.ok-text { color: var(--mp-success); }
+.togs { display: flex; gap: 6px; flex-wrap: wrap; }
+.tog { height: 34px; padding: 0 12px; border-radius: 17px; border: 1.5px solid var(--mp-border); background: none; color: var(--mp-muted); font-size: 13px; font-weight: 700; }
+.tog[aria-pressed="true"] { background: var(--mp-primary-soft); border-color: var(--mp-primary); color: var(--mp-primary-text); }
+.tog[data-k="hide"][aria-pressed="true"] { background: var(--mp-danger-soft); border-color: var(--mp-danger); color: var(--mp-danger); }
+.mono-block { margin: 0; padding: 10px 12px; border-radius: var(--mp-r-sm); background: var(--mp-field); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; overflow-wrap: anywhere; }
+
 /* login */
 .login { max-width: 400px; margin: 8vh auto 0; display: flex; flex-direction: column; gap: 16px; text-align: center; }
 .login .logo { width: 96px; height: 96px; border-radius: 50%; background: var(--mp-primary-soft); display: grid; place-items: center; margin: 0 auto; }

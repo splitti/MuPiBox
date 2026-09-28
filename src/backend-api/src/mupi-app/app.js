@@ -2394,6 +2394,416 @@ function mountCovers(root, page) {
   })
 }
 
+/* NAS: login, profiles, the folders the box shows / hides / keeps on the SD card */
+
+// st: /api/nas/state; path: the folder shown (''= top); entries: its subfolders; edits: path -> {show, hide, download}
+const nas = { st: null, profiles: [], index: null, dl: null, path: '', entries: null, err: '', edits: new Map(), q: '', hits: null, onlySel: false, loginOpen: false }
+
+async function loadNas() {
+  const [st, profiles, index, dl] = await Promise.all([api('/api/nas/state'), api('/api/nas/profiles'), api('/api/nas/index/status'), api('/api/nas/download/status')])
+  if (!st.ok) throw new Error(`nas state ${st.status}`)
+  nas.st = st.body
+  nas.profiles = profiles.body?.profiles ?? []
+  nas.index = index.ok ? index.body : null
+  nas.dl = dl.ok ? dl.body : null
+}
+
+async function loadNasFolder() {
+  nas.entries = null
+  nas.err = ''
+  drawNasFolders()
+  const r = await api(`/api/nas/browse?path=${encodeURIComponent(nas.path || '/')}`)
+  nas.entries = r.ok ? r.body?.entries ?? [] : []
+  if (!r.ok) nas.err = r.status === 401 ? 'Die Box ist nicht beim NAS angemeldet.' : 'Das NAS antwortet gerade nicht.'
+  drawNasFolders()
+}
+
+function nasTop() {
+  const st = nas.st ?? {}
+  const loginForm = !st.loggedIn || nas.loginOpen
+  const sw = (id, label, on) => `<div class="row"><span class="lbl"><b>${label}</b></span><label class="switch"><input type="checkbox" id="${id}" ${on ? 'checked' : ''} aria-label="${label}"><span></span></label></div>`
+  const dl = nas.dl
+  return [
+    `<section class="card"><h2>Anmeldung</h2>${
+      loginForm
+        ? `<p class="help">Die Box meldet sich per WebDAV beim NAS an (z. B. Synology: WebDAV-Server einschalten, Port 5005 bzw. 5006 für HTTPS).</p>
+          <div class="field"><label for="n-addr">Server (Adresse:Port)</label><input class="input" id="n-addr" value="${esc(st.address ?? '')}" placeholder="z. B. 192.168.1.10:5005" autocomplete="off"></div>
+          ${sw('n-https', 'HTTPS', st.https)}
+          <div class="field"><label for="n-acc">Benutzer</label><input class="input" id="n-acc" value="${esc(st.account ?? '')}" autocomplete="off"></div>
+          <div class="field"><label for="n-pw">Passwort</label><div class="input-wrap"><input class="input has-eye" id="n-pw" type="password" autocomplete="new-password"><button class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div></div>
+          ${sw('n-remember', 'Anmeldung merken', st.rememberMe || !st.address)}
+          <p class="help" style="margin:0">Ohne „merken“ vergisst die Box das Passwort beim nächsten Neustart – der NAS-Reiter ist dann leer. Gespeichert wird es verschlüsselt.</p>
+          <div class="btns"><button class="btn primary" id="n-login">Anmelden</button>${nas.loginOpen ? '<button class="btn" id="n-cancel">Abbrechen</button>' : ''}</div>`
+        : `<dl class="kv"><div><dt>Server</dt><dd>${esc(st.address)}${st.https ? ' (HTTPS)' : ''}</dd></div><div><dt>Benutzer</dt><dd>${esc(st.account)}</dd></div>
+            <div><dt>Status</dt><dd>${st.offline ? 'gerade nicht erreichbar' : 'angemeldet'}</dd></div></dl>
+          <div class="btns"><button class="btn" id="n-other">Andere Anmeldung</button><button class="btn" id="n-logout">Abmelden</button></div>`
+    }</section>`,
+    st.loggedIn
+      ? `<section class="card"><h2>Profile</h2><p class="help">Ein Profil merkt sich die Ordner-Auswahl (Anzeigen, Ausblenden, Laden) für ein NAS und Konto – nicht das Passwort.</p>
+        <div class="rows">${nas.profiles
+          .map(
+            (p, i) => `<div class="entry"><span class="lbl"><b>${esc(p.name === 'standard' ? 'Standard' : p.name)}</b><small>${p.shown} angezeigt · ${p.hidden} ausgeblendet · ${p.download} laden${p.matchesLogin ? '' : ` · anderes NAS (${esc(p.account ?? '')}@${esc(p.address ?? '')})`}</small></span>
+              ${p.active ? '<span class="chip ok">aktiv</span>' : `<button class="btn sm" data-pload="${i}" ${p.matchesLogin ? '' : 'disabled'}>Laden</button>`}${p.name === 'standard' ? '' : `<button class="btn danger sm" data-pdel="${i}">Löschen</button>`}</div>`,
+          )
+          .join('')}</div>
+        <div class="btns"><button class="btn" id="n-pnew">${icon('plus', 18)}Auswahl als Profil speichern</button></div></section>`
+      : '',
+    st.loggedIn
+      ? `<section class="card wide"><h2>Ordner</h2><p class="help">Anzeigen = erscheint auf der Box. Ausblenden = bleibt verborgen (auch alles darunter). Laden = auf die SD-Karte kopieren, damit es auch ohne NAS spielt.</p>
+        <div class="search">${icon('search')}<input class="input" id="n-q" type="search" placeholder="Ordner auf dem ganzen NAS suchen" autocomplete="off" value="${esc(nas.q)}"></div>
+        <p class="help" id="n-index" style="margin:0"></p>
+        ${sw('n-only', 'Nur die Auswahl zeigen', nas.onlySel)}
+        <nav class="crumbs" id="n-crumbs"></nav>
+        <div class="rows" id="n-list"><div class="loading"><p>Lade …</p></div></div>
+        <div class="btns"><button class="btn sm" data-bulk="show1">Alle anzeigen</button><button class="btn sm" data-bulk="show0">Keine anzeigen</button><button class="btn sm" data-bulk="dl1">Alle laden</button><button class="btn sm" data-bulk="dl0">Keine laden</button></div>
+        <p class="help" id="n-changes" style="margin:0"></p>
+        <div class="btns"><button class="btn primary" id="n-save">Auswahl speichern</button><button class="btn" id="n-dl">${icon('up', 18)}Ausgewählte herunterladen</button><button class="btn" id="n-covers">Cover neu laden</button><button class="btn" id="n-reindex">Index aktualisieren</button></div>
+        <div class="bar" id="n-dlbar" ${dl?.running ? '' : 'hidden'}><div class="track"><i id="n-dlfill" style="width:0%"></i></div><small id="n-dltext"></small></div>
+        <p class="help" id="n-dlmsg" style="margin:0"></p>
+        <div class="btns"><button class="btn danger" id="n-dlcancel" ${dl?.running ? '' : 'hidden'}>Download abbrechen</button></div></section>`
+      : '',
+  ]
+}
+
+// The rows shown: search hits, the saved selection, or the subfolders of the open folder
+function nasRows() {
+  const st = nas.st ?? {}
+  const flags = (p) => ({ isMarked: st.artistFolders.includes(p), isHidden: st.hiddenFolders.includes(p), isDownload: st.downloadFolders.includes(p) })
+  const of = (p) => ({ name: p.slice(p.lastIndexOf('/') + 1) || p, path: p, sub: p.slice(0, p.lastIndexOf('/')) || '/', flat: true, ...flags(p) })
+  if (nas.q.trim().length >= 2) return nas.hits === null ? null : nas.hits.map(of)
+  if (nas.onlySel) return [...new Set([...st.artistFolders, ...st.hiddenFolders, ...st.downloadFolders])].sort((a, b) => a.localeCompare(b, 'de')).map(of)
+  return nas.entries
+}
+
+const nasFlag = (row, key) => {
+  const e = nas.edits.get(row.path)
+  if (e) return e[key]
+  return key === 'show' ? row.isMarked && !row.isHidden : key === 'hide' ? row.isHidden : row.isDownload
+}
+
+function setNasFlag(row, key, on) {
+  const e = nas.edits.get(row.path) ?? { show: nasFlag(row, 'show'), hide: nasFlag(row, 'hide'), download: nasFlag(row, 'download') }
+  e[key] = on
+  // a folder is either shown or hidden
+  if (on && key === 'show') e.hide = false
+  if (on && key === 'hide') e.show = false
+  nas.edits.set(row.path, e)
+}
+
+let nasShown = []
+
+function drawNasFolders() {
+  const list = $('#n-list')
+  if (!list) return
+  const crumbs = $('#n-crumbs')
+  const flat = nas.q.trim().length >= 2 || nas.onlySel
+  crumbs.hidden = flat
+  const parts = nas.path.split('/').filter(Boolean)
+  crumbs.innerHTML = [{ t: 'NAS', p: '' }, ...parts.map((t, i) => ({ t, p: `/${parts.slice(0, i + 1).join('/')}` }))]
+    .map((c, i, all) => (i === all.length - 1 ? `<span aria-current="page">${esc(c.t)}</span>` : `<button data-crumb="${esc(c.p)}">${esc(c.t)}</button><span class="sep">›</span>`))
+    .join('')
+  for (const b of crumbs.querySelectorAll('[data-crumb]')) {
+    b.onclick = () => {
+      nas.path = b.dataset.crumb
+      loadNasFolder()
+    }
+  }
+  const rows = nasRows()
+  $('#n-changes').textContent = nas.edits.size ? `${nas.edits.size} ${nas.edits.size === 1 ? 'Ordner geändert' : 'Ordner geändert'} – noch nicht gespeichert.` : ''
+  if (rows === null) {
+    list.innerHTML = `<div class="loading"><p>Lade …</p></div>`
+    return
+  }
+  nasShown = rows
+  if (!rows.length) {
+    list.innerHTML = `<p class="help">${esc(nas.err || (flat ? 'Nichts gefunden.' : 'Keine Unterordner.'))}</p>`
+    return
+  }
+  const chip = (i, key, label, row) => `<button class="tog" data-i="${i}" data-k="${key}" aria-pressed="${nasFlag(row, key)}">${label}</button>`
+  list.innerHTML = rows
+    .map(
+      (r, i) => `<div class="entry nas-row${nas.edits.has(r.path) ? ' changed' : ''}"><button class="lbl nas-open" data-open="${i}"><b>${icon('folder', 16)} ${esc(r.name)}</b>${r.flat ? `<small>${esc(r.sub)}</small>` : ''}${r.isDownloaded ? '<small class="ok-text">✓ auf der Box</small>' : ''}</button>
+        <span class="togs">${chip(i, 'show', 'Anzeigen', r)}${chip(i, 'hide', 'Ausblenden', r)}${chip(i, 'download', 'Laden', r)}</span></div>`,
+    )
+    .join('')
+  for (const b of list.querySelectorAll('.tog')) {
+    b.onclick = () => {
+      const row = nasShown[Number(b.dataset.i)]
+      setNasFlag(row, b.dataset.k, b.getAttribute('aria-pressed') !== 'true')
+      drawNasFolders()
+    }
+  }
+  for (const b of list.querySelectorAll('[data-open]')) {
+    b.onclick = () => {
+      nas.path = nasShown[Number(b.dataset.open)].path
+      nas.q = ''
+      nas.onlySel = false
+      const q = $('#n-q')
+      if (q) q.value = ''
+      const only = $('#n-only')
+      if (only) only.checked = false
+      loadNasFolder()
+    }
+  }
+}
+
+function drawNasIndex() {
+  const el = $('#n-index')
+  const ix = nas.index
+  if (!el || !ix) return
+  el.textContent = ix.running ? `Suchindex wird erstellt … (${ix.folders ?? 0} Ordner)` : ix.exists ? `Suchindex: ${ix.count} Ordner, Stand ${relTime(new Date(ix.updated).toISOString())}` : 'Noch kein Suchindex – „Index aktualisieren“.'
+}
+
+function drawNasDownload() {
+  const d = nas.dl
+  const bar = $('#n-dlbar')
+  if (!bar || !d) return
+  bar.hidden = !d.running
+  $('#n-dlcancel').hidden = !d.running
+  const pct = d.bytesTotal ? (d.bytesDone / d.bytesTotal) * 100 : d.filesTotal ? (d.filesDone / d.filesTotal) * 100 : 0
+  $('#n-dlfill').style.width = `${Math.min(100, pct).toFixed(1)}%`
+  $('#n-dltext').textContent = `${d.filesDone} von ${d.filesTotal} Dateien · ${formatBytes(d.bytesDone)} von ${formatBytes(d.bytesTotal)}`
+  $('#n-dlmsg').textContent = d.spaceError
+    ? `Passt nicht auf die SD-Karte: nötig ${formatBytes(d.spaceError.needed)}, frei ${formatBytes(Math.max(0, d.spaceError.free - d.spaceError.reserve))}.`
+    : d.error
+      ? `Fehler: ${d.error}`
+      : d.message && d.message !== 'Idle'
+        ? `Download: ${d.message}${d.cancelled ? ' (abgebrochen)' : ''}`
+        : ''
+}
+
+async function saveNasSelection() {
+  if (!nas.edits.size) return true
+  const shown = [...nas.edits.keys()]
+  const pick = (k) => shown.filter((p) => nas.edits.get(p)[k])
+  const r = await api('/api/nas/selection', { method: 'POST', body: { shown, show: pick('show'), hide: pick('hide'), download: pick('download') } })
+  if (!r.ok || !r.body?.success) {
+    toast('Nicht gespeichert', 'info')
+    return false
+  }
+  nas.edits.clear()
+  const st = await api('/api/nas/state')
+  if (st.ok) nas.st = st.body
+  libChanged()
+  libChanged()
+  return true
+}
+
+async function nasLogin(root, page, fingerprint) {
+  const address = $('#n-addr', root).value.trim()
+  const account = $('#n-acc', root).value.trim()
+  const password = $('#n-pw', root).value
+  if (!address || !account || !password) return toast('Bitte Server, Benutzer und Passwort eintragen', 'info')
+  const body = { address, https: $('#n-https', root).checked, account, password, rememberMe: $('#n-remember', root).checked, ...(fingerprint ? { certFingerprint: fingerprint } : {}) }
+  const btn = $('#n-login', root)
+  btn.disabled = true
+  btn.textContent = 'Melde an …'
+  const r = await api('/api/nas/login', { method: 'POST', body })
+  btn.disabled = false
+  btn.textContent = 'Anmelden'
+  if (r.body?.success) {
+    nas.loginOpen = false
+    nas.path = ''
+    nas.edits.clear()
+    toast('Beim NAS angemeldet')
+    libChanged()
+    await loadNas().catch(() => undefined)
+    return renderPage(page, false)
+  }
+  const cert = r.body?.certificate
+  if (cert?.fingerprint && !fingerprint) {
+    return openSheet(
+      `<h2>Zertifikat bestätigen</h2><p class="help" style="margin:0">Das NAS nutzt ein eigenes (selbst signiertes) Zertifikat. Vergleiche den Fingerabdruck mit dem im NAS (bzw. im Browser über das Schloss-Symbol). Nur wenn er übereinstimmt:</p>
+       <dl class="kv"><div><dt>Ausgestellt für</dt><dd>${esc(cert.subject)}</dd></div><div><dt>Gültig bis</dt><dd>${esc(cert.validTo)}</dd></div></dl>
+       <p class="mono-block">${esc(cert.fingerprint)}</p>
+       <div class="btns"><button class="btn" data-close>Abbrechen</button><button class="btn primary" data-ok>Vertrauen und anmelden</button></div>`,
+      (sheet, close) => {
+        sheet.querySelector('[data-close]').onclick = close
+        sheet.querySelector('[data-ok]').onclick = () => {
+          close()
+          nasLogin(root, page, cert.fingerprint)
+        }
+      },
+    )
+  }
+  toast(r.body?.error ? `Anmeldung fehlgeschlagen: ${r.body.error}` : 'Anmeldung fehlgeschlagen', 'info')
+}
+
+function mountNas(root, page) {
+  const again = async (text) => {
+    if (text) toast(text)
+    await loadNas().catch(() => undefined)
+    if (currentPage()?.id === page.id) renderPage(page, false)
+  }
+  $('#n-login', root)?.addEventListener('click', () => nasLogin(root, page))
+  $('#n-cancel', root)?.addEventListener('click', () => {
+    nas.loginOpen = false
+    renderPage(page, false)
+  })
+  $('#n-other', root)?.addEventListener('click', () => {
+    nas.loginOpen = true
+    renderPage(page, false)
+  })
+  $('#n-logout', root)?.addEventListener('click', () =>
+    confirmSheet('Abmelden', 'Die Box vom NAS abmelden und das gespeicherte Passwort löschen? Der NAS-Reiter auf der Box ist dann leer, bis du dich wieder anmeldest. Heruntergeladene Ordner spielen weiter.', async () => {
+      const r = await api('/api/nas/logout', { method: 'POST', body: {} })
+      if (!r.body?.success) return toast('Das hat nicht geklappt', 'info')
+      libChanged()
+      again('Abgemeldet')
+    }),
+  )
+  if (!nas.st?.loggedIn) return
+  // profiles
+  for (const b of root.querySelectorAll('[data-pload]')) {
+    const p = nas.profiles[Number(b.dataset.pload)]
+    b.onclick = () =>
+      confirmSheet('Laden', `Profil „${p.name === 'standard' ? 'Standard' : p.name}“ laden? Die aktuelle Ordner-Auswahl wird ersetzt${nas.edits.size ? ' (auch deine ungespeicherten Änderungen)' : ''}.`, async () => {
+        const r = await api('/api/nas/profiles/load', { method: 'POST', body: { name: p.name } })
+        if (r.body?.error === 'different_login') return toast('Das Profil gehört zu einem anderen NAS oder Konto', 'info')
+        if (!r.body?.success) return toast('Das hat nicht geklappt', 'info')
+        nas.edits.clear()
+        libChanged()
+        const missing = r.body.missing ?? []
+        if (missing.length) {
+          await again()
+          return openSheet(
+            `<h2>Ordner fehlen</h2><p class="help" style="margin:0">Das Profil ist geladen, aber ${missing.length} Ordner gibt es auf dem NAS nicht mehr:</p><ul class="u-list">${missing.map((m) => `<li>${esc(m)}</li>`).join('')}</ul>
+             <div class="btns"><button class="btn" data-close>Behalten</button><button class="btn primary" data-ok>Aus dem Profil entfernen</button></div>`,
+            (sheet, close) => {
+              sheet.querySelector('[data-close]').onclick = close
+              sheet.querySelector('[data-ok]').onclick = async () => {
+                close()
+                await api('/api/nas/profiles/remove-missing', { method: 'POST', body: { name: p.name, paths: missing } })
+                again('Entfernt')
+              }
+            },
+          )
+        }
+        again(r.body.unverified ? `Geladen – ${r.body.unverified} Ordner ließen sich nicht prüfen` : 'Profil geladen')
+      })
+  }
+  for (const b of root.querySelectorAll('[data-pdel]')) {
+    const p = nas.profiles[Number(b.dataset.pdel)]
+    b.onclick = () =>
+      confirmSheet('Löschen', `Profil „${p.name}“ löschen? Die aktuelle Auswahl auf der Box bleibt.`, async () => {
+        const r = await api('/api/nas/profiles/delete', { method: 'POST', body: { name: p.name } })
+        again(r.body?.success ? 'Profil gelöscht' : 'Das hat nicht geklappt')
+      })
+  }
+  $('#n-pnew', root).onclick = () =>
+    openSheet(
+      `<h2>Als Profil speichern</h2><p class="help" style="margin:0">Speichert die gespeicherte Ordner-Auswahl unter einem Namen und macht es zum aktiven Profil.</p>
+       <div class="field"><label for="p-name">Name</label><input class="input" id="p-name" maxlength="40" placeholder="z. B. Oma und Opa"></div>
+       <div class="btns"><button class="btn" data-close>Abbrechen</button><button class="btn primary" data-ok>Speichern</button></div>`,
+      (sheet, close) => {
+        sheet.querySelector('[data-close]').onclick = close
+        const create = async (overwrite) => {
+          const name = sheet.querySelector('#p-name').value.trim()
+          if (!/^[\p{L}\p{N} .()-]{1,40}$/u.test(name)) return toast('Nur Buchstaben, Ziffern, Leerzeichen und . ( ) -', 'info')
+          if (!(await saveNasSelection())) return
+          const r = await api('/api/nas/profiles/create', { method: 'POST', body: { name, overwrite } })
+          if (r.body?.error === 'exists' && !overwrite) {
+            close()
+            return confirmSheet('Ersetzen', `Ein Profil „${name}“ gibt es schon. Ersetzen?`, async () => {
+              const r2 = await api('/api/nas/profiles/create', { method: 'POST', body: { name, overwrite: true } })
+              again(r2.body?.success ? 'Profil gespeichert' : 'Das hat nicht geklappt')
+            })
+          }
+          close()
+          again(r.body?.success ? 'Profil gespeichert' : r.body?.error === 'invalid_name' ? 'Ungültiger Name' : 'Das hat nicht geklappt')
+        }
+        sheet.querySelector('[data-ok]').onclick = () => create(false)
+      },
+    )
+  // folders
+  let timer = null
+  const q = $('#n-q', root)
+  q.addEventListener('input', () => {
+    nas.q = q.value
+    clearTimeout(timer)
+    if (nas.q.trim().length < 2) {
+      nas.hits = null
+      return drawNasFolders()
+    }
+    nas.hits = null
+    drawNasFolders()
+    timer = setTimeout(async () => {
+      const r = await api(`/api/nas/index/search?q=${encodeURIComponent(nas.q.trim())}`)
+      nas.hits = r.body?.paths ?? []
+      if (r.body && !r.body.success) nas.err = 'Noch kein Suchindex – bitte „Index aktualisieren“.'
+      drawNasFolders()
+    }, 300)
+  })
+  $('#n-only', root).onchange = (e) => {
+    nas.onlySel = e.target.checked
+    drawNasFolders()
+  }
+  for (const b of root.querySelectorAll('[data-bulk]')) {
+    b.onclick = () => {
+      const [key, on] = b.dataset.bulk === 'show1' ? ['show', true] : b.dataset.bulk === 'show0' ? ['show', false] : b.dataset.bulk === 'dl1' ? ['download', true] : ['download', false]
+      for (const row of nasShown) setNasFlag(row, key, on)
+      drawNasFolders()
+    }
+  }
+  $('#n-save', root).onclick = async () => {
+    if (!nas.edits.size) return toast('Nichts geändert', 'info')
+    if (await saveNasSelection()) {
+      toast('Auswahl gespeichert – der NAS-Reiter der Box zeigt sie gleich')
+      loadNasFolder()
+    }
+  }
+  $('#n-dl', root).onclick = () =>
+    confirmSheet('Herunterladen', 'Die Ordner mit „Laden“ auf die SD-Karte kopieren? Lokale Kopien von Ordnern ohne „Laden“ werden dabei gelöscht.', async () => {
+      if (!(await saveNasSelection())) return
+      const r = await api('/api/nas/download/sync', { method: 'POST', body: {} })
+      if (!r.body?.success) return toast(r.status === 409 ? 'Es läuft schon ein Download oder das Neuladen der Cover' : 'Das hat nicht geklappt', 'info')
+      toast('Download gestartet')
+      pollNasDownload()
+    })
+  $('#n-covers', root).onclick = async () => {
+    toast('Cover werden neu geladen …')
+    const r = await api('/api/nas/covers/refresh', { method: 'POST', body: {} })
+    toast(r.body?.success ? 'Cover neu geladen' : r.body?.error ?? 'Das hat nicht geklappt', r.body?.success ? 'ok' : 'info')
+  }
+  $('#n-reindex', root).onclick = async () => {
+    const r = await api('/api/nas/index/refresh', { method: 'POST', body: {} })
+    if (!r.body?.success) return toast('Das hat nicht geklappt', 'info')
+    toast('Der Suchindex wird im Hintergrund erstellt')
+    pollNasIndex()
+  }
+  $('#n-dlcancel', root).onclick = async () => {
+    await api('/api/nas/download/cancel', { method: 'POST', body: {} })
+    toast('Wird abgebrochen …')
+  }
+  drawNasIndex()
+  drawNasDownload()
+  if (nas.q.trim().length >= 2 || nas.onlySel) drawNasFolders()
+  else loadNasFolder()
+  if (nas.dl?.running) pollNasDownload()
+  if (nas.index?.running) pollNasIndex()
+}
+
+function pollNasDownload() {
+  every(2000, async () => {
+    const r = await api('/api/nas/download/status')
+    if (r.ok) nas.dl = r.body
+    drawNasDownload()
+    if (!nas.dl?.running) {
+      stopPageTimers()
+      if (nas.index?.running) pollNasIndex()
+    }
+  })
+}
+
+function pollNasIndex() {
+  every(3000, async () => {
+    const r = await api('/api/nas/index/status')
+    if (r.ok) nas.index = r.body
+    drawNasIndex()
+    if (!nas.index?.running) stopPageTimers()
+  })
+}
+
 /* the controllers: load(page) reads the box before drawing, mount(root, page) runs after it, change(key, value)
    saves a setting, act / byLabel run the buttons, sections(page) gives the building blocks with the box's values,
    top(page) draws the page's own top part (instead of customTop's), ownNav: the page shows its sub pages itself */
@@ -2625,6 +3035,12 @@ const CONTROLLERS = {
         go('spotify')
       },
     },
+  },
+  nas: {
+    load: loadNas,
+    top: nasTop,
+    sections: () => [],
+    mount: mountNas,
   },
   cover: {
     load: loadCovers,
