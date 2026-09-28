@@ -692,6 +692,11 @@ rm -f /tmp/mupibox-update-failed
 		mv -f ${MUPI_SRC}/config/services/mupi_goodbye.service /etc/systemd/system/mupi_goodbye.service >&3 2>&3
 		MUPI_GOODBYE=1
 	fi
+	# The display's autologin without the 5 s Type=idle wait (see config/services/getty@tty1.service.d/mupibox.conf)
+	if [ -f "${MUPI_SRC}/config/services/getty@tty1.service.d/mupibox.conf" ]; then
+		mkdir -p "/etc/systemd/system/getty@tty1.service.d" >&3 2>&3
+		cp -f "${MUPI_SRC}/config/services/getty@tty1.service.d/mupibox.conf" "/etc/systemd/system/getty@tty1.service.d/mupibox.conf" >&3 2>&3
+	fi
 	# The Samba share is a standalone server (smbd); the Active Directory domain controller came with the package and
 	# is not needed
 	systemctl disable --now samba-ad-dc.service >&3 2>&3
