@@ -790,13 +790,40 @@ export class PlayerPage implements OnInit, AfterViewInit {
     this.showTrackList = false
   }
 
+  // Jumping several tracks at once (e.g. from track 1 to track 5) needs a corrective step on the player
+  // backend's side: mplayer's own 'metadata' event always bumps currentTracknr by exactly 1 per track change,
+  // no matter how many tracks were actually skipped, so the backend pre-sets currentTracknr to (target - 1)
+  // right away and lets that one +1 land exactly on the target. Polled here in between, that pre-set value
+  // briefly names the track BEFORE the one just tapped as playing. This holds the tapped position instead,
+  // until the real state (poll of /local) reaches it - a 6s fallback clears it if that never happens (e.g. the
+  // jump failed), so a row can't stay marked forever.
+  private pendingTrackPosition: number | undefined
+  private pendingTrackTimer: ReturnType<typeof setTimeout> | undefined
+
   playTrackFromList(entry: TrackListEntry) {
+    if (this.media.type === 'library' || this.media.type === 'nas') {
+      clearTimeout(this.pendingTrackTimer)
+      this.pendingTrackPosition = entry.position
+      this.pendingTrackTimer = setTimeout(() => {
+        this.pendingTrackPosition = undefined
+      }, 6000)
+    }
     this.playerService.playTrackAtPosition(this.media, entry)
   }
 
   isCurrentTrack(entry: TrackListEntry): boolean {
     if (this.media.type === 'library' || this.media.type === 'nas') {
-      return this.currentPlayedLocal?.currentTracknr === entry.position
+      const actualPosition = this.currentPlayedLocal?.currentTracknr
+      if (this.pendingTrackPosition !== undefined) {
+        if (actualPosition === this.pendingTrackPosition) {
+          // caught up: the real state now agrees, no need for the override any more
+          clearTimeout(this.pendingTrackTimer)
+          this.pendingTrackPosition = undefined
+        } else {
+          return entry.position === this.pendingTrackPosition
+        }
+      }
+      return actualPosition === entry.position
     }
     if (this.media.playlistid) {
       return this.currentPlayedSpotify?.playlist?.current_track_position === entry.position
