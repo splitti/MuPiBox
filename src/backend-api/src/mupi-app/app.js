@@ -3583,6 +3583,285 @@ function pinOptions(reserved) {
   return (hw.data?.pins ?? []).filter((p) => !reserved.includes(p))
 }
 
+/* Einstellungen › Netzwerk and › Dienste */
+
+const net = { status: null, scan: null, scanning: false, saved: null, shares: null, tg: null, tgFound: null, mqtt: null, wled: null }
+
+/* WLAN */
+
+async function loadWlan() {
+  const [st, saved] = await Promise.all([api('/api/network'), api(`${API}/wlan/saved`)])
+  net.status = st.ok ? st.body : null
+  net.saved = saved.ok ? saved.body?.networks ?? [] : null
+}
+
+const signalWord = (dbm) => (dbm >= -55 ? 'sehr gut' : dbm >= -67 ? 'gut' : dbm >= -75 ? 'mittel' : 'schwach')
+
+function wlanTop() {
+  const n = net.status ?? {}
+  const row = (k, v) => (v ? `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>` : '')
+  return [
+    `<section class="card"><h2>Verbindung</h2><dl class="kv">${row('Status', n.onlinestate === 'online' ? 'online' : 'offline')}${row('Netz', n.wifi || (n.interface?.startsWith('eth') ? 'LAN-Kabel' : ''))}${row('Signal', n.wifisignal ? `${n.wifisignal}` : '')}${row('IP-Adresse', n.ip)}${row('Gateway', n.gateway)}${row('DNS', n.dns)}${row('MAC', n.mac)}</dl>
+      <p class="help" style="margin:0">Der Stand ist bis zu 30 Sekunden alt.</p><div class="btns"><button class="btn" id="w-refresh">Aktualisieren</button></div></section>`,
+    `<section class="card"><h2>Netze in Reichweite</h2>
+      <div class="btns"><button class="btn primary" id="w-scan" ${net.scanning ? 'disabled' : ''}>${net.scanning ? 'Suche läuft …' : net.scan ? 'Neu suchen' : 'Suchen'}</button></div>
+      ${
+        net.scan
+          ? net.scan.length
+            ? `<div class="rows">${net.scan
+                .map((w, i) => `<button class="entry lib-row" data-w="${i}"><span class="avatar">${icon('wifi', 16)}</span><span class="lbl"><b>${esc(w.ssid)}</b><small>${signalWord(w.signal_dbm)} (${w.signal_dbm} dBm)${w.encrypted ? '' : ' · offen'}</small></span>${n.wifi === w.ssid ? '<span class="chip ok">verbunden</span>' : ''}<span class="chev">${icon('plus', 18)}</span></button>`)
+                .join('')}</div>`
+            : '<p class="help" style="margin:0">Keine Netze gefunden.</p>'
+          : ''
+      }</section>`,
+    `<section class="card"><h2>Neues WLAN hinzufügen</h2>
+      <div class="field"><label for="w-ssid">Netzname (SSID)</label><input class="input" id="w-ssid" maxlength="32" autocomplete="off"></div>
+      <div class="field"><label for="w-pw">Passwort (8–63 Zeichen, leer = offenes Netz)</label><div class="input-wrap"><input class="input has-eye" id="w-pw" type="password" maxlength="63" autocomplete="new-password"><button class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div></div>
+      <p class="help" style="margin:0">Die Box bleibt im aktuellen Netz und nimmt das neue, wenn es in Reichweite und besser ist.</p>
+      <div class="btns"><button class="btn primary" id="w-add">Hinzufügen</button></div></section>`,
+    `<section class="card"><h2>Gespeicherte Netze</h2>${
+      net.saved
+        ? net.saved.length
+          ? `<div class="rows">${net.saved
+              .map((w, i) => `<div class="entry"><span class="avatar">${icon('wifi', 16)}</span><span class="lbl"><b>${esc(w.ssid)}</b></span>${w.active ? '<span class="chip ok">aktiv</span>' : `<button class="btn danger sm" data-wrm="${i}">Entfernen</button>`}</div>`)
+              .join('')}</div>`
+          : '<p class="help" style="margin:0">Keine.</p>'
+        : '<p class="help" style="margin:0">Die gespeicherten Netze ließen sich nicht lesen.</p>'
+    }</section>`,
+  ]
+}
+
+function mountWlan(root, page) {
+  const again = async (text, kind) => {
+    if (text) toast(text, kind)
+    await loadWlan().catch(() => undefined)
+    if (currentPage()?.id === page.id) renderPage(page, false)
+  }
+  $('#w-refresh', root).onclick = () => again('Aktualisiert')
+  $('#w-scan', root).onclick = async () => {
+    net.scanning = true
+    renderPage(page, false)
+    const r = await api(`${API}/wlan/scan`)
+    net.scanning = false
+    net.scan = r.ok ? r.body?.networks ?? [] : []
+    if (!r.ok) toast('Die Suche ging nicht', 'info')
+    if (currentPage()?.id === page.id) renderPage(page, false)
+  }
+  for (const b of root.querySelectorAll('[data-w]')) {
+    b.onclick = () => {
+      const w = net.scan[Number(b.dataset.w)]
+      $('#w-ssid', root).value = w.ssid
+      $('#w-pw', root).focus()
+      $('#w-ssid', root).scrollIntoView({ block: 'center', behavior: 'smooth' })
+    }
+  }
+  $('#w-add', root).onclick = async () => {
+    const ssid = $('#w-ssid', root).value
+    const password = $('#w-pw', root).value
+    if (!ssid.trim()) return toast('Bitte den Netznamen eintragen', 'info')
+    if (password && (password.length < 8 || password.length > 63)) return toast('Das Passwort hat 8 bis 63 Zeichen', 'info')
+    const r = await api(`${API}/wlan/add`, { method: 'POST', body: { ssid, password } })
+    if (!r.ok) return toast(r.body?.error ?? 'Das hat nicht geklappt', 'info')
+    $('#w-ssid', root).value = ''
+    $('#w-pw', root).value = ''
+    setTimeout(() => again(), 8000)
+    toast(`„${ssid}“ wird eingetragen`)
+  }
+  for (const b of root.querySelectorAll('[data-wrm]')) {
+    const w = net.saved[Number(b.dataset.wrm)]
+    b.onclick = () =>
+      confirmSheet('Entfernen', `Das Netz „${w.ssid}“ vergessen? Die Box verbindet sich dann nicht mehr damit.`, async () => {
+        const r = await api(`${API}/wlan/remove`, { method: 'POST', body: { ssid: w.ssid } })
+        again(r.ok ? 'Entfernt' : r.body?.error ?? 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
+      })
+  }
+}
+
+/* Freigaben & Fernzugriff */
+
+async function loadShares() {
+  const r = await api(`${API}/shares`)
+  if (!r.ok) throw new Error(`shares ${r.status}`)
+  net.shares = r.body
+  for (const k of ['samba', 'ftp', 'vnc']) state.values.set(k, r.body[k].active)
+}
+
+/* Telegram */
+
+async function loadTelegram() {
+  const r = await api(`${API}/telegram-config`)
+  if (!r.ok) throw new Error(`telegram ${r.status}`)
+  net.tg = { ...r.body, chatIds: [...(r.body.chatIds ?? [])] }
+}
+
+function tgTop() {
+  const t = net.tg
+  const sw = (id, label, help, on) =>
+    `<div class="row"><span class="lbl"><b>${label}</b>${help ? `<small>${help}</small>` : ''}</span><label class="switch"><input type="checkbox" id="${id}" ${on ? 'checked' : ''} aria-label="${label}"><span></span></label></div>`
+  return [
+    `<section class="card"><h2>Eltern-Bot</h2>
+      ${sw('tg-on', 'Bot aktiv', 'Steuern und Nachfragen per Telegram (/status, /extend, /quietnow …).', t.active)}
+      ${sw('tg-report', 'Wiedergabe melden', 'Schickt jeden Start, Titel und Stopp – meist zu viel.', t.notifyPlayback)}
+      <dl class="kv"><div><dt>Bot-Token</dt><dd>${t.token_configured ? '✓ eingerichtet' : 'fehlt'}</dd></div></dl>
+      <div class="field"><label for="tg-token">Neuen Token setzen (leer = unverändert)</label><input class="input mono" id="tg-token" autocomplete="off" placeholder="123456789:AA…"></div>
+      <p class="help" style="margin:0">Den Token bekommst du bei @BotFather in Telegram (/newbot).</p></section>`,
+    `<section class="card"><h2>Erlaubte Chats</h2><p class="help">Nur diese Chats dürfen den Bot steuern.</p>
+      ${
+        t.chatIds.length
+          ? `<div class="rows">${t.chatIds.map((c, i) => `<div class="entry"><span class="avatar">${icon('tg', 16)}</span><span class="lbl"><b>${esc(c.label || 'ohne Namen')}</b><small>${esc(c.id)}</small></span><button class="btn danger sm" data-tgrm="${i}">Entfernen</button></div>`).join('')}</div>`
+          : '<p class="help" style="margin:0">Noch keiner – ohne erlaubten Chat antwortet der Bot niemandem.</p>'
+      }
+      <div class="rule-times"><div class="field"><label for="tg-id">Chat-ID</label><input class="input mono" id="tg-id" autocomplete="off" inputmode="numeric"></div><div class="field"><label for="tg-name">Name</label><input class="input" id="tg-name" maxlength="60" autocomplete="off"></div></div>
+      <div class="btns"><button class="btn" id="tg-add">${icon('plus', 18)}Chat hinzufügen</button><button class="btn" id="tg-detect" ${t.token_configured ? '' : 'disabled'}>Chat-ID ermitteln</button></div></section>`,
+    `<div class="btns wide"><button class="btn primary" id="tg-save">Speichern</button></div>`,
+  ]
+}
+
+function mountTelegram(root, page) {
+  const redraw = () => currentPage()?.id === page.id && renderPage(page, false)
+  $('#tg-on', root).onchange = (e) => (net.tg.active = e.target.checked)
+  $('#tg-report', root).onchange = (e) => (net.tg.notifyPlayback = e.target.checked)
+  for (const b of root.querySelectorAll('[data-tgrm]')) {
+    b.onclick = () => {
+      net.tg.chatIds.splice(Number(b.dataset.tgrm), 1)
+      redraw()
+      toast('Entfernt – noch speichern', 'info')
+    }
+  }
+  const addChat = (id, label) => {
+    if (!/^-?\d{1,20}$/.test(id)) return toast('Eine Chat-ID besteht aus Ziffern (Gruppen mit Minus davor)', 'info')
+    if (net.tg.chatIds.some((c) => c.id === id)) return toast('Diesen Chat gibt es schon', 'info')
+    net.tg.chatIds.push({ id, label: label.slice(0, 60) })
+    redraw()
+    toast('Hinzugefügt – noch speichern', 'info')
+  }
+  $('#tg-add', root).onclick = () => addChat($('#tg-id', root).value.trim(), $('#tg-name', root).value.trim())
+  $('#tg-detect', root).onclick = () => {
+    openSheet(
+      `<h2>Chat-ID ermitteln</h2><p class="help" style="margin:0">Schreib dem Bot jetzt in Telegram eine Nachricht (z. B. „Hallo“). Die Box wartet bis zu 40 Sekunden darauf; der Bot ist so lange kurz aus.</p>
+       <div class="loading" id="tg-wait"><p>Warte auf eine Nachricht …</p></div><div id="tg-res"></div>
+       <div class="btns"><button class="btn" data-close>Schließen</button></div>`,
+      async (sheet, close) => {
+        sheet.querySelector('[data-close]').onclick = close
+        const r = await api(`${API}/telegram/detect-chats`, { method: 'POST', body: {} })
+        const wait = sheet.querySelector('#tg-wait')
+        if (wait) wait.remove()
+        const chats = r.body?.chats ?? []
+        const box = sheet.querySelector('#tg-res')
+        if (!box) return
+        box.innerHTML = chats.length
+          ? `<div class="rows">${chats.map((c, i) => `<div class="entry"><span class="lbl"><b>${esc(c.label || 'ohne Namen')}</b><small>${esc(c.id)}</small></span><button class="btn sm" data-found="${i}">Übernehmen</button></div>`).join('')}</div>`
+          : `<p class="help">${r.ok ? 'Keine Nachricht angekommen. Noch einmal versuchen?' : 'Das ging nicht.'}</p>`
+        for (const b of box.querySelectorAll('[data-found]')) {
+          b.onclick = () => {
+            const c = chats[Number(b.dataset.found)]
+            close()
+            addChat(c.id, c.label)
+          }
+        }
+      },
+    )
+  }
+  $('#tg-save', root).onclick = async () => {
+    const token = $('#tg-token', root).value.trim()
+    if (token && !/^\d{6,12}:[A-Za-z0-9_-]{30,50}$/.test(token)) return toast('Der Token sieht nicht richtig aus (Zahl:Buchstaben)', 'info')
+    const body = { active: net.tg.active, notifyPlayback: net.tg.notifyPlayback, chatIds: net.tg.chatIds, ...(token ? { token } : {}) }
+    const r = await api(`${API}/telegram-config`, { method: 'POST', body })
+    if (!r.ok) return toast(r.body?.error ?? 'Nicht gespeichert', 'info')
+    toast(net.tg.active ? 'Gespeichert – der Bot startet neu' : 'Gespeichert – der Bot ist aus')
+    await loadTelegram().catch(() => undefined)
+    redraw()
+  }
+}
+
+/* MQTT */
+
+const MQTT_KEYS = [
+  ['mqttOn', 'active'],
+  ['mqName', 'name'],
+  ['mqBroker', 'broker'],
+  ['mqPort', 'port'],
+  ['mqTopic', 'topic'],
+  ['mqClient', 'clientId'],
+  ['mqUser', 'username'],
+  ['mqRef', 'refresh'],
+  ['mqIdle', 'refreshIdle'],
+  ['mqTo', 'timeout'],
+  ['haOn', 'haActive'],
+  ['haTopic', 'haTopic'],
+]
+
+async function loadMqtt() {
+  const r = await api(`${API}/mqtt`)
+  if (!r.ok) throw new Error(`mqtt ${r.status}`)
+  net.mqtt = r.body
+  for (const [key, field] of MQTT_KEYS) state.values.set(key, r.body[field])
+  state.values.set('mqPw', '')
+}
+
+/* WLED */
+
+const WLED_BAUD = ['300', '1200', '2400', '4800', '9600', '19200', '38400', '57600', '115200', '230400', '460800', '921600']
+
+async function loadWled() {
+  const r = await api(`${API}/wled`)
+  if (!r.ok) throw new Error(`wled ${r.status}`)
+  net.wled = r.body
+}
+
+function wledTop() {
+  const w = net.wled
+  const sw = (id, label, on) => `<div class="row"><span class="lbl"><b>${label}</b></span><label class="switch"><input type="checkbox" id="${id}" ${on ? 'checked' : ''} aria-label="${label}"><span></span></label></div>`
+  const preset = (id, label, value) =>
+    w.presets.length
+      ? `<div class="field"><label for="${id}">${label}</label><select class="input" id="${id}"><option value="">–</option>${w.presets.map((p) => `<option value="${esc(p.id)}"${p.id === value ? ' selected' : ''}>${esc(`${p.id} · ${p.name}`)}</option>`).join('')}</select></div>`
+      : `<div class="field"><label for="${id}">${label} (Nummer)</label><input class="input" id="${id}" inputmode="numeric" maxlength="3" value="${esc(value)}"></div>`
+  const slider = (id, label, v) =>
+    `<div class="field"><div class="slider-head"><label for="${id}">${label}</label><span class="value-pill" id="${id}-out">${v}</span></div><input type="range" id="${id}" min="0" max="255" value="${v}" style="--fill:${(v / 255) * 100}%"></div>`
+  return [
+    `<section class="card"><h2>Verbindung</h2>${sw('wl-on', 'WLED aktiv', w.active)}
+      <div class="field"><label for="wl-port">Serielle Schnittstelle</label><input class="input mono" id="wl-port" value="${esc(w.port || '/dev/ttyUSB0')}" autocomplete="off"></div>
+      <div class="field"><label for="wl-baud">Baudrate</label><select class="input" id="wl-baud">${WLED_BAUD.map((b) => `<option${b === w.baud ? ' selected' : ''}>${b}</option>`).join('')}</select></div>
+      ${w.device ? `<dl class="kv"><div><dt>Gerät</dt><dd>${esc(w.device.name ?? '')}</dd></div><div><dt>Version</dt><dd>${esc(w.device.version ?? '')}</dd></div><div><dt>IP</dt><dd>${esc(w.device.ip ?? '')}</dd></div></dl>` : '<p class="help" style="margin:0">Kein WLED-Gerät hat geantwortet. Die Einstellungen lassen sich trotzdem speichern.</p>'}</section>`,
+    `<section class="card"><h2>Presets</h2>${preset('wl-main', 'Haupt-Preset (normaler Betrieb)', w.mainId)}
+      ${sw('wl-booton', 'Preset beim Start', w.bootActive)}${preset('wl-boot', 'Preset beim Start', w.bootId)}
+      ${sw('wl-offon', 'Preset beim Ausschalten', w.shutdownActive)}${preset('wl-off', 'Preset beim Ausschalten', w.shutdownId)}</section>`,
+    `<section class="card"><h2>Helligkeit</h2>${slider('wl-bright', 'Helligkeit normal', w.brightness)}${slider('wl-dim', 'Helligkeit gedimmt', w.dimmed)}</section>`,
+    `<div class="btns wide"><button class="btn primary" id="wl-save">Speichern</button></div>`,
+  ]
+}
+
+function mountWled(root, page) {
+  for (const id of ['wl-bright', 'wl-dim']) {
+    const el = $(`#${id}`, root)
+    el.oninput = () => {
+      el.style.setProperty('--fill', `${(el.value / 255) * 100}%`)
+      $(`#${id}-out`, root).textContent = el.value
+    }
+  }
+  $('#wl-save', root).onclick = async () => {
+    const v = (id) => $(`#${id}`, root).value.trim()
+    const body = {
+      active: $('#wl-on', root).checked,
+      port: v('wl-port'),
+      baud: v('wl-baud'),
+      mainId: v('wl-main'),
+      bootActive: $('#wl-booton', root).checked,
+      bootId: v('wl-boot'),
+      shutdownActive: $('#wl-offon', root).checked,
+      shutdownId: v('wl-off'),
+      brightness: Number(v('wl-bright')),
+      dimmed: Number(v('wl-dim')),
+    }
+    if (!/^\/dev\/tty[A-Za-z0-9]+$/.test(body.port)) return toast('Die Schnittstelle sieht aus wie /dev/ttyUSB0', 'info')
+    const r = await api(`${API}/wled`, { method: 'POST', body })
+    if (!r.ok) return toast(r.body?.error ?? 'Nicht gespeichert', 'info')
+    toast(`Gespeichert${r.body?.device ? ' – auch im WLED-Gerät' : ''}`)
+    await loadWled().catch(() => undefined)
+    if (currentPage()?.id === page.id) renderPage(page, false)
+  }
+}
+
 /* the controllers: load(page) reads the box before drawing, mount(root, page) runs after it, change(key, value)
    saves a setting, act / byLabel run the buttons, sections(page) gives the building blocks with the box's values,
    top(page) draws the page's own top part (instead of customTop's), ownNav: the page shows its sub pages itself */
@@ -4153,6 +4432,84 @@ const CONTROLLERS = {
       },
     },
   },
+  wlan: { load: loadWlan, top: wlanTop, sections: () => [], mount: mountWlan },
+  freigaben: {
+    load: loadShares,
+    sections: (page) =>
+      page.sections.map((sec) => ({
+        ...sec,
+        help: 'Einschalten installiert, was fehlt (kann ein paar Minuten dauern). Ausschalten hält den Dienst nur an.',
+        items: sec.items.map((it) => {
+          const job = net.shares?.[it.key]?.job
+          const busy = job?.running ? ' – wird gerade umgeschaltet …' : job?.ok === false ? ' – das letzte Umschalten ging schief' : ''
+          const help = {
+            samba: `Der Ordner der Box im Netzwerk: \\\\${location.hostname}\\mupibox (Benutzer dietpi, Passwort mupibox).`,
+            ftp: 'Zugriff per FTP (Port 21).',
+            vnc: 'Das Display im Browser bedienen (Display & Bedienung › Display live).',
+          }[it.key]
+          return it.key ? { ...it, help: `${help ?? ''}${busy}` } : it
+        }),
+      })),
+    mount(root, page) {
+      if (Object.values(net.shares ?? {}).some((s) => s.job?.running)) {
+        every(3000, async () => {
+          await loadShares().catch(() => undefined)
+          if (!Object.values(net.shares ?? {}).some((s) => s.job?.running)) {
+            stopPageTimers()
+            renderPage(page, false)
+          }
+        })
+      }
+    },
+    async change(key, v, page) {
+      if (!['samba', 'ftp', 'vnc'].includes(key)) return
+      const name = { samba: 'Samba', ftp: 'FTP', vnc: 'VNC' }[key]
+      if (!v && !(await ask(`${name} ausschalten`, `${name} anhalten? Es lässt sich hier jederzeit wieder einschalten.`, 'Ausschalten'))) {
+        state.values.set(key, true)
+        return renderPage(page, false)
+      }
+      const r = await api(`${API}/shares`, { method: 'POST', body: { name: key, on: v } })
+      if (!r.ok) {
+        state.values.set(key, !v)
+        renderPage(page, false)
+        return toast(r.status === 409 ? 'Wird gerade schon umgeschaltet' : 'Das hat nicht geklappt', 'info')
+      }
+      toast(`${name} wird ${v ? 'eingeschaltet' : 'ausgeschaltet'} …`)
+      await loadShares().catch(() => undefined)
+      renderPage(page, false)
+    },
+  },
+  telegram: { load: loadTelegram, top: tgTop, sections: () => [], mount: mountTelegram },
+  mqtt: {
+    load: loadMqtt,
+    sections: (page) =>
+      page.sections.map((sec) => ({
+        ...sec,
+        items: sec.items.map((it) =>
+          it.key === 'mqPw'
+            ? { ...it, kind: 'password', placeholder: net.mqtt?.hasPassword ? 'gespeichert – leer lassen = behalten' : '', help: '' }
+            : it.key === 'mqttOn'
+              ? { ...it, help: net.mqtt?.running ? 'Der Dienst läuft.' : 'Der Dienst läuft nicht.' }
+              : it.key === 'mqTopic'
+                ? { ...it, help: 'Die Box sendet unter Topic/Client-ID.' }
+                : it,
+        ),
+      })),
+    byLabel: {
+      async Speichern(_a, _l, page) {
+        const body = Object.fromEntries(MQTT_KEYS.map(([key, field]) => [field, state.values.get(key)]))
+        for (const f of ['port', 'refresh', 'refreshIdle', 'timeout']) body[f] = Number(body[f])
+        const pw = String(state.values.get('mqPw') ?? '')
+        if (pw) body.password = pw
+        const r = await api(`${API}/mqtt`, { method: 'POST', body })
+        if (!r.ok) return toast(r.body?.error ? `Nicht gespeichert (${r.body.error})` : 'Nicht gespeichert', 'info')
+        toast(body.active ? (r.body?.running ? 'Gespeichert – MQTT läuft' : 'Gespeichert – der Dienst startet nicht, Werte prüfen') : 'Gespeichert – MQTT ist aus', r.body?.running || !body.active ? 'ok' : 'info')
+        await loadMqtt().catch(() => undefined)
+        renderPage(page, false)
+      },
+    },
+  },
+  wled: { load: loadWled, top: wledTop, sections: () => [], mount: mountWled },
   nas: {
     load: loadNas,
     top: nasTop,

@@ -16,8 +16,8 @@ freigegeben (`localOnly`) – Guard umstellen · `⚙ PHP` kann heute nur das PH
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 Start, Hören, Spielzeit, Bibliothek | 14 | 142 | – | 1 | 4 | – |
 | 2 Aussehen, Display, Audio, Akku & Strom | 18 | 73 | – | 0 | 2 | – |
-| 3 Netzwerk, Dienste, Sicherheit, System | 16 | 25 | – | 75 | 2 | 5 |
-| **Summe** | **48** | **240** | **–** | **76** | **8** | **5** |
+| 3 Netzwerk, Dienste, Sicherheit, System | 16 | 52 | – | 48 | 2 | 5 |
+| **Summe** | **48** | **267** | **–** | **49** | **8** | **5** |
 
 Alle 156 Schlüssel aus `app-schema.json` (157 Einstellungen, der Playlist-Präfix steht zweimal), alle Aktionen und
 Anzeigen sind zugeordnet; keine Zeile ist unklar. Die Bereiche Start, Hören, Spielzeit und Bibliothek laufen schon
@@ -28,11 +28,11 @@ WLED, Updates, Backup, Protokolle, Systemoptionen, Browser, Experten) kann heute
 
 1. **Guards umstellen:** erledigt – die NAS-Verwaltung (`/api/nas/profiles*`, `login`, `index/*`, `browse`,
    `selection`, `mark`, `download/*`, `covers/refresh`) und `/api/online-covers*` nehmen `localOrElternSession`.
-2. **Neue Endpunkte für heutige PHP-Funktionen (⚙ PHP, 76 Zeilen)**, jeweils mit der Logik und den Skripten, die PHP
+2. **Neue Endpunkte für heutige PHP-Funktionen (⚙ PHP, 49 Zeilen)**, jeweils mit der Logik und den Skripten, die PHP
    heute nutzt (Details in den Tabellen):
    - Bibliothek: „Update verfügbar“
    - Netzwerk & Dienste: Netzwerk-Optionen (Onboard-WLAN, USB-Treiber, Stromsparen, DHCP, Wächter, neu verbinden,
-     IP-Steuerung), Freigaben (Samba, FTP, VNC), Telegram-Chat-ID ermitteln, MQTT, WLED
+     IP-Steuerung) – zurückgestellt bis zu den LAN/WLAN-Änderungen von Andreas
    - System: Neuigkeiten, Support-Infos, Updates (MuPiBox, Betriebssystem), Backup/Einspielen, Neustart von
      Display/Diensten, Protokolle, Systemoptionen, Browser, Hostname, JSON-Editor, Zurücksetzen
 3. **Neu zu bauen (＋ neu, 8 Zeilen):**
@@ -662,13 +662,19 @@ Allgemein zur Node-Seite: `rt`-Routen laufen alle hinter `localNetworkOnly` (nur
 | `▶ DHCP erneuern` | DHCP erneuern | A: network.php:460-465, Handler :297-303 | — | — | `sudo dhclient -r && ifup@<if> stop/start && sudo dhclient` | neue IP möglich: die App findet die Box danach vielleicht nicht mehr | ⚙ PHP |
 | `ipCtl` | Backend-Steuerung per IP | A: admin.php:559-577 (`ip_control_backend`), Handler :179-190 → `$change=2` :428-432 | `mupibox.ip_control_backend` (bool) | `$data` | `save_mupiboxconfig()` + `sudo setting_update.sh` (schreibt `node-sonos-http-api.ip` in `…/server/config/config.json`, setting_update.sh:40-65) | der Server liest config.json nur beim Start (srv:64-66). PHP meldet „Services restarted“, startet aber nichts neu: nötig ist ein Neustart von `pm2 restart server` bzw. der Box | ⚙ PHP |
 
+> Neue App (eltern/services.ts): GET/POST `/api/eltern/shares` (an = fehlende Pakete installieren + Dienst starten, aus = nur
+> stoppen/deaktivieren, läuft im Hintergrund), POST `/telegram/detect-chats` (Bot kurz anhalten, `getUpdates` bis 40 s, wieder
+> starten), GET/POST `/mqtt` (Werte geprüft, Passwort nur schreibbar, `mupi_mqtt` enable+restart bzw. stop+disable),
+> GET/POST `/wled` (Gerät + Preset-Namen über wled_get_data.py, Start-Preset auch ins Gerät). Telegram an/aus aktiviert bzw.
+> deaktiviert den Dienst jetzt auch. **Netzwerk-Optionen** zurückgestellt, bis die LAN/WLAN-Änderungen von Andreas da sind.
+
 ### Einstellungen › Netzwerk › Freigaben & Fernzugriff [freigaben]
 
 | Schlüssel / Aktion | Beschriftung | Heute | Speicherort | Lesen | Schreiben / Ausführen | Nebenwirkung / Hinweis | Status |
 |---|---|---|---|---|---|---|---|
-| `samba` | Samba (Windows-Freigabe) | A: network.php:588-597, Handler :161-174 (Kopie in service.php:52-65, nicht mehr im Menü) | systemd `smbd` + Pakete `samba wsdd`, `/etc/samba/smb.conf` | `sudo service smbd status \| grep running` :307 | an: `apt-get install samba wsdd`, `wget …/main/config/templates/smb.conf`, `systemctl enable/start smbd`, `smbpasswd -a dietpi` mit festem Passwort `mupibox` · aus: stop/disable + `apt-get remove` | 🔒 apt, lädt die Konfig vom Upstream-`main`. Das Samba-Passwort ist fest und öffentlich bekannt (`mupibox`), Freigabe `/home/dietpi/MuPiBox/media` beschreibbar. network.php hat keine apt-Sperre (service.php schon) | ⚙ PHP |
-| `ftp` | FTP-Server | A: network.php:598-605, Handler :207-220 | systemd `proftpd`, `/etc/proftpd/proftpd.conf` | `service proftpd status \| grep running` :350 | an: `apt-get install proftpd` **und samba**, `wget …/proftpd.conf`, restart · aus: stop/disable/`apt-get remove proftpd` | 🔒 apt. Klartext-FTP mit System-Logins. Beim Einschalten wird unnötig auch samba installiert | ⚙ PHP |
-| `vnc` | VNC (Display fernsteuern) | A: network.php:606-616, Handler :119-144 · Link im Menü header.php:277-285, Seite vnc.php | systemd `mupi_vnc` + `mupi_novnc` (x11vnc :5900, websockify/noVNC :6080), Pakete, `/usr/share/novnc`; Merker `tweaks.vnc` ("0"/"1") | `ps -ef \| grep websockify` :363 | an: `apt-get install x11vnc websockify`, `git clone noVNC`, enable/start · aus: stop/disable, `apt-get remove`, `rm -R /usr/share/novnc` · `tweaks.vnc` per `jq … > config` | 🔒 **x11vnc ohne Passwort** (config/services/mupi_vnc.service): jeder im WLAN kann das Display bedienen, an allen Logins vorbei. Der Konfig-Schreibzugriff per `cat <<< jq > file` umgeht Sperre und Backup von `save_mupiboxconfig` (Race mit dem Backend). `tweaks` fehlt in der Vorlage | ⚙ PHP |
+| `samba` | Samba (Windows-Freigabe) | A: network.php:588-597, Handler :161-174 (Kopie in service.php:52-65, nicht mehr im Menü) | systemd `smbd` + Pakete `samba wsdd`, `/etc/samba/smb.conf` | `sudo service smbd status \| grep running` :307 | an: `apt-get install samba wsdd`, `wget …/main/config/templates/smb.conf`, `systemctl enable/start smbd`, `smbpasswd -a dietpi` mit festem Passwort `mupibox` · aus: stop/disable + `apt-get remove` | 🔒 apt, lädt die Konfig vom Upstream-`main`. Das Samba-Passwort ist fest und öffentlich bekannt (`mupibox`), Freigabe `/home/dietpi/MuPiBox/media` beschreibbar. network.php hat keine apt-Sperre (service.php schon) | ✓ API |
+| `ftp` | FTP-Server | A: network.php:598-605, Handler :207-220 | systemd `proftpd`, `/etc/proftpd/proftpd.conf` | `service proftpd status \| grep running` :350 | an: `apt-get install proftpd` **und samba**, `wget …/proftpd.conf`, restart · aus: stop/disable/`apt-get remove proftpd` | 🔒 apt. Klartext-FTP mit System-Logins. Beim Einschalten wird unnötig auch samba installiert | ✓ API |
+| `vnc` | VNC (Display fernsteuern) | A: network.php:606-616, Handler :119-144 · Link im Menü header.php:277-285, Seite vnc.php | systemd `mupi_vnc` + `mupi_novnc` (x11vnc :5900, websockify/noVNC :6080), Pakete, `/usr/share/novnc`; Merker `tweaks.vnc` ("0"/"1") | `ps -ef \| grep websockify` :363 | an: `apt-get install x11vnc websockify`, `git clone noVNC`, enable/start · aus: stop/disable, `apt-get remove`, `rm -R /usr/share/novnc` · `tweaks.vnc` per `jq … > config` | 🔒 **x11vnc ohne Passwort** (config/services/mupi_vnc.service): jeder im WLAN kann das Display bedienen, an allen Logins vorbei. Der Konfig-Schreibzugriff per `cat <<< jq > file` umgeht Sperre und Backup von `save_mupiboxconfig` (Race mit dem Backend). `tweaks` fehlt in der Vorlage | ✓ API |
 
 ### Einstellungen › Dienste › Telegram [telegram]
 
@@ -682,7 +688,7 @@ Allgemein zur Node-Seite: `rt`-Routen laufen alle hinter `localNetworkOnly` (nur
 | `tgNewId` | Chat-ID | A: Zeile `telegram_chatId_id[]` smart.php:479 · E: Chat-Zeile in `renderTelegramChats()` | Eintrag `telegram.chatId[].id` | — | über rt:1906 (ganze Liste) | — | ✓ API |
 | `tgNewName` | Name | A: `telegram_chatId_label[]` smart.php:480 · E: dito | `telegram.chatId[].label` | — | rt:1906 | — | ✓ API |
 | `▶ + Chat hinzufügen` | + Chat hinzufügen | A: JS `addTelegramChat()` smart.php:491 · E: `addTelegramChat()` app.js:1591 (`#tg-add-chat-btn`) | — | — | erst mit Speichern (rt:1906) | nur im Browser, bis gespeichert wird | ✓ API |
-| `▶ Chat-ID ermitteln` | Chat-ID ermitteln | A: smart.php:511 (`generate_chatId`), Handler :163-192 → `$change=3` (Speichern + `pm2 restart spotify-control`) | hängt `{id,label:""}` an `telegram.chatId` an | `sudo telegram_set_deviceid.sh`: `getUpdates` der Bot-API, `result[-1].message.chat.id` | wie links | ⚠ Solange `mupi_telegram` läuft, holt der Bot die Updates selbst per Long-Polling ab. `getUpdates` liefert dann wahrscheinlich nichts oder einen Konflikt („no chat detected“). Neuer Endpunkt: Skript wiederverwenden, vorher den Bot kurz stoppen oder die ID vom Empfänger mitloggen lassen | ⚙ PHP |
+| `▶ Chat-ID ermitteln` | Chat-ID ermitteln | A: smart.php:511 (`generate_chatId`), Handler :163-192 → `$change=3` (Speichern + `pm2 restart spotify-control`) | hängt `{id,label:""}` an `telegram.chatId` an | `sudo telegram_set_deviceid.sh`: `getUpdates` der Bot-API, `result[-1].message.chat.id` | wie links | ⚠ Solange `mupi_telegram` läuft, holt der Bot die Updates selbst per Long-Polling ab. `getUpdates` liefert dann wahrscheinlich nichts oder einen Konflikt („no chat detected“). Neuer Endpunkt: Skript wiederverwenden, vorher den Bot kurz stoppen oder die ID vom Empfänger mitloggen lassen | ✓ API |
 
 ### Einstellungen › Dienste › MQTT / Home Assistant [mqtt]
 
@@ -690,19 +696,19 @@ Alles liegt in `smart.php`: Formular :282-411, ein Handler `change_mqtt` :19-99 
 
 | Schlüssel / Aktion | Beschriftung | Heute | Speicherort | Lesen | Schreiben / Ausführen | Nebenwirkung / Hinweis | Status |
 |---|---|---|---|---|---|---|---|
-| `mqttOn` | MQTT aktiv | A: smart.php:383-390, :45-59 | `mqtt.active` + systemd `mupi_mqtt` | `$data` | `systemctl enable`+`service start` bzw. `stop`+`disable` | 🔒 sudo systemctl | ⚙ PHP |
-| `mqName` | Gerätename | A: :290-297, :21-24 | `mqtt.name` | `$data` | save | ⚠ `mqtt.name` fehlt in der Vorlage und in conf_update.sh. mqtt.py:935 greift direkt `['name']` ab: KeyError, der Dienst stürzt ab, bis einmal in PHP gespeichert wurde | ⚙ PHP |
-| `mqBroker` | Broker | A: :298-305, :60-63 | `mqtt.broker` | `$data` | save | wirkt erst nach Neustart von mupi_mqtt (PHP startet ihn nicht neu) | ⚙ PHP |
-| `mqPort` | Port | A: :306-313, :64-67 | `mqtt.port` (String) | `$data` | save, ungeprüft | mqtt.py macht `int()`: ungültiger Wert = Absturz | ⚙ PHP |
-| `mqTopic` | Topic | A: :314-321, :68-71 | `mqtt.topic` (tatsächliches Topic = `topic/clientId`, mqtt.py:936) | `$data` | save | Neustart nötig | ⚙ PHP |
-| `mqClient` | Client-ID | A: :322-329, :72-75 | `mqtt.clientId` | `$data` | save | Neustart nötig | ⚙ PHP |
-| `mqUser` | Benutzer | A: :330-337, :76-79 | `mqtt.username` | `$data` | save | aus `/api/config` herausgefiltert (srv:3476) | ⚙ PHP |
-| `mqPw` | Passwort | A: :338-345, :80-83 | `mqtt.password` (Klartext) | `$data` | save | 🔒 PHP gibt das Passwort im value-Feld aus (:342). Neuer Endpunkt: nur schreiben, nie lesen | ⚙ PHP |
-| `mqRef` | Aktualisierung (Wiedergabe) 1-90 s | A: :346-357 (Range), :84-87 | `mqtt.refresh` (String) | `$data` | save, ungeprüft | Neustart nötig | ⚙ PHP |
-| `mqIdle` | Aktualisierung (Leerlauf) 1-90 s | A: :359-370, :88-91 | `mqtt.refreshIdle` | `$data` | save | — | ⚙ PHP |
-| `mqTo` | Timeout 10-180 s | A: :371-382, :92-95 | `mqtt.timeout` | `$data` | save | — | ⚙ PHP |
-| `haOn` | An Home Assistant melden | A: :392-399, :29-43 | `mqtt.ha_active` | `$data` | save + `sudo service mupi_mqtt restart` | ⚠ der Neustart läuft vor dem Speichern (:34 vor :271): der Dienst liest möglicherweise noch den alten Wert | ⚙ PHP |
-| `haTopic` | Discovery-Präfix | A: :400-407, :25-28 | `mqtt.ha_topic` | `$data` | save | Neustart nötig | ⚙ PHP |
+| `mqttOn` | MQTT aktiv | A: smart.php:383-390, :45-59 | `mqtt.active` + systemd `mupi_mqtt` | `$data` | `systemctl enable`+`service start` bzw. `stop`+`disable` | 🔒 sudo systemctl | ✓ API |
+| `mqName` | Gerätename | A: :290-297, :21-24 | `mqtt.name` | `$data` | save | ⚠ `mqtt.name` fehlt in der Vorlage und in conf_update.sh. mqtt.py:935 greift direkt `['name']` ab: KeyError, der Dienst stürzt ab, bis einmal in PHP gespeichert wurde | ✓ API |
+| `mqBroker` | Broker | A: :298-305, :60-63 | `mqtt.broker` | `$data` | save | wirkt erst nach Neustart von mupi_mqtt (PHP startet ihn nicht neu) | ✓ API |
+| `mqPort` | Port | A: :306-313, :64-67 | `mqtt.port` (String) | `$data` | save, ungeprüft | mqtt.py macht `int()`: ungültiger Wert = Absturz | ✓ API |
+| `mqTopic` | Topic | A: :314-321, :68-71 | `mqtt.topic` (tatsächliches Topic = `topic/clientId`, mqtt.py:936) | `$data` | save | Neustart nötig | ✓ API |
+| `mqClient` | Client-ID | A: :322-329, :72-75 | `mqtt.clientId` | `$data` | save | Neustart nötig | ✓ API |
+| `mqUser` | Benutzer | A: :330-337, :76-79 | `mqtt.username` | `$data` | save | aus `/api/config` herausgefiltert (srv:3476) | ✓ API |
+| `mqPw` | Passwort | A: :338-345, :80-83 | `mqtt.password` (Klartext) | `$data` | save | 🔒 PHP gibt das Passwort im value-Feld aus (:342). Neuer Endpunkt: nur schreiben, nie lesen | ✓ API |
+| `mqRef` | Aktualisierung (Wiedergabe) 1-90 s | A: :346-357 (Range), :84-87 | `mqtt.refresh` (String) | `$data` | save, ungeprüft | Neustart nötig | ✓ API |
+| `mqIdle` | Aktualisierung (Leerlauf) 1-90 s | A: :359-370, :88-91 | `mqtt.refreshIdle` | `$data` | save | — | ✓ API |
+| `mqTo` | Timeout 10-180 s | A: :371-382, :92-95 | `mqtt.timeout` | `$data` | save | — | ✓ API |
+| `haOn` | An Home Assistant melden | A: :392-399, :29-43 | `mqtt.ha_active` | `$data` | save + `sudo service mupi_mqtt restart` | ⚠ der Neustart läuft vor dem Speichern (:34 vor :271): der Dienst liest möglicherweise noch den alten Wert | ✓ API |
+| `haTopic` | Discovery-Präfix | A: :400-407, :25-28 | `mqtt.ha_topic` | `$data` | save | Neustart nötig | ✓ API |
 
 ### Einstellungen › Dienste › WLED [wled]
 
@@ -710,16 +716,16 @@ Alles liegt in `smart.php`: Formular :515-700, Handler `change_wled` :101-162 �
 
 | Schlüssel / Aktion | Beschriftung | Heute | Speicherort | Lesen | Schreiben / Ausführen | Nebenwirkung / Hinweis | Status |
 |---|---|---|---|---|---|---|---|
-| `wledOn` | WLED aktiv | A: :688-695, :152-159 | `wled.active` | `$data` | save | ⚠ Das Feld wird nur angezeigt, wenn ein WLED-Gerät antwortet (:555-697), der Speichern-Knopf aber immer (:699). Ohne Gerät setzt Speichern `active=false`, beide Helligkeiten auf 0 und die Presets auf leer | ⚙ PHP |
-| `wledPort` | Serielle Schnittstelle | A: :521-529, :112-119 | `wled.com_port` | `$data` | save, Regex `^/dev/tty[A-Za-z0-9]+$` | 🔒 geht in Root-Shells (smart.php:10, Skripte) und ist geprüft | ⚙ PHP |
-| `baud` | Baudrate | A: :530-550, :105-111 | `wled.baud_rate` (String) | `$data` | save, Whitelist aus 12 Werten | — | ⚙ PHP |
-| `wledMain` | Haupt-Preset | A: :607-629 (Select aus den Geräte-Presets), :124 | `wled.main_id` | Geräte-Presets: `sudo python3 wled_get_data.py -s <port> -b <baud> -j '{"v":true}'` bei **jedem** Seitenaufruf (:8-12) → `/tmp/.wled.info.json`, `/tmp/.wled.presets.json` | save (nur Ziffern) | Der Prototyp nimmt eine Zahl, PHP eine Liste mit Namen: für die Namen ein Lese-Endpunkt nötig | ⚙ PHP |
-| `wledBootOn` | Preset beim Start | A: :656-662, :136-151 | `wled.boot_active` | `$data` | save + `curl POST http://<wled-ip>/settings/leds` (BP, CA, BO) | wird **im WLED-Gerät** gespeichert (IP aus dessen eigener Antwort, per FILTER_VALIDATE_IP geprüft). Kein Skript der Box nutzt `boot_active` | ⚙ PHP |
-| `wledBoot` | Preset-Nummer beim Start | A: :583-605, :123 | `wled.startup_id` | wie oben | save + curl (siehe oben) | — | ⚙ PHP |
-| `wledOffOn` | Preset beim Ausschalten | A: :664-670, :127-134 | `wled.shutdown_active` | `$data` | save | mupi_shutdown.sh:39 prüft nur `shutdown_active`, nicht `wled.active` | ⚙ PHP |
-| `wledOff` | Preset-Nummer beim Ausschalten | A: :631-654, :122 | `wled.shutdown_id` | wie oben | save | — | ⚙ PHP |
-| `wledBright` | Helligkeit normal 0-255 | A: :671-679, :121 | `wled.brightness_default` (String) | `$data` | save, auf 0..255 begrenzt | überschreibt die Helligkeit der Presets | ⚙ PHP |
-| `wledDim` | Helligkeit gedimmt 0-255 | A: :680-687, :120 | `wled.brightness_dimmed` | `$data` | save, auf 0..255 begrenzt | genutzt in mupi_start_led.sh:75 | ⚙ PHP |
+| `wledOn` | WLED aktiv | A: :688-695, :152-159 | `wled.active` | `$data` | save | ⚠ Das Feld wird nur angezeigt, wenn ein WLED-Gerät antwortet (:555-697), der Speichern-Knopf aber immer (:699). Ohne Gerät setzt Speichern `active=false`, beide Helligkeiten auf 0 und die Presets auf leer | ✓ API |
+| `wledPort` | Serielle Schnittstelle | A: :521-529, :112-119 | `wled.com_port` | `$data` | save, Regex `^/dev/tty[A-Za-z0-9]+$` | 🔒 geht in Root-Shells (smart.php:10, Skripte) und ist geprüft | ✓ API |
+| `baud` | Baudrate | A: :530-550, :105-111 | `wled.baud_rate` (String) | `$data` | save, Whitelist aus 12 Werten | — | ✓ API |
+| `wledMain` | Haupt-Preset | A: :607-629 (Select aus den Geräte-Presets), :124 | `wled.main_id` | Geräte-Presets: `sudo python3 wled_get_data.py -s <port> -b <baud> -j '{"v":true}'` bei **jedem** Seitenaufruf (:8-12) → `/tmp/.wled.info.json`, `/tmp/.wled.presets.json` | save (nur Ziffern) | Der Prototyp nimmt eine Zahl, PHP eine Liste mit Namen: für die Namen ein Lese-Endpunkt nötig | ✓ API |
+| `wledBootOn` | Preset beim Start | A: :656-662, :136-151 | `wled.boot_active` | `$data` | save + `curl POST http://<wled-ip>/settings/leds` (BP, CA, BO) | wird **im WLED-Gerät** gespeichert (IP aus dessen eigener Antwort, per FILTER_VALIDATE_IP geprüft). Kein Skript der Box nutzt `boot_active` | ✓ API |
+| `wledBoot` | Preset-Nummer beim Start | A: :583-605, :123 | `wled.startup_id` | wie oben | save + curl (siehe oben) | — | ✓ API |
+| `wledOffOn` | Preset beim Ausschalten | A: :664-670, :127-134 | `wled.shutdown_active` | `$data` | save | mupi_shutdown.sh:39 prüft nur `shutdown_active`, nicht `wled.active` | ✓ API |
+| `wledOff` | Preset-Nummer beim Ausschalten | A: :631-654, :122 | `wled.shutdown_id` | wie oben | save | — | ✓ API |
+| `wledBright` | Helligkeit normal 0-255 | A: :671-679, :121 | `wled.brightness_default` (String) | `$data` | save, auf 0..255 begrenzt | überschreibt die Helligkeit der Presets | ✓ API |
+| `wledDim` | Helligkeit gedimmt 0-255 | A: :680-687, :120 | `wled.brightness_dimmed` | `$data` | save, auf 0..255 begrenzt | genutzt in mupi_start_led.sh:75 | ✓ API |
 
 ### Einstellungen › Sicherheit › Passwort & Anmeldung [passwort]
 
