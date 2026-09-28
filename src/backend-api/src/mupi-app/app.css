@@ -77,7 +77,10 @@ a { color: var(--mp-primary-text); }
     padding: 16px 12px; background: var(--mp-surface); border-right: 1px solid var(--mp-border);
   }
   .sidebar .brand { display: flex; align-items: center; gap: 10px; padding: 4px 8px 16px; font: 600 20px/1.2 var(--mp-font-display); }
-  .sidebar .brand img { width: 40px; height: 42px; }
+  .sidebar .brand .brand-dot { width: 42px; height: 42px; border-radius: 50%; flex: none; background: var(--mp-primary-soft); display: grid; place-items: center; }
+  .sidebar .brand img { width: 34px; height: 35px; }
+  /* (on the PC the side bar shows the logo; the top bar only the title, as in the design) */
+  .topbar .brand-dot { display: none; }
   .side-link {
     display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px;
     border: 0; border-radius: var(--mp-r-sm); background: none; color: var(--mp-text);
@@ -273,6 +276,7 @@ input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border-radius
 .now-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; padding: 8px 0 4px; }
 .now-empty b { font: 600 20px/1.2 var(--mp-font-display); }
 .now-empty small { color: var(--mp-muted); margin-bottom: 6px; }
+.now-mupi { display: block; }
 .mupi-circle { width: 88px; height: 88px; border-radius: 50%; background: var(--mp-primary-soft); display: grid; place-items: center; }
 .now-track { display: flex; gap: 16px; align-items: center; min-width: 0; }
 .now-cover {

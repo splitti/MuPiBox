@@ -144,7 +144,7 @@ function renderChrome(page) {
     return p?.id?.startsWith('g-') ? p.id : p?.parent
   })()
   $('#sidebar').innerHTML = `
-    <div class="brand"><img src="mupi.svg" alt=""><span>${esc(state.boxName)}</span></div>
+    <div class="brand"><span class="brand-dot"><img src="mupi.svg" alt=""></span><span>${esc(state.boxName)}</span></div>
     ${AREAS.map(
       (a) => `<button class="side-link" data-go="${a.id}" ${a.id === area && !(area === 'einstellungen' && page.id !== 'einstellungen') ? 'aria-current="page"' : ''}>${icon(a.icon)}${a.title}</button>
       ${a.id === 'einstellungen' ? groups.map((g) => `<button class="side-link sub" data-go="${g.id}" ${g.id === groupOf ? 'aria-current="page"' : ''}>${icon(g.icon, 18)}${esc(g.title)}</button>`).join('') : ''}`,
@@ -534,7 +534,7 @@ async function loadNow(root) {
   const hasTrack = !!b.player && !!(b.title || b.artist)
   if (!r.ok || (!b.playing && !hasTrack)) {
     if (!box.querySelector('.now-empty')) {
-      box.innerHTML = `<div class="now-empty"><div class="mupi-circle"><img src="mupi.svg" alt="" width="64" height="67"></div>
+      box.innerHTML = `<div class="now-empty"><img class="now-mupi" src="mupi.svg" alt="" width="92" height="96">
         <b>Die Box ist ruhig.</b><small>${r.ok ? 'Gerade läuft nichts.' : 'Der Status ist gerade nicht erreichbar.'}</small>
         <button class="btn primary" data-go="hoeren">${icon('phones', 18)}Etwas abspielen</button></div>${volumeRow()}`
       box.querySelector('[data-go]').onclick = () => go('hoeren')
