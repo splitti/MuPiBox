@@ -16,8 +16,8 @@ freigegeben (`localOnly`) – Guard umstellen · `⚙ PHP` kann heute nur das PH
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 Start, Hören, Spielzeit, Bibliothek | 14 | 142 | – | 1 | 4 | – |
 | 2 Aussehen, Display, Audio, Akku & Strom | 18 | 73 | – | 0 | 2 | – |
-| 3 Netzwerk, Dienste, Sicherheit, System | 16 | 70 | – | 31 | 1 | 5 |
-| **Summe** | **48** | **285** | **–** | **32** | **7** | **5** |
+| 3 Netzwerk, Dienste, Sicherheit, System | 16 | 89 | – | 12 | 1 | 5 |
+| **Summe** | **48** | **304** | **–** | **13** | **7** | **5** |
 
 Alle 156 Schlüssel aus `app-schema.json` (157 Einstellungen, der Playlist-Präfix steht zweimal), alle Aktionen und
 Anzeigen sind zugeordnet; keine Zeile ist unklar. Die Bereiche Start, Hören, Spielzeit und Bibliothek laufen schon
@@ -28,7 +28,7 @@ WLED, Updates, Backup, Protokolle, Systemoptionen, Browser, Experten) kann heute
 
 1. **Guards umstellen:** erledigt – die NAS-Verwaltung (`/api/nas/profiles*`, `login`, `index/*`, `browse`,
    `selection`, `mark`, `download/*`, `covers/refresh`) und `/api/online-covers*` nehmen `localOrElternSession`.
-2. **Neue Endpunkte für heutige PHP-Funktionen (⚙ PHP, 32 Zeilen)**, jeweils mit der Logik und den Skripten, die PHP
+2. **Neue Endpunkte für heutige PHP-Funktionen (⚙ PHP, 13 Zeilen)**, jeweils mit der Logik und den Skripten, die PHP
    heute nutzt (Details in den Tabellen):
    - Bibliothek: „Update verfügbar“
    - Netzwerk & Dienste: Netzwerk-Optionen (Onboard-WLAN, USB-Treiber, Stromsparen, DHCP, Wächter, neu verbinden,
@@ -57,10 +57,10 @@ WLED, Updates, Backup, Protokolle, Systemoptionen, Browser, Experten) kann heute
 3. **Ein Passwort** für die ganze App. Das bisherige Admin-Passwort bleibt gültig (ist nur das Eltern-Passwort
    gesetzt, gilt dieses). Mindestens 6 Zeichen, Ändern nur mit dem alten Passwort. Node prüft bcrypt (PHP) und
    scrypt (Eltern-App) und schreibt beim nächsten Ändern scrypt.
-4. **QR-Code- und Telegram-Link** öffnen die ganze App. Kritische Aktionen (Update, Backup einspielen,
-   JSON-Editor, Zurücksetzen) fragen zusätzlich nach dem Passwort.
-5. **Anmeldung bleibt abschaltbar** (Schalter „Anmeldung verlangen“ wie heute). Ist ein Passwort gesetzt, fragen die
-   kritischen Aktionen auch bei abgeschalteter Anmeldung danach.
+4. **QR-Code- und Telegram-Link** öffnen die ganze App. ~~Kritische Aktionen fragen zusätzlich nach dem Passwort.~~
+   Geändert am 29.09.: Wer angemeldet ist, darf alles, ohne zweite Passwortabfrage (nur das Passwort selbst ändert
+   sich nur mit dem alten).
+5. **Anmeldung bleibt abschaltbar** (Schalter „Anmeldung verlangen“ wie heute, `interfacelogin.state`).
 6. **Sitzung 24 Stunden.**
 7. **Updates und Reparatur-Skripte** kommen aus dem installierten Stand bzw. dem Paket der gewählten Version, nicht
    mehr live von Upstream-`main`. Welche Versionen angeboten werden, wird mit splitti abgestimmt.
@@ -732,11 +732,11 @@ Alles liegt in `smart.php`: Formular :515-700, Handler `change_wled` :101-162 �
 | Schlüssel / Aktion | Beschriftung | Heute | Speicherort | Lesen | Schreiben / Ausführen | Nebenwirkung / Hinweis | Status |
 |---|---|---|---|---|---|---|---|
 | `◉ Status` (Passwort ist gesetzt) | Status | E: `renderPasswordStatus()` app.js:2053 (`state.passwordConfigured`) · A: nur „Login state enabled/disabled“ admin.php:506-516 | `eltern.password` bzw. `interfacelogin.*` | `GET /api/eltern/session` rt:239 bzw. `GET /api/eltern/auth-info` rt:251 (`passwordConfigured`) | — | gilt heute nur für das Eltern-Passwort | ✓ API |
-| `pwCur` | Aktuelles Passwort | A: admin.php:492-493 (`curpwd`), geprüft :394 per `password_verify` | `interfacelogin.password` | — | — | Node verlangt das aktuelle Passwort **nicht** (rt:281 braucht nur Sitzung + CSRF). Wer eine offene Sitzung hat (z. B. über den Telegram-Magic-Link), kann das Passwort ändern oder löschen. Für die gemeinsame App die Prüfung nach Node übernehmen | ⚙ PHP |
+| `pwCur` | Aktuelles Passwort | A: admin.php:492-493 (`curpwd`), geprüft :394 per `password_verify` | `interfacelogin.password` | — | — | Node verlangt das aktuelle Passwort **nicht** (rt:281 braucht nur Sitzung + CSRF). Wer eine offene Sitzung hat (z. B. über den Telegram-Magic-Link), kann das Passwort ändern oder löschen. Für die gemeinsame App die Prüfung nach Node übernehmen | ✓ API |
 | `pwNew` | Neues Passwort (mind. 6 Zeichen) | A: admin.php:494-496 (`newpwd`, mind. 6, :389) · E: `setPassword()` app.js:2059 (`#pw-new`) | A: `interfacelogin.password` (bcrypt) · E: `eltern.password = {salt,hash}` (scrypt) | — | E: `POST /api/eltern/password {password}` rt:281 (mind. 4, auth.ts:221, `ELTERN_PASSWORD_MIN_LENGTH`) | unterschiedliche Mindestlänge (PHP 6, Node 4, Prototyp 6) | ✓ API |
 | `▶ Passwort ändern` | Passwort ändern | A: `submitpw` admin.php:384-406 → `$change=2` = save + `sudo setting_update.sh` (:428-432) · E: `#pw-set-btn` → `setPassword()` | siehe oben | — | E: rt:281 → `setElternPassword()` auth.ts:258 → `updateMupiboxConfig()` srv:1552 (gemeinsame flock-Sperre mit PHP) | zwei getrennte Passwörter, siehe „Login heute“. Die Zusammenführung ist ＋ neu | ✓ API |
 | `▶ Passwort entfernen` | Passwort entfernen | E: `clearPassword()` app.js:2081 (`#pw-clear-btn`) · A: nicht möglich (mind. 6 Zeichen) | löscht `eltern.password` | — | `POST /api/eltern/password {password:""}` rt:281 | danach nur noch Magic Link (QR/Telegram). Ohne Abfrage des aktuellen Passworts | ✓ API |
-| `loginOn` | Anmeldung verlangen | A: admin.php:501-519 (`change_login`), Handler :409-422 | `interfacelogin.state` (bool, **Vorlage: false**) | `$data` | Umschalten + save + setting_update.sh | 🔒 wirkt sofort. Node hat keinen solchen Schalter: die Eltern-App verlangt immer eine Sitzung. Die Admin-Oberfläche ist ab Werk **offen** (state=false) | ⚙ PHP |
+| `loginOn` | Anmeldung verlangen | A: admin.php:501-519 (`change_login`), Handler :409-422 | `interfacelogin.state` (bool, **Vorlage: false**) | `$data` | Umschalten + save + setting_update.sh | 🔒 wirkt sofort. Node hat keinen solchen Schalter: die Eltern-App verlangt immer eine Sitzung. Die Admin-Oberfläche ist ab Werk **offen** (state=false) | ✓ API |
 | `◉ Hinweis` (QR am Display / Link per Telegram) | Hinweis | Box: Statusanzeige lange drücken (`mupibox.settingsAccessTimer`, home.page.ts:103) → `eltern-magic-link.service.ts:38-60` · Telegram `/login` telegram_receiver.py:353 → `send_magic_link()` :186 | — | — | `POST /api/eltern/magic-link/generate` rt:187 (nur localhost) | beide Wege gibt es schon, gelten aber nur für die Eltern-App | ✓ API |
 
 > Neue App (eltern/system.ts): GET `/api/eltern/version`, `/news` (als Text, nicht als HTML), `/support-info` (Zip, Geheimnisse
@@ -766,12 +766,12 @@ Alles liegt in `smart.php`: Formular :515-700, Handler `change_wled` :101-162 �
 
 | Schlüssel / Aktion | Beschriftung | Heute | Speicherort | Lesen | Schreiben / Ausführen | Nebenwirkung / Hinweis | Status |
 |---|---|---|---|---|---|---|---|
-| `▶ Konfigurations-Backup` | Konfigurations-Backup | A: admin.php:527-530 → `backup.php` (auth_check.php) | ZIP aus `/home/dietpi/MuPiBox/media/cover/*`, Konfig, `…/server/config/data.json` | — | `mupibox_send_zip()` zip_download.php:17 (`sudo zip` nach /var/tmp, chmod 600, nach dem Senden gelöscht) | 🔒 enthält **alle Geheimnisse** (Spotify-Tokens, Telegram-Token, MQTT-Passwort, bcrypt- und scrypt-Hash). NAS-Passwort ist verschlüsselt (srv:4605). Neuer Endpunkt: Streaming-Download aus Node mit Sitzungsprüfung | ⚙ PHP |
+| `▶ Konfigurations-Backup` | Konfigurations-Backup | A: admin.php:527-530 → `backup.php` (auth_check.php) | ZIP aus `/home/dietpi/MuPiBox/media/cover/*`, Konfig, `…/server/config/data.json` | — | `mupibox_send_zip()` zip_download.php:17 (`sudo zip` nach /var/tmp, chmod 600, nach dem Senden gelöscht) | 🔒 enthält **alle Geheimnisse** (Spotify-Tokens, Telegram-Token, MQTT-Passwort, bcrypt- und scrypt-Hash). NAS-Passwort ist verschlüsselt (srv:4605). Neuer Endpunkt: Streaming-Download aus Node mit Sitzungsprüfung | ✓ API |
 | `◉ note` (Cover, mupiboxconfig.json, data.json) | — | admin.php:528 | — | — | — | statisch | — statisch |
-| `▶ Voll-Backup` | Voll-Backup | A: admin.php:531-533 → `fullbackup.php` | ZIP aus `/home/dietpi/MuPiBox/media/*` + Konfig + data.json | — | wie oben (/var/tmp, weil /tmp nur 1 GB RAM hat) | 🔒 wie oben; mehrere GB, `sudo zip` blockiert lange | ⚙ PHP |
+| `▶ Voll-Backup` | Voll-Backup | A: admin.php:531-533 → `fullbackup.php` | ZIP aus `/home/dietpi/MuPiBox/media/*` + Konfig + data.json | — | wie oben (/var/tmp, weil /tmp nur 1 GB RAM hat) | 🔒 wie oben; mehrere GB, `sudo zip` blockiert lange | ✓ API |
 | `◉ note` (alle Mediendateien) | — | admin.php:531 | — | — | — | statisch | — statisch |
-| `◉ file` Backup-Datei | Backup-Datei | A: admin.php:537 (`fileToUpload`) | Upload nach `/tmp/<name>` | — | — | Dateiname nur `^[A-Za-z0-9._-]+\.zip$` (admin.php:63); das Upload-Limit von PHP gilt | ⚙ PHP |
-| `▶ Backup einspielen` | Backup einspielen | A: admin.php:538 (`submitfile`), Handler :50-173 (**vor** header.php, mit eigener Login- :24-38 und CSRF-Prüfung :42-45) | überschreibt Konfig, data.json, `media/…` | — | ZipArchive-Whitelist (:86-129: exakte Dateien, unter media/ nur Ordner und Nicht-Skript-Typen, keine Symlinks, kein `..`) → `sudo unzip -o -a … -d /` → chown/chmod → `conf_update.sh` (lokal, sonst curl vom Upstream) → Version behalten → write_json (save + setting_update + restart_kiosk) → `change_hostname <host>` + `set_hostname.sh` → **Neustart** | 🔒🔒 Root-Entpacken nach `/`. Ein altes Backup setzt auch `interfacelogin` (Passwort/Status) und `eltern.password` zurück. Neuer Endpunkt: Whitelist-Logik 1:1 übernehmen | ⚙ PHP |
+| `◉ file` Backup-Datei | Backup-Datei | A: admin.php:537 (`fileToUpload`) | Upload nach `/tmp/<name>` | — | — | Dateiname nur `^[A-Za-z0-9._-]+\.zip$` (admin.php:63); das Upload-Limit von PHP gilt | ✓ API |
+| `▶ Backup einspielen` | Backup einspielen | A: admin.php:538 (`submitfile`), Handler :50-173 (**vor** header.php, mit eigener Login- :24-38 und CSRF-Prüfung :42-45) | überschreibt Konfig, data.json, `media/…` | — | ZipArchive-Whitelist (:86-129: exakte Dateien, unter media/ nur Ordner und Nicht-Skript-Typen, keine Symlinks, kein `..`) → `sudo unzip -o -a … -d /` → chown/chmod → `conf_update.sh` (lokal, sonst curl vom Upstream) → Version behalten → write_json (save + setting_update + restart_kiosk) → `change_hostname <host>` + `set_hostname.sh` → **Neustart** | 🔒🔒 Root-Entpacken nach `/`. Ein altes Backup setzt auch `interfacelogin` (Passwort/Status) und `eltern.password` zurück. Neuer Endpunkt: Whitelist-Logik 1:1 übernehmen | ✓ API |
 
 ### Einstellungen › System › Neu starten & Ausschalten [neustart]
 
@@ -782,7 +782,7 @@ Alles liegt in `smart.php`: Formular :515-700, Handler `change_wled` :101-162 �
 | `▶ Display (Chromium) neu starten` | (Zeile) | A: header.php:147-151/:268 (`hchromerestart`, sofort `sudo -i -u dietpi restart_kiosk.sh`) · admin.php:578-581 (`restart_kiosk` → `$change=3` = setting_update + set_hostname + restart_kiosk) | — | — | `restart_kiosk.sh` (killall chromium, chromium-autostart.sh) | Wiedergabe im Display bricht ab. `/api/eltern/display/reload-theme` (rt:1620) lädt nur das Theme neu, **kein** Neustart | ✓ API |
 | `▶ Spotify-Dienste neu starten` | (Zeile) | A: admin.php:551-554 (`spotify_restart`), Handler :352-358 | — | — | ⚠ ruft `/usr/local/bin/mupibox/./spotify_restartspotify_restart.sh` auf (**Tippfehler**, die Datei gibt es nicht). Gemeint ist `spotify_restart.sh` (pm2 restart server + spotify-control) | **Knopf ist heute wirkungslos.** Node kann `pm2 restart server` nicht synchron an sich selbst ausführen: abgekoppelt starten (`setsid`) | ✓ API |
 | `▶ PM2 neu starten` | (Zeile) | A: admin.php:555-558 (`pm2_restart`), Handler :344-350 | — | — | `sudo -i -u dietpi pm2 restart server; restart_kiosk.sh` | startet nur `server` neu (nicht spotify-control), obwohl die Beschriftung „PM2“ sagt | ✓ API |
-| `▶ Einstellungen übernehmen` | (Zeile) | A: admin.php:547-550 (`update`), Handler :317-343 | data.json-Migration 3.0.0 + `setting_update.sh` | — | — | ⚠ **Kaputt:** der Handler bindet `includes/header.php` ein zweites Mal ein (admin.php:322). header.php definiert `navActive()`, `navTabHidden()` und `mupibox_cached_exec()` ohne `function_exists`-Schutz: PHP bricht mit „Cannot redeclare“ ab, setting_update.sh läuft nie. Neuer Endpunkt: nur `sudo setting_update.sh` (+ restart_kiosk) | ⚙ PHP |
+| `▶ Einstellungen übernehmen` | (Zeile) | A: admin.php:547-550 (`update`), Handler :317-343 | data.json-Migration 3.0.0 + `setting_update.sh` | — | — | ⚠ **Kaputt:** der Handler bindet `includes/header.php` ein zweites Mal ein (admin.php:322). header.php definiert `navActive()`, `navTabHidden()` und `mupibox_cached_exec()` ohne `function_exists`-Schutz: PHP bricht mit „Cannot redeclare“ ab, setting_update.sh läuft nie. Neuer Endpunkt: nur `sudo setting_update.sh` (+ restart_kiosk) | ✓ API |
 
 ### Einstellungen › System › Protokolle [protokolle]
 
@@ -797,19 +797,25 @@ Alles liegt in `smart.php`: Formular :515-700, Handler `change_wled` :101-162 �
 | `ctlDebug` | Controller-Debugging | A: admin.php:676-687 (`spotifydebug`), Handler :217-230 | `…/spotifycontroller-main/config/config.json` `"logLevel": "error"\|"debug"` (Player: spotify-control.js:162) | `sudo cat … \| grep '"logLevel": "error"'` admin.php:677 | `sudo sed -i` + `pm2 restart spotify-control` | Wiedergabe wird kurz unterbrochen | ✓ API |
 | `▶ PM2-Log herunterladen` | PM2-Log herunterladen | A: admin.php:688 → `pm2logs.php` (auth_check) | `/home/dietpi/.pm2/logs/*` | — | `mupibox_send_zip('pm2_logs.zip', …)` | 🔒 Logs können Tokens und Chat-IDs enthalten | ✓ API |
 
+> Neue App (eltern/admin.ts): GET/POST `/api/eltern/system-options`, POST `/hostname`, GET/POST `/json-file` (Box-Konfig über
+> die Sperre von `updateMupiboxConfig`, `interfacelogin` bleibt), POST `/reset {config|library|server}` (Vorlagen aus dem
+> installierten Stand: `templates/` neben server.js, kein wget von Upstream, kein chmod 777), POST `/apply-settings`, GET
+> `/backup?kind=config|full`, PUT `/backup/restore` (Whitelist wie admin.php, symbolische Links abgelehnt, ohne `unzip -a`).
+> Updates: noch über das Admin-Interface, bis die Versionen mit splitti abgestimmt sind.
+
 ### Einstellungen › System › Systemoptionen [systemopt]
 
 Heute in `mupi.php` › „System settings“ (Formular :1693-1845, Handler :115-272) und als nicht mehr verlinkte Kopie in `tweaks.php` (Menüeintrag in header.php:297-298 auskommentiert). Speichern: `$change=1` = Cache löschen + save + setting_update.sh + restart_kiosk (mupi.php:706-713), `$change=2` = save + setting_update (:714-718).
 
 | Schlüssel / Aktion | Beschriftung | Heute | Speicherort | Lesen | Schreiben / Ausführen | Nebenwirkung / Hinweis | Status |
 |---|---|---|---|---|---|---|---|
-| `ocSd` | SD-Karte übertakten | A: mupi.php:1709-1718 (`change_sd`), :231-244 | `/boot/config.txt` `dtoverlay=sdtweak,overclock_50=100` | `sudo cat /boot/config.txt \| grep …` :260 | an: `echo … \| sudo tee -a` · aus: `sed` leert die Zeile, **dann `head -n -1` löscht die LETZTE Zeile der Datei** | 🔒 ⚠ Beim Ausschalten wird die letzte Zeile von config.txt gelöscht, egal was dort steht (z. B. das Soundkarten-Overlay), falls der Eintrag nicht zufällig ganz unten war. Neustart nötig. Kann die Karte beschädigen | ⚙ PHP |
-| `pm2Ram` | PM2-Logs im RAM | A: mupi.php:1721-1730 (`change_pm2log`), :115-146 | `/etc/fstab` (tmpfs `/home/dietpi/.pm2/logs` 50M) + `pm2.ramlog` (0/1) | `$data["pm2"]["ramlog"]` (nicht die fstab) | `sudo bash -c "sed … /etc/fstab > /tmp/.fstab && mv"` + save + setting_update | 🔒 schreibt /etc/fstab; ein Fehler kann den Start stören. Wirkt nach Neustart. Anzeige und fstab können auseinanderlaufen | ⚙ PHP |
-| `waitNet` | Beim Start auf Netzwerk warten | A: mupi.php:1733-1742 (`change_netboot`), :148-161 | DietPi: `dietpi-set_software boot_wait_for_network` (`/etc/systemd/system/dietpi-postboot.service.d/dietpi.conf`) | Datei vorhanden? :246 | `sudo /boot/dietpi/func/dietpi-set_software boot_wait_for_network 0\|1` | nächster Start | ⚙ PHP |
-| `turbo` | Turbo beim Start | A: mupi.php:1745-1765 (`change_turbo`), :178-191 | `/boot/config.txt` `initial_turbo=0\|30` | `grep initial_turbo \| cut` :1751 | `G_CONFIG_INJECT` als dietpi mit G_SUDO | nächster Start | ⚙ PHP |
-| `gov` | CPU-Governor | A: mupi.php:1768-1797 (`cpugovernor`/`change_cpug`), :208-229 | `/boot/dietpi.txt` `CONFIG_CPU_GOVERNOR=` | Optionen aus `/sys/…/scaling_available_governors`, Wert aus `grep dietpi.txt` :1779 | Whitelist aus sysfs → `G_CONFIG_INJECT` + `sudo dietpi-set_cpu` | 🔒 Whitelist vorhanden. Die 6 Optionen im Prototyp gelten nur, wenn der Kernel sie anbietet: dynamisch aus sysfs lesen | ⚙ PHP |
-| `noWarn` | Unterspannungs-Warnungen ausblenden | A: mupi.php:1800-1820 (`change_warnings`), :163-176 | `/boot/config.txt` `avoid_warnings=1` | `grep 'avoid_warnings=1'` :1806 | an: `tee -a` · aus: `sed` + **`head -n -1`** (derselbe Fehler wie bei ocSd) | 🔒 ⚠ löscht beim Ausschalten die letzte Zeile von config.txt. Neustart nötig | ⚙ PHP |
-| `swap` | SWAP | A: mupi.php:1823-1843 (`change_swap`), :193-206 | DietPi `AUTO_SETUP_SWAPFILE_SIZE` in `/boot/dietpi.txt` | `grep AUTO_SETUP_SWAPFILE_SIZE=` :1829 | `sudo /boot/dietpi/func/dietpi-set_swapfile 0\|1` | legt die Swap-Datei an bzw. löscht sie (SD-Verschleiß) | ⚙ PHP |
+| `ocSd` | SD-Karte übertakten | A: mupi.php:1709-1718 (`change_sd`), :231-244 | `/boot/config.txt` `dtoverlay=sdtweak,overclock_50=100` | `sudo cat /boot/config.txt \| grep …` :260 | an: `echo … \| sudo tee -a` · aus: `sed` leert die Zeile, **dann `head -n -1` löscht die LETZTE Zeile der Datei** | 🔒 ⚠ Beim Ausschalten wird die letzte Zeile von config.txt gelöscht, egal was dort steht (z. B. das Soundkarten-Overlay), falls der Eintrag nicht zufällig ganz unten war. Neustart nötig. Kann die Karte beschädigen | ✓ API |
+| `pm2Ram` | PM2-Logs im RAM | A: mupi.php:1721-1730 (`change_pm2log`), :115-146 | `/etc/fstab` (tmpfs `/home/dietpi/.pm2/logs` 50M) + `pm2.ramlog` (0/1) | `$data["pm2"]["ramlog"]` (nicht die fstab) | `sudo bash -c "sed … /etc/fstab > /tmp/.fstab && mv"` + save + setting_update | 🔒 schreibt /etc/fstab; ein Fehler kann den Start stören. Wirkt nach Neustart. Anzeige und fstab können auseinanderlaufen | ✓ API |
+| `waitNet` | Beim Start auf Netzwerk warten | A: mupi.php:1733-1742 (`change_netboot`), :148-161 | DietPi: `dietpi-set_software boot_wait_for_network` (`/etc/systemd/system/dietpi-postboot.service.d/dietpi.conf`) | Datei vorhanden? :246 | `sudo /boot/dietpi/func/dietpi-set_software boot_wait_for_network 0\|1` | nächster Start | ✓ API |
+| `turbo` | Turbo beim Start | A: mupi.php:1745-1765 (`change_turbo`), :178-191 | `/boot/config.txt` `initial_turbo=0\|30` | `grep initial_turbo \| cut` :1751 | `G_CONFIG_INJECT` als dietpi mit G_SUDO | nächster Start | ✓ API |
+| `gov` | CPU-Governor | A: mupi.php:1768-1797 (`cpugovernor`/`change_cpug`), :208-229 | `/boot/dietpi.txt` `CONFIG_CPU_GOVERNOR=` | Optionen aus `/sys/…/scaling_available_governors`, Wert aus `grep dietpi.txt` :1779 | Whitelist aus sysfs → `G_CONFIG_INJECT` + `sudo dietpi-set_cpu` | 🔒 Whitelist vorhanden. Die 6 Optionen im Prototyp gelten nur, wenn der Kernel sie anbietet: dynamisch aus sysfs lesen | ✓ API |
+| `noWarn` | Unterspannungs-Warnungen ausblenden | A: mupi.php:1800-1820 (`change_warnings`), :163-176 | `/boot/config.txt` `avoid_warnings=1` | `grep 'avoid_warnings=1'` :1806 | an: `tee -a` · aus: `sed` + **`head -n -1`** (derselbe Fehler wie bei ocSd) | 🔒 ⚠ löscht beim Ausschalten die letzte Zeile von config.txt. Neustart nötig | ✓ API |
+| `swap` | SWAP | A: mupi.php:1823-1843 (`change_swap`), :193-206 | DietPi `AUTO_SETUP_SWAPFILE_SIZE` in `/boot/dietpi.txt` | `grep AUTO_SETUP_SWAPFILE_SIZE=` :1829 | `sudo /boot/dietpi/func/dietpi-set_swapfile 0\|1` | legt die Swap-Datei an bzw. löscht sie (SD-Verschleiß) | ✓ API |
 
 ### Einstellungen › System › Browser (Chromium) [browser]
 
@@ -827,12 +833,12 @@ Alles wird von `chromium-autostart.sh` beim Start des Kiosk gelesen (:25-75). Sp
 
 | Schlüssel / Aktion | Beschriftung | Heute | Speicherort | Lesen | Schreiben / Ausführen | Nebenwirkung / Hinweis | Status |
 |---|---|---|---|---|---|---|---|
-| `host` | Hostname | A: mupi.php:1696-1706 (`hostname`/`submithn`), :335-347 | `mupibox.host` + System-Hostname | `$data` (Anzeige), `os.hostname()` in rt:1979 | Regex RFC 1123 (:335) → `sudo /boot/dietpi/func/change_hostname <escapeshellarg>` + save ($change=1 → setting_update: spotifyd `device_name`, Server-config.json; restart_kiosk) | 🔒 sudo. Neustart nötig. Achtung: `browserGuard` akzeptiert nur `os.hostname()` als Host (request-guard.ts:44), bis zum Neustart gilt noch der alte Name | ⚙ PHP |
+| `host` | Hostname | A: mupi.php:1696-1706 (`hostname`/`submithn`), :335-347 | `mupibox.host` + System-Hostname | `$data` (Anzeige), `os.hostname()` in rt:1979 | Regex RFC 1123 (:335) → `sudo /boot/dietpi/func/change_hostname <escapeshellarg>` + save ($change=1 → setting_update: spotifyd `device_name`, Server-config.json; restart_kiosk) | 🔒 sudo. Neustart nötig. Achtung: `browserGuard` akzeptiert nur `os.hostname()` als Host (request-guard.ts:44), bis zum Neustart gilt noch der alte Name | ✓ API |
 | `◉ warn` | Konfiguration direkt bearbeiten | jsoneditor.php:111 | — | — | — | statisch | — statisch |
-| `◉ json` (+ Speichern) | (Editor) | A: jsoneditor.php (Menü „JSON“), 7 Dateien :17-25 (Konfig, data, config, resume, monitor, offline_*) | die gewählte Datei | `file_get_contents` | eigene CSRF-Prüfung :36-38 → JSON prüfen → `interfacelogin` festhalten :49-55 → `sudo install -m/-o/-g` :82-88 | 🔒🔒 zeigt **alle Geheimnisse** im Klartext. Umgeht Sperre, Merge und Tages-Backup von `save_mupiboxconfig` (Race mit dem Backend). Hält `interfacelogin` fest, **nicht** aber `eltern.password`. Erlaubt Werte, die in Root-Skripten landen (z. B. `chromium.cachesize`, `mupibox.theme`). Neuer Endpunkt: nur mupiboxconfig, über `updateMupiboxConfig`, Geheimnisse schwärzen und beim Speichern übernehmen | ⚙ PHP |
-| `▶ Box-Konfiguration zurücksetzen` | (Zeile) | A: admin.php:698-701 (`resetMupiConf`), :359-365 | Konfig | — | `sudo su - -c 'rm …; wget <GitHub main>/config/templates/mupiboxconfig.json …; chmod 777'` | 🔒🔒 lädt die Vorlage live vom Upstream. Ohne Netz bleibt die Box **ohne Konfig**. Setzt **chmod 777** (für alle beschreibbar). Löscht Spotify, Telegram und Passwörter. Neuer Endpunkt: lokale Vorlage + `conf_update.sh`, Rechte 644 | ⚙ PHP |
-| `▶ Medien-Datenbank zurücksetzen` | (Zeile) | A: admin.php:702-705 (`resetDataJson`), :366-372 | `…/server/config/*data.json` | — | `sudo rm …/*data.json` | 🔒 löscht auch active_/offline_data.json. Die Tages-Backups in `config/backup/` bleiben | ⚙ PHP |
-| `▶ Server-Konfiguration zurücksetzen` | (Zeile) | A: admin.php:706-709 (`resetConfigJson`), :373-379 | `…/server/config/config.json` | — | `sudo repair_config.sh` (wget von `mupibox.de/version/latest/config/templates/www.json`, set_hostname) | 🔒 braucht Internet. Ohne Netz ist config.json gelöscht und die Box startet nicht. Lokale Vorlage `config/templates/www.json` nehmen | ⚙ PHP |
+| `◉ json` (+ Speichern) | (Editor) | A: jsoneditor.php (Menü „JSON“), 7 Dateien :17-25 (Konfig, data, config, resume, monitor, offline_*) | die gewählte Datei | `file_get_contents` | eigene CSRF-Prüfung :36-38 → JSON prüfen → `interfacelogin` festhalten :49-55 → `sudo install -m/-o/-g` :82-88 | 🔒🔒 zeigt **alle Geheimnisse** im Klartext. Umgeht Sperre, Merge und Tages-Backup von `save_mupiboxconfig` (Race mit dem Backend). Hält `interfacelogin` fest, **nicht** aber `eltern.password`. Erlaubt Werte, die in Root-Skripten landen (z. B. `chromium.cachesize`, `mupibox.theme`). Neuer Endpunkt: nur mupiboxconfig, über `updateMupiboxConfig`, Geheimnisse schwärzen und beim Speichern übernehmen | ✓ API |
+| `▶ Box-Konfiguration zurücksetzen` | (Zeile) | A: admin.php:698-701 (`resetMupiConf`), :359-365 | Konfig | — | `sudo su - -c 'rm …; wget <GitHub main>/config/templates/mupiboxconfig.json …; chmod 777'` | 🔒🔒 lädt die Vorlage live vom Upstream. Ohne Netz bleibt die Box **ohne Konfig**. Setzt **chmod 777** (für alle beschreibbar). Löscht Spotify, Telegram und Passwörter. Neuer Endpunkt: lokale Vorlage + `conf_update.sh`, Rechte 644 | ✓ API |
+| `▶ Medien-Datenbank zurücksetzen` | (Zeile) | A: admin.php:702-705 (`resetDataJson`), :366-372 | `…/server/config/*data.json` | — | `sudo rm …/*data.json` | 🔒 löscht auch active_/offline_data.json. Die Tages-Backups in `config/backup/` bleiben | ✓ API |
+| `▶ Server-Konfiguration zurücksetzen` | (Zeile) | A: admin.php:706-709 (`resetConfigJson`), :373-379 | `…/server/config/config.json` | — | `sudo repair_config.sh` (wget von `mupibox.de/version/latest/config/templates/www.json`, set_hostname) | 🔒 braucht Internet. Ohne Netz ist config.json gelöscht und die Box startet nicht. Lokale Vorlage `config/templates/www.json` nehmen | ✓ API |
 
 ### Einstellungen › System › Sprache [sprache]
 

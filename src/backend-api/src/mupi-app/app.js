@@ -3872,31 +3872,6 @@ async function loadAuthState() {
   sec.st = r.body
 }
 
-// Asks for the current password in a sheet: the text, or null when cancelled
-function askPassword(title, text, okLabel) {
-  return new Promise((resolve) => {
-    let answer = null
-    openSheet(
-      `<h2>${esc(title)}</h2><p class="help" style="margin:0">${esc(text)}</p>
-       <div class="field"><label for="ap-pw">Aktuelles Passwort</label><div class="input-wrap"><input class="input has-eye" id="ap-pw" type="password" autocomplete="current-password"><button class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div></div>
-       <div class="btns"><button class="btn" data-close>Abbrechen</button><button class="btn primary" data-ok>${esc(okLabel)}</button></div>`,
-      (sheet, close) => {
-        const input = sheet.querySelector('#ap-pw')
-        sheet.querySelector('[data-eye]').onclick = () => (input.type = input.type === 'password' ? 'text' : 'password')
-        sheet.querySelector('[data-close]').onclick = close
-        const ok = () => {
-          answer = input.value
-          close()
-        }
-        sheet.querySelector('[data-ok]').onclick = ok
-        input.addEventListener('keydown', (e) => e.key === 'Enter' && ok())
-        setTimeout(() => input.focus(), 50)
-      },
-      () => setTimeout(() => resolve(answer)),
-    )
-  })
-}
-
 function securityTop() {
   const st = sec.st
   const sw = `<div class="row"><span class="lbl"><b>Anmeldung verlangen</b><small>Aus = im Heimnetz ohne Passwort, wie beim Admin-Interface. Der QR-Code am Display und der Telegram-Link gehen immer.</small></span>
@@ -3936,12 +3911,11 @@ function mountSecurity(root, page) {
   }
   $('#sec-login', root).onchange = async (e) => {
     const required = e.target.checked
-    const current = await askPassword(required ? 'Anmeldung einschalten' : 'Anmeldung ausschalten', required ? 'Die App und das Admin-Interface fragen dann nach dem Passwort.' : 'Dann kommt jeder im Heimnetz ohne Passwort in die App und das Admin-Interface.', required ? 'Einschalten' : 'Ausschalten')
-    if (current === null) {
+    if (!(await ask(required ? 'Anmeldung einschalten' : 'Anmeldung ausschalten', required ? 'Die App und das Admin-Interface fragen dann nach dem Passwort.' : 'Dann kommt jeder im Heimnetz ohne Passwort in die App und das Admin-Interface.', required ? 'Einschalten' : 'Ausschalten'))) {
       e.target.checked = !required
       return
     }
-    const r = await api(`${API}/auth/login-required`, { method: 'POST', body: { required, current } })
+    const r = await api(`${API}/auth/login-required`, { method: 'POST', body: { required } })
     if (!r.ok) {
       e.target.checked = !required
       return toast(r.body?.error === 'wrong_password' ? 'Das Passwort stimmt nicht' : r.status === 429 ? 'Zu viele Versuche – bitte kurz warten' : 'Nicht gespeichert', 'info')
@@ -4040,11 +4014,12 @@ function restartTop() {
     ['display', 'display', 'Display neu starten', 'Chromium startet neu (ein paar Sekunden schwarz). Die Wiedergabe läuft weiter.'],
     ['player', 'music', 'Player neu starten', 'Spotify und die lokale Wiedergabe starten neu – was läuft, stoppt.'],
     ['services', 'sync', 'Dienste neu starten', 'Player und Server der Box; die App ist dabei kurz nicht erreichbar.'],
+    ['apply', 'gear', 'Einstellungen übernehmen', 'Schreibt alle Einstellungen neu in die Dienste und startet das Display neu (wie „Update settings“ im Admin-Interface).'],
   ]
   return [
     `<section class="card"><h2>Box</h2><div class="btns"><button class="btn" id="rs-reboot">${icon('sync', 18)}Neu starten</button><button class="btn danger" id="rs-off">${icon('power', 18)}Ausschalten</button></div></section>`,
     `<section class="card"><h2>Display & Dienste</h2><div class="rows">${rows
-      .map(([id, ic, t, s]) => `<div class="entry"><span class="avatar">${icon(ic, 16)}</span><span class="lbl"><b>${t}</b><small>${s}</small></span><button class="btn sm" data-rs="${id}">Neu starten</button></div>`)
+      .map(([id, ic, t, s]) => `<div class="entry"><span class="avatar">${icon(ic, 16)}</span><span class="lbl"><b>${t}</b><small>${s}</small></span><button class="btn sm" data-rs="${id}">${id === 'apply' ? 'Übernehmen' : 'Neu starten'}</button></div>`)
       .join('')}</div></section>`,
   ]
 }
@@ -4063,9 +4038,9 @@ function mountRestart(root) {
   for (const b of root.querySelectorAll('[data-rs]')) {
     b.onclick = () => {
       const what = b.dataset.rs
-      const t = { display: 'Display', player: 'Player', services: 'Dienste' }[what]
-      confirmSheet('Neu starten', `${t} jetzt neu starten?`, async () => {
-        const r = await api(`${API}/restart`, { method: 'POST', body: { what } })
+      const t = { display: 'Display', player: 'Player', services: 'Dienste', apply: 'Einstellungen übernehmen' }[what]
+      confirmSheet(what === 'apply' ? 'Übernehmen' : 'Neu starten', what === 'apply' ? 'Alle Einstellungen jetzt übernehmen? Das Display startet dabei neu.' : `${t} jetzt neu starten?`, async () => {
+        const r = what === 'apply' ? await api(`${API}/apply-settings`, { method: 'POST', body: {} }) : await api(`${API}/restart`, { method: 'POST', body: { what } })
         toast(r.ok ? `${t} startet neu …` : 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
       })
     }
@@ -4166,6 +4141,185 @@ async function loadLanguage() {
   const cur = r.body.current.bootscreenLanguage || 'en'
   state.values.set('boxLang', r.body.languages[cur]?.name ?? cur)
   state.values.set('appLang', 'Deutsch')
+}
+
+/* Systemoptionen, Experten, Backup, Updates */
+
+const adm = { opts: null, json: { key: 'mupiboxconfig', text: '', keys: [] }, host: '' }
+
+async function loadSystemOptions() {
+  const r = await api(`${API}/system-options`)
+  if (!r.ok) throw new Error(`system-options ${r.status}`)
+  adm.opts = r.body
+  for (const k of ['ocSd', 'pm2Ram', 'waitNet', 'turbo', 'noWarn', 'swap']) state.values.set(k, r.body[k])
+  state.values.set('gov', r.body.governor)
+}
+
+function rebootHint(text) {
+  offerReboot(`${text} Das gilt erst nach einem Neustart der Box.`)
+}
+
+/* Experten */
+
+async function loadExperts() {
+  const [json, info] = await Promise.all([api(`${API}/json-file?key=${adm.json.key}`), api(`${API}/system`)])
+  adm.json.keys = json.body?.keys ?? []
+  adm.json.text = json.body?.text ?? ''
+  adm.host = info.body?.hostname ?? ''
+}
+
+const JSON_LABEL = {
+  mupiboxconfig: 'mupiboxconfig.json (Box)',
+  data: 'data.json (Bibliothek)',
+  config: 'config.json (Server)',
+  resume: 'resume.json',
+  monitor: 'monitor.json',
+  offline_resume: 'offline_resume.json',
+  offline_monitor: 'offline_monitor.json',
+}
+
+function expertsTop() {
+  const resets = [
+    ['config', 'Box-Konfiguration zurücksetzen', 'Alle Einstellungen auf den Stand der installierten Version (Spotify, Telegram, WLAN-Liste bleiben nicht erhalten). Das Passwort bleibt.'],
+    ['library', 'Bibliothek leeren', 'Alle Einträge der Bibliothek (data.json) weg. Die Tages-Sicherungen bleiben, Dateien auf SD-Karte und NAS auch.'],
+    ['server', 'Server-Konfiguration zurücksetzen', 'config.json des Servers aus der Vorlage; der Server startet neu.'],
+  ]
+  return [
+    `<section class="card"><h2>Hostname</h2><p class="help">Der Name der Box im Netzwerk (z. B. http://mupibox/). Buchstaben, Ziffern und „-“.</p>
+      <div class="field"><label for="ex-host">Hostname</label><input class="input mono" id="ex-host" maxlength="63" value="${esc(adm.host)}" autocomplete="off"></div>
+      <div class="btns"><button class="btn primary" id="ex-hostsave">Speichern</button></div></section>`,
+    `<section class="card wide"><h2>Konfiguration direkt bearbeiten</h2>
+      <div class="note warn">${icon('info', 18)}<span>Fehler hier können die Box lahmlegen. Nur ändern, was du kennst – vorher ein Backup ziehen.</span></div>
+      <div class="field"><label for="ex-file">Datei</label><select class="input" id="ex-file">${adm.json.keys.map((k) => `<option value="${k}"${k === adm.json.key ? ' selected' : ''}>${esc(JSON_LABEL[k] ?? k)}</option>`).join('')}</select></div>
+      <textarea class="input json-edit" id="ex-json" spellcheck="false">${esc(adm.json.text)}</textarea>
+      <p class="help" id="ex-jsonmsg" style="margin:0"></p>
+      <div class="btns"><button class="btn danger" id="ex-jsonsave">Speichern</button><button class="btn" id="ex-jsonreload">Neu laden</button></div></section>`,
+    `<section class="card"><h2>Zurücksetzen</h2><div class="rows">${resets
+      .map(([id, t, s]) => `<div class="entry"><span class="lbl"><b>${t}</b><small>${s}</small></span><button class="btn danger sm" data-reset="${id}">Zurücksetzen</button></div>`)
+      .join('')}</div></section>`,
+    `<div class="card nav-card"><div class="navlist">${navRow('ext:dietpi', 'DietPi-Dashboard', 'Systemverwaltung von DietPi (Port 5252)', 'ext')}${navRow('ext:admin', 'Bisheriges Admin-Interface', 'Port 80', 'ext')}</div></div>`,
+  ]
+}
+
+function mountExperts(root, page) {
+  const area = $('#ex-json', root)
+  const msg = $('#ex-jsonmsg', root)
+  const check = () => {
+    try {
+      JSON.parse(area.value)
+      msg.textContent = 'Gültiges JSON.'
+      return true
+    } catch (e) {
+      msg.textContent = `Kein gültiges JSON: ${e.message}`
+      return false
+    }
+  }
+  area.addEventListener('input', check)
+  $('#ex-file', root).onchange = async (e) => {
+    adm.json.key = e.target.value
+    await loadExperts().catch(() => undefined)
+    renderPage(page, false)
+  }
+  $('#ex-jsonreload', root).onclick = async () => {
+    await loadExperts().catch(() => undefined)
+    renderPage(page, false)
+  }
+  $('#ex-jsonsave', root).onclick = async () => {
+    if (!check()) return toast('Kein gültiges JSON – nicht gespeichert', 'info')
+    if (!(await ask('Speichern', `${JSON_LABEL[adm.json.key] ?? adm.json.key} mit diesem Inhalt überschreiben?`, 'Speichern'))) return
+    const r = await api(`${API}/json-file`, { method: 'POST', body: { key: adm.json.key, text: area.value } })
+    toast(r.ok ? 'Gespeichert' : r.body?.error ?? 'Nicht gespeichert', r.ok ? 'ok' : 'info')
+  }
+  $('#ex-hostsave', root).onclick = async () => {
+    const host = $('#ex-host', root).value.trim()
+    if (!/^[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/.test(host)) return toast('Nur Buchstaben, Ziffern und „-“ (nicht am Anfang oder Ende)', 'info')
+    if (host === adm.host) return toast('Nichts geändert', 'info')
+    const r = await api(`${API}/hostname`, { method: 'POST', body: { host } })
+    if (!r.ok) return toast('Das hat nicht geklappt', 'info')
+    rebootHint(`Hostname „${host}“ gespeichert.`)
+  }
+  for (const b of root.querySelectorAll('[data-reset]')) {
+    b.onclick = async () => {
+      const what = b.dataset.reset
+      const t = { config: 'die Box-Konfiguration', library: 'die Bibliothek', server: 'die Server-Konfiguration' }[what]
+      if (!(await ask('Zurücksetzen', `Wirklich ${t} zurücksetzen? Das lässt sich nur mit einem Backup rückgängig machen.`, 'Zurücksetzen'))) return
+      const r = await api(`${API}/reset`, { method: 'POST', body: { what } })
+      if (!r.ok) return toast(r.body?.error ?? 'Das hat nicht geklappt', 'info')
+      libChanged()
+      if (r.body?.rebootNeeded) return rebootHint('Zurückgesetzt.')
+      toast(what === 'server' ? 'Zurückgesetzt – der Server startet neu' : 'Zurückgesetzt')
+    }
+  }
+  check()
+}
+
+/* Backup */
+
+function backupTop() {
+  return [
+    `<section class="card"><h2>Sichern</h2>
+      <div class="rows"><div class="entry"><span class="lbl"><b>Konfigurations-Backup</b><small>Einstellungen (mupiboxconfig.json), Bibliothek (data.json) und eigene Cover. Enthält auch Passwörter und Zugänge – gut aufbewahren.</small></span><a class="btn primary sm" href="${API}/backup?kind=config" download>Herunterladen</a></div>
+        <div class="entry"><span class="lbl"><b>Voll-Backup</b><small>Dazu alle Medien der SD-Karte – kann mehrere GB groß sein und dauern.</small></span><a class="btn sm" href="${API}/backup?kind=full" download>Herunterladen</a></div></div></section>`,
+    `<section class="card"><h2>Einspielen</h2><p class="help">Eine Backup-Datei dieser App oder des Admin-Interface. Sie überschreibt Einstellungen und Bibliothek; danach startet die Box neu.</p>
+      <input type="file" id="bk-file" accept=".zip,application/zip" hidden>
+      <div class="btns"><button class="btn" id="bk-pick">Backup-Datei wählen</button><button class="btn danger" id="bk-go" disabled>Backup einspielen</button></div>
+      <p class="help" id="bk-name" style="margin:0"></p>
+      <div class="bar" id="bk-bar" hidden><div class="track"><i id="bk-fill" style="width:0%"></i></div><small id="bk-text"></small></div></section>`,
+  ]
+}
+
+function mountBackup(root) {
+  let file = null
+  $('#bk-pick', root).onclick = () => $('#bk-file', root).click()
+  $('#bk-file', root).onchange = (e) => {
+    file = e.target.files?.[0] ?? null
+    $('#bk-name', root).textContent = file ? `${file.name} · ${formatBytes(file.size)}` : ''
+    $('#bk-go', root).disabled = !file
+  }
+  $('#bk-go', root).onclick = async () => {
+    if (!(await ask('Backup einspielen', `„${file.name}“ einspielen? Einstellungen und Bibliothek werden überschrieben, danach startet die Box neu.`, 'Einspielen'))) return
+    $('#bk-bar', root).hidden = false
+    const xhr = new XMLHttpRequest()
+    xhr.open('PUT', `${API}/backup/restore`)
+    xhr.withCredentials = true
+    xhr.setRequestHeader('Content-Type', 'application/zip')
+    xhr.setRequestHeader('x-mupibox-csrf', state.csrf)
+    xhr.upload.onprogress = (e) => {
+      const pct = e.total ? (e.loaded / e.total) * 100 : 0
+      $('#bk-fill', root).style.width = `${pct.toFixed(1)}%`
+      $('#bk-text', root).textContent = pct < 100 ? `Lade hoch … ${Math.round(pct)} %` : 'Wird geprüft und eingespielt …'
+    }
+    xhr.onload = () => {
+      let b = {}
+      try {
+        b = JSON.parse(xhr.responseText)
+      } catch {
+        // no JSON
+      }
+      if (xhr.status === 200) {
+        $('#bk-text', root).textContent = 'Eingespielt – die Box startet gleich neu.'
+        return toast('Backup eingespielt – die Box startet neu')
+      }
+      $('#bk-bar', root).hidden = true
+      toast(b.error === 'entry_not_allowed' ? `Abgelehnt: „${b.entry}“ gehört nicht in ein Backup` : b.error === 'not a zip file' ? 'Das ist keine Zip-Datei' : 'Einspielen ging nicht', 'info')
+    }
+    xhr.onerror = () => {
+      $('#bk-bar', root).hidden = true
+      toast('Die Verbindung brach ab', 'info')
+    }
+    xhr.send(file)
+  }
+}
+
+/* Updates */
+
+function updatesTop() {
+  return [
+    `<section class="card"><h2>MuPiBox</h2><dl class="kv"><div><dt>Installiert</dt><dd>${esc(sys.version || '–')}</dd></div></dl>
+      <p class="help" style="margin:0">Updates laufen vorerst über das bisherige Admin-Interface. In der App kommen sie, sobald mit splitti abgestimmt ist, welche Versionen angeboten werden.</p>
+      <div class="note warn">${icon('info', 18)}<span>Vor jedem Update ein Backup ziehen (System › Backup).</span></div></section>`,
+    `<div class="card nav-card"><div class="navlist">${navRow('ext:admin', 'Updates im Admin-Interface', 'MuPiBox und Betriebssystem', 'ext')}${navRow('backup', 'Backup', 'Vorher sichern', 'save')}</div></div>`,
+  ]
 }
 
 /* the controllers: load(page) reads the box before drawing, mount(root, page) runs after it, change(key, value)
@@ -4876,6 +5030,47 @@ const CONTROLLERS = {
       const r = await api(`${API}/box-language`, { method: 'POST', body: { code } })
       toast(r.ok ? `Sprache der Box: ${v} – das Startbild wird neu erzeugt` : 'Nicht gespeichert', r.ok ? 'ok' : 'info')
     },
+  },
+  systemopt: {
+    load: loadSystemOptions,
+    sections: (page) =>
+      page.sections.map((sec) => ({
+        ...sec,
+        help: 'Alles hier gilt erst nach einem Neustart der Box (außer dem CPU-Governor).',
+        items: sec.items.map((it) => {
+          const help = {
+            ocSd: 'Schnellerer Zugriff auf die SD-Karte; manche Karten laufen damit nicht stabil.',
+            pm2Ram: 'Die Logs von Server und Player im Arbeitsspeicher statt auf der SD-Karte (schont sie).',
+            waitNet: 'Die Box wartet beim Start aufs Netzwerk (langsamerer Start, dafür gleich online).',
+            turbo: 'Schneller Start (höherer Takt in den ersten 30 Sekunden).',
+            noWarn: 'Blendet das Blitz-Symbol bei zu schwacher Stromversorgung aus.',
+            swap: 'Auslagerungsdatei auf der SD-Karte.',
+          }[it.key]
+          if (it.key === 'gov') return { ...it, options: adm.opts?.governors?.length ? adm.opts.governors : it.options, help: 'Wie der Prozessor taktet (ondemand = nach Bedarf). Gilt sofort.' }
+          return help ? { ...it, help } : it
+        }),
+      })),
+    async change(key, v, page) {
+      const r = await api(`${API}/system-options`, { method: 'POST', body: { key: key === 'gov' ? 'governor' : key, value: v } })
+      if (!r.ok) {
+        toast(r.body?.error ?? 'Das hat nicht geklappt', 'info')
+        await loadSystemOptions().catch(() => undefined)
+        return renderPage(page, false)
+      }
+      if (r.body?.rebootNeeded) rebootHint('Gespeichert.')
+      else toast('Gespeichert')
+    },
+  },
+  experten: { load: loadExperts, top: expertsTop, sections: () => [], ownNav: true, mount: mountExperts },
+  backup: { top: backupTop, sections: () => [], mount: mountBackup },
+  updates: {
+    async load() {
+      const r = await api(`${API}/version`)
+      sys.version = r.body?.version ?? ''
+    },
+    top: updatesTop,
+    sections: () => [],
+    ownNav: true,
   },
   nas: {
     load: loadNas,

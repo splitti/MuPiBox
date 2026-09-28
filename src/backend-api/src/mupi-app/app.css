@@ -510,6 +510,8 @@ select.input { appearance: auto; }
 .logview { margin: 0; height: 420px; overflow: auto; padding: 10px 12px; border-radius: var(--mp-r-sm); background: var(--mp-field); font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
 a.btn { text-decoration: none; color: inherit; }
 
+.json-edit { min-height: 360px; resize: vertical; font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre; overflow: auto; }
+
 /* login */
 .login { max-width: 400px; margin: 8vh auto 0; display: flex; flex-direction: column; gap: 16px; text-align: center; }
 .login .logo { width: 96px; height: 96px; border-radius: 50%; background: var(--mp-primary-soft); display: grid; place-items: center; margin: 0 auto; }

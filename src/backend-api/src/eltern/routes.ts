@@ -41,6 +41,7 @@ import { registerDisplayRoutes } from './display'
 import { registerHardwareRoutes } from './hardware'
 import { registerServicesRoutes } from './services'
 import { registerSystemRoutes } from './system'
+import { registerAdminRoutes } from './admin'
 import { type LocalLibraryDeps, registerLocalUploadRoutes } from './upload'
 import { localOnly } from '../request-guard'
 import {
@@ -220,6 +221,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   registerHardwareRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerServicesRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerSystemRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
+  // (pm2 runs server.js from its folder: templates/ lies next to it)
+  registerAdminRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig, serverDir: process.cwd() })
   registerCustomCoverRoutes(router, {
     dir: '/home/dietpi/MuPiBox/media/cover',
     host: () => String((deps.getMupiboxConfig()?.mupibox as { host?: string } | undefined)?.host || os.hostname()),
@@ -409,7 +412,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     res.json({ ok: true })
   })
 
-  /** POST /api/eltern/auth/login-required {required, current} - "Anmeldung verlangen" (interfacelogin.state). */
+  /** POST /api/eltern/auth/login-required {required} - "Anmeldung verlangen" (interfacelogin.state). Whoever is signed
+   *  in may switch it (no second password, decided on 29.09.2026); switching on needs a password to ask for. */
   router.post('/auth/login-required', requireSession, requireCsrf, ipRateLimit(5), async (req, res) => {
     const body = (req.body ?? {}) as { required?: unknown; current?: unknown }
     if (typeof body.required !== 'boolean') {
@@ -419,10 +423,6 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     const cfg = deps.getMupiboxConfig()
     if (!hasAppPassword(cfg)) {
       res.status(409).json({ error: 'no_password' })
-      return
-    }
-    if (!(await verifyAppPassword(typeof body.current === 'string' ? body.current : '', cfg))) {
-      res.status(403).json({ error: 'wrong_password' })
       return
     }
     await deps.updateMupiboxConfig((c) => {
