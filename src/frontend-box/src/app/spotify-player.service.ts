@@ -387,6 +387,8 @@ export class SpotifyPlayerService {
     }
 
     this.logService.log('[Spotify SDK] Loading SDK script...')
+    // the boot screen of index.html waits for the set-up only once it has begun
+    ;(window as unknown as { mupiBootDone?: (what: string) => void }).mupiBootDone?.('sdkStart')
     this.sdkState = 'loading'
     this.sdkLoadError$.next(null)
 
