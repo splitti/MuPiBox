@@ -9,6 +9,6 @@ BS_OUT="/home/dietpi/MuPiBox/sysmedia/images/bootscreen"
 SCENE=$(cat ${BS_OUT}/current 2>/dev/null || cat ${BS_OUT}/next 2>/dev/null)
 PIC="${BS_OUT}/splash-${SCENE}.png"
 [ -f "${PIC}" ] || PIC="/home/dietpi/MuPiBox/sysmedia/bootscreens/prerendered/en/splash-karte.png"
-[ -f "${PIC}" ] && sudo -n /usr/bin/fbv "${PIC}" >/dev/null 2>&1 &
+[ -f "${PIC}" ] && sudo -n /usr/bin/fbv -c -y "${PIC}" >/dev/null 2>&1 &
 
 exec "$@"

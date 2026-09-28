@@ -13,7 +13,7 @@ SHOWN="/run/mupibox-goodbye"
 if [ "$1" = "--again" ]; then
 	PIC=$(cat ${SHOWN} 2>/dev/null)
 	[ -f "${PIC}" ] || exit 0
-	/usr/bin/fbv "${PIC}" >/dev/null 2>&1 &
+	/usr/bin/fbv -c -y "${PIC}" >/dev/null 2>&1 &
 	sleep 0.3
 	exit 0
 fi
@@ -36,4 +36,4 @@ echo "${PIC}" > ${SHOWN} 2>/dev/null
 # hide the display's window (it keeps running until mupi_shutdown.sh ends it)
 DISPLAY=:0 XAUTHORITY=/home/dietpi/.Xauthority /usr/bin/xdotool search --onlyvisible --class chromium windowunmap %@ >/dev/null 2>&1
 sleep 0.15
-/usr/bin/fbv "${PIC}" >/dev/null 2>&1 &
+/usr/bin/fbv -c -y "${PIC}" >/dev/null 2>&1 &

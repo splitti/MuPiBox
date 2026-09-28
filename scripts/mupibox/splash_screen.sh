@@ -10,7 +10,7 @@ OUT="/home/dietpi/MuPiBox/sysmedia/images/bootscreen"
 
 NEXT=$(cat "${OUT}/next" 2>/dev/null)
 if [ -n "${NEXT}" ] && [ -f "${OUT}/splash-${NEXT}.png" ]; then
-	/usr/bin/fbv "${OUT}/splash-${NEXT}.png" &
+	/usr/bin/fbv -c -y "${OUT}/splash-${NEXT}.png" &
 	echo "${NEXT}" > "${OUT}/current"
 	/usr/local/bin/mupibox/bootscreen_color.sh "${NEXT}" browser
 	if [ "$(/usr/bin/jq -r '.mupibox.bootscreen // ""' ${CONFIG})" = "random" ]; then
@@ -27,7 +27,7 @@ fi
 # not put together yet (e.g. first start after the installation): the default's ready-made picture, else as before
 READY="/home/dietpi/MuPiBox/sysmedia/bootscreens/prerendered/en/splash-karte.png"
 if [ -f "${READY}" ]; then
-	/usr/bin/fbv "${READY}"
+	/usr/bin/fbv -c -y "${READY}"
 	exit 0
 fi
 START_SPLASH=`/usr/bin/jq -r .mupibox.startSplash ${CONFIG}`

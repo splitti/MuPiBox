@@ -21,4 +21,4 @@ LANG_DIR=$(/usr/bin/jq -r '.mupibox.bootscreenLanguage // "en"' "${CONFIG}" 2>/d
 [ -f "${PIC}" ] || PIC="${READY}/${LANG_DIR}/maintenance-karte-${KIND}.png"
 [ -f "${PIC}" ] || PIC="${READY}/en/maintenance-karte-${KIND}.png"
 [ -f "${PIC}" ] || PIC="${FALLBACK}"
-/usr/bin/fbv "${PIC}" &
+/usr/bin/fbv -c -y "${PIC}" &
