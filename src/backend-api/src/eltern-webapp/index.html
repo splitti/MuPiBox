@@ -299,6 +299,7 @@
         <div class="actions" style="margin-top: 0;">
           <button class="primary" id="library-add-btn" data-i18n="library.addBtn"></button>
           <button class="ghost" id="library-search-spotify-btn" data-i18n="library.searchSpotify"></button>
+          <button class="ghost" id="library-upload-btn" data-i18n="library.upload"></button>
           <button class="ghost" id="library-sync-btn" data-i18n="sync.now"></button>
         </div>
         <p class="dim" id="library-sync-status">—</p>
@@ -420,6 +421,59 @@
         <div id="search-feedback" class="feedback" hidden></div>
       </div>
       <div id="search-results"></div>
+    </section>
+
+    <!-- Titel und Ordner auf die SD-Karte hochladen (media/<Kategorie>/<Interpret>/<Album>) -->
+    <section id="screen-upload" class="screen" hidden>
+      <div class="card">
+        <h3 data-i18n="upload.target"></h3>
+        <p class="dim" data-i18n="upload.hint"></p>
+        <div class="form-row">
+          <label for="upload-category" data-i18n="libadd.category"></label>
+          <select id="upload-category">
+            <option value="audiobook" data-i18n="cat.audiobookLong"></option>
+            <option value="music" data-i18n="cat.music"></option>
+            <option value="other" data-i18n="cat.other"></option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label for="upload-artist" data-i18n="upload.artist"></label>
+          <input type="text" id="upload-artist" list="upload-artist-list" data-i18n-placeholder="upload.artistPh" autocomplete="off">
+          <datalist id="upload-artist-list"></datalist>
+        </div>
+        <div class="form-row">
+          <label for="upload-album" data-i18n="upload.album"></label>
+          <input type="text" id="upload-album" list="upload-album-list" data-i18n-placeholder="upload.albumPh" autocomplete="off">
+          <datalist id="upload-album-list"></datalist>
+        </div>
+        <p class="dim" id="upload-where">—</p>
+      </div>
+
+      <div class="card">
+        <h3 data-i18n="upload.files"></h3>
+        <div class="actions" style="margin-top: 0;">
+          <button class="ghost" id="upload-pick-files" data-i18n="upload.pickFiles"></button>
+          <button class="ghost" id="upload-pick-folder" data-i18n="upload.pickFolder"></button>
+          <button class="ghost" id="upload-pick-cover" data-i18n="upload.pickCover"></button>
+        </div>
+        <input type="file" id="upload-input-files" multiple accept="audio/*,.mp3,.m4a,.flac,.ogg,.wav,.wma,image/*" hidden>
+        <input type="file" id="upload-input-folder" webkitdirectory multiple hidden>
+        <input type="file" id="upload-input-cover" accept="image/*" hidden>
+        <div class="upload-drop" id="upload-drop" data-i18n="upload.drop"></div>
+        <p class="dim" id="upload-summary" data-i18n="upload.none"></p>
+        <ul class="upload-list" id="upload-list"></ul>
+        <p class="dim" id="upload-free">—</p>
+        <div class="upload-progress" id="upload-progress" hidden>
+          <div class="playback-progress"><div class="playback-progress-fill" id="upload-progress-fill"></div></div>
+          <p class="dim" id="upload-progress-text">—</p>
+        </div>
+        <div class="actions">
+          <button class="ghost" id="upload-clear" data-i18n="upload.clear"></button>
+          <button class="ghost" id="upload-cancel" data-i18n="common.cancel" hidden></button>
+          <button class="primary" id="upload-start" data-i18n="upload.start" disabled></button>
+        </div>
+        <div id="upload-feedback" class="feedback" hidden></div>
+      </div>
     </section>
 
     <section id="screen-caps" class="screen" hidden>

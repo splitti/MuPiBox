@@ -1154,6 +1154,11 @@ app.get('/api/bootscreen/current-splash', (_req, res) => {
   })
 })
 
+// Changes whenever files were added to the local media folders from the web app (upload): the display then reads
+// its lists again. Apart from data.json's version, which also stands for the kept lists of the home page (their
+// Spotify part would be looked up again for nothing).
+let localLibraryVersion = Date.now()
+
 app.get('/api/data-version', (_req, res) => {
   // Cheap change-token for the box frontend's library-change poll (Phase 17g).
   // activedataFile is a symlink to data.json (or offline_data.json) reconciled
@@ -1162,9 +1167,9 @@ app.get('/api/data-version', (_req, res) => {
   // only when something actually changed — no full-list polling.
   try {
     const st = fs.statSync(activedataFile)
-    res.json({ version: `${Math.floor(st.mtimeMs)}-${st.size}` })
+    res.json({ version: `${Math.floor(st.mtimeMs)}-${st.size}`, local: String(localLibraryVersion) })
   } catch {
-    res.json({ version: '0' })
+    res.json({ version: '0', local: String(localLibraryVersion) })
   }
 })
 
@@ -7091,6 +7096,13 @@ app.use(
     playingAlbumCover,
     playingTrackCover: async (file: string) =>
       (await trackCover(file).catch(() => undefined)) ? `/api/track-cover?file=${encodeURIComponent(file)}` : null,
+    localLibrary: {
+      root: libraryRoot,
+      categories: libraryCategories,
+      changed: () => {
+        localLibraryVersion = Date.now()
+      },
+    },
   }),
 )
 // The web app lives at /parents; /eltern (its first address) keeps working for bookmarks, home-screen
@@ -7156,7 +7168,9 @@ process.on('uncaughtException', (err) => {
 })
 
 if (!testServe) {
-  app.listen(8200)
+  const server = app.listen(8200)
+  // A request may take up to 5 minutes by default: too short for a large file uploaded from the web app over WiFi
+  server.requestTimeout = 60 * 60 * 1000
   console.log(`${new Date().toLocaleString()}: [mupibox-backend-api] Server started at http://localhost:8200`)
   // Spotify-sync scheduler — only in production / dev, not under tests.
   // Boot-after-60s lead-in inside startScheduler so initial config load

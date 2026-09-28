@@ -41,6 +41,7 @@ const SECTIONS = {
   library:   { titleKey: 'section.library',   parent: 'hub', loader: () => { loadLibrary(); loadSubscriptions(); loadSyncStatus() } },
   play:      { titleKey: 'section.play',      parent: 'hub', loader: () => loadPlay() },
   search:    { titleKey: 'section.search',    parent: 'library', loader: () => resetSearch() },
+  upload:    { titleKey: 'section.upload',    parent: 'library', loader: () => loadUpload() },
   caps:      { titleKey: 'section.caps',      parent: 'hub', loader: () => { loadCaps(); loadDisplayTexts() } },
   power:     { titleKey: 'section.power',     parent: 'hub', loader: () => loadPower() },
   wlan:      { titleKey: 'section.wlan',      parent: 'hub', loader: () => loadWlan() },
@@ -1621,6 +1622,298 @@ function formatBytes(n) {
   if (!Number.isFinite(n)) return '—'
   const gb = n / 1024 ** 3
   return gb >= 1 ? `${gb.toFixed(1)} GB` : `${Math.round(n / 1024 ** 2)} MB`
+}
+
+/* ---------- Upload: tracks and folders onto the SD card ---------- */
+
+// What the box plays and the pictures it takes as covers (as in the backend, eltern/upload.ts)
+const UPLOAD_AUDIO = /\.(mp3|flac|wav|wma|ogg|m4a)$/i
+const UPLOAD_IMAGE = /\.(jpe?g|jfif|png|webp)$/i
+
+// items: {file, top, sub} - top is the chosen folder's name ('' for single files), sub the path below it
+const uploadState = { items: [], cover: null, skipped: 0, free: null, reserve: 0, running: false, xhr: null, cancelled: false }
+
+const uploadCategory = () => $('#upload-category')?.value || 'audiobook'
+const uploadArtist = () => ($('#upload-artist')?.value ?? '').trim()
+const uploadAlbum = () => ($('#upload-album')?.value ?? '').trim()
+
+function fillDatalist(sel, names) {
+  const list = $(sel)
+  if (!list) return
+  list.replaceChildren(...names.map((n) => Object.assign(document.createElement('option'), { value: n })))
+}
+
+async function loadUploadFolders(withArtist) {
+  const q = new URLSearchParams({ category: uploadCategory() })
+  if (withArtist) {
+    if (!uploadArtist()) return fillDatalist('#upload-album-list', [])
+    q.set('artist', uploadArtist())
+  }
+  const res = await api(`${API}/local/folders?${q}`)
+  if (!res.ok) return
+  fillDatalist(withArtist ? '#upload-album-list' : '#upload-artist-list', res.body?.folders ?? [])
+  if (Number.isFinite(res.body?.free)) {
+    uploadState.free = res.body.free
+    uploadState.reserve = res.body.reserve ?? 0
+  }
+  renderUpload()
+}
+
+function loadUpload() {
+  loadUploadFolders(false)
+  loadUploadFolders(true)
+}
+
+function uploadTotal() {
+  return uploadState.items.reduce((sum, it) => sum + it.file.size, 0) + (uploadState.cover?.size ?? 0)
+}
+
+// The path of an item below media/<category>/<artist>/<album>/: with more than one folder (or no album given) each
+// keeps its own folder, so several albums at once land side by side.
+function uploadPathOf(item) {
+  const tops = new Set(uploadState.items.map((it) => it.top).filter(Boolean))
+  const keepTop = item.top && (tops.size > 1 || uploadAlbum() === '')
+  return keepTop ? `${item.top}/${item.sub}` : item.sub
+}
+
+function renderUpload() {
+  const artist = uploadArtist()
+  const album = uploadAlbum()
+  const catLabel = $('#upload-category')?.selectedOptions?.[0]?.textContent ?? ''
+  setText('#upload-where', artist ? `${t('upload.where')} ${[catLabel, artist, album].filter(Boolean).join(' › ')}` : t('upload.needArtist'))
+
+  const n = uploadState.items.length
+  const total = uploadTotal()
+  let summary = n === 0 && !uploadState.cover ? t('upload.none') : `${tn('upload.count', n)} · ${formatBytes(total)}`
+  if (uploadState.cover) summary += ` · ${t('upload.withCover')}`
+  if (uploadState.skipped > 0) summary += ` · ${tn('upload.skipped', uploadState.skipped)}`
+  setText('#upload-summary', summary)
+
+  const list = $('#upload-list')
+  if (list) {
+    const shown = uploadState.items.slice(0, 50).map((it) => {
+      const li = document.createElement('li')
+      li.textContent = uploadPathOf(it)
+      return li
+    })
+    if (n > 50) {
+      const li = document.createElement('li')
+      li.className = 'dim'
+      li.textContent = t('upload.more', { n: n - 50 })
+      shown.push(li)
+    }
+    list.replaceChildren(...shown)
+  }
+
+  const room = uploadState.free === null ? null : uploadState.free - uploadState.reserve
+  setText('#upload-free', room === null ? '—' : t('upload.free', { free: formatBytes(Math.max(0, room)) }))
+  const tooBig = room !== null && total > room
+  if (tooBig) feedback('#upload-feedback', 'error', t('upload.noSpace'))
+  const start = $('#upload-start')
+  if (start) start.disabled = uploadState.running || !artist || (n === 0 && !uploadState.cover) || tooBig
+  for (const id of ['#upload-pick-files', '#upload-pick-folder', '#upload-pick-cover', '#upload-clear', '#upload-category', '#upload-artist', '#upload-album']) {
+    const el = $(id)
+    if (el) el.disabled = uploadState.running
+  }
+  const cancel = $('#upload-cancel')
+  if (cancel) cancel.hidden = !uploadState.running
+}
+
+function addUploadItems(entries) {
+  for (const { file, top, sub } of entries) {
+    if (!UPLOAD_AUDIO.test(file.name) && !UPLOAD_IMAGE.test(file.name)) {
+      uploadState.skipped++
+      continue
+    }
+    if (file.name.startsWith('.')) continue
+    // the same place twice: the later one counts
+    const key = `${top}/${sub}`
+    uploadState.items = uploadState.items.filter((it) => `${it.top}/${it.sub}` !== key)
+    uploadState.items.push({ file, top, sub })
+  }
+  uploadState.items.sort((a, b) => `${a.top}/${a.sub}`.localeCompare(`${b.top}/${b.sub}`, undefined, { numeric: true }))
+  // one folder chosen and no album yet: the folder's name is the album's
+  const tops = new Set(uploadState.items.map((it) => it.top).filter(Boolean))
+  if (tops.size === 1 && uploadAlbum() === '') $('#upload-album').value = [...tops][0]
+  $('#upload-feedback').hidden = true
+  renderUpload()
+}
+
+// Files of a folder chosen with the file dialog: webkitRelativePath is "Folder/sub/file.mp3"
+function folderEntriesOf(files) {
+  return Array.from(files).map((file) => {
+    const parts = (file.webkitRelativePath || file.name).split('/')
+    return parts.length > 1 ? { file, top: parts[0], sub: parts.slice(1).join('/') } : { file, top: '', sub: file.name }
+  })
+}
+
+// Dropped files and folders (a folder is read with all its subfolders)
+async function droppedEntries(dataTransfer) {
+  const out = []
+  const readDir = (dir) =>
+    new Promise((resolve) => {
+      const reader = dir.createReader()
+      const all = []
+      const next = () =>
+        reader.readEntries((batch) => (batch.length ? (all.push(...batch), next()) : resolve(all)), () => resolve(all))
+      next()
+    })
+  const fileOf = (entry) => new Promise((resolve) => entry.file(resolve, () => resolve(null)))
+  const walk = async (entry, top, prefix) => {
+    if (entry.isFile) {
+      const file = await fileOf(entry)
+      if (file) out.push({ file, top, sub: prefix + file.name })
+    } else if (entry.isDirectory) {
+      for (const child of await readDir(entry)) await walk(child, top, `${prefix}${entry.name}/`)
+    }
+  }
+  const roots = Array.from(dataTransfer.items ?? [])
+    .map((item) => item.webkitGetAsEntry?.())
+    .filter(Boolean)
+  if (roots.length === 0) return Array.from(dataTransfer.files ?? []).map((file) => ({ file, top: '', sub: file.name }))
+  for (const root of roots) {
+    if (root.isDirectory) {
+      for (const child of await readDir(root)) await walk(child, root.name, '')
+    } else {
+      await walk(root, '', '')
+    }
+  }
+  return out
+}
+
+function uploadOne(path, file, onProgress) {
+  return new Promise((resolve) => {
+    const q = new URLSearchParams({ category: uploadCategory(), artist: uploadArtist(), album: uploadAlbum(), path })
+    const xhr = new XMLHttpRequest()
+    uploadState.xhr = xhr
+    xhr.open('PUT', `${API}/local/upload?${q}`)
+    xhr.withCredentials = true
+    xhr.setRequestHeader('Content-Type', 'application/octet-stream')
+    if (state.csrf) xhr.setRequestHeader('x-mupibox-csrf', state.csrf)
+    xhr.upload.onprogress = (e) => onProgress(e.loaded)
+    xhr.onload = () => resolve(xhr.status)
+    xhr.onerror = () => resolve(0)
+    xhr.onabort = () => resolve(-1)
+    xhr.send(file)
+  })
+}
+
+async function startUpload() {
+  if (uploadState.running) return
+  const jobs = uploadState.items.map((it) => ({ path: uploadPathOf(it), file: it.file }))
+  if (uploadState.cover) {
+    const ext = (uploadState.cover.name.match(/\.[^.]+$/)?.[0] ?? '.jpg').toLowerCase()
+    // the cover of the album (or of the artist, without an album); it is taken before any other picture there
+    jobs.unshift({ path: `cover${ext}`, file: uploadState.cover })
+  }
+  if (!uploadArtist() || jobs.length === 0) return
+  uploadState.running = true
+  uploadState.cancelled = false
+  renderUpload()
+  $('#upload-feedback').hidden = true
+  $('#upload-progress').hidden = false
+  const total = jobs.reduce((s, j) => s + j.file.size, 0) || 1
+  let done = 0
+  let ok = 0
+  let failed = 0
+  let stopWith = null
+  for (const [i, job] of jobs.entries()) {
+    if (uploadState.cancelled) break
+    const status = await uploadOne(job.path, job.file, (loaded) => {
+      const pct = Math.min(100, ((done + loaded) / total) * 100)
+      $('#upload-progress-fill').style.width = `${pct.toFixed(1)}%`
+      setText('#upload-progress-text', t('upload.progress', { i: i + 1, n: jobs.length, name: job.path, pct: Math.round(pct) }))
+    })
+    done += job.file.size
+    if (status === 200) ok++
+    else if (status === -1) break
+    else if (status === 401 || status === 403) stopWith = t('upload.sessionGone')
+    else if (status === 507) stopWith = t('upload.noSpace')
+    else failed++
+    if (stopWith) break
+  }
+  uploadState.running = false
+  uploadState.xhr = null
+  $('#upload-progress').hidden = true
+  $('#upload-progress-fill').style.width = '0%'
+  if (ok > 0) {
+    // what arrived is no longer in the list; what failed stays for another try
+    uploadState.items = []
+    uploadState.cover = null
+    uploadState.skipped = 0
+  }
+  const parts = []
+  if (ok > 0) parts.push(`${tn('upload.done', ok)} ${t('upload.visible')}`)
+  if (uploadState.cancelled) parts.push(t('upload.cancelled'))
+  if (failed > 0) parts.push(tn('upload.failed', failed))
+  if (stopWith) parts.push(stopWith)
+  feedback('#upload-feedback', failed > 0 || stopWith ? (ok > 0 ? 'warn' : 'error') : uploadState.cancelled ? 'info' : 'success', parts.join(' '))
+  loadUpload()
+}
+
+function initUpload() {
+  const pick = (btn, input) => $(btn)?.addEventListener('click', () => $(input)?.click())
+  pick('#upload-pick-files', '#upload-input-files')
+  pick('#upload-pick-folder', '#upload-input-folder')
+  pick('#upload-pick-cover', '#upload-input-cover')
+  $('#upload-input-files')?.addEventListener('change', (e) => {
+    addUploadItems(Array.from(e.target.files ?? []).map((file) => ({ file, top: '', sub: file.name })))
+    e.target.value = ''
+  })
+  $('#upload-input-folder')?.addEventListener('change', (e) => {
+    addUploadItems(folderEntriesOf(e.target.files ?? []))
+    e.target.value = ''
+  })
+  $('#upload-input-cover')?.addEventListener('change', (e) => {
+    const file = e.target.files?.[0]
+    if (file && UPLOAD_IMAGE.test(file.name)) uploadState.cover = file
+    e.target.value = ''
+    renderUpload()
+  })
+  // a folder dialog is not offered everywhere (e.g. iPhone): the button goes then
+  const folderInput = $('#upload-input-folder')
+  if (folderInput && !('webkitdirectory' in folderInput)) $('#upload-pick-folder').hidden = true
+  const drop = $('#upload-drop')
+  if (drop) {
+    drop.addEventListener('dragover', (e) => {
+      e.preventDefault()
+      drop.classList.add('over')
+    })
+    drop.addEventListener('dragleave', () => drop.classList.remove('over'))
+    drop.addEventListener('drop', async (e) => {
+      e.preventDefault()
+      drop.classList.remove('over')
+      if (uploadState.running) return
+      addUploadItems(await droppedEntries(e.dataTransfer))
+    })
+  }
+  $('#upload-category')?.addEventListener('change', () => {
+    loadUploadFolders(false)
+    loadUploadFolders(true)
+  })
+  let artistTimer = null
+  $('#upload-artist')?.addEventListener('input', () => {
+    renderUpload()
+    clearTimeout(artistTimer)
+    artistTimer = setTimeout(() => loadUploadFolders(true), 300)
+  })
+  $('#upload-album')?.addEventListener('input', renderUpload)
+  $('#upload-clear')?.addEventListener('click', () => {
+    uploadState.items = []
+    uploadState.cover = null
+    uploadState.skipped = 0
+    $('#upload-feedback').hidden = true
+    renderUpload()
+  })
+  $('#upload-cancel')?.addEventListener('click', () => {
+    uploadState.cancelled = true
+    uploadState.xhr?.abort()
+  })
+  $('#upload-start')?.addEventListener('click', startUpload)
+  // leaving the page while it uploads: the browser asks first
+  window.addEventListener('beforeunload', (e) => {
+    if (uploadState.running) e.preventDefault()
+  })
 }
 
 async function loadSystem() {
@@ -3801,6 +4094,8 @@ function wire() {
 
   // Spotify-Suche (Phase 17a)
   $('#library-search-spotify-btn')?.addEventListener('click', () => navigate('search'))
+  $('#library-upload-btn')?.addEventListener('click', () => navigate('upload'))
+  initUpload()
   $('#library-sync-btn')?.addEventListener('click', manualSyncNow)
   $('#search-go-btn')?.addEventListener('click', doSearch)
   $('#search-query')?.addEventListener('keydown', (e) => {

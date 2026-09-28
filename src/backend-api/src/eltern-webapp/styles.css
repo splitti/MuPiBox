@@ -1154,6 +1154,35 @@ select:focus, textarea:focus {
   transition: width 1s linear;
 }
 
+/* Hochladen: Ablagefläche, Dateiliste, Fortschritt */
+.upload-drop {
+  margin: 12px 0 8px;
+  padding: 18px 12px;
+  border: 2px dashed var(--border-strong);
+  border-radius: 12px;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 14px;
+}
+.upload-drop.over { border-color: var(--brand); background: rgba(255, 255, 255, 0.04); }
+@media (hover: none) { .upload-drop { display: none; } }
+.upload-list {
+  list-style: none;
+  margin: 4px 0 8px;
+  padding: 0;
+  max-height: 220px;
+  overflow-y: auto;
+  font-size: 13px;
+}
+.upload-list li {
+  padding: 3px 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--border);
+}
+.upload-progress .playback-progress-fill { transition: width 0.2s linear; }
+
 /* Runde Buttons mittig — Stop (klein) links, Play/Pause (groß) zentral. */
 .playback-actions {
   display: flex;

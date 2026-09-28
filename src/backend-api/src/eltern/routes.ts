@@ -31,6 +31,7 @@ import {
   verifyElternPassword,
 } from './auth'
 import { ipRateLimit, localNetworkOnly, requireCsrf, requireSession } from './middleware'
+import { type LocalLibraryDeps, registerLocalUploadRoutes } from './upload'
 import { localOnly } from '../request-guard'
 import {
   REQUESTED_SCOPES,
@@ -53,6 +54,8 @@ export interface ElternRouterDeps {
   playingAlbumCover?: (type: string, folder: string) => Promise<string | null>
   // The picture embedded in the file that plays (nas:<path> / local:<path>), if it has one
   playingTrackCover?: (file: string) => Promise<string | null>
+  /** The local media folders, for the upload of tracks and folders (see upload.ts). */
+  localLibrary?: LocalLibraryDeps
 }
 
 /** Build a Set-Cookie header value. HttpOnly + SameSite=Strict; no Secure
@@ -165,6 +168,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   // Every API route requires LAN + session; magic-link generation
   // (the bootstrap path) requires LAN + rate-limit but no session.
   router.use(localNetworkOnly)
+
+  if (deps.localLibrary) registerLocalUploadRoutes(router, deps.localLibrary)
 
   /**
    * POST /api/eltern/magic-link/generate

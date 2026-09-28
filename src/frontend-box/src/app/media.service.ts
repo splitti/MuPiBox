@@ -317,6 +317,8 @@ export class MediaService {
   }
 
   private libraryVersion$?: Observable<string>
+  private dataVersion$?: Observable<string>
+  private versions$?: Observable<{ version: string; local: string }>
 
   /**
    * Phase 17g: cheap library-change signal. Polls /api/data-version (a stat,
@@ -326,21 +328,42 @@ export class MediaService {
    * downloading the whole list on every tick. shareReplay+refCount keeps the
    * poll alive only while a page is subscribed (idle on the player screen).
    */
+  // The pages' version also changes when files were uploaded into the local media folders (web app); the kept lists
+  // of the home page only depend on data.json (getDataVersion).
   public getLibraryVersion(): Observable<string> {
     if (!this.libraryVersion$) {
-      this.libraryVersion$ = interval(20000).pipe(
-        startWith(0),
-        switchMap(() =>
-          this.http.get<{ version: string }>(`${this.getApiBackendUrl()}/data-version`).pipe(
-            map((r) => r?.version ?? ''),
-            catchError(() => of('')),
-          ),
-        ),
+      this.libraryVersion$ = this.versions().pipe(
+        map((v) => (v.version === '' ? '' : `${v.version}|${v.local}`)),
         distinctUntilChanged(),
-        shareReplay({ bufferSize: 1, refCount: true }),
       )
     }
     return this.libraryVersion$
+  }
+
+  private getDataVersion(): Observable<string> {
+    if (!this.dataVersion$) {
+      this.dataVersion$ = this.versions().pipe(
+        map((v) => v.version),
+        distinctUntilChanged(),
+      )
+    }
+    return this.dataVersion$
+  }
+
+  private versions(): Observable<{ version: string; local: string }> {
+    if (!this.versions$) {
+      this.versions$ = interval(20000).pipe(
+        startWith(0),
+        switchMap(() =>
+          this.http.get<{ version: string; local?: string }>(`${this.getApiBackendUrl()}/data-version`).pipe(
+            map((r) => ({ version: r?.version ?? '', local: r?.local ?? '' })),
+            catchError(() => of({ version: '', local: '' })),
+          ),
+        ),
+        shareReplay({ bufferSize: 1, refCount: true }),
+      )
+    }
+    return this.versions$
   }
 
   updateWLAN() {
@@ -680,7 +703,7 @@ export class MediaService {
         return list.map((m) => ({ ...m }))
       }
     }
-    return forkJoin([this.loadHomeLists(), this.getLibraryVersion().pipe(take(1))]).pipe(
+    return forkJoin([this.loadHomeLists(), this.getDataVersion().pipe(take(1))]).pipe(
       switchMap(([, version]) => {
         const kept = this.homeLists.get(category)
         if (kept && this.homeListIsCurrent(category, version)) {
@@ -703,7 +726,7 @@ export class MediaService {
   // old. One category after the other, only the ones out of date.
   public keepHomeListsWarm(categories: () => CategoryType[]): void {
     if (this.homeListsWarming) return
-    this.homeListsWarming = combineLatest([this.getLibraryVersion(), timer(15_000, MediaService.HOME_LIST_MAX_AGE_MS / 4)])
+    this.homeListsWarming = combineLatest([this.getDataVersion(), timer(15_000, MediaService.HOME_LIST_MAX_AGE_MS / 4)])
       .pipe(
         debounceTime(5_000),
         exhaustMap(([version]) =>
