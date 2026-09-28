@@ -697,6 +697,14 @@ rm -f /tmp/mupibox-update-failed
 		mkdir -p "/etc/systemd/system/getty@tty1.service.d" >&3 2>&3
 		cp -f "${MUPI_SRC}/config/services/getty@tty1.service.d/mupibox.conf" "/etc/systemd/system/getty@tty1.service.d/mupibox.conf" >&3 2>&3
 	fi
+	# Admin interface, Samba share and DietPi dashboard 45 s after the start: not needed for the display, which they
+	# were competing with (see config/services/mupibox-delayed-start.conf)
+	if [ -f "${MUPI_SRC}/config/services/mupibox-delayed-start.conf" ]; then
+		for delayed in lighttpd smbd dietpi-dashboard $(systemctl list-unit-files "php*-fpm.service" --no-legend 2>/dev/null | awk '{print $1}' | sed 's/\.service$//'); do
+			mkdir -p "/etc/systemd/system/${delayed}.service.d" >&3 2>&3
+			cp -f "${MUPI_SRC}/config/services/mupibox-delayed-start.conf" "/etc/systemd/system/${delayed}.service.d/mupibox-delayed-start.conf" >&3 2>&3
+		done
+	fi
 	# The Samba share is a standalone server (smbd); the Active Directory domain controller came with the package and
 	# is not needed
 	systemctl disable --now samba-ad-dc.service >&3 2>&3
