@@ -15,9 +15,9 @@ freigegeben (`localOnly`) – Guard umstellen · `⚙ PHP` kann heute nur das PH
 | Teil | Seiten | ✓ API | ✓ API° | ⚙ PHP | ＋ neu | — statisch |
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 Start, Hören, Spielzeit, Bibliothek | 14 | 142 | – | 1 | 4 | – |
-| 2 Aussehen, Display, Audio, Akku & Strom | 18 | 57 | – | 16 | 2 | – |
+| 2 Aussehen, Display, Audio, Akku & Strom | 18 | 73 | – | 0 | 2 | – |
 | 3 Netzwerk, Dienste, Sicherheit, System | 16 | 25 | – | 75 | 2 | 5 |
-| **Summe** | **48** | **224** | **–** | **92** | **8** | **5** |
+| **Summe** | **48** | **240** | **–** | **76** | **8** | **5** |
 
 Alle 156 Schlüssel aus `app-schema.json` (157 Einstellungen, der Playlist-Präfix steht zweimal), alle Aktionen und
 Anzeigen sind zugeordnet; keine Zeile ist unklar. Die Bereiche Start, Hören, Spielzeit und Bibliothek laufen schon
@@ -28,9 +28,8 @@ WLED, Updates, Backup, Protokolle, Systemoptionen, Browser, Experten) kann heute
 
 1. **Guards umstellen:** erledigt – die NAS-Verwaltung (`/api/nas/profiles*`, `login`, `index/*`, `browse`,
    `selection`, `mark`, `download/*`, `covers/refresh`) und `/api/online-covers*` nehmen `localOrElternSession`.
-2. **Neue Endpunkte für heutige PHP-Funktionen (⚙ PHP, 92 Zeilen)**, jeweils mit der Logik und den Skripten, die PHP
+2. **Neue Endpunkte für heutige PHP-Funktionen (⚙ PHP, 76 Zeilen)**, jeweils mit der Logik und den Skripten, die PHP
    heute nutzt (Details in den Tabellen):
-   - Audio & Hardware: Soundkarte, Drehregler/Taster, MuPiHAT an/aus, Akku-Auswahl, Taster-Verzögerung, LED, Lüfter
    - Bibliothek: „Update verfügbar“
    - Netzwerk & Dienste: Netzwerk-Optionen (Onboard-WLAN, USB-Treiber, Stromsparen, DHCP, Wächter, neu verbinden,
      IP-Steuerung), Freigaben (Samba, FTP, VNC), Telegram-Chat-ID ermitteln, MQTT, WLED
@@ -490,6 +489,12 @@ Abkürzungen: `A:` = alte Admin-Oberfläche (PHP, Port 80), `E:` = Eltern-WebApp
 | ▶ Fernsteuerung öffnen | Fernsteuerung (VNC) | A: vnc.php:14 (`<embed>` + Link `http://<host>:6080/vnc_lite.html?host=<host>&port=5900`) | Dienste `mupi_vnc` + `mupi_novnc` (an/aus in service.php:25–46, `tweaks.vnc`) | — | nur Link | Neue App: Link öffnen + Dienststatus abfragen (Endpoint `systemctl is-active mupi_novnc` fehlt) | ✓ API |
 | ▶ Strg+Alt+Entf senden | Strg+Alt+Entf senden | nirgends in MuPiBox-Code; nur noVNC-eigene Oberfläche (vnc_lite) | — | — | — | Neu: eigener noVNC-Client (RFB `sendCtrlAltDel()`) in der App oder weglassen | ＋ neu |
 
+> Neue App (eltern/hardware.ts): GET `/api/eltern/hardware`, POST `/soundcard` (dietpi-set_hardware, Neustart
+> angeboten), `/rotary`, `/mupihat` (enable/disable_mupihat.sh + Neustart), `/battery` (+ mupi_hat-Neustart),
+> `/mupihat/restart` (nach dem Profil), `/shim` (pressDelay, ledPin, LED-Helligkeit), `/fan` (Reihenfolge und Pins geprüft,
+> `systemctl restart` statt `start`). Startlautstärke: `/audio/config` schreibt jetzt `startupVolume` **und**
+> `startVolume` (nur das lesen die Skripte; vorher wirkte die Einstellung der Eltern-App nicht), „aus“ entfernt beide.
+
 ### Einstellungen › Audio › Lautstärke [lautstaerke]
 | Schlüssel / Aktion | Beschriftung | Heute | Speicherort | Lesen | Schreiben / Ausführen | Nebenwirkung / Hinweis | Status |
 |---|---|---|---|---|---|---|---|
@@ -501,14 +506,14 @@ Abkürzungen: `A:` = alte Admin-Oberfläche (PHP, Port 80), `E:` = Eltern-WebApp
 ### Einstellungen › Audio › Soundkarte [soundkarte]
 | Schlüssel / Aktion | Beschriftung | Heute | Speicherort | Lesen | Schreiben / Ausführen | Nebenwirkung / Hinweis | Status |
 |---|---|---|---|---|---|---|---|
-| `sound` | Soundkarte | A: mupi.php:1372 → :326 (`audioset`) | `/boot/dietpi.txt` `CONFIG_SOUNDCARD=` + `mupibox.physicalDevice`; Liste `mupibox.AudioDevices` (28 ✓, `tname`/`ufname`) | `sed … CONFIG_SOUNDCARD=` /boot/dietpi.txt (mupi.php:1374) | `sudo /boot/dietpi/func/dietpi-set_hardware soundcard '<tname>'` (Whitelist gegen AudioDevices), change=2 | Neustart nötig. MuPiHAT an/aus überschreibt die Soundkarte (enable/disable_mupihat.sh). Vergleich nutzt `physicalDevice`, Anzeige dietpi.txt → können auseinanderlaufen. Neu: Endpoint mit Whitelist + dietpi-set_hardware | ⚙ PHP |
+| `sound` | Soundkarte | A: mupi.php:1372 → :326 (`audioset`) | `/boot/dietpi.txt` `CONFIG_SOUNDCARD=` + `mupibox.physicalDevice`; Liste `mupibox.AudioDevices` (28 ✓, `tname`/`ufname`) | `sed … CONFIG_SOUNDCARD=` /boot/dietpi.txt (mupi.php:1374) | `sudo /boot/dietpi/func/dietpi-set_hardware soundcard '<tname>'` (Whitelist gegen AudioDevices), change=2 | Neustart nötig. MuPiHAT an/aus überschreibt die Soundkarte (enable/disable_mupihat.sh). Vergleich nutzt `physicalDevice`, Anzeige dietpi.txt → können auseinanderlaufen. Neu: Endpoint mit Whitelist + dietpi-set_hardware | ✓ API |
 
 ### Einstellungen › Audio › Drehregler und Taster [drehregler]
 | Schlüssel / Aktion | Beschriftung | Heute | Speicherort | Lesen | Schreiben / Ausführen | Nebenwirkung / Hinweis | Status |
 |---|---|---|---|---|---|---|---|
-| `rotary` | Drehregler für die Lautstärke | A: mupi.php:1495 (Knopf `rotary_toggle`) → :435 | `rotary.active` (bool) + Dienst `mupi_rotary` | Konfig | `sudo systemctl enable`+`restart mupi_rotary` bzw. `stop`+`disable`, change=2 | GPIO 26/24 (Encoder), 10 (Taster) | ⚙ PHP |
-| `rotStep` | Schritt pro Raste | A: mupi.php:1503 → :457 (1–10, nur sichtbar wenn aktiv) | `rotary.step` (int) | rotary_control.py:56/69 (mtime-Cache → live) | PHP clamp 1–10, change=2 | live, kein Neustart | ⚙ PHP |
-| `btnFn` | Funktion des Tasters an GPIO 10 | A: mupi.php:1506 → :460 | `rotary.button` ∈ off/playpause/next/ffwd | rotary_control.py (live) | PHP Whitelist, change=2 | Code-Standard `off`, Prototyp „Play/Pause“. Neu für alle 3: Endpoint `rotary` (+ systemctl) | ⚙ PHP |
+| `rotary` | Drehregler für die Lautstärke | A: mupi.php:1495 (Knopf `rotary_toggle`) → :435 | `rotary.active` (bool) + Dienst `mupi_rotary` | Konfig | `sudo systemctl enable`+`restart mupi_rotary` bzw. `stop`+`disable`, change=2 | GPIO 26/24 (Encoder), 10 (Taster) | ✓ API |
+| `rotStep` | Schritt pro Raste | A: mupi.php:1503 → :457 (1–10, nur sichtbar wenn aktiv) | `rotary.step` (int) | rotary_control.py:56/69 (mtime-Cache → live) | PHP clamp 1–10, change=2 | live, kein Neustart | ✓ API |
+| `btnFn` | Funktion des Tasters an GPIO 10 | A: mupi.php:1506 → :460 | `rotary.button` ∈ off/playpause/next/ffwd | rotary_control.py (live) | PHP Whitelist, change=2 | Code-Standard `off`, Prototyp „Play/Pause“. Neu für alle 3: Endpoint `rotary` (+ systemctl) | ✓ API |
 
 ### Einstellungen › Audio › Bluetooth [bluetooth]
 | Schlüssel / Aktion | Beschriftung | Heute | Speicherort | Lesen | Schreiben / Ausführen | Nebenwirkung / Hinweis | Status |
@@ -530,8 +535,8 @@ Abkürzungen: `A:` = alte Admin-Oberfläche (PHP, Port 80), `E:` = Eltern-WebApp
 ### Einstellungen › Akku & Strom › MuPiHAT & Akku-Profil [mupihat]
 | Schlüssel / Aktion | Beschriftung | Heute | Speicherort | Lesen | Schreiben / Ausführen | Nebenwirkung / Hinweis | Status |
 |---|---|---|---|---|---|---|---|
-| `hatOn` | MuPiHAT aktiv | A: mupihat.php:224 → :96 (`activate_the_hat`) | `mupihat.hat_active` (bool) | Konfig | `sudo enable_mupihat.sh` / `disable_mupihat.sh` (config.txt-Overlays, i2c-Module, Dienste `mupi_hat`+`mupi_hat_control`, Soundkarte via `/boot/run_once.sh`), change=2 + `$reboot=1` → Neustart (footer.php:183) | Box startet neu, Soundkarte wird umgestellt. Neu: Endpoint, der die Skripte + Neustart ausführt | ⚙ PHP |
-| `battery` | Akku | A: mupihat.php:238 → :116 (`save_battery`); E: nur Anzeige `#power-profile-name` (app.js:3241) | `mupihat.selected_battery` (Name aus `mupihat.battery_types[].name`) | GET `/power-config` (`battery.selected`) | PHP: **ohne** Prüfung übernommen; bei HAT aktiv `sudo service mupi_hat restart` (change=5) | Namen im Code: „Ansmann 2S1P“, „ENERpower 2S2P 10.000mAh“, „ENERpower 2S3P 15.000mAh“, „USB-C mode (no battery)“, „Custom“. Neu: Endpoint mit Whitelist + mupi_hat-Restart | ⚙ PHP |
+| `hatOn` | MuPiHAT aktiv | A: mupihat.php:224 → :96 (`activate_the_hat`) | `mupihat.hat_active` (bool) | Konfig | `sudo enable_mupihat.sh` / `disable_mupihat.sh` (config.txt-Overlays, i2c-Module, Dienste `mupi_hat`+`mupi_hat_control`, Soundkarte via `/boot/run_once.sh`), change=2 + `$reboot=1` → Neustart (footer.php:183) | Box startet neu, Soundkarte wird umgestellt. Neu: Endpoint, der die Skripte + Neustart ausführt | ✓ API |
+| `battery` | Akku | A: mupihat.php:238 → :116 (`save_battery`); E: nur Anzeige `#power-profile-name` (app.js:3241) | `mupihat.selected_battery` (Name aus `mupihat.battery_types[].name`) | GET `/power-config` (`battery.selected`) | PHP: **ohne** Prüfung übernommen; bei HAT aktiv `sudo service mupi_hat restart` (change=5) | Namen im Code: „Ansmann 2S1P“, „ENERpower 2S2P 10.000mAh“, „ENERpower 2S3P 15.000mAh“, „USB-C mode (no battery)“, „Custom“. Neu: Endpoint mit Whitelist + mupi_hat-Restart | ✓ API |
 | `v100` | v_100 (100 %) | A: mupihat.php:263 (nur Profil „Custom“) → :8; E: `#pwr-prof-v100` app.js:3244 | `mupihat.battery_types[<gewählt>].config.v_100` (String, mV) | GET `/power-config` (`battery.profile`) | POST `/power-config` {batteryProfile} routes.ts:610 (5000–9000) | ⚠ API ändert das **aktive** Profil (auch Standardprofile), PHP nur „Custom“ (4000–12600, streng absteigend). API: kein mupi_hat-Restart → wirkt erst nach Dienst-/Box-Neustart | ✓ API |
 | `v75` | v_75 (75 %) | A: mupihat.php:281; E: nicht im UI | `…config.v_75` | GET `/power-config` | POST `/power-config` (API nimmt es an, 5000–9000) | WebApp-UI zeigt nur v_100/Warnung/Abschalten/VREG. Keine Prüfung auf absteigende Reihenfolge in der API | ✓ API |
 | `v50` | v_50 (50 %) | A: mupihat.php:287; E: – | `…config.v_50` | wie oben | wie oben | wie oben | ✓ API |
@@ -551,20 +556,20 @@ Abkürzungen: `A:` = alte Admin-Oberfläche (PHP, Port 80), `E:` = Eltern-WebApp
 ### Einstellungen › Akku & Strom › Ein-/Ausschalter und LED [taster]
 | Schlüssel / Aktion | Beschriftung | Heute | Speicherort | Lesen | Schreiben / Ausführen | Nebenwirkung / Hinweis | Status |
 |---|---|---|---|---|---|---|---|
-| `pressDelay` | Verzögerung des Ausschalt-Tasters | A: mupi.php:1539 → :518 (`powerset`, 0–5 / 0,25, ohne Prüfung) | `timeout.pressDelay` (String, s) | GET `/power-config` liefert es (routes.ts:595), POST nimmt es **nicht** an | PHP change=2 | off_trigger.sh:17 (DietPi-postboot) liest nur beim Boot → Neustart nötig. Neu: `pressDelay` in POST `/power-config` aufnehmen | ⚙ PHP |
-| `ledPin` | LED-Pin (OnOffShim) | A: mupi.php:1548 → :595 (Whitelist 4…27) | `shim.ledPin` (String) + `/etc/init.d/pi-blaster.boot.sh` `DAEMON_ARGS="--gpio N"` | Konfig | PHP: `sudo sed -i` in pi-blaster.boot.sh, change=2 | Neustart nötig. Template-Standard 13, Prototyp 25 | ⚙ PHP |
-| `ledMax` | LED-Helligkeit normal | A: mupi.php:1575 → :419 (0–100 / 1, ohne Prüfung) | `shim.ledBrightnessMax` (String) | mupi_start_led.sh:70 (mtime-Cache → live) | PHP change=2 | live | ⚙ PHP |
-| `ledMin` | LED-Helligkeit gedimmt | A: mupi.php:1587 → :426 | `shim.ledBrightnessMin` | mupi_start_led.sh:71 | PHP change=2 | live. Neu für alle 4: Endpoint `shim`/`pressDelay` | ⚙ PHP |
+| `pressDelay` | Verzögerung des Ausschalt-Tasters | A: mupi.php:1539 → :518 (`powerset`, 0–5 / 0,25, ohne Prüfung) | `timeout.pressDelay` (String, s) | GET `/power-config` liefert es (routes.ts:595), POST nimmt es **nicht** an | PHP change=2 | off_trigger.sh:17 (DietPi-postboot) liest nur beim Boot → Neustart nötig. Neu: `pressDelay` in POST `/power-config` aufnehmen | ✓ API |
+| `ledPin` | LED-Pin (OnOffShim) | A: mupi.php:1548 → :595 (Whitelist 4…27) | `shim.ledPin` (String) + `/etc/init.d/pi-blaster.boot.sh` `DAEMON_ARGS="--gpio N"` | Konfig | PHP: `sudo sed -i` in pi-blaster.boot.sh, change=2 | Neustart nötig. Template-Standard 13, Prototyp 25 | ✓ API |
+| `ledMax` | LED-Helligkeit normal | A: mupi.php:1575 → :419 (0–100 / 1, ohne Prüfung) | `shim.ledBrightnessMax` (String) | mupi_start_led.sh:70 (mtime-Cache → live) | PHP change=2 | live | ✓ API |
+| `ledMin` | LED-Helligkeit gedimmt | A: mupi.php:1587 → :426 | `shim.ledBrightnessMin` | mupi_start_led.sh:71 | PHP change=2 | live. Neu für alle 4: Endpoint `shim`/`pressDelay` | ✓ API |
 
 ### Einstellungen › Akku & Strom › Lüfter [luefter]
 | Schlüssel / Aktion | Beschriftung | Heute | Speicherort | Lesen | Schreiben / Ausführen | Nebenwirkung / Hinweis | Status |
 |---|---|---|---|---|---|---|---|
-| `fanOn` | Lüfter aktiv | A: mupi.php:1678 → :474 (`fan_control`) | `fan.fan_active` (bool) + Dienst `mupi_fan` | Konfig | an: `systemctl enable mupi_fan` + `service mupi_fan start`; aus: stop + disable; change=2 | – | ⚙ PHP |
-| `fanPin` | Lüfter-Pin | A: mupi.php:1607 → :477 | `fan.fan_gpio` (String) | fan_control.py:38 (nur beim Dienststart) | PHP ohne Whitelist-Prüfung | Standard: Template 12, conf_update.sh 13, Prototyp **17** = OnOffShim-Trigger-Pin (`shim.triggerPin`) → Konflikt | ⚙ PHP |
-| `fan100` | Volle Drehzahl ab | A: mupi.php:1634 → :478 (20–90) | `fan.fan_temp_100` | fan_control.py:39 (nur Start) | PHP ohne Prüfung | Reihenfolge 100 > 75 > 50 > 25 nirgends geprüft | ⚙ PHP |
-| `fan75` | 75 % ab | A: mupi.php:1646 → :479 | `fan.fan_temp_75` | fan_control.py:40 | wie oben | – | ⚙ PHP |
-| `fan50` | 50 % ab | A: mupi.php:1658 → :480 | `fan.fan_temp_50` | fan_control.py:41 | wie oben | – | ⚙ PHP |
-| `fan25` | 25 % ab | A: mupi.php:1670 → :481 | `fan.fan_temp_25` | fan_control.py:42 | wie oben | ⚠ Läuft der Lüfter schon, macht `service mupi_fan start` nichts → neue Pins/Temperaturen erst nach Neustart. Neu: Endpoint mit Validierung + `systemctl restart mupi_fan` | ⚙ PHP |
+| `fanOn` | Lüfter aktiv | A: mupi.php:1678 → :474 (`fan_control`) | `fan.fan_active` (bool) + Dienst `mupi_fan` | Konfig | an: `systemctl enable mupi_fan` + `service mupi_fan start`; aus: stop + disable; change=2 | – | ✓ API |
+| `fanPin` | Lüfter-Pin | A: mupi.php:1607 → :477 | `fan.fan_gpio` (String) | fan_control.py:38 (nur beim Dienststart) | PHP ohne Whitelist-Prüfung | Standard: Template 12, conf_update.sh 13, Prototyp **17** = OnOffShim-Trigger-Pin (`shim.triggerPin`) → Konflikt | ✓ API |
+| `fan100` | Volle Drehzahl ab | A: mupi.php:1634 → :478 (20–90) | `fan.fan_temp_100` | fan_control.py:39 (nur Start) | PHP ohne Prüfung | Reihenfolge 100 > 75 > 50 > 25 nirgends geprüft | ✓ API |
+| `fan75` | 75 % ab | A: mupi.php:1646 → :479 | `fan.fan_temp_75` | fan_control.py:40 | wie oben | – | ✓ API |
+| `fan50` | 50 % ab | A: mupi.php:1658 → :480 | `fan.fan_temp_50` | fan_control.py:41 | wie oben | – | ✓ API |
+| `fan25` | 25 % ab | A: mupi.php:1670 → :481 | `fan.fan_temp_25` | fan_control.py:42 | wie oben | ⚠ Läuft der Lüfter schon, macht `service mupi_fan start` nichts → neue Pins/Temperaturen erst nach Neustart. Neu: Endpoint mit Validierung + `systemctl restart mupi_fan` | ✓ API |
 
 ### Lücken und Auffälligkeiten (Teil 2)
 

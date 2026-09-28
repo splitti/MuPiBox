@@ -33,6 +33,7 @@ import {
 import { ipRateLimit, localNetworkOnly, requireCsrf, requireSession } from './middleware'
 import { registerCustomCoverRoutes } from './covers'
 import { registerDisplayRoutes } from './display'
+import { registerHardwareRoutes } from './hardware'
 import { type LocalLibraryDeps, registerLocalUploadRoutes } from './upload'
 import { localOnly } from '../request-guard'
 import {
@@ -209,6 +210,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
 
   if (deps.localLibrary) registerLocalUploadRoutes(router, deps.localLibrary)
   registerDisplayRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
+  registerHardwareRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerCustomCoverRoutes(router, {
     dir: '/home/dietpi/MuPiBox/media/cover',
     host: () => String((deps.getMupiboxConfig()?.mupibox as { host?: string } | undefined)?.host || os.hostname()),
@@ -896,7 +898,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       }
       const mb = (cfg.mupibox as Record<string, unknown> | undefined) ?? {}
       const maxVolume = volumePercent(mb.maxVolume) ?? 100
-      const startupVolume = volumePercent(mb.startupVolume) ?? null
+      // (the admin interface only writes startVolume)
+      const startupVolume = volumePercent(mb.startupVolume) ?? volumePercent(mb.startVolume) ?? null
       res.json({ current, maxVolume, startupVolume })
     })
   })
@@ -971,9 +974,17 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     await deps.updateMupiboxConfig((cfg) => {
       const mb = ((cfg.mupibox as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
       if (mutations.maxVolume !== undefined) mb.maxVolume = mutations.maxVolume
+      // The scripts that set the volume at start and shutdown (chromium-autostart.sh, mupi_shutdown.sh,
+      // off_trigger.sh, shutdown_sound.sh) and the admin interface read startVolume: this app's startupVolume alone
+      // had no effect. Both are written; without a fixed value both go, and the scripts leave the volume as it was.
       if (mutations.startupVolume !== undefined) {
-        if (mutations.startupVolume === null) delete mb.startupVolume
-        else mb.startupVolume = mutations.startupVolume
+        if (mutations.startupVolume === null) {
+          delete mb.startupVolume
+          delete mb.startVolume
+        } else {
+          mb.startupVolume = mutations.startupVolume
+          mb.startVolume = mutations.startupVolume
+        }
       }
       cfg.mupibox = mb
     })

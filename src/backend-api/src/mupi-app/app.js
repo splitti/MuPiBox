@@ -3249,6 +3249,194 @@ const ttsName = (code) => {
 }
 const fmtSec = (v) => `${Number(v).toLocaleString('de-DE')} s`
 
+/* Einstellungen › Audio and › Akku & Strom */
+
+const hw = { data: null, audio: null, bt: null, found: null, scanning: false, power: null, hat: null, hist: null }
+
+async function loadHardware() {
+  const r = await api(`${API}/hardware`)
+  if (!r.ok) throw new Error(`hardware ${r.status}`)
+  hw.data = r.body
+}
+
+// Leaves out the schema's save button of a page that saves each change right away
+const withoutSave = (page) => page.sections.map((sec) => ({ ...sec, items: sec.items.filter((it) => !(it.type === 'buttons' && it.buttons.some(([l]) => l === 'Speichern'))) }))
+
+async function offerReboot(text) {
+  if (!(await ask('Neu starten?', text, 'Jetzt neu starten'))) return toast('Wird beim nächsten Neustart übernommen', 'info')
+  const r = await api('/api/reboot', { method: 'POST', body: {} })
+  toast(r.ok ? 'Die Box startet neu …' : 'Neustart ging nicht', r.ok ? 'ok' : 'info')
+}
+
+/* Lautstärke */
+
+async function loadVolume() {
+  const r = await api(`${API}/audio`)
+  if (!r.ok) throw new Error(`audio ${r.status}`)
+  hw.audio = r.body
+  state.values.set('vol', Number(r.body.current ?? 0))
+  state.values.set('volMax', Number(r.body.maxVolume ?? 100))
+  state.values.set('volFix', r.body.startupVolume != null)
+  state.values.set('volStart', Number(r.body.startupVolume ?? 30))
+}
+
+/* Soundkarte, Drehregler */
+
+const BTN_FN = [
+  ['Aus', 'off'],
+  ['Play/Pause', 'playpause'],
+  ['Nächster Titel', 'next'],
+  ['Vorspulen', 'ffwd'],
+]
+
+/* Bluetooth */
+
+async function loadBluetooth() {
+  const r = await api(`${API}/bluetooth`)
+  if (!r.ok) throw new Error(`bluetooth ${r.status}`)
+  hw.bt = r.body
+}
+
+function btTop() {
+  const b = hw.bt ?? {}
+  const sw = (id, label, help, on) =>
+    `<div class="row"><span class="lbl"><b>${label}</b>${help ? `<small>${help}</small>` : ''}</span><label class="switch"><input type="checkbox" id="${id}" ${on ? 'checked' : ''} aria-label="${label}"><span></span></label></div>`
+  const devices = b.devices ?? []
+  return [
+    `<section class="card">${sw('bt-on', 'Bluetooth', 'Für Kopfhörer oder Lautsprecher.', b.powered)}${sw('bt-auto', 'Automatisch verbinden', 'Verbindet ein bekanntes Gerät von selbst, sobald es an ist.', b.autoconnect)}</section>`,
+    b.powered
+      ? `<section class="card"><h2>Gekoppelte Geräte</h2>${
+          devices.length
+            ? `<div class="rows">${devices
+                .map((d, i) => `<div class="entry"><span class="avatar">${icon('bt', 16)}</span><span class="lbl"><b>${esc(d.name)}</b><small>${d.connected ? 'verbunden' : 'nicht verbunden'}</small></span>${d.connected ? '<span class="chip ok">aktiv</span>' : ''}<button class="btn danger sm" data-bt-rm="${i}">Entfernen</button></div>`)
+                .join('')}</div>`
+            : '<p class="help" style="margin:0">Noch kein Gerät gekoppelt.</p>'
+        }</section>
+        <section class="card"><h2>Neue Geräte koppeln</h2><p class="help">Gerät in den Kopplungsmodus versetzen, dann suchen (dauert etwa 10–30 s).</p>
+          <div class="btns"><button class="btn primary" id="bt-scan" ${hw.scanning ? 'disabled' : ''}>${hw.scanning ? 'Suche läuft …' : 'Suchen'}</button></div>
+          ${
+            hw.found
+              ? hw.found.length
+                ? `<div class="rows">${hw.found.map((d, i) => `<div class="entry"><span class="lbl"><b>${esc(d.name)}</b><small>${esc(d.mac)}</small></span><button class="btn sm" data-bt-pair="${i}">Koppeln</button></div>`).join('')}</div>`
+                : '<p class="help" style="margin:0">Nichts gefunden. Ist das Gerät im Kopplungsmodus?</p>'
+              : ''
+          }</section>`
+      : '',
+  ]
+}
+
+function mountBluetooth(root, page) {
+  const again = async (text, kind) => {
+    if (text) toast(text, kind)
+    await loadBluetooth().catch(() => undefined)
+    if (currentPage()?.id === page.id) renderPage(page, false)
+  }
+  $('#bt-on', root).onchange = async (e) => {
+    const on = e.target.checked
+    const r = await api(`${API}/bluetooth/power`, { method: 'POST', body: { on } })
+    hw.found = null
+    again(r.body?.ok ? (on ? 'Bluetooth an' : 'Bluetooth aus') : 'Das hat nicht geklappt', r.body?.ok ? 'ok' : 'info')
+  }
+  $('#bt-auto', root).onchange = async (e) => {
+    const r = await api(`${API}/bluetooth/autoconnect`, { method: 'POST', body: { enable: e.target.checked } })
+    toast(r.ok ? (e.target.checked ? 'Verbindet automatisch' : 'Verbindet nicht mehr automatisch') : 'Nicht gespeichert', r.ok ? 'ok' : 'info')
+  }
+  $('#bt-scan', root)?.addEventListener('click', async () => {
+    hw.scanning = true
+    renderPage(page, false)
+    const r = await api(`${API}/bluetooth/scan`, { method: 'POST', body: {} })
+    hw.scanning = false
+    hw.found = r.body?.found ?? []
+    if (currentPage()?.id === page.id) renderPage(page, false)
+  })
+  for (const b of root.querySelectorAll('[data-bt-pair]')) {
+    const d = hw.found[Number(b.dataset.btPair)]
+    b.onclick = async () => {
+      b.disabled = true
+      b.textContent = 'Kopple …'
+      const r = await api(`${API}/bluetooth/pair`, { method: 'POST', body: { mac: d.mac } })
+      hw.found = hw.found.filter((x) => x !== d)
+      again(r.body?.ok ? `${d.name} gekoppelt` : `${d.name} ließ sich nicht koppeln`, r.body?.ok ? 'ok' : 'info')
+    }
+  }
+  for (const b of root.querySelectorAll('[data-bt-rm]')) {
+    const d = hw.bt.devices[Number(b.dataset.btRm)]
+    b.onclick = () =>
+      confirmSheet('Entfernen', `„${d.name}“ entfernen? Zum erneuten Verbinden muss es wieder gekoppelt werden.`, async () => {
+        await api(`${API}/bluetooth/remove`, { method: 'POST', body: { mac: d.mac } })
+        again('Entfernt')
+      })
+  }
+}
+
+/* Akku */
+
+async function loadBattery() {
+  const [hat, hist] = await Promise.all([api('/api/mupihat'), api(`${API}/battery-history?hours=24`)])
+  hw.hat = hat.ok ? hat.body : null
+  hw.hist = hist.ok ? hist.body?.samples ?? [] : []
+}
+
+function batteryTop() {
+  const h = hw.hat
+  if (!h || !Object.keys(h).length) return [`<section class="card"><h2>Akku-Stand</h2><p class="help" style="margin:0">Kein MuPiHAT gefunden – die Box läuft ohne Akku-Anzeige.</p></section>`]
+  let pct = h.Bat_Percent
+  if (!Number.isFinite(pct)) pct = Number.parseInt(String(h.Bat_SOC ?? ''), 10)
+  const charging = (h.IBus ?? 0) > 0
+  const v = (mv) => (Number.isFinite(mv) && mv > 0 ? `${(mv / 1000).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} V` : '–')
+  const status = { 'Not Charging': 'lädt nicht', 'Pre-charge': 'Vorladen', 'Fast Charging': 'lädt (schnell)', 'Fast charging': 'lädt (schnell)', 'Trickle Charge': 'lädt (Erhaltung)', 'Taper Charging': 'lädt (fast voll)', 'Top-off Timer Active Charging': 'lädt (fast voll)', 'Charge Termination Done': 'voll' }[h.Charger_Status] ?? h.Charger_Status ?? '–'
+  // the last 24 hours in hours: the average percent of each hour
+  const now = Date.now()
+  const hours = Array.from({ length: 24 }, (_, i) => ({ at: now - (23 - i) * 3600e3, vals: [] }))
+  for (const s of hw.hist ?? []) {
+    const age = Math.floor((now - Date.parse(s.ts)) / 3600e3)
+    if (age >= 0 && age < 24 && Number.isFinite(s.percent)) hours[23 - age].vals.push(s.percent)
+  }
+  const vals = hours.map((x) => (x.vals.length ? Math.round(x.vals.reduce((a, b) => a + b, 0) / x.vals.length) : 0))
+  const labels = hours.map((x, i) => (i % 4 === 3 ? `${new Date(x.at).getHours()}` : ''))
+  return [
+    `<section class="card"><h2>Akku-Stand</h2><div><div class="big">${Number.isFinite(pct) ? `${pct} %` : '–'}${charging ? ' ⚡' : ''}</div><small class="help">${esc(h.Bat_Type ?? '')}</small></div>
+      <dl class="kv"><div><dt>Akku-Spannung</dt><dd>${v(h.Vbat)}</dd></div><div><dt>USB-Spannung</dt><dd>${v(h.Vbus)}</dd></div>
+        <div><dt>Akku-Strom</dt><dd>${Number.isFinite(h.Ibat) ? `${h.Ibat.toLocaleString('de-DE')} mA` : '–'}</dd></div><div><dt>Temperatur</dt><dd>${Number.isFinite(h.Temp) ? `${h.Temp.toLocaleString("de-DE")} °C` : '–'}</dd></div>
+        <div><dt>Ladegerät</dt><dd>${esc(status)}</dd></div></dl></section>`,
+    `<section class="card"><h2>Verlauf (24 h)</h2>${
+      (hw.hist ?? []).length
+        ? `<div class="chart" style="--n:24">${vals.map((x, i) => `<div class="col${i === 23 ? ' today' : ''}"><i style="height:${x}%"></i>${labels[i]}</div>`).join('')}</div><p class="help" style="margin:0">Akku in Prozent, je Stunde gemittelt. Ohne Balken: keine Messung in der Stunde.</p>`
+        : '<p class="help" style="margin:0">Noch keine Messwerte.</p>'
+    }</section>`,
+  ]
+}
+
+/* MuPiHAT & Akku-Profil */
+
+const BATTERY_NAMES = { 'USB-C mode (no battery)': 'USB-C-Betrieb (ohne Akku)', Custom: 'Eigenes Profil' }
+const batteryLabel = (n) => BATTERY_NAMES[n] ?? n
+const PROFILE_KEYS = [
+  ['v100', 'v_100'],
+  ['v75', 'v_75'],
+  ['v50', 'v_50'],
+  ['v25', 'v_25'],
+  ['v0', 'v_0'],
+  ['thWarn', 'th_warning'],
+  ['thShut', 'th_shutdown'],
+  ['vreg', 'vreg'],
+]
+
+async function loadHat() {
+  const [, power] = await Promise.all([loadHardware(), api(`${API}/power-config`)])
+  hw.power = power.body ?? {}
+  state.values.set('hatOn', hw.data.mupihat.active)
+  state.values.set('battery', batteryLabel(hw.data.mupihat.battery))
+  const p = hw.power.battery?.profile ?? {}
+  for (const [key, field] of PROFILE_KEYS) state.values.set(key, p[field] != null ? String(p[field]) : '')
+}
+
+/* Taster und LED, Lüfter */
+
+function pinOptions(reserved) {
+  return (hw.data?.pins ?? []).filter((p) => !reserved.includes(p))
+}
+
 /* the controllers: load(page) reads the box before drawing, mount(root, page) runs after it, change(key, value)
    saves a setting, act / byLabel run the buttons, sections(page) gives the building blocks with the box's values,
    top(page) draws the page's own top part (instead of customTop's), ownNav: the page shows its sub pages itself */
@@ -3609,6 +3797,225 @@ const CONTROLLERS = {
     },
   },
   displaylive: { top: liveTop, sections: () => [], mount: mountLive },
+  lautstaerke: {
+    load: loadVolume,
+    sections: (page) =>
+      withoutSave(page).map((sec) => ({
+        ...sec,
+        items: sec.items.map((it) =>
+          it.key === 'vol'
+            ? { ...it, help: `Höchstens ${state.values.get('volMax')} % (Hörschutz).` }
+            : it.key === 'volMax'
+              ? { ...it, help: 'Lauter geht es auch am Display und per Telegram nicht.' }
+              : it.key === 'volStart'
+                ? { ...it, help: 'Aus = die Box startet mit der zuletzt eingestellten Lautstärke.' }
+                : it,
+        ),
+      })),
+    async change(key, v, page) {
+      if (key === 'vol') {
+        const r = await api(`${API}/audio/volume`, { method: 'POST', body: { volume: v } })
+        if (!r.ok) return toast('Lautstärke ließ sich nicht setzen', 'info')
+        if (r.body?.capped) {
+          state.values.set('vol', r.body.applied)
+          renderPage(page, false)
+          return toast(`Hörschutz: höchstens ${r.body.applied} %`, 'info')
+        }
+        return toast(`Lautstärke ${v} %`)
+      }
+      const body = key === 'volMax' ? { maxVolume: v } : key === 'volFix' ? { startupVolume: v ? Number(state.values.get('volStart')) : null } : key === 'volStart' && state.values.get('volFix') ? { startupVolume: v } : null
+      if (!body) return
+      const r = await api(`${API}/audio/config`, { method: 'POST', body })
+      toast(r.ok ? 'Gespeichert' : 'Nicht gespeichert', r.ok ? 'ok' : 'info')
+      if (r.ok && key === 'volMax') renderPage(page, false)
+    },
+  },
+  soundkarte: {
+    async load() {
+      await loadHardware()
+      const sc = hw.data.soundcard
+      state.values.set('sound', sc.options.find((o) => o.id === sc.current)?.name ?? sc.current)
+    },
+    sections: (page) =>
+      withoutSave(page).map((sec) => ({
+        ...sec,
+        help: `${hw.data.mupihat.active ? 'Mit dem MuPiHAT gehört die Soundkarte zum HAT (MAX98357A). ' : ''}Wird nach einem Neustart übernommen.`,
+        items: sec.items.map((it) => (it.key === 'sound' ? { ...it, options: hw.data.soundcard.options.map((o) => o.name) } : it)),
+      })),
+    async change(key, v, page) {
+      if (key !== 'sound') return
+      const opt = hw.data.soundcard.options.find((o) => o.name === v)
+      if (!opt || opt.id === hw.data.soundcard.current) return
+      if (!(await ask('Soundkarte wechseln', `Auf „${v}“ umstellen? Die Box braucht danach einen Neustart.`, 'Umstellen'))) {
+        state.values.set('sound', hw.data.soundcard.options.find((o) => o.id === hw.data.soundcard.current)?.name ?? '')
+        return renderPage(page, false)
+      }
+      toast('Wird umgestellt …')
+      const r = await api(`${API}/soundcard`, { method: 'POST', body: { id: opt.id } })
+      if (!r.ok) return toast('Das hat nicht geklappt', 'info')
+      hw.data.soundcard.current = opt.id
+      offerReboot('Die neue Soundkarte gilt nach einem Neustart.')
+    },
+  },
+  drehregler: {
+    async load() {
+      await loadHardware()
+      const r = hw.data.rotary
+      state.values.set('rotary', r.active)
+      state.values.set('rotStep', r.step)
+      state.values.set('btnFn', BTN_FN.find(([, v]) => v === r.button)?.[0] ?? 'Aus')
+    },
+    sections: (page) =>
+      withoutSave(page).map((sec) => ({
+        ...sec,
+        help: 'Drehregler an GPIO 26/24, Taster an GPIO 10.',
+        items: sec.items.map((it) => (it.key === 'btnFn' ? { ...it, label: 'Funktion des Tasters (GPIO 10)' } : it)),
+      })),
+    async change(key, v) {
+      const body = key === 'rotary' ? { active: v } : key === 'rotStep' ? { step: v } : key === 'btnFn' ? { button: BTN_FN.find(([l]) => l === v)?.[1] } : null
+      if (!body) return
+      const r = await api(`${API}/rotary`, { method: 'POST', body })
+      toast(r.ok ? (key === 'rotary' ? (v ? 'Drehregler an' : 'Drehregler aus') : 'Gespeichert') : 'Nicht gespeichert', r.ok ? 'ok' : 'info')
+    },
+  },
+  bluetooth: { load: loadBluetooth, top: btTop, sections: () => [], mount: mountBluetooth },
+  akku: {
+    load: loadBattery,
+    top: batteryTop,
+    sections: () => [],
+    mount(root, page) {
+      every(30000, async () => {
+        await loadBattery().catch(() => undefined)
+        if (currentPage()?.id === page.id) renderPage(page, false)
+      })
+    },
+  },
+  mupihat: {
+    load: loadHat,
+    sections: (page) =>
+      page.sections.map((sec) => ({
+        ...sec,
+        items: sec.items
+          .map((it) => {
+            if (it.key === 'battery') return { ...it, options: hw.data.mupihat.batteries.map(batteryLabel), help: 'Die Spannungen darunter gehören zu diesem Profil.' }
+            if (it.key === 'hatOn') return { ...it, help: 'Umschalten stellt auch die Soundkarte um und startet die Box neu.' }
+            if (it.type === 'warn') return { ...it, text: 'Vorsicht: Die Werte ändern das gewählte Profil. Ein zu hoher Ladeschluss (VREG) schadet dem Akku; das Abschalten muss unter der Warnung liegen. Die Werte gelten, sobald der MuPiHAT-Dienst neu startet (passiert beim Speichern).' }
+            if (it.key === 'vreg') return { ...it, help: 'Leer = Standard des Lade-Chips.' }
+            return it
+          })
+          .filter((it) => it.key !== 'hatOn' || true),
+      })),
+    async change(key, v, page) {
+      if (key === 'hatOn') {
+        if (!(await ask(v ? 'MuPiHAT einschalten' : 'MuPiHAT ausschalten', `Die Box stellt die Soundkarte um (${v ? 'MAX98357A' : 'Onboard 3,5 mm'}) und startet gleich neu.`, v ? 'Einschalten' : 'Ausschalten'))) {
+          state.values.set('hatOn', !v)
+          return renderPage(page, false)
+        }
+        const r = await api(`${API}/mupihat`, { method: 'POST', body: { active: v } })
+        return toast(r.ok ? 'Die Box startet gleich neu …' : 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
+      }
+      if (key === 'battery') {
+        const name = hw.data.mupihat.batteries.find((n) => batteryLabel(n) === v)
+        if (!name || name === hw.data.mupihat.battery) return
+        const r = await api(`${API}/battery`, { method: 'POST', body: { name } })
+        if (!r.ok) return toast('Nicht gespeichert', 'info')
+        toast(`Akku: ${v}${r.body?.restarted ? ' – aktiv' : ''}`)
+        await loadHat().catch(() => undefined)
+        return renderPage(page, false)
+      }
+    },
+    byLabel: {
+      async 'Profil speichern'(_a, _l, page) {
+        const profile = {}
+        for (const [key, field] of PROFILE_KEYS) {
+          const raw = String(state.values.get(key) ?? '').trim()
+          if (raw === '') continue
+          if (!/^\d{4}$/.test(raw)) return toast(`${field}: bitte eine Spannung in mV (4 Ziffern)`, 'info')
+          profile[field] = Number(raw)
+        }
+        const order = ['v_100', 'v_75', 'v_50', 'v_25', 'v_0'].map((f) => profile[f]).filter((x) => x !== undefined)
+        if (order.some((x, i) => i > 0 && x >= order[i - 1])) return toast('Die Spannungen müssen von 100 % nach 0 % kleiner werden', 'info')
+        if (profile.th_shutdown !== undefined && profile.th_warning !== undefined && profile.th_shutdown >= profile.th_warning) return toast('Abschalten muss unter der Warnung liegen', 'info')
+        if (!(await ask('Profil speichern', `Die Spannungen des Profils „${batteryLabel(hw.data.mupihat.battery)}“ ändern? Der MuPiHAT-Dienst startet dafür neu.`, 'Speichern'))) return
+        const r = await api(`${API}/power-config`, { method: 'POST', body: { batteryProfile: profile } })
+        if (!r.ok) return toast(r.body?.error ?? 'Nicht gespeichert', 'info')
+        const rs = await api(`${API}/mupihat/restart`, { method: 'POST', body: {} })
+        toast(`Profil gespeichert${rs.body?.restarted ? ' und aktiv' : ''}`)
+        await loadHat().catch(() => undefined)
+        renderPage(page, false)
+      },
+    },
+  },
+  autoaus: {
+    async load() {
+      const r = await api(`${API}/power-config`)
+      if (!r.ok) throw new Error(`power-config ${r.status}`)
+      state.values.set('idleOff', Number(r.body.timeout?.idlePiShutdown ?? 0))
+    },
+    sections: (page) => withoutSave(page).map((sec) => ({ ...sec, items: sec.items.map((it) => (it.key === 'idleOff' ? { ...it, help: '0 = nie. Die Box prüft alle 10 Sekunden, ob etwas läuft.' } : it)) })),
+    async change(key, v) {
+      if (key !== 'idleOff') return
+      const r = await api(`${API}/power-config`, { method: 'POST', body: { idlePiShutdown: v } })
+      toast(r.ok ? (v === 0 ? 'Schaltet sich nicht mehr selbst aus' : `Aus nach ${v} min ohne Wiedergabe`) : 'Nicht gespeichert', r.ok ? 'ok' : 'info')
+    },
+  },
+  taster: {
+    async load() {
+      await loadHardware()
+      const s = hw.data.shim
+      state.values.set('pressDelay', s.pressDelay)
+      state.values.set('ledPin', s.ledPin)
+      state.values.set('ledMax', s.ledMax)
+      state.values.set('ledMin', s.ledMin)
+    },
+    sections: (page) =>
+      withoutSave(page).map((sec) => ({
+        ...sec,
+        items: sec.items.map((it) =>
+          it.key === 'ledPin'
+            ? { ...it, options: pinOptions(hw.data.shim.reserved.filter((p) => p !== hw.data.shim.ledPin)), help: `Gilt nach einem Neustart. Belegt vom OnOffShim: GPIO ${hw.data.shim.reserved.join(', ')}.` }
+            : it.key === 'pressDelay'
+              ? { ...it, help: 'So lange hält man den Taster, bis die Box ausgeht. Gilt nach einem Neustart.' }
+              : it,
+        ),
+      })),
+    async change(key, v) {
+      const field = { pressDelay: 'pressDelay', ledPin: 'ledPin', ledMax: 'ledMax', ledMin: 'ledMin' }[key]
+      if (!field) return
+      const r = await api(`${API}/shim`, { method: 'POST', body: { [field]: key === 'ledPin' ? String(v) : Number(v) } })
+      toast(r.ok ? `Gespeichert${r.body?.rebootNeeded ? ' – gilt nach einem Neustart' : ''}` : r.body?.error ?? 'Nicht gespeichert', r.ok ? 'ok' : 'info')
+    },
+  },
+  luefter: {
+    async load() {
+      await loadHardware()
+      const f = hw.data.fan
+      state.values.set('fanOn', f.active)
+      state.values.set('fanPin', f.gpio)
+      for (const k of ['100', '75', '50', '25']) state.values.set(`fan${k}`, f[`t${k}`])
+    },
+    sections: (page) =>
+      page.sections.map((sec) => ({
+        ...sec,
+        help: 'Je wärmer die Box, desto schneller läuft der Lüfter. Die Temperaturen müssen von 100 % nach 25 % kleiner werden.',
+        items: sec.items.map((it) => (it.key === 'fanPin' ? { ...it, options: pinOptions([...hw.data.shim.reserved, hw.data.shim.ledPin].filter((p) => p !== hw.data.fan.gpio)) } : it)),
+      })),
+    byLabel: {
+      async Speichern() {
+        const body = {
+          active: !!state.values.get('fanOn'),
+          gpio: String(state.values.get('fanPin')),
+          t100: Number(state.values.get('fan100')),
+          t75: Number(state.values.get('fan75')),
+          t50: Number(state.values.get('fan50')),
+          t25: Number(state.values.get('fan25')),
+        }
+        if (!(body.t100 > body.t75 && body.t75 > body.t50 && body.t50 > body.t25)) return toast('Die Temperaturen müssen von 100 % nach 25 % kleiner werden', 'info')
+        const r = await api(`${API}/fan`, { method: 'POST', body })
+        toast(r.ok ? (body.active ? 'Lüfter an – mit den neuen Werten' : 'Lüfter aus') : r.body?.error ?? 'Nicht gespeichert', r.ok ? 'ok' : 'info')
+      },
+    },
+  },
   nas: {
     load: loadNas,
     top: nasTop,
