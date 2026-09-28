@@ -32,6 +32,14 @@
     </style>
     <script>
       (function () {
+        // only for the display's start: previews of the page in a frame (MuPi-Conf's display texts, the web app) and
+        // other pages opened directly never report a list, and showed the boot screen for seconds
+        var path = location.pathname
+        if (window.top !== window || !(path === '/' || path === '/home' || path === '/index.html')) {
+          document.documentElement.classList.add('mupi-ready')
+          window.mupiBootDone = function () {}
+          return
+        }
         var done = {}
         function ready() {
           if (document.documentElement.classList.contains('mupi-ready')) return
