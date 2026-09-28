@@ -505,6 +505,11 @@ select.input { appearance: auto; }
 .chip.cat-audiobook { background: var(--mp-accent-soft); color: var(--mp-accent-text); }
 .chip.cat-music { background: var(--mp-primary-soft); color: var(--mp-primary-text); }
 
+/* ---------- System ---------- */
+.news { margin: 0; max-height: 320px; overflow: auto; white-space: pre-wrap; font: 13px/1.5 var(--mp-font); color: var(--mp-muted); }
+.logview { margin: 0; height: 420px; overflow: auto; padding: 10px 12px; border-radius: var(--mp-r-sm); background: var(--mp-field); font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+a.btn { text-decoration: none; color: inherit; }
+
 /* login */
 .login { max-width: 400px; margin: 8vh auto 0; display: flex; flex-direction: column; gap: 16px; text-align: center; }
 .login .logo { width: 96px; height: 96px; border-radius: 50%; background: var(--mp-primary-soft); display: grid; place-items: center; margin: 0 auto; }

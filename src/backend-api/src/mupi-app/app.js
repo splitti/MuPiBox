@@ -3952,6 +3952,222 @@ function mountSecurity(root, page) {
   }
 }
 
+/* Einstellungen › System */
+
+const sys = { info: null, version: '', news: null, bs: null, logs: null, logSel: 'log:server-error', logGrep: '', logText: '', logAuto: false, debug: null, browser: null }
+
+const fmtUptime = (s) => {
+  const d = Math.floor(s / 86400)
+  const h = Math.floor((s % 86400) / 3600)
+  const m = Math.floor((s % 3600) / 60)
+  return d ? `${d} T ${h} h` : h ? `${h} h ${m} min` : `${m} min`
+}
+
+/* Über die Box */
+
+// news.txt is an HTML snippet from GitHub: turned into plain text (headings, bullet points) - nothing of it is run
+// or inserted as HTML (the admin interface printed it as it came)
+function newsText(html) {
+  const doc = new DOMParser().parseFromString(String(html), 'text/html')
+  const lines = []
+  const walk = (node) => {
+    for (const el of node.childNodes) {
+      if (el.nodeType === 3) {
+        const t = el.textContent.replace(/\s+/g, ' ')
+        if (t.trim()) lines.push(lines.length && !lines[lines.length - 1].endsWith('\n') ? t : t.trimStart())
+        continue
+      }
+      if (el.nodeType !== 1) continue
+      const tag = el.tagName.toLowerCase()
+      if (/^h[1-6]$/.test(tag)) lines.push(`\n\n${el.textContent.trim().toUpperCase()}\n`)
+      else if (tag === 'li') lines.push(`\n• ${el.textContent.replace(/\s+/g, ' ').trim()}`)
+      else if (tag === 'br' || tag === 'p' || tag === 'div') {
+        lines.push('\n')
+        walk(el)
+      } else walk(el)
+    }
+  }
+  walk(doc.body)
+  return lines.join('').replace(/\n{3,}/g, '\n\n').trim()
+}
+
+
+async function loadAbout() {
+  const [info, version, bs] = await Promise.all([api(`${API}/system`), api(`${API}/version`), api(`${API}/bootscreen`)])
+  sys.info = info.ok ? info.body : null
+  sys.version = version.body?.version ?? ''
+  sys.bs = bs.ok ? bs.body : null
+  api(`${API}/news`).then((r) => {
+    sys.news = r.body?.text ?? ''
+    const box = $('#ab-news')
+    if (box) box.textContent = sys.news ? newsText(sys.news) : 'Die Neuigkeiten ließen sich nicht laden (keine Verbindung zu GitHub).'
+  })
+}
+
+function aboutTop() {
+  const i = sys.info ?? {}
+  const max = sys.bs?.screens?.nameMaxLength ?? 14
+  const disk = i.disk ?? {}
+  const used = disk.total ? Math.round(((disk.total - disk.free) / disk.total) * 100) : null
+  const row = (k, v) => (v ? `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>` : '')
+  return [
+    `<section class="card"><h2>Name der Box</h2><p class="help">Steht auf dem Startbild und oben in der App.</p>
+      <div class="field"><label for="ab-name">Name der Box (höchstens ${max} Zeichen)</label><input class="input" id="ab-name" maxlength="${max}" value="${esc(sys.bs?.current?.boxName ?? '')}" placeholder="${esc(sys.bs?.screens?.defaultName ?? 'MuPiBox')}"></div>
+      <div class="btns"><button class="btn primary" id="ab-save">Speichern</button></div></section>`,
+    `<section class="card"><h2>MuPiBox</h2><dl class="kv">${row('Version', sys.version)}${row('Hostname', i.hostname)}${row('Läuft seit', i.uptime_seconds != null ? fmtUptime(i.uptime_seconds) : '')}${row('CPU-Last', i.load_1 != null ? `${i.load_1.toLocaleString('de-DE')} (${i.cpu_count} Kerne)` : '')}${row('Temperatur', i.cpu_temp_c != null ? `${Math.round(i.cpu_temp_c)} °C` : '')}${row('Arbeitsspeicher', i.mem_total ? `${formatBytes(i.mem_total - i.mem_free)} von ${formatBytes(i.mem_total)}` : '')}</dl>
+      ${used != null ? `<div class="bar"><div class="slider-head"><b>SD-Karte</b><span class="value-pill">${used} %</span></div><div class="track"><i style="--w:${used}%"></i></div><small>${formatBytes(disk.free)} frei von ${formatBytes(disk.total)}</small></div>` : ''}</section>`,
+    `<section class="card"><h2>Neuigkeiten</h2><pre class="news" id="ab-news">${esc(sys.news ? newsText(sys.news) : 'Lade …')}</pre></section>`,
+    `<section class="card"><h2>Support</h2><p class="help">Für Hilfe im Discord: ein Zip mit Bibliothek, Einstellungen (ohne Passwörter, Tokens und Konten), Netz- und Systemstand.</p>
+      <div class="btns"><a class="btn" href="${API}/support-info" download>${icon('save', 18)}Support-Infos herunterladen</a></div></section>`,
+  ]
+}
+
+function mountAbout(root) {
+  $('#ab-save', root).onclick = async () => {
+    const name = $('#ab-name', root).value.trim()
+    const r = await api(`${API}/bootscreen`, { method: 'POST', body: { boxName: name } })
+    if (!r.ok) return toast('Nicht gespeichert', 'info')
+    state.boxName = r.body?.current?.boxName || 'MuPiBox'
+    renderChrome(currentPage())
+    toast('Gespeichert – das Startbild wird neu erzeugt')
+  }
+}
+
+/* Neu starten & Ausschalten */
+
+function restartTop() {
+  const rows = [
+    ['display', 'display', 'Display neu starten', 'Chromium startet neu (ein paar Sekunden schwarz). Die Wiedergabe läuft weiter.'],
+    ['player', 'music', 'Player neu starten', 'Spotify und die lokale Wiedergabe starten neu – was läuft, stoppt.'],
+    ['services', 'sync', 'Dienste neu starten', 'Player und Server der Box; die App ist dabei kurz nicht erreichbar.'],
+  ]
+  return [
+    `<section class="card"><h2>Box</h2><div class="btns"><button class="btn" id="rs-reboot">${icon('sync', 18)}Neu starten</button><button class="btn danger" id="rs-off">${icon('power', 18)}Ausschalten</button></div></section>`,
+    `<section class="card"><h2>Display & Dienste</h2><div class="rows">${rows
+      .map(([id, ic, t, s]) => `<div class="entry"><span class="avatar">${icon(ic, 16)}</span><span class="lbl"><b>${t}</b><small>${s}</small></span><button class="btn sm" data-rs="${id}">Neu starten</button></div>`)
+      .join('')}</div></section>`,
+  ]
+}
+
+function mountRestart(root) {
+  $('#rs-reboot', root).onclick = () =>
+    confirmSheet('Neu starten', 'Die Box jetzt neu starten? Das dauert etwa eine Minute.', async () => {
+      const r = await api('/api/reboot', { method: 'POST', body: {} })
+      toast(r.ok ? 'Die Box startet neu …' : 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
+    })
+  $('#rs-off', root).onclick = () =>
+    confirmSheet('Ausschalten', 'Die Box jetzt ausschalten? Einschalten geht dann nur noch am Taster.', async () => {
+      const r = await api('/api/shutdown', { method: 'POST', body: {} })
+      toast(r.ok ? 'Die Box schaltet aus …' : 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
+    })
+  for (const b of root.querySelectorAll('[data-rs]')) {
+    b.onclick = () => {
+      const what = b.dataset.rs
+      const t = { display: 'Display', player: 'Player', services: 'Dienste' }[what]
+      confirmSheet('Neu starten', `${t} jetzt neu starten?`, async () => {
+        const r = await api(`${API}/restart`, { method: 'POST', body: { what } })
+        toast(r.ok ? `${t} startet neu …` : 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
+      })
+    }
+  }
+}
+
+/* Protokolle */
+
+async function loadLogs() {
+  const [list, debug] = await Promise.all([api(`${API}/logs`), api(`${API}/controller-debug`)])
+  if (!list.ok) throw new Error(`logs ${list.status}`)
+  sys.logs = list.body
+  sys.debug = debug.body?.on === true
+}
+
+function logsTop() {
+  const l = sys.logs
+  const opt = (v, t) => `<option value="${esc(v)}"${v === sys.logSel ? ' selected' : ''}>${esc(t)}</option>`
+  return [
+    `<section class="card wide"><h2>Protokoll</h2>
+      <div class="rule-times"><div class="field"><label for="lg-sel">Log oder Dienst</label><select class="input" id="lg-sel"><optgroup label="Logs">${l.logs.map((k) => opt(`log:${k}`, `${k}.log`)).join('')}</optgroup><optgroup label="Dienste (Status)">${l.services.map((k) => opt(`service:${k}`, k)).join('')}</optgroup></select></div>
+        <div class="field"><label for="lg-grep">Suche</label><input class="input" id="lg-grep" type="search" value="${esc(sys.logGrep)}" placeholder="z. B. error" autocomplete="off"></div></div>
+      <div class="btns"><button class="btn" id="lg-refresh">Aktualisieren</button><button class="btn" id="lg-auto" aria-pressed="${sys.logAuto}">${sys.logAuto ? 'Anhalten' : 'Mitlaufen'}</button><button class="btn" id="lg-dl">Herunterladen</button></div>
+      <pre class="logview" id="lg-view">Lade …</pre></section>`,
+    `<section class="card"><h2>Fehlersuche</h2><div class="row"><span class="lbl"><b>Ausführliches Player-Log</b><small>Schreibt viel mehr ins spotify-control-Log (Player startet neu). Nach der Fehlersuche wieder aus.</small></span>
+      <label class="switch"><input type="checkbox" id="lg-debug" ${sys.debug ? 'checked' : ''} aria-label="Ausführliches Player-Log"><span></span></label></div></section>`,
+  ]
+}
+
+async function showLog() {
+  const [kind, key] = sys.logSel.split(':')
+  const q = new URLSearchParams({ kind, key, grep: sys.logGrep, lines: '300' })
+  const r = await fetch(`${API}/logs/view?${q}`, { credentials: 'same-origin' }).catch(() => null)
+  sys.logText = r?.ok ? await r.text() : 'Das Protokoll ließ sich nicht lesen.'
+  const view = $('#lg-view')
+  if (!view) return
+  const atEnd = view.scrollTop + view.clientHeight >= view.scrollHeight - 20
+  view.textContent = sys.logText || '(leer)'
+  if (atEnd || !sys.logShown) view.scrollTop = view.scrollHeight
+  sys.logShown = true
+}
+
+function mountLogs(root) {
+  sys.logShown = false
+  $('#lg-sel', root).onchange = (e) => {
+    sys.logSel = e.target.value
+    sys.logShown = false
+    showLog()
+  }
+  let t = null
+  $('#lg-grep', root).addEventListener('input', (e) => {
+    sys.logGrep = e.target.value
+    clearTimeout(t)
+    t = setTimeout(showLog, 300)
+  })
+  $('#lg-refresh', root).onclick = showLog
+  $('#lg-auto', root).onclick = (e) => {
+    sys.logAuto = !sys.logAuto
+    e.target.textContent = sys.logAuto ? 'Anhalten' : 'Mitlaufen'
+    e.target.setAttribute('aria-pressed', String(sys.logAuto))
+  }
+  every(5000, () => sys.logAuto && showLog())
+  $('#lg-dl', root).onclick = () => {
+    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([sys.logText], { type: 'text/plain' })), download: `${sys.logSel.split(':')[1]}.txt` })
+    a.click()
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000)
+  }
+  $('#lg-debug', root).onchange = async (e) => {
+    const r = await api(`${API}/controller-debug`, { method: 'POST', body: { on: e.target.checked } })
+    if (!r.ok) {
+      e.target.checked = !e.target.checked
+      return toast('Das hat nicht geklappt', 'info')
+    }
+    toast(e.target.checked ? 'Ausführliches Player-Log an – der Player startet neu' : 'Ausführliches Player-Log aus – der Player startet neu')
+  }
+  showLog()
+}
+
+/* Browser (Chromium) */
+
+async function loadBrowser() {
+  const r = await api(`${API}/browser`)
+  if (!r.ok) throw new Error(`browser ${r.status}`)
+  sys.browser = r.body
+  state.values.set('gpu', r.body.gpu)
+  state.values.set('smooth', r.body.smooth)
+  state.values.set('kiosk', r.body.kiosk)
+  state.values.set('cache', `${r.body.cachesize} MB`)
+  state.values.set('chromeDebug', r.body.debug)
+}
+
+/* Sprache */
+
+async function loadLanguage() {
+  const r = await api(`${API}/bootscreen`)
+  if (!r.ok) throw new Error(`bootscreen ${r.status}`)
+  sys.bs = r.body
+  const cur = r.body.current.bootscreenLanguage || 'en'
+  state.values.set('boxLang', r.body.languages[cur]?.name ?? cur)
+  state.values.set('appLang', 'Deutsch')
+}
+
 /* the controllers: load(page) reads the box before drawing, mount(root, page) runs after it, change(key, value)
    saves a setting, act / byLabel run the buttons, sections(page) gives the building blocks with the box's values,
    top(page) draws the page's own top part (instead of customTop's), ownNav: the page shows its sub pages itself */
@@ -4601,6 +4817,66 @@ const CONTROLLERS = {
   },
   wled: { load: loadWled, top: wledTop, sections: () => [], mount: mountWled },
   passwort: { load: loadAuthState, top: securityTop, sections: () => [], mount: mountSecurity },
+  ueber: { load: loadAbout, top: aboutTop, sections: () => [], mount: mountAbout },
+  neustart: { top: restartTop, sections: () => [], mount: mountRestart },
+  protokolle: { load: loadLogs, top: logsTop, sections: () => [], mount: mountLogs },
+  browser: {
+    load: loadBrowser,
+    sections: (page) => [
+      ...page.sections.map((sec) => ({
+        ...sec,
+        help: 'Gilt nach einem Neustart des Displays (Knopf unten).',
+        items: sec.items.map((it) =>
+          it.key === 'kiosk'
+            ? { ...it, help: 'Aus = mit Fensterrahmen, nur zum Testen.' }
+            : it.key === 'chromeDebug'
+              ? { ...it, help: 'Schreibt ein ausführliches Log des Browsers; nach der Fehlersuche wieder aus.' }
+              : it,
+        ),
+      })),
+      { title: '', help: '', items: [{ type: 'buttons', buttons: [['Übernehmen und Display neu starten', 'primary', 'apply']] }] },
+    ],
+    async change(key, v) {
+      const body = { gpu: { gpu: v }, smooth: { smooth: v }, kiosk: { kiosk: v }, chromeDebug: { debug: v }, cache: { cachesize: String(v).replace(/\s*MB$/, '') } }[key]
+      if (!body) return
+      const r = await api(`${API}/browser`, { method: 'POST', body })
+      toast(r.ok ? 'Gespeichert – gilt nach dem Neustart des Displays' : 'Nicht gespeichert', r.ok ? 'ok' : 'info')
+    },
+    act: {
+      async apply() {
+        if (!(await ask('Display neu starten', 'Das Display startet mit den neuen Einstellungen neu (ein paar Sekunden schwarz).', 'Neu starten'))) return
+        const r = await api(`${API}/browser`, { method: 'POST', body: { restart: true } })
+        toast(r.ok ? 'Das Display startet neu …' : 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
+      },
+    },
+  },
+  sprache: {
+    load: loadLanguage,
+    sections: (page) =>
+      page.sections.map((sec) => ({
+        ...sec,
+        items: sec.items.map((it) =>
+          it.key === 'appLang'
+            ? { ...it, options: ['Deutsch'], help: 'Weitere Sprachen der App folgen.' }
+            : it.key === 'boxLang'
+              ? {
+                  ...it,
+                  options: Object.values(sys.bs.languages)
+                    .map((l) => l.name)
+                    .sort((a, b) => a.localeCompare(b, 'de')),
+                  help: 'Die Texte auf dem Display (Limit, Ruhezeit, QR-Code) und auf dem Start- und Wartungsbild.',
+                }
+              : it,
+        ),
+      })),
+    async change(key, v) {
+      if (key !== 'boxLang') return
+      const code = Object.entries(sys.bs.languages).find(([, l]) => l.name === v)?.[0]
+      if (!code) return
+      const r = await api(`${API}/box-language`, { method: 'POST', body: { code } })
+      toast(r.ok ? `Sprache der Box: ${v} – das Startbild wird neu erzeugt` : 'Nicht gespeichert', r.ok ? 'ok' : 'info')
+    },
+  },
   nas: {
     load: loadNas,
     top: nasTop,

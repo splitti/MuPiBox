@@ -16,8 +16,8 @@ freigegeben (`localOnly`) – Guard umstellen · `⚙ PHP` kann heute nur das PH
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 Start, Hören, Spielzeit, Bibliothek | 14 | 142 | – | 1 | 4 | – |
 | 2 Aussehen, Display, Audio, Akku & Strom | 18 | 73 | – | 0 | 2 | – |
-| 3 Netzwerk, Dienste, Sicherheit, System | 16 | 52 | – | 48 | 2 | 5 |
-| **Summe** | **48** | **267** | **–** | **49** | **8** | **5** |
+| 3 Netzwerk, Dienste, Sicherheit, System | 16 | 70 | – | 31 | 1 | 5 |
+| **Summe** | **48** | **285** | **–** | **32** | **7** | **5** |
 
 Alle 156 Schlüssel aus `app-schema.json` (157 Einstellungen, der Playlist-Präfix steht zweimal), alle Aktionen und
 Anzeigen sind zugeordnet; keine Zeile ist unklar. Die Bereiche Start, Hören, Spielzeit und Bibliothek laufen schon
@@ -28,7 +28,7 @@ WLED, Updates, Backup, Protokolle, Systemoptionen, Browser, Experten) kann heute
 
 1. **Guards umstellen:** erledigt – die NAS-Verwaltung (`/api/nas/profiles*`, `login`, `index/*`, `browse`,
    `selection`, `mark`, `download/*`, `covers/refresh`) und `/api/online-covers*` nehmen `localOrElternSession`.
-2. **Neue Endpunkte für heutige PHP-Funktionen (⚙ PHP, 49 Zeilen)**, jeweils mit der Logik und den Skripten, die PHP
+2. **Neue Endpunkte für heutige PHP-Funktionen (⚙ PHP, 32 Zeilen)**, jeweils mit der Logik und den Skripten, die PHP
    heute nutzt (Details in den Tabellen):
    - Bibliothek: „Update verfügbar“
    - Netzwerk & Dienste: Netzwerk-Optionen (Onboard-WLAN, USB-Treiber, Stromsparen, DHCP, Wächter, neu verbinden,
@@ -739,6 +739,11 @@ Alles liegt in `smart.php`: Formular :515-700, Handler `change_wled` :101-162 �
 | `loginOn` | Anmeldung verlangen | A: admin.php:501-519 (`change_login`), Handler :409-422 | `interfacelogin.state` (bool, **Vorlage: false**) | `$data` | Umschalten + save + setting_update.sh | 🔒 wirkt sofort. Node hat keinen solchen Schalter: die Eltern-App verlangt immer eine Sitzung. Die Admin-Oberfläche ist ab Werk **offen** (state=false) | ⚙ PHP |
 | `◉ Hinweis` (QR am Display / Link per Telegram) | Hinweis | Box: Statusanzeige lange drücken (`mupibox.settingsAccessTimer`, home.page.ts:103) → `eltern-magic-link.service.ts:38-60` · Telegram `/login` telegram_receiver.py:353 → `send_magic_link()` :186 | — | — | `POST /api/eltern/magic-link/generate` rt:187 (nur localhost) | beide Wege gibt es schon, gelten aber nur für die Eltern-App | ✓ API |
 
+> Neue App (eltern/system.ts): GET `/api/eltern/version`, `/news` (als Text, nicht als HTML), `/support-info` (Zip, Geheimnisse
+> nach Schlüssel entfernt), POST `/restart {display|player|services}` (Dienste = Player + Server, abgekoppelt), GET `/logs`,
+> `/logs/view`, GET/POST `/controller-debug`, `/browser` (Werte geprüft, Neustart des Displays auf Knopfdruck), POST
+> `/box-language` (displayLanguage + bootscreenLanguage zusammen). Offen: „Einstellungen übernehmen“ (data.json-Migration).
+
 ### Einstellungen › System › Über die Box [ueber]
 
 | Schlüssel / Aktion | Beschriftung | Heute | Speicherort | Lesen | Schreiben / Ausführen | Nebenwirkung / Hinweis | Status |
@@ -746,8 +751,8 @@ Alles liegt in `smart.php`: Formular :515-700, Handler `change_wled` :101-162 �
 | `boxName` | Name der Box (max. 14 Zeichen) | A: mupi.php:960 (`boxName`), Handler :546-573 · E: Startbild-Editor `loadBootscreen()` app.js:2735 / `saveBootscreen()` :2894 | `mupibox.boxName` | `GET /api/eltern/bootscreen` rt:1675 (`current.boxName`) | `POST /api/eltern/bootscreen` rt:1699 (Steuerzeichen raus, `nameMaxLength` aus bootscreens.json, Standard 14) → startet `sudo bootscreen_update.sh` im Hintergrund | ⚠ Die POST-Route setzt **immer alle vier Felder** (bootscreen, maintenanceScreen, boxName, bootscreenLanguage). Wer nur den Namen schickt, setzt die übrigen auf Standard zurück. Neue App: alle mitsenden oder eigene Route. Die Smart-Sync-Vorbelegung des Präfixes läuft über einen anderen Teil | ✓ API |
 | `◉ MuPiBox` (Version/Hostname/Laufzeit/CPU-Last/Temp/RAM/SD) | MuPiBox | E: `loadSystem()` app.js:1928 · A: index.php:90-130 (Version), :181-200 (Modell/OS/Throttle), :219ff (SD) | Version: `mupibox.version`; sonst Laufzeitwerte | `GET /api/eltern/system` rt:1963 (hostname, uptime, load_1, cpu_count, mem, cpu_temp_c, disk; nur Node-Bordmittel) · Version: `GET /api/config` srv:3494 (`mupibox.version`, ohne Anmeldung, Geheimnisse herausgefiltert) | — | `/system` liefert die Version nicht: in der Route ergänzen | ✓ API |
 | `◉ SD-Karte` (Balken) | SD-Karte | E: `#sys-disk` | — | rt:1973 `statfs('/')` | — | — | ✓ API |
-| `◉ Neuigkeiten` | Neuigkeiten | A: index.php:131-147 (`news.txt` von GitHub `splitti/MuPiBox/main`, 60 min zwischengespeichert) | — | `file_get_contents(raw.githubusercontent…/news.txt)` | — | 🔒 PHP gibt den Text roh als HTML aus (index.php:145), die fremde Quelle kann also HTML einschleusen. Neuer Endpunkt: holen und als Text ausliefern | ⚙ PHP |
-| `▶ Support-Infos herunterladen` | Support-Infos herunterladen | A: index.php:176-177 → `support_data.php` (auth_check.php) | ZIP: data.json, gefilterte Konfig, monitor/network.json, mupi.info | — | `sudo`-Befehle, `zip_download.php` (zufälliger Name in /var/tmp, danach gelöscht) | 🔒 Gefiltert wird zeilenweise mit `grep -v password\|token\|…` (support_data.php:17). **Leck:** `eltern.password` ist ein Objekt, dadurch bleiben die Zeilen `"salt"` und `"hash"` (scrypt) im ZIP. Die JSON wird dabei außerdem ungültig. Neuer Endpunkt: mit `redactSecrets()` (srv:3478) filtern | ⚙ PHP |
+| `◉ Neuigkeiten` | Neuigkeiten | A: index.php:131-147 (`news.txt` von GitHub `splitti/MuPiBox/main`, 60 min zwischengespeichert) | — | `file_get_contents(raw.githubusercontent…/news.txt)` | — | 🔒 PHP gibt den Text roh als HTML aus (index.php:145), die fremde Quelle kann also HTML einschleusen. Neuer Endpunkt: holen und als Text ausliefern | ✓ API |
+| `▶ Support-Infos herunterladen` | Support-Infos herunterladen | A: index.php:176-177 → `support_data.php` (auth_check.php) | ZIP: data.json, gefilterte Konfig, monitor/network.json, mupi.info | — | `sudo`-Befehle, `zip_download.php` (zufälliger Name in /var/tmp, danach gelöscht) | 🔒 Gefiltert wird zeilenweise mit `grep -v password\|token\|…` (support_data.php:17). **Leck:** `eltern.password` ist ein Objekt, dadurch bleiben die Zeilen `"salt"` und `"hash"` (scrypt) im ZIP. Die JSON wird dabei außerdem ungültig. Neuer Endpunkt: mit `redactSecrets()` (srv:3478) filtern | ✓ API |
 
 ### Einstellungen › System › Updates [updates]
 
@@ -774,23 +779,23 @@ Alles liegt in `smart.php`: Formular :515-700, Handler `change_wled` :101-162 �
 |---|---|---|---|---|---|---|---|
 | `▶ Neu starten` | Neu starten | E: `systemReboot()` app.js:2986 · A: admin.php:457 (`reboot`) :309-316 und Schnellzugriff header.php:142-146/:267 (GET mit csrf_token) → footer.php:183-187 | — | — | E: `POST /api/reboot` srv:3604 → `sudo su - -c "restart.sh &"` · A: `( flock -n … ; sleep 5; sudo restart.sh ) &` (Doppelklick-Schutz) | 🔒 `/api/reboot` hat **keine Anmeldung** (nur browserGuard). Jedes Gerät im WLAN kann die Box per curl neu starten. Die App ruft es per `fetch` ohne CSRF auf. Neue App: Route hinter `localOrElternSession` legen, flock übernehmen | ✓ API |
 | `▶ Ausschalten` | Ausschalten | E: `systemShutdown()` app.js:2992 · A: admin.php:458 (`shutdown`) :301-308 und header.php:137-141/:266 → footer.php:188-192 | — | — | E: `POST /api/shutdown` srv:3587 → `shutdown.sh &` · A: flock + `shutdown.sh` | 🔒 wie oben, ohne Anmeldung | ✓ API |
-| `▶ Display (Chromium) neu starten` | (Zeile) | A: header.php:147-151/:268 (`hchromerestart`, sofort `sudo -i -u dietpi restart_kiosk.sh`) · admin.php:578-581 (`restart_kiosk` → `$change=3` = setting_update + set_hostname + restart_kiosk) | — | — | `restart_kiosk.sh` (killall chromium, chromium-autostart.sh) | Wiedergabe im Display bricht ab. `/api/eltern/display/reload-theme` (rt:1620) lädt nur das Theme neu, **kein** Neustart | ⚙ PHP |
-| `▶ Spotify-Dienste neu starten` | (Zeile) | A: admin.php:551-554 (`spotify_restart`), Handler :352-358 | — | — | ⚠ ruft `/usr/local/bin/mupibox/./spotify_restartspotify_restart.sh` auf (**Tippfehler**, die Datei gibt es nicht). Gemeint ist `spotify_restart.sh` (pm2 restart server + spotify-control) | **Knopf ist heute wirkungslos.** Node kann `pm2 restart server` nicht synchron an sich selbst ausführen: abgekoppelt starten (`setsid`) | ⚙ PHP |
-| `▶ PM2 neu starten` | (Zeile) | A: admin.php:555-558 (`pm2_restart`), Handler :344-350 | — | — | `sudo -i -u dietpi pm2 restart server; restart_kiosk.sh` | startet nur `server` neu (nicht spotify-control), obwohl die Beschriftung „PM2“ sagt | ⚙ PHP |
+| `▶ Display (Chromium) neu starten` | (Zeile) | A: header.php:147-151/:268 (`hchromerestart`, sofort `sudo -i -u dietpi restart_kiosk.sh`) · admin.php:578-581 (`restart_kiosk` → `$change=3` = setting_update + set_hostname + restart_kiosk) | — | — | `restart_kiosk.sh` (killall chromium, chromium-autostart.sh) | Wiedergabe im Display bricht ab. `/api/eltern/display/reload-theme` (rt:1620) lädt nur das Theme neu, **kein** Neustart | ✓ API |
+| `▶ Spotify-Dienste neu starten` | (Zeile) | A: admin.php:551-554 (`spotify_restart`), Handler :352-358 | — | — | ⚠ ruft `/usr/local/bin/mupibox/./spotify_restartspotify_restart.sh` auf (**Tippfehler**, die Datei gibt es nicht). Gemeint ist `spotify_restart.sh` (pm2 restart server + spotify-control) | **Knopf ist heute wirkungslos.** Node kann `pm2 restart server` nicht synchron an sich selbst ausführen: abgekoppelt starten (`setsid`) | ✓ API |
+| `▶ PM2 neu starten` | (Zeile) | A: admin.php:555-558 (`pm2_restart`), Handler :344-350 | — | — | `sudo -i -u dietpi pm2 restart server; restart_kiosk.sh` | startet nur `server` neu (nicht spotify-control), obwohl die Beschriftung „PM2“ sagt | ✓ API |
 | `▶ Einstellungen übernehmen` | (Zeile) | A: admin.php:547-550 (`update`), Handler :317-343 | data.json-Migration 3.0.0 + `setting_update.sh` | — | — | ⚠ **Kaputt:** der Handler bindet `includes/header.php` ein zweites Mal ein (admin.php:322). header.php definiert `navActive()`, `navTabHidden()` und `mupibox_cached_exec()` ohne `function_exists`-Schutz: PHP bricht mit „Cannot redeclare“ ab, setting_update.sh läuft nie. Neuer Endpunkt: nur `sudo setting_update.sh` (+ restart_kiosk) | ⚙ PHP |
 
 ### Einstellungen › System › Protokolle [protokolle]
 
 | Schlüssel / Aktion | Beschriftung | Heute | Speicherort | Lesen | Schreiben / Ausführen | Nebenwirkung / Hinweis | Status |
 |---|---|---|---|---|---|---|---|
-| `log` | Log oder Dienst (25) | A: logviewer.php:5-31 (6 Logs + 19 Dienste = 25, identisch mit dem Prototyp) | Logs: `/home/dietpi/.pm2/logs/{server,spotify-control}-{error,out}.log`, `/tmp/shutdown_control.log`, `/tmp/idle_shutdown.log` · Dienste: systemd | `backend.php?mode=log\|status&key=` (backend.php:22-41, Whitelists :7-16) | — | ⚠ Der Eintrag `proftpd.service.service` (logviewer.php:29) steht nicht in der Whitelist von backend.php (dort `proftpd.service`), Antwort „Unkown Service“. `mupi_rotary` und `wpa_supplicant` stehen in der Whitelist, fehlen aber in der Auswahl | ⚙ PHP |
-| `grep` | Suche (grep) | A: logviewer.php:46-49 | — | backend.php:30 `tail -n 100 <log> \| grep -i <escapeshellarg>` | — | nur für Logs, nicht für den Dienst-Status | ⚙ PHP |
-| `▶ Aktualisieren` | Aktualisieren | A: logviewer.php:53 `loadData(true)`, sonst Polling alle 1,5 s (:63) | — | backend.php | — | `systemctl status` läuft mit sudo | ⚙ PHP |
+| `log` | Log oder Dienst (25) | A: logviewer.php:5-31 (6 Logs + 19 Dienste = 25, identisch mit dem Prototyp) | Logs: `/home/dietpi/.pm2/logs/{server,spotify-control}-{error,out}.log`, `/tmp/shutdown_control.log`, `/tmp/idle_shutdown.log` · Dienste: systemd | `backend.php?mode=log\|status&key=` (backend.php:22-41, Whitelists :7-16) | — | ⚠ Der Eintrag `proftpd.service.service` (logviewer.php:29) steht nicht in der Whitelist von backend.php (dort `proftpd.service`), Antwort „Unkown Service“. `mupi_rotary` und `wpa_supplicant` stehen in der Whitelist, fehlen aber in der Auswahl | ✓ API |
+| `grep` | Suche (grep) | A: logviewer.php:46-49 | — | backend.php:30 `tail -n 100 <log> \| grep -i <escapeshellarg>` | — | nur für Logs, nicht für den Dienst-Status | ✓ API |
+| `▶ Aktualisieren` | Aktualisieren | A: logviewer.php:53 `loadData(true)`, sonst Polling alle 1,5 s (:63) | — | backend.php | — | `systemctl status` läuft mit sudo | ✓ API |
 | `▶ Pause` | Pause | A: logviewer.php:54/:99 (nur JS) | — | — | — | reine Client-Funktion | — statisch |
-| `▶ Herunterladen` | Herunterladen | A: logviewer.php:55/:104 → `backend.php?mode=download` :43-54 (`tail -n 500`) | — | — | — | nur Logs | ⚙ PHP |
-| `◉ log` | (Ausgabe) | A: logviewer.php:88-96 | — | wie oben | — | 🔒 **Stored XSS:** die Ausgabe landet per `innerHTML` **ohne Escaping** im Browser (logviewer.php:91-94). `POST /api/logs` (srv:3513, ohne Anmeldung) schreibt beliebigen Text in `server-out.log`. Jedes Gerät im WLAN kann so JavaScript in die Admin-Oberfläche einschleusen (mit CSRF-Token dort bis zur Root-Ausführung). Neue App: Log nur als Text anzeigen | ⚙ PHP |
-| `ctlDebug` | Controller-Debugging | A: admin.php:676-687 (`spotifydebug`), Handler :217-230 | `…/spotifycontroller-main/config/config.json` `"logLevel": "error"\|"debug"` (Player: spotify-control.js:162) | `sudo cat … \| grep '"logLevel": "error"'` admin.php:677 | `sudo sed -i` + `pm2 restart spotify-control` | Wiedergabe wird kurz unterbrochen | ⚙ PHP |
-| `▶ PM2-Log herunterladen` | PM2-Log herunterladen | A: admin.php:688 → `pm2logs.php` (auth_check) | `/home/dietpi/.pm2/logs/*` | — | `mupibox_send_zip('pm2_logs.zip', …)` | 🔒 Logs können Tokens und Chat-IDs enthalten | ⚙ PHP |
+| `▶ Herunterladen` | Herunterladen | A: logviewer.php:55/:104 → `backend.php?mode=download` :43-54 (`tail -n 500`) | — | — | — | nur Logs | ✓ API |
+| `◉ log` | (Ausgabe) | A: logviewer.php:88-96 | — | wie oben | — | 🔒 **Stored XSS:** die Ausgabe landet per `innerHTML` **ohne Escaping** im Browser (logviewer.php:91-94). `POST /api/logs` (srv:3513, ohne Anmeldung) schreibt beliebigen Text in `server-out.log`. Jedes Gerät im WLAN kann so JavaScript in die Admin-Oberfläche einschleusen (mit CSRF-Token dort bis zur Root-Ausführung). Neue App: Log nur als Text anzeigen | ✓ API |
+| `ctlDebug` | Controller-Debugging | A: admin.php:676-687 (`spotifydebug`), Handler :217-230 | `…/spotifycontroller-main/config/config.json` `"logLevel": "error"\|"debug"` (Player: spotify-control.js:162) | `sudo cat … \| grep '"logLevel": "error"'` admin.php:677 | `sudo sed -i` + `pm2 restart spotify-control` | Wiedergabe wird kurz unterbrochen | ✓ API |
+| `▶ PM2-Log herunterladen` | PM2-Log herunterladen | A: admin.php:688 → `pm2logs.php` (auth_check) | `/home/dietpi/.pm2/logs/*` | — | `mupibox_send_zip('pm2_logs.zip', …)` | 🔒 Logs können Tokens und Chat-IDs enthalten | ✓ API |
 
 ### Einstellungen › System › Systemoptionen [systemopt]
 
@@ -812,11 +817,11 @@ Alles wird von `chromium-autostart.sh` beim Start des Kiosk gelesen (:25-75). Sp
 
 | Schlüssel / Aktion | Beschriftung | Heute | Speicherort | Lesen | Schreiben / Ausführen | Nebenwirkung / Hinweis | Status |
 |---|---|---|---|---|---|---|---|
-| `gpu` | GPU-Unterstützung (experimentell) | A: mupi.php:1852-1872 (`change_gpu`), :66-77 | `chromium.gpu` (bool) | `$data` | save, $change=1 | ⚠ chromium-autostart.sh:39 führt den Wert als Befehl aus (`if ${FORCE_GPU}`). Nur echte Booleans schreiben | ⚙ PHP |
-| `smooth` | Sanftes Scrollen (experimentell) | A: mupi.php:1874-1894, :88-99 | `chromium.sccrollanimation` (Tippfehler im Schlüssel ist so gewollt) | `$data` | save, $change=1 | wie oben (:43) | ⚙ PHP |
-| `kiosk` | Kiosk-Modus | A: mupi.php:1895-1915, :101-112 | `chromium.kiosk` (bool) | `$data` | save, $change=1 | wie oben (:60) | ⚙ PHP |
-| `cache` | Cache-Größe | A: mupi.php:1916-1935 (`cachesize`/`change_cache`), :78-86 | `chromium.cachesize` (MB, String) | `$data` | save, **nicht geprüft** | 🔒 chromium-autostart.sh:32 rechnet `$(( $CACHE_SIZE * 1024 * 1024 ))`. Bash-Arithmetik mit einem beliebigen String erlaubt Befehlsausführung als dietpi: neue App nur die Whitelist 0…2048 zulassen. Der Cache liegt sonst im RAM (`cacheInRam`, :69) | ⚙ PHP |
-| `chromeDebug` | Chrome-Debugging | A: admin.php:660-669 (`debug`), :231-242 · Log-Download admin.php:673 → `debug.php` | `chromium.debug` (1/0, Vorlage "0") | `$data` | write_json = save + setting_update + restart_kiosk | 🔒 `chrome_debug.log` kann OAuth-Codes enthalten (debug.php:4-6) | ⚙ PHP |
+| `gpu` | GPU-Unterstützung (experimentell) | A: mupi.php:1852-1872 (`change_gpu`), :66-77 | `chromium.gpu` (bool) | `$data` | save, $change=1 | ⚠ chromium-autostart.sh:39 führt den Wert als Befehl aus (`if ${FORCE_GPU}`). Nur echte Booleans schreiben | ✓ API |
+| `smooth` | Sanftes Scrollen (experimentell) | A: mupi.php:1874-1894, :88-99 | `chromium.sccrollanimation` (Tippfehler im Schlüssel ist so gewollt) | `$data` | save, $change=1 | wie oben (:43) | ✓ API |
+| `kiosk` | Kiosk-Modus | A: mupi.php:1895-1915, :101-112 | `chromium.kiosk` (bool) | `$data` | save, $change=1 | wie oben (:60) | ✓ API |
+| `cache` | Cache-Größe | A: mupi.php:1916-1935 (`cachesize`/`change_cache`), :78-86 | `chromium.cachesize` (MB, String) | `$data` | save, **nicht geprüft** | 🔒 chromium-autostart.sh:32 rechnet `$(( $CACHE_SIZE * 1024 * 1024 ))`. Bash-Arithmetik mit einem beliebigen String erlaubt Befehlsausführung als dietpi: neue App nur die Whitelist 0…2048 zulassen. Der Cache liegt sonst im RAM (`cacheInRam`, :69) | ✓ API |
+| `chromeDebug` | Chrome-Debugging | A: admin.php:660-669 (`debug`), :231-242 · Log-Download admin.php:673 → `debug.php` | `chromium.debug` (1/0, Vorlage "0") | `$data` | write_json = save + setting_update + restart_kiosk | 🔒 `chrome_debug.log` kann OAuth-Codes enthalten (debug.php:4-6) | ✓ API |
 
 ### Einstellungen › System › Experten [experten]
 
@@ -834,8 +839,7 @@ Alles wird von `chromium-autostart.sh` beim Start des Kiosk gelesen (:25-75). Sp
 | Schlüssel / Aktion | Beschriftung | Heute | Speicherort | Lesen | Schreiben / Ausführen | Nebenwirkung / Hinweis | Status |
 |---|---|---|---|---|---|---|---|
 | `appLang` | Sprache der App (18) | E: `.lang-select` (index.html:72-73, :226-231), app.js:4233-4246 → `setLangPref()` i18n.js:1374 | Browser: `localStorage['eltern.lang']` (`auto`/`de`/`en`) | `readPref()` i18n.js:1331, sonst `navigator.languages` | nur im Browser | heute nur **de/en** (i18n.js:1329). Für 16 weitere Sprachen fehlen die Übersetzungen. Kein Backend nötig | ＋ neu (teilweise) |
-| `boxLang` | Sprache der Box (17) | E: Display-Texte (`#display-lang`, app.js:860-928) und Startbild-Editor (`#bs-lang`, app.js:2763) · A: mupi.php:1117 (`dt_language`) und :991 (`bootscreenLanguage`) | **zwei Schlüssel:** `displayLanguage` (Overlays Limit/Ruhe/QR) und `mupibox.bootscreenLanguage` (Start- und Wartungsbilder) | `GET /api/eltern/display-texts` rt:399, `GET /api/eltern/bootscreen` rt:1675 (Sprachliste aus `…/www/assets/i18n/display-texts.json`) | `POST /api/eltern/display-texts` rt:409 (Regex, setzt auch die Texte!) und `POST /api/eltern/bootscreen` rt:1699 (setzt alle 4 Felder, dann `bootscreen_update.sh`) | Der Prototyp legt zwei getrennte Einstellungen zu einer zusammen. Nötig: eine Route, die beide Schlüssel setzt, ohne die Texte und Bildauswahl anzufassen, und danach bootscreen_update.sh startet | ＋ neu (kombiniert) |
-
+| `boxLang` | Sprache der Box (17) | E: Display-Texte (`#display-lang`, app.js:860-928) und Startbild-Editor (`#bs-lang`, app.js:2763) · A: mupi.php:1117 (`dt_language`) und :991 (`bootscreenLanguage`) | **zwei Schlüssel:** `displayLanguage` (Overlays Limit/Ruhe/QR) und `mupibox.bootscreenLanguage` (Start- und Wartungsbilder) | `GET /api/eltern/display-texts` rt:399, `GET /api/eltern/bootscreen` rt:1675 (Sprachliste aus `…/www/assets/i18n/display-texts.json`) | `POST /api/eltern/display-texts` rt:409 (Regex, setzt auch die Texte!) und `POST /api/eltern/bootscreen` rt:1699 (setzt alle 4 Felder, dann `bootscreen_update.sh`) | Der Prototyp legt zwei getrennte Einstellungen zu einer zusammen. Nötig: eine Route, die beide Schlüssel setzt, ohne die Texte und Bildauswahl anzufassen, und danach bootscreen_update.sh startet | ✓ API |
 ---
 
 ### Login heute (zwei Mechanismen)
