@@ -75,6 +75,13 @@
 		$navTabsShown = $_POST['nav_tabs_show'] ?? array();
 		$navTabsHidden = array_values(array_diff(array_keys($navTabsHideable), $navTabsShown));
 	}
+	// The menu entry of the page shown is highlighted (class "active"). Pages without an entry of their own count
+	// as the one they are reached from.
+	function navActive($file) {
+		$page = basename($_SERVER['SCRIPT_NAME'] ?? '');
+		$page = array('' => 'index.php', 'service.php' => 'admin.php', 'tweaks.php' => 'admin.php')[$page] ?? $page;
+		return $page === $file ? ' class="active" aria-current="page"' : '';
+	}
 	function navTabHidden($key) {
 		global $navTabsHidden;
 		return in_array($key, $navTabsHidden, true);
@@ -261,8 +268,8 @@
 				<a href="?hchromerestart=1&csrf_token=<?= urlencode(csrf_token()) ?>" onclick="confirm('Do really want to restart chrome kiosk?') || stopEvent(event)" ><iconify-icon icon="tabler:brand-chrome"  title="Restart chrome browser" ></iconify-icon></a>
 			</div>
 			<div class="topnav" id="myTopnav">
-				<a href="<?= $link ?>index.php"><i class="fa fa-fw fa-home"></i> Home</a>
-				<a href="<?= $link ?>content.php"><i class="fa-solid fa-music"></i> MuPiBox</a>				
+				<a<?= navActive('index.php') ?> href="<?= $link ?>index.php"><i class="fa fa-fw fa-home"></i> Home</a>
+				<a<?= navActive('content.php') ?> href="<?= $link ?>content.php"><i class="fa-solid fa-music"></i> MuPiBox</a>				
 <?php
 	// R3-B-1: same caching rationale as the wifi exec()s above. The
 	// `ps -ef | grep websockify` invocation forks ps + grep on every
@@ -274,25 +281,25 @@
 	);
 	if ($vnc_active !== '' && !navTabHidden('vnc'))
 	{
-		echo '<a href="' . $link . 'vnc.php"><i class="fa-solid fa-display"></i> VNC</a>';
+		echo '<a' . navActive('vnc.php') . ' href="' . $link . 'vnc.php"><i class="fa-solid fa-display"></i> VNC</a>';
 	}
 ?>
-				<?php if (!navTabHidden('mupi')) { ?><a href="<?= $link ?>mupi.php"><i class="fa-solid fa-headphones"></i> MuPi-Conf</a><?php } ?>
-				<?php if (!navTabHidden('parental')) { ?><a href="<?= $link ?>parental.php"><i class="fa-solid fa-people-roof"></i> Parental</a><?php } ?>
-				<?php if (!navTabHidden('mupihat')) { ?><a href="<?= $link ?>mupihat.php"><i class="fa-solid fa-hat-wizard"></i> MuPiHAT</a><?php } ?>
-				<?php if (!navTabHidden('media')) { ?><a href="<?= $link ?>media.php"><i class="fa-solid fa-list"></i> Media</a><?php } ?>
-				<?php if (!navTabHidden('cover')) { ?><a href="<?= $link ?>cover.php"><i class="fa-regular fa-image"></i> Cover</a><?php } ?>
-				<?php if (!navTabHidden('bluetooth')) { ?><a href="<?= $link ?>bluetooth.php"><i class="fa-brands fa-bluetooth"></i> Bluetooth</a><?php } ?>
-				<?php if (!navTabHidden('spotify')) { ?><a href="<?= $link ?>spotify.php"><i class="fa-brands fa-spotify"></i> Spotify</a><?php } ?>
-				<?php if (!navTabHidden('nas')) { ?><a href="<?= $link ?>nas.php"><i class="fa-solid fa-server"></i> NAS</a><?php } ?>
-				<?php if (!navTabHidden('network')) { ?><a href="<?= $link ?>network.php"><i class="fa-solid fa-wifi"></i> Network</a><?php } ?>
-				<?php if (!navTabHidden('smart')) { ?><a href="<?= $link ?>smart.php"><i class="fa-solid fa-share-nodes"></i> Smart</a><?php } ?>
+				<?php if (!navTabHidden('mupi')) { ?><a<?= navActive('mupi.php') ?> href="<?= $link ?>mupi.php"><i class="fa-solid fa-headphones"></i> MuPi-Conf</a><?php } ?>
+				<?php if (!navTabHidden('parental')) { ?><a<?= navActive('parental.php') ?> href="<?= $link ?>parental.php"><i class="fa-solid fa-people-roof"></i> Parental</a><?php } ?>
+				<?php if (!navTabHidden('mupihat')) { ?><a<?= navActive('mupihat.php') ?> href="<?= $link ?>mupihat.php"><i class="fa-solid fa-hat-wizard"></i> MuPiHAT</a><?php } ?>
+				<?php if (!navTabHidden('media')) { ?><a<?= navActive('media.php') ?> href="<?= $link ?>media.php"><i class="fa-solid fa-list"></i> Media</a><?php } ?>
+				<?php if (!navTabHidden('cover')) { ?><a<?= navActive('cover.php') ?> href="<?= $link ?>cover.php"><i class="fa-regular fa-image"></i> Cover</a><?php } ?>
+				<?php if (!navTabHidden('bluetooth')) { ?><a<?= navActive('bluetooth.php') ?> href="<?= $link ?>bluetooth.php"><i class="fa-brands fa-bluetooth"></i> Bluetooth</a><?php } ?>
+				<?php if (!navTabHidden('spotify')) { ?><a<?= navActive('spotify.php') ?> href="<?= $link ?>spotify.php"><i class="fa-brands fa-spotify"></i> Spotify</a><?php } ?>
+				<?php if (!navTabHidden('nas')) { ?><a<?= navActive('nas.php') ?> href="<?= $link ?>nas.php"><i class="fa-solid fa-server"></i> NAS</a><?php } ?>
+				<?php if (!navTabHidden('network')) { ?><a<?= navActive('network.php') ?> href="<?= $link ?>network.php"><i class="fa-solid fa-wifi"></i> Network</a><?php } ?>
+				<?php if (!navTabHidden('smart')) { ?><a<?= navActive('smart.php') ?> href="<?= $link ?>smart.php"><i class="fa-solid fa-share-nodes"></i> Smart</a><?php } ?>
 				<?php /*<a href="service.php"><i class="fa-solid fa-gear"></i> Services</a>
 				<a href="tweaks.php"><i class="fa-solid fa-rocket"></i> Performance</a>*/ ?>
 				<?php if (!navTabHidden('dietpidash')) { ?><a href="<?= $link ?>" onmouseover="javascript:event.target.port=5252" target="_blank"><i class="fa-brands fa-raspberry-pi"></i> DietPi-Dash</a><?php } ?>
 				<?php /*<a href="/" onmouseover="javascript:event.target.port=8081" target="_blank"><i class="fa-brands fa-youtube"></i> Youtube</a>*/ ?>
-				<?php if (!navTabHidden('logs')) { ?><a href="<?= $link ?>logviewer.php"><i class="fa-solid fa-file-lines"></i> Logs</a><?php } ?>
-				<?php if (!navTabHidden('json')) { ?><a href="<?= $link ?>jsoneditor.php"><i class="fa-solid fa-code"></i> JSON</a><?php } ?>
-				<a href="<?= $link ?>admin.php"><i class="fa-solid fa-screwdriver-wrench"></i> Admin</a>
+				<?php if (!navTabHidden('logs')) { ?><a<?= navActive('logviewer.php') ?> href="<?= $link ?>logviewer.php"><i class="fa-solid fa-file-lines"></i> Logs</a><?php } ?>
+				<?php if (!navTabHidden('json')) { ?><a<?= navActive('jsoneditor.php') ?> href="<?= $link ?>jsoneditor.php"><i class="fa-solid fa-code"></i> JSON</a><?php } ?>
+				<a<?= navActive('admin.php') ?> href="<?= $link ?>admin.php"><i class="fa-solid fa-screwdriver-wrench"></i> Admin</a>
 				<a href="javascript:void(0);" class="icon" onclick="myFunction()"><i class="fa fa-bars"></i></a>
 			</div>
