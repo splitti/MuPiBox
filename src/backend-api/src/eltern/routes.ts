@@ -115,6 +115,16 @@ function readDisplayLanguages(): Record<string, { name?: string }> {
   }
 }
 
+/**
+ * A volume in percent from the config, whether stored as a number (web app) or as text (MuPi-Conf saves "75"):
+ * only the number was taken, so after a save in MuPi-Conf the hearing protection (maxVolume) was ignored here.
+ * undefined when missing or not 0..100.
+ */
+function volumePercent(value: unknown): number | undefined {
+  const n = typeof value === 'number' ? value : typeof value === 'string' && value.trim() !== '' ? Number(value) : Number.NaN
+  return Number.isFinite(n) && n >= 0 && n <= 100 ? Math.floor(n) : undefined
+}
+
 /** Run a command (no shell — execFile is injection-safe) and capture stdout.
  *  Never rejects: failures resolve with ok:false so handlers stay simple. */
 function execCapture(cmd: string, args: string[], timeoutMs = 8000): Promise<{ ok: boolean; stdout: string }> {
@@ -797,8 +807,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
         if (m) current = Number.parseInt(m[1], 10)
       }
       const mb = (cfg.mupibox as Record<string, unknown> | undefined) ?? {}
-      const maxVolume = typeof mb.maxVolume === 'number' ? mb.maxVolume : 100
-      const startupVolume = typeof mb.startupVolume === 'number' ? mb.startupVolume : null
+      const maxVolume = volumePercent(mb.maxVolume) ?? 100
+      const startupVolume = volumePercent(mb.startupVolume) ?? null
       res.json({ current, maxVolume, startupVolume })
     })
   })
@@ -824,7 +834,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       return
     }
     const mb = (cfg.mupibox as Record<string, unknown> | undefined) ?? {}
-    const cap = typeof mb.maxVolume === 'number' ? mb.maxVolume : 100
+    const cap = volumePercent(mb.maxVolume) ?? 100
     const requested = Math.floor(raw)
     const applied = Math.min(requested, cap)
     execFile('/usr/bin/amixer', ['sset', 'Master', `${applied}%`], { timeout: 3000 }, (err) => {

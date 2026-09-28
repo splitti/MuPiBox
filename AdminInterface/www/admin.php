@@ -319,22 +319,30 @@
 		/*UPDATE 3.0.0*/
 		$str_data = file_get_contents('/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json', true);
 		$data_json_playlistid = json_decode($str_data, true);
-		include ('includes/header.php');
-		$i = 0;
-		foreach($data_json_playlistid as $mydata)
+		// (header.php is included above already: including it again here ended the page with a fatal error)
+		// data.json is only written when it could be read and an old "playlist" entry was converted (it used to be
+		// rewritten every time, and an unreadable file came back as "null")
+		$playlist_converted = false;
+		if( is_array($data_json_playlistid) )
 			{
-			if( $mydata['category'] == "playlist" )
+			foreach($data_json_playlistid as $i => $mydata)
 				{
-				$data_json_playlistid[$i]['category'] = "music";
-				$data_json_playlistid[$i]['playlistid'] = $mydata['id'];
-				unset($data_json_playlistid[$i]['id']);
+				if( is_array($mydata) && ($mydata['category'] ?? '') == "playlist" )
+					{
+					$data_json_playlistid[$i]['category'] = "music";
+					$data_json_playlistid[$i]['playlistid'] = $mydata['id'] ?? '';
+					unset($data_json_playlistid[$i]['id']);
+					$playlist_converted = true;
+					}
 				}
-			$i++;
 			}
-		$json_changed = json_encode($data_json_playlistid);
-		file_put_contents('/tmp/data.json', $json_changed );
-		exec("sudo mv /tmp/data.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json");
-		exec("sudo chown dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json");
+		if( $playlist_converted )
+			{
+			$json_changed = json_encode($data_json_playlistid);
+			file_put_contents('/tmp/data.json', $json_changed );
+			exec("sudo mv /tmp/data.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json");
+			exec("sudo chown dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json");
+			}
 		/*END OF UPDATE 3.0.0*/
 		$command = "sudo /usr/local/bin/mupibox/./setting_update.sh";
 		exec($command, $output, $result );
@@ -351,7 +359,7 @@
 		
 	if( $_POST['spotify_restart'] )
 		{
-		$command = "sudo /usr/local/bin/mupibox/./spotify_restartspotify_restart.sh";
+		$command = "sudo /usr/local/bin/mupibox/./spotify_restart.sh";
 		exec($command, $output, $result );
 		$change=3;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Spotify Services are restarted</li>";

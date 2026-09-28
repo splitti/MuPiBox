@@ -24,7 +24,8 @@
 
 	if( $_POST['change_warnings'] == "disable" )
 		{
-		$command = "sudo sed -i -e 's/avoid_warnings=1//g' /boot/config.txt && sudo head -n -1 /boot/config.txt > /tmp/config.txt && sudo mv /tmp/config.txt /boot/config.txt";
+		// only the line of this setting goes (it used to cut off the last line of config.txt, whatever it was)
+		$command = "sudo sed -i '/^avoid_warnings=1$/d' /boot/config.txt";
 		exec($command, $output, $result );
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Warning Icons disabled [restart necessary]</li>";
@@ -95,7 +96,8 @@
 		}
 	else if( $_POST['change_sd'] == "disable" )
 		{
-		$command = "sudo sed -i -e 's/dtoverlay=sdtweak,overclock_50=100//g' /boot/config.txt && sudo head -n -1 /boot/config.txt > /tmp/config.txt && sudo mv /tmp/config.txt /boot/config.txt";
+		// only the line of this setting goes (it used to cut off the last line of config.txt, whatever it was)
+		$command = "sudo sed -i '/^dtoverlay=sdtweak,overclock_50=100$/d' /boot/config.txt";
 		exec($command, $output, $result );
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>SD Overclocking disabled [restart necessary]</li>";

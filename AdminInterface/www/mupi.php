@@ -162,7 +162,8 @@
 
 	if( $_POST['change_warnings'] == "disable" )
 		{
-		$command = "sudo sed -i -e 's/avoid_warnings=1//g' /boot/config.txt && sudo head -n -1 /boot/config.txt > /tmp/config.txt && sudo mv /tmp/config.txt /boot/config.txt";
+		// only the line of this setting goes (it used to cut off the last line of config.txt, whatever it was)
+		$command = "sudo sed -i '/^avoid_warnings=1$/d' /boot/config.txt";
 		exec($command, $output, $result );
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Warning Icons disabled [restart necessary]</li>";
@@ -237,7 +238,8 @@
 		}
 	else if( $_POST['change_sd'] == "disable" )
 		{
-		$command = "sudo sed -i -e 's/dtoverlay=sdtweak,overclock_50=100//g' /boot/config.txt && sudo head -n -1 /boot/config.txt > /tmp/config.txt && sudo mv /tmp/config.txt /boot/config.txt";
+		// only the line of this setting goes (it used to cut off the last line of config.txt, whatever it was)
+		$command = "sudo sed -i '/^dtoverlay=sdtweak,overclock_50=100$/d' /boot/config.txt";
 		exec($command, $output, $result );
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>SD Overclocking disabled [restart necessary]</li>";
@@ -496,16 +498,18 @@ if( $_POST['fan_control'] )
 	$change = 2;
 	}
 
+ // Volumes are stored as numbers 0..100: the web app's backend took only a number, so a "75" saved from here
+ // switched the hearing protection (maxVolume) off there.
  if( $data["mupibox"]["maxVolume"]!=$_POST['maxVolume'] && $_POST['audioset'] )
   {
-  $data["mupibox"]["maxVolume"]=$_POST['maxVolume'];
+  $data["mupibox"]["maxVolume"]=max(0, min(100, intval($_POST['maxVolume'])));
   $CHANGE_TXT=$CHANGE_TXT."<li>Max Volume is set to ".$data["mupibox"]["maxVolume"]."% [reboot is necessary]</li>";
   $change=2;
   }
 
  if( $data["mupibox"]["startVolume"]!=$_POST['volume'] && $_POST['audioset'] )
   {
-  $data["mupibox"]["startVolume"]=$_POST['volume'];
+  $data["mupibox"]["startVolume"]=max(0, min(100, intval($_POST['volume'])));
   $CHANGE_TXT=$CHANGE_TXT."<li>Start Volume is set to ".$data["mupibox"]["startVolume"]."%</li>";
   $change=2;
   }
