@@ -88,7 +88,10 @@ function loadData(force = false) {
     fetch(`backend.php?mode=${type}&key=${key}&grep=${encodeURIComponent(grep)}`)
         .then(res => res.text())
         .then(text => {
-            const html = text
+            // The logs hold text anyone in the home network can write (e.g. POST /api/logs of the box):
+            // escaped first, so nothing in them runs as HTML or script on this page.
+            const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+            const html = escaped
                 .replace(/(ERROR|Error|Exception)/g, '<span class="error">$1</span>')
                 .replace(/(WARN|Warning)/g, '<span class="warn">$1</span>');
             output.innerHTML = html;

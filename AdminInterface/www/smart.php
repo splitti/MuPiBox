@@ -291,7 +291,7 @@
 					<h3>Public device name</h3>
 					<div>
 					<input id="mqtt_name" name="mqtt_name" class="element text medium" type="text" maxlength="255" value="<?php
-					print $data["mqtt"]["name"];
+					print htmlspecialchars((string)($data["mqtt"]["name"] ?? ''), ENT_QUOTES);
 					?>" />
 					</div>
 				</li>
@@ -299,7 +299,7 @@
 					<h3>Broker</h3>
 					<div>
 					<input id="mqtt_broker" name="mqtt_broker" class="element text medium" type="text" maxlength="255" value="<?php
-					print $data["mqtt"]["broker"];
+					print htmlspecialchars((string)($data["mqtt"]["broker"] ?? ''), ENT_QUOTES);
 					?>" />
 					</div>
 				</li>
@@ -307,7 +307,7 @@
 					<h3>Port</h3>
 					<div>
 					<input id="mqtt_port" name="mqtt_port" class="element text medium" type="number" maxlength="5" value="<?php
-					print $data["mqtt"]["port"];
+					print htmlspecialchars((string)($data["mqtt"]["port"] ?? ''), ENT_QUOTES);
 					?>" />
 					</div>
 				</li>
@@ -315,7 +315,7 @@
 					<h3>Topic</h3>
 					<div>
 					<input id="mqtt_topic" name="mqtt_topic" class="element text medium" type="text" maxlength="255" value="<?php
-					print $data["mqtt"]["topic"];
+					print htmlspecialchars((string)($data["mqtt"]["topic"] ?? ''), ENT_QUOTES);
 					?>" />
 					</div>
 				</li>
@@ -323,7 +323,7 @@
 					<h3>ClientID</h3>
 					<div>
 					<input id="mqtt_clientId" name="mqtt_clientId" class="element text medium" type="text" maxlength="255" value="<?php
-					print $data["mqtt"]["clientId"];
+					print htmlspecialchars((string)($data["mqtt"]["clientId"] ?? ''), ENT_QUOTES);
 					?>" />
 					</div>
 				</li>
@@ -331,7 +331,7 @@
 					<h3>MQTT username</h3>
 					<div>
 					<input id="mqtt_username" name="mqtt_username" class="element text medium" type="text" maxlength="255" value="<?php
-					print $data["mqtt"]["username"];
+					print htmlspecialchars((string)($data["mqtt"]["username"] ?? ''), ENT_QUOTES);
 					?>" />
 					</div>
 				</li>
@@ -339,7 +339,7 @@
 					<h3>MQTT password</h3>
 					<div>
 					<input id="mqtt_password" name="mqtt_password" class="element text medium" type="password" maxlength="255" value="<?php
-					print $data["mqtt"]["password"];
+					print htmlspecialchars((string)($data["mqtt"]["password"] ?? ''), ENT_QUOTES);
 					?>" />
 					</div>
 				</li>
@@ -347,11 +347,11 @@
 				<h2>Refresh interval</h2>
 				<div>
 					<output id="rangeval" class="rangeval"><?php 
-					echo $data["mqtt"]["refresh"] . " seconds"
+					echo htmlspecialchars((string)($data["mqtt"]["refresh"] ?? ''), ENT_QUOTES) . " seconds"
 				?></output>				
 				
 				<input class="range slider-progress" name="mqtt_refresh" type="range" min="1" max="90" step="1.0" value="<?php 
-					echo $data["mqtt"]["refresh"]
+					echo htmlspecialchars((string)($data["mqtt"]["refresh"] ?? ''), ENT_QUOTES)
 				?>" oninput="this.previousElementSibling.value = this.value">
 				</div>
 			</li>
@@ -360,11 +360,11 @@
 				<h2>Refresh interval idle</h2>
 				<div>
 					<output id="rangeval" class="rangeval"><?php 
-					echo $data["mqtt"]["refreshIdle"] . " seconds"
+					echo htmlspecialchars((string)($data["mqtt"]["refreshIdle"] ?? ''), ENT_QUOTES) . " seconds"
 				?></output>				
 				
 				<input class="range slider-progress" name="mqtt_refreshIdle" type="range" min="1" max="90" step="1.0" value="<?php 
-					echo $data["mqtt"]["refreshIdle"]
+					echo htmlspecialchars((string)($data["mqtt"]["refreshIdle"] ?? ''), ENT_QUOTES)
 				?>" oninput="this.previousElementSibling.value = this.value">
 				</div>
 			</li>
@@ -372,11 +372,11 @@
 				<h2>Timeout</h2>
 				<div>
 					<output id="rangeval" class="rangeval"><?php 
-					echo $data["mqtt"]["timeout"] . " seconds"
+					echo htmlspecialchars((string)($data["mqtt"]["timeout"] ?? ''), ENT_QUOTES) . " seconds"
 				?></output>				
 				
 				<input class="range slider-progress" name="mqtt_timeout" type="range" min="10" max="180" step="5.0" value="<?php 
-					echo $data["mqtt"]["timeout"]
+					echo htmlspecialchars((string)($data["mqtt"]["timeout"] ?? ''), ENT_QUOTES)
 				?>" oninput="this.previousElementSibling.value = this.value">
 				</div>
 			</li>
@@ -401,7 +401,7 @@
 					<h3>Homeassistant discovery prefix</h3>
 					<p>Default: homeassistant</p><div>
 					<input id="ha_topic" name="ha_topic" class="element text medium" type="text" maxlength="255" value="<?php
-					print $data["mqtt"]["ha_topic"];
+					print htmlspecialchars((string)($data["mqtt"]["ha_topic"] ?? ''), ENT_QUOTES);
 					?>" />
 					</div>
 				</li>
@@ -443,7 +443,7 @@
 					<label class="description" for="telegram_token">Telegram token</label>
 					<div>
 							<input id="telegram_token" name="telegram_token" class="element text medium" type="text" maxlength="255" value="<?php
-							print $data["telegram"]["token"];
+							print htmlspecialchars((string)($data["telegram"]["token"] ?? ''), ENT_QUOTES);
 	?>"/>
 					</div><p class="guidelines" id="guide_1"><small>Please enter your telegram token.</small></p>
 	   </li>
@@ -523,7 +523,7 @@ function removeTelegramChat(btn) {
 					<p>Just change this value, if you really know what you do! Default: /dev/ttyUSB0</p>
 					<div>
 					<input id="com_port" name="com_port" class="element text medium" type="text" maxlength="255" value="<?php
-					print $data["wled"]["com_port"];
+					print htmlspecialchars((string)($data["wled"]["com_port"] ?? ''), ENT_QUOTES);
 					?>" />
 					</div>
 				</li>
@@ -671,16 +671,16 @@ function removeTelegramChat(btn) {
 	   <li id="li_1" >
 					<div>	<h3>Default brightness</h3>
 					<p>Please notice: This value will overwrite brightness settings of the presets!</p>
-						<output id="rangeval" class="rangeval"><?php echo $data["wled"]["brightness_default"]; ?></output>
-						<input class="range slider-progress" list="steplist_po" data-tick-step="1" name="brightness_default" type="range" min="0" max="255" step="1.0" value="<?php echo $data["wled"]["brightness_default"]; ?>" oninput="this.previousElementSibling.value = this.value">
+						<output id="rangeval" class="rangeval"><?php echo htmlspecialchars((string)($data["wled"]["brightness_default"] ?? ''), ENT_QUOTES); ?></output>
+						<input class="range slider-progress" list="steplist_po" data-tick-step="1" name="brightness_default" type="range" min="0" max="255" step="1.0" value="<?php echo htmlspecialchars((string)($data["wled"]["brightness_default"] ?? ''), ENT_QUOTES); ?>" oninput="this.previousElementSibling.value = this.value">
 			
 
 					</div>
 				</li>
 	   <li id="li_1" >
 					<div>	<h3>Dimmed brightness</h3>
-						<output id="rangeval" class="rangeval"><?php echo $data["wled"]["brightness_dimmed"]; ?></output>
-						<input class="range slider-progress" list="steplist_po" data-tick-step="1" name="brightness_dimmed" type="range" min="0" max="255" step="1.0" value="<?php echo $data["wled"]["brightness_dimmed"]; ?>" oninput="this.previousElementSibling.value = this.value">
+						<output id="rangeval" class="rangeval"><?php echo htmlspecialchars((string)($data["wled"]["brightness_dimmed"] ?? ''), ENT_QUOTES); ?></output>
+						<input class="range slider-progress" list="steplist_po" data-tick-step="1" name="brightness_dimmed" type="range" min="0" max="255" step="1.0" value="<?php echo htmlspecialchars((string)($data["wled"]["brightness_dimmed"] ?? ''), ENT_QUOTES); ?>" oninput="this.previousElementSibling.value = this.value">
 			
 
 					</div>
