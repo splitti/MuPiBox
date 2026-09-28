@@ -163,9 +163,9 @@ export class HomePage extends SwiperIonicEventsHelper {
         }),
         map(({ artists }) => artists),
         tap(() => this.isLoading.set(false)),
-        // the first list is there: the boot screen of index.html gives way to the page (a moment later, when the
+        // the first list is there: the boot screen of index.html may give way to the page (a moment later, when the
         // first covers are drawn - else the page showed empty for an instant)
-        tap(() => window.setTimeout(() => document.documentElement.classList.add('mupi-ready'), 250)),
+        tap(() => window.setTimeout(() => (window as unknown as { mupiBootDone?: (what: string) => void }).mupiBootDone?.('list'), 250)),
       ),
     )
 

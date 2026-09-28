@@ -1,8 +1,8 @@
 import { DOCUMENT } from '@angular/common'
 import { HttpClient } from '@angular/common/http'
 import { Inject, Injectable } from '@angular/core'
-import { BehaviorSubject, Subject } from 'rxjs'
-import { debounceTime, filter } from 'rxjs/operators'
+import { BehaviorSubject, Subject, timer } from 'rxjs'
+import { debounce, filter } from 'rxjs/operators'
 import { environment } from 'src/environments/environment'
 import { LogService } from './log.service'
 import type { Media } from './media'
@@ -63,6 +63,7 @@ export class SpotifyPlayerService {
   private lastRecoveryAttempt: number = 0
   private readonly RECOVERY_COOLDOWN_MS = 10000 // 10 seconds
   private readonly NETWORK_DEBOUNCE_MS = 3000 // 3 seconds - wait for network to stabilize
+  private networkSeenOnline = false // the first 'online' after the start needs no waiting
 
   // Cached online state from NetworkService
   private isOnline = false
@@ -344,6 +345,9 @@ export class SpotifyPlayerService {
 
       const ready = this.isPlayerReady()
       this.logService.log('[Spotify SDK] ensurePlayerReady() result:', ready, 'state:', this.sdkState)
+      // Setting up the player (and its DRM module) blanked the screen for a moment: the boot screen of index.html
+      // stays until it is done
+      window.setTimeout(() => (window as unknown as { mupiBootDone?: (what: string) => void }).mupiBootDone?.('sdk'), 300)
       return ready
     } catch (error) {
       this.logService.error('[Spotify SDK] ensurePlayerReady() exception:', error)
@@ -624,10 +628,13 @@ export class SpotifyPlayerService {
       .isOnline()
       .pipe(
         filter((isOnline) => isOnline),
-        debounceTime(this.NETWORK_DEBOUNCE_MS), // Wait for network to stabilize
+        // Wait for the network to stabilize - but not at the start of the display: the box is online already, and the
+        // player was set up 3 s later than needed (its set-up holds the boot screen, see index.html)
+        debounce(() => timer(this.networkSeenOnline ? this.NETWORK_DEBOUNCE_MS : 0)),
         filter(() => this.sdkState === 'error' || this.sdkState === 'not_loaded'),
       )
       .subscribe(() => {
+        this.networkSeenOnline = true
         // Check cooldown to prevent excessive recovery attempts
         const now = Date.now()
         const timeSinceLastAttempt = now - this.lastRecoveryAttempt

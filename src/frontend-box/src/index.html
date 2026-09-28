@@ -16,19 +16,33 @@
 
     <link rel="icon" type="image/png" href="assets/icon/favicon.png" />
 
-    <!-- The boot screen until the start page has loaded its list (see home.page.ts, class mupi-ready): between the
-         boot screen and the display it was black and white for seconds. At the latest after 30 s the page shows. -->
+    <!-- The boot screen over the page until the start page has its list and the display's Spotify player is set up
+         (window.mupiBootDone, see home.page.ts and spotify-player.service.ts): between the boot screen and the display
+         it was black and white for seconds, and setting up the Spotify player blanked the screen for a moment. A layer
+         of its own (fixed, will-change) stays on the screen through that. Without the player it goes 10 s after the
+         page was loaded, in any case after 30 s. -->
     <link rel="preload" as="image" href="/api/bootscreen/current-splash" />
     <style>
-      /* transparent under the picture: until it is there, Chromium's own background (the boot screen's colour) */
-      html:not(.mupi-ready) { background: transparent url('/api/bootscreen/current-splash') center / cover no-repeat; }
-      html:not(.mupi-ready) body { background: transparent !important; }
-      html:not(.mupi-ready) app-root { visibility: hidden; }
+      #mupi-boot {
+        position: fixed; inset: 0; z-index: 2147483647; pointer-events: none; will-change: transform;
+        background: transparent url('/api/bootscreen/current-splash') center / cover no-repeat;
+      }
+      html.mupi-ready #mupi-boot { display: none; }
     </style>
-    <script>setTimeout(function () { document.documentElement.classList.add('mupi-ready') }, 30000)</script>
+    <script>
+      (function () {
+        var done = {}, start = Date.now()
+        function ready() { document.documentElement.classList.add('mupi-ready') }
+        function check() { if (done.list && (done.sdk || Date.now() - start > 10000)) ready() }
+        window.mupiBootDone = function (what) { done[what] = true; check() }
+        var timer = setInterval(function () { check(); if (document.documentElement.classList.contains('mupi-ready')) clearInterval(timer) }, 500)
+        setTimeout(ready, 30000)
+      })()
+    </script>
 </head>
 
 <body>
+    <div id="mupi-boot"></div>
     <app-root></app-root>
 </body>
 
