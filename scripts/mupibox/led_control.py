@@ -50,9 +50,35 @@ class HardwarePwm:
                     break
                 sleep(0.02)
         self.period = int(1000000000 / frequency)
-        self._write(self.path + "/enable", 0)
-        self._write(self.path + "/duty_cycle", 0)
+        # The period first: while it is 0 (a new channel) the driver refuses duty_cycle and enable. A duty cycle
+        # longer than the new period is taken back to 0 before.
+        with open(self.path + "/period") as file:
+            if int(file.read().strip() or 0) > 0:
+                self._write(self.path + "/duty_cycle", 0)
         self._write(self.path + "/period", self.period)
+        self._write(self.path + "/duty_cycle", 0)
+        HardwarePwm._pin_to_pwm(gpio)
+
+    @staticmethod
+    def _pin_to_pwm(gpio):
+        """The pin back on its PWM function (ALT0 for GPIO 12/13) - the overlay sets it at boot, but a software PWM
+        of RPi.GPIO before (e.g. after a failed start) had made it a plain output. Through /dev/gpiomem: the
+        function select register of GPIO 10-19 (GPFSEL1, offset 4), 3 bits per pin, ALT0 = 0b100."""
+        import mmap
+        import struct
+
+        fd = os.open("/dev/gpiomem", os.O_RDWR | os.O_SYNC)  # a device: no buffered file object (not seekable)
+        try:
+            mem = mmap.mmap(fd, 4096)
+            try:
+                shift = (gpio % 10) * 3
+                value = struct.unpack_from("<I", mem, 4)[0]
+                value = (value & ~(7 << shift)) | (4 << shift)
+                struct.pack_into("<I", mem, 4, value)
+            finally:
+                mem.close()
+        finally:
+            os.close(fd)
 
     @staticmethod
     def _write(path, value):
@@ -138,8 +164,8 @@ if __name__ == "__main__":
         try:
             POWER_LED = HardwarePwm(JSON_DATA["led_gpio"], pwm_frequency)
             HARDWARE_PWM = True
-        except OSError as error:
-            print("PWM hardware not usable, software PWM: " + str(error))
+        except (OSError, ValueError) as error:
+            print("PWM hardware not usable, software PWM: " + str(error), flush=True)
     if not HARDWARE_PWM:
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(JSON_DATA["led_gpio"], GPIO.OUT)
