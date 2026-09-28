@@ -296,11 +296,10 @@
          der Bereich „in Entwicklung" ist + ggf. einen Workaround. -->
     <section id="screen-library" class="screen" hidden>
       <div class="card">
-        <div class="actions" style="margin-top: 0;">
-          <button class="primary" id="library-add-btn" data-i18n="library.addBtn"></button>
-          <button class="ghost" id="library-search-spotify-btn" data-i18n="library.searchSpotify"></button>
-          <button class="ghost" id="library-upload-btn" data-i18n="library.upload"></button>
-          <button class="ghost" id="library-sync-btn" data-i18n="sync.now"></button>
+        <!-- Ein Knopf fuer alles Neue (Auswahl: Spotify / Link / Hochladen), daneben der Sync als Rund-Knopf -->
+        <div class="library-toolbar">
+          <button class="primary library-add-main" id="library-add-btn" data-i18n="library.addBtn"></button>
+          <button class="ghost icon-btn" id="library-sync-btn" data-i18n-aria-label="sync.nowPlain" data-i18n-title="sync.nowPlain"><span class="sync-icon" aria-hidden="true">🔄</span></button>
         </div>
         <p class="dim" id="library-sync-status">—</p>
         <div class="form-row">
@@ -343,6 +342,33 @@
           </div>
           <div class="sheet-body" id="library-edit-body">
             <!-- Inhalt von openEditSheet() -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Auswahl: was soll hinzukommen? (overlay) -->
+      <div class="sheet-backdrop" id="library-choose-backdrop" hidden>
+        <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="library-choose-title">
+          <div class="sheet-header">
+            <h3 id="library-choose-title" data-i18n="libchoose.title"></h3>
+            <button class="ghost back-btn" id="library-choose-close" data-i18n-aria-label="common.close">×</button>
+          </div>
+          <div class="sheet-body choose-list">
+            <button class="choose-item" data-choose="spotify">
+              <span class="choose-icon" aria-hidden="true">🔎</span>
+              <span class="choose-text"><span class="choose-title" data-i18n="libchoose.spotify"></span><span class="choose-sub" data-i18n="libchoose.spotifySub"></span></span>
+              <span class="choose-chev" aria-hidden="true">›</span>
+            </button>
+            <button class="choose-item" data-choose="link">
+              <span class="choose-icon" aria-hidden="true">🔗</span>
+              <span class="choose-text"><span class="choose-title" data-i18n="libchoose.link"></span><span class="choose-sub" data-i18n="libchoose.linkSub"></span></span>
+              <span class="choose-chev" aria-hidden="true">›</span>
+            </button>
+            <button class="choose-item" data-choose="upload">
+              <span class="choose-icon" aria-hidden="true">⬆️</span>
+              <span class="choose-text"><span class="choose-title" data-i18n="libchoose.upload"></span><span class="choose-sub" data-i18n="libchoose.uploadSub"></span></span>
+              <span class="choose-chev" aria-hidden="true">›</span>
+            </button>
           </div>
         </div>
       </div>

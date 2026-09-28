@@ -273,7 +273,15 @@ export const I18N = {
     'wizard.nameMin': 'Box-Name muss mindestens 2 Zeichen lang sein.',
     'wizard.configSaveFailed': 'Konfiguration speichern fehlgeschlagen: {status}',
     // Library
-    'library.addBtn': '+ Inhalt hinzufügen',
+    'library.addBtn': '＋ Hinzufügen',
+    'libchoose.title': 'Was möchtest du hinzufügen?',
+    'libchoose.spotify': 'Auf Spotify suchen',
+    'libchoose.spotifySub': 'Hörspiele, Alben und Künstler finden',
+    'libchoose.link': 'Link einfügen',
+    'libchoose.linkSub': 'Spotify-Link, Radiosender oder Podcast',
+    'libchoose.upload': 'Vom Gerät hochladen',
+    'libchoose.uploadSub': 'Titel oder ganze Ordner auf die SD-Karte',
+    'sync.nowPlain': 'Jetzt synchronisieren',
     'library.searchSpotify': '🔎 Auf Spotify suchen',
     'library.search': 'Suche',
     'library.searchPh': 'Artist oder Titel …',
@@ -339,7 +347,7 @@ export const I18N = {
     'libedit.syncDeleteHint':
       'Löschen geht bei Sync-Items nur über Spotify (Item aus LeniBox-Playlist entfernen). Beim nächsten Sync verschwindet es von der Box.',
     'libedit.thisItem': 'dieses Item',
-    'libadd.title': 'Inhalt hinzufügen',
+    'libadd.title': 'Link einfügen',
     'libadd.hint':
       'Klebe einen Spotify-Link ein oder gib direkt Stream-/RSS-URL ein. Box-Library lädt das beim nächsten Wechsel automatisch.',
     'libadd.type': 'Typ',
@@ -922,7 +930,15 @@ export const I18N = {
     'wizard.nameMin': 'The box name must be at least 2 characters long.',
     'wizard.configSaveFailed': 'Saving the configuration failed: {status}',
     // Library
-    'library.addBtn': '+ Add content',
+    'library.addBtn': '＋ Add',
+    'libchoose.title': 'What would you like to add?',
+    'libchoose.spotify': 'Search Spotify',
+    'libchoose.spotifySub': 'Find audio plays, albums and artists',
+    'libchoose.link': 'Paste a link',
+    'libchoose.linkSub': 'Spotify link, radio station or podcast',
+    'libchoose.upload': 'Upload from this device',
+    'libchoose.uploadSub': 'Tracks or whole folders to the SD card',
+    'sync.nowPlain': 'Sync now',
     'library.searchSpotify': '🔎 Search Spotify',
     'library.search': 'Search',
     'library.searchPh': 'Artist or title …',
@@ -988,7 +1004,7 @@ export const I18N = {
     'libedit.syncDeleteHint':
       'Sync items can only be deleted via Spotify (remove the item from the LeniBox playlist). It disappears from the box with the next sync.',
     'libedit.thisItem': 'this item',
-    'libadd.title': 'Add content',
+    'libadd.title': 'Paste a link',
     'libadd.hint':
       'Paste a Spotify link or enter a stream/RSS URL directly. The box library picks it up automatically on its next change.',
     'libadd.type': 'Type',

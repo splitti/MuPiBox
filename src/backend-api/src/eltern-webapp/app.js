@@ -581,6 +581,13 @@ function openLibraryAddSheet() {
 }
 function closeLibraryAddSheet() { $('#library-add-backdrop').hidden = true }
 
+// What is to be added: Spotify (search), a link (Spotify / radio / podcast) or files from the device (upload)
+function openLibraryChooseSheet() {
+  $('#library-choose-backdrop').hidden = false
+  $('#library-choose-backdrop .choose-item')?.focus()
+}
+function closeLibraryChooseSheet() { $('#library-choose-backdrop').hidden = true }
+
 function onAddTypeChange() {
   const type = $('#library-add-type').value
   $('#library-add-label-row').hidden = (type === 'spotifyURL')
@@ -4095,8 +4102,20 @@ function wire() {
   $('#bt-scan-btn')?.addEventListener('click', btScan)
 
   // Spotify-Suche (Phase 17a)
-  $('#library-search-spotify-btn')?.addEventListener('click', () => navigate('search'))
-  $('#library-upload-btn')?.addEventListener('click', () => navigate('upload'))
+  // "+ Hinzufügen": first the choice, then Spotify search, the link form or the upload page
+  $('#library-choose-close')?.addEventListener('click', closeLibraryChooseSheet)
+  $('#library-choose-backdrop')?.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeLibraryChooseSheet()
+  })
+  for (const item of $$('[data-choose]')) {
+    item.addEventListener('click', () => {
+      closeLibraryChooseSheet()
+      const choice = item.dataset.choose
+      if (choice === 'spotify') navigate('search')
+      else if (choice === 'upload') navigate('upload')
+      else openLibraryAddSheet()
+    })
+  }
   initUpload()
   $('#library-sync-btn')?.addEventListener('click', manualSyncNow)
   $('#search-go-btn')?.addEventListener('click', doSearch)
@@ -4120,7 +4139,7 @@ function wire() {
   $('#caps-quietnow-btn')?.addEventListener('click', capsQuietNow)
 
   // Phase 15e — Library wiring.
-  $('#library-add-btn')?.addEventListener('click', openLibraryAddSheet)
+  $('#library-add-btn')?.addEventListener('click', openLibraryChooseSheet)
   $('#library-add-close')?.addEventListener('click', closeLibraryAddSheet)
   $('#library-add-cancel')?.addEventListener('click', closeLibraryAddSheet)
   $('#library-add-submit')?.addEventListener('click', submitLibraryAdd)
