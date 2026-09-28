@@ -727,162 +727,6 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 <p>This is the central configuration of your MuPiBox...</p>
 </div>
 
-	<details id="systemsettings">
-		<summary><i class="fa-solid fa-screwdriver-wrench"></i> System settings</summary>
-		<ul>
-			<li id="li_1" >
-				<h2>Hostname </h2>
-				<div>
-				<input id="hostname" name="hostname" class="element text medium" type="text" maxlength="255" value="<?php
-				print $data["mupibox"]["host"];
-				?>"/>
-				</div>
-			</li>
-			<li class="buttons">
-				<input type="hidden" name="form_id" value="37271" />
-
-				<input id="saveForm" class="button_text" type="submit" name="submithn" value="Submit" />
-			</li>
-			
-			<li class="li_1"><h2>Overclock SD Card</h2>
-				<p>
-				Just for highspeed SD Cards. You can damage data or the microSD itself!
-				</p>
-				<p>
-				<?php
-				echo "Overclocking state: <b>".$sd_state."</b>";
-				?>
-				</p>
-				<input id="saveForm" class="button_text" type="submit" name="change_sd" value="<?php print $change_sd; ?>" />
-			</li>
-
-			<li class="li_1"><h2>PM2-Logs to RAM</h2>
-				<p>
-				To protect the microSD, the logs can be swapped out to RAM. However, logs can no longer be evaluated after a restart.
-				</p>
-				<p>
-				<?php
-				echo "PM2-Logs to RAM: <b>".$pm2_state."</b>";
-				?>
-				</p>
-				<input id="saveForm" class="button_text" type="submit" name="change_pm2log" value="<?php print $change_pm2; ?>" />
-			</li>
-
-			<li class="li_1"><h2>Wait for Network on boot</h2>
-				<p>
-				Speeds up the boot time, but sometimes the boot process is to fast and you have to wait for the network to be ready... Try it, if disabling this option works for you!
-				</p>
-				<p>
-				<?php
-				echo "Wait for Network on boot: <b>".$netboot_state."</b>";
-				?>
-				</p>
-				<input id="saveForm" class="button_text" type="submit" name="change_netboot" value="<?php print $change_netboot; ?>" />
-			</li>
-
-			<li class="li_1"><h2>Initial Turbo</h2>
-				<p>
-				Initial Turbo avoids throtteling sometimes...
-				</p>
-				<p>
-				<?php
-				$command = "cat /boot/config.txt | grep initial_turbo | cut -d '=' -f 2";
-				$turbo = exec($command, $output);
-				echo "Turbo seconds: <b>".$turbo."</b>";
-				if($turbo == 0)
-					{
-					$change_turbo="enable";
-					}
-				else
-					{
-					$change_turbo="disable";
-					}
-
-				?>
-				</p>
-				<input id="saveForm" class="button_text" type="submit" name="change_turbo" value="<?php print $change_turbo; ?>" />
-			</li>
-
-			<li class="li_1"><h2>CPU Governor</h2>
-				<p>
-				Try powersave (Limits CPU frequency to 600 MHz - Helps to avoid throtteling).
-				</p>
-				<p>
-				<div>
-				<select id="cpugovernor" name="cpugovernor" class="element text medium">
-				<?php
-				$command = "cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors";
-				$governors = exec($command, $output);
-				$cpug = explode(" ", $governors);
-				$command = "cat /boot/dietpi.txt | grep CONFIG_CPU_GOVERNOR | cut -d '=' -f 2";
-				$current_governor = exec($command, $output);
-
-				foreach($cpug as $key) {
-				if( $key == $current_governor )
-					{
-					$selected = " selected=\"selected\"";
-					}
-				else
-					{
-					$selected = "";
-					}
-				print "<option value=\"". $key . "\"" . $selected  . ">" . $key . "</option>";
-				}
-				?>
-				"</select>
-				</div>
-				</p>
-				<input id="saveForm" class="button_text" type="submit" name="change_cpug" value="Save CPU Governor" />
-			</li>
-
-			<li class="li_1"><h2>Disable Warnings (Throtteling Warning)</h2>
-				<p>
-				Enables or disables the lightning icon (warning)! In worst case, this option can cause you loose all your data.
-				</p>
-				<p>
-				<?php
-				$command = "cat /boot/config.txt | grep 'avoid_warnings=1'";
-				$warnings = exec($command, $output);
-				if($warnings == "")
-					{
-					$change_warnings="enable";
-					echo "Warnings: <b>disabled</b>";
-					}
-				else
-					{
-					$change_warnings="disable";
-					echo "Warnings: <b>enabled</b>";
-					}
-				?>
-				</p>
-				<input id="saveForm" class="button_text" type="submit" name="change_warnings" value="<?php print $change_warnings; ?>" />
-			</li>
-
-			<li class="li_1"><h2>SWAP</h2>
-				<p>
-				Enables or disables SWAP!
-				</p>
-				<p>
-				<?php
-				$command = "cat /boot/dietpi.txt | grep AUTO_SETUP_SWAPFILE_SIZE= | cut -d '=' -f 2";
-				$currentswapsize = exec($command, $output);
-				if($currentswapsize == 0)
-					{
-					$change_swap="enable";
-					}
-				else
-					{
-					$change_swap="disable";
-					}
-
-				echo "SWAP Size: <b>".$currentswapsize." MB</b>";
-				?>
-				</p>
-				<input id="saveForm" class="button_text" type="submit" name="change_swap" value="<?php print $change_swap; ?>" />
-			</li>
-		</ul>
-	</details>
-
 	<details id="mupiboxsetting">
 		<summary><i class="fa-solid fa-radio"></i> MuPiBox settings</summary>
 		<ul>
@@ -1841,6 +1685,162 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 
 			<li class="buttons">
 				<input id="saveForm" class="button_text" type="submit" name="fan_control" value="Submit" />
+			</li>
+		</ul>
+	</details>
+
+	<details id="systemsettings">
+		<summary><i class="fa-solid fa-screwdriver-wrench"></i> System settings</summary>
+		<ul>
+			<li id="li_1" >
+				<h2>Hostname </h2>
+				<div>
+				<input id="hostname" name="hostname" class="element text medium" type="text" maxlength="255" value="<?php
+				print $data["mupibox"]["host"];
+				?>"/>
+				</div>
+			</li>
+			<li class="buttons">
+				<input type="hidden" name="form_id" value="37271" />
+
+				<input id="saveForm" class="button_text" type="submit" name="submithn" value="Submit" />
+			</li>
+			
+			<li class="li_1"><h2>Overclock SD Card</h2>
+				<p>
+				Just for highspeed SD Cards. You can damage data or the microSD itself!
+				</p>
+				<p>
+				<?php
+				echo "Overclocking state: <b>".$sd_state."</b>";
+				?>
+				</p>
+				<input id="saveForm" class="button_text" type="submit" name="change_sd" value="<?php print $change_sd; ?>" />
+			</li>
+
+			<li class="li_1"><h2>PM2-Logs to RAM</h2>
+				<p>
+				To protect the microSD, the logs can be swapped out to RAM. However, logs can no longer be evaluated after a restart.
+				</p>
+				<p>
+				<?php
+				echo "PM2-Logs to RAM: <b>".$pm2_state."</b>";
+				?>
+				</p>
+				<input id="saveForm" class="button_text" type="submit" name="change_pm2log" value="<?php print $change_pm2; ?>" />
+			</li>
+
+			<li class="li_1"><h2>Wait for Network on boot</h2>
+				<p>
+				Speeds up the boot time, but sometimes the boot process is to fast and you have to wait for the network to be ready... Try it, if disabling this option works for you!
+				</p>
+				<p>
+				<?php
+				echo "Wait for Network on boot: <b>".$netboot_state."</b>";
+				?>
+				</p>
+				<input id="saveForm" class="button_text" type="submit" name="change_netboot" value="<?php print $change_netboot; ?>" />
+			</li>
+
+			<li class="li_1"><h2>Initial Turbo</h2>
+				<p>
+				Initial Turbo avoids throtteling sometimes...
+				</p>
+				<p>
+				<?php
+				$command = "cat /boot/config.txt | grep initial_turbo | cut -d '=' -f 2";
+				$turbo = exec($command, $output);
+				echo "Turbo seconds: <b>".$turbo."</b>";
+				if($turbo == 0)
+					{
+					$change_turbo="enable";
+					}
+				else
+					{
+					$change_turbo="disable";
+					}
+
+				?>
+				</p>
+				<input id="saveForm" class="button_text" type="submit" name="change_turbo" value="<?php print $change_turbo; ?>" />
+			</li>
+
+			<li class="li_1"><h2>CPU Governor</h2>
+				<p>
+				Try powersave (Limits CPU frequency to 600 MHz - Helps to avoid throtteling).
+				</p>
+				<p>
+				<div>
+				<select id="cpugovernor" name="cpugovernor" class="element text medium">
+				<?php
+				$command = "cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors";
+				$governors = exec($command, $output);
+				$cpug = explode(" ", $governors);
+				$command = "cat /boot/dietpi.txt | grep CONFIG_CPU_GOVERNOR | cut -d '=' -f 2";
+				$current_governor = exec($command, $output);
+
+				foreach($cpug as $key) {
+				if( $key == $current_governor )
+					{
+					$selected = " selected=\"selected\"";
+					}
+				else
+					{
+					$selected = "";
+					}
+				print "<option value=\"". $key . "\"" . $selected  . ">" . $key . "</option>";
+				}
+				?>
+				"</select>
+				</div>
+				</p>
+				<input id="saveForm" class="button_text" type="submit" name="change_cpug" value="Save CPU Governor" />
+			</li>
+
+			<li class="li_1"><h2>Disable Warnings (Throtteling Warning)</h2>
+				<p>
+				Enables or disables the lightning icon (warning)! In worst case, this option can cause you loose all your data.
+				</p>
+				<p>
+				<?php
+				$command = "cat /boot/config.txt | grep 'avoid_warnings=1'";
+				$warnings = exec($command, $output);
+				if($warnings == "")
+					{
+					$change_warnings="enable";
+					echo "Warnings: <b>disabled</b>";
+					}
+				else
+					{
+					$change_warnings="disable";
+					echo "Warnings: <b>enabled</b>";
+					}
+				?>
+				</p>
+				<input id="saveForm" class="button_text" type="submit" name="change_warnings" value="<?php print $change_warnings; ?>" />
+			</li>
+
+			<li class="li_1"><h2>SWAP</h2>
+				<p>
+				Enables or disables SWAP!
+				</p>
+				<p>
+				<?php
+				$command = "cat /boot/dietpi.txt | grep AUTO_SETUP_SWAPFILE_SIZE= | cut -d '=' -f 2";
+				$currentswapsize = exec($command, $output);
+				if($currentswapsize == 0)
+					{
+					$change_swap="enable";
+					}
+				else
+					{
+					$change_swap="disable";
+					}
+
+				echo "SWAP Size: <b>".$currentswapsize." MB</b>";
+				?>
+				</p>
+				<input id="saveForm" class="button_text" type="submit" name="change_swap" value="<?php print $change_swap; ?>" />
 			</li>
 		</ul>
 	</details>
