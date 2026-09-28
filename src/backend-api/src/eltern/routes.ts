@@ -31,6 +31,7 @@ import {
   verifyElternPassword,
 } from './auth'
 import { ipRateLimit, localNetworkOnly, requireCsrf, requireSession } from './middleware'
+import { registerCustomCoverRoutes } from './covers'
 import { type LocalLibraryDeps, registerLocalUploadRoutes } from './upload'
 import { localOnly } from '../request-guard'
 import {
@@ -206,6 +207,39 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   router.use(localNetworkOnly)
 
   if (deps.localLibrary) registerLocalUploadRoutes(router, deps.localLibrary)
+  registerCustomCoverRoutes(router, {
+    dir: '/home/dietpi/MuPiBox/media/cover',
+    host: () => String((deps.getMupiboxConfig()?.mupibox as { host?: string } | undefined)?.host || os.hostname()),
+  })
+
+  /**
+   * GET/POST /api/eltern/online-covers-settings  {onlineCovers?, onlineCoversSave?}
+   * The two switches of the online covers (mupibox.onlineCovers / onlineCoversSave), which only the admin interface's
+   * cover page could set. The backend reads them live; the app starts the scan or the storing itself after switching
+   * on (POST /api/online-covers/scan, /save-all), as that page did.
+   */
+  router.get('/online-covers-settings', requireSession, (_req, res) => {
+    const mb = (deps.getMupiboxConfig()?.mupibox ?? {}) as Record<string, unknown>
+    res.json({ onlineCovers: mb.onlineCovers === true, onlineCoversSave: mb.onlineCoversSave === true })
+  })
+  router.post('/online-covers-settings', requireSession, requireCsrf, async (req, res) => {
+    const body = (req.body ?? {}) as { onlineCovers?: unknown; onlineCoversSave?: unknown }
+    const set: Record<string, boolean> = {}
+    for (const key of ['onlineCovers', 'onlineCoversSave'] as const) {
+      if (body[key] === undefined) continue
+      if (typeof body[key] !== 'boolean') {
+        res.status(400).json({ error: `${key} must be true or false` })
+        return
+      }
+      set[key] = body[key] as boolean
+    }
+    await deps.updateMupiboxConfig((cfg) => {
+      const mb = ((cfg.mupibox as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
+      Object.assign(mb, set)
+      cfg.mupibox = mb
+    })
+    res.json({ ok: true })
+  })
 
   /**
    * POST /api/eltern/magic-link/generate

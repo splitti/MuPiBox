@@ -451,7 +451,8 @@ function action(act, label, page) {
 async function api(path, { method = 'GET', body } = {}) {
   const headers = {}
   if (body !== undefined) headers['Content-Type'] = 'application/json'
-  if (method !== 'GET') headers['x-mupibox-csrf'] = state.csrf
+  // (also on reading: some routes of the box take the app's session only with its token, see localOrElternSession)
+  if (state.csrf) headers['x-mupibox-csrf'] = state.csrf
   const r = await fetch(path, { method, credentials: 'same-origin', headers, body: body === undefined ? undefined : JSON.stringify(body) }).catch(() => null)
   if (!r) return { ok: false, status: 0, body: null, text: '' }
   const text = await r.text().catch(() => '')
@@ -2229,6 +2230,170 @@ function wizardSections(page) {
   ]
 }
 
+/* Cover: own pictures (e.g. for radio streams) and the online covers of NAS and local albums */
+
+const cov = { own: [], oc: null, settings: {}, alsoRejected: false, file: null }
+
+async function loadCovers() {
+  const [own, oc, settings] = await Promise.all([api(`${API}/covers`), api('/api/online-covers'), api(`${API}/online-covers-settings`)])
+  cov.own = own.body?.covers ?? []
+  cov.oc = oc.ok ? oc.body : null
+  cov.settings = settings.body ?? {}
+}
+
+function coverTop() {
+  const entries = cov.oc?.entries ?? []
+  const count = { found: 0, none: 0, rejected: 0 }
+  let saved = 0
+  for (const e of entries) {
+    if (e.status in count) count[e.status]++
+    if (e.status === 'found' && (e.savedTo === 'nas' || e.savedTo === 'local')) saved++
+  }
+  const found = entries.filter((e) => e.status === 'found' && /^[a-f0-9]{40}\.jpg$/.test(String(e.file ?? ''))).sort((a, b) => String(b.at ?? '').localeCompare(String(a.at ?? '')))
+  cov.found = found
+  const pending = cov.oc?.pending ?? 0
+  const sw = (id, label, help, on) =>
+    `<div class="row"><span class="lbl"><b>${label}</b>${help ? `<small>${help}</small>` : ''}</span><label class="switch"><input type="checkbox" id="${id}" ${on ? 'checked' : ''} aria-label="${label}"><span></span></label></div>`
+  return [
+    `<section class="card"><h2>Eigene Cover</h2><p class="help">Quadratische Bilder (JPG, PNG, GIF, WEBP, 300–1200 px), z. B. für Radiosender. Die Adresse trägst du beim Eintrag als Cover ein.</p>
+      <input type="file" id="c-file" accept=".jpg,.jpeg,.png,.gif,.webp,image/*" hidden>
+      <div class="btns"><button class="btn" id="c-pick">${icon('image', 18)}Bild wählen</button><button class="btn primary" id="c-up" disabled>${icon('up', 18)}Hochladen</button></div>
+      <p class="help" id="c-picked" style="margin:0"></p>
+      ${
+        cov.own.length
+          ? `<div class="rows">${cov.own
+              .map((c, i) => `<div class="entry"><span class="lib-thumb"><img src="${API}/covers/file/${encodeURIComponent(c.name)}" alt="" loading="lazy"></span>
+                <span class="lbl"><b>${esc(c.name)}</b><small>${esc(c.url)}</small></span>
+                <button class="icon-btn soft" data-copy="${i}" aria-label="Adresse kopieren">${icon('link', 18)}</button><button class="btn danger sm" data-del="${i}">Löschen</button></div>`)
+              .join('')}</div>`
+          : `<p class="help" style="margin:0">Noch keine eigenen Bilder.</p>`
+      }</section>`,
+    `<section class="card"><h2>Online-Cover für NAS- und lokale Alben</h2><p class="help">Alben ohne eigenes Bild bekommen ihr Cover von iTunes oder Deezer – nur bei eindeutigem Treffer. Die Ordnernamen werden dafür an Apple und Deezer geschickt.</p>
+      ${sw('c-on', 'Cover online suchen', 'Ein paar Minuten nach jedem Start und alle 6 Stunden für neue Ordner.', cov.settings.onlineCovers)}
+      ${sw('c-save', 'Auch als cover.jpg im Albumordner speichern', 'Nur in Ordner ohne Bild. Auf dem NAS braucht das Schreibrecht.', cov.settings.onlineCoversSave)}
+      <dl class="kv"><div><dt>Gefunden</dt><dd>${count.found}</dd></div><div><dt>Kein Treffer</dt><dd>${count.none}</dd></div><div><dt>Verworfen</dt><dd>${count.rejected}</dd></div>
+        ${pending || cov.oc?.scanning ? `<div><dt>Noch zu suchen</dt><dd>${pending}${cov.oc?.scanning ? ' (liest Ordner …)' : ''}</dd></div>` : ''}
+        ${cov.settings.onlineCoversSave ? `<div><dt>Im Albumordner gespeichert</dt><dd>${saved} von ${count.found}</dd></div>` : ''}</dl>
+      ${sw('c-rej', 'Auch verworfene erneut suchen', '', cov.alsoRejected)}
+      <div class="btns"><button class="btn" id="c-retry">Ohne Treffer erneut suchen</button>${cov.settings.onlineCovers ? `<button class="btn primary" id="c-scan">Alle Alben jetzt suchen</button>` : ''}
+        ${cov.settings.onlineCoversSave && count.found > saved ? `<button class="btn" id="c-saveall">Übrige gefundene speichern</button>` : ''}</div>
+      ${cov.oc ? '' : `<p class="help" style="margin:0">Der Stand der Online-Cover ließ sich nicht laden.</p>`}</section>`,
+    found.length
+      ? `<section class="card wide"><h2>Zuletzt gefunden</h2><p class="help">Falsches Cover? Verwerfen – das Album fällt dann auf das Bild des Ordners darüber zurück.</p>
+          <div class="covers">${found
+            .slice(0, 30)
+            .map(
+              (e, i) => `<div class="cover-tile"><span class="cover-img"><img src="/api/online-cover/${e.file}" alt="" loading="lazy"><span class="cover-badge">${String(e.key).startsWith('nas:') ? 'NAS' : 'SD-Karte'}</span></span>
+                <b>${esc(e.album ?? '')}</b><small>${esc(e.series ?? '')} · ${e.source === 'itunes' ? 'iTunes' : 'Deezer'}</small>
+                <button class="btn danger sm" data-reject="${i}">Verwerfen</button></div>`,
+            )
+            .join('')}</div>${found.length > 30 ? `<p class="help" style="margin:0">… und ${found.length - 30} weitere.</p>` : ''}</section>`
+      : '',
+  ]
+}
+
+// A file name the box takes: letters, digits, dot, dash and underscore
+function coverName(file) {
+  const ext = (file.name.match(/\.(jpe?g|png|gif|webp)$/i)?.[0] ?? '').toLowerCase()
+  const base = file.name
+    .slice(0, file.name.length - ext.length)
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .replace(/[^A-Za-z0-9._-]+/g, '-')
+    .replace(/^[-.]+|[-.]+$/g, '')
+  return ext ? `${base || 'cover'}${ext}` : ''
+}
+
+function mountCovers(root, page) {
+  const again = async (text, kind = 'ok') => {
+    if (text) toast(text, kind)
+    await loadCovers().catch(() => undefined)
+    if (currentPage()?.id === page.id) renderPage(page, false)
+  }
+  const input = $('#c-file', root)
+  $('#c-pick', root).onclick = () => input.click()
+  input.onchange = () => {
+    cov.file = input.files?.[0] ?? null
+    const name = cov.file ? coverName(cov.file) : ''
+    $('#c-picked', root).textContent = cov.file ? (name ? `Wird gespeichert als ${name}${cov.own.some((c) => c.name === name) ? ' (ersetzt das vorhandene Bild)' : ''}` : 'Das ist kein JPG, PNG, GIF oder WEBP.') : ''
+    $('#c-up', root).disabled = !name
+  }
+  $('#c-up', root).onclick = async () => {
+    const name = coverName(cov.file)
+    const r = await fetch(`${API}/covers/upload?name=${encodeURIComponent(name)}`, {
+      method: 'PUT',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/octet-stream', 'x-mupibox-csrf': state.csrf },
+      body: cov.file,
+    }).catch(() => null)
+    const b = r ? await r.json().catch(() => ({})) : {}
+    if (!r?.ok) {
+      const why = {
+        not_square: `Das Bild ist nicht quadratisch (${b.width} × ${b.height} px).`,
+        bad_size: `Das Bild muss 300 bis 1200 px groß sein (hat ${b.width} px).`,
+        not_an_image: 'Das ist kein JPG, PNG, GIF oder WEBP.',
+        too_large: 'Das Bild ist größer als 10 MB.',
+      }[b.error]
+      return toast(why ?? 'Hochladen ging nicht', 'info')
+    }
+    cov.file = null
+    again(b.replaced ? 'Bild ersetzt' : 'Bild hochgeladen')
+  }
+  for (const b of root.querySelectorAll('[data-copy]')) b.onclick = () => copyText(cov.own[Number(b.dataset.copy)].url)
+  for (const b of root.querySelectorAll('[data-del]')) {
+    const c = cov.own[Number(b.dataset.del)]
+    b.onclick = () =>
+      confirmSheet('Löschen', `„${c.name}“ löschen? Einträge, die es als Cover nutzen, zeigen dann kein Bild mehr.`, async () => {
+        const r = await api(`${API}/covers/delete`, { method: 'POST', body: { name: c.name } })
+        if (!r.ok) return toast('Das hat nicht geklappt', 'info')
+        again('Gelöscht')
+      })
+  }
+  const setting = (id, key, after) =>
+    ($(id, root).onchange = async (e) => {
+      const on = e.target.checked
+      const r = await api(`${API}/online-covers-settings`, { method: 'POST', body: { [key]: on } })
+      if (!r.ok) {
+        e.target.checked = !on
+        return toast('Nicht gespeichert', 'info')
+      }
+      cov.settings[key] = on
+      // switched on: as the admin interface's cover page, start the work right away (the backend reads the switch live)
+      if (on) setTimeout(() => after(), 1000)
+      again(on ? 'Eingeschaltet' : 'Ausgeschaltet')
+    })
+  setting('#c-on', 'onlineCovers', () => api('/api/online-covers/scan', { method: 'POST', body: {} }))
+  setting('#c-save', 'onlineCoversSave', () => api('/api/online-covers/save-all', { method: 'POST', body: {} }))
+  $('#c-rej', root).onchange = (e) => (cov.alsoRejected = e.target.checked)
+  $('#c-retry', root).onclick = async () => {
+    const r = await api('/api/online-covers/retry', { method: 'POST', body: { alsoRejected: cov.alsoRejected } })
+    if (!r.ok || !r.body?.success) return toast('Das hat nicht geklappt', 'info')
+    await api('/api/online-covers/scan', { method: 'POST', body: {} })
+    again(`${r.body.cleared ?? 0} Alben werden im Hintergrund neu gesucht`)
+  }
+  $('#c-scan', root)?.addEventListener('click', async () => {
+    const r = await api('/api/online-covers/scan', { method: 'POST', body: {} })
+    again(r.ok ? 'Die Suche läuft im Hintergrund' : 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
+  })
+  $('#c-saveall', root)?.addEventListener('click', async () => {
+    const r = await api('/api/online-covers/save-all', { method: 'POST', body: {} })
+    again(r.body?.success ? `${r.body.queued ?? 0} Cover werden gespeichert` : r.body?.error ?? 'Das hat nicht geklappt', r.body?.success ? 'ok' : 'info')
+  })
+  for (const b of root.querySelectorAll('[data-reject]')) {
+    const e = cov.found[Number(b.dataset.reject)]
+    b.onclick = () =>
+      confirmSheet('Verwerfen', `Das Cover von „${e.album ?? ''}“ verwerfen? Das Album wird nicht mehr online gesucht${e.savedTo === 'nas' || e.savedTo === 'local' ? ', und das gespeicherte cover.jpg wird gelöscht' : ''}.`, async () => {
+        const r = await api('/api/online-covers/reject', { method: 'POST', body: { key: e.key } })
+        again(r.body?.success ? 'Verworfen' : 'Das hat nicht geklappt', r.body?.success ? 'ok' : 'info')
+      })
+  }
+  // while albums are still looked up: the numbers follow
+  if ((cov.oc?.pending ?? 0) > 0 || cov.oc?.scanning) every(15000, async () => {
+    if (document.activeElement?.closest?.('#content')) return
+    await again()
+  })
+}
+
 /* the controllers: load(page) reads the box before drawing, mount(root, page) runs after it, change(key, value)
    saves a setting, act / byLabel run the buttons, sections(page) gives the building blocks with the box's values,
    top(page) draws the page's own top part (instead of customTop's), ownNav: the page shows its sub pages itself */
@@ -2460,6 +2625,12 @@ const CONTROLLERS = {
         go('spotify')
       },
     },
+  },
+  cover: {
+    load: loadCovers,
+    top: coverTop,
+    sections: () => [],
+    mount: mountCovers,
   },
   upload: {
     top: uploadTop,

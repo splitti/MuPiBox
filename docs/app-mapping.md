@@ -14,10 +14,10 @@ freigegeben (`localOnly`) – Guard umstellen · `⚙ PHP` kann heute nur das PH
 
 | Teil | Seiten | ✓ API | ✓ API° | ⚙ PHP | ＋ neu | — statisch |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 Start, Hören, Spielzeit, Bibliothek | 14 | 114 | 21 | 6 | 6 | – |
+| 1 Start, Hören, Spielzeit, Bibliothek | 14 | 125 | 15 | 1 | 6 | – |
 | 2 Aussehen, Display, Audio, Akku & Strom | 18 | 36 | – | 37 | 2 | – |
 | 3 Netzwerk, Dienste, Sicherheit, System | 16 | 25 | – | 75 | 2 | 5 |
-| **Summe** | **48** | **175** | **21** | **118** | **10** | **5** |
+| **Summe** | **48** | **186** | **15** | **113** | **10** | **5** |
 
 Alle 156 Schlüssel aus `app-schema.json` (157 Einstellungen, der Playlist-Präfix steht zweimal), alle Aktionen und
 Anzeigen sind zugeordnet; keine Zeile ist unklar. Die Bereiche Start, Hören, Spielzeit und Bibliothek laufen schon
@@ -26,16 +26,16 @@ WLED, Updates, Backup, Protokolle, Systemoptionen, Browser, Experten) kann heute
 
 ## Was für die neue App gebaut werden muss
 
-1. **Guards umstellen (✓ API°, 21 Zeilen):** alle NAS-Endpunkte (`/api/nas/profiles*`, `login`, `index/*`,
-   `browse`, `selection`, `mark`, `download/*`, `covers/refresh`) und `/api/online-covers*` von `localOnly` auf
-   `localOrElternSession`.
-2. **Neue Endpunkte für heutige PHP-Funktionen (⚙ PHP, 118 Zeilen)**, jeweils mit der Logik und den Skripten, die PHP
+1. **Guards umstellen (✓ API°, 15 Zeilen):** alle NAS-Endpunkte (`/api/nas/profiles*`, `login`, `index/*`,
+   `browse`, `selection`, `mark`, `download/*`, `covers/refresh`) von `localOnly` auf `localOrElternSession`
+   (`/api/online-covers*` ist erledigt).
+2. **Neue Endpunkte für heutige PHP-Funktionen (⚙ PHP, 113 Zeilen)**, jeweils mit der Logik und den Skripten, die PHP
    heute nutzt (Details in den Tabellen):
    - Aussehen & Display: eigenes Hintergrundbild, Namen anzeigen, Scrollleiste, Vorlese-Sprache, Helligkeit (neu
      speichern und beim Start setzen), Drehungen (`/boot/config.txt`), Auflösung, Kategorien ausblenden,
      Fortsetzen-Anzahl, Haltezeiten, Display live (Screenshot, VNC)
    - Audio & Hardware: Soundkarte, Drehregler/Taster, MuPiHAT an/aus, Akku-Auswahl, Taster-Verzögerung, LED, Lüfter
-   - Bibliothek: eigene Cover, Online-Cover-Schalter, „Update verfügbar“
+   - Bibliothek: „Update verfügbar“
    - Netzwerk & Dienste: Netzwerk-Optionen (Onboard-WLAN, USB-Treiber, Stromsparen, DHCP, Wächter, neu verbinden,
      IP-Steuerung), Freigaben (Samba, FTP, VNC), Telegram-Chat-ID ermitteln, MQTT, WLED
    - System: Neuigkeiten, Support-Infos, Updates (MuPiBox, Betriebssystem), Backup/Einspielen, Neustart von
@@ -352,17 +352,17 @@ Stand: Code auf Branch `upstream-v5-pr` (28.09.2026), nur gelesen, nichts auf de
 ### Bibliothek › Cover [cover]
 | Schlüssel / Aktion | Beschriftung | Heute | Speicherort | Lesen | Schreiben / Ausführen | Nebenwirkung / Hinweis | Status |
 |---|---|---|---|---|---|---|---|
-| `◉ file Bild` | Datei wählen | A: cover.php:204 | — | — | Client | | ⚙ PHP |
-| `▶ Hochladen` | primary | A: cover.php:119–193 | `/var/www/cover/<name>` (lighttpd: `http://<host>/cover/<name>`) | — | PHP `move_uploaded_file` | Dateiname nur `[A-Za-z0-9._-]`; jpg/jpeg/png/gif/webp; quadratisch; 300–1200 px; gleicher Name wird überschrieben. Endpoint mit denselben Prüfungen nötig; Ablage/Ausliefern klären, wenn lighttpd wegfällt | ⚙ PHP |
-| `◉ rows` (URL + Löschen) | radio-teddy.png | A: cover.php:296–316 (glob), Löschen :101 (`sudo rm`, Namensprüfung) | `/var/www/cover/*` | nur PHP | nur PHP | Liste- und Lösch-Endpoint nötig | ⚙ PHP |
-| `covOn` | Cover online suchen | A: cover.php:236 → Handler :45–72 | `mupibox.onlineCovers` (Standard false) | PHP / `/api/config` | nur PHP (`save_mupiboxconfig`) | beim Einschalten ruft PHP nach 1 s POST `/api/online-covers/scan` auf; das Backend liest die Config live (fs.watch) | ⚙ PHP |
-| `covSave` | Auch als cover.jpg speichern | A: cover.php:239 → :45–72 | `mupibox.onlineCoversSave` | dto. | nur PHP | beim Einschalten POST `/api/online-covers/save-all` s.ts:1368; nur in Ordner ohne Bild; NAS braucht Schreibrecht | ⚙ PHP |
-| `◉ kv Gefunden / Kein Treffer / Verworfen` | | A: cover.php:212–245 (zählt `entries.status`, dazu „Noch zu suchen“) | `cache/online-covers/index.json` (s.ts:91) | GET `/api/online-covers` s.ts:1346 → `entries, pending, scanning` | — | | ✓ API° |
-| `covDiscarded` | Auch verworfene erneut suchen | A: cover.php:249 | — (nur Parameter) | — | `alsoRejected` bei retry | | ✓ API° |
-| `▶ Ohne Treffer erneut suchen` | ghost | A: cover.php:251 → :85 | dto. | — | POST `/api/online-covers/retry {alsoRejected}` s.ts:1399, danach `/scan` | | ✓ API° |
-| `▶ Alle Alben jetzt suchen` | primary | A: cover.php:255 (nur wenn `covOn`) → :93 | dto. | — | POST `/api/online-covers/scan` s.ts:1354 | Hintergrund-Scan, schickt Ordnernamen an iTunes/Deezer; läuft auch 3 min nach dem Start und alle 6 h (s.ts:1343f) | ✓ API° |
-| `◉ Zuletzt gefunden` (+ Verwerfen) | Liste | A: cover.php:267–290 | dto. (`status='found'`, nach `at` sortiert, online-covers.ts:215) | Bild GET `/api/online-cover/:file` s.ts:1217 (ohne localOnly) | Verwerfen POST `/api/online-covers/reject {key}` s.ts:1358 (löscht auch ein gespeichertes cover.jpg) | | ✓ API° |
-| `▶ (fehlt im Prototyp) Übrige gefundene speichern` | | A: cover.php:261 → :78 | dto. | — | POST `/api/online-covers/save-all` | nur sichtbar, wenn `covSave` an ist und noch Cover fehlen | ✓ API° |
+| `◉ file Bild` | Datei wählen | A: cover.php:204 | — | — | Client | | ✓ API |
+| `▶ Hochladen` | primary | A: cover.php:119–193 | `/var/www/cover/<name>` (lighttpd: `http://<host>/cover/<name>`) | — | PUT `/api/eltern/covers/upload?name=` (eltern/covers.ts, gleiche Prüfungen; Größe aus dem Dateikopf) | Dateiname nur `[A-Za-z0-9._-]`; jpg/jpeg/png/gif/webp; quadratisch; 300–1200 px; gleicher Name wird überschrieben. Endpoint mit denselben Prüfungen nötig; Ablage/Ausliefern klären, wenn lighttpd wegfällt | ✓ API |
+| `◉ rows` (URL + Löschen) | radio-teddy.png | A: cover.php:296–316 (glob), Löschen :101 (`sudo rm`, Namensprüfung) | `/var/www/cover/*` | GET `/api/eltern/covers` (+ Vorschau `/covers/file/:name`) | POST `/api/eltern/covers/delete {name}` | Adresse wie bisher `http://<host>/cover/<name>` | ✓ API |
+| `covOn` | Cover online suchen | A: cover.php:236 → Handler :45–72 | `mupibox.onlineCovers` (Standard false) | PHP / `/api/config` | POST `/api/eltern/online-covers-settings {onlineCovers}` (die App startet danach `/scan`) | beim Einschalten ruft PHP nach 1 s POST `/api/online-covers/scan` auf; das Backend liest die Config live (fs.watch) | ✓ API |
+| `covSave` | Auch als cover.jpg speichern | A: cover.php:239 → :45–72 | `mupibox.onlineCoversSave` | dto. | POST `/api/eltern/online-covers-settings {onlineCoversSave}` | beim Einschalten POST `/api/online-covers/save-all` s.ts:1368; nur in Ordner ohne Bild; NAS braucht Schreibrecht | ✓ API |
+| `◉ kv Gefunden / Kein Treffer / Verworfen` | | A: cover.php:212–245 (zählt `entries.status`, dazu „Noch zu suchen“) | `cache/online-covers/index.json` (s.ts:91) | GET `/api/online-covers` s.ts:1346 → `entries, pending, scanning` | — | | ✓ API |
+| `covDiscarded` | Auch verworfene erneut suchen | A: cover.php:249 | — (nur Parameter) | — | `alsoRejected` bei retry | | ✓ API |
+| `▶ Ohne Treffer erneut suchen` | ghost | A: cover.php:251 → :85 | dto. | — | POST `/api/online-covers/retry {alsoRejected}` s.ts:1399, danach `/scan` | | ✓ API |
+| `▶ Alle Alben jetzt suchen` | primary | A: cover.php:255 (nur wenn `covOn`) → :93 | dto. | — | POST `/api/online-covers/scan` s.ts:1354 | Hintergrund-Scan, schickt Ordnernamen an iTunes/Deezer; läuft auch 3 min nach dem Start und alle 6 h (s.ts:1343f) | ✓ API |
+| `◉ Zuletzt gefunden` (+ Verwerfen) | Liste | A: cover.php:267–290 | dto. (`status='found'`, nach `at` sortiert, online-covers.ts:215) | Bild GET `/api/online-cover/:file` s.ts:1217 (ohne localOnly) | Verwerfen POST `/api/online-covers/reject {key}` s.ts:1358 (löscht auch ein gespeichertes cover.jpg) | | ✓ API |
+| `▶ (fehlt im Prototyp) Übrige gefundene speichern` | | A: cover.php:261 → :78 | dto. | — | POST `/api/online-covers/save-all` | nur sichtbar, wenn `covSave` an ist und noch Cover fehlen | ✓ API |
 
 ---
 

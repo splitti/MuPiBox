@@ -1343,7 +1343,7 @@ async function scanAlbumsForOnlineCovers(): Promise<void> {
 setTimeout(() => void scanAlbumsForOnlineCovers(), 3 * 60 * 1000).unref()
 setInterval(() => void scanAlbumsForOnlineCovers(), 6 * 3600 * 1000).unref()
 
-app.get('/api/online-covers', localOnly, (_req, res) => {
+app.get('/api/online-covers', localOrElternSession, (_req, res) => {
   res.json({
     success: true,
     entries: onlineCovers.list(),
@@ -1351,11 +1351,11 @@ app.get('/api/online-covers', localOnly, (_req, res) => {
     scanning: onlineCoverScan.running,
   })
 })
-app.post('/api/online-covers/scan', localOnly, (_req, res) => {
+app.post('/api/online-covers/scan', localOrElternSession, (_req, res) => {
   void scanAlbumsForOnlineCovers()
   res.json({ success: true })
 })
-app.post('/api/online-covers/reject', localOnly, async (req, res) => {
+app.post('/api/online-covers/reject', localOrElternSession, async (req, res) => {
   const key = typeof req.body?.key === 'string' ? req.body.key : ''
   await removeSavedOnlineCover(key).catch((error) =>
     console.warn(`${new Date().toLocaleString()}: [OnlineCovers] removing the stored cover of ${key} failed: ${error}`),
@@ -1365,7 +1365,7 @@ app.post('/api/online-covers/reject', localOnly, async (req, res) => {
 // Stores every found cover not stored yet (e.g. after switching the option on, or after write permission was given
 // on the NAS) - in the background, one after the other.
 let onlineCoversSaving = false
-app.post('/api/online-covers/save-all', localOnly, (_req, res) => {
+app.post('/api/online-covers/save-all', localOrElternSession, (_req, res) => {
   if (!onlineCoversSaveEnabled()) {
     res.json({ success: false, error: 'Saving covers into the album folders is switched off.' })
     return
@@ -1389,14 +1389,14 @@ app.post('/api/online-covers/save-all', localOnly, (_req, res) => {
 })
 // Single albums looked up afresh (e.g. after the matching got stricter): a cover the box stored in the album folder
 // is removed first.
-app.post('/api/online-covers/forget', localOnly, async (req, res) => {
+app.post('/api/online-covers/forget', localOrElternSession, async (req, res) => {
   const keys = Array.isArray(req.body?.keys) ? (req.body.keys as unknown[]).filter((k): k is string => typeof k === 'string') : []
   for (const key of keys) {
     await removeSavedOnlineCover(key).catch(() => undefined)
   }
   res.json({ success: true, forgotten: onlineCovers.forget(keys) })
 })
-app.post('/api/online-covers/retry', localOnly, (req, res) => {
+app.post('/api/online-covers/retry', localOrElternSession, (req, res) => {
   res.json({ success: true, cleared: onlineCovers.retry(req.body?.alsoRejected === true) })
 })
 
