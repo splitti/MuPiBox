@@ -727,115 +727,6 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 <p>This is the central configuration of your MuPiBox...</p>
 </div>
 
-	<details id="displaytexts">
-		<summary><i class="fa-solid fa-font"></i> Display texts</summary>
-		<ul>
-			<li id="li_1">
-				<h2>About</h2>
-				<p>Texts the child sees on the box display when the daily limit is used up, during a quiet time and on the parents' QR code. Choose a language; any text can be replaced by your own. A quiet-time rule with a label (e.g. "Bedtime") shows that label as the heading.</p>
-			</li>
-			<li id="li_1">
-				<?php
-				$display_texts_stored = isset($data["displayTexts"]) && is_array($data["displayTexts"]) ? $data["displayTexts"] : array();
-				$display_lang_current = isset($data["displayLanguage"]) && is_string($data["displayLanguage"]) ? $data["displayLanguage"] : 'en';
-				echo '<h2>Language</h2><select name="dt_language" id="dt_language" class="element select medium">';
-				if( !isset($display_languages[$display_lang_current]) ) echo '<option value="'.htmlspecialchars($display_lang_current, ENT_QUOTES).'" selected>'.htmlspecialchars($display_lang_current).'</option>';
-				foreach( $display_languages as $dl_code => $dl )
-					{
-					$dl_name = is_array($dl) && isset($dl['name']) && is_string($dl['name']) ? $dl['name'] : $dl_code;
-					echo '<option value="'.htmlspecialchars($dl_code, ENT_QUOTES).'"'.($dl_code === $display_lang_current ? ' selected' : '').'>'.htmlspecialchars($dl_name).'</option>';
-					}
-				echo '</select><p>Own texts below (optional) replace the text of the language. Empty = text of the language (in grey).</p>';
-
-				// The screens of the box display that have texts, and the text fields of each
-				$display_screens = array(
-					'blocked' => array('label' => 'Limit reached', 'fields' => array('blockedHeading', 'blockedSubheading')),
-					'quiet' => array('label' => 'Quiet time', 'fields' => array('quietHeading', 'quietSubheading')),
-					'parents' => array('label' => 'Parents QR code', 'fields' => array('parentsTitle', 'parentsHint', 'parentsCountdown', 'parentsClose')),
-				);
-				echo '<h2>Screen</h2><select id="dt_screen" class="element select medium">';
-				foreach( $display_screens as $ds_key => $ds )
-					{
-					echo '<option value="'.htmlspecialchars($ds_key, ENT_QUOTES).'">'.htmlspecialchars($ds['label']).'</option>';
-					}
-				echo '</select>';
-				echo '<p>The picture shows the screen as it looks on the box display (800 x 480 px, with the theme in use). It follows what you type, before anything is saved.</p>';
-				echo '<div style="max-width:100%; overflow-x:auto;"><iframe id="dt_preview" width="800" height="480" style="border:1px solid #888; background:#000; display:block;" title="Preview of the box display"></iframe></div>';
-				foreach( $display_screens as $ds_key => $ds )
-					{
-					echo '<div class="dt-screen-fields" data-screen="'.htmlspecialchars($ds_key, ENT_QUOTES).'" style="display:none;">';
-					foreach( $ds['fields'] as $dt_key )
-						{
-						$dt_label = $display_text_fields[$dt_key] ?? $dt_key;
-						// "Limit reached - heading" -> "Heading": the screen is chosen above
-						if( strpos($dt_label, ' - ') !== false ) $dt_label = ucfirst(substr($dt_label, strpos($dt_label, ' - ') + 3));
-						$dt_current = isset($display_texts_stored[$dt_key]) && is_string($display_texts_stored[$dt_key]) ? $display_texts_stored[$dt_key] : '';
-						echo '<h2>'.htmlspecialchars($dt_label, ENT_QUOTES).'</h2>';
-						echo '<input type="text" class="element text large" name="dt_'.htmlspecialchars($dt_key, ENT_QUOTES).'" data-dtkey="'.htmlspecialchars($dt_key, ENT_QUOTES).'" maxlength="120" value="'.htmlspecialchars($dt_current, ENT_QUOTES).'">';
-						}
-					echo '</div>';
-					}
-				?>
-				<script>
-				(function () {
-					// grey suggestions = texts of the chosen language
-					var langs = <?php echo json_encode($display_languages, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
-					var select = document.getElementById('dt_language');
-					var screenSelect = document.getElementById('dt_screen');
-					var frame = document.getElementById('dt_preview');
-					var details = document.getElementById('displaytexts');
-					// the box display (its web frontend) is served on port 8200 of the same host
-					var frameOrigin = location.protocol + '//' + location.hostname + ':8200';
-					var frameReady = false;
-
-					function apply() {
-						var set = (langs[select.value] || langs.en || {}).texts || {};
-						document.querySelectorAll('input[data-dtkey]').forEach(function (input) { input.placeholder = set[input.getAttribute('data-dtkey')] || ''; });
-					}
-					// sends the texts as typed (also unsaved ones) to the preview
-					function send() {
-						if (!frameReady || !frame.contentWindow) { return; }
-						var texts = {};
-						document.querySelectorAll('input[data-dtkey]').forEach(function (input) {
-							if (input.value.trim() !== '') { texts[input.getAttribute('data-dtkey')] = input.value.trim(); }
-						});
-						frame.contentWindow.postMessage({ type: 'mupibox-display-texts', language: select.value, texts: texts }, frameOrigin);
-					}
-					function showScreen() {
-						document.querySelectorAll('.dt-screen-fields').forEach(function (box) {
-							box.style.display = box.getAttribute('data-screen') === screenSelect.value ? '' : 'none';
-						});
-						frameReady = false;
-						frame.src = frameOrigin + '/text-preview?screen=' + encodeURIComponent(screenSelect.value);
-					}
-					frame.addEventListener('load', function () {
-						frameReady = true;
-						// the page of the box needs a moment to be ready for messages
-						send();
-						setTimeout(send, 600);
-						setTimeout(send, 1800);
-					});
-					select.addEventListener('change', function () { apply(); send(); });
-					screenSelect.addEventListener('change', showScreen);
-					document.querySelectorAll('input[data-dtkey]').forEach(function (input) { input.addEventListener('input', send); });
-					apply();
-					// the preview is loaded when the section is opened (not with every visit of the page)
-					var started = false;
-					function start() { if (!started && details && details.open) { started = true; showScreen(); } }
-					if (details) { details.addEventListener('toggle', start); }
-					start();
-					if (!started) {
-						document.querySelectorAll('.dt-screen-fields').forEach(function (box) { box.style.display = box.getAttribute('data-screen') === screenSelect.value ? '' : 'none'; });
-					}
-				})();
-				</script>
-			</li>
-			<li class="buttons">
-				<input id="saveForm" class="button_text" type="submit" name="displaytexts_save" value="Save display texts" />
-			</li>
-		</ul>
-	</details>
-
 	<details id="systemsettings">
 		<summary><i class="fa-solid fa-screwdriver-wrench"></i> System settings</summary>
 		<ul>
@@ -1368,6 +1259,115 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 		</ul>
 	</details>
 
+	<details id="displaytexts">
+		<summary><i class="fa-solid fa-font"></i> Display texts</summary>
+		<ul>
+			<li id="li_1">
+				<h2>About</h2>
+				<p>Texts the child sees on the box display when the daily limit is used up, during a quiet time and on the parents' QR code. Choose a language; any text can be replaced by your own. A quiet-time rule with a label (e.g. "Bedtime") shows that label as the heading.</p>
+			</li>
+			<li id="li_1">
+				<?php
+				$display_texts_stored = isset($data["displayTexts"]) && is_array($data["displayTexts"]) ? $data["displayTexts"] : array();
+				$display_lang_current = isset($data["displayLanguage"]) && is_string($data["displayLanguage"]) ? $data["displayLanguage"] : 'en';
+				echo '<h2>Language</h2><select name="dt_language" id="dt_language" class="element select medium">';
+				if( !isset($display_languages[$display_lang_current]) ) echo '<option value="'.htmlspecialchars($display_lang_current, ENT_QUOTES).'" selected>'.htmlspecialchars($display_lang_current).'</option>';
+				foreach( $display_languages as $dl_code => $dl )
+					{
+					$dl_name = is_array($dl) && isset($dl['name']) && is_string($dl['name']) ? $dl['name'] : $dl_code;
+					echo '<option value="'.htmlspecialchars($dl_code, ENT_QUOTES).'"'.($dl_code === $display_lang_current ? ' selected' : '').'>'.htmlspecialchars($dl_name).'</option>';
+					}
+				echo '</select><p>Own texts below (optional) replace the text of the language. Empty = text of the language (in grey).</p>';
+
+				// The screens of the box display that have texts, and the text fields of each
+				$display_screens = array(
+					'blocked' => array('label' => 'Limit reached', 'fields' => array('blockedHeading', 'blockedSubheading')),
+					'quiet' => array('label' => 'Quiet time', 'fields' => array('quietHeading', 'quietSubheading')),
+					'parents' => array('label' => 'Parents QR code', 'fields' => array('parentsTitle', 'parentsHint', 'parentsCountdown', 'parentsClose')),
+				);
+				echo '<h2>Screen</h2><select id="dt_screen" class="element select medium">';
+				foreach( $display_screens as $ds_key => $ds )
+					{
+					echo '<option value="'.htmlspecialchars($ds_key, ENT_QUOTES).'">'.htmlspecialchars($ds['label']).'</option>';
+					}
+				echo '</select>';
+				echo '<p>The picture shows the screen as it looks on the box display (800 x 480 px, with the theme in use). It follows what you type, before anything is saved.</p>';
+				echo '<div style="max-width:100%; overflow-x:auto;"><iframe id="dt_preview" width="800" height="480" style="border:1px solid #888; background:#000; display:block;" title="Preview of the box display"></iframe></div>';
+				foreach( $display_screens as $ds_key => $ds )
+					{
+					echo '<div class="dt-screen-fields" data-screen="'.htmlspecialchars($ds_key, ENT_QUOTES).'" style="display:none;">';
+					foreach( $ds['fields'] as $dt_key )
+						{
+						$dt_label = $display_text_fields[$dt_key] ?? $dt_key;
+						// "Limit reached - heading" -> "Heading": the screen is chosen above
+						if( strpos($dt_label, ' - ') !== false ) $dt_label = ucfirst(substr($dt_label, strpos($dt_label, ' - ') + 3));
+						$dt_current = isset($display_texts_stored[$dt_key]) && is_string($display_texts_stored[$dt_key]) ? $display_texts_stored[$dt_key] : '';
+						echo '<h2>'.htmlspecialchars($dt_label, ENT_QUOTES).'</h2>';
+						echo '<input type="text" class="element text large" name="dt_'.htmlspecialchars($dt_key, ENT_QUOTES).'" data-dtkey="'.htmlspecialchars($dt_key, ENT_QUOTES).'" maxlength="120" value="'.htmlspecialchars($dt_current, ENT_QUOTES).'">';
+						}
+					echo '</div>';
+					}
+				?>
+				<script>
+				(function () {
+					// grey suggestions = texts of the chosen language
+					var langs = <?php echo json_encode($display_languages, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+					var select = document.getElementById('dt_language');
+					var screenSelect = document.getElementById('dt_screen');
+					var frame = document.getElementById('dt_preview');
+					var details = document.getElementById('displaytexts');
+					// the box display (its web frontend) is served on port 8200 of the same host
+					var frameOrigin = location.protocol + '//' + location.hostname + ':8200';
+					var frameReady = false;
+
+					function apply() {
+						var set = (langs[select.value] || langs.en || {}).texts || {};
+						document.querySelectorAll('input[data-dtkey]').forEach(function (input) { input.placeholder = set[input.getAttribute('data-dtkey')] || ''; });
+					}
+					// sends the texts as typed (also unsaved ones) to the preview
+					function send() {
+						if (!frameReady || !frame.contentWindow) { return; }
+						var texts = {};
+						document.querySelectorAll('input[data-dtkey]').forEach(function (input) {
+							if (input.value.trim() !== '') { texts[input.getAttribute('data-dtkey')] = input.value.trim(); }
+						});
+						frame.contentWindow.postMessage({ type: 'mupibox-display-texts', language: select.value, texts: texts }, frameOrigin);
+					}
+					function showScreen() {
+						document.querySelectorAll('.dt-screen-fields').forEach(function (box) {
+							box.style.display = box.getAttribute('data-screen') === screenSelect.value ? '' : 'none';
+						});
+						frameReady = false;
+						frame.src = frameOrigin + '/text-preview?screen=' + encodeURIComponent(screenSelect.value);
+					}
+					frame.addEventListener('load', function () {
+						frameReady = true;
+						// the page of the box needs a moment to be ready for messages
+						send();
+						setTimeout(send, 600);
+						setTimeout(send, 1800);
+					});
+					select.addEventListener('change', function () { apply(); send(); });
+					screenSelect.addEventListener('change', showScreen);
+					document.querySelectorAll('input[data-dtkey]').forEach(function (input) { input.addEventListener('input', send); });
+					apply();
+					// the preview is loaded when the section is opened (not with every visit of the page)
+					var started = false;
+					function start() { if (!started && details && details.open) { started = true; showScreen(); } }
+					if (details) { details.addEventListener('toggle', start); }
+					start();
+					if (!started) {
+						document.querySelectorAll('.dt-screen-fields').forEach(function (box) { box.style.display = box.getAttribute('data-screen') === screenSelect.value ? '' : 'none'; });
+					}
+				})();
+				</script>
+			</li>
+			<li class="buttons">
+				<input id="saveForm" class="button_text" type="submit" name="displaytexts_save" value="Save display texts" />
+			</li>
+		</ul>
+	</details>
+
 	<details id="displaysettings">
 		<summary><i class="fa-solid fa-display"></i> Display settings</summary>
 		<ul>
@@ -1518,6 +1518,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 			</li>
 		</ul>
 	</details>
+
 	<details id="audiosettings">
 		<summary><i class="fa-solid fa-volume-high"></i> Audio settings</summary>
 		<ul>
@@ -1677,6 +1678,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 			</li>
 		</ul>
 	</details>
+
 	<details id="poweronsettings">
 		<summary><i class="fa-solid fa-power-off"></i> Power-on settings</summary>
 		<ul>
@@ -1751,7 +1753,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 			</li>
 		</ul>
 	</details>
-	
+
 	<details id="fancontrol">
 		<summary><i class="fa-solid fa-fan"></i> Fan-Control</summary>
 		<ul>
@@ -1842,6 +1844,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 			</li>
 		</ul>
 	</details>
+
 	<details id="chromiumparameters">
 		<summary><i class="fa-brands fa-chrome"></i> Chromium browser parameters</summary>
 		<ul>
@@ -1936,6 +1939,7 @@ $CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 
 		</ul>
 	</details>
+
 
 
 </form><p>
