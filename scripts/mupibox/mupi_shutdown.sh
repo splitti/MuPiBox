@@ -10,9 +10,14 @@ AUDIO_DEVICE=$(/usr/bin/jq -r .mupibox.audioDevice ${CONFIG})
 START_VOLUME=$(/usr/bin/jq -r .mupibox.startVolume ${CONFIG})
 PLAYERSTATE="/tmp/playerstate"
 
-if [ $(head -n1 ${PLAYERSTATE}) = "play" ]; then
+if [ "$(head -n1 ${PLAYERSTATE} 2>/dev/null)" = "play" ]; then
   curl -s http://127.0.0.1:5005/pause
 fi
+
+# The goodbye sound starts right away and plays while Chromium is ended and the goodbye picture is shown (ending
+# Chromium takes about 2 s; the sound used to wait for it). Waited for at the end, so it is not cut off.
+sudo -i -u dietpi /usr/local/bin/mupibox/./shutdown_sound.sh &
+SOUND_PID=$!
 
 #/usr/bin/pactl set-sink-volume @DEFAULT_SINK@ ${START_VOLUME}%
 #/usr/bin/aplay ${SHUT_SOUND}
@@ -40,10 +45,6 @@ elif [ -n "$1" ]; then
 else
     /usr/bin/fbv ${SHUT_SPLASH} &
 fi
-# The sound plays while the goodbye picture is shown (it used to play first, 4 s with the display still on, and the
-# picture came after it). Waited for at the end, so it is not cut off.
-sudo -i -u dietpi /usr/local/bin/mupibox/./shutdown_sound.sh &
-SOUND_PID=$!
 wled_shut_active=$(/usr/bin/jq -r .wled.shutdown_active ${CONFIG})
 wled_shut_id=$(/usr/bin/jq -r .wled.shutdown_id ${CONFIG})
 wled_baud_rate=$(/usr/bin/jq -r .wled.baud_rate ${CONFIG})

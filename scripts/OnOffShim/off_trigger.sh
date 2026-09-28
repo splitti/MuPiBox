@@ -82,7 +82,8 @@ while true; do
 
             echo "$(date) - INFO:  Stopping services" >> ${LOGFILE}
             sudo service mupi_startstop stop
-            sudo service mupi_powerled stop
+            # (--no-block: the LED's goodbye animation takes about 2 s and runs on while the box shuts down)
+            sudo systemctl --no-block stop mupi_powerled
 
             echo "$(date) - INFO:  System shutdown initiated" >> ${LOGFILE}
             sudo poweroff
