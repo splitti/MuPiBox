@@ -2193,8 +2193,9 @@ export function buildElternLandingHandler(): import('express').RequestHandler {
       res.status(401).send('Magic link invalid or expired / Magic-Link ungültig oder abgelaufen')
       return
     }
-    // Set cookie, strip the token from URL by redirecting to the same page (/parents, or /eltern for old links)
+    // Set cookie, strip the token from URL by redirecting to the same page (/parents, /eltern for old links, or /app
+    // for the new app)
     res.setHeader('Set-Cookie', buildSessionCookie(session.sessionId, 24 * 60 * 60))
-    res.redirect(req.path === '/eltern' ? '/eltern' : '/parents')
+    res.redirect(['/eltern', '/app'].includes(req.path) ? req.path : '/parents')
   }
 }

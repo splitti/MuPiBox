@@ -7133,6 +7133,18 @@ for (const base of ['/parents', '/eltern']) {
   )
 }
 
+// The new MuPiBox app (one app for everything, see docs/eine-app/) grows at /app next to the parents' web app until it
+// can replace it and the admin interface. Same login (session cookie, magic link from the QR code or Telegram).
+app.get('/app', buildElternLandingHandler())
+app.use(
+  '/app',
+  express.static(path.join(serverDir, 'mupi-app'), {
+    setHeaders: (res) => {
+      res.setHeader('Cache-Control', 'no-cache')
+    },
+  }),
+)
+
 // Catch-all handler: send back Angular's index.html file for any non-API routes
 // This must be placed after all API routes but before starting the server
 if (productionServe) {

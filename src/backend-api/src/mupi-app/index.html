@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="de" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark light">
+  <title>MuPiBox</title>
+  <link rel="icon" href="mupi.svg" type="image/svg+xml">
+  <!-- The chosen theme before the first paint (dark by default), so nothing flashes -->
+  <script>
+    try {
+      var t = localStorage.getItem('mupi-theme')
+      if (t === 'light' || t === 'dark' || t === 'auto') document.documentElement.setAttribute('data-theme', t)
+    } catch (e) {}
+  </script>
+  <link rel="stylesheet" href="fonts.css">
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="app.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <div class="shell" id="shell">
+    <nav class="sidebar" id="sidebar" aria-label="Bereiche"></nav>
+    <div class="main">
+      <header class="topbar" id="topbar"></header>
+      <main class="content" id="content" tabindex="-1">
+        <div class="loading"><img src="mupi.svg" alt="" width="96" height="100"><p>Verbinde mit der Box …</p></div>
+      </main>
+    </div>
+    <nav class="tabbar" id="tabbar" aria-label="Bereiche"></nav>
+  </div>
+  <div class="sheet-scrim" id="sheet-scrim" hidden></div>
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true" hidden></div>
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+</body>
+</html>

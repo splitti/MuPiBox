@@ -6,7 +6,7 @@
   "scripts": {
     "serve": "cross-env NODE_ENV=development tsx watch src/server.ts",
     "build": "npm run check-types && esbuild src/server.ts --bundle --minify --platform=node --target=node22 --log-override:empty-import-meta=silent --metafile=backend-api.esbuild-meta.json --outfile=../deploy/server.js && npm run build:statics",
-    "build:statics": "node -e \"require('fs').cpSync('src/eltern-webapp','../deploy/eltern-webapp',{recursive:true,force:true})\"",
+    "build:statics": "node -e \"for (const d of ['eltern-webapp','mupi-app']) require('fs').cpSync('src/'+d,'../deploy/'+d,{recursive:true,force:true})\"",
     "test": "cross-env NODE_ENV=test tsx --test src/*.spec.ts",
     "lint": "npx @biomejs/biome check .",
     "lint:fix": "npx @biomejs/biome check --fix .",
