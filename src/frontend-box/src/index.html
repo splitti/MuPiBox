@@ -19,8 +19,9 @@
     <!-- The boot screen over the page until the start page has its list and the display's Spotify player is set up
          (window.mupiBootDone, see home.page.ts and spotify-player.service.ts): between the boot screen and the display
          it was black and white for seconds, and setting up the Spotify player blanked the screen for a moment. A layer
-         of its own (fixed, will-change) stays on the screen through that. Without the player it goes 10 s after the
-         page was loaded, in any case after 30 s. -->
+         of its own (fixed, will-change) stays on the screen through that. The player gets 1.5 s after the list (at a
+         cold start its script takes much longer to load - the page is not held for it then), in any case the page
+         shows after 30 s. -->
     <link rel="preload" as="image" href="/api/bootscreen/current-splash" />
     <style>
       #mupi-boot {
@@ -31,10 +32,10 @@
     </style>
     <script>
       (function () {
-        var done = {}, start = Date.now()
+        var done = {}
         function ready() { document.documentElement.classList.add('mupi-ready') }
-        function check() { if (done.list && (done.sdk || Date.now() - start > 10000)) ready() }
-        window.mupiBootDone = function (what) { done[what] = true; check() }
+        function check() { if (done.list && (done.sdk || Date.now() - done.list > 1500)) ready() }
+        window.mupiBootDone = function (what) { done[what] = done[what] || Date.now(); check() }
         var timer = setInterval(function () { check(); if (document.documentElement.classList.contains('mupi-ready')) clearInterval(timer) }, 500)
         setTimeout(ready, 30000)
       })()
