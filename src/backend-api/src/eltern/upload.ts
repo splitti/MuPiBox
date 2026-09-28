@@ -171,4 +171,46 @@ export function registerLocalUploadRoutes(router: Router, deps: LocalLibraryDeps
     deps.changed()
     res.json({ ok: true, path: path.relative(deps.root, target).split(path.sep).join('/') })
   })
+
+  /**
+   * POST /api/eltern/local/delete  {path: "<category>/<artist>[/<album>…]"}
+   * Deletes a folder of the local media (an artist with all its albums, or one album) from the SD card. A category
+   * itself cannot be deleted. The artist's folder goes too when its last album was deleted (an empty artist would
+   * show on the box).
+   */
+  router.post('/local/delete', requireSession, requireCsrf, async (req, res) => {
+    const raw = typeof (req.body as { path?: unknown } | undefined)?.path === 'string' ? (req.body as { path: string }).path : ''
+    const parts = raw.split('/').filter(Boolean)
+    if (parts.length < 2 || !deps.categories.includes(parts[0]) || parts.some((p) => p === '.' || p === '..' || p.includes('\\'))) {
+      res.status(400).json({ error: 'invalid_path' })
+      return
+    }
+    const categoryDir = path.join(deps.root, parts[0])
+    const target = path.join(deps.root, ...parts)
+    if (!target.startsWith(categoryDir + path.sep)) {
+      res.status(400).json({ error: 'invalid_path' })
+      return
+    }
+    try {
+      const st = await fsp.lstat(target)
+      if (!st.isDirectory()) throw new Error('not a folder')
+    } catch {
+      res.status(404).json({ error: 'item_not_found' })
+      return
+    }
+    try {
+      await fsp.rm(target, { recursive: true })
+    } catch (err) {
+      console.warn(`${new Date().toLocaleString()}: [local delete] ${target}: ${(err as Error).message}`)
+      res.status(500).json({ error: 'delete_failed' })
+      return
+    }
+    // the parent folders left empty go too (not the category)
+    for (let d = path.dirname(target); d.startsWith(categoryDir + path.sep); d = path.dirname(d)) {
+      if ((await subfolders(d)).length > 0 || !(await fsp.rmdir(d).then(() => true, () => false))) break
+    }
+    console.log(`${new Date().toLocaleString()}: [local delete] ${parts.join('/')}`)
+    deps.changed()
+    res.json({ ok: true })
+  })
 }

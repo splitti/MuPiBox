@@ -14,10 +14,10 @@ freigegeben (`localOnly`) – Guard umstellen · `⚙ PHP` kann heute nur das PH
 
 | Teil | Seiten | ✓ API | ✓ API° | ⚙ PHP | ＋ neu | — statisch |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 Start, Hören, Spielzeit, Bibliothek | 14 | 108 | 21 | 9 | 9 | – |
+| 1 Start, Hören, Spielzeit, Bibliothek | 14 | 110 | 21 | 9 | 7 | – |
 | 2 Aussehen, Display, Audio, Akku & Strom | 18 | 36 | – | 37 | 2 | – |
 | 3 Netzwerk, Dienste, Sicherheit, System | 16 | 25 | – | 75 | 2 | 5 |
-| **Summe** | **48** | **169** | **21** | **121** | **13** | **5** |
+| **Summe** | **48** | **171** | **21** | **121** | **11** | **5** |
 
 Alle 156 Schlüssel aus `app-schema.json` (157 Einstellungen, der Playlist-Präfix steht zweimal), alle Aktionen und
 Anzeigen sind zugeordnet; keine Zeile ist unklar. Die Bereiche Start, Hören, Spielzeit und Bibliothek laufen schon
@@ -41,7 +41,7 @@ WLED, Updates, Backup, Protokolle, Systemoptionen, Browser, Experten) kann heute
      IP-Steuerung), Freigaben (Samba, FTP, VNC), Telegram-Chat-ID ermitteln, MQTT, WLED
    - System: Neuigkeiten, Support-Infos, Updates (MuPiBox, Betriebssystem), Backup/Einspielen, Neustart von
      Display/Diensten, Protokolle, Systemoptionen, Browser, Hostname, JSON-Editor, Zurücksetzen
-3. **Neu zu bauen (＋ neu, 13 Zeilen):** lokale SD-Ordner in der Bibliothek (Löschen),
+3. **Neu zu bauen (＋ neu, 11 Zeilen):**
    Kategorie und Fortschritt im „Läuft gerade“ auch für lokal/NAS/Radio, nächstes Ruhezeit-Fenster, ein
    Bluetooth-Schalter (Funk + Chip), „Sprache der Box“ (setzt `displayLanguage` und `bootscreenLanguage`), App in
    17 Sprachen, echter NAS-Logout, Playlist-Präfix aus dem Box-Namen vorbelegen, ein gemeinsamer Login.
@@ -233,7 +233,7 @@ Stand: Code auf Branch `upstream-v5-pr` (28.09.2026), nur gelesen, nichts auf de
 | Schlüssel / Aktion | Beschriftung | Heute | Speicherort | Lesen | Schreiben / Ausführen | Nebenwirkung / Hinweis | Status |
 |---|---|---|---|---|---|---|---|
 | `◉ Liste` | Cover, Titel, Interpret, Kategorie-Etikett, Sync | E: `loadLibrary` app.js:316, `renderLibrary` app.js:349; A: media.php (nur Übersicht von data.json) | data.json | GET `/api/data` s.ts:1121 | — | Resume-Einträge werden ausgeblendet; Cover wie beim Hören | ✓ API |
-| `◉ Lokale Ordner in der Liste` | alle Inhalte inkl. lokal | – | `media/<cat>/…` (Dateisystem) | `/api/library/artists` s.ts:6858 + `/api/library/children` s.ts:6887 | — | im Client mit data.json zusammenführen | ＋ neu |
+| `◉ Lokale Ordner in der Liste` | alle Inhalte inkl. lokal | – | `media/<cat>/…` (Dateisystem) | `/api/library/artists` s.ts:6858 + `/api/library/children` s.ts:6887 | — | Neue App: Liste mit Filter „SD-Karte“, Tippen zeigt die Alben des Ordners | ✓ API |
 | `S Suche` | Suchfeld | E: `#library-search` → renderLibrary | — | Client (artist/title inkl. `_override`) | — | | ✓ API |
 | `S Filter Kategorie` | Hörspiel / Musik / Sonstiges | E: html:311 | `category` | Client | — | filtert auf `category`, nicht auf `category_override` (Anzeige nutzt Override) | ✓ API |
 | `S Filter Quelle` | manuell / Sync | E: html:317 | `source` = manual / spotify-sync (Phase 14a) | Client | — | ohne `source` = manual | ✓ API |
@@ -241,7 +241,7 @@ Stand: Code auf Branch `upstream-v5-pr` (28.09.2026), nur gelesen, nichts auf de
 | `▶ Hinzufügen (Blatt add)` | 3 Wege | E: `openLibraryChooseSheet` app.js:585 (html:356) | — | — | Navigation zu suche/link/upload | | ✓ API |
 | `▶ Blatt edit: Speichern` | Bearbeiten | E: `openLibraryEditSheet` app.js:420 | data.json: manuell die Grundfelder `artist/title/cover/artistcover/category`; Sync-Einträge nur `*_override` + `category_override` | — | POST `/api/edit {index, data, original}` s.ts:2974 (Lock `/tmp/.data.lock`, atomar, 409 bei verschobenem Eintrag) | **kein Login/CSRF** (offene /api); `index` kommt aus dem Feld in data.json (s. Lücken); die Box lädt über `/api/data-version` neu | ✓ API |
 | `▶ Blatt edit: Löschen` | Löschen | E: app.js:519 (nur manuelle Einträge) | data.json | — | POST `/api/delete {index, original}` s.ts:2936 | `splice` ohne neue Nummerierung; Sync-Einträge nur über Abo/Playlist entfernbar | ✓ API |
-| `▶ Lokalen Ordner löschen/bearbeiten` | (lokale Einträge) | nur Box-Display: Player `deletelocal/<cat>:<artist>:<title>` sc.js:2540 | Dateisystem | — | kein Eltern-Endpoint | Proxy-Route mit Pfadprüfung | ＋ neu |
+| `▶ Lokalen Ordner löschen/bearbeiten` | (lokale Einträge) | nur Box-Display: Player `deletelocal/<cat>:<artist>:<title>` sc.js:2540 | Dateisystem | — | POST `/api/eltern/local/delete {path}` up.ts (Kategorie geprüft, keine ganze Kategorie, leere Elternordner gehen mit, `changed()` → das Display lädt neu) | ganzer Interpret oder ein Album; mit Rückfrage | ✓ API |
 | `▶ Jetzt synchronisieren` | (Bibliothek-Kopf) | E: `manualSyncNow` app.js:3679 | — | GET /api/spotify-sync/status (Polling bis fertig) | POST `/api/spotify-sync/trigger?source=webapp` ss.ts:54 | s. Seite Spotify | ✓ API |
 
 ### Bibliothek › Verwaltete Inhalte [verwaltet]

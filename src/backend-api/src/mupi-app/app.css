@@ -409,6 +409,26 @@ select.input { appearance: auto; }
 .cover-tile small { color: var(--mp-muted); font-size: 12px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .cover-tile:active .cover-img { transform: scale(.97); }
 
+/* ---------- Bibliothek ---------- */
+.lib-head .help { margin: 0; }
+.lib-row { width: 100%; border: 0; background: none; text-align: left; color: inherit; padding-left: 0; padding-right: 0; }
+.lib-thumb { position: relative; width: 48px; height: 48px; flex: none; border-radius: var(--mp-r-sm); overflow: hidden; background: var(--mp-chip); display: grid; place-items: center; color: var(--mp-muted); }
+.lib-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.entry .lbl { display: flex; flex-direction: column; gap: 2px; }
+.entry .lbl small { color: var(--mp-muted); font-size: 13px; overflow: hidden; text-overflow: ellipsis; }
+.tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
+.tags .chip { font-size: 11px; padding: 2px 8px; }
+.lib-row .chev { color: var(--mp-muted); }
+.lib-list > .loading { margin: 24px auto; }
+.btn.sm { min-height: 36px; height: 36px; padding: 0 12px; font-size: 13px; flex: none; }
+.entry.out { opacity: .55; }
+.entry .pos { width: 28px; flex: none; text-align: right; color: var(--mp-muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.wide-stack { display: flex; flex-direction: column; gap: var(--mp-gap); grid-column: 1 / -1; }
+.wide-stack > .help, .wide-stack > .loading { margin: 12px 2px; text-align: center; }
+.u-list { margin: 0; padding-left: 18px; max-height: 220px; overflow-y: auto; font-size: 13px; color: var(--mp-muted); }
+.u-list:empty { display: none; }
+.drop.over { border-color: var(--mp-primary); background: var(--mp-primary-soft); color: var(--mp-primary-text); }
+
 /* login */
 .login { max-width: 400px; margin: 8vh auto 0; display: flex; flex-direction: column; gap: 16px; text-align: center; }
 .login .logo { width: 96px; height: 96px; border-radius: 50%; background: var(--mp-primary-soft); display: grid; place-items: center; margin: 0 auto; }

@@ -104,6 +104,7 @@ function stopPageTimers() {
 function route() {
   const page = currentPage()
   stopPageTimers()
+  closeSheet() // (a sheet belongs to the page it was opened on)
   renderChrome(page)
   renderPage(page)
   window.scrollTo(0, 0)
@@ -207,6 +208,8 @@ function hasSettings(page) {
 
 // Pages that are drawn by the app itself (not only from the schema); filled in the next steps
 function customTop(page) {
+  const own = ctrlOf(page)?.top
+  if (own) return own(page)
   switch (page.id) {
     case 'start':
       return startSkeleton()
@@ -214,8 +217,6 @@ function customTop(page) {
       return hearSkeleton()
     case 'spielzeit':
       return [`<section class="card hero wide pt-hero" id="pt-hero"><div class="loading"><p>Lade …</p></div></section>`]
-    case 'bibliothek':
-      return [`<div class="card wide"><h2>Inhalte</h2><div class="btns"><button class="btn primary" data-sheet="add">${icon('plus', 18)}Hinzufügen</button></div><div class="placeholder">${icon('lib')}Liste mit Suche und Filtern – kommt in Schritt 4.</div></div>`]
     case 'einstellungen':
       return [
         `<div class="search wide">${icon('search')}<input class="input" id="settings-search" type="search" placeholder="Einstellung suchen – z. B. WLAN, Lüfter, Passwort" autocomplete="off"></div>`,
@@ -228,7 +229,7 @@ function customTop(page) {
 
 // Sub pages of an area or a group that no nav item of the page already leads to
 function childNav(page) {
-  if (page.id === 'hoeren') return [] // Hören shows its sub page (the history) above the grid
+  if (page.id === 'hoeren' || ctrlOf(page)?.ownNav) return [] // these pages show their sub pages themselves
   const linked = new Set((page.sections || []).flatMap((s) => (s.items || []).filter((i) => i.type === 'nav').map((i) => i.target)))
   const kids = state.schema.pages.filter((p) => p.parent === page.id && !linked.has(p.id))
   if (kids.length === 0) return []
@@ -447,14 +448,15 @@ async function api(path, { method = 'GET', body } = {}) {
   if (body !== undefined) headers['Content-Type'] = 'application/json'
   if (method !== 'GET') headers['x-mupibox-csrf'] = state.csrf
   const r = await fetch(path, { method, credentials: 'same-origin', headers, body: body === undefined ? undefined : JSON.stringify(body) }).catch(() => null)
-  if (!r) return { ok: false, status: 0, body: null }
+  if (!r) return { ok: false, status: 0, body: null, text: '' }
+  const text = await r.text().catch(() => '')
   let data = null
   try {
-    data = await r.json()
+    data = JSON.parse(text)
   } catch {
-    /* no JSON */
+    /* no JSON (some old endpoints answer with a plain "ok") */
   }
-  return { ok: r.ok, status: r.status, body: data }
+  return { ok: r.ok, status: r.status, body: data, text }
 }
 
 /* ---------- Start ---------- */
@@ -1259,8 +1261,774 @@ async function startPlay(title, path, body) {
   return run()
 }
 
+/* Bibliothek: all content (library entries and the SD card's folders), edit, delete, sync */
+
+const CATS = [
+  ['audiobook', 'Hörspiele', 'Hörbuch/Hörspiel'],
+  ['music', 'Musik', 'Musik'],
+  ['other', 'Sonstiges', 'Sonstiges'],
+]
+const catLabel = (c) => CATS.find(([id]) => id === c)?.[1] ?? ''
+const catFromLabel = (label) => CATS.find(([, , long]) => long === label)?.[0] ?? 'audiobook'
+const SYNC_API = '/api/spotify-sync'
+
+// items: /api/data; local: category -> artist folders; cat / src / q: the filters
+const lib = { items: null, local: {}, cat: 'all', src: 'all', q: '', sync: null }
+
+async function loadLib() {
+  const [data, sync, ...local] = await Promise.all([
+    api('/api/data'),
+    api(`${SYNC_API}/status`),
+    ...CATS.map(([c]) => api(`/api/library/artists?category=${c}`)),
+  ])
+  lib.items = Array.isArray(data.body) ? data.body : []
+  lib.sync = sync.ok ? sync.body : null
+  CATS.forEach(([c], i) => (lib.local[c] = Array.isArray(local[i].body) ? local[i].body : []))
+}
+
+// After a change the lists of Hören are read again too
+function libChanged() {
+  hear.items = null
+  hear.loadedAt = 0
+}
+
+function libTop() {
+  return [
+    `<div class="card wide lib-head"><div class="btns"><button class="btn primary" id="lib-add">${icon('plus', 18)}Hinzufügen</button>
+      <button class="btn" id="lib-sync">${icon('sync', 18)}Jetzt synchronisieren</button></div><p class="help" id="lib-sync-line"></p></div>`,
+    `<div class="card nav-card wide"><div class="navlist">${['verwaltet', 'spotify', 'nas', 'cover']
+      .map((id) => state.pages.get(id))
+      .filter(Boolean)
+      .map((p) => navRow(p.id, p.title, NAV_SUB[p.id], p.icon))
+      .join('')}</div></div>`,
+    `<section class="card wide">
+      <div class="search">${icon('search')}<input class="input" id="lib-q" type="search" placeholder="In der Bibliothek suchen" autocomplete="off" value="${esc(lib.q)}"></div>
+      <div class="pills" id="lib-cat">${[['all', 'Alle'], ...CATS].map(([id, t]) => `<button aria-selected="${lib.cat === id}" data-v="${id}">${t}</button>`).join('')}</div>
+      <div class="seg" id="lib-src">${[['all', 'Alle'], ['manual', 'Manuell'], ['spotify-sync', 'Sync'], ['local', 'SD-Karte']]
+        .map(([id, t]) => `<button aria-pressed="${lib.src === id}" data-v="${id}">${t}</button>`)
+        .join('')}</div>
+      <p class="help" id="lib-count"></p>
+      <div class="rows lib-list" id="lib-list"><div class="loading"><p>Lade …</p></div></div>
+    </section>`,
+  ]
+}
+const NAV_SUB = {
+  verwaltet: 'Künstler-Abos und Alben aus der Suche',
+  spotify: 'Smart-Sync und Spotify-Konto',
+  nas: 'Ordner vom Netzwerkspeicher',
+  cover: 'Eigene Bilder und Online-Cover',
+}
+
+function libRows() {
+  const q = norm(lib.q.trim())
+  const rows = []
+  if (lib.src !== 'local') {
+    for (const it of lib.items) {
+      if (!it || it.isResume === true || it.category === 'resume' || it.type === 'library') continue
+      const cat = it.category === 'radio' ? 'other' : it.category
+      if (lib.cat !== 'all' && cat !== lib.cat) continue
+      const src = it.source ?? 'manual'
+      if (lib.src !== 'all' && src !== lib.src) continue
+      const title = String(it.title_override ?? it.title ?? it.artist_override ?? it.artist ?? '—')
+      const artist = String(it.artist_override ?? it.artist ?? '')
+      if (q && !norm(`${title} ${artist}`).includes(q)) continue
+      const tags = [catLabel(it.category_override ?? cat)]
+      if (src === 'spotify-sync') tags.push('Sync')
+      else if (badgeOf(it)) tags.push(badgeOf(it))
+      if (it.type === 'spotify' && !it.id && !it.playlistid && !it.showid && !it.audiobookid && it.artistid) tags.push('Alle Folgen')
+      rows.push({ kind: 'entry', item: it, title, sub: artist === title ? '' : artist, cover: it.cover_override ?? it.cover ?? it.artistcover_override ?? it.artistcover ?? spotifyCover(it), tags })
+    }
+  }
+  if (lib.src === 'all' || lib.src === 'local') {
+    for (const [c] of CATS) {
+      if (lib.cat !== 'all' && lib.cat !== c) continue
+      for (const f of lib.local[c] ?? []) {
+        if (q && !norm(`${f.title} ${f.artist}`).includes(q)) continue
+        rows.push({ kind: 'local', folder: f, title: String(f.title ?? '—'), sub: '', cover: f.cover, tags: [catLabel(c), 'SD-Karte'] })
+      }
+    }
+  }
+  return rows.sort((a, b) => a.title.localeCompare(b.title, 'de', { numeric: true }))
+}
+
+let libShown = []
+
+function drawLib() {
+  const list = $('#lib-list')
+  if (!list || !lib.items) return
+  libShown = libRows()
+  $('#lib-count').textContent = `${libShown.length} ${libShown.length === 1 ? 'Eintrag' : 'Einträge'}`
+  if (libShown.length === 0) {
+    list.innerHTML = `<p class="help covers-empty">${lib.q ? 'Nichts gefunden.' : 'Hier ist noch nichts.'}</p>`
+    return
+  }
+  list.innerHTML = libShown
+    .map(
+      (r, i) => `<button class="entry lib-row" data-i="${i}"><span class="lib-thumb">${r.cover ? `<img src="${esc(r.cover)}" alt="" loading="lazy">` : ''}${icon(r.kind === 'local' ? 'folder' : 'music', 18)}</span>
+        <span class="lbl"><b>${esc(r.title)}</b>${r.sub ? `<small>${esc(r.sub)}</small>` : ''}<span class="tags">${r.tags.filter(Boolean).map((t) => `<span class="chip${t === 'Sync' ? ' ok' : ''}">${esc(t)}</span>`).join('')}</span></span>
+        <span class="chev">${icon('chevron', 18)}</span></button>`,
+    )
+    .join('')
+  for (const img of list.querySelectorAll('img')) img.addEventListener('error', () => img.remove(), { once: true })
+  for (const b of list.querySelectorAll('.lib-row')) {
+    b.onclick = () => {
+      const r = libShown[Number(b.dataset.i)]
+      if (r.kind === 'local') openLocalSheet(r.folder)
+      else openEntrySheet(r.item)
+    }
+  }
+}
+
+function drawSyncLine() {
+  const el = $('#lib-sync-line')
+  if (!el) return
+  const s = lib.sync
+  const end = s?.state?.last_sync_end
+  el.textContent = !s ? '' : !s.enabled ? 'Smart-Sync ist aus (Bibliothek › Spotify).' : s.state?.current_state && s.state.current_state !== 'IDLE' ? 'Synchronisiert gerade …' : end ? `Zuletzt synchronisiert um ${hhmm(Date.parse(end))} Uhr.` : 'Noch nicht synchronisiert.'
+  const btn = $('#lib-sync')
+  if (btn) btn.hidden = !s?.enabled
+}
+
+// Starts a sync run and says what happens; used after every change of the managed content
+async function fireSync() {
+  const r = await api(`${SYNC_API}/trigger?source=webapp`, { method: 'POST' })
+  const b = r.body ?? {}
+  if (r.status === 202 && b.status === 'scheduled') return `Der Sync läuft in ${b.scheduledInSeconds ?? 60} s.`
+  if (r.status === 202) return 'Der Sync läuft.'
+  if (r.status === 409) return 'Ein Sync läuft gerade.'
+  if (b.status === 'disabled') return 'Smart-Sync ist aus – erst in Bibliothek › Spotify einschalten.'
+  return 'Beim nächsten Sync kommt es auf die Box.'
+}
+
+// /api/edit, /api/delete and /api/add answer with the text "ok"; "locked" and "error" come with status 200 too
+function libWriteOk(r) {
+  if (r.ok && r.text.trim() === 'ok') return true
+  toast(r.status === 409 ? 'Die Bibliothek hat sich inzwischen geändert – bitte noch einmal.' : r.text.trim() === 'locked' ? 'Die Bibliothek wird gerade geschrieben – bitte gleich noch einmal.' : 'Das hat nicht geklappt', 'info')
+  return false
+}
+
+async function libReload() {
+  libChanged()
+  await loadLib()
+  if (currentPage()?.id === 'bibliothek') drawLib()
+}
+
+function catSelect(id, value, withSync) {
+  const opts = [...(withSync ? [['', 'wie vom Sync']] : []), ...CATS.map(([c, , long]) => [c, long])]
+  return `<select class="input" id="${id}">${opts.map(([v, l]) => `<option value="${v}"${v === value ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select>`
+}
+
+// The sheet of a library entry: manual ones change their fields, synced ones get overrides (the sync keeps its own)
+function openEntrySheet(item) {
+  const isSync = (item.source ?? 'manual') === 'spotify-sync'
+  const fields = [
+    ['artist', 'Interpret'],
+    ['title', 'Titel'],
+    ['cover', 'Cover (Bild-URL)'],
+    ['artistcover', 'Interpret-Cover (Bild-URL)'],
+  ]
+  const val = (k) => item[`${k}_override`] ?? (isSync ? '' : item[k] ?? '')
+  openSheet(
+    `<h2>${esc(item.title_override ?? item.title ?? item.artist_override ?? item.artist ?? 'Eintrag')}</h2>
+     <p class="help" style="margin:0">${isSync ? 'Kommt vom Spotify-Sync. Was du hier einträgst, gilt statt der Werte von Spotify; leer = der Wert von Spotify.' : 'Von Hand hinzugefügt.'}</p>
+     ${fields
+       .map(([k, l]) => `<div class="field"><label for="e-${k}">${l}</label><input class="input" id="e-${k}" value="${esc(val(k))}" placeholder="${esc(isSync ? item[k] ?? '' : '')}" autocomplete="off"></div>`)
+       .join('')}
+     <div class="field"><label for="e-cat">Kategorie</label>${catSelect('e-cat', item.category_override ?? (isSync ? '' : item.category === 'radio' ? 'other' : item.category), isSync)}</div>
+     ${isSync ? `<p class="help" style="margin:0">Entfernen geht über Bibliothek › Verwaltete Inhalte oder die Spotify-Playlist.</p>` : ''}
+     <div class="btns">${isSync ? '' : `<button class="btn danger" data-del>Löschen</button>`}<button class="btn" data-close>Abbrechen</button><button class="btn primary" data-ok>Speichern</button></div>`,
+    (sheet, close) => {
+      sheet.querySelector('[data-close]').onclick = close
+      sheet.querySelector('[data-ok]').onclick = async () => {
+        const updated = { ...item }
+        for (const [k] of fields) {
+          const v = sheet.querySelector(`#e-${k}`).value.trim()
+          const key = isSync ? `${k}_override` : k
+          if (v) updated[key] = v
+          else delete updated[key]
+        }
+        const cat = sheet.querySelector('#e-cat').value
+        if (isSync) {
+          if (cat) updated.category_override = cat
+          else delete updated.category_override
+        } else if (cat) updated.category = cat
+        const r = await api('/api/edit', { method: 'POST', body: { index: item.index, data: updated, original: item } })
+        if (!libWriteOk(r)) return
+        close()
+        toast('Gespeichert')
+        libReload()
+      }
+      sheet.querySelector('[data-del]')?.addEventListener('click', () => {
+        close()
+        confirmSheet('Löschen', `„${item.title ?? item.artist ?? 'Eintrag'}“ aus der Bibliothek löschen?`, async () => {
+          const r = await api('/api/delete', { method: 'POST', body: { index: item.index, original: item } })
+          if (!libWriteOk(r)) return
+          toast('Gelöscht')
+          libReload()
+        })
+      })
+    },
+  )
+}
+
+// A folder of the SD card: its albums, each one or the whole folder can be deleted
+async function openLocalSheet(folder) {
+  const r = folder.libraryIsContainer ? await api(`/api/library/children?path=${encodeURIComponent(folder.libraryPath)}`) : { body: [] }
+  const albums = (Array.isArray(r.body) ? r.body : []).filter((a) => !a.ownFiles)
+  openSheet(
+    `<h2>${esc(folder.title)}</h2><p class="help" style="margin:0">Ordner auf der SD-Karte · ${esc(catLabel(folder.category))}${albums.length ? ` · ${albums.length} ${albums.length === 1 ? 'Album' : 'Alben'}` : ''}</p>
+     ${albums.length ? `<div class="rows">${albums.map((a, i) => `<div class="entry"><span class="lbl"><b>${esc(a.title)}</b></span><button class="btn danger sm" data-a="${i}">Löschen</button></div>`).join('')}</div>` : ''}
+     <div class="btns"><button class="btn danger" data-all>${albums.length ? 'Ganzen Ordner löschen' : 'Löschen'}</button><button class="btn" data-close>Schließen</button></div>`,
+    (sheet, close) => {
+      sheet.querySelector('[data-close]').onclick = close
+      const del = (path, name, what) => {
+        close()
+        confirmSheet('Löschen', `${what} „${name}“ wird mit allen Dateien von der SD-Karte gelöscht. Das lässt sich nicht rückgängig machen.`, async () => {
+          const d = await api(`${API}/local/delete`, { method: 'POST', body: { path } })
+          if (!d.ok) return toast(errorText(d), 'info')
+          toast('Gelöscht')
+          libReload()
+        })
+      }
+      sheet.querySelector('[data-all]').onclick = () => del(folder.libraryPath, folder.title, albums.length ? 'Der Ordner' : 'Das Album')
+      for (const b of sheet.querySelectorAll('[data-a]')) {
+        const a = albums[Number(b.dataset.a)]
+        b.onclick = () => del(a.libraryPath, a.title, 'Das Album')
+      }
+    },
+  )
+}
+
+/* Verwaltete Inhalte: the artist subscriptions and albums added from the search */
+
+const managed = { subs: null }
+
+function managedTop() {
+  const s = managed.subs ?? {}
+  const artists = s.artists ?? []
+  const albums = s.explicit_albums ?? []
+  const range = (a) => (a.range_from || a.range_to ? `Folgen ${a.range_from ?? 1}–${a.range_to ?? '…'}` : 'alle Folgen')
+  return [
+    `<p class="page-intro">Über die Suche hinzugefügte Künstler-Abos und Alben. Beim Künstler den Bereich (Folge von–bis) eingrenzen und einzelne Alben aus- oder einschließen.</p>`,
+    `<section class="card"><h2>Künstler-Abos</h2>${
+      artists.length
+        ? `<div class="rows">${artists
+            .map((a, i) => `<button class="entry lib-row" data-sub="${i}"><span class="avatar">${esc(initials(a.name || a.id))}</span><span class="lbl"><b>${esc(a.name || a.id)}</b><small>${esc(range(a))} · ${esc(catLabel(a.category))}${a.exclude_album_ids?.length ? ` · ${a.exclude_album_ids.length} ausgeschlossen` : ''}</small></span><span class="chev">${icon('chevron', 18)}</span></button>`)
+            .join('')}</div>`
+        : `<p class="help" style="margin:0">Noch keine. Über „Auf Spotify suchen“ einen Künstler mit ＋ abonnieren.</p>`
+    }</section>`,
+    `<section class="card"><h2>Einzelne Alben</h2>${
+      albums.length
+        ? `<div class="rows">${albums
+            .map((a, i) => `<div class="entry"><span class="avatar">${esc(initials(a.name || a.id))}</span><span class="lbl"><b>${esc(a.name || a.id)}</b><small>${esc(catLabel(a.category))}</small></span><button class="btn danger sm" data-album="${i}">Entfernen</button></div>`)
+            .join('')}</div>`
+        : `<p class="help" style="margin:0">Noch keine.</p>`
+    }</section>`,
+  ]
+}
+
+async function loadManaged() {
+  const r = await api(`${API}/library/subscriptions`)
+  if (!r.ok) throw new Error(`subscriptions ${r.status}`)
+  managed.subs = r.body ?? {}
+}
+
+async function managedDone(text, page) {
+  const sync = await fireSync()
+  toast(`${text} ${sync}`)
+  libChanged()
+  if (currentPage()?.id === page.id) renderPage(page)
+}
+
+function openSubSheet(a, page) {
+  openSheet(
+    `<h2>${esc(a.name || a.id)}</h2><p class="help" style="margin:0">„Folge“ ist die Position nach Erscheinungsdatum (1 = die älteste). Leer = offen.</p>
+     <div class="rule-times"><div class="field"><label for="s-from">Folge von</label><input class="input" id="s-from" type="number" min="1" value="${esc(a.range_from ?? '')}"></div>
+       <div class="field"><label for="s-to">Folge bis</label><input class="input" id="s-to" type="number" min="1" value="${esc(a.range_to ?? '')}"></div></div>
+     <div class="btns"><button class="btn primary" data-range>Bereich übernehmen</button><button class="btn" data-albums>Alben ein-/ausschließen</button></div>
+     <div id="s-albums"></div>
+     <div class="btns"><button class="btn danger" data-unsub>Abo entfernen</button><button class="btn" data-close>Schließen</button></div>`,
+    (sheet, close) => {
+      sheet.querySelector('[data-close]').onclick = close
+      sheet.querySelector('[data-range]').onclick = async () => {
+        const num = (id) => {
+          const v = sheet.querySelector(id).value.trim()
+          return v === '' ? undefined : Math.floor(Number(v))
+        }
+        const range_from = num('#s-from')
+        const range_to = num('#s-to')
+        if ([range_from, range_to].some((v) => v !== undefined && !(v >= 1)) || (range_from && range_to && range_from > range_to)) return toast('Bitte einen gültigen Bereich eintragen', 'info')
+        const r = await api(`${API}/library/subscribe-artist`, { method: 'POST', body: { artistId: a.id, name: a.name, category: a.category, range_from, range_to } })
+        if (!r.ok) return toast(r.body?.error ?? 'Das hat nicht geklappt', 'info')
+        close()
+        managedDone('Bereich übernommen.', page)
+      }
+      sheet.querySelector('[data-albums]').onclick = () => loadSubAlbums(a, sheet.querySelector('#s-albums'))
+      sheet.querySelector('[data-unsub]').onclick = () => {
+        close()
+        confirmSheet('Abo entfernen', `„${a.name || a.id}“ abbestellen? Der nächste Sync nimmt die Alben von der Box.`, async () => {
+          const r = await api(`${API}/library/unsubscribe-artist`, { method: 'POST', body: { artistId: a.id } })
+          if (!r.ok) return toast('Das hat nicht geklappt', 'info')
+          managedDone('Abo entfernt.', page)
+        })
+      }
+    },
+  )
+}
+
+async function loadSubAlbums(a, box) {
+  box.innerHTML = `<p class="help">Lade die Alben von Spotify …</p>`
+  const r = await api(`${SYNC_API}/artist-albums?artistId=${encodeURIComponent(a.id)}`)
+  if (!r.ok) {
+    box.innerHTML = `<p class="help">Die Alben ließen sich nicht laden${r.status === 409 ? ' (Spotify ist nicht verbunden)' : ''}.</p>`
+    return
+  }
+  const albums = r.body?.albums ?? []
+  if (!albums.length) {
+    box.innerHTML = `<p class="help">Keine Alben gefunden.</p>`
+    return
+  }
+  box.innerHTML = `<div class="rows">${albums
+    .map(
+      (al, i) => `<div class="entry${al.inRange ? '' : ' out'}"><span class="pos">${al.position}</span><span class="lib-thumb">${al.cover ? `<img src="${esc(al.cover)}" alt="" loading="lazy">` : ''}</span>
+        <span class="lbl"><b>${esc(al.name || al.id)}</b>${al.inRange ? '' : '<small>außerhalb des Bereichs</small>'}</span>
+        <label class="switch"><input type="checkbox" data-al="${i}" ${al.inRange && !al.excluded ? 'checked' : ''} ${al.inRange ? '' : 'disabled'} aria-label="${esc(al.name)} auf der Box"><span></span></label></div>`,
+    )
+    .join('')}</div>`
+  for (const cb of box.querySelectorAll('[data-al]')) {
+    cb.onchange = async () => {
+      const al = albums[Number(cb.dataset.al)]
+      const r2 = await api(`${API}/library/artist-exclude`, { method: 'POST', body: { artistId: a.id, albumId: al.id, excluded: !cb.checked } })
+      if (!r2.ok) {
+        cb.checked = !cb.checked
+        return toast('Das hat nicht geklappt', 'info')
+      }
+      const sync = await fireSync()
+      toast(`${cb.checked ? 'Wieder dabei' : 'Ausgeschlossen'}: ${al.name}. ${sync}`)
+      libChanged()
+    }
+  }
+}
+
+/* Auf Spotify suchen */
+
+const search = { q: '', type: 'Alle', cat: 'audiobook', result: null, busy: false }
+
+function searchTop() {
+  return [
+    `<section class="card wide">
+      <div class="search">${icon('search')}<input class="input" id="s-q" type="search" placeholder="Künstler, Album oder Titel …" autocomplete="off" value="${esc(search.q)}" enterkeyhint="search"></div>
+      <div class="seg" id="s-type">${['Alle', 'Künstler', 'Alben', 'Titel'].map((t) => `<button aria-pressed="${search.type === t}" data-v="${t}">${t}</button>`).join('')}</div>
+      <div class="field"><label for="s-cat">Hinzufügen als</label>${catSelect('s-cat', search.cat, false)}</div>
+      <div class="btns"><button class="btn primary" id="s-go">Suchen</button></div>
+    </section>`,
+    `<div id="s-results" class="wide-stack"></div>`,
+  ]
+}
+
+async function doSpotifySearch() {
+  const q = search.q.trim()
+  if (q.length < 2) return toast('Bitte mindestens 2 Zeichen eingeben', 'info')
+  const types = { Alle: 'artist,album,track', Künstler: 'artist', Alben: 'album', Titel: 'track' }[search.type]
+  const box = $('#s-results')
+  box.innerHTML = `<div class="loading"><p>Suche …</p></div>`
+  const r = await api(`/api/spotify/search?q=${encodeURIComponent(q)}&types=${types}&limit=8`)
+  if (!r.ok) {
+    box.innerHTML = `<p class="help">Die Suche ging nicht${r.body?.error ? ` (${esc(r.body.error)})` : ''}.</p>`
+    return
+  }
+  search.result = r.body ?? {}
+  drawSearch()
+}
+
+function drawSearch() {
+  const box = $('#s-results')
+  const d = search.result
+  if (!box || !d) return
+  const img = (images) => (Array.isArray(images) && images.length ? images[1]?.url || images[0]?.url : '')
+  const names = (arr) => (arr ?? []).map((x) => x?.name).filter(Boolean).join(', ')
+  const groups = [
+    ['Künstler', (d.artists ?? []).filter((a) => a.id).map((a) => ({ kind: 'artist', id: a.id, name: a.name, t: a.name, s: 'Künstler – alle Folgen abonnieren', img: img(a.images) }))],
+    ['Alben', (d.albums ?? []).filter((a) => a.id).map((a) => ({ kind: 'album', id: a.id, name: a.name, t: a.name, s: names(a.artists), img: img(a.images) }))],
+    ['Titel', (d.tracks ?? []).filter((t) => t.album?.id).map((t) => ({ kind: 'album', id: t.album.id, name: t.album.name ?? t.name, t: t.name, s: `${names(t.artists)} · ${t.album?.name ?? ''}`, img: img(t.album?.images) }))],
+  ].filter(([, rows]) => rows.length)
+  search.rows = groups.flatMap(([, rows]) => rows)
+  let n = 0
+  box.innerHTML = groups.length
+    ? groups
+        .map(
+          ([title, rows]) => `<section class="card"><h2>${title}</h2><div class="rows">${rows
+            .map((r) => `<div class="entry"><span class="lib-thumb">${r.img ? `<img src="${esc(r.img)}" alt="" loading="lazy">` : ''}${icon('music', 18)}</span><span class="lbl"><b>${esc(r.t)}</b><small>${esc(r.s)}</small></span>
+              <button class="icon-btn soft" data-r="${n++}" aria-label="${esc(`${r.kind === 'artist' ? 'Abonnieren' : 'Hinzufügen'}: ${r.t}`)}">${icon('plus', 18)}</button></div>`)
+            .join('')}</div>${title === 'Titel' ? '<p class="help" style="margin:0">＋ fügt das ganze Album des Titels hinzu.</p>' : ''}</section>`,
+        )
+        .join('')
+    : `<p class="help">Nichts gefunden.</p>`
+  for (const b of box.querySelectorAll('[data-r]')) b.onclick = () => addFromSearch(search.rows[Number(b.dataset.r)], b)
+}
+
+async function addFromSearch(r, btn) {
+  const run = async () => {
+    btn.disabled = true
+    const res =
+      r.kind === 'artist'
+        ? await api(`${API}/library/subscribe-artist`, { method: 'POST', body: { artistId: r.id, name: r.name, category: search.cat } })
+        : await api(`${API}/library/add-album`, { method: 'POST', body: { albumId: r.id, category: search.cat, name: r.name } })
+    if (!res.ok) {
+      btn.disabled = false
+      return toast(res.body?.error ?? 'Das hat nicht geklappt', 'info')
+    }
+    btn.innerHTML = icon('check', 18)
+    const sync = await fireSync()
+    toast(`${r.kind === 'artist' ? 'Abonniert' : 'Hinzugefügt'}: ${r.name}. ${sync}`)
+    libChanged()
+  }
+  if (r.kind === 'artist') {
+    return openSheet(
+      `<h2>${esc(r.name)} abonnieren?</h2><p class="help" style="margin:0">Alle Folgen kommen als ${esc(catLabel(search.cat))} auf die Box, neue später von selbst. Den Bereich kannst du danach unter „Verwaltete Inhalte“ eingrenzen.</p>
+       <div class="btns"><button class="btn" data-close>Abbrechen</button><button class="btn primary" data-ok>Abonnieren</button></div>`,
+      (sheet, close) => {
+        sheet.querySelector('[data-close]').onclick = close
+        sheet.querySelector('[data-ok]').onclick = () => {
+          close()
+          run()
+        }
+      },
+    )
+  }
+  return run()
+}
+
+/* Link einfügen (Spotify-Link, Radiosender, Podcast) */
+
+function spotifyIdFrom(url, kind) {
+  const m = new RegExp(`${kind}/([A-Za-z0-9]+)`).exec(url)
+  return m ? m[1] : null
+}
+
+async function addLink(page) {
+  const type = state.values.get('lType') ?? 'Spotify-Link'
+  const url = String(state.values.get('lUrl') ?? '').trim()
+  const label = String(state.values.get('lLabel') ?? '').trim()
+  const title = String(state.values.get('lTitle') ?? '').trim()
+  const category = catFromLabel(state.values.get('lCat') ?? 'Hörbuch/Hörspiel')
+  if (!url) return toast('Bitte eine URL eintragen', 'info')
+  const body = { category, source: 'manual' }
+  if (type === 'Spotify-Link') {
+    if (!url.startsWith('https://open.spotify.com/')) return toast('Spotify-Links beginnen mit https://open.spotify.com/', 'info')
+    const kinds = [['playlist', 'playlistid'], ['artist', 'artistid'], ['album', 'id'], ['show', 'showid'], ['audiobook', 'audiobookid']]
+    const hit = kinds.map(([k, field]) => [field, spotifyIdFrom(url, k)]).find(([, id]) => id)
+    if (!hit) return toast('Diese Art von Spotify-Link kennt die Box nicht', 'info')
+    Object.assign(body, { type: 'spotify', spotify_url: url, [hit[0]]: hit[1] })
+    if (label) body.artist = label
+  } else {
+    if (!/^https?:\/\//.test(url)) return toast('Die URL muss mit http:// oder https:// beginnen', 'info')
+    // (as the box's own add page: the player takes the streams over http)
+    const id = url.startsWith('https://') ? url.replace('https://', 'http://') : url
+    if (type === 'Radio-Stream') Object.assign(body, { type: 'radio', id, artist: label || 'Radio', title: title || 'Stream' })
+    else Object.assign(body, { type: 'rss', id, artist: label || 'Podcast' })
+  }
+  const r = await api('/api/add', { method: 'POST', body })
+  if (!libWriteOk(r)) return
+  for (const k of ['lUrl', 'lLabel', 'lTitle']) state.values.delete(k)
+  toast('Hinzugefügt')
+  libChanged()
+  lib.items = null
+  go('bibliothek')
+}
+
+/* Vom Gerät hochladen */
+
+const UP_AUDIO = /\.(mp3|flac|wav|wma|ogg|m4a)$/i
+const UP_IMAGE = /\.(jpe?g|jfif|png|webp)$/i
+// items: {file, top, sub} - top is the chosen folder's name ('' for single files), sub the path below it
+const up = { cat: 'audiobook', artist: '', album: '', items: [], cover: null, skipped: 0, free: null, reserve: 0, running: false, xhr: null, cancelled: false, artists: [], albums: [] }
+
+function formatBytes(n) {
+  if (!Number.isFinite(n)) return '–'
+  const gb = n / 1024 ** 3
+  return gb >= 1 ? `${gb.toLocaleString('de-DE', { maximumFractionDigits: 1 })} GB` : `${Math.round(n / 1024 ** 2)} MB`
+}
+
+function uploadTop() {
+  return [
+    `<section class="card"><h2>Wohin?</h2><p class="help">Titel oder ganze Ordner werden auf die SD-Karte kopiert und erscheinen danach von selbst auf dem Display.</p>
+      <div class="field"><label>Kategorie</label><div class="seg" id="u-cat">${CATS.map(([c, t]) => `<button aria-pressed="${up.cat === c}" data-v="${c}">${t}</button>`).join('')}</div></div>
+      <div class="field"><label for="u-artist">Interpret</label><input class="input" id="u-artist" list="u-artists" placeholder="z. B. Benjamin Blümchen" autocomplete="off" value="${esc(up.artist)}"><datalist id="u-artists"></datalist></div>
+      <div class="field"><label for="u-album">Album</label><input class="input" id="u-album" list="u-albums" placeholder="z. B. Folge 1 (leer = direkt beim Interpreten)" autocomplete="off" value="${esc(up.album)}"><datalist id="u-albums"></datalist></div>
+      <p class="help" id="u-where" style="margin:0"></p></section>`,
+    `<section class="card"><h2>Dateien</h2>
+      <div class="btns"><button class="btn" id="u-files">${icon('music', 18)}Titel wählen</button><button class="btn" id="u-folder">${icon('folder', 18)}Ordner wählen</button><button class="btn" id="u-coverbtn">${icon('image', 18)}Cover wählen</button></div>
+      <input type="file" id="u-in-files" multiple accept="audio/*,.mp3,.flac,.wav,.wma,.ogg,.m4a,image/*" hidden>
+      <input type="file" id="u-in-folder" webkitdirectory multiple hidden>
+      <input type="file" id="u-in-cover" accept="image/*,.jpg,.jpeg,.jfif,.png,.webp" hidden>
+      <div class="drop" id="u-drop">Oder Dateien und Ordner hierher ziehen.</div>
+      <p class="help" id="u-summary" style="margin:0"></p>
+      <ul class="u-list" id="u-list"></ul>
+      <div class="bar" id="u-progress" hidden><div class="track"><i id="u-fill" style="width:0%"></i></div><small id="u-ptext"></small></div>
+      <dl class="kv"><div><dt>Frei auf der SD-Karte</dt><dd id="u-free">–</dd></div></dl>
+      <div class="btns"><button class="btn" id="u-clear">Auswahl leeren</button><button class="btn danger" id="u-cancel" hidden>Abbrechen</button><button class="btn primary" id="u-start">${icon('up', 18)}Hochladen</button></div>
+    </section>`,
+  ]
+}
+
+async function loadUploadFolders(withArtist) {
+  const q = new URLSearchParams({ category: up.cat })
+  if (withArtist) {
+    if (!up.artist.trim()) {
+      up.albums = []
+      return drawUpload()
+    }
+    q.set('artist', up.artist.trim())
+  }
+  const r = await api(`${API}/local/folders?${q}`)
+  if (!r.ok) return
+  if (withArtist) up.albums = r.body?.folders ?? []
+  else up.artists = r.body?.folders ?? []
+  if (Number.isFinite(r.body?.free)) {
+    up.free = r.body.free
+    up.reserve = r.body.reserve ?? 0
+  }
+  drawUpload()
+}
+
+const upTotal = () => up.items.reduce((s, it) => s + it.file.size, 0) + (up.cover?.size ?? 0)
+
+// With more than one folder (or no album given) each keeps its own folder, so several albums land side by side
+function upPathOf(item) {
+  const tops = new Set(up.items.map((it) => it.top).filter(Boolean))
+  return item.top && (tops.size > 1 || up.album.trim() === '') ? `${item.top}/${item.sub}` : item.sub
+}
+
+function drawUpload() {
+  const where = $('#u-where')
+  if (!where) return
+  const fill = (id, names) => {
+    const l = $(id)
+    if (l) l.replaceChildren(...names.map((n) => Object.assign(document.createElement('option'), { value: n })))
+  }
+  fill('#u-artists', up.artists)
+  fill('#u-albums', up.albums)
+  const artist = up.artist.trim()
+  where.textContent = artist ? `Ziel: ${[catLabel(up.cat), artist, up.album.trim()].filter(Boolean).join(' › ')}` : 'Bitte einen Interpreten eintragen.'
+  const n = up.items.length
+  const total = upTotal()
+  let summary = n === 0 && !up.cover ? 'Noch nichts ausgewählt.' : `${n} ${n === 1 ? 'Datei' : 'Dateien'} · ${formatBytes(total)}`
+  if (up.cover) summary += ' · mit Cover'
+  if (up.skipped) summary += ` · ${up.skipped} übersprungen (kein Audio/Bild)`
+  $('#u-summary').textContent = summary
+  const items = up.items.slice(0, 50).map((it) => `<li>${esc(upPathOf(it))}</li>`)
+  if (n > 50) items.push(`<li class="help">… und ${n - 50} weitere</li>`)
+  $('#u-list').innerHTML = items.join('')
+  const room = up.free === null ? null : up.free - up.reserve
+  $('#u-free').textContent = room === null ? '–' : formatBytes(Math.max(0, room))
+  const tooBig = room !== null && total > room
+  $('#u-start').disabled = up.running || !artist || (n === 0 && !up.cover) || tooBig
+  $('#u-start').textContent = tooBig ? 'Zu wenig Platz' : 'Hochladen'
+  for (const id of ['#u-files', '#u-folder', '#u-coverbtn', '#u-clear', '#u-artist', '#u-album']) $(id).disabled = up.running
+  for (const b of $('#u-cat').children) b.disabled = up.running
+  $('#u-cancel').hidden = !up.running
+}
+
+function addUploadItems(entries) {
+  for (const { file, top, sub } of entries) {
+    if (file.name.startsWith('.')) continue
+    if (!UP_AUDIO.test(file.name) && !UP_IMAGE.test(file.name)) {
+      up.skipped++
+      continue
+    }
+    const key = `${top}/${sub}`
+    up.items = up.items.filter((it) => `${it.top}/${it.sub}` !== key)
+    up.items.push({ file, top, sub })
+  }
+  up.items.sort((a, b) => `${a.top}/${a.sub}`.localeCompare(`${b.top}/${b.sub}`, undefined, { numeric: true }))
+  // one folder chosen and no album yet: the folder's name is the album's
+  const tops = new Set(up.items.map((it) => it.top).filter(Boolean))
+  if (tops.size === 1 && up.album.trim() === '') {
+    up.album = [...tops][0]
+    $('#u-album').value = up.album
+  }
+  drawUpload()
+}
+
+async function droppedEntries(dataTransfer) {
+  const out = []
+  const readDir = (dir) =>
+    new Promise((resolve) => {
+      const reader = dir.createReader()
+      const all = []
+      const next = () => reader.readEntries((batch) => (batch.length ? (all.push(...batch), next()) : resolve(all)), () => resolve(all))
+      next()
+    })
+  const fileOf = (entry) => new Promise((resolve) => entry.file(resolve, () => resolve(null)))
+  const walk = async (entry, top, prefix) => {
+    if (entry.isFile) {
+      const file = await fileOf(entry)
+      if (file) out.push({ file, top, sub: prefix + file.name })
+    } else if (entry.isDirectory) {
+      for (const child of await readDir(entry)) await walk(child, top, `${prefix}${entry.name}/`)
+    }
+  }
+  const roots = Array.from(dataTransfer.items ?? []).map((item) => item.webkitGetAsEntry?.()).filter(Boolean)
+  if (roots.length === 0) return Array.from(dataTransfer.files ?? []).map((file) => ({ file, top: '', sub: file.name }))
+  for (const root of roots) {
+    if (root.isDirectory) for (const child of await readDir(root)) await walk(child, root.name, '')
+    else await walk(root, '', '')
+  }
+  return out
+}
+
+function uploadOne(path, file, onProgress) {
+  return new Promise((resolve) => {
+    const q = new URLSearchParams({ category: up.cat, artist: up.artist.trim(), album: up.album.trim(), path })
+    const xhr = new XMLHttpRequest()
+    up.xhr = xhr
+    xhr.open('PUT', `${API}/local/upload?${q}`)
+    xhr.withCredentials = true
+    xhr.setRequestHeader('Content-Type', 'application/octet-stream')
+    xhr.setRequestHeader('x-mupibox-csrf', state.csrf)
+    xhr.upload.onprogress = (e) => onProgress(e.loaded)
+    xhr.onload = () => resolve(xhr.status)
+    xhr.onerror = () => resolve(0)
+    xhr.onabort = () => resolve(-1)
+    xhr.send(file)
+  })
+}
+
+async function startUpload() {
+  if (up.running) return
+  const jobs = up.items.map((it) => ({ path: upPathOf(it), file: it.file }))
+  if (up.cover) {
+    const ext = (up.cover.name.match(/\.[^.]+$/)?.[0] ?? '.jpg').toLowerCase()
+    // the cover of the album (or of the artist, without an album); it is taken before any other picture there
+    jobs.unshift({ path: `cover${ext}`, file: up.cover })
+  }
+  if (!up.artist.trim() || jobs.length === 0) return
+  up.running = true
+  up.cancelled = false
+  drawUpload()
+  $('#u-progress').hidden = false
+  const total = jobs.reduce((s, j) => s + j.file.size, 0) || 1
+  let done = 0
+  let ok = 0
+  let failed = 0
+  let stopWith = ''
+  for (const [i, job] of jobs.entries()) {
+    if (up.cancelled) break
+    const status = await uploadOne(job.path, job.file, (loaded) => {
+      const pct = Math.min(100, ((done + loaded) / total) * 100)
+      $('#u-fill').style.width = `${pct.toFixed(1)}%`
+      $('#u-ptext').textContent = `${i + 1} von ${jobs.length}: ${job.path} · ${Math.round(pct)} %`
+    })
+    done += job.file.size
+    if (status === 200) ok++
+    else if (status === -1) break
+    else if (status === 401 || status === 403) stopWith = 'Die Anmeldung ist abgelaufen – bitte neu anmelden.'
+    else if (status === 507) stopWith = 'Auf der SD-Karte ist nicht mehr genug Platz.'
+    else failed++
+    if (stopWith) break
+  }
+  up.running = false
+  up.xhr = null
+  $('#u-progress').hidden = true
+  $('#u-fill').style.width = '0%'
+  if (ok > 0) {
+    up.items = []
+    up.cover = null
+    up.skipped = 0
+    libChanged()
+    lib.items = null
+  }
+  const parts = []
+  if (ok > 0) parts.push(`${ok} ${ok === 1 ? 'Datei' : 'Dateien'} hochgeladen – gleich auf dem Display.`)
+  if (up.cancelled) parts.push('Abgebrochen.')
+  if (failed > 0) parts.push(`${failed} fehlgeschlagen.`)
+  if (stopWith) parts.push(stopWith)
+  toast(parts.join(' ') || 'Nichts hochgeladen', failed || stopWith || !ok ? 'info' : 'ok')
+  loadUploadFolders(false)
+  loadUploadFolders(true)
+}
+
+function mountUpload(root) {
+  const pick = (btn, input) => ($(btn, root).onclick = () => $(input, root).click())
+  pick('#u-files', '#u-in-files')
+  pick('#u-folder', '#u-in-folder')
+  pick('#u-coverbtn', '#u-in-cover')
+  $('#u-in-files', root).onchange = (e) => {
+    addUploadItems(Array.from(e.target.files ?? []).map((file) => ({ file, top: '', sub: file.name })))
+    e.target.value = ''
+  }
+  $('#u-in-folder', root).onchange = (e) => {
+    addUploadItems(
+      Array.from(e.target.files ?? []).map((file) => {
+        const parts = (file.webkitRelativePath || file.name).split('/')
+        return parts.length > 1 ? { file, top: parts[0], sub: parts.slice(1).join('/') } : { file, top: '', sub: file.name }
+      }),
+    )
+    e.target.value = ''
+  }
+  $('#u-in-cover', root).onchange = (e) => {
+    const file = e.target.files?.[0]
+    if (file && UP_IMAGE.test(file.name)) up.cover = file
+    e.target.value = ''
+    drawUpload()
+  }
+  // a folder dialog is not offered everywhere (e.g. iPhone): the button goes then
+  if (!('webkitdirectory' in $('#u-in-folder', root))) $('#u-folder', root).hidden = true
+  const drop = $('#u-drop', root)
+  drop.ondragover = (e) => {
+    e.preventDefault()
+    drop.classList.add('over')
+  }
+  drop.ondragleave = () => drop.classList.remove('over')
+  drop.ondrop = async (e) => {
+    e.preventDefault()
+    drop.classList.remove('over')
+    if (!up.running) addUploadItems(await droppedEntries(e.dataTransfer))
+  }
+  $('#u-cat', root).onclick = (e) => {
+    const b = e.target.closest('button')
+    if (!b || up.running) return
+    up.cat = b.dataset.v
+    for (const x of b.parentElement.children) x.setAttribute('aria-pressed', String(x === b))
+    loadUploadFolders(false)
+    loadUploadFolders(true)
+  }
+  let timer = null
+  $('#u-artist', root).oninput = (e) => {
+    up.artist = e.target.value
+    drawUpload()
+    clearTimeout(timer)
+    timer = setTimeout(() => loadUploadFolders(true), 300)
+  }
+  $('#u-album', root).oninput = (e) => {
+    up.album = e.target.value
+    drawUpload()
+  }
+  $('#u-clear', root).onclick = () => {
+    up.items = []
+    up.cover = null
+    up.skipped = 0
+    drawUpload()
+  }
+  $('#u-cancel', root).onclick = () => {
+    up.cancelled = true
+    up.xhr?.abort()
+  }
+  $('#u-start', root).onclick = startUpload
+  drawUpload()
+  loadUploadFolders(false)
+  loadUploadFolders(true)
+}
+
+// a running upload keeps going when the page is left; leaving the app asks first
+window.addEventListener('beforeunload', (e) => {
+  if (up.running) e.preventDefault()
+})
+
 /* the controllers: load(page) reads the box before drawing, mount(root, page) runs after it, change(key, value)
-   saves a setting, act / byLabel run the buttons, sections(page) gives the building blocks with the box's values */
+   saves a setting, act / byLabel run the buttons, sections(page) gives the building blocks with the box's values,
+   top(page) draws the page's own top part (instead of customTop's), ownNav: the page shows its sub pages itself */
 const CONTROLLERS = {
   spielzeit: {
     load: loadCaps,
@@ -1336,6 +2104,110 @@ const CONTROLLERS = {
     },
     sections: historySections,
   },
+  bibliothek: {
+    async load() {
+      if (!lib.items) {
+        await loadLib()
+        lib.loadedAt = Date.now()
+      }
+    },
+    top: libTop,
+    sections: () => [],
+    ownNav: true,
+    mount(root) {
+      $('#lib-add', root).onclick = openAdd
+      $('#lib-sync', root).onclick = async () => {
+        toast(await fireSync())
+        setTimeout(async () => {
+          const s = await api(`${SYNC_API}/status`)
+          if (s.ok) lib.sync = s.body
+          drawSyncLine()
+        }, 2500)
+      }
+      const q = $('#lib-q', root)
+      q.addEventListener('input', () => {
+        lib.q = q.value
+        drawLib()
+      })
+      $('#lib-cat', root).onclick = (e) => {
+        const b = e.target.closest('button')
+        if (!b) return
+        lib.cat = b.dataset.v
+        for (const x of b.parentElement.children) x.setAttribute('aria-selected', String(x === b))
+        b.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+        drawLib()
+      }
+      $('#lib-src', root).onclick = (e) => {
+        const b = e.target.closest('button')
+        if (!b) return
+        lib.src = b.dataset.v
+        for (const x of b.parentElement.children) x.setAttribute('aria-pressed', String(x === b))
+        drawLib()
+      }
+      drawLib()
+      drawSyncLine()
+      // known state first, then read again (the sync or the box may have changed it)
+      if (Date.now() - (lib.loadedAt ?? 0) > 5000) {
+        lib.loadedAt = Date.now()
+        loadLib().then(() => {
+          if (currentPage()?.id !== 'bibliothek') return
+          drawLib()
+          drawSyncLine()
+        })
+      }
+    },
+  },
+  verwaltet: {
+    load: loadManaged,
+    top: managedTop,
+    sections: () => [],
+    mount(root, page) {
+      for (const b of root.querySelectorAll('[data-sub]')) b.onclick = () => openSubSheet(managed.subs.artists[Number(b.dataset.sub)], page)
+      for (const b of root.querySelectorAll('[data-album]')) {
+        const al = managed.subs.explicit_albums[Number(b.dataset.album)]
+        b.onclick = () =>
+          confirmSheet('Entfernen', `„${al.name || al.id}“ entfernen? Der nächste Sync nimmt es von der Box.`, async () => {
+            const r = await api(`${API}/library/remove-album`, { method: 'POST', body: { albumId: al.id } })
+            if (!r.ok) return toast('Das hat nicht geklappt', 'info')
+            managedDone('Entfernt.', page)
+          })
+      }
+    },
+  },
+  suche: {
+    top: searchTop,
+    sections: () => [],
+    mount(root) {
+      const q = $('#s-q', root)
+      q.addEventListener('input', () => (search.q = q.value))
+      q.addEventListener('keydown', (e) => e.key === 'Enter' && doSpotifySearch())
+      $('#s-type', root).onclick = (e) => {
+        const b = e.target.closest('button')
+        if (!b) return
+        search.type = b.dataset.v
+        for (const x of b.parentElement.children) x.setAttribute('aria-pressed', String(x === b))
+        if (search.q.trim().length >= 2) doSpotifySearch()
+      }
+      $('#s-cat', root).onchange = (e) => (search.cat = e.target.value)
+      $('#s-go', root).onclick = doSpotifySearch
+      drawSearch()
+    },
+  },
+  link: {
+    change(key, v, page) {
+      if (key !== 'lType') return
+      state.values.set('lCat', v === 'Spotify-Link' ? 'Hörbuch/Hörspiel' : 'Sonstiges')
+      renderPage(page, false)
+    },
+    byLabel: {
+      Hinzufügen: (_arg, _label, page) => addLink(page),
+    },
+  },
+  upload: {
+    top: uploadTop,
+    sections: () => [],
+    mount: mountUpload,
+  },
   hoeren: {
     async load() {
       if (!hear.items) {
@@ -1400,6 +2272,12 @@ function showHits(q) {
 
 /* ---------- sheets and toasts ---------- */
 
+let openSheetClose = null
+function closeSheet() {
+  openSheetClose?.()
+  openSheetClose = null
+}
+
 function openSheet(html, onOpen) {
   const sheet = $('#sheet')
   const scrim = $('#sheet-scrim')
@@ -1408,6 +2286,7 @@ function openSheet(html, onOpen) {
   sheet.hidden = false
   scrim.hidden = false
   const close = () => {
+    if (sheet.hidden) return
     sheet.hidden = true
     scrim.hidden = true
     document.removeEventListener('keydown', onKey)
@@ -1430,6 +2309,7 @@ function openSheet(html, onOpen) {
   }
   document.addEventListener('keydown', onKey)
   scrim.onclick = close
+  openSheetClose = close
   onOpen?.(sheet, close)
   sheet.querySelector('input, button')?.focus()
   return close
