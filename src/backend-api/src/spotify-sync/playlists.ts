@@ -2,7 +2,7 @@
 //
 // Two responsibilities:
 //   1. discoverPlaylists() — pull /me/playlists, filter to the configured
-//      LeniBox-prefix (Q5 decision), parse description for override tags
+//      MuPiBox-prefix (Q5 decision), parse description for override tags
 //      (Q1=C episode-only, §6.3.1 category override).
 //   2. resolveSyncItems() — fetch tracks for each discovered playlist,
 //      group by album/show identifier per spec §6.2, with album-promotion

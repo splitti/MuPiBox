@@ -120,7 +120,7 @@ export function computeSyncDiff(syncItems: Map<string, SyncItem>, library: BoxLi
   }
 
   // Orphan-removal: sync-managed library entries that no longer appear
-  // in any LeniBox-playlist.
+  // in any MuPiBox-playlist.
   const removals: BoxLibraryEntry[] = []
   for (const entry of library) {
     if ((entry.source ?? 'manual') !== 'spotify-sync') continue

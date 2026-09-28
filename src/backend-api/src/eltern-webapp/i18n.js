@@ -53,7 +53,7 @@ export const I18N = {
     'common.savedChangesNow': 'Gespeichert. Änderungen greifen sofort.',
     'common.removeQ': '„{name}" entfernen?',
     'common.removedMsg': '„{name}" entfernt.',
-    'common.egLeniBox': 'z.B. LeniBox',
+    'common.egBoxName': 'z.B. MuPiBox',
     'common.copyManually': 'Bitte manuell kopieren: {text}',
     // Sprache
     'lang.label': '🌐 Sprache',
@@ -173,7 +173,7 @@ export const I18N = {
     'sync.settings': 'Einstellungen',
     'sync.conflicts': '⚠️ Konflikte',
     'sync.conflictsHint':
-      'Diese Inhalte sind sowohl manuell als auch in einer LeniBox-Playlist. Manuelle Einträge bleiben unangetastet.',
+      'Diese Inhalte sind sowohl manuell als auch in einer MuPiBox-Playlist. Manuelle Einträge bleiben unangetastet.',
     'sync.notSetUp': 'Noch nicht eingerichtet',
     'sync.reauthWarn': '⚠️ Neu autorisieren',
     'sync.reauth': 'Neu autorisieren',
@@ -345,7 +345,7 @@ export const I18N = {
     'libedit.deleteQ': '„{name}" löschen?',
     'libedit.deleteBody': 'Der Eintrag verschwindet aus der Box-Library.',
     'libedit.syncDeleteHint':
-      'Löschen geht bei Sync-Items nur über Spotify (Item aus LeniBox-Playlist entfernen). Beim nächsten Sync verschwindet es von der Box.',
+      'Löschen geht bei Sync-Items nur über Spotify (Item aus MuPiBox-Playlist entfernen). Beim nächsten Sync verschwindet es von der Box.',
     'libedit.thisItem': 'dieses Item',
     'libadd.title': 'Link einfügen',
     'libadd.hint':
@@ -712,7 +712,7 @@ export const I18N = {
     'common.savedChangesNow': 'Saved. Changes take effect immediately.',
     'common.removeQ': 'Remove "{name}"?',
     'common.removedMsg': '"{name}" removed.',
-    'common.egLeniBox': 'e.g. LeniBox',
+    'common.egBoxName': 'e.g. MuPiBox',
     'common.copyManually': 'Please copy manually: {text}',
     // Sprache
     'lang.label': '🌐 Language',
@@ -831,7 +831,7 @@ export const I18N = {
     'sync.settings': 'Settings',
     'sync.conflicts': '⚠️ Conflicts',
     'sync.conflictsHint':
-      'These items exist both as manual entries and in a LeniBox playlist. Manual entries are left untouched.',
+      'These items exist both as manual entries and in a MuPiBox playlist. Manual entries are left untouched.',
     'sync.notSetUp': 'Not set up yet',
     'sync.reauthWarn': '⚠️ Re-authorise',
     'sync.reauth': 'Re-authorise',
@@ -1002,7 +1002,7 @@ export const I18N = {
     'libedit.deleteQ': 'Delete "{name}"?',
     'libedit.deleteBody': 'The entry disappears from the box library.',
     'libedit.syncDeleteHint':
-      'Sync items can only be deleted via Spotify (remove the item from the LeniBox playlist). It disappears from the box with the next sync.',
+      'Sync items can only be deleted via Spotify (remove the item from the MuPiBox playlist). It disappears from the box with the next sync.',
     'libedit.thisItem': 'this item',
     'libadd.title': 'Paste a link',
     'libadd.hint':

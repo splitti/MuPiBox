@@ -468,7 +468,7 @@ function openLibraryEditSheet(item) {
         const hint = document.createElement('p');
         hint.className = 'dim';
         hint.style.marginTop = '12px';
-        hint.textContent = 'Löschen geht bei Sync-Items nur über Spotify (Item aus LeniBox-Playlist entfernen). Beim nächsten Sync verschwindet es von der Box.';
+        hint.textContent = 'Löschen geht bei Sync-Items nur über Spotify (Item aus MuPiBox-Playlist entfernen). Beim nächsten Sync verschwindet es von der Box.';
         body.appendChild(hint);
     }
     body.appendChild(actions);
@@ -2624,7 +2624,7 @@ async function loadSettings() {
     updateSettingsExamples();
 }
 function updateSettingsExamples() {
-    const name = $('#settings-prefix').value.trim() || 'LeniBox';
+    const name = $('#settings-prefix').value.trim() || 'MuPiBox';
     setText('#settings-prefix-example-1', `${name}-Hörspiele`);
     setText('#settings-prefix-example-2', `${name}-Musik`);
 }
@@ -2679,7 +2679,7 @@ function updateWizardRedirectUri() {
         el.textContent = `${location.protocol}//${location.host}/api/eltern/spotify-oauth/callback`;
 }
 function updateWizardExamples() {
-    const name = $('#wizard-box-name').value.trim() || 'LeniBox';
+    const name = $('#wizard-box-name').value.trim() || 'MuPiBox';
     setText('#wizard-example-1', `${name}-Hörspiele`);
     setText('#wizard-example-2', `${name}-Musik`);
     setText('#wizard-example-3', `${name}-Schlafenszeit`);

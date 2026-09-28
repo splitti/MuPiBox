@@ -90,12 +90,12 @@ export function resolvePlaylistCategory(
  * `prefix suffix`, or just `prefix` (returns empty string).
  * Anything not starting with the prefix returns undefined.
  *
- * Examples (prefix="LeniBox"):
- *   "LeniBox-Hörspiele"  -> "Hörspiele"
- *   "LeniBox Schlaflieder" -> "Schlaflieder"
- *   "LeniBox"            -> ""
- *   "LeniBoxFavorites"   -> undefined (no separator → not a managed playlist)
- *   "lenibox-musik"      -> undefined (case-sensitive — guards against
+ * Examples (prefix="MuPiBox"):
+ *   "MuPiBox-Hörspiele"  -> "Hörspiele"
+ *   "MuPiBox Schlaflieder" -> "Schlaflieder"
+ *   "MuPiBox"            -> ""
+ *   "MuPiBoxFavorites"   -> undefined (no separator → not a managed playlist)
+ *   "mupibox-musik"      -> undefined (case-sensitive — guards against
  *                                       accidentally pulling in unrelated
  *                                       lowercase playlists)
  */

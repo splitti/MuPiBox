@@ -67,7 +67,7 @@ Aus `bootscreens.json → bootscreens[].name`: `x`, `y` (Oberkante), `maxWidth`,
 ## Zusammensetzen – Referenz
 `tools/compose_bootscreen.py` ist eine lauffähige Referenz (Pillow zum Messen, `rsvg-convert` zum Rendern):
 ```
-compose_bootscreen.py splash  abendhuegel "LeniBox" /home/dietpi/MuPiBox/media/images/splash.png
+compose_bootscreen.py splash  abendhuegel "MuPiBox" /home/dietpi/MuPiBox/media/images/splash.png
 compose_bootscreen.py wartung abendhuegel update de /home/dietpi/MuPiBox/media/images/installation.jpg  (PNG, Endung anpassen)
 ```
 Voraussetzungen: `python3-pil`, `librsvg2-bin`, Fredoka unter `/theme-data/_fonts/Fredoka-Variable.ttf` **und** als Systemschrift für librsvg (z. B. nach `/usr/local/share/fonts/` kopieren + `fc-cache -f`). Du darfst das Skript an die Struktur des Repos anpassen oder in die vorhandene Sprache portieren. Das Ergebnis muss pixelgleich zur Referenz sein.
@@ -90,7 +90,7 @@ Voraussetzungen: `python3-pil`, `librsvg2-bin`, Fredoka unter `/theme-data/_font
 
 ## Abnahme-Checkliste
 - [ ] Alle 15 Startbilder erscheinen korrekt beim Start (Motiv, Farben, Name an der richtigen Stelle, ≥ 40 px zum Rand).
-- [ ] „MuPiBox“ ohne Eintrag, „LeniBox“ mit Eintrag, ein langer Name (14 Zeichen, z. B. „WilhelminesBox“) wird verkleinert und nicht abgeschnitten, Umlaute funktionieren.
+- [ ] „MuPiBox“ ohne Eintrag, „MuPiBox“ mit Eintrag, ein langer Name (14 Zeichen, z. B. „WilhelminesBox“) wird verkleinert und nicht abgeschnitten, Umlaute funktionieren.
 - [ ] „Zufällig“ wechselt bei jedem Start.
 - [ ] Kein Farbblitz: Konsole → Startbild → Browser in derselben Grundfarbe.
 - [ ] Wartungsbild bei Update, Installation und neuem WLAN mit der passenden Szene und dem richtigen Text (DE/EN).

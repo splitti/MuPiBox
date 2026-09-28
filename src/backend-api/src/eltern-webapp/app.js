@@ -3792,7 +3792,7 @@ async function loadSettings() {
 }
 
 function updateSettingsExamples() {
-  const name = $('#settings-prefix').value.trim() || 'LeniBox'
+  const name = $('#settings-prefix').value.trim() || 'MuPiBox'
   setText('#settings-prefix-example-1', t('example.audiobooks', { name }))
   setText('#settings-prefix-example-2', t('example.music', { name }))
 }
@@ -3858,7 +3858,7 @@ function updateWizardRedirectUri() {
 }
 
 function updateWizardExamples() {
-  const name = $('#wizard-box-name').value.trim() || 'LeniBox'
+  const name = $('#wizard-box-name').value.trim() || 'MuPiBox'
   setText('#wizard-example-1', t('example.audiobooks', { name }))
   setText('#wizard-example-2', t('example.music', { name }))
   setText('#wizard-example-3', t('example.bedtime', { name }))

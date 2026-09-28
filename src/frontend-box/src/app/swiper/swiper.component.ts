@@ -34,7 +34,7 @@ export interface SwiperData<T> {
   data: T
   // Phase 14e: optional small overlay badge for the card — used by the
   // medialist to mark `source='spotify-sync'` items so parents/kids can
-  // tell at a glance which entries are auto-synced from a LeniBox
+  // tell at a glance which entries are auto-synced from a MuPiBox
   // playlist. Renders as a tiny emoji/glyph in the top-right corner of
   // the card; absent badges add no DOM.
   badge?: string
