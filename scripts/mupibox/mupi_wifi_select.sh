@@ -43,14 +43,21 @@ reaches_router() {
 # brought up and connected as normal by the rest of this script either way, so it is an immediate,
 # already-connected fallback the moment LAN actually goes down.
 lan_connected() {
-	has_ip eth0 && reaches_router eth0
+	local gw
+	has_ip eth0 || return 1
+	gw=$(eth0_gateway)
+	[ -n "${gw}" ] && ping -nqc 2 -W 2 -I eth0 "${gw}" > /dev/null 2>&1
 }
 
-# eth0's own gateway, from its own DHCP lease - needed to give it back the default route below while
-# some other interface still holds it (router_address only reads the CURRENT default route, or a lease
-# file if none exists at all; it cannot name eth0's gateway specifically once WiFi already has the route).
+# eth0's own gateway - needed to give it back the default route below while some other interface still holds it
+# (router_address only reads the CURRENT default route, which may be WiFi's router in another network). From its
+# own default route, else the static config (/etc/network/interfaces), else its DHCP lease.
 eth0_gateway() {
-	grep -h "option routers" /var/lib/dhcp/dhclient.eth0.leases* 2>/dev/null | tail -n 1 | awk '{gsub(";", "", $3); print $3}'
+	local gw
+	gw=$(ip -4 route show default dev eth0 2>/dev/null | awk '{print $3}' | head -n 1)
+	[ -z "${gw}" ] && gw=$(awk '/^iface[ \t]+eth0[ \t]+inet[ \t]+static/ { s = 1; next } /^(iface|auto|allow-)/ { s = 0 } s && $1 == "gateway" { print $2; exit }' /etc/network/interfaces 2>/dev/null)
+	[ -z "${gw}" ] && gw=$(grep -h "option routers" /var/lib/dhcp/dhclient.eth0.leases* 2>/dev/null | tail -n 1 | awk '{gsub(";", "", $3); print $3}')
+	echo "${gw}"
 }
 
 wait_for_ip() {

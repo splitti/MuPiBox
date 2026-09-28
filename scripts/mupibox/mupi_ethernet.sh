@@ -16,8 +16,17 @@
 IF="${1:-eth0}"
 [ -d "/sys/class/net/${IF}" ] || exit 0
 
+# LAN switched off (WiFi settings / the app, /api/network/ethernet/power): the port stays down while this file
+# exists, also after a restart. Without it, a port set down read as a pulled cable below and was set up again at once.
+LAN_OFF=/etc/mupibox/lan.off
+lan_off() { [ -e "${LAN_OFF}" ]; }
+
 # the link is only seen (carrier) while the interface is up
-ip link set "${IF}" up 2>/dev/null
+if lan_off; then
+	ip link set "${IF}" down 2>/dev/null
+else
+	ip link set "${IF}" up 2>/dev/null
+fi
 LINK=0
 
 # (never ifdown here: it takes the link down, which would read as a pulled cable)
@@ -29,6 +38,16 @@ connect() {
 }
 
 check() {
+	if lan_off; then
+		# switched off: nothing to connect, and the port is not set up again as after a pulled cable
+		if [ "${LINK}" = "1" ]; then
+			LINK=0
+			ifdown --force "${IF}" >/dev/null 2>&1
+			ip link set "${IF}" down 2>/dev/null
+			/usr/local/bin/mupibox/mupi_wifi_select.sh &
+		fi
+		return
+	fi
 	if [ "$(cat "/sys/class/net/${IF}/carrier" 2>/dev/null)" = "1" ]; then
 		if [ "${LINK}" != "1" ]; then
 			LINK=1

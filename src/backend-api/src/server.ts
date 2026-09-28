@@ -2200,7 +2200,7 @@ app.get('/api/network/onboard-wifi', async (_req, res) => {
   }
 })
 
-app.post('/api/network/onboard-wifi', async (req, res) => {
+app.post('/api/network/onboard-wifi', localOrElternSession, async (req, res) => {
   try {
     const enabled = Boolean(req.body?.enabled)
     await execFileAsync('sudo', [ONBOARD_WIFI_SCRIPT, enabled ? 'on' : 'off'])
@@ -2584,7 +2584,7 @@ app.get('/api/network/ethernet', async (_req, res) => {
   }
 })
 
-app.post('/api/network/ethernet', async (req, res) => {
+app.post('/api/network/ethernet', localOrElternSession, async (req, res) => {
   try {
     const dhcp = Boolean(req.body?.dhcp)
     const ip = String(req.body?.ip ?? '').trim()
@@ -2621,10 +2621,12 @@ app.post('/api/network/ethernet', async (req, res) => {
   }
 })
 
+const LAN_OFF_FILE = '/etc/mupibox/lan.off'
+
 // Brings the ethernet port itself up or down (administratively), independent of its DHCP/STATIC config.
 // Immediate - unlike /restart above, this can cut a connection that is currently going over this same
 // interface (e.g. the admin page reached through the LAN cable) with no way to undo it remotely.
-app.post('/api/network/ethernet/power', async (req, res) => {
+app.post('/api/network/ethernet/power', localOrElternSession, async (req, res) => {
   try {
     const enabled = Boolean(req.body?.enabled)
     const parsed = parseEthernetStanza(await readInterfacesFile())
@@ -2632,7 +2634,15 @@ app.post('/api/network/ethernet/power', async (req, res) => {
       res.status(404).send('no ethernet interface configured')
       return
     }
-    await execFileAsync('sudo', ['ip', 'link', 'set', parsed.iface, enabled ? 'up' : 'down'])
+    // (the switch is kept in LAN_OFF_FILE: mupi_ethernet.sh leaves the port down while it exists, also after a
+    // restart - a port only set down was taken for a pulled cable and set up again at once)
+    if (enabled) {
+      await execFileAsync('sudo', ['rm', '-f', LAN_OFF_FILE])
+      await execFileAsync('sudo', ['ip', 'link', 'set', parsed.iface, 'up'])
+    } else {
+      await execFileAsync('sudo', ['touch', LAN_OFF_FILE])
+      await execFileAsync('sudo', ['ip', 'link', 'set', parsed.iface, 'down'])
+    }
     res.send('ok')
   } catch (error) {
     console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error powering ethernet ${req.body?.enabled ? 'up' : 'down'}: ${error}`)
@@ -2641,15 +2651,21 @@ app.post('/api/network/ethernet/power', async (req, res) => {
 })
 
 // Restarts the ethernet interface so a saved config takes effect, mirroring the WiFi "Restart" button.
-app.post('/api/network/ethernet/restart', async (_req, res) => {
+app.post('/api/network/ethernet/restart', localOrElternSession, async (_req, res) => {
   try {
     const parsed = parseEthernetStanza(await readInterfacesFile())
     if (!parsed) {
       res.status(404).send('no ethernet interface configured')
       return
     }
-    await execFileAsync('sudo', ['service', `ifup@${parsed.iface}`, 'stop'])
-    await execFileAsync('sudo', ['service', `ifup@${parsed.iface}`, 'start'])
+    // (ifup@eth0.service starts nothing any more, see config/services/ifup@eth0.service.d/mupibox.conf: the new
+    // config is applied by taking the interface down and up here; a port switched off stays off)
+    if (!fs.existsSync(LAN_OFF_FILE)) {
+      await execFileAsync('sudo', ['ifdown', '--force', parsed.iface]).catch(() => undefined)
+      await execFileAsync('sudo', ['ip', 'link', 'set', parsed.iface, 'up'])
+      await execFileAsync('sudo', ['ifup', '--allow=hotplug', parsed.iface], { timeout: 30000 }).catch(() => undefined)
+      execFile('sudo', ['/usr/local/bin/mupibox/mupi_wifi_select.sh'], { timeout: 300000 }, () => undefined)
+    }
     res.send('ok')
   } catch (error) {
     console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Error restarting ethernet: ${error}`)
