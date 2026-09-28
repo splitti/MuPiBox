@@ -89,8 +89,20 @@ function areaOf(page) {
   return p?.id ?? page?.area ?? 'start'
 }
 
+// Timers of the page shown (polling); stopped when another page is opened
+const pageTimers = new Set()
+function every(ms, fn) {
+  const id = setInterval(fn, ms)
+  pageTimers.add(id)
+}
+function stopPageTimers() {
+  for (const id of pageTimers) clearInterval(id)
+  pageTimers.clear()
+}
+
 function route() {
   const page = currentPage()
+  stopPageTimers()
   renderChrome(page)
   renderPage(page)
   window.scrollTo(0, 0)
@@ -158,9 +170,11 @@ function renderPage(page) {
   for (const sec of page.sections || []) parts.push(renderSection(sec))
   parts.push(...childNav(page))
   main.innerHTML = parts.join('')
-  // two columns on a wide PC screen when the page has several cards
-  main.classList.toggle('cols', main.querySelectorAll(':scope > .card').length >= 3)
+  // two columns on a wide PC screen when the page has several cards (the start page has its own layout)
+  main.classList.toggle('start', page.id === 'start')
+  main.classList.toggle('cols', page.id !== 'start' && main.querySelectorAll(':scope > .card').length >= 3)
   wire(main, page)
+  if (page.id === 'start') mountStart(main)
 }
 
 function hasSettings(page) {
@@ -171,11 +185,7 @@ function hasSettings(page) {
 function customTop(page) {
   switch (page.id) {
     case 'start':
-      return [
-        `<div class="card hero wide"><h2>Läuft gerade</h2><div class="placeholder">${icon('music')}Wiedergabe, Bedienung und Lautstärke – kommt in Schritt 2.</div></div>`,
-        `<div class="card"><h2>Status</h2><div class="placeholder">${icon('bat')}Akku, heute gehört, Ruhezeit, WLAN – kommt in Schritt 2.</div></div>`,
-        `<div class="card"><h2>Schnell</h2><div class="btns"><button class="btn accent" data-act="toast:+15 min (noch nicht verbunden)">+15 min</button><button class="btn" data-act="toast:Ruhe sofort (noch nicht verbunden)">Ruhe sofort</button><button class="btn" data-go="spielzeit">Schlaftimer</button></div></div>`,
-      ]
+      return startSkeleton()
     case 'hoeren':
       return [`<div class="card wide"><h2>Wiedergabe starten</h2><div class="placeholder">${icon('grid')}Suche, Filter und Cover-Raster – kommt in Schritt 3.</div></div>`]
     case 'spielzeit':
@@ -329,7 +339,7 @@ function wire(root, page) {
   for (const el of root.querySelectorAll('[data-go]')) {
     el.onclick = () => {
       const t = el.dataset.go
-      if (t.startsWith('ext:')) toast('Öffnet sich künftig in einem neuen Fenster', 'info')
+      if (t.startsWith('ext:')) openExternal(t.slice(4))
       else go(t)
     }
   }
@@ -372,6 +382,13 @@ function wire(root, page) {
   if (search) search.addEventListener('input', () => showHits(search.value))
 }
 
+// Pages outside the app: the previous admin interface (port 80) and the DietPi dashboard (port 5252)
+function openExternal(which) {
+  const host = location.hostname
+  const url = which === 'dietpi' ? `http://${host}:5252/` : `${location.protocol === 'https:' ? 'https' : 'http'}://${host}/`
+  window.open(url, '_blank', 'noopener')
+}
+
 function findItem(page, key) {
   for (const s of page.sections || []) for (const i of s.items || []) if (i.key === key) return i
   return {}
@@ -385,6 +402,345 @@ function action(act, label, page) {
   }
   if (!CONNECTED.has(page.id)) return toast('Vorschau: noch nicht mit der Box verbunden', 'info')
   toast(kind === 'toast' ? arg : label)
+}
+
+/* ---------- talking to the box ---------- */
+
+// JSON request with the session's CSRF token on everything that changes something. Never throws.
+async function api(path, { method = 'GET', body } = {}) {
+  const headers = {}
+  if (body !== undefined) headers['Content-Type'] = 'application/json'
+  if (method !== 'GET') headers['x-mupibox-csrf'] = state.csrf
+  const r = await fetch(path, { method, credentials: 'same-origin', headers, body: body === undefined ? undefined : JSON.stringify(body) }).catch(() => null)
+  if (!r) return { ok: false, status: 0, body: null }
+  let data = null
+  try {
+    data = await r.json()
+  } catch {
+    /* no JSON */
+  }
+  return { ok: r.ok, status: r.status, body: data }
+}
+
+/* ---------- Start ---------- */
+
+// The parts of the start page; filled by mountStart() and refreshed while the page is shown
+function startSkeleton() {
+  return [
+    `<section class="card hero now" id="now"><div class="now-idle">${icon('music')}<span>Verbinde …</span></div></section>`,
+    `<div class="start-side">
+      <div id="notices"></div>
+      <div class="tiles" id="tiles">
+        ${tile('akku', 'bat', 'Akku', '–')}${tile('spielzeit', 'time', 'Heute gehört', '–')}
+        ${tile('spielzeit', 'moon', 'Ruhezeit', '–', 'quiet')}${tile('wlan', 'wifi', 'WLAN', '–')}
+      </div>
+      <div class="section-label">Schnell</div>
+      <div class="quick">
+        <button class="qbtn accent" id="q-plus">${icon('plus', 22)}<span>+15 min</span></button>
+        <button class="qbtn blue" id="q-quiet">${icon('moon', 22)}<span>Ruhe sofort</span></button>
+        <button class="qbtn" id="q-sleep">${icon('time', 22)}<span id="q-sleep-label">Schlaftimer</span></button>
+      </div>
+    </div>`,
+    `<section class="card nav-card start-more"><div class="navlist">
+      ${navRow('g-aussehen', 'Aussehen des Displays', 'Theme, Start- und Wartungsbilder', 'pal')}
+      ${navRow('spotify', 'Spotify', 'Smart-Sync und Zugang', 'sync')}
+      ${navRow('verlauf', 'Hör-Verlauf', 'Heute und die letzten 7 Tage', 'hist')}
+      ${navRow('bluetooth', 'Bluetooth', 'Kopfhörer und Lautsprecher', 'bt')}
+      ${navRow('telegram', 'Telegram', 'Eltern-Bot', 'tg')}
+      ${navRow('g-system', 'System', 'Über die Box, Neustart, Updates', 'gear')}
+      ${navRow('ext:admin', 'Erweiterte Einstellungen', 'Das bisherige Admin-Interface', 'ext')}
+    </div></section>`,
+  ]
+}
+
+function tile(target, ic, label, val, id) {
+  return `<button class="tile-card" data-go="${target}" ${id ? `id="tile-${id}"` : `id="tile-${target}"`}>
+    <span class="tile-head">${icon(ic, 16)}${label}</span><b class="tile-val">${val}</b><span class="tile-bar" hidden><i></i></span></button>`
+}
+
+const startState = { maxVolume: 100, volTimer: null, sleep: null }
+
+function mountStart(root) {
+  loadNow(root)
+  loadStatus(root)
+  loadVolumeCap(root)
+  loadNotices(root)
+  every(5000, () => loadNow(root))
+  every(30000, () => loadStatus(root))
+  $('#q-plus', root).onclick = async () => {
+    const r = await api('/api/playtime/extend', { method: 'POST', body: { minutes: 15 } })
+    toast(r.ok ? '15 Minuten mehr für heute' : 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
+    if (r.ok) loadStatus(root)
+  }
+  $('#q-quiet', root).onclick = () => minutesSheet('Ruhe sofort', 'Die Box spielt für diese Zeit nichts.', [15, 30, 60, 120], 30, async (m) => {
+    const r = await api('/api/quiethours/now', { method: 'POST', body: { minutes: m } })
+    toast(r.ok ? `Ruhe für ${m} Minuten` : 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
+    if (r.ok) loadStatus(root)
+  })
+  $('#q-sleep', root).onclick = () => sleepSheet(root)
+}
+
+async function loadNow(root) {
+  const box = $('#now', root)
+  if (!box) return
+  const r = await api(`${API}/playback`)
+  const b = r.body ?? {}
+  const hasTrack = !!b.player && !!(b.title || b.artist)
+  if (!r.ok || (!b.playing && !hasTrack)) {
+    if (!box.querySelector('.now-empty')) {
+      box.innerHTML = `<div class="now-empty"><div class="mupi-circle"><img src="mupi.svg" alt="" width="64" height="67"></div>
+        <b>Die Box ist ruhig.</b><small>${r.ok ? 'Gerade läuft nichts.' : 'Der Status ist gerade nicht erreichbar.'}</small>
+        <button class="btn primary" data-go="hoeren">${icon('phones', 18)}Etwas abspielen</button></div>${volumeRow()}`
+      box.querySelector('[data-go]').onclick = () => go('hoeren')
+      wireVolume(root)
+    }
+    setVolume(root, b.volume)
+    return
+  }
+  if (!box.querySelector('.now-track')) {
+    box.innerHTML = `<div class="now-track">
+        <div class="now-cover"><img alt="" hidden><span>${icon('music', 32)}</span></div>
+        <div class="now-text"><span class="now-label"></span><b class="now-title"></b><small class="now-meta"></small></div>
+      </div>
+      <div class="now-progress" hidden><div class="track"><i></i></div><div class="range-ends"><span class="t0"></span><span class="t1"></span></div></div>
+      <div class="now-ctrl">
+        <button class="cbtn" data-a="stop" aria-label="Stopp">${STOP_SVG}</button>
+        <button class="cbtn" data-a="previous" aria-label="Zurück">${PREV_SVG}</button>
+        <button class="cbtn big" data-a="toggle" aria-label="Play/Pause"></button>
+        <button class="cbtn" data-a="next" aria-label="Weiter">${NEXT_SVG}</button>
+      </div>${volumeRow()}`
+    for (const btn of box.querySelectorAll('[data-a]')) btn.onclick = () => playbackAction(root, btn.dataset.a === 'toggle' ? (btn.dataset.state === 'playing' ? 'pause' : 'play') : btn.dataset.a)
+    wireVolume(root)
+  }
+  const img = box.querySelector('.now-cover img')
+  if (b.coverUrl) {
+    if (img.getAttribute('src') !== b.coverUrl) img.src = b.coverUrl
+    img.hidden = false
+  } else img.hidden = true
+  box.querySelector('.now-label').innerHTML = `<i class="dot"></i>${b.playing ? 'Läuft gerade' : 'Pausiert'}`
+  box.querySelector('.now-title').textContent = b.title || '—'
+  box.querySelector('.now-meta').textContent = [b.artist, b.album].filter(Boolean).join(' · ')
+  const toggle = box.querySelector('[data-a="toggle"]')
+  toggle.dataset.state = b.playing ? 'playing' : 'paused'
+  toggle.innerHTML = b.playing ? PAUSE_SVG : PLAY_SVG
+  const prog = box.querySelector('.now-progress')
+  if (Number.isFinite(b.progressMs) && Number.isFinite(b.durationMs) && b.durationMs > 0) {
+    prog.hidden = false
+    prog.querySelector('i').style.width = `${Math.min(100, (b.progressMs / b.durationMs) * 100)}%`
+    prog.querySelector('.t0').textContent = clock(b.progressMs)
+    prog.querySelector('.t1').textContent = clock(b.durationMs)
+  } else prog.hidden = true
+  setVolume(root, b.volume)
+}
+
+const PLAY_SVG = '<svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>'
+const STOP_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>'
+const PREV_SVG = '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg>'
+const NEXT_SVG = '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg>'
+const PAUSE_SVG = '<svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>'
+
+function clock(ms) {
+  const s = Math.floor(ms / 1000)
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+}
+
+async function playbackAction(root, action) {
+  const r = await api(`${API}/playback/${action}`, { method: 'POST' })
+  if (!r.ok) {
+    const code = r.body?.error ?? ''
+    toast(
+      { playtime_limit_reached: 'Die Hörzeit für heute ist aufgebraucht.', quiet_hours_active: 'Gerade ist Ruhezeit.', no_active_track: 'Es ist nichts zum Fortsetzen da.' }[code] ??
+        'Das hat nicht geklappt',
+      'info',
+    )
+  }
+  setTimeout(() => loadNow(root), 600)
+}
+
+function volumeRow() {
+  return `<div class="now-vol">${icon('vol', 20)}<div class="vol-wrap"><input type="range" id="vol" min="0" max="100" step="1" value="0" aria-label="Lautstärke"><i class="vol-cap" hidden></i></div><span class="value-pill" id="vol-out">–</span></div>`
+}
+
+async function loadVolumeCap(root) {
+  const r = await api(`${API}/audio`)
+  if (!r.ok) return
+  startState.maxVolume = Number.isFinite(r.body?.maxVolume) ? r.body.maxVolume : 100
+  showCap(root)
+  setVolume(root, r.body?.current)
+}
+
+function showCap(root) {
+  const cap = $('.vol-cap', root)
+  if (!cap) return
+  cap.hidden = startState.maxVolume >= 100
+  cap.style.left = `${startState.maxVolume}%`
+}
+
+function setVolume(root, v) {
+  const input = $('#vol', root)
+  if (!input || !Number.isFinite(v) || document.activeElement === input) return
+  input.value = v
+  input.style.setProperty('--fill', `${v}%`)
+  $('#vol-out', root).textContent = `${v} %`
+}
+
+function wireVolume(root) {
+  const input = $('#vol', root)
+  if (!input) return
+  showCap(root)
+  input.addEventListener('input', () => {
+    const v = Number(input.value)
+    input.style.setProperty('--fill', `${v}%`)
+    $('#vol-out', root).textContent = `${v} %`
+    clearTimeout(startState.volTimer)
+    startState.volTimer = setTimeout(async () => {
+      const r = await api(`${API}/audio/volume`, { method: 'POST', body: { volume: v } })
+      if (r.ok && r.body?.capped) {
+        toast(`Hörschutz: höchstens ${r.body.applied} %`, 'info')
+        input.value = r.body.applied
+        input.style.setProperty('--fill', `${r.body.applied}%`)
+        $('#vol-out', root).textContent = `${r.body.applied} %`
+      } else if (!r.ok) toast('Lautstärke ließ sich nicht setzen', 'info')
+    }, 200)
+  })
+}
+
+async function loadStatus(root) {
+  const [hat, pt, net, caps, sleep] = await Promise.all([
+    api('/api/mupihat'),
+    api('/api/playtime'),
+    api('/api/network'),
+    api(`${API}/caps-config`),
+    api(`${API}/sleeptimer`),
+  ])
+  // battery
+  let pct = hat.body?.Bat_Percent
+  if (!Number.isFinite(pct)) pct = Number.parseInt(String(hat.body?.Bat_SOC ?? ''), 10)
+  const charging = (hat.body?.IBus ?? 0) > 0
+  setTile(root, 'tile-akku', Number.isFinite(pct) ? `${pct} %${charging ? ' ⚡' : ''}` : '–', Number.isFinite(pct) ? pct : null, pct <= 15 ? 'danger' : pct <= 30 ? 'warn' : 'ok')
+  // listened today
+  const p = pt.body?.playtime ?? {}
+  if (p.enabled && Number.isFinite(p.limitMinutes)) {
+    const used = Math.floor((p.usedSeconds ?? 0) / 60)
+    setTile(root, 'tile-spielzeit', `${used} / ${p.limitMinutes} min`, p.limitMinutes > 0 ? Math.min(100, (used / p.limitMinutes) * 100) : 100, p.state === 'blocked' ? 'danger' : 'accent')
+  } else {
+    setTile(root, 'tile-spielzeit', 'kein Limit', null)
+  }
+  // quiet time
+  const q = pt.body?.quiet ?? {}
+  let quiet = 'aus'
+  if (q.enabled) quiet = q.state === 'blocked' || q.inWindow ? `jetzt${q.label ? ` · ${q.label}` : ''}` : nextQuiet(caps.body?.quietHours?.schedule) ?? 'keine geplant'
+  setTile(root, 'tile-quiet', quiet, null)
+  // WiFi
+  const n = net.body ?? {}
+  setTile(root, 'tile-wlan', n.wifi ? `${n.wifi}${n.onlinestate === 'online' ? '' : ' (offline)'}` : n.onlinestate === 'online' ? 'LAN' : 'offline', null)
+  // sleep timer on its quick button
+  startState.sleep = sleep.body?.active ? sleep.body : null
+  const label = $('#q-sleep-label', root)
+  if (label) label.textContent = startState.sleep ? `noch ${Math.ceil((startState.sleep.remaining_seconds ?? 0) / 60)} min` : 'Schlaftimer'
+}
+
+function setTile(root, id, text, pct, kind) {
+  const el = $(`#${id}`, root)
+  if (!el) return
+  el.querySelector('.tile-val').textContent = text
+  const bar = el.querySelector('.tile-bar')
+  bar.hidden = pct == null
+  if (pct != null) {
+    bar.querySelector('i').style.width = `${pct}%`
+    bar.dataset.kind = kind ?? 'ok'
+  }
+}
+
+// The next start of a quiet-time window, e.g. "ab 20:00" today or "Di ab 20:00"
+function nextQuiet(schedule) {
+  if (!schedule) return null
+  const keys = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
+  const short = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
+  const now = new Date()
+  const today = (now.getDay() + 6) % 7
+  const nowMin = now.getHours() * 60 + now.getMinutes()
+  for (let d = 0; d < 7; d++) {
+    const day = (today + d) % 7
+    const starts = (schedule[keys[day]] ?? [])
+      .map((w) => String(w.from ?? w.start ?? ''))
+      .filter((f) => /^\d{2}:\d{2}$/.test(f))
+      .map((f) => [f, Number(f.slice(0, 2)) * 60 + Number(f.slice(3))])
+      .filter(([, m]) => d > 0 || m > nowMin)
+      .sort((a, b) => a[1] - b[1])
+    if (starts.length) return d === 0 ? `ab ${starts[0][0]}` : `${short[day]} ab ${starts[0][0]}`
+  }
+  return null
+}
+
+async function loadNotices(root) {
+  const [hat, sync] = await Promise.all([api('/api/mupihat'), api('/api/spotify-sync/status')])
+  const notes = []
+  const pct = hat.body?.Bat_Percent
+  if (Number.isFinite(pct) && pct <= 15 && !((hat.body?.IBus ?? 0) > 0)) {
+    notes.push(['bat', 'Akku fast leer', `Noch ${pct} % – bitte bald laden.`, 'akku'])
+  }
+  const tok = sync.body?.token
+  if (sync.body?.enabled && tok?.configured && tok.scopes_ok === false) {
+    notes.push(['sync', 'Spotify-Anmeldung abgelaufen', 'Bitte neu verbinden, damit der Sync weiterläuft.', 'spotify'])
+  }
+  const box = $('#notices', root)
+  if (!box) return
+  box.innerHTML = notes
+    .map(([ic, t, s, target]) => `<div class="notice"><button class="notice-body" data-go="${target}">${icon(ic, 20)}<span><b>${esc(t)}</b><small>${esc(s)}</small></span></button><button class="notice-x" aria-label="Schließen">${icon('close', 16)}</button></div>`)
+    .join('')
+  for (const n of box.querySelectorAll('.notice')) {
+    n.querySelector('.notice-body').onclick = () => go(n.querySelector('.notice-body').dataset.go)
+    n.querySelector('.notice-x').onclick = () => n.remove()
+  }
+}
+
+function minutesSheet(title, text, choices, def, onOk) {
+  let minutes = def
+  openSheet(
+    `<h2>${esc(title)}</h2><p class="help" style="margin:0">${esc(text)}</p>
+     <div class="seg" id="m-seg">${choices.map((m) => `<button aria-pressed="${m === def}" data-v="${m}">${m} min</button>`).join('')}</div>
+     <div class="btns"><button class="btn" data-close>Abbrechen</button><button class="btn primary" data-ok>Übernehmen</button></div>`,
+    (sheet, close) => {
+      sheet.querySelector('#m-seg').onclick = (e) => {
+        const b = e.target.closest('button')
+        if (!b) return
+        minutes = Number(b.dataset.v)
+        for (const x of b.parentElement.children) x.setAttribute('aria-pressed', String(x === b))
+      }
+      sheet.querySelector('[data-close]').onclick = close
+      sheet.querySelector('[data-ok]').onclick = () => {
+        close()
+        onOk(minutes)
+      }
+    },
+  )
+}
+
+function sleepSheet(root) {
+  const active = startState.sleep
+  if (active) {
+    const until = active.until_iso ? new Date(active.until_iso) : null
+    openSheet(
+      `<h2>Schlaftimer läuft</h2><p class="help" style="margin:0">Die Box schaltet sich in ${Math.ceil((active.remaining_seconds ?? 0) / 60)} Minuten aus${until ? ` (um ${until.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })})` : ''}.</p>
+       <div class="btns"><button class="btn" data-close>Schließen</button><button class="btn danger" data-ok>Timer stoppen</button></div>`,
+      (sheet, close) => {
+        sheet.querySelector('[data-close]').onclick = close
+        sheet.querySelector('[data-ok]').onclick = async () => {
+          close()
+          const r = await api(`${API}/sleeptimer/stop`, { method: 'POST' })
+          toast(r.ok ? 'Schlaftimer gestoppt' : 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
+          loadStatus(root)
+        }
+      },
+    )
+    return
+  }
+  minutesSheet('Schlaftimer', 'Die Box schaltet sich danach komplett aus – egal, ob gerade etwas läuft.', [15, 30, 45, 60, 90], 30, async (m) => {
+    const r = await api(`${API}/sleeptimer/start`, { method: 'POST', body: { minutes: m } })
+    toast(r.ok ? `Schlaftimer: ${m} Minuten` : r.body?.error ?? 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
+    loadStatus(root)
+  })
 }
 
 /* ---------- settings search ---------- */
