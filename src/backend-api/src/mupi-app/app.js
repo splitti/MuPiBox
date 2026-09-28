@@ -387,6 +387,9 @@ function wire(root, page) {
       }
     })
   }
+  for (const el of root.querySelectorAll('input[type="range"][data-key]')) {
+    el.addEventListener('change', () => ctrlOf(page)?.change?.(el.dataset.key, Number(el.value), page))
+  }
   for (const el of root.querySelectorAll('input.input[data-key]')) {
     // text and number fields are saved when they are left (or with Enter)
     el.addEventListener('change', () => ctrlOf(page)?.change?.(el.dataset.key, el.type === 'number' ? Number(el.value) : el.value, page))
@@ -2804,6 +2807,448 @@ function pollNasIndex() {
   })
 }
 
+/* Einstellungen › Aussehen and › Display & Bedienung */
+
+const disp = { theme: null, opts: null, power: null, bs: null, bsSel: '', dt: null, dtLangs: {}, dtScreen: 'blocked' }
+
+async function loadTheme() {
+  const r = await api(`${API}/theme`)
+  if (!r.ok) throw new Error(`theme ${r.status}`)
+  disp.theme = r.body
+}
+async function loadDisplayOptions() {
+  const r = await api(`${API}/display-options`)
+  if (!r.ok) throw new Error(`display-options ${r.status}`)
+  disp.opts = r.body
+}
+
+// What the display did after a save, in words
+function displayNote(b) {
+  if (b?.restartKiosk) return 'Das Display startet neu.'
+  if (b?.reboot) return 'Wird nach einem Neustart der Box übernommen.'
+  if (b?.restartPlayer) return 'Der Player startet neu.'
+  if (b?.reloaded === true) return 'Das Display lädt neu.'
+  if (b?.reloaded === false) return 'Das Display zeigt es nach dem nächsten Neuladen.'
+  return ''
+}
+
+async function saveDisplayOptions(body, done = 'Gespeichert') {
+  const r = await api(`${API}/display-options`, { method: 'POST', body })
+  if (!r.ok) {
+    toast(r.body?.error === 'at least one category must stay visible' ? 'Mindestens eine Kategorie bleibt sichtbar' : 'Nicht gespeichert', 'info')
+    return null
+  }
+  toast(`${done}. ${displayNote(r.body)}`.trim())
+  return r.body
+}
+
+const themeLabel = (name) => disp.theme?.labelsDe?.[name] ?? disp.theme?.labels?.[name] ?? name
+const isKidsTheme = (name) => !!disp.theme?.labels && name in disp.theme.labels
+
+/* Theme */
+
+function themeTop() {
+  const t = disp.theme ?? {}
+  const list = [...(t.available ?? [])].sort((a, b) => themeLabel(a).localeCompare(themeLabel(b), 'de', { sensitivity: 'base' }))
+  return [
+    `<section class="card wide"><h2>Theme</h2><p class="help">Tippe auf ein Theme, um es auf der Box zu verwenden. Die Kinder-Themes haben deutsche Namen.</p>
+      <div class="search">${icon('search')}<input class="input" id="t-q" type="search" placeholder="Theme suchen" autocomplete="off"></div>
+      <div class="theme-grid" id="t-grid">${list
+        .map(
+          (n) => `<button class="theme-card" data-theme="${esc(n)}" aria-pressed="${n === t.current}"><span class="theme-img"><img src="${API}/theme-preview/${encodeURIComponent(n)}?v=2" alt="" loading="lazy"></span>
+            <b>${esc(themeLabel(n))}</b>${n === t.current ? '<small>aktiv</small>' : ''}</button>`,
+        )
+        .join('')}</div></section>`,
+  ]
+}
+
+function mountTheme(root, page) {
+  for (const img of root.querySelectorAll('.theme-img img')) img.addEventListener('error', () => img.remove(), { once: true })
+  $('#t-q', root).addEventListener('input', (e) => {
+    const q = norm(e.target.value.trim())
+    for (const c of root.querySelectorAll('.theme-card')) c.hidden = !!q && !norm(`${c.dataset.theme} ${c.textContent}`).includes(q)
+  })
+  for (const c of root.querySelectorAll('.theme-card')) {
+    const name = c.dataset.theme
+    if (name === disp.theme.current) continue
+    c.onclick = () =>
+      openSheet(
+        `<h2>${esc(themeLabel(name))}</h2><div class="theme-big"><img src="${API}/theme-preview/${encodeURIComponent(name)}?v=2" alt=""></div>
+         <p class="help" style="margin:0">Dieses Theme auf der Box verwenden?</p>
+         <div class="btns"><button class="btn" data-close>Abbrechen</button><button class="btn" data-later>Beim nächsten Neuladen</button><button class="btn primary" data-now>Jetzt anzeigen</button></div>`,
+        (sheet, close) => {
+          sheet.querySelector('[data-close]').onclick = close
+          const apply = async (now) => {
+            close()
+            const before = disp.theme.current
+            const r = await api(`${API}/theme`, { method: 'POST', body: { theme: name } })
+            if (!r.ok) return toast('Das hat nicht geklappt', 'info')
+            let note = 'Das Display zeigt es nach dem nächsten Neuladen.'
+            if (now) {
+              // the cover-flow theme builds its page differently: switching to or from it needs the page loaded again
+              const whole = before === 'coverflow' || name === 'coverflow'
+              const rl = await api(`${API}/display/${whole ? 'reload-page' : 'reload-theme'}`, { method: 'POST', body: {} })
+              note = rl.ok ? 'Das Display zeigt es gleich.' : 'Das Display zeigt es nach dem nächsten Neuladen.'
+            }
+            toast(`${themeLabel(name)} ist aktiv. ${note}`)
+            await loadTheme()
+            if (currentPage()?.id === page.id) renderPage(page, false)
+          }
+          sheet.querySelector('[data-later]').onclick = () => apply(false)
+          sheet.querySelector('[data-now]').onclick = () => apply(true)
+        },
+      )
+  }
+}
+
+/* Eigenes Theme: the background picture of the theme "custom" */
+
+function bgTop() {
+  const active = disp.theme?.current === 'custom'
+  return [
+    `<section class="card"><h2>Hintergrundbild</h2><p class="help">Das Bild des Themes „Eigenes“ (custom): ein JPG, am besten 800 × 480 Pixel oder größer. Es füllt das ganze Display.</p>
+      <div class="bg-preview"><img id="b-img" src="${API}/display/background?t=${Date.now()}" alt=""></div>
+      <input type="file" id="b-file" accept=".jpg,.jpeg,image/jpeg" hidden>
+      <div class="btns"><button class="btn" id="b-pick">${icon('image', 18)}Bild wählen</button><button class="btn primary" id="b-up" disabled>${icon('up', 18)}Bild hochladen</button></div>
+      <p class="help" id="b-picked" style="margin:0"></p>
+      ${active ? '<p class="help" style="margin:0">Das Theme „Eigenes“ ist aktiv.</p>' : `<div class="btns"><button class="btn" id="b-activate">Theme „Eigenes“ verwenden</button></div>`}</section>`,
+  ]
+}
+
+function mountCustom(root, page) {
+  let file = null
+  const img = $('#b-img', root)
+  img.addEventListener('error', () => img.remove(), { once: true })
+  $('#b-pick', root).onclick = () => $('#b-file', root).click()
+  $('#b-file', root).onchange = (e) => {
+    file = e.target.files?.[0] ?? null
+    const ok = file && /\.jpe?g$/i.test(file.name)
+    $('#b-picked', root).textContent = file ? (ok ? file.name : 'Bitte ein JPG wählen.') : ''
+    $('#b-up', root).disabled = !ok
+  }
+  $('#b-up', root).onclick = async () => {
+    const r = await fetch(`${API}/display/background`, { method: 'PUT', credentials: 'same-origin', headers: { 'Content-Type': 'image/jpeg', 'x-mupibox-csrf': state.csrf }, body: file }).catch(() => null)
+    const b = r ? await r.json().catch(() => ({})) : {}
+    if (!r?.ok) {
+      return toast({ not_jpeg: 'Das ist kein JPG.', too_small: `Das Bild ist zu klein (${b.width} × ${b.height}).`, too_large: 'Das Bild ist größer als 15 MB.' }[b.error] ?? 'Hochladen ging nicht', 'info')
+    }
+    toast(`Bild gespeichert.${b.active ? ` ${b.reloaded ? 'Das Display lädt neu.' : ''}` : ' Es erscheint, wenn das Theme „Eigenes“ aktiv ist.'}`)
+    renderPage(page, false)
+  }
+  $('#b-activate', root)?.addEventListener('click', async () => {
+    const r = await api(`${API}/theme`, { method: 'POST', body: { theme: 'custom' } })
+    if (!r.ok) return toast('Das hat nicht geklappt', 'info')
+    await api(`${API}/display/reload-page`, { method: 'POST', body: {} })
+    toast('Theme „Eigenes“ ist aktiv. Das Display lädt neu.')
+    await loadTheme()
+    renderPage(page, false)
+  })
+}
+
+/* Start- und Wartungsbilder: the scenes with the box name / texts laid over them as the box puts them in */
+
+async function loadBootscreens() {
+  const r = await api(`${API}/bootscreen`)
+  if (!r.ok) throw new Error(`bootscreen ${r.status}`)
+  disp.bs = r.body
+  disp.bsSel = r.body.current.bootscreen || r.body.screens.defaultBootscreen
+  disp.bsMaint = r.body.current.maintenanceScreen || 'same'
+  disp.bsKind = disp.bsKind ?? 'maintenance'
+}
+
+const bsScene = (id, kind) => `${API}/bootscreen-scene/${encodeURIComponent(id)}/${kind}`
+const bsLabel = (b) => b.label ?? b.labelEn ?? b.id
+const bsShadow = (spec, s) => (!spec || spec === 'none' ? 'none' : spec.replace(/(-?[\d.]+)px/g, (_, v) => `${Number.parseFloat(v) * s}px`))
+
+function bsName() {
+  const s = disp.bs.screens
+  return Array.from(String(disp.bs.current.boxName || '').trim()).slice(0, s.nameMaxLength || 14).join('') || s.defaultName || 'MuPiBox'
+}
+
+// the name at its place: the given size, made smaller when it is wider than maxWidth (as bootscreen_update.sh)
+function bsPlaceName(el, b, width) {
+  const s = width / 800
+  const n = b.name
+  el.textContent = bsName()
+  Object.assign(el.style, {
+    fontSize: `${n.fontSize * s}px`,
+    fontWeight: n.fontWeight,
+    letterSpacing: `${n.letterSpacing * s}px`,
+    color: n.color,
+    textShadow: bsShadow(n.textShadow, s),
+    top: `${n.y * s}px`,
+    transform: 'none',
+    left: n.align === 'center' ? '50%' : `${n.x * s}px`,
+  })
+  const scale = Math.min(1, (n.maxWidth * s) / Math.max(1, el.scrollWidth))
+  el.style.transformOrigin = n.align === 'center' ? 'center top' : 'left top'
+  el.style.transform = `${n.align === 'center' ? 'translateX(-50%) ' : ''}scale(${scale})`
+}
+
+// title and line of the maintenance / goodbye / battery screen at their place
+function bsPlaceMaint(box, b, width, kind, lang) {
+  const s = width / 800
+  const m = b[`${kind}Text`] || b.maintenanceText
+  const p = m.subPill
+  const texts = disp.bs.screens.texts?.[kind] ?? {}
+  const [title, sub] = texts[lang] ?? texts.en ?? ['', '']
+  box.innerHTML = ''
+  Object.assign(box.style, { left: m.align === 'center' ? `${(400 - m.maxWidth / 2) * s}px` : `${m.x * s}px`, top: `${m.y * s}px`, width: `${m.maxWidth * s}px`, textAlign: m.align === 'center' ? 'center' : 'left' })
+  const t1 = Object.assign(document.createElement('span'), { className: 't', textContent: title })
+  t1.style.cssText = `font-size:${m.titleSize * s}px;font-weight:${m.titleWeight};color:${m.color};text-shadow:${bsShadow(m.textShadow, s)};letter-spacing:${-1 * s}px;margin-bottom:${m.gap * s}px`
+  const t2 = Object.assign(document.createElement('span'), { className: 's', textContent: sub })
+  t2.style.cssText = `font-size:${m.subSize * s}px;font-weight:${m.subWeight};color:${p.color};background:${p.background};border-radius:${p.radius * s}px;padding:${p.padY * s}px ${p.padX * s}px`
+  box.append(t1, t2)
+  for (let ts = m.titleSize; ts > 24 && t1.getBoundingClientRect().height > 2.2 * ts * 1.05 * s; ts--) t1.style.fontSize = `${(ts - 1) * s}px`
+}
+
+const BS_KINDS = [
+  ['maintenance', 'Update / Installation / WLAN'],
+  ['goodbye', 'Tschüss (schaltet aus)'],
+  ['battery', 'Akku leer (schaltet aus)'],
+]
+
+function bootTop() {
+  const { screens, current, languages } = disp.bs
+  const byId = Object.fromEntries(screens.bootscreens.map((b) => [b.id, b]))
+  disp.bsById = byId
+  const opt = (v, l, sel) => `<option value="${esc(v)}"${v === sel ? ' selected' : ''}>${esc(l)}</option>`
+  return [
+    `<div class="card nav-card"><div class="navlist">${navRow('ueber', 'Name der Box', current.boxName || screens.defaultName || 'MuPiBox', 'text')}${navRow('sprache', 'Sprache der Box', languages[current.bootscreenLanguage]?.name ?? current.bootscreenLanguage, 'globe')}</div></div>`,
+    `<section class="card wide"><h2>Startbild</h2><p class="help">${screens.bootscreens.length} Szenen, die Karte oder jeden Start zufällig. Der Name der Box steht auf dem Bild.</p>
+      <div class="bs-grid" id="bs-grid">
+        <button class="bs-tile" data-id="random" aria-pressed="${disp.bsSel === 'random'}"><span class="bs-thumb bs-random">${icon('sync', 28)}</span><span class="bs-cap">Jeden Start zufällig</span></button>
+        ${screens.bootscreens
+          .map(
+            (b) => `<button class="bs-tile" data-id="${esc(b.id)}" aria-pressed="${disp.bsSel === b.id}"><span class="bs-thumb"><img src="${bsScene(b.id, 'scene')}" alt=""><span class="bs-text" data-bs-name="${esc(b.id)}"></span></span>
+              <span class="bs-cap">${esc(bsLabel(b))}${b.id === screens.defaultBootscreen ? ' (Standard)' : ''}</span></button>`,
+          )
+          .join('')}</div></section>`,
+    `<section class="card wide"><h2>Wartungsbild & Vorschau</h2><p class="help">Bei Update, Installation, neuem WLAN, beim Ausschalten und bei leerem Akku.</p>
+      <div class="rule-times"><div class="field"><label for="bs-maint">Wartungsbild</label><select class="input" id="bs-maint">${opt('same', 'Wie das Startbild', disp.bsMaint)}${screens.bootscreens.map((b) => opt(b.id, bsLabel(b), disp.bsMaint)).join('')}</select></div>
+        <div class="field"><label for="bs-kind">Vorschau</label><select class="input" id="bs-kind">${BS_KINDS.map(([v, l]) => opt(v, l, disp.bsKind)).join('')}</select></div></div>
+      <div class="bs-previews"><div><small class="help">Startbild</small><div class="bs-preview" id="bs-boot"><img alt=""><span class="bs-text"></span></div></div>
+        <div><small class="help" id="bs-mtitle">Wartungsbild</small><div class="bs-preview" id="bs-mprev"><img alt=""><div class="bs-maint"></div></div></div></div>
+      <div class="btns"><button class="btn primary" id="bs-save">Speichern</button></div>
+      <p class="help" style="margin:0">Die Bilder werden nach dem Speichern auf der Box erzeugt und sind ab dem nächsten Start zu sehen.</p></section>`,
+  ]
+}
+
+function bsUpdate(root) {
+  const s = disp.bs.screens
+  const byId = disp.bsById
+  for (const t of root.querySelectorAll('.bs-tile')) t.setAttribute('aria-pressed', String(t.dataset.id === disp.bsSel))
+  const shown = byId[disp.bsSel] ?? s.bootscreens[0]
+  const kind = disp.bsKind
+  const off = kind !== 'maintenance'
+  const mb = off || disp.bsMaint === 'same' ? shown : byId[disp.bsMaint] ?? shown
+  const boot = $('#bs-boot', root)
+  const maint = $('#bs-mprev', root)
+  boot.querySelector('img').src = bsScene(shown.id, 'scene')
+  maint.querySelector('img').src = bsScene(mb.id, off ? kind : 'maintenance')
+  $('#bs-mtitle', root).textContent = off ? 'Beim Ausschalten' : 'Wartungsbild'
+  bsPlaceName(boot.querySelector('.bs-text'), shown, boot.clientWidth || 400)
+  bsPlaceMaint(maint.querySelector('.bs-maint'), mb, maint.clientWidth || 400, kind, disp.bs.current.bootscreenLanguage || 'en')
+  for (const el of root.querySelectorAll('#bs-grid [data-bs-name]')) bsPlaceName(el, byId[el.dataset.bsName], el.parentElement.clientWidth || 130)
+}
+
+function mountBoot(root) {
+  for (const t of root.querySelectorAll('.bs-tile')) {
+    t.onclick = () => {
+      disp.bsSel = t.dataset.id
+      bsUpdate(root)
+    }
+  }
+  $('#bs-maint', root).onchange = (e) => {
+    disp.bsMaint = e.target.value
+    bsUpdate(root)
+  }
+  $('#bs-kind', root).onchange = (e) => {
+    disp.bsKind = e.target.value
+    bsUpdate(root)
+  }
+  $('#bs-save', root).onclick = async () => {
+    const r = await api(`${API}/bootscreen`, { method: 'POST', body: { bootscreen: disp.bsSel, maintenanceScreen: disp.bsMaint } })
+    if (!r.ok) return toast('Nicht gespeichert', 'info')
+    disp.bs.current = r.body.current
+    toast('Gespeichert – die Bilder werden erzeugt')
+  }
+  bsUpdate(root)
+  // the names are laid out in the font of the box: again once it is loaded
+  document.fonts?.load?.('600 20px FredokaBS').then(() => currentPage()?.id === 'startbilder' && bsUpdate(root), () => undefined)
+  every(1000, () => {
+    // the grid changes its size with the window: place the names again (cheap, only when the width changed)
+    const w = $('#bs-boot', root)?.clientWidth
+    if (w && w !== disp.bsWidth) {
+      disp.bsWidth = w
+      bsUpdate(root)
+    }
+  })
+}
+
+/* Texte auf dem Display: own texts of the overlays, preview of the box's own page */
+
+const DT_FIELDS = [
+  ['blocked', 'blockedHeading', 'Überschrift'],
+  ['blocked', 'blockedSubheading', 'Text darunter'],
+  ['quiet', 'quietHeading', 'Überschrift'],
+  ['quiet', 'quietSubheading', 'Text darunter'],
+  ['parents', 'parentsTitle', 'Titel'],
+  ['parents', 'parentsHint', 'Hinweis'],
+  ['parents', 'parentsCountdown', 'Countdown ({s} = Sekunden)'],
+  ['parents', 'parentsClose', 'Knopf „Schließen“'],
+]
+const DT_SCREENS = [
+  ['blocked', 'Limit erreicht'],
+  ['quiet', 'Ruhezeit'],
+  ['parents', 'QR-Code für Eltern'],
+]
+
+async function loadDisplayTexts() {
+  const [r, file] = await Promise.all([
+    api(`${API}/display-texts`),
+    fetch('/assets/i18n/display-texts.json', { cache: 'no-cache' }).then((x) => (x.ok ? x.json() : {})).catch(() => ({})),
+  ])
+  if (!r.ok) throw new Error(`display-texts ${r.status}`)
+  disp.dt = { texts: { ...(r.body?.texts ?? {}) }, language: r.body?.language ?? 'en' }
+  disp.dtLangs = file?.languages ?? {}
+}
+
+function textsTop() {
+  const lang = disp.dt.language
+  const defaults = disp.dtLangs[lang]?.texts ?? disp.dtLangs.en?.texts ?? {}
+  return [
+    `<div class="card nav-card"><div class="navlist">${navRow('sprache', 'Sprache der Box', disp.dtLangs[lang]?.name ?? lang, 'globe')}</div></div>`,
+    `<section class="card wide"><h2>Texte</h2><p class="help">Was das Kind sieht, wenn die Spielzeit aufgebraucht ist oder eine Ruhezeit läuft, dazu der QR-Code für Eltern. Leer = der Text der Sprache (grau).</p>
+      <div class="seg" id="dt-seg">${DT_SCREENS.map(([v, l]) => `<button aria-pressed="${disp.dtScreen === v}" data-v="${v}">${l}</button>`).join('')}</div>
+      <div class="dt-frame" id="dt-frame"><iframe src="/text-preview?screen=${disp.dtScreen}" title="Vorschau" tabindex="-1"></iframe></div>
+      <div id="dt-fields">${DT_FIELDS.filter(([sc]) => sc === disp.dtScreen)
+        .map(([, key, label]) => `<div class="field"><label for="dt-${key}">${label}</label><input class="input" id="dt-${key}" data-dt="${key}" maxlength="120" value="${esc(disp.dt.texts[key] ?? '')}" placeholder="${esc(defaults[key] ?? '')}"></div>`)
+        .join('')}</div>
+      <div class="btns"><button class="btn primary" id="dt-save">Texte speichern</button></div></section>`,
+  ]
+}
+
+function mountTexts(root, page) {
+  const frame = $('#dt-frame iframe', root)
+  const box = $('#dt-frame', root)
+  const fit = () => frame.style.setProperty('--s', String(box.clientWidth / 800))
+  fit()
+  every(1000, fit)
+  const send = () => frame.contentWindow?.postMessage({ type: 'mupibox-display-texts', language: disp.dt.language, texts: disp.dt.texts }, location.origin)
+  frame.addEventListener('load', () => setTimeout(send, 400))
+  for (const input of root.querySelectorAll('[data-dt]')) {
+    input.addEventListener('input', () => {
+      disp.dt.texts[input.dataset.dt] = input.value
+      send()
+    })
+  }
+  $('#dt-seg', root).onclick = (e) => {
+    const b = e.target.closest('button')
+    if (!b || b.dataset.v === disp.dtScreen) return
+    disp.dtScreen = b.dataset.v
+    renderPage(page, false)
+  }
+  $('#dt-save', root).onclick = async () => {
+    // all eight texts go together (the box replaces the whole set)
+    const texts = Object.fromEntries(DT_FIELDS.map(([, key]) => [key, String(disp.dt.texts[key] ?? '').trim()]))
+    const r = await api(`${API}/display-texts`, { method: 'POST', body: { language: disp.dt.language, texts } })
+    toast(r.ok ? 'Texte gespeichert' : 'Nicht gespeichert', r.ok ? 'ok' : 'info')
+  }
+}
+
+/* Display: brightness, off after, rotation, resolution */
+
+const HDMI_ROT = [
+  ['Aus (Standard)', '0'],
+  ['90°', '1'],
+  ['180°', '2'],
+  ['270°', '3'],
+  ['Horizontal spiegeln', '0x10000'],
+  ['Vertikal spiegeln', '0x20000'],
+]
+const LCD_ROT = [
+  ['Aus (Standard)', '0'],
+  ['180°', '2'],
+]
+const rotLabel = (list, v) => list.find(([, x]) => x === String(v))?.[0] ?? list[0][0]
+const rotValue = (list, label) => list.find(([l]) => l === label)?.[1] ?? '0'
+
+async function loadDisplaySettings() {
+  const [, power] = await Promise.all([loadDisplayOptions(), api(`${API}/power-config`)])
+  const o = disp.opts
+  disp.power = power.body ?? {}
+  if (o.brightness != null) state.values.set('bright', o.brightness)
+  state.values.set('dispOff', Number(disp.power.idleDisplayOff ?? disp.power.timeout?.idleDisplayOff ?? 10))
+  state.values.set('hdmiRot', rotLabel(HDMI_ROT, o.rotation.display_hdmi_rotate))
+  state.values.set('lcdRot', rotLabel(LCD_ROT, o.rotation.lcd_rotate))
+  state.values.set('dlcdRot', rotLabel(LCD_ROT, o.rotation.display_lcd_rotate))
+  state.values.set('resX', String(o.resX))
+  state.values.set('resY', String(o.resY))
+}
+
+async function loadControls() {
+  await loadDisplayOptions()
+  const o = disp.opts
+  const hidden = new Set(o.hiddenCategories)
+  state.values.set('hideA', hidden.has('audiobook'))
+  state.values.set('hideM', hidden.has('music'))
+  state.values.set('hideN', hidden.has('nas'))
+  state.values.set('hideO', hidden.has('other'))
+  state.values.set('resume', o.resume)
+  state.values.set('listTimer', o.listviewTimer)
+  state.values.set('setTimer', o.settingsAccessTimer)
+}
+
+/* Display live: a picture of the display, the remote control */
+
+function liveTop() {
+  return [
+    `<section class="card wide"><h2>Aktuelles Bild</h2><p class="help">So sieht das Display gerade aus. Aktualisiert sich alle 5 Sekunden, solange die Seite offen ist.</p>
+      <div class="live-shot"><img id="lv-img" alt="Bild des Displays"></div><p class="help" id="lv-note" style="margin:0"></p>
+      <div class="btns"><button class="btn" id="lv-refresh">Aktualisieren</button></div></section>`,
+    `<section class="card"><h2>Fernsteuerung (VNC)</h2><p class="help">Das Display im Browser bedienen. VNC muss unter Netzwerk › Freigaben an sein.</p>
+      <p class="help" id="lv-vnc" style="margin:0"></p><div class="btns"><button class="btn primary" id="lv-open" disabled>Fernsteuerung öffnen</button></div></section>`,
+  ]
+}
+
+function mountLive(root) {
+  const img = $('#lv-img', root)
+  const shot = () => {
+    const next = new Image()
+    next.onload = () => {
+      img.src = next.src
+      $('#lv-note', root).textContent = `Stand ${new Date().toLocaleTimeString('de-DE')}`
+    }
+    next.onerror = () => ($('#lv-note', root).textContent = 'Das Bild ließ sich nicht holen.')
+    next.src = `${API}/display/screenshot?t=${Date.now()}`
+  }
+  shot()
+  every(5000, () => document.visibilityState === 'visible' && shot())
+  $('#lv-refresh', root).onclick = shot
+  api(`${API}/display/vnc`).then((r) => {
+    const on = r.body?.active
+    $('#lv-vnc', root).textContent = on ? 'Die Fernsteuerung läuft.' : 'Die Fernsteuerung ist aus.'
+    const btn = $('#lv-open', root)
+    btn.disabled = !on
+    btn.onclick = () => window.open(`http://${location.hostname}:${r.body.port}/vnc.html?autoconnect=1&resize=scale`, '_blank', 'noopener')
+  })
+}
+
+// The name of a language in German (the box keeps the English names)
+const ttsNames = (() => {
+  try {
+    return new Intl.DisplayNames(['de'], { type: 'language' })
+  } catch {
+    return null
+  }
+})()
+const ttsName = (code) => {
+  const n = ttsNames?.of(code)
+  return n && n !== code ? n : disp.opts?.ttsLanguages?.find((l) => l.code === code)?.name ?? code
+}
+const fmtSec = (v) => `${Number(v).toLocaleString('de-DE')} s`
+
 /* the controllers: load(page) reads the box before drawing, mount(root, page) runs after it, change(key, value)
    saves a setting, act / byLabel run the buttons, sections(page) gives the building blocks with the box's values,
    top(page) draws the page's own top part (instead of customTop's), ownNav: the page shows its sub pages itself */
@@ -3036,6 +3481,134 @@ const CONTROLLERS = {
       },
     },
   },
+  theme: { load: loadTheme, top: themeTop, sections: () => [], mount: mountTheme },
+  eigenes: { load: loadTheme, top: bgTop, sections: () => [], mount: mountCustom },
+  ansicht: {
+    async load() {
+      await Promise.all([loadTheme(), loadDisplayOptions()])
+      state.values.set('stage', disp.theme.stage === true)
+      state.values.set('names', disp.opts.coverflowShowNames)
+      state.values.set('hideScroll', disp.opts.hideScrollbar)
+    },
+    sections: (page) =>
+      page.sections.map((sec) => ({
+        ...sec,
+        items: sec.items.map((it) => {
+          const cur = themeLabel(disp.theme?.current ?? '')
+          if (it.key === 'stage') return { ...it, help: `Große Cover in der Mitte, für die Kinder-Themes${isKidsTheme(disp.theme?.current) ? '' : ` – das aktive Theme (${cur}) nutzt sie nicht`}.` }
+          if (it.key === 'names' || it.key === 'hideScroll') return { ...it, help: `Nur beim Theme „coverflow“${disp.theme?.current === 'coverflow' ? '' : ` (aktiv: ${cur})`}.` }
+          return it
+        }),
+      })),
+    async change(key, v) {
+      if (key === 'stage') {
+        const r = await api(`${API}/theme-stage`, { method: 'POST', body: { stage: v } })
+        return toast(r.ok ? (v ? 'Cover-Flow-Ansicht an' : 'Cover-Flow-Ansicht aus') : 'Nicht gespeichert', r.ok ? 'ok' : 'info')
+      }
+      if (key === 'names') return saveDisplayOptions({ coverflowShowNames: v })
+      if (key === 'hideScroll') return saveDisplayOptions({ hideScrollbar: v })
+    },
+  },
+  vorlesen: {
+    async load() {
+      await Promise.all([loadTheme(), loadDisplayOptions()])
+      state.values.set('tts', disp.theme.stageAutoRead === true)
+      state.values.set('ttsLang', ttsName(disp.opts.ttsLanguage))
+    },
+    sections: (page) =>
+      page.sections.map((sec) => ({
+        ...sec,
+        items: sec.items.map((it) =>
+          it.key === 'ttsLang'
+            ? { ...it, options: disp.opts.ttsLanguages.map((l) => ttsName(l.code)).sort((a, b) => a.localeCompare(b, 'de')), help: 'Die Sprache, in der die Box Namen vorliest. Der Player startet dafür neu.' }
+            : it.key === 'tts'
+              ? { ...it, help: 'Liest den Namen vor, wenn die Cover-Flow-Ansicht anhält (nur bei den Kinder-Themes).' }
+              : it,
+        ),
+      })),
+    async change(key, v, page) {
+      if (key === 'tts') {
+        const r = await api(`${API}/theme-stage`, { method: 'POST', body: { autoRead: v } })
+        return toast(r.ok ? (v ? 'Vorlesen an' : 'Vorlesen aus') : 'Nicht gespeichert', r.ok ? 'ok' : 'info')
+      }
+      if (key === 'ttsLang') {
+        const code = disp.opts.ttsLanguages.find((l) => ttsName(l.code) === v)?.code
+        if (!code || code === disp.opts.ttsLanguage) return
+        const ok = await ask('Sprache ändern', 'Der Player startet dafür neu – was gerade läuft, stoppt kurz.', 'Ändern')
+        if (!ok) {
+          state.values.set('ttsLang', ttsName(disp.opts.ttsLanguage))
+          return renderPage(page, false)
+        }
+        if (await saveDisplayOptions({ ttsLanguage: code }, `Vorlese-Sprache: ${v}`)) disp.opts.ttsLanguage = code
+      }
+    },
+  },
+  startbilder: { load: loadBootscreens, top: bootTop, sections: () => [], ownNav: true, mount: mountBoot },
+  displaytexte: { load: loadDisplayTexts, top: textsTop, sections: () => [], ownNav: true, mount: mountTexts },
+  displaysettings: {
+    load: loadDisplaySettings,
+    sections: (page) =>
+      page.sections.map((sec) => ({
+        ...sec,
+        items: sec.items.map((it) => {
+          if (it.key === 'bright') return { ...it, min: 5, help: disp.opts?.brightness == null ? 'Dieses Display lässt sich nicht dimmen.' : 'Bleibt auch nach einem Neustart.' }
+          if (it.key === 'dispOff') return { ...it, help: '0 = nie ausschalten.' }
+          return it
+        }),
+      })),
+    async change(key, v) {
+      if (key === 'bright') return saveDisplayOptions({ brightness: v }, `Helligkeit ${v} %`)
+      if (key === 'dispOff') {
+        const r = await api(`${API}/power-config`, { method: 'POST', body: { idleDisplayOff: Number(v) } })
+        if (!r.ok) return toast('Nicht gespeichert', 'info')
+        // the display reads the time when its page loads
+        const rl = await api(`${API}/display/reload-page`, { method: 'POST', body: {} })
+        return toast(`${Number(v) === 0 ? 'Display bleibt an' : `Display aus nach ${v} min`}. ${rl.body?.ok ? 'Das Display lädt neu.' : ''}`.trim())
+      }
+      const rot = { hdmiRot: ['display_hdmi_rotate', HDMI_ROT], lcdRot: ['lcd_rotate', LCD_ROT], dlcdRot: ['display_lcd_rotate', LCD_ROT] }[key]
+      if (rot) return saveDisplayOptions({ rotation: { [rot[0]]: rotValue(rot[1], v) } }, 'Drehung gespeichert')
+    },
+    byLabel: {
+      async Speichern() {
+        const resX = Number(state.values.get('resX'))
+        const resY = Number(state.values.get('resY'))
+        if (!Number.isInteger(resX) || !Number.isInteger(resY) || resX < 200 || resY < 200) return toast('Bitte Breite und Höhe in Pixeln eintragen', 'info')
+        if (resX === disp.opts.resX && resY === disp.opts.resY) return toast('Nichts geändert', 'info')
+        if (!(await ask('Auflösung ändern', `Das Display startet mit ${resX} × ${resY} Pixeln neu. Das dauert ein paar Sekunden.`, 'Übernehmen'))) return
+        if (await saveDisplayOptions({ resX, resY }, 'Auflösung gespeichert')) Object.assign(disp.opts, { resX, resY })
+      },
+    },
+  },
+  bedienung: {
+    load: loadControls,
+    sections: (page) =>
+      page.sections.map((sec) => ({
+        ...sec,
+        items: sec.items.map((it) =>
+          it.key === 'setTimer'
+            ? { ...it, help: 'So lange drückt man auf die Status-Symbole oben, bis die Einstellungen der Box aufgehen.' }
+            : it.key === 'listTimer'
+              ? { ...it, help: 'So lange drückt man auf ein Cover, bis die Titelliste aufgeht.' }
+              : it,
+        ),
+      })),
+    async change(key, v, page) {
+      const cats = { hideA: 'audiobook', hideM: 'music', hideN: 'nas', hideO: 'other' }
+      if (key in cats) {
+        const hidden = Object.entries(cats).filter(([k]) => state.values.get(k)).map(([, c]) => c)
+        if (hidden.length === 4) {
+          state.values.set(key, false)
+          toast('Mindestens eine Kategorie bleibt sichtbar', 'info')
+          return renderPage(page, false)
+        }
+        return saveDisplayOptions({ hiddenCategories: hidden })
+      }
+      if (key === 'resume') return saveDisplayOptions({ resume: v }, `${v} Fortsetzen-Einträge`)
+      if (key === 'listTimer') return saveDisplayOptions({ listviewTimer: v }, `Titelliste nach ${fmtSec(v)}`)
+      if (key === 'setTimer') return saveDisplayOptions({ settingsAccessTimer: v }, `Einstellungen nach ${fmtSec(v)}`)
+    },
+  },
+  displaylive: { top: liveTop, sections: () => [], mount: mountLive },
   nas: {
     load: loadNas,
     top: nasTop,
@@ -3123,7 +3696,7 @@ function closeSheet() {
   openSheetClose = null
 }
 
-function openSheet(html, onOpen) {
+function openSheet(html, onOpen, onClose) {
   const sheet = $('#sheet')
   const scrim = $('#sheet-scrim')
   const before = document.activeElement
@@ -3132,6 +3705,7 @@ function openSheet(html, onOpen) {
   scrim.hidden = false
   const close = () => {
     if (sheet.hidden) return
+    onClose?.()
     sheet.hidden = true
     scrim.hidden = true
     document.removeEventListener('keydown', onKey)
@@ -3218,6 +3792,25 @@ function openAdd() {
         go(el.dataset.go)
       }
     }
+  })
+}
+
+// A yes/no question in a sheet: true for yes, false for no or when the sheet is closed otherwise
+function ask(title, text, okLabel) {
+  return new Promise((resolve) => {
+    let answer = false
+    openSheet(
+      `<h2>${esc(title)}</h2><p class="help" style="margin:0">${esc(text)}</p>
+       <div class="btns"><button class="btn" data-close>Abbrechen</button><button class="btn primary" data-ok>${esc(okLabel)}</button></div>`,
+      (sheet, close) => {
+        sheet.querySelector('[data-close]').onclick = close
+        sheet.querySelector('[data-ok]').onclick = () => {
+          answer = true
+          close()
+        }
+      },
+      () => setTimeout(() => resolve(answer)),
+    )
   })
 }
 

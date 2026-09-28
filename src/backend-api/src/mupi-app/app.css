@@ -442,6 +442,46 @@ select.input { appearance: auto; }
 .tog[data-k="hide"][aria-pressed="true"] { background: var(--mp-danger-soft); border-color: var(--mp-danger); color: var(--mp-danger); }
 .mono-block { margin: 0; padding: 10px 12px; border-radius: var(--mp-r-sm); background: var(--mp-field); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; overflow-wrap: anywhere; }
 
+/* ---------- Aussehen & Display ---------- */
+.theme-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 12px; }
+@media (min-width: 560px) { .theme-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 960px) { .theme-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.theme-card { display: flex; flex-direction: column; gap: 4px; padding: 0; border: 0; background: none; text-align: left; color: inherit; min-width: 0; }
+.theme-card[hidden] { display: none; }
+.theme-img { aspect-ratio: 800 / 480; border-radius: var(--mp-r); overflow: hidden; background: var(--mp-chip); outline: 3px solid transparent; outline-offset: 2px; }
+.theme-img img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.theme-card[aria-pressed="true"] .theme-img { outline-color: var(--mp-primary); }
+.theme-card b { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.theme-card small { color: var(--mp-primary-text); font-weight: 700; font-size: 12px; }
+.theme-big { aspect-ratio: 800 / 480; border-radius: var(--mp-r); overflow: hidden; background: var(--mp-chip); }
+.theme-big img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.bg-preview { aspect-ratio: 800 / 480; border-radius: var(--mp-r); overflow: hidden; background: var(--mp-chip); }
+.bg-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+@font-face { font-family: "FredokaBS"; src: url("/theme-data/_fonts/Fredoka-Variable.ttf") format("truetype"); font-weight: 300 700; }
+.bs-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (min-width: 560px) { .bs-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 960px) { .bs-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.bs-tile { padding: 0; border: 0; background: none; text-align: left; color: inherit; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.bs-thumb { position: relative; display: block; aspect-ratio: 800 / 480; border-radius: var(--mp-r-sm); overflow: hidden; background: var(--mp-chip); outline: 3px solid transparent; outline-offset: 2px; }
+.bs-thumb img { display: block; width: 100%; height: 100%; }
+.bs-tile[aria-pressed="true"] .bs-thumb { outline-color: var(--mp-primary); }
+.bs-random { display: grid; place-items: center; color: var(--mp-muted); }
+.bs-cap { font-size: 13px; font-weight: 700; }
+.bs-previews { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+@media (min-width: 700px) { .bs-previews { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.bs-preview { position: relative; aspect-ratio: 800 / 480; border-radius: var(--mp-r-sm); overflow: hidden; background: var(--mp-chip); margin-top: 4px; }
+.bs-preview img { display: block; width: 100%; height: 100%; }
+.bs-text { position: absolute; white-space: nowrap; font-family: "FredokaBS", "DejaVu Sans", sans-serif; line-height: 1; }
+.bs-maint { position: absolute; font-family: "FredokaBS", "DejaVu Sans", sans-serif; }
+.bs-maint .t { display: block; line-height: 1.05; }
+.bs-maint .s { display: inline; line-height: 1.9; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+
+.dt-frame { position: relative; aspect-ratio: 800 / 480; border-radius: var(--mp-r-sm); overflow: hidden; background: #000; --s: .5; }
+.dt-frame iframe { position: absolute; left: 0; top: 0; width: 800px; height: 480px; border: 0; transform: scale(var(--s)); transform-origin: 0 0; pointer-events: none; }
+.live-shot { aspect-ratio: 800 / 480; border-radius: var(--mp-r-sm); overflow: hidden; background: #000; }
+.live-shot img { display: block; width: 100%; height: 100%; object-fit: contain; }
+
 /* login */
 .login { max-width: 400px; margin: 8vh auto 0; display: flex; flex-direction: column; gap: 16px; text-align: center; }
 .login .logo { width: 96px; height: 96px; border-radius: 50%; background: var(--mp-primary-soft); display: grid; place-items: center; margin: 0 auto; }

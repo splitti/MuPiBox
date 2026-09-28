@@ -32,6 +32,7 @@ import {
 } from './auth'
 import { ipRateLimit, localNetworkOnly, requireCsrf, requireSession } from './middleware'
 import { registerCustomCoverRoutes } from './covers'
+import { registerDisplayRoutes } from './display'
 import { type LocalLibraryDeps, registerLocalUploadRoutes } from './upload'
 import { localOnly } from '../request-guard'
 import {
@@ -207,6 +208,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   router.use(localNetworkOnly)
 
   if (deps.localLibrary) registerLocalUploadRoutes(router, deps.localLibrary)
+  registerDisplayRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerCustomCoverRoutes(router, {
     dir: '/home/dietpi/MuPiBox/media/cover',
     host: () => String((deps.getMupiboxConfig()?.mupibox as { host?: string } | undefined)?.host || os.hostname()),
@@ -1822,9 +1824,10 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
-   * POST /api/eltern/bootscreen  {bootscreen, maintenanceScreen, boxName, bootscreenLanguage}
+   * POST /api/eltern/bootscreen  {bootscreen?, maintenanceScreen?, boxName?, bootscreenLanguage?}
    * Checked as in MuPi-Conf (the default scene is stored empty, so a later change of the default reaches the box);
-   * the box then puts the pictures together in the background (bootscreen_update.sh).
+   * the box then puts the pictures together in the background (bootscreen_update.sh). Only the fields sent change:
+   * a body without boxName used to empty the name, one without the language set it to English.
    */
   router.post('/bootscreen', requireSession, requireCsrf, async (req, res) => {
     const screens = readBootscreens()
@@ -1847,19 +1850,30 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       .trim()
     let lang = typeof body.bootscreenLanguage === 'string' ? body.bootscreenLanguage : 'en'
     if (!readDisplayLanguages()[lang]) lang = 'en'
+    const has = (key: string) => body[key] !== undefined
     await deps.updateMupiboxConfig((c) => {
       const m = ((c.mupibox as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
-      m.bootscreen = boot
-      m.maintenanceScreen = maint
-      m.boxName = name
-      m.bootscreenLanguage = lang
+      if (has('bootscreen')) m.bootscreen = boot
+      if (has('maintenanceScreen')) m.maintenanceScreen = maint
+      if (has('boxName')) m.boxName = name
+      if (has('bootscreenLanguage')) m.bootscreenLanguage = lang
       c.mupibox = m
     })
+    const saved = (deps.getMupiboxConfig()?.mupibox ?? {}) as Record<string, unknown>
+    const str = (key: string, fallback: string) => (typeof saved[key] === 'string' ? (saved[key] as string) : fallback)
     // putting the pictures together takes a few seconds (all scenes for "random"): in the background
     const child = spawn('sudo', ['/usr/local/bin/mupibox/bootscreen_update.sh'], { detached: true, stdio: 'ignore' })
     child.on('error', () => undefined)
     child.unref()
-    res.json({ ok: true, current: { bootscreen: boot, maintenanceScreen: maint, boxName: name, bootscreenLanguage: lang } })
+    res.json({
+      ok: true,
+      current: {
+        bootscreen: has('bootscreen') ? boot : str('bootscreen', ''),
+        maintenanceScreen: has('maintenanceScreen') ? maint : str('maintenanceScreen', 'same'),
+        boxName: has('boxName') ? name : str('boxName', ''),
+        bootscreenLanguage: has('bootscreenLanguage') ? lang : str('bootscreenLanguage', 'en'),
+      },
+    })
   })
 
   /**

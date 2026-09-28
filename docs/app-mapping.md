@@ -15,9 +15,9 @@ freigegeben (`localOnly`) – Guard umstellen · `⚙ PHP` kann heute nur das PH
 | Teil | Seiten | ✓ API | ✓ API° | ⚙ PHP | ＋ neu | — statisch |
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 Start, Hören, Spielzeit, Bibliothek | 14 | 142 | – | 1 | 4 | – |
-| 2 Aussehen, Display, Audio, Akku & Strom | 18 | 36 | – | 37 | 2 | – |
+| 2 Aussehen, Display, Audio, Akku & Strom | 18 | 57 | – | 16 | 2 | – |
 | 3 Netzwerk, Dienste, Sicherheit, System | 16 | 25 | – | 75 | 2 | 5 |
-| **Summe** | **48** | **203** | **–** | **113** | **8** | **5** |
+| **Summe** | **48** | **224** | **–** | **92** | **8** | **5** |
 
 Alle 156 Schlüssel aus `app-schema.json` (157 Einstellungen, der Playlist-Präfix steht zweimal), alle Aktionen und
 Anzeigen sind zugeordnet; keine Zeile ist unklar. Die Bereiche Start, Hören, Spielzeit und Bibliothek laufen schon
@@ -28,11 +28,8 @@ WLED, Updates, Backup, Protokolle, Systemoptionen, Browser, Experten) kann heute
 
 1. **Guards umstellen:** erledigt – die NAS-Verwaltung (`/api/nas/profiles*`, `login`, `index/*`, `browse`,
    `selection`, `mark`, `download/*`, `covers/refresh`) und `/api/online-covers*` nehmen `localOrElternSession`.
-2. **Neue Endpunkte für heutige PHP-Funktionen (⚙ PHP, 113 Zeilen)**, jeweils mit der Logik und den Skripten, die PHP
+2. **Neue Endpunkte für heutige PHP-Funktionen (⚙ PHP, 92 Zeilen)**, jeweils mit der Logik und den Skripten, die PHP
    heute nutzt (Details in den Tabellen):
-   - Aussehen & Display: eigenes Hintergrundbild, Namen anzeigen, Scrollleiste, Vorlese-Sprache, Helligkeit (neu
-     speichern und beim Start setzen), Drehungen (`/boot/config.txt`), Auflösung, Kategorien ausblenden,
-     Fortsetzen-Anzahl, Haltezeiten, Display live (Screenshot, VNC)
    - Audio & Hardware: Soundkarte, Drehregler/Taster, MuPiHAT an/aus, Akku-Auswahl, Taster-Verzögerung, LED, Lüfter
    - Bibliothek: „Update verfügbar“
    - Netzwerk & Dienste: Netzwerk-Optionen (Onboard-WLAN, USB-Treiber, Stromsparen, DHCP, Wächter, neu verbinden,
@@ -422,24 +419,30 @@ Abkürzungen: `A:` = alte Admin-Oberfläche (PHP, Port 80), `E:` = Eltern-WebApp
 | ◉ themegrid | Theme-Kacheln | A: mupi.php:736 (Select + Vorschaubild :767); E: `loadTheme()` app.js:2683 | `mupibox.installedThemes`, Namen aus `/home/dietpi/MuPiBox/themes/km-themes.json` | GET `/theme` routes.ts:1503 (current, available, labels/labelsDe, stage), Bild GET `/theme-preview/:name` routes.ts:1644 (`/var/www/images/<n>.png` bzw. `km/<n>.svg`) | — | Liste = installierte Themes (Repo: 68 css, km-themes.json 67) | ✓ API |
 | `theme` | Alle 67 Themes | A: mupi.php:736 → Handler :348 (`mupiset`); E: `applyTheme()` app.js:2939 | `mupibox.theme` + Symlink `www/active_theme.css` → `themes/<t>.css` | GET `/theme` | E: POST `/theme` routes.ts:1550 (Whitelist installedThemes, Symlink selbst); danach optional POST `/display/reload-theme` routes.ts:1620 → Player `/display/reload-theme`. A: change=1 → setting_update.sh (setzt Symlink) + restart_kiosk | A: voller Display-Neustart. E: weicher Stylesheet-Tausch beim nächsten /local-Poll (2–10 s). Wechsel von/zu `coverflow` braucht vollen Reload (swiper.component.ts:191 liest Theme nur einmal) | ✓ API |
 
+> Neue App (eltern/display.ts): GET/POST `/api/eltern/display-options` (Ansicht, Bedienung, Auflösung, Helligkeit
+> `mupibox.displayBrightness` + beim Start gesetzt in mupi_startup.sh, Drehung, Vorlese-Sprache), PUT `/display/background`,
+> GET `/display/screenshot`, GET `/display/vnc`. Statt des Kiosk-Neustarts lädt das Display seine Seite neu
+> (Player `/display/reload-page` → `pageReloadAt`); nur die Auflösung startet den Kiosk neu. `POST /bootscreen` ändert
+> nur die gesendeten Felder.
+
 ### Einstellungen › Aussehen › Eigenes Theme [eigenes]
 | Schlüssel / Aktion | Beschriftung | Heute | Speicherort | Lesen | Schreiben / Ausführen | Nebenwirkung / Hinweis | Status |
 |---|---|---|---|---|---|---|---|
-| ◉ Bild (Datei) | Hintergrundbild | A: mupi.php:911 (file input `fileToUpload`) | `/home/dietpi/MuPiBox/themes/custom-bg.jpg` (Symlink `www/theme-data/custom/custom-bg.jpg`, start_mupibox_update.sh:547) | kein Lesen/Vorschau heute | — | Wirkt nur mit Theme `custom` (custom.css:36) | ⚙ PHP |
-| ▶ Bild hochladen | Bild hochladen | A: mupi.php:912 → Handler :623 (`submitfile`) | wie oben | — | PHP: nur JPEG (getimagesize), ≠800×480 → per GD auf ≥800×480 skaliert (:644–670), `sudo mv` nach themes/ | `change=3` → kein Speichern/Kiosk-Neustart; Display zeigt Bild erst nach Reload. Neu: Upload-Endpoint (multipart, JPEG-Prüfung, Skalierung z. B. sharp) + `/display/reload-theme` | ⚙ PHP |
+| ◉ Bild (Datei) | Hintergrundbild | A: mupi.php:911 (file input `fileToUpload`) | `/home/dietpi/MuPiBox/themes/custom-bg.jpg` (Symlink `www/theme-data/custom/custom-bg.jpg`, start_mupibox_update.sh:547) | kein Lesen/Vorschau heute | — | Wirkt nur mit Theme `custom` (custom.css:36) | ✓ API |
+| ▶ Bild hochladen | Bild hochladen | A: mupi.php:912 → Handler :623 (`submitfile`) | wie oben | — | PHP: nur JPEG (getimagesize), ≠800×480 → per GD auf ≥800×480 skaliert (:644–670), `sudo mv` nach themes/ | `change=3` → kein Speichern/Kiosk-Neustart; Display zeigt Bild erst nach Reload. Neu: Upload-Endpoint (multipart, JPEG-Prüfung, Skalierung z. B. sharp) + `/display/reload-theme` | ✓ API |
 
 ### Einstellungen › Aussehen › Ansicht [ansicht]
 | Schlüssel / Aktion | Beschriftung | Heute | Speicherort | Lesen | Schreiben / Ausführen | Nebenwirkung / Hinweis | Status |
 |---|---|---|---|---|---|---|---|
 | `stage` | Cover-Flow-Ansicht (Bühne) | A: mupi.php:797 → :375 (nur wenn `kmStageShown`); E: `showThemeStage()`/`saveThemeStage()` app.js:2913/2927 | `mupibox.themeStage` (bool) | GET `/theme` (`stage`) | E: POST `/theme-stage` {stage} routes.ts:1588 → Player reload-theme; A: change=1 | Nur für Kinder-(km-)Themes wirksam/angezeigt (A: km + legacy, E: nur km-Labels). Box: km-theme.service.ts:47 `refresh()` – live | ✓ API |
-| `names` | Ordner- und Albumnamen anzeigen | A: mupi.php:788 → :364 | `mupibox.coverflowShowNames` (bool) | `/api/config` (Box, swiper.component.ts:194) | nur PHP, change=1 | Nur beim Theme `coverflow` sichtbar/wirksam (swiper.component.html:16); Box liest nur beim Start → Kiosk-Reload nötig. Prototyp-Standard „an“, Code-Standard false. Neu: Endpoint (z. B. `/theme-stage` um `names` erweitern) + Display-Reload | ⚙ PHP |
-| `hideScroll` | Horizontale Scrollleiste ausblenden | A: mupi.php:781 → :354 | `mupibox.hideScrollbar` (bool) | `/api/config` (swiper.component.ts:193) | nur PHP, change=1 | Box liest nur beim Start → Kiosk-Reload. Prototyp-Standard „an“, Code false. Neu: wie `names` | ⚙ PHP |
+| `names` | Ordner- und Albumnamen anzeigen | A: mupi.php:788 → :364 | `mupibox.coverflowShowNames` (bool) | `/api/config` (Box, swiper.component.ts:194) | nur PHP, change=1 | Nur beim Theme `coverflow` sichtbar/wirksam (swiper.component.html:16); Box liest nur beim Start → Kiosk-Reload nötig. Prototyp-Standard „an“, Code-Standard false. Neu: Endpoint (z. B. `/theme-stage` um `names` erweitern) + Display-Reload | ✓ API |
+| `hideScroll` | Horizontale Scrollleiste ausblenden | A: mupi.php:781 → :354 | `mupibox.hideScrollbar` (bool) | `/api/config` (swiper.component.ts:193) | nur PHP, change=1 | Box liest nur beim Start → Kiosk-Reload. Prototyp-Standard „an“, Code false. Neu: wie `names` | ✓ API |
 
 ### Einstellungen › Aussehen › Vorlesen [vorlesen]
 | Schlüssel / Aktion | Beschriftung | Heute | Speicherort | Lesen | Schreiben / Ausführen | Nebenwirkung / Hinweis | Status |
 |---|---|---|---|---|---|---|---|
 | `tts` | Namen beim Anhalten vorlesen | A: mupi.php:803 → :375; E: app.js:2924 (`theme-autoread-toggle`) | `mupibox.themeStageAutoRead` (bool) | GET `/theme` (`stageAutoRead`) | E: POST `/theme-stage` {autoRead} routes.ts:1588; A: change=1 | Wirkt nur wenn `themeStage` an **und** km-Theme (km-theme.service.ts:27). Prototyp zeigt es unabhängig | ✓ API |
-| `ttsLang` | Vorlese-Sprache | A: mupi.php:833 → :388 | `mupibox.ttsLanguage` (ISO 639-1); Liste `mupibox.googlettslanguages` (21 Einträge ✓) | PHP aus Konfig | PHP: speichern, `sudo rm /home/dietpi/MuPiBox/tts_files/*.mp3`, change=1 → setting_update.sh kopiert nach spotifycontroller `config.json .ttsLanguage` | Player liest `config.json` nur beim Start (spotify-control.js:160) → `pm2 restart spotify-control` nötig (PHP sagt „reboot“). Neu: Endpoint mit Whitelist, Cache löschen, setting_update, pm2-Restart | ⚙ PHP |
+| `ttsLang` | Vorlese-Sprache | A: mupi.php:833 → :388 | `mupibox.ttsLanguage` (ISO 639-1); Liste `mupibox.googlettslanguages` (21 Einträge ✓) | PHP aus Konfig | PHP: speichern, `sudo rm /home/dietpi/MuPiBox/tts_files/*.mp3`, change=1 → setting_update.sh kopiert nach spotifycontroller `config.json .ttsLanguage` | Player liest `config.json` nur beim Start (spotify-control.js:160) → `pm2 restart spotify-control` nötig (PHP sagt „reboot“). Neu: Endpoint mit Whitelist, Cache löschen, setting_update, pm2-Restart | ✓ API |
 
 ### Einstellungen › Aussehen › Start- und Wartungsbilder [startbilder]
 | Schlüssel / Aktion | Beschriftung | Heute | Speicherort | Lesen | Schreiben / Ausführen | Nebenwirkung / Hinweis | Status |
@@ -460,31 +463,31 @@ Abkürzungen: `A:` = alte Admin-Oberfläche (PHP, Port 80), `E:` = Eltern-WebApp
 ### Einstellungen › Display & Bedienung › Display [displaysettings]
 | Schlüssel / Aktion | Beschriftung | Heute | Speicherort | Lesen | Schreiben / Ausführen | Nebenwirkung / Hinweis | Status |
 |---|---|---|---|---|---|---|---|
-| `bright` | Helligkeit | A: mupi.php:1248 → :288 (`displayset`) | `/sys/class/backlight/*/brightness` (0–255), **nicht** in Konfig | `cat /sys/class/backlight/*/brightness` (mupi.php:1222) | `sudo su - -c 'echo N > …/brightness'` (:318) | Nur 6 Stufen 0/20/…/100 % → 0/51/…/255; andere Werte (Prototyp Schritt 5) → 255. Geht beim Neustart verloren. Neu: Endpoint (linear 0–100→0–255) + Konfig-Key + Wiederherstellen beim Boot | ⚙ PHP |
+| `bright` | Helligkeit | A: mupi.php:1248 → :288 (`displayset`) | `/sys/class/backlight/*/brightness` (0–255), **nicht** in Konfig | `cat /sys/class/backlight/*/brightness` (mupi.php:1222) | `sudo su - -c 'echo N > …/brightness'` (:318) | Nur 6 Stufen 0/20/…/100 % → 0/51/…/255; andere Werte (Prototyp Schritt 5) → 255. Geht beim Neustart verloren. Neu: Endpoint (linear 0–100→0–255) + Konfig-Key + Wiederherstellen beim Boot | ✓ API |
 | `dispOff` | Display aus nach | A: mupi.php:1335 → :512 (0–120, Schritt 1); E: `savePowerConfig()` app.js:3285 (Akku-Screen, 0–1440) | `timeout.idleDisplayOff` (String, Minuten) | GET `/power-config` routes.ts:580 | POST `/power-config` {idleDisplayOff} routes.ts:610 (0–1440). A: change=2 → setting_update.sh schreibt X-`BlankTime` in 98-dietpi-disable_dpms.conf (:119) | E: **kein** setting_update → BlankTime bleibt alt; Box-DisplayManager liest nur beim Start (display-manager.service.ts:31) → Kiosk-Reload nötig, obwohl WebApp „greift sofort“ meldet. 0 = „nie“ klappt im Frontend nicht (0 → 1 min) | ✓ API |
-| `hdmiRot` | HDMI-Drehung | A: mupi.php:1264 → :35 | `/boot/config.txt` `display_hdmi_rotate=` | `sed -n …display_hdmi_rotate=` (mupi.php:27) | `sudo su - dietpi -c ". dietpi-globals && G_SUDO G_CONFIG_INJECT 'display_hdmi_rotate=' …"` (:40) | Neustart nötig. ⚠ Optionen „Horizontal/Vertikal spiegeln“ (0x10000/0x20000) scheitern: `intval()` → 0 (:37) | ⚙ PHP |
-| `lcdRot` | LCD-Drehung | A: mupi.php:1285 → :45 | `/boot/config.txt` `lcd_rotate=` (0 \| 2) | `sed` (:25) | G_CONFIG_INJECT (:50) | Neustart nötig | ⚙ PHP |
-| `dlcdRot` | Display-LCD-Drehung | A: mupi.php:1306 → :55 | `/boot/config.txt` `display_lcd_rotate=` (0 \| 2) | `sed` (:26) | G_CONFIG_INJECT (:60) | Neustart nötig | ⚙ PHP |
-| `resX` | Breite X in Pixel | A: mupi.php:1344 → :604 | `chromium.resX` (String) | Konfig | PHP change=1 → setting_update + restart_kiosk | Gelesen von chromium-autostart.sh:25. Keine Zahlenprüfung in PHP | ⚙ PHP |
-| `resY` | Höhe Y in Pixel | A: mupi.php:1352 → :610 | `chromium.resY` | Konfig | wie resX | chromium-autostart.sh:26 | ⚙ PHP |
+| `hdmiRot` | HDMI-Drehung | A: mupi.php:1264 → :35 | `/boot/config.txt` `display_hdmi_rotate=` | `sed -n …display_hdmi_rotate=` (mupi.php:27) | `sudo su - dietpi -c ". dietpi-globals && G_SUDO G_CONFIG_INJECT 'display_hdmi_rotate=' …"` (:40) | Neustart nötig. ⚠ Optionen „Horizontal/Vertikal spiegeln“ (0x10000/0x20000) scheitern: `intval()` → 0 (:37) | ✓ API |
+| `lcdRot` | LCD-Drehung | A: mupi.php:1285 → :45 | `/boot/config.txt` `lcd_rotate=` (0 \| 2) | `sed` (:25) | G_CONFIG_INJECT (:50) | Neustart nötig | ✓ API |
+| `dlcdRot` | Display-LCD-Drehung | A: mupi.php:1306 → :55 | `/boot/config.txt` `display_lcd_rotate=` (0 \| 2) | `sed` (:26) | G_CONFIG_INJECT (:60) | Neustart nötig | ✓ API |
+| `resX` | Breite X in Pixel | A: mupi.php:1344 → :604 | `chromium.resX` (String) | Konfig | PHP change=1 → setting_update + restart_kiosk | Gelesen von chromium-autostart.sh:25. Keine Zahlenprüfung in PHP | ✓ API |
+| `resY` | Höhe Y in Pixel | A: mupi.php:1352 → :610 | `chromium.resY` | Konfig | wie resX | chromium-autostart.sh:26 | ✓ API |
 
 ### Einstellungen › Display & Bedienung › Bedienung am Display [bedienung]
 | Schlüssel / Aktion | Beschriftung | Heute | Speicherort | Lesen | Schreiben / Ausführen | Nebenwirkung / Hinweis | Status |
 |---|---|---|---|---|---|---|---|
-| `hideA` | Hörspiele ausblenden | A: admin.php:476 (Checkbox `hide_categories[]`) → :199 (`display_cats_save`) | `mupibox.hiddenCategories` ∋ `audiobook` | `/api/config` (home.page.ts:108) | PHP: Whitelist, mind. 1 sichtbar, change=1 → Kiosk-Neustart | Box liest nur beim Start der Home-Seite | ⚙ PHP |
-| `hideM` | Musik ausblenden | wie oben | ∋ `music` | wie oben | wie oben | – | ⚙ PHP |
-| `hideN` | NAS ausblenden | wie oben | ∋ `nas` | wie oben | wie oben | – | ⚙ PHP |
-| `hideO` | Sonstiges ausblenden | wie oben | ∋ `other` | wie oben | wie oben | Neu für alle 4: ein Endpoint `hiddenCategories` (Array) + Display-Reload | ⚙ PHP |
-| `resume` | Anzahl der Fortsetzen-Einträge | A: mupi.php:859 → :397 (1–99) | `mupibox.resume` (int) | Konfig | PHP change=1 (Kiosk-Neustart, unnötig) | Live gelesen von remove_max_resume.sh:7 (Player-Befehl `maxresume`). Template-Standard 9 ✓ | ⚙ PHP |
-| `listTimer` | Haltezeit für die Titelliste | A: mupi.php:874 → :404 (0,5–5 / 0,5) | `mupibox.listviewTimer` (float) | `/api/config` (player.page.ts:267, bei Seitenaufbau) | PHP change=1 | Template-Standard 2.5, Prototyp 2 | ⚙ PHP |
-| `setTimer` | Haltezeit für den Einstellungszugang | A: mupi.php:889 → :411 (1–10) | `mupibox.settingsAccessTimer` (float) | `/api/config` (home.page.ts:103) | PHP change=1 | Öffnet die Box-Einstellungsseite (home.page.ts:237), dort Kachel „Eltern“ mit QR – nicht direkt den QR (Prototyp-Hilfetext ungenau). Template 3, Prototyp 5 | ⚙ PHP |
+| `hideA` | Hörspiele ausblenden | A: admin.php:476 (Checkbox `hide_categories[]`) → :199 (`display_cats_save`) | `mupibox.hiddenCategories` ∋ `audiobook` | `/api/config` (home.page.ts:108) | PHP: Whitelist, mind. 1 sichtbar, change=1 → Kiosk-Neustart | Box liest nur beim Start der Home-Seite | ✓ API |
+| `hideM` | Musik ausblenden | wie oben | ∋ `music` | wie oben | wie oben | – | ✓ API |
+| `hideN` | NAS ausblenden | wie oben | ∋ `nas` | wie oben | wie oben | – | ✓ API |
+| `hideO` | Sonstiges ausblenden | wie oben | ∋ `other` | wie oben | wie oben | Neu für alle 4: ein Endpoint `hiddenCategories` (Array) + Display-Reload | ✓ API |
+| `resume` | Anzahl der Fortsetzen-Einträge | A: mupi.php:859 → :397 (1–99) | `mupibox.resume` (int) | Konfig | PHP change=1 (Kiosk-Neustart, unnötig) | Live gelesen von remove_max_resume.sh:7 (Player-Befehl `maxresume`). Template-Standard 9 ✓ | ✓ API |
+| `listTimer` | Haltezeit für die Titelliste | A: mupi.php:874 → :404 (0,5–5 / 0,5) | `mupibox.listviewTimer` (float) | `/api/config` (player.page.ts:267, bei Seitenaufbau) | PHP change=1 | Template-Standard 2.5, Prototyp 2 | ✓ API |
+| `setTimer` | Haltezeit für den Einstellungszugang | A: mupi.php:889 → :411 (1–10) | `mupibox.settingsAccessTimer` (float) | `/api/config` (home.page.ts:103) | PHP change=1 | Öffnet die Box-Einstellungsseite (home.page.ts:237), dort Kachel „Eltern“ mit QR – nicht direkt den QR (Prototyp-Hilfetext ungenau). Template 3, Prototyp 5 | ✓ API |
 
 ### Einstellungen › Display & Bedienung › Display live [displaylive]
 | Schlüssel / Aktion | Beschriftung | Heute | Speicherort | Lesen | Schreiben / Ausführen | Nebenwirkung / Hinweis | Status |
 |---|---|---|---|---|---|---|---|
-| ◉ livescreen | Aktuelles Bild | A: index.php:168 (Home, „Current Screen“) | `/var/www/images/screenshot.png` | bei jedem Aufruf von index.php: `sudo -H -u dietpi DISPLAY=:0 scrot /tmp/screenshot.png` + mv (index.php:42–43) | — | Kein Node-Endpoint (scrot nur für Telegram, telegram_notify_screen.py:27). Neu: GET-Endpoint, der scrot ausführt und PNG liefert (Rate-Limit) | ⚙ PHP |
-| ▶ Aktualisieren | Aktualisieren | A: nur durch Neuladen von index.php | — | — | scrot wie oben | – | ⚙ PHP |
-| ▶ Fernsteuerung öffnen | Fernsteuerung (VNC) | A: vnc.php:14 (`<embed>` + Link `http://<host>:6080/vnc_lite.html?host=<host>&port=5900`) | Dienste `mupi_vnc` + `mupi_novnc` (an/aus in service.php:25–46, `tweaks.vnc`) | — | nur Link | Neue App: Link öffnen + Dienststatus abfragen (Endpoint `systemctl is-active mupi_novnc` fehlt) | ⚙ PHP |
+| ◉ livescreen | Aktuelles Bild | A: index.php:168 (Home, „Current Screen“) | `/var/www/images/screenshot.png` | bei jedem Aufruf von index.php: `sudo -H -u dietpi DISPLAY=:0 scrot /tmp/screenshot.png` + mv (index.php:42–43) | — | Kein Node-Endpoint (scrot nur für Telegram, telegram_notify_screen.py:27). Neu: GET-Endpoint, der scrot ausführt und PNG liefert (Rate-Limit) | ✓ API |
+| ▶ Aktualisieren | Aktualisieren | A: nur durch Neuladen von index.php | — | — | scrot wie oben | – | ✓ API |
+| ▶ Fernsteuerung öffnen | Fernsteuerung (VNC) | A: vnc.php:14 (`<embed>` + Link `http://<host>:6080/vnc_lite.html?host=<host>&port=5900`) | Dienste `mupi_vnc` + `mupi_novnc` (an/aus in service.php:25–46, `tweaks.vnc`) | — | nur Link | Neue App: Link öffnen + Dienststatus abfragen (Endpoint `systemctl is-active mupi_novnc` fehlt) | ✓ API |
 | ▶ Strg+Alt+Entf senden | Strg+Alt+Entf senden | nirgends in MuPiBox-Code; nur noVNC-eigene Oberfläche (vnc_lite) | — | — | — | Neu: eigener noVNC-Client (RFB `sendCtrlAltDel()`) in der App oder weglassen | ＋ neu |
 
 ### Einstellungen › Audio › Lautstärke [lautstaerke]

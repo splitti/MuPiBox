@@ -39,6 +39,7 @@ export class ExternalPlaybackNavigatorService {
   private readonly pollNow$ = new Subject<void>()
   /** Same idea for "show the new theme now" from the parents' web app (see checkThemeReload). */
   private lastSeenThemeReloadAt: number | null = null
+  private lastSeenPageReloadAt: number | null = null
   // km themes: their body classes (stage view, day/night ...) follow the new theme too
   private readonly kmTheme = inject(KmThemeService)
   /** Tick-Zähler für die gedrosselte Abfrage auf der Player-Page. */
@@ -121,6 +122,7 @@ export class ExternalPlaybackNavigatorService {
       )
       .subscribe((data) => {
         this.checkThemeReload(data.themeReloadAt)
+        this.checkPageReload(data.pageReloadAt)
         // the admin interface's text preview (a frame on another device): no jump to the player page there
         if (window.location.pathname.startsWith('/text-preview')) return
         const at = data.triggerAt ?? 0
@@ -187,6 +189,20 @@ export class ExternalPlaybackNavigatorService {
     if (reloadAt === this.lastSeenThemeReloadAt) return
     this.lastSeenThemeReloadAt = reloadAt
     this.reloadThemeStylesheet(reloadAt)
+  }
+
+  /** The app changed a setting the display only reads when its page loads (see the player's /display/reload-page):
+   *  the page is loaded again, like checkThemeReload with a baseline first. Playback runs on in the player. */
+  private checkPageReload(reloadAt: number | undefined): void {
+    if (typeof reloadAt !== 'number') return
+    if (this.lastSeenPageReloadAt === null || reloadAt < this.lastSeenPageReloadAt) {
+      this.lastSeenPageReloadAt = reloadAt
+      return
+    }
+    if (reloadAt === this.lastSeenPageReloadAt) return
+    this.lastSeenPageReloadAt = reloadAt
+    console.log('🔄 Page reloaded on request from the parents app')
+    window.location.reload()
   }
 
   /** active_theme.css is a symlink to the chosen theme; loading it again under a new query string

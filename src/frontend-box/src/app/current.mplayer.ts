@@ -27,6 +27,8 @@ export interface CurrentMPlayer {
   triggerAt?: number
   // Set when the parents' web app asks the display to show a newly chosen theme right away.
   themeReloadAt?: number
+  // Set when the app changed a setting the display reads only when its page loads: the page is loaded again.
+  pageReloadAt?: number
   // What plays: the Spotify context (e.g. spotify:album:<id>:0:0), the kind of media (spotify, local, nas, radio,
   // rss) and, for mplayer, its folder or path.
   activeSpotifyId?: string
