@@ -62,7 +62,7 @@
 	// Tabs that can be hidden from the top navigation (Admin > Control system).
 	// Home, MuPiBox and Admin are always shown and are not part of this list.
 	$navTabsHideable = array(
-		'mupi' => 'MuPi-Conf', 'mupihat' => 'MuPiHAT', 'media' => 'Media', 'cover' => 'Cover',
+		'mupi' => 'MuPi-Conf', 'parental' => 'Parental', 'mupihat' => 'MuPiHAT', 'media' => 'Media', 'cover' => 'Cover',
 		'bluetooth' => 'Bluetooth', 'spotify' => 'Spotify', 'nas' => 'NAS', 'network' => 'Network',
 		'smart' => 'Smart', 'vnc' => 'VNC', 'dietpidash' => 'DietPi-Dash', 'logs' => 'Logs', 'json' => 'JSON',
 	);
@@ -278,6 +278,7 @@
 	}
 ?>
 				<?php if (!navTabHidden('mupi')) { ?><a href="<?= $link ?>mupi.php"><i class="fa-solid fa-headphones"></i> MuPi-Conf</a><?php } ?>
+				<?php if (!navTabHidden('parental')) { ?><a href="<?= $link ?>parental.php"><i class="fa-solid fa-people-roof"></i> Parental</a><?php } ?>
 				<?php if (!navTabHidden('mupihat')) { ?><a href="<?= $link ?>mupihat.php"><i class="fa-solid fa-hat-wizard"></i> MuPiHAT</a><?php } ?>
 				<?php if (!navTabHidden('media')) { ?><a href="<?= $link ?>media.php"><i class="fa-solid fa-list"></i> Media</a><?php } ?>
 				<?php if (!navTabHidden('cover')) { ?><a href="<?= $link ?>cover.php"><i class="fa-regular fa-image"></i> Cover</a><?php } ?>

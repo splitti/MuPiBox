@@ -377,6 +377,50 @@
 		$change=3;
 		$CHANGE_TXT=$CHANGE_TXT."<li>config.json repaired</li>";
 		}
+	// Login of this interface (moved here from mupi.php: it protects the whole interface). $change 2 = save,
+	// 4 = only show the message.
+	// Changing the password needs the current one (a forged request or an unattended browser must
+	// not be able to replace it), and the new one must not be empty or shorter than the form allows.
+	if($_POST['submitpw'])
+		{
+		$newpwd = (string)($_POST['newpwd'] ?? '');
+		$curpwd = (string)($_POST['curpwd'] ?? '');
+		$oldhash = $data["interfacelogin"]["password"] ?? '';
+		if( strlen($newpwd) < 6 )
+			{
+			$CHANGE_TXT=$CHANGE_TXT."<li>Password not changed: at least 6 characters</li>";
+			$change = 4; // message only, nothing saved (else the refusal was not shown at all)
+			}
+		else if( $oldhash !== '' && !password_verify($curpwd, $oldhash) )
+			{
+			$CHANGE_TXT=$CHANGE_TXT."<li>Password not changed: current password is wrong</li>";
+			$change = 3;
+			}
+		else
+			{
+			$hash = password_hash($newpwd, PASSWORD_DEFAULT);
+			$data["interfacelogin"]["password"]=$hash;
+			$change=2;
+			$CHANGE_TXT=$CHANGE_TXT."<li>New password has been set</li>";
+			}
+		}
+
+
+	if($_POST['change_login'])
+		{
+		if($data["interfacelogin"]["state"])
+			{
+			$data["interfacelogin"]["state"]=false;	
+			$CHANGE_TXT=$CHANGE_TXT."<li>Login disabled</li>";
+			}
+		else
+			{
+			$data["interfacelogin"]["state"]=true;	
+			$CHANGE_TXT=$CHANGE_TXT."<li>Login enabled</li>";
+			}
+		$change=2;
+		}
+
 	if( $change == 1 )
 		{
 		write_json($data);
@@ -433,6 +477,47 @@
 				<br/><br/>
 				<input id="saveForm" class="button_text" type="submit" name="display_cats_save" value="Save categories" onclick="if (document.querySelectorAll('input[name=\'hide_categories[]\']:checked').length >= 4) { alert('At least one category must stay visible.'); return false; }" />
 			</li>
+		</ul>
+	</details>
+
+	<details id="loginsettings">
+		<summary><i class="fa-solid fa-user-lock"></i> Login settings</summary>
+		<ul>
+			<li id="li_1" >
+				<h2>Password </h2>
+				<p>
+				The default password is "MuP1B0x"!
+				</p>
+				<div>
+				<label for="curpwd">Current password</label>
+				<input id="curpwd" name="curpwd" class="element text medium" type="password" maxlength="255" value="" autocomplete="current-password"/>
+				<label for="newpwd">New password</label>
+				<input id="newpwd" name="newpwd" class="element text medium" type="password" minlength="6" maxlength="255" value="" autocomplete="new-password"/>
+				<input type="submit" class="button_text" value="Set new password" name="submitpw" >
+				</div>
+			</li>
+		</ul>
+		<ul>
+			<li class="li_1"><h2>Enable login</h2>
+				<p>
+				The login will be instantly activated after enabling this option!
+				</p>
+				<p>
+				<?php
+				if ($data['interfacelogin']['state']) {
+					$login_state="enabled";
+					$login_button="disable";
+					}
+				else {
+					$login_state="disabled";
+					$login_button="enable";
+					}
+				echo "Login state: <b>".$login_state."</b>";
+				?>
+				</p>
+				<input id="saveForm" class="button_text" type="submit" name="change_login" value="<?php print $login_button; ?>" />
+			</li>
+
 		</ul>
 	</details>
 
