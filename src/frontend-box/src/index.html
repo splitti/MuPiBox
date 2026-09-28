@@ -15,6 +15,15 @@
     <meta name="msapplication-tap-highlight" content="no" />
 
     <link rel="icon" type="image/png" href="assets/icon/favicon.png" />
+
+    <!-- The boot screen until the start page has loaded its list (see home.page.ts, class mupi-ready): between the
+         boot screen and the display it was black and white for seconds. At the latest after 30 s the page shows. -->
+    <style>
+      html:not(.mupi-ready) { background: #000 url('/api/bootscreen/current-splash') center / cover no-repeat; }
+      html:not(.mupi-ready) body { background: transparent !important; }
+      html:not(.mupi-ready) app-root { visibility: hidden; }
+    </style>
+    <script>setTimeout(function () { document.documentElement.classList.add('mupi-ready') }, 30000)</script>
 </head>
 
 <body>

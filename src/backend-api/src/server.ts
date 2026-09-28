@@ -1137,6 +1137,23 @@ app.get('/api/data', (_req, res) => {
   })
 })
 
+// The boot screen of this start (bootscreen_update.sh / splash_screen.sh, with the box name): the display shows it
+// until its start page is ready (index.html), so there is no black and white between boot screen and display.
+app.get('/api/bootscreen/current-splash', (_req, res) => {
+  const dir = '/home/dietpi/MuPiBox/sysmedia/images/bootscreen'
+  let scene = ''
+  try {
+    scene = fs.readFileSync(`${dir}/current`, 'utf8').trim()
+  } catch {
+    // none yet
+  }
+  const file = /^[a-z0-9-]+$/.test(scene) ? `${dir}/splash-${scene}.png` : '/home/dietpi/MuPiBox/sysmedia/bootscreens/prerendered/en/splash-karte.png'
+  res.setHeader('Cache-Control', 'no-store')
+  res.sendFile(file, (err) => {
+    if (err && !res.headersSent) res.status(404).end()
+  })
+})
+
 app.get('/api/data-version', (_req, res) => {
   // Cheap change-token for the box frontend's library-change poll (Phase 17g).
   // activedataFile is a symlink to data.json (or offline_data.json) reconciled
