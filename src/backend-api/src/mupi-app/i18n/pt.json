@@ -600,7 +600,7 @@
  "Die Bibliothek wird gerade geschrieben – bitte gleich noch einmal.": "A biblioteca está a ser gravada – tenta novamente daqui a pouco.",
  "Die Bilder werden nach dem Speichern auf der Box erzeugt und sind ab dem nächsten Start zu sehen.": "As imagens são geradas na caixa depois de guardar e ficam visíveis a partir do próximo arranque.",
  "Die bisherige Oberfläche": "A interface anterior",
- "Die Bluetooth-Hardware ist abgeschaltet. Einschalten unten unter „Bluetooth-Hardware“.": "O hardware Bluetooth está desligado. Liga-o mais abaixo, em «Hardware Bluetooth».",
+ "Die Bluetooth-Hardware ist abgeschaltet. Einschalten unter „Bluetooth-Hardware“.": "O hardware Bluetooth está desligado. Liga-o em «Hardware Bluetooth».",
  "Die Bluetooth-Hardware wird beim nächsten Neustart eingeschaltet.": "O hardware Bluetooth vai ser ligado no próximo reinício.",
  "Die Bluetooth-Hardware wird beim nächsten Neustart ganz abgeschaltet. Kopfhörer und Lautsprecher lassen sich dann nicht mehr verbinden, bis sie wieder eingeschaltet wird.": "O hardware Bluetooth vai ser totalmente desligado no próximo reinício. Auscultadores e colunas deixam de poder ligar-se até ser ligado de novo.",
  "Die Box antwortet gerade nicht. Beim MuPiBox-Update ist das normal, der Server wird ausgetauscht. Die Seite fragt weiter nach.": "A caixa não está a responder de momento. Durante uma atualização do MuPiBox isso é normal, o servidor está a ser substituído. A página continua a verificar.",

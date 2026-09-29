@@ -3566,17 +3566,19 @@ function btTop() {
     ${sw('bt-chip', 'Bluetooth-Chip', 'Schaltet die Bluetooth-Hardware des Raspberry Pi ganz ab: für stabileres Onboard-WLAN (es teilt sich den Funk mit Bluetooth), etwas weniger Strom oder die serielle Schnittstelle, die der Chip belegt. Gilt nach einem Neustart.', chip.on)}
     ${b.controller ? `<dl class="kv"><div><dt>Controller</dt><dd translate="no">${esc(b.controller.name)} · ${esc(b.controller.mac)}</dd></div></dl>` : ''}
     ${chip.rebootNeeded ? `<div class="note warn">${icon('info', 18)}<span>${chip.on ? 'Der Chip wird beim nächsten Neustart eingeschaltet.' : 'Der Chip wird beim nächsten Neustart abgeschaltet.'}</span></div><div class="btns"><button class="btn" id="bt-reboot">Jetzt neu starten</button></div>` : ''}</section>`
-  return [
-    `<section class="card">${noHw ? `<div class="note warn">${icon('info', 18)}<span>Die Bluetooth-Hardware ist abgeschaltet. Einschalten unten unter „Bluetooth-Hardware“.</span></div>` : ''}${sw('bt-on', 'Bluetooth', 'Für Kopfhörer oder Lautsprecher.', b.powered, noHw)}${sw('bt-auto', 'Automatisch verbinden', 'Verbindet ein bekanntes Gerät von selbst, sobald es an ist.', b.autoconnect, noHw)}</section>`,
-    b.powered
-      ? `<section class="card"><h2>Gekoppelte Geräte</h2>${
+  // the everyday switches (on the phone on top, see .bt-main in app.css)
+  const main = `<section class="card bt-main">${noHw ? `<div class="note warn">${icon('info', 18)}<span>Die Bluetooth-Hardware ist abgeschaltet. Einschalten unter „Bluetooth-Hardware“.</span></div>` : ''}${sw('bt-on', 'Bluetooth', 'Für Kopfhörer oder Lautsprecher.', b.powered, noHw)}${sw('bt-auto', 'Automatisch verbinden', 'Verbindet ein bekanntes Gerät von selbst, sobald es an ist.', b.autoconnect, noHw)}</section>`
+  const paired = b.powered
+    ? `<section class="card"><h2>Gekoppelte Geräte</h2>${
           devices.length
             ? `<div class="rows">${devices
                 .map((d, i) => `<div class="entry"><span class="avatar">${icon('bt', 16)}</span><span class="lbl"><b>${esc(d.name)}</b><small>${d.connected ? 'verbunden' : 'nicht verbunden'}</small></span>${d.connected ? '<span class="chip ok">aktiv</span>' : ''}<button class="btn danger sm" data-bt-rm="${i}">Entfernen</button></div>`)
                 .join('')}</div>`
             : '<p class="help" style="margin:0">Noch kein Gerät gekoppelt.</p>'
-        }</section>
-        <section class="card"><h2>Neue Geräte koppeln</h2><p class="help">Gerät in den Kopplungsmodus versetzen, dann suchen (dauert etwa 10–30 s).</p>
+        }</section>`
+    : ''
+  const pair = b.powered
+    ? `<section class="card"><h2>Neue Geräte koppeln</h2><p class="help">Gerät in den Kopplungsmodus versetzen, dann suchen (dauert etwa 10–30 s).</p>
           <div class="btns"><button class="btn primary" id="bt-scan" ${hw.scanning ? 'disabled' : ''}>${hw.scanning ? 'Suche läuft …' : 'Suchen'}</button></div>
           ${
             hw.found
@@ -3585,9 +3587,9 @@ function btTop() {
                 : '<p class="help" style="margin:0">Nichts gefunden. Ist das Gerät im Kopplungsmodus?</p>'
               : ''
           }</section>`
-      : '',
-    hardware,
-  ]
+    : ''
+  // on the PC: hardware | switches, then new devices | paired devices
+  return [hardware, main, pair, paired]
 }
 
 function mountBluetooth(root, page) {

@@ -600,7 +600,7 @@
  "Die Bibliothek wird gerade geschrieben – bitte gleich noch einmal.": "Бібліотека зараз записується – спробуйте за мить ще раз.",
  "Die Bilder werden nach dem Speichern auf der Box erzeugt und sind ab dem nächsten Start zu sehen.": "Зображення створюються на боксі після збереження і будуть видні з наступного запуску.",
  "Die bisherige Oberfläche": "Попередній інтерфейс",
- "Die Bluetooth-Hardware ist abgeschaltet. Einschalten unten unter „Bluetooth-Hardware“.": "Апаратне забезпечення Bluetooth вимкнено. Увімкни його нижче в розділі «Апаратне забезпечення Bluetooth».",
+ "Die Bluetooth-Hardware ist abgeschaltet. Einschalten unter „Bluetooth-Hardware“.": "Апаратне забезпечення Bluetooth вимкнено. Увімкни його в розділі «Апаратне забезпечення Bluetooth».",
  "Die Bluetooth-Hardware wird beim nächsten Neustart eingeschaltet.": "Апаратне забезпечення Bluetooth буде увімкнено під час наступного перезапуску.",
  "Die Bluetooth-Hardware wird beim nächsten Neustart ganz abgeschaltet. Kopfhörer und Lautsprecher lassen sich dann nicht mehr verbinden, bis sie wieder eingeschaltet wird.": "Апаратне забезпечення Bluetooth буде повністю вимкнено під час наступного перезапуску. Навушники й колонки не зможуть під’єднатися, доки його знову не увімкнуть.",
  "Die Box antwortet gerade nicht. Beim MuPiBox-Update ist das normal, der Server wird ausgetauscht. Die Seite fragt weiter nach.": "Бокс зараз не відповідає. Під час оновлення MuPiBox це нормально, сервер замінюється. Сторінка продовжує опитування.",

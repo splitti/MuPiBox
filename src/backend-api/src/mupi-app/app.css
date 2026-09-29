@@ -614,3 +614,6 @@ a.btn { text-decoration: none; color: inherit; }
 .group-card .lbl b { font-size: 16px; }
 .group-card .lbl small { font-size: 13px; color: var(--mp-muted); line-height: 1.35; }
 .group-card .chev { color: var(--mp-muted); flex: none; }
+
+/* Bluetooth: on the PC hardware | switches, then new | paired; in one column (phone) the everyday switches on top */
+@media (max-width: 1199px) { .content > .bt-main { order: -1; } .content > .page-intro { order: -2; } }

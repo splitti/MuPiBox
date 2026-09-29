@@ -600,7 +600,7 @@
  "Die Bibliothek wird gerade geschrieben – bitte gleich noch einmal.": "La bibliothèque est en cours d'écriture – réessaie dans un instant.",
  "Die Bilder werden nach dem Speichern auf der Box erzeugt und sind ab dem nächsten Start zu sehen.": "Les images sont générées sur la Box après l'enregistrement et visibles dès le prochain démarrage.",
  "Die bisherige Oberfläche": "L'interface précédente",
- "Die Bluetooth-Hardware ist abgeschaltet. Einschalten unten unter „Bluetooth-Hardware“.": "Le matériel Bluetooth est désactivé. Active-le plus bas, sous « Matériel Bluetooth ».",
+ "Die Bluetooth-Hardware ist abgeschaltet. Einschalten unter „Bluetooth-Hardware“.": "Le matériel Bluetooth est désactivé. Active-le sous « Matériel Bluetooth ».",
  "Die Bluetooth-Hardware wird beim nächsten Neustart eingeschaltet.": "Le matériel Bluetooth sera activé au prochain redémarrage.",
  "Die Bluetooth-Hardware wird beim nächsten Neustart ganz abgeschaltet. Kopfhörer und Lautsprecher lassen sich dann nicht mehr verbinden, bis sie wieder eingeschaltet wird.": "Le matériel Bluetooth sera entièrement désactivé au prochain redémarrage. Les casques et haut-parleurs ne pourront plus se connecter tant qu'il ne sera pas réactivé.",
  "Die Box antwortet gerade nicht. Beim MuPiBox-Update ist das normal, der Server wird ausgetauscht. Die Seite fragt weiter nach.": "La Box ne répond pas pour le moment. C'est normal pendant une mise à jour MuPiBox, le serveur est remplacé. La page continue de vérifier.",

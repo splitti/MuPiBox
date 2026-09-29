@@ -600,7 +600,7 @@
  "Die Bibliothek wird gerade geschrieben – bitte gleich noch einmal.": "Kirjastoa kirjoitetaan juuri nyt – yritä hetken kuluttua uudelleen.",
  "Die Bilder werden nach dem Speichern auf der Box erzeugt und sind ab dem nächsten Start zu sehen.": "Kuvat luodaan laatikossa tallennuksen jälkeen ja näkyvät seuraavasta käynnistyksestä alkaen.",
  "Die bisherige Oberfläche": "Aiempi käyttöliittymä",
- "Die Bluetooth-Hardware ist abgeschaltet. Einschalten unten unter „Bluetooth-Hardware“.": "Bluetooth-laitteisto on kytketty pois. Kytke se päälle alempana kohdassa ”Bluetooth-laitteisto”.",
+ "Die Bluetooth-Hardware ist abgeschaltet. Einschalten unter „Bluetooth-Hardware“.": "Bluetooth-laitteisto on kytketty pois. Kytke se päälle kohdassa ”Bluetooth-laitteisto”.",
  "Die Bluetooth-Hardware wird beim nächsten Neustart eingeschaltet.": "Bluetooth-laitteisto kytketään päälle seuraavassa uudelleenkäynnistyksessä.",
  "Die Bluetooth-Hardware wird beim nächsten Neustart ganz abgeschaltet. Kopfhörer und Lautsprecher lassen sich dann nicht mehr verbinden, bis sie wieder eingeschaltet wird.": "Bluetooth-laitteisto kytketään kokonaan pois seuraavassa uudelleenkäynnistyksessä. Kuulokkeet ja kaiuttimet eivät sen jälkeen voi yhdistää, ennen kuin se kytketään taas päälle.",
  "Die Box antwortet gerade nicht. Beim MuPiBox-Update ist das normal, der Server wird ausgetauscht. Die Seite fragt weiter nach.": "Laatikko ei vastaa juuri nyt. MuPiBox-päivityksen aikana tämä on normaalia, koska palvelin vaihtuu. Sivu kysyy tilannetta edelleen.",

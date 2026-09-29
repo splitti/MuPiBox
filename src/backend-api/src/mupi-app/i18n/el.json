@@ -600,7 +600,7 @@
  "Die Bibliothek wird gerade geschrieben – bitte gleich noch einmal.": "Η βιβλιοθήκη γράφεται αυτή τη στιγμή – δοκίμασε ξανά σε λίγο.",
  "Die Bilder werden nach dem Speichern auf der Box erzeugt und sind ab dem nächsten Start zu sehen.": "Οι εικόνες δημιουργούνται στο κουτί μετά την αποθήκευση και εμφανίζονται από την επόμενη εκκίνηση.",
  "Die bisherige Oberfläche": "Το προηγούμενο περιβάλλον",
- "Die Bluetooth-Hardware ist abgeschaltet. Einschalten unten unter „Bluetooth-Hardware“.": "Το υλικό Bluetooth είναι απενεργοποιημένο. Ενεργοποίησέ το παρακάτω, στο «Υλικό Bluetooth».",
+ "Die Bluetooth-Hardware ist abgeschaltet. Einschalten unter „Bluetooth-Hardware“.": "Το υλικό Bluetooth είναι απενεργοποιημένο. Ενεργοποίησέ το στο «Υλικό Bluetooth».",
  "Die Bluetooth-Hardware wird beim nächsten Neustart eingeschaltet.": "Το υλικό Bluetooth θα ενεργοποιηθεί στην επόμενη επανεκκίνηση.",
  "Die Bluetooth-Hardware wird beim nächsten Neustart ganz abgeschaltet. Kopfhörer und Lautsprecher lassen sich dann nicht mehr verbinden, bis sie wieder eingeschaltet wird.": "Το υλικό Bluetooth θα απενεργοποιηθεί εντελώς στην επόμενη επανεκκίνηση. Ακουστικά και ηχεία δεν θα μπορούν να συνδεθούν μέχρι να ενεργοποιηθεί ξανά.",
  "Die Box antwortet gerade nicht. Beim MuPiBox-Update ist das normal, der Server wird ausgetauscht. Die Seite fragt weiter nach.": "Το κουτί δεν απαντά αυτή τη στιγμή. Κατά την ενημέρωση MuPiBox αυτό είναι φυσιολογικό, ο server αντικαθίσταται. Η σελίδα θα συνεχίσει να ελέγχει.",

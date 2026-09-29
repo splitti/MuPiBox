@@ -600,7 +600,7 @@
  "Die Bibliothek wird gerade geschrieben – bitte gleich noch einmal.": "Biblioteket skrives lige nu – prøv igen om lidt.",
  "Die Bilder werden nach dem Speichern auf der Box erzeugt und sind ab dem nächsten Start zu sehen.": "Billederne oprettes på boksen efter gemning og kan ses fra næste start.",
  "Die bisherige Oberfläche": "Den tidligere brugerflade",
- "Die Bluetooth-Hardware ist abgeschaltet. Einschalten unten unter „Bluetooth-Hardware“.": "Bluetooth-hardwaren er slået fra. Slå den til længere nede under “Bluetooth-hardware”.",
+ "Die Bluetooth-Hardware ist abgeschaltet. Einschalten unter „Bluetooth-Hardware“.": "Bluetooth-hardwaren er slået fra. Slå den til under “Bluetooth-hardware”.",
  "Die Bluetooth-Hardware wird beim nächsten Neustart eingeschaltet.": "Bluetooth-hardwaren slås til ved næste genstart.",
  "Die Bluetooth-Hardware wird beim nächsten Neustart ganz abgeschaltet. Kopfhörer und Lautsprecher lassen sich dann nicht mehr verbinden, bis sie wieder eingeschaltet wird.": "Bluetooth-hardwaren slås helt fra ved næste genstart. Hovedtelefoner og højttalere kan så ikke længere forbinde, før den slås til igen.",
  "Die Box antwortet gerade nicht. Beim MuPiBox-Update ist das normal, der Server wird ausgetauscht. Die Seite fragt weiter nach.": "Boksen svarer ikke lige nu. Ved MuPiBox-opdateringer er det normalt, serveren skiftes ud. Siden bliver ved med at spørge.",

@@ -600,7 +600,7 @@
  "Die Bibliothek wird gerade geschrieben – bitte gleich noch einmal.": "Knihovna se právě zapisuje – zkuste to prosím za chvíli znovu.",
  "Die Bilder werden nach dem Speichern auf der Box erzeugt und sind ab dem nächsten Start zu sehen.": "Obrázky se po uložení vytvoří na Boxu a budou vidět od dalšího startu.",
  "Die bisherige Oberfläche": "Dosavadní rozhraní",
- "Die Bluetooth-Hardware ist abgeschaltet. Einschalten unten unter „Bluetooth-Hardware“.": "Hardware Bluetooth je vypnutý. Zapněte ho níže v části „Hardware Bluetooth“.",
+ "Die Bluetooth-Hardware ist abgeschaltet. Einschalten unter „Bluetooth-Hardware“.": "Hardware Bluetooth je vypnutý. Zapněte ho v části „Hardware Bluetooth“.",
  "Die Bluetooth-Hardware wird beim nächsten Neustart eingeschaltet.": "Hardware Bluetooth bude zapnut při příštím restartu.",
  "Die Bluetooth-Hardware wird beim nächsten Neustart ganz abgeschaltet. Kopfhörer und Lautsprecher lassen sich dann nicht mehr verbinden, bis sie wieder eingeschaltet wird.": "Hardware Bluetooth bude při příštím restartu úplně vypnut. Sluchátka a reproduktory se pak nebudou moci připojit, dokud ho znovu nezapnete.",
  "Die Box antwortet gerade nicht. Beim MuPiBox-Update ist das normal, der Server wird ausgetauscht. Die Seite fragt weiter nach.": "Box teď neodpovídá. Při aktualizaci MuPiBoxu je to normální, server se právě vyměňuje. Stránka se bude dál dotazovat.",
