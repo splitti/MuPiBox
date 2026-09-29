@@ -89,6 +89,7 @@
  "pages": [
   {
    "id": "start",
+   "slug": "home",
    "area": "start",
    "parent": null,
    "title": "Start",
@@ -98,6 +99,7 @@
   },
   {
    "id": "hoeren",
+   "slug": "listen",
    "area": "hoeren",
    "parent": null,
    "title": "Hören",
@@ -107,6 +109,7 @@
   },
   {
    "id": "spielzeit",
+   "slug": "playtime",
    "area": "spielzeit",
    "parent": null,
    "title": "Spielzeit",
@@ -280,6 +283,7 @@
   },
   {
    "id": "bibliothek",
+   "slug": "library",
    "area": "bibliothek",
    "parent": null,
    "title": "Bibliothek",
@@ -289,6 +293,7 @@
   },
   {
    "id": "einstellungen",
+   "slug": "settings",
    "area": "einstellungen",
    "parent": null,
    "title": "Einstellungen",
@@ -298,6 +303,7 @@
   },
   {
    "id": "verlauf",
+   "slug": "history",
    "area": "hoeren",
    "parent": "hoeren",
    "title": "Hör-Verlauf",
@@ -422,6 +428,7 @@
   },
   {
    "id": "verwaltet",
+   "slug": "managed",
    "area": "bibliothek",
    "parent": "bibliothek",
    "title": "Verwaltete Inhalte",
@@ -540,6 +547,7 @@
   },
   {
    "id": "suche",
+   "slug": "spotify-search",
    "area": "bibliothek",
    "parent": "bibliothek",
    "title": "Auf Spotify suchen",
@@ -702,6 +710,7 @@
   },
   {
    "id": "link",
+   "slug": "add-link",
    "area": "bibliothek",
    "parent": "bibliothek",
    "title": "Link einfügen",
@@ -776,6 +785,7 @@
   },
   {
    "id": "upload",
+   "slug": "upload",
    "area": "bibliothek",
    "parent": "bibliothek",
    "title": "Vom Gerät hochladen",
@@ -875,6 +885,7 @@
   },
   {
    "id": "spotify",
+   "slug": "spotify",
    "area": "bibliothek",
    "parent": "bibliothek",
    "title": "Spotify",
@@ -1100,6 +1111,7 @@
   },
   {
    "id": "syncopt",
+   "slug": "sync-settings",
    "area": "bibliothek",
    "parent": "spotify",
    "title": "Sync-Einstellungen",
@@ -1161,6 +1173,7 @@
   },
   {
    "id": "wizard",
+   "slug": "spotify-setup",
    "area": "bibliothek",
    "parent": "spotify",
    "title": "Spotify einrichten",
@@ -1281,6 +1294,7 @@
   },
   {
    "id": "nas",
+   "slug": "nas",
    "area": "bibliothek",
    "parent": "bibliothek",
    "title": "NAS",
@@ -1447,6 +1461,7 @@
   },
   {
    "id": "cover",
+   "slug": "covers",
    "area": "bibliothek",
    "parent": "bibliothek",
    "title": "Cover",
@@ -1587,6 +1602,7 @@
   },
   {
    "id": "theme",
+   "slug": "theme",
    "area": "einstellungen",
    "parent": "g-aussehen",
    "title": "Theme",
@@ -1681,6 +1697,7 @@
   },
   {
    "id": "eigenes",
+   "slug": "custom-theme",
    "area": "einstellungen",
    "parent": "g-aussehen",
    "title": "Eigenes Theme",
@@ -1712,6 +1729,7 @@
   },
   {
    "id": "ansicht",
+   "slug": "view",
    "area": "einstellungen",
    "parent": "g-aussehen",
    "title": "Ansicht",
@@ -1747,6 +1765,7 @@
   },
   {
    "id": "vorlesen",
+   "slug": "read-aloud",
    "area": "einstellungen",
    "parent": "g-aussehen",
    "title": "Vorlesen",
@@ -1799,6 +1818,7 @@
   },
   {
    "id": "startbilder",
+   "slug": "boot-screens",
    "area": "einstellungen",
    "parent": "g-aussehen",
    "title": "Start- und Wartungsbilder",
@@ -1891,6 +1911,7 @@
   },
   {
    "id": "displaytexte",
+   "slug": "display-texts",
    "area": "einstellungen",
    "parent": "g-aussehen",
    "title": "Texte auf dem Display",
@@ -1939,6 +1960,7 @@
   },
   {
    "id": "displaysettings",
+   "slug": "display",
    "area": "einstellungen",
    "parent": "g-display",
    "title": "Display",
@@ -2046,6 +2068,7 @@
   },
   {
    "id": "bedienung",
+   "slug": "display-controls",
    "area": "einstellungen",
    "parent": "g-display",
    "title": "Bedienung am Display",
@@ -2123,6 +2146,7 @@
   },
   {
    "id": "displaylive",
+   "slug": "display-live",
    "area": "einstellungen",
    "parent": "g-display",
    "title": "Display live",
@@ -2173,6 +2197,7 @@
   },
   {
    "id": "lautstaerke",
+   "slug": "volume",
    "area": "einstellungen",
    "parent": "g-audio",
    "title": "Lautstärke",
@@ -2237,6 +2262,7 @@
   },
   {
    "id": "soundkarte",
+   "slug": "sound-card",
    "area": "einstellungen",
    "parent": "g-audio",
    "title": "Soundkarte",
@@ -2299,6 +2325,7 @@
   },
   {
    "id": "drehregler",
+   "slug": "rotary-knob",
    "area": "einstellungen",
    "parent": "g-audio",
    "title": "Drehregler und Taster",
@@ -2353,6 +2380,7 @@
   },
   {
    "id": "bluetooth",
+   "slug": "bluetooth",
    "area": "einstellungen",
    "parent": "g-audio",
    "title": "Bluetooth",
@@ -2440,6 +2468,7 @@
   },
   {
    "id": "akku",
+   "slug": "battery",
    "area": "einstellungen",
    "parent": "g-strom",
    "title": "Akku",
@@ -2533,6 +2562,7 @@
   },
   {
    "id": "mupihat",
+   "slug": "mupihat",
    "area": "einstellungen",
    "parent": "g-strom",
    "title": "MuPiHAT & Akku-Profil",
@@ -2648,6 +2678,7 @@
   },
   {
    "id": "autoaus",
+   "slug": "auto-off",
    "area": "einstellungen",
    "parent": "g-strom",
    "title": "Automatisch ausschalten",
@@ -2685,6 +2716,7 @@
   },
   {
    "id": "taster",
+   "slug": "power-button",
    "area": "einstellungen",
    "parent": "g-strom",
    "title": "Ein-/Ausschalter und LED",
@@ -2761,6 +2793,7 @@
   },
   {
    "id": "luefter",
+   "slug": "fan",
    "area": "einstellungen",
    "parent": "g-strom",
    "title": "Lüfter",
@@ -2852,6 +2885,7 @@
   },
   {
    "id": "wlan",
+   "slug": "wifi",
    "area": "einstellungen",
    "parent": "g-netz",
    "title": "WLAN",
@@ -3004,6 +3038,7 @@
   },
   {
    "id": "wlanopt",
+   "slug": "network-options",
    "area": "einstellungen",
    "parent": "g-netz",
    "title": "Netzwerk-Optionen",
@@ -3107,6 +3142,7 @@
   },
   {
    "id": "freigaben",
+   "slug": "shares",
    "area": "einstellungen",
    "parent": "g-netz",
    "title": "Freigaben & Fernzugriff",
@@ -3143,6 +3179,7 @@
   },
   {
    "id": "telegram",
+   "slug": "telegram",
    "area": "einstellungen",
    "parent": "g-dienste",
    "title": "Telegram",
@@ -3258,6 +3295,7 @@
   },
   {
    "id": "mqtt",
+   "slug": "mqtt",
    "area": "einstellungen",
    "parent": "g-dienste",
    "title": "MQTT / Home Assistant",
@@ -3392,6 +3430,7 @@
   },
   {
    "id": "wled",
+   "slug": "wled",
    "area": "einstellungen",
    "parent": "g-dienste",
    "title": "WLED",
@@ -3515,6 +3554,7 @@
   },
   {
    "id": "passwort",
+   "slug": "password",
    "area": "einstellungen",
    "parent": "g-sicherheit",
    "title": "Passwort & Anmeldung",
@@ -3584,6 +3624,7 @@
   },
   {
    "id": "ueber",
+   "slug": "about",
    "area": "einstellungen",
    "parent": "g-system",
    "title": "Über die Box",
@@ -3677,6 +3718,7 @@
   },
   {
    "id": "updates",
+   "slug": "updates",
    "area": "einstellungen",
    "parent": "g-system",
    "title": "Updates",
@@ -3716,6 +3758,7 @@
   },
   {
    "id": "backup",
+   "slug": "backup",
    "area": "einstellungen",
    "parent": "g-system",
    "title": "Backup",
@@ -3781,6 +3824,7 @@
   },
   {
    "id": "neustart",
+   "slug": "restart",
    "area": "einstellungen",
    "parent": "g-system",
    "title": "Neu starten & Ausschalten",
@@ -3847,6 +3891,7 @@
   },
   {
    "id": "protokolle",
+   "slug": "logs",
    "area": "einstellungen",
    "parent": "g-system",
    "title": "Protokolle",
@@ -3949,6 +3994,7 @@
   },
   {
    "id": "systemopt",
+   "slug": "system-options",
    "area": "einstellungen",
    "parent": "g-system",
    "title": "Systemoptionen",
@@ -4016,6 +4062,7 @@
   },
   {
    "id": "browser",
+   "slug": "browser",
    "area": "einstellungen",
    "parent": "g-system",
    "title": "Browser (Chromium)",
@@ -4075,6 +4122,7 @@
   },
   {
    "id": "experten",
+   "slug": "expert",
    "area": "einstellungen",
    "parent": "g-system",
    "title": "Experten",
@@ -4175,6 +4223,7 @@
   },
   {
    "id": "sprache",
+   "slug": "language",
    "area": "einstellungen",
    "parent": "g-system",
    "title": "Sprache",
@@ -4260,6 +4309,7 @@
   },
   {
    "id": "g-aussehen",
+   "slug": "appearance",
    "area": "einstellungen",
    "parent": "einstellungen",
    "title": "Aussehen",
@@ -4312,6 +4362,7 @@
   },
   {
    "id": "g-display",
+   "slug": "display-and-controls",
    "area": "einstellungen",
    "parent": "einstellungen",
    "title": "Display & Bedienung",
@@ -4346,6 +4397,7 @@
   },
   {
    "id": "g-audio",
+   "slug": "audio",
    "area": "einstellungen",
    "parent": "einstellungen",
    "title": "Audio",
@@ -4386,6 +4438,7 @@
   },
   {
    "id": "g-strom",
+   "slug": "power",
    "area": "einstellungen",
    "parent": "einstellungen",
    "title": "Akku & Strom",
@@ -4432,6 +4485,7 @@
   },
   {
    "id": "g-netz",
+   "slug": "network",
    "area": "einstellungen",
    "parent": "einstellungen",
    "title": "Netzwerk",
@@ -4466,6 +4520,7 @@
   },
   {
    "id": "g-dienste",
+   "slug": "services",
    "area": "einstellungen",
    "parent": "einstellungen",
    "title": "Dienste",
@@ -4506,6 +4561,7 @@
   },
   {
    "id": "g-sicherheit",
+   "slug": "security",
    "area": "einstellungen",
    "parent": "einstellungen",
    "title": "Sicherheit",
@@ -4528,6 +4584,7 @@
   },
   {
    "id": "g-system",
+   "slug": "system",
    "area": "einstellungen",
    "parent": "einstellungen",
    "title": "System",

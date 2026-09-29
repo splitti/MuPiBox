@@ -507,7 +507,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       redirectAfter: ret,
     })
     if ('error' in result) {
-      res.status(400).json({ error: 'no_client_id', redirect_to: '/app#/wizard' })
+      res.status(400).json({ error: 'no_client_id', redirect_to: '/app#/spotify-setup' })
       return
     }
     res.json({

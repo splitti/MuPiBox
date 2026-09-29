@@ -31,6 +31,7 @@ const AREAS = [
 const state = {
   schema: null,
   pages: new Map(), // id -> page
+  bySlug: new Map(), // address (#/battery) -> id
   values: new Map(), // setting key -> current value (defaults until the page is connected)
   csrf: '',
   boxName: 'MuPiBox',
@@ -50,7 +51,10 @@ async function boot() {
     fetch(`${API}/session`, { credentials: 'same-origin' }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
   ])
   state.schema = schema
-  for (const p of schema.pages) state.pages.set(p.id, p)
+  for (const p of schema.pages) {
+    state.pages.set(p.id, p)
+    if (p.slug) state.bySlug.set(p.slug, p.id)
+  }
   for (const g of schema.settingsGroups) {
     // the settings groups are pages of their own in the schema; keep their icon and text for the lists
     const page = state.pages.get(g.id)
@@ -86,9 +90,13 @@ async function loadBoxName() {
 
 /* ---------- routing ---------- */
 
+// The address of a page is its English slug (#/battery); the ids in the code stay as they are. The old addresses
+// (#/akku: bookmarks, home-screen icons) still lead to their page.
+const hashOf = (id) => `#/${state.pages.get(id)?.slug ?? id}`
 function currentId() {
-  const id = decodeURIComponent(location.hash.replace(/^#\/?/, ''))
-  return state.pages.has(id) ? id : 'start'
+  const name = decodeURIComponent(location.hash.replace(/^#\/?/, ''))
+  if (state.bySlug.has(name)) return state.bySlug.get(name)
+  return state.pages.has(name) ? name : 'start'
 }
 function currentPage() {
   return state.pages.get(currentId())
@@ -96,7 +104,7 @@ function currentPage() {
 function go(id) {
   // (an address outside the app, e.g. "Erweiterte Einstellungen": whoever wired the click)
   if (String(id).startsWith('ext:')) return openExternal(id.slice(4))
-  if (location.hash !== `#/${id}`) location.hash = `#/${id}`
+  if (location.hash !== hashOf(id)) location.hash = hashOf(id)
   else route()
 }
 function areaOf(page) {
@@ -118,6 +126,8 @@ function stopPageTimers() {
 
 function route() {
   const page = currentPage()
+  // an old or unknown address: the page's own one in the address bar (no extra step back)
+  if (location.hash && location.hash !== hashOf(page.id)) history.replaceState(null, '', hashOf(page.id))
   stopPageTimers()
   closeSheet() // (a sheet belongs to the page it was opened on)
   renderChrome(page)
