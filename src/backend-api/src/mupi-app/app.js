@@ -1758,8 +1758,10 @@ function libChanged() {
   hear.loadedAt = 0
 }
 
+// (Spotify: every Spotify entry, added by hand or by the Smart-Sync; Manuell and Sync split them by how they came)
 const LIB_SOURCES = [
   ['all', 'Alle Quellen'],
+  ['spotify', 'Spotify'],
   ['manual', 'Manuell'],
   ['spotify-sync', 'Sync'],
   ['local', 'SD-Karte'],
@@ -1775,7 +1777,7 @@ function libTop() {
     `<button class="btn primary block lib-add" id="lib-add">${icon('plus', 18)}Hinzufügen</button>`,
     `<div class="lib-tiles wide" id="lib-tiles"></div>`,
     `<div class="search wide">${icon('search')}<input class="input" id="lib-q" type="search" placeholder="In der Bibliothek suchen" autocomplete="off" value="${esc(lib.q)}"></div>`,
-    `<div class="pills wide" id="lib-cat">${[['all', 'Alle'], ...CATS.map(([c]) => [c, CAT_SHORT[c]])].map(([id, t]) => `<button aria-selected="${lib.cat === id}" data-v="${id}">${t}</button>`).join('')}</div>`,
+    `<div class="pills wide" id="lib-cat">${[['all', 'Alle'], ...CATS.map(([c]) => [c, CAT_SHORT[c]]), ['nas', 'NAS']].map(([id, t]) => `<button aria-selected="${lib.cat === id}" data-v="${id}">${t}</button>`).join('')}</div>`,
     `<div class="pills small wide" id="lib-src">${LIB_SOURCES.map(([id, t]) => `<button aria-selected="${lib.src === id}" data-v="${id}">${t}</button>`).join('')}</div>`,
     `<p class="help wide lib-count" id="lib-count"></p>`,
     `<section class="card wide lib-card"><div class="rows lib-list" id="lib-list"><div class="loading"><p>Lade …</p></div></div></section>`,
@@ -1810,13 +1812,13 @@ function libGroups() {
     if (!groups.has(key)) groups.set(key, { ...g, entries: [] })
     return groups.get(key)
   }
-  if (lib.src === 'all' || lib.src === 'manual' || lib.src === 'spotify-sync') {
+  if (lib.src === 'all' || lib.src === 'spotify' || lib.src === 'manual' || lib.src === 'spotify-sync') {
     for (const it of lib.items) {
       if (!it || it.isResume === true || it.category === 'resume' || it.type === 'library') continue
       const cat = it.category_override ?? (it.category === 'radio' ? 'other' : it.category)
       if (lib.cat !== 'all' && cat !== lib.cat) continue
       const src = it.source ?? 'manual'
-      if (lib.src !== 'all' && src !== lib.src) continue
+      if (lib.src === 'spotify' ? it.type !== 'spotify' : lib.src !== 'all' && src !== lib.src) continue
       const title = String(it.title_override ?? it.title ?? it.artist_override ?? it.artist ?? '—')
       const artist = String(it.artist_override ?? it.artist ?? title)
       if (q && !norm(`${title} ${artist}`).includes(q)) continue
@@ -1835,8 +1837,9 @@ function libGroups() {
   }
   if (lib.src === 'all' || lib.src === 'nas') {
     for (const f of lib.nas) {
+      // (the category NAS: the folders in the box's NAS tab, those not sorted into one of the others)
       const c = f.nasCategory && f.nasCategory !== 'nas' ? f.nasCategory : ''
-      if (lib.cat !== 'all' && lib.cat !== c) continue
+      if (lib.cat !== 'all' && lib.cat !== (c || 'nas')) continue
       if (q && !norm(`${f.title} ${f.artist}`).includes(q)) continue
       add(`nas|${f.nasPath}`, { kind: 'nas', artist: String(f.title ?? '—'), src: 'nas', cat: c, cover: f.cover, folder: f })
     }
@@ -1847,13 +1850,16 @@ function libGroups() {
 let libShown = []
 
 function libSub(g) {
-  const src = SOURCE_LABEL[g.src] ?? ''
+  const spotify = g.kind === 'entries' && g.entries[0]?.item.type === 'spotify'
+  const src = spotify ? (g.src === 'spotify-sync' ? 'Spotify · Sync' : 'Spotify') : (SOURCE_LABEL[g.src] ?? '')
   if (g.kind === 'local') return `${g.folder.libraryIsContainer ? 'Ordner' : 'Album'} · ${src}`
   if (g.kind === 'nas') return `${g.folder.nasIsContainer ? 'Ordner' : 'Album'} · ${src}`
   if (g.entries.length === 1) {
     const e = g.entries[0]
     const whole = e.item.type === 'spotify' && !e.item.id && !e.item.playlistid && !e.item.showid && !e.item.audiobookid
-    return `${whole ? (g.cat === 'music' ? 'Alle Alben' : 'Alle Folgen') : e.title !== g.artist ? e.title : badgeOf(e.item) || 'Eintrag'} · ${src}`
+    // (the source already says Spotify: what kind of Spotify entry it is instead)
+    const what = spotify ? (e.item.playlistid ? 'Playlist' : e.item.showid ? 'Podcast' : e.item.audiobookid ? 'Hörbuch' : 'Album') : badgeOf(e.item) || 'Eintrag'
+    return `${whole ? (g.cat === 'music' ? 'Alle Alben' : 'Alle Folgen') : e.title !== g.artist ? e.title : what} · ${src}`
   }
   return `${g.entries.length} ${g.cat === 'music' ? 'Alben' : 'Folgen'} · ${src}`
 }
