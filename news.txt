@@ -104,7 +104,7 @@
 <b>Reliability and updates</b>
 </ul>
 <ul id='ulnews' class='ulnews'>
-<li id='linews' class='linews'>Fixed: the media scan could empty the library. Settings and library are now always saved completely or not at all.</li>
+<li id='linews' class='linews'>Settings and library are always saved completely or not at all – a power cut while saving no longer leaves a broken file behind.</li>
 <li id='linews' class='linews'>Before each save the previous settings and library are kept (the last version and one copy per day for 7 days).</li>
 <li id='linews' class='linews'>Update: resume positions, offline lists, podcast data and covers are kept and checked, the old installation is only removed after everything was restored, and the sound card is no longer reset.</li>
 <li id='linews' class='linews'>Updates (stable, beta, dev) and operating system updates, backup and restore can be started in the app, with progress.</li>
