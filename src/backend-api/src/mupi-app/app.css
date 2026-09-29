@@ -353,6 +353,10 @@ input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border-radius
   display: flex; flex-direction: column; gap: 14px;
 }
 .sheet .grip { width: 40px; height: 5px; border-radius: 3px; background: var(--mp-border); margin: 0 auto 4px; }
+/* pulled down to close (app.js enableSheetDrag): a touch area larger than the bar itself */
+.sheet .grip { position: relative; flex-shrink: 0; }
+.sheet .grip::after { content: ""; position: absolute; inset: -14px -60px; }
+@media (min-width: 960px) { .sheet .grip { display: none; } }
 .sheet h2 { margin: 0; font: 600 22px/1.2 var(--mp-font-display); }
 .sheet .opts { display: flex; flex-direction: column; }
 .sheet .opt { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 48px; border: 0; background: none; text-align: left; padding: 0 4px; border-radius: 10px; }

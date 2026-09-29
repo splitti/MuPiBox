@@ -7401,8 +7401,69 @@ function unlockPageScroll() {
   window.scrollTo(0, y)
 }
 
+// A sheet at the bottom (phone width) is closed by pulling it down, as its grip suggests: from the grip, or anywhere
+// while its content is at the top. Far enough (or fast) it goes, else it springs back. Set up once for #sheet.
+let sheetDragReady = false
+function enableSheetDrag(sheet) {
+  if (sheetDragReady) return
+  sheetDragReady = true
+  let startY = null
+  let fromGrip = false
+  let dy = 0
+  let t0 = 0
+  sheet.addEventListener(
+    'touchstart',
+    (e) => {
+      if (window.matchMedia('(min-width: 960px)').matches || e.touches.length !== 1) return
+      fromGrip = !!e.target.closest('.grip')
+      if (!fromGrip && (sheet.scrollTop > 0 || e.target.closest('input, textarea, select, .switch, .pills'))) return
+      startY = e.touches[0].clientY
+      dy = 0
+      t0 = Date.now()
+      sheet.style.transition = 'none'
+    },
+    { passive: true },
+  )
+  sheet.addEventListener(
+    'touchmove',
+    (e) => {
+      if (startY === null) return
+      dy = e.touches[0].clientY - startY
+      // upwards (or the content scrolled meanwhile): the content scrolls as usual
+      if (dy <= 0 || (!fromGrip && sheet.scrollTop > 0)) {
+        sheet.style.transform = ''
+        if (!fromGrip) startY = null
+        return
+      }
+      e.preventDefault()
+      sheet.style.transform = `translateY(${dy}px)`
+    },
+    { passive: false },
+  )
+  const end = () => {
+    if (startY === null) return
+    startY = null
+    sheet.style.transition = 'transform 180ms ease'
+    if (dy > 110 || (dy > 40 && Date.now() - t0 < 250)) {
+      sheet.style.transform = 'translateY(100%)'
+      setTimeout(() => {
+        openSheetClose?.()
+        sheet.style.transition = ''
+        sheet.style.transform = ''
+      }, 180)
+    } else {
+      sheet.style.transform = ''
+    }
+  }
+  sheet.addEventListener('touchend', end)
+  sheet.addEventListener('touchcancel', end)
+}
+
 function openSheet(html, onOpen, onClose) {
   const sheet = $('#sheet')
+  enableSheetDrag(sheet)
+  sheet.style.transition = ''
+  sheet.style.transform = ''
   const scrim = $('#sheet-scrim')
   // (a sheet opened from a sheet - an entry's cover picker, an album of a folder: the one before ends properly, its
   // keys and its onClose, e.g. a question that was not answered)
