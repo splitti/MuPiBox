@@ -270,8 +270,11 @@ input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border-radius
 /* (no notice: no place for one either - the empty box took a gap and the tiles began lower than the player) */
 #notices:empty { display: none; }
 @media (min-width: 960px) {
-  .content.start { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); align-items: start; }
-  .content.start .start-more { grid-column: 1 / -1; }
+  /* (the player and the column beside it as high as each other: the tiles flush with its top, the quick actions with
+     its bottom) */
+  .content.start { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); align-items: stretch; }
+  .content.start .start-more, .content.start .update-note { grid-column: 1 / -1; }
+  .start-side > .section-label { margin-top: auto; }
 }
 .now { gap: 16px; }
 .now-idle { display: flex; gap: 10px; align-items: center; color: var(--mp-muted); }
@@ -617,3 +620,8 @@ a.btn { text-decoration: none; color: inherit; }
 
 /* Bluetooth: on the PC hardware | switches, then new | paired; in one column (phone) the everyday switches on top */
 @media (max-width: 1199px) { .content > .bt-main { order: -1; } .content > .page-intro { order: -2; } }
+
+/* the announcement of a new version (or an update running): a band under the player, across the page on the PC */
+.update-note:empty { display: none; }
+.update-note .notice { margin-bottom: 0; }
+.update-note .notice-body { align-items: center; padding: 14px 16px; }

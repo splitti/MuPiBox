@@ -585,6 +585,7 @@ function startSkeleton() {
         <button class="qbtn" id="q-sleep">${icon('time', 22)}<span id="q-sleep-label">Schlaftimer</span></button>
       </div>
     </div>`,
+    `<div class="update-note" id="update-note"></div>`,
     `<section class="card nav-card start-more"><div class="navlist">
       ${navRow('g-aussehen', 'Aussehen des Displays', 'Theme, Start- und Wartungsbilder', 'pal')}
       ${navRow('spotify', 'Spotify', 'Smart-Sync und Zugang', 'sync')}
@@ -833,21 +834,47 @@ async function loadNotices(root) {
   const box = $('#notices', root)
   if (!box) return
   drawNotices(box, notes)
+  // a new version / an update running: the band under the player (the versions may take a moment: after the rest)
+  const band = $('#update-note', root)
   const u = await api(`${API}/updates`)
-  if (u.body?.job?.phase === 'running') notes.push(['sync', 'Update läuft', `${JOB_LABEL[u.body.job.kind] ?? 'Update'} – ${u.body.job.percent} %`, 'updates'])
-  else if (u.body?.update) notes.push(['sync', 'Update verfügbar', `MuPiBox ${u.body.update.version} – aus dem offiziellen Repository`, 'updates'])
-  else return
-  if (box.isConnected) drawNotices(box, notes)
+  const job = u.body?.job
+  const next = u.body?.update
+  let item = null
+  if (job?.phase === 'running') item = ['sync', 'Update läuft', `${JOB_LABEL[job.kind] ?? 'Update'} – ${job.percent} %`, 'updates']
+  else if (next && next.version !== updateDismissed()) {
+    item = ['sync', 'Neue Version verfügbar', `MuPiBox ${next.version} (${CHANNEL_LABEL[next.channel] ?? next.channel}) · Details ansehen`, 'updates', () => setUpdateDismissed(next.version)]
+  }
+  if (band?.isConnected) drawNotices(band, item ? [item] : [])
+}
+
+// the version whose announcement was closed: it stays away until a newer one comes
+function updateDismissed() {
+  try {
+    return localStorage.getItem('mupi-update-dismissed')
+  } catch {
+    return null
+  }
+}
+function setUpdateDismissed(version) {
+  try {
+    localStorage.setItem('mupi-update-dismissed', version)
+  } catch {
+    // private mode: only for this visit
+  }
 }
 
 function drawNotices(box, notes) {
   box.innerHTML = notes
     .map(([ic, t, s, target]) => `<div class="notice"><button class="notice-body" data-go="${target}">${icon(ic, 20)}<span><b>${esc(t)}</b><small>${esc(s)}</small></span></button><button class="notice-x" aria-label="Schließen">${icon('close', 16)}</button></div>`)
     .join('')
-  for (const n of box.querySelectorAll('.notice')) {
+  // (a notice may remember its closing: its fifth part)
+  box.querySelectorAll('.notice').forEach((n, i) => {
     n.querySelector('.notice-body').onclick = () => go(n.querySelector('.notice-body').dataset.go)
-    n.querySelector('.notice-x').onclick = () => n.remove()
-  }
+    n.querySelector('.notice-x').onclick = () => {
+      n.remove()
+      notes[i][4]?.()
+    }
+  })
 }
 
 function minutesSheet(title, text, choices, def, onOk) {
