@@ -77,7 +77,7 @@
    "id": "g-sicherheit",
    "title": "Sicherheit",
    "icon": "lock",
-   "description": "Passwort und Anmeldung"
+   "description": "Passwort, Anmeldung, Zertifikat (HTTPS)"
   },
   {
    "id": "g-system",
@@ -4699,7 +4699,7 @@
    "area": "einstellungen",
    "parent": "einstellungen",
    "title": "Sicherheit",
-   "description": "Passwort und Anmeldung",
+   "description": "Passwort, Anmeldung, Zertifikat (HTTPS)",
    "icon": "lock",
    "sections": [
     {
