@@ -88,8 +88,12 @@ body.km {
     height: 64px !important;
     min-height: 64px !important;
     align-self: center;
-    // as wide as its tabs (two tabs when two categories are hidden: a small pill, as in the design)
+    // as wide as its tabs (two tabs when two categories are hidden: a small pill, as in the design). Ionic lays the
+    // tabs out as a grid whose columns share the width (1fr): a fixed column width, else three tabs (the NAS tab gone,
+    // see home.page.ts) spread over the pill of four.
     width: fit-content !important;
+    grid-auto-columns: 96px !important;
+    justify-content: center;
     max-width: 420px;
     margin: 0 auto;
     padding: 4px;
