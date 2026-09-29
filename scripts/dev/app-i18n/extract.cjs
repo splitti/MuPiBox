@@ -100,9 +100,11 @@ fromSchema(out)
 // the names of the languages stay in their own language (LANGS in i18n.js)
 const langBlock = /export const LANGS = \{([\s\S]*?)\}/.exec(fs.readFileSync(path.join(APP, 'i18n.js'), 'utf8'))[1]
 const langNames = new Set([...langBlock.matchAll(/'([^']+)'/g)].map((m) => m[1]))
-// the names of the themes too: they are the box's names, the app says "Die Kinder-Themes haben deutsche Namen"
+// the names of the themes too: they come from the theme registry (German in German, English in every other language,
+// see themeLabel in app.js) - but not the scenes of the boot screen that are called the same ("Weltraum")
 const schemaJson = JSON.parse(fs.readFileSync(path.join(APP, 'schema.json'), 'utf8'))
-const themeNames = new Set([...(schemaJson.themes ?? []), ...Object.keys(schemaJson.themePreview ?? {})])
+const bootLabels = new Set((schemaJson.bootscreens ?? []).map((b) => b.label))
+const themeNames = new Set([...(schemaJson.themes ?? []), ...Object.keys(schemaJson.themePreview ?? {})].filter((n) => !bootLabels.has(n)))
 const texts = [...out]
   .filter((t) => !langNames.has(t) && !themeNames.has(t)).filter((t) => t.replace(/\{\}/g, '').replace(/[\s\d.,:%·–—()/+\-×]/g, '').length >= 2).sort((a, b) => a.localeCompare(b, 'de'))
 

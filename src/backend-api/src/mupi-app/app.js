@@ -5,7 +5,7 @@
 // the light/dark switch and the login. Pages are connected to the box one by one (see docs/app-mapping.md): until a
 // page is in CONNECTED, its controls only change locally and the page says so.
 
-import { getLangPref, langBadge, LANGS, loadLanguage as loadAppLanguage, localeTag, setLangPref, tr, watchDocument } from './i18n.js'
+import { getLang, getLangPref, langBadge, LANGS, loadLanguage as loadAppLanguage, localeTag, setLangPref, tr, watchDocument } from './i18n.js'
 import { icon } from './icons.js'
 
 const API = '/api/eltern'
@@ -3059,21 +3059,22 @@ async function saveDisplayOptions(body, done = 'Gespeichert') {
   return r.body
 }
 
-const themeLabel = (name) => disp.theme?.labelsDe?.[name] ?? disp.theme?.labels?.[name] ?? name
+// the names of the children's themes from their registry: German in German, English in every other language
+const themeLabel = (name) => (getLang() === 'de' ? disp.theme?.labelsDe?.[name] : null) ?? disp.theme?.labels?.[name] ?? name
 const isKidsTheme = (name) => !!disp.theme?.labels && name in disp.theme.labels
 
 /* Theme */
 
 function themeTop() {
   const t = disp.theme ?? {}
-  const list = [...(t.available ?? [])].sort((a, b) => themeLabel(a).localeCompare(themeLabel(b), 'de', { sensitivity: 'base' }))
+  const list = [...(t.available ?? [])].sort((a, b) => themeLabel(a).localeCompare(themeLabel(b), LOCALE, { sensitivity: 'base' }))
   return [
-    `<section class="card wide"><h2>Theme</h2><p class="help">Tippe auf ein Theme, um es auf der Box zu verwenden. Die Kinder-Themes haben deutsche Namen.</p>
+    `<section class="card wide"><h2>Theme</h2><p class="help">Tippe auf ein Theme, um es auf der Box zu verwenden.</p>
       <div class="search">${icon('search')}<input class="input" id="t-q" type="search" placeholder="Theme suchen" autocomplete="off"></div>
       <div class="theme-grid" id="t-grid">${list
         .map(
           (n) => `<button class="theme-card" data-theme="${esc(n)}" aria-pressed="${n === t.current}"><span class="theme-img"><img src="${API}/theme-preview/${encodeURIComponent(n)}?v=2" alt="" loading="lazy"></span>
-            <b>${esc(themeLabel(n))}</b>${n === t.current ? '<small>aktiv</small>' : ''}</button>`,
+            <b translate="no">${esc(themeLabel(n))}</b>${n === t.current ? '<small>aktiv</small>' : ''}</button>`,
         )
         .join('')}</div></section>`,
   ]
@@ -3090,7 +3091,7 @@ function mountTheme(root, page) {
     if (name === disp.theme.current) continue
     c.onclick = () =>
       openSheet(
-        `<h2>${esc(themeLabel(name))}</h2><div class="theme-big"><img src="${API}/theme-preview/${encodeURIComponent(name)}?v=2" alt=""></div>
+        `<h2 translate="no">${esc(themeLabel(name))}</h2><div class="theme-big"><img src="${API}/theme-preview/${encodeURIComponent(name)}?v=2" alt=""></div>
          <p class="help" style="margin:0">Dieses Theme auf der Box verwenden?</p>
          <div class="btns"><button class="btn" data-close>Abbrechen</button><button class="btn" data-later>Beim nächsten Neuladen</button><button class="btn primary" data-now>Jetzt anzeigen</button></div>`,
         (sheet, close) => {
