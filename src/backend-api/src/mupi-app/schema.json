@@ -1210,6 +1210,16 @@
    ]
   },
   {
+   "id": "spzugang",
+   "slug": "spotify-access",
+   "area": "bibliothek",
+   "parent": "spotify",
+   "title": "Zugangsdaten",
+   "description": "",
+   "icon": "lock",
+   "sections": []
+  },
+  {
    "id": "wizard",
    "slug": "spotify-setup",
    "area": "bibliothek",

@@ -1263,15 +1263,33 @@ async function refreshToken() {
   })
 }
 
+// Spotify refused the login (invalid_grant: its 6 months are over, or it was withdrawn): the backend tells the parents
+// (app, Telegram) - see backend-api eltern/spotify-auth-age.ts. The mark goes when a refresh works again.
+const AUTH_REFUSED_FLAG = '/tmp/.spotify_auth_invalid'
+function markLoginRefused(refused) {
+  try {
+    if (refused) {
+      if (!fs.existsSync(AUTH_REFUSED_FLAG)) {
+        fs.writeFileSync(AUTH_REFUSED_FLAG, JSON.stringify({ since: new Date().toISOString() }))
+        console.warn(`${now()}: [Spotify Control] Spotify refused the login (invalid_grant) - a new login is needed`)
+      }
+    } else if (fs.existsSync(AUTH_REFUSED_FLAG)) fs.rmSync(AUTH_REFUSED_FLAG, { force: true })
+  } catch {
+    // (only a hint for the parents)
+  }
+}
+
 async function refreshTokenApi() {
   return spotifyApi.refreshAccessToken().then(
     (data) => {
       apiAccessToken.accessToken = data.body.access_token
       apiAccessToken.expires = Date.now() + data.body.expires_in * 1000
+      markLoginRefused(false)
       return apiAccessToken.accessToken
     },
     (err) => {
       log.debug(`${now()}: Could not refresh access token`, err)
+      if (err?.body?.error === 'invalid_grant') markLoginRefused(true)
       throw err
     },
   )

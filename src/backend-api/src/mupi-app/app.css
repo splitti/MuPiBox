@@ -699,3 +699,34 @@ input[type="range"]:disabled { opacity: .4; cursor: default; }
 .qbtn:disabled { opacity: .45; cursor: default; filter: grayscale(.6); }
 /* "Ruhe sofort" while the quiet runs: it ends it */
 .qbtn.blue.on { background: var(--mp-primary); color: var(--mp-on-primary); }
+/* Spotify: status head, two columns of values, the setup check list, the rare actions */
+.sp-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.sp-head h2 { margin: 0; }
+.sp-cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 28px; }
+@media (max-width: 640px) { .sp-cols { grid-template-columns: minmax(0, 1fr); } .sp-cols > div + div .kv div:first-child { border-top: 1px solid var(--mp-border); } }
+.sp-checks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.sp-checks li { display: flex; align-items: center; gap: 10px; color: var(--mp-muted); }
+.sp-checks li .ic { flex: none; width: 24px; height: 24px; padding: 4px; border-radius: 50%; background: var(--mp-chip); }
+.sp-checks li.done { color: var(--mp-text); }
+.sp-checks li.done .ic { background: var(--mp-success-soft); color: var(--mp-success); }
+.sp-checks li.next { color: var(--mp-text); font-weight: 700; }
+.sp-checks li.next .ic { background: var(--mp-primary-soft); color: var(--mp-primary-text); }
+.sp-checks small { font-weight: 400; color: var(--mp-muted); }
+.sp-danger .row .btn { flex: none; }
+/* the Spotify assistant: one step at a time, the steps as a bar on top */
+.wz-steps { list-style: none; margin: 0 0 4px; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.wz-steps button { width: 100%; display: flex; flex-direction: column; gap: 6px; padding: 0; border: 0; background: none; color: var(--mp-muted); font: inherit; font-size: 12px; text-align: left; cursor: pointer; }
+.wz-steps .bar { height: 4px; width: 100%; border-radius: 2px; background: var(--mp-track); }
+.wz-steps .lbl { display: flex; align-items: center; gap: 4px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wz-steps .lbl i { font-style: normal; font-weight: 700; }
+.wz-steps li.done .bar { background: var(--mp-success); }
+.wz-steps li.done .lbl .ic { color: var(--mp-success); flex: none; }
+.wz-steps li.current .bar { background: var(--mp-primary); }
+.wz-steps li.current button { color: var(--mp-text); font-weight: 700; }
+.wz-count { font-size: 12px; color: var(--mp-muted); font-weight: 600; }
+.wz h2 { margin: 0; }
+.wz-opt { font-size: 12px; font-weight: 600; color: var(--mp-muted); margin-left: 6px; }
+.wz-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; border-top: 1px solid var(--mp-border); padding-top: 14px; margin-top: 4px; }
+.wz-next { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; }
+.card.wz { max-width: 760px; width: 100%; margin-inline: auto; }
+.input.mono::placeholder { font-family: inherit; }

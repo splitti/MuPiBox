@@ -52,6 +52,7 @@ import { registerUpdateRoutes } from './updates'
 import { type LocalLibraryDeps, registerLocalUploadRoutes } from './upload'
 import { randomBytes } from 'node:crypto'
 import { localOnly } from '../request-guard'
+import { spotifyLoginAge } from './spotify-auth-age'
 import {
   REQUESTED_SCOPES,
   buildAuthorizeUrl,
@@ -2164,8 +2165,9 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
    * What the player's Spotify access looks like, without the secrets themselves (the admin interface showed them in
    * plain text): the client id, whether a secret and tokens are stored, and "process playlists".
    */
-  router.get('/spotify-access', requireSession, (_req, res) => {
-    const sp = (deps.getMupiboxConfig()?.spotify ?? {}) as Record<string, unknown>
+  router.get('/spotify-access', requireSession, async (_req, res) => {
+    const cfg = deps.getMupiboxConfig()
+    const sp = (cfg?.spotify ?? {}) as Record<string, unknown>
     const str = (v: unknown) => (typeof v === 'string' ? v : '')
     res.json({
       clientId: str(sp.clientId),
@@ -2174,6 +2176,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       tokenUpdatedAt: str(sp.tokenUpdatedAt) || null,
       scopes: Array.isArray(sp.tokenScopes) ? sp.tokenScopes : [],
       processPlaylists: sp.disableScraperForPlaylists !== true,
+      // since when the login holds and until when (6 months), or that Spotify refused it (see spotify-auth-age.ts)
+      login: await spotifyLoginAge(cfg),
     })
   })
 

@@ -34,6 +34,7 @@ import { createSpotifySyncRouter } from './spotify-sync/routes'
 import { startScheduler } from './spotify-sync/scheduler'
 import type { RunSyncDeps } from './spotify-sync/state-machine'
 import { buildElternLandingHandler, createElternApiRouter } from './eltern/routes'
+import { startSpotifyLoginWatch } from './eltern/spotify-auth-age'
 import { startBucketCleanup } from './eltern/middleware'
 import { SUDO_BACKUP_SNIPPET, backupBeforeWrite } from './file-backup'
 import { readEmbeddedPicture } from './embedded-cover'
@@ -7759,6 +7760,8 @@ if (!testServe) {
   // Boot-after-60s lead-in inside startScheduler so initial config load
   // has time to finish before the first sync attempt.
   startScheduler(spotifySyncDeps)
+  // The Spotify login's 6 months: reminders before the end, a message when Spotify refused it (eltern/spotify-auth-age.ts)
+  startSpotifyLoginWatch({ getMupiboxConfig: getMupiboxConfigSync, updateMupiboxConfig })
   // Eltern-WebApp rate-limit map cleanup tick.
   startBucketCleanup()
   // Phase 18 Item 4: Play-Log poller — sniffs localhost:5005 (the player's

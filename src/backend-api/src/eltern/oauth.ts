@@ -12,6 +12,7 @@
 
 import { randomBytes } from 'node:crypto'
 import type { MupiboxConfig } from '../models/mupibox-config.model'
+import { forgetRefusedLogin, markNewLogin } from './spotify-auth-age'
 
 /** Scopes the box needs for everything (existing + new for Smart-Sync). */
 export const REQUESTED_SCOPES = [
@@ -178,8 +179,11 @@ export async function exchangeCodeForTokens(deps: {
     spotify.tokenExpiresAt = expiresAt
     spotify.tokenUpdatedAt = nowIso
     spotify.tokenScopes = scopes
+    // (a login holds 6 months from now: see spotify-auth-age.ts)
+    markNewLogin(spotify, refreshToken)
     cfg.spotify = spotify
   })
+  await forgetRefusedLogin()
 
   return { ok: true, scopes, expiresAt }
 }
