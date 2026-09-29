@@ -1536,7 +1536,7 @@ const SYNC_API = '/api/spotify-sync'
 // items: /api/data; local: category -> artist folders; cat / src / q: the filters
 // items: /api/data; local: category -> folders of the SD card; nas: the NAS folders shown on the box;
 // cat / src / q: the filters; subs, nasProfile, covers: the numbers of the tiles
-const lib = { items: null, local: {}, nas: [], cat: 'all', src: 'all', q: '', sync: null, subs: null, nasProfile: '', covers: null }
+const lib = { items: null, local: {}, nas: [], cat: 'all', src: 'all', q: '', sync: null, subs: null, nasProfile: '', covers: null, mounts: 0 }
 
 async function loadLib() {
   const [data, sync, nas, subs, profiles, covers, ...local] = await Promise.all([
@@ -5064,6 +5064,26 @@ const CONTROLLERS = {
           drawLib()
         })
       }
+      // Open for a while: a sync run or an upload elsewhere shows up by itself. The box's change token (data.json and
+      // the SD card's folders) is asked once a minute; the list is only read again when it moved.
+      const token = async () => {
+        const r = await api('/api/data-version')
+        return r.ok ? `${r.body?.version}|${r.body?.local}` : null
+      }
+      const mounted = ++lib.mounts
+      token().then((first) => {
+        // (left or drawn anew meanwhile: no timer for a page that is gone)
+        if (currentPage()?.id !== 'bibliothek' || mounted !== lib.mounts) return
+        let known = first
+        every(60_000, async () => {
+          const now = await token()
+          if (!now || now === known) return
+          known = now
+          await loadLib()
+          lib.loadedAt = Date.now()
+          if (currentPage()?.id === 'bibliothek') drawLib()
+        })
+      })
     },
   },
   verwaltet: {
