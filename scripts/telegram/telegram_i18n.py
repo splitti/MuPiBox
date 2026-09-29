@@ -1,8 +1,8 @@
 #!/usr/bin/python3
 """Texts of the Telegram bot and the box's Telegram messages, in German and English.
 
-The bot speaks German when the display language (mupiboxconfig.json "displayLanguage", set in the parents'
-web app or the admin interface) is German, English otherwise - like the parents' web app, which has these two.
+The bot speaks German when the display language (mupiboxconfig.json "displayLanguage", set in the app or the
+admin interface) is German, English otherwise.
 Changing the language needs no restart: it is read again when the config file changed.
 """
 
@@ -94,7 +94,7 @@ TEXTS = {
     'sync_started_short': {'de': '🔄 Sync gestartet.', 'en': '🔄 Sync started.'},
     'sync_cooldown': {'de': '⏱ Bitte in {wait} s noch einmal versuchen.', 'en': '⏱ Please try again in {wait} s.'},
     'sync_running': {'de': '⏳ Es läuft bereits ein Sync.', 'en': '⏳ A sync is already running.'},
-    'sync_disabled': {'de': '⚠️ Smart-Sync ist nicht aktiviert. Du schaltest ihn in der Eltern-WebApp ein (/login).', 'en': '⚠️ Smart-Sync is not enabled. Turn it on in the parents\' web app (/login).'},
+    'sync_disabled': {'de': '⚠️ Smart-Sync ist nicht aktiviert. Du schaltest ihn in der MuPiBox-App ein (/login).', 'en': '⚠️ Smart-Sync is not enabled. Turn it on in the MuPiBox app (/login).'},
     'syncstatus_failed': {'de': 'Sync-Status-Abfrage fehlgeschlagen: {detail}', 'en': 'Sync status request failed: {detail}'},
     'ss_title': {'de': '<b>Smart-Sync-Status</b>', 'en': '<b>Smart-Sync status</b>'},
     'ss_enabled': {'de': 'Aktiv: {mark}', 'en': 'Enabled: {mark}'},
@@ -111,13 +111,13 @@ TEXTS = {
     'disconnect_q': {'de': '⚠️ Spotify-Verbindung wirklich trennen?\n\nSmart-Sync stoppt, und du musst Spotify neu verbinden.', 'en': '⚠️ Really disconnect Spotify?\n\nSmart-Sync stops and you have to connect Spotify again.'},
     'disconnect_yes': {'de': '✓ Ja, Spotify trennen', 'en': '✓ Yes, disconnect Spotify'},
     'disconnect_no': {'de': '✗ Abbrechen', 'en': '✗ Cancel'},
-    'disconnect_done': {'de': 'Smart-Sync gestoppt. Die Spotify-Anmeldung löschst du in der Eltern-WebApp.', 'en': 'Smart-Sync stopped. Remove the Spotify sign-in in the parents\' web app.'},
+    'disconnect_done': {'de': 'Smart-Sync gestoppt. Die Spotify-Anmeldung löschst du in der MuPiBox-App.', 'en': 'Smart-Sync stopped. Remove the Spotify sign-in in the MuPiBox app.'},
     'cancelled': {'de': 'Abgebrochen.', 'en': 'Cancelled.'},
 
     # ── login links ─────────────────────────────────────────────────────────
     'login_heading': {'de': '🔑 <b>Eltern-Login</b>', 'en': '🔑 <b>Parent login</b>'},
-    'login_button': {'de': 'Eltern-WebApp öffnen', 'en': 'Open the parents\' web app'},
-    'connect_heading': {'de': '🎵 <b>Spotify verbinden</b>\n\nÖffne den Link und tippe in der WebApp auf „Spotify einrichten“.', 'en': '🎵 <b>Connect Spotify</b>\n\nOpen the link and tap "Set up Spotify" in the web app.'},
+    'login_button': {'de': 'MuPiBox-App öffnen', 'en': 'Open the MuPiBox app'},
+    'connect_heading': {'de': '🎵 <b>Spotify verbinden</b>\n\nÖffne den Link und tippe in der App unter Bibliothek › Spotify auf „Mit Spotify verbinden“.', 'en': '🎵 <b>Connect Spotify</b>\n\nOpen the link and tap "Connect with Spotify" under Library › Spotify in the app.'},
     'magic_valid': {'de': 'Gültig {mins} min, nur einmal verwendbar.', 'en': 'Valid for {mins} min, single use.'},
     'magic_failed': {'de': 'Login-Link konnte nicht erzeugt werden: {detail}', 'en': 'Could not create the login link: {detail}'},
 
@@ -143,7 +143,7 @@ TEXTS = {
     'n_sync_auth_failed': {'de': '⚠️ MuPiBox Smart-Sync: Die Spotify-Anmeldung ist abgelaufen oder ungültig.\n\nBitte neu verbinden:\n/spotify_connect', 'en': '⚠️ MuPiBox Smart-Sync: the Spotify sign-in has expired or is invalid.\n\nPlease connect again:\n/spotify_connect'},
     'n_sync_failures_network': {'de': '⚠️ MuPiBox Smart-Sync: Netzwerkfehler – {count} fehlgeschlagene Versuche in Folge.\n\nDetails mit /syncstatus.', 'en': '⚠️ MuPiBox Smart-Sync: network error – {count} failed attempts in a row.\n\nDetails via /syncstatus.'},
     'n_sync_failures_internal': {'de': '⚠️ MuPiBox Smart-Sync: interner Fehler – {count} fehlgeschlagene Versuche in Folge.\n\nDetails mit /syncstatus.', 'en': '⚠️ MuPiBox Smart-Sync: internal error – {count} failed attempts in a row.\n\nDetails via /syncstatus.'},
-    'n_sync_conflicts': {'de': 'ℹ️ MuPiBox Smart-Sync: {count} Konflikt(e) (manueller Eintrag und Sync-Playlist gleich).\n\nManuelle Einträge bleiben unangetastet. Details in der Eltern-WebApp.', 'en': 'ℹ️ MuPiBox Smart-Sync: {count} conflict(s) (manual entry and sync playlist are the same).\n\nManual entries stay untouched. Details in the parents\' web app.'},
+    'n_sync_conflicts': {'de': 'ℹ️ MuPiBox Smart-Sync: {count} Konflikt(e) (manueller Eintrag und Sync-Playlist gleich).\n\nManuelle Einträge bleiben unangetastet. Details in der MuPiBox-App.', 'en': 'ℹ️ MuPiBox Smart-Sync: {count} conflict(s) (manual entry and sync playlist are the same).\n\nManual entries stay untouched. Details in the MuPiBox app.'},
     'n_sync_summary': {'de': '✅ MuPiBox Smart-Sync: +{adds} hinzugefügt, −{rems} entfernt.', 'en': '✅ MuPiBox Smart-Sync: +{adds} added, −{rems} removed.'},
 }
 
@@ -157,8 +157,8 @@ TEXTS['commands'] = {
         '<code><b>/release</b> <i>[Minuten, Standard 60]</i></code>\n<i>alle Sperren für N Minuten aufheben</i>\n\n'
         '<code><b>/quietnow</b> <i>[Minuten, Standard 60]</i></code>\n<i>Wiedergabe für N Minuten sperren</i>\n\n'
         '<code><b>/limit set</b> <i>&lt;Tag&gt; &lt;Minuten&gt;</i></code>\n<i>Spielzeit-Limit für einen Wochentag (mon..sun, 0..1440)</i>\n\n'
-        '<b>Eltern-WebApp:</b>\n'
-        '<code><b>/login</b></code> – Login-Link zur Eltern-WebApp\n\n'
+        '<b>MuPiBox-App:</b>\n'
+        '<code><b>/login</b></code> – Login-Link zur MuPiBox-App\n\n'
         '<b>Smart-Sync:</b>\n'
         '<code><b>/resync</b></code> – Spotify jetzt synchronisieren\n'
         '<code><b>/syncstatus</b></code> – letztes Sync-Ergebnis und Status\n'
@@ -178,8 +178,8 @@ TEXTS['commands'] = {
         '<code><b>/release</b> <i>[minutes, default 60]</i></code>\n<i>lift all blocks for N minutes</i>\n\n'
         '<code><b>/quietnow</b> <i>[minutes, default 60]</i></code>\n<i>block playback for N minutes</i>\n\n'
         '<code><b>/limit set</b> <i>&lt;day&gt; &lt;minutes&gt;</i></code>\n<i>playtime limit for one weekday (mon..sun, 0..1440)</i>\n\n'
-        '<b>Parents\' web app:</b>\n'
-        '<code><b>/login</b></code> – login link to the parents\' web app\n\n'
+        '<b>MuPiBox app:</b>\n'
+        '<code><b>/login</b></code> – login link to the MuPiBox app\n\n'
         '<b>Smart-Sync:</b>\n'
         '<code><b>/resync</b></code> – sync Spotify now\n'
         '<code><b>/syncstatus</b></code> – last sync result and status\n'

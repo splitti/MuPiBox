@@ -125,7 +125,7 @@ function purgeExpiredSessions(now: number = Date.now()): void {
 /**
  * Issue a new magic link. Caller persists/communicates the token
  * (telegram bot sends URL, box-frontend shows QR + code, etc.).
- * Returns the raw token; the WebApp consumes it via GET /parents?token=... (/eltern still works)
+ * Returns the raw token; the app consumes it via GET /app?token=... (/parents and /eltern lead there)
  */
 export function generateMagicLink(source: string): { token: string; expiresIn: number } {
   purgeExpiredMagicLinks()
@@ -210,7 +210,7 @@ export const CSRF_HEADER = 'x-mupibox-csrf'
 
 /** Constant for the magic-link URL path; centralised for the bot/frontend
  *  callers that need to construct the link. */
-export const MAGIC_LINK_PATH = '/parents'
+export const MAGIC_LINK_PATH = '/app'
 
 // --- Phase 17h — optional parent password ----------------------------------
 // Stored at mupiboxconfig.json:eltern.password = {salt, hash} (hex-encoded

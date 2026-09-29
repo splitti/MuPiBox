@@ -9,7 +9,7 @@ import QRCode from 'qrcode'
 
 const OVERLAY_TIMEOUT_S = 60
 
-// Port of the backend-api (server.js) where the /parents (formerly /eltern) routes + magic-link
+// Port of the backend-api (server.js) where the app (/app) and the magic-link
 // endpoints live. Kept here so the QR/URL we hand the parent's phone point at
 // the right place rather than the kiosk's localhost.
 const ELTERN_PORT = 8200
@@ -47,9 +47,9 @@ export class ElternMagicLinkService {
         body: JSON.stringify({ source: 'settings-qr' }),
       })
       // A login link is only made on the box itself (the backend refuses it from other devices, e.g. this page
-      // shown in the admin interface's browser view). Then the plain address of the parents' app is shown: it
-      // asks for the parent password - instead of the tap doing nothing at all.
-      let url = `http://${host}:${ELTERN_PORT}/parents`
+      // shown in the admin interface's browser view). Then the plain address of the app is shown: it asks for the
+      // password - instead of the tap doing nothing at all.
+      let url = `http://${host}:${ELTERN_PORT}/app`
       if (res.ok) {
         const body = (await res.json()) as { token: string }
         url += `?token=${encodeURIComponent(body.token)}`

@@ -46,7 +46,7 @@ export function buildAuthorizeUrl(deps: {
   sessionId: string
   host: string
   protocol: string
-  /** Where to send the user after callback success (default '/parents'). */
+  /** Where to send the user after callback success (default '/app'). */
   redirectAfter?: string
 }): { url: string; state: string; redirectUri: string } | { error: 'no_client_id' } {
   const cfg = deps.getMupiboxConfig()
@@ -59,7 +59,7 @@ export function buildAuthorizeUrl(deps: {
   oauthStates.set(state, {
     sessionId: deps.sessionId,
     issued: Date.now(),
-    redirectAfter: deps.redirectAfter ?? '/parents',
+    redirectAfter: deps.redirectAfter ?? '/app',
   })
 
   const redirectUri = buildRedirectUri(deps.protocol, deps.host)

@@ -18,7 +18,7 @@ export class ElternMagicLinkOverlayComponent {
   protected readonly texts = inject(DisplayTextsService)
   // Preview of the admin interface (text-preview page): the overlay is shown with a sample QR code.
   public readonly preview = input(false)
-  protected readonly previewUrl = `http://${location.hostname}:8200/parents`
+  protected readonly previewUrl = `http://${location.hostname}:8200/app`
   protected readonly previewQr = signal<string | null>(null)
 
   constructor() {

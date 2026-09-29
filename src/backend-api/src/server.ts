@@ -7447,10 +7447,8 @@ const spotifySyncDeps: RunSyncDeps = {
 }
 app.use('/api/spotify-sync', createSpotifySyncRouter(spotifySyncDeps))
 
-// Phase 14c — Eltern-WebApp routes.
-// JSON API under /api/eltern/* + a magic-link landing handler at /parents
-// that redeems ?token=... into a session cookie and redirects to /parents
-// (without the query) so the WebApp shell loads cleanly.
+// Phase 14c — the routes of the app (JSON API under /api/eltern/*). The magic-link landing handler at /app redeems
+// ?token=... into a session cookie and redirects to /app (without the query) so the app loads cleanly.
 app.use(
   '/api/eltern',
   createElternApiRouter({
@@ -7471,34 +7469,20 @@ app.use(
     },
   }),
 )
-// The web app lives at /parents; /eltern (its first address) keeps working for bookmarks, home-screen
-// icons and links sent before.
-for (const base of ['/parents', '/eltern']) {
-  app.get(base, buildElternLandingHandler())
-  // Static WebApp assets (HTML/CSS/JS). The landing handler above runs
-  // first and either redeems a token (-> redirect) or calls next() so the
-  // static middleware below serves the shell.
-  app.use(
-    base,
-    express.static(path.join(serverDir, 'eltern-webapp'), {
-      // ETag bleibt aktiv, aber keine implizite Browser-Cache-Frist: bei
-      // jedem Request wird via If-None-Match revalidiert. 304 wenn nichts
-      // neu — kostet wenig und stellt sicher dass neu deployte HTML/JS
-      // sofort ankommen statt im aggressiven Mobile-Browser-Cache zu
-      // hängen.
-      setHeaders: (res) => {
-        res.setHeader('Cache-Control', 'no-cache')
-      },
-    }),
-  )
-}
+// The parents' web app (/parents, first /eltern) is replaced by the app: its addresses lead there, with a login link's
+// token (bookmarks, home-screen icons, Telegram messages sent before)
+app.use(['/parents', '/eltern'], (req, res) => {
+  const query = req.originalUrl.indexOf('?')
+  res.redirect(302, `/app${query >= 0 ? req.originalUrl.slice(query) : ''}`)
+})
 
-// The new MuPiBox app (one app for everything, see docs/eine-app/) grows at /app next to the parents' web app until it
-// can replace it and the admin interface. Same login (session cookie, magic link from the QR code or Telegram).
+// The MuPiBox app (one app for everything, see docs/eine-app/). Login: session cookie, password, or a magic link from
+// the QR code on the display or Telegram (redeemed by the landing handler).
 app.get('/app', buildElternLandingHandler())
 app.use(
   '/app',
   express.static(path.join(serverDir, 'mupi-app'), {
+    // (no browser cache period: new versions of the page arrive at once, revalidated by ETag)
     setHeaders: (res) => {
       res.setHeader('Cache-Control', 'no-cache')
     },

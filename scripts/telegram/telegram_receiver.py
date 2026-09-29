@@ -184,7 +184,7 @@ def box_base_url():
     return f"http://{ip or config['mupibox'].get('host', 'localhost')}:8200"
 
 def send_magic_link(chat_id, heading, button_text):
-    # Issue a single-use magic link for the Eltern-WebApp. We post from
+    # Issue a single-use magic link for the MuPiBox app (/app). We post from
     # 127.0.0.1 so the localNetworkOnly gate accepts us; the receiver's
     # chatId-whitelist (is_authorized in on_chat_message) is the actual
     # auth boundary for who can request a link.
@@ -192,7 +192,7 @@ def send_magic_link(chat_id, heading, button_text):
     if status_code != 201 or not isinstance(body, dict):
         bot.sendMessage(chat_id, tr('magic_failed', detail=failure_detail(status_code, body)))
         return
-    url = box_base_url() + body.get('url_path', '/parents')
+    url = box_base_url() + body.get('url_path', '/app')
     expires = body.get('expires_in', 900)
     text = f'{heading}\n\n{tr("magic_valid", mins=expires // 60)}\n\n<a href="{url}">{button_text}</a>\n\n<code>{url}</code>'
     markup = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text=button_text, url=url)]])

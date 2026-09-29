@@ -6,6 +6,11 @@ sagt, wo eine Einstellung, Aktion oder Anzeige der neuen App heute steckt, wo si
 und geschrieben wird und was dabei sonst passiert. Umgeschaltet wird erst, wenn jede Zeile in der neuen App
 funktioniert und getestet ist.
 
+> **29.09.2026:** Die alte Eltern-Web-App (`/parents` auf Port 8200, Verweise `E:` unten) ist entfernt. `/parents` und
+> `/eltern` leiten auf `/app` um (mit dem Token eines Login-Links); QR-Code am Display und Telegram (`/login`,
+> `/spotify_connect`) führen direkt in die App. Nächster Schritt: Port 80 mit Auswahl-Login „Web-App (Beta)“ /
+> „Admin-Interface“.
+
 **Status je Zeile:** `✓ API` Node-Endpunkt vorhanden · `✓ API°` Endpunkt vorhanden, aber nur für die Box selbst
 freigegeben (`localOnly`) – Guard umstellen · `⚙ PHP` kann heute nur das PHP-Admin – neuer Endpunkt nötig ·
 `＋ neu` gibt es heute nirgends · `— statisch` reiner Hinweistext / reine Client-Funktion · 🔒 sicherheitsrelevant.
