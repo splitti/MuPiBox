@@ -107,7 +107,16 @@ for item in "${my_array[@]}"; do
 	fi
 done
 echo "]" >> ${TMP_DATA}
-/usr/bin/echo $(/usr/bin/jq -c . ${TMP_DATA}) | /usr/bin/jq . > ${DATA}
+# Written next to the library and put in its place only when it is a list: "jq . > data.json" emptied the library
+# when the cleaned list could not be read
+_CLEAN="${DATA}.clean.$$"
+if /usr/bin/jq -e 'type == "array"' "${TMP_DATA}" > /dev/null 2>&1 && /usr/bin/jq . "${TMP_DATA}" > "${_CLEAN}"; then
+	/usr/bin/chown dietpi:dietpi "${_CLEAN}"
+	/usr/bin/mv -f "${_CLEAN}" "${DATA}"
+else
+	rm -f "${_CLEAN}"
+	echo "[ERR]   the cleaned list is no valid JSON, data.json left as it was"
+fi
 /usr/bin/chown dietpi:dietpi ${DATA}
 
 bash /usr/local/bin/mupibox/add_index.sh
