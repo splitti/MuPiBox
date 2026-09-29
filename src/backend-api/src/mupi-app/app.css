@@ -566,3 +566,8 @@ a.btn { text-decoration: none; color: inherit; }
 .lang-name { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .shell.no-nav .topbar { position: absolute; top: 0; right: 0; left: 0; background: none; justify-content: flex-end; }
 .login-bar { display: flex; justify-content: flex-end; gap: 12px; width: 100%; }
+
+/* iPhone/iPad: Safari zooms into a field with a font below 16 px when it gets the focus (and the page stays zoomed) */
+@supports (-webkit-touch-callout: none) {
+  input, textarea, select, .input, textarea.input { font-size: max(16px, 1em); }
+}

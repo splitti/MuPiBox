@@ -5775,7 +5775,7 @@ async function renderLogin() {
       <div class="login-head"><h1>Willkommen zurück</h1><p class="help">Melde dich an, um die Box zu verwalten.</p></div>
       <form class="card" id="login-form">
         <div class="field"><label for="pw">Passwort</label>
-          <div class="input-wrap"><input class="input has-eye" id="pw" type="password" autocomplete="current-password" required autofocus><button type="button" class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div>
+          <div class="input-wrap"><input class="input has-eye" id="pw" type="password" autocomplete="current-password" required><button type="button" class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div>
           <small>Dasselbe Passwort wie im Admin-Interface.</small></div>
         <p class="login-msg" id="login-msg" role="alert" hidden></p>
         <button class="btn primary block" type="submit">Anmelden</button>
@@ -5786,6 +5786,8 @@ async function renderLogin() {
         <div class="entry">${icon('tg', 18)}<span class="lbl"><b>Telegram</b><small>Dem Bot der Box /login schicken und den Link öffnen.</small></span></div>
       </div>
     </div>`
+  // the cursor in the field at once, but not on a phone (the keyboard would cover the page)
+  if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) $('#pw').focus()
   $('[data-eye]').onclick = () => {
     const i = $('#pw')
     i.type = i.type === 'password' ? 'text' : 'password'
