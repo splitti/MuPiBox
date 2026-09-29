@@ -49,8 +49,9 @@ export class ElternMagicLinkService {
       // password - instead of the tap doing nothing at all.
       let url = `http://${host}/app`
       if (res.ok) {
-        const body = (await res.json()) as { token: string }
-        url += `?token=${encodeURIComponent(body.token)}`
+        // (https when "Nur sichere Verbindung" is on, and the name set for links - e.g. an own certificate's)
+        const body = (await res.json()) as { token: string; scheme?: string; link_host?: string | null }
+        url = `${body.scheme === 'https' ? 'https' : 'http'}://${body.link_host || host}/app?token=${encodeURIComponent(body.token)}`
       } else {
         console.warn('[eltern-magic-link] no login link (status', res.status, ') - showing the plain address')
       }

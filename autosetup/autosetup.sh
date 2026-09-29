@@ -579,6 +579,7 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/dietpi-dashboard.service /etc/systemd/system/dietpi-dashboard.service >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/mupi_hat.service /etc/systemd/system/mupi_hat.service >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/mupi_fan.service /etc/systemd/system/mupi_fan.service >&3 2>&3
+	mv -f ${MUPI_SRC}/config/services/mupi_tls.service /etc/systemd/system/mupi_tls.service >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/mupi_hat_control.service /etc/systemd/system/mupi_hat_control.service >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/mupi_autoconnect-wifi.service /etc/systemd/system/mupi_autoconnect-wifi.service >&3 2>&3
 	# Tolerant replacement for DietPi's WiFi monitor (see scripts/mupibox/wifi_monitor.sh)
@@ -633,7 +634,11 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 
 	echo -e "XXX\n${STEP}\nActivate SSL... \nXXX"
 	before=$(date +%s)
-	openssl req -new -x509 -keyout /etc/lighttpd/server.pem -out /etc/lighttpd/server.pem -days 3650 -nodes -subj "/C=DE/CN=mupibox" >/dev/null >&3 2>&3
+	# The web server's certificate: the box's own, from its small authority for the home network (the app offers it to
+	# install on the phones; an own one uploaded in the app stays) - no longer a new self-signed one on every run, which
+	# no phone can trust and every browser asked about again. Checked at every start too (mupi_tls.service).
+	/usr/local/bin/mupibox/tls_cert.sh ensure >&3 2>&3
+	systemctl enable mupi_tls.service >&3 2>&3
 	# no scripts or pages from the media folder behind /cover (see the file)
 	cp -f ${MUPI_SRC}/config/lighttpd/99-mupibox-media-noexec.conf /etc/lighttpd/conf-enabled/99-mupibox-media-noexec.conf >&3 2>&3
 	# the app on port 80/443 too: its login at /, the app at /app (see the file)

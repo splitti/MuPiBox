@@ -48,6 +48,7 @@ import { registerAdminRoutes } from './admin'
 import { registerNetworkRoutes } from './network'
 import { registerUpdateRoutes } from './updates'
 import { registerSpotifyConnectRoutes } from './spotify-connect'
+import { registerTlsRoutes, tlsOf } from './tls'
 import { type LocalLibraryDeps, registerLocalUploadRoutes } from './upload'
 import { randomBytes } from 'node:crypto'
 import { localOnly } from '../request-guard'
@@ -335,6 +336,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   registerNetworkRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerUpdateRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig })
   registerSpotifyConnectRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
+  registerTlsRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerCustomCoverRoutes(router, {
     dir: '/home/dietpi/MuPiBox/media/cover',
     host: () => String((deps.getMupiboxConfig()?.mupibox as { host?: string } | undefined)?.host || os.hostname()),
@@ -390,10 +392,15 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     const body = (req.body ?? {}) as { source?: unknown }
     const source = typeof body.source === 'string' ? body.source : 'unknown'
     const link = generateMagicLink(source)
+    // (the address the phone opens it at: https when "Nur sichere Verbindung" is on, the name the parents set for
+    // links - e.g. the one of an own certificate - else the box's IP, which the caller knows)
+    const tls = tlsOf(deps.getMupiboxConfig())
     res.status(201).json({
       token: link.token,
       expires_in: link.expiresIn,
       url_path: `/app?token=${encodeURIComponent(link.token)}`,
+      scheme: tls.httpsOnly === true ? 'https' : 'http',
+      link_host: typeof tls.linkHost === 'string' && tls.linkHost ? tls.linkHost : null,
     })
   })
 

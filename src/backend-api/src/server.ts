@@ -35,6 +35,7 @@ import { startScheduler } from './spotify-sync/scheduler'
 import type { RunSyncDeps } from './spotify-sync/state-machine'
 import { buildElternLandingHandler, createElternApiRouter } from './eltern/routes'
 import { startSpotifyLoginWatch } from './eltern/spotify-auth-age'
+import { startTlsWatch } from './eltern/tls'
 import { startBucketCleanup, parseCookie } from './eltern/middleware'
 import { SESSION_COOKIE, validateSession } from './eltern/auth'
 import { type IncomingMessage, request as httpRequest } from 'node:http'
@@ -8031,6 +8032,7 @@ if (!testServe) {
   startScheduler(spotifySyncDeps)
   // The Spotify login's 6 months: reminders before the end, a message when Spotify refused it (eltern/spotify-auth-age.ts)
   startSpotifyLoginWatch({ getMupiboxConfig: getMupiboxConfigSync, updateMupiboxConfig })
+  startTlsWatch({ getMupiboxConfig: getMupiboxConfigSync, updateMupiboxConfig })
   // Eltern-WebApp rate-limit map cleanup tick.
   startBucketCleanup()
   // Phase 18 Item 4: Play-Log poller — sniffs localhost:5005 (the player's

@@ -181,8 +181,18 @@ def box_base_url():
         ip = next((a for a in out if '.' in a), '')
     except Exception:
         pass
-    # port 80: the web server passes /app to the app, as the QR code on the display
-    return f"http://{ip or config['mupibox'].get('host', 'localhost')}"
+    # port 80/443: the web server passes /app to the app, as the QR code on the display - https when "Nur sichere
+    # Verbindung" is on, and the name set for links (e.g. an own certificate's) instead of the IP
+    # (read now: the switch may have changed since the bot started)
+    try:
+        with open("/etc/mupibox/mupiboxconfig.json") as file:
+            live = json.load(file)
+    except Exception:
+        live = config
+    tls = live.get('tls') or {}
+    scheme = 'https' if tls.get('httpsOnly') is True else 'http'
+    host = tls.get('linkHost') or ip or config['mupibox'].get('host', 'localhost')
+    return f"{scheme}://{host}"
 
 def send_magic_link(chat_id, heading, button_text, page=''):
     # Issue a single-use magic link for the MuPiBox app (/app). We post from
