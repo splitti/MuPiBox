@@ -3016,7 +3016,7 @@ function spotifyTop() {
     `<div class="card nav-card"><div class="navlist">${navRow('syncopt', 'Sync-Einstellungen', 'Playlist-Präfix, Intervall, an/aus', 'gear')}${navRow('wizard', 'Einrichtungs-Assistent', 'Spotify neu verbinden in 5 Schritten', 'sync')}</div></div>`,
     `<section class="card"><h2>Zugang des Players</h2><p class="help">Damit der Player auf der Box Spotify abspielen kann. Die Spotify-App legst du auf developer.spotify.com an (siehe Assistent).</p>
       <div class="field"><label for="sp-id">Client ID</label><input class="input mono" id="sp-id" value="${esc(a.clientId ?? '')}" autocomplete="off" spellcheck="false"></div>
-      <div class="field"><label for="sp-secret">Client Secret</label><div class="input-wrap"><input class="input has-eye mono" id="sp-secret" type="password" autocomplete="off" placeholder="${a.hasSecret ? 'gespeichert – leer lassen = behalten' : 'nicht gesetzt (optional)'}"><button class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div></div>
+      <div class="field"><label for="sp-secret">Client Secret</label><div class="input-wrap"><input class="input has-eye mono" id="sp-secret" type="password" autocomplete="off" placeholder="${a.hasSecret ? 'gespeichert – leer lassen = behalten' : 'nicht gesetzt – nötig für Alben, Cover und Suche'}"><button class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div></div>
       ${kv([['Anmeldung', a.connected ? (a.tokenUpdatedAt ? `Angemeldet · ${relTime(a.tokenUpdatedAt)}` : 'Angemeldet') : 'Nicht angemeldet']])}
       <div class="field"><label>Redirect URI</label><div class="field-pick"><input class="input mono" value="${esc(SPOTIFY_REDIRECT)}" readonly aria-label="Redirect URI"><button type="button" class="icon-btn soft" data-sp="copyuri" aria-label="Redirect URI kopieren">${icon('link', 18)}</button></div>
         <small>Muss in deiner Spotify-App unter „Redirect URIs“ stehen, sonst lehnt Spotify die Anmeldung ab. Beim Zurückkommen fragt der Browser wegen des Zertifikats der Box eventuell einmal nach.</small></div>
@@ -3151,7 +3151,15 @@ function wizardSections(page) {
         { type: 'buttons', buttons: [['Redirect URI kopieren', 'ghost', 'copy']] },
       ],
     },
-    { ...s3, items: [{ ...s3.items[0], default: spot.access?.clientId ?? '' }, { type: 'buttons', buttons: [['Speichern + weiter', 'primary', 'saveid']] }] },
+    {
+      ...s3,
+      items: [
+        { ...s3.items[0], default: spot.access?.clientId ?? '' },
+        // (a stored secret is not shown: left empty it stays)
+        { ...s3.items[1], placeholder: spot.access?.hasSecret ? 'gespeichert – leer lassen = behalten' : 'aus der Spotify-App' },
+        { type: 'buttons', buttons: [['Speichern + weiter', 'primary', 'saveid']] },
+      ],
+    },
     { ...s4, help: 'Öffnet Spotify; nach der Anmeldung kommst du hierher zurück.', items: [{ type: 'buttons', buttons: [['Mit Spotify verbinden', 'primary', 'connect']] }] },
     { ...s5, items: [s5.items[0], { type: 'buttons', buttons: [['Fertig', 'primary', 'finish']] }] },
   ]
@@ -5991,11 +5999,15 @@ const CONTROLLERS = {
       copy: () => copyText(SPOTIFY_REDIRECT),
       async saveid() {
         const clientId = String(state.values.get('wzClient') ?? spot.access?.clientId ?? '').trim()
+        const clientSecret = String(state.values.get('wzSecret') ?? '').trim()
         if (!/^[A-Za-z0-9]{16,64}$/.test(clientId)) return toast('Die Client ID hat 16–64 Buchstaben und Ziffern', 'info')
-        const r = await api(`${API}/spotify-credentials`, { method: 'POST', body: { clientId } })
+        if (clientSecret && !/^[A-Za-z0-9]{16,64}$/.test(clientSecret)) return toast('Der Client Secret hat 16–64 Buchstaben und Ziffern', 'info')
+        // (the box looks albums, covers and search up at Spotify with ID and secret: without one it finds nothing)
+        if (!clientSecret && !spot.access?.hasSecret) return toast('Bitte auch den Client Secret eintragen – ohne ihn findet die Box bei Spotify keine Alben und Cover.', 'info')
+        const r = await api(`${API}/spotify-credentials`, { method: 'POST', body: clientSecret ? { clientId, clientSecret } : { clientId } })
         if (!r.ok) return toast(r.body?.error ?? 'Nicht gespeichert', 'info')
-        toast('Client ID gespeichert – weiter mit Schritt 4')
-        spot.access = { ...(spot.access ?? {}), clientId }
+        toast(clientSecret ? 'Client ID und Secret gespeichert – weiter mit Schritt 4' : 'Client ID gespeichert – weiter mit Schritt 4')
+        spot.access = { ...(spot.access ?? {}), clientId, hasSecret: spot.access?.hasSecret || !!clientSecret }
       },
       connect: connectSpotify,
       async finish() {

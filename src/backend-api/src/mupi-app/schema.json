@@ -1268,8 +1268,8 @@
      ]
     },
     {
-     "title": "Schritt 3 – Client ID kopieren",
-     "help": "",
+     "title": "Schritt 3 – Client ID und Client Secret kopieren",
+     "help": "Stehen in der Spotify-App unter „Settings“; den Secret zeigt „View client secret“.",
      "items": [
       {
        "type": "text",
@@ -1277,6 +1277,13 @@
        "key": "wzClient",
        "placeholder": "aus der Spotify-App",
        "kind": "text"
+      },
+      {
+       "type": "text",
+       "label": "Client Secret",
+       "key": "wzSecret",
+       "placeholder": "aus der Spotify-App",
+       "kind": "password"
       },
       {
        "type": "buttons",
@@ -5049,7 +5056,12 @@
    "id": "wizard"
   },
   {
-   "l": "Schritt 3 – Client ID kopieren",
+   "l": "Schritt 3 – Client ID und Client Secret kopieren",
+   "where": "Bibliothek › Spotify einrichten",
+   "id": "wizard"
+  },
+  {
+   "l": "Client Secret",
    "where": "Bibliothek › Spotify einrichten",
    "id": "wizard"
   },
