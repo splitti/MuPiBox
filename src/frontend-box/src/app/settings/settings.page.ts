@@ -60,12 +60,8 @@ export class SettingsPage {
   protected network = toSignal(this.mediaService.network$, { initialValue: null })
 
   protected menuEntries: Signal<SettingsMenuEntry[]> = computed(() => {
+    // ("Add media" is gone: the library is kept in the app now - the parents' web app below)
     const out: SettingsMenuEntry[] = [
-      {
-        name: 'Add media',
-        imgSrc: of('../../assets/plus-box-outline.svg'),
-        data: 'add-media',
-      },
       {
         name: 'WiFi settings',
         imgSrc: of('../../assets/wifi.svg'),
@@ -99,9 +95,7 @@ export class SettingsPage {
   }
 
   protected entryClicked(entry: SettingsMenuEntry): void {
-    if (entry.data === 'add-media') {
-      this.router.navigate(['/edit'])
-    } else if (entry.data === 'wifi') {
+    if (entry.data === 'wifi') {
       this.router.navigate(['/wifi'])
     } else if (entry.data === 'bluetooth') {
       this.router.navigate(['/bluetooth'])
