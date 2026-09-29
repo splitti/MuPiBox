@@ -730,3 +730,10 @@ input[type="range"]:disabled { opacity: .4; cursor: default; }
 .wz-next { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; }
 .card.wz { max-width: 760px; width: 100%; margin-inline: auto; }
 .input.mono::placeholder { font-family: inherit; }
+/* NAS: where a shown folder appears on the box (a category tab or the NAS tab) */
+.where-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.where-opt { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; text-align: left; padding: 12px; border-radius: var(--mp-r); border: 1.5px solid var(--mp-border); background: var(--mp-field); color: var(--mp-text); font: inherit; cursor: pointer; }
+.where-opt small { color: var(--mp-muted); font-size: 12px; }
+.where-opt[aria-pressed="true"] { background: var(--mp-primary-soft); border-color: var(--mp-primary); }
+.where-opt[aria-pressed="true"] b { color: var(--mp-primary-text); }
+.tog.where { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

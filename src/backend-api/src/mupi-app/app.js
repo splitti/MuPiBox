@@ -1504,7 +1504,7 @@ const playable = (it) => it && typeof it === 'object' && !it.isResume && it.cate
 async function loadHear() {
   const [data, nas, ...local] = await Promise.all([
     api('/api/data'),
-    api('/api/nas/artists'),
+    api('/api/nas/artists?expand=1'),
     ...['audiobook', 'music', 'other'].map((c) => api(`/api/library/artists?category=${c}`)),
   ])
   hear.items = Array.isArray(data.body) ? data.body.map((it, index) => ({ ...it, _index: index })) : []
@@ -1542,7 +1542,8 @@ function topTiles() {
       for (const f of hear.local[c] ?? []) if (match(`${f.title} ${f.artist}`)) tiles.push(localTile(f))
     }
   }
-  if (cat === 'all' || cat === 'nas') for (const f of hear.nasTop ?? []) if (match(`${f.title} ${f.artist}`)) tiles.push(nasTile(f))
+  // (a NAS folder in a category shows there, as on the box; "NAS": the ones without one)
+  for (const f of hear.nasTop ?? []) if ((cat === 'all' || cat === (f.nasCategory ?? 'nas')) && match(`${f.title} ${f.artist}`)) tiles.push(nasTile(f))
   return tiles.sort((a, b) => a.title.localeCompare(b.title, 'de'))
 }
 
@@ -1824,10 +1825,12 @@ function libGroups() {
       }
     }
   }
-  if ((lib.src === 'all' || lib.src === 'nas') && (lib.cat === 'all' || lib.cat === 'audiobook')) {
+  if (lib.src === 'all' || lib.src === 'nas') {
     for (const f of lib.nas) {
+      const c = f.nasCategory && f.nasCategory !== 'nas' ? f.nasCategory : ''
+      if (lib.cat !== 'all' && lib.cat !== c) continue
       if (q && !norm(`${f.title} ${f.artist}`).includes(q)) continue
-      add(`nas|${f.nasPath}`, { kind: 'nas', artist: String(f.title ?? '—'), src: 'nas', cat: '', cover: f.cover, folder: f })
+      add(`nas|${f.nasPath}`, { kind: 'nas', artist: String(f.title ?? '—'), src: 'nas', cat: c, cover: f.cover, folder: f })
     }
   }
   return [...groups.values()].sort((a, b) => a.artist.localeCompare(b.artist, 'de', { numeric: true }))
@@ -3732,11 +3735,19 @@ function nasRows() {
 const nasFlag = (row, key) => {
   const e = nas.edits.get(row.path)
   if (e) return e[key]
+  if (key === 'category') return nas.st?.folderCategories?.[row.path] ?? ''
+  if (key === 'split') return (nas.st?.folderSplit ?? []).includes(row.path)
   return key === 'show' ? row.isMarked && !row.isHidden : key === 'hide' ? row.isHidden : row.isDownload
 }
 
 function setNasFlag(row, key, on) {
-  const e = nas.edits.get(row.path) ?? { show: nasFlag(row, 'show'), hide: nasFlag(row, 'hide'), download: nasFlag(row, 'download') }
+  const e = nas.edits.get(row.path) ?? {
+    show: nasFlag(row, 'show'),
+    hide: nasFlag(row, 'hide'),
+    download: nasFlag(row, 'download'),
+    category: nasFlag(row, 'category'),
+    split: nasFlag(row, 'split'),
+  }
   e[key] = on
   // a folder is either shown or hidden
   if (on && key === 'show') e.hide = false
@@ -3762,6 +3773,12 @@ function drawNasFolders() {
     return
   }
   const chip = (i, key, label, row) => `<button class="tog" data-i="${i}" data-k="${key}" aria-pressed="${nasFlag(row, key)}">${label}</button>`
+  // (shown: where - a category tab of the box or the NAS tab)
+  const showChip = (i, row) => {
+    const on = nasFlag(row, 'show')
+    const where = NAS_WHERE[nasFlag(row, 'category')] ?? NAS_WHERE['']
+    return `<button class="tog${on ? ' where' : ''}" data-i="${i}" data-k="show" aria-pressed="${on}">${on ? esc(where) : 'Anzeigen'}</button>`
+  }
   let i = -1
   list.innerHTML = rows
     .map((r) => {
@@ -3772,12 +3789,13 @@ function drawNasFolders() {
       return `<div class="entry nas-row${nas.edits.has(r.path) ? ' changed' : ''}" ${pad}>
         ${flat ? '' : `<button class="nas-chev" data-toggle="${i}" aria-expanded="${r.isOpen}" aria-label="${r.isOpen ? 'Zuklappen' : 'Aufklappen'}">${icon('chevron', 16)}</button>`}
         <button class="lbl nas-open" data-open="${i}"><b translate="no">${icon('folder', 16)} ${esc(r.name)}</b>${r.flat ? `<small translate="no">${esc(r.sub)}</small>` : ''}${r.isDownloaded ? '<small class="ok-text">✓ auf der Box</small>' : ''}</button>
-        <span class="togs">${chip(i, 'show', 'Anzeigen', r)}${chip(i, 'hide', 'Ausblenden', r)}${chip(i, 'download', 'Laden', r)}</span></div>`
+        <span class="togs">${showChip(i, r)}${chip(i, 'hide', 'Ausblenden', r)}${chip(i, 'download', 'Laden', r)}</span></div>`
     })
     .join('')
   for (const b of list.querySelectorAll('.tog')) {
     b.onclick = () => {
       const row = nasShown[Number(b.dataset.i)]
+      if (b.dataset.k === 'show') return nasWhereSheet(row)
       setNasFlag(row, b.dataset.k, b.getAttribute('aria-pressed') !== 'true')
       drawNasFolders()
     }
@@ -3830,11 +3848,99 @@ function drawNasDownload() {
         : ''
 }
 
+// Where a shown NAS folder appears on the box: a category tab (next to Spotify and the SD card) or the NAS tab
+const NAS_WHERE = { '': 'Im NAS-Reiter', audiobook: 'In Hörspiele', music: 'In Musik', other: 'In Sonstiges' }
+
+// "Anzeigen" of a NAS folder: shown where - a category, or the NAS tab - and, in a category, whether its subfolders
+// are tiles of their own (a collection of series) or the folder is one tile; or not shown
+async function nasWhereSheet(row) {
+  const shown = nasFlag(row, 'show')
+  let category = shown ? nasFlag(row, 'category') : ''
+  // (a folder already in a category keeps its choice; else the default below, by what is in it)
+  let split = shown && category ? nasFlag(row, 'split') : null
+  // what is in it (for the choice "one by one" and its default): the subfolders, and which of them hold subfolders
+  let subs = null
+  const peek = (async () => {
+    const r = await api(`/api/nas/browse?path=${encodeURIComponent(row.path)}`)
+    const names = (r.body?.entries ?? []).map((e) => e.name)
+    const deeper = await Promise.all(
+      (r.body?.entries ?? []).slice(0, 8).map((e) => api(`/api/nas/browse?path=${encodeURIComponent(e.path)}`).then((x) => (x.body?.entries ?? []).length > 0)),
+    )
+    subs = { names, series: deeper.filter(Boolean).length }
+  })().catch(() => {
+    subs = { names: [], series: 0 }
+  })
+  const option = (id, title, text) =>
+    `<button class="where-opt" data-where="${id}" aria-pressed="${category === id}"><b>${esc(title)}</b><small>${esc(text)}</small></button>`
+  openSheet(
+    `<h2 translate="no">${esc(row.name)}</h2>
+     <p class="help" style="margin:0">Wo soll der Ordner auf der Box erscheinen?</p>
+     <div class="where-grid">
+       ${option('audiobook', 'Hörspiele', 'neben SD-Karte und Spotify')}
+       ${option('music', 'Musik', 'neben SD-Karte und Spotify')}
+       ${option('other', 'Sonstiges', 'neben Radio und Podcasts')}
+       ${option('', 'NAS-Reiter', 'eigener Reiter nur fürs NAS')}
+     </div>
+     <div class="where-split" id="w-split" hidden>
+       <div class="row"><span class="lbl"><b>Unterordner einzeln zeigen</b><small id="w-split-help">Lade …</small></span>
+         <label class="switch"><input type="checkbox" id="w-split-on" aria-label="Unterordner einzeln zeigen"><span></span></label></div>
+     </div>
+     <div class="btns">${shown ? '<button class="btn danger" data-hide-folder>Nicht anzeigen</button>' : ''}<button class="btn" data-close>Abbrechen</button><button class="btn primary" data-ok>Übernehmen</button></div>`,
+    (sheet, close) => {
+      const splitBox = $('#w-split', sheet)
+      const splitOn = $('#w-split-on', sheet)
+      const help = $('#w-split-help', sheet)
+      const drawSplit = () => {
+        for (const b of sheet.querySelectorAll('[data-where]')) b.setAttribute('aria-pressed', String(b.dataset.where === category))
+        splitBox.hidden = category === ''
+        if (!subs) return
+        // (default: one by one when several subfolders hold folders of their own - a collection of series)
+        if (split === null) split = subs.series >= 2
+        splitOn.checked = split
+        const some = subs.names.slice(0, 3).join(', ')
+        help.textContent = split
+          ? tr(`Jeder Unterordner wird eine eigene Kachel (${subs.names.length}: ${some}${subs.names.length > 3 ? ' …' : ''}) – für eine Sammlung von Serien.`)
+          : tr(`Der Ordner ist eine Kachel „${row.name}“, sein Inhalt liegt darin – z. B. eine Serie mit ihren Folgen.`)
+      }
+      peek.then(() => sheet.isConnected && drawSplit())
+      drawSplit()
+      for (const b of sheet.querySelectorAll('[data-where]')) {
+        b.onclick = () => {
+          category = b.dataset.where
+          drawSplit()
+        }
+      }
+      splitOn.onchange = () => {
+        split = splitOn.checked
+        drawSplit()
+      }
+      sheet.querySelector('[data-close]').onclick = close
+      sheet.querySelector('[data-hide-folder]')?.addEventListener('click', () => {
+        setNasFlag(row, 'show', false)
+        close()
+        drawNasFolders()
+      })
+      sheet.querySelector('[data-ok]').onclick = () => {
+        setNasFlag(row, 'show', true)
+        setNasFlag(row, 'category', category)
+        setNasFlag(row, 'split', category !== '' && !!split)
+        close()
+        drawNasFolders()
+      }
+    },
+  )
+}
+
 async function saveNasSelection() {
   if (!nas.edits.size) return true
   const shown = [...nas.edits.keys()]
   const pick = (k) => shown.filter((p) => nas.edits.get(p)[k])
-  const r = await api('/api/nas/selection', { method: 'POST', body: { shown, show: pick('show'), hide: pick('hide'), download: pick('download') } })
+  // (the category of each shown folder of the page: none = the NAS tab)
+  const categories = Object.fromEntries(shown.filter((p) => nas.edits.get(p).show && nas.edits.get(p).category).map((p) => [p, nas.edits.get(p).category]))
+  const r = await api('/api/nas/selection', {
+    method: 'POST',
+    body: { shown, show: pick('show'), hide: pick('hide'), download: pick('download'), categories, split: shown.filter((p) => nas.edits.get(p).show && nas.edits.get(p).category && nas.edits.get(p).split) },
+  })
   if (!r.ok || !r.body?.success) {
     toast('Nicht gespeichert', 'info')
     return false

@@ -318,7 +318,7 @@ export class MediaService {
 
   private libraryVersion$?: Observable<string>
   private dataVersion$?: Observable<string>
-  private versions$?: Observable<{ version: string; local: string }>
+  private versions$?: Observable<{ version: string; local: string; nasTab: boolean }>
 
   /**
    * Phase 17g: cheap library-change signal. Polls /api/data-version (a stat,
@@ -350,14 +350,22 @@ export class MediaService {
     return this.dataVersion$
   }
 
-  private versions(): Observable<{ version: string; local: string }> {
+  /** Whether the NAS tab is wanted: shown NAS folders are left that have no category (older backends: always). */
+  public getNasTabWanted(): Observable<boolean> {
+    return this.versions().pipe(
+      map((v) => v.nasTab),
+      distinctUntilChanged(),
+    )
+  }
+
+  private versions(): Observable<{ version: string; local: string; nasTab: boolean }> {
     if (!this.versions$) {
       this.versions$ = interval(20000).pipe(
         startWith(0),
         switchMap(() =>
-          this.http.get<{ version: string; local?: string }>(`${this.getApiBackendUrl()}/data-version`).pipe(
-            map((r) => ({ version: r?.version ?? '', local: r?.local ?? '' })),
-            catchError(() => of({ version: '', local: '' })),
+          this.http.get<{ version: string; local?: string; nasTab?: boolean }>(`${this.getApiBackendUrl()}/data-version`).pipe(
+            map((r) => ({ version: r?.version ?? '', local: r?.local ?? '', nasTab: r?.nasTab !== false })),
+            catchError(() => of({ version: '', local: '', nasTab: true })),
           ),
         ),
         shareReplay({ bufferSize: 1, refCount: true }),
@@ -559,23 +567,24 @@ export class MediaService {
           // Skip other media without artist (they would cause undefined grouping)
         }
 
-        // Process regular media with artist grouping
+        // Process regular media with artist grouping. A folder of the SD card or the NAS is a tile of its own, even
+        // with the name of another one (a NAS "Benjamin Blümchen" next to the one of the SD card: merged, one tap
+        // opened only one of them).
+        const groupOf = (m: Media) => (m.nasPath ? `nas:${m.nasPath}` : m.libraryPath ? `lib:${m.libraryPath}` : `artist:${m.artist}`)
+        const names: Record<string, string> = {}
         const mediaCounts = regularMedia.reduce<Record<string, number>>((tempCounts, currentMedia) => {
-          tempCounts[currentMedia.artist] = (tempCounts[currentMedia.artist] || 0) + 1
+          const key = groupOf(currentMedia)
+          names[key] = currentMedia.artist
+          tempCounts[key] = (tempCounts[key] || 0) + 1
           return tempCounts
         }, {})
 
         const covers = regularMedia
           .sort((a, b) => (a.title <= b.title ? -1 : 1))
           .reduce<Record<string, string>>((tempCovers, currentMedia) => {
-            if (/* currentMedia.type === 'library' &&  */ currentMedia.artistcover) {
-              if (!tempCovers[currentMedia.artist]) {
-                tempCovers[currentMedia.artist] = currentMedia.artistcover
-              }
-            } else {
-              if (!tempCovers[currentMedia.artist]) {
-                tempCovers[currentMedia.artist] = currentMedia.cover
-              }
+            const key = groupOf(currentMedia)
+            if (!tempCovers[key]) {
+              tempCovers[key] = currentMedia.artistcover || currentMedia.cover
             }
             return tempCovers
           }, {})
@@ -583,8 +592,9 @@ export class MediaService {
         const coverMedia = regularMedia
           .sort((a, b) => (a.title <= b.title ? -1 : 1))
           .reduce<Record<string, Media>>((tempMedia, currentMedia) => {
-            if (!tempMedia[currentMedia.artist]) {
-              tempMedia[currentMedia.artist] = currentMedia
+            const key = groupOf(currentMedia)
+            if (!tempMedia[key]) {
+              tempMedia[key] = currentMedia
             }
             return tempMedia
           }, {})
@@ -592,12 +602,12 @@ export class MediaService {
         // Build Array of Artist objects sorted by Artist name
         const regularArtists: Artist[] = Object.keys(mediaCounts)
           .sort()
-          .map((currentName) => {
+          .map((key) => {
             const artist: Artist = {
-              name: currentName,
-              albumCount: mediaCounts[currentName].toString(),
-              cover: covers[currentName],
-              coverMedia: coverMedia[currentName],
+              name: names[key],
+              albumCount: mediaCounts[key].toString(),
+              cover: covers[key],
+              coverMedia: coverMedia[key],
             }
             return artist
           })
@@ -631,6 +641,8 @@ export class MediaService {
 
   // true when the NAS list could not be loaded even after the retries (the home page shows the placeholder)
   public readonly nasUnavailable = signal(false)
+  // the NAS folders of each category tab as last loaded (shown at once the next time, see fetchMedia)
+  private readonly nasInCategory = new Map<CategoryType, Media[]>()
 
   // --- Lists of the home page (see /api/home-lists in the backend) ---------------------------------------------
   // The data.json part of a category (Spotify, podcasts, playlists, radio) as resolved Media, per data.json version.
@@ -751,7 +763,7 @@ export class MediaService {
       // (About 40 s in all: a list that loads for a minute makes the loading component reload the page.)
       return defer(() => {
         this.nasUnavailable.set(false)
-        return this.http.get<Media[]>(`${this.getApiBackendUrl()}/nas/artists`)
+        return this.http.get<Media[]>(`${this.getApiBackendUrl()}/nas/artists?category=nas`)
       }).pipe(
         retry({ count: 8, delay: () => timer(5000) }),
         catchError(() => {
@@ -772,9 +784,19 @@ export class MediaService {
       const localFolders = this.http
         .get<Media[]>(`${this.getApiBackendUrl()}/library/artists?category=${category}`)
         .pipe(catchError(() => of([] as Media[])))
+      // NAS folders the parents put into this category (app: NAS › "Anzeigen"). The NAS may answer slowly or not at
+      // all: the list shows at once with the NAS folders of last time, the new ones follow.
+      const nasFolders = this.http.get<Media[]>(`${this.getApiBackendUrl()}/nas/artists?category=${category}`).pipe(
+        timeout(20000),
+        retry({ count: 2, delay: () => timer(5000) }),
+        tap((list) => this.nasInCategory.set(category, list)),
+        catchError(() => of(this.nasInCategory.get(category) ?? [])),
+        startWith(this.nasInCategory.get(category) ?? []),
+        distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
+      )
       // combineLatest: the data.json part may come twice (kept list, then the new one), each time with the folders
-      return combineLatest([dataMedia, localFolders]).pipe(
-        map(([data, local]) => [...data.filter((item) => item.type !== 'library'), ...local]),
+      return combineLatest([dataMedia, localFolders, nasFolders]).pipe(
+        map(([data, local, nas]) => [...data.filter((item) => item.type !== 'library'), ...local, ...nas]),
       )
     }
     return dataMedia

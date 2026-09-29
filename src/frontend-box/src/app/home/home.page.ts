@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http'
 import { ChangeDetectionStrategy, Component, computed, effect, inject, Signal, signal, WritableSignal } from '@angular/core'
-import { toObservable, toSignal } from '@angular/core/rxjs-interop'
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop'
 import { NavigationExtras, Router } from '@angular/router'
 import {
   IonButton,
@@ -72,7 +72,11 @@ export class HomePage extends SwiperIonicEventsHelper {
   ]
   protected hiddenCategories: WritableSignal<string[]> = signal([])
   protected configLoaded: WritableSignal<boolean> = signal(false)
-  protected visibleCategories = computed(() => this.categories.filter((c) => !this.hiddenCategories().includes(c.key)))
+  // (the NAS tab also goes when all shown NAS folders are in a category of their own: nothing is left for it)
+  protected nasTabWanted: WritableSignal<boolean> = signal(true)
+  protected visibleCategories = computed(() =>
+    this.categories.filter((c) => !this.hiddenCategories().includes(c.key) && (c.key !== 'nas' || this.nasTabWanted())),
+  )
 
   protected artists: Signal<Artist[]>
   // Category of the list currently shown; a reload of the same category keeps the scroll position.
@@ -120,6 +124,15 @@ export class HomePage extends SwiperIonicEventsHelper {
         // Keep default settingsAccessTimerMs / show all categories if config could not be loaded.
         this.configLoaded.set(true)
       },
+    })
+
+    // the NAS tab comes and goes with the parents' choice (app › NAS); shown on it when it goes: the first tab
+    this.mediaService.getNasTabWanted().pipe(takeUntilDestroyed()).subscribe((wanted) => {
+      this.nasTabWanted.set(wanted)
+      const visible = this.visibleCategories()
+      if (visible.length > 0 && !visible.some((c) => c.key === this.category())) {
+        this.category.set(visible[0].key)
+      }
     })
 
     this.isOnline = toSignal(this.mediaService.isOnline())

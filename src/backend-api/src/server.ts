@@ -23,7 +23,7 @@ import jsonfile from 'jsonfile'
 import ky from 'ky'
 import xmlparser from 'xml-js'
 import { LogRequest, LogResponse } from './models/log.model'
-import type { MupiboxConfig, NasConfig, NasProfile } from './models/mupibox-config.model'
+import type { MupiboxConfig, NasBoxCategory, NasConfig, NasProfile } from './models/mupibox-config.model'
 import type { PlaytimeStatus } from './models/playtime.model'
 import { ServerConfig } from './models/server.model'
 import type { SpotifyValidationRequest, SpotifyValidationResponse } from './models/spotify-api.model'
@@ -1215,9 +1215,9 @@ app.get('/api/data-version', (_req, res) => {
   // only when something actually changed — no full-list polling.
   try {
     const st = fs.statSync(activedataFile)
-    res.json({ version: `${Math.floor(st.mtimeMs)}-${st.size}`, local: String(localLibraryVersion) })
+    res.json({ version: `${Math.floor(st.mtimeMs)}-${st.size}`, local: String(localLibraryVersion), nasTab: nasTabWanted(nasSettings(getMupiboxConfigSync())) })
   } catch {
-    res.json({ version: '0', local: String(localLibraryVersion) })
+    res.json({ version: '0', local: String(localLibraryVersion), nasTab: nasTabWanted(nasSettings(getMupiboxConfigSync())) })
   }
 })
 
@@ -5214,6 +5214,8 @@ function nasProfileSnapshot(settings: NasConfig | undefined, created = Date.now(
     artistFolders: [...(settings?.artistFolders ?? [])],
     hiddenFolders: [...(settings?.hiddenFolders ?? [])],
     downloadFolders: [...(settings?.downloadFolders ?? [])],
+    folderCategories: { ...(settings?.folderCategories ?? {}) },
+    folderSplit: [...(settings?.folderSplit ?? [])],
   }
 }
 
@@ -5247,6 +5249,8 @@ function nasTrackActiveProfile(settings: NasConfig | undefined, changes: Record<
         artistFolders: pick('artistFolders'),
         hiddenFolders: pick('hiddenFolders'),
         downloadFolders: pick('downloadFolders'),
+        folderCategories: (changes.folderCategories as NasConfig['folderCategories']) ?? settings?.folderCategories ?? {},
+        folderSplit: (changes.folderSplit as string[] | undefined) ?? settings?.folderSplit ?? [],
       },
     },
     activeProfile: active,
@@ -5357,10 +5361,13 @@ app.post('/api/nas/profiles/load', localOrElternSession, async (req, res) => {
         artistFolders: [...bound.artistFolders],
         hiddenFolders: [...bound.hiddenFolders],
         downloadFolders: [...bound.downloadFolders],
+        folderCategories: { ...(bound.folderCategories ?? {}) },
+        folderSplit: [...(bound.folderSplit ?? [])],
         profiles: { ...profiles, [name]: bound },
         activeProfile: name,
       }
     })
+    localLibraryVersion = Date.now()
     const paths = Array.from(new Set([...profile.artistFolders, ...profile.hiddenFolders, ...profile.downloadFolders]))
     let unverified = 0
     const exists = await mapWithConcurrency(paths, 4, async (folderPath) => {
@@ -5400,6 +5407,8 @@ app.post('/api/nas/profiles/remove-missing', localOrElternSession, async (req, r
             artistFolders: strip(profile.artistFolders),
             hiddenFolders: strip(profile.hiddenFolders),
             downloadFolders: strip(profile.downloadFolders),
+            folderCategories: nasKeepCategories(profile.folderCategories, strip(profile.artistFolders)),
+            folderSplit: strip(profile.folderSplit),
           },
         },
       }
@@ -5407,6 +5416,8 @@ app.post('/api/nas/profiles/remove-missing', localOrElternSession, async (req, r
         change.artistFolders = strip(settings?.artistFolders)
         change.hiddenFolders = strip(settings?.hiddenFolders)
         change.downloadFolders = strip(settings?.downloadFolders)
+        change.folderCategories = nasKeepCategories(settings?.folderCategories, change.artistFolders as string[])
+        change.folderSplit = strip(settings?.folderSplit)
       }
       return change
     })
@@ -5608,6 +5619,8 @@ app.get('/api/nas/state', localOrElternSession, async (_req, res) => {
     artistFolders: syn?.artistFolders ?? [],
     hiddenFolders: syn?.hiddenFolders ?? [],
     downloadFolders: syn?.downloadFolders ?? [],
+    folderCategories: syn?.folderCategories ?? {},
+    folderSplit: syn?.folderSplit ?? [],
   })
 })
 
@@ -5683,6 +5696,40 @@ function nasIsHidden(folderPath: string, hidden: string[]): boolean {
   return hidden.some((h) => folderPath === h || folderPath.startsWith(`${h}/`))
 }
 
+// --- NAS folders in the box's categories ---------------------------------------------------------------------
+// A shown folder can be put into a category tab (Hörspiele, Musik, Sonstiges) next to Spotify and the SD card, instead
+// of the NAS tab (settings.folderCategories). A collection of series ("Hörspiele" with "Benjamin Blümchen", …) can show
+// its subfolders one by one (settings.folderSplit): each series a tile of its own with its episodes inside, as an
+// artist of the SD card. The NAS tab keeps the shown folders without a category; with none left it is not shown.
+const nasBoxCategories: readonly NasBoxCategory[] = ['audiobook', 'music', 'other']
+const isNasBoxCategory = (value: unknown): value is NasBoxCategory => nasBoxCategories.includes(value as NasBoxCategory)
+
+function nasCategoryOf(settings: NasConfig | undefined, folder: string): NasBoxCategory | undefined {
+  const category = settings?.folderCategories?.[folder]
+  return isNasBoxCategory(category) ? category : undefined
+}
+
+// The shown folders (not hidden)
+function nasShownFolders(settings: NasConfig | undefined): string[] {
+  const hidden = settings?.hiddenFolders ?? []
+  return (settings?.artistFolders ?? []).filter((p) => !nasIsHidden(p, hidden))
+}
+
+// The categories of the folders that are still shown (a folder no longer shown takes its category with it)
+function nasKeepCategories(categories: Record<string, unknown> | undefined, shown: string[]): Record<string, NasBoxCategory> {
+  const keep: Record<string, NasBoxCategory> = {}
+  for (const folder of shown) {
+    const category = categories?.[folder]
+    if (isNasBoxCategory(category)) keep[folder] = category
+  }
+  return keep
+}
+
+/** Whether the box shows its NAS tab: shown folders without a category are left for it. */
+function nasTabWanted(settings: NasConfig | undefined): boolean {
+  return nasShownFolders(settings).some((p) => !nasCategoryOf(settings, p))
+}
+
 app.get('/api/nas/browse', localOrElternSession, async (req, res) => {
   const folderPath = typeof req.query.path === 'string' ? req.query.path : ''
 
@@ -5735,6 +5782,18 @@ app.post('/api/nas/selection', localOrElternSession, async (req, res) => {
     res.status(400).json({ success: false, error: 'shown, show, hide and download must be lists of paths.' })
     return
   }
+  // (optional: the category of the shown folders on the page - a folder not named here goes back to the NAS tab - and
+  // which of them show their subfolders one by one)
+  const categoriesBody = req.body?.categories as unknown
+  const categories =
+    categoriesBody && typeof categoriesBody === 'object' && !Array.isArray(categoriesBody)
+      ? Object.fromEntries(Object.entries(categoriesBody as Record<string, unknown>).filter(([, c]) => isNasBoxCategory(c)))
+      : undefined
+  const split = list(req.body?.split)
+  if (categoriesBody !== undefined && categories === undefined) {
+    res.status(400).json({ success: false, error: 'categories must map paths to audiobook, music or other.' })
+    return
+  }
 
   try {
     const shownSet = new Set(shown)
@@ -5743,22 +5802,35 @@ app.post('/api/nas/selection', localOrElternSession, async (req, res) => {
     const merge = (existing: string[] | undefined, ticked: string[]): string[] =>
       Array.from(new Set([...(existing ?? []).filter((p) => !shownSet.has(p)), ...ticked.filter((p) => shownSet.has(p))]))
     await updateNasConfig((settings) => {
+      const artistFolders = merge(settings?.artistFolders, show.filter((p) => !hideSet.has(p)))
+      // the page's folders get the categories sent (none: the NAS tab), the others keep theirs
+      const withCategories = categories
+        ? { ...Object.fromEntries(Object.entries(settings?.folderCategories ?? {}).filter(([p]) => !shownSet.has(p))), ...Object.fromEntries(Object.entries(categories).filter(([p]) => shownSet.has(p))) }
+        : settings?.folderCategories
       const update: Record<string, unknown> = {
-        artistFolders: merge(settings?.artistFolders, show.filter((p) => !hideSet.has(p))),
+        artistFolders,
         hiddenFolders: merge(settings?.hiddenFolders, hide),
         downloadFolders: merge(settings?.downloadFolders, download),
+        folderCategories: nasKeepCategories(withCategories, artistFolders),
+        folderSplit: (split ? merge(settings?.folderSplit, split) : settings?.folderSplit ?? []).filter((p) => artistFolders.includes(p)),
       }
       // nothing changed: no config write (and no backup copy) for a "Save selection" without changes
       const same = (a: unknown, b: unknown) => JSON.stringify([...((a as string[]) ?? [])].sort()) === JSON.stringify([...((b as string[]) ?? [])].sort())
+      const sameMap = (a: unknown, b: unknown) =>
+        JSON.stringify(Object.entries((a as Record<string, string>) ?? {}).sort()) === JSON.stringify(Object.entries((b as Record<string, string>) ?? {}).sort())
       if (
         same(update.artistFolders, settings?.artistFolders) &&
         same(update.hiddenFolders, settings?.hiddenFolders) &&
-        same(update.downloadFolders, settings?.downloadFolders)
+        same(update.downloadFolders, settings?.downloadFolders) &&
+        sameMap(update.folderCategories, settings?.folderCategories) &&
+        same(update.folderSplit, settings?.folderSplit)
       ) {
         return undefined
       }
       return { ...update, ...nasTrackActiveProfile(settings, update) }
     })
+    // (the box reads its lists and tabs again, see /api/data-version)
+    localLibraryVersion = Date.now()
     res.json({ success: true })
   } catch (error) {
     console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to save NAS selection: ${error}`)
@@ -5787,8 +5859,12 @@ app.post('/api/nas/mark', localOrElternSession, async (req, res) => {
           update[opposite] = other.filter((p) => p !== folderPath)
         }
       }
+      const shownNow = (update.artistFolders as string[] | undefined) ?? settings?.artistFolders ?? []
+      update.folderCategories = nasKeepCategories(settings?.folderCategories, shownNow)
+      update.folderSplit = (settings?.folderSplit ?? []).filter((p) => shownNow.includes(p))
       return { ...update, ...nasTrackActiveProfile(settings, update) }
     })
+    localLibraryVersion = Date.now()
     res.json({ success: true, [key]: next })
   } catch (error) {
     console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to save NAS selection: ${error}`)
@@ -5796,31 +5872,87 @@ app.post('/api/nas/mark', localOrElternSession, async (req, res) => {
   }
 })
 
-app.get('/api/nas/artists', async (_req, res) => {
-  try {
-    const config = await getMupiboxConfig()
-    const hiddenFolders = nasSettings(config)?.hiddenFolders ?? []
-    const artistFolders = (nasSettings(config)?.artistFolders ?? []).filter((p) => !nasIsHidden(p, hiddenFolders))
+// The subfolders of one NAS folder as ready-to-use Media entries (one level deeper), live from the NAS or from the
+// local copy. asTiles: each subfolder a tile of its own (a collection shown one by one in a category of the box,
+// see folderSplit) - its own name as the artist, not the folder above. offline: some failed because the NAS dropped
+// out meanwhile (the list would miss albums without saying so).
+async function nasFolderEntries(folderPath: string, asTiles = false): Promise<{ entries: Record<string, unknown>[]; offline: boolean }> {
+  const files = await nasListFiles(folderPath)
+  const hiddenFolders = nasSettings(await getMupiboxConfig())?.hiddenFolders ?? []
+  const parentName = folderPath.split('/').filter(Boolean).pop() ?? folderPath
+  const parentCoverPath = nasFindCoverImage(files)
 
-    // One entry per marked folder. Deeper levels are loaded on demand via
+  const subfolders = files.filter((f) => f.isdir && !nasIsHidden(f.path, hiddenFolders))
+  const factsOf = new Map<string, NasFolderFacts>()
+  const entries = await mapWithConcurrency(subfolders, 4, async (sub) => {
+    try {
+      // from the folder index when the subfolder is unchanged (its ETag/date in this listing)
+      const facts = await nasFolderFacts(sub.path, sub.version)
+      factsOf.set(sub.path, facts)
+      // A folder with nothing to play (only pictures, an eBook, ...) is no tile.
+      if (!facts.audio && !facts.container) {
+        return null
+      }
+      // (a tile of its own: its own name and picture, not the collection's)
+      return asTiles ? nasEntryFromFacts(sub.path, sub.name, sub.name, facts) : nasEntryFromFacts(sub.path, parentName, sub.name, facts, parentCoverPath)
+    } catch (error) {
+      console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Skipping unreadable NAS folder ${sub.path}: ${error}`)
+      return undefined
+    }
+  })
+  const offline = entries.some((entry) => entry === undefined) && Date.now() < nasOfflineUntil
+  // Audio files next to subfolders with albums: first comes an entry that plays them.
+  if (nasHasAudio(files) && subfolders.some((sub) => factsOf.get(sub.path)?.audio || factsOf.get(sub.path)?.container)) {
+    const own = pickCoverImage(files)
+    const ownFacts: NasFolderFacts = { audio: true, container: false, own: own?.path, ownV: own?.version, at: Date.now() }
+    entries.unshift(nasEntryFromFacts(folderPath, parentName, parentName, ownFacts, undefined, true))
+  }
+  return { entries: entries.filter((entry): entry is Record<string, unknown> => !!entry), offline }
+}
+
+// The shown NAS folders as tiles of the box.
+//   ?category=nas                       the NAS tab: folders without a category
+//   ?category=audiobook|music|other     that category tab: its folders, a collection split into its subfolders
+//   (none)                              all shown folders, one entry each (the app's library); ?expand=1 splits the
+//                                       collections as in the tabs (the app's "Hören")
+// Every entry says where it is shown: nasCategory ('nas' or the category); a collection shown one by one: nasSplit.
+app.get('/api/nas/artists', async (req, res) => {
+  try {
+    const settings = nasSettings(await getMupiboxConfig())
+    const wanted = typeof req.query.category === 'string' ? req.query.category : ''
+    const shown = nasShownFolders(settings)
+    const folders =
+      wanted === 'nas'
+        ? shown.filter((p) => !nasCategoryOf(settings, p))
+        : isNasBoxCategory(wanted)
+          ? shown.filter((p) => nasCategoryOf(settings, p) === wanted)
+          : shown
+    const expand = isNasBoxCategory(wanted) || req.query.expand === '1'
+    const split = new Set(settings?.folderSplit ?? [])
+
+    // One entry per shown folder (a split collection: its subfolders). Deeper levels are loaded on demand via
     // /api/nas/children as the user navigates, so this stays cheap.
-    const entries = await mapWithConcurrency(artistFolders, 4, async (artistPath) => {
+    const lists = await mapWithConcurrency(folders, 4, async (folderPath) => {
+      const category = nasCategoryOf(settings, folderPath)
+      const where = { nasCategory: category ?? 'nas', ...(category && split.has(folderPath) ? { nasSplit: true } : {}) }
       try {
-        const artistName = artistPath.split('/').filter(Boolean).pop() ?? artistPath
-        return await nasBuildMediaEntry(artistPath, artistName, artistName)
+        if (expand && category && split.has(folderPath)) {
+          const { entries } = await nasFolderEntries(folderPath, true)
+          return entries.map((entry) => ({ ...entry, ...where }))
+        }
+        const name = folderPath.split('/').filter(Boolean).pop() ?? folderPath
+        return [{ ...(await nasBuildMediaEntry(folderPath, name, name)), ...where }]
       } catch (error) {
         // Skip just this one folder (deleted on the NAS since it was marked, or
         // NAS offline and never downloaded) instead of failing the whole category.
-        console.error(
-          `${new Date().toLocaleString()}: [MuPiBox-Server] Skipping unavailable NAS folder ${artistPath}: ${error}`,
-        )
+        console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Skipping unavailable NAS folder ${folderPath}: ${error}`)
         return undefined
       }
     })
-    const found = entries.filter((entry) => entry !== undefined)
+    const found = lists.filter((list) => list !== undefined).flat()
     // Folders are marked but none could be read: the NAS (or its login) is not reachable right now. Say so
     // instead of returning an empty list that looks like "nothing marked", so the UI can try again.
-    if (artistFolders.length > 0 && found.length === 0) {
+    if (folders.length > 0 && lists.every((list) => list === undefined)) {
       res.status(503).json([])
       return
     }
@@ -5840,49 +5972,15 @@ app.get('/api/nas/children', nasPathWithinSelection, async (req, res) => {
     res.status(400).json([])
     return
   }
-
   try {
-    const files = await nasListFiles(folderPath)
-    const hiddenFolders = nasSettings(await getMupiboxConfig())?.hiddenFolders ?? []
-    const parentName = folderPath.split('/').filter(Boolean).pop() ?? folderPath
-    const parentCoverPath = nasFindCoverImage(files)
-
-    const subfolders = files.filter((f) => f.isdir && !nasIsHidden(f.path, hiddenFolders))
-    const factsOf = new Map<string, NasFolderFacts>()
-    const entries = await mapWithConcurrency(
-      subfolders,
-      4,
-      async (sub) => {
-        try {
-          // from the folder index when the subfolder is unchanged (its ETag/date in this listing)
-          const facts = await nasFolderFacts(sub.path, sub.version)
-          factsOf.set(sub.path, facts)
-          // A folder with nothing to play (only pictures, an eBook, ...) is no tile.
-          if (!facts.audio && !facts.container) {
-            return null
-          }
-          return nasEntryFromFacts(sub.path, parentName, sub.name, facts, parentCoverPath)
-        } catch (error) {
-          console.error(
-            `${new Date().toLocaleString()}: [MuPiBox-Server] Skipping unreadable NAS folder ${sub.path}: ${error}`,
-          )
-          return undefined
-        }
-      },
-    )
+    const { entries, offline } = await nasFolderEntries(folderPath)
     // Folders that failed because the NAS dropped out meanwhile (not: a folder without permission): the list would
     // be missing albums without telling. 503 lets the box and the web app try again, as for /api/nas/artists.
-    if (entries.some((entry) => entry === undefined) && Date.now() < nasOfflineUntil) {
+    if (offline) {
       res.status(503).json([])
       return
     }
-    // Audio files next to subfolders with albums: first comes an entry that plays them.
-    if (nasHasAudio(files) && subfolders.some((sub) => factsOf.get(sub.path)?.audio || factsOf.get(sub.path)?.container)) {
-      const own = pickCoverImage(files)
-      const ownFacts: NasFolderFacts = { audio: true, container: false, own: own?.path, ownV: own?.version, at: Date.now() }
-      entries.unshift(nasEntryFromFacts(folderPath, parentName, parentName, ownFacts, undefined, true))
-    }
-    res.json(entries.filter((entry) => entry))
+    res.json(entries)
   } catch (error) {
     // The folder itself could not be read (NAS not reachable): not an empty folder.
     console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to list NAS children of ${folderPath}: ${error}`)
