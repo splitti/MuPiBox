@@ -1,4 +1,4 @@
-// Icons of the MuPiBox app (24 x 24 line paths, from the Claude Design prototype "MuPiBox · eine App").
+// Icons of the MuPiBox app (24 x 24 line paths, from the design prototype "MuPiBox · eine App").
 // icon(name, size) returns an inline SVG in the current text colour.
 export const ICONS = {
   home: "M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z",

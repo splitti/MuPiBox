@@ -16,8 +16,8 @@ node_modules
 # Other files.
 *.bak
 
-# Claude Code local (machine-specific) settings.
-.claude/settings.local.json
+# Output of a plain tsc run (the box runs the esbuild bundle, see src/deploy)
+src/backend-api/build/
 
 
 __pycache__/
