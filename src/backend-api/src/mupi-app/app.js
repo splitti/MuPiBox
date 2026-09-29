@@ -163,8 +163,28 @@ function stopPageTimers() {
   pageTimers.clear()
 }
 
+// The pages walked through since the last tab (Start, Hören, …): the back button returns to the one before - Spotify
+// opened from the start page goes back there, not to the library it belongs to. A page shown again cuts the trail
+// there (Spotify › Assistent › "Zur Spotify-Seite": back leads where Spotify was opened from).
+const trail = []
+function noteTrail(page) {
+  if (!page.parent) {
+    trail.length = 0
+    trail.push(page.id)
+    return
+  }
+  const at = trail.indexOf(page.id)
+  if (at >= 0) trail.length = at + 1
+  else trail.push(page.id)
+}
+// where the back button leads: the page before, else (opened by a link, reloaded) the one above
+function backTarget(page) {
+  return trail.length >= 2 && trail.at(-1) === page.id ? trail.at(-2) : page.parent || 'start'
+}
+
 function route() {
   const page = currentPage()
+  noteTrail(page)
   // an old or unknown address: the page's own one in the address bar (no extra step back)
   if (location.hash && location.hash !== hashOf(page.id)) history.replaceState(null, '', hashOf(page.id))
   stopPageTimers()
@@ -239,7 +259,7 @@ function renderChrome(page) {
     ${langButton()}
     ${themeButton()}
     ${state.open ? '' : `<button class="icon-btn" id="logout-btn" aria-label="Abmelden">${icon('logout')}</button>`}`
-  $('#back')?.addEventListener('click', () => go(page.parent && page.parent.startsWith('g-') ? page.parent : page.parent || 'start'))
+  $('#back')?.addEventListener('click', () => go(backTarget(page)))
   $('#lang-btn').addEventListener('click', openLangSheet)
   $('#theme-btn').addEventListener('click', toggleTheme)
   $('#logout-btn')?.addEventListener('click', () => confirmSheet('Abmelden', 'Von der App abmelden? Danach fragt sie wieder nach dem Passwort.', logout))
