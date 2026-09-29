@@ -1098,6 +1098,39 @@ app.get('/api/rssfeed/image', async (req, res) => {
   }
 })
 
+// A podcast's own picture (the channel cover the box shows on its tile), for the app's library: from the feed as
+// the box has cached it - no feed is fetched here, a podcast the box never opened has none yet (404).
+app.get('/api/rssfeed/cover', async (req, res) => {
+  if (typeof req.query.url !== 'string') {
+    res.status(400).send('Given url is not a string.')
+    return
+  }
+  let address: string | undefined
+  try {
+    const feed = JSON.parse(await readFile(rssCacheFilePath(rssCacheKeyFor(req.query.url)), 'utf8'))
+    address = extractRssText(feed?.rss?.channel?.image?.url)
+  } catch {
+    // not cached (yet)
+  }
+  let file: string | undefined
+  if (address?.startsWith(`${rssCoverPublicBase}/`)) {
+    const local = path.join(rssCoverDir, path.basename(address))
+    if (fs.existsSync(local)) file = local
+  } else if (address && /^https?:\/\//i.test(address)) {
+    file = await ensureRssImage(address)
+  }
+  if (!file) {
+    res.status(404).send('Not found')
+    return
+  }
+  try {
+    await sendRssImage(res, file, parseThumbSize(req.query.w))
+  } catch (error) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to send RSS cover ${file}: ${error}`)
+    res.status(500).send('Failed to read image.')
+  }
+})
+
 // The newest episodes are what gets opened first: fetch their pictures ahead of time.
 async function warmRssEpisodeCovers(feed: any, count: number): Promise<void> {
   const items = feed?.rss?.channel?.item

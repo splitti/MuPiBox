@@ -1447,13 +1447,15 @@ const catOf = (it) => {
   return c === 'radio' ? 'other' : c
 }
 
-function spotifyCover(it) {
+// The picture of an entry that has none of its own: Spotify's, a podcast's channel picture (as the box shows it)
+function serviceCover(it) {
+  if (it.type === 'rss' && it.id) return `/api/rssfeed/cover?url=${encodeURIComponent(it.id)}&w=400`
   if (it.type !== 'spotify') return ''
   // (an entry of a whole artist - "Alle Folgen": the artist's picture, as its tile on "Hören")
   const ref = it.id ? ['album', it.id] : it.playlistid ? ['playlist', it.playlistid] : it.showid ? ['show', it.showid] : it.audiobookid ? ['audiobook', it.audiobookid] : it.artistid ? ['artist', it.artistid] : null
   return ref ? `/api/spotify/cover-for/${ref[0]}/${encodeURIComponent(ref[1])}` : ''
 }
-const coverOf = (it) => it.cover_override ?? it.cover ?? spotifyCover(it) ?? ''
+const coverOf = (it) => it.cover_override ?? it.cover ?? serviceCover(it) ?? ''
 
 // Spotify entries that only name an artist are not playable on their own (the box looks their albums up itself)
 // Entries that subscribe a whole Spotify artist (only artistid): a folder of that artist's albums (as on the box)
@@ -1780,7 +1782,7 @@ function libGroups() {
       const title = String(it.title_override ?? it.title ?? it.artist_override ?? it.artist ?? '—')
       const artist = String(it.artist_override ?? it.artist ?? title)
       if (q && !norm(`${title} ${artist}`).includes(q)) continue
-      const g = add(`${src}|${cat}|${artist}`, { kind: 'entries', artist, src, cat, cover: it.artistcover_override ?? it.artistcover ?? it.cover_override ?? it.cover ?? spotifyCover(it) })
+      const g = add(`${src}|${cat}|${artist}`, { kind: 'entries', artist, src, cat, cover: it.artistcover_override ?? it.artistcover ?? it.cover_override ?? it.cover ?? serviceCover(it) })
       g.entries.push({ item: it, title })
     }
   }
@@ -1939,7 +1941,7 @@ function openEntrySheet(item) {
             title: k === 'artistcover' ? artist || title : title || artist,
             query: k === 'artistcover' ? artist : `${artist} ${title}`.trim(),
             fallbacks: k === 'artistcover' ? [] : [withoutNumber(title), artist],
-            current: item[`${k}_override`] ?? item[k] ?? (k === 'cover' ? spotifyCover(item) : ''),
+            current: item[`${k}_override`] ?? item[k] ?? (k === 'cover' ? serviceCover(item) : ''),
             onDone: async (body) => {
               const key = isSync ? `${k}_override` : k
               const r = await api('/api/edit', { method: 'POST', body: { index: libPlace(item), data: { ...item, [key]: body.url }, original: item } })
