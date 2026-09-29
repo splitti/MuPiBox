@@ -1,6 +1,6 @@
 // MuPiBox app – one app for everything (replaces the admin interface and the parents' web app step by step).
 //
-// The pages come from schema.json (docs/eine-app/app-schema.json): areas, settings groups, pages with sections and
+// The pages come from schema.json: areas, settings groups, pages with sections and
 // their building blocks (toggle, slider, select, …). This file draws them and handles navigation, sheets, search,
 // the light/dark switch and the login. Pages are connected to the box one by one (see docs/app-mapping.md): until a
 // page is in CONNECTED, its controls only change locally and the page says so.

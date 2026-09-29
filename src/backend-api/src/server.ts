@@ -37,7 +37,7 @@ import { buildElternLandingHandler, createElternApiRouter } from './eltern/route
 import { startSpotifyLoginWatch } from './eltern/spotify-auth-age'
 import { startBucketCleanup, parseCookie } from './eltern/middleware'
 import { SESSION_COOKIE, validateSession } from './eltern/auth'
-import type { IncomingMessage } from 'node:http'
+import { type IncomingMessage, request as httpRequest } from 'node:http'
 import type { Duplex } from 'node:stream'
 import { SUDO_BACKUP_SNIPPET, backupBeforeWrite } from './file-backup'
 import { readEmbeddedPicture } from './embedded-cover'
@@ -362,6 +362,35 @@ app.use((req, res, next) => {
   }
   // the display page from another device: to the app's login
   res.redirect(302, '/app/?portal')
+})
+
+// The player (port 5005) listens on the box itself only. The display page opened from another device (the admin
+// interface's "Display content", a browser in the network) reaches it through here - behind the check above. Only
+// requests of the box's pages (they send X-Requested-With, which a foreign page cannot without a CORS preflight that
+// is refused) are passed on; the body is passed through as it came.
+app.use('/api/player', (req, res) => {
+  if (!req.headers['x-requested-with']) {
+    res.status(403).send('forbidden')
+    return
+  }
+  const headers = { ...req.headers, host: '127.0.0.1:5005' }
+  delete headers.cookie
+  delete headers.origin
+  delete headers.referer
+  const upstream = httpRequest({ host: '127.0.0.1', port: 5005, method: req.method, path: req.url, headers, timeout: 60000 }, (answer) => {
+    res.status(answer.statusCode ?? 502)
+    for (const name of ['content-type', 'content-length', 'cache-control']) {
+      const value = answer.headers[name]
+      if (value !== undefined) res.setHeader(name, value)
+    }
+    answer.pipe(res)
+  })
+  upstream.on('timeout', () => upstream.destroy(new Error('timeout')))
+  upstream.on('error', () => {
+    if (!res.headersSent) res.status(502).json({ error: 'player not reachable' })
+    else res.end()
+  })
+  req.pipe(upstream)
 })
 
 // --- Lists of the home page, kept for the display ---------------------------

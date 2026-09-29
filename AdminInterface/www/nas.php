@@ -159,11 +159,22 @@ if (isset($_POST['nas_save_selection']) || isset($_POST['nas_download_selected']
 	$shown = json_decode($_POST['shown_folders'] ?? '[]', true) ?? array();
 	// One request for the whole page (before: three per folder in the tree, each rewriting the config file).
 	// A folder is either shown or hidden; the backend lets hidden win if both were sent.
+	// "Shown in" of the shown folders on the page (path => audiobook|music|other; the NAS tab is not named) and which
+	// of them show their subfolders one by one
+	$categories = array();
+	foreach ((array)(json_decode($_POST['folder_categories'] ?? '{}', true) ?? array()) as $path => $category) {
+		if (is_string($path) && in_array($category, array('audiobook', 'music', 'other'), true)) {
+			$categories[$path] = $category;
+		}
+	}
+	$split = array_values(array_filter((array)(json_decode($_POST['folder_split'] ?? '[]', true) ?? array()), 'is_string'));
 	$saveResult = nasApiCall("$backendBase/selection", 'POST', array(
 		'shown' => array_values($shown),
 		'show' => array_values($checkedShow),
 		'hide' => array_values($checkedHide),
 		'download' => array_values($checkedDownload),
+		'categories' => (object)$categories,
+		'split' => $split,
 	), 30);
 	// No lightbox of the site-wide change notice here: the save shows a short line, the download its progress bar.
 	$saveOk = !empty($saveResult['success']);
@@ -218,7 +229,7 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 	.nas-pop { text-align: left; position: fixed; z-index: 10000; box-sizing: border-box; max-width: 440px; width: calc(100vw - 32px); background: #fff; color: #222; border-radius: 10px; padding: 14px 16px; font-size: 14px; line-height: 1.45; box-shadow: 0 6px 24px rgba(0, 0, 0, .35); }
 </style>
 <div style="display:none;">
-	<div id="nas-info-nas">Connect a NAS (Synology, QNAP, TrueNAS, ... - anything with a WebDAV server) as an additional media source. Enable WebDAV on the NAS first (Synology: package "WebDAV Server", ports 5005 http / 5006 https). Every folder with a checkmark under "Show in Mupibox" appears in the NAS tab on the MuPiBox together with all of its subfolders - so you only need to tick the top-level folder, not every subfolder. To leave out a single folder (and everything in it), tick "Hide in Mupibox" for it instead - a folder is either shown or hidden. Changes on the NAS show up live, with no separate media update needed. A shown folder can also appear in the Audiobook, Music or Radio &amp; Podcasts tab instead of the NAS tab (series one by one) - set in the app: NAS › "Show". Saving here keeps that choice.</div>
+	<div id="nas-info-nas">Connect a NAS (Synology, QNAP, TrueNAS, ... - anything with a WebDAV server) as an additional media source. Enable WebDAV on the NAS first (Synology: package "WebDAV Server", ports 5005 http / 5006 https). Every folder with a checkmark under "Show in Mupibox" appears in the NAS tab on the MuPiBox together with all of its subfolders - so you only need to tick the top-level folder, not every subfolder. To leave out a single folder (and everything in it), tick "Hide in Mupibox" for it instead - a folder is either shown or hidden. Changes on the NAS show up live, with no separate media update needed. A shown folder can also appear in the Audiobook, Music or Radio &amp; Podcasts tab instead of the NAS tab: choose it under "Shown in" (the app's NAS page offers the same). "One by one" makes every subfolder a tile of its own there - for a folder that collects several series; without it the folder is one tile with its content inside.</div>
 	<div id="nas-info-profiles">A profile remembers which folders are set to "Show", "Hide" and "Download local", together with the NAS login it was made with. Saving the selection updates the active profile. A profile can only be loaded while the same NAS and account are connected. Profiles and the NAS login (the password encrypted) are part of the configuration backup.</div>
 </div>
 
@@ -342,6 +353,8 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 <?php } else { ?>
 	<form class="appnitro" method="post" action="nas.php" id="form">
 			<input type="hidden" name="shown_folders" id="shown_folders" value="[]" />
+			<input type="hidden" name="folder_categories" id="folder_categories" value="{}" />
+			<input type="hidden" name="folder_split" id="folder_split" value="[]" />
 			<ul>
 				<?php if ($browseError) { ?>
 					<li id="li_1"><p style="color:#900;"><?= htmlspecialchars($browseError) ?></p></li>
@@ -371,6 +384,15 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 						.nas-children { display: none; }
 						.nas-children.open, .nas-children.filter-open { display: block; }
 						.nas-msg { color: #888; font-style: italic; padding: 3px 0; }
+						#nas-tree { max-width: 980px; }
+						/* at the right end of every row, whatever the depth of the folder (the name only takes its own width) */
+						#nas-tree .nas-name { flex: 0 1 auto; }
+						#nas-tree .nas-children, #nas-tree .nas-children > div { padding-left: 0; padding-right: 0; margin-left: 0; margin-right: 0; }
+						.nas-where { flex: 0 0 240px; margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 13px; }
+						.nas-where select { font-size: 13px; padding: 1px 2px; max-width: 150px; }
+						.nas-where select:disabled, .nas-where input:disabled + span { opacity: .35; }
+						.nas-where label { display: flex; align-items: center; gap: 3px; white-space: nowrap; margin: 0; }
+						.nas-head .nas-where { align-self: flex-end; padding-bottom: 4px; }
 					</style>
 					<div id="nas-tree">
 						<div class="nas-head">
@@ -378,6 +400,7 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 							<div class="nas-cb"><span>Hide in Mupibox</span></div>
 							<div class="nas-cb"><span>Download local</span></div>
 							<div class="nas-name"><b>Folder</b></div>
+							<div class="nas-where"><b>Shown in</b></div>
 						</div>
 						<div id="nas-root"></div>
 					</div>
@@ -450,6 +473,10 @@ var NAS_CSRF = <?= json_encode(csrf_token()) ?>;
 	)))) ?>;
 	var shown = {};
 	var STORE = 'nasTreeExpanded';
+	// "Shown in" as saved (the app's NAS page sets the same): path => audiobook|music|other, else the NAS tab
+	var SAVED_CATEGORIES = <?= json_encode((object)(($data['nas']['folderCategories'] ?? array()) ?: array())) ?>;
+	var SAVED_SPLIT = <?= json_encode(array_values((array)($data['nas']['folderSplit'] ?? array()))) ?>;
+	var whereOf = {};
 
 	function readExpanded() {
 		try { return JSON.parse(localStorage.getItem(STORE) || '[]') || []; } catch (e) { return []; }
@@ -736,8 +763,37 @@ var NAS_CSRF = <?= json_encode(csrf_token()) ?>;
 		var showCell = checkbox('artist_folders[]', entry, entry.isMarked, 'Show in Mupibox');
 		var hideCell = checkbox('hide_folders[]', entry, entry.isHidden, 'Hide in Mupibox');
 		var showBox = showCell.firstChild, hideBox = hideCell.firstChild;
+		// Where a shown folder appears on the box, and whether its subfolders are tiles of their own there
+		var where = document.createElement('div');
+		where.className = 'nas-where';
+		var place = document.createElement('select');
+		place.title = 'Shown in';
+		[['', 'NAS tab'], ['audiobook', 'Audiobooks'], ['music', 'Music'], ['other', 'Radio & Podcasts']].forEach(function (o) {
+			var opt = document.createElement('option');
+			opt.value = o[0];
+			opt.textContent = o[1];
+			place.appendChild(opt);
+		});
+		place.value = SAVED_CATEGORIES[entry.path] || '';
+		var splitLabel = document.createElement('label');
+		splitLabel.title = 'Every subfolder becomes a tile of its own (a folder with several series)';
+		var splitBox = document.createElement('input');
+		splitBox.type = 'checkbox';
+		splitBox.checked = SAVED_SPLIT.indexOf(entry.path) !== -1;
+		var splitText = document.createElement('span');
+		splitText.textContent = 'one by one';
+		splitLabel.appendChild(splitBox);
+		splitLabel.appendChild(splitText);
+		where.appendChild(place);
+		where.appendChild(splitLabel);
+		whereOf[entry.path] = { show: showBox, place: place, split: splitBox };
+		function syncWhere() {
+			place.disabled = !showBox.checked;
+			splitBox.disabled = !showBox.checked || place.value === '';
+		}
+		place.addEventListener('change', syncWhere);
 		// A folder is either shown or hidden: while one box is checked the other one is inactive.
-		function syncShowHide() { showBox.disabled = hideBox.checked; hideBox.disabled = showBox.checked; }
+		function syncShowHide() { showBox.disabled = hideBox.checked; hideBox.disabled = showBox.checked; syncWhere(); }
 		showBox.addEventListener('change', syncShowHide);
 		hideBox.addEventListener('change', syncShowHide);
 		syncShowHide();
@@ -766,6 +822,7 @@ var NAS_CSRF = <?= json_encode(csrf_token()) ?>;
 			name.appendChild(done);
 		}
 		row.appendChild(name);
+		row.appendChild(where);
 
 		var children = document.createElement('div');
 		children.className = 'nas-children';
@@ -853,6 +910,15 @@ var NAS_CSRF = <?= json_encode(csrf_token()) ?>;
 	// Only folders that were actually loaded (visible in the tree) are saved.
 	document.getElementById('form').addEventListener('submit', function () {
 		shownInput.value = JSON.stringify(Object.keys(shown));
+		var categories = {}, split = [];
+		Object.keys(whereOf).forEach(function (path) {
+			var w = whereOf[path];
+			if (!w.show.checked || w.place.value === '') { return; }
+			categories[path] = w.place.value;
+			if (w.split.checked) { split.push(path); }
+		});
+		document.getElementById('folder_categories').value = JSON.stringify(categories);
+		document.getElementById('folder_split').value = JSON.stringify(split);
 	});
 })();
 </script>
