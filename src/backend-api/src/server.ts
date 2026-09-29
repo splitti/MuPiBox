@@ -483,8 +483,17 @@ const PRIVATE_IP_REGEXES = [
 const isPrivateHost = (host: string): boolean => {
   // Strip brackets from IPv6 literals
   let h = host.replace(/^\[|\]$/g, '').toLowerCase()
-  // IPv4-mapped IPv6 (::ffff:10.0.0.1) is checked as the IPv4 address it maps to
-  h = h.replace(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/, '$1')
+  // IPv4-mapped IPv6 (::ffff:10.0.0.1) is checked as the IPv4 address it maps to - also in the form the URL parser
+  // writes it (::ffff:a00:1), as NAT64 (64:ff9b::a00:1) or IPv4-compatible (::a00:1): these passed as "public" before
+  h = h.replace(/^(?:::ffff:|64:ff9b::|::)(\d+\.\d+\.\d+\.\d+)$/, '$1')
+  const hex = /^(?:::ffff:|64:ff9b::|::)([0-9a-f]{1,4}):([0-9a-f]{1,4})$/.exec(h)
+  if (hex) {
+    const hi = Number.parseInt(hex[1], 16)
+    const lo = Number.parseInt(hex[2], 16)
+    h = `${hi >> 8}.${hi & 255}.${lo >> 8}.${lo & 255}`
+  }
+  // any other form of these prefixes is nothing a feed lives on
+  if (/^(::ffff:|64:ff9b:)/.test(h)) return true
   if (h === 'localhost' || h.endsWith('.localhost') || h === '0.0.0.0' || h === '::') return true
   return PRIVATE_IP_REGEXES.some((r) => r.test(h))
 }
@@ -550,6 +559,40 @@ class RemoteFetchError extends Error {
   }
 }
 
+// The address a connection really goes to is checked as well: fetch() looked the name up once more after the check
+// above, so a DNS answer that changed in between (rebinding) could still lead to 127.0.0.1 or the LAN.
+const guardedLookup: net.LookupFunction = (hostname, options, callback) => {
+  dns.lookup(hostname, { ...options, all: true, verbatim: true }, (err, addresses) => {
+    const list = (addresses ?? []) as dns.LookupAddress[]
+    if (!err && (list.length === 0 || list.some((a) => isPrivateHost(a.address)))) {
+      err = new Error(`${hostname} resolves to a private / loopback address`) as NodeJS.ErrnoException
+    }
+    if (err) return callback(err, '', 0)
+    if (options.all) return (callback as unknown as (e: null, a: dns.LookupAddress[]) => void)(null, list)
+    callback(null, list[0].address, list[0].family)
+  })
+}
+
+// A GET as fetch() does it, but over a connection made with guardedLookup; redirects are not followed (the caller
+// checks every hop). No Accept-Encoding: the body comes as it is.
+function fetchPinned(url: URL, signal: AbortSignal): Promise<Response> {
+  return new Promise((resolve, reject) => {
+    const request = url.protocol === 'https:' ? https.request : httpRequest
+    const req = request(url, { method: 'GET', lookup: guardedLookup, signal, headers: { 'user-agent': 'MuPiBox', accept: '*/*' } }, (res) => {
+      const headers = new Headers()
+      for (const [name, value] of Object.entries(res.headers)) {
+        if (value !== undefined) headers.set(name, Array.isArray(value) ? value.join(', ') : value)
+      }
+      const status = res.statusCode ?? 502
+      const empty = status === 204 || status === 304
+      if (empty) res.resume()
+      resolve(new Response(empty ? null : (Readable.toWeb(res) as ReadableStream<Uint8Array>), { status, headers }))
+    })
+    req.on('error', reject)
+    req.end()
+  })
+}
+
 // The one way to fetch a URL the box did not choose (RSS feeds, podcast covers, episode images).
 // checkRemoteUrl() alone looked at the host name as written: a DNS name pointing at 127.0.0.1 or
 // a LAN device, or a redirect to one, still reached it - the cached feed path did not even call
@@ -572,7 +615,7 @@ async function fetchRemote(
     if (addresses.length === 0 || addresses.some((a) => isPrivateHost(a.address))) {
       throw new RemoteFetchError(`${hostname} resolves to a private / loopback address`, 403)
     }
-    const response = await fetch(checked.url, { redirect: 'manual', signal })
+    const response = await fetchPinned(checked.url, signal)
     if (response.status >= 300 && response.status < 400) {
       const location = response.headers.get('location')
       await response.body?.cancel()
