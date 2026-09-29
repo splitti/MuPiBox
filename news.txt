@@ -7,7 +7,7 @@
 <li id='linews' class='linews'>"Stay signed in" keeps a device signed in for 90 days, also across restarts. "Sign out all other devices" or a new password ends all other sessions, in the admin interface too.</li>
 <li id='linews' class='linews'>Start page: what is playing now (cover, progress, controls, volume with the hearing protection limit marked), tiles for battery, listening time today, quiet hours and WiFi, quick actions (+15 min, Quiet now, Sleep timer) and notices only when needed (battery low or not charging, Spotify login running out, update available, MuPiBox news).</li>
 <li id='linews' class='linews'>17 languages (taken from the browser or chosen by hand), light and dark design, and it can be added to the home screen like an app.</li>
-<li id='linews' class='linews'>The app replaces the previous parents' web app (old links to /parents lead to it). The admin interface stays available; "Advanced settings" in the app opens it already signed in.</li>
+<li id='linews' class='linews'>The admin interface stays available; "Advanced settings" in the app opens it already signed in.</li>
 </ul>
 <b>Listen and play</b>
 </ul>
