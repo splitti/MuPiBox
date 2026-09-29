@@ -251,7 +251,7 @@ export function registerSystemRoutes(router: Router, deps: SystemDeps): void {
     if (!newsCache || Date.now() - newsCache.at > 3600_000) {
       try {
         const r = await fetch('https://raw.githubusercontent.com/splitti/MuPiBox/main/news.txt', { signal: AbortSignal.timeout(8000) })
-        if (r.ok) newsCache = { at: Date.now(), text: (await r.text()).slice(0, 20000) }
+        if (r.ok) newsCache = { at: Date.now(), text: (await r.text()).slice(0, 100000) }
       } catch {
         // no internet: the last text, if any
       }
