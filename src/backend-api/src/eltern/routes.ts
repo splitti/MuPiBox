@@ -49,6 +49,7 @@ import { registerSystemRoutes } from './system'
 import { registerAdminRoutes } from './admin'
 import { registerNetworkRoutes } from './network'
 import { registerUpdateRoutes } from './updates'
+import { registerSpotifyConnectRoutes } from './spotify-connect'
 import { type LocalLibraryDeps, registerLocalUploadRoutes } from './upload'
 import { randomBytes } from 'node:crypto'
 import { localOnly } from '../request-guard'
@@ -281,6 +282,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   registerAdminRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig, serverDir: process.cwd() })
   registerNetworkRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerUpdateRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig })
+  registerSpotifyConnectRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig })
   registerCustomCoverRoutes(router, {
     dir: '/home/dietpi/MuPiBox/media/cover',
     host: () => String((deps.getMupiboxConfig()?.mupibox as { host?: string } | undefined)?.host || os.hostname()),
@@ -550,7 +552,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     }
     // Only a page of the app: the value ends up in res.redirect() after the login, and
     // "https://elsewhere" or "//elsewhere" made that an open redirect.
-    const ret = typeof req.query.return === 'string' && /^\/app(?:[/?#]|$)/.test(req.query.return) ? req.query.return : '/app'
+    // (or the admin interface's Spotify page, which starts the same login)
+    const ret = typeof req.query.return === 'string' && /^\/(?:app(?:[/?#]|$)|spotify\.php$)/.test(req.query.return) ? req.query.return : '/app'
     const result = buildAuthorizeUrl({
       getMupiboxConfig: deps.getMupiboxConfig,
       sessionId: req.elternSessionId ?? '',

@@ -1,7 +1,9 @@
 <?php
 
 include('includes/header.php');
-$REDIRECT_URI = "https://" . $_SERVER['HTTP_HOST'] . "/spotify.php";
+// The login goes through the app (Node backend): Spotify comes back to /app/spotify-callback - the one Redirect URI
+// of the Spotify app for both the app and this page. The old address (/spotify.php) is no longer used.
+$REDIRECT_URI = "https://" . preg_replace('/:\d+$/', '', $_SERVER['HTTP_HOST']) . "/app/spotify-callback";
 // playlist-read-private/-collaborative added for Phase-14 Smart-Sync, which
 // discovers the parent's prefixed playlists. Re-running this login grants the
 // existing playback token the extra scopes in one consent step.
@@ -12,6 +14,16 @@ $SCOPE = urlencode($SCOPELIST);
 if ( $_POST['clearCache']) {
     exec("sudo rm -r /home/dietpi/.mupibox/Sonos-Kids-Controller-master/cache/*");
 	$CHANGE_TXT = $CHANGE_TXT . "<li>Cleared spotify metadata cache</li>";
+	$change = 1;
+}
+
+// back from the login started below (the app's flow): it saved the tokens and restarted the player itself
+if (isset($_GET['spotify_connected'])) {
+	$CHANGE_TXT = $CHANGE_TXT . "<li>Spotify login done: tokens saved, player restarted</li>";
+	$change = 1;
+}
+if (isset($_GET['spotify_error'])) {
+	$CHANGE_TXT = $CHANGE_TXT . "<li>Spotify login failed: " . htmlspecialchars((string)$_GET['spotify_error'], ENT_QUOTES) . "</li>";
 	$change = 1;
 }
 
@@ -178,22 +190,27 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 			<li id="li_1">
 
 				<h3>Create Developer-App and Client-Connection</h3>
-				<p>Please press the following URL to generate Access and Refresh Token. A login may be necessary.</p>
-				<p><b>
-						<?php
-						// OAuth "state": the callback below only accepts the answer to a login started
-						// from this session (a foreign link to spotify.php?code=... must not replace the tokens).
-						if (empty($_SESSION['spotify_oauth_state'])) {
-							$_SESSION['spotify_oauth_state'] = bin2hex(random_bytes(16));
-						}
-						$authorize_url = 'https://accounts.spotify.com/authorize?response_type=code'
-							. '&client_id=' . urlencode((string)$data["spotify"]["clientId"])
-							. '&redirect_uri=' . urlencode($REDIRECT_URI)
-							. '&scope=' . $SCOPE
-							. '&state=' . $_SESSION['spotify_oauth_state'];
-						print '<a href="' . htmlspecialchars($authorize_url, ENT_QUOTES) . '" id="loading">Login and generate Refresh & Access Token</a>';
-						?>
-					</b></p>
+				<p>Please press the following link to generate Access and Refresh Token. A login may be necessary. Spotify asks for a new login every 6 months; the box reminds you (app and Telegram).</p>
+				<p><b><a href="#" id="spotify_login">Login and generate Refresh & Access Token</a></b></p>
+				<p id="spotify_login_msg"></p>
+				<script>
+				// The login is started by the app's backend (it keeps the OAuth state, exchanges the code and saves the
+				// tokens) and comes back here. It needs the app's login in this browser - signing in to this admin
+				// interface signs in to the app as well.
+				document.getElementById('spotify_login').addEventListener('click', async function (e) {
+					e.preventDefault();
+					var msg = document.getElementById('spotify_login_msg');
+					try {
+						var r = await fetch('/api/eltern/spotify-oauth/init?return=' + encodeURIComponent('/spotify.php'), { credentials: 'same-origin' });
+						var body = await r.json().catch(function () { return {}; });
+						if (r.ok && body.authorize_url) { location.href = body.authorize_url; return; }
+						if (r.status === 401) { msg.innerHTML = 'Please sign in first: <a href="/app/?portal=admin">sign in</a>, then press the link again.'; return; }
+						msg.textContent = body.error === 'no_client_id' ? 'Please save the Client ID (step 1) first.' : 'The login could not be started.';
+					} catch (err) {
+						msg.textContent = 'The login could not be started.';
+					}
+				});
+				</script>
 			</li>
 			<li id="li_1">
 				<label class="description" for="spotify_accesstoken">Spotify Access Token </label>
