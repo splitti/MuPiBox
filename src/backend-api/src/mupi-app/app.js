@@ -272,7 +272,7 @@ async function renderPage(page, reload = true) {
   main.dataset.page = page.id
   // two columns on a wide PC screen when the page has several cards (the start page has its own layout)
   main.classList.toggle('start', page.id === 'start')
-  main.classList.toggle('cols', page.id !== 'start' && main.querySelectorAll(':scope > .card').length >= 3)
+  main.classList.toggle('cols', page.id !== 'start' && main.querySelectorAll(':scope > .card').length >= 2)
   wire(main, page)
   if (page.id === 'start') mountStart(main)
   ctrl?.mount?.(main, page)
@@ -310,7 +310,18 @@ function childNav(page) {
   const linked = new Set((page.sections || []).flatMap((s) => (s.items || []).filter((i) => i.type === 'nav').map((i) => i.target)))
   const kids = state.schema.pages.filter((p) => p.parent === page.id && !linked.has(p.id))
   if (kids.length === 0) return []
-  return [`<div class="card nav-card${page.id === 'einstellungen' ? ' wide' : ''}"><div class="navlist">${kids.map((k) => navRow(k.id, k.title, k.description, k.icon)).join('')}</div></div>`]
+  // the settings: a card per group (as the design; two columns on the PC)
+  if (page.id === 'einstellungen') {
+    return [
+      `<div class="group-grid wide">${kids
+        .map(
+          (k) =>
+            `<button class="group-card" data-go="${esc(k.id)}"><span class="tile">${icon(k.icon || 'chevron', 20)}</span><span class="lbl"><b>${esc(k.title)}</b>${k.description ? `<small>${esc(k.description)}</small>` : ''}</span><span class="chev">${icon('chevron', 18)}</span></button>`,
+        )
+        .join('')}</div>`,
+    ]
+  }
+  return [`<div class="card nav-card"><div class="navlist">${kids.map((k) => navRow(k.id, k.title, k.description, k.icon)).join('')}</div></div>`]
 }
 
 function navRow(target, title, subtitle, ic) {
@@ -3662,29 +3673,48 @@ function batteryTop() {
   if (!Number.isFinite(pct)) pct = Number.parseInt(String(h.Bat_SOC ?? ''), 10)
   const charging = batteryCharging(h)
   const v = (mv) => (Number.isFinite(mv) && mv > 0 ? `${(mv / 1000).toLocaleString(LOCALE, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} V` : '–')
-  const status = { 'Not Charging': 'lädt nicht', 'Pre-charge': 'Vorladen', 'Fast charge (CC mode)': 'lädt (schnell)', 'Fast Charging': 'lädt (schnell)', 'Fast charging': 'lädt (schnell)', 'Trickle Charge': 'lädt (Erhaltung)', 'Taper Charge (CV mode)': 'lädt (fast voll)', 'Taper Charging': 'lädt (fast voll)', 'Top-off Timer Active Charging': 'lädt (fast voll)', 'Charge Termination Done': 'voll' }[h.Charger_Status] ?? h.Charger_Status ?? '–'
-  // the last 24 hours in hours: the average percent of each hour
+  const status = { 'Not Charging': 'lädt nicht', 'Pre-charge': 'Vorladen', 'Fast charge (CC mode)': 'lädt (schnell)', 'Fast Charging': 'lädt (schnell)', 'Fast charging': 'lädt (schnell)', 'Trickle Charge': 'lädt (Erhaltung)', 'Taper Charge (CV mode)': 'lädt (fast voll)', 'Taper Charging': 'lädt (fast voll)', 'Top-off Timer Active Charging': 'lädt (fast voll)', 'Charge Termination Done': 'vollständig geladen' }[h.Charger_Status] ?? h.Charger_Status ?? '–'
+  // what the battery does now, under the big number (as the design: "OK · entlädt")
+  const state = charging
+    ? 'lädt'
+    : /termination|done/i.test(h.Charger_Status ?? '')
+      ? 'vollständig geladen'
+      : Number.isFinite(h.Ibat) && h.Ibat < -50
+        ? 'entlädt'
+        : 'Ruhezustand'
+  const health = { OK: 'OK', LOW: 'Niedrig', SHUTDOWN: 'Leer' }[h.Bat_Stat] ?? h.Bat_Stat
+  // the last 24 hours in twelve steps of two hours: the charge at the end of each (the last reading in it), so every
+  // bar says how full the box was then
   const now = Date.now()
-  const hours = Array.from({ length: 24 }, (_, i) => ({ at: now - (23 - i) * 3600e3, vals: [] }))
-  for (const s of hw.hist ?? []) {
-    const age = Math.floor((now - Date.parse(s.ts)) / 3600e3)
-    if (age >= 0 && age < 24 && Number.isFinite(s.percent)) hours[23 - age].vals.push(s.percent)
-  }
-  const vals = hours.map((x) => (x.vals.length ? Math.round(x.vals.reduce((a, b) => a + b, 0) / x.vals.length) : 0))
-  const labels = hours.map((x, i) => (i % 4 === 3 ? `${new Date(x.at).getHours()}` : ''))
+  const samples = (hw.hist ?? []).filter((s) => Number.isFinite(s.percent) && Number.isFinite(Date.parse(s.ts)))
+  const steps = Array.from({ length: 12 }, (_, i) => {
+    const from = now - (12 - i) * 2 * 3600e3
+    const inStep = samples.filter((s) => {
+      const t = Date.parse(s.ts)
+      return t >= from && t < from + 2 * 3600e3
+    })
+    return { from, value: inStep.length ? inStep[inStep.length - 1].percent : null }
+  })
+  const last = samples[samples.length - 1]
+  const chart = `<div class="chart vals" style="--n:12">${steps
+    .map(
+      (s, i) =>
+        `<div class="col${i === 11 ? ' today' : ''}"><div class="bar-area"><b>${s.value ?? '–'}</b>${s.value === null ? '' : `<i style="height:calc((100% - 18px) * ${s.value / 100})"></i>`}</div><span>${i === 11 ? new Date(now).getHours() : new Date(s.from).getHours()}</span></div>`,
+    )
+    .join('')}</div>`
   return [
     `<section class="card"><h2>Akku-Stand</h2>${h.ChargeProblemSince ? `<div class="note warn">${icon('plug', 18)}<span>${esc(NOT_CHARGING)}</span></div>` : ''}${
       h.BatteryStaleSince
         ? `<div class="note warn">${icon('bat', 18)}<span>${esc(BATTERY_STALE)} ${esc(`Letzte Werte von ${hhmm(Date.parse(h.BatteryStaleSince))} Uhr.`)}</span></div>
            <div class="btns"><button class="btn" id="hat-reboot">Box neu starten</button></div>`
         : ''
-    }<div><div class="big">${Number.isFinite(pct) ? `${pct} %` : '–'}${charging ? ' ⚡' : ''}</div><small class="help">${esc(h.Bat_Type ?? '')}</small></div>
+    }<div class="bat-now"><div class="bat-pct">${Number.isFinite(pct) ? `${pct} %` : '–'}</div><small>${esc([health, state].filter(Boolean).join(' · '))}</small></div>
       <dl class="kv"><div><dt>Akku-Spannung</dt><dd>${v(h.Vbat)}</dd></div><div><dt>USB-Spannung</dt><dd>${v(h.Vbus)}</dd></div>
         <div><dt>Akku-Strom</dt><dd>${Number.isFinite(h.Ibat) ? `${h.Ibat.toLocaleString(LOCALE)} mA` : '–'}</dd></div><div><dt>Temperatur</dt><dd>${Number.isFinite(h.Temp) ? `${h.Temp.toLocaleString(LOCALE)} °C` : '–'}</dd></div>
         <div><dt>Ladegerät</dt><dd>${esc(status)}</dd></div></dl></section>`,
     `<section class="card"><h2>Verlauf (24 h)</h2>${
-      (hw.hist ?? []).length
-        ? `<div class="chart" style="--n:24">${vals.map((x, i) => `<div class="col${i === 23 ? ' today' : ''}"><i style="height:${x}%"></i>${labels[i]}</div>`).join('')}</div><p class="help" style="margin:0">Akku in Prozent, je Stunde gemittelt. Ohne Balken: keine Messung in der Stunde.</p>`
+      last
+        ? `${chart}<p class="help" style="margin:0">${esc(`${samples.length} Messpunkte, zuletzt ${last.percent} % um ${hhmm(Date.parse(last.ts))}.`)}</p>`
         : '<p class="help" style="margin:0">Noch keine Messwerte.</p>'
     }</section>`,
   ]
