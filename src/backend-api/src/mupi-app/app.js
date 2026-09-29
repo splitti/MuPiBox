@@ -811,6 +811,7 @@ async function loadNotices(root) {
   const notes = []
   const pct = hat.body?.Bat_Percent
   if (hat.body?.ChargeProblemSince) notes.push(['plug', 'Akku lädt nicht', NOT_CHARGING, 'akku'])
+  if (hat.body?.BatteryStaleSince) notes.push(['bat', 'Akku-Werte veraltet', BATTERY_STALE, 'akku'])
   if (Number.isFinite(pct) && pct <= 15 && !batteryCharging(hat.body)) {
     notes.push(['bat', 'Akku fast leer', `Noch ${pct} % – bitte bald laden.`, 'akku'])
   }
@@ -3543,11 +3544,19 @@ async function loadBluetooth() {
 
 function btTop() {
   const b = hw.bt ?? {}
-  const sw = (id, label, help, on) =>
-    `<div class="row"><span class="lbl"><b>${label}</b>${help ? `<small>${help}</small>` : ''}</span><label class="switch"><input type="checkbox" id="${id}" ${on ? 'checked' : ''} aria-label="${label}"><span></span></label></div>`
+  const chip = b.chip ?? { on: true, present: true, rebootNeeded: false }
+  const sw = (id, label, help, on, off = false) =>
+    `<div class="row"><span class="lbl"><b>${label}</b>${help ? `<small>${help}</small>` : ''}</span><label class="switch"><input type="checkbox" id="${id}" ${on ? 'checked' : ''} ${off ? 'disabled' : ''} aria-label="${label}"><span></span></label></div>`
   const devices = b.devices ?? []
+  // (the Pi's Bluetooth hardware switched off: nothing to switch on above - the radio needs the chip)
+  const noHw = !chip.present
+  // the hardware: the chip itself (the admin interface's second switch), rarely needed and only after a restart
+  const hardware = `<section class="card"><h2>Bluetooth-Hardware</h2>
+    ${sw('bt-chip', 'Bluetooth-Chip', 'Schaltet die Bluetooth-Hardware des Raspberry Pi ganz ab: für stabileres Onboard-WLAN (es teilt sich den Funk mit Bluetooth), etwas weniger Strom oder die serielle Schnittstelle, die der Chip belegt. Gilt nach einem Neustart.', chip.on)}
+    ${b.controller ? `<dl class="kv"><div><dt>Controller</dt><dd translate="no">${esc(b.controller.name)} · ${esc(b.controller.mac)}</dd></div></dl>` : ''}
+    ${chip.rebootNeeded ? `<div class="note warn">${icon('info', 18)}<span>${chip.on ? 'Der Chip wird beim nächsten Neustart eingeschaltet.' : 'Der Chip wird beim nächsten Neustart abgeschaltet.'}</span></div><div class="btns"><button class="btn" id="bt-reboot">Jetzt neu starten</button></div>` : ''}</section>`
   return [
-    `<section class="card">${sw('bt-on', 'Bluetooth', 'Für Kopfhörer oder Lautsprecher.', b.powered)}${sw('bt-auto', 'Automatisch verbinden', 'Verbindet ein bekanntes Gerät von selbst, sobald es an ist.', b.autoconnect)}</section>`,
+    `<section class="card">${noHw ? `<div class="note warn">${icon('info', 18)}<span>Die Bluetooth-Hardware ist abgeschaltet. Einschalten unten unter „Bluetooth-Hardware“.</span></div>` : ''}${sw('bt-on', 'Bluetooth', 'Für Kopfhörer oder Lautsprecher.', b.powered, noHw)}${sw('bt-auto', 'Automatisch verbinden', 'Verbindet ein bekanntes Gerät von selbst, sobald es an ist.', b.autoconnect, noHw)}</section>`,
     b.powered
       ? `<section class="card"><h2>Gekoppelte Geräte</h2>${
           devices.length
@@ -3566,6 +3575,7 @@ function btTop() {
               : ''
           }</section>`
       : '',
+    hardware,
   ]
 }
 
@@ -3585,6 +3595,21 @@ function mountBluetooth(root, page) {
     const r = await api(`${API}/bluetooth/autoconnect`, { method: 'POST', body: { enable: e.target.checked } })
     toast(r.ok ? (e.target.checked ? 'Verbindet automatisch' : 'Verbindet nicht mehr automatisch') : 'Nicht gespeichert', r.ok ? 'ok' : 'info')
   }
+  $('#bt-chip', root).onchange = async (e) => {
+    const on = e.target.checked
+    const text = on
+      ? 'Die Bluetooth-Hardware wird beim nächsten Neustart eingeschaltet.'
+      : 'Die Bluetooth-Hardware wird beim nächsten Neustart ganz abgeschaltet. Kopfhörer und Lautsprecher lassen sich dann nicht mehr verbinden, bis sie wieder eingeschaltet wird.'
+    if (!(await ask(on ? 'Bluetooth-Chip einschalten?' : 'Bluetooth-Chip abschalten?', text, on ? 'Einschalten' : 'Abschalten'))) {
+      e.target.checked = !on
+      return
+    }
+    const r = await api(`${API}/bluetooth/chip`, { method: 'POST', body: { on } })
+    if (!r.ok || !r.body?.ok) return again('Das hat nicht geklappt', 'info')
+    await again()
+    if (r.body.rebootNeeded) offerReboot(on ? 'Der Chip wird eingeschaltet.' : 'Der Chip wird abgeschaltet.')
+  }
+  $('#bt-reboot', root)?.addEventListener('click', () => offerReboot(hw.bt?.chip?.on ? 'Der Chip wird eingeschaltet.' : 'Der Chip wird abgeschaltet.'))
   $('#bt-scan', root)?.addEventListener('click', async () => {
     hw.scanning = true
     renderPage(page, false)
@@ -3620,6 +3645,9 @@ function mountBluetooth(root, page) {
 const batteryCharging = (h) => Number.isFinite(h?.Ibat) && h.Ibat > 50
 // (the box saw it for 10 minutes: /api/mupihat ChargeProblemSince, see checkCharging in server.ts)
 const NOT_CHARGING = 'Das Netzteil steckt, aber der Akku lädt nicht. Bitte das Netzteil an der Box kurz abziehen und wieder anstecken.'
+// (the MuPiHAT service did not update the values for 10 minutes, a restart of it did not help: BatteryStaleSince, see
+// checkHatFresh in server.ts)
+const BATTERY_STALE = 'Die Box liest den Akku nicht mehr aus, die Werte sind veraltet. Ein Neustart des MuPiHAT-Dienstes hat nicht geholfen – bitte die Box neu starten.'
 
 async function loadBattery() {
   const [hat, hist] = await Promise.all([api('/api/mupihat'), api(`${API}/battery-history?hours=24`)])
@@ -3645,7 +3673,12 @@ function batteryTop() {
   const vals = hours.map((x) => (x.vals.length ? Math.round(x.vals.reduce((a, b) => a + b, 0) / x.vals.length) : 0))
   const labels = hours.map((x, i) => (i % 4 === 3 ? `${new Date(x.at).getHours()}` : ''))
   return [
-    `<section class="card"><h2>Akku-Stand</h2>${h.ChargeProblemSince ? `<div class="note warn">${icon('plug', 18)}<span>${esc(NOT_CHARGING)}</span></div>` : ''}<div><div class="big">${Number.isFinite(pct) ? `${pct} %` : '–'}${charging ? ' ⚡' : ''}</div><small class="help">${esc(h.Bat_Type ?? '')}</small></div>
+    `<section class="card"><h2>Akku-Stand</h2>${h.ChargeProblemSince ? `<div class="note warn">${icon('plug', 18)}<span>${esc(NOT_CHARGING)}</span></div>` : ''}${
+      h.BatteryStaleSince
+        ? `<div class="note warn">${icon('bat', 18)}<span>${esc(BATTERY_STALE)} ${esc(`Letzte Werte von ${hhmm(Date.parse(h.BatteryStaleSince))} Uhr.`)}</span></div>
+           <div class="btns"><button class="btn" id="hat-reboot">Box neu starten</button></div>`
+        : ''
+    }<div><div class="big">${Number.isFinite(pct) ? `${pct} %` : '–'}${charging ? ' ⚡' : ''}</div><small class="help">${esc(h.Bat_Type ?? '')}</small></div>
       <dl class="kv"><div><dt>Akku-Spannung</dt><dd>${v(h.Vbat)}</dd></div><div><dt>USB-Spannung</dt><dd>${v(h.Vbus)}</dd></div>
         <div><dt>Akku-Strom</dt><dd>${Number.isFinite(h.Ibat) ? `${h.Ibat.toLocaleString(LOCALE)} mA` : '–'}</dd></div><div><dt>Temperatur</dt><dd>${Number.isFinite(h.Temp) ? `${h.Temp.toLocaleString(LOCALE)} °C` : '–'}</dd></div>
         <div><dt>Ladegerät</dt><dd>${esc(status)}</dd></div></dl></section>`,
@@ -5215,6 +5248,8 @@ const CONTROLLERS = {
     top: batteryTop,
     sections: () => [],
     mount(root, page) {
+      const reboot = $('#hat-reboot', root)
+      if (reboot) reboot.onclick = () => offerReboot('Danach liest die Box den Akku wieder aus.')
       every(30000, async () => {
         await loadBattery().catch(() => undefined)
         if (currentPage()?.id === page.id) renderPage(page, false)

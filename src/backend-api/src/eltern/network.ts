@@ -1,11 +1,13 @@
 // Network options of the app (the admin interface's network.php and admin.php): onboard WiFi at boot, USB WiFi
 // drivers and their power saving, DHCP timeout, WiFi watchdog, "best connection", restarting WiFi, renewing DHCP,
 // control by IP. The LAN itself (on/off, DHCP/static) has its routes in server.ts (/api/network/ethernet*), the
-// onboard radio's quick switch too (/api/network/onboard-wifi). The driver scripts come with the installed version
-// (drivers/ next to server.js) instead of being fetched live from the upstream repository.
+// onboard radio's quick switch too (/api/network/onboard-wifi). The driver scripts are loaded from the official
+// repository each time (as the admin interface and the updates do): they fetch the drivers from the internet anyway,
+// and stay current without a new version of the box.
 
 import { execFile, spawn } from 'node:child_process'
 import { promises as fsp } from 'node:fs'
+import * as os from 'node:os'
 import * as path from 'node:path'
 import type { Router } from 'express'
 import type { MupiboxConfig } from '../models/mupibox-config.model'
@@ -14,7 +16,6 @@ import { requireCsrf, requireSession } from './middleware'
 export interface NetworkDeps {
   getMupiboxConfig: () => MupiboxConfig | undefined
   updateMupiboxConfig: (mutate: (cfg: Record<string, unknown>) => void) => Promise<void>
-  serverDir: string
 }
 
 function run(cmd: string, args: string[], timeoutMs = 30000): Promise<{ ok: boolean; stdout: string }> {
@@ -29,6 +30,7 @@ function detached(script: string): void {
   child.unref()
 }
 
+const DRIVER_SCRIPTS = 'https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/online'
 const DRIVERS: Record<string, { label: string; module: string; path: string; script: string }> = {
   RTL88X2BU: { label: 'RTL88X2BU', module: '88x2bu', path: '/home/dietpi/.driver/network/88x2bu-20210702', script: 'rtl88x2bu' },
   RTL8821AU: { label: 'RTL8821AU', module: '8821au', path: '/home/dietpi/.driver/network/8821au-20210708', script: 'rtl8821au' },
@@ -152,11 +154,20 @@ export function registerNetworkRoutes(router: Router, deps: NetworkDeps): void {
       res.status(409).json({ error: 'a driver job is running' })
       return
     }
-    const script = path.join(deps.serverDir, 'drivers', `${action}_${d.script}.sh`)
-    if (!(await fsp.stat(script).then(() => true, () => false))) {
-      res.status(500).json({ error: 'driver script missing' })
+    // the script from the official repository, current (a shell script, else it is not run)
+    let text = ''
+    try {
+      const r = await fetch(`${DRIVER_SCRIPTS}/${action}_${d.script}.sh`, { signal: AbortSignal.timeout(20000) })
+      if (r.ok) text = await r.text()
+    } catch {
+      // no internet
+    }
+    if (!text.startsWith('#!/bin/bash')) {
+      res.status(502).json({ error: 'driver script not loaded (no internet?)' })
       return
     }
+    const script = path.join(os.tmpdir(), `mupibox-driver-${action}-${d.script}.sh`)
+    await fsp.writeFile(script, text.split('\r').join(''), { mode: 0o644 })
     const job: { running: boolean; ok?: boolean; action?: string; headersMissing?: boolean } = { running: true, action: action as string }
     driverJobs[String(driver)] = job
     await run('sudo', ['rm', '-f', '/tmp/driver-install.txt'], 5000)

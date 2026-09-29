@@ -139,6 +139,7 @@ TEXTS = {
     'n_quiet_started': {'de': 'Ruhezeit gestartet', 'en': 'Quiet time started'},
     'n_quiet_started_label': {'de': 'Ruhezeit gestartet: {label}', 'en': 'Quiet time started: {label}'},
     'n_battery': {'de': 'Der MuPiBox-Akku steht bei {soc}', 'en': 'The MuPiBox battery is at {soc}'},
+    'n_battery_stale': {'de': '⚠️ Die MuPiBox liest den Akku seit {mins} Minuten nicht mehr aus – auch ein Neustart des MuPiHAT-Dienstes hat nicht geholfen.\n\nBitte die Box neu starten.', 'en': '⚠️ The MuPiBox has not read its battery for {mins} minutes – restarting the MuPiHAT service did not help either.\n\nPlease restart the box.'},
     'n_battery_not_charging': {'de': '🔌 Der MuPiBox-Akku lädt nicht ({soc}), obwohl das Netzteil steckt.\n\nBitte das Netzteil an der Box kurz abziehen und wieder anstecken.', 'en': '🔌 The MuPiBox battery is not charging ({soc}) although the power supply is plugged in.\n\nPlease unplug the power supply from the box for a moment and plug it in again.'},
     'n_sync_auth_failed': {'de': '⚠️ MuPiBox Smart-Sync: Die Spotify-Anmeldung ist abgelaufen oder ungültig.\n\nBitte neu verbinden:\n/spotify_connect', 'en': '⚠️ MuPiBox Smart-Sync: the Spotify sign-in has expired or is invalid.\n\nPlease connect again:\n/spotify_connect'},
     'n_sync_failures_network': {'de': '⚠️ MuPiBox Smart-Sync: Netzwerkfehler – {count} fehlgeschlagene Versuche in Folge.\n\nDetails mit /syncstatus.', 'en': '⚠️ MuPiBox Smart-Sync: network error – {count} failed attempts in a row.\n\nDetails via /syncstatus.'},

@@ -1458,8 +1458,13 @@ app.get('/api/mupihat', (_req, res) => {
       console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] ${error}`)
       res.json({})
     } else {
-      // (the battery does not charge although the power supply is plugged in, see checkCharging)
-      res.json(chargeProblemSince === null ? data : { ...data, ChargeProblemSince: new Date(chargeProblemSince).toISOString() })
+      // (the battery does not charge although the power supply is plugged in, see checkCharging; the values do not
+      // change any more, see checkHatFresh)
+      res.json({
+        ...data,
+        ...(chargeProblemSince === null ? {} : { ChargeProblemSince: new Date(chargeProblemSince).toISOString() }),
+        ...(hatStaleWarned && hatStaleSince !== null ? { BatteryStaleSince: new Date(hatStaleSince).toISOString() } : {}),
+      })
     }
   })
 })
@@ -1813,6 +1818,8 @@ function trimBatteryLog(): void {
 function tickBatteryLog(): void {
   const snap = readMupihatSnapshot()
   if (!snap) return
+  // (values the MuPiHAT service no longer updates are not logged: they drew a flat line for hours)
+  if (!checkHatFresh()) return
   const entry = {
     ts: new Date().toISOString(),
     vbat: typeof snap.Vbat === 'number' ? snap.Vbat : null,
@@ -1831,6 +1838,49 @@ function tickBatteryLog(): void {
     trimBatteryLog()
   }
   checkCharging(snap)
+}
+
+// === The battery values do not change any more ===
+// The MuPiHAT service can hang without ending (systemd's restart does not help then): /tmp/mupihat.json stays as it
+// was - on 28.09. for hours, the battery log drew a flat line and the charging check had nothing to go by. After
+// 5 minutes the service is restarted once; if that does not help, after 10 minutes a notice in the app (/api/mupihat
+// BatteryStaleSince) and one Telegram message. Only with the MuPiHAT switched on.
+const HAT_FRESH_MS = 3 * 60_000
+const HAT_RESTART_AFTER_MS = 5 * 60_000
+const HAT_WARN_AFTER_MS = 10 * 60_000
+let hatStaleSince: number | null = null
+let hatRestarted = false
+let hatStaleWarned = false
+
+/** false: the values are older than 3 minutes (and the service is restarted / the parents told, see above) */
+function checkHatFresh(): boolean {
+  let written: number
+  try {
+    written = fs.statSync(mupihat).mtimeMs
+  } catch {
+    return false
+  }
+  const age = Date.now() - written
+  if (age < HAT_FRESH_MS) {
+    hatStaleSince = null
+    hatRestarted = false
+    hatStaleWarned = false
+    return true
+  }
+  const hat = (getMupiboxConfigSync()?.mupihat as { hat_active?: unknown } | undefined) ?? {}
+  if (hat.hat_active !== true) return false
+  hatStaleSince = written
+  if (!hatRestarted && age >= HAT_RESTART_AFTER_MS) {
+    hatRestarted = true
+    console.warn(`${new Date().toLocaleString()}: [battery] MuPiHAT values ${Math.round(age / 60_000)} min old - restarting mupi_hat`)
+    execFile('sudo', ['systemctl', 'restart', 'mupi_hat'], { timeout: 60_000 }, () => undefined)
+  }
+  if (!hatStaleWarned && age >= HAT_WARN_AFTER_MS) {
+    hatStaleWarned = true
+    console.warn(`${new Date().toLocaleString()}: [battery] MuPiHAT values still ${Math.round(age / 60_000)} min old after the restart`)
+    execFile('/usr/bin/python3', ['/usr/local/bin/mupibox/telegram_send_message.py', '--key', 'n_battery_stale', `mins=${Math.round(age / 60_000)}`], { timeout: 60_000 }, () => undefined)
+  }
+  return false
 }
 
 // === The battery does not charge although the power supply is plugged in ===

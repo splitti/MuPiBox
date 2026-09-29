@@ -12,7 +12,7 @@
 // per-IP.
 
 import { execFile, execFileSync, spawn } from 'node:child_process'
-import { promises as fsp, readFileSync } from 'node:fs'
+import { promises as fsp, readdirSync, readFileSync } from 'node:fs'
 import * as os from 'node:os'
 import { type Request, Router } from 'express'
 import QRCode from 'qrcode'
@@ -141,6 +141,15 @@ function volumePercent(value: unknown): number | undefined {
 
 /** Run a command (no shell — execFile is injection-safe) and capture stdout.
  *  Never rejects: failures resolve with ok:false so handlers stay simple. */
+/** The system has a Bluetooth controller now (no: the chip is switched off, or there is none) */
+function btControllerPresent(): boolean {
+  try {
+    return readdirSync('/sys/class/bluetooth').some((n) => n.startsWith('hci'))
+  } catch {
+    return false
+  }
+}
+
 function execCapture(cmd: string, args: string[], timeoutMs = 8000): Promise<{ ok: boolean; stdout: string }> {
   return new Promise((resolve) => {
     execFile(cmd, args, { timeout: timeoutMs, maxBuffer: 1024 * 1024 }, (err, stdout) => {
@@ -237,7 +246,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   registerSystemRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   // (pm2 runs server.js from its folder: templates/ lies next to it)
   registerAdminRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig, serverDir: process.cwd() })
-  registerNetworkRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig, serverDir: process.cwd() })
+  registerNetworkRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerUpdateRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig })
   registerCustomCoverRoutes(router, {
     dir: '/home/dietpi/MuPiBox/media/cover',
@@ -2128,6 +2137,19 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
    * like the PHP does. Empty/off → just {powered:false}.
    */
   router.get('/bluetooth', requireSession, async (_req, res) => {
+    // The chip (the Pi's Bluetooth hardware, hciuart.service: masked = switched off at the start) and the controller
+    // the system has now. They differ until the restart after switching the chip.
+    const chipOn = (await execCapture('systemctl', ['is-enabled', 'hciuart.service'], 5000)).stdout.trim() !== 'masked'
+    const present = btControllerPresent()
+    const chip = { on: chipOn, present, rebootNeeded: chipOn !== present }
+    if (!present) {
+      // (without a controller bluetoothctl waits for one until its time is up)
+      res.json({ powered: false, devices: [], autoconnect: false, chip, controller: null })
+      return
+    }
+    const list = await execCapture('sudo', ['-u', 'dietpi', 'bluetoothctl', 'list'], 5000)
+    const ctl = /Controller\s+([0-9A-Fa-f:]{17})\s+(.*?)(\s+\[default\])?\s*$/m.exec(list.stdout)
+    const controller = ctl ? { mac: ctl[1], name: ctl[2].trim() } : null
     const show = await execCapture('sudo', ['-u', 'dietpi', 'bluetoothctl', 'show'])
     const powered = /Powered:\s*yes/i.test(show.stdout)
     const devices: Array<{ mac: string; name: string; connected: boolean }> = []
@@ -2144,11 +2166,29 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       }
     }
     const ac = await execCapture('systemctl', ['is-active', 'mupi_autoconnect_bt'])
-    res.json({ powered, devices, autoconnect: ac.stdout.trim() === 'active' })
+    res.json({ powered, devices, autoconnect: ac.stdout.trim() === 'active', chip, controller })
   })
 
+  /**
+   * POST /api/eltern/bluetooth/chip  {on:boolean} - the Pi's Bluetooth hardware on or off (set_bluetooth_chip.sh,
+   * as the admin interface): for a steadier onboard WiFi (it shares its radio with Bluetooth), a little less power, or
+   * the serial port the chip holds. Takes effect after a restart. The radio (/bluetooth/power) is the switch for every
+   * day.
+   */
+  router.post('/bluetooth/chip', requireSession, requireCsrf, async (req, res) => {
+    const on = (req.body as { on?: unknown } | undefined)?.on === true
+    const r = await execCapture('sudo', ['/usr/local/bin/mupibox/set_bluetooth_chip.sh', on ? 'on' : 'off'], 30000)
+    res.json({ ok: r.ok, rebootNeeded: on !== btControllerPresent() })
+  })
+
+  // (no Bluetooth controller: bluetoothctl and the scripts built on it would wait for one until their time is up)
+  const noController: import('express').RequestHandler = (_req, res, next) => {
+    if (btControllerPresent()) return next()
+    res.status(409).json({ error: 'no bluetooth controller' })
+  }
+
   /** POST /api/eltern/bluetooth/power  — {on:boolean} → start_bt.sh|stop_bt.sh. */
-  router.post('/bluetooth/power', requireSession, requireCsrf, async (req, res) => {
+  router.post('/bluetooth/power', requireSession, requireCsrf, noController, async (req, res) => {
     const on = (req.body as { on?: unknown } | undefined)?.on === true
     const script = on ? 'start_bt.sh' : 'stop_bt.sh'
     const r = await execCapture('sudo', ['-u', 'dietpi', `/usr/local/bin/mupibox/${script}`], 15000)
@@ -2157,7 +2197,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
 
   /** POST /api/eltern/bluetooth/scan  — runs scan_bt.sh, returns discovered
    *  devices parsed from /tmp/bt_scan (tab-sep; col[1]=MAC, col[2]=name). */
-  router.post('/bluetooth/scan', requireSession, requireCsrf, async (_req, res) => {
+  router.post('/bluetooth/scan', requireSession, requireCsrf, noController, async (_req, res) => {
     await execCapture('sudo', ['-u', 'dietpi', '/usr/local/bin/mupibox/scan_bt.sh'], 30000)
     const found: Array<{ mac: string; name: string }> = []
     try {
@@ -2174,7 +2214,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /** POST /api/eltern/bluetooth/pair  — {mac} → pair_bt.sh. */
-  router.post('/bluetooth/pair', requireSession, requireCsrf, async (req, res) => {
+  router.post('/bluetooth/pair', requireSession, requireCsrf, noController, async (req, res) => {
     const mac = String((req.body as { mac?: unknown } | undefined)?.mac ?? '').trim()
     if (!BT_MAC_RE.test(mac)) {
       res.status(400).json({ error: 'invalid MAC' })
@@ -2185,7 +2225,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /** POST /api/eltern/bluetooth/remove  — {mac} → remove_bt.sh + bt restart. */
-  router.post('/bluetooth/remove', requireSession, requireCsrf, async (req, res) => {
+  router.post('/bluetooth/remove', requireSession, requireCsrf, noController, async (req, res) => {
     const mac = String((req.body as { mac?: unknown } | undefined)?.mac ?? '').trim()
     if (!BT_MAC_RE.test(mac)) {
       res.status(400).json({ error: 'invalid MAC' })
