@@ -56,7 +56,7 @@ function textsOf(s, out) {
     if (isText(t)) out.add(decode(t))
     return
   }
-  for (const m of s.matchAll(/\b(?:placeholder|aria-label|title|alt)="([^"]*)"/g)) {
+  for (const m of s.matchAll(/\b(?:placeholder|aria-label|title|alt|label)="([^"]*)"/g)) {
     const t = m[1].trim()
     if (isText(t)) out.add(decode(t))
   }

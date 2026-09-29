@@ -273,6 +273,8 @@ export function registerDisplayRoutes(router: Router, deps: DisplayDeps): void {
       await shooting
     }
     res.setHeader('Cache-Control', 'no-store')
+    // (when the last shot failed the one before comes: its time goes along, the app shows it instead of "now")
+    if (lastShot > 0) res.setHeader('X-Shot-At', String(lastShot))
     res.sendFile(SCREENSHOT, (err) => {
       if (err && !res.headersSent) res.status(503).json({ error: 'no_screenshot' })
     })

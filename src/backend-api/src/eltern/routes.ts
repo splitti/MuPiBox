@@ -35,6 +35,8 @@ import {
   setAppPassword,
   verifyAppPassword,
   PERSISTENT_TTL_MS,
+  destroyOtherSessions,
+  keptSessionCount,
   restampSession,
   usePasswordStamp,
 } from './auth'
@@ -163,14 +165,22 @@ function execCapture(cmd: string, args: string[], timeoutMs = 8000): Promise<{ o
   })
 }
 
-// The player reads its Spotify access from its own config (spotifycontroller-main/config/config.json), which
-// setting_update.sh writes from mupiboxconfig.json. After a login or a reset the player is restarted too, as the admin
-// interface's Spotify page does - but not this process (spotify_restart.sh restarts both): it reads the config live.
-function applySpotifyAccessToPlayer(restartPlayer: boolean): void {
+// An address of the app with one more query part (it may carry one already: /app?from=wizard)
+const withQuery = (url: string, part: string): string => `${url}${url.includes('?') ? '&' : '?'}${part}`
+
+// setting_update.sh in the background: it carries the config into the files of the system and the player
+function runSettingUpdate(restartPlayer = false): void {
   const restart = restartPlayer ? '; PM2=$(command -v pm2 || echo /usr/local/bin/pm2); "$PM2" restart spotify-control >/dev/null 2>&1' : ''
   const child = spawn('sh', ['-c', `sudo /usr/local/bin/mupibox/setting_update.sh >/dev/null 2>&1${restart}`], { detached: true, stdio: 'ignore' })
   child.on('error', () => undefined)
   child.unref()
+}
+
+// The player reads its Spotify access from its own config (spotifycontroller-main/config/config.json), which
+// setting_update.sh writes from mupiboxconfig.json. After a login or a reset the player is restarted too, as the admin
+// interface's Spotify page does - but not this process (spotify_restart.sh restarts both): it reads the config live.
+function applySpotifyAccessToPlayer(restartPlayer: boolean): void {
+  runSettingUpdate(restartPlayer)
 }
 
 // The backend's Spotify caches (see /spotify-access/clear-cache); true when all of them are gone
@@ -454,7 +464,13 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       loginRequired: appLoginRequired(cfg),
       loginSwitch: (cfg as { interfacelogin?: { state?: unknown } } | undefined)?.interfacelogin?.state === true,
       defaultPassword: await verifyAppPassword('MuP1B0x', cfg),
+      keptDevices: keptSessionCount(),
     })
+  })
+
+  /** POST /api/eltern/auth/sign-out-others - every other device is signed out (also those kept signed in); this stays. */
+  router.post('/auth/sign-out-others', requireSession, requireCsrf, (req, res) => {
+    res.json({ ok: true, ended: destroyOtherSessions(req.elternSessionId) })
   })
 
   /** POST /api/eltern/auth/password {current, password} - the one password; the current one is needed when one is set. */
@@ -561,7 +577,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     if (error) {
       // (back to the page that started the login, when the state is still known)
       const started = state ? consumeOauthState(state) : undefined
-      res.redirect(`${started?.redirectAfter ?? '/app'}?spotify_error=${encodeURIComponent(error)}`)
+      res.redirect(withQuery(started?.redirectAfter ?? '/app', `spotify_error=${encodeURIComponent(error)}`))
       return
     }
     if (!state || !code) {
@@ -586,7 +602,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       updateMupiboxConfig: deps.updateMupiboxConfig,
     })
     if (!exchange.ok) {
-      res.redirect(`${original.redirectAfter}?spotify_error=${encodeURIComponent(exchange.reason)}`)
+      res.redirect(withQuery(original.redirectAfter, `spotify_error=${encodeURIComponent(exchange.reason)}`))
       return
     }
     // As the admin interface's Spotify page: logging in means Spotify is wanted, and the player gets the new access
@@ -596,7 +612,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       cfg.spotify = spotify
     })
     applySpotifyAccessToPlayer(true)
-    res.redirect(`${original.redirectAfter}?spotify_connected=1`)
+    res.redirect(withQuery(original.redirectAfter, 'spotify_connected=1'))
   })
 
   /** POST /api/eltern/spotify-oauth/disconnect  — clears stored tokens. */
@@ -859,6 +875,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     // VREG-in-mV especially safety-critical — too high cooks the cells.
     // Validation pro-Feld + Cross-Field (th_shutdown < th_warning).
     let profileMutations: Record<string, string> | null = null
+    let removeVreg = false
     if (body.batteryProfile && typeof body.batteryProfile === 'object') {
       const ranges: Record<string, [number, number]> = {
         v_100: [5000, 9000],
@@ -873,6 +890,11 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       const candidates: Record<string, string> = {}
       for (const [field, [lo, hi]] of Object.entries(ranges)) {
         const raw = body.batteryProfile[field]
+        // vreg null: the charger chip's own value again (the key goes, as the admin interface's empty field did)
+        if (field === 'vreg' && raw === null) {
+          removeVreg = true
+          continue
+        }
         if (raw === undefined || raw === null || raw === '') continue
         const n = Math.floor(Number(raw))
         if (!Number.isFinite(n) || n < lo || n > hi) {
@@ -898,7 +920,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
         res.status(400).json({ error: `th_shutdown (${finalShutdown}) must be < th_warning (${finalWarning})` })
         return
       }
-      if (Object.keys(candidates).length > 0) profileMutations = candidates
+      if (Object.keys(candidates).length > 0 || removeVreg) profileMutations = candidates
     }
 
     if (Object.keys(timeoutMutations).length === 0 && !profileMutations) {
@@ -922,12 +944,23 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
         if (profile) {
           const pConfig = ((profile.config as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
           Object.assign(pConfig, profileMutations)
+          if (removeVreg) delete pConfig.vreg
           profile.config = pConfig
           mupihat.battery_types = types
           cfg.mupihat = mupihat
         }
       }
     })
+    // "Display aus nach" while nothing plays is the X server's blanking (BlankTime, written by setting_update.sh, read
+    // at the start): set live now as well, 0 = never; setting_update.sh keeps it for the next start
+    if (timeoutMutations.idleDisplayOff !== undefined) {
+      const min = Number(timeoutMutations.idleDisplayOff)
+      const xset = min > 0 ? ['s', String(min * 60), String(min * 60)] : ['s', 'off']
+      execFile('xset', xset, { env: { ...process.env, DISPLAY: ':0' }, timeout: 5000 }, (err) => {
+        if (err) console.warn(`${new Date().toLocaleString()}: [eltern] xset ${xset.join(' ')}: ${err.message}`)
+      })
+      runSettingUpdate()
+    }
     res.json({ ok: true, applied: { timeout: timeoutMutations, batteryProfile: profileMutations } })
   })
 
@@ -1116,6 +1149,15 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
         } else {
           mb.startupVolume = mutations.startupVolume
           mb.startVolume = mutations.startupVolume
+        }
+      }
+      // Hearing protection also at the start: the scripts set startVolume as it is (pactl), without the maximum - a
+      // start value above it (set before, or the maximum lowered later) made the box start louder than allowed
+      const max = Number(mb.maxVolume)
+      if (Number.isFinite(max) && max > 0) {
+        for (const key of ['startupVolume', 'startVolume']) {
+          const v = Number(mb[key])
+          if (mb[key] !== undefined && mb[key] !== null && Number.isFinite(v) && v > max) mb[key] = max
         }
       }
       cfg.mupibox = mb
@@ -1480,7 +1522,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
    * das zuletzt aktive Connect-Device (typisch die Box).
    */
   router.post('/library/play', requireSession, requireCsrf, async (req, res) => {
-    const body = (req.body as { index?: unknown; albumId?: unknown } | undefined) ?? {}
+    const body = (req.body as { index?: unknown; albumId?: unknown; expect?: unknown } | undefined) ?? {}
     const idx = Number(body.index)
     if (!Number.isInteger(idx) || idx < 0) {
       res.status(400).json({ error: 'invalid_index' })
@@ -1505,6 +1547,15 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     if (item.isResume === true || item.category === 'resume') {
       res.status(400).json({ error: 'resume_entry_not_playable' })
       return
+    }
+    // The app's list may be older than the library (a sync, a delete, the offline list switched in): what stands at
+    // this place now must be the entry that was tapped, else something else would play
+    if (body.expect && typeof body.expect === 'object') {
+      const expect = body.expect as Record<string, unknown>
+      if (Object.keys(expect).some((k) => (item[k] ?? null) !== (expect[k] ?? null))) {
+        res.status(409).json({ error: 'library_changed' })
+        return
+      }
     }
     const enc = encodeURIComponent
     const type = String(item.type ?? '')
@@ -1654,7 +1705,10 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     }
     const now = new Date()
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-    const cutoffMs = range === 'today' ? todayStart.getTime() : now.getTime() - 7 * 24 * 3600 * 1000
+    // The week: today and the six days before, from midnight on - the same days as the bars below (the last 168 hours
+    // counted plays in the total that no bar showed). setDate keeps the days right across a clock change.
+    const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6)
+    const cutoffMs = range === 'today' ? todayStart.getTime() : weekStart.getTime()
 
     let raw = ''
     try {
@@ -1729,7 +1783,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
 
     const artistMap = new Map<string, { name: string; seconds: number; count: number }>()
     for (const p of plays) {
-      const key = p.artist || '(unbekannt)'
+      // (no artist, e.g. a radio stream or a local file without tags: an empty name, the app words it)
+      const key = p.artist || ''
       const cur = artistMap.get(key) ?? { name: key, seconds: 0, count: 0 }
       cur.seconds += p.duration
       cur.count += 1
@@ -1761,8 +1816,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     } else {
       const dayBuckets = new Map<string, number>()
       for (let i = 6; i >= 0; i--) {
-        const d = new Date(todayStart.getTime() - i * 24 * 3600 * 1000)
-        dayBuckets.set(dateKey(d), 0)
+        dayBuckets.set(dateKey(new Date(now.getFullYear(), now.getMonth(), now.getDate() - i)), 0)
       }
       for (const p of plays) {
         const d = new Date(p.tsMs)
@@ -2252,10 +2306,11 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       res.status(400).json({ error: 'invalid MAC' })
       return
     }
-    await execCapture('sudo', ['-u', 'dietpi', '/usr/local/bin/mupibox/remove_bt.sh', mac], 15000)
+    const r = await execCapture('sudo', ['-u', 'dietpi', '/usr/local/bin/mupibox/remove_bt.sh', mac], 15000)
     await execCapture('sudo', ['-u', 'dietpi', '/usr/local/bin/mupibox/stop_bt.sh'], 15000)
     await execCapture('sudo', ['-u', 'dietpi', '/usr/local/bin/mupibox/start_bt.sh'], 15000)
-    res.json({ ok: true })
+    // (a device the controller did not let go is an error the app shows, not "removed")
+    res.status(r.ok ? 200 : 500).json({ ok: r.ok })
   })
 
   /** POST /api/eltern/bluetooth/autoconnect  — {enable:boolean}. */
@@ -2318,7 +2373,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
         const label = String((c as Record<string, unknown>).label ?? '').trim()
         // Telegram chat IDs are integers; groups/channels are negative (-100…).
         if (!/^-?\d{1,20}$/.test(id)) {
-          res.status(400).json({ error: `invalid chat id: ${id}` })
+          res.status(400).json({ error: 'invalid_chat_id', id })
           return
         }
         validatedChats.push({ id, label: label.slice(0, 60) })
@@ -2328,10 +2383,26 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     if (typeof body.token === 'string' && body.token.trim().length > 0) {
       const t = body.token.trim()
       if (!/^\d{6,12}:[A-Za-z0-9_-]{30,50}$/.test(t)) {
-        res.status(400).json({ error: 'Bot token format looks invalid / Bot-Token-Format sieht ungültig aus' })
+        res.status(400).json({ error: 'invalid_token' })
         return
       }
       newToken = t
+    }
+    // Switched on without a token or anyone allowed, the bot cannot run: systemd would start it again and again (as
+    // smart.php refused it). What the config will hold after this request counts.
+    const stored = (deps.getMupiboxConfig()?.telegram as Record<string, unknown> | undefined) ?? {}
+    const willBeActive = typeof body.active === 'boolean' ? body.active : stored.active === true
+    if (willBeActive) {
+      const token = newToken ?? (typeof stored.token === 'string' ? stored.token.trim() : '')
+      const chats = validatedChats ?? (Array.isArray(stored.chatId) ? stored.chatId : typeof stored.chatId === 'string' && stored.chatId.trim() ? [stored.chatId] : [])
+      if (!token) {
+        res.status(400).json({ error: 'token_missing' })
+        return
+      }
+      if (chats.length === 0) {
+        res.status(400).json({ error: 'chat_missing' })
+        return
+      }
     }
     await deps.updateMupiboxConfig((cfg) => {
       const tg = ((cfg.telegram as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>

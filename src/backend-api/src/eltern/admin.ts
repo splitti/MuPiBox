@@ -85,6 +85,35 @@ async function installAs(target: string, content: string): Promise<boolean> {
   return r.ok
 }
 
+// Secrets of the box config in the JSON editor: the value stands there as HIDDEN (only strings; not the dates and lists
+// that share the name, e.g. tokenUpdatedAt, tokenScopes)
+const HIDDEN = '(verborgen)'
+const SECRET_KEY = /pass|token|secret|hash|salt/i
+const NOT_SECRET = /(At|Scopes|Configured)$/
+
+function hideSecrets(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(hideSecrets)
+  if (value && typeof value === 'object') {
+    const out: Record<string, unknown> = {}
+    for (const [k, v] of Object.entries(value)) {
+      out[k] = typeof v === 'string' && v !== '' && SECRET_KEY.test(k) && !NOT_SECRET.test(k) ? HIDDEN : hideSecrets(v)
+    }
+    return out
+  }
+  return value
+}
+
+function putSecretsBack(edited: unknown, stored: unknown): unknown {
+  if (Array.isArray(edited)) return edited.map((v, i) => putSecretsBack(v, Array.isArray(stored) ? stored[i] : undefined))
+  if (edited && typeof edited === 'object') {
+    const from = stored && typeof stored === 'object' ? (stored as Record<string, unknown>) : {}
+    const out: Record<string, unknown> = {}
+    for (const [k, v] of Object.entries(edited)) out[k] = v === HIDDEN && k in from ? from[k] : putSecretsBack(v, from[k])
+    return out
+  }
+  return edited
+}
+
 export function registerAdminRoutes(router: Router, deps: AdminDeps): void {
   /* ---- system options ---- */
 
@@ -155,7 +184,8 @@ export function registerAdminRoutes(router: Router, deps: AdminDeps): void {
         }
         r = await dietpiInject('CONFIG_CPU_GOVERNOR=', `CONFIG_CPU_GOVERNOR=${value}`, '/boot/dietpi.txt')
         if (r.ok) r = await run('sudo', ['/boot/dietpi/func/dietpi-set_cpu'], 60000)
-        res.json({ ok: r.ok, rebootNeeded: false })
+        // (a failure is an error the app shows, not "saved")
+        res.status(r.ok ? 200 : 500).json({ ok: r.ok, rebootNeeded: false })
         return
       }
       default:
@@ -179,17 +209,27 @@ export function registerAdminRoutes(router: Router, deps: AdminDeps): void {
       cfg.mupibox = { ...((cfg.mupibox as Record<string, unknown>) ?? {}), host }
     })
     detached('sudo /usr/local/bin/mupibox/setting_update.sh; sudo su dietpi -c /usr/local/bin/mupibox/set_hostname.sh')
-    res.json({ ok: r.ok, rebootNeeded: true })
+    res.status(r.ok ? 200 : 500).json({ ok: r.ok, rebootNeeded: true })
   })
 
   /** GET /api/eltern/json-file?key= - one of the files of the admin interface's JSON editor, as text. */
   router.get('/json-file', requireSession, async (req, res) => {
-    const file = JSON_FILES[String(req.query.key ?? '')]
+    const key = String(req.query.key ?? '')
+    const file = JSON_FILES[key]
     if (!file) {
       res.status(400).json({ error: 'unknown file' })
       return
     }
-    const text = await readText(file)
+    let text = await readText(file)
+    // The box config's secrets (tokens, passwords, the password's hash) do not go to the browser - the app hides them
+    // everywhere else as well. They show as HIDDEN and are put back on saving when they come back unchanged.
+    if (key === 'mupiboxconfig') {
+      try {
+        text = `${JSON.stringify(hideSecrets(JSON.parse(text)), null, 2)}\n`
+      } catch {
+        // not readable as JSON: shown as it is, the editor says so
+      }
+    }
     res.json({ keys: Object.keys(JSON_FILES), text })
   })
 
@@ -218,8 +258,10 @@ export function registerAdminRoutes(router: Router, deps: AdminDeps): void {
       }
       await deps.updateMupiboxConfig((cfg) => {
         const login = cfg.interfacelogin
+        // (the hidden secrets back from the config as it is)
+        const merged = putSecretsBack(parsed, structuredClone(cfg)) as Record<string, unknown>
         for (const k of Object.keys(cfg)) delete cfg[k]
-        Object.assign(cfg, parsed)
+        Object.assign(cfg, merged)
         if (login !== undefined) cfg.interfacelogin = login
       })
       res.json({ ok: true })
@@ -245,9 +287,16 @@ export function registerAdminRoutes(router: Router, deps: AdminDeps): void {
       }
       await deps.updateMupiboxConfig((cfg) => {
         const login = cfg.interfacelogin
+        // (what the template cannot know stays: the installed version - else no update is found and "Über" shows
+        // none - and the box's name in the network, which the system keeps anyway)
+        const mb = (cfg.mupibox as Record<string, unknown> | undefined) ?? {}
+        const keep = { version: mb.version, host: mb.host }
         for (const k of Object.keys(cfg)) delete cfg[k]
         Object.assign(cfg, template)
         if (login !== undefined) cfg.interfacelogin = login
+        const fresh = (cfg.mupibox as Record<string, unknown> | undefined) ?? {}
+        for (const [k, v] of Object.entries(keep)) if (typeof v === 'string' && v) fresh[k] = v
+        cfg.mupibox = fresh
       })
       detached('sudo /usr/local/bin/mupibox/setting_update.sh')
       res.json({ ok: true, rebootNeeded: true })

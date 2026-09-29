@@ -275,7 +275,7 @@
        "type": "nav",
        "label": "Hörschutz (Maximallautstärke)",
        "target": "lautstaerke",
-       "subtitle": "75 % · Einstellungen › Audio"
+       "subtitle": "Einstellungen › Audio › Lautstärke"
       }
      ]
     }
@@ -1132,7 +1132,7 @@
     },
     {
      "title": "Sync-Intervall",
-     "help": "Manuell (Knopf oder Telegram /resync) geht immer.",
+     "help": "Wie oft die Box bei Spotify nach Änderungen schaut.",
      "items": [
       {
        "type": "slider",
@@ -1778,7 +1778,7 @@
      "items": [
       {
        "type": "toggle",
-       "label": "Namen beim Anhalten vorlesen",
+       "label": "Namen vorlesen, wenn das Cover stehen bleibt",
        "key": "tts",
        "default": false,
        "help": "In der Cover-Flow-Ansicht wird der Name des mittleren Covers vorgelesen."
@@ -1990,7 +1990,8 @@
        "min": 0,
        "max": 120,
        "step": 1,
-       "unit": " min"
+       "unit": " min",
+       "zero": "Nie"
       }
      ]
     },
@@ -2698,7 +2699,8 @@
        "min": 0,
        "max": 300,
        "step": 5,
-       "unit": " min"
+       "unit": " min",
+       "zero": "Nie"
       },
       {
        "type": "buttons",
@@ -2735,7 +2737,7 @@
        "help": "So lange den Taster halten, bis die Box ausgeht.",
        "min": 0,
        "max": 5,
-       "step": 0.5,
+       "step": 1,
        "unit": " s"
       },
       {
@@ -4104,9 +4106,7 @@
         "64 MB",
         "128 MB",
         "256 MB",
-        "512 MB",
-        "1024 MB",
-        "2048 MB"
+        "512 MB"
        ]
       },
       {
@@ -4238,9 +4238,9 @@
        "type": "select",
        "label": "Sprache der App",
        "key": "appLang",
-       "default": "Automatisch (Browser)",
+       "default": "Automatisch (Sprache des Browsers)",
        "options": [
-        "Automatisch (Browser)",
+        "Automatisch (Sprache des Browsers)",
         "Deutsch",
         "English",
         "Français",

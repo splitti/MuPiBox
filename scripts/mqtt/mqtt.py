@@ -951,7 +951,7 @@ def main():
     
     
     # Check MQTT Broker online state
-    if check_server_availability(mqtt_broker,1883,mqtt_refresh):
+    if check_server_availability(mqtt_broker,mqtt_port,mqtt_refresh):
 
         global client
 

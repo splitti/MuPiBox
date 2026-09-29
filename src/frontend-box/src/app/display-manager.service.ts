@@ -28,8 +28,9 @@ export class DisplayManagerService {
     console.log('[DisplayManager] Loading idle timeout from config...')
     this.http.get<MupiboxConfig>(`${environment.backend.apiUrl}/config`).subscribe({
       next: (config) => {
-        const timeout = Number.parseInt(config?.timeout?.idleDisplayOff || '1', 10)
-        this.idleTimeoutMinutes = timeout > 0 ? timeout : 1
+        // 0 = never (as the app and the admin interface say); only a missing or broken value falls back to 1 minute
+        const timeout = Number.parseInt(String(config?.timeout?.idleDisplayOff ?? '1'), 10)
+        this.idleTimeoutMinutes = Number.isFinite(timeout) && timeout >= 0 ? timeout : 1
         console.log(`[DisplayManager] Idle timeout set to ${this.idleTimeoutMinutes} minute(s)`)
         this.initialize()
       },
@@ -80,6 +81,8 @@ export class DisplayManagerService {
   }
 
   private checkIdleState(): void {
+    // "Display aus nach 0 min" = the display stays on
+    if (this.idleTimeoutMinutes <= 0) return
     const isPlaying = this.spotifyService.playerState$.value?.paused === false
     const idleTimeSeconds = (Date.now() - this.lastActivityTimestamp) / 1000
     const timeoutSeconds = this.idleTimeoutMinutes * 60

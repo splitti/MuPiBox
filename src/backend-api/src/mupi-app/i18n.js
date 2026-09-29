@@ -212,7 +212,7 @@ export function tr(text) {
 
 /* ---------- the document ---------- */
 
-const ATTRS = ['placeholder', 'aria-label', 'title', 'alt']
+const ATTRS = ['placeholder', 'aria-label', 'title', 'alt', 'label'] // (label: of an <optgroup>)
 // no translation: code, logs, JSON, what people type (a textarea's text; a field's value is no text node), and
 // everything marked translate="no"
 const REJECT = new Set(['SCRIPT', 'STYLE', 'PRE', 'CODE', 'svg'])

@@ -106,10 +106,15 @@ export function registerHardwareRoutes(router: Router, deps: HardwareDeps): void
       res.status(400).json({ error: 'unknown sound card' })
       return
     }
-    await merge(deps, 'mupibox', { physicalDevice: id })
     const r = await run('sudo', ['/boot/dietpi/func/dietpi-set_hardware', 'soundcard', id], 120000)
+    // (only a card DietPi took is noted - and a failure is one for the app, not "saved")
+    if (!r.ok) {
+      res.status(500).json({ ok: false, error: 'switch_failed' })
+      return
+    }
+    await merge(deps, 'mupibox', { physicalDevice: id })
     detached('sudo /usr/local/bin/mupibox/setting_update.sh >/dev/null 2>&1')
-    res.json({ ok: r.ok, reboot: true })
+    res.json({ ok: true, reboot: true })
   })
 
   /** POST /api/eltern/rotary {active?, step?, button?} - the rotary encoder (volume) and its push button. */
@@ -151,11 +156,18 @@ export function registerHardwareRoutes(router: Router, deps: HardwareDeps): void
       res.status(400).json({ error: 'active must be true or false' })
       return
     }
+    const before = section(deps, 'mupihat').hat_active
     await merge(deps, 'mupihat', { hat_active: active })
     const r = await run('sudo', [`/usr/local/bin/mupibox/${active ? 'enable' : 'disable'}_mupihat.sh`], 120000)
+    if (!r.ok) {
+      // (the script failed: the switch goes back, and the box is not restarted into a half-done state)
+      await merge(deps, 'mupihat', { hat_active: before })
+      res.status(500).json({ ok: false, error: 'switch_failed' })
+      return
+    }
     await run('sudo', ['/usr/local/bin/mupibox/setting_update.sh'], 60000)
     rebootSoon()
-    res.json({ ok: r.ok, reboot: true })
+    res.json({ ok: true, reboot: true })
   })
 
   /** POST /api/eltern/battery {name} - the battery profile (one of mupihat.battery_types); mupi_hat reads it anew. */

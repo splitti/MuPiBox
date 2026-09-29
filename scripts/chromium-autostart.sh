@@ -104,6 +104,11 @@ pactl load-module module-bluetooth-discover
 # START SOUND
 START_SOUND=$(/usr/bin/jq -r .mupibox.startSound ${CONFIG})
 START_VOLUME=$(/usr/bin/jq -r .mupibox.startVolume ${CONFIG})
+# hearing protection at the start too: never above the maximum (a start value set before the maximum was lowered)
+MAX_VOLUME=$(/usr/bin/jq -r '.mupibox.maxVolume // 100' ${CONFIG})
+if [ "${START_VOLUME}" -eq "${START_VOLUME}" ] 2>/dev/null && [ "${MAX_VOLUME}" -eq "${MAX_VOLUME}" ] 2>/dev/null && [ "${START_VOLUME}" -gt "${MAX_VOLUME}" ]; then
+	START_VOLUME=${MAX_VOLUME}
+fi
 AUDIO_DEVICE=$(/usr/bin/jq -r .mupibox.audioDevice ${CONFIG})
 /usr/bin/pactl set-sink-volume @DEFAULT_SINK@ ${START_VOLUME}%
 # Kill any in-flight startup-sound playback before launching a fresh one.

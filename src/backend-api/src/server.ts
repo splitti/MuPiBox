@@ -2085,6 +2085,25 @@ app.post('/api/quiethours/now', localOrElternSession, async (req, res) => {
   }
 })
 
+// POST /api/playtime/override/clear - ends a parent's "quiet now" or "release" early: the planned times and the daily
+// limit count again at once (before, the only way out of "quiet now" was a release, which also lifted the limit)
+app.post('/api/playtime/override/clear', localOrElternSession, async (_req, res) => {
+  try {
+    await updateMupiboxConfig((cfg) => {
+      const ov = cfg.playbackOverride as Record<string, unknown> | undefined
+      if (ov && typeof ov === 'object') {
+        ov.forceBlockUntil = 0
+        ov.allowUntil = 0
+      }
+    })
+    console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] /api/playtime/override/clear`)
+    res.status(200).json({ ok: true })
+  } catch (err) {
+    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] /api/playtime/override/clear failed:`, err)
+    res.status(500).json({ error: 'internal error' })
+  }
+})
+
 app.get('/api/activeresume', (_req, res) => {
   // active_resume.json is a symlink that scripts/mupibox/check_network.sh
   // creates the first time the network state is determined. Until that runs
@@ -2980,6 +2999,7 @@ app.post('/api/add', (req, res) => {
       newEntry.source = 'manual'
     }
     data.push(newEntry)
+    renumberLibrary(data)
     writeJsonAtomic(dataFile, data, (writeError) => {
       releaseLock(dataLock, '/api/add')
       if (writeError) {
@@ -3298,6 +3318,15 @@ function sameLibraryEntry(a: unknown, b: unknown): boolean {
   const y = b as Record<string, unknown>
   return LIBRARY_ID_KEYS.every((k) => (x[k] ?? null) === (y[k] ?? null))
 }
+// Every entry of data.json carries its place as "index" (add_index.sh, the Smart-Sync): edit and delete find an entry by
+// it. After an entry was added or deleted here the places moved - they are counted again, else every later edit or
+// delete in the app met "library changed" (the display sends the player's INDEX for the same reason).
+function renumberLibrary(data: unknown[]): void {
+  data.forEach((entry, i) => {
+    if (entry && typeof entry === 'object' && !Array.isArray(entry)) (entry as Record<string, unknown>).index = i
+  })
+}
+
 function libraryIndexProblem(data: unknown, index: unknown, original: unknown): string | null {
   if (!Array.isArray(data)) return 'library unreadable'
   if (typeof index !== 'number' || !Number.isInteger(index) || index < 0 || index >= data.length) return 'bad index'
@@ -3331,6 +3360,7 @@ app.post('/api/delete', (req, res) => {
       return
     }
     data.splice(req.body.index, 1)
+    renumberLibrary(data)
     writeJsonAtomic(dataFile, data, (writeError) => {
       releaseLock(dataLock, '/api/delete')
       if (writeError) {
@@ -3376,6 +3406,7 @@ app.post('/api/edit', (req, res) => {
       return
     }
     data.splice(req.body.index, 1, entry)
+    renumberLibrary(data)
     writeJsonAtomic(dataFile, data, (writeError) => {
       releaseLock(dataLock, '/api/edit')
       if (writeError) {

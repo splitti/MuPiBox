@@ -67,8 +67,11 @@ export function createSpotifySyncRouter(deps: RunSyncDeps): Router {
   /** GET /api/spotify-sync/config
    *  Returns the merged effective config (defaults + user overrides). */
   router.get('/config', (_req, res) => {
-    const config = loadSpotifySyncConfig(deps.getMupiboxConfig())
-    res.json(config)
+    const cfg = deps.getMupiboxConfig()
+    const config = loadSpotifySyncConfig(cfg)
+    // (whether a prefix was ever chosen: the defaults fill in "MuPiBox", the app suggests the box's name instead)
+    const raw = (cfg as unknown as { spotify_sync?: { playlist_prefix?: unknown } } | undefined)?.spotify_sync
+    res.json({ ...config, prefix_set: typeof raw?.playlist_prefix === 'string' && raw.playlist_prefix !== '' })
   })
 
   /**

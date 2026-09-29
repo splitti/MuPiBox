@@ -282,6 +282,25 @@ export function validateSession(sessionId: string | undefined): Session | null {
   return entry
 }
 
+/** Every session but this one ends (the devices kept signed in too); answers how many ended. */
+export function destroyOtherSessions(sessionId: string | undefined): number {
+  const sessions = loadSessions()
+  let n = 0
+  for (const id of Object.keys(sessions)) {
+    if (id === sessionId) continue
+    delete sessions[id]
+    n++
+  }
+  if (n > 0) saveSessions()
+  return n
+}
+
+/** How many devices are kept signed in ("Angemeldet bleiben"). */
+export function keptSessionCount(): number {
+  purgeExpiredSessions()
+  return Object.values(loadSessions()).filter((s) => s.persistent).length
+}
+
 /** Drop a session — for explicit logout. */
 export function destroySession(sessionId: string | undefined): void {
   if (!sessionId) return

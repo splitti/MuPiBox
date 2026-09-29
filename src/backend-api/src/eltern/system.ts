@@ -172,11 +172,12 @@ async function seedFromRrd(): Promise<void> {
   samples.unshift(...seeded.filter((s) => s[0] < first))
 }
 
-/** The samples of the last `hours`, at most `points` of them (averages of equal slices when there are more). */
-function systemHistory(hours: number, points = 240): SystemSample[] {
+/** The samples of the last `hours`, at most `points` of them (averages of equal slices when there are more), and
+ *  how far apart they are meant to be (the app breaks its line only at a gap bigger than that). */
+function systemHistory(hours: number, points = 240): { step: number; samples: SystemSample[] } {
   const from = Date.now() - hours * 3600e3
   const inRange = samples.filter((s) => s[0] >= from)
-  if (inRange.length <= points) return inRange
+  if (inRange.length <= points) return { step: SAMPLE_MS, samples: inRange }
   const size = Math.ceil(inRange.length / points)
   const out: SystemSample[] = []
   for (let i = 0; i < inRange.length; i += size) {
@@ -187,7 +188,7 @@ function systemHistory(hours: number, points = 240): SystemSample[] {
     }
     out.push([slice[slice.length - 1][0], avg(1), avg(2), avg(3)])
   }
-  return out
+  return { step: size * SAMPLE_MS, samples: out }
 }
 
 const CACHE_SIZES = ['0', '8', '16', '32', '64', '128', '256', '512']
@@ -198,7 +199,7 @@ export function registerSystemRoutes(router: Router, deps: SystemDeps): void {
   /** GET /api/eltern/system-history?hours=1|6|24 - [time, temp °C, cpu %, ram %] a minute apart (fewer for 24 h). */
   router.get('/system-history', requireSession, (req, res) => {
     const hours = [1, 6, 24].includes(Number(req.query.hours)) ? Number(req.query.hours) : 1
-    res.json({ hours, since: samples[0]?.[0] ?? null, samples: systemHistory(hours) })
+    res.json({ hours, since: samples[0]?.[0] ?? null, ...systemHistory(hours) })
   })
 
   /** GET /api/eltern/version - the installed MuPiBox version (mupibox.version). */
@@ -291,6 +292,13 @@ export function registerSystemRoutes(router: Router, deps: SystemDeps): void {
     const grep = String(req.query.grep ?? '').slice(0, 100)
     const lines = Math.max(20, Math.min(2000, Number.parseInt(String(req.query.lines ?? '200'), 10) || 200))
     let text = ''
+    if (kind === 'log' && LOGS[key] && grep) {
+      // a search goes through the whole log, then its last lines (not only the last lines searched)
+      const r = await run('grep', ['-i', '-F', '--', grep, LOGS[key]], 10000)
+      const hits = r.stdout.split('\n').filter((l) => l !== '')
+      res.type('text/plain; charset=utf-8').send(hits.slice(-lines).join('\n'))
+      return
+    }
     if (kind === 'log' && LOGS[key]) {
       const r = await run('tail', ['-n', String(lines), LOGS[key]], 10000)
       text = r.stdout
