@@ -404,12 +404,19 @@ rm -f /tmp/mupibox-update-failed
 	USERDATA_BAK="/home/dietpi/.mupibox/userdata.upd-bak"
 	rm -rf "${USERDATA_BAK}" >&3 2>&3
 	mkdir -p "${USERDATA_BAK}/www" >&3 2>&3
-	cp -a /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config "${USERDATA_BAK}/config" >&3 2>&3
-	cp -a /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover "${USERDATA_BAK}/www/cover" >&3 2>&3
-	cp -a /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/active_theme.css "${USERDATA_BAK}/www/active_theme.css" >&3 2>&3
-	# H5: data.json holds the library - non-recoverable. cover and active_theme.css can be restored
-	# from defaults if missing, so only the data.json backup is fail-fast.
-	[ -f "${USERDATA_BAK}/config/data.json" ] || fail_update "data.json backup failed (library state would be lost)"
+	# Every copy is checked (a full card copied part of it, and the old install was deleted all the same); what is not
+	# there (a box without covers yet) is not an error. The podcast pictures (rss-covers) come along: without them every
+	# picture was loaded again after an update.
+	SKC=/home/dietpi/.mupibox/Sonos-Kids-Controller-master
+	cp -a "${SKC}/server/config" "${USERDATA_BAK}/config" >&3 2>&3 || fail_update "backup of the user data failed (card full?)"
+	for item in cover active_theme.css rss-covers; do
+		[ -e "${SKC}/www/${item}" ] || continue
+		cp -a "${SKC}/www/${item}" "${USERDATA_BAK}/www/${item}" >&3 2>&3 || fail_update "backup of www/${item} failed (card full?)"
+	done
+	# H5: data.json holds the library - non-recoverable: the copy has to be readable
+	if [ -f "${SKC}/server/config/data.json" ]; then
+		/usr/bin/jq -e . "${USERDATA_BAK}/config/data.json" > /dev/null 2>&1 || fail_update "data.json backup failed (library state would be lost)"
+	fi
 	after=$(date +%s)
 	echo -e "## Backup Data  ##  finished after $((after - $before)) seconds" >&3 2>&3
 
@@ -442,8 +449,7 @@ rm -f /tmp/mupibox-update-failed
 		fi
 		fail_update "deploy.zip extraction failed — rolled back to previous install"
 	fi
-	# Extract succeeded — drop the backup.
-	rm -rf "${BAK_DIR}" >&3 2>&3
+	# (the old install is removed once the user data is back, see "Restore Userdata")
 	mv ${MUPI_SRC}/config/templates/monitor.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/monitor.json >&3 2>&3
 	mv ${MUPI_SRC}/config/templates/www.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >&3 2>&3
 	chown dietpi:dietpi -R /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www >&3 2>&3
@@ -913,15 +919,19 @@ rm -f /tmp/mupibox-update-failed
 		rm -rf "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/${name}" >&3 2>&3
 		cp -a "${item}" "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/${name}" >&3 2>&3 || RESTORE_OK=0
 	done
-	rm -rf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover >&3 2>&3
-	cp -a "${USERDATA_BAK}/www/cover" /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover >&3 2>&3 || RESTORE_OK=0
-	cp -a "${USERDATA_BAK}/www/active_theme.css" /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/active_theme.css >&3 2>&3 || RESTORE_OK=0
+	for item in cover active_theme.css rss-covers; do
+		[ -e "${USERDATA_BAK}/www/${item}" ] || continue
+		rm -rf "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/${item}" >&3 2>&3
+		cp -a "${USERDATA_BAK}/www/${item}" "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/${item}" >&3 2>&3 || RESTORE_OK=0
+	done
 	chown -R dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config >&3 2>&3
 	# only now that everything is back
 	if [ "${RESTORE_OK}" = 1 ] && /usr/bin/jq -e . /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json > /dev/null 2>&1; then
 		rm -rf "${USERDATA_BAK}" >&3 2>&3
+		# the old install is not needed any more either
+		rm -rf "${BAK_DIR}" >&3 2>&3
 	else
-		echo "## Restore incomplete - user data kept in ${USERDATA_BAK}" >&3 2>&3
+		echo "## Restore incomplete - user data kept in ${USERDATA_BAK} (old install in ${BAK_DIR})" >&3 2>&3
 	fi
 	chown dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >&3 2>&3
 	sleep 1 >&3 2>&3
