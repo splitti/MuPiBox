@@ -741,6 +741,12 @@ function tile(target, ic, label, val, id) {
 
 const startState = { maxVolume: 100, volTimer: null, sleep: null, quietUntil: 0 }
 
+// After a quick action: the start page's state now and twice more (the player takes a change over within seconds)
+function statusSoon(root) {
+  loadStatus(root)
+  for (const ms of [1500, 5000]) setTimeout(() => root.isConnected && loadStatus(root), ms)
+}
+
 function mountStart(root) {
   loadNow(root)
   loadStatus(root)
@@ -751,7 +757,7 @@ function mountStart(root) {
   $('#q-plus', root).onclick = async () => {
     const r = await api('/api/playtime/extend', { method: 'POST', body: { minutes: 15 } })
     toast(r.ok ? '15 Minuten mehr für heute' : 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
-    if (r.ok) loadStatus(root)
+    if (r.ok) statusSoon(root)
   }
   $('#q-quiet', root).onclick = () => {
     // (a quiet running: the same button ends it - the planned times and the limit count again)
@@ -759,13 +765,13 @@ function mountStart(root) {
       return confirmSheet('Ruhe beenden', `Die Ruhe läuft noch bis ${hhmm(startState.quietUntil)}. Jetzt beenden? Dann gelten wieder die normalen Zeiten.`, async () => {
         const r = await api('/api/playtime/override/clear', { method: 'POST', body: {} })
         toast(r.ok ? 'Ruhe beendet' : 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
-        if (r.ok) setTimeout(() => loadStatus(root), 600)
+        if (r.ok) statusSoon(root)
       })
     }
     minutesSheet('Ruhe sofort', 'Die Box spielt für diese Zeit nichts.', [15, 30, 60, 120], 30, async (m) => {
       const r = await api('/api/quiethours/now', { method: 'POST', body: { minutes: m } })
       toast(r.ok ? `Ruhe für ${m} Minuten` : 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
-      if (r.ok) setTimeout(() => loadStatus(root), 600)
+      if (r.ok) statusSoon(root)
     })
   }
   $('#q-sleep', root).onclick = () => sleepSheet(root)
@@ -3247,7 +3253,7 @@ function spotifyTop() {
 
   parts.push(`<section class="card nav-card"><div class="navlist">
       ${navRow('syncopt', 'Sync-Einstellungen', 'Playlist-Präfix, Intervall, an/aus', 'gear')}
-      ${navRow('spzugang', 'Zugangsdaten', 'Client ID, Client Secret, Redirect URI, Anmeldung', 'lock')}
+      ${navRow('spzugang', 'Zugangsdaten', 'Client ID, Secret, Anmeldung, Spotify Connect', 'lock')}
       ${navRow('wizard', 'Einrichtungs-Assistent', ready ? 'Alles eingerichtet – Schritt für Schritt ansehen' : 'Schritt für Schritt – zeigt, was fehlt', 'sync')}
     </div></section>`)
 
@@ -3927,7 +3933,7 @@ function nasTreeRows(path, depth, out) {
     out.push({ ...k, depth, isOpen: nas.open.has(k.path) })
     if (nas.open.has(k.path)) nasTreeRows(k.path, depth + 1, out)
   }
-  if (pages > 1) out.push({ pager: path, page, pages, depth })
+  if (pages > 1) out.push({ pager: path, name: path.slice(path.lastIndexOf('/') + 1) || path, page, pages, depth })
   return out
 }
 
@@ -3994,7 +4000,8 @@ function drawNasFolders() {
       const pad = `style="--depth:${r.depth}"`
       if (r.loading) return `<div class="nas-note" ${pad}>Lade …</div>`
       if (r.empty) return `<div class="nas-note" ${pad}>Keine Unterordner</div>`
-      if (r.pager) return `<nav class="pager nas-pager" ${pad} data-pager="${esc(r.pager)}" aria-label="Seiten">${pagerButtons(r.page, r.pages)}</nav>`
+      if (r.pager)
+        return `<div class="nas-pager" ${pad}><small>${esc(tr(`„${r.name}“: Seite ${r.page + 1} von ${r.pages}`))}</small><nav class="pager" data-pager="${esc(r.pager)}" aria-label="Seiten">${pagerButtons(r.page, r.pages)}</nav></div>`
       i++
       return `<div class="entry nas-row${nas.edits.has(r.path) ? ' changed' : ''}" ${pad}>
         ${flat ? '' : `<button class="nas-chev" data-toggle="${i}" aria-expanded="${r.isOpen}" aria-label="${r.isOpen ? 'Zuklappen' : 'Aufklappen'}">${icon('chevron', 16)}</button>`}
@@ -4098,7 +4105,7 @@ async function nasWhereSheet(row, place = null) {
      <div class="where-grid">
        ${option('audiobook', 'Hörspiele', 'neben SD-Karte und Spotify')}
        ${option('music', 'Musik', 'neben SD-Karte und Spotify')}
-       ${option('other', 'Radio & Podcasts', 'z. B. Geräusche, Geschichten ohne Serie')}
+       ${option('other', 'Radio & Podcasts', 'neben Radiosendern und Podcasts')}
        ${option('', 'NAS-Reiter', 'eigener Reiter nur fürs NAS')}
      </div>
      <div class="where-split" id="w-split" hidden>
@@ -4139,7 +4146,7 @@ async function nasWhereSheet(row, place = null) {
         close()
         if (place) return place.apply(false, '', false)
         setNasFlag(row, 'show', false)
-        drawNasFolders()
+        saveNasRow(row)
       })
       sheet.querySelector('[data-ok]').onclick = () => {
         close()
@@ -4147,10 +4154,33 @@ async function nasWhereSheet(row, place = null) {
         setNasFlag(row, 'show', true)
         setNasFlag(row, 'category', category)
         setNasFlag(row, 'split', category !== '' && !!split)
-        drawNasFolders()
+        saveNasRow(row)
       }
     },
   )
+}
+
+// One folder of the NAS page saved at once (its place on the box was chosen: shown where, or not): its show / hide /
+// download and category, the other changes of the page wait for "Auswahl speichern"
+async function saveNasRow(row) {
+  const p = row.path
+  const show = nasFlag(row, 'show')
+  const category = show ? nasFlag(row, 'category') : ''
+  const split = !!category && nasFlag(row, 'split')
+  const r = await api('/api/nas/selection', {
+    method: 'POST',
+    body: { shown: [p], show: show ? [p] : [], hide: nasFlag(row, 'hide') ? [p] : [], download: nasFlag(row, 'download') ? [p] : [], categories: category ? { [p]: category } : {}, split: split ? [p] : [] },
+  })
+  if (!r.ok || !r.body?.success) {
+    drawNasFolders()
+    return toast('Nicht gespeichert', 'info')
+  }
+  nas.edits.delete(p)
+  const st = await api('/api/nas/state')
+  if (st.ok) nas.st = st.body
+  libChanged()
+  toast(show ? `${NAS_WHERE[category] ?? NAS_WHERE['']} – gleich auf dem Display` : 'Nicht mehr angezeigt')
+  drawNasFolders()
 }
 
 async function saveNasSelection() {
@@ -4801,8 +4831,10 @@ function liveTop() {
     `<section class="card wide"><h2>Aktuelles Bild</h2><p class="help">So sieht das Display gerade aus. Aktualisiert sich alle 5 Sekunden, solange die Seite offen ist.</p>
       <div class="live-shot"><img id="lv-img" alt="Bild des Displays"></div><p class="help" id="lv-note" style="margin:0"></p>
       <div class="btns"><button class="btn" id="lv-refresh">Aktualisieren</button></div></section>`,
-    `<section class="card"><h2>Fernsteuerung (VNC)</h2><p class="help">Das Display im Browser bedienen – mit der Anmeldung der App, ohne eigenes Passwort. Dafür muss VNC unter Netzwerk › Freigaben & Fernzugriff an sein.</p>
-      <p class="help" id="lv-vnc" style="margin:0"></p><div class="btns"><button class="btn primary" id="lv-open" disabled>Fernsteuerung öffnen</button><button class="btn" id="lv-shares" hidden>Zu Freigaben & Fernzugriff</button></div></section>`,
+    `<section class="card" id="lv-card"><h2>Fernsteuerung (VNC)</h2><p class="help">Das Display im Browser bedienen – mit der Anmeldung der App, ohne eigenes Passwort. Dafür muss VNC unter Netzwerk › Freigaben & Fernzugriff an sein.</p>
+      <p class="help" id="lv-vnc" style="margin:0"></p><div class="btns"><button class="btn primary" id="lv-open" disabled>Fernsteuerung öffnen</button><button class="btn" id="lv-shares" hidden>Zu Freigaben & Fernzugriff</button></div>
+      <div class="vnc-frame" id="lv-frame" hidden><iframe title="Fernsteuerung" allow="fullscreen; clipboard-read; clipboard-write"></iframe>
+        <div class="btns"><button class="btn" id="lv-full">${icon('ext', 18)}Vollbild</button><button class="btn" id="lv-tab">In neuem Tab</button><button class="btn" id="lv-close">Schließen</button></div></div></section>`,
   ]
 }
 
@@ -4834,8 +4866,28 @@ function mountLive(root) {
     const shares = $('#lv-shares', root)
     shares.hidden = !!on
     shares.onclick = () => go('freigaben')
-    // (the same address as the app: its login goes with it)
-    btn.onclick = () => window.open(r.body.url, '_blank', 'noopener')
+    // (the app on port 8200 of the same box: its login goes with it)
+    const url = `http://${location.hostname}:${r.body.port ?? 8200}${r.body.path ?? r.body.url ?? ''}`
+    const frame = $('#lv-frame', root)
+    const iframe = frame.querySelector('iframe')
+    const card = $('#lv-card', root)
+    btn.onclick = () => {
+      // (a page of https does not show one of http inside it: a tab of its own there)
+      if (location.protocol === 'https:') return window.open(url, '_blank', 'noopener')
+      iframe.src = url
+      frame.hidden = false
+      card.classList.add('wide')
+      btn.hidden = true
+      frame.scrollIntoView({ block: 'start', behavior: 'smooth' })
+    }
+    $('#lv-full', root).onclick = () => (iframe.requestFullscreen ? iframe.requestFullscreen() : window.open(url, '_blank', 'noopener'))
+    $('#lv-tab', root).onclick = () => window.open(url, '_blank', 'noopener')
+    $('#lv-close', root).onclick = () => {
+      iframe.src = 'about:blank'
+      frame.hidden = true
+      card.classList.remove('wide')
+      btn.hidden = false
+    }
   })
 }
 
