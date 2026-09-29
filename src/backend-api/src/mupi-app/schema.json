@@ -3737,6 +3737,16 @@
    ]
   },
   {
+   "id": "https",
+   "slug": "https",
+   "area": "einstellungen",
+   "parent": "g-sicherheit",
+   "title": "Verschlüsselung (HTTPS)",
+   "description": "Zertifikat, sichere Verbindung, App installieren",
+   "icon": "lock",
+   "sections": []
+  },
+  {
    "id": "ueber",
    "slug": "about",
    "area": "einstellungen",
@@ -4701,6 +4711,12 @@
        "label": "Passwort & Anmeldung",
        "target": "passwort",
        "subtitle": "Ein Passwort für die ganze App"
+      },
+      {
+       "type": "nav",
+       "label": "Verschlüsselung (HTTPS)",
+       "target": "https",
+       "subtitle": "Zertifikat, sichere Verbindung, App installieren"
       }
      ]
     }
@@ -5993,6 +6009,16 @@
    "l": "Passwort & Anmeldung",
    "where": "Sicherheit › Passwort & Anmeldung",
    "id": "passwort"
+  },
+  {
+   "l": "Verschlüsselung (HTTPS)",
+   "where": "Sicherheit › Verschlüsselung (HTTPS)",
+   "id": "https"
+  },
+  {
+   "l": "Zertifikat",
+   "where": "Sicherheit › Verschlüsselung (HTTPS)",
+   "id": "https"
   },
   {
    "l": "Passwort",

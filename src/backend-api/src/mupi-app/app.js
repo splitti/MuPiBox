@@ -5714,6 +5714,140 @@ function mountSecurity(root, page) {
   }
 }
 
+/* Einstellungen › Sicherheit › Verschlüsselung (HTTPS): the box's certificate (eltern/tls.ts, tls_cert.sh) - to
+   install on the phones (then https shows no warning, and Android installs the app), "Nur sichere Verbindung", the
+   address for links, an own certificate */
+
+const tlsState = { st: null, trust: null }
+
+async function loadTls() {
+  const r = await api(`${API}/tls`)
+  if (!r.ok) throw new Error(`tls ${r.status}`)
+  tlsState.st = r.body
+  tlsState.trust = null
+}
+
+// Whether this device reaches the box by https without a warning: a request to it fails when the certificate is not
+// trusted (no-cors: only whether the connection itself worked)
+async function checkTlsTrust(host) {
+  try {
+    await fetch(`https://${host}/api/app/auth-info`, { mode: 'no-cors', cache: 'no-store', signal: AbortSignal.timeout(5000) })
+    return true
+  } catch {
+    return false
+  }
+}
+
+function tlsTop() {
+  const st = tlsState.st
+  const c = st.cert
+  const host = st.linkHost || location.hostname
+  const httpsApp = `https://${host}/app/`
+  const trust = tlsState.trust === null ? 'Wird geprüft …' : tlsState.trust ? 'Vertraut der Box – https ohne Warnung' : 'Vertraut der Box noch nicht'
+  const custom = st.mode === 'custom'
+  return [
+    `<section class="card"><h2>Zertifikat</h2>
+      <p class="help">Damit ist die Verbindung zur Box verschlüsselt (https://…). Die Spotify-Anmeldung nutzt es auch.</p>
+      ${spKv([
+        ['Art', custom ? 'Eigenes Zertifikat' : 'Zertifikat der Box'],
+        c && ['Gilt für', c.names.join(', ')],
+        c && ['Gültig bis', new Date(c.validTo).toLocaleDateString(LOCALE)],
+        c && custom && ['Aussteller', c.issuer.replace(/\n/g, ', ')],
+        ['Dieses Gerät', trust],
+      ])}
+      ${custom && !st.coversBox ? `<div class="note warn">${icon('info', 18)}<span>${esc('Das Zertifikat gilt für keine der Adressen, unter denen die Box gerade erreichbar ist – dort warnt der Browser. Unten eine Adresse für Links eintragen, unter der es gilt.')}</span></div>` : ''}
+      <div class="btns"><a class="btn" href="${esc(httpsApp)}">${icon('lock', 18)}${esc('Über https öffnen')}</a></div></section>`,
+    custom
+      ? ''
+      : `<section class="card"><h2>${esc('Diesem Gerät die Box bekannt machen')}</h2>
+      <p class="help">${esc('Einmal pro Handy oder Computer: das Zertifikat der Box installieren. Danach warnt der Browser bei https nicht mehr, und auf Android lässt sich die App wie eine echte App installieren. Es gilt nur für Adressen im Heimnetz – für andere Webseiten taugt es nicht.')}</p>
+      <div class="btns"><a class="btn primary" href="${API}/tls/ca.crt" download>${icon('save', 18)}${esc('Zertifikat laden')}</a></div>
+      <details class="howto"><summary><b>Android</b></summary><ol>
+        <li>${esc('„Zertifikat laden“ tippen – die Datei landet in „Downloads“.')}</li>
+        <li>${esc('Einstellungen › Sicherheit › Weitere Einstellungen › Verschlüsselung & Anmeldedaten › Zertifikat installieren › CA-Zertifikat (je nach Handy leicht anders benannt), den Hinweis bestätigen und die Datei wählen.')}</li>
+        <li>${esc('In Chrome die App über https öffnen und im Menü „App installieren“ wählen.')}</li></ol></details>
+      <details class="howto"><summary><b>iPhone / iPad</b></summary><ol>
+        <li>${esc('In Safari „Zertifikat laden“ tippen und „Zulassen“.')}</li>
+        <li>${esc('Einstellungen › Allgemein › VPN und Geräteverwaltung › das MuPiBox-Profil › Installieren.')}</li>
+        <li>${esc('Einstellungen › Allgemein › Info › Zertifikatsvertrauenseinstellungen › das MuPiBox-Zertifikat einschalten.')}</li>
+        <li>${esc('Die App über https in Safari öffnen › Teilen › „Zum Home-Bildschirm“.')}</li></ol></details></section>`,
+    `<section class="card"><h2>${esc('Nur sichere Verbindung')}</h2>
+      <div class="row"><span class="lbl"><b>${esc('http auf https umleiten')}</b><small>${esc('Die App und das Admin-Interface öffnen sich dann immer über https, auch QR-Code und Telegram-Links. Vorher auf allen Geräten das Zertifikat installieren, sonst warnt dort der Browser. Das Display der Box ist ausgenommen, und über Port 8200 bleibt die App immer per http erreichbar.')}</small></span>
+        <label class="switch"><input type="checkbox" id="tls-only" ${st.httpsOnly ? 'checked' : ''} aria-label="${esc('http auf https umleiten')}"><span></span></label></div></section>`,
+    `<section class="card"><h2>${esc('Adresse für Links')}</h2>
+      <p class="help">${esc('Unter welchem Namen QR-Code und Telegram-Links die Box nennen – z. B. der Name eines eigenen Zertifikats. Leer = die IP-Adresse der Box.')}</p>
+      <div class="field"><input class="input mono" id="tls-host" value="${esc(st.linkHost)}" placeholder="${esc(st.boxNames?.[0] ?? '')}" spellcheck="false" autocomplete="off" ${NO_PW_MANAGER}></div>
+      <div class="btns"><button class="btn" id="tls-host-save">Speichern</button></div></section>`,
+    `<section class="card"><h2>${esc('Eigenes Zertifikat')}</h2>
+      <p class="help">${esc('Für Fortgeschrittene: ein Zertifikat für einen eigenen Namen (z. B. von Let’s Encrypt) samt Zwischenzertifikaten und der Schlüssel, beides im PEM-Format, der Schlüssel ohne Passwort. Die Box prüft es vorher und erinnert vor dem Ablauf. Der Schlüssel wird nie wieder angezeigt.')}</p>
+      <div class="field"><label for="tls-crt">${esc('Zertifikat (PEM)')}</label><textarea class="input mono" id="tls-crt" rows="4" spellcheck="false" placeholder="-----BEGIN CERTIFICATE-----"></textarea><input type="file" id="tls-crt-file" accept=".pem,.crt,.cer,.txt" hidden><button class="btn" data-file="tls-crt">${esc('Datei wählen')}</button></div>
+      <div class="field"><label for="tls-key">${esc('Schlüssel (PEM)')}</label><textarea class="input mono" id="tls-key" rows="4" spellcheck="false" placeholder="-----BEGIN PRIVATE KEY-----" ${NO_PW_MANAGER}></textarea><input type="file" id="tls-key-file" accept=".pem,.key,.txt" hidden><button class="btn" data-file="tls-key">${esc('Datei wählen')}</button></div>
+      <div class="btns">${custom ? `<button class="btn" id="tls-box">${esc('Zurück zum Zertifikat der Box')}</button>` : ''}<button class="btn primary" id="tls-upload">${esc('Hochladen')}</button></div></section>`,
+  ]
+}
+
+function mountTls(root, page) {
+  const st = tlsState.st
+  const again = async (delay = 0) => {
+    if (delay) await new Promise((r) => setTimeout(r, delay))
+    await loadTls().catch(() => undefined)
+    if (currentPage()?.id === page.id) renderPage(page, false)
+  }
+  if (tlsState.trust === null) {
+    checkTlsTrust(st.linkHost || location.hostname).then((ok) => {
+      tlsState.trust = ok
+      if (currentPage()?.id === page.id) renderPage(page, false)
+    })
+  }
+  $('#tls-only', root).onchange = async (e) => {
+    const on = e.target.checked
+    if (on && !(await ask('Nur sichere Verbindung', 'Auf Geräten ohne das Zertifikat der Box warnt der Browser danach bei jedem Aufruf. Einschalten?', 'Einschalten'))) {
+      e.target.checked = false
+      return
+    }
+    const r = await api(`${API}/tls/https-only`, { method: 'POST', body: { on } })
+    if (!r.ok) {
+      e.target.checked = !on
+      return toast('Nicht gespeichert', 'info')
+    }
+    toast(on ? 'http leitet jetzt auf https um' : 'http und https gehen wieder beide')
+    again(3000)
+  }
+  $('#tls-host-save', root).onclick = async () => {
+    const r = await api(`${API}/tls/link-host`, { method: 'POST', body: { host: $('#tls-host', root).value.trim() } })
+    if (!r.ok) return toast(r.body?.error === 'invalid_host' ? 'Das ist kein gültiger Name' : 'Nicht gespeichert', 'info')
+    toast('Gespeichert')
+    again()
+  }
+  for (const b of root.querySelectorAll('[data-file]')) {
+    const area = $(`#${b.dataset.file}`, root)
+    const input = $(`#${b.dataset.file}-file`, root)
+    b.onclick = () => input.click()
+    input.onchange = async () => {
+      const f = input.files?.[0]
+      if (f && f.size < 65536) area.value = await f.text()
+    }
+  }
+  $('#tls-upload', root).onclick = async () => {
+    const cert = $('#tls-crt', root).value.trim()
+    const key = $('#tls-key', root).value.trim()
+    if (!cert || !key) return toast('Bitte Zertifikat und Schlüssel einfügen', 'info')
+    const r = await api(`${API}/tls/custom`, { method: 'POST', body: { cert, key } })
+    const why = { certificate: 'Das ist kein Zertifikat im PEM-Format.', key: 'Der Schlüssel lässt sich nicht lesen (PEM, ohne Passwort?).', mismatch: 'Der Schlüssel gehört nicht zu diesem Zertifikat.', expired: 'Das Zertifikat ist abgelaufen.' }
+    if (!r.ok) return toast(why[r.body?.error] ?? 'Nicht übernommen', 'info')
+    toast(r.body?.coversBox ? 'Wird eingesetzt – die Seite lädt gleich neu' : 'Wird eingesetzt – es gilt aber für keine Adresse der Box, siehe Hinweis')
+    again(4000)
+  }
+  $('#tls-box', root)?.addEventListener('click', () =>
+    confirmSheet('Zurück', 'Wieder das Zertifikat der Box verwenden? Das eigene wird entfernt.', async () => {
+      const r = await api(`${API}/tls/box`, { method: 'POST', body: {} })
+      if (!r.ok) return toast('Das hat nicht geklappt', 'info')
+      toast('Das Zertifikat der Box wird wieder eingesetzt')
+      again(4000)
+    }),
+  )
+}
+
 /* Einstellungen › System */
 
 const sys = { info: null, version: '', news: null, bs: null, logs: null, logSel: 'log:server-error', logGrep: '', logText: '', logAuto: false, debug: null, browser: null, range: 1 }
@@ -7276,6 +7410,7 @@ const CONTROLLERS = {
   },
   wled: { load: loadWled, top: wledTop, sections: () => [], mount: mountWled },
   passwort: { load: loadAuthState, top: securityTop, sections: () => [], mount: mountSecurity },
+  https: { load: loadTls, top: tlsTop, sections: () => [], mount: mountTls },
   ueber: { load: loadAbout, top: aboutTop, sections: () => [], mount: mountAbout },
   neustart: { top: restartTop, sections: () => [], mount: mountRestart },
   protokolle: { load: loadLogs, top: logsTop, sections: () => [], mount: mountLogs },

@@ -755,3 +755,9 @@ input[type="range"]:disabled { opacity: .4; cursor: default; }
 /* the remote control embedded in the "Display live" page */
 .vnc-frame { display: flex; flex-direction: column; gap: 10px; }
 .vnc-frame iframe { width: 100%; aspect-ratio: 1024 / 600; border: 0; border-radius: var(--mp-r-sm); background: #000; }
+
+/* the step-by-step guides of the HTTPS page (Sicherheit › Verschlüsselung) */
+details.howto { border-top: 1px solid var(--mp-border); padding-top: 10px; }
+details.howto summary { cursor: pointer; }
+details.howto ol { margin: 8px 0 0; padding-left: 20px; display: grid; gap: 6px; font-size: 14px; color: var(--mp-text-2, inherit); }
+textarea.input { min-height: 88px; resize: vertical; font-size: 12px; }
