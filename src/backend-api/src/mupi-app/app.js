@@ -179,12 +179,11 @@ function renderChrome(page) {
   const area = areaOf(page)
   const isArea = !page.parent
   const title = page.id === 'start' ? state.boxName : page.title
-  const theme = document.documentElement.getAttribute('data-theme') || 'dark'
   $('#topbar').innerHTML = `
     ${isArea ? `<div class="brand-dot">${mupiImg()}</div>` : `<button class="icon-btn" id="back" aria-label="Zurück">${icon('back')}</button>`}
     <div class="title">${esc(title)}</div>
     ${langButton()}
-    <button class="icon-btn soft" id="theme-btn" aria-label="${theme === 'light' ? 'Dunkel' : 'Hell'}">${icon(theme === 'light' ? 'moon' : 'sun')}</button>
+    ${themeButton()}
     <button class="icon-btn" id="logout-btn" aria-label="Abmelden">${icon('logout')}</button>`
   $('#back')?.addEventListener('click', () => go(page.parent && page.parent.startsWith('g-') ? page.parent : page.parent || 'start'))
   $('#lang-btn').addEventListener('click', openLangSheet)
@@ -210,6 +209,11 @@ function renderChrome(page) {
   for (const el of document.querySelectorAll('[data-go]')) el.onclick = () => go(el.dataset.go)
 }
 
+function themeButton() {
+  const theme = document.documentElement.getAttribute('data-theme') || 'dark'
+  return `<button class="icon-btn soft" id="theme-btn" aria-label="${theme === 'light' ? 'Dunkel' : 'Hell'}">${icon(theme === 'light' ? 'moon' : 'sun')}</button>`
+}
+
 function toggleTheme() {
   const now = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light'
   document.documentElement.setAttribute('data-theme', now)
@@ -218,7 +222,9 @@ function toggleTheme() {
   } catch {
     /* private mode: the choice lasts for this visit */
   }
-  renderChrome(currentPage())
+  // (not signed in: only the buttons of the login page)
+  if (state.csrf) renderChrome(currentPage())
+  else renderLoginBar()
 }
 
 /* ---------- pages ---------- */
@@ -5732,13 +5738,18 @@ function toast(text, kind = 'ok') {
 
 /* ---------- login ---------- */
 
+function renderLoginBar() {
+  $('#topbar').innerHTML = `<div class="login-bar">${langButton()}${themeButton()}</div>`
+  $('#lang-btn').addEventListener('click', openLangSheet)
+  $('#theme-btn').addEventListener('click', toggleTheme)
+}
+
 async function renderLogin() {
   $('#tabbar').hidden = true
   $('#sidebar').hidden = true
   // (no side bar: the page gets the whole width, the grid of the shell would keep its column)
   $('#shell').classList.add('no-nav')
-  $('#topbar').innerHTML = `<div class="login-bar">${langButton()}</div>`
-  $('#lang-btn').addEventListener('click', openLangSheet)
+  renderLoginBar()
   // Without a parents' password there is nothing to type in: the page says how to get in instead (a password field
   // that can only fail made people think there was a default password)
   const info = await fetch(`${API}/auth-info`, { credentials: 'same-origin' }).then((r) => (r.ok ? r.json() : null), () => null)
