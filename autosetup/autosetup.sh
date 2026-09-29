@@ -280,6 +280,7 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 	echo -e "XXX\n${STEP}\nInstall frontend, backend-api, and backend-player... \nXXX"
 	before=$(date +%s)
 	unzip ${MUPI_SRC}/bin/nodejs/deploy.zip -d /home/dietpi/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
+	mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config >&3 2>&3
 	cp ${MUPI_SRC}/config/templates/www.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >&3 2>&3
 	cp ${MUPI_SRC}/config/templates/monitor.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/monitor.json >&3 2>&3
 	cp /home/dietpi/.mupibox/Sonos-Kids-Controller-master/spotify-control.js /home/dietpi/.mupibox/spotifycontroller-main/spotify-control.js >&3 2>&3
@@ -654,7 +655,9 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 	/usr/local/bin/mupibox/bootscreen_update.sh >&3 2>&3
 	service librespot restart >&3 2>&3
 	sudo -H -u dietpi bash -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && npm install" >&3 2>&3
-	sudo -H -u dietpi bash -c "pm2 start server" >&3 2>&3
+	# by path: on a fresh box pm2 knows neither process yet ("pm2 start server" looked for a file "server")
+	sudo -H -u dietpi bash -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && if pm2 describe server >/dev/null 2>&1; then pm2 restart server; else pm2 start server.js --name server; fi" >&3 2>&3
+	sudo -H -u dietpi bash -c "cd /home/dietpi/.mupibox/spotifycontroller-main && if pm2 describe spotify-control >/dev/null 2>&1; then pm2 restart spotify-control; else pm2 start spotify-control.js --name spotify-control; fi" >&3 2>&3
 	sudo -H -u dietpi bash -c "pm2 save" >&3 2>&3
 	chown -R dietpi:dietpi /home/dietpi/.mupibox /home/dietpi/MuPiBox >&3 2>&3
 	chown dietpi:dietpi ${CONFIG} >&3 2>&3
