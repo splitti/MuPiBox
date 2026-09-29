@@ -8,7 +8,7 @@
 import { getLang, getLangPref, langBadge, LANGS, loadLanguage as loadAppLanguage, localeTag, setLangPref, tr, watchDocument } from './i18n.js'
 import { icon } from './icons.js'
 
-const API = '/api/eltern'
+const API = '/api/app'
 // The app's own port (8200): the display's pages are there, also when the app is used through port 80 (whose root is
 // the admin interface's)
 const BOX_ORIGIN = `http://${location.hostname}:8200`
@@ -5180,7 +5180,7 @@ const net = { status: null, scan: null, scanning: false, saved: null, shares: nu
 /* WLAN */
 
 async function loadWlan() {
-  const [st, saved] = await Promise.all([api('/api/network'), api(`${API}/wlan/saved`)])
+  const [st, saved] = await Promise.all([api('/api/network'), api(`${API}/wifi/saved`)])
   net.status = st.ok ? st.body : null
   net.saved = saved.ok ? saved.body?.networks ?? [] : null
 }
@@ -5231,7 +5231,7 @@ function mountWlan(root, page) {
   $('#w-scan', root).onclick = async () => {
     net.scanning = true
     renderPage(page, false)
-    const r = await api(`${API}/wlan/scan`)
+    const r = await api(`${API}/wifi/scan`)
     net.scanning = false
     net.scan = r.ok ? r.body?.networks ?? [] : []
     // (a failed search is no "no networks")
@@ -5251,7 +5251,7 @@ function mountWlan(root, page) {
     const password = $('#w-pw', root).value
     if (!ssid.trim()) return toast('Bitte den Netznamen eintragen', 'info')
     if (password && (password.length < 8 || password.length > 63)) return toast('Das Passwort hat 8 bis 63 Zeichen', 'info')
-    const r = await api(`${API}/wlan/add`, { method: 'POST', body: { ssid, password } })
+    const r = await api(`${API}/wifi/add`, { method: 'POST', body: { ssid, password } })
     if (!r.ok) return toast(r.body?.error ?? 'Das hat nicht geklappt', 'info')
     $('#w-ssid', root).value = ''
     $('#w-pw', root).value = ''
@@ -5262,7 +5262,7 @@ function mountWlan(root, page) {
     const w = net.saved[Number(b.dataset.wrm)]
     b.onclick = () =>
       confirmSheet('Entfernen', `Das Netz „${w.ssid}“ vergessen? Die Box verbindet sich dann nicht mehr damit.`, async () => {
-        const r = await api(`${API}/wlan/remove`, { method: 'POST', body: { ssid: w.ssid } })
+        const r = await api(`${API}/wifi/remove`, { method: 'POST', body: { ssid: w.ssid } })
         again(r.ok ? 'Entfernt' : r.body?.error ?? 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
       })
   }

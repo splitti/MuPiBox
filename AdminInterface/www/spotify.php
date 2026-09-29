@@ -201,7 +201,7 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 					e.preventDefault();
 					var msg = document.getElementById('spotify_login_msg');
 					try {
-						var r = await fetch('/api/eltern/spotify-oauth/init?return=' + encodeURIComponent('/spotify.php'), { credentials: 'same-origin' });
+						var r = await fetch('/api/app/spotify-oauth/init?return=' + encodeURIComponent('/spotify.php'), { credentials: 'same-origin' });
 						var body = await r.json().catch(function () { return {}; });
 						if (r.ok && body.authorize_url) { location.href = body.authorize_url; return; }
 						if (r.status === 401) { msg.innerHTML = 'Please sign in first: <a href="/app/?portal=admin">sign in</a>, then press the link again.'; return; }

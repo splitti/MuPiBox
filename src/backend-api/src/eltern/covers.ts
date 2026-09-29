@@ -60,7 +60,7 @@ export function registerCustomCoverRoutes(router: Router, deps: ChoiceDeps): voi
   const address = (name: string) => `http://${deps.host()}/cover/${encodeURIComponent(name)}`
   registerCoverChoiceRoutes(router, deps, address)
 
-  /** GET /api/eltern/covers - the pictures, newest first, with their address. */
+  /** GET /api/app/covers - the pictures, newest first, with their address. */
   router.get('/covers', requireSession, async (_req, res) => {
     let names: string[] = []
     try {
@@ -77,7 +77,7 @@ export function registerCustomCoverRoutes(router: Router, deps: ChoiceDeps): voi
     res.json({ covers: covers.sort((a, b) => b.at - a.at) })
   })
 
-  /** GET /api/eltern/covers/file/:name - a picture, for the preview in the app (does not need the web server). */
+  /** GET /api/app/covers/file/:name - a picture, for the preview in the app (does not need the web server). */
   router.get('/covers/file/:name', requireSession, (req, res) => {
     const name = String(req.params.name)
     if (!NAME.test(name)) {
@@ -92,7 +92,7 @@ export function registerCustomCoverRoutes(router: Router, deps: ChoiceDeps): voi
   })
 
   /**
-   * PUT /api/eltern/covers/upload?name=<file name>  body: the picture's bytes.
+   * PUT /api/app/covers/upload?name=<file name>  body: the picture's bytes.
    * A picture of the same name is replaced (answer: replaced true).
    */
   router.put('/covers/upload', requireSession, requireCsrf, async (req, res) => {
@@ -147,7 +147,7 @@ export function registerCustomCoverRoutes(router: Router, deps: ChoiceDeps): voi
     res.json({ ok: true, name, url: address(name), replaced })
   })
 
-  /** POST /api/eltern/covers/delete {name} */
+  /** POST /api/app/covers/delete {name} */
   router.post('/covers/delete', requireSession, requireCsrf, async (req, res) => {
     const name = String((req.body as { name?: unknown } | undefined)?.name ?? '')
     if (!NAME.test(name)) {
@@ -193,7 +193,7 @@ function localTargetParts(target: string, local: LocalLibraryDeps): string[] | u
 
 function registerCoverChoiceRoutes(router: Router, deps: ChoiceDeps, address: (name: string) => string): void {
   /**
-   * GET /api/eltern/cover-search?q=<text> - albums at iTunes and Deezer with a picture, taken in turns (at most 24).
+   * GET /api/app/cover-search?q=<text> - albums at iTunes and Deezer with a picture, taken in turns (at most 24).
    * The search term goes to Apple and Deezer; the app says so.
    */
   router.get('/cover-search', requireSession, async (req, res) => {
@@ -227,7 +227,7 @@ function registerCoverChoiceRoutes(router: Router, deps: ChoiceDeps, address: (n
   })
 
   /**
-   * POST /api/eltern/cover-hide {target, hide} - a folder (local:<path> / nas:<path>) shown without a cover (hide: true)
+   * POST /api/app/cover-hide {target, hide} - a folder (local:<path> / nas:<path>) shown without a cover (hide: true)
    * or with its pictures again (false); nothing is deleted, see hidden-covers.ts.
    */
   router.post('/cover-hide', requireSession, requireCsrf, async (req, res) => {
@@ -274,7 +274,7 @@ function registerCoverChoiceRoutes(router: Router, deps: ChoiceDeps, address: (n
     res.json({ ok: true, hidden: hide })
   })
 
-  /** POST /api/eltern/cover-apply {target, image} - takes a search result's picture (see applyCover for the target). */
+  /** POST /api/app/cover-apply {target, image} - takes a search result's picture (see applyCover for the target). */
   router.post('/cover-apply', requireSession, requireCsrf, async (req, res) => {
     const body = (req.body ?? {}) as { target?: unknown; image?: unknown }
     let bytes: Buffer
@@ -290,7 +290,7 @@ function registerCoverChoiceRoutes(router: Router, deps: ChoiceDeps, address: (n
     res.status(r.status).json(r.body)
   })
 
-  /** PUT /api/eltern/cover-apply?target=  body: an own picture (JPEG or PNG, squared by the app). */
+  /** PUT /api/app/cover-apply?target=  body: an own picture (JPEG or PNG, squared by the app). */
   router.put('/cover-apply', requireSession, requireCsrf, async (req, res) => {
     const bytes = await readBody(req, MAX_CHOSEN_BYTES)
     if (!bytes) {

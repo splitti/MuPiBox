@@ -235,18 +235,18 @@ const CACHE_SIZES = ['0', '8', '16', '32', '64', '128', '256', '512']
 export function registerSystemRoutes(router: Router, deps: SystemDeps): void {
   startSystemSampler()
 
-  /** GET /api/eltern/system-history?hours=1|6|24 - [time, temp °C, cpu %, ram %] a minute apart (fewer for 24 h). */
+  /** GET /api/app/system-history?hours=1|6|24 - [time, temp °C, cpu %, ram %] a minute apart (fewer for 24 h). */
   router.get('/system-history', requireSession, (req, res) => {
     const hours = [1, 6, 24].includes(Number(req.query.hours)) ? Number(req.query.hours) : 1
     res.json({ hours, now: Date.now(), since: samples[0]?.[0] ?? null, ...systemHistory(hours) })
   })
 
-  /** GET /api/eltern/version - the installed MuPiBox version (mupibox.version). */
+  /** GET /api/app/version - the installed MuPiBox version (mupibox.version). */
   router.get('/version', requireSession, (_req, res) => {
     res.json({ version: String((deps.getMupiboxConfig()?.mupibox as Record<string, unknown> | undefined)?.version ?? '') })
   })
 
-  /** GET /api/eltern/news - the MuPiBox news (news.txt on GitHub), as text (the admin interface printed it as HTML). */
+  /** GET /api/app/news - the MuPiBox news (news.txt on GitHub), as text (the admin interface printed it as HTML). */
   router.get('/news', requireSession, async (_req, res) => {
     if (!newsCache || Date.now() - newsCache.at > 3600_000) {
       try {
@@ -260,7 +260,7 @@ export function registerSystemRoutes(router: Router, deps: SystemDeps): void {
   })
 
   /**
-   * GET /api/eltern/support-info - a zip for the support (Discord): the library, the config without secrets, the
+   * GET /api/app/support-info - a zip for the support (Discord): the library, the config without secrets, the
    * monitor and network state, versions. As the admin interface's support_data.php, but the secrets are removed by
    * key (its line filter let multi-line values through).
    */
@@ -300,7 +300,7 @@ export function registerSystemRoutes(router: Router, deps: SystemDeps): void {
   })
 
   /**
-   * POST /api/eltern/restart {what} - display (Chromium kiosk), player (spotify-control) or services (player and this
+   * POST /api/app/restart {what} - display (Chromium kiosk), player (spotify-control) or services (player and this
    * backend, what the admin interface's "Restart services" should have done - its button called a script name with a
    * typo). Reboot and shutdown stay /api/reboot and /api/shutdown.
    */
@@ -319,12 +319,12 @@ export function registerSystemRoutes(router: Router, deps: SystemDeps): void {
     res.json({ ok: true })
   })
 
-  /** GET /api/eltern/logs - the logs and services that can be looked at. */
+  /** GET /api/app/logs - the logs and services that can be looked at. */
   router.get('/logs', requireSession, (_req, res) => {
     res.json({ logs: Object.keys(LOGS), services: SERVICES })
   })
 
-  /** GET /api/eltern/logs/view?kind=log|service&key=&grep=&lines= - the end of a log or the state of a service, as text. */
+  /** GET /api/app/logs/view?kind=log|service&key=&grep=&lines= - the end of a log or the state of a service, as text. */
   router.get('/logs/view', requireSession, async (req, res) => {
     const kind = String(req.query.kind ?? 'log')
     const key = String(req.query.key ?? '')
@@ -358,7 +358,7 @@ export function registerSystemRoutes(router: Router, deps: SystemDeps): void {
     res.type('text/plain; charset=utf-8').send(text)
   })
 
-  /** GET/POST /api/eltern/controller-debug {on} - the player's debug log (its config.json logLevel), player restarts. */
+  /** GET/POST /api/app/controller-debug {on} - the player's debug log (its config.json logLevel), player restarts. */
   router.get('/controller-debug', requireSession, async (_req, res) => {
     const text = await fsp.readFile(PLAYER_CONFIG, 'utf8').catch(() => '')
     res.json({ on: /"logLevel"\s*:\s*"debug"/.test(text) })
@@ -376,7 +376,7 @@ export function registerSystemRoutes(router: Router, deps: SystemDeps): void {
     res.json({ ok: true })
   })
 
-  /** GET/POST /api/eltern/browser - the kiosk's Chromium options (chromium-autostart.sh reads them at its start). */
+  /** GET/POST /api/app/browser - the kiosk's Chromium options (chromium-autostart.sh reads them at its start). */
   router.get('/browser', requireSession, (_req, res) => {
     const c = ((deps.getMupiboxConfig() as Record<string, unknown> | undefined)?.chromium ?? {}) as Record<string, unknown>
     res.json({ gpu: c.gpu === true, smooth: c.sccrollanimation === true, kiosk: c.kiosk !== false, cachesize: String(c.cachesize ?? '128'), debug: String(c.debug ?? '0') === '1' })
@@ -411,7 +411,7 @@ export function registerSystemRoutes(router: Router, deps: SystemDeps): void {
   })
 
   /**
-   * POST /api/eltern/box-language {code} - the language of the box: the texts on the display (displayLanguage) and
+   * POST /api/app/box-language {code} - the language of the box: the texts on the display (displayLanguage) and
    * the boot and maintenance pictures (mupibox.bootscreenLanguage) together; the pictures are made again.
    */
   router.post('/box-language', requireSession, requireCsrf, async (req, res) => {

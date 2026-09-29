@@ -188,7 +188,7 @@ def send_magic_link(chat_id, heading, button_text, page=''):
     # 127.0.0.1 so the localNetworkOnly gate accepts us; the receiver's
     # chatId-whitelist (is_authorized in on_chat_message) is the actual
     # auth boundary for who can request a link.
-    status_code, body = call_api_post('/eltern/magic-link/generate', {'source': 'telegram'})
+    status_code, body = call_api_post('/app/magic-link/generate', {'source': 'telegram'})
     if status_code != 201 or not isinstance(body, dict):
         bot.sendMessage(chat_id, tr('magic_failed', detail=failure_detail(status_code, body)))
         return
@@ -495,7 +495,7 @@ def handle_callback(query_data, chat_id, keyboard_msg, answer):
         bot.sendMessage(chat_id, tr('media_done'))
     # ── Phase 14d — Smart-Sync controls ──────────────────────────────────
     elif query_data == 'spotify_disconnect_confirm':
-        # POST /api/eltern/spotify-oauth/disconnect needs a session cookie
+        # POST /api/app/spotify-oauth/disconnect needs a session cookie
         # AND csrf token — both of which we don't have from a Telegram-bot
         # context. Pragmatic stop-gap: just disable spotify_sync; full
         # token-clear is one extra step parents can do in the WebApp.

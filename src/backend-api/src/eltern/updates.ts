@@ -221,7 +221,7 @@ async function jobState() {
 }
 
 export function registerUpdateRoutes(router: Router, deps: UpdatesDeps): void {
-  /** GET /api/eltern/updates - the installed version, the official ones, whether there is a newer one, the last job */
+  /** GET /api/app/updates - the installed version, the official ones, whether there is a newer one, the last job */
   router.get('/updates', requireSession, async (_req, res) => {
     const installed = String((deps.getMupiboxConfig()?.mupibox as Record<string, unknown> | undefined)?.version ?? '')
     const [latest, date, job] = await Promise.all([officialVersions(), devDate(), jobState()])
@@ -237,12 +237,12 @@ export function registerUpdateRoutes(router: Router, deps: UpdatesDeps): void {
     })
   })
 
-  /** GET /api/eltern/updates/job - the running (or last) update, for the progress */
+  /** GET /api/app/updates/job - the running (or last) update, for the progress */
   router.get('/updates/job', requireSession, async (_req, res) => {
     res.json({ job: await jobState() })
   })
 
-  /** POST /api/eltern/updates/start {kind: stable|beta|dev|os} */
+  /** POST /api/app/updates/start {kind: stable|beta|dev|os} */
   router.post('/updates/start', requireSession, requireCsrf, async (req, res) => {
     const kind = String((req.body ?? {}).kind ?? '')
     if (![...CHANNELS, 'os'].includes(kind)) {

@@ -64,7 +64,7 @@ async function endJob(): Promise<void> {
 }
 
 export function registerSpotifyConnectRoutes(router: Router, deps: { getMupiboxConfig: () => MupiboxConfig | undefined }): void {
-  /** GET /api/eltern/spotify-connect - whether the box has a Connect login, since when, a login going on */
+  /** GET /api/app/spotify-connect - whether the box has a Connect login, since when, a login going on */
   router.get('/spotify-connect', requireSession, async (_req, res) => {
     const cache = cacheOf(deps.getMupiboxConfig())
     const [since, active] = await Promise.all([loginSince(cache), run('systemctl', ['is-active', 'librespot'], 5000)])
@@ -72,7 +72,7 @@ export function registerSpotifyConnectRoutes(router: Router, deps: { getMupiboxC
   })
 
   /**
-   * POST /api/eltern/spotify-connect/start - stops the Connect service, starts `librespot --enable-oauth` with the same
+   * POST /api/app/spotify-connect/start - stops the Connect service, starts `librespot --enable-oauth` with the same
    * cache folder and name, answers the Spotify login address it names
    */
   router.post('/spotify-connect/start', requireSession, requireCsrf, async (_req, res) => {
@@ -112,7 +112,7 @@ export function registerSpotifyConnectRoutes(router: Router, deps: { getMupiboxC
   })
 
   /**
-   * POST /api/eltern/spotify-connect/finish {address} - the address the browser ended on after the Spotify login
+   * POST /api/app/spotify-connect/finish {address} - the address the browser ended on after the Spotify login
    * (http://127.0.0.1:5588/login?code=…), handed to librespot on the box; then the service starts with the new login
    */
   router.post('/spotify-connect/finish', requireSession, requireCsrf, async (req, res) => {
@@ -163,7 +163,7 @@ export function registerSpotifyConnectRoutes(router: Router, deps: { getMupiboxC
     res.json({ ok: true, since })
   })
 
-  /** POST /api/eltern/spotify-connect/cancel - gives a login up, the service as before */
+  /** POST /api/app/spotify-connect/cancel - gives a login up, the service as before */
   router.post('/spotify-connect/cancel', requireSession, requireCsrf, async (_req, res) => {
     await endJob()
     res.json({ ok: true })

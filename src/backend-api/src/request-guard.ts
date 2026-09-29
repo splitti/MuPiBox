@@ -60,7 +60,7 @@ function isSameHostOrigin(req: Request): boolean {
 const UNSAFE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 
 /** Paths a foreign site may send the browser to as a top-level navigation. */
-const NAVIGATION_ALLOWED_API = ['/api/eltern/spotify-oauth/callback']
+const NAVIGATION_ALLOWED_API = ['/api/app/spotify-oauth/callback', '/api/eltern/spotify-oauth/callback']
 
 function reject(req: Request, res: Parameters<RequestHandler>[1], reason: string) {
   console.warn(

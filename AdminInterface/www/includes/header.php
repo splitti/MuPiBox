@@ -223,7 +223,7 @@
 					'content' => json_encode(['ticket' => $appTicket]),
 					'timeout' => 3,
 				]]);
-				$answer = json_decode((string)@file_get_contents('http://127.0.0.1:8200/api/eltern/admin-ticket/redeem', false, $ctx), true);
+				$answer = json_decode((string)@file_get_contents('http://127.0.0.1:8200/api/app/admin-ticket/redeem', false, $ctx), true);
 				if (!empty($answer['ok'])) {
 					session_regenerate_id(true);
 					$_SESSION['logged_in'] = true;

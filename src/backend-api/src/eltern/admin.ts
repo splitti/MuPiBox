@@ -135,7 +135,7 @@ export function registerAdminRoutes(router: Router, deps: AdminDeps): void {
     })
   })
 
-  /** POST /api/eltern/system-options {key, value} - one option; most need a restart of the box to take effect. */
+  /** POST /api/app/system-options {key, value} - one option; most need a restart of the box to take effect. */
   router.post('/system-options', requireSession, requireCsrf, async (req, res) => {
     const { key, value } = (req.body ?? {}) as { key?: unknown; value?: unknown }
     const on = value === true
@@ -197,7 +197,7 @@ export function registerAdminRoutes(router: Router, deps: AdminDeps): void {
 
   /* ---- experts ---- */
 
-  /** POST /api/eltern/hostname {host} - the box's name in the network (DietPi's change_hostname); restart needed. */
+  /** POST /api/app/hostname {host} - the box's name in the network (DietPi's change_hostname); restart needed. */
   router.post('/hostname', requireSession, requireCsrf, async (req, res) => {
     const host = String((req.body as { host?: unknown } | undefined)?.host ?? '')
     if (!HOSTNAME.test(host)) {
@@ -212,7 +212,7 @@ export function registerAdminRoutes(router: Router, deps: AdminDeps): void {
     res.status(r.ok ? 200 : 500).json({ ok: r.ok, rebootNeeded: true })
   })
 
-  /** GET /api/eltern/json-file?key= - one of the files of the admin interface's JSON editor, as text. */
+  /** GET /api/app/json-file?key= - one of the files of the admin interface's JSON editor, as text. */
   router.get('/json-file', requireSession, async (req, res) => {
     const key = String(req.query.key ?? '')
     const file = JSON_FILES[key]
@@ -234,7 +234,7 @@ export function registerAdminRoutes(router: Router, deps: AdminDeps): void {
   })
 
   /**
-   * POST /api/eltern/json-file {key, text} - saves it when it is valid JSON. The box config goes through the config's
+   * POST /api/app/json-file {key, text} - saves it when it is valid JSON. The box config goes through the config's
    * lock (the admin interface's editor wrote past it); its login (interfacelogin) is kept from the disk, as there.
    */
   router.post('/json-file', requireSession, requireCsrf, async (req, res) => {
@@ -271,7 +271,7 @@ export function registerAdminRoutes(router: Router, deps: AdminDeps): void {
   })
 
   /**
-   * POST /api/eltern/reset {what} - config (the box config from the installed template: the login stays), library
+   * POST /api/app/reset {what} - config (the box config from the installed template: the login stays), library
    * (data.json empty, the daily backups stay), server (the backend's config.json from the template).
    */
   router.post('/reset', requireSession, requireCsrf, async (req, res) => {
@@ -325,7 +325,7 @@ export function registerAdminRoutes(router: Router, deps: AdminDeps): void {
     res.status(400).json({ error: 'what must be config, library or server' })
   })
 
-  /** POST /api/eltern/apply-settings - the admin interface's "Update settings": old playlist entries, setting_update.sh. */
+  /** POST /api/app/apply-settings - the admin interface's "Update settings": old playlist entries, setting_update.sh. */
   router.post('/apply-settings', requireSession, requireCsrf, async (_req, res) => {
     try {
       const data = JSON.parse(await readText(`${SERVER_CONFIG}/data.json`)) as unknown
@@ -350,7 +350,7 @@ export function registerAdminRoutes(router: Router, deps: AdminDeps): void {
 
   /* ---- backup ---- */
 
-  /** GET /api/eltern/backup?kind=config|full - a zip of the config, the library and the covers (full: all media). */
+  /** GET /api/app/backup?kind=config|full - a zip of the config, the library and the covers (full: all media). */
   router.get('/backup', requireSession, async (req, res) => {
     const full = req.query.kind === 'full'
     const zip = `/var/tmp/mupibox-backup-${process.pid}-${Date.now()}.zip`
@@ -368,7 +368,7 @@ export function registerAdminRoutes(router: Router, deps: AdminDeps): void {
   })
 
   /**
-   * PUT /api/eltern/backup/restore - body: a backup zip. Every entry is checked against what a backup holds (the
+   * PUT /api/app/backup/restore - body: a backup zip. Every entry is checked against what a backup holds (the
    * admin interface's whitelist: the two files, and below media/ folders and no file types a server or browser runs,
    * no symbolic links, no ".."); then it is unpacked as root, the config brought up to date, and the box restarts.
    */

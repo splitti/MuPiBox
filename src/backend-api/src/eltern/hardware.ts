@@ -48,7 +48,7 @@ async function merge(deps: HardwareDeps, key: string, values: Record<string, unk
 }
 
 export function registerHardwareRoutes(router: Router, deps: HardwareDeps): void {
-  /** GET /api/eltern/hardware - everything the pages Soundkarte, Drehregler, MuPiHAT, Taster and Lüfter show. */
+  /** GET /api/app/hardware - everything the pages Soundkarte, Drehregler, MuPiHAT, Taster and Lüfter show. */
   router.get('/hardware', requireSession, async (_req, res) => {
     const mb = section(deps, 'mupibox')
     const hat = section(deps, 'mupihat')
@@ -98,7 +98,7 @@ export function registerHardwareRoutes(router: Router, deps: HardwareDeps): void
     })
   })
 
-  /** POST /api/eltern/soundcard {id} - one of mupibox.AudioDevices; DietPi switches the card, needs a restart. */
+  /** POST /api/app/soundcard {id} - one of mupibox.AudioDevices; DietPi switches the card, needs a restart. */
   router.post('/soundcard', requireSession, requireCsrf, async (req, res) => {
     const id = String((req.body as { id?: unknown } | undefined)?.id ?? '')
     const known = (Array.isArray(section(deps, 'mupibox').AudioDevices) ? (section(deps, 'mupibox').AudioDevices as Record<string, unknown>[]) : []).map((d) => String(d.tname))
@@ -117,7 +117,7 @@ export function registerHardwareRoutes(router: Router, deps: HardwareDeps): void
     res.json({ ok: true, reboot: true })
   })
 
-  /** POST /api/eltern/rotary {active?, step?, button?} - the rotary encoder (volume) and its push button. */
+  /** POST /api/app/rotary {active?, step?, button?} - the rotary encoder (volume) and its push button. */
   router.post('/rotary', requireSession, requireCsrf, async (req, res) => {
     const body = (req.body ?? {}) as Record<string, unknown>
     const values: Record<string, unknown> = {}
@@ -147,7 +147,7 @@ export function registerHardwareRoutes(router: Router, deps: HardwareDeps): void
   })
 
   /**
-   * POST /api/eltern/mupihat {active} - switches the MuPiHAT on or off (overlays, services, sound card, see
+   * POST /api/app/mupihat {active} - switches the MuPiHAT on or off (overlays, services, sound card, see
    * enable_mupihat.sh / disable_mupihat.sh); the box restarts a few seconds later, as in the admin interface.
    */
   router.post('/mupihat', requireSession, requireCsrf, async (req, res) => {
@@ -170,7 +170,7 @@ export function registerHardwareRoutes(router: Router, deps: HardwareDeps): void
     res.json({ ok: true, reboot: true })
   })
 
-  /** POST /api/eltern/battery {name} - the battery profile (one of mupihat.battery_types); mupi_hat reads it anew. */
+  /** POST /api/app/battery {name} - the battery profile (one of mupihat.battery_types); mupi_hat reads it anew. */
   router.post('/battery', requireSession, requireCsrf, async (req, res) => {
     const name = String((req.body as { name?: unknown } | undefined)?.name ?? '')
     const hat = section(deps, 'mupihat')
@@ -184,7 +184,7 @@ export function registerHardwareRoutes(router: Router, deps: HardwareDeps): void
     res.json({ ok: true, restarted: hat.hat_active === true })
   })
 
-  /** POST /api/eltern/mupihat/restart - after a change of the battery profile's voltages (read when mupi_hat starts). */
+  /** POST /api/app/mupihat/restart - after a change of the battery profile's voltages (read when mupi_hat starts). */
   router.post('/mupihat/restart', requireSession, requireCsrf, async (_req, res) => {
     if (section(deps, 'mupihat').hat_active !== true) {
       res.json({ ok: true, restarted: false })
@@ -195,7 +195,7 @@ export function registerHardwareRoutes(router: Router, deps: HardwareDeps): void
   })
 
   /**
-   * POST /api/eltern/shim {pressDelay?, ledPin?, ledMax?, ledMin?} - the OnOffShim: delay of the power button (read at
+   * POST /api/app/shim {pressDelay?, ledPin?, ledMax?, ledMin?} - the OnOffShim: delay of the power button (read at
    * boot), the LED's pin (pi-blaster, read at boot) and its brightness (read live by mupi_start_led.sh).
    */
   router.post('/shim', requireSession, requireCsrf, async (req, res) => {
@@ -234,7 +234,7 @@ export function registerHardwareRoutes(router: Router, deps: HardwareDeps): void
   })
 
   /**
-   * POST /api/eltern/fan {active, gpio, t100, t75, t50, t25} - the fan (fan_control.py reads pin and temperatures when
+   * POST /api/app/fan {active, gpio, t100, t75, t50, t25} - the fan (fan_control.py reads pin and temperatures when
    * it starts: the service is restarted, which the admin interface's "start" of a running service did not do).
    */
   router.post('/fan', requireSession, requireCsrf, async (req, res) => {

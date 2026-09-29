@@ -1,6 +1,6 @@
 // Phase 14c — Eltern-WebApp REST routes.
 //
-// Mounted at /api/eltern/* and /eltern (Magic-Link landing + WebApp
+// Mounted at /api/app/* and /eltern (Magic-Link landing + WebApp
 // static assets) by server.ts. Three logical groups:
 //   - auth (magic-link redeem, session info, logout)
 //   - oauth (Spotify connect/callback/disconnect)
@@ -227,7 +227,7 @@ function wifiIface(): string {
 }
 
 /**
- * Creates the API router for /api/eltern/*. The /eltern landing page
+ * Creates the API router for /api/app/*. The /eltern landing page
  * (magic-link redemption) is a separate route in server.ts because it
  * needs to redirect to the WebApp, not return JSON.
  */
@@ -293,7 +293,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
-   * GET/POST /api/eltern/online-covers-settings  {onlineCovers?, onlineCoversSave?}
+   * GET/POST /api/app/online-covers-settings  {onlineCovers?, onlineCoversSave?}
    * The two switches of the online covers (mupibox.onlineCovers / onlineCoversSave), which only the admin interface's
    * cover page could set. The backend reads them live; the app starts the scan or the storing itself after switching
    * on (POST /api/online-covers/scan, /save-all), as that page did.
@@ -322,7 +322,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
-   * POST /api/eltern/magic-link/generate
+   * POST /api/app/magic-link/generate
    * Issues a single-use magic-link token. Caller is expected to be the
    * Telegram bot OR the Cloud+Batterie-Tap handler — both intermediate
    * a physical access proof (chatId-whitelist or device-touch sequence).
@@ -346,7 +346,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
-   * POST /api/eltern/admin-ticket - a one-time ticket that signs the app's user in to the admin interface (the app's
+   * POST /api/app/admin-ticket - a one-time ticket that signs the app's user in to the admin interface (the app's
    * "Erweiterte Einstellungen"), without the password: the admin interface (header.php) redeems it through the box
    * itself, POST /admin-ticket/redeem {ticket}. 60 seconds, single use.
    */
@@ -365,7 +365,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
-   * GET /api/eltern/magic-link/qr?token=<token>
+   * GET /api/app/magic-link/qr?token=<token>
    * Renders a QR-Code SVG for the magic-link URL. Used by the Box-Frontend
    * Cloud+Batterie-Tap overlay (Phase 15b): box-frontend POSTs to
    * /magic-link/generate, receives the token, then loads this endpoint
@@ -402,7 +402,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     }
   })
 
-  /** GET /api/eltern/session  — does the current request carry a valid
+  /** GET /api/app/session  — does the current request carry a valid
    *  session? Used by the WebApp on load to decide login vs. dashboard.
    *  Also tells the System screen whether a parent password is configured. */
   router.get('/session', (req, res, next) => {
@@ -425,14 +425,14 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     })
   })
 
-  /** GET /api/eltern/auth-info  — unauthenticated probe so the no-session
+  /** GET /api/app/auth-info  — unauthenticated probe so the no-session
    *  screen can decide whether to offer a password-login form. Returns only
    *  a boolean; never the hash. */
   router.get('/auth-info', (_req, res) => {
     res.json({ passwordConfigured: hasAppPassword(deps.getMupiboxConfig()), loginRequired: appLoginRequired(deps.getMupiboxConfig()) })
   })
 
-  /** POST /api/eltern/login  {password}  (Phase 17h)
+  /** POST /api/app/login  {password}  (Phase 17h)
    *  Alternative to magic-link redemption: when the parent has set a password,
    *  they can log back in after a session timeout without re-issuing a token.
    *  Rate-limited; the magic-link flow remains the passwordless entry path. */
@@ -457,7 +457,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     res.json({ ok: true, csrf_header: CSRF_HEADER, csrf_token: session.csrf })
   })
 
-  /** POST /api/eltern/password  {password}  (Phase 17h)
+  /** POST /api/app/password  {password}  (Phase 17h)
    *  Set or clear the parent login password. Empty string clears it. The
    *  magic-link path is unaffected either way. */
   router.post('/password', requireSession, requireCsrf, async (req, res) => {
@@ -472,7 +472,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     res.json({ ok: true, configured: hasElternPassword(deps.getMupiboxConfig()) })
   })
 
-  /** GET /api/eltern/auth-state - the Sicherheit page: is a password set, is the login required, is it still the
+  /** GET /api/app/auth-state - the Sicherheit page: is a password set, is the login required, is it still the
    *  admin interface's well-known default password. */
   router.get('/auth-state', requireSession, async (_req, res) => {
     const cfg = deps.getMupiboxConfig()
@@ -485,12 +485,12 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     })
   })
 
-  /** POST /api/eltern/auth/sign-out-others - every other device is signed out (also those kept signed in); this stays. */
+  /** POST /api/app/auth/sign-out-others - every other device is signed out (also those kept signed in); this stays. */
   router.post('/auth/sign-out-others', requireSession, requireCsrf, (req, res) => {
     res.json({ ok: true, ended: destroyOtherSessions(req.elternSessionId) })
   })
 
-  /** POST /api/eltern/auth/password {current, password} - the one password; the current one is needed when one is set. */
+  /** POST /api/app/auth/password {current, password} - the one password; the current one is needed when one is set. */
   router.post('/auth/password', requireSession, requireCsrf, ipRateLimit(5), async (req, res) => {
     const body = (req.body ?? {}) as { current?: unknown; password?: unknown }
     const current = typeof body.current === 'string' ? body.current : ''
@@ -510,7 +510,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     res.json({ ok: true })
   })
 
-  /** POST /api/eltern/auth/login-required {required} - "Anmeldung verlangen" (interfacelogin.state). Whoever is signed
+  /** POST /api/app/auth/login-required {required} - "Anmeldung verlangen" (interfacelogin.state). Whoever is signed
    *  in may switch it (no second password, decided on 29.09.2026); switching on needs a password to ask for. */
   router.post('/auth/login-required', requireSession, requireCsrf, ipRateLimit(5), async (req, res) => {
     const body = (req.body ?? {}) as { required?: unknown; current?: unknown }
@@ -531,7 +531,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     res.json({ ok: true })
   })
 
-  /** POST /api/eltern/logout  — destroys the session, clears the cookie. */
+  /** POST /api/app/logout  — destroys the session, clears the cookie. */
   router.post('/logout', requireSession, requireCsrf, (req, res) => {
     destroySession(req.elternSessionId)
     res.setHeader('Set-Cookie', buildClearCookie())
@@ -539,7 +539,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
-   * GET /api/eltern/spotify-oauth/init
+   * GET /api/app/spotify-oauth/init
    * Starts the Authorize-flow. Returns the Spotify URL the WebApp should
    * window.location.href to. Caller's redirect-target after callback is
    * optionally provided as ?return=/app (the default; the query ?spotify_connected=1 is appended to it).
@@ -573,7 +573,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
-   * GET /api/eltern/spotify-oauth/callback
+   * GET /api/app/spotify-oauth/callback
    * Spotify redirects here after the user authorises. We swap code for
    * tokens, persist them, then redirect back to the WebApp. Uses the
    * exchange result to reset the box's tokenScopes so Smart-Sync picks
@@ -633,14 +633,14 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     res.redirect(withQuery(original.redirectAfter, 'spotify_connected=1'))
   })
 
-  /** POST /api/eltern/spotify-oauth/disconnect  — clears stored tokens. */
+  /** POST /api/app/spotify-oauth/disconnect  — clears stored tokens. */
   router.post('/spotify-oauth/disconnect', requireSession, requireCsrf, async (_req, res) => {
     await clearSpotifyTokens(deps.updateMupiboxConfig)
     res.json({ ok: true })
   })
 
   /**
-   * GET/POST /api/eltern/display-texts
+   * GET/POST /api/app/display-texts
    * Texts of the box display's overlays (limit reached, quiet time, parents' QR code), stored in
    * mupiboxconfig.json under displayTexts (+ displayLanguage). A missing or empty key means the text of the chosen language -
    * so parents can write them in their own language, or something personal ("Good night, Emma").
@@ -688,7 +688,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
-   * GET /api/eltern/caps-config
+   * GET /api/app/caps-config
    * Returns playtimeLimit + quietHours configuration (per-weekday limits
    * and schedules) so the WebApp can render the editor. Live status
    * (today's used/remaining minutes) comes from the existing
@@ -719,7 +719,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
-   * POST /api/eltern/caps-config
+   * POST /api/app/caps-config
    * Update the playtimeLimit and quietHours config blocks. Validates the
    * shape (numeric day-limits 0-1440, schedule windows as {start, end}
    * HH:MM-strings). Existing /api/playtime/limit endpoint sets one day
@@ -844,7 +844,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
-   * GET /api/eltern/power-config
+   * GET /api/app/power-config
    * Returns idle-shutdown + display-timeout fields from mupiboxconfig.timeout.
    * Plus the active battery profile name so the WebApp can display it
    * alongside live mupihat readings. Phase 15i.
@@ -874,7 +874,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
-   * POST /api/eltern/power-config
+   * POST /api/app/power-config
    * Updates idlePiShutdown / idleDisplayOff. Values arrive as numbers,
    * persisted as strings (matches the existing JSON convention from
    * Phase 1's config). Phase 15i.
@@ -989,7 +989,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
-   * GET /api/eltern/sleeptimer  (Phase 17i)
+   * GET /api/app/sleeptimer  (Phase 17i)
    * Read the runtime state of the poweroff-countdown timer. The countdown
    * itself is the existing `sleep_timer.sh` background process (started by
    * AdminInterface/mupi.php today) which writes the remaining seconds to
@@ -1012,7 +1012,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
-   * POST /api/eltern/sleeptimer/start  {minutes}  (Phase 17i)
+   * POST /api/app/sleeptimer/start  {minutes}  (Phase 17i)
    * Mirrors the mupi.php behaviour: spawn `sleep_timer.sh <seconds>` detached
    * via sudo. Accepts 1..1440 minutes (same cap the admin UI uses). The shell
    * script writes the remaining time to /tmp/.time2sleep and runs `poweroff`
@@ -1045,7 +1045,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
-   * POST /api/eltern/sleeptimer/stop  (Phase 17i)
+   * POST /api/app/sleeptimer/stop  (Phase 17i)
    * Mirrors mupi.php's "Stop running timer" button: `pkill -f sleep_timer.sh`
    * then remove `/tmp/.time2sleep`. Both are idempotent — calling stop when
    * no timer runs returns ok without erroring.
@@ -1059,7 +1059,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
-   * GET /api/eltern/audio  (Phase 18 Item 1)
+   * GET /api/app/audio  (Phase 18 Item 1)
    * Returns the live ALSA Master volume, the configured hearing-protection
    * cap (`mupibox.maxVolume`), and the optional startup default
    * (`mupibox.startupVolume`, null if disabled). Live value comes from amixer
@@ -1094,7 +1094,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
-   * POST /api/eltern/audio/volume  {volume}  (Phase 18 Item 1)
+   * POST /api/app/audio/volume  {volume}  (Phase 18 Item 1)
    * Live volume control. Server-side clamps to the configured maxVolume cap
    * so a parent in the WebApp can't go above the hearing-protection limit
    * (matches the player's own cap enforcement for touchscreen volume-up).
@@ -1127,7 +1127,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
-   * POST /api/eltern/audio/config  {maxVolume?, startupVolume?}  (Phase 18 Item 1)
+   * POST /api/app/audio/config  {maxVolume?, startupVolume?}  (Phase 18 Item 1)
    * Persist the hearing-protection cap and/or the startup-default volume.
    * `startupVolume: null` removes the startup default (so the box keeps
    * wherever the last session left off). Cap is min 10 % to avoid an
@@ -1221,12 +1221,12 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   }
 
   /**
-   * GET /api/eltern/wlan/scan  (Phase 18 Item 2)
+   * GET /api/app/wifi/scan  (Phase 18 Item 2)
    * Returns visible Wi-Fi networks, parsed from `iwlist wlan0 scanning`. We
    * dedup by SSID (keep the strongest signal) and drop hidden networks
    * (empty SSID). Slow — iwlist takes ~3-5 s.
    */
-  router.get('/wlan/scan', requireSession, (_req, res) => {
+  router.get(['/wifi/scan', '/wlan/scan'], requireSession, (_req, res) => {
     iwlistScan().then((stdout) => {
       const blocks = stdout.split(/Cell \d+ -/)
       const byBest = new Map<string, { ssid: string; signal_dbm: number; encrypted: boolean }>()
@@ -1251,12 +1251,12 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
-   * GET /api/eltern/wlan/saved  (Phase 18 Item 2)
+   * GET /api/app/wifi/saved  (Phase 18 Item 2)
    * Lists wpa_supplicant's saved networks via `wpa_cli list_networks`. The
    * `[CURRENT]` flag marks which one is connected — the WebApp disables
    * "remove" on that row so the box can't be locked out via this UI.
    */
-  router.get('/wlan/saved', requireSession, (_req, res) => {
+  router.get(['/wifi/saved', '/wlan/saved'], requireSession, (_req, res) => {
     execFile('sudo', ['/usr/sbin/wpa_cli', '-i', wifiIface(), 'list_networks'], { timeout: 5000 }, (err, stdout) => {
       if (err) {
         res.status(500).json({ error: `wpa_cli failed: ${err.message}` })
@@ -1280,7 +1280,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
-   * POST /api/eltern/wlan/add  {ssid, password?}  (Phase 18 Item 2)
+   * POST /api/app/wifi/add  {ssid, password?}  (Phase 18 Item 2)
    * Queues a new Wi-Fi entry by writing to wlan.json — same mechanism that
    * AdminInterface/network.php has used for ages. The add_wifi.sh daemon
    * polls the file every 2 s, runs `wpa_passphrase` (or appends an open
@@ -1288,7 +1288,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
    * connection is NOT touched: wpa_supplicant only switches if the new SSID
    * is reachable.
    */
-  router.post('/wlan/add', requireSession, requireCsrf, async (req, res) => {
+  router.post(['/wifi/add', '/wlan/add'], requireSession, requireCsrf, async (req, res) => {
     const body = (req.body as { ssid?: unknown; password?: unknown } | undefined) ?? {}
     const ssid = typeof body.ssid === 'string' ? body.ssid : ''
     const password = typeof body.password === 'string' ? body.password : ''
@@ -1321,13 +1321,13 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
-   * POST /api/eltern/wlan/remove  {ssid}  (Phase 18 Item 2)
+   * POST /api/app/wifi/remove  {ssid}  (Phase 18 Item 2)
    * Removes a saved Wi-Fi network via wpa_cli, then persists the config. The
    * currently-connected network is refused (409) — the no-lockout safeguard
    * that the user explicitly asked for over a more elaborate test-connect
    * mechanism (which can't work when the WebApp lives on a separate device).
    */
-  router.post('/wlan/remove', requireSession, requireCsrf, (req, res) => {
+  router.post(['/wifi/remove', '/wlan/remove'], requireSession, requireCsrf, (req, res) => {
     const body = (req.body as { ssid?: unknown } | undefined) ?? {}
     const ssid = typeof body.ssid === 'string' ? body.ssid : ''
     if (!ssid) {
@@ -1375,7 +1375,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
-   * GET /api/eltern/battery-history?hours=24  (Phase 18 Item 6)
+   * GET /api/app/battery-history?hours=24  (Phase 18 Item 6)
    * Reads /home/dietpi/.mupibox/battery_log.jsonl that the server.ts poller
    * writes once a minute. Filtered to the last `hours` (default 24, max
    * 168 = 7 days). Sampled down to ~120 points so the SVG chart in the
@@ -1413,7 +1413,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
-   * GET /api/eltern/playback  (Phase 18 Item 5)
+   * GET /api/app/playback  (Phase 18 Item 5)
    * Snapshot of what's playing on the box (current track + paused/playing
    * state). Just proxies the player's own /local — same data the box's
    * frontend already gets from it.
@@ -1514,7 +1514,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     }
   })
 
-  /** POST /api/eltern/playback/pause|play|stop  (Phase 18 Item 5)
+  /** POST /api/app/playback/pause|play|stop  (Phase 18 Item 5)
    *  Quick-Pause / Quick-Play / Quick-Stop. Just forwards to the player's
    *  HTTP API on localhost:5005, where the corresponding command handler
    *  already exists (used by the box display + Telegram bot). No state
@@ -1538,7 +1538,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   }
 
   /**
-   * POST /api/eltern/library/play  { index }
+   * POST /api/app/library/play  { index }
    * Startet ein Library-Item auf der Box. Liest active_data.json, mapped den
    * Type auf den passenden Player-Command-Pfad (mirror PlayerService.playMedia
    * aus frontend-box) und proxied an localhost:5005. Nutzt /current/ als
@@ -1651,13 +1651,13 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
-   * POST /api/eltern/library/play-nas  { path }
+   * POST /api/app/library/play-nas  { path }
    * Plays a NAS album (a folder with audio files) on the box, as a tap in the box's NAS tab does. Only
    * folders the admin selected ("Show in MuPiBox" / "Download local") and did not hide can be played,
    * like everything else the box offers from the NAS.
    */
   /**
-   * POST /api/eltern/library/play-local  {path}  – plays a folder of the SD card's media library
+   * POST /api/app/library/play-local  {path}  – plays a folder of the SD card's media library
    * (<category>/<artist>/<album…>, as /api/library/artists|children list it) on the box, like the display does
    * (player: musicsearch/library/album/<segments joined by ":">).
    */
@@ -1713,7 +1713,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
-   * GET /api/eltern/playlog?range=today|week  (Phase 18 Item 4)
+   * GET /api/app/playlog?range=today|week  (Phase 18 Item 4)
    * Reads the play_log.jsonl that the backend-api's own poller writes and
    * aggregates by track / artist / day. No DB — just walking the file once
    * per request, which is fine until the daughter listens to a few thousand
@@ -1856,7 +1856,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
-   * GET /api/eltern/theme  (Phase 18 Item 3)
+   * GET /api/app/theme  (Phase 18 Item 3)
    * Returns the current theme + the whitelist of installed themes from
    * mupibox.installedThemes (35+ themes registered by conf_update.sh on box
    * provisioning). The installed-themes list IS the security boundary —
@@ -1901,7 +1901,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
-   * POST /api/eltern/theme  {theme}  (Phase 18 Item 3)
+   * POST /api/app/theme  {theme}  (Phase 18 Item 3)
    * Updates mupibox.theme AND swaps the active_theme.css symlink so the
    * change is visible after the next display reload — without running the
    * full setting_update.sh (which on shutdown also rewrites Spotify, Sonos,
@@ -1943,7 +1943,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
-   * POST /api/eltern/theme-stage  {stage?, autoRead?}
+   * POST /api/app/theme-stage  {stage?, autoRead?}
    * The children's themes' Cover Flow view (mupibox.themeStage) and reading the name aloud when it stops
    * (mupibox.themeStageAutoRead). The display takes them over right away (same signal as after a theme change).
    */
@@ -1974,7 +1974,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
-   * POST /api/eltern/display/reload-theme
+   * POST /api/app/display/reload-theme
    * After a theme change, when the parents want to see it right away: the display swaps its
    * stylesheet on its next /local poll (2 s, 10 s on the player page). No page reload, so playback
    * and the Spotify player in the display keep running.
@@ -1996,7 +1996,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
-   * GET /api/eltern/theme-preview/:name  (Phase 18 Item 3)
+   * GET /api/app/theme-preview/:name  (Phase 18 Item 3)
    * Serves the theme preview PNG that AdminInterface ships under
    * /var/www/images/<name>.png. Name MUST be in the installed-themes
    * whitelist — without that check this would be a /var/www/images path
@@ -2030,7 +2030,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
-   * GET /api/eltern/bootscreen
+   * GET /api/app/bootscreen
    * Boot and maintenance screens (as in MuPi-Conf): the installed scenes with their text places and texts
    * (bootscreens.json), the settings (empty bootscreen = the default scene) and the languages of the display texts.
    */
@@ -2054,7 +2054,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
-   * POST /api/eltern/bootscreen  {bootscreen?, maintenanceScreen?, boxName?, bootscreenLanguage?}
+   * POST /api/app/bootscreen  {bootscreen?, maintenanceScreen?, boxName?, bootscreenLanguage?}
    * Checked as in MuPi-Conf (the default scene is stored empty, so a later change of the default reaches the box);
    * the box then puts the pictures together in the background (bootscreen_update.sh). Only the fields sent change:
    * a body without boxName used to empty the name, one without the language set it to English.
@@ -2107,7 +2107,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
-   * GET /api/eltern/bootscreen-scene/:id/:kind
+   * GET /api/app/bootscreen-scene/:id/:kind
    * A scene picture for the preview (kind: scene | maintenance | goodbye | battery), only of an installed scene.
    */
   router.get('/bootscreen-scene/:id/:kind', requireSession, (req, res) => {
@@ -2125,7 +2125,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
-   * POST /api/eltern/spotify-credentials
+   * POST /api/app/spotify-credentials
    * Persists the user-provided clientId (and optional clientSecret) into
    * mupiboxconfig.json.spotify. This is the wizard-step-3 endpoint that
    * was deferred in Phase 14c.
@@ -2164,7 +2164,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
-   * GET /api/eltern/spotify-access
+   * GET /api/app/spotify-access
    * What the player's Spotify access looks like, without the secrets themselves (the admin interface showed them in
    * plain text): the client id, whether a secret and tokens are stored, and "process playlists".
    */
@@ -2184,7 +2184,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     })
   })
 
-  /** POST /api/eltern/spotify-access/playlists {enabled} - "process playlists" (read live by the backend, no restart). */
+  /** POST /api/app/spotify-access/playlists {enabled} - "process playlists" (read live by the backend, no restart). */
   router.post('/spotify-access/playlists', requireSession, requireCsrf, async (req, res) => {
     const enabled = (req.body as { enabled?: unknown } | undefined)?.enabled
     if (typeof enabled !== 'boolean') {
@@ -2200,7 +2200,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
-   * POST /api/eltern/spotify-access/clear-cache
+   * POST /api/app/spotify-access/clear-cache
    * Empties the backend's Spotify caches (album and artist data, Spotify covers, the kept home lists). Unlike the
    * admin interface (rm -r cache/*) the online covers, the NAS folder lists and the cover shapes stay: they have
    * nothing to do with Spotify, and the online covers' found and discarded lists would be lost.
@@ -2210,7 +2210,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
-   * POST /api/eltern/spotify-access/reset
+   * POST /api/app/spotify-access/reset
    * As the admin interface's "Reset data": deletes the player's Spotify access (ids, tokens, device, the librespot
    * login in spotify.cachepath) and the Spotify caches; the player is restarted with the empty access.
    */
@@ -2233,7 +2233,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
-   * GET /api/eltern/bluetooth  (Phase 15d)
+   * GET /api/app/bluetooth  (Phase 15d)
    * Power state + paired devices (with connected flag) + autoconnect-service
    * state. Mirrors the admin bluetooth.php read path; runs as dietpi via sudo
    * like the PHP does. Empty/off → just {powered:false}.
@@ -2272,7 +2272,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
-   * POST /api/eltern/bluetooth/chip  {on:boolean} - the Pi's Bluetooth hardware on or off (set_bluetooth_chip.sh,
+   * POST /api/app/bluetooth/chip  {on:boolean} - the Pi's Bluetooth hardware on or off (set_bluetooth_chip.sh,
    * as the admin interface): for a steadier onboard WiFi (it shares its radio with Bluetooth), a little less power, or
    * the serial port the chip holds. Takes effect after a restart. The radio (/bluetooth/power) is the switch for every
    * day.
@@ -2289,7 +2289,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     res.status(409).json({ error: 'no bluetooth controller' })
   }
 
-  /** POST /api/eltern/bluetooth/power  — {on:boolean} → start_bt.sh|stop_bt.sh. */
+  /** POST /api/app/bluetooth/power  — {on:boolean} → start_bt.sh|stop_bt.sh. */
   router.post('/bluetooth/power', requireSession, requireCsrf, noController, async (req, res) => {
     const on = (req.body as { on?: unknown } | undefined)?.on === true
     const script = on ? 'start_bt.sh' : 'stop_bt.sh'
@@ -2297,7 +2297,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     res.json({ ok: r.ok })
   })
 
-  /** POST /api/eltern/bluetooth/scan  — runs scan_bt.sh, returns discovered
+  /** POST /api/app/bluetooth/scan  — runs scan_bt.sh, returns discovered
    *  devices parsed from /tmp/bt_scan (tab-sep; col[1]=MAC, col[2]=name). */
   router.post('/bluetooth/scan', requireSession, requireCsrf, noController, async (_req, res) => {
     await execCapture('sudo', ['-u', 'dietpi', '/usr/local/bin/mupibox/scan_bt.sh'], 30000)
@@ -2315,7 +2315,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     res.json({ ok: true, found })
   })
 
-  /** POST /api/eltern/bluetooth/pair  — {mac} → pair_bt.sh. */
+  /** POST /api/app/bluetooth/pair  — {mac} → pair_bt.sh. */
   router.post('/bluetooth/pair', requireSession, requireCsrf, noController, async (req, res) => {
     const mac = String((req.body as { mac?: unknown } | undefined)?.mac ?? '').trim()
     if (!BT_MAC_RE.test(mac)) {
@@ -2326,7 +2326,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     res.json({ ok: r.ok })
   })
 
-  /** POST /api/eltern/bluetooth/remove  — {mac} → remove_bt.sh + bt restart. */
+  /** POST /api/app/bluetooth/remove  — {mac} → remove_bt.sh + bt restart. */
   router.post('/bluetooth/remove', requireSession, requireCsrf, noController, async (req, res) => {
     const mac = String((req.body as { mac?: unknown } | undefined)?.mac ?? '').trim()
     if (!BT_MAC_RE.test(mac)) {
@@ -2340,7 +2340,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     res.status(r.ok ? 200 : 500).json({ ok: r.ok })
   })
 
-  /** POST /api/eltern/bluetooth/autoconnect  — {enable:boolean}. */
+  /** POST /api/app/bluetooth/autoconnect  — {enable:boolean}. */
   router.post('/bluetooth/autoconnect', requireSession, requireCsrf, async (req, res) => {
     const enable = (req.body as { enable?: unknown } | undefined)?.enable === true
     if (enable) {
@@ -2354,7 +2354,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
-   * GET /api/eltern/telegram-config  (Phase 15f)
+   * GET /api/app/telegram-config  (Phase 15f)
    * Returns the Telegram bot config for editing — but NOT the raw token
    * (write-only secret); only whether one is configured. chatId list is
    * normalised to {id,label} objects.
@@ -2376,7 +2376,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
-   * POST /api/eltern/telegram-config  (Phase 15f)
+   * POST /api/app/telegram-config  (Phase 15f)
    * Update active flag, chatId whitelist, and optionally the bot token
    * (only when a non-empty value is sent — blank keeps the existing one).
    * telegram_receiver.py reads the config only at startup, so the service
@@ -2453,7 +2453,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
-   * GET /api/eltern/system
+   * GET /api/app/system
    * Read-only box system overview (Phase 15g): hostname, uptime, CPU load +
    * count + temperature, RAM, root-disk usage. Uses Node built-ins only
    * (os + fs.statfs + the thermal sysfs node) — no shell-out. Reboot/Shutdown
@@ -2487,7 +2487,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
-   * POST /api/eltern/library/add-album  (Phase 17b)
+   * POST /api/app/library/add-album  (Phase 17b)
    * Pin a single Spotify album (from the WebApp search) into the Smart-Sync
    * config (spotify_sync.explicit_albums). The next sync resolves it into the
    * library as source='spotify-sync'. Idempotent — re-adding the same id is a
@@ -2520,7 +2520,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
-   * POST /api/eltern/library/subscribe-artist  (Phase 17c/17d)
+   * POST /api/app/library/subscribe-artist  (Phase 17c/17d)
    * Upsert a whole-artist subscription: all of the artist's albums get synced,
    * optionally narrowed to [range_from..range_to] (1-indexed by release date).
    * Re-subscribing the same id replaces the prior settings (so clearing the
@@ -2569,7 +2569,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     res.json({ ok: true })
   })
 
-  /** GET /api/eltern/library/subscriptions  (Phase 17d) — current artist subs
+  /** GET /api/app/library/subscriptions  (Phase 17d) — current artist subs
    *  + explicit albums, for the management list. */
   router.get('/library/subscriptions', requireSession, (_req, res) => {
     const ss = (deps.getMupiboxConfig()?.spotify_sync as Record<string, unknown> | undefined) ?? {}
@@ -2579,7 +2579,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     })
   })
 
-  /** POST /api/eltern/library/unsubscribe-artist  {artistId}  (Phase 17d).
+  /** POST /api/app/library/unsubscribe-artist  {artistId}  (Phase 17d).
    *  The artist's albums become orphans and the next sync removes them. */
   router.post('/library/unsubscribe-artist', requireSession, requireCsrf, async (req, res) => {
     const artistId = String((req.body as { artistId?: unknown } | undefined)?.artistId ?? '').trim()
@@ -2597,7 +2597,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     res.json({ ok: true })
   })
 
-  /** POST /api/eltern/library/remove-album  {albumId}  (Phase 17d). */
+  /** POST /api/app/library/remove-album  {albumId}  (Phase 17d). */
   router.post('/library/remove-album', requireSession, requireCsrf, async (req, res) => {
     const albumId = String((req.body as { albumId?: unknown } | undefined)?.albumId ?? '').trim()
     if (!albumId) {
@@ -2615,7 +2615,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
-   * POST /api/eltern/library/artist-exclude  {artistId, albumId, excluded}
+   * POST /api/app/library/artist-exclude  {artistId, albumId, excluded}
    * (Phase 17e) Toggle a single album of a subscribed artist on/off the
    * subscription's exclude list. Excluded albums are skipped on the next sync
    * (and removed as orphans). Re-including (excluded:false) drops it from the
@@ -2672,7 +2672,7 @@ export function buildElternLandingHandler(): import('express').RequestHandler {
     if (!token) {
       // No token — let the static-file handler serve index.html for the
       // WebApp shell. Browser-side code does its own session check via
-      // GET /api/eltern/session.
+      // GET /api/app/session.
       next()
       return
     }

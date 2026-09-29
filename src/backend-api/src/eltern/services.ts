@@ -63,14 +63,14 @@ const shareJobs: Record<string, { running: boolean; ok?: boolean; at?: number }>
 let detecting = false
 
 export function registerServicesRoutes(router: Router, deps: ServicesDeps): void {
-  /** GET /api/eltern/shares - Samba, FTP, VNC: running or not, and a switch still at work. */
+  /** GET /api/app/shares - Samba, FTP, VNC: running or not, and a switch still at work. */
   router.get('/shares', requireSession, async (_req, res) => {
     const out: Record<string, unknown> = {}
     for (const [name, s] of Object.entries(SHARES)) out[name] = { active: await isActive(s.unit), job: shareJobs[name] ?? { running: false } }
     res.json(out)
   })
 
-  /** POST /api/eltern/shares {name, on} - switches a share in the background (installs it first when missing). */
+  /** POST /api/app/shares {name, on} - switches a share in the background (installs it first when missing). */
   router.post('/shares', requireSession, requireCsrf, async (req, res) => {
     const { name, on } = (req.body ?? {}) as { name?: unknown; on?: unknown }
     const share = typeof name === 'string' ? SHARES[name] : undefined
@@ -92,7 +92,7 @@ export function registerServicesRoutes(router: Router, deps: ServicesDeps): void
   })
 
   /**
-   * POST /api/eltern/telegram/detect-chats
+   * POST /api/app/telegram/detect-chats
    * The chats that write to the bot now: the bot is stopped (it would take the messages itself), the Telegram API is
    * asked for new messages for up to 40 seconds, and the bot is started again. The admin interface's button asked
    * while the bot was running and found nothing.
@@ -131,7 +131,7 @@ export function registerServicesRoutes(router: Router, deps: ServicesDeps): void
     res.json({ chats: [...chats].map(([id, label]) => ({ id, label })) })
   })
 
-  /** GET /api/eltern/mqtt - the MQTT settings, the password only as "set". */
+  /** GET /api/app/mqtt - the MQTT settings, the password only as "set". */
   router.get('/mqtt', requireSession, async (_req, res) => {
     const m = section(deps, 'mqtt')
     const str = (k: string, d = '') => (m[k] === undefined || m[k] === null ? d : String(m[k]))
@@ -153,7 +153,7 @@ export function registerServicesRoutes(router: Router, deps: ServicesDeps): void
     })
   })
 
-  /** POST /api/eltern/mqtt - all fields; password only when not empty. mupi_mqtt reads them when it starts: restarted. */
+  /** POST /api/app/mqtt - all fields; password only when not empty. mupi_mqtt reads them when it starts: restarted. */
   router.post('/mqtt', requireSession, requireCsrf, async (req, res) => {
     const b = (req.body ?? {}) as Record<string, unknown>
     const text = (k: string, max = 100, required = false): string | undefined => {
@@ -208,7 +208,7 @@ export function registerServicesRoutes(router: Router, deps: ServicesDeps): void
     res.json({ ok: true, running: await isActive('mupi_mqtt') })
   })
 
-  /** GET /api/eltern/wled - the settings, and the device with its presets when one answers on the serial port. */
+  /** GET /api/app/wled - the settings, and the device with its presets when one answers on the serial port. */
   router.get('/wled', requireSession, async (_req, res) => {
     const w = section(deps, 'wled')
     const port = String(w.com_port ?? '')
@@ -245,7 +245,7 @@ export function registerServicesRoutes(router: Router, deps: ServicesDeps): void
   })
 
   /**
-   * POST /api/eltern/wled - the settings. The start preset is stored in the device itself (its "LED settings", as
+   * POST /api/app/wled - the settings. The start preset is stored in the device itself (its "LED settings", as
    * the admin interface does), when the device answered with its address.
    */
   router.post('/wled', requireSession, requireCsrf, async (req, res) => {

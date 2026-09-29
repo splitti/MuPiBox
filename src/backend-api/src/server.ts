@@ -325,12 +325,12 @@ export const app = express()
 // app on (see PROXY_PORT). From anywhere else the header is ignored, a client on the network cannot forge its address.
 app.set('trust proxy', 'loopback')
 // Spotify's way back after the login (the Redirect URI in the parents' Spotify app, see eltern/oauth.ts
-// buildRedirectUri): https://<box>/app/spotify-callback is handled as /api/eltern/spotify-oauth/callback, the address
-// of before - which stays for Spotify apps that still name it
+// buildRedirectUri): https://<box>/app/spotify-callback is handled as /api/app/spotify-oauth/callback; the addresses
+// of before (/api/eltern/…) stay for Spotify apps that still name them
 app.use((req, _res, next) => {
   if (req.path === '/app/spotify-callback') {
     const query = req.url.indexOf('?')
-    req.url = `/api/eltern/spotify-oauth/callback${query >= 0 ? req.url.slice(query) : ''}`
+    req.url = `/api/app/spotify-oauth/callback${query >= 0 ? req.url.slice(query) : ''}`
   }
   next()
 })
@@ -343,12 +343,12 @@ app.use(cors(corsOptionsFor))
 // look at and operate, the library to change. With "Anmeldung verlangen" on (interfacelogin.state) they are for the box
 // itself (its display, the scripts, the Telegram bot, the admin interface's PHP - all on 127.0.0.1) or a parent signed
 // in to the app (its session cookie, the one of the admin interface's login too). The app itself (/app) and its own
-// API (/api/eltern: login, magic links, …) check for themselves. Without the login switch the box stays open, as chosen.
+// API (/api/app, before /api/eltern: login, magic links, …) check for themselves. Without the login switch the box stays open, as chosen.
 const loginRequired = () =>
   (getMupiboxConfigSync() as { interfacelogin?: { state?: unknown } } | undefined)?.interfacelogin?.state === true
 app.use((req, res, next) => {
   const p = req.path
-  if (isLoopback(req) || p === '/app' || p.startsWith('/app/') || p.startsWith('/api/eltern/') || p === '/parents' || p === '/eltern' || !loginRequired()) {
+  if (isLoopback(req) || p === '/app' || p.startsWith('/app/') || p.startsWith('/api/app/') || p.startsWith('/api/eltern/') || p === '/parents' || p === '/eltern' || !loginRequired()) {
     next()
     return
   }
@@ -1732,7 +1732,7 @@ function appendPlayLogLine(entry: Record<string, unknown>): void {
 
 // Der Hör-Verlauf wuchs bis hierher unbegrenzt -- anders als battery_log,
 // das seit Phase 18 Item 6 auf 8 Tage getrimmt wird. Nach gut drei Monaten
-// standen 2,1 MB auf der SD-Karte, und /api/eltern/playlog liest die Datei
+// standen 2,1 MB auf der SD-Karte, und /api/app/playlog liest die Datei
 // bei JEDEM Aufruf komplett ein. Unbegrenztes Wachstum heisst also nicht nur
 // SD-Wear, sondern auch stetig steigende Latenz der Hör-Verlauf-Seite.
 // 90 Tage lassen Raum für längere Auswertungen (der Endpoint selbst braucht
@@ -7795,10 +7795,11 @@ const spotifySyncDeps: RunSyncDeps = {
 }
 app.use('/api/spotify-sync', createSpotifySyncRouter(spotifySyncDeps))
 
-// Phase 14c — the routes of the app (JSON API under /api/eltern/*). The magic-link landing handler at /app redeems
+// Phase 14c — the routes of the app (JSON API under /api/app/*; /api/eltern/* the address of before, for links and
+// scripts still using it). The magic-link landing handler at /app redeems
 // ?token=... into a session cookie and redirects to /app (without the query) so the app loads cleanly.
 app.use(
-  '/api/eltern',
+  ['/api/app', '/api/eltern'],
   createElternApiRouter({
     getMupiboxConfig: getMupiboxConfigSync,
     updateMupiboxConfig,

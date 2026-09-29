@@ -74,7 +74,7 @@ export function registerNetworkRoutes(router: Router, deps: NetworkDeps): void {
     })
   })
 
-  /** POST /api/eltern/network-options {key, value} */
+  /** POST /api/app/network-options {key, value} */
   router.post('/network-options', requireSession, requireCsrf, async (req, res) => {
     const { key, value } = (req.body ?? {}) as { key?: unknown; value?: unknown }
     const on = value === true
@@ -117,7 +117,7 @@ export function registerNetworkRoutes(router: Router, deps: NetworkDeps): void {
     res.status(r.ok ? 200 : 500).json({ ok: r.ok, rebootNeeded })
   })
 
-  /** POST /api/eltern/usb-wifi-power {driver, level} - power saving of a USB WiFi driver (0 off, 1 minimal, 2 max). */
+  /** POST /api/app/usb-wifi-power {driver, level} - power saving of a USB WiFi driver (0 off, 1 minimal, 2 max). */
   router.post('/usb-wifi-power', requireSession, requireCsrf, async (req, res) => {
     const { driver, level } = (req.body ?? {}) as { driver?: unknown; level?: unknown }
     const d = DRIVERS[String(driver)]
@@ -140,7 +140,7 @@ export function registerNetworkRoutes(router: Router, deps: NetworkDeps): void {
   })
 
   /**
-   * POST /api/eltern/usb-wifi-driver {driver, action: install|remove} - builds or removes the driver (minutes: kernel
+   * POST /api/app/usb-wifi-driver {driver, action: install|remove} - builds or removes the driver (minutes: kernel
    * headers, compiling), in the background; GET /network-options shows the job.
    */
   router.post('/usb-wifi-driver', requireSession, requireCsrf, async (req, res) => {
@@ -184,7 +184,7 @@ export function registerNetworkRoutes(router: Router, deps: NetworkDeps): void {
     res.json({ ok: true, started: true })
   })
 
-  /** POST /api/eltern/wifi/restart and /dhcp/renew - as the admin interface (the WiFi is gone for a moment). */
+  /** POST /api/app/wifi/restart and /dhcp/renew - as the admin interface (the WiFi is gone for a moment). */
   router.post('/wifi/restart', requireSession, requireCsrf, async (_req, res) => {
     const iface = await wifiIface()
     detached(`sleep 1; sudo service ifup@${iface} stop; sudo service ifup@${iface} start`)

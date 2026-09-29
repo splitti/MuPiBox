@@ -59,7 +59,7 @@ async function refusedSince(sp: Spotify): Promise<{ player: boolean; sync: boole
   return { player, sync }
 }
 
-/** The login's age as the app shows it (GET /api/eltern/spotify-access). */
+/** The login's age as the app shows it (GET /api/app/spotify-access). */
 export async function spotifyLoginAge(cfg: MupiboxConfig | undefined): Promise<SpotifyLoginAge> {
   const sp = ((cfg?.spotify as Spotify | undefined) ?? {}) as Spotify
   const refresh = str(sp.refreshToken)

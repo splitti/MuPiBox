@@ -83,7 +83,7 @@ const num = (v: unknown, min: number, max: number, step = 1): number | undefined
 }
 
 export function registerDisplayRoutes(router: Router, deps: DisplayDeps): void {
-  /** GET /api/eltern/display-options - everything the pages Ansicht, Vorlesen, Display and Bedienung show. */
+  /** GET /api/app/display-options - everything the pages Ansicht, Vorlesen, Display and Bedienung show. */
   router.get('/display-options', requireSession, async (_req, res) => {
     const cfg = deps.getMupiboxConfig() as Record<string, Record<string, unknown> | undefined> | undefined
     const mb = cfg?.mupibox ?? {}
@@ -106,7 +106,7 @@ export function registerDisplayRoutes(router: Router, deps: DisplayDeps): void {
   })
 
   /**
-   * POST /api/eltern/display-options  (any part of what GET shows)
+   * POST /api/app/display-options  (any part of what GET shows)
    * Answer: what happened on top of saving - reloaded (the display page), restartKiosk (resolution), reboot (rotation),
    * restartPlayer (reading-aloud language).
    */
@@ -204,13 +204,13 @@ export function registerDisplayRoutes(router: Router, deps: DisplayDeps): void {
     res.json(result)
   })
 
-  /** POST /api/eltern/display/reload-page - the display loads its page again (e.g. after "Display off after"). */
+  /** POST /api/app/display/reload-page - the display loads its page again (e.g. after "Display off after"). */
   router.post('/display/reload-page', requireSession, requireCsrf, async (_req, res) => {
     res.json({ ok: await reloadDisplayPage() })
   })
 
   /**
-   * PUT /api/eltern/display/background  body: a JPEG
+   * PUT /api/app/display/background  body: a JPEG
    * The background picture of the theme "custom". The admin interface scaled smaller pictures up to 800 x 480 with
    * PHP's GD; the theme shows it with background-size: cover, so any JPEG of at least 400 x 240 is taken as it is.
    */
@@ -249,7 +249,7 @@ export function registerDisplayRoutes(router: Router, deps: DisplayDeps): void {
     res.json({ ok: true, width: info.width, height: info.height, active: theme === 'custom', reloaded: theme === 'custom' ? await reloadDisplayPage() : false })
   })
 
-  /** GET /api/eltern/display/background - the current background picture (for the preview). */
+  /** GET /api/app/display/background - the current background picture (for the preview). */
   router.get('/display/background', requireSession, (_req, res) => {
     res.setHeader('Cache-Control', 'no-cache')
     res.sendFile(BACKGROUND, (err) => {
@@ -258,7 +258,7 @@ export function registerDisplayRoutes(router: Router, deps: DisplayDeps): void {
   })
 
   /**
-   * GET /api/eltern/display/screenshot - what the display shows right now (PNG, scrot on the kiosk's X display).
+   * GET /api/app/display/screenshot - what the display shows right now (PNG, scrot on the kiosk's X display).
    * One picture at most every 2 seconds; a request in between gets the last one.
    */
   let lastShot = 0
@@ -280,7 +280,7 @@ export function registerDisplayRoutes(router: Router, deps: DisplayDeps): void {
     })
   })
 
-  /** GET /api/eltern/display/vnc - whether the remote control runs; it opens under /app/vnc/ (server.ts proxyVncUpgrade:
+  /** GET /api/app/display/vnc - whether the remote control runs; it opens under /app/vnc/ (server.ts proxyVncUpgrade:
    *  only with the app's login, x11vnc and websockify listen on the box itself only). */
   router.get('/display/vnc', requireSession, async (_req, res) => {
     const r = await run('systemctl', ['is-active', 'mupi_novnc'], 5000)

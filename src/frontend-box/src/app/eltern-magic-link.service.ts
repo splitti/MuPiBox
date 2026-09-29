@@ -41,7 +41,7 @@ export class ElternMagicLinkService {
       return
     }
     try {
-      const res = await fetch('/api/eltern/magic-link/generate', {
+      const res = await fetch('/api/app/magic-link/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ source: 'settings-qr' }),

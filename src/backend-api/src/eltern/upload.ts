@@ -79,7 +79,7 @@ async function freeBytes(dir: string): Promise<number | null> {
 
 export function registerLocalUploadRoutes(router: Router, deps: LocalLibraryDeps): void {
   /**
-   * GET /api/eltern/local/folders?category=&artist=
+   * GET /api/app/local/folders?category=&artist=
    * The artists of a category (without artist) or the albums of an artist, for the choice in the upload form,
    * and the free space on the card.
    */
@@ -102,7 +102,7 @@ export function registerLocalUploadRoutes(router: Router, deps: LocalLibraryDeps
   })
 
   /**
-   * PUT /api/eltern/local/upload?category=&artist=&album=&path=<file, or sub/folders/file>
+   * PUT /api/app/local/upload?category=&artist=&album=&path=<file, or sub/folders/file>
    * Body: the file's bytes. Lands in media/<category>/<artist>/<album>/<path> (album may be empty: then right in
    * the artist's folder, e.g. for an uploaded folder that holds several albums). An existing file of that name is
    * replaced.
@@ -173,7 +173,7 @@ export function registerLocalUploadRoutes(router: Router, deps: LocalLibraryDeps
   })
 
   /**
-   * POST /api/eltern/local/delete  {path: "<category>/<artist>[/<album>…]"}
+   * POST /api/app/local/delete  {path: "<category>/<artist>[/<album>…]"}
    * Deletes a folder of the local media (an artist with all its albums, or one album) from the SD card. A category
    * itself cannot be deleted. The artist's folder goes too when its last album was deleted (an empty artist would
    * show on the box).

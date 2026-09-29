@@ -84,7 +84,7 @@ export function buildAuthorizeUrl(deps: {
 /** Same shape used by spotify.php; canonicalises the redirect URI. */
 export function buildRedirectUri(protocol: string, host: string): string {
   // https://<box>/app/spotify-callback, through the web server on port 443 (lighttpd with the box's certificate passes
-  // /app to the app, server.ts hands it to /api/eltern/spotify-oauth/callback): Spotify refuses http redirect addresses
+  // /app to the app, server.ts hands it to /api/app/spotify-oauth/callback): Spotify refuses http redirect addresses
   // other than 127.0.0.1.
   return `${protocol}://${host}/app/spotify-callback`
 }
