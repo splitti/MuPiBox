@@ -1213,7 +1213,7 @@
         ],
         [
          "Redirect URI",
-         "http://mupibox.local/api/spotify/callback"
+         "https://mupibox/api/eltern/spotify-oauth/callback"
         ]
        ]
       },

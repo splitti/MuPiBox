@@ -1169,6 +1169,7 @@
  "MuPiHAT einschalten",
  "Musik",
  "Musik ausblenden",
+ "Muss in deiner Spotify-App unter „Redirect URIs“ stehen, sonst lehnt Spotify die Anmeldung ab. Beim Zurückkommen fragt der Browser wegen des Zertifikats der Box eventuell einmal nach.",
  "Nach … Minuten ohne Wiedergabe",
  "Nach dem Wechsel lädt das Display neu.",
  "Nächste Seite",

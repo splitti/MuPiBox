@@ -9,9 +9,12 @@ import { getLang, getLangPref, langBadge, LANGS, loadLanguage as loadAppLanguage
 import { icon } from './icons.js'
 
 const API = '/api/eltern'
-// The app's own port (8200): the display's pages and Spotify's redirect address are there, also when the app is used
-// through port 80 (whose root is the admin interface's)
+// The app's own port (8200): the display's pages are there, also when the app is used through port 80 (whose root is
+// the admin interface's)
 const BOX_ORIGIN = `http://${location.hostname}:8200`
+// Where Spotify sends the browser back after the login: https through the box's web server (port 443), as the admin
+// interface's spotify.php - Spotify takes no http addresses except 127.0.0.1. It has to be entered in the Spotify app.
+const SPOTIFY_REDIRECT = `https://${location.hostname}/api/eltern/spotify-oauth/callback`
 // numbers and dates in the language of the app (see i18n.js)
 let LOCALE = localeTag()
 
@@ -2692,6 +2695,8 @@ function spotifyTop() {
       <div class="field"><label for="sp-id">Client ID</label><input class="input mono" id="sp-id" value="${esc(a.clientId ?? '')}" autocomplete="off" spellcheck="false"></div>
       <div class="field"><label for="sp-secret">Client Secret</label><div class="input-wrap"><input class="input has-eye mono" id="sp-secret" type="password" autocomplete="off" placeholder="${a.hasSecret ? 'gespeichert – leer lassen = behalten' : 'nicht gesetzt (optional)'}"><button class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div></div>
       ${kv([['Anmeldung', a.connected ? `angemeldet${a.tokenUpdatedAt ? ` (${relTime(a.tokenUpdatedAt)})` : ''}` : 'nicht angemeldet']])}
+      <div class="field"><label>Redirect URI</label><div class="field-pick"><input class="input mono" value="${esc(SPOTIFY_REDIRECT)}" readonly aria-label="Redirect URI"><button type="button" class="icon-btn soft" data-sp="copyuri" aria-label="Redirect URI kopieren">${icon('link', 18)}</button></div>
+        <small>Muss in deiner Spotify-App unter „Redirect URIs“ stehen, sonst lehnt Spotify die Anmeldung ab. Beim Zurückkommen fragt der Browser wegen des Zertifikats der Box eventuell einmal nach.</small></div>
       <div class="btns"><button class="btn primary" data-sp="save">Speichern</button><button class="btn" data-sp="connect">${a.connected ? 'Neu anmelden' : 'Bei Spotify anmelden'}</button></div></section>`,
     `<section class="card"><h2>Playlists & Cache</h2>
       <div class="row"><span class="lbl"><b>Playlists verarbeiten</b><small>Titel von Spotify-Playlists einzeln lesen. Aus = schneller, aber ohne Titelliste.</small></span>
@@ -2723,6 +2728,7 @@ function mountSpotify(root, page) {
       confirmSheet('Ausschalten', 'Smart-Sync ausschalten? Dann gibt es auch keinen Sync von Hand (Knopf, Telegram) – die Inhalte auf der Box bleiben.', done)
     },
     connect: connectSpotify,
+    copyuri: () => copyText(SPOTIFY_REDIRECT),
     disconnect: () =>
       confirmSheet('Trennen', 'Die Spotify-Anmeldung löschen? Smart-Sync hört auf, und der Player verliert beim nächsten Neustart den Zugang zu Spotify.', async () => {
         const r = await api(`${API}/spotify-oauth/disconnect`, { method: 'POST' })
@@ -2799,7 +2805,7 @@ function prefixOk(p) {
 }
 
 function wizardSections(page) {
-  const redirect = `${BOX_ORIGIN}/api/eltern/spotify-oauth/callback`
+  const redirect = SPOTIFY_REDIRECT
   const [s1, s2, s3, s4, s5] = page.sections
   return [
     { ...s1, items: [{ type: 'buttons', buttons: [['developer.spotify.com öffnen', 'ghost', 'devsite']] }] },
@@ -5570,7 +5576,7 @@ const CONTROLLERS = {
     sections: wizardSections,
     act: {
       devsite: () => window.open('https://developer.spotify.com/dashboard', '_blank', 'noopener'),
-      copy: () => copyText(`${BOX_ORIGIN}/api/eltern/spotify-oauth/callback`),
+      copy: () => copyText(SPOTIFY_REDIRECT),
       async saveid() {
         const clientId = String(state.values.get('wzClient') ?? spot.access?.clientId ?? '').trim()
         if (!/^[A-Za-z0-9]{16,64}$/.test(clientId)) return toast('Die Client ID hat 16–64 Buchstaben und Ziffern', 'info')

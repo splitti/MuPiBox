@@ -1169,6 +1169,7 @@
  "MuPiHAT einschalten": "Ενεργοποίηση MuPiHAT",
  "Musik": "Μουσική",
  "Musik ausblenden": "Απόκρυψη μουσικής",
+ "Muss in deiner Spotify-App unter „Redirect URIs“ stehen, sonst lehnt Spotify die Anmeldung ab. Beim Zurückkommen fragt der Browser wegen des Zertifikats der Box eventuell einmal nach.": "Πρέπει να υπάρχει στα «Redirect URIs» της εφαρμογής σου Spotify, αλλιώς το Spotify απορρίπτει τη σύνδεση. Κατά την επιστροφή ο browser ίσως ρωτήσει μία φορά για το πιστοποιητικό του κουτιού.",
  "Nach … Minuten ohne Wiedergabe": "Μετά από … λεπτά χωρίς αναπαραγωγή",
  "Nach dem Wechsel lädt das Display neu.": "Μετά την αλλαγή, η οθόνη θα ανανεωθεί.",
  "Nächste Seite": "Επόμενη σελίδα",

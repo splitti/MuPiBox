@@ -1169,6 +1169,7 @@
  "MuPiHAT einschalten": "Ligar MuPiHAT",
  "Musik": "Música",
  "Musik ausblenden": "Ocultar música",
+ "Muss in deiner Spotify-App unter „Redirect URIs“ stehen, sonst lehnt Spotify die Anmeldung ab. Beim Zurückkommen fragt der Browser wegen des Zertifikats der Box eventuell einmal nach.": "Tem de constar em «Redirect URIs» na tua app Spotify, senão o Spotify recusa o início de sessão. No regresso, o browser pode perguntar uma vez pelo certificado da caixa.",
  "Nach … Minuten ohne Wiedergabe": "Após … minutos sem reprodução",
  "Nach dem Wechsel lädt das Display neu.": "Depois da mudança, o ecrã recarrega.",
  "Nächste Seite": "Página seguinte",

@@ -49,7 +49,7 @@ import { registerNetworkRoutes } from './network'
 import { registerUpdateRoutes } from './updates'
 import { type LocalLibraryDeps, registerLocalUploadRoutes } from './upload'
 import { randomBytes } from 'node:crypto'
-import { localOnly, viaProxy } from '../request-guard'
+import { localOnly } from '../request-guard'
 import {
   REQUESTED_SCOPES,
   buildAuthorizeUrl,
@@ -231,10 +231,13 @@ const adminTickets = new Map<string, number>()
 
 // The box's address for Spotify: the one of port 8200, registered in the Spotify app - also when the app is used
 // through port 80 (the web server passes it on, see PROXY_PORT)
+// The box's name as the browser uses it, without a port: Spotify's redirect address is https://<box>/…, through the
+// web server on port 443 (as the admin interface's https://<box>/spotify.php) - Spotify takes no http addresses any
+// more except 127.0.0.1, so http://<box>:8200 was refused after the login
 function spotifyHost(req: Request): string | undefined {
   const host = req.headers.host
   if (typeof host !== 'string') return undefined
-  return viaProxy(req) ? `${host.replace(/:\d+$/, '')}:8200` : host
+  return host.replace(/:\d+$/, '')
 }
 
 export function createElternApiRouter(deps: ElternRouterDeps): Router {
@@ -521,7 +524,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       getMupiboxConfig: deps.getMupiboxConfig,
       sessionId: req.elternSessionId ?? '',
       host,
-      protocol: 'http',
+      protocol: 'https',
       redirectAfter: ret,
     })
     if ('error' in result) {
@@ -575,7 +578,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       res.status(400).send('no host header')
       return
     }
-    const redirectUri = buildRedirectUri('http', host)
+    const redirectUri = buildRedirectUri('https', host)
     const exchange = await exchangeCodeForTokens({
       code,
       redirectUri,

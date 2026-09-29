@@ -1169,6 +1169,7 @@
  "MuPiHAT einschalten": "Slå på MuPiHAT",
  "Musik": "Musikk",
  "Musik ausblenden": "Skjul musikk",
+ "Muss in deiner Spotify-App unter „Redirect URIs“ stehen, sonst lehnt Spotify die Anmeldung ab. Beim Zurückkommen fragt der Browser wegen des Zertifikats der Box eventuell einmal nach.": "Må stå under «Redirect URIs» i Spotify-appen din, ellers avviser Spotify påloggingen. På vei tilbake kan nettleseren spørre én gang på grunn av boksens sertifikat.",
  "Nach … Minuten ohne Wiedergabe": "Etter … minutter uten avspilling",
  "Nach dem Wechsel lädt das Display neu.": "Displayet laster på nytt etter byttet.",
  "Nächste Seite": "Neste side",

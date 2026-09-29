@@ -1169,6 +1169,7 @@
  "MuPiHAT einschalten": "MuPiHAT'ı aç",
  "Musik": "Müzik",
  "Musik ausblenden": "Müziği gizle",
+ "Muss in deiner Spotify-App unter „Redirect URIs“ stehen, sonst lehnt Spotify die Anmeldung ab. Beim Zurückkommen fragt der Browser wegen des Zertifikats der Box eventuell einmal nach.": "Spotify uygulamanda “Redirect URIs” altında yer almalı, yoksa Spotify girişi reddeder. Dönüşte tarayıcı kutunun sertifikası nedeniyle bir kez sorabilir.",
  "Nach … Minuten ohne Wiedergabe": "… dakika oynatma olmadan sonra",
  "Nach dem Wechsel lädt das Display neu.": "Değişiklikten sonra ekran yeniden yüklenir.",
  "Nächste Seite": "Sonraki sayfa",
