@@ -1520,6 +1520,15 @@ app.get('/api/mupihat', (_req, res) => {
 // Playback time tracking written by backend-player to /tmp/playtime.json (tmpfs).
 // Missing/unreadable file means the player hasn't ticked yet or the feature is off —
 // either way, surfaces as "disabled" so the frontend can hide the UI safely.
+// The player writes playtime.json on its own tick: right after "Ruhe sofort" / "Ruhe beenden" it still told the state
+// before. The parents' override is taken from the config here (what they just set), the rest as the player wrote it.
+function withLiveOverride(data: Record<string, unknown>): Record<string, unknown> {
+  const ov = (getMupiboxConfigSync() as { playbackOverride?: { forceBlockUntil?: unknown; allowUntil?: unknown } } | undefined)?.playbackOverride
+  if (!ov || typeof ov !== 'object') return data
+  const current = (data.override as Record<string, unknown> | undefined) ?? {}
+  return { ...data, override: { ...current, forceBlockUntil: Number(ov.forceBlockUntil) || 0, allowUntil: Number(ov.allowUntil) || 0 } }
+}
+
 app.get('/api/playtime', (_req, res) => {
   const disabled: PlaytimeStatus = { enabled: false }
   if (!fs.existsSync(playtimeFile)) {
@@ -1532,7 +1541,7 @@ app.get('/api/playtime', (_req, res) => {
       console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] ${error}`)
       res.json(disabled)
     } else {
-      res.json(data)
+      res.json(data && typeof data === 'object' ? withLiveOverride(data as Record<string, unknown>) : data)
     }
   })
 })
