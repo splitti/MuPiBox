@@ -27,6 +27,22 @@ const AUDIO_EXTENSIONS = ['.mp3', '.flac', '.wav', '.wma', '.ogg', '.m4a']
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.jfif', '.png', '.webp']
 // Kept free on the SD card (as for the NAS downloads): the box needs room for its logs, caches and updates
 const RESERVE_BYTES = 512 * 1024 * 1024
+
+// Whether a path really is inside a folder of the media: the name alone said so, but a symbolic link on the way
+// (e.g. media/music/x -> /home/dietpi) led the upload or the deletion outside. The deepest part that exists is
+// resolved; what does not exist yet is made below it.
+async function reallyInside(target: string, folder: string): Promise<boolean> {
+  const base = await fsp.realpath(folder).catch(() => null)
+  if (!base) return false
+  let existing = target
+  while (!(await fsp.lstat(existing).then(() => true, () => false))) {
+    const up = path.dirname(existing)
+    if (up === existing) return false
+    existing = up
+  }
+  const real = await fsp.realpath(existing).catch(() => null)
+  return real !== null && (real === base || real.startsWith(base + path.sep))
+}
 const MAX_FILE_BYTES = 4 * 1024 * 1024 * 1024
 // Folder depth below the album (e.g. CD1/, CD2/ of an uploaded folder)
 const MAX_SUB_DEPTH = 4
@@ -151,6 +167,10 @@ export function registerLocalUploadRoutes(router: Router, deps: LocalLibraryDeps
       res.status(400).json({ error: 'bad target' })
       return
     }
+    if (!(await reallyInside(dir, path.join(deps.root, category)))) {
+      res.status(400).json({ error: 'bad target' })
+      return
+    }
     const part = path.join(dir, `.${fileName}.${randomBytes(4).toString('hex')}.part`)
     try {
       await fsp.mkdir(dir, { recursive: true })
@@ -196,6 +216,11 @@ export function registerLocalUploadRoutes(router: Router, deps: LocalLibraryDeps
       if (!st.isDirectory()) throw new Error('not a folder')
     } catch {
       res.status(404).json({ error: 'item_not_found' })
+      return
+    }
+    // (a folder below a link to elsewhere is not one of the media)
+    if (!(await reallyInside(target, categoryDir)) || (await fsp.realpath(target)) === (await fsp.realpath(categoryDir))) {
+      res.status(400).json({ error: 'invalid_path' })
       return
     }
     try {
