@@ -626,3 +626,5 @@ a.btn { text-decoration: none; color: inherit; }
 .update-note:empty { display: none; }
 .update-note .notice { margin-bottom: 0; }
 .update-note .notice-body { align-items: center; padding: 14px 16px; }
+/* the news in their overlay: the sheet scrolls, the text is not cut */
+.news-sheet { max-height: none; overflow: visible; font-size: 14px; color: var(--mp-text); }

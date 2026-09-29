@@ -852,10 +852,23 @@ async function loadNotices(root) {
     const key = `${news.length}:${news.slice(0, 120)}`
     const head = new DOMParser().parseFromString(news, 'text/html').querySelector('h1,h2,h3,h4,b,strong')?.textContent?.trim()
     if (key !== remembered('mupi-news-dismissed')) {
-      items.push(['info', 'Neuigkeiten', head || 'Neues von MuPiBox', 'ueber', () => remember('mupi-news-dismissed', key)])
+      items.push(['info', 'Neuigkeiten', head || 'Neues von MuPiBox', () => showNews(news), () => remember('mupi-news-dismissed', key)])
     }
   }
   if (band?.isConnected) drawNotices(band, items)
+}
+
+// the whole news over the start page (not the page "Über die Box": the parents stay where they are)
+function showNews(news) {
+  openSheet(
+    `<h2>Neuigkeiten</h2><pre class="news news-sheet">${esc(newsText(news))}</pre>
+     <div class="btns"><button class="btn primary" data-close>Schließen</button></div>`,
+    (sheet, close) => {
+      sheet.querySelector('[data-close]').onclick = close
+      // (the focus goes to the button at the end: the text still starts at the top)
+      requestAnimationFrame(() => (sheet.scrollTop = 0))
+    },
+  )
 }
 
 // what was closed on the start page (a version's announcement, the news): it stays away until something newer comes
@@ -876,11 +889,15 @@ function remember(name, value) {
 
 function drawNotices(box, notes) {
   box.innerHTML = notes
-    .map(([ic, t, s, target]) => `<div class="notice"><button class="notice-body" data-go="${target}">${icon(ic, 20)}<span><b>${esc(t)}</b><small>${esc(s)}</small></span></button><button class="notice-x" aria-label="Schließen">${icon('close', 16)}</button></div>`)
+    .map(
+      ([ic, t, s, target]) =>
+        `<div class="notice"><button class="notice-body"${typeof target === 'string' ? ` data-go="${esc(target)}"` : ''}>${icon(ic, 20)}<span><b>${esc(t)}</b><small>${esc(s)}</small></span></button><button class="notice-x" aria-label="Schließen">${icon('close', 16)}</button></div>`,
+    )
     .join('')
-  // (a notice may remember its closing: its fifth part)
+  // (the fourth part: a page to go to, or what to do instead; the fifth: what to remember when it is closed)
   box.querySelectorAll('.notice').forEach((n, i) => {
-    n.querySelector('.notice-body').onclick = () => go(n.querySelector('.notice-body').dataset.go)
+    const target = notes[i][3]
+    n.querySelector('.notice-body').onclick = () => (typeof target === 'function' ? target() : go(target))
     n.querySelector('.notice-x').onclick = () => {
       n.remove()
       notes[i][4]?.()
@@ -4162,7 +4179,11 @@ function newsText(html) {
       const tag = el.tagName.toLowerCase()
       if (/^h[1-6]$/.test(tag)) lines.push(`\n\n${el.textContent.trim().toUpperCase()}\n`)
       else if (tag === 'li') lines.push(`\n• ${el.textContent.replace(/\s+/g, ' ').trim()}`)
-      else if (tag === 'br' || tag === 'p' || tag === 'div') {
+      else if (tag === 'ul' || tag === 'ol') {
+        // (what follows a list - in news.txt the <b> headings - starts a new paragraph)
+        walk(el)
+        lines.push('\n\n')
+      } else if (tag === 'br' || tag === 'p' || tag === 'div') {
         lines.push('\n')
         walk(el)
       } else walk(el)
