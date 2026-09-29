@@ -10,9 +10,11 @@
 	// with `";<script>...</script><` to break out of the attribute
 	// quotes. htmlspecialchars + ENT_QUOTES escapes both ' and " so
 	// neither attribute boundary can be escaped.
-	$h = htmlspecialchars((string)$data["mupibox"]["host"], ENT_QUOTES, 'UTF-8');
-	print "<p><embed src='http://".$h.":6080/vnc_lite.html?host=".$h."&port=5900' id='remotecontrol'></p>";
-	print "<p><a href='http://".$h.":6080/vnc_lite.html?host=".$h."&port=5900' id='remotecontrol' target='_blank'>If it doesn't display properly or can't be served, try this Link and click me...</a></p>";
+	// The remote control goes through the app (same address, its login): x11vnc and websockify listen on the box
+	// itself only - no longer open to the whole network without a password (port 6080 / 5900 are gone).
+	$vnc = '/app/vnc/vnc_lite.html?path=websockify&autoconnect=1&resize=scale';
+	print "<p><embed src='".$vnc."' id='remotecontrol'></p>";
+	print "<p><a href='/app/vnc/vnc.html?path=websockify&autoconnect=1&resize=scale&reconnect=1' target='_blank'>If it doesn't display properly, open it in a tab of its own ...</a></p>";
 ?>
 </div>
 <?php

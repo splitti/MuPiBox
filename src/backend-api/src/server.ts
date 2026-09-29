@@ -35,12 +35,15 @@ import { startScheduler } from './spotify-sync/scheduler'
 import type { RunSyncDeps } from './spotify-sync/state-machine'
 import { buildElternLandingHandler, createElternApiRouter } from './eltern/routes'
 import { startSpotifyLoginWatch } from './eltern/spotify-auth-age'
-import { startBucketCleanup } from './eltern/middleware'
+import { startBucketCleanup, parseCookie } from './eltern/middleware'
+import { SESSION_COOKIE, validateSession } from './eltern/auth'
+import type { IncomingMessage } from 'node:http'
+import type { Duplex } from 'node:stream'
 import { SUDO_BACKUP_SNIPPET, backupBeforeWrite } from './file-backup'
 import { readEmbeddedPicture } from './embedded-cover'
 import { coverHidden } from './hidden-covers'
 import { OnlineCovers } from './online-covers'
-import { browserGuard, corsOptionsFor, isLoopback, localOnly, localOrElternSession, PROXY_PORT, viaProxy } from './request-guard'
+import { browserGuard, corsOptionsFor, isAllowedHost, isLoopback, localOnly, localOrElternSession, PROXY_PORT, viaProxy } from './request-guard'
 
 // Force IPv4 for DNS lookups to avoid EAI_AGAIN errors on Raspberry Pi
 // This fixes issues where IPv6 is misconfigured or not supported
@@ -3849,6 +3852,29 @@ app.get('/api/spotify/artist/:artistId', async (req, res) => {
 })
 
 // Validate Spotify resource
+// The stream a radio playlist file (.m3u / .pls) names: its first address - the player wants the stream itself. Read
+// by the box (a browser may not read another site's file); an HLS list (#EXT-X-, .m3u8) is played as it is.
+app.get('/api/stream/resolve', localOrElternSession, async (req, res) => {
+  const url = typeof req.query.url === 'string' ? req.query.url.trim() : ''
+  if (!/^https?:\/\//i.test(url)) {
+    res.status(400).json({ error: 'bad_url' })
+    return
+  }
+  try {
+    const { body } = await fetchRemote(url, { maxBytes: 256 * 1024, timeoutMs: 8000 })
+    const text = body.toString('utf8')
+    const found = /^\s*\[playlist\]/im.test(text)
+      ? /^\s*File\d+\s*=\s*(https?:\/\/\S+)/im.exec(text)?.[1]
+      : /#EXT-X-/i.test(text)
+        ? undefined
+        : /(?:^|\r?\n)(?:\s*#.*\r?\n)*\s*(https?:\/\/\S+)/i.exec(text)?.[1]
+    res.json({ url: found ?? url, resolved: !!found })
+  } catch (error) {
+    console.warn(`${new Date().toLocaleString()}: [MuPiBox-Server] stream playlist ${url}: ${(error as Error).message}`)
+    res.json({ url, resolved: false })
+  }
+})
+
 app.post('/api/spotify/validate', async (req, res) => {
   if (!spotifyApiService) {
     res.status(503).json({ error: 'Spotify API service not available' })
@@ -7795,6 +7821,42 @@ app.get('/app/manifest.webmanifest', (_req, res) => {
     }),
   )
 })
+// The remote control of the display (VNC): noVNC's page comes from here, its connection goes through the app (see
+// proxyVncUpgrade) - x11vnc and websockify listen on the box itself only, no longer in the whole Wi-Fi without a password
+const noVncDir = '/usr/share/novnc'
+app.use('/app/vnc', express.static(noVncDir, { index: false, setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache') }))
+
+// The websocket of noVNC (/app/vnc/websockify): for a parent signed in to the app (its session cookie - no second
+// password), from a page of the box itself (a foreign page's websocket carries its own Origin), passed on to websockify
+function proxyVncUpgrade(req: IncomingMessage, socket: Duplex, head: Buffer): void {
+  const refuse = (status: string) => {
+    console.warn(`${new Date().toLocaleString()}: [MuPiBox-Server] VNC connection refused (${status}): ${req.url} host=${req.headers.host ?? ''} origin=${req.headers.origin ?? ''}`)
+    socket.end(`HTTP/1.1 ${status}\r\nConnection: close\r\n\r\n`)
+  }
+  if (!(req.url ?? '').startsWith('/app/vnc/websockify')) return refuse('404 Not Found')
+  const host = req.headers.host
+  let sameBox = isAllowedHost(host)
+  if (sameBox && req.headers.origin) {
+    try {
+      sameBox = new URL(req.headers.origin).host.toLowerCase() === String(host).toLowerCase()
+    } catch {
+      sameBox = false
+    }
+  }
+  if (!sameBox) return refuse('403 Forbidden')
+  if (!validateSession(parseCookie(req as express.Request, SESSION_COOKIE))) return refuse('401 Unauthorized')
+  const upstream = net.connect(6080, '127.0.0.1', () => {
+    const lines = [`GET /websockify HTTP/${req.httpVersion}`]
+    for (let i = 0; i < req.rawHeaders.length; i += 2) lines.push(`${req.rawHeaders[i]}: ${req.rawHeaders[i + 1]}`)
+    upstream.write(`${lines.join('\r\n')}\r\n\r\n`)
+    if (head.length) upstream.write(head)
+    socket.pipe(upstream).pipe(socket)
+  })
+  upstream.on('error', () => refuse('502 Bad Gateway'))
+  socket.on('error', () => upstream.destroy())
+  socket.on('close', () => upstream.destroy())
+}
+
 app.use(
   '/app',
   express.static(path.join(serverDir, 'mupi-app'), {
@@ -7847,11 +7909,13 @@ process.on('uncaughtException', (err) => {
 
 if (!testServe) {
   const server = app.listen(8200)
+  server.on('upgrade', proxyVncUpgrade)
   // A request may take up to 5 minutes by default: too short for a large file uploaded from the web app over WiFi
   server.requestTimeout = 60 * 60 * 1000
   console.log(`${new Date().toLocaleString()}: [mupibox-backend-api] Server started at http://localhost:8200`)
   // the same app for the web server of port 80/443 (lighttpd proxies /app, /api, ... here; see request-guard.ts)
   const proxied = app.listen(PROXY_PORT, '127.0.0.1')
+  proxied.on('upgrade', proxyVncUpgrade)
   proxied.requestTimeout = 60 * 60 * 1000
   proxied.on('error', (err) => console.error(`${new Date().toLocaleString()}: [mupibox-backend-api] port ${PROXY_PORT}: ${err.message}`))
   // Spotify-sync scheduler — only in production / dev, not under tests.

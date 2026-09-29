@@ -280,9 +280,10 @@ export function registerDisplayRoutes(router: Router, deps: DisplayDeps): void {
     })
   })
 
-  /** GET /api/eltern/display/vnc - whether the remote control (noVNC on port 6080) runs. */
+  /** GET /api/eltern/display/vnc - whether the remote control runs; it opens under /app/vnc/ (server.ts proxyVncUpgrade:
+   *  only with the app's login, x11vnc and websockify listen on the box itself only). */
   router.get('/display/vnc', requireSession, async (_req, res) => {
     const r = await run('systemctl', ['is-active', 'mupi_novnc'], 5000)
-    res.json({ active: r.stdout.trim() === 'active', port: 6080 })
+    res.json({ active: r.stdout.trim() === 'active', url: '/app/vnc/vnc.html?path=websockify&autoconnect=1&resize=scale&reconnect=1' })
   })
 }

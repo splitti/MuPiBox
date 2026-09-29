@@ -18,6 +18,6 @@ Environment=DISPLAY=:0
 # counts as started at once and holds nothing up. ($ = a $ for the shell, not for systemd)
 # No -ncache: x11vnc then puts a pixel cache ten screens high below the display, which only some VNC programs
 # understand - the browser (noVNC, the app's "remote control") showed a long strip with old pictures at the bottom.
-ExecStart=/bin/sh -c 'u=$$(cut -d. -f1 /proc/uptime); [ "$$u" -lt 60 ] && sleep $$((60 - u)); for i in $$(seq 1 180); do [ -S /tmp/.X11-unix/X0 ] && exec /usr/bin/x11vnc -forever -display :0; sleep 1; done; exit 1'
+ExecStart=/bin/sh -c 'u=$$(cut -d. -f1 /proc/uptime); [ "$$u" -lt 60 ] && sleep $$((60 - u)); for i in $$(seq 1 180); do [ -S /tmp/.X11-unix/X0 ] && exec /usr/bin/x11vnc -forever -localhost -rfbport 5900 -display :0; sleep 1; done; exit 1'
 Restart=on-failure
 RestartSec=10
