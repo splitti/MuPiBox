@@ -4023,6 +4023,13 @@ const nasFlag = (row, key) => {
   if (e) return e[key]
   if (key === 'category') return nas.st?.folderCategories?.[row.path] ?? ''
   if (key === 'split') return (nas.st?.folderSplit ?? []).includes(row.path)
+  // (from the saved selection as read last: the folders of the tree keep what they were when they were loaded, so a
+  // folder set to "Nicht anzeigen" still showed as shown until the page was loaded again)
+  const st = nas.st
+  if (Array.isArray(st?.artistFolders) && Array.isArray(st?.hiddenFolders) && Array.isArray(st?.downloadFolders)) {
+    const hidden = st.hiddenFolders.includes(row.path)
+    return key === 'show' ? st.artistFolders.includes(row.path) && !hidden : key === 'hide' ? hidden : st.downloadFolders.includes(row.path)
+  }
   return key === 'show' ? row.isMarked && !row.isHidden : key === 'hide' ? row.isHidden : row.isDownload
 }
 
