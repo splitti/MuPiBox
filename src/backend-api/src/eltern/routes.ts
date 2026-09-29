@@ -77,6 +77,8 @@ export interface ElternRouterDeps {
   localLibrary?: LocalLibraryDeps
   /** Writes a chosen cover into a selected NAS folder (server.ts writeNasCover). */
   nasCover?: (folder: string, bytes: Buffer, ext: '.jpg' | '.png') => Promise<'ok' | 'not_selected' | 'offline' | 'denied' | 'failed'>
+  /** Whether a NAS folder is one the parents selected (server.ts nasPathSelected). */
+  nasSelected?: (folder: string) => Promise<boolean>
 }
 
 /** Build a Set-Cookie header value. HttpOnly + SameSite=Strict; no Secure
@@ -284,6 +286,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     // (a cover chosen for a folder of the SD card or the NAS, see cover-apply)
     local: deps.localLibrary,
     nas: deps.nasCover,
+    nasSelected: deps.nasSelected,
   })
 
   /**

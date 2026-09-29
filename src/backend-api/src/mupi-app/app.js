@@ -1905,9 +1905,12 @@ const libPlace = (item) => {
 // The sheet of a library entry: manual ones change their fields, synced ones get overrides (the sync keeps its own)
 function openEntrySheet(item) {
   const isSync = (item.source ?? 'manual') === 'spotify-sync'
+  // a radio station or a podcast: its address (stream / feed) can be changed too
+  const addressLabel = !isSync && { radio: 'Stream-Adresse (URL)', rss: 'Feed-Adresse (URL)' }[item.type]
   const fields = [
     ['artist', 'Interpret'],
     ['title', 'Titel'],
+    ...(addressLabel ? [['id', addressLabel]] : []),
     ['cover', 'Cover (Bild-URL)'],
     ['artistcover', 'Interpret-Cover (Bild-URL)'],
   ]
@@ -1917,7 +1920,7 @@ function openEntrySheet(item) {
      <p class="help" style="margin:0">${isSync ? 'Kommt vom Spotify-Sync. Was du hier einträgst, gilt statt der Werte von Spotify; leer = der Wert von Spotify.' : 'Von Hand hinzugefügt.'}</p>
      ${fields
        .map(([k, l]) => {
-         const input = `<input class="input" id="e-${k}" value="${esc(val(k))}" placeholder="${esc(isSync ? item[k] ?? '' : '')}" autocomplete="off">`
+         const input = `<input class="input" id="e-${k}"${k === 'id' ? ' type="url" inputmode="url" spellcheck="false" translate="no"' : ''} value="${esc(val(k))}" placeholder="${esc(isSync ? item[k] ?? '' : '')}" autocomplete="off">`
          // the picture fields: also chosen from a search or the device (see openCoverPicker)
          return k.endsWith('cover')
            ? `<div class="field"><label for="e-${k}">${l}</label><div class="field-pick">${input}<button type="button" class="icon-btn soft" data-pick="${k}" aria-label="Bild suchen oder hochladen">${icon('image', 18)}</button></div></div>`
@@ -1952,6 +1955,13 @@ function openEntrySheet(item) {
           })
       }
       sheet.querySelector('[data-ok]').onclick = async () => {
+        if (addressLabel) {
+          const address = sheet.querySelector('#e-id').value.trim()
+          if (!/^https?:\/\/\S+$/i.test(address)) {
+            sheet.querySelector('#e-id').focus()
+            return toast('Bitte eine Adresse eintragen, die mit http:// oder https:// beginnt.', 'info')
+          }
+        }
         const updated = { ...item }
         for (const [k] of fields) {
           const v = sheet.querySelector(`#e-${k}`).value.trim()
@@ -2000,21 +2010,57 @@ function deleteLocal(path, name, what) {
   })
 }
 
-// The cover picker for a folder of the SD card (cover.jpg there); done: called with the new picture's address
+// A folder of the SD card or the NAS as the box lists it now (after "Cover entfernen" / "Cover wieder zeigen": its
+// picture and coverHidden); from the list it is in - the one of its parent, or the top list
+async function freshFolder(folder, parent) {
+  const nas = folder.nasPath !== undefined
+  const address = nas
+    ? parent
+      ? `/api/nas/children?path=${encodeURIComponent(parent.nasPath)}`
+      : '/api/nas/artists'
+    : parent
+      ? `/api/library/children?path=${encodeURIComponent(parent.libraryPath)}`
+      : `/api/library/artists?category=${encodeURIComponent(folder.category)}`
+  const r = await api(address)
+  const same = (a) => (nas ? a.nasPath === folder.nasPath : a.libraryPath === folder.libraryPath) && !a.ownFiles
+  return (Array.isArray(r.body) ? r.body.find(same) : undefined) ?? folder
+}
+
+// "Kein Cover" / "Cover wieder zeigen" in the cover picker of a folder: the box shows it without a picture, or with its
+// pictures again (nothing is deleted); done: called with the folder as the box lists it then
+function hideFolderCover(target, hide, folder, parent, done) {
+  return async () => {
+    const r = await api(`${API}/cover-hide`, { method: 'POST', body: { target, hide } })
+    if (!r.ok) {
+      toast(r.body?.error === 'nas_not_selected' ? 'Dieser NAS-Ordner ist nicht freigegeben.' : 'Das hat nicht geklappt', 'info')
+      return false
+    }
+    lib.coverStamp = Date.now()
+    toast(hide ? 'Ohne Cover – gleich auf dem Display' : 'Cover wird wieder gezeigt')
+    libReload()
+    done(await freshFolder({ ...folder, cover: undefined, coverHidden: hide }, parent))
+    return true
+  }
+}
+
+// The cover picker for a folder of the SD card (cover.jpg there); done: called with the folder as it is then
 function pickLocalCover(folder, parent, done) {
   const album = folder.title
   const artist = parent?.title ?? ''
+  const target = `local:${folder.libraryPath}`
   openCoverPicker({
-    target: `local:${folder.libraryPath}`,
+    target,
     title: album,
     query: artist ? `${artist} ${album}` : album,
     fallbacks: artist ? [`${artist} ${withoutNumber(album)}`, withoutNumber(album), artist] : [withoutNumber(album)],
     current: stampedCover(folder.cover),
+    hidden: !!folder.coverHidden,
+    onHide: (hide) => hideFolderCover(target, hide, folder, parent, done)(),
     onDone: (body) => {
       lib.coverStamp = Date.now()
       toast('Cover übernommen – gleich auf dem Display')
       libReload()
-      done(body?.path ? localCoverUrl(body.path) : folder.cover)
+      done({ ...folder, coverHidden: false, cover: body?.path ? localCoverUrl(body.path) : folder.cover })
     },
   })
 }
@@ -2038,7 +2084,7 @@ async function openLocalSheet(folder, parent = null) {
       const back = () => (parent ? openLocalSheet(parent) : close())
       sheet.querySelector('[data-close]').onclick = back
       sheet.querySelector('[data-back]')?.addEventListener('click', back)
-      sheet.querySelector('[data-cover]').onclick = () => pickLocalCover(folder, parent, (cover) => openLocalSheet({ ...folder, cover }, parent))
+      sheet.querySelector('[data-cover]').onclick = () => pickLocalCover(folder, parent, (f) => openLocalSheet(f, parent))
       for (const b of sheet.querySelectorAll('[data-a]')) b.onclick = () => openLocalSheet(albums[Number(b.dataset.a)], folder)
       sheet.querySelector('[data-all]').onclick = () => {
         close()
@@ -2048,20 +2094,23 @@ async function openLocalSheet(folder, parent = null) {
   )
 }
 
-// The cover picker for a folder of the NAS (cover.jpg there, needs write permission); done: the new picture's address
+// The cover picker for a folder of the NAS (cover.jpg there, needs write permission); done: the folder as it is then
 function pickNasCover(folder, parent, done) {
   const album = folder.title
   const artist = parent?.title ?? ''
+  const target = `nas:${folder.nasPath}`
   openCoverPicker({
-    target: `nas:${folder.nasPath}`,
+    target,
     title: album,
     query: artist ? `${artist} ${album}` : album,
     fallbacks: artist ? [`${artist} ${withoutNumber(album)}`, withoutNumber(album), artist] : [withoutNumber(album)],
     current: folder.cover,
+    hidden: !!folder.coverHidden,
+    onHide: (hide) => hideFolderCover(target, hide, folder, parent, done)(),
     onDone: (body) => {
       toast('Cover übernommen – gleich auf dem Display')
       libReload()
-      done(body?.path ? `/api/nas/stream?path=${encodeURIComponent(body.path)}&w=400&v=${Date.now()}` : folder.cover)
+      done({ ...folder, coverHidden: false, cover: body?.path ? `/api/nas/stream?path=${encodeURIComponent(body.path)}&w=400&v=${Date.now()}` : folder.cover })
     },
   })
 }
@@ -2091,7 +2140,7 @@ async function openNasSheet(folder, parent = null) {
         go('nas')
       }
       for (const b of sheet.querySelectorAll('[data-a]')) b.onclick = () => openNasSheet(albums[Number(b.dataset.a)], folder)
-      sheet.querySelector('[data-cover]').onclick = () => pickNasCover(folder, parent, (cover) => openNasSheet({ ...folder, cover }, parent))
+      sheet.querySelector('[data-cover]').onclick = () => pickNasCover(folder, parent, (f) => openNasSheet(f, parent))
     },
   )
 }
@@ -2117,7 +2166,7 @@ function openNasAlbumSheet(album, parent) {
         close()
         startPlay(album.title, `${API}/library/play-nas`, { path: album.nasPath })
       }
-      sheet.querySelector('[data-cover]').onclick = () => pickNasCover(album, parent, (cover) => openNasAlbumSheet({ ...album, cover }, parent))
+      sheet.querySelector('[data-cover]').onclick = () => pickNasCover(album, parent, (f) => openNasAlbumSheet(f, parent))
     },
   )
 }
@@ -2135,7 +2184,7 @@ function openLocalAlbumSheet(album, parent) {
       const back = () => (parent ? openLocalSheet(parent) : close())
       sheet.querySelector('[data-close]').onclick = back
       sheet.querySelector('[data-back]')?.addEventListener('click', back)
-      sheet.querySelector('[data-cover]').onclick = () => pickLocalCover(album, parent, (cover) => openLocalAlbumSheet({ ...album, cover }, parent))
+      sheet.querySelector('[data-cover]').onclick = () => pickLocalCover(album, parent, (f) => openLocalAlbumSheet(f, parent))
       sheet.querySelector('[data-del]').onclick = () => {
         close()
         deleteLocal(album.libraryPath, album.title, 'Das Album')
@@ -2148,8 +2197,8 @@ function openLocalAlbumSheet(album, parent) {
 
 // target: 'local:<path>' (the folder gets it as cover.jpg) or 'own:<name>' (stored among the own pictures, onDone gets
 // its address); query: the search it starts with, fallbacks: shorter ones when it finds nothing; current: the picture
-// shown now
-function openCoverPicker({ target, title, query, fallbacks, current, onDone }) {
+// shown now. onHide (folders): "Kein Cover" (hide true) or, when hidden, "Cover wieder zeigen" (false); true when done
+function openCoverPicker({ target, title, query, fallbacks, current, hidden = false, onDone, onHide }) {
   let results = []
   let chosen = null // { i } of a result, or { blob, url } of an own picture
   const coverError = (r) =>
@@ -2167,6 +2216,8 @@ function openCoverPicker({ target, title, query, fallbacks, current, onDone }) {
   openSheet(
     `<h2>Cover für „${esc(title)}“</h2>
      <div class="cover-now">${current ? `<span class="lib-thumb"><img src="${esc(current)}" alt=""></span>` : ''}<p class="help" style="margin:0">Ein Bild antippen und übernehmen – oder ein eigenes Bild vom Gerät nehmen. Es wird quadratisch zugeschnitten.</p></div>
+     ${onHide && hidden ? `<div class="cover-hidden"><p class="help" style="margin:0">Dieser Ordner wird gerade ohne Cover gezeigt.</p><button class="btn sm" id="cp-hide">Cover wieder zeigen</button></div>` : ''}
+     ${onHide && !hidden && current ? `<div class="cover-hidden"><p class="help" style="margin:0">Lieber gar kein Bild? Die Bilder im Ordner bleiben dabei erhalten.</p><button class="btn sm" id="cp-hide">${icon('close', 16)}Kein Cover</button></div>` : ''}
      <form class="cover-search" id="cp-form"><div class="search">${icon('search')}<input class="input" id="cp-q" type="search" value="${esc(query)}" autocomplete="off" enterkeyhint="search" aria-label="Cover suchen"></div><button class="btn" type="submit">Suchen</button></form>
      <p class="help" style="margin:0">Sucht bei iTunes und Deezer – der Suchbegriff geht dafür an Apple und Deezer.</p>
      <div class="covers cover-pick" id="cp-list"></div>
@@ -2231,6 +2282,14 @@ function openCoverPicker({ target, title, query, fallbacks, current, onDone }) {
         draw()
       }
       sheet.querySelector('[data-close]').onclick = close
+      const hideButton = $('#cp-hide', sheet)
+      if (hideButton) {
+        hideButton.onclick = async () => {
+          hideButton.disabled = true
+          close()
+          await onHide(!hidden)
+        }
+      }
       ok.onclick = async () => {
         ok.disabled = true
         ok.textContent = 'Wird übernommen …'

@@ -37,6 +37,7 @@ import { buildElternLandingHandler, createElternApiRouter } from './eltern/route
 import { startBucketCleanup } from './eltern/middleware'
 import { SUDO_BACKUP_SNIPPET, backupBeforeWrite } from './file-backup'
 import { readEmbeddedPicture } from './embedded-cover'
+import { coverHidden } from './hidden-covers'
 import { OnlineCovers } from './online-covers'
 import { browserGuard, corsOptionsFor, isLoopback, localOnly, localOrElternSession, PROXY_PORT, viaProxy } from './request-guard'
 
@@ -4991,13 +4992,16 @@ function nasEntryFromFacts(
 ): Record<string, unknown> {
   const ownCoverPath = facts.own ?? (ownFilesOnly ? undefined : facts.below)
   const isContainer = !ownFilesOnly && facts.container
+  // (the parents chose "no cover" for this folder in the app: none, whatever pictures it has)
+  const hidden = coverHidden('nas', folderPath)
   // An album without a picture: its own cover from the internet beats the series' picture from the folder above.
   // An album whose picture is not square (scanned cassette inlay): its online cover, if one was found.
-  const cover =
-    (facts.own && !isContainer ? onlineInsteadOfOwn('nas', folderPath, facts.own) : undefined) ??
-    (ownCoverPath ? nasStreamUrl(ownCoverPath) : undefined) ??
-    (isContainer ? undefined : onlineAlbumCover('nas', folderPath)) ??
-    (fallbackCoverPath ? nasStreamUrl(fallbackCoverPath) : undefined)
+  const cover = hidden
+    ? undefined
+    : ((facts.own && !isContainer ? onlineInsteadOfOwn('nas', folderPath, facts.own) : undefined) ??
+      (ownCoverPath ? nasStreamUrl(ownCoverPath) : undefined) ??
+      (isContainer ? undefined : onlineAlbumCover('nas', folderPath)) ??
+      (fallbackCoverPath ? nasStreamUrl(fallbackCoverPath) : undefined))
   return {
     type: 'nas',
     category: 'nas',
@@ -5006,6 +5010,7 @@ function nasEntryFromFacts(
     nasPath: folderPath,
     nasIsContainer: isContainer,
     ...(ownFilesOnly ? { ownFiles: true } : {}),
+    ...(hidden ? { coverHidden: true } : {}),
     cover,
     artistcover: cover,
   }
@@ -5020,7 +5025,8 @@ function onlineAlbumCover(
 ): string | undefined {
   const parts = folderPath.split('/').filter(Boolean)
   const album = parts.at(-1)
-  if (!album) return undefined
+  // (a folder the parents want without a cover: not looked up either)
+  if (!album || coverHidden(type, folderPath)) return undefined
   return onlineCovers.coverFor(type, folderPath, parts.at(-2) ?? '', album, reason)
 }
 
@@ -7335,6 +7341,8 @@ async function playingAlbumCover(type: string, folder: string): Promise<string |
     cached = { album, own, ownPicture, parent: parentCover, at: Date.now() }
     playingCoverCache.set(key, cached)
   }
+  // (an album the parents want without a cover, see hidden-covers.ts)
+  if (cached.album && coverHidden(cached.album.type, cached.album.path)) return null
   if (cached.own) {
     // a picture far from square: the album's online cover, as in the lists
     const replaced =
@@ -7360,13 +7368,16 @@ async function libraryBuildEntry(
 ): Promise<Record<string, unknown>> {
   const files = await libraryListFiles(relPath)
   const isContainer = !ownFilesOnly && (await folderIsContainer(files, libraryListFiles))
-  const ownPicture = libraryFindCover(files)
-  const ownCoverPath = ownPicture ?? (isContainer ? await libraryFindCoverBelow(files, 2) : undefined)
-  const cover =
-    (ownPicture && !isContainer ? onlineInsteadOfOwn('local', relPath, ownPicture) : undefined) ??
-    (ownCoverPath ? libraryFileUrl(ownCoverPath) : undefined) ??
-    (isContainer ? undefined : onlineAlbumCover('local', relPath)) ??
-    (fallbackCoverPath ? libraryFileUrl(fallbackCoverPath) : undefined)
+  // (the parents chose "no cover" for this folder in the app, see hidden-covers.ts)
+  const hidden = coverHidden('local', relPath)
+  const ownPicture = hidden ? undefined : libraryFindCover(files)
+  const ownCoverPath = hidden ? undefined : (ownPicture ?? (isContainer ? await libraryFindCoverBelow(files, 2) : undefined))
+  const cover = hidden
+    ? undefined
+    : ((ownPicture && !isContainer ? onlineInsteadOfOwn('local', relPath, ownPicture) : undefined) ??
+      (ownCoverPath ? libraryFileUrl(ownCoverPath) : undefined) ??
+      (isContainer ? undefined : onlineAlbumCover('local', relPath)) ??
+      (fallbackCoverPath ? libraryFileUrl(fallbackCoverPath) : undefined))
   return {
     type: 'library',
     category: relPath.split('/')[0],
@@ -7376,6 +7387,7 @@ async function libraryBuildEntry(
     // A folder with only subfolders (no audio files) opens the next level instead of playing.
     libraryIsContainer: isContainer,
     ...(ownFilesOnly ? { ownFiles: true } : {}),
+    ...(hidden ? { coverHidden: true } : {}),
     cover,
     artistcover: cover,
   }
@@ -7628,6 +7640,7 @@ app.use(
     playingTrackCover: async (file: string) =>
       (await trackCover(file).catch(() => undefined)) ? `/api/track-cover?file=${encodeURIComponent(file)}` : null,
     nasCover: writeNasCover,
+    nasSelected: nasPathSelected,
     localLibrary: {
       root: libraryRoot,
       categories: libraryCategories,

@@ -6,6 +6,7 @@ import { randomBytes } from 'node:crypto'
 import { promises as fsp } from 'node:fs'
 import * as path from 'node:path'
 import type { Request, Router } from 'express'
+import { setCoverHidden } from '../hidden-covers'
 import { type CoverCandidate, fetchCoverImage, searchDeezer, searchItunes } from '../online-covers'
 import { requireCsrf, requireSession } from './middleware'
 import type { LocalLibraryDeps } from './upload'
@@ -179,6 +180,15 @@ type Applied = { status: number; body: Record<string, unknown> }
 type ChoiceDeps = CustomCoverDeps & {
   local?: LocalLibraryDeps
   nas?: (folder: string, bytes: Buffer, ext: '.jpg' | '.png') => Promise<'ok' | 'not_selected' | 'offline' | 'denied' | 'failed'>
+  nasSelected?: (folder: string) => Promise<boolean>
+}
+
+// A folder of the SD card as a cover target (local:<category>/<folder>[/…]): its parts, when it is one
+function localTargetParts(target: string, local: LocalLibraryDeps): string[] | undefined {
+  const parts = target.slice(6).split('/').filter(Boolean)
+  if (parts.length < 2 || !local.categories.includes(parts[0]) || parts.some((p) => p === '.' || p === '..' || p.includes('\\'))) return undefined
+  const categoryDir = path.join(local.root, parts[0])
+  return path.join(local.root, ...parts).startsWith(categoryDir + path.sep) ? parts : undefined
 }
 
 function registerCoverChoiceRoutes(router: Router, deps: ChoiceDeps, address: (name: string) => string): void {
@@ -214,6 +224,54 @@ function registerCoverChoiceRoutes(router: Router, deps: ChoiceDeps, address: (n
     res.json({
       results: results.slice(0, 24).map((c) => ({ source: c.source, title: c.title, artist: c.artist, image: c.imageUrl, thumb: c.thumbUrl })),
     })
+  })
+
+  /**
+   * POST /api/eltern/cover-hide {target, hide} - a folder (local:<path> / nas:<path>) shown without a cover (hide: true)
+   * or with its pictures again (false); nothing is deleted, see hidden-covers.ts.
+   */
+  router.post('/cover-hide', requireSession, requireCsrf, async (req, res) => {
+    const body = (req.body ?? {}) as { target?: unknown; hide?: unknown }
+    const target = String(body.target ?? '')
+    const hide = body.hide !== false
+    let type: 'local' | 'nas'
+    let folder: string
+    if (target.startsWith('local:') && deps.local) {
+      const parts = localTargetParts(target, deps.local)
+      if (!parts) {
+        res.status(400).json({ error: 'invalid_path' })
+        return
+      }
+      try {
+        if (!(await fsp.lstat(path.join(deps.local.root, ...parts))).isDirectory()) throw new Error('not a folder')
+      } catch {
+        res.status(404).json({ error: 'item_not_found' })
+        return
+      }
+      type = 'local'
+      folder = parts.join('/')
+    } else if (target.startsWith('nas:') && deps.nasSelected) {
+      folder = target.slice(4)
+      if (!(await deps.nasSelected(folder))) {
+        res.status(403).json({ error: 'nas_not_selected' })
+        return
+      }
+      type = 'nas'
+    } else {
+      res.status(400).json({ error: 'invalid_target' })
+      return
+    }
+    try {
+      await setCoverHidden(type, folder, hide)
+    } catch (err) {
+      console.warn(`${new Date().toLocaleString()}: [cover-hide] ${target}: ${(err as Error).message}`)
+      res.status(500).json({ error: 'write_failed' })
+      return
+    }
+    console.log(`${new Date().toLocaleString()}: [cover-hide] ${target} ${hide ? 'without a cover' : 'with its cover again'}`)
+    // (the display reads its lists again)
+    deps.local?.changed()
+    res.json({ ok: true, hidden: hide })
   })
 
   /** POST /api/eltern/cover-apply {target, image} - takes a search result's picture (see applyCover for the target). */
@@ -297,13 +355,9 @@ export async function applyCover(target: string, bytes: Buffer, deps: ChoiceDeps
   }
 
   if (target.startsWith('local:') && deps.local) {
-    const parts = target.slice(6).split('/').filter(Boolean)
-    if (parts.length < 2 || !deps.local.categories.includes(parts[0]) || parts.some((p) => p === '.' || p === '..' || p.includes('\\'))) {
-      return { status: 400, body: { error: 'invalid_path' } }
-    }
-    const categoryDir = path.join(deps.local.root, parts[0])
+    const parts = localTargetParts(target, deps.local)
+    if (!parts) return { status: 400, body: { error: 'invalid_path' } }
     const dir = path.join(deps.local.root, ...parts)
-    if (!dir.startsWith(categoryDir + path.sep)) return { status: 400, body: { error: 'invalid_path' } }
     let names: string[]
     try {
       if (!(await fsp.lstat(dir)).isDirectory()) throw new Error('not a folder')
@@ -329,13 +383,18 @@ export async function applyCover(target: string, bytes: Buffer, deps: ChoiceDeps
       return { status: 500, body: { error: 'write_failed' } }
     }
     console.log(`${new Date().toLocaleString()}: [cover-apply] ${parts.join('/')}/${COVER_BASE}${ext}`)
+    // (a folder shown without a cover before: with the chosen one now)
+    await setCoverHidden('local', parts.join('/'), false).catch(() => undefined)
     deps.local.changed()
     return { status: 200, body: { ok: true, path: `${parts.join('/')}/${COVER_BASE}${ext}` } }
   }
   if (target.startsWith('nas:') && deps.nas) {
     const folder = target.slice(4)
     const r = await deps.nas(folder, bytes, ext)
-    if (r === 'ok') return { status: 200, body: { ok: true, path: `${folder.replace(/\/+$/, '')}/cover${ext}` } }
+    if (r === 'ok') {
+      await setCoverHidden('nas', folder, false).catch(() => undefined)
+      return { status: 200, body: { ok: true, path: `${folder.replace(/\/+$/, '')}/cover${ext}` } }
+    }
     const why = { not_selected: [403, 'nas_not_selected'], offline: [503, 'nas_offline'], denied: [403, 'nas_denied'], failed: [502, 'nas_failed'] } as const
     return { status: why[r][0], body: { error: why[r][1] } }
   }

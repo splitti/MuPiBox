@@ -636,6 +636,7 @@ a.btn { text-decoration: none; color: inherit; }
 .login .login-keep { text-align: left; border-top: 0; padding-top: 0; }
 /* choosing a cover (openCoverPicker): the search, then the results to tap; the chosen one framed */
 .cover-now { display: flex; align-items: center; gap: 12px; }
+.cover-hidden { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 10px 12px; border-radius: var(--mp-r-sm); background: var(--mp-chip); }
 .cover-search { display: flex; gap: 8px; align-items: center; }
 .cover-search .search { flex: 1; min-width: 0; margin: 0; }
 .cover-pick { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 10px; }
