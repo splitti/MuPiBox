@@ -1,14 +1,20 @@
 <?php
 
+// Spotify's answer to a login (code or error, with the login's state): the login is the app's (Node backend), also
+// when it was started here. Boxes set up before the app name this page as the Redirect URI in their Spotify app (see
+// eltern/oauth.ts redirectModeOf) - the answer goes on to the app's address, which checks the state and exchanges the
+// code. Before the login check below: whoever is not signed in to this interface would lose the answer.
+if (isset($_GET['state']) && (isset($_GET['code']) || isset($_GET['error']))) {
+	header('Location: /app/spotify-callback?' . $_SERVER['QUERY_STRING'], true, 302);
+	exit;
+}
+
 include('includes/header.php');
-// The login goes through the app (Node backend): Spotify comes back to /app/spotify-callback - the one Redirect URI
-// of the Spotify app for both the app and this page. The old address (/spotify.php) is no longer used.
-$REDIRECT_URI = "https://" . preg_replace('/:\d+$/', '', $_SERVER['HTTP_HOST']) . "/app/spotify-callback";
-// playlist-read-private/-collaborative added for Phase-14 Smart-Sync, which
-// discovers the parent's prefixed playlists. Re-running this login grants the
-// existing playback token the extra scopes in one consent step.
-$SCOPELIST = "streaming user-read-currently-playing user-modify-playback-state user-read-playback-state user-read-private user-read-email playlist-read-private playlist-read-collaborative";
-$SCOPE = urlencode($SCOPELIST);
+// The Redirect URI of this box, chosen as the app chooses it (eltern/oauth.ts redirectModeOf): spotify.redirect, else
+// /spotify.php for a box signed in before the app did the login, /app/spotify-callback for a new one
+$__sp = $data['spotify'] ?? array();
+$__mode = $__sp['redirect'] ?? ((!empty($__sp['refreshToken']) && (empty($__sp['authorizedAt']) || !empty($__sp['authorizedEstimated']))) ? 'legacy' : 'app');
+$REDIRECT_URI = "https://" . preg_replace('/:\d+$/', '', $_SERVER['HTTP_HOST']) . ($__mode === 'legacy' ? '/spotify.php' : '/app/spotify-callback');
 
 
 if ( $_POST['clearCache']) {
@@ -32,75 +38,6 @@ if ( $_POST['spotifyget'] ) {
 	$change = 1;
 }
 
-// The Spotify redirect is a GET that replaces the tokens: accept it only with the state of a
-// login this session started (see the authorize link below), once.
-$spotify_state_ok = isset($_GET['code'], $_GET['state'], $_SESSION['spotify_oauth_state'])
-	&& hash_equals($_SESSION['spotify_oauth_state'], (string)$_GET['state']);
-if (isset($_GET['code']) && !$spotify_state_ok) {
-	$CHANGE_TXT = $CHANGE_TXT . "<li>Spotify login ignored: it was not started from this page (please use the link below again)</li>";
-	$change = 0;
-}
-if ($spotify_state_ok) {
-	unset($_SESSION['spotify_oauth_state']);
-	// All four interpolated values reach the shell. clientId / clientSecret
-	// come from mupiboxconfig.json (admin-controlled) but $_GET['code'] is
-	// echoed back from Spotify's redirect — an attacker could craft a
-	// redirect URL with `code=$(rm -rf /)` or backticks. escapeshellarg()
-	// each value so the shell sees them as a single quoted token.
-	$command = "curl -d client_id=" . escapeshellarg($data["spotify"]["clientId"])
-	         . " -d client_secret=" . escapeshellarg($data["spotify"]["clientSecret"])
-	         . " -d grant_type=authorization_code"
-	         . " -d code=" . escapeshellarg($_GET['code'])
-	         . " -d redirect_uri=" . escapeshellarg($REDIRECT_URI)
-	         . " https://accounts.spotify.com/api/token";
-	exec($command, $Tokenoutput, $result);
-	$tokendata = json_decode($Tokenoutput[0] ?? '', true);
-	// Only replace the stored tokens with a complete answer: a failed exchange used to overwrite
-	// both with null and leave Spotify dead until the next successful login.
-	if (!empty($tokendata["access_token"]) && !empty($tokendata["refresh_token"])) {
-		$data["spotify"]["accessToken"] = $tokendata["access_token"];
-		$data["spotify"]["refreshToken"] = $tokendata["refresh_token"];
-	}
-	// Re-authorising via OAuth implies the user wants Spotify ON. Without this
-	// flip, an admin who turned `active` off (e.g. while debugging) and then
-	// re-ran the Connect-Spotify flow would still have Spotify hidden in the
-	// frontend — and might assume the new tokens are also broken. Only flip if
-	// we actually got both tokens back; the OAuth call could have failed and
-	// returned an error blob, in which case enabling Spotify would resurrect
-	// the loading-spinner-stuck state.
-	if (!empty($tokendata["access_token"]) && !empty($tokendata["refresh_token"])) {
-		$data["spotify"]["active"] = true;
-			// Phase-14 Smart-Sync checks the granted scopes (hasRequiredSyncScopes)
-			// to decide whether playlist access is available. The token response
-			// carries them as a space-separated `scope` string; persist as array.
-			if (!empty($tokendata["scope"])) {
-				$data["spotify"]["tokenScopes"] = explode(" ", $tokendata["scope"]);
-			}
-	}
-	save_mupiboxconfig($data);
-	exec("sudo /usr/local/bin/mupibox/./setting_update.sh");
-	// The librespot credentials.json is NOT deleted here any more. Since 2026-08-10 Spotify refuses
-	// librespot logins derived from a developer app's token (what env-librespot falls back to
-	// without that file), so deleting it on every re-link broke Spotify Connect for good. It is
-	// created by a librespot OAuth login (librespot --enable-oauth) and only "Reset data" removes it.
-	exec("sudo /usr/local/bin/mupibox/./spotify_restart.sh");
-?>
-<form class="appnitro" method="post" action="spotify.php" id="form">
-<div class="description">
-<h2>Please wait... Data will be saved, page will reload automatically!!!</h2>
-</div><p></p>
-<input id="spotifyget" name="spotifyget" class="element readonly large" type="hidden" maxlength="255" value="saving" />
-</form>
-<p></p>
-<?php
-	include('includes/footer.php');
-?>
-<script type="text/javascript">
-    document.getElementById('form').submit();
-</script>
-<?php
-	exit();
-}
 
 if ($_POST['saveIDs']) {
 	$data["spotify"]["clientId"] = $_POST['spotify_clientid'];

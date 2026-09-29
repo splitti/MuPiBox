@@ -29,7 +29,7 @@ export const REQUESTED_SCOPES = [
 const STATE_TTL_MS = 10 * 60 * 1000
 
 /** In-memory OAuth-state store; single process per box, no need for tmpfs. */
-const oauthStates = new Map<string, { sessionId: string; issued: number; redirectAfter: string }>()
+const oauthStates = new Map<string, { sessionId: string; issued: number; redirectAfter: string; redirectUri: string }>()
 
 function purgeExpiredStates(now = Date.now()): void {
   for (const [state, entry] of oauthStates) {
@@ -57,13 +57,14 @@ export function buildAuthorizeUrl(deps: {
 
   purgeExpiredStates()
   const state = randomBytes(24).toString('hex')
+  // (kept with the state: the code is exchanged with the same address, also when the choice changes in between)
+  const redirectUri = buildRedirectUri(deps.protocol, deps.host, redirectModeOf(cfg))
   oauthStates.set(state, {
     sessionId: deps.sessionId,
     issued: Date.now(),
     redirectAfter: deps.redirectAfter ?? '/app',
+    redirectUri,
   })
-
-  const redirectUri = buildRedirectUri(deps.protocol, deps.host)
   const params = new URLSearchParams({
     response_type: 'code',
     client_id: clientId,
@@ -81,24 +82,42 @@ export function buildAuthorizeUrl(deps: {
   }
 }
 
-/** Same shape used by spotify.php; canonicalises the redirect URI. */
-export function buildRedirectUri(protocol: string, host: string): string {
-  // https://<box>/app/spotify-callback, through the web server on port 443 (lighttpd with the box's certificate passes
-  // /app to the app, server.ts hands it to /api/app/spotify-oauth/callback): Spotify refuses http redirect addresses
-  // other than 127.0.0.1.
-  return `${protocol}://${host}/app/spotify-callback`
+// The Redirect URI - the address the parents entered in their Spotify app. Through the web server on port 443
+// (lighttpd with the box's certificate): Spotify refuses http addresses other than 127.0.0.1.
+//   app: https://<box>/app/spotify-callback - lighttpd passes /app to the app, server.ts hands it to
+//        /api/app/spotify-oauth/callback
+//   legacy: https://<box>/spotify.php - the address of the admin interface before; spotify.php passes Spotify's answer
+//        on to the one above, so the Spotify apps of boxes set up before need no change after an update
+export const SPOTIFY_CALLBACK_PATHS = { app: '/app/spotify-callback', legacy: '/spotify.php' } as const
+export type RedirectMode = keyof typeof SPOTIFY_CALLBACK_PATHS
+
+/**
+ * Which address the box uses: spotify.redirect when chosen (the app's Zugangsdaten page; set by every login through
+ * the app). Not chosen: a box that is signed in, but not by the app (the admin interface of before), keeps
+ * /spotify.php - its Spotify app knows that one; a new setup uses the app's.
+ */
+export function redirectModeOf(cfg: MupiboxConfig | undefined): RedirectMode {
+  const sp = (cfg?.spotify as Record<string, unknown> | undefined) ?? {}
+  if (sp.redirect === 'app' || sp.redirect === 'legacy') return sp.redirect
+  const signedIn = typeof sp.refreshToken === 'string' && sp.refreshToken !== ''
+  const byApp = typeof sp.authorizedAt === 'string' && sp.authorizedEstimated !== true
+  return signedIn && !byApp ? 'legacy' : 'app'
+}
+
+export function buildRedirectUri(protocol: string, host: string, mode: RedirectMode = 'app'): string {
+  return `${protocol}://${host}${SPOTIFY_CALLBACK_PATHS[mode]}`
 }
 
 /**
  * Consume the state from the callback. Returns the original session
  * + redirectAfter, or null if state is unknown / expired / replayed.
  */
-export function consumeOauthState(state: string): { sessionId: string; redirectAfter: string } | null {
+export function consumeOauthState(state: string): { sessionId: string; redirectAfter: string; redirectUri: string } | null {
   purgeExpiredStates()
   const entry = oauthStates.get(state)
   if (!entry) return null
   oauthStates.delete(state)
-  return { sessionId: entry.sessionId, redirectAfter: entry.redirectAfter }
+  return { sessionId: entry.sessionId, redirectAfter: entry.redirectAfter, redirectUri: entry.redirectUri }
 }
 
 /**

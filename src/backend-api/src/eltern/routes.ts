@@ -56,6 +56,8 @@ import {
   REQUESTED_SCOPES,
   buildAuthorizeUrl,
   buildRedirectUri,
+  redirectModeOf,
+  SPOTIFY_CALLBACK_PATHS,
   clearSpotifyTokens,
   consumeOauthState,
   exchangeCodeForTokens,
@@ -613,7 +615,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       res.status(400).send('no host header')
       return
     }
-    const redirectUri = buildRedirectUri('https', host)
+    // (the address the login started with - Spotify checks that both are the same)
+    const redirectUri = original.redirectUri || buildRedirectUri('https', host, redirectModeOf(deps.getMupiboxConfig()))
     const exchange = await exchangeCodeForTokens({
       code,
       redirectUri,
@@ -628,6 +631,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     await deps.updateMupiboxConfig((cfg) => {
       const spotify = ((cfg.spotify as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
       spotify.active = true
+      // (the address that worked is the one of this box from now on)
+      spotify.redirect = redirectUri.endsWith(SPOTIFY_CALLBACK_PATHS.legacy) ? 'legacy' : 'app'
       cfg.spotify = spotify
     })
     applySpotifyAccessToPlayer(true)
@@ -2169,11 +2174,17 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
    * What the player's Spotify access looks like, without the secrets themselves (the admin interface showed them in
    * plain text): the client id, whether a secret and tokens are stored, and "process playlists".
    */
-  router.get('/spotify-access', requireSession, async (_req, res) => {
+  router.get('/spotify-access', requireSession, async (req, res) => {
     const cfg = deps.getMupiboxConfig()
     const sp = (cfg?.spotify ?? {}) as Record<string, unknown>
     const str = (v: unknown) => (typeof v === 'string' ? v : '')
+    const mode = redirectModeOf(cfg)
     res.json({
+      // the Redirect URI of this box (the one its Spotify app has to name) and both to choose from
+      redirectMode: mode,
+      redirectUris: Object.fromEntries(
+        (Object.keys(SPOTIFY_CALLBACK_PATHS) as (keyof typeof SPOTIFY_CALLBACK_PATHS)[]).map((m) => [m, buildRedirectUri('https', spotifyHost(req) ?? 'mupibox', m)]),
+      ),
       clientId: str(sp.clientId),
       hasSecret: str(sp.clientSecret) !== '',
       connected: str(sp.accessToken) !== '' && str(sp.refreshToken) !== '',
@@ -2183,6 +2194,20 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       // since when the login holds and until when (6 months), or that Spotify refused it (see spotify-auth-age.ts)
       login: await spotifyLoginAge(cfg),
     })
+  })
+
+  /** POST /api/app/spotify-access/redirect {mode: app|legacy} - which Redirect URI the next login uses (the one the
+   *  parents' Spotify app names). */
+  router.post('/spotify-access/redirect', requireSession, requireCsrf, async (req, res) => {
+    const mode = (req.body as { mode?: unknown } | undefined)?.mode
+    if (mode !== 'app' && mode !== 'legacy') {
+      res.status(400).json({ error: 'mode must be app or legacy' })
+      return
+    }
+    await deps.updateMupiboxConfig((cfg) => {
+      cfg.spotify = { ...((cfg.spotify as Record<string, unknown> | undefined) ?? {}), redirect: mode }
+    })
+    res.json({ ok: true })
   })
 
   /** POST /api/app/spotify-access/playlists {enabled} - "process playlists" (read live by the backend, no restart). */

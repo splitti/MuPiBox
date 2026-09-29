@@ -12,9 +12,10 @@ const API = '/api/app'
 // The app's own port (8200): the display's pages are there, also when the app is used through port 80 (whose root is
 // the admin interface's)
 const BOX_ORIGIN = `http://${location.hostname}:8200`
-// Where Spotify sends the browser back after the login: https through the box's web server (port 443), as the admin
-// interface's spotify.php - Spotify takes no http addresses except 127.0.0.1. It has to be entered in the Spotify app.
-const SPOTIFY_REDIRECT = `https://${location.hostname}/app/spotify-callback`
+// Where Spotify sends the browser back after the login: https through the box's web server (port 443) - Spotify takes
+// no http addresses except 127.0.0.1. It has to be entered in the Spotify app. Which one the box uses comes from the box
+// (eltern/oauth.ts redirectModeOf: /app/spotify-callback, or /spotify.php for a box set up before the app).
+const spotifyRedirect = () => spot.access?.redirectUris?.[spot.access.redirectMode] ?? `https://${location.hostname}/app/spotify-callback`
 // numbers and dates in the language of the app (see i18n.js)
 let LOCALE = localeTag()
 
@@ -3390,8 +3391,19 @@ function spotifyAccessTop() {
         login.since && ['Angemeldet seit', login.since],
         login.until && ['Gültig bis', login.until],
       ])}
-      <div class="field"><label>Redirect URI</label><div class="field-pick"><input class="input mono" value="${esc(SPOTIFY_REDIRECT)}" readonly aria-label="Redirect URI" ${NO_PW_MANAGER}><button type="button" class="icon-btn soft" data-sp="copyuri" aria-label="Redirect URI kopieren">${icon('link', 18)}</button></div>
-        <small>Muss in deiner Spotify-App unter „Redirect URIs“ stehen, sonst lehnt Spotify die Anmeldung ab. Beim Zurückkommen fragt der Browser wegen des Zertifikats der Box eventuell einmal nach.</small></div>
+      <div class="field"><label>Redirect URI</label><div class="field-pick"><input class="input mono" value="${esc(spotifyRedirect())}" readonly aria-label="Redirect URI" ${NO_PW_MANAGER}><button type="button" class="icon-btn soft" data-sp="copyuri" aria-label="Redirect URI kopieren">${icon('link', 18)}</button></div>
+        <small>Muss in deiner Spotify-App unter „Redirect URIs“ stehen, sonst lehnt Spotify die Anmeldung ab. Beim Zurückkommen fragt der Browser wegen des Zertifikats der Box eventuell einmal nach.</small>
+        ${
+          a.redirectUris
+            ? `<div class="pills small" id="sp-rd" role="radiogroup" aria-label="Redirect URI">${[
+                ['app', '/app/spotify-callback'],
+                ['legacy', '/spotify.php'],
+              ]
+                .map(([m, t]) => `<button role="radio" aria-selected="${a.redirectMode === m}" data-rd="${m}" translate="no">${t}</button>`)
+                .join('')}</div>
+              <small>${esc('Welche der beiden Adressen in deiner Spotify-App steht: Boxen, die vor der App eingerichtet wurden, nutzen /spotify.php – dann muss in der Spotify-App nichts geändert werden.')}</small>`
+            : ''
+        }</div>
       <div class="btns"><button class="btn${login.state === 'ok' ? '' : ' primary'}" data-sp="connect">${a.connected ? 'Neu anmelden' : 'Bei Spotify anmelden'}</button></div></section>`,
     spotifyConnectCard(),
   ]
@@ -3502,7 +3514,7 @@ function mountSpotifyAccess(root, page) {
   const acts = {
     connect: connectSpotify,
     connectlogin: () => connectLoginSheet(page),
-    copyuri: () => copyText(SPOTIFY_REDIRECT),
+    copyuri: () => copyText(spotifyRedirect()),
     save: async () => {
       const clientId = $('#sp-id', root).value.trim()
       const secret = $('#sp-secret', root).value.trim()
@@ -3516,6 +3528,17 @@ function mountSpotifyAccess(root, page) {
     },
   }
   for (const b of root.querySelectorAll('[data-sp]')) b.onclick = () => acts[b.dataset.sp]()
+  // which Redirect URI the Spotify app names (the next login uses it)
+  for (const b of root.querySelectorAll('[data-rd]')) {
+    b.onclick = async () => {
+      if (b.getAttribute('aria-selected') === 'true') return
+      const r = await api(`${API}/spotify-access/redirect`, { method: 'POST', body: { mode: b.dataset.rd } })
+      if (!r.ok) return toast('Nicht gespeichert', 'info')
+      toast('Gespeichert')
+      await loadSpotify().catch(() => undefined)
+      if (currentPage()?.id === page.id) renderPage(page, false)
+    }
+  }
   const on = $('#cc-on', root)
   if (on)
     on.onchange = async () => {
@@ -3588,7 +3611,7 @@ function wizardTop() {
       ${spKv([
         ['App name', state.boxName || 'MuPiBox'],
         ['App description', 'MuPiBox'],
-        ['Redirect URI', SPOTIFY_REDIRECT],
+        ['Redirect URI', spotifyRedirect()],
       ])}
       <div class="note">${icon('info', 18)}<span>Bei „Which API/SDKs are you planning to use?“ die „Web API“ und das „Web Playback SDK“ ankreuzen.</span></div>
       <div class="btns"><button class="btn" data-wz="copy">${icon('link', 18)}Redirect URI kopieren</button></div>`,
@@ -3622,7 +3645,7 @@ function mountWizard(root, page) {
   }
   const acts = {
     devsite: () => window.open('https://developer.spotify.com/dashboard', '_blank', 'noopener'),
-    copy: () => copyText(SPOTIFY_REDIRECT),
+    copy: () => copyText(spotifyRedirect()),
     connect: connectSpotify,
     back: () => show(Math.max(0, wz.step - 1)),
     next: () => show(Math.min(spotifySteps().length - 1, wz.step + 1)),
