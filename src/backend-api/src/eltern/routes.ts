@@ -258,6 +258,34 @@ const adminTickets = new Map<string, number>()
 // The box's name as the browser uses it, without a port: Spotify's redirect address is https://<box>/…, through the
 // web server on port 443 (as the admin interface's https://<box>/spotify.php) - Spotify takes no http addresses any
 // more except 127.0.0.1, so http://<box>:8200 was refused after the login
+// The newest episode of a podcast feed (its audio address, title and the show's name), from the feed as the display
+// reads it (xml-js: a text is {_text} or {_cdata}, one item comes as an object instead of a list), or null
+async function newestRssEpisode(feed: string): Promise<{ url: string; title: string; show: string } | null> {
+  const text = (v: unknown): string => {
+    if (typeof v === 'string') return v
+    const o = v as { _text?: unknown; _cdata?: unknown } | undefined
+    return typeof o?._cdata === 'string' ? o._cdata : typeof o?._text === 'string' ? o._text : ''
+  }
+  try {
+    const r = await fetch(`http://127.0.0.1:8200/api/rssfeed/cached?url=${encodeURIComponent(feed)}`, { signal: AbortSignal.timeout(15000) })
+    if (!r.ok) return null
+    const channel = ((await r.json()) as { rss?: { channel?: Record<string, unknown> } }).rss?.channel
+    const raw = channel?.item
+    const items = (Array.isArray(raw) ? raw : raw ? [raw] : []) as Record<string, unknown>[]
+    let best: { url: string; title: string; at: number } | null = null
+    for (const [i, it] of items.entries()) {
+      const url = (it.enclosure as { _attributes?: { url?: unknown } } | undefined)?._attributes?.url
+      if (typeof url !== 'string' || !url) continue
+      // (no date: the order of the feed, the first one being the newest as usual)
+      const at = Date.parse(text(it.pubDate)) || -i
+      if (!best || at > best.at) best = { url, title: text(it.title) || 'Episode', at }
+    }
+    return best ? { url: best.url, title: best.title, show: text(channel?.title) } : null
+  } catch {
+    return null
+  }
+}
+
 function spotifyHost(req: Request): string | undefined {
   const host = req.headers.host
   if (typeof host !== 'string') return undefined
@@ -1626,10 +1654,17 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
         break
       }
       case 'rss': {
-        const id = String(item.id ?? '')
-        const title = String(item.title ?? 'Episode')
-        const artist = String(item.artist ?? '')
-        url = `rss/${enc(id)}/${enc(title)}:title:artist:${enc(artist)}`
+        // A podcast's entry holds its feed, not an episode: the player got the feed's address and played nothing.
+        // As a tap on the box's episode list: the newest episode (by its date) - read from the feed as the display
+        // reads it (/api/rssfeed/cached, the box's own address).
+        const feed = String(item.id ?? '')
+        const episode = await newestRssEpisode(feed)
+        if (!episode) {
+          res.status(502).json({ error: 'no_episode' })
+          return
+        }
+        const artist = episode.show || String(item.artist ?? '')
+        url = `rss/${enc(episode.url)}/${enc(episode.title)}:title:artist:${enc(artist)}`
         break
       }
       default:
