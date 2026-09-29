@@ -1,0 +1,12 @@
+[Unit]
+# The web server's certificate checked every night too (mupi_tls.service, tls_cert.sh ensure): a box that runs for
+# months without a restart gets its new certificate in time, and one after an address change within a day
+Description=MuPiBox: certificate of the web server, daily check
+
+[Timer]
+OnCalendar=*-*-* 04:30:00
+# (missed while the box was off: made up at the next start)
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -689,6 +689,7 @@ rm -f /tmp/mupibox-update-failed
 	mv -f ${MUPI_SRC}/config/services/mupi_hat.service /etc/systemd/system/mupi_hat.service  >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/mupi_fan.service /etc/systemd/system/mupi_fan.service >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/mupi_tls.service /etc/systemd/system/mupi_tls.service >&3 2>&3
+	mv -f ${MUPI_SRC}/config/services/mupi_tls.timer /etc/systemd/system/mupi_tls.timer >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/mupi_hat_control.service /etc/systemd/system/mupi_hat_control.service  >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/mupi_autoconnect-wifi.service /etc/systemd/system/mupi_autoconnect-wifi.service  >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/mupi_mqtt.service /etc/systemd/system/mupi_mqtt.service  >&3 2>&3
@@ -893,6 +894,8 @@ rm -f /tmp/mupibox-update-failed
 	# no phone can trust and every browser asked about again. Checked at every start too (mupi_tls.service).
 	/usr/local/bin/mupibox/tls_cert.sh ensure >&3 2>&3
 	systemctl enable mupi_tls.service >&3 2>&3
+	systemctl daemon-reload >&3 2>&3
+	systemctl enable --now mupi_tls.timer >&3 2>&3
 	# no scripts or pages from the media folder behind /cover (see the file)
 	cp -f ${MUPI_SRC}/config/lighttpd/99-mupibox-media-noexec.conf /etc/lighttpd/conf-enabled/99-mupibox-media-noexec.conf >&3 2>&3
 	# the app on port 80/443 too: its login at /, the app at /app (see the file)
