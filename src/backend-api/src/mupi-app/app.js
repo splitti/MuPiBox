@@ -725,6 +725,7 @@ function startSkeleton() {
     `<div class="update-note" id="update-note"></div>`,
     `<section class="card nav-card start-more"><div class="navlist">
       ${navRow('g-aussehen', 'Aussehen des Displays', 'Theme, Start- und Wartungsbilder', 'pal')}
+      ${navRow('displaylive', 'Display live', 'Aktuelles Bild, Fernsteuerung (VNC)', 'display')}
       ${navRow('spotify', 'Spotify', 'Smart-Sync und Zugang', 'sync')}
       ${navRow('verlauf', 'Hör-Verlauf', 'Heute und die letzten 7 Tage', 'hist')}
       ${navRow('bluetooth', 'Bluetooth', 'Kopfhörer und Lautsprecher', 'bt')}
