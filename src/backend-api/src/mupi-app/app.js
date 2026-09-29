@@ -1936,9 +1936,20 @@ const libPlace = (item) => {
   return i >= 0 ? i : item.index
 }
 
+// Order, shuffle and a part of the episodes of an entry (the fields of "Link einfügen"): empty "von/bis" = all
+function entryPlayFields(item) {
+  const opts = SORTINGS.map(([v, l]) => `<option value="${v}"${(item.sorting ?? '') === v ? ' selected' : ''}>${esc(l)}</option>`).join('')
+  const part = item.aPartOfAll === true
+  return `<div class="field"><label for="e-sort">Sortierung</label><select class="input" id="e-sort">${opts}</select></div>
+    ${item.type === 'spotify' ? `<div class="row"><span class="lbl"><b>Zufällig abspielen</b></span><label class="switch"><input type="checkbox" id="e-shuffle" ${item.shuffle ? 'checked' : ''} aria-label="Zufällig abspielen"><span></span></label></div>` : ''}
+    <div class="field"><label>Nur einen Teil (Nr. von – bis, leer = alle)</label><div class="rule-times"><input class="input" id="e-from" type="number" min="1" inputmode="numeric" value="${part ? esc(item.aPartOfAllMin ?? 1) : ''}" placeholder="von" aria-label="von"><input class="input" id="e-to" type="number" min="1" inputmode="numeric" value="${part ? esc(item.aPartOfAllMax ?? '') : ''}" placeholder="bis" aria-label="bis"></div></div>`
+}
+
 // The sheet of a library entry: manual ones change their fields, synced ones get overrides (the sync keeps its own)
 function openEntrySheet(item) {
   const isSync = (item.source ?? 'manual') === 'spotify-sync'
+  // (order, shuffle, a part of the episodes: of the entries one adds by hand - Spotify and podcasts)
+  const playOptions = !isSync && (item.type === 'spotify' || item.type === 'rss')
   // a radio station or a podcast: its address (stream / feed) can be changed too
   const addressLabel = !isSync && { radio: 'Stream-Adresse (URL)', rss: 'Feed-Adresse (URL)' }[item.type]
   const fields = [
@@ -1962,6 +1973,7 @@ function openEntrySheet(item) {
        })
        .join('')}
      <div class="field"><label for="e-cat">Kategorie</label>${catSelect('e-cat', item.category_override ?? (isSync ? '' : item.category === 'radio' ? 'other' : item.category), isSync)}</div>
+     ${playOptions ? entryPlayFields(item) : ''}
      ${isSync ? `<p class="help" style="margin:0">Entfernen geht über Bibliothek › Verwaltete Inhalte oder die Spotify-Playlist.</p>` : ''}
      <div class="btns">${isSync ? '' : `<button class="btn danger" data-del>Löschen</button>`}<button class="btn" data-close>Abbrechen</button><button class="btn primary" data-ok>Speichern</button></div>`,
     (sheet, close) => {
@@ -2002,6 +2014,25 @@ function openEntrySheet(item) {
           const key = isSync ? `${k}_override` : k
           if (v) updated[key] = v
           else delete updated[key]
+        }
+        if (playOptions) {
+          const sorting = sheet.querySelector('#e-sort').value
+          if (sorting) updated.sorting = sorting
+          else delete updated.sorting
+          const shuffle = sheet.querySelector('#e-shuffle')
+          if (shuffle) updated.shuffle = shuffle.checked
+          const from = Number(sheet.querySelector('#e-from').value) || 0
+          const to = Number(sheet.querySelector('#e-to').value) || 0
+          if (from || to) {
+            if ((to && to < (from || 1)) || from < 0) return toast('Der Bereich passt nicht (von 1 an, „bis“ nicht vor „von“)', 'info')
+            Object.assign(updated, { aPartOfAll: true, aPartOfAllMin: from || 1 })
+            if (to) updated.aPartOfAllMax = to
+            else delete updated.aPartOfAllMax
+          } else {
+            updated.aPartOfAll = false
+            delete updated.aPartOfAllMin
+            delete updated.aPartOfAllMax
+          }
         }
         const cat = sheet.querySelector('#e-cat').value
         if (isSync) {
@@ -2635,31 +2666,95 @@ function spotifyIdFrom(url, kind) {
   return m ? m[1] : null
 }
 
+// The order of an entry's albums / episodes (data.json "sorting"; none: podcasts newest first, else A–Z)
+const SORT_VALUES = ['', 'Alphabetical' + 'Ascending', 'Alphabetical' + 'Descending', 'ReleaseDate' + 'Ascending', 'ReleaseDate' + 'Descending']
+const SORTINGS = ['Standard', 'Alphabetisch A–Z', 'Alphabetisch Z–A', 'Älteste zuerst', 'Neueste zuerst'].map((label, i) => [SORT_VALUES[i], label])
+const sortingOf = (label) => SORTINGS.find(([, l]) => l === label)?.[0] ?? ''
+
+// Whether Spotify knows the id as this kind (the box asks it): true / false, or null when it cannot tell (offline, no
+// access yet) - then the entry is taken as it is
+async function spotifyKnows(id, type) {
+  const r = await api('/api/spotify/validate', { method: 'POST', body: { id, type } })
+  if (r.ok && r.body?.valid) return true
+  return r.status === 0 || r.status >= 500 ? null : false
+}
+
+// The fields of the "Link einfügen" page that all kinds share: covers, order, shuffle, a part of the episodes
+function linkExtras(body, kind) {
+  const cover = String(state.values.get('lCover') ?? '').trim()
+  const artistcover = String(state.values.get('lArtistCover') ?? '').trim()
+  for (const [k, v] of [['cover', cover], ['artistcover', artistcover]]) {
+    if (!v) continue
+    if (!/^https?:\/\//.test(v)) return 'Bild-Adressen beginnen mit http:// oder https://'
+    body[k] = v
+  }
+  if (kind === 'radio') return ''
+  const sorting = sortingOf(state.values.get('lSort'))
+  if (sorting) body.sorting = sorting
+  if (kind === 'spotify') body.shuffle = !!state.values.get('lShuffle')
+  if (state.values.get('lPart')) {
+    const from = Number(state.values.get('lFrom') ?? 1) || 1
+    const to = Number(state.values.get('lTo') ?? 0) || 0
+    if (from < 1 || (to && to < from)) return 'Der Bereich passt nicht (von 1 an, „bis“ nicht vor „von“)'
+    Object.assign(body, { aPartOfAll: true, aPartOfAllMin: from, ...(to ? { aPartOfAllMax: to } : {}) })
+  }
+  return ''
+}
+
 async function addLink(page) {
   const type = state.values.get('lType') ?? 'Spotify-Link'
   const url = String(state.values.get('lUrl') ?? '').trim()
   const label = String(state.values.get('lLabel') ?? '').trim()
   const title = String(state.values.get('lTitle') ?? '').trim()
   const category = catFromLabel(state.values.get('lCat') ?? 'Hörbuch/Hörspiel')
-  if (!url) return toast('Bitte eine URL eintragen', 'info')
+  if (!url) return toast(type === 'Spotify-Suche' ? 'Bitte einen Suchbegriff eintragen' : 'Bitte eine URL eintragen', 'info')
   const body = { category, source: 'manual' }
-  if (type === 'Spotify-Link') {
-    if (!url.startsWith('https://open.spotify.com/')) return toast('Spotify-Links beginnen mit https://open.spotify.com/', 'info')
-    const kinds = [['playlist', 'playlistid'], ['artist', 'artistid'], ['album', 'id'], ['show', 'showid'], ['audiobook', 'audiobookid']]
-    const hit = kinds.map(([k, field]) => [field, spotifyIdFrom(url, k)]).find(([, id]) => id)
-    if (!hit) return toast('Diese Art von Spotify-Link kennt die Box nicht', 'info')
-    Object.assign(body, { type: 'spotify', spotify_url: url, [hit[0]]: hit[1] })
-    if (label) body.artist = label
-  } else {
-    if (!/^https?:\/\//.test(url)) return toast('Die URL muss mit http:// oder https:// beginnen', 'info')
-    // (as the box's own add page: the player takes the streams over http)
-    const id = url.startsWith('https://') ? url.replace('https://', 'http://') : url
-    if (type === 'Radio-Stream') Object.assign(body, { type: 'radio', id, artist: label || 'Radio', title: title || 'Stream' })
-    else Object.assign(body, { type: 'rss', id, artist: label || 'Podcast' })
+  const kind = type.startsWith('Spotify') ? 'spotify' : type === 'Radio-Stream' ? 'radio' : 'rss'
+  const problem = linkExtras(body, kind)
+  if (problem) return toast(problem, 'info')
+  const button = document.querySelector('[data-label="Hinzufügen"]')
+  if (button) button.disabled = true
+  try {
+    if (type === 'Spotify-Suche') {
+      // (the box looks the search up itself: its first hit plays - a name is needed for the tile)
+      if (!label) return toast('Bitte auch einen Namen eintragen (so heißt die Kachel)', 'info')
+      Object.assign(body, { type: 'spotify', query: url, artist: label })
+    } else if (type === 'Spotify-Link') {
+      if (!url.startsWith('https://open.spotify.com/')) return toast('Spotify-Links beginnen mit https://open.spotify.com/', 'info')
+      const kinds = [['playlist', 'playlistid', 'playlist'], ['artist', 'artistid', 'artist'], ['album', 'id', 'album'], ['show', 'showid', 'show'], ['audiobook', 'audiobookid', 'audiobook']]
+      const hit = kinds.map(([k, field, check]) => [field, spotifyIdFrom(url, k), check]).find(([, id]) => id)
+      if (!hit) return toast('Diese Art von Spotify-Link kennt die Box nicht', 'info')
+      let [field, id, check] = hit
+      // a "show" link that is an audiobook at Spotify: stored as one (as the box's own add page did)
+      if (field === 'showid' && (await spotifyKnows(id, 'audiobook'))) {
+        field = 'audiobookid'
+        check = 'audiobook'
+      }
+      if ((await spotifyKnows(id, check)) === false) return toast('Diesen Inhalt kennt Spotify nicht – ist der Link richtig?', 'info')
+      Object.assign(body, { type: 'spotify', spotify_url: url, [field]: id })
+      if (label) body.artist = label
+    } else {
+      if (!/^https?:\/\//.test(url)) return toast('Die URL muss mit http:// oder https:// beginnen', 'info')
+      let address = url
+      // a playlist file of a radio station (.m3u, .pls): the stream it names
+      if (type === 'Radio-Stream' && /\.(m3u|pls)(\?|#|$)/i.test(new URL(url).pathname + new URL(url).search)) {
+        const r = await api(`/api/stream/resolve?url=${encodeURIComponent(url)}`)
+        if (r.ok && r.body?.resolved) {
+          address = r.body.url
+          toast('Stream-Adresse aus der Playlist übernommen')
+        }
+      }
+      // (as the box's own add page: the player takes the streams over http)
+      const id = address.startsWith('https://') ? address.replace('https://', 'http://') : address
+      if (type === 'Radio-Stream') Object.assign(body, { type: 'radio', id, artist: label || 'Radio', title: title || 'Stream' })
+      else Object.assign(body, { type: 'rss', id, artist: label || 'Podcast' })
+    }
+  } finally {
+    if (button) button.disabled = false
   }
   const r = await api('/api/add', { method: 'POST', body })
   if (!libWriteOk(r)) return
-  for (const k of ['lUrl', 'lLabel', 'lTitle']) state.values.delete(k)
+  for (const k of ['lUrl', 'lLabel', 'lTitle', 'lCover', 'lArtistCover', 'lFrom', 'lTo']) state.values.delete(k)
   toast('Hinzugefügt')
   libChanged()
   lib.items = null
@@ -3019,7 +3114,8 @@ function relTime(iso) {
 }
 
 async function loadSpotify() {
-  const [status, access] = await Promise.all([api(`${SYNC_API}/status`), api(`${API}/spotify-access`)])
+  const [status, access, connect] = await Promise.all([api(`${SYNC_API}/status`), api(`${API}/spotify-access`), api(`${API}/spotify-connect`)])
+  spot.connect = connect.ok ? connect.body : null
   if (!status.ok && !access.ok) throw new Error(`spotify ${status.status}`)
   spot.status = status.ok ? status.body : null
   spot.access = access.ok ? access.body : null
@@ -3275,12 +3371,74 @@ function spotifyAccessTop() {
       <div class="field"><label>Redirect URI</label><div class="field-pick"><input class="input mono" value="${esc(SPOTIFY_REDIRECT)}" readonly aria-label="Redirect URI" ${NO_PW_MANAGER}><button type="button" class="icon-btn soft" data-sp="copyuri" aria-label="Redirect URI kopieren">${icon('link', 18)}</button></div>
         <small>Muss in deiner Spotify-App unter „Redirect URIs“ stehen, sonst lehnt Spotify die Anmeldung ab. Beim Zurückkommen fragt der Browser wegen des Zertifikats der Box eventuell einmal nach.</small></div>
       <div class="btns"><button class="btn${login.state === 'ok' ? '' : ' primary'}" data-sp="connect">${a.connected ? 'Neu anmelden' : 'Bei Spotify anmelden'}</button></div></section>`,
+    spotifyConnectCard(),
   ]
+}
+
+// Spotify Connect: the box as a speaker in the Spotify app on the phone (librespot) - its own login, see
+// eltern/spotify-connect.ts
+function spotifyConnectCard() {
+  const c = spot.connect ?? {}
+  const state = !spot.connect
+    ? 'Unbekannt'
+    : c.configured
+      ? c.running
+        ? `Eingerichtet seit ${new Date(c.since).toLocaleDateString(LOCALE)}`
+        : `Eingerichtet seit ${new Date(c.since).toLocaleDateString(LOCALE)} – der Dienst läuft gerade nicht`
+      : 'Nicht eingerichtet'
+  return `<section class="card"><h2>Spotify Connect</h2><p class="help">${esc(`Damit erscheint die Box in der Spotify-App auf dem Handy als Lautsprecher „${c.name ?? 'MuPiBox'}“ – dort unter „Geräte“ wählen und direkt vom Handy abspielen. Die Box braucht dafür eine eigene, einmalige Anmeldung.`)}</p>
+    ${spKv([['Status', state]])}
+    <div class="btns"><button class="btn${spot.connect && !c.configured ? ' primary' : ''}" data-sp="connectlogin">${c.configured ? 'Neu verbinden' : 'Spotify Connect verbinden'}</button></div></section>`
+}
+
+// The Connect login: the box starts it and names the Spotify address; after logging in there, the browser shows an
+// error page (its address leads to the box itself) - that address is pasted here and handed to the box
+async function connectLoginSheet(page) {
+  const r = await api(`${API}/spotify-connect/start`, { method: 'POST' })
+  if (!r.ok || !r.body?.url) return toast('Die Anmeldung ließ sich nicht starten', 'info')
+  const url = r.body.url
+  let finished = false
+  openSheet(
+    `<h2>Spotify Connect verbinden</h2>
+     <ol class="steps-list">
+       <li><b>Bei Spotify anmelden</b><small>Öffnet Spotify in einem neuen Tab – mit dem Konto anmelden, dessen Musik die Box abspielen soll, und zustimmen.</small>
+         <div class="btns"><a class="btn primary" href="${esc(url)}" target="_blank" rel="noopener">${icon('ext', 18)}Spotify öffnen</a></div></li>
+       <li><b>Adresse zurückholen</b><small>Danach zeigt der Browser eine Fehlerseite („Seite nicht erreichbar“). Das ist richtig so: Die Adresse oben beginnt mit http://127.0.0.1:5588/login – sie ganz kopieren und hier einfügen.</small>
+         <div class="field"><input class="input mono" id="cc-addr" placeholder="http://127.0.0.1:5588/login?code=…" autocomplete="off" spellcheck="false" ${NO_PW_MANAGER}></div></li>
+     </ol>
+     <div class="btns"><button class="btn" data-close>Abbrechen</button><button class="btn primary" id="cc-ok">Verbinden</button></div>`,
+    (sheet, close) => {
+      sheet.querySelector('[data-close]').onclick = close
+      $('#cc-ok', sheet).onclick = async () => {
+        const address = $('#cc-addr', sheet).value.trim()
+        if (!/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?\/.*[?&]code=/.test(address)) return toast('Bitte die ganze Adresse der Fehlerseite einfügen (beginnt mit http://127.0.0.1:5588/login?code=)', 'info')
+        const b = $('#cc-ok', sheet)
+        b.disabled = true
+        b.textContent = 'Verbinde …'
+        const f = await api(`${API}/spotify-connect/finish`, { method: 'POST', body: { address } })
+        if (!f.ok) {
+          b.disabled = false
+          b.textContent = 'Verbinden'
+          return toast(f.body?.error === 'no_login_running' ? 'Die Anmeldung ist abgelaufen – bitte noch einmal starten.' : 'Das hat nicht geklappt – bitte noch einmal von vorn.', 'info')
+        }
+        finished = true
+        close()
+        toast('Spotify Connect ist verbunden')
+        await loadSpotify().catch(() => undefined)
+        if (currentPage()?.id === page.id) renderPage(page, false)
+      }
+    },
+    () => {
+      // (closed without finishing: the box goes back to Connect as it was)
+      if (!finished) api(`${API}/spotify-connect/cancel`, { method: 'POST' })
+    },
+  )
 }
 
 function mountSpotifyAccess(root, page) {
   const acts = {
     connect: connectSpotify,
+    connectlogin: () => connectLoginSheet(page),
     copyuri: () => copyText(SPOTIFY_REDIRECT),
     save: async () => {
       const clientId = $('#sp-id', root).value.trim()
@@ -3520,19 +3678,12 @@ function drawFound(root) {
         drawFound(root)
       })
   }
-  // the pages: first, last and the ones around the one shown, gaps as "…"
-  const pager = $('#c-pager', root)
+    const pager = $('#c-pager', root)
   if (pages <= 1) {
     pager.innerHTML = ''
     return
   }
-  const nums = [...new Set([0, pages - 1, cov.page - 1, cov.page, cov.page + 1])].filter((n) => n >= 0 && n < pages).sort((a, b) => a - b)
-  const parts = []
-  nums.forEach((n, i) => {
-    if (i > 0 && n - nums[i - 1] > 1) parts.push('<span class="gap">…</span>')
-    parts.push(`<button data-page="${n}" ${n === cov.page ? 'aria-current="page"' : ''} aria-label="Seite ${n + 1}">${n + 1}</button>`)
-  })
-  pager.innerHTML = `<button data-page="${cov.page - 1}" ${cov.page === 0 ? 'disabled' : ''} aria-label="Vorherige Seite">${icon('back', 18)}</button>${parts.join('')}<button data-page="${cov.page + 1}" ${cov.page === pages - 1 ? 'disabled' : ''} aria-label="Nächste Seite" class="next">${icon('back', 18)}</button>`
+  pager.innerHTML = pagerButtons(cov.page, pages)
   for (const b of pager.querySelectorAll('[data-page]')) {
     b.onclick = () => {
       cov.page = Number(b.dataset.page)
@@ -3657,7 +3808,22 @@ function mountCovers(root, page) {
 /* NAS: login, profiles, the folders the box shows / hides / keeps on the SD card */
 
 // st: /api/nas/state; path: the folder shown (''= top); entries: its subfolders; edits: path -> {show, hide, download}
-const nas = { st: null, profiles: [], index: null, dl: null, path: '', tree: new Map(), open: new Set(), autoOpened: false, err: '', edits: new Map(), q: '', hits: null, onlySel: false, loginOpen: false }
+const nas = { st: null, profiles: [], index: null, dl: null, path: '', tree: new Map(), open: new Set(), autoOpened: false, err: '', edits: new Map(), q: '', hits: null, onlySel: false, loginOpen: false, page: new Map() }
+// (an opened folder shows this many subfolders a page, with a pager: a share with hundreds of albums made the page very
+// long)
+const NAS_PAGE = 20
+
+// The buttons of a pager (data-page = the page's number from 0): first, last and the ones around the one shown, gaps
+// as "…", with back and forth
+function pagerButtons(page, pages) {
+  const nums = [...new Set([0, pages - 1, page - 1, page, page + 1])].filter((n) => n >= 0 && n < pages).sort((a, b) => a - b)
+  const parts = []
+  nums.forEach((n, i) => {
+    if (i > 0 && n - nums[i - 1] > 1) parts.push('<span class="gap">…</span>')
+    parts.push(`<button data-page="${n}" ${n === page ? 'aria-current="page"' : ''} aria-label="Seite ${n + 1}">${n + 1}</button>`)
+  })
+  return `<button data-page="${page - 1}" ${page === 0 ? 'disabled' : ''} aria-label="Vorherige Seite">${icon('back', 18)}</button>${parts.join('')}<button data-page="${page + 1}" ${page === pages - 1 ? 'disabled' : ''} aria-label="Nächste Seite" class="next">${icon('back', 18)}</button>`
+}
 
 async function loadNas() {
   const [st, profiles, index, dl] = await Promise.all([api('/api/nas/state'), api('/api/nas/profiles'), api('/api/nas/index/status'), api('/api/nas/download/status')])
@@ -3755,10 +3921,13 @@ function nasTreeRows(path, depth, out) {
     return out
   }
   if (depth > 0 && kids.length === 0) out.push({ empty: true, depth })
-  for (const k of kids) {
+  const pages = Math.ceil(kids.length / NAS_PAGE)
+  const page = Math.min(nas.page.get(path) ?? 0, Math.max(0, pages - 1))
+  for (const k of kids.slice(page * NAS_PAGE, (page + 1) * NAS_PAGE)) {
     out.push({ ...k, depth, isOpen: nas.open.has(k.path) })
     if (nas.open.has(k.path)) nasTreeRows(k.path, depth + 1, out)
   }
+  if (pages > 1) out.push({ pager: path, page, pages, depth })
   return out
 }
 
@@ -3825,6 +3994,7 @@ function drawNasFolders() {
       const pad = `style="--depth:${r.depth}"`
       if (r.loading) return `<div class="nas-note" ${pad}>Lade …</div>`
       if (r.empty) return `<div class="nas-note" ${pad}>Keine Unterordner</div>`
+      if (r.pager) return `<nav class="pager nas-pager" ${pad} data-pager="${esc(r.pager)}" aria-label="Seiten">${pagerButtons(r.page, r.pages)}</nav>`
       i++
       return `<div class="entry nas-row${nas.edits.has(r.path) ? ' changed' : ''}" ${pad}>
         ${flat ? '' : `<button class="nas-chev" data-toggle="${i}" aria-expanded="${r.isOpen}" aria-label="${r.isOpen ? 'Zuklappen' : 'Aufklappen'}">${icon('chevron', 16)}</button>`}
@@ -3846,6 +4016,14 @@ function drawNasFolders() {
     drawNasFolders()
   }
   for (const b of list.querySelectorAll('[data-toggle]')) b.onclick = () => toggle(nasShown[Number(b.dataset.toggle)])
+  for (const nav of list.querySelectorAll('[data-pager]')) {
+    for (const b of nav.querySelectorAll('[data-page]')) {
+      b.onclick = () => {
+        nas.page.set(nav.dataset.pager, Number(b.dataset.page))
+        drawNasFolders()
+      }
+    }
+  }
   for (const b of list.querySelectorAll('[data-open]')) {
     b.onclick = () => {
       const row = nasShown[Number(b.dataset.open)]
@@ -4623,7 +4801,7 @@ function liveTop() {
     `<section class="card wide"><h2>Aktuelles Bild</h2><p class="help">So sieht das Display gerade aus. Aktualisiert sich alle 5 Sekunden, solange die Seite offen ist.</p>
       <div class="live-shot"><img id="lv-img" alt="Bild des Displays"></div><p class="help" id="lv-note" style="margin:0"></p>
       <div class="btns"><button class="btn" id="lv-refresh">Aktualisieren</button></div></section>`,
-    `<section class="card"><h2>Fernsteuerung (VNC)</h2><p class="help">Das Display im Browser bedienen. Dafür muss VNC unter Netzwerk › Freigaben & Fernzugriff an sein.</p>
+    `<section class="card"><h2>Fernsteuerung (VNC)</h2><p class="help">Das Display im Browser bedienen – mit der Anmeldung der App, ohne eigenes Passwort. Dafür muss VNC unter Netzwerk › Freigaben & Fernzugriff an sein.</p>
       <p class="help" id="lv-vnc" style="margin:0"></p><div class="btns"><button class="btn primary" id="lv-open" disabled>Fernsteuerung öffnen</button><button class="btn" id="lv-shares" hidden>Zu Freigaben & Fernzugriff</button></div></section>`,
   ]
 }
@@ -4656,7 +4834,8 @@ function mountLive(root) {
     const shares = $('#lv-shares', root)
     shares.hidden = !!on
     shares.onclick = () => go('freigaben')
-    btn.onclick = () => window.open(`http://${location.hostname}:${r.body.port}/vnc.html?autoconnect=1&resize=scale`, '_blank', 'noopener')
+    // (the same address as the app: its login goes with it)
+    btn.onclick = () => window.open(r.body.url, '_blank', 'noopener')
   })
 }
 
@@ -6321,10 +6500,39 @@ const CONTROLLERS = {
     },
   },
   link: {
+    // the fields that fit the kind of link (as the box's own add page)
+    sections: (page) => {
+      const type = state.values.get('lType') ?? 'Spotify-Link'
+      const spotify = type.startsWith('Spotify')
+      const radio = type === 'Radio-Stream'
+      const part = !!state.values.get('lPart')
+      const keep = (it) =>
+        !it.key ||
+        ({
+          lTitle: radio,
+          lSort: !radio,
+          lShuffle: spotify,
+          lPart: !radio,
+          lFrom: !radio && part,
+          lTo: !radio && part,
+        }[it.key] ?? true)
+      return page.sections.map((sec) => ({
+        ...sec,
+        items: sec.items.filter(keep).map((it) =>
+          it.key === 'lUrl'
+            ? { ...it, label: type === 'Spotify-Suche' ? 'Suchbegriff' : 'Link', placeholder: type === 'Spotify-Suche' ? 'z. B. Benjamin Blümchen Folge 1' : 'https://…' }
+            : it.key === 'lLabel' && type === 'Spotify-Suche'
+              ? { ...it, label: 'Name der Kachel' }
+              : it,
+        ),
+      }))
+    },
     change(key, v, page) {
-      if (key !== 'lType') return
-      state.values.set('lCat', v === 'Spotify-Link' ? 'Hörbuch/Hörspiel' : 'Radio & Podcasts')
-      renderPage(page, false)
+      if (key === 'lType') {
+        state.values.set('lCat', v.startsWith('Spotify') ? 'Hörbuch/Hörspiel' : 'Radio & Podcasts')
+        renderPage(page, false)
+      }
+      if (key === 'lPart') renderPage(page, false)
     },
     byLabel: {
       Hinzufügen: (_arg, _label, page) => addLink(page),

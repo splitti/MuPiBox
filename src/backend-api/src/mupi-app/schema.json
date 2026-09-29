@@ -766,20 +766,22 @@
        "default": "Spotify-Link",
        "options": [
         "Spotify-Link",
+        "Spotify-Suche",
         "Radio-Stream",
         "Podcast (RSS)"
        ]
       },
       {
        "type": "text",
-       "label": "URL",
+       "label": "Link",
        "key": "lUrl",
        "placeholder": "https://…",
-       "kind": "text"
+       "kind": "text",
+       "help": "Spotify: Album, Playlist, Interpret, Podcast oder Hörbuch. Radio: auch eine .m3u- oder .pls-Datei – die Box liest die Stream-Adresse daraus."
       },
       {
        "type": "text",
-       "label": "Künstler/Show-Name (optional)",
+       "label": "Interpret / Name (optional)",
        "key": "lLabel",
        "placeholder": "z. B. Kinderradio",
        "kind": "text"
@@ -801,6 +803,61 @@
         "Musik",
         "Radio & Podcasts"
        ]
+      },
+      {
+       "type": "text",
+       "label": "Cover (Bild-URL, optional)",
+       "key": "lCover",
+       "placeholder": "https://…",
+       "kind": "text"
+      },
+      {
+       "type": "text",
+       "label": "Interpret-Cover (Bild-URL, optional)",
+       "key": "lArtistCover",
+       "placeholder": "https://…",
+       "kind": "text"
+      },
+      {
+       "type": "select",
+       "label": "Sortierung",
+       "key": "lSort",
+       "default": "Standard",
+       "options": [
+        "Standard",
+        "Alphabetisch A–Z",
+        "Alphabetisch Z–A",
+        "Älteste zuerst",
+        "Neueste zuerst"
+       ],
+       "help": "Standard: Podcasts die neueste Folge zuerst, sonst alphabetisch."
+      },
+      {
+       "type": "toggle",
+       "label": "Zufällig abspielen",
+       "key": "lShuffle",
+       "default": false
+      },
+      {
+       "type": "toggle",
+       "label": "Nur einen Teil der Folgen",
+       "key": "lPart",
+       "default": false,
+       "help": "Z. B. nur Folge 1 bis 20 einer Serie – gezählt in der Reihenfolge von Spotify bzw. des Podcasts."
+      },
+      {
+       "type": "text",
+       "label": "Von Nr.",
+       "key": "lFrom",
+       "placeholder": "1",
+       "kind": "number"
+      },
+      {
+       "type": "text",
+       "label": "Bis Nr. (leer = bis zum Ende)",
+       "key": "lTo",
+       "placeholder": "",
+       "kind": "number"
       },
       {
        "type": "buttons",
