@@ -22,11 +22,17 @@ if [ "$EUID" -ne 0 ]
   exit
 fi
 
-if [ -f "${DATA_LOCK}" ]; then
+# Taken in one step (noclobber creates the file with O_EXCL, as the backend does): "test, then touch" let two runs in
+# at once. Kept fresh while the scan runs: the backend takes a lock older than 30 s for one left over by a crash.
+if ! ( set -C; : > "${DATA_LOCK}" ) 2>/dev/null; then
 	echo "Data-file locked."
     exit
 else
-	touch ${DATA_LOCK}
+	HOLD_LOCK=1
+	( while [ -f "${DATA_LOCK}" ]; do sleep 10; touch -c "${DATA_LOCK}"; done ) &
+	LOCK_KEEPER=$!
+	# (ended early: the lock goes, but only while it is still this run's)
+	trap 'kill ${LOCK_KEEPER} 2>/dev/null; [ -n "${HOLD_LOCK}" ] && rm -f "${DATA_LOCK}"' EXIT
 
 	if [ ! -f "$DATA" ]; then
 		echo "[]" > ${DATA}
@@ -106,14 +112,14 @@ else
 							--arg cover "http://${HN}:8200/cover/audiobook/${artist}/${title}/cover.jpg" \
 							--arg artistcover "http://${HN}:8200/cover/audiobook/${artist}/cover.jpg" \
 							'. += [{type: "library", category: "audiobook", artist: $artist, title: $title, cover: $cover, artistcover: $artistcover}]' \
-							"${DATA}" > "${_TMP}" && mv "${_TMP}" "${DATA}" || rm -f "${_TMP}"
+							"${DATA}" > "${_TMP}" && [ -s "${_TMP}" ] && mv "${_TMP}" "${DATA}" || rm -f "${_TMP}"
 					else
 						/usr/bin/jq \
 							--arg artist "${artist}" \
 							--arg title "${title}" \
 							--arg cover "http://${HN}:8200/cover/audiobook/${artist}/${title}/cover.jpg" \
 							'. += [{type: "library", category: "audiobook", artist: $artist, title: $title, cover: $cover}]' \
-							"${DATA}" > "${_TMP}" && mv "${_TMP}" "${DATA}" || rm -f "${_TMP}"
+							"${DATA}" > "${_TMP}" && [ -s "${_TMP}" ] && mv "${_TMP}" "${DATA}" || rm -f "${_TMP}"
 					fi
 				fi
 			fi
@@ -174,14 +180,14 @@ else
 							--arg cover "http://${HN}:8200/cover/music/${artist}/${title}/cover.jpg" \
 							--arg artistcover "http://${HN}:8200/cover/music/${artist}/cover.jpg" \
 							'. += [{type: "library", category: "music", artist: $artist, title: $title, cover: $cover, artistcover: $artistcover}]' \
-							"${DATA}" > "${_TMP}" && mv "${_TMP}" "${DATA}" || rm -f "${_TMP}"
+							"${DATA}" > "${_TMP}" && [ -s "${_TMP}" ] && mv "${_TMP}" "${DATA}" || rm -f "${_TMP}"
 					else
 						/usr/bin/jq \
 							--arg artist "${artist}" \
 							--arg title "${title}" \
 							--arg cover "http://${HN}:8200/cover/music/${artist}/${title}/cover.jpg" \
 							'. += [{type: "library", category: "music", artist: $artist, title: $title, cover: $cover}]' \
-							"${DATA}" > "${_TMP}" && mv "${_TMP}" "${DATA}" || rm -f "${_TMP}"
+							"${DATA}" > "${_TMP}" && [ -s "${_TMP}" ] && mv "${_TMP}" "${DATA}" || rm -f "${_TMP}"
 					fi
 				fi
 			fi
@@ -241,14 +247,14 @@ else
 							--arg cover "http://${HN}:8200/cover/other/${artist}/${title}/cover.jpg" \
 							--arg artistcover "http://${HN}:8200/cover/other/${artist}/cover.jpg" \
 							'. += [{type: "library", category: "other", artist: $artist, title: $title, cover: $cover, artistcover: $artistcover}]' \
-							"${DATA}" > "${_TMP}" && mv "${_TMP}" "${DATA}" || rm -f "${_TMP}"
+							"${DATA}" > "${_TMP}" && [ -s "${_TMP}" ] && mv "${_TMP}" "${DATA}" || rm -f "${_TMP}"
 					else
 						/usr/bin/jq \
 							--arg artist "${artist}" \
 							--arg title "${title}" \
 							--arg cover "http://${HN}:8200/cover/other/${artist}/${title}/cover.jpg" \
 							'. += [{type: "library", category: "other", artist: $artist, title: $title, cover: $cover}]' \
-							"${DATA}" > "${_TMP}" && mv "${_TMP}" "${DATA}" || rm -f "${_TMP}"
+							"${DATA}" > "${_TMP}" && [ -s "${_TMP}" ] && mv "${_TMP}" "${DATA}" || rm -f "${_TMP}"
 					fi
 				fi
 			fi
@@ -258,7 +264,9 @@ else
 	/usr/bin/chown -R dietpi:dietpi /home/dietpi/MuPiBox/media/
 	/usr/bin/chown -R dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover/
 	/usr/bin/chown dietpi:dietpi ${DATA}
+	kill ${LOCK_KEEPER} 2>/dev/null
 	rm ${DATA_LOCK}
+	HOLD_LOCK=
 
 	bash /usr/local/bin/mupibox/add_index.sh
 

@@ -82,15 +82,46 @@ async function readText(file: string): Promise<string> {
   }
 }
 
-// Writes a file as root, keeping its owner and mode (as the admin interface's JSON editor)
+// Writes a file as root, keeping its owner and mode (as the admin interface's JSON editor). Put next to the target
+// and renamed over it: install replaced the file in place, a reader could see it half written.
 async function installAs(target: string, content: string): Promise<boolean> {
   const st = await run('sudo', ['stat', '-c', '%a %U %G', target], 10000)
   const [mode, owner, group] = st.ok ? st.stdout.trim().split(' ') : ['644', 'dietpi', 'dietpi']
   const tmp = `/tmp/.mupibox-app-${process.pid}-${Date.now()}.json`
+  const next = `${target}.app-${process.pid}.tmp`
   await fsp.writeFile(tmp, content)
-  const r = await run('sudo', ['install', '-m', mode, '-o', owner, '-g', group, tmp, target], 20000)
+  const r = await run('sudo', ['install', '-m', mode, '-o', owner, '-g', group, tmp, next], 20000)
   await fsp.unlink(tmp).catch(() => undefined)
-  return r.ok
+  const moved = r.ok && (await run('sudo', ['mv', '-f', next, target], 20000)).ok
+  if (!moved) await run('sudo', ['rm', '-f', next])
+  return moved
+}
+
+// The library's lock, taken as the backend takes it (server.ts acquireLock: created with O_EXCL, one older than 30 s
+// is left over from a crash): the JSON editor, the library reset and "Update settings" wrote data.json while the
+// Smart-Sync or the media scan did, and one of the two changes was lost.
+const DATA_LOCK = '/tmp/.data.lock'
+async function withDataLock<T>(work: () => Promise<T>): Promise<T | 'locked'> {
+  for (let i = 0; i < 40; i++) {
+    let got = false
+    try {
+      await (await fsp.open(DATA_LOCK, 'wx')).close()
+      got = true
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== 'EEXIST') throw err
+      const age = Date.now() - ((await fsp.stat(DATA_LOCK).catch(() => null))?.mtimeMs ?? Date.now())
+      if (age > 30_000) await fsp.unlink(DATA_LOCK).catch(() => undefined)
+    }
+    if (got) {
+      try {
+        return await work()
+      } finally {
+        await fsp.unlink(DATA_LOCK).catch(() => undefined)
+      }
+    }
+    await new Promise((r) => setTimeout(r, 250))
+  }
+  return 'locked'
 }
 
 // Secrets of the box config in the JSON editor: the value stands there as HIDDEN (only strings; not the dates and lists
@@ -275,7 +306,13 @@ export function registerAdminRoutes(router: Router, deps: AdminDeps): void {
       res.json({ ok: true })
       return
     }
-    res.status((await installAs(file, `${JSON.stringify(parsed, null, 2)}\n`)) ? 200 : 500).json({ ok: true })
+    const write = () => installAs(file, `${JSON.stringify(parsed, null, 2)}\n`)
+    const done = file === JSON_FILES.data ? await withDataLock(write) : await write()
+    if (done === 'locked') {
+      res.status(409).json({ error: 'busy' })
+      return
+    }
+    res.status(done ? 200 : 500).json({ ok: done })
   })
 
   /**
@@ -311,8 +348,15 @@ export function registerAdminRoutes(router: Router, deps: AdminDeps): void {
       return
     }
     if (what === 'library') {
-      const r = await run('sudo', ['sh', '-c', `rm -f ${SERVER_CONFIG}/offline_data.json && printf '[]\\n' > ${SERVER_CONFIG}/data.json && chown dietpi:dietpi ${SERVER_CONFIG}/data.json`])
-      res.status(r.ok ? 200 : 500).json({ ok: r.ok })
+      const done = await withDataLock(async () => {
+        await run('sudo', ['rm', '-f', `${SERVER_CONFIG}/offline_data.json`])
+        return installAs(`${SERVER_CONFIG}/data.json`, '[]\n')
+      })
+      if (done === 'locked') {
+        res.status(409).json({ error: 'busy' })
+        return
+      }
+      res.status(done ? 200 : 500).json({ ok: done })
       return
     }
     if (what === 'server') {
@@ -336,8 +380,9 @@ export function registerAdminRoutes(router: Router, deps: AdminDeps): void {
   /** POST /api/app/apply-settings - the admin interface's "Update settings": old playlist entries, setting_update.sh. */
   router.post('/apply-settings', requireSession, requireCsrf, async (_req, res) => {
     try {
-      const data = JSON.parse(await readText(`${SERVER_CONFIG}/data.json`)) as unknown
-      if (Array.isArray(data)) {
+      await withDataLock(async () => {
+        const data = JSON.parse(await readText(`${SERVER_CONFIG}/data.json`)) as unknown
+        if (!Array.isArray(data)) return
         let changed = false
         for (const item of data as Record<string, unknown>[]) {
           if (item && item.category === 'playlist') {
@@ -348,7 +393,7 @@ export function registerAdminRoutes(router: Router, deps: AdminDeps): void {
           }
         }
         if (changed) await installAs(`${SERVER_CONFIG}/data.json`, JSON.stringify(data, null, 4))
-      }
+      })
     } catch {
       // an unreadable data.json stays as it is
     }
