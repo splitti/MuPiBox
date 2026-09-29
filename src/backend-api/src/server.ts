@@ -42,9 +42,10 @@ import { type IncomingMessage, request as httpRequest } from 'node:http'
 import type { Duplex } from 'node:stream'
 import { SUDO_BACKUP_SNIPPET, backupBeforeWrite } from './file-backup'
 import { readEmbeddedPicture } from './embedded-cover'
+import { acquireLock, releaseLock, staleReason } from './file-lock'
 import { coverHidden } from './hidden-covers'
 import { OnlineCovers } from './online-covers'
-import { browserGuard, corsOptionsFor, isAllowedHost, isLoopback, localOnly, localOrElternSession, PROXY_PORT, viaProxy } from './request-guard'
+import { browserGuard, corsOptionsFor, isAllowedHost, isLoopback, localOnly, localOrElternSession, PROXY_PORT, setConfiguredHosts, viaProxy } from './request-guard'
 
 // Force IPv4 for DNS lookups to avoid EAI_AGAIN errors on Raspberry Pi
 // This fixes issues where IPv6 is misconfigured or not supported
@@ -216,11 +217,6 @@ const rssCacheDataDir = `${configBasePath}/rss-cache`
 const serverDir = typeof __dirname !== 'undefined' ? __dirname : path.dirname(fileURLToPath(import.meta.url))
 const rssCoverDir = path.join(serverDir, 'www', 'rss-covers')
 const rssCoverPublicBase = '/rss-covers'
-// Maximum age (ms) of a lock file before it's considered stale and reclaimable.
-// A write+release cycle is sub-second in practice; 30s gives a generous margin
-// for SD-card stalls and busy-system schedules while still recovering before
-// the next user action.
-const LOCK_STALE_MS = 30_000
 
 // AR5-6: proactively clear any lock file left behind by a previous pm2 crash.
 // Without this, a mid-write crash leaves /tmp/.data.lock or /tmp/.resume.lock
@@ -230,25 +226,14 @@ const LOCK_STALE_MS = 30_000
 // this start-up pass keeps the file system tidy and surfaces the cleanup in
 // the boot logs.
 ;[dataLock, resumeLock].forEach((lockPath) => {
+  const reason = staleReason(lockPath)
+  if (!reason || reason === 'gone') return
   try {
-    const stat = fs.statSync(lockPath)
-    const ageMs = Date.now() - stat.mtimeMs
-    if (ageMs > LOCK_STALE_MS) {
-      fs.unlinkSync(lockPath)
-      console.warn(
-        `${new Date().toLocaleString()}: [MuPiBox-Server] startup: removed stale lock ${lockPath} (age ${Math.round(ageMs / 1000)}s)`,
-      )
-    } else {
-      console.warn(
-        `${new Date().toLocaleString()}: [MuPiBox-Server] startup: leaving lock ${lockPath} in place (age ${Math.round(ageMs / 1000)}s, < ${LOCK_STALE_MS / 1000}s)`,
-      )
-    }
+    fs.unlinkSync(lockPath)
+    console.warn(`${new Date().toLocaleString()}: [MuPiBox-Server] startup: removed stale lock ${lockPath} (${reason})`)
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
-      console.error(
-        `${new Date().toLocaleString()}: [MuPiBox-Server] startup: error inspecting ${lockPath}:`,
-        err,
-      )
+      console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] startup: error removing ${lockPath}:`, err)
     }
   }
 })
@@ -585,9 +570,17 @@ function fetchPinned(url: URL, signal: AbortSignal): Promise<Response> {
         if (value !== undefined) headers.set(name, Array.isArray(value) ? value.join(', ') : value)
       }
       const status = res.statusCode ?? 502
-      const empty = status === 204 || status === 304
-      if (empty) res.resume()
-      resolve(new Response(empty ? null : (Readable.toWeb(res) as ReadableStream<Uint8Array>), { status, headers }))
+      // (no body allowed with these - a stream for them made the Response constructor throw here, in a callback
+      // nothing caught: the whole process ended. Any other surprise is a failed fetch, not a crash either.)
+      const empty = status === 204 || status === 205 || status === 304
+      try {
+        if (status < 200 || status > 599) throw new Error(`unexpected status ${status}`)
+        if (empty) res.resume()
+        resolve(new Response(empty ? null : (Readable.toWeb(res) as ReadableStream<Uint8Array>), { status, headers }))
+      } catch (err) {
+        res.destroy()
+        reject(err)
+      }
     })
     req.on('error', reject)
     req.end()
@@ -3167,21 +3160,6 @@ app.post('/api/add', (req, res) => {
   })
 })
 
-// Lock acquisition — atomic test-and-set on a lock file using O_EXCL | O_CREAT
-// (Node's 'wx' flag). The historical pattern was `if (existsSync) ...; openSync(..., 'w')`
-// which had two problems:
-//   M8: 'w' truncates the existing file instead of failing, so the openSync
-//        side never actually fails — the "lock" was just a marker file that
-//        relied on existsSync + releaseLock cooperating.
-//   M8 race: between existsSync and openSync another worker could win the
-//            race, both threads would think they hold the lock.
-// 'wx' = O_CREAT | O_EXCL: atomic create-or-fail. EEXIST means somebody else
-// holds it.
-//
-// AR5-6 stale-lock recovery: if EEXIST and the lock is older than LOCK_STALE_MS,
-// the owner almost certainly crashed before releasing — steal it once and try
-// again. A startup pass (see top of file) already does this proactively, but
-// recovery at acquisition time covers crashes that happen after startup.
 // data.json, resume.json and wlan.json were written straight into the target file: a power cut
 // or a crash mid-write left a cut-off JSON (the library or the resume list unreadable). Written
 // next to the target and renamed over it instead, so a reader sees the old or the new file.
@@ -3201,64 +3179,6 @@ function writeJsonAtomic(file: string, data: unknown, callback: (error: Error | 
       }
       callback(null)
     })
-  })
-}
-
-const acquireLock = (lockPath: string, context: string): 'acquired' | 'locked' | 'error' => {
-  const tryOpen = (): 'acquired' | 'exists' | 'error' => {
-    try {
-      fs.closeSync(fs.openSync(lockPath, 'wx'))
-      return 'acquired'
-    } catch (err) {
-      const code = (err as NodeJS.ErrnoException).code
-      if (code === 'EEXIST') return 'exists'
-      console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] ${context} failed to acquire lock:`, err)
-      return 'error'
-    }
-  }
-  const first = tryOpen()
-  if (first !== 'exists') return first
-  // EEXIST: check whether the existing lock is stale.
-  try {
-    const stat = fs.statSync(lockPath)
-    const ageMs = Date.now() - stat.mtimeMs
-    if (ageMs > LOCK_STALE_MS) {
-      console.warn(
-        `${new Date().toLocaleString()}: [MuPiBox-Server] ${context} found stale lock (age ${Math.round(ageMs / 1000)}s), reclaiming`,
-      )
-      try {
-        fs.unlinkSync(lockPath)
-      } catch (unlinkErr) {
-        if ((unlinkErr as NodeJS.ErrnoException).code !== 'ENOENT') {
-          console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] ${context} stale-lock unlink failed:`, unlinkErr)
-          return 'error'
-        }
-      }
-      const retry = tryOpen()
-      return retry === 'exists' ? 'locked' : retry
-    }
-  } catch (statErr) {
-    if ((statErr as NodeJS.ErrnoException).code === 'ENOENT') {
-      // Lock disappeared between our open attempt and the stat — race with a
-      // worker that just released. Try once more.
-      const retry = tryOpen()
-      return retry === 'exists' ? 'locked' : retry
-    }
-    console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] ${context} stale-lock stat failed:`, statErr)
-  }
-  return 'locked'
-}
-
-// Lock cleanup — used by every read-modify-write endpoint (data.json + resume.json)
-// to ensure the lock is always removed once the read+write cycle has finished
-// (success OR error). The historical pattern called fs.unlink outside the async
-// readFile callback, so the lock was gone before the write started — two
-// concurrent calls could clobber each other.
-const releaseLock = (lockPath: string, context: string) => {
-  fs.unlink(lockPath, (err) => {
-    if (err && (err as NodeJS.ErrnoException).code !== 'ENOENT') {
-      console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] ${context} - failed to unlink lock:`, err)
-    }
   })
 }
 
@@ -8033,6 +7953,10 @@ if (!testServe) {
   // The Spotify login's 6 months: reminders before the end, a message when Spotify refused it (eltern/spotify-auth-age.ts)
   startSpotifyLoginWatch({ getMupiboxConfig: getMupiboxConfigSync, updateMupiboxConfig })
   startTlsWatch({ getMupiboxConfig: getMupiboxConfigSync, updateMupiboxConfig })
+  setConfiguredHosts(() => {
+    const linkHost = (getMupiboxConfigSync()?.tls as { linkHost?: unknown } | undefined)?.linkHost
+    return typeof linkHost === 'string' && linkHost !== '' ? [linkHost.toLowerCase()] : []
+  })
   // Eltern-WebApp rate-limit map cleanup tick.
   startBucketCleanup()
   // Phase 18 Item 4: Play-Log poller — sniffs localhost:5005 (the player's

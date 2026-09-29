@@ -35,10 +35,18 @@ function isIpLiteral(host: string): boolean {
   return /^\d{1,3}(\.\d{1,3}){3}$/.test(host) || (host.startsWith('[') && host.endsWith(']'))
 }
 
+// Names the parents set up for the box themselves (tls.linkHost: a name their own certificate is for). Only those,
+// not any name: the links in the QR code and Telegram lead there, and the app answered them with 403.
+let configuredHosts: () => string[] = () => []
+export function setConfiguredHosts(get: () => string[]): void {
+  configuredHosts = get
+}
+
 export function isAllowedHost(hostHeader: string | undefined): boolean {
   const host = hostnameOf(hostHeader)
   if (host === '') return true // HTTP/1.0 clients without Host: not a browser
   if (host === 'localhost' || isIpLiteral(host)) return true
+  if (configuredHosts().includes(host)) return true
   const boxName = os.hostname().toLowerCase()
   if (host === boxName) return true
   return LOCAL_SUFFIXES.some((suffix) => host === `${boxName}.${suffix}`)

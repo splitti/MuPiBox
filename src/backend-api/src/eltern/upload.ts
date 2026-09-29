@@ -30,10 +30,13 @@ const RESERVE_BYTES = 512 * 1024 * 1024
 
 // Whether a path really is inside a folder of the media: the name alone said so, but a symbolic link on the way
 // (e.g. media/music/x -> /home/dietpi) led the upload or the deletion outside. The deepest part that exists is
-// resolved; what does not exist yet is made below it.
-async function reallyInside(target: string, folder: string): Promise<boolean> {
+// resolved; what does not exist yet is made below it. The category folder itself is held to the media folder (the
+// one fixed border): a category that is a link elsewhere (media/music -> /home/dietpi) is no place to write or delete.
+const within = (real: string, base: string) => real === base || real.startsWith(base + path.sep)
+async function reallyInside(target: string, folder: string, root: string): Promise<boolean> {
+  const top = await fsp.realpath(root).catch(() => null)
   const base = await fsp.realpath(folder).catch(() => null)
-  if (!base) return false
+  if (!top || !base || base === top || !within(base, top)) return false
   let existing = target
   while (!(await fsp.lstat(existing).then(() => true, () => false))) {
     const up = path.dirname(existing)
@@ -41,7 +44,7 @@ async function reallyInside(target: string, folder: string): Promise<boolean> {
     existing = up
   }
   const real = await fsp.realpath(existing).catch(() => null)
-  return real !== null && (real === base || real.startsWith(base + path.sep))
+  return real !== null && within(real, base)
 }
 const MAX_FILE_BYTES = 4 * 1024 * 1024 * 1024
 // Folder depth below the album (e.g. CD1/, CD2/ of an uploaded folder)
@@ -167,7 +170,7 @@ export function registerLocalUploadRoutes(router: Router, deps: LocalLibraryDeps
       res.status(400).json({ error: 'bad target' })
       return
     }
-    if (!(await reallyInside(dir, path.join(deps.root, category)))) {
+    if (!(await reallyInside(dir, path.join(deps.root, category), deps.root))) {
       res.status(400).json({ error: 'bad target' })
       return
     }
@@ -219,7 +222,7 @@ export function registerLocalUploadRoutes(router: Router, deps: LocalLibraryDeps
       return
     }
     // (a folder below a link to elsewhere is not one of the media)
-    if (!(await reallyInside(target, categoryDir)) || (await fsp.realpath(target)) === (await fsp.realpath(categoryDir))) {
+    if (!(await reallyInside(target, categoryDir, deps.root)) || (await fsp.realpath(target)) === (await fsp.realpath(categoryDir))) {
       res.status(400).json({ error: 'invalid_path' })
       return
     }

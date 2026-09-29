@@ -10,6 +10,7 @@ import { Transform } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 import type { Router } from 'express'
 import type { MupiboxConfig } from '../models/mupibox-config.model'
+import { withLock } from '../file-lock'
 import { requireCsrf, requireSession } from './middleware'
 
 export interface AdminDeps {
@@ -97,32 +98,12 @@ async function installAs(target: string, content: string): Promise<boolean> {
   return moved
 }
 
-// The library's lock, taken as the backend takes it (server.ts acquireLock: created with O_EXCL, one older than 30 s
-// is left over from a crash): the JSON editor, the library reset and "Update settings" wrote data.json while the
-// Smart-Sync or the media scan did, and one of the two changes was lost.
+// The library's lock, the one the backend and the scripts take (file-lock.ts): the JSON editor, the library reset and
+// "Update settings" wrote data.json while the Smart-Sync or the media scan did, and one of the two changes was lost.
 const DATA_LOCK = '/tmp/.data.lock'
-async function withDataLock<T>(work: () => Promise<T>): Promise<T | 'locked'> {
-  for (let i = 0; i < 40; i++) {
-    let got = false
-    try {
-      await (await fsp.open(DATA_LOCK, 'wx')).close()
-      got = true
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== 'EEXIST') throw err
-      const age = Date.now() - ((await fsp.stat(DATA_LOCK).catch(() => null))?.mtimeMs ?? Date.now())
-      if (age > 30_000) await fsp.unlink(DATA_LOCK).catch(() => undefined)
-    }
-    if (got) {
-      try {
-        return await work()
-      } finally {
-        await fsp.unlink(DATA_LOCK).catch(() => undefined)
-      }
-    }
-    await new Promise((r) => setTimeout(r, 250))
-  }
-  return 'locked'
-}
+const withDataLock = <T>(work: () => Promise<T>) => withLock(DATA_LOCK, 'app admin', work)
+
+let restoreRunning = false
 
 // Secrets of the box config in the JSON editor: the value stands there as HIDDEN (only strings; not the dates and lists
 // that share the name, e.g. tokenUpdatedAt, tokenScopes)
@@ -468,18 +449,18 @@ export function registerAdminRoutes(router: Router, deps: AdminDeps): void {
     const unpacked = Number(/^\d+ files?, (\d+) bytes uncompressed/.exec(lines[lines.length - 1] ?? '')?.[1] ?? NaN)
     let bad = ''
     let count = 0
-    const names: string[] = []
+    const files: { name: string; size: number }[] = []
     for (const line of lines.slice(2, -1)) {
       const m =
-        /^([-d])[rwxsStT-]{9}\s+\S+\s+unx\s+\d+\s+\S+\s+\S+\s+\S+\s+\S+\s(.+)$/.exec(line) ??
-        /^([-d])[rwxahs-]{6}\s+\S+\s+(?:fat|ntf|hpf)\s+\d+\s+\S+\s+\S+\s+\S+\s+\S+\s(.+)$/.exec(line)
+        /^([-d])[rwxsStT-]{9}\s+\S+\s+unx\s+(\d+)\s+\S+\s+\S+\s+\S+\s+\S+\s(.+)$/.exec(line) ??
+        /^([-d])[rwxahs-]{6}\s+\S+\s+(?:fat|ntf|hpf)\s+(\d+)\s+\S+\s+\S+\s+\S+\s+\S+\s(.+)$/.exec(line)
       if (!m) {
         bad = line.slice(0, 120)
         break
       }
       count++
       const type = m[1]
-      const name = m[2].replace(/^\/+/, '')
+      const name = m[3].replace(/^\/+/, '')
       const isDir = type === 'd' || name.endsWith('/')
       const inMedia = name.startsWith('home/dietpi/MuPiBox/media/')
       const allowed =
@@ -490,26 +471,39 @@ export function registerAdminRoutes(router: Router, deps: AdminDeps): void {
         bad = name
         break
       }
-      if (!isDir) names.push(name)
+      if (!isDir) files.push({ name, size: Number(m[2]) })
     }
     if (bad || count === 0 || count !== entries) {
       await cleanup()
       res.status(400).json({ error: 'entry_not_allowed', entry: bad || (count === 0 ? '(leer)' : '(unbekannte Einträge)') })
       return
     }
-    // unpacked it has to fit on the card as well (files already there are replaced: their room counts)
-    let replaced = 0
-    for (const name of names) {
-      const st = await fsp.lstat(`/${name}`).catch(() => null)
-      if (st?.isFile()) replaced += st.size
+    // Unpacked it has to fit on the card as well. unzip goes entry by entry: a file it replaces frees its room only
+    // when its own entry comes, so each entry counts with what it adds (the room of all replaced files counted up
+    // front let a big new file come first and fill the card). One restore at a time, else both count the same room.
+    if (restoreRunning) {
+      await cleanup()
+      res.status(409).json({ error: 'restore_running' })
+      return
     }
-    if (!Number.isFinite(unpacked) || unpacked - replaced > (await freeBytes('/'))) {
+    restoreRunning = true
+    let need = 0
+    const seen = new Set<string>()
+    for (const { name, size } of files) {
+      const st = seen.has(name) ? null : await fsp.lstat(`/${name}`).catch(() => null)
+      seen.add(name)
+      need += Math.max(0, size - (st?.isFile() ? st.size : 0))
+    }
+    if (!Number.isFinite(unpacked) || need > (await freeBytes('/'))) {
+      restoreRunning = false
       await cleanup()
       res.status(413).json({ error: 'not_enough_space' })
       return
     }
     const version = String((deps.getMupiboxConfig()?.mupibox as Record<string, unknown> | undefined)?.version ?? '')
-    const unzip = await run('sudo', ['unzip', '-o', file, '-d', '/'], 3600000)
+    const unzip = await run('sudo', ['unzip', '-o', file, '-d', '/'], 3600000).finally(() => {
+      restoreRunning = false
+    })
     await cleanup()
     if (!unzip.ok) {
       res.status(500).json({ error: 'unzip failed' })

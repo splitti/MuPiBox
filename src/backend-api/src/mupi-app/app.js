@@ -6527,7 +6527,7 @@ function mountBackup(root) {
         return toast('Backup eingespielt – die Box startet neu')
       }
       $('#bk-bar', root).hidden = true
-      toast(b.error === 'entry_not_allowed' ? `Abgelehnt: „${b.entry}“ gehört nicht in ein Backup` : b.error === 'not a zip file' ? 'Das ist keine Zip-Datei' : 'Einspielen ging nicht', 'info')
+      toast(b.error === 'entry_not_allowed' ? `Abgelehnt: „${b.entry}“ gehört nicht in ein Backup` : b.error === 'not a zip file' ? 'Das ist keine Zip-Datei' : b.error === 'not_enough_space' ? 'Zu wenig Platz auf der SD-Karte für dieses Backup' : b.error === 'restore_running' ? 'Es wird gerade schon ein Backup eingespielt' : 'Einspielen ging nicht', 'info')
     }
     xhr.onerror = () => {
       $('#bk-bar', root).hidden = true

@@ -406,10 +406,11 @@ rm -f /tmp/mupibox-update-failed
 	mkdir -p "${USERDATA_BAK}/www" >&3 2>&3
 	# Every copy is checked (a full card copied part of it, and the old install was deleted all the same); what is not
 	# there (a box without covers yet) is not an error. The podcast pictures (rss-covers) come along: without them every
-	# picture was loaded again after an update.
+	# picture was loaded again after an update. theme-data holds the pictures and fonts of the themes, the custom
+	# theme's among them (put there by the user): it comes back below without replacing the files the update ships.
 	SKC=/home/dietpi/.mupibox/Sonos-Kids-Controller-master
 	cp -a "${SKC}/server/config" "${USERDATA_BAK}/config" >&3 2>&3 || fail_update "backup of the user data failed (card full?)"
-	for item in cover active_theme.css rss-covers; do
+	for item in cover active_theme.css rss-covers theme-data; do
 		[ -e "${SKC}/www/${item}" ] || continue
 		cp -a "${SKC}/www/${item}" "${USERDATA_BAK}/www/${item}" >&3 2>&3 || fail_update "backup of www/${item} failed (card full?)"
 	done
@@ -932,6 +933,11 @@ rm -f /tmp/mupibox-update-failed
 		rm -rf "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/${item}" >&3 2>&3
 		cp -a "${USERDATA_BAK}/www/${item}" "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/${item}" >&3 2>&3 || RESTORE_OK=0
 	done
+	# theme-data: the new version's files stay, what the user added comes back (-n: nothing of the update replaced)
+	if [ -d "${USERDATA_BAK}/www/theme-data" ]; then
+		mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data >&3 2>&3
+		cp -an "${USERDATA_BAK}/www/theme-data/." /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/ >&3 2>&3 || RESTORE_OK=0
+	fi
 	chown -R dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config >&3 2>&3
 	# only now that everything is back
 	if [ "${RESTORE_OK}" = 1 ] && /usr/bin/jq -e . /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json > /dev/null 2>&1; then
