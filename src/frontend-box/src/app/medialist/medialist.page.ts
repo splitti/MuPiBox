@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, Signal, signal, WritableSignal } from '@angular/core'
+import { ChangeDetectionStrategy, Component, computed, inject, Signal, signal, WritableSignal } from '@angular/core'
 import { toObservable, toSignal } from '@angular/core/rxjs-interop'
 import { ActivatedRoute, NavigationExtras, Router } from '@angular/router'
 import {
@@ -7,6 +7,7 @@ import {
   IonContent,
   IonHeader,
   IonIcon,
+  IonRouterOutlet,
   IonTitle,
   IonToolbar,
   NavController,
@@ -86,6 +87,9 @@ export class MedialistPage extends SwiperIonicEventsHelper {
       }
     })
   })
+
+  // (whether there is a page to go back to: none after the page was loaded afresh here)
+  private readonly outlet = inject(IonRouterOutlet, { optional: true })
 
   constructor(
     private router: Router,
@@ -210,8 +214,12 @@ export class MedialistPage extends SwiperIonicEventsHelper {
     const above = this.levelsAbove.pop()
     if (above !== undefined) {
       this.router.navigate(['/medialist'], { queryParams: above, replaceUrl: true })
-    } else {
+    } else if (this.outlet?.canGoBack()) {
       this.navController.pop()
+    } else {
+      // The page was loaded afresh on this list (the parents saved a display setting in the app, which reloads the
+      // display where it is): no page before it - pop() did nothing and the child was stuck. Back to the start page.
+      this.navController.navigateRoot('/home', { animationDirection: 'back' })
     }
   }
 
