@@ -71,7 +71,7 @@
    "id": "g-dienste",
    "title": "Dienste",
    "icon": "plug",
-   "description": "Telegram, MQTT, WLED · Link zu Spotify"
+   "description": "Spotify, NAS · Telegram, MQTT, WLED"
   },
   {
    "id": "g-sicherheit",
@@ -4579,11 +4579,29 @@
    "area": "einstellungen",
    "parent": "einstellungen",
    "title": "Dienste",
-   "description": "Telegram, MQTT, WLED · Link zu Spotify",
+   "description": "Spotify, NAS · Telegram, MQTT, WLED",
    "icon": "plug",
    "sections": [
     {
-     "title": "",
+     "title": "Musikquellen",
+     "help": "",
+     "items": [
+      {
+       "type": "nav",
+       "label": "Spotify",
+       "target": "spotify",
+       "subtitle": "Zugang des Players und Smart-Sync · Bibliothek › Spotify"
+      },
+      {
+       "type": "nav",
+       "label": "NAS",
+       "target": "nas",
+       "subtitle": "Anmeldung, freigegebene Ordner, Profile · Bibliothek › NAS"
+      }
+     ]
+    },
+    {
+     "title": "Nachrichten & Smart Home",
      "help": "",
      "items": [
       {
@@ -4603,12 +4621,6 @@
        "label": "WLED",
        "target": "wled",
        "subtitle": "LED-Streifen per serieller Schnittstelle"
-      },
-      {
-       "type": "nav",
-       "label": "Spotify",
-       "target": "spotify",
-       "subtitle": "Zugang des Players und Smart-Sync · Bibliothek › Spotify"
       }
      ]
     }
