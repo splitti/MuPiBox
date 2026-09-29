@@ -45,6 +45,7 @@ import { registerAdminRoutes } from './admin'
 import { registerNetworkRoutes } from './network'
 import { registerUpdateRoutes } from './updates'
 import { type LocalLibraryDeps, registerLocalUploadRoutes } from './upload'
+import { randomBytes } from 'node:crypto'
 import { localOnly, viaProxy } from '../request-guard'
 import {
   REQUESTED_SCOPES,
@@ -211,6 +212,9 @@ function graceModeOf(block: Record<string, unknown>): GraceMode {
   return block.maxOverrunMinutes === 0 ? 'stop' : 'track'
 }
 
+// one-time tickets for the admin interface (POST /admin-ticket): ticket -> valid until
+const adminTickets = new Map<string, number>()
+
 // The box's address for Spotify: the one of port 8200, registered in the Spotify app - also when the app is used
 // through port 80 (the web server passes it on, see PROXY_PORT)
 function spotifyHost(req: Request): string | undefined {
@@ -291,6 +295,25 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       expires_in: link.expiresIn,
       url_path: `/app?token=${encodeURIComponent(link.token)}`,
     })
+  })
+
+  /**
+   * POST /api/eltern/admin-ticket - a one-time ticket that signs the app's user in to the admin interface (the app's
+   * "Erweiterte Einstellungen"), without the password: the admin interface (header.php) redeems it through the box
+   * itself, POST /admin-ticket/redeem {ticket}. 60 seconds, single use.
+   */
+  router.post('/admin-ticket', requireSession, requireCsrf, (_req, res) => {
+    const now = Date.now()
+    for (const [t, until] of adminTickets) if (until < now) adminTickets.delete(t)
+    const ticket = randomBytes(32).toString('hex')
+    adminTickets.set(ticket, now + 60_000)
+    res.json({ ticket })
+  })
+  router.post('/admin-ticket/redeem', localOnly, (req, res) => {
+    const ticket = String((req.body as { ticket?: unknown } | undefined)?.ticket ?? '')
+    const until = adminTickets.get(ticket)
+    adminTickets.delete(ticket)
+    res.json({ ok: until !== undefined && until >= Date.now() })
   })
 
   /**

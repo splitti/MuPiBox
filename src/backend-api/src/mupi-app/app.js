@@ -94,6 +94,8 @@ function currentPage() {
   return state.pages.get(currentId())
 }
 function go(id) {
+  // (an address outside the app, e.g. "Erweiterte Einstellungen": whoever wired the click)
+  if (String(id).startsWith('ext:')) return openExternal(id.slice(4))
   if (location.hash !== `#/${id}`) location.hash = `#/${id}`
   else route()
 }
@@ -493,10 +495,24 @@ function wire(root, page) {
 }
 
 // Pages outside the app: the previous admin interface (port 80) and the DietPi dashboard (port 5252)
-function openExternal(which) {
+async function openExternal(which) {
   const host = location.hostname
-  const url = which === 'dietpi' ? `http://${host}:5252/` : `${location.protocol === 'https:' ? 'https' : 'http'}://${host}/`
-  window.open(url, '_blank', 'noopener')
+  if (which === 'dietpi') {
+    window.open(`http://${host}:5252/`, '_blank', 'noopener')
+    return
+  }
+  // the admin interface, signed in with a one-time ticket of this app's session (no second login there). The window
+  // opens at once: one opened after waiting for the ticket is blocked as a popup.
+  const win = window.open('', '_blank')
+  let url = `${location.protocol === 'https:' ? 'https' : 'http'}://${host}/index.php`
+  const r = await api(`${API}/admin-ticket`, { method: 'POST' })
+  if (r.ok && r.body?.ticket) url += `?app_ticket=${r.body.ticket}`
+  if (!win) {
+    location.href = url
+    return
+  }
+  win.opener = null
+  win.location.href = url
 }
 
 // the building block as shown (a connected page may have filled in its own options), else the schema's

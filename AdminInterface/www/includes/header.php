@@ -213,6 +213,24 @@
 			// The way in is the login of the app (port 80: /app/?portal, the choice between the app and this
 			// interface), where lighttpd has it (config/lighttpd/90-mupibox-app.conf). The form below then only answers
 			// the app's request for its CSRF token (?login_form) and the password the app sends (POST).
+			// Signed in to the app: its one-time ticket ("Erweiterte Einstellungen" in the app), checked with the app on
+			// the box itself - no second login.
+			$appTicket = (string)($_GET['app_ticket'] ?? '');
+			if (preg_match('/^[a-f0-9]{64}$/', $appTicket)) {
+				$ctx = stream_context_create(['http' => [
+					'method' => 'POST',
+					'header' => "Content-Type: application/json\r\n",
+					'content' => json_encode(['ticket' => $appTicket]),
+					'timeout' => 3,
+				]]);
+				$answer = json_decode((string)@file_get_contents('http://127.0.0.1:8200/api/eltern/admin-ticket/redeem', false, $ctx), true);
+				if (!empty($answer['ok'])) {
+					session_regenerate_id(true);
+					$_SESSION['logged_in'] = true;
+					header('Location: ' . $_SERVER['PHP_SELF']);
+					exit;
+				}
+			}
 			if ($_SERVER['REQUEST_METHOD'] === 'GET' && !isset($_GET['login_form'])
 				&& file_exists('/etc/lighttpd/conf-enabled/90-mupibox-app.conf')) {
 				header('Location: /app/?portal=admin', true, 302);
