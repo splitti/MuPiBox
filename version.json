@@ -3,8 +3,8 @@
 	"release": {
 		"dev": [
 			{
-			"version": "5.0.2",
-			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/5.0.2.zip",
+			"version": "5.0.3",
+			"url": "https://github.com/splitti/MuPiBox/archive/refs/tags/5.0.3.zip",
 			"releaseinfo": "Development Version, install on your own risk! Please create a backup before installation"
 			}
 		],
