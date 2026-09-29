@@ -1903,10 +1903,12 @@ function openLibGroup(g) {
      <div class="btns"><button class="btn" data-close>Schließen</button></div>`,
     (sheet, close) => {
       sheet.querySelector('[data-close]').onclick = close
+      // (back from an entry: the list where it was)
+      if (g.scrollTop) sheet.scrollTop = g.scrollTop
       for (const b of sheet.querySelectorAll('[data-e]')) {
         b.onclick = () => {
-          close()
-          openEntrySheet(entries[Number(b.dataset.e)].item)
+          g.scrollTop = sheet.scrollTop
+          openEntrySheet(entries[Number(b.dataset.e)].item, { title: g.artist, open: () => openLibGroup(g) })
         }
       }
     },
@@ -1959,8 +1961,40 @@ function entryPlayFields(item) {
 }
 
 // The sheet of a library entry: manual ones change their fields, synced ones get overrides (the sync keeps its own)
-function openEntrySheet(item) {
+// The albums of a whole Spotify artist in its entry (as Spotify lists them, oldest first; the box shows them in the
+// order the entry chooses)
+async function loadArtistAlbums(item, box) {
+  const r = await api(`${SYNC_API}/artist-albums?artistId=${encodeURIComponent(item.artistid)}`)
+  if (!box.isConnected) return
+  if (!r.ok) {
+    box.innerHTML = `<p class="help">${r.status === 409 ? 'Spotify ist nicht verbunden.' : 'Die Alben ließen sich nicht laden.'}</p>`
+    return
+  }
+  const albums = r.body?.albums ?? []
+  if (!albums.length) {
+    box.innerHTML = '<p class="help">Keine Alben gefunden.</p>'
+    return
+  }
+  // (the first ten, the others on request: an artist with hundreds of albums would push the sheet's buttons far down)
+  const draw = (all) => {
+    const shown = all ? albums : albums.slice(0, 10)
+    box.innerHTML = `<p class="help" style="margin:0 0 6px">${esc(`${albums.length} ${albums.length === 1 ? 'Album' : 'Alben'}`)}</p><div class="rows">${shown
+      .map(
+        (al) => `<div class="entry"><span class="lib-thumb">${al.cover ? `<img src="${esc(al.cover)}" alt="" loading="lazy">` : ''}</span>
+          <span class="lbl"><b translate="no">${esc(al.name || al.id)}</b>${al.release_date ? `<small>${esc(String(al.release_date).slice(0, 4))}</small>` : ''}</span></div>`,
+      )
+      .join('')}</div>${shown.length < albums.length ? `<div class="btns"><button class="btn" data-all-albums>${esc(`Alle ${albums.length} Alben zeigen`)}</button></div>` : ''}`
+    for (const img of box.querySelectorAll('img')) img.addEventListener('error', () => img.remove(), { once: true })
+    box.querySelector('[data-all-albums]')?.addEventListener('click', () => draw(true))
+  }
+  draw(false)
+}
+
+// back: opened from the list of an artist's entries ({title, open}) - a way back to it, and "Abbrechen" goes there too
+function openEntrySheet(item, back = null) {
   const isSync = (item.source ?? 'manual') === 'spotify-sync'
+  // a whole Spotify artist ("Alle Folgen"): its albums are listed, as the folders of the SD card and the NAS
+  const wholeArtist = item.type === 'spotify' && item.artistid && !item.id && !item.playlistid && !item.showid && !item.audiobookid
   // (order, shuffle, a part of the episodes: of the entries one adds by hand - Spotify and podcasts)
   const playOptions = !isSync && (item.type === 'spotify' || item.type === 'rss')
   // a radio station or a podcast: its address (stream / feed) can be changed too
@@ -1974,7 +2008,8 @@ function openEntrySheet(item) {
   ]
   const val = (k) => item[`${k}_override`] ?? (isSync ? '' : item[k] ?? '')
   openSheet(
-    `<h2 translate="no">${esc(item.title_override ?? item.title ?? item.artist_override ?? item.artist ?? 'Eintrag')}</h2>
+    `${back ? `<button class="sheet-back" data-back>${icon('back', 18)}<span translate="no">${esc(back.title)}</span></button>` : ''}
+     <h2 translate="no">${esc(item.title_override ?? item.title ?? item.artist_override ?? item.artist ?? 'Eintrag')}</h2>
      <p class="help" style="margin:0">${isSync ? 'Kommt vom Spotify-Sync. Was du hier einträgst, gilt statt der Werte von Spotify; leer = der Wert von Spotify.' : 'Von Hand hinzugefügt.'}</p>
      ${fields
        .map(([k, l]) => {
@@ -1988,9 +2023,12 @@ function openEntrySheet(item) {
      <div class="field"><label for="e-cat">Kategorie</label>${catSelect('e-cat', item.category_override ?? (isSync ? '' : item.category === 'radio' ? 'other' : item.category), isSync)}</div>
      ${playOptions ? entryPlayFields(item) : ''}
      ${isSync ? `<p class="help" style="margin:0">Entfernen geht über Bibliothek › Verwaltete Inhalte oder die Spotify-Playlist.</p>` : ''}
+     ${wholeArtist ? `<div class="section-label" style="margin:0">Alben</div><div id="e-albums"><p class="help">Lade die Alben von Spotify …</p></div>` : ''}
      <div class="btns">${isSync ? '' : `<button class="btn danger" data-del>Löschen</button>`}<button class="btn" data-close>Abbrechen</button><button class="btn primary" data-ok>Speichern</button></div>`,
     (sheet, close) => {
-      sheet.querySelector('[data-close]').onclick = close
+      sheet.querySelector('[data-close]').onclick = back ? back.open : close
+      sheet.querySelector('[data-back]')?.addEventListener('click', back?.open)
+      if (wholeArtist) loadArtistAlbums(item, sheet.querySelector('#e-albums'))
       // A chosen picture lands among the own pictures and is saved into the entry right away (the picker takes the
       // sheet's place, what was typed here and not saved yet stays as it was on the box)
       for (const b of sheet.querySelectorAll('[data-pick]')) {
@@ -7508,7 +7546,8 @@ function openSheet(html, onOpen, onClose) {
   scrim.onclick = close
   openSheetClose = close
   onOpen?.(sheet, close)
-  sheet.querySelector('input, button')?.focus()
+  // (without scrolling to it: a sheet opened again at its place, e.g. back from an entry to its list, stays there)
+  sheet.querySelector('input, button')?.focus({ preventScroll: true })
   return close
 }
 
