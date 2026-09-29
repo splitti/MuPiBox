@@ -6,6 +6,7 @@
 import { execFile, spawn } from 'node:child_process'
 import { createWriteStream, promises as fsp } from 'node:fs'
 import * as path from 'node:path'
+import { Transform } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 import type { Router } from 'express'
 import type { MupiboxConfig } from '../models/mupibox-config.model'
@@ -48,6 +49,13 @@ const JSON_FILES: Record<string, string> = {
 
 // What a backup holds (the admin interface's backup.php / fullbackup.php) and what a restore may write
 const BACKUP_FILES = ['/etc/mupibox/mupiboxconfig.json', `${SERVER_CONFIG}/data.json`]
+// Kept free on the SD card by a restore (the box itself needs room to run)
+const RESERVE_BYTES = 512 * 1024 * 1024
+const freeBytes = async (dir: string) => {
+  const st = await fsp.statfs(dir).catch(() => null)
+  return st ? Math.max(0, st.bavail * st.bsize - RESERVE_BYTES) : 0
+}
+
 const RESTORE_FILES = ['etc/mupibox/mupiboxconfig.json', 'home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json']
 const RESTORE_DIRS = [
   'etc/',
@@ -374,11 +382,21 @@ export function registerAdminRoutes(router: Router, deps: AdminDeps): void {
    */
   router.put('/backup/restore', requireSession, requireCsrf, async (req, res) => {
     const file = `/var/tmp/mupibox-restore-${process.pid}-${Date.now()}.zip`
+    // the upload may not fill the SD card: at most what is free there, less a reserve for the box itself
+    const room = await freeBytes('/var/tmp')
+    let received = 0
+    const limit = new Transform({
+      transform(chunk: Buffer, _enc, done) {
+        received += chunk.length
+        done(received > room ? new Error('too_large') : null, chunk)
+      },
+    })
     try {
-      await pipeline(req, createWriteStream(file, { flags: 'wx', mode: 0o600 }))
-    } catch {
+      await pipeline(req, limit, createWriteStream(file, { flags: 'wx', mode: 0o600 }))
+    } catch (err) {
       await fsp.unlink(file).catch(() => undefined)
-      res.status(400).json({ error: 'upload failed' })
+      if ((err as Error).message === 'too_large') res.status(413).json({ error: 'not_enough_space' })
+      else res.status(400).json({ error: 'upload failed' })
       return
     }
     const cleanup = () => fsp.unlink(file).catch(() => undefined)
@@ -394,29 +412,55 @@ export function registerAdminRoutes(router: Router, deps: AdminDeps): void {
       res.status(400).json({ error: 'not a zip file' })
       return
     }
-    // lines: "-rw-r--r--  3.0 unx  13218 tx defN 26-Sep-28 22:17 path"
+    // Every entry has to be understood, else nothing is unpacked: a line that did not match used to be skipped - and
+    // unzip then put it wherever it named, as root (e.g. an entry of a Windows zip, a link or a device).
+    //   header: "Zip file size: 700 bytes, number of entries: 6"
+    //   entries: "-rw-r--r--  3.0 unx  13218 tx defN 26-Sep-28 22:17 path" (Unix: files and folders only)
+    //            "-rw-a--     2.0 fat     18 b- stor 25-Sep-01 00:00 path" (Windows/DOS: no links there)
+    //   end: "6 files, 22 bytes uncompressed, 22 bytes compressed:  0.0%"
+    const lines = list.stdout.split('\n').filter((l) => l.trim() !== '')
+    const entries = Number(/number of entries: (\d+)/.exec(lines[1] ?? '')?.[1] ?? NaN)
+    const unpacked = Number(/^\d+ files?, (\d+) bytes uncompressed/.exec(lines[lines.length - 1] ?? '')?.[1] ?? NaN)
     let bad = ''
     let count = 0
-    for (const line of list.stdout.split('\n')) {
-      const m = /^([-dl][rwxsStT-]{9})\s+\S+\s+\S+\s+\d+\s+\S+\s+\S+\s+\S+\s+\S+\s(.+)$/.exec(line)
-      if (!m) continue
+    const names: string[] = []
+    for (const line of lines.slice(2, -1)) {
+      const m =
+        /^([-d])[rwxsStT-]{9}\s+\S+\s+unx\s+\d+\s+\S+\s+\S+\s+\S+\s+\S+\s(.+)$/.exec(line) ??
+        /^([-d])[rwxahs-]{6}\s+\S+\s+(?:fat|ntf|hpf)\s+\d+\s+\S+\s+\S+\s+\S+\s+\S+\s(.+)$/.exec(line)
+      if (!m) {
+        bad = line.slice(0, 120)
+        break
+      }
       count++
-      const type = m[1][0]
+      const type = m[1]
       const name = m[2].replace(/^\/+/, '')
       const isDir = type === 'd' || name.endsWith('/')
       const inMedia = name.startsWith('home/dietpi/MuPiBox/media/')
       const allowed =
-        type !== 'l' &&
         !name.includes('..') &&
+        !name.includes('\\') &&
         (RESTORE_FILES.includes(name) || (isDir && (RESTORE_DIRS.includes(name) || inMedia)) || (!isDir && inMedia && !FORBIDDEN_MEDIA.test(name)))
       if (!allowed) {
         bad = name
         break
       }
+      if (!isDir) names.push(name)
     }
-    if (bad || count === 0) {
+    if (bad || count === 0 || count !== entries) {
       await cleanup()
-      res.status(400).json({ error: 'entry_not_allowed', entry: bad || '(leer)' })
+      res.status(400).json({ error: 'entry_not_allowed', entry: bad || (count === 0 ? '(leer)' : '(unbekannte Einträge)') })
+      return
+    }
+    // unpacked it has to fit on the card as well (files already there are replaced: their room counts)
+    let replaced = 0
+    for (const name of names) {
+      const st = await fsp.lstat(`/${name}`).catch(() => null)
+      if (st?.isFile()) replaced += st.size
+    }
+    if (!Number.isFinite(unpacked) || unpacked - replaced > (await freeBytes('/'))) {
+      await cleanup()
+      res.status(413).json({ error: 'not_enough_space' })
       return
     }
     const version = String((deps.getMupiboxConfig()?.mupibox as Record<string, unknown> | undefined)?.version ?? '')
