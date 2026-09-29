@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core'
+import { AfterViewInit, Component, OnDestroy, OnInit, ViewEncapsulation, signal } from '@angular/core'
 import type { NgForm } from '@angular/forms'
 import { FormsModule } from '@angular/forms'
 import { Router } from '@angular/router'
@@ -54,7 +54,11 @@ interface EditNetworkState {
 export class WifiAddPage implements OnInit, AfterViewInit, OnDestroy {
   keyboard: Keyboard
   selectedInputElem: any
-  valid = false
+  // Signals: the on-screen keyboard changes them from its own callbacks, and the Save button did not always follow
+  // (it lit up only after a tap into a field)
+  valid = signal(false)
+  /** Length of the password typed so far (for the hint below the field: WPA needs 8 to 63 characters). */
+  pwLength = signal(0)
 
   /** When set, the page edits the password of an already configured network instead of adding a new one. */
   editNetwork: EditNetworkState | undefined
@@ -239,13 +243,14 @@ export class WifiAddPage implements OnInit, AfterViewInit, OnDestroy {
 
   validate() {
     const wlanPw = this.keyboard?.getInput('wlan_pw') ?? ''
+    this.pwLength.set(wlanPw.length)
 
     if (this.editNetwork) {
-      this.valid = wlanPw.length >= 8 && wlanPw.length <= 63
+      this.valid.set(wlanPw.length >= 8 && wlanPw.length <= 63)
       return
     }
 
     const wlanSsid = this.keyboard?.getInput('wlan_ssid') ?? ''
-    this.valid = wlanSsid.length > 0 && (wlanPw.length === 0 || (wlanPw.length >= 8 && wlanPw.length <= 63))
+    this.valid.set(wlanSsid.length > 0 && (wlanPw.length === 0 || (wlanPw.length >= 8 && wlanPw.length <= 63)))
   }
 }

@@ -33,6 +33,11 @@
                 <ion-item>
                   <ion-input #wlan_pw name="wlan_pw" type="text" placeholder="WLAN-Key" (ionInput)="inputChanged($event)" (ionFocus)="focusChanged($event)" ngModel></ion-input>
                 </ion-item>
+                @if (pwLength() > 0 && pwLength() < 8) {
+                  <p class="pw-hint">At least 8 characters ({{ pwLength() }}/8)</p>
+                } @else if (pwLength() > 63) {
+                  <p class="pw-hint">At most 63 characters</p>
+                }
               </div>
             </ion-col>
           </ion-row>
@@ -40,7 +45,7 @@
             <ion-col size="6">
               <div>
                 <div class="add-button">
-                  <ion-button size="large" type="submit" expand="block" [disabled]="!valid">{{ editNetwork ? 'Save' : 'Set new WLAN' }}</ion-button>
+                  <ion-button size="large" type="submit" expand="block" [disabled]="!valid()">{{ editNetwork ? 'Save' : 'Set new WLAN' }}</ion-button>
                 </div>
               </div>
             </ion-col>
