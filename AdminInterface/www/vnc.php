@@ -12,9 +12,11 @@
 	// neither attribute boundary can be escaped.
 	// The remote control goes through the app (same address, its login): x11vnc and websockify listen on the box
 	// itself only - no longer open to the whole network without a password (port 6080 / 5900 are gone).
-	$vnc = '/app/vnc/vnc_lite.html?path=websockify&autoconnect=1&resize=scale';
-	print "<p><embed src='".$vnc."' id='remotecontrol'></p>";
-	print "<p><a href='/app/vnc/vnc.html?path=websockify&autoconnect=1&resize=scale&reconnect=1' target='_blank'>If it doesn't display properly, open it in a tab of its own ...</a></p>";
+	// (on the app's own port 8200 of this box: its login cookie goes with it)
+	$h = htmlspecialchars(preg_replace('/:\d+$/', '', (string)$_SERVER['HTTP_HOST']), ENT_QUOTES, 'UTF-8');
+	$vnc = 'http://' . $h . ':8200/app/vnc/vnc.html?path=websockify&autoconnect=1&resize=scale&reconnect=1';
+	if (empty($_SERVER['HTTPS'])) print "<p><iframe src='" . $vnc . "' id='remotecontrol' style='width:100%;aspect-ratio:1024/600;border:0'></iframe></p>";
+	print "<p><a href='" . $vnc . "' target='_blank'>Open the remote control in a tab of its own ...</a></p>";
 ?>
 </div>
 <?php

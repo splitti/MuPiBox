@@ -284,6 +284,8 @@ export function registerDisplayRoutes(router: Router, deps: DisplayDeps): void {
    *  only with the app's login, x11vnc and websockify listen on the box itself only). */
   router.get('/display/vnc', requireSession, async (_req, res) => {
     const r = await run('systemctl', ['is-active', 'mupi_novnc'], 5000)
-    res.json({ active: r.stdout.trim() === 'active', url: '/app/vnc/vnc.html?path=websockify&autoconnect=1&resize=scale&reconnect=1' })
+    // (on the app's own port 8200: the websocket through the web server of port 80/443 stalled; the login cookie is the
+    // box's, whatever the port)
+    res.json({ active: r.stdout.trim() === 'active', port: 8200, path: '/app/vnc/vnc.html?path=websockify&autoconnect=1&resize=scale&reconnect=1' })
   })
 }
