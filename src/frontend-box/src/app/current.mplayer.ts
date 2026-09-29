@@ -18,6 +18,8 @@ export interface CurrentMPlayer {
   volume?: number
   // Radio streams and podcasts are buffered before they start: how far that is (0-100).
   loading?: boolean
+  // cover of a radio station / podcast episode started by the parents' app (spotify-control.js ?cover=)
+  cover?: string
   loadProgress?: number
   // Phase 19 Stufe B: wer hat den letzten Command an den Player geschickt?
   // Display-Frontend ('box', Default), Eltern-WebApp ('eltern'),

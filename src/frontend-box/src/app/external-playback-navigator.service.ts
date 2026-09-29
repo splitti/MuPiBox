@@ -313,6 +313,11 @@ export class ExternalPlaybackNavigatorService {
     const type: Media['type'] =
       ctype === 'rss' ? 'rss' : ctype === 'radio' ? 'radio' : 'library'
     const media = { type, category, artist, title } as Media
+    // a radio station or podcast started from the parents' app: the cover it passed on (the player knows no other)
+    if ((type === 'rss' || type === 'radio') && data.cover) {
+      media.cover = data.cover
+      media.artistcover = data.cover
+    }
     // A local album: path is its folder in the library (e.g. audiobook/<artist>/<album>), as the box's own
     // library pages know it - the cover is looked up there (see navigateToPlayerExternal).
     if (type === 'library' && pathParts.length >= 2) media.libraryPath = pathParts.join('/')

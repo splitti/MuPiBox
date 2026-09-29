@@ -529,6 +529,9 @@ const currentMeta = {
   volume: 0,
   // Radio streams and podcasts are buffered before they start: how far along that is.
   loading: false,
+  // Cover of a radio station or podcast episode started by the parents' app (?cover=): the display shows it when it
+  // opens the player for playback it did not start itself (it knows no cover of its own then)
+  cover: '',
   loadProgress: 0,
   // Phase 19 Stufe B: wer hat den letzten Command geschickt? Werte:
   // 'box' (Default — Display-Frontend), 'eltern' (WebApp-Proxy),
@@ -2451,11 +2454,15 @@ app.use((req, res) => {
   // Base-URL ist irrelevant, sie wird nur vom URL-Constructor verlangt.
   let pathname = req.url
   let triggerSource = 'box'
+  let triggerCover = ''
   try {
     const u = new URL(req.url, 'http://localhost')
     pathname = u.pathname
     const src = u.searchParams.get('src')
     if (src && /^[a-z0-9_-]{1,20}$/i.test(src)) triggerSource = src
+    // (only a picture address of the box's own API or of the web - it lands in an <img> on the display)
+    const cover = u.searchParams.get('cover') ?? ''
+    if (cover.length < 2000 && /^(\/api\/|https?:\/\/)/.test(cover)) triggerCover = cover
   } catch {
     /* malformed — bleibt 'box', pathname bleibt req.url */
   }
@@ -2522,6 +2529,7 @@ app.use((req, res) => {
   if (hasDirSegment(command, 'radio')) {
     switchToMplayer()
     currentMeta.currentType = 'radio'
+    currentMeta.cover = triggerCover
     const parts = decodeURIComponent(command.name).split(':title:artist:')
     currentMeta.currentTrackname = parts[0]
     currentMeta.album = parts[1]
@@ -2534,6 +2542,7 @@ app.use((req, res) => {
   if (hasDirSegment(command, 'rss')) {
     switchToMplayer()
     currentMeta.currentType = 'rss'
+    currentMeta.cover = triggerCover
     const parts = decodeURIComponent(command.name).split(':title:artist:')
     currentMeta.currentTrackname = parts[0]
     currentMeta.album = parts[1]

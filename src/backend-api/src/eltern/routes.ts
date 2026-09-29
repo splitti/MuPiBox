@@ -260,7 +260,7 @@ const adminTickets = new Map<string, number>()
 // more except 127.0.0.1, so http://<box>:8200 was refused after the login
 // The newest episode of a podcast feed (its audio address, title and the show's name), from the feed as the display
 // reads it (xml-js: a text is {_text} or {_cdata}, one item comes as an object instead of a list), or null
-async function newestRssEpisode(feed: string): Promise<{ url: string; title: string; show: string } | null> {
+async function newestRssEpisode(feed: string): Promise<{ url: string; title: string; show: string; cover: string } | null> {
   const text = (v: unknown): string => {
     if (typeof v === 'string') return v
     const o = v as { _text?: unknown; _cdata?: unknown } | undefined
@@ -272,15 +272,25 @@ async function newestRssEpisode(feed: string): Promise<{ url: string; title: str
     const channel = ((await r.json()) as { rss?: { channel?: Record<string, unknown> } }).rss?.channel
     const raw = channel?.item
     const items = (Array.isArray(raw) ? raw : raw ? [raw] : []) as Record<string, unknown>[]
-    let best: { url: string; title: string; at: number } | null = null
+    let best: { url: string; title: string; at: number; image: string } | null = null
     for (const [i, it] of items.entries()) {
       const url = (it.enclosure as { _attributes?: { url?: unknown } } | undefined)?._attributes?.url
       if (typeof url !== 'string' || !url) continue
       // (no date: the order of the feed, the first one being the newest as usual)
       const at = Date.parse(text(it.pubDate)) || -i
-      if (!best || at > best.at) best = { url, title: text(it.title) || 'Episode', at }
+      const image = (it['itunes:image'] as { _attributes?: { href?: unknown } } | undefined)?._attributes?.href
+      if (!best || at > best.at) best = { url, title: text(it.title) || 'Episode', at, image: typeof image === 'string' ? image : '' }
     }
-    return best ? { url: best.url, title: best.title, show: text(channel?.title) } : null
+    if (!best) return null
+    // the picture as the display shows it: the episode's, else the show's, through the box's picture proxy (a local
+    // copy of the show's picture is /rss-covers/…)
+    const picture = best.image || text((channel?.image as { url?: unknown } | undefined)?.url)
+    const cover = !picture
+      ? ''
+      : picture.startsWith('/rss-covers/')
+        ? `/api/rssfeed/image?local=${encodeURIComponent(picture.slice('/rss-covers/'.length))}&w=400`
+        : `/api/rssfeed/image?url=${encodeURIComponent(picture)}&w=400`
+    return { url: best.url, title: best.title, show: text(channel?.title), cover }
   } catch {
     return null
   }
@@ -1618,6 +1628,9 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     const enc = encodeURIComponent
     const type = String(item.type ?? '')
     let url = ''
+    // (a radio station's or podcast's picture for the display, which opens the player for it: it knows none itself)
+    let cover = ''
+    const ownCover = (v: unknown) => (typeof v === 'string' && /^(\/|https?:\/\/)/.test(v) ? v : '')
     // One album of an entry that subscribes a whole Spotify artist (only artistid): the app lists the artist's albums
     // and plays the one tapped - only for an artist that is in the library.
     const albumId = body.albumId
@@ -1651,6 +1664,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
         const title = String(item.title ?? 'Radio')
         const artist = String(item.artist ?? '')
         url = `radio/${enc(id)}/${enc(title)}:title:artist:${enc(artist)}`
+        cover = ownCover(item.cover_override) || ownCover(item.cover)
         break
       }
       case 'rss': {
@@ -1665,6 +1679,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
         }
         const artist = episode.show || String(item.artist ?? '')
         url = `rss/${enc(episode.url)}/${enc(episode.title)}:title:artist:${enc(artist)}`
+        cover = ownCover(item.cover_override) || episode.cover
         break
       }
       default:
@@ -1672,7 +1687,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
         return
     }
     try {
-      const r = await fetch(`http://127.0.0.1:5005/current/${url}?src=eltern`, { signal: AbortSignal.timeout(5000) })
+      const r = await fetch(`http://127.0.0.1:5005/current/${url}?src=eltern${cover ? `&cover=${encodeURIComponent(cover)}` : ''}`, { signal: AbortSignal.timeout(5000) })
       if (!r.ok) {
         const errBody = await r.json().catch(() => ({ error: `player rejected play (HTTP ${r.status})` }))
         res.status(r.status).json(errBody)
