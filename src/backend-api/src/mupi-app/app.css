@@ -467,7 +467,7 @@ select.input { appearance: auto; }
 .bg-preview { aspect-ratio: 800 / 480; border-radius: var(--mp-r); overflow: hidden; background: var(--mp-chip); }
 .bg-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
-@font-face { font-family: "FredokaBS"; src: url("/theme-data/_fonts/Fredoka-Variable.ttf") format("truetype"); font-weight: 300 700; }
+/* (the scenes' name in the font of the box's pictures: the app's own Fredoka, fonts.css - on the box, on every port) */
 .bs-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 @media (min-width: 560px) { .bs-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (min-width: 960px) { .bs-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
@@ -481,8 +481,8 @@ select.input { appearance: auto; }
 @media (min-width: 700px) { .bs-previews { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .bs-preview { position: relative; aspect-ratio: 800 / 480; border-radius: var(--mp-r-sm); overflow: hidden; background: var(--mp-chip); margin-top: 4px; }
 .bs-preview img { display: block; width: 100%; height: 100%; }
-.bs-text { position: absolute; white-space: nowrap; font-family: "FredokaBS", "DejaVu Sans", sans-serif; line-height: 1; }
-.bs-maint { position: absolute; font-family: "FredokaBS", "DejaVu Sans", sans-serif; }
+.bs-text { position: absolute; white-space: nowrap; font-family: "Fredoka", "DejaVu Sans", sans-serif; line-height: 1; }
+.bs-maint { position: absolute; font-family: "Fredoka", "DejaVu Sans", sans-serif; }
 .bs-maint .t { display: block; line-height: 1.05; }
 .bs-maint .s { display: inline; line-height: 1.9; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
 

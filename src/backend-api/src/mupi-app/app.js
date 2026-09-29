@@ -3331,7 +3331,7 @@ function mountBoot(root) {
   }
   bsUpdate(root)
   // the names are laid out in the font of the box: again once it is loaded
-  document.fonts?.load?.('600 20px FredokaBS').then(() => currentPage()?.id === 'startbilder' && bsUpdate(root), () => undefined)
+  document.fonts?.load?.('600 20px Fredoka').then(() => currentPage()?.id === 'startbilder' && bsUpdate(root), () => undefined)
   every(1000, () => {
     // the grid changes its size with the window: place the names again (cheap, only when the width changed)
     const w = $('#bs-boot', root)?.clientWidth
