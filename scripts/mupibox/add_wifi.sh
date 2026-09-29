@@ -66,7 +66,8 @@ do
 			else
 				_ESCAPED_SSID="${SSID//\\/\\\\}"
 				_ESCAPED_SSID="${_ESCAPED_SSID//\"/\\\"}"
-				printf 'network={\n\tssid="%s"\n\tscan_ssid=1\n}\n' "${_ESCAPED_SSID}" | sudo tee -a ${WPACONF} >/dev/null
+				# key_mgmt=NONE: without it wpa_supplicant takes the network for WPA and never connects to it
+				printf 'network={\n\tssid="%s"\n\tscan_ssid=1\n\tkey_mgmt=NONE\n}\n' "${_ESCAPED_SSID}" | sudo tee -a ${WPACONF} >/dev/null
 				restart_network
 			fi
 		else
