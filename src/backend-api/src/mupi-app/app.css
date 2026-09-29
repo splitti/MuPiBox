@@ -341,10 +341,12 @@ input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border-radius
 .notice-x { width: 44px; border: 0; background: none; color: inherit; display: grid; place-items: center; }
 
 /* ---------- sheet, toasts ---------- */
-.sheet-scrim { position: fixed; inset: 0; z-index: 40; background: var(--mp-scrim); }
+.sheet-scrim { position: fixed; inset: 0; z-index: 40; background: var(--mp-scrim); touch-action: none; }
 .sheet {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 41;
   max-height: 88vh; overflow-y: auto;
+  /* the swipe stays in the sheet (no scroll of the page behind it at its end) */
+  overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
   margin: 0 auto; max-width: 560px;
   background: var(--mp-surface); border-radius: var(--mp-r-sheet) var(--mp-r-sheet) 0 0;
   padding: 10px 16px calc(20px + env(safe-area-inset-bottom));

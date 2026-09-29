@@ -7385,6 +7385,22 @@ function closeSheet() {
 let sheetSeq = 0
 let sheetRelease = null
 
+// While a sheet is open the page behind it stays where it is: iOS Safari passed the swipe in a sheet on to the page
+// (it scrolled in the background, the sheet's list did not). The page is fixed at its place and put back on close.
+let sheetLockY = null
+function lockPageScroll() {
+  if (sheetLockY !== null) return
+  sheetLockY = window.scrollY
+  Object.assign(document.body.style, { position: 'fixed', top: `-${sheetLockY}px`, left: '0', right: '0', width: '100%' })
+}
+function unlockPageScroll() {
+  if (sheetLockY === null) return
+  const y = sheetLockY
+  sheetLockY = null
+  Object.assign(document.body.style, { position: '', top: '', left: '', right: '', width: '' })
+  window.scrollTo(0, y)
+}
+
 function openSheet(html, onOpen, onClose) {
   const sheet = $('#sheet')
   const scrim = $('#sheet-scrim')
@@ -7396,6 +7412,7 @@ function openSheet(html, onOpen, onClose) {
   sheet.innerHTML = `<div class="grip"></div>${html}`
   sheet.hidden = false
   scrim.hidden = false
+  lockPageScroll()
   const release = () => {
     document.removeEventListener('keydown', onKey)
     if (sheetRelease === release) sheetRelease = null
@@ -7408,6 +7425,7 @@ function openSheet(html, onOpen, onClose) {
     release()
     sheet.hidden = true
     scrim.hidden = true
+    unlockPageScroll()
     before?.focus?.()
   }
   const onKey = (e) => {
