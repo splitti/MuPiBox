@@ -3226,10 +3226,17 @@ function spotifyTop() {
             ? `<div class="note">${icon('info', 18)}<span>Seit wann die Anmeldung besteht, weiß die Box nicht (sie ist älter als diese Version oder kam aus dem Admin-Interface). Spotify lässt eine Anmeldung 6 Monate gelten – einmal neu anmelden, dann kennt die Box das Datum und erinnert rechtzeitig.</span></div>`
             : ''
       }
+      ${
+        spot.connect && !spot.connect.configured
+          ? `<div class="note">${icon('info', 18)}<span>${esc('Spotify Connect ist nicht eingerichtet: Die Box erscheint in der Spotify-App auf dem Handy nicht als Lautsprecher.')}</span></div><div class="btns"><button class="btn" data-sp="connectlogin">Spotify Connect einrichten</button></div>`
+          : ''
+      }
       <div class="sp-cols">
         <div>${spKv([
           ['Angemeldet seit', login.since ?? '–'],
           ['Gültig bis', login.until ?? '–'],
+          // (the box as a speaker in the Spotify app: its own login, see the Zugangsdaten page)
+          spot.connect && ['Spotify Connect', spot.connect.configured ? `Eingerichtet seit ${new Date(spot.connect.since).toLocaleDateString(LOCALE)}` : 'Nicht eingerichtet'],
         ])}</div>
         <div>${spKv(
           s.enabled
@@ -3310,6 +3317,7 @@ function mountSpotify(root, page) {
       confirmSheet('Ausschalten', 'Smart-Sync ausschalten? Dann gibt es auch keinen Sync von Hand (Knopf, Telegram) – die Inhalte auf der Box bleiben.', done)
     },
     connect: connectSpotify,
+    connectlogin: () => connectLoginSheet(page),
     disconnect: () =>
       confirmSheet('Trennen', 'Die Spotify-Anmeldung löschen? Smart-Sync hört auf, und der Player verliert beim nächsten Neustart den Zugang zu Spotify.', async () => {
         const r = await api(`${API}/spotify-oauth/disconnect`, { method: 'POST' })
