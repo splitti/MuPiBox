@@ -79,9 +79,128 @@ function withoutSecrets(value: unknown): unknown {
 
 let newsCache: { at: number; text: string } | undefined
 
+// ---------- CPU, RAM and temperature over the last 24 hours (as the admin interface's rrd graphs, which kept 20 min) ----------
+// Measured once a minute and kept in memory only (nothing on the SD card; after a restart it starts again).
+// cpu: the share of the minute the CPUs were busy (from /proc/stat), ram: used share (MemAvailable), temp: °C.
+
+type SystemSample = [at: number, temp: number | null, cpu: number | null, ram: number | null]
+const SAMPLE_MS = 60_000
+const KEEP_SAMPLES = 24 * 60
+const samples: SystemSample[] = []
+let lastCpu: { busy: number; total: number } | undefined
+let sampler: ReturnType<typeof setInterval> | undefined
+
+async function cpuTimes(): Promise<{ busy: number; total: number } | undefined> {
+  try {
+    const line = (await fsp.readFile('/proc/stat', 'utf8')).split('\n')[0]
+    const v = line.trim().split(/\s+/).slice(1).map(Number)
+    if (v.length < 4 || v.some((n) => !Number.isFinite(n))) return undefined
+    const idle = v[3] + (v[4] ?? 0) // idle + iowait
+    const total = v.reduce((a, b) => a + b, 0)
+    return { busy: total - idle, total }
+  } catch {
+    return undefined
+  }
+}
+
+async function sampleSystem(): Promise<void> {
+  let temp: number | null = null
+  try {
+    const milli = Number.parseInt((await fsp.readFile('/sys/class/thermal/thermal_zone0/temp', 'utf8')).trim(), 10)
+    if (Number.isFinite(milli)) temp = Math.round(milli / 100) / 10
+  } catch {
+    // no thermal node
+  }
+  let ram: number | null = null
+  try {
+    const info = await fsp.readFile('/proc/meminfo', 'utf8')
+    const kb = (key: string) => Number(new RegExp(`^${key}:\\s+(\\d+)`, 'm').exec(info)?.[1])
+    const total = kb('MemTotal')
+    const available = kb('MemAvailable')
+    if (total > 0 && Number.isFinite(available)) ram = Math.round(((total - available) / total) * 1000) / 10
+  } catch {
+    // no /proc (not Linux)
+  }
+  let cpu: number | null = null
+  const now = await cpuTimes()
+  if (now && lastCpu && now.total > lastCpu.total) cpu = Math.round(((now.busy - lastCpu.busy) / (now.total - lastCpu.total)) * 1000) / 10
+  lastCpu = now
+  samples.push([Date.now(), temp, cpu, ram])
+  if (samples.length > KEEP_SAMPLES) samples.splice(0, samples.length - KEEP_SAMPLES)
+}
+
+function startSystemSampler(): void {
+  if (sampler) return
+  void cpuTimes().then((t) => {
+    lastCpu = t
+  })
+  void seedFromRrd()
+  // (a first CPU share soon after the start, not only after a minute)
+  setTimeout(() => void sampleSystem(), 5000).unref()
+  sampler = setInterval(() => void sampleSystem(), SAMPLE_MS)
+  sampler.unref()
+}
+
+// After a restart of this process (every update of it) the box's own rrd files still hold the last 20 minutes of
+// temperature and RAM (save_rrd.sh, cron): taken as the start, a minute apart (the CPU share is not in there)
+async function seedFromRrd(): Promise<void> {
+  const fetch = async (file: string): Promise<Map<number, number[]>> => {
+    const out = new Map<number, number[]>()
+    const r = await new Promise<string>((resolve) =>
+      execFile('rrdtool', ['fetch', file, 'AVERAGE', '-s', '-20min', '-r', '60'], { timeout: 5000, env: { ...process.env, LC_ALL: 'C' } }, (err, stdout) =>
+        resolve(err ? '' : String(stdout)),
+      ),
+    )
+    for (const line of r.split('\n')) {
+      const m = /^(\d+):\s+(.+)$/.exec(line.trim())
+      if (!m) continue
+      const vals = m[2].split(/\s+/).map(Number)
+      if (vals.every((v) => Number.isFinite(v))) out.set(Number(m[1]) * 1000, vals)
+    }
+    return out
+  }
+  const [temps, rams] = await Promise.all([fetch('/tmp/.rrd/cputemp.rrd'), fetch('/tmp/.rrd/ram.rrd')])
+  const seeded: SystemSample[] = []
+  for (const [at, [temp]] of temps) {
+    const ram = rams.get(at)?.[0]
+    // (one a minute, as the samples of this process)
+    if (seeded.length && at - seeded[seeded.length - 1][0] < SAMPLE_MS) continue
+    seeded.push([at, Math.round(temp * 10) / 10, null, ram !== undefined ? Math.round(ram * 10) / 10 : null])
+  }
+  // (only what is older than the first own sample)
+  const first = samples[0]?.[0] ?? Number.POSITIVE_INFINITY
+  samples.unshift(...seeded.filter((s) => s[0] < first))
+}
+
+/** The samples of the last `hours`, at most `points` of them (averages of equal slices when there are more). */
+function systemHistory(hours: number, points = 240): SystemSample[] {
+  const from = Date.now() - hours * 3600e3
+  const inRange = samples.filter((s) => s[0] >= from)
+  if (inRange.length <= points) return inRange
+  const size = Math.ceil(inRange.length / points)
+  const out: SystemSample[] = []
+  for (let i = 0; i < inRange.length; i += size) {
+    const slice = inRange.slice(i, i + size)
+    const avg = (k: 1 | 2 | 3) => {
+      const vals = slice.map((s) => s[k]).filter((v): v is number => v !== null)
+      return vals.length ? Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10 : null
+    }
+    out.push([slice[slice.length - 1][0], avg(1), avg(2), avg(3)])
+  }
+  return out
+}
+
 const CACHE_SIZES = ['0', '8', '16', '32', '64', '128', '256', '512']
 
 export function registerSystemRoutes(router: Router, deps: SystemDeps): void {
+  startSystemSampler()
+
+  /** GET /api/eltern/system-history?hours=1|6|24 - [time, temp °C, cpu %, ram %] a minute apart (fewer for 24 h). */
+  router.get('/system-history', requireSession, (req, res) => {
+    const hours = [1, 6, 24].includes(Number(req.query.hours)) ? Number(req.query.hours) : 1
+    res.json({ hours, since: samples[0]?.[0] ?? null, samples: systemHistory(hours) })
+  })
+
   /** GET /api/eltern/version - the installed MuPiBox version (mupibox.version). */
   router.get('/version', requireSession, (_req, res) => {
     res.json({ version: String((deps.getMupiboxConfig()?.mupibox as Record<string, unknown> | undefined)?.version ?? '') })

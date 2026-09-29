@@ -29,6 +29,8 @@ function isText(s) {
   if (/^\d+ \d+px /.test(t)) return false // css fonts ("600 20px Fredoka")
   if (/^[a-z0-9#.-]+(,\s*[a-z0-9#.-]+)+$/.test(t)) return false // selectors ("h1,h2,b", "input, select")
   if (/^[a-z]+\[[\w-]+(=|\])/.test(t)) return false // attribute selectors ('meta[name="theme-color"]')
+  if (/^var\(--[\w-]+\)$/.test(t)) return false // css variables
+  if (/^[MLHVZ][\d{}.,\sMLHVZ-]*$/.test(t)) return false // svg paths ("L{},100 L{},100 Z")
   if (!/\s/.test(t) && /^(\{\}|\?)/.test(t) && /[/?=]/.test(t)) return false // addresses put together (`${origin}/api/...`, `?x=${…}`)
   if (/^[A-Z0-9_]+$/.test(t) && t !== 'WLAN') return false // constants (WLAN is a word)
   if (/^[\w.-]+\.(json|js|css|svg|png|jpg|txt|sh|mp3|zip|log|html)$/i.test(t)) return false
@@ -111,7 +113,7 @@ const schemaJson = JSON.parse(fs.readFileSync(path.join(APP, 'schema.json'), 'ut
 const bootLabels = new Set((schemaJson.bootscreens ?? []).map((b) => b.label))
 const themeNames = new Set([...(schemaJson.themes ?? []), ...Object.keys(schemaJson.themePreview ?? {})].filter((n) => !bootLabels.has(n)))
 const texts = [...out]
-  .filter((t) => !langNames.has(t) && !themeNames.has(t)).filter((t) => t.replace(/\{\}/g, '').replace(/[\s\d.,:%·–—()/+\-×]/g, '').length >= 2).sort((a, b) => a.localeCompare(b, 'de'))
+  .filter((t) => !langNames.has(t) && !themeNames.has(t)).filter((t) => t.replace(/\{\}/g, '').replace(/[\s\d.,:%·–—()/+\-×°]/g, '').length >= 2).sort((a, b) => a.localeCompare(b, 'de'))
 
 if (process.argv.includes('--check')) {
   const set = new Set(texts)

@@ -4527,7 +4527,7 @@ function mountSecurity(root, page) {
 
 /* Einstellungen › System */
 
-const sys = { info: null, version: '', news: null, bs: null, logs: null, logSel: 'log:server-error', logGrep: '', logText: '', logAuto: false, debug: null, browser: null }
+const sys = { info: null, version: '', news: null, bs: null, logs: null, logSel: 'log:server-error', logGrep: '', logText: '', logAuto: false, debug: null, browser: null, range: 1 }
 
 const fmtUptime = (s) => {
   const d = Math.floor(s / 86400)
@@ -4593,13 +4593,84 @@ function aboutTop() {
       <div class="btns"><button class="btn primary" id="ab-save">Speichern</button></div></section>`,
     `<section class="card"><h2>MuPiBox</h2><dl class="kv">${row('Version', sys.version)}${row('Hostname', i.hostname)}${row('Läuft seit', i.uptime_seconds != null ? fmtUptime(i.uptime_seconds) : '')}${row('CPU-Last', i.load_1 != null ? `${i.load_1.toLocaleString(LOCALE)} (${i.cpu_count} Kerne)` : '')}${row('Temperatur', i.cpu_temp_c != null ? `${Math.round(i.cpu_temp_c)} °C` : '')}${row('Arbeitsspeicher', i.mem_total ? `${formatBytes(i.mem_total - i.mem_free)} von ${formatBytes(i.mem_total)}` : '')}</dl>
       ${used != null ? `<div class="bar"><div class="slider-head"><b>SD-Karte</b><span class="value-pill">${used} %</span></div><div class="track"><i style="--w:${used}%"></i></div><small>${formatBytes(disk.free)} frei von ${formatBytes(disk.total)}</small></div>` : ''}</section>`,
+    `<section class="card wide"><div class="hist-head"><h2>Verlauf</h2><div class="pills small" id="ab-range">${[1, 6, 24].map((h) => `<button aria-selected="${sys.range === h}" data-h="${h}">${h} h</button>`).join('')}</div></div>
+      <div class="hist-grid" id="ab-charts"><div class="loading"><p>Lade …</p></div></div>
+      <p class="help" style="margin:0">Einmal pro Minute gemessen, nur im Arbeitsspeicher der Box – nach einem Neustart beginnt der Verlauf neu.</p></section>`,
     `<section class="card"><h2>Neuigkeiten</h2><pre class="news" id="ab-news">${esc(sys.news ? newsText(sys.news) : 'Lade …')}</pre></section>`,
     `<section class="card"><h2>Support</h2><p class="help">Für Hilfe im Discord: ein Zip mit Bibliothek, Einstellungen (ohne Passwörter, Tokens und Konten), Netz- und Systemstand.</p>
       <div class="btns"><a class="btn" href="${API}/support-info" download>${icon('save', 18)}Support-Infos herunterladen</a></div></section>`,
   ]
 }
 
+// CPU, RAM and temperature over the last hours (the admin interface's rrd graphs): /system-history, a minute apart
+async function drawSystemHistory(root) {
+  const box = $('#ab-charts', root)
+  if (!box) return
+  const r = await api(`${API}/system-history?hours=${sys.range}`)
+  if (!box.isConnected) return
+  if (!r.ok) {
+    box.innerHTML = `<p class="help" style="margin:0">Der Verlauf ließ sich nicht laden.</p>`
+    return
+  }
+  const rows = r.body?.samples ?? []
+  const fmt = (v, digits = 0) => v.toLocaleString(LOCALE, { maximumFractionDigits: digits })
+  box.innerHTML = [
+    lineChart(rows, 1, { title: 'Temperatur', unit: '°C', color: 'var(--mp-warn)', digits: 1, fmt }),
+    lineChart(rows, 2, { title: 'CPU-Auslastung', unit: '%', min: 0, max: 100, color: 'var(--mp-primary)', fmt }),
+    lineChart(rows, 3, { title: 'Arbeitsspeicher', unit: '%', min: 0, max: 100, color: 'var(--mp-success)', fmt }),
+  ].join('')
+}
+
+// One value over time as a line (rows: [time, …], k: the value's place). A gap of more than three minutes (the box
+// was off) breaks the line. min/max: a fixed scale (percent), else the values' own range with some room.
+function lineChart(rows, k, { title, unit, min, max, color, digits = 0, fmt }) {
+  const pts = rows.filter((row) => Number.isFinite(row[k]))
+  const head = (value) => `<div class="hist-top"><b>${esc(title)}</b>${value ? `<span class="value-pill">${esc(value)}</span>` : ''}</div>`
+  if (pts.length < 2) return `<div class="hist">${head('')}<p class="help" style="margin:0">Noch zu wenige Messwerte.</p></div>`
+  const vals = pts.map((row) => row[k])
+  const low = Math.min(...vals)
+  const high = Math.max(...vals)
+  const lo = min ?? Math.floor(low - 2)
+  const hi = max ?? Math.ceil(high + 2)
+  const t0 = pts[0][0]
+  const t1 = pts[pts.length - 1][0]
+  const x = (t) => ((t - t0) / Math.max(1, t1 - t0)) * 300
+  const y = (v) => 100 - ((v - lo) / Math.max(1e-9, hi - lo)) * 100
+  let line = ''
+  let area = ''
+  let start = null
+  pts.forEach((row, i) => {
+    const gap = i > 0 && row[0] - pts[i - 1][0] > 3 * 60e3
+    const p = `${x(row[0]).toFixed(1)},${y(row[k]).toFixed(1)}`
+    if (i === 0 || gap) {
+      if (start !== null) area += `L${x(pts[i - 1][0]).toFixed(1)},100 L${start},100 Z `
+      line += `M${p} `
+      area += `M${p} `
+      start = x(row[0]).toFixed(1)
+    } else {
+      line += `L${p} `
+      area += `L${p} `
+    }
+  })
+  area += `L${x(t1).toFixed(1)},100 L${start},100 Z`
+  const last = vals[vals.length - 1]
+  return `<div class="hist" style="--c:${color}">${head(`${fmt(last, digits)} ${unit}`)}
+    <div class="hist-plot"><span class="hi">${fmt(hi)}</span><span class="lo">${fmt(lo)}</span>
+      <svg viewBox="0 0 300 100" preserveAspectRatio="none" aria-hidden="true"><path class="area" d="${area}"/><path class="line" d="${line}"/></svg></div>
+    <div class="hist-axis"><span>${hhmm(t0)}</span><span>${hhmm(t1)}</span></div>
+    <small>${esc(`Zwischen ${fmt(low, digits)} und ${fmt(high, digits)} ${unit}`)}</small></div>`
+}
+
 function mountAbout(root) {
+  drawSystemHistory(root)
+  every(60_000, () => drawSystemHistory(root))
+  $('#ab-range', root).onclick = (e) => {
+    const b = e.target.closest('button')
+    if (!b) return
+    sys.range = Number(b.dataset.h)
+    for (const x of b.parentElement.children) x.setAttribute('aria-selected', String(x === b))
+    drawSystemHistory(root)
+  }
   $('#ab-save', root).onclick = async () => {
     const name = $('#ab-name', root).value.trim()
     const r = await api(`${API}/bootscreen`, { method: 'POST', body: { boxName: name } })
