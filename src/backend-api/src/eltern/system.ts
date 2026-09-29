@@ -3,7 +3,7 @@
 // backend.php and MuPi-Conf did.
 
 import { execFile, spawn } from 'node:child_process'
-import { promises as fsp } from 'node:fs'
+import { writeFileSync, promises as fsp } from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import type { Router } from 'express'
@@ -80,7 +80,8 @@ function withoutSecrets(value: unknown): unknown {
 let newsCache: { at: number; text: string } | undefined
 
 // ---------- CPU, RAM and temperature over the last 24 hours (as the admin interface's rrd graphs, which kept 20 min) ----------
-// Measured once a minute and kept in memory only (nothing on the SD card; after a restart it starts again).
+// Measured once a minute and kept in memory, and in /tmp (RAM as well, nothing on the SD card) every 5 minutes and
+// when the process ends: an update of the backend keeps the history, a restart of the box starts it again.
 // cpu: the share of the minute the CPUs were busy (from /proc/stat), ram: used share (MemAvailable), temp: °C.
 
 type SystemSample = [at: number, temp: number | null, cpu: number | null, ram: number | null]
@@ -89,6 +90,36 @@ const KEEP_SAMPLES = 24 * 60
 const samples: SystemSample[] = []
 let lastCpu: { busy: number; total: number } | undefined
 let sampler: ReturnType<typeof setInterval> | undefined
+const KEPT_FILE = '/tmp/.mupibox-system-history.json'
+const KEEP_EVERY = 5
+
+function keepSamples(): void {
+  try {
+    writeFileSync(KEPT_FILE, JSON.stringify(samples))
+  } catch {
+    // no /tmp to write: the history lives on in memory
+  }
+}
+
+// The history kept before this process started (see keepSamples); only the last 24 hours, only well-formed rows
+async function readKeptSamples(): Promise<number> {
+  try {
+    const kept = JSON.parse(await fsp.readFile(KEPT_FILE, 'utf8'))
+    if (!Array.isArray(kept)) return 0
+    const from = Date.now() - KEEP_SAMPLES * SAMPLE_MS
+    const first = samples[0]?.[0] ?? Number.POSITIVE_INFINITY
+    const ok = (v: unknown) => v === null || (typeof v === 'number' && Number.isFinite(v))
+    const rows = kept.filter(
+      (s): s is SystemSample =>
+        Array.isArray(s) && s.length === 4 && typeof s[0] === 'number' && s[0] >= from && s[0] < first && ok(s[1]) && ok(s[2]) && ok(s[3]),
+    )
+    samples.unshift(...rows)
+    return rows.length
+  } catch {
+    // nothing kept (the first start after a restart of the box)
+    return 0
+  }
+}
 
 async function cpuTimes(): Promise<{ busy: number; total: number } | undefined> {
   try {
@@ -127,6 +158,7 @@ async function sampleSystem(): Promise<void> {
   lastCpu = now
   samples.push([Date.now(), temp, cpu, ram])
   if (samples.length > KEEP_SAMPLES) samples.splice(0, samples.length - KEEP_SAMPLES)
+  if (samples.length % KEEP_EVERY === 0) keepSamples()
 }
 
 function startSystemSampler(): void {
@@ -134,7 +166,10 @@ function startSystemSampler(): void {
   void cpuTimes().then((t) => {
     lastCpu = t
   })
-  void seedFromRrd()
+  // (what was kept before; else the last 20 minutes of the box's rrd files)
+  void readKeptSamples().then((kept) => (kept ? undefined : seedFromRrd()))
+  // (process.exit in server.ts's SIGINT/SIGTERM handler: 'exit' still comes, writing has to be synchronous there)
+  process.once('exit', keepSamples)
   // (a first CPU share soon after the start, not only after a minute)
   setTimeout(() => void sampleSystem(), 5000).unref()
   sampler = setInterval(() => void sampleSystem(), SAMPLE_MS)
@@ -199,7 +234,7 @@ export function registerSystemRoutes(router: Router, deps: SystemDeps): void {
   /** GET /api/eltern/system-history?hours=1|6|24 - [time, temp °C, cpu %, ram %] a minute apart (fewer for 24 h). */
   router.get('/system-history', requireSession, (req, res) => {
     const hours = [1, 6, 24].includes(Number(req.query.hours)) ? Number(req.query.hours) : 1
-    res.json({ hours, since: samples[0]?.[0] ?? null, ...systemHistory(hours) })
+    res.json({ hours, now: Date.now(), since: samples[0]?.[0] ?? null, ...systemHistory(hours) })
   })
 
   /** GET /api/eltern/version - the installed MuPiBox version (mupibox.version). */

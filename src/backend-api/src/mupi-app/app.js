@@ -1449,7 +1449,8 @@ const catOf = (it) => {
 
 function spotifyCover(it) {
   if (it.type !== 'spotify') return ''
-  const ref = it.id ? ['album', it.id] : it.playlistid ? ['playlist', it.playlistid] : it.showid ? ['show', it.showid] : it.audiobookid ? ['audiobook', it.audiobookid] : null
+  // (an entry of a whole artist - "Alle Folgen": the artist's picture, as its tile on "Hören")
+  const ref = it.id ? ['album', it.id] : it.playlistid ? ['playlist', it.playlistid] : it.showid ? ['show', it.showid] : it.audiobookid ? ['audiobook', it.audiobookid] : it.artistid ? ['artist', it.artistid] : null
   return ref ? `/api/spotify/cover-for/${ref[0]}/${encodeURIComponent(ref[1])}` : ''
 }
 const coverOf = (it) => it.cover_override ?? it.cover ?? spotifyCover(it) ?? ''
@@ -4929,7 +4930,7 @@ function aboutTop() {
       ${used != null ? `<div class="bar"><div class="slider-head"><b>SD-Karte</b><span class="value-pill">${used} %</span></div><div class="track"><i style="--w:${used}%"></i></div><small>${formatBytes(disk.free)} frei von ${formatBytes(disk.total)}</small></div>` : ''}</section>`,
     `<section class="card wide"><div class="hist-head"><h2>Verlauf</h2><div class="pills small" id="ab-range">${[1, 6, 24].map((h) => `<button aria-selected="${sys.range === h}" data-h="${h}">${h} h</button>`).join('')}</div></div>
       <div class="hist-grid" id="ab-charts"><div class="loading"><p>Lade …</p></div></div>
-      <p class="help" style="margin:0">Einmal pro Minute gemessen, nur im Arbeitsspeicher der Box – nach einem Neustart beginnt der Verlauf neu.</p></section>`,
+      <p class="help" style="margin:0"><span id="ab-since"></span> Einmal pro Minute gemessen, nur im Arbeitsspeicher der Box – nach einem Neustart beginnt der Verlauf neu.</p></section>`,
     `<section class="card"><h2>Neuigkeiten</h2><pre class="news" id="ab-news">${esc(sys.news ? newsText(sys.news) : tr('Lade …'))}</pre></section>`,
     `<section class="card"><h2>Support</h2><p class="help">Für Hilfe im Discord: ein Zip mit Bibliothek, Einstellungen (ohne Passwörter, Tokens und Konten), Netz- und Systemstand.</p>
       <div class="btns"><a class="btn" href="${API}/support-info" download>${icon('save', 18)}Support-Infos herunterladen</a></div></section>`,
@@ -4952,16 +4953,22 @@ async function drawSystemHistory(root) {
   const fmt = (v, digits = 0) => v.toLocaleString(LOCALE, { maximumFractionDigits: digits })
   // (a gap: the box was off - more than three times the points' spacing, at least three minutes)
   const gap = Math.max(3 * 60e3, 3 * (Number(r.body?.step) || 60e3))
+  // (the whole chosen range from left to right, the box's clock; measured only for a part of it: the line starts later)
+  const end = Number(r.body?.now) || Date.now()
+  const span = [end - range * 3600e3, end]
+  const since = Number(r.body?.since)
+  const note = $('#ab-since', root)
+  if (note) note.textContent = since > span[0] + 5 * 60e3 ? tr(`Messwerte erst seit ${hhmm(since)} Uhr.`) : ''
   box.innerHTML = [
-    lineChart(rows, 1, { title: 'Temperatur', unit: '°C', color: 'var(--mp-warn)', digits: 1, fmt, gap }),
-    lineChart(rows, 2, { title: 'CPU-Auslastung', unit: '%', min: 0, max: 100, color: 'var(--mp-primary)', fmt, gap }),
-    lineChart(rows, 3, { title: 'Arbeitsspeicher', unit: '%', min: 0, max: 100, color: 'var(--mp-success)', fmt, gap }),
+    lineChart(rows, 1, { title: 'Temperatur', unit: '°C', color: 'var(--mp-warn)', digits: 1, fmt, gap, span }),
+    lineChart(rows, 2, { title: 'CPU-Auslastung', unit: '%', min: 0, max: 100, color: 'var(--mp-primary)', fmt, gap, span }),
+    lineChart(rows, 3, { title: 'Arbeitsspeicher', unit: '%', min: 0, max: 100, color: 'var(--mp-success)', fmt, gap, span }),
   ].join('')
 }
 
 // One value over time as a line (rows: [time, …], k: the value's place). A gap of more than three minutes (the box
 // was off) breaks the line. min/max: a fixed scale (percent), else the values' own range with some room.
-function lineChart(rows, k, { title, unit, min, max, color, digits = 0, fmt, gap: maxGap = 3 * 60e3 }) {
+function lineChart(rows, k, { title, unit, min, max, color, digits = 0, fmt, gap: maxGap = 3 * 60e3, span }) {
   const pts = rows.filter((row) => Number.isFinite(row[k]))
   const head = (value) => `<div class="hist-top"><b>${esc(title)}</b>${value ? `<span class="value-pill">${esc(value)}</span>` : ''}</div>`
   if (pts.length < 2) return `<div class="hist">${head('')}<p class="help" style="margin:0">Noch zu wenige Messwerte.</p></div>`
@@ -4970,9 +4977,9 @@ function lineChart(rows, k, { title, unit, min, max, color, digits = 0, fmt, gap
   const high = Math.max(...vals)
   const lo = min ?? Math.floor(low - 2)
   const hi = max ?? Math.ceil(high + 2)
-  const t0 = pts[0][0]
-  const t1 = pts[pts.length - 1][0]
-  const x = (t) => ((t - t0) / Math.max(1, t1 - t0)) * 300
+  // (span: the chosen range's start and end - the points lie in it; else from the first to the last point)
+  const [t0, t1] = span ?? [pts[0][0], pts[pts.length - 1][0]]
+  const x = (t) => Math.min(300, Math.max(0, ((t - t0) / Math.max(1, t1 - t0)) * 300))
   const y = (v) => 100 - ((v - lo) / Math.max(1e-9, hi - lo)) * 100
   let line = ''
   let area = ''
@@ -4990,12 +4997,12 @@ function lineChart(rows, k, { title, unit, min, max, color, digits = 0, fmt, gap
       area += `L${p} `
     }
   })
-  area += `L${x(t1).toFixed(1)},100 L${start},100 Z`
+  area += `L${x(pts[pts.length - 1][0]).toFixed(1)},100 L${start},100 Z`
   const last = vals[vals.length - 1]
   return `<div class="hist" style="--c:${color}">${head(`${fmt(last, digits)} ${unit}`)}
     <div class="hist-plot"><span class="hi">${fmt(hi)}</span><span class="lo">${fmt(lo)}</span>
       <svg viewBox="0 0 300 100" preserveAspectRatio="none" aria-hidden="true"><path class="area" d="${area}"/><path class="line" d="${line}"/></svg></div>
-    <div class="hist-axis"><span>${hhmm(t0)}</span><span>${hhmm(t1)}</span></div>
+    <div class="hist-axis"><span>${hhmm(t0)}</span><span>${hhmm((t0 + t1) / 2)}</span><span>${hhmm(t1)}</span></div>
     <small>${esc(`Zwischen ${fmt(low, digits)} und ${fmt(high, digits)} ${unit}`)}</small></div>`
 }
 
