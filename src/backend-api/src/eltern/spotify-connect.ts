@@ -206,12 +206,20 @@ export function registerSpotifyConnectRoutes(
     const cache = cacheOf(deps.getMupiboxConfig())
     const creds = `${cache}/credentials.json`
     const previous = `${cache}/credentials.json.previous`
-    const hadOne = made && (await run('sudo', ['cp', '-p', creds, previous])).ok
+    // The login there is kept first: no copy of it (the card full, …) - nothing is replaced. The new one goes in
+    // next to it and takes its place in one step (rename), so a failed copy never leaves half a file behind.
+    const hadOne = made && (await run('sudo', ['test', '-e', creds])).ok
+    const kept = !hadOne || (await run('sudo', ['cp', '-p', creds, previous])).ok
     const ok =
       made &&
+      kept &&
       (await run('sudo', ['install', '-d', cache])).ok &&
-      (await run('sudo', ['install', '-m', '600', `${LOGIN_DIR}/credentials.json`, creds])).ok
-    if (!ok) console.warn(`${new Date().toLocaleString()}: [spotify-connect] no new login: ${current.output.slice(-500)}`)
+      (await run('sudo', ['install', '-m', '600', `${LOGIN_DIR}/credentials.json`, `${creds}.new`])).ok &&
+      (await run('sudo', ['mv', '-f', `${creds}.new`, creds])).ok
+    if (!ok) {
+      console.warn(`${new Date().toLocaleString()}: [spotify-connect] no new login${kept ? '' : ' (the one there could not be kept)'}: ${current.output.slice(-500)}`)
+      await run('sudo', ['rm', '-f', `${creds}.new`])
+    }
     await endJob()
     if (!ok) {
       res.status(502).json({ error: 'login_failed' })
@@ -223,7 +231,8 @@ export function registerSpotifyConnectRoutes(
     if (!state.running) {
       console.warn(`${new Date().toLocaleString()}: [spotify-connect] the new login is refused: ${state.error ?? '?'}${hadOne ? ' - the one before is back' : ''}`)
       if (hadOne) {
-        await run('sudo', ['install', '-m', '600', previous, creds])
+        await run('sudo', ['cp', '-p', previous, `${creds}.new`])
+        await run('sudo', ['mv', '-f', `${creds}.new`, creds])
         await run('sudo', ['systemctl', 'restart', 'librespot'])
       }
       res.status(502).json({ error: 'login_refused', detail: state.error, restored: hadOne })
