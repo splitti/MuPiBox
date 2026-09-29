@@ -646,3 +646,24 @@ a.btn { text-decoration: none; color: inherit; }
 .field-pick .input { flex: 1; min-width: 0; }
 /* its buttons stay at the bottom of the sheet while the results scroll */
 .cover-actions { position: sticky; bottom: 0; z-index: 3; margin-top: 0; padding: 10px 0 4px; background: var(--mp-surface); box-shadow: 0 -10px 12px -8px rgba(0,0,0,.25); }
+/* the library's folders of the SD card: artist (cover, albums to tap) and album (cover large); back to the artist */
+.sheet-back { align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; border: 0; background: none; padding: 4px 6px 4px 0; color: var(--mp-primary-text); font-weight: 700; font-size: 14px; }
+.local-head { display: flex; gap: 14px; align-items: center; }
+.local-head .lbl { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.local-cover { position: relative; width: 96px; height: 96px; flex: none; border-radius: var(--mp-r); overflow: hidden; background: var(--mp-chip); display: grid; place-items: center; color: var(--mp-muted); }
+.local-cover img, .album-cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.album-cover { position: relative; width: min(240px, 70%); aspect-ratio: 1; align-self: center; border-radius: var(--mp-r); overflow: hidden; background: var(--mp-chip); display: grid; place-items: center; color: var(--mp-muted); box-shadow: 0 8px 24px rgba(0,0,0,.25); }
+.album-title { text-align: center; display: flex; flex-direction: column; gap: 4px; }
+/* the found covers (Cover page): search and place above, the tiles' buttons flush at the bottom of each row, pages */
+.found-card { scroll-margin-top: calc(var(--mp-head-h) + env(safe-area-inset-top) + 8px); }
+.found-tools { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.found-tools .search { flex: 1 1 240px; min-width: 0; }
+.found-covers .cover-tile .btn { margin-top: auto; }
+.found-covers .cover-tile small { margin-bottom: 8px; }
+.pager { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px; }
+.pager:empty { display: none; }
+.pager button { min-width: 40px; height: 40px; padding: 0 10px; border-radius: 20px; border: 1.5px solid var(--mp-border); background: none; color: var(--mp-text); font-weight: 700; display: grid; place-items: center; }
+.pager button[aria-current="page"] { background: var(--mp-primary); border-color: var(--mp-primary); color: var(--mp-on-primary); }
+.pager button:disabled { opacity: .35; cursor: default; }
+.pager .next .ic { transform: rotate(180deg); }
+.pager .gap { color: var(--mp-muted); padding: 0 2px; }

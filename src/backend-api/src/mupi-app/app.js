@@ -1677,7 +1677,7 @@ function drawLib() {
   }
   list.innerHTML = libShown
     .map(
-      (g, i) => `<button class="entry lib-row" data-i="${i}"><span class="lib-thumb" style="background:${avatarColor(g.artist)}"><b>${esc(initials(g.artist))}</b>${g.cover ? `<img src="${esc(g.cover)}" alt="" loading="lazy">` : ''}</span>
+      (g, i) => `<button class="entry lib-row" data-i="${i}"><span class="lib-thumb" style="background:${avatarColor(g.artist)}"><b>${esc(initials(g.artist))}</b>${g.cover ? `<img src="${esc(stampedCover(g.cover))}" alt="" loading="lazy">` : ''}</span>
         <span class="lbl"><b>${esc(g.artist)}</b><small>${esc(libSub(g))}</small></span>
         ${g.cat ? `<span class="chip cat-${g.cat}">${esc(CAT_SHORT[g.cat] ?? '')}</span>` : ''}<span class="chev">${icon('chevron', 18)}</span></button>`,
     )
@@ -1820,53 +1820,88 @@ function openEntrySheet(item) {
   )
 }
 
-// A folder of the SD card: its albums, each one or the whole folder can be deleted
-async function openLocalSheet(folder) {
-  const r = folder.libraryIsContainer ? await api(`/api/library/children?path=${encodeURIComponent(folder.libraryPath)}`) : { body: [] }
+// A cover of the SD card after it was changed: the same address, so the browser is told it is new (its memory would
+// show the old picture)
+function stampedCover(url) {
+  return url && lib.coverStamp && String(url).startsWith('/api/library/file') ? `${url}&v=${lib.coverStamp}` : url
+}
+const localCoverUrl = (path) => `/api/library/file?path=${encodeURIComponent(path)}&w=400`
+
+// Deletes a folder of the SD card (an artist with its albums, or one album), asked first
+function deleteLocal(path, name, what) {
+  confirmSheet('Löschen', `${what} „${name}“ wird mit allen Dateien von der SD-Karte gelöscht. Das lässt sich nicht rückgängig machen.`, async () => {
+    const d = await api(`${API}/local/delete`, { method: 'POST', body: { path } })
+    if (!d.ok) return toast(errorText(d), 'info')
+    toast('Gelöscht')
+    libReload()
+  })
+}
+
+// The cover picker for a folder of the SD card (cover.jpg there); done: called with the new picture's address
+function pickLocalCover(folder, parent, done) {
+  const album = folder.title
+  const artist = parent?.title ?? ''
+  openCoverPicker({
+    target: `local:${folder.libraryPath}`,
+    title: album,
+    query: artist ? `${artist} ${album}` : album,
+    fallbacks: artist ? [`${artist} ${withoutNumber(album)}`, withoutNumber(album), artist] : [withoutNumber(album)],
+    current: stampedCover(folder.cover),
+    onDone: (body) => {
+      lib.coverStamp = Date.now()
+      toast('Cover übernommen – gleich auf dem Display')
+      libReload()
+      done(body?.path ? localCoverUrl(body.path) : folder.cover)
+    },
+  })
+}
+
+// A folder of the SD card: an artist (or a folder of folders) with its cover and its albums, each album opens on its
+// own sheet; a folder that is an album itself opens as one. parent: the folder above, to go back to.
+async function openLocalSheet(folder, parent = null) {
+  if (!folder.libraryIsContainer) return openLocalAlbumSheet(folder, parent)
+  const r = await api(`/api/library/children?path=${encodeURIComponent(folder.libraryPath)}`)
   const albums = (Array.isArray(r.body) ? r.body : []).filter((a) => !a.ownFiles)
-  const thumb = (cover) => `<span class="lib-thumb">${cover ? `<img src="${esc(cover)}" alt="" loading="lazy">` : icon('image', 18)}</span>`
+  const thumb = (cover) => `<span class="lib-thumb">${cover ? `<img src="${esc(stampedCover(cover))}" alt="" loading="lazy">` : icon('image', 18)}</span>`
   openSheet(
-    `<h2>${esc(folder.title)}</h2><p class="help" style="margin:0">Ordner auf der SD-Karte · ${esc(catLabel(folder.category))}${albums.length ? ` · ${albums.length} ${albums.length === 1 ? 'Album' : 'Alben'}` : ''}</p>
-     <div class="entry">${thumb(folder.cover)}<span class="lbl"><b>${albums.length ? 'Cover des Interpreten' : 'Cover'}</b>${folder.cover ? '' : '<small>Noch kein Bild</small>'}</span><button class="btn sm" data-cover>${folder.cover ? 'Ändern' : 'Wählen'}</button></div>
-     ${albums.length ? `<div class="rows">${albums.map((a, i) => `<div class="entry">${thumb(a.cover)}<span class="lbl"><b>${esc(a.title)}</b></span><button class="btn sm" data-c="${i}">Cover</button><button class="btn danger sm" data-a="${i}">Löschen</button></div>`).join('')}</div>` : ''}
-     <div class="btns"><button class="btn danger" data-all>${albums.length ? 'Ganzen Ordner löschen' : 'Löschen'}</button><button class="btn" data-close>Schließen</button></div>`,
+    `${parent ? `<button class="sheet-back" data-back>${icon('back', 18)}<span>${esc(parent.title)}</span></button>` : ''}
+     <div class="local-head"><span class="local-cover">${folder.cover ? `<img src="${esc(stampedCover(folder.cover))}" alt="">` : icon('image', 28)}</span>
+       <div class="lbl"><h2>${esc(folder.title)}</h2><p class="help" style="margin:0">${esc(['Ordner auf der SD-Karte', catLabel(folder.category), `${albums.length} ${albums.length === 1 ? 'Album' : 'Alben'}`].join(' · '))}</p>
+       <button class="btn sm" data-cover>${icon('image', 16)}${folder.cover ? 'Cover ändern' : 'Cover wählen'}</button></div></div>
+     ${albums.length ? `<div class="section-label" style="margin:0">Alben</div><div class="rows">${albums.map((a, i) => `<button class="entry lib-row" data-a="${i}">${thumb(a.cover)}<span class="lbl"><b>${esc(a.title)}</b>${a.libraryIsContainer ? '<small>Ordner</small>' : ''}</span><span class="chev">${icon('chevron', 18)}</span></button>`).join('')}</div>` : ''}
+     <div class="btns"><button class="btn danger" data-all>Ganzen Ordner löschen</button><button class="btn" data-close>${parent ? 'Zurück' : 'Schließen'}</button></div>`,
     (sheet, close) => {
-      for (const img of sheet.querySelectorAll('.lib-thumb img')) img.addEventListener('error', () => img.remove(), { once: true })
-      sheet.querySelector('[data-close]').onclick = close
-      // a cover for the folder or one of its albums: cover.jpg in that folder
-      const pick = (path, title, query, current, fallbacks = []) =>
-        openCoverPicker({
-          target: `local:${path}`,
-          title,
-          query,
-          fallbacks,
-          current,
-          onDone: async () => {
-            toast('Cover übernommen – gleich auf dem Display')
-            await libReload()
-            // back to the folder, with its new pictures
-            const again = lib.local[folder.category]?.find((f) => f.libraryPath === folder.libraryPath)
-            openLocalSheet(again ?? folder)
-          },
-        })
-      sheet.querySelector('[data-cover]').onclick = () => pick(folder.libraryPath, folder.title, folder.title, folder.cover)
-      for (const b of sheet.querySelectorAll('[data-c]')) {
-        const a = albums[Number(b.dataset.c)]
-        b.onclick = () => pick(a.libraryPath, a.title, `${folder.title} ${a.title}`, a.cover, [`${folder.title} ${withoutNumber(a.title)}`, withoutNumber(a.title), folder.title])
-      }
-      const del = (path, name, what) => {
+      for (const img of sheet.querySelectorAll('img')) img.addEventListener('error', () => img.remove(), { once: true })
+      const back = () => (parent ? openLocalSheet(parent) : close())
+      sheet.querySelector('[data-close]').onclick = back
+      sheet.querySelector('[data-back]')?.addEventListener('click', back)
+      sheet.querySelector('[data-cover]').onclick = () => pickLocalCover(folder, parent, (cover) => openLocalSheet({ ...folder, cover }, parent))
+      for (const b of sheet.querySelectorAll('[data-a]')) b.onclick = () => openLocalSheet(albums[Number(b.dataset.a)], folder)
+      sheet.querySelector('[data-all]').onclick = () => {
         close()
-        confirmSheet('Löschen', `${what} „${name}“ wird mit allen Dateien von der SD-Karte gelöscht. Das lässt sich nicht rückgängig machen.`, async () => {
-          const d = await api(`${API}/local/delete`, { method: 'POST', body: { path } })
-          if (!d.ok) return toast(errorText(d), 'info')
-          toast('Gelöscht')
-          libReload()
-        })
+        deleteLocal(folder.libraryPath, folder.title, 'Der Ordner')
       }
-      sheet.querySelector('[data-all]').onclick = () => del(folder.libraryPath, folder.title, albums.length ? 'Der Ordner' : 'Das Album')
-      for (const b of sheet.querySelectorAll('[data-a]')) {
-        const a = albums[Number(b.dataset.a)]
-        b.onclick = () => del(a.libraryPath, a.title, 'Das Album')
+    },
+  )
+}
+
+// An album of the SD card: its cover large, change it or delete the album; back to its artist
+function openLocalAlbumSheet(album, parent) {
+  openSheet(
+    `${parent ? `<button class="sheet-back" data-back>${icon('back', 18)}<span>${esc(parent.title)}</span></button>` : ''}
+     <span class="album-cover">${album.cover ? `<img src="${esc(stampedCover(album.cover))}" alt="">` : icon('image', 40)}</span>
+     <div class="album-title"><h2>${esc(album.title)}</h2><p class="help" style="margin:0">${esc(['Album auf der SD-Karte', catLabel(album.category), parent?.title].filter(Boolean).join(' · '))}</p></div>
+     <button class="btn primary block" data-cover>${icon('image', 18)}${album.cover ? 'Cover ändern' : 'Cover wählen'}</button>
+     <div class="btns"><button class="btn danger" data-del>Album löschen</button><button class="btn" data-close>${parent ? 'Zurück' : 'Schließen'}</button></div>`,
+    (sheet, close) => {
+      for (const img of sheet.querySelectorAll('img')) img.addEventListener('error', () => img.remove(), { once: true })
+      const back = () => (parent ? openLocalSheet(parent) : close())
+      sheet.querySelector('[data-close]').onclick = back
+      sheet.querySelector('[data-back]')?.addEventListener('click', back)
+      sheet.querySelector('[data-cover]').onclick = () => pickLocalCover(album, parent, (cover) => openLocalAlbumSheet({ ...album, cover }, parent))
+      sheet.querySelector('[data-del]').onclick = () => {
+        close()
+        deleteLocal(album.libraryPath, album.title, 'Das Album')
       }
     },
   )
@@ -2497,6 +2532,7 @@ function offerCover(folder, artist) {
           query: name === artist ? artist : `${artist} ${name}`,
           fallbacks: name === artist ? [] : [`${artist} ${withoutNumber(name)}`, withoutNumber(name), artist],
           onDone: () => {
+            lib.coverStamp = Date.now()
             toast('Cover übernommen – gleich auf dem Display')
             libChanged()
             lib.items = null
@@ -2783,7 +2819,7 @@ function wizardSections(page) {
 
 /* Cover: own pictures (e.g. for radio streams) and the online covers of NAS and local albums */
 
-const cov = { own: [], oc: null, settings: {}, alsoRejected: false, file: null }
+const cov = { own: [], oc: null, settings: {}, alsoRejected: false, file: null, q: '', src: 'all', page: 0 }
 
 async function loadCovers() {
   const [own, oc, settings] = await Promise.all([api(`${API}/covers`), api('/api/online-covers'), api(`${API}/online-covers-settings`)])
@@ -2830,17 +2866,70 @@ function coverTop() {
         ${cov.settings.onlineCoversSave && count.found > saved ? `<button class="btn" id="c-saveall">Übrige gefundene speichern</button>` : ''}</div>
       ${cov.oc ? '' : `<p class="help" style="margin:0">Der Stand der Online-Cover ließ sich nicht laden.</p>`}</section>`,
     found.length
-      ? `<section class="card wide"><h2>Zuletzt gefunden</h2><p class="help">Falsches Cover? Verwerfen – das Album fällt dann auf das Bild des Ordners darüber zurück.</p>
-          <div class="covers">${found
-            .slice(0, 30)
-            .map(
-              (e, i) => `<div class="cover-tile"><span class="cover-img"><img src="/api/online-cover/${e.file}" alt="" loading="lazy"><span class="cover-badge">${String(e.key).startsWith('nas:') ? 'NAS' : 'SD-Karte'}</span></span>
-                <b>${esc(e.album ?? '')}</b><small>${esc(e.series ?? '')} · ${e.source === 'itunes' ? 'iTunes' : 'Deezer'}</small>
-                <button class="btn danger sm" data-reject="${i}">Verwerfen</button></div>`,
-            )
-            .join('')}</div>${found.length > 30 ? `<p class="help" style="margin:0">… und ${found.length - 30} weitere.</p>` : ''}</section>`
+      ? `<section class="card wide found-card" id="c-found-card"><h2>Gefundene Cover</h2><p class="help">Die neuesten zuerst. Falsches Cover? Verwerfen – das Album fällt dann auf das Bild des Ordners darüber zurück.</p>
+          <div class="found-tools"><div class="search">${icon('search')}<input class="input" id="c-q" type="search" placeholder="Album oder Reihe suchen" autocomplete="off" value="${esc(cov.q)}"></div>
+            <div class="pills small" id="c-src">${[['all', 'Alle'], ['nas', 'NAS'], ['local', 'SD-Karte']].map(([v, t]) => `<button aria-selected="${cov.src === v}" data-v="${v}">${t}</button>`).join('')}</div></div>
+          <p class="help" id="c-count" style="margin:0"></p>
+          <div class="covers found-covers" id="c-found"></div>
+          <nav class="pager" id="c-pager" aria-label="Seiten"></nav></section>`
       : '',
   ]
+}
+
+// The found covers, a page at a time (30: two, three, five or six in a row fill it), filtered by name and place
+const COVER_PAGE = 30
+function drawFound(root) {
+  const grid = $('#c-found', root)
+  if (!grid) return
+  const q = norm(cov.q.trim())
+  const shown = (cov.found ?? []).filter(
+    (e) => (cov.src === 'all' || String(e.key).startsWith(`${cov.src}:`)) && (!q || norm(`${e.album ?? ''} ${e.series ?? ''}`).includes(q)),
+  )
+  const pages = Math.max(1, Math.ceil(shown.length / COVER_PAGE))
+  cov.page = Math.min(Math.max(0, cov.page), pages - 1)
+  const from = cov.page * COVER_PAGE
+  const part = shown.slice(from, from + COVER_PAGE)
+  $('#c-count', root).textContent = shown.length ? `${from + 1}–${from + part.length} von ${shown.length} Covern` : ''
+  grid.innerHTML = part.length
+    ? part
+        .map(
+          (e, i) => `<div class="cover-tile"><span class="cover-img"><img src="/api/online-cover/${e.file}" alt="" loading="lazy"><span class="cover-badge">${String(e.key).startsWith('nas:') ? 'NAS' : 'SD-Karte'}</span></span>
+            <b>${esc(e.album ?? '')}</b><small>${esc(e.series ?? '')} · ${e.source === 'itunes' ? 'iTunes' : 'Deezer'}</small>
+            <button class="btn danger sm" data-reject="${i}">Verwerfen</button></div>`,
+        )
+        .join('')
+    : `<p class="help covers-empty">Nichts gefunden.</p>`
+  for (const b of grid.querySelectorAll('[data-reject]')) {
+    const e = part[Number(b.dataset.reject)]
+    b.onclick = () =>
+      confirmSheet('Verwerfen', `Das Cover von „${e.album ?? ''}“ verwerfen? Das Album wird nicht mehr online gesucht${e.savedTo === 'nas' || e.savedTo === 'local' ? ', und das gespeicherte cover.jpg wird gelöscht' : ''}.`, async () => {
+        const r = await api('/api/online-covers/reject', { method: 'POST', body: { key: e.key } })
+        toast(r.body?.success ? 'Verworfen' : 'Das hat nicht geklappt', r.body?.success ? 'ok' : 'info')
+        await loadCovers().catch(() => undefined)
+        coverTop() // (the list of found ones again)
+        drawFound(root)
+      })
+  }
+  // the pages: first, last and the ones around the one shown, gaps as "…"
+  const pager = $('#c-pager', root)
+  if (pages <= 1) {
+    pager.innerHTML = ''
+    return
+  }
+  const nums = [...new Set([0, pages - 1, cov.page - 1, cov.page, cov.page + 1])].filter((n) => n >= 0 && n < pages).sort((a, b) => a - b)
+  const parts = []
+  nums.forEach((n, i) => {
+    if (i > 0 && n - nums[i - 1] > 1) parts.push('<span class="gap">…</span>')
+    parts.push(`<button data-page="${n}" ${n === cov.page ? 'aria-current="page"' : ''} aria-label="Seite ${n + 1}">${n + 1}</button>`)
+  })
+  pager.innerHTML = `<button data-page="${cov.page - 1}" ${cov.page === 0 ? 'disabled' : ''} aria-label="Vorherige Seite">${icon('back', 18)}</button>${parts.join('')}<button data-page="${cov.page + 1}" ${cov.page === pages - 1 ? 'disabled' : ''} aria-label="Nächste Seite" class="next">${icon('back', 18)}</button>`
+  for (const b of pager.querySelectorAll('[data-page]')) {
+    b.onclick = () => {
+      cov.page = Number(b.dataset.page)
+      drawFound(root)
+      $('#c-found-card', root)?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+    }
+  }
 }
 
 // A file name the box takes: letters, digits, dot, dash and underscore
@@ -2930,14 +3019,21 @@ function mountCovers(root, page) {
     const r = await api('/api/online-covers/save-all', { method: 'POST', body: {} })
     again(r.body?.success ? `${r.body.queued ?? 0} Cover werden gespeichert` : r.body?.error ?? 'Das hat nicht geklappt', r.body?.success ? 'ok' : 'info')
   })
-  for (const b of root.querySelectorAll('[data-reject]')) {
-    const e = cov.found[Number(b.dataset.reject)]
-    b.onclick = () =>
-      confirmSheet('Verwerfen', `Das Cover von „${e.album ?? ''}“ verwerfen? Das Album wird nicht mehr online gesucht${e.savedTo === 'nas' || e.savedTo === 'local' ? ', und das gespeicherte cover.jpg wird gelöscht' : ''}.`, async () => {
-        const r = await api('/api/online-covers/reject', { method: 'POST', body: { key: e.key } })
-        again(r.body?.success ? 'Verworfen' : 'Das hat nicht geklappt', r.body?.success ? 'ok' : 'info')
-      })
-  }
+  // the found covers: search, place and page (drawn on their own, the rest of the page stays)
+  drawFound(root)
+  $('#c-q', root)?.addEventListener('input', (e) => {
+    cov.q = e.target.value
+    cov.page = 0
+    drawFound(root)
+  })
+  $('#c-src', root)?.addEventListener('click', (e) => {
+    const b = e.target.closest('button')
+    if (!b) return
+    cov.src = b.dataset.v
+    cov.page = 0
+    for (const x of b.parentElement.children) x.setAttribute('aria-selected', String(x === b))
+    drawFound(root)
+  })
   // while albums are still looked up: the numbers follow
   if ((cov.oc?.pending ?? 0) > 0 || cov.oc?.scanning) every(15000, async () => {
     if (document.activeElement?.closest?.('#content')) return
