@@ -27,7 +27,8 @@ function isText(s) {
   if (/^[\w-]+="/.test(t)) return false // attributes put into a tag (class="…" width="…")
   if (/^\([a-z-]+: /.test(t)) return false // media queries
   if (/^\d+ \d+px /.test(t)) return false // css fonts ("600 20px Fredoka")
-  if (/^[a-z0-9#.-]+(,[a-z0-9#.-]+)+$/.test(t)) return false // selectors ("h1,h2,b")
+  if (/^[a-z0-9#.-]+(,\s*[a-z0-9#.-]+)+$/.test(t)) return false // selectors ("h1,h2,b", "input, select")
+  if (/^[a-z]+\[[\w-]+(=|\])/.test(t)) return false // attribute selectors ('meta[name="theme-color"]')
   if (!/\s/.test(t) && /^(\{\}|\?)/.test(t) && /[/?=]/.test(t)) return false // addresses put together (`${origin}/api/...`, `?x=${…}`)
   if (/^[A-Z0-9_]+$/.test(t) && t !== 'WLAN') return false // constants (WLAN is a word)
   if (/^[\w.-]+\.(json|js|css|svg|png|jpg|txt|sh|mp3|zip|log|html)$/i.test(t)) return false
@@ -84,7 +85,7 @@ function fromApp(out) {
 
 function fromSchema(out) {
   const schema = JSON.parse(fs.readFileSync(path.join(APP, 'schema.json'), 'utf8'))
-  const skipKeys = new Set(['id', 'key', 'type', 'icon', 'target', 'parent', 'area', 'kind', 'unit', 'default', 'act'])
+  const skipKeys = new Set(['id', 'key', 'type', 'icon', 'target', 'parent', 'area', 'kind', 'unit', 'default', 'act', 'slug'])
   const walk = (v, key) => {
     if (typeof v === 'string') {
       if (!skipKeys.has(key)) textsOf(v, out)

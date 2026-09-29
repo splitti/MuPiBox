@@ -7529,6 +7529,32 @@ app.use(['/parents', '/eltern'], (req, res) => {
 // The MuPiBox app (one app for everything, see docs/eine-app/). Login: session cookie, password, or a magic link from
 // the QR code on the display or Telegram (redeemed by the landing handler).
 app.get('/app', buildElternLandingHandler())
+// The app on a phone's home screen: its name is the box's (as on the display), its addresses stay under /app on
+// whichever port it was added from (relative to this file)
+app.get('/app/manifest.webmanifest', (_req, res) => {
+  const mb = getMupiboxConfigSync()?.mupibox as { boxName?: unknown } | undefined
+  const name = typeof mb?.boxName === 'string' && mb.boxName.trim() ? mb.boxName.trim() : 'MuPiBox'
+  res.setHeader('Cache-Control', 'no-cache')
+  res.type('application/manifest+json').send(
+    JSON.stringify({
+      id: '/app/',
+      name,
+      short_name: name,
+      description: 'MuPiBox',
+      start_url: './',
+      scope: './',
+      display: 'standalone',
+      orientation: 'any',
+      background_color: '#0F1522',
+      theme_color: '#0F1522',
+      icons: [
+        { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+        { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+        { src: 'icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+      ],
+    }),
+  )
+})
 app.use(
   '/app',
   express.static(path.join(serverDir, 'mupi-app'), {

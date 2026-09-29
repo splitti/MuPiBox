@@ -6,12 +6,22 @@
   <meta name="color-scheme" content="dark light">
   <title>MuPiBox</title>
   <link rel="icon" href="mupi-hell.svg" type="image/svg+xml">
+  <!-- On a phone's home screen: an app of its own (icon, name, no browser bars) -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="MuPiBox">
+  <meta name="theme-color" content="#0F1522">
   <!-- The chosen theme before the first paint (dark by default), so nothing flashes -->
   <script>
     try {
       var t = localStorage.getItem('mupi-theme')
       if (t === 'light' || t === 'dark' || t === 'auto') document.documentElement.setAttribute('data-theme', t)
     } catch (e) {}
+    // (the bars of the phone around the app in its background colour, see themeColor in app.js)
+    var light = t === 'light' || (t === 'auto' && matchMedia('(prefers-color-scheme: light)').matches)
+    if (light) document.querySelector('meta[name="theme-color"]').content = '#F3F6F9'
   </script>
   <link rel="stylesheet" href="fonts.css">
   <link rel="stylesheet" href="tokens.css">

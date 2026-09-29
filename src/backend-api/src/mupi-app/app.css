@@ -9,6 +9,8 @@ body {
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
 }
+/* as in an app: no text selection or long-press menu on the controls (the texts of a page stay selectable) */
+button, .tabbar, .sidebar, .topbar { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
 a { color: var(--mp-primary-text); }
@@ -20,7 +22,9 @@ a { color: var(--mp-primary-text); }
 .main { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; }
 .topbar {
   position: sticky; top: 0; z-index: 20;
-  height: var(--mp-head-h); padding: 0 16px;
+  /* (on the home screen of a phone: below the status bar and beside the notch in landscape) */
+  height: calc(var(--mp-head-h) + env(safe-area-inset-top));
+  padding: env(safe-area-inset-top) max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));
   display: flex; align-items: center; gap: 12px;
   background: var(--mp-bg);
 }
@@ -44,7 +48,7 @@ a { color: var(--mp-primary-text); }
 
 .content {
   flex: 1; width: 100%; max-width: var(--mp-maxw); margin: 0 auto;
-  padding: 8px 16px calc(var(--mp-tab-h) + 24px + env(safe-area-inset-bottom));
+  padding: 8px max(16px, env(safe-area-inset-right)) calc(var(--mp-tab-h) + 24px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
   display: flex; flex-direction: column; gap: var(--mp-gap);
   outline: none;
 }
@@ -52,7 +56,7 @@ a { color: var(--mp-primary-text); }
 .tabbar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
   height: calc(var(--mp-tab-h) + env(safe-area-inset-bottom));
-  padding: 8px 4px env(safe-area-inset-bottom);
+  padding: 8px max(4px, env(safe-area-inset-right)) env(safe-area-inset-bottom) max(4px, env(safe-area-inset-left));
   display: flex; justify-content: space-around; align-items: flex-start;
   background: var(--mp-surface); border-top: 1px solid var(--mp-border);
 }
@@ -91,7 +95,7 @@ a { color: var(--mp-primary-text); }
   .side-link.sub[aria-current="page"] { background: none; color: var(--mp-primary-text); }
   .sidebar .side-foot { margin-top: auto; }
   .content { max-width: var(--mp-maxw-wide); padding-bottom: 32px; }
-  .topbar { padding: 0 24px; }
+  .topbar { padding: env(safe-area-inset-top) max(24px, env(safe-area-inset-right)) 0 24px; }
 }
 /* PC from 1200 px: pages with several cards in two columns; wide blocks across both */
 @media (min-width: 1200px) {

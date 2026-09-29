@@ -72,7 +72,29 @@ async function boot() {
   }
   loadBoxName()
   window.addEventListener('hashchange', route)
+  refreshOnReturn()
   route()
+}
+
+// On the phone the app stays open in the background (home screen: no reload, no pull to refresh). Back after a while:
+// the page shown is loaded afresh, unless something is being typed or a sheet is open.
+function refreshOnReturn() {
+  let hiddenAt = 0
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      hiddenAt = Date.now()
+      return
+    }
+    const away = hiddenAt && Date.now() - hiddenAt > 60_000
+    const busy = !$('#sheet').hidden || document.activeElement?.matches?.('input, textarea, select')
+    if (!away || busy || !state.csrf) return
+    // (where one was on the page stays)
+    const y = window.scrollY
+    const page = currentPage()
+    stopPageTimers()
+    renderChrome(page)
+    renderPage(page).then(() => window.scrollTo(0, y))
+  })
 }
 
 async function loadBoxName() {
@@ -81,6 +103,10 @@ async function loadBoxName() {
     if (r.ok) {
       const name = (await r.json())?.current?.boxName
       if (typeof name === 'string' && name.trim()) state.boxName = name.trim()
+      // (the name of the tab and of the icon when the app is put on the home screen)
+      document.title = state.boxName
+      const title = $('meta[name="apple-mobile-web-app-title"]')
+      if (title) title.content = state.boxName
       renderChrome(currentPage())
     }
   } catch {
@@ -229,9 +255,16 @@ function themeButton() {
   return `<button class="icon-btn soft" id="theme-btn" aria-label="${theme === 'light' ? 'Dunkel' : 'Hell'}">${icon(theme === 'light' ? 'moon' : 'sun')}</button>`
 }
 
+// the phone's bars around the app (status bar, browser) in the page's background colour (as index.html sets it)
+function themeColor(theme) {
+  const meta = $('meta[name="theme-color"]')
+  if (meta) meta.content = theme === 'light' ? '#F3F6F9' : '#0F1522'
+}
+
 function toggleTheme() {
   const now = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light'
   document.documentElement.setAttribute('data-theme', now)
+  themeColor(now)
   try {
     localStorage.setItem('mupi-theme', now)
   } catch {
