@@ -14,7 +14,7 @@ const API = '/api/eltern'
 const BOX_ORIGIN = `http://${location.hostname}:8200`
 // Where Spotify sends the browser back after the login: https through the box's web server (port 443), as the admin
 // interface's spotify.php - Spotify takes no http addresses except 127.0.0.1. It has to be entered in the Spotify app.
-const SPOTIFY_REDIRECT = `https://${location.hostname}/api/eltern/spotify-oauth/callback`
+const SPOTIFY_REDIRECT = `https://${location.hostname}/app/spotify-callback`
 // numbers and dates in the language of the app (see i18n.js)
 let LOCALE = localeTag()
 

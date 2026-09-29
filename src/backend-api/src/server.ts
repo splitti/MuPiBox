@@ -320,6 +320,16 @@ export const app = express()
 // req.ip from X-Forwarded-For only when the request came from the box itself: the web server of port 80 passing the
 // app on (see PROXY_PORT). From anywhere else the header is ignored, a client on the network cannot forge its address.
 app.set('trust proxy', 'loopback')
+// Spotify's way back after the login (the Redirect URI in the parents' Spotify app, see eltern/oauth.ts
+// buildRedirectUri): https://<box>/app/spotify-callback is handled as /api/eltern/spotify-oauth/callback, the address
+// of before - which stays for Spotify apps that still name it
+app.use((req, _res, next) => {
+  if (req.path === '/app/spotify-callback') {
+    const query = req.url.indexOf('?')
+    req.url = `/api/eltern/spotify-oauth/callback${query >= 0 ? req.url.slice(query) : ''}`
+  }
+  next()
+})
 // Refuse requests a foreign web page makes through a visitor's browser, then CORS for the box
 // itself only (was: cors() for every origin). See request-guard.ts.
 app.use(browserGuard)
