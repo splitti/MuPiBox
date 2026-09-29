@@ -14,6 +14,7 @@ export interface PlaytimeLimitConfig {
   enabled: boolean
   resetHour?: number
   graceMode?: GraceMode
+  graceMaxMinutes?: number // how long it may play on after the limit at most (1-180, default 15)
   maxOverrunMinutes?: number // older configs: 0 = stop at once, anything else = let the song finish
   limitsMinutes?: PlaytimeLimitsMinutes
   todayBonus?: PlaytimeBonus
@@ -37,6 +38,7 @@ export type QuietHoursSchedule = Partial<Record<PlaytimeDayKey, QuietHoursWindow
 export interface QuietHoursConfig {
   enabled: boolean
   graceMode?: GraceMode
+  graceMaxMinutes?: number // see PlaytimeLimitConfig
   maxOverrunMinutes?: number // older configs: see PlaytimeLimitConfig
   schedule?: QuietHoursSchedule
 }

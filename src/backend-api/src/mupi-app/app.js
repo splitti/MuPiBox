@@ -1083,6 +1083,10 @@ function sleepSheet(root) {
 // What a limit or a quiet time does when it begins: the words of the page and the values of the box
 const GRACE = { 'Sofort stoppen': 'stop', 'Titel zu Ende spielen': 'track', 'Album zu Ende spielen': 'album' }
 const GRACE_LABEL = Object.fromEntries(Object.entries(GRACE).map(([label, v]) => [v, label]))
+// how long it may play on at most after the limit / when a quiet time begins (the player's graceMaxMinutes)
+const GRACE_MAX = [5, 10, 15, 20, 30, 45, 60, 90, 120, 180]
+const graceMaxLabel = (m) => (m < 60 ? `${m} min` : m % 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m / 60} h`)
+const graceMaxOf = (label) => GRACE_MAX.find((m) => graceMaxLabel(m) === label)
 const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
 const DAY_SHORT = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
 const DAY_LONG = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag']
@@ -1128,8 +1132,10 @@ async function loadCaps() {
   DAY_KEYS.forEach((d, i) => state.values.set(`lim${i}`, Number(pl.limitsMinutes?.[d] ?? 0)))
   state.values.set('resetHour', String(pl.resetHour ?? 0))
   state.values.set('limitGrace', GRACE_LABEL[pl.graceMode] ?? 'Titel zu Ende spielen')
+  state.values.set('limitGraceMax', graceMaxLabel(pl.graceMaxMinutes ?? 15))
   state.values.set('quietOn', !!qh.enabled)
   state.values.set('quietGrace', GRACE_LABEL[qh.graceMode] ?? 'Titel zu Ende spielen')
+  state.values.set('quietGraceMax', graceMaxLabel(qh.graceMaxMinutes ?? 15))
 }
 
 async function refreshPlaytime() {
@@ -5589,6 +5595,10 @@ const CONTROLLERS = {
           return saveCaps({ playtimeLimit: { graceMode: GRACE[v] } })
         case 'quietGrace':
           return saveCaps({ quietHours: { graceMode: GRACE[v] } })
+        case 'limitGraceMax':
+          return saveCaps({ playtimeLimit: { graceMaxMinutes: graceMaxOf(v) } }, `Höchstens ${v} weiter`)
+        case 'quietGraceMax':
+          return saveCaps({ quietHours: { graceMaxMinutes: graceMaxOf(v) } }, `Höchstens ${v} weiter`)
         case 'resetHour': {
           const h = Number(v)
           // (an emptied field is no "0:00")

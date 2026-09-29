@@ -231,6 +231,14 @@ type GraceMode = 'stop' | 'track' | 'album'
 function isGraceMode(value: unknown): value is GraceMode {
   return value === 'stop' || value === 'track' || value === 'album'
 }
+// How long it may play on after a limit at most (the player's graceMaxMinutes: 1-180, default 15)
+const GRACE_MAX_DEFAULT = 15
+const graceMaxOf = (block: Record<string, unknown>): number => {
+  const m = Number(block.graceMaxMinutes)
+  return Number.isInteger(m) && m >= 1 && m <= 180 ? m : GRACE_MAX_DEFAULT
+}
+const validGraceMax = (v: unknown): v is number => typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 180
+
 function graceModeOf(block: Record<string, unknown>): GraceMode {
   if (isGraceMode(block.graceMode)) return block.graceMode
   return block.maxOverrunMinutes === 0 ? 'stop' : 'track'
@@ -685,6 +693,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       playtimeLimit: {
         enabled: playtime.enabled ?? false,
         graceMode: graceModeOf(playtime),
+        graceMaxMinutes: graceMaxOf(playtime),
         resetHour: playtime.resetHour ?? 0,
         limitsMinutes: playtime.limitsMinutes ?? {
           mon: 60, tue: 60, wed: 60, thu: 60, fri: 60, sat: 60, sun: 60,
@@ -693,6 +702,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       quietHours: {
         enabled: quiet.enabled ?? false,
         graceMode: graceModeOf(quiet),
+        graceMaxMinutes: graceMaxOf(quiet),
         schedule: quiet.schedule ?? { mon: [], tue: [], wed: [], thu: [], fri: [], sat: [], sun: [] },
       },
     })
@@ -712,12 +722,14 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
         enabled?: unknown
         limitsMinutes?: Record<string, unknown>
         graceMode?: unknown
+        graceMaxMinutes?: unknown
         resetHour?: unknown
       }
       quietHours?: {
         enabled?: unknown
         schedule?: Record<string, unknown>
         graceMode?: unknown
+        graceMaxMinutes?: unknown
       }
     }
     const days = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
@@ -794,6 +806,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
           block.graceMode = body.playtimeLimit.graceMode
           delete block.maxOverrunMinutes
         }
+        if (validGraceMax(body.playtimeLimit.graceMaxMinutes)) block.graceMaxMinutes = body.playtimeLimit.graceMaxMinutes
         if (Object.keys(validatedLimits).length > 0) {
           const lm = ((block.limitsMinutes as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
           Object.assign(lm, validatedLimits)
@@ -808,6 +821,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
           block.graceMode = body.quietHours.graceMode
           delete block.maxOverrunMinutes
         }
+        if (validGraceMax(body.quietHours.graceMaxMinutes)) block.graceMaxMinutes = body.quietHours.graceMaxMinutes
         if (Object.keys(validatedSchedule).length > 0) {
           const sched = ((block.schedule as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
           Object.assign(sched, validatedSchedule)

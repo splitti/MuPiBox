@@ -584,14 +584,17 @@ function effectiveGraceMode(configured) {
 function stopUnlessEpisode(configured) {
   return configured === 'stop' && currentMeta.currentPlayer === 'spotify' && currentMeta.currentType !== 'rss' && currentMeta.currentType !== 'radio'
 }
-// A podcast episode can be long: it gets the long safety cap, too.
-function graceCapMs(mode) {
-  return currentMeta.currentType === 'rss' ? GRACE_MAX_MS.album : GRACE_MAX_MS[mode]
+// How long a song, album or podcast episode may play on after the limit at most: the parents choose it (graceMaxMinutes
+// of the limit or the quiet times, 1-180, default 15). Before, 30 min (song) and 3 h (album, episode) were fixed - more
+// than a whole day's limit of 120 min. Normally the song ends long before; a never-ending one stops at this time.
+const GRACE_MAX_DEFAULT_MINUTES = 15
+function readGraceMaxMinutes(raw) {
+  const m = Number(raw.graceMaxMinutes)
+  return Number.isInteger(m) && m >= 1 && m <= 180 ? m : GRACE_MAX_DEFAULT_MINUTES
 }
-
-// Safety net only: something that never ends (radio, a many-hour audiobook chapter or "album") must not play on
-// for ever. Normally the song / album ends long before.
-const GRACE_MAX_MS = { track: 30 * 60 * 1000, album: 3 * 60 * 60 * 1000 }
+function graceCapMs(cfg) {
+  return cfg.graceMaxMinutes * 60 * 1000
+}
 
 function readPlaytimeConfig() {
   const raw = muPiBoxConfig?.playtimeLimit || {}
@@ -600,6 +603,7 @@ function readPlaytimeConfig() {
     enabled: raw.enabled === true,
     resetHour,
     graceMode: readGraceMode(raw),
+    graceMaxMinutes: readGraceMaxMinutes(raw),
     limitsMinutes: { ...PLAYTIME_DEFAULT_LIMITS, ...(raw.limitsMinutes || {}) },
     todayBonus: raw.todayBonus || null,
   }
@@ -643,6 +647,7 @@ function readQuietHoursConfig() {
   return {
     enabled: raw.enabled === true,
     graceMode: readGraceMode(raw),
+    graceMaxMinutes: readGraceMaxMinutes(raw),
     schedule: { ...QUIET_DEFAULT_SCHEDULE, ...(raw.schedule || {}) },
   }
 }
@@ -977,12 +982,8 @@ async function spotifyGraceCheck() {
         spotifyGracePos = null
         return
       }
-    } else {
-      // A podcast episode may always finish: give it the long safety cap (a song only gets 30 min).
-      const cap = Date.now() + GRACE_MAX_MS.album
-      if (playtimeState.state === 'grace' && playtimeState.graceEndsAt !== null && playtimeState.graceEndsAt < cap) playtimeState.graceEndsAt = cap
-      if (quietHoursState.state === 'grace' && quietHoursState.graceEndsAt !== null && quietHoursState.graceEndsAt < cap) quietHoursState.graceEndsAt = cap
     }
+    // (a podcast episode may finish too - within the same time the parents chose)
     // "album" only means something inside an album played in order; a playlist, podcast, audiobook,
     // shuffled or repeated album counts as its current item (its "end" can't be told reliably)
     const inAlbum = body.context?.type === 'album'
@@ -1078,7 +1079,7 @@ function playtimeTickStep() {
         playtimeState.state = 'grace'
         playtimeState.graceMode = graceMode
         playtimeState.stopUnlessEpisode = stopUnlessEpisode(cfg.graceMode)
-        playtimeState.graceEndsAt = Date.now() + graceCapMs(graceMode)
+        playtimeState.graceEndsAt = Date.now() + graceCapMs(cfg)
         console.log(
           `${now.toLocaleString()}: [Playtime] Daily limit reached (${limit} min for ${today.dayKey}${bonus > 0 ? `, +${bonus} bonus` : ''}). Letting the ${graceMode} finish.`,
         )
@@ -1153,7 +1154,7 @@ function quietHoursTickStep() {
         quietHoursState.state = 'grace'
         quietHoursState.graceMode = graceMode
         quietHoursState.stopUnlessEpisode = stopUnlessEpisode(cfg.graceMode)
-        quietHoursState.graceEndsAt = Date.now() + graceCapMs(graceMode)
+        quietHoursState.graceEndsAt = Date.now() + graceCapMs(cfg)
         console.log(
           `${now.toLocaleString()}: [QuietHours] Entered window ${window.from}-${window.to}${window.label ? ` (${window.label})` : ''}. Letting the ${graceMode} finish.`,
         )

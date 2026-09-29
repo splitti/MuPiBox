@@ -216,12 +216,31 @@
        "label": "Wenn das Limit erreicht ist",
        "key": "limitGrace",
        "default": "Titel zu Ende spielen",
-       "help": "Podcasts dürfen immer die Folge beenden, Radio stoppt sofort. Zu Ende spielen ist auf 30 min (Titel) bzw. 3 h (Album) begrenzt.",
+       "help": "Podcasts dürfen die Folge beenden, Radio stoppt sofort.",
        "options": [
         "Sofort stoppen",
         "Titel zu Ende spielen",
         "Album zu Ende spielen"
        ]
+      },
+      {
+       "type": "select",
+       "key": "limitGraceMax",
+       "label": "Höchstens so lange weiterspielen",
+       "options": [
+        "5 min",
+        "10 min",
+        "15 min",
+        "20 min",
+        "30 min",
+        "45 min",
+        "1 h",
+        "1 h 30 min",
+        "2 h",
+        "3 h"
+       ],
+       "default": "15 min",
+       "help": "Danach stoppt die Box auch mitten im Titel oder Album."
       }
      ]
     },
@@ -258,6 +277,25 @@
         "Titel zu Ende spielen",
         "Album zu Ende spielen"
        ]
+      },
+      {
+       "type": "select",
+       "key": "quietGraceMax",
+       "label": "Höchstens so lange weiterspielen",
+       "options": [
+        "5 min",
+        "10 min",
+        "15 min",
+        "20 min",
+        "30 min",
+        "45 min",
+        "1 h",
+        "1 h 30 min",
+        "2 h",
+        "3 h"
+       ],
+       "default": "15 min",
+       "help": "Danach stoppt die Box auch mitten im Titel oder Album."
       }
      ]
     },
