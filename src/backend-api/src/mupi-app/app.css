@@ -694,3 +694,7 @@ input[type="range"]:disabled { opacity: .4; cursor: default; }
 /* the phone: a segment's words may wrap (two lines instead of cut off), two fields side by side go below each other */
 .seg button { min-height: 38px; height: auto; line-height: 1.15; padding-block: 4px; }
 @media (max-width: 480px) { .rule-times.stack-phone { grid-template-columns: minmax(0, 1fr); } }
+/* a quick action that does nothing now (e.g. +15 min without a daily limit) */
+.qbtn:disabled { opacity: .45; cursor: default; filter: grayscale(.6); }
+/* "Ruhe sofort" while the quiet runs: it ends it */
+.qbtn.blue.on { background: var(--mp-primary); color: var(--mp-on-primary); }

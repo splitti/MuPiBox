@@ -691,7 +691,7 @@ function startSkeleton() {
       <div class="section-label">Sofort-Aktionen</div>
       <div class="quick">
         <button class="qbtn accent" id="q-plus">${icon('plus', 22)}<span>+15 min</span></button>
-        <button class="qbtn blue" id="q-quiet">${icon('moon', 22)}<span>Ruhe sofort</span></button>
+        <button class="qbtn blue" id="q-quiet">${icon('moon', 22)}<span id="q-quiet-label">Ruhe sofort</span></button>
         <button class="qbtn" id="q-sleep">${icon('time', 22)}<span id="q-sleep-label">Schlaftimer</span></button>
       </div>
     </div>`,
@@ -713,7 +713,7 @@ function tile(target, ic, label, val, id) {
     <span class="tile-head">${icon(ic, 16)}${label}</span><b class="tile-val">${val}</b><span class="tile-bar" hidden><i></i></span></button>`
 }
 
-const startState = { maxVolume: 100, volTimer: null, sleep: null }
+const startState = { maxVolume: 100, volTimer: null, sleep: null, quietUntil: 0 }
 
 function mountStart(root) {
   loadNow(root)
@@ -727,11 +727,21 @@ function mountStart(root) {
     toast(r.ok ? '15 Minuten mehr für heute' : 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
     if (r.ok) loadStatus(root)
   }
-  $('#q-quiet', root).onclick = () => minutesSheet('Ruhe sofort', 'Die Box spielt für diese Zeit nichts.', [15, 30, 60, 120], 30, async (m) => {
-    const r = await api('/api/quiethours/now', { method: 'POST', body: { minutes: m } })
-    toast(r.ok ? `Ruhe für ${m} Minuten` : 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
-    if (r.ok) loadStatus(root)
-  })
+  $('#q-quiet', root).onclick = () => {
+    // (a quiet running: the same button ends it - the planned times and the limit count again)
+    if (startState.quietUntil > Date.now()) {
+      return confirmSheet('Ruhe beenden', `Die Ruhe läuft noch bis ${hhmm(startState.quietUntil)}. Jetzt beenden? Dann gelten wieder die normalen Zeiten.`, async () => {
+        const r = await api('/api/playtime/override/clear', { method: 'POST', body: {} })
+        toast(r.ok ? 'Ruhe beendet' : 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
+        if (r.ok) setTimeout(() => loadStatus(root), 600)
+      })
+    }
+    minutesSheet('Ruhe sofort', 'Die Box spielt für diese Zeit nichts.', [15, 30, 60, 120], 30, async (m) => {
+      const r = await api('/api/quiethours/now', { method: 'POST', body: { minutes: m } })
+      toast(r.ok ? `Ruhe für ${m} Minuten` : 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
+      if (r.ok) setTimeout(() => loadStatus(root), 600)
+    })
+  }
   $('#q-sleep', root).onclick = () => sleepSheet(root)
 }
 
@@ -880,6 +890,12 @@ async function loadStatus(root) {
   setTile(root, 'tile-akku', Number.isFinite(pct) ? `${pct} %${charging ? ' ⚡' : ''}` : '–', Number.isFinite(pct) ? pct : null, pct <= 15 ? 'danger' : pct <= 30 ? 'warn' : 'ok')
   // listened today
   const p = pt.body?.playtime ?? {}
+  // (bonus minutes go onto today's limit: without one they do nothing)
+  const plus = $('#q-plus', root)
+  if (plus) {
+    plus.disabled = !p.enabled
+    plus.title = p.enabled ? '' : 'Nur mit Tageslimit'
+  }
   if (p.enabled && Number.isFinite(p.limitMinutes)) {
     const used = Math.floor((p.usedSeconds ?? 0) / 60)
     setTile(root, 'tile-spielzeit', `${used} / ${p.limitMinutes} min`, p.limitMinutes > 0 ? Math.min(100, (used / p.limitMinutes) * 100) : 100, p.state === 'blocked' ? 'danger' : 'accent')
@@ -896,6 +912,14 @@ async function loadStatus(root) {
   const ov = pt.body?.override ?? {}
   const now = Date.now()
   let quiet = 'Aus'
+  // the "Ruhe sofort" button: until when, and it ends the quiet (see mountStart)
+  startState.quietUntil = ov.forceBlockUntil > now ? ov.forceBlockUntil : 0
+  const quietLabel = $('#q-quiet-label', root)
+  if (quietLabel) {
+    // (until when: in the tile beside it - the button stays short)
+    quietLabel.textContent = startState.quietUntil ? 'Ruhe beenden' : 'Ruhe sofort'
+    $('#q-quiet', root).classList.toggle('on', !!startState.quietUntil)
+  }
   if (ov.forceBlockUntil > now) quiet = `Ruhe bis ${hhmm(ov.forceBlockUntil)}`
   else if (ov.allowUntil > now) quiet = `Frei bis ${hhmm(ov.allowUntil)}`
   else if (q.enabled) quiet = q.state === 'blocked' || q.inWindow ? (q.label ? `Jetzt · ${q.label}` : 'Jetzt') : nextQuiet(caps.body?.quietHours?.schedule) ?? 'Keine geplant'
@@ -1195,6 +1219,14 @@ function drawRing() {
       setTimeout(() => refreshPlaytime(), 1200)
     }
   }
+}
+
+// "+ Bonus-Zeit" adds to today's limit: only with the daily limits on
+function bonusButton(root, on = !!state.values.get('limitOn')) {
+  const b = root?.querySelector('[data-act="bonus"]')
+  if (!b) return
+  b.disabled = !on
+  b.title = on ? '' : 'Nur mit Tageslimit'
 }
 
 // The sleep timer card says whether a timer runs
@@ -5580,14 +5612,16 @@ function mountUpdates(root, page) {
 const CONTROLLERS = {
   spielzeit: {
     load: loadCaps,
-    mount() {
+    mount(root) {
       drawRing()
       drawSleep()
+      bonusButton(root)
       every(20000, refreshPlaytime)
     },
     change(key, v) {
       switch (key) {
         case 'limitOn':
+          bonusButton($('#content'), v)
           return saveCaps({ playtimeLimit: { enabled: v } }, v ? 'Tageslimits an' : 'Tageslimits aus')
         case 'quietOn':
           return saveCaps({ quietHours: { enabled: v } }, v ? 'Ruhezeiten an' : 'Ruhezeiten aus')
