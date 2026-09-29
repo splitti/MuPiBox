@@ -77,12 +77,47 @@ async function endJob(): Promise<void> {
   await run('sudo', ['systemctl', 'start', 'librespot'])
 }
 
-export function registerSpotifyConnectRoutes(router: Router, deps: { getMupiboxConfig: () => MupiboxConfig | undefined }): void {
-  /** GET /api/app/spotify-connect - whether the box has a Connect login, since when, a login going on */
+// Switched off in the app: the service does not start (librespot.service ExecCondition reads the same value)
+const connectOff = (cfg: MupiboxConfig | undefined) => (cfg?.spotify as Record<string, unknown> | undefined)?.connectOff === true
+
+export function registerSpotifyConnectRoutes(
+  router: Router,
+  deps: { getMupiboxConfig: () => MupiboxConfig | undefined; updateMupiboxConfig: (mutate: (cfg: Record<string, unknown>) => void) => Promise<void> },
+): void {
+  /** GET /api/app/spotify-connect - whether the box has a Connect login, since when, a login going on, switched off */
   router.get('/spotify-connect', requireSession, async (_req, res) => {
-    const cache = cacheOf(deps.getMupiboxConfig())
-    const [since, state] = await Promise.all([loginSince(cache), connectState()])
-    res.json({ configured: since !== null, since, running: state.running, error: since !== null ? state.error : null, pending: job ? job.url : null, name: nameOf(deps.getMupiboxConfig()) })
+    const cfg = deps.getMupiboxConfig()
+    const off = connectOff(cfg)
+    const [since, state] = await Promise.all([loginSince(cacheOf(cfg)), connectState()])
+    res.json({ configured: since !== null, since, off, running: state.running, error: since !== null && !off ? state.error : null, pending: job ? job.url : null, name: nameOf(cfg) })
+  })
+
+  /**
+   * POST /api/app/spotify-connect/enabled {on} - Connect on or off. Off (e.g. while Spotify refuses Connect logins)
+   * the service stops and stays stopped - also after a restart or an update - instead of failing every minute;
+   * the login is kept for when it is switched on again.
+   */
+  router.post('/spotify-connect/enabled', requireSession, requireCsrf, async (req, res) => {
+    const on = (req.body as { on?: unknown } | undefined)?.on
+    if (typeof on !== 'boolean') {
+      res.status(400).json({ error: 'on must be true or false' })
+      return
+    }
+    if (job && !on) await endJob()
+    await deps.updateMupiboxConfig((cfg) => {
+      const spotify = (cfg.spotify ?? {}) as Record<string, unknown>
+      if (on) delete spotify.connectOff
+      else spotify.connectOff = true
+      cfg.spotify = spotify
+    })
+    if (on) {
+      await run('sudo', ['systemctl', 'enable', 'librespot'])
+      await run('sudo', ['systemctl', 'restart', 'librespot'])
+    } else {
+      await run('sudo', ['systemctl', 'stop', 'librespot'])
+    }
+    console.log(`${new Date().toLocaleString()}: [spotify-connect] switched ${on ? 'on' : 'off'}`)
+    res.json({ ok: true, off: !on })
   })
 
   /**
@@ -90,8 +125,13 @@ export function registerSpotifyConnectRoutes(router: Router, deps: { getMupiboxC
    * cache folder and name, answers the Spotify login address it names
    */
   router.post('/spotify-connect/start', requireSession, requireCsrf, async (_req, res) => {
-    if (job) await endJob()
     const cfg = deps.getMupiboxConfig()
+    // (switched off, the service could not show that a new login works)
+    if (connectOff(cfg)) {
+      res.status(409).json({ error: 'connect_off' })
+      return
+    }
+    if (job) await endJob()
     await run('sudo', ['systemctl', 'stop', 'librespot'])
     await run('sudo', ['rm', '-rf', LOGIN_DIR])
     await run('sudo', ['install', '-d', '-m', '700', LOGIN_DIR])

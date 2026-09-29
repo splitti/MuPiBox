@@ -3244,7 +3244,7 @@ function spotifyTop() {
           ['Angemeldet seit', login.since ?? '–'],
           ['Gültig bis', login.until ?? '–'],
           // (the box as a speaker in the Spotify app: its own login, see the Zugangsdaten page)
-          spot.connect && ['Spotify Connect', connectProblem(spot.connect) ? 'Fehler' : spot.connect.configured ? `Eingerichtet seit ${new Date(spot.connect.since).toLocaleDateString(LOCALE)}` : 'Nicht eingerichtet'],
+          spot.connect && ['Spotify Connect', spot.connect.off ? 'Ausgeschaltet' : connectProblem(spot.connect) ? 'Fehler' : spot.connect.configured ? `Eingerichtet seit ${new Date(spot.connect.since).toLocaleDateString(LOCALE)}` : 'Nicht eingerichtet'],
         ])}</div>
         <div>${spKv(
           s.enabled
@@ -3402,16 +3402,22 @@ function spotifyAccessTop() {
 function spotifyConnectCard() {
   const c = spot.connect ?? {}
   const problem = connectProblem(c)
-  const state = !spot.connect ? 'Unbekannt' : problem ? 'Fehler' : c.configured ? `Eingerichtet seit ${new Date(c.since).toLocaleDateString(LOCALE)}` : 'Nicht eingerichtet'
+  const state = !spot.connect ? 'Unbekannt' : c.off ? 'Ausgeschaltet' : problem ? 'Fehler' : c.configured ? `Eingerichtet seit ${new Date(c.since).toLocaleDateString(LOCALE)}` : 'Nicht eingerichtet'
   return `<section class="card"><h2>Spotify Connect</h2><p class="help">${esc(`Damit erscheint die Box in der Spotify-App auf dem Handy als Lautsprecher „${c.name ?? 'MuPiBox'}“ – dort unter „Geräte“ wählen und direkt vom Handy abspielen. Die Box braucht dafür eine eigene, einmalige Anmeldung.`)}</p>
-    ${spKv([['Status', state], problem && c.since && ['Eingerichtet seit', new Date(c.since).toLocaleDateString(LOCALE)]])}
-    ${problem ? `<div class="note warn">${icon('info', 18)}<span>${esc(problem)}${c.error ? `<br><small class="mono">${esc(c.error)}</small>` : ''}</span></div>` : ''}
-    <div class="btns"><button class="btn${spot.connect && !c.configured ? ' primary' : ''}" data-sp="connectlogin">${c.configured ? 'Neu verbinden' : 'Spotify Connect verbinden'}</button></div></section>`
+    ${
+      spot.connect && c.configured
+        ? `<div class="row"><span class="lbl"><b>Spotify Connect an</b><small>${esc('Aus: Die Box erscheint nicht als Lautsprecher und versucht keine Anmeldung – z. B. solange Spotify die Anmeldung ablehnt. Die Anmeldung bleibt gespeichert.')}</small></span>
+          <label class="switch"><input type="checkbox" id="cc-on" ${c.off ? '' : 'checked'} aria-label="Spotify Connect an"><span></span></label></div>`
+        : ''
+    }
+    ${spKv([['Status', state], (problem || c.off) && c.since && ['Eingerichtet seit', new Date(c.since).toLocaleDateString(LOCALE)]])}
+    ${problem ? `<div class="note warn">${icon('info', 18)}<span>${esc(problem)} ${esc('Bis dahin kannst du Connect oben ausschalten.')}${c.error ? `<br><small class="mono">${esc(c.error)}</small>` : ''}</span></div>` : ''}
+    ${c.off ? '' : `<div class="btns"><button class="btn${spot.connect && !c.configured ? ' primary' : ''}" data-sp="connectlogin">${c.configured ? 'Neu verbinden' : 'Spotify Connect verbinden'}</button></div>`}</section>`
 }
 
 // Why the Connect service does not run, in words (its last error, eltern/spotify-connect.ts connectState), or null
 function connectProblem(c) {
-  if (!c?.configured || c.running) return null
+  if (!c?.configured || c.running || c.off) return null
   const e = c.error ?? ''
   if (/503|Service unavailable/i.test(e)) return 'Spotify nimmt die Anmeldung der Box gerade nicht an (Fehler 503). Die Box versucht es jede Minute wieder – hilft das nicht, neu verbinden.'
   if (/INVALID_CREDENTIALS|denied|BadCredentials/i.test(e)) return 'Spotify lehnt die Anmeldung der Box ab. Bitte neu verbinden.'
@@ -3510,6 +3516,20 @@ function mountSpotifyAccess(root, page) {
     },
   }
   for (const b of root.querySelectorAll('[data-sp]')) b.onclick = () => acts[b.dataset.sp]()
+  const on = $('#cc-on', root)
+  if (on)
+    on.onchange = async () => {
+      on.disabled = true
+      const r = await api(`${API}/spotify-connect/enabled`, { method: 'POST', body: { on: on.checked } })
+      if (!r.ok) {
+        on.checked = !on.checked
+        on.disabled = false
+        return toast('Nicht gespeichert', 'info')
+      }
+      toast(on.checked ? 'Spotify Connect ist an' : 'Spotify Connect ist aus')
+      await loadSpotify().catch(() => undefined)
+      if (currentPage()?.id === page.id) renderPage(page, false)
+    }
 }
 
 /* Sync-Einstellungen and the setup assistant */
