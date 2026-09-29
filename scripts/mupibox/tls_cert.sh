@@ -98,7 +98,7 @@ make_ca() {
 	local host
 	host=$(hostname)
 	openssl req -x509 -new -nodes -newkey ec -pkeyopt ec_paramgen_curve:P-256 -keyout "${CA_KEY}" -out "${CA_CRT}" -days 7300 \
-		-subj "/O=MuPiBox/CN=${host} Heimnetz" \
+		-subj "/O=MuPiBox/CN=${host} Home Network CA" \
 		-addext "basicConstraints=critical,CA:TRUE,pathlen:0" \
 		-addext "keyUsage=critical,keyCertSign,cRLSign" \
 		-addext "nameConstraints=critical,permitted;IP:10.0.0.0/255.0.0.0,permitted;IP:172.16.0.0/255.240.0.0,permitted;IP:192.168.0.0/255.255.0.0,permitted;IP:169.254.0.0/255.255.0.0,permitted;IP:127.0.0.0/255.0.0.0,permitted;DNS:local" \
