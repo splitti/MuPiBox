@@ -75,6 +75,8 @@ export interface ElternRouterDeps {
   playingTrackCover?: (file: string) => Promise<string | null>
   /** The local media folders, for the upload of tracks and folders (see upload.ts). */
   localLibrary?: LocalLibraryDeps
+  /** Writes a chosen cover into a selected NAS folder (server.ts writeNasCover). */
+  nasCover?: (folder: string, bytes: Buffer, ext: '.jpg' | '.png') => Promise<'ok' | 'not_selected' | 'offline' | 'denied' | 'failed'>
 }
 
 /** Build a Set-Cookie header value. HttpOnly + SameSite=Strict; no Secure
@@ -279,8 +281,9 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   registerCustomCoverRoutes(router, {
     dir: '/home/dietpi/MuPiBox/media/cover',
     host: () => String((deps.getMupiboxConfig()?.mupibox as { host?: string } | undefined)?.host || os.hostname()),
-    // (a cover chosen for a folder of the SD card, see cover-apply)
+    // (a cover chosen for a folder of the SD card or the NAS, see cover-apply)
     local: deps.localLibrary,
+    nas: deps.nasCover,
   })
 
   /**

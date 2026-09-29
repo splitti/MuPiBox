@@ -2045,6 +2045,24 @@ async function openLocalSheet(folder, parent = null) {
   )
 }
 
+// The cover picker for a folder of the NAS (cover.jpg there, needs write permission); done: the new picture's address
+function pickNasCover(folder, parent, done) {
+  const album = folder.title
+  const artist = parent?.title ?? ''
+  openCoverPicker({
+    target: `nas:${folder.nasPath}`,
+    title: album,
+    query: artist ? `${artist} ${album}` : album,
+    fallbacks: artist ? [`${artist} ${withoutNumber(album)}`, withoutNumber(album), artist] : [withoutNumber(album)],
+    current: folder.cover,
+    onDone: (body) => {
+      toast('Cover übernommen – gleich auf dem Display')
+      libReload()
+      done(body?.path ? `/api/nas/stream?path=${encodeURIComponent(body.path)}&w=400&v=${Date.now()}` : folder.cover)
+    },
+  })
+}
+
 // A folder of the NAS (as openLocalSheet): the folders in it, each opens on its own sheet; an album shows its cover
 // and plays. The NAS administration (login, shown folders, downloads) is a button away.
 async function openNasSheet(folder, parent = null) {
@@ -2055,7 +2073,8 @@ async function openNasSheet(folder, parent = null) {
   openSheet(
     `${parent ? `<button class="sheet-back" data-back>${icon('back', 18)}<span translate="no">${esc(parent.title)}</span></button>` : ''}
      <div class="local-head"><span class="local-cover">${folder.cover ? `<img src="${esc(folder.cover)}" alt="">` : icon('folder', 28)}</span>
-       <div class="lbl"><h2 translate="no">${esc(folder.title)}</h2><p class="help" style="margin:0">${esc(['Ordner auf dem NAS', `${albums.length} ${albums.length === 1 ? 'Album' : 'Alben'}`].join(' · '))}</p></div></div>
+       <div class="lbl"><h2 translate="no">${esc(folder.title)}</h2><p class="help" style="margin:0">${esc(['Ordner auf dem NAS', `${albums.length} ${albums.length === 1 ? 'Album' : 'Alben'}`].join(' · '))}</p>
+       <button class="btn sm" data-cover>${icon('image', 16)}${folder.cover ? 'Cover ändern' : 'Cover wählen'}</button></div></div>
      ${r.ok ? '' : `<p class="help" style="margin:0">Das NAS antwortet gerade nicht.</p>`}
      ${albums.length ? `<div class="section-label" style="margin:0">Alben</div><div class="rows">${albums.map((a, i) => `<button class="entry lib-row" data-a="${i}">${thumb(a.cover)}<span class="lbl"><b translate="no">${esc(a.title)}</b>${a.nasIsContainer ? '<small>Ordner</small>' : ''}</span><span class="chev">${icon('chevron', 18)}</span></button>`).join('')}</div>` : ''}
      <div class="btns"><button class="btn" data-admin>NAS-Verwaltung</button><button class="btn" data-close>${parent ? 'Zurück' : 'Schließen'}</button></div>`,
@@ -2069,6 +2088,7 @@ async function openNasSheet(folder, parent = null) {
         go('nas')
       }
       for (const b of sheet.querySelectorAll('[data-a]')) b.onclick = () => openNasSheet(albums[Number(b.dataset.a)], folder)
+      sheet.querySelector('[data-cover]').onclick = () => pickNasCover(folder, parent, (cover) => openNasSheet({ ...folder, cover }, parent))
     },
   )
 }
@@ -2080,7 +2100,7 @@ function openNasAlbumSheet(album, parent) {
      <span class="album-cover">${album.cover ? `<img src="${esc(album.cover)}" alt="">` : icon('folder', 40)}</span>
      <div class="album-title"><h2 translate="no">${esc(album.title)}</h2><p class="help" style="margin:0">${esc(['Album auf dem NAS', parent?.title].filter(Boolean).join(' · '))}</p></div>
      <button class="btn primary block" data-play>${icon('phones', 18)}Abspielen</button>
-     <div class="btns"><button class="btn" data-admin>NAS-Verwaltung</button><button class="btn" data-close>${parent ? 'Zurück' : 'Schließen'}</button></div>`,
+     <div class="btns"><button class="btn" data-cover>${icon('image', 18)}${album.cover ? 'Cover ändern' : 'Cover wählen'}</button><button class="btn" data-admin>NAS-Verwaltung</button><button class="btn" data-close>${parent ? 'Zurück' : 'Schließen'}</button></div>`,
     (sheet, close) => {
       for (const img of sheet.querySelectorAll('img')) img.addEventListener('error', () => img.remove(), { once: true })
       const back = () => (parent ? openNasSheet(parent) : close())
@@ -2094,6 +2114,7 @@ function openNasAlbumSheet(album, parent) {
         close()
         startPlay(album.title, `${API}/library/play-nas`, { path: album.nasPath })
       }
+      sheet.querySelector('[data-cover]').onclick = () => pickNasCover(album, parent, (cover) => openNasAlbumSheet({ ...album, cover }, parent))
     },
   )
 }
@@ -2135,6 +2156,10 @@ function openCoverPicker({ target, title, query, fallbacks, current, onDone }) {
       not_an_image: 'Das ist kein JPG- oder PNG-Bild.',
       too_large: 'Das Bild ist zu groß.',
       item_not_found: 'Den Ordner gibt es nicht mehr.',
+      nas_denied: 'Die Box darf in diesen NAS-Ordner nicht schreiben – dem NAS-Konto der Box fehlt das Schreibrecht.',
+      nas_offline: 'Das NAS antwortet gerade nicht.',
+      nas_not_selected: 'Dieser NAS-Ordner ist nicht freigegeben.',
+      nas_failed: 'Das NAS hat das Bild nicht angenommen.',
     })[r.body?.error] ?? 'Das hat nicht geklappt'
   openSheet(
     `<h2>Cover für „${esc(title)}“</h2>

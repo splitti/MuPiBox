@@ -4615,6 +4615,57 @@ async function nasPathSelected(raw: string): Promise<boolean> {
   return selected.some((folder) => wanted === folder || wanted.startsWith(`${folder}/`)) && !nasIsHidden(wanted, hidden)
 }
 
+// A cover chosen in the app for a folder of the NAS (the cover picker, see eltern/covers.ts): written as cover.jpg
+// (cover.png) into that folder with the box's NAS login - only in the folders the parents selected. A cover there
+// before is kept as cover-previous.*, the box's own cover-online.jpg goes (it would come first); when the upload fails
+// the cover before comes back. An account without write permission: 'denied'.
+async function writeNasCover(folder: string, bytes: Buffer, ext: '.jpg' | '.png'): Promise<'ok' | 'not_selected' | 'offline' | 'denied' | 'failed'> {
+  if (!(await nasPathSelected(folder))) return 'not_selected'
+  const session = await getActiveNasSession()
+  if (!session) return 'offline'
+  const files = await withNasSession((s) => nasListFilesLive(s, folder))
+  if (!files) return 'offline'
+  const dir = nasUrl(session, folder)
+  const denied = (status: number) => status === 401 || status === 403 || status === 405
+  const call = async (url: string, method: string, headers: Record<string, string> = {}, body?: Buffer) => {
+    const r = await nasFetch(session, url, { method, headers: { Authorization: session.auth, ...headers }, body, signal: AbortSignal.timeout(20000) })
+    await r.arrayBuffer().catch(() => undefined)
+    return r.status
+  }
+  const moved: Array<{ from: string; to: string }> = []
+  try {
+    for (const f of files) {
+      if (f.isdir) continue
+      const e = path.extname(f.name).toLowerCase()
+      if (!['.jpg', '.jpeg', '.jfif', '.png', '.webp'].includes(e)) continue
+      const from = `${dir}/${encodeURIComponent(f.name)}`
+      if (f.name.slice(0, -e.length).toLowerCase() === 'cover') {
+        const to = `${dir}/cover-previous${e}`
+        const status = await call(from, 'MOVE', { Destination: to, Overwrite: 'T' })
+        if (denied(status)) return 'denied'
+        if (status >= 300) return 'failed'
+        moved.push({ from, to })
+      } else if (f.name.toLowerCase() === 'cover-online.jpg') {
+        await call(from, 'DELETE')
+      }
+    }
+    const status = await call(`${dir}/cover${ext}`, 'PUT', { 'Content-Type': ext === '.png' ? 'image/png' : 'image/jpeg', Overwrite: 'T' }, bytes)
+    if (status >= 300) {
+      // (the cover before back in its place)
+      for (const m of moved) await call(m.to, 'MOVE', { Destination: m.from, Overwrite: 'T' }).catch(() => undefined)
+      return denied(status) ? 'denied' : 'failed'
+    }
+  } catch (error) {
+    console.warn(`${new Date().toLocaleString()}: [MuPiBox-Server] NAS cover ${folder}: ${(error as Error).message}`)
+    return 'failed'
+  }
+  // (the folder and the one above list their picture anew: the library shows the new one)
+  nasListCache.delete(normalizeNasPath(folder))
+  nasListCache.delete(normalizeNasPath(path.posix.dirname(normalizeNasPath(folder))))
+  console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] NAS cover ${folder}/cover${ext}`)
+  return 'ok'
+}
+
 const nasPathWithinSelection: express.RequestHandler = async (req, res, next) => {
   const raw = typeof req.query.path === 'string' ? req.query.path : ''
   if (await nasPathSelected(raw)) {
@@ -7543,6 +7594,7 @@ app.use(
     playingAlbumCover,
     playingTrackCover: async (file: string) =>
       (await trackCover(file).catch(() => undefined)) ? `/api/track-cover?file=${encodeURIComponent(file)}` : null,
+    nasCover: writeNasCover,
     localLibrary: {
       root: libraryRoot,
       categories: libraryCategories,

@@ -176,7 +176,10 @@ const BOX_ONLINE_COVER = 'cover-online.jpg'
 const PICTURE_EXTENSIONS = ['.jpg', '.jpeg', '.jfif', '.png', '.webp']
 
 type Applied = { status: number; body: Record<string, unknown> }
-type ChoiceDeps = CustomCoverDeps & { local?: LocalLibraryDeps }
+type ChoiceDeps = CustomCoverDeps & {
+  local?: LocalLibraryDeps
+  nas?: (folder: string, bytes: Buffer, ext: '.jpg' | '.png') => Promise<'ok' | 'not_selected' | 'offline' | 'denied' | 'failed'>
+}
 
 function registerCoverChoiceRoutes(router: Router, deps: ChoiceDeps, address: (name: string) => string): void {
   /**
@@ -265,6 +268,7 @@ async function readBody(req: Request, max: number): Promise<Buffer | undefined> 
  *                   into the entry's cover field (radio streams, Spotify entries, …)
  *   local:<path>  - as cover.jpg into a folder of the SD card (category/artist[/album…]); a cover there before is kept
  *                   as cover-previous.jpg, the box's own cover-online.jpg goes (it would come first)
+ *   nas:<path>    - the same in a selected folder of the NAS (needs write permission for the box's NAS account)
  */
 export async function applyCover(target: string, bytes: Buffer, deps: ChoiceDeps, address: (name: string) => string): Promise<Applied> {
   const info = imageSize(bytes)
@@ -327,6 +331,13 @@ export async function applyCover(target: string, bytes: Buffer, deps: ChoiceDeps
     console.log(`${new Date().toLocaleString()}: [cover-apply] ${parts.join('/')}/${COVER_BASE}${ext}`)
     deps.local.changed()
     return { status: 200, body: { ok: true, path: `${parts.join('/')}/${COVER_BASE}${ext}` } }
+  }
+  if (target.startsWith('nas:') && deps.nas) {
+    const folder = target.slice(4)
+    const r = await deps.nas(folder, bytes, ext)
+    if (r === 'ok') return { status: 200, body: { ok: true, path: `${folder.replace(/\/+$/, '')}/cover${ext}` } }
+    const why = { not_selected: [403, 'nas_not_selected'], offline: [503, 'nas_offline'], denied: [403, 'nas_denied'], failed: [502, 'nas_failed'] } as const
+    return { status: why[r][0], body: { error: why[r][1] } }
   }
   return { status: 400, body: { error: 'invalid_target' } }
 }
