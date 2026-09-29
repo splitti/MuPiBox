@@ -2147,6 +2147,40 @@ function pickNasCover(folder, parent, done) {
   })
 }
 
+// Where a shown NAS folder of the library is on the box (its entry from /api/nas/artists: nasCategory, nasSplit):
+// a line with "Ändern", which saves the choice at once (the download setting stays as it is)
+function nasPlaceLine(folder) {
+  if (!folder?.nasCategory) return ''
+  const where = NAS_WHERE[folder.nasCategory === 'nas' ? '' : folder.nasCategory] ?? NAS_WHERE['']
+  return `<div class="nas-place"><span>${esc(`Auf der Box: ${where}`)}${folder.nasSplit ? ` · ${esc(tr('Unterordner einzeln'))}` : ''}</span><button class="btn sm" data-place>Ändern</button></div>`
+}
+
+function changeNasPlace(folder, reopen) {
+  const category = folder.nasCategory && folder.nasCategory !== 'nas' ? folder.nasCategory : ''
+  nasWhereSheet(
+    { name: folder.title, path: folder.nasPath },
+    {
+      shown: true,
+      category,
+      split: !!folder.nasSplit,
+      apply: async (show, cat, split) => {
+        const p = folder.nasPath
+        const st = await api('/api/nas/state')
+        if (!st.ok) return toast('Das hat nicht geklappt', 'info')
+        const download = (st.body?.downloadFolders ?? []).includes(p)
+        const r = await api('/api/nas/selection', {
+          method: 'POST',
+          body: { shown: [p], show: show ? [p] : [], hide: [], download: download ? [p] : [], categories: show && cat ? { [p]: cat } : {}, split: show && cat && split ? [p] : [] },
+        })
+        if (!r.ok || !r.body?.success) return toast('Nicht gespeichert', 'info')
+        toast(show ? `${NAS_WHERE[cat] ?? NAS_WHERE['']} – gleich auf dem Display` : 'Nicht mehr angezeigt')
+        await libReload()
+        if (show) reopen({ ...folder, nasCategory: cat || 'nas', nasSplit: !!(cat && split) })
+      },
+    },
+  )
+}
+
 // A folder of the NAS (as openLocalSheet): the folders in it, each opens on its own sheet; an album shows its cover
 // and plays. The NAS administration (login, shown folders, downloads) is a button away.
 async function openNasSheet(folder, parent = null) {
@@ -2159,6 +2193,7 @@ async function openNasSheet(folder, parent = null) {
      <div class="local-head"><span class="local-cover">${folder.cover ? `<img src="${esc(folder.cover)}" alt="">` : icon('folder', 28)}</span>
        <div class="lbl"><h2 translate="no">${esc(folder.title)}</h2><p class="help" style="margin:0">${esc(['Ordner auf dem NAS', `${albums.length} ${albums.length === 1 ? 'Album' : 'Alben'}`].join(' · '))}</p>
        <button class="btn sm" data-cover>${icon('image', 16)}${folder.cover ? 'Cover ändern' : 'Cover wählen'}</button></div></div>
+     ${parent ? '' : nasPlaceLine(folder)}
      ${r.ok ? '' : `<p class="help" style="margin:0">Das NAS antwortet gerade nicht.</p>`}
      ${albums.length ? `<div class="section-label" style="margin:0">Alben</div><div class="rows">${albums.map((a, i) => `<button class="entry lib-row" data-a="${i}">${thumb(a.cover)}<span class="lbl"><b translate="no">${esc(a.title)}</b>${a.nasIsContainer ? '<small>Ordner</small>' : ''}</span><span class="chev">${icon('chevron', 18)}</span></button>`).join('')}</div>` : ''}
      <div class="btns"><button class="btn" data-admin>NAS-Verwaltung</button><button class="btn" data-close>${parent ? 'Zurück' : 'Schließen'}</button></div>`,
@@ -2173,6 +2208,7 @@ async function openNasSheet(folder, parent = null) {
       }
       for (const b of sheet.querySelectorAll('[data-a]')) b.onclick = () => openNasSheet(albums[Number(b.dataset.a)], folder)
       sheet.querySelector('[data-cover]').onclick = () => pickNasCover(folder, parent, (f) => openNasSheet(f, parent))
+      sheet.querySelector('[data-place]')?.addEventListener('click', () => changeNasPlace(folder, (f) => openNasSheet(f)))
     },
   )
 }
@@ -2183,6 +2219,7 @@ function openNasAlbumSheet(album, parent) {
     `${parent ? `<button class="sheet-back" data-back>${icon('back', 18)}<span translate="no">${esc(parent.title)}</span></button>` : ''}
      <span class="album-cover">${album.cover ? `<img src="${esc(album.cover)}" alt="">` : icon('folder', 40)}</span>
      <div class="album-title"><h2 translate="no">${esc(album.title)}</h2><p class="help" style="margin:0">${esc(['Album auf dem NAS', parent?.title].filter(Boolean).join(' · '))}</p></div>
+     ${parent ? '' : nasPlaceLine(album)}
      <button class="btn primary block" data-play>${icon('phones', 18)}Abspielen</button>
      <div class="btns"><button class="btn" data-cover>${icon('image', 18)}${album.cover ? 'Cover ändern' : 'Cover wählen'}</button><button class="btn" data-admin>NAS-Verwaltung</button><button class="btn" data-close>${parent ? 'Zurück' : 'Schließen'}</button></div>`,
     (sheet, close) => {
@@ -2199,6 +2236,7 @@ function openNasAlbumSheet(album, parent) {
         startPlay(album.title, `${API}/library/play-nas`, { path: album.nasPath })
       }
       sheet.querySelector('[data-cover]').onclick = () => pickNasCover(album, parent, (f) => openNasAlbumSheet(f, parent))
+      sheet.querySelector('[data-place]')?.addEventListener('click', () => changeNasPlace(album, (f) => openNasAlbumSheet(f, null)))
     },
   )
 }
@@ -3691,7 +3729,7 @@ function nasTop() {
         <div class="btns"><button class="btn" id="n-pnew">${icon('plus', 18)}Auswahl als Profil speichern</button></div></section>`
       : '',
     st.loggedIn
-      ? `<section class="card wide"><h2>Ordner</h2><p class="help">Anzeigen = erscheint auf der Box. Ausblenden = bleibt verborgen (auch alles darunter). Laden = auf die SD-Karte kopieren, damit es auch ohne NAS spielt.</p>
+      ? `<section class="card wide"><h2>Ordner</h2><p class="help">Anzeigen = erscheint auf der Box – antippen und wählen, wo: in Hörspiele, Musik oder Sonstiges (neben SD-Karte und Spotify) oder im NAS-Reiter. Ausblenden = bleibt verborgen (auch alles darunter). Laden = auf die SD-Karte kopieren, damit es auch ohne NAS spielt.</p>
         <div class="search">${icon('search')}<input class="input" id="n-q" type="search" placeholder="Ordner auf dem ganzen NAS suchen" autocomplete="off" value="${esc(nas.q)}"></div>
         <p class="help" id="n-index" style="margin:0"></p>
         ${sw('n-only', 'Nur die Auswahl zeigen', nas.onlySel)}
@@ -3853,11 +3891,13 @@ const NAS_WHERE = { '': 'Im NAS-Reiter', audiobook: 'In Hörspiele', music: 'In 
 
 // "Anzeigen" of a NAS folder: shown where - a category, or the NAS tab - and, in a category, whether its subfolders
 // are tiles of their own (a collection of series) or the folder is one tile; or not shown
-async function nasWhereSheet(row) {
-  const shown = nasFlag(row, 'show')
-  let category = shown ? nasFlag(row, 'category') : ''
+// place: { shown, category, split, apply(show, category, split) } from the library (saved at once); without it the
+// NAS page's selection (saved with "Auswahl speichern")
+async function nasWhereSheet(row, place = null) {
+  const shown = place ? place.shown : nasFlag(row, 'show')
+  let category = shown ? (place ? place.category : nasFlag(row, 'category')) : ''
   // (a folder already in a category keeps its choice; else the default below, by what is in it)
-  let split = shown && category ? nasFlag(row, 'split') : null
+  let split = shown && category ? (place ? place.split : nasFlag(row, 'split')) : null
   // what is in it (for the choice "one by one" and its default): the subfolders, and which of them hold subfolders
   let subs = null
   const peek = (async () => {
@@ -3916,15 +3956,17 @@ async function nasWhereSheet(row) {
       }
       sheet.querySelector('[data-close]').onclick = close
       sheet.querySelector('[data-hide-folder]')?.addEventListener('click', () => {
-        setNasFlag(row, 'show', false)
         close()
+        if (place) return place.apply(false, '', false)
+        setNasFlag(row, 'show', false)
         drawNasFolders()
       })
       sheet.querySelector('[data-ok]').onclick = () => {
+        close()
+        if (place) return place.apply(true, category, category !== '' && !!split)
         setNasFlag(row, 'show', true)
         setNasFlag(row, 'category', category)
         setNasFlag(row, 'split', category !== '' && !!split)
-        close()
         drawNasFolders()
       }
     },

@@ -737,3 +737,5 @@ input[type="range"]:disabled { opacity: .4; cursor: default; }
 .where-opt[aria-pressed="true"] { background: var(--mp-primary-soft); border-color: var(--mp-primary); }
 .where-opt[aria-pressed="true"] b { color: var(--mp-primary-text); }
 .tog.where { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* a shown NAS folder in the library: where it is on the box */
+.nas-place { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 10px 12px; border-radius: var(--mp-r-sm); background: var(--mp-chip); font-size: 14px; font-weight: 600; }
