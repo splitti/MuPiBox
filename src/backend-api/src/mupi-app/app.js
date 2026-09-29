@@ -834,30 +834,41 @@ async function loadNotices(root) {
   const box = $('#notices', root)
   if (!box) return
   drawNotices(box, notes)
-  // a new version / an update running: the band under the player (the versions may take a moment: after the rest)
+  // a new version / an update running, and the MuPiBox news: the band under the player (from GitHub, which may take a
+  // moment: after the rest)
   const band = $('#update-note', root)
-  const u = await api(`${API}/updates`)
+  const [u, n] = await Promise.all([api(`${API}/updates`), api(`${API}/news`)])
   const job = u.body?.job
   const next = u.body?.update
-  let item = null
-  if (job?.phase === 'running') item = ['sync', 'Update läuft', `${JOB_LABEL[job.kind] ?? 'Update'} – ${job.percent} %`, 'updates']
-  else if (next && next.version !== updateDismissed()) {
-    item = ['sync', 'Neue Version verfügbar', `MuPiBox ${next.version} (${CHANNEL_LABEL[next.channel] ?? next.channel}) · Details ansehen`, 'updates', () => setUpdateDismissed(next.version)]
+  const items = []
+  if (job?.phase === 'running') items.push(['sync', 'Update läuft', `${JOB_LABEL[job.kind] ?? 'Update'} – ${job.percent} %`, 'updates'])
+  else if (next && next.version !== remembered('mupi-update-dismissed')) {
+    items.push(['sync', 'Neue Version verfügbar', `MuPiBox ${next.version} (${CHANNEL_LABEL[next.channel] ?? next.channel}) · Details ansehen`, 'updates', () => remember('mupi-update-dismissed', next.version)])
   }
-  if (band?.isConnected) drawNotices(band, item ? [item] : [])
+  const news = typeof n.body?.text === 'string' ? n.body.text.trim() : ''
+  if (news) {
+    // (the news as the box's developer writes them, in English: their first heading, the whole text on "Über die Box";
+    // closed, they stay away until the text changes)
+    const key = `${news.length}:${news.slice(0, 120)}`
+    const head = new DOMParser().parseFromString(news, 'text/html').querySelector('h1,h2,h3,h4,b,strong')?.textContent?.trim()
+    if (key !== remembered('mupi-news-dismissed')) {
+      items.push(['info', 'Neuigkeiten', head || 'Neues von MuPiBox', 'ueber', () => remember('mupi-news-dismissed', key)])
+    }
+  }
+  if (band?.isConnected) drawNotices(band, items)
 }
 
-// the version whose announcement was closed: it stays away until a newer one comes
-function updateDismissed() {
+// what was closed on the start page (a version's announcement, the news): it stays away until something newer comes
+function remembered(name) {
   try {
-    return localStorage.getItem('mupi-update-dismissed')
+    return localStorage.getItem(name)
   } catch {
     return null
   }
 }
-function setUpdateDismissed(version) {
+function remember(name, value) {
   try {
-    localStorage.setItem('mupi-update-dismissed', version)
+    localStorage.setItem(name, value)
   } catch {
     // private mode: only for this visit
   }

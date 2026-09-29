@@ -622,6 +622,7 @@ a.btn { text-decoration: none; color: inherit; }
 @media (max-width: 1199px) { .content > .bt-main { order: -1; } .content > .page-intro { order: -2; } }
 
 /* the announcement of a new version (or an update running): a band under the player, across the page on the PC */
+.update-note { display: flex; flex-direction: column; gap: 10px; }
 .update-note:empty { display: none; }
 .update-note .notice { margin-bottom: 0; }
 .update-note .notice-body { align-items: center; padding: 14px 16px; }
