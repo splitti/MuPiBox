@@ -4145,7 +4145,7 @@ function securityTop() {
     <label class="switch"><input type="checkbox" id="sec-login" ${st.loginSwitch ? 'checked' : ''} ${st.passwordSet ? '' : 'disabled'} aria-label="Anmeldung verlangen"><span></span></label></div>`
   return [
     `<section class="card"><h2>Passwort</h2>
-      <p class="help">Ein Passwort für diese App und das bisherige Admin-Interface.</p>
+      <p class="help">Ein Passwort für diese App und das bisherige Admin-Interface. Ein neues Passwort meldet alle anderen Geräte ab, auch die mit „Angemeldet bleiben“.</p>
       <dl class="kv"><div><dt>Status</dt><dd>${st.passwordSet ? (st.defaultPassword ? 'Standardpasswort' : 'gesetzt') : 'nicht gesetzt'}</dd></div></dl>
       ${st.defaultPassword ? `<div class="note warn">${icon('info', 18)}<span>Es gilt noch das Standardpasswort, das im Admin-Interface steht. Bitte ein eigenes festlegen.</span></div>` : ''}
       ${st.passwordSet ? `<div class="field"><label for="sec-cur">Aktuelles Passwort</label><div class="input-wrap"><input class="input has-eye" id="sec-cur" type="password" autocomplete="current-password"><button class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div></div>` : ''}
@@ -6002,6 +6002,13 @@ async function openAdmin(password) {
   form.submit()
 }
 
+// "Angemeldet bleiben": as chosen last time on this device; the first time on when the app runs from the home screen
+function keepSignedIn() {
+  const last = remembered('mupi-keep-signed-in')
+  if (last !== null) return last === '1'
+  return navigator.standalone === true || matchMedia('(display-mode: standalone)').matches
+}
+
 async function renderLogin(hasSession = state.loginHasSession ?? false) {
   state.loginHasSession = hasSession
   $('#tabbar').hidden = true
@@ -6036,6 +6043,11 @@ async function renderLogin(hasSession = state.loginHasSession ?? false) {
                   ? `<div class="field"><label for="pw">Passwort</label>
                       <div class="input-wrap"><input class="input has-eye" id="pw" type="password" autocomplete="current-password" required><button type="button" class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div>
                       <small>Dasselbe Passwort für die Web-App und das Admin-Interface.</small></div>`
+                  : ''
+              }${
+                needPassword && choice === 'app'
+                  ? `<div class="row login-keep"><span class="lbl"><b>Angemeldet bleiben</b><small>90 Tage ab der letzten Nutzung, auch nach einem Neustart der Box</small></span>
+                      <label class="switch"><input type="checkbox" id="login-keep" ${keepSignedIn() ? 'checked' : ''} aria-label="Angemeldet bleiben"><span></span></label></div>`
                   : ''
               }
               <p class="login-msg" id="login-msg" role="alert" hidden></p>
@@ -6075,13 +6087,15 @@ async function renderLogin(hasSession = state.loginHasSession ?? false) {
         return
       }
       const msg = $('#login-msg')
+      const keep = $('#login-keep')
+      if (keep) remember('mupi-keep-signed-in', keep.checked ? '1' : '0')
       // (also for the admin interface: the password is checked here first, a typo shows on this page and not on the
       // admin interface's own login; a correct one signs in to the app as well)
       const r = await fetch(`${API}/login`, {
         method: 'POST',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: pw.value }),
+        body: JSON.stringify({ password: pw.value, remember: keep?.checked === true }),
       }).catch(() => null)
       if (r?.ok) {
         if (choice === 'admin') openAdmin(pw.value)

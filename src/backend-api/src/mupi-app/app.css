@@ -632,3 +632,5 @@ a.btn { text-decoration: none; color: inherit; }
 .update-note .notice-body { align-items: center; padding: 14px 16px; }
 /* the news in their overlay: the sheet scrolls, the text is not cut */
 .news-sheet { max-height: none; overflow: visible; font-size: 14px; color: var(--mp-text); }
+/* "Angemeldet bleiben" under the password (the login page is centred, the switch row reads from the left) */
+.login .login-keep { text-align: left; border-top: 0; padding-top: 0; }

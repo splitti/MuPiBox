@@ -34,6 +34,9 @@ import {
   hasAppPassword,
   setAppPassword,
   verifyAppPassword,
+  PERSISTENT_TTL_MS,
+  restampSession,
+  usePasswordStamp,
 } from './auth'
 import { ipRateLimit, localNetworkOnly, parseCookie, requireCsrf, requireSession } from './middleware'
 import { registerCustomCoverRoutes } from './covers'
@@ -89,6 +92,8 @@ const DISPLAY_TEXT_KEYS = [
 function buildSessionCookie(sessionId: string, maxAgeSeconds: number): string {
   return `${SESSION_COOKIE}=${sessionId}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${maxAgeSeconds}`
 }
+// (a session kept with "Angemeldet bleiben": its cookie as long as the session, renewed when the app is opened)
+const PERSISTENT_COOKIE_SECONDS = Math.floor(PERSISTENT_TTL_MS / 1000)
 
 /** Clear-cookie helper for logout. */
 function buildClearCookie(): string {
@@ -234,6 +239,8 @@ function spotifyHost(req: Request): string | undefined {
 
 export function createElternApiRouter(deps: ElternRouterDeps): Router {
   const router = Router()
+  // (a new password ends the sessions issued under the old one)
+  usePasswordStamp(deps.getMupiboxConfig)
 
   // Every API route requires LAN + session; magic-link generation
   // (the bootstrap path) requires LAN + rate-limit but no session.
@@ -374,6 +381,10 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     res.setHeader('Set-Cookie', buildSessionCookie(session.sessionId, 24 * 60 * 60))
     res.json({ authenticated: true, open: true, csrf_header: CSRF_HEADER, csrf_token: session.csrf, passwordConfigured: hasAppPassword(deps.getMupiboxConfig()) })
   }, requireSession, (req, res) => {
+    // kept signed in: another 90 days from now on (the cookie too)
+    if (validateSession(req.elternSessionId)?.persistent) {
+      res.setHeader('Set-Cookie', buildSessionCookie(req.elternSessionId as string, PERSISTENT_COOKIE_SECONDS))
+    }
     res.json({
       authenticated: true,
       csrf_header: CSRF_HEADER,
@@ -394,7 +405,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
    *  they can log back in after a session timeout without re-issuing a token.
    *  Rate-limited; the magic-link flow remains the passwordless entry path. */
   router.post('/login', ipRateLimit(5), async (req, res) => {
-    const body = (req.body as { password?: unknown } | undefined) ?? {}
+    const body = (req.body as { password?: unknown; remember?: unknown } | undefined) ?? {}
     const pw = typeof body.password === 'string' ? body.password : ''
     const mupibox = deps.getMupiboxConfig()
     if (!hasAppPassword(mupibox)) {
@@ -407,8 +418,10 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       return
     }
     const ip = req.ip ?? req.socket.remoteAddress ?? ''
-    const session = issueSession(ip)
-    res.setHeader('Set-Cookie', buildSessionCookie(session.sessionId, 24 * 60 * 60))
+    // "Angemeldet bleiben": the session survives the box's restarts (see auth.ts)
+    const remember = body.remember === true
+    const session = issueSession(ip, remember)
+    res.setHeader('Set-Cookie', buildSessionCookie(session.sessionId, remember ? PERSISTENT_COOKIE_SECONDS : 24 * 60 * 60))
     res.json({ ok: true, csrf_header: CSRF_HEADER, csrf_token: session.csrf })
   })
 
@@ -423,6 +436,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       return
     }
     await setElternPassword(pw, deps.updateMupiboxConfig)
+    restampSession(req.elternSessionId)
     res.json({ ok: true, configured: hasElternPassword(deps.getMupiboxConfig()) })
   })
 
@@ -453,6 +467,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       return
     }
     await setAppPassword(next, deps.updateMupiboxConfig)
+    // (this device stays signed in, the others sign in with the new password)
+    restampSession(req.elternSessionId)
     res.json({ ok: true })
   })
 

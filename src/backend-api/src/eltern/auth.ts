@@ -3,13 +3,18 @@
 // they don't survive reboots (deliberate — sessions die with the box):
 //   /tmp/.eltern_magic_links.json  — pending single-use tokens, 15-min TTL
 //   /tmp/.eltern_sessions.json     — active session cookies, 24-h TTL
+// "Angemeldet bleiben" (the app on a phone's home screen): such a session is kept on the SD card instead
+// (PERSISTENT_SESSIONS_PATH) and lasts PERSISTENT_TTL_MS after its last use - written when one is issued or ends,
+// and at most once a day per session for its last use.
+// Every session carries a stamp of the password it was issued under: a new password (in the app or the admin
+// interface) ends the others.
 //
 // Tokens and session IDs are 32-byte cryptographically random hex
 // strings. Single-use enforcement on magic links blocks replay attacks;
 // session lifetime is enforced on every check via timestamp comparison.
 
 import bcrypt from 'bcryptjs'
-import { randomBytes, scrypt as scryptCb, timingSafeEqual } from 'node:crypto'
+import { createHash, randomBytes, scrypt as scryptCb, timingSafeEqual } from 'node:crypto'
 import * as fs from 'node:fs'
 import { promisify } from 'node:util'
 
@@ -18,8 +23,14 @@ const scryptAsync = promisify(scryptCb)
 const MAGIC_LINKS_PATH = '/tmp/.eltern_magic_links.json'
 const SESSIONS_PATH = '/tmp/.eltern_sessions.json'
 
+const PERSISTENT_SESSIONS_PATH = '/home/dietpi/.mupibox/.app_sessions.json'
+
 const MAGIC_LINK_TTL_MS = 15 * 60 * 1000
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000
+const DAY_MS = 24 * 60 * 60 * 1000
+export const PERSISTENT_TTL_MS = 90 * DAY_MS
+// (the devices kept signed in: the ones used last)
+const MAX_PERSISTENT_SESSIONS = 20
 const TOKEN_BYTES = 32 // 64 hex chars
 
 interface MagicLink {
@@ -40,6 +51,10 @@ interface Session {
   ip: string
   /** CSRF token paired to this session (double-submit pattern). */
   csrf: string
+  /** "Angemeldet bleiben": kept on the SD card, valid PERSISTENT_TTL_MS after the last use. */
+  persistent?: boolean
+  /** Stamp of the password at issuance (passwordStamp); missing on sessions from before. */
+  pw?: string
 }
 
 type MagicLinkMap = Record<string, MagicLink>
@@ -72,7 +87,12 @@ function loadMagicLinks(): MagicLinkMap {
 }
 
 function loadSessions(): SessionMap {
-  if (sessionsCache === null) sessionsCache = readMap<SessionMap>(SESSIONS_PATH)
+  if (sessionsCache === null) {
+    const kept = readMap<SessionMap>(PERSISTENT_SESSIONS_PATH)
+    for (const entry of Object.values(kept)) if (entry && typeof entry === 'object') entry.persistent = true
+    persistentJson = persistentPart(kept)
+    sessionsCache = { ...readMap<SessionMap>(SESSIONS_PATH), ...kept }
+  }
   return sessionsCache
 }
 
@@ -80,8 +100,44 @@ function saveMagicLinks(): void {
   if (magicLinksCache) writeMap(MAGIC_LINKS_PATH, magicLinksCache)
 }
 
+// What the file of the kept sessions holds: their last use by the day only, so a request changes it once a day at most
+let persistentJson = ''
+function persistentPart(sessions: SessionMap): string {
+  const kept: SessionMap = {}
+  for (const [id, entry] of Object.entries(sessions)) {
+    if (entry.persistent) kept[id] = { ...entry, lastSeen: entry.lastSeen.slice(0, 10) }
+  }
+  return JSON.stringify(kept)
+}
+
 function saveSessions(): void {
-  if (sessionsCache) writeMap(SESSIONS_PATH, sessionsCache)
+  if (!sessionsCache) return
+  const temporary: SessionMap = {}
+  for (const [id, entry] of Object.entries(sessionsCache)) if (!entry.persistent) temporary[id] = entry
+  writeMap(SESSIONS_PATH, temporary)
+  const kept = persistentPart(sessionsCache)
+  if (kept === persistentJson) return
+  try {
+    const tmp = `${PERSISTENT_SESSIONS_PATH}.tmp.${process.pid}`
+    fs.writeFileSync(tmp, kept, { encoding: 'utf8', mode: 0o600 })
+    fs.renameSync(tmp, PERSISTENT_SESSIONS_PATH)
+    persistentJson = kept
+  } catch (err) {
+    // (no SD card place: the session still works until the box restarts)
+    console.warn(`[eltern-auth] could not keep the sessions: ${(err as Error).message}`)
+  }
+}
+
+// The password a session was issued under (a short hash of its hash; '' without a password). Set up by the router,
+// which reads the config.
+let passwordStamp: () => string = () => ''
+export function usePasswordStamp(readConfig: () => unknown): void {
+  passwordStamp = () => {
+    const cfg = readConfig()
+    const admin = adminHash(cfg) ?? ''
+    const parents = readPasswordEntry(cfg)?.hash ?? ''
+    return admin || parents ? createHash('sha256').update(`${admin}|${parents}`).digest('hex').slice(0, 16) : ''
+  }
 }
 
 /**
@@ -110,14 +166,27 @@ function purgeExpiredMagicLinks(now: number = Date.now()): void {
   if (touched) saveMagicLinks()
 }
 
+function sessionExpired(entry: Session, now: number): boolean {
+  if (entry.persistent) return !(now - Date.parse(entry.lastSeen) <= PERSISTENT_TTL_MS)
+  return !(now - Date.parse(entry.issued) <= SESSION_TTL_MS)
+}
+
 function purgeExpiredSessions(now: number = Date.now()): void {
   const sessions = loadSessions()
   let touched = false
   for (const [id, entry] of Object.entries(sessions)) {
-    if (now - Date.parse(entry.issued) > SESSION_TTL_MS) {
+    if (sessionExpired(entry, now)) {
       delete sessions[id]
       touched = true
     }
+  }
+  // (the kept ones: the devices used last)
+  const kept = Object.entries(sessions)
+    .filter(([, e]) => e.persistent)
+    .sort(([, a], [, b]) => b.lastSeen.localeCompare(a.lastSeen))
+  for (const [id] of kept.slice(MAX_PERSISTENT_SESSIONS)) {
+    delete sessions[id]
+    touched = true
   }
   if (touched) saveSessions()
 }
@@ -145,7 +214,7 @@ export function generateMagicLink(source: string): { token: string; expiresIn: n
  * Issue a fresh session + csrf token. Used by every authentication path
  * (magic-link, password login, …) — keeps session creation in one place.
  */
-export function issueSession(ip: string): { sessionId: string; csrf: string } {
+export function issueSession(ip: string, persistent = false): { sessionId: string; csrf: string } {
   const sessions = loadSessions()
   const sessionId = randomBytes(TOKEN_BYTES).toString('hex')
   const csrf = randomBytes(TOKEN_BYTES).toString('hex')
@@ -155,10 +224,21 @@ export function issueSession(ip: string): { sessionId: string; csrf: string } {
     lastSeen: nowIso,
     ip,
     csrf,
+    pw: passwordStamp(),
+    ...(persistent ? { persistent: true } : {}),
   }
   sessionsCache = sessions
+  if (persistent) purgeExpiredSessions() // (the oldest kept one goes when there are too many)
   saveSessions()
   return { sessionId, csrf }
+}
+
+/** After the password was changed by this session: it stays valid (the others end, see validateSession). */
+export function restampSession(sessionId: string | undefined): void {
+  const entry = ownEntry(loadSessions(), sessionId)
+  if (!entry) return
+  entry.pw = passwordStamp()
+  saveSessions()
 }
 
 /**
@@ -184,12 +264,21 @@ export function validateSession(sessionId: string | undefined): Session | null {
   const sessions = loadSessions()
   const entry = ownEntry(sessions, sessionId)
   if (!entry) return null
+  // issued under another password (changed since, here or in the admin interface): over
+  if (entry.pw !== undefined && entry.pw !== passwordStamp()) {
+    delete sessions[sessionId as string]
+    saveSessions()
+    return null
+  }
   // Touch lastSeen to extend the active window (within absolute TTL).
+  const day = entry.lastSeen.slice(0, 10)
   entry.lastSeen = new Date().toISOString()
   sessionsCache = sessions
   // Don't write on every request — it would bottleneck tmpfs. Background
   // saves would be ideal; for now we rely on the next state-changing
   // request to flush. Read-only lastSeen drift is acceptable.
+  // A kept session: its day of last use on the SD card (once a day), so 90 days count from the last use
+  if (entry.persistent && entry.lastSeen.slice(0, 10) !== day) saveSessions()
   return entry
 }
 
