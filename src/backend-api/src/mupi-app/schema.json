@@ -624,7 +624,7 @@
        "options": [
         "Hörbuch/Hörspiel",
         "Musik",
-        "Sonstiges"
+        "Radio & Podcasts"
        ]
       },
       {
@@ -799,7 +799,7 @@
        "options": [
         "Hörbuch/Hörspiel",
         "Musik",
-        "Sonstiges"
+        "Radio & Podcasts"
        ]
       },
       {
@@ -842,7 +842,7 @@
        "options": [
         "Hörbuch/Hörspiel",
         "Musik",
-        "Sonstiges"
+        "Radio & Podcasts"
        ]
       },
       {
@@ -1022,7 +1022,7 @@
         {
          "t": "MuPiBox-Einschlafen",
          "s": "6 Alben",
-         "tag": "Sonstiges"
+         "tag": "Radio & Podcasts"
         }
        ]
       }
@@ -2155,7 +2155,7 @@
       },
       {
        "type": "toggle",
-       "label": "Sonstiges ausblenden",
+       "label": "Radio & Podcasts ausblenden",
        "key": "hideO",
        "default": false
       }
@@ -5373,7 +5373,7 @@
    "id": "bedienung"
   },
   {
-   "l": "Sonstiges ausblenden",
+   "l": "Radio & Podcasts ausblenden",
    "where": "Display & Bedienung › Bedienung am Display",
    "id": "bedienung"
   },

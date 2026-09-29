@@ -1449,7 +1449,7 @@ const PILLS = [
   ['all', 'Alle'],
   ['audiobook', 'Hörspiele'],
   ['music', 'Musik'],
-  ['other', 'Radio'],
+  ['other', 'Radio & Podcasts'],
   ['nas', 'NAS'],
 ]
 // items: /api/data; local: category -> folders; nasTop: the selected NAS folders;
@@ -1713,10 +1713,12 @@ async function startPlay(title, path, body) {
 const CATS = [
   ['audiobook', 'Hörspiele', 'Hörbuch/Hörspiel'],
   ['music', 'Musik', 'Musik'],
-  ['other', 'Sonstiges', 'Sonstiges'],
+  // (the box shows a radio for it; radio stations and podcasts are added here)
+  ['other', 'Radio & Podcasts', 'Radio & Podcasts'],
 ]
 const catLabel = (c) => CATS.find(([id]) => id === c)?.[1] ?? ''
-const catFromLabel = (label) => CATS.find(([, , long]) => long === label)?.[0] ?? 'audiobook'
+// (the old name "Sonstiges" too: a value kept from before)
+const catFromLabel = (label) => (label === 'Sonstiges' ? 'other' : CATS.find(([, , long]) => long === label)?.[0] ?? 'audiobook')
 const SYNC_API = '/api/spotify-sync'
 
 // items: /api/data; local: category -> artist folders; cat / src / q: the filters
@@ -1758,7 +1760,7 @@ const LIB_SOURCES = [
   ['nas', 'NAS'],
 ]
 const SOURCE_LABEL = { manual: 'Manuell', 'spotify-sync': 'Sync', local: 'SD-Karte', nas: 'NAS' }
-const CAT_SHORT = { audiobook: 'Hörspiel', music: 'Musik', other: 'Sonstiges' }
+const CAT_SHORT = { audiobook: 'Hörspiel', music: 'Musik', other: 'Radio & Podcasts' }
 const AVATAR_COLORS = ['#F2B45A', '#7FC7F0', '#9ED8A6', '#F4A3B4', '#C9B6F2', '#8FD6C8', '#F6C58A', '#A8C6F5']
 const avatarColor = (name) => AVATAR_COLORS[[...String(name)].reduce((h, ch) => (h * 31 + ch.codePointAt(0)) >>> 0, 7) % AVATAR_COLORS.length]
 
@@ -3729,7 +3731,7 @@ function nasTop() {
         <div class="btns"><button class="btn" id="n-pnew">${icon('plus', 18)}Auswahl als Profil speichern</button></div></section>`
       : '',
     st.loggedIn
-      ? `<section class="card wide"><h2>Ordner</h2><p class="help">Anzeigen = erscheint auf der Box – antippen und wählen, wo: in Hörspiele, Musik oder Sonstiges (neben SD-Karte und Spotify) oder im NAS-Reiter. Ausblenden = bleibt verborgen (auch alles darunter). Laden = auf die SD-Karte kopieren, damit es auch ohne NAS spielt.</p>
+      ? `<section class="card wide"><h2>Ordner</h2><p class="help">Anzeigen = erscheint auf der Box – antippen und wählen, wo: in Hörspiele, Musik oder Radio & Podcasts (neben SD-Karte und Spotify) oder im NAS-Reiter. Ausblenden = bleibt verborgen (auch alles darunter). Laden = auf die SD-Karte kopieren, damit es auch ohne NAS spielt.</p>
         <div class="search">${icon('search')}<input class="input" id="n-q" type="search" placeholder="Ordner auf dem ganzen NAS suchen" autocomplete="off" value="${esc(nas.q)}"></div>
         <p class="help" id="n-index" style="margin:0"></p>
         ${sw('n-only', 'Nur die Auswahl zeigen', nas.onlySel)}
@@ -3887,7 +3889,7 @@ function drawNasDownload() {
 }
 
 // Where a shown NAS folder appears on the box: a category tab (next to Spotify and the SD card) or the NAS tab
-const NAS_WHERE = { '': 'Im NAS-Reiter', audiobook: 'In Hörspiele', music: 'In Musik', other: 'In Sonstiges' }
+const NAS_WHERE = { '': 'Im NAS-Reiter', audiobook: 'In Hörspiele', music: 'In Musik', other: 'In Radio & Podcasts' }
 
 // "Anzeigen" of a NAS folder: shown where - a category, or the NAS tab - and, in a category, whether its subfolders
 // are tiles of their own (a collection of series) or the folder is one tile; or not shown
@@ -3918,7 +3920,7 @@ async function nasWhereSheet(row, place = null) {
      <div class="where-grid">
        ${option('audiobook', 'Hörspiele', 'neben SD-Karte und Spotify')}
        ${option('music', 'Musik', 'neben SD-Karte und Spotify')}
-       ${option('other', 'Sonstiges', 'neben Radio und Podcasts')}
+       ${option('other', 'Radio & Podcasts', 'z. B. Geräusche, Geschichten ohne Serie')}
        ${option('', 'NAS-Reiter', 'eigener Reiter nur fürs NAS')}
      </div>
      <div class="where-split" id="w-split" hidden>
@@ -6321,7 +6323,7 @@ const CONTROLLERS = {
   link: {
     change(key, v, page) {
       if (key !== 'lType') return
-      state.values.set('lCat', v === 'Spotify-Link' ? 'Hörbuch/Hörspiel' : 'Sonstiges')
+      state.values.set('lCat', v === 'Spotify-Link' ? 'Hörbuch/Hörspiel' : 'Radio & Podcasts')
       renderPage(page, false)
     },
     byLabel: {
