@@ -2613,7 +2613,13 @@ process.on('unhandledRejection', (reason) => {
   console.error(`${now()}: [Spotify Control] Unhandled promise rejection:`, reason)
 })
 
-server.listen(config.server.port)
+// On the box itself only (its display, the backend, the scripts, the Telegram bot call it on localhost): open to the
+// whole network, anyone could start, stop or change what plays. IPv4 and IPv6 (localhost may resolve to ::1 first).
+server.listen(config.server.port, '127.0.0.1')
+http
+  .createServer(app)
+  .on('error', (err) => console.warn(`${now()}: [Spotify Control] no IPv6 loopback listener: ${err.message}`))
+  .listen(config.server.port, '::1')
 console.log(
   `${now()}: [mupibox-backend-player] Server started at http://localhost:${config.server.port}`,
 )
