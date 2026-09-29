@@ -2,10 +2,13 @@
 // http://<box>/cover/<name> (/var/www/cover links there). The same checks as its cover page: a plain file name, JPEG,
 // PNG, GIF or WEBP, square, 300 to 1200 px.
 
+import { randomBytes } from 'node:crypto'
 import { promises as fsp } from 'node:fs'
 import * as path from 'node:path'
-import type { Router } from 'express'
+import type { Request, Router } from 'express'
+import { type CoverCandidate, fetchCoverImage, searchDeezer, searchItunes } from '../online-covers'
 import { requireCsrf, requireSession } from './middleware'
+import type { LocalLibraryDeps } from './upload'
 
 export interface CustomCoverDeps {
   /** The folder of the pictures (/home/dietpi/MuPiBox/media/cover). */
@@ -52,8 +55,9 @@ export function imageSize(b: Buffer): { type: string; width: number; height: num
   return undefined
 }
 
-export function registerCustomCoverRoutes(router: Router, deps: CustomCoverDeps): void {
+export function registerCustomCoverRoutes(router: Router, deps: ChoiceDeps): void {
   const address = (name: string) => `http://${deps.host()}/cover/${encodeURIComponent(name)}`
+  registerCoverChoiceRoutes(router, deps, address)
 
   /** GET /api/eltern/covers - the pictures, newest first, with their address. */
   router.get('/covers', requireSession, async (_req, res) => {
@@ -157,4 +161,183 @@ export function registerCustomCoverRoutes(router: Router, deps: CustomCoverDeps)
     }
     res.json({ ok: true })
   })
+}
+
+// ---------- Choosing a cover in the app: search iTunes/Deezer or take an own picture, for a folder or an entry ----------
+
+// A chosen picture: the app sends it squared and at most 1200 px (canvas), the search results are at most 2 MB
+const MAX_CHOSEN_BYTES = 5 * 1024 * 1024
+const MIN_CHOSEN_EDGE = 200
+const COVER_BASE = 'cover'
+// the one before is kept next to it (once), in case the new one was the wrong choice
+const PREVIOUS_BASE = 'cover-previous'
+// stored by the box next to a scanned picture (online covers): it would come before a chosen cover
+const BOX_ONLINE_COVER = 'cover-online.jpg'
+const PICTURE_EXTENSIONS = ['.jpg', '.jpeg', '.jfif', '.png', '.webp']
+
+type Applied = { status: number; body: Record<string, unknown> }
+type ChoiceDeps = CustomCoverDeps & { local?: LocalLibraryDeps }
+
+function registerCoverChoiceRoutes(router: Router, deps: ChoiceDeps, address: (name: string) => string): void {
+  /**
+   * GET /api/eltern/cover-search?q=<text> - albums at iTunes and Deezer with a picture, taken in turns (at most 24).
+   * The search term goes to Apple and Deezer; the app says so.
+   */
+  router.get('/cover-search', requireSession, async (req, res) => {
+    const q = (typeof req.query.q === 'string' ? req.query.q : '').replace(/\p{Cc}/gu, ' ').trim().slice(0, 100)
+    if (q.length < 2) {
+      res.status(400).json({ error: 'query_too_short' })
+      return
+    }
+    const [itunes, deezer] = await Promise.allSettled([searchItunes(q, 12, 1000), searchDeezer(q, 12, true)])
+    if (itunes.status === 'rejected' && deezer.status === 'rejected') {
+      console.warn(`${new Date().toLocaleString()}: [cover-search] ${String(itunes.reason)} / ${String(deezer.reason)}`)
+      res.status(502).json({ error: 'search_failed' })
+      return
+    }
+    const a = itunes.status === 'fulfilled' ? itunes.value : []
+    const b = deezer.status === 'fulfilled' ? deezer.value : []
+    const results: CoverCandidate[] = []
+    const seen = new Set<string>()
+    for (let i = 0; i < Math.max(a.length, b.length); i++) {
+      for (const c of [a[i], b[i]]) {
+        if (!c) continue
+        const key = `${c.title}|${c.artist}`.toLowerCase()
+        if (seen.has(key)) continue
+        seen.add(key)
+        results.push(c)
+      }
+    }
+    res.json({
+      results: results.slice(0, 24).map((c) => ({ source: c.source, title: c.title, artist: c.artist, image: c.imageUrl, thumb: c.thumbUrl })),
+    })
+  })
+
+  /** POST /api/eltern/cover-apply {target, image} - takes a search result's picture (see applyCover for the target). */
+  router.post('/cover-apply', requireSession, requireCsrf, async (req, res) => {
+    const body = (req.body ?? {}) as { target?: unknown; image?: unknown }
+    let bytes: Buffer
+    try {
+      bytes = await fetchCoverImage(String(body.image ?? ''))
+    } catch (err) {
+      const bad = (err as Error).message === 'bad_address'
+      if (!bad) console.warn(`${new Date().toLocaleString()}: [cover-apply] ${(err as Error).message}`)
+      res.status(bad ? 400 : 502).json({ error: bad ? 'bad_address' : 'download_failed' })
+      return
+    }
+    const r = await applyCover(String(body.target ?? ''), bytes, deps, address)
+    res.status(r.status).json(r.body)
+  })
+
+  /** PUT /api/eltern/cover-apply?target=  body: an own picture (JPEG or PNG, squared by the app). */
+  router.put('/cover-apply', requireSession, requireCsrf, async (req, res) => {
+    const bytes = await readBody(req, MAX_CHOSEN_BYTES)
+    if (!bytes) {
+      if (!res.headersSent) res.status(413).json({ error: 'too_large' })
+      return
+    }
+    const r = await applyCover(typeof req.query.target === 'string' ? req.query.target : '', bytes, deps, address)
+    res.status(r.status).json(r.body)
+  })
+}
+
+async function readBody(req: Request, max: number): Promise<Buffer | undefined> {
+  const chunks: Buffer[] = []
+  let size = 0
+  try {
+    for await (const chunk of req) {
+      size += (chunk as Buffer).length
+      if (size > max) {
+        req.destroy()
+        return undefined
+      }
+      chunks.push(chunk as Buffer)
+    }
+  } catch {
+    return undefined
+  }
+  return Buffer.concat(chunks)
+}
+
+/**
+ * Puts a chosen picture in place:
+ *   own:<name>    - into the own pictures (media/cover) as <name>-<random>.jpg; answers its address, which the app puts
+ *                   into the entry's cover field (radio streams, Spotify entries, …)
+ *   local:<path>  - as cover.jpg into a folder of the SD card (category/artist[/album…]); a cover there before is kept
+ *                   as cover-previous.jpg, the box's own cover-online.jpg goes (it would come first)
+ */
+export async function applyCover(target: string, bytes: Buffer, deps: ChoiceDeps, address: (name: string) => string): Promise<Applied> {
+  const info = imageSize(bytes)
+  if (!info || (info.type !== 'jpeg' && info.type !== 'png')) return { status: 415, body: { error: 'not_an_image' } }
+  if (Math.min(info.width, info.height) < MIN_CHOSEN_EDGE) return { status: 422, body: { error: 'too_small', width: info.width, height: info.height } }
+  const ext = info.type === 'png' ? '.png' : '.jpg'
+
+  if (target.startsWith('own:')) {
+    const base =
+      target
+        .slice(4)
+        .normalize('NFD')
+        .replace(/\p{Diacritic}/gu, '')
+        .replace(/[^A-Za-z0-9_-]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 60) || 'cover'
+    const name = `${base}-${randomBytes(3).toString('hex')}${ext}`
+    try {
+      await fsp.mkdir(deps.dir, { recursive: true })
+      await writeAtomically(path.join(deps.dir, name), bytes)
+    } catch (err) {
+      console.warn(`${new Date().toLocaleString()}: [cover-apply] ${name}: ${(err as Error).message}`)
+      return { status: 500, body: { error: 'write_failed' } }
+    }
+    return { status: 200, body: { ok: true, url: address(name) } }
+  }
+
+  if (target.startsWith('local:') && deps.local) {
+    const parts = target.slice(6).split('/').filter(Boolean)
+    if (parts.length < 2 || !deps.local.categories.includes(parts[0]) || parts.some((p) => p === '.' || p === '..' || p.includes('\\'))) {
+      return { status: 400, body: { error: 'invalid_path' } }
+    }
+    const categoryDir = path.join(deps.local.root, parts[0])
+    const dir = path.join(deps.local.root, ...parts)
+    if (!dir.startsWith(categoryDir + path.sep)) return { status: 400, body: { error: 'invalid_path' } }
+    let names: string[]
+    try {
+      if (!(await fsp.lstat(dir)).isDirectory()) throw new Error('not a folder')
+      names = await fsp.readdir(dir)
+    } catch {
+      return { status: 404, body: { error: 'item_not_found' } }
+    }
+    // (the new picture is written first: a full card leaves the old cover where it was)
+    const tmp = path.join(dir, `.${COVER_BASE}${ext}.${randomBytes(4).toString('hex')}.part`)
+    try {
+      await fsp.writeFile(tmp, bytes, { mode: 0o664 })
+      for (const n of names) {
+        const e = path.extname(n).toLowerCase()
+        if (!PICTURE_EXTENSIONS.includes(e)) continue
+        const b = n.slice(0, -e.length).toLowerCase()
+        if (b === COVER_BASE) await fsp.rename(path.join(dir, n), path.join(dir, `${PREVIOUS_BASE}${e}`))
+        else if (n.toLowerCase() === BOX_ONLINE_COVER) await fsp.unlink(path.join(dir, n))
+      }
+      await fsp.rename(tmp, path.join(dir, `${COVER_BASE}${ext}`))
+    } catch (err) {
+      await fsp.unlink(tmp).catch(() => undefined)
+      console.warn(`${new Date().toLocaleString()}: [cover-apply] ${dir}: ${(err as Error).message}`)
+      return { status: 500, body: { error: 'write_failed' } }
+    }
+    console.log(`${new Date().toLocaleString()}: [cover-apply] ${parts.join('/')}/${COVER_BASE}${ext}`)
+    deps.local.changed()
+    return { status: 200, body: { ok: true, path: `${parts.join('/')}/${COVER_BASE}${ext}` } }
+  }
+  return { status: 400, body: { error: 'invalid_target' } }
+}
+
+async function writeAtomically(file: string, bytes: Buffer): Promise<void> {
+  const tmp = path.join(path.dirname(file), `.${path.basename(file)}.${randomBytes(4).toString('hex')}.part`)
+  try {
+    await fsp.writeFile(tmp, bytes, { mode: 0o664 })
+    await fsp.rename(tmp, file)
+  } catch (err) {
+    await fsp.unlink(tmp).catch(() => undefined)
+    throw err
+  }
 }

@@ -4695,6 +4695,8 @@ function pickCoverImage(files: NasFileEntry[]): NasFileEntry | undefined {
   return (
     // stored by the box next to a picture that is not square (see saveOnlineCoverToFolder)
     images.find((f) => base(f) === 'cover-online') ??
+    // a cover chosen in the app (cover-apply) before folder.jpg / AlbumArt*.jpg of a ripping program
+    images.find((f) => base(f) === 'cover') ??
     images.find((f) => /^(cover|folder|front|albumart\w*)$/.test(base(f))) ??
     images.find((f) => /cover|front/.test(base(f)) && !/back/.test(base(f))) ??
     images.find((f) => !/back|rueck|rück|inlay|booklet|cd\d?$|disc/.test(base(f))) ??

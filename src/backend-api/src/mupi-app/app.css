@@ -634,3 +634,15 @@ a.btn { text-decoration: none; color: inherit; }
 .news-sheet { max-height: none; overflow: visible; font-size: 14px; color: var(--mp-text); }
 /* "Angemeldet bleiben" under the password (the login page is centred, the switch row reads from the left) */
 .login .login-keep { text-align: left; border-top: 0; padding-top: 0; }
+/* choosing a cover (openCoverPicker): the search, then the results to tap; the chosen one framed */
+.cover-now { display: flex; align-items: center; gap: 12px; }
+.cover-search { display: flex; gap: 8px; align-items: center; }
+.cover-search .search { flex: 1; min-width: 0; margin: 0; }
+.cover-pick { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 10px; }
+.cover-pick .cover-tile[aria-pressed="true"] .cover-img { outline: 3px solid var(--mp-primary); outline-offset: 2px; }
+.cover-pick .cover-tile[aria-pressed="true"] b { color: var(--mp-primary-text); }
+/* a picture field with its button (entry sheet) */
+.field-pick { display: flex; gap: 8px; align-items: center; }
+.field-pick .input { flex: 1; min-width: 0; }
+/* its buttons stay at the bottom of the sheet while the results scroll */
+.cover-actions { position: sticky; bottom: 0; z-index: 3; margin-top: 0; padding: 10px 0 4px; background: var(--mp-surface); box-shadow: 0 -10px 12px -8px rgba(0,0,0,.25); }

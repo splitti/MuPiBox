@@ -48,6 +48,75 @@ interface Candidate {
   genre?: string
 }
 
+/** A result for the cover choice in the app: a small picture for the list, a large one to take. */
+export interface CoverCandidate extends Candidate {
+  thumbUrl: string
+}
+
+/** Albums at iTunes for a search term; `size` is the edge of the picture taken (600 for the automatic lookup). */
+export async function searchItunes(term: string, limit = 10, size = 600): Promise<CoverCandidate[]> {
+  const url = `https://itunes.apple.com/search?${new URLSearchParams({ term, media: 'music', entity: 'album', country: 'DE', limit: String(limit) })}`
+  const r = await fetch(url, { signal: AbortSignal.timeout(8000) })
+  if (!r.ok) throw new Error(`iTunes ${r.status}`)
+  const body = (await r.json()) as {
+    results?: Array<{ collectionName?: string; artistName?: string; artworkUrl100?: string; primaryGenreName?: string }>
+  }
+  return (body.results ?? [])
+    .filter((x) => x.collectionName && x.artworkUrl100)
+    .map((x) => ({
+      source: 'itunes' as const,
+      title: String(x.collectionName),
+      artist: String(x.artistName ?? ''),
+      imageUrl: String(x.artworkUrl100).replace(/\/\d+x\d+bb\./, `/${size}x${size}bb.`),
+      thumbUrl: String(x.artworkUrl100).replace(/\/\d+x\d+bb\./, '/300x300bb.'),
+      genre: x.primaryGenreName,
+    }))
+}
+
+/** Albums at Deezer for a search term; `large` takes the 1000 px picture instead of the 500 px one. */
+export async function searchDeezer(q: string, limit = 10, large = false): Promise<CoverCandidate[]> {
+  const r = await fetch(`https://api.deezer.com/search/album?${new URLSearchParams({ q, limit: String(limit) })}`, {
+    signal: AbortSignal.timeout(8000),
+  })
+  if (!r.ok) throw new Error(`Deezer ${r.status}`)
+  const body = (await r.json()) as {
+    data?: Array<{ title?: string; artist?: { name?: string }; cover_medium?: string; cover_big?: string; cover_xl?: string; genre_id?: number }>
+  }
+  return (body.data ?? [])
+    .filter((x) => x.title && x.cover_big)
+    .map((x) => ({
+      source: 'deezer' as const,
+      title: String(x.title),
+      artist: String(x.artist?.name ?? ''),
+      imageUrl: String((large && x.cover_xl) || x.cover_big),
+      thumbUrl: String(x.cover_medium || x.cover_big),
+      genre: x.genre_id !== undefined ? DEEZER_GENRES[x.genre_id] : undefined,
+    }))
+}
+
+// Where a chosen picture may be fetched from: the picture servers of iTunes and Deezer, nothing else (the address
+// comes from the app)
+const COVER_HOSTS = /^(?:is\d+-ssl\.mzstatic\.com|(?:e-)?cdns?-images\.dzcdn\.net)$/
+
+/** The bytes of a picture of a search result (iTunes/Deezer only, https, no redirects, at most 2 MB). */
+export async function fetchCoverImage(address: string): Promise<Buffer> {
+  let url: URL
+  try {
+    url = new URL(address)
+  } catch {
+    throw new Error('bad_address')
+  }
+  if (url.protocol !== 'https:' || !COVER_HOSTS.test(url.hostname) || url.username || url.password || url.port) {
+    throw new Error('bad_address')
+  }
+  const r = await fetch(url, { signal: AbortSignal.timeout(15000), redirect: 'error' })
+  const type = r.headers.get('content-type') ?? ''
+  if (!r.ok || !type.startsWith('image/')) throw new Error(`download ${r.status} ${type}`)
+  const data = Buffer.from(await r.arrayBuffer())
+  if (data.length === 0 || data.length > MAX_IMAGE_BYTES) throw new Error(`size ${data.length}`)
+  return data
+}
+
 const SPACING_MS = 3000 // between two requests to the same service
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024
 // Deezer only gives genre ids: 457 Hörbücher, 462 Hörbücher auf Deutsch, 95 Kids
@@ -339,41 +408,12 @@ export class OnlineCovers {
 
   private async itunes(term: string): Promise<Candidate[]> {
     await this.spaced('itunes')
-    const url = `https://itunes.apple.com/search?${new URLSearchParams({ term, media: 'music', entity: 'album', country: 'DE', limit: '10' })}`
-    const r = await fetch(url, { signal: AbortSignal.timeout(8000) })
-    if (!r.ok) throw new Error(`iTunes ${r.status}`)
-    const body = (await r.json()) as {
-      results?: Array<{ collectionName?: string; artistName?: string; artworkUrl100?: string; primaryGenreName?: string }>
-    }
-    return (body.results ?? [])
-      .filter((x) => x.collectionName && x.artworkUrl100)
-      .map((x) => ({
-        source: 'itunes' as const,
-        title: String(x.collectionName),
-        artist: String(x.artistName ?? ''),
-        imageUrl: String(x.artworkUrl100).replace(/\/\d+x\d+bb\./, '/600x600bb.'),
-        genre: x.primaryGenreName,
-      }))
+    return searchItunes(term)
   }
 
   private async deezer(q: string): Promise<Candidate[]> {
     await this.spaced('deezer')
-    const r = await fetch(`https://api.deezer.com/search/album?${new URLSearchParams({ q, limit: '10' })}`, {
-      signal: AbortSignal.timeout(8000),
-    })
-    if (!r.ok) throw new Error(`Deezer ${r.status}`)
-    const body = (await r.json()) as {
-      data?: Array<{ title?: string; artist?: { name?: string }; cover_big?: string; genre_id?: number }>
-    }
-    return (body.data ?? [])
-      .filter((x) => x.title && x.cover_big)
-      .map((x) => ({
-        source: 'deezer' as const,
-        title: String(x.title),
-        artist: String(x.artist?.name ?? ''),
-        imageUrl: String(x.cover_big),
-        genre: x.genre_id !== undefined ? DEEZER_GENRES[x.genre_id] : undefined,
-      }))
+    return searchDeezer(q)
   }
 
   private async download(url: string, target: string): Promise<void> {

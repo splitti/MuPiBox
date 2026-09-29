@@ -1753,13 +1753,41 @@ function openEntrySheet(item) {
     `<h2>${esc(item.title_override ?? item.title ?? item.artist_override ?? item.artist ?? 'Eintrag')}</h2>
      <p class="help" style="margin:0">${isSync ? 'Kommt vom Spotify-Sync. Was du hier einträgst, gilt statt der Werte von Spotify; leer = der Wert von Spotify.' : 'Von Hand hinzugefügt.'}</p>
      ${fields
-       .map(([k, l]) => `<div class="field"><label for="e-${k}">${l}</label><input class="input" id="e-${k}" value="${esc(val(k))}" placeholder="${esc(isSync ? item[k] ?? '' : '')}" autocomplete="off"></div>`)
+       .map(([k, l]) => {
+         const input = `<input class="input" id="e-${k}" value="${esc(val(k))}" placeholder="${esc(isSync ? item[k] ?? '' : '')}" autocomplete="off">`
+         // the picture fields: also chosen from a search or the device (see openCoverPicker)
+         return k.endsWith('cover')
+           ? `<div class="field"><label for="e-${k}">${l}</label><div class="field-pick">${input}<button type="button" class="icon-btn soft" data-pick="${k}" aria-label="Bild suchen oder hochladen">${icon('image', 18)}</button></div></div>`
+           : `<div class="field"><label for="e-${k}">${l}</label>${input}</div>`
+       })
        .join('')}
      <div class="field"><label for="e-cat">Kategorie</label>${catSelect('e-cat', item.category_override ?? (isSync ? '' : item.category === 'radio' ? 'other' : item.category), isSync)}</div>
      ${isSync ? `<p class="help" style="margin:0">Entfernen geht über Bibliothek › Verwaltete Inhalte oder die Spotify-Playlist.</p>` : ''}
      <div class="btns">${isSync ? '' : `<button class="btn danger" data-del>Löschen</button>`}<button class="btn" data-close>Abbrechen</button><button class="btn primary" data-ok>Speichern</button></div>`,
     (sheet, close) => {
       sheet.querySelector('[data-close]').onclick = close
+      // A chosen picture lands among the own pictures and is saved into the entry right away (the picker takes the
+      // sheet's place, what was typed here and not saved yet stays as it was on the box)
+      for (const b of sheet.querySelectorAll('[data-pick]')) {
+        const k = b.dataset.pick
+        const artist = String(item.artist_override ?? item.artist ?? '')
+        const title = String(item.title_override ?? item.title ?? '')
+        b.onclick = () =>
+          openCoverPicker({
+            target: `own:${k === 'artistcover' ? artist : `${artist} ${title}`}`,
+            title: k === 'artistcover' ? artist || title : title || artist,
+            query: k === 'artistcover' ? artist : `${artist} ${title}`.trim(),
+            fallbacks: k === 'artistcover' ? [] : [withoutNumber(title), artist],
+            current: item[`${k}_override`] ?? item[k] ?? (k === 'cover' ? spotifyCover(item) : ''),
+            onDone: async (body) => {
+              const key = isSync ? `${k}_override` : k
+              const r = await api('/api/edit', { method: 'POST', body: { index: item.index, data: { ...item, [key]: body.url }, original: item } })
+              if (!libWriteOk(r)) return
+              toast('Cover übernommen')
+              libReload()
+            },
+          })
+      }
       sheet.querySelector('[data-ok]').onclick = async () => {
         const updated = { ...item }
         for (const [k] of fields) {
@@ -1796,12 +1824,36 @@ function openEntrySheet(item) {
 async function openLocalSheet(folder) {
   const r = folder.libraryIsContainer ? await api(`/api/library/children?path=${encodeURIComponent(folder.libraryPath)}`) : { body: [] }
   const albums = (Array.isArray(r.body) ? r.body : []).filter((a) => !a.ownFiles)
+  const thumb = (cover) => `<span class="lib-thumb">${cover ? `<img src="${esc(cover)}" alt="" loading="lazy">` : icon('image', 18)}</span>`
   openSheet(
     `<h2>${esc(folder.title)}</h2><p class="help" style="margin:0">Ordner auf der SD-Karte · ${esc(catLabel(folder.category))}${albums.length ? ` · ${albums.length} ${albums.length === 1 ? 'Album' : 'Alben'}` : ''}</p>
-     ${albums.length ? `<div class="rows">${albums.map((a, i) => `<div class="entry"><span class="lbl"><b>${esc(a.title)}</b></span><button class="btn danger sm" data-a="${i}">Löschen</button></div>`).join('')}</div>` : ''}
+     <div class="entry">${thumb(folder.cover)}<span class="lbl"><b>${albums.length ? 'Cover des Interpreten' : 'Cover'}</b>${folder.cover ? '' : '<small>Noch kein Bild</small>'}</span><button class="btn sm" data-cover>${folder.cover ? 'Ändern' : 'Wählen'}</button></div>
+     ${albums.length ? `<div class="rows">${albums.map((a, i) => `<div class="entry">${thumb(a.cover)}<span class="lbl"><b>${esc(a.title)}</b></span><button class="btn sm" data-c="${i}">Cover</button><button class="btn danger sm" data-a="${i}">Löschen</button></div>`).join('')}</div>` : ''}
      <div class="btns"><button class="btn danger" data-all>${albums.length ? 'Ganzen Ordner löschen' : 'Löschen'}</button><button class="btn" data-close>Schließen</button></div>`,
     (sheet, close) => {
+      for (const img of sheet.querySelectorAll('.lib-thumb img')) img.addEventListener('error', () => img.remove(), { once: true })
       sheet.querySelector('[data-close]').onclick = close
+      // a cover for the folder or one of its albums: cover.jpg in that folder
+      const pick = (path, title, query, current, fallbacks = []) =>
+        openCoverPicker({
+          target: `local:${path}`,
+          title,
+          query,
+          fallbacks,
+          current,
+          onDone: async () => {
+            toast('Cover übernommen – gleich auf dem Display')
+            await libReload()
+            // back to the folder, with its new pictures
+            const again = lib.local[folder.category]?.find((f) => f.libraryPath === folder.libraryPath)
+            openLocalSheet(again ?? folder)
+          },
+        })
+      sheet.querySelector('[data-cover]').onclick = () => pick(folder.libraryPath, folder.title, folder.title, folder.cover)
+      for (const b of sheet.querySelectorAll('[data-c]')) {
+        const a = albums[Number(b.dataset.c)]
+        b.onclick = () => pick(a.libraryPath, a.title, `${folder.title} ${a.title}`, a.cover, [`${folder.title} ${withoutNumber(a.title)}`, withoutNumber(a.title), folder.title])
+      }
       const del = (path, name, what) => {
         close()
         confirmSheet('Löschen', `${what} „${name}“ wird mit allen Dateien von der SD-Karte gelöscht. Das lässt sich nicht rückgängig machen.`, async () => {
@@ -1818,6 +1870,148 @@ async function openLocalSheet(folder) {
       }
     },
   )
+}
+
+/* Choosing a cover: a search at iTunes and Deezer or an own picture, for a folder of the SD card or an entry */
+
+// target: 'local:<path>' (the folder gets it as cover.jpg) or 'own:<name>' (stored among the own pictures, onDone gets
+// its address); query: the search it starts with, fallbacks: shorter ones when it finds nothing; current: the picture
+// shown now
+function openCoverPicker({ target, title, query, fallbacks, current, onDone }) {
+  let results = []
+  let chosen = null // { i } of a result, or { blob, url } of an own picture
+  const coverError = (r) =>
+    ({
+      download_failed: 'Das Bild ließ sich nicht laden – bitte ein anderes nehmen.',
+      too_small: 'Das Bild ist zu klein (mindestens 200 × 200 px).',
+      not_an_image: 'Das ist kein JPG- oder PNG-Bild.',
+      too_large: 'Das Bild ist zu groß.',
+      item_not_found: 'Den Ordner gibt es nicht mehr.',
+    })[r.body?.error] ?? 'Das hat nicht geklappt'
+  openSheet(
+    `<h2>Cover für „${esc(title)}“</h2>
+     <div class="cover-now">${current ? `<span class="lib-thumb"><img src="${esc(current)}" alt=""></span>` : ''}<p class="help" style="margin:0">Ein Bild antippen und übernehmen – oder ein eigenes Bild vom Gerät nehmen. Es wird quadratisch zugeschnitten.</p></div>
+     <form class="cover-search" id="cp-form"><div class="search">${icon('search')}<input class="input" id="cp-q" type="search" value="${esc(query)}" autocomplete="off" enterkeyhint="search" aria-label="Cover suchen"></div><button class="btn" type="submit">Suchen</button></form>
+     <p class="help" style="margin:0">Sucht bei iTunes und Deezer – der Suchbegriff geht dafür an Apple und Deezer.</p>
+     <div class="covers cover-pick" id="cp-list"></div>
+     <input type="file" id="cp-file" accept="image/*" hidden>
+     <div class="btns cover-actions"><button class="btn" id="cp-own">${icon('image', 18)}Eigenes Bild</button><button class="btn" data-close>Abbrechen</button><button class="btn primary" id="cp-ok" disabled>Übernehmen</button></div>`,
+    (sheet, close) => {
+      const list = $('#cp-list', sheet)
+      const ok = $('#cp-ok', sheet)
+      const draw = () => {
+        const own = chosen?.blob
+          ? `<button type="button" class="cover-tile" data-own aria-pressed="true"><span class="cover-img"><img src="${chosen.url}" alt=""><span class="cover-badge">Eigenes</span></span><b>Eigenes Bild</b><small>vom Gerät</small></button>`
+          : ''
+        const tiles = results.map(
+          (c, i) => `<button type="button" class="cover-tile" data-i="${i}" aria-pressed="${chosen?.i === i}"><span class="cover-img"><img src="${esc(c.thumb)}" alt="" loading="lazy" referrerpolicy="no-referrer"><span class="cover-badge">${c.source === 'itunes' ? 'iTunes' : 'Deezer'}</span></span>
+            <b>${esc(c.title)}</b><small>${esc(c.artist)}</small></button>`,
+        )
+        list.innerHTML = own + (tiles.length ? tiles.join('') : own ? '' : `<p class="help covers-empty">Nichts gefunden – anders suchen oder ein eigenes Bild nehmen.</p>`)
+        for (const b of list.querySelectorAll('[data-i]')) {
+          b.onclick = () => {
+            if (chosen?.url) URL.revokeObjectURL(chosen.url)
+            chosen = { i: Number(b.dataset.i) }
+            draw()
+          }
+        }
+        ok.disabled = !chosen
+      }
+      // The first search: when the whole name finds nothing, shorter ones are tried (the album without its number, the
+      // artist alone); the field shows the one that found something
+      const search = async (tries = [$('#cp-q', sheet).value.trim()]) => {
+        const queries = [...new Set(tries.map((t) => t.trim()).filter((t) => t.length >= 2))]
+        if (queries.length === 0) return
+        list.innerHTML = `<div class="loading"><p>Suche …</p></div>`
+        let r
+        for (const q of queries) {
+          r = await api(`${API}/cover-search?q=${encodeURIComponent(q)}`)
+          if (!sheet.contains(list)) return // (closed meanwhile)
+          if (!r.ok || (r.body?.results ?? []).length > 0) {
+            $('#cp-q', sheet).value = q
+            break
+          }
+        }
+        results = r.ok ? (r.body?.results ?? []) : []
+        if (chosen && !chosen.blob) chosen = null
+        draw()
+        if (!r.ok) list.innerHTML = `<p class="help covers-empty">${r.status === 502 ? 'iTunes und Deezer sind gerade nicht erreichbar.' : 'Die Suche hat nicht geklappt.'}</p>`
+      }
+      $('#cp-form', sheet).onsubmit = (e) => {
+        e.preventDefault()
+        $('#cp-q', sheet).blur() // (the phone's keyboard goes, the results show)
+        search()
+      }
+      const file = $('#cp-file', sheet)
+      $('#cp-own', sheet).onclick = () => file.click()
+      file.onchange = async () => {
+        const f = file.files?.[0]
+        file.value = ''
+        if (!f) return
+        const blob = await squareImage(f).catch(() => null)
+        if (!blob) return toast(blob === null ? 'Das Bild ließ sich nicht öffnen.' : 'Das Bild ist zu klein (mindestens 200 × 200 px).', 'info')
+        if (chosen?.url) URL.revokeObjectURL(chosen.url)
+        chosen = { blob, url: URL.createObjectURL(blob) }
+        draw()
+      }
+      sheet.querySelector('[data-close]').onclick = close
+      ok.onclick = async () => {
+        ok.disabled = true
+        ok.textContent = 'Wird übernommen …'
+        const r = chosen.blob
+          ? await fetch(`${API}/cover-apply?target=${encodeURIComponent(target)}`, {
+              method: 'PUT',
+              credentials: 'same-origin',
+              headers: { 'Content-Type': 'application/octet-stream', 'x-mupibox-csrf': state.csrf },
+              body: chosen.blob,
+            }).then(
+              async (x) => ({ ok: x.ok, status: x.status, body: await x.json().catch(() => ({})) }),
+              () => ({ ok: false, status: 0, body: {} }),
+            )
+          : await api(`${API}/cover-apply`, { method: 'POST', body: { target, image: results[chosen.i].image } })
+        if (!r.ok) {
+          ok.disabled = false
+          ok.textContent = 'Übernehmen'
+          return toast(coverError(r), 'info')
+        }
+        close()
+        onDone?.(r.body)
+      }
+      draw()
+      search([query, ...(fallbacks ?? [])])
+      // (on a phone no keyboard over the results: the search field gets the focus only when tapped)
+      if (matchMedia('(pointer: coarse)').matches) requestAnimationFrame(() => $('#cp-q', sheet)?.blur())
+    },
+    () => {
+      if (chosen?.url) URL.revokeObjectURL(chosen.url)
+    },
+  )
+}
+
+// "084 Das Zirkusfest" / "1 - Flucht in der Nacht" without the episode number (catalogs often name it otherwise)
+const withoutNumber = (name) => String(name).replace(/^\d{1,4}\s*(?:[-.:)_]\s*)?/, '').trim() || String(name)
+
+// An own picture squared (the middle of it) and at most 1000 px, as JPEG; undefined when it is smaller than 200 px
+async function squareImage(file, max = 1000) {
+  const url = URL.createObjectURL(file)
+  try {
+    const img = await new Promise((resolve, reject) => {
+      const i = new Image()
+      i.onload = () => resolve(i)
+      i.onerror = reject
+      i.src = url
+    })
+    const side = Math.min(img.naturalWidth, img.naturalHeight)
+    if (side < 200) return undefined
+    const out = Math.min(side, max)
+    const canvas = document.createElement('canvas')
+    canvas.width = out
+    canvas.height = out
+    canvas.getContext('2d').drawImage(img, (img.naturalWidth - side) / 2, (img.naturalHeight - side) / 2, side, side, 0, 0, out, out)
+    return await new Promise((resolve) => canvas.toBlob((b) => resolve(b ?? null), 'image/jpeg', 0.9))
+  } finally {
+    URL.revokeObjectURL(url)
+  }
 }
 
 /* Verwaltete Inhalte: the artist subscriptions and albums added from the search */
@@ -2209,7 +2403,15 @@ function uploadOne(path, file, onProgress) {
     xhr.setRequestHeader('Content-Type', 'application/octet-stream')
     xhr.setRequestHeader('x-mupibox-csrf', state.csrf)
     xhr.upload.onprogress = (e) => onProgress(e.loaded)
-    xhr.onload = () => resolve(xhr.status)
+    xhr.onload = () => {
+      // (where the box put it, with the names as it cleaned them: for the cover offer afterwards)
+      try {
+        up.savedPath = xhr.status === 200 ? String(JSON.parse(xhr.responseText).path ?? '') : ''
+      } catch {
+        up.savedPath = ''
+      }
+      resolve(xhr.status)
+    }
     xhr.onerror = () => resolve(0)
     xhr.onabort = () => resolve(-1)
     xhr.send(file)
@@ -2234,6 +2436,10 @@ async function startUpload() {
   let ok = 0
   let failed = 0
   let stopWith = ''
+  // the album folders the tracks went to, and whether a picture came along
+  const albumFolders = new Set()
+  const withPicture = jobs.some((j) => UP_IMAGE.test(j.path))
+  const artistName = up.artist.trim()
   for (const [i, job] of jobs.entries()) {
     if (up.cancelled) break
     const status = await uploadOne(job.path, job.file, (loaded) => {
@@ -2242,8 +2448,12 @@ async function startUpload() {
       $('#u-ptext').textContent = `${i + 1} von ${jobs.length}: ${job.path} · ${Math.round(pct)} %`
     })
     done += job.file.size
-    if (status === 200) ok++
-    else if (status === -1) break
+    if (status === 200) {
+      ok++
+      // category/artist/album/…/file: the album is the third part (a track right in the artist's folder: the artist)
+      const parts = up.savedPath.split('/')
+      if (parts.length >= 3 && UP_AUDIO.test(job.path)) albumFolders.add(parts.slice(0, Math.min(3, parts.length - 1)).join('/'))
+    } else if (status === -1) break
     else if (status === 401 || status === 403) stopWith = 'Die Anmeldung ist abgelaufen – bitte neu anmelden.'
     else if (status === 507) stopWith = 'Auf der SD-Karte ist nicht mehr genug Platz.'
     else failed++
@@ -2268,6 +2478,32 @@ async function startUpload() {
   toast(parts.join(' ') || 'Nichts hochgeladen', failed || stopWith || !ok ? 'info' : 'ok')
   loadUploadFolders(false)
   loadUploadFolders(true)
+  // one album without a picture: a cover from the internet is offered (asked first, the search goes to Apple/Deezer)
+  if (ok > 0 && !withPicture && !up.cancelled && albumFolders.size === 1) offerCover([...albumFolders][0], artistName)
+}
+
+function offerCover(folder, artist) {
+  const name = folder.split('/').pop()
+  openSheet(
+    `<h2>Cover suchen?</h2>
+     <p class="help" style="margin:0">Für „${esc(name)}“ war kein Cover dabei. Soll ich bei iTunes und Deezer nach einem suchen? Du wählst dann eins aus – oder nimmst ein eigenes Bild.</p>
+     <div class="btns"><button class="btn" data-close>Später</button><button class="btn primary" data-search>${icon('search', 18)}Cover suchen</button></div>`,
+    (sheet, close) => {
+      sheet.querySelector('[data-close]').onclick = close
+      sheet.querySelector('[data-search]').onclick = () =>
+        openCoverPicker({
+          target: `local:${folder}`,
+          title: name,
+          query: name === artist ? artist : `${artist} ${name}`,
+          fallbacks: name === artist ? [] : [`${artist} ${withoutNumber(name)}`, withoutNumber(name), artist],
+          onDone: () => {
+            toast('Cover übernommen – gleich auf dem Display')
+            libChanged()
+            lib.items = null
+          },
+        })
+    },
+  )
 }
 
 function mountUpload(root) {

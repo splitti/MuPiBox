@@ -258,6 +258,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   registerCustomCoverRoutes(router, {
     dir: '/home/dietpi/MuPiBox/media/cover',
     host: () => String((deps.getMupiboxConfig()?.mupibox as { host?: string } | undefined)?.host || os.hostname()),
+    // (a cover chosen for a folder of the SD card, see cover-apply)
+    local: deps.localLibrary,
   })
 
   /**
