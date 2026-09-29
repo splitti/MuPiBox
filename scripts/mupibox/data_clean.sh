@@ -13,7 +13,11 @@ for i in "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover/audiobook
 		echo "[OK]    ${artist}"
 		for j in "${i}/"* ; do
 			album=$(/usr/bin/basename "${j}")
-			if [[ ! -f ${j} ]]
+			# HIGH-16: previous test was `[[ ! -f ${j} ]]` — true for any
+			# non-regular-file, including the literal `${i}/*` glob fallback
+			# when the dir is empty (would then `rm -R` a path containing
+			# a literal `*`). Restrict to actual directories.
+			if [[ -d ${j} ]]
 			then
 				if [[ -d "/home/dietpi/MuPiBox/media/audiobook/${artist}/${album}/" ]]
 				then
@@ -36,7 +40,11 @@ for i in "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover/music/"* 
 		echo "[OK]    ${artist}"
 		for j in "${i}/"* ; do
 			album=$(/usr/bin/basename "${j}")
-			if [[ ! -f ${j} ]]
+			# HIGH-16: previous test was `[[ ! -f ${j} ]]` — true for any
+			# non-regular-file, including the literal `${i}/*` glob fallback
+			# when the dir is empty (would then `rm -R` a path containing
+			# a literal `*`). Restrict to actual directories.
+			if [[ -d ${j} ]]
 			then
 				if [[ -d "/home/dietpi/MuPiBox/media/music/${artist}/${album}/" ]]
 				then
@@ -75,7 +83,12 @@ for item in "${my_array[@]}"; do
 	fi
 	if [[ ${i} > 0 ]] && [[ ${add_item} > 0 ]]
 	then
-		echo $(sed '${s/$/,/}' ${TMP_DATA}) > ${TMP_DATA}
+		# Atomic-update (HIGH-8). sed reads TMP_DATA into the substitution,
+		# echo writes back via redirect — if sed errored mid-read the file
+		# was truncated to empty. Tempfile + rename keeps TMP_DATA intact
+		# on failure.
+		_TMP="${TMP_DATA}.tmp.$$"
+		sed '${s/$/,/}' "${TMP_DATA}" > "${_TMP}" && mv "${_TMP}" "${TMP_DATA}" || rm -f "${_TMP}"
 	fi
 	if [[ ${i} = 0 ]] && [[ ${add_item} > 0 ]]
 	then
@@ -83,14 +96,27 @@ for item in "${my_array[@]}"; do
 	fi
 	if [[ ${add_item} > 0 ]]
 	then
-		/usr/bin/cat <<< $(/usr/bin/jq '.' <<< $item) >> ${TMP_DATA}
+		# Drop the cat<<< indirection — jq's stdout goes straight to the
+		# append. Same result, simpler, and no needless tempfile when we
+		# only need to append (>> doesn't have the truncate-race risk
+		# that > has).
+		/usr/bin/jq '.' <<< "$item" >> "${TMP_DATA}"
 		echo "[OK]    ${type:1:-1}    |    ${category:1:-1}"
 	else
 		echo "[DEL]   ${type:1:-1}    |    ${category:1:-1}    |    ${artist:1:-1}    |    ${title:1:-1}"		
 	fi
 done
 echo "]" >> ${TMP_DATA}
-/usr/bin/echo $(/usr/bin/jq -c . ${TMP_DATA}) | /usr/bin/jq . > ${DATA}
+# Written next to the library and put in its place only when it is a list: "jq . > data.json" emptied the library
+# when the cleaned list could not be read
+_CLEAN="${DATA}.clean.$$"
+if /usr/bin/jq -e 'type == "array"' "${TMP_DATA}" > /dev/null 2>&1 && /usr/bin/jq . "${TMP_DATA}" > "${_CLEAN}"; then
+	/usr/bin/chown dietpi:dietpi "${_CLEAN}"
+	/usr/bin/mv -f "${_CLEAN}" "${DATA}"
+else
+	rm -f "${_CLEAN}"
+	echo "[ERR]   the cleaned list is no valid JSON, data.json left as it was"
+fi
 /usr/bin/chown dietpi:dietpi ${DATA}
 
 bash /usr/local/bin/mupibox/add_index.sh

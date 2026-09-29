@@ -1,8 +1,15 @@
 	<?php
 		include ('includes/header.php');
 
-		$command='sudo python3 /usr/local/bin/mupibox/wled_get_data.py -s '.$data["wled"]["com_port"].' -b '.$data["wled"]["baud_rate"].' -j {"v":true}';
-		exec($command);
+		// The stored port and baud rate run through a root shell on every page load: quote them, and
+		// only accept a serial device path and a plain number (values saved by older versions included).
+		$wled_port = (string)($data["wled"]["com_port"] ?? '');
+		$wled_baud = intval($data["wled"]["baud_rate"] ?? 0);
+		if( preg_match('#^/dev/tty[A-Za-z0-9]+$#', $wled_port) && $wled_baud > 0 )
+			{
+			$command='sudo python3 /usr/local/bin/mupibox/wled_get_data.py -s '.escapeshellarg($wled_port).' -b '.$wled_baud.' -j '.escapeshellarg('{"v":true}');
+			exec($command);
+			}
 
 		$info_string = file_get_contents('/tmp/.wled.info.json', true);
 		$wled_info_data = json_decode($info_string, true);
@@ -93,13 +100,30 @@
 
 		if( $_POST['change_wled'] )
 			{
-			$data["wled"]["baud_rate"] = $_POST['baud_rate'];
-			$data["wled"]["com_port"] = $_POST['com_port'];
-			$data["wled"]["brightness_dimmed"] = $_POST['brightness_dimmed'];
-			$data["wled"]["brightness_default"] = $_POST['brightness_default'];
-			$data["wled"]["shutdown_id"] = $_POST['wled_shutdown_preset'];
-			$data["wled"]["startup_id"] = $_POST['wled_boot_preset'];
-			$data["wled"]["main_id"] = $_POST['wled_main_preset'];
+			// These values end up in shell commands (here and on every page load): keep only a serial
+			// device path, a known baud rate and plain numbers.
+			$baud_allowed = array(300,1200,2400,4800,9600,19200,38400,57600,115200,230400,460800,921600);
+			// stored as strings like the template does; an empty preset id means "none"
+			$digits_or_empty = function ($v) { $v = trim((string)$v); return ctype_digit($v) ? $v : ''; };
+			if( in_array(intval($_POST['baud_rate']), $baud_allowed, true) )
+				{
+				$data["wled"]["baud_rate"] = (string)intval($_POST['baud_rate']);
+				}
+			if( preg_match('#^/dev/tty[A-Za-z0-9]+$#', (string)$_POST['com_port']) )
+				{
+				$data["wled"]["com_port"] = $_POST['com_port'];
+				}
+			else
+				{
+				$CHANGE_TXT=$CHANGE_TXT."<li>Invalid serial port ignored (expected e.g. /dev/ttyUSB0)</li>";
+				}
+			$data["wled"]["brightness_dimmed"] = (string)max(0, min(255, intval($_POST['brightness_dimmed'])));
+			$data["wled"]["brightness_default"] = (string)max(0, min(255, intval($_POST['brightness_default'])));
+			$data["wled"]["shutdown_id"] = $digits_or_empty($_POST['wled_shutdown_preset']);
+			$data["wled"]["startup_id"] = $digits_or_empty($_POST['wled_boot_preset']);
+			$data["wled"]["main_id"] = $digits_or_empty($_POST['wled_main_preset']);
+			// The WLED address comes from the device's own answer: only use it if it is an IP address.
+			$wled_ip = filter_var($wled_info_data["info"]["ip"] ?? '', FILTER_VALIDATE_IP) ?: '';
 			if( $_POST['wled_shutdown_active'] == "on" )
 			{
 				$data["wled"]["shutdown_active"]=true;
@@ -112,12 +136,18 @@
 			if( $_POST['wled_boot_active'] == "on" )
 			{
 				$data["wled"]["boot_active"]=true;
-				exec('curl -H "Content-Type: application/x-www-form-urlencoded" -d "BP='.$data["wled"]["startup_id"].'&&CA='.$data["wled"]["brightness_default"].'&&BO=on" -X POST http://'.$wled_info_data["info"]["ip"].'/settings/leds');
+				if( $wled_ip !== '' )
+					{
+					exec('curl -H "Content-Type: application/x-www-form-urlencoded" -d '.escapeshellarg('BP='.$data["wled"]["startup_id"].'&&CA='.$data["wled"]["brightness_default"].'&&BO=on').' -X POST '.escapeshellarg('http://'.$wled_ip.'/settings/leds'));
+					}
 			}
 			else
 			{
-				$data["wled"]["boot_active"]=false;	
-				exec('curl -H "Content-Type: application/x-www-form-urlencoded" -d "BP='.$data["wled"]["startup_id"].'&&CA='.$data["wled"]["brightness_default"].'&&BO" -X POST http://'.$wled_info_data["info"]["ip"].'/settings/leds');
+				$data["wled"]["boot_active"]=false;
+				if( $wled_ip !== '' )
+					{
+					exec('curl -H "Content-Type: application/x-www-form-urlencoded" -d '.escapeshellarg('BP='.$data["wled"]["startup_id"].'&&CA='.$data["wled"]["brightness_default"].'&&BO').' -X POST '.escapeshellarg('http://'.$wled_ip.'/settings/leds'));
+					}
 			}
 			if( $_POST['wled_active'] )
 			{
@@ -134,15 +164,58 @@
 			{
 			$command="sudo bash -c '/usr/local/bin/mupibox/./telegram_set_deviceid.sh'";
 			exec($command, $output);
-			$data["telegram"]["chatId"]=$output[0];
+			$generated_id = trim($output[0]);
+			// Append the freshly-detected chat to the existing list rather than
+			// overwriting it. New format: array of {id, label?} objects. Old
+			// format (single string) is migrated to the new format on save.
+			$existing = $data["telegram"]["chatId"] ?? "";
+			if (is_string($existing) || is_numeric($existing)) {
+				$existing = trim((string)$existing);
+				$existing = ($existing === "") ? array() : array(array("id" => $existing));
+			}
+			if (!is_array($existing)) {
+				$existing = array();
+			}
+			$already = false;
+			foreach ($existing as $entry) {
+				$entry_id = is_array($entry) ? ($entry["id"] ?? "") : (string)$entry;
+				if ((string)$entry_id === $generated_id) { $already = true; break; }
+			}
+			if (!$already && $generated_id !== "" && $generated_id !== "null") {
+				$existing[] = array("id" => $generated_id, "label" => "");
+				$CHANGE_TXT=$CHANGE_TXT."<li>Detected chat id ".$generated_id." added to the list.</li>";
+			} else {
+				$CHANGE_TXT=$CHANGE_TXT."<li>Telegram chat id detection: ".($generated_id === "" || $generated_id === "null" ? "no chat detected — write to your bot first" : "chat id already known")."</li>";
+			}
+			$data["telegram"]["chatId"] = $existing;
 			$change=3;
-			$CHANGE_TXT=$CHANGE_TXT."<li>Telegram Chat ID generation finished...</li>";
 			}
 
 		if( $_POST['change_telegram'] )
 			{
-			$data["telegram"]["chatId"]=$_POST['telegram_chatId'];
+			// New form: parallel arrays telegram_chatId_id[] + telegram_chatId_label[]
+			// (one row per chat). Filter out empty rows and store as array of
+			// {id, label?} objects. Falls back to the legacy single-input field
+			// if the array fields aren't posted.
+			$ids = $_POST['telegram_chatId_id'] ?? null;
+			$labels = $_POST['telegram_chatId_label'] ?? null;
+			if (is_array($ids)) {
+				$normalized = array();
+				foreach ($ids as $i => $raw) {
+					$id = trim((string)$raw);
+					if ($id === "") continue;
+					$entry = array("id" => $id);
+					$lbl = isset($labels[$i]) ? trim((string)$labels[$i]) : "";
+					if ($lbl !== "") $entry["label"] = $lbl;
+					$normalized[] = $entry;
+				}
+				$data["telegram"]["chatId"] = $normalized;
+			} else {
+				// Legacy single-input fallback
+				$data["telegram"]["chatId"] = $_POST['telegram_chatId'] ?? "";
+			}
 			$data["telegram"]["token"]=$_POST['telegram_token'];
+			$data["telegram"]["notifyPlayback"] = !empty($_POST['telegram_notifyPlayback']);
 			if($_POST['telegram_active'])
 				{
 				if (empty($data["telegram"]["chatId"]) or empty($data["telegram"]["token"]))
@@ -157,8 +230,7 @@
 				else
 					{
 					$data["telegram"]["active"]=true;
-					$command="sudo su dietpi -c '/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py \"Telegram enabled\"'";
-					exec($command);
+					// (no "Telegram enabled" message to all chats on every save any more)
 					$command="sudo systemctl enable mupi_telegram.service";
 					exec($command);
 					$command="sudo systemctl restart mupi_telegram.service";
@@ -168,8 +240,6 @@
 			else
 				{
 				$data["telegram"]["active"]=false;
-				$command="sudo su dietpi -c '/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py \"Telegram disabled\"'";
-				exec($command);
 				$command="sudo systemctl stop mupi_telegram.service";
 				exec($command);
 				$command="sudo systemctl disable mupi_telegram.service";
@@ -181,33 +251,24 @@
 		
 		if( $change == 1 )
 			{
-			$json_object = json_encode($data);
-			$save_rc = file_put_contents('/tmp/.mupiboxconfig.json', $json_object);
-			exec("sudo chmod 755 /etc/mupibox/mupiboxconfig.json");
-			exec("sudo mv /tmp/.mupiboxconfig.json /etc/mupibox/mupiboxconfig.json");
+			save_mupiboxconfig($data);
 			exec("sudo /usr/local/bin/mupibox/./setting_update.sh");
 			exec("sudo -i -u dietpi /usr/local/bin/mupibox/./restart_kiosk.sh");
 			}
 		if( $change == 2 )
 			{
-			$json_object = json_encode($data);
-			$save_rc = file_put_contents('/tmp/.mupiboxconfig.json', $json_object);
-			exec("sudo mv /tmp/.mupiboxconfig.json /etc/mupibox/mupiboxconfig.json");
+			save_mupiboxconfig($data);
 			exec("sudo /usr/local/bin/mupibox/./setting_update.sh");
 			}
 		if( $change == 3 )
 			{
-			$json_object = json_encode($data);
-			$save_rc = file_put_contents('/tmp/.mupiboxconfig.json', $json_object);
-			exec("sudo mv /tmp/.mupiboxconfig.json /etc/mupibox/mupiboxconfig.json");
+			save_mupiboxconfig($data);
 			$command="sudo su dietpi -c 'pm2 restart spotify-control'";
 			exec($command);
 			}
 		if( $change == 4 )
 			{
-			$json_object = json_encode($data);
-			$save_rc = file_put_contents('/tmp/.mupiboxconfig.json', $json_object);
-			exec("sudo mv /tmp/.mupiboxconfig.json /etc/mupibox/mupiboxconfig.json");
+			save_mupiboxconfig($data);
 			}
 		$CHANGE_TXT=$CHANGE_TXT."</ul></div>";
 	?>
@@ -230,7 +291,7 @@
 					<h3>Public device name</h3>
 					<div>
 					<input id="mqtt_name" name="mqtt_name" class="element text medium" type="text" maxlength="255" value="<?php
-					print $data["mqtt"]["name"];
+					print htmlspecialchars((string)($data["mqtt"]["name"] ?? ''), ENT_QUOTES);
 					?>" />
 					</div>
 				</li>
@@ -238,7 +299,7 @@
 					<h3>Broker</h3>
 					<div>
 					<input id="mqtt_broker" name="mqtt_broker" class="element text medium" type="text" maxlength="255" value="<?php
-					print $data["mqtt"]["broker"];
+					print htmlspecialchars((string)($data["mqtt"]["broker"] ?? ''), ENT_QUOTES);
 					?>" />
 					</div>
 				</li>
@@ -246,7 +307,7 @@
 					<h3>Port</h3>
 					<div>
 					<input id="mqtt_port" name="mqtt_port" class="element text medium" type="number" maxlength="5" value="<?php
-					print $data["mqtt"]["port"];
+					print htmlspecialchars((string)($data["mqtt"]["port"] ?? ''), ENT_QUOTES);
 					?>" />
 					</div>
 				</li>
@@ -254,7 +315,7 @@
 					<h3>Topic</h3>
 					<div>
 					<input id="mqtt_topic" name="mqtt_topic" class="element text medium" type="text" maxlength="255" value="<?php
-					print $data["mqtt"]["topic"];
+					print htmlspecialchars((string)($data["mqtt"]["topic"] ?? ''), ENT_QUOTES);
 					?>" />
 					</div>
 				</li>
@@ -262,7 +323,7 @@
 					<h3>ClientID</h3>
 					<div>
 					<input id="mqtt_clientId" name="mqtt_clientId" class="element text medium" type="text" maxlength="255" value="<?php
-					print $data["mqtt"]["clientId"];
+					print htmlspecialchars((string)($data["mqtt"]["clientId"] ?? ''), ENT_QUOTES);
 					?>" />
 					</div>
 				</li>
@@ -270,7 +331,7 @@
 					<h3>MQTT username</h3>
 					<div>
 					<input id="mqtt_username" name="mqtt_username" class="element text medium" type="text" maxlength="255" value="<?php
-					print $data["mqtt"]["username"];
+					print htmlspecialchars((string)($data["mqtt"]["username"] ?? ''), ENT_QUOTES);
 					?>" />
 					</div>
 				</li>
@@ -278,7 +339,7 @@
 					<h3>MQTT password</h3>
 					<div>
 					<input id="mqtt_password" name="mqtt_password" class="element text medium" type="password" maxlength="255" value="<?php
-					print $data["mqtt"]["password"];
+					print htmlspecialchars((string)($data["mqtt"]["password"] ?? ''), ENT_QUOTES);
 					?>" />
 					</div>
 				</li>
@@ -286,11 +347,11 @@
 				<h2>Refresh interval</h2>
 				<div>
 					<output id="rangeval" class="rangeval"><?php 
-					echo $data["mqtt"]["refresh"] . " seconds"
+					echo htmlspecialchars((string)($data["mqtt"]["refresh"] ?? ''), ENT_QUOTES) . " seconds"
 				?></output>				
 				
 				<input class="range slider-progress" name="mqtt_refresh" type="range" min="1" max="90" step="1.0" value="<?php 
-					echo $data["mqtt"]["refresh"]
+					echo htmlspecialchars((string)($data["mqtt"]["refresh"] ?? ''), ENT_QUOTES)
 				?>" oninput="this.previousElementSibling.value = this.value">
 				</div>
 			</li>
@@ -299,11 +360,11 @@
 				<h2>Refresh interval idle</h2>
 				<div>
 					<output id="rangeval" class="rangeval"><?php 
-					echo $data["mqtt"]["refreshIdle"] . " seconds"
+					echo htmlspecialchars((string)($data["mqtt"]["refreshIdle"] ?? ''), ENT_QUOTES) . " seconds"
 				?></output>				
 				
 				<input class="range slider-progress" name="mqtt_refreshIdle" type="range" min="1" max="90" step="1.0" value="<?php 
-					echo $data["mqtt"]["refreshIdle"]
+					echo htmlspecialchars((string)($data["mqtt"]["refreshIdle"] ?? ''), ENT_QUOTES)
 				?>" oninput="this.previousElementSibling.value = this.value">
 				</div>
 			</li>
@@ -311,11 +372,11 @@
 				<h2>Timeout</h2>
 				<div>
 					<output id="rangeval" class="rangeval"><?php 
-					echo $data["mqtt"]["timeout"] . " seconds"
+					echo htmlspecialchars((string)($data["mqtt"]["timeout"] ?? ''), ENT_QUOTES) . " seconds"
 				?></output>				
 				
 				<input class="range slider-progress" name="mqtt_timeout" type="range" min="10" max="180" step="5.0" value="<?php 
-					echo $data["mqtt"]["timeout"]
+					echo htmlspecialchars((string)($data["mqtt"]["timeout"] ?? ''), ENT_QUOTES)
 				?>" oninput="this.previousElementSibling.value = this.value">
 				</div>
 			</li>
@@ -340,7 +401,7 @@
 					<h3>Homeassistant discovery prefix</h3>
 					<p>Default: homeassistant</p><div>
 					<input id="ha_topic" name="ha_topic" class="element text medium" type="text" maxlength="255" value="<?php
-					print $data["mqtt"]["ha_topic"];
+					print htmlspecialchars((string)($data["mqtt"]["ha_topic"] ?? ''), ENT_QUOTES);
 					?>" />
 					</div>
 				</li>
@@ -368,23 +429,81 @@
 	?> /></label></div>
 	   </li>
 
+	   <li id="li_1" ><div>
+		 <label class="labelchecked" for="telegram_notifyPlayback">Report playback:&nbsp; &nbsp; <input type="checkbox" id="telegram_notifyPlayback"  name="telegram_notifyPlayback" <?php
+		 if( !empty($data["telegram"]["notifyPlayback"]) )
+		  {
+		  print "checked";
+		  }
+	?> /></label></div>
+		<p class="guidelines"><small>Off: the bot only reports what matters (listening time used up, quiet time, low battery, start and shutdown) and is there for the commands. On: also every start, every track (with a screenshot), pause, stop and continue.</small></p>
+	   </li>
+
 	   <li id="li_1" >
 					<label class="description" for="telegram_token">Telegram token</label>
 					<div>
 							<input id="telegram_token" name="telegram_token" class="element text medium" type="text" maxlength="255" value="<?php
-							print $data["telegram"]["token"];
+							print htmlspecialchars((string)($data["telegram"]["token"] ?? ''), ENT_QUOTES);
 	?>"/>
 					</div><p class="guidelines" id="guide_1"><small>Please enter your telegram token.</small></p>
 	   </li>
 
 	   <li id="li_1" >
-					<label class="description" for="telegram_chatId">Telegram ChatID</label>
-					<div>
-							<input id="telegram_chatId" name="telegram_chatId" class="element text medium" type="text" maxlength="255" value="<?php
-							print $data["telegram"]["chatId"];
-	?>"/>
-					</div><p class="guidelines" id="guide_1"><small>Please enter your telegram ChatId.</small></p>
+					<label class="description">Telegram Chat IDs</label>
+					<div id="telegram_chatId_list">
+<?php
+	// Normalize stored value to a list of {id, label} pairs for display.
+	$entries = array();
+	$stored = $data["telegram"]["chatId"] ?? "";
+	if (is_string($stored) || is_numeric($stored)) {
+		$s = trim((string)$stored);
+		if ($s !== "") $entries[] = array("id" => $s, "label" => "");
+	} elseif (is_array($stored)) {
+		foreach ($stored as $entry) {
+			if (is_array($entry)) {
+				$id = trim((string)($entry["id"] ?? ""));
+				if ($id === "") continue;
+				$entries[] = array("id" => $id, "label" => trim((string)($entry["label"] ?? "")));
+			} elseif (is_string($entry) || is_numeric($entry)) {
+				$id = trim((string)$entry);
+				if ($id !== "") $entries[] = array("id" => $id, "label" => "");
+			}
+		}
+	}
+	if (empty($entries)) {
+		// One empty row so the user has somewhere to type
+		$entries[] = array("id" => "", "label" => "");
+	}
+	foreach ($entries as $entry) {
+		echo '<div class="telegram_chatId_row" style="display:flex;gap:0.5em;margin-bottom:0.3em;align-items:center;">';
+		echo '<input name="telegram_chatId_id[]" type="text" maxlength="64" placeholder="Chat ID (z. B. -1001234567890)" style="flex:1;" value="'.htmlspecialchars($entry["id"], ENT_QUOTES).'"/>';
+		echo '<input name="telegram_chatId_label[]" type="text" maxlength="64" placeholder="Label (optional, z. B. Familie)" style="flex:1;" value="'.htmlspecialchars($entry["label"], ENT_QUOTES).'"/>';
+		echo '<button type="button" onclick="removeTelegramChat(this)">Entfernen</button>';
+		echo '</div>';
+	}
+?>
+					</div>
+					<button type="button" onclick="addTelegramChat()" style="margin-top:0.5em;">+ Chat hinzufügen</button>
+					<p class="guidelines" id="guide_1"><small>Eine Zeile pro Chat oder Gruppe. Label ist optional und nur fürs eigene Wiedererkennen. Leere Zeilen werden beim Speichern verworfen. „Generate Telegram Chat ID" hängt einen neu erkannten Chat an die Liste an.</small></p>
 	   </li>
+
+<script>
+function addTelegramChat() {
+	var list = document.getElementById('telegram_chatId_list');
+	var row = document.createElement('div');
+	row.className = 'telegram_chatId_row';
+	row.style.cssText = 'display:flex;gap:0.5em;margin-bottom:0.3em;align-items:center;';
+	row.innerHTML =
+		'<input name="telegram_chatId_id[]" type="text" maxlength="64" placeholder="Chat ID (z. B. -1001234567890)" style="flex:1;"/>' +
+		'<input name="telegram_chatId_label[]" type="text" maxlength="64" placeholder="Label (optional, z. B. Familie)" style="flex:1;"/>' +
+		'<button type="button" onclick="removeTelegramChat(this)">Entfernen</button>';
+	list.appendChild(row);
+}
+function removeTelegramChat(btn) {
+	var row = btn.closest('.telegram_chatId_row');
+	if (row && row.parentNode) row.parentNode.removeChild(row);
+}
+</script>
 
 
 	   <li class="buttons">
@@ -404,7 +523,7 @@
 					<p>Just change this value, if you really know what you do! Default: /dev/ttyUSB0</p>
 					<div>
 					<input id="com_port" name="com_port" class="element text medium" type="text" maxlength="255" value="<?php
-					print $data["wled"]["com_port"];
+					print htmlspecialchars((string)($data["wled"]["com_port"] ?? ''), ENT_QUOTES);
 					?>" />
 					</div>
 				</li>
@@ -552,16 +671,16 @@
 	   <li id="li_1" >
 					<div>	<h3>Default brightness</h3>
 					<p>Please notice: This value will overwrite brightness settings of the presets!</p>
-						<output id="rangeval" class="rangeval"><?php echo $data["wled"]["brightness_default"]; ?></output>
-						<input class="range slider-progress" list="steplist_po" data-tick-step="1" name="brightness_default" type="range" min="0" max="255" step="1.0" value="<?php echo $data["wled"]["brightness_default"]; ?>" oninput="this.previousElementSibling.value = this.value">
+						<output id="rangeval" class="rangeval"><?php echo htmlspecialchars((string)($data["wled"]["brightness_default"] ?? ''), ENT_QUOTES); ?></output>
+						<input class="range slider-progress" list="steplist_po" data-tick-step="1" name="brightness_default" type="range" min="0" max="255" step="1.0" value="<?php echo htmlspecialchars((string)($data["wled"]["brightness_default"] ?? ''), ENT_QUOTES); ?>" oninput="this.previousElementSibling.value = this.value">
 			
 
 					</div>
 				</li>
 	   <li id="li_1" >
 					<div>	<h3>Dimmed brightness</h3>
-						<output id="rangeval" class="rangeval"><?php echo $data["wled"]["brightness_dimmed"]; ?></output>
-						<input class="range slider-progress" list="steplist_po" data-tick-step="1" name="brightness_dimmed" type="range" min="0" max="255" step="1.0" value="<?php echo $data["wled"]["brightness_dimmed"]; ?>" oninput="this.previousElementSibling.value = this.value">
+						<output id="rangeval" class="rangeval"><?php echo htmlspecialchars((string)($data["wled"]["brightness_dimmed"] ?? ''), ENT_QUOTES); ?></output>
+						<input class="range slider-progress" list="steplist_po" data-tick-step="1" name="brightness_dimmed" type="range" min="0" max="255" step="1.0" value="<?php echo htmlspecialchars((string)($data["wled"]["brightness_dimmed"] ?? ''), ENT_QUOTES); ?>" oninput="this.previousElementSibling.value = this.value">
 			
 
 					</div>

@@ -1,0 +1,6 @@
+@if (visible()) {
+  <div class="playtime-chip" [attr.data-level]="level()" aria-label="Verbleibende Hörzeit">
+    <ion-icon name="time-outline" aria-hidden="true"></ion-icon>
+    <span>{{ remainingMinutes() }} min</span>
+  </div>
+}

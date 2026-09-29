@@ -1,9 +1,20 @@
 <?php
 
+// Spotify's answer to a login (code or error, with the login's state): the login is the app's (Node backend), also
+// when it was started here. Boxes set up before the app name this page as the Redirect URI in their Spotify app (see
+// eltern/oauth.ts redirectModeOf) - the answer goes on to the app's address, which checks the state and exchanges the
+// code. Before the login check below: whoever is not signed in to this interface would lose the answer.
+if (isset($_GET['state']) && (isset($_GET['code']) || isset($_GET['error']))) {
+	header('Location: /app/spotify-callback?' . $_SERVER['QUERY_STRING'], true, 302);
+	exit;
+}
+
 include('includes/header.php');
-$REDIRECT_URI = "https://" . $_SERVER['HTTP_HOST'] . "/spotify.php";
-$SCOPELIST = "streaming user-read-currently-playing user-modify-playback-state user-read-playback-state user-read-private user-read-email";
-$SCOPE = urlencode($SCOPELIST);
+// The Redirect URI of this box, chosen as the app chooses it (eltern/oauth.ts redirectModeOf): spotify.redirect, else
+// /spotify.php for a box signed in before the app did the login, /app/spotify-callback for a new one
+$__sp = $data['spotify'] ?? array();
+$__mode = $__sp['redirect'] ?? ((!empty($__sp['refreshToken']) && (empty($__sp['authorizedAt']) || !empty($__sp['authorizedEstimated']))) ? 'legacy' : 'app');
+$REDIRECT_URI = "https://" . preg_replace('/:\d+$/', '', $_SERVER['HTTP_HOST']) . ($__mode === 'legacy' ? '/spotify.php' : '/app/spotify-callback');
 
 
 if ( $_POST['clearCache']) {
@@ -12,40 +23,21 @@ if ( $_POST['clearCache']) {
 	$change = 1;
 }
 
+// back from the login started below (the app's flow): it saved the tokens and restarted the player itself
+if (isset($_GET['spotify_connected'])) {
+	$CHANGE_TXT = $CHANGE_TXT . "<li>Spotify login done: tokens saved, player restarted</li>";
+	$change = 1;
+}
+if (isset($_GET['spotify_error'])) {
+	$CHANGE_TXT = $CHANGE_TXT . "<li>Spotify login failed: " . htmlspecialchars((string)$_GET['spotify_error'], ENT_QUOTES) . "</li>";
+	$change = 1;
+}
+
 if ( $_POST['spotifyget'] ) {
 	$CHANGE_TXT = $CHANGE_TXT . "<li>Token-Data generated, saved & Services restartet</li>";
 	$change = 1;
 }
 
-if ($_GET['code']) {
-	$command = "curl -d client_id=" . $data["spotify"]["clientId"] . " -d client_secret=" . $data["spotify"]["clientSecret"] . " -d grant_type=authorization_code -d code=" . $_GET['code'] . " -d redirect_uri=" . $REDIRECT_URI . " https://accounts.spotify.com/api/token";
-	exec($command, $Tokenoutput, $result);
-	$tokendata = json_decode($Tokenoutput[0], true);
-	$data["spotify"]["accessToken"] = $tokendata["access_token"];
-	$data["spotify"]["refreshToken"] = $tokendata["refresh_token"];
-	$json_object = json_encode($data);
-	$save_rc = file_put_contents('/tmp/.mupiboxconfig.json', $json_object);
-	exec("sudo mv /tmp/.mupiboxconfig.json /etc/mupibox/mupiboxconfig.json");
-	exec("sudo /usr/local/bin/mupibox/./setting_update.sh");
-    exec("sudo rm {$data['spotify']['cachepath']}/credentials.json");
-	exec("sudo /usr/local/bin/mupibox/./spotify_restart.sh");
-?>
-<form class="appnitro" method="post" action="spotify.php" id="form">
-<div class="description">
-<h2>Please wait... Data will be saved, page will reload automatically!!!</h2>
-</div><p></p>
-<input id="spotifyget" name="spotifyget" class="element readonly large" type="hidden" maxlength="255" value="saving" />
-</form>
-<p></p>
-<?php
-	include('includes/footer.php');
-?>
-<script type="text/javascript">
-    document.getElementById('form').submit();
-</script>
-<?php
-	exit();
-}
 
 if ($_POST['saveIDs']) {
 	$data["spotify"]["clientId"] = $_POST['spotify_clientid'];
@@ -62,7 +54,7 @@ if ($_POST['savePlaylistScraper']) {
 
 if ($_POST['resetData']) {
     exec("sudo rm -r /home/dietpi/.mupibox/Sonos-Kids-Controller-master/cache/*");
-	exec("sudo rm -R " . $data["spotify"]["cachepath"] . "/*");
+	remove_config_cache_dir((string)($data["spotify"]["cachepath"] ?? ""), true);
 	$data["spotify"]["username"] = "";
 	$data["spotify"]["password"] = "";
 	$data["spotify"]["deviceId"] = "";
@@ -75,9 +67,7 @@ if ($_POST['resetData']) {
 }
 
 if ($change) {
-	$json_object = json_encode($data);
-	$save_rc = file_put_contents('/tmp/.mupiboxconfig.json', $json_object);
-	exec("sudo mv /tmp/.mupiboxconfig.json /etc/mupibox/mupiboxconfig.json");
+	save_mupiboxconfig($data);
 	exec("sudo /usr/local/bin/mupibox/./setting_update.sh");
 }
 
@@ -137,12 +127,30 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 			<li id="li_1">
 
 				<h3>Create Developer-App and Client-Connection</h3>
-				<p>Please press the following URL to generate Access and Refresh Token. A login may be necessary.</p>
-				<p><b>
-						<?php
-						print '<a href=https://accounts.spotify.com/authorize?response_type=code&client_id=' . $data["spotify"]["clientId"] . '&redirect_uri=' . $REDIRECT_URI . '&scope=' . $SCOPE . ' id="loading">Login and generate Refresh & Access Token</a>';
-						?>
-					</b></p>
+				<p>Please press the following link to generate Access and Refresh Token. A login may be necessary. Spotify asks for a new login every 6 months; the box reminds you (app and Telegram).</p>
+				<p><b><a href="#" id="spotify_login">Login and generate Refresh & Access Token</a></b></p>
+				<p id="spotify_login_msg"></p>
+				<script>
+				// The login is started by the app's backend (it keeps the OAuth state, exchanges the code and saves the
+				// tokens) and comes back here. It needs the app's login in this browser - signing in to this admin
+				// interface signs in to the app as well.
+				document.getElementById('spotify_login').addEventListener('click', async function (e) {
+					e.preventDefault();
+					var msg = document.getElementById('spotify_login_msg');
+					try {
+						var init = function () { return fetch('/api/app/spotify-oauth/init?return=' + encodeURIComponent('/spotify.php'), { credentials: 'same-origin' }); };
+						var r = await init();
+						// "Login required" off: no login here, the app hands out its session on asking - then once more
+						if (r.status === 401 && (await fetch('/api/app/session', { credentials: 'same-origin' })).ok) { r = await init(); }
+						var body = await r.json().catch(function () { return {}; });
+						if (r.ok && body.authorize_url) { location.href = body.authorize_url; return; }
+						if (r.status === 401) { msg.innerHTML = 'Please sign in first: <a href="/app/?portal=admin">sign in</a>, then press the link again.'; return; }
+						msg.textContent = body.error === 'no_client_id' ? 'Please save the Client ID (step 1) first.' : 'The login could not be started.';
+					} catch (err) {
+						msg.textContent = 'The login could not be started.';
+					}
+				});
+				</script>
 			</li>
 			<li id="li_1">
 				<label class="description" for="spotify_accesstoken">Spotify Access Token </label>

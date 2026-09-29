@@ -1,0 +1,345 @@
+{
+  "_comment": "Texts of the overlays on the box display, per language. Used by the box display, the parents' web app and the admin interface. {s} = seconds. To add a language, add a block with all keys.",
+  "languages": {
+    "en": {
+      "name": "English",
+      "texts": {
+        "blockedHeading": "That's enough music for today",
+        "blockedSubheading": "More music tomorrow",
+        "quietHeading": "Quiet time",
+        "quietSubheading": "Music will be back soon",
+        "parentsTitle": "Parent setup",
+        "parentsHint": "Scan with your phone or open in a browser:",
+        "parentsCountdown": "Disappears in {s} s",
+        "parentsClose": "Close",
+        "ownFilesLabel": "All tracks here",
+        "liveLabel": "Live",
+        "connectingLabel": "Connecting …",
+        "closeShort": "Close",
+        "nasUnavailable": "NAS not reachable",
+        "offlineLabel": "No connection",
+        "resumeTitle": "Continue listening"
+      }
+    },
+    "de": {
+      "name": "Deutsch",
+      "texts": {
+        "blockedHeading": "Heute war genug Musik",
+        "blockedSubheading": "Morgen geht's weiter",
+        "quietHeading": "Ruhezeit",
+        "quietSubheading": "Bald gibt es wieder Musik",
+        "parentsTitle": "Eltern-Setup",
+        "parentsHint": "Mit dem Smartphone scannen oder im Browser öffnen:",
+        "parentsCountdown": "Verschwindet in {s} Sek",
+        "parentsClose": "Schließen",
+        "ownFilesLabel": "Alle Titel hier",
+        "liveLabel": "Live",
+        "connectingLabel": "Verbinde …",
+        "closeShort": "Zu",
+        "nasUnavailable": "NAS nicht erreichbar",
+        "offlineLabel": "Keine Verbindung",
+        "resumeTitle": "Weiterhören"
+      }
+    },
+    "fr": {
+      "name": "Français",
+      "texts": {
+        "blockedHeading": "C'est assez de musique pour aujourd'hui",
+        "blockedSubheading": "On continue demain",
+        "quietHeading": "C'est l'heure du calme",
+        "quietSubheading": "La musique revient bientôt",
+        "parentsTitle": "Espace parents",
+        "parentsHint": "Scannez avec votre téléphone ou ouvrez dans un navigateur :",
+        "parentsCountdown": "Disparaît dans {s} s",
+        "parentsClose": "Fermer",
+        "ownFilesLabel": "Tous les titres",
+        "liveLabel": "En direct",
+        "connectingLabel": "Connexion …",
+        "closeShort": "Fermer",
+        "nasUnavailable": "NAS inaccessible",
+        "offlineLabel": "Pas de connexion",
+        "resumeTitle": "Reprendre l'écoute"
+      }
+    },
+    "es": {
+      "name": "Español",
+      "texts": {
+        "blockedHeading": "Por hoy ya hay suficiente música",
+        "blockedSubheading": "Mañana seguimos",
+        "quietHeading": "Hora de descansar",
+        "quietSubheading": "Pronto volverá la música",
+        "parentsTitle": "Configuración para padres",
+        "parentsHint": "Escanea con el móvil o ábrelo en un navegador:",
+        "parentsCountdown": "Desaparece en {s} s",
+        "parentsClose": "Cerrar",
+        "ownFilesLabel": "Todas las pistas",
+        "liveLabel": "En directo",
+        "connectingLabel": "Conectando …",
+        "closeShort": "Cerrar",
+        "nasUnavailable": "NAS no disponible",
+        "offlineLabel": "Sin conexión",
+        "resumeTitle": "Seguir escuchando"
+      }
+    },
+    "it": {
+      "name": "Italiano",
+      "texts": {
+        "blockedHeading": "Per oggi basta musica",
+        "blockedSubheading": "Domani si continua",
+        "quietHeading": "Momento di silenzio",
+        "quietSubheading": "La musica torna presto",
+        "parentsTitle": "Area genitori",
+        "parentsHint": "Scansiona con lo smartphone o apri nel browser:",
+        "parentsCountdown": "Scompare tra {s} s",
+        "parentsClose": "Chiudi",
+        "ownFilesLabel": "Tutti i brani",
+        "liveLabel": "In diretta",
+        "connectingLabel": "Connessione …",
+        "closeShort": "Chiudi",
+        "nasUnavailable": "NAS non raggiungibile",
+        "offlineLabel": "Nessuna connessione",
+        "resumeTitle": "Continua ad ascoltare"
+      }
+    },
+    "nl": {
+      "name": "Nederlands",
+      "texts": {
+        "blockedHeading": "Genoeg muziek voor vandaag",
+        "blockedSubheading": "Morgen gaan we verder",
+        "quietHeading": "Rusttijd",
+        "quietSubheading": "Straks is er weer muziek",
+        "parentsTitle": "Ouderinstellingen",
+        "parentsHint": "Scan met je telefoon of open in een browser:",
+        "parentsCountdown": "Verdwijnt over {s} s",
+        "parentsClose": "Sluiten",
+        "ownFilesLabel": "Alle nummers",
+        "liveLabel": "Live",
+        "connectingLabel": "Verbinden …",
+        "closeShort": "Sluiten",
+        "nasUnavailable": "NAS niet bereikbaar",
+        "offlineLabel": "Geen verbinding",
+        "resumeTitle": "Verder luisteren"
+      }
+    },
+    "sv": {
+      "name": "Svenska",
+      "texts": {
+        "blockedHeading": "Det räcker med musik för idag",
+        "blockedSubheading": "Imorgon fortsätter vi",
+        "quietHeading": "Vilotid",
+        "quietSubheading": "Snart kommer musiken tillbaka",
+        "parentsTitle": "Föräldrainställningar",
+        "parentsHint": "Skanna med mobilen eller öppna i en webbläsare:",
+        "parentsCountdown": "Försvinner om {s} s",
+        "parentsClose": "Stäng",
+        "ownFilesLabel": "Alla spår här",
+        "liveLabel": "Live",
+        "connectingLabel": "Ansluter …",
+        "closeShort": "Stäng",
+        "nasUnavailable": "NAS går inte att nå",
+        "offlineLabel": "Ingen anslutning",
+        "resumeTitle": "Fortsätt lyssna"
+      }
+    },
+    "da": {
+      "name": "Dansk",
+      "texts": {
+        "blockedHeading": "Det er nok musik for i dag",
+        "blockedSubheading": "I morgen fortsætter vi",
+        "quietHeading": "Hviletid",
+        "quietSubheading": "Musikken kommer snart igen",
+        "parentsTitle": "Forældreopsætning",
+        "parentsHint": "Scan med telefonen eller åbn i en browser:",
+        "parentsCountdown": "Forsvinder om {s} s",
+        "parentsClose": "Luk",
+        "ownFilesLabel": "Alle numre her",
+        "liveLabel": "Live",
+        "connectingLabel": "Forbinder …",
+        "closeShort": "Luk",
+        "nasUnavailable": "NAS kan ikke nås",
+        "offlineLabel": "Ingen forbindelse",
+        "resumeTitle": "Lyt videre"
+      }
+    },
+    "nb": {
+      "name": "Norsk",
+      "texts": {
+        "blockedHeading": "Det er nok musikk for i dag",
+        "blockedSubheading": "I morgen fortsetter vi",
+        "quietHeading": "Hviletid",
+        "quietSubheading": "Musikken kommer snart tilbake",
+        "parentsTitle": "Foreldreoppsett",
+        "parentsHint": "Skann med mobilen eller åpne i en nettleser:",
+        "parentsCountdown": "Forsvinner om {s} s",
+        "parentsClose": "Lukk",
+        "ownFilesLabel": "Alle spor her",
+        "liveLabel": "Direkte",
+        "connectingLabel": "Kobler til …",
+        "closeShort": "Lukk",
+        "nasUnavailable": "NAS er ikke tilgjengelig",
+        "offlineLabel": "Ingen tilkobling",
+        "resumeTitle": "Fortsett å lytte"
+      }
+    },
+    "fi": {
+      "name": "Suomi",
+      "texts": {
+        "blockedHeading": "Tänään on kuunneltu tarpeeksi musiikkia",
+        "blockedSubheading": "Huomenna jatketaan",
+        "quietHeading": "Hiljainen hetki",
+        "quietSubheading": "Musiikki palaa pian",
+        "parentsTitle": "Vanhempien asetukset",
+        "parentsHint": "Skannaa puhelimella tai avaa selaimessa:",
+        "parentsCountdown": "Katoaa {s} s kuluttua",
+        "parentsClose": "Sulje",
+        "ownFilesLabel": "Kaikki kappaleet",
+        "liveLabel": "Suora",
+        "connectingLabel": "Yhdistetään …",
+        "closeShort": "Sulje",
+        "nasUnavailable": "NAS ei ole tavoitettavissa",
+        "offlineLabel": "Ei yhteyttä",
+        "resumeTitle": "Jatka kuuntelua"
+      }
+    },
+    "pl": {
+      "name": "Polski",
+      "texts": {
+        "blockedHeading": "Na dziś wystarczy muzyki",
+        "blockedSubheading": "Jutro gramy dalej",
+        "quietHeading": "Czas na odpoczynek",
+        "quietSubheading": "Muzyka wkrótce wróci",
+        "parentsTitle": "Ustawienia dla rodziców",
+        "parentsHint": "Zeskanuj telefonem lub otwórz w przeglądarce:",
+        "parentsCountdown": "Zniknie za {s} s",
+        "parentsClose": "Zamknij",
+        "ownFilesLabel": "Wszystkie utwory",
+        "liveLabel": "Na żywo",
+        "connectingLabel": "Łączenie …",
+        "closeShort": "Zamknij",
+        "nasUnavailable": "NAS jest niedostępny",
+        "offlineLabel": "Brak połączenia",
+        "resumeTitle": "Słuchaj dalej"
+      }
+    },
+    "pt": {
+      "name": "Português",
+      "texts": {
+        "blockedHeading": "Por hoje já chega de música",
+        "blockedSubheading": "Amanhã há mais",
+        "quietHeading": "Hora de descansar",
+        "quietSubheading": "A música volta em breve",
+        "parentsTitle": "Configuração para pais",
+        "parentsHint": "Digitalize com o telemóvel ou abra num navegador:",
+        "parentsCountdown": "Desaparece em {s} s",
+        "parentsClose": "Fechar",
+        "ownFilesLabel": "Todas as faixas",
+        "liveLabel": "Ao vivo",
+        "connectingLabel": "A ligar …",
+        "closeShort": "Fechar",
+        "nasUnavailable": "NAS indisponível",
+        "offlineLabel": "Sem ligação",
+        "resumeTitle": "Continuar a ouvir"
+      }
+    },
+    "tr": {
+      "name": "Türkçe",
+      "texts": {
+        "blockedHeading": "Bugünlük bu kadar müzik yeter",
+        "blockedSubheading": "Yarın devam ederiz",
+        "quietHeading": "Dinlenme zamanı",
+        "quietSubheading": "Müzik yakında geri gelecek",
+        "parentsTitle": "Ebeveyn ayarları",
+        "parentsHint": "Telefonunla tara veya bir tarayıcıda aç:",
+        "parentsCountdown": "{s} sn içinde kaybolur",
+        "parentsClose": "Kapat",
+        "ownFilesLabel": "Tüm parçalar",
+        "liveLabel": "Canlı",
+        "connectingLabel": "Bağlanıyor …",
+        "closeShort": "Kapat",
+        "nasUnavailable": "NAS erişilemiyor",
+        "offlineLabel": "Bağlantı yok",
+        "resumeTitle": "Dinlemeye devam et"
+      }
+    },
+    "uk": {
+      "name": "Українська",
+      "texts": {
+        "blockedHeading": "На сьогодні музики досить",
+        "blockedSubheading": "Завтра продовжимо",
+        "quietHeading": "Час відпочинку",
+        "quietSubheading": "Музика скоро повернеться",
+        "parentsTitle": "Налаштування для батьків",
+        "parentsHint": "Відскануйте телефоном або відкрийте в браузері:",
+        "parentsCountdown": "Зникне через {s} с",
+        "parentsClose": "Закрити",
+        "ownFilesLabel": "Усі треки тут",
+        "liveLabel": "Наживо",
+        "connectingLabel": "З’єднання …",
+        "closeShort": "Закрити",
+        "nasUnavailable": "NAS недоступний",
+        "offlineLabel": "Немає з’єднання",
+        "resumeTitle": "Слухати далі"
+      }
+    },
+    "ru": {
+      "name": "Русский",
+      "texts": {
+        "blockedHeading": "На сегодня музыки достаточно",
+        "blockedSubheading": "Завтра продолжим",
+        "quietHeading": "Время отдыха",
+        "quietSubheading": "Музыка скоро вернётся",
+        "parentsTitle": "Настройки для родителей",
+        "parentsHint": "Отсканируйте телефоном или откройте в браузере:",
+        "parentsCountdown": "Исчезнет через {s} с",
+        "parentsClose": "Закрыть",
+        "ownFilesLabel": "Все треки здесь",
+        "liveLabel": "В эфире",
+        "connectingLabel": "Подключение …",
+        "closeShort": "Закрыть",
+        "nasUnavailable": "NAS недоступен",
+        "offlineLabel": "Нет соединения",
+        "resumeTitle": "Слушать дальше"
+      }
+    },
+    "cs": {
+      "name": "Čeština",
+      "texts": {
+        "blockedHeading": "Na dnešek už bylo hudby dost",
+        "blockedSubheading": "Zítra se hraje dál",
+        "quietHeading": "Čas na odpočinek",
+        "quietSubheading": "Hudba bude brzy zpátky",
+        "parentsTitle": "Nastavení pro rodiče",
+        "parentsHint": "Naskenujte telefonem nebo otevřete v prohlížeči:",
+        "parentsCountdown": "Zmizí za {s} s",
+        "parentsClose": "Zavřít",
+        "ownFilesLabel": "Všechny skladby",
+        "liveLabel": "Živě",
+        "connectingLabel": "Připojování …",
+        "closeShort": "Zavřít",
+        "nasUnavailable": "NAS není dostupný",
+        "offlineLabel": "Bez připojení",
+        "resumeTitle": "Poslouchat dál"
+      }
+    },
+    "el": {
+      "name": "Ελληνικά",
+      "texts": {
+        "blockedHeading": "Για σήμερα φτάνει η μουσική",
+        "blockedSubheading": "Αύριο συνεχίζουμε",
+        "quietHeading": "Ώρα ησυχίας",
+        "quietSubheading": "Η μουσική θα επιστρέψει σύντομα",
+        "parentsTitle": "Ρυθμίσεις γονέων",
+        "parentsHint": "Σαρώστε με το κινητό ή ανοίξτε σε πρόγραμμα περιήγησης:",
+        "parentsCountdown": "Εξαφανίζεται σε {s} δευτ.",
+        "parentsClose": "Κλείσιμο",
+        "ownFilesLabel": "Όλα τα κομμάτια",
+        "liveLabel": "Ζωντανά",
+        "connectingLabel": "Σύνδεση …",
+        "closeShort": "Κλείσιμο",
+        "nasUnavailable": "Το NAS δεν είναι διαθέσιμο",
+        "offlineLabel": "Χωρίς σύνδεση",
+        "resumeTitle": "Συνέχεια ακρόασης"
+      }
+    }
+  }
+}

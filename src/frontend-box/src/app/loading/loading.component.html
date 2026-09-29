@@ -1,7 +1,12 @@
 @if (loading()) {
   <div class="mupi-loading" (click)="$event.stopPropagation();">
     <div class="mupi-loading-spinner">
+      @if (km()) {
+        <!-- km themes: three bouncing dots -->
+        <div class="km-dots"><i></i><i></i><i></i></div>
+      } @else {
         <ion-spinner></ion-spinner>
-        </div>
+      }
+    </div>
   </div>
 }

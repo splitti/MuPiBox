@@ -45,78 +45,105 @@ fi
 # (Before: `sudo echo -n "[]" file` had no redirect and wrote nothing.)
 if [ ! -s ${NETWORKCONFIG} ] || ! /usr/bin/jq -e 'type == "object"' ${NETWORKCONFIG} > /dev/null 2>&1; then
         sudo rm -f ${NETWORKCONFIG}
-        echo -n "{}" > ${NETWORKCONFIG}
+        # Atomic write (HIGH-8): tempfile + mv, so a concurrent reader never sees a half-written file.
+        # Ownership and mode are set after the mv, which replaces the inode.
+        _TMP="${NETWORKCONFIG}.tmp.$$"
+        /usr/bin/jq -n --arg v "starting" '.onlinestate = $v' > "${_TMP}" && mv "${_TMP}" "${NETWORKCONFIG}" || rm -f "${_TMP}"
         chown dietpi:dietpi ${NETWORKCONFIG}
         chmod 777 ${NETWORKCONFIG}
-        /usr/bin/cat <<< $(/usr/bin/jq -n --arg v "starting" '.onlinestate = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
 fi
 
 #wget -q --spider http://google.com
 
+# Idempotent symlink reconciliation. Always points $link at $target —
+# if the link already points there, no-op. Replaces the previous
+# state-transition-only logic that depended on detecting a change
+# from OLDSTATE → ONLINESTATE; that logic missed the case where
+# check_network.sh starts up in a state that already matches stored
+# OLD_ONLINESTATE but where the on-disk symlink is still pointing at
+# the wrong target (e.g. after a pm2 restart while box was already
+# online — both ONLINESTATE and OLD_ONLINESTATE = "online", no flip
+# fired, but the symlink may still be pointing at offline_data.json
+# from a prior offline session). Symptom: active_data.json never
+# resolved to data.json post-reboot, so the API served the offline
+# (Spotify-less) shape even though the box was clearly online.
+ensure_symlink() {
+	local target="$1"
+	local link="$2"
+	if [ ! -L "$link" ] || [ "$(readlink "$link")" != "$target" ]; then
+		rm -f "$link"
+		ln -s "$target" "$link"
+		chown -h dietpi:dietpi "$link" 2>/dev/null || sudo chown -h dietpi:dietpi "$link"
+	fi
+}
+
 while true
 do
+	# AR5-1 history: this used to be `if ( $(python3 ...) == ${TRUESTATE} )`,
+	# a bash subshell that executed the python output as a command instead of
+	# comparing strings — the condition was permanently false. Our fix back
+	# then compared against the script's stdout ("true"/"false").
+	# With 5.0.0 check_network.py was rewritten: it prints nothing and
+	# signals via the exit code only, so the exit-code form below is the
+	# correct one now. A stdout comparison would compare "" against "true"
+	# and report the box as permanently offline.
+	# ONLINESTATE keeps its "online"/"offline" values for downstream
+	# consumers of /tmp/network.json.
 	if /usr/bin/python3 /usr/local/bin/mupibox/check_network.py; then
 		ONLINESTATE=${TRUESTATE}
-		if [ "${ONLINESTATE}" != "${OLDSTATE}" ]; then
-			rm -f "${ACTIVE_FILE}"
-			ln -s "${DATA_FILE}" "${ACTIVE_FILE}"
-			chown dietpi:dietpi "${ACTIVE_FILE}"
-			rm -f "${ACTIVERESUME_FILE}"
-			ln -s "${RESUME_FILE}" "${ACTIVERESUME_FILE}"
-			chown dietpi:dietpi "${ACTIVERESUME_FILE}"
-		fi
+		# Reconcile every tick (cheap when it is a no-op) instead of only on
+		# state change — self-healing if a symlink was wrong.
+		ensure_symlink "${DATA_FILE}" "${ACTIVE_FILE}"
+		ensure_symlink "${RESUME_FILE}" "${ACTIVERESUME_FILE}"
 	else
 		ONLINESTATE=${FALSESTATE}
 		if [ ! -f ${OFFLINE_FILE} ]; then
 			echo -n "[" > ${OFFLINE_FILE}
-			echo -n $(jq '.[] | select(.type != "spotify") | select(.type != "radio" | select(.type != "rss")' < ${DATA_FILE}) >> ${OFFLINE_FILE}
+			echo -n $(jq '.[] | select(.type != "spotify" and .type != "radio" and .type != "rss")' < ${DATA_FILE}) >> ${OFFLINE_FILE}
 			echo -n "]" >> ${OFFLINE_FILE}
 			sed -i 's/} {/}, {/g' ${OFFLINE_FILE}
 			chown dietpi:dietpi ${OFFLINE_FILE}
 		elif [ ! -s ${OFFLINE_FILE} ]; then
 			rm ${OFFLINE_FILE}
 			echo -n "[" > ${OFFLINE_FILE}
-			echo -n $(jq '.[] | select(.type != "spotify") | select(.type != "radio" | select(.type != "rss")' < ${DATA_FILE}) >> ${OFFLINE_FILE}
+			echo -n $(jq '.[] | select(.type != "spotify" and .type != "radio" and .type != "rss")' < ${DATA_FILE}) >> ${OFFLINE_FILE}
 			echo -n "]" >> ${OFFLINE_FILE}
 			sed -i 's/} {/}, {/g' ${OFFLINE_FILE}
 			chown dietpi:dietpi ${OFFLINE_FILE}
 		elif [ $(stat --format='%Y' "${DATA_FILE}") -gt $(stat --format='%Y' "${OFFLINE_FILE}") ]; then
 			echo -n "[" > ${OFFLINE_FILE}
-			echo -n $(jq '.[] | select(.type != "spotify") | select(.type != "radio" | select(.type != "rss")' < ${DATA_FILE}) >> ${OFFLINE_FILE}
+			echo -n $(jq '.[] | select(.type != "spotify" and .type != "radio" and .type != "rss")' < ${DATA_FILE}) >> ${OFFLINE_FILE}
 			echo -n "]" >> ${OFFLINE_FILE}
 			sed -i 's/} {/}, {/g' ${OFFLINE_FILE}
 		fi
 		if [ ! -f ${OFFLINERESUME_FILE} ]; then
 			echo -n "[" > ${OFFLINERESUME_FILE}
-			echo -n $(jq '.[] | select(.type != "spotify") | select(.type != "radio" | select(.type != "rss")' < ${RESUME_FILE}) >> ${OFFLINERESUME_FILE}
+			echo -n $(jq '.[] | select(.type != "spotify" and .type != "radio" and .type != "rss")' < ${RESUME_FILE}) >> ${OFFLINERESUME_FILE}
 			echo -n "]" >> ${OFFLINERESUME_FILE}
 			sed -i 's/} {/}, {/g' ${OFFLINERESUME_FILE}
 			chown dietpi:dietpi ${OFFLINERESUME_FILE}
 		elif [ ! -s ${OFFLINERESUME_FILE} ]; then
 			rm ${OFFLINERESUME_FILE}
 			echo -n "[" > ${OFFLINERESUME_FILE}
-			echo -n $(jq '.[] | select(.type != "spotify") | select(.type != "radio" | select(.type != "rss")' < ${RESUME_FILE}) >> ${OFFLINERESUME_FILE}
+			echo -n $(jq '.[] | select(.type != "spotify" and .type != "radio" and .type != "rss")' < ${RESUME_FILE}) >> ${OFFLINERESUME_FILE}
 			echo -n "]" >> ${OFFLINERESUME_FILE}
 			sed -i 's/} {/}, {/g' ${OFFLINERESUME_FILE}
 			chown dietpi:dietpi ${OFFLINERESUME_FILE}
 		elif [ $(stat --format='%Y' "${RESUME_FILE}") -gt $(stat --format='%Y' "${OFFLINERESUME_FILE}") ]; then
 			echo -n "[" > ${OFFLINERESUME_FILE}
-			echo -n $(jq '.[] | select(.type != "spotify") | select(.type != "radio" | select(.type != "rss")' < ${RESUME_FILE}) >> ${OFFLINERESUME_FILE}
+			echo -n $(jq '.[] | select(.type != "spotify" and .type != "radio" and .type != "rss")' < ${RESUME_FILE}) >> ${OFFLINERESUME_FILE}
 			echo -n "]" >> ${OFFLINERESUME_FILE}
 			sed -i 's/} {/}, {/g' ${OFFLINERESUME_FILE}
 		fi
-		if [ "${ONLINESTATE}" != "${OLDSTATE}" ]; then
-			rm -f "${ACTIVE_FILE}"
-			ln -s "${OFFLINE_FILE}" "${ACTIVE_FILE}"
-			chown dietpi:dietpi "${ACTIVE_FILE}"
-			rm -f "${ACTIVERESUME_FILE}"
-			ln -s "${OFFLINERESUME_FILE}" "${ACTIVERESUME_FILE}"
-			chown dietpi:dietpi "${ACTIVERESUME_FILE}"
-		fi
+		# Self-healing reconciliation, see ensure_symlink comment above.
+		ensure_symlink "${OFFLINE_FILE}" "${ACTIVE_FILE}"
+		ensure_symlink "${OFFLINERESUME_FILE}" "${ACTIVERESUME_FILE}"
 	fi
 
 	if [ "${ONLINESTATE}" != "${OLDSTATE}" ]; then
-		/usr/bin/cat <<< $(/usr/bin/jq --arg v "${ONLINESTATE}" '.onlinestate = $v' ${NETWORKCONFIG}) >  ${NETWORKCONFIG}
+		# Atomic-update (HIGH-8).
+		_TMP="${NETWORKCONFIG}.tmp.$$"
+		/usr/bin/jq --arg v "${ONLINESTATE}" '.onlinestate = $v' "${NETWORKCONFIG}" > "${_TMP}" && mv "${_TMP}" "${NETWORKCONFIG}" || rm -f "${_TMP}"
 	#	if [ "${ONLINESTATE}" == "${FALSESTATE}" ] && [ "${OLDSTATE}" != "starting" ]; then
 	#		#sudo dhclient -r
 	#		sudo service ifup@wlan0 stop
@@ -125,7 +152,19 @@ do
 	#		#sudo dhclient
 	#	fi
 	fi
+	# The display counts the box as offline until the network file has an address (get_network.sh, from cron every
+	# 30 s): after a start that took up to a minute, and the display set up nothing that needs the internet (the
+	# Spotify player) until then. Online without an address: filled in now.
+	if [ "${ONLINESTATE}" = "${TRUESTATE}" ] && ! /usr/bin/jq -e '.ip' "${NETWORKCONFIG}" > /dev/null 2>&1; then
+		/usr/local/bin/mupibox/get_network.sh > /dev/null 2>&1
+	fi
 	OLDSTATE=${ONLINESTATE}
-	
-	sleep 10
+
+	# Every 2 s instead of 10 s while the box is not online yet in its first minute (the WiFi connects a few seconds
+	# after this service started; the next check came 10 s later).
+	if [ "${ONLINESTATE}" != "${TRUESTATE}" ] && [ "${SECONDS}" -lt 60 ]; then
+		sleep 2
+	else
+		sleep 10
+	fi
 done

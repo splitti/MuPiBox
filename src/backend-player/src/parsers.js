@@ -1,24 +1,58 @@
 const id = (val) => val
 
-const parseString = (str) => str.slice(1, -1)
+// B7: previous parseString was a blind `str.slice(1, -1)` — strips the
+// FIRST and LAST characters whether or not they're actually quotes.
+// mplayer's slave-protocol responses for `get_meta_*` ARE wrapped in
+// double quotes, but the wrapper isn't guaranteed (some mplayer
+// builds emit unquoted strings, ANS_-property responses are bare,
+// and edge cases — empty strings, partial outputs — would have us
+// silently strip real characters). Check the wrapper first; if it's
+// not a `"…"` pair, return the input untouched.
+const parseString = (str) => {
+  if (typeof str !== 'string') return ''
+  if (str.length >= 2 && str.startsWith('"') && str.endsWith('"')) {
+    return str.slice(1, -1)
+  }
+  return str
+}
 
-const parseFlag = (str) => str.toLowerCase().trim() === 'yes'
+const parseFlag = (str) => typeof str === 'string' && str.toLowerCase().trim() === 'yes'
 
 const knownMetaProps = ['Title', 'Artist', 'Album', 'Year', 'Comment', 'Genre']
 
+// B7: parseStringList consumes mplayer's `metadata` response which
+// concatenates fields as comma-separated `Title,<v>,Artist,<v>,…`.
+// The previous implementation split on a literal `,` — which goes
+// wrong as soon as a field VALUE contains a comma (e.g. an album
+// titled "Foo, Vol. 2" or an artist "Bach, Johann Sebastian"). We
+// can't fix the underlying ambiguity (mplayer's protocol is what it
+// is), but we can be more defensive: re-join everything between two
+// known meta-prop markers as the value, so a comma INSIDE a value
+// gets preserved instead of treated as a delimiter. Loses only when
+// a value happens to start with one of knownMetaProps verbatim — far
+// less likely than commas in titles.
 const parseStringList = (str) => {
   const res = Object.create(null)
+  if (typeof str !== 'string') return res
   const parts = str.split(',')
   let metaProp = null
+  let buffer = []
+  const flush = () => {
+    if (metaProp != null && buffer.length > 0) {
+      res[metaProp] = buffer.join(',')
+      buffer = []
+    }
+  }
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i]
     if (knownMetaProps.includes(part)) {
+      flush()
       metaProp = part
     } else if (metaProp) {
-      if (!res[metaProp]) res[metaProp] = part
-      else res[metaProp] += `,${part}`
+      buffer.push(part)
     }
   }
+  flush()
   return res
 }
 

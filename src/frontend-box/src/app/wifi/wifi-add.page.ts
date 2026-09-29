@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, OnInit, ViewEncapsulation } from '@angular/core'
+import { AfterViewInit, Component, OnDestroy, OnInit, ViewEncapsulation, signal } from '@angular/core'
 import type { NgForm } from '@angular/forms'
 import { FormsModule } from '@angular/forms'
 import { Router } from '@angular/router'
@@ -51,10 +51,14 @@ interface EditNetworkState {
     IonInput,
   ],
 })
-export class WifiAddPage implements OnInit, AfterViewInit {
+export class WifiAddPage implements OnInit, AfterViewInit, OnDestroy {
   keyboard: Keyboard
   selectedInputElem: any
-  valid = false
+  // Signals: the on-screen keyboard changes them from its own callbacks, and the Save button did not always follow
+  // (it lit up only after a tap into a field)
+  valid = signal(false)
+  /** Length of the password typed so far (for the hint below the field: WPA needs 8 to 63 characters). */
+  pwLength = signal(0)
 
   /** When set, the page edits the password of an already configured network instead of adding a new one. */
   editNetwork: EditNetworkState | undefined
@@ -79,10 +83,26 @@ export class WifiAddPage implements OnInit, AfterViewInit {
 
   ngOnInit() {}
 
+  // MED-19: simple-keyboard attaches several listeners to the document
+  // (mousedown, touchstart, ...). Without an explicit destroy() those pile up
+  // every time the user enters and leaves this page, and the keyboard instance
+  // plus its closures stay reachable — on a box that runs for weeks the memory
+  // creeps up. destroy() is guarded because ngOnDestroy can run before
+  // ngAfterViewInit ever created the instance (fast navigation away).
+  ngOnDestroy() {
+    this.keyboard?.destroy()
+  }
+
+  // LOW-9: every this.keyboard access below is optional-chained. The instance
+  // is only created here in ngAfterViewInit, but the handlers are wired to
+  // template events (focus, change) and to the keyboard's own callbacks — both
+  // can fire before view init has finished during fast navigation, and used to
+  // throw on an undefined keyboard. selectedInputElem gets the same treatment:
+  // it is assigned after the constructor below, so onChange can run first.
   ngAfterViewInit() {
     this.keyboard = new Keyboard({
       onChange: (input) => {
-        this.selectedInputElem.value = input
+        if (this.selectedInputElem) this.selectedInputElem.value = input
         this.validate()
       },
       onKeyPress: (button) => {
@@ -128,11 +148,11 @@ export class WifiAddPage implements OnInit, AfterViewInit {
 
     if (this.prefillSsid) {
       // Name already known: fill it in and let the keyboard type into the password field.
-      this.keyboard.setInput(this.prefillSsid, 'wlan_ssid')
+      this.keyboard?.setInput(this.prefillSsid, 'wlan_ssid')
       const passwordInput = document.querySelector('ion-input[name="wlan_pw"]') as any
       if (passwordInput) {
         this.selectedInputElem = passwordInput
-        this.keyboard.setOptions({ disableCaretPositioning: false, inputName: 'wlan_pw' })
+        this.keyboard?.setOptions({ disableCaretPositioning: false, inputName: 'wlan_pw' })
       }
       this.validate()
     }
@@ -145,19 +165,19 @@ export class WifiAddPage implements OnInit, AfterViewInit {
   focusChanged(event: any) {
     this.selectedInputElem = event.target
 
-    this.keyboard.setOptions({
+    this.keyboard?.setOptions({
       disableCaretPositioning: false,
       inputName: event.target.name,
     })
   }
 
   inputChanged(event: any) {
-    this.keyboard.setInput(event.target.value, event.target.name)
+    this.keyboard?.setInput(event.target.value, event.target.name)
     this.validate()
   }
 
-  handleLayoutChange(button) {
-    const currentLayout = this.keyboard.options.layoutName
+  handleLayoutChange(button: string) {
+    const currentLayout = this.keyboard?.options.layoutName
     let layout: string
 
     switch (button) {
@@ -178,19 +198,19 @@ export class WifiAddPage implements OnInit, AfterViewInit {
     }
 
     if (layout) {
-      this.keyboard.setOptions({
+      this.keyboard?.setOptions({
         layoutName: layout,
       })
     }
   }
 
   submit(form: NgForm) {
-    const wlanPw = this.keyboard.getInput('wlan_pw') ?? ''
+    const wlanPw = this.keyboard?.getInput('wlan_pw') ?? ''
 
     if (this.editNetwork) {
       this.wifiService.updateNetworkPassword(this.editNetwork.id, wlanPw).subscribe(() => {
         form.reset()
-        this.keyboard.clearInput('wlan_pw')
+        this.keyboard?.clearInput('wlan_pw')
         this.navController.back()
       })
       return
@@ -200,7 +220,7 @@ export class WifiAddPage implements OnInit, AfterViewInit {
       category: 'WLAN',
     }
 
-    const wlanSsid = this.keyboard.getInput('wlan_ssid') ?? ''
+    const wlanSsid = this.keyboard?.getInput('wlan_ssid') ?? ''
 
     if (wlanSsid.length) {
       wlan.ssid = wlanSsid
@@ -213,8 +233,8 @@ export class WifiAddPage implements OnInit, AfterViewInit {
 
     form.reset()
 
-    this.keyboard.clearInput('wlan_ssid')
-    this.keyboard.clearInput('wlan_pw')
+    this.keyboard?.clearInput('wlan_ssid')
+    this.keyboard?.clearInput('wlan_pw')
 
     this.validate()
 
@@ -222,14 +242,15 @@ export class WifiAddPage implements OnInit, AfterViewInit {
   }
 
   validate() {
-    const wlanPw = this.keyboard.getInput('wlan_pw') ?? ''
+    const wlanPw = this.keyboard?.getInput('wlan_pw') ?? ''
+    this.pwLength.set(wlanPw.length)
 
     if (this.editNetwork) {
-      this.valid = wlanPw.length >= 8 && wlanPw.length <= 63
+      this.valid.set(wlanPw.length >= 8 && wlanPw.length <= 63)
       return
     }
 
-    const wlanSsid = this.keyboard.getInput('wlan_ssid') ?? ''
-    this.valid = wlanSsid.length > 0 && (wlanPw.length === 0 || (wlanPw.length >= 8 && wlanPw.length <= 63))
+    const wlanSsid = this.keyboard?.getInput('wlan_ssid') ?? ''
+    this.valid.set(wlanSsid.length > 0 && (wlanPw.length === 0 || (wlanPw.length >= 8 && wlanPw.length <= 63)))
   }
 }

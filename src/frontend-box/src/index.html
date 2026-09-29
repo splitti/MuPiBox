@@ -15,9 +15,56 @@
     <meta name="msapplication-tap-highlight" content="no" />
 
     <link rel="icon" type="image/png" href="assets/icon/favicon.png" />
+
+    <!-- The boot screen over the page until the start page has its list and the display's Spotify player is set up
+         (window.mupiBootDone, see home.page.ts and spotify-player.service.ts): between the boot screen and the display
+         it was black and white for seconds, and setting up the Spotify player blanked the screen for a moment. A layer
+         of its own (fixed, will-change) stays on the screen through that. The player gets 1.5 s after the list (at a
+         cold start its script takes much longer to load - the page is not held for it then), in any case the page
+         shows after 30 s. -->
+    <link rel="preload" as="image" href="/api/bootscreen/current-splash" />
+    <style>
+      #mupi-boot {
+        position: fixed; inset: 0; z-index: 2147483647; pointer-events: none; will-change: transform;
+        background: transparent url('/api/bootscreen/current-splash') center / cover no-repeat;
+      }
+      html.mupi-ready #mupi-boot { display: none; }
+    </style>
+    <script>
+      (function () {
+        // only for the display's start: previews of the page in a frame (MuPi-Conf's display texts, the web app) and
+        // other pages opened directly never report a list, and showed the boot screen for seconds
+        var path = location.pathname
+        if (window.top !== window || !(path === '/' || path === '/home' || path === '/index.html')) {
+          document.documentElement.classList.add('mupi-ready')
+          window.mupiBootDone = function () {}
+          return
+        }
+        var done = {}
+        function ready() {
+          if (document.documentElement.classList.contains('mupi-ready')) return
+          document.documentElement.classList.add('mupi-ready')
+          // for measuring the start: when the list, the player and the page were there (ms after the page started)
+          var t = function (v) { return v ? Math.round(v - performance.timeOrigin) : '-' }
+          try {
+            fetch('/api/logs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ entries: [{
+              level: 'log', source: 'Boot', timestamp: new Date().toISOString(),
+              message: 'boot screen gone: list ' + t(done.list) + ' ms, player ' + t(done.sdk) + ' ms, page ' + t(Date.now()) + ' ms after the page started at ' + new Date(performance.timeOrigin).toISOString()
+            }] }) })
+          } catch (e) {}
+        }
+        // the player is waited for only when its set-up has begun already (a restart of the display); at a start of the
+        // box it begins seconds later, and the page would wait for nothing
+        function check() { if (done.list && (!done.sdkStart || done.sdk || Date.now() - done.list > 1500)) ready() }
+        window.mupiBootDone = function (what) { done[what] = done[what] || Date.now(); check() }
+        var timer = setInterval(function () { check(); if (document.documentElement.classList.contains('mupi-ready')) clearInterval(timer) }, 500)
+        setTimeout(ready, 30000)
+      })()
+    </script>
 </head>
 
 <body>
+    <div id="mupi-boot"></div>
     <app-root></app-root>
 </body>
 

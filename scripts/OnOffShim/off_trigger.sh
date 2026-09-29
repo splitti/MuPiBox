@@ -77,12 +77,16 @@ while true; do
             echo "$(date) - INFO:  Button held for ${PRESS_DELAY} seconds, initiating shutdown" >> ${LOGFILE}
 
             # Actions when button is pressed
+            # the goodbye picture before anything else (the sounds and the shutdown come after it)
+            /usr/local/bin/mupibox/show_goodbye.sh
             /usr/bin/pactl set-sink-volume @DEFAULT_SINK@ ${START_VOLUME}%
             /usr/bin/aplay /home/dietpi/MuPiBox/sysmedia/sound/button_shutdown.wav
 
             echo "$(date) - INFO:  Stopping services" >> ${LOGFILE}
-            sudo service mupi_startstop stop
-            sudo service mupi_powerled stop
+            # (systemctl, not service: for stop, service asks every socket unit of the system first - 2.3 s)
+            sudo systemctl stop mupi_startstop
+            # (--no-block: the LED's goodbye animation takes about 2 s and runs on while the box shuts down)
+            sudo systemctl --no-block stop mupi_powerled
 
             echo "$(date) - INFO:  System shutdown initiated" >> ${LOGFILE}
             sudo poweroff

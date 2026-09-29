@@ -1,0 +1,20 @@
+[Unit]
+# When the box shuts down, the display's X server ends (with the user session) and switches the screen back to the
+# text console: the goodbye picture was gone for the last seconds before the power went off. Ordered before
+# systemd-user-sessions.service, this unit is stopped after all sessions (X included) have ended and draws the
+# picture once more (only when a goodbye picture was shown, see show_goodbye.sh).
+Description=MuPiBox goodbye picture until the power is off
+DefaultDependencies=no
+After=local-fs.target
+Before=systemd-user-sessions.service shutdown.target
+Conflicts=shutdown.target
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/true
+ExecStop=/usr/local/bin/mupibox/show_goodbye.sh --again
+TimeoutStopSec=5

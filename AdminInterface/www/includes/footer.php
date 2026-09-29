@@ -137,7 +137,16 @@ document.addEventListener("DOMContentLoaded", function () {
     const savedScroll = sessionStorage.getItem("mupibox-scroll");
     if (savedScroll !== null) {
         sessionStorage.removeItem("mupibox-scroll");
-        window.scrollTo(0, parseInt(savedScroll, 10));
+        const target = parseInt(savedScroll, 10);
+        window.scrollTo(0, target);
+        // Images, fonts and charts change the page height while loading: scroll again once everything is
+        // there, then show the page (it is hidden by header.php until now).
+        const reveal = function () {
+            window.scrollTo(0, target);
+            document.documentElement.style.visibility = "";
+        };
+        if (document.readyState === "complete") reveal();
+        else window.addEventListener("load", reveal);
     }
 });
 
@@ -162,14 +171,23 @@ document.addEventListener("submit", function () {
 </html>
 
 <?php
+	// R3-B-5: previous code launched restart.sh / shutdown.sh in a
+	// detached background shell with no inter-request locking — a
+	// double-click on the reboot button (or two admin tabs both
+	// pressing Reboot in quick succession) spawned two restart.sh
+	// processes simultaneously. Their cleanup steps fight (kill of
+	// pm2 from one terminates spawn from the other, etc.) and the
+	// box can end up in a half-rebooted state. Wrap in `flock -n`
+	// against a per-action lockfile so a second invocation while
+	// the first is still running becomes a no-op.
 	if( $reboot == 1 )
 		{
-		$command='sudo su - -c "sleep 5; /usr/local/bin/mupibox/./restart.sh &" &';
+		$command='( flock -n 9 || exit 0; sleep 5; sudo /usr/local/bin/mupibox/./restart.sh ) 9>/tmp/.mupibox.reboot.lock &';
 		exec($command);
 		}
 	if( $shutdown == 1 )
 		{
-		$command='sudo su - -c "sleep 5; /usr/local/bin/mupibox/./shutdown.sh &" &';
+		$command='( flock -n 9 || exit 0; sleep 5; sudo /usr/local/bin/mupibox/./shutdown.sh ) 9>/tmp/.mupibox.shutdown.lock &';
 		exec($command);
 		}
 ?>

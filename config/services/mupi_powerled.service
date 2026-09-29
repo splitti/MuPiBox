@@ -1,4 +1,8 @@
 [Unit]
+# Never give up (StartLimitIntervalSec=0), but retry slowly (RestartSec 30 here: power button / LED): with a start
+# limit the service stayed dead for good after a few quick failures - e.g. a boot without WiFi -
+# until the next reboot; retrying every 10 s filled the journal (librespot 325x in an hour).
+StartLimitIntervalSec=0
 Description=Power LED Control
 Before=basic.target
 After=local-fs.target sysinit.target
@@ -10,6 +14,10 @@ RemainAfterExit=true
 ExecStart=/usr/local/bin/mupibox/./mupi_start_led.sh
 ExecStop=/usr/local/bin/mupibox/./mupi_stop_led.sh
 KillMode=process
-
+# Phase 13b (B4): without a Restart directive the service stayed dead
+# after a crash — LED + WLED control lost until reboot. on-failure +
+# bounded restart limit (5 restarts per 10 min) is the Phase-8 pattern.
+Restart=on-failure
+RestartSec=30
 [Install]
 WantedBy=basic.target

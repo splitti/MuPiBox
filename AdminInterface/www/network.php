@@ -4,12 +4,14 @@
 	$usb_wifi_drivers = array(
 		'RTL88X2BU' => array(
 			'label' => 'RTL88X2BU',
+			'module' => '88x2bu',
 			'path' => '/home/dietpi/.driver/network/88x2bu-20210702',
 			'install_url' => 'https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/online/install_rtl88x2bu.sh',
 			'remove_url' => 'https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/online/remove_rtl88x2bu.sh',
 			),
 		'RTL8821AU' => array(
 			'label' => 'RTL8821AU',
+			'module' => '8821au',
 			'path' => '/home/dietpi/.driver/network/8821au-20210708',
 			'install_url' => 'https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/online/install_rtl8821au.sh',
 			'remove_url' => 'https://raw.githubusercontent.com/splitti/MuPiBox/main/scripts/online/remove_rtl8821au.sh',
@@ -20,7 +22,9 @@
 	// different driver updates "State: ..." and the button label without reloading the
 	// whole page (that used to also re-scan the embedded WiFi iframe and jump the scroll).
 	if (isset($_GET['check_usb_wifi_driver'])) {
-		$checked_driver = $_GET['check_usb_wifi_driver'];
+		// comes before header.php, so it needs the login gate of its own (sends 401 and exits without a login)
+		require __DIR__ . '/includes/auth_check.php';
+		$checked_driver = (string)$_GET['check_usb_wifi_driver'];
 		$installed = isset($usb_wifi_drivers[$checked_driver]) && is_dir($usb_wifi_drivers[$checked_driver]['path']);
 		header('Content-Type: application/json');
 		echo json_encode(array('installed' => $installed));
@@ -73,6 +77,45 @@
 		$change=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Driver removed</li>";
 		}
+	// Power saving of an installed USB WiFi adapter: the rtw_power_mgnt option of its driver (RTL88X2BU or
+	// RTL8821AU) in /etc/modprobe.d/<module>.conf (0 = off, 1 = minimal, 2 = maximum). The driver reads it
+	// when it is loaded, so a change is active after the next boot.
+	$usb_power_labels = array('0' => 'Off', '1' => 'Minimal', '2' => 'Maximum');
+	$usb_power_key = isset($_POST['save_usb_wifi_power']) ? (string) $_POST['save_usb_wifi_power'] : '';
+	if( isset($usb_wifi_drivers[$usb_power_key]) && isset($_POST['usb_wifi_power_' . $usb_power_key]) && is_string($_POST['usb_wifi_power_' . $usb_power_key]) && isset($usb_power_labels[$_POST['usb_wifi_power_' . $usb_power_key]]) )
+		{
+		$usb_power_module = $usb_wifi_drivers[$usb_power_key]['module'];
+		$usb_power_conf = '/etc/modprobe.d/' . $usb_power_module . '.conf';
+		$usb_power_new = (string) $_POST['usb_wifi_power_' . $usb_power_key];
+		$usb_power_text = is_file($usb_power_conf) ? (string) file_get_contents($usb_power_conf) : '';
+		if( $usb_power_text === '' )
+			{
+			$command = 'echo ' . escapeshellarg('options ' . $usb_power_module . ' rtw_power_mgnt=' . $usb_power_new) . ' | sudo tee ' . escapeshellarg($usb_power_conf) . ' > /dev/null';
+			}
+		elseif( preg_match('/^options\s+' . $usb_power_module . '\b[^\n]*\brtw_power_mgnt=/m', $usb_power_text) )
+			{
+			$command = "sudo /usr/bin/sed -i -E '/^options[[:space:]]+" . $usb_power_module . "/ s/rtw_power_mgnt=[0-9]+/rtw_power_mgnt=" . $usb_power_new . "/' " . escapeshellarg($usb_power_conf);
+			}
+		elseif( preg_match('/^options\s+' . $usb_power_module . '\b/m', $usb_power_text) )
+			{
+			$command = "sudo /usr/bin/sed -i -E '/^options[[:space:]]+" . $usb_power_module . "/ s/\$/ rtw_power_mgnt=" . $usb_power_new . "/' " . escapeshellarg($usb_power_conf);
+			}
+		else
+			{
+			$command = 'echo ' . escapeshellarg('options ' . $usb_power_module . ' rtw_power_mgnt=' . $usb_power_new) . ' | sudo tee -a ' . escapeshellarg($usb_power_conf) . ' > /dev/null';
+			}
+		exec($command, $output, $result );
+		$change=1; // shows the notice box
+		if( $result == 0 )
+			{
+			$CHANGE_TXT=$CHANGE_TXT."<li>Power management of the ".$usb_wifi_drivers[$usb_power_key]['label']." driver set to: ".$usb_power_labels[$usb_power_new].". Active after the next reboot.</li>";
+			}
+		else
+			{
+			$CHANGE_TXT=$CHANGE_TXT."<li>Power management of the ".$usb_wifi_drivers[$usb_power_key]['label']." driver could not be saved.</li>";
+			}
+		}
+
 	if( $_POST['change_vnc'] == "stop & disable" )
 		{
 		exec("sudo systemctl stop mupi_vnc.service");
@@ -176,18 +219,29 @@
 		$CHANGE_TXT=$CHANGE_TXT."<li>FTP disabled</li>";
 		}
 
-	if( $_POST['save_wifi'] )
+	// No password = open network, else WPA's 8..63 characters (a wrong length used to break
+	// wpa_supplicant.conf and take the box offline).
+	$wifi_pwd_len = strlen((string)($_POST['wifi_pwd'] ?? ''));
+	if( $_POST['save_wifi'] && $wifi_pwd_len > 0 && ($wifi_pwd_len < 8 || $wifi_pwd_len > 63) )
+		{
+		$CHANGE_TXT=$CHANGE_TXT."<li>Wifi not added: the password must have 8 to 63 characters</li>";
+		}
+	else if( $_POST['save_wifi'] )
 		{
 		$wifi_data[0]['category']="WLAN";
 		$wifi_data[0]['ssid']=$_POST['wifi_name'];
 		$wifi_data[0]['pw']=$_POST['wifi_pwd'];
 		$json_object = json_encode($wifi_data, JSON_PRETTY_PRINT);
-		$save_rc = file_put_contents('/tmp/.add-wifi.json', $json_object);
-		exec("sudo chmod 755 /tmp/.add-wifi.json");
-		exec("sudo mv /tmp/.add-wifi.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/wlan.json");
+		// Random name, readable by nobody else: the file holds the WiFi password in plain text
+		// (it used to be a fixed /tmp/.add-wifi.json with mode 755).
+		$wifi_tmp = tempnam('/tmp', '.add-wifi.');
+		chmod($wifi_tmp, 0600);
+		$save_rc = file_put_contents($wifi_tmp, $json_object);
+		exec("sudo chown dietpi:dietpi " . escapeshellarg($wifi_tmp));
+		exec("sudo mv " . escapeshellarg($wifi_tmp) . " /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/wlan.json");
 		sleep(2);
 		#exec("sudo wpa_cli -i wlan0 reconfigure");
-		$CHANGE_TXT=$CHANGE_TXT."<li>Wifi ".$_POST['wifi_name']." added</li>";
+		$CHANGE_TXT=$CHANGE_TXT."<li>Wifi ".htmlspecialchars((string)$_POST['wifi_name'], ENT_QUOTES)." added</li>";
 		$change=1;
 
 		}
@@ -206,9 +260,14 @@
 
 	if( $_POST['delete_wifi'] )
 		{
-		if( $_POST['wifinr'] )
+		// wpa_cli wifinr is always a small non-negative integer; intval()
+		// strips anything that isn't a digit, so a POST with
+		// wifinr="0; rm -rf /" becomes 0 and the chained-command injection
+		// is gone. -1 is invalid for wpa_cli but harmless.
+		$wifinr = isset($_POST['wifinr']) ? intval($_POST['wifinr']) : -1;
+		if ($wifinr >= 0)
 			{
-			$command = "sudo wpa_cli remove_network ".$_POST['wifinr']." && sudo wpa_cli save_config";
+			$command = "sudo wpa_cli remove_network " . $wifinr . " && sudo wpa_cli save_config";
 			exec($command, $output, $result );
 			$change=1;
 			$CHANGE_TXT=$CHANGE_TXT."<li>Wifi deleted</li>";
@@ -436,6 +495,58 @@
 			?>
 			</b></p><p>Please notice: Installation takes a long long time! If you want to install manually and see the installation status, check out this blog post: <a href="https://mupibox.de/pimp-die-mupibox-mit-schneller-netzwerkkarte/" target="_blank">Blog Post</a></p>
 			<input id="usb_wifi_driver_button" class="button_text" type="submit" name="USB_WIFI_DRIVER" value="<?php print $change_usb_wifi_driver; ?>" />
+		</li>
+		<li class="li_1"><h2>Power management USB-driver</h2>
+			<p>
+			Power saving of the USB WiFi adapter. With power saving the adapter dozes between data packets: with a weak signal packets can get lost or delayed and the connection is set up again. <b>Off</b> keeps the adapter awake, it uses a little more power and gets slightly warmer. Takes effect after the next reboot.
+			</p>
+			<?php
+			$usb_power_shown = 0;
+			foreach ($usb_wifi_drivers as $usb_power_key => $usb_power_driver)
+				{
+				if( !is_dir($usb_power_driver['path']) )
+					{
+					continue;
+					}
+				$usb_power_shown++;
+				$usb_power_conf = '/etc/modprobe.d/' . $usb_power_driver['module'] . '.conf';
+				$usb_power_set = null;
+				if( is_file($usb_power_conf) && preg_match('/^options\s+' . $usb_power_driver['module'] . '\b[^\n]*\brtw_power_mgnt=(\d)/m', (string) file_get_contents($usb_power_conf), $usb_power_match) )
+					{
+					$usb_power_set = $usb_power_match[1];
+					}
+				$usb_power_param = '/sys/module/' . $usb_power_driver['module'] . '/parameters/rtw_power_mgnt';
+				$usb_power_running = is_readable($usb_power_param) ? trim((string) file_get_contents($usb_power_param)) : null;
+				if( $usb_power_set === null )
+					{
+					$usb_power_set = $usb_power_running !== null ? $usb_power_running : '2';
+					}
+			?>
+			<p><b><?php print $usb_power_driver['label']; ?></b></p>
+			<p>
+			<select id="usb_wifi_power_<?php print $usb_power_key; ?>" name="usb_wifi_power_<?php print $usb_power_key; ?>">
+				<?php foreach ($usb_power_labels as $usb_power_value => $usb_power_label) { ?>
+				<option value="<?php print $usb_power_value; ?>" <?php if ((string) $usb_power_set === (string) $usb_power_value) print 'selected'; ?>><?php print $usb_power_label; ?></option>
+				<?php } ?>
+			</select>
+			</p>
+			<p>
+			<?php
+				print "Running now: <b>".(isset($usb_power_labels[$usb_power_running]) ? $usb_power_labels[$usb_power_running] : 'driver not loaded')."</b>";
+				if( $usb_power_running !== null && (string) $usb_power_running !== (string) $usb_power_set )
+					{
+					print " (changed setting is active after the next reboot)";
+					}
+			?>
+			</p>
+			<button class="button_text" type="submit" name="save_usb_wifi_power" value="<?php print $usb_power_key; ?>">Save</button>
+			<?php
+				}
+			if( $usb_power_shown == 0 )
+				{
+				print "<p><b>No USB WiFi driver (RTL88X2BU / RTL8821AU) is installed.</b></p>";
+				}
+			?>
 		</li>
 		<script>
 		function updateUsbWifiDriverState(select) {

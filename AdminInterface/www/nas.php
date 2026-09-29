@@ -4,6 +4,32 @@ $backendBase = 'http://localhost:8200/api/nas';
 
 // Progress of a running "Download selected" (polled by the page below). Answers
 // before header.php so that no HTML is sent along with the JSON.
+// These JSON answers come before header.php, so they need a login gate and CSRF check of their
+// own: without it anyone in the LAN could list the whole NAS, load or delete profiles, rebuild
+// the index or cancel a download through this page, without the admin login.
+$nasJsonActions = array('covers_refresh', 'download_cancel', 'download_status', 'browse', 'index_status', 'index_search', 'index_refresh', 'profile_api');
+if (count(array_intersect($nasJsonActions, array_keys($_GET))) > 0) {
+	// background polling of the page must not count as activity, else an open tab never times out
+	$AUTH_CHECK_NO_TOUCH = isset($_GET['download_status']) || isset($_GET['index_status']);
+	require __DIR__ . '/includes/auth_check.php';
+	if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+		// The page sends the token in an X-CSRF-Token header (NAS_CSRF below); a foreign page can't
+		// read it. Compared against the session directly: auth_check.php has already released the
+		// session lock, and csrf.php would start the session again.
+		$nasSessionToken = (string)($_SESSION['csrf_token'] ?? '');
+		if ($nasSessionToken === '' || !hash_equals($nasSessionToken, (string)($_SERVER['HTTP_X_CSRF_TOKEN'] ?? ''))) {
+			http_response_code(403);
+			header('Content-Type: application/json');
+			echo json_encode(array('success' => false, 'error' => 'CSRF token mismatch - please reload the page.'));
+			exit;
+		}
+	}
+}
+if (isset($_GET['covers_refresh']) && $_SERVER['REQUEST_METHOD'] === 'POST') {
+	header('Content-Type: application/json');
+	echo json_encode(nasApiCall("$backendBase/covers/refresh", 'POST', new stdClass(), 240));
+	exit;
+}
 if (isset($_GET['download_cancel']) && $_SERVER['REQUEST_METHOD'] === 'POST') {
 	header('Content-Type: application/json');
 	echo json_encode(nasApiCall("$backendBase/download/cancel", 'POST', new stdClass(), 10));
@@ -57,6 +83,9 @@ if (isset($_GET['profile_api'])) {
 }
 
 include('includes/header.php');
+// The token must exist before the session is released (the form filter of header.php prints it later).
+csrf_token();
+session_write_close();
 
 function nasApiCall($url, $method = 'GET', $body = null, $timeout = 30) {
 	$ch = curl_init($url);
@@ -82,6 +111,7 @@ function nasApiCall($url, $method = 'GET', $body = null, $timeout = 30) {
 }
 
 $loginError = '';
+$loginCertificate = null; // the NAS certificate to confirm (https with a self-signed one)
 
 if (isset($_POST['nas_signin'])) {
 	$address = trim($_POST['nas_address'] ?? '');
@@ -97,16 +127,22 @@ if (isset($_POST['nas_signin'])) {
 	} elseif ($password === '') {
 		$loginError = 'Password not filled in.';
 	} else {
+		// A certificate confirmed below (checkbox): the fingerprint it was shown with.
+		$certFingerprint = isset($_POST['nas_cert_trust']) ? (string)($_POST['nas_cert_fingerprint'] ?? '') : '';
 		$result = nasApiCall("$backendBase/login", 'POST', array(
 			'address' => $address,
 			'https' => $useHttps,
 			'account' => $account,
 			'password' => $password,
 			'rememberMe' => $rememberMe,
+			'certFingerprint' => $certFingerprint,
 		), 30);
 
 		if (empty($result['success'])) {
 			$loginError = $result['error'] ?? 'Login failed.';
+			if (!empty($result['certificate']['fingerprint'])) {
+				$loginCertificate = $result['certificate'];
+			}
 		}
 	}
 }
@@ -115,30 +151,46 @@ $downloadStarted = false;
 
 $nasFlash = '';
 $nasFlashError = '';
+$nasFlashTitle = 'Selection not saved'; // the popup title: what failed
 if (isset($_POST['nas_save_selection']) || isset($_POST['nas_download_selected'])) {
 	$checkedShow = $_POST['artist_folders'] ?? array();
 	$checkedHide = $_POST['hide_folders'] ?? array();
 	$checkedDownload = $_POST['download_folders'] ?? array();
 	$shown = json_decode($_POST['shown_folders'] ?? '[]', true) ?? array();
-	foreach ($shown as $shownPath) {
-		// A folder is either shown or hidden; hidden wins if both were sent.
-		$isHidden = in_array($shownPath, $checkedHide, true);
-		nasApiCall("$backendBase/mark", 'POST', array(
-			'path' => $shownPath, 'marked' => !$isHidden && in_array($shownPath, $checkedShow, true), 'list' => 'artist'), 10);
-		nasApiCall("$backendBase/mark", 'POST', array(
-			'path' => $shownPath, 'marked' => $isHidden, 'list' => 'hidden'), 10);
-		nasApiCall("$backendBase/mark", 'POST', array(
-			'path' => $shownPath, 'marked' => in_array($shownPath, $checkedDownload, true), 'list' => 'download'), 10);
+	// One request for the whole page (before: three per folder in the tree, each rewriting the config file).
+	// A folder is either shown or hidden; the backend lets hidden win if both were sent.
+	// "Shown in" of the shown folders on the page (path => audiobook|music|other; the NAS tab is not named) and which
+	// of them show their subfolders one by one
+	$categories = array();
+	foreach ((array)(json_decode($_POST['folder_categories'] ?? '{}', true) ?? array()) as $path => $category) {
+		if (is_string($path) && in_array($category, array('audiobook', 'music', 'other'), true)) {
+			$categories[$path] = $category;
+		}
 	}
+	$split = array_values(array_filter((array)(json_decode($_POST['folder_split'] ?? '[]', true) ?? array()), 'is_string'));
+	$saveResult = nasApiCall("$backendBase/selection", 'POST', array(
+		'shown' => array_values($shown),
+		'show' => array_values($checkedShow),
+		'hide' => array_values($checkedHide),
+		'download' => array_values($checkedDownload),
+		'categories' => (object)$categories,
+		'split' => $split,
+	), 30);
 	// No lightbox of the site-wide change notice here: the save shows a short line, the download its progress bar.
-	$nasFlash = 'Selection saved.';
+	$saveOk = !empty($saveResult['success']);
+	if ($saveOk) {
+		$nasFlash = 'Selection saved.';
+	} else {
+		$nasFlashError = 'The selection could not be saved.';
+	}
 
-	if (isset($_POST['nas_download_selected'])) {
+	if ($saveOk && isset($_POST['nas_download_selected'])) {
 		$syncResult = nasApiCall("$backendBase/download/sync", 'POST', new stdClass(), 10);
 		if (!empty($syncResult['success'])) {
 			$downloadStarted = true;
 			$nasFlash = '';
 		} else {
+			$nasFlashTitle = 'Download not started';
 			$nasFlashError = (string)($syncResult['error'] ?? 'Could not start the download.');
 		}
 	}
@@ -177,7 +229,7 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 	.nas-pop { text-align: left; position: fixed; z-index: 10000; box-sizing: border-box; max-width: 440px; width: calc(100vw - 32px); background: #fff; color: #222; border-radius: 10px; padding: 14px 16px; font-size: 14px; line-height: 1.45; box-shadow: 0 6px 24px rgba(0, 0, 0, .35); }
 </style>
 <div style="display:none;">
-	<div id="nas-info-nas">Connect a NAS (Synology, QNAP, TrueNAS, ... - anything with a WebDAV server) as an additional media source. Enable WebDAV on the NAS first (Synology: package "WebDAV Server", ports 5005 http / 5006 https). Every folder with a checkmark under "Show in Mupibox" appears in the NAS tab on the MuPiBox together with all of its subfolders - so you only need to tick the top-level folder, not every subfolder. To leave out a single folder (and everything in it), tick "Hide in Mupibox" for it instead - a folder is either shown or hidden. Changes on the NAS show up live, with no separate media update needed.</div>
+	<div id="nas-info-nas">Connect a NAS (Synology, QNAP, TrueNAS, ... - anything with a WebDAV server) as an additional media source. Enable WebDAV on the NAS first (Synology: package "WebDAV Server", ports 5005 http / 5006 https). Every folder with a checkmark under "Show in Mupibox" appears in the NAS tab on the MuPiBox together with all of its subfolders - so you only need to tick the top-level folder, not every subfolder. To leave out a single folder (and everything in it), tick "Hide in Mupibox" for it instead - a folder is either shown or hidden. Changes on the NAS show up live, with no separate media update needed. A shown folder can also appear in the Audiobook, Music or Radio &amp; Podcasts tab instead of the NAS tab: choose it under "Shown in" (the app's NAS page offers the same). "One by one" makes every subfolder a tile of its own there - for a folder that collects several series; without it the folder is one tile with its content inside.</div>
 	<div id="nas-info-profiles">A profile remembers which folders are set to "Show", "Hide" and "Download local", together with the NAS login it was made with. Saving the selection updates the active profile. A profile can only be loaded while the same NAS and account are connected. Profiles and the NAS login (the password encrypted) are part of the configuration backup.</div>
 </div>
 
@@ -278,6 +330,21 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 			<?php if ($loginError) { ?>
 				<li id="li_1"><p style="color:#900;"><?= htmlspecialchars($loginError) ?></p></li>
 			<?php } ?>
+			<?php if ($loginCertificate) { ?>
+				<li id="li_1">
+					<div style="border:1px solid #dcdcdc;border-radius:6px;padding:10px 14px;background:#fafafa;">
+						<p style="margin:0 0 6px 0;"><b>Certificate of the NAS</b></p>
+						<p style="margin:0;font-size:13px;">Issued to: <?= htmlspecialchars((string)($loginCertificate['subject'] ?? '')) ?><br>
+						Issued by: <?= htmlspecialchars((string)($loginCertificate['issuer'] ?? '')) ?><br>
+						Valid until: <?= htmlspecialchars((string)($loginCertificate['validTo'] ?? '')) ?><br>
+						SHA-256 fingerprint:<br><code style="word-break:break-all;"><?= htmlspecialchars((string)$loginCertificate['fingerprint']) ?></code></p>
+						<p style="margin:8px 0 0 0;font-size:13px;">To check it, open the NAS with https in a browser (e.g. https://&lt;NAS&gt;:5001), show the
+						certificate via the warning / lock icon and compare its SHA-256 fingerprint. Only if they match:</p>
+						<input type="hidden" name="nas_cert_fingerprint" value="<?= htmlspecialchars((string)$loginCertificate['fingerprint'], ENT_QUOTES) ?>" />
+						<label style="display:block;margin-top:6px;"><input type="checkbox" name="nas_cert_trust" value="1" /> Trust this certificate (enter the password again and sign in)</label>
+					</div>
+				</li>
+			<?php } ?>
 			<li class="buttons">
 				<input id="saveForm" class="button_text" type="submit" name="nas_signin" value="Sign In" title="Signing in can take up to ~15 seconds." />
 			</li>
@@ -286,6 +353,8 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 <?php } else { ?>
 	<form class="appnitro" method="post" action="nas.php" id="form">
 			<input type="hidden" name="shown_folders" id="shown_folders" value="[]" />
+			<input type="hidden" name="folder_categories" id="folder_categories" value="{}" />
+			<input type="hidden" name="folder_split" id="folder_split" value="[]" />
 			<ul>
 				<?php if ($browseError) { ?>
 					<li id="li_1"><p style="color:#900;"><?= htmlspecialchars($browseError) ?></p></li>
@@ -315,6 +384,15 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 						.nas-children { display: none; }
 						.nas-children.open, .nas-children.filter-open { display: block; }
 						.nas-msg { color: #888; font-style: italic; padding: 3px 0; }
+						#nas-tree { max-width: 980px; }
+						/* at the right end of every row, whatever the depth of the folder (the name only takes its own width) */
+						#nas-tree .nas-name { flex: 0 1 auto; }
+						#nas-tree .nas-children, #nas-tree .nas-children > div { padding-left: 0; padding-right: 0; margin-left: 0; margin-right: 0; }
+						.nas-where { flex: 0 0 240px; margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 13px; }
+						.nas-where select { font-size: 13px; padding: 1px 2px; max-width: 150px; }
+						.nas-where select:disabled, .nas-where input:disabled + span { opacity: .35; }
+						.nas-where label { display: flex; align-items: center; gap: 3px; white-space: nowrap; margin: 0; }
+						.nas-head .nas-where { align-self: flex-end; padding-bottom: 4px; }
 					</style>
 					<div id="nas-tree">
 						<div class="nas-head">
@@ -322,6 +400,7 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 							<div class="nas-cb"><span>Hide in Mupibox</span></div>
 							<div class="nas-cb"><span>Download local</span></div>
 							<div class="nas-name"><b>Folder</b></div>
+							<div class="nas-where"><b>Shown in</b></div>
 						</div>
 						<div id="nas-root"></div>
 					</div>
@@ -332,28 +411,35 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 			<li class="buttons">
 				<style>
 					/* Three columns of the same width, so the buttons of both rows line up. */
-					#nas-actions { display: grid; grid-template-columns: repeat(3, 200px) minmax(220px, 1fr) auto; gap: 10px; align-items: center; max-width: 1000px; }
+					#nas-actions { display: grid; grid-template-columns: repeat(4, 200px) minmax(120px, 1fr) auto; gap: 10px; align-items: center; max-width: 1200px; }
 					#nas-actions input.button_text { box-sizing: border-box; width: 100%; min-width: 0; margin: 0; }
-					#nas-actions > :nth-child(-n+3) { grid-row: 1; }
-					#nas-actions > :nth-child(n+4) { grid-row: 2; }
+					#nas-actions > :nth-child(-n+4) { grid-row: 1; }
+					#nas-actions > :nth-child(n+5) { grid-row: 2; }
+					#nas-actions > #nas-progress { grid-row: 3; grid-column: 1 / 4; }
+					#nas-actions > #nas-download-cancel { grid-row: 3; grid-column: 4; }
+					#nas-actions > #nas-covers-status { grid-row: 4; grid-column: 1 / -1; font-size: 13px; color: #444; text-align: left; }
+					#nas-covers-status:empty { display: none; }
 					#nas-progress { display: none; position: relative; box-sizing: border-box; height: 28px; border-radius: 8px; background: #d9e3ea; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0, 0, 0, .25); }
 					#nas-progress-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background-image: linear-gradient(144deg, #024364, #00689C 50%, #44afe2); transition: width .4s; }
 					#nas-progress-text { position: relative; display: block; text-align: center; line-height: 28px; font-size: 13px; font-weight: bold; color: #fff; text-shadow: 0 0 3px rgba(0, 0, 0, .7); white-space: nowrap; }
 					#nas-download-cancel { display: none; }
 					@media (max-width: 900px) {
 						#nas-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-						#nas-actions > :nth-child(n+7) { grid-row: auto; grid-column: 1 / -1; }
+						#nas-actions > :nth-child(n+9) { grid-row: auto; grid-column: 1 / -1; }
 					}
 				</style>
 				<div id="nas-actions">
+					<input class="button_text" type="button" id="nas-only-selected" value="Show only selected" title="Shows only the folders with at least one checked box (and the folders leading to them)." />
 					<input class="button_text" type="button" value="Select all" onclick="document.querySelectorAll('input[name=\'artist_folders[]\']').forEach(function (box) { if (!box.disabled) { box.checked = true; box.dispatchEvent(new Event('change')); } });" />
 					<input class="button_text" type="button" value="Unselect all" onclick="document.querySelectorAll('input[name=\'artist_folders[]\']').forEach(function (box) { box.checked = false; box.dispatchEvent(new Event('change')); });" />
 					<input id="saveForm" class="button_text" type="submit" name="nas_save_selection" value="Save selection" />
 					<input class="button_text" type="button" value="Select all downloads" onclick="document.querySelectorAll('input[name=\'download_folders[]\']').forEach(function (box) { box.checked = true; });" />
 					<input class="button_text" type="button" value="Unselect all downloads" onclick="document.querySelectorAll('input[name=\'download_folders[]\']').forEach(function (box) { box.checked = false; });" />
 					<input class="button_text" type="submit" name="nas_download_selected" value="Download selected" onclick="return confirm('Download the checked folders to the MuPiBox and delete local copies of unchecked ones?');" />
+					<input class="button_text" type="button" id="nas-covers-refresh" value="Reload covers" title="Loads the cover pictures again: the thumbnails are made again and the covers of downloaded folders are fetched from the NAS again." />
 					<div id="nas-progress"><div id="nas-progress-fill"></div><span id="nas-progress-text"></span></div>
 					<input class="button_text" type="button" id="nas-download-cancel" value="Cancel" />
+					<div id="nas-covers-status"></div>
 				</div>
 			</li>
 			<li id="li_1" style="padding-top:6px;">
@@ -373,12 +459,24 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 <?php } ?>
 
 <script>
+// CSRF token for the JSON POSTs below (checked at the top of this file)
+var NAS_CSRF = <?= json_encode(csrf_token()) ?>;
 (function () {
 	var root = document.getElementById('nas-root');
 	if (!root) { return; }
 	var shownInput = document.getElementById('shown_folders');
+	// Paths of the saved selection (shown, hidden, download): "Show only selected" opens the way to them.
+	var SAVED_SELECTED = <?= json_encode(array_values(array_unique(array_merge(
+		(array)(($data['nas']['artistFolders'] ?? ($data['synology']['artistFolders'] ?? array()))),
+		(array)(($data['nas']['hiddenFolders'] ?? ($data['synology']['hiddenFolders'] ?? array()))),
+		(array)(($data['nas']['downloadFolders'] ?? ($data['synology']['downloadFolders'] ?? array())))
+	)))) ?>;
 	var shown = {};
 	var STORE = 'nasTreeExpanded';
+	// "Shown in" as saved (the app's NAS page sets the same): path => audiobook|music|other, else the NAS tab
+	var SAVED_CATEGORIES = <?= json_encode((object)(($data['nas']['folderCategories'] ?? array()) ?: array())) ?>;
+	var SAVED_SPLIT = <?= json_encode(array_values((array)($data['nas']['folderSplit'] ?? array()))) ?>;
+	var whereOf = {};
 
 	function readExpanded() {
 		try { return JSON.parse(localStorage.getItem(STORE) || '[]') || []; } catch (e) { return []; }
@@ -456,6 +554,34 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 			if (!isNode(div)) { return; }
 			if (idx && q !== '') { filterNodeIdx(div, false); } else { filterNode(div, false, q); }
 		});
+		if (onlySelected) {
+			Array.prototype.forEach.call(root.children, function (div) { if (isNode(div)) { selectedOnlyNode(div); } });
+		}
+	}
+
+	// "Show only selected": a folder stays if one of its own boxes is checked or something below it stays;
+	// the folders leading to a selected one are shown open. Folders hidden by the text filter stay hidden.
+	// Once the view is ready the folders can be opened by hand: a folder opened that way shows everything inside
+	// it (data-show-all), so more folders can be ticked. Closing it again brings back the selected-only view.
+	var onlySelected = false;
+	function selectedOnlyNode(div, forced) {
+		if (div.style.display === 'none') { return false; }
+		var kids = kidsOf(div), any = false;
+		var showAllInside = div.dataset.showAll === '1';
+		if (kids) {
+			Array.prototype.forEach.call(kids.children, function (kid) {
+				if (isNode(kid) && selectedOnlyNode(kid, showAllInside)) { any = true; }
+			});
+		}
+		var row = div.querySelector(':scope > .nas-row');
+		var own = !!(row && row.querySelector('input[type="checkbox"]:checked'));
+		setOpenForFilter(div, any);
+		var keep = forced || own || any;
+		div.style.display = keep ? '' : 'none';
+		return keep;
+	}
+	function clearShowAll() {
+		Array.prototype.forEach.call(root.querySelectorAll('[data-show-all]'), function (el) { delete el.dataset.showAll; });
 	}
 
 	// Loads the subfolders of every folder for which shouldLoad(div) is true (4 requests at a time),
@@ -542,6 +668,28 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 	}
 	if (filterInput) { filterInput.addEventListener('input', runFilter); }
 
+	var onlySelectedBtn = document.getElementById('nas-only-selected');
+	if (onlySelectedBtn) {
+		onlySelectedBtn.addEventListener('click', function () {
+			onlySelected = !onlySelected;
+			onlySelectedBtn.value = onlySelected ? 'Show all' : 'Show only selected';
+			clearShowAll();
+			if (!onlySelected) { applyFilter(); return; }
+			// First load the folders that lead to the saved selections (they may not be opened yet), then filter.
+			var token = ++filterToken;
+			onlySelectedBtn.disabled = true;
+			showSearching(true);
+			crawl(function (d) {
+				var prefix = d.dataset.path + '/';
+				return SAVED_SELECTED.some(function (p) { return p.indexOf(prefix) === 0; });
+			}, token).then(function () {
+				onlySelectedBtn.disabled = false;
+				if (token === filterToken) { showSearching(false); }
+				applyFilter();
+			});
+		});
+	}
+
 	// Index status line ("Folder index: 3412 folders, updated ...  Refresh index").
 	var wasBuilding = false;
 	function safeText(t) { return String(t).replace(/[<>&]/g, ''); }
@@ -585,7 +733,7 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 		if (refreshBtn) {
 			refreshBtn.addEventListener('click', function () {
 				refreshBtn.disabled = true;
-				fetch('nas.php?index_refresh=1', { method: 'POST' }).then(function () { setTimeout(pollIndex, 300); });
+				fetch('nas.php?index_refresh=1', { method: 'POST', headers: { 'X-CSRF-Token': NAS_CSRF } }).then(function () { setTimeout(pollIndex, 300); });
 			});
 		}
 		pollIndex();
@@ -615,8 +763,37 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 		var showCell = checkbox('artist_folders[]', entry, entry.isMarked, 'Show in Mupibox');
 		var hideCell = checkbox('hide_folders[]', entry, entry.isHidden, 'Hide in Mupibox');
 		var showBox = showCell.firstChild, hideBox = hideCell.firstChild;
+		// Where a shown folder appears on the box, and whether its subfolders are tiles of their own there
+		var where = document.createElement('div');
+		where.className = 'nas-where';
+		var place = document.createElement('select');
+		place.title = 'Shown in';
+		[['', 'NAS tab'], ['audiobook', 'Audiobooks'], ['music', 'Music'], ['other', 'Radio & Podcasts']].forEach(function (o) {
+			var opt = document.createElement('option');
+			opt.value = o[0];
+			opt.textContent = o[1];
+			place.appendChild(opt);
+		});
+		place.value = SAVED_CATEGORIES[entry.path] || '';
+		var splitLabel = document.createElement('label');
+		splitLabel.title = 'Every subfolder becomes a tile of its own (a folder with several series)';
+		var splitBox = document.createElement('input');
+		splitBox.type = 'checkbox';
+		splitBox.checked = SAVED_SPLIT.indexOf(entry.path) !== -1;
+		var splitText = document.createElement('span');
+		splitText.textContent = 'one by one';
+		splitLabel.appendChild(splitBox);
+		splitLabel.appendChild(splitText);
+		where.appendChild(place);
+		where.appendChild(splitLabel);
+		whereOf[entry.path] = { show: showBox, place: place, split: splitBox };
+		function syncWhere() {
+			place.disabled = !showBox.checked;
+			splitBox.disabled = !showBox.checked || place.value === '';
+		}
+		place.addEventListener('change', syncWhere);
 		// A folder is either shown or hidden: while one box is checked the other one is inactive.
-		function syncShowHide() { showBox.disabled = hideBox.checked; hideBox.disabled = showBox.checked; }
+		function syncShowHide() { showBox.disabled = hideBox.checked; hideBox.disabled = showBox.checked; syncWhere(); }
 		showBox.addEventListener('change', syncShowHide);
 		hideBox.addEventListener('change', syncShowHide);
 		syncShowHide();
@@ -645,6 +822,7 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 			name.appendChild(done);
 		}
 		row.appendChild(name);
+		row.appendChild(where);
 
 		var children = document.createElement('div');
 		children.className = 'nas-children';
@@ -704,9 +882,18 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 				});
 				return loadPromise;
 			}
-		chevron.addEventListener('click', function () { toggle(); });
-		label.addEventListener('click', function () { toggle(); });
-		icon.addEventListener('click', function () { toggle(); });
+		// A click by hand (not the restore of the opened folders while loading). In "Show only selected" a folder
+		// opened by hand shows everything inside it, so more can be ticked; closing it goes back to the selection.
+		function userToggle() {
+			var wasOpen = children.classList.contains('open');
+			var done = toggle();
+			if (!onlySelected) { return; }
+			if (wasOpen) { delete node.dataset.showAll; } else { node.dataset.showAll = '1'; }
+			Promise.resolve(done).then(applyFilter);
+		}
+		chevron.addEventListener('click', userToggle);
+		label.addEventListener('click', userToggle);
+		icon.addEventListener('click', userToggle);
 		return { toggle: toggle };
 	}
 
@@ -723,6 +910,15 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 	// Only folders that were actually loaded (visible in the tree) are saved.
 	document.getElementById('form').addEventListener('submit', function () {
 		shownInput.value = JSON.stringify(Object.keys(shown));
+		var categories = {}, split = [];
+		Object.keys(whereOf).forEach(function (path) {
+			var w = whereOf[path];
+			if (!w.show.checked || w.place.value === '') { return; }
+			categories[path] = w.place.value;
+			if (w.split.checked) { split.push(path); }
+		});
+		document.getElementById('folder_categories').value = JSON.stringify(categories);
+		document.getElementById('folder_split').value = JSON.stringify(split);
 	});
 })();
 </script>
@@ -800,7 +996,7 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 	window.nasNotice = notice;
 
 	function api(action, body) {
-		var opt = body === undefined ? { cache: 'no-store' } : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
+		var opt = body === undefined ? { cache: 'no-store' } : { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': NAS_CSRF }, body: JSON.stringify(body) };
 		return fetch('nas.php?profile_api=' + encodeURIComponent(action), opt).then(function (r) { return r.json(); });
 	}
 	var working = false;
@@ -931,6 +1127,7 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 </script>
 
 <script>
+window.NAS_CSRF = <?= json_encode(csrf_token()) ?>;
 (function () {
 	var pop = null;
 	function closePop() { if (pop) { document.body.removeChild(pop); pop = null; } }
@@ -970,18 +1167,40 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 
 <script>
 (function () {
+	var btn = document.getElementById('nas-covers-refresh');
+	var out = document.getElementById('nas-covers-status');
+	if (!btn) { return; }
+	btn.addEventListener('click', function () {
+		btn.disabled = true;
+		out.textContent = 'Reloading covers ...';
+		fetch('nas.php?covers_refresh=1', { method: 'POST', headers: { 'X-CSRF-Token': NAS_CSRF } })
+			.then(function (r) { return r.json(); })
+			.then(function (res) {
+				btn.disabled = false;
+				if (!res || !res.success) { out.textContent = (res && res.error) ? res.error : 'The covers could not be reloaded.'; return; }
+				out.textContent = 'Done: ' + res.thumbnails + ' thumbnails dropped, ' + res.covers + ' covers of downloaded folders fetched again'
+					+ (res.nasReachable ? '.' : ' (NAS not reachable, downloaded covers were not checked).');
+			})
+			.catch(function () { btn.disabled = false; out.textContent = 'The covers could not be reloaded.'; });
+	});
+})();
+</script>
+
+<script>
+(function () {
 	var box = document.getElementById('nas-download-status');
 	if (!box) { return; }
 	var autoStarted = <?= $downloadStarted ? 'true' : 'false' ?>;
 	var flash = <?= json_encode($nasFlash) ?>;
 	var flashError = <?= json_encode($nasFlashError) ?>;
+	var flashTitle = <?= json_encode($nasFlashTitle) ?>;
 	var flashBox = document.getElementById('nas-flash');
 	if (flash && flashBox) {
 		flashBox.textContent = flash;
 		flashBox.style.display = 'block';
 		setTimeout(function () { flashBox.style.display = 'none'; }, 5000);
 	}
-	if (flashError && window.nasNotice) { window.nasNotice('Download not started', flashError); }
+	if (flashError && window.nasNotice) { window.nasNotice(flashTitle, flashError); }
 	var bar = document.getElementById('nas-progress');
 	var fill = document.getElementById('nas-progress-fill');
 	var barText = document.getElementById('nas-progress-text');
@@ -1027,7 +1246,7 @@ $CHANGE_TXT = $CHANGE_TXT . "</ul>";
 		cancelBtn.addEventListener('click', function () {
 			cancelBtn.disabled = true;
 			cancelBtn.value = 'Cancelling...';
-			fetch('nas.php?download_cancel=1', { method: 'POST' }).catch(function () {});
+			fetch('nas.php?download_cancel=1', { method: 'POST', headers: { 'X-CSRF-Token': NAS_CSRF } }).catch(function () {});
 		});
 	}
 	refresh();

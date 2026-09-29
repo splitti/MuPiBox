@@ -1,5 +1,6 @@
 [Unit]
 Description=MuPiBox VNC Service
+After=network.target
 
 [Install]
 WantedBy=multi-user.target
@@ -7,5 +8,16 @@ WantedBy=multi-user.target
 [Service]
 User=dietpi
 Group=dietpi
-ExecStart=/usr/bin/x11vnc -speeds modem -notruecolor -ncache 0 -forever -display :0
-ExecStop=sudo /usr/bin/kill $(/usr/bin/pgrep x11vnc)
+Environment=DISPLAY=:0
+# The kiosk display (X server :0) comes up after this service is started at boot: x11vnc failed with "cannot open
+# display" and the service stayed failed. Wait for the display (up to 3 minutes), and start again after a failure.
+# (chromium-autostart.sh used to start a second x11vnc of its own - also when VNC was switched off in the admin
+# interface; this service is the only one now.)
+# At boot x11vnc started just as Chromium loaded the display and slowed it down: it starts 60 s after the start of
+# the box now (switched on later in the admin interface: at once). The waiting happens in ExecStart, so the service
+# counts as started at once and holds nothing up. ($ = a $ for the shell, not for systemd)
+# No -ncache: x11vnc then puts a pixel cache ten screens high below the display, which only some VNC programs
+# understand - the browser (noVNC, the app's "remote control") showed a long strip with old pictures at the bottom.
+ExecStart=/bin/sh -c 'u=$$(cut -d. -f1 /proc/uptime); [ "$$u" -lt 60 ] && sleep $$((60 - u)); for i in $$(seq 1 180); do [ -S /tmp/.X11-unix/X0 ] && exec /usr/bin/x11vnc -forever -shared -localhost -rfbport 5900 -display :0; sleep 1; done; exit 1'
+Restart=on-failure
+RestartSec=10

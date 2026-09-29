@@ -1,0 +1,2 @@
+/* custom – dunkle Variante (Standard): helle Schrift über dem eigenen Bild */
+:root { --km-night: #1A1A1A; --km-night-2: rgba(0,0,0,.5); --km-night-3: #333333; --km-night-4: #4A4A4A; --km-stack-1: #7A7A7A; --km-stack-2: #4A4A4A; --km-shadow: rgba(0,0,0,.45); --km-overlay: rgba(0,0,0,.72); --km-cream: #FFFFFF; --km-ring: #FFFFFF; --km-ink: #1A1A1A; --km-lavender: #DDDDDD; --km-apricot: #E8E8E8; --km-apricot-shadow: #8B8B8B; --km-moon: #FFF2B8; --km-rose: #E5484D; --km-on-bg: #FFFFFF; --km-sync-bg: #1A1A1A; --km-sync-fg: #FFFFFF; }

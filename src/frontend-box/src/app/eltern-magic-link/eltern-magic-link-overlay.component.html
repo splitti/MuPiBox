@@ -1,0 +1,14 @@
+@if (svc.visible() || preview()) {
+  <div class="magic-link-overlay" (click)="preview() || svc.close()">
+    <div class="ml-card" (click)="$event.stopPropagation()">
+      <img [src]="preview() ? previewQr() : svc.qrUrl()" alt="QR-Code" class="ml-qr">
+      <div class="ml-info">
+        <h2>{{ texts.text('parentsTitle') }}</h2>
+        <p>{{ texts.text('parentsHint') }}</p>
+        <code class="ml-url">{{ preview() ? previewUrl : svc.magicLinkUrl() }}</code>
+        <p class="ml-countdown">{{ texts.text('parentsCountdown', { s: preview() ? 60 : svc.countdownSeconds() }) }}</p>
+        <button class="ml-close" (click)="preview() || svc.close()">{{ texts.text('parentsClose') }}</button>
+      </div>
+    </div>
+  </div>
+}

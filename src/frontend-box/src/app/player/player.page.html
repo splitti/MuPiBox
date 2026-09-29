@@ -1,19 +1,32 @@
+<!--
+  H2: collapse 22 separate `(spotify$ | async)` and 6 separate
+  `(local$ | async)` async-pipe subscribers down to one each via @let.
+  Each polling tick previously triggered 28 individual subscriptions
+  + 28 micro-tasks on default change-detection; on the RPi-Chromium
+  kiosk that was visible CD jank during playback. @let keeps the
+  default CD strategy (no need for markForCheck() audit across this
+  component's many subscribe-bodies) but uses one shared subscription
+  per stream.
+-->
+@let spotify = spotify$ | async;
+@let local = local$ | async;
+
 <ion-header class="player-header">
   <ion-toolbar color="light">
     <ion-buttons slot="start">
-      <ion-back-button icon="arrow-back-outline" defaultHref="/medialist" [routerAnimation]="coverFlip.returnAnimation"></ion-back-button>
+      <ion-back-button icon="arrow-back-outline" defaultHref="/home" [routerAnimation]="coverFlip.returnAnimation"></ion-back-button>
     </ion-buttons>
     <ion-title class="toolbar-album" #themeFontSource>
       @if (media.type ==='spotify' && currentPlayedSpotify?.currently_playing_type !== 'episode') {
-        <div>{{(spotify$ | async)?.item.album.name}}</div>
+        <div>{{spotify?.item.album.name}}</div>
       } @else {
-        @if (media.showid && (spotify$ | async)?.show_details) {
-          <div>{{(spotify$ | async)?.show_details?.name}}</div>
-        } @else if (media.audiobookid && (spotify$ | async)?.audiobook) {
-          <div>{{(spotify$ | async)?.audiobook?.name}}</div>
+        @if (media.showid && spotify?.show_details) {
+          <div>{{spotify?.show_details?.name}}</div>
+        } @else if (media.audiobookid && spotify?.audiobook) {
+          <div>{{spotify?.audiobook?.name}}</div>
         } @else {
           @if (media.type ==='library' || media.type ==='nas') {
-            <div>{{(local$ | async)?.album}}</div>
+            <div>{{local?.album}}</div>
           } @else {
             @if (media.type ==='rss') {
               <div>{{media.artist}}</div>
@@ -26,15 +39,15 @@
     </ion-title>
     <ion-title class="toolbar-tracktitle">
       @if (media.type ==='spotify' && currentPlayedSpotify?.currently_playing_type !== 'episode') {
-        <div>{{(spotify$ | async)?.item.name}}</div>
+        <div>{{spotify?.item.name}}</div>
       } @else {
-        @if (media.showid && (spotify$ | async)?.show_details) {
-          <div>{{(spotify$ | async)?.item?.name}}</div>
-        } @else if (media.audiobookid && (spotify$ | async)?.audiobook) {
-          <div>{{(spotify$ | async)?.item?.name}}</div>
+        @if (media.showid && spotify?.show_details) {
+          <div>{{spotify?.item?.name}}</div>
+        } @else if (media.audiobookid && spotify?.audiobook) {
+          <div>{{spotify?.item?.name}}</div>
         } @else {
           @if (media.type ==='library' || media.type ==='nas') {
-            <div>{{(local$ | async)?.currentTrackname}}</div>
+            <div>{{local?.currentTrackname}}</div>
           } @else {
             @if (media.type ==='rss') {
               <div>{{media.title}}</div>
@@ -45,31 +58,24 @@
         }
       }
     </ion-title>
-    @if (showTrackList) {
-      <ion-buttons slot="end">
-        <ion-button (click)="closeTrackList()">
-          <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>
-        </ion-button>
-      </ion-buttons>
-    }
     <ion-title class="toolbar-tracknumber" slot="end">
-      <div>{{(local$ | async)?.volume}}%</div>
+      <div class="km-vol">@if (km()) {<ion-icon name="volume-medium"></ion-icon>{{local?.volume}} %} @else { {{local?.volume}}% }</div>
       @if (media.type ==='library' || media.type ==='nas') {
-        <div>{{(local$ | async)?.currentTracknr}}/{{(local$ | async)?.totalTracks}}</div>
+        <div>{{local?.currentTracknr}}/{{local?.totalTracks}}</div>
       } @else {
         @if (media.type ==='spotify') {
-          @if (media.playlistid && (spotify$ | async)?.playlist?.total_tracks && (spotify$ | async)?.playlist?.total_tracks > 0) {
+          @if (media.playlistid && spotify?.playlist?.total_tracks && spotify?.playlist?.total_tracks > 0) {
             <!-- Playlist -->
-            <div>{{(spotify$ | async)?.playlist?.current_track_position}}/{{(spotify$ | async)?.playlist?.total_tracks}}</div>
-          } @else if (media.showid && (spotify$ | async)?.show_details) {
+            <div>{{spotify?.playlist?.current_track_position}}/{{spotify?.playlist?.total_tracks}}</div>
+          } @else if (media.showid && spotify?.show_details) {
             <!-- Show/Podcast -->
-            <div>{{(spotify$ | async)?.show_details?.current_episode_position}}/{{(spotify$ | async)?.show_details?.total_episodes}}</div>
-          } @else if (media.audiobookid && (spotify$ | async)?.audiobook) {
+            <div>{{spotify?.show_details?.current_episode_position}}/{{spotify?.show_details?.total_episodes}}</div>
+          } @else if (media.audiobookid && spotify?.audiobook) {
             <!-- Audiobook -->
-            <div>{{(spotify$ | async)?.audiobook?.current_chapter_position}}/{{(spotify$ | async)?.audiobook?.total_chapters}}</div>
-          } @else if (currentPlayedSpotify?.currently_playing_type !== 'episode' && (spotify$ | async)?.item.album.total_tracks > 0) {
+            <div>{{spotify?.audiobook?.current_chapter_position}}/{{spotify?.audiobook?.total_chapters}}</div>
+          } @else if (currentPlayedSpotify?.currently_playing_type !== 'episode' && spotify?.item.album.total_tracks > 0) {
             <!-- Regular album -->
-            <div>{{(spotify$ | async)?.item.track_number}}/{{(spotify$ | async)?.item.album.total_tracks}}</div>
+            <div>{{spotify?.item.track_number}}/{{spotify?.item.album.total_tracks}}</div>
           } @else {
             <!-- Fallback - no track info available -->
             <div></div>
@@ -80,12 +86,18 @@
         }
       }
     </ion-title>
-    <span slot="end" class="mupihat-icon-container"><mupihat-icon></mupihat-icon></span>
+    <span slot="end" class="mupihat-icon-container"><mupi-status></mupi-status></span>
   </ion-toolbar>
 </ion-header>
 
 <ion-content class="player-content" [class.tracklist-active]="showTrackList">
   @if (showTrackList) {
+    <div class="km-tl-wrap">
+    <!-- every theme: cover and "close" on the left (was the km themes' only; the others had a back arrow in the header) -->
+    <div class="km-tl-side">
+      <img [src]="shownCover()" alt="" (error)="coverFailed()">
+      <button class="km-tl-close" (click)="closeTrackList()"><ion-icon name="close"></ion-icon>{{ displayTexts.text('closeShort') }}</button>
+    </div>
     <ion-list class="tracklist" [style.font-family]="listFontFamily" [style.--ion-font-family]="listFontFamily">
       @if (loadingTrackList) {
         <div class="tracklist-loading"><ion-spinner></ion-spinner></div>
@@ -117,13 +129,17 @@
         }
       }
     </ion-list>
+    </div>
   } @else {
   <ion-grid>
     <ion-row>
       <ion-col size="6">
-        <ion-card class="cover-card" (pointerdown)="coverPointerDown()" (pointerup)="coverPointerUp()" (pointerleave)="coverPointerUp()" (pointercancel)="coverPointerUp()">
-          <img src="{{this.cover}} " draggable="false" style="-moz-user-select: none;" ondragstart="return false;">
-          @if ((media.type === 'radio' || media.type === 'rss') && currentPlayedLocal?.loading) {
+        <ion-card class="cover-card" [class.km-pressing]="km() && pressingCover" (pointerdown)="coverPointerDown()" (pointerup)="coverPointerUp()" (pointerleave)="coverPointerUp()" (pointercancel)="coverPointerUp()">
+          <img [src]="shownCover()" (error)="coverFailed()" draggable="false" style="-moz-user-select: none;" ondragstart="return false;">
+          @if ((media.type === 'radio' || media.type === 'rss') && currentPlayedLocal?.loading && km()) {
+            <!-- km themes: three bouncing dots on the cover while the stream connects -->
+            <div class="km-cover-dots"><i></i><i></i><i></i></div>
+          } @else if ((media.type === 'radio' || media.type === 'rss') && currentPlayedLocal?.loading) {
             <!-- Stream is being buffered: a ring in the middle of the cover that gets smaller until playback starts. -->
             <div class="load-indicator">
               <svg viewBox="0 0 48 48">
@@ -148,16 +164,26 @@
           <ion-row class="slider-row">
             @if (media.type !=='radio') {
               <ion-range #range [(ngModel)]="progress" max="100" (touchend)="seek()" (mouseup)="seek()"></ion-range>
+              @if (km() && kmTimes(); as times) {
+                <div class="km-times"><span>{{ times.position }}</span><span>{{ times.duration }}</span></div>
+              }
+            } @else if (km()) {
+              <!-- km themes: a stream has no end - a "Live" pill instead of the bar -->
+              <span class="km-live" [class.km-buffering]="currentPlayedLocal?.loading"><i></i>{{ currentPlayedLocal?.loading ? displayTexts.text('connectingLabel') : displayTexts.text('liveLabel') }}</span>
             }
           </ion-row>
           <ion-row class="controls-row">
             <ion-col size="4" class="ion-text-center">
               <ion-button (click)="volDown()" color="light">
-                <ion-icon slot="icon-only" name="volume-low-outline" class="small-icon"></ion-icon>
+                @if (km()) {
+                  <svg class="km-vol-icon" viewBox="0 0 24 24" aria-hidden="true"><path class="speaker" d="M3 9.2h3.6L11.2 5v14l-4.6-4.2H3z" /><path class="sign" d="M14.5 12h6" /></svg>
+                } @else {
+                  <ion-icon slot="icon-only" name="volume-low-outline" class="small-icon"></ion-icon>
+                }
               </ion-button>
             </ion-col>
             <ion-col size="4" class="ion-text-center">
-              <ion-button (click)="playPause()" color="light">
+              <ion-button class="km-play" (click)="playPause()" color="light">
                 @if (playing) {
                   <ion-icon slot="icon-only" name="pause" class="small-icon"></ion-icon>
                 }
@@ -168,19 +194,25 @@
             </ion-col>
             <ion-col size="4" class="ion-text-center">
               <ion-button (click)="volUp()" color="light">
-                <ion-icon slot="icon-only" name="volume-high-outline" class="small-icon"></ion-icon>
+                @if (km()) {
+                  <svg class="km-vol-icon" viewBox="0 0 24 24" aria-hidden="true"><path class="speaker" d="M3 9.2h3.6L11.2 5v14l-4.6-4.2H3z" /><path class="sign" d="M14.5 12h6M17.5 9v6" /></svg>
+                } @else {
+                  <ion-icon slot="icon-only" name="volume-high-outline" class="small-icon"></ion-icon>
+                }
               </ion-button>
             </ion-col>
           </ion-row>
 
+          <!-- km themes: a radio station has neither titles nor an end - only volume and play (as in the design) -->
+          @if (!(km() && media.type === 'radio')) {
           <ion-row class="controls-row">
             <ion-col size="6" class="ion-text-center">
-              <ion-button [disabled]="this.media.showid" (click)="skipPrev()" color="light">
+              <ion-button class="km-skip" [disabled]="this.media.showid" (click)="skipPrev()" color="light">
                 <ion-icon slot="icon-only" name="play-skip-back" class="small-icon"></ion-icon>
               </ion-button>
             </ion-col>
             <ion-col size="6" class="ion-text-center">
-              <ion-button [disabled]="this.media.showid" (click)="skipNext()" color="light">
+              <ion-button class="km-skip" [disabled]="this.media.showid" (click)="skipNext()" color="light">
                 <ion-icon slot="icon-only" name="play-skip-forward" class="small-icon"></ion-icon>
               </ion-button>
             </ion-col>
@@ -189,24 +221,24 @@
           @if (media.type ==='spotify' && (media.category =='music' || media.category =='other')) {
             <ion-row class="controls-row">
               <ion-col size="4" class="ion-text-center">
-                <ion-button (click)="seekBack()" color="light">
+                <ion-button class="km-minor" (click)="seekBack()" color="light">
                   <ion-icon slot="icon-only" name="play-back" class="small-icon"></ion-icon>
                 </ion-button>
               </ion-col>
               <ion-col size="4" class="ion-text-center">
                 @if (!media.shuffle) {
-                  <ion-button (click)="toggleshuffle()" color="light">
+                  <ion-button class="km-minor" (click)="toggleshuffle()" color="light">
                     <ion-icon slot="icon-only" name="shuffle-outline" class="small-icon"></ion-icon>
                   </ion-button>
                 }
                 @if (media.shuffle) {
-                  <ion-button (click)="toggleshuffle()" color="dark">
+                  <ion-button class="km-minor" (click)="toggleshuffle()" color="dark">
                     <ion-icon slot="icon-only" name="shuffle-outline" class="small-icon"></ion-icon>
                   </ion-button>
                 }
               </ion-col>
               <ion-col size="4" class="ion-text-center">
-                <ion-button (click)="seekForward()" color="light">
+                <ion-button class="km-minor" (click)="seekForward()" color="light">
                   <ion-icon slot="icon-only" name="play-forward" class="small-icon"></ion-icon>
                 </ion-button>
               </ion-col>
@@ -214,16 +246,17 @@
           } @else {
             <ion-row class="controls-row">
               <ion-col size="6" class="ion-text-center">
-                <ion-button (click)="seekBack()" color="light">
+                <ion-button class="km-minor" (click)="seekBack()" color="light">
                   <ion-icon slot="icon-only" name="play-back" class="small-icon"></ion-icon>
                 </ion-button>
               </ion-col>
               <ion-col size="6" class="ion-text-center">
-                <ion-button (click)="seekForward()" color="light">
+                <ion-button class="km-minor" (click)="seekForward()" color="light">
                   <ion-icon slot="icon-only" name="play-forward" class="small-icon"></ion-icon>
                 </ion-button>
               </ion-col>
             </ion-row>
+          }
           }
         </ion-grid>
       </ion-col>

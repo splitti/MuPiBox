@@ -57,6 +57,22 @@ if ${PREFLIGHT_DIR}/jq . /home/dietpi/.mupibox/Sonos-Kids-Controller-master/serv
 fi
 LOG="/boot/mupibox_update.log"
 exec 3>${LOG}
+
+# H5: previously the script ran the destructive `rm -R Sonos-Kids-
+# Controller-master/` BEFORE verifying that the downloaded archive was
+# usable. A flaky internet-dropout, a 404 response, or a corrupted
+# unzip would leave the box with no installation and no rollback path.
+# Add fail_update() to bail BEFORE any destructive op when a pre-flight
+# check fails, plus an atomic-swap pattern around the rm so a failure
+# at extract time can restore the previous install.
+fail_update() {
+	local msg=$1
+	echo "## UPDATE ABORTED: ${msg}" >&3 2>&3
+	echo "## (no destructive operation performed yet — your installation is intact)" >&3 2>&3
+	# Surface to dialog/whiptail so the user actually sees the failure
+	echo -e "XXX\n100\nUpdate aborted: ${msg}\nXXX"
+	exit 1
+}
 service mupi_idle_shutdown stop
 # 2026-09-20: no longer installed (nothing in MuPiBox uses them any more):
 #   id3tool - only the ID3 converter used it; that converter was removed from the admin
@@ -70,9 +86,9 @@ service mupi_idle_shutdown stop
 #   automake - only needed to compile fbv (dev/compile_scripts/fbv.sh); fbv ships prebuilt in bin/fbv
 # The changes of this list apply to DEV installs only; stable and beta keep the list they always had.
 if [ "$RELEASE" != "dev" ]; then
-  packages2install="lighttpd-mod-openssl gpiod git libasound2 mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt libgles2-mesa mesa-utils libsdl2-dev preload python3-smbus2 pigpio libjson-c-dev i2c-tools libi2c-dev python3-smbus python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask"
+  packages2install="lighttpd-mod-openssl gpiod git libasound2 mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt libgles2-mesa mesa-utils libsdl2-dev preload python3-smbus2 pigpio libjson-c-dev i2c-tools libi2c-dev python3-smbus python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask python3-pil librsvg2-bin feh"
 else
-  packages2install="lighttpd-mod-openssl gpiod git libasound2 mplayer pulseaudio-module-bluetooth pip bluez zip rrdtool scrot net-tools wireless-tools bc build-essential python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt libgles2-mesa preload python3-smbus2 pigpio libjson-c-dev libi2c-dev python3-alsaaudio python3-netifaces python3-flask python3-pil"
+  packages2install="lighttpd-mod-openssl gpiod git libasound2 mplayer pulseaudio-module-bluetooth pip bluez zip rrdtool scrot net-tools wireless-tools bc build-essential python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt libgles2-mesa preload python3-smbus2 pigpio libjson-c-dev libi2c-dev python3-alsaaudio python3-netifaces python3-flask python3-pil librsvg2-bin feh"
 fi
 packages2remove="jq"
 STEP=0
@@ -81,8 +97,12 @@ OS=$(grep -E '^(VERSION_CODENAME)=' /etc/os-release)  >&3 2>&3
 OS=${OS:17}  >&3 2>&3
 ARCH=$(uname -m) >&3 2>&3	
 
-wget -O /tmp/installation.jpg https://raw.githubusercontent.com/splitti/MuPiBox/main/media/images/installation.jpg >&3 2>&3
-/usr/bin/fbv /tmp/installation.jpg & >&3 2>&3
+# maintenance screen of the box (boot screen scene, text in the box's language); the old picture without one
+if [ -x /usr/local/bin/mupibox/maintenance_screen.sh ]; then
+	/usr/local/bin/mupibox/maintenance_screen.sh update >&3 2>&3
+else
+	/usr/bin/fbv /home/dietpi/MuPiBox/sysmedia/images/installation.jpg & >&3 2>&3
+fi
 
 if [ -z "$BRANCH" ]; then
   wget -q -O ${VER_JSON} https://raw.githubusercontent.com/splitti/MuPiBox/main/version.json >&3 2>&3
@@ -299,7 +319,7 @@ rm -f /tmp/mupibox-update-failed
 
 	###############################################################################################
 
-	echo -e "XXX\n${STEP}\nDownload MuPiBox Version ${VERSION_LONG}... \nXXX"	
+	echo -e "XXX\n${STEP}\nDownload MuPiBox Version ${VERSION_LONG}... \nXXX"
 	before=$(date +%s)
 	# The source archive is large and a dropped connection leaves a truncated file, which
 	# used to be unpacked anyway (nothing) while the update went on emptying the install.
@@ -331,7 +351,7 @@ rm -f /tmp/mupibox-update-failed
 
 	###############################################################################################
 
-	echo -e "XXX\n${STEP}\nUnzip MuPiBox Version ${VERSION_LONG}... \nXXX"	
+	echo -e "XXX\n${STEP}\nUnzip MuPiBox Version ${VERSION_LONG}... \nXXX"
 	before=$(date +%s)
 	# The folder the archive unpacks to depends on where it comes from (a branch archive is
 	# "MuPiBox-<branch>", a tag archive "MuPiBox-<tag>", ...). Read it from the archive instead of
@@ -343,6 +363,11 @@ rm -f /tmp/mupibox-update-failed
 	if [ -n "${UNPACKED_DIR}" ]; then
 		MUPI_SRC="/home/dietpi/${UNPACKED_DIR}"
 	fi
+	# H5: verify the source dir + the inner deploy.zip exist before we
+	# wipe the live install. If either is missing the user gets a
+	# clean abort instead of a half-installed box.
+	[ -d "${MUPI_SRC}" ] || fail_update "Expected source directory ${MUPI_SRC} not found after unzip"
+	[ -s "${MUPI_SRC}/bin/nodejs/deploy.zip" ] || fail_update "Backend deploy.zip missing or empty in update package"
 
 	# Everything the update copies must be there before anything is replaced. If not, stop here:
 	# a half update (admin interface removed, scripts missing) is worse than no update.
@@ -371,25 +396,61 @@ rm -f /tmp/mupibox-update-failed
 
 	echo -e "XXX\n${STEP}\nBackup Userdata... \nXXX" >&3 2>&3
 	before=$(date +%s)
-	mv /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json /tmp/data.json >&3 2>&3
-	mv /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover /tmp/cover >&3 2>&3
-	#mv /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json /tmp/config.json >&3 2>&3
-	mv /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/active_theme.css /tmp/active_theme.css >&3 2>&3
+	# User data is copied (not moved) to a directory on the SD card, not to /tmp: /tmp is a RAM disk,
+	# and an update that stopped after the old install was moved aside used to leave the library and
+	# the covers only there - gone after the next reboot. The whole server/config directory is kept:
+	# besides data.json it holds resume.json, albumstop.json, wlan.json, the offline lists and the
+	# RSS cache, which were all lost on every update before.
+	USERDATA_BAK="/home/dietpi/.mupibox/userdata.upd-bak"
+	rm -rf "${USERDATA_BAK}" >&3 2>&3
+	mkdir -p "${USERDATA_BAK}/www" >&3 2>&3
+	# Every copy is checked (a full card copied part of it, and the old install was deleted all the same); what is not
+	# there (a box without covers yet) is not an error. The podcast pictures (rss-covers) come along: without them every
+	# picture was loaded again after an update. theme-data holds the pictures and fonts of the themes, the custom
+	# theme's among them (put there by the user): it comes back below without replacing the files the update ships.
+	SKC=/home/dietpi/.mupibox/Sonos-Kids-Controller-master
+	cp -a "${SKC}/server/config" "${USERDATA_BAK}/config" >&3 2>&3 || fail_update "backup of the user data failed (card full?)"
+	for item in cover active_theme.css rss-covers theme-data; do
+		[ -e "${SKC}/www/${item}" ] || continue
+		cp -a "${SKC}/www/${item}" "${USERDATA_BAK}/www/${item}" >&3 2>&3 || fail_update "backup of www/${item} failed (card full?)"
+	done
+	# H5: data.json holds the library - non-recoverable: the copy has to be readable
+	if [ -f "${SKC}/server/config/data.json" ]; then
+		/usr/bin/jq -e . "${USERDATA_BAK}/config/data.json" > /dev/null 2>&1 || fail_update "data.json backup failed (library state would be lost)"
+	fi
 	after=$(date +%s)
 	echo -e "## Backup Data  ##  finished after $((after - $before)) seconds" >&3 2>&3
-		
+
 	STEP=$(($STEP + 1))
 
 	###############################################################################################
 
 
-	echo -e "XXX\n${STEP}\nUpdate frontend, backend-api, and backend-player ... \nXXX"	
+	echo -e "XXX\n${STEP}\nUpdate frontend, backend-api, and backend-player ... \nXXX"
 	before=$(date +%s)
 	sudo -H -u dietpi bash -c "pm2 stop server" >&3 2>&3
 	#su - dietpi -c "pm2 save" >&3 2>&3
-	rm -R /home/dietpi/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
+	# H5: atomic-swap with rollback. Move old install aside instead of
+	# deleting it; if the deploy.zip extract fails, restore the backup
+	# so the box keeps running on the previous version. The .upd-bak
+	# directory is removed after a successful extract.
+	BAK_DIR="/home/dietpi/.mupibox/Sonos-Kids-Controller-master.upd-bak"
+	rm -rf "${BAK_DIR}" >&3 2>&3
+	if [ -d /home/dietpi/.mupibox/Sonos-Kids-Controller-master ]; then
+		mv /home/dietpi/.mupibox/Sonos-Kids-Controller-master "${BAK_DIR}" >&3 2>&3 || \
+			fail_update "Could not move old install aside (filesystem full?)"
+	fi
 	mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/ >&3 2>&3
-	unzip ${MUPI_SRC}/bin/nodejs/deploy.zip -d /home/dietpi/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3
+	if ! unzip ${MUPI_SRC}/bin/nodejs/deploy.zip -d /home/dietpi/.mupibox/Sonos-Kids-Controller-master/ >&3 2>&3; then
+		# Rollback: remove the partially-extracted dir and restore the backup.
+		rm -rf /home/dietpi/.mupibox/Sonos-Kids-Controller-master >&3 2>&3
+		if [ -d "${BAK_DIR}" ]; then
+			mv "${BAK_DIR}" /home/dietpi/.mupibox/Sonos-Kids-Controller-master >&3 2>&3
+			sudo -H -u dietpi bash -c "pm2 start server" >&3 2>&3
+		fi
+		fail_update "deploy.zip extraction failed — rolled back to previous install"
+	fi
+	# (the old install is removed once the user data is back, see "Restore Userdata")
 	mv ${MUPI_SRC}/config/templates/monitor.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/monitor.json >&3 2>&3
 	mv ${MUPI_SRC}/config/templates/www.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >&3 2>&3
 	chown dietpi:dietpi -R /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www >&3 2>&3
@@ -495,6 +556,17 @@ rm -f /tmp/mupibox-update-failed
 
 	chown dietpi:dietpi -R /home/dietpi/.mupibox/Sonos-Kids-Controller-master/
 
+	# km themes (children's themes of one design): pictures per theme, shared fonts, and the list with their names
+	# (the admin interface shows those). New ones: add the id here, in conf_update.sh and in autosetup.sh.
+	KM_THEMES="kuschelmond moosnest sonnenhof pferdehof fussball fahrzeuge buecherregal kassettenrekorder unterwasser bastelpapier prinzessin einhorn feenschloss weltraum dinoland piratenbucht tagundnacht feuerwehr ritterburg eisenbahn roboter heldenstadt safari eiswelt zirkus meerjungfrau ballett kaetzchen zuckerland schmetterlinge"
+	# the old themes in the km layout (legacy in km-themes.json): their mascots and cover placeholders (their pictures and
+	# fonts were moved above already); coverflow stays as it is
+	KM_LEGACY_THEMES="axolotl blue captainamerica chocolate cinema clone-wars comic custom danger dark darkred deepblue dinosaur earth enterprise fantasybutterflies forms green ironman light lines matrix mint mystic orange pikachu pink purple red spiderman steampunk supermario unicorn vintage wall-e wood xmas"
+	for theme in ${KM_THEMES} ${KM_LEGACY_THEMES} _fonts; do
+		mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/${theme} >&3 2>&3
+		cp -f ${MUPI_SRC}/themes/${theme}/* /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/${theme}/ >&3 2>&3
+	done
+	cp -f ${MUPI_SRC}/themes/km-themes.json /home/dietpi/MuPiBox/themes/km-themes.json >&3 2>&3
 	mv ${MUPI_SRC}/themes/*.css /home/dietpi/MuPiBox/themes/ >&3 2>&3
 	mv ${MUPI_SRC}/scripts/chromium-autostart.sh /var/lib/dietpi/dietpi-software/installed/chromium-autostart.sh >&3 2>&3
 	mv ${MUPI_SRC}/scripts/mupibox/* /usr/local/bin/mupibox/ >&3 2>&3
@@ -509,6 +581,8 @@ rm -f /tmp/mupibox-update-failed
 	mv ${MUPI_SRC}/scripts/fan/* /usr/local/bin/mupibox/ >&3 2>&3
 	mv ${MUPI_SRC}/scripts/wifi/* /usr/local/bin/mupibox/ >&3 2>&3
 	mv ${MUPI_SRC}/scripts/mqtt/* /usr/local/bin/mupibox/ >&3 2>&3
+	# (the app's backup restore runs it from here, as the admin interface does)
+	cp ${MUPI_SRC}/update/conf_update.sh /usr/local/bin/mupibox/conf_update.sh >&3 2>&3
 
 	chown dietpi:dietpi /home/dietpi/.bashrc >&3 2>&3
 	chmod 755 /usr/local/bin/mupibox/* >&3 2>&3
@@ -551,7 +625,7 @@ rm -f /tmp/mupibox-update-failed
 	
 	###############################################################################################
 
-	echo -e "XXX\n${STEP}\nCopy some media files... \nXXX"	
+	echo -e "XXX\n${STEP}\nCopy some media files... \nXXX"
 	# Splash and Media
 	before=$(date +%s)
 	#mv ${MUPI_SRC}/config/templates/splash.txt /boot/splash.txt >&3 2>&3
@@ -565,6 +639,12 @@ rm -f /tmp/mupibox-update-failed
 	cp ${MUPI_SRC}/media/sound/low.wav /home/dietpi/MuPiBox/sysmedia/sound/low.wav >&3 2>&3
 	cp ${MUPI_SRC}/media/images/installation.jpg /home/dietpi/MuPiBox/sysmedia/images/installation.jpg >&3 2>&3
 	cp ${MUPI_SRC}/media/images/battery_low.jpg /home/dietpi/MuPiBox/sysmedia/images/battery_low.jpg >&3 2>&3
+	# boot and maintenance screens (scenes, texts, tool; the pictures are put together at the end of the update)
+	rm -rf /home/dietpi/MuPiBox/sysmedia/bootscreens >&3 2>&3
+	cp -r ${MUPI_SRC}/media/bootscreens /home/dietpi/MuPiBox/sysmedia/bootscreens >&3 2>&3
+	mkdir -p /usr/local/share/fonts/mupibox >&3 2>&3
+	cp ${MUPI_SRC}/themes/_fonts/Fredoka-Variable.ttf /usr/local/share/fonts/mupibox/ >&3 2>&3
+	fc-cache -f >&3 2>&3
 
 	after=$(date +%s)
 	echo -e "## Copy media files  ##  finished after $((after - $before)) seconds" >&3 2>&3
@@ -608,12 +688,46 @@ rm -f /tmp/mupibox-update-failed
 	mv -f ${MUPI_SRC}/config/services/mupi_telegram.service /etc/systemd/system/mupi_telegram.service  >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/dietpi-dashboard.service /etc/systemd/system/dietpi-dashboard.service  >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/mupi_hat.service /etc/systemd/system/mupi_hat.service  >&3 2>&3
+	mv -f ${MUPI_SRC}/config/services/mupi_fan.service /etc/systemd/system/mupi_fan.service >&3 2>&3
+	mv -f ${MUPI_SRC}/config/services/mupi_tls.service /etc/systemd/system/mupi_tls.service >&3 2>&3
+	mv -f ${MUPI_SRC}/config/services/mupi_tls.timer /etc/systemd/system/mupi_tls.timer >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/mupi_hat_control.service /etc/systemd/system/mupi_hat_control.service  >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/mupi_autoconnect-wifi.service /etc/systemd/system/mupi_autoconnect-wifi.service  >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/mupi_mqtt.service /etc/systemd/system/mupi_mqtt.service  >&3 2>&3
+	mv -f ${MUPI_SRC}/config/services/mupi_rotary.service /etc/systemd/system/mupi_rotary.service  >&3 2>&3
+	# LAN without waiting at boot, and an address at once when a cable is plugged in (see scripts/mupibox/mupi_ethernet.sh)
+	if [ -f ${MUPI_SRC}/config/services/mupi_ethernet.service ]; then
+		mv -f ${MUPI_SRC}/config/services/mupi_ethernet.service /etc/systemd/system/mupi_ethernet.service >&3 2>&3
+		mkdir -p "/etc/systemd/system/ifup@eth0.service.d" >&3 2>&3
+		cp -f "${MUPI_SRC}/config/services/ifup@eth0.service.d/mupibox.conf" "/etc/systemd/system/ifup@eth0.service.d/mupibox.conf" >&3 2>&3
+		MUPI_ETHERNET=1
+	fi
+	# the goodbye picture until the power is off (see config/services/mupi_goodbye.service)
+	if [ -f ${MUPI_SRC}/config/services/mupi_goodbye.service ]; then
+		mv -f ${MUPI_SRC}/config/services/mupi_goodbye.service /etc/systemd/system/mupi_goodbye.service >&3 2>&3
+		MUPI_GOODBYE=1
+	fi
+	# The display's autologin without the 5 s Type=idle wait (see config/services/getty@tty1.service.d/mupibox.conf)
+	if [ -f "${MUPI_SRC}/config/services/getty@tty1.service.d/mupibox.conf" ]; then
+		mkdir -p "/etc/systemd/system/getty@tty1.service.d" >&3 2>&3
+		cp -f "${MUPI_SRC}/config/services/getty@tty1.service.d/mupibox.conf" "/etc/systemd/system/getty@tty1.service.d/mupibox.conf" >&3 2>&3
+	fi
+	# Admin interface, Samba share and DietPi dashboard 45 s after the start: not needed for the display, which they
+	# were competing with (see config/services/mupibox-delayed-start.conf)
+	if [ -f "${MUPI_SRC}/config/services/mupibox-delayed-start.conf" ]; then
+		for delayed in lighttpd smbd dietpi-dashboard $(systemctl list-unit-files "php*-fpm.service" --no-legend 2>/dev/null | awk '{print $1}' | sed 's/\.service$//'); do
+			mkdir -p "/etc/systemd/system/${delayed}.service.d" >&3 2>&3
+			cp -f "${MUPI_SRC}/config/services/mupibox-delayed-start.conf" "/etc/systemd/system/${delayed}.service.d/mupibox-delayed-start.conf" >&3 2>&3
+		done
+	fi
+	# The Samba share is a standalone server (smbd); the Active Directory domain controller came with the package and
+	# is not needed
+	systemctl disable --now samba-ad-dc.service >&3 2>&3
 
-	# Tolerant replacement for DietPi's WiFi monitor (see scripts/mupibox/wifi_monitor.sh): only versions that ship it
-	if [ "$RELEASE" = "dev" ] && [ -f ${MUPI_SRC}/config/services/dietpi-wifi-monitor-override.conf ]; then
+	# Tolerant replacement for DietPi's WiFi monitor (see scripts/mupibox/wifi_monitor.sh): the original re-connected at
+	# the first lost ping - also while the box roams between access points, 5-15 s without network each time. For
+	# every version that ships it (it was only set up for dev versions).
+	if [ -f ${MUPI_SRC}/config/services/dietpi-wifi-monitor-override.conf ] && [ -x /usr/local/bin/mupibox/wifi_monitor.sh ]; then
 		mkdir -p /etc/systemd/system/dietpi-wifi-monitor.service.d >&3 2>&3
 		cp -f ${MUPI_SRC}/config/services/dietpi-wifi-monitor-override.conf /etc/systemd/system/dietpi-wifi-monitor.service.d/override.conf >&3 2>&3
 	fi
@@ -622,7 +736,11 @@ rm -f /tmp/mupibox-update-failed
 		cp -f ${MUPI_SRC}/config/udev/99-mupibox-wifi.rules /etc/udev/rules.d/99-mupibox-wifi.rules >&3 2>&3
 		udevadm control --reload >&3 2>&3
 	fi
-
+	# LAN takes over from WiFi again on carrier loss/return of the ethernet cable (same script): only versions that ship it
+	if [ "$RELEASE" = "dev" ] && [ -f ${MUPI_SRC}/config/udev/99-mupibox-eth.rules ]; then
+		cp -f ${MUPI_SRC}/config/udev/99-mupibox-eth.rules /etc/udev/rules.d/99-mupibox-eth.rules >&3 2>&3
+		udevadm control --reload >&3 2>&3
+	fi
 	systemctl daemon-reload >&3 2>&3
 	if systemctl list-unit-files dietpi-wifi-monitor.service 2>/dev/null | grep -q dietpi-wifi-monitor; then
 		systemctl restart dietpi-wifi-monitor.service >&3 2>&3
@@ -635,6 +753,13 @@ rm -f /tmp/mupibox-update-failed
 	systemctl start mupi_powerled.service >&3 2>&3
 	systemctl enable dietpi-dashboard.service >&3 2>&3
 	systemctl start dietpi-dashboard.service >&3 2>&3
+	if [ "${MUPI_ETHERNET}" = "1" ]; then
+		systemctl enable mupi_ethernet.service >&3 2>&3
+		systemctl start mupi_ethernet.service >&3 2>&3
+	fi
+	if [ "${MUPI_GOODBYE}" = "1" ]; then
+		systemctl enable --now mupi_goodbye.service >&3 2>&3
+	fi
 	after=$(date +%s)
 	echo -e "## Restarting services  ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
@@ -671,6 +796,13 @@ rm -f /tmp/mupibox-update-failed
 	  echo 'dtoverlay=gpio-poweroff,gpiopin=4,active_low=1' | tee -a /boot/config.txt >&3 2>&3
 	fi
 
+	# Power LED on the Pi's PWM hardware (see led_control.py; the software PWM took about 9 % of a CPU core all the
+	# time): only for GPIO 12/13 and with the analog audio off (it uses the same PWM unit). Active from the next start.
+	LED_PIN=$(/usr/bin/jq -r '.shim.ledPin // empty' ${CONFIG} 2>/dev/null)
+	if { [ "${LED_PIN}" = "12" ] || [ "${LED_PIN}" = "13" ]; } && grep -q '^dtparam=audio=off' /boot/config.txt && ! grep -q '^dtoverlay=pwm' /boot/config.txt; then
+	  echo "dtoverlay=pwm,pin=${LED_PIN},func=4" | tee -a /boot/config.txt >&3 2>&3
+	fi
+
 	#if grep -q '^initramfs initramfs.img' /boot/config.txt; then
 	#  echo -e "initramfs initramfs.img already set"
 	#else
@@ -697,13 +829,33 @@ rm -f /tmp/mupibox-update-failed
 	###############################################################################################
 
 
-	echo -e "XXX\n{STEP}\nUpdate Admin-Interface... \nXXX"	
+	# MED-6: typo `{STEP}` (no $) just printed literal "{STEP}" in the
+	# update progress UI. Plus: `rm -R /var/www/*` then unzip wiped any
+	# admin-customised files (active_theme.css from the theme picker,
+	# the cover/ symlink, theme-data/ for custom-theme backgrounds).
+	# The next admin save would re-create active_theme.css, but custom
+	# themes and cover/-symlink-content were lost. Preserve them around
+	# the wipe.
+	echo -e "XXX\n${STEP}\nUpdate Admin-Interface... \nXXX"
 	before=$(date +%s)
-	rm -R /var/www/* >&3 2>&3 
+	# Stage user-customised files in /tmp so they survive the wipe.
+	UPDATE_PRESERVE=$(mktemp -d /tmp/mupibox-www-preserve.XXXXXX)
+	for item in active_theme.css cover theme-data; do
+		[ -e "/var/www/${item}" ] && cp -a "/var/www/${item}" "${UPDATE_PRESERVE}/" >&3 2>&3
+	done
+	rm -R /var/www/* >&3 2>&3
 	mv ${MUPI_SRC}/AdminInterface/release/www.zip /var/www/www.zip >&3 2>&3
 	unzip /var/www/www.zip -d /var/www/ >&3 2>&3
 	rm /var/www/www.zip >&3 2>&3
-	ln -s /home/dietpi/MuPiBox/media/cover /var/www/cover >&3 2>&3
+	# Restore preserved files after the new www/ unzipped so they
+	# overwrite anything the package would otherwise have shipped.
+	for item in active_theme.css cover theme-data; do
+		[ -e "${UPDATE_PRESERVE}/${item}" ] && cp -a "${UPDATE_PRESERVE}/${item}" /var/www/ >&3 2>&3
+	done
+	rm -rf "${UPDATE_PRESERVE}"
+	# `cover` is supposed to be a symlink to /home/dietpi/MuPiBox/media/cover —
+	# only re-create if the preserve step didn't already restore it.
+	[ -L /var/www/cover ] || ln -s /home/dietpi/MuPiBox/media/cover /var/www/cover >&3 2>&3
 	chown -R www-data:www-data /var/www/ >&3 2>&3
 	chmod -R 755 /var/www/ >&3 2>&3
 	chown -R dietpi:www-data /home/dietpi/MuPiBox/media/cover >&3 2>&3
@@ -738,7 +890,18 @@ rm -f /tmp/mupibox-update-failed
 	echo -e "XXX\n{STEP}\nActivate SSL... \nXXX"	
 	before=$(date +%s)
 	
-	openssl req -new -x509 -keyout /etc/lighttpd/server.pem -out /etc/lighttpd/server.pem -days 3650 -nodes -subj "/C=DE/CN=mupibox" >/dev/null >&3 2>&3
+	# The web server's certificate: the box's own, from its small authority for the home network (the app offers it to
+	# install on the phones; an own one uploaded in the app stays) - no longer a new self-signed one on every run, which
+	# no phone can trust and every browser asked about again. Checked at every start too (mupi_tls.service).
+	/usr/local/bin/mupibox/tls_cert.sh ensure >&3 2>&3
+	systemctl enable mupi_tls.service >&3 2>&3
+	systemctl daemon-reload >&3 2>&3
+	systemctl enable --now mupi_tls.timer >&3 2>&3
+	# no scripts or pages from the media folder behind /cover (see the file)
+	cp -f ${MUPI_SRC}/config/lighttpd/99-mupibox-media-noexec.conf /etc/lighttpd/conf-enabled/99-mupibox-media-noexec.conf >&3 2>&3
+	# the app on port 80/443 too: its login at /, the app at /app (see the file)
+	cp -f ${MUPI_SRC}/config/lighttpd/90-mupibox-app.conf /etc/lighttpd/conf-enabled/90-mupibox-app.conf >&3 2>&3
+	lighty-enable-mod proxy  >&3 2>&3
 	lighty-enable-mod ssl  >&3 2>&3
 	service lighttpd force-reload  >&3 2>&3
 	after=$(date +%s)
@@ -749,11 +912,41 @@ rm -f /tmp/mupibox-update-failed
 
 	echo -e "XXX\n${STEP}\nRestore Userdata... \nXXX"
 	before=$(date +%s)
-	mv /tmp/data.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json  >&3 2>&3
-	mv /tmp/cover /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/cover  >&3 2>&3
-	#mv /tmp/config.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json  >&3 2>&3
-	mv /tmp/active_theme.css /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/active_theme.css >&3 2>&3
-	chown dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json >&3 2>&3
+	# Every step is checked; the backup is only removed when all of them worked and data.json is
+	# valid JSON again (a mere "data.json exists" also passed for a cut-off copy or a failed
+	# resume.json / cover copy on a full card, and the only intact copy was deleted).
+	RESTORE_OK=1
+	# Everything from the backup except what the update installs fresh (config.json, monitor.json)
+	# and the links check_network.sh / get_network.sh recreate (active_*.json, network.json).
+	for item in "${USERDATA_BAK}"/config/* "${USERDATA_BAK}"/config/.[!.]*; do
+		[ -e "${item}" ] || continue
+		name=$(basename "${item}")
+		case "${name}" in
+			config.json|monitor.json|active_data.json|active_resume.json|network.json) continue ;;
+		esac
+		[ -L "${item}" ] && continue
+		rm -rf "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/${name}" >&3 2>&3
+		cp -a "${item}" "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/${name}" >&3 2>&3 || RESTORE_OK=0
+	done
+	for item in cover active_theme.css rss-covers; do
+		[ -e "${USERDATA_BAK}/www/${item}" ] || continue
+		rm -rf "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/${item}" >&3 2>&3
+		cp -a "${USERDATA_BAK}/www/${item}" "/home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/${item}" >&3 2>&3 || RESTORE_OK=0
+	done
+	# theme-data: the new version's files stay, what the user added comes back (-n: nothing of the update replaced)
+	if [ -d "${USERDATA_BAK}/www/theme-data" ]; then
+		mkdir -p /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data >&3 2>&3
+		cp -an "${USERDATA_BAK}/www/theme-data/." /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/ >&3 2>&3 || RESTORE_OK=0
+	fi
+	chown -R dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config >&3 2>&3
+	# only now that everything is back
+	if [ "${RESTORE_OK}" = 1 ] && /usr/bin/jq -e . /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json > /dev/null 2>&1; then
+		rm -rf "${USERDATA_BAK}" >&3 2>&3
+		# the old install is not needed any more either
+		rm -rf "${BAK_DIR}" >&3 2>&3
+	else
+		echo "## Restore incomplete - user data kept in ${USERDATA_BAK} (old install in ${BAK_DIR})" >&3 2>&3
+	fi
 	chown dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/config.json >&3 2>&3
 	sleep 1 >&3 2>&3
 	after=$(date +%s)
@@ -775,12 +968,17 @@ rm -f /tmp/mupibox-update-failed
 	rm /etc/systemd/system/mupi_change_checker.service >&3 2>&3
 	/usr/local/bin/mupibox/./m3u_generator.sh >&3 2>&3
 	/usr/local/bin/mupibox/./setting_update.sh >&3 2>&3
+	# boot and maintenance screens for the settings (box name, scene, language)
+	/usr/local/bin/mupibox/bootscreen_update.sh >&3 2>&3
 	
 	mv ${LOG} /boot/$(date +%F)_update_${VERSION}.log >&3 2>&3
 	chown dietpi:dietpi ${CONFIG} >&3 2>&3
 	
 	sudo -H -u dietpi bash -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && npm install" >&3 2>&3
-	sudo -H -u dietpi bash -c "pm2 start server" >&3 2>&3
+	# by path: on a fresh box pm2 knows neither process yet ("pm2 start server" looked for a file "server")
+	sudo -H -u dietpi bash -c "cd /home/dietpi/.mupibox/Sonos-Kids-Controller-master && if pm2 describe server >/dev/null 2>&1; then pm2 restart server; else pm2 start server.js --name server; fi" >&3 2>&3
+	sudo -H -u dietpi bash -c "cd /home/dietpi/.mupibox/spotifycontroller-main && if pm2 describe spotify-control >/dev/null 2>&1; then pm2 restart spotify-control; else pm2 start spotify-control.js --name spotify-control; fi" >&3 2>&3
+	sudo -H -u dietpi bash -c "pm2 save" >&3 2>&3
 
 	CPU=$(cat /proc/cpuinfo | grep Serial | cut -d ":" -f2 | sed 's/^ //') >&3 2>&3
 	curl -X POST https://mupibox.de/mupi/ct.php -H "Content-Type: application/x-www-form-urlencoded" -d key1=${CPU} -d key2=Update -d key3="${VERSION_LONG}" -d key4="${ARCH}" -d key5="${OS}" >&3 2>&3

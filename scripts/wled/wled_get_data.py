@@ -81,7 +81,7 @@ def main(argv):
 
         URL = "http://" + IP + "/presets.json"
 
-        r = requests.get(URL)
+        r = requests.get(URL, timeout=5)
         PRESETS = r.json()
 
         f = open("/tmp/.wled.presets.json", "w")

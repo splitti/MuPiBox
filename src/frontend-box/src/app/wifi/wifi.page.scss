@@ -1,3 +1,5 @@
+@import 'simple-keyboard/build/css/index.css';
+
 // Which adapter carries the connection: wlan0 (onboard) or wlan1 (USB adapter). Same size and style as the title.
 .wifi-interface {
     margin-left: 30px;
@@ -11,8 +13,19 @@ ion-toolbar {
     }
     ion-button {
         height: 70px !important;
-        width: 70px !important;
+        width: 60px !important;
         font-size: 20px !important;
+    }
+
+    // Onboard-WiFi / LAN on-off indicators: gray when off, glowing green when on.
+    .power-icon {
+        color: #6b6f76;
+        transition: color 0.2s ease, filter 0.2s ease;
+
+        &.on {
+            color: var(--ion-color-success, #2dd36f);
+            filter: drop-shadow(0 0 4px var(--ion-color-success, #2dd36f));
+        }
     }
 }
 
@@ -21,6 +34,13 @@ ion-toolbar {
     --padding-start: 16px;
     --padding-end: 16px;
     --padding-top: 16px;
+}
+
+// Hides the visible scrollbar track/thumb only - the content stays scrollable by finger/drag as before.
+// scrollbar-width is a real CSS property applied straight to the exposed "scroll" part; chaining
+// ::-webkit-scrollbar after ::part() does not actually hide anything in this Chromium build.
+ion-content.wifi-content::part(scroll) {
+    scrollbar-width: none;
 }
 
 .status-card {
@@ -128,6 +148,46 @@ ion-toolbar {
             opacity: 0.6;
         }
 
+        // Change / Delete and, for a network on both bands, the band choice in front of them. The choice
+        // is stretched to the height of the buttons (align-items), so both are always exactly as high.
+        .row-actions {
+            display: flex;
+            align-items: stretch;
+            gap: 20px;
+
+            ion-button {
+                margin: 0;
+            }
+        }
+
+        // Band choice of a saved network on both bands: Auto | 2.4 GHz | 5 GHz
+        .band-toggle {
+            display: inline-flex;
+            box-sizing: border-box;
+            font-size: 0.8125rem;
+            border: 1px solid var(--ion-color-primary, #2dd6c7);
+            border-radius: 6px;
+            overflow: hidden;
+
+            button {
+                background: transparent;
+                color: var(--ion-color-primary, #2dd6c7);
+                border: 0;
+                padding: 0 16px;
+                font-size: inherit;
+
+                & + button {
+                    border-left: 1px solid var(--ion-color-primary, #2dd6c7);
+                }
+
+                &.on {
+                    background: var(--ion-color-primary, #2dd6c7);
+                    color: #000;
+                    font-weight: 600;
+                }
+            }
+        }
+
         // Saved network that is currently out of range: greyed out.
         &.unavailable {
             opacity: 0.45;
@@ -163,4 +223,191 @@ ion-toolbar {
     display: flex;
     justify-content: center;
     padding: 32px;
+}
+
+// LAN mode: DHCP/STATIC form modeled on dietpi-config's network adapter screen.
+.lan-config {
+    background: transparent;
+
+    ion-item {
+        --background: #16202a;
+        margin-bottom: 8px;
+        border-radius: 8px;
+        font-size: 18px;
+    }
+
+    .mode-item {
+        --min-height: 46px;
+        margin-bottom: 4px;
+    }
+
+    // Static IP/Mask/Gateway/DNS in the left third, the onscreen keypad filling the other two thirds -
+    // sized to fit in one screen with no scrolling (ion-content's scrollY is off while this is shown).
+    .lan-static-row {
+        display: flex;
+        gap: 12px;
+        height: 260px;
+    }
+
+    .lan-fields {
+        flex: 0 0 33%;
+        max-width: 33%;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+
+        ion-item {
+            flex: 1;
+            min-height: 0;
+            margin-bottom: 0;
+            --min-height: 0;
+            --padding-start: 10px;
+            --padding-end: 10px;
+            // Equal breathing room above the label and below the input, same distance both sides. The
+            // label's own line-height adds ~3px above the box-model padding that the input's line does
+            // not add below it, so top is set 3px lower than bottom to end up visually even (measured
+            // pixel-for-pixel on real screenshots: 6/6 rendered as 10px top vs 6-7px bottom; 3/9 rendered
+            // as 6px top vs 9px bottom - both confirm the same +3px top bias).
+            --padding-top: 5px;
+            --padding-bottom: 8px;
+            font-size: 14px;
+
+            // Same rendered size as "Mode" above (18px). Ionic scales a position="stacked" label to 75%
+            // via a CSS transform - transform does not shrink the space it reserves in layout, so with
+            // font-size alone compensated for that (a bigger 24px), the label pushed the input below it
+            // out of the item entirely. Turning the transform off is the only way to get both a normal
+            // font-size and normal (not oversized) label height at once.
+            ion-label {
+                transform: none !important;
+                font-size: 18px;
+                margin-bottom: 1px;
+            }
+
+            ion-input {
+                font-size: 16px;
+                --padding-top: 0;
+                --padding-bottom: 0;
+            }
+        }
+    }
+
+    // DHCP | STATIC, same look as the WiFi band toggle
+    .mode-toggle {
+        display: inline-flex;
+        box-sizing: border-box;
+        font-size: 0.9375rem;
+        border: 1px solid var(--ion-color-primary, #2dd6c7);
+        border-radius: 6px;
+        overflow: hidden;
+
+        button {
+            background: transparent;
+            color: var(--ion-color-primary, #2dd6c7);
+            border: 0;
+            padding: 8px 20px;
+            font-size: inherit;
+
+            & + button {
+                border-left: 1px solid var(--ion-color-primary, #2dd6c7);
+            }
+
+            &.on {
+                background: var(--ion-color-primary, #2dd6c7);
+                color: #000;
+                font-weight: 600;
+            }
+        }
+    }
+
+    .lan-actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 16px;
+    }
+}
+
+// Onscreen keyboard for the Static IP/Mask/Gateway/DNS fields (same styling as the WiFi add page's keyboard).
+// simple-keyboard renders its buttons straight into the DOM (not through Angular), so this page's normal
+// encapsulated styles never reach them - ::ng-deep is needed here, unlike the WiFi add page which turns
+// encapsulation off for the whole component.
+:host ::ng-deep {
+    // Fills the right two thirds of .lan-static-row, next to .lan-fields on the left third. Its height
+    // comes from the row (flex child, stretches by default); hg-row/hg-button below divide that height
+    // evenly across the 4 rows, so the row height in .lan-static-row is the only number to tune.
+    .lan-simple-keyboard {
+        flex: 1;
+        background-color: #1a1a1a;
+        padding: 5px;
+        border-radius: 5px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .lan-simple-keyboard .hg-button {
+        color: #ffffff;
+    }
+
+    .lan-simple-keyboard.hg-theme-default {
+        font-family: inherit !important;
+    }
+
+    .lan-simple-keyboard.hg-theme-ios {
+        width: 100%;
+    }
+
+    // simple-keyboard wraps the rows in this element; without it stretching, the rows keep their
+    // natural height and leave the rest of the keyboard's flex-column height empty below them.
+    .lan-simple-keyboard .hg-rows {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+    }
+
+    .lan-simple-keyboard.hg-theme-ios.hg-theme-default .hg-row .hg-button {
+        flex-grow: 1;
+        // simple-keyboard's own CSS gives plain character keys (hg-standardBtn) an explicit width that
+        // {bksp} does not get, so with the default flex-basis: auto the last row's 3 buttons started
+        // from different sizes before growing - basis: 0 makes every button in every row start equal.
+        flex-basis: 0;
+        cursor: pointer;
+        max-width: initial;
+    }
+
+    .lan-simple-keyboard.hg-theme-ios .hg-row {
+        display: flex;
+        flex: 1;
+    }
+
+    .lan-simple-keyboard.hg-theme-ios .hg-row:not(:last-child) {
+        margin-bottom: 5px;
+    }
+
+    .lan-simple-keyboard.hg-theme-ios .hg-row .hg-button:not(:last-child) {
+        margin-right: 5px;
+    }
+
+    .lan-simple-keyboard.hg-theme-ios.hg-theme-default .hg-button {
+        border-radius: 5px;
+        box-sizing: border-box;
+        padding: 0;
+        background: #2a2a2a;
+        border-bottom: 1px solid #444444;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: none;
+        font-weight: 400;
+        font-size: 18px;
+        color: #ffffff;
+    }
+
+    .lan-simple-keyboard.hg-theme-ios.hg-theme-default .hg-button:active,
+    .lan-simple-keyboard.hg-theme-ios.hg-theme-default .hg-button:focus {
+        background: #3a3a3a;
+    }
+
+    .lan-simple-keyboard.hg-theme-ios.hg-theme-default .hg-button.hg-functionBtn {
+        background-color: #555555;
+    }
 }

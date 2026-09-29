@@ -33,6 +33,8 @@ def main():
     JSON_DATA = "skip"
     while JSON_DATA == "skip":
         JSON_DATA = read_json("/etc/mupibox/mupiboxconfig.json")
+        if JSON_DATA == "skip":
+            time.sleep(1)  # was a busy loop on one core while the file could not be read
     GPIO = int(JSON_DATA['fan']['fan_gpio'])
     FAN100 = int(JSON_DATA['fan']['fan_temp_100'])
     FAN75 = int(JSON_DATA['fan']['fan_temp_75'])
@@ -46,13 +48,24 @@ def main():
     fan.start(0)                                          # Generate a PWM signal with a 0% duty cycle (fan off)
     while 1:                                              # Execute loop forever
         if HAT_STATE == True:
+            # Without /tmp/mupihat.json (mupihat service down) this spun at 100% CPU forever and
+            # never reached the fan control below. Now: a few tries, then only the CPU temperature.
             JSON_DATA = "skip"
-            while JSON_DATA == "skip":
+            for _ in range(5):
                 JSON_DATA = read_json("/tmp/mupihat.json")
-            ictemp = int(JSON_DATA['Temp'])
+                if JSON_DATA != "skip":
+                    break
+                time.sleep(0.2)
+            try:
+                ictemp = int(JSON_DATA["Temp"])
+            except (TypeError, KeyError, ValueError):
+                ictemp = 0
         else:
             ictemp = 0
-        cputemp = int(get_temp())                         # Get the current CPU temperature
+        try:
+            cputemp = int(get_temp())                     # Get the current CPU temperature
+        except RuntimeError:
+            cputemp = FAN100 + 1  # unknown temperature: run the fan at full speed instead of crashing
         if cputemp > FAN100 or ictemp > FAN100:           # Check temperature threshhold, in degrees celcius
             fan.ChangeDutyCycle(100)                      # Set fan duty based on temperature, 100 is max speed and 0 is min speed or off.
             speed = "100%"

@@ -23,9 +23,11 @@
 # m h  dom mon dow   command
 #@reboot         /usr/local/bin/mupibox/./get_network.sh
 #@reboot         sleep 30; /usr/local/bin/mupibox/./get_network.sh
+# M7: dropped from 4 invocations/minute to 1. The RRD database serves
+# cputemp/cpuusage/RAM graphs that the user looks at via the Admin-UI on
+# the order of seconds-to-minutes, not 15s resolution. Each invocation
+# forks rrdtool 3× under sudo (~17k sudo/day at 4/min) -- the audit.log
+# was full of these, and the baseline CPU time was non-trivial on the Pi.
 * * * * *       /usr/local/bin/mupibox/./save_rrd.sh
-* * * * *       sleep 15; /usr/local/bin/mupibox/./save_rrd.sh
-* * * * *       sleep 30; /usr/local/bin/mupibox/./save_rrd.sh
-* * * * *       sleep 45; /usr/local/bin/mupibox/./save_rrd.sh
 * * * * *       /usr/local/bin/mupibox/./get_network.sh
 * * * * *       sleep 30; /usr/local/bin/mupibox/./get_network.sh

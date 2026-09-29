@@ -1,3 +1,139 @@
+<h3>DEV 5.0.3 - changes compared to 5.0.2</h3>
+<b>Highlights</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'><b>The new MuPiBox web app</b> for phone, tablet and PC: play, library, playtime, Spotify, NAS and all settings in one place, in 17 languages – and on Android it can be installed like a real app.</li>
+<li id='linews' class='linews'><b>Much faster box:</b> it starts and shuts down several seconds quicker, and it now keeps an index of all content – SD card, Spotify and NAS – so switching between categories and opening artists and albums is instant, with covers loading right away.</li>
+<li id='linews' class='linews'><b>Search Spotify and add content from the web app:</b> find albums, audiobooks and artists and add them with one tap, or paste any Spotify, radio or podcast link.</li>
+<li id='linews' class='linews'><b>Spotify Smart Sync:</b> manage the box from your own Spotify account – albums in playlists named after the box appear on it automatically, whole artists can be followed.</li>
+<li id='linews' class='linews'><b>Upload media from the web app:</b> copy tracks and whole folders from the phone or PC straight onto the SD card, no network share needed.</li>
+<li id='linews' class='linews'><b>Covers from the internet:</b> albums without a picture can get one automatically (iTunes / Deezer, switched on in the web app), and any cover can be searched online, replaced by your own picture or hidden.</li>
+<li id='linews' class='linews'><b>NAS in all tabs:</b> NAS folders can appear in Audiobooks, Music or Other, a folder index finds any folder instantly, and downloaded folders stay up to date by themselves.</li>
+<li id='linews' class='linews'><b>Playtime limits and quiet hours:</b> daily listening time per weekday and quiet times (homework, bedtime), with a gentle end of the current track or album.</li>
+<li id='linews' class='linews'><b>30 new kids' themes</b> with mascots and big buttons, 16 boot screens with the box's own name, and display texts in 17 languages.</li>
+<li id='linews' class='linews'><b>Parents' remote control:</b> Telegram commands (extra time, quiet now, sign-in link), a live picture of the display and remote control of the box right in the web app.</li>
+<li id='linews' class='linews'><b>Secure connection:</b> the box's own certificate for https without warnings, one password for web app and admin interface, and many security fixes.</li>
+</ul>
+<b>New MuPiBox web app</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>New web app at http://&lt;box&gt;/app for phone, tablet and PC: now playing, listening, library, playtime, Spotify, NAS, covers, appearance, audio, battery, network, services, security and system in one place. http://&lt;box&gt;/ now opens a sign-in page where you choose between the web app (beta) and the admin interface.</li>
+<li id='linews' class='linews'>One password for the web app and the admin interface. With "Require sign-in" switched off both can be used in the home network without a password. You can also sign in with the QR code on the box (Settings &gt; Parent web app) or with the Telegram command /login.</li>
+<li id='linews' class='linews'>"Stay signed in" keeps a device signed in for 90 days, also across restarts. "Sign out all other devices" or a new password ends all other sessions, in the admin interface too.</li>
+<li id='linews' class='linews'>Start page: what is playing now (cover, progress, controls, volume with the hearing protection limit marked), tiles for battery, listening time today, quiet hours and WiFi, quick actions (+15 min, Quiet now, Sleep timer) and notices only when needed (battery low or not charging, Spotify login running out, update available, MuPiBox news).</li>
+<li id='linews' class='linews'>17 languages (taken from the browser or chosen by hand), light and dark design, and it can be added to the home screen like an app.</li>
+<li id='linews' class='linews'>The admin interface stays available; "Advanced settings" in the app opens it already signed in.</li>
+</ul>
+<b>Listen and play</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Listen page in the app: audiobooks, music, radio &amp; podcasts, folders on the SD card, NAS folders and whole Spotify artists as covers, with search and filters. Tap to play on the box (the app asks first if something else is playing). Podcasts show their episodes to choose from, newest first.</li>
+<li id='linews' class='linews'>The display follows playback started from the app or Telegram: it opens the player with the right cover and switches when another album is started.</li>
+<li id='linews' class='linews'>The player shows the cover stored in the file that is playing (MP3 and FLAC), so a folder of different stories shows a cover for each story.</li>
+<li id='linews' class='linews'>Radio links to m3u / pls playlists play the first stream of the list. WMA files from the NAS play.</li>
+<li id='linews' class='linews'>Resume jumps straight to the saved track and position without playing bits of other tracks first. The resume list is sorted by last played, and a position is only saved after something was really listened to.</li>
+<li id='linews' class='linews'>Spotify and local / NAS / radio no longer play at the same time after switching.</li>
+</ul>
+<b>Library</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Library page: library entries, SD card folders and NAS folders in one list with search and filters for category and source, grouped by artist (artist &gt; album). Edit or delete entries and SD card albums, change the address of a radio station or podcast. The list updates itself when something changes elsewhere.</li>
+<li id='linews' class='linews'>"+ Add": search Spotify (add albums or a whole artist), paste a link (Spotify, radio, podcast, m3u / pls, with ID check, audiobook detection, sorting, shuffle and range) or upload tracks and whole folders from the phone or PC to the SD card.</li>
+<li id='linews' class='linews'>Covers: search one online or use your own picture (cropped to a square), for entries, SD card folders and NAS folders (on the NAS it is saved as cover.jpg if the box may write there). "No cover" hides a folder's picture without deleting anything.</li>
+<li id='linews' class='linews'>Online covers (off by default; app or Admin &gt; Cover): albums without a picture, and albums with a scanned, non-square picture, get a cover from iTunes or Deezer. Only covers that clearly match are used. They can also be saved as cover.jpg in the album folder.</li>
+</ul>
+<b>Spotify</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Smart sync (optional): create Spotify playlists whose names start with the box name (e.g. "MuPiBox Audiobooks", "MuPiBox Music"). The box adds their albums to its library and keeps them up to date. Conflicts with your own entries are shown in the app.</li>
+<li id='linews' class='linews'>Managed content: follow a whole artist, optionally only a range of episodes, and leave out single albums.</li>
+<li id='linews' class='linews'>A step-by-step set-up in the app (client ID, client secret, redirect URI to copy). <b>Redirect URI:</b> boxes that are already set up keep https://&lt;box&gt;/spotify.php (it now forwards to the app). New set-ups use https://&lt;box&gt;/app/spotify-callback. The app shows which one must be in your Spotify developer app.</li>
+<li id='linews' class='linews'>Spotify now keeps the login of a developer app for only 6 months. The box remembers the date, reminds you 14 and 3 days before (Telegram and app), and the start page takes you straight to a new login.</li>
+<li id='linews' class='linews'>Spotify Connect: sign in again from the app, see its state and errors, or switch it off completely (it stays off after restarts and updates).</li>
+<li id='linews' class='linews'>Faster and more robust: covers are cached on the box, artists with hundreds of albums load much faster, a long Spotify block ("too many requests") no longer hangs the lists, and playback started from the app or Telegram plays on the box.</li>
+</ul>
+<b>NAS</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>NAS folders can be shown in the Audiobooks, Music or Other tab instead of the NAS tab. A folder with several series can show each series as its own tile. Set in the app (NAS or library) or in the NAS tab of the admin interface.</li>
+<li id='linews' class='linews'>NAS page in the app: sign in, profiles, folder tree with search, show / hide / download folders, reload covers.</li>
+<li id='linews' class='linews'>HTTPS for the NAS, also with the NAS's self-signed certificate (confirm its fingerprint once).</li>
+<li id='linews' class='linews'>Faster and more reliable: large folders open in a fraction of a second, the next track is loaded in advance (no gap between tracks), playback carries on where it stopped after a connection drop, and a slow or waking NAS is waited for.</li>
+<li id='linews' class='linews'>Folders with their own tracks and subfolders can be opened. System folders (@eaDir, #recycle, ...) and folders without audio are hidden. WebP and JFIF covers work. New in the NAS tab: "Show only selected" and "Reload covers". Downloaded folders stay up to date (new episodes are added, deleted ones removed).</li>
+</ul>
+<b>Kids' themes and display</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>30 new kids' themes (e.g. Cuddle Moon, Unicorn Dream, Dino Land, Pirate Cove, Fire Station, Outer Space, Day &amp; Night), each with its own mascot, background and cover placeholder, large covers and big buttons.</li>
+<li id='linews' class='linews'>Optional Cover Flow "stage" with a large cover in the middle. Tapping the name reads it aloud, optionally also when the list stops. "Day &amp; Night" turns to night in the evening and during quiet hours.</li>
+<li id='linews' class='linews'>The 37 older themes (all except coverflow) also use the new layout and keep their colors, background and font.</li>
+<li id='linews' class='linews'>New WiFi and battery display (percentage inside the battery) and the same track list (panel with cover and close button) in all themes. Covers are always square.</li>
+<li id='linews' class='linews'>Choose the theme in the app with a preview, and the display can use it immediately.</li>
+<li id='linews' class='linews'>16 boot screens with the box's own name (or a random one each start), with matching screens for updates, installation, new WiFi, goodbye and empty battery. The default is "Card".</li>
+<li id='linews' class='linews'>The texts on the display (limit reached, quiet time, QR code) can be changed, with a live preview, and are available in 17 languages.</li>
+<li id='linews' class='linews'>Faster start and shutdown: the display is ready several seconds earlier, the boot screen stays until the menu appears (no black or white flashes), and the goodbye picture comes right away.</li>
+<li id='linews' class='linews'>Lists open at once (category and album lists are remembered), swiping is smoother, and the position in a list is kept.</li>
+</ul>
+<b>Playtime and quiet hours</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Daily playtime limit per weekday, with a badge showing the remaining time and a lock screen on the display.</li>
+<li id='linews' class='linews'>When the limit is reached or quiet hours begin, playback stops right away, or the track or album may finish (for 5 min to 3 h, 15 min by default). Podcasts may finish their episode, radio stops at once.</li>
+<li id='linews' class='linews'>Quiet hours: several time windows per day with names (e.g. homework, bedtime), also over midnight.</li>
+<li id='linews' class='linews'>From the app, Telegram or the admin interface: bonus minutes, "Quiet now" for a while, lifting all locks for a while, sleep timer. "Quiet now" and lifting the locks end each other.</li>
+<li id='linews' class='linews'>In the app: ring with the remaining time, limits per weekday, the hour at which a new day starts, rules for quiet hours, and a listening history (today, last 7 days, top lists).</li>
+</ul>
+<b>Telegram</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Parent commands: /status, /extend, /release, /quietnow, /limit set and /login (sign-in link to the app), plus smart sync commands (/resync, /syncstatus, /playlists, /spotify_connect, /spotify_disconnect).</li>
+<li id='linews' class='linews'>The bot only answers allowed chats. Several chats and group chats work, and the app can find the chat ID for you.</li>
+<li id='linews' class='linews'>Only important messages by default (limit reached, quiet hours, battery low, battery not charging, Spotify login running out, sync problems). Messages for every track, pause and stop can be switched on.</li>
+<li id='linews' class='linews'>Bot and messages are in German or English, following the display language.</li>
+</ul>
+<b>Battery and hardware</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Battery level in 5 % steps with a charging symbol, and in the app a 24-hour battery history and a battery profile editor with safety checks.</li>
+<li id='linews' class='linews'>New battery profile ENERpower 2S3P 15,000 mAh, corrected 2S2P profile. Profiles can set the charge voltage.</li>
+<li id='linews' class='linews'>MuPiHAT: the settings on the charger chip are checked, and a wrong cell count that could stop charging is corrected. Implausible readings are filtered out, the service is restarted if it hangs, and Custom battery values take effect right after saving.</li>
+<li id='linews' class='linews'>Warning in the app and on Telegram when the battery does not charge although the power supply is plugged in (unplug the power supply for a moment).</li>
+<li id='linews' class='linews'>Rotary encoder (KY-040) for the volume, with push button. The power LED uses hardware PWM (less CPU load). The fan service is installed and applies changes immediately.</li>
+</ul>
+<b>Network and remote access</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>WiFi: 2.4 GHz, 5 GHz or auto per saved network, live status (band, signal, IP), open networks work, and passwords are checked (8 to 63 characters) so a wrong one can no longer take the box offline.</li>
+<li id='linews' class='linews'>LAN: settings with static IP on the box, LAN and onboard WiFi can be switched off, and the box switches automatically between LAN and WiFi (LAN first, as soon as the cable is plugged in).</li>
+<li id='linews' class='linews'>A more tolerant WiFi monitor for all versions, and power saving settings for USB WiFi drivers (RTL88X2BU / RTL8821AU).</li>
+<li id='linews' class='linews'>In the app: WiFi, network options, shares (Samba, FTP, VNC), MQTT / Home Assistant, WLED, and remote control of the box's display (VNC) right in the page.</li>
+</ul>
+<b>Security</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>The box has its own certificate that only works for home network addresses. Install it once per phone or computer (app: Security &gt; Encryption (HTTPS), with instructions for Android and iPhone): https then works without a warning, and on Android the app can be installed like a real app. Optional: always use https, or upload your own certificate (reminder before it runs out).</li>
+<li id='linews' class='linews'><b>The player port 5005 only answers the box itself.</b> The display page and the API on port 8200 answer other devices only with an app sign-in when "Require sign-in" is on.</li>
+<li id='linews' class='linews'>Other websites can no longer send commands to the box, passwords and tokens are no longer given out, and radio, podcast and cover downloads can no longer reach the box or the home network. Several ways to inject commands or scripts were closed.</li>
+<li id='linews' class='linews'>Admin interface: CSRF protection on every page, restore checks every file of a backup, backup files no longer stay on the web server, and changing the password needs the current one (at least 6 characters).</li>
+</ul>
+<b>Reliability and updates</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Settings and library are always saved completely or not at all – a power cut while saving no longer leaves a broken file behind.</li>
+<li id='linews' class='linews'>Before each save the previous settings and library are kept (the last version and one copy per day for 7 days).</li>
+<li id='linews' class='linews'>Update: resume positions, offline lists, podcast data and covers are kept and checked, the old installation is only removed after everything was restored, and the sound card is no longer reset.</li>
+<li id='linews' class='linews'>Updates (stable, beta, dev) and operating system updates, backup and restore can be started in the app, with progress.</li>
+<li id='linews' class='linews'>Services and the player restart by themselves after a crash, and the box writes much less to the SD card (browser cache in RAM, fewer log lines).</li>
+</ul>
+<b>Admin interface</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>New "Parental" page: sleep timer, automatic shutdown, playtime limit and quiet hours (rules in a table, Enable / Disable button). The sign-in settings are now under Admin.</li>
+<li id='linews' class='linews'>MuPi-Conf: sections in a clearer order, kids' themes with the stage switch, boot and maintenance screens, display texts with preview. The menu highlights the current page.</li>
+<li id='linews' class='linews'>NAS tab with a category per folder, Admin &gt; Cover for online covers, settings for the rotary encoder and the USB WiFi driver.</li>
+<li id='linews' class='linews'>"Add media" was removed from the box's settings menu: the library is managed in the app (or the admin interface).</li>
+</ul>
+
 <h3>DEV 5.0.0 - changes compared to the stable version</h3>
 <b>NAS as a media source</b>
 </ul>

@@ -270,10 +270,11 @@ transform: rotate(360deg);
   color: #ffffff;
 }
 
-/* Add an active class to highlight the current page */
+/* The menu entry of the page shown (set by navActive() in header.php): dark like the hover, with a white bar below */
 .topnav a.active {
-  background-color: #04AA6D;
-  color: white;
+  background-color: #054b61;
+  color: #ffffff;
+  box-shadow: inset 0 -3px 0 #ffffff;
 }
 
 /* Hide the link that should open and close the topnav on small screens */
@@ -285,6 +286,8 @@ transform: rotate(360deg);
 /* When the screen is less than 600 pixels wide, hide all links, except for the first one ("Home"). Show the link that contains should open and close the topnav (.icon) */
 @media screen and (max-width: 1130px) {
   .topnav a:not(:first-child) {display: none;}
+  /* the page shown stays visible next to "Home" while the menu is folded */
+  .topnav a.active {display: block;}
   .topnav a.icon {
     float: right;
     display: block;

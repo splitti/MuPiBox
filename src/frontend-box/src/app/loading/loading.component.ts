@@ -1,6 +1,7 @@
-import { Component, effect, input } from '@angular/core'
+import { Component, effect, inject, input } from '@angular/core'
 
 import { IonSpinner } from '@ionic/angular/standalone'
+import { KmThemeService } from '../theme/km-theme.service'
 
 @Component({
   selector: 'mupi-loading',
@@ -10,6 +11,7 @@ import { IonSpinner } from '@ionic/angular/standalone'
 })
 export class LoadingComponent {
   protected readonly loading = input.required<boolean>()
+  protected readonly km = inject(KmThemeService).isKm
 
   // A list that has been loading for a minute is stuck (a request that never got an answer,
   // e.g. while the backend restarted). The kids' display has no way to recover from that, so

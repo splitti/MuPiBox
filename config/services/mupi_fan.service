@@ -6,7 +6,9 @@ DefaultDependencies=no
 
 [Service]
 Type=simple
-RemainAfterExit=true
+# RemainAfterExit removed and Restart added: a crashed fan control left the PWM output off.
+Restart=on-failure
+RestartSec=10
 ExecStart=python3 /usr/local/bin/mupibox/fan_control.py
 ExecStop=pkill -f "python3 /usr/local/bin/mupibox/fan_control.py"
 KillMode=process

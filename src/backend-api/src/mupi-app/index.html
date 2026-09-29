@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="de" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark light">
+  <title>MuPiBox</title>
+  <link rel="icon" href="mupi-hell.svg" type="image/svg+xml">
+  <!-- On a phone's home screen: an app of its own (icon, name, no browser bars) -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="MuPiBox">
+  <meta name="theme-color" content="#0F1522">
+  <!-- The chosen theme before the first paint (dark by default), so nothing flashes -->
+  <script>
+    try {
+      var t = localStorage.getItem('mupi-theme')
+      if (t === 'light' || t === 'dark' || t === 'auto') document.documentElement.setAttribute('data-theme', t)
+    } catch (e) {}
+    // (the bars of the phone around the app in its background colour, see themeColor in app.js)
+    var light = t === 'light' || (t === 'auto' && matchMedia('(prefers-color-scheme: light)').matches)
+    if (light) document.querySelector('meta[name="theme-color"]').content = '#F3F6F9'
+  </script>
+  <link rel="stylesheet" href="fonts.css">
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="app.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <div class="shell" id="shell">
+    <nav class="sidebar" id="sidebar" aria-label="Bereiche"></nav>
+    <div class="main">
+      <header class="topbar" id="topbar"></header>
+      <main class="content" id="content" tabindex="-1">
+        <div class="loading"><img class="mupi-d" src="mupi.svg" alt="" width="96" height="100"><img class="mupi-l" src="mupi-hell.svg" alt="" width="96" height="100"><p>Verbinde mit der Box …</p></div>
+      </main>
+    </div>
+    <nav class="tabbar" id="tabbar" aria-label="Bereiche"></nav>
+  </div>
+  <div class="sheet-scrim" id="sheet-scrim" hidden></div>
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true" hidden></div>
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+</body>
+</html>

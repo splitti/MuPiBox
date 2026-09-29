@@ -1,5 +1,10 @@
 <?php
-$command = "sudo rm /var/www/support_data.zip";
+require __DIR__ . '/includes/auth_check.php';
+
+// support_data bundles config + logs + state for support. Same exposure
+// concerns as pm2logs.php / fullbackup.php — require auth via the
+// header-only gate (header.php would print HTML and corrupt the zip).
+$command = "sudo rm -f /var/www/support_data.zip"; // left over by older versions
 exec( $command );
 $command = "sudo rm -R /tmp/support";
 exec( $command );
@@ -31,32 +36,10 @@ $command = "echo $(jq --version) >> /tmp/support/mupi.info";
 exec( $command );
 $command = "sudo chmod -R 777 /tmp/support/support";
 exec( $command );
-$command = "sudo zip -r /var/www/support_data.zip /tmp/support/*";
-exec( $command );
-$command = "sudo chmod 777 /var/www/support_data.zip; sudo chown www-data:www-data /var/www/support_data.zip";
-exec( $command );
-
-//Define header information
-header('Content-Description: File Transfer');
-//header("Content-Encoding: gzip");
-//header('Vary: Accept-Encoding');
-header('Content-Type: application/octet-stream');
-header("Cache-Control: no-cache, must-revalidate");
-header("Expires: 0");
-header("Content-Transfer-Encoding: binary");
-header('Content-Disposition: attachment; filename="support_data.zip"');
-header("Content-Length: ".filesize('support_data.zip'));
-header("Content-Transfer-Encoding: binary");
-header('Pragma: public');
-
-//Clear system output buffer
-flush();
-
-ob_clean();
-ob_end_flush();
-
-//Read the size of the file
-//print_r($output,true);
-readfile("support_data.zip");
-//Terminate from the script
-?>
+// Built outside the web root and deleted after sending (it used to stay in /var/www with mode 777,
+// downloadable by anyone in the LAN). The collected files in /tmp/support go right after.
+register_shutdown_function(function () {
+	exec("sudo rm -rf /tmp/support");
+});
+require __DIR__ . '/includes/zip_download.php';
+mupibox_send_zip('support_data.zip', '-r', '/tmp/support/*');

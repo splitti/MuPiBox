@@ -1,0 +1,250 @@
+/* fahrzeuge – MuPiBox-Theme „Fahrzeuge“ (km-Theme-Familie)
+   Grundlage 800 × 480. Vollständige Beschreibung: README.md im Handoff-Paket.
+   Die Regeln unter „GEMEINSAMER TEIL“ setzen die HTML-Änderungen aus dem README voraus.
+   Alle Selektoren gegen die laufende App prüfen (Ionic-Shadow-DOM). */
+
+@font-face {
+  font-family: "Baloo 2";
+  src: url("/theme-data/_fonts/Baloo2-Variable.ttf") format("truetype");
+  font-weight: 300 700;
+  font-display: block;
+}
+
+:root {
+  --km-night: #2B2F36;  --km-night-2: #353A43;  --km-night-3: #424854;  --km-night-4: #525A68;
+  --km-stack-1: #E0B53A; --km-stack-2: #9C7E22; --km-shadow: #1A1D22;  --km-overlay: #1E2126;
+  --km-cream: #F5F2EA;  --km-ring: #FFC83D;     --km-ink: #1E2126;     --km-lavender: #C9CED8;
+  --km-apricot: #FFC83D; --km-apricot-shadow: #A67C00;
+  --km-moon: #FFE58A;   --km-rose: #FF6B4A;
+  --km-on-bg: #F5F2EA;  --km-sync-bg: #2B2F36;  --km-sync-fg: #F5F2EA;
+  --km-spring: cubic-bezier(.3, 1.4, .6, 1);
+  --km-ease: cubic-bezier(.2, .7, .2, 1);
+  --ion-font-family: "Baloo 2", sans-serif;
+}
+/* Nacht-Variante: body.km-night { --km-night:#17132A; --km-night-3:#2A2447; --km-cream:#E6D9C3; --km-apricot:#E0995A; --km-moon:#E8CF95; } */
+
+/* Hintergrund */
+.ion-page {
+  background: var(--km-night) url("/theme-data/fahrzeuge/background.svg") center / cover no-repeat !important;
+}
+body .home-content, body .medialist-content, body .player-content { --ion-background-color: transparent !important; }
+
+/* Kopfleiste */
+.ion-page .home-header, .ion-page .medialist-header, .ion-page .player-header {
+  --ion-color-light: transparent !important;
+  --ion-color-light-contrast: var(--km-on-bg) !important;
+  box-shadow: none !important;
+}
+.home-header ion-toolbar, .medialist-header ion-toolbar, .player-header ion-toolbar {
+  --background: transparent; --border-width: 0; --min-height: 72px; --color: var(--km-on-bg);
+}
+.home-header ion-buttons ion-button, .medialist-header ion-buttons ion-button, .player-header ion-back-button, .player-header ion-buttons ion-button {
+  width: 64px; height: 64px;
+  --border-radius: 32px; --background: var(--km-night-3); --background-activated: var(--km-night-4);
+  --color: var(--km-cream);
+  transition: transform 150ms var(--km-spring);
+}
+.home-header ion-buttons ion-button:active, .medialist-header ion-buttons ion-button:active, .player-header ion-back-button:active { transform: scale(.9); }
+.home-header .status-icons { --background: transparent; width: auto; }
+
+.home-header ion-segment {
+  background: var(--km-night-2); border-radius: 34px; padding: 4px; max-width: 400px; margin: 0 auto;
+}
+.home-header ion-segment-button {
+  min-width: 96px; min-height: 56px;
+  --indicator-color: transparent; --border-radius: 28px;
+  --color: var(--km-lavender); --color-checked: var(--km-ink);
+  border-radius: 28px;
+  transition: transform 150ms var(--km-spring), background-color 200ms;
+}
+.home-header ion-segment-button.segment-button-checked { background: var(--km-apricot); }
+.home-header ion-segment-button:active { transform: scale(.92); }
+.home-header ion-segment-button ion-icon { font-size: 30px; }
+
+.medialist-header ion-title, .player-header .toolbar-album { color: var(--km-on-bg); font-weight: 600; font-size: 26px; }
+.player-header .toolbar-album { font-size: 22px; }
+.player-header .toolbar-tracktitle { color: var(--km-lavender); font-weight: 500; font-size: 16px; }
+
+/* Karten (Start + Liste) */
+.home-content ion-card, .medialist-content ion-card { box-shadow: none !important; background: transparent !important; }
+.home-content .circle-card {
+  width: 208px; height: 208px; margin: 0 auto;
+  border: 6px solid var(--km-ring) !important; border-radius: 50% !important;
+  box-shadow: 0 6px 0 var(--km-shadow) !important;
+  transition: transform 180ms var(--km-spring);
+}
+.medialist-content .img-row ion-card {
+  width: 204px; height: 204px; margin: 0 auto; overflow: visible;
+  border-radius: 22px !important; background: var(--km-night-4) !important;
+  box-shadow: 0 6px 0 var(--km-shadow) !important;
+  transition: transform 180ms var(--km-spring);
+}
+.medialist-content .img-row ion-card img { width: 100%; height: 100%; object-fit: contain; border-radius: 22px; }
+.home-content .img-row ion-card:active, .medialist-content .img-row ion-card:active { transform: scale(.93); }
+
+/* Namensleiste = Vorlese-Knopf */
+.home-content .title-row ion-card, .medialist-content .title-row ion-card {
+  width: 232px; height: 60px; margin: 0 auto;
+  background: var(--km-cream) !important; border-radius: 30px !important;
+  box-shadow: 0 4px 0 var(--km-shadow) !important;
+  transition: transform 180ms var(--km-spring), background-color 200ms;
+}
+.home-content .title-row ion-card:active, .medialist-content .title-row ion-card:active { transform: scale(.95); }
+.home-content ion-card-header, .medialist-content ion-card-header {
+  height: 60px; padding: 0 20px; display: flex; align-items: center; border: 0 !important; background: transparent !important;
+}
+.home-content .truncate-text, .medialist-content .truncate-text {
+  font-family: "Baloo 2", sans-serif !important; font-weight: 600; font-size: 21px !important;
+  color: var(--km-ink) !important; text-align: center !important; flex: 1; min-width: 0;
+}
+/* benötigt HTML: [class.km-speaking] an der Namens-Karte */
+.title-row ion-card.km-speaking { background: var(--km-moon) !important; transform: scale(1.05); }
+
+/* benötigt HTML: Ordner / eigene Titel / Sync */
+.km-folder .km-stack { position: absolute; height: 40px; background: var(--km-stack-1); border-radius: 20px 20px 0 0; left: 12px; right: 12px; top: -11px; z-index: -1; }
+.km-folder .km-stack + .km-stack { background: var(--km-stack-2); left: 24px; right: 24px; top: -22px; z-index: -2; }
+.km-badge {
+  position: absolute; right: -10px; bottom: -10px; width: 56px; height: 56px; border-radius: 28px;
+  display: grid; place-items: center; background: var(--km-apricot); color: var(--km-ink); border: 4px solid var(--km-night); box-sizing: border-box; font-size: 26px;
+}
+
+/* Scrollbalken */
+mupi-swiper swiper-container::part(scrollbar) { width: 200px; height: 8px; left: 300px; bottom: 22px; background: var(--km-night-3); border-radius: 4px; }
+
+/* Player */
+.player-content .cover-card { width: 320px; height: 320px; border-radius: 28px; background: var(--km-night-4); box-shadow: 0 8px 0 var(--km-shadow); }
+.player-content .cover-card img { width: 100%; height: 100%; object-fit: contain; }
+.player-content ion-range {
+  --bar-height: 12px; --bar-border-radius: 6px;
+  --bar-background: var(--km-night-3) !important; --bar-background-active: var(--km-apricot);
+  --knob-size: 32px; --knob-background: var(--km-cream);
+}
+.player-content ion-range::part(knob) { border: 4px solid var(--km-apricot); box-sizing: border-box; box-shadow: none; }
+.player-content .controls ion-button {
+  --background: var(--km-night-3); --background-activated: var(--km-night-4); --color: var(--km-cream);
+  --border-radius: 38px; --box-shadow: 0 4px 0 var(--km-shadow);
+  width: 76px; height: 76px; transition: transform 150ms var(--km-spring);
+}
+.player-content .controls ion-button:active { transform: scale(.9); }
+/* benötigt HTML: Rollen-Klassen */
+.player-content .controls ion-button.km-play { width: 116px; height: 116px; --border-radius: 58px; --background: var(--km-apricot); --color: var(--km-ink); --box-shadow: 0 6px 0 var(--km-apricot-shadow); font-size: 54px; }
+.player-content .controls ion-button.km-skip { width: 96px; height: 72px; --border-radius: 36px; }
+.player-content .controls ion-button.km-minor { width: 72px; height: 64px; --border-radius: 32px; --background: var(--km-night-2); --color: var(--km-lavender); --box-shadow: none; }
+.player-content .controls ion-button[color="dark"] { --background: var(--km-apricot); --color: var(--km-ink); }
+.player-content .press-indicator-track { stroke: rgba(255, 243, 224, .35); }
+.player-content .press-indicator-progress, .player-content .load-indicator-ring { stroke: var(--km-apricot); }
+.player-content .tracklist { background: var(--km-night-2); border-radius: 28px; }
+.player-content .tracklist ion-item { --background: var(--km-night-3) !important; --color: var(--km-cream); --border-radius: 20px; --min-height: 64px; margin-bottom: 6px; }
+.player-content .tracklist ion-item.current-track { --background: var(--km-apricot) !important; --color: var(--km-ink); }
+
+/* Hörzeit-Abzeichen */
+.playtime-chip {
+  top: 76px; right: 14px; height: 32px; padding: 0 12px 0 9px; border-radius: 16px;
+  font-family: "Baloo 2", sans-serif; font-size: 16px; font-weight: 600;
+  background: var(--km-night-3); color: var(--km-cream);
+  backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: none;
+}
+.playtime-chip[data-level="warning"] { background: var(--km-apricot); color: var(--km-ink); }
+.playtime-chip[data-level="critical"] { background: var(--km-rose); color: #2A0E06; }
+
+/* Tageslimit / Ruhezeit */
+.playtime-blocked-overlay { background: var(--km-overlay) url("/theme-data/fahrzeuge/background.svg") center / cover !important; color: var(--km-on-bg); }
+.playtime-blocked-overlay h1 { font-family: "Baloo 2", sans-serif; font-size: 44px; font-weight: 600; }
+.playtime-blocked-overlay p { color: var(--km-lavender); font-size: 24px; }
+.playtime-blocked-overlay .inline-icon { color: var(--km-apricot); }
+
+/* Eltern-QR */
+.magic-link-overlay { background: rgba(20, 16, 36, .86); backdrop-filter: none; }
+.magic-link-overlay .ml-card { background: var(--km-cream); color: var(--km-ink); border-radius: 32px; width: 680px; }
+.magic-link-overlay .ml-close { height: 64px; border-radius: 32px; background: var(--km-ink); color: var(--km-cream); font-family: "Baloo 2", sans-serif; font-size: 22px; border: 0; }
+
+ion-spinner { color: var(--km-apricot) !important; }
+
+
+/* ==================================================================
+   GEMEINSAMER TEIL aller km-Themes (identisch in jeder Theme-Datei,
+   nur die Variablen oben unterscheiden sich). Setzt die HTML-Änderungen
+   aus README → „Aufbau-Änderungen“ voraus. Aktiv nur mit body.km
+   ================================================================== */
+
+/* Statussymbole */
+body.km .status-icons, body.km .mupihat-icon-container, body.km .status-icons ion-icon { color: var(--km-on-bg) !important; }
+body.km .status-icons .percent, body.km .mupihat-icon-container .percent { color: var(--km-lavender); font-size: 12px; font-weight: 600; }
+
+/* Player-Kopfleiste: Lautstärke + x/y als zwei Pillen nebeneinander */
+body.km .km-chip { height: 34px; padding: 0 12px; border-radius: 17px; background: var(--km-night-2); color: var(--km-lavender); font-size: 16px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+
+/* Namensleiste: vorlesen-Zustand */
+body.km .title-row ion-card { transition: transform 180ms var(--km-spring), background-color 200ms; }
+body.km .title-row ion-card.km-speaking { background: var(--km-moon) !important; transform: scale(1.05); }
+
+/* Ordner (Kartenstapel), „Alle Titel hier“, Sync-Abzeichen */
+body.km .img-row ion-card.km-folder, body.km .img-row ion-card.km-own { overflow: visible !important; position: relative; }
+body.km .km-stack { position: absolute; left: 12px; right: 12px; top: -11px; height: 40px; border-radius: 20px 20px 0 0; background: var(--km-stack-1); z-index: -1; }
+body.km .km-stack + .km-stack { left: 24px; right: 24px; top: -22px; background: var(--km-stack-2); z-index: -2; }
+body.km .km-badge { position: absolute; right: -10px; bottom: -10px; width: 56px; height: 56px; border-radius: 28px; display: grid; place-items: center; background: var(--km-apricot); color: var(--km-ink); border: 4px solid var(--km-night); box-sizing: border-box; font-size: 26px; z-index: 2; }
+body.km .km-own-label { position: absolute; left: 10px; top: 10px; height: 30px; padding: 0 12px; border-radius: 15px; background: var(--km-cream); color: var(--km-ink); font-size: 15px; font-weight: 600; display: flex; align-items: center; z-index: 2; }
+body.km .km-sync { position: absolute; right: 10px; top: 10px; width: 30px; height: 30px; border-radius: 15px; background: var(--km-sync-bg); color: var(--km-sync-fg); display: grid; place-items: center; font-size: 17px; z-index: 2; }
+body.km .km-missing { position: absolute; inset: 0; display: grid; place-items: center; background: var(--km-night-3); border-radius: inherit; }
+body.km .km-missing img { width: 110px; height: 110px; }
+body.km mupi-swiper .km-few .swiper-wrapper { justify-content: center; }
+
+/* ---------- Bühne (Cover-Flow-Variante, Schieberegler in MuPi-Conf) ---------- */
+body.km.km-stage .km-stage-wrap { position: relative; height: 380px; }
+body.km.km-stage .km-stage swiper-slide { width: 260px !important; height: 260px; }
+body.km.km-stage .km-stage swiper-slide .km-stage-card { width: 260px; height: 260px; transform: scale(var(--km-s, 1)); opacity: var(--km-o, 1); transition: transform 320ms var(--km-ease), opacity 320ms; }
+body.km.km-stage .km-stage .circle-card { border: 6px solid var(--km-ring) !important; border-radius: 50% !important; }
+body.km.km-stage .km-stage-name { position: absolute; left: 50%; top: 300px; transform: translateX(-50%); width: 440px; height: 72px; border-radius: 36px; background: var(--km-cream); color: var(--km-ink); box-shadow: 0 5px 0 var(--km-shadow); display: flex; align-items: center; justify-content: center; padding: 0 28px; box-sizing: border-box; font-size: 22px; font-weight: 600; line-height: 1.15; text-align: center; transition: transform 180ms var(--km-spring), background-color 200ms; }
+body.km.km-stage .km-stage-name span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-wrap: balance; }
+body.km.km-stage .km-stage-name.km-speaking { background: var(--km-moon); transform: translateX(-50%) scale(1.05); }
+body.km.km-stage .km-stage-name:active { transform: translateX(-50%) scale(.96); }
+
+/* ---------- Tageslimit / Ruhezeit ---------- */
+body.km .playtime-blocked-overlay { color: var(--km-on-bg); }
+body.km .playtime-blocked-overlay .content { display: flex; flex-direction: row; align-items: center; gap: 44px; padding: 0 60px; text-align: left; max-width: none; }
+body.km .km-mascot-wrap { position: relative; flex: 0 0 220px; height: 220px; }
+body.km .km-mascot-wrap img { width: 220px; height: 220px; }
+body.km .km-mascot-wrap .icon { position: absolute; right: 6px; top: 20px; width: 72px; height: 72px; border-radius: 36px; background: var(--km-night-3); color: var(--km-moon); border: 5px solid var(--km-overlay); box-sizing: border-box; padding: 16px; font-size: 36px; }
+body.km .playtime-blocked-overlay h1 { font-size: 44px; font-weight: 600; line-height: 1.1; margin: 0 0 14px; text-wrap: balance; color: var(--km-on-bg); }
+body.km .playtime-blocked-overlay p { font-size: 24px; font-weight: 500; color: var(--km-lavender); display: flex; align-items: center; gap: 10px; margin: 0; }
+body.km .playtime-blocked-overlay .inline-icon { color: var(--km-apricot); font-size: 24px; }
+
+/* ---------- Nicht erreichbar (mupi-media-unavailable) ---------- */
+body.km mupi-media-unavailable .km-unavail { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; height: 100%; padding-bottom: 40px; }
+body.km mupi-media-unavailable .km-mascot-small { position: relative; width: 150px; height: 130px; }
+body.km mupi-media-unavailable .km-mascot-small img { width: 130px; height: 130px; }
+body.km mupi-media-unavailable .km-mascot-small ion-icon { position: absolute; right: 0; top: 0; width: 62px; height: 62px; border-radius: 31px; background: var(--km-night-3); color: var(--km-cream); border: 4px solid var(--km-night); box-sizing: border-box; padding: 11px; }
+body.km mupi-media-unavailable .km-unavail-text { font-size: 28px; font-weight: 600; color: var(--km-on-bg); }
+
+/* ---------- Laden (mupi-loading): drei hüpfende Punkte ---------- */
+body.km .km-dots { display: flex; gap: 14px; }
+body.km .km-dots i { width: 22px; height: 22px; border-radius: 11px; background: var(--km-moon); animation: km-bounce 1100ms ease-in-out infinite; }
+body.km .km-dots i:nth-child(2) { background: var(--km-apricot); animation-delay: 150ms; }
+body.km .km-dots i:nth-child(3) { animation-delay: 300ms; }
+@keyframes km-bounce { 0%, 80%, 100% { transform: translateY(0); opacity: .5 } 40% { transform: translateY(-14px); opacity: 1 } }
+
+/* ---------- Bildschirm aus: unverändert reines Schwarz ---------- */
+body.km .mupi-monitor-blocker { background: #000 !important; }
+
+/* ---------- Radio: Live-Pille statt Fortschritt ---------- */
+body.km .km-live { height: 48px; display: inline-flex; align-items: center; gap: 8px; padding: 0 18px; border-radius: 24px; background: var(--km-night-2); color: var(--km-on-bg); font-size: 18px; font-weight: 600; }
+body.km .km-live i { width: 12px; height: 12px; border-radius: 6px; background: var(--km-rose); }
+body.km .km-live.km-buffering i { background: var(--km-lavender); }
+
+/* ---------- Titelliste: Mini-Cover + „Zu“-Knopf links ---------- */
+body.km .player-content .tracklist { position: absolute; left: 16px; right: 16px; top: 42px; bottom: 14px; display: flex; overflow: hidden; }
+body.km .km-tl-side { flex: 0 0 200px; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px; }
+body.km .km-tl-side img { width: 160px; height: 160px; border-radius: 20px; object-fit: contain; background: var(--km-night-4); }
+body.km .km-tl-close { width: 160px; height: 64px; border-radius: 32px; border: 0; background: var(--km-apricot); color: var(--km-ink); font-size: 20px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; }
+
+/* Skalierung: Grundlage 800 × 480. Die ganze Oberfläche wächst mit der Bildschirmhöhe;
+   bei breiteren Bildschirmen wird einfach mehr von der Cover-Reihe sichtbar. */
+@media (min-height: 560px) { html { zoom: 1.25; } }    /* 1024 × 600 */
+@media (min-height: 700px) { html { zoom: 1.5; } }     /* 1280 × 720 */
+@media (min-height: 760px) { html { zoom: 1.6; } }     /* 1024 × 768 */
+@media (min-height: 790px) { html { zoom: 1.6667; } }  /* 1280 × 800 */
+/* Schmale Bildschirme (4 : 3, logisch < 760 breit): Player-Cover 250 statt 320 */
+@media (max-aspect-ratio: 3/2) {
+  .player-content .cover-card { width: 250px; height: 250px; }
+  .player-content .controls ion-buttons { gap: 12px; }
+}

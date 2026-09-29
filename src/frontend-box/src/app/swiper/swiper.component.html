@@ -2,7 +2,7 @@
   @if (coverflow()) {
   <!-- Cover Flow: the centered cover faces front, all others are tilted towards it (see applyCoverflow). -->
     <swiper-container #swiper class="coverflow" (click)="slideClicked($event)" (pointerdown)="fewPointerDown($event)" (pointermove)="fewPointerMove($event)" (pointerup)="fewPointerUp($event)" (pointercancel)="fewPointerUp($event)" (swiperprogress)="applyCoverflow()" (swipersettranslate)="applyCoverflow()" (swiperinit)="applyCoverflow()" watch-slides-progress="true" centered-slides="true" slides-per-view="auto" space-between="-272" grab-cursor="true" touch-ratio="0.67" [attr.scrollbar]="!hideScrollbar()" scrollbar-hide="false" scrollbar-draggable="true" scrollbar-drag-size="auto" scrollbar-snap-on-release="true">
-      @for (currentData of shownData(); track currentData) {
+      @for (currentData of shownData(); track $index + ":" + currentData.name) {
         <swiper-slide>
           <ion-grid>
             <ion-row class="img-row">
@@ -21,21 +21,87 @@
         </swiper-slide>
       }
     </swiper-container>
+  } @else if (kmStage()) {
+  <!-- km themes, "Bühne": one big cover in the middle, two smaller ones on each side, the name below it (tap: read
+       aloud). Only these few are in the DOM, whatever the length of the list (see stageItems). -->
+    @let cur = stageCurrent();
+    <div class="km-stage-wrap" [class.km-stage-dragging]="stageDragging()">
+      <div class="km-stage" (pointerdown)="stageDown($event)" (pointermove)="stageMove($event)" (pointerup)="stageUp()" (pointerleave)="stageUp()" (pointercancel)="stageUp()">
+        @for (it of stageItems(); track it.index) {
+          @let src = it.data.imgSrc | async;
+          <button class="km-stage-item" [class.km-folder]="it.data.kind === 'folder'" [class.km-own]="it.data.kind === 'own'" [style.transform]="it.transform" [style.opacity]="it.opacity" [style.z-index]="it.z" (click)="kmStageTap(it.index, it.data)">
+            @if (it.data.kind === 'folder') {
+              <span class="km-stack"></span><span class="km-stack"></span>
+            }
+            <div class="km-stage-card" [class.km-round]="roundImages()">
+              @if (coverMissing(it.data.name, src)) {
+                <img class="km-placeholder" draggable="false" [src]="kmCoverPlaceholder()" alt="">
+              } @else {
+                <img draggable="false" ondragstart="return false;" [src]="src" alt="" (error)="onCoverError(it.data.name)">
+              }
+              @if (it.data.kind === 'own') {
+                <span class="km-own-label">{{ displayTexts.text('ownFilesLabel') }}</span>
+              }
+            </div>
+            @if (it.data.kind === 'folder') {
+              <span class="km-badge"><ion-icon name="folder"></ion-icon></span>
+            }
+            @if (it.data.kind === 'own') {
+              <span class="km-badge"><ion-icon name="play"></ion-icon></span>
+            }
+            @if (it.data.synced) {
+              <span class="km-sync"><ion-icon name="link"></ion-icon></span>
+            }
+          </button>
+        }
+      </div>
+      @if (cur) {
+        <button class="km-stage-name" [class.km-speaking]="speakingName() === cur.name" (click)="readText(cur.name)"><span>{{ cur.name }}</span></button>
+      }
+      @if (!hideScrollbar() && stageBar(); as bar) {
+        <div class="km-stage-bar"><i [style.width.px]="bar.width" [style.transform]="'translateX(' + bar.x + 'px)'"></i></div>
+      }
+    </div>
   } @else {
-  <swiper-container #swiper slides-per-view="3" [attr.scrollbar]="!hideScrollbar()" scrollbar-hide="false" scrollbar-draggable="true" scrollbar-drag-size="auto" scrollbar-snap-on-release="true" free-mode="false" css-mode="true">
-      @for (currentData of shownData(); track currentData) {
+  <swiper-container #swiper slides-per-view="3" [class.km-few]="km() && shownData().length < 3" [attr.scrollbar]="!hideScrollbar()" scrollbar-hide="false" scrollbar-draggable="true" scrollbar-drag-size="auto" scrollbar-snap-on-release="true" free-mode="false" css-mode="true"
+    speed="900" touch-ratio="0.5" slides-per-group="1" resistance="true" resistance-ratio="0.85"
+    (swiperslidechange)="onSlideChange($event)">
+      @for (currentData of shownData(); track $index + ":" + currentData.name) {
         <swiper-slide>
           <ion-grid>
             <ion-row class="img-row">
               <ion-col size="12">
-                <ion-card [class.circle-card]="roundImages()" (click)="this.elementClicked.emit(currentData)">
-                  <img draggable="false" ondragstart="return false;" loading="lazy" src="{{currentData.imgSrc | async}}">
+                <ion-card [class.circle-card]="roundImages()" [class.km-folder]="km() && currentData.kind === 'folder'" [class.km-own]="km() && currentData.kind === 'own'" (click)="this.elementClicked.emit(currentData)">
+                  @if (km()) {
+                    <!-- km themes: folder = card stack + badge, the folder's own titles, Spotify sync, missing cover = mascot -->
+                    @let src = currentData.imgSrc | async;
+                    @if (currentData.kind === 'folder') {
+                      <span class="km-stack"></span><span class="km-stack"></span>
+                    }
+                    @if (coverMissing(currentData.name, src)) {
+                      <img class="km-placeholder" draggable="false" [src]="kmCoverPlaceholder()" alt="">
+                    } @else {
+                      <img draggable="false" ondragstart="return false;" loading="lazy" [src]="src" (error)="onCoverError(currentData.name)">
+                    }
+                    @if (currentData.kind === 'folder') {
+                      <span class="km-badge"><ion-icon name="folder"></ion-icon></span>
+                    }
+                    @if (currentData.kind === 'own') {
+                      <span class="km-own-label">{{ displayTexts.text('ownFilesLabel') }}</span>
+                      <span class="km-badge"><ion-icon name="play"></ion-icon></span>
+                    }
+                    @if (currentData.synced) {
+                      <span class="km-sync"><ion-icon name="link"></ion-icon></span>
+                    }
+                  } @else {
+                    <img draggable="false" ondragstart="return false;" loading="lazy" src="{{currentData.imgSrc | async}}">
+                  }
                 </ion-card>
               </ion-col>
             </ion-row>
             <ion-row class="title-row">
               <ion-col size="12">
-                <ion-card (click)="readText(currentData.name)">
+                <ion-card [class.km-speaking]="km() && speakingName() === currentData.name" (click)="readText(currentData.name)">
                   <ion-card-header>
                     <ion-card-title class="ion-text-nowrap truncate-text ion-text-center">{{currentData.name}}</ion-card-title>
                   </ion-card-header>

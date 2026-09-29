@@ -1,4 +1,10 @@
 <?php
+require __DIR__ . '/includes/auth_check.php';
+
+// chrome_debug.log can contain Spotify OAuth redirect URLs (with the
+// `code` parameter), Authorization headers, and console output from the
+// frontend. auth_check.php gates without emitting HTML so the file
+// download below still streams cleanly.
 $command = "sudo cat /home/dietpi/.config/chromium/chrome_debug.log";
 exec($command, $output, $result );
 //Define header information

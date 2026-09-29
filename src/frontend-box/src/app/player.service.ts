@@ -2,8 +2,9 @@ import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
 import type { ServerHttpApiConfig } from '@backend-api/server.model'
 import type { Observable } from 'rxjs'
-import { publishReplay, refCount } from 'rxjs/operators'
+import { shareReplay } from 'rxjs/operators'
 import { environment } from '../environments/environment'
+import { CurrentMediaService } from './current-media.service'
 import { LogService } from './log.service'
 import type { Media } from './media'
 import { SpotifyService } from './spotify.service'
@@ -42,16 +43,24 @@ export class PlayerService {
     private http: HttpClient,
     private logService: LogService,
     private spotifyService: SpotifyService,
+    private currentMediaService: CurrentMediaService,
   ) {}
 
   getConfig() {
-    // Observable with caching:
-    // publishReplay(1) tells rxjs to cache the last response of the request
-    // refCount() keeps the observable alive until all subscribers unsubscribed
+    // MED-20: previously used `publishReplay(1) + refCount()` which keeps
+    // the observable alive only while at least one subscriber is connected.
+    // mupihat-icon components mount-then-unmount-then-mount as the user
+    // navigates between tabs in the admin UI — each remount unsubscribed
+    // and resubscribed, which dropped to zero subscribers in between and
+    // re-fired the underlying http.get. With three mupihat-icons across
+    // the toolbar/footer/medialist views, that's three /api/sonos hits per
+    // navigation. Switch to `shareReplay({ bufferSize: 1, refCount: false })`
+    // so the cached config survives the zero-subscriber window. The config
+    // only changes via setting_update.sh (which restarts pm2 anyway), so
+    // the lifetime cache is fine.
     if (!this.config) {
       this.config = this.http.get<ServerHttpApiConfig>(`${environment.backend.apiUrl}/sonos`).pipe(
-        publishReplay(1), // cache result
-        refCount(),
+        shareReplay({ bufferSize: 1, refCount: false }),
       )
     }
 
@@ -74,7 +83,7 @@ export class PlayerService {
     this.sendRequest(cmd)
   }
 
-  seekPosition(pos) {
+  seekPosition(pos: number) {
     const seekpos = `seekpos:${pos}`
     this.sendRequest(seekpos)
   }
@@ -119,15 +128,19 @@ export class PlayerService {
         break
       }
       case 'radio': {
-        url = `radio/${encodeURIComponent(media.id)}/${encodeURIComponent(media.title)}:title:artist:${encodeURIComponent(media.artist)}`
+        url = `radio/${encodeURIComponent(media.id)}/${encodeURIComponent(media.title)}:title:artist:${encodeURIComponent(media.artist)}${this.coverQuery(media)}`
         break
       }
       case 'rss': {
-        url = `rss/${encodeURIComponent(media.id)}/${encodeURIComponent(media.title)}:title:artist:${encodeURIComponent(media.artist)}`
+        url = `rss/${encodeURIComponent(media.id)}/${encodeURIComponent(media.title)}:title:artist:${encodeURIComponent(media.artist)}${this.coverQuery(media)}`
         break
       }
     }
 
+    // Snapshot the Media so the global resume-on-cap effect (AppComponent)
+    // knows what was playing if playtime/quiet stops it while the user is
+    // off the player page.
+    this.currentMediaService.set(media)
     this.sendRequest(url)
     return true
   }
@@ -152,6 +165,23 @@ export class PlayerService {
       url = `spotify/now/spotify:show:${encodeURIComponent(media.audiobookid)}:${media.resumespotifytrack_number}:${media.resumespotifyprogress_ms}`
     }
 
+    this.currentMediaService.set(media)
+    this.sendRequest(url)
+    return true
+  }
+
+  // Library resume: hand the target track + position to the backend in one
+  // request so mplayer can do a single atomic pt_step instead of the page
+  // playing audible fragments of every intermediate track during an N-skip
+  // sequence. Position is a percentage (0–100), rounded — sub-percent
+  // precision is irrelevant for a resume hint.
+  async resumeLibraryMedia(media: Media): Promise<boolean> {
+    const trackNr = media.resumelocalcurrentTracknr || 1
+    const progressPct = Math.round(media.resumelocalprogressTime || 0)
+    // the same folder as playMedia() uses: live library entries carry their real path, and
+    // category:artist:title pointed at a folder that does not exist for them
+    const url = `musicsearch/library/resume/${this.libraryFolderParam(media)}:${trackNr}:${progressPct}`
+    this.currentMediaService.set(media)
     this.sendRequest(url)
     return true
   }
@@ -227,6 +257,13 @@ export class PlayerService {
 
       this.sendRequest(url)
     })
+  }
+
+  // The picture of a radio station / podcast episode for the player's status (spotify-control.js ?cover=): the parents'
+  // app shows it at "Läuft gerade". The box's own API as a path (the box's address here is localhost, not the phone's).
+  private coverQuery(media: Media): string {
+    const cover = (media.cover ?? '').replace(/^https?:\/\/[^/]+(?=\/api\/)/, '')
+    return cover ? `?cover=${encodeURIComponent(cover)}` : ''
   }
 
   private sendRequest(url: string) {

@@ -78,7 +78,7 @@ export interface SpotifyAudiobooksResponseItem {
 
 export interface SpotifyConfig {
   clientId: string
-  clientSecret: string
+  clientSecret?: string // no longer sent by /api/spotify/config
   deviceName: string
 }
 

@@ -34,6 +34,8 @@
 			"mystic"
 			],
 		"customTheme": "",
+		"onlineCovers": false,
+		"onlineCoversSave": false,
 		"startSound": "/home/dietpi/MuPiBox/sysmedia/sound/startup.wav",
 		"shutSound": "/home/dietpi/MuPiBox/sysmedia/sound/shutdown.wav",
 		"startVolume": "40",
@@ -276,6 +278,37 @@
 		"idleDisplayOff": "10",
 		"pressDelay": "2"
 	    },
+	"playtimeLimit": {
+		"enabled": false,
+		"resetHour": 0,
+		"graceMode": "track",
+		"limitsMinutes": {
+			"mon": 60,
+			"tue": 60,
+			"wed": 60,
+			"thu": 60,
+			"fri": 60,
+			"sat": 60,
+			"sun": 60
+		}
+	},
+	"quietHours": {
+		"enabled": false,
+		"graceMode": "track",
+		"schedule": {
+			"mon": [],
+			"tue": [],
+			"wed": [],
+			"thu": [],
+			"fri": [],
+			"sat": [],
+			"sun": []
+		}
+	},
+	"playbackOverride": {
+		"allowUntil": 0,
+		"forceBlockUntil": 0
+	},
 	"shim": {
 		"poweroffPin": "4",
 		"triggerPin": "17",
@@ -300,7 +333,8 @@
 	"telegram": {
 		"token": "",
 		"active": false,
-		"chatId": ""
+		"chatId": "",
+		"notifyPlayback": false
 	},
 	"mqtt": {
 		"active": false,
@@ -346,13 +380,27 @@
 			{
 				"name": "ENERpower 2S2P 10.000mAh",
 				"config": {
-						"v_100": "8000",
+						"v_100": "8200",
 						"v_75": "7700",
-						"v_50": "7300",
-						"v_25": "6900",
-						"v_0": "6000",
-						"th_warning": "6500",
-						"th_shutdown": "6150"
+						"v_50": "7400",
+						"v_25": "7000",
+						"v_0": "6400",
+						"th_warning": "6700",
+						"th_shutdown": "6600",
+						"vreg": "8300"
+				}
+			},
+			{
+				"name": "ENERpower 2S3P 15.000mAh",
+				"config": {
+						"v_100": "8200",
+						"v_75": "7700",
+						"v_50": "7400",
+						"v_25": "7000",
+						"v_0": "6400",
+						"th_warning": "6700",
+						"th_shutdown": "6600",
+						"vreg": "8300"
 				}
 			},
 			{
@@ -404,6 +452,11 @@
 		"fan_temp_75": "65",
 		"fan_temp_50": "55",
 		"fan_temp_25": "45"
+	},
+	"rotary": {
+		"active": false,
+		"button": "off",
+		"step": 5
 	}
 }
 

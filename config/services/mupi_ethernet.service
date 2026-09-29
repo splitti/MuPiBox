@@ -1,0 +1,13 @@
+[Unit]
+Description=MuPiBox LAN (address as soon as a cable is plugged in)
+After=network-pre.target
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+# simple: counts as started at once - the start does not wait for an address (see mupi_ethernet.sh)
+Type=simple
+ExecStart=/usr/local/bin/mupibox/mupi_ethernet.sh eth0
+Restart=on-failure
+RestartSec=10

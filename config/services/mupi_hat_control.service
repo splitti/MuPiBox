@@ -1,4 +1,8 @@
 [Unit]
+# Never give up (StartLimitIntervalSec=0), but retry slowly (RestartSec 30 here: power button / LED): with a start
+# limit the service stayed dead for good after a few quick failures - e.g. a boot without WiFi -
+# until the next reboot; retrying every 10 s filled the journal (librespot 325x in an hour).
+StartLimitIntervalSec=0
 Description=Control service, to automate warn and shutdown
 After=local-fs.target sysinit.target mupi_hat.service
 DefaultDependencies=no
@@ -9,7 +13,14 @@ WorkingDirectory=/tmp/
 User=root
 ExecStart=/bin/bash -c '/usr/local/bin/mupibox/mupihat_automation.sh'
 ExecStop=/bin/kill -TERM $(cat /run/mupi_hat_control.pid)
-Restart=on-abort
-
+# Phase 13b (B4): on-abort only fires on SIGABRT — it misses normal
+# non-zero exits and the typical set-e bash exit code path. This service
+# drives Low-Battery warnings and auto-shutdown; a stuck-dead service
+# means the box runs the pack into deep discharge unnoticed. Switching
+# to on-failure (Phase-8 pattern) catches all non-success exits. Longer
+# RestartSec (30s) because the script polls /tmp/mupihat.json on its
+# own cadence — frequent restarts add no value here.
+Restart=on-failure
+RestartSec=30
 [Install]
 WantedBy=multi-user.target

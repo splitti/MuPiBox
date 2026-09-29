@@ -46,11 +46,16 @@ export class SpotifyMediaInfo {
       console.debug(`${logPrefix} Fetching playlist data from Spotify Embed: ${playlistId}`)
 
       const embedUrl = `https://open.spotify.com/embed/playlist/${playlistId}`
+      // B6: AbortSignal.timeout() ensures a stalled embed-page fetch
+      // can't hang the foreground request indefinitely (no built-in
+      // fetch timeout in Node). 20s matches the SDK timeout in
+      // SpotifyApiService.
       const response = await fetch(embedUrl, {
         headers: {
           'user-agent':
             'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36',
         },
+        signal: AbortSignal.timeout(20000),
       })
 
       if (!response.ok) {

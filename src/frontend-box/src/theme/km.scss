@@ -1,0 +1,245 @@
+// km themes (children's themes of one design, see app/theme/km-theme.service.ts): the parts of the layout that
+// are the same for all 17 themes and that live outside a single component - headers and status icons. Only active
+// with body.km; colours come from the active theme's --km-* variables. !important where the pages' own rules
+// (e.g. 70 px toolbar buttons) would win otherwise.
+
+// status (WiFi + battery, see app/status): the colours of all kids' themes
+body.km {
+  --st-on: var(--km-on-bg);
+  --st-track: color-mix(in srgb, var(--km-on-bg) 42%, transparent);
+  --st-full: var(--km-on-bg);
+  --st-num: var(--km-night);
+  --st-low: var(--km-rose);
+  --st-charge: var(--km-apricot);
+  --st-bolt-edge: var(--km-night);
+}
+
+body.km.km-light {
+  --st-track: color-mix(in srgb, var(--km-on-bg) 30%, transparent);
+  --st-full: #ffffff;
+  --st-num: var(--km-on-bg);
+}
+
+body.km {
+  // ---------- header: 72 px, transparent, round 64 px buttons ----------
+  .home-header,
+  .medialist-header,
+  .player-header {
+    box-shadow: none !important;
+
+    ion-toolbar {
+      --background: transparent !important;
+      --border-width: 0 !important;
+      --min-height: 72px;
+      --padding-start: 14px;
+      --padding-end: 14px;
+      --color: var(--km-on-bg);
+    }
+
+    ion-buttons[slot='start'] ion-button,
+    ion-back-button {
+      width: 64px !important;
+      height: 64px !important;
+      margin: 0;
+      --border-radius: 32px;
+      --background: var(--km-night-3);
+      --background-activated: var(--km-night-4);
+      --background-focused: var(--km-night-4);
+      --background-hover: var(--km-night-3);
+      --color: var(--km-cream);
+      --padding-start: 0;
+      --padding-end: 0;
+      --icon-font-size: 28px;
+      transition: transform 150ms var(--km-spring);
+
+      &:active {
+        transform: scale(0.9);
+      }
+
+      ion-icon {
+        font-size: 28px;
+        color: var(--km-cream);
+      }
+    }
+
+    // resume ("Weiterhören"): the design's clock with an arrow
+    .km-resume-icon {
+      width: 30px;
+      height: 30px;
+      fill: none;
+      stroke: var(--km-cream);
+      stroke-width: 2.2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    // status: WiFi and battery in the theme's colour on the background
+    .status-icons,
+    .mupihat-icon-container {
+      --background: transparent;
+      --color: var(--km-on-bg);
+      color: var(--km-on-bg);
+    }
+  }
+
+  // ---------- start page: category pill (tabs 96 × 56) ----------
+  .home-header ion-segment {
+    flex: 0 0 auto;
+    height: 64px !important;
+    min-height: 64px !important;
+    align-self: center;
+    // as wide as its tabs (two tabs when two categories are hidden: a small pill, as in the design). Ionic lays the
+    // tabs out as a grid whose columns share the width (1fr): a fixed column width, else three tabs (the NAS tab gone,
+    // see home.page.ts) spread over the pill of four.
+    width: fit-content !important;
+    grid-auto-columns: 96px !important;
+    justify-content: center;
+    max-width: 420px;
+    margin: 0 auto;
+    padding: 4px;
+    gap: 0;
+    border-radius: 34px;
+    background: var(--km-night-2);
+  }
+
+  .home-header ion-segment-button {
+    flex: 0 0 96px;
+    min-width: 96px;
+    max-width: 96px;
+    min-height: 56px;
+    height: 56px;
+    margin: 0;
+    border-radius: 28px;
+    --border-radius: 28px;
+    --indicator-color: transparent;
+    --indicator-height: 0;
+    --background: transparent;
+    --background-checked: var(--km-apricot);
+    // no grey hover / focus field on a tab that was touched but is not the chosen one
+    --background-hover: transparent;
+    --background-hover-opacity: 0;
+    --background-focused: transparent;
+    --background-focused-opacity: 0;
+    --background-activated: transparent;
+    --background-activated-opacity: 0;
+    --ripple-color: transparent;
+    outline: none;
+    --color: var(--km-lavender);
+    --color-checked: var(--km-ink);
+    transition:
+      transform 150ms var(--km-spring),
+      background-color 200ms;
+
+    &::part(indicator) {
+      display: none;
+    }
+
+    // the tapped tab showed a rectangular field (ripple / focus) around the round tab
+    &::part(native) {
+      border-radius: 28px;
+      overflow: hidden;
+      outline: none;
+    }
+
+    &.segment-button-checked {
+      background: var(--km-apricot);
+    }
+
+    // icon colour set directly: the toolbar's colour would win over --color / --color-checked
+    ion-icon {
+      color: var(--km-lavender);
+    }
+
+    &.segment-button-checked ion-icon {
+      color: var(--km-ink);
+    }
+
+    &:active {
+      transform: scale(0.92);
+    }
+
+    ion-icon {
+      font-size: 30px;
+    }
+  }
+
+  // ---------- resume page: on the theme's background like the album list (the theme files only name the others) ----------
+  .resume-content {
+    --ion-background-color: transparent !important;
+    --background: transparent !important;
+  }
+
+  // ---------- "not reachable": the mascot is on the theme's background (transparent), so the list behind it goes ----------
+  mupi-media-unavailable ~ mupi-swiper {
+    visibility: hidden;
+  }
+
+  // ---------- album list: the title left next to the back button ----------
+  .medialist-header ion-title {
+    padding-inline: 16px 8px;
+    text-align: left;
+    font-size: 26px;
+    font-weight: 600;
+    color: var(--km-on-bg);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  // ---------- player header: album 22/600, track 16/500, volume and x/y as pills ----------
+  .player-header {
+    // the titles end with "..." before the volume and track pills
+    .toolbar-album,
+    .toolbar-tracktitle {
+      width: 440px;
+
+      div {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
+
+    .toolbar-album {
+      padding-inline: 16px 8px;
+      text-align: left;
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--km-on-bg);
+    }
+
+    .toolbar-tracktitle {
+      padding-inline: 16px 8px;
+      text-align: left;
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--km-lavender);
+    }
+
+    // volume and "x / y" side by side as pills (an empty one is left out)
+    .toolbar-tracknumber {
+      min-width: 0;
+      max-width: none;
+      padding-inline: 0 8px;
+
+      > div:empty {
+        display: none;
+      }
+    }
+
+    .toolbar-tracknumber > div,
+    .km-chip {
+      height: 34px;
+      padding: 0 12px;
+      border-radius: 17px;
+      background: var(--km-night-2);
+      color: var(--km-lavender);
+      font-size: 16px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: 8px;
+    }
+  }
+}

@@ -1,0 +1,137 @@
+.playtime-blocked-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  user-select: none;
+  cursor: default;
+
+  .content {
+    color: #ffffff;
+    padding: 2rem;
+    max-width: 90%;
+  }
+
+  .icon {
+    font-size: 96px;
+    margin-bottom: 1.5rem;
+    opacity: 0.85;
+  }
+
+  h1 {
+    font-size: 2rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+    line-height: 1.2;
+  }
+
+  p {
+    font-size: 1.25rem;
+    opacity: 0.8;
+    margin: 0;
+    line-height: 1.3;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .inline-icon {
+    font-size: 1.4rem;
+    opacity: 0.85;
+    vertical-align: middle;
+  }
+}
+
+// km themes: mascot 220 on the left with the icon as a badge, heading and line of text on the right
+:host-context(body.km) .playtime-blocked-overlay {
+  // plain overlay colour, as in the design (the theme file puts its landscape picture here)
+  background: var(--km-overlay) !important;
+
+  .content {
+    display: flex;
+    align-items: center;
+    gap: 44px;
+    max-width: none;
+    padding: 0 60px;
+    text-align: left;
+    color: var(--km-on-bg);
+  }
+
+  .km-mascot-wrap {
+    position: relative;
+    flex: 0 0 220px;
+    height: 220px;
+
+    img {
+      width: 220px;
+      height: 220px;
+    }
+
+    // badge 72 × 72 with rounded corners, top right on the mascot
+    .icon,
+    .km-badge-zzz {
+      position: absolute;
+      right: 6px;
+      top: 20px;
+      margin: 0;
+      border-radius: 24px;
+      border: 5px solid var(--km-overlay);
+      background: var(--km-night-3);
+      color: var(--km-moon);
+      opacity: 1;
+    }
+
+    // ion-icon keeps box-sizing content-box (!important): 34 + 2 × 14 padding + 2 × 5 border = 72
+    .icon {
+      width: 34px;
+      height: 34px;
+      padding: 14px;
+      font-size: 34px;
+    }
+
+    .km-badge-zzz {
+      box-sizing: border-box;
+      width: 72px;
+      height: 72px;
+      display: grid;
+      place-items: center;
+      font-size: 24px;
+      font-weight: 700;
+      line-height: 1;
+    }
+  }
+
+  h1 {
+    margin: 0 0 14px;
+    font-size: 44px;
+    font-weight: 600;
+    line-height: 1.1;
+    text-wrap: balance;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  p {
+    display: flex;
+    gap: 10px;
+    font-size: 24px;
+    font-weight: 500;
+    color: var(--km-lavender);
+    opacity: 1;
+  }
+
+  .inline-icon {
+    font-size: 24px;
+    color: var(--km-apricot);
+    opacity: 1;
+  }
+}

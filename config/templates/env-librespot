@@ -8,12 +8,19 @@ export LIBRESPOT_BITRATE=160
 export LIBRESPOT_INITIAL_VOLUME=100
 export LIBRESPOT_ENABLE_VOLUME_NORMALISATION=1
 export LIBRESPOT_NORMALISATION_PREGAIN=0
+# The variable was LIBRESPOT_NAME_DISABLE_AUDIO_CACHE, which librespot does not know: the audio
+# cache was always on and filled the SD card up to maxcachesize even with the cache switched off.
+# And `if ! $cachestate` ran the config value as a command.
 cachestate=$(/usr/bin/jq -r .spotify.cachestate ${MUPIBOX_CONFIG})
-if ! $cachestate ; then
-    export LIBRESPOT_NAME_DISABLE_AUDIO_CACHE=1
+if [ "${cachestate}" = "false" ]; then
+    export LIBRESPOT_DISABLE_AUDIO_CACHE=1
 fi
+# Without stored librespot credentials, fall back to the Web API access token. Note: since
+# 2026-08-10 Spotify refuses librespot logins derived from a developer app's token, so this only
+# gets librespot as far as the access point; a working credentials.json comes from a one-time
+# `librespot --enable-oauth` login. ("$access-token" was always a non-empty string.)
 access_token=$(/usr/bin/jq -r .spotify.accessToken ${MUPIBOX_CONFIG})
 credentials="${LIBRESPOT_CACHE}/credentials.json"
-if [ ! -z "$access-token" ] && [ ! -f $credentials ]; then
+if [ -n "${access_token}" ] && [ "${access_token}" != "null" ] && [ ! -f "${credentials}" ]; then
   export LIBRESPOT_ACCESS_TOKEN=${access_token}
 fi

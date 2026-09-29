@@ -1,4 +1,8 @@
 [Unit]
+# Never give up (StartLimitIntervalSec=0), but retry slowly (RestartSec >= 60): with a start
+# limit the service stayed dead for good after a few quick failures - e.g. a boot without WiFi -
+# until the next reboot; retrying every 10 s filled the journal (librespot 325x in an hour).
+StartLimitIntervalSec=0
 Description=MuPiBox noVNC Service
 After=syslog.target network.target
 
@@ -11,6 +15,12 @@ Type=simple
 TimeoutStopSec=20
 KillMode=process
 Restart=always
-RestartSec=2
-ExecStart=/usr/bin/python3 /usr/bin/websockify --web=/usr/share/novnc 6080 localhost:5900
+# Phase 13b (B4): RestartSec was 2 — combined with the absent VNC backend
+# this gave a flap loop of ~30 restarts/min, hammering journald and the
+# CPU. 10s + 5 restarts per 5 min lets the kernel-level VNC come up if
+# it's going to come up, but stops the loop in the typical case where
+# VNC simply isn't wired up.
+RestartSec=60
+# Like mupi_vnc.service: 60 s after the start of the box, not while the display loads (later: at once).
+ExecStart=/bin/sh -c 'u=$$(cut -d. -f1 /proc/uptime); [ "$$u" -lt 60 ] && sleep $$((60 - u)); exec /usr/bin/python3 /usr/bin/websockify 127.0.0.1:6080 127.0.0.1:5900'
 ExecStop=/usr/bin/kill $(/usr/bin/pgrep websockify)

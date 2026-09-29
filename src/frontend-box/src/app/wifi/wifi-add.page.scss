@@ -155,3 +155,10 @@ ion-item {
 .wifi-content {
     --ion-background-color: #000000 !important;
 }
+
+/* why Save stays grey: WPA passwords have 8 to 63 characters */
+.pw-hint {
+  margin: 4px 16px 0;
+  font-size: 14px;
+  color: var(--ion-color-medium, #999);
+}

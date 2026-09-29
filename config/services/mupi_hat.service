@@ -1,4 +1,7 @@
 [Unit]
+# Never give up restarting (default: 5 tries in 10 s, then dead): without this service the charger
+# watchdog expires after 160 s and the chip falls back to POR defaults (VREG 8400 instead of 8300).
+StartLimitIntervalSec=0
 Description=MuPiHAT Service
 Before=basic.target
 After=local-fs.target sysinit.target
@@ -10,6 +13,7 @@ WorkingDirectory=/usr/local/bin/mupibox/
 User=root
 ExecStart=/usr/bin/python3 -B /usr/local/bin/mupibox/mupihat.py -j /tmp/mupihat.json
 Restart=on-failure
+RestartSec=5
 
 [Install]
 WantedBy=basic.target

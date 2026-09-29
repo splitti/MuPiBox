@@ -1,4 +1,8 @@
 [Unit]
+# Never give up (StartLimitIntervalSec=0), but retry slowly (RestartSec >= 60): with a start
+# limit the service stayed dead for good after a few quick failures - e.g. a boot without WiFi -
+# until the next reboot; retrying every 10 s filled the journal (librespot 325x in an hour).
+StartLimitIntervalSec=0
 Description=MuPiBox MQTT Service
 Wants=network-online.target
 After=network-online.target
@@ -11,7 +15,8 @@ User=root
 PIDFile=/run/mupi_mqtt.pid
 ExecStart=/usr/bin/python3 -B /usr/local/bin/mupibox/mqtt.py
 #ExecStop=/bin/kill -TERM $(cat /run/mupi_mqtt.pid)
-Restart=on-abort
-
+# Phase 13b (B4): same on-abort -> on-failure switch as mupi_hat_control.
+Restart=on-failure
+RestartSec=60
 [Install]
 WantedBy=basic.target

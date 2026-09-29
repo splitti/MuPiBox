@@ -126,6 +126,26 @@ class bq25792:
     hat.read_all_register()
     print(hat.to_json())
     """
+
+    # Plausibility bounds for the ADC readings, per signal: (min, max).
+    # The BQ25792 ADC occasionally returns single-sample garbage. Observed on
+    # a live box: IBus 9892 mA while the input was hard-limited to 1700 mA,
+    # and Ibat 2428 mA at an input power of 8.7 W. Those spikes propagate
+    # straight into /tmp/mupihat.json and from there into battery_log.jsonl
+    # and the frontend charts, where a single outlier flattens the whole
+    # y-axis. The bounds are deliberately wide -- they reject the physically
+    # impossible, not the merely unusual.
+    _ADC_LIMITS = {
+        'Vbat': (0, 20000),     # chip supports up to 4S (~18.8 V VREG)
+        'Vbus': (0, 30000),     # VBUS ADC range per datasheet
+        'IBus': (-5000, 5000),  # MuPiHAT input path cannot carry more
+        'Ibat': (-6000, 6000),
+    }
+    # Never substitute a held value forever: after this many consecutive
+    # rejects we trust the sensor again, so a genuine new operating point
+    # (or a real fault) cannot be masked indefinitely.
+    _ADC_MAX_HOLD = 5
+
      # constructor method
     def __init__(self, i2c_device=1, i2c_addr=0x6b, busWS_ms=10, exit_on_error = False, battery_conf_file="/etc/mupibox/mupiboxconfig.json"):
         try:
@@ -139,6 +159,17 @@ class bq25792:
                                  'th_warning': 7000,
                                  'th_shutdown': 6800 }
             self._exit_on_error = exit_on_error
+            # Phase-12: VBAT history for granular-percent smoothing (5%-step display).
+            # Voltage swings 30-100 mV under load (Bass-pumping, Display wake);
+            # without smoothing the 5%-display would visibly flap. 8 samples at
+            # 4s cycle = ~32s window, well below the timescale of real SoC
+            # change but long enough to absorb the load-sag transients.
+            self._vbat_history: list[int] = []
+            self._vbat_history_max = 8
+            # ADC plausibility filter: last accepted reading per signal and
+            # how many implausible samples in a row we have suppressed.
+            self._adc_last: dict[str, int] = {}
+            self._adc_reject_streak: dict[str, int] = {}
             self.i2c_device = i2c_device
             self.i2c_addr = i2c_addr
             self.busWS_ms = busWS_ms
@@ -230,8 +261,20 @@ class bq25792:
                     self.battery_conf["v_0"] = int(bt["config"]["v_0"])
                     self.battery_conf["th_warning"] = int(bt["config"]["th_warning"])
                     self.battery_conf["th_shutdown"] = int(bt["config"]["th_shutdown"])
+                    # Phase 13a: optional VREG (Charge Voltage Limit) per battery profile.
+                    # When set, write_defaults() applies it to BQ25792 REG01. When
+                    # absent (legacy profiles, USB-C mode, custom-without-vreg),
+                    # the POR default (typ. 8400 mV / 4.20 V/cell) stays active.
+                    vreg_raw = bt["config"].get("vreg")
+                    self.battery_conf["vreg"] = int(vreg_raw) if vreg_raw not in (None, "", "0") else None
+                    # Optional VSYSMIN per battery profile, same opt-in shape as
+                    # vreg above. battery_conf is an explicit whitelist, not a
+                    # copy of the profile dict -- a key that is not listed here
+                    # never reaches write_defaults(), no matter what the JSON says.
+                    vsysmin_raw = bt["config"].get("vsysmin")
+                    self.battery_conf["vsysmin"] = int(vsysmin_raw) if vsysmin_raw not in (None, "", "0") else None
                     logging.info("Battery configuration loaded from JSON: %s", self.battery_conf_file)
-                    break            
+                    break
             return 0
         except Exception as _error:
             logging.error("battery_conf_load from JSON failed, use standard configuration, %s", str(_error))
@@ -259,17 +302,114 @@ class bq25792:
 
         VBat = self.read_Vbat()
 
-        if VBat > v_100     : Bat_SOC = "100%"
-        elif VBat > v_75    : Bat_SOC = "75%"
-        elif VBat > v_50    : Bat_SOC = "50%"
-        elif VBat > v_25    : Bat_SOC = "25%"
-        elif VBat > v_0     : Bat_SOC = "0%"
+        # Phase-12 follow-up: changed > to >= so a pack sitting exactly at
+        # the v_100 threshold (8200 mV for a freshly-finished CV charge on
+        # the 2S3P pack) renders as "100%" / Battery100.svg instead of
+        # falling through to "75%" / Battery70.svg. Without this the icon
+        # bucket disagrees with the new granular Bat_Percent text at the
+        # exact-voll-Fall (icon: 3/4-strich, text: 100%) which looks broken.
+        if VBat >= v_100    : Bat_SOC = "100%"
+        elif VBat >= v_75   : Bat_SOC = "75%"
+        elif VBat >= v_50   : Bat_SOC = "50%"
+        elif VBat >= v_25   : Bat_SOC = "25%"
+        else                : Bat_SOC = "0%"
 
         if VBat > th_warning : Bat_Stat = 'OK'
         elif (VBat < th_warning) & (VBat > th_shutdown) : Bat_Stat = 'LOW'
         elif (VBat < th_shutdown) : Bat_Stat = 'SHUTDOWN'
 
         return Bat_SOC, Bat_Stat
+
+    def record_vbat_sample(self, vbat_mv: int):
+        '''
+        Phase-12: append a VBAT reading to the smoothing ring buffer.
+        Called from mupihat.py's periodic_json_dump after read_all_register().
+        Drops the oldest sample once the buffer is full so the average always
+        reflects the most-recent ~32s window.
+        '''
+        if vbat_mv is None or vbat_mv <= 0:
+            return  # ignore invalid reads (post-reopen, etc.)
+        self._vbat_history.append(int(vbat_mv))
+        if len(self._vbat_history) > self._vbat_history_max:
+            self._vbat_history.pop(0)
+
+    def smoothed_vbat(self) -> int:
+        '''
+        Return the moving-average VBAT over the recorded samples. Falls back
+        to the current single read if the buffer is empty (cold start).
+        '''
+        if not self._vbat_history:
+            return self.read_Vbat()
+        return sum(self._vbat_history) // len(self._vbat_history)
+
+    def battery_percent_granular(self):
+        '''
+        Phase-12: piecewise-linear interpolation between the 5 thresholds for
+        a 0-100 % SoC value, rounded to 5 % steps. Returns a tuple:
+            (percent: int, source: str)
+        where source is "charging" while CC/Taper charge is running (the
+        voltage-based estimate is systematically optimistic during active
+        charge because the pack is held above its rest curve), otherwise
+        "voltage". The frontend can show a ⚡ next to the number when
+        source == "charging" to signal the disclaimer.
+
+        Uses smoothed_vbat() to absorb sub-second voltage swings -- without
+        smoothing the 5%-display would flap visibly under audio load.
+
+        Why 5% steps and not 1%: the discharge curve in the plateau region
+        (~3.7-3.9 V/cell) gives ~2-3 mV per 1 %, smaller than the BQ25792
+        ADC's noise floor (~10 mV) and far smaller than load-sag transients
+        (30-60 mV under typical box load). 1 % steps would zap-zap-zap
+        constantly; 5 % steps map cleanly to ~90 mV per step which IS
+        resolvable above the noise.
+        '''
+        try:
+            v_100 = int(self.battery_conf['v_100'])
+            v_75  = int(self.battery_conf['v_75'])
+            v_50  = int(self.battery_conf['v_50'])
+            v_25  = int(self.battery_conf['v_25'])
+            v_0   = int(self.battery_conf['v_0'])
+        except (KeyError, ValueError, TypeError):
+            return (0, "voltage")  # config not loaded yet — safe default
+
+        # USB-C mode profile has v_*=1 (sentinel for "no battery"). Don't
+        # report any percent in that case — the icon will fall back to its
+        # plug-symbol mode.
+        if v_100 <= 10:
+            return (0, "voltage")
+
+        v = self.smoothed_vbat()
+
+        # Piecewise linear: each segment maps [v_lower, v_upper] to a
+        # 25-percentage-point range linearly.
+        if v >= v_100:
+            pct = 100.0
+        elif v >= v_75:
+            pct = 75.0 + 25.0 * (v - v_75) / max(1, v_100 - v_75)
+        elif v >= v_50:
+            pct = 50.0 + 25.0 * (v - v_50) / max(1, v_75 - v_50)
+        elif v >= v_25:
+            pct = 25.0 + 25.0 * (v - v_25) / max(1, v_50 - v_25)
+        elif v >= v_0:
+            pct = 0.0  + 25.0 * (v - v_0)  / max(1, v_25 - v_0)
+        else:
+            pct = 0.0
+
+        # Round to 5 % steps -- see docstring above for why not 1 %.
+        rounded = int(round(pct / 5.0) * 5)
+        rounded = max(0, min(100, rounded))
+
+        # During active charging the voltage-based estimate is too optimistic
+        # (pack held above rest curve by CC current). Flag the source so the
+        # frontend can render a charging indicator (⚡) instead of treating
+        # the number as a settled SoC reading.
+        try:
+            _, chg_str = self.read_ChargerStatus()
+            source = "charging" if 'Charge' in chg_str and 'Done' not in chg_str else "voltage"
+        except Exception:
+            source = "voltage"
+
+        return (rounded, source)
 
     # BQ25795 Register
     class BQ25795_REGISTER:
@@ -330,7 +470,7 @@ class bq25792:
             self.VREG = self._value * 10
         def set (self, value):
             super().set(value)
-            self.VRE0G = self._value * 10
+            self.VREG = self._value * 10
 
     class REG03_Charge_Current_Limit(BQ25795_REGISTER):
         #Charge Current Limit During POR, the device reads the resistance tie to PROG pin, to identify the default battery cell count and determine the default power-on battery charging current: 1s and 2s: 3s and 4s: 1A Type : RW Range : 50mA-5000mA Fixed Offset : 0mA Bit Step Size : 10mA
@@ -5307,15 +5447,43 @@ class bq25792:
     # class methods 
     
 
+    def _reopen_bus(self):
+        """
+        Close and re-open the SMBus handle. Used after a Remote I/O error
+        to clear a hung bus state on the BQ25792 (errno 121 leaves the bus
+        in an indeterminate state on the Pi's i2c-bcm2835 driver).
+        """
+        try:
+            self.bq.close()
+        except Exception:
+            pass
+        self.bq = smbus2.SMBus(self.i2c_device)
+
     def safe_execute(self, func, *args, **kwargs):
         """
         Executes a function safely, catching exceptions and handling errors.
+        On the first OSError (typically errno 121 "Remote I/O error" caused
+        by an interleaved I2C transaction or transient bus glitch), reopen
+        the SMBus handle and retry once. A second failure escalates to
+        I2CError so the caller can choose whether to skip the cycle.
         If `_exit_on_error` is True, the program will exit on error.
         """
         try:
             return func(*args, **kwargs)
+        except OSError as e:
+            logging.warning(f"OSError in {func.__name__}: {str(e)} — reopening I2C bus and retrying once")
+            self._reopen_bus()
+            try:
+                # Re-bind the bound method to the new bus handle if needed
+                if hasattr(func, '__self__') and func.__self__ is not None:
+                    func = getattr(self.bq, func.__name__)
+                return func(*args, **kwargs)
+            except Exception as e2:
+                logging.error(f"Error in {func.__name__} after bus reopen: {str(e2)}")
+                if self._exit_on_error:
+                    sys.exit(1)
+                raise I2CError(f"Failed to execute {func.__name__}") from e2
         except Exception as e:
-            #sys.stderr.write(f"Error in {func.__name__}: {str(e)}\n")
             logging.error(f"Error in {func.__name__}: {str(e)}")
             if self._exit_on_error:
                 sys.exit(1)
@@ -5337,10 +5505,19 @@ class bq25792:
     def write_register_word(self, reg):
         """
         Writes a two-byte register value safely.
+
+        BQ25792 word registers are big-endian: the lower I2C address holds the
+        most-significant byte. Verified against the live chip — for the 8400 mV
+        VREG POR default (840 = 0x0348) REG01h reads 0x03 and REG02h reads 0x48.
+        read_all_register() decodes the same way ((reg[addr] << 8) | reg[addr+1]),
+        so the write must place the HIGH byte at addr and the LOW byte at addr+1.
+        The previous little-endian order silently corrupted every word write
+        (VREG never reached 8300 mV; IINDPM was masked to 0 and only worked
+        because the hardware ILIM_HIZ resistor caps input current at 2.2 A).
         """
         reg.get()
-        self.safe_execute(self.bq.write_byte_data, self.i2c_addr, reg._addr, reg._value & 0xFF)
-        self.safe_execute(self.bq.write_byte_data, self.i2c_addr, reg._addr + 1, (reg._value >> 8) & 0xFF)
+        self.safe_execute(self.bq.write_byte_data, self.i2c_addr, reg._addr, (reg._value >> 8) & 0xFF)
+        self.safe_execute(self.bq.write_byte_data, self.i2c_addr, reg._addr + 1, reg._value & 0xFF)
 
     def read_all_register(self):
         """
@@ -5423,11 +5600,53 @@ class bq25792:
         """
         return self.REG41_TDIE_ADC.get_IC_temperature()
 
+    def _adc_filter(self, name: str, value, reason: str = None):
+        """
+        Reject implausible ADC samples and hold the last accepted value instead.
+
+        Every consumer -- to_json(), the log loop, battery_soc(),
+        battery_percent_granular() -- goes through the read_* methods, so this
+        is the single choke point where an outlier can be stopped before it
+        reaches /tmp/mupihat.json, battery_log.jsonl and the frontend charts.
+
+        `reason` lets the caller reject a sample that is inside the static
+        bounds but fails a cross-check (see read_Ibat). Returns the last
+        accepted value while suppressing, and falls back to passing the raw
+        value through once _ADC_MAX_HOLD rejects in a row have piled up, so a
+        real change of operating point is never masked permanently.
+        """
+        if reason is None:
+            lo, hi = self._ADC_LIMITS[name]
+            if value is None:
+                reason = "no reading"
+            elif not lo <= value <= hi:
+                reason = f"outside {lo}..{hi}"
+
+        if reason is None:
+            self._adc_last[name] = value
+            self._adc_reject_streak[name] = 0
+            return value
+
+        streak = self._adc_reject_streak.get(name, 0) + 1
+        self._adc_reject_streak[name] = streak
+        last = self._adc_last.get(name)
+
+        if last is None or streak > self._ADC_MAX_HOLD:
+            logging.error(
+                "ADC %s implausible (%s, %s) and no usable fallback after %d "
+                "rejects -- passing the raw value through.", name, value, reason, streak)
+            self._adc_last[name] = value
+            return value
+
+        logging.warning("ADC %s implausible (%s, %s), holding last value %s.",
+                        name, value, reason, last)
+        return last
+
     def read_Vbat(self) -> int:
         """
         Reads the VBAT_ADC register and returns the battery voltage in mV.
         """
-        return self.REG3B_VBAT_ADC.get_Vbat()
+        return self._adc_filter('Vbat', self.REG3B_VBAT_ADC.get_Vbat())
 
 
     def read_Vbus(self):
@@ -5435,7 +5654,7 @@ class bq25792:
         Reads the VBUS_ADC register and returns the bus voltage in mV.
         If the read operation fails, it returns the last known value.
         """
-        return self.REG35_VBUS_ADC.get_Vbus()
+        return self._adc_filter('Vbus', self.REG35_VBUS_ADC.get_Vbus())
 
     def read_Ibus(self):
         """
@@ -5443,13 +5662,32 @@ class bq25792:
         The IBUS ADC reading is reported in 2's complement.
         If the read operation fails, it returns the last known value.
         """
-        return self.REG31_IBUS_ADC.get_Ibus()
+        return self._adc_filter('IBus', self.REG31_IBUS_ADC.get_Ibus())
 
     def read_Ibat(self) -> int:
         """
         Reads the IBAT_ADC register and returns the battery current in mA.
+
+        On top of the static bounds this cross-checks charge current against
+        input power: the converter cannot put more into the battery than the
+        input delivers. The observed 2428 mA spike sat well inside the static
+        bounds but claimed 15.6 W of charge power from an 8.7 W input -- only
+        the energy check catches that class of outlier. Discharge (negative
+        Ibat) is fed from the battery itself and is not bounded this way, so
+        it is checked against the static limits only.
         """
-        return self.REG33_IBAT_ADC.get_Ibat()
+        ibat = self.REG33_IBAT_ADC.get_Ibat()
+        reason = None
+        if ibat is not None and ibat > 0:
+            # All four come from the register cache filled by
+            # read_all_register(), so this costs no extra I2C traffic.
+            vbat, vbus, ibus = self.read_Vbat(), self.read_Vbus(), self.read_Ibus()
+            if all(v is not None for v in (vbat, vbus, ibus)) and vbat > 0 and ibus > 0:
+                # 1.1 covers ADC tolerance; the converter is never >100% efficient.
+                ibat_max = (vbus * ibus * 1.1) / vbat
+                if ibat > ibat_max:
+                    reason = f"charge power exceeds input power (max ~{int(ibat_max)} mA)"
+        return self._adc_filter('Ibat', ibat, reason)
 
 
     def read_InputCurrentLimit(self) -> int:
@@ -5494,7 +5732,7 @@ class bq25792:
             reg = self.REG10_Charger_Control_1
             reg.set_WD_RST(1)  # Reset watchdog
             self.write_register(reg)
-            logging.info("watchdog_reset done.")
+            logging.debug("watchdog_reset done.")  # every few seconds - not for the journal
             return 0
         except I2CError:
             logging.error("watchdog_reset failed.")
@@ -5524,10 +5762,69 @@ class bq25792:
             logging.error("mask_all_INTERRUPTS failed.")
             return -1
     
+    def _verify_register(self, addr: int, expected: int, label: str, width: int = 1) -> bool:
+        """
+        Read a register back after writing it and log when the write did not stick.
+
+        The BQ25792 silently ignores writes that violate its internal
+        constraints -- there is no error bit and no exception. Observed in the
+        field: with the charger latched to 4 cells, VREG could not be set below
+        VSYSMIN (12000 mV), so every write of 8300 mV was dropped while the
+        driver cheerfully logged "VREG set to 8300 mV". The chip kept 16800 mV,
+        the pack stayed in precharge for over a week and drained to 0 % while
+        plugged in - nothing in the log pointed at the cause. The
+        input current limit fails the same way (driver logs 2200 mA, register
+        holds 1790 mA because the external ILIM_HIZ pin governs).
+
+        A write without a read-back is a wish, not a setting.
+        """
+        try:
+            raw = self.read_register(addr, width)
+            actual = raw[0] if width == 1 else (raw[0] << 8) | raw[1]
+        except I2CError:
+            logging.warning("%s: read-back failed, cannot verify the write.", label)
+            return False
+        if actual != expected:
+            logging.warning("%s: write did not stick -- wrote 0x%0*X, chip holds 0x%0*X.",
+                            label, width * 2, expected, width * 2, actual)
+            return False
+        logging.info("%s: verified.", label)
+        return True
+
+    def _battery_cell_count(self):
+        """
+        Derive the pack's cell count from the configured battery profile.
+
+        The charger latches CELL from the PROG pin resistance at POR. That
+        latch was observed to come up wrong once on a live box (4 cells for a
+        2S pack), and every derived default follows it off a cliff: VREG
+        16800 mV, VSYSMIN 12000 mV, and a precharge-to-fastcharge threshold of
+        71.4% x VREG = 12 V that a 2S pack can never reach. The pack then sits
+        in precharge forever, gets no current, and discharges while plugged in.
+
+        Deriving the count from the profile lets write_defaults() correct such
+        a misread instead of inheriting it. Returns None when the profile
+        carries no usable pack voltage (e.g. the USB-C / no-battery profile),
+        in which case the POR latch is left untouched.
+        """
+        for key in ("vreg", "v_100"):
+            try:
+                mv = int(self.battery_conf.get(key) or 0)
+            except (TypeError, ValueError):
+                continue
+            if mv < 3000:          # no battery configured on this profile
+                continue
+            cells = int(round(mv / 4200.0))
+            if 1 <= cells <= 4:
+                return cells
+            logging.warning("Battery profile %s=%s mV implies %d cells, out of range 1-4.",
+                            key, mv, cells)
+        return None
+
     def write_defaults(self):
         '''
-        Write default settings to the charger IC.   
-        ''' 
+        Write default settings to the charger IC.
+        '''
         #Watchdog
         reg = self.REG10_Charger_Control_1
         reg.set_WATCHDOG(7) #160s watchdog
@@ -5557,21 +5854,117 @@ class bq25792:
         reg.set_EN_IBAT(1) # Enable the IBAT discharge current sensing for ADC
         reg.set_EN_EXTILIM(1) # Enable External ILIM_HIZ Input Current Limit pin input
         self.write_register(reg)
-        
-        
-        self.set_input_current_limit(2200) # 2.2A input current limit
 
-        self.mask_all_INTERRUPTS()  
-        return
+        # The next three writes MUST stay in this order: CELL, then VSYSMIN,
+        # then VREG. The chip derives VREG and VSYSMIN defaults from the cell
+        # count and rejects a VREG below VSYSMIN, so writing VREG first means
+        # writing it into a value the chip immediately overrides (when CELL
+        # changes) or refuses outright (when VSYSMIN is still the 4S default).
+        # With the wrong 4S latch that is exactly what happened: the 8300 mV VREG
+        # was written first and refused, and the chip kept 16800 mV.
+
+        # Correct a wrong PROG-pin cell latch. Writing CELL makes the chip
+        # re-derive VREG and VSYSMIN for that cell count on its own -- verified
+        # on hardware: CELL 4S -> 2S moved VSYSMIN 12000 -> 7000 mV and VREG
+        # 16800 -> 8400 mV in the same instant.
+        cells = self._battery_cell_count()
+        # Returned to the caller: a cell latch that stays wrong (4S on a 2S pack, charge target
+        # 16800 mV) must not be left charging; a VREG that did not stick (POR 8400 mV = 4.2 V/cell)
+        # is within cell spec and only retried.
+        cell_ok = True
+        vreg_ok = True
+        if cells:
+            try:
+                reg0a = self.read_register(0x0A, 1)[0]
+                want = (reg0a & 0b00111111) | ((cells - 1) << 6)
+                if want != reg0a:
+                    logging.warning(
+                        "Charger reports %d cell(s) but the battery profile implies %d -- correcting.",
+                        (reg0a >> 6) + 1, cells)
+                    self.safe_execute(self.bq.write_byte_data, self.i2c_addr, 0x0A, want)
+                    cell_ok = self._verify_register(0x0A, want, f"CELL ({cells}s)")
+            except I2CError:
+                cell_ok = False
+                logging.error("CELL correction failed, keeping the POR latch.")
+
+        # Optional VSYSMIN override from the battery profile. Left alone when
+        # unset, so existing installs keep the cell-derived POR default.
+        # Lowering it below the pack voltage stops the converter from boosting
+        # the system rail above the battery: on a deeply discharged 2S pack
+        # that measured +30% charge current and -11 °C at identical input
+        # power. The trade-off is less brown-out headroom at the very end of
+        # discharge, so keep it at or above the profile's th_shutdown.
+        vsysmin_mv = self.battery_conf.get("vsysmin")
+        if vsysmin_mv:
+            try:
+                vsysmin_mv = int(vsysmin_mv)
+            except (TypeError, ValueError):
+                vsysmin_mv = 0
+            # BQ25792 REG00 spec: 2500-16000 mV range, 250 mV step
+            if 2500 <= vsysmin_mv <= 16000:
+                value = (vsysmin_mv - 2500) // 250
+                # Caught here like the CELL write: an I2C error used to abort write_defaults(), so
+                # the input current limit and the interrupt mask were never set and the service
+                # exited - with the chip watchdog then resetting everything to POR defaults.
+                try:
+                    self.safe_execute(self.bq.write_byte_data, self.i2c_addr, 0x00, value)
+                    self._verify_register(0x00, value, f"VSYSMIN ({value * 250 + 2500} mV)")
+                except I2CError:
+                    logging.error("VSYSMIN write failed, keeping the current value.")
+            else:
+                logging.warning(f"VSYSMIN value {vsysmin_mv} mV out of range (2500-16000), keeping POR default")
+
+        # Phase 13a: apply VREG (Charge Voltage Limit) from the active
+        # battery profile, when configured. 8300 mV = 4.15 V/cell on a 2S
+        # pack — Samsung INR21700-50E datasheet maps that to ~3x the cycle
+        # life vs. the 4.20 V/cell POR default. Profiles without a `vreg`
+        # field (legacy ones, USB-C-only, Custom-without-vreg) keep the
+        # POR default — no behavior change for those users.
+        vreg_mv = self.battery_conf.get("vreg")
+        if vreg_mv:
+            # BQ25792 REG01 spec: 3000-18800 mV range, 10 mV step
+            if 3000 <= vreg_mv <= 18800:
+                vreg_mv_aligned = (vreg_mv // 10) * 10
+                reg = self.REG01_Charge_Voltage_Limit
+                reg.set(vreg_mv_aligned // 10)
+                try:
+                    self.write_register_word(reg)
+                    logging.info(f"VREG (Charge Voltage Limit) set to {vreg_mv_aligned} mV from battery profile")
+                    vreg_ok = self._verify_register(0x01, vreg_mv_aligned // 10, f"VREG ({vreg_mv_aligned} mV)", width=2)
+                except I2CError:
+                    vreg_ok = False
+                    logging.error("VREG write failed, keeping the current value.")
+            else:
+                logging.warning(f"VREG value {vreg_mv} mV out of range (3000-18800), keeping POR default")
+
+        self.set_input_current_limit(2200) # 2.2A input current limit
+        # Expect this one to come back lower: with EN_EXTILIM set the external
+        # ILIM_HIZ resistor governs and the chip clamps to it (1790 mA on this
+        # HAT). Verifying it anyway turns a silent discrepancy into a log line.
+        self._verify_register(0x06, 220, "Input current limit (2200 mA)", width=2)
+
+        self.mask_all_INTERRUPTS()
+        return cell_ok, vreg_ok
 
     def MuPiHAT_Default(self):
-        ''' 
-        Write MuPiHAT Default Settings to Charger IC
+        '''
+        Write MuPiHAT Default Settings to Charger IC.
+        Returns (cell_ok, vreg_ok): whether the cell count and the charge voltage limit from the
+        battery profile are verified on the chip (True when the profile does not set them).
         '''
         self.soft_reset()
         self.read_all_register()
-        self.write_defaults()
-        return
+        return self.write_defaults()
+
+    def disable_charging(self):
+        '''
+        Safe state when the cell count cannot be corrected: the system keeps running from the input,
+        only the battery is not charged (EN_CHG = 0).
+        '''
+        reg = self.REG0F_Charger_Control_0
+        reg.set_EN_CHG(0)
+        self.write_register(reg)
+        logging.error("Charging DISABLED: the charger's cell count does not match the battery profile.")
 
     def get_IC_temperature(self):
         '''
@@ -5724,6 +6117,7 @@ class bq25792:
             Input Current Limit obtained from ICO or ILIM_HIZ pin setting
         '''
         bat_SOC, bat_Stat = self.battery_soc()
+        bat_Percent, bat_PercentSource = self.battery_percent_granular()
         return {
             'Charger_Status': self.read_ChargerStatus(),
             'Vbat': self.read_Vbat(),
@@ -5735,7 +6129,12 @@ class bq25792:
             'Bat_SOC' : bat_SOC,
             'Bat_Stat' : bat_Stat,
             'Bat_Type' : self.battery_conf['battery_type'],
-            'Input_Current_Limit' : self.read_InputCurrentLimit()
+            'Input_Current_Limit' : self.read_InputCurrentLimit(),
+            # Phase-12: granular 5%-step percent + charging-state hint for
+            # the frontend. Bat_SOC stays for backwards-compat (Telegram bot
+            # messages, legacy Admin-UI bits).
+            'Bat_Percent' : bat_Percent,
+            'Bat_PercentSource' : bat_PercentSource,
         }
     
     def to_json_registers(self):

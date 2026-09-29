@@ -16,6 +16,9 @@ node_modules
 # Other files.
 *.bak
 
+# Output of a plain tsc run (the box runs the esbuild bundle, see src/deploy)
+src/backend-api/build/
+
 
 __pycache__/
 *.pyc

@@ -21,8 +21,9 @@ import {
 import { addIcons } from 'ionicons'
 import { arrowBackOutline } from 'ionicons/icons'
 import { Observable, of } from 'rxjs'
+import { ElternMagicLinkService } from '../eltern-magic-link.service'
 import { MediaService } from '../media.service'
-import { MupiHatIconComponent } from '../mupihat-icon/mupihat-icon.component'
+import { StatusComponent } from '../status/status.component'
 
 export interface SettingsMenuEntry {
   name: string
@@ -38,7 +39,7 @@ export interface SettingsMenuEntry {
     AsyncPipe,
     IonBackButton,
     IonTitle,
-    MupiHatIconComponent,
+    StatusComponent,
     IonHeader,
     IonToolbar,
     IonButtons,
@@ -55,15 +56,12 @@ export interface SettingsMenuEntry {
 })
 export class SettingsPage {
   private mediaService = inject(MediaService)
+  private elternMagicLink = inject(ElternMagicLinkService)
   protected network = toSignal(this.mediaService.network$, { initialValue: null })
 
   protected menuEntries: Signal<SettingsMenuEntry[]> = computed(() => {
+    // ("Add media" is gone: the library is kept in the app now - the parents' web app below)
     const out: SettingsMenuEntry[] = [
-      {
-        name: 'Add media',
-        imgSrc: of('../../assets/plus-box-outline.svg'),
-        data: 'add-media',
-      },
       {
         name: 'WiFi settings',
         imgSrc: of('../../assets/wifi.svg'),
@@ -79,6 +77,11 @@ export class SettingsPage {
         imgSrc: of('../../assets/power.svg'),
         data: 'shutdown',
       },
+      {
+        name: 'Parent web app',
+        imgSrc: of('../../assets/eltern.svg'),
+        data: 'eltern-webapp',
+      },
     ]
     return out
   })
@@ -92,14 +95,17 @@ export class SettingsPage {
   }
 
   protected entryClicked(entry: SettingsMenuEntry): void {
-    if (entry.data === 'add-media') {
-      this.router.navigate(['/edit'])
-    } else if (entry.data === 'wifi') {
+    if (entry.data === 'wifi') {
       this.router.navigate(['/wifi'])
     } else if (entry.data === 'bluetooth') {
       this.router.navigate(['/bluetooth'])
     } else if (entry.data === 'shutdown') {
       this.shutdownMessage()
+    } else if (entry.data === 'eltern-webapp') {
+      // Shows the magic-link QR overlay. The box IP comes from the network
+      // signal; generateAndShow() handles the undefined case itself by
+      // falling back to the hostname.
+      void this.elternMagicLink.generateAndShow(this.network()?.ip)
     }
   }
 
@@ -112,13 +118,23 @@ export class SettingsPage {
         {
           text: 'Shutdown',
           handler: () => {
-            this.http.post('/api/shutdown', {}).subscribe()
+            // LOW-6: previously `subscribe()` with no error handler. A
+            // failed POST (network blip, backend down) silently disappeared,
+            // and the user got an Ionic alert dismiss with no feedback that
+            // the shutdown didn't fire. Wire up an error logger so the
+            // failure at least lands in chrome_debug.log.
+            this.http.post('/api/shutdown', {}).subscribe({
+              error: (err) => console.error('[settings] /api/shutdown failed:', err),
+            })
           },
         },
         {
           text: 'Reboot',
           handler: () => {
-            this.http.post('/api/reboot', {}).subscribe()
+            // LOW-6: same fix.
+            this.http.post('/api/reboot', {}).subscribe({
+              error: (err) => console.error('[settings] /api/reboot failed:', err),
+            })
           },
         },
         {

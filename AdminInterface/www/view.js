@@ -158,7 +158,12 @@ imageList['coverflow'].src = "images/coverflow.png";
 
 function switchImage() {
     var selectedImage = document.mupi.theme.options[document.mupi.theme.selectedIndex].value;
-    document.selectedTheme.src = imageList[selectedImage].src;
+    // km themes (children's themes): their background as preview (kmThemeIds comes from mupi.php)
+    if (typeof kmThemeIds !== "undefined" && kmThemeIds.indexOf(selectedImage) >= 0) {
+        document.selectedTheme.src = "images/km/" + selectedImage + ".svg";
+        return;
+    }
+    document.selectedTheme.src = imageList[selectedImage] ? imageList[selectedImage].src : "images/" + selectedImage + ".png";
 }
 
 function stopEvent(event) {

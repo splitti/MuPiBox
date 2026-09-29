@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http'
 import { Injectable } from '@angular/core'
 import { interval, Subject, Subscription } from 'rxjs'
+import { throttleTime } from 'rxjs/operators'
 import { environment } from 'src/environments/environment'
 import { MupiboxConfig } from './mupibox-config.model'
 import { SpotifyService } from './spotify.service'
@@ -27,8 +28,9 @@ export class DisplayManagerService {
     console.log('[DisplayManager] Loading idle timeout from config...')
     this.http.get<MupiboxConfig>(`${environment.backend.apiUrl}/config`).subscribe({
       next: (config) => {
-        const timeout = Number.parseInt(config?.timeout?.idleDisplayOff || '1', 10)
-        this.idleTimeoutMinutes = timeout > 0 ? timeout : 1
+        // 0 = never (as the app and the admin interface say); only a missing or broken value falls back to 1 minute
+        const timeout = Number.parseInt(String(config?.timeout?.idleDisplayOff ?? '1'), 10)
+        this.idleTimeoutMinutes = Number.isFinite(timeout) && timeout >= 0 ? timeout : 1
         console.log(`[DisplayManager] Idle timeout set to ${this.idleTimeoutMinutes} minute(s)`)
         this.initialize()
       },
@@ -52,8 +54,14 @@ export class DisplayManagerService {
       document.addEventListener(eventName, () => this.activityDebouncer.next(), { passive: true })
     }
 
-    // Debounce activity events to avoid spamming resets
-    this.activitySubscription = this.activityDebouncer.subscribe(() => {
+    // LOW-4 / A23: previous comment claimed "Debounce activity events to avoid
+    // spamming resets" but the pipe was empty — every mousemove and touchstart
+    // tick fired a fresh resetIdleTimer call (which writes to a Date.now()
+    // field, so cheap, but still wakes the JS event loop hundreds of times
+    // a second on a busy screen). Add throttleTime(500ms) so we update the
+    // last-activity timestamp at most twice a second — plenty for a 1-minute
+    // idle threshold and orders of magnitude less work.
+    this.activitySubscription = this.activityDebouncer.pipe(throttleTime(500)).subscribe(() => {
       this.resetIdleTimer()
     })
   }
@@ -73,6 +81,8 @@ export class DisplayManagerService {
   }
 
   private checkIdleState(): void {
+    // "Display aus nach 0 min" = the display stays on
+    if (this.idleTimeoutMinutes <= 0) return
     const isPlaying = this.spotifyService.playerState$.value?.paused === false
     const idleTimeSeconds = (Date.now() - this.lastActivityTimestamp) / 1000
     const timeoutSeconds = this.idleTimeoutMinutes * 60
@@ -101,8 +111,11 @@ export class DisplayManagerService {
     })
   }
 
-  ngOnDestroy(): void {
-    this.idleCheckInterval?.unsubscribe()
-    this.activitySubscription?.unsubscribe()
-  }
+  // LOW-4 / A23: removed dead ngOnDestroy. The service is providedIn: 'root',
+  // so Angular keeps it alive for the entire app lifetime — ngOnDestroy never
+  // fires. The cleanup it claimed to do was theatre. The DOM listeners
+  // attached to `document` in setupActivityTracking() likewise stay attached
+  // for the app lifetime (which is fine — `document` lives just as long).
+  // If we ever switch to a non-root scope this needs revisiting; until then
+  // honesty beats cargo-culted lifecycle hooks.
 }

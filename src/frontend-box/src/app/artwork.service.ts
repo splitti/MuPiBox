@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core'
-import { Observable } from 'rxjs'
+import { Observable, of } from 'rxjs'
 import { environment } from '../environments/environment'
 import type { Media } from './media'
 
@@ -17,19 +17,19 @@ export class ArtworkService {
     return url
   }
 
+  // LOW-5: the previous code used `new Observable(observer => observer.next(url))`
+  // which never calls observer.complete(), so the observable stays "open"
+  // forever. Subscribers leak — every cover lookup adds a non-completing
+  // subscription that's only released when the component is destroyed.
+  // `of(value)` is the idiomatic single-emit-then-complete observable, and it
+  // composes with the radio-cover cache above.
   getArtwork(media: Media): Observable<string> {
     const coverUrl = this.cachedCoverUrl(media, media.cover || '../assets/images/nocover_mupi.png')
-
-    return new Observable((observer) => {
-      observer.next(coverUrl)
-    })
+    return of(coverUrl)
   }
 
   getArtistArtwork(media: Media): Observable<string> {
     const coverUrl = this.cachedCoverUrl(media, media.artistcover || media.cover || '../assets/images/nocover_mupi.png')
-
-    return new Observable((observer) => {
-      observer.next(coverUrl)
-    })
+    return of(coverUrl)
   }
 }

@@ -1,8 +1,16 @@
 [Unit]
+# Never give up (StartLimitIntervalSec=0), but retry slowly (RestartSec >= 60): with a start
+# limit the service stayed dead for good after a few quick failures - e.g. a boot without WiFi -
+# until the next reboot; retrying every 10 s filled the journal (librespot 325x in an hour).
+StartLimitIntervalSec=0
 Description=Checks Blank Monitor
 
 [Service]
 ExecStart=/usr/local/bin/mupibox/./get_monitor.sh
-
+# Phase 13b (B4): get_monitor.sh feeds the touch-blocking-while-display-off
+# logic. Without Restart the service stayed dead after any crash and the
+# kid-interface could freeze in a touch-blocked state until reboot.
+Restart=on-failure
+RestartSec=60
 [Install]
 WantedBy=default.target

@@ -5,12 +5,15 @@
         <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>
       </ion-button>
     </ion-buttons>
-    <ion-title>{{artist().name}}</ion-title>
-    <span slot="end" class="mupihat-icon-container"><mupihat-icon></mupihat-icon></span>
+    <ion-title>{{artist()?.name}}</ion-title>
+    <span slot="end" class="mupihat-icon-container"><mupi-status></mupi-status></span>
   </ion-toolbar>
 </ion-header>
 
 <ion-content class="medialist-content">
   <mupi-loading [loading]="isLoading()"></mupi-loading>
-  <mupi-swiper [data]="swiperData()" (elementClicked)="this.coverClicked($event.data)"></mupi-swiper>
+  @if (unavailable()) {
+    <mupi-media-unavailable [nas]="artist()?.coverMedia?.type === 'nas'"></mupi-media-unavailable>
+  }
+  <mupi-swiper [data]="swiperData()" [positionKey]="category() + '|' + (artist()?.name ?? '') + '|' + (artist()?.coverMedia?.libraryPath ?? artist()?.coverMedia?.nasPath ?? '')" (elementClicked)="this.coverClicked($event.data)"></mupi-swiper>
 </ion-content>

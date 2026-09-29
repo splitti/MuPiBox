@@ -1,0 +1,5 @@
+/* custom – helle Variante: für helle eigene Bilder, dunkle Schrift und heller Verlauf oben */
+:root { --km-night: #F2F2F2; --km-night-2: rgba(255,255,255,.72); --km-night-3: #FFFFFF; --km-night-4: #E4E4E4; --km-stack-1: #FFFFFF; --km-stack-2: #D8D8D8; --km-shadow: rgba(0,0,0,.25); --km-overlay: rgba(255,255,255,.82); --km-cream: #FFFFFF; --km-ring: #FFFFFF; --km-ink: #1A1A1A; --km-lavender: #4A4A4A; --km-apricot: #1A1A1A; --km-apricot-shadow: #000000; --km-moon: #FFE9A0; --km-rose: #E5484D; --km-on-bg: #1A1A1A; --km-sync-bg: #4A4A4A; --km-sync-fg: #FFFFFF; }
+.ion-page { background-image: linear-gradient(to bottom, rgba(255,255,255,.6) 0, rgba(255,255,255,0) 120px), url("/theme-data/custom/custom-bg.jpg") !important; }
+/* Bei heller Variante zusätzlich body.km-light setzen (light: true). Achtung: --km-apricot ist hier dunkel → Symbole auf Akzent in Weiß: */
+body.km .km-tab.active ion-icon, body.km .player-content .controls ion-button.km-play { --color: #FFFFFF; color: #FFFFFF; }

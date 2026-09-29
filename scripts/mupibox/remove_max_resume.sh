@@ -19,8 +19,10 @@ if [ -f "${RESUME_LOCK}" ]; then
 else
 	touch ${RESUME_LOCK}
 
-	# Anzahl der Einträge mit der Kategorie "resume" zählen
-	json_output=$(jq '[.[] | select(.category == "resume")] | length' "$RESUME")
+	# Anzahl der Resume-Einträge zählen.
+	# Akzeptiert beide Formate: neue Einträge tragen isResume=true und ihre
+	# echte Kategorie (audiobook/music/...); Alt-Einträge haben category="resume".
+	json_output=$(jq '[.[] | select(.isResume == true or .category == "resume")] | length' "$RESUME")
 
 	if [ -n "$json_output" ]; then
 	    # Versuchen Sie, den Wert in eine ganze Zahl umzuwandeln

@@ -1,0 +1,159 @@
+.magic-link-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.88);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: ml-fade-in 200ms;
+}
+@keyframes ml-fade-in { from { opacity: 0 } to { opacity: 1 } }
+
+// Landscape two-column layout: QR on the left, text on the right. The box
+// kiosk is 800×480; a vertical stack overflowed the 480px height (the header
+// and close button got clipped). Side-by-side keeps the card well under the
+// screen height. max-height + overflow-y is a safety net for any future
+// content growth or a smaller panel.
+.ml-card {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 22px;
+  background: #1a1c20;
+  border-radius: 14px;
+  padding: 18px 22px;
+  max-width: 94vw;
+  max-height: 94vh;
+  overflow-y: auto;
+  color: #e4e4e7;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+}
+
+.ml-qr {
+  flex: 0 0 auto;
+  display: block;
+  width: 220px;
+  height: 220px;
+  background: white;
+  border-radius: 8px;
+  padding: 8px;
+  box-sizing: content-box;
+}
+
+.ml-info {
+  flex: 1 1 auto;
+  min-width: 0;        // let the URL's break-all wrap inside this column
+  max-width: 360px;
+  text-align: center;
+}
+
+.ml-info h2 {
+  margin: 0 0 8px;
+  font-size: 22px;
+}
+
+.ml-info p {
+  margin: 6px 0;
+  font-size: 14px;
+}
+
+.ml-url {
+  display: block;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 12px;
+  word-break: break-all;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin: 8px 0;
+}
+
+.ml-countdown {
+  color: #9ca3af;
+  font-size: 13px;
+  margin: 8px 0 14px;
+}
+
+.ml-close {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #e4e4e7;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  min-height: 44px;
+  width: 100%;
+}
+.ml-close:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+// km themes: cream card 680 × 340 (radius 32) on a scrim without blur, QR 284 on white, big close button
+:host-context(body.km) {
+  .magic-link-overlay {
+    background: rgba(20, 16, 36, 0.86);
+  }
+
+  .ml-card {
+    width: 680px;
+    max-width: calc(100vw - 32px);
+    min-height: 340px;
+    box-sizing: border-box;
+    gap: 28px;
+    padding: 28px;
+    border-radius: 32px;
+    background: var(--km-cream);
+    color: var(--km-ink);
+    font-family: inherit;
+    box-shadow: 0 8px 0 var(--km-shadow);
+  }
+
+  .ml-qr {
+    width: 252px;
+    height: 252px;
+    padding: 16px;
+    border-radius: 20px;
+  }
+
+  .ml-info {
+    max-width: none;
+    text-align: left;
+  }
+
+  .ml-info h2 {
+    font-size: 30px;
+    font-weight: 600;
+  }
+
+  .ml-info p {
+    font-size: 17px;
+    font-weight: 500;
+  }
+
+  .ml-url {
+    font-size: 15px;
+    border-radius: 10px;
+    background: rgba(42, 33, 64, 0.08);
+  }
+
+  .ml-countdown {
+    color: inherit;
+    opacity: 0.7;
+    font-size: 16px;
+    font-weight: 500;
+  }
+
+  .ml-close {
+    height: 64px;
+    border: 0;
+    border-radius: 32px;
+    background: var(--km-ink);
+    color: var(--km-cream);
+    font-size: 22px;
+    font-weight: 600;
+  }
+}

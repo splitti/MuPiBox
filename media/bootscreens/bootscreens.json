@@ -1,0 +1,1161 @@
+{
+  "_comment": "Startbilder (Bootscreens) und Wartungsbilder der MuPiBox. Koordinaten in px auf 800 × 480. Text wird auf der Box eingerechnet (siehe README).",
+  "canvas": {
+    "width": 800,
+    "height": 480
+  },
+  "font": {
+    "family": "Fredoka",
+    "file": "/theme-data/_fonts/Fredoka-Variable.ttf"
+  },
+  "defaultName": "MuPiBox",
+  "nameMaxLength": 14,
+  "defaultBootscreen": "karte",
+  "texts": {
+    "update": {
+      "de": [
+        "Update läuft",
+        "Bitte nicht ausschalten – das dauert ein paar Minuten"
+      ],
+      "en": [
+        "Updating",
+        "Please don't switch off – this takes a few minutes"
+      ],
+      "fr": [
+        "Mise à jour en cours",
+        "Ne pas éteindre – cela prend quelques minutes"
+      ],
+      "es": [
+        "Actualizando",
+        "No apagar – tarda unos minutos"
+      ],
+      "it": [
+        "Aggiornamento in corso",
+        "Non spegnere – ci vuole qualche minuto"
+      ],
+      "nl": [
+        "Bezig met bijwerken",
+        "Niet uitschakelen – dit duurt een paar minuten"
+      ],
+      "sv": [
+        "Uppdaterar",
+        "Stäng inte av – det tar några minuter"
+      ],
+      "da": [
+        "Opdaterer",
+        "Sluk ikke – det tager et par minutter"
+      ],
+      "nb": [
+        "Oppdaterer",
+        "Ikke slå av – dette tar noen minutter"
+      ],
+      "fi": [
+        "Päivitetään",
+        "Älä sammuta – tämä kestää muutaman minuutin"
+      ],
+      "pl": [
+        "Aktualizacja",
+        "Nie wyłączaj – to potrwa kilka minut"
+      ],
+      "pt": [
+        "A atualizar",
+        "Não desligar – demora alguns minutos"
+      ],
+      "tr": [
+        "Güncelleniyor",
+        "Kapatmayın – birkaç dakika sürer"
+      ],
+      "uk": [
+        "Оновлення",
+        "Не вимикайте – це займе кілька хвилин"
+      ],
+      "ru": [
+        "Обновление",
+        "Не выключайте – это займёт несколько минут"
+      ],
+      "cs": [
+        "Probíhá aktualizace",
+        "Nevypínejte – potrvá to pár minut"
+      ],
+      "el": [
+        "Ενημέρωση",
+        "Μην το απενεργοποιείτε – θα πάρει λίγα λεπτά"
+      ]
+    },
+    "install": {
+      "de": [
+        "Installation läuft",
+        "Bitte nicht ausschalten – das kann etwas dauern"
+      ],
+      "en": [
+        "Installing",
+        "Please don't switch off – this can take a while"
+      ],
+      "fr": [
+        "Installation en cours",
+        "Ne pas éteindre – cela peut prendre un moment"
+      ],
+      "es": [
+        "Instalando",
+        "No apagar – puede tardar un poco"
+      ],
+      "it": [
+        "Installazione in corso",
+        "Non spegnere – può richiedere un po’ di tempo"
+      ],
+      "nl": [
+        "Bezig met installeren",
+        "Niet uitschakelen – dit kan even duren"
+      ],
+      "sv": [
+        "Installerar",
+        "Stäng inte av – det kan ta en stund"
+      ],
+      "da": [
+        "Installerer",
+        "Sluk ikke – det kan tage lidt tid"
+      ],
+      "nb": [
+        "Installerer",
+        "Ikke slå av – dette kan ta litt tid"
+      ],
+      "fi": [
+        "Asennetaan",
+        "Älä sammuta – tämä voi kestää hetken"
+      ],
+      "pl": [
+        "Instalacja",
+        "Nie wyłączaj – to może chwilę potrwać"
+      ],
+      "pt": [
+        "A instalar",
+        "Não desligar – pode demorar um pouco"
+      ],
+      "tr": [
+        "Kuruluyor",
+        "Kapatmayın – biraz sürebilir"
+      ],
+      "uk": [
+        "Встановлення",
+        "Не вимикайте – це може зайняти час"
+      ],
+      "ru": [
+        "Установка",
+        "Не выключайте – это может занять время"
+      ],
+      "cs": [
+        "Probíhá instalace",
+        "Nevypínejte – může to chvíli trvat"
+      ],
+      "el": [
+        "Εγκατάσταση",
+        "Μην το απενεργοποιείτε – μπορεί να αργήσει λίγο"
+      ]
+    },
+    "wlan": {
+      "de": [
+        "Neues WLAN wird eingerichtet",
+        "Die Box startet gleich neu"
+      ],
+      "en": [
+        "Setting up new Wi-Fi",
+        "The box will restart shortly"
+      ],
+      "fr": [
+        "Configuration du Wi-Fi",
+        "La box va bientôt redémarrer"
+      ],
+      "es": [
+        "Configurando el Wi-Fi",
+        "La caja se reiniciará en breve"
+      ],
+      "it": [
+        "Configurazione del Wi-Fi",
+        "La box si riavvierà a breve"
+      ],
+      "nl": [
+        "Nieuwe wifi instellen",
+        "De box start zo opnieuw"
+      ],
+      "sv": [
+        "Nytt wifi ställs in",
+        "Boxen startar snart om"
+      ],
+      "da": [
+        "Nyt wifi sættes op",
+        "Boksen genstarter om lidt"
+      ],
+      "nb": [
+        "Nytt wifi settes opp",
+        "Boksen starter snart på nytt"
+      ],
+      "fi": [
+        "Uutta wifiä määritetään",
+        "Laite käynnistyy pian uudelleen"
+      ],
+      "pl": [
+        "Konfiguracja nowego Wi-Fi",
+        "Urządzenie zaraz się uruchomi ponownie"
+      ],
+      "pt": [
+        "A configurar o Wi-Fi",
+        "A caixa vai reiniciar em breve"
+      ],
+      "tr": [
+        "Yeni Wi-Fi kuruluyor",
+        "Kutu birazdan yeniden başlayacak"
+      ],
+      "uk": [
+        "Налаштування Wi-Fi",
+        "Пристрій скоро перезапуститься"
+      ],
+      "ru": [
+        "Настройка Wi-Fi",
+        "Устройство скоро перезапустится"
+      ],
+      "cs": [
+        "Nastavuje se nová Wi-Fi",
+        "Box se brzy restartuje"
+      ],
+      "el": [
+        "Ρύθμιση νέου Wi-Fi",
+        "Η συσκευή θα επανεκκινηθεί σύντομα"
+      ]
+    },
+    "goodbye": {
+      "en": [
+        "Goodbye!",
+        "See you soon"
+      ],
+      "de": [
+        "Tschüss!",
+        "Bis bald"
+      ],
+      "fr": [
+        "Au revoir !",
+        "À bientôt"
+      ],
+      "es": [
+        "¡Adiós!",
+        "Hasta pronto"
+      ],
+      "it": [
+        "Ciao ciao!",
+        "A presto"
+      ],
+      "nl": [
+        "Doei!",
+        "Tot snel"
+      ],
+      "sv": [
+        "Hej då!",
+        "Vi ses snart"
+      ],
+      "da": [
+        "Farvel!",
+        "Vi ses snart"
+      ],
+      "nb": [
+        "Ha det!",
+        "Vi ses snart"
+      ],
+      "fi": [
+        "Heippa!",
+        "Nähdään pian"
+      ],
+      "pl": [
+        "Pa pa!",
+        "Do zobaczenia"
+      ],
+      "pt": [
+        "Adeus!",
+        "Até breve"
+      ],
+      "tr": [
+        "Hoşça kal!",
+        "Görüşmek üzere"
+      ],
+      "uk": [
+        "Бувай!",
+        "До зустрічі"
+      ],
+      "ru": [
+        "Пока!",
+        "До встречи"
+      ],
+      "cs": [
+        "Ahoj!",
+        "Brzy na viděnou"
+      ],
+      "el": [
+        "Γεια σου!",
+        "Τα λέμε σύντομα"
+      ]
+    },
+    "battery": {
+      "en": [
+        "Battery empty",
+        "Please charge me – the box is switching off"
+      ],
+      "de": [
+        "Akku leer",
+        "Bitte aufladen – die Box schaltet sich aus"
+      ],
+      "fr": [
+        "Batterie vide",
+        "Recharge-moi – la box s'éteint"
+      ],
+      "es": [
+        "Batería vacía",
+        "Cárgame, por favor – la caja se apaga"
+      ],
+      "it": [
+        "Batteria scarica",
+        "Ricaricami – la box si spegne"
+      ],
+      "nl": [
+        "Batterij leeg",
+        "Laad me op – de box gaat uit"
+      ],
+      "sv": [
+        "Batteriet är slut",
+        "Ladda mig – boxen stängs av"
+      ],
+      "da": [
+        "Batteriet er tomt",
+        "Oplad mig – boksen slukker"
+      ],
+      "nb": [
+        "Batteriet er tomt",
+        "Lad meg opp – boksen slår seg av"
+      ],
+      "fi": [
+        "Akku on tyhjä",
+        "Lataa minut – laite sammuu"
+      ],
+      "pl": [
+        "Bateria pusta",
+        "Naładuj mnie – urządzenie się wyłącza"
+      ],
+      "pt": [
+        "Bateria vazia",
+        "Carrega-me – a caixa vai desligar"
+      ],
+      "tr": [
+        "Pil bitti",
+        "Beni şarj et – kutu kapanıyor"
+      ],
+      "uk": [
+        "Батарея розряджена",
+        "Зарядіть мене – пристрій вимикається"
+      ],
+      "ru": [
+        "Батарея разряжена",
+        "Зарядите меня – устройство выключается"
+      ],
+      "cs": [
+        "Baterie je vybitá",
+        "Nabij mě – box se vypíná"
+      ],
+      "el": [
+        "Η μπαταρία άδειασε",
+        "Φόρτισέ με – η συσκευή σβήνει"
+      ]
+    }
+  },
+  "bootscreens": [
+    {
+      "id": "karte",
+      "code": "3f",
+      "label": "Karte",
+      "labelEn": "Card",
+      "baseColor": "#44AFE2",
+      "scene": "screens/karte/splash.svg",
+      "maintenance": "screens/karte/wartung.svg",
+      "goodbye": "screens/karte/goodbye.svg",
+      "battery": "screens/karte/battery.svg",
+      "name": {
+        "x": 366,
+        "y": 196,
+        "maxWidth": 346,
+        "align": "left",
+        "fontSize": 80,
+        "fontWeight": 600,
+        "letterSpacing": -2,
+        "color": "#1E2A44",
+        "textShadow": "none"
+      },
+      "maintenanceText": {
+        "x": 366,
+        "maxWidth": 346,
+        "align": "left",
+        "color": "#1E2A44",
+        "textShadow": "none",
+        "titleSize": 48,
+        "titleWeight": 600,
+        "subSize": 21,
+        "subWeight": 500,
+        "gap": 12,
+        "subMaxLines": 2,
+        "y": 150,
+        "subPill": {
+          "background": "#FFF1CC",
+          "color": "#1E2A44",
+          "padX": 14,
+          "padY": 6,
+          "radius": 16,
+          "lineGap": 6
+        }
+      },
+      "goodbyeText": {
+        "x": 366,
+        "maxWidth": 346,
+        "align": "left",
+        "color": "#1E2A44",
+        "textShadow": "none",
+        "titleSize": 48,
+        "titleWeight": 600,
+        "subSize": 21,
+        "subWeight": 500,
+        "gap": 12,
+        "subMaxLines": 2,
+        "y": 150,
+        "subPill": {
+          "background": "#ECE9FB",
+          "color": "#1E2A44",
+          "padX": 14,
+          "padY": 6,
+          "radius": 16,
+          "lineGap": 6
+        }
+      },
+      "batteryText": {
+        "x": 366,
+        "maxWidth": 346,
+        "align": "left",
+        "color": "#1E2A44",
+        "textShadow": "none",
+        "titleSize": 48,
+        "titleWeight": 600,
+        "subSize": 21,
+        "subWeight": 500,
+        "gap": 12,
+        "subMaxLines": 2,
+        "y": 164,
+        "subPill": {
+          "background": "#E6E8EF",
+          "color": "#1E2A44",
+          "padX": 14,
+          "padY": 6,
+          "radius": 16,
+          "lineGap": 6
+        }
+      }
+    },
+    {
+      "id": "abendhuegel",
+      "code": "4a",
+      "label": "Abendhügel",
+      "labelEn": "Evening Hills",
+      "baseColor": "#EE9E86",
+      "scene": "screens/abendhuegel/splash.svg",
+      "maintenance": "screens/abendhuegel/wartung.svg",
+      "goodbye": "screens/abendhuegel/goodbye.svg",
+      "battery": "screens/abendhuegel/battery.svg",
+      "name": {
+        "x": 446,
+        "y": 68,
+        "maxWidth": 314,
+        "align": "left",
+        "fontSize": 87,
+        "fontWeight": 600,
+        "letterSpacing": -2,
+        "color": "#FFF4E6",
+        "textShadow": "0 5px 0 #C9776A"
+      },
+      "maintenanceText": {
+        "x": 446,
+        "y": 68,
+        "maxWidth": 314,
+        "align": "left",
+        "color": "#FFF4E6",
+        "textShadow": "0 5px 0 #C9776A",
+        "titleSize": 52,
+        "titleWeight": 600,
+        "subSize": 21,
+        "subWeight": 500,
+        "gap": 10,
+        "subMaxLines": 2,
+        "subPill": {
+          "background": "rgba(255,255,255,0.92)",
+          "color": "#1E2A44",
+          "padX": 14,
+          "padY": 6,
+          "radius": 16,
+          "lineGap": 6
+        }
+      }
+    },
+    {
+      "id": "knete",
+      "code": "4b",
+      "label": "Knete",
+      "labelEn": "Clay",
+      "baseColor": "#CFE9F7",
+      "scene": "screens/knete/splash.svg",
+      "maintenance": "screens/knete/wartung.svg",
+      "goodbye": "screens/knete/goodbye.svg",
+      "battery": "screens/knete/battery.svg",
+      "name": {
+        "x": 435,
+        "y": 114,
+        "maxWidth": 325,
+        "align": "left",
+        "fontSize": 87,
+        "fontWeight": 600,
+        "letterSpacing": -2,
+        "color": "#7B63D6",
+        "textShadow": "0 2px 0 #FFFFFF, 0 6px 0 #5A45B0, 0 10px 12px rgba(90,69,176,.25)"
+      },
+      "maintenanceText": {
+        "x": 435,
+        "y": 114,
+        "maxWidth": 325,
+        "align": "left",
+        "color": "#7B63D6",
+        "textShadow": "0 2px 0 #FFFFFF, 0 6px 0 #5A45B0, 0 10px 12px rgba(90,69,176,.25)",
+        "titleSize": 52,
+        "titleWeight": 600,
+        "subSize": 21,
+        "subWeight": 500,
+        "gap": 10,
+        "subMaxLines": 2,
+        "subPill": {
+          "background": "rgba(255,255,255,0.92)",
+          "color": "#1E2A44",
+          "padX": 14,
+          "padY": 6,
+          "radius": 16,
+          "lineGap": 6
+        }
+      }
+    },
+    {
+      "id": "papier",
+      "code": "4c",
+      "label": "Papier-Collage",
+      "labelEn": "Paper Collage",
+      "baseColor": "#F6EBD7",
+      "scene": "screens/papier/splash.svg",
+      "maintenance": "screens/papier/wartung.svg",
+      "goodbye": "screens/papier/goodbye.svg",
+      "battery": "screens/papier/battery.svg",
+      "name": {
+        "x": 41,
+        "y": 46,
+        "maxWidth": 719,
+        "align": "left",
+        "fontSize": 83,
+        "fontWeight": 600,
+        "letterSpacing": -2,
+        "color": "#1E2A44",
+        "textShadow": "4px 5px 0 rgba(0,0,0,.15)"
+      },
+      "maintenanceText": {
+        "x": 41,
+        "y": 46,
+        "maxWidth": 719,
+        "align": "left",
+        "color": "#1E2A44",
+        "textShadow": "4px 5px 0 rgba(0,0,0,.15)",
+        "titleSize": 51,
+        "titleWeight": 600,
+        "subSize": 21,
+        "subWeight": 500,
+        "gap": 10,
+        "subMaxLines": 2,
+        "subPill": {
+          "background": "rgba(255,255,255,0.92)",
+          "color": "#1E2A44",
+          "padX": 14,
+          "padY": 6,
+          "radius": 16,
+          "lineGap": 6
+        }
+      }
+    },
+    {
+      "id": "plakativ",
+      "code": "4d",
+      "label": "Plakativ",
+      "labelEn": "Poster",
+      "baseColor": "#1E2A44",
+      "scene": "screens/plakativ/splash.svg",
+      "maintenance": "screens/plakativ/wartung.svg",
+      "goodbye": "screens/plakativ/goodbye.svg",
+      "battery": "screens/plakativ/battery.svg",
+      "name": {
+        "x": 46,
+        "y": 203,
+        "maxWidth": 714,
+        "align": "left",
+        "fontSize": 99,
+        "fontWeight": 600,
+        "letterSpacing": -2,
+        "color": "#FFF4E6",
+        "textShadow": "none"
+      },
+      "maintenanceText": {
+        "x": 46,
+        "y": 203,
+        "maxWidth": 390,
+        "align": "left",
+        "color": "#FFF4E6",
+        "textShadow": "none",
+        "titleSize": 52,
+        "titleWeight": 600,
+        "subSize": 21,
+        "subWeight": 500,
+        "gap": 10,
+        "subMaxLines": 2,
+        "subPill": {
+          "background": "rgba(255,255,255,0.92)",
+          "color": "#1E2A44",
+          "padX": 14,
+          "padY": 6,
+          "radius": 16,
+          "lineGap": 6
+        }
+      },
+      "goodbyeText": {
+        "x": 46,
+        "y": 203,
+        "maxWidth": 390,
+        "align": "left",
+        "color": "#FFF4E6",
+        "textShadow": "none",
+        "titleSize": 52,
+        "titleWeight": 600,
+        "subSize": 21,
+        "subWeight": 500,
+        "gap": 10,
+        "subMaxLines": 2,
+        "subPill": {
+          "background": "rgba(255,255,255,0.92)",
+          "color": "#1E2A44",
+          "padX": 14,
+          "padY": 6,
+          "radius": 16,
+          "lineGap": 6
+        }
+      },
+      "batteryText": {
+        "x": 46,
+        "y": 203,
+        "maxWidth": 390,
+        "align": "left",
+        "color": "#FFF4E6",
+        "textShadow": "none",
+        "titleSize": 52,
+        "titleWeight": 600,
+        "subSize": 21,
+        "subWeight": 500,
+        "gap": 10,
+        "subMaxLines": 2,
+        "subPill": {
+          "background": "rgba(255,255,255,0.92)",
+          "color": "#1E2A44",
+          "padX": 14,
+          "padY": 6,
+          "radius": 16,
+          "lineGap": 6
+        }
+      }
+    },
+    {
+      "id": "kinderbuch",
+      "code": "4e",
+      "label": "Kinderbuch",
+      "labelEn": "Picture Book",
+      "baseColor": "#FBF3E4",
+      "scene": "screens/kinderbuch/splash.svg",
+      "maintenance": "screens/kinderbuch/wartung.svg",
+      "goodbye": "screens/kinderbuch/goodbye.svg",
+      "battery": "screens/kinderbuch/battery.svg",
+      "name": {
+        "x": 46,
+        "y": 50,
+        "maxWidth": 714,
+        "align": "left",
+        "fontSize": 81,
+        "fontWeight": 600,
+        "letterSpacing": -2,
+        "color": "#5A4A3A",
+        "textShadow": "none"
+      },
+      "maintenanceText": {
+        "x": 46,
+        "y": 50,
+        "maxWidth": 714,
+        "align": "left",
+        "color": "#5A4A3A",
+        "textShadow": "none",
+        "titleSize": 50,
+        "titleWeight": 600,
+        "subSize": 21,
+        "subWeight": 500,
+        "gap": 10,
+        "subMaxLines": 2,
+        "subPill": {
+          "background": "rgba(255,255,255,0.92)",
+          "color": "#1E2A44",
+          "padX": 14,
+          "padY": 6,
+          "radius": 16,
+          "lineGap": 6
+        }
+      }
+    },
+    {
+      "id": "retro",
+      "code": "4f",
+      "label": "Retro 70er",
+      "labelEn": "Retro 70s",
+      "baseColor": "#F7D9A8",
+      "scene": "screens/retro/splash.svg",
+      "maintenance": "screens/retro/wartung.svg",
+      "goodbye": "screens/retro/goodbye.svg",
+      "battery": "screens/retro/battery.svg",
+      "name": {
+        "x": 40,
+        "y": 46,
+        "maxWidth": 720,
+        "align": "center",
+        "fontSize": 91,
+        "fontWeight": 600,
+        "letterSpacing": -2,
+        "color": "#FFF4E6",
+        "textShadow": "0 4px 0 #E0344E, 0 8px 0 #F47B3B, 0 12px 0 #F2A93B"
+      },
+      "maintenanceText": {
+        "x": 40,
+        "y": 46,
+        "maxWidth": 720,
+        "align": "center",
+        "color": "#FFF4E6",
+        "textShadow": "0 4px 0 #E0344E, 0 8px 0 #F47B3B, 0 12px 0 #F2A93B",
+        "titleSize": 52,
+        "titleWeight": 600,
+        "subSize": 21,
+        "subWeight": 500,
+        "gap": 10,
+        "subMaxLines": 2,
+        "subPill": {
+          "background": "rgba(255,255,255,0.92)",
+          "color": "#1E2A44",
+          "padX": 14,
+          "padY": 6,
+          "radius": 16,
+          "lineGap": 6
+        }
+      }
+    },
+    {
+      "id": "weltraum",
+      "code": "5a",
+      "label": "Weltraum",
+      "labelEn": "Space",
+      "baseColor": "#141A40",
+      "scene": "screens/weltraum/splash.svg",
+      "maintenance": "screens/weltraum/wartung.svg",
+      "goodbye": "screens/weltraum/goodbye.svg",
+      "battery": "screens/weltraum/battery.svg",
+      "name": {
+        "x": 259,
+        "y": 41,
+        "maxWidth": 501,
+        "align": "left",
+        "fontSize": 79,
+        "fontWeight": 600,
+        "letterSpacing": -2,
+        "color": "#FFF4E6",
+        "textShadow": "0 5px 0 #0E1330"
+      },
+      "maintenanceText": {
+        "x": 259,
+        "y": 41,
+        "maxWidth": 501,
+        "align": "left",
+        "color": "#FFF4E6",
+        "textShadow": "0 5px 0 #0E1330",
+        "titleSize": 49,
+        "titleWeight": 600,
+        "subSize": 21,
+        "subWeight": 500,
+        "gap": 10,
+        "subMaxLines": 2,
+        "subPill": {
+          "background": "rgba(255,255,255,0.92)",
+          "color": "#1E2A44",
+          "padX": 14,
+          "padY": 6,
+          "radius": 16,
+          "lineGap": 6
+        }
+      }
+    },
+    {
+      "id": "unterwasser",
+      "code": "5b",
+      "label": "Unterwasser",
+      "labelEn": "Underwater",
+      "baseColor": "#1678A6",
+      "scene": "screens/unterwasser/splash.svg",
+      "maintenance": "screens/unterwasser/wartung.svg",
+      "goodbye": "screens/unterwasser/goodbye.svg",
+      "battery": "screens/unterwasser/battery.svg",
+      "name": {
+        "x": 41,
+        "y": 35,
+        "maxWidth": 719,
+        "align": "left",
+        "fontSize": 79,
+        "fontWeight": 600,
+        "letterSpacing": -2,
+        "color": "#FFFFFF",
+        "textShadow": "0 5px 0 #0F5E86"
+      },
+      "maintenanceText": {
+        "x": 41,
+        "y": 35,
+        "maxWidth": 719,
+        "align": "left",
+        "color": "#FFFFFF",
+        "textShadow": "0 5px 0 #0F5E86",
+        "titleSize": 49,
+        "titleWeight": 600,
+        "subSize": 21,
+        "subWeight": 500,
+        "gap": 10,
+        "subMaxLines": 2,
+        "subPill": {
+          "background": "rgba(255,255,255,0.92)",
+          "color": "#1E2A44",
+          "padX": 14,
+          "padY": 6,
+          "radius": 16,
+          "lineGap": 6
+        }
+      }
+    },
+    {
+      "id": "winter",
+      "code": "5c",
+      "label": "Winterabend",
+      "labelEn": "Winter Evening",
+      "baseColor": "#1C2A5A",
+      "scene": "screens/winter/splash.svg",
+      "maintenance": "screens/winter/wartung.svg",
+      "goodbye": "screens/winter/goodbye.svg",
+      "battery": "screens/winter/battery.svg",
+      "name": {
+        "x": 435,
+        "y": 41,
+        "maxWidth": 325,
+        "align": "left",
+        "fontSize": 79,
+        "fontWeight": 600,
+        "letterSpacing": -2,
+        "color": "#FFF4E6",
+        "textShadow": "0 5px 0 #121C44"
+      },
+      "maintenanceText": {
+        "x": 435,
+        "y": 41,
+        "maxWidth": 325,
+        "align": "left",
+        "color": "#FFF4E6",
+        "textShadow": "0 5px 0 #121C44",
+        "titleSize": 49,
+        "titleWeight": 600,
+        "subSize": 21,
+        "subWeight": 500,
+        "gap": 10,
+        "subMaxLines": 2,
+        "subPill": {
+          "background": "rgba(255,255,255,0.92)",
+          "color": "#1E2A44",
+          "padX": 14,
+          "padY": 6,
+          "radius": 16,
+          "lineGap": 6
+        }
+      }
+    },
+    {
+      "id": "lagerfeuer",
+      "code": "5d",
+      "label": "Lagerfeuer",
+      "labelEn": "Campfire",
+      "baseColor": "#1E2447",
+      "scene": "screens/lagerfeuer/splash.svg",
+      "maintenance": "screens/lagerfeuer/wartung.svg",
+      "goodbye": "screens/lagerfeuer/goodbye.svg",
+      "battery": "screens/lagerfeuer/battery.svg",
+      "name": {
+        "x": 456,
+        "y": 50,
+        "maxWidth": 304,
+        "align": "left",
+        "fontSize": 75,
+        "fontWeight": 600,
+        "letterSpacing": -2,
+        "color": "#FFE3A3",
+        "textShadow": "0 5px 0 #0E1330"
+      },
+      "maintenanceText": {
+        "x": 456,
+        "y": 50,
+        "maxWidth": 304,
+        "align": "left",
+        "color": "#FFE3A3",
+        "textShadow": "0 5px 0 #0E1330",
+        "titleSize": 47,
+        "titleWeight": 600,
+        "subSize": 21,
+        "subWeight": 500,
+        "gap": 10,
+        "subMaxLines": 2,
+        "subPill": {
+          "background": "rgba(255,255,255,0.92)",
+          "color": "#1E2A44",
+          "padX": 14,
+          "padY": 6,
+          "radius": 16,
+          "lineGap": 6
+        }
+      }
+    },
+    {
+      "id": "ballon",
+      "code": "5e",
+      "label": "Ballonfahrt",
+      "labelEn": "Balloon Ride",
+      "baseColor": "#BFE6F7",
+      "scene": "screens/ballon/splash.svg",
+      "maintenance": "screens/ballon/wartung.svg",
+      "goodbye": "screens/ballon/goodbye.svg",
+      "battery": "screens/ballon/battery.svg",
+      "name": {
+        "x": 446,
+        "y": 280,
+        "maxWidth": 314,
+        "align": "left",
+        "fontSize": 79,
+        "fontWeight": 600,
+        "letterSpacing": -2,
+        "color": "#1E2A44",
+        "textShadow": "0 4px 0 #FFFFFF"
+      },
+      "maintenanceText": {
+        "x": 446,
+        "y": 280,
+        "maxWidth": 314,
+        "align": "left",
+        "color": "#1E2A44",
+        "textShadow": "0 4px 0 #FFFFFF",
+        "titleSize": 49,
+        "titleWeight": 600,
+        "subSize": 21,
+        "subWeight": 500,
+        "gap": 10,
+        "subMaxLines": 2,
+        "subPill": {
+          "background": "rgba(255,255,255,0.92)",
+          "color": "#1E2A44",
+          "padX": 14,
+          "padY": 6,
+          "radius": 16,
+          "lineGap": 6
+        }
+      }
+    },
+    {
+      "id": "zimmer",
+      "code": "5f",
+      "label": "Kinderzimmer",
+      "labelEn": "Cozy Room",
+      "baseColor": "#F6D8C2",
+      "scene": "screens/zimmer/splash.svg",
+      "maintenance": "screens/zimmer/wartung.svg",
+      "goodbye": "screens/zimmer/goodbye.svg",
+      "battery": "screens/zimmer/battery.svg",
+      "name": {
+        "x": 218,
+        "y": 41,
+        "maxWidth": 542,
+        "align": "left",
+        "fontSize": 77,
+        "fontWeight": 600,
+        "letterSpacing": -2,
+        "color": "#8A4E2A",
+        "textShadow": "0 4px 0 #FFFFFF"
+      },
+      "maintenanceText": {
+        "x": 218,
+        "y": 41,
+        "maxWidth": 542,
+        "align": "left",
+        "color": "#8A4E2A",
+        "textShadow": "0 4px 0 #FFFFFF",
+        "titleSize": 48,
+        "titleWeight": 600,
+        "subSize": 21,
+        "subWeight": 500,
+        "gap": 10,
+        "subMaxLines": 2,
+        "subPill": {
+          "background": "rgba(255,255,255,0.92)",
+          "color": "#1E2A44",
+          "padX": 14,
+          "padY": 6,
+          "radius": 16,
+          "lineGap": 6
+        }
+      }
+    },
+    {
+      "id": "regenbogen",
+      "code": "5g",
+      "label": "Regenbogen",
+      "labelEn": "Rainbow",
+      "baseColor": "#FDE7F0",
+      "scene": "screens/regenbogen/splash.svg",
+      "maintenance": "screens/regenbogen/wartung.svg",
+      "goodbye": "screens/regenbogen/goodbye.svg",
+      "battery": "screens/regenbogen/battery.svg",
+      "name": {
+        "x": 40,
+        "y": 10,
+        "maxWidth": 720,
+        "align": "center",
+        "fontSize": 64,
+        "fontWeight": 600,
+        "letterSpacing": -2,
+        "color": "#5A45B0",
+        "textShadow": "0 4px 0 #D9CFF7"
+      },
+      "maintenanceText": {
+        "x": 40,
+        "y": 10,
+        "maxWidth": 720,
+        "align": "center",
+        "color": "#5A45B0",
+        "textShadow": "0 4px 0 #D9CFF7",
+        "titleSize": 40,
+        "titleWeight": 600,
+        "subSize": 21,
+        "subWeight": 500,
+        "gap": 10,
+        "subMaxLines": 2,
+        "subPill": {
+          "background": "rgba(255,255,255,0.92)",
+          "color": "#1E2A44",
+          "padX": 14,
+          "padY": 6,
+          "radius": 16,
+          "lineGap": 6
+        }
+      }
+    },
+    {
+      "id": "konzert",
+      "code": "5h",
+      "label": "Konzert",
+      "labelEn": "Concert",
+      "baseColor": "#2A1840",
+      "scene": "screens/konzert/splash.svg",
+      "maintenance": "screens/konzert/wartung.svg",
+      "goodbye": "screens/konzert/goodbye.svg",
+      "battery": "screens/konzert/battery.svg",
+      "name": {
+        "x": 40,
+        "y": 75,
+        "maxWidth": 720,
+        "align": "center",
+        "fontSize": 79,
+        "fontWeight": 600,
+        "letterSpacing": -2,
+        "color": "#FFE3A3",
+        "textShadow": "0 5px 0 #B8203E"
+      },
+      "maintenanceText": {
+        "x": 40,
+        "y": 75,
+        "maxWidth": 720,
+        "align": "center",
+        "color": "#FFE3A3",
+        "textShadow": "0 5px 0 #B8203E",
+        "titleSize": 49,
+        "titleWeight": 600,
+        "subSize": 21,
+        "subWeight": 500,
+        "gap": 10,
+        "subMaxLines": 2,
+        "subPill": {
+          "background": "rgba(255,255,255,0.92)",
+          "color": "#1E2A44",
+          "padX": 14,
+          "padY": 6,
+          "radius": 16,
+          "lineGap": 6
+        }
+      }
+    },
+    {
+      "id": "baumhaus",
+      "code": "5i",
+      "label": "Baumhaus",
+      "labelEn": "Treehouse",
+      "baseColor": "#BFE3C6",
+      "scene": "screens/baumhaus/splash.svg",
+      "maintenance": "screens/baumhaus/wartung.svg",
+      "goodbye": "screens/baumhaus/goodbye.svg",
+      "battery": "screens/baumhaus/battery.svg",
+      "name": {
+        "x": 41,
+        "y": 35,
+        "maxWidth": 719,
+        "align": "left",
+        "fontSize": 79,
+        "fontWeight": 600,
+        "letterSpacing": -2,
+        "color": "#2F5A3A",
+        "textShadow": "0 4px 0 #FFFFFF"
+      },
+      "maintenanceText": {
+        "x": 41,
+        "y": 35,
+        "maxWidth": 719,
+        "align": "left",
+        "color": "#2F5A3A",
+        "textShadow": "0 4px 0 #FFFFFF",
+        "titleSize": 49,
+        "titleWeight": 600,
+        "subSize": 21,
+        "subWeight": 500,
+        "gap": 10,
+        "subMaxLines": 2,
+        "subPill": {
+          "background": "rgba(255,255,255,0.92)",
+          "color": "#1E2A44",
+          "padX": 14,
+          "padY": 6,
+          "radius": 16,
+          "lineGap": 6
+        }
+      }
+    }
+  ],
+  "defaultLanguage": "en"
+}

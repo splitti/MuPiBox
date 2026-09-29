@@ -3,98 +3,215 @@
     <ion-buttons slot="start">
       <ion-back-button icon="arrow-back-outline" defaultHref="/settings"></ion-back-button>
     </ion-buttons>
-    <ion-title>WiFi@if (network()?.interface) {<span class="wifi-interface">{{ network()?.interface }}</span>}</ion-title>
+    <ion-title>
+      @if (linkType() === 'ethernet') {
+        LAN@if (ethernet()?.interface) {<span class="wifi-interface">{{ ethernet()?.interface }}</span>}
+      } @else {
+        WiFi@if (card().interface) {<span class="wifi-interface">{{ card().interface }}</span>}
+      }
+    </ion-title>
     <ion-buttons slot="end">
       <ion-button (click)="wifiRestartButtonPressed()">
         <ion-icon slot="icon-only" name="refresh"></ion-icon>
       </ion-button>
     </ion-buttons>
-    <ion-buttons slot="end">
-      <ion-button (click)="enableWifiOnButtonPressed()">
-        <ion-icon slot="icon-only" name="wifi-outline"></ion-icon>
-      </ion-button>
-    </ion-buttons>
+    @if (onboardWifi()?.available) {
+      <ion-buttons slot="end">
+        <ion-button (click)="onboardWifiButtonPressed()" [title]="onboardWifiTooltip()">
+          <ion-icon slot="icon-only" name="wifi-outline" class="power-icon" [class.on]="onboardWifi()?.enabled"></ion-icon>
+        </ion-button>
+      </ion-buttons>
+    }
+    @if (ethernetAvailable()) {
+      <ion-buttons slot="end">
+        <ion-button (click)="lanPowerButtonPressed()" [title]="lanTooltip()">
+          <ion-icon slot="icon-only" name="git-network-outline" class="power-icon" [class.on]="ethernetLinkUp()"></ion-icon>
+        </ion-button>
+      </ion-buttons>
+    }
   </ion-toolbar>
 </ion-header>
 
 <ion-content class="wifi-content">
-  @let net = network();
-  <ion-card class="status-card">
-    <div class="status-row">
-      <div class="status-ssid">
-        <ion-icon name="wifi-outline"></ion-icon>
-        <div>
-          <div class="ssid-name">{{ net?.wifi ?? '—' }}</div>
-          <div class="ssid-detail">{{ net?.wifilink ?? '' }} &middot; {{ net?.wifisignal ?? '' }}</div>
+  @if (linkType() === 'ethernet') {
+    <ion-card class="status-card">
+      <div class="status-row">
+        <div class="status-ssid">
+          <ion-icon name="wifi-outline"></ion-icon>
+          <div>
+            <div class="ssid-name">LAN</div>
+            <div class="ssid-detail">{{ ethernet()?.interface }}@if (ethernet(); as eth) { &middot; {{ eth.dhcp ? 'DHCP' : 'STATIC' }}}</div>
+          </div>
+        </div>
+        <div class="status-ip">
+          <div class="ip-label">Box IP address</div>
+          <div class="ip-value">{{ ethernet()?.currentIp ?? '—' }}</div>
+          <div class="gateway-value">Router: {{ ethernet()?.currentGateway ?? '—' }}</div>
         </div>
       </div>
-      <div class="status-ip">
-        <div class="ip-label">Box IP address</div>
-        <div class="ip-value">{{ net?.ip ?? '—' }}</div>
-        <div class="gateway-value">Router: {{ net?.gateway ?? '—' }}</div>
+    </ion-card>
+
+    @if (ethernetLoading()) {
+      <div class="loading-row"><ion-spinner></ion-spinner></div>
+    } @else {
+      <ion-list class="lan-config">
+        <ion-item class="mode-item">
+          <ion-label>Mode</ion-label>
+          <div class="mode-toggle" role="group" aria-label="Mode" slot="end">
+            <button type="button" [class.on]="lanDhcp()" (click)="lanDhcp.set(true)">DHCP</button>
+            <button type="button" [class.on]="!lanDhcp()" (click)="lanDhcp.set(false)">STATIC</button>
+          </div>
+        </ion-item>
+
+        @if (!lanDhcp()) {
+          <div class="lan-static-row">
+            <div class="lan-fields">
+              <ion-item>
+                <ion-label position="stacked">Static IP</ion-label>
+                <ion-input
+                  name="lan_ip"
+                  type="text"
+                  inputmode="decimal"
+                  placeholder="192.168.1.100"
+                  [value]="lanIp()"
+                  (ionInput)="lanInputChanged($event)"
+                  (ionFocus)="lanFocusChanged($event)"
+                ></ion-input>
+              </ion-item>
+              <ion-item>
+                <ion-label position="stacked">Static Mask</ion-label>
+                <ion-input
+                  name="lan_mask"
+                  type="text"
+                  inputmode="decimal"
+                  placeholder="255.255.255.0"
+                  [value]="lanMask()"
+                  (ionInput)="lanInputChanged($event)"
+                  (ionFocus)="lanFocusChanged($event)"
+                ></ion-input>
+              </ion-item>
+              <ion-item>
+                <ion-label position="stacked">Static Gateway</ion-label>
+                <ion-input
+                  name="lan_gateway"
+                  type="text"
+                  inputmode="decimal"
+                  placeholder="192.168.1.1"
+                  [value]="lanGateway()"
+                  (ionInput)="lanInputChanged($event)"
+                  (ionFocus)="lanFocusChanged($event)"
+                ></ion-input>
+              </ion-item>
+              <ion-item>
+                <ion-label position="stacked">Static DNS</ion-label>
+                <ion-input
+                  name="lan_dns"
+                  type="text"
+                  inputmode="decimal"
+                  placeholder="192.168.1.1"
+                  [value]="lanDns()"
+                  (ionInput)="lanInputChanged($event)"
+                  (ionFocus)="lanFocusChanged($event)"
+                ></ion-input>
+              </ion-item>
+            </div>
+            <div class="lan-simple-keyboard"></div>
+          </div>
+        }
+
+        <div class="lan-actions">
+          <ion-button (click)="saveEthernetConfig()" [disabled]="ethernetSaving()">Save</ion-button>
+          <ion-button fill="outline" (click)="ethernetRestartButtonPressed()">Apply &amp; restart</ion-button>
+        </div>
+      </ion-list>
+    }
+  } @else {
+    <ion-card class="status-card">
+      <div class="status-row">
+        <div class="status-ssid">
+          <ion-icon name="wifi-outline"></ion-icon>
+          <div>
+            <div class="ssid-name">{{ card().name }}</div>
+            <div class="ssid-detail">{{ card().detail }}</div>
+          </div>
+        </div>
+        <div class="status-ip">
+          <div class="ip-label">Box IP address</div>
+          <div class="ip-value">{{ card().ip }}</div>
+          <div class="gateway-value">Router: {{ card().gateway }}</div>
+        </div>
+      </div>
+    </ion-card>
+
+    <div class="list-header">
+      <ion-label>Networks in range</ion-label>
+      <div class="list-actions">
+        <ion-button size="small" fill="outline" (click)="loadNetworks()" [disabled]="loading()">
+          <ion-icon slot="start" name="scan-outline"></ion-icon>
+          Scan
+        </ion-button>
+        <ion-button size="small" (click)="addNetworkButtonPressed()">
+          <ion-icon slot="start" name="add-outline"></ion-icon>
+          Add network
+        </ion-button>
       </div>
     </div>
-  </ion-card>
 
-  <div class="list-header">
-    <ion-label>Networks in range</ion-label>
-    <div class="list-actions">
-      <ion-button size="small" fill="outline" (click)="loadNetworks()" [disabled]="loading()">
-        <ion-icon slot="start" name="scan-outline"></ion-icon>
-        Scan
-      </ion-button>
-      <ion-button size="small" (click)="addNetworkButtonPressed()">
-        <ion-icon slot="start" name="add-outline"></ion-icon>
-        Add network
-      </ion-button>
-    </div>
-  </div>
-
-  @if (loading()) {
-    <div class="loading-row"><ion-spinner></ion-spinner></div>
-  } @else {
-    <ion-list class="networks-list">
-      @for (wifi of networks(); track wifi.ssid + '/' + wifi.id) {
-        <ion-item [class.current-network]="wifi.current" [class.unavailable]="!wifi.available">
-          <div slot="start" class="signal" [attr.title]="wifi.available && wifi.signal !== undefined ? wifi.signal + ' %' : 'not in range'">
-            @for (bar of signalBars; track bar) {
-              <span class="bar" [class.on]="bar <= signalLevel(wifi)"></span>
+    @if (loading()) {
+      <div class="loading-row"><ion-spinner></ion-spinner></div>
+    } @else {
+      <ion-list class="networks-list">
+        @for (wifi of networks(); track wifi.ssid + '/' + wifi.id) {
+          <ion-item [class.current-network]="wifi.current" [class.unavailable]="!wifi.available">
+            <div slot="start" class="signal" [attr.title]="wifi.available && wifi.signal !== undefined ? wifi.signal + ' %' : 'not in range'">
+              @for (bar of signalBars; track bar) {
+                <span class="bar" [class.on]="bar <= signalLevel(wifi)"></span>
+              }
+            </div>
+            <ion-label>
+              <h2>
+                {{ wifi.ssid }}
+                @if (wifi.secured) {
+                  <ion-icon class="lock" name="lock-closed-outline"></ion-icon>
+                }
+                @if (wifi.current) {
+                  <span class="current-badge">&check; connected@if (canChooseBand(wifi) && wifi.connectedBand) { on {{ wifi.connectedBand }} GHz}</span>
+                } @else if (wifi.id !== undefined) {
+                  <span class="saved-badge">saved</span>
+                }
+              </h2>
+              <p>
+                @if (wifi.available && wifi.signal !== undefined) {
+                  Signal {{ wifi.signal }} % ({{ wifi.signalDbm }} dBm)@if (canChooseBand(wifi) ? '' : bandText(wifi); as band) { &nbsp;&middot;&nbsp;{{ band }}}
+                } @else if (wifi.available) {
+                  In range
+                } @else {
+                  Not in range
+                }
+              </p>
+            </ion-label>
+            @if (wifi.id !== undefined) {
+              <div slot="end" class="row-actions">
+              @if (canChooseBand(wifi)) {
+                <div class="band-toggle" role="group" aria-label="Band">
+                  <button type="button" [class.on]="(wifi.band ?? 'auto') === 'auto'" (click)="setBand(wifi, 'auto')">Auto</button>
+                  <button type="button" [class.on]="wifi.band === '2.4'" (click)="setBand(wifi, '2.4')">2.4 GHz</button>
+                  <button type="button" [class.on]="wifi.band === '5'" (click)="setBand(wifi, '5')">5 GHz</button>
+                </div>
+              }
+              <ion-button fill="outline" size="small" (click)="changeNetworkButtonPressed(wifi)">Change</ion-button>
+              <ion-button fill="outline" color="danger" size="small" (click)="deleteNetworkButtonPressed(wifi)">Delete</ion-button>
+              </div>
+            } @else {
+              <ion-button slot="end" fill="outline" size="small" (click)="connectNetworkButtonPressed(wifi)">Connect</ion-button>
             }
-          </div>
-          <ion-label>
-            <h2>
-              {{ wifi.ssid }}
-              @if (wifi.secured) {
-                <ion-icon class="lock" name="lock-closed-outline"></ion-icon>
-              }
-              @if (wifi.current) {
-                <span class="current-badge">&check; connected</span>
-              } @else if (wifi.id !== undefined) {
-                <span class="saved-badge">saved</span>
-              }
-            </h2>
-            <p>
-              @if (wifi.available && wifi.signal !== undefined) {
-                Signal {{ wifi.signal }} % ({{ wifi.signalDbm }} dBm)@if (bandText(wifi); as band) { &nbsp;&middot;&nbsp;{{ band }}}
-              } @else if (wifi.available) {
-                In range
-              } @else {
-                Not in range
-              }
-            </p>
-          </ion-label>
-          @if (wifi.id !== undefined) {
-            <ion-button slot="end" fill="outline" size="small" (click)="changeNetworkButtonPressed(wifi)">Change</ion-button>
-            <ion-button slot="end" fill="outline" color="danger" size="small" (click)="deleteNetworkButtonPressed(wifi)">Delete</ion-button>
-          } @else {
-            <ion-button slot="end" fill="outline" size="small" (click)="connectNetworkButtonPressed(wifi)">Connect</ion-button>
-          }
-        </ion-item>
-      } @empty {
-        <ion-item>
-          <ion-label>No networks found. Tap "Scan" to search again.</ion-label>
-        </ion-item>
-      }
-    </ion-list>
+          </ion-item>
+        } @empty {
+          <ion-item>
+            <ion-label>No networks found. Tap "Scan" to search again.</ion-label>
+          </ion-item>
+        }
+      </ion-list>
+    }
   }
 </ion-content>

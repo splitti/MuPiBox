@@ -1,0 +1,15 @@
+[Unit]
+Description=Rotary encoder volume control
+After=local-fs.target sysinit.target
+# a box where it keeps failing stops trying after 5 starts in 5 minutes
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=10
+ExecStart=/usr/bin/python3 -B /usr/local/bin/mupibox/rotary_control.py
+
+[Install]
+WantedBy=multi-user.target

@@ -1,4 +1,9 @@
 <?php
+require __DIR__ . '/includes/auth_check.php';
+
+// backend.php streams pm2 log contents and service status as plain text
+// for XHR consumers in the admin UI. Use the header-only gate so the
+// fetch() body stays free of HTML chrome.
 $logfiles = [
     'server-error' => '/home/dietpi/.pm2/logs/server-error.log',
     'server-out' => '/home/dietpi/.pm2/logs/server-out.log',
@@ -8,7 +13,7 @@ $logfiles = [
     'idle_shutdown' => '/tmp/idle_shutdown.log'
 ];
 
-$services = ['mupi_autoconnect_bt.service', 'mupi_autoconnect-wifi.service', 'mupi_check_internet.service', 'mupi_check_monitor.service', 'mupi_fan.service', 'mupi_hat_control.service', 'mupi_hat.service', 'mupi_idle_shutdown.service', 'mupi_mqtt.service', 'mupi_novnc.service', 'mupi_powerled.service', 'mupi_splash.service', 'mupi_startstop.service', 'mupi_telegram.service', 'mupi_vnc.service', 'mupi_wifi.service', 'pm2-dietpi.service', 'samba-ad-dc.service', 'wpa_supplicant.service', 'proftpd.service'];
+$services = ['mupi_autoconnect_bt.service', 'mupi_autoconnect-wifi.service', 'mupi_check_internet.service', 'mupi_check_monitor.service', 'mupi_fan.service', 'mupi_hat_control.service', 'mupi_hat.service', 'mupi_idle_shutdown.service', 'mupi_mqtt.service', 'mupi_novnc.service', 'mupi_rotary.service', 'mupi_powerled.service', 'mupi_splash.service', 'mupi_startstop.service', 'mupi_telegram.service', 'mupi_vnc.service', 'mupi_wifi.service', 'pm2-dietpi.service', 'samba-ad-dc.service', 'wpa_supplicant.service', 'proftpd.service'];
 
 $mode = $_GET['mode'] ?? '';
 $key = $_GET['key'] ?? '';

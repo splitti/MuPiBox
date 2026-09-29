@@ -1,0 +1,6495 @@
+{
+ "_comment": "Vollständiger Seiten- und Einstellungs-Baum der neuen MuPiBox-App, erzeugt aus dem Prototyp. area = Bereich der Navigation, parent = übergeordnete Seite. key = Schlüssel im Prototyp (Vorschlag) – beim Einbau auf den ECHTEN Konfig-Schlüssel / API-Parameter aus Admin-Interface bzw. Eltern-App abbilden (siehe README „Datenquellen“).",
+ "itemTypes": [
+  "text",
+  "buttons",
+  "slider",
+  "toggle",
+  "days",
+  "select",
+  "rules",
+  "nav",
+  "big",
+  "chart",
+  "note",
+  "rows",
+  "seg",
+  "bar",
+  "kv",
+  "checks",
+  "file",
+  "themegrid",
+  "bootgrid",
+  "bootprev",
+  "dtprev",
+  "dtfields",
+  "livescreen",
+  "warn",
+  "versions",
+  "log",
+  "json"
+ ],
+ "areas": [
+  "start",
+  "hoeren",
+  "spielzeit",
+  "bibliothek",
+  "einstellungen"
+ ],
+ "settingsGroups": [
+  {
+   "id": "g-aussehen",
+   "title": "Aussehen",
+   "icon": "pal",
+   "description": "Theme, Ansicht, Vorlesen, Start- & Wartungsbilder, Display-Texte"
+  },
+  {
+   "id": "g-display",
+   "title": "Display & Bedienung",
+   "icon": "display",
+   "description": "Helligkeit, Drehung, Haltezeiten, Display live"
+  },
+  {
+   "id": "g-audio",
+   "title": "Audio",
+   "icon": "vol",
+   "description": "Lautstärke, Soundkarte, Drehregler, Bluetooth"
+  },
+  {
+   "id": "g-strom",
+   "title": "Akku & Strom",
+   "icon": "bat",
+   "description": "Akku, MuPiHAT, Ausschalten, Taster, Lüfter"
+  },
+  {
+   "id": "g-netz",
+   "title": "Netzwerk",
+   "icon": "wifi",
+   "description": "WLAN, Optionen, Freigaben"
+  },
+  {
+   "id": "g-dienste",
+   "title": "Dienste",
+   "icon": "plug",
+   "description": "Spotify, NAS · Telegram, MQTT, WLED"
+  },
+  {
+   "id": "g-sicherheit",
+   "title": "Sicherheit",
+   "icon": "lock",
+   "description": "Passwort, Anmeldung, Zertifikat (HTTPS)"
+  },
+  {
+   "id": "g-system",
+   "title": "System",
+   "icon": "gear",
+   "description": "Über, Updates, Backup, Neustart, Protokolle, Experten, Sprache"
+  }
+ ],
+ "pages": [
+  {
+   "id": "start",
+   "slug": "home",
+   "area": "start",
+   "parent": null,
+   "title": "Start",
+   "description": "",
+   "icon": "home",
+   "sections": []
+  },
+  {
+   "id": "hoeren",
+   "slug": "listen",
+   "area": "hoeren",
+   "parent": null,
+   "title": "Hören",
+   "description": "",
+   "icon": "phones",
+   "sections": []
+  },
+  {
+   "id": "spielzeit",
+   "slug": "playtime",
+   "area": "spielzeit",
+   "parent": null,
+   "title": "Spielzeit",
+   "description": "",
+   "icon": "time",
+   "sections": [
+    {
+     "title": "Sofort-Aktionen",
+     "help": "Bonus = +N Minuten zum heutigen Limit. Sperren aufheben = N Minuten freie Wiedergabe. Ruhe sofort = N Minuten Stopp.",
+     "items": [
+      {
+       "type": "text",
+       "label": "Minuten (1–1440)",
+       "key": "capMin",
+       "default": "30",
+       "kind": "number"
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "+ Bonus-Zeit",
+         "accent",
+         "bonus"
+        ],
+        [
+         "Sperren aufheben",
+         "ghost",
+         "toast:Sperren für 30 min aufgehoben"
+        ],
+        [
+         "Ruhe sofort",
+         "ghost",
+         "quiet"
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Schlaftimer",
+     "help": "Die Box schaltet sich nach Ablauf komplett aus – egal, ob gerade etwas läuft.",
+     "items": [
+      {
+       "type": "slider",
+       "label": "Minuten",
+       "key": "sleepMin",
+       "default": 60,
+       "min": 15,
+       "max": 360,
+       "step": 15,
+       "unit": " min"
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Starten",
+         "primary",
+         "sleep"
+        ],
+        [
+         "Stoppen",
+         "ghost",
+         "sleepoff"
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Tageslimits",
+     "help": "Minuten pro Wochentag. 0 = an diesem Tag gesperrt.",
+     "items": [
+      {
+       "type": "toggle",
+       "label": "Tageslimits aktiv",
+       "key": "limitOn",
+       "default": true
+      },
+      {
+       "type": "days",
+       "default": [
+        120,
+        120,
+        120,
+        120,
+        120,
+        120,
+        90
+       ],
+       "keyPrefix": "lim"
+      },
+      {
+       "type": "text",
+       "label": "Tageswechsel um (Stunde 0–23)",
+       "key": "resetHour",
+       "default": "0",
+       "help": "Zu dieser Stunde beginnt der neue Tag. Z. B. 4, damit spätes Hören nicht mittendrin abbricht.",
+       "kind": "number"
+      },
+      {
+       "type": "select",
+       "label": "Wenn das Limit erreicht ist",
+       "key": "limitGrace",
+       "default": "Titel zu Ende spielen",
+       "help": "Podcasts dürfen die Folge beenden, Radio stoppt sofort.",
+       "options": [
+        "Sofort stoppen",
+        "Titel zu Ende spielen",
+        "Album zu Ende spielen"
+       ]
+      },
+      {
+       "type": "select",
+       "key": "limitGraceMax",
+       "label": "Höchstens so lange weiterspielen",
+       "options": [
+        "5 min",
+        "10 min",
+        "15 min",
+        "20 min",
+        "30 min",
+        "45 min",
+        "1 h",
+        "1 h 30 min",
+        "2 h",
+        "3 h"
+       ],
+       "default": "15 min",
+       "help": "Danach stoppt die Box auch mitten im Titel oder Album."
+      }
+     ]
+    },
+    {
+     "title": "Ruhezeiten",
+     "help": "Zeitfenster je Wochentag, auch über Mitternacht. Mehrere Fenster pro Tag möglich (z. B. Hausaufgaben + Schlafenszeit).",
+     "items": [
+      {
+       "type": "toggle",
+       "label": "Ruhezeiten aktiv",
+       "key": "quietOn",
+       "default": true
+      },
+      {
+       "type": "rules"
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "+ Zeitfenster",
+         "ghost",
+         "sheet:rule-new"
+        ]
+       ]
+      },
+      {
+       "type": "select",
+       "label": "Wenn eine Ruhezeit beginnt",
+       "key": "quietGrace",
+       "default": "Titel zu Ende spielen",
+       "options": [
+        "Sofort stoppen",
+        "Titel zu Ende spielen",
+        "Album zu Ende spielen"
+       ]
+      },
+      {
+       "type": "select",
+       "key": "quietGraceMax",
+       "label": "Höchstens so lange weiterspielen",
+       "options": [
+        "5 min",
+        "10 min",
+        "15 min",
+        "20 min",
+        "30 min",
+        "45 min",
+        "1 h",
+        "1 h 30 min",
+        "2 h",
+        "3 h"
+       ],
+       "default": "15 min",
+       "help": "Danach stoppt die Box auch mitten im Titel oder Album."
+      }
+     ]
+    },
+    {
+     "title": "",
+     "help": "",
+     "items": [
+      {
+       "type": "nav",
+       "label": "Texte, die das Kind sieht",
+       "target": "displaytexte",
+       "subtitle": "Bei Limit, Ruhezeit und QR-Code für Eltern"
+      },
+      {
+       "type": "nav",
+       "label": "Hörschutz (Maximallautstärke)",
+       "target": "lautstaerke",
+       "subtitle": "Einstellungen › Audio › Lautstärke"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "bibliothek",
+   "slug": "library",
+   "area": "bibliothek",
+   "parent": null,
+   "title": "Bibliothek",
+   "description": "",
+   "icon": "lib",
+   "sections": []
+  },
+  {
+   "id": "einstellungen",
+   "slug": "settings",
+   "area": "einstellungen",
+   "parent": null,
+   "title": "Einstellungen",
+   "description": "",
+   "icon": "gear",
+   "sections": []
+  },
+  {
+   "id": "verlauf",
+   "slug": "history",
+   "area": "hoeren",
+   "parent": "hoeren",
+   "title": "Hör-Verlauf",
+   "description": "",
+   "icon": "hist",
+   "sections": [
+    {
+     "title": "Heute",
+     "help": "",
+     "items": [
+      {
+       "type": "big",
+       "subtitle": "14 Titel · meistgehört: Benjamin Blümchen"
+      }
+     ]
+    },
+    {
+     "title": "Letzte 7 Tage",
+     "help": "",
+     "items": [
+      {
+       "type": "chart",
+       "unit": " min",
+       "vals": [
+        115,
+        0,
+        88,
+        39,
+        183,
+        83,
+        42
+       ],
+       "labels": [
+        "Di",
+        "Mi",
+        "Do",
+        "Fr",
+        "Sa",
+        "So",
+        "Mo"
+       ]
+      },
+      {
+       "type": "note",
+       "text": "Insgesamt 550 Minuten in 384 Titeln."
+      }
+     ]
+    },
+    {
+     "title": "Top-Künstler (7 Tage)",
+     "help": "",
+     "items": [
+      {
+       "type": "rows",
+       "rows": [
+        {
+         "t": "Fünf Freunde",
+         "s": "",
+         "r": "149 min · 159×"
+        },
+        {
+         "t": "Benjamin Blümchen",
+         "s": "",
+         "r": "121 min · 42×"
+        },
+        {
+         "t": "Anne auf Green Gables",
+         "s": "",
+         "r": "65 min · 15×"
+        },
+        {
+         "t": "Rolf Zuckowski",
+         "s": "",
+         "r": "38 min · 22×"
+        },
+        {
+         "t": "Kinderchor",
+         "s": "",
+         "r": "10 min · 10×"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Top-Titel (7 Tage)",
+     "help": "",
+     "items": [
+      {
+       "type": "rows",
+       "rows": [
+        {
+         "t": "Als Briefträger",
+         "s": "Benjamin Blümchen",
+         "r": "58 min · 6×"
+        },
+        {
+         "t": "Die Vogelhochzeit",
+         "s": "Rolf Zuckowski",
+         "r": "23 min · 3×"
+        },
+        {
+         "t": "Das Geheimnis der alten Mühle",
+         "s": "Fünf Freunde",
+         "r": "23 min · 1×"
+        },
+        {
+         "t": "Auf dem Mond",
+         "s": "Benjamin Blümchen",
+         "r": "22 min · 5×"
+        },
+        {
+         "t": "Kapitel 1",
+         "s": "Anne auf Green Gables",
+         "r": "20 min · 1×"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "verwaltet",
+   "slug": "managed",
+   "area": "bibliothek",
+   "parent": "bibliothek",
+   "title": "Verwaltete Inhalte",
+   "description": "",
+   "icon": "sync",
+   "intro": "Über die Suche hinzugefügte Künstler-Abos und Alben. Beim Künstler den Bereich (Folge von–bis) eingrenzen, einzelne Alben aus- oder einschließen.",
+   "sections": [
+    {
+     "title": "Künstler-Abos",
+     "help": "",
+     "items": [
+      {
+       "type": "rows",
+       "rows": [
+        {
+         "t": "Benjamin Blümchen",
+         "s": "Folgen 1–180 · 178 Alben",
+         "tag": "Abo",
+         "b": "Bearbeiten",
+         "act": "toast:Bearbeiten (Prototyp)"
+        },
+        {
+         "t": "Fünf Freunde",
+         "s": "alle Folgen · 162 Alben",
+         "tag": "Abo",
+         "b": "Bearbeiten",
+         "act": "toast:Bearbeiten (Prototyp)"
+        },
+        {
+         "t": "Die drei ??? Kids",
+         "s": "Folgen 60–99 · 40 Alben",
+         "tag": "Abo",
+         "b": "Bearbeiten",
+         "act": "toast:Bearbeiten (Prototyp)"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Benjamin Blümchen",
+     "help": "Bereich und einzelne Alben",
+     "items": [
+      {
+       "type": "text",
+       "label": "Folge von",
+       "key": "epFrom",
+       "default": "1",
+       "kind": "number"
+      },
+      {
+       "type": "text",
+       "label": "Folge bis",
+       "key": "epTo",
+       "default": "180",
+       "kind": "number"
+      },
+      {
+       "type": "toggle",
+       "label": "Folge 12 – Als Briefträger",
+       "key": "inc12",
+       "default": true
+      },
+      {
+       "type": "toggle",
+       "label": "Folge 99 – Das Weihnachtslied",
+       "key": "inc99",
+       "default": false,
+       "help": "ausgeschlossen"
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Übernehmen",
+         "primary",
+         "toast:Übernommen"
+        ],
+        [
+         "Abo entfernen",
+         "danger",
+         "toast:Entfernt (Prototyp)"
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Einzelne Alben",
+     "help": "",
+     "items": [
+      {
+       "type": "rows",
+       "rows": [
+        {
+         "t": "Die Vogelhochzeit",
+         "s": "Rolf Zuckowski",
+         "tag": "Album",
+         "b": "Entfernen",
+         "bk": "danger",
+         "act": "toast:Entfernt (Prototyp)"
+        },
+        {
+         "t": "Pettersson kriegt Weihnachtsbesuch",
+         "s": "Pettersson & Findus",
+         "tag": "Album",
+         "b": "Entfernen",
+         "bk": "danger",
+         "act": "toast:Entfernt (Prototyp)"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "suche",
+   "slug": "spotify-search",
+   "area": "bibliothek",
+   "parent": "bibliothek",
+   "title": "Auf Spotify suchen",
+   "description": "",
+   "icon": "search",
+   "sections": [
+    {
+     "title": "",
+     "help": "",
+     "items": [
+      {
+       "type": "text",
+       "label": "Auf Spotify suchen",
+       "key": "sq",
+       "default": "Benjamin Blümchen",
+       "placeholder": "Künstler, Album oder Titel …",
+       "kind": "text"
+      },
+      {
+       "type": "seg",
+       "label": "Suchen in",
+       "key": "sType",
+       "default": "Alle",
+       "options": [
+        "Alle",
+        "Künstler",
+        "Alben",
+        "Titel"
+       ]
+      },
+      {
+       "type": "select",
+       "label": "Hinzufügen als",
+       "key": "sCat",
+       "default": "Hörbuch/Hörspiel",
+       "options": [
+        "Hörbuch/Hörspiel",
+        "Musik",
+        "Radio & Podcasts"
+       ]
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Suchen",
+         "primary",
+         "toast:8 Künstler · 8 Alben · 8 Titel"
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Künstler",
+     "help": "",
+     "items": [
+      {
+       "type": "rows",
+       "rows": [
+        {
+         "t": "Benjamin Blümchen",
+         "s": "Künstler",
+         "ini": "BB",
+         "col": "#F2B45A",
+         "b": "+",
+         "act": "toast:Als Künstler-Abo hinzugefügt"
+        },
+        {
+         "t": "Bibi Blocksberg",
+         "s": "Künstler",
+         "ini": "Bi",
+         "col": "#9ED8A6",
+         "b": "+",
+         "act": "toast:Als Künstler-Abo hinzugefügt"
+        },
+        {
+         "t": "Die drei !!!",
+         "s": "Künstler",
+         "ini": "!!!",
+         "col": "#F4A3B4",
+         "b": "+",
+         "act": "toast:Als Künstler-Abo hinzugefügt"
+        },
+        {
+         "t": "TKKG",
+         "s": "Künstler",
+         "ini": "TK",
+         "col": "#7FC7F0",
+         "b": "+",
+         "act": "toast:Als Künstler-Abo hinzugefügt"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Alben",
+     "help": "",
+     "items": [
+      {
+       "type": "rows",
+       "rows": [
+        {
+         "t": "Folge 15: im Urlaub",
+         "s": "Benjamin Blümchen",
+         "ini": "BB",
+         "col": "#F2B45A",
+         "b": "+",
+         "act": "toast:Album hinzugefügt"
+        },
+        {
+         "t": "Folge 172: als Kapitän",
+         "s": "Benjamin Blümchen",
+         "ini": "BB",
+         "col": "#F2B45A",
+         "b": "+",
+         "act": "toast:Album hinzugefügt"
+        },
+        {
+         "t": "Folge 120: Der Zeltausflug",
+         "s": "Benjamin Blümchen",
+         "ini": "BB",
+         "col": "#F2B45A",
+         "b": "+",
+         "act": "toast:Album hinzugefügt"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Titel",
+     "help": "",
+     "items": [
+      {
+       "type": "rows",
+       "rows": [
+        {
+         "t": "Benjamin Blümchen Lied",
+         "s": "Folge 1: als Wetterelefant",
+         "ini": "BB",
+         "col": "#F2B45A",
+         "b": "+",
+         "act": "toast:Titel hinzugefügt"
+        },
+        {
+         "t": "Benjamin Blümchen Titellied",
+         "s": "Folge 172: als Kapitän",
+         "ini": "BB",
+         "col": "#F2B45A",
+         "b": "+",
+         "act": "toast:Titel hinzugefügt"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "link",
+   "slug": "add-link",
+   "area": "bibliothek",
+   "parent": "bibliothek",
+   "title": "Link einfügen",
+   "description": "",
+   "icon": "link",
+   "sections": [
+    {
+     "title": "",
+     "help": "",
+     "items": [
+      {
+       "type": "select",
+       "label": "Typ",
+       "key": "lType",
+       "default": "Spotify-Link",
+       "options": [
+        "Spotify-Link",
+        "Spotify-Suche",
+        "Radio-Stream",
+        "Podcast (RSS)"
+       ]
+      },
+      {
+       "type": "text",
+       "label": "Link",
+       "key": "lUrl",
+       "placeholder": "https://…",
+       "kind": "text",
+       "help": "Spotify: Album, Playlist, Interpret, Podcast oder Hörbuch. Radio: auch eine .m3u- oder .pls-Datei – die Box liest die Stream-Adresse daraus."
+      },
+      {
+       "type": "text",
+       "label": "Interpret / Name (optional)",
+       "key": "lLabel",
+       "placeholder": "z. B. Kinderradio",
+       "kind": "text"
+      },
+      {
+       "type": "text",
+       "label": "Titel (für Radio-Streams)",
+       "key": "lTitle",
+       "placeholder": "z. B. Radio Teddy",
+       "kind": "text"
+      },
+      {
+       "type": "select",
+       "label": "Kategorie",
+       "key": "lCat",
+       "default": "Hörbuch/Hörspiel",
+       "options": [
+        "Hörbuch/Hörspiel",
+        "Musik",
+        "Radio & Podcasts"
+       ]
+      },
+      {
+       "type": "text",
+       "label": "Cover (Bild-URL, optional)",
+       "key": "lCover",
+       "placeholder": "https://…",
+       "kind": "text"
+      },
+      {
+       "type": "text",
+       "label": "Interpret-Cover (Bild-URL, optional)",
+       "key": "lArtistCover",
+       "placeholder": "https://…",
+       "kind": "text"
+      },
+      {
+       "type": "select",
+       "label": "Sortierung",
+       "key": "lSort",
+       "default": "Standard",
+       "options": [
+        "Standard",
+        "Alphabetisch A–Z",
+        "Alphabetisch Z–A",
+        "Älteste zuerst",
+        "Neueste zuerst"
+       ],
+       "help": "Standard: Podcasts die neueste Folge zuerst, sonst alphabetisch."
+      },
+      {
+       "type": "toggle",
+       "label": "Zufällig abspielen",
+       "key": "lShuffle",
+       "default": false
+      },
+      {
+       "type": "toggle",
+       "label": "Nur einen Teil der Folgen",
+       "key": "lPart",
+       "default": false,
+       "help": "Z. B. nur Folge 1 bis 20 einer Serie – gezählt in der Reihenfolge von Spotify bzw. des Podcasts."
+      },
+      {
+       "type": "text",
+       "label": "Von Nr.",
+       "key": "lFrom",
+       "placeholder": "1",
+       "kind": "number"
+      },
+      {
+       "type": "text",
+       "label": "Bis Nr. (leer = bis zum Ende)",
+       "key": "lTo",
+       "placeholder": "",
+       "kind": "number"
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Abbrechen",
+         "ghost",
+         "go:bibliothek"
+        ],
+        [
+         "Hinzufügen",
+         "primary",
+         "toast:Hinzugefügt"
+        ]
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "upload",
+   "slug": "upload",
+   "area": "bibliothek",
+   "parent": "bibliothek",
+   "title": "Vom Gerät hochladen",
+   "description": "",
+   "icon": "up",
+   "sections": [
+    {
+     "title": "Wohin?",
+     "help": "Titel oder ganze Ordner werden auf die SD-Karte kopiert und erscheinen danach von selbst auf dem Display.",
+     "items": [
+      {
+       "type": "select",
+       "label": "Kategorie",
+       "key": "uCat",
+       "default": "Hörbuch/Hörspiel",
+       "options": [
+        "Hörbuch/Hörspiel",
+        "Musik",
+        "Radio & Podcasts"
+       ]
+      },
+      {
+       "type": "text",
+       "label": "Interpret",
+       "key": "uArtist",
+       "placeholder": "z. B. Benjamin Blümchen",
+       "kind": "text"
+      },
+      {
+       "type": "text",
+       "label": "Album",
+       "key": "uAlbum",
+       "placeholder": "z. B. Folge 1 (leer = direkt beim Interpreten)",
+       "kind": "text"
+      }
+     ]
+    },
+    {
+     "title": "Dateien",
+     "help": "",
+     "items": [
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Titel wählen",
+         "ghost",
+         "toast:Dateiauswahl"
+        ],
+        [
+         "Ordner wählen",
+         "ghost",
+         "toast:Ordnerauswahl"
+        ],
+        [
+         "Cover wählen",
+         "ghost",
+         "toast:Bildauswahl"
+        ]
+       ]
+      },
+      {
+       "type": "note",
+       "text": "Oder Dateien und Ordner hierher ziehen."
+      },
+      {
+       "type": "bar",
+       "label": "Hochladen"
+      },
+      {
+       "type": "kv",
+       "rows": [
+        [
+         "Frei auf der SD-Karte",
+         "12,4 GB"
+        ]
+       ]
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Auswahl leeren",
+         "ghost",
+         "toast:Geleert"
+        ],
+        [
+         "Hochladen",
+         "primary",
+         "toast:Wird hochgeladen"
+        ]
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "spotify",
+   "slug": "spotify",
+   "area": "bibliothek",
+   "parent": "bibliothek",
+   "title": "Spotify",
+   "description": "",
+   "icon": "music",
+   "intro": "Oben Smart-Sync (Playlists landen automatisch auf der Box), darunter der Zugang, mit dem der Player Spotify abspielt.",
+   "sections": [
+    {
+     "title": "Smart-Sync · Verbindung",
+     "help": "",
+     "items": [
+      {
+       "type": "kv",
+       "rows": [
+        [
+         "Status",
+         "✓ Verbunden"
+        ]
+       ]
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Trennen",
+         "ghost",
+         "toast:Getrennt (Prototyp)"
+        ],
+        [
+         "Smart-Sync deaktivieren",
+         "ghost",
+         "toast:Deaktiviert (Prototyp)"
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Smart-Sync",
+     "help": "Playlists, deren Name mit dem Playlist-Präfix beginnt, landen automatisch auf der Box.",
+     "items": [
+      {
+       "type": "kv",
+       "rows": [
+        [
+         "Letzter Sync",
+         "vor 13 min"
+        ],
+        [
+         "Status",
+         "fertig"
+        ],
+        [
+         "Nächster Sync",
+         "in 2 min"
+        ],
+        [
+         "Playlist-Präfix",
+         "MuPiBox"
+        ],
+        [
+         "Zuletzt",
+         "+3 neu · 0 geändert · 1 entfernt"
+        ]
+       ]
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Jetzt synchronisieren",
+         "primary",
+         "toast:Sync gestartet"
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Gefundene Playlists",
+     "help": "",
+     "items": [
+      {
+       "type": "rows",
+       "rows": [
+        {
+         "t": "MuPiBox-Hörspiele",
+         "s": "24 Alben",
+         "tag": "Hörspiel"
+        },
+        {
+         "t": "MuPiBox-Musik",
+         "s": "11 Alben",
+         "tag": "Musik"
+        },
+        {
+         "t": "MuPiBox-Einschlafen",
+         "s": "6 Alben",
+         "tag": "Radio & Podcasts"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Konflikte",
+     "help": "Inhalte, die schon manuell auf der Box sind.",
+     "items": [
+      {
+       "type": "rows",
+       "rows": [
+        {
+         "t": "Die Vogelhochzeit",
+         "s": "manuell und in MuPiBox-Musik",
+         "b": "Auflösen",
+         "act": "toast:Aufgelöst (Prototyp)"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "title": "",
+     "help": "",
+     "items": [
+      {
+       "type": "nav",
+       "label": "Sync-Einstellungen",
+       "target": "syncopt",
+       "subtitle": "Playlist-Präfix, Intervall, an/aus"
+      },
+      {
+       "type": "nav",
+       "label": "Einrichtungs-Assistent",
+       "target": "wizard",
+       "subtitle": "Spotify neu verbinden in 5 Schritten"
+      }
+     ]
+    },
+    {
+     "title": "Zugang des Players",
+     "help": "Damit der Player auf der Box Spotify abspielen kann. Spotify-App auf developer.spotify.com anlegen.",
+     "items": [
+      {
+       "type": "text",
+       "label": "Client ID",
+       "key": "spId",
+       "default": "4f8c…a21e",
+       "kind": "text"
+      },
+      {
+       "type": "text",
+       "label": "Client Secret",
+       "key": "spSecret",
+       "default": "••••••••",
+       "kind": "password"
+      },
+      {
+       "type": "text",
+       "label": "Access Token",
+       "key": "spAcc",
+       "default": "BQD…",
+       "kind": "password"
+      },
+      {
+       "type": "text",
+       "label": "Refresh Token",
+       "key": "spRef",
+       "default": "AQC…",
+       "kind": "password"
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Speichern",
+         "primary",
+         "toast:Gespeichert"
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Zugang · Playlists & Cache",
+     "help": "",
+     "items": [
+      {
+       "type": "toggle",
+       "label": "Playlists verarbeiten",
+       "key": "spPl",
+       "default": true
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Metadaten-Cache leeren",
+         "ghost",
+         "toast:Cache geleert"
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Zugang zurücksetzen",
+     "help": "Löscht die Spotify-Zugangsdaten des Players.",
+     "items": [
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Spotify-Zugang zurücksetzen",
+         "danger",
+         "sheet:reset-spotify"
+        ]
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "syncopt",
+   "slug": "sync-settings",
+   "area": "bibliothek",
+   "parent": "spotify",
+   "title": "Sync-Einstellungen",
+   "description": "",
+   "icon": "gear",
+   "sections": [
+    {
+     "title": "Playlist-Präfix",
+     "help": "Spotify-Playlists, deren Name so anfängt, werden synchronisiert (z. B. „MuPiBox-Hörspiele“). Vorbelegt mit dem Namen der Box.",
+     "items": [
+      {
+       "type": "text",
+       "label": "Playlist-Präfix",
+       "key": "prefix",
+       "kind": "text"
+      }
+     ]
+    },
+    {
+     "title": "Sync-Intervall",
+     "help": "Wie oft die Box bei Spotify nach Änderungen schaut.",
+     "items": [
+      {
+       "type": "slider",
+       "label": "Minuten zwischen automatischen Syncs",
+       "key": "syncInt",
+       "default": 15,
+       "min": 5,
+       "max": 60,
+       "step": 5,
+       "unit": " min"
+      }
+     ]
+    },
+    {
+     "title": "Smart-Sync aktiv",
+     "help": "",
+     "items": [
+      {
+       "type": "toggle",
+       "label": "Automatischer Sync",
+       "key": "syncOn",
+       "default": true,
+       "help": "Aus = kein automatischer Sync; manuell bleibt möglich."
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Speichern",
+         "primary",
+         "toast:Gespeichert"
+        ]
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "spzugang",
+   "slug": "spotify-access",
+   "area": "bibliothek",
+   "parent": "spotify",
+   "title": "Zugangsdaten",
+   "description": "",
+   "icon": "lock",
+   "sections": []
+  },
+  {
+   "id": "wizard",
+   "slug": "spotify-setup",
+   "area": "bibliothek",
+   "parent": "spotify",
+   "title": "Spotify einrichten",
+   "description": "",
+   "icon": "sync",
+   "sections": [
+    {
+     "title": "Schritt 1 – Spotify-App anlegen",
+     "help": "Auf developer.spotify.com anmelden und „Create app“ wählen.",
+     "items": [
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "developer.spotify.com öffnen",
+         "ghost",
+         "toast:Öffnet Spotify (Prototyp)"
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Schritt 2 – Felder ausfüllen",
+     "help": "Diese Werte in die Spotify-App kopieren.",
+     "items": [
+      {
+       "type": "kv",
+       "rows": [
+        [
+         "App name",
+         "MuPiBox"
+        ],
+        [
+         "Description",
+         "MuPiBox Smart-Sync"
+        ],
+        [
+         "Redirect URI",
+         "https://mupibox/app/spotify-callback"
+        ]
+       ]
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Kopieren",
+         "ghost",
+         "toast:Kopiert"
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Schritt 3 – Client ID und Client Secret kopieren",
+     "help": "Stehen in der Spotify-App unter „Settings“; den Secret zeigt „View client secret“.",
+     "items": [
+      {
+       "type": "text",
+       "label": "Client ID",
+       "key": "wzClient",
+       "placeholder": "aus der Spotify-App",
+       "kind": "text"
+      },
+      {
+       "type": "text",
+       "label": "Client Secret",
+       "key": "wzSecret",
+       "placeholder": "aus der Spotify-App",
+       "kind": "password"
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Speichern + weiter",
+         "primary",
+         "toast:Gespeichert"
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Schritt 4 – Verbindung testen",
+     "help": "",
+     "items": [
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Mit Spotify verbinden",
+         "primary",
+         "toast:Verbunden ✓"
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Schritt 5 – Playlist-Präfix",
+     "help": "Vorbelegt mit dem Namen der Box.",
+     "items": [
+      {
+       "type": "text",
+       "label": "Playlist-Präfix",
+       "key": "prefix",
+       "kind": "text"
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Fertig",
+         "primary",
+         "go:spotify"
+        ]
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "nas",
+   "slug": "nas",
+   "area": "bibliothek",
+   "parent": "bibliothek",
+   "title": "NAS",
+   "description": "",
+   "icon": "server",
+   "sections": [
+    {
+     "title": "Profile",
+     "help": "Ein Profil speichert Server, Freigabe und Zugangsdaten.",
+     "items": [
+      {
+       "type": "select",
+       "label": "Profil",
+       "key": "nasProf",
+       "default": "Heim-NAS",
+       "options": [
+        "Heim-NAS",
+        "Oma & Opa"
+       ]
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Profil anlegen",
+         "ghost",
+         "toast:Neues Profil"
+        ],
+        [
+         "Laden",
+         "ghost",
+         "toast:Geladen"
+        ],
+        [
+         "Löschen",
+         "danger",
+         "toast:Gelöscht (Prototyp)"
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Zugangsdaten",
+     "help": "",
+     "items": [
+      {
+       "type": "text",
+       "label": "Server",
+       "key": "nasHost",
+       "default": "192.168.178.10",
+       "kind": "text"
+      },
+      {
+       "type": "text",
+       "label": "Freigabe",
+       "key": "nasShare",
+       "default": "Hörspiele",
+       "kind": "text"
+      },
+      {
+       "type": "text",
+       "label": "Benutzer",
+       "key": "nasUser",
+       "default": "mupibox",
+       "kind": "text"
+      },
+      {
+       "type": "text",
+       "label": "Passwort",
+       "key": "nasPw",
+       "default": "••••••",
+       "kind": "password"
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Anmelden",
+         "primary",
+         "toast:Angemeldet"
+        ],
+        [
+         "Abmelden",
+         "ghost",
+         "toast:Abgemeldet"
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Ordner",
+     "help": "Anzeigen = erscheint auf der Box. Ausblenden = bleibt verborgen. Herunterladen = auf die SD-Karte kopieren.",
+     "items": [
+      {
+       "type": "text",
+       "label": "Ordner filtern",
+       "key": "nasFilter",
+       "placeholder": "Ordnername …",
+       "kind": "text"
+      },
+      {
+       "type": "checks"
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Index aktualisieren",
+         "ghost",
+         "toast:Index wird aktualisiert"
+        ],
+        [
+         "Nur Auswahl anzeigen",
+         "ghost",
+         "toast:Gefiltert"
+        ],
+        [
+         "Alle",
+         "ghost",
+         "toast:Alle gewählt"
+        ],
+        [
+         "Keine",
+         "ghost",
+         "toast:Keine gewählt"
+        ]
+       ]
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Auswahl speichern",
+         "primary",
+         "toast:Gespeichert"
+        ],
+        [
+         "Alle Downloads",
+         "ghost",
+         "toast:Alle Downloads gewählt"
+        ],
+        [
+         "Keine Downloads",
+         "ghost",
+         "toast:Keine Downloads"
+        ],
+        [
+         "Ausgewählte herunterladen",
+         "ghost",
+         "toast:Download läuft"
+        ],
+        [
+         "Cover neu laden",
+         "ghost",
+         "toast:Cover werden geladen"
+        ]
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "cover",
+   "slug": "covers",
+   "area": "bibliothek",
+   "parent": "bibliothek",
+   "title": "Cover",
+   "description": "",
+   "icon": "image",
+   "sections": [
+    {
+     "title": "Eigenes Cover",
+     "help": "Quadratische Bilder hochladen (JPG, WEBP, GIF, PNG). Die Adresse kannst du z. B. bei Radio-Streams eintragen.",
+     "items": [
+      {
+       "type": "file",
+       "label": "Bild",
+       "buttons": "Datei wählen"
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Hochladen",
+         "primary",
+         "toast:Hochgeladen"
+        ]
+       ]
+      },
+      {
+       "type": "rows",
+       "rows": [
+        {
+         "t": "radio-teddy.png",
+         "s": "hochgeladen am 12.09.",
+         "ini": "RT",
+         "col": "#FFD66B",
+         "b": "Löschen",
+         "bk": "danger",
+         "act": "toast:Gelöscht (Prototyp)"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Online-Cover für NAS- und lokale Alben",
+     "help": "Alben ohne eigenes Bild bekommen ihr Cover von iTunes oder Deezer – nur bei eindeutigem Treffer. Die Ordnernamen werden dafür an Apple und Deezer geschickt.",
+     "items": [
+      {
+       "type": "toggle",
+       "label": "Cover online suchen",
+       "key": "covOn",
+       "default": true
+      },
+      {
+       "type": "toggle",
+       "label": "Auch als cover.jpg im Albumordner speichern",
+       "key": "covSave",
+       "default": true,
+       "help": "Nur in Ordner ohne Bild. Auf dem NAS braucht das Schreibrecht."
+      },
+      {
+       "type": "kv",
+       "rows": [
+        [
+         "Gefunden",
+         "538"
+        ],
+        [
+         "Kein Treffer",
+         "1152"
+        ],
+        [
+         "Verworfen",
+         "3"
+        ]
+       ]
+      },
+      {
+       "type": "toggle",
+       "label": "Auch verworfene erneut suchen",
+       "key": "covDiscarded",
+       "default": false
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Ohne Treffer erneut suchen",
+         "ghost",
+         "toast:Suche läuft"
+        ],
+        [
+         "Alle Alben jetzt suchen",
+         "primary",
+         "toast:Suche läuft"
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Zuletzt gefunden",
+     "help": "Falsches Cover? Verwerfen – das Album fällt dann auf das Bild des Ordners darüber zurück.",
+     "items": [
+      {
+       "type": "rows",
+       "rows": [
+        {
+         "t": "190 – Der eiskalte Clown",
+         "s": "NAS: TKKG",
+         "ini": "TK",
+         "col": "#7FC7F0",
+         "b": "Verwerfen",
+         "bk": "danger",
+         "act": "toast:Verworfen"
+        },
+        {
+         "t": "188 – Die blauen Schafe von Artelsbach",
+         "s": "NAS: TKKG",
+         "ini": "TK",
+         "col": "#7FC7F0",
+         "b": "Verwerfen",
+         "bk": "danger",
+         "act": "toast:Verworfen"
+        },
+        {
+         "t": "Wendy",
+         "s": "NAS: Hörspiele",
+         "ini": "WE",
+         "col": "#F4A3B4",
+         "b": "Verwerfen",
+         "bk": "danger",
+         "act": "toast:Verworfen"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "theme",
+   "slug": "theme",
+   "area": "einstellungen",
+   "parent": "g-aussehen",
+   "title": "Theme",
+   "description": "Aussehen des Box-Displays",
+   "icon": "pal",
+   "sections": [
+    {
+     "title": "",
+     "help": "Nach dem Wechsel lädt das Display neu.",
+     "items": [
+      {
+       "type": "themegrid"
+      },
+      {
+       "type": "select",
+       "label": "Alle 67 Themes",
+       "key": "theme",
+       "default": "Tag & Nacht",
+       "options": [
+        "axolotl",
+        "Ballettbühne",
+        "Bastelpapier",
+        "blue",
+        "Bücherregal",
+        "captainamerica",
+        "chocolate",
+        "cinema",
+        "clone-wars",
+        "comic",
+        "coverflow",
+        "custom",
+        "danger",
+        "dark",
+        "darkred",
+        "deepblue",
+        "Dinoland",
+        "dinosaur",
+        "earth",
+        "Einhorn",
+        "Eisenbahn",
+        "enterprise",
+        "Fahrzeuge",
+        "fantasybutterflies",
+        "Feenschloss",
+        "Feuerwehr",
+        "forms",
+        "Fußball",
+        "green",
+        "Heldenstadt",
+        "ironman",
+        "Kassettenrekorder",
+        "Kätzchenzimmer",
+        "Kuschelmond",
+        "light",
+        "lines",
+        "matrix",
+        "Meerjungfrau-Lagune",
+        "mint",
+        "Moosnest",
+        "mystic",
+        "orange",
+        "Pferdehof",
+        "pikachu",
+        "Pinguin-Eiswelt",
+        "pink",
+        "Piratenbucht",
+        "Prinzessin",
+        "purple",
+        "red",
+        "Ritterburg",
+        "Roboterwerkstatt",
+        "Safari",
+        "Schmetterlingsgarten",
+        "Sonnenhof",
+        "spiderman",
+        "steampunk",
+        "supermario",
+        "Tag & Nacht",
+        "unicorn",
+        "Unterwasser",
+        "vintage",
+        "Weltraum",
+        "wood",
+        "xmas",
+        "Zirkus",
+        "Zuckerland"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "eigenes",
+   "slug": "custom-theme",
+   "area": "einstellungen",
+   "parent": "g-aussehen",
+   "title": "Eigenes Theme",
+   "description": "Hintergrundbild hochladen",
+   "icon": "image",
+   "sections": [
+    {
+     "title": "Hintergrundbild",
+     "help": "Wird beim Theme „custom“ verwendet. Am besten 800 × 480 Pixel, JPG.",
+     "items": [
+      {
+       "type": "file",
+       "label": "Bild",
+       "buttons": "Datei wählen"
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Bild hochladen",
+         "primary",
+         "toast:Hochgeladen"
+        ]
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ansicht",
+   "slug": "view",
+   "area": "einstellungen",
+   "parent": "g-aussehen",
+   "title": "Ansicht",
+   "description": "Cover Flow, Namen, Scrollleiste",
+   "icon": "grid",
+   "sections": [
+    {
+     "title": "",
+     "help": "",
+     "items": [
+      {
+       "type": "toggle",
+       "label": "Cover-Flow-Ansicht (Bühne)",
+       "key": "stage",
+       "default": true,
+       "help": "Großes Cover in der Mitte, Nachbarn kleiner."
+      },
+      {
+       "type": "toggle",
+       "label": "Ordner- und Albumnamen anzeigen",
+       "key": "names",
+       "default": true
+      },
+      {
+       "type": "toggle",
+       "label": "Horizontale Scrollleiste ausblenden",
+       "key": "hideScroll",
+       "default": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "vorlesen",
+   "slug": "read-aloud",
+   "area": "einstellungen",
+   "parent": "g-aussehen",
+   "title": "Vorlesen",
+   "description": "Namen vorlesen, Sprache",
+   "icon": "vol",
+   "sections": [
+    {
+     "title": "",
+     "help": "",
+     "items": [
+      {
+       "type": "toggle",
+       "label": "Namen vorlesen, wenn das Cover stehen bleibt",
+       "key": "tts",
+       "default": false,
+       "help": "In der Cover-Flow-Ansicht wird der Name des mittleren Covers vorgelesen."
+      },
+      {
+       "type": "select",
+       "label": "Vorlese-Sprache",
+       "key": "ttsLang",
+       "default": "Deutsch",
+       "options": [
+        "Arabisch",
+        "Chinesisch",
+        "Dänisch",
+        "Deutsch",
+        "Englisch",
+        "Finnisch",
+        "Französisch",
+        "Griechisch",
+        "Hindi",
+        "Italienisch",
+        "Japanisch",
+        "Niederländisch",
+        "Norwegisch",
+        "Polnisch",
+        "Portugiesisch",
+        "Russisch",
+        "Schwedisch",
+        "Spanisch",
+        "Tschechisch",
+        "Türkisch",
+        "Ukrainisch"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "startbilder",
+   "slug": "boot-screens",
+   "area": "einstellungen",
+   "parent": "g-aussehen",
+   "title": "Start- und Wartungsbilder",
+   "description": "Startbild, Wartungsbild, Vorschau",
+   "icon": "boot",
+   "sections": [
+    {
+     "title": "Name der Box",
+     "help": "",
+     "items": [
+      {
+       "type": "nav",
+       "label": "Name der Box",
+       "target": "ueber"
+      }
+     ]
+    },
+    {
+     "title": "Startbild",
+     "help": "15 Szenen, die Karte oder jeden Start zufällig.",
+     "items": [
+      {
+       "type": "bootgrid"
+      }
+     ]
+    },
+    {
+     "title": "Wartungsbild & Vorschau",
+     "help": "Bei Update, Installation, neuem WLAN, beim Ausschalten und bei leerem Akku.",
+     "items": [
+      {
+       "type": "select",
+       "label": "Wartungsbild",
+       "key": "maint",
+       "default": "Wie das Startbild",
+       "options": [
+        "Wie das Startbild",
+        "Karte (Standard)",
+        "Abendhügel",
+        "Knete",
+        "Papier-Collage",
+        "Plakativ",
+        "Kinderbuch",
+        "Retro 70er",
+        "Weltraum",
+        "Unterwasser",
+        "Winterabend",
+        "Lagerfeuer",
+        "Ballonfahrt",
+        "Kinderzimmer",
+        "Regenbogen",
+        "Konzert",
+        "Baumhaus"
+       ]
+      },
+      {
+       "type": "nav",
+       "label": "Sprache der Box",
+       "target": "sprache"
+      },
+      {
+       "type": "select",
+       "label": "Vorschau",
+       "key": "bsKind",
+       "default": "Update läuft",
+       "options": [
+        "Update läuft",
+        "Installation läuft",
+        "Neues WLAN wird eingerichtet",
+        "Tschüss (schaltet aus)",
+        "Akku leer (schaltet aus)"
+       ]
+      },
+      {
+       "type": "bootprev"
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Speichern",
+         "primary",
+         "toast:Gespeichert – Bilder werden erzeugt"
+        ]
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "displaytexte",
+   "slug": "display-texts",
+   "area": "einstellungen",
+   "parent": "g-aussehen",
+   "title": "Texte auf dem Display",
+   "description": "Limit, Ruhezeit, QR-Code für Eltern",
+   "icon": "text",
+   "sections": [
+    {
+     "title": "",
+     "help": "Was das Kind sieht, wenn die Spielzeit aufgebraucht ist oder eine Ruhezeit läuft, dazu der QR-Code für Eltern. Leer = Text der Sprache.",
+     "items": [
+      {
+       "type": "nav",
+       "label": "Sprache der Box",
+       "target": "sprache"
+      },
+      {
+       "type": "select",
+       "label": "Bildschirm",
+       "key": "dtScreen",
+       "default": "Limit erreicht",
+       "options": [
+        "Limit erreicht",
+        "Ruhezeit",
+        "QR-Code für Eltern"
+       ]
+      },
+      {
+       "type": "dtprev"
+      },
+      {
+       "type": "dtfields"
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Texte speichern",
+         "primary",
+         "toast:Gespeichert"
+        ]
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "displaysettings",
+   "slug": "display",
+   "area": "einstellungen",
+   "parent": "g-display",
+   "title": "Display",
+   "description": "Helligkeit, Display aus, Drehung, Auflösung",
+   "icon": "display",
+   "sections": [
+    {
+     "title": "",
+     "help": "",
+     "items": [
+      {
+       "type": "slider",
+       "label": "Helligkeit",
+       "key": "bright",
+       "default": 100,
+       "min": 0,
+       "max": 100,
+       "step": 5,
+       "unit": " %"
+      },
+      {
+       "type": "slider",
+       "label": "Display aus nach",
+       "key": "dispOff",
+       "default": 10,
+       "help": "0 = nie ausschalten.",
+       "min": 0,
+       "max": 120,
+       "step": 1,
+       "unit": " min",
+       "zero": "Nie"
+      }
+     ]
+    },
+    {
+     "title": "Drehung",
+     "help": "Wird nach einem Neustart übernommen.",
+     "items": [
+      {
+       "type": "select",
+       "label": "HDMI-Drehung",
+       "key": "hdmiRot",
+       "default": "Aus (Standard)",
+       "options": [
+        "Aus (Standard)",
+        "90°",
+        "180°",
+        "270°",
+        "Horizontal spiegeln",
+        "Vertikal spiegeln"
+       ]
+      },
+      {
+       "type": "select",
+       "label": "LCD-Drehung",
+       "key": "lcdRot",
+       "default": "Aus (Standard)",
+       "options": [
+        "Aus (Standard)",
+        "180°"
+       ]
+      },
+      {
+       "type": "select",
+       "label": "Display-LCD-Drehung",
+       "key": "dlcdRot",
+       "default": "Aus (Standard)",
+       "options": [
+        "Aus (Standard)",
+        "180°"
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Auflösung",
+     "help": "",
+     "items": [
+      {
+       "type": "text",
+       "label": "Breite X in Pixel",
+       "key": "resX",
+       "default": "800",
+       "kind": "number"
+      },
+      {
+       "type": "text",
+       "label": "Höhe Y in Pixel",
+       "key": "resY",
+       "default": "480",
+       "kind": "number"
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Speichern",
+         "primary",
+         "toast:Gespeichert"
+        ]
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "bedienung",
+   "slug": "display-controls",
+   "area": "einstellungen",
+   "parent": "g-display",
+   "title": "Bedienung am Display",
+   "description": "Kategorien, Fortsetzen, Haltezeiten",
+   "icon": "touch",
+   "sections": [
+    {
+     "title": "Kategorien ausblenden",
+     "help": "Die übrigen Reiter auf dem Display verteilen sich gleichmäßig. Mindestens einer bleibt sichtbar.",
+     "items": [
+      {
+       "type": "toggle",
+       "label": "Hörspiele ausblenden",
+       "key": "hideA",
+       "default": false
+      },
+      {
+       "type": "toggle",
+       "label": "Musik ausblenden",
+       "key": "hideM",
+       "default": false
+      },
+      {
+       "type": "toggle",
+       "label": "NAS ausblenden",
+       "key": "hideN",
+       "default": false
+      },
+      {
+       "type": "toggle",
+       "label": "Radio & Podcasts ausblenden",
+       "key": "hideO",
+       "default": false
+      }
+     ]
+    },
+    {
+     "title": "Haltezeiten & Fortsetzen",
+     "help": "",
+     "items": [
+      {
+       "type": "slider",
+       "label": "Anzahl der Fortsetzen-Einträge",
+       "key": "resume",
+       "default": 9,
+       "min": 1,
+       "max": 99,
+       "step": 1
+      },
+      {
+       "type": "slider",
+       "label": "Haltezeit für die Titelliste",
+       "key": "listTimer",
+       "default": 2,
+       "help": "So lange das Cover im Player gedrückt halten, bis die Titelliste aufgeht.",
+       "min": 0.5,
+       "max": 5,
+       "step": 0.5,
+       "unit": " s"
+      },
+      {
+       "type": "slider",
+       "label": "Haltezeit für den Einstellungszugang",
+       "key": "setTimer",
+       "default": 5,
+       "help": "So lange die Statusanzeige drücken, bis der QR-Code für Eltern erscheint.",
+       "min": 1,
+       "max": 10,
+       "step": 1,
+       "unit": " s"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "displaylive",
+   "slug": "display-live",
+   "area": "einstellungen",
+   "parent": "g-display",
+   "title": "Display live",
+   "description": "Aktuelles Bild, Fernsteuerung (VNC)",
+   "icon": "eye",
+   "sections": [
+    {
+     "title": "Aktuelles Bild",
+     "help": "So sieht das Display gerade aus. Aktualisiert sich alle paar Sekunden.",
+     "items": [
+      {
+       "type": "livescreen"
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Aktualisieren",
+         "ghost",
+         "toast:Aktualisiert"
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Fernsteuerung (VNC)",
+     "help": "Das Display im Browser bedienen. VNC muss unter Netzwerk › Freigaben an sein.",
+     "items": [
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Fernsteuerung öffnen",
+         "primary",
+         "toast:VNC öffnet sich (Prototyp)"
+        ],
+        [
+         "Strg+Alt+Entf senden",
+         "ghost",
+         "toast:Gesendet"
+        ]
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lautstaerke",
+   "slug": "volume",
+   "area": "einstellungen",
+   "parent": "g-audio",
+   "title": "Lautstärke",
+   "description": "Jetzt, Maximum (Hörschutz), beim Start",
+   "icon": "vol",
+   "sections": [
+    {
+     "title": "",
+     "help": "",
+     "items": [
+      {
+       "type": "slider",
+       "label": "Lautstärke jetzt",
+       "key": "vol",
+       "default": 30,
+       "min": 0,
+       "max": 100,
+       "step": 5,
+       "unit": " %"
+      },
+      {
+       "type": "slider",
+       "label": "Maximum (Hörschutz)",
+       "key": "volMax",
+       "default": 75,
+       "help": "Gilt für Display, App und Drehregler.",
+       "min": 10,
+       "max": 100,
+       "step": 5,
+       "unit": " %"
+      },
+      {
+       "type": "toggle",
+       "label": "Beim Start auf festen Wert setzen",
+       "key": "volFix",
+       "default": true,
+       "help": "Sonst behält die Box den Wert von vor dem Ausschalten."
+      },
+      {
+       "type": "slider",
+       "label": "Wert beim Start",
+       "key": "volStart",
+       "default": 30,
+       "min": 0,
+       "max": 100,
+       "step": 5,
+       "unit": " %"
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Speichern",
+         "primary",
+         "toast:Gespeichert"
+        ]
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "soundkarte",
+   "slug": "sound-card",
+   "area": "einstellungen",
+   "parent": "g-audio",
+   "title": "Soundkarte",
+   "description": "Audio-Ausgabe (28 Geräte)",
+   "icon": "chip",
+   "sections": [
+    {
+     "title": "",
+     "help": "Wird nach einem Neustart übernommen.",
+     "items": [
+      {
+       "type": "select",
+       "label": "Soundkarte",
+       "key": "sound",
+       "default": "MAX98357A bcm2835-i2s-HiFi HiFi-0",
+       "options": [
+        "MAX98357A bcm2835-i2s-HiFi HiFi-0",
+        "Onboard 3,5-mm-Ausgang",
+        "Onboard HDMI-Ausgang",
+        "Allo Boss DAC",
+        "Allo Boss2 DAC",
+        "Allo DigiOne",
+        "Allo Katana DAC",
+        "Allo Piano DAC",
+        "Allo Piano DAC 2.1",
+        "ApplePi DAC (Orchard Audio)",
+        "Dion Audio LOCO",
+        "Dion Audio LOCO V2",
+        "Google AIY voice kit",
+        "HifiBerry AMP / AMP+",
+        "HifiBerry DAC / MiniAmp",
+        "HifiBerry DAC+ / DAC+ Pro / AMP2",
+        "HifiBerry DAC+ADC",
+        "HifiBerry DAC+ADC Pro",
+        "HifiBerry DAC+DSP",
+        "HifiBerry DAC+ HD",
+        "HifiBerry Digi / Digi+",
+        "HifiBerry Digi+ Pro",
+        "AudioPhonics I-Sabre ES9028Q2M / ES9038Q2M",
+        "IQaudIO Pi-Codec HAT",
+        "IQaudIO DAC audio card",
+        "Pi-DAC+, Pi-DACZero, Pi-DAC+ Pro, Pi-DigiAMP+",
+        "Pi-Digi+",
+        "Beliebiger USB-Audio-DAC (automatisch erkannt)"
+       ]
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Speichern",
+         "primary",
+         "toast:Gespeichert – Neustart nötig"
+        ]
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "drehregler",
+   "slug": "rotary-knob",
+   "area": "einstellungen",
+   "parent": "g-audio",
+   "title": "Drehregler und Taster",
+   "description": "Lautstärke per Drehregler, Taster an GPIO 10",
+   "icon": "knob",
+   "sections": [
+    {
+     "title": "",
+     "help": "",
+     "items": [
+      {
+       "type": "toggle",
+       "label": "Drehregler für die Lautstärke",
+       "key": "rotary",
+       "default": false
+      },
+      {
+       "type": "slider",
+       "label": "Schritt pro Raste",
+       "key": "rotStep",
+       "default": 5,
+       "min": 1,
+       "max": 10,
+       "step": 1,
+       "unit": " %"
+      },
+      {
+       "type": "select",
+       "label": "Funktion des Tasters an GPIO 10",
+       "key": "btnFn",
+       "default": "Play/Pause",
+       "options": [
+        "Aus",
+        "Play/Pause",
+        "Nächster Titel",
+        "Vorspulen"
+       ]
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Speichern",
+         "primary",
+         "toast:Gespeichert"
+        ]
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "bluetooth",
+   "slug": "bluetooth",
+   "area": "einstellungen",
+   "parent": "g-audio",
+   "title": "Bluetooth",
+   "description": "Kopfhörer & Lautsprecher",
+   "icon": "bt",
+   "sections": [
+    {
+     "title": "",
+     "help": "",
+     "items": [
+      {
+       "type": "toggle",
+       "label": "Bluetooth",
+       "key": "btOn",
+       "default": true,
+       "help": "Aus = Bluetooth-Chip aus (spart Strom). Controller: MuPiBox [AA:BB:CC:DD:EE:FF]"
+      },
+      {
+       "type": "toggle",
+       "label": "Automatisch verbinden",
+       "key": "btAuto",
+       "default": false,
+       "help": "Hilft, wenn bekannte Geräte nach dem Einschalten nicht von selbst verbinden."
+      }
+     ]
+    },
+    {
+     "title": "Gekoppelte Geräte",
+     "help": "",
+     "items": [
+      {
+       "type": "rows",
+       "rows": [
+        {
+         "t": "Kinderkopfhörer",
+         "s": "verbunden · Akku 60 %",
+         "tag": "aktiv",
+         "b": "Trennen",
+         "act": "toast:Getrennt"
+        },
+        {
+         "t": "JBL Go 3",
+         "s": "nicht verbunden",
+         "b": "Verbinden",
+         "act": "toast:Verbinde …"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Neue Geräte koppeln",
+     "help": "Gerät in den Kopplungsmodus versetzen, dann suchen (dauert ca. 10 s).",
+     "items": [
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Suchen",
+         "primary",
+         "toast:Suche läuft …"
+        ]
+       ]
+      },
+      {
+       "type": "rows",
+       "rows": [
+        {
+         "t": "Sony WH-CH520",
+         "s": "gefunden",
+         "b": "Koppeln",
+         "act": "toast:Gekoppelt"
+        },
+        {
+         "t": "Unbekanntes Gerät",
+         "s": "5C:12:…",
+         "b": "Koppeln",
+         "act": "toast:Gekoppelt"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "akku",
+   "slug": "battery",
+   "area": "einstellungen",
+   "parent": "g-strom",
+   "title": "Akku",
+   "description": "Stand, Spannung, Verlauf",
+   "icon": "bat",
+   "sections": [
+    {
+     "title": "Akku-Stand",
+     "help": "",
+     "items": [
+      {
+       "type": "big",
+       "subtitle": "OK · entlädt"
+      },
+      {
+       "type": "kv",
+       "rows": [
+        [
+         "Akku-Spannung",
+         "7,84 V"
+        ],
+        [
+         "USB-Spannung",
+         "–"
+        ],
+        [
+         "Akku-Strom",
+         "−488 mA"
+        ],
+        [
+         "Temperatur",
+         "36,5 °C"
+        ],
+        [
+         "Ladegerät",
+         "lädt nicht"
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Verlauf (24 h)",
+     "help": "",
+     "items": [
+      {
+       "type": "chart",
+       "unit": " %",
+       "vals": [
+        100,
+        100,
+        98,
+        97,
+        97,
+        96,
+        95,
+        93,
+        92,
+        92,
+        90,
+        88,
+        86,
+        84,
+        80
+       ],
+       "labels": [
+        "13",
+        "15",
+        "17",
+        "19",
+        "21",
+        "23",
+        "1",
+        "3",
+        "5",
+        "7",
+        "9",
+        "11",
+        "12",
+        "12",
+        "13"
+       ]
+      },
+      {
+       "type": "note",
+       "text": "118 Messpunkte, zuletzt 80 % um 13:05."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "mupihat",
+   "slug": "mupihat",
+   "area": "einstellungen",
+   "parent": "g-strom",
+   "title": "MuPiHAT & Akku-Profil",
+   "description": "Spannungen, Warnung, Abschalten, Ladeschluss",
+   "icon": "chip",
+   "sections": [
+    {
+     "title": "",
+     "help": "",
+     "items": [
+      {
+       "type": "toggle",
+       "label": "MuPiHAT aktiv",
+       "key": "hatOn",
+       "default": true
+      },
+      {
+       "type": "select",
+       "label": "Akku",
+       "key": "battery",
+       "default": "ENERpower 2S3P 15.000mAh",
+       "options": [
+        "ENERpower 2S3P 15.000mAh",
+        "Ansmann 2S1P",
+        "ENERpower 2S2P 10.000mAh",
+        "USB-C-Betrieb (ohne Akku)",
+        "Eigenes Profil"
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Akku-Profil (mV)",
+     "help": "",
+     "items": [
+      {
+       "type": "text",
+       "label": "v_100 (100 %)",
+       "key": "v100",
+       "default": "8200",
+       "help": "5000–9000",
+       "kind": "number"
+      },
+      {
+       "type": "text",
+       "label": "v_75 (75 %)",
+       "key": "v75",
+       "default": "7800",
+       "kind": "number"
+      },
+      {
+       "type": "text",
+       "label": "v_50 (50 %)",
+       "key": "v50",
+       "default": "7400",
+       "kind": "number"
+      },
+      {
+       "type": "text",
+       "label": "v_25 (25 %)",
+       "key": "v25",
+       "default": "7000",
+       "kind": "number"
+      },
+      {
+       "type": "text",
+       "label": "v_0 (0 %)",
+       "key": "v0",
+       "default": "6600",
+       "kind": "number"
+      },
+      {
+       "type": "text",
+       "label": "Warnung (th_warning)",
+       "key": "thWarn",
+       "default": "6700",
+       "help": "5500–8000",
+       "kind": "number"
+      },
+      {
+       "type": "text",
+       "label": "Abschalten (th_shutdown)",
+       "key": "thShut",
+       "default": "6600",
+       "help": "5000–7500, muss unter der Warnung liegen",
+       "kind": "number"
+      },
+      {
+       "type": "warn",
+       "text": "Ladeschluss (VREG) ist sicherheitskritisch – zu hoch schadet den Zellen. Nur ändern, wenn du weißt, was du tust."
+      },
+      {
+       "type": "text",
+       "label": "Ladeschluss VREG (optional)",
+       "key": "vreg",
+       "default": "8300",
+       "help": "6000–8500",
+       "kind": "number"
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Profil speichern",
+         "primary",
+         "toast:Gespeichert"
+        ]
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "autoaus",
+   "slug": "auto-off",
+   "area": "einstellungen",
+   "parent": "g-strom",
+   "title": "Automatisch ausschalten",
+   "description": "Nach … Minuten ohne Wiedergabe",
+   "icon": "power",
+   "sections": [
+    {
+     "title": "",
+     "help": "Die Box schaltet sich selbst aus, wenn niemand hört.",
+     "items": [
+      {
+       "type": "slider",
+       "label": "Ausschalten nach",
+       "key": "idleOff",
+       "default": 240,
+       "help": "0 = nie ausschalten.",
+       "min": 0,
+       "max": 300,
+       "step": 5,
+       "unit": " min",
+       "zero": "Nie"
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Speichern",
+         "primary",
+         "toast:Gespeichert"
+        ]
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "taster",
+   "slug": "power-button",
+   "area": "einstellungen",
+   "parent": "g-strom",
+   "title": "Ein-/Ausschalter und LED",
+   "description": "Taster-Verzögerung, LED",
+   "icon": "power",
+   "sections": [
+    {
+     "title": "",
+     "help": "",
+     "items": [
+      {
+       "type": "slider",
+       "label": "Verzögerung des Ausschalt-Tasters",
+       "key": "pressDelay",
+       "default": 2,
+       "help": "So lange den Taster halten, bis die Box ausgeht.",
+       "min": 0,
+       "max": 5,
+       "step": 1,
+       "unit": " s"
+      },
+      {
+       "type": "select",
+       "label": "LED-Pin (OnOffShim)",
+       "key": "ledPin",
+       "default": "25",
+       "options": [
+        "4",
+        "12",
+        "13",
+        "17",
+        "18",
+        "21",
+        "22",
+        "23",
+        "24",
+        "25",
+        "27"
+       ]
+      },
+      {
+       "type": "slider",
+       "label": "LED-Helligkeit normal",
+       "key": "ledMax",
+       "default": 90,
+       "min": 0,
+       "max": 100,
+       "step": 5,
+       "unit": " %"
+      },
+      {
+       "type": "slider",
+       "label": "LED-Helligkeit gedimmt",
+       "key": "ledMin",
+       "default": 60,
+       "min": 0,
+       "max": 100,
+       "step": 5,
+       "unit": " %"
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Speichern",
+         "primary",
+         "toast:Gespeichert"
+        ]
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "luefter",
+   "slug": "fan",
+   "area": "einstellungen",
+   "parent": "g-strom",
+   "title": "Lüfter",
+   "description": "Pin, Temperaturen",
+   "icon": "fan",
+   "sections": [
+    {
+     "title": "",
+     "help": "",
+     "items": [
+      {
+       "type": "toggle",
+       "label": "Lüfter aktiv",
+       "key": "fanOn",
+       "default": false
+      },
+      {
+       "type": "select",
+       "label": "Lüfter-Pin",
+       "key": "fanPin",
+       "default": "17",
+       "options": [
+        "4",
+        "12",
+        "13",
+        "17",
+        "18",
+        "21",
+        "22",
+        "23",
+        "24",
+        "25",
+        "27"
+       ]
+      },
+      {
+       "type": "slider",
+       "label": "Volle Drehzahl (100 %) ab",
+       "key": "fan100",
+       "default": 75,
+       "min": 20,
+       "max": 90,
+       "step": 1,
+       "unit": " °C"
+      },
+      {
+       "type": "slider",
+       "label": "75 % ab",
+       "key": "fan75",
+       "default": 65,
+       "min": 20,
+       "max": 90,
+       "step": 1,
+       "unit": " °C"
+      },
+      {
+       "type": "slider",
+       "label": "50 % ab",
+       "key": "fan50",
+       "default": 55,
+       "min": 20,
+       "max": 90,
+       "step": 1,
+       "unit": " °C"
+      },
+      {
+       "type": "slider",
+       "label": "25 % ab",
+       "key": "fan25",
+       "default": 45,
+       "min": 20,
+       "max": 90,
+       "step": 1,
+       "unit": " °C"
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Speichern",
+         "primary",
+         "toast:Gespeichert"
+        ]
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "wlan",
+   "slug": "wifi",
+   "area": "einstellungen",
+   "parent": "g-netz",
+   "title": "WLAN",
+   "description": "Verbindung, Netze, hinzufügen",
+   "icon": "wifi",
+   "sections": [
+    {
+     "title": "Verbindung",
+     "help": "",
+     "items": [
+      {
+       "type": "kv",
+       "rows": [
+        [
+         "Status",
+         "● Online"
+        ],
+        [
+         "Netz",
+         "Heimnetz"
+        ],
+        [
+         "Signal",
+         "−40 dBm · 100 %"
+        ],
+        [
+         "IP-Adresse",
+         "192.168.178.20"
+        ],
+        [
+         "Gateway",
+         "192.168.178.1"
+        ],
+        [
+         "DNS",
+         "192.168.178.1"
+        ],
+        [
+         "MAC",
+         "AA:BB:CC:DD:EE:FF"
+        ]
+       ]
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Aktualisieren",
+         "ghost",
+         "toast:Aktualisiert"
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Netze in Reichweite",
+     "help": "",
+     "items": [
+      {
+       "type": "rows",
+       "rows": [
+        {
+         "t": "Heimnetz",
+         "s": "5 GHz · sehr gut",
+         "tag": "verbunden"
+        },
+        {
+         "t": "Heimnetz-Gast",
+         "s": "2,4 GHz · gut",
+         "b": "Verbinden",
+         "act": "sheet:wifi"
+        },
+        {
+         "t": "FRITZ!Box 7530 XY",
+         "s": "2,4 GHz · schwach",
+         "b": "Verbinden",
+         "act": "sheet:wifi"
+        }
+       ]
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Neu suchen",
+         "ghost",
+         "toast:Suche läuft …"
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Neues WLAN hinzufügen",
+     "help": "Die Box bleibt im aktuellen Netz und wechselt erst, wenn das neue erreichbar ist.",
+     "items": [
+      {
+       "type": "text",
+       "label": "Netzname (SSID)",
+       "key": "ssid",
+       "kind": "text"
+      },
+      {
+       "type": "text",
+       "label": "Passwort (8–63 Zeichen, leer = offenes Netz)",
+       "key": "wpw",
+       "kind": "password"
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Hinzufügen",
+         "primary",
+         "toast:Hinzugefügt"
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Gespeicherte Netze",
+     "help": "Die aktive Verbindung kann nicht entfernt werden – sonst wäre die Box offline.",
+     "items": [
+      {
+       "type": "rows",
+       "rows": [
+        {
+         "t": "Heimnetz",
+         "tag": "aktiv"
+        },
+        {
+         "t": "Oma & Opa",
+         "b": "Entfernen",
+         "bk": "danger",
+         "act": "toast:Entfernt"
+        },
+        {
+         "t": "Ferienhaus",
+         "b": "Entfernen",
+         "bk": "danger",
+         "act": "toast:Entfernt"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "wlanopt",
+   "slug": "network-options",
+   "area": "einstellungen",
+   "parent": "g-netz",
+   "title": "Netzwerk-Optionen",
+   "description": "Onboard-WLAN, USB-WLAN, DHCP, Wächter, Fernsteuerung per IP",
+   "icon": "sliders",
+   "sections": [
+    {
+     "title": "WLAN-Hardware",
+     "help": "",
+     "items": [
+      {
+       "type": "toggle",
+       "label": "Onboard-WLAN an",
+       "key": "wOnboard",
+       "default": true
+      },
+      {
+       "type": "select",
+       "label": "USB-WLAN-Treiber",
+       "key": "usbDrv",
+       "default": "RTL88X2BU",
+       "options": [
+        "RTL88X2BU",
+        "RTL8821AU"
+       ]
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Treiber installieren",
+         "ghost",
+         "toast:Wird installiert …"
+        ]
+       ]
+      },
+      {
+       "type": "toggle",
+       "label": "Stromsparen des USB-Adapters",
+       "key": "usbPm",
+       "default": false,
+       "help": "Aus = stabilere Verbindung bei manchen Adaptern."
+      }
+     ]
+    },
+    {
+     "title": "Verbindung",
+     "help": "",
+     "items": [
+      {
+       "type": "toggle",
+       "label": "DHCP-Timeout",
+       "key": "dhcpTo",
+       "default": true,
+       "help": "Beim Start nicht ewig auf eine IP-Adresse warten."
+      },
+      {
+       "type": "toggle",
+       "label": "WLAN-Wächter (DietPi-WiFi-Monitor)",
+       "key": "wMon",
+       "default": true,
+       "help": "Baut die Verbindung neu auf, wenn sie abreißt."
+      },
+      {
+       "type": "toggle",
+       "label": "Beste Verbindung suchen",
+       "key": "wBest",
+       "default": false,
+       "help": "Wechselt bei mehreren Netzen automatisch zum stärksten."
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "WLAN neu starten",
+         "ghost",
+         "toast:WLAN startet neu"
+        ],
+        [
+         "DHCP erneuern",
+         "ghost",
+         "toast:Erneuert"
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Fernsteuerung per IP",
+     "help": "Falls die Box sich über den Hostnamen nicht richtig erreicht, stattdessen die IP-Adresse verwenden.",
+     "items": [
+      {
+       "type": "toggle",
+       "label": "Backend-Steuerung per IP",
+       "key": "ipCtl",
+       "default": false
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "freigaben",
+   "slug": "shares",
+   "area": "einstellungen",
+   "parent": "g-netz",
+   "title": "Freigaben & Fernzugriff",
+   "description": "Samba, FTP, VNC",
+   "icon": "share",
+   "sections": [
+    {
+     "title": "",
+     "help": "",
+     "items": [
+      {
+       "type": "toggle",
+       "label": "Samba (Windows-Freigabe)",
+       "key": "samba",
+       "default": true,
+       "help": "SD-Karte im Heimnetz als Laufwerk öffnen."
+      },
+      {
+       "type": "toggle",
+       "label": "FTP-Server",
+       "key": "ftp",
+       "default": false
+      },
+      {
+       "type": "toggle",
+       "label": "VNC (Display fernsteuern)",
+       "key": "vnc",
+       "default": true,
+       "help": "Nötig für „Display live › Fernsteuerung“."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "telegram",
+   "slug": "telegram",
+   "area": "einstellungen",
+   "parent": "g-dienste",
+   "title": "Telegram",
+   "description": "Eltern-Bot, erlaubte Chats",
+   "icon": "tg",
+   "sections": [
+    {
+     "title": "Eltern-Bot",
+     "help": "",
+     "items": [
+      {
+       "type": "toggle",
+       "label": "Bot aktiv",
+       "key": "tgOn",
+       "default": true
+      },
+      {
+       "type": "toggle",
+       "label": "Wiedergabe melden",
+       "key": "tgReport",
+       "default": false,
+       "help": "Aus: nur Wichtiges (Hörzeit aufgebraucht, Ruhezeit, Akku fast leer, Start und Ausschalten). An: zusätzlich jeder Titel mit Bildschirmfoto, Pause, Stopp, Weiter."
+      },
+      {
+       "type": "kv",
+       "rows": [
+        [
+         "Bot-Token",
+         "✓ eingerichtet"
+        ]
+       ]
+      },
+      {
+       "type": "text",
+       "label": "Neuen Token setzen (leer = unverändert)",
+       "key": "tgToken",
+       "placeholder": "123456789:ABC…",
+       "kind": "password"
+      }
+     ]
+    },
+    {
+     "title": "Erlaubte Chats",
+     "help": "Nur diese Chats dürfen die Box steuern. Gruppen haben negative IDs (z. B. −100…).",
+     "items": [
+      {
+       "type": "rows",
+       "rows": [
+        {
+         "t": "Familien-Chat",
+         "s": "123456789",
+         "b": "Entfernen",
+         "bk": "danger",
+         "act": "toast:Entfernt"
+        },
+        {
+         "t": "Papa",
+         "s": "987654321",
+         "b": "Entfernen",
+         "bk": "danger",
+         "act": "toast:Entfernt"
+        }
+       ]
+      },
+      {
+       "type": "text",
+       "label": "Chat-ID",
+       "key": "tgNewId",
+       "placeholder": "z. B. 123456789",
+       "kind": "text"
+      },
+      {
+       "type": "text",
+       "label": "Name",
+       "key": "tgNewName",
+       "placeholder": "z. B. Mama",
+       "kind": "text"
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "+ Chat hinzufügen",
+         "ghost",
+         "toast:Hinzugefügt"
+        ],
+        [
+         "Chat-ID ermitteln",
+         "ghost",
+         "toast:Schreib dem Bot jetzt eine Nachricht"
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "title": "",
+     "help": "Änderungen starten den Telegram-Dienst neu.",
+     "items": [
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Speichern",
+         "primary",
+         "toast:Gespeichert"
+        ]
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "mqtt",
+   "slug": "mqtt",
+   "area": "einstellungen",
+   "parent": "g-dienste",
+   "title": "MQTT / Home Assistant",
+   "description": "Broker, Topic, Intervalle, Discovery",
+   "icon": "home2",
+   "sections": [
+    {
+     "title": "",
+     "help": "",
+     "items": [
+      {
+       "type": "toggle",
+       "label": "MQTT aktiv",
+       "key": "mqttOn",
+       "default": false
+      },
+      {
+       "type": "text",
+       "label": "Gerätename",
+       "key": "mqName",
+       "default": "MuPiBox Kinderzimmer",
+       "kind": "text"
+      },
+      {
+       "type": "text",
+       "label": "Broker",
+       "key": "mqBroker",
+       "default": "192.168.178.5",
+       "kind": "text"
+      },
+      {
+       "type": "text",
+       "label": "Port",
+       "key": "mqPort",
+       "default": "1883",
+       "kind": "number"
+      },
+      {
+       "type": "text",
+       "label": "Topic",
+       "key": "mqTopic",
+       "default": "mupibox",
+       "kind": "text"
+      },
+      {
+       "type": "text",
+       "label": "Client-ID",
+       "key": "mqClient",
+       "default": "mupibox-01",
+       "kind": "text"
+      },
+      {
+       "type": "text",
+       "label": "Benutzer",
+       "key": "mqUser",
+       "kind": "text"
+      },
+      {
+       "type": "text",
+       "label": "Passwort",
+       "key": "mqPw",
+       "kind": "password"
+      }
+     ]
+    },
+    {
+     "title": "Intervalle",
+     "help": "",
+     "items": [
+      {
+       "type": "slider",
+       "label": "Aktualisierung (Wiedergabe)",
+       "key": "mqRef",
+       "default": 10,
+       "min": 1,
+       "max": 90,
+       "step": 1,
+       "unit": " s"
+      },
+      {
+       "type": "slider",
+       "label": "Aktualisierung (Leerlauf)",
+       "key": "mqIdle",
+       "default": 60,
+       "min": 1,
+       "max": 90,
+       "step": 1,
+       "unit": " s"
+      },
+      {
+       "type": "slider",
+       "label": "Timeout",
+       "key": "mqTo",
+       "default": 60,
+       "min": 10,
+       "max": 180,
+       "step": 5,
+       "unit": " s"
+      }
+     ]
+    },
+    {
+     "title": "Home Assistant",
+     "help": "",
+     "items": [
+      {
+       "type": "toggle",
+       "label": "An Home Assistant melden",
+       "key": "haOn",
+       "default": false
+      },
+      {
+       "type": "text",
+       "label": "Discovery-Präfix",
+       "key": "haTopic",
+       "default": "homeassistant",
+       "kind": "text"
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Speichern",
+         "primary",
+         "toast:Gespeichert"
+        ]
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "wled",
+   "slug": "wled",
+   "area": "einstellungen",
+   "parent": "g-dienste",
+   "title": "WLED",
+   "description": "LED-Streifen per serieller Schnittstelle",
+   "icon": "bulb",
+   "sections": [
+    {
+     "title": "",
+     "help": "",
+     "items": [
+      {
+       "type": "toggle",
+       "label": "WLED aktiv",
+       "key": "wledOn",
+       "default": false
+      },
+      {
+       "type": "text",
+       "label": "Serielle Schnittstelle",
+       "key": "wledPort",
+       "default": "/dev/ttyUSB0",
+       "placeholder": "/dev/ttyUSB0",
+       "kind": "text"
+      },
+      {
+       "type": "select",
+       "label": "Baudrate",
+       "key": "baud",
+       "default": "115200 bps",
+       "options": [
+        "300 bps",
+        "1200 bps",
+        "2400 bps",
+        "4800 bps",
+        "9600 bps",
+        "19200 bps",
+        "38400 bps",
+        "57600 bps",
+        "115200 bps",
+        "230400 bps",
+        "460800 bps",
+        "921600 bps"
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Presets",
+     "help": "Nummern der Presets im WLED-Controller.",
+     "items": [
+      {
+       "type": "text",
+       "label": "Haupt-Preset (normaler Betrieb)",
+       "key": "wledMain",
+       "default": "1",
+       "kind": "number"
+      },
+      {
+       "type": "toggle",
+       "label": "Preset beim Start",
+       "key": "wledBootOn",
+       "default": true
+      },
+      {
+       "type": "text",
+       "label": "Preset-Nummer beim Start",
+       "key": "wledBoot",
+       "default": "2",
+       "kind": "number"
+      },
+      {
+       "type": "toggle",
+       "label": "Preset beim Ausschalten",
+       "key": "wledOffOn",
+       "default": true
+      },
+      {
+       "type": "text",
+       "label": "Preset-Nummer beim Ausschalten",
+       "key": "wledOff",
+       "default": "3",
+       "kind": "number"
+      }
+     ]
+    },
+    {
+     "title": "Helligkeit",
+     "help": "",
+     "items": [
+      {
+       "type": "slider",
+       "label": "Helligkeit normal",
+       "key": "wledBright",
+       "default": 200,
+       "min": 0,
+       "max": 255,
+       "step": 5
+      },
+      {
+       "type": "slider",
+       "label": "Helligkeit gedimmt",
+       "key": "wledDim",
+       "default": 60,
+       "min": 0,
+       "max": 255,
+       "step": 5
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Speichern",
+         "primary",
+         "toast:Gespeichert"
+        ]
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "passwort",
+   "slug": "password",
+   "area": "einstellungen",
+   "parent": "g-sicherheit",
+   "title": "Passwort & Anmeldung",
+   "description": "Ein Passwort für die ganze App",
+   "icon": "lock",
+   "sections": [
+    {
+     "title": "Passwort",
+     "help": "Gilt für die ganze App – am Handy wie am PC.",
+     "items": [
+      {
+       "type": "kv",
+       "rows": [
+        [
+         "Status",
+         "Passwort ist gesetzt"
+        ]
+       ]
+      },
+      {
+       "type": "text",
+       "label": "Aktuelles Passwort",
+       "key": "pwCur",
+       "kind": "password"
+      },
+      {
+       "type": "text",
+       "label": "Neues Passwort (mind. 6 Zeichen)",
+       "key": "pwNew",
+       "kind": "password"
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Passwort ändern",
+         "primary",
+         "toast:Geändert"
+        ],
+        [
+         "Passwort entfernen",
+         "danger",
+         "toast:Entfernt (Prototyp)"
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Anmeldung",
+     "help": "",
+     "items": [
+      {
+       "type": "toggle",
+       "label": "Anmeldung verlangen",
+       "key": "loginOn",
+       "default": true,
+       "help": "Wird sofort wirksam."
+      },
+      {
+       "type": "note",
+       "text": "Anmelden geht auch ohne Passwort: per QR-Code am Display (Statusanzeige lange drücken) oder mit einem Link über Telegram."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "https",
+   "slug": "https",
+   "area": "einstellungen",
+   "parent": "g-sicherheit",
+   "title": "Verschlüsselung (HTTPS)",
+   "description": "Zertifikat, sichere Verbindung, App installieren",
+   "icon": "lock",
+   "sections": []
+  },
+  {
+   "id": "ueber",
+   "slug": "about",
+   "area": "einstellungen",
+   "parent": "g-system",
+   "title": "Über die Box",
+   "description": "Name der Box, Version, Neuigkeiten, Hardware",
+   "icon": "info",
+   "sections": [
+    {
+     "title": "Name der Box",
+     "help": "Erscheint im Startbild, auf dem Start der App und als Vorschlag für den Playlist-Präfix von Smart-Sync.",
+     "items": [
+      {
+       "type": "text",
+       "label": "Name der Box (max. 14 Zeichen)",
+       "key": "boxName",
+       "help": "Leer = „MuPiBox“. Der Name im Netzwerk (Hostname) steht unter Experten.",
+       "placeholder": "z. B. Mias Box",
+       "kind": "text"
+      }
+     ]
+    },
+    {
+     "title": "MuPiBox",
+     "help": "",
+     "items": [
+      {
+       "type": "kv",
+       "rows": [
+        [
+         "Version",
+         "4.2.4 stable"
+        ],
+        [
+         "Hostname",
+         "mupibox"
+        ],
+        [
+         "Laufzeit",
+         "2 h 24 min"
+        ],
+        [
+         "CPU-Last (1 min)",
+         "0,39 · 4 Kerne"
+        ],
+        [
+         "CPU-Temperatur",
+         "52,1 °C"
+        ],
+        [
+         "Arbeitsspeicher",
+         "740 MB / 3,7 GB"
+        ],
+        [
+         "SD-Karte",
+         "45,5 / 58,4 GB belegt"
+        ]
+       ]
+      },
+      {
+       "type": "bar",
+       "label": "SD-Karte"
+      }
+     ]
+    },
+    {
+     "title": "Neuigkeiten",
+     "help": "",
+     "items": [
+      {
+       "type": "note",
+       "text": "MuPiBox 5.0 (Beta): eine App für alles, neue Kinder-Themes, Startbilder und Akku-Anzeige. Unterstützt DietPi auf Raspberry Pi 3, 4, 5 und Zero 2."
+      }
+     ]
+    },
+    {
+     "title": "Support",
+     "help": "Sammelt Version, Konfiguration (ohne Passwörter) und Logs in einer Datei.",
+     "items": [
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Support-Infos herunterladen",
+         "ghost",
+         "toast:Wird erstellt …"
+        ]
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "updates",
+   "slug": "updates",
+   "area": "einstellungen",
+   "parent": "g-system",
+   "title": "Updates",
+   "description": "MuPiBox-Versionen, Betriebssystem",
+   "icon": "sync",
+   "sections": [
+    {
+     "title": "MuPiBox",
+     "help": "Installiert: 4.2.4 stable. Vorher ein Backup machen – die Entwicklerversion kann die Installation beschädigen.",
+     "items": [
+      {
+       "type": "versions"
+      }
+     ]
+    },
+    {
+     "title": "Betriebssystem",
+     "help": "Dauert auf älteren Raspberry Pis bis zu 30 Minuten. Browser nicht schließen und auf den Neustart warten.",
+     "items": [
+      {
+       "type": "warn",
+       "text": "Vorher immer ein Backup machen."
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Betriebssystem aktualisieren",
+         "ghost",
+         "toast:Update startet (Prototyp)"
+        ]
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "backup",
+   "slug": "backup",
+   "area": "einstellungen",
+   "parent": "g-system",
+   "title": "Backup",
+   "description": "Sichern und einspielen",
+   "icon": "save",
+   "sections": [
+    {
+     "title": "Sichern",
+     "help": "",
+     "items": [
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Konfigurations-Backup",
+         "primary",
+         "toast:Wird heruntergeladen"
+        ]
+       ]
+      },
+      {
+       "type": "note",
+       "text": "Cover, mupiboxconfig.json und data.json."
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Voll-Backup",
+         "ghost",
+         "toast:Wird heruntergeladen"
+        ]
+       ]
+      },
+      {
+       "type": "note",
+       "text": "Zusätzlich alle Mediendateien – kann sehr groß werden."
+      }
+     ]
+    },
+    {
+     "title": "Einspielen",
+     "help": "",
+     "items": [
+      {
+       "type": "file",
+       "label": "Backup-Datei",
+       "buttons": "Datei wählen"
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Backup einspielen",
+         "danger",
+         "toast:Wird eingespielt (Prototyp)"
+        ]
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "neustart",
+   "slug": "restart",
+   "area": "einstellungen",
+   "parent": "g-system",
+   "title": "Neu starten & Ausschalten",
+   "description": "Box, Display, Dienste",
+   "icon": "power",
+   "sections": [
+    {
+     "title": "Box",
+     "help": "Neustart dauert etwa eine Minute. Nach dem Ausschalten muss die Box am Gerät wieder eingeschaltet werden.",
+     "items": [
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Neu starten",
+         "ghost",
+         "toast:Box startet neu"
+        ],
+        [
+         "Ausschalten",
+         "danger",
+         "toast:Box schaltet aus"
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Display & Dienste",
+     "help": "",
+     "items": [
+      {
+       "type": "rows",
+       "rows": [
+        {
+         "t": "Display (Chromium) neu starten",
+         "s": "Kiosk-Browser",
+         "b": "Starten",
+         "act": "toast:Display startet neu"
+        },
+        {
+         "t": "Spotify-Dienste neu starten",
+         "s": "Frontend und Spotify-Verbindung",
+         "b": "Starten",
+         "act": "toast:Neu gestartet"
+        },
+        {
+         "t": "PM2 neu starten",
+         "s": "Frontend und Kiosk",
+         "b": "Starten",
+         "act": "toast:Neu gestartet"
+        },
+        {
+         "t": "Einstellungen übernehmen",
+         "s": "Manches braucht sonst einen Neustart",
+         "b": "Übernehmen",
+         "act": "toast:Übernommen"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "protokolle",
+   "slug": "logs",
+   "area": "einstellungen",
+   "parent": "g-system",
+   "title": "Protokolle",
+   "description": "Logs und Dienst-Status",
+   "icon": "doc",
+   "sections": [
+    {
+     "title": "",
+     "help": "",
+     "items": [
+      {
+       "type": "select",
+       "label": "Log oder Dienst (25)",
+       "key": "log",
+       "default": "Log: idle_shutdown.log",
+       "options": [
+        "Log: idle_shutdown.log",
+        "Log: shutdown_control.log",
+        "PM2-Log: server-error.log",
+        "PM2-Log: server-out.log",
+        "PM2-Log: spotify-control-error.log",
+        "PM2-Log: spotify-control-out.log",
+        "Status: mupi_autoconnect_bt.service",
+        "Status: mupi_autoconnect-wifi.service",
+        "Status: mupi_check_internet.service",
+        "Status: mupi_check_monitor.service",
+        "Status: mupi_fan.service",
+        "Status: mupi_hat_control.service",
+        "Status: mupi_hat.service",
+        "Status: mupi_idle_shutdown.service",
+        "Status: mupi_mqtt.service",
+        "Status: mupi_novnc.service",
+        "Status: mupi_powerled.service",
+        "Status: mupi_splash.service",
+        "Status: mupi_startstop.service",
+        "Status: mupi_telegram.service",
+        "Status: mupi_vnc.service",
+        "Status: mupi_wifi.service",
+        "Status: pm2-dietpi.service",
+        "Status: proftpd.service",
+        "Status: samba-ad-dc.service"
+       ]
+      },
+      {
+       "type": "text",
+       "label": "Suche (grep)",
+       "key": "grep",
+       "placeholder": "Stichwort …",
+       "kind": "text"
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Aktualisieren",
+         "ghost",
+         "toast:Aktualisiert"
+        ],
+        [
+         "Pause",
+         "ghost",
+         "toast:Pausiert"
+        ],
+        [
+         "Herunterladen",
+         "ghost",
+         "toast:Wird heruntergeladen"
+        ]
+       ]
+      },
+      {
+       "type": "log"
+      }
+     ]
+    },
+    {
+     "title": "Fehlersuche",
+     "help": "",
+     "items": [
+      {
+       "type": "toggle",
+       "label": "Controller-Debugging",
+       "key": "ctlDebug",
+       "default": false,
+       "help": "Ausführlichere Logs des Players."
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "PM2-Log herunterladen",
+         "ghost",
+         "toast:Wird heruntergeladen"
+        ]
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "systemopt",
+   "slug": "system-options",
+   "area": "einstellungen",
+   "parent": "g-system",
+   "title": "Systemoptionen",
+   "description": "Übertakten, Turbo, Governor, SWAP …",
+   "icon": "sliders",
+   "sections": [
+    {
+     "title": "Leistung & Start",
+     "help": "",
+     "items": [
+      {
+       "type": "toggle",
+       "label": "SD-Karte übertakten",
+       "key": "ocSd",
+       "default": true
+      },
+      {
+       "type": "toggle",
+       "label": "PM2-Logs im RAM",
+       "key": "pm2Ram",
+       "default": true,
+       "help": "Schont die SD-Karte, Logs gehen beim Neustart verloren."
+      },
+      {
+       "type": "toggle",
+       "label": "Beim Start auf Netzwerk warten",
+       "key": "waitNet",
+       "default": true
+      },
+      {
+       "type": "toggle",
+       "label": "Turbo beim Start",
+       "key": "turbo",
+       "default": true
+      },
+      {
+       "type": "select",
+       "label": "CPU-Governor",
+       "key": "gov",
+       "default": "ondemand",
+       "options": [
+        "conservative",
+        "ondemand",
+        "userspace",
+        "powersave",
+        "performance",
+        "schedutil"
+       ]
+      },
+      {
+       "type": "toggle",
+       "label": "Unterspannungs-Warnungen ausblenden",
+       "key": "noWarn",
+       "default": false
+      },
+      {
+       "type": "toggle",
+       "label": "SWAP",
+       "key": "swap",
+       "default": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "browser",
+   "slug": "browser",
+   "area": "einstellungen",
+   "parent": "g-system",
+   "title": "Browser (Chromium)",
+   "description": "GPU, Scrollen, Kiosk, Cache, Debugging",
+   "icon": "globe",
+   "sections": [
+    {
+     "title": "",
+     "help": "",
+     "items": [
+      {
+       "type": "toggle",
+       "label": "GPU-Unterstützung (experimentell)",
+       "key": "gpu",
+       "default": false
+      },
+      {
+       "type": "toggle",
+       "label": "Sanftes Scrollen (experimentell)",
+       "key": "smooth",
+       "default": false
+      },
+      {
+       "type": "toggle",
+       "label": "Kiosk-Modus",
+       "key": "kiosk",
+       "default": true
+      },
+      {
+       "type": "select",
+       "label": "Cache-Größe",
+       "key": "cache",
+       "default": "128 MB",
+       "options": [
+        "0 MB",
+        "8 MB",
+        "16 MB",
+        "32 MB",
+        "64 MB",
+        "128 MB",
+        "256 MB",
+        "512 MB"
+       ]
+      },
+      {
+       "type": "toggle",
+       "label": "Chrome-Debugging",
+       "key": "chromeDebug",
+       "default": false,
+       "help": "Remote-Debugging des Display-Browsers."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "experten",
+   "slug": "expert",
+   "area": "einstellungen",
+   "parent": "g-system",
+   "title": "Experten",
+   "description": "Hostname, JSON-Editor, Zurücksetzen, DietPi",
+   "icon": "code",
+   "sections": [
+    {
+     "title": "Hostname",
+     "help": "Name der Box im Netzwerk (z. B. mupibox.local). Nur Buchstaben, Ziffern und Bindestrich. Wird nach einem Neustart übernommen.",
+     "items": [
+      {
+       "type": "text",
+       "label": "Hostname",
+       "key": "host",
+       "default": "mupibox",
+       "kind": "text"
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Speichern",
+         "primary",
+         "toast:Gespeichert – Neustart nötig"
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Konfiguration direkt bearbeiten",
+     "help": "",
+     "items": [
+      {
+       "type": "warn",
+       "text": "Falsche Werte können die Box lahmlegen. Vorher ein Backup machen."
+      },
+      {
+       "type": "json"
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Speichern",
+         "danger",
+         "toast:Gespeichert (Prototyp)"
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Zurücksetzen",
+     "help": "",
+     "items": [
+      {
+       "type": "rows",
+       "rows": [
+        {
+         "t": "Box-Konfiguration zurücksetzen",
+         "s": "mupiboxconfig.json – alle Einstellungen",
+         "b": "Zurücksetzen",
+         "bk": "danger",
+         "act": "sheet:reset-box"
+        },
+        {
+         "t": "Medien-Datenbank zurücksetzen",
+         "s": "data.json – alle Einträge der Bibliothek",
+         "b": "Zurücksetzen",
+         "bk": "danger",
+         "act": "sheet:reset-data"
+        },
+        {
+         "t": "Server-Konfiguration zurücksetzen",
+         "s": "config.json",
+         "b": "Zurücksetzen",
+         "bk": "danger",
+         "act": "sheet:reset-server"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "title": "",
+     "help": "",
+     "items": [
+      {
+       "type": "nav",
+       "label": "DietPi-Dashboard",
+       "target": "ext:dietpi",
+       "subtitle": "öffnet sich in einem neuen Fenster"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "sprache",
+   "slug": "language",
+   "area": "einstellungen",
+   "parent": "g-system",
+   "title": "Sprache",
+   "description": "Sprache der App, Sprache der Box",
+   "icon": "globe",
+   "sections": [
+    {
+     "title": "Sprache der App",
+     "help": "Nur diese App im Browser. Automatisch = Sprache des Browsers.",
+     "items": [
+      {
+       "type": "select",
+       "label": "Sprache der App",
+       "key": "appLang",
+       "default": "Automatisch (Sprache des Browsers)",
+       "options": [
+        "Automatisch (Sprache des Browsers)",
+        "Deutsch",
+        "English",
+        "Français",
+        "Español",
+        "Italiano",
+        "Nederlands",
+        "Svenska",
+        "Dansk",
+        "Norsk",
+        "Suomi",
+        "Polski",
+        "Português",
+        "Türkçe",
+        "Українська",
+        "Русский",
+        "Čeština",
+        "Ελληνικά"
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Sprache der Box",
+     "help": "Texte auf dem Display (Limit, Ruhezeit, QR-Code für Eltern) und in den Start- und Wartungsbildern.",
+     "items": [
+      {
+       "type": "select",
+       "label": "Sprache der Box",
+       "key": "boxLang",
+       "default": "Deutsch",
+       "options": [
+        "Deutsch",
+        "English",
+        "Français",
+        "Español",
+        "Italiano",
+        "Nederlands",
+        "Svenska",
+        "Dansk",
+        "Norsk",
+        "Suomi",
+        "Polski",
+        "Português",
+        "Türkçe",
+        "Українська",
+        "Русский",
+        "Čeština",
+        "Ελληνικά"
+       ]
+      }
+     ]
+    },
+    {
+     "title": "",
+     "help": "",
+     "items": [
+      {
+       "type": "nav",
+       "label": "Vorlese-Sprache",
+       "target": "vorlesen",
+       "subtitle": "Eigene Einstellung mit 21 Sprachen · Aussehen › Vorlesen"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "g-aussehen",
+   "slug": "appearance",
+   "area": "einstellungen",
+   "parent": "einstellungen",
+   "title": "Aussehen",
+   "description": "Theme, Ansicht, Vorlesen, Start- & Wartungsbilder, Display-Texte",
+   "icon": "pal",
+   "sections": [
+    {
+     "title": "",
+     "help": "",
+     "items": [
+      {
+       "type": "nav",
+       "label": "Theme",
+       "target": "theme",
+       "subtitle": "Aussehen des Box-Displays"
+      },
+      {
+       "type": "nav",
+       "label": "Eigenes Theme",
+       "target": "eigenes",
+       "subtitle": "Hintergrundbild hochladen"
+      },
+      {
+       "type": "nav",
+       "label": "Ansicht",
+       "target": "ansicht",
+       "subtitle": "Cover Flow, Namen, Scrollleiste"
+      },
+      {
+       "type": "nav",
+       "label": "Vorlesen",
+       "target": "vorlesen",
+       "subtitle": "Namen vorlesen, Sprache"
+      },
+      {
+       "type": "nav",
+       "label": "Start- und Wartungsbilder",
+       "target": "startbilder",
+       "subtitle": "Startbild, Wartungsbild, Vorschau"
+      },
+      {
+       "type": "nav",
+       "label": "Texte auf dem Display",
+       "target": "displaytexte",
+       "subtitle": "Limit, Ruhezeit, QR-Code für Eltern"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "g-display",
+   "slug": "display-and-controls",
+   "area": "einstellungen",
+   "parent": "einstellungen",
+   "title": "Display & Bedienung",
+   "description": "Helligkeit, Drehung, Haltezeiten, Display live",
+   "icon": "display",
+   "sections": [
+    {
+     "title": "",
+     "help": "",
+     "items": [
+      {
+       "type": "nav",
+       "label": "Display",
+       "target": "displaysettings",
+       "subtitle": "Helligkeit, Display aus, Drehung, Auflösung"
+      },
+      {
+       "type": "nav",
+       "label": "Bedienung am Display",
+       "target": "bedienung",
+       "subtitle": "Kategorien, Fortsetzen, Haltezeiten"
+      },
+      {
+       "type": "nav",
+       "label": "Display live",
+       "target": "displaylive",
+       "subtitle": "Aktuelles Bild, Fernsteuerung (VNC)"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "g-audio",
+   "slug": "audio",
+   "area": "einstellungen",
+   "parent": "einstellungen",
+   "title": "Audio",
+   "description": "Lautstärke, Soundkarte, Drehregler, Bluetooth",
+   "icon": "vol",
+   "sections": [
+    {
+     "title": "",
+     "help": "",
+     "items": [
+      {
+       "type": "nav",
+       "label": "Lautstärke",
+       "target": "lautstaerke",
+       "subtitle": "Jetzt, Maximum (Hörschutz), beim Start"
+      },
+      {
+       "type": "nav",
+       "label": "Soundkarte",
+       "target": "soundkarte",
+       "subtitle": "Audio-Ausgabe (28 Geräte)"
+      },
+      {
+       "type": "nav",
+       "label": "Drehregler und Taster",
+       "target": "drehregler",
+       "subtitle": "Lautstärke per Drehregler, Taster an GPIO 10"
+      },
+      {
+       "type": "nav",
+       "label": "Bluetooth",
+       "target": "bluetooth",
+       "subtitle": "Kopfhörer & Lautsprecher"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "g-strom",
+   "slug": "power",
+   "area": "einstellungen",
+   "parent": "einstellungen",
+   "title": "Akku & Strom",
+   "description": "Akku, MuPiHAT, Ausschalten, Taster, Lüfter",
+   "icon": "bat",
+   "sections": [
+    {
+     "title": "",
+     "help": "",
+     "items": [
+      {
+       "type": "nav",
+       "label": "Akku",
+       "target": "akku",
+       "subtitle": "Stand, Spannung, Verlauf"
+      },
+      {
+       "type": "nav",
+       "label": "MuPiHAT & Akku-Profil",
+       "target": "mupihat",
+       "subtitle": "Spannungen, Warnung, Abschalten, Ladeschluss"
+      },
+      {
+       "type": "nav",
+       "label": "Automatisch ausschalten",
+       "target": "autoaus",
+       "subtitle": "Nach … Minuten ohne Wiedergabe"
+      },
+      {
+       "type": "nav",
+       "label": "Ein-/Ausschalter und LED",
+       "target": "taster",
+       "subtitle": "Taster-Verzögerung, LED"
+      },
+      {
+       "type": "nav",
+       "label": "Lüfter",
+       "target": "luefter",
+       "subtitle": "Pin, Temperaturen"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "g-netz",
+   "slug": "network",
+   "area": "einstellungen",
+   "parent": "einstellungen",
+   "title": "Netzwerk",
+   "description": "WLAN, Optionen, Freigaben",
+   "icon": "wifi",
+   "sections": [
+    {
+     "title": "",
+     "help": "",
+     "items": [
+      {
+       "type": "nav",
+       "label": "WLAN",
+       "target": "wlan",
+       "subtitle": "Verbindung, Netze, hinzufügen"
+      },
+      {
+       "type": "nav",
+       "label": "Netzwerk-Optionen",
+       "target": "wlanopt",
+       "subtitle": "Onboard-WLAN, USB-WLAN, DHCP, Wächter, Fernsteuerung per IP"
+      },
+      {
+       "type": "nav",
+       "label": "Freigaben & Fernzugriff",
+       "target": "freigaben",
+       "subtitle": "Samba, FTP, VNC"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "g-dienste",
+   "slug": "services",
+   "area": "einstellungen",
+   "parent": "einstellungen",
+   "title": "Dienste",
+   "description": "Spotify, NAS · Telegram, MQTT, WLED",
+   "icon": "plug",
+   "sections": [
+    {
+     "title": "Musikquellen",
+     "help": "",
+     "items": [
+      {
+       "type": "nav",
+       "label": "Spotify",
+       "target": "spotify",
+       "subtitle": "Zugang des Players und Smart-Sync · Bibliothek › Spotify"
+      },
+      {
+       "type": "nav",
+       "label": "NAS",
+       "target": "nas",
+       "subtitle": "Anmeldung, freigegebene Ordner, Profile · Bibliothek › NAS"
+      }
+     ]
+    },
+    {
+     "title": "Nachrichten & Smart Home",
+     "help": "",
+     "items": [
+      {
+       "type": "nav",
+       "label": "Telegram",
+       "target": "telegram",
+       "subtitle": "Eltern-Bot, erlaubte Chats"
+      },
+      {
+       "type": "nav",
+       "label": "MQTT / Home Assistant",
+       "target": "mqtt",
+       "subtitle": "Broker, Topic, Intervalle, Discovery"
+      },
+      {
+       "type": "nav",
+       "label": "WLED",
+       "target": "wled",
+       "subtitle": "LED-Streifen per serieller Schnittstelle"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "g-sicherheit",
+   "slug": "security",
+   "area": "einstellungen",
+   "parent": "einstellungen",
+   "title": "Sicherheit",
+   "description": "Passwort, Anmeldung, Zertifikat (HTTPS)",
+   "icon": "lock",
+   "sections": [
+    {
+     "title": "",
+     "help": "",
+     "items": [
+      {
+       "type": "nav",
+       "label": "Passwort & Anmeldung",
+       "target": "passwort",
+       "subtitle": "Ein Passwort für die ganze App"
+      },
+      {
+       "type": "nav",
+       "label": "Verschlüsselung (HTTPS)",
+       "target": "https",
+       "subtitle": "Zertifikat, sichere Verbindung, App installieren"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "g-system",
+   "slug": "system",
+   "area": "einstellungen",
+   "parent": "einstellungen",
+   "title": "System",
+   "description": "Über, Updates, Backup, Neustart, Protokolle, Experten, Sprache",
+   "icon": "gear",
+   "sections": [
+    {
+     "title": "",
+     "help": "",
+     "items": [
+      {
+       "type": "nav",
+       "label": "Über die Box",
+       "target": "ueber",
+       "subtitle": "Name der Box, Version, Neuigkeiten, Hardware"
+      },
+      {
+       "type": "nav",
+       "label": "Updates",
+       "target": "updates",
+       "subtitle": "MuPiBox-Versionen, Betriebssystem"
+      },
+      {
+       "type": "nav",
+       "label": "Backup",
+       "target": "backup",
+       "subtitle": "Sichern und einspielen"
+      },
+      {
+       "type": "nav",
+       "label": "Neu starten & Ausschalten",
+       "target": "neustart",
+       "subtitle": "Box, Display, Dienste"
+      },
+      {
+       "type": "nav",
+       "label": "Protokolle",
+       "target": "protokolle",
+       "subtitle": "Logs und Dienst-Status"
+      },
+      {
+       "type": "nav",
+       "label": "Systemoptionen",
+       "target": "systemopt",
+       "subtitle": "Übertakten, Turbo, Governor, SWAP …"
+      },
+      {
+       "type": "nav",
+       "label": "Browser (Chromium)",
+       "target": "browser",
+       "subtitle": "GPU, Scrollen, Kiosk, Cache, Debugging"
+      },
+      {
+       "type": "nav",
+       "label": "Experten",
+       "target": "experten",
+       "subtitle": "Hostname, JSON-Editor, Zurücksetzen, DietPi"
+      },
+      {
+       "type": "nav",
+       "label": "Sprache",
+       "target": "sprache",
+       "subtitle": "Sprache der App, Sprache der Box"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "searchIndex": [
+  {
+   "l": "Hören",
+   "where": "Hören › Hören",
+   "id": "hoeren"
+  },
+  {
+   "l": "Spielzeit",
+   "where": "Spielzeit",
+   "id": "spielzeit"
+  },
+  {
+   "l": "Sofort-Aktionen",
+   "where": "Spielzeit",
+   "id": "spielzeit"
+  },
+  {
+   "l": "Minuten (1–1440)",
+   "where": "Spielzeit",
+   "id": "spielzeit"
+  },
+  {
+   "l": "Schlaftimer",
+   "where": "Spielzeit",
+   "id": "spielzeit"
+  },
+  {
+   "l": "Minuten",
+   "where": "Spielzeit",
+   "id": "spielzeit"
+  },
+  {
+   "l": "Tageslimits",
+   "where": "Spielzeit",
+   "id": "spielzeit"
+  },
+  {
+   "l": "Tageslimits aktiv",
+   "where": "Spielzeit",
+   "id": "spielzeit"
+  },
+  {
+   "l": "Tageswechsel um (Stunde 0–23)",
+   "where": "Spielzeit",
+   "id": "spielzeit"
+  },
+  {
+   "l": "Wenn das Limit erreicht ist",
+   "where": "Spielzeit",
+   "id": "spielzeit"
+  },
+  {
+   "l": "Ruhezeiten",
+   "where": "Spielzeit",
+   "id": "spielzeit"
+  },
+  {
+   "l": "Ruhezeiten aktiv",
+   "where": "Spielzeit",
+   "id": "spielzeit"
+  },
+  {
+   "l": "Wenn eine Ruhezeit beginnt",
+   "where": "Spielzeit",
+   "id": "spielzeit"
+  },
+  {
+   "l": "Bibliothek",
+   "where": "Bibliothek › Bibliothek",
+   "id": "bibliothek"
+  },
+  {
+   "l": "Einstellungen",
+   "where": "Einstellungen",
+   "id": "einstellungen"
+  },
+  {
+   "l": "Hör-Verlauf",
+   "where": "Hören › Hör-Verlauf",
+   "id": "verlauf"
+  },
+  {
+   "l": "Heute",
+   "where": "Hören › Hör-Verlauf",
+   "id": "verlauf"
+  },
+  {
+   "l": "Letzte 7 Tage",
+   "where": "Hören › Hör-Verlauf",
+   "id": "verlauf"
+  },
+  {
+   "l": "Top-Künstler (7 Tage)",
+   "where": "Hören › Hör-Verlauf",
+   "id": "verlauf"
+  },
+  {
+   "l": "Top-Titel (7 Tage)",
+   "where": "Hören › Hör-Verlauf",
+   "id": "verlauf"
+  },
+  {
+   "l": "Verwaltete Inhalte",
+   "where": "Bibliothek › Verwaltete Inhalte",
+   "id": "verwaltet"
+  },
+  {
+   "l": "Künstler-Abos",
+   "where": "Bibliothek › Verwaltete Inhalte",
+   "id": "verwaltet"
+  },
+  {
+   "l": "Benjamin Blümchen",
+   "where": "Bibliothek › Verwaltete Inhalte",
+   "id": "verwaltet"
+  },
+  {
+   "l": "Folge von",
+   "where": "Bibliothek › Verwaltete Inhalte",
+   "id": "verwaltet"
+  },
+  {
+   "l": "Folge bis",
+   "where": "Bibliothek › Verwaltete Inhalte",
+   "id": "verwaltet"
+  },
+  {
+   "l": "Folge 12 – Als Briefträger",
+   "where": "Bibliothek › Verwaltete Inhalte",
+   "id": "verwaltet"
+  },
+  {
+   "l": "Folge 99 – Das Weihnachtslied",
+   "where": "Bibliothek › Verwaltete Inhalte",
+   "id": "verwaltet"
+  },
+  {
+   "l": "Einzelne Alben",
+   "where": "Bibliothek › Verwaltete Inhalte",
+   "id": "verwaltet"
+  },
+  {
+   "l": "Auf Spotify suchen",
+   "where": "Bibliothek › Auf Spotify suchen",
+   "id": "suche"
+  },
+  {
+   "l": "Auf Spotify suchen",
+   "where": "Bibliothek › Auf Spotify suchen",
+   "id": "suche"
+  },
+  {
+   "l": "Suchen in",
+   "where": "Bibliothek › Auf Spotify suchen",
+   "id": "suche"
+  },
+  {
+   "l": "Hinzufügen als",
+   "where": "Bibliothek › Auf Spotify suchen",
+   "id": "suche"
+  },
+  {
+   "l": "Künstler",
+   "where": "Bibliothek › Auf Spotify suchen",
+   "id": "suche"
+  },
+  {
+   "l": "Alben",
+   "where": "Bibliothek › Auf Spotify suchen",
+   "id": "suche"
+  },
+  {
+   "l": "Titel",
+   "where": "Bibliothek › Auf Spotify suchen",
+   "id": "suche"
+  },
+  {
+   "l": "Link einfügen",
+   "where": "Bibliothek › Link einfügen",
+   "id": "link"
+  },
+  {
+   "l": "Typ",
+   "where": "Bibliothek › Link einfügen",
+   "id": "link"
+  },
+  {
+   "l": "URL",
+   "where": "Bibliothek › Link einfügen",
+   "id": "link"
+  },
+  {
+   "l": "Künstler/Show-Name (optional)",
+   "where": "Bibliothek › Link einfügen",
+   "id": "link"
+  },
+  {
+   "l": "Titel (für Radio-Streams)",
+   "where": "Bibliothek › Link einfügen",
+   "id": "link"
+  },
+  {
+   "l": "Kategorie",
+   "where": "Bibliothek › Link einfügen",
+   "id": "link"
+  },
+  {
+   "l": "Vom Gerät hochladen",
+   "where": "Bibliothek › Vom Gerät hochladen",
+   "id": "upload"
+  },
+  {
+   "l": "Wohin?",
+   "where": "Bibliothek › Vom Gerät hochladen",
+   "id": "upload"
+  },
+  {
+   "l": "Kategorie",
+   "where": "Bibliothek › Vom Gerät hochladen",
+   "id": "upload"
+  },
+  {
+   "l": "Interpret",
+   "where": "Bibliothek › Vom Gerät hochladen",
+   "id": "upload"
+  },
+  {
+   "l": "Album",
+   "where": "Bibliothek › Vom Gerät hochladen",
+   "id": "upload"
+  },
+  {
+   "l": "Dateien",
+   "where": "Bibliothek › Vom Gerät hochladen",
+   "id": "upload"
+  },
+  {
+   "l": "Hochladen",
+   "where": "Bibliothek › Vom Gerät hochladen",
+   "id": "upload"
+  },
+  {
+   "l": "Spotify",
+   "where": "Bibliothek › Spotify",
+   "id": "spotify"
+  },
+  {
+   "l": "Smart-Sync · Verbindung",
+   "where": "Bibliothek › Spotify",
+   "id": "spotify"
+  },
+  {
+   "l": "Smart-Sync",
+   "where": "Bibliothek › Spotify",
+   "id": "spotify"
+  },
+  {
+   "l": "Gefundene Playlists",
+   "where": "Bibliothek › Spotify",
+   "id": "spotify"
+  },
+  {
+   "l": "Konflikte",
+   "where": "Bibliothek › Spotify",
+   "id": "spotify"
+  },
+  {
+   "l": "Zugang des Players",
+   "where": "Bibliothek › Spotify",
+   "id": "spotify"
+  },
+  {
+   "l": "Client ID",
+   "where": "Bibliothek › Spotify",
+   "id": "spotify"
+  },
+  {
+   "l": "Client Secret",
+   "where": "Bibliothek › Spotify",
+   "id": "spotify"
+  },
+  {
+   "l": "Access Token",
+   "where": "Bibliothek › Spotify",
+   "id": "spotify"
+  },
+  {
+   "l": "Refresh Token",
+   "where": "Bibliothek › Spotify",
+   "id": "spotify"
+  },
+  {
+   "l": "Zugang · Playlists & Cache",
+   "where": "Bibliothek › Spotify",
+   "id": "spotify"
+  },
+  {
+   "l": "Playlists verarbeiten",
+   "where": "Bibliothek › Spotify",
+   "id": "spotify"
+  },
+  {
+   "l": "Zugang zurücksetzen",
+   "where": "Bibliothek › Spotify",
+   "id": "spotify"
+  },
+  {
+   "l": "Sync-Einstellungen",
+   "where": "Bibliothek › Sync-Einstellungen",
+   "id": "syncopt"
+  },
+  {
+   "l": "Playlist-Präfix",
+   "where": "Bibliothek › Sync-Einstellungen",
+   "id": "syncopt"
+  },
+  {
+   "l": "Playlist-Präfix",
+   "where": "Bibliothek › Sync-Einstellungen",
+   "id": "syncopt"
+  },
+  {
+   "l": "Sync-Intervall",
+   "where": "Bibliothek › Sync-Einstellungen",
+   "id": "syncopt"
+  },
+  {
+   "l": "Minuten zwischen automatischen Syncs",
+   "where": "Bibliothek › Sync-Einstellungen",
+   "id": "syncopt"
+  },
+  {
+   "l": "Smart-Sync aktiv",
+   "where": "Bibliothek › Sync-Einstellungen",
+   "id": "syncopt"
+  },
+  {
+   "l": "Automatischer Sync",
+   "where": "Bibliothek › Sync-Einstellungen",
+   "id": "syncopt"
+  },
+  {
+   "l": "Spotify einrichten",
+   "where": "Bibliothek › Spotify einrichten",
+   "id": "wizard"
+  },
+  {
+   "l": "Schritt 1 – Spotify-App anlegen",
+   "where": "Bibliothek › Spotify einrichten",
+   "id": "wizard"
+  },
+  {
+   "l": "Schritt 2 – Felder ausfüllen",
+   "where": "Bibliothek › Spotify einrichten",
+   "id": "wizard"
+  },
+  {
+   "l": "Schritt 3 – Client ID und Client Secret kopieren",
+   "where": "Bibliothek › Spotify einrichten",
+   "id": "wizard"
+  },
+  {
+   "l": "Client Secret",
+   "where": "Bibliothek › Spotify einrichten",
+   "id": "wizard"
+  },
+  {
+   "l": "Client ID",
+   "where": "Bibliothek › Spotify einrichten",
+   "id": "wizard"
+  },
+  {
+   "l": "Schritt 4 – Verbindung testen",
+   "where": "Bibliothek › Spotify einrichten",
+   "id": "wizard"
+  },
+  {
+   "l": "Schritt 5 – Playlist-Präfix",
+   "where": "Bibliothek › Spotify einrichten",
+   "id": "wizard"
+  },
+  {
+   "l": "Playlist-Präfix",
+   "where": "Bibliothek › Spotify einrichten",
+   "id": "wizard"
+  },
+  {
+   "l": "NAS",
+   "where": "Bibliothek › NAS",
+   "id": "nas"
+  },
+  {
+   "l": "Profile",
+   "where": "Bibliothek › NAS",
+   "id": "nas"
+  },
+  {
+   "l": "Profil",
+   "where": "Bibliothek › NAS",
+   "id": "nas"
+  },
+  {
+   "l": "Zugangsdaten",
+   "where": "Bibliothek › NAS",
+   "id": "nas"
+  },
+  {
+   "l": "Server",
+   "where": "Bibliothek › NAS",
+   "id": "nas"
+  },
+  {
+   "l": "Freigabe",
+   "where": "Bibliothek › NAS",
+   "id": "nas"
+  },
+  {
+   "l": "Benutzer",
+   "where": "Bibliothek › NAS",
+   "id": "nas"
+  },
+  {
+   "l": "Passwort",
+   "where": "Bibliothek › NAS",
+   "id": "nas"
+  },
+  {
+   "l": "Ordner",
+   "where": "Bibliothek › NAS",
+   "id": "nas"
+  },
+  {
+   "l": "Ordner filtern",
+   "where": "Bibliothek › NAS",
+   "id": "nas"
+  },
+  {
+   "l": "Cover",
+   "where": "Bibliothek › Cover",
+   "id": "cover"
+  },
+  {
+   "l": "Eigenes Cover",
+   "where": "Bibliothek › Cover",
+   "id": "cover"
+  },
+  {
+   "l": "Bild",
+   "where": "Bibliothek › Cover",
+   "id": "cover"
+  },
+  {
+   "l": "Online-Cover für NAS- und lokale Alben",
+   "where": "Bibliothek › Cover",
+   "id": "cover"
+  },
+  {
+   "l": "Cover online suchen",
+   "where": "Bibliothek › Cover",
+   "id": "cover"
+  },
+  {
+   "l": "Auch als cover.jpg im Albumordner speichern",
+   "where": "Bibliothek › Cover",
+   "id": "cover"
+  },
+  {
+   "l": "Auch verworfene erneut suchen",
+   "where": "Bibliothek › Cover",
+   "id": "cover"
+  },
+  {
+   "l": "Zuletzt gefunden",
+   "where": "Bibliothek › Cover",
+   "id": "cover"
+  },
+  {
+   "l": "Theme",
+   "where": "Aussehen › Theme",
+   "id": "theme"
+  },
+  {
+   "l": "Alle 67 Themes",
+   "where": "Aussehen › Theme",
+   "id": "theme"
+  },
+  {
+   "l": "Eigenes Theme",
+   "where": "Aussehen › Eigenes Theme",
+   "id": "eigenes"
+  },
+  {
+   "l": "Hintergrundbild",
+   "where": "Aussehen › Eigenes Theme",
+   "id": "eigenes"
+  },
+  {
+   "l": "Bild",
+   "where": "Aussehen › Eigenes Theme",
+   "id": "eigenes"
+  },
+  {
+   "l": "Ansicht",
+   "where": "Aussehen › Ansicht",
+   "id": "ansicht"
+  },
+  {
+   "l": "Cover-Flow-Ansicht (Bühne)",
+   "where": "Aussehen › Ansicht",
+   "id": "ansicht"
+  },
+  {
+   "l": "Ordner- und Albumnamen anzeigen",
+   "where": "Aussehen › Ansicht",
+   "id": "ansicht"
+  },
+  {
+   "l": "Horizontale Scrollleiste ausblenden",
+   "where": "Aussehen › Ansicht",
+   "id": "ansicht"
+  },
+  {
+   "l": "Vorlesen",
+   "where": "Aussehen › Vorlesen",
+   "id": "vorlesen"
+  },
+  {
+   "l": "Namen beim Anhalten vorlesen",
+   "where": "Aussehen › Vorlesen",
+   "id": "vorlesen"
+  },
+  {
+   "l": "Vorlese-Sprache",
+   "where": "Aussehen › Vorlesen",
+   "id": "vorlesen"
+  },
+  {
+   "l": "Start- und Wartungsbilder",
+   "where": "Aussehen › Start- und Wartungsbilder",
+   "id": "startbilder"
+  },
+  {
+   "l": "Name der Box",
+   "where": "Aussehen › Start- und Wartungsbilder",
+   "id": "startbilder"
+  },
+  {
+   "l": "Startbild",
+   "where": "Aussehen › Start- und Wartungsbilder",
+   "id": "startbilder"
+  },
+  {
+   "l": "Wartungsbild & Vorschau",
+   "where": "Aussehen › Start- und Wartungsbilder",
+   "id": "startbilder"
+  },
+  {
+   "l": "Wartungsbild",
+   "where": "Aussehen › Start- und Wartungsbilder",
+   "id": "startbilder"
+  },
+  {
+   "l": "Vorschau",
+   "where": "Aussehen › Start- und Wartungsbilder",
+   "id": "startbilder"
+  },
+  {
+   "l": "Texte auf dem Display",
+   "where": "Aussehen › Texte auf dem Display",
+   "id": "displaytexte"
+  },
+  {
+   "l": "Bildschirm",
+   "where": "Aussehen › Texte auf dem Display",
+   "id": "displaytexte"
+  },
+  {
+   "l": "Display",
+   "where": "Display & Bedienung › Display",
+   "id": "displaysettings"
+  },
+  {
+   "l": "Helligkeit",
+   "where": "Display & Bedienung › Display",
+   "id": "displaysettings"
+  },
+  {
+   "l": "Display aus nach",
+   "where": "Display & Bedienung › Display",
+   "id": "displaysettings"
+  },
+  {
+   "l": "Drehung",
+   "where": "Display & Bedienung › Display",
+   "id": "displaysettings"
+  },
+  {
+   "l": "HDMI-Drehung",
+   "where": "Display & Bedienung › Display",
+   "id": "displaysettings"
+  },
+  {
+   "l": "LCD-Drehung",
+   "where": "Display & Bedienung › Display",
+   "id": "displaysettings"
+  },
+  {
+   "l": "Display-LCD-Drehung",
+   "where": "Display & Bedienung › Display",
+   "id": "displaysettings"
+  },
+  {
+   "l": "Auflösung",
+   "where": "Display & Bedienung › Display",
+   "id": "displaysettings"
+  },
+  {
+   "l": "Breite X in Pixel",
+   "where": "Display & Bedienung › Display",
+   "id": "displaysettings"
+  },
+  {
+   "l": "Höhe Y in Pixel",
+   "where": "Display & Bedienung › Display",
+   "id": "displaysettings"
+  },
+  {
+   "l": "Bedienung am Display",
+   "where": "Display & Bedienung › Bedienung am Display",
+   "id": "bedienung"
+  },
+  {
+   "l": "Kategorien ausblenden",
+   "where": "Display & Bedienung › Bedienung am Display",
+   "id": "bedienung"
+  },
+  {
+   "l": "Hörspiele ausblenden",
+   "where": "Display & Bedienung › Bedienung am Display",
+   "id": "bedienung"
+  },
+  {
+   "l": "Musik ausblenden",
+   "where": "Display & Bedienung › Bedienung am Display",
+   "id": "bedienung"
+  },
+  {
+   "l": "NAS ausblenden",
+   "where": "Display & Bedienung › Bedienung am Display",
+   "id": "bedienung"
+  },
+  {
+   "l": "Radio & Podcasts ausblenden",
+   "where": "Display & Bedienung › Bedienung am Display",
+   "id": "bedienung"
+  },
+  {
+   "l": "Haltezeiten & Fortsetzen",
+   "where": "Display & Bedienung › Bedienung am Display",
+   "id": "bedienung"
+  },
+  {
+   "l": "Anzahl der Fortsetzen-Einträge",
+   "where": "Display & Bedienung › Bedienung am Display",
+   "id": "bedienung"
+  },
+  {
+   "l": "Haltezeit für die Titelliste",
+   "where": "Display & Bedienung › Bedienung am Display",
+   "id": "bedienung"
+  },
+  {
+   "l": "Haltezeit für den Einstellungszugang",
+   "where": "Display & Bedienung › Bedienung am Display",
+   "id": "bedienung"
+  },
+  {
+   "l": "Display live",
+   "where": "Display & Bedienung › Display live",
+   "id": "displaylive"
+  },
+  {
+   "l": "Aktuelles Bild",
+   "where": "Display & Bedienung › Display live",
+   "id": "displaylive"
+  },
+  {
+   "l": "Fernsteuerung (VNC)",
+   "where": "Display & Bedienung › Display live",
+   "id": "displaylive"
+  },
+  {
+   "l": "Lautstärke",
+   "where": "Audio › Lautstärke",
+   "id": "lautstaerke"
+  },
+  {
+   "l": "Lautstärke jetzt",
+   "where": "Audio › Lautstärke",
+   "id": "lautstaerke"
+  },
+  {
+   "l": "Maximum (Hörschutz)",
+   "where": "Audio › Lautstärke",
+   "id": "lautstaerke"
+  },
+  {
+   "l": "Beim Start auf festen Wert setzen",
+   "where": "Audio › Lautstärke",
+   "id": "lautstaerke"
+  },
+  {
+   "l": "Wert beim Start",
+   "where": "Audio › Lautstärke",
+   "id": "lautstaerke"
+  },
+  {
+   "l": "Soundkarte",
+   "where": "Audio › Soundkarte",
+   "id": "soundkarte"
+  },
+  {
+   "l": "Soundkarte",
+   "where": "Audio › Soundkarte",
+   "id": "soundkarte"
+  },
+  {
+   "l": "Drehregler und Taster",
+   "where": "Audio › Drehregler und Taster",
+   "id": "drehregler"
+  },
+  {
+   "l": "Drehregler für die Lautstärke",
+   "where": "Audio › Drehregler und Taster",
+   "id": "drehregler"
+  },
+  {
+   "l": "Schritt pro Raste",
+   "where": "Audio › Drehregler und Taster",
+   "id": "drehregler"
+  },
+  {
+   "l": "Funktion des Tasters an GPIO 10",
+   "where": "Audio › Drehregler und Taster",
+   "id": "drehregler"
+  },
+  {
+   "l": "Bluetooth",
+   "where": "Audio › Bluetooth",
+   "id": "bluetooth"
+  },
+  {
+   "l": "Bluetooth",
+   "where": "Audio › Bluetooth",
+   "id": "bluetooth"
+  },
+  {
+   "l": "Automatisch verbinden",
+   "where": "Audio › Bluetooth",
+   "id": "bluetooth"
+  },
+  {
+   "l": "Gekoppelte Geräte",
+   "where": "Audio › Bluetooth",
+   "id": "bluetooth"
+  },
+  {
+   "l": "Neue Geräte koppeln",
+   "where": "Audio › Bluetooth",
+   "id": "bluetooth"
+  },
+  {
+   "l": "Akku",
+   "where": "Akku & Strom › Akku",
+   "id": "akku"
+  },
+  {
+   "l": "Akku-Stand",
+   "where": "Akku & Strom › Akku",
+   "id": "akku"
+  },
+  {
+   "l": "Verlauf (24 h)",
+   "where": "Akku & Strom › Akku",
+   "id": "akku"
+  },
+  {
+   "l": "MuPiHAT & Akku-Profil",
+   "where": "Akku & Strom › MuPiHAT & Akku-Profil",
+   "id": "mupihat"
+  },
+  {
+   "l": "MuPiHAT aktiv",
+   "where": "Akku & Strom › MuPiHAT & Akku-Profil",
+   "id": "mupihat"
+  },
+  {
+   "l": "Akku",
+   "where": "Akku & Strom › MuPiHAT & Akku-Profil",
+   "id": "mupihat"
+  },
+  {
+   "l": "Akku-Profil (mV)",
+   "where": "Akku & Strom › MuPiHAT & Akku-Profil",
+   "id": "mupihat"
+  },
+  {
+   "l": "v_100 (100 %)",
+   "where": "Akku & Strom › MuPiHAT & Akku-Profil",
+   "id": "mupihat"
+  },
+  {
+   "l": "v_75 (75 %)",
+   "where": "Akku & Strom › MuPiHAT & Akku-Profil",
+   "id": "mupihat"
+  },
+  {
+   "l": "v_50 (50 %)",
+   "where": "Akku & Strom › MuPiHAT & Akku-Profil",
+   "id": "mupihat"
+  },
+  {
+   "l": "v_25 (25 %)",
+   "where": "Akku & Strom › MuPiHAT & Akku-Profil",
+   "id": "mupihat"
+  },
+  {
+   "l": "v_0 (0 %)",
+   "where": "Akku & Strom › MuPiHAT & Akku-Profil",
+   "id": "mupihat"
+  },
+  {
+   "l": "Warnung (th_warning)",
+   "where": "Akku & Strom › MuPiHAT & Akku-Profil",
+   "id": "mupihat"
+  },
+  {
+   "l": "Abschalten (th_shutdown)",
+   "where": "Akku & Strom › MuPiHAT & Akku-Profil",
+   "id": "mupihat"
+  },
+  {
+   "l": "Ladeschluss VREG (optional)",
+   "where": "Akku & Strom › MuPiHAT & Akku-Profil",
+   "id": "mupihat"
+  },
+  {
+   "l": "Automatisch ausschalten",
+   "where": "Akku & Strom › Automatisch ausschalten",
+   "id": "autoaus"
+  },
+  {
+   "l": "Ausschalten nach",
+   "where": "Akku & Strom › Automatisch ausschalten",
+   "id": "autoaus"
+  },
+  {
+   "l": "Ein-/Ausschalter und LED",
+   "where": "Akku & Strom › Ein-/Ausschalter und LED",
+   "id": "taster"
+  },
+  {
+   "l": "Verzögerung des Ausschalt-Tasters",
+   "where": "Akku & Strom › Ein-/Ausschalter und LED",
+   "id": "taster"
+  },
+  {
+   "l": "LED-Pin (OnOffShim)",
+   "where": "Akku & Strom › Ein-/Ausschalter und LED",
+   "id": "taster"
+  },
+  {
+   "l": "LED-Helligkeit normal",
+   "where": "Akku & Strom › Ein-/Ausschalter und LED",
+   "id": "taster"
+  },
+  {
+   "l": "LED-Helligkeit gedimmt",
+   "where": "Akku & Strom › Ein-/Ausschalter und LED",
+   "id": "taster"
+  },
+  {
+   "l": "Lüfter",
+   "where": "Akku & Strom › Lüfter",
+   "id": "luefter"
+  },
+  {
+   "l": "Lüfter aktiv",
+   "where": "Akku & Strom › Lüfter",
+   "id": "luefter"
+  },
+  {
+   "l": "Lüfter-Pin",
+   "where": "Akku & Strom › Lüfter",
+   "id": "luefter"
+  },
+  {
+   "l": "Volle Drehzahl (100 %) ab",
+   "where": "Akku & Strom › Lüfter",
+   "id": "luefter"
+  },
+  {
+   "l": "75 % ab",
+   "where": "Akku & Strom › Lüfter",
+   "id": "luefter"
+  },
+  {
+   "l": "50 % ab",
+   "where": "Akku & Strom › Lüfter",
+   "id": "luefter"
+  },
+  {
+   "l": "25 % ab",
+   "where": "Akku & Strom › Lüfter",
+   "id": "luefter"
+  },
+  {
+   "l": "WLAN",
+   "where": "Netzwerk › WLAN",
+   "id": "wlan"
+  },
+  {
+   "l": "Verbindung",
+   "where": "Netzwerk › WLAN",
+   "id": "wlan"
+  },
+  {
+   "l": "Netze in Reichweite",
+   "where": "Netzwerk › WLAN",
+   "id": "wlan"
+  },
+  {
+   "l": "Neues WLAN hinzufügen",
+   "where": "Netzwerk › WLAN",
+   "id": "wlan"
+  },
+  {
+   "l": "Netzname (SSID)",
+   "where": "Netzwerk › WLAN",
+   "id": "wlan"
+  },
+  {
+   "l": "Passwort (8–63 Zeichen, leer = offenes Netz)",
+   "where": "Netzwerk › WLAN",
+   "id": "wlan"
+  },
+  {
+   "l": "Gespeicherte Netze",
+   "where": "Netzwerk › WLAN",
+   "id": "wlan"
+  },
+  {
+   "l": "Netzwerk-Optionen",
+   "where": "Netzwerk › Netzwerk-Optionen",
+   "id": "wlanopt"
+  },
+  {
+   "l": "WLAN-Hardware",
+   "where": "Netzwerk › Netzwerk-Optionen",
+   "id": "wlanopt"
+  },
+  {
+   "l": "Onboard-WLAN an",
+   "where": "Netzwerk › Netzwerk-Optionen",
+   "id": "wlanopt"
+  },
+  {
+   "l": "USB-WLAN-Treiber",
+   "where": "Netzwerk › Netzwerk-Optionen",
+   "id": "wlanopt"
+  },
+  {
+   "l": "Stromsparen des USB-Adapters",
+   "where": "Netzwerk › Netzwerk-Optionen",
+   "id": "wlanopt"
+  },
+  {
+   "l": "Verbindung",
+   "where": "Netzwerk › Netzwerk-Optionen",
+   "id": "wlanopt"
+  },
+  {
+   "l": "DHCP-Timeout",
+   "where": "Netzwerk › Netzwerk-Optionen",
+   "id": "wlanopt"
+  },
+  {
+   "l": "WLAN-Wächter (DietPi-WiFi-Monitor)",
+   "where": "Netzwerk › Netzwerk-Optionen",
+   "id": "wlanopt"
+  },
+  {
+   "l": "Beste Verbindung suchen",
+   "where": "Netzwerk › Netzwerk-Optionen",
+   "id": "wlanopt"
+  },
+  {
+   "l": "Fernsteuerung per IP",
+   "where": "Netzwerk › Netzwerk-Optionen",
+   "id": "wlanopt"
+  },
+  {
+   "l": "Backend-Steuerung per IP",
+   "where": "Netzwerk › Netzwerk-Optionen",
+   "id": "wlanopt"
+  },
+  {
+   "l": "Freigaben & Fernzugriff",
+   "where": "Netzwerk › Freigaben & Fernzugriff",
+   "id": "freigaben"
+  },
+  {
+   "l": "Samba (Windows-Freigabe)",
+   "where": "Netzwerk › Freigaben & Fernzugriff",
+   "id": "freigaben"
+  },
+  {
+   "l": "FTP-Server",
+   "where": "Netzwerk › Freigaben & Fernzugriff",
+   "id": "freigaben"
+  },
+  {
+   "l": "VNC (Display fernsteuern)",
+   "where": "Netzwerk › Freigaben & Fernzugriff",
+   "id": "freigaben"
+  },
+  {
+   "l": "Telegram",
+   "where": "Dienste › Telegram",
+   "id": "telegram"
+  },
+  {
+   "l": "Eltern-Bot",
+   "where": "Dienste › Telegram",
+   "id": "telegram"
+  },
+  {
+   "l": "Bot aktiv",
+   "where": "Dienste › Telegram",
+   "id": "telegram"
+  },
+  {
+   "l": "Wiedergabe melden",
+   "where": "Dienste › Telegram",
+   "id": "telegram"
+  },
+  {
+   "l": "Neuen Token setzen (leer = unverändert)",
+   "where": "Dienste › Telegram",
+   "id": "telegram"
+  },
+  {
+   "l": "Erlaubte Chats",
+   "where": "Dienste › Telegram",
+   "id": "telegram"
+  },
+  {
+   "l": "Chat-ID",
+   "where": "Dienste › Telegram",
+   "id": "telegram"
+  },
+  {
+   "l": "Name",
+   "where": "Dienste › Telegram",
+   "id": "telegram"
+  },
+  {
+   "l": "MQTT / Home Assistant",
+   "where": "Dienste › MQTT / Home Assistant",
+   "id": "mqtt"
+  },
+  {
+   "l": "MQTT aktiv",
+   "where": "Dienste › MQTT / Home Assistant",
+   "id": "mqtt"
+  },
+  {
+   "l": "Gerätename",
+   "where": "Dienste › MQTT / Home Assistant",
+   "id": "mqtt"
+  },
+  {
+   "l": "Broker",
+   "where": "Dienste › MQTT / Home Assistant",
+   "id": "mqtt"
+  },
+  {
+   "l": "Port",
+   "where": "Dienste › MQTT / Home Assistant",
+   "id": "mqtt"
+  },
+  {
+   "l": "Topic",
+   "where": "Dienste › MQTT / Home Assistant",
+   "id": "mqtt"
+  },
+  {
+   "l": "Client-ID",
+   "where": "Dienste › MQTT / Home Assistant",
+   "id": "mqtt"
+  },
+  {
+   "l": "Benutzer",
+   "where": "Dienste › MQTT / Home Assistant",
+   "id": "mqtt"
+  },
+  {
+   "l": "Passwort",
+   "where": "Dienste › MQTT / Home Assistant",
+   "id": "mqtt"
+  },
+  {
+   "l": "Intervalle",
+   "where": "Dienste › MQTT / Home Assistant",
+   "id": "mqtt"
+  },
+  {
+   "l": "Aktualisierung (Wiedergabe)",
+   "where": "Dienste › MQTT / Home Assistant",
+   "id": "mqtt"
+  },
+  {
+   "l": "Aktualisierung (Leerlauf)",
+   "where": "Dienste › MQTT / Home Assistant",
+   "id": "mqtt"
+  },
+  {
+   "l": "Timeout",
+   "where": "Dienste › MQTT / Home Assistant",
+   "id": "mqtt"
+  },
+  {
+   "l": "Home Assistant",
+   "where": "Dienste › MQTT / Home Assistant",
+   "id": "mqtt"
+  },
+  {
+   "l": "An Home Assistant melden",
+   "where": "Dienste › MQTT / Home Assistant",
+   "id": "mqtt"
+  },
+  {
+   "l": "Discovery-Präfix",
+   "where": "Dienste › MQTT / Home Assistant",
+   "id": "mqtt"
+  },
+  {
+   "l": "WLED",
+   "where": "Dienste › WLED",
+   "id": "wled"
+  },
+  {
+   "l": "WLED aktiv",
+   "where": "Dienste › WLED",
+   "id": "wled"
+  },
+  {
+   "l": "Serielle Schnittstelle",
+   "where": "Dienste › WLED",
+   "id": "wled"
+  },
+  {
+   "l": "Baudrate",
+   "where": "Dienste › WLED",
+   "id": "wled"
+  },
+  {
+   "l": "Presets",
+   "where": "Dienste › WLED",
+   "id": "wled"
+  },
+  {
+   "l": "Haupt-Preset (normaler Betrieb)",
+   "where": "Dienste › WLED",
+   "id": "wled"
+  },
+  {
+   "l": "Preset beim Start",
+   "where": "Dienste › WLED",
+   "id": "wled"
+  },
+  {
+   "l": "Preset-Nummer beim Start",
+   "where": "Dienste › WLED",
+   "id": "wled"
+  },
+  {
+   "l": "Preset beim Ausschalten",
+   "where": "Dienste › WLED",
+   "id": "wled"
+  },
+  {
+   "l": "Preset-Nummer beim Ausschalten",
+   "where": "Dienste › WLED",
+   "id": "wled"
+  },
+  {
+   "l": "Helligkeit",
+   "where": "Dienste › WLED",
+   "id": "wled"
+  },
+  {
+   "l": "Helligkeit normal",
+   "where": "Dienste › WLED",
+   "id": "wled"
+  },
+  {
+   "l": "Helligkeit gedimmt",
+   "where": "Dienste › WLED",
+   "id": "wled"
+  },
+  {
+   "l": "Passwort & Anmeldung",
+   "where": "Sicherheit › Passwort & Anmeldung",
+   "id": "passwort"
+  },
+  {
+   "l": "Verschlüsselung (HTTPS)",
+   "where": "Sicherheit › Verschlüsselung (HTTPS)",
+   "id": "https"
+  },
+  {
+   "l": "Zertifikat",
+   "where": "Sicherheit › Verschlüsselung (HTTPS)",
+   "id": "https"
+  },
+  {
+   "l": "Passwort",
+   "where": "Sicherheit › Passwort & Anmeldung",
+   "id": "passwort"
+  },
+  {
+   "l": "Aktuelles Passwort",
+   "where": "Sicherheit › Passwort & Anmeldung",
+   "id": "passwort"
+  },
+  {
+   "l": "Neues Passwort (mind. 6 Zeichen)",
+   "where": "Sicherheit › Passwort & Anmeldung",
+   "id": "passwort"
+  },
+  {
+   "l": "Anmeldung",
+   "where": "Sicherheit › Passwort & Anmeldung",
+   "id": "passwort"
+  },
+  {
+   "l": "Anmeldung verlangen",
+   "where": "Sicherheit › Passwort & Anmeldung",
+   "id": "passwort"
+  },
+  {
+   "l": "Über die Box",
+   "where": "System › Über die Box",
+   "id": "ueber"
+  },
+  {
+   "l": "Name der Box",
+   "where": "System › Über die Box",
+   "id": "ueber"
+  },
+  {
+   "l": "Name der Box (max. 14 Zeichen)",
+   "where": "System › Über die Box",
+   "id": "ueber"
+  },
+  {
+   "l": "MuPiBox",
+   "where": "System › Über die Box",
+   "id": "ueber"
+  },
+  {
+   "l": "SD-Karte",
+   "where": "System › Über die Box",
+   "id": "ueber"
+  },
+  {
+   "l": "Neuigkeiten",
+   "where": "System › Über die Box",
+   "id": "ueber"
+  },
+  {
+   "l": "Support",
+   "where": "System › Über die Box",
+   "id": "ueber"
+  },
+  {
+   "l": "Updates",
+   "where": "System › Updates",
+   "id": "updates"
+  },
+  {
+   "l": "MuPiBox",
+   "where": "System › Updates",
+   "id": "updates"
+  },
+  {
+   "l": "Betriebssystem",
+   "where": "System › Updates",
+   "id": "updates"
+  },
+  {
+   "l": "Backup",
+   "where": "System › Backup",
+   "id": "backup"
+  },
+  {
+   "l": "Sichern",
+   "where": "System › Backup",
+   "id": "backup"
+  },
+  {
+   "l": "Einspielen",
+   "where": "System › Backup",
+   "id": "backup"
+  },
+  {
+   "l": "Backup-Datei",
+   "where": "System › Backup",
+   "id": "backup"
+  },
+  {
+   "l": "Neu starten & Ausschalten",
+   "where": "System › Neu starten & Ausschalten",
+   "id": "neustart"
+  },
+  {
+   "l": "Box",
+   "where": "System › Neu starten & Ausschalten",
+   "id": "neustart"
+  },
+  {
+   "l": "Display & Dienste",
+   "where": "System › Neu starten & Ausschalten",
+   "id": "neustart"
+  },
+  {
+   "l": "Protokolle",
+   "where": "System › Protokolle",
+   "id": "protokolle"
+  },
+  {
+   "l": "Log oder Dienst (25)",
+   "where": "System › Protokolle",
+   "id": "protokolle"
+  },
+  {
+   "l": "Suche (grep)",
+   "where": "System › Protokolle",
+   "id": "protokolle"
+  },
+  {
+   "l": "Fehlersuche",
+   "where": "System › Protokolle",
+   "id": "protokolle"
+  },
+  {
+   "l": "Controller-Debugging",
+   "where": "System › Protokolle",
+   "id": "protokolle"
+  },
+  {
+   "l": "Systemoptionen",
+   "where": "System › Systemoptionen",
+   "id": "systemopt"
+  },
+  {
+   "l": "Leistung & Start",
+   "where": "System › Systemoptionen",
+   "id": "systemopt"
+  },
+  {
+   "l": "SD-Karte übertakten",
+   "where": "System › Systemoptionen",
+   "id": "systemopt"
+  },
+  {
+   "l": "PM2-Logs im RAM",
+   "where": "System › Systemoptionen",
+   "id": "systemopt"
+  },
+  {
+   "l": "Beim Start auf Netzwerk warten",
+   "where": "System › Systemoptionen",
+   "id": "systemopt"
+  },
+  {
+   "l": "Turbo beim Start",
+   "where": "System › Systemoptionen",
+   "id": "systemopt"
+  },
+  {
+   "l": "CPU-Governor",
+   "where": "System › Systemoptionen",
+   "id": "systemopt"
+  },
+  {
+   "l": "Unterspannungs-Warnungen ausblenden",
+   "where": "System › Systemoptionen",
+   "id": "systemopt"
+  },
+  {
+   "l": "SWAP",
+   "where": "System › Systemoptionen",
+   "id": "systemopt"
+  },
+  {
+   "l": "Browser (Chromium)",
+   "where": "System › Browser (Chromium)",
+   "id": "browser"
+  },
+  {
+   "l": "GPU-Unterstützung (experimentell)",
+   "where": "System › Browser (Chromium)",
+   "id": "browser"
+  },
+  {
+   "l": "Sanftes Scrollen (experimentell)",
+   "where": "System › Browser (Chromium)",
+   "id": "browser"
+  },
+  {
+   "l": "Kiosk-Modus",
+   "where": "System › Browser (Chromium)",
+   "id": "browser"
+  },
+  {
+   "l": "Cache-Größe",
+   "where": "System › Browser (Chromium)",
+   "id": "browser"
+  },
+  {
+   "l": "Chrome-Debugging",
+   "where": "System › Browser (Chromium)",
+   "id": "browser"
+  },
+  {
+   "l": "Experten",
+   "where": "System › Experten",
+   "id": "experten"
+  },
+  {
+   "l": "Hostname",
+   "where": "System › Experten",
+   "id": "experten"
+  },
+  {
+   "l": "Hostname",
+   "where": "System › Experten",
+   "id": "experten"
+  },
+  {
+   "l": "Konfiguration direkt bearbeiten",
+   "where": "System › Experten",
+   "id": "experten"
+  },
+  {
+   "l": "Zurücksetzen",
+   "where": "System › Experten",
+   "id": "experten"
+  },
+  {
+   "l": "Sprache",
+   "where": "System › Sprache",
+   "id": "sprache"
+  },
+  {
+   "l": "Sprache der App",
+   "where": "System › Sprache",
+   "id": "sprache"
+  },
+  {
+   "l": "Sprache der App",
+   "where": "System › Sprache",
+   "id": "sprache"
+  },
+  {
+   "l": "Sprache der Box",
+   "where": "System › Sprache",
+   "id": "sprache"
+  },
+  {
+   "l": "Sprache der Box",
+   "where": "System › Sprache",
+   "id": "sprache"
+  },
+  {
+   "l": "Aussehen",
+   "where": "Aussehen",
+   "id": "g-aussehen"
+  },
+  {
+   "l": "Display & Bedienung",
+   "where": "Display & Bedienung",
+   "id": "g-display"
+  },
+  {
+   "l": "Audio",
+   "where": "Audio",
+   "id": "g-audio"
+  },
+  {
+   "l": "Akku & Strom",
+   "where": "Akku & Strom",
+   "id": "g-strom"
+  },
+  {
+   "l": "Netzwerk",
+   "where": "Netzwerk",
+   "id": "g-netz"
+  },
+  {
+   "l": "Dienste",
+   "where": "Dienste",
+   "id": "g-dienste"
+  },
+  {
+   "l": "Sicherheit",
+   "where": "Sicherheit",
+   "id": "g-sicherheit"
+  },
+  {
+   "l": "System",
+   "where": "System",
+   "id": "g-system"
+  }
+ ],
+ "themes": [
+  "axolotl",
+  "Ballettbühne",
+  "Bastelpapier",
+  "blue",
+  "Bücherregal",
+  "captainamerica",
+  "chocolate",
+  "cinema",
+  "clone-wars",
+  "comic",
+  "coverflow",
+  "custom",
+  "danger",
+  "dark",
+  "darkred",
+  "deepblue",
+  "Dinoland",
+  "dinosaur",
+  "earth",
+  "Einhorn",
+  "Eisenbahn",
+  "enterprise",
+  "Fahrzeuge",
+  "fantasybutterflies",
+  "Feenschloss",
+  "Feuerwehr",
+  "forms",
+  "Fußball",
+  "green",
+  "Heldenstadt",
+  "ironman",
+  "Kassettenrekorder",
+  "Kätzchenzimmer",
+  "Kuschelmond",
+  "light",
+  "lines",
+  "matrix",
+  "Meerjungfrau-Lagune",
+  "mint",
+  "Moosnest",
+  "mystic",
+  "orange",
+  "Pferdehof",
+  "pikachu",
+  "Pinguin-Eiswelt",
+  "pink",
+  "Piratenbucht",
+  "Prinzessin",
+  "purple",
+  "red",
+  "Ritterburg",
+  "Roboterwerkstatt",
+  "Safari",
+  "Schmetterlingsgarten",
+  "Sonnenhof",
+  "spiderman",
+  "steampunk",
+  "supermario",
+  "Tag & Nacht",
+  "unicorn",
+  "Unterwasser",
+  "vintage",
+  "Weltraum",
+  "wood",
+  "xmas",
+  "Zirkus",
+  "Zuckerland"
+ ],
+ "themePreview": {
+  "Tag & Nacht": "tagundnacht",
+  "Sonnenhof": "sonnenhof",
+  "Kuschelmond": "kuschelmond",
+  "Moosnest": "moosnest",
+  "Pferdehof": "pferdehof",
+  "Einhorn": "einhorn",
+  "Weltraum": "weltraum",
+  "Unterwasser": "unterwasser",
+  "Fußball": "fussball",
+  "Feuerwehr": "feuerwehr",
+  "Piratenbucht": "piratenbucht",
+  "Prinzessin": "prinzessin",
+  "Dinoland": "dinoland",
+  "Eisenbahn": "eisenbahn",
+  "Zirkus": "zirkus",
+  "Safari": "safari",
+  "Ballettbühne": "ballett",
+  "Bastelpapier": "bastelpapier",
+  "Bücherregal": "buecherregal",
+  "Pinguin-Eiswelt": "eiswelt",
+  "Fahrzeuge": "fahrzeuge",
+  "Feenschloss": "feenschloss",
+  "Heldenstadt": "heldenstadt",
+  "Kätzchenzimmer": "kaetzchen",
+  "Kassettenrekorder": "kassettenrekorder",
+  "Meerjungfrau-Lagune": "meerjungfrau",
+  "Ritterburg": "ritterburg",
+  "Roboterwerkstatt": "roboter",
+  "Schmetterlingsgarten": "schmetterlinge",
+  "Zuckerland": "zuckerland"
+ },
+ "bootscreens": [
+  {
+   "label": "Zufällig",
+   "file": null
+  },
+  {
+   "label": "Karte (Standard)",
+   "file": "karte"
+  },
+  {
+   "label": "Abendhügel",
+   "file": "4a-szene"
+  },
+  {
+   "label": "Knete",
+   "file": "4b-knete"
+  },
+  {
+   "label": "Papier-Collage",
+   "file": "4c-papier"
+  },
+  {
+   "label": "Plakativ",
+   "file": "4d-plakativ"
+  },
+  {
+   "label": "Kinderbuch",
+   "file": "4e-kinderbuch"
+  },
+  {
+   "label": "Retro 70er",
+   "file": "4f-retro"
+  },
+  {
+   "label": "Weltraum",
+   "file": "5a-weltraum"
+  },
+  {
+   "label": "Unterwasser",
+   "file": "5b-unterwasser"
+  },
+  {
+   "label": "Winterabend",
+   "file": "5c-winter"
+  },
+  {
+   "label": "Lagerfeuer",
+   "file": "5d-lagerfeuer"
+  },
+  {
+   "label": "Ballonfahrt",
+   "file": "5e-ballon"
+  },
+  {
+   "label": "Kinderzimmer",
+   "file": "5f-zimmer"
+  },
+  {
+   "label": "Regenbogen",
+   "file": "5g-regenbogen"
+  },
+  {
+   "label": "Konzert",
+   "file": "5h-konzert"
+  },
+  {
+   "label": "Baumhaus",
+   "file": "5i-baumhaus"
+  }
+ ]
+}

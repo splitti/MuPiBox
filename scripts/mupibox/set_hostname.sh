@@ -6,4 +6,6 @@ FRONTENDCONFIG="/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config
 
 HOSTN=$(/usr/bin/hostname)
 
-/usr/bin/cat <<< $(/usr/bin/jq --arg v "${HOSTN}" '."node-sonos-http-api".server = $v' ${FRONTENDCONFIG}) >  ${FRONTENDCONFIG}
+# Atomic-update (HIGH-8).
+_TMP="${FRONTENDCONFIG}.tmp.$$"
+/usr/bin/jq --arg v "${HOSTN}" '."node-sonos-http-api".server = $v' "${FRONTENDCONFIG}" > "${_TMP}" && mv "${_TMP}" "${FRONTENDCONFIG}" || rm -f "${_TMP}"

@@ -2,10 +2,9 @@
 # DEPRECATED 2026-09-20: no service, script or admin page starts it (shutdown messages use telegram_send_message.py).
 # Kept for reference; nothing in MuPiBox calls it. Safe to delete.
 
-import sys
-import time
 import telepot
 import json
+from telegram_chats import normalize_chat_ids, send_to_all
 
 with open("/etc/mupibox/mupiboxconfig.json") as file:
     config = json.load(file)
@@ -13,15 +12,15 @@ with open("/etc/mupibox/mupiboxconfig.json") as file:
 if not config['telegram']['active']:
     quit()
 
-TOKEN = config['telegram']['token']
-bot = telepot.Bot(TOKEN)
-chat_id = config['telegram']['chatId']
+chat_ids = normalize_chat_ids(config['telegram'].get('chatId'))
+if not chat_ids:
+    quit()
 
-bot.sendMessage(chat_id, 'MuPiBox is shuting down!')
+bot = telepot.Bot(config['telegram']['token'])
+send_to_all(bot, 'MuPiBox is shuting down!', chat_ids)
 
 if config['mupihat']['hat_active']:
     with open("/tmp/mupihat.json") as file:
         mupihat = json.load(file)
-
     if mupihat['BatteryConnected']:
-        bot.sendMessage(chat_id, 'The MupiBox battery is at '+mupihat['Bat_SOC'])
+        send_to_all(bot, 'The MupiBox battery is at ' + mupihat['Bat_SOC'], chat_ids)

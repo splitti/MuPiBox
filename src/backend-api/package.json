@@ -5,7 +5,8 @@
   "homepage": "https://github.com/splitti/mupibox",
   "scripts": {
     "serve": "cross-env NODE_ENV=development tsx watch src/server.ts",
-    "build": "npm run check-types && esbuild src/server.ts --bundle --minify --platform=node --target=node22 --metafile=backend-api.esbuild-meta.json --outfile=../deploy/server.js",
+    "build": "npm run check-types && esbuild src/server.ts --bundle --minify --platform=node --target=node22 --log-override:empty-import-meta=silent --metafile=backend-api.esbuild-meta.json --outfile=../deploy/server.js && npm run build:statics",
+    "build:statics": "node -e \"const fs=require('fs');for (const d of ['mupi-app']) fs.cpSync('src/'+d,'../deploy/'+d,{recursive:true,force:true,filter:(s)=>!/_parts|_source/.test(s)});fs.mkdirSync('../deploy/templates',{recursive:true});for (const f of ['mupiboxconfig.json','www.json']) fs.copyFileSync('../../config/templates/'+f,'../deploy/templates/'+f)\"",
     "test": "cross-env NODE_ENV=test tsx --test src/*.spec.ts",
     "lint": "npx @biomejs/biome check .",
     "lint:fix": "npx @biomejs/biome check --fix .",
@@ -13,16 +14,19 @@
   },
   "dependencies": {
     "@spotify/web-api-ts-sdk": "^1.2.0",
+    "bcryptjs": "3.0.3",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "jsonfile": "^6.2.0",
     "ky": "1.10.0",
+    "qrcode": "^1.5.4",
     "xml-js": "^1.6.11"
   },
   "devDependencies": {
     "@types/express": "5.0.3",
     "@types/jsonfile": "6.1.4",
     "@types/node": "24.5.2",
+    "@types/qrcode": "^1.5.6",
     "@types/supertest": "6.0.3",
     "esbuild": "0.25.10",
     "nock": "^14.0.10",

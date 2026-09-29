@@ -1,6 +1,10 @@
 # DEPRECATED 2026-09-20: spotifyd was replaced by librespot; the update script only stops and disables this unit, nothing installs it.
 # Kept for reference; nothing in MuPiBox calls it. Safe to delete.
 [Unit]
+# Never give up (StartLimitIntervalSec=0), but retry slowly (RestartSec >= 60): with a start
+# limit the service stayed dead for good after a few quick failures - e.g. a boot without WiFi -
+# until the next reboot; retrying every 10 s filled the journal (librespot 325x in an hour).
+StartLimitIntervalSec=0
 Description=A spotify playing daemon
 Documentation=https://github.com/Spotifyd/spotifyd
 Wants=sound.target
@@ -11,7 +15,8 @@ After=network-online.target
 [Service]
 ExecStart=/usr/bin/spotifyd --no-daemon --config-path /etc/spotifyd/spotifyd.conf --initial-volume 100
 Restart=always
-RestartSec=12
+RestartSec=60
+# Phase 13b (B4): bound restart attempts, see librespot.service notes.
 
 [Install]
 WantedBy=default.target

@@ -1,4 +1,4 @@
-import { provideHttpClient, withInterceptorsFromDi, withJsonpSupport } from '@angular/common/http'
+import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptorsFromDi, withJsonpSupport } from '@angular/common/http'
 import { enableProdMode, importProvidersFrom } from '@angular/core'
 import { BrowserModule, bootstrapApplication } from '@angular/platform-browser'
 import { provideRouter, RouteReuseStrategy } from '@angular/router'
@@ -7,6 +7,7 @@ import { register as registerSwiperComponents } from 'swiper/element/bundle'
 import { AppComponent } from './app/app.component'
 import { routes } from './app/app.routes'
 import { MediaService } from './app/media.service'
+import { PlayerRequestInterceptor } from './app/player-request.interceptor'
 import { environment } from './environments/environment'
 
 // Register swiper webcomponents before bootstrapping.
@@ -23,6 +24,7 @@ bootstrapApplication(AppComponent, {
     MediaService,
     { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
     provideHttpClient(withInterceptorsFromDi(), withJsonpSupport()),
+    { provide: HTTP_INTERCEPTORS, useClass: PlayerRequestInterceptor, multi: true },
     provideIonicAngular({ mode: 'md' }),
   ],
 }).catch((err) => console.log(err))

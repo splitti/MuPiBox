@@ -1,0 +1,14 @@
+[Unit]
+# The web server's certificate as it should be at every start (scripts/mupibox/tls_cert.sh ensure): made again when
+# the box has another address now (DHCP) or it runs out soon; an own certificate stays as it is. After the network,
+# so the address is known; the web server is restarted only when the certificate changed.
+Description=MuPiBox: certificate of the web server
+Wants=network-online.target
+After=network-online.target lighttpd.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/mupibox/tls_cert.sh ensure
+
+[Install]
+WantedBy=multi-user.target

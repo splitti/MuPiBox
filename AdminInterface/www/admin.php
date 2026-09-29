@@ -1,70 +1,169 @@
 <?php
 
+	// B8: writes go through save_mupiboxconfig() (loaded by header.php) for
+	// flock-serialised concurrent-save safety. Note that write_json() is
+	// CALLED below the header include, so the helper is loaded by then —
+	// the definition itself is parsed at file-load time and only executed
+	// when invoked.
 	function write_json($data)
 		{
-		$json_object = json_encode($data);
-		$save_rc = file_put_contents('/tmp/.mupiboxconfig.json', $json_object);
-		exec("sudo chmod 755 /etc/mupibox/mupiboxconfig.json");
-		exec("sudo mv /tmp/.mupiboxconfig.json /etc/mupibox/mupiboxconfig.json");
+		save_mupiboxconfig($data);
 		exec("sudo /usr/local/bin/mupibox/./setting_update.sh");
 		exec("sudo -i -u dietpi /usr/local/bin/mupibox/./restart_kiosk.sh");
 		}
 
+	// Narrow header-only auth gate for the submitfile upload handler below.
+	// The handler lives ABOVE `include 'includes/header.php'`, so without
+	// this an unauthenticated LAN POST can drop a crafted zip and have it
+	// extracted to / via `unzip -d /`. All other POST handlers in this
+	// file run AFTER the include — header.php's own auth gate already
+	// blocks them on unauth, so we explicitly do NOT block other POSTs
+	// here. In particular the login POST (password=...) must flow through
+	// to header.php so the user can authenticate in the first place.
+	// Same cookie flags as header.php (this page starts the session before header.php does).
+	if (session_status() === PHP_SESSION_NONE) {
+		session_set_cookie_params(['httponly' => true, 'samesite' => 'Lax']);
+		session_start();
+	}
+	// M5: route the pre-header auth gate through the shared reader so
+	// header.php's later read hits the same static cache rather than
+	// doing a second file_get_contents + json_decode round.
+	require_once __DIR__ . '/includes/save_config.php';
+	$__authCfg  = mupibox_config();
+	$__loginRequired = !empty($__authCfg['interfacelogin']['state']);
+	$__loggedIn      = isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true;
+	if ($__loginRequired && !$__loggedIn && !empty($_POST['submitfile'])) {
+		http_response_code(403);
+		exit('Authentication required');
+	}
+	// The restore below runs before header.php and therefore before its central CSRF check: a
+	// form on a foreign page could post a crafted archive that was extracted to / as root. Check
+	// the token here already (the upload form gets it from header.php's form filter).
+	if (!empty($_POST['submitfile'])) {
+		require_once __DIR__ . '/includes/csrf.php';
+		csrf_check();
+	}
+
 	$shutdown=0;
 	$reboot=0;
 
-	if( $_POST['submitfile'] )
+	if( !empty($_POST['submitfile']) )
 		{
 		$target_dir = "/tmp/";
-		$target_file = $target_dir . basename($_FILES["fileToUpload"]["name"]);
+		// Strip any directory components from the user-controlled filename.
+		// The filename is later interpolated into a shell command, so even
+		// after escapeshellarg() we want the basename so the file lands in
+		// /tmp/ and not somewhere else via a relative path inside the name.
+		$rawName = basename($_FILES["fileToUpload"]["name"]);
+		// Conservative whitelist on filename: letters, digits, dot, dash,
+		// underscore. Anything else (spaces, quotes, semicolons, …) is
+		// rejected outright. Backup zips produced by backup.php/fullbackup.php
+		// match this pattern.
 		$uploadOk = 1;
-		$FileType = strtolower(pathinfo($target_file,PATHINFO_EXTENSION));
-		// Allow zip file format
-		if($FileType != "zip" )
-			{
+		if (!preg_match('/^[A-Za-z0-9._-]+\.zip$/', $rawName)) {
 			$uploadOk = 0;
-			}
+		}
+		$target_file = $target_dir . $rawName;
 		// Check if $uploadOk is set to 0 by an error
 		if ($uploadOk == 0)
 			{
-			$CHANGE_TXT=$CHANGE_TXT."<li>WARNING: Please upload a .zip-File!</li>";
+			$CHANGE_TXT=$CHANGE_TXT."<li>WARNING: Please upload a .zip-File! (only A-Z, 0-9, ._- allowed in filename)</li>";
 			$change=0;
 			}
 		else
 			{
 			if (move_uploaded_file($_FILES["fileToUpload"]["tmp_name"], $target_file))
 				{
-				$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
-				$data = json_decode($string, true);
+				// ZIP-Slip / arbitrary-path defence. backup.php and
+				// fullbackup.php only ever pack files under three roots —
+				// reject any zip entry that escapes them. Without this,
+				// `unzip -o -a -d /` happily writes anywhere on disk.
+				// Exact files, and below media/ only folders and media file types: any file was
+				// allowed there before, and media/cover is served as /cover by lighttpd, which runs
+				// .php files - a restored media/cover/x.php was code execution as root (www-data
+				// has sudo). A prefix test also let "mupiboxconfig.json.php" through. Symbolic
+				// links are refused as well (they could point anywhere once extracted).
+				$allowedExactFiles = [
+					'etc/mupibox/mupiboxconfig.json',
+					'home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json',
+				];
+				$allowedExactDirs = ['etc/', 'etc/mupibox/', 'home/', 'home/dietpi/', 'home/dietpi/MuPiBox/',
+					'home/dietpi/.mupibox/', 'home/dietpi/.mupibox/Sonos-Kids-Controller-master/',
+					'home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/',
+					'home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/'];
+				// Types lighttpd executes or a browser runs as a page on the admin origin. Everything
+				// else below media/ is fine (audio, covers, playlists, but also .DS_Store, booklets).
+				$forbiddenMediaTypes = '/(\.(php\d?|phtml|phar|pht|pl|py|cgi|fcgi|sh|shtml|s?html?|xhtml|xht|svgz?|js|mjs|xml|xsl)|\/\.htaccess|\/\.user\.ini)$/i';
+				$zip = new ZipArchive();
+				$zipOk = false;
+				$badEntry = '';
+				if ($zip->open($target_file) === true) {
+					$zipOk = true;
+					for ($i = 0; $i < $zip->numFiles; $i++) {
+						$entry = $zip->getNameIndex($i);
+						// Normalise: strip leading slash, forbid `..`
+						$norm = ltrim($entry, '/');
+						if (strpos($norm, '..') !== false) {
+							$zipOk = false;
+							$badEntry = $entry;
+							break;
+						}
+						$isDir = substr($norm, -1) === '/';
+						$stat = $zip->statIndex($i, ZipArchive::FL_UNCHANGED);
+						$opsys = 0; $attr = 0;
+						$zip->getExternalAttributesIndex($i, $opsys, $attr);
+						$isSymlink = $opsys === ZipArchive::OPSYS_UNIX && ((($attr >> 16) & 0170000) === 0120000);
+						$inMedia = strpos($norm, 'home/dietpi/MuPiBox/media/') === 0 || $norm === 'home/dietpi/MuPiBox/media/';
+						$matched = !$isSymlink && $stat !== false && (
+							in_array($norm, $allowedExactFiles, true)
+							|| ($isDir && (in_array($norm, $allowedExactDirs, true) || $inMedia))
+							|| (!$isDir && $inMedia && !preg_match($forbiddenMediaTypes, $norm))
+						);
+						if (!$matched) {
+							$zipOk = false;
+							$badEntry = $entry;
+							break;
+						}
+					}
+					$zip->close();
+				}
+				if (!$zipOk) {
+					exec("sudo rm " . escapeshellarg($target_file));
+					$CHANGE_TXT=$CHANGE_TXT."<li>ERROR: Backup rejected (entry outside whitelist: ".htmlspecialchars($badEntry).")</li>";
+					$change=0;
+				} else {
+				// M5: external command above just mutated the config -- force fresh re-read.
+				$data = mupibox_config(true);
 				$old_version = $data["mupibox"]["version"];
 
-				$command = "sudo unzip -o -a '".$target_file."' -d / >> /tmp/restore.log";
-				#$command = "sudo su - -c \"unzip -o -a '".$target_file."' -d / >> /tmp/restore.log && sleep 1\"";
-				#$command = "sudo su - -c 'tar xvzf ".$target_file." >> /tmp/restore.log'";
+				$command = "sudo unzip -o -a " . escapeshellarg($target_file) . " -d / >> /tmp/restore.log";
 				exec($command, $output, $result );
 				exec("sudo chown root:www-data /etc/mupibox/mupiboxconfig.json");
 				exec("sudo chmod 644 /etc/mupibox/mupiboxconfig.json");
 				exec("sudo chown dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json");
 				exec("sudo chmod 644 /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json");
 
-				$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/conf_update.sh | sudo bash";
+				// The installed copy first: piping a script fetched live from the upstream repo into a root
+				// shell ran whatever that repo holds at that moment (and not this fork's version).
+				$command = "cd; if [ -x /usr/local/bin/mupibox/conf_update.sh ]; then sudo /usr/local/bin/mupibox/conf_update.sh; else curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/conf_update.sh | sudo bash; fi";
 				exec($command, $output, $result );
 
-				$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
-				$data = json_decode($string, true);
+				// M5: external command above just mutated the config -- force fresh re-read.
+				$data = mupibox_config(true);
 				$data["mupibox"]["version"] = $old_version;
 				write_json($data);
 
-				$command = "sudo /boot/dietpi/func/change_hostname " . $data["mupibox"]["host"];
+				$command = "sudo /boot/dietpi/func/change_hostname " . escapeshellarg($data["mupibox"]["host"]);
 				$change_hostname = exec($command, $output, $change_hostname );
 				$command = "sudo su dietpi -c '/usr/local/bin/mupibox/./set_hostname.sh'";
 				exec($command);
-				
-				$command = "sudo rm '".$target_file."'";
+
+				$command = "sudo rm " . escapeshellarg($target_file);
 				exec($command, $output, $result );
 				$change=99;
 				$CHANGE_TXT=$CHANGE_TXT."<li>Backup-File restored! The MuPiBox will reboot now!</li>";
 				$reboot=1;
+				}
 				}
 			else
 				{
@@ -153,8 +252,8 @@
 		{
 		$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh | sudo bash -s -- stable";
 		exec($command, $output, $result );
-		$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
-		$data = json_decode($string, true);
+		// M5: external command above just mutated the config -- force fresh re-read.
+		$data = mupibox_config(true);
 		$change=3;
 		$reboot=1;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Update complete to Version ".$data["mupibox"]["version"]."</li>";
@@ -163,8 +262,8 @@
 		{
 		$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh | sudo bash -s -- beta";
 		exec($command, $output, $result );
-		$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
-		$data = json_decode($string, true);
+		// M5: external command above just mutated the config -- force fresh re-read.
+		$data = mupibox_config(true);
 		$change=1;
 		$reboot=1;
 		$data["mupibox"]["version"]=$data["mupibox"]["version"]." BETA";
@@ -175,8 +274,8 @@
 		$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/start_mupibox_update.sh | sudo bash -s -- dev";
 
 		exec($command, $output, $result );
-		$string = file_get_contents('/etc/mupibox/mupiboxconfig.json', true);
-		$data = json_decode($string, true);
+		// M5: external command above just mutated the config -- force fresh re-read.
+		$data = mupibox_config(true);
 		$change=1;
 		$reboot=1;
 		$data["mupibox"]["version"]=$data["mupibox"]["version"]." DEVELOPMENT";
@@ -184,7 +283,9 @@
 		}
 /*	if( $_POST['config_update'] )
 		{
-		$command = "cd; curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/conf_update.sh | sudo bash";
+		// The installed copy first: piping a script fetched live from the upstream repo into a root
+				// shell ran whatever that repo holds at that moment (and not this fork's version).
+				$command = "cd; if [ -x /usr/local/bin/mupibox/conf_update.sh ]; then sudo /usr/local/bin/mupibox/conf_update.sh; else curl -L https://raw.githubusercontent.com/splitti/MuPiBox/main/update/conf_update.sh | sudo bash; fi";
 		exec($command, $output, $result );
 		$change=3;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Config is up to date.</li>";
@@ -218,22 +319,30 @@
 		/*UPDATE 3.0.0*/
 		$str_data = file_get_contents('/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json', true);
 		$data_json_playlistid = json_decode($str_data, true);
-		include ('includes/header.php');
-		$i = 0;
-		foreach($data_json_playlistid as $mydata)
+		// (header.php is included above already: including it again here ended the page with a fatal error)
+		// data.json is only written when it could be read and an old "playlist" entry was converted (it used to be
+		// rewritten every time, and an unreadable file came back as "null")
+		$playlist_converted = false;
+		if( is_array($data_json_playlistid) )
 			{
-			if( $mydata['category'] == "playlist" )
+			foreach($data_json_playlistid as $i => $mydata)
 				{
-				$data_json_playlistid[$i]['category'] = "music";
-				$data_json_playlistid[$i]['playlistid'] = $mydata['id'];
-				unset($data_json_playlistid[$i]['id']);
+				if( is_array($mydata) && ($mydata['category'] ?? '') == "playlist" )
+					{
+					$data_json_playlistid[$i]['category'] = "music";
+					$data_json_playlistid[$i]['playlistid'] = $mydata['id'] ?? '';
+					unset($data_json_playlistid[$i]['id']);
+					$playlist_converted = true;
+					}
 				}
-			$i++;
 			}
-		$json_changed = json_encode($data_json_playlistid);
-		file_put_contents('/tmp/data.json', $json_changed );
-		exec("sudo mv /tmp/data.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json");
-		exec("sudo chown dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json");
+		if( $playlist_converted )
+			{
+			$json_changed = json_encode($data_json_playlistid);
+			file_put_contents('/tmp/data.json', $json_changed );
+			exec("sudo mv /tmp/data.json /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json");
+			exec("sudo chown dietpi:dietpi /home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json");
+			}
 		/*END OF UPDATE 3.0.0*/
 		$command = "sudo /usr/local/bin/mupibox/./setting_update.sh";
 		exec($command, $output, $result );
@@ -250,7 +359,7 @@
 		
 	if( $_POST['spotify_restart'] )
 		{
-		$command = "sudo /usr/local/bin/mupibox/./spotify_restartspotify_restart.sh";
+		$command = "sudo /usr/local/bin/mupibox/./spotify_restart.sh";
 		exec($command, $output, $result );
 		$change=3;
 		$CHANGE_TXT=$CHANGE_TXT."<li>Spotify Services are restarted</li>";
@@ -276,15 +385,66 @@
 		$change=3;
 		$CHANGE_TXT=$CHANGE_TXT."<li>config.json repaired</li>";
 		}
+	// Login of this interface (moved here from mupi.php: it protects the whole interface). $change 2 = save,
+	// 4 = only show the message.
+	// Changing the password needs the current one (a forged request or an unattended browser must
+	// not be able to replace it), and the new one must not be empty or shorter than the form allows.
+	if($_POST['submitpw'])
+		{
+		$newpwd = (string)($_POST['newpwd'] ?? '');
+		$curpwd = (string)($_POST['curpwd'] ?? '');
+		$oldhash = $data["interfacelogin"]["password"] ?? '';
+		if( strlen($newpwd) < 6 )
+			{
+			$CHANGE_TXT=$CHANGE_TXT."<li>Password not changed: at least 6 characters</li>";
+			$change = 4; // message only, nothing saved (else the refusal was not shown at all)
+			}
+		else if( $oldhash !== '' && !password_verify($curpwd, $oldhash) )
+			{
+			$CHANGE_TXT=$CHANGE_TXT."<li>Password not changed: current password is wrong</li>";
+			$change = 3;
+			}
+		else
+			{
+			$hash = password_hash($newpwd, PASSWORD_DEFAULT);
+			$data["interfacelogin"]["password"]=$hash;
+			// the one password (as the app sets it): a parents' password of before goes, and every other device -
+			// app and this interface - signs in again with the new one; this one stays signed in
+			unset($data["eltern"]["password"]);
+			$data["interfacelogin"]["epoch"] = bin2hex(random_bytes(8));
+			$_SESSION['login_epoch'] = $data["interfacelogin"]["epoch"];
+			$change=2;
+			$CHANGE_TXT=$CHANGE_TXT."<li>New password has been set</li>";
+			}
+		}
+
+
+	if($_POST['change_login'])
+		{
+		if($data["interfacelogin"]["state"])
+			{
+			$data["interfacelogin"]["state"]=false;	
+			$CHANGE_TXT=$CHANGE_TXT."<li>Login disabled</li>";
+			}
+		else
+			{
+			$data["interfacelogin"]["state"]=true;	
+			// every other device signs in now (app and this interface) - also those that came in while it was open;
+			// this one stays when it is signed in
+			$data["interfacelogin"]["epoch"] = bin2hex(random_bytes(8));
+			if (!empty($_SESSION['logged_in'])) { $_SESSION['login_epoch'] = $data["interfacelogin"]["epoch"]; }
+			$CHANGE_TXT=$CHANGE_TXT."<li>Login enabled</li>";
+			}
+		$change=2;
+		}
+
 	if( $change == 1 )
 		{
 		write_json($data);
 		}
 	if( $change == 2 )
 		{
-		$json_object = json_encode($data);
-		$save_rc = file_put_contents('/tmp/.mupiboxconfig.json', $json_object);
-		exec("sudo mv /tmp/.mupiboxconfig.json /etc/mupibox/mupiboxconfig.json");
+		save_mupiboxconfig($data);
 		exec("sudo /usr/local/bin/mupibox/./setting_update.sh");
 		}
 	if( $change == 3 )
@@ -334,6 +494,47 @@
 				<br/><br/>
 				<input id="saveForm" class="button_text" type="submit" name="display_cats_save" value="Save categories" onclick="if (document.querySelectorAll('input[name=\'hide_categories[]\']:checked').length >= 4) { alert('At least one category must stay visible.'); return false; }" />
 			</li>
+		</ul>
+	</details>
+
+	<details id="loginsettings">
+		<summary><i class="fa-solid fa-user-lock"></i> Login settings</summary>
+		<ul>
+			<li id="li_1" >
+				<h2>Password </h2>
+				<p>
+				The default password is "MuP1B0x"!
+				</p>
+				<div>
+				<label for="curpwd">Current password</label>
+				<input id="curpwd" name="curpwd" class="element text medium" type="password" maxlength="255" value="" autocomplete="current-password"/>
+				<label for="newpwd">New password</label>
+				<input id="newpwd" name="newpwd" class="element text medium" type="password" minlength="6" maxlength="255" value="" autocomplete="new-password"/>
+				<input type="submit" class="button_text" value="Set new password" name="submitpw" >
+				</div>
+			</li>
+		</ul>
+		<ul>
+			<li class="li_1"><h2>Enable login</h2>
+				<p>
+				The login will be instantly activated after enabling this option!
+				</p>
+				<p>
+				<?php
+				if ($data['interfacelogin']['state']) {
+					$login_state="enabled";
+					$login_button="disable";
+					}
+				else {
+					$login_state="disabled";
+					$login_button="enable";
+					}
+				echo "Login state: <b>".$login_state."</b>";
+				?>
+				</p>
+				<input id="saveForm" class="button_text" type="submit" name="change_login" value="<?php print $login_button; ?>" />
+			</li>
+
 		</ul>
 	</details>
 

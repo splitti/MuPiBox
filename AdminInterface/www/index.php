@@ -1,9 +1,45 @@
 	<?php
 			include ('includes/header.php');
-			$onlinejson = file_get_contents('https://raw.githubusercontent.com/splitti/MuPiBox/main/version.json');
+
+			// H3: index.php fired three blocking external HTTPS-requests on
+			// every render — version.json + news.txt + api.github.com. With
+			// flaky internet the page hangs 2-5s; api.github.com is also rate-
+			// limited at 60 req/h per IP. Cache to /tmp with a 60-min TTL.
+			// Use 5xx-style suppression so a transient outage doesn't break
+			// the page; we keep serving the last good response.
+			function mupibox_cached_url(string $cacheKey, int $ttlSeconds, callable $fetch): string {
+				$cacheFile = '/tmp/.mupibox.indexcache.' . $cacheKey;
+				if (is_file($cacheFile) && (time() - filemtime($cacheFile)) < $ttlSeconds) {
+					$cached = @file_get_contents($cacheFile);
+					if ($cached !== false) return $cached;
+				}
+				try {
+					$value = (string)$fetch();
+					if ($value !== '') {
+						@file_put_contents($cacheFile, $value, LOCK_EX);
+						return $value;
+					}
+				} catch (Throwable $e) {
+					// fall through
+				}
+				// Fetch failed — serve last cached value if we have one, even
+				// if expired. Beats a blank page or PHP warnings on json_decode.
+				if (is_file($cacheFile)) {
+					$stale = @file_get_contents($cacheFile);
+					if ($stale !== false) return $stale;
+				}
+				return '';
+			}
+
+			$onlinejson = mupibox_cached_url('version_json', 3600, function () {
+				$ctx = stream_context_create(['http' => ['timeout' => 5]]);
+				return @file_get_contents(
+					'https://raw.githubusercontent.com/splitti/MuPiBox/main/version.json',
+					false, $ctx);
+			});
 			$dataonline = json_decode($onlinejson, true);
 
-			exec("sudo rm /var/www/images/screenshot.png /val/www/images/temp.png /var/www/images/cpuload.png");
+			exec("sudo rm /var/www/images/screenshot.png /var/www/images/temp.png /var/www/images/cpuload.png");
 			exec("sudo -H -u dietpi bash -c 'DISPLAY=:0 scrot /tmp/screenshot.png'; sudo mv /tmp/screenshot.png /var/www/images/screenshot.png");
 			exec('sudo rrdtool graph /var/www/images/temp.png --start -15m -z -a PNG -t "CPU Temperature" --slope-mode --vertical-label "Temperature ºC" -w 700 -h 100 DEF:cpu_temp=/tmp/.rrd/cputemp.rrd:cpu_temp:AVERAGE VDEF:cpu_templ=cpu_temp,LAST LINE1:cpu_temp#ff0000:"Raspberry Pi Temperature,   last\:" GPRINT:cpu_templ:"%7.2lf °C \t\t\t\t\t\t\t\t"');
 			exec('sudo rrdtool graph /var/www/images/cpuload.png  --start -15m -a PNG -t "Load Average" --slope-mode --vertical-label "Average Load" -w 750 -h 100 DEF:load1=/tmp/.rrd/cpuusage.rrd:load1:AVERAGE DEF:load5=/tmp/.rrd/cpuusage.rrd:load5:AVERAGE DEF:load15=/tmp/.rrd/cpuusage.rrd:load15:AVERAGE VDEF:load1l=load1,LAST VDEF:load5l=load5,LAST VDEF:load15l=load15,LAST AREA:load1#ff0000:"1 Minute,   last\:" GPRINT:load1l:"%5.2lf \t" AREA:load5#ff9900:"5 Minutes,  last\:" GPRINT:load5l:"%5.2lf \t" AREA:load15#ffff00:"15 Minutes, last\:" GPRINT:load15l:"%5.2lf \t" LINE1:load5#ff9900:"" LINE1:load1#ff0000:"" > /dev/null');
@@ -78,8 +114,14 @@
 							<tr>
 									<td>Development</td>
 									<td><?php
-											exec("echo $(sudo curl -s 'https://api.github.com/repos/splitti/MuPiBox' | jq -r '.pushed_at' | cut -d'T' -f1)", $devversion, $rc);
-											print "DEV " . $devversion[0];
+											// H3: cache pushed_at to avoid hitting api.github.com on every render
+											// (60 req/h rate limit). 60-min TTL is plenty for a "DEV YYYY-MM-DD" tag.
+											$devdate = mupibox_cached_url('github_pushed_at', 3600, function () {
+												$out = [];
+												exec("sudo curl -s --max-time 5 'https://api.github.com/repos/splitti/MuPiBox' | jq -r '.pushed_at' | cut -d'T' -f1", $out);
+												return $out[0] ?? '';
+											});
+											print "DEV " . htmlspecialchars($devdate, ENT_QUOTES, 'UTF-8');
 										?>
 									</td>
 									<td><?php print $dataonline["release"]["dev"][count($dataonline["release"]["dev"])-1]["releaseinfo"]; ?></td>
@@ -89,8 +131,14 @@
 				<p><h2>MuPiBox-News</h2>
 					<?php
 						// The changelog text comes from news.txt on GitHub - there is no copy of it in the admin.
-						$news_url = 'https://raw.githubusercontent.com/splitti/MuPiBox/main/news.txt';
-						$news_text = @file_get_contents($news_url, false, stream_context_create(['http' => ['timeout' => 8]]));
+						// H3: cached for 60min (same as version.json above) so opening the admin
+						// does not block on a GitHub round-trip every single time.
+						$news_text = mupibox_cached_url('news_txt', 3600, function () {
+							$ctx = stream_context_create(['http' => ['timeout' => 8]]);
+							return @file_get_contents(
+								'https://raw.githubusercontent.com/splitti/MuPiBox/main/news.txt',
+								false, $ctx);
+						});
 						if ($news_text === false || trim($news_text) === '') {
 							print 'The news could not be loaded (no connection to GitHub). See <a href="https://github.com/splitti/MuPiBox/blob/main/news.txt" target="_blank">news.txt</a>.';
 						} else {
