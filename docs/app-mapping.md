@@ -16,8 +16,8 @@ freigegeben (`localOnly`) – Guard umstellen · `⚙ PHP` kann heute nur das PH
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 Start, Hören, Spielzeit, Bibliothek | 14 | 143 | – | 0 | 4 | – |
 | 2 Aussehen, Display, Audio, Akku & Strom | 18 | 73 | – | 0 | 2 | – |
-| 3 Netzwerk, Dienste, Sicherheit, System | 16 | 101 | – | 0 | 2 | 5 |
-| **Summe** | **48** | **317** | **–** | **0** | **8** | **5** |
+| 3 Netzwerk, Dienste, Sicherheit, System | 16 | 102 | – | 0 | 1 | 5 |
+| **Summe** | **48** | **318** | **–** | **0** | **7** | **5** |
 
 Alle 156 Schlüssel aus `app-schema.json` (157 Einstellungen, der Playlist-Präfix steht zweimal), alle Aktionen und
 Anzeigen sind zugeordnet; keine Zeile ist unklar. Die Bereiche Start, Hören, Spielzeit und Bibliothek laufen schon
@@ -859,7 +859,7 @@ Alles wird von `chromium-autostart.sh` beim Start des Kiosk gelesen (:25-75). Sp
 
 | Schlüssel / Aktion | Beschriftung | Heute | Speicherort | Lesen | Schreiben / Ausführen | Nebenwirkung / Hinweis | Status |
 |---|---|---|---|---|---|---|---|
-| `appLang` | Sprache der App (18) | E: `.lang-select` (index.html:72-73, :226-231), app.js:4233-4246 → `setLangPref()` i18n.js:1374 | Browser: `localStorage['eltern.lang']` (`auto`/`de`/`en`) | `readPref()` i18n.js:1331, sonst `navigator.languages` | nur im Browser | heute nur **de/en** (i18n.js:1329). Für 16 weitere Sprachen fehlen die Übersetzungen. Kein Backend nötig | ＋ neu (teilweise) |
+| `appLang` | Sprache der App (18) | E: `.lang-select` (index.html:72-73, :226-231), app.js:4233-4246 → `setLangPref()` i18n.js:1374 | Browser: `localStorage['mupi-lang']` (`auto` oder Sprachcode) | gespeicherte Wahl, sonst `navigator.languages`, sonst Englisch | nur im Browser, sofort ohne Neuladen; auch über den Sprachknopf in der Kopfleiste und auf der Anmeldeseite | alle **17 Sprachen** der Display-Texte (mupi-app/i18n.js + i18n/<code>.json), Fallback Englisch | ✓ API |
 | `boxLang` | Sprache der Box (17) | E: Display-Texte (`#display-lang`, app.js:860-928) und Startbild-Editor (`#bs-lang`, app.js:2763) · A: mupi.php:1117 (`dt_language`) und :991 (`bootscreenLanguage`) | **zwei Schlüssel:** `displayLanguage` (Overlays Limit/Ruhe/QR) und `mupibox.bootscreenLanguage` (Start- und Wartungsbilder) | `GET /api/eltern/display-texts` rt:399, `GET /api/eltern/bootscreen` rt:1675 (Sprachliste aus `…/www/assets/i18n/display-texts.json`) | `POST /api/eltern/display-texts` rt:409 (Regex, setzt auch die Texte!) und `POST /api/eltern/bootscreen` rt:1699 (setzt alle 4 Felder, dann `bootscreen_update.sh`) | Der Prototyp legt zwei getrennte Einstellungen zu einer zusammen. Nötig: eine Route, die beide Schlüssel setzt, ohne die Texte und Bildauswahl anzufassen, und danach bootscreen_update.sh startet | ✓ API |
 ---
 
@@ -920,7 +920,10 @@ Alles wird von `chromium-autostart.sh` beim Start des Kiosk gelesen (:25-75). Sp
 - experten drei Resets: lokale Vorlagen statt wget, Rechte 644, vorher ein automatisches Backup.
 
 **＋ neu**
-- sprache `appLang`: 16 weitere Sprachen (Übersetzungen) für die App. Der Mechanismus (localStorage) ist schon da.
+- ~~sprache `appLang`: 16 weitere Sprachen~~ erledigt am 29.09.: die 17 Sprachen der Display-Texte. Deutsch ist die
+  Ausgangssprache im Code; `i18n/<code>.json` ordnet jedem deutschen Text die Übersetzung zu, die Seite wird beim Zeichnen
+  übersetzt (i18n.js). Neue Texte: `node scripts/dev/app-i18n/extract.cjs`, dann `--check -v` (Anleitung und Glossar:
+  scripts/dev/app-i18n/BRIEF.md). Theme-Namen bleiben deutsch.
 - sprache `boxLang`: eine Einstellung, die `displayLanguage` **und** `mupibox.bootscreenLanguage` gemeinsam setzt (eigene Route, danach bootscreen_update.sh).
 - Login: ein gemeinsames Passwort und eine gemeinsame Sitzung für beide Oberflächen (siehe oben).
 

@@ -5,9 +5,12 @@
 // the light/dark switch and the login. Pages are connected to the box one by one (see docs/app-mapping.md): until a
 // page is in CONNECTED, its controls only change locally and the page says so.
 
+import { getLangPref, langBadge, LANGS, loadLanguage as loadAppLanguage, localeTag, setLangPref, tr, watchDocument } from './i18n.js'
 import { icon } from './icons.js'
 
 const API = '/api/eltern'
+// numbers and dates in the language of the app (see i18n.js)
+let LOCALE = localeTag()
 
 // Pages whose settings already read from and write to the box: the pages with a controller (see CONTROLLERS)
 const CONNECTED = new Set()
@@ -37,6 +40,8 @@ const esc = (s) =>
 /* ---------- start ---------- */
 
 async function boot() {
+  await loadAppLanguage()
+  watchDocument()
   const [schema, session] = await Promise.all([
     fetch('schema.json', { cache: 'no-cache' }).then((r) => r.json()),
     fetch(`${API}/session`, { credentials: 'same-origin' }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
@@ -116,6 +121,57 @@ function route() {
   $('#content').focus({ preventScroll: true })
 }
 
+/* ---------- language of the app (the button in the top bar and on the login page) ---------- */
+
+const LANG_AUTO_LABEL = 'Automatisch (Sprache des Browsers)'
+
+function langButton() {
+  return `<button class="lang-btn" id="lang-btn" aria-label="Sprache der App">${icon('globe', 20)}<span translate="no">${esc(langBadge())}</span></button>`
+}
+
+function openLangSheet() {
+  const pref = getLangPref()
+  const opt = (code, name, badge) => {
+    const on = pref === code
+    return `<button class="lang-opt${code === 'auto' ? ' wide' : ''}" data-lang="${code}" aria-pressed="${on}">
+      <span class="lang-code" translate="no">${esc(badge)}</span><span class="lang-name"${code === 'auto' ? '' : ' translate="no"'}>${esc(name)}</span>${on ? icon('check', 18) : ''}</button>`
+  }
+  openSheet(
+    `<h2>Sprache der App</h2>
+     <div class="lang-grid">${opt('auto', LANG_AUTO_LABEL, 'Auto')}${Object.entries(LANGS)
+       .map(([code, name]) => opt(code, name, code.toUpperCase()))
+       .join('')}</div>
+     <p class="help" style="margin:0">Gilt nur für diese App in diesem Browser. Die Sprache der Box (Display, Startbilder) stellst du unter Einstellungen › System › Sprache ein.</p>`,
+    (sheet, close) => {
+      for (const b of sheet.querySelectorAll('[data-lang]')) {
+        b.onclick = async () => {
+          close()
+          await changeAppLanguage(b.dataset.lang)
+        }
+      }
+    },
+  )
+}
+
+// right away, without loading the app again: the language, then everything drawn once more
+async function changeAppLanguage(code) {
+  await setLangPref(code)
+  LOCALE = localeTag()
+  // (the same setting as under System › Sprache)
+  state.values.set('appLang', code === 'auto' ? APP_LANG_AUTO : LANGS[code])
+  const page = state.csrf ? currentPage() : null
+  if (page) {
+    renderChrome(page)
+    await renderPage(page, false)
+  } else renderLogin()
+  toast(`Sprache: ${code === 'auto' ? 'Automatisch' : LANGS[code]}`)
+}
+
+// MuPi: with an outline on the light design (white on light blue is too weak), the plain one on the dark
+function mupiImg(attrs = '') {
+  return `<img class="mupi-d" src="mupi.svg" alt="" ${attrs}><img class="mupi-l" src="mupi-hell.svg" alt="" ${attrs}>`
+}
+
 /* ---------- frame: top bar, tab bar, side bar ---------- */
 
 function renderChrome(page) {
@@ -125,11 +181,13 @@ function renderChrome(page) {
   const title = page.id === 'start' ? state.boxName : page.title
   const theme = document.documentElement.getAttribute('data-theme') || 'dark'
   $('#topbar').innerHTML = `
-    ${isArea ? `<div class="brand-dot"><img src="mupi.svg" alt=""></div>` : `<button class="icon-btn" id="back" aria-label="Zurück">${icon('back')}</button>`}
+    ${isArea ? `<div class="brand-dot">${mupiImg()}</div>` : `<button class="icon-btn" id="back" aria-label="Zurück">${icon('back')}</button>`}
     <div class="title">${esc(title)}</div>
+    ${langButton()}
     <button class="icon-btn soft" id="theme-btn" aria-label="${theme === 'light' ? 'Dunkel' : 'Hell'}">${icon(theme === 'light' ? 'moon' : 'sun')}</button>
     <button class="icon-btn" id="logout-btn" aria-label="Abmelden">${icon('logout')}</button>`
   $('#back')?.addEventListener('click', () => go(page.parent && page.parent.startsWith('g-') ? page.parent : page.parent || 'start'))
+  $('#lang-btn').addEventListener('click', openLangSheet)
   $('#theme-btn').addEventListener('click', toggleTheme)
   $('#logout-btn').addEventListener('click', logout)
 
@@ -144,7 +202,7 @@ function renderChrome(page) {
     return p?.id?.startsWith('g-') ? p.id : p?.parent
   })()
   $('#sidebar').innerHTML = `
-    <div class="brand"><span class="brand-dot"><img src="mupi.svg" alt=""></span><span>${esc(state.boxName)}</span></div>
+    <div class="brand"><span class="brand-dot">${mupiImg()}</span><span>${esc(state.boxName)}</span></div>
     ${AREAS.map(
       (a) => `<button class="side-link" data-go="${a.id}" ${a.id === area && !(area === 'einstellungen' && page.id !== 'einstellungen') ? 'aria-current="page"' : ''}>${icon(a.icon)}${a.title}</button>
       ${a.id === 'einstellungen' ? groups.map((g) => `<button class="side-link sub" data-go="${g.id}" ${g.id === groupOf ? 'aria-current="page"' : ''}>${icon(g.icon, 18)}${esc(g.title)}</button>`).join('') : ''}`,
@@ -364,7 +422,7 @@ function initials(t) {
 
 function fmt(v, it) {
   const n = Number(v)
-  return `${Number.isInteger(n) ? n : n.toLocaleString('de-DE')}${it.unit ?? ''}`
+  return `${Number.isInteger(n) ? n : n.toLocaleString(LOCALE)}${it.unit ?? ''}`
 }
 
 /* ---------- behaviour of the drawn page ---------- */
@@ -538,7 +596,7 @@ async function loadNow(root) {
   const hasTrack = !!b.player && !!(b.title || b.artist)
   if (!r.ok || (!b.playing && !hasTrack)) {
     if (!box.querySelector('.now-empty')) {
-      box.innerHTML = `<div class="now-empty"><img class="now-mupi" src="mupi.svg" alt="" width="92" height="96">
+      box.innerHTML = `<div class="now-empty">${mupiImg('class="now-mupi" width="92" height="96"')}
         <b>Die Box ist ruhig.</b><small>${r.ok ? 'Gerade läuft nichts.' : 'Der Status ist gerade nicht erreichbar.'}</small>
         <button class="btn primary" data-go="hoeren">${icon('phones', 18)}Etwas abspielen</button></div>${volumeRow()}`
       box.querySelector('[data-go]').onclick = () => go('hoeren')
@@ -781,7 +839,7 @@ function sleepSheet(root) {
   if (active) {
     const until = active.until_iso ? new Date(active.until_iso) : null
     openSheet(
-      `<h2>Schlaftimer läuft</h2><p class="help" style="margin:0">Die Box schaltet sich in ${Math.ceil((active.remaining_seconds ?? 0) / 60)} Minuten aus${until ? ` (um ${until.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })})` : ''}.</p>
+      `<h2>Schlaftimer läuft</h2><p class="help" style="margin:0">Die Box schaltet sich in ${Math.ceil((active.remaining_seconds ?? 0) / 60)} Minuten aus${until ? ` (um ${until.toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit' })})` : ''}.</p>
        <div class="btns"><button class="btn" data-close>Schließen</button><button class="btn danger" data-ok>Timer stoppen</button></div>`,
       (sheet, close) => {
         sheet.querySelector('[data-close]').onclick = close
@@ -811,7 +869,7 @@ const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
 const DAY_SHORT = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
 const DAY_LONG = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag']
 
-const hhmm = (ms) => new Date(ms).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+const hhmm = (ms) => new Date(ms).toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit' })
 
 // Friendly words for the errors of the play and save endpoints
 function errorText(r, fallback = 'Das hat nicht geklappt') {
@@ -1874,7 +1932,7 @@ const up = { cat: 'audiobook', artist: '', album: '', items: [], cover: null, sk
 function formatBytes(n) {
   if (!Number.isFinite(n)) return '–'
   const gb = n / 1024 ** 3
-  return gb >= 1 ? `${gb.toLocaleString('de-DE', { maximumFractionDigits: 1 })} GB` : `${Math.round(n / 1024 ** 2)} MB`
+  return gb >= 1 ? `${gb.toLocaleString(LOCALE, { maximumFractionDigits: 1 })} GB` : `${Math.round(n / 1024 ** 2)} MB`
 }
 
 function uploadTop() {
@@ -2162,7 +2220,7 @@ function relTime(iso) {
   if (!t) return '–'
   const min = Math.round((t - Date.now()) / 60000)
   if (Math.abs(min) < 1) return 'gerade eben'
-  if (min < 0) return -min < 60 ? `vor ${-min} min` : -min < 1440 ? `vor ${Math.round(-min / 60)} h` : `am ${new Date(t).toLocaleDateString('de-DE')}`
+  if (min < 0) return -min < 60 ? `vor ${-min} min` : -min < 1440 ? `vor ${Math.round(-min / 60)} h` : `am ${new Date(t).toLocaleDateString(LOCALE)}`
   return min < 60 ? `in ${min} min` : `in ${Math.round(min / 60)} h`
 }
 
@@ -3377,7 +3435,7 @@ function mountLive(root) {
     const next = new Image()
     next.onload = () => {
       img.src = next.src
-      $('#lv-note', root).textContent = `Stand ${new Date().toLocaleTimeString('de-DE')}`
+      $('#lv-note', root).textContent = `Stand ${new Date().toLocaleTimeString(LOCALE)}`
     }
     next.onerror = () => ($('#lv-note', root).textContent = 'Das Bild ließ sich nicht holen.')
     next.src = `${API}/display/screenshot?t=${Date.now()}`
@@ -3394,10 +3452,10 @@ function mountLive(root) {
   })
 }
 
-// The name of a language in German (the box keeps the English names)
+// The name of a language in the language of the app (the box keeps the English names)
 const ttsNames = (() => {
   try {
-    return new Intl.DisplayNames(['de'], { type: 'language' })
+    return new Intl.DisplayNames([LOCALE], { type: 'language' })
   } catch {
     return null
   }
@@ -3406,7 +3464,7 @@ const ttsName = (code) => {
   const n = ttsNames?.of(code)
   return n && n !== code ? n : disp.opts?.ttsLanguages?.find((l) => l.code === code)?.name ?? code
 }
-const fmtSec = (v) => `${Number(v).toLocaleString('de-DE')} s`
+const fmtSec = (v) => `${Number(v).toLocaleString(LOCALE)} s`
 
 /* Einstellungen › Audio and › Akku & Strom */
 
@@ -3542,7 +3600,7 @@ function batteryTop() {
   let pct = h.Bat_Percent
   if (!Number.isFinite(pct)) pct = Number.parseInt(String(h.Bat_SOC ?? ''), 10)
   const charging = (h.IBus ?? 0) > 0
-  const v = (mv) => (Number.isFinite(mv) && mv > 0 ? `${(mv / 1000).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} V` : '–')
+  const v = (mv) => (Number.isFinite(mv) && mv > 0 ? `${(mv / 1000).toLocaleString(LOCALE, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} V` : '–')
   const status = { 'Not Charging': 'lädt nicht', 'Pre-charge': 'Vorladen', 'Fast Charging': 'lädt (schnell)', 'Fast charging': 'lädt (schnell)', 'Trickle Charge': 'lädt (Erhaltung)', 'Taper Charging': 'lädt (fast voll)', 'Top-off Timer Active Charging': 'lädt (fast voll)', 'Charge Termination Done': 'voll' }[h.Charger_Status] ?? h.Charger_Status ?? '–'
   // the last 24 hours in hours: the average percent of each hour
   const now = Date.now()
@@ -3556,7 +3614,7 @@ function batteryTop() {
   return [
     `<section class="card"><h2>Akku-Stand</h2><div><div class="big">${Number.isFinite(pct) ? `${pct} %` : '–'}${charging ? ' ⚡' : ''}</div><small class="help">${esc(h.Bat_Type ?? '')}</small></div>
       <dl class="kv"><div><dt>Akku-Spannung</dt><dd>${v(h.Vbat)}</dd></div><div><dt>USB-Spannung</dt><dd>${v(h.Vbus)}</dd></div>
-        <div><dt>Akku-Strom</dt><dd>${Number.isFinite(h.Ibat) ? `${h.Ibat.toLocaleString('de-DE')} mA` : '–'}</dd></div><div><dt>Temperatur</dt><dd>${Number.isFinite(h.Temp) ? `${h.Temp.toLocaleString("de-DE")} °C` : '–'}</dd></div>
+        <div><dt>Akku-Strom</dt><dd>${Number.isFinite(h.Ibat) ? `${h.Ibat.toLocaleString(LOCALE)} mA` : '–'}</dd></div><div><dt>Temperatur</dt><dd>${Number.isFinite(h.Temp) ? `${h.Temp.toLocaleString(LOCALE)} °C` : '–'}</dd></div>
         <div><dt>Ladegerät</dt><dd>${esc(status)}</dd></div></dl></section>`,
     `<section class="card"><h2>Verlauf (24 h)</h2>${
       (hw.hist ?? []).length
@@ -4001,7 +4059,7 @@ function aboutTop() {
     `<section class="card"><h2>Name der Box</h2><p class="help">Steht auf dem Startbild und oben in der App.</p>
       <div class="field"><label for="ab-name">Name der Box (höchstens ${max} Zeichen)</label><input class="input" id="ab-name" maxlength="${max}" value="${esc(sys.bs?.current?.boxName ?? '')}" placeholder="${esc(sys.bs?.screens?.defaultName ?? 'MuPiBox')}"></div>
       <div class="btns"><button class="btn primary" id="ab-save">Speichern</button></div></section>`,
-    `<section class="card"><h2>MuPiBox</h2><dl class="kv">${row('Version', sys.version)}${row('Hostname', i.hostname)}${row('Läuft seit', i.uptime_seconds != null ? fmtUptime(i.uptime_seconds) : '')}${row('CPU-Last', i.load_1 != null ? `${i.load_1.toLocaleString('de-DE')} (${i.cpu_count} Kerne)` : '')}${row('Temperatur', i.cpu_temp_c != null ? `${Math.round(i.cpu_temp_c)} °C` : '')}${row('Arbeitsspeicher', i.mem_total ? `${formatBytes(i.mem_total - i.mem_free)} von ${formatBytes(i.mem_total)}` : '')}</dl>
+    `<section class="card"><h2>MuPiBox</h2><dl class="kv">${row('Version', sys.version)}${row('Hostname', i.hostname)}${row('Läuft seit', i.uptime_seconds != null ? fmtUptime(i.uptime_seconds) : '')}${row('CPU-Last', i.load_1 != null ? `${i.load_1.toLocaleString(LOCALE)} (${i.cpu_count} Kerne)` : '')}${row('Temperatur', i.cpu_temp_c != null ? `${Math.round(i.cpu_temp_c)} °C` : '')}${row('Arbeitsspeicher', i.mem_total ? `${formatBytes(i.mem_total - i.mem_free)} von ${formatBytes(i.mem_total)}` : '')}</dl>
       ${used != null ? `<div class="bar"><div class="slider-head"><b>SD-Karte</b><span class="value-pill">${used} %</span></div><div class="track"><i style="--w:${used}%"></i></div><small>${formatBytes(disk.free)} frei von ${formatBytes(disk.total)}</small></div>` : ''}</section>`,
     `<section class="card"><h2>Neuigkeiten</h2><pre class="news" id="ab-news">${esc(sys.news ? newsText(sys.news) : 'Lade …')}</pre></section>`,
     `<section class="card"><h2>Support</h2><p class="help">Für Hilfe im Discord: ein Zip mit Bibliothek, Einstellungen (ohne Passwörter, Tokens und Konten), Netz- und Systemstand.</p>
@@ -4153,8 +4211,11 @@ async function loadLanguage() {
   sys.bs = r.body
   const cur = r.body.current.bootscreenLanguage || 'en'
   state.values.set('boxLang', r.body.languages[cur]?.name ?? cur)
-  state.values.set('appLang', 'Deutsch')
+  const pref = getLangPref()
+  state.values.set('appLang', pref === 'auto' ? APP_LANG_AUTO : LANGS[pref])
 }
+
+const APP_LANG_AUTO = 'Automatisch (Browser)'
 
 /* Systemoptionen, Experten, Backup, Updates */
 
@@ -4565,7 +4626,7 @@ async function loadUpdates() {
 function updJobCard() {
   const j = upd.job
   if (!j) return ''
-  const when = (t) => (t ? new Date(t).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' }) : '')
+  const when = (t) => (t ? new Date(t).toLocaleString(LOCALE, { dateStyle: 'short', timeStyle: 'short' }) : '')
   const head = {
     running: 'Läuft …',
     rebooting: 'Fertig – die Box startet neu',
@@ -5368,23 +5429,26 @@ const CONTROLLERS = {
   sprache: {
     load: loadLanguage,
     sections: (page) =>
-      page.sections.map((sec) => ({
-        ...sec,
-        items: sec.items.map((it) =>
-          it.key === 'appLang'
-            ? { ...it, options: ['Deutsch'], help: 'Weitere Sprachen der App folgen.' }
-            : it.key === 'boxLang'
-              ? {
-                  ...it,
-                  options: Object.values(sys.bs.languages)
-                    .map((l) => l.name)
-                    .sort((a, b) => a.localeCompare(b, 'de')),
-                  help: 'Die Texte auf dem Display (Limit, Ruhezeit, QR-Code) und auf dem Start- und Wartungsbild.',
-                }
-              : it,
-        ),
-      })),
+      page.sections.map((sec) => {
+        // (one help per card: the card's)
+        const own = sec.items.some((it) => it.key === 'appLang')
+        return {
+          ...sec,
+          help: own ? 'Nur diese App in diesem Browser. Automatisch = die Sprache des Browsers, sonst Englisch.' : sec.help,
+          items: sec.items.map((it) =>
+            it.key === 'appLang'
+              ? { ...it, options: [APP_LANG_AUTO, ...Object.values(LANGS)] }
+              : it.key === 'boxLang'
+                ? { ...it, options: Object.values(sys.bs.languages).map((l) => l.name).sort((x, y) => x.localeCompare(y, 'de')) }
+                : it,
+          ),
+        }
+      }),
     async change(key, v) {
+      if (key === 'appLang') {
+        // right away, as with the button in the top bar
+        return changeAppLanguage(Object.keys(LANGS).find((c) => LANGS[c] === v) ?? 'auto')
+      }
       if (key !== 'boxLang') return
       const code = Object.entries(sys.bs.languages).find(([, l]) => l.name === v)?.[0]
       if (!code) return
@@ -5497,7 +5561,7 @@ function showHits(q) {
     return
   }
   const seen = new Set()
-  const hits = state.schema.searchIndex.filter((h) => norm(h.l).includes(n) && !seen.has(h.l + h.id) && seen.add(h.l + h.id)).slice(0, 12)
+  const hits = state.schema.searchIndex.filter((h) => (norm(tr(h.l)).includes(n) || norm(h.l).includes(n)) && !seen.has(h.l + h.id) && seen.add(h.l + h.id)).slice(0, 12)
   box.hidden = false
   box.innerHTML = hits.length
     ? `<div class="navlist">${hits.map((h) => navRow(h.id, h.l, h.where, state.pages.get(h.id)?.icon)).join('')}</div>`
@@ -5560,7 +5624,7 @@ function openSelect(it, btn) {
     (sheet, close) => {
       sheet.querySelector('[data-filter]')?.addEventListener('input', (e) => {
         const n = norm(e.target.value)
-        for (const b of sheet.querySelectorAll('.opt')) b.hidden = !norm(b.dataset.v).includes(n)
+        for (const b of sheet.querySelectorAll('.opt')) b.hidden = !norm(b.textContent).includes(n) && !norm(b.dataset.v).includes(n)
       })
       for (const b of sheet.querySelectorAll('.opt')) {
         b.onclick = () => {
@@ -5668,16 +5732,19 @@ function toast(text, kind = 'ok') {
 /* ---------- login ---------- */
 
 async function renderLogin() {
-  $('#topbar').innerHTML = ''
   $('#tabbar').hidden = true
   $('#sidebar').hidden = true
+  // (no side bar: the page gets the whole width, the grid of the shell would keep its column)
+  $('#shell').classList.add('no-nav')
+  $('#topbar').innerHTML = `<div class="login-bar">${langButton()}</div>`
+  $('#lang-btn').addEventListener('click', openLangSheet)
   // Without a parents' password there is nothing to type in: the page says how to get in instead (a password field
   // that can only fail made people think there was a default password)
   const info = await fetch(`${API}/auth-info`, { credentials: 'same-origin' }).then((r) => (r.ok ? r.json() : null), () => null)
   if (info && info.passwordConfigured === false) {
     $('#content').innerHTML = `
     <div class="login">
-      <div class="logo"><img src="mupi.svg" alt="" width="64" height="67"></div>
+      <div class="logo">${mupiImg('width="64" height="67"')}</div>
       <h1>Anmelden</h1>
       <p class="help" style="margin:0">Auf dieser Box ist noch kein Passwort gesetzt. So kommst du hinein:</p>
       <div class="card login-ways">
@@ -5692,15 +5759,20 @@ async function renderLogin() {
   }
   $('#content').innerHTML = `
     <div class="login">
-      <div class="logo"><img src="mupi.svg" alt="" width="64" height="67"></div>
-      <h1>Willkommen zurück</h1>
-      <p class="help" style="margin:0">Melde dich mit dem Passwort an – es ist dasselbe wie im Admin-Interface. Oder scanne den QR-Code am Display (Statusanzeige lange drücken) bzw. schick dem Telegram-Bot /login.</p>
+      <div class="logo">${mupiImg('width="64" height="67"')}</div>
+      <div class="login-head"><h1>Willkommen zurück</h1><p class="help">Melde dich an, um die Box zu verwalten.</p></div>
       <form class="card" id="login-form">
         <div class="field"><label for="pw">Passwort</label>
-          <div class="input-wrap"><input class="input has-eye" id="pw" type="password" autocomplete="current-password" required><button type="button" class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div></div>
+          <div class="input-wrap"><input class="input has-eye" id="pw" type="password" autocomplete="current-password" required autofocus><button type="button" class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div>
+          <small>Dasselbe Passwort wie im Admin-Interface.</small></div>
+        <p class="login-msg" id="login-msg" role="alert" hidden></p>
         <button class="btn primary block" type="submit">Anmelden</button>
-        <p class="help" id="login-msg" style="margin:0" hidden></p>
       </form>
+      <div class="login-other">
+        <p class="eyebrow">Ohne Passwort</p>
+        <div class="entry">${icon('display', 18)}<span class="lbl"><b>QR-Code am Display</b><small>Die Statusanzeige oben am Display lange drücken, dann den Code scannen.</small></span></div>
+        <div class="entry">${icon('tg', 18)}<span class="lbl"><b>Telegram</b><small>Dem Bot der Box /login schicken und den Link öffnen.</small></span></div>
+      </div>
     </div>`
   $('[data-eye]').onclick = () => {
     const i = $('#pw')

@@ -513,10 +513,56 @@ a.btn { text-decoration: none; color: inherit; }
 .json-edit { min-height: 360px; resize: vertical; font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre; overflow: auto; }
 
 /* login */
-.login { max-width: 400px; margin: 8vh auto 0; display: flex; flex-direction: column; gap: 16px; text-align: center; }
-.login .logo { width: 96px; height: 96px; border-radius: 50%; background: var(--mp-primary-soft); display: grid; place-items: center; margin: 0 auto; }
-.login h1 { margin: 0; font: 600 28px/1.2 var(--mp-font-display); }
-.login .card { text-align: left; }
+/* the login: alone on the page (no side bar, no tabs), in the middle */
+.shell.no-nav { display: block; }
+.shell.no-nav .content { min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; padding-block: 32px; }
+.login { width: 100%; max-width: 400px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; text-align: center; }
+.login .logo { width: 112px; height: 112px; border-radius: 50%; background: radial-gradient(circle, var(--mp-primary-soft) 55%, transparent 72%); display: grid; place-items: center; margin: 0 auto; }
+.login .logo img { width: 76px; height: auto; }
+.login-head { display: flex; flex-direction: column; gap: 6px; }
+.login h1 { margin: 0; font: 600 30px/1.2 var(--mp-font-display); }
+.login-head .help { margin: 0; }
+.login .card { text-align: left; display: flex; flex-direction: column; gap: 14px; padding: 20px; }
+.login .card .field { margin: 0; }
+.login-msg { margin: 0; padding: 10px 12px; border-radius: var(--mp-r-sm); background: var(--mp-warn-soft); color: var(--mp-warn); font-weight: 600; font-size: 14px; }
+.login-other { text-align: left; display: flex; flex-direction: column; gap: 10px; padding: 0 4px; }
+.login-other .eyebrow { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--mp-muted); }
+.login-other .entry { display: flex; align-items: flex-start; gap: 12px; color: var(--mp-muted); }
+.login-other .entry > svg { flex: none; margin-top: 2px; color: var(--mp-primary-text); }
+.login-other .lbl { display: flex; flex-direction: column; gap: 2px; }
+.login-other b { color: var(--mp-text); font-size: 14px; }
+.login-other small { font-size: 13px; line-height: 1.4; }
 .login-ways .entry .avatar { background: var(--mp-primary-soft); color: var(--mp-primary-text); }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* MuPi: the outlined one on the light design, the plain one on the dark (mupiImg in app.js) */
+:root[data-theme="light"] .mupi-d, :root[data-theme="dark"] .mupi-l, :root:not([data-theme]) .mupi-l { display: none !important; }
+@media (prefers-color-scheme: light) { :root[data-theme="auto"] .mupi-d { display: none !important; } }
+@media (prefers-color-scheme: dark) { :root[data-theme="auto"] .mupi-l { display: none !important; } }
+
+/* the language of the app: button in the top bar (and on the login page), sheet with the languages */
+.lang-btn {
+  height: var(--mp-hit); padding: 0 12px; flex: none;
+  display: flex; align-items: center; gap: 6px;
+  border-radius: 12px; border: 1px solid var(--mp-border);
+  background: transparent; color: var(--mp-text);
+}
+.lang-btn span { font-size: 14px; font-weight: 800; letter-spacing: .02em; }
+.lang-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.lang-opt {
+  min-height: 52px; padding: 8px 12px; border-radius: 12px; border: 1px solid var(--mp-border);
+  background: transparent; color: var(--mp-text); display: flex; align-items: center; gap: 10px; text-align: left;
+}
+.lang-opt.wide { grid-column: 1 / -1; }
+.lang-opt[aria-pressed="true"] { background: var(--mp-primary-soft); border: 1.5px solid var(--mp-primary); }
+.lang-opt[aria-pressed="true"] .lang-name { font-weight: 800; }
+.lang-opt svg { flex: none; color: var(--mp-primary); }
+.lang-code {
+  flex: none; min-width: 34px; height: 26px; padding: 0 6px; border-radius: 7px;
+  background: var(--mp-chip); display: grid; place-items: center;
+  font-size: 12px; font-weight: 800; color: var(--mp-muted);
+}
+.lang-name { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.shell.no-nav .topbar { position: absolute; top: 0; right: 0; left: 0; background: none; justify-content: flex-end; }
+.login-bar { display: flex; justify-content: flex-end; width: 100%; }
