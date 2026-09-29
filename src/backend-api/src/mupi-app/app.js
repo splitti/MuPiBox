@@ -730,7 +730,7 @@ async function loadStatus(root) {
   // battery
   let pct = hat.body?.Bat_Percent
   if (!Number.isFinite(pct)) pct = Number.parseInt(String(hat.body?.Bat_SOC ?? ''), 10)
-  const charging = (hat.body?.IBus ?? 0) > 0
+  const charging = batteryCharging(hat.body)
   setTile(root, 'tile-akku', Number.isFinite(pct) ? `${pct} %${charging ? ' ⚡' : ''}` : '–', Number.isFinite(pct) ? pct : null, pct <= 15 ? 'danger' : pct <= 30 ? 'warn' : 'ok')
   // listened today
   const p = pt.body?.playtime ?? {}
@@ -791,7 +791,8 @@ async function loadNotices(root) {
   const [hat, sync] = await Promise.all([api('/api/mupihat'), api('/api/spotify-sync/status')])
   const notes = []
   const pct = hat.body?.Bat_Percent
-  if (Number.isFinite(pct) && pct <= 15 && !((hat.body?.IBus ?? 0) > 0)) {
+  if (hat.body?.ChargeProblemSince) notes.push(['plug', 'Akku lädt nicht', NOT_CHARGING, 'akku'])
+  if (Number.isFinite(pct) && pct <= 15 && !batteryCharging(hat.body)) {
     notes.push(['bat', 'Akku fast leer', `Noch ${pct} % – bitte bald laden.`, 'akku'])
   }
   const tok = sync.body?.token
@@ -3595,6 +3596,12 @@ function mountBluetooth(root, page) {
 
 /* Akku */
 
+// the battery takes current (not: the power supply gives some - that also runs the Pi; with the charger stuck it gave
+// 45 mA and the app showed the flash while the battery ran down)
+const batteryCharging = (h) => Number.isFinite(h?.Ibat) && h.Ibat > 50
+// (the box saw it for 10 minutes: /api/mupihat ChargeProblemSince, see checkCharging in server.ts)
+const NOT_CHARGING = 'Das Netzteil steckt, aber der Akku lädt nicht. Bitte das Netzteil an der Box kurz abziehen und wieder anstecken.'
+
 async function loadBattery() {
   const [hat, hist] = await Promise.all([api('/api/mupihat'), api(`${API}/battery-history?hours=24`)])
   hw.hat = hat.ok ? hat.body : null
@@ -3606,9 +3613,9 @@ function batteryTop() {
   if (!h || !Object.keys(h).length) return [`<section class="card"><h2>Akku-Stand</h2><p class="help" style="margin:0">Kein MuPiHAT gefunden – die Box läuft ohne Akku-Anzeige.</p></section>`]
   let pct = h.Bat_Percent
   if (!Number.isFinite(pct)) pct = Number.parseInt(String(h.Bat_SOC ?? ''), 10)
-  const charging = (h.IBus ?? 0) > 0
+  const charging = batteryCharging(h)
   const v = (mv) => (Number.isFinite(mv) && mv > 0 ? `${(mv / 1000).toLocaleString(LOCALE, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} V` : '–')
-  const status = { 'Not Charging': 'lädt nicht', 'Pre-charge': 'Vorladen', 'Fast Charging': 'lädt (schnell)', 'Fast charging': 'lädt (schnell)', 'Trickle Charge': 'lädt (Erhaltung)', 'Taper Charging': 'lädt (fast voll)', 'Top-off Timer Active Charging': 'lädt (fast voll)', 'Charge Termination Done': 'voll' }[h.Charger_Status] ?? h.Charger_Status ?? '–'
+  const status = { 'Not Charging': 'lädt nicht', 'Pre-charge': 'Vorladen', 'Fast charge (CC mode)': 'lädt (schnell)', 'Fast Charging': 'lädt (schnell)', 'Fast charging': 'lädt (schnell)', 'Trickle Charge': 'lädt (Erhaltung)', 'Taper Charge (CV mode)': 'lädt (fast voll)', 'Taper Charging': 'lädt (fast voll)', 'Top-off Timer Active Charging': 'lädt (fast voll)', 'Charge Termination Done': 'voll' }[h.Charger_Status] ?? h.Charger_Status ?? '–'
   // the last 24 hours in hours: the average percent of each hour
   const now = Date.now()
   const hours = Array.from({ length: 24 }, (_, i) => ({ at: now - (23 - i) * 3600e3, vals: [] }))
@@ -3619,7 +3626,7 @@ function batteryTop() {
   const vals = hours.map((x) => (x.vals.length ? Math.round(x.vals.reduce((a, b) => a + b, 0) / x.vals.length) : 0))
   const labels = hours.map((x, i) => (i % 4 === 3 ? `${new Date(x.at).getHours()}` : ''))
   return [
-    `<section class="card"><h2>Akku-Stand</h2><div><div class="big">${Number.isFinite(pct) ? `${pct} %` : '–'}${charging ? ' ⚡' : ''}</div><small class="help">${esc(h.Bat_Type ?? '')}</small></div>
+    `<section class="card"><h2>Akku-Stand</h2>${h.ChargeProblemSince ? `<div class="note warn">${icon('plug', 18)}<span>${esc(NOT_CHARGING)}</span></div>` : ''}<div><div class="big">${Number.isFinite(pct) ? `${pct} %` : '–'}${charging ? ' ⚡' : ''}</div><small class="help">${esc(h.Bat_Type ?? '')}</small></div>
       <dl class="kv"><div><dt>Akku-Spannung</dt><dd>${v(h.Vbat)}</dd></div><div><dt>USB-Spannung</dt><dd>${v(h.Vbus)}</dd></div>
         <div><dt>Akku-Strom</dt><dd>${Number.isFinite(h.Ibat) ? `${h.Ibat.toLocaleString(LOCALE)} mA` : '–'}</dd></div><div><dt>Temperatur</dt><dd>${Number.isFinite(h.Temp) ? `${h.Temp.toLocaleString(LOCALE)} °C` : '–'}</dd></div>
         <div><dt>Ladegerät</dt><dd>${esc(status)}</dd></div></dl></section>`,

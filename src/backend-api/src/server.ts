@@ -1455,7 +1455,8 @@ app.get('/api/mupihat', (_req, res) => {
       console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] ${error}`)
       res.json({})
     } else {
-      res.json(data)
+      // (the battery does not charge although the power supply is plugged in, see checkCharging)
+      res.json(chargeProblemSince === null ? data : { ...data, ChargeProblemSince: new Date(chargeProblemSince).toISOString() })
     }
   })
 })
@@ -1825,6 +1826,52 @@ function tickBatteryLog(): void {
   if (batteryLogTickCount >= BATTERY_LOG_TRIM_EVERY_TICKS) {
     batteryLogTickCount = 0
     trimBatteryLog()
+  }
+  checkCharging(snap)
+}
+
+// === The battery does not charge although the power supply is plugged in ===
+// The charger chip of the MuPiHAT can get stuck with the power supply plugged in: its converter stops (VINDPM at 22 V,
+// input limit 500 mA), the box runs on the battery all night. Nothing in the chip's registers brings it back - only
+// unplugging the power supply for a moment does. So: after 10 minutes like this, a notice in the app (/api/mupihat
+// ChargeProblemSince) and one Telegram message per case.
+const CHARGE_PROBLEM_AFTER_MS = 10 * 60_000
+let notChargingSince: number | null = null
+let chargeProblemSince: number | null = null
+let chargingAgainTicks = 0
+
+function checkCharging(snap: Record<string, unknown>): void {
+  // (values older than 3 minutes: the MuPiHAT service does not read the chip - nothing to judge by)
+  const fresh = (() => {
+    try {
+      return Date.now() - fs.statSync(mupihat).mtimeMs < 3 * 60_000
+    } catch {
+      return false
+    }
+  })()
+  const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : null)
+  const vbus = num(snap.Vbus)
+  const ibat = num(snap.Ibat)
+  const percent = num(snap.Bat_Percent)
+  const status = typeof snap.Charger_Status === 'string' ? snap.Charger_Status : ''
+  if (!fresh || snap.BatteryConnected !== 1 || vbus === null || percent === null) return
+  const plugged = vbus >= 4500
+  const full = percent >= 95 || /termination|done|top-?off/i.test(status)
+  const stuck = plugged && !full && /not charging/i.test(status) && (ibat ?? 0) <= 50
+  if (stuck) {
+    chargingAgainTicks = 0
+    notChargingSince ??= Date.now()
+    if (chargeProblemSince === null && Date.now() - notChargingSince >= CHARGE_PROBLEM_AFTER_MS) {
+      chargeProblemSince = notChargingSince
+      console.warn(`${new Date().toLocaleString()}: [battery] not charging with the power supply plugged in (${vbus} mV, ${ibat} mA)`)
+      execFile('/usr/bin/python3', ['/usr/local/bin/mupibox/telegram_send_message.py', '--key', 'n_battery_not_charging', `soc=${percent} %`], { timeout: 60_000 }, () => undefined)
+    }
+    return
+  }
+  // (over again after two good readings in a row: one reading of a changing charger is no proof)
+  if (++chargingAgainTicks >= 2) {
+    notChargingSince = null
+    chargeProblemSince = null
   }
 }
 

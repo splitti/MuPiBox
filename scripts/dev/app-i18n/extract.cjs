@@ -25,6 +25,7 @@ function isText(s) {
   if (/[{};]\s*$/.test(t) && /:\s*[^ ]/.test(t) && !/\p{Lu}/u.test(t[0])) return false // css
   if (/^(GET|POST|PUT|DELETE)\b/.test(t)) return false
   if (/^[\w-]+="/.test(t)) return false // attributes put into a tag (class="…" width="…")
+  if (/^\([a-z-]+: /.test(t)) return false // media queries
   if (/^[A-Z0-9_]+$/.test(t) && t !== 'WLAN') return false // constants (WLAN is a word)
   if (/^[\w.-]+\.(json|js|css|svg|png|jpg|txt|sh|mp3|zip|log|html)$/i.test(t)) return false
   return true
