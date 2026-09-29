@@ -304,8 +304,10 @@ async function renderPage(page, reload = true) {
     try {
       await ctrl.load(page)
     } catch (err) {
+      // without its values a page would draw empty or wrong (the NAS page: an empty login form) - it says so instead
       console.error(err)
-      toast('Die Werte der Box ließen sich nicht laden', 'info')
+      if (token !== renderToken) return
+      return pageNotLoaded(main, page)
     }
     if (token !== renderToken) return
   }
@@ -325,12 +327,7 @@ async function renderPage(page, reload = true) {
   } catch (err) {
     // the box's values did not come (the page cannot be drawn without them): say so, instead of "Lade …" for ever
     console.error(err)
-    main.innerHTML = `<section class="card"><h2>Nicht geladen</h2><p class="help">Die Werte dieser Seite ließen sich nicht von der Box laden.</p>
-      <div class="btns"><button class="btn primary" id="page-retry">Erneut versuchen</button></div></section>`
-    main.dataset.page = page.id
-    main.classList.remove('start', 'cols')
-    $('#page-retry', main).onclick = () => renderPage(page)
-    return
+    return pageNotLoaded(main, page)
   }
   parts.push(...childNav(page))
   // a redraw with the values already loaded (after a change) stays where the user is
@@ -351,6 +348,15 @@ async function renderPage(page, reload = true) {
     toast('Ein Teil der Seite ließ sich nicht einrichten', 'info')
   }
   if (keepScroll != null) window.scrollTo(0, keepScroll)
+}
+
+// A page whose values did not come from the box: a card that says so and tries again
+function pageNotLoaded(main, page) {
+  main.innerHTML = `<section class="card"><h2>Nicht geladen</h2><p class="help">Die Werte dieser Seite ließen sich nicht von der Box laden.</p>
+    <div class="btns"><button class="btn primary" id="page-retry">Erneut versuchen</button></div></section>`
+  main.dataset.page = page.id
+  main.classList.remove('start', 'cols')
+  $('#page-retry', main).onclick = () => renderPage(page)
 }
 
 function hasSettings(page) {
@@ -1836,7 +1842,7 @@ function drawLib() {
 // A group: one entry opens right away, several are listed first
 function openLibGroup(g) {
   if (g.kind === 'local') return openLocalSheet(g.folder)
-  if (g.kind === 'nas') return go('nas')
+  if (g.kind === 'nas') return openNasSheet(g.folder)
   if (g.entries.length === 1) return openEntrySheet(g.entries[0].item)
   const entries = [...g.entries].sort((a, b) => a.title.localeCompare(b.title, 'de', { numeric: true }))
   openSheet(
@@ -2034,6 +2040,59 @@ async function openLocalSheet(folder, parent = null) {
       sheet.querySelector('[data-all]').onclick = () => {
         close()
         deleteLocal(folder.libraryPath, folder.title, 'Der Ordner')
+      }
+    },
+  )
+}
+
+// A folder of the NAS (as openLocalSheet): the folders in it, each opens on its own sheet; an album shows its cover
+// and plays. The NAS administration (login, shown folders, downloads) is a button away.
+async function openNasSheet(folder, parent = null) {
+  if (!folder.nasIsContainer) return openNasAlbumSheet(folder, parent)
+  const r = await api(`/api/nas/children?path=${encodeURIComponent(folder.nasPath)}`)
+  const albums = Array.isArray(r.body) ? r.body : []
+  const thumb = (cover) => `<span class="lib-thumb">${cover ? `<img src="${esc(cover)}" alt="" loading="lazy">` : icon('folder', 18)}</span>`
+  openSheet(
+    `${parent ? `<button class="sheet-back" data-back>${icon('back', 18)}<span translate="no">${esc(parent.title)}</span></button>` : ''}
+     <div class="local-head"><span class="local-cover">${folder.cover ? `<img src="${esc(folder.cover)}" alt="">` : icon('folder', 28)}</span>
+       <div class="lbl"><h2 translate="no">${esc(folder.title)}</h2><p class="help" style="margin:0">${esc(['Ordner auf dem NAS', `${albums.length} ${albums.length === 1 ? 'Album' : 'Alben'}`].join(' · '))}</p></div></div>
+     ${r.ok ? '' : `<p class="help" style="margin:0">Das NAS antwortet gerade nicht.</p>`}
+     ${albums.length ? `<div class="section-label" style="margin:0">Alben</div><div class="rows">${albums.map((a, i) => `<button class="entry lib-row" data-a="${i}">${thumb(a.cover)}<span class="lbl"><b translate="no">${esc(a.title)}</b>${a.nasIsContainer ? '<small>Ordner</small>' : ''}</span><span class="chev">${icon('chevron', 18)}</span></button>`).join('')}</div>` : ''}
+     <div class="btns"><button class="btn" data-admin>NAS-Verwaltung</button><button class="btn" data-close>${parent ? 'Zurück' : 'Schließen'}</button></div>`,
+    (sheet, close) => {
+      for (const img of sheet.querySelectorAll('img')) img.addEventListener('error', () => img.remove(), { once: true })
+      const back = () => (parent ? openNasSheet(parent) : close())
+      sheet.querySelector('[data-close]').onclick = back
+      sheet.querySelector('[data-back]')?.addEventListener('click', back)
+      sheet.querySelector('[data-admin]').onclick = () => {
+        close()
+        go('nas')
+      }
+      for (const b of sheet.querySelectorAll('[data-a]')) b.onclick = () => openNasSheet(albums[Number(b.dataset.a)], folder)
+    },
+  )
+}
+
+// An album of the NAS: its cover large, play it; back to its folder
+function openNasAlbumSheet(album, parent) {
+  openSheet(
+    `${parent ? `<button class="sheet-back" data-back>${icon('back', 18)}<span translate="no">${esc(parent.title)}</span></button>` : ''}
+     <span class="album-cover">${album.cover ? `<img src="${esc(album.cover)}" alt="">` : icon('folder', 40)}</span>
+     <div class="album-title"><h2 translate="no">${esc(album.title)}</h2><p class="help" style="margin:0">${esc(['Album auf dem NAS', parent?.title].filter(Boolean).join(' · '))}</p></div>
+     <button class="btn primary block" data-play>${icon('phones', 18)}Abspielen</button>
+     <div class="btns"><button class="btn" data-admin>NAS-Verwaltung</button><button class="btn" data-close>${parent ? 'Zurück' : 'Schließen'}</button></div>`,
+    (sheet, close) => {
+      for (const img of sheet.querySelectorAll('img')) img.addEventListener('error', () => img.remove(), { once: true })
+      const back = () => (parent ? openNasSheet(parent) : close())
+      sheet.querySelector('[data-close]').onclick = back
+      sheet.querySelector('[data-back]')?.addEventListener('click', back)
+      sheet.querySelector('[data-admin]').onclick = () => {
+        close()
+        go('nas')
+      }
+      sheet.querySelector('[data-play]').onclick = () => {
+        close()
+        startPlay(album.title, `${API}/library/play-nas`, { path: album.nasPath })
       }
     },
   )
