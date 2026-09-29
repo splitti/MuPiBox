@@ -49,6 +49,20 @@ async function loginSince(cache: string): Promise<number | null> {
   return r.ok && Number.isFinite(t) && t > 0 ? t * 1000 : null
 }
 
+// Whether the Connect service runs, else the reason librespot gave last (its ERROR line: Spotify refusing the login,
+// the network, …). When Spotify refuses, librespot ends a second after its start and systemd tries again a minute later
+// (the unit is "activating" in between), so "active" means it got past that.
+async function connectState(): Promise<{ running: boolean; error: string | null }> {
+  const active = await run('systemctl', ['is-active', 'librespot'], 5000)
+  if (active.stdout.trim() === 'active') return { running: true, error: null }
+  const log = await run('sudo', ['journalctl', '-u', 'librespot', '-n', '40', '--no-pager', '-o', 'cat'], 8000)
+  const line = log.stdout
+    .split('\n')
+    .reverse()
+    .find((l) => /\bERROR\b/.test(l))
+  return { running: false, error: line ? line.replace(/^\[[^\]]*\]\s*/, '').slice(0, 300) : null }
+}
+
 // The login process ends; librespot runs again as the service
 async function endJob(): Promise<void> {
   const current = job
@@ -67,8 +81,8 @@ export function registerSpotifyConnectRoutes(router: Router, deps: { getMupiboxC
   /** GET /api/app/spotify-connect - whether the box has a Connect login, since when, a login going on */
   router.get('/spotify-connect', requireSession, async (_req, res) => {
     const cache = cacheOf(deps.getMupiboxConfig())
-    const [since, active] = await Promise.all([loginSince(cache), run('systemctl', ['is-active', 'librespot'], 5000)])
-    res.json({ configured: since !== null, since, running: active.stdout.trim() === 'active', pending: job ? job.url : null, name: nameOf(deps.getMupiboxConfig()) })
+    const [since, state] = await Promise.all([loginSince(cache), connectState()])
+    res.json({ configured: since !== null, since, running: state.running, error: since !== null ? state.error : null, pending: job ? job.url : null, name: nameOf(deps.getMupiboxConfig()) })
   })
 
   /**
@@ -113,7 +127,9 @@ export function registerSpotifyConnectRoutes(router: Router, deps: { getMupiboxC
 
   /**
    * POST /api/app/spotify-connect/finish {address} - the address the browser ended on after the Spotify login
-   * (http://127.0.0.1:5588/login?code=…), handed to librespot on the box; then the service starts with the new login
+   * (http://127.0.0.1:5588/login?code=…), handed to librespot on the box; then the service starts with the new login.
+   * The login before is kept until the new one worked: when Spotify refuses the new one (librespot does not get
+   * going), the old one comes back - a working Connect is never lost to a new try.
    */
   router.post('/spotify-connect/finish', requireSession, requireCsrf, async (req, res) => {
     const current = job
@@ -148,17 +164,32 @@ export function registerSpotifyConnectRoutes(router: Router, deps: { getMupiboxC
       await new Promise((r) => setTimeout(r, 1000))
     }
     const cache = cacheOf(deps.getMupiboxConfig())
+    const creds = `${cache}/credentials.json`
+    const previous = `${cache}/credentials.json.previous`
+    const hadOne = made && (await run('sudo', ['cp', '-p', creds, previous])).ok
     const ok =
       made &&
       (await run('sudo', ['install', '-d', cache])).ok &&
-      (await run('sudo', ['install', '-m', '600', `${LOGIN_DIR}/credentials.json`, `${cache}/credentials.json`])).ok
+      (await run('sudo', ['install', '-m', '600', `${LOGIN_DIR}/credentials.json`, creds])).ok
     if (!ok) console.warn(`${new Date().toLocaleString()}: [spotify-connect] no new login: ${current.output.slice(-500)}`)
     await endJob()
-    const since = ok ? await loginSince(cache) : null
     if (!ok) {
       res.status(502).json({ error: 'login_failed' })
       return
     }
+    // librespot needs a second or two to sign in with it (then it runs, or ends refused)
+    await new Promise((r) => setTimeout(r, 12000))
+    const state = await connectState()
+    if (!state.running) {
+      console.warn(`${new Date().toLocaleString()}: [spotify-connect] the new login is refused: ${state.error ?? '?'}${hadOne ? ' - the one before is back' : ''}`)
+      if (hadOne) {
+        await run('sudo', ['install', '-m', '600', previous, creds])
+        await run('sudo', ['systemctl', 'restart', 'librespot'])
+      }
+      res.status(502).json({ error: 'login_refused', detail: state.error, restored: hadOne })
+      return
+    }
+    const since = await loginSince(cache)
     console.log(`${new Date().toLocaleString()}: [spotify-connect] new Connect login saved`)
     res.json({ ok: true, since })
   })

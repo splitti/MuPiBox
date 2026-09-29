@@ -3229,14 +3229,16 @@ function spotifyTop() {
       ${
         spot.connect && !spot.connect.configured
           ? `<div class="note">${icon('info', 18)}<span>${esc('Spotify Connect ist nicht eingerichtet: Die Box erscheint in der Spotify-App auf dem Handy nicht als Lautsprecher.')}</span></div><div class="btns"><button class="btn" data-sp="connectlogin">Spotify Connect einrichten</button></div>`
-          : ''
+          : connectProblem(spot.connect)
+            ? `<div class="note warn">${icon('info', 18)}<span>${esc('Spotify Connect läuft nicht:')} ${esc(connectProblem(spot.connect))}</span></div><div class="btns"><button class="btn" data-sp="connectlogin">Neu verbinden</button></div>`
+            : ''
       }
       <div class="sp-cols">
         <div>${spKv([
           ['Angemeldet seit', login.since ?? '–'],
           ['Gültig bis', login.until ?? '–'],
           // (the box as a speaker in the Spotify app: its own login, see the Zugangsdaten page)
-          spot.connect && ['Spotify Connect', spot.connect.configured ? `Eingerichtet seit ${new Date(spot.connect.since).toLocaleDateString(LOCALE)}` : 'Nicht eingerichtet'],
+          spot.connect && ['Spotify Connect', connectProblem(spot.connect) ? 'Fehler' : spot.connect.configured ? `Eingerichtet seit ${new Date(spot.connect.since).toLocaleDateString(LOCALE)}` : 'Nicht eingerichtet'],
         ])}</div>
         <div>${spKv(
           s.enabled
@@ -3393,20 +3395,27 @@ function spotifyAccessTop() {
 // eltern/spotify-connect.ts
 function spotifyConnectCard() {
   const c = spot.connect ?? {}
-  const state = !spot.connect
-    ? 'Unbekannt'
-    : c.configured
-      ? c.running
-        ? `Eingerichtet seit ${new Date(c.since).toLocaleDateString(LOCALE)}`
-        : `Eingerichtet seit ${new Date(c.since).toLocaleDateString(LOCALE)} – der Dienst läuft gerade nicht`
-      : 'Nicht eingerichtet'
+  const problem = connectProblem(c)
+  const state = !spot.connect ? 'Unbekannt' : problem ? 'Fehler' : c.configured ? `Eingerichtet seit ${new Date(c.since).toLocaleDateString(LOCALE)}` : 'Nicht eingerichtet'
   return `<section class="card"><h2>Spotify Connect</h2><p class="help">${esc(`Damit erscheint die Box in der Spotify-App auf dem Handy als Lautsprecher „${c.name ?? 'MuPiBox'}“ – dort unter „Geräte“ wählen und direkt vom Handy abspielen. Die Box braucht dafür eine eigene, einmalige Anmeldung.`)}</p>
-    ${spKv([['Status', state]])}
+    ${spKv([['Status', state], problem && c.since && ['Eingerichtet seit', new Date(c.since).toLocaleDateString(LOCALE)]])}
+    ${problem ? `<div class="note warn">${icon('info', 18)}<span>${esc(problem)}${c.error ? `<br><small class="mono">${esc(c.error)}</small>` : ''}</span></div>` : ''}
     <div class="btns"><button class="btn${spot.connect && !c.configured ? ' primary' : ''}" data-sp="connectlogin">${c.configured ? 'Neu verbinden' : 'Spotify Connect verbinden'}</button></div></section>`
 }
 
+// Why the Connect service does not run, in words (its last error, eltern/spotify-connect.ts connectState), or null
+function connectProblem(c) {
+  if (!c?.configured || c.running) return null
+  const e = c.error ?? ''
+  if (/503|Service unavailable/i.test(e)) return 'Spotify nimmt die Anmeldung der Box gerade nicht an (Fehler 503). Die Box versucht es jede Minute wieder – hilft das nicht, neu verbinden.'
+  if (/INVALID_CREDENTIALS|denied|BadCredentials/i.test(e)) return 'Spotify lehnt die Anmeldung der Box ab. Bitte neu verbinden.'
+  if (/resolve|dns|timed out|unreachable|network/i.test(e)) return 'Die Box erreicht Spotify nicht (Netzwerk). Sie versucht es jede Minute wieder.'
+  return 'Der Dienst für Spotify Connect startet nicht. Die Box versucht es jede Minute wieder – hilft das nicht, neu verbinden.'
+}
+
 // The Connect login: the box starts it and names the Spotify address; after logging in there, the browser shows an
-// error page (its address leads to the box itself) - that address is pasted here and handed to the box
+// error page (its address leads to the box itself) - that address is pasted here and handed to the box. Spotify
+// allows only that address (127.0.0.1) as the way back for this login, so it cannot come back to the box by itself.
 async function connectLoginSheet(page) {
   const r = await api(`${API}/spotify-connect/start`, { method: 'POST' })
   if (!r.ok || !r.body?.url) return toast('Die Anmeldung ließ sich nicht starten', 'info')
@@ -3417,22 +3426,37 @@ async function connectLoginSheet(page) {
      <ol class="steps-list">
        <li><b>Bei Spotify anmelden</b><small>Öffnet Spotify in einem neuen Tab – mit dem Konto anmelden, dessen Musik die Box abspielen soll, und zustimmen.</small>
          <div class="btns"><a class="btn primary" href="${esc(url)}" target="_blank" rel="noopener">${icon('ext', 18)}Spotify öffnen</a></div></li>
-       <li><b>Adresse zurückholen</b><small>Danach zeigt der Browser eine Fehlerseite („Seite nicht erreichbar“). Das ist richtig so: Die Adresse oben beginnt mit http://127.0.0.1:5588/login – sie ganz kopieren und hier einfügen.</small>
-         <div class="field"><input class="input mono" id="cc-addr" placeholder="http://127.0.0.1:5588/login?code=…" autocomplete="off" spellcheck="false" ${NO_PW_MANAGER}></div></li>
+       <li><b>Adresse zurückholen</b><small>Danach zeigt der Browser eine Fehlerseite („Seite nicht erreichbar“). Das ist richtig so: Die Adresse oben beginnt mit http://127.0.0.1:5588/login – sie ganz kopieren, den Tab schließen und hier einfügen. Die Box verbindet sich dann von selbst.</small>
+         <div class="field"><input class="input mono" id="cc-addr" placeholder="http://127.0.0.1:5588/login?code=…" autocomplete="off" spellcheck="false" ${NO_PW_MANAGER}></div>
+         ${navigator.clipboard?.readText ? '<div class="btns"><button class="btn" id="cc-paste">Aus der Zwischenablage einfügen</button></div>' : ''}</li>
      </ol>
      <div class="btns"><button class="btn" data-close>Abbrechen</button><button class="btn primary" id="cc-ok">Verbinden</button></div>`,
     (sheet, close) => {
       sheet.querySelector('[data-close]').onclick = close
-      $('#cc-ok', sheet).onclick = async () => {
-        const address = $('#cc-addr', sheet).value.trim()
-        if (!/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?\/.*[?&]code=/.test(address)) return toast('Bitte die ganze Adresse der Fehlerseite einfügen (beginnt mit http://127.0.0.1:5588/login?code=)', 'info')
+      const input = $('#cc-addr', sheet)
+      const valid = (v) => /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?\/.*[?&]code=/.test(v)
+      let busy = false
+      const connect = async () => {
+        if (busy) return
+        const address = input.value.trim()
+        if (!valid(address)) return toast('Bitte die ganze Adresse der Fehlerseite einfügen (beginnt mit http://127.0.0.1:5588/login?code=)', 'info')
+        busy = true
         const b = $('#cc-ok', sheet)
         b.disabled = true
         b.textContent = 'Verbinde …'
         const f = await api(`${API}/spotify-connect/finish`, { method: 'POST', body: { address } })
+        busy = false
         if (!f.ok) {
           b.disabled = false
           b.textContent = 'Verbinden'
+          if (f.body?.error === 'login_refused') {
+            finished = true
+            close()
+            toast(f.body.restored ? 'Spotify hat die neue Anmeldung nicht angenommen – die bisherige bleibt. Bitte später noch einmal versuchen.' : 'Spotify hat die Anmeldung nicht angenommen. Bitte später noch einmal versuchen.', 'info')
+            await loadSpotify().catch(() => undefined)
+            if (currentPage()?.id === page.id) renderPage(page, false)
+            return
+          }
           return toast(f.body?.error === 'no_login_running' ? 'Die Anmeldung ist abgelaufen – bitte noch einmal starten.' : 'Das hat nicht geklappt – bitte noch einmal von vorn.', 'info')
         }
         finished = true
@@ -3441,6 +3465,19 @@ async function connectLoginSheet(page) {
         await loadSpotify().catch(() => undefined)
         if (currentPage()?.id === page.id) renderPage(page, false)
       }
+      $('#cc-ok', sheet).onclick = connect
+      // pasted (or typed to the end): connects right away
+      input.addEventListener('input', () => {
+        if (valid(input.value.trim())) connect()
+      })
+      const paste = $('#cc-paste', sheet)
+      if (paste)
+        paste.onclick = async () => {
+          const text = await navigator.clipboard.readText().catch(() => '')
+          if (!valid(text.trim())) return toast('In der Zwischenablage ist keine passende Adresse – bitte die Adresse der Fehlerseite kopieren.', 'info')
+          input.value = text.trim()
+          connect()
+        }
     },
     () => {
       // (closed without finishing: the box goes back to Connect as it was)
