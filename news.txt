@@ -1,4 +1,19 @@
 <h3>DEV 5.1.0 - changes compared to 5.0.2</h3>
+<b>Highlights</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'><b>The new MuPiBox web app</b> for phone, tablet and PC: play, library, playtime, Spotify, NAS and all settings in one place, in 17 languages – and on Android it can be installed like a real app.</li>
+<li id='linews' class='linews'><b>Much faster box:</b> it starts and shuts down several seconds quicker, switching between categories and opening lists is instant, and covers load right away.</li>
+<li id='linews' class='linews'><b>Search Spotify and add content from the web app:</b> find albums, audiobooks and artists and add them with one tap, or paste any Spotify, radio or podcast link.</li>
+<li id='linews' class='linews'><b>Spotify Smart Sync:</b> manage the box from your own Spotify account – albums in playlists named after the box appear on it automatically, whole artists can be followed.</li>
+<li id='linews' class='linews'><b>Upload media from the web app:</b> copy tracks and whole folders from the phone or PC straight onto the SD card, no network share needed.</li>
+<li id='linews' class='linews'><b>Covers from the internet:</b> albums without a picture can get one automatically (iTunes / Deezer, switched on in the web app), and any cover can be searched online, replaced by your own picture or hidden.</li>
+<li id='linews' class='linews'><b>NAS in all tabs:</b> NAS folders can appear in Audiobooks, Music or Other, a folder index finds any folder instantly, and downloaded folders stay up to date by themselves.</li>
+<li id='linews' class='linews'><b>Playtime limits and quiet hours:</b> daily listening time per weekday and quiet times (homework, bedtime), with a gentle end of the current track or album.</li>
+<li id='linews' class='linews'><b>30 new kids' themes</b> with mascots and big buttons, 16 boot screens with the box's own name, and display texts in 17 languages.</li>
+<li id='linews' class='linews'><b>Parents' remote control:</b> Telegram commands (extra time, quiet now, sign-in link), a live picture of the display and remote control of the box right in the web app.</li>
+<li id='linews' class='linews'><b>Secure connection:</b> the box's own certificate for https without warnings, one password for web app and admin interface, and many security fixes.</li>
+</ul>
 <b>New MuPiBox web app</b>
 </ul>
 <ul id='ulnews' class='ulnews'>
