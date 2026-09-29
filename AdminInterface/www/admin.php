@@ -408,6 +408,11 @@
 			{
 			$hash = password_hash($newpwd, PASSWORD_DEFAULT);
 			$data["interfacelogin"]["password"]=$hash;
+			// the one password (as the app sets it): a parents' password of before goes, and every other device -
+			// app and this interface - signs in again with the new one; this one stays signed in
+			unset($data["eltern"]["password"]);
+			$data["interfacelogin"]["epoch"] = bin2hex(random_bytes(8));
+			$_SESSION['login_epoch'] = $data["interfacelogin"]["epoch"];
 			$change=2;
 			$CHANGE_TXT=$CHANGE_TXT."<li>New password has been set</li>";
 			}
@@ -424,6 +429,10 @@
 		else
 			{
 			$data["interfacelogin"]["state"]=true;	
+			// every other device signs in now (app and this interface) - also those that came in while it was open;
+			// this one stays when it is signed in
+			$data["interfacelogin"]["epoch"] = bin2hex(random_bytes(8));
+			if (!empty($_SESSION['logged_in'])) { $_SESSION['login_epoch'] = $data["interfacelogin"]["epoch"]; }
 			$CHANGE_TXT=$CHANGE_TXT."<li>Login enabled</li>";
 			}
 		$change=2;

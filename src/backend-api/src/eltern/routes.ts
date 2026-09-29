@@ -19,14 +19,11 @@ import QRCode from 'qrcode'
 import type { MupiboxConfig } from '../models/mupibox-config.model'
 import {
   CSRF_HEADER,
-  ELTERN_PASSWORD_MIN_LENGTH,
   SESSION_COOKIE,
   destroySession,
   generateMagicLink,
-  hasElternPassword,
   issueSession,
   redeemMagicLink,
-  setElternPassword,
   validateSession,
   verifyElternPassword,
   APP_PASSWORD_MIN_LENGTH,
@@ -39,6 +36,7 @@ import {
   keptSessionCount,
   restampSession,
   usePasswordStamp,
+  newSignOutEpoch,
 } from './auth'
 import { ipRateLimit, localNetworkOnly, parseCookie, requireCsrf, requireSession } from './middleware'
 import { registerCustomCoverRoutes } from './covers'
@@ -268,6 +266,10 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   const router = Router()
   // (a new password ends the sessions issued under the old one)
   usePasswordStamp(deps.getMupiboxConfig)
+  const newEpoch = () =>
+    deps.updateMupiboxConfig((c) => {
+      c.interfacelogin = { ...((c.interfacelogin as Record<string, unknown> | undefined) ?? {}), epoch: newSignOutEpoch() }
+    })
 
   // Every API route requires LAN + session; magic-link generation
   // (the bootstrap path) requires LAN + rate-limit but no session.
@@ -409,7 +411,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     // "Anmeldung verlangen" off (as the admin interface's switch): no login on the home network (localNetworkOnly
     // above), the app gets its session and CSRF token right away
     if (appLoginRequired(deps.getMupiboxConfig()) || validateSession(parseCookie(req, SESSION_COOKIE))) return next()
-    const session = issueSession(req.ip ?? req.socket.remoteAddress ?? '')
+    const session = issueSession(req.ip ?? req.socket.remoteAddress ?? '', false, true)
     res.setHeader('Set-Cookie', buildSessionCookie(session.sessionId, 24 * 60 * 60))
     res.json({ authenticated: true, open: true, csrf_header: CSRF_HEADER, csrf_token: session.csrf, passwordConfigured: hasAppPassword(deps.getMupiboxConfig()) })
   }, requireSession, (req, res) => {
@@ -457,20 +459,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     res.json({ ok: true, csrf_header: CSRF_HEADER, csrf_token: session.csrf })
   })
 
-  /** POST /api/app/password  {password}  (Phase 17h)
-   *  Set or clear the parent login password. Empty string clears it. The
-   *  magic-link path is unaffected either way. */
-  router.post('/password', requireSession, requireCsrf, async (req, res) => {
-    const body = (req.body as { password?: unknown } | undefined) ?? {}
-    const pw = typeof body.password === 'string' ? body.password : ''
-    if (pw.trim() && pw.trim().length < ELTERN_PASSWORD_MIN_LENGTH) {
-      res.status(400).json({ error: `password too short (min ${ELTERN_PASSWORD_MIN_LENGTH} chars)` })
-      return
-    }
-    await setElternPassword(pw, deps.updateMupiboxConfig)
-    restampSession(req.elternSessionId)
-    res.json({ ok: true, configured: hasElternPassword(deps.getMupiboxConfig()) })
-  })
+  // (POST /password, the parents' password of before, is gone: it set a second password without asking for the
+  // current one - /auth/password below is the one way)
 
   /** GET /api/app/auth-state - the Sicherheit page: is a password set, is the login required, is it still the
    *  admin interface's well-known default password. */
@@ -486,8 +476,12 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /** POST /api/app/auth/sign-out-others - every other device is signed out (also those kept signed in); this stays. */
-  router.post('/auth/sign-out-others', requireSession, requireCsrf, (req, res) => {
-    res.json({ ok: true, ended: destroyOtherSessions(req.elternSessionId) })
+  router.post('/auth/sign-out-others', requireSession, requireCsrf, async (req, res) => {
+    const ended = destroyOtherSessions(req.elternSessionId)
+    // (the admin interface's sessions as well: they check the sign-out generation)
+    await newEpoch()
+    restampSession(req.elternSessionId)
+    res.json({ ok: true, ended })
   })
 
   /** POST /api/app/auth/password {current, password} - the one password; the current one is needed when one is set. */
@@ -505,7 +499,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       return
     }
     await setAppPassword(next, deps.updateMupiboxConfig)
-    // (this device stays signed in, the others sign in with the new password)
+    await newEpoch()
+    // (this device stays signed in, the others sign in with the new password - in the admin interface too)
     restampSession(req.elternSessionId)
     res.json({ ok: true })
   })
@@ -523,11 +518,17 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       res.status(409).json({ error: 'no_password' })
       return
     }
+    const wasOn = (cfg as { interfacelogin?: { state?: unknown } } | undefined)?.interfacelogin?.state === true
+    const callerAnon = validateSession(req.elternSessionId)?.anon === true
     await deps.updateMupiboxConfig((c) => {
       const login = ((c.interfacelogin as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
       login.state = body.required
+      // switched on: every other device signs in now (the admin interface too) - also those that came in while it
+      // was open; this one stays when it signed in with the password
+      if (body.required && !wasOn) login.epoch = newSignOutEpoch()
       c.interfacelogin = login
     })
+    if (body.required && !wasOn && !callerAnon) restampSession(req.elternSessionId)
     res.json({ ok: true })
   })
 

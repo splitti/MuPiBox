@@ -58,6 +58,15 @@
 	// re-parsed 7x per admin page load. $data stays exposed as a local for
 	// downstream PHP that reads $data directly.
 	$data = mupibox_config();
+	// Signed out elsewhere: "sign out other devices" or a new password (in the app or on the Admin page) changes
+	// interfacelogin.epoch - a session of this interface signed in before that ends here as well
+	if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true
+		&& ($_SESSION['login_epoch'] ?? '') !== (string)($data['interfacelogin']['epoch'] ?? '')) {
+		session_unset();
+		session_destroy();
+		header("Location: " . $_SERVER['PHP_SELF']);
+		exit;
+	}
 
 	// Tabs that can be hidden from the top navigation (Admin > Control system).
 	// Home, MuPiBox and Admin are always shown and are not part of this list.
@@ -227,6 +236,7 @@
 				if (!empty($answer['ok'])) {
 					session_regenerate_id(true);
 					$_SESSION['logged_in'] = true;
+					$_SESSION['login_epoch'] = (string)($data['interfacelogin']['epoch'] ?? '');
 					header('Location: ' . $_SERVER['PHP_SELF']);
 					exit;
 				}
@@ -242,6 +252,7 @@
 					// become a logged-in one (session fixation)
 					session_regenerate_id(true);
 					$_SESSION['logged_in'] = true;
+					$_SESSION['login_epoch'] = (string)($data['interfacelogin']['epoch'] ?? '');
 					header("Location: " . $_SERVER['PHP_SELF']);
 					exit;
 				} else {

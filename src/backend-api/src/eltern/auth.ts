@@ -55,6 +55,8 @@ interface Session {
   persistent?: boolean
   /** Stamp of the password at issuance (passwordStamp); missing on sessions from before. */
   pw?: string
+  /** Given without a password while "Anmeldung verlangen" was off: ends once it is switched on. */
+  anon?: boolean
 }
 
 type MagicLinkMap = Record<string, MagicLink>
@@ -128,16 +130,26 @@ function saveSessions(): void {
   }
 }
 
-// The password a session was issued under (a short hash of its hash; '' without a password). Set up by the router,
-// which reads the config.
+// The password a session was issued under (a short hash of its hash; '' without a password), and the sign-out
+// generation (interfacelogin.epoch: changed by "sign out other devices" and a new password, here or in the admin
+// interface, which checks it for its own sessions). Set up by the router, which reads the config.
 let passwordStamp: () => string = () => ''
+let loginRequired: () => boolean = () => false
 export function usePasswordStamp(readConfig: () => unknown): void {
   passwordStamp = () => {
     const cfg = readConfig()
     const admin = adminHash(cfg) ?? ''
     const parents = readPasswordEntry(cfg)?.hash ?? ''
-    return admin || parents ? createHash('sha256').update(`${admin}|${parents}`).digest('hex').slice(0, 16) : ''
+    const epoch = (cfg as { interfacelogin?: { epoch?: unknown } } | undefined)?.interfacelogin?.epoch
+    const gen = typeof epoch === 'string' ? epoch : ''
+    return admin || parents || gen ? createHash('sha256').update(`${admin}|${parents}${gen ? `|${gen}` : ''}`).digest('hex').slice(0, 16) : ''
   }
+  loginRequired = () => (readConfig() as { interfacelogin?: { state?: unknown } } | undefined)?.interfacelogin?.state === true
+}
+
+/** A new sign-out generation: every session but the ones restamped afterwards ends, in the admin interface too. */
+export function newSignOutEpoch(): string {
+  return randomBytes(8).toString('hex')
 }
 
 /**
@@ -214,7 +226,7 @@ export function generateMagicLink(source: string): { token: string; expiresIn: n
  * Issue a fresh session + csrf token. Used by every authentication path
  * (magic-link, password login, …) — keeps session creation in one place.
  */
-export function issueSession(ip: string, persistent = false): { sessionId: string; csrf: string } {
+export function issueSession(ip: string, persistent = false, anon = false): { sessionId: string; csrf: string } {
   const sessions = loadSessions()
   const sessionId = randomBytes(TOKEN_BYTES).toString('hex')
   const csrf = randomBytes(TOKEN_BYTES).toString('hex')
@@ -226,6 +238,7 @@ export function issueSession(ip: string, persistent = false): { sessionId: strin
     csrf,
     pw: passwordStamp(),
     ...(persistent ? { persistent: true } : {}),
+    ...(anon ? { anon: true } : {}),
   }
   sessionsCache = sessions
   if (persistent) purgeExpiredSessions() // (the oldest kept one goes when there are too many)
@@ -264,8 +277,9 @@ export function validateSession(sessionId: string | undefined): Session | null {
   const sessions = loadSessions()
   const entry = ownEntry(sessions, sessionId)
   if (!entry) return null
-  // issued under another password (changed since, here or in the admin interface): over
-  if (entry.pw !== undefined && entry.pw !== passwordStamp()) {
+  // issued under another password (changed since, here or in the admin interface) or before "sign out other
+  // devices"; or given without a password while the login was off - and it is on now: over
+  if ((entry.pw !== undefined && entry.pw !== passwordStamp()) || (entry.anon && loginRequired())) {
     delete sessions[sessionId as string]
     saveSessions()
     return null

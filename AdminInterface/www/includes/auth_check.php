@@ -29,6 +29,12 @@ $__loggedIn      = isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === t
 // Same idle timeout as header.php (60 min), checked BEFORE last_activity is bumped below: this
 // gate used to accept an expired session and refresh it, so a session header.php had already
 // timed out came back to life through any download or XHR endpoint.
+// signed out elsewhere (interfacelogin.epoch changed, see header.php)
+if ($__loggedIn && ($_SESSION['login_epoch'] ?? '') !== (string)($__cfg['interfacelogin']['epoch'] ?? '')) {
+    session_unset();
+    session_destroy();
+    $__loggedIn = false;
+}
 if ($__loggedIn && isset($_SESSION['last_activity']) && time() - $_SESSION['last_activity'] > 60 * 60) {
     session_unset();
     session_destroy();
