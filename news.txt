@@ -3,7 +3,7 @@
 </ul>
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'><b>The new MuPiBox web app</b> for phone, tablet and PC: play, library, playtime, Spotify, NAS and all settings in one place, in 17 languages – and on Android it can be installed like a real app.</li>
-<li id='linews' class='linews'><b>Much faster box:</b> it starts and shuts down several seconds quicker, switching between categories and opening lists is instant, and covers load right away.</li>
+<li id='linews' class='linews'><b>Much faster box:</b> it starts and shuts down several seconds quicker, and it now keeps an index of all content – SD card, Spotify and NAS – so switching between categories and opening artists and albums is instant, with covers loading right away.</li>
 <li id='linews' class='linews'><b>Search Spotify and add content from the web app:</b> find albums, audiobooks and artists and add them with one tap, or paste any Spotify, radio or podcast link.</li>
 <li id='linews' class='linews'><b>Spotify Smart Sync:</b> manage the box from your own Spotify account – albums in playlists named after the box appear on it automatically, whole artists can be followed.</li>
 <li id='linews' class='linews'><b>Upload media from the web app:</b> copy tracks and whole folders from the phone or PC straight onto the SD card, no network share needed.</li>
