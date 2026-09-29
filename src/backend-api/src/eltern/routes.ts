@@ -14,7 +14,7 @@
 import { execFile, execFileSync, spawn } from 'node:child_process'
 import { promises as fsp, readFileSync } from 'node:fs'
 import * as os from 'node:os'
-import { Router } from 'express'
+import { type Request, Router } from 'express'
 import QRCode from 'qrcode'
 import type { MupiboxConfig } from '../models/mupibox-config.model'
 import {
@@ -45,7 +45,7 @@ import { registerAdminRoutes } from './admin'
 import { registerNetworkRoutes } from './network'
 import { registerUpdateRoutes } from './updates'
 import { type LocalLibraryDeps, registerLocalUploadRoutes } from './upload'
-import { localOnly } from '../request-guard'
+import { localOnly, viaProxy } from '../request-guard'
 import {
   REQUESTED_SCOPES,
   buildAuthorizeUrl,
@@ -209,6 +209,14 @@ function isGraceMode(value: unknown): value is GraceMode {
 function graceModeOf(block: Record<string, unknown>): GraceMode {
   if (isGraceMode(block.graceMode)) return block.graceMode
   return block.maxOverrunMinutes === 0 ? 'stop' : 'track'
+}
+
+// The box's address for Spotify: the one of port 8200, registered in the Spotify app - also when the app is used
+// through port 80 (the web server passes it on, see PROXY_PORT)
+function spotifyHost(req: Request): string | undefined {
+  const host = req.headers.host
+  if (typeof host !== 'string') return undefined
+  return viaProxy(req) ? `${host.replace(/:\d+$/, '')}:8200` : host
 }
 
 export function createElternApiRouter(deps: ElternRouterDeps): Router {
@@ -451,7 +459,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
    * optionally provided as ?return=/app (the default; the query ?spotify_connected=1 is appended to it).
    */
   router.get('/spotify-oauth/init', requireSession, (req, res) => {
-    const host = req.headers.host
+    const host = spotifyHost(req)
     if (typeof host !== 'string') {
       res.status(400).json({ error: 'no host header' })
       return
@@ -512,7 +520,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       res.status(403).send('invalid or replayed state')
       return
     }
-    const host = req.headers.host
+    const host = spotifyHost(req)
     if (typeof host !== 'string') {
       res.status(400).send('no host header')
       return

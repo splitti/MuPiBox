@@ -8,8 +8,15 @@ funktioniert und getestet ist.
 
 > **29.09.2026:** Die alte Eltern-Web-App (`/parents` auf Port 8200, Verweise `E:` unten) ist entfernt. `/parents` und
 > `/eltern` leiten auf `/app` um (mit dem Token eines Login-Links); QR-Code am Display und Telegram (`/login`,
-> `/spotify_connect`) führen direkt in die App. Nächster Schritt: Port 80 mit Auswahl-Login „Web-App (Beta)“ /
-> „Admin-Interface“.
+> `/spotify_connect`) führen direkt in die App.
+>
+> **Port 80/443:** `http://box/` führt auf den Anmeldebildschirm der App mit der Wahl „Web-App (Beta)“ /
+> „Admin-Interface“ (`/app/?portal`). lighttpd reicht `/app`, `/api`, `/assets`, `/text-preview` an Node weiter
+> (`config/lighttpd/90-mupibox-app.conf`, von autosetup und Update eingespielt, `lighty-enable-mod proxy`), und zwar an
+> den nur intern erreichbaren Port 8201: was dort ankommt, gilt nie als „die Box selbst“ (`PROXY_PORT`,
+> request-guard.ts), die Adresse des Aufrufers kommt aus X-Forwarded-For (`trust proxy` nur für Loopback). Das
+> Admin-Interface bleibt unverändert unter `/index.php` usw.; die Anmeldung dorthin prüft das Passwort in Node und
+> schickt es dann mit dem CSRF-Token der Admin-Anmeldeseite ab. Port 8200 bleibt (Display, Spotify-Rücksprung).
 
 **Status je Zeile:** `✓ API` Node-Endpunkt vorhanden · `✓ API°` Endpunkt vorhanden, aber nur für die Box selbst
 freigegeben (`localOnly`) – Guard umstellen · `⚙ PHP` kann heute nur das PHP-Admin – neuer Endpunkt nötig ·

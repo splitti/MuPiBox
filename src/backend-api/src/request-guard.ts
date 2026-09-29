@@ -98,7 +98,20 @@ export function corsOptionsFor(req: Request, callback: (err: Error | null, optio
   callback(null, { origin: isSameHostOrigin(req) })
 }
 
+/**
+ * The port the web server of port 80/443 (lighttpd) passes the app on to (config/lighttpd/90-mupibox-app.conf). It
+ * listens on 127.0.0.1 only; whatever arrives there comes from the network through the proxy, never from the box
+ * itself - so it is never "local", whatever the headers say. The client's address is in X-Forwarded-For (Express
+ * reads it for req.ip: trust proxy "loopback").
+ */
+export const PROXY_PORT = 8201
+
+export function viaProxy(req: Request): boolean {
+  return req.socket.localPort === PROXY_PORT
+}
+
 export function isLoopback(req: Request): boolean {
+  if (viaProxy(req)) return false
   const addr = req.socket.remoteAddress ?? ''
   // the whole 127.0.0.0/8: a box's own hostname often resolves to 127.0.1.1 (Debian /etc/hosts)
   return addr === '::1' || /^(::ffff:)?127\./.test(addr)

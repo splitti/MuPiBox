@@ -9,6 +9,9 @@ import { getLang, getLangPref, langBadge, LANGS, loadLanguage as loadAppLanguage
 import { icon } from './icons.js'
 
 const API = '/api/eltern'
+// The app's own port (8200): the display's pages and Spotify's redirect address are there, also when the app is used
+// through port 80 (whose root is the admin interface's)
+const BOX_ORIGIN = `http://${location.hostname}:8200`
 // numbers and dates in the language of the app (see i18n.js)
 let LOCALE = localeTag()
 
@@ -53,8 +56,8 @@ async function boot() {
     const page = state.pages.get(g.id)
     if (page) Object.assign(page, { icon: page.icon || g.icon, description: page.description || g.description })
   }
-  if (!session?.csrf_token) {
-    renderLogin()
+  if (!session?.csrf_token || new URLSearchParams(location.search).has('portal')) {
+    renderLogin(!!session?.csrf_token)
     return
   }
   state.csrf = session.csrf_token
@@ -2398,7 +2401,7 @@ function prefixOk(p) {
 }
 
 function wizardSections(page) {
-  const redirect = `${location.protocol}//${location.host}/api/eltern/spotify-oauth/callback`
+  const redirect = `${BOX_ORIGIN}/api/eltern/spotify-oauth/callback`
   const [s1, s2, s3, s4, s5] = page.sections
   return [
     { ...s1, items: [{ type: 'buttons', buttons: [['developer.spotify.com öffnen', 'ghost', 'devsite']] }] },
@@ -3346,7 +3349,7 @@ function textsTop() {
     `<div class="card nav-card"><div class="navlist">${navRow('sprache', 'Sprache der Box', disp.dtLangs[lang]?.name ?? lang, 'globe')}</div></div>`,
     `<section class="card wide"><h2>Texte</h2><p class="help">Was das Kind sieht, wenn die Spielzeit aufgebraucht ist oder eine Ruhezeit läuft, dazu der QR-Code für Eltern. Leer = der Text der Sprache (grau).</p>
       <div class="seg" id="dt-seg">${DT_SCREENS.map(([v, l]) => `<button aria-pressed="${disp.dtScreen === v}" data-v="${v}">${l}</button>`).join('')}</div>
-      <div class="dt-frame" id="dt-frame"><iframe src="/text-preview?screen=${disp.dtScreen}" title="Vorschau" tabindex="-1"></iframe></div>
+      <div class="dt-frame" id="dt-frame"><iframe src="${BOX_ORIGIN}/text-preview?screen=${disp.dtScreen}" title="Vorschau" tabindex="-1"></iframe></div>
       <div id="dt-fields">${DT_FIELDS.filter(([sc]) => sc === disp.dtScreen)
         .map(([, key, label]) => `<div class="field"><label for="dt-${key}">${label}</label><input class="input" id="dt-${key}" data-dt="${key}" maxlength="120" value="${esc(disp.dt.texts[key] ?? '')}" placeholder="${esc(defaults[key] ?? '')}"></div>`)
         .join('')}</div>
@@ -3360,7 +3363,7 @@ function mountTexts(root, page) {
   const fit = () => frame.style.setProperty('--s', String(box.clientWidth / 800))
   fit()
   every(1000, fit)
-  const send = () => frame.contentWindow?.postMessage({ type: 'mupibox-display-texts', language: disp.dt.language, texts: disp.dt.texts }, location.origin)
+  const send = () => frame.contentWindow?.postMessage({ type: 'mupibox-display-texts', language: disp.dt.language, texts: disp.dt.texts }, BOX_ORIGIN)
   frame.addEventListener('load', () => setTimeout(send, 400))
   for (const input of root.querySelectorAll('[data-dt]')) {
     input.addEventListener('input', () => {
@@ -4961,7 +4964,7 @@ const CONTROLLERS = {
     sections: wizardSections,
     act: {
       devsite: () => window.open('https://developer.spotify.com/dashboard', '_blank', 'noopener'),
-      copy: () => copyText(`${location.protocol}//${location.host}/api/eltern/spotify-oauth/callback`),
+      copy: () => copyText(`${BOX_ORIGIN}/api/eltern/spotify-oauth/callback`),
       async saveid() {
         const clientId = String(state.values.get('wzClient') ?? spot.access?.clientId ?? '').trim()
         if (!/^[A-Za-z0-9]{16,64}$/.test(clientId)) return toast('Die Client ID hat 16–64 Buchstaben und Ziffern', 'info')
@@ -5751,70 +5754,160 @@ function renderLoginBar() {
   $('#theme-btn').addEventListener('click', toggleTheme)
 }
 
-async function renderLogin() {
+// Where the login leads: this app (beta) or the previous admin interface (PHP on port 80/443, same password). The choice
+// is remembered in this browser. The start page of port 80 (/) opens the login with ?portal, also when signed in.
+const PORTALS = [
+  ['app', 'Web-App', 'Beta', 'grid'],
+  ['admin', 'Admin-Interface', 'Die bisherige Oberfläche', 'gear'],
+]
+const adminUrl = () => `${location.protocol}//${location.hostname}/index.php`
+
+function portalChoice() {
+  try {
+    return localStorage.getItem('mupi-portal') === 'admin' ? 'admin' : 'app'
+  } catch {
+    return 'app'
+  }
+}
+
+function setPortalChoice(v) {
+  try {
+    localStorage.setItem('mupi-portal', v)
+  } catch {
+    // private mode: only for this visit
+  }
+}
+
+// The admin interface takes the password in a form of its own (field "password", any of its pages) - with its CSRF
+// token, like every form it takes: its login page carries it. So the page is read first; that works where the admin
+// interface is the same origin, i.e. on port 80/443. From port 8200 the login of port 80 does it (admin chosen).
+async function openAdmin(password) {
+  const url = adminUrl()
+  if (password === undefined) {
+    location.href = url
+    return
+  }
+  if (new URL(url).origin !== location.origin) {
+    location.href = `${location.protocol}//${location.hostname}/app/?portal=admin`
+    return
+  }
+  // (?login_form: the admin interface sends anyone not signed in to this login - but not this request)
+  const html = await fetch(`${url}?login_form=1`, { credentials: 'same-origin', cache: 'no-store' }).then((r) => r.text(), () => '')
+  const token = /name="csrf_token" value="([^"]+)"/.exec(html)?.[1]
+  // (no login form: signed in there already, or no login asked for)
+  if (!token || !/name="password"/.test(html)) {
+    location.href = url
+    return
+  }
+  const form = document.createElement('form')
+  form.method = 'post'
+  form.action = url
+  form.hidden = true
+  for (const [name, value] of [
+    ['password', password],
+    ['csrf_token', token],
+  ]) {
+    const input = document.createElement('input')
+    input.type = 'hidden'
+    input.name = name
+    input.value = value
+    form.append(input)
+  }
+  document.body.append(form)
+  form.submit()
+}
+
+async function renderLogin(hasSession = state.loginHasSession ?? false) {
+  state.loginHasSession = hasSession
   $('#tabbar').hidden = true
   $('#sidebar').hidden = true
   // (no side bar: the page gets the whole width, the grid of the shell would keep its column)
   $('#shell').classList.add('no-nav')
   renderLoginBar()
-  // Without a parents' password there is nothing to type in: the page says how to get in instead (a password field
-  // that can only fail made people think there was a default password)
-  const info = await fetch(`${API}/auth-info`, { credentials: 'same-origin' }).then((r) => (r.ok ? r.json() : null), () => null)
-  if (info && info.passwordConfigured === false) {
+  const info = (await fetch(`${API}/auth-info`, { credentials: 'same-origin' }).then((r) => (r.ok ? r.json() : null), () => null)) ?? {}
+  // (?portal=admin: sent here from port 8200 with the admin interface chosen)
+  if (new URLSearchParams(location.search).get('portal') === 'admin') setPortalChoice('admin')
+  let choice = portalChoice()
+  const draw = () => {
+    // Without a password there is nothing to type in: for the app the page says how to get in instead (a password field
+    // that can only fail made people think there was a default password)
+    const noPassword = choice === 'app' && !hasSession && info.passwordConfigured === false
+    const needPassword = choice === 'admin' ? info.loginRequired === true : !hasSession && !noPassword
     $('#content').innerHTML = `
     <div class="login">
       <div class="logo">${mupiImg('width="64" height="67"')}</div>
-      <h1>Anmelden</h1>
-      <p class="help" style="margin:0">Auf dieser Box ist noch kein Passwort gesetzt. So kommst du hinein:</p>
-      <div class="card login-ways">
-        <div class="entry"><span class="avatar">1</span><span class="lbl"><b>QR-Code am Display</b><small>Die Status-Symbole oben am Display lange drücken, dann „Eltern“ – den Code mit diesem Gerät scannen.</small></span></div>
-        <div class="entry"><span class="avatar">2</span><span class="lbl"><b>Telegram</b><small>Dem Bot der Box <b>/login</b> schicken und den Link öffnen.</small></span></div>
-        <p class="help" style="margin:0">Danach diese Seite (<b>${esc(location.host)}/app</b>) im selben Browser neu laden. Ein Passwort für später legst du dann unter Einstellungen › Sicherheit fest.</p>
-        <button class="btn primary block" id="login-reload">Neu laden</button>
-      </div>
-    </div>`
-    $('#login-reload').onclick = () => location.reload()
-    return
-  }
-  $('#content').innerHTML = `
-    <div class="login">
-      <div class="logo">${mupiImg('width="64" height="67"')}</div>
-      <div class="login-head"><h1>Willkommen zurück</h1><p class="help">Melde dich an, um die Box zu verwalten.</p></div>
+      <div class="login-head"><h1>Willkommen zurück</h1><p class="help">Wohin möchtest du?</p></div>
       <form class="card" id="login-form">
-        <div class="field"><label for="pw">Passwort</label>
-          <div class="input-wrap"><input class="input has-eye" id="pw" type="password" autocomplete="current-password" required><button type="button" class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div>
-          <small>Dasselbe Passwort wie im Admin-Interface.</small></div>
-        <p class="login-msg" id="login-msg" role="alert" hidden></p>
-        <button class="btn primary block" type="submit">Anmelden</button>
+        <div class="portal-pick" role="radiogroup" aria-label="Wohin möchtest du?">${PORTALS.map(
+          ([id, name, sub, ic]) =>
+            `<button type="button" class="portal-opt" role="radio" data-portal="${id}" aria-checked="${id === choice}">${icon(ic, 22)}<span class="lbl"><b>${esc(name)}</b><small>${esc(sub)}</small></span></button>`,
+        ).join('')}</div>
+        ${
+          noPassword
+            ? `<p class="help" style="margin:0">Auf dieser Box ist noch kein Passwort gesetzt. Hinein geht es mit dem QR-Code am Display oder dem Telegram-Bot (unten), danach diese Seite neu laden.</p>
+               <button class="btn primary block" type="button" id="login-reload">Neu laden</button>`
+            : `${
+                needPassword
+                  ? `<div class="field"><label for="pw">Passwort</label>
+                      <div class="input-wrap"><input class="input has-eye" id="pw" type="password" autocomplete="current-password" required><button type="button" class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div>
+                      <small>Dasselbe Passwort für die Web-App und das Admin-Interface.</small></div>`
+                  : ''
+              }
+              <p class="login-msg" id="login-msg" role="alert" hidden></p>
+              <button class="btn primary block" type="submit">${needPassword ? 'Anmelden' : 'Öffnen'}</button>`
+        }
       </form>
-      <div class="login-other">
+      ${
+        choice === 'app' && !hasSession
+          ? `<div class="login-other">
         <p class="eyebrow">Ohne Passwort</p>
         <div class="entry">${icon('display', 18)}<span class="lbl"><b>QR-Code am Display</b><small>Die Statusanzeige oben am Display lange drücken, dann den Code scannen.</small></span></div>
         <div class="entry">${icon('tg', 18)}<span class="lbl"><b>Telegram</b><small>Dem Bot der Box /login schicken und den Link öffnen.</small></span></div>
-      </div>
+      </div>`
+          : ''
+      }
     </div>`
-  // the cursor in the field at once, but not on a phone (the keyboard would cover the page)
-  if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) $('#pw').focus()
-  $('[data-eye]').onclick = () => {
-    const i = $('#pw')
-    i.type = i.type === 'password' ? 'text' : 'password'
-  }
-  $('#login-form').addEventListener('submit', async (e) => {
-    e.preventDefault()
-    const msg = $('#login-msg')
-    const r = await fetch(`${API}/login`, {
-      method: 'POST',
-      credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: $('#pw').value }),
-    }).catch(() => null)
-    if (r?.ok) {
-      location.reload()
-      return
+    for (const b of document.querySelectorAll('[data-portal]')) {
+      b.onclick = () => {
+        if (b.dataset.portal === choice) return
+        choice = b.dataset.portal
+        setPortalChoice(choice)
+        draw()
+      }
     }
-    msg.hidden = false
-    msg.textContent = r?.status === 429 ? 'Zu viele Versuche – bitte kurz warten.' : r?.status === 401 ? 'Das Passwort stimmt nicht.' : 'Die Box ist gerade nicht erreichbar.'
-  })
+    $('#login-reload')?.addEventListener('click', () => location.reload())
+    const pw = $('#pw')
+    // the cursor in the field at once, but not on a phone (the keyboard would cover the page)
+    if (pw && window.matchMedia('(hover: hover) and (pointer: fine)').matches) pw.focus()
+    $('[data-eye]')?.addEventListener('click', () => {
+      pw.type = pw.type === 'password' ? 'text' : 'password'
+    })
+    $('#login-form').addEventListener('submit', async (e) => {
+      e.preventDefault()
+      if (!needPassword) {
+        if (choice === 'admin') openAdmin()
+        else location.href = location.pathname // the app, without ?portal
+        return
+      }
+      const msg = $('#login-msg')
+      // (also for the admin interface: the password is checked here first, a typo shows on this page and not on the
+      // admin interface's own login; a correct one signs in to the app as well)
+      const r = await fetch(`${API}/login`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pw.value }),
+      }).catch(() => null)
+      if (r?.ok) {
+        if (choice === 'admin') openAdmin(pw.value)
+        else location.href = location.pathname
+        return
+      }
+      msg.hidden = false
+      msg.textContent = r?.status === 429 ? 'Zu viele Versuche – bitte kurz warten.' : r?.status === 401 ? 'Das Passwort stimmt nicht.' : 'Die Box ist gerade nicht erreichbar.'
+    })
+  }
+  draw()
 }
 
 async function logout() {

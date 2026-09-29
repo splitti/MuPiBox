@@ -27,7 +27,9 @@ if (ini_get('session.use_cookies')) {
     );
 }
 session_destroy();
-header('Location: index.php');
+// back to the login of the app (the choice between the app and this admin interface), where port 80 has it
+// (config/lighttpd/90-mupibox-app.conf); else to this interface's own login
+header(file_exists('/etc/lighttpd/conf-enabled/90-mupibox-app.conf') ? 'Location: /app/?portal=admin' : 'Location: index.php');
 exit;
 
 ?>

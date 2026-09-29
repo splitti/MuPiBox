@@ -38,7 +38,7 @@ import { startBucketCleanup } from './eltern/middleware'
 import { SUDO_BACKUP_SNIPPET, backupBeforeWrite } from './file-backup'
 import { readEmbeddedPicture } from './embedded-cover'
 import { OnlineCovers } from './online-covers'
-import { browserGuard, corsOptionsFor, localOnly, localOrElternSession } from './request-guard'
+import { browserGuard, corsOptionsFor, isLoopback, localOnly, localOrElternSession, PROXY_PORT, viaProxy } from './request-guard'
 
 // Force IPv4 for DNS lookups to avoid EAI_AGAIN errors on Raspberry Pi
 // This fixes issues where IPv6 is misconfigured or not supported
@@ -316,6 +316,9 @@ let spotifyApiService: SpotifyApiService | undefined
 
 // We export the app so we can use it in testing.
 export const app = express()
+// req.ip from X-Forwarded-For only when the request came from the box itself: the web server of port 80 passing the
+// app on (see PROXY_PORT). From anywhere else the header is ignored, a client on the network cannot forge its address.
+app.set('trust proxy', 'loopback')
 // Refuse requests a foreign web page makes through a visitor's browser, then CORS for the box
 // itself only (was: cors() for every origin). See request-guard.ts.
 app.use(browserGuard)
@@ -2075,10 +2078,7 @@ app.get('/api/network', (_req, res) => {
 })
 
 app.get('/api/monitor', (req, res) => {
-  const ip = req.socket.remoteAddress
-  const host = req.hostname
-  const isLocalhost =
-    ip === '127.0.0.1' || ip === '::ffff:127.0.0.1' || ip === '::1' || host.indexOf('localhost') !== -1
+  const isLocalhost = isLoopback(req) || (!viaProxy(req) && req.hostname.indexOf('localhost') !== -1)
 
   if (fs.existsSync(monitorFile) && isLocalhost) {
     jsonfile.readFile(monitorFile, (error, data) => {
@@ -7534,6 +7534,10 @@ if (!testServe) {
   // A request may take up to 5 minutes by default: too short for a large file uploaded from the web app over WiFi
   server.requestTimeout = 60 * 60 * 1000
   console.log(`${new Date().toLocaleString()}: [mupibox-backend-api] Server started at http://localhost:8200`)
+  // the same app for the web server of port 80/443 (lighttpd proxies /app, /api, ... here; see request-guard.ts)
+  const proxied = app.listen(PROXY_PORT, '127.0.0.1')
+  proxied.requestTimeout = 60 * 60 * 1000
+  proxied.on('error', (err) => console.error(`${new Date().toLocaleString()}: [mupibox-backend-api] port ${PROXY_PORT}: ${err.message}`))
   // Spotify-sync scheduler — only in production / dev, not under tests.
   // Boot-after-60s lead-in inside startScheduler so initial config load
   // has time to finish before the first sync attempt.

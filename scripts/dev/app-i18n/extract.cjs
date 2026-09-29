@@ -19,13 +19,14 @@ function isText(s) {
   if (t.length < 2 || !/\p{L}/u.test(t)) return false
   if (/^\{\}$/.test(t)) return false
   if (/^(https?:|\/|\.\/|#|\.|\[|@|--)/.test(t)) return false
-  if (/^[a-z][a-zA-Z0-9]*$/.test(t)) return false // identifiers, keys, icon names, single lowercase words used as values
+  if (/^[a-z][a-zA-Z0-9_]*$/.test(t)) return false // identifiers, keys, icon names, single lowercase words used as values
   if (/^[a-z0-9-]+(\s+[a-z0-9-]+)*$/.test(t) && /-/.test(t)) return false // class lists
   if (/^[\w-]+:[\w-]/.test(t) && !/\s/.test(t)) return false // go:x, toast:y actions
   if (/[{};]\s*$/.test(t) && /:\s*[^ ]/.test(t) && !/\p{Lu}/u.test(t[0])) return false // css
   if (/^(GET|POST|PUT|DELETE)\b/.test(t)) return false
   if (/^[\w-]+="/.test(t)) return false // attributes put into a tag (class="…" width="…")
   if (/^\([a-z-]+: /.test(t)) return false // media queries
+  if (!/\s/.test(t) && /^\{\}\//.test(t)) return false // addresses put together (`${origin}/api/...`)
   if (/^[A-Z0-9_]+$/.test(t) && t !== 'WLAN') return false // constants (WLAN is a word)
   if (/^[\w.-]+\.(json|js|css|svg|png|jpg|txt|sh|mp3|zip|log|html)$/i.test(t)) return false
   return true

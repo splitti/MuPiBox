@@ -210,6 +210,14 @@
 <?php
 	if ($loginEnabled) {
 		if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
+			// The way in is the login of the app (port 80: /app/?portal, the choice between the app and this
+			// interface), where lighttpd has it (config/lighttpd/90-mupibox-app.conf). The form below then only answers
+			// the app's request for its CSRF token (?login_form) and the password the app sends (POST).
+			if ($_SERVER['REQUEST_METHOD'] === 'GET' && !isset($_GET['login_form'])
+				&& file_exists('/etc/lighttpd/conf-enabled/90-mupibox-app.conf')) {
+				header('Location: /app/?portal=admin', true, 302);
+				exit;
+			}
 			if (isset($_POST['password'])) {
 				if (password_verify($_POST['password'], $hashedPassword)) {
 					// new session id at login: a session id planted before the login must not
