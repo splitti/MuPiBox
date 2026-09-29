@@ -185,49 +185,136 @@ ion-back-button {
     gap: 10px;
 }
 
+// Track list: a panel with the cover and a "close" button on the left and the titles as rows on the right - the
+// layout of the km themes (children's themes, see the :host-context(body.km) block below, which puts in their own
+// colours and sizes) for every theme. Here the classic themes' neutral greys; the playing row and the button take the
+// theme's accent colour (--ion-color-primary).
 ion-content.player-content.tracklist-active {
     --background: #000000 !important;
     --ion-background-color: #000000 !important;
 }
 
-.tracklist {
-    background: #000000;
-    font-size: 2rem;
+.km-tl-wrap {
+    position: absolute;
+    inset: 16px;
+    display: flex;
+    border-radius: 28px;
+    background: #161616;
+    overflow: hidden;
+}
 
-    ion-item {
-        --background: transparent;
-        --border-color: #d3d3d3 !important;
-        --align-items: center;
-        font-size: 2rem;
+.km-tl-side {
+    flex: 0 0 200px;
+    padding: 20px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
 
-        &.current-track {
-            --color: var(--ion-color-primary, #2dd6c7);
-        }
+    img {
+        width: 160px;
+        height: 160px;
+        border-radius: 20px;
+        object-fit: contain;
+        background: #262626;
+    }
+}
+
+.km-tl-close {
+    width: 160px;
+    height: 64px;
+    border: 0;
+    border-radius: 32px;
+    background: var(--ion-color-primary, #2dd6c7);
+    color: var(--ion-color-primary-contrast, #000000);
+    font-family: inherit;
+    font-size: 20px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: transform 150ms ease;
+
+    ion-icon {
+        font-size: 26px;
     }
 
-    ion-label h2 {
-        font-size: 2rem;
-        white-space: nowrap;
+    &:active {
+        transform: scale(0.93);
+    }
+}
+
+// the list is the panel's scrolling right column
+.tracklist {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-y: auto;
+    scrollbar-width: none; // swiped with the finger, no bar
+    padding: 16px 16px 16px 0;
+    background: transparent;
+
+    &::-webkit-scrollbar {
+        display: none;
+    }
+
+    ion-item {
+        --background: #262626;
+        --color: #f2f2f2;
+        --border-width: 0 !important;
+        --inner-border-width: 0 !important;
+        --min-height: 64px;
+        --padding-start: 10px;
+        --align-items: center;
+        margin-bottom: 6px;
+        border-radius: 20px;
+
+        &.current-track {
+            --background: var(--ion-color-primary, #2dd6c7);
+            --color: var(--ion-color-primary-contrast, #000000);
+
+            .track-position {
+                background: rgba(0, 0, 0, 0.18);
+            }
+        }
     }
 
     .track-position {
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 40px;
+        width: 44px;
+        height: 44px;
         flex-shrink: 0;
-        font-size: 2rem;
-        opacity: 0.7;
+        margin-inline-end: 14px;
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.1);
+        font-size: 18px;
+        font-weight: 600;
 
         ion-icon {
-            font-size: 2rem;
-            color: var(--ion-color-primary, #2dd6c7);
+            font-size: 20px;
+            color: inherit;
         }
+    }
+
+    ion-label h2 {
+        font-size: 20px;
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    ion-label p {
+        font-size: 14px;
+        color: inherit;
+        opacity: 0.7;
     }
 
     .track-duration {
         opacity: 0.7;
-        font-size: 2rem;
+        font-size: 16px;
     }
 }
 
@@ -239,11 +326,6 @@ ion-content.player-content.tracklist-active {
     display: flex;
     justify-content: center;
     padding: 40px;
-}
-
-// Wrapper of the track list: only the km themes lay it out (mini cover and "Zu" on the left), else it is not there.
-.km-tl-wrap {
-    display: contents;
 }
 
 // --- km themes (children's themes, body.km - see theme/km-theme.service.ts) ------------------------------------

@@ -58,13 +58,6 @@
         }
       }
     </ion-title>
-    @if (showTrackList && !km()) {
-      <ion-buttons slot="end">
-        <ion-button (click)="closeTrackList()">
-          <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>
-        </ion-button>
-      </ion-buttons>
-    }
     <ion-title class="toolbar-tracknumber" slot="end">
       <div class="km-vol">@if (km()) {<ion-icon name="volume-medium"></ion-icon>{{local?.volume}} %} @else { {{local?.volume}}% }</div>
       @if (media.type ==='library' || media.type ==='nas') {
@@ -100,12 +93,11 @@
 <ion-content class="player-content" [class.tracklist-active]="showTrackList">
   @if (showTrackList) {
     <div class="km-tl-wrap">
-    @if (km()) {
-      <div class="km-tl-side">
-        <img [src]="shownCover()" alt="" (error)="coverFailed()">
-        <button class="km-tl-close" (click)="closeTrackList()"><ion-icon name="close"></ion-icon>{{ displayTexts.text('closeShort') }}</button>
-      </div>
-    }
+    <!-- every theme: cover and "close" on the left (was the km themes' only; the others had a back arrow in the header) -->
+    <div class="km-tl-side">
+      <img [src]="shownCover()" alt="" (error)="coverFailed()">
+      <button class="km-tl-close" (click)="closeTrackList()"><ion-icon name="close"></ion-icon>{{ displayTexts.text('closeShort') }}</button>
+    </div>
     <ion-list class="tracklist" [style.font-family]="listFontFamily" [style.--ion-font-family]="listFontFamily">
       @if (loadingTrackList) {
         <div class="tracklist-loading"><ion-spinner></ion-spinner></div>
