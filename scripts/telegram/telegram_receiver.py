@@ -181,7 +181,8 @@ def box_base_url():
         ip = next((a for a in out if '.' in a), '')
     except Exception:
         pass
-    return f"http://{ip or config['mupibox'].get('host', 'localhost')}:8200"
+    # port 80: the web server passes /app to the app, as the QR code on the display
+    return f"http://{ip or config['mupibox'].get('host', 'localhost')}"
 
 def send_magic_link(chat_id, heading, button_text, page=''):
     # Issue a single-use magic link for the MuPiBox app (/app). We post from
