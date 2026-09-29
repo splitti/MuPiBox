@@ -1676,10 +1676,56 @@ function onTile(t) {
     window.scrollTo({ top: 0, behavior: 'smooth' })
     return
   }
+  // a podcast: its episodes to choose from, as on the box
+  if (t.kind === 'entry' && t.ident?.type === 'rss') return openEpisodes(t)
   if (t.kind === 'entry') return startPlay(t.title, `${API}/library/play`, { index: t.index, expect: t.ident })
   if (t.kind === 'spalbum') return startPlay(t.title, `${API}/library/play`, { index: t.index, albumId: t.albumId })
   if (t.kind === 'nas') return startPlay(t.title, `${API}/library/play-nas`, { path: t.path })
   return startPlay(t.title, `${API}/library/play-local`, { path: t.path })
+}
+
+// The episodes of a podcast (newest first, from its feed as the box reads it); a tap plays one on the box
+async function openEpisodes(t) {
+  let shown = 40
+  let episodes = null
+  openSheet(
+    `<h2 translate="no">${esc(t.title)}</h2><div id="ep-list"><p class="help">Lade die Folgen …</p></div>
+     <div class="btns"><button class="btn" data-close>Schließen</button></div>`,
+    async (sheet, close) => {
+      sheet.querySelector('[data-close]').onclick = close
+      const box = sheet.querySelector('#ep-list')
+      const r = await api(`${API}/library/episodes?index=${t.index}`)
+      if (!box.isConnected) return
+      if (!r.ok) {
+        box.innerHTML = `<p class="help">${esc('Die Folgen ließen sich nicht laden.')}</p>`
+        return
+      }
+      episodes = r.body?.episodes ?? []
+      const draw = () => {
+        if (!episodes.length) {
+          box.innerHTML = `<p class="help">${esc('Keine Folgen gefunden.')}</p>`
+          return
+        }
+        box.innerHTML = `<p class="help" style="margin:0 0 6px">${esc(`${episodes.length} Folgen`)}</p><div class="rows">${episodes
+          .slice(0, shown)
+          .map(
+            (e, i) => `<button class="entry lib-row" data-ep="${i}">${e.cover ? `<span class="lib-thumb"><img src="${esc(e.cover)}" alt="" loading="lazy"></span>` : ''}
+              <span class="lbl"><b translate="no">${esc(e.title)}</b><small>${esc([e.date ? new Date(e.date).toLocaleDateString(LOCALE) : '', e.duration].filter(Boolean).join(' · '))}</small></span><span class="chev">${icon('chevron', 18)}</span></button>`,
+          )
+          .join('')}</div>${shown < episodes.length ? `<div class="btns"><button class="btn" data-more>${esc('Weitere Folgen anzeigen')}</button></div>` : ''}`
+        for (const img of box.querySelectorAll('img')) img.addEventListener('error', () => img.remove(), { once: true })
+        for (const b of box.querySelectorAll('[data-ep]')) {
+          const e = episodes[Number(b.dataset.ep)]
+          b.onclick = () => startPlay(e.title, `${API}/library/play`, { index: t.index, expect: t.ident, episode: e.url })
+        }
+        box.querySelector('[data-more]')?.addEventListener('click', () => {
+          shown += 40
+          draw()
+        })
+      }
+      draw()
+    },
+  )
 }
 
 // Starts something on the box; asks first when something else is playing

@@ -258,39 +258,49 @@ const adminTickets = new Map<string, number>()
 // The box's name as the browser uses it, without a port: Spotify's redirect address is https://<box>/…, through the
 // web server on port 443 (as the admin interface's https://<box>/spotify.php) - Spotify takes no http addresses any
 // more except 127.0.0.1, so http://<box>:8200 was refused after the login
-// The newest episode of a podcast feed (its audio address, title and the show's name), from the feed as the display
-// reads it (xml-js: a text is {_text} or {_cdata}, one item comes as an object instead of a list), or null
-async function newestRssEpisode(feed: string): Promise<{ url: string; title: string; show: string; cover: string } | null> {
+type RssEpisode = { url: string; title: string; date: string | null; duration: string; cover: string; show: string }
+
+// The episodes of a podcast feed, newest first (by date; without dates in the feed's order), from the feed as the
+// display reads it (xml-js: a text is {_text} or {_cdata}, one item comes as an object instead of a list), or null.
+// cover: the episode's picture, else the show's, through the box's picture proxy (a local copy is /rss-covers/…).
+async function rssEpisodes(feed: string): Promise<RssEpisode[] | null> {
   const text = (v: unknown): string => {
     if (typeof v === 'string') return v
     const o = v as { _text?: unknown; _cdata?: unknown } | undefined
     return typeof o?._cdata === 'string' ? o._cdata : typeof o?._text === 'string' ? o._text : ''
   }
+  const proxied = (picture: string) =>
+    !picture
+      ? ''
+      : picture.startsWith('/rss-covers/')
+        ? `/api/rssfeed/image?local=${encodeURIComponent(picture.slice('/rss-covers/'.length))}&w=400`
+        : `/api/rssfeed/image?url=${encodeURIComponent(picture)}&w=400`
   try {
     const r = await fetch(`http://127.0.0.1:8200/api/rssfeed/cached?url=${encodeURIComponent(feed)}`, { signal: AbortSignal.timeout(15000) })
     if (!r.ok) return null
     const channel = ((await r.json()) as { rss?: { channel?: Record<string, unknown> } }).rss?.channel
     const raw = channel?.item
     const items = (Array.isArray(raw) ? raw : raw ? [raw] : []) as Record<string, unknown>[]
-    let best: { url: string; title: string; at: number; image: string } | null = null
+    const show = text(channel?.title)
+    const showPicture = text((channel?.image as { url?: unknown } | undefined)?.url)
+    const list: (RssEpisode & { at: number })[] = []
     for (const [i, it] of items.entries()) {
       const url = (it.enclosure as { _attributes?: { url?: unknown } } | undefined)?._attributes?.url
       if (typeof url !== 'string' || !url) continue
-      // (no date: the order of the feed, the first one being the newest as usual)
-      const at = Date.parse(text(it.pubDate)) || -i
+      const when = Date.parse(text(it.pubDate))
       const image = (it['itunes:image'] as { _attributes?: { href?: unknown } } | undefined)?._attributes?.href
-      if (!best || at > best.at) best = { url, title: text(it.title) || 'Episode', at, image: typeof image === 'string' ? image : '' }
+      list.push({
+        url,
+        title: text(it.title) || 'Episode',
+        date: Number.isFinite(when) ? new Date(when).toISOString() : null,
+        duration: text(it['itunes:duration']),
+        cover: proxied(typeof image === 'string' && image ? image : showPicture),
+        show,
+        // (no date: the order of the feed, the first one being the newest as usual)
+        at: Number.isFinite(when) ? when : -i,
+      })
     }
-    if (!best) return null
-    // the picture as the display shows it: the episode's, else the show's, through the box's picture proxy (a local
-    // copy of the show's picture is /rss-covers/…)
-    const picture = best.image || text((channel?.image as { url?: unknown } | undefined)?.url)
-    const cover = !picture
-      ? ''
-      : picture.startsWith('/rss-covers/')
-        ? `/api/rssfeed/image?local=${encodeURIComponent(picture.slice('/rss-covers/'.length))}&w=400`
-        : `/api/rssfeed/image?url=${encodeURIComponent(picture)}&w=400`
-    return { url: best.url, title: best.title, show: text(channel?.title), cover }
+    return list.sort((x, y) => y.at - x.at).map(({ at: _at, ...e }) => e)
   } catch {
     return null
   }
@@ -1491,6 +1501,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
         // the artist is the folder above, the cover the one the box shows for it.
         const source = String(local.currentType ?? '')
         const folder = String(local.path ?? '')
+        // a radio station or podcast: the picture it was started with (the app passes it on, spotify-control.js ?cover=)
+        if ((source === 'rss' || source === 'radio') && typeof local.cover === 'string' && local.cover) coverUrl = local.cover
         if ((source === 'nas' || source === 'local') && folder) {
           const parts = folder.split('/').filter(Boolean)
           artist = parts[parts.length - 2] ?? ''
@@ -1589,8 +1601,34 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
    * Device-Prefix — Player setzt damit activeDevice=null und Spotify nimmt
    * das zuletzt aktive Connect-Device (typisch die Box).
    */
+  /**
+   * GET /api/app/library/episodes?index=N - the episodes of the podcast at this place of the library, newest first
+   * (to choose one in the app, as on the box's episode list; played with POST /library/play {index, episode})
+   */
+  router.get('/library/episodes', requireSession, async (req, res) => {
+    const idx = Number(req.query.index)
+    let library: unknown
+    try {
+      library = JSON.parse(await fsp.readFile(deps.activeDataPath, 'utf8'))
+    } catch {
+      res.status(500).json({ error: 'library_unavailable' })
+      return
+    }
+    const item = Array.isArray(library) && Number.isInteger(idx) && idx >= 0 ? (library[idx] as Record<string, unknown> | undefined) : undefined
+    if (!item || item.type !== 'rss' || typeof item.id !== 'string') {
+      res.status(404).json({ error: 'item_not_found' })
+      return
+    }
+    const episodes = await rssEpisodes(item.id)
+    if (!episodes) {
+      res.status(502).json({ error: 'feed_unavailable' })
+      return
+    }
+    res.json({ episodes })
+  })
+
   router.post('/library/play', requireSession, requireCsrf, async (req, res) => {
-    const body = (req.body as { index?: unknown; albumId?: unknown; expect?: unknown } | undefined) ?? {}
+    const body = (req.body as { index?: unknown; albumId?: unknown; expect?: unknown; episode?: unknown } | undefined) ?? {}
     const idx = Number(body.index)
     if (!Number.isInteger(idx) || idx < 0) {
       res.status(400).json({ error: 'invalid_index' })
@@ -1672,7 +1710,9 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
         // As a tap on the box's episode list: the newest episode (by its date) - read from the feed as the display
         // reads it (/api/rssfeed/cached, the box's own address).
         const feed = String(item.id ?? '')
-        const episode = await newestRssEpisode(feed)
+        const episodes = await rssEpisodes(feed)
+        // (a chosen one only when it is one of this feed's episodes)
+        const episode = typeof body.episode === 'string' && body.episode ? episodes?.find((e) => e.url === body.episode) : episodes?.[0]
         if (!episode) {
           res.status(502).json({ error: 'no_episode' })
           return
