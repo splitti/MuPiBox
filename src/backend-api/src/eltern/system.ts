@@ -91,7 +91,8 @@ const samples: SystemSample[] = []
 let lastCpu: { busy: number; total: number } | undefined
 let sampler: ReturnType<typeof setInterval> | undefined
 const KEPT_FILE = '/tmp/.mupibox-system-history.json'
-const KEEP_EVERY = 5
+const KEEP_EVERY = 5 // (samples: every 5 minutes)
+let sinceKept = 0
 
 function keepSamples(): void {
   try {
@@ -158,7 +159,10 @@ async function sampleSystem(): Promise<void> {
   lastCpu = now
   samples.push([Date.now(), temp, cpu, ram])
   if (samples.length > KEEP_SAMPLES) samples.splice(0, samples.length - KEEP_SAMPLES)
-  if (samples.length % KEEP_EVERY === 0) keepSamples()
+  if (++sinceKept >= KEEP_EVERY) {
+    sinceKept = 0
+    keepSamples()
+  }
 }
 
 function startSystemSampler(): void {
