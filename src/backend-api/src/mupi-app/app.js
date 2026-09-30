@@ -6495,9 +6495,11 @@ function legalTop() {
         copyright && ['Copyright', copyright.replace(/^Copyright\s*(\(c\)|©)?\s*/i, '')],
       ])}
       <div class="btns">${link('https://github.com/splitti/MuPiBox', 'Projekt auf GitHub')}${link('https://mupibox.de', 'mupibox.de')}</div></section>`,
-    `<section class="card"><h2>Lizenz</h2><p class="help">${esc(name ? `MuPiBox steht unter der ${name}.` : 'Die Lizenz ließ sich nicht laden.')}</p>
-      ${text ? `<details class="legal"><summary>Lizenztext anzeigen</summary><pre class="logview legal-text" translate="no">${esc(text)}</pre></details>` : ''}</section>`,
-    `<section class="card"><h2>Open Source &amp; Drittanbieter</h2><p class="help">MuPiBox nutzt Software, Schriften und Dienste anderer Projekte. Jede Komponente behält ihre eigene Lizenz; die Liste nennt sie und enthält die Lizenztexte.</p>
+    // (its own license and the third parties in one card: beside "MuPiBox" of about the same height on a wide screen)
+    `<section class="card"><h2>Lizenzen</h2>
+      <h3 class="legal-h">Lizenz</h3><p class="help">${esc(name ? `MuPiBox steht unter der ${name}.` : 'Die Lizenz ließ sich nicht laden.')}</p>
+      ${text ? `<details class="legal"><summary>Lizenztext anzeigen</summary><pre class="logview legal-text" translate="no">${esc(text)}</pre></details>` : ''}
+      <h3 class="legal-h">Open Source &amp; Drittanbieter</h3><p class="help">MuPiBox nutzt Software, Schriften und Dienste anderer Projekte. Jede Komponente behält ihre eigene Lizenz; die Liste nennt sie und enthält die Lizenztexte.</p>
       <details class="legal" id="lg-notices"><summary>Drittanbieter-Hinweise anzeigen</summary><pre class="logview legal-text" translate="no">${esc(tr('Lade …'))}</pre></details></section>`,
     `<section class="card"><h2>Datenschutz</h2>
       <p class="help">Alles, was die Box über ihre Nutzung weiß, bleibt auf ihr: Bibliothek, Einstellungen, der Hör-Verlauf der letzten 90 Tage und wo Folgen zuletzt gehört wurden. MuPiBox erhebt keine Nutzungsstatistik und zeigt keine Werbung.</p>
@@ -6515,7 +6517,7 @@ function legalTop() {
     `<section class="card"><h2>Externe Dienste</h2><div class="rows">${LEGAL_SERVICES.map(
       ([name, what, href]) => `<div class="entry"><span class="lbl"><b translate="no">${esc(name)}</b><small>${esc(what)}</small></span>${link(href, 'Bedingungen', 'btn sm')}</div>`,
     ).join('')}</div></section>`,
-    `<section class="card"><h2>Unabhängigkeit</h2><p class="help">MuPiBox ist ein unabhängiges Projekt. Es ist nicht mit Spotify, der ARD, Apple, Deezer, Google, Telegram oder anderen hier genannten Anbietern verbunden und wird von ihnen weder unterstützt noch autorisiert. Alle genannten Marken gehören ihren jeweiligen Inhabern.</p></section>`,
+    `<section class="card wide"><h2>Unabhängigkeit</h2><p class="help">MuPiBox ist ein unabhängiges Projekt. Es ist nicht mit Spotify, der ARD, Apple, Deezer, Google, Telegram oder anderen hier genannten Anbietern verbunden und wird von ihnen weder unterstützt noch autorisiert. Alle genannten Marken gehören ihren jeweiligen Inhabern.</p></section>`,
   ]
 }
 
