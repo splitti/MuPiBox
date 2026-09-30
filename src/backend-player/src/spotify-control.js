@@ -2036,39 +2036,42 @@ function saveEpisodePositions() {
   }
 }
 setInterval(saveEpisodePositions, 60 * 1000)
-// The play of an episode starts: the one before is written away, and it goes on where it was left
+// The play of an episode starts: the one before is written away. Returns where it goes on (seconds), or null to
+// start from the beginning.
 function startEpisode(url) {
   saveEpisodePositions()
-  // (the way of an episode before to its position ends here; this one mutes again if it goes on somewhere)
   if (pendingEpisodeSeek) endEpisodeSeek()
   playingEpisode = url
-  if (!episodeResumeOn()) return
+  if (!episodeResumeOn()) return null
   const p = loadEpisodePositions()[url]
-  if (!p || p.done || !(p.pos > 10) || (p.len && p.pos > p.len - 30)) return
-  // The seek works only once mplayer has the stream open: until then it stays silent (the beginning played for a
-  // second or two before the jump), the seek goes out with its first playing time and the sound comes back when the
-  // position is there - or after 8 s at the latest.
+  if (!p || p.done || !(p.pos > 10) || (p.len && p.pos > p.len - 30)) return null
   const target = Math.max(0, p.pos - 5)
-  player.exec('pausing_keep mute', [1])
-  pendingEpisodeSeek = { url, target, sent: false, timer: setTimeout(() => endEpisodeSeek(), 8000) }
+  // (the sound comes back when mplayer got there - or after 8 s at the latest, see playURL)
+  pendingEpisodeSeek = { url, target, sent: Date.now(), tries: 0, timer: setTimeout(() => endEpisodeSeek(), 8000) }
   log.debug(`${now()}: [Spotify Control] Episode goes on at ${Math.round(target)}s`)
+  return target
 }
-let pendingEpisodeSeek = null // { url, target, sent, timer } while an episode is on its way to where it was left
-function endEpisodeSeek() {
-  if (!pendingEpisodeSeek) return
-  clearTimeout(pendingEpisodeSeek.timer)
+let pendingEpisodeSeek = null // { url, target, sent, tries, timer } while an episode is on its way to where it was left
+function endEpisodeSeek(delayMs = 0) {
+  const s = pendingEpisodeSeek
+  if (!s) return
+  clearTimeout(s.timer)
   pendingEpisodeSeek = null
-  player.exec('pausing_keep mute', [0])
+  if (!delayMs) return player.setVolume(volumeStart)
+  // (a moment after the jump, so the beginning still in the audio buffer is not heard)
+  setTimeout(() => {
+    if (!pendingEpisodeSeek) player.setVolume(volumeStart)
+  }, delayMs)
 }
 // (from mplayer's playing time, every second)
 function continueEpisodeSeek(seconds) {
   const s = pendingEpisodeSeek
   if (!s) return
   if (s.url !== playingEpisode || currentMeta.currentType !== 'rss') return endEpisodeSeek()
-  if (seconds >= s.target - 3) return endEpisodeSeek() // there
+  if (seconds >= s.target - 3) return endEpisodeSeek(400) // there
   // (sent again when mplayer dropped it while still buffering, as with the CUE albums)
-  if (!s.sent || (Date.now() - s.sent > 2500 && (s.tries ?? 0) < 2)) {
-    s.tries = s.sent ? (s.tries ?? 0) + 1 : 0
+  if (Date.now() - s.sent > 2500 && s.tries < 2) {
+    s.tries++
     s.sent = Date.now()
     player.exec('pausing_keep seek', [s.target, 2])
   }
@@ -2101,14 +2104,22 @@ function offlineEpisodeFile(url) {
   return undefined
 }
 
-function playURL(playedURL) {
+// resumeAt: a podcast episode goes on there (seconds). The seek is sent right behind the loadfile, so mplayer takes it
+// with its first round, and the volume stays at 0 until it got there (endEpisodeSeek): the beginning played for a
+// second or so before the jump.
+function playURL(playedURL, resumeAt = null) {
   playbackGeneration++
   startLoading()
   log.debug(`${now()}: [Spotify Control] Starting currentMeta.playing:${playedURL}`)
   //currentMeta.playing = true;
   writeplayerstatePlay()
   player.play(playedURL)
-  player.setVolume(volumeStart)
+  if (resumeAt != null) {
+    // (set again once mplayer has opened its audio output - before that it does not take it, as playListAtTrack)
+    player.setVolume(0)
+    player.exec('pausing_keep seek', [resumeAt, 2])
+    setTimeout(() => pendingEpisodeSeek && player.setVolume(0), 300)
+  } else player.setVolume(volumeStart)
   log.debug(`${now()}: ${playedURL}`)
   if (telegramPlaybackNotices())
     cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Start playing stream"')
@@ -2657,8 +2668,7 @@ app.use((req, res) => {
     const dir = command.dir
     let rssURL = dir.split('rss/').pop()
     rssURL = decodeURIComponent(rssURL)
-    playURL(offlineEpisodeFile(rssURL) ?? rssURL)
-    startEpisode(rssURL)
+    playURL(offlineEpisodeFile(rssURL) ?? rssURL, startEpisode(rssURL))
   }
 
   if (hasDirSegment(command, 'say')) {
