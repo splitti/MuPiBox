@@ -33,7 +33,7 @@
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>Library: filter by source (Spotify, Smart Sync, podcasts, radio, SD card, NAS).</li>
 <li id='linews' class='linews'>New page Settings &gt; System &gt; Box health: storage, temperature, power supply (under-voltage), SD card errors, memory, services, internet, NAS, Spotify sign-in, certificate and saved episodes – with what to do and a link to the right page when something is off.</li>
-<li id='linews' class='linews'>Listening history: audiobooks and podcasts without an artist are counted by their album or show.</li>
+<li id='linews' class='linews'>Listening history: the minutes of each day above its bar, and audiobooks and podcasts without an artist are counted by their album or show.</li>
 <li id='linews' class='linews'>Telegram: weekly summary on Sunday evening (how long and what was played), switchable under Telegram.</li>
 </ul>
 <h3>DEV 5.0.3 - changes compared to 5.0.2</h3>
