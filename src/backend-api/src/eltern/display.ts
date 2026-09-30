@@ -13,6 +13,7 @@ import type { MupiboxConfig } from '../models/mupibox-config.model'
 import { imageSize } from './covers'
 import { requireCsrf, requireSession } from './middleware'
 import { episodeStateSettings } from '../episode-state'
+import { applyNightDim, nightDimmed, nightDimOf, parseNightDim } from './night-dim'
 
 export interface DisplayDeps {
   getMupiboxConfig: () => MupiboxConfig | undefined
@@ -105,7 +106,9 @@ export function registerDisplayRoutes(router: Router, deps: DisplayDeps): void {
       ...episodeStateSettings(mb),
       resX: num(chromium.resX, 200, 7680) ?? 800,
       resY: num(chromium.resY, 200, 4320) ?? 480,
-      brightness: await readBrightness(),
+      // (the normal brightness, not the one of the evening: that is lower while "Abends dunkler" dims)
+      brightness: await readBrightness().then((now) => (now === null ? null : typeof mb.displayBrightness === 'number' ? mb.displayBrightness : now)),
+      nightDim: { ...nightDimOf(cfg), dimmed: nightDimmed() },
       rotation: await readRotations(),
       ttsLanguage: typeof mb.ttsLanguage === 'string' ? mb.ttsLanguage : 'en',
       ttsLanguages: langs.map((l) => ({ code: String(l['iso639-1'] ?? ''), name: String(l.Language ?? '') })).filter((l) => l.code),
@@ -157,6 +160,12 @@ export function registerDisplayRoutes(router: Router, deps: DisplayDeps): void {
       if (brightness === undefined) return bad('brightness')
       mb.displayBrightness = brightness
     }
+    // "Abends dunkler" (night-dim.ts)
+    if (body.nightDim !== undefined) {
+      const nd = parseNightDim(body.nightDim)
+      if (!nd) return bad('nightDim')
+      mb.nightDim = nd
+    }
     let tts: string | undefined
     if (body.ttsLanguage !== undefined) {
       const list = mupibox(deps).googlettslanguages
@@ -191,6 +200,11 @@ export function registerDisplayRoutes(router: Router, deps: DisplayDeps): void {
         const value = String(Math.round((brightness / 100) * max))
         await run('sudo', ['sh', '-c', `echo ${value} > /sys/class/backlight/${dir}/brightness`])
       }
+    }
+    // the evening's dimming at once (also over a new normal brightness, which was just written as it is)
+    if (brightness !== undefined || body.nightDim !== undefined) {
+      await applyNightDim(deps.getMupiboxConfig(), true)
+      result.dimmed = nightDimmed()
     }
     // rotation: into /boot/config.txt as the admin interface does (DietPi's G_CONFIG_INJECT); needs a restart
     for (const [key, value] of Object.entries(rotation)) {

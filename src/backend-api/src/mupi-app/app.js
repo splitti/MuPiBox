@@ -564,7 +564,7 @@ function renderItemOnly(it) {
         .join('')}</div></div>`
     case 'text': {
       const kind = it.kind || 'text'
-      const type = kind === 'password' ? 'password' : kind === 'number' ? 'number' : kind === 'url' ? 'url' : 'text'
+      const type = kind === 'password' ? 'password' : kind === 'number' ? 'number' : kind === 'url' ? 'url' : kind === 'time' ? 'time' : 'text'
       const unit = it.unit ? `<span class="unit">${esc(it.unit)}</span>` : ''
       const eye = kind === 'password' ? `<button class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button>` : ''
       return `<div class="field"><label for="k-${esc(it.key)}">${esc(it.label)}${sub}</label>
@@ -2664,7 +2664,10 @@ function openLocalAlbumSheet(album, parent) {
   )
 }
 
-/* Choosing a cover: a search at iTunes and Deezer or an own picture, for a folder of the SD card or an entry */
+// the services of the cover search, as their badge on a result
+const COVER_SOURCES = { itunes: 'iTunes', deezer: 'Deezer', spotify: 'Spotify' }
+
+/* Choosing a cover: a search at iTunes, Deezer and Spotify or an own picture, for a folder of the SD card or an entry */
 
 // target: 'local:<path>' (the folder gets it as cover.jpg) or 'own:<name>' (stored among the own pictures, onDone gets
 // its address); query: the search it starts with, fallbacks: shorter ones when it finds nothing; current: the picture
@@ -2690,7 +2693,7 @@ function openCoverPicker({ target, title, query, fallbacks, current, hidden = fa
      ${onHide && hidden ? `<div class="cover-hidden"><p class="help" style="margin:0">Dieser Ordner wird gerade ohne Cover gezeigt.</p><button class="btn sm" id="cp-hide">Cover wieder zeigen</button></div>` : ''}
      ${onHide && !hidden && current ? `<div class="cover-hidden"><p class="help" style="margin:0">Lieber gar kein Bild? Die Bilder im Ordner bleiben dabei erhalten.</p><button class="btn sm" id="cp-hide">${icon('close', 16)}Kein Cover</button></div>` : ''}
      <form class="cover-search" id="cp-form"><div class="search">${icon('search')}<input class="input" id="cp-q" type="search" value="${esc(query)}" autocomplete="off" enterkeyhint="search" aria-label="Cover suchen"></div><button class="btn" type="submit">Suchen</button></form>
-     <p class="help" style="margin:0">Sucht bei iTunes und Deezer – der Suchbegriff geht dafür an Apple und Deezer.</p>
+     <p class="help" style="margin:0">Sucht bei iTunes, Deezer und Spotify – der Suchbegriff geht dafür an Apple, Deezer und Spotify.</p>
      <div class="covers cover-pick" id="cp-list"></div>
      <input type="file" id="cp-file" accept="image/*" hidden>
      <div class="btns cover-actions"><button class="btn" id="cp-own">${icon('image', 18)}Eigenes Bild</button><button class="btn" data-close>Abbrechen</button><button class="btn primary" id="cp-ok" disabled>Übernehmen</button></div>`,
@@ -2702,7 +2705,7 @@ function openCoverPicker({ target, title, query, fallbacks, current, hidden = fa
           ? `<button type="button" class="cover-tile" data-own aria-pressed="true"><span class="cover-img"><img src="${chosen.url}" alt=""><span class="cover-badge">Eigenes</span></span><b>Eigenes Bild</b><small>vom Gerät</small></button>`
           : ''
         const tiles = results.map(
-          (c, i) => `<button type="button" class="cover-tile" data-i="${i}" aria-pressed="${chosen?.i === i}"><span class="cover-img"><img src="${esc(c.thumb)}" alt="" loading="lazy" referrerpolicy="no-referrer"><span class="cover-badge">${c.source === 'itunes' ? 'iTunes' : 'Deezer'}</span></span>
+          (c, i) => `<button type="button" class="cover-tile" data-i="${i}" aria-pressed="${chosen?.i === i}"><span class="cover-img"><img src="${esc(c.thumb)}" alt="" loading="lazy" referrerpolicy="no-referrer"><span class="cover-badge">${COVER_SOURCES[c.source] ?? ''}</span></span>
             <b translate="no">${esc(c.title)}</b><small translate="no">${esc(c.artist)}</small></button>`,
         )
         list.innerHTML = own + (tiles.length ? tiles.join('') : own ? '' : `<p class="help covers-empty">Nichts gefunden – anders suchen oder ein eigenes Bild nehmen.</p>`)
@@ -2733,7 +2736,7 @@ function openCoverPicker({ target, title, query, fallbacks, current, hidden = fa
         results = r.ok ? (r.body?.results ?? []) : []
         if (chosen && !chosen.blob) chosen = null
         draw()
-        if (!r.ok) list.innerHTML = `<p class="help covers-empty">${r.status === 502 ? 'iTunes und Deezer sind gerade nicht erreichbar.' : 'Die Suche hat nicht geklappt.'}</p>`
+        if (!r.ok) list.innerHTML = `<p class="help covers-empty">${r.status === 502 ? 'iTunes, Deezer und Spotify sind gerade nicht erreichbar.' : 'Die Suche hat nicht geklappt.'}</p>`
       }
       $('#cp-form', sheet).onsubmit = (e) => {
         e.preventDefault()
@@ -3625,7 +3628,7 @@ function offerCover(folder, artist) {
   const name = folder.split('/').pop()
   openSheet(
     `<h2>Cover suchen?</h2>
-     <p class="help" style="margin:0">Für „${esc(name)}“ war kein Cover dabei. Soll ich bei iTunes und Deezer nach einem suchen? Du wählst dann eins aus – oder nimmst ein eigenes Bild.</p>
+     <p class="help" style="margin:0">Für „${esc(name)}“ war kein Cover dabei. Soll ich bei iTunes, Deezer und Spotify nach einem suchen? Du wählst dann eins aus – oder nimmst ein eigenes Bild.</p>
      <div class="btns"><button class="btn" data-close>Später</button><button class="btn primary" data-search>${icon('search', 18)}Cover suchen</button></div>`,
     (sheet, close) => {
       sheet.querySelector('[data-close]').onclick = close
@@ -4281,7 +4284,7 @@ function drawFound(root) {
     ? part
         .map(
           (e, i) => `<div class="cover-tile"><span class="cover-img"><img src="/api/online-cover/${e.file}" alt="" loading="lazy"><span class="cover-badge">${String(e.key).startsWith('nas:') ? 'NAS' : 'SD-Karte'}</span></span>
-            <b translate="no">${esc(e.album ?? '')}</b><small><span translate="no">${esc(e.series ?? '')}</span> · ${e.source === 'itunes' ? 'iTunes' : 'Deezer'}</small>
+            <b translate="no">${esc(e.album ?? '')}</b><small><span translate="no">${esc(e.series ?? '')}</span> · ${COVER_SOURCES[e.source] ?? ''}</small>
             <button class="btn danger sm" data-reject="${i}">Verwerfen</button></div>`,
         )
         .join('')
@@ -5452,6 +5455,13 @@ async function loadDisplaySettings() {
   state.values.set('dlcdRot', rotLabel(LCD_ROT, o.rotation.display_lcd_rotate))
   state.values.set('resX', String(o.resX))
   state.values.set('resY', String(o.resY))
+  const nd = o.nightDim ?? {}
+  state.values.set('ndOn', nd.enabled === true)
+  state.values.set('ndFrom', nd.from ?? '19:00')
+  state.values.set('ndTo', nd.to ?? '07:00')
+  state.values.set('ndLevel', nd.level ?? 30)
+  state.values.set('ndFade', nd.fade ?? 30)
+  state.values.set('ndQuiet', nd.withQuiet === true)
 }
 
 async function loadControls() {
@@ -5599,6 +5609,9 @@ async function loadVolume() {
   state.values.set('volMax', Number(r.body.maxVolume ?? 100))
   state.values.set('volFix', r.body.startupVolume != null)
   state.values.set('volStart', Number(r.body.startupVolume ?? 30))
+  // (with Bluetooth audio: an own maximum - for headphones)
+  state.values.set('volBtOn', r.body.btMaxVolume != null)
+  state.values.set('volBtMax', Number(r.body.btMaxVolume ?? Math.min(60, Number(r.body.maxVolume ?? 100))))
 }
 
 /* Soundkarte, Drehregler */
@@ -5635,7 +5648,8 @@ function btTop() {
   const main = `<section class="card bt-main" data-col="1"><div class="card-head"><h2>Bluetooth</h2><span class="chip ${b.powered ? 'ok' : ''}">${b.powered ? 'an' : 'aus'}</span></div>
     ${noHw ? `<div class="note warn">${icon('info', 18)}<span>Der Bluetooth-Chip ist ausgeschaltet (gilt nach einem Neustart). Einschalten unten unter „Hardware“.</span></div>` : ''}
     ${b.powered ? `<div class="status-line"><span class="dot ${linked ? 'ok' : ''}"></span><span>${linked ? `Verbunden mit <b translate="no">${esc(linked.name)}</b>` : 'Kein Gerät verbunden'}</span></div>` : ''}
-    ${sw('bt-on', 'Bluetooth', 'Für Kopfhörer oder Lautsprecher.', b.powered, noHw)}${sw('bt-auto', 'Automatisch verbinden', 'Verbindet ein bekanntes Gerät von selbst, sobald es an ist.', b.autoconnect, noHw)}</section>`
+    ${sw('bt-on', 'Bluetooth', 'Für Kopfhörer oder Lautsprecher.', b.powered, noHw)}${sw('bt-auto', 'Automatisch verbinden', 'Verbindet ein bekanntes Gerät von selbst, sobald es an ist.', b.autoconnect, noHw)}
+    <div class="navlist">${navRow('lautstaerke', 'Lautstärkegrenze für Kopfhörer', 'Eigenes Maximum, solange Bluetooth-Audio läuft', 'vol')}</div></section>`
   const paired = b.powered
     ? `<section class="card" data-col="1"><h2>Gekoppelte Geräte</h2>${
         devices.length
@@ -7060,7 +7074,7 @@ function legalTop() {
       <ul class="legal-list">
         <li>Spotify: die Anmeldung und was abgespielt, gesucht oder synchronisiert wird.</li>
         <li>Podcast- und Radiosender: der Abruf der eingetragenen Feeds und Streams.</li>
-        <li>Suchen (Apple, ARD, radio-browser.info, Deezer): der Suchbegriff und die gewählte Sprache; bei der automatischen Cover-Suche (wenn eingeschaltet) der Name des Ordners.</li>
+        <li>Suchen (Apple, ARD, radio-browser.info, Deezer, bei der Cover-Suche auch Spotify): der Suchbegriff und die gewählte Sprache; bei der automatischen Cover-Suche (wenn eingeschaltet) der Name des Ordners.</li>
         <li>Google: der Text einer gesprochenen Ansage, einmal; die Ansage bleibt danach auf der Box.</li>
         <li>Telegram (nur mit eingerichtetem Bot): die Nachrichten des Bots, bei „Wiedergabe melden“ auch Titel und ein Bildschirmfoto.</li>
         <li>GitHub: die Prüfung auf Updates, die Neuigkeiten und die Updates selbst.</li>
@@ -8186,6 +8200,17 @@ const CONTROLLERS = {
           ],
         },
         {
+          title: 'Abends dunkler',
+          badge: state.values.get('ndOn') ? (disp.opts?.nightDim?.dimmed ? { text: 'gerade gedimmt', kind: 'ok' } : { text: 'an', kind: 'ok' }) : { text: 'aus' },
+          items: [
+            { type: 'toggle', key: 'ndOn', label: 'Abends dunkler', help: 'Das Display wird abends dunkler und morgens wieder normal hell.', disabled: disp.opts?.brightness == null },
+            { type: 'pair', keep: true, dep: 'ndOn', items: [{ type: 'text', kind: 'time', key: 'ndFrom', label: 'Ab' }, { type: 'text', kind: 'time', key: 'ndTo', label: 'Bis' }] },
+            { type: 'slider', key: 'ndLevel', label: 'Helligkeit am Abend', min: 5, max: 100, step: 5, unit: ' %', dep: 'ndOn', help: 'Nie heller als die normale Helligkeit.' },
+            { type: 'slider', key: 'ndFade', label: 'Sanft abdunkeln über', stops: [0, 15, 30, 60], unit: ' min', zero: 'Sofort', dep: 'ndOn' },
+            { type: 'toggle', key: 'ndQuiet', label: 'Auch während der Ruhezeiten', help: 'Zum Beispiel zur Schlafenszeit, auch wenn sie außerhalb der Uhrzeiten liegt.', dep: 'ndOn' },
+          ],
+        },
+        {
           title: 'Drehung',
           help: 'Gilt nach einem Neustart der Box.',
           items: [
@@ -8220,6 +8245,11 @@ const CONTROLLERS = {
     },
     async change(key, v) {
       if (key === 'bright') return saveDisplayOptions({ brightness: v }, `Helligkeit ${v} %`)
+      if (['ndOn', 'ndFrom', 'ndTo', 'ndLevel', 'ndFade', 'ndQuiet'].includes(key)) {
+        const nightDim = { enabled: !!state.values.get('ndOn'), from: String(state.values.get('ndFrom')), to: String(state.values.get('ndTo')), level: Number(state.values.get('ndLevel')), fade: Number(state.values.get('ndFade')), withQuiet: !!state.values.get('ndQuiet') }
+        if (nightDim.from === nightDim.to) return toast('Beginn und Ende brauchen verschiedene Uhrzeiten', 'info')
+        return saveDisplayOptions({ nightDim }, key === 'ndOn' ? (nightDim.enabled ? `Abends dunkler: ${nightDim.from}–${nightDim.to} Uhr` : 'Abends dunkler ist aus') : 'Gespeichert')
+      }
       if (key === 'dispOff') {
         const r = await api(`${API}/power-config`, { method: 'POST', body: { idleDisplayOff: Number(v) } })
         if (!r.ok) return toast('Nicht gespeichert', 'info')
@@ -8339,11 +8369,21 @@ const CONTROLLERS = {
     sections: (page) =>
       withoutSave(page).map((sec) => ({
         ...sec,
-        items: sec.items.map((it) =>
+        items: sec.items.flatMap((it) =>
           it.key === 'vol'
-            ? { ...it, help: `Höchstens ${state.values.get('volMax')} % (Hörschutz).` }
+            ? {
+                ...it,
+                help:
+                  hw.audio?.bluetooth && state.values.get('volBtOn')
+                    ? `Höchstens ${state.values.get('volBtMax')} % – gerade mit Bluetooth-Kopfhörer oder -Lautsprecher.`
+                    : `Höchstens ${state.values.get('volMax')} % (Hörschutz).`,
+              }
             : it.key === 'volMax'
-              ? { ...it, help: 'Lauter geht es auch am Display und per Telegram nicht.' }
+              ? [
+                  { ...it, help: 'Lauter geht es auch am Display und per Telegram nicht.' },
+                  { type: 'toggle', key: 'volBtOn', label: 'Eigene Grenze mit Bluetooth', help: 'Für Kopfhörer: gilt, solange Kopfhörer oder ein Lautsprecher per Bluetooth verbunden sind.' },
+                  { type: 'slider', key: 'volBtMax', label: 'Maximum mit Bluetooth', min: 10, max: 100, step: 5, unit: ' %', dep: 'volBtOn', help: 'Ist die Box beim Verbinden lauter, geht sie gleich auf diesen Wert herunter.' },
+                ]
               : it.key === 'volStart'
                 ? // (never above the maximum; only with a fixed start value)
                   { ...it, max: Number(state.values.get('volMax')) || it.max, disabled: !state.values.get('volFix'), help: '' }
@@ -8363,7 +8403,7 @@ const CONTROLLERS = {
         }
         return toast(`Lautstärke ${v} %`)
       }
-      const body = key === 'volMax' ? { maxVolume: v } : key === 'volFix' ? { startupVolume: v ? Number(state.values.get('volStart')) : null } : key === 'volStart' && state.values.get('volFix') ? { startupVolume: v } : null
+      const body = key === 'volBtOn' ? { btMaxVolume: v ? Number(state.values.get('volBtMax')) : null } : key === 'volBtMax' ? (state.values.get('volBtOn') ? { btMaxVolume: v } : null) : key === 'volMax' ? { maxVolume: v } : key === 'volFix' ? { startupVolume: v ? Number(state.values.get('volStart')) : null } : key === 'volStart' && state.values.get('volFix') ? { startupVolume: v } : null
       if (!body) return
       const r = await api(`${API}/audio/config`, { method: 'POST', body })
       if (!r.ok) return toast('Nicht gespeichert', 'info')

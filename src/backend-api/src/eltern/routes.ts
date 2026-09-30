@@ -160,6 +160,14 @@ function readDisplayLanguages(): Record<string, { name?: string }> {
  * only the number was taken, so after a save in MuPi-Conf the hearing protection (maxVolume) was ignored here.
  * undefined when missing or not 0..100.
  */
+// Bluetooth audio now: PulseAudio's default output is a Bluetooth device (headphones, a speaker) - then its own
+// maximum volume counts (mupibox.btMaxVolume), see the player's volumeCap()
+function bluetoothAudio(): Promise<boolean> {
+  return new Promise((resolve) =>
+    execFile('/usr/bin/pactl', ['get-default-sink'], { timeout: 3000 }, (err, stdout) => resolve(!err && String(stdout).trim().startsWith('bluez_'))),
+  )
+}
+
 function volumePercent(value: unknown): number | undefined {
   const n = typeof value === 'number' ? value : typeof value === 'string' && value.trim() !== '' ? Number(value) : Number.NaN
   return Number.isFinite(n) && n >= 0 && n <= 100 ? Math.floor(n) : undefined
@@ -1195,7 +1203,9 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       const maxVolume = volumePercent(mb.maxVolume) ?? 100
       // (the admin interface only writes startVolume)
       const startupVolume = volumePercent(mb.startupVolume) ?? volumePercent(mb.startVolume) ?? null
-      res.json({ current, maxVolume, startupVolume })
+      // (with Bluetooth audio: an own maximum, null = the same as without)
+      const btMaxVolume = volumePercent(mb.btMaxVolume) ?? null
+      bluetoothAudio().then((bluetooth) => res.json({ current, maxVolume, startupVolume, btMaxVolume, bluetooth }))
     })
   })
 
@@ -1205,7 +1215,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
    * so a parent in the WebApp can't go above the hearing-protection limit
    * (matches the player's own cap enforcement for touchscreen volume-up).
    */
-  router.post('/audio/volume', requireSession, requireCsrf, (req, res) => {
+  router.post('/audio/volume', requireSession, requireCsrf, async (req, res) => {
     const body = (req.body as { volume?: unknown } | undefined) ?? {}
     const raw = Number(body.volume)
     if (!Number.isFinite(raw) || raw < 0 || raw > 100) {
@@ -1220,7 +1230,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       return
     }
     const mb = (cfg.mupibox as Record<string, unknown> | undefined) ?? {}
-    const cap = volumePercent(mb.maxVolume) ?? 100
+    const btMax = volumePercent(mb.btMaxVolume)
+    const cap = btMax !== undefined && (await bluetoothAudio()) ? btMax : (volumePercent(mb.maxVolume) ?? 100)
     const requested = Math.floor(raw)
     const applied = Math.min(requested, cap)
     execFile('/usr/bin/amixer', ['sset', 'Master', `${applied}%`], { timeout: 3000 }, (err) => {
@@ -1240,8 +1251,17 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
    * accidentally-muted box that looks broken.
    */
   router.post('/audio/config', requireSession, requireCsrf, async (req, res) => {
-    const body = (req.body as { maxVolume?: unknown; startupVolume?: unknown } | undefined) ?? {}
-    const mutations: { maxVolume?: number; startupVolume?: number | null } = {}
+    const body = (req.body as { maxVolume?: unknown; startupVolume?: unknown; btMaxVolume?: unknown } | undefined) ?? {}
+    const mutations: { maxVolume?: number; startupVolume?: number | null; btMaxVolume?: number | null } = {}
+    // the maximum while Bluetooth audio is on (headphones); null: the same as without
+    if (body.btMaxVolume !== undefined) {
+      const v = Number(body.btMaxVolume)
+      if (body.btMaxVolume !== null && (!Number.isFinite(v) || v < 10 || v > 100)) {
+        res.status(400).json({ error: 'btMaxVolume must be a number between 10 and 100, or null' })
+        return
+      }
+      mutations.btMaxVolume = body.btMaxVolume === null ? null : Math.floor(v)
+    }
     if (body.maxVolume !== undefined) {
       const v = Number(body.maxVolume)
       if (!Number.isFinite(v) || v < 10 || v > 100) {
@@ -1269,6 +1289,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     await deps.updateMupiboxConfig((cfg) => {
       const mb = ((cfg.mupibox as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
       if (mutations.maxVolume !== undefined) mb.maxVolume = mutations.maxVolume
+      if (mutations.btMaxVolume === null) delete mb.btMaxVolume
+      else if (mutations.btMaxVolume !== undefined) mb.btMaxVolume = mutations.btMaxVolume
       // The scripts that set the volume at start and shutdown (chromium-autostart.sh, mupi_shutdown.sh,
       // off_trigger.sh, shutdown_sound.sh) and the admin interface read startVolume: this app's startupVolume alone
       // had no effect. Both are written; without a fixed value both go, and the scripts leave the volume as it was.

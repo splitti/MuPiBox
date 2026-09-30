@@ -37,6 +37,7 @@ import { buildElternLandingHandler, createElternApiRouter } from './eltern/route
 import { startSpotifyLoginWatch } from './eltern/spotify-auth-age'
 import { startTlsWatch } from './eltern/tls'
 import { startWeeklySummary } from './eltern/weekly-summary'
+import { startNightDim } from './eltern/night-dim'
 import { startBucketCleanup, parseCookie } from './eltern/middleware'
 import { SESSION_COOKIE, validateSession } from './eltern/auth'
 import { type IncomingMessage, request as httpRequest } from 'node:http'
@@ -8159,6 +8160,8 @@ if (!testServe) {
   startSpotifyLoginWatch({ getMupiboxConfig: getMupiboxConfigSync, updateMupiboxConfig })
   startTlsWatch({ getMupiboxConfig: getMupiboxConfigSync, updateMupiboxConfig })
   startWeeklySummary({ getMupiboxConfig: getMupiboxConfigSync, updateMupiboxConfig, currentPlayLogStart })
+  // "Abends dunkler": the display's brightness in the evening (eltern/night-dim.ts)
+  startNightDim(getMupiboxConfigSync)
   setConfiguredHosts(() => {
     const linkHost = (getMupiboxConfigSync()?.tls as { linkHost?: unknown } | undefined)?.linkHost
     return typeof linkHost === 'string' && linkHost !== '' ? [linkHost.toLowerCase()] : []

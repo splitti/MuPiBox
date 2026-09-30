@@ -517,6 +517,16 @@ setInterval(() => {
     const match = /\[(\d+)%\]/.exec(stdout)
     if (match) {
       currentMeta.volume = Number.parseInt(match[1], 10)
+      // headphones just connected, the box louder than their maximum: down to it (whoever set the volume)
+      const btMax = muPiBoxConfig.mupibox?.btMaxVolume
+      if (Number.isInteger(btMax) && currentMeta.volume > btMax) {
+        bluetoothAudio().then((on) => {
+          if (!on) return
+          log.info(`${now()}: [Spotify Control] Bluetooth audio: volume ${currentMeta.volume} % down to its maximum ${btMax} %`)
+          _volumeOpQueue = _volumeOpQueue.then(() => cmdCall(`/usr/bin/amixer sset Master ${btMax}%`)).catch(() => {})
+          currentMeta.volume = btMax
+        })
+      }
     }
   })
 }, 5000)
@@ -2478,12 +2488,27 @@ const _execAsync = (cmd) =>
     })
   })
 
+// Bluetooth audio on (PulseAudio's default output is a Bluetooth device, e.g. headphones): its own maximum volume
+// counts (mupibox.btMaxVolume), else the box's (maxVolume). Asked at most every 3 seconds.
+let btAudio = { at: 0, on: false }
+async function bluetoothAudio() {
+  if (Date.now() - btAudio.at < 3000) return btAudio.on
+  const on = await _execAsync('/usr/bin/pactl get-default-sink')
+    .then(({ stdout }) => String(stdout).trim().startsWith('bluez_'))
+    .catch(() => false)
+  btAudio = { at: Date.now(), on }
+  return on
+}
+async function volumeCap() {
+  const mb = muPiBoxConfig.mupibox
+  return Number.isInteger(mb.btMaxVolume) && (await bluetoothAudio()) ? mb.btMaxVolume : mb.maxVolume
+}
+
 /*gets available devices, searches for the active one and returns its volume*/
 async function setVolume(volume, step = 5) {
   // step: percent per change (5 for the +5 / -5 commands, 1..10 for the rotary encoder)
   const volumeUp = `/usr/bin/amixer sset Master ${step}%+`
   const volumeDown = `/usr/bin/amixer sset Master ${step}%-`
-  const volumeMax = `/usr/bin/amixer sset Master ${muPiBoxConfig.mupibox.maxVolume}%`
   const cmdVolume = "/usr/bin/amixer sget Master | grep 'Right:'"
 
   // Chain onto the queue so concurrent invocations run strictly serially.
@@ -2503,14 +2528,16 @@ async function setVolume(volume, step = 5) {
       return
     }
     currentMeta.volume = actualVolume
+    const cap = await volumeCap()
+    const volumeMax = `/usr/bin/amixer sset Master ${cap}%`
 
     if (volume) {
-      if (actualVolume < muPiBoxConfig.mupibox.maxVolume) {
+      if (actualVolume < cap) {
         // never above the max volume, also when the step does not divide the remaining room
-        await cmdCall(actualVolume + step > muPiBoxConfig.mupibox.maxVolume ? volumeMax : volumeUp)
-        currentMeta.volume = Math.min(actualVolume + step, muPiBoxConfig.mupibox.maxVolume)
+        await cmdCall(actualVolume + step > cap ? volumeMax : volumeUp)
+        currentMeta.volume = Math.min(actualVolume + step, cap)
       } else {
-        currentMeta.volume = muPiBoxConfig.mupibox.maxVolume
+        currentMeta.volume = cap
         await cmdCall(volumeMax)
       }
     } else {

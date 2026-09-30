@@ -21,7 +21,7 @@ export type OnlineCoverStatus = 'found' | 'none' | 'rejected'
 export interface OnlineCoverEntry {
   status: OnlineCoverStatus
   file?: string // <sha1>.jpg in the cover folder
-  source?: 'itunes' | 'deezer'
+  source?: 'itunes' | 'deezer' | 'spotify'
   matchedTitle?: string
   matchedArtist?: string
   series: string
@@ -41,7 +41,7 @@ export interface OnlineCoverEntry {
 const PART_FOLDER = /^(cd|disc|disk|teil|part|seite|side|kassette|mc)\s*\d+$/i
 
 interface Candidate {
-  source: 'itunes' | 'deezer'
+  source: 'itunes' | 'deezer' | 'spotify'
   title: string
   artist: string
   imageUrl: string
@@ -94,11 +94,42 @@ export async function searchDeezer(q: string, limit = 10, large = false): Promis
     }))
 }
 
-// Where a chosen picture may be fetched from: the picture servers of iTunes and Deezer, nothing else (the address
-// comes from the app)
-const COVER_HOSTS = /^(?:is\d+-ssl\.mzstatic\.com|(?:e-)?cdns?-images\.dzcdn\.net)$/
+/**
+ * Albums at Spotify for a search term (the cover choice in the app only), with the box's Spotify login - the player's
+ * token; none without a login.
+ */
+export async function searchSpotify(q: string, limit = 10): Promise<CoverCandidate[]> {
+  const t = await fetch('http://127.0.0.1:5005/spotify/token', { signal: AbortSignal.timeout(3000) })
+  const token = (await t.text()).trim()
+  if (!t.ok || !token || token.startsWith('{')) return []
+  const r = await fetch(`https://api.spotify.com/v1/search?${new URLSearchParams({ q, type: 'album', limit: String(limit), market: 'DE' })}`, {
+    headers: { Authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(8000),
+  })
+  if (!r.ok) throw new Error(`Spotify ${r.status}`)
+  const body = (await r.json()) as {
+    albums?: { items?: Array<{ name?: string; artists?: Array<{ name?: string }>; images?: Array<{ url?: string; width?: number }> }> }
+  }
+  return (body.albums?.items ?? [])
+    .filter((x) => x.name && x.images?.some((i) => i.url))
+    .map((x) => {
+      // (the largest picture to take, one of about 300 px for the list)
+      const images = (x.images ?? []).filter((i) => i.url).sort((a, b) => (b.width ?? 0) - (a.width ?? 0))
+      return {
+        source: 'spotify' as const,
+        title: String(x.name),
+        artist: String(x.artists?.[0]?.name ?? ''),
+        imageUrl: String(images[0].url),
+        thumbUrl: String((images.find((i) => (i.width ?? 0) <= 320) ?? images[0]).url),
+      }
+    })
+}
 
-/** The bytes of a picture of a search result (iTunes/Deezer only, https, no redirects, at most 2 MB). */
+// Where a chosen picture may be fetched from: the picture servers of iTunes, Deezer and Spotify, nothing else (the
+// address comes from the app)
+const COVER_HOSTS = /^(?:is\d+-ssl\.mzstatic\.com|(?:e-)?cdns?-images\.dzcdn\.net|i\.scdn\.co)$/
+
+/** The bytes of a picture of a search result (iTunes/Deezer/Spotify only, https, no redirects, at most 2 MB). */
 export async function fetchCoverImage(address: string): Promise<Buffer> {
   let url: URL
   try {
