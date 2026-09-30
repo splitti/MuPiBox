@@ -2988,6 +2988,111 @@ async function openPodShow(s) {
   )
 }
 
+/* Radiosender suchen (radio-browser.info, see radio-search.ts) */
+
+// the language is the one of the podcast search (the same choice, remembered on this device)
+const radio = { q: '', kids: true, result: null, suggestions: null, suggestionsLang: '' }
+
+function radioTop() {
+  if (!svc.radio) {
+    return [
+      `<section class="card wide"><p class="help" style="margin:0">${esc('Die Radiosender-Suche ist ausgeschaltet. Einschalten unter Einstellungen › Dienste.')}</p>
+        <div class="btns"><button class="btn primary" id="radio-services">Dienste öffnen</button></div></section>`,
+    ]
+  }
+  podLang()
+  return [
+    `<section class="card wide">
+      <p class="help" style="margin:0">${esc('Findet Radiosender aus vielen Ländern, auch Kinderradio. Der Sender kommt unter Radio & Podcasts auf die Box. Das Verzeichnis (radio-browser.info) wird von seinen Nutzern gepflegt; der Suchbegriff geht dorthin.')}</p>
+      <div class="search">${icon('search')}<input class="input" id="radio-q" type="search" placeholder="${esc('Sender suchen – z. B. Die Maus')}" autocomplete="off" value="${esc(radio.q)}" enterkeyhint="search"></div>
+      <div class="field"><label for="radio-lang">Sprache</label><select class="input" id="radio-lang">${svc.available
+        .map((l) => `<option value="${esc(l.code)}"${l.code === pod.lang ? ' selected' : ''} translate="no">${esc(l.name)}</option>`)
+        .join('')}</select></div>
+      <div class="seg" id="radio-kids"><button aria-pressed="${radio.kids}" data-v="1">Für Kinder</button><button aria-pressed="${!radio.kids}" data-v="0">Alles</button></div>
+      <div class="btns"><button class="btn primary" id="radio-go">Suchen</button></div>
+    </section>`,
+    `<div id="radio-results" class="wide-stack"></div>`,
+  ]
+}
+
+async function doRadioSearch() {
+  const q = radio.q.trim()
+  if (q.length < 2) return toast('Bitte mindestens 2 Zeichen eingeben', 'info')
+  const box = $('#radio-results')
+  box.innerHTML = `<div class="loading"><p>Suche …</p></div>`
+  const r = await api(`${API}/radio-search?${new URLSearchParams({ q, lang: pod.lang, ...(radio.kids ? { kids: '1' } : {}) })}`)
+  if (!r.ok) {
+    box.innerHTML = `<p class="help">${esc('Das Senderverzeichnis ist gerade nicht erreichbar.')}</p>`
+    return
+  }
+  radio.result = r.body?.stations ?? []
+  drawRadio()
+}
+
+// Before a search: the children's stations of the language
+async function loadRadioSuggestions() {
+  const box = $('#radio-results')
+  if (!box || radio.result) return
+  if (radio.suggestions && radio.suggestionsLang === pod.lang) return drawRadio()
+  box.innerHTML = `<div class="loading"><p>Lade …</p></div>`
+  const lang = pod.lang
+  const r = await api(`${API}/radio-suggestions?lang=${encodeURIComponent(lang)}`)
+  if (lang !== pod.lang) return
+  radio.suggestions = r.ok ? (r.body?.stations ?? []) : []
+  radio.suggestionsLang = lang
+  drawRadio()
+}
+
+function drawRadio() {
+  const box = $('#radio-results')
+  if (!box) return
+  const searched = !!radio.result
+  const stations = searched ? radio.result : radio.suggestionsLang === pod.lang ? (radio.suggestions ?? []) : []
+  box.innerHTML = stations.length
+    ? `<section class="card"><h2>${esc(searched ? 'Gefunden' : 'Kinderradio')}</h2><div class="rows">${stations
+        .map(
+          (s, i) => `<button class="entry lib-row ard-show" data-station="${i}"><span class="lib-thumb">${s.image ? `<img src="${esc(s.image)}" alt="" loading="lazy">` : ''}${icon('vol', 18)}</span>
+            <span class="lbl"><b translate="no">${esc(s.name)}</b><small translate="no">${esc([s.country, s.tags.join(', ')].filter(Boolean).join(' · '))}</small></span><span class="chev">${icon('chevron', 18)}</span></button>`,
+        )
+        .join('')}</div></section>`
+    : searched
+      ? `<p class="help">${esc(radio.kids ? 'Nichts für Kinder gefunden – mit „Alles“ noch einmal suchen?' : 'Nichts gefunden.')}</p>`
+      : ''
+  for (const img of box.querySelectorAll('img')) img.addEventListener('error', () => img.remove(), { once: true })
+  for (const b of box.querySelectorAll('[data-station]')) b.onclick = () => openRadioStation(stations[Number(b.dataset.station)])
+}
+
+// A station: its details and how it comes onto the box
+async function openRadioStation(s) {
+  const data = await api('/api/data')
+  const have = Array.isArray(data.body) && data.body.some((it) => it?.type === 'radio' && String(it.id ?? '').replace(/^https?:\/\//, '') === s.url.replace(/^https?:\/\//, ''))
+  openSheet(
+    `<div class="ard-head">${s.image ? `<img src="${esc(s.image)}" alt="">` : ''}<span class="lbl"><h2 translate="no" style="margin:0">${esc(s.name)}</h2><small translate="no">${esc([s.country, s.codec, s.bitrate ? `${s.bitrate} kbit/s` : ''].filter(Boolean).join(' · '))}</small></span></div>
+     ${s.tags.length ? `<p class="ard-synopsis" translate="no">${esc(s.tags.join(', '))}</p>` : ''}
+     ${
+       have
+         ? `<p class="help" style="margin:0">${esc('Schon in der Bibliothek.')}</p><div class="btns"><button class="btn" data-close>Schließen</button></div>`
+         : `<div class="field"><label for="radio-cat">Hinzufügen als</label>${catSelect('radio-cat', 'other', false)}</div>
+            <div class="btns"><button class="btn" data-close>Abbrechen</button><button class="btn primary" data-add>${icon('plus', 18)}Hinzufügen</button></div>`
+     }`,
+    (sheet, close) => {
+      for (const b of sheet.querySelectorAll('[data-close]')) b.onclick = close
+      sheet.querySelector('[data-add]')?.addEventListener('click', async (e) => {
+        const btn = e.currentTarget
+        btn.disabled = true
+        const body = { type: 'radio', id: s.url, artist: s.name, title: s.name, category: sheet.querySelector('#radio-cat').value, source: 'manual', ...(s.image ? { cover: s.image } : {}) }
+        const r = await api('/api/add', { method: 'POST', body })
+        btn.disabled = false
+        if (!libWriteOk(r)) return
+        close()
+        toast(`Hinzugefügt: ${s.name}`)
+        libChanged()
+        lib.items = null
+      })
+    },
+  )
+}
+
 /* Link einfügen (Spotify-Link, Radiosender, Podcast) */
 
 function spotifyIdFrom(url, kind) {
@@ -7156,15 +7261,55 @@ const CONTROLLERS = {
       else loadPodSuggestions()
     },
   },
+  radiosuche: {
+    load: loadServices,
+    top: radioTop,
+    sections: () => [],
+    mount(root) {
+      const q = $('#radio-q', root)
+      // (switched off: only the way to switch it on)
+      if (!q) return $('#radio-services', root)?.addEventListener('click', () => go('g-dienste'))
+      q.addEventListener('input', () => {
+        radio.q = q.value
+        if (!radio.q.trim() && radio.result) {
+          radio.result = null
+          loadRadioSuggestions()
+        }
+      })
+      q.addEventListener('keydown', (e) => e.key === 'Enter' && doRadioSearch())
+      $('#radio-lang', root).onchange = (e) => {
+        pod.lang = e.target.value
+        try {
+          localStorage.setItem('mupi-pod-lang', pod.lang)
+        } catch {
+          // (private mode: for this visit)
+        }
+        if (radio.q.trim().length >= 2) doRadioSearch()
+        else loadRadioSuggestions()
+      }
+      $('#radio-kids', root).onclick = (e) => {
+        const b = e.target.closest('button')
+        if (!b) return
+        radio.kids = b.dataset.v === '1'
+        for (const x of b.parentElement.children) x.setAttribute('aria-pressed', String(x === b))
+        if (radio.q.trim().length >= 2) doRadioSearch()
+      }
+      $('#radio-go', root).onclick = doRadioSearch
+      if (radio.result) drawRadio()
+      else loadRadioSuggestions()
+    },
+  },
   'g-dienste': {
     async load() {
       svc.at = 0
       await loadServices()
       state.values.set('svcPod', svc.podcasts)
+      state.values.set('svcRadio', svc.radio)
     },
     async change(key, v) {
-      if (key !== 'svcPod') return
-      const r = await api(`${API}/sources`, { method: 'POST', body: { podcastSearch: !!v } })
+      const field = { svcPod: 'podcastSearch', svcRadio: 'radioSearch' }[key]
+      if (!field) return
+      const r = await api(`${API}/sources`, { method: 'POST', body: { [field]: !!v } })
       if (!r.ok) return toast('Nicht gespeichert', 'info')
       setSources(r.body)
       toast('Gespeichert')
@@ -8104,7 +8249,7 @@ function openDay(el, page) {
 // only those - a Spotify search without a Spotify login only ends in an error.
 // podcasts: the podcast search (Apple's directory, for German with the ARD Audiothek); available: the languages it
 // offers ({code, name})
-const svc = { spotify: true, podcasts: true, available: [], at: 0 }
+const svc = { spotify: true, podcasts: true, radio: true, available: [], at: 0 }
 async function loadServices() {
   if (Date.now() - svc.at < 30_000) return svc
   const [access, sources] = await Promise.all([api(`${API}/spotify-access`), api(`${API}/sources`)])
@@ -8116,6 +8261,7 @@ async function loadServices() {
 }
 function setSources(b) {
   svc.podcasts = b.podcastSearch !== false
+  svc.radio = b.radioSearch !== false
   if (Array.isArray(b.available)) svc.available = b.available
 }
 
@@ -8124,6 +8270,7 @@ async function openAdd() {
   const ways = [
     ...(svc.spotify ? [['suche', 'search', 'Auf Spotify suchen', 'Hörspiele, Alben und Künstler finden']] : []),
     ...(svc.podcasts ? [['podsuche', 'globe', 'Podcasts suchen', 'Kinderpodcasts und Hörspiele in vielen Sprachen']] : []),
+    ...(svc.radio ? [['radiosuche', 'vol', 'Radiosender suchen', 'Kinderradio und Sender aus vielen Ländern']] : []),
     ['link', 'link', 'Link einfügen', svc.spotify ? 'Spotify-Link, Radiosender oder Podcast' : 'Radiosender oder Podcast'],
     ['upload', 'up', 'Vom Gerät hochladen', 'Titel oder ganze Ordner auf die SD-Karte'],
   ]

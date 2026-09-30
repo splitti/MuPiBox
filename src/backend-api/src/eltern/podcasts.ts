@@ -12,6 +12,7 @@ import type { MupiboxConfig } from '../models/mupibox-config.model'
 import { ardKidsShows, ardSearch, ardShowIdFromUrl, type ArdShow } from '../ard-sounds'
 import { MAX_KEEP, type PodcastOffline } from '../podcast-offline'
 import { CONTENT_LANGUAGES, mergeHits, type PodcastHit, searchPodcasts, topKidsPodcasts } from '../podcast-search'
+import { kidsRadio, radioLanguageKnown, searchRadio } from '../radio-search'
 import { requireCsrf, requireSession } from './middleware'
 
 export interface PodcastRouteDeps {
@@ -22,8 +23,9 @@ export interface PodcastRouteDeps {
 }
 
 const mupiboxOf = (cfg: MupiboxConfig | undefined) => (cfg?.mupibox as Record<string, unknown> | undefined) ?? {}
-// The podcast search, on unless switched off (Dienste)
+// The podcast search and the radio station search, on unless switched off (Dienste)
 export const podcastSearchOn = (cfg: MupiboxConfig | undefined) => mupiboxOf(cfg).podcastSearch !== false
+export const radioSearchOn = (cfg: MupiboxConfig | undefined) => mupiboxOf(cfg).radioSearch !== false
 
 // A show of the ARD Audiothek as a hit of the search (its "feed" is ard:<id>, see ard-sounds.ts)
 const ardHit = (s: ArdShow): PodcastHit => ({
@@ -46,20 +48,60 @@ const ardKids = async () => {
 }
 
 export function registerPodcastRoutes(router: Router, deps: PodcastRouteDeps): void {
-  /** GET /api/app/sources - {podcastSearch, available: [{code, name}]}; POST {podcastSearch} switches the search */
-  router.get('/sources', requireSession, (_req, res) => {
-    res.json({
-      podcastSearch: podcastSearchOn(deps.getMupiboxConfig()),
+  /**
+   * GET /api/app/sources - {podcastSearch, radioSearch, available: [{code, name}]}; POST {podcastSearch} and/or
+   * {radioSearch} switches a search
+   */
+  const sources = () => {
+    const cfg = deps.getMupiboxConfig()
+    return {
+      podcastSearch: podcastSearchOn(cfg),
+      radioSearch: radioSearchOn(cfg),
       available: Object.entries(CONTENT_LANGUAGES).map(([code, l]) => ({ code, name: l.name })),
-    })
+    }
+  }
+  router.get('/sources', requireSession, (_req, res) => {
+    res.json(sources())
   })
   router.post('/sources', requireSession, requireCsrf, async (req, res) => {
-    const on = (req.body as { podcastSearch?: unknown } | undefined)?.podcastSearch
-    if (typeof on !== 'boolean') return void res.status(400).json({ error: 'podcastSearch must be true or false' })
+    const body = (req.body as { podcastSearch?: unknown; radioSearch?: unknown } | undefined) ?? {}
+    const set: Record<string, boolean> = {}
+    for (const key of ['podcastSearch', 'radioSearch'] as const) {
+      if (body[key] === undefined) continue
+      if (typeof body[key] !== 'boolean') return void res.status(400).json({ error: `${key} must be true or false` })
+      set[key] = body[key] as boolean
+    }
+    if (!Object.keys(set).length) return void res.status(400).json({ error: 'nothing to change' })
     await deps.updateMupiboxConfig((cfg) => {
-      cfg.mupibox = { ...((cfg.mupibox as Record<string, unknown>) ?? {}), podcastSearch: on }
+      cfg.mupibox = { ...((cfg.mupibox as Record<string, unknown>) ?? {}), ...set }
     })
-    res.json({ podcastSearch: podcastSearchOn(deps.getMupiboxConfig()) })
+    res.json(sources())
+  })
+
+  /** GET /api/app/radio-search?q=…&lang=de&kids=1 - radio stations of a language (radio-browser.info) */
+  router.get('/radio-search', requireSession, async (req, res) => {
+    if (!radioSearchOn(deps.getMupiboxConfig())) return void res.status(403).json({ error: 'radio_search_disabled' })
+    const q = String(req.query.q ?? '').trim()
+    const lang = String(req.query.lang ?? 'de')
+    if (q.length < 2 || q.length > 100 || !radioLanguageKnown(lang)) return void res.status(400).json({ error: 'invalid_query' })
+    try {
+      res.json({ stations: await searchRadio(q, lang, req.query.kids === '1') })
+    } catch (error) {
+      console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] radio search: ${error}`)
+      res.status(502).json({ error: 'directory_unavailable' })
+    }
+  })
+
+  /** GET /api/app/radio-suggestions?lang=de - children's stations of a language, before anything is searched */
+  router.get('/radio-suggestions', requireSession, async (req, res) => {
+    const lang = String(req.query.lang ?? 'de')
+    if (!radioLanguageKnown(lang)) return void res.status(400).json({ error: 'invalid_language' })
+    try {
+      res.json({ stations: await kidsRadio(lang) })
+    } catch (error) {
+      console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] radio suggestions: ${error}`)
+      res.json({ stations: [] })
+    }
   })
 
   /**

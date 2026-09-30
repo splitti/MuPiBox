@@ -71,7 +71,7 @@
    "id": "g-dienste",
    "title": "Dienste",
    "icon": "plug",
-   "description": "Spotify, NAS, Podcast-Suche · Telegram, MQTT, WLED"
+   "description": "Spotify, NAS, Podcast- und Radiosuche · Telegram, MQTT, WLED"
   },
   {
    "id": "g-sicherheit",
@@ -591,6 +591,16 @@
    "title": "Podcasts suchen",
    "description": "",
    "icon": "globe",
+   "sections": []
+  },
+  {
+   "id": "radiosuche",
+   "slug": "radio-search",
+   "area": "bibliothek",
+   "parent": "bibliothek",
+   "title": "Radiosender suchen",
+   "description": "",
+   "icon": "vol",
    "sections": []
   },
   {
@@ -4681,7 +4691,7 @@
    "area": "einstellungen",
    "parent": "einstellungen",
    "title": "Dienste",
-   "description": "Spotify, NAS, Podcast-Suche · Telegram, MQTT, WLED",
+   "description": "Spotify, NAS, Podcast- und Radiosuche · Telegram, MQTT, WLED",
    "icon": "plug",
    "sections": [
     {
@@ -4706,6 +4716,13 @@
        "key": "svcPod",
        "default": true,
        "help": "Findet Podcasts vieler Sender und Anbieter in vielen Sprachen (Apples Podcast-Verzeichnis, bei Deutsch zusätzlich die ARD Audiothek; nur der Suchbegriff geht dorthin). Aus: wird beim Hinzufügen nicht angeboten."
+      },
+      {
+       "type": "toggle",
+       "label": "Radiosender-Suche",
+       "key": "svcRadio",
+       "default": true,
+       "help": "Findet Radiosender aus vielen Ländern, auch Kinderradio (radio-browser.info, von seinen Nutzern gepflegt; nur der Suchbegriff geht dorthin). Aus: wird beim Hinzufügen nicht angeboten."
       }
      ]
     },
@@ -4981,6 +4998,11 @@
    "l": "Podcasts suchen",
    "where": "Bibliothek › Podcasts suchen",
    "id": "podsuche"
+  },
+  {
+   "l": "Radiosender suchen",
+   "where": "Bibliothek › Radiosender suchen",
+   "id": "radiosuche"
   },
   {
    "l": "Auf Spotify suchen",
@@ -6374,6 +6396,11 @@
   },
   {
    "l": "Podcast-Suche",
+   "where": "Dienste",
+   "id": "g-dienste"
+  },
+  {
+   "l": "Radiosender-Suche",
    "where": "Dienste",
    "id": "g-dienste"
   },
