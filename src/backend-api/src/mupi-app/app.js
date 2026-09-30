@@ -1843,17 +1843,25 @@ function libChanged() {
   hear.loadedAt = 0
 }
 
-// (Spotify: every Spotify entry, added by hand or by the Smart-Sync; Manuell and Sync split them by how they came)
+// Where the content comes from. Spotify: every Spotify entry, added by hand or by the Smart-Sync; Smart-Sync: only
+// the Sync's; Podcasts: every podcast (the ARD Audiothek's shows among them); Radio: the stations
 const LIB_SOURCES = [
   ['all', 'Alle Quellen'],
   ['spotify', 'Spotify'],
-  ['ard', 'ARD Sounds'],
-  ['manual', 'Manuell'],
-  ['spotify-sync', 'Sync'],
+  ['spotify-sync', 'Smart-Sync'],
+  ['podcast', 'Podcasts'],
+  ['radio', 'Radio'],
   ['local', 'SD-Karte'],
   ['nas', 'NAS'],
 ]
-const SOURCE_LABEL = { manual: 'Manuell', 'spotify-sync': 'Sync', local: 'SD-Karte', nas: 'NAS' }
+const SOURCE_LABEL = { local: 'SD-Karte', nas: 'NAS' }
+// Whether an entry of the library belongs to a source of the filter
+const entryInSource = (it, src) =>
+  src === 'all' ||
+  (src === 'spotify' && it.type === 'spotify') ||
+  (src === 'spotify-sync' && (it.source ?? 'manual') === 'spotify-sync') ||
+  (src === 'podcast' && it.type === 'rss') ||
+  (src === 'radio' && it.type === 'radio')
 // A show of ARD Sounds: a podcast whose "feed" is ard:<show id> (the box builds its episode list from the ARD)
 const isArdEntry = (it) => it?.type === 'rss' && String(it.id ?? '').startsWith('ard:')
 const CAT_SHORT = { audiobook: 'Hörspiel', music: 'Musik', other: 'Radio & Podcasts' }
@@ -1866,13 +1874,20 @@ function libTop() {
     `<div class="lib-tiles wide" id="lib-tiles"></div>`,
     `<div class="search wide">${icon('search')}<input class="input" id="lib-q" type="search" placeholder="In der Bibliothek suchen" autocomplete="off" value="${esc(lib.q)}"></div>`,
     `<div class="pills wide" id="lib-cat">${[['all', 'Alle'], ...CATS.map(([c]) => [c, CAT_SHORT[c]]), ['nas', 'NAS']].map(([id, t]) => `<button aria-selected="${lib.cat === id}" data-v="${id}">${t}</button>`).join('')}</div>`,
-    // (ARD Sounds only when the library has a show of it)
-    `<div class="pills small wide" id="lib-src">${LIB_SOURCES.filter(([id]) => id !== 'ard' || lib.src === 'ard' || !lib.items || lib.items.some(isArdEntry))
+    // (a source only when the library has something of it)
+    `<div class="pills small wide" id="lib-src">${LIB_SOURCES.filter(([id]) => lib.src === id || libSourceHas(id))
       .map(([id, t]) => `<button aria-selected="${lib.src === id}" data-v="${id}">${t}</button>`)
       .join('')}</div>`,
     `<p class="help wide lib-count" id="lib-count"></p>`,
     `<section class="card wide lib-card"><div class="rows lib-list" id="lib-list"><div class="loading"><p>Lade …</p></div></div></section>`,
   ]
+}
+
+function libSourceHas(id) {
+  if (id === 'all' || !lib.items) return true
+  if (id === 'local') return Object.values(lib.local).some((l) => l.length)
+  if (id === 'nas') return lib.nas.length > 0
+  return lib.items.some((it) => it && !it.isResume && it.category !== 'resume' && entryInSource(it, id))
 }
 
 // The four tiles: where the content comes from, each with its state in a few words
@@ -1903,13 +1918,15 @@ function libGroups() {
     if (!groups.has(key)) groups.set(key, { ...g, entries: [] })
     return groups.get(key)
   }
-  if (lib.src === 'all' || lib.src === 'spotify' || lib.src === 'ard' || lib.src === 'manual' || lib.src === 'spotify-sync') {
+  // (a source of before - "Manuell", "ARD Sounds" - is "all" now)
+  if (!LIB_SOURCES.some(([id]) => id === lib.src)) lib.src = 'all'
+  if (lib.src !== 'local' && lib.src !== 'nas') {
     for (const it of lib.items) {
       if (!it || it.isResume === true || it.category === 'resume' || it.type === 'library') continue
       const cat = it.category_override ?? (it.category === 'radio' ? 'other' : it.category)
       if (lib.cat !== 'all' && cat !== lib.cat) continue
       const src = it.source ?? 'manual'
-      if (lib.src === 'spotify' ? it.type !== 'spotify' : lib.src === 'ard' ? !isArdEntry(it) : lib.src !== 'all' && src !== lib.src) continue
+      if (!entryInSource(it, lib.src)) continue
       const title = String(it.title_override ?? it.title ?? it.artist_override ?? it.artist ?? '—')
       const artist = String(it.artist_override ?? it.artist ?? title)
       if (q && !norm(`${title} ${artist}`).includes(q)) continue
@@ -1942,14 +1959,26 @@ let libShown = []
 
 function libSub(g) {
   const spotify = g.kind === 'entries' && g.entries[0]?.item.type === 'spotify'
-  const ard = g.kind === 'entries' && isArdEntry(g.entries[0]?.item)
-  const src = spotify ? (g.src === 'spotify-sync' ? 'Spotify · Sync' : 'Spotify') : ard ? 'ARD Sounds' : (SOURCE_LABEL[g.src] ?? '')
+  const first = g.kind === 'entries' ? g.entries[0]?.item : null
+  const src = spotify
+    ? g.src === 'spotify-sync'
+      ? 'Spotify · Smart-Sync'
+      : 'Spotify'
+    : first?.type === 'rss'
+      ? isArdEntry(first)
+        ? 'Podcast · ARD Audiothek'
+        : 'Podcast'
+      : first?.type === 'radio'
+        ? 'Radio'
+        : (SOURCE_LABEL[g.src] ?? '')
   if (g.kind === 'local') return `${g.folder.libraryIsContainer ? 'Ordner' : 'Album'} · ${src}`
   if (g.kind === 'nas') return `${g.folder.nasIsContainer ? 'Ordner' : 'Album'} · ${src}`
   if (g.entries.length === 1) {
     const e = g.entries[0]
     const whole = e.item.type === 'spotify' && !e.item.id && !e.item.playlistid && !e.item.showid && !e.item.audiobookid
     // (the source already says Spotify: what kind of Spotify entry it is instead)
+    // (a podcast or a station under its own name: the source says what it is - not "Podcast · Podcast")
+    if ((e.item.type === 'rss' || e.item.type === 'radio') && e.title === g.artist) return src
     const what = spotify ? (e.item.playlistid ? 'Playlist' : e.item.showid ? 'Podcast' : e.item.audiobookid ? 'Hörbuch' : 'Album') : badgeOf(e.item) || 'Eintrag'
     return `${whole ? (g.cat === 'music' ? 'Alle Alben' : 'Alle Folgen') : e.title !== g.artist ? e.title : what} · ${src}`
   }
