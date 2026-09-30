@@ -2843,7 +2843,20 @@ async function addFromSearch(r, btn) {
 
 /* Podcasts suchen (Apple's podcast directory, in the stores of a language; see podcast-search.ts) */
 
-const pod = { q: '', lang: '', kids: true, result: null }
+// lang: remembered on this device (first time: the app's language); suggestions: shows for children before a search
+const pod = { q: '', lang: '', kids: true, result: null, suggestions: null, suggestionsLang: '' }
+function podLang() {
+  if (pod.lang && svc.available.some((l) => l.code === pod.lang)) return pod.lang
+  let saved = ''
+  try {
+    saved = localStorage.getItem('mupi-pod-lang') ?? ''
+  } catch {
+    // (private mode: the app's language)
+  }
+  const known = (c) => svc.available.some((l) => l.code === c)
+  pod.lang = known(saved) ? saved : known(getLang()) ? getLang() : 'de'
+  return pod.lang
+}
 
 function podTop() {
   if (!svc.podcasts) {
@@ -2852,12 +2865,11 @@ function podTop() {
         <div class="btns"><button class="btn primary" id="pod-services">Dienste öffnen</button></div></section>`,
     ]
   }
-  if (!pod.lang || !svc.available.some((l) => l.code === pod.lang)) pod.lang = svc.languages[0] ?? 'de'
-  // (the languages of the content first, then all others)
-  const langs = [...svc.available].sort((a, b) => (svc.languages.includes(b.code) ? 1 : 0) - (svc.languages.includes(a.code) ? 1 : 0))
+  podLang()
+  const langs = svc.available
   return [
     `<section class="card wide">
-      <p class="help" style="margin:0">${esc('Findet Podcasts vieler Sender und Anbieter – auch Deutschlandfunk, SRF, ORF, RTÉ oder BBC. Eine Sendung kommt wie ein Podcast auf die Box, neue Folgen erscheinen von selbst. Der Suchbegriff geht an Apples Podcast-Verzeichnis.')}</p>
+      <p class="help" style="margin:0">${esc('Findet Podcasts vieler Sender und Anbieter – auch Deutschlandfunk, SRF, ORF, RTÉ oder BBC, bei Deutsch zusätzlich die ARD Audiothek. Eine Sendung kommt wie ein Podcast auf die Box, neue Folgen erscheinen von selbst. Der Suchbegriff geht an Apples Podcast-Verzeichnis (bei Deutsch auch an die ARD).')}</p>
       <div class="search">${icon('search')}<input class="input" id="pod-q" type="search" placeholder="${esc('Sendung suchen – z. B. Gutenachtgeschichten')}" autocomplete="off" value="${esc(pod.q)}" enterkeyhint="search"></div>
       <div class="field"><label for="pod-lang">Sprache</label><select class="input" id="pod-lang">${langs
         .map((l) => `<option value="${esc(l.code)}"${l.code === pod.lang ? ' selected' : ''} translate="no">${esc(l.name)}</option>`)
@@ -2883,18 +2895,45 @@ async function doPodSearch() {
   drawPod()
 }
 
+// Before a search: suggestions for children in the chosen language (German: the ARD Audiothek's children's shows)
+async function loadPodSuggestions() {
+  const box = $('#pod-results')
+  if (!box || pod.result) return
+  if (pod.suggestions && pod.suggestionsLang === pod.lang) return drawPod()
+  box.innerHTML = `<div class="loading"><p>Lade …</p></div>`
+  const lang = pod.lang
+  const r = await api(`${API}/podcast-suggestions?lang=${encodeURIComponent(lang)}`)
+  if (lang !== pod.lang) return
+  pod.suggestions = r.ok ? (r.body?.shows ?? []) : []
+  pod.suggestionsLang = lang
+  drawPod()
+}
+
 function drawPod() {
   const box = $('#pod-results')
-  if (!box || !pod.result) return
+  if (!box) return
+  if (!pod.result) {
+    // (nothing searched yet: the suggestions, if the language has some)
+    const shows = pod.suggestionsLang === pod.lang ? (pod.suggestions ?? []) : []
+    box.innerHTML = shows.length ? podList('Vorschläge für Kinder', shows) : ''
+    wirePodList(box, shows)
+    return
+  }
   const shows = pod.result
-  box.innerHTML = shows.length
-    ? `<section class="card"><h2>Gefunden</h2><div class="rows">${shows
-        .map(
-          (s, i) => `<button class="entry lib-row ard-show" data-show="${i}"><span class="lib-thumb">${s.image ? `<img src="${esc(s.image)}" alt="" loading="lazy">` : ''}${icon('music', 18)}</span>
-            <span class="lbl"><b translate="no">${esc(s.title)}</b><small translate="no">${esc([s.author, s.episodes ? `${s.episodes} Folgen` : ''].filter(Boolean).join(' · '))}</small></span><span class="chev">${icon('chevron', 18)}</span></button>`,
-        )
-        .join('')}</div></section>`
-    : `<p class="help">${esc(pod.kids ? 'Nichts für Kinder gefunden – mit „Alles“ noch einmal suchen?' : 'Nichts gefunden.')}</p>`
+  box.innerHTML = shows.length ? podList('Gefunden', shows) : `<p class="help">${esc(pod.kids ? 'Nichts für Kinder gefunden – mit „Alles“ noch einmal suchen?' : 'Nichts gefunden.')}</p>`
+  wirePodList(box, shows)
+}
+
+// (the provider under the name: the ARD Audiothek's shows come with their station, the others with their publisher)
+function podList(title, shows) {
+  return `<section class="card"><h2>${esc(title)}</h2><div class="rows">${shows
+    .map(
+      (s, i) => `<button class="entry lib-row ard-show" data-show="${i}"><span class="lib-thumb">${s.image ? `<img src="${esc(s.image)}" alt="" loading="lazy">` : ''}${icon('music', 18)}</span>
+        <span class="lbl"><b translate="no">${esc(s.title)}</b><small translate="no">${esc([s.author, s.genre === 'ARD Audiothek' ? 'ARD Audiothek' : '', s.episodes ? `${s.episodes} Folgen` : ''].filter(Boolean).join(' · '))}</small></span><span class="chev">${icon('chevron', 18)}</span></button>`,
+    )
+    .join('')}</div></section>`
+}
+function wirePodList(box, shows) {
   for (const img of box.querySelectorAll('img')) img.addEventListener('error', () => img.remove(), { once: true })
   for (const b of box.querySelectorAll('[data-show]')) b.onclick = () => openPodShow(shows[Number(b.dataset.show)])
 }
@@ -2945,118 +2984,6 @@ async function openPodShow(s) {
             })
             .join('')}</div>`
         : `<p class="help">${esc('Die Folgen ließen sich nicht laden.')}</p>`
-    },
-  )
-}
-
-/* In der ARD Audiothek suchen (ARD Sounds) */
-
-// kids: only shows for children (the ARD's children's category, or a name that says so); list: the children's shows
-// shown before anything is searched
-const ard = { q: '', kids: true, cat: 'audiobook', result: null, list: null }
-
-function ardTop() {
-  if (!svc.ard) {
-    return [
-      `<section class="card wide"><p class="help" style="margin:0">${esc('Die ARD Audiothek ist ausgeschaltet. Einschalten unter Einstellungen › Dienste.')}</p>
-        <div class="btns"><button class="btn primary" id="ard-services">Dienste öffnen</button></div></section>`,
-    ]
-  }
-  return [
-    `<section class="card wide">
-      <p class="help" style="margin:0">${esc('Kostenlose Hörspiele, Geschichten und Kinderpodcasts der ARD – ohne Konto. Eine Sendung kommt wie ein Podcast auf die Box, neue Folgen erscheinen von selbst.')}</p>
-      <div class="search">${icon('search')}<input class="input" id="ard-q" type="search" placeholder="${esc('Sendung suchen – z. B. Ohrenbär')}" autocomplete="off" value="${esc(ard.q)}" enterkeyhint="search"></div>
-      <div class="seg" id="ard-kids"><button aria-pressed="${ard.kids}" data-v="1">Für Kinder</button><button aria-pressed="${!ard.kids}" data-v="0">Alles</button></div>
-      <div class="btns"><button class="btn primary" id="ard-go">Suchen</button></div>
-    </section>`,
-    `<div id="ard-results" class="wide-stack"></div>`,
-  ]
-}
-
-async function doArdSearch() {
-  const q = ard.q.trim()
-  if (q.length < 2) return toast('Bitte mindestens 2 Zeichen eingeben', 'info')
-  const box = $('#ard-results')
-  box.innerHTML = `<div class="loading"><p>Suche …</p></div>`
-  const r = await api(`${API}/ard/search?q=${encodeURIComponent(q)}${ard.kids ? '&kids=1' : ''}`)
-  if (!r.ok) {
-    box.innerHTML = `<p class="help">${esc('Die ARD Audiothek ist gerade nicht erreichbar.')}</p>`
-    return
-  }
-  ard.result = r.body?.shows ?? []
-  drawArd()
-}
-
-// Before a search: the ARD's children's shows, the ones with new episodes first
-async function loadArdKids() {
-  if (ard.list) return drawArd()
-  const box = $('#ard-results')
-  if (box) box.innerHTML = `<div class="loading"><p>Lade …</p></div>`
-  const r = await api(`${API}/ard/kids`)
-  ard.list = r.ok ? (r.body?.shows ?? []) : []
-  drawArd()
-}
-
-function drawArd() {
-  const box = $('#ard-results')
-  if (!box) return
-  const searched = ard.result !== null
-  const shows = searched ? ard.result : ard.list ?? []
-  const title = searched ? 'Gefunden' : 'Sendungen für Kinder'
-  box.innerHTML = shows.length
-    ? `<section class="card"><h2>${esc(title)}</h2><div class="rows">${shows
-        .map(
-          (s, i) => `<button class="entry lib-row ard-show" data-show="${i}"><span class="lib-thumb">${s.image ? `<img src="${esc(s.image)}" alt="" loading="lazy">` : ''}${icon('music', 18)}</span>
-            <span class="lbl"><b translate="no">${esc(s.title)}</b><small>${esc([s.station, `${s.episodes} Folgen`].filter(Boolean).join(' · '))}</small></span><span class="chev">${icon('chevron', 18)}</span></button>`,
-        )
-        .join('')}</div></section>`
-    : `<p class="help">${esc(searched ? (ard.kids ? 'Nichts für Kinder gefunden – mit „Alles“ noch einmal suchen?' : 'Nichts gefunden.') : 'Die ARD Audiothek ist gerade nicht erreichbar.')}</p>`
-  for (const img of box.querySelectorAll('img')) img.addEventListener('error', () => img.remove(), { once: true })
-  for (const b of box.querySelectorAll('[data-show]')) b.onclick = () => openArdShow(shows[Number(b.dataset.show)])
-}
-
-// A show: its picture, description and newest episodes, and how it comes onto the box
-async function openArdShow(s) {
-  const data = await api('/api/data')
-  const have = Array.isArray(data.body) && data.body.some((it) => it?.type === 'rss' && it.id === `ard:${s.id}`)
-  openSheet(
-    `<div class="ard-head">${s.image ? `<img src="${esc(s.image)}" alt="">` : ''}<span class="lbl"><h2 translate="no" style="margin:0">${esc(s.title)}</h2><small>${esc([s.station, `${s.episodes} Folgen`].filter(Boolean).join(' · '))}</small></span></div>
-     ${s.synopsis ? `<p class="ard-synopsis">${esc(s.synopsis)}</p>` : ''}
-     <div class="section-label" style="margin:0">${esc('Neueste Folgen')}</div><div id="ard-eps"><p class="help">Lade die Folgen …</p></div>
-     ${
-       have
-         ? `<p class="help" style="margin:0">${esc('Schon in der Bibliothek.')}</p><div class="btns"><button class="btn" data-close>Schließen</button></div>`
-         : `<div class="field"><label for="ard-cat">Hinzufügen als</label>${catSelect('ard-cat', ard.cat, false)}</div>
-            <div class="field"><label for="ard-off">Auf der Box speichern (ohne Internet hören)</label><select class="input" id="ard-off">${OFFLINE_KEEP.map(([n, l]) => `<option value="${n}">${esc(l)}</option>`).join('')}</select></div>
-            <div class="btns"><button class="btn" data-close>Abbrechen</button><button class="btn primary" data-add>${icon('plus', 18)}Hinzufügen</button></div>`
-     }`,
-    async (sheet, close) => {
-      for (const b of sheet.querySelectorAll('[data-close]')) b.onclick = close
-      sheet.querySelector('#ard-cat')?.addEventListener('change', (e) => (ard.cat = e.target.value))
-      sheet.querySelector('[data-add]')?.addEventListener('click', async (e) => {
-        const btn = e.currentTarget
-        btn.disabled = true
-        const keep = Number(sheet.querySelector('#ard-off').value) || 0
-        const body = { type: 'rss', id: `ard:${s.id}`, artist: s.title, category: sheet.querySelector('#ard-cat').value, source: 'manual', ...(keep ? { offline: keep } : {}) }
-        const r = await api('/api/add', { method: 'POST', body })
-        btn.disabled = false
-        if (!libWriteOk(r)) return
-        close()
-        toast(`Hinzugefügt: ${s.title}`)
-        if (keep) api(`${API}/podcast-offline/sync`, { method: 'POST', body: {} })
-        libChanged()
-        lib.items = null
-      })
-      const r = await api(`${API}/ard/show?id=${encodeURIComponent(s.id)}`)
-      const box = sheet.querySelector('#ard-eps')
-      if (!box?.isConnected) return
-      const eps = r.ok ? (r.body?.episodes ?? []).slice(0, 5) : []
-      const time = (sec) => (sec >= 60 ? `${Math.round(sec / 60)} min` : '')
-      box.innerHTML = eps.length
-        ? `<div class="rows">${eps
-            .map((e) => `<div class="entry"><span class="lbl"><b translate="no">${esc(e.title)}</b><small>${esc([e.date ? new Date(e.date).toLocaleDateString(LOCALE) : '', time(e.duration)].filter(Boolean).join(' · '))}</small></span></div>`)
-            .join('')}</div>`
-        : `<p class="help">${esc(r.ok ? 'Gerade keine Folgen verfügbar.' : 'Die Folgen ließen sich nicht laden.')}</p>`
     },
   )
 }
@@ -3150,7 +3077,6 @@ async function addLink(page) {
       const id = address.startsWith('https://') ? address.replace('https://', 'http://') : address
       // a link to a show on ardsounds.de / ardaudiothek.de: taken as the show of ARD Sounds (its page is no feed)
       const ardLink = type !== 'Radio-Stream' && /^https:\/\/(www\.)?(ardsounds|ardaudiothek)\.de\/sendung\//i.test(url)
-      if (ardLink && !(await loadServices()).ard) return toast('Die ARD Audiothek ist ausgeschaltet (Einstellungen › Dienste).', 'info')
       const ardId = ardLink ? (await api(`${API}/ard/resolve`, { method: 'POST', body: { url } })).body?.id : null
       if (ardLink && !ardId) return toast('Diese Sendung kennt die ARD Audiothek nicht – ist der Link richtig?', 'info')
       if (type === 'Radio-Stream') Object.assign(body, { type: 'radio', id, artist: label || 'Radio', title: title || 'Stream' })
@@ -7199,11 +7125,24 @@ const CONTROLLERS = {
       const q = $('#pod-q', root)
       // (switched off: only the way to switch it on)
       if (!q) return $('#pod-services', root)?.addEventListener('click', () => go('g-dienste'))
-      q.addEventListener('input', () => (pod.q = q.value))
+      q.addEventListener('input', () => {
+        pod.q = q.value
+        // (the field emptied: the suggestions again)
+        if (!pod.q.trim() && pod.result) {
+          pod.result = null
+          loadPodSuggestions()
+        }
+      })
       q.addEventListener('keydown', (e) => e.key === 'Enter' && doPodSearch())
       $('#pod-lang', root).onchange = (e) => {
         pod.lang = e.target.value
+        try {
+          localStorage.setItem('mupi-pod-lang', pod.lang)
+        } catch {
+          // (private mode: for this visit)
+        }
         if (pod.q.trim().length >= 2) doPodSearch()
+        else loadPodSuggestions()
       }
       $('#pod-kids', root).onclick = (e) => {
         const b = e.target.closest('button')
@@ -7213,73 +7152,22 @@ const CONTROLLERS = {
         if (pod.q.trim().length >= 2) doPodSearch()
       }
       $('#pod-go', root).onclick = doPodSearch
-      drawPod()
-    },
-  },
-  ard: {
-    load: loadServices,
-    top: ardTop,
-    sections: () => [],
-    mount(root) {
-      const q = $('#ard-q', root)
-      // (switched off: only the way to switch it on)
-      if (!q) return $('#ard-services', root)?.addEventListener('click', () => go('g-dienste'))
-      q.addEventListener('input', () => {
-        ard.q = q.value
-        // (the field emptied: the children's shows again)
-        if (!ard.q.trim() && ard.result) {
-          ard.result = null
-          drawArd()
-        }
-      })
-      q.addEventListener('keydown', (e) => e.key === 'Enter' && doArdSearch())
-      $('#ard-kids', root).onclick = (e) => {
-        const b = e.target.closest('button')
-        if (!b) return
-        ard.kids = b.dataset.v === '1'
-        for (const x of b.parentElement.children) x.setAttribute('aria-pressed', String(x === b))
-        if (ard.q.trim().length >= 2) doArdSearch()
-      }
-      $('#ard-go', root).onclick = doArdSearch
-      if (ard.result) drawArd()
-      else loadArdKids()
+      if (pod.result) drawPod()
+      else loadPodSuggestions()
     },
   },
   'g-dienste': {
     async load() {
       svc.at = 0
       await loadServices()
-      state.values.set('svcArd', svc.ard)
       state.values.set('svcPod', svc.podcasts)
-      for (const l of svc.available) state.values.set(`lang-${l.code}`, svc.languages.includes(l.code))
     },
-    // the languages of the content: one switch each, named in the language itself
-    sections: (page) =>
-      page.sections.map((sec) =>
-        sec.items.some((it) => it.key === 'contentLanguages')
-          ? { ...sec, items: svc.available.map((l) => ({ type: 'toggle', label: l.name, key: `lang-${l.code}`, default: false })) }
-          : sec,
-      ),
-    async change(key, v, page) {
-      let body
-      if (key === 'svcArd') body = { ard: !!v }
-      else if (key === 'svcPod') body = { podcastSearch: !!v }
-      else if (key.startsWith('lang-')) {
-        const languages = svc.available.map((l) => l.code).filter((c) => state.values.get(`lang-${c}`))
-        if (!languages.length) {
-          state.values.set(key, true)
-          toast('Mindestens eine Sprache bleibt ausgewählt', 'info')
-          return renderPage(page, false)
-        }
-        body = { languages }
-      } else return
-      const r = await api(`${API}/sources`, { method: 'POST', body })
+    async change(key, v) {
+      if (key !== 'svcPod') return
+      const r = await api(`${API}/sources`, { method: 'POST', body: { podcastSearch: !!v } })
       if (!r.ok) return toast('Nicht gespeichert', 'info')
       setSources(r.body)
       toast('Gespeichert')
-      // (a language changes whether the ARD Audiothek is on, as long as it was not switched by hand)
-      state.values.set('svcArd', svc.ard)
-      renderPage(page, false)
     },
   },
   link: {
@@ -8214,9 +8102,9 @@ function openDay(el, page) {
 
 // Which services the box has: Spotify signed in (Dienste › Spotify), ARD Sounds switched on (Dienste). Adding offers
 // only those - a Spotify search without a Spotify login only ends in an error.
-// podcasts: the podcast search (Apple's directory); languages: the languages of the content (Dienste), available: all
-// the box knows ({code, name})
-const svc = { spotify: true, ard: true, podcasts: true, languages: ['de'], available: [], at: 0 }
+// podcasts: the podcast search (Apple's directory, for German with the ARD Audiothek); available: the languages it
+// offers ({code, name})
+const svc = { spotify: true, podcasts: true, available: [], at: 0 }
 async function loadServices() {
   if (Date.now() - svc.at < 30_000) return svc
   const [access, sources] = await Promise.all([api(`${API}/spotify-access`), api(`${API}/sources`)])
@@ -8227,9 +8115,7 @@ async function loadServices() {
   return svc
 }
 function setSources(b) {
-  svc.ard = b.ard !== false
   svc.podcasts = b.podcastSearch !== false
-  if (Array.isArray(b.languages) && b.languages.length) svc.languages = b.languages
   if (Array.isArray(b.available)) svc.available = b.available
 }
 
@@ -8238,7 +8124,6 @@ async function openAdd() {
   const ways = [
     ...(svc.spotify ? [['suche', 'search', 'Auf Spotify suchen', 'Hörspiele, Alben und Künstler finden']] : []),
     ...(svc.podcasts ? [['podsuche', 'globe', 'Podcasts suchen', 'Kinderpodcasts und Hörspiele in vielen Sprachen']] : []),
-    ...(svc.ard ? [['ard', 'phones', 'In der ARD Audiothek suchen', 'Kostenlose Hörspiele und Kinderpodcasts']] : []),
     ['link', 'link', 'Link einfügen', svc.spotify ? 'Spotify-Link, Radiosender oder Podcast' : 'Radiosender oder Podcast'],
     ['upload', 'up', 'Vom Gerät hochladen', 'Titel oder ganze Ordner auf die SD-Karte'],
   ]

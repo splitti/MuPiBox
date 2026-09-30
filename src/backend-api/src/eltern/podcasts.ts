@@ -1,16 +1,17 @@
-// ARD Sounds in the app (search, the children's shows, a show with its newest episodes) and the podcast episodes kept
-// on the SD card (see ../ard-sounds.ts and ../podcast-offline.ts).
+// Finding podcasts in the app - one search for every provider: Apple's podcast directory (the shows of most
+// broadcasters, as RSS feeds) and, for German, the ARD Audiothek (many of its children's plays have no feed) - and
+// the podcast episodes kept on the SD card (see ../podcast-search.ts, ../ard-sounds.ts, ../podcast-offline.ts).
 //
-// A show is added as a podcast through /api/add ({type: 'rss', id: 'ard:<id>'}), like a feed from "Link einfügen".
-// How many episodes of a podcast stay on the card is its library entry's field "offline" (changed with /api/edit);
-// /podcast-offline/sync then brings the files in line at once instead of at the next hourly run.
+// A show is added as a podcast through /api/add ({type: 'rss', id: <feed> or 'ard:<id>'}), like a feed from "Link
+// einfügen". How many episodes of a podcast stay on the card is its library entry's field "offline" (changed with
+// /api/edit); /podcast-offline/sync then brings the files in line at once instead of at the next hourly run.
 
 import { promises as fsp } from 'node:fs'
-import type { RequestHandler, Router } from 'express'
+import type { Router } from 'express'
 import type { MupiboxConfig } from '../models/mupibox-config.model'
-import { ardKidsShows, ardSearch, ardShow, ardShowIdFromUrl, type ArdShow } from '../ard-sounds'
+import { ardKidsShows, ardSearch, ardShowIdFromUrl, type ArdShow } from '../ard-sounds'
 import { MAX_KEEP, type PodcastOffline } from '../podcast-offline'
-import { CONTENT_LANGUAGES, contentLanguagesOf, searchPodcasts } from '../podcast-search'
+import { CONTENT_LANGUAGES, mergeHits, type PodcastHit, searchPodcasts } from '../podcast-search'
 import { requireCsrf, requireSession } from './middleware'
 
 export interface PodcastRouteDeps {
@@ -21,131 +22,79 @@ export interface PodcastRouteDeps {
 }
 
 const mupiboxOf = (cfg: MupiboxConfig | undefined) => (cfg?.mupibox as Record<string, unknown> | undefined) ?? {}
-// ARD Sounds can be switched off (Dienste; mupibox.ardSounds) - e.g. a box abroad, for which German children's plays
-// are no use: then it is not offered for adding. Not switched either way: on when German is one of the languages of
-// the content (Dienste › Sprachen der Inhalte). Shows added before stay in the library and play.
-export const ardSoundsOn = (cfg: MupiboxConfig | undefined) => {
-  const mb = mupiboxOf(cfg)
-  return typeof mb.ardSounds === 'boolean' ? mb.ardSounds : contentLanguagesOf(mb).includes('de')
-}
-// The podcast search (Apple's directory, see podcast-search.ts), on unless switched off
+// The podcast search, on unless switched off (Dienste)
 export const podcastSearchOn = (cfg: MupiboxConfig | undefined) => mupiboxOf(cfg).podcastSearch !== false
+
+// A show of the ARD Audiothek as a hit of the search (its "feed" is ard:<id>, see ard-sounds.ts)
+const ardHit = (s: ArdShow): PodcastHit => ({
+  title: s.title,
+  author: s.station || 'ARD',
+  feedUrl: `ard:${s.id}`,
+  image: s.image,
+  genre: 'ARD Audiothek',
+  episodes: s.episodes,
+  country: 'DE',
+  kids: s.kids,
+  explicit: false,
+})
 
 const KIDS_TTL_MS = 60 * 60 * 1000
 let kidsCache: { at: number; shows: ArdShow[] } | null = null
+const ardKids = async () => {
+  if (!kidsCache || Date.now() - kidsCache.at > KIDS_TTL_MS) kidsCache = { at: Date.now(), shows: await ardKidsShows() }
+  return kidsCache.shows
+}
 
 export function registerPodcastRoutes(router: Router, deps: PodcastRouteDeps): void {
-  const ardOn: RequestHandler = (_req, res, next) => {
-    if (ardSoundsOn(deps.getMupiboxConfig())) return next()
-    res.status(403).json({ error: 'ard_disabled' })
-  }
-
-  /**
-   * GET /api/app/sources - the services for adding content and the languages of the content: {ard, podcastSearch,
-   * languages (chosen), available [{code, name}]}; POST any of ard, podcastSearch (booleans), languages (codes)
-   */
+  /** GET /api/app/sources - {podcastSearch, available: [{code, name}]}; POST {podcastSearch} switches the search */
   router.get('/sources', requireSession, (_req, res) => {
-    const cfg = deps.getMupiboxConfig()
     res.json({
-      ard: ardSoundsOn(cfg),
-      podcastSearch: podcastSearchOn(cfg),
-      languages: contentLanguagesOf(mupiboxOf(cfg)),
+      podcastSearch: podcastSearchOn(deps.getMupiboxConfig()),
       available: Object.entries(CONTENT_LANGUAGES).map(([code, l]) => ({ code, name: l.name })),
     })
   })
   router.post('/sources', requireSession, requireCsrf, async (req, res) => {
-    const body = (req.body as { ard?: unknown; podcastSearch?: unknown; languages?: unknown } | undefined) ?? {}
-    const set: Record<string, unknown> = {}
-    for (const [key, name] of [['ard', 'ardSounds'], ['podcastSearch', 'podcastSearch']] as const) {
-      if (body[key] === undefined) continue
-      if (typeof body[key] !== 'boolean') return void res.status(400).json({ error: `${key} must be true or false` })
-      set[name] = body[key]
-    }
-    if (body.languages !== undefined) {
-      const list = Array.isArray(body.languages) ? [...new Set(body.languages.map(String))] : []
-      if (!list.length || !list.every((l) => l in CONTENT_LANGUAGES)) return void res.status(400).json({ error: 'invalid languages' })
-      set.contentLanguages = list
-    }
+    const on = (req.body as { podcastSearch?: unknown } | undefined)?.podcastSearch
+    if (typeof on !== 'boolean') return void res.status(400).json({ error: 'podcastSearch must be true or false' })
     await deps.updateMupiboxConfig((cfg) => {
-      cfg.mupibox = { ...((cfg.mupibox as Record<string, unknown>) ?? {}), ...set }
+      cfg.mupibox = { ...((cfg.mupibox as Record<string, unknown>) ?? {}), podcastSearch: on }
     })
-    const cfg = deps.getMupiboxConfig()
-    res.json({ ard: ardSoundsOn(cfg), podcastSearch: podcastSearchOn(cfg), languages: contentLanguagesOf(mupiboxOf(cfg)) })
+    res.json({ podcastSearch: podcastSearchOn(deps.getMupiboxConfig()) })
   })
 
-  /** GET /api/app/podcast-search?q=…&lang=de&kids=1 - shows of Apple's podcast directory in a language's stores */
+  /**
+   * GET /api/app/podcast-search?q=…&lang=de&kids=1 - shows for a search term in a language: Apple's directory in the
+   * language's stores, for German together with the ARD Audiothek (a show found in both once: its feed)
+   */
   router.get('/podcast-search', requireSession, async (req, res) => {
     if (!podcastSearchOn(deps.getMupiboxConfig())) return void res.status(403).json({ error: 'podcast_search_disabled' })
     const q = String(req.query.q ?? '').trim()
     const lang = String(req.query.lang ?? 'de')
+    const kids = req.query.kids === '1'
     if (q.length < 2 || q.length > 100 || !(lang in CONTENT_LANGUAGES)) return void res.status(400).json({ error: 'invalid_query' })
-    try {
-      res.json({ shows: await searchPodcasts(q, lang, req.query.kids === '1') })
-    } catch (error) {
-      console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] podcast search: ${error}`)
-      res.status(502).json({ error: 'directory_unavailable' })
+    const [apple, ard] = await Promise.allSettled([searchPodcasts(q, lang, kids), lang === 'de' ? ardSearch(q, kids) : Promise.resolve([])])
+    if (apple.status === 'rejected' && ard.status === 'rejected') {
+      console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] podcast search: ${apple.reason}`)
+      return void res.status(502).json({ error: 'directory_unavailable' })
     }
+    const fromApple = apple.status === 'fulfilled' ? apple.value : []
+    const fromArd = ard.status === 'fulfilled' ? ard.value.map(ardHit) : []
+    res.json({ shows: mergeHits(fromApple, fromArd) })
   })
 
-  /** GET /api/app/ard/enabled - whether ARD Sounds is offered; POST {enabled} switches it */
-  router.get('/ard/enabled', requireSession, (_req, res) => {
-    res.json({ enabled: ardSoundsOn(deps.getMupiboxConfig()) })
-  })
-  router.post('/ard/enabled', requireSession, requireCsrf, async (req, res) => {
-    const enabled = (req.body as { enabled?: unknown } | undefined)?.enabled
-    if (typeof enabled !== 'boolean') {
-      res.status(400).json({ error: 'enabled must be true or false' })
-      return
-    }
-    await deps.updateMupiboxConfig((cfg) => {
-      cfg.mupibox = { ...((cfg.mupibox as Record<string, unknown>) ?? {}), ardSounds: enabled }
-    })
-    res.json({ enabled })
-  })
-
-  /** GET /api/app/ard/search?q=…&kids=1 - shows of ARD Sounds for a search term (kids=1: for children only) */
-  router.get('/ard/search', requireSession, ardOn, async (req, res) => {
-    const q = String(req.query.q ?? '').trim()
-    if (q.length < 2 || q.length > 100) {
-      res.status(400).json({ error: 'invalid_query' })
-      return
-    }
+  /** GET /api/app/podcast-suggestions?lang=de - shows for children to start with, before anything is searched */
+  router.get('/podcast-suggestions', requireSession, async (req, res) => {
+    const lang = String(req.query.lang ?? 'de')
     try {
-      res.json({ shows: await ardSearch(q, req.query.kids === '1') })
+      res.json({ shows: lang === 'de' ? (await ardKids()).map(ardHit) : [] })
     } catch (error) {
-      console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] ARD search: ${error}`)
-      res.status(502).json({ error: 'ard_unavailable' })
-    }
-  })
-
-  /** GET /api/app/ard/kids - the ARD's children's shows (kept for an hour) */
-  router.get('/ard/kids', requireSession, ardOn, async (_req, res) => {
-    try {
-      if (!kidsCache || Date.now() - kidsCache.at > KIDS_TTL_MS) kidsCache = { at: Date.now(), shows: await ardKidsShows() }
-      res.json({ shows: kidsCache.shows })
-    } catch (error) {
-      console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] ARD children's shows: ${error}`)
-      res.status(502).json({ error: 'ard_unavailable' })
-    }
-  })
-
-  /** GET /api/app/ard/show?id=… - a show and its 10 newest episodes (for the details before adding it) */
-  router.get('/ard/show', requireSession, ardOn, async (req, res) => {
-    try {
-      const found = await ardShow(String(req.query.id ?? ''), 10)
-      if (!found) {
-        res.status(404).json({ error: 'show_not_found' })
-        return
-      }
-      res.json(found)
-    } catch (error) {
-      console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] ARD show: ${error}`)
-      res.status(502).json({ error: 'ard_unavailable' })
+      console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] podcast suggestions: ${error}`)
+      res.json({ shows: [] })
     }
   })
 
   /** POST /api/app/ard/resolve {url} - the show id behind a link to it on ardsounds.de / ardaudiothek.de */
-  router.post('/ard/resolve', requireSession, requireCsrf, ardOn, async (req, res) => {
+  router.post('/ard/resolve', requireSession, requireCsrf, async (req, res) => {
     const url = String((req.body as { url?: unknown } | undefined)?.url ?? '')
     try {
       const id = url.length < 500 ? await ardShowIdFromUrl(url) : null

@@ -71,7 +71,7 @@
    "id": "g-dienste",
    "title": "Dienste",
    "icon": "plug",
-   "description": "Sprachen, Spotify, NAS, Podcasts, ARD · Telegram, MQTT, WLED"
+   "description": "Spotify, NAS, Podcast-Suche · Telegram, MQTT, WLED"
   },
   {
    "id": "g-sicherheit",
@@ -591,16 +591,6 @@
    "title": "Podcasts suchen",
    "description": "",
    "icon": "globe",
-   "sections": []
-  },
-  {
-   "id": "ard",
-   "slug": "ard-sounds",
-   "area": "bibliothek",
-   "parent": "bibliothek",
-   "title": "In der ARD Audiothek suchen",
-   "description": "",
-   "icon": "phones",
    "sections": []
   },
   {
@@ -4691,23 +4681,11 @@
    "area": "einstellungen",
    "parent": "einstellungen",
    "title": "Dienste",
-   "description": "Sprachen, Spotify, NAS, Podcasts, ARD · Telegram, MQTT, WLED",
+   "description": "Spotify, NAS, Podcast-Suche · Telegram, MQTT, WLED",
    "icon": "plug",
    "sections": [
     {
-     "title": "Sprachen der Inhalte",
-     "help": "In welchen Sprachen die Box Inhalte anbietet: Die Podcast-Suche beginnt mit ihnen, und Dienste einer Sprache (z. B. die ARD Audiothek für Deutsch) sind an, wenn ihre Sprache dabei ist.",
-     "items": [
-      {
-       "type": "toggle",
-       "label": "Sprachen",
-       "key": "contentLanguages",
-       "default": false
-      }
-     ]
-    },
-    {
-     "title": "Für alle Sprachen",
+     "title": "Musikquellen",
      "help": "",
      "items": [
       {
@@ -4727,20 +4705,7 @@
        "label": "Podcast-Suche",
        "key": "svcPod",
        "default": true,
-       "help": "Findet Podcasts vieler Sender und Anbieter in vielen Sprachen (Apples Podcast-Verzeichnis, nur der Suchbegriff geht dorthin). Aus: wird beim Hinzufügen nicht angeboten."
-      }
-     ]
-    },
-    {
-     "title": "Deutschsprachig",
-     "help": "",
-     "items": [
-      {
-       "type": "toggle",
-       "label": "ARD Audiothek",
-       "key": "svcArd",
-       "default": true,
-       "help": "Kostenlose Hörspiele und Kinderpodcasts der ARD. Ist Deutsch keine Sprache der Inhalte, ist sie aus, solange du sie nicht selbst einschaltest. Aus: wird beim Hinzufügen nicht mehr angeboten; schon hinzugefügte Sendungen bleiben."
+       "help": "Findet Podcasts vieler Sender und Anbieter in vielen Sprachen (Apples Podcast-Verzeichnis, bei Deutsch zusätzlich die ARD Audiothek; nur der Suchbegriff geht dorthin). Aus: wird beim Hinzufügen nicht angeboten."
       }
      ]
     },
@@ -5016,11 +4981,6 @@
    "l": "Podcasts suchen",
    "where": "Bibliothek › Podcasts suchen",
    "id": "podsuche"
-  },
-  {
-   "l": "In der ARD Audiothek suchen",
-   "where": "Bibliothek › In der ARD Audiothek suchen",
-   "id": "ard"
   },
   {
    "l": "Auf Spotify suchen",
@@ -6413,17 +6373,7 @@
    "id": "g-dienste"
   },
   {
-   "l": "ARD Audiothek",
-   "where": "Dienste",
-   "id": "g-dienste"
-  },
-  {
    "l": "Podcast-Suche",
-   "where": "Dienste",
-   "id": "g-dienste"
-  },
-  {
-   "l": "Sprachen der Inhalte",
    "where": "Dienste",
    "id": "g-dienste"
   },

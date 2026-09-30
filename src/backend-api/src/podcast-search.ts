@@ -14,7 +14,7 @@ export interface ContentLanguage {
   countries: string[]
 }
 
-// The languages the box offers content in (Einstellungen › Dienste › Sprachen der Inhalte)
+// The languages the search offers (the app's choice on the search page)
 export const CONTENT_LANGUAGES: Record<string, ContentLanguage> = {
   de: { name: 'Deutsch', countries: ['DE', 'AT', 'CH'] },
   en: { name: 'English', countries: ['GB', 'IE', 'US'] },
@@ -33,20 +33,6 @@ export const CONTENT_LANGUAGES: Record<string, ContentLanguage> = {
   tr: { name: 'Türkçe', countries: ['TR'] },
   uk: { name: 'Українська', countries: ['UA'] },
   ru: { name: 'Русский', countries: ['RU'] },
-}
-
-/**
- * The languages of the box's content (mupibox.contentLanguages). Not set yet: German - the ARD Audiothek stays on for
- * every box after the update, as it was - and the language the box reads aloud in, if it is another one.
- */
-export function contentLanguagesOf(mb: Record<string, unknown> | undefined): string[] {
-  const set = mb?.contentLanguages
-  if (Array.isArray(set)) {
-    const known = set.map(String).filter((l) => l in CONTENT_LANGUAGES)
-    if (known.length) return [...new Set(known)]
-  }
-  const tts = typeof mb?.ttsLanguage === 'string' ? mb.ttsLanguage.slice(0, 2) : ''
-  return [...new Set(['de', ...(tts in CONTENT_LANGUAGES ? [tts] : [])])]
 }
 
 export interface PodcastHit {
@@ -119,4 +105,29 @@ export async function searchPodcasts(term: string, lang: string, kidsOnly: boole
     .sort((a, b) => a.rank - b.rank)
     .slice(0, 40)
     .map(({ rank: _rank, ...h }) => h)
+}
+
+// A show's name for comparing: the ARD adds its station ("Kakadu – Das Kinderhörspiel - Deutschlandfunk Kultur")
+const comparable = (title: string) =>
+  title
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/\p{M}/gu, '')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim()
+
+/**
+ * The hits of Apple's directory and of the ARD Audiothek in one list, taking turns. A show in both once - with its
+ * feed: an RSS feed is the steadier way than the ARD's interface.
+ */
+export function mergeHits(apple: PodcastHit[], ard: PodcastHit[]): PodcastHit[] {
+  const names = apple.map((h) => comparable(h.title))
+  const same = (a: string, b: string) => Math.min(a.length, b.length) >= 6 && (a.startsWith(b) || b.startsWith(a))
+  const onlyArd = ard.filter((h) => !names.some((n) => same(n, comparable(h.title))))
+  const out: PodcastHit[] = []
+  for (let i = 0; i < Math.max(apple.length, onlyArd.length); i++) {
+    if (apple[i]) out.push(apple[i])
+    if (onlyArd[i]) out.push(onlyArd[i])
+  }
+  return out.slice(0, 50)
 }
