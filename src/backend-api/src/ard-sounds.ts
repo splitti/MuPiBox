@@ -39,6 +39,13 @@ export interface ArdEpisode {
   duration: number
   url: string
   image: string
+  /**
+   * Where the ARD lets the episode be downloaded (allowDownload with a downloadUrl), or null: then it may only be
+   * streamed - never kept on the card from its stream address instead
+   */
+  download: string | null
+  /** When it leaves the ARD's offer (the end of its time online, endDate), or null */
+  until: string | null
 }
 
 export const isArdFeed = (id: unknown): id is string => typeof id === 'string' && id.startsWith(ARD_PREFIX)
@@ -136,7 +143,8 @@ interface RawItem {
   publishDate?: string | null
   duration?: number | null
   image?: { url?: string } | null
-  audios?: { url?: string; mimeType?: string }[] | null
+  endDate?: string | null
+  audios?: { url?: string; mimeType?: string; downloadUrl?: string | null; allowDownload?: boolean | null }[] | null
 }
 
 /** A show and its newest episodes (at most `first`), or null when the ARD does not know it */
@@ -146,7 +154,7 @@ export async function ardShow(id: string, first = MAX_EPISODES): Promise<{ show:
   const data = await query<{ programSet?: (RawShow & { items?: { nodes?: RawItem[] } }) | null }>(
     `query($id: ID!, $first: Int) { programSet(id: $id) { ${SHOW_FIELDS}
       items(first: $first, orderBy: PUBLISH_DATE_DESC, filter: { isPublished: { equalTo: true } }) {
-        nodes { id title publishDate duration image { url } audios { url mimeType } } } } }`,
+        nodes { id title publishDate endDate duration image { url } audios { url mimeType downloadUrl allowDownload } } } } }`,
     { id: showId, first: Math.max(1, Math.min(first, MAX_EPISODES)) },
   )
   const raw = data.programSet
@@ -158,6 +166,9 @@ export async function ardShow(id: string, first = MAX_EPISODES): Promise<{ show:
     const audios = (item.audios ?? []).filter((a) => typeof a.url === 'string' && /^https?:\/\//.test(a.url))
     const audio = audios.find((a) => /mp3|mpeg/i.test(a.mimeType ?? '') || /\.mp3(\?|$)/i.test(a.url ?? '')) ?? audios[0]
     if (!item.id || !audio?.url) continue
+    // (only what the ARD itself releases for download: allowDownload and a downloadUrl - an MP3 first again)
+    const released = (item.audios ?? []).filter((a) => a.allowDownload === true && typeof a.downloadUrl === 'string' && /^https?:\/\//.test(a.downloadUrl))
+    const download = released.find((a) => /mp3|mpeg/i.test(a.mimeType ?? '') || /\.mp3(\?|$)/i.test(a.downloadUrl ?? '')) ?? released[0]
     episodes.push({
       id: item.id,
       title: (item.title ?? '').trim() || 'Folge',
@@ -165,6 +176,8 @@ export async function ardShow(id: string, first = MAX_EPISODES): Promise<{ show:
       duration: item.duration ?? 0,
       url: audio.url,
       image: picture(item.image?.url) || s.image,
+      download: download?.downloadUrl ?? null,
+      until: item.endDate ?? null,
     })
   }
   return { show: s, episodes }
@@ -186,7 +199,7 @@ export async function ardFeed(id: string): Promise<unknown> {
   if (!found) throw new Error(`ARD Sounds does not know the show ${id}`)
   const { show: s, episodes } = found
   return {
-    _slim: 2, // (the version of the cached shape, see RSS_SLIM_VERSION in server.ts)
+    _slim: 3, // (the version of the cached shape, see RSS_SLIM_VERSION in server.ts)
     rss: {
       channel: {
         title: { _text: s.title },
@@ -198,6 +211,9 @@ export async function ardFeed(id: string): Promise<unknown> {
           enclosure: { _attributes: { url: e.url } },
           ...(e.image ? { 'itunes:image': { _attributes: { href: e.image } } } : {}),
           ...(e.duration ? { 'itunes:duration': { _text: hms(e.duration) } } : {}),
+          // (for the SD card, podcast-offline.ts: the ARD's download address or none, and the end of its time online)
+          _download: e.download,
+          ...(e.until ? { _until: e.until } : {}),
         })),
       },
     },

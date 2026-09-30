@@ -1739,8 +1739,12 @@ async function openEpisodes(t) {
           return
         }
         // (the button on the right keeps an episode on the SD card - it plays without internet then - or deletes it)
+        // (an ARD episode the ARD does not release for download: streaming only, a lock instead - see
+        // podcast-offline.ts mayKeep)
         const saveBtn = (e, i) =>
-          `<button class="icon-btn soft ep-save" data-save="${i}" aria-pressed="${!!e.saved}" aria-label="${esc(e.saved ? `Von der Box löschen: ${e.title}` : `Auf der Box speichern: ${e.title}`)}">${icon(e.saved ? 'check' : e.queued ? 'sync' : 'save', 18)}</button>`
+          e.saveable === false && !e.saved
+            ? `<button class="icon-btn soft ep-save ep-locked" data-locked="1" aria-label="${esc(`Nur mit Internet: ${e.title}`)}">${icon('lock', 18)}</button>`
+            : `<button class="icon-btn soft ep-save" data-save="${i}" aria-pressed="${!!e.saved}" aria-label="${esc(e.saved ? `Von der Box löschen: ${e.title}` : `Auf der Box speichern: ${e.title}`)}">${icon(e.saved ? 'check' : e.queued ? 'sync' : 'save', 18)}</button>`
         box.innerHTML = `<p class="help" style="margin:0 0 6px">${esc(`${episodes.length} Folgen`)}${episodes.some((e) => e.saved) ? ` · ${esc(`${episodes.filter((e) => e.saved).length} auf der Box gespeichert`)}` : ''}</p><div class="rows">${episodes
           .slice(0, shown)
           .map(
@@ -1753,6 +1757,7 @@ async function openEpisodes(t) {
           const e = episodes[Number(b.dataset.ep)]
           b.onclick = () => startPlay(e.title, `${API}/library/play`, { index: t.index, expect: t.ident, episode: e.url })
         }
+        for (const b of box.querySelectorAll('[data-locked]')) b.onclick = () => toast('Diese Folge gibt die ARD nicht zum Herunterladen frei – sie spielt nur mit Internet.', 'info')
         for (const b of box.querySelectorAll('[data-save]')) {
           const e = episodes[Number(b.dataset.save)]
           b.onclick = async () => {
@@ -1760,7 +1765,7 @@ async function openEpisodes(t) {
             const keep = !e.saved
             const r = await api(`${API}/podcast-offline/episode`, { method: 'POST', body: { feed: t.ident?.id, url: e.url, keep } })
             b.disabled = false
-            if (!r.ok) return toast('Das hat nicht geklappt', 'info')
+            if (!r.ok) return toast(r.body?.error === 'not_downloadable' ? 'Diese Folge gibt die ARD nicht zum Herunterladen frei – sie spielt nur mit Internet.' : 'Das hat nicht geklappt', 'info')
             if (keep) {
               e.queued = true
               toast('Wird auf die Box geladen')
@@ -2111,7 +2116,11 @@ function offlineField(item) {
   return `<div class="field"><label for="e-offline">Auf der Box speichern (ohne Internet hören)</label><select class="input" id="e-offline">${opts
     .map(([n, l]) => `<option value="${n}"${n === keep ? ' selected' : ''}>${esc(l)}</option>`)
     .join('')}</select></div>
-    <p class="help" id="e-offline-status" style="margin:0">${esc('Neue Folgen kommen von selbst, ältere gehen wieder. Einzelne Folgen merkst du dir unter Hören.')}</p>`
+    <p class="help" id="e-offline-status" style="margin:0">${esc('Neue Folgen kommen von selbst, ältere gehen wieder. Einzelne Folgen merkst du dir unter Hören.')}</p>${
+      String(item.id ?? '').startsWith('ard:')
+        ? `<p class="help" style="margin:0">${esc('Nur Folgen, die die ARD zum Herunterladen freigibt. Nimmt die ARD eine Folge aus ihrem Angebot, wird sie auch auf der Box gelöscht.')}</p>`
+        : ''
+    }`
 }
 
 // What of a podcast is on the SD card, in a line under its setting

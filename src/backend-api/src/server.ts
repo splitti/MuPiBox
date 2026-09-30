@@ -47,7 +47,7 @@ import { acquireLock, releaseLock, staleReason } from './file-lock'
 import { coverHidden } from './hidden-covers'
 import { OnlineCovers } from './online-covers'
 import { ardFeed, isArdFeed } from './ard-sounds'
-import { episodeKey, MAX_KEEP, PodcastOffline } from './podcast-offline'
+import { episodeKey, MAX_KEEP, type OfflineEpisode, PodcastOffline } from './podcast-offline'
 import { setFeedHeadReader } from './podcast-search'
 import { EpisodeState, episodeStateSettings } from './episode-state'
 import { browserGuard, corsOptionsFor, isAllowedHost, isLoopback, localOnly, localOrElternSession, PROXY_PORT, setConfiguredHosts, viaProxy } from './request-guard'
@@ -848,7 +848,8 @@ const rssFetchTimeoutMs = 5000
 const RSS_MAX_BYTES = 25_000_000
 const rssRefreshTimeoutMs = 30_000
 // Version of the cached shape: a cache written by an older one is rewritten at the next refresh (2: with durations)
-const RSS_SLIM_VERSION = 2
+// (3: ARD episodes carry their download release and end date - older caches are written again)
+const RSS_SLIM_VERSION = 3
 
 // Long podcasts are several MB of XML, and parsing that completely (xml-js) blocks the whole
 // backend for many seconds on the Pi. The kiosk only needs the <title>, <enclosure>,
@@ -984,7 +985,7 @@ setTimeout(() => void warmConfiguredPodcasts(), 60 * 1000).unref()
 // --------------------------------------------
 
 // The episodes of a podcast, newest first, from its cached feed (fetched when there is none yet)
-async function feedEpisodes(feed: string): Promise<{ url: string; title: string }[] | null> {
+async function feedEpisodes(feed: string): Promise<OfflineEpisode[] | null> {
   const key = rssCacheKeyFor(feed)
   let parsed: any
   try {
@@ -995,14 +996,24 @@ async function feedEpisodes(feed: string): Promise<{ url: string; title: string 
   const raw = parsed?.rss?.channel?.item
   if (!raw) return null
   const items = (Array.isArray(raw) ? raw : [raw]) as any[]
+  const ard = isArdFeed(feed)
   return items
     .map((it, i) => {
       const when = Date.parse(extractRssText(it.pubDate) ?? '')
-      return { url: it.enclosure?._attributes?.url, title: extractRssText(it.title) ?? 'Episode', at: Number.isFinite(when) ? when : -i }
+      const until = typeof it._until === 'string' ? Date.parse(it._until) : Number.NaN
+      return {
+        url: it.enclosure?._attributes?.url,
+        title: extractRssText(it.title) ?? 'Episode',
+        // An ARD episode: only with the ARD's own download release (ard-sounds.ts ardFeed) - none, also in a cache of
+        // before it was noted, is streaming only. A podcast feed's episode: its own address (undefined).
+        ...(ard ? { download: typeof it._download === 'string' ? it._download : null } : {}),
+        ...(Number.isFinite(until) ? { until } : {}),
+        at: Number.isFinite(when) ? when : -i,
+      }
     })
-    .filter((e): e is { url: string; title: string; at: number } => typeof e.url === 'string' && /^https?:\/\//.test(e.url))
+    .filter((e): e is typeof e & { url: string } => typeof e.url === 'string' && /^https?:\/\//.test(e.url))
     .sort((a, b) => b.at - a.at)
-    .map(({ url, title }) => ({ url, title }))
+    .map(({ at: _at, ...e }) => e)
 }
 
 // The first 16 KB of a feed (its <language> stands at the top), for the podcast search's language filter

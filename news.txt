@@ -17,6 +17,7 @@
 <li id='linews' class='linews'>Radio station search (radio-browser.info) with suggestions of kids' stations for the chosen language.</li>
 <li id='linews' class='linews'>Podcast and radio search can be switched off under Settings &gt; Services; adding content only offers services that are set up (Spotify only when signed in).</li>
 <li id='linews' class='linews'>Episodes on the SD card: per podcast "Off" or the newest 1, 3, 5, 10 or 20 episodes; single episodes can be saved or removed by hand. Saved episodes play without internet.</li>
+<li id='linews' class='linews'>ARD Audiothek: an episode is only saved when the ARD itself releases it for download (from the ARD's download address); all others are streamed only and show a lock. Saved ARD episodes are deleted when their time online at the ARD ends.</li>
 <li id='linews' class='linews'>Every episode keeps its own position (Settings &gt; Controls on the display &gt; Podcasts): on, and kept for 1 month to unlimited. The app shows how far each episode was heard.</li>
 <li id='linews' class='linews'>New episodes are marked on the display and in the app for 3, 7 or 14 days (only episodes that appeared after the podcast was added; gone once played). Started episodes show a progress bar, finished ones a tick.</li>
 <li id='linews' class='linews'>More robust podcasts: very large feeds load, an episode keeps its identity when the feed changes its links, the length comes from the feed, and slow feeds no longer hold up the display.</li>

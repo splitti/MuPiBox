@@ -20,6 +20,11 @@ import { pipeline } from 'node:stream/promises'
  *
  * One download at a time; each is written to a .part file and renamed when complete, and never fills the card
  * beyond a reserve.
+ *
+ * Rights: an episode is only kept when its source releases it for download. A podcast feed is meant to be downloaded
+ * (its enclosure); an ARD show (ard-sounds.ts) names per episode whether the ARD allows it (allowDownload with a
+ * downloadUrl) - without that it is only streamed, its stream address is never saved instead. An episode with an
+ * end of its time online (the ARD's endDate) is deleted then, a pinned one too.
  */
 
 export const OFFLINE_EXTENSIONS = ['.mp3', '.m4a', '.mp4', '.aac', '.ogg', '.opus']
@@ -37,21 +42,42 @@ export interface OfflineFile {
   bytes: number
   at: number
   pinned: boolean
+  /** when it has to go (the end of its time online, ms), if its source names one */
+  until?: number
+}
+
+/** An episode as the feed names it */
+export interface OfflineEpisode {
+  url: string
+  title: string
+  /**
+   * Where it may be downloaded: undefined = from its own address (a podcast feed); a string = from there (the ARD's
+   * downloadUrl); null = not at all (the ARD does not release it - streaming only)
+   */
+  download?: string | null
+  /** the end of its time online (ms), if any */
+  until?: number | null
 }
 
 interface Job {
   url: string
+  /** the address that is downloaded (the episode's own, or the ARD's download address) */
+  source: string
   feed: string
   title: string
   pinned: boolean
+  until?: number
 }
+
+/** Whether an episode may be kept on the card now */
+export const mayKeep = (e: OfflineEpisode, now = Date.now()) => e.download !== null && !(e.until && e.until <= now)
 
 export interface OfflineDeps {
   dir: string
   /** A GET of an address the box did not choose, checked on every hop (server.ts, openRemote) */
   openRemote: (url: string, signal: AbortSignal) => Promise<Response>
   /** A podcast's episodes, newest first (from the feed cache), or null when it cannot be read now */
-  episodes: (feed: string) => Promise<{ url: string; title: string }[] | null>
+  episodes: (feed: string) => Promise<OfflineEpisode[] | null>
   /**
    * Every podcast of the library and how many of its newest episodes to keep, or null when the library cannot be
    * read now (then nothing is removed: an empty list would mean "no podcast any more" and delete every file)
@@ -184,17 +210,26 @@ export class PodcastOffline {
     return info ? Number(info.bavail) * Number(info.bsize) : 0
   }
 
-  /** Keep this episode (pinned: until it is deleted; else as one of the newest N) */
-  async add(url: string, feed: string, title: string, pinned: boolean): Promise<void> {
+  /**
+   * Keep this episode (pinned: until it is deleted or its time online ends; else as one of the newest N). Throws
+   * not_downloadable when its source does not release it (see mayKeep).
+   */
+  async add(episode: OfflineEpisode, feed: string, pinned: boolean): Promise<void> {
     await this.load()
+    const { url, title } = episode
     if (!/^https?:\/\//.test(url)) throw new Error('not an http(s) address')
+    if (!mayKeep(episode)) throw new Error('not_downloadable')
+    const source = episode.download ?? url
+    if (!/^https?:\/\//.test(source)) throw new Error('not an http(s) address')
+    const until = episode.until ?? undefined
     const key = episodeKey(url)
     const have = this.files[key]
     if (have) {
       // (the address as the feed names it now: the app and the offline list compare with it)
-      if ((pinned && !have.pinned) || have.url !== url) {
+      if ((pinned && !have.pinned) || have.url !== url || have.until !== until) {
         have.pinned ||= pinned
         have.url = url
+        have.until = until
         await this.save()
       }
       return
@@ -205,7 +240,7 @@ export class PodcastOffline {
       queued.pinned ||= pinned
       return
     }
-    this.queue.push({ url, feed, title, pinned })
+    this.queue.push({ url, source, feed, title, pinned, until })
     void this.work()
   }
 
@@ -263,7 +298,7 @@ export class PodcastOffline {
   }
 
   private async fetchTo(job: Job & { done: number; total: number }, signal: AbortSignal, name: string, target: string, part: string): Promise<void> {
-    const response = await this.deps.openRemote(job.url, signal)
+    const response = await this.deps.openRemote(job.source, signal)
     const type = response.headers.get('content-type') ?? ''
     if (type && /^(text|application\/(json|xml|xhtml))/i.test(type)) {
       await response.body?.cancel()
@@ -292,25 +327,47 @@ export class PodcastOffline {
       await rm(part, { force: true })
       throw error
     }
-    this.files[episodeKey(job.url)] = { name, url: job.url, feed: job.feed, title: job.title, bytes: job.done, at: Date.now(), pinned: job.pinned }
+    this.files[episodeKey(job.url)] = {
+      name,
+      url: job.url,
+      feed: job.feed,
+      title: job.title,
+      bytes: job.done,
+      at: Date.now(),
+      pinned: job.pinned,
+      ...(job.until ? { until: job.until } : {}),
+    }
     await this.save()
   }
 
   /**
-   * One podcast as its setting says: its newest `keep` episodes there (the missing ones queued), the others that
-   * came that way deleted. Pinned ones stay.
+   * One podcast as its setting says: its newest `keep` episodes that may be kept there (the missing ones queued), the
+   * others that came that way deleted. Pinned ones stay - unless their source no longer releases them.
    */
   async syncFeed(feed: string, keep: number): Promise<void> {
     await this.load()
     const episodes = await this.deps.episodes(feed)
     if (!episodes) return // (feed not readable now: nothing is deleted on that basis)
-    const wanted = episodes.slice(0, Math.max(0, Math.min(keep, MAX_KEEP)))
+    const wanted = episodes.filter((e) => mayKeep(e)).slice(0, Math.max(0, Math.min(keep, MAX_KEEP)))
     const wantedKeys = new Set(wanted.map((e) => episodeKey(e.url)))
-    for (const e of wanted) await this.add(e.url, feed, e.title, false)
+    for (const e of wanted) await this.add(e, feed, false)
     this.queue = this.queue.filter((j) => j.feed !== feed || j.pinned || wantedKeys.has(episodeKey(j.url)))
+    const byKey = new Map(episodes.map((e) => [episodeKey(e.url), e]))
     for (const [key, f] of Object.entries(this.files)) {
-      if (f.feed === feed && !f.pinned && !wantedKeys.has(key)) await this.remove(f.url)
+      if (f.feed !== feed) continue
+      const now = byKey.get(key)
+      // (released no longer, or its end date moved: taken from the feed as it is now)
+      if (now && !mayKeep(now)) await this.remove(f.url)
+      else if (!f.pinned && !wantedKeys.has(key)) await this.remove(f.url)
+      else if (now && (now.until ?? undefined) !== f.until) await this.add(now, feed, f.pinned)
     }
+  }
+
+  /** Files whose time online is over: deleted (pinned ones too) - also when no feed can be read now */
+  async removeExpired(now = Date.now()): Promise<void> {
+    await this.load()
+    for (const f of Object.values(this.files)) if (f.until && f.until <= now) await this.remove(f.url)
+    this.queue = this.queue.filter((j) => !(j.until && j.until <= now))
   }
 
   /** Every podcast of the library; the files of podcasts no longer in it go */
@@ -318,7 +375,7 @@ export class PodcastOffline {
     if (this.syncing) return
     this.syncing = true
     try {
-      await this.load()
+      await this.removeExpired()
       const feeds = await this.deps.feeds()
       if (!feeds) return
       const inLibrary = new Set(feeds.map((f) => f.feed))

@@ -10,7 +10,7 @@ import { promises as fsp } from 'node:fs'
 import type { Router } from 'express'
 import type { MupiboxConfig } from '../models/mupibox-config.model'
 import { ardKidsShows, ardSearch, ardShowIdFromUrl, type ArdShow } from '../ard-sounds'
-import { MAX_KEEP, type PodcastOffline } from '../podcast-offline'
+import { MAX_KEEP, mayKeep, type PodcastOffline } from '../podcast-offline'
 import { CONTENT_LANGUAGES, mergeHits, type PodcastHit, searchPodcasts, topKidsPodcasts } from '../podcast-search'
 import { kidsRadio, radioLanguageKnown, searchRadio } from '../radio-search'
 import { requireCsrf, requireSession } from './middleware'
@@ -206,7 +206,12 @@ export function registerPodcastRoutes(router: Router, deps: PodcastRouteDeps): v
         res.status(404).json({ error: 'episode_not_found' })
         return
       }
-      await offline.add(episode.url, podcast.feed, episode.title, true)
+      // (an ARD episode the ARD does not release for download: only streamed, see podcast-offline.ts mayKeep)
+      if (!mayKeep(episode)) {
+        res.status(403).json({ error: 'not_downloadable' })
+        return
+      }
+      await offline.add(episode, podcast.feed, true)
     } else {
       await offline.remove(body.url)
     }

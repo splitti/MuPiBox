@@ -55,7 +55,8 @@ import { registerPodcastRoutes } from './podcasts'
 import { registerHealthRoutes } from './health'
 import { playlogSummary } from './playlog'
 import { weeklySummaryOn } from './weekly-summary'
-import { episodeKey, type PodcastOffline } from '../podcast-offline'
+import { isArdFeed } from '../ard-sounds'
+import { episodeKey, mayKeep, type PodcastOffline } from '../podcast-offline'
 import { randomBytes } from 'node:crypto'
 import { localOnly } from '../request-guard'
 import { spotifyLoginAge } from './spotify-auth-age'
@@ -267,7 +268,7 @@ const adminTickets = new Map<string, number>()
 // The box's name as the browser uses it, without a port: Spotify's redirect address is https://<box>/…, through the
 // web server on port 443 (as the admin interface's https://<box>/spotify.php) - Spotify takes no http addresses any
 // more except 127.0.0.1, so http://<box>:8200 was refused after the login
-type RssEpisode = { url: string; title: string; date: string | null; duration: string; cover: string; show: string; isNew: boolean }
+type RssEpisode = { url: string; title: string; date: string | null; duration: string; cover: string; show: string; isNew: boolean; saveable: boolean }
 
 // The episodes of a podcast feed, newest first (by date; without dates in the feed's order), from the feed as the
 // display reads it (xml-js: a text is {_text} or {_cdata}, one item comes as an object instead of a list), or null.
@@ -307,6 +308,14 @@ async function rssEpisodes(feed: string): Promise<RssEpisode[] | null> {
         show,
         // (new: see episode-state.ts, set by /api/rssfeed/cached)
         isNew: it._new === true,
+        // (may be kept on the SD card: a podcast feed's episode always, an ARD episode only with the ARD's download
+        // release and before the end of its time online - see podcast-offline.ts mayKeep)
+        saveable: mayKeep({
+          url,
+          title: '',
+          ...(isArdFeed(feed) ? { download: typeof it._download === 'string' ? it._download : null } : {}),
+          until: typeof it._until === 'string' ? Date.parse(it._until) || null : null,
+        }),
         // (no date: the order of the feed, the first one being the newest as usual)
         at: Number.isFinite(when) ? when : -i,
       })
