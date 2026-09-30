@@ -14,6 +14,7 @@
 import { execFile, execFileSync, spawn } from 'node:child_process'
 import { promises as fsp, readdirSync, readFileSync } from 'node:fs'
 import * as os from 'node:os'
+import * as path from 'node:path'
 import { type Request, Router } from 'express'
 import QRCode from 'qrcode'
 import type { MupiboxConfig } from '../models/mupibox-config.model'
@@ -50,6 +51,8 @@ import { registerUpdateRoutes } from './updates'
 import { registerSpotifyConnectRoutes } from './spotify-connect'
 import { registerTlsRoutes, tlsOf } from './tls'
 import { type LocalLibraryDeps, registerLocalUploadRoutes } from './upload'
+import { registerPodcastRoutes } from './podcasts'
+import type { PodcastOffline } from '../podcast-offline'
 import { randomBytes } from 'node:crypto'
 import { localOnly } from '../request-guard'
 import { spotifyLoginAge } from './spotify-auth-age'
@@ -82,6 +85,8 @@ export interface ElternRouterDeps {
   nasCover?: (folder: string, bytes: Buffer, ext: '.jpg' | '.png') => Promise<'ok' | 'not_selected' | 'offline' | 'denied' | 'failed'>
   /** Whether a NAS folder is one the parents selected (server.ts nasPathSelected). */
   nasSelected?: (folder: string) => Promise<boolean>
+  /** The podcast episodes kept on the SD card (see ../podcast-offline.ts). */
+  podcastOffline?: PodcastOffline
 }
 
 /** Build a Set-Cookie header value. HttpOnly + SameSite=Strict; no Secure
@@ -337,6 +342,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   registerUpdateRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig })
   registerSpotifyConnectRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerTlsRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
+  registerPodcastRoutes(router, { activeDataPath: deps.activeDataPath, podcastOffline: deps.podcastOffline })
   registerCustomCoverRoutes(router, {
     dir: '/home/dietpi/MuPiBox/media/cover',
     host: () => String((deps.getMupiboxConfig()?.mupibox as { host?: string } | undefined)?.host || os.hostname()),
@@ -1631,7 +1637,21 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       res.status(502).json({ error: 'feed_unavailable' })
       return
     }
-    res.json({ episodes })
+    // (saved: on the SD card - it plays without internet too; pos/len/done: where it was left, from the player's
+    // episode-positions.json next to the library)
+    const saved = deps.podcastOffline ? await deps.podcastOffline.list(item.id) : {}
+    let positions: Record<string, { pos?: number; len?: number; done?: boolean }> = {}
+    try {
+      positions = JSON.parse(await fsp.readFile(path.join(path.dirname(deps.activeDataPath), 'episode-positions.json'), 'utf8'))
+    } catch {
+      positions = {}
+    }
+    res.json({
+      episodes: episodes.map((e) => {
+        const p = positions[e.url]
+        return { ...e, saved: !!saved[e.url], ...(p ? { pos: p.pos ?? 0, len: p.len ?? 0, done: !!p.done } : {}) }
+      }),
+    })
   })
 
   router.post('/library/play', requireSession, requireCsrf, async (req, res) => {

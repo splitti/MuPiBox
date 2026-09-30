@@ -45,6 +45,8 @@ import { readEmbeddedPicture } from './embedded-cover'
 import { acquireLock, releaseLock, staleReason } from './file-lock'
 import { coverHidden } from './hidden-covers'
 import { OnlineCovers } from './online-covers'
+import { ardFeed, isArdFeed } from './ard-sounds'
+import { MAX_KEEP, PodcastOffline } from './podcast-offline'
 import { browserGuard, corsOptionsFor, isAllowedHost, isLoopback, localOnly, localOrElternSession, PROXY_PORT, setConfiguredHosts, viaProxy } from './request-guard'
 
 // Force IPv4 for DNS lookups to avoid EAI_AGAIN errors on Raspberry Pi
@@ -212,6 +214,7 @@ const resumeLock = '/tmp/.resume.lock'
 // RSS feed cache: persisted on disk (not /tmp) so cached podcast covers and feed
 // data survive a reboot.
 const rssCacheDataDir = `${configBasePath}/rss-cache`
+const podcastOfflineDir = '/home/dietpi/MuPiBox/podcasts'
 // The folder of this file: __dirname in the bundle (esbuild, CommonJS); run directly as an ES module (the tests, via
 // tsx) there is no __dirname, and the tests failed before the first one ran.
 const serverDir = typeof __dirname !== 'undefined' ? __dirname : path.dirname(fileURLToPath(import.meta.url))
@@ -597,7 +600,27 @@ async function fetchRemote(
   raw: string,
   opts: { maxBytes: number; timeoutMs: number; contentType?: RegExp },
 ): Promise<{ body: Buffer; contentType: string }> {
-  const signal = AbortSignal.timeout(opts.timeoutMs)
+  const response = await openRemote(raw, AbortSignal.timeout(opts.timeoutMs))
+  const contentType = response.headers.get('content-type') ?? ''
+  if (opts.contentType && contentType && !opts.contentType.test(contentType)) {
+    await response.body?.cancel()
+    throw new RemoteFetchError(`unsupported content-type: ${contentType}`, 415)
+  }
+  const advertised = Number.parseInt(response.headers.get('content-length') ?? '0', 10)
+  if (advertised > opts.maxBytes) {
+    await response.body?.cancel()
+    throw new RemoteFetchError(`response advertises ${advertised} bytes, cap is ${opts.maxBytes}`, 413)
+  }
+  try {
+    return { body: await readBodyCapped(response, opts.maxBytes), contentType }
+  } catch (error) {
+    throw new RemoteFetchError(String(error), 413)
+  }
+}
+
+// The checked GET of fetchRemote without reading the body: the answer (2xx) of the last hop, for a caller that
+// streams it (the podcast downloads, see podcast-offline.ts)
+async function openRemote(raw: string, signal: AbortSignal): Promise<Response> {
   let current = raw
   for (let hop = 0; hop <= 5; hop++) {
     const checked = checkRemoteUrl(current)
@@ -623,21 +646,7 @@ async function fetchRemote(
       await response.body?.cancel()
       throw new RemoteFetchError(`remote answered ${response.status}`, 502)
     }
-    const contentType = response.headers.get('content-type') ?? ''
-    if (opts.contentType && contentType && !opts.contentType.test(contentType)) {
-      await response.body?.cancel()
-      throw new RemoteFetchError(`unsupported content-type: ${contentType}`, 415)
-    }
-    const advertised = Number.parseInt(response.headers.get('content-length') ?? '0', 10)
-    if (advertised > opts.maxBytes) {
-      await response.body?.cancel()
-      throw new RemoteFetchError(`response advertises ${advertised} bytes, cap is ${opts.maxBytes}`, 413)
-    }
-    try {
-      return { body: await readBodyCapped(response, opts.maxBytes), contentType }
-    } catch (error) {
-      throw new RemoteFetchError(String(error), 413)
-    }
+    return response
   }
   throw new RemoteFetchError('too many redirects', 502)
 }
@@ -865,16 +874,22 @@ async function refreshRssCache(rssUrl: string, cacheKey: string): Promise<any> {
     }
   }
 
-  // Checked on every hop and capped while streaming (this path had no URL check at all, see fetchRemote)
-  const xml = (await fetchRemote(rssUrl, { maxBytes: 5_000_000, timeoutMs: rssFetchTimeoutMs })).body.toString('utf8')
-  const feed =
-    parseRssFeedFast(xml) ??
-    JSON.parse(
-      xmlparser.xml2json(
-        xml.replace(/<(description|content:encoded|itunes:summary|itunes:subtitle)(\s[^>]*)?>[\s\S]*?<\/\1>/g, ''),
-        { compact: true, nativeType: true },
-      ),
-    )
+  // A show of ARD Sounds ("ard:<id>", see ard-sounds.ts): its episodes from the ARD, in the shape of a feed
+  let feed: any
+  if (isArdFeed(rssUrl)) {
+    feed = await ardFeed(rssUrl)
+  } else {
+    // Checked on every hop and capped while streaming (this path had no URL check at all, see fetchRemote)
+    const xml = (await fetchRemote(rssUrl, { maxBytes: 5_000_000, timeoutMs: rssFetchTimeoutMs })).body.toString('utf8')
+    feed =
+      parseRssFeedFast(xml) ??
+      JSON.parse(
+        xmlparser.xml2json(
+          xml.replace(/<(description|content:encoded|itunes:summary|itunes:subtitle)(\s[^>]*)?>[\s\S]*?<\/\1>/g, ''),
+          { compact: true, nativeType: true },
+        ),
+      )
+  }
 
   const hasNewEpisode = latestEpisodeFingerprint(feed) !== latestEpisodeFingerprint(previousFeed)
   const previousCoverUrl = extractRssText(previousFeed?.rss?.channel?.image?.url)
@@ -940,6 +955,76 @@ async function warmConfiguredPodcasts(): Promise<void> {
 }
 setTimeout(() => void warmConfiguredPodcasts(), 60 * 1000).unref()
 
+// --------------------------------------------
+// Podcast episodes on the SD card (podcast-offline.ts)
+// --------------------------------------------
+
+// The episodes of a podcast, newest first, from its cached feed (fetched when there is none yet)
+async function feedEpisodes(feed: string): Promise<{ url: string; title: string }[] | null> {
+  const key = rssCacheKeyFor(feed)
+  let parsed: any
+  try {
+    parsed = JSON.parse(await readFile(rssCacheFilePath(key), 'utf8'))
+  } catch {
+    parsed = await refreshRssCache(feed, key).catch(() => null)
+  }
+  const raw = parsed?.rss?.channel?.item
+  if (!raw) return null
+  const items = (Array.isArray(raw) ? raw : [raw]) as any[]
+  return items
+    .map((it, i) => {
+      const when = Date.parse(extractRssText(it.pubDate) ?? '')
+      return { url: it.enclosure?._attributes?.url, title: extractRssText(it.title) ?? 'Episode', at: Number.isFinite(when) ? when : -i }
+    })
+    .filter((e): e is { url: string; title: string; at: number } => typeof e.url === 'string' && /^https?:\/\//.test(e.url))
+    .sort((a, b) => b.at - a.at)
+    .map(({ url, title }) => ({ url, title }))
+}
+
+const podcastOffline = new PodcastOffline({
+  dir: podcastOfflineDir,
+  openRemote,
+  episodes: feedEpisodes,
+  feeds: async () => {
+    try {
+      const data = JSON.parse(await readFile(dataFile, 'utf8')) as { type?: string; id?: unknown; offline?: unknown }[]
+      return data
+        .filter((e) => e.type === 'rss' && typeof e.id === 'string')
+        .map((e) => ({ feed: e.id as string, keep: Math.max(0, Math.min(MAX_KEEP, Number(e.offline) || 0)) }))
+    } catch {
+      return []
+    }
+  },
+  changed: () => undefined,
+})
+podcastOffline.start()
+
+// Whether the box has no internet right now (network.json, written every minute by get_network.sh)
+let offlineCheck = { at: 0, offline: false }
+function boxOffline(): boolean {
+  if (Date.now() - offlineCheck.at < 10_000) return offlineCheck.offline
+  let offline = false
+  try {
+    offline = (JSON.parse(fs.readFileSync(networkFile, 'utf8')) as { onlinestate?: string }).onlinestate === 'offline'
+  } catch {
+    offline = false
+  }
+  offlineCheck = { at: Date.now(), offline }
+  return offline
+}
+
+// Without internet a podcast with episodes on the card shows those only (the others cannot play); null: as it is
+async function offlineFeedView(feed: string, cached: Buffer): Promise<unknown | null> {
+  if (!boxOffline()) return null
+  const files = await podcastOffline.list(feed)
+  if (Object.keys(files).length === 0) return null
+  const parsed = JSON.parse(cached.toString('utf8'))
+  const raw = parsed?.rss?.channel?.item
+  const items = (Array.isArray(raw) ? raw : raw ? [raw] : []) as any[]
+  parsed.rss.channel.item = items.filter((it) => files[it?.enclosure?._attributes?.url])
+  return parsed
+}
+
 app.get('/api/rssfeed/cached', async (req, res) => {
   const rssUrl = req.query.url
   if (typeof rssUrl !== 'string') {
@@ -954,7 +1039,9 @@ app.get('/api/rssfeed/cached', async (req, res) => {
     try {
       // The cache file already is the JSON answer - send it as it is (no parse / stringify).
       const cached = await readFile(cacheFile)
-      res.type('application/json').send(cached)
+      const offlineView = await offlineFeedView(rssUrl, cached)
+      if (offlineView) res.json(offlineView)
+      else res.type('application/json').send(cached)
       // Refresh in the background for next time; don't make the caller wait for it.
       const due = Date.now() - (rssLastRefresh.get(cacheKey) ?? 0) > rssRefreshIntervalMs
       if (due && !rssRefreshing.has(cacheKey)) {
@@ -7804,6 +7891,7 @@ app.use(
       (await trackCover(file).catch(() => undefined)) ? `/api/track-cover?file=${encodeURIComponent(file)}` : null,
     nasCover: writeNasCover,
     nasSelected: nasPathSelected,
+    podcastOffline,
     localLibrary: {
       root: libraryRoot,
       categories: libraryCategories,

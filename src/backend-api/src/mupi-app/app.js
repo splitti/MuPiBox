@@ -1685,6 +1685,14 @@ function onTile(t) {
   return startPlay(t.title, `${API}/library/play-local`, { path: t.path })
 }
 
+// How far an episode was heard (the player remembers it, see Bedienung am Display › Podcasts weiterhören)
+function heardText(e) {
+  if (e.done) return 'gehört'
+  if (!(e.pos > 0)) return ''
+  const left = e.len > e.pos ? Math.max(1, Math.round((e.len - e.pos) / 60)) : 0
+  return left ? `noch ${left} min` : 'Angefangen'
+}
+
 // The episodes of a podcast (newest first, from its feed as the box reads it); a tap plays one on the box
 async function openEpisodes(t) {
   let shown = 40
@@ -1707,17 +1715,38 @@ async function openEpisodes(t) {
           box.innerHTML = `<p class="help">${esc('Keine Folgen gefunden.')}</p>`
           return
         }
-        box.innerHTML = `<p class="help" style="margin:0 0 6px">${esc(`${episodes.length} Folgen`)}</p><div class="rows">${episodes
+        // (the button on the right keeps an episode on the SD card - it plays without internet then - or deletes it)
+        const saveBtn = (e, i) =>
+          `<button class="icon-btn soft ep-save" data-save="${i}" aria-pressed="${!!e.saved}" aria-label="${esc(e.saved ? `Von der Box löschen: ${e.title}` : `Auf der Box speichern: ${e.title}`)}">${icon(e.saved ? 'check' : e.queued ? 'sync' : 'save', 18)}</button>`
+        box.innerHTML = `<p class="help" style="margin:0 0 6px">${esc(`${episodes.length} Folgen`)}${episodes.some((e) => e.saved) ? ` · ${esc(`${episodes.filter((e) => e.saved).length} auf der Box gespeichert`)}` : ''}</p><div class="rows">${episodes
           .slice(0, shown)
           .map(
-            (e, i) => `<button class="entry lib-row" data-ep="${i}">${e.cover ? `<span class="lib-thumb"><img src="${esc(e.cover)}" alt="" loading="lazy"></span>` : ''}
-              <span class="lbl"><b translate="no">${esc(e.title)}</b><small>${esc([e.date ? new Date(e.date).toLocaleDateString(LOCALE) : '', e.duration].filter(Boolean).join(' · '))}</small></span><span class="chev">${icon('chevron', 18)}</span></button>`,
+            (e, i) => `<div class="entry ep-row"><button class="lib-row ep-play" data-ep="${i}">${e.cover ? `<span class="lib-thumb"><img src="${esc(e.cover)}" alt="" loading="lazy"></span>` : ''}
+              <span class="lbl"><b translate="no">${esc(e.title)}</b><small>${esc([e.date ? new Date(e.date).toLocaleDateString(LOCALE) : '', e.duration, heardText(e)].filter(Boolean).join(' · '))}</small></span></button>${saveBtn(e, i)}</div>`,
           )
           .join('')}</div>${shown < episodes.length ? `<div class="btns"><button class="btn" data-more>${esc('Weitere Folgen anzeigen')}</button></div>` : ''}`
         for (const img of box.querySelectorAll('img')) img.addEventListener('error', () => img.remove(), { once: true })
         for (const b of box.querySelectorAll('[data-ep]')) {
           const e = episodes[Number(b.dataset.ep)]
           b.onclick = () => startPlay(e.title, `${API}/library/play`, { index: t.index, expect: t.ident, episode: e.url })
+        }
+        for (const b of box.querySelectorAll('[data-save]')) {
+          const e = episodes[Number(b.dataset.save)]
+          b.onclick = async () => {
+            b.disabled = true
+            const keep = !e.saved
+            const r = await api(`${API}/podcast-offline/episode`, { method: 'POST', body: { feed: t.ident?.id, url: e.url, keep } })
+            b.disabled = false
+            if (!r.ok) return toast('Das hat nicht geklappt', 'info')
+            if (keep) {
+              e.queued = true
+              toast('Wird auf die Box geladen')
+            } else {
+              e.saved = false
+              toast('Von der Box gelöscht')
+            }
+            draw()
+          }
         }
         box.querySelector('[data-more]')?.addEventListener('click', () => {
           shown += 40
@@ -1810,12 +1839,15 @@ function libChanged() {
 const LIB_SOURCES = [
   ['all', 'Alle Quellen'],
   ['spotify', 'Spotify'],
+  ['ard', 'ARD Sounds'],
   ['manual', 'Manuell'],
   ['spotify-sync', 'Sync'],
   ['local', 'SD-Karte'],
   ['nas', 'NAS'],
 ]
 const SOURCE_LABEL = { manual: 'Manuell', 'spotify-sync': 'Sync', local: 'SD-Karte', nas: 'NAS' }
+// A show of ARD Sounds: a podcast whose "feed" is ard:<show id> (the box builds its episode list from the ARD)
+const isArdEntry = (it) => it?.type === 'rss' && String(it.id ?? '').startsWith('ard:')
 const CAT_SHORT = { audiobook: 'Hörspiel', music: 'Musik', other: 'Radio & Podcasts' }
 const AVATAR_COLORS = ['#F2B45A', '#7FC7F0', '#9ED8A6', '#F4A3B4', '#C9B6F2', '#8FD6C8', '#F6C58A', '#A8C6F5']
 const avatarColor = (name) => AVATAR_COLORS[[...String(name)].reduce((h, ch) => (h * 31 + ch.codePointAt(0)) >>> 0, 7) % AVATAR_COLORS.length]
@@ -1860,13 +1892,13 @@ function libGroups() {
     if (!groups.has(key)) groups.set(key, { ...g, entries: [] })
     return groups.get(key)
   }
-  if (lib.src === 'all' || lib.src === 'spotify' || lib.src === 'manual' || lib.src === 'spotify-sync') {
+  if (lib.src === 'all' || lib.src === 'spotify' || lib.src === 'ard' || lib.src === 'manual' || lib.src === 'spotify-sync') {
     for (const it of lib.items) {
       if (!it || it.isResume === true || it.category === 'resume' || it.type === 'library') continue
       const cat = it.category_override ?? (it.category === 'radio' ? 'other' : it.category)
       if (lib.cat !== 'all' && cat !== lib.cat) continue
       const src = it.source ?? 'manual'
-      if (lib.src === 'spotify' ? it.type !== 'spotify' : lib.src !== 'all' && src !== lib.src) continue
+      if (lib.src === 'spotify' ? it.type !== 'spotify' : lib.src === 'ard' ? !isArdEntry(it) : lib.src !== 'all' && src !== lib.src) continue
       const title = String(it.title_override ?? it.title ?? it.artist_override ?? it.artist ?? '—')
       const artist = String(it.artist_override ?? it.artist ?? title)
       if (q && !norm(`${title} ${artist}`).includes(q)) continue
@@ -1899,7 +1931,8 @@ let libShown = []
 
 function libSub(g) {
   const spotify = g.kind === 'entries' && g.entries[0]?.item.type === 'spotify'
-  const src = spotify ? (g.src === 'spotify-sync' ? 'Spotify · Sync' : 'Spotify') : (SOURCE_LABEL[g.src] ?? '')
+  const ard = g.kind === 'entries' && isArdEntry(g.entries[0]?.item)
+  const src = spotify ? (g.src === 'spotify-sync' ? 'Spotify · Sync' : 'Spotify') : ard ? 'ARD Sounds' : (SOURCE_LABEL[g.src] ?? '')
   if (g.kind === 'local') return `${g.folder.libraryIsContainer ? 'Ordner' : 'Album'} · ${src}`
   if (g.kind === 'nas') return `${g.folder.nasIsContainer ? 'Ordner' : 'Album'} · ${src}`
   if (g.entries.length === 1) {
@@ -2007,6 +2040,38 @@ function entryPlayFields(item) {
     <div class="field"><label>Nur einen Teil (Nr. von – bis, leer = alle)</label><div class="rule-times"><input class="input" id="e-from" type="number" min="1" inputmode="numeric" value="${part ? esc(item.aPartOfAllMin ?? 1) : ''}" placeholder="von" aria-label="von"><input class="input" id="e-to" type="number" min="1" inputmode="numeric" value="${part ? esc(item.aPartOfAllMax ?? '') : ''}" placeholder="bis" aria-label="bis"></div></div>`
 }
 
+// How many of a podcast's newest episodes stay on the SD card (entry field "offline"; see podcast-offline.ts)
+const OFFLINE_KEEP = [
+  [0, 'Aus'],
+  [1, 'Die neueste Folge'],
+  [3, 'Die 3 neuesten Folgen'],
+  [5, 'Die 5 neuesten Folgen'],
+  [10, 'Die 10 neuesten Folgen'],
+  [20, 'Die 20 neuesten Folgen'],
+]
+
+function offlineField(item) {
+  const keep = Number(item.offline) || 0
+  const opts = [...OFFLINE_KEEP, ...(OFFLINE_KEEP.some(([n]) => n === keep) ? [] : [[keep, `Die ${keep} neuesten Folgen`]])]
+  return `<div class="field"><label for="e-offline">Auf der Box speichern (ohne Internet hören)</label><select class="input" id="e-offline">${opts
+    .map(([n, l]) => `<option value="${n}"${n === keep ? ' selected' : ''}>${esc(l)}</option>`)
+    .join('')}</select></div>
+    <p class="help" id="e-offline-status" style="margin:0">${esc('Neue Folgen kommen von selbst, ältere gehen wieder. Einzelne Folgen merkst du dir unter Hören.')}</p>`
+}
+
+// What of a podcast is on the SD card, in a line under its setting
+async function loadOfflineStatus(feed, box) {
+  const r = await api(`${API}/podcast-offline?feed=${encodeURIComponent(feed)}`)
+  if (!box?.isConnected || !r.ok) return
+  const n = Object.keys(r.body.files ?? {}).length
+  const waiting = (r.body.queued ?? []).length + (r.body.current ? 1 : 0)
+  const size = formatBytes(r.body.bytes)
+  const parts = [n === 0 ? 'Noch keine Folge gespeichert' : n === 1 ? `Eine Folge gespeichert (${size})` : `${n} Folgen gespeichert (${size})`]
+  if (waiting) parts.push(`${waiting} in der Warteschlange`)
+  if (r.body.lastError?.error === 'not_enough_space') parts.push('Zu wenig Platz auf der SD-Karte')
+  box.textContent = parts.join(' · ')
+}
+
 // The sheet of a library entry: manual ones change their fields, synced ones get overrides (the sync keeps its own)
 // The albums of a whole Spotify artist in its entry (as Spotify lists them, oldest first; the box shows them in the
 // order the entry chooses)
@@ -2045,7 +2110,8 @@ function openEntrySheet(item, back = null) {
   // (order, shuffle, a part of the episodes: of the entries one adds by hand - Spotify and podcasts)
   const playOptions = !isSync && (item.type === 'spotify' || item.type === 'rss')
   // a radio station or a podcast: its address (stream / feed) can be changed too
-  const addressLabel = !isSync && { radio: 'Stream-Adresse (URL)', rss: 'Feed-Adresse (URL)' }[item.type]
+  // (not for a show of ARD Sounds: its "address" is the ARD's id of the show)
+  const addressLabel = !isSync && !isArdEntry(item) && { radio: 'Stream-Adresse (URL)', rss: 'Feed-Adresse (URL)' }[item.type]
   const fields = [
     ['artist', 'Interpret'],
     ['title', 'Titel'],
@@ -2069,6 +2135,7 @@ function openEntrySheet(item, back = null) {
        .join('')}
      <div class="field"><label for="e-cat">Kategorie</label>${catSelect('e-cat', item.category_override ?? (isSync ? '' : item.category === 'radio' ? 'other' : item.category), isSync)}</div>
      ${playOptions ? entryPlayFields(item) : ''}
+     ${item.type === 'rss' ? offlineField(item) : ''}
      ${isSync ? `<p class="help" style="margin:0">Entfernen geht über Bibliothek › Verwaltete Inhalte oder die Spotify-Playlist.</p>` : ''}
      ${wholeArtist ? `<div class="section-label" style="margin:0">Alben</div><div id="e-albums"><p class="help">Lade die Alben von Spotify …</p></div>` : ''}
      <div class="btns">${isSync ? '' : `<button class="btn danger" data-del>Löschen</button>`}<button class="btn" data-close>Abbrechen</button><button class="btn primary" data-ok>Speichern</button></div>`,
@@ -2076,6 +2143,7 @@ function openEntrySheet(item, back = null) {
       sheet.querySelector('[data-close]').onclick = back ? back.open : close
       sheet.querySelector('[data-back]')?.addEventListener('click', back?.open)
       if (wholeArtist) loadArtistAlbums(item, sheet.querySelector('#e-albums'))
+      if (item.type === 'rss') loadOfflineStatus(item.id, sheet.querySelector('#e-offline-status'))
       // A chosen picture lands among the own pictures and is saved into the entry right away (the picker takes the
       // sheet's place, what was typed here and not saved yet stays as it was on the box)
       for (const b of sheet.querySelectorAll('[data-pick]')) {
@@ -2137,10 +2205,15 @@ function openEntrySheet(item, back = null) {
           if (cat) updated.category_override = cat
           else delete updated.category_override
         } else if (cat) updated.category = cat
+        const keep = item.type === 'rss' ? Number(sheet.querySelector('#e-offline').value) || 0 : 0
+        if (keep) updated.offline = keep
+        else delete updated.offline
         const r = await api('/api/edit', { method: 'POST', body: { index: libPlace(item), data: updated, original: item } })
         if (!libWriteOk(r)) return
         close()
         toast('Gespeichert')
+        // (the episodes on the SD card follow the setting now, not only at the next hourly round)
+        if (item.type === 'rss' && keep !== (Number(item.offline) || 0)) api(`${API}/podcast-offline/sync`, { method: 'POST', body: { feed: updated.id } })
         libReload()
       }
       sheet.querySelector('[data-del]')?.addEventListener('click', () => {
@@ -2757,6 +2830,112 @@ async function addFromSearch(r, btn) {
   return run()
 }
 
+/* In der ARD Audiothek suchen (ARD Sounds) */
+
+// kids: only shows for children (the ARD's children's category, or a name that says so); list: the children's shows
+// shown before anything is searched
+const ard = { q: '', kids: true, cat: 'audiobook', result: null, list: null }
+
+function ardTop() {
+  return [
+    `<section class="card wide">
+      <p class="help" style="margin:0">${esc('Kostenlose Hörspiele, Geschichten und Kinderpodcasts der ARD – ohne Konto. Eine Sendung kommt wie ein Podcast auf die Box, neue Folgen erscheinen von selbst.')}</p>
+      <div class="search">${icon('search')}<input class="input" id="ard-q" type="search" placeholder="${esc('Sendung suchen – z. B. Ohrenbär')}" autocomplete="off" value="${esc(ard.q)}" enterkeyhint="search"></div>
+      <div class="seg" id="ard-kids"><button aria-pressed="${ard.kids}" data-v="1">Für Kinder</button><button aria-pressed="${!ard.kids}" data-v="0">Alles</button></div>
+      <div class="btns"><button class="btn primary" id="ard-go">Suchen</button></div>
+    </section>`,
+    `<div id="ard-results" class="wide-stack"></div>`,
+  ]
+}
+
+async function doArdSearch() {
+  const q = ard.q.trim()
+  if (q.length < 2) return toast('Bitte mindestens 2 Zeichen eingeben', 'info')
+  const box = $('#ard-results')
+  box.innerHTML = `<div class="loading"><p>Suche …</p></div>`
+  const r = await api(`${API}/ard/search?q=${encodeURIComponent(q)}${ard.kids ? '&kids=1' : ''}`)
+  if (!r.ok) {
+    box.innerHTML = `<p class="help">${esc('Die ARD Audiothek ist gerade nicht erreichbar.')}</p>`
+    return
+  }
+  ard.result = r.body?.shows ?? []
+  drawArd()
+}
+
+// Before a search: the ARD's children's shows, the ones with new episodes first
+async function loadArdKids() {
+  if (ard.list) return drawArd()
+  const box = $('#ard-results')
+  if (box) box.innerHTML = `<div class="loading"><p>Lade …</p></div>`
+  const r = await api(`${API}/ard/kids`)
+  ard.list = r.ok ? (r.body?.shows ?? []) : []
+  drawArd()
+}
+
+function drawArd() {
+  const box = $('#ard-results')
+  if (!box) return
+  const searched = ard.result !== null
+  const shows = searched ? ard.result : ard.list ?? []
+  const title = searched ? 'Gefunden' : 'Sendungen für Kinder'
+  box.innerHTML = shows.length
+    ? `<section class="card"><h2>${esc(title)}</h2><div class="rows">${shows
+        .map(
+          (s, i) => `<button class="entry lib-row ard-show" data-show="${i}"><span class="lib-thumb">${s.image ? `<img src="${esc(s.image)}" alt="" loading="lazy">` : ''}${icon('music', 18)}</span>
+            <span class="lbl"><b translate="no">${esc(s.title)}</b><small>${esc([s.station, `${s.episodes} Folgen`].filter(Boolean).join(' · '))}</small></span><span class="chev">${icon('chevron', 18)}</span></button>`,
+        )
+        .join('')}</div></section>`
+    : `<p class="help">${esc(searched ? (ard.kids ? 'Nichts für Kinder gefunden – mit „Alles“ noch einmal suchen?' : 'Nichts gefunden.') : 'Die ARD Audiothek ist gerade nicht erreichbar.')}</p>`
+  for (const img of box.querySelectorAll('img')) img.addEventListener('error', () => img.remove(), { once: true })
+  for (const b of box.querySelectorAll('[data-show]')) b.onclick = () => openArdShow(shows[Number(b.dataset.show)])
+}
+
+// A show: its picture, description and newest episodes, and how it comes onto the box
+async function openArdShow(s) {
+  const data = await api('/api/data')
+  const have = Array.isArray(data.body) && data.body.some((it) => it?.type === 'rss' && it.id === `ard:${s.id}`)
+  openSheet(
+    `<div class="ard-head">${s.image ? `<img src="${esc(s.image)}" alt="">` : ''}<span class="lbl"><h2 translate="no" style="margin:0">${esc(s.title)}</h2><small>${esc([s.station, `${s.episodes} Folgen`].filter(Boolean).join(' · '))}</small></span></div>
+     ${s.synopsis ? `<p class="ard-synopsis">${esc(s.synopsis)}</p>` : ''}
+     <div class="section-label" style="margin:0">${esc('Neueste Folgen')}</div><div id="ard-eps"><p class="help">Lade die Folgen …</p></div>
+     ${
+       have
+         ? `<p class="help" style="margin:0">${esc('Schon in der Bibliothek.')}</p><div class="btns"><button class="btn" data-close>Schließen</button></div>`
+         : `<div class="field"><label for="ard-cat">Hinzufügen als</label>${catSelect('ard-cat', ard.cat, false)}</div>
+            <div class="field"><label for="ard-off">Auf der Box speichern (ohne Internet hören)</label><select class="input" id="ard-off">${OFFLINE_KEEP.map(([n, l]) => `<option value="${n}">${esc(l)}</option>`).join('')}</select></div>
+            <div class="btns"><button class="btn" data-close>Abbrechen</button><button class="btn primary" data-add>${icon('plus', 18)}Hinzufügen</button></div>`
+     }`,
+    async (sheet, close) => {
+      for (const b of sheet.querySelectorAll('[data-close]')) b.onclick = close
+      sheet.querySelector('#ard-cat')?.addEventListener('change', (e) => (ard.cat = e.target.value))
+      sheet.querySelector('[data-add]')?.addEventListener('click', async (e) => {
+        const btn = e.currentTarget
+        btn.disabled = true
+        const keep = Number(sheet.querySelector('#ard-off').value) || 0
+        const body = { type: 'rss', id: `ard:${s.id}`, artist: s.title, category: sheet.querySelector('#ard-cat').value, source: 'manual', ...(keep ? { offline: keep } : {}) }
+        const r = await api('/api/add', { method: 'POST', body })
+        btn.disabled = false
+        if (!libWriteOk(r)) return
+        close()
+        toast(`Hinzugefügt: ${s.title}`)
+        if (keep) api(`${API}/podcast-offline/sync`, { method: 'POST', body: {} })
+        libChanged()
+        lib.items = null
+      })
+      const r = await api(`${API}/ard/show?id=${encodeURIComponent(s.id)}`)
+      const box = sheet.querySelector('#ard-eps')
+      if (!box?.isConnected) return
+      const eps = r.ok ? (r.body?.episodes ?? []).slice(0, 5) : []
+      const time = (sec) => (sec >= 60 ? `${Math.round(sec / 60)} min` : '')
+      box.innerHTML = eps.length
+        ? `<div class="rows">${eps
+            .map((e) => `<div class="entry"><span class="lbl"><b translate="no">${esc(e.title)}</b><small>${esc([e.date ? new Date(e.date).toLocaleDateString(LOCALE) : '', time(e.duration)].filter(Boolean).join(' · '))}</small></span></div>`)
+            .join('')}</div>`
+        : `<p class="help">${esc(r.ok ? 'Gerade keine Folgen verfügbar.' : 'Die Folgen ließen sich nicht laden.')}</p>`
+    },
+  )
+}
+
 /* Link einfügen (Spotify-Link, Radiosender, Podcast) */
 
 function spotifyIdFrom(url, kind) {
@@ -2844,8 +3023,12 @@ async function addLink(page) {
       }
       // (as the box's own add page: the player takes the streams over http)
       const id = address.startsWith('https://') ? address.replace('https://', 'http://') : address
+      // a link to a show on ardsounds.de / ardaudiothek.de: taken as the show of ARD Sounds (its page is no feed)
+      const ardLink = type !== 'Radio-Stream' && /^https:\/\/(www\.)?(ardsounds|ardaudiothek)\.de\/sendung\//i.test(url)
+      const ardId = ardLink ? (await api(`${API}/ard/resolve`, { method: 'POST', body: { url } })).body?.id : null
+      if (ardLink && !ardId) return toast('Diese Sendung kennt die ARD Audiothek nicht – ist der Link richtig?', 'info')
       if (type === 'Radio-Stream') Object.assign(body, { type: 'radio', id, artist: label || 'Radio', title: title || 'Stream' })
-      else Object.assign(body, { type: 'rss', id, artist: label || 'Podcast' })
+      else Object.assign(body, { type: 'rss', id: ardId ? `ard:${ardId}` : id, artist: label || 'Podcast' })
     }
   } finally {
     if (button) button.disabled = false
@@ -5008,7 +5191,18 @@ async function loadControls() {
   state.values.set('resume', o.resume)
   state.values.set('listTimer', o.listviewTimer)
   state.values.set('setTimer', o.settingsAccessTimer)
+  state.values.set('epResume', o.episodeResume !== false)
+  state.values.set('epDays', EP_DAYS.find(([, d]) => d === o.episodeResumeDays)?.[0] ?? `${o.episodeResumeDays} Tage`)
 }
+
+// How long a podcast episode's position is remembered (mupibox.episodeResumeDays; 0: without end)
+const EP_DAYS = [
+  ['1 Monat', 30],
+  ['3 Monate', 90],
+  ['6 Monate', 180],
+  ['1 Jahr', 365],
+  ['Unbegrenzt', 0],
+]
 
 /* Display live: a picture of the display, the remote control */
 
@@ -6871,6 +7065,32 @@ const CONTROLLERS = {
       drawSearch()
     },
   },
+  ard: {
+    top: ardTop,
+    sections: () => [],
+    mount(root) {
+      const q = $('#ard-q', root)
+      q.addEventListener('input', () => {
+        ard.q = q.value
+        // (the field emptied: the children's shows again)
+        if (!ard.q.trim() && ard.result) {
+          ard.result = null
+          drawArd()
+        }
+      })
+      q.addEventListener('keydown', (e) => e.key === 'Enter' && doArdSearch())
+      $('#ard-kids', root).onclick = (e) => {
+        const b = e.target.closest('button')
+        if (!b) return
+        ard.kids = b.dataset.v === '1'
+        for (const x of b.parentElement.children) x.setAttribute('aria-pressed', String(x === b))
+        if (ard.q.trim().length >= 2) doArdSearch()
+      }
+      $('#ard-go', root).onclick = doArdSearch
+      if (ard.result) drawArd()
+      else loadArdKids()
+    },
+  },
   link: {
     // the fields that fit the kind of link (as the box's own add page)
     sections: (page) => {
@@ -7075,6 +7295,12 @@ const CONTROLLERS = {
       if (key === 'resume') return saveDisplayOptions({ resume: v }, `${v} Fortsetzen-Einträge`)
       if (key === 'listTimer') return saveDisplayOptions({ listviewTimer: v }, `Titelliste nach ${fmtSec(v)}`)
       if (key === 'setTimer') return saveDisplayOptions({ settingsAccessTimer: v }, `Einstellungen nach ${fmtSec(v)}`)
+      if (key === 'epResume') return saveDisplayOptions({ episodeResume: !!v }, v ? 'Folgen gehen an der letzten Stelle weiter' : 'Folgen beginnen immer von vorn')
+      if (key === 'epDays') {
+        const days = EP_DAYS.find(([l]) => l === v)?.[1]
+        if (days === undefined) return
+        return saveDisplayOptions({ episodeResumeDays: days })
+      }
     },
   },
   displaylive: { top: liveTop, sections: () => [], mount: mountLive },
@@ -7783,6 +8009,7 @@ function openDay(el, page) {
 function openAdd() {
   const ways = [
     ['suche', 'search', 'Auf Spotify suchen', 'Hörspiele, Alben und Künstler finden'],
+    ['ard', 'phones', 'In der ARD Audiothek suchen', 'Kostenlose Hörspiele und Kinderpodcasts'],
     ['link', 'link', 'Link einfügen', 'Spotify-Link, Radiosender oder Podcast'],
     ['upload', 'up', 'Vom Gerät hochladen', 'Titel oder ganze Ordner auf die SD-Karte'],
   ]

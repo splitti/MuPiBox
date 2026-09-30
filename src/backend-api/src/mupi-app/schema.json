@@ -584,6 +584,16 @@
    ]
   },
   {
+   "id": "ard",
+   "slug": "ard-sounds",
+   "area": "bibliothek",
+   "parent": "bibliothek",
+   "title": "In der ARD Audiothek suchen",
+   "description": "",
+   "icon": "phones",
+   "sections": []
+  },
+  {
    "id": "suche",
    "slug": "spotify-search",
    "area": "bibliothek",
@@ -2185,7 +2195,7 @@
    "area": "einstellungen",
    "parent": "g-display",
    "title": "Bedienung am Display",
-   "description": "Kategorien, Fortsetzen, Haltezeiten",
+   "description": "Kategorien, Fortsetzen, Haltezeiten, Podcasts",
    "icon": "touch",
    "sections": [
     {
@@ -2252,6 +2262,31 @@
        "max": 10,
        "step": 1,
        "unit": " s"
+      }
+     ]
+    },
+    {
+     "title": "Podcasts weiterhören",
+     "help": "Jede angespielte Folge merkt sich die Stelle, an der aufgehört wurde – auch ohne Fortsetzen-Kachel, auch in der App. Zu Ende gehörte Folgen beginnen wieder von vorn.",
+     "items": [
+      {
+       "type": "toggle",
+       "label": "An der letzten Stelle weiterhören",
+       "key": "epResume",
+       "default": true
+      },
+      {
+       "type": "select",
+       "label": "Stelle merken für",
+       "key": "epDays",
+       "default": "6 Monate",
+       "options": [
+        "1 Monat",
+        "3 Monate",
+        "6 Monate",
+        "1 Jahr",
+        "Unbegrenzt"
+       ]
       }
      ]
     }
@@ -4936,6 +4971,11 @@
    "id": "verwaltet"
   },
   {
+   "l": "In der ARD Audiothek suchen",
+   "where": "Bibliothek › In der ARD Audiothek suchen",
+   "id": "ard"
+  },
+  {
    "l": "Auf Spotify suchen",
    "where": "Bibliothek › Auf Spotify suchen",
    "id": "suche"
@@ -5467,6 +5507,21 @@
   },
   {
    "l": "Haltezeit für den Einstellungszugang",
+   "where": "Display & Bedienung › Bedienung am Display",
+   "id": "bedienung"
+  },
+  {
+   "l": "Podcasts weiterhören",
+   "where": "Display & Bedienung › Bedienung am Display",
+   "id": "bedienung"
+  },
+  {
+   "l": "An der letzten Stelle weiterhören",
+   "where": "Display & Bedienung › Bedienung am Display",
+   "id": "bedienung"
+  },
+  {
+   "l": "Stelle merken für",
    "where": "Display & Bedienung › Bedienung am Display",
    "id": "bedienung"
   },

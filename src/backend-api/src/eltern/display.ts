@@ -96,6 +96,10 @@ export function registerDisplayRoutes(router: Router, deps: DisplayDeps): void {
       resume: num(mb.resume, 1, 99) ?? 9,
       listviewTimer: num(mb.listviewTimer, 0.5, 5, 0.5) ?? 2.5,
       settingsAccessTimer: num(mb.settingsAccessTimer, 1, 10, 0.5) ?? 3,
+      // podcast episodes go on where they were left (the player, spotify-control.js), remembered for so many days
+      // (0: without end)
+      episodeResume: mb.episodeResume !== false,
+      episodeResumeDays: num(mb.episodeResumeDays, 0, 3650) ?? 180,
       resX: num(chromium.resX, 200, 7680) ?? 800,
       resY: num(chromium.resY, 200, 4320) ?? 480,
       brightness: await readBrightness(),
@@ -115,7 +119,7 @@ export function registerDisplayRoutes(router: Router, deps: DisplayDeps): void {
     const mb: Record<string, unknown> = {}
     const chromium: Record<string, unknown> = {}
     const bad = (what: string) => res.status(400).json({ error: `invalid ${what}` })
-    for (const key of ['coverflowShowNames', 'hideScrollbar']) {
+    for (const key of ['coverflowShowNames', 'hideScrollbar', 'episodeResume']) {
       if (body[key] === undefined) continue
       if (typeof body[key] !== 'boolean') return bad(key)
       mb[key] = body[key]
@@ -132,6 +136,7 @@ export function registerDisplayRoutes(router: Router, deps: DisplayDeps): void {
       ['resume', 1, 99, 1, mb],
       ['listviewTimer', 0.5, 5, 0.5, mb],
       ['settingsAccessTimer', 1, 10, 0.5, mb],
+      ['episodeResumeDays', 0, 3650, 1, mb],
       ['resX', 200, 7680, 1, chromium],
       ['resY', 200, 4320, 1, chromium],
     ]

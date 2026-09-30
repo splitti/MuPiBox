@@ -236,6 +236,7 @@ player.on('time_pos', (seconds) => {
   if (!isCuePlayback()) {
     pendingCueSeek = null
     currentMeta.positionSeconds = seconds
+    noteEpisodePosition(seconds)
     return
   }
   if (pendingCueSeek) {
@@ -1993,6 +1994,87 @@ function playRadioURL(radioURL) {
     })
 }
 
+// --- Where each podcast episode was left ---
+// Every episode that was played is remembered with its position (mupibox.episodeResume, on unless switched off),
+// for mupibox.episodeResumeDays days after it was last heard (0: without end). Started again - from the episode
+// list, the app or a resume tile - it goes on there. An episode heard to its last half minute counts as heard and
+// starts from the beginning next time. The backend reads the file for the app's episode list.
+const EPISODE_POSITIONS_FILE = '/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/episode-positions.json'
+const EPISODE_POSITIONS_MAX = 5000
+let episodePositions = null // { [episode address]: { pos, len, at, done } }
+let episodePositionsDirty = false
+let playingEpisode = null // the address of the episode mplayer plays, while it plays one
+function episodeResumeOn() {
+  return muPiBoxConfig?.mupibox?.episodeResume !== false
+}
+function loadEpisodePositions() {
+  if (episodePositions) return episodePositions
+  try {
+    episodePositions = JSON.parse(fs.readFileSync(EPISODE_POSITIONS_FILE, 'utf8')) ?? {}
+  } catch {
+    episodePositions = {}
+  }
+  return episodePositions
+}
+// Written at most once a minute while an episode plays (and when it ends), not every second: the SD card
+function saveEpisodePositions() {
+  if (!episodePositionsDirty || !episodePositions) return
+  episodePositionsDirty = false
+  const days = Number(muPiBoxConfig?.mupibox?.episodeResumeDays ?? 180)
+  const oldest = days > 0 ? Date.now() - days * 24 * 3600 * 1000 : 0
+  const kept = Object.entries(episodePositions)
+    .filter(([, p]) => p && p.at >= oldest)
+    .sort((a, b) => b[1].at - a[1].at)
+    .slice(0, EPISODE_POSITIONS_MAX)
+  episodePositions = Object.fromEntries(kept)
+  const tmp = `${EPISODE_POSITIONS_FILE}.tmp`
+  try {
+    fs.writeFileSync(tmp, JSON.stringify(episodePositions))
+    fs.renameSync(tmp, EPISODE_POSITIONS_FILE)
+  } catch (err) {
+    log.debug(`${now()}: [Spotify Control] Episode positions not saved: ${err}`)
+  }
+}
+setInterval(saveEpisodePositions, 60 * 1000)
+// The play of an episode starts: the one before is written away, and it goes on where it was left
+function startEpisode(url) {
+  saveEpisodePositions()
+  playingEpisode = url
+  if (!episodeResumeOn()) return
+  const p = loadEpisodePositions()[url]
+  if (!p || p.done || !(p.pos > 10) || (p.len && p.pos > p.len - 30)) return
+  // (once mplayer has the stream open; a resume tile of the display seeks a bit later to its own, similar position)
+  setTimeout(() => {
+    if (playingEpisode !== url || currentMeta.currentType !== 'rss') return
+    log.debug(`${now()}: [Spotify Control] Episode goes on at ${Math.round(p.pos)}s`)
+    player.exec('pausing_keep seek', [Math.max(0, p.pos - 5), 2])
+  }, 1500)
+}
+function noteEpisodePosition(seconds) {
+  if (!playingEpisode || currentMeta.currentType !== 'rss' || !episodeResumeOn() || !(seconds > 0)) return
+  const len = Number(currentMeta.durationSeconds) || 0
+  const done = len > 60 && seconds >= len - 30
+  loadEpisodePositions()[playingEpisode] = { pos: done ? 0 : Math.round(seconds), len: Math.round(len), at: Date.now(), done }
+  episodePositionsDirty = true
+}
+
+// A podcast episode kept on the SD card (backend-api podcast-offline.ts): <sha1 of its address>.<ext> in this folder.
+// Played from there - also without internet - instead of being streamed; the address stays what the rest knows.
+const podcastOfflineDir = '/home/dietpi/MuPiBox/podcasts'
+const podcastOfflineExtensions = ['.mp3', '.m4a', '.mp4', '.aac', '.ogg', '.opus']
+function offlineEpisodeFile(url) {
+  if (typeof url !== 'string' || !/^https?:\/\//.test(url)) return undefined
+  const hash = require('node:crypto').createHash('sha1').update(url).digest('hex')
+  for (const ext of podcastOfflineExtensions) {
+    const file = path.join(podcastOfflineDir, `${hash}${ext}`)
+    if (fs.existsSync(file)) {
+      log.debug(`${now()}: [Spotify Control] Episode from the SD card: ${file}`)
+      return file
+    }
+  }
+  return undefined
+}
+
 function playURL(playedURL) {
   playbackGeneration++
   startLoading()
@@ -2549,7 +2631,8 @@ app.use((req, res) => {
     const dir = command.dir
     let rssURL = dir.split('rss/').pop()
     rssURL = decodeURIComponent(rssURL)
-    playURL(rssURL)
+    playURL(offlineEpisodeFile(rssURL) ?? rssURL)
+    startEpisode(rssURL)
   }
 
   if (hasDirSegment(command, 'say')) {
