@@ -509,13 +509,28 @@ function piperWorker(key: string): PiperWorker {
   return w
 }
 
+// The names made with voices not in use (another voice chosen, a voice only tried): deleted, the voices themselves
+// stay loaded. Chosen again, a voice's names are made again in the background.
+async function clearUnusedNames(sp: SpeechConfig, active: string): Promise<void> {
+  const keep = new Set([active, ...Object.values(sp.voices)])
+  for (const dir of await fsp.readdir(CACHE_DIR).catch(() => [] as string[])) {
+    if (keep.has(dir) || workers.get(dir)?.busy) continue
+    await fsp.rm(`${CACHE_DIR}/${dir}`, { recursive: true, force: true }).catch(() => undefined)
+  }
+}
+
 // The names the display reads out (the library's artists and albums), made in advance in the background: then they
-// come as fast as before with Google's saved files. Once after the start, after a voice was loaded or chosen, and
-// every 6 hours for what came new.
+// come as fast as before with Google's saved files. After the start, after a voice was loaded or chosen, and whenever
+// the library changed (added in the app or the admin interface, an index update, the Smart-Sync): only the new names.
 const LIBRARY_FILE = '/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json'
 let preparing = false
+let prepareAgain = false
 export async function prepareNames(getConfig: () => unknown): Promise<void> {
-  if (preparing) return
+  // (asked again meanwhile - the library changed while the names were made: once more afterwards)
+  if (preparing) {
+    prepareAgain = true
+    return
+  }
   const cfg = getConfig()
   const sp = speechOf(cfg)
   if (sp.engine !== 'piper') return
@@ -523,6 +538,7 @@ export async function prepareNames(getConfig: () => unknown): Promise<void> {
   if (!voice) return
   preparing = true
   try {
+    await clearUnusedNames(sp, voice)
     const list = JSON.parse(await fsp.readFile(LIBRARY_FILE, 'utf8').catch(() => '[]')) as { artist?: unknown; title?: unknown }[]
     // (as the player gets them: a "/" becomes a space, see spotify-control.js)
     const names = [...new Set(list.flatMap((e) => [e.artist, e.title]).filter((n): n is string => typeof n === 'string' && n.trim() !== '').map((n) => n.replace(/\//g, ' ')))]
@@ -535,6 +551,10 @@ export async function prepareNames(getConfig: () => unknown): Promise<void> {
     if (made) console.log(`${new Date().toLocaleString()}: [speech] ${made} names made in advance with ${voice}`)
   } finally {
     preparing = false
+  }
+  if (prepareAgain) {
+    prepareAgain = false
+    await prepareNames(getConfig)
   }
 }
 
@@ -723,9 +743,22 @@ async function tick(getConfig: () => unknown): Promise<void> {
   }
 }
 
-/** Every 15 seconds, from the start of the server; the names made in advance after a minute and every 6 hours. */
+/** Every 15 seconds, from the start of the server; the names made in advance after a minute and when the library
+ *  changed (its file's time, looked at every minute - once it stayed the same for half a minute). */
 export function startSpeech(getConfig: () => unknown): void {
   setInterval(() => void tick(getConfig).catch(() => undefined), 15000).unref()
   setTimeout(() => void prepareNames(getConfig).catch(() => undefined), 60000).unref()
-  setInterval(() => void prepareNames(getConfig).catch(() => undefined), 6 * 3600e3).unref()
+  let seen = 0
+  let changedAt = 0
+  setInterval(async () => {
+    const mtime = (await fsp.stat(LIBRARY_FILE).catch(() => null))?.mtimeMs ?? 0
+    if (!seen) seen = mtime
+    else if (mtime !== seen) {
+      seen = mtime
+      changedAt = Date.now()
+    } else if (changedAt && Date.now() - changedAt >= 30000) {
+      changedAt = 0
+      void prepareNames(getConfig).catch(() => undefined)
+    }
+  }, 30000).unref()
 }
