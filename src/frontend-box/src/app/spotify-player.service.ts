@@ -686,8 +686,11 @@ export class SpotifyPlayerService {
       if (!res.ok) return null
       const body = (await res.json()) as { devices?: { id?: string }[] }
       const known = (body.devices ?? []).some((d) => d.id === id)
-      if (known) this.deviceCheckedAt = Date.now()
-      else this.logService.warn('[Spotify SDK] Spotify does not list this player any more:', id)
+      if (known) {
+        this.deviceCheckedAt = Date.now()
+        // (the box's player forgets the display's device when it restarts: told again)
+        this.http.get(`${environment.backend.playerUrl}/display/spotify-device/${encodeURIComponent(id)}`).subscribe({ error: () => {} })
+      } else this.logService.warn('[Spotify SDK] Spotify does not list this player any more:', id)
       return known
     } catch {
       return null
