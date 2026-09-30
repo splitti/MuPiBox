@@ -792,3 +792,41 @@ details.legal > summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
 details.legal .legal-text { height: auto; max-height: 60vh; margin-top: 8px; }
 .legal-list { margin: 0 0 10px; padding-left: 20px; color: var(--mp-muted); font-size: 13px; display: flex; flex-direction: column; gap: 4px; }
 .card .btns a { text-decoration: none; }
+
+/* rows of a card side by side on a wide screen (Neu starten: two columns, Experten › Zurücksetzen: three) */
+@media (min-width: 1200px) {
+  .content.cols .rows.two-col, .content.cols .rows.three-col { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 28px; }
+  .content.cols .rows.three-col { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .content.cols .rows.two-col > .entry:nth-child(-n+2), .content.cols .rows.three-col > .entry { border-top: 0; }
+  .content.cols .rows.three-col > .entry { flex-direction: column; align-items: flex-start; }
+  .content.cols .json-edit { height: 60vh; }
+}
+/* Experten: what cannot be undone, set apart */
+.danger-zone { border-color: color-mix(in srgb, var(--mp-danger) 45%, var(--mp-border)); }
+.danger-zone h2 { color: var(--mp-danger); }
+
+/* Protokolle: the list of logs and services (wide screen), the log at full height */
+.lg-split { display: flex; flex-direction: column; gap: 14px; }
+.lg-side { order: 2; display: flex; flex-direction: column; gap: 10px; }
+.lg-main { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.lg-list { display: none; }
+.lg-list small { color: var(--mp-muted); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; margin: 10px 8px 2px; }
+.lg-list small:first-child { margin-top: 0; }
+.lg-item { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; border: 0; background: none; padding: 6px 8px; border-radius: var(--mp-r-sm); color: inherit; font: 13px/1.3 var(--mp-font); cursor: pointer; }
+.lg-item span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lg-item:hover { background: var(--mp-chip); }
+.lg-item[aria-current="true"] { background: var(--mp-primary-soft); color: var(--mp-primary-text); font-weight: 700; }
+.lg-item .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: transparent; }
+.lg-item .dot.st-active { background: var(--mp-success); }
+.lg-item .dot.st-failed { background: var(--mp-danger); }
+.lg-item .dot.st-inactive { background: var(--mp-muted); }
+.lg-item .dot.st-activating { background: var(--mp-warn); }
+@media (min-width: 1200px) {
+  .lg-split { display: grid; grid-template-columns: 260px minmax(0, 1fr); align-items: start; gap: 20px; }
+  .lg-side { order: 0; position: sticky; top: 12px; }
+  .lg-list { display: flex; flex-direction: column; gap: 1px; max-height: calc(100vh - 360px); overflow: auto; }
+  .lg-side .lg-debug { border-top: 1px solid var(--mp-border); padding-top: 10px; }
+  .lg-pick { display: none; }
+  .lg-card .rule-times { grid-template-columns: minmax(0, 1fr); }
+  .lg-card .logview { height: calc(100vh - 290px); min-height: 420px; }
+}

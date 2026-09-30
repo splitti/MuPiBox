@@ -444,7 +444,7 @@ function navRow(target, title, subtitle, ic) {
 
 function renderSection(sec) {
   const items = (sec.items || []).map(renderItem).join('')
-  const wide = (sec.items || []).some((i) => ['themegrid', 'bootgrid', 'log', 'json', 'checks'].includes(i.type))
+  const wide = sec.wide === true || (sec.items || []).some((i) => ['themegrid', 'bootgrid', 'log', 'json', 'checks'].includes(i.type))
   const onlyNav = (sec.items || []).length > 0 && sec.items.every((i) => i.type === 'nav')
   return `<section class="card${wide ? ' wide' : ''}${onlyNav && !sec.title ? ' nav-card' : ''}">
     ${sec.title ? `<h2>${esc(sec.title)}</h2>` : ''}${sec.help ? `<p class="help">${esc(sec.help)}</p>` : ''}${items}</section>`
@@ -6320,9 +6320,12 @@ function restartTop() {
     ['services', 'sync', 'Dienste neu starten', 'Player und Server der Box; die App ist dabei kurz nicht erreichbar.'],
     ['apply', 'gear', 'Einstellungen übernehmen', 'Schreibt alle Einstellungen neu in die Dienste und startet das Display neu (wie „Update settings“ im Admin-Interface).'],
   ]
+  // (both across the whole width; on a wide screen their entries in two columns - no small card beside a long one)
   return [
-    `<section class="card"><h2>Box</h2><div class="btns"><button class="btn" id="rs-reboot">${icon('sync', 18)}Neu starten</button><button class="btn danger" id="rs-off">${icon('power', 18)}Ausschalten</button></div></section>`,
-    `<section class="card"><h2>Display & Dienste</h2><div class="rows">${rows
+    `<section class="card wide"><h2>Box</h2><div class="rows two-col">
+      <div class="entry"><span class="avatar">${icon('sync', 16)}</span><span class="lbl"><b>Neu starten</b><small>Dauert etwa eine Minute; die Wiedergabe endet.</small></span><button class="btn sm" id="rs-reboot">Neu starten</button></div>
+      <div class="entry"><span class="avatar">${icon('power', 16)}</span><span class="lbl"><b>Ausschalten</b><small>Wieder einschalten geht nur über den Taster an der Box.</small></span><button class="btn danger sm" id="rs-off">Ausschalten</button></div></div></section>`,
+    `<section class="card wide"><h2>Display & Dienste</h2><div class="rows two-col">${rows
       .map(([id, ic, t, s]) => `<div class="entry"><span class="avatar">${icon(ic, 16)}</span><span class="lbl"><b>${t}</b><small>${s}</small></span><button class="btn sm" data-rs="${id}">${id === 'apply' ? 'Übernehmen' : 'Neu starten'}</button></div>`)
       .join('')}</div></section>`,
   ]
@@ -6550,14 +6553,22 @@ async function loadLogs() {
 function logsTop() {
   const l = sys.logs
   const opt = (v, t) => `<option value="${esc(v)}"${v === sys.logSel ? ' selected' : ''}>${esc(t)}</option>`
+  // (a wide screen: the logs and services as a list on the left - the services with their state - and the log at
+  // full height on the right; a phone: the choice as a menu, the log below)
+  const word = { active: 'läuft', failed: 'Fehler', inactive: 'gestoppt', activating: 'startet' }
+  const item = (value, label, st) =>
+    `<button class="lg-item" data-lg="${esc(value)}" aria-current="${value === sys.logSel}">${st ? `<i class="dot st-${esc(st)}" title="${esc(word[st] ?? st)}"></i>` : '<i class="dot"></i>'}<span translate="no">${esc(label)}</span></button>`
+  const list = `<nav class="lg-list" aria-label="Logs und Dienste"><small>Logs</small>${l.logs.map((k) => item(`log:${k}`, `${k}.log`)).join('')}<small>Dienste</small>${l.services
+    .map((k) => item(`service:${k}`, k, l.states?.[k] ?? ''))
+    .join('')}</nav>`
   return [
-    `<section class="card wide"><h2>Protokoll</h2>
-      <div class="rule-times stack-phone"><div class="field"><label for="lg-sel">Log oder Dienst</label><select class="input" id="lg-sel"><optgroup label="Logs">${l.logs.map((k) => opt(`log:${k}`, `${k}.log`)).join('')}</optgroup><optgroup label="Dienste (Status)">${l.services.map((k) => opt(`service:${k}`, k)).join('')}</optgroup></select></div>
+    `<section class="card wide lg-card"><h2>Protokoll</h2><div class="lg-split"><aside class="lg-side">${list}
+      <div class="row lg-debug"><span class="lbl"><b>Ausführliches Player-Log</b><small>Schreibt viel mehr ins spotify-control-Log (Player startet neu). Nach der Fehlersuche wieder aus.</small></span>
+      <label class="switch"><input type="checkbox" id="lg-debug" ${sys.debug ? 'checked' : ''} aria-label="Ausführliches Player-Log"><span></span></label></div></aside>
+      <div class="lg-main"><div class="rule-times stack-phone"><div class="field lg-pick"><label for="lg-sel">Log oder Dienst</label><select class="input" id="lg-sel"><optgroup label="Logs">${l.logs.map((k) => opt(`log:${k}`, `${k}.log`)).join('')}</optgroup><optgroup label="Dienste (Status)">${l.services.map((k) => opt(`service:${k}`, k)).join('')}</optgroup></select></div>
         <div class="field"><label for="lg-grep">Suche</label><input class="input" id="lg-grep" type="search" value="${esc(sys.logGrep)}" placeholder="z. B. error" autocomplete="off"></div></div>
       <div class="btns"><button class="btn" id="lg-refresh">Aktualisieren</button><button class="btn" id="lg-auto" aria-pressed="${sys.logAuto}">${sys.logAuto ? 'Anhalten' : 'Mitlaufen'}</button><button class="btn" id="lg-dl">Herunterladen</button></div>
-      <pre class="logview" id="lg-view">${esc(tr('Lade …'))}</pre></section>`,
-    `<section class="card"><h2>Fehlersuche</h2><div class="row"><span class="lbl"><b>Ausführliches Player-Log</b><small>Schreibt viel mehr ins spotify-control-Log (Player startet neu). Nach der Fehlersuche wieder aus.</small></span>
-      <label class="switch"><input type="checkbox" id="lg-debug" ${sys.debug ? 'checked' : ''} aria-label="Ausführliches Player-Log"><span></span></label></div></section>`,
+      <pre class="logview" id="lg-view">${esc(tr('Lade …'))}</pre></div></div></section>`,
   ]
 }
 
@@ -6576,11 +6587,15 @@ async function showLog() {
 
 function mountLogs(root) {
   sys.logShown = false
-  $('#lg-sel', root).onchange = (e) => {
-    sys.logSel = e.target.value
+  const pick = (value) => {
+    sys.logSel = value
     sys.logShown = false
+    $('#lg-sel', root).value = value
+    for (const b of root.querySelectorAll('[data-lg]')) b.setAttribute('aria-current', String(b.dataset.lg === value))
     showLog()
   }
+  $('#lg-sel', root).onchange = (e) => pick(e.target.value)
+  for (const b of root.querySelectorAll('[data-lg]')) b.onclick = () => pick(b.dataset.lg)
   let t = null
   $('#lg-grep', root).addEventListener('input', (e) => {
     sys.logGrep = e.target.value
@@ -6894,16 +6909,18 @@ function expertsTop() {
     `<section class="card"><h2>Hostname</h2><p class="help">Der Name der Box im Netzwerk (z. B. http://mupibox/). Buchstaben, Ziffern und „-“.</p>
       <div class="field"><label for="ex-host">Hostname</label><input class="input mono" id="ex-host" maxlength="63" value="${esc(adm.host)}" autocomplete="off"></div>
       <div class="btns"><button class="btn primary" id="ex-hostsave">Speichern</button></div></section>`,
+    // (beside the host name: both short)
+    `<section class="card"><h2>Weitere Werkzeuge</h2><div class="navlist">${navRow('ext:dietpi', 'DietPi-Dashboard', 'Systemverwaltung von DietPi (Port 5252)', 'ext')}${navRow('ext:admin', 'Bisheriges Admin-Interface', 'Port 80', 'ext')}</div></section>`,
     `<section class="card wide"><h2>Konfiguration direkt bearbeiten</h2>
       <div class="note warn">${icon('info', 18)}<span>Fehler hier können die Box lahmlegen. Nur ändern, was du kennst – vorher ein Backup ziehen.</span></div>
       <div class="field"><label for="ex-file">Datei</label><select class="input" id="ex-file">${adm.json.keys.map((k) => `<option value="${k}"${k === adm.json.key ? ' selected' : ''}>${esc(JSON_LABEL[k] ?? k)}</option>`).join('')}</select></div>
       <textarea class="input json-edit" id="ex-json" spellcheck="false">${esc(adm.json.text)}</textarea>
       <p class="help" id="ex-jsonmsg" style="margin:0"></p>
       <div class="btns"><button class="btn danger" id="ex-jsonsave">Speichern</button><button class="btn" id="ex-jsonreload">Neu laden</button></div></section>`,
-    `<section class="card"><h2>Zurücksetzen</h2><div class="rows">${resets
+    // (last, across the whole width and set apart: what cannot be undone; on a wide screen the three side by side)
+    `<section class="card wide danger-zone"><h2>Zurücksetzen</h2><p class="help">Lässt sich nicht rückgängig machen – vorher ein Backup ziehen.</p><div class="rows three-col">${resets
       .map(([id, t, s]) => `<div class="entry"><span class="lbl"><b>${t}</b><small>${s}</small></span><button class="btn danger sm" data-reset="${id}">Zurücksetzen</button></div>`)
       .join('')}</div></section>`,
-    `<div class="card nav-card"><div class="navlist">${navRow('ext:dietpi', 'DietPi-Dashboard', 'Systemverwaltung von DietPi (Port 5252)', 'ext')}${navRow('ext:admin', 'Bisheriges Admin-Interface', 'Port 80', 'ext')}</div></div>`,
   ]
 }
 
@@ -8020,20 +8037,29 @@ const CONTROLLERS = {
   protokolle: { load: loadLogs, top: logsTop, sections: () => [], mount: mountLogs },
   browser: {
     load: loadBrowser,
-    sections: (page) => [
-      ...page.sections.map((sec) => ({
-        ...sec,
-        help: 'Gilt nach einem Neustart des Displays (Knopf unten).',
-        items: sec.items.map((it) =>
+    // two cards by topic (about the same height side by side), below them the button with what it does, across the width
+    sections: (page) => {
+      const items = page.sections
+        .flatMap((sec) => sec.items)
+        .map((it) =>
           it.key === 'kiosk'
             ? { ...it, help: 'Aus = mit Fensterrahmen, nur zum Testen.' }
             : it.key === 'chromeDebug'
               ? { ...it, help: 'Schreibt ein ausführliches Log des Browsers; nach der Fehlersuche wieder aus.' }
               : it,
-        ),
-      })),
-      { title: '', help: '', items: [{ type: 'buttons', buttons: [['Übernehmen und Display neu starten', 'primary', 'apply']] }] },
-    ],
+        )
+      const pick = (keys) => items.filter((it) => keys.includes(it.key))
+      return [
+        { title: 'Darstellung', help: '', items: pick(['gpu', 'smooth', 'kiosk']) },
+        { title: 'Speicher & Fehlersuche', help: '', items: pick(['cache', 'chromeDebug']) },
+        {
+          title: '',
+          help: 'Die Änderungen gelten nach einem Neustart des Displays.',
+          wide: true,
+          items: [{ type: 'buttons', buttons: [['Übernehmen und Display neu starten', 'primary', 'apply']] }],
+        },
+      ]
+    },
     async change(key, v) {
       const body = { gpu: { gpu: v }, smooth: { smooth: v }, kiosk: { kiosk: v }, chromeDebug: { debug: v }, cache: { cachesize: String(v).replace(/\s*MB$/, '') } }[key]
       if (!body) return

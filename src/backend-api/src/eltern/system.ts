@@ -318,9 +318,15 @@ export function registerSystemRoutes(router: Router, deps: SystemDeps): void {
     res.json({ ok: true })
   })
 
-  /** GET /api/app/logs - the logs and services that can be looked at. */
-  router.get('/logs', requireSession, (_req, res) => {
-    res.json({ logs: Object.keys(LOGS), services: SERVICES })
+  /**
+   * GET /api/app/logs - the logs and services that can be looked at, with the state of each service (states:
+   * {name: active | inactive | failed | activating …}, from one systemctl call; missing when it cannot be read)
+   */
+  router.get('/logs', requireSession, async (_req, res) => {
+    const r = await run('systemctl', ['is-active', ...SERVICES.map((s) => `${s}.service`)], 5000)
+    const lines = r.stdout.split('\n')
+    const states = Object.fromEntries(SERVICES.map((s, i) => [s, (lines[i] ?? '').trim()]).filter(([, st]) => st))
+    res.json({ logs: Object.keys(LOGS), services: SERVICES, states })
   })
 
   /** GET /api/app/logs/view?kind=log|service&key=&grep=&lines= - the end of a log or the state of a service, as text. */
