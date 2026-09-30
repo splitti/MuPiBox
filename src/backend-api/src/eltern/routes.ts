@@ -38,6 +38,10 @@ import {
   restampSession,
   usePasswordStamp,
   newSignOutEpoch,
+  describeDevice,
+  listSessions,
+  destroySessionByRef,
+  mayResetPassword,
 } from './auth'
 import { ipRateLimit, localNetworkOnly, parseCookie, requireCsrf, requireSession } from './middleware'
 import { registerCustomCoverRoutes } from './covers'
@@ -56,7 +60,7 @@ import { playlogSummary } from './playlog'
 import { weeklySummaryOn } from './weekly-summary'
 import { isArdFeed } from '../ard-sounds'
 import { episodeKey, mayKeep, type PodcastOffline } from '../podcast-offline'
-import { randomBytes } from 'node:crypto'
+import { pbkdf2Sync, randomBytes } from 'node:crypto'
 import { localOnly } from '../request-guard'
 import { spotifyLoginAge } from './spotify-auth-age'
 import {
@@ -492,7 +496,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     // "Anmeldung verlangen" off (as the admin interface's switch): no login on the home network (localNetworkOnly
     // above), the app gets its session and CSRF token right away
     if (appLoginRequired(deps.getMupiboxConfig()) || validateSession(parseCookie(req, SESSION_COOKIE))) return next()
-    const session = issueSession(req.ip ?? req.socket.remoteAddress ?? '', false, true)
+    const session = issueSession(req.ip ?? req.socket.remoteAddress ?? '', false, true, { device: describeDevice(req.headers['user-agent']) })
     res.setHeader('Set-Cookie', buildSessionCookie(session.sessionId, 24 * 60 * 60))
     res.json({ authenticated: true, open: true, csrf_header: CSRF_HEADER, csrf_token: session.csrf, passwordConfigured: hasAppPassword(deps.getMupiboxConfig()) })
   }, requireSession, (req, res) => {
@@ -535,7 +539,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     const ip = req.ip ?? req.socket.remoteAddress ?? ''
     // "Angemeldet bleiben": the session survives the box's restarts (see auth.ts)
     const remember = body.remember === true
-    const session = issueSession(ip, remember)
+    const session = issueSession(ip, remember, false, { device: describeDevice(req.headers['user-agent']) })
     res.setHeader('Set-Cookie', buildSessionCookie(session.sessionId, remember ? PERSISTENT_COOKIE_SECONDS : 24 * 60 * 60))
     res.json({ ok: true, csrf_header: CSRF_HEADER, csrf_token: session.csrf })
   })
@@ -545,15 +549,32 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
 
   /** GET /api/app/auth-state - the Sicherheit page: is a password set, is the login required, is it still the
    *  admin interface's well-known default password. */
-  router.get('/auth-state', requireSession, async (_req, res) => {
+  router.get('/auth-state', requireSession, async (req, res) => {
     const cfg = deps.getMupiboxConfig()
     res.json({
+      // (signed in with the display's QR code or the Telegram link a moment ago: a new password without the old)
+      resetOpen: hasAppPassword(cfg) && mayResetPassword(req.elternSessionId),
       passwordSet: hasAppPassword(cfg),
       loginRequired: appLoginRequired(cfg),
       loginSwitch: (cfg as { interfacelogin?: { state?: unknown } } | undefined)?.interfacelogin?.state === true,
       defaultPassword: await verifyAppPassword('MuP1B0x', cfg),
       keptDevices: keptSessionCount(),
     })
+  })
+
+  /** GET /api/app/auth/sessions - the devices signed in (browser and system as they name themselves, last use). */
+  router.get('/auth/sessions', requireSession, (req, res) => {
+    res.json({ sessions: listSessions(req.elternSessionId) })
+  })
+
+  /** POST /api/app/auth/sign-out {id} - one other device signed out (id: its name in the list, not its session). */
+  router.post('/auth/sign-out', requireSession, requireCsrf, (req, res) => {
+    const id = (req.body as { id?: unknown } | undefined)?.id
+    if (typeof id !== 'string' || !/^[0-9a-f]{16}$/.test(id)) {
+      res.status(400).json({ error: 'invalid_id' })
+      return
+    }
+    res.json({ ok: destroySessionByRef(id, req.elternSessionId) })
   })
 
   /** POST /api/app/auth/sign-out-others - every other device is signed out (also those kept signed in); this stays. */
@@ -571,7 +592,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     const current = typeof body.current === 'string' ? body.current : ''
     const next = typeof body.password === 'string' ? body.password : ''
     const cfg = deps.getMupiboxConfig()
-    if (hasAppPassword(cfg) && !(await verifyAppPassword(current, cfg))) {
+    if (hasAppPassword(cfg) && !mayResetPassword(req.elternSessionId) && !(await verifyAppPassword(current, cfg))) {
       res.status(403).json({ error: 'wrong_password' })
       return
     }
@@ -1406,6 +1427,46 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   })
 
   /**
+   * POST /api/app/wifi/password {ssid, password} - a new password for a saved network that is not the one connected
+   * now (the router got a new one). Set as the network's key (WPA-PSK, worked out here as wpa_passphrase does: no
+   * character of the password can break the configuration), then saved.
+   */
+  router.post('/wifi/password', requireSession, requireCsrf, async (req, res) => {
+    const body = (req.body as { ssid?: unknown; password?: unknown } | undefined) ?? {}
+    const ssid = typeof body.ssid === 'string' ? body.ssid : ''
+    const password = typeof body.password === 'string' ? body.password : ''
+    if (!ssid || password.length < 8 || password.length > 63) {
+      res.status(400).json({ error: 'password must be 8-63 chars' })
+      return
+    }
+    const cli = (args: string[]) =>
+      new Promise<string>((resolve) => execFile('sudo', ['/usr/sbin/wpa_cli', '-i', wifiIface(), ...args], { timeout: 5000 }, (err, out) => resolve(err ? '' : out)))
+    let id: string | null = null
+    let active = false
+    for (const ln of (await cli(['list_networks'])).split('\n')) {
+      const parts = ln.split('\t')
+      if (ln.startsWith('network id') || parts[1] !== ssid) continue
+      id = parts[0]
+      active = (parts[3] ?? '').includes('[CURRENT]')
+      break
+    }
+    if (id === null || !/^\d+$/.test(id)) {
+      res.status(404).json({ error: 'ssid not in saved networks' })
+      return
+    }
+    if (active) {
+      res.status(409).json({ error: 'connected_network' })
+      return
+    }
+    const psk = pbkdf2Sync(password, ssid, 4096, 32, 'sha1').toString('hex')
+    if (!/OK/.test(await cli(['set_network', id, 'psk', psk])) || !/OK/.test(await cli(['save_config']))) {
+      res.status(500).json({ error: 'not_set' })
+      return
+    }
+    res.json({ ok: true })
+  })
+
+  /**
    * POST /api/app/wifi/remove  {ssid}  (Phase 18 Item 2)
    * Removes a saved Wi-Fi network via wpa_cli, then persists the config. The
    * currently-connected network is refused (409) — the no-lockout safeguard
@@ -2208,6 +2269,36 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     })
   })
 
+  /** GET /api/app/spotify-access/account - the Spotify account signed in (Premium: the display's player needs it) and
+   *  whether Spotify lists the display as a device now. Asked with the player's token; {} when that is not possible. */
+  router.get('/spotify-access/account', requireSession, async (_req, res) => {
+    const json = (r: Response) => (r.ok ? r.json() : null)
+    try {
+      const token = (await (await fetch('http://127.0.0.1:5005/spotify/token', { signal: AbortSignal.timeout(3000) })).text()).trim()
+      if (!token || token.startsWith('{')) {
+        res.json({})
+        return
+      }
+      const get = (url: string) => fetch(url, { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(6000) }).then(json).catch(() => null)
+      const [me, devices, display] = await Promise.all([
+        get('https://api.spotify.com/v1/me') as Promise<{ display_name?: string; id?: string; product?: string } | null>,
+        get('https://api.spotify.com/v1/me/player/devices') as Promise<{ devices?: { id?: string; name?: string }[] } | null>,
+        fetch('http://127.0.0.1:5005/display/spotify-device', { signal: AbortSignal.timeout(3000) })
+          .then(json)
+          .catch(() => null) as Promise<{ id?: string | null } | null>,
+      ])
+      const mine = display?.id ? devices?.devices?.find((d) => d.id === display.id) : undefined
+      res.json({
+        name: me?.display_name || me?.id || '',
+        premium: me?.product ? me.product === 'premium' : null,
+        deviceVisible: devices ? !!mine : null,
+        deviceName: mine?.name ?? '',
+      })
+    } catch {
+      res.json({})
+    }
+  })
+
   /** POST /api/app/spotify-access/redirect {mode: app|legacy} - which Redirect URI the next login uses (the one the
    *  parents' Spotify app names). */
   router.post('/spotify-access/redirect', requireSession, requireCsrf, async (req, res) => {
@@ -2363,6 +2454,23 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     const r = await execCapture('sudo', ['-u', 'dietpi', '/usr/local/bin/mupibox/pair_bt.sh', mac], 30000)
     res.json({ ok: r.ok })
   })
+
+  /** POST /api/app/bluetooth/connect|disconnect  — {mac}: a paired device connected or let go (bluetoothctl, as the
+   *  admin interface's buttons). ok: bluetoothctl said so ("Connection successful", "Successful disconnected"). */
+  for (const [path, cmd, done] of [
+    ['connect', 'connect', /Connection successful/i],
+    ['disconnect', 'disconnect', /Successful disconnected/i],
+  ] as const) {
+    router.post(`/bluetooth/${path}`, requireSession, requireCsrf, noController, async (req, res) => {
+      const mac = String((req.body as { mac?: unknown } | undefined)?.mac ?? '').trim()
+      if (!BT_MAC_RE.test(mac)) {
+        res.status(400).json({ error: 'invalid MAC' })
+        return
+      }
+      const r = await execCapture('sudo', ['-u', 'dietpi', 'bluetoothctl', cmd, mac], 20000)
+      res.json({ ok: done.test(r.stdout) })
+    })
+  }
 
   /** POST /api/app/bluetooth/remove  — {mac} → remove_bt.sh + bt restart. */
   router.post('/bluetooth/remove', requireSession, requireCsrf, noController, async (req, res) => {
@@ -2718,7 +2826,7 @@ export function buildElternLandingHandler(): import('express').RequestHandler {
       return
     }
     const ip = req.ip ?? req.socket.remoteAddress ?? ''
-    const session = redeemMagicLink(token, ip)
+    const session = redeemMagicLink(token, ip, describeDevice(req.headers['user-agent']))
     if (!session) {
       res.status(401).send('Magic link invalid or expired / Magic-Link ungültig oder abgelaufen')
       return

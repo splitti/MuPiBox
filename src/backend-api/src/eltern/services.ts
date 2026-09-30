@@ -131,6 +131,19 @@ export function registerServicesRoutes(router: Router, deps: ServicesDeps): void
     res.json({ chats: [...chats].map(([id, label]) => ({ id, label })) })
   })
 
+  /** POST /api/app/telegram/test - a test message to the allowed chats, with the saved settings (the bot active,
+   *  a token, a chat - else nothing is sent, see telegram_send_message.py). */
+  router.post('/telegram/test', requireSession, requireCsrf, async (_req, res) => {
+    const tg = section(deps, 'telegram')
+    const chats = Array.isArray(tg.chatId) ? tg.chatId : []
+    if (tg.active !== true || !tg.token || !chats.length) {
+      res.status(409).json({ error: 'not_ready' })
+      return
+    }
+    const r = await run('/usr/bin/python3', ['/usr/local/bin/mupibox/telegram_send_message.py', '--key', 'n_test'], 30000)
+    res.json({ ok: r.ok })
+  })
+
   /** GET /api/app/mqtt - the MQTT settings, the password only as "set". */
   router.get('/mqtt', requireSession, async (_req, res) => {
     const m = section(deps, 'mqtt')

@@ -1292,7 +1292,7 @@
    "area": "bibliothek",
    "parent": "spotify",
    "title": "Zugangsdaten",
-   "description": "",
+   "description": "Anmeldung, Spotify-App, Redirect URI",
    "icon": "lock",
    "sections": []
   },
@@ -3749,7 +3749,7 @@
    "area": "einstellungen",
    "parent": "g-sicherheit",
    "title": "Passwort & Anmeldung",
-   "description": "Ein Passwort für die ganze App",
+   "description": "Passwort, Anmeldung, angemeldete Geräte",
    "icon": "lock",
    "sections": [
     {
@@ -3924,7 +3924,7 @@
    "parent": "g-system",
    "title": "Zustand der Box",
    "description": "Speicher, Temperatur, Strom, SD-Karte, Dienste, Anmeldungen",
-   "icon": "bulb",
+   "icon": "pulse",
    "sections": []
   },
   {
@@ -4447,7 +4447,7 @@
    "parent": "g-system",
    "title": "Sprache",
    "description": "Sprache der App, Sprache der Box",
-   "icon": "globe",
+   "icon": "lang",
    "sections": [
     {
      "title": "Sprache der App",
@@ -4839,7 +4839,7 @@
    "area": "einstellungen",
    "parent": "einstellungen",
    "title": "System",
-   "description": "Über, Updates, Backup, Neustart, Protokolle, Experten, Sprache",
+   "description": "Über die Box, Zustand, Updates, Neustart, Protokolle, Rechtliches …",
    "icon": "gear",
    "sections": [
     {

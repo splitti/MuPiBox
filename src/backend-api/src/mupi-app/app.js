@@ -379,8 +379,57 @@ async function renderPage(page, reload = true) {
     console.error(err)
     toast('Ein Teil der Seite ließ sich nicht einrichten', 'info')
   }
+  balanceCols(main)
   if (keepScroll != null) window.scrollTo(0, keepScroll)
 }
+
+// Two columns on the PC: the cards go into two columns of their own, each into the one that is shorter so far (in the
+// page's order; a card with data-col into that one). In rows of the grid the taller card of a row set its height, and
+// a short card left a gap under it. Wide cards stay across both; pages with their own layout (.col-stack) are left.
+const WIDE_SCREEN = window.matchMedia('(min-width: 1200px)')
+const OWN_LAYOUT = new Set(['start', 'ueber', 'rechtliches'])
+
+function balanceCols(main) {
+  // (first back into the page's order: on a phone, and before sorting again)
+  // (a page drawn anew has no columns of its own any more: nothing to put back)
+  if (main._order && main.querySelector(':scope > .auto-col')) {
+    for (const s of main.querySelectorAll(':scope > .auto-col')) s.remove()
+    for (const el of main._order) main.appendChild(el)
+  }
+  main._order = null
+  if (!WIDE_SCREEN.matches || !main.classList.contains('cols') || OWN_LAYOUT.has(main.dataset.page) || main.querySelector(':scope > .col-stack')) return
+  const kids = [...main.children]
+  const runs = []
+  let run = []
+  for (const el of kids) {
+    if (el.matches('.card') && !el.matches('.wide')) run.push(el)
+    else if (run.length) {
+      runs.push(run)
+      run = []
+    }
+  }
+  if (run.length) runs.push(run)
+  // (two cards are side by side anyway)
+  const sorted = runs.filter((r) => r.length >= 3 || r.some((c) => c.dataset.col))
+  if (!sorted.length) return
+  main._order = kids
+  for (const cards of sorted) {
+    const heights = cards.map((c) => c.getBoundingClientRect().height)
+    const cols = [document.createElement('div'), document.createElement('div')]
+    const h = [0, 0]
+    for (const c of cols) c.className = 'col-stack auto-col'
+    cards[0].before(cols[0], cols[1])
+    cards.forEach((c, i) => {
+      const at = c.dataset.col ? Number(c.dataset.col) - 1 : h[0] <= h[1] ? 0 : 1
+      cols[at].appendChild(c)
+      h[at] += heights[i]
+    })
+  }
+}
+WIDE_SCREEN.addEventListener('change', () => {
+  const main = $('#content')
+  if (main) balanceCols(main)
+})
 
 // A page whose values did not come from the box: a card that says so and tries again
 function pageNotLoaded(main, page) {
@@ -436,18 +485,27 @@ function childNav(page) {
   return [`<div class="card nav-card"><div class="navlist">${kids.map((k) => navRow(k.id, k.title, k.description, k.icon)).join('')}</div></div>`]
 }
 
-function navRow(target, title, subtitle, ic) {
+// (badge: a place right in the row for a short state, filled later - "5.0.4", "Update verfügbar")
+function navRow(target, title, subtitle, ic, badge = '') {
   const ext = String(target).startsWith('ext:')
   return `<button class="navrow" data-go="${esc(target)}"><span class="tile">${icon(ic || state.pages.get(target)?.icon || 'chevron', 18)}</span>
-    <span class="lbl"><b>${esc(title)}</b>${subtitle ? `<small>${esc(subtitle)}</small>` : ''}</span><span class="chev">${icon(ext ? 'ext' : 'chevron', 18)}</span></button>`
+    <span class="lbl"><b>${esc(title)}</b>${subtitle ? `<small>${esc(subtitle)}</small>` : ''}</span>${badge}<span class="chev">${icon(ext ? 'ext' : 'chevron', 18)}</span></button>`
 }
 
 function renderSection(sec) {
   const items = (sec.items || []).map(renderItem).join('')
+  // (the page's save button under its cards, over both columns - not in the last card, as if it saved only that)
+  if (sec.bar) return `<div class="btns save-bar wide">${items}</div>`
   const wide = sec.wide === true || (sec.items || []).some((i) => ['themegrid', 'bootgrid', 'log', 'json', 'checks'].includes(i.type))
   const onlyNav = (sec.items || []).length > 0 && sec.items.every((i) => i.type === 'nav')
-  return `<section class="card${wide ? ' wide' : ''}${onlyNav && !sec.title ? ' nav-card' : ''}">
-    ${sec.title ? `<h2>${esc(sec.title)}</h2>` : ''}${sec.help ? `<p class="help">${esc(sec.help)}</p>` : ''}${items}</section>`
+  // sec.col: the column on the PC (1 left, 2 right; see balanceCols), sec.badge: a chip beside the title
+  const head = sec.title
+    ? sec.badge
+      ? `<div class="card-head"><h2>${esc(sec.title)}</h2><span class="chip ${esc(sec.badge.kind ?? '')}">${esc(sec.badge.text)}</span></div>`
+      : `<h2>${esc(sec.title)}</h2>`
+    : ''
+  return `<section class="card${wide ? ' wide' : ''}${onlyNav && !sec.title ? ' nav-card' : ''}${sec.cls ? ` ${esc(sec.cls)}` : ''}"${sec.col ? ` data-col="${sec.col}"` : ''}>
+    ${head}${sec.help ? `<p class="help">${esc(sec.help)}</p>` : ''}${items}</section>`
 }
 
 function value(item) {
@@ -455,19 +513,48 @@ function value(item) {
   return state.values.get(item.key)
 }
 
+// A building block that belongs to a switch (it.dep: its key): shown only while the switch is on, a little indented;
+// it.dim: shown, but dimmed while it is off (see wire)
 function renderItem(it) {
-  const help = it.help ? `<small>${esc(it.help)}</small>` : ''
+  const html = renderItemOnly(it)
+  if (it.dep) return `<div class="dep" data-dep="${esc(it.dep)}"${state.values.get(it.dep) ? '' : ' hidden'}>${html}</div>`
+  if (it.dim) return `<div class="dimmable${state.values.get(it.dim) ? '' : ' off'}" data-dim="${esc(it.dim)}">${html}</div>`
+  return html
+}
+
+// A slider over fixed steps (it.stops: 0, 1, 2, 5, 10 … min): the range runs over their places
+const stopIndex = (it, v) => Math.max(0, it.stops.findIndex((s) => s >= Number(v)))
+const rangeValue = (it, el) => (it.stops ? it.stops[Number(el.value)] : Number(el.value))
+
+function renderItemOnly(it) {
+  const help = it.help ? `<small${it.helpId ? ` id="${esc(it.helpId)}"` : ''}>${esc(it.help)}</small>` : ''
+  // (a technical name beside the label, small: "Voll · 100 %" v_100)
+  const sub = it.sub ? ` <span class="lbl-sub" translate="no">${esc(it.sub)}</span>` : ''
   switch (it.type) {
     case 'toggle':
       return `<div class="row"><span class="lbl"><b>${esc(it.label)}</b>${help}</span>
-        <label class="switch"><input type="checkbox" data-key="${esc(it.key)}" ${value(it) ? 'checked' : ''} aria-label="${esc(it.label)}"><span></span></label></div>`
+        <label class="switch"><input type="checkbox" data-key="${esc(it.key)}" ${value(it) ? 'checked' : ''} ${it.disabled ? 'disabled' : ''} aria-label="${esc(it.label)}"><span></span></label></div>`
     case 'slider': {
       const v = Number(value(it))
-      const fill = ((v - it.min) / (it.max - it.min)) * 100
+      const [min, max, at] = it.stops ? [0, it.stops.length - 1, stopIndex(it, v)] : [it.min, it.max, v]
+      const fill = ((at - min) / (max - min)) * 100
+      const ends = it.stops ? [it.stops[0], it.stops[it.stops.length - 1]] : [it.min, it.max]
       return `<div class="field"><div class="slider-head"><label for="k-${esc(it.key)}">${esc(it.label)}</label><span class="value-pill" data-out="${esc(it.key)}">${fmt(v, it)}</span></div>
-        <input type="range" id="k-${esc(it.key)}" data-key="${esc(it.key)}" min="${it.min}" max="${it.max}" step="${it.step ?? 1}" value="${v}" style="--fill:${fill}%"${it.disabled ? ' disabled' : ''}>
-        <div class="range-ends"><span>${fmt(it.min, it)}</span><span>${fmt(it.max, it)}</span></div>${help}</div>`
+        <input type="range" id="k-${esc(it.key)}" data-key="${esc(it.key)}" min="${min}" max="${max}" step="${it.stops ? 1 : it.step ?? 1}" value="${at}" style="--fill:${fill}%"${it.disabled ? ' disabled' : ''}>
+        <div class="range-ends"><span>${fmt(ends[0], it)}</span><span>${fmt(ends[1], it)}</span></div>${help}</div>`
     }
+    // several fields side by side (it.cols: their widths, e.g. "2fr 1fr"); under each other on a narrow phone
+    case 'pair':
+      return `<div class="pair${it.keep ? ' keep' : ''}${it.cls ? ` ${esc(it.cls)}` : ''}" style="--cols:${esc(it.cols ?? `repeat(${it.items.length}, minmax(0, 1fr))`)}">${it.items.map(renderItem).join('')}</div>`
+    // a number with − and + (instead of a slider from 1 to 99, where one hardly hits 9)
+    case 'stepper':
+      return `<div class="row stepper-row"><span class="lbl"><b>${esc(it.label)}</b>${help}</span>
+        <div class="stepper"><button type="button" class="icon-btn soft" data-step="-1" data-for="${esc(it.key)}" aria-label="Weniger">−</button>
+        <input class="input" type="number" id="k-${esc(it.key)}" data-key="${esc(it.key)}" min="${it.min}" max="${it.max}" value="${esc(value(it))}" aria-label="${esc(it.label)}">
+        <button type="button" class="icon-btn soft" data-step="1" data-for="${esc(it.key)}" aria-label="Mehr">+</button></div></div>`
+    // a page's own drawing inside a card (a preview, a chart)
+    case 'html':
+      return it.html
     case 'select':
       return `<div class="field"><label>${esc(it.label)}</label>
         <button class="select-btn" data-select="${esc(it.key)}"><span data-out="${esc(it.key)}">${esc(value(it))}</span>${icon('chevron', 18)}</button>${help}</div>`
@@ -480,9 +567,9 @@ function renderItem(it) {
       const type = kind === 'password' ? 'password' : kind === 'number' ? 'number' : kind === 'url' ? 'url' : 'text'
       const unit = it.unit ? `<span class="unit">${esc(it.unit)}</span>` : ''
       const eye = kind === 'password' ? `<button class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button>` : ''
-      return `<div class="field"><label for="k-${esc(it.key)}">${esc(it.label)}</label>
-        <div class="input-wrap"><input class="input${unit ? ' has-unit' : ''}${eye ? ' has-eye' : ''}" id="k-${esc(it.key)}" type="${type}" data-key="${esc(it.key)}"
-          value="${esc(kind === 'password' ? '' : value(it) ?? '')}" placeholder="${esc(it.placeholder ?? '')}" autocomplete="off">${unit}${eye}</div>${help}</div>`
+      return `<div class="field"><label for="k-${esc(it.key)}">${esc(it.label)}${sub}</label>
+        <div class="input-wrap"><input class="input${unit ? ' has-unit' : ''}${eye ? ' has-eye' : ''}${it.mono ? ' mono' : ''}" id="k-${esc(it.key)}" type="${type}" data-key="${esc(it.key)}"
+          value="${esc(kind === 'password' ? '' : value(it) ?? '')}" placeholder="${esc(it.placeholder ?? '')}" ${NO_PW_MANAGER}>${unit}${eye}</div>${help}</div>`
     }
     case 'buttons':
       return `<div class="btns">${it.buttons
@@ -597,18 +684,35 @@ function wire(root, page) {
   for (const el of root.querySelectorAll('input[data-key]')) {
     el.addEventListener('input', () => {
       const it = findItem(page, el.dataset.key)
-      const v = el.type === 'checkbox' ? el.checked : el.type === 'range' || el.type === 'number' ? Number(el.value) : el.value
+      const v = el.type === 'checkbox' ? el.checked : el.type === 'range' ? rangeValue(it, el) : el.type === 'number' ? (el.value === '' ? '' : Number(el.value)) : el.value
       state.values.set(el.dataset.key, v)
-      if (el.type === 'checkbox') commit(el.dataset.key, v)
+      if (el.type === 'checkbox') {
+        // what belongs to the switch shows or dims with it
+        for (const d of root.querySelectorAll(`[data-dep="${CSS.escape(el.dataset.key)}"]`)) d.hidden = !v
+        for (const d of root.querySelectorAll(`[data-dim="${CSS.escape(el.dataset.key)}"]`)) d.classList.toggle('off', !v)
+        commit(el.dataset.key, v)
+      }
       if (el.type === 'range') {
-        el.style.setProperty('--fill', `${((v - it.min) / (it.max - it.min)) * 100}%`)
+        const [min, max] = it.stops ? [0, it.stops.length - 1] : [it.min, it.max]
+        el.style.setProperty('--fill', `${((Number(el.value) - min) / (max - min)) * 100}%`)
         const out = root.querySelector(`[data-out="${CSS.escape(el.dataset.key)}"]`)
         if (out) out.textContent = fmt(v, it)
       }
     })
   }
   for (const el of root.querySelectorAll('input[type="range"][data-key]')) {
-    el.addEventListener('change', () => commit(el.dataset.key, Number(el.value)))
+    el.addEventListener('change', () => commit(el.dataset.key, rangeValue(findItem(page, el.dataset.key), el)))
+  }
+  // − and + of a number: one step, within its limits, saved as a typed number is
+  for (const b of root.querySelectorAll('[data-step]')) {
+    b.onclick = () => {
+      const input = $(`#k-${CSS.escape(b.dataset.for)}`, root)
+      const next = Math.min(Number(input.max), Math.max(Number(input.min), Number(input.value) + Number(b.dataset.step)))
+      if (next === Number(input.value)) return
+      input.value = String(next)
+      state.values.set(b.dataset.for, next)
+      input.dispatchEvent(new Event('change'))
+    }
   }
   for (const el of root.querySelectorAll('input.input[data-key]')) {
     // text and number fields are saved when they are left (or with Enter)
@@ -665,8 +769,26 @@ async function openExternal(which) {
 
 // the building block as shown (a connected page may have filled in its own options), else the schema's
 function findItem(page, key) {
-  for (const s of (state.shown?.id === page.id ? state.shown.sections : page.sections) || []) for (const i of s.items || []) if (i.key === key) return i
+  // (also inside a pair of fields)
+  const inItems = (items) => {
+    for (const i of items || []) {
+      if (i.key === key) return i
+      const inner = i.items && inItems(i.items)
+      if (inner) return inner
+    }
+    return null
+  }
+  for (const s of (state.shown?.id === page.id ? state.shown.sections : page.sections) || []) {
+    const hit = inItems(s.items)
+    if (hit) return hit
+  }
   return {}
+}
+
+// The schema's building block with this key, with what the page changes in it
+function schemaItem(page, key, over = {}) {
+  for (const s of page.sections || []) for (const i of s.items || []) if (i.key === key) return { ...i, ...over }
+  return { key, ...over }
 }
 
 function action(act, label, page) {
@@ -3858,37 +3980,71 @@ function mountSpotify(root, page) {
 function spotifyAccessTop() {
   const a = spot.access ?? {}
   const login = spotifyLogin(a)
+  const keys = !!a.clientId && !!a.hasSecret
+  // how much of the six months is left: a bar, yellow from 14 days, red when refused or gone
+  const days = login.days
+  const bar =
+    days != null
+      ? `<div class="life ${login.state === 'soon' ? 'warn' : 'ok'}"><i style="width:${Math.max(3, Math.min(100, (days / 183) * 100))}%"></i></div>`
+      : ''
+  const head = { none: ['Nicht angemeldet', 'warn'], refused: ['Von Spotify abgelehnt', 'danger'], soon: ['Läuft bald ab', 'warn'], unknown: ['Angemeldet', 'ok'], ok: ['Angemeldet', 'ok'] }[login.state]
+  const app = keys
+    ? `<div class="row"><span class="lbl"><b>Client ID</b><small class="mono" translate="no">…${esc(String(a.clientId).slice(-6))} · Secret gespeichert</small></span><button class="btn sm" id="sp-edit">Ändern</button></div>`
+    : `<ol class="steps-mini"><li>Auf developer.spotify.com eine App anlegen.</li><li>Dort die Redirect URI unten eintragen.</li><li>Client ID und Client Secret hier eintragen.</li><li>Bei Spotify anmelden.</li></ol>
+       <div class="btns"><button class="btn" data-go="wizard">Schritt für Schritt einrichten</button></div>`
   return [
-    `<section class="card"><h2>Spotify-App</h2><p class="help">Die Werte deiner Spotify-App auf developer.spotify.com (unter „Settings“; den Secret zeigt „View client secret“).</p>
-      <div class="field"><label for="sp-id">Client ID</label><input class="input mono" id="sp-id" value="${esc(a.clientId ?? '')}" ${NO_PW_MANAGER} spellcheck="false"></div>
-      <div class="field"><label for="sp-secret">Client Secret</label><div class="input-wrap"><input class="input has-eye mono" id="sp-secret" type="password" ${NO_PW_MANAGER} placeholder="${a.hasSecret ? 'gespeichert – leer lassen = behalten' : 'nicht gesetzt – nötig für Alben, Cover und Suche'}"><button type="button" class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div></div>
-      <div class="btns"><button class="btn primary" data-sp="save">Speichern</button></div></section>`,
-    `<section class="card"><h2>Anmeldung</h2><p class="help">Mit ihr spielt der Player Spotify ab und liest der Smart-Sync deine Playlists. Spotify lässt sie 6 Monate gelten, dann braucht es eine neue – die Box erinnert 14 und 3 Tage vorher (App und Telegram).</p>
+    `<section class="card" data-col="1"><div class="card-head"><h2>Anmeldung</h2><span class="chip ${head[1]}">${esc(head[0])}</span></div>
+      ${days != null ? `<div class="status-line"><span>${esc(days === 1 ? 'Noch 1 Tag gültig' : `Noch ${days} Tage gültig`)}</span></div>${bar}` : ''}
       ${spKv([
-        ['Status', login.state === 'none' ? 'Nicht angemeldet' : login.state === 'refused' ? 'Von Spotify abgelehnt' : login.state === 'soon' ? 'Läuft bald ab' : login.state === 'unknown' ? 'Angemeldet – seit wann, ist unbekannt' : 'Angemeldet'],
         login.since && ['Angemeldet seit', login.since],
         login.until && ['Gültig bis', login.until],
-      ])}
-      <div class="field"><label>Redirect URI</label><div class="field-pick"><input class="input mono" value="${esc(spotifyRedirect())}" readonly aria-label="Redirect URI" ${NO_PW_MANAGER}><button type="button" class="icon-btn soft" data-sp="copyuri" aria-label="Redirect URI kopieren">${icon('link', 18)}</button></div>
-        <small>Muss in deiner Spotify-App unter „Redirect URIs“ stehen, sonst lehnt Spotify die Anmeldung ab. Beim Zurückkommen fragt der Browser wegen des Zertifikats der Box eventuell einmal nach.</small>
-        ${
-          a.redirectUris
-            ? `<div class="pills small" id="sp-rd" role="radiogroup" aria-label="Redirect URI">${[
-                ['app', '/app/spotify-callback'],
-                ['legacy', '/spotify.php'],
-              ]
-                .map(([m, t]) => `<button role="radio" aria-selected="${a.redirectMode === m}" data-rd="${m}" translate="no">${t}</button>`)
-                .join('')}</div>
-              <small>${esc('Welche der beiden Adressen in deiner Spotify-App steht: Boxen, die vor der App eingerichtet wurden, nutzen /spotify.php – dann muss in der Spotify-App nichts geändert werden.')}</small>`
-            : ''
-        }</div>
+      ]).replace('</dl>', a.connected ? '<div id="sp-account-row" hidden><dt>Konto</dt><dd id="sp-account"></dd></div></dl>' : '</dl>')}
+      <p class="help" style="margin:0">Spotify lässt eine Anmeldung 6 Monate gelten. Die Box erinnert 14 und 3 Tage vorher (App und Telegram).</p>
       <div class="btns"><button class="btn${login.state === 'ok' ? '' : ' primary'}" data-sp="connect">${a.connected ? 'Neu anmelden' : 'Bei Spotify anmelden'}</button></div></section>`,
-    // (the display's player is itself a device in the Spotify app - librespot as a second one is gone)
-    `<section class="card"><h2>Vom Handy abspielen</h2><p class="help">${esc('Solange das Display läuft, erscheint die Box in der Spotify-App auf dem Handy unter „Geräte“ – mit ihrem Namen im Netzwerk. Dort auswählen und direkt vom Handy abspielen, ohne eigene Anmeldung.')}</p></section>`,
+    `<section class="card" data-col="1"><div class="card-head"><h2>Vom Handy abspielen</h2><span class="chip" id="sp-dev-chip">…</span></div>
+      <p class="help" style="margin:0" id="sp-dev">${esc('Solange das Display läuft, erscheint die Box in der Spotify-App auf dem Handy unter „Geräte“. Dort auswählen und direkt vom Handy abspielen.')}</p></section>`,
+    `<section class="card" data-col="2"><h2>Spotify-App</h2><p class="help">Deine App auf developer.spotify.com – damit spielt der Player ab und liest der Smart-Sync deine Playlists.</p>
+      ${app}
+      <div id="sp-fields"${keys ? ' hidden' : ''}>
+        <div class="field"><label for="sp-id">Client ID</label><input class="input mono" id="sp-id" value="${esc(a.clientId ?? '')}" ${NO_PW_MANAGER} spellcheck="false"></div>
+        <div class="field"><label for="sp-secret">Client Secret</label><div class="input-wrap"><input class="input has-eye mono" id="sp-secret" type="password" ${NO_PW_MANAGER} placeholder="${a.hasSecret ? 'gespeichert – leer lassen = behalten' : 'unter „View client secret“'}"><button type="button" class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div></div>
+        <div class="btns"><button class="btn primary" data-sp="save">Speichern</button></div></div>
+      <div class="field"><label>Redirect URI</label><div class="field-pick"><input class="input mono" value="${esc(spotifyRedirect())}" readonly aria-label="Redirect URI" ${NO_PW_MANAGER}><button type="button" class="btn sm" data-sp="copyuri">Kopieren</button></div>
+        <small>Muss in deiner Spotify-App unter „Redirect URIs“ stehen, sonst lehnt Spotify die Anmeldung ab.</small></div>
+      ${
+        a.redirectUris
+          ? `<div class="field"><label>Welche Adresse steht in deiner Spotify-App?</label><div class="pills small" id="sp-rd" role="radiogroup" aria-label="Redirect URI">${[
+              ['app', '/app/spotify-callback'],
+              ['legacy', '/spotify.php'],
+            ]
+              .map(([m, t]) => `<button role="radio" aria-selected="${a.redirectMode === m}" data-rd="${m}" translate="no">${t}</button>`)
+              .join('')}</div></div>
+            <details class="more"><summary>Warum zwei Adressen?</summary><p class="help" style="margin:0">${esc('Boxen, die vor der App eingerichtet wurden, nutzen /spotify.php – dann muss in der Spotify-App nichts geändert werden. Beim Zurückkommen von Spotify fragt der Browser wegen des Zertifikats der Box eventuell einmal nach.')}</p></details>`
+          : ''
+      }</section>`,
   ]
 }
 
 function mountSpotifyAccess(root, page) {
+  $('#sp-edit', root)?.addEventListener('click', (e) => {
+    $('#sp-fields', root).hidden = false
+    e.target.closest('.row').hidden = true
+  })
+  // the account signed in (Premium: the display's player needs it), and whether Spotify sees the display as a device
+  api(`${API}/spotify-access/account`).then((r) => {
+    const acc = r.ok ? r.body : null
+    if (acc?.name && $('#sp-account', root)) {
+      $('#sp-account', root).textContent = `${acc.name}${acc.premium === false ? ' · kein Premium' : acc.premium ? ' · Premium' : ''}`
+      $('#sp-account-row', root).hidden = false
+    }
+    const chip = $('#sp-dev-chip', root)
+    if (!chip) return
+    if (!acc || acc.deviceVisible == null) return chip.remove()
+    chip.textContent = acc.deviceVisible ? 'sichtbar' : 'nicht sichtbar'
+    chip.className = `chip ${acc.deviceVisible ? 'ok' : 'warn'}`
+    if (!acc.deviceVisible) $('#sp-dev', root).textContent = 'Gerade nicht in Spotify zu sehen – läuft das Display? Sonst hilft ein Neustart des Displays.'
+    else if (acc.deviceName) $('#sp-dev', root).textContent = `Die Box erscheint in der Spotify-App auf dem Handy unter „Geräte“ als „${acc.deviceName}“. Dort auswählen und direkt vom Handy abspielen.`
+  })
   const acts = {
     connect: connectSpotify,
     copyuri: () => copyText(spotifyRedirect()),
@@ -5259,6 +5415,29 @@ const LCD_ROT = [
   ['Aus (Standard)', '0'],
   ['180°', '2'],
 ]
+// The display's usual sizes; anything else is "Eigene …" with its two fields
+const RES_PRESETS = [
+  ['800 × 480', 800, 480],
+  ['1024 × 600', 1024, 600],
+  ['1280 × 720', 1280, 720],
+  ['1280 × 800', 1280, 800],
+  ['1920 × 1080', 1920, 1080],
+]
+// "Display aus nach": the steps of its slider (min, 0 = never)
+const DISPLAY_OFF_STOPS = [0, 1, 2, 5, 10, 15, 20, 30, 45, 60, 90, 120]
+
+// A rotation as tiles: a small screen turned as the display will be (its top marked), the mirrorings flipped
+function rotTiles(key, list) {
+  const now = state.values.get(key)
+  const look = { 'Aus (Standard)': ['0°', 'rotate(0)'], '90°': ['90°', 'rotate(90deg)'], '180°': ['180°', 'rotate(180deg)'], '270°': ['270°', 'rotate(270deg)'], 'Horizontal spiegeln': ['Spiegeln ↔', 'scaleX(-1)'], 'Vertikal spiegeln': ['Spiegeln ↕', 'scaleY(-1)'] }
+  return `<div class="rot-tiles">${list
+    .map(([label]) => {
+      const [text, tf] = look[label] ?? [label, 'none']
+      return `<button type="button" class="rot-tile" data-rot-key="${esc(key)}" data-rot="${esc(label)}" aria-pressed="${label === now}"><span class="scr" style="transform:${tf}"><i></i><b>F</b></span><small>${esc(text)}</small></button>`
+    })
+    .join('')}</div>`
+}
+
 const rotLabel = (list, v) => list.find(([, x]) => x === String(v))?.[0] ?? list[0][0]
 const rotValue = (list, label) => list.find(([l]) => l === label)?.[1] ?? '0'
 
@@ -5292,6 +5471,14 @@ async function loadControls() {
   state.values.set('epNewDays', `${o.newEpisodeDays ?? 7} Tage`)
   state.values.set('epProgress', o.episodeProgress !== false)
 }
+
+// The display's tabs: hidden key, the page's switch (on = shown), its name
+const TAB_KEYS = [
+  ['hideA', 'showA', 'Hörspiele'],
+  ['hideM', 'showM', 'Musik'],
+  ['hideN', 'showN', 'NAS'],
+  ['hideO', 'showO', 'Radio & Podcasts'],
+]
 
 // How long a podcast episode's position is remembered (mupibox.episodeResumeDays; 0: without end)
 const EP_DAYS = [
@@ -5431,43 +5618,61 @@ async function loadBluetooth() {
   hw.bt = r.body
 }
 
+// (a found device that told no name: its address only - those go under "Weitere Geräte")
+const btNameless = (d) => !d.name || d.name === d.mac || /^([0-9A-F]{2}[:-]){5}[0-9A-F]{2}$/i.test(d.name)
+// how long a search takes about (the backend scans ~20 s, see /bluetooth/scan)
+const BT_SCAN_S = 25
+
 function btTop() {
   const b = hw.bt ?? {}
   const chip = b.chip ?? { on: true, present: true, rebootNeeded: false }
   const sw = (id, label, help, on, off = false) =>
     `<div class="row"><span class="lbl"><b>${label}</b>${help ? `<small>${help}</small>` : ''}</span><label class="switch"><input type="checkbox" id="${id}" ${on ? 'checked' : ''} ${off ? 'disabled' : ''} aria-label="${label}"><span></span></label></div>`
   const devices = b.devices ?? []
-  // (the Pi's Bluetooth hardware switched off: nothing to switch on above - the radio needs the chip)
   const noHw = !chip.present
-  // the hardware: the chip itself (the admin interface's second switch), rarely needed and only after a restart
-  const hardware = `<section class="card"><h2>Bluetooth-Hardware</h2>
-    ${sw('bt-chip', 'Bluetooth-Chip', 'Schaltet die Bluetooth-Hardware des Raspberry Pi ganz ab: für stabileres Onboard-WLAN (es teilt sich den Funk mit Bluetooth), etwas weniger Strom oder die serielle Schnittstelle, die der Chip belegt. Gilt nach einem Neustart.', chip.on)}
-    ${b.controller ? `<dl class="kv"><div><dt>Controller</dt><dd translate="no">${esc(b.controller.name)} · ${esc(b.controller.mac)}</dd></div></dl>` : ''}
-    ${chip.rebootNeeded ? `<div class="note warn">${icon('info', 18)}<span>${chip.on ? 'Der Chip wird beim nächsten Neustart eingeschaltet.' : 'Der Chip wird beim nächsten Neustart abgeschaltet.'}</span></div><div class="btns"><button class="btn" id="bt-reboot">Jetzt neu starten</button></div>` : ''}</section>`
-  // the everyday switches (on the phone on top, see .bt-main in app.css)
-  const main = `<section class="card bt-main">${noHw ? `<div class="note warn">${icon('info', 18)}<span>Die Bluetooth-Hardware ist abgeschaltet. Einschalten unter „Bluetooth-Hardware“.</span></div>` : ''}${sw('bt-on', 'Bluetooth', 'Für Kopfhörer oder Lautsprecher.', b.powered, noHw)}${sw('bt-auto', 'Automatisch verbinden', 'Verbindet ein bekanntes Gerät von selbst, sobald es an ist.', b.autoconnect, noHw)}</section>`
+  const linked = devices.find((d) => d.connected)
+  // the everyday switches, with what the box does now
+  const main = `<section class="card bt-main" data-col="1"><div class="card-head"><h2>Bluetooth</h2><span class="chip ${b.powered ? 'ok' : ''}">${b.powered ? 'an' : 'aus'}</span></div>
+    ${noHw ? `<div class="note warn">${icon('info', 18)}<span>Der Bluetooth-Chip ist ausgeschaltet (gilt nach einem Neustart). Einschalten unten unter „Hardware“.</span></div>` : ''}
+    ${b.powered ? `<div class="status-line"><span class="dot ${linked ? 'ok' : ''}"></span><span>${linked ? `Verbunden mit <b translate="no">${esc(linked.name)}</b>` : 'Kein Gerät verbunden'}</span></div>` : ''}
+    ${sw('bt-on', 'Bluetooth', 'Für Kopfhörer oder Lautsprecher.', b.powered, noHw)}${sw('bt-auto', 'Automatisch verbinden', 'Verbindet ein bekanntes Gerät von selbst, sobald es an ist.', b.autoconnect, noHw)}</section>`
   const paired = b.powered
-    ? `<section class="card"><h2>Gekoppelte Geräte</h2>${
-          devices.length
-            ? `<div class="rows">${devices
-                .map((d, i) => `<div class="entry"><span class="avatar">${icon('bt', 16)}</span><span class="lbl"><b translate="no">${esc(d.name)}</b><small>${d.connected ? 'verbunden' : 'nicht verbunden'}</small></span>${d.connected ? '<span class="chip ok">aktiv</span>' : ''}<button class="btn danger sm" data-bt-rm="${i}">Entfernen</button></div>`)
-                .join('')}</div>`
-            : '<p class="help" style="margin:0">Noch kein Gerät gekoppelt.</p>'
+    ? `<section class="card" data-col="1"><h2>Gekoppelte Geräte</h2>${
+        devices.length
+          ? `<div class="rows">${devices
+              .map(
+                (d, i) =>
+                  `<div class="entry"><span class="avatar">${icon('bt', 16)}</span><span class="lbl"><b translate="no">${esc(d.name)}</b><small>${d.connected ? 'verbunden' : 'nicht verbunden'}</small></span>
+                  ${d.connected ? `<button class="btn sm" data-bt-disc="${i}">Trennen</button>` : `<button class="btn sm" data-bt-conn="${i}">Verbinden</button>`}<button class="btn danger sm" data-bt-rm="${i}">Entfernen</button></div>`,
+              )
+              .join('')}</div>`
+          : `<p class="help" style="margin:0">Noch kein Gerät gekoppelt. Neue Geräte koppelst du unter „Neues Gerät koppeln“.</p>`
+      }</section>`
+    : ''
+  const found = hw.found ?? []
+  const named = found.filter((d) => !btNameless(d))
+  const nameless = found.filter(btNameless)
+  const foundRow = (d) => `<div class="entry"><span class="avatar">${icon('bt', 16)}</span><span class="lbl"><b translate="no">${esc(d.name || d.mac)}</b><small>${esc(d.mac)}</small></span><button class="btn sm" data-bt-pair="${found.indexOf(d)}">Koppeln</button></div>`
+  const left = hw.scanning ? Math.max(1, BT_SCAN_S - Math.round((Date.now() - (hw.scanStart ?? Date.now())) / 1000)) : 0
+  const pair = b.powered
+    ? `<section class="card" data-col="2"><h2>Neues Gerät koppeln</h2><p class="help">Gerät in den Kopplungsmodus versetzen (meist die Taste lange drücken), dann suchen.</p>
+        <div class="btns"><button class="btn primary" id="bt-scan" ${hw.scanning ? 'disabled' : ''}>${hw.scanning ? `<span class="spin"></span><span id="bt-left">Suche läuft … noch ${left} s</span>` : hw.found ? 'Neu suchen' : 'Suchen'}</button></div>
+        ${
+          hw.found
+            ? found.length
+              ? `${named.length ? `<div class="rows">${named.map(foundRow).join('')}</div>` : '<p class="help" style="margin:0">Kein Gerät mit Namen gefunden.</p>'}
+                 ${nameless.length ? `<details class="more"><summary>${esc(nameless.length === 1 ? 'Ein weiteres Gerät ohne Namen' : `${nameless.length} weitere Geräte ohne Namen`)}</summary><div class="rows">${nameless.map(foundRow).join('')}</div></details>` : ''}`
+              : '<p class="help" style="margin:0">Nichts gefunden. Ist das Gerät im Kopplungsmodus?</p>'
+            : ''
         }</section>`
     : ''
-  const pair = b.powered
-    ? `<section class="card"><h2>Neue Geräte koppeln</h2><p class="help">Gerät in den Kopplungsmodus versetzen, dann suchen (dauert etwa 10–30 s).</p>
-          <div class="btns"><button class="btn primary" id="bt-scan" ${hw.scanning ? 'disabled' : ''}>${hw.scanning ? 'Suche läuft …' : 'Suchen'}</button></div>
-          ${
-            hw.found
-              ? hw.found.length
-                ? `<div class="rows">${hw.found.map((d, i) => `<div class="entry"><span class="lbl"><b translate="no">${esc(d.name)}</b><small>${esc(d.mac)}</small></span><button class="btn sm" data-bt-pair="${i}">Koppeln</button></div>`).join('')}</div>`
-                : '<p class="help" style="margin:0">Nichts gefunden. Ist das Gerät im Kopplungsmodus?</p>'
-              : ''
-          }</section>`
-    : ''
-  // on the PC: hardware | switches, then new devices | paired devices
-  return [hardware, main, pair, paired]
+  // the hardware: rarely needed, folded away
+  const hardware = `<section class="card" data-col="2"><h2>Hardware</h2>
+    ${chip.rebootNeeded ? `<div class="note warn">${icon('info', 18)}<span>${chip.on ? 'Der Chip wird beim nächsten Neustart eingeschaltet.' : 'Der Chip wird beim nächsten Neustart abgeschaltet.'}</span></div><div class="btns"><button class="btn" id="bt-reboot">Jetzt neu starten</button></div>` : ''}
+    <details class="more"${noHw ? ' open' : ''}><summary>Bluetooth-Chip und Controller</summary>
+    ${sw('bt-chip', 'Bluetooth-Chip', 'Schaltet die Bluetooth-Hardware des Raspberry Pi ganz ab: für stabileres Onboard-WLAN (es teilt sich den Funk mit Bluetooth), etwas weniger Strom oder die serielle Schnittstelle, die der Chip belegt. Gilt nach einem Neustart.', chip.on)}
+    ${b.controller ? `<dl class="kv"><div><dt>Controller</dt><dd translate="no">${esc(b.controller.name)} · ${esc(b.controller.mac)}</dd></div></dl>` : ''}</details></section>`
+  return [main, paired, pair, hardware]
 }
 
 function mountBluetooth(root, page) {
@@ -5502,8 +5707,30 @@ function mountBluetooth(root, page) {
     if (r.body.rebootNeeded) offerReboot(on ? 'Der Chip wird eingeschaltet.' : 'Der Chip wird abgeschaltet.')
   }
   $('#bt-reboot', root)?.addEventListener('click', () => offerReboot(hw.bt?.chip?.on ? 'Der Chip wird eingeschaltet.' : 'Der Chip wird abgeschaltet.'))
+  // while searching: the time it still takes, every second
+  if (hw.scanning) {
+    every(1000, () => {
+      const el = $('#bt-left', root)
+      if (el) el.textContent = `Suche läuft … noch ${Math.max(1, BT_SCAN_S - Math.round((Date.now() - hw.scanStart) / 1000))} s`
+    })
+  }
+  // (connect and disconnect a paired device)
+  for (const [attr, path, ok, no] of [
+    ['btConn', 'connect', 'verbunden', 'ließ sich nicht verbinden – ist es an?'],
+    ['btDisc', 'disconnect', 'getrennt', 'ließ sich nicht trennen'],
+  ]) {
+    for (const b of root.querySelectorAll(`[data-${attr.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}]`)) {
+      const d = hw.bt.devices[Number(b.dataset[attr])]
+      b.onclick = async () => {
+        b.disabled = true
+        const r = await api(`${API}/bluetooth/${path}`, { method: 'POST', body: { mac: d.mac } })
+        again(r.body?.ok ? `${d.name} ${ok}` : `${d.name} ${no}`, r.body?.ok ? 'ok' : 'info')
+      }
+    }
+  }
   $('#bt-scan', root)?.addEventListener('click', async () => {
     hw.scanning = true
+    hw.scanStart = Date.now()
     renderPage(page, false)
     const r = await api(`${API}/bluetooth/scan`, { method: 'POST', body: {} })
     hw.scanning = false
@@ -5618,12 +5845,80 @@ const PROFILE_KEYS = [
 ]
 
 async function loadHat() {
-  const [, power] = await Promise.all([loadHardware(), api(`${API}/power-config`)])
+  const [, power, now] = await Promise.all([loadHardware(), api(`${API}/power-config`), api('/api/mupihat')])
   hw.power = power.body ?? {}
+  hw.hat = now.ok ? now.body : null
   state.values.set('hatOn', hw.data.mupihat.active)
   state.values.set('battery', batteryLabel(hw.data.mupihat.battery))
   const p = hw.power.battery?.profile ?? {}
   for (const [key, field] of PROFILE_KEYS) state.values.set(key, p[field] != null ? String(p[field]) : '')
+}
+
+// What the battery reads now, under the choice of the profile: "7,85 V · 82 % · lädt"
+function hatNowLine() {
+  const h = hw.hat
+  if (!h || !Number.isFinite(h.Vbat)) return ''
+  const pct = Number.isFinite(h.Bat_Percent) ? h.Bat_Percent : Number.parseInt(String(h.Bat_SOC ?? ''), 10)
+  const what = batteryCharging(h) ? 'lädt' : Number.isFinite(h.Ibat) && h.Ibat < -50 ? 'entlädt' : 'Ruhezustand'
+  const parts = [`${(h.Vbat / 1000).toLocaleString(LOCALE, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} V`, Number.isFinite(pct) ? `${pct} %` : '', what].filter(Boolean)
+  return `<div class="status-line"><span class="dot ok"></span><span><span>Jetzt</span> <b>${esc(parts.join(' · '))}</b></span></div>`
+}
+
+// The profile's values as typed (numbers, or NaN)
+const hatVals = () => Object.fromEntries(PROFILE_KEYS.map(([key]) => [key, Number.parseInt(String(state.values.get(key) ?? '').trim(), 10)]))
+
+// What is wrong with the typed profile, per field (as the backend checks it, and more)
+function hatProfileErrors() {
+  const v = hatVals()
+  const e = {}
+  const curve = ['v0', 'v25', 'v50', 'v75', 'v100']
+  for (const k of curve) if (!(v[k] >= 5000 && v[k] <= 9000)) e[k] = '5000–9000'
+  curve.forEach((k, i) => {
+    if (i > 0 && !e[k] && !e[curve[i - 1]] && v[k] <= v[curve[i - 1]]) e[k] = 'Muss größer sein als links daneben'
+  })
+  if (!(v.thWarn >= 5500 && v.thWarn <= 8000)) e.thWarn = '5500–8000'
+  if (!(v.thShut >= 5000 && v.thShut <= 7500)) e.thShut = '5000–7500'
+  else if (!e.thWarn && v.thShut >= v.thWarn) e.thShut = 'Muss unter der Warnung liegen'
+  const vreg = String(state.values.get('vreg') ?? '').trim()
+  if (vreg && !(v.vreg >= 6000 && v.vreg <= 8400)) e.vreg = v.vreg > 8400 ? 'Höher als 8400 mV schadet einem 2S-Akku' : '6000–8400'
+  return e
+}
+
+// The charge curve: charge (0–100 %) against voltage, with the warning and switch-off lines and where the battery is now
+function hatChart() {
+  const v = hatVals()
+  const pts = [
+    [0, v.v0],
+    [25, v.v25],
+    [50, v.v50],
+    [75, v.v75],
+    [100, v.v100],
+  ].filter(([, y]) => Number.isFinite(y))
+  if (pts.length < 2) return ''
+  const ys = [...pts.map(([, y]) => y), v.thWarn, v.thShut, hw.hat?.Vbat].filter(Number.isFinite)
+  const lo = Math.floor((Math.min(...ys) - 150) / 100) * 100
+  const hi = Math.ceil((Math.max(...ys) + 150) / 100) * 100
+  const W = 320
+  const H = 150
+  const L = 34
+  const B = 18
+  const x = (p) => L + (p / 100) * (W - L - 6)
+  const y = (mv) => 6 + (1 - (mv - lo) / (hi - lo)) * (H - B - 6)
+  const volts = (mv) => (mv / 1000).toLocaleString(LOCALE, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+  const grid = [lo, (lo + hi) / 2, hi].map((mv) => `<line x1="${L}" x2="${W - 6}" y1="${y(mv)}" y2="${y(mv)}" class="g"/><text x="${L - 4}" y="${y(mv) + 4}" text-anchor="end">${volts(mv)} V</text>`).join('')
+  const xs = [0, 25, 50, 75, 100].map((p) => `<text x="${x(p)}" y="${H - 4}" text-anchor="${p === 0 ? 'start' : p === 100 ? 'end' : 'middle'}">${p} %</text>`).join('')
+  const line = (mv, cls) => (Number.isFinite(mv) ? `<line x1="${L}" x2="${W - 6}" y1="${y(mv)}" y2="${y(mv)}" class="${cls}"/>` : '')
+  const curve = pts.map(([p, mv]) => `${x(p)},${y(mv)}`).join(' ')
+  // where the battery is: its voltage on the curve
+  let now = ''
+  const mv = hw.hat?.Vbat
+  if (Number.isFinite(mv)) {
+    const seg = pts.findIndex(([, a], i) => i < pts.length - 1 && mv >= a && mv <= pts[i + 1][1])
+    const p = mv <= pts[0][1] ? 0 : mv >= pts[pts.length - 1][1] ? 100 : seg >= 0 ? pts[seg][0] + ((mv - pts[seg][1]) / (pts[seg + 1][1] - pts[seg][1])) * (pts[seg + 1][0] - pts[seg][0]) : null
+    if (p !== null) now = `<circle cx="${x(p)}" cy="${y(mv)}" r="5" class="now"/>`
+  }
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Ladekurve">${grid}${xs}${line(v.thWarn, 'warn')}${line(v.thShut, 'off')}<polyline points="${curve}" class="c"/>${pts.map(([p, m]) => `<circle cx="${x(p)}" cy="${y(m)}" r="3" class="p"/>`).join('')}${now}</svg>
+    <div class="hat-legend"><span><i class="c"></i>Ladekurve</span><span><i class="warn"></i>Warnung</span><span><i class="off"></i>Abschalten</span>${now ? '<span><i class="now"></i>Jetzt</span>' : ''}</div>`
 }
 
 /* Taster und LED, Lüfter */
@@ -5656,38 +5951,65 @@ async function loadWlan() {
 }
 
 const signalWord = (dbm) => (dbm >= -55 ? 'sehr gut' : dbm >= -67 ? 'gut' : dbm >= -75 ? 'mittel' : 'schwach')
+// the signal as four bars (as the phone shows it)
+const signalBars = (dbm) => {
+  const n = !Number.isFinite(dbm) ? 0 : dbm >= -55 ? 4 : dbm >= -67 ? 3 : dbm >= -75 ? 2 : 1
+  return `<span class="sig" aria-hidden="true">${[1, 2, 3, 4].map((i) => `<i${i <= n ? ' class="on"' : ''}></i>`).join('')}</span>`
+}
 
 function wlanTop() {
   const n = net.status ?? {}
   const row = (k, v) => (v ? `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>` : '')
+  const dbm = Number.parseInt(String(n.wifisignal ?? ''), 10)
+  const online = n.onlinestate === 'online'
+  const name = n.wifi || (n.interface?.startsWith('eth') ? 'LAN-Kabel' : '')
+  const scan = net.scan ?? []
+  const inRange = new Map(scan.map((w) => [w.ssid, w.signal_dbm]))
+  const saved = new Set((net.saved ?? []).map((w) => w.ssid))
+  const pick = net.pick
   return [
-    `<section class="card"><h2>Verbindung</h2><dl class="kv">${row('Status', n.onlinestate === 'online' ? 'online' : 'offline')}${row('Netz', n.wifi || (n.interface?.startsWith('eth') ? 'LAN-Kabel' : ''))}${row('Signal', n.wifisignal ? `${n.wifisignal}` : '')}${row('IP-Adresse', n.ip)}${row('Gateway', n.gateway)}${row('DNS', n.dns)}${row('MAC', n.mac)}</dl>
-      <p class="help" style="margin:0">Der Stand ist bis zu 30 Sekunden alt.</p><div class="btns"><button class="btn" id="w-refresh">Aktualisieren</button></div></section>`,
-    `<section class="card"><h2>Netze in Reichweite</h2>
-      <div class="btns"><button class="btn primary" id="w-scan" ${net.scanning ? 'disabled' : ''}>${net.scanning ? 'Suche läuft …' : net.scan ? 'Neu suchen' : 'Suchen'}</button></div>
+    `<section class="card" data-col="1"><div class="card-head"><h2>Verbindung</h2><button class="icon-btn soft" id="w-refresh" aria-label="Aktualisieren">${icon('sync', 18)}</button></div>
+      <div class="wifi-now"><span class="avatar">${icon('wifi', 18)}</span><span class="lbl"><b translate="no">${esc(name || 'Nicht verbunden')}</b>
+        <small>${Number.isFinite(dbm) ? `${signalBars(dbm)} Empfang ${signalWord(dbm)}` : ''}</small></span><span class="chip ${online ? 'ok' : 'warn'}">${online ? 'online' : 'offline'}</span></div>
+      <dl class="kv">${row('IP-Adresse', n.ip)}</dl>
+      <details class="more"><summary>Details</summary><dl class="kv">${row('Signal', n.wifisignal)}${row('Gateway', n.gateway)}${row('DNS', n.dns)}${row('MAC', n.mac)}</dl></details></section>`,
+    `<section class="card" data-col="1"><h2>Gespeicherte Netze</h2>${
+      net.saved
+        ? net.saved.length
+          ? `<div class="rows">${net.saved
+              .map((w, i) => {
+                const sig = inRange.get(w.ssid)
+                const where = w.active ? 'verbunden' : sig !== undefined ? `in Reichweite · ${signalWord(sig)}` : net.scan ? 'nicht in Reichweite' : ''
+                return `<div class="entry"><span class="avatar">${icon('wifi', 16)}</span><span class="lbl"><b translate="no">${esc(w.ssid)}</b>${where ? `<small>${sig !== undefined && !w.active ? signalBars(sig) : ''} ${esc(where)}</small>` : ''}</span>
+                  ${w.active ? '<span class="chip ok">aktiv</span>' : `<button class="btn sm" data-wpw="${i}">Passwort</button><button class="btn danger sm" data-wrm="${i}">Entfernen</button>`}</div>`
+              })
+              .join('')}</div><p class="help" style="margin:0">Das verbundene Netz lässt sich nicht entfernen – die Box wäre sonst offline.</p>`
+          : '<p class="help" style="margin:0">Keine.</p>'
+        : '<p class="help" style="margin:0">Die gespeicherten Netze ließen sich nicht lesen.</p>'
+    }</section>`,
+    `<section class="card" data-col="2"><h2>Netz hinzufügen</h2>
+      <div class="btns"><button class="btn${net.scan ? '' : ' primary'}" id="w-scan" ${net.scanning ? 'disabled' : ''}>${net.scanning ? '<span class="spin"></span>Suche läuft …' : net.scan ? 'Neu suchen' : 'Netze in Reichweite suchen'}</button></div>
       ${
         net.scan
           ? net.scan.length
             ? `<div class="rows">${net.scan
-                .map((w, i) => `<button class="entry lib-row" data-w="${i}"><span class="avatar">${icon('wifi', 16)}</span><span class="lbl"><b translate="no">${esc(w.ssid)}</b><small>${signalWord(w.signal_dbm)} (${w.signal_dbm} dBm)${w.encrypted ? '' : ' · offen'}</small></span>${n.wifi === w.ssid ? '<span class="chip ok">verbunden</span>' : ''}<span class="chev">${icon('plus', 18)}</span></button>`)
+                .map(
+                  (w, i) =>
+                    `<button class="entry lib-row${pick === w.ssid ? ' picked' : ''}" data-w="${i}"><span class="avatar">${signalBars(w.signal_dbm)}</span><span class="lbl"><b translate="no">${esc(w.ssid)}</b><small>${esc(signalWord(w.signal_dbm))}${w.encrypted ? '' : ' · offen'}</small></span>${n.wifi === w.ssid ? '<span class="chip ok">verbunden</span>' : saved.has(w.ssid) ? '<span class="chip">gespeichert</span>' : ''}${w.encrypted ? `<span class="chev">${icon('lock', 16)}</span>` : ''}</button>`,
+                )
                 .join('')}</div>`
             : `<p class="help" style="margin:0">${net.scanFailed ? 'Die Suche hat nicht geklappt – bitte noch einmal.' : 'Keine Netze gefunden.'}</p>`
           : ''
-      }</section>`,
-    `<section class="card"><h2>Neues WLAN hinzufügen</h2>
-      <div class="field"><label for="w-ssid">Netzname (SSID)</label><input class="input" id="w-ssid" maxlength="32" autocomplete="off"></div>
-      <div class="field"><label for="w-pw">Passwort (8–63 Zeichen, leer = offenes Netz)</label><div class="input-wrap"><input class="input has-eye" id="w-pw" type="password" maxlength="63" autocomplete="new-password"><button class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div></div>
-      <p class="help" style="margin:0">Die Box bleibt im aktuellen Netz und nimmt das neue, wenn es in Reichweite und besser ist.</p>
-      <div class="btns"><button class="btn primary" id="w-add">Hinzufügen</button></div></section>`,
-    `<section class="card"><h2>Gespeicherte Netze</h2>${
-      net.saved
-        ? net.saved.length
-          ? `<div class="rows">${net.saved
-              .map((w, i) => `<div class="entry"><span class="avatar">${icon('wifi', 16)}</span><span class="lbl"><b translate="no">${esc(w.ssid)}</b></span>${w.active ? '<span class="chip ok">aktiv</span>' : `<button class="btn danger sm" data-wrm="${i}">Entfernen</button>`}</div>`)
-              .join('')}</div>`
-          : '<p class="help" style="margin:0">Keine.</p>'
-        : '<p class="help" style="margin:0">Die gespeicherten Netze ließen sich nicht lesen.</p>'
-    }</section>`,
+      }
+      <div class="wifi-form" id="w-form"${pick ? '' : ' hidden'}>
+        <div class="field"><label for="w-pw">Passwort <span class="lbl-sub" id="w-pick" translate="no">${esc(pick ?? '')}</span></label><div class="input-wrap"><input class="input has-eye" id="w-pw" type="password" maxlength="63" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true"><button class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div>
+          <small id="w-pw-hint">8–63 Zeichen, leer bei einem offenen Netz.</small></div>
+        <div class="btns"><button class="btn primary" id="w-add">${net.pwChange ? 'Passwort ändern' : 'Hinzufügen'}</button></div></div>
+      <details class="more" id="w-hidden"><summary>Verstecktes Netz eingeben</summary>
+        <div class="field"><label for="w-ssid">Netzname (SSID)</label><input class="input" id="w-ssid" maxlength="32" ${NO_PW_MANAGER}></div>
+        <div class="field"><label for="w-pw2">Passwort</label><div class="input-wrap"><input class="input has-eye" id="w-pw2" type="password" maxlength="63" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true"><button class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div><small>8–63 Zeichen, leer bei einem offenen Netz.</small></div>
+        <div class="btns"><button class="btn primary" id="w-add2">Hinzufügen</button></div></details>
+      <p class="help" style="margin:0">Die Box bleibt im aktuellen Netz und nimmt das neue, wenn es in Reichweite und besser ist.</p></section>`,
   ]
 }
 
@@ -5708,26 +6030,58 @@ function mountWlan(root, page) {
     net.scanFailed = !r.ok
     if (currentPage()?.id === page.id) renderPage(page, false)
   }
+  // a network of the list: its password next (an open one needs none)
   for (const b of root.querySelectorAll('[data-w]')) {
     b.onclick = () => {
       const w = net.scan[Number(b.dataset.w)]
-      $('#w-ssid', root).value = w.ssid
-      $('#w-pw', root).focus()
-      $('#w-ssid', root).scrollIntoView({ block: 'center', behavior: 'smooth' })
+      net.pick = w.ssid
+      net.pwChange = false
+      $('#w-add', root).textContent = 'Hinzufügen'
+      for (const x of root.querySelectorAll('[data-w]')) x.classList.toggle('picked', x === b)
+      $('#w-pick', root).textContent = w.ssid
+      $('#w-form', root).hidden = false
+      $('#w-pw', root).hidden = !w.encrypted
+      $('#w-pw-hint', root).textContent = w.encrypted ? '8–63 Zeichen.' : 'Ein offenes Netz – ohne Passwort.'
+      if (w.encrypted) $('#w-pw', root).focus()
     }
   }
-  $('#w-add', root).onclick = async () => {
-    const ssid = $('#w-ssid', root).value
-    const password = $('#w-pw', root).value
+  // a saved network's new password (the router got a new one)
+  for (const b of root.querySelectorAll('[data-wpw]')) {
+    b.onclick = () => {
+      const w = net.saved[Number(b.dataset.wpw)]
+      net.pick = w.ssid
+      net.pwChange = true
+      $('#w-pick', root).textContent = w.ssid
+      $('#w-pw', root).hidden = false
+      $('#w-pw-hint', root).textContent = 'Das neue Passwort des Netzes, 8–63 Zeichen.'
+      $('#w-add', root).textContent = 'Passwort ändern'
+      $('#w-form', root).hidden = false
+      $('#w-pw', root).focus()
+      $('#w-form', root).scrollIntoView({ block: 'center', behavior: 'smooth' })
+    }
+  }
+  const add = async (ssid, password) => {
     if (!ssid.trim()) return toast('Bitte den Netznamen eintragen', 'info')
     if (password && (password.length < 8 || password.length > 63)) return toast('Das Passwort hat 8 bis 63 Zeichen', 'info')
     const r = await api(`${API}/wifi/add`, { method: 'POST', body: { ssid, password } })
     if (!r.ok) return toast(r.body?.error ?? 'Das hat nicht geklappt', 'info')
-    $('#w-ssid', root).value = ''
-    $('#w-pw', root).value = ''
+    net.pick = null
     setTimeout(() => again(), 8000)
     toast(`„${ssid}“ wird eingetragen`)
+    renderPage(page, false)
   }
+  $('#w-add', root).onclick = async () => {
+    if (!net.pwChange) return add(net.pick ?? '', $('#w-pw', root).value)
+    const password = $('#w-pw', root).value
+    if (password.length < 8 || password.length > 63) return toast('Das Passwort hat 8 bis 63 Zeichen', 'info')
+    const r = await api(`${API}/wifi/password`, { method: 'POST', body: { ssid: net.pick, password } })
+    if (!r.ok) return toast(r.body?.error === 'connected_network' ? 'Das verbundene Netz lässt sich hier nicht ändern' : 'Das hat nicht geklappt', 'info')
+    toast(`Neues Passwort für „${net.pick}“ gespeichert`)
+    net.pick = null
+    net.pwChange = false
+    renderPage(page, false)
+  }
+  $('#w-add2', root).onclick = () => add($('#w-ssid', root).value, $('#w-pw2', root).value)
   for (const b of root.querySelectorAll('[data-wrm]')) {
     const w = net.saved[Number(b.dataset.wrm)]
     b.onclick = () =>
@@ -5755,32 +6109,60 @@ async function loadTelegram() {
   net.tg = { ...r.body, chatIds: [...(r.body.chatIds ?? [])] }
 }
 
+// The bot's commands a parent uses most (the whole list: /command in Telegram, see telegram_i18n.py)
+const TG_COMMANDS = [
+  ['/help', 'die wichtigsten Befehle als Knöpfe'],
+  ['/status', 'Spielzeit und Ruhezeiten jetzt'],
+  ['/extend 30', 'Bonus-Minuten für heute'],
+  ['/release 60', 'alle Sperren für eine Weile aufheben'],
+  ['/quietnow 60', 'Wiedergabe für eine Weile sperren'],
+  ['/pause', 'Wiedergabe anhalten'],
+  ['/vol 40', 'Lautstärke setzen (0–100)'],
+  ['/login', 'Link zu dieser App'],
+  ['/command', 'alle Befehle'],
+]
+
 function tgTop() {
   const t = net.tg
   const sw = (id, label, help, on) =>
     `<div class="row"><span class="lbl"><b>${label}</b>${help ? `<small>${help}</small>` : ''}</span><label class="switch"><input type="checkbox" id="${id}" ${on ? 'checked' : ''} aria-label="${label}"><span></span></label></div>`
+  // the token: once set, only a button to change it (the field comes on the click)
+  const tokenField = `<div class="field" id="tg-token-field"${t.token_configured ? ' hidden' : ''}><label for="tg-token">${t.token_configured ? 'Neuer Token' : 'Bot-Token'}</label><div class="input-wrap"><input class="input mono has-eye" id="tg-token" type="password" ${NO_PW_MANAGER} placeholder="123456789:AA…"><button type="button" class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div>
+      <small>Den Token bekommst du bei @BotFather in Telegram (/newbot).</small></div>`
   return [
-    `<section class="card"><h2>Eltern-Bot</h2>
-      ${sw('tg-on', 'Bot aktiv', 'Steuern und Nachfragen per Telegram (/status, /extend, /quietnow …).', t.active)}
+    `<section class="card" data-col="1"><div class="card-head"><h2>Eltern-Bot</h2><span class="chip ${t.active ? 'ok' : ''}">${t.active ? 'aktiv' : 'aus'}</span></div>
+      ${sw('tg-on', 'Bot aktiv', 'Steuern und Nachfragen per Telegram.', t.active)}
       ${sw('tg-report', 'Wiedergabe melden', 'Schickt jeden Start, Titel und Stopp – meist zu viel.', t.notifyPlayback)}
       ${sw('tg-week', 'Wochenrückblick', 'Sonntagabend: wie lange und was die Woche über gehört wurde.', t.weeklySummary)}
-      <dl class="kv"><div><dt>Bot-Token</dt><dd>${t.token_configured ? '✓ Eingerichtet' : 'Fehlt'}</dd></div></dl>
-      <div class="field"><label for="tg-token">Neuen Token setzen (leer = unverändert)</label><div class="input-wrap"><input class="input mono has-eye" id="tg-token" type="password" autocomplete="off" placeholder="123456789:AA…"><button type="button" class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div></div>
-      <p class="help" style="margin:0">Den Token bekommst du bei @BotFather in Telegram (/newbot).</p></section>`,
-    `<section class="card"><h2>Erlaubte Chats</h2><p class="help">Nur diese Chats dürfen den Bot steuern.</p>
+      <div class="row"><span class="lbl"><b>Bot-Token</b><small>${t.token_configured ? '✓ Eingerichtet' : 'Fehlt noch'}</small></span>${t.token_configured ? '<button class="btn sm" id="tg-token-edit">Ändern</button>' : ''}</div>
+      ${tokenField}
+      <div class="btns"><button class="btn" id="tg-test" ${t.token_configured && t.chatIds.length ? '' : 'disabled'}>${icon('tg', 18)}Testnachricht senden</button></div></section>`,
+    `<section class="card" data-col="2"><h2>Erlaubte Chats</h2><p class="help">Nur diese Chats dürfen den Bot steuern.</p>
       ${
         t.chatIds.length
           ? `<div class="rows">${t.chatIds.map((c, i) => `<div class="entry"><span class="avatar">${icon('tg', 16)}</span><span class="lbl"><b${c.label ? ' translate="no"' : ''}>${esc(c.label || 'Ohne Namen')}</b><small>${esc(c.id)}</small></span><button class="btn danger sm" data-tgrm="${i}">Entfernen</button></div>`).join('')}</div>`
           : '<p class="help" style="margin:0">Noch keiner – ohne erlaubten Chat antwortet der Bot niemandem.</p>'
       }
-      <div class="rule-times"><div class="field"><label for="tg-id">Chat-ID</label><input class="input mono" id="tg-id" autocomplete="off" inputmode="numeric"></div><div class="field"><label for="tg-name">Name</label><input class="input" id="tg-name" maxlength="60" autocomplete="off"></div></div>
-      <div class="btns"><button class="btn" id="tg-add">${icon('plus', 18)}Chat hinzufügen</button><button class="btn" id="tg-detect" ${t.token_configured ? '' : 'disabled'}>Chat-ID ermitteln</button></div></section>`,
-    `<div class="btns wide"><button class="btn primary" id="tg-save">Speichern</button></div>`,
+      <div class="pair keep" style="--cols:1fr 1fr"><div class="field"><label for="tg-id">Chat-ID</label><input class="input mono" id="tg-id" ${NO_PW_MANAGER} inputmode="numeric"></div><div class="field"><label for="tg-name">Name</label><input class="input" id="tg-name" maxlength="60" ${NO_PW_MANAGER}></div></div>
+      <div class="btns"><button class="btn" id="tg-add">${icon('plus', 18)}Hinzufügen</button><button class="btn" id="tg-detect" ${t.token_configured ? '' : 'disabled'}>Chat-ID ermitteln</button></div></section>`,
+    `<div class="btns save-bar wide"><button class="btn primary" id="tg-save">Speichern</button></div>`,
+    `<section class="card wide"><h2>Befehle</h2><p class="help">Im Chat mit dem Bot, z. B.:</p>
+      <dl class="cmds cols2">${TG_COMMANDS.map(([c, d]) => `<div><dt translate="no">${esc(c)}</dt><dd>${esc(d)}</dd></div>`).join('')}</dl></section>`,
   ]
 }
 
 function mountTelegram(root, page) {
   const redraw = () => currentPage()?.id === page.id && renderPage(page, false)
+  $('#tg-token-edit', root)?.addEventListener('click', (e) => {
+    $('#tg-token-field', root).hidden = false
+    e.target.hidden = true
+    $('#tg-token', root).focus()
+  })
+  $('#tg-test', root).onclick = async () => {
+    const r = await api(`${API}/telegram/test`, { method: 'POST', body: {} })
+    // (with the saved settings: the bot switched on, its token and a chat saved)
+    toast(r.status === 409 ? 'Erst Bot aktiv, Token und einen Chat speichern' : r.body?.ok ? 'Testnachricht geschickt – kam sie an?' : 'Das ging nicht', r.body?.ok ? 'ok' : 'info')
+  }
   $('#tg-on', root).onchange = (e) => (net.tg.active = e.target.checked)
   $('#tg-report', root).onchange = (e) => (net.tg.notifyPlayback = e.target.checked)
   $('#tg-week', root).onchange = (e) => (net.tg.weeklySummary = e.target.checked)
@@ -5862,12 +6244,23 @@ const MQTT_KEYS = [
   ['haTopic', 'haTopic'],
 ]
 
+// the example of the box's configuration template: shown as an empty field with a hint, not as a real broker
+const MQTT_EXAMPLE_BROKER = 'mqtt-example-broker.com'
+
 async function loadMqtt() {
   const r = await api(`${API}/mqtt`)
   if (!r.ok) throw new Error(`mqtt ${r.status}`)
   net.mqtt = r.body
   for (const [key, field] of MQTT_KEYS) state.values.set(key, r.body[field])
+  if (r.body.broker === MQTT_EXAMPLE_BROKER) state.values.set('mqBroker', '')
   state.values.set('mqPw', '')
+}
+
+// One of the topics the box sends to, from what is typed (scripts/mqtt/mqtt.py: topic/client-id/state …)
+function mqttTopicPreview() {
+  const t = String(state.values.get('mqTopic') ?? '').trim() || '…'
+  const c = String(state.values.get('mqClient') ?? '').trim() || '…'
+  return `z. B. ${t}/${c}/state`
 }
 
 /* WLED */
@@ -5882,23 +6275,29 @@ async function loadWled() {
 
 function wledTop() {
   const w = net.wled
-  const sw = (id, label, on) => `<div class="row"><span class="lbl"><b>${label}</b></span><label class="switch"><input type="checkbox" id="${id}" ${on ? 'checked' : ''} aria-label="${label}"><span></span></label></div>`
-  const preset = (id, label, value) =>
+  const sw = (id, label, on, help = '', extra = '') =>
+    `<div class="row"><span class="lbl"><b>${label}</b>${help ? `<small>${help}</small>` : ''}</span>${extra}<label class="switch"><input type="checkbox" id="${id}" ${on ? 'checked' : ''} aria-label="${label}"><span></span></label></div>`
+  // a preset: the WLED device's list when it answered, else its number
+  const preset = (id, value, label = '') =>
     w.presets.length
-      ? `<div class="field"><label for="${id}">${label}</label><select class="input" id="${id}"><option value="">–</option>${w.presets.map((p) => `<option value="${esc(p.id)}"${p.id === value ? ' selected' : ''}>${esc(`${p.id} · ${p.name}`)}</option>`).join('')}</select></div>`
-      : `<div class="field"><label for="${id}">${label}</label><input class="input" id="${id}" inputmode="numeric" maxlength="3" value="${esc(value)}"></div>`
+      ? `<select class="input" id="${id}" aria-label="${esc(label || 'Preset')}"><option value="">–</option>${w.presets.map((p) => `<option value="${esc(p.id)}"${p.id === value ? ' selected' : ''}>${esc(`${p.id} · ${p.name}`)}</option>`).join('')}</select>`
+      : `<input class="input" id="${id}" inputmode="numeric" maxlength="3" value="${esc(value)}" placeholder="Nr." aria-label="${esc(label || 'Preset')}">`
+  const pct = (v) => Math.round((v / 255) * 100)
   const slider = (id, label, v) =>
-    `<div class="field"><div class="slider-head"><label for="${id}">${label}</label><span class="value-pill" id="${id}-out">${v}</span></div><input type="range" id="${id}" min="0" max="255" value="${v}" style="--fill:${(v / 255) * 100}%"></div>`
+    `<div class="field"><div class="slider-head"><label for="${id}">${label}</label><span class="value-pill" id="${id}-out">${pct(v)} %</span></div><input type="range" id="${id}" min="0" max="255" value="${v}" style="--fill:${(v / 255) * 100}%"></div>`
+  const dev = w.device
   return [
-    `<section class="card"><h2>Verbindung</h2>${sw('wl-on', 'WLED aktiv', w.active)}
-      <div class="field"><label for="wl-port">Serielle Schnittstelle</label><input class="input mono" id="wl-port" value="${esc(w.port || '/dev/ttyUSB0')}" autocomplete="off"></div>
-      <div class="field"><label for="wl-baud">Baudrate</label><select class="input" id="wl-baud">${WLED_BAUD.map((b) => `<option${b === w.baud ? ' selected' : ''}>${b}</option>`).join('')}</select></div>
-      ${w.device ? `<dl class="kv"><div><dt>Gerät</dt><dd>${esc(w.device.name ?? '')}</dd></div><div><dt>Version</dt><dd>${esc(w.device.version ?? '')}</dd></div><div><dt>IP</dt><dd>${esc(w.device.ip ?? '')}</dd></div></dl>` : '<p class="help" style="margin:0">Kein WLED-Gerät hat geantwortet. Die Einstellungen lassen sich trotzdem speichern.</p>'}</section>`,
-    `<section class="card"><h2>Presets</h2>${preset('wl-main', 'Preset im normalen Betrieb (Nummer)', w.mainId)}
-      ${sw('wl-booton', 'Beim Start ein eigenes Preset', w.bootActive)}${preset('wl-boot', 'Preset beim Start (Nummer)', w.bootId)}
-      ${sw('wl-offon', 'Beim Ausschalten ein eigenes Preset', w.shutdownActive)}${preset('wl-off', 'Preset beim Ausschalten (Nummer)', w.shutdownId)}</section>`,
-    `<section class="card"><h2>Helligkeit</h2>${slider('wl-bright', 'Helligkeit normal', w.brightness)}${slider('wl-dim', 'Helligkeit gedimmt', w.dimmed)}</section>`,
-    `<div class="btns wide"><button class="btn primary" id="wl-save">Speichern</button></div>`,
+    `<section class="card" data-col="1"><div class="card-head"><h2>Verbindung</h2><span class="chip ${dev ? 'ok' : 'warn'}">${dev ? 'verbunden' : 'kein Gerät'}</span></div>
+      <div class="status-line"><span class="dot ${dev ? 'ok' : 'warn'}"></span><span>${dev ? esc([dev.name, dev.version && `Version ${dev.version}`, dev.ip].filter(Boolean).join(' · ')) : 'Kein WLED-Gerät hat geantwortet. Speichern geht trotzdem.'}</span>${dev ? '' : '<button class="btn sm" id="wl-retry">Erneut suchen</button>'}</div>
+      ${sw('wl-on', 'WLED aktiv', w.active, 'Die LEDs zeigen, was die Box tut.')}
+      <div class="pair keep" style="--cols:3fr 2fr"><div class="field"><label for="wl-port">Schnittstelle</label><input class="input mono" id="wl-port" value="${esc(w.port || '/dev/ttyUSB0')}" ${NO_PW_MANAGER}></div>
+        <div class="field"><label for="wl-baud">Baudrate</label><select class="input" id="wl-baud">${WLED_BAUD.map((b) => `<option${b === w.baud ? ' selected' : ''}>${b}</option>`).join('')}</select></div></div></section>`,
+    `<section class="card" data-col="2"><h2>Presets</h2>
+      <div class="row"><span class="lbl"><b>Im normalen Betrieb</b></span><span class="mini-field">${preset('wl-main', w.mainId, 'Im normalen Betrieb')}</span></div>
+      ${sw('wl-booton', 'Beim Start', w.bootActive, 'ein eigenes Preset', `<span class="mini-field" data-show="wl-booton"${w.bootActive ? '' : ' hidden'}>${preset('wl-boot', w.bootId, 'Beim Start')}</span>`)}
+      ${sw('wl-offon', 'Beim Ausschalten', w.shutdownActive, 'ein eigenes Preset', `<span class="mini-field" data-show="wl-offon"${w.shutdownActive ? '' : ' hidden'}>${preset('wl-off', w.shutdownId, 'Beim Ausschalten')}</span>`)}</section>`,
+    `<section class="card" data-col="1"><h2>Helligkeit</h2>${slider('wl-bright', 'Normal', w.brightness)}${slider('wl-dim', 'Gedimmt', w.dimmed)}</section>`,
+    `<div class="save-card wide"><span>${esc(w.device ? 'Verbindung, Presets und Helligkeit – gehen beim Speichern auch an das WLED-Gerät.' : 'Verbindung, Presets und Helligkeit.')}</span><button class="btn primary" id="wl-save">Speichern</button></div>`,
   ]
 }
 
@@ -5907,9 +6306,16 @@ function mountWled(root, page) {
     const el = $(`#${id}`, root)
     el.oninput = () => {
       el.style.setProperty('--fill', `${(el.value / 255) * 100}%`)
-      $(`#${id}-out`, root).textContent = el.value
+      $(`#${id}-out`, root).textContent = `${Math.round((el.value / 255) * 100)} %`
     }
   }
+  // the preset of a switch only while it is on
+  for (const id of ['wl-booton', 'wl-offon']) $(`#${id}`, root).addEventListener('change', (e) => ($(`[data-show="${id}"]`, root).hidden = !e.target.checked))
+  $('#wl-retry', root)?.addEventListener('click', async () => {
+    await loadWled().catch(() => undefined)
+    if (currentPage()?.id === page.id) renderPage(page, false)
+    toast(net.wled?.device ? 'WLED-Gerät gefunden' : 'Wieder keine Antwort', net.wled?.device ? 'ok' : 'info')
+  })
   $('#wl-save', root).onclick = async () => {
     const v = (id) => $(`#${id}`, root).value.trim()
     const body = {
@@ -5938,31 +6344,58 @@ function mountWled(root, page) {
 const sec = { st: null }
 
 async function loadAuthState() {
-  const r = await api(`${API}/auth-state`)
+  const [r, list] = await Promise.all([api(`${API}/auth-state`), api(`${API}/auth/sessions`)])
   if (!r.ok) throw new Error(`auth-state ${r.status}`)
   sec.st = r.body
+  // (the devices signed in: from the box's sessions; an older box has no list - then only their number)
+  sec.sessions = list.ok && Array.isArray(list.body?.sessions) ? list.body.sessions : null
 }
+
+// "vor 2 Stunden", "gestern", "am 12.9."
+function agoText(ts) {
+  const min = Math.round((Date.now() - Date.parse(ts)) / 60000)
+  if (!Number.isFinite(min)) return ''
+  if (min < 2) return 'gerade eben'
+  if (min < 60) return `vor ${min} min`
+  if (min < 24 * 60) return `vor ${Math.round(min / 60)} h`
+  if (min < 48 * 60) return 'gestern'
+  return `am ${new Date(ts).toLocaleDateString(LOCALE, { day: 'numeric', month: 'numeric' })}`
+}
+
+// the devices listed by name (the last used); the others only counted
+const SESSIONS_SHOWN = 6
 
 function securityTop() {
   const st = sec.st
-  const sw = `<div class="row"><span class="lbl"><b>Anmeldung verlangen</b><small>Aus = im Heimnetz ohne Passwort, wie beim Admin-Interface. Der QR-Code am Display und der Telegram-Link gehen immer.</small></span>
-    <label class="switch"><input type="checkbox" id="sec-login" ${st.loginSwitch ? 'checked' : ''} ${st.passwordSet ? '' : 'disabled'} aria-label="Anmeldung verlangen"><span></span></label></div>`
+  const eye = `<button class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button>`
+  const sessions = sec.sessions
+  const devices = sessions
+    ? `<div class="rows">${sessions
+        .slice(0, SESSIONS_SHOWN)
+        .map(
+          (x) =>
+            `<div class="entry"><span class="avatar">${icon(/iphone|android|ipad/i.test(x.device ?? '') ? 'mobile' : 'display', 16)}</span><span class="lbl"><b>${esc(x.device || 'Unbekanntes Gerät')}</b><small>${esc([x.current ? 'dieses Gerät' : '', x.kept ? 'bleibt angemeldet' : '', x.lastSeen ? `zuletzt ${agoText(x.lastSeen)}` : ''].filter(Boolean).join(' · '))}</small></span>${x.current ? '<span class="chip ok">dieses Gerät</span>' : `<button class="btn sm" data-sec-out="${esc(x.id)}">Abmelden</button>`}</div>`,
+        )
+        .join('')}</div>${sessions.length > SESSIONS_SHOWN ? `<p class="help" style="margin:0">${esc(sessions.length - SESSIONS_SHOWN === 1 ? 'Dazu eine ältere Anmeldung.' : `Dazu ${sessions.length - SESSIONS_SHOWN} ältere Anmeldungen.`)}</p>` : ''}`
+    : `<p class="help">${st.keptDevices ? (st.keptDevices === 1 ? '1 Gerät bleibt angemeldet („Angemeldet bleiben“).' : `${st.keptDevices} Geräte bleiben angemeldet („Angemeldet bleiben“).`) : 'Kein Gerät bleibt dauerhaft angemeldet.'}</p>`
   return [
-    `<section class="card"><h2>Passwort</h2>
-      <p class="help">Ein Passwort für diese App und das bisherige Admin-Interface. Ein neues Passwort meldet alle anderen Geräte ab, auch die mit „Angemeldet bleiben“.</p>
-      <dl class="kv"><div><dt>Status</dt><dd>${st.passwordSet ? (st.defaultPassword ? 'Standardpasswort' : 'Gesetzt') : 'Nicht gesetzt'}</dd></div></dl>
+    `<section class="card" data-col="1"><div class="card-head"><h2>Passwort</h2><span class="chip ${st.passwordSet && !st.defaultPassword ? 'ok' : 'warn'}">${st.passwordSet ? (st.defaultPassword ? 'Standardpasswort' : 'gesetzt') : 'nicht gesetzt'}</span></div>
+      <p class="help">Ein Passwort für diese App und das bisherige Admin-Interface.</p>
       ${st.defaultPassword ? `<div class="note warn">${icon('info', 18)}<span>Es gilt noch das Standardpasswort, das im Admin-Interface steht. Bitte ein eigenes festlegen.</span></div>` : ''}
-      ${st.passwordSet ? `<div class="field"><label for="sec-cur">Aktuelles Passwort</label><div class="input-wrap"><input class="input has-eye" id="sec-cur" type="password" autocomplete="current-password"><button class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div></div>` : ''}
-      <div class="field"><label for="sec-new">Neues Passwort (mindestens 6 Zeichen)</label><div class="input-wrap"><input class="input has-eye" id="sec-new" type="password" autocomplete="new-password"><button class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div></div>
-      <div class="field"><label for="sec-new2">Neues Passwort wiederholen</label><input class="input" id="sec-new2" type="password" autocomplete="new-password"></div>
-      <div class="btns"><button class="btn primary" id="sec-save">${st.passwordSet ? 'Passwort ändern' : 'Passwort festlegen'}</button></div></section>`,
-    `<section class="card"><h2>Anmeldung</h2>${sw}
+      ${st.resetOpen ? `<div class="note">${icon('info', 18)}<span>Du bist über den QR-Code oder Telegram hereingekommen: Ein paar Minuten lang geht ein neues Passwort ohne das alte.</span></div>` : ''}
+      ${st.passwordSet && !st.resetOpen ? `<div class="field"><label for="sec-cur">Aktuelles Passwort</label><div class="input-wrap"><input class="input has-eye" id="sec-cur" type="password" autocomplete="current-password">${eye}</div></div>` : ''}
+      <div class="field"><label for="sec-new">Neues Passwort</label><div class="input-wrap"><input class="input has-eye" id="sec-new" type="password" autocomplete="new-password"><button class="eye" id="sec-eye2" aria-label="Anzeigen">${icon('eye', 18)}</button></div><small id="sec-len">Mindestens 6 Zeichen.</small></div>
+      <div class="field"><label for="sec-new2">Neues Passwort wiederholen</label><input class="input" id="sec-new2" type="password" autocomplete="new-password"><small id="sec-match"></small></div>
+      <p class="help" style="margin:0">Ein neues Passwort meldet alle anderen Geräte ab.</p>
+      <div class="btns"><button class="btn primary" id="sec-save" disabled>${st.passwordSet ? 'Passwort ändern' : 'Passwort festlegen'}</button></div>
+      <details class="more"><summary>Passwort vergessen?</summary><p class="help" style="margin:0">${esc('Über den QR-Code am Display (die Status-Symbole oben lange drücken) oder /login beim Telegram-Bot kommst du ohne Passwort in die App. Danach lässt sich hier 10 Minuten lang ein neues Passwort ohne das alte festlegen.')}</p></details></section>`,
+    `<section class="card" data-col="2"><div class="card-head"><h2>Anmeldung</h2><span class="chip ${st.loginRequired ? 'ok' : 'warn'}">${st.loginRequired ? 'an' : 'aus'}</span></div>
+      <div class="row"><span class="lbl"><b>Anmeldung verlangen</b><small>Der QR-Code am Display und der Telegram-Link gehen immer.</small></span>
+        <label class="switch"><input type="checkbox" id="sec-login" ${st.loginSwitch ? 'checked' : ''} ${st.passwordSet ? '' : 'disabled'} aria-label="Anmeldung verlangen"><span></span></label></div>
       ${st.passwordSet ? '' : '<p class="help" style="margin:0">Erst ein Passwort festlegen, dann lässt sich die Anmeldung einschalten.</p>'}
-      <p class="help" style="margin:0">${st.loginRequired ? 'Die App fragt im Heimnetz nach dem Passwort.' : 'Die App ist im Heimnetz ohne Passwort offen.'}</p></section>`,
-    // (without changing the password: e.g. a lost phone that stayed signed in)
-    `<section class="card"><h2>Angemeldete Geräte</h2>
-      <p class="help">${st.keptDevices ? (st.keptDevices === 1 ? '1 Gerät bleibt angemeldet („Angemeldet bleiben“).' : `${st.keptDevices} Geräte bleiben angemeldet („Angemeldet bleiben“).`) : 'Kein Gerät bleibt dauerhaft angemeldet.'}</p>
-      <div class="btns"><button class="btn danger" id="sec-others">Alle anderen Geräte abmelden</button></div></section>`,
+      ${st.loginRequired ? '<div class="status-line"><span class="dot ok"></span><span>Die App fragt im Heimnetz nach dem Passwort.</span></div>' : `<div class="note warn">${icon('info', 18)}<span>Jeder im Heimnetz kann die App ohne Passwort bedienen.</span></div>`}</section>`,
+    `<section class="card" data-col="2"><h2>Angemeldete Geräte</h2>${devices}
+      <div class="btns"><button class="btn danger" id="sec-others">Alle anderen abmelden</button></div></section>`,
   ]
 }
 
@@ -5971,6 +6404,32 @@ function mountSecurity(root, page) {
     b.onclick = () => {
       const i = b.parentElement.querySelector('input')
       i.type = i.type === 'password' ? 'text' : 'password'
+    }
+  }
+  // the new password's eye shows both new fields
+  $('#sec-eye2', root).onclick = () => {
+    const show = $('#sec-new', root).type === 'password'
+    for (const id of ['sec-new', 'sec-new2']) $(`#${id}`, root).type = show ? 'text' : 'password'
+  }
+  // checked while typing: long enough, both the same - the button only then
+  const check = () => {
+    const a = $('#sec-new', root).value
+    const b = $('#sec-new2', root).value
+    const len = $('#sec-len', root)
+    len.textContent = a && a.length < 6 ? `Noch ${6 - a.length} Zeichen` : 'Mindestens 6 Zeichen.'
+    len.classList.toggle('err', !!a && a.length < 6)
+    const m = $('#sec-match', root)
+    m.textContent = b ? (a === b ? '✓ Stimmt überein' : 'Stimmt nicht überein') : ''
+    m.className = b && a !== b ? 'err' : ''
+    $('#sec-save', root).disabled = !(a.length >= 6 && a === b)
+  }
+  for (const id of ['sec-new', 'sec-new2']) $(`#${id}`, root).addEventListener('input', check)
+  for (const b of root.querySelectorAll('[data-sec-out]')) {
+    b.onclick = async () => {
+      const r = await api(`${API}/auth/sign-out`, { method: 'POST', body: { id: b.dataset.secOut } })
+      toast(r.ok ? 'Abgemeldet' : 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
+      await loadAuthState()
+      renderPage(page, false)
     }
   }
   $('#sec-save', root).onclick = async () => {
@@ -6033,51 +6492,75 @@ async function checkTlsTrust(host) {
   }
 }
 
+// The device the app runs on: its guide is the one shown open
+const devicePlatform = () => {
+  const ua = navigator.userAgent
+  return /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1) ? 'ios' : /Android/.test(ua) ? 'android' : /Macintosh/.test(ua) ? 'mac' : /Windows/.test(ua) ? 'win' : ''
+}
+
+// How to install the box's certificate, per system
+const TLS_GUIDES = [
+  ['android', 'Android', ['„Zertifikat laden“ tippen – die Datei landet in „Downloads“.', 'Einstellungen › Sicherheit › Weitere Einstellungen › Verschlüsselung & Anmeldedaten › Zertifikat installieren › CA-Zertifikat (je nach Handy leicht anders benannt), den Hinweis bestätigen und die Datei wählen.', 'In Chrome die App über https öffnen und im Menü „App installieren“ wählen.']],
+  ['ios', 'iPhone / iPad', ['In Safari „Zertifikat laden“ tippen und „Zulassen“.', 'Einstellungen › Allgemein › VPN und Geräteverwaltung › das MuPiBox-Profil › Installieren.', 'Einstellungen › Allgemein › Info › Zertifikatsvertrauenseinstellungen › das MuPiBox-Zertifikat einschalten.', 'Die App über https in Safari öffnen › Teilen › „Zum Home-Bildschirm“.']],
+  ['win', 'Windows', ['„Zertifikat laden“ und die Datei öffnen › „Zertifikat installieren …“.', '„Alle Zertifikate in folgendem Speicher speichern“ › „Vertrauenswürdige Stammzertifizierungsstellen“ › Fertig stellen.', 'Den Browser neu starten. (Firefox hat eigene Zertifikate: Einstellungen › Datenschutz & Sicherheit › Zertifikate anzeigen › Zertifizierungsstellen › Importieren.)']],
+  ['mac', 'Mac', ['„Zertifikat laden“ und die Datei öffnen – die Schlüsselbundverwaltung geht auf.', 'Das MuPiBox-Zertifikat doppelklicken › „Vertrauen“ › „Bei Verwendung dieses Zertifikats“: „Immer vertrauen“.', 'Den Browser neu laden.']],
+]
+
 function tlsTop() {
   const st = tlsState.st
   const c = st.cert
   const host = st.linkHost || location.hostname
   const httpsApp = `https://${host}/app/`
-  const trust = tlsState.trust === null ? 'Wird geprüft …' : tlsState.trust ? 'Vertraut der Box – https ohne Warnung' : 'Vertraut der Box noch nicht'
   const custom = st.mode === 'custom'
+  const trust = tlsState.trust
+  const onHttps = location.protocol === 'https:'
+  const platform = devicePlatform()
+  const months = c ? Math.round((Date.parse(c.validTo) - Date.now()) / (30.4 * 86400e3)) : null
+  const now =
+    trust === null
+      ? `<span class="spin"></span><span>Prüfe, ob dieses Gerät der Box vertraut …</span>`
+      : trust && onHttps
+        ? `<span class="dot ok"></span><span><b>Dieses Gerät ist sicher verbunden</b> – über https, ohne Warnung.</span>`
+        : trust
+          ? `<span class="dot ok"></span><span><b>Dieses Gerät vertraut der Box.</b> Die App ist gerade noch über http offen.</span><a class="btn sm" href="${esc(httpsApp)}">${icon('lock', 16)}Über https öffnen</a>`
+          : `<span class="dot warn"></span><span><b>Dieses Gerät vertraut der Box noch nicht.</b> ${custom ? '' : 'Einmal das Zertifikat installieren, dann warnt der Browser nicht mehr.'}</span>${custom ? '' : `<a class="btn sm primary" href="${API}/tls/ca.crt" download>${icon('save', 16)}Zertifikat laden</a>`}`
+  const step = (n, done, title, body) => `<li class="${done ? 'done' : ''}"><span class="num">${done ? icon('check', 14) : n}</span><div><b>${esc(title)}</b>${body}</div></li>`
+  const names = [...new Set([...(c?.names ?? []), ...(st.boxNames ?? [])])].filter((n) => n !== '127.0.0.1' && n !== 'localhost')
   return [
-    `<section class="card"><h2>Zertifikat</h2>
-      <p class="help">Damit ist die Verbindung zur Box verschlüsselt (https://…). Die Spotify-Anmeldung nutzt es auch.</p>
+    `<section class="card wide tls-now"><div class="status-line">${now}</div></section>`,
+    `<section class="card" data-col="1"><div class="card-head"><h2>Zertifikat</h2><span class="chip ok">${custom ? 'eigenes' : 'der Box'}</span></div>
       ${spKv([
-        ['Art', custom ? 'Eigenes Zertifikat' : 'Zertifikat der Box'],
         c && ['Gilt für', c.names.join(', ')],
-        c && ['Gültig bis', new Date(c.validTo).toLocaleDateString(LOCALE)],
+        c && ['Gültig bis', `${new Date(c.validTo).toLocaleDateString(LOCALE)}${months != null && months >= 1 ? ` · noch ${months} ${months === 1 ? 'Monat' : 'Monate'}` : ''}`],
         c && custom && ['Aussteller', c.issuer.replace(/\n/g, ', ')],
-        ['Dieses Gerät', trust],
       ])}
-      ${custom && !st.coversBox ? `<div class="note warn">${icon('info', 18)}<span>${esc('Das Zertifikat gilt für keine der Adressen, unter denen die Box gerade erreichbar ist – dort warnt der Browser. Unten eine Adresse für Links eintragen, unter der es gilt.')}</span></div>` : ''}
-      <div class="btns"><a class="btn" href="${esc(httpsApp)}">${icon('lock', 18)}${esc('Über https öffnen')}</a></div></section>`,
+      <p class="help" style="margin:0">${esc(custom ? 'Die Box erinnert vor dem Ablauf. Ein neues Zertifikat unten wieder hochladen.' : 'Die Box erneuert es selbst rechtzeitig. Auf den Geräten muss dafür nichts neu installiert werden.')}</p>
+      ${custom && !st.coversBox ? `<div class="note warn">${icon('info', 18)}<span>${esc('Das Zertifikat gilt für keine der Adressen, unter denen die Box gerade erreichbar ist – dort warnt der Browser. Unten eine Adresse für Links eintragen, unter der es gilt.')}</span></div>` : ''}</section>`,
+    `<section class="card" data-col="1"><h2>${esc('Nur sichere Verbindung')}</h2>
+      <div class="row"><span class="lbl"><b>${esc('http auf https umleiten')}</b><small>${esc('Die App öffnet sich dann immer über https, auch über QR-Code und Telegram-Links.')}</small></span>
+        <label class="switch"><input type="checkbox" id="tls-only" ${st.httpsOnly ? 'checked' : ''} ${!st.httpsOnly && trust === false ? 'disabled' : ''} aria-label="${esc('http auf https umleiten')}"><span></span></label></div>
+      ${!st.httpsOnly && trust === false ? `<p class="help" style="margin:0">${esc('Erst dieses Gerät einrichten (rechts) – sonst sperrst du dich mit einer Warnung aus.')}</p>` : ''}
+      <details class="more"><summary>Was ausgenommen ist</summary><p class="help" style="margin:0">${esc('Das Display der Box bleibt bei http, und über Port 8200 ist die App immer per http erreichbar. Auf Geräten ohne das Zertifikat warnt der Browser.')}</p></details></section>`,
     custom
       ? ''
-      : `<section class="card"><h2>${esc('Diesem Gerät die Box bekannt machen')}</h2>
-      <p class="help">${esc('Einmal pro Handy oder Computer: das Zertifikat der Box installieren. Danach warnt der Browser bei https nicht mehr, und auf Android lässt sich die App wie eine echte App installieren. Es gilt nur für Adressen im Heimnetz – für andere Webseiten taugt es nicht.')}</p>
-      <div class="btns"><a class="btn primary" href="${API}/tls/ca.crt" download>${icon('save', 18)}${esc('Zertifikat laden')}</a></div>
-      <details class="howto"><summary><b>Android</b></summary><ol>
-        <li>${esc('„Zertifikat laden“ tippen – die Datei landet in „Downloads“.')}</li>
-        <li>${esc('Einstellungen › Sicherheit › Weitere Einstellungen › Verschlüsselung & Anmeldedaten › Zertifikat installieren › CA-Zertifikat (je nach Handy leicht anders benannt), den Hinweis bestätigen und die Datei wählen.')}</li>
-        <li>${esc('In Chrome die App über https öffnen und im Menü „App installieren“ wählen.')}</li></ol></details>
-      <details class="howto"><summary><b>iPhone / iPad</b></summary><ol>
-        <li>${esc('In Safari „Zertifikat laden“ tippen und „Zulassen“.')}</li>
-        <li>${esc('Einstellungen › Allgemein › VPN und Geräteverwaltung › das MuPiBox-Profil › Installieren.')}</li>
-        <li>${esc('Einstellungen › Allgemein › Info › Zertifikatsvertrauenseinstellungen › das MuPiBox-Zertifikat einschalten.')}</li>
-        <li>${esc('Die App über https in Safari öffnen › Teilen › „Zum Home-Bildschirm“.')}</li></ol></details></section>`,
-    `<section class="card"><h2>${esc('Nur sichere Verbindung')}</h2>
-      <div class="row"><span class="lbl"><b>${esc('http auf https umleiten')}</b><small>${esc('Die App und das Admin-Interface öffnen sich dann immer über https, auch QR-Code und Telegram-Links. Vorher auf allen Geräten das Zertifikat installieren, sonst warnt dort der Browser. Das Display der Box ist ausgenommen, und über Port 8200 bleibt die App immer per http erreichbar.')}</small></span>
-        <label class="switch"><input type="checkbox" id="tls-only" ${st.httpsOnly ? 'checked' : ''} aria-label="${esc('http auf https umleiten')}"><span></span></label></div></section>`,
-    `<section class="card"><h2>${esc('Adresse für Links')}</h2>
-      <p class="help">${esc('Unter welchem Namen QR-Code und Telegram-Links die Box nennen – z. B. der Name eines eigenen Zertifikats. Leer = die IP-Adresse der Box.')}</p>
-      <div class="field"><input class="input mono" id="tls-host" value="${esc(st.linkHost)}" placeholder="${esc(st.boxNames?.[0] ?? '')}" spellcheck="false" autocomplete="off" ${NO_PW_MANAGER}></div>
+      : `<section class="card" data-col="2"><h2>${esc('Diesem Gerät die Box bekannt machen')}</h2><p class="help">${esc('Einmal pro Handy oder Computer. Es gilt nur für Adressen im Heimnetz.')}</p>
+      <ol class="tls-steps">
+        ${step(1, !!trust, 'Zertifikat laden', `<div class="btns"><a class="btn${trust ? '' : ' primary'}" href="${API}/tls/ca.crt" download>${icon('save', 18)}${esc('Zertifikat laden')}</a></div>`)}
+        ${step(2, !!trust, 'Auf dem Gerät installieren', TLS_GUIDES.map(([id, name, lines]) => `<details class="howto"${id === platform && !trust ? ' open' : ''}><summary><b>${esc(name)}</b>${id === platform ? ' <span class="chip">dieses Gerät</span>' : ''}</summary><ol>${lines.map((l) => `<li>${esc(l)}</li>`).join('')}</ol></details>`).join(''))}
+        ${step(3, !!trust && onHttps, 'Über https öffnen', trust && onHttps ? '<small>Erledigt.</small>' : `<div class="btns"><a class="btn" href="${esc(httpsApp)}">${icon('lock', 18)}${esc('Über https öffnen')}</a></div>`)}
+      </ol></section>`,
+    `<section class="card" data-col="2"><h2>${esc('Adresse für Links')}</h2>
+      <p class="help">${esc('Unter welchem Namen QR-Code und Telegram-Links die Box nennen. Leer = die IP-Adresse der Box.')}</p>
+      ${names.length ? `<div class="pills small">${names.map((n) => `<button type="button" data-host="${esc(n)}" aria-selected="${n === st.linkHost}" translate="no">${esc(n)}</button>`).join('')}</div>` : ''}
+      <div class="field"><input class="input mono" id="tls-host" value="${esc(st.linkHost)}" placeholder="${esc(st.boxNames?.[0] ?? '')}" spellcheck="false" ${NO_PW_MANAGER}><small id="tls-host-warn" class="err" hidden>${esc('Diese Adresse deckt das Zertifikat nicht ab – der Browser wird warnen.')}</small></div>
       <div class="btns"><button class="btn" id="tls-host-save">Speichern</button></div></section>`,
-    `<section class="card"><h2>${esc('Eigenes Zertifikat')}</h2>
-      <p class="help">${esc('Für Fortgeschrittene: ein Zertifikat für einen eigenen Namen (z. B. von Let’s Encrypt) samt Zwischenzertifikaten und der Schlüssel, beides im PEM-Format, der Schlüssel ohne Passwort. Die Box prüft es vorher und erinnert vor dem Ablauf. Der Schlüssel wird nie wieder angezeigt.')}</p>
-      <div class="field"><label for="tls-crt">${esc('Zertifikat (PEM)')}</label><textarea class="input mono" id="tls-crt" rows="4" spellcheck="false" placeholder="-----BEGIN CERTIFICATE-----"></textarea><input type="file" id="tls-crt-file" accept=".pem,.crt,.cer,.txt" hidden><button class="btn" data-file="tls-crt">${esc('Datei wählen')}</button></div>
-      <div class="field"><label for="tls-key">${esc('Schlüssel (PEM)')}</label><textarea class="input mono" id="tls-key" rows="4" spellcheck="false" placeholder="-----BEGIN PRIVATE KEY-----" ${NO_PW_MANAGER}></textarea><input type="file" id="tls-key-file" accept=".pem,.key,.txt" hidden><button class="btn" data-file="tls-key">${esc('Datei wählen')}</button></div>
-      <div class="btns">${custom ? `<button class="btn" id="tls-box">${esc('Zurück zum Zertifikat der Box')}</button>` : ''}<button class="btn primary" id="tls-upload">${esc('Hochladen')}</button></div></section>`,
+    `<section class="card wide"><details class="more plain"${custom ? ' open' : ''}><summary>${esc('Eigenes Zertifikat (für Fortgeschrittene)')}</summary>
+      <p class="help">${esc('Ein Zertifikat für einen eigenen Namen (z. B. von Let’s Encrypt) samt Zwischenzertifikaten und der Schlüssel ohne Passwort, beides im PEM-Format. Der Schlüssel wird nie wieder angezeigt.')}</p>
+      <div class="pair">
+        <div class="field"><label>${esc('Zertifikat (PEM)')}</label><button type="button" class="drop" data-file="tls-crt">${icon('doc', 20)}<span id="tls-crt-name">${esc('Datei wählen oder hierher ziehen')}</span></button><input type="file" id="tls-crt-file" accept=".pem,.crt,.cer,.txt" hidden><textarea class="input mono" id="tls-crt" rows="4" spellcheck="false" placeholder="-----BEGIN CERTIFICATE-----" hidden></textarea></div>
+        <div class="field"><label>${esc('Schlüssel (PEM)')}</label><button type="button" class="drop" data-file="tls-key">${icon('lock', 20)}<span id="tls-key-name">${esc('Datei wählen oder hierher ziehen')}</span></button><input type="file" id="tls-key-file" accept=".pem,.key,.txt" hidden><textarea class="input mono" id="tls-key" rows="4" spellcheck="false" placeholder="-----BEGIN PRIVATE KEY-----" ${NO_PW_MANAGER} hidden></textarea></div>
+      </div>
+      <div class="btns"><button class="btn" id="tls-paste">${esc('Text einfügen statt Datei')}</button>${custom ? `<button class="btn" id="tls-box">${esc('Zurück zum Zertifikat der Box')}</button>` : ''}<button class="btn primary" id="tls-upload">${esc('Hochladen')}</button></div></details></section>`,
   ]
 }
 
@@ -6094,6 +6577,40 @@ function mountTls(root, page) {
       if (currentPage()?.id === page.id) renderPage(page, false)
     })
   }
+  // a name of the certificate as the address; a typed one it does not hold: said at once
+  const hostWarn = () => {
+    const v = $('#tls-host', root).value.trim()
+    $('#tls-host-warn', root).hidden = !v || !st.cert || st.cert.names.includes(v)
+  }
+  for (const b of root.querySelectorAll('[data-host]')) {
+    b.onclick = () => {
+      $('#tls-host', root).value = b.dataset.host
+      for (const x of root.querySelectorAll('[data-host]')) x.setAttribute('aria-selected', String(x === b))
+      hostWarn()
+    }
+  }
+  $('#tls-host', root).addEventListener('input', hostWarn)
+  hostWarn()
+  $('#tls-paste', root).onclick = (e) => {
+    for (const id of ['tls-crt', 'tls-key']) $(`#${id}`, root).hidden = false
+    e.target.hidden = true
+  }
+  for (const b of root.querySelectorAll('.drop[data-file]')) {
+    const take = async (f) => {
+      if (!f || f.size >= 65536) return
+      $(`#${b.dataset.file}`, root).value = await f.text()
+      $(`#${b.dataset.file}-name`, root).textContent = f.name
+      b.classList.add('chosen')
+    }
+    b.ondragover = (e) => e.preventDefault()
+    b.ondrop = (e) => {
+      e.preventDefault()
+      take(e.dataTransfer?.files?.[0])
+    }
+    const input = $(`#${b.dataset.file}-file`, root)
+    input.onchange = () => take(input.files?.[0])
+  }
+  for (const b of root.querySelectorAll('.drop[data-file]')) b.onclick = () => $(`#${b.dataset.file}-file`, root).click()
   $('#tls-only', root).onchange = async (e) => {
     const on = e.target.checked
     if (on && !(await ask('Nur sichere Verbindung', 'Auf Geräten ohne das Zertifikat der Box warnt der Browser danach bei jedem Aufruf. Einschalten?', 'Einschalten'))) {
@@ -6113,15 +6630,6 @@ function mountTls(root, page) {
     if (!r.ok) return toast(r.body?.error === 'invalid_host' ? 'Das ist kein gültiger Name' : 'Nicht gespeichert', 'info')
     toast('Gespeichert')
     again()
-  }
-  for (const b of root.querySelectorAll('[data-file]')) {
-    const area = $(`#${b.dataset.file}`, root)
-    const input = $(`#${b.dataset.file}-file`, root)
-    b.onclick = () => input.click()
-    input.onchange = async () => {
-      const f = input.files?.[0]
-      if (f && f.size < 65536) area.value = await f.text()
-    }
   }
   $('#tls-upload', root).onclick = async () => {
     const cert = $('#tls-crt', root).value.trim()
@@ -6144,6 +6652,46 @@ function mountTls(root, page) {
 }
 
 /* Einstellungen › System */
+
+/* Einstellungen › System: its pages in four groups, a short state beside some (version, health, update) */
+
+const SYS_GROUPS = [
+  ['Die Box', ['ueber', 'zustand', 'updates', 'backup']],
+  ['Betrieb', ['neustart', 'protokolle', 'systemopt']],
+  ['Für Fortgeschrittene', ['browser', 'experten']],
+  ['Allgemein', ['sprache', 'rechtliches']],
+]
+
+function systemTop() {
+  return SYS_GROUPS.map(([title, ids]) => {
+    const rows = ids
+      .map((id) => state.pages.get(id))
+      .filter(Boolean)
+      .map((p) => navRow(p.id, p.title, p.description, p.icon, `<span class="nav-badge" id="sysb-${p.id}"></span>`))
+      .join('')
+    return `<section class="card nav-card"><div class="group-title">${esc(title)}</div><div class="navlist">${rows}</div></section>`
+  })
+}
+
+// the states come after the page: each from its own request, none holds up the others
+function mountSystem(root) {
+  const put = (id, html) => {
+    const el = $(`#sysb-${id}`, root)
+    if (el) el.innerHTML = html
+  }
+  api(`${API}/version`).then((r) => r.body?.version && put('ueber', `<span translate="no">${esc(r.body.version)}</span>`))
+  api(`${API}/health`).then((r) => {
+    const checks = r.body?.checks
+    if (!Array.isArray(checks)) return
+    const bad = checks.filter((c) => c.status === 'error').length
+    const warn = checks.filter((c) => c.status === 'warn').length
+    put('zustand', bad ? `<span class="dot bad"></span>${bad === 1 ? 'Ein Problem' : `${bad} Probleme`}` : warn ? `<span class="dot warn"></span>${warn === 1 ? 'Ein Hinweis' : `${warn} Hinweise`}` : '<span class="dot ok"></span>OK')
+  })
+  api(`${API}/updates`).then((r) => {
+    if (r.body?.job?.phase === 'running') put('updates', '<span class="chip">läuft …</span>')
+    else if (r.body?.update) put('updates', `<span class="chip ok">${esc(`${r.body.update.version} verfügbar`)}</span>`)
+  })
+}
 
 const sys = { info: null, version: '', news: null, bs: null, logs: null, logSel: 'log:server-error', logGrep: '', logText: '', logAuto: false, debug: null, browser: null, range: 1 }
 
@@ -7622,15 +8170,54 @@ const CONTROLLERS = {
   displaytexte: { load: loadDisplayTexts, top: textsTop, sections: () => [], ownNav: true, mount: mountTexts },
   displaysettings: {
     load: loadDisplaySettings,
-    sections: (page) =>
-      page.sections.map((sec) => ({
-        ...sec,
-        items: sec.items.map((it) => {
-          if (it.key === 'bright') return { ...it, min: 5, disabled: disp.opts?.brightness == null, help: disp.opts?.brightness == null ? 'Dieses Display lässt sich nicht dimmen.' : 'Bleibt auch nach einem Neustart.' }
-          if (it.key === 'dispOff') return { ...it, help: '0 = nie ausschalten.' }
-          return it
-        }),
-      })),
+    // what works at once (brightness, switching off) | what the display takes after a restart (rotation, resolution)
+    sections: (page) => {
+      const it = (key, over) => schemaItem(page, key, over)
+      const custom = !RES_PRESETS.some(([, x, y]) => x === Number(state.values.get('resX')) && y === Number(state.values.get('resY')))
+      state.values.set('resCustom', custom)
+      state.values.set('resPreset', custom ? 'Eigene …' : `${state.values.get('resX')} × ${state.values.get('resY')}`)
+      return [
+        {
+          title: 'Helligkeit & Ausschalten',
+          help: 'Gilt sofort.',
+          items: [
+            it('bright', { min: 5, disabled: disp.opts?.brightness == null, help: disp.opts?.brightness == null ? 'Dieses Display lässt sich nicht dimmen.' : '' }),
+            it('dispOff', { stops: DISPLAY_OFF_STOPS, help: '' }),
+          ],
+        },
+        {
+          title: 'Drehung',
+          help: 'Gilt nach einem Neustart der Box.',
+          items: [
+            { type: 'html', html: `<div class="field"><label>Display am HDMI-Anschluss</label>${rotTiles('hdmiRot', HDMI_ROT)}</div>` },
+            {
+              type: 'html',
+              html: `<details class="more"><summary>Display am Flachbandkabel (DSI/LCD)</summary><div class="field"><label>LCD-Drehung</label>${rotTiles('lcdRot', LCD_ROT)}</div>
+                <div class="field"><label>Display-LCD-Drehung</label>${rotTiles('dlcdRot', LCD_ROT)}</div></details>`,
+            },
+          ],
+        },
+        {
+          title: 'Auflösung',
+          help: 'Das Display startet damit gleich neu.',
+          items: [
+            { type: 'select', label: 'Größe', key: 'resPreset', options: [...RES_PRESETS.map(([l]) => l), 'Eigene …'] },
+            { type: 'pair', dep: 'resCustom', keep: true, items: [it('resX', { label: 'Breite', unit: 'px' }), it('resY', { label: 'Höhe', unit: 'px' })] },
+            { type: 'buttons', buttons: [['Auflösung übernehmen', 'primary', 'toast:Gespeichert']] },
+          ],
+        },
+      ]
+    },
+    mount(root, page) {
+      for (const b of root.querySelectorAll('[data-rot-key]')) {
+        b.onclick = () => {
+          const key = b.dataset.rotKey
+          for (const x of root.querySelectorAll(`[data-rot-key="${key}"]`)) x.setAttribute('aria-pressed', String(x === b))
+          state.values.set(key, b.dataset.rot)
+          commitChange(page, key, b.dataset.rot, shownValues.get(key))
+        }
+      }
+    },
     async change(key, v) {
       if (key === 'bright') return saveDisplayOptions({ brightness: v }, `Helligkeit ${v} %`)
       if (key === 'dispOff') {
@@ -7641,10 +8228,20 @@ const CONTROLLERS = {
         return toast(`${Number(v) === 0 ? 'Display bleibt an' : `Display aus nach ${v} min`}. ${rl.body?.ok ? 'Das Display lädt neu.' : ''}`.trim())
       }
       const rot = { hdmiRot: ['display_hdmi_rotate', HDMI_ROT], lcdRot: ['lcd_rotate', LCD_ROT], dlcdRot: ['display_lcd_rotate', LCD_ROT] }[key]
-      if (rot) return saveDisplayOptions({ rotation: { [rot[0]]: rotValue(rot[1], v) } }, 'Drehung gespeichert')
+      if (rot) return saveDisplayOptions({ rotation: { [rot[0]]: rotValue(rot[1], v) } }, 'Drehung gespeichert – gilt nach einem Neustart')
+      if (key === 'resPreset') {
+        const p = RES_PRESETS.find(([l]) => l === v)
+        if (p) {
+          state.values.set('resX', String(p[1]))
+          state.values.set('resY', String(p[2]))
+        }
+        state.values.set('resCustom', !p)
+        const pair = $('[data-dep="resCustom"]')
+        if (pair) pair.hidden = !!p
+      }
     },
     byLabel: {
-      async Speichern() {
+      async 'Auflösung übernehmen'() {
         const resX = Number(state.values.get('resX'))
         const resY = Number(state.values.get('resY'))
         if (!Number.isInteger(resX) || !Number.isInteger(resY) || resX < 200 || resY < 200) return toast('Bitte Breite und Höhe in Pixeln eintragen', 'info')
@@ -7656,19 +8253,60 @@ const CONTROLLERS = {
   },
   bedienung: {
     load: loadControls,
-    sections: (page) =>
-      page.sections.map((sec) => ({
-        ...sec,
-        items: sec.items.map((it) =>
-          it.key === 'setTimer'
-            ? { ...it, help: 'So lange drückt man auf die Status-Symbole oben, bis die Einstellungen der Box aufgehen.' }
-            : it.key === 'listTimer'
-              ? { ...it, help: 'So lange drückt man auf ein Cover, bis die Titelliste aufgeht.' }
-              : it,
-        ),
-      })),
+    // the tabs of the display (switched on = shown), how long to hold, where it goes on, podcasts
+    sections: (page) => {
+      const it = (key, over) => schemaItem(page, key, over)
+      const shown = TAB_KEYS.filter(([k]) => !state.values.get(k))
+      for (const [k, show] of TAB_KEYS) state.values.set(show, !state.values.get(k))
+      const setTimer = Number(state.values.get('setTimer'))
+      return [
+        {
+          title: 'Reiter auf dem Display',
+          help: 'Die sichtbaren Reiter teilen sich die Breite. Mindestens einer bleibt.',
+          items: [
+            { type: 'html', html: `<div class="tab-prev" aria-hidden="true">${shown.map(([, , l]) => `<span>${esc(l)}</span>`).join('')}</div>` },
+            ...TAB_KEYS.map(([k, show, label]) => ({ type: 'toggle', key: show, label, disabled: shown.length === 1 && !state.values.get(k) })),
+          ],
+        },
+        {
+          title: 'Haltezeiten',
+          items: [
+            it('listTimer', { help: 'So lange drückt man auf ein Cover, bis die Titelliste aufgeht.' }),
+            it('setTimer', { help: 'So lange drückt man auf die Status-Symbole oben, bis die Einstellungen der Box aufgehen.' }),
+            ...(setTimer < 3 ? [{ type: 'warn', text: 'So kurz kommen Kinder leicht in die Einstellungen.' }] : []),
+          ],
+        },
+        {
+          title: 'Weiterhören',
+          items: [
+            { type: 'stepper', key: 'resume', label: 'Einträge unter „Fortsetzen“', help: 'So viele zuletzt gehörte Titel bietet das Display zum Weiterhören an.', min: 1, max: 99 },
+            it('epResume', { label: 'Podcast-Folgen an der letzten Stelle weiterhören' }),
+            it('epDays', { dep: 'epResume' }),
+          ],
+        },
+        {
+          title: 'Podcasts',
+          help: 'Was neu ist und wie weit gehört – auf dem Display und in der App.',
+          items: [it('epNew'), it('epNewDays', { dep: 'epNew' }), it('epProgress')],
+        },
+      ]
+    },
     async change(key, v, page) {
       const cats = { hideA: 'audiobook', hideM: 'music', hideN: 'nas', hideO: 'other' }
+      // (a tab switched on: not hidden)
+      const tab = TAB_KEYS.find(([, show]) => show === key)
+      if (tab) {
+        state.values.set(tab[0], !v)
+        const hidden = Object.entries(cats).filter(([k]) => state.values.get(k)).map(([, c]) => c)
+        const ok = await saveDisplayOptions({ hiddenCategories: hidden })
+        renderPage(page, false)
+        return ok
+      }
+      if (key === 'setTimer') {
+        const r = await saveDisplayOptions({ settingsAccessTimer: v }, `Einstellungen nach ${fmtSec(v)}`)
+        renderPage(page, false)
+        return r
+      }
       if (key in cats) {
         const hidden = Object.entries(cats).filter(([k]) => state.values.get(k)).map(([, c]) => c)
         if (hidden.length === 4) {
@@ -7806,19 +8444,72 @@ const CONTROLLERS = {
   },
   mupihat: {
     load: loadHat,
-    sections: (page) =>
-      page.sections.map((sec) => ({
-        ...sec,
-        items: sec.items
-          .map((it) => {
-            if (it.key === 'battery') return { ...it, options: hw.data.mupihat.batteries.map(batteryLabel), help: 'Die Spannungen darunter gehören zu diesem Profil.' }
-            if (it.key === 'hatOn') return { ...it, help: 'Umschalten stellt auch die Soundkarte um und startet die Box neu.' }
-            if (it.type === 'warn') return { ...it, text: 'Vorsicht: Die Werte ändern das gewählte Profil. Ein zu hoher Ladeschluss (VREG) schadet dem Akku; das Abschalten muss unter der Warnung liegen. Die Werte gelten, sobald der MuPiHAT-Dienst neu startet (passiert beim Speichern).' }
-            if (it.key === 'vreg') return { ...it, help: 'Leer = Standard des Lade-Chips.' }
-            return it
-          })
-          .filter((it) => it.key !== 'hatOn' || true),
-      })),
+    // the HAT and its battery (with what it reads now) | the charge curve as a chart | when it warns and switches off,
+    // how full it charges - checked while typing
+    sections: (page) => {
+      const it = (key, over) => schemaItem(page, key, over)
+      const field = (key, label, sub) => it(key, { label, sub, help: '' })
+      return [
+        {
+          title: 'MuPiHAT',
+          col: 1,
+          items: [
+            it('hatOn', { help: 'Umschalten stellt auch die Soundkarte um und startet die Box neu.' }),
+            it('battery', { options: hw.data.mupihat.batteries.map(batteryLabel), help: 'Die Spannungen gehören zu diesem Profil.' }),
+            { type: 'html', html: hatNowLine() },
+          ],
+        },
+        {
+          title: 'Ladekurve',
+          help: 'Welche Spannung welchem Ladestand entspricht (mV). Die Werte steigen von „Leer“ nach „Voll“.',
+          col: 2,
+          items: [
+            { type: 'html', html: `<div class="hat-chart" id="hat-chart">${hatChart()}</div>` },
+            { type: 'pair', cls: 'grid5', items: [field('v0', 'Leer', 'v_0'), field('v25', '25 %', 'v_25'), field('v50', '50 %', 'v_50'), field('v75', '75 %', 'v_75'), field('v100', 'Voll', 'v_100')] },
+          ],
+        },
+        {
+          title: 'Schwellen',
+          col: 1,
+          items: [
+            { type: 'pair', keep: true, items: [field('thWarn', 'Warnung ab', 'th_warning'), field('thShut', 'Abschalten bei', 'th_shutdown')] },
+            { type: 'html', html: '<small class="help-line">In mV. Abschalten muss unter der Warnung liegen.</small>' },
+          ],
+        },
+        {
+          title: 'Laden',
+          col: 1,
+          items: [it('vreg', { label: 'Ladeschluss', sub: 'VREG', unit: 'mV', help: 'Leer = Standard des Lade-Chips. Bei zwei Zellen in Reihe höchstens 8400 mV (4,2 V je Zelle) – höher schadet dem Akku.' })],
+        },
+        { bar: true, items: [{ type: 'buttons', buttons: [['Profil speichern', 'primary', 'toast:Gespeichert']] }] },
+      ]
+    },
+    mount(root) {
+      const check = () => {
+        const errs = hatProfileErrors()
+        for (const [key] of PROFILE_KEYS) {
+          const input = $(`#k-${key}`, root)
+          if (!input) continue
+          input.classList.toggle('bad', !!errs[key])
+          const field = input.closest('.field')
+          let msg = field.querySelector('small.err')
+          if (errs[key] && !msg) {
+            msg = document.createElement('small')
+            msg.className = 'err'
+            field.appendChild(msg)
+          }
+          if (msg) {
+            if (errs[key]) msg.textContent = errs[key]
+            else msg.remove()
+          }
+        }
+        const save = root.querySelector('[data-label="Profil speichern"]')
+        if (save) save.disabled = Object.keys(errs).length > 0
+        $('#hat-chart', root).innerHTML = hatChart()
+      }
+      for (const [key] of PROFILE_KEYS) $(`#k-${key}`, root)?.addEventListener('input', check)
+      check()
+    },
     async change(key, v, page) {
       if (key === 'hatOn') {
         if (!(await ask(v ? 'MuPiHAT einschalten' : 'MuPiHAT ausschalten', `Die Box stellt die Soundkarte um (${v ? 'MAX98357A' : 'Onboard 3,5 mm'}) und startet gleich neu.`, v ? 'Einschalten' : 'Ausschalten'))) {
@@ -7996,23 +8687,46 @@ const CONTROLLERS = {
   telegram: { load: loadTelegram, top: tgTop, sections: () => [], mount: mountTelegram },
   mqtt: {
     load: loadMqtt,
-    sections: (page) =>
-      page.sections.map((sec) => ({
-        ...sec,
-        items: sec.items.map((it) =>
-          it.key === 'mqPw'
-            ? { ...it, kind: 'password', placeholder: net.mqtt?.hasPassword ? 'gespeichert – leer lassen = behalten' : '', help: '' }
-            : it.key === 'mqttOn'
-              ? { ...it, help: net.mqtt?.running ? 'Der Dienst läuft.' : 'Der Dienst läuft nicht.' }
-              : it.key === 'mqTopic'
-                ? { ...it, help: 'Die Themen der Box beginnen mit Topic/Client-ID.' }
-                : it,
-        ),
-      })),
+    // the connection (broker and login), the box's names in MQTT, how often, Home Assistant - saved together
+    sections: (page) => {
+      const it = (key, over) => schemaItem(page, key, over)
+      const on = state.values.get('mqttOn')
+      const running = net.mqtt?.running
+      return [
+        {
+          title: 'Verbindung',
+          badge: on ? (running ? { text: 'verbunden', kind: 'ok' } : { text: 'nicht verbunden', kind: 'warn' }) : { text: 'aus' },
+          col: 1,
+          items: [
+            it('mqttOn', { help: 'Meldet Zustand, Wiedergabe und Werte der Box an einen MQTT-Broker.' }),
+            { type: 'pair', cols: '2fr 1fr', keep: true, dim: 'mqttOn', items: [it('mqBroker', { placeholder: 'z. B. 192.168.1.10' }), it('mqPort')] },
+            { type: 'pair', dim: 'mqttOn', items: [it('mqUser'), it('mqPw', { kind: 'password', placeholder: net.mqtt?.hasPassword ? 'gespeichert' : '', help: '' })] },
+          ],
+        },
+        {
+          title: 'Name & Topic',
+          col: 1,
+          items: [
+            it('mqName', { dim: 'mqttOn' }),
+            it('mqTopic', { dim: 'mqttOn', help: mqttTopicPreview(), helpId: 'mq-preview' }),
+            it('mqClient', { dim: 'mqttOn' }),
+          ],
+        },
+        { ...page.sections[1], col: 2 },
+        { title: 'Home Assistant', col: 2, items: [it('haOn', { help: 'Die Box erscheint in Home Assistant von selbst als Gerät.' }), it('haTopic', { dep: 'haOn' })] },
+        { bar: true, items: [{ type: 'buttons', buttons: [['Speichern', 'primary', 'toast:Gespeichert']] }] },
+      ]
+    },
+    mount(root) {
+      // the topics as they come out, while typing
+      for (const k of ['mqTopic', 'mqClient']) $(`#k-${k}`, root)?.addEventListener('input', () => ($('#mq-preview', root).textContent = mqttTopicPreview()))
+    },
     byLabel: {
       async Speichern(_a, _l, page) {
         const body = Object.fromEntries(MQTT_KEYS.map(([key, field]) => [field, state.values.get(key)]))
         for (const f of ['port', 'refresh', 'refreshIdle', 'timeout']) body[f] = Number(body[f])
+        // (still switched off with the template's example: it stays in the configuration)
+        if (!String(body.broker ?? '').trim() && !body.active && net.mqtt?.broker === MQTT_EXAMPLE_BROKER) body.broker = MQTT_EXAMPLE_BROKER
         const pw = String(state.values.get('mqPw') ?? '')
         if (pw) body.password = pw
         const r = await api(`${API}/mqtt`, { method: 'POST', body })
@@ -8030,6 +8744,7 @@ const CONTROLLERS = {
   wled: { load: loadWled, top: wledTop, sections: () => [], mount: mountWled },
   passwort: { load: loadAuthState, top: securityTop, sections: () => [], mount: mountSecurity },
   https: { load: loadTls, top: tlsTop, sections: () => [], mount: mountTls },
+  'g-system': { top: systemTop, sections: () => [], ownNav: true, mount: mountSystem },
   ueber: { load: loadAbout, top: aboutTop, sections: () => [], mount: mountAbout },
   neustart: { top: restartTop, sections: () => [], mount: mountRestart },
   zustand: { load: loadHealth, top: healthTop, sections: () => [], mount: mountHealth },

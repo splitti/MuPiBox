@@ -2701,6 +2701,10 @@ app.get('/state', (_req, res) => {
 
 // The display reports its Spotify device (the Web Playback SDK in the kiosk) when it connects. Starts that
 // don't come from the display (/current/..., e.g. the parents' web app or Telegram) play there.
+// Which device the display reported (the app's page "Zugangsdaten" asks Spotify whether it still knows it)
+app.get('/display/spotify-device', (_req, res) => {
+  res.json({ id: displaySpotifyDevice })
+})
 app.get('/display/spotify-device/:id', (req, res) => {
   if (!/^[A-Za-z0-9]{20,64}$/.test(req.params.id)) {
     res.status(400).json({ error: 'bad device id' })
