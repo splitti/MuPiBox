@@ -65,7 +65,11 @@ interface RawHit {
 }
 
 async function searchCountry(term: string, country: string): Promise<(PodcastHit & { rank: number })[]> {
-  const url = `https://itunes.apple.com/search?${new URLSearchParams({ media: 'podcast', entity: 'podcast', term, country, limit: '25' })}`
+  return appleHits(`https://itunes.apple.com/search?${new URLSearchParams({ media: 'podcast', entity: 'podcast', term, country, limit: '25' })}`, country)
+}
+
+// The shows of an answer of Apple's search or lookup, in its order
+async function appleHits(url: string, country: string): Promise<(PodcastHit & { rank: number })[]> {
   const r = await fetch(url, { signal: AbortSignal.timeout(10000), headers: { 'user-agent': 'MuPiBox' } })
   if (!r.ok) throw new Error(`Apple answered ${r.status}`)
   const results = ((await r.json()) as { results?: RawHit[] }).results ?? []
@@ -130,4 +134,36 @@ export function mergeHits(apple: PodcastHit[], ard: PodcastHit[]): PodcastHit[] 
     if (onlyArd[i]) out.push(onlyArd[i])
   }
   return out.slice(0, 50)
+}
+
+// Apple's charts of "Stories for Kids" (1520) and "Education for Kids" (1519) in a language's first store: shows for
+// children to start with, without a list kept by hand (Kids & Family itself also holds parenting shows)
+const CHART_GENRES = ['1520', '1519']
+const TOP_TTL_MS = 6 * 60 * 60 * 1000
+const topCache = new Map<string, { at: number; hits: PodcastHit[] }>()
+
+export async function topKidsPodcasts(lang: string): Promise<PodcastHit[]> {
+  const cached = topCache.get(lang)
+  if (cached && Date.now() - cached.at < TOP_TTL_MS) return cached.hits
+  const country = CONTENT_LANGUAGES[lang]?.countries[0] ?? 'DE'
+  const charts = await Promise.all(
+    CHART_GENRES.map(async (genre) => {
+      const r = await fetch(`https://itunes.apple.com/${country.toLowerCase()}/rss/toppodcasts/limit=25/genre=${genre}/json`, {
+        signal: AbortSignal.timeout(10000),
+        headers: { 'user-agent': 'MuPiBox' },
+      })
+      if (!r.ok) return [] as string[]
+      const entries = ((await r.json()) as { feed?: { entry?: { id?: { attributes?: { 'im:id'?: string } } }[] } }).feed?.entry ?? []
+      return entries.map((e) => e.id?.attributes?.['im:id']).filter((id): id is string => !!id && /^\d+$/.test(id))
+    }),
+  )
+  // taking turns between the two charts, each show once
+  const ids: string[] = []
+  for (let i = 0; i < 25; i++) for (const chart of charts) if (chart[i] && !ids.includes(chart[i])) ids.push(chart[i])
+  if (!ids.length) return []
+  const found = await appleHits(`https://itunes.apple.com/lookup?${new URLSearchParams({ id: ids.join(','), entity: 'podcast', country })}`, country)
+  const byId = new Map(found.map((h) => [h.feedUrl, h]))
+  const hits = [...byId.values()].filter((h) => h.title && h.kids && !h.explicit)
+  topCache.set(lang, { at: Date.now(), hits })
+  return hits
 }

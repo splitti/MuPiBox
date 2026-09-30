@@ -11,7 +11,7 @@ import type { Router } from 'express'
 import type { MupiboxConfig } from '../models/mupibox-config.model'
 import { ardKidsShows, ardSearch, ardShowIdFromUrl, type ArdShow } from '../ard-sounds'
 import { MAX_KEEP, type PodcastOffline } from '../podcast-offline'
-import { CONTENT_LANGUAGES, mergeHits, type PodcastHit, searchPodcasts } from '../podcast-search'
+import { CONTENT_LANGUAGES, mergeHits, type PodcastHit, searchPodcasts, topKidsPodcasts } from '../podcast-search'
 import { requireCsrf, requireSession } from './middleware'
 
 export interface PodcastRouteDeps {
@@ -85,8 +85,12 @@ export function registerPodcastRoutes(router: Router, deps: PodcastRouteDeps): v
   /** GET /api/app/podcast-suggestions?lang=de - shows for children to start with, before anything is searched */
   router.get('/podcast-suggestions', requireSession, async (req, res) => {
     const lang = String(req.query.lang ?? 'de')
+    if (!(lang in CONTENT_LANGUAGES)) return void res.status(400).json({ error: 'invalid_language' })
+    // Apple's charts of stories and knowledge for children in the language's store; for German together with the
+    // ARD Audiothek's children's shows
+    const [apple, ard] = await Promise.allSettled([topKidsPodcasts(lang), lang === 'de' ? ardKids() : Promise.resolve([])])
     try {
-      res.json({ shows: lang === 'de' ? (await ardKids()).map(ardHit) : [] })
+      res.json({ shows: mergeHits(apple.status === 'fulfilled' ? apple.value : [], ard.status === 'fulfilled' ? ard.value.map(ardHit) : []) })
     } catch (error) {
       console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] podcast suggestions: ${error}`)
       res.json({ shows: [] })
