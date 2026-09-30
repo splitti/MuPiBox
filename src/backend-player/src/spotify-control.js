@@ -1829,32 +1829,46 @@ function playListAtTrack(playedList, trackNr, progressPct) {
     `${now()}: [Spotify Control] Library resume — track ${trackNr}, pct ${progressPct}, list ${playedList}`,
   )
   playList(playedList)
+  scheduleResumeJumps(trackNr, progressPct, 1200)
+}
+
+// The jumps of a resume after an album was loaded: to track trackNr (a moment after the start), then to
+// progressPct % of it; silent until they are done. firstJumpMs: when mplayer has the first track open (the NAS takes
+// longer than the SD card). The NAS's CUE albums are one file: there both are a seek inside it.
+function scheduleResumeJumps(trackNr, progressPct, firstJumpMs) {
   const jumps = trackNr > 1 || progressPct > 1
-  if (jumps) {
-    // silent until the jump is done; set again once mplayer has opened its audio output
-    libraryResumeMuted = true
-    player.setVolume(0)
-    libraryResumeTimers.push(setTimeout(() => player.setVolume(0), 300))
-  }
+  if (!jumps) return
+  // silent until the jump is done; set again once mplayer has opened its audio output
+  libraryResumeMuted = true
+  player.setVolume(0)
+  libraryResumeTimers.push(setTimeout(() => player.setVolume(0), 300))
+  const seekAt = trackNr > 1 ? firstJumpMs * 2 : firstJumpMs
   if (trackNr > 1) {
     libraryResumeTimers.push(
       setTimeout(() => {
+        if (isCuePlayback()) return seekToCueTrack(trackNr)
         // The 'metadata' handler adds exactly 1 per track change, however far pt_step jumps (see
         // jumpToTrack). Without this the counter stood at 2 after the jump, the player page saved
         // track 2 as the resume position, and every further resume lost more of the progress.
         currentMeta.currentTracknr = trackNr - 1
         player.exec('pt_step', [trackNr - 1])
-      }, 1200),
+      }, firstJumpMs),
     )
   }
   if (progressPct > 1) {
-    libraryResumeTimers.push(setTimeout(() => player.seekPercent(progressPct), trackNr > 1 ? 2400 : 1200))
+    libraryResumeTimers.push(
+      setTimeout(() => {
+        if (!isCuePlayback()) return player.seekPercent(progressPct)
+        const index = Math.max(0, Math.min(currentCue.tracks.length, trackNr) - 1)
+        const start = currentCue.tracks[index].startSeconds
+        const end = cueTrackEnd(index)
+        if (end > start) cueSeek(start + ((end - start) * progressPct) / 100)
+      }, seekAt),
+    )
   }
-  if (jumps) {
-    // a moment after the last jump, so the old position is no longer in the audio buffer
-    const lastJump = progressPct > 1 ? (trackNr > 1 ? 2400 : 1200) : 1200
-    libraryResumeTimers.push(setTimeout(unmuteLibraryResume, lastJump + 400))
-  }
+  // a moment after the last jump, so the old position is no longer in the audio buffer
+  const lastJump = progressPct > 1 ? seekAt : firstJumpMs
+  libraryResumeTimers.push(setTimeout(unmuteLibraryResume, lastJump + 400))
 }
 
 function playList(playedList) {
@@ -1892,10 +1906,12 @@ function playList(playedList) {
 // m3u file whose lines are HTTP(S) stream-proxy URLs - mplayer already plays
 // remote URLs from an m3u today for radio/rss, so this reuses the exact same
 // player.playList() path (and with it, track-jump/track-count handling).
-async function playNasList(nasPath) {
+// resume: {trackNr, progressPct} to go on where it was left (the display's resume tile; see scheduleResumeJumps)
+async function playNasList(nasPath, resume = null) {
   const decodedPath = decodeURIComponent(nasPath)
   log.debug(`${now()}: [Spotify Control] Starting NAS playback: ${decodedPath}`)
   const generation = ++playbackGeneration
+  clearLibraryResumeTimers()
 
   try {
     // The NAS may not answer at the first try (waking up, WiFi hiccup): one more try after 3 s. An empty or failed
@@ -1950,6 +1966,7 @@ async function playNasList(nasPath) {
     player.setVolume(volumeStart)
     currentMeta.currentTracknr = 0
     currentMeta.totalTracks = tracks.length
+    if (resume) scheduleResumeJumps(Math.min(resume.trackNr, tracks.length), resume.progressPct, 1800)
   } catch (error) {
     log.debug(`${now()}: [Spotify Control] Error starting NAS playback: ${error}`)
   }
@@ -2049,8 +2066,11 @@ function startEpisode(url) {
   // (the sound comes back when mplayer got there - or after 8 s at the latest, see playURL)
   pendingEpisodeSeek = { url, target, sent: Date.now(), tries: 0, timer: setTimeout(() => endEpisodeSeek(), 8000) }
   log.debug(`${now()}: [Spotify Control] Episode goes on at ${Math.round(target)}s`)
+  episodeResumedAt = Date.now()
   return target
 }
+// (the display's resume tile seeks 2 s after the start to its own position, up to 30 s older: not after this did)
+let episodeResumedAt = 0
 let pendingEpisodeSeek = null // { url, target, sent, tries, timer } while an episode is on its way to where it was left
 function endEpisodeSeek(delayMs = 0) {
   const s = pendingEpisodeSeek
@@ -2642,7 +2662,12 @@ app.use((req, res) => {
   if (hasDirSegment(command, 'nas')) {
     switchToMplayer()
     currentMeta.currentType = 'nas'
-    playNasList(command.base)
+    // /musicsearch/nas/resume/<encoded path>:<trackNr>:<progressPct> (the path is encoded: no ":" of its own)
+    const parts = hasDirSegment(command, 'resume') ? command.base.split(':') : []
+    const trackNr = Number.parseInt(parts[1], 10)
+    const progressPct = Number.parseFloat(parts[2])
+    if (parts.length === 3 && trackNr >= 1 && Number.isFinite(progressPct)) playNasList(parts[0], { trackNr, progressPct })
+    else playNasList(command.base)
   }
 
   if (hasDirSegment(command, 'radio')) {
@@ -2715,7 +2740,9 @@ app.use((req, res) => {
   else if (command.name === 'seek-30') seek(0)
   else if (command.name.includes('seekpos:')) {
     const pos = command.name.split(':')[1]
-    seek(pos)
+    if (currentMeta.currentType === 'rss' && Date.now() - episodeResumedAt < 5000) {
+      log.debug(`${now()}: [Spotify Control] seekpos ${pos} skipped: the episode already went on where it was left`)
+    } else seek(pos)
   } else if (command.name === 'albumstop') cmdCall('bash /usr/local/bin/mupibox/albumstop.sh')
   else if (command.name === 'enablewifi')
     cmdCall(

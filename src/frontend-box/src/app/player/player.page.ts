@@ -535,24 +535,13 @@ export class PlayerPage implements OnInit, AfterViewInit {
       // the saved position and playing an audible fragment of every track in
       // between.
     } else if (this.media.type === 'nas') {
-      const success = await this.playerService.playMedia(this.media)
+      // The player jumps to the saved track and position itself, silent until it is there (as for the SD card's
+      // albums): this page used to start the album and jump 2.5 and 4.5 s later - the beginning was heard meanwhile.
+      const success = await this.playerService.resumeNasMedia(this.media)
       if (!success) {
         this.logService.error('[PlayerPage] Failed to start NAS playback')
         return
       }
-      // Jump to the saved track and position once the playlist is loaded.
-      const track = this.media.resumelocalcurrentTracknr || 1
-      const progress = this.media.resumelocalprogressTime || 0
-      setTimeout(() => {
-        if (track > 1) {
-          this.playerService.playTrackAtPosition(this.media, { position: track })
-        }
-        setTimeout(() => {
-          if (progress > 0) {
-            this.playerService.seekPosition(progress)
-          }
-        }, 2000)
-      }, 2500)
     } else if (this.media.type === 'rss') {
       const success = await this.playerService.playMedia(this.media)
       if (!success) {

@@ -186,6 +186,16 @@ export class PlayerService {
     return true
   }
 
+  // A NAS album where it was left: the player jumps to the track and the position itself, silent until it is there
+  // (the display used to start the album and jump 2.5 and 4.5 s later - the beginning was heard meanwhile)
+  async resumeNasMedia(media: Media): Promise<boolean> {
+    const trackNr = media.resumelocalcurrentTracknr || 1
+    const progressPct = Math.round(media.resumelocalprogressTime || 0)
+    this.currentMediaService.set(media)
+    this.sendRequest(`musicsearch/nas/resume/${encodeURIComponent(media.nasPath)}:${trackNr}:${progressPct}`)
+    return true
+  }
+
   /**
    * Jump playback to a specific track/episode/chapter within the currently playing
    * Spotify album, playlist, show or audiobook.
