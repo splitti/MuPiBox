@@ -368,7 +368,7 @@ async function renderPage(page, reload = true) {
   main.dataset.page = page.id
   // two columns on a wide PC screen when the page has several cards (the start page has its own layout)
   main.classList.toggle('start', page.id === 'start')
-  main.classList.toggle('cols', page.id !== 'start' && main.querySelectorAll(':scope > .card').length >= 2)
+  main.classList.toggle('cols', page.id !== 'start' && main.querySelectorAll(':scope > .card, :scope > .col-stack').length >= 2)
   // (a page drawn again sets up its polling again: the timers of the drawing before go, else they pile up)
   stopPageTimers()
   wire(main, page)
@@ -7092,9 +7092,10 @@ function updatesTop() {
       ${i?.update ? `<div class="note">${icon('sync', 18)}<span>Neue Version ${esc(i.update.version)} verfügbar.</span></div>` : ''}
       ${rows || `<p class="help">Die Versionen des offiziellen Repositorys ließen sich nicht laden (keine Internetverbindung?).</p>`}
       <p class="help" style="margin:0">Aus dem offiziellen MuPiBox-Repository (splitti/MuPiBox). Die Box ist dabei 10–30 Minuten nicht nutzbar und startet danach von selbst neu. Einstellungen und Bibliothek bleiben erhalten und werden vorher zusätzlich auf der Box gesichert.</p></section>`,
-    `<section class="card"><h2>Betriebssystem</h2><p class="help">Aktualisiert die Pakete des Systems (apt). Dauert auf älteren Raspberry Pis bis zu 30 Minuten; die Box läuft dabei weiter. Danach neu starten.</p>
-      <div class="btns"><button class="btn" data-upd="os" ${busy ? 'disabled' : ''}>Betriebssystem aktualisieren</button></div></section>`,
-    `<div class="card nav-card"><div class="navlist">${navRow('backup', 'Backup', 'Vorher herunterladen', 'save')}</div></div>`,
+    // (the system and the backup one below the other: beside the long MuPiBox card on a wide screen, no gap between)
+    `<div class="col-stack"><section class="card"><h2>Betriebssystem</h2><p class="help">Aktualisiert die Pakete des Systems (apt). Dauert auf älteren Raspberry Pis bis zu 30 Minuten; die Box läuft dabei weiter. Danach neu starten.</p>
+      <div class="btns"><button class="btn" data-upd="os" ${busy ? 'disabled' : ''}>Betriebssystem aktualisieren</button></div></section>
+      <div class="card nav-card"><div class="navlist">${navRow('backup', 'Backup', 'Vorher herunterladen', 'save')}</div></div></div>`,
   ]
 }
 

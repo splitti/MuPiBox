@@ -786,6 +786,8 @@ details.legal { margin-top: 6px; }
 /* Über die Box: MuPiBox over two rows on the left, name and support beside it as high as it, stretched to its end */
 .content.cols[data-page="ueber"] { align-items: stretch; }
 .content.cols[data-page="ueber"] > .about-main { grid-row: span 2; }
+/* several cards as one block in a column (e.g. Updates: system and backup beside MuPiBox) */
+.col-stack { display: flex; flex-direction: column; gap: var(--mp-gap); min-width: 0; }
 details.legal > summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
 details.legal .legal-text { height: auto; max-height: 60vh; margin-top: 8px; }
 .legal-list { margin: 0 0 10px; padding-left: 20px; color: var(--mp-muted); font-size: 13px; display: flex; flex-direction: column; gap: 4px; }
