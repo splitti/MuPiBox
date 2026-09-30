@@ -13,9 +13,10 @@ import { pipeline } from 'node:stream/promises'
  * appear and the ones that drop out of the newest N go again. Single episodes can be kept as well ("pinned"); those
  * stay until they are deleted. All of a podcast's files go when the podcast leaves the library.
  *
- * A file is named after the SHA-1 of the episode's address (<sha1>.<ext>): the player looks for it by the address
- * it is given and plays the file when there is one (backend-player, offlineEpisodeFile) - with or without network,
- * and resume keeps working with the address. index.json holds what the app shows (podcast, title, size, pinned).
+ * A file is named after the SHA-1 of the episode's key (<sha1>.<ext>, see episodeKey): the player looks for it by the
+ * address it is given and plays the file when there is one (backend-player, offlineEpisodeFile) - with or without
+ * network, and resume keeps working with the address. index.json holds what the app shows (podcast, title, size,
+ * pinned), by key.
  *
  * One download at a time; each is written to a .part file and renamed when complete, and never fills the card
  * beyond a reserve.
@@ -29,6 +30,8 @@ export const MAX_KEEP = 50
 
 export interface OfflineFile {
   name: string
+  /** the episode's address as the feed named it last */
+  url: string
   feed: string
   title: string
   bytes: number
@@ -55,6 +58,23 @@ export interface OfflineDeps {
   changed: () => void
 }
 
+/**
+ * What stays the same of an episode's address from one fetch of the feed to the next. Some podcast hosts put values
+ * for statistics or ads into the query of the MP3 address, new at every fetch: the position, the file on the card
+ * and resume went with the address and were lost. When the path names the audio file itself, the query (and the
+ * scheme) is left out; an address like ".../download.php?id=123" is kept whole - there the query names the episode.
+ * The player works it out the same way (backend-player, episodeKey).
+ */
+export function episodeKey(url: string): string {
+  try {
+    const u = new URL(url)
+    if (/\.(mp3|m4a|mp4|aac|ogg|oga|opus|wav|flac)$/i.test(u.pathname)) return `${u.host.toLowerCase()}${u.pathname}`
+  } catch {
+    // no URL: as it is
+  }
+  return url
+}
+
 export const offlineName = (url: string) => {
   let ext = '.mp3'
   try {
@@ -63,7 +83,7 @@ export const offlineName = (url: string) => {
   } catch {
     // no URL: .mp3
   }
-  return `${crypto.createHash('sha1').update(url).digest('hex')}${ext}`
+  return `${crypto.createHash('sha1').update(episodeKey(url)).digest('hex')}${ext}`
 }
 
 export class PodcastOffline {
@@ -90,10 +110,31 @@ export class PodcastOffline {
     } catch {
       this.files = {}
     }
-    // (a file that is gone - deleted by hand, a card swapped - is not kept in the list)
-    for (const [url, f] of Object.entries(this.files)) {
-      if (!(await stat(path.join(this.deps.dir, f.name)).catch(() => null))) delete this.files[url]
+    let changed = false
+    for (const [k, f] of Object.entries(this.files)) {
+      // (a file that is gone - deleted by hand, a card swapped - is not kept in the list)
+      if (!(await stat(path.join(this.deps.dir, f.name)).catch(() => null))) {
+        delete this.files[k]
+        changed = true
+        continue
+      }
+      // a list of before the keys: by the address, the file named after it - taken over under its key
+      const url = f.url ?? k
+      const key = episodeKey(url)
+      const name = offlineName(url)
+      if (key === k && f.url && f.name === name) continue
+      if (f.name !== name) await rename(path.join(this.deps.dir, f.name), path.join(this.deps.dir, name)).catch(() => undefined)
+      delete this.files[k]
+      this.files[key] = { ...f, url, name }
+      changed = true
     }
+    if (changed) await this.save()
+  }
+
+  /** The kept file of this episode (by its key), or undefined */
+  async fileOf(url: string): Promise<OfflineFile | undefined> {
+    await this.load()
+    return this.files[episodeKey(url)]
   }
 
   private async save(): Promise<void> {
@@ -138,15 +179,19 @@ export class PodcastOffline {
   async add(url: string, feed: string, title: string, pinned: boolean): Promise<void> {
     await this.load()
     if (!/^https?:\/\//.test(url)) throw new Error('not an http(s) address')
-    const have = this.files[url]
+    const key = episodeKey(url)
+    const have = this.files[key]
     if (have) {
-      if (pinned && !have.pinned) {
-        have.pinned = true
+      // (the address as the feed names it now: the app and the offline list compare with it)
+      if ((pinned && !have.pinned) || have.url !== url) {
+        have.pinned ||= pinned
+        have.url = url
         await this.save()
       }
       return
     }
-    const queued = this.queue.find((j) => j.url === url) ?? (this.current?.url === url ? this.current : undefined)
+    const sameKey = (j: Job) => episodeKey(j.url) === key
+    const queued = this.queue.find(sameKey) ?? (this.current && sameKey(this.current) ? this.current : undefined)
     if (queued) {
       queued.pinned ||= pinned
       return
@@ -158,11 +203,12 @@ export class PodcastOffline {
   /** Deletes the episode's file (or takes it out of the queue) */
   async remove(url: string): Promise<boolean> {
     await this.load()
-    this.queue = this.queue.filter((j) => j.url !== url)
-    if (this.current?.url === url) this.abort?.abort()
-    const f = this.files[url]
+    const key = episodeKey(url)
+    this.queue = this.queue.filter((j) => episodeKey(j.url) !== key)
+    if (this.current && episodeKey(this.current.url) === key) this.abort?.abort()
+    const f = this.files[key]
     if (!f) return false
-    delete this.files[url]
+    delete this.files[key]
     await rm(path.join(this.deps.dir, f.name), { force: true })
     await this.save()
     this.deps.changed()
@@ -237,7 +283,7 @@ export class PodcastOffline {
       await rm(part, { force: true })
       throw error
     }
-    this.files[job.url] = { name, feed: job.feed, title: job.title, bytes: job.done, at: Date.now(), pinned: job.pinned }
+    this.files[episodeKey(job.url)] = { name, url: job.url, feed: job.feed, title: job.title, bytes: job.done, at: Date.now(), pinned: job.pinned }
     await this.save()
   }
 
@@ -250,11 +296,11 @@ export class PodcastOffline {
     const episodes = await this.deps.episodes(feed)
     if (!episodes) return // (feed not readable now: nothing is deleted on that basis)
     const wanted = episodes.slice(0, Math.max(0, Math.min(keep, MAX_KEEP)))
-    const wantedUrls = new Set(wanted.map((e) => e.url))
+    const wantedKeys = new Set(wanted.map((e) => episodeKey(e.url)))
     for (const e of wanted) await this.add(e.url, feed, e.title, false)
-    this.queue = this.queue.filter((j) => j.feed !== feed || j.pinned || wantedUrls.has(j.url))
-    for (const [url, f] of Object.entries(this.files)) {
-      if (f.feed === feed && !f.pinned && !wantedUrls.has(url)) await this.remove(url)
+    this.queue = this.queue.filter((j) => j.feed !== feed || j.pinned || wantedKeys.has(episodeKey(j.url)))
+    for (const [key, f] of Object.entries(this.files)) {
+      if (f.feed === feed && !f.pinned && !wantedKeys.has(key)) await this.remove(f.url)
     }
   }
 
@@ -266,7 +312,7 @@ export class PodcastOffline {
       await this.load()
       const feeds = await this.deps.feeds()
       const inLibrary = new Set(feeds.map((f) => f.feed))
-      for (const [url, f] of Object.entries(this.files)) if (!inLibrary.has(f.feed)) await this.remove(url)
+      for (const f of Object.values(this.files)) if (!inLibrary.has(f.feed)) await this.remove(f.url)
       for (const { feed, keep } of feeds) {
         const has = Object.values(this.files).some((f) => f.feed === feed)
         if (keep > 0 || has) await this.syncFeed(feed, keep).catch(() => undefined)

@@ -2092,7 +2092,40 @@ function playRadioURL(radioURL) {
 // starts from the beginning next time. The backend reads the file for the app's episode list.
 const EPISODE_POSITIONS_FILE = '/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/episode-positions.json'
 const EPISODE_POSITIONS_MAX = 5000
-let episodePositions = null // { [episode address]: { pos, len, at, done } }
+let episodePositions = null // { [episode key]: { pos, len, at, done } } (by the address, from before the keys)
+// What stays the same of an episode's address from one fetch of its feed to the next - the same as backend-api's
+// episodeKey (podcast-offline.ts): the query of an address whose path names the audio file is left out (values for
+// statistics or ads, new at every fetch - the position and the kept file were lost with them).
+function episodeKey(url) {
+  try {
+    const u = new URL(url)
+    if (/\.(mp3|m4a|mp4|aac|ogg|oga|opus|wav|flac)$/i.test(u.pathname)) return `${u.host.toLowerCase()}${u.pathname}`
+  } catch {
+    // no URL: as it is
+  }
+  return url
+}
+const positionOf = (url) => {
+  const all = loadEpisodePositions()
+  return all[episodeKey(url)] ?? all[url]
+}
+// The length of an episode as its feed gives it (backend-api /api/rssfeed/episode-duration): mplayer only estimates
+// the length of an MP3 with a changing bitrate - an episode counted as heard too early, or a broken connection was
+// not seen as one. 0: not known.
+let episodeFeedLength = { url: '', seconds: 0 }
+function loadEpisodeFeedLength(url) {
+  episodeFeedLength = { url, seconds: 0 }
+  fetch(`http://127.0.0.1:8200/api/rssfeed/episode-duration?url=${encodeURIComponent(url)}`, { signal: AbortSignal.timeout(10000) })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((body) => {
+      if (episodeFeedLength.url === url && Number(body?.seconds) > 60) episodeFeedLength.seconds = Number(body.seconds)
+    })
+    .catch(() => undefined)
+}
+// The feed's length if it gave one, else mplayer's
+function episodeLength() {
+  return (episodeFeedLength.url === playingEpisode && episodeFeedLength.seconds) || Number(currentMeta.durationSeconds) || 0
+}
 let episodePositionsDirty = false
 let playingEpisode = null // the address of the episode mplayer plays, while it plays one
 function episodeResumeOn() {
@@ -2133,8 +2166,9 @@ function startEpisode(url) {
   saveEpisodePositions()
   if (pendingEpisodeSeek) endEpisodeSeek()
   playingEpisode = url
+  loadEpisodeFeedLength(url)
   if (!episodeResumeOn()) return null
-  const p = loadEpisodePositions()[url]
+  const p = positionOf(url)
   if (!p || p.done || !(p.pos > 10) || (p.len && p.pos > p.len - 30)) return null
   const target = Math.max(0, p.pos - 5)
   // (the sound comes back when mplayer got there - or after 8 s at the latest, see playURL)
@@ -2150,7 +2184,7 @@ function reconnectEpisode() {
   const run = episodeRun
   if (!run || run.generation !== playbackGeneration || currentMeta.currentType !== 'rss' || playingEpisode !== run.url) return false
   const pos = Number(currentMeta.positionSeconds) || 0
-  const len = Number(currentMeta.durationSeconds) || 0
+  const len = episodeLength()
   if (!(len > 60) || pos < 5 || pos >= len - 30 || run.retries >= 3 || isPlaybackBlocked()) return false
   run.retries++
   const target = Math.max(0, pos - 3)
@@ -2183,7 +2217,13 @@ function continueEpisodeSeek(seconds) {
   if (s.url !== playingEpisode || currentMeta.currentType !== 'rss') return endEpisodeSeek()
   if (seconds >= s.target - 3) return endEpisodeSeek(400) // there
   // (sent again when mplayer dropped it while still buffering, as with the CUE albums)
-  if (s.sent && Date.now() - s.sent > 2500 && s.tries < 2) {
+  if (s.sent && Date.now() - s.sent > 2500) {
+    // a server that does not let mplayer seek (no range requests): after the retries on where it is - silent for
+    // up to 20 s before
+    if (s.tries >= 2) {
+      console.warn(`${now()}: [Spotify Control] Episode could not go on at ${Math.round(s.target)}s (the server does not seek), plays on from ${Math.round(seconds)}s`)
+      return endEpisodeSeek()
+    }
     s.tries++
     s.sent = Date.now()
     player.exec('pausing_keep seek', [s.target, 2])
@@ -2194,9 +2234,11 @@ function noteEpisodePosition(seconds) {
   // (not while it is still on its way: the beginning would overwrite the position)
   if (pendingEpisodeSeek) return
   if (!playingEpisode || currentMeta.currentType !== 'rss' || !episodeResumeOn() || !(seconds > 0)) return
-  const len = Number(currentMeta.durationSeconds) || 0
+  const len = episodeLength()
   const done = len > 60 && seconds >= len - 30
-  loadEpisodePositions()[playingEpisode] = { pos: done ? 0 : Math.round(seconds), len: Math.round(len), at: Date.now(), done }
+  const all = loadEpisodePositions()
+  if (all[playingEpisode] && episodeKey(playingEpisode) !== playingEpisode) delete all[playingEpisode] // (the entry of before the keys)
+  all[episodeKey(playingEpisode)] = { pos: done ? 0 : Math.round(seconds), len: Math.round(len), at: Date.now(), done }
   episodePositionsDirty = true
 }
 
@@ -2206,12 +2248,14 @@ const podcastOfflineDir = '/home/dietpi/MuPiBox/podcasts'
 const podcastOfflineExtensions = ['.mp3', '.m4a', '.mp4', '.aac', '.ogg', '.opus']
 function offlineEpisodeFile(url) {
   if (typeof url !== 'string' || !/^https?:\/\//.test(url)) return undefined
-  const hash = require('node:crypto').createHash('sha1').update(url).digest('hex')
-  for (const ext of podcastOfflineExtensions) {
-    const file = path.join(podcastOfflineDir, `${hash}${ext}`)
-    if (fs.existsSync(file)) {
-      log.debug(`${now()}: [Spotify Control] Episode from the SD card: ${file}`)
-      return file
+  const sha1 = (text) => require('node:crypto').createHash('sha1').update(text).digest('hex')
+  for (const hash of new Set([sha1(episodeKey(url)), sha1(url)])) {
+    for (const ext of podcastOfflineExtensions) {
+      const file = path.join(podcastOfflineDir, `${hash}${ext}`)
+      if (fs.existsSync(file)) {
+        log.debug(`${now()}: [Spotify Control] Episode from the SD card: ${file}`)
+        return file
+      }
     }
   }
   return undefined

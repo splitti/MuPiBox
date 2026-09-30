@@ -46,7 +46,7 @@ import { acquireLock, releaseLock, staleReason } from './file-lock'
 import { coverHidden } from './hidden-covers'
 import { OnlineCovers } from './online-covers'
 import { ardFeed, isArdFeed } from './ard-sounds'
-import { MAX_KEEP, PodcastOffline } from './podcast-offline'
+import { episodeKey, MAX_KEEP, PodcastOffline } from './podcast-offline'
 import { browserGuard, corsOptionsFor, isAllowedHost, isLoopback, localOnly, localOrElternSession, PROXY_PORT, setConfiguredHosts, viaProxy } from './request-guard'
 
 // Force IPv4 for DNS lookups to avoid EAI_AGAIN errors on Raspberry Pi
@@ -678,7 +678,7 @@ app.get('/api/rssfeed', async (req, res) => {
   // a player command).
   try {
     const { body } = await fetchRemote(rssUrl, {
-      maxBytes: 5_000_000,
+      maxBytes: RSS_MAX_BYTES,
       timeoutMs: 10000,
       contentType: /xml|rss|atom|text\/plain|octet-stream/i,
     })
@@ -779,11 +779,13 @@ function parseRssFeedFast(xml: string): any | undefined {
     const guid = rssTagText(block, 'guid')
     const enclosureUrl = rssTagAttribute(block, 'enclosure', 'url')
     const imageUrl = rssTagAttribute(block, 'itunes:image', 'href')
+    const duration = rssTagText(block, 'itunes:duration')
     if (title) item.title = title
     if (pubDate) item.pubDate = pubDate
     if (guid) item.guid = guid
     if (enclosureUrl) item.enclosure = { _attributes: { url: enclosureUrl } }
     if (imageUrl) item['itunes:image'] = { _attributes: { href: imageUrl } }
+    if (duration) item['itunes:duration'] = duration
     return item
   })
   if (items.length === 0) {
@@ -794,7 +796,7 @@ function parseRssFeedFast(xml: string): any | undefined {
   const coverUrl = channelImage ? extractRssText(channelImage) : rssTagAttribute(head, 'itunes:image', 'href')
   const title = rssTagText(head.replace(/<image>[\s\S]*?<\/image>/, ''), 'title')
   return {
-    _slim: true,
+    _slim: RSS_SLIM_VERSION,
     rss: { channel: { title: title ?? { _text: '' }, image: { url: { _text: coverUrl ?? '' } }, item: items } },
   }
 }
@@ -837,6 +839,13 @@ async function downloadRssCover(coverUrl: string, cacheKey: string): Promise<str
 // below (self-healing - nothing bad gets cached, so the next visit tries again),
 // but no single feed can ever stall a response past this.
 const rssFetchTimeoutMs = 5000
+// Long-running podcasts with thousands of episodes and long show notes are more than the 5 MB this was (their list
+// stayed empty); the text is only read for a few tags (parseRssFeedFast), so a large one costs little. Such a feed may
+// need longer than rssFetchTimeoutMs: the fetch goes on in the background then (see /api/rssfeed/cached).
+const RSS_MAX_BYTES = 25_000_000
+const rssRefreshTimeoutMs = 30_000
+// Version of the cached shape: a cache written by an older one is rewritten at the next refresh (2: with durations)
+const RSS_SLIM_VERSION = 2
 
 // Long podcasts are several MB of XML, and parsing that completely (xml-js) blocks the whole
 // backend for many seconds on the Pi. The kiosk only needs the <title>, <enclosure>,
@@ -880,7 +889,7 @@ async function refreshRssCache(rssUrl: string, cacheKey: string): Promise<any> {
     feed = await ardFeed(rssUrl)
   } else {
     // Checked on every hop and capped while streaming (this path had no URL check at all, see fetchRemote)
-    const xml = (await fetchRemote(rssUrl, { maxBytes: 5_000_000, timeoutMs: rssFetchTimeoutMs })).body.toString('utf8')
+    const xml = (await fetchRemote(rssUrl, { maxBytes: RSS_MAX_BYTES, timeoutMs: rssRefreshTimeoutMs })).body.toString('utf8')
     feed =
       parseRssFeedFast(xml) ??
       JSON.parse(
@@ -895,7 +904,7 @@ async function refreshRssCache(rssUrl: string, cacheKey: string): Promise<any> {
   const previousCoverUrl = extractRssText(previousFeed?.rss?.channel?.image?.url)
   const coverMissing = rssCoverFileMissing(previousCoverUrl)
   // A cache written by an older version holds every tag of the feed; rewrite it slim.
-  const previousIsSlim = previousFeed?._slim === true
+  const previousIsSlim = previousFeed?._slim === RSS_SLIM_VERSION
 
   if (previousFeed && !hasNewEpisode && !coverMissing && previousIsSlim) {
     // Nothing changed and the cached cover file is still there - keep serving as-is.
@@ -1021,9 +1030,45 @@ async function offlineFeedView(feed: string, cached: Buffer): Promise<unknown | 
   const parsed = JSON.parse(cached.toString('utf8'))
   const raw = parsed?.rss?.channel?.item
   const items = (Array.isArray(raw) ? raw : raw ? [raw] : []) as any[]
-  parsed.rss.channel.item = items.filter((it) => files[it?.enclosure?._attributes?.url])
+  parsed.rss.channel.item = items.filter((it) => files[episodeKey(String(it?.enclosure?._attributes?.url ?? ''))])
   return parsed
 }
+
+// The length of an episode as its feed gives it (itunes:duration), for the player: mplayer only estimates the length
+// of an MP3 with a changing bitrate, and an episode counted as heard too early, or a broken connection was not seen as
+// one. From the cached feeds, looked through at most every 10 minutes.
+let feedDurations: { at: number; byKey: Map<string, number> } | null = null
+function durationSeconds(text: string | undefined): number {
+  if (!text) return 0
+  const parts = text.trim().split(':').map(Number)
+  if (parts.some((n) => !Number.isFinite(n))) return 0
+  return parts.reduce((sum, n) => sum * 60 + n, 0)
+}
+app.get('/api/rssfeed/episode-duration', async (req, res) => {
+  const url = typeof req.query.url === 'string' ? req.query.url : ''
+  if (!url) {
+    res.status(400).json({ error: 'url missing' })
+    return
+  }
+  if (!feedDurations || Date.now() - feedDurations.at > 10 * 60 * 1000) {
+    const byKey = new Map<string, number>()
+    for (const name of await readdir(rssCacheDataDir).catch(() => [] as string[])) {
+      if (!name.endsWith('.json')) continue
+      try {
+        const raw = JSON.parse(await readFile(path.join(rssCacheDataDir, name), 'utf8'))?.rss?.channel?.item
+        for (const it of (Array.isArray(raw) ? raw : raw ? [raw] : []) as any[]) {
+          const u = it?.enclosure?._attributes?.url
+          const seconds = durationSeconds(extractRssText(it?.['itunes:duration']))
+          if (typeof u === 'string' && seconds > 0) byKey.set(episodeKey(u), seconds)
+        }
+      } catch {
+        // a cache file being written: next time
+      }
+    }
+    feedDurations = { at: Date.now(), byKey }
+  }
+  res.json({ seconds: feedDurations.byKey.get(episodeKey(url)) ?? 0 })
+})
 
 app.get('/api/rssfeed/cached', async (req, res) => {
   const rssUrl = req.query.url
@@ -1060,10 +1105,14 @@ app.get('/api/rssfeed/cached', async (req, res) => {
     }
   }
 
-  // No usable cache yet - fetch synchronously so there is something to show.
+  // No usable cache yet - fetch synchronously so there is something to show. A large or slow feed that takes
+  // longer than rssFetchTimeoutMs goes on in the background and is there at the next visit (it never came before:
+  // every visit gave up after the same 5 s).
   try {
-    const feed = await refreshRssCache(rssUrl, cacheKey)
-    res.json(feed)
+    const refresh = refreshRssCache(rssUrl, cacheKey)
+    refresh.catch(() => undefined)
+    const feed = await Promise.race([refresh, new Promise((resolve) => setTimeout(() => resolve(null), rssFetchTimeoutMs))])
+    res.json(feed ?? emptyRssFeed())
   } catch (error) {
     console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] RSS fetch failed: ${error}`)
     // Respond with a valid-but-empty feed rather than an HTTP error: the frontend
@@ -3275,10 +3324,11 @@ function writeJsonAtomic(file: string, data: unknown, callback: (error: Error | 
 // up duplicates. Mirror the resolution order frontend uses to dispatch
 // playback (playlistid/showid/audiobookid/id), and fall back to artist::title
 // as a last resort.
+// (a podcast episode by its key: an address that changes with every fetch of the feed gave a second tile for it)
 const resumeKeyOf = (m: { type?: string; id?: string; playlistid?: string; showid?: string; audiobookid?: string; artist?: string; title?: string }) =>
   [
     m?.type || '',
-    m?.playlistid || m?.showid || m?.audiobookid || m?.id || `${m?.artist || ''}::${m?.title || ''}`,
+    m?.playlistid || m?.showid || m?.audiobookid || (m?.type === 'rss' && m?.id ? episodeKey(m.id) : m?.id) || `${m?.artist || ''}::${m?.title || ''}`,
   ].join('|')
 
 // AR5-18: when mplayer fires playlist-finish, backend-player POSTs

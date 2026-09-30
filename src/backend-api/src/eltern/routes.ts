@@ -52,7 +52,7 @@ import { registerSpotifyConnectRoutes } from './spotify-connect'
 import { registerTlsRoutes, tlsOf } from './tls'
 import { type LocalLibraryDeps, registerLocalUploadRoutes } from './upload'
 import { registerPodcastRoutes } from './podcasts'
-import type { PodcastOffline } from '../podcast-offline'
+import { episodeKey, type PodcastOffline } from '../podcast-offline'
 import { randomBytes } from 'node:crypto'
 import { localOnly } from '../request-guard'
 import { spotifyLoginAge } from './spotify-auth-age'
@@ -1653,8 +1653,10 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     }
     res.json({
       episodes: episodes.map((e) => {
-        const p = positions[e.url]
-        return { ...e, saved: !!saved[e.url], ...(p ? { pos: p.pos ?? 0, len: p.len ?? 0, done: !!p.done } : {}) }
+        // (by the episode's key, see episodeKey; positions written before the keys by the address)
+        const key = episodeKey(e.url)
+        const p = positions[key] ?? positions[e.url]
+        return { ...e, saved: !!saved[key], ...(p ? { pos: p.pos ?? 0, len: p.len ?? 0, done: !!p.done } : {}) }
       }),
     })
   })

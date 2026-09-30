@@ -186,7 +186,7 @@ export async function ardFeed(id: string): Promise<unknown> {
   if (!found) throw new Error(`ARD Sounds does not know the show ${id}`)
   const { show: s, episodes } = found
   return {
-    _slim: true,
+    _slim: 2, // (the version of the cached shape, see RSS_SLIM_VERSION in server.ts)
     rss: {
       channel: {
         title: { _text: s.title },
