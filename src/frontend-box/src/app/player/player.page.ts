@@ -389,6 +389,12 @@ export class PlayerPage implements OnInit, AfterViewInit {
     }
     this.checkPlaytimeForResume()
 
+    // Back to the list only after this many seconds in a row without playing: the count went on over the whole
+    // listening - a long podcast episode with a few short buffering breaks (WiFi) went back after some minutes
+    // although it was still playing.
+    if (this.media.type === 'spotify' ? this.currentPlayedSpotify?.is_playing : this.currentPlayedLocal?.playing) {
+      this.goBackTimer = 0
+    }
     if (this.media.type === 'spotify') {
       const seek = this.currentPlayedSpotify?.progress_ms || 0
       if (this.currentPlayedSpotify?.item != null) {

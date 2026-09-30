@@ -446,6 +446,9 @@ player.on('playlist-finish', () => {
   if (quietHoursState.state === 'grace') {
     finalizeQuietHoursBlock('playlist finished during grace period')
   }
+  // A podcast episode that ended long before its end: the connection to its server broke (mplayer takes that as
+  // the end of the file) - it is opened again where it stopped
+  if (reconnectEpisode()) return
   // Library album finished naturally — drop its resume entry so the user
   // isn't offered "weiterhören" at the very end next time. Spotify and RSS
   // are skipped: Spotify gives no clean end-of-album signal via the
@@ -2140,6 +2143,25 @@ function startEpisode(url) {
   episodeResumedAt = Date.now()
   return target
 }
+// The episode mplayer plays: { url, generation (of the playback), retries }. A stop, another start or a block
+// changes playbackGeneration - then its end is no broken connection.
+let episodeRun = null
+function reconnectEpisode() {
+  const run = episodeRun
+  if (!run || run.generation !== playbackGeneration || currentMeta.currentType !== 'rss' || playingEpisode !== run.url) return false
+  const pos = Number(currentMeta.positionSeconds) || 0
+  const len = Number(currentMeta.durationSeconds) || 0
+  if (!(len > 60) || pos < 5 || pos >= len - 30 || run.retries >= 3 || isPlaybackBlocked()) return false
+  run.retries++
+  const target = Math.max(0, pos - 3)
+  console.warn(`${now()}: [Spotify Control] Episode ended at ${Math.round(pos)}s of ${Math.round(len)}s - opened again (${run.retries}/3)`)
+  if (pendingEpisodeSeek) endEpisodeSeek()
+  pendingEpisodeSeek = { url: run.url, target, sent: 0, tries: 0, timer: setTimeout(() => endEpisodeSeek(), 20000) }
+  episodeResumedAt = Date.now()
+  playURL(offlineEpisodeFile(run.url) ?? run.url, target)
+  run.generation = playbackGeneration
+  return true
+}
 // (the display's resume tile seeks 2 s after the start to its own position, up to 30 s older: not after this did)
 let episodeResumedAt = 0
 let pendingEpisodeSeek = null // { url, target, sent, tries, timer } while an episode is on its way to where it was left
@@ -2766,6 +2788,7 @@ app.use((req, res) => {
     let rssURL = dir.split('rss/').pop()
     rssURL = decodeURIComponent(rssURL)
     playURL(offlineEpisodeFile(rssURL) ?? rssURL, startEpisode(rssURL))
+    episodeRun = { url: rssURL, generation: playbackGeneration, retries: 0 }
   }
 
   if (hasDirSegment(command, 'say')) {
