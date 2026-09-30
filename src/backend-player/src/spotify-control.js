@@ -317,6 +317,43 @@ player.on('metadata', (val) => {
 })
 player.on('track-change', () => player.getProps(['metadata']))
 
+// --- Going on where it was left, for streams (the NAS, podcasts) ---
+// A stream plays only once mplayer's buffer is filled (a second or two after the load); until then mplayer takes
+// neither the volume nor a seek - both were sent with the load, came to nothing, and the beginning was heard before
+// a later retry jumped. So they wait for "Starting playback..." (the wrapper's track-change), and the sound comes
+// back once the playing time shows the position (or after maxMs at the latest).
+let onPlaybackStart = null // { generation, run } for the next start of the current playback
+function atPlaybackStart(run) {
+  onPlaybackStart = { generation: playbackGeneration, run }
+}
+player.on('track-change', () => {
+  const next = onPlaybackStart
+  if (!next) return
+  onPlaybackStart = null
+  if (next.generation !== playbackGeneration) return
+  player.setVolume(0)
+  next.run()
+})
+let silence = null // { reached, timer } while playback is on its way to where it was left
+function silentUntil(reached, maxMs) {
+  if (silence) clearTimeout(silence.timer)
+  player.setVolume(0)
+  silence = { reached, timer: setTimeout(() => endSilence(), maxMs) }
+}
+function endSilence(delayMs = 0) {
+  const s = silence
+  if (!s) return
+  clearTimeout(s.timer)
+  silence = null
+  // (a moment after arriving, so what is still in the audio buffer from before is not heard)
+  setTimeout(() => {
+    if (!silence) player.setVolume(volumeStart)
+  }, delayMs)
+}
+function checkSilence() {
+  if (silence?.reached()) endSilence(400)
+}
+
 // --- Buffering of streams before playback starts ---
 // mplayer starts once cache-min percent of the cache are filled (see the wrapper).
 const cachePrefillPercent = 10
@@ -342,6 +379,8 @@ player.on('cache-fill', (percent) => {
   }
 })
 player.on('track-change', stopLoading)
+player.on('percent_pos', checkSilence)
+player.on('time_pos', checkSilence)
 
 //player.on('length', console.log)
 //player.on('track-change', () => player.getProps(['length']))
@@ -1966,10 +2005,42 @@ async function playNasList(nasPath, resume = null) {
     player.setVolume(volumeStart)
     currentMeta.currentTracknr = 0
     currentMeta.totalTracks = tracks.length
-    if (resume) scheduleResumeJumps(Math.min(resume.trackNr, tracks.length), resume.progressPct, 1800)
+    if (resume) resumeNasAt(Math.min(resume.trackNr, tracks.length), resume.progressPct)
   } catch (error) {
     log.debug(`${now()}: [Spotify Control] Error starting NAS playback: ${error}`)
   }
+}
+
+// A NAS album where it was left: when its first track starts, on to track trackNr (another start, it is a stream too)
+// and then to progressPct % of it; silent until the playing time shows it. A CUE album is one file: one seek.
+function resumeNasAt(trackNr, progressPct) {
+  if (trackNr <= 1 && progressPct <= 1) return
+  player.setVolume(0)
+  silentUntil(() => false, 30000)
+  const reached = () => currentMeta.currentTracknr === trackNr && (progressPct <= 1 || Number(currentMeta.progressTime) >= progressPct - 3)
+  const seekInTrack = () => {
+    if (progressPct > 1) player.seekPercent(progressPct)
+    silentUntil(reached, 15000)
+    checkSilence()
+  }
+  atPlaybackStart(() => {
+    if (isCuePlayback()) {
+      const index = Math.max(0, Math.min(currentCue.tracks.length, trackNr) - 1)
+      const start = currentCue.tracks[index].startSeconds
+      const end = cueTrackEnd(index)
+      currentMeta.currentTracknr = index + 1
+      currentMeta.currentTrackname = currentCue.tracks[index].name
+      cueSeek(end > start ? start + ((end - start) * progressPct) / 100 : start)
+      silentUntil(reached, 15000)
+      return
+    }
+    if (trackNr > 1) {
+      // (the 'metadata' handler adds 1 at the track change - see jumpToTrack)
+      currentMeta.currentTracknr = trackNr - 1
+      player.exec('pt_step', [trackNr - 1])
+      atPlaybackStart(seekInTrack)
+    } else seekInTrack()
+  })
 }
 
 function playFile(playedFile) {
@@ -2064,7 +2135,7 @@ function startEpisode(url) {
   if (!p || p.done || !(p.pos > 10) || (p.len && p.pos > p.len - 30)) return null
   const target = Math.max(0, p.pos - 5)
   // (the sound comes back when mplayer got there - or after 8 s at the latest, see playURL)
-  pendingEpisodeSeek = { url, target, sent: Date.now(), tries: 0, timer: setTimeout(() => endEpisodeSeek(), 8000) }
+  pendingEpisodeSeek = { url, target, sent: 0, tries: 0, timer: setTimeout(() => endEpisodeSeek(), 20000) }
   log.debug(`${now()}: [Spotify Control] Episode goes on at ${Math.round(target)}s`)
   episodeResumedAt = Date.now()
   return target
@@ -2090,7 +2161,7 @@ function continueEpisodeSeek(seconds) {
   if (s.url !== playingEpisode || currentMeta.currentType !== 'rss') return endEpisodeSeek()
   if (seconds >= s.target - 3) return endEpisodeSeek(400) // there
   // (sent again when mplayer dropped it while still buffering, as with the CUE albums)
-  if (Date.now() - s.sent > 2500 && s.tries < 2) {
+  if (s.sent && Date.now() - s.sent > 2500 && s.tries < 2) {
     s.tries++
     s.sent = Date.now()
     player.exec('pausing_keep seek', [s.target, 2])
@@ -2135,10 +2206,11 @@ function playURL(playedURL, resumeAt = null) {
   writeplayerstatePlay()
   player.play(playedURL)
   if (resumeAt != null) {
-    // (set again once mplayer has opened its audio output - before that it does not take it, as playListAtTrack)
     player.setVolume(0)
-    player.exec('pausing_keep seek', [resumeAt, 2])
-    setTimeout(() => pendingEpisodeSeek && player.setVolume(0), 300)
+    atPlaybackStart(() => {
+      if (pendingEpisodeSeek) pendingEpisodeSeek.sent = Date.now()
+      player.exec('pausing_keep seek', [resumeAt, 2])
+    })
   } else player.setVolume(volumeStart)
   log.debug(`${now()}: ${playedURL}`)
   if (telegramPlaybackNotices())
