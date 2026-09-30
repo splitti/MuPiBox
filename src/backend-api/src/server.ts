@@ -47,6 +47,7 @@ import { coverHidden } from './hidden-covers'
 import { OnlineCovers } from './online-covers'
 import { ardFeed, isArdFeed } from './ard-sounds'
 import { episodeKey, MAX_KEEP, PodcastOffline } from './podcast-offline'
+import { setFeedHeadReader } from './podcast-search'
 import { browserGuard, corsOptionsFor, isAllowedHost, isLoopback, localOnly, localOrElternSession, PROXY_PORT, setConfiguredHosts, viaProxy } from './request-guard'
 
 // Force IPv4 for DNS lookups to avoid EAI_AGAIN errors on Raspberry Pi
@@ -989,6 +990,26 @@ async function feedEpisodes(feed: string): Promise<{ url: string; title: string 
     .sort((a, b) => b.at - a.at)
     .map(({ url, title }) => ({ url, title }))
 }
+
+// The first 16 KB of a feed (its <language> stands at the top), for the podcast search's language filter
+setFeedHeadReader(async (url) => {
+  const response = await openRemote(url, AbortSignal.timeout(5000))
+  const reader = response.body?.getReader()
+  if (!reader) return ''
+  const chunks: Uint8Array[] = []
+  let size = 0
+  try {
+    while (size < 16_384) {
+      const { done, value } = await reader.read()
+      if (done || !value) break
+      chunks.push(value)
+      size += value.length
+    }
+  } finally {
+    await reader.cancel().catch(() => undefined)
+  }
+  return Buffer.concat(chunks).toString('utf8')
+})
 
 const podcastOffline = new PodcastOffline({
   dir: podcastOfflineDir,
