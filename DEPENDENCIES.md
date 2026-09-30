@@ -95,7 +95,7 @@ Kept, with what uses them:
 | `raspberrypi-kernel-headers`, `dkms` | USB WiFi driver installers (`scripts/online/install_rtl88x2bu.sh`, `install_rtl8821au.sh`), installed on demand from the Network admin page - not by autosetup/update |
 | `bc` | `mupi_start_led.sh` |
 | `build-essential`, `pigpio`, `libjson-c-dev` | autosetup compiles `scripts/led/led_control.c` (`-lpigpio -ljson-c`) |
-| `gpiod` | power button/shim scripts (`scripts/OnOffShim`) |
+| `gpiod`, `raspberrypi-utils` | power button/shim scripts (`scripts/OnOffShim`) |
 | `libi2c-dev`, `python3-smbus2` | MuPiHAT (`scripts/mupihat`) |
 | `python3-rpi.gpio`, `python3-lgpio` | LED and fan control (`RPi.GPIO`); `lgpio` is not imported by any script, it is kept as the GPIO backend for the Raspberry Pi 5 |
 | `python3-serial` | WLED scripts |
