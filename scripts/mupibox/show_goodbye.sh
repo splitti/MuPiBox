@@ -33,6 +33,15 @@ PIC="${BS_OUT}/${BS_KIND}-${BS_SCENE}.png"
 [ -f "${PIC}" ] || PIC=$(/usr/bin/jq -r .mupibox.shutSplash ${CONFIG})
 echo "${PIC}" > ${SHOWN} 2>/dev/null
 
+# Nothing of the text console between the pictures: when the X server ends, the screen shows tty1 again - with the
+# start's texts (the login's banner with the network, mplayer's lines), and the login writes more there while it ends.
+# tty1 is cleared and all 16 of its colours are set to black, so what is (or gets) written there stays invisible until
+# the picture is drawn again (the colours come back with the next start).
+{
+	for i in 0 1 2 3 4 5 6 7 8 9 A B C D E F; do printf '\033]P%s000000' "$i"; done
+	printf '\033[0m\033[H\033[2J\033[3J'
+} >/dev/tty1 2>/dev/null
+
 # hide the display's window (it keeps running until mupi_shutdown.sh ends it)
 DISPLAY=:0 XAUTHORITY=/home/dietpi/.Xauthority /usr/bin/xdotool search --onlyvisible --class chromium windowunmap %@ >/dev/null 2>&1
 sleep 0.15

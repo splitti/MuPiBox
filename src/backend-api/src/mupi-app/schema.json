@@ -71,7 +71,7 @@
    "id": "g-dienste",
    "title": "Dienste",
    "icon": "plug",
-   "description": "Spotify, NAS · Telegram, MQTT, WLED"
+   "description": "Spotify, NAS, Podcast- und Radiosuche · Telegram, MQTT, WLED"
   },
   {
    "id": "g-sicherheit",
@@ -83,7 +83,7 @@
    "id": "g-system",
    "title": "System",
    "icon": "gear",
-   "description": "Über, Updates, Backup, Neustart, Protokolle, Experten, Sprache"
+   "description": "Über, Zustand, Rechtliches, Updates, Backup, Neustart, Protokolle, Experten, Sprache"
   }
  ],
  "pages": [
@@ -391,7 +391,7 @@
      ]
     },
     {
-     "title": "Top-Künstler (7 Tage)",
+     "title": "Meistgehört (7 Tage)",
      "help": "",
      "items": [
       {
@@ -582,6 +582,26 @@
      ]
     }
    ]
+  },
+  {
+   "id": "podsuche",
+   "slug": "podcast-search",
+   "area": "bibliothek",
+   "parent": "bibliothek",
+   "title": "Podcasts suchen",
+   "description": "",
+   "icon": "globe",
+   "sections": []
+  },
+  {
+   "id": "radiosuche",
+   "slug": "radio-search",
+   "area": "bibliothek",
+   "parent": "bibliothek",
+   "title": "Radiosender suchen",
+   "description": "",
+   "icon": "vol",
+   "sections": []
   },
   {
    "id": "suche",
@@ -1272,7 +1292,7 @@
    "area": "bibliothek",
    "parent": "spotify",
    "title": "Zugangsdaten",
-   "description": "",
+   "description": "Anmeldung, Spotify-App, Redirect URI",
    "icon": "lock",
    "sections": []
   },
@@ -2185,7 +2205,7 @@
    "area": "einstellungen",
    "parent": "g-display",
    "title": "Bedienung am Display",
-   "description": "Kategorien, Fortsetzen, Haltezeiten",
+   "description": "Kategorien, Fortsetzen, Haltezeiten, Podcasts",
    "icon": "touch",
    "sections": [
     {
@@ -2252,6 +2272,56 @@
        "max": 10,
        "step": 1,
        "unit": " s"
+      }
+     ]
+    },
+    {
+     "title": "Podcasts",
+     "help": "Wo eine Folge aufgehört wurde, was neu ist und wie weit gehört – auf dem Display und in der App.",
+     "items": [
+      {
+       "type": "toggle",
+       "label": "An der letzten Stelle weiterhören",
+       "key": "epResume",
+       "default": true
+      },
+      {
+       "type": "select",
+       "label": "Stelle merken für",
+       "key": "epDays",
+       "default": "6 Monate",
+       "options": [
+        "1 Monat",
+        "3 Monate",
+        "6 Monate",
+        "1 Jahr",
+        "Unbegrenzt"
+       ]
+      },
+      {
+       "type": "toggle",
+       "label": "Neue Folgen markieren",
+       "key": "epNew",
+       "default": true,
+       "help": "Ein Punkt auf dem Podcast und der neuen Folge. Nur Folgen, die nach dem Hinzufügen erschienen sind; weg, sobald die Folge angespielt wurde oder die Zeit um ist."
+      },
+      {
+       "type": "select",
+       "label": "Als neu markieren für",
+       "key": "epNewDays",
+       "default": "7 Tage",
+       "options": [
+        "3 Tage",
+        "7 Tage",
+        "14 Tage"
+       ]
+      },
+      {
+       "type": "toggle",
+       "label": "Hörstand auf dem Display zeigen",
+       "key": "epProgress",
+       "default": true,
+       "help": "Ein Balken bei angefangenen Folgen, ein Haken bei zu Ende gehörten."
       }
      ]
     }
@@ -2578,6 +2648,16 @@
      ]
     }
    ]
+  },
+  {
+   "id": "sprachausgabe",
+   "slug": "speech",
+   "area": "einstellungen",
+   "parent": "g-audio",
+   "title": "Sprachausgabe",
+   "description": "Stimmen, Ansagen, Eltern-Durchsagen",
+   "icon": "vol",
+   "sections": []
   },
   {
    "id": "akku",
@@ -3318,6 +3398,13 @@
        "help": "Aus: nur Wichtiges (Hörzeit aufgebraucht, Ruhezeit, Akku fast leer, Start und Ausschalten). An: zusätzlich jeder Titel mit Bildschirmfoto, Pause, Stopp, Weiter."
       },
       {
+       "type": "toggle",
+       "label": "Wochenrückblick",
+       "key": "tgWeek",
+       "default": true,
+       "help": "Sonntagabend: wie lange und was die Woche über gehört wurde."
+      },
+      {
        "type": "kv",
        "rows": [
         [
@@ -3672,7 +3759,7 @@
    "area": "einstellungen",
    "parent": "g-sicherheit",
    "title": "Passwort & Anmeldung",
-   "description": "Ein Passwort für die ganze App",
+   "description": "Passwort, Anmeldung, angemeldete Geräte",
    "icon": "lock",
    "sections": [
     {
@@ -3839,6 +3926,26 @@
      ]
     }
    ]
+  },
+  {
+   "id": "zustand",
+   "slug": "health",
+   "area": "einstellungen",
+   "parent": "g-system",
+   "title": "Zustand der Box",
+   "description": "Speicher, Temperatur, Strom, SD-Karte, Dienste, Anmeldungen",
+   "icon": "pulse",
+   "sections": []
+  },
+  {
+   "id": "rechtliches",
+   "slug": "legal",
+   "area": "einstellungen",
+   "parent": "g-system",
+   "title": "Rechtliches",
+   "description": "Lizenz, Open Source, Datenschutz, externe Dienste",
+   "icon": "doc",
+   "sections": []
   },
   {
    "id": "updates",
@@ -4350,7 +4457,7 @@
    "parent": "g-system",
    "title": "Sprache",
    "description": "Sprache der App, Sprache der Box",
-   "icon": "globe",
+   "icon": "lang",
    "sections": [
     {
      "title": "Sprache der App",
@@ -4523,7 +4630,7 @@
    "area": "einstellungen",
    "parent": "einstellungen",
    "title": "Audio",
-   "description": "Lautstärke, Soundkarte, Drehregler, Bluetooth",
+   "description": "Lautstärke, Soundkarte, Drehregler, Bluetooth, Sprachausgabe",
    "icon": "vol",
    "sections": [
     {
@@ -4553,6 +4660,12 @@
        "label": "Bluetooth",
        "target": "bluetooth",
        "subtitle": "Kopfhörer & Lautsprecher"
+      },
+      {
+       "type": "nav",
+       "label": "Sprachausgabe",
+       "target": "sprachausgabe",
+       "subtitle": "Stimmen, Ansagen, Eltern-Durchsagen"
       }
      ]
     }
@@ -4646,7 +4759,7 @@
    "area": "einstellungen",
    "parent": "einstellungen",
    "title": "Dienste",
-   "description": "Spotify, NAS · Telegram, MQTT, WLED",
+   "description": "Spotify, NAS, Podcast- und Radiosuche · Telegram, MQTT, WLED",
    "icon": "plug",
    "sections": [
     {
@@ -4664,6 +4777,20 @@
        "label": "NAS",
        "target": "nas",
        "subtitle": "Anmeldung, freigegebene Ordner, Profile · Bibliothek › NAS"
+      },
+      {
+       "type": "toggle",
+       "label": "Podcast-Suche",
+       "key": "svcPod",
+       "default": true,
+       "help": "Findet Podcasts vieler Sender und Anbieter in vielen Sprachen (Apples Podcast-Verzeichnis, bei Deutsch zusätzlich die ARD Audiothek; nur der Suchbegriff geht dorthin). Aus: wird beim Hinzufügen nicht angeboten."
+      },
+      {
+       "type": "toggle",
+       "label": "Radiosender-Suche",
+       "key": "svcRadio",
+       "default": true,
+       "help": "Findet Radiosender aus vielen Ländern, auch Kinderradio (radio-browser.info, von seinen Nutzern gepflegt; nur der Suchbegriff geht dorthin). Aus: wird beim Hinzufügen nicht angeboten."
       }
      ]
     },
@@ -4728,7 +4855,7 @@
    "area": "einstellungen",
    "parent": "einstellungen",
    "title": "System",
-   "description": "Über, Updates, Backup, Neustart, Protokolle, Experten, Sprache",
+   "description": "Über die Box, Zustand, Updates, Neustart, Protokolle, Rechtliches …",
    "icon": "gear",
    "sections": [
     {
@@ -4886,7 +5013,7 @@
    "id": "verlauf"
   },
   {
-   "l": "Top-Künstler (7 Tage)",
+   "l": "Meistgehört (7 Tage)",
    "where": "Hören › Hör-Verlauf",
    "id": "verlauf"
   },
@@ -4934,6 +5061,16 @@
    "l": "Einzelne Alben",
    "where": "Bibliothek › Verwaltete Inhalte",
    "id": "verwaltet"
+  },
+  {
+   "l": "Podcasts suchen",
+   "where": "Bibliothek › Podcasts suchen",
+   "id": "podsuche"
+  },
+  {
+   "l": "Radiosender suchen",
+   "where": "Bibliothek › Radiosender suchen",
+   "id": "radiosuche"
   },
   {
    "l": "Auf Spotify suchen",
@@ -5471,6 +5608,31 @@
    "id": "bedienung"
   },
   {
+   "l": "Podcasts",
+   "where": "Display & Bedienung › Bedienung am Display",
+   "id": "bedienung"
+  },
+  {
+   "l": "An der letzten Stelle weiterhören",
+   "where": "Display & Bedienung › Bedienung am Display",
+   "id": "bedienung"
+  },
+  {
+   "l": "Stelle merken für",
+   "where": "Display & Bedienung › Bedienung am Display",
+   "id": "bedienung"
+  },
+  {
+   "l": "Neue Folgen markieren",
+   "where": "Display & Bedienung › Bedienung am Display",
+   "id": "bedienung"
+  },
+  {
+   "l": "Hörstand auf dem Display zeigen",
+   "where": "Display & Bedienung › Bedienung am Display",
+   "id": "bedienung"
+  },
+  {
    "l": "Display live",
    "where": "Display & Bedienung › Display live",
    "id": "displaylive"
@@ -5841,6 +6003,11 @@
    "id": "telegram"
   },
   {
+   "l": "Wochenrückblick",
+   "where": "Dienste › Telegram",
+   "id": "telegram"
+  },
+  {
    "l": "Neuen Token setzen (leer = unverändert)",
    "where": "Dienste › Telegram",
    "id": "telegram"
@@ -6049,6 +6216,56 @@
    "l": "Über die Box",
    "where": "System › Über die Box",
    "id": "ueber"
+  },
+  {
+   "l": "Zustand der Box",
+   "where": "System › Zustand der Box",
+   "id": "zustand"
+  },
+  {
+   "l": "Temperatur",
+   "where": "System › Zustand der Box",
+   "id": "zustand"
+  },
+  {
+   "l": "Unterspannung",
+   "where": "System › Zustand der Box",
+   "id": "zustand"
+  },
+  {
+   "l": "SD-Karte",
+   "where": "System › Zustand der Box",
+   "id": "zustand"
+  },
+  {
+   "l": "Speicherplatz",
+   "where": "System › Zustand der Box",
+   "id": "zustand"
+  },
+  {
+   "l": "Rechtliches",
+   "where": "System › Rechtliches",
+   "id": "rechtliches"
+  },
+  {
+   "l": "Lizenz",
+   "where": "System › Rechtliches",
+   "id": "rechtliches"
+  },
+  {
+   "l": "Datenschutz",
+   "where": "System › Rechtliches",
+   "id": "rechtliches"
+  },
+  {
+   "l": "Drittanbieter-Hinweise",
+   "where": "System › Rechtliches",
+   "id": "rechtliches"
+  },
+  {
+   "l": "Open Source",
+   "where": "System › Rechtliches",
+   "id": "rechtliches"
   },
   {
    "l": "Name der Box",
@@ -6307,6 +6524,16 @@
   },
   {
    "l": "Dienste",
+   "where": "Dienste",
+   "id": "g-dienste"
+  },
+  {
+   "l": "Podcast-Suche",
+   "where": "Dienste",
+   "id": "g-dienste"
+  },
+  {
+   "l": "Radiosender-Suche",
    "where": "Dienste",
    "id": "g-dienste"
   },

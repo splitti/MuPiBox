@@ -96,14 +96,5 @@ if [ -f "/boot/run_once.sh" ]; then
     sudo /tmp/./run_once.sh
 fi
 
-if [ -f "$FIRST_INSTALL" ] && [ ${ONLINESTATE} = "online" ]; then
-	OS="$(grep -E '^(VERSION_CODENAME)=' /etc/os-release)"
-	OS="${OS:17}"
-	ARCH=$(uname -m) 
-	VERSION=$(sudo /usr/bin/jq -r .mupibox.version ${MUPIBOX_CONFIG})
-	CPU=$(cat /proc/cpuinfo | grep Serial | cut -d ":" -f2 | sed 's/^ //')
-	STATE=$(curl -X POST https://mupibox.de/mupi/ct.php -H "Content-Type: application/x-www-form-urlencoded" -d key1=${CPU} -d key2="Image Installation" -d key3="${VERSION}" -d key4="${ARCH}" -d key5="${OS}")
-	if [ "$STATE" = "OK" ]; then
-		rm ${FIRST_INSTALL}
-	fi
-fi
+# (the marker of an image's first start is not needed any more)
+rm -f "${FIRST_INSTALL}"

@@ -7,7 +7,7 @@ import { promises as fsp } from 'node:fs'
 import * as path from 'node:path'
 import type { Request, Router } from 'express'
 import { setCoverHidden } from '../hidden-covers'
-import { type CoverCandidate, fetchCoverImage, searchDeezer, searchItunes } from '../online-covers'
+import { type CoverCandidate, fetchCoverImage, searchDeezer, searchItunes, searchSpotify } from '../online-covers'
 import { requireCsrf, requireSession } from './middleware'
 import type { LocalLibraryDeps } from './upload'
 
@@ -202,18 +202,18 @@ function registerCoverChoiceRoutes(router: Router, deps: ChoiceDeps, address: (n
       res.status(400).json({ error: 'query_too_short' })
       return
     }
-    const [itunes, deezer] = await Promise.allSettled([searchItunes(q, 12, 1000), searchDeezer(q, 12, true)])
-    if (itunes.status === 'rejected' && deezer.status === 'rejected') {
-      console.warn(`${new Date().toLocaleString()}: [cover-search] ${String(itunes.reason)} / ${String(deezer.reason)}`)
+    // (Spotify with the box's login: none without one)
+    const found = await Promise.allSettled([searchItunes(q, 12, 1000), searchDeezer(q, 12, true), searchSpotify(q, 12)])
+    if (found.every((f) => f.status === 'rejected')) {
+      console.warn(`${new Date().toLocaleString()}: [cover-search] ${found.map((f) => String((f as PromiseRejectedResult).reason)).join(' / ')}`)
       res.status(502).json({ error: 'search_failed' })
       return
     }
-    const a = itunes.status === 'fulfilled' ? itunes.value : []
-    const b = deezer.status === 'fulfilled' ? deezer.value : []
+    const lists = found.map((f) => (f.status === 'fulfilled' ? f.value : []))
     const results: CoverCandidate[] = []
     const seen = new Set<string>()
-    for (let i = 0; i < Math.max(a.length, b.length); i++) {
-      for (const c of [a[i], b[i]]) {
+    for (let i = 0; i < Math.max(...lists.map((l) => l.length)); i++) {
+      for (const c of lists.map((l) => l[i])) {
         if (!c) continue
         const key = `${c.title}|${c.artist}`.toLowerCase()
         if (seen.has(key)) continue
@@ -222,7 +222,7 @@ function registerCoverChoiceRoutes(router: Router, deps: ChoiceDeps, address: (n
       }
     }
     res.json({
-      results: results.slice(0, 24).map((c) => ({ source: c.source, title: c.title, artist: c.artist, image: c.imageUrl, thumb: c.thumbUrl })),
+      results: results.slice(0, 36).map((c) => ({ source: c.source, title: c.title, artist: c.artist, image: c.imageUrl, thumb: c.thumbUrl })),
     })
   })
 
@@ -302,7 +302,7 @@ function registerCoverChoiceRoutes(router: Router, deps: ChoiceDeps, address: (n
   })
 }
 
-async function readBody(req: Request, max: number): Promise<Buffer | undefined> {
+export async function readBody(req: Request, max: number): Promise<Buffer | undefined> {
   const chunks: Buffer[] = []
   let size = 0
   try {

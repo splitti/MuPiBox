@@ -18,7 +18,7 @@ import {
 } from '@angular/core'
 import { IonCard, IonCardHeader, IonCardTitle, IonCol, IonGrid, IonIcon, IonRow } from '@ionic/angular/standalone'
 import { addIcons } from 'ionicons'
-import { folder, link, play } from 'ionicons/icons'
+import { checkmark, folder, link, play } from 'ionicons/icons'
 import { Observable } from 'rxjs'
 import Swiper from 'swiper'
 import { environment } from '../../environments/environment'
@@ -42,6 +42,10 @@ export interface SwiperData<T> {
   // as the first entry) - shown as card stack / badge - and whether it is synced from Spotify.
   kind?: 'artist' | 'folder' | 'album' | 'own'
   synced?: boolean
+  // A podcast (episode) with something new: a dot; an episode's progress (percent) and heard to its end: a bar / a tick
+  isNew?: boolean
+  progress?: number
+  done?: boolean
 }
 
 @Component({
@@ -186,7 +190,7 @@ export class SwiperComponent<T> {
     private coverFlip: CoverFlipService,
     http: HttpClient,
   ) {
-    addIcons({ folder, link, play })
+    addIcons({ checkmark, folder, link, play })
     http.get<MupiboxConfig>(`${environment.backend.apiUrl}/config`).subscribe({
       next: (config) => {
         this.coverflow.set(config?.mupibox?.theme === 'coverflow')

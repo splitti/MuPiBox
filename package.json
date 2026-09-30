@@ -21,7 +21,9 @@
     "test:frontend-api": "npm run test --workspace=mupibox-frontend-api",
     "test:frontend-box": "npm run test --workspace=mupibox-frontend-box",
     "lint": "npm run lint --workspaces",
-    "lint:fix": "npm run lint:fix --workspaces"
+    "lint:fix": "npm run lint:fix --workspaces",
+    "notices": "node src/tools/third-party-notices.mjs",
+    "notices:check": "node src/tools/third-party-notices.mjs --check"
   },
   "keywords": [
     "mupi",

@@ -2616,8 +2616,8 @@
       "font": "Fredoka",
       "fontFile": "Fredoka-Variable.ttf",
       "nameFont": {
-        "family": "Shadow of Xizor",
-        "file": "/theme-data/steampunk/akaPosse.ttf",
+        "family": "Rye",
+        "file": "/theme-data/steampunk/Rye-Regular.ttf",
         "size": 25
       },
       "mascot": {
@@ -2663,8 +2663,8 @@
       "font": "Fredoka",
       "fontFile": "Fredoka-Variable.ttf",
       "nameFont": {
-        "family": "New Super Mario Font U",
-        "file": "/theme-data/supermario/NewSuperMarioFontU.ttf",
+        "family": "Titan One",
+        "file": "/theme-data/supermario/TitanOne-Regular.ttf",
         "size": 23
       },
       "mascot": {

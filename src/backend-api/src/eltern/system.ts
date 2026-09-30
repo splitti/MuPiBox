@@ -281,10 +281,9 @@ export function registerSystemRoutes(router: Router, deps: SystemDeps): void {
       }
       const osRelease = (await fsp.readFile('/etc/os-release', 'utf8').catch(() => '')).match(/^PRETTY_NAME=.*$/m)?.[0] ?? ''
       const model = (await fsp.readFile('/sys/firmware/devicetree/base/model', 'utf8').catch(() => '')).replace(/\0/g, '')
-      const lib = await run('librespot', ['--version'], 5000)
       const jq = await run('jq', ['--version'], 5000)
       const version = String((deps.getMupiboxConfig()?.mupibox as Record<string, unknown> | undefined)?.version ?? '')
-      await fsp.writeFile(`${dir}/mupi.info`, [osRelease, model, os.hostname(), os.arch(), `MuPiBox ${version}`, lib.stdout.trim(), jq.stdout.trim()].join('\n'))
+      await fsp.writeFile(`${dir}/mupi.info`, [osRelease, model, os.hostname(), os.arch(), `MuPiBox ${version}`, jq.stdout.trim()].join('\n'))
       const zip = `${dir}.zip`
       const z = await run('sh', ['-c', `cd '${dir}' && zip -q -r '${zip}' .`], 30000)
       if (!z.ok) {
@@ -319,9 +318,15 @@ export function registerSystemRoutes(router: Router, deps: SystemDeps): void {
     res.json({ ok: true })
   })
 
-  /** GET /api/app/logs - the logs and services that can be looked at. */
-  router.get('/logs', requireSession, (_req, res) => {
-    res.json({ logs: Object.keys(LOGS), services: SERVICES })
+  /**
+   * GET /api/app/logs - the logs and services that can be looked at, with the state of each service (states:
+   * {name: active | inactive | failed | activating …}, from one systemctl call; missing when it cannot be read)
+   */
+  router.get('/logs', requireSession, async (_req, res) => {
+    const r = await run('systemctl', ['is-active', ...SERVICES.map((s) => `${s}.service`)], 5000)
+    const lines = r.stdout.split('\n')
+    const states = Object.fromEntries(SERVICES.map((s, i) => [s, (lines[i] ?? '').trim()]).filter(([, st]) => st))
+    res.json({ logs: Object.keys(LOGS), services: SERVICES, states })
   })
 
   /** GET /api/app/logs/view?kind=log|service&key=&grep=&lines= - the end of a log or the state of a service, as text. */

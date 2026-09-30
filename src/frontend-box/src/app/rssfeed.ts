@@ -33,6 +33,10 @@ export interface Item {
   'itunes:duration'?: {
     _text: string
   }
+  // the episode's state, added by the backend (episode-state.ts)
+  _new?: boolean
+  _pct?: number
+  _done?: boolean
   'itunes:image'?: {
     _attributes?: {
       href?: string

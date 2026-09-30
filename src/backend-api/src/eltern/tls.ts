@@ -45,7 +45,7 @@ function later(args: string[]): void {
 export const tlsOf = (cfg: MupiboxConfig | undefined): Tls => ((cfg as { tls?: Tls } | undefined)?.tls ?? {}) as Tls
 
 /** The certificate in use, as the app shows it */
-async function certInfo() {
+export async function certInfo() {
   const r = await run(['cert'], 15000)
   if (!r.ok || !r.stdout.includes('BEGIN CERTIFICATE')) return null
   try {

@@ -36,6 +36,9 @@ import type { RunSyncDeps } from './spotify-sync/state-machine'
 import { buildElternLandingHandler, createElternApiRouter } from './eltern/routes'
 import { startSpotifyLoginWatch } from './eltern/spotify-auth-age'
 import { startTlsWatch } from './eltern/tls'
+import { startWeeklySummary } from './eltern/weekly-summary'
+import { startNightDim } from './eltern/night-dim'
+import { startSpeech } from './speech'
 import { startBucketCleanup, parseCookie } from './eltern/middleware'
 import { SESSION_COOKIE, validateSession } from './eltern/auth'
 import { type IncomingMessage, request as httpRequest } from 'node:http'
@@ -45,6 +48,10 @@ import { readEmbeddedPicture } from './embedded-cover'
 import { acquireLock, releaseLock, staleReason } from './file-lock'
 import { coverHidden } from './hidden-covers'
 import { OnlineCovers } from './online-covers'
+import { ardFeed, isArdFeed } from './ard-sounds'
+import { episodeKey, MAX_KEEP, type OfflineEpisode, PodcastOffline } from './podcast-offline'
+import { setFeedHeadReader } from './podcast-search'
+import { EpisodeState, episodeStateSettings } from './episode-state'
 import { browserGuard, corsOptionsFor, isAllowedHost, isLoopback, localOnly, localOrElternSession, PROXY_PORT, setConfiguredHosts, viaProxy } from './request-guard'
 
 // Force IPv4 for DNS lookups to avoid EAI_AGAIN errors on Raspberry Pi
@@ -212,6 +219,7 @@ const resumeLock = '/tmp/.resume.lock'
 // RSS feed cache: persisted on disk (not /tmp) so cached podcast covers and feed
 // data survive a reboot.
 const rssCacheDataDir = `${configBasePath}/rss-cache`
+const podcastOfflineDir = '/home/dietpi/MuPiBox/podcasts'
 // The folder of this file: __dirname in the bundle (esbuild, CommonJS); run directly as an ES module (the tests, via
 // tsx) there is no __dirname, and the tests failed before the first one ran.
 const serverDir = typeof __dirname !== 'undefined' ? __dirname : path.dirname(fileURLToPath(import.meta.url))
@@ -597,7 +605,27 @@ async function fetchRemote(
   raw: string,
   opts: { maxBytes: number; timeoutMs: number; contentType?: RegExp },
 ): Promise<{ body: Buffer; contentType: string }> {
-  const signal = AbortSignal.timeout(opts.timeoutMs)
+  const response = await openRemote(raw, AbortSignal.timeout(opts.timeoutMs))
+  const contentType = response.headers.get('content-type') ?? ''
+  if (opts.contentType && contentType && !opts.contentType.test(contentType)) {
+    await response.body?.cancel()
+    throw new RemoteFetchError(`unsupported content-type: ${contentType}`, 415)
+  }
+  const advertised = Number.parseInt(response.headers.get('content-length') ?? '0', 10)
+  if (advertised > opts.maxBytes) {
+    await response.body?.cancel()
+    throw new RemoteFetchError(`response advertises ${advertised} bytes, cap is ${opts.maxBytes}`, 413)
+  }
+  try {
+    return { body: await readBodyCapped(response, opts.maxBytes), contentType }
+  } catch (error) {
+    throw new RemoteFetchError(String(error), 413)
+  }
+}
+
+// The checked GET of fetchRemote without reading the body: the answer (2xx) of the last hop, for a caller that
+// streams it (the podcast downloads, see podcast-offline.ts)
+async function openRemote(raw: string, signal: AbortSignal): Promise<Response> {
   let current = raw
   for (let hop = 0; hop <= 5; hop++) {
     const checked = checkRemoteUrl(current)
@@ -623,21 +651,7 @@ async function fetchRemote(
       await response.body?.cancel()
       throw new RemoteFetchError(`remote answered ${response.status}`, 502)
     }
-    const contentType = response.headers.get('content-type') ?? ''
-    if (opts.contentType && contentType && !opts.contentType.test(contentType)) {
-      await response.body?.cancel()
-      throw new RemoteFetchError(`unsupported content-type: ${contentType}`, 415)
-    }
-    const advertised = Number.parseInt(response.headers.get('content-length') ?? '0', 10)
-    if (advertised > opts.maxBytes) {
-      await response.body?.cancel()
-      throw new RemoteFetchError(`response advertises ${advertised} bytes, cap is ${opts.maxBytes}`, 413)
-    }
-    try {
-      return { body: await readBodyCapped(response, opts.maxBytes), contentType }
-    } catch (error) {
-      throw new RemoteFetchError(String(error), 413)
-    }
+    return response
   }
   throw new RemoteFetchError('too many redirects', 502)
 }
@@ -669,7 +683,7 @@ app.get('/api/rssfeed', async (req, res) => {
   // a player command).
   try {
     const { body } = await fetchRemote(rssUrl, {
-      maxBytes: 5_000_000,
+      maxBytes: RSS_MAX_BYTES,
       timeoutMs: 10000,
       contentType: /xml|rss|atom|text\/plain|octet-stream/i,
     })
@@ -770,11 +784,13 @@ function parseRssFeedFast(xml: string): any | undefined {
     const guid = rssTagText(block, 'guid')
     const enclosureUrl = rssTagAttribute(block, 'enclosure', 'url')
     const imageUrl = rssTagAttribute(block, 'itunes:image', 'href')
+    const duration = rssTagText(block, 'itunes:duration')
     if (title) item.title = title
     if (pubDate) item.pubDate = pubDate
     if (guid) item.guid = guid
     if (enclosureUrl) item.enclosure = { _attributes: { url: enclosureUrl } }
     if (imageUrl) item['itunes:image'] = { _attributes: { href: imageUrl } }
+    if (duration) item['itunes:duration'] = duration
     return item
   })
   if (items.length === 0) {
@@ -785,7 +801,7 @@ function parseRssFeedFast(xml: string): any | undefined {
   const coverUrl = channelImage ? extractRssText(channelImage) : rssTagAttribute(head, 'itunes:image', 'href')
   const title = rssTagText(head.replace(/<image>[\s\S]*?<\/image>/, ''), 'title')
   return {
-    _slim: true,
+    _slim: RSS_SLIM_VERSION,
     rss: { channel: { title: title ?? { _text: '' }, image: { url: { _text: coverUrl ?? '' } }, item: items } },
   }
 }
@@ -828,6 +844,14 @@ async function downloadRssCover(coverUrl: string, cacheKey: string): Promise<str
 // below (self-healing - nothing bad gets cached, so the next visit tries again),
 // but no single feed can ever stall a response past this.
 const rssFetchTimeoutMs = 5000
+// Long-running podcasts with thousands of episodes and long show notes are more than the 5 MB this was (their list
+// stayed empty); the text is only read for a few tags (parseRssFeedFast), so a large one costs little. Such a feed may
+// need longer than rssFetchTimeoutMs: the fetch goes on in the background then (see /api/rssfeed/cached).
+const RSS_MAX_BYTES = 25_000_000
+const rssRefreshTimeoutMs = 30_000
+// Version of the cached shape: a cache written by an older one is rewritten at the next refresh (2: with durations)
+// (3: ARD episodes carry their download release and end date - older caches are written again)
+const RSS_SLIM_VERSION = 3
 
 // Long podcasts are several MB of XML, and parsing that completely (xml-js) blocks the whole
 // backend for many seconds on the Pi. The kiosk only needs the <title>, <enclosure>,
@@ -854,7 +878,19 @@ function emptyRssFeed(): any {
  * Returns the feed that should be served (freshly fetched one, or the untouched
  * previous cache if nothing changed).
  */
-async function refreshRssCache(rssUrl: string, cacheKey: string): Promise<any> {
+// One fetch per feed at a time: the display, the app, the offline sync and the warm-up asking for the same feed
+// (with no cache yet) share it instead of each downloading and writing it
+const rssRefreshRuns = new Map<string, Promise<any>>()
+function refreshRssCache(rssUrl: string, cacheKey: string): Promise<any> {
+  let running = rssRefreshRuns.get(cacheKey)
+  if (!running) {
+    running = refreshRssCacheNow(rssUrl, cacheKey).finally(() => rssRefreshRuns.delete(cacheKey))
+    rssRefreshRuns.set(cacheKey, running)
+  }
+  return running
+}
+
+async function refreshRssCacheNow(rssUrl: string, cacheKey: string): Promise<any> {
   const cacheFile = rssCacheFilePath(cacheKey)
   let previousFeed: any = null
   if (fs.existsSync(cacheFile)) {
@@ -865,22 +901,28 @@ async function refreshRssCache(rssUrl: string, cacheKey: string): Promise<any> {
     }
   }
 
-  // Checked on every hop and capped while streaming (this path had no URL check at all, see fetchRemote)
-  const xml = (await fetchRemote(rssUrl, { maxBytes: 5_000_000, timeoutMs: rssFetchTimeoutMs })).body.toString('utf8')
-  const feed =
-    parseRssFeedFast(xml) ??
-    JSON.parse(
-      xmlparser.xml2json(
-        xml.replace(/<(description|content:encoded|itunes:summary|itunes:subtitle)(\s[^>]*)?>[\s\S]*?<\/\1>/g, ''),
-        { compact: true, nativeType: true },
-      ),
-    )
+  // A show of ARD Sounds ("ard:<id>", see ard-sounds.ts): its episodes from the ARD, in the shape of a feed
+  let feed: any
+  if (isArdFeed(rssUrl)) {
+    feed = await ardFeed(rssUrl)
+  } else {
+    // Checked on every hop and capped while streaming (this path had no URL check at all, see fetchRemote)
+    const xml = (await fetchRemote(rssUrl, { maxBytes: RSS_MAX_BYTES, timeoutMs: rssRefreshTimeoutMs })).body.toString('utf8')
+    feed =
+      parseRssFeedFast(xml) ??
+      JSON.parse(
+        xmlparser.xml2json(
+          xml.replace(/<(description|content:encoded|itunes:summary|itunes:subtitle)(\s[^>]*)?>[\s\S]*?<\/\1>/g, ''),
+          { compact: true, nativeType: true },
+        ),
+      )
+  }
 
   const hasNewEpisode = latestEpisodeFingerprint(feed) !== latestEpisodeFingerprint(previousFeed)
   const previousCoverUrl = extractRssText(previousFeed?.rss?.channel?.image?.url)
   const coverMissing = rssCoverFileMissing(previousCoverUrl)
   // A cache written by an older version holds every tag of the feed; rewrite it slim.
-  const previousIsSlim = previousFeed?._slim === true
+  const previousIsSlim = previousFeed?._slim === RSS_SLIM_VERSION
 
   if (previousFeed && !hasNewEpisode && !coverMissing && previousIsSlim) {
     // Nothing changed and the cached cover file is still there - keep serving as-is.
@@ -940,6 +982,148 @@ async function warmConfiguredPodcasts(): Promise<void> {
 }
 setTimeout(() => void warmConfiguredPodcasts(), 60 * 1000).unref()
 
+// --------------------------------------------
+// Podcast episodes on the SD card (podcast-offline.ts)
+// --------------------------------------------
+
+// The episodes of a podcast, newest first, from its cached feed (fetched when there is none yet)
+async function feedEpisodes(feed: string): Promise<OfflineEpisode[] | null> {
+  const key = rssCacheKeyFor(feed)
+  let parsed: any
+  try {
+    parsed = JSON.parse(await readFile(rssCacheFilePath(key), 'utf8'))
+  } catch {
+    parsed = await refreshRssCache(feed, key).catch(() => null)
+  }
+  const raw = parsed?.rss?.channel?.item
+  if (!raw) return null
+  const items = (Array.isArray(raw) ? raw : [raw]) as any[]
+  const ard = isArdFeed(feed)
+  return items
+    .map((it, i) => {
+      const when = Date.parse(extractRssText(it.pubDate) ?? '')
+      const until = typeof it._until === 'string' ? Date.parse(it._until) : Number.NaN
+      return {
+        url: it.enclosure?._attributes?.url,
+        title: extractRssText(it.title) ?? 'Episode',
+        // An ARD episode: only with the ARD's own download release (ard-sounds.ts ardFeed) - none, also in a cache of
+        // before it was noted, is streaming only. A podcast feed's episode: its own address (undefined).
+        ...(ard ? { download: typeof it._download === 'string' ? it._download : null } : {}),
+        ...(Number.isFinite(until) ? { until } : {}),
+        at: Number.isFinite(when) ? when : -i,
+      }
+    })
+    .filter((e): e is typeof e & { url: string } => typeof e.url === 'string' && /^https?:\/\//.test(e.url))
+    .sort((a, b) => b.at - a.at)
+    .map(({ at: _at, ...e }) => e)
+}
+
+// The first 16 KB of a feed (its <language> stands at the top), for the podcast search's language filter
+setFeedHeadReader(async (url) => {
+  const response = await openRemote(url, AbortSignal.timeout(5000))
+  const reader = response.body?.getReader()
+  if (!reader) return ''
+  const chunks: Uint8Array[] = []
+  let size = 0
+  try {
+    while (size < 16_384) {
+      const { done, value } = await reader.read()
+      if (done || !value) break
+      chunks.push(value)
+      size += value.length
+    }
+  } finally {
+    await reader.cancel().catch(() => undefined)
+  }
+  return Buffer.concat(chunks).toString('utf8')
+})
+
+const podcastOffline = new PodcastOffline({
+  dir: podcastOfflineDir,
+  openRemote,
+  episodes: feedEpisodes,
+  feeds: async () => {
+    try {
+      const data = JSON.parse(await readFile(dataFile, 'utf8')) as { type?: string; id?: unknown; offline?: unknown }[]
+      return data
+        .filter((e) => e.type === 'rss' && typeof e.id === 'string')
+        .map((e) => ({ feed: e.id as string, keep: Math.max(0, Math.min(MAX_KEEP, Number(e.offline) || 0)) }))
+    } catch {
+      // (not readable right now - being written, or broken: the sync leaves the files alone)
+      return null
+    }
+  },
+  changed: () => undefined,
+})
+podcastOffline.start()
+
+// Whether the box has no internet right now (network.json, written every minute by get_network.sh)
+let offlineCheck = { at: 0, offline: false }
+function boxOffline(): boolean {
+  if (Date.now() - offlineCheck.at < 10_000) return offlineCheck.offline
+  let offline = false
+  try {
+    offline = (JSON.parse(fs.readFileSync(networkFile, 'utf8')) as { onlinestate?: string }).onlinestate === 'offline'
+  } catch {
+    offline = false
+  }
+  offlineCheck = { at: Date.now(), offline }
+  return offline
+}
+
+// Without internet a podcast with episodes on the card shows those only (the others cannot play); null: as it is
+async function offlineFeedView(feed: string, cached: Buffer): Promise<unknown | null> {
+  if (!boxOffline()) return null
+  const files = await podcastOffline.list(feed)
+  if (Object.keys(files).length === 0) return null
+  const parsed = JSON.parse(cached.toString('utf8'))
+  const raw = parsed?.rss?.channel?.item
+  const items = (Array.isArray(raw) ? raw : raw ? [raw] : []) as any[]
+  parsed.rss.channel.item = items.filter((it) => files[episodeKey(String(it?.enclosure?._attributes?.url ?? ''))])
+  return parsed
+}
+
+// The length of an episode as its feed gives it (itunes:duration), for the player: mplayer only estimates the length
+// of an MP3 with a changing bitrate, and an episode counted as heard too early, or a broken connection was not seen as
+// one. From the cached feeds, looked through at most every 10 minutes.
+let feedDurations: { at: number; byKey: Map<string, number> } | null = null
+function durationSeconds(text: string | undefined): number {
+  if (!text) return 0
+  const parts = text.trim().split(':').map(Number)
+  if (parts.some((n) => !Number.isFinite(n))) return 0
+  return parts.reduce((sum, n) => sum * 60 + n, 0)
+}
+app.get('/api/rssfeed/episode-duration', async (req, res) => {
+  const url = typeof req.query.url === 'string' ? req.query.url : ''
+  if (!url) {
+    res.status(400).json({ error: 'url missing' })
+    return
+  }
+  if (!feedDurations || Date.now() - feedDurations.at > 10 * 60 * 1000) {
+    const byKey = new Map<string, number>()
+    for (const name of await readdir(rssCacheDataDir).catch(() => [] as string[])) {
+      if (!name.endsWith('.json')) continue
+      try {
+        const raw = JSON.parse(await readFile(path.join(rssCacheDataDir, name), 'utf8'))?.rss?.channel?.item
+        for (const it of (Array.isArray(raw) ? raw : raw ? [raw] : []) as any[]) {
+          const u = it?.enclosure?._attributes?.url
+          const seconds = durationSeconds(extractRssText(it?.['itunes:duration']))
+          if (typeof u === 'string' && seconds > 0) byKey.set(episodeKey(u), seconds)
+        }
+      } catch {
+        // a cache file being written: next time
+      }
+    }
+    feedDurations = { at: Date.now(), byKey }
+  }
+  res.json({ seconds: feedDurations.byKey.get(episodeKey(url)) ?? 0 })
+})
+
+// "New" and how far heard at a podcast's episodes (episode-state.ts)
+const episodeState = new EpisodeState(configBasePath, () =>
+  episodeStateSettings(getMupiboxConfigSync()?.mupibox as Record<string, unknown> | undefined),
+)
+
 app.get('/api/rssfeed/cached', async (req, res) => {
   const rssUrl = req.query.url
   if (typeof rssUrl !== 'string') {
@@ -952,9 +1136,10 @@ app.get('/api/rssfeed/cached', async (req, res) => {
 
   if (fs.existsSync(cacheFile)) {
     try {
-      // The cache file already is the JSON answer - send it as it is (no parse / stringify).
+      // (with each episode's state for the display: new, how far heard - see episode-state.ts)
       const cached = await readFile(cacheFile)
-      res.type('application/json').send(cached)
+      const offlineView = await offlineFeedView(rssUrl, cached)
+      res.json(episodeState.annotateFeed(rssUrl, offlineView ?? JSON.parse(cached.toString('utf8'))))
       // Refresh in the background for next time; don't make the caller wait for it.
       const due = Date.now() - (rssLastRefresh.get(cacheKey) ?? 0) > rssRefreshIntervalMs
       if (due && !rssRefreshing.has(cacheKey)) {
@@ -973,10 +1158,15 @@ app.get('/api/rssfeed/cached', async (req, res) => {
     }
   }
 
-  // No usable cache yet - fetch synchronously so there is something to show.
+  // No usable cache yet - fetch synchronously so there is something to show. A large or slow feed that takes
+  // longer than rssFetchTimeoutMs goes on in the background and is there at the next visit (it never came before:
+  // every visit gave up after the same 5 s).
   try {
-    const feed = await refreshRssCache(rssUrl, cacheKey)
-    res.json(feed)
+    const refresh = refreshRssCache(rssUrl, cacheKey)
+    refresh.catch(() => undefined)
+    const feed = await Promise.race([refresh, new Promise((resolve) => setTimeout(() => resolve(null), rssFetchTimeoutMs))])
+    // (a copy: the feed object is the cache's, written again when its cover arrives)
+    res.json(feed ? episodeState.annotateFeed(rssUrl, JSON.parse(JSON.stringify(feed))) : emptyRssFeed())
   } catch (error) {
     console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] RSS fetch failed: ${error}`)
     // Respond with a valid-but-empty feed rather than an HTTP error: the frontend
@@ -1746,7 +1936,7 @@ let lastPlayStartTs: number | null = null
 let lastPlayMeta: { source: string; title: string; artist: string; album: string } | null = null
 
 async function fetchCurrentPlayerState(): Promise<
-  { fingerprint: string | null; meta: typeof lastPlayMeta } | null
+  { fingerprint: string | null; meta: typeof lastPlayMeta; player?: string } | null
 > {
   try {
     const localRes = await fetch(`${PLAYER_HOST}/local`, { signal: AbortSignal.timeout(4000) })
@@ -1784,7 +1974,7 @@ async function fetchCurrentPlayerState(): Promise<
     }
     if (!title) return { fingerprint: null, meta: null }
     const fingerprint = `${source}|${artist}|${album}|${title}`
-    return { fingerprint, meta: { source, title, artist, album } }
+    return { fingerprint, meta: { source, title, artist, album }, player }
   } catch {
     return null
   }
@@ -1890,7 +2080,22 @@ async function tickPlayLog(): Promise<void> {
     lastPlayStartTs = now
     lastPlayMeta = state.meta
     lastPlaySeenTs = now
+    if (state.player === 'spotify') notifySpotifyTrack()
   }
+}
+
+// A new Spotify track in Telegram ("Wiedergabe melden"): the display's player (Web Playback SDK) plays Spotify and
+// sends no events of its own - the message came from librespot's onevent hook before, i.e. only for playback
+// through librespot. Sent from here now, where the history notices the track; the script checks the setting too.
+function notifySpotifyTrack(): void {
+  const tg = (getMupiboxConfigSync()?.telegram as Record<string, unknown> | undefined) ?? {}
+  if (tg.active !== true || tg.notifyPlayback !== true) return
+  execFile(
+    '/usr/bin/python3',
+    ['/usr/local/bin/mupibox/telegram_Track_Spotify.py'],
+    { env: { ...process.env, PLAYER_EVENT: 'playing', POSITION_MS: '0' }, timeout: 60_000 },
+    () => undefined,
+  )
 }
 
 function startPlayLogPoller(): void {
@@ -3188,10 +3393,11 @@ function writeJsonAtomic(file: string, data: unknown, callback: (error: Error | 
 // up duplicates. Mirror the resolution order frontend uses to dispatch
 // playback (playlistid/showid/audiobookid/id), and fall back to artist::title
 // as a last resort.
+// (a podcast episode by its key: an address that changes with every fetch of the feed gave a second tile for it)
 const resumeKeyOf = (m: { type?: string; id?: string; playlistid?: string; showid?: string; audiobookid?: string; artist?: string; title?: string }) =>
   [
     m?.type || '',
-    m?.playlistid || m?.showid || m?.audiobookid || m?.id || `${m?.artist || ''}::${m?.title || ''}`,
+    m?.playlistid || m?.showid || m?.audiobookid || (m?.type === 'rss' && m?.id ? episodeKey(m.id) : m?.id) || `${m?.artist || ''}::${m?.title || ''}`,
   ].join('|')
 
 // AR5-18: when mplayer fires playlist-finish, backend-player POSTs
@@ -7804,6 +8010,7 @@ app.use(
       (await trackCover(file).catch(() => undefined)) ? `/api/track-cover?file=${encodeURIComponent(file)}` : null,
     nasCover: writeNasCover,
     nasSelected: nasPathSelected,
+    podcastOffline,
     localLibrary: {
       root: libraryRoot,
       categories: libraryCategories,
@@ -7953,6 +8160,11 @@ if (!testServe) {
   // The Spotify login's 6 months: reminders before the end, a message when Spotify refused it (eltern/spotify-auth-age.ts)
   startSpotifyLoginWatch({ getMupiboxConfig: getMupiboxConfigSync, updateMupiboxConfig })
   startTlsWatch({ getMupiboxConfig: getMupiboxConfigSync, updateMupiboxConfig })
+  startWeeklySummary({ getMupiboxConfig: getMupiboxConfigSync, updateMupiboxConfig, currentPlayLogStart })
+  // "Abends dunkler": the display's brightness in the evening (eltern/night-dim.ts)
+  startNightDim(getMupiboxConfigSync)
+  // the automatic announcements (speech.ts)
+  startSpeech(getMupiboxConfigSync)
   setConfiguredHosts(() => {
     const linkHost = (getMupiboxConfigSync()?.tls as { linkHost?: unknown } | undefined)?.linkHost
     return typeof linkHost === 'string' && linkHost !== '' ? [linkHost.toLowerCase()] : []

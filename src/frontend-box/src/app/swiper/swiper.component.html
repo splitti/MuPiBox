@@ -7,8 +7,16 @@
           <ion-grid>
             <ion-row class="img-row">
               <ion-col size="12">
-                <ion-card>
+                <ion-card class="ep-anchor">
                   <img draggable="false" ondragstart="return false;" [attr.data-src]="currentData.imgSrc | async">
+                  @if (currentData.isNew) {
+                    <span class="ep-new" aria-hidden="true"></span>
+                  }
+                  @if (currentData.done) {
+                    <span class="ep-done" aria-hidden="true"><ion-icon name="checkmark"></ion-icon></span>
+                  } @else if (currentData.progress) {
+                    <span class="ep-progress" aria-hidden="true"><i [style.width.%]="currentData.progress"></i></span>
+                  }
                 </ion-card>
               </ion-col>
             </ion-row>
@@ -33,7 +41,7 @@
             @if (it.data.kind === 'folder') {
               <span class="km-stack"></span><span class="km-stack"></span>
             }
-            <div class="km-stage-card" [class.km-round]="roundImages()">
+            <div class="km-stage-card ep-anchor" [class.km-round]="roundImages()">
               @if (coverMissing(it.data.name, src)) {
                 <img class="km-placeholder" draggable="false" [src]="kmCoverPlaceholder()" alt="">
               } @else {
@@ -42,6 +50,14 @@
               @if (it.data.kind === 'own') {
                 <span class="km-own-label">{{ displayTexts.text('ownFilesLabel') }}</span>
               }
+                  @if (it.data.isNew) {
+                    <span class="ep-new" aria-hidden="true"></span>
+                  }
+                  @if (it.data.done) {
+                    <span class="ep-done" aria-hidden="true"><ion-icon name="checkmark"></ion-icon></span>
+                  } @else if (it.data.progress) {
+                    <span class="ep-progress" aria-hidden="true"><i [style.width.%]="it.data.progress"></i></span>
+                  }
             </div>
             @if (it.data.kind === 'folder') {
               <span class="km-badge"><ion-icon name="folder"></ion-icon></span>
@@ -71,7 +87,7 @@
           <ion-grid>
             <ion-row class="img-row">
               <ion-col size="12">
-                <ion-card [class.circle-card]="roundImages()" [class.km-folder]="km() && currentData.kind === 'folder'" [class.km-own]="km() && currentData.kind === 'own'" (click)="this.elementClicked.emit(currentData)">
+                <ion-card class="ep-anchor" [class.circle-card]="roundImages()" [class.km-folder]="km() && currentData.kind === 'folder'" [class.km-own]="km() && currentData.kind === 'own'" (click)="this.elementClicked.emit(currentData)">
                   @if (km()) {
                     <!-- km themes: folder = card stack + badge, the folder's own titles, Spotify sync, missing cover = mascot -->
                     @let src = currentData.imgSrc | async;
@@ -95,6 +111,14 @@
                     }
                   } @else {
                     <img draggable="false" ondragstart="return false;" loading="lazy" src="{{currentData.imgSrc | async}}">
+                  }
+                  @if (currentData.isNew) {
+                    <span class="ep-new" aria-hidden="true"></span>
+                  }
+                  @if (currentData.done) {
+                    <span class="ep-done" aria-hidden="true"><ion-icon name="checkmark"></ion-icon></span>
+                  } @else if (currentData.progress) {
+                    <span class="ep-progress" aria-hidden="true"><i [style.width.%]="currentData.progress"></i></span>
                   }
                 </ion-card>
               </ion-col>

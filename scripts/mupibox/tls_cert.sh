@@ -94,6 +94,29 @@ current_names() {
 	openssl x509 -in "${BOX_CRT}" -noout -ext subjectAltName 2>/dev/null | tail -n +2 | tr ',' '\n' | sed 's/^ *//' | sed '/^$/d' | sort -u | paste -sd, -
 }
 
+# Whether the certificate holds every name the box has now. A name it holds that the box does not have now (no network
+# yet at the start, or none at all) is no reason for a new one: at every start, before the WiFi had its address, a
+# certificate without it was made - https:// by the address warned until the check at night made it again.
+holds_all() {
+	local have=",$(current_names)," name
+	while IFS= read -r name; do
+		[ -z "${name}" ] && continue
+		case "${have}" in *",${name},"*) ;; *) return 1 ;; esac
+	done <<<"$(echo "$1" | tr ',' '\n')"
+	return 0
+}
+
+# At the start the network may not have its address yet (network-online.target does not wait for it here): up to 45 s
+# for a private IPv4 address from the network (not 127.x, not the fallback 169.254.x), else the names as they are
+wait_for_address() {
+	local i
+	for i in $(seq 1 45); do
+		wanted_names | tr ',' '\n' | grep '^IP Address:' | grep -v -e '^IP Address:127\.' -e '^IP Address:169\.254\.' -q && return 0
+		sleep 1
+	done
+	return 0
+}
+
 make_ca() {
 	local host
 	host=$(hostname)
@@ -138,10 +161,12 @@ ensure() {
 		rm -f "${BOX_CRT}"
 	fi
 	local names
+	wait_for_address
 	names=$(wanted_names)
-	# made again when missing, not from this authority, running out within 60 days or naming other addresses
+	# made again when missing, not from this authority, running out within 60 days or missing an address the box has
+	# now (see holds_all)
 	if [ ! -s "${BOX_CRT}" ] || ! openssl verify -CAfile "${CA_CRT}" "${BOX_CRT}" >/dev/null 2>&1 ||
-		! openssl x509 -in "${BOX_CRT}" -noout -checkend 5184000 >/dev/null 2>&1 || [ "$(current_names)" != "${names}" ]; then
+		! openssl x509 -in "${BOX_CRT}" -noout -checkend 5184000 >/dev/null 2>&1 || ! holds_all "${names}"; then
 		make_box_cert "${names}" || {
 			echo "tls_cert.sh: could not make the certificate" >&2
 			return 1

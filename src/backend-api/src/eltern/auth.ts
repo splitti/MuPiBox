@@ -57,6 +57,10 @@ interface Session {
   pw?: string
   /** Given without a password while "Anmeldung verlangen" was off: ends once it is switched on. */
   anon?: boolean
+  /** The device as its browser names itself ("iPhone · Safari"), for the list of signed-in devices. */
+  device?: string
+  /** How it began when not with the password: the magic link's source ('telegram', 'settings-qr'). */
+  via?: string
 }
 
 type MagicLinkMap = Record<string, MagicLink>
@@ -226,7 +230,7 @@ export function generateMagicLink(source: string): { token: string; expiresIn: n
  * Issue a fresh session + csrf token. Used by every authentication path
  * (magic-link, password login, …) — keeps session creation in one place.
  */
-export function issueSession(ip: string, persistent = false, anon = false): { sessionId: string; csrf: string } {
+export function issueSession(ip: string, persistent = false, anon = false, extra: { device?: string; via?: string } = {}): { sessionId: string; csrf: string } {
   const sessions = loadSessions()
   const sessionId = randomBytes(TOKEN_BYTES).toString('hex')
   const csrf = randomBytes(TOKEN_BYTES).toString('hex')
@@ -239,6 +243,8 @@ export function issueSession(ip: string, persistent = false, anon = false): { se
     pw: passwordStamp(),
     ...(persistent ? { persistent: true } : {}),
     ...(anon ? { anon: true } : {}),
+    ...(extra.device ? { device: extra.device } : {}),
+    ...(extra.via ? { via: extra.via } : {}),
   }
   sessionsCache = sessions
   if (persistent) purgeExpiredSessions() // (the oldest kept one goes when there are too many)
@@ -260,14 +266,14 @@ export function restampSession(sessionId: string | undefined): void {
  * returns null. Defensive against missing entries, expired entries,
  * and already-used entries.
  */
-export function redeemMagicLink(token: string, ip: string): { sessionId: string; csrf: string } | null {
+export function redeemMagicLink(token: string, ip: string, device?: string): { sessionId: string; csrf: string } | null {
   purgeExpiredMagicLinks()
   const links = loadMagicLinks()
   const entry = ownEntry(links, token)
   if (!entry || entry.used) return null
   entry.used = true
   saveMagicLinks()
-  return issueSession(ip)
+  return issueSession(ip, false, false, { device, via: entry.source })
 }
 
 /** Validate a session cookie, touch lastSeen. Returns the session or null. */
@@ -313,6 +319,70 @@ export function destroyOtherSessions(sessionId: string | undefined): number {
 export function keptSessionCount(): number {
   purgeExpiredSessions()
   return Object.values(loadSessions()).filter((s) => s.persistent).length
+}
+
+/** The device of a browser, short: "iPhone · Safari", "Windows · Chrome" ('' when it says nothing usable). */
+export function describeDevice(ua: unknown): string {
+  if (typeof ua !== 'string' || !ua) return ''
+  const os = /iPad/.test(ua)
+    ? 'iPad'
+    : /iPhone|iPod/.test(ua)
+      ? 'iPhone'
+      : /Android/.test(ua)
+        ? 'Android'
+        : /Windows/.test(ua)
+          ? 'Windows'
+          : /Macintosh|Mac OS X/.test(ua)
+            ? 'Mac'
+            : /CrOS/.test(ua)
+              ? 'ChromeOS'
+              : /Linux/.test(ua)
+                ? 'Linux'
+                : ''
+  const browser = /Edg\//.test(ua)
+    ? 'Edge'
+    : /OPR\/|Opera/.test(ua)
+      ? 'Opera'
+      : /Firefox\/|FxiOS/.test(ua)
+        ? 'Firefox'
+        : /SamsungBrowser/.test(ua)
+          ? 'Samsung Internet'
+          : /Chrome\/|CriOS/.test(ua)
+            ? 'Chrome'
+            : /Safari\//.test(ua)
+              ? 'Safari'
+              : ''
+  return [os, browser].filter(Boolean).join(' · ')
+}
+
+// A session's name in the list of devices: not its id (that is the cookie itself)
+const sessionRef = (id: string): string => createHash('sha256').update(id).digest('hex').slice(0, 16)
+
+/** The signed-in devices, the one asking marked; the last used first. */
+export function listSessions(sessionId: string | undefined): { id: string; device: string; lastSeen: string; kept: boolean; current: boolean }[] {
+  purgeExpiredSessions()
+  return Object.entries(loadSessions())
+    .map(([id, e]) => ({ id: sessionRef(id), device: e.device ?? '', lastSeen: e.lastSeen, kept: e.persistent === true, current: id === sessionId }))
+    .sort((a, b) => Number(b.current) - Number(a.current) || b.lastSeen.localeCompare(a.lastSeen))
+}
+
+/** Signs one other device out (by its name in the list); false when there is none such, or it is the one asking. */
+export function destroySessionByRef(ref: string, sessionId: string | undefined): boolean {
+  const sessions = loadSessions()
+  const id = Object.keys(sessions).find((k) => sessionRef(k) === ref)
+  if (!id || id === sessionId) return false
+  delete sessions[id]
+  saveSessions()
+  return true
+}
+
+// Signed in with the QR code of the display or the Telegram bot's link: that proves being at the box or in an
+// allowed chat - for a while a new password may be set without the old one ("Passwort vergessen?")
+const RESET_SOURCES = new Set(['telegram', 'settings-qr'])
+export const PASSWORD_RESET_MS = 10 * 60 * 1000
+export function mayResetPassword(sessionId: string | undefined): boolean {
+  const entry = ownEntry(loadSessions(), sessionId)
+  return !!entry && RESET_SOURCES.has(entry.via ?? '') && Date.now() - Date.parse(entry.issued) < PASSWORD_RESET_MS
 }
 
 /** Drop a session — for explicit logout. */

@@ -79,7 +79,9 @@ async function boot() {
     setTimeout(() => toast(back.has('spotify_connected') ? 'Mit Spotify verbunden' : `Spotify-Anmeldung fehlgeschlagen (${back.get('spotify_error')})`, back.has('spotify_connected') ? 'ok' : 'info'), 300)
   }
   loadBoxName()
-  window.addEventListener('hashchange', route)
+  // (back and forward: popstate; an address typed or a link with #/…: hashchange)
+  window.addEventListener('popstate', routeIfMoved)
+  window.addEventListener('hashchange', routeIfMoved)
   refreshOnReturn()
   route()
 }
@@ -138,8 +140,10 @@ function currentPage() {
 function go(id) {
   // (an address outside the app, e.g. "Erweiterte Einstellungen": whoever wired the click)
   if (String(id).startsWith('ext:')) return openExternal(id.slice(4))
-  if (location.hash !== hashOf(id)) location.hash = hashOf(id)
-  else route()
+  // (the address by pushState, then drawn: setting location.hash made the app on the iPhone's home screen load itself
+  // again after every change of page - "Verbinde mit der Box …" - while Safari and Chrome only fired hashchange)
+  if (location.hash !== hashOf(id)) history.pushState(null, '', hashOf(id))
+  route()
 }
 function areaOf(page) {
   let p = page
@@ -183,11 +187,18 @@ function backTarget(page) {
   return trail.length >= 2 && trail.at(-1) === page.id ? trail.at(-2) : page.parent || 'start'
 }
 
+// The address drawn last: a step back fires popstate and hashchange - drawn once
+let routedHash = null
+function routeIfMoved() {
+  if (location.hash !== routedHash) route()
+}
+
 function route() {
   const page = currentPage()
   noteTrail(page)
   // an old or unknown address: the page's own one in the address bar (no extra step back)
   if (location.hash && location.hash !== hashOf(page.id)) history.replaceState(null, '', hashOf(page.id))
+  routedHash = location.hash
   stopPageTimers()
   closeSheet() // (a sheet belongs to the page it was opened on)
   renderChrome(page)
@@ -357,7 +368,7 @@ async function renderPage(page, reload = true) {
   main.dataset.page = page.id
   // two columns on a wide PC screen when the page has several cards (the start page has its own layout)
   main.classList.toggle('start', page.id === 'start')
-  main.classList.toggle('cols', page.id !== 'start' && main.querySelectorAll(':scope > .card').length >= 2)
+  main.classList.toggle('cols', page.id !== 'start' && main.querySelectorAll(':scope > .card, :scope > .col-stack').length >= 2)
   // (a page drawn again sets up its polling again: the timers of the drawing before go, else they pile up)
   stopPageTimers()
   wire(main, page)
@@ -368,8 +379,57 @@ async function renderPage(page, reload = true) {
     console.error(err)
     toast('Ein Teil der Seite ließ sich nicht einrichten', 'info')
   }
+  balanceCols(main)
   if (keepScroll != null) window.scrollTo(0, keepScroll)
 }
+
+// Two columns on the PC: the cards go into two columns of their own, each into the one that is shorter so far (in the
+// page's order; a card with data-col into that one). In rows of the grid the taller card of a row set its height, and
+// a short card left a gap under it. Wide cards stay across both; pages with their own layout (.col-stack) are left.
+const WIDE_SCREEN = window.matchMedia('(min-width: 1200px)')
+const OWN_LAYOUT = new Set(['start', 'ueber', 'rechtliches'])
+
+function balanceCols(main) {
+  // (first back into the page's order: on a phone, and before sorting again)
+  // (a page drawn anew has no columns of its own any more: nothing to put back)
+  if (main._order && main.querySelector(':scope > .auto-col')) {
+    for (const s of main.querySelectorAll(':scope > .auto-col')) s.remove()
+    for (const el of main._order) main.appendChild(el)
+  }
+  main._order = null
+  if (!WIDE_SCREEN.matches || !main.classList.contains('cols') || OWN_LAYOUT.has(main.dataset.page) || main.querySelector(':scope > .col-stack')) return
+  const kids = [...main.children]
+  const runs = []
+  let run = []
+  for (const el of kids) {
+    if (el.matches('.card') && !el.matches('.wide')) run.push(el)
+    else if (run.length) {
+      runs.push(run)
+      run = []
+    }
+  }
+  if (run.length) runs.push(run)
+  // (two cards are side by side anyway)
+  const sorted = runs.filter((r) => r.length >= 3 || r.some((c) => c.dataset.col))
+  if (!sorted.length) return
+  main._order = kids
+  for (const cards of sorted) {
+    const heights = cards.map((c) => c.getBoundingClientRect().height)
+    const cols = [document.createElement('div'), document.createElement('div')]
+    const h = [0, 0]
+    for (const c of cols) c.className = 'col-stack auto-col'
+    cards[0].before(cols[0], cols[1])
+    cards.forEach((c, i) => {
+      const at = c.dataset.col ? Number(c.dataset.col) - 1 : h[0] <= h[1] ? 0 : 1
+      cols[at].appendChild(c)
+      h[at] += heights[i]
+    })
+  }
+}
+WIDE_SCREEN.addEventListener('change', () => {
+  const main = $('#content')
+  if (main) balanceCols(main)
+})
 
 // A page whose values did not come from the box: a card that says so and tries again
 function pageNotLoaded(main, page) {
@@ -425,18 +485,27 @@ function childNav(page) {
   return [`<div class="card nav-card"><div class="navlist">${kids.map((k) => navRow(k.id, k.title, k.description, k.icon)).join('')}</div></div>`]
 }
 
-function navRow(target, title, subtitle, ic) {
+// (badge: a place right in the row for a short state, filled later - "5.0.4", "Update verfügbar")
+function navRow(target, title, subtitle, ic, badge = '') {
   const ext = String(target).startsWith('ext:')
   return `<button class="navrow" data-go="${esc(target)}"><span class="tile">${icon(ic || state.pages.get(target)?.icon || 'chevron', 18)}</span>
-    <span class="lbl"><b>${esc(title)}</b>${subtitle ? `<small>${esc(subtitle)}</small>` : ''}</span><span class="chev">${icon(ext ? 'ext' : 'chevron', 18)}</span></button>`
+    <span class="lbl"><b>${esc(title)}</b>${subtitle ? `<small>${esc(subtitle)}</small>` : ''}</span>${badge}<span class="chev">${icon(ext ? 'ext' : 'chevron', 18)}</span></button>`
 }
 
 function renderSection(sec) {
   const items = (sec.items || []).map(renderItem).join('')
-  const wide = (sec.items || []).some((i) => ['themegrid', 'bootgrid', 'log', 'json', 'checks'].includes(i.type))
+  // (the page's save button under its cards, over both columns - not in the last card, as if it saved only that)
+  if (sec.bar) return `<div class="btns save-bar wide">${items}</div>`
+  const wide = sec.wide === true || (sec.items || []).some((i) => ['themegrid', 'bootgrid', 'log', 'json', 'checks'].includes(i.type))
   const onlyNav = (sec.items || []).length > 0 && sec.items.every((i) => i.type === 'nav')
-  return `<section class="card${wide ? ' wide' : ''}${onlyNav && !sec.title ? ' nav-card' : ''}">
-    ${sec.title ? `<h2>${esc(sec.title)}</h2>` : ''}${sec.help ? `<p class="help">${esc(sec.help)}</p>` : ''}${items}</section>`
+  // sec.col: the column on the PC (1 left, 2 right; see balanceCols), sec.badge: a chip beside the title
+  const head = sec.title
+    ? sec.badge
+      ? `<div class="card-head"><h2>${esc(sec.title)}</h2><span class="chip ${esc(sec.badge.kind ?? '')}">${esc(sec.badge.text)}</span></div>`
+      : `<h2>${esc(sec.title)}</h2>`
+    : ''
+  return `<section class="card${wide ? ' wide' : ''}${onlyNav && !sec.title ? ' nav-card' : ''}${sec.cls ? ` ${esc(sec.cls)}` : ''}"${sec.col ? ` data-col="${sec.col}"` : ''}>
+    ${head}${sec.help ? `<p class="help">${esc(sec.help)}</p>` : ''}${items}</section>`
 }
 
 function value(item) {
@@ -444,19 +513,48 @@ function value(item) {
   return state.values.get(item.key)
 }
 
+// A building block that belongs to a switch (it.dep: its key): shown only while the switch is on, a little indented;
+// it.dim: shown, but dimmed while it is off (see wire)
 function renderItem(it) {
-  const help = it.help ? `<small>${esc(it.help)}</small>` : ''
+  const html = renderItemOnly(it)
+  if (it.dep) return `<div class="dep" data-dep="${esc(it.dep)}"${state.values.get(it.dep) ? '' : ' hidden'}>${html}</div>`
+  if (it.dim) return `<div class="dimmable${state.values.get(it.dim) ? '' : ' off'}" data-dim="${esc(it.dim)}">${html}</div>`
+  return html
+}
+
+// A slider over fixed steps (it.stops: 0, 1, 2, 5, 10 … min): the range runs over their places
+const stopIndex = (it, v) => Math.max(0, it.stops.findIndex((s) => s >= Number(v)))
+const rangeValue = (it, el) => (it.stops ? it.stops[Number(el.value)] : Number(el.value))
+
+function renderItemOnly(it) {
+  const help = it.help ? `<small${it.helpId ? ` id="${esc(it.helpId)}"` : ''}>${esc(it.help)}</small>` : ''
+  // (a technical name beside the label, small: "Voll · 100 %" v_100)
+  const sub = it.sub ? ` <span class="lbl-sub" translate="no">${esc(it.sub)}</span>` : ''
   switch (it.type) {
     case 'toggle':
       return `<div class="row"><span class="lbl"><b>${esc(it.label)}</b>${help}</span>
-        <label class="switch"><input type="checkbox" data-key="${esc(it.key)}" ${value(it) ? 'checked' : ''} aria-label="${esc(it.label)}"><span></span></label></div>`
+        <label class="switch"><input type="checkbox" data-key="${esc(it.key)}" ${value(it) ? 'checked' : ''} ${it.disabled ? 'disabled' : ''} aria-label="${esc(it.label)}"><span></span></label></div>`
     case 'slider': {
       const v = Number(value(it))
-      const fill = ((v - it.min) / (it.max - it.min)) * 100
+      const [min, max, at] = it.stops ? [0, it.stops.length - 1, stopIndex(it, v)] : [it.min, it.max, v]
+      const fill = ((at - min) / (max - min)) * 100
+      const ends = it.stops ? [it.stops[0], it.stops[it.stops.length - 1]] : [it.min, it.max]
       return `<div class="field"><div class="slider-head"><label for="k-${esc(it.key)}">${esc(it.label)}</label><span class="value-pill" data-out="${esc(it.key)}">${fmt(v, it)}</span></div>
-        <input type="range" id="k-${esc(it.key)}" data-key="${esc(it.key)}" min="${it.min}" max="${it.max}" step="${it.step ?? 1}" value="${v}" style="--fill:${fill}%"${it.disabled ? ' disabled' : ''}>
-        <div class="range-ends"><span>${fmt(it.min, it)}</span><span>${fmt(it.max, it)}</span></div>${help}</div>`
+        <input type="range" id="k-${esc(it.key)}" data-key="${esc(it.key)}" min="${min}" max="${max}" step="${it.stops ? 1 : it.step ?? 1}" value="${at}" style="--fill:${fill}%"${it.disabled ? ' disabled' : ''}>
+        <div class="range-ends"><span>${fmt(ends[0], it)}</span><span>${fmt(ends[1], it)}</span></div>${help}</div>`
     }
+    // several fields side by side (it.cols: their widths, e.g. "2fr 1fr"); under each other on a narrow phone
+    case 'pair':
+      return `<div class="pair${it.keep ? ' keep' : ''}${it.cls ? ` ${esc(it.cls)}` : ''}" style="--cols:${esc(it.cols ?? `repeat(${it.items.length}, minmax(0, 1fr))`)}">${it.items.map(renderItem).join('')}</div>`
+    // a number with − and + (instead of a slider from 1 to 99, where one hardly hits 9)
+    case 'stepper':
+      return `<div class="row stepper-row"><span class="lbl"><b>${esc(it.label)}</b>${help}</span>
+        <div class="stepper"><button type="button" class="icon-btn soft" data-step="-1" data-for="${esc(it.key)}" aria-label="Weniger">−</button>
+        <input class="input" type="number" id="k-${esc(it.key)}" data-key="${esc(it.key)}" min="${it.min}" max="${it.max}" value="${esc(value(it))}" aria-label="${esc(it.label)}">
+        <button type="button" class="icon-btn soft" data-step="1" data-for="${esc(it.key)}" aria-label="Mehr">+</button></div></div>`
+    // a page's own drawing inside a card (a preview, a chart)
+    case 'html':
+      return it.html
     case 'select':
       return `<div class="field"><label>${esc(it.label)}</label>
         <button class="select-btn" data-select="${esc(it.key)}"><span data-out="${esc(it.key)}">${esc(value(it))}</span>${icon('chevron', 18)}</button>${help}</div>`
@@ -466,12 +564,12 @@ function renderItem(it) {
         .join('')}</div></div>`
     case 'text': {
       const kind = it.kind || 'text'
-      const type = kind === 'password' ? 'password' : kind === 'number' ? 'number' : kind === 'url' ? 'url' : 'text'
+      const type = kind === 'password' ? 'password' : kind === 'number' ? 'number' : kind === 'url' ? 'url' : kind === 'time' ? 'time' : 'text'
       const unit = it.unit ? `<span class="unit">${esc(it.unit)}</span>` : ''
       const eye = kind === 'password' ? `<button class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button>` : ''
-      return `<div class="field"><label for="k-${esc(it.key)}">${esc(it.label)}</label>
-        <div class="input-wrap"><input class="input${unit ? ' has-unit' : ''}${eye ? ' has-eye' : ''}" id="k-${esc(it.key)}" type="${type}" data-key="${esc(it.key)}"
-          value="${esc(kind === 'password' ? '' : value(it) ?? '')}" placeholder="${esc(it.placeholder ?? '')}" autocomplete="off">${unit}${eye}</div>${help}</div>`
+      return `<div class="field"><label for="k-${esc(it.key)}">${esc(it.label)}${sub}</label>
+        <div class="input-wrap"><input class="input${unit ? ' has-unit' : ''}${eye ? ' has-eye' : ''}${it.mono ? ' mono' : ''}" id="k-${esc(it.key)}" type="${type}" data-key="${esc(it.key)}"
+          value="${esc(kind === 'password' ? '' : value(it) ?? '')}" placeholder="${esc(it.placeholder ?? '')}" ${NO_PW_MANAGER}>${unit}${eye}</div>${help}</div>`
     }
     case 'buttons':
       return `<div class="btns">${it.buttons
@@ -487,6 +585,14 @@ function renderItem(it) {
       return `<div class="bar"><div class="slider-head"><b>${esc(it.label)}</b><span class="value-pill">${esc(it.value ?? '')}</span></div><div class="track"><i></i></div></div>`
     case 'chart': {
       const max = Math.max(1, ...it.vals)
+      // (with its values: each above its bar, as the battery's chart - the bars alone gave no scale)
+      if (it.shown)
+        return `<div class="chart vals" style="--n:${it.vals.length}">${it.vals
+          .map(
+            (v, i) =>
+              `<div class="col${i === it.vals.length - 1 ? ' today' : ''}"><div class="bar-area"><b translate="no">${esc(it.shown[i] ?? '')}</b><i style="height:calc((100% - 18px) * ${v / max})"></i></div><span>${esc(it.labels?.[i] ?? '')}</span></div>`,
+          )
+          .join('')}</div>`
       return `<div class="chart" style="--n:${it.vals.length}">${it.vals
         .map((v, i) => `<div class="col${i === it.vals.length - 1 ? ' today' : ''}"><i style="height:${(v / max) * 100}%"></i>${esc(it.labels?.[i] ?? '')}</div>`)
         .join('')}</div>`
@@ -578,18 +684,35 @@ function wire(root, page) {
   for (const el of root.querySelectorAll('input[data-key]')) {
     el.addEventListener('input', () => {
       const it = findItem(page, el.dataset.key)
-      const v = el.type === 'checkbox' ? el.checked : el.type === 'range' || el.type === 'number' ? Number(el.value) : el.value
+      const v = el.type === 'checkbox' ? el.checked : el.type === 'range' ? rangeValue(it, el) : el.type === 'number' ? (el.value === '' ? '' : Number(el.value)) : el.value
       state.values.set(el.dataset.key, v)
-      if (el.type === 'checkbox') commit(el.dataset.key, v)
+      if (el.type === 'checkbox') {
+        // what belongs to the switch shows or dims with it
+        for (const d of root.querySelectorAll(`[data-dep="${CSS.escape(el.dataset.key)}"]`)) d.hidden = !v
+        for (const d of root.querySelectorAll(`[data-dim="${CSS.escape(el.dataset.key)}"]`)) d.classList.toggle('off', !v)
+        commit(el.dataset.key, v)
+      }
       if (el.type === 'range') {
-        el.style.setProperty('--fill', `${((v - it.min) / (it.max - it.min)) * 100}%`)
+        const [min, max] = it.stops ? [0, it.stops.length - 1] : [it.min, it.max]
+        el.style.setProperty('--fill', `${((Number(el.value) - min) / (max - min)) * 100}%`)
         const out = root.querySelector(`[data-out="${CSS.escape(el.dataset.key)}"]`)
         if (out) out.textContent = fmt(v, it)
       }
     })
   }
   for (const el of root.querySelectorAll('input[type="range"][data-key]')) {
-    el.addEventListener('change', () => commit(el.dataset.key, Number(el.value)))
+    el.addEventListener('change', () => commit(el.dataset.key, rangeValue(findItem(page, el.dataset.key), el)))
+  }
+  // − and + of a number: one step, within its limits, saved as a typed number is
+  for (const b of root.querySelectorAll('[data-step]')) {
+    b.onclick = () => {
+      const input = $(`#k-${CSS.escape(b.dataset.for)}`, root)
+      const next = Math.min(Number(input.max), Math.max(Number(input.min), Number(input.value) + Number(b.dataset.step)))
+      if (next === Number(input.value)) return
+      input.value = String(next)
+      state.values.set(b.dataset.for, next)
+      input.dispatchEvent(new Event('change'))
+    }
   }
   for (const el of root.querySelectorAll('input.input[data-key]')) {
     // text and number fields are saved when they are left (or with Enter)
@@ -646,8 +769,26 @@ async function openExternal(which) {
 
 // the building block as shown (a connected page may have filled in its own options), else the schema's
 function findItem(page, key) {
-  for (const s of (state.shown?.id === page.id ? state.shown.sections : page.sections) || []) for (const i of s.items || []) if (i.key === key) return i
+  // (also inside a pair of fields)
+  const inItems = (items) => {
+    for (const i of items || []) {
+      if (i.key === key) return i
+      const inner = i.items && inItems(i.items)
+      if (inner) return inner
+    }
+    return null
+  }
+  for (const s of (state.shown?.id === page.id ? state.shown.sections : page.sections) || []) {
+    const hit = inItems(s.items)
+    if (hit) return hit
+  }
   return {}
+}
+
+// The schema's building block with this key, with what the page changes in it
+function schemaItem(page, key, over = {}) {
+  for (const s of page.sections || []) for (const i of s.items || []) if (i.key === key) return { ...i, ...over }
+  return { key, ...over }
 }
 
 function action(act, label, page) {
@@ -720,6 +861,7 @@ function startSkeleton() {
         <button class="qbtn accent" id="q-plus">${icon('plus', 22)}<span>+15 min</span></button>
         <button class="qbtn blue" id="q-quiet">${icon('moon', 22)}<span id="q-quiet-label">Ruhe sofort</span></button>
         <button class="qbtn" id="q-sleep">${icon('time', 22)}<span id="q-sleep-label">Schlaftimer</span></button>
+        <button class="qbtn" id="q-say">${icon('vol', 22)}<span>Durchsage</span></button>
       </div>
     </div>`,
     `<div class="update-note" id="update-note"></div>`,
@@ -777,6 +919,7 @@ function mountStart(root) {
     })
   }
   $('#q-sleep', root).onclick = () => sleepSheet(root)
+  $('#q-say', root).onclick = () => saySheet()
 }
 
 async function loadNow(root) {
@@ -1441,7 +1584,13 @@ function historySections(page) {
       ...secWeek,
       items: tl.length
         ? [
-            { type: 'chart', vals: tl.map((d) => d.minutes), labels: tl.map((d) => DAY_SHORT[(new Date(`${d.date}T12:00`).getDay() + 6) % 7]) },
+            {
+              type: 'chart',
+              vals: tl.map((d) => d.minutes),
+              // (short enough for a narrow bar: "45 min", from an hour on "2:05 h")
+              shown: tl.map((d) => (d.minutes < 60 ? `${d.minutes} min` : `${Math.floor(d.minutes / 60)}:${String(d.minutes % 60).padStart(2, '0')} h`)),
+              labels: tl.map((d) => DAY_SHORT[(new Date(`${d.date}T12:00`).getDay() + 6) % 7]),
+            },
             { type: 'note', text: `Insgesamt ${w.totalMinutes ?? 0} Minuten in ${w.trackCount ?? 0} Titeln.` },
           ]
         : [noData],
@@ -1685,6 +1834,23 @@ function onTile(t) {
   return startPlay(t.title, `${API}/library/play-local`, { path: t.path })
 }
 
+// An episode's length as a feed gives it - seconds ("697") or h:mm:ss ("00:24:09") - in minutes
+function durationText(v) {
+  const parts = String(v ?? '').trim().split(':').map(Number)
+  if (!parts.length || parts.some((n) => !Number.isFinite(n))) return ''
+  const seconds = parts.reduce((sum, n) => sum * 60 + n, 0)
+  return seconds > 0 ? `${Math.max(1, Math.round(seconds / 60))} min` : ''
+}
+
+// How far an episode was heard (the player remembers it, see Bedienung am Display › Podcasts weiterhören)
+function heardText(e) {
+  if (e.isNew) return 'Neu'
+  if (e.done) return 'gehört'
+  if (!(e.pos > 0)) return ''
+  const left = e.len > e.pos ? Math.max(1, Math.round((e.len - e.pos) / 60)) : 0
+  return left ? `noch ${left} min` : 'Angefangen'
+}
+
 // The episodes of a podcast (newest first, from its feed as the box reads it); a tap plays one on the box
 async function openEpisodes(t) {
   let shown = 40
@@ -1707,17 +1873,43 @@ async function openEpisodes(t) {
           box.innerHTML = `<p class="help">${esc('Keine Folgen gefunden.')}</p>`
           return
         }
-        box.innerHTML = `<p class="help" style="margin:0 0 6px">${esc(`${episodes.length} Folgen`)}</p><div class="rows">${episodes
+        // (the button on the right keeps an episode on the SD card - it plays without internet then - or deletes it)
+        // (an ARD episode the ARD does not release for download: streaming only, a lock instead - see
+        // podcast-offline.ts mayKeep)
+        const saveBtn = (e, i) =>
+          e.saveable === false && !e.saved
+            ? `<button class="icon-btn soft ep-save ep-locked" data-locked="1" aria-label="${esc(`Nur mit Internet: ${e.title}`)}">${icon('lock', 18)}</button>`
+            : `<button class="icon-btn soft ep-save" data-save="${i}" aria-pressed="${!!e.saved}" aria-label="${esc(e.saved ? `Von der Box löschen: ${e.title}` : `Auf der Box speichern: ${e.title}`)}">${icon(e.saved ? 'check' : e.queued ? 'sync' : 'save', 18)}</button>`
+        box.innerHTML = `<p class="help" style="margin:0 0 6px">${esc(`${episodes.length} Folgen`)}${episodes.some((e) => e.saved) ? ` · ${esc(`${episodes.filter((e) => e.saved).length} auf der Box gespeichert`)}` : ''}</p><div class="rows">${episodes
           .slice(0, shown)
           .map(
-            (e, i) => `<button class="entry lib-row" data-ep="${i}">${e.cover ? `<span class="lib-thumb"><img src="${esc(e.cover)}" alt="" loading="lazy"></span>` : ''}
-              <span class="lbl"><b translate="no">${esc(e.title)}</b><small>${esc([e.date ? new Date(e.date).toLocaleDateString(LOCALE) : '', e.duration].filter(Boolean).join(' · '))}</small></span><span class="chev">${icon('chevron', 18)}</span></button>`,
+            (e, i) => `<div class="entry ep-row"><button class="lib-row ep-play" data-ep="${i}">${e.cover ? `<span class="lib-thumb"><img src="${esc(e.cover)}" alt="" loading="lazy"></span>` : ''}
+              <span class="lbl"><b translate="no">${esc(e.title)}</b><small>${esc([e.date ? new Date(e.date).toLocaleDateString(LOCALE) : '', durationText(e.duration), heardText(e)].filter(Boolean).join(' · '))}</small></span></button>${saveBtn(e, i)}</div>`,
           )
           .join('')}</div>${shown < episodes.length ? `<div class="btns"><button class="btn" data-more>${esc('Weitere Folgen anzeigen')}</button></div>` : ''}`
         for (const img of box.querySelectorAll('img')) img.addEventListener('error', () => img.remove(), { once: true })
         for (const b of box.querySelectorAll('[data-ep]')) {
           const e = episodes[Number(b.dataset.ep)]
           b.onclick = () => startPlay(e.title, `${API}/library/play`, { index: t.index, expect: t.ident, episode: e.url })
+        }
+        for (const b of box.querySelectorAll('[data-locked]')) b.onclick = () => toast('Diese Folge gibt die ARD nicht zum Herunterladen frei – sie spielt nur mit Internet.', 'info')
+        for (const b of box.querySelectorAll('[data-save]')) {
+          const e = episodes[Number(b.dataset.save)]
+          b.onclick = async () => {
+            b.disabled = true
+            const keep = !e.saved
+            const r = await api(`${API}/podcast-offline/episode`, { method: 'POST', body: { feed: t.ident?.id, url: e.url, keep } })
+            b.disabled = false
+            if (!r.ok) return toast(r.body?.error === 'not_downloadable' ? 'Diese Folge gibt die ARD nicht zum Herunterladen frei – sie spielt nur mit Internet.' : 'Das hat nicht geklappt', 'info')
+            if (keep) {
+              e.queued = true
+              toast('Wird auf die Box geladen')
+            } else {
+              e.saved = false
+              toast('Von der Box gelöscht')
+            }
+            draw()
+          }
         }
         box.querySelector('[data-more]')?.addEventListener('click', () => {
           shown += 40
@@ -1806,16 +1998,27 @@ function libChanged() {
   hear.loadedAt = 0
 }
 
-// (Spotify: every Spotify entry, added by hand or by the Smart-Sync; Manuell and Sync split them by how they came)
+// Where the content comes from. Spotify: every Spotify entry, added by hand or by the Smart-Sync; Smart-Sync: only
+// the Sync's; Podcasts: every podcast (the ARD Audiothek's shows among them); Radio: the stations
 const LIB_SOURCES = [
   ['all', 'Alle Quellen'],
   ['spotify', 'Spotify'],
-  ['manual', 'Manuell'],
-  ['spotify-sync', 'Sync'],
+  ['spotify-sync', 'Smart-Sync'],
+  ['podcast', 'Podcasts'],
+  ['radio', 'Radio'],
   ['local', 'SD-Karte'],
   ['nas', 'NAS'],
 ]
-const SOURCE_LABEL = { manual: 'Manuell', 'spotify-sync': 'Sync', local: 'SD-Karte', nas: 'NAS' }
+const SOURCE_LABEL = { local: 'SD-Karte', nas: 'NAS' }
+// Whether an entry of the library belongs to a source of the filter
+const entryInSource = (it, src) =>
+  src === 'all' ||
+  (src === 'spotify' && it.type === 'spotify') ||
+  (src === 'spotify-sync' && (it.source ?? 'manual') === 'spotify-sync') ||
+  (src === 'podcast' && it.type === 'rss') ||
+  (src === 'radio' && it.type === 'radio')
+// A show of ARD Sounds: a podcast whose "feed" is ard:<show id> (the box builds its episode list from the ARD)
+const isArdEntry = (it) => it?.type === 'rss' && String(it.id ?? '').startsWith('ard:')
 const CAT_SHORT = { audiobook: 'Hörspiel', music: 'Musik', other: 'Radio & Podcasts' }
 const AVATAR_COLORS = ['#F2B45A', '#7FC7F0', '#9ED8A6', '#F4A3B4', '#C9B6F2', '#8FD6C8', '#F6C58A', '#A8C6F5']
 const avatarColor = (name) => AVATAR_COLORS[[...String(name)].reduce((h, ch) => (h * 31 + ch.codePointAt(0)) >>> 0, 7) % AVATAR_COLORS.length]
@@ -1826,10 +2029,20 @@ function libTop() {
     `<div class="lib-tiles wide" id="lib-tiles"></div>`,
     `<div class="search wide">${icon('search')}<input class="input" id="lib-q" type="search" placeholder="In der Bibliothek suchen" autocomplete="off" value="${esc(lib.q)}"></div>`,
     `<div class="pills wide" id="lib-cat">${[['all', 'Alle'], ...CATS.map(([c]) => [c, CAT_SHORT[c]]), ['nas', 'NAS']].map(([id, t]) => `<button aria-selected="${lib.cat === id}" data-v="${id}">${t}</button>`).join('')}</div>`,
-    `<div class="pills small wide" id="lib-src">${LIB_SOURCES.map(([id, t]) => `<button aria-selected="${lib.src === id}" data-v="${id}">${t}</button>`).join('')}</div>`,
+    // (a source only when the library has something of it)
+    `<div class="pills small wide" id="lib-src">${LIB_SOURCES.filter(([id]) => lib.src === id || libSourceHas(id))
+      .map(([id, t]) => `<button aria-selected="${lib.src === id}" data-v="${id}">${t}</button>`)
+      .join('')}</div>`,
     `<p class="help wide lib-count" id="lib-count"></p>`,
     `<section class="card wide lib-card"><div class="rows lib-list" id="lib-list"><div class="loading"><p>Lade …</p></div></div></section>`,
   ]
+}
+
+function libSourceHas(id) {
+  if (id === 'all' || !lib.items) return true
+  if (id === 'local') return Object.values(lib.local).some((l) => l.length)
+  if (id === 'nas') return lib.nas.length > 0
+  return lib.items.some((it) => it && !it.isResume && it.category !== 'resume' && entryInSource(it, id))
 }
 
 // The four tiles: where the content comes from, each with its state in a few words
@@ -1860,13 +2073,15 @@ function libGroups() {
     if (!groups.has(key)) groups.set(key, { ...g, entries: [] })
     return groups.get(key)
   }
-  if (lib.src === 'all' || lib.src === 'spotify' || lib.src === 'manual' || lib.src === 'spotify-sync') {
+  // (a source of before - "Manuell", "ARD Sounds" - is "all" now)
+  if (!LIB_SOURCES.some(([id]) => id === lib.src)) lib.src = 'all'
+  if (lib.src !== 'local' && lib.src !== 'nas') {
     for (const it of lib.items) {
       if (!it || it.isResume === true || it.category === 'resume' || it.type === 'library') continue
       const cat = it.category_override ?? (it.category === 'radio' ? 'other' : it.category)
       if (lib.cat !== 'all' && cat !== lib.cat) continue
       const src = it.source ?? 'manual'
-      if (lib.src === 'spotify' ? it.type !== 'spotify' : lib.src !== 'all' && src !== lib.src) continue
+      if (!entryInSource(it, lib.src)) continue
       const title = String(it.title_override ?? it.title ?? it.artist_override ?? it.artist ?? '—')
       const artist = String(it.artist_override ?? it.artist ?? title)
       if (q && !norm(`${title} ${artist}`).includes(q)) continue
@@ -1899,13 +2114,26 @@ let libShown = []
 
 function libSub(g) {
   const spotify = g.kind === 'entries' && g.entries[0]?.item.type === 'spotify'
-  const src = spotify ? (g.src === 'spotify-sync' ? 'Spotify · Sync' : 'Spotify') : (SOURCE_LABEL[g.src] ?? '')
+  const first = g.kind === 'entries' ? g.entries[0]?.item : null
+  const src = spotify
+    ? g.src === 'spotify-sync'
+      ? 'Spotify · Smart-Sync'
+      : 'Spotify'
+    : first?.type === 'rss'
+      ? isArdEntry(first)
+        ? 'Podcast · ARD Audiothek'
+        : 'Podcast'
+      : first?.type === 'radio'
+        ? 'Radio'
+        : (SOURCE_LABEL[g.src] ?? '')
   if (g.kind === 'local') return `${g.folder.libraryIsContainer ? 'Ordner' : 'Album'} · ${src}`
   if (g.kind === 'nas') return `${g.folder.nasIsContainer ? 'Ordner' : 'Album'} · ${src}`
   if (g.entries.length === 1) {
     const e = g.entries[0]
     const whole = e.item.type === 'spotify' && !e.item.id && !e.item.playlistid && !e.item.showid && !e.item.audiobookid
     // (the source already says Spotify: what kind of Spotify entry it is instead)
+    // (a podcast or a station under its own name: the source says what it is - not "Podcast · Podcast")
+    if ((e.item.type === 'rss' || e.item.type === 'radio') && e.title === g.artist) return src
     const what = spotify ? (e.item.playlistid ? 'Playlist' : e.item.showid ? 'Podcast' : e.item.audiobookid ? 'Hörbuch' : 'Album') : badgeOf(e.item) || 'Eintrag'
     return `${whole ? (g.cat === 'music' ? 'Alle Alben' : 'Alle Folgen') : e.title !== g.artist ? e.title : what} · ${src}`
   }
@@ -2007,6 +2235,42 @@ function entryPlayFields(item) {
     <div class="field"><label>Nur einen Teil (Nr. von – bis, leer = alle)</label><div class="rule-times"><input class="input" id="e-from" type="number" min="1" inputmode="numeric" value="${part ? esc(item.aPartOfAllMin ?? 1) : ''}" placeholder="von" aria-label="von"><input class="input" id="e-to" type="number" min="1" inputmode="numeric" value="${part ? esc(item.aPartOfAllMax ?? '') : ''}" placeholder="bis" aria-label="bis"></div></div>`
 }
 
+// How many of a podcast's newest episodes stay on the SD card (entry field "offline"; see podcast-offline.ts)
+const OFFLINE_KEEP = [
+  [0, 'Aus'],
+  [1, 'Die neueste Folge'],
+  [3, 'Die 3 neuesten Folgen'],
+  [5, 'Die 5 neuesten Folgen'],
+  [10, 'Die 10 neuesten Folgen'],
+  [20, 'Die 20 neuesten Folgen'],
+]
+
+function offlineField(item) {
+  const keep = Number(item.offline) || 0
+  const opts = [...OFFLINE_KEEP, ...(OFFLINE_KEEP.some(([n]) => n === keep) ? [] : [[keep, `Die ${keep} neuesten Folgen`]])]
+  return `<div class="field"><label for="e-offline">Auf der Box speichern (ohne Internet hören)</label><select class="input" id="e-offline">${opts
+    .map(([n, l]) => `<option value="${n}"${n === keep ? ' selected' : ''}>${esc(l)}</option>`)
+    .join('')}</select></div>
+    <p class="help" id="e-offline-status" style="margin:0">${esc('Neue Folgen kommen von selbst, ältere gehen wieder. Einzelne Folgen merkst du dir unter Hören.')}</p>${
+      String(item.id ?? '').startsWith('ard:')
+        ? `<p class="help" style="margin:0">${esc('Nur Folgen, die die ARD zum Herunterladen freigibt. Nimmt die ARD eine Folge aus ihrem Angebot, wird sie auch auf der Box gelöscht.')}</p>`
+        : ''
+    }`
+}
+
+// What of a podcast is on the SD card, in a line under its setting
+async function loadOfflineStatus(feed, box) {
+  const r = await api(`${API}/podcast-offline?feed=${encodeURIComponent(feed)}`)
+  if (!box?.isConnected || !r.ok) return
+  const n = Object.keys(r.body.files ?? {}).length
+  const waiting = (r.body.queued ?? []).length + (r.body.current ? 1 : 0)
+  const size = formatBytes(r.body.bytes)
+  const parts = [n === 0 ? 'Noch keine Folge gespeichert' : n === 1 ? `Eine Folge gespeichert (${size})` : `${n} Folgen gespeichert (${size})`]
+  if (waiting) parts.push(`${waiting} in der Warteschlange`)
+  if (r.body.lastError?.error === 'not_enough_space') parts.push('Zu wenig Platz auf der SD-Karte')
+  box.textContent = parts.join(' · ')
+}
+
 // The sheet of a library entry: manual ones change their fields, synced ones get overrides (the sync keeps its own)
 // The albums of a whole Spotify artist in its entry (as Spotify lists them, oldest first; the box shows them in the
 // order the entry chooses)
@@ -2045,7 +2309,8 @@ function openEntrySheet(item, back = null) {
   // (order, shuffle, a part of the episodes: of the entries one adds by hand - Spotify and podcasts)
   const playOptions = !isSync && (item.type === 'spotify' || item.type === 'rss')
   // a radio station or a podcast: its address (stream / feed) can be changed too
-  const addressLabel = !isSync && { radio: 'Stream-Adresse (URL)', rss: 'Feed-Adresse (URL)' }[item.type]
+  // (not for a show of ARD Sounds: its "address" is the ARD's id of the show)
+  const addressLabel = !isSync && !isArdEntry(item) && { radio: 'Stream-Adresse (URL)', rss: 'Feed-Adresse (URL)' }[item.type]
   const fields = [
     ['artist', 'Interpret'],
     ['title', 'Titel'],
@@ -2069,6 +2334,7 @@ function openEntrySheet(item, back = null) {
        .join('')}
      <div class="field"><label for="e-cat">Kategorie</label>${catSelect('e-cat', item.category_override ?? (isSync ? '' : item.category === 'radio' ? 'other' : item.category), isSync)}</div>
      ${playOptions ? entryPlayFields(item) : ''}
+     ${item.type === 'rss' ? offlineField(item) : ''}
      ${isSync ? `<p class="help" style="margin:0">Entfernen geht über Bibliothek › Verwaltete Inhalte oder die Spotify-Playlist.</p>` : ''}
      ${wholeArtist ? `<div class="section-label" style="margin:0">Alben</div><div id="e-albums"><p class="help">Lade die Alben von Spotify …</p></div>` : ''}
      <div class="btns">${isSync ? '' : `<button class="btn danger" data-del>Löschen</button>`}<button class="btn" data-close>Abbrechen</button><button class="btn primary" data-ok>Speichern</button></div>`,
@@ -2076,6 +2342,7 @@ function openEntrySheet(item, back = null) {
       sheet.querySelector('[data-close]').onclick = back ? back.open : close
       sheet.querySelector('[data-back]')?.addEventListener('click', back?.open)
       if (wholeArtist) loadArtistAlbums(item, sheet.querySelector('#e-albums'))
+      if (item.type === 'rss') loadOfflineStatus(item.id, sheet.querySelector('#e-offline-status'))
       // A chosen picture lands among the own pictures and is saved into the entry right away (the picker takes the
       // sheet's place, what was typed here and not saved yet stays as it was on the box)
       for (const b of sheet.querySelectorAll('[data-pick]')) {
@@ -2137,10 +2404,15 @@ function openEntrySheet(item, back = null) {
           if (cat) updated.category_override = cat
           else delete updated.category_override
         } else if (cat) updated.category = cat
+        const keep = item.type === 'rss' ? Number(sheet.querySelector('#e-offline').value) || 0 : 0
+        if (keep) updated.offline = keep
+        else delete updated.offline
         const r = await api('/api/edit', { method: 'POST', body: { index: libPlace(item), data: updated, original: item } })
         if (!libWriteOk(r)) return
         close()
         toast('Gespeichert')
+        // (the episodes on the SD card follow the setting now, not only at the next hourly round)
+        if (item.type === 'rss' && keep !== (Number(item.offline) || 0)) api(`${API}/podcast-offline/sync`, { method: 'POST', body: { feed: updated.id } })
         libReload()
       }
       sheet.querySelector('[data-del]')?.addEventListener('click', () => {
@@ -2394,7 +2666,10 @@ function openLocalAlbumSheet(album, parent) {
   )
 }
 
-/* Choosing a cover: a search at iTunes and Deezer or an own picture, for a folder of the SD card or an entry */
+// the services of the cover search, as their badge on a result
+const COVER_SOURCES = { itunes: 'iTunes', deezer: 'Deezer', spotify: 'Spotify' }
+
+/* Choosing a cover: a search at iTunes, Deezer and Spotify or an own picture, for a folder of the SD card or an entry */
 
 // target: 'local:<path>' (the folder gets it as cover.jpg) or 'own:<name>' (stored among the own pictures, onDone gets
 // its address); query: the search it starts with, fallbacks: shorter ones when it finds nothing; current: the picture
@@ -2420,7 +2695,7 @@ function openCoverPicker({ target, title, query, fallbacks, current, hidden = fa
      ${onHide && hidden ? `<div class="cover-hidden"><p class="help" style="margin:0">Dieser Ordner wird gerade ohne Cover gezeigt.</p><button class="btn sm" id="cp-hide">Cover wieder zeigen</button></div>` : ''}
      ${onHide && !hidden && current ? `<div class="cover-hidden"><p class="help" style="margin:0">Lieber gar kein Bild? Die Bilder im Ordner bleiben dabei erhalten.</p><button class="btn sm" id="cp-hide">${icon('close', 16)}Kein Cover</button></div>` : ''}
      <form class="cover-search" id="cp-form"><div class="search">${icon('search')}<input class="input" id="cp-q" type="search" value="${esc(query)}" autocomplete="off" enterkeyhint="search" aria-label="Cover suchen"></div><button class="btn" type="submit">Suchen</button></form>
-     <p class="help" style="margin:0">Sucht bei iTunes und Deezer – der Suchbegriff geht dafür an Apple und Deezer.</p>
+     <p class="help" style="margin:0">Sucht bei iTunes, Deezer und Spotify – der Suchbegriff geht dafür an Apple, Deezer und Spotify.</p>
      <div class="covers cover-pick" id="cp-list"></div>
      <input type="file" id="cp-file" accept="image/*" hidden>
      <div class="btns cover-actions"><button class="btn" id="cp-own">${icon('image', 18)}Eigenes Bild</button><button class="btn" data-close>Abbrechen</button><button class="btn primary" id="cp-ok" disabled>Übernehmen</button></div>`,
@@ -2432,7 +2707,7 @@ function openCoverPicker({ target, title, query, fallbacks, current, hidden = fa
           ? `<button type="button" class="cover-tile" data-own aria-pressed="true"><span class="cover-img"><img src="${chosen.url}" alt=""><span class="cover-badge">Eigenes</span></span><b>Eigenes Bild</b><small>vom Gerät</small></button>`
           : ''
         const tiles = results.map(
-          (c, i) => `<button type="button" class="cover-tile" data-i="${i}" aria-pressed="${chosen?.i === i}"><span class="cover-img"><img src="${esc(c.thumb)}" alt="" loading="lazy" referrerpolicy="no-referrer"><span class="cover-badge">${c.source === 'itunes' ? 'iTunes' : 'Deezer'}</span></span>
+          (c, i) => `<button type="button" class="cover-tile" data-i="${i}" aria-pressed="${chosen?.i === i}"><span class="cover-img"><img src="${esc(c.thumb)}" alt="" loading="lazy" referrerpolicy="no-referrer"><span class="cover-badge">${COVER_SOURCES[c.source] ?? ''}</span></span>
             <b translate="no">${esc(c.title)}</b><small translate="no">${esc(c.artist)}</small></button>`,
         )
         list.innerHTML = own + (tiles.length ? tiles.join('') : own ? '' : `<p class="help covers-empty">Nichts gefunden – anders suchen oder ein eigenes Bild nehmen.</p>`)
@@ -2463,7 +2738,7 @@ function openCoverPicker({ target, title, query, fallbacks, current, hidden = fa
         results = r.ok ? (r.body?.results ?? []) : []
         if (chosen && !chosen.blob) chosen = null
         draw()
-        if (!r.ok) list.innerHTML = `<p class="help covers-empty">${r.status === 502 ? 'iTunes und Deezer sind gerade nicht erreichbar.' : 'Die Suche hat nicht geklappt.'}</p>`
+        if (!r.ok) list.innerHTML = `<p class="help covers-empty">${r.status === 502 ? 'iTunes, Deezer und Spotify sind gerade nicht erreichbar.' : 'Die Suche hat nicht geklappt.'}</p>`
       }
       $('#cp-form', sheet).onsubmit = (e) => {
         e.preventDefault()
@@ -2757,6 +3032,258 @@ async function addFromSearch(r, btn) {
   return run()
 }
 
+/* Podcasts suchen (Apple's podcast directory, in the stores of a language; see podcast-search.ts) */
+
+// lang: remembered on this device (first time: the app's language); suggestions: shows for children before a search
+const pod = { q: '', lang: '', kids: true, result: null, suggestions: null, suggestionsLang: '' }
+function podLang() {
+  if (pod.lang && svc.available.some((l) => l.code === pod.lang)) return pod.lang
+  let saved = ''
+  try {
+    saved = localStorage.getItem('mupi-pod-lang') ?? ''
+  } catch {
+    // (private mode: the app's language)
+  }
+  const known = (c) => svc.available.some((l) => l.code === c)
+  pod.lang = known(saved) ? saved : known(getLang()) ? getLang() : 'de'
+  return pod.lang
+}
+
+function podTop() {
+  if (!svc.podcasts) {
+    return [
+      `<section class="card wide"><p class="help" style="margin:0">${esc('Die Podcast-Suche ist ausgeschaltet. Einschalten unter Einstellungen › Dienste.')}</p>
+        <div class="btns"><button class="btn primary" id="pod-services">Dienste öffnen</button></div></section>`,
+    ]
+  }
+  podLang()
+  const langs = svc.available
+  return [
+    `<section class="card wide">
+      <p class="help" style="margin:0">${esc('Findet Podcasts vieler Sender und Anbieter – auch Deutschlandfunk, SRF, ORF, RTÉ oder BBC, bei Deutsch zusätzlich die ARD Audiothek. Eine Sendung kommt wie ein Podcast auf die Box, neue Folgen erscheinen von selbst. Der Suchbegriff geht an Apples Podcast-Verzeichnis (bei Deutsch auch an die ARD).')}</p>
+      <div class="search">${icon('search')}<input class="input" id="pod-q" type="search" placeholder="${esc('Sendung suchen – z. B. Gutenachtgeschichten')}" autocomplete="off" value="${esc(pod.q)}" enterkeyhint="search"></div>
+      <div class="field"><label for="pod-lang">Sprache</label><select class="input" id="pod-lang">${langs
+        .map((l) => `<option value="${esc(l.code)}"${l.code === pod.lang ? ' selected' : ''} translate="no">${esc(l.name)}</option>`)
+        .join('')}</select></div>
+      <div class="seg" id="pod-kids"><button aria-pressed="${pod.kids}" data-v="1">Für Kinder</button><button aria-pressed="${!pod.kids}" data-v="0">Alles</button></div>
+      <div class="btns"><button class="btn primary" id="pod-go">Suchen</button></div>
+    </section>`,
+    `<div id="pod-results" class="wide-stack"></div>`,
+  ]
+}
+
+async function doPodSearch() {
+  const q = pod.q.trim()
+  if (q.length < 2) return toast('Bitte mindestens 2 Zeichen eingeben', 'info')
+  const box = $('#pod-results')
+  box.innerHTML = `<div class="loading"><p>Suche …</p></div>`
+  const r = await api(`${API}/podcast-search?${new URLSearchParams({ q, lang: pod.lang, ...(pod.kids ? { kids: '1' } : {}) })}`)
+  if (!r.ok) {
+    box.innerHTML = `<p class="help">${esc('Das Podcast-Verzeichnis ist gerade nicht erreichbar.')}</p>`
+    return
+  }
+  pod.result = r.body?.shows ?? []
+  drawPod()
+}
+
+// Before a search: suggestions for children in the chosen language (German: the ARD Audiothek's children's shows)
+async function loadPodSuggestions() {
+  const box = $('#pod-results')
+  if (!box || pod.result) return
+  if (pod.suggestions && pod.suggestionsLang === pod.lang) return drawPod()
+  box.innerHTML = `<div class="loading"><p>Lade …</p></div>`
+  const lang = pod.lang
+  const r = await api(`${API}/podcast-suggestions?lang=${encodeURIComponent(lang)}`)
+  if (lang !== pod.lang) return
+  pod.suggestions = r.ok ? (r.body?.shows ?? []) : []
+  pod.suggestionsLang = lang
+  drawPod()
+}
+
+function drawPod() {
+  const box = $('#pod-results')
+  if (!box) return
+  if (!pod.result) {
+    // (nothing searched yet: the suggestions, if the language has some)
+    const shows = pod.suggestionsLang === pod.lang ? (pod.suggestions ?? []) : []
+    box.innerHTML = shows.length ? podList('Vorschläge für Kinder', shows) : ''
+    wirePodList(box, shows)
+    return
+  }
+  const shows = pod.result
+  box.innerHTML = shows.length ? podList('Gefunden', shows) : `<p class="help">${esc(pod.kids ? 'Nichts für Kinder gefunden – mit „Alles“ noch einmal suchen?' : 'Nichts gefunden.')}</p>`
+  wirePodList(box, shows)
+}
+
+// (the provider under the name: the ARD Audiothek's shows come with their station, the others with their publisher)
+function podList(title, shows) {
+  return `<section class="card"><h2>${esc(title)}</h2><div class="rows">${shows
+    .map(
+      (s, i) => `<button class="entry lib-row ard-show" data-show="${i}"><span class="lib-thumb">${s.image ? `<img src="${esc(s.image)}" alt="" loading="lazy">` : ''}${icon('music', 18)}</span>
+        <span class="lbl"><b translate="no">${esc(s.title)}</b><small translate="no">${esc([s.author, s.genre === 'ARD Audiothek' ? 'ARD Audiothek' : '', s.episodes ? `${s.episodes} Folgen` : ''].filter(Boolean).join(' · '))}</small></span><span class="chev">${icon('chevron', 18)}</span></button>`,
+    )
+    .join('')}</div></section>`
+}
+function wirePodList(box, shows) {
+  for (const img of box.querySelectorAll('img')) img.addEventListener('error', () => img.remove(), { once: true })
+  for (const b of box.querySelectorAll('[data-show]')) b.onclick = () => openPodShow(shows[Number(b.dataset.show)])
+}
+
+// A show of the directory: its newest episodes (from its feed, as the box reads it) and how it comes onto the box
+async function openPodShow(s) {
+  const data = await api('/api/data')
+  const same = (id) => String(id ?? '').replace(/^https?:\/\//, '') === s.feedUrl.replace(/^https?:\/\//, '')
+  const have = Array.isArray(data.body) && data.body.some((it) => it?.type === 'rss' && same(it.id))
+  openSheet(
+    `<div class="ard-head">${s.image ? `<img src="${esc(s.image)}" alt="">` : ''}<span class="lbl"><h2 translate="no" style="margin:0">${esc(s.title)}</h2><small translate="no">${esc([s.author, s.genre].filter(Boolean).join(' · '))}</small></span></div>
+     <div class="section-label" style="margin:0">${esc('Neueste Folgen')}</div><div id="pod-eps"><p class="help">Lade die Folgen …</p></div>
+     ${
+       have
+         ? `<p class="help" style="margin:0">${esc('Schon in der Bibliothek.')}</p><div class="btns"><button class="btn" data-close>Schließen</button></div>`
+         : `<div class="field"><label for="pod-cat">Hinzufügen als</label>${catSelect('pod-cat', 'audiobook', false)}</div>
+            <div class="field"><label for="pod-off">Auf der Box speichern (ohne Internet hören)</label><select class="input" id="pod-off">${OFFLINE_KEEP.map(([n, l]) => `<option value="${n}">${esc(l)}</option>`).join('')}</select></div>
+            <div class="btns"><button class="btn" data-close>Abbrechen</button><button class="btn primary" data-add>${icon('plus', 18)}Hinzufügen</button></div>`
+     }`,
+    async (sheet, close) => {
+      for (const b of sheet.querySelectorAll('[data-close]')) b.onclick = close
+      sheet.querySelector('[data-add]')?.addEventListener('click', async (e) => {
+        const btn = e.currentTarget
+        btn.disabled = true
+        const keep = Number(sheet.querySelector('#pod-off').value) || 0
+        const body = { type: 'rss', id: s.feedUrl, artist: s.title, category: sheet.querySelector('#pod-cat').value, source: 'manual', ...(keep ? { offline: keep } : {}) }
+        const r = await api('/api/add', { method: 'POST', body })
+        btn.disabled = false
+        if (!libWriteOk(r)) return
+        close()
+        toast(`Hinzugefügt: ${s.title}`)
+        if (keep) api(`${API}/podcast-offline/sync`, { method: 'POST', body: {} })
+        libChanged()
+        lib.items = null
+      })
+      // (the feed as the box reads it - it is in the box's cache then, the display shows it at once after adding)
+      const r = await api(`/api/rssfeed/cached?url=${encodeURIComponent(s.feedUrl)}`)
+      const box = sheet.querySelector('#pod-eps')
+      if (!box?.isConnected) return
+      const raw = r.body?.rss?.channel?.item
+      const text = (v) => (typeof v === 'string' ? v : (v?._cdata ?? v?._text ?? ''))
+      const eps = (Array.isArray(raw) ? raw : raw ? [raw] : []).filter((it) => it?.enclosure?._attributes?.url).slice(0, 5)
+      box.innerHTML = eps.length
+        ? `<div class="rows">${eps
+            .map((it) => {
+              const when = Date.parse(text(it.pubDate))
+              return `<div class="entry"><span class="lbl"><b translate="no">${esc(text(it.title) || 'Folge')}</b><small>${esc([Number.isFinite(when) ? new Date(when).toLocaleDateString(LOCALE) : '', durationText(text(it['itunes:duration']))].filter(Boolean).join(' · '))}</small></span></div>`
+            })
+            .join('')}</div>`
+        : `<p class="help">${esc('Die Folgen ließen sich nicht laden.')}</p>`
+    },
+  )
+}
+
+/* Radiosender suchen (radio-browser.info, see radio-search.ts) */
+
+// the language is the one of the podcast search (the same choice, remembered on this device)
+const radio = { q: '', kids: true, result: null, suggestions: null, suggestionsLang: '' }
+
+function radioTop() {
+  if (!svc.radio) {
+    return [
+      `<section class="card wide"><p class="help" style="margin:0">${esc('Die Radiosender-Suche ist ausgeschaltet. Einschalten unter Einstellungen › Dienste.')}</p>
+        <div class="btns"><button class="btn primary" id="radio-services">Dienste öffnen</button></div></section>`,
+    ]
+  }
+  podLang()
+  return [
+    `<section class="card wide">
+      <p class="help" style="margin:0">${esc('Findet Radiosender aus vielen Ländern, auch Kinderradio. Der Sender kommt unter Radio & Podcasts auf die Box. Das Verzeichnis (radio-browser.info) wird von seinen Nutzern gepflegt; der Suchbegriff geht dorthin.')}</p>
+      <div class="search">${icon('search')}<input class="input" id="radio-q" type="search" placeholder="${esc('Sender suchen – z. B. Die Maus')}" autocomplete="off" value="${esc(radio.q)}" enterkeyhint="search"></div>
+      <div class="field"><label for="radio-lang">Sprache</label><select class="input" id="radio-lang">${svc.available
+        .map((l) => `<option value="${esc(l.code)}"${l.code === pod.lang ? ' selected' : ''} translate="no">${esc(l.name)}</option>`)
+        .join('')}</select></div>
+      <div class="seg" id="radio-kids"><button aria-pressed="${radio.kids}" data-v="1">Für Kinder</button><button aria-pressed="${!radio.kids}" data-v="0">Alles</button></div>
+      <div class="btns"><button class="btn primary" id="radio-go">Suchen</button></div>
+    </section>`,
+    `<div id="radio-results" class="wide-stack"></div>`,
+  ]
+}
+
+async function doRadioSearch() {
+  const q = radio.q.trim()
+  if (q.length < 2) return toast('Bitte mindestens 2 Zeichen eingeben', 'info')
+  const box = $('#radio-results')
+  box.innerHTML = `<div class="loading"><p>Suche …</p></div>`
+  const r = await api(`${API}/radio-search?${new URLSearchParams({ q, lang: pod.lang, ...(radio.kids ? { kids: '1' } : {}) })}`)
+  if (!r.ok) {
+    box.innerHTML = `<p class="help">${esc('Das Senderverzeichnis ist gerade nicht erreichbar.')}</p>`
+    return
+  }
+  radio.result = r.body?.stations ?? []
+  drawRadio()
+}
+
+// Before a search: the children's stations of the language
+async function loadRadioSuggestions() {
+  const box = $('#radio-results')
+  if (!box || radio.result) return
+  if (radio.suggestions && radio.suggestionsLang === pod.lang) return drawRadio()
+  box.innerHTML = `<div class="loading"><p>Lade …</p></div>`
+  const lang = pod.lang
+  const r = await api(`${API}/radio-suggestions?lang=${encodeURIComponent(lang)}`)
+  if (lang !== pod.lang) return
+  radio.suggestions = r.ok ? (r.body?.stations ?? []) : []
+  radio.suggestionsLang = lang
+  drawRadio()
+}
+
+function drawRadio() {
+  const box = $('#radio-results')
+  if (!box) return
+  const searched = !!radio.result
+  const stations = searched ? radio.result : radio.suggestionsLang === pod.lang ? (radio.suggestions ?? []) : []
+  box.innerHTML = stations.length
+    ? `<section class="card"><h2>${esc(searched ? 'Gefunden' : 'Kinderradio')}</h2><div class="rows">${stations
+        .map(
+          (s, i) => `<button class="entry lib-row ard-show" data-station="${i}"><span class="lib-thumb">${s.image ? `<img src="${esc(s.image)}" alt="" loading="lazy">` : ''}${icon('vol', 18)}</span>
+            <span class="lbl"><b translate="no">${esc(s.name)}</b><small translate="no">${esc([s.country, s.tags.join(', ')].filter(Boolean).join(' · '))}</small></span><span class="chev">${icon('chevron', 18)}</span></button>`,
+        )
+        .join('')}</div></section>`
+    : searched
+      ? `<p class="help">${esc(radio.kids ? 'Nichts für Kinder gefunden – mit „Alles“ noch einmal suchen?' : 'Nichts gefunden.')}</p>`
+      : ''
+  for (const img of box.querySelectorAll('img')) img.addEventListener('error', () => img.remove(), { once: true })
+  for (const b of box.querySelectorAll('[data-station]')) b.onclick = () => openRadioStation(stations[Number(b.dataset.station)])
+}
+
+// A station: its details and how it comes onto the box
+async function openRadioStation(s) {
+  const data = await api('/api/data')
+  const have = Array.isArray(data.body) && data.body.some((it) => it?.type === 'radio' && String(it.id ?? '').replace(/^https?:\/\//, '') === s.url.replace(/^https?:\/\//, ''))
+  openSheet(
+    `<div class="ard-head">${s.image ? `<img src="${esc(s.image)}" alt="">` : ''}<span class="lbl"><h2 translate="no" style="margin:0">${esc(s.name)}</h2><small translate="no">${esc([s.country, s.codec, s.bitrate ? `${s.bitrate} kbit/s` : ''].filter(Boolean).join(' · '))}</small></span></div>
+     ${s.tags.length ? `<p class="ard-synopsis" translate="no">${esc(s.tags.join(', '))}</p>` : ''}
+     ${
+       have
+         ? `<p class="help" style="margin:0">${esc('Schon in der Bibliothek.')}</p><div class="btns"><button class="btn" data-close>Schließen</button></div>`
+         : `<div class="field"><label for="radio-cat">Hinzufügen als</label>${catSelect('radio-cat', 'other', false)}</div>
+            <div class="btns"><button class="btn" data-close>Abbrechen</button><button class="btn primary" data-add>${icon('plus', 18)}Hinzufügen</button></div>`
+     }`,
+    (sheet, close) => {
+      for (const b of sheet.querySelectorAll('[data-close]')) b.onclick = close
+      sheet.querySelector('[data-add]')?.addEventListener('click', async (e) => {
+        const btn = e.currentTarget
+        btn.disabled = true
+        const body = { type: 'radio', id: s.url, artist: s.name, title: s.name, category: sheet.querySelector('#radio-cat').value, source: 'manual', ...(s.image ? { cover: s.image } : {}) }
+        const r = await api('/api/add', { method: 'POST', body })
+        btn.disabled = false
+        if (!libWriteOk(r)) return
+        close()
+        toast(`Hinzugefügt: ${s.name}`)
+        libChanged()
+        lib.items = null
+      })
+    },
+  )
+}
+
 /* Link einfügen (Spotify-Link, Radiosender, Podcast) */
 
 function spotifyIdFrom(url, kind) {
@@ -2844,8 +3371,12 @@ async function addLink(page) {
       }
       // (as the box's own add page: the player takes the streams over http)
       const id = address.startsWith('https://') ? address.replace('https://', 'http://') : address
+      // a link to a show on ardsounds.de / ardaudiothek.de: taken as the show of ARD Sounds (its page is no feed)
+      const ardLink = type !== 'Radio-Stream' && /^https:\/\/(www\.)?(ardsounds|ardaudiothek)\.de\/sendung\//i.test(url)
+      const ardId = ardLink ? (await api(`${API}/ard/resolve`, { method: 'POST', body: { url } })).body?.id : null
+      if (ardLink && !ardId) return toast('Diese Sendung kennt die ARD Audiothek nicht – ist der Link richtig?', 'info')
       if (type === 'Radio-Stream') Object.assign(body, { type: 'radio', id, artist: label || 'Radio', title: title || 'Stream' })
-      else Object.assign(body, { type: 'rss', id, artist: label || 'Podcast' })
+      else Object.assign(body, { type: 'rss', id: ardId ? `ard:${ardId}` : id, artist: label || 'Podcast' })
     }
   } finally {
     if (button) button.disabled = false
@@ -3099,7 +3630,7 @@ function offerCover(folder, artist) {
   const name = folder.split('/').pop()
   openSheet(
     `<h2>Cover suchen?</h2>
-     <p class="help" style="margin:0">Für „${esc(name)}“ war kein Cover dabei. Soll ich bei iTunes und Deezer nach einem suchen? Du wählst dann eins aus – oder nimmst ein eigenes Bild.</p>
+     <p class="help" style="margin:0">Für „${esc(name)}“ war kein Cover dabei. Soll ich bei iTunes, Deezer und Spotify nach einem suchen? Du wählst dann eins aus – oder nimmst ein eigenes Bild.</p>
      <div class="btns"><button class="btn" data-close>Später</button><button class="btn primary" data-search>${icon('search', 18)}Cover suchen</button></div>`,
     (sheet, close) => {
       sheet.querySelector('[data-close]').onclick = close
@@ -3212,8 +3743,7 @@ function relTime(iso) {
 }
 
 async function loadSpotify() {
-  const [status, access, connect] = await Promise.all([api(`${SYNC_API}/status`), api(`${API}/spotify-access`), api(`${API}/spotify-connect`)])
-  spot.connect = connect.ok ? connect.body : null
+  const [status, access] = await Promise.all([api(`${SYNC_API}/status`), api(`${API}/spotify-access`)])
   if (!status.ok && !access.ok) throw new Error(`spotify ${status.status}`)
   spot.status = status.ok ? status.body : null
   spot.access = access.ok ? access.body : null
@@ -3318,19 +3848,10 @@ function spotifyTop() {
             ? `<div class="note">${icon('info', 18)}<span>Seit wann die Anmeldung besteht, weiß die Box nicht (sie ist älter als diese Version oder kam aus dem Admin-Interface). Spotify lässt eine Anmeldung 6 Monate gelten – einmal neu anmelden, dann kennt die Box das Datum und erinnert rechtzeitig.</span></div>`
             : ''
       }
-      ${
-        spot.connect && !spot.connect.configured
-          ? `<div class="note">${icon('info', 18)}<span>${esc('Spotify Connect ist nicht eingerichtet: Die Box erscheint in der Spotify-App auf dem Handy nicht als Lautsprecher.')}</span></div><div class="btns"><button class="btn" data-sp="connectlogin">Spotify Connect einrichten</button></div>`
-          : connectProblem(spot.connect)
-            ? `<div class="note warn">${icon('info', 18)}<span>${esc('Spotify Connect läuft nicht:')} ${esc(connectProblem(spot.connect))}</span></div><div class="btns"><button class="btn" data-sp="connectlogin">Neu verbinden</button></div>`
-            : ''
-      }
       <div class="sp-cols">
         <div>${spKv([
           ['Angemeldet seit', login.since ?? '–'],
           ['Gültig bis', login.until ?? '–'],
-          // (the box as a speaker in the Spotify app: its own login, see the Zugangsdaten page)
-          spot.connect && ['Spotify Connect', spot.connect.off ? 'Ausgeschaltet' : connectProblem(spot.connect) ? 'Fehler' : spot.connect.configured ? `Eingerichtet seit ${new Date(spot.connect.since).toLocaleDateString(LOCALE)}` : 'Nicht eingerichtet'],
         ])}</div>
         <div>${spKv(
           s.enabled
@@ -3354,7 +3875,7 @@ function spotifyTop() {
 
   parts.push(`<section class="card nav-card"><div class="navlist">
       ${navRow('syncopt', 'Sync-Einstellungen', 'Playlist-Präfix, Intervall, an/aus', 'gear')}
-      ${navRow('spzugang', 'Zugangsdaten', 'Client ID, Secret, Anmeldung, Spotify Connect', 'lock')}
+      ${navRow('spzugang', 'Zugangsdaten', 'Client ID, Secret, Anmeldung', 'lock')}
       ${navRow('wizard', 'Einrichtungs-Assistent', ready ? 'Alles eingerichtet – Schritt für Schritt ansehen' : 'Schritt für Schritt – zeigt, was fehlt', 'sync')}
     </div></section>`)
 
@@ -3373,7 +3894,7 @@ function spotifyTop() {
       <div class="sp-danger">
         ${s.enabled ? `<div class="row"><span class="lbl"><b>Smart-Sync ausschalten</b><small>Keine Playlists mehr übernehmen, auch nicht von Hand.</small></span><button class="btn sm" data-sp="toggle">Ausschalten</button></div>` : ''}
         ${a.connected ? `<div class="row"><span class="lbl"><b>Trennen</b><small>Die Anmeldung löschen: kein Sync, der Player verliert Spotify.</small></span><button class="btn sm" data-sp="disconnect">Trennen</button></div>` : ''}
-        <div class="row"><span class="lbl"><b>Zugang zurücksetzen</b><small>Client ID, Secret, Anmeldung und Spotify-Connect-Login löschen.</small></span><button class="btn sm danger" data-sp="reset">Zurücksetzen</button></div>
+        <div class="row"><span class="lbl"><b>Zugang zurücksetzen</b><small>Client ID, Secret und Anmeldung löschen.</small></span><button class="btn sm danger" data-sp="reset">Zurücksetzen</button></div>
       </div></section>`)
   }
   return parts
@@ -3411,7 +3932,6 @@ function mountSpotify(root, page) {
       confirmSheet('Ausschalten', 'Smart-Sync ausschalten? Dann gibt es auch keinen Sync von Hand (Knopf, Telegram) – die Inhalte auf der Box bleiben.', done)
     },
     connect: connectSpotify,
-    connectlogin: () => connectLoginSheet(page),
     disconnect: () =>
       confirmSheet('Trennen', 'Die Spotify-Anmeldung löschen? Smart-Sync hört auf, und der Player verliert beim nächsten Neustart den Zugang zu Spotify.', async () => {
         const r = await api(`${API}/spotify-oauth/disconnect`, { method: 'POST' })
@@ -3465,140 +3985,73 @@ function mountSpotify(root, page) {
 function spotifyAccessTop() {
   const a = spot.access ?? {}
   const login = spotifyLogin(a)
+  const keys = !!a.clientId && !!a.hasSecret
+  // how much of the six months is left: a bar, yellow from 14 days, red when refused or gone
+  const days = login.days
+  const bar =
+    days != null
+      ? `<div class="life ${login.state === 'soon' ? 'warn' : 'ok'}"><i style="width:${Math.max(3, Math.min(100, (days / 183) * 100))}%"></i></div>`
+      : ''
+  const head = { none: ['Nicht angemeldet', 'warn'], refused: ['Von Spotify abgelehnt', 'danger'], soon: ['Läuft bald ab', 'warn'], unknown: ['Angemeldet', 'ok'], ok: ['Angemeldet', 'ok'] }[login.state]
+  const app = keys
+    ? `<div class="row"><span class="lbl"><b>Client ID</b><small class="mono" translate="no">…${esc(String(a.clientId).slice(-6))} · Secret gespeichert</small></span><button class="btn sm" id="sp-edit">Ändern</button></div>`
+    : `<ol class="steps-mini"><li>Auf developer.spotify.com eine App anlegen.</li><li>Dort die Redirect URI unten eintragen.</li><li>Client ID und Client Secret hier eintragen.</li><li>Bei Spotify anmelden.</li></ol>
+       <div class="btns"><button class="btn" data-go="wizard">Schritt für Schritt einrichten</button></div>`
   return [
-    `<section class="card"><h2>Spotify-App</h2><p class="help">Die Werte deiner Spotify-App auf developer.spotify.com (unter „Settings“; den Secret zeigt „View client secret“).</p>
-      <div class="field"><label for="sp-id">Client ID</label><input class="input mono" id="sp-id" value="${esc(a.clientId ?? '')}" ${NO_PW_MANAGER} spellcheck="false"></div>
-      <div class="field"><label for="sp-secret">Client Secret</label><div class="input-wrap"><input class="input has-eye mono" id="sp-secret" type="password" ${NO_PW_MANAGER} placeholder="${a.hasSecret ? 'gespeichert – leer lassen = behalten' : 'nicht gesetzt – nötig für Alben, Cover und Suche'}"><button type="button" class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div></div>
-      <div class="btns"><button class="btn primary" data-sp="save">Speichern</button></div></section>`,
-    `<section class="card"><h2>Anmeldung</h2><p class="help">Mit ihr spielt der Player Spotify ab und liest der Smart-Sync deine Playlists. Spotify lässt sie 6 Monate gelten, dann braucht es eine neue – die Box erinnert 14 und 3 Tage vorher (App und Telegram).</p>
+    `<section class="card" data-col="1"><div class="card-head"><h2>Anmeldung</h2><span class="chip ${head[1]}">${esc(head[0])}</span></div>
+      ${days != null ? `<div class="status-line"><span>${esc(days === 1 ? 'Noch 1 Tag gültig' : `Noch ${days} Tage gültig`)}</span></div>${bar}` : ''}
       ${spKv([
-        ['Status', login.state === 'none' ? 'Nicht angemeldet' : login.state === 'refused' ? 'Von Spotify abgelehnt' : login.state === 'soon' ? 'Läuft bald ab' : login.state === 'unknown' ? 'Angemeldet – seit wann, ist unbekannt' : 'Angemeldet'],
         login.since && ['Angemeldet seit', login.since],
         login.until && ['Gültig bis', login.until],
-      ])}
-      <div class="field"><label>Redirect URI</label><div class="field-pick"><input class="input mono" value="${esc(spotifyRedirect())}" readonly aria-label="Redirect URI" ${NO_PW_MANAGER}><button type="button" class="icon-btn soft" data-sp="copyuri" aria-label="Redirect URI kopieren">${icon('link', 18)}</button></div>
-        <small>Muss in deiner Spotify-App unter „Redirect URIs“ stehen, sonst lehnt Spotify die Anmeldung ab. Beim Zurückkommen fragt der Browser wegen des Zertifikats der Box eventuell einmal nach.</small>
-        ${
-          a.redirectUris
-            ? `<div class="pills small" id="sp-rd" role="radiogroup" aria-label="Redirect URI">${[
-                ['app', '/app/spotify-callback'],
-                ['legacy', '/spotify.php'],
-              ]
-                .map(([m, t]) => `<button role="radio" aria-selected="${a.redirectMode === m}" data-rd="${m}" translate="no">${t}</button>`)
-                .join('')}</div>
-              <small>${esc('Welche der beiden Adressen in deiner Spotify-App steht: Boxen, die vor der App eingerichtet wurden, nutzen /spotify.php – dann muss in der Spotify-App nichts geändert werden.')}</small>`
-            : ''
-        }</div>
+      ]).replace('</dl>', a.connected ? '<div id="sp-account-row" hidden><dt>Konto</dt><dd id="sp-account"></dd></div></dl>' : '</dl>')}
+      <p class="help" style="margin:0">Spotify lässt eine Anmeldung 6 Monate gelten. Die Box erinnert 14 und 3 Tage vorher (App und Telegram).</p>
       <div class="btns"><button class="btn${login.state === 'ok' ? '' : ' primary'}" data-sp="connect">${a.connected ? 'Neu anmelden' : 'Bei Spotify anmelden'}</button></div></section>`,
-    spotifyConnectCard(),
+    `<section class="card" data-col="1"><div class="card-head"><h2>Vom Handy abspielen</h2><span class="chip" id="sp-dev-chip">…</span></div>
+      <p class="help" style="margin:0" id="sp-dev">${esc('Solange das Display läuft, erscheint die Box in der Spotify-App auf dem Handy unter „Geräte“. Dort auswählen und direkt vom Handy abspielen.')}</p></section>`,
+    `<section class="card" data-col="2"><h2>Spotify-App</h2><p class="help">Deine App auf developer.spotify.com – damit spielt der Player ab und liest der Smart-Sync deine Playlists.</p>
+      ${app}
+      <div id="sp-fields"${keys ? ' hidden' : ''}>
+        <div class="field"><label for="sp-id">Client ID</label><input class="input mono" id="sp-id" value="${esc(a.clientId ?? '')}" ${NO_PW_MANAGER} spellcheck="false"></div>
+        <div class="field"><label for="sp-secret">Client Secret</label><div class="input-wrap"><input class="input has-eye mono" id="sp-secret" type="password" ${NO_PW_MANAGER} placeholder="${a.hasSecret ? 'gespeichert – leer lassen = behalten' : 'unter „View client secret“'}"><button type="button" class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div></div>
+        <div class="btns"><button class="btn primary" data-sp="save">Speichern</button></div></div>
+      <div class="field"><label>Redirect URI</label><div class="field-pick"><input class="input mono" value="${esc(spotifyRedirect())}" readonly aria-label="Redirect URI" ${NO_PW_MANAGER}><button type="button" class="btn sm" data-sp="copyuri">Kopieren</button></div>
+        <small>Muss in deiner Spotify-App unter „Redirect URIs“ stehen, sonst lehnt Spotify die Anmeldung ab.</small></div>
+      ${
+        a.redirectUris
+          ? `<div class="field"><label>Welche Adresse steht in deiner Spotify-App?</label><div class="pills small" id="sp-rd" role="radiogroup" aria-label="Redirect URI">${[
+              ['app', '/app/spotify-callback'],
+              ['legacy', '/spotify.php'],
+            ]
+              .map(([m, t]) => `<button role="radio" aria-selected="${a.redirectMode === m}" data-rd="${m}" translate="no">${t}</button>`)
+              .join('')}</div></div>
+            <details class="more"><summary>Warum zwei Adressen?</summary><p class="help" style="margin:0">${esc('Boxen, die vor der App eingerichtet wurden, nutzen /spotify.php – dann muss in der Spotify-App nichts geändert werden. Beim Zurückkommen von Spotify fragt der Browser wegen des Zertifikats der Box eventuell einmal nach.')}</p></details>`
+          : ''
+      }</section>`,
   ]
 }
 
-// Spotify Connect: the box as a speaker in the Spotify app on the phone (librespot) - its own login, see
-// eltern/spotify-connect.ts
-function spotifyConnectCard() {
-  const c = spot.connect ?? {}
-  const problem = connectProblem(c)
-  const state = !spot.connect ? 'Unbekannt' : c.off ? 'Ausgeschaltet' : problem ? 'Fehler' : c.configured ? `Eingerichtet seit ${new Date(c.since).toLocaleDateString(LOCALE)}` : 'Nicht eingerichtet'
-  return `<section class="card"><h2>Spotify Connect</h2><p class="help">${esc(`Damit erscheint die Box in der Spotify-App auf dem Handy als Lautsprecher „${c.name ?? 'MuPiBox'}“ – dort unter „Geräte“ wählen und direkt vom Handy abspielen. Die Box braucht dafür eine eigene, einmalige Anmeldung.`)}</p>
-    ${
-      spot.connect && c.configured
-        ? `<div class="row"><span class="lbl"><b>Spotify Connect an</b><small>${esc('Aus: Die Box erscheint nicht als Lautsprecher und versucht keine Anmeldung – z. B. solange Spotify die Anmeldung ablehnt. Die Anmeldung bleibt gespeichert.')}</small></span>
-          <label class="switch"><input type="checkbox" id="cc-on" ${c.off ? '' : 'checked'} aria-label="Spotify Connect an"><span></span></label></div>`
-        : ''
-    }
-    ${spKv([['Status', state], (problem || c.off) && c.since && ['Eingerichtet seit', new Date(c.since).toLocaleDateString(LOCALE)]])}
-    ${problem ? `<div class="note warn">${icon('info', 18)}<span>${esc(problem)} ${esc('Bis dahin kannst du Connect oben ausschalten.')}${c.error ? `<br><small class="mono">${esc(c.error)}</small>` : ''}</span></div>` : ''}
-    ${c.off ? '' : `<div class="btns"><button class="btn${spot.connect && !c.configured ? ' primary' : ''}" data-sp="connectlogin">${c.configured ? 'Neu verbinden' : 'Spotify Connect verbinden'}</button></div>`}</section>`
-}
-
-// Why the Connect service does not run, in words (its last error, eltern/spotify-connect.ts connectState), or null
-function connectProblem(c) {
-  if (!c?.configured || c.running || c.off) return null
-  const e = c.error ?? ''
-  if (/503|Service unavailable/i.test(e)) return 'Spotify nimmt die Anmeldung der Box gerade nicht an (Fehler 503). Die Box versucht es jede Minute wieder – hilft das nicht, neu verbinden.'
-  if (/INVALID_CREDENTIALS|denied|BadCredentials/i.test(e)) return 'Spotify lehnt die Anmeldung der Box ab. Bitte neu verbinden.'
-  if (/resolve|dns|timed out|unreachable|network/i.test(e)) return 'Die Box erreicht Spotify nicht (Netzwerk). Sie versucht es jede Minute wieder.'
-  return 'Der Dienst für Spotify Connect startet nicht. Die Box versucht es jede Minute wieder – hilft das nicht, neu verbinden.'
-}
-
-// The Connect login: the box starts it and names the Spotify address; after logging in there, the browser shows an
-// error page (its address leads to the box itself) - that address is pasted here and handed to the box. Spotify
-// allows only that address (127.0.0.1) as the way back for this login, so it cannot come back to the box by itself.
-async function connectLoginSheet(page) {
-  const r = await api(`${API}/spotify-connect/start`, { method: 'POST' })
-  if (!r.ok || !r.body?.url) return toast('Die Anmeldung ließ sich nicht starten', 'info')
-  const url = r.body.url
-  let finished = false
-  openSheet(
-    `<h2>Spotify Connect verbinden</h2>
-     <ol class="steps-list">
-       <li><b>Bei Spotify anmelden</b><small>Öffnet Spotify in einem neuen Tab – mit dem Konto anmelden, dessen Musik die Box abspielen soll, und zustimmen.</small>
-         <div class="btns"><a class="btn primary" href="${esc(url)}" target="_blank" rel="noopener">${icon('ext', 18)}Spotify öffnen</a></div></li>
-       <li><b>Adresse zurückholen</b><small>Danach zeigt der Browser eine Fehlerseite („Seite nicht erreichbar“). Das ist richtig so: Die Adresse oben beginnt mit http://127.0.0.1:5588/login – sie ganz kopieren, den Tab schließen und hier einfügen. Die Box verbindet sich dann von selbst.</small>
-         <div class="field"><input class="input mono" id="cc-addr" placeholder="http://127.0.0.1:5588/login?code=…" autocomplete="off" spellcheck="false" ${NO_PW_MANAGER}></div>
-         ${navigator.clipboard?.readText ? '<div class="btns"><button class="btn" id="cc-paste">Aus der Zwischenablage einfügen</button></div>' : ''}</li>
-     </ol>
-     <div class="btns"><button class="btn" data-close>Abbrechen</button><button class="btn primary" id="cc-ok">Verbinden</button></div>`,
-    (sheet, close) => {
-      sheet.querySelector('[data-close]').onclick = close
-      const input = $('#cc-addr', sheet)
-      const valid = (v) => /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?\/.*[?&]code=/.test(v)
-      let busy = false
-      const connect = async () => {
-        if (busy) return
-        const address = input.value.trim()
-        if (!valid(address)) return toast('Bitte die ganze Adresse der Fehlerseite einfügen (beginnt mit http://127.0.0.1:5588/login?code=)', 'info')
-        busy = true
-        const b = $('#cc-ok', sheet)
-        b.disabled = true
-        b.textContent = 'Verbinde …'
-        const f = await api(`${API}/spotify-connect/finish`, { method: 'POST', body: { address } })
-        busy = false
-        if (!f.ok) {
-          b.disabled = false
-          b.textContent = 'Verbinden'
-          if (f.body?.error === 'login_refused') {
-            finished = true
-            close()
-            toast(f.body.restored ? 'Spotify hat die neue Anmeldung nicht angenommen – die bisherige bleibt. Bitte später noch einmal versuchen.' : 'Spotify hat die Anmeldung nicht angenommen. Bitte später noch einmal versuchen.', 'info')
-            await loadSpotify().catch(() => undefined)
-            if (currentPage()?.id === page.id) renderPage(page, false)
-            return
-          }
-          return toast(f.body?.error === 'no_login_running' ? 'Die Anmeldung ist abgelaufen – bitte noch einmal starten.' : 'Das hat nicht geklappt – bitte noch einmal von vorn.', 'info')
-        }
-        finished = true
-        close()
-        toast('Spotify Connect ist verbunden')
-        await loadSpotify().catch(() => undefined)
-        if (currentPage()?.id === page.id) renderPage(page, false)
-      }
-      $('#cc-ok', sheet).onclick = connect
-      // pasted (or typed to the end): connects right away
-      input.addEventListener('input', () => {
-        if (valid(input.value.trim())) connect()
-      })
-      const paste = $('#cc-paste', sheet)
-      if (paste)
-        paste.onclick = async () => {
-          const text = await navigator.clipboard.readText().catch(() => '')
-          if (!valid(text.trim())) return toast('In der Zwischenablage ist keine passende Adresse – bitte die Adresse der Fehlerseite kopieren.', 'info')
-          input.value = text.trim()
-          connect()
-        }
-    },
-    () => {
-      // (closed without finishing: the box goes back to Connect as it was)
-      if (!finished) api(`${API}/spotify-connect/cancel`, { method: 'POST' })
-    },
-  )
-}
-
 function mountSpotifyAccess(root, page) {
+  $('#sp-edit', root)?.addEventListener('click', (e) => {
+    $('#sp-fields', root).hidden = false
+    e.target.closest('.row').hidden = true
+  })
+  // the account signed in (Premium: the display's player needs it), and whether Spotify sees the display as a device
+  api(`${API}/spotify-access/account`).then((r) => {
+    const acc = r.ok ? r.body : null
+    if (acc?.name && $('#sp-account', root)) {
+      $('#sp-account', root).textContent = `${acc.name}${acc.premium === false ? ' · kein Premium' : acc.premium ? ' · Premium' : ''}`
+      $('#sp-account-row', root).hidden = false
+    }
+    const chip = $('#sp-dev-chip', root)
+    if (!chip) return
+    if (!acc || acc.deviceVisible == null) return chip.remove()
+    chip.textContent = acc.deviceVisible ? 'sichtbar' : 'nicht sichtbar'
+    chip.className = `chip ${acc.deviceVisible ? 'ok' : 'warn'}`
+    if (!acc.deviceVisible) $('#sp-dev', root).textContent = 'Gerade nicht in Spotify zu sehen – läuft das Display? Sonst hilft ein Neustart des Displays.'
+    else if (acc.deviceName) $('#sp-dev', root).textContent = `Die Box erscheint in der Spotify-App auf dem Handy unter „Geräte“ als „${acc.deviceName}“. Dort auswählen und direkt vom Handy abspielen.`
+  })
   const acts = {
     connect: connectSpotify,
-    connectlogin: () => connectLoginSheet(page),
     copyuri: () => copyText(spotifyRedirect()),
     save: async () => {
       const clientId = $('#sp-id', root).value.trim()
@@ -3624,20 +4077,6 @@ function mountSpotifyAccess(root, page) {
       if (currentPage()?.id === page.id) renderPage(page, false)
     }
   }
-  const on = $('#cc-on', root)
-  if (on)
-    on.onchange = async () => {
-      on.disabled = true
-      const r = await api(`${API}/spotify-connect/enabled`, { method: 'POST', body: { on: on.checked } })
-      if (!r.ok) {
-        on.checked = !on.checked
-        on.disabled = false
-        return toast('Nicht gespeichert', 'info')
-      }
-      toast(on.checked ? 'Spotify Connect ist an' : 'Spotify Connect ist aus')
-      await loadSpotify().catch(() => undefined)
-      if (currentPage()?.id === page.id) renderPage(page, false)
-    }
 }
 
 /* Sync-Einstellungen and the setup assistant */
@@ -3847,7 +4286,7 @@ function drawFound(root) {
     ? part
         .map(
           (e, i) => `<div class="cover-tile"><span class="cover-img"><img src="/api/online-cover/${e.file}" alt="" loading="lazy"><span class="cover-badge">${String(e.key).startsWith('nas:') ? 'NAS' : 'SD-Karte'}</span></span>
-            <b translate="no">${esc(e.album ?? '')}</b><small><span translate="no">${esc(e.series ?? '')}</span> · ${e.source === 'itunes' ? 'iTunes' : 'Deezer'}</small>
+            <b translate="no">${esc(e.album ?? '')}</b><small><span translate="no">${esc(e.series ?? '')}</span> · ${COVER_SOURCES[e.source] ?? ''}</small>
             <button class="btn danger sm" data-reject="${i}">Verwerfen</button></div>`,
         )
         .join('')
@@ -4754,11 +5193,146 @@ function mountCustom(root, page) {
 
 /* Start- und Wartungsbilder: the scenes with the box name / texts laid over them as the box puts them in */
 
+/* Startbilder › Eigene Bilder: a photo or logo instead of the design's start, goodbye and empty-battery picture. The
+   app fits it to the display (fill: cut at the edges; whole: a border in the colour of the picture's edge) and sends a
+   PNG of the display's size; the box puts it in place (eltern/bootscreen-custom.ts, bootscreen_update.sh). */
+
+const BS_OWN = [
+  ['splash', 'Start'],
+  ['goodbye', 'Tschüss'],
+  ['battery', 'Akku leer'],
+]
+
+// The average colour of a picture's edge (the border of a small copy)
+function edgeColor(src) {
+  const k = 32
+  const c = document.createElement('canvas')
+  c.width = k
+  c.height = k
+  const g = c.getContext('2d', { willReadFrequently: true })
+  g.drawImage(src, 0, 0, k, k)
+  const d = g.getImageData(0, 0, k, k).data
+  const sum = [0, 0, 0]
+  let n = 0
+  for (let y = 0; y < k; y++) {
+    for (let x = 0; x < k; x++) {
+      if (x > 0 && y > 0 && x < k - 1 && y < k - 1) continue
+      const i = (y * k + x) * 4
+      sum[0] += d[i]
+      sum[1] += d[i + 1]
+      sum[2] += d[i + 2]
+      n++
+    }
+  }
+  return sum.map((v) => Math.round(v / n).toString(16).padStart(2, '0')).join('')
+}
+
+// A chosen file as the display's picture: {blob (PNG W × H), color (its edge, rrggbb)}
+async function ownBootPicture(file, W, H, fit) {
+  const url = URL.createObjectURL(file)
+  try {
+    const img = await new Promise((ok, no) => {
+      const i = new Image()
+      i.onload = () => ok(i)
+      i.onerror = no
+      i.src = url
+    })
+    const c = document.createElement('canvas')
+    c.width = W
+    c.height = H
+    const g = c.getContext('2d')
+    g.fillStyle = `#${edgeColor(img)}`
+    g.fillRect(0, 0, W, H)
+    const s = fit === 'contain' ? Math.min(W / img.naturalWidth, H / img.naturalHeight) : Math.max(W / img.naturalWidth, H / img.naturalHeight)
+    const w = img.naturalWidth * s
+    const h = img.naturalHeight * s
+    g.imageSmoothingQuality = 'high'
+    g.drawImage(img, (W - w) / 2, (H - h) / 2, w, h)
+    const blob = await new Promise((ok) => c.toBlob(ok, 'image/png'))
+    return { blob, color: edgeColor(c) }
+  } finally {
+    URL.revokeObjectURL(url)
+  }
+}
+
+function bsOwnCard() {
+  const own = disp.bsOwn
+  if (!own) return ''
+  // (an empty place shows the design's picture it keeps: the design chosen before, with "random" the standard one)
+  const design = disp.bsBase === 'random' || !disp.bsBase ? disp.bs.screens.defaultBootscreen : disp.bsBase
+  const baseName = bsLabel(disp.bsById?.[design] ?? { id: design })
+  const slot = ([kind, label]) => {
+    const at = own.pictures[kind]
+    return `<div class="own-slot"><b>${esc(label)}</b>
+      <div class="own-prev" style="aspect-ratio:${own.width} / ${own.height}">${at ? `<img src="${API}/bootscreen/custom/${kind}.png?t=${Math.round(at)}" alt="">` : `<img src="${bsScene(design, kind === 'splash' ? 'scene' : kind)}" alt="" class="design"><span class="own-tag">${esc('Design')}</span>`}</div>
+      <div class="btns"><button class="btn sm${at ? '' : ' primary'}" data-own-pick="${kind}">${icon('image', 16)}${at ? 'Anderes Bild' : 'Bild wählen'}</button>${at ? `<button class="btn sm danger" data-own-rm="${kind}">Entfernen</button>` : ''}</div>
+      <input type="file" accept="image/*" hidden data-own-file="${kind}"></div>`
+  }
+  return `<section class="card wide" id="bs-own"${disp.bsSel === 'custom' ? '' : ' hidden'}><h2>Eigene Bilder</h2>
+    <p class="help">${esc(`Statt des Designs ein eigenes Bild, z. B. ein Foto oder ein Logo. Die Box passt es an das Display an (${own.width} × ${own.height}).`)}</p>
+    <div class="field"><label>Anpassen</label><div class="seg" id="bs-fit"><button aria-pressed="${disp.bsFit !== 'contain'}" data-v="cover">Ausfüllen</button><button aria-pressed="${disp.bsFit === 'contain'}" data-v="contain">Ganz zeigen</button></div>
+      <small>Ausfüllen schneidet am Rand ab, „Ganz zeigen“ lässt einen Rand in der Farbe des Bildrands.</small></div>
+    <div class="own-grid">${BS_OWN.map(slot).join('')}</div>
+    <p class="help" style="margin:0">${esc(`Ohne eigenes Bild und für die Wartungsbilder (Update, WLAN) gilt das Design „${baseName}“.`)} ${esc('Zu sehen ab dem nächsten Start bzw. beim nächsten Ausschalten.')}</p></section>`
+}
+
+function mountBsOwn(root, page) {
+  const again = async () => {
+    const r = await api(`${API}/bootscreen/custom`)
+    if (r.ok) disp.bsOwn = r.body
+    if (currentPage()?.id === page.id) renderPage(page, false)
+  }
+  const fit = $('#bs-fit', root)
+  if (fit) {
+    fit.onclick = (e) => {
+      const b = e.target.closest('button')
+      if (!b) return
+      disp.bsFit = b.dataset.v
+      for (const x of fit.children) x.setAttribute('aria-pressed', String(x === b))
+    }
+  }
+  for (const b of root.querySelectorAll('[data-own-pick]')) {
+    const input = $(`[data-own-file="${b.dataset.ownPick}"]`, root)
+    b.onclick = () => input.click()
+    input.onchange = async () => {
+      const file = input.files?.[0]
+      if (!file) return
+      b.disabled = true
+      try {
+        const { blob, color } = await ownBootPicture(file, disp.bsOwn.width, disp.bsOwn.height, disp.bsFit)
+        const r = await fetch(`${API}/bootscreen/custom?kind=${b.dataset.ownPick}&color=${color}`, {
+          method: 'PUT',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'image/png', 'x-mupibox-csrf': state.csrf },
+          body: blob,
+        }).catch(() => null)
+        toast(r?.ok ? 'Gespeichert – ab dem nächsten Mal zu sehen' : r?.status === 413 ? 'Das Bild ist zu groß' : 'Nicht gespeichert', r?.ok ? 'ok' : 'info')
+        if (r?.ok) disp.bsSel = 'custom'
+      } catch {
+        toast('Dieses Bild lässt sich nicht öffnen', 'info')
+      }
+      b.disabled = false
+      again()
+    }
+  }
+  for (const b of root.querySelectorAll('[data-own-rm]')) {
+    b.onclick = () =>
+      confirmSheet('Entfernen', 'Das eigene Bild entfernen? Dann gilt wieder das Bild des Designs.', async () => {
+        const r = await api(`${API}/bootscreen/custom/remove`, { method: 'POST', body: { kind: b.dataset.ownRm } })
+        toast(r.ok ? 'Entfernt' : 'Das ging nicht', r.ok ? 'ok' : 'info')
+        again()
+      })
+  }
+}
+
 async function loadBootscreens() {
-  const r = await api(`${API}/bootscreen`)
+  const [r, own] = await Promise.all([api(`${API}/bootscreen`), api(`${API}/bootscreen/custom`)])
   if (!r.ok) throw new Error(`bootscreen ${r.status}`)
   disp.bs = r.body
+  disp.bsOwn = own.ok ? own.body : null
   disp.bsSel = r.body.current.bootscreen || r.body.screens.defaultBootscreen
+  // (the design the own pictures keep for what has none)
+  disp.bsBase = r.body.current.base || r.body.screens.defaultBootscreen
   disp.bsMaint = r.body.current.maintenanceScreen || 'same'
   disp.bsKind = BS_KINDS.some(([k]) => k === disp.bsKind) ? disp.bsKind : 'update'
 }
@@ -4827,6 +5401,7 @@ function bootTop() {
     `<div class="card nav-card"><div class="navlist">${navRow('ueber', 'Name der Box', current.boxName || screens.defaultName || 'MuPiBox', 'text')}${navRow('sprache', 'Sprache der Box', languages[current.bootscreenLanguage]?.name ?? current.bootscreenLanguage, 'globe')}</div></div>`,
     `<section class="card wide"><h2>Startbild</h2><p class="help">${screens.bootscreens.length} Szenen zur Auswahl – oder bei jedem Start eine zufällige. Der Name der Box steht auf dem Bild.</p>
       <div class="bs-grid" id="bs-grid">
+        <button class="bs-tile" data-id="custom" aria-pressed="${disp.bsSel === 'custom'}"><span class="bs-thumb bs-random">${disp.bsOwn?.pictures?.splash ? `<img src="${API}/bootscreen/custom/splash.png?t=${Math.round(disp.bsOwn.pictures.splash)}" alt="">` : icon('image', 28)}</span><span class="bs-cap">Eigene Bilder</span></button>
         <button class="bs-tile" data-id="random" aria-pressed="${disp.bsSel === 'random'}"><span class="bs-thumb bs-random">${icon('sync', 28)}</span><span class="bs-cap">Jeden Start zufällig</span></button>
         ${screens.bootscreens
           .map(
@@ -4834,6 +5409,7 @@ function bootTop() {
               <span class="bs-cap">${esc(bsLabel(b))}${b.id === screens.defaultBootscreen ? ' (Standard)' : ''}</span></button>`,
           )
           .join('')}</div></section>`,
+    bsOwnCard(),
     `<section class="card wide"><h2>Wartungsbild & Vorschau</h2><p class="help">Bei Update, Installation, neuem WLAN, beim Ausschalten und bei leerem Akku.</p>
       <div class="rule-times stack-phone"><div class="field"><label for="bs-maint">Wartungsbild</label><select class="input" id="bs-maint">${opt('same', 'Wie das Startbild', disp.bsMaint)}${screens.bootscreens.map((b) => opt(b.id, bsLabel(b), disp.bsMaint)).join('')}</select></div>
         <div class="field"><label for="bs-kind">Vorschau</label><select class="input" id="bs-kind">${BS_KINDS.map(([v, l]) => opt(v, l, disp.bsKind)).join('')}</select></div></div>
@@ -4848,13 +5424,19 @@ function bsUpdate(root) {
   const s = disp.bs.screens
   const byId = disp.bsById
   for (const t of root.querySelectorAll('.bs-tile')) t.setAttribute('aria-pressed', String(t.dataset.id === disp.bsSel))
-  const shown = byId[disp.bsSel] ?? s.bootscreens[0]
+  const custom = disp.bsSel === 'custom'
+  const shown = byId[custom ? disp.bsBase : disp.bsSel] ?? byId[s.defaultBootscreen] ?? s.bootscreens[0]
+  const own = $('#bs-own', root)
+  if (own) own.hidden = !custom
   const kind = disp.bsKind
   const off = !MAINT_KINDS.includes(kind)
   const mb = off || disp.bsMaint === 'same' ? shown : byId[disp.bsMaint] ?? shown
   const boot = $('#bs-boot', root)
   const maint = $('#bs-mprev', root)
-  boot.querySelector('img').src = bsScene(shown.id, 'scene')
+  // (the own start picture as it is, without the name on it)
+  const ownSplash = custom && disp.bsOwn?.pictures?.splash
+  boot.querySelector('img').src = ownSplash ? `${API}/bootscreen/custom/splash.png?t=${Math.round(ownSplash)}` : bsScene(shown.id, 'scene')
+  boot.querySelector('.bs-text').hidden = !!ownSplash
   maint.querySelector('img').src = bsScene(mb.id, off ? kind : 'maintenance')
   $('#bs-mtitle', root).textContent = off ? 'Beim Ausschalten' : 'Wartungsbild'
   bsPlaceName(boot.querySelector('.bs-text'), shown, boot.clientWidth || 400)
@@ -4862,7 +5444,8 @@ function bsUpdate(root) {
   for (const el of root.querySelectorAll('#bs-grid [data-bs-name]')) bsPlaceName(el, byId[el.dataset.bsName], el.parentElement.clientWidth || 130)
 }
 
-function mountBoot(root) {
+function mountBoot(root, page) {
+  mountBsOwn(root, page)
   for (const t of root.querySelectorAll('.bs-tile')) {
     t.onclick = () => {
       disp.bsSel = t.dataset.id
@@ -4881,6 +5464,7 @@ function mountBoot(root) {
     const r = await api(`${API}/bootscreen`, { method: 'POST', body: { bootscreen: disp.bsSel, maintenanceScreen: disp.bsMaint } })
     if (!r.ok) return toast('Nicht gespeichert', 'info')
     disp.bs.current = r.body.current
+    disp.bsBase = r.body.current.base || disp.bs.screens.defaultBootscreen
     toast('Gespeichert – die Bilder werden erzeugt')
   }
   bsUpdate(root)
@@ -4981,6 +5565,29 @@ const LCD_ROT = [
   ['Aus (Standard)', '0'],
   ['180°', '2'],
 ]
+// The display's usual sizes; anything else is "Eigene …" with its two fields
+const RES_PRESETS = [
+  ['800 × 480', 800, 480],
+  ['1024 × 600', 1024, 600],
+  ['1280 × 720', 1280, 720],
+  ['1280 × 800', 1280, 800],
+  ['1920 × 1080', 1920, 1080],
+]
+// "Display aus nach": the steps of its slider (min, 0 = never)
+const DISPLAY_OFF_STOPS = [0, 1, 2, 5, 10, 15, 20, 30, 45, 60, 90, 120]
+
+// A rotation as tiles: a small screen turned as the display will be (its top marked), the mirrorings flipped
+function rotTiles(key, list) {
+  const now = state.values.get(key)
+  const look = { 'Aus (Standard)': ['0°', 'rotate(0)'], '90°': ['90°', 'rotate(90deg)'], '180°': ['180°', 'rotate(180deg)'], '270°': ['270°', 'rotate(270deg)'], 'Horizontal spiegeln': ['Spiegeln ↔', 'scaleX(-1)'], 'Vertikal spiegeln': ['Spiegeln ↕', 'scaleY(-1)'] }
+  return `<div class="rot-tiles">${list
+    .map(([label]) => {
+      const [text, tf] = look[label] ?? [label, 'none']
+      return `<button type="button" class="rot-tile" data-rot-key="${esc(key)}" data-rot="${esc(label)}" aria-pressed="${label === now}"><span class="scr" style="transform:${tf}"><i></i><b>F</b></span><small>${esc(text)}</small></button>`
+    })
+    .join('')}</div>`
+}
+
 const rotLabel = (list, v) => list.find(([, x]) => x === String(v))?.[0] ?? list[0][0]
 const rotValue = (list, label) => list.find(([l]) => l === label)?.[1] ?? '0'
 
@@ -4995,6 +5602,13 @@ async function loadDisplaySettings() {
   state.values.set('dlcdRot', rotLabel(LCD_ROT, o.rotation.display_lcd_rotate))
   state.values.set('resX', String(o.resX))
   state.values.set('resY', String(o.resY))
+  const nd = o.nightDim ?? {}
+  state.values.set('ndOn', nd.enabled === true)
+  state.values.set('ndFrom', nd.from ?? '19:00')
+  state.values.set('ndTo', nd.to ?? '07:00')
+  state.values.set('ndLevel', nd.level ?? 30)
+  state.values.set('ndFade', nd.fade ?? 30)
+  state.values.set('ndQuiet', nd.withQuiet === true)
 }
 
 async function loadControls() {
@@ -5008,7 +5622,29 @@ async function loadControls() {
   state.values.set('resume', o.resume)
   state.values.set('listTimer', o.listviewTimer)
   state.values.set('setTimer', o.settingsAccessTimer)
+  state.values.set('epResume', o.episodeResume !== false)
+  state.values.set('epDays', EP_DAYS.find(([, d]) => d === o.episodeResumeDays)?.[0] ?? `${o.episodeResumeDays} Tage`)
+  state.values.set('epNew', o.newEpisodes !== false)
+  state.values.set('epNewDays', `${o.newEpisodeDays ?? 7} Tage`)
+  state.values.set('epProgress', o.episodeProgress !== false)
 }
+
+// The display's tabs: hidden key, the page's switch (on = shown), its name
+const TAB_KEYS = [
+  ['hideA', 'showA', 'Hörspiele'],
+  ['hideM', 'showM', 'Musik'],
+  ['hideN', 'showN', 'NAS'],
+  ['hideO', 'showO', 'Radio & Podcasts'],
+]
+
+// How long a podcast episode's position is remembered (mupibox.episodeResumeDays; 0: without end)
+const EP_DAYS = [
+  ['1 Monat', 30],
+  ['3 Monate', 90],
+  ['6 Monate', 180],
+  ['1 Jahr', 365],
+  ['Unbegrenzt', 0],
+]
 
 /* Display live: a picture of the display, the remote control */
 
@@ -5120,6 +5756,9 @@ async function loadVolume() {
   state.values.set('volMax', Number(r.body.maxVolume ?? 100))
   state.values.set('volFix', r.body.startupVolume != null)
   state.values.set('volStart', Number(r.body.startupVolume ?? 30))
+  // (with Bluetooth audio: an own maximum - for headphones)
+  state.values.set('volBtOn', r.body.btMaxVolume != null)
+  state.values.set('volBtMax', Number(r.body.btMaxVolume ?? Math.min(60, Number(r.body.maxVolume ?? 100))))
 }
 
 /* Soundkarte, Drehregler */
@@ -5139,43 +5778,62 @@ async function loadBluetooth() {
   hw.bt = r.body
 }
 
+// (a found device that told no name: its address only - those go under "Weitere Geräte")
+const btNameless = (d) => !d.name || d.name === d.mac || /^([0-9A-F]{2}[:-]){5}[0-9A-F]{2}$/i.test(d.name)
+// how long a search takes about (the backend scans ~20 s, see /bluetooth/scan)
+const BT_SCAN_S = 25
+
 function btTop() {
   const b = hw.bt ?? {}
   const chip = b.chip ?? { on: true, present: true, rebootNeeded: false }
   const sw = (id, label, help, on, off = false) =>
     `<div class="row"><span class="lbl"><b>${label}</b>${help ? `<small>${help}</small>` : ''}</span><label class="switch"><input type="checkbox" id="${id}" ${on ? 'checked' : ''} ${off ? 'disabled' : ''} aria-label="${label}"><span></span></label></div>`
   const devices = b.devices ?? []
-  // (the Pi's Bluetooth hardware switched off: nothing to switch on above - the radio needs the chip)
   const noHw = !chip.present
-  // the hardware: the chip itself (the admin interface's second switch), rarely needed and only after a restart
-  const hardware = `<section class="card"><h2>Bluetooth-Hardware</h2>
-    ${sw('bt-chip', 'Bluetooth-Chip', 'Schaltet die Bluetooth-Hardware des Raspberry Pi ganz ab: für stabileres Onboard-WLAN (es teilt sich den Funk mit Bluetooth), etwas weniger Strom oder die serielle Schnittstelle, die der Chip belegt. Gilt nach einem Neustart.', chip.on)}
-    ${b.controller ? `<dl class="kv"><div><dt>Controller</dt><dd translate="no">${esc(b.controller.name)} · ${esc(b.controller.mac)}</dd></div></dl>` : ''}
-    ${chip.rebootNeeded ? `<div class="note warn">${icon('info', 18)}<span>${chip.on ? 'Der Chip wird beim nächsten Neustart eingeschaltet.' : 'Der Chip wird beim nächsten Neustart abgeschaltet.'}</span></div><div class="btns"><button class="btn" id="bt-reboot">Jetzt neu starten</button></div>` : ''}</section>`
-  // the everyday switches (on the phone on top, see .bt-main in app.css)
-  const main = `<section class="card bt-main">${noHw ? `<div class="note warn">${icon('info', 18)}<span>Die Bluetooth-Hardware ist abgeschaltet. Einschalten unter „Bluetooth-Hardware“.</span></div>` : ''}${sw('bt-on', 'Bluetooth', 'Für Kopfhörer oder Lautsprecher.', b.powered, noHw)}${sw('bt-auto', 'Automatisch verbinden', 'Verbindet ein bekanntes Gerät von selbst, sobald es an ist.', b.autoconnect, noHw)}</section>`
+  const linked = devices.find((d) => d.connected)
+  // the everyday switches, with what the box does now
+  const main = `<section class="card bt-main" data-col="1"><div class="card-head"><h2>Bluetooth</h2><span class="chip ${b.powered ? 'ok' : ''}">${b.powered ? 'an' : 'aus'}</span></div>
+    ${noHw ? `<div class="note warn">${icon('info', 18)}<span>Der Bluetooth-Chip ist ausgeschaltet (gilt nach einem Neustart). Einschalten unten unter „Hardware“.</span></div>` : ''}
+    ${b.powered ? `<div class="status-line"><span class="dot ${linked ? 'ok' : ''}"></span><span>${linked ? `Verbunden mit <b translate="no">${esc(linked.name)}</b>` : 'Kein Gerät verbunden'}</span></div>` : ''}
+    ${sw('bt-on', 'Bluetooth', 'Für Kopfhörer oder Lautsprecher.', b.powered, noHw)}${sw('bt-auto', 'Automatisch verbinden', 'Verbindet ein bekanntes Gerät von selbst, sobald es an ist.', b.autoconnect, noHw)}
+    <div class="navlist">${navRow('lautstaerke', 'Lautstärkegrenze für Kopfhörer', 'Eigenes Maximum, solange Bluetooth-Audio läuft', 'vol')}</div></section>`
   const paired = b.powered
-    ? `<section class="card"><h2>Gekoppelte Geräte</h2>${
-          devices.length
-            ? `<div class="rows">${devices
-                .map((d, i) => `<div class="entry"><span class="avatar">${icon('bt', 16)}</span><span class="lbl"><b translate="no">${esc(d.name)}</b><small>${d.connected ? 'verbunden' : 'nicht verbunden'}</small></span>${d.connected ? '<span class="chip ok">aktiv</span>' : ''}<button class="btn danger sm" data-bt-rm="${i}">Entfernen</button></div>`)
-                .join('')}</div>`
-            : '<p class="help" style="margin:0">Noch kein Gerät gekoppelt.</p>'
+    ? `<section class="card" data-col="1"><h2>Gekoppelte Geräte</h2>${
+        devices.length
+          ? `<div class="rows">${devices
+              .map(
+                (d, i) =>
+                  `<div class="entry"><span class="avatar">${icon('bt', 16)}</span><span class="lbl"><b translate="no">${esc(d.name)}</b><small>${d.connected ? 'verbunden' : 'nicht verbunden'}</small></span>
+                  ${d.connected ? `<button class="btn sm" data-bt-disc="${i}">Trennen</button>` : `<button class="btn sm" data-bt-conn="${i}">Verbinden</button>`}<button class="btn danger sm" data-bt-rm="${i}">Entfernen</button></div>`,
+              )
+              .join('')}</div>`
+          : `<p class="help" style="margin:0">Noch kein Gerät gekoppelt. Neue Geräte koppelst du unter „Neues Gerät koppeln“.</p>`
+      }</section>`
+    : ''
+  const found = hw.found ?? []
+  const named = found.filter((d) => !btNameless(d))
+  const nameless = found.filter(btNameless)
+  const foundRow = (d) => `<div class="entry"><span class="avatar">${icon('bt', 16)}</span><span class="lbl"><b translate="no">${esc(d.name || d.mac)}</b><small>${esc(d.mac)}</small></span><button class="btn sm" data-bt-pair="${found.indexOf(d)}">Koppeln</button></div>`
+  const left = hw.scanning ? Math.max(1, BT_SCAN_S - Math.round((Date.now() - (hw.scanStart ?? Date.now())) / 1000)) : 0
+  const pair = b.powered
+    ? `<section class="card" data-col="2"><h2>Neues Gerät koppeln</h2><p class="help">Gerät in den Kopplungsmodus versetzen (meist die Taste lange drücken), dann suchen.</p>
+        <div class="btns"><button class="btn primary" id="bt-scan" ${hw.scanning ? 'disabled' : ''}>${hw.scanning ? `<span class="spin"></span><span id="bt-left">Suche läuft … noch ${left} s</span>` : hw.found ? 'Neu suchen' : 'Suchen'}</button></div>
+        ${
+          hw.found
+            ? found.length
+              ? `${named.length ? `<div class="rows">${named.map(foundRow).join('')}</div>` : '<p class="help" style="margin:0">Kein Gerät mit Namen gefunden.</p>'}
+                 ${nameless.length ? `<details class="more"><summary>${esc(nameless.length === 1 ? 'Ein weiteres Gerät ohne Namen' : `${nameless.length} weitere Geräte ohne Namen`)}</summary><div class="rows">${nameless.map(foundRow).join('')}</div></details>` : ''}`
+              : '<p class="help" style="margin:0">Nichts gefunden. Ist das Gerät im Kopplungsmodus?</p>'
+            : ''
         }</section>`
     : ''
-  const pair = b.powered
-    ? `<section class="card"><h2>Neue Geräte koppeln</h2><p class="help">Gerät in den Kopplungsmodus versetzen, dann suchen (dauert etwa 10–30 s).</p>
-          <div class="btns"><button class="btn primary" id="bt-scan" ${hw.scanning ? 'disabled' : ''}>${hw.scanning ? 'Suche läuft …' : 'Suchen'}</button></div>
-          ${
-            hw.found
-              ? hw.found.length
-                ? `<div class="rows">${hw.found.map((d, i) => `<div class="entry"><span class="lbl"><b translate="no">${esc(d.name)}</b><small>${esc(d.mac)}</small></span><button class="btn sm" data-bt-pair="${i}">Koppeln</button></div>`).join('')}</div>`
-                : '<p class="help" style="margin:0">Nichts gefunden. Ist das Gerät im Kopplungsmodus?</p>'
-              : ''
-          }</section>`
-    : ''
-  // on the PC: hardware | switches, then new devices | paired devices
-  return [hardware, main, pair, paired]
+  // the hardware: rarely needed, folded away
+  const hardware = `<section class="card" data-col="2"><h2>Hardware</h2>
+    ${chip.rebootNeeded ? `<div class="note warn">${icon('info', 18)}<span>${chip.on ? 'Der Chip wird beim nächsten Neustart eingeschaltet.' : 'Der Chip wird beim nächsten Neustart abgeschaltet.'}</span></div><div class="btns"><button class="btn" id="bt-reboot">Jetzt neu starten</button></div>` : ''}
+    <details class="more"${noHw ? ' open' : ''}><summary>Bluetooth-Chip und Controller</summary>
+    ${sw('bt-chip', 'Bluetooth-Chip', 'Schaltet die Bluetooth-Hardware des Raspberry Pi ganz ab: für stabileres Onboard-WLAN (es teilt sich den Funk mit Bluetooth), etwas weniger Strom oder die serielle Schnittstelle, die der Chip belegt. Gilt nach einem Neustart.', chip.on)}
+    ${b.controller ? `<dl class="kv"><div><dt>Controller</dt><dd translate="no">${esc(b.controller.name)} · ${esc(b.controller.mac)}</dd></div></dl>` : ''}</details></section>`
+  return [main, paired, pair, hardware]
 }
 
 function mountBluetooth(root, page) {
@@ -5210,8 +5868,30 @@ function mountBluetooth(root, page) {
     if (r.body.rebootNeeded) offerReboot(on ? 'Der Chip wird eingeschaltet.' : 'Der Chip wird abgeschaltet.')
   }
   $('#bt-reboot', root)?.addEventListener('click', () => offerReboot(hw.bt?.chip?.on ? 'Der Chip wird eingeschaltet.' : 'Der Chip wird abgeschaltet.'))
+  // while searching: the time it still takes, every second
+  if (hw.scanning) {
+    every(1000, () => {
+      const el = $('#bt-left', root)
+      if (el) el.textContent = `Suche läuft … noch ${Math.max(1, BT_SCAN_S - Math.round((Date.now() - hw.scanStart) / 1000))} s`
+    })
+  }
+  // (connect and disconnect a paired device)
+  for (const [attr, path, ok, no] of [
+    ['btConn', 'connect', 'verbunden', 'ließ sich nicht verbinden – ist es an?'],
+    ['btDisc', 'disconnect', 'getrennt', 'ließ sich nicht trennen'],
+  ]) {
+    for (const b of root.querySelectorAll(`[data-${attr.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}]`)) {
+      const d = hw.bt.devices[Number(b.dataset[attr])]
+      b.onclick = async () => {
+        b.disabled = true
+        const r = await api(`${API}/bluetooth/${path}`, { method: 'POST', body: { mac: d.mac } })
+        again(r.body?.ok ? `${d.name} ${ok}` : `${d.name} ${no}`, r.body?.ok ? 'ok' : 'info')
+      }
+    }
+  }
   $('#bt-scan', root)?.addEventListener('click', async () => {
     hw.scanning = true
+    hw.scanStart = Date.now()
     renderPage(page, false)
     const r = await api(`${API}/bluetooth/scan`, { method: 'POST', body: {} })
     hw.scanning = false
@@ -5326,12 +6006,80 @@ const PROFILE_KEYS = [
 ]
 
 async function loadHat() {
-  const [, power] = await Promise.all([loadHardware(), api(`${API}/power-config`)])
+  const [, power, now] = await Promise.all([loadHardware(), api(`${API}/power-config`), api('/api/mupihat')])
   hw.power = power.body ?? {}
+  hw.hat = now.ok ? now.body : null
   state.values.set('hatOn', hw.data.mupihat.active)
   state.values.set('battery', batteryLabel(hw.data.mupihat.battery))
   const p = hw.power.battery?.profile ?? {}
   for (const [key, field] of PROFILE_KEYS) state.values.set(key, p[field] != null ? String(p[field]) : '')
+}
+
+// What the battery reads now, under the choice of the profile: "7,85 V · 82 % · lädt"
+function hatNowLine() {
+  const h = hw.hat
+  if (!h || !Number.isFinite(h.Vbat)) return ''
+  const pct = Number.isFinite(h.Bat_Percent) ? h.Bat_Percent : Number.parseInt(String(h.Bat_SOC ?? ''), 10)
+  const what = batteryCharging(h) ? 'lädt' : Number.isFinite(h.Ibat) && h.Ibat < -50 ? 'entlädt' : 'Ruhezustand'
+  const parts = [`${(h.Vbat / 1000).toLocaleString(LOCALE, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} V`, Number.isFinite(pct) ? `${pct} %` : '', what].filter(Boolean)
+  return `<div class="status-line"><span class="dot ok"></span><span><span>Jetzt</span> <b>${esc(parts.join(' · '))}</b></span></div>`
+}
+
+// The profile's values as typed (numbers, or NaN)
+const hatVals = () => Object.fromEntries(PROFILE_KEYS.map(([key]) => [key, Number.parseInt(String(state.values.get(key) ?? '').trim(), 10)]))
+
+// What is wrong with the typed profile, per field (as the backend checks it, and more)
+function hatProfileErrors() {
+  const v = hatVals()
+  const e = {}
+  const curve = ['v0', 'v25', 'v50', 'v75', 'v100']
+  for (const k of curve) if (!(v[k] >= 5000 && v[k] <= 9000)) e[k] = '5000–9000'
+  curve.forEach((k, i) => {
+    if (i > 0 && !e[k] && !e[curve[i - 1]] && v[k] <= v[curve[i - 1]]) e[k] = 'Muss größer sein als links daneben'
+  })
+  if (!(v.thWarn >= 5500 && v.thWarn <= 8000)) e.thWarn = '5500–8000'
+  if (!(v.thShut >= 5000 && v.thShut <= 7500)) e.thShut = '5000–7500'
+  else if (!e.thWarn && v.thShut >= v.thWarn) e.thShut = 'Muss unter der Warnung liegen'
+  const vreg = String(state.values.get('vreg') ?? '').trim()
+  if (vreg && !(v.vreg >= 6000 && v.vreg <= 8400)) e.vreg = v.vreg > 8400 ? 'Höher als 8400 mV schadet einem 2S-Akku' : '6000–8400'
+  return e
+}
+
+// The charge curve: charge (0–100 %) against voltage, with the warning and switch-off lines and where the battery is now
+function hatChart() {
+  const v = hatVals()
+  const pts = [
+    [0, v.v0],
+    [25, v.v25],
+    [50, v.v50],
+    [75, v.v75],
+    [100, v.v100],
+  ].filter(([, y]) => Number.isFinite(y))
+  if (pts.length < 2) return ''
+  const ys = [...pts.map(([, y]) => y), v.thWarn, v.thShut, hw.hat?.Vbat].filter(Number.isFinite)
+  const lo = Math.floor((Math.min(...ys) - 150) / 100) * 100
+  const hi = Math.ceil((Math.max(...ys) + 150) / 100) * 100
+  const W = 320
+  const H = 150
+  const L = 34
+  const B = 18
+  const x = (p) => L + (p / 100) * (W - L - 6)
+  const y = (mv) => 6 + (1 - (mv - lo) / (hi - lo)) * (H - B - 6)
+  const volts = (mv) => (mv / 1000).toLocaleString(LOCALE, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+  const grid = [lo, (lo + hi) / 2, hi].map((mv) => `<line x1="${L}" x2="${W - 6}" y1="${y(mv)}" y2="${y(mv)}" class="g"/><text x="${L - 4}" y="${y(mv) + 4}" text-anchor="end">${volts(mv)} V</text>`).join('')
+  const xs = [0, 25, 50, 75, 100].map((p) => `<text x="${x(p)}" y="${H - 4}" text-anchor="${p === 0 ? 'start' : p === 100 ? 'end' : 'middle'}">${p} %</text>`).join('')
+  const line = (mv, cls) => (Number.isFinite(mv) ? `<line x1="${L}" x2="${W - 6}" y1="${y(mv)}" y2="${y(mv)}" class="${cls}"/>` : '')
+  const curve = pts.map(([p, mv]) => `${x(p)},${y(mv)}`).join(' ')
+  // where the battery is: its voltage on the curve
+  let now = ''
+  const mv = hw.hat?.Vbat
+  if (Number.isFinite(mv)) {
+    const seg = pts.findIndex(([, a], i) => i < pts.length - 1 && mv >= a && mv <= pts[i + 1][1])
+    const p = mv <= pts[0][1] ? 0 : mv >= pts[pts.length - 1][1] ? 100 : seg >= 0 ? pts[seg][0] + ((mv - pts[seg][1]) / (pts[seg + 1][1] - pts[seg][1])) * (pts[seg + 1][0] - pts[seg][0]) : null
+    if (p !== null) now = `<circle cx="${x(p)}" cy="${y(mv)}" r="5" class="now"/>`
+  }
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Ladekurve">${grid}${xs}${line(v.thWarn, 'warn')}${line(v.thShut, 'off')}<polyline points="${curve}" class="c"/>${pts.map(([p, m]) => `<circle cx="${x(p)}" cy="${y(m)}" r="3" class="p"/>`).join('')}${now}</svg>
+    <div class="hat-legend"><span><i class="c"></i>Ladekurve</span><span><i class="warn"></i>Warnung</span><span><i class="off"></i>Abschalten</span>${now ? '<span><i class="now"></i>Jetzt</span>' : ''}</div>`
 }
 
 /* Taster und LED, Lüfter */
@@ -5364,38 +6112,65 @@ async function loadWlan() {
 }
 
 const signalWord = (dbm) => (dbm >= -55 ? 'sehr gut' : dbm >= -67 ? 'gut' : dbm >= -75 ? 'mittel' : 'schwach')
+// the signal as four bars (as the phone shows it)
+const signalBars = (dbm) => {
+  const n = !Number.isFinite(dbm) ? 0 : dbm >= -55 ? 4 : dbm >= -67 ? 3 : dbm >= -75 ? 2 : 1
+  return `<span class="sig" aria-hidden="true">${[1, 2, 3, 4].map((i) => `<i${i <= n ? ' class="on"' : ''}></i>`).join('')}</span>`
+}
 
 function wlanTop() {
   const n = net.status ?? {}
   const row = (k, v) => (v ? `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>` : '')
+  const dbm = Number.parseInt(String(n.wifisignal ?? ''), 10)
+  const online = n.onlinestate === 'online'
+  const name = n.wifi || (n.interface?.startsWith('eth') ? 'LAN-Kabel' : '')
+  const scan = net.scan ?? []
+  const inRange = new Map(scan.map((w) => [w.ssid, w.signal_dbm]))
+  const saved = new Set((net.saved ?? []).map((w) => w.ssid))
+  const pick = net.pick
   return [
-    `<section class="card"><h2>Verbindung</h2><dl class="kv">${row('Status', n.onlinestate === 'online' ? 'online' : 'offline')}${row('Netz', n.wifi || (n.interface?.startsWith('eth') ? 'LAN-Kabel' : ''))}${row('Signal', n.wifisignal ? `${n.wifisignal}` : '')}${row('IP-Adresse', n.ip)}${row('Gateway', n.gateway)}${row('DNS', n.dns)}${row('MAC', n.mac)}</dl>
-      <p class="help" style="margin:0">Der Stand ist bis zu 30 Sekunden alt.</p><div class="btns"><button class="btn" id="w-refresh">Aktualisieren</button></div></section>`,
-    `<section class="card"><h2>Netze in Reichweite</h2>
-      <div class="btns"><button class="btn primary" id="w-scan" ${net.scanning ? 'disabled' : ''}>${net.scanning ? 'Suche läuft …' : net.scan ? 'Neu suchen' : 'Suchen'}</button></div>
+    `<section class="card" data-col="1"><div class="card-head"><h2>Verbindung</h2><button class="icon-btn soft" id="w-refresh" aria-label="Aktualisieren">${icon('sync', 18)}</button></div>
+      <div class="wifi-now"><span class="avatar">${icon('wifi', 18)}</span><span class="lbl"><b translate="no">${esc(name || 'Nicht verbunden')}</b>
+        <small>${Number.isFinite(dbm) ? `${signalBars(dbm)} Empfang ${signalWord(dbm)}` : ''}</small></span><span class="chip ${online ? 'ok' : 'warn'}">${online ? 'online' : 'offline'}</span></div>
+      <dl class="kv">${row('IP-Adresse', n.ip)}</dl>
+      <details class="more"><summary>Details</summary><dl class="kv">${row('Signal', n.wifisignal)}${row('Gateway', n.gateway)}${row('DNS', n.dns)}${row('MAC', n.mac)}</dl></details></section>`,
+    `<section class="card" data-col="1"><h2>Gespeicherte Netze</h2>${
+      net.saved
+        ? net.saved.length
+          ? `<div class="rows">${net.saved
+              .map((w, i) => {
+                const sig = inRange.get(w.ssid)
+                const where = w.active ? 'verbunden' : sig !== undefined ? `in Reichweite · ${signalWord(sig)}` : net.scan ? 'nicht in Reichweite' : ''
+                return `<div class="entry"><span class="avatar">${icon('wifi', 16)}</span><span class="lbl"><b translate="no">${esc(w.ssid)}</b>${where ? `<small>${sig !== undefined && !w.active ? signalBars(sig) : ''} ${esc(where)}</small>` : ''}</span>
+                  ${w.active ? '<span class="chip ok">aktiv</span>' : `<button class="btn sm" data-wpw="${i}">Passwort</button><button class="btn danger sm" data-wrm="${i}">Entfernen</button>`}</div>`
+              })
+              .join('')}</div><p class="help" style="margin:0">Das verbundene Netz lässt sich nicht entfernen – die Box wäre sonst offline.</p>`
+          : '<p class="help" style="margin:0">Keine.</p>'
+        : '<p class="help" style="margin:0">Die gespeicherten Netze ließen sich nicht lesen.</p>'
+    }</section>`,
+    `<section class="card" data-col="2"><h2>Netz hinzufügen</h2>
+      <div class="btns"><button class="btn${net.scan ? '' : ' primary'}" id="w-scan" ${net.scanning ? 'disabled' : ''}>${net.scanning ? '<span class="spin"></span>Suche läuft …' : net.scan ? 'Neu suchen' : 'Netze in Reichweite suchen'}</button></div>
       ${
         net.scan
           ? net.scan.length
             ? `<div class="rows">${net.scan
-                .map((w, i) => `<button class="entry lib-row" data-w="${i}"><span class="avatar">${icon('wifi', 16)}</span><span class="lbl"><b translate="no">${esc(w.ssid)}</b><small>${signalWord(w.signal_dbm)} (${w.signal_dbm} dBm)${w.encrypted ? '' : ' · offen'}</small></span>${n.wifi === w.ssid ? '<span class="chip ok">verbunden</span>' : ''}<span class="chev">${icon('plus', 18)}</span></button>`)
+                .map(
+                  (w, i) =>
+                    `<button class="entry lib-row${pick === w.ssid ? ' picked' : ''}" data-w="${i}"><span class="avatar">${signalBars(w.signal_dbm)}</span><span class="lbl"><b translate="no">${esc(w.ssid)}</b><small>${esc(signalWord(w.signal_dbm))}${w.encrypted ? '' : ' · offen'}</small></span>${n.wifi === w.ssid ? '<span class="chip ok">verbunden</span>' : saved.has(w.ssid) ? '<span class="chip">gespeichert</span>' : ''}${w.encrypted ? `<span class="chev">${icon('lock', 16)}</span>` : ''}</button>`,
+                )
                 .join('')}</div>`
             : `<p class="help" style="margin:0">${net.scanFailed ? 'Die Suche hat nicht geklappt – bitte noch einmal.' : 'Keine Netze gefunden.'}</p>`
           : ''
-      }</section>`,
-    `<section class="card"><h2>Neues WLAN hinzufügen</h2>
-      <div class="field"><label for="w-ssid">Netzname (SSID)</label><input class="input" id="w-ssid" maxlength="32" autocomplete="off"></div>
-      <div class="field"><label for="w-pw">Passwort (8–63 Zeichen, leer = offenes Netz)</label><div class="input-wrap"><input class="input has-eye" id="w-pw" type="password" maxlength="63" autocomplete="new-password"><button class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div></div>
-      <p class="help" style="margin:0">Die Box bleibt im aktuellen Netz und nimmt das neue, wenn es in Reichweite und besser ist.</p>
-      <div class="btns"><button class="btn primary" id="w-add">Hinzufügen</button></div></section>`,
-    `<section class="card"><h2>Gespeicherte Netze</h2>${
-      net.saved
-        ? net.saved.length
-          ? `<div class="rows">${net.saved
-              .map((w, i) => `<div class="entry"><span class="avatar">${icon('wifi', 16)}</span><span class="lbl"><b translate="no">${esc(w.ssid)}</b></span>${w.active ? '<span class="chip ok">aktiv</span>' : `<button class="btn danger sm" data-wrm="${i}">Entfernen</button>`}</div>`)
-              .join('')}</div>`
-          : '<p class="help" style="margin:0">Keine.</p>'
-        : '<p class="help" style="margin:0">Die gespeicherten Netze ließen sich nicht lesen.</p>'
-    }</section>`,
+      }
+      <div class="wifi-form" id="w-form"${pick ? '' : ' hidden'}>
+        <div class="field"><label for="w-pw">Passwort <span class="lbl-sub" id="w-pick" translate="no">${esc(pick ?? '')}</span></label><div class="input-wrap"><input class="input has-eye" id="w-pw" type="password" maxlength="63" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true"><button class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div>
+          <small id="w-pw-hint">8–63 Zeichen, leer bei einem offenen Netz.</small></div>
+        <div class="btns"><button class="btn primary" id="w-add">${net.pwChange ? 'Passwort ändern' : 'Hinzufügen'}</button></div></div>
+      <details class="more" id="w-hidden"><summary>Verstecktes Netz eingeben</summary>
+        <div class="field"><label for="w-ssid">Netzname (SSID)</label><input class="input" id="w-ssid" maxlength="32" ${NO_PW_MANAGER}></div>
+        <div class="field"><label for="w-pw2">Passwort</label><div class="input-wrap"><input class="input has-eye" id="w-pw2" type="password" maxlength="63" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true"><button class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div><small>8–63 Zeichen, leer bei einem offenen Netz.</small></div>
+        <div class="btns"><button class="btn primary" id="w-add2">Hinzufügen</button></div></details>
+      <p class="help" style="margin:0">Die Box bleibt im aktuellen Netz und nimmt das neue, wenn es in Reichweite und besser ist.</p></section>`,
   ]
 }
 
@@ -5416,26 +6191,58 @@ function mountWlan(root, page) {
     net.scanFailed = !r.ok
     if (currentPage()?.id === page.id) renderPage(page, false)
   }
+  // a network of the list: its password next (an open one needs none)
   for (const b of root.querySelectorAll('[data-w]')) {
     b.onclick = () => {
       const w = net.scan[Number(b.dataset.w)]
-      $('#w-ssid', root).value = w.ssid
-      $('#w-pw', root).focus()
-      $('#w-ssid', root).scrollIntoView({ block: 'center', behavior: 'smooth' })
+      net.pick = w.ssid
+      net.pwChange = false
+      $('#w-add', root).textContent = 'Hinzufügen'
+      for (const x of root.querySelectorAll('[data-w]')) x.classList.toggle('picked', x === b)
+      $('#w-pick', root).textContent = w.ssid
+      $('#w-form', root).hidden = false
+      $('#w-pw', root).hidden = !w.encrypted
+      $('#w-pw-hint', root).textContent = w.encrypted ? '8–63 Zeichen.' : 'Ein offenes Netz – ohne Passwort.'
+      if (w.encrypted) $('#w-pw', root).focus()
     }
   }
-  $('#w-add', root).onclick = async () => {
-    const ssid = $('#w-ssid', root).value
-    const password = $('#w-pw', root).value
+  // a saved network's new password (the router got a new one)
+  for (const b of root.querySelectorAll('[data-wpw]')) {
+    b.onclick = () => {
+      const w = net.saved[Number(b.dataset.wpw)]
+      net.pick = w.ssid
+      net.pwChange = true
+      $('#w-pick', root).textContent = w.ssid
+      $('#w-pw', root).hidden = false
+      $('#w-pw-hint', root).textContent = 'Das neue Passwort des Netzes, 8–63 Zeichen.'
+      $('#w-add', root).textContent = 'Passwort ändern'
+      $('#w-form', root).hidden = false
+      $('#w-pw', root).focus()
+      $('#w-form', root).scrollIntoView({ block: 'center', behavior: 'smooth' })
+    }
+  }
+  const add = async (ssid, password) => {
     if (!ssid.trim()) return toast('Bitte den Netznamen eintragen', 'info')
     if (password && (password.length < 8 || password.length > 63)) return toast('Das Passwort hat 8 bis 63 Zeichen', 'info')
     const r = await api(`${API}/wifi/add`, { method: 'POST', body: { ssid, password } })
     if (!r.ok) return toast(r.body?.error ?? 'Das hat nicht geklappt', 'info')
-    $('#w-ssid', root).value = ''
-    $('#w-pw', root).value = ''
+    net.pick = null
     setTimeout(() => again(), 8000)
     toast(`„${ssid}“ wird eingetragen`)
+    renderPage(page, false)
   }
+  $('#w-add', root).onclick = async () => {
+    if (!net.pwChange) return add(net.pick ?? '', $('#w-pw', root).value)
+    const password = $('#w-pw', root).value
+    if (password.length < 8 || password.length > 63) return toast('Das Passwort hat 8 bis 63 Zeichen', 'info')
+    const r = await api(`${API}/wifi/password`, { method: 'POST', body: { ssid: net.pick, password } })
+    if (!r.ok) return toast(r.body?.error === 'connected_network' ? 'Das verbundene Netz lässt sich hier nicht ändern' : 'Das hat nicht geklappt', 'info')
+    toast(`Neues Passwort für „${net.pick}“ gespeichert`)
+    net.pick = null
+    net.pwChange = false
+    renderPage(page, false)
+  }
+  $('#w-add2', root).onclick = () => add($('#w-ssid', root).value, $('#w-pw2', root).value)
   for (const b of root.querySelectorAll('[data-wrm]')) {
     const w = net.saved[Number(b.dataset.wrm)]
     b.onclick = () =>
@@ -5463,33 +6270,64 @@ async function loadTelegram() {
   net.tg = { ...r.body, chatIds: [...(r.body.chatIds ?? [])] }
 }
 
+// The bot's commands a parent uses most (the whole list: /command in Telegram, see telegram_i18n.py)
+const TG_COMMANDS = [
+  ['/help', 'die wichtigsten Befehle als Knöpfe'],
+  ['/status', 'Spielzeit und Ruhezeiten jetzt'],
+  ['/extend 30', 'Bonus-Minuten für heute'],
+  ['/release 60', 'alle Sperren für eine Weile aufheben'],
+  ['/quietnow 60', 'Wiedergabe für eine Weile sperren'],
+  ['/pause', 'Wiedergabe anhalten'],
+  ['/vol 40', 'Lautstärke setzen (0–100)'],
+  ['/sag Text', 'Durchsage: die Box sagt den Text'],
+  ['/login', 'Link zu dieser App'],
+  ['/command', 'alle Befehle'],
+]
+
 function tgTop() {
   const t = net.tg
   const sw = (id, label, help, on) =>
     `<div class="row"><span class="lbl"><b>${label}</b>${help ? `<small>${help}</small>` : ''}</span><label class="switch"><input type="checkbox" id="${id}" ${on ? 'checked' : ''} aria-label="${label}"><span></span></label></div>`
+  // the token: once set, only a button to change it (the field comes on the click)
+  const tokenField = `<div class="field" id="tg-token-field"${t.token_configured ? ' hidden' : ''}><label for="tg-token">${t.token_configured ? 'Neuer Token' : 'Bot-Token'}</label><div class="input-wrap"><input class="input mono has-eye" id="tg-token" type="password" ${NO_PW_MANAGER} placeholder="123456789:AA…"><button type="button" class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div>
+      <small>Den Token bekommst du bei @BotFather in Telegram (/newbot).</small></div>`
   return [
-    `<section class="card"><h2>Eltern-Bot</h2>
-      ${sw('tg-on', 'Bot aktiv', 'Steuern und Nachfragen per Telegram (/status, /extend, /quietnow …).', t.active)}
+    `<section class="card" data-col="1"><div class="card-head"><h2>Eltern-Bot</h2><span class="chip ${t.active ? 'ok' : ''}">${t.active ? 'aktiv' : 'aus'}</span></div>
+      ${sw('tg-on', 'Bot aktiv', 'Steuern und Nachfragen per Telegram.', t.active)}
       ${sw('tg-report', 'Wiedergabe melden', 'Schickt jeden Start, Titel und Stopp – meist zu viel.', t.notifyPlayback)}
-      <dl class="kv"><div><dt>Bot-Token</dt><dd>${t.token_configured ? '✓ Eingerichtet' : 'Fehlt'}</dd></div></dl>
-      <div class="field"><label for="tg-token">Neuen Token setzen (leer = unverändert)</label><div class="input-wrap"><input class="input mono has-eye" id="tg-token" type="password" autocomplete="off" placeholder="123456789:AA…"><button type="button" class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div></div>
-      <p class="help" style="margin:0">Den Token bekommst du bei @BotFather in Telegram (/newbot).</p></section>`,
-    `<section class="card"><h2>Erlaubte Chats</h2><p class="help">Nur diese Chats dürfen den Bot steuern.</p>
+      ${sw('tg-week', 'Wochenrückblick', 'Sonntagabend: wie lange und was die Woche über gehört wurde.', t.weeklySummary)}
+      <div class="row"><span class="lbl"><b>Bot-Token</b><small>${t.token_configured ? '✓ Eingerichtet' : 'Fehlt noch'}</small></span>${t.token_configured ? '<button class="btn sm" id="tg-token-edit">Ändern</button>' : ''}</div>
+      ${tokenField}
+      <div class="btns"><button class="btn" id="tg-test" ${t.token_configured && t.chatIds.length ? '' : 'disabled'}>${icon('tg', 18)}Testnachricht senden</button></div></section>`,
+    `<section class="card" data-col="2"><h2>Erlaubte Chats</h2><p class="help">Nur diese Chats dürfen den Bot steuern.</p>
       ${
         t.chatIds.length
           ? `<div class="rows">${t.chatIds.map((c, i) => `<div class="entry"><span class="avatar">${icon('tg', 16)}</span><span class="lbl"><b${c.label ? ' translate="no"' : ''}>${esc(c.label || 'Ohne Namen')}</b><small>${esc(c.id)}</small></span><button class="btn danger sm" data-tgrm="${i}">Entfernen</button></div>`).join('')}</div>`
           : '<p class="help" style="margin:0">Noch keiner – ohne erlaubten Chat antwortet der Bot niemandem.</p>'
       }
-      <div class="rule-times"><div class="field"><label for="tg-id">Chat-ID</label><input class="input mono" id="tg-id" autocomplete="off" inputmode="numeric"></div><div class="field"><label for="tg-name">Name</label><input class="input" id="tg-name" maxlength="60" autocomplete="off"></div></div>
-      <div class="btns"><button class="btn" id="tg-add">${icon('plus', 18)}Chat hinzufügen</button><button class="btn" id="tg-detect" ${t.token_configured ? '' : 'disabled'}>Chat-ID ermitteln</button></div></section>`,
-    `<div class="btns wide"><button class="btn primary" id="tg-save">Speichern</button></div>`,
+      <div class="pair keep" style="--cols:1fr 1fr"><div class="field"><label for="tg-id">Chat-ID</label><input class="input mono" id="tg-id" ${NO_PW_MANAGER} inputmode="numeric"></div><div class="field"><label for="tg-name">Name</label><input class="input" id="tg-name" maxlength="60" ${NO_PW_MANAGER}></div></div>
+      <div class="btns"><button class="btn" id="tg-add">${icon('plus', 18)}Hinzufügen</button><button class="btn" id="tg-detect" ${t.token_configured ? '' : 'disabled'}>Chat-ID ermitteln</button></div></section>`,
+    `<div class="btns save-bar wide"><button class="btn primary" id="tg-save">Speichern</button></div>`,
+    `<section class="card wide"><h2>Befehle</h2><p class="help">Im Chat mit dem Bot, z. B.:</p>
+      <dl class="cmds cols2">${TG_COMMANDS.map(([c, d]) => `<div><dt translate="no">${esc(c)}</dt><dd>${esc(d)}</dd></div>`).join('')}</dl></section>`,
   ]
 }
 
 function mountTelegram(root, page) {
   const redraw = () => currentPage()?.id === page.id && renderPage(page, false)
+  $('#tg-token-edit', root)?.addEventListener('click', (e) => {
+    $('#tg-token-field', root).hidden = false
+    e.target.hidden = true
+    $('#tg-token', root).focus()
+  })
+  $('#tg-test', root).onclick = async () => {
+    const r = await api(`${API}/telegram/test`, { method: 'POST', body: {} })
+    // (with the saved settings: the bot switched on, its token and a chat saved)
+    toast(r.status === 409 ? 'Erst Bot aktiv, Token und einen Chat speichern' : r.body?.ok ? 'Testnachricht geschickt – kam sie an?' : 'Das ging nicht', r.body?.ok ? 'ok' : 'info')
+  }
   $('#tg-on', root).onchange = (e) => (net.tg.active = e.target.checked)
   $('#tg-report', root).onchange = (e) => (net.tg.notifyPlayback = e.target.checked)
+  $('#tg-week', root).onchange = (e) => (net.tg.weeklySummary = e.target.checked)
   for (const b of root.querySelectorAll('[data-tgrm]')) {
     b.onclick = () => {
       net.tg.chatIds.splice(Number(b.dataset.tgrm), 1)
@@ -5534,7 +6372,7 @@ function mountTelegram(root, page) {
   $('#tg-save', root).onclick = async () => {
     const token = $('#tg-token', root).value.trim()
     if (token && !/^\d{6,12}:[A-Za-z0-9_-]{30,50}$/.test(token)) return toast('Der Token sieht nicht richtig aus (Zahl:Buchstaben)', 'info')
-    const body = { active: net.tg.active, notifyPlayback: net.tg.notifyPlayback, chatIds: net.tg.chatIds, ...(token ? { token } : {}) }
+    const body = { active: net.tg.active, notifyPlayback: net.tg.notifyPlayback, weeklySummary: net.tg.weeklySummary, chatIds: net.tg.chatIds, ...(token ? { token } : {}) }
     const r = await api(`${API}/telegram-config`, { method: 'POST', body })
     if (!r.ok) {
       const why = {
@@ -5568,12 +6406,23 @@ const MQTT_KEYS = [
   ['haTopic', 'haTopic'],
 ]
 
+// the example of the box's configuration template: shown as an empty field with a hint, not as a real broker
+const MQTT_EXAMPLE_BROKER = 'mqtt-example-broker.com'
+
 async function loadMqtt() {
   const r = await api(`${API}/mqtt`)
   if (!r.ok) throw new Error(`mqtt ${r.status}`)
   net.mqtt = r.body
   for (const [key, field] of MQTT_KEYS) state.values.set(key, r.body[field])
+  if (r.body.broker === MQTT_EXAMPLE_BROKER) state.values.set('mqBroker', '')
   state.values.set('mqPw', '')
+}
+
+// One of the topics the box sends to, from what is typed (scripts/mqtt/mqtt.py: topic/client-id/state …)
+function mqttTopicPreview() {
+  const t = String(state.values.get('mqTopic') ?? '').trim() || '…'
+  const c = String(state.values.get('mqClient') ?? '').trim() || '…'
+  return `z. B. ${t}/${c}/state`
 }
 
 /* WLED */
@@ -5588,23 +6437,29 @@ async function loadWled() {
 
 function wledTop() {
   const w = net.wled
-  const sw = (id, label, on) => `<div class="row"><span class="lbl"><b>${label}</b></span><label class="switch"><input type="checkbox" id="${id}" ${on ? 'checked' : ''} aria-label="${label}"><span></span></label></div>`
-  const preset = (id, label, value) =>
+  const sw = (id, label, on, help = '', extra = '') =>
+    `<div class="row"><span class="lbl"><b>${label}</b>${help ? `<small>${help}</small>` : ''}</span>${extra}<label class="switch"><input type="checkbox" id="${id}" ${on ? 'checked' : ''} aria-label="${label}"><span></span></label></div>`
+  // a preset: the WLED device's list when it answered, else its number
+  const preset = (id, value, label = '') =>
     w.presets.length
-      ? `<div class="field"><label for="${id}">${label}</label><select class="input" id="${id}"><option value="">–</option>${w.presets.map((p) => `<option value="${esc(p.id)}"${p.id === value ? ' selected' : ''}>${esc(`${p.id} · ${p.name}`)}</option>`).join('')}</select></div>`
-      : `<div class="field"><label for="${id}">${label}</label><input class="input" id="${id}" inputmode="numeric" maxlength="3" value="${esc(value)}"></div>`
+      ? `<select class="input" id="${id}" aria-label="${esc(label || 'Preset')}"><option value="">–</option>${w.presets.map((p) => `<option value="${esc(p.id)}"${p.id === value ? ' selected' : ''}>${esc(`${p.id} · ${p.name}`)}</option>`).join('')}</select>`
+      : `<input class="input" id="${id}" inputmode="numeric" maxlength="3" value="${esc(value)}" placeholder="Nr." aria-label="${esc(label || 'Preset')}">`
+  const pct = (v) => Math.round((v / 255) * 100)
   const slider = (id, label, v) =>
-    `<div class="field"><div class="slider-head"><label for="${id}">${label}</label><span class="value-pill" id="${id}-out">${v}</span></div><input type="range" id="${id}" min="0" max="255" value="${v}" style="--fill:${(v / 255) * 100}%"></div>`
+    `<div class="field"><div class="slider-head"><label for="${id}">${label}</label><span class="value-pill" id="${id}-out">${pct(v)} %</span></div><input type="range" id="${id}" min="0" max="255" value="${v}" style="--fill:${(v / 255) * 100}%"></div>`
+  const dev = w.device
   return [
-    `<section class="card"><h2>Verbindung</h2>${sw('wl-on', 'WLED aktiv', w.active)}
-      <div class="field"><label for="wl-port">Serielle Schnittstelle</label><input class="input mono" id="wl-port" value="${esc(w.port || '/dev/ttyUSB0')}" autocomplete="off"></div>
-      <div class="field"><label for="wl-baud">Baudrate</label><select class="input" id="wl-baud">${WLED_BAUD.map((b) => `<option${b === w.baud ? ' selected' : ''}>${b}</option>`).join('')}</select></div>
-      ${w.device ? `<dl class="kv"><div><dt>Gerät</dt><dd>${esc(w.device.name ?? '')}</dd></div><div><dt>Version</dt><dd>${esc(w.device.version ?? '')}</dd></div><div><dt>IP</dt><dd>${esc(w.device.ip ?? '')}</dd></div></dl>` : '<p class="help" style="margin:0">Kein WLED-Gerät hat geantwortet. Die Einstellungen lassen sich trotzdem speichern.</p>'}</section>`,
-    `<section class="card"><h2>Presets</h2>${preset('wl-main', 'Preset im normalen Betrieb (Nummer)', w.mainId)}
-      ${sw('wl-booton', 'Beim Start ein eigenes Preset', w.bootActive)}${preset('wl-boot', 'Preset beim Start (Nummer)', w.bootId)}
-      ${sw('wl-offon', 'Beim Ausschalten ein eigenes Preset', w.shutdownActive)}${preset('wl-off', 'Preset beim Ausschalten (Nummer)', w.shutdownId)}</section>`,
-    `<section class="card"><h2>Helligkeit</h2>${slider('wl-bright', 'Helligkeit normal', w.brightness)}${slider('wl-dim', 'Helligkeit gedimmt', w.dimmed)}</section>`,
-    `<div class="btns wide"><button class="btn primary" id="wl-save">Speichern</button></div>`,
+    `<section class="card" data-col="1"><div class="card-head"><h2>Verbindung</h2><span class="chip ${dev ? 'ok' : 'warn'}">${dev ? 'verbunden' : 'kein Gerät'}</span></div>
+      <div class="status-line"><span class="dot ${dev ? 'ok' : 'warn'}"></span><span>${dev ? esc([dev.name, dev.version && `Version ${dev.version}`, dev.ip].filter(Boolean).join(' · ')) : 'Kein WLED-Gerät hat geantwortet. Speichern geht trotzdem.'}</span>${dev ? '' : '<button class="btn sm" id="wl-retry">Erneut suchen</button>'}</div>
+      ${sw('wl-on', 'WLED aktiv', w.active, 'Die LEDs zeigen, was die Box tut.')}
+      <div class="pair keep" style="--cols:3fr 2fr"><div class="field"><label for="wl-port">Schnittstelle</label><input class="input mono" id="wl-port" value="${esc(w.port || '/dev/ttyUSB0')}" ${NO_PW_MANAGER}></div>
+        <div class="field"><label for="wl-baud">Baudrate</label><select class="input" id="wl-baud">${WLED_BAUD.map((b) => `<option${b === w.baud ? ' selected' : ''}>${b}</option>`).join('')}</select></div></div></section>`,
+    `<section class="card" data-col="2"><h2>Presets</h2>
+      <div class="row"><span class="lbl"><b>Im normalen Betrieb</b></span><span class="mini-field">${preset('wl-main', w.mainId, 'Im normalen Betrieb')}</span></div>
+      ${sw('wl-booton', 'Beim Start', w.bootActive, 'ein eigenes Preset', `<span class="mini-field" data-show="wl-booton"${w.bootActive ? '' : ' hidden'}>${preset('wl-boot', w.bootId, 'Beim Start')}</span>`)}
+      ${sw('wl-offon', 'Beim Ausschalten', w.shutdownActive, 'ein eigenes Preset', `<span class="mini-field" data-show="wl-offon"${w.shutdownActive ? '' : ' hidden'}>${preset('wl-off', w.shutdownId, 'Beim Ausschalten')}</span>`)}</section>`,
+    `<section class="card" data-col="1"><h2>Helligkeit</h2>${slider('wl-bright', 'Normal', w.brightness)}${slider('wl-dim', 'Gedimmt', w.dimmed)}</section>`,
+    `<div class="save-card wide"><span>${esc(w.device ? 'Verbindung, Presets und Helligkeit – gehen beim Speichern auch an das WLED-Gerät.' : 'Verbindung, Presets und Helligkeit.')}</span><button class="btn primary" id="wl-save">Speichern</button></div>`,
   ]
 }
 
@@ -5613,9 +6468,16 @@ function mountWled(root, page) {
     const el = $(`#${id}`, root)
     el.oninput = () => {
       el.style.setProperty('--fill', `${(el.value / 255) * 100}%`)
-      $(`#${id}-out`, root).textContent = el.value
+      $(`#${id}-out`, root).textContent = `${Math.round((el.value / 255) * 100)} %`
     }
   }
+  // the preset of a switch only while it is on
+  for (const id of ['wl-booton', 'wl-offon']) $(`#${id}`, root).addEventListener('change', (e) => ($(`[data-show="${id}"]`, root).hidden = !e.target.checked))
+  $('#wl-retry', root)?.addEventListener('click', async () => {
+    await loadWled().catch(() => undefined)
+    if (currentPage()?.id === page.id) renderPage(page, false)
+    toast(net.wled?.device ? 'WLED-Gerät gefunden' : 'Wieder keine Antwort', net.wled?.device ? 'ok' : 'info')
+  })
   $('#wl-save', root).onclick = async () => {
     const v = (id) => $(`#${id}`, root).value.trim()
     const body = {
@@ -5644,31 +6506,58 @@ function mountWled(root, page) {
 const sec = { st: null }
 
 async function loadAuthState() {
-  const r = await api(`${API}/auth-state`)
+  const [r, list] = await Promise.all([api(`${API}/auth-state`), api(`${API}/auth/sessions`)])
   if (!r.ok) throw new Error(`auth-state ${r.status}`)
   sec.st = r.body
+  // (the devices signed in: from the box's sessions; an older box has no list - then only their number)
+  sec.sessions = list.ok && Array.isArray(list.body?.sessions) ? list.body.sessions : null
 }
+
+// "vor 2 Stunden", "gestern", "am 12.9."
+function agoText(ts) {
+  const min = Math.round((Date.now() - Date.parse(ts)) / 60000)
+  if (!Number.isFinite(min)) return ''
+  if (min < 2) return 'gerade eben'
+  if (min < 60) return `vor ${min} min`
+  if (min < 24 * 60) return `vor ${Math.round(min / 60)} h`
+  if (min < 48 * 60) return 'gestern'
+  return `am ${new Date(ts).toLocaleDateString(LOCALE, { day: 'numeric', month: 'numeric' })}`
+}
+
+// the devices listed by name (the last used); the others only counted
+const SESSIONS_SHOWN = 6
 
 function securityTop() {
   const st = sec.st
-  const sw = `<div class="row"><span class="lbl"><b>Anmeldung verlangen</b><small>Aus = im Heimnetz ohne Passwort, wie beim Admin-Interface. Der QR-Code am Display und der Telegram-Link gehen immer.</small></span>
-    <label class="switch"><input type="checkbox" id="sec-login" ${st.loginSwitch ? 'checked' : ''} ${st.passwordSet ? '' : 'disabled'} aria-label="Anmeldung verlangen"><span></span></label></div>`
+  const eye = `<button class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button>`
+  const sessions = sec.sessions
+  const devices = sessions
+    ? `<div class="rows">${sessions
+        .slice(0, SESSIONS_SHOWN)
+        .map(
+          (x) =>
+            `<div class="entry"><span class="avatar">${icon(/iphone|android|ipad/i.test(x.device ?? '') ? 'mobile' : 'display', 16)}</span><span class="lbl"><b>${esc(x.device || 'Unbekanntes Gerät')}</b><small>${esc([x.current ? 'dieses Gerät' : '', x.kept ? 'bleibt angemeldet' : '', x.lastSeen ? `zuletzt ${agoText(x.lastSeen)}` : ''].filter(Boolean).join(' · '))}</small></span>${x.current ? '<span class="chip ok">dieses Gerät</span>' : `<button class="btn sm" data-sec-out="${esc(x.id)}">Abmelden</button>`}</div>`,
+        )
+        .join('')}</div>${sessions.length > SESSIONS_SHOWN ? `<p class="help" style="margin:0">${esc(sessions.length - SESSIONS_SHOWN === 1 ? 'Dazu eine ältere Anmeldung.' : `Dazu ${sessions.length - SESSIONS_SHOWN} ältere Anmeldungen.`)}</p>` : ''}`
+    : `<p class="help">${st.keptDevices ? (st.keptDevices === 1 ? '1 Gerät bleibt angemeldet („Angemeldet bleiben“).' : `${st.keptDevices} Geräte bleiben angemeldet („Angemeldet bleiben“).`) : 'Kein Gerät bleibt dauerhaft angemeldet.'}</p>`
   return [
-    `<section class="card"><h2>Passwort</h2>
-      <p class="help">Ein Passwort für diese App und das bisherige Admin-Interface. Ein neues Passwort meldet alle anderen Geräte ab, auch die mit „Angemeldet bleiben“.</p>
-      <dl class="kv"><div><dt>Status</dt><dd>${st.passwordSet ? (st.defaultPassword ? 'Standardpasswort' : 'Gesetzt') : 'Nicht gesetzt'}</dd></div></dl>
+    `<section class="card" data-col="1"><div class="card-head"><h2>Passwort</h2><span class="chip ${st.passwordSet && !st.defaultPassword ? 'ok' : 'warn'}">${st.passwordSet ? (st.defaultPassword ? 'Standardpasswort' : 'gesetzt') : 'nicht gesetzt'}</span></div>
+      <p class="help">Ein Passwort für diese App und das bisherige Admin-Interface.</p>
       ${st.defaultPassword ? `<div class="note warn">${icon('info', 18)}<span>Es gilt noch das Standardpasswort, das im Admin-Interface steht. Bitte ein eigenes festlegen.</span></div>` : ''}
-      ${st.passwordSet ? `<div class="field"><label for="sec-cur">Aktuelles Passwort</label><div class="input-wrap"><input class="input has-eye" id="sec-cur" type="password" autocomplete="current-password"><button class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div></div>` : ''}
-      <div class="field"><label for="sec-new">Neues Passwort (mindestens 6 Zeichen)</label><div class="input-wrap"><input class="input has-eye" id="sec-new" type="password" autocomplete="new-password"><button class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div></div>
-      <div class="field"><label for="sec-new2">Neues Passwort wiederholen</label><input class="input" id="sec-new2" type="password" autocomplete="new-password"></div>
-      <div class="btns"><button class="btn primary" id="sec-save">${st.passwordSet ? 'Passwort ändern' : 'Passwort festlegen'}</button></div></section>`,
-    `<section class="card"><h2>Anmeldung</h2>${sw}
+      ${st.resetOpen ? `<div class="note">${icon('info', 18)}<span>Du bist über den QR-Code oder Telegram hereingekommen: Ein paar Minuten lang geht ein neues Passwort ohne das alte.</span></div>` : ''}
+      ${st.passwordSet && !st.resetOpen ? `<div class="field"><label for="sec-cur">Aktuelles Passwort</label><div class="input-wrap"><input class="input has-eye" id="sec-cur" type="password" autocomplete="current-password">${eye}</div></div>` : ''}
+      <div class="field"><label for="sec-new">Neues Passwort</label><div class="input-wrap"><input class="input has-eye" id="sec-new" type="password" autocomplete="new-password"><button class="eye" id="sec-eye2" aria-label="Anzeigen">${icon('eye', 18)}</button></div><small id="sec-len">Mindestens 6 Zeichen.</small></div>
+      <div class="field"><label for="sec-new2">Neues Passwort wiederholen</label><input class="input" id="sec-new2" type="password" autocomplete="new-password"><small id="sec-match"></small></div>
+      <p class="help" style="margin:0">Ein neues Passwort meldet alle anderen Geräte ab.</p>
+      <div class="btns"><button class="btn primary" id="sec-save" disabled>${st.passwordSet ? 'Passwort ändern' : 'Passwort festlegen'}</button></div>
+      <details class="more"><summary>Passwort vergessen?</summary><p class="help" style="margin:0">${esc('Über den QR-Code am Display (die Status-Symbole oben lange drücken) oder /login beim Telegram-Bot kommst du ohne Passwort in die App. Danach lässt sich hier 10 Minuten lang ein neues Passwort ohne das alte festlegen.')}</p></details></section>`,
+    `<section class="card" data-col="2"><div class="card-head"><h2>Anmeldung</h2><span class="chip ${st.loginRequired ? 'ok' : 'warn'}">${st.loginRequired ? 'an' : 'aus'}</span></div>
+      <div class="row"><span class="lbl"><b>Anmeldung verlangen</b><small>Der QR-Code am Display und der Telegram-Link gehen immer.</small></span>
+        <label class="switch"><input type="checkbox" id="sec-login" ${st.loginSwitch ? 'checked' : ''} ${st.passwordSet ? '' : 'disabled'} aria-label="Anmeldung verlangen"><span></span></label></div>
       ${st.passwordSet ? '' : '<p class="help" style="margin:0">Erst ein Passwort festlegen, dann lässt sich die Anmeldung einschalten.</p>'}
-      <p class="help" style="margin:0">${st.loginRequired ? 'Die App fragt im Heimnetz nach dem Passwort.' : 'Die App ist im Heimnetz ohne Passwort offen.'}</p></section>`,
-    // (without changing the password: e.g. a lost phone that stayed signed in)
-    `<section class="card"><h2>Angemeldete Geräte</h2>
-      <p class="help">${st.keptDevices ? (st.keptDevices === 1 ? '1 Gerät bleibt angemeldet („Angemeldet bleiben“).' : `${st.keptDevices} Geräte bleiben angemeldet („Angemeldet bleiben“).`) : 'Kein Gerät bleibt dauerhaft angemeldet.'}</p>
-      <div class="btns"><button class="btn danger" id="sec-others">Alle anderen Geräte abmelden</button></div></section>`,
+      ${st.loginRequired ? '<div class="status-line"><span class="dot ok"></span><span>Die App fragt im Heimnetz nach dem Passwort.</span></div>' : `<div class="note warn">${icon('info', 18)}<span>Jeder im Heimnetz kann die App ohne Passwort bedienen.</span></div>`}</section>`,
+    `<section class="card" data-col="2"><h2>Angemeldete Geräte</h2>${devices}
+      <div class="btns"><button class="btn danger" id="sec-others">Alle anderen abmelden</button></div></section>`,
   ]
 }
 
@@ -5677,6 +6566,32 @@ function mountSecurity(root, page) {
     b.onclick = () => {
       const i = b.parentElement.querySelector('input')
       i.type = i.type === 'password' ? 'text' : 'password'
+    }
+  }
+  // the new password's eye shows both new fields
+  $('#sec-eye2', root).onclick = () => {
+    const show = $('#sec-new', root).type === 'password'
+    for (const id of ['sec-new', 'sec-new2']) $(`#${id}`, root).type = show ? 'text' : 'password'
+  }
+  // checked while typing: long enough, both the same - the button only then
+  const check = () => {
+    const a = $('#sec-new', root).value
+    const b = $('#sec-new2', root).value
+    const len = $('#sec-len', root)
+    len.textContent = a && a.length < 6 ? `Noch ${6 - a.length} Zeichen` : 'Mindestens 6 Zeichen.'
+    len.classList.toggle('err', !!a && a.length < 6)
+    const m = $('#sec-match', root)
+    m.textContent = b ? (a === b ? '✓ Stimmt überein' : 'Stimmt nicht überein') : ''
+    m.className = b && a !== b ? 'err' : ''
+    $('#sec-save', root).disabled = !(a.length >= 6 && a === b)
+  }
+  for (const id of ['sec-new', 'sec-new2']) $(`#${id}`, root).addEventListener('input', check)
+  for (const b of root.querySelectorAll('[data-sec-out]')) {
+    b.onclick = async () => {
+      const r = await api(`${API}/auth/sign-out`, { method: 'POST', body: { id: b.dataset.secOut } })
+      toast(r.ok ? 'Abgemeldet' : 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
+      await loadAuthState()
+      renderPage(page, false)
     }
   }
   $('#sec-save', root).onclick = async () => {
@@ -5739,51 +6654,75 @@ async function checkTlsTrust(host) {
   }
 }
 
+// The device the app runs on: its guide is the one shown open
+const devicePlatform = () => {
+  const ua = navigator.userAgent
+  return /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1) ? 'ios' : /Android/.test(ua) ? 'android' : /Macintosh/.test(ua) ? 'mac' : /Windows/.test(ua) ? 'win' : ''
+}
+
+// How to install the box's certificate, per system
+const TLS_GUIDES = [
+  ['android', 'Android', ['„Zertifikat laden“ tippen – die Datei landet in „Downloads“.', 'Einstellungen › Sicherheit › Weitere Einstellungen › Verschlüsselung & Anmeldedaten › Zertifikat installieren › CA-Zertifikat (je nach Handy leicht anders benannt), den Hinweis bestätigen und die Datei wählen.', 'In Chrome die App über https öffnen und im Menü „App installieren“ wählen.']],
+  ['ios', 'iPhone / iPad', ['In Safari „Zertifikat laden“ tippen und „Zulassen“.', 'Einstellungen › Allgemein › VPN und Geräteverwaltung › das MuPiBox-Profil › Installieren.', 'Einstellungen › Allgemein › Info › Zertifikatsvertrauenseinstellungen › das MuPiBox-Zertifikat einschalten.', 'Die App über https in Safari öffnen › Teilen › „Zum Home-Bildschirm“.']],
+  ['win', 'Windows', ['„Zertifikat laden“ und die Datei öffnen › „Zertifikat installieren …“.', '„Alle Zertifikate in folgendem Speicher speichern“ › „Vertrauenswürdige Stammzertifizierungsstellen“ › Fertig stellen.', 'Den Browser neu starten. (Firefox hat eigene Zertifikate: Einstellungen › Datenschutz & Sicherheit › Zertifikate anzeigen › Zertifizierungsstellen › Importieren.)']],
+  ['mac', 'Mac', ['„Zertifikat laden“ und die Datei öffnen – die Schlüsselbundverwaltung geht auf.', 'Das MuPiBox-Zertifikat doppelklicken › „Vertrauen“ › „Bei Verwendung dieses Zertifikats“: „Immer vertrauen“.', 'Den Browser neu laden.']],
+]
+
 function tlsTop() {
   const st = tlsState.st
   const c = st.cert
   const host = st.linkHost || location.hostname
   const httpsApp = `https://${host}/app/`
-  const trust = tlsState.trust === null ? 'Wird geprüft …' : tlsState.trust ? 'Vertraut der Box – https ohne Warnung' : 'Vertraut der Box noch nicht'
   const custom = st.mode === 'custom'
+  const trust = tlsState.trust
+  const onHttps = location.protocol === 'https:'
+  const platform = devicePlatform()
+  const months = c ? Math.round((Date.parse(c.validTo) - Date.now()) / (30.4 * 86400e3)) : null
+  const now =
+    trust === null
+      ? `<span class="spin"></span><span>Prüfe, ob dieses Gerät der Box vertraut …</span>`
+      : trust && onHttps
+        ? `<span class="dot ok"></span><span><b>Dieses Gerät ist sicher verbunden</b> – über https, ohne Warnung.</span>`
+        : trust
+          ? `<span class="dot ok"></span><span><b>Dieses Gerät vertraut der Box.</b> Die App ist gerade noch über http offen.</span><a class="btn sm" href="${esc(httpsApp)}">${icon('lock', 16)}Über https öffnen</a>`
+          : `<span class="dot warn"></span><span><b>Dieses Gerät vertraut der Box noch nicht.</b> ${custom ? '' : 'Einmal das Zertifikat installieren, dann warnt der Browser nicht mehr.'}</span>${custom ? '' : `<a class="btn sm primary" href="${API}/tls/ca.crt" download>${icon('save', 16)}Zertifikat laden</a>`}`
+  const step = (n, done, title, body) => `<li class="${done ? 'done' : ''}"><span class="num">${done ? icon('check', 14) : n}</span><div><b>${esc(title)}</b>${body}</div></li>`
+  const names = [...new Set([...(c?.names ?? []), ...(st.boxNames ?? [])])].filter((n) => n !== '127.0.0.1' && n !== 'localhost')
   return [
-    `<section class="card"><h2>Zertifikat</h2>
-      <p class="help">Damit ist die Verbindung zur Box verschlüsselt (https://…). Die Spotify-Anmeldung nutzt es auch.</p>
+    `<section class="card wide tls-now"><div class="status-line">${now}</div></section>`,
+    `<section class="card" data-col="1"><div class="card-head"><h2>Zertifikat</h2><span class="chip ok">${custom ? 'eigenes' : 'der Box'}</span></div>
       ${spKv([
-        ['Art', custom ? 'Eigenes Zertifikat' : 'Zertifikat der Box'],
         c && ['Gilt für', c.names.join(', ')],
-        c && ['Gültig bis', new Date(c.validTo).toLocaleDateString(LOCALE)],
+        c && ['Gültig bis', `${new Date(c.validTo).toLocaleDateString(LOCALE)}${months != null && months >= 1 ? ` · noch ${months} ${months === 1 ? 'Monat' : 'Monate'}` : ''}`],
         c && custom && ['Aussteller', c.issuer.replace(/\n/g, ', ')],
-        ['Dieses Gerät', trust],
       ])}
-      ${custom && !st.coversBox ? `<div class="note warn">${icon('info', 18)}<span>${esc('Das Zertifikat gilt für keine der Adressen, unter denen die Box gerade erreichbar ist – dort warnt der Browser. Unten eine Adresse für Links eintragen, unter der es gilt.')}</span></div>` : ''}
-      <div class="btns"><a class="btn" href="${esc(httpsApp)}">${icon('lock', 18)}${esc('Über https öffnen')}</a></div></section>`,
+      <p class="help" style="margin:0">${esc(custom ? 'Die Box erinnert vor dem Ablauf. Ein neues Zertifikat unten wieder hochladen.' : 'Die Box erneuert es selbst rechtzeitig. Auf den Geräten muss dafür nichts neu installiert werden.')}</p>
+      ${custom && !st.coversBox ? `<div class="note warn">${icon('info', 18)}<span>${esc('Das Zertifikat gilt für keine der Adressen, unter denen die Box gerade erreichbar ist – dort warnt der Browser. Unten eine Adresse für Links eintragen, unter der es gilt.')}</span></div>` : ''}</section>`,
+    `<section class="card" data-col="1"><h2>${esc('Nur sichere Verbindung')}</h2>
+      <div class="row"><span class="lbl"><b>${esc('http auf https umleiten')}</b><small>${esc('Die App öffnet sich dann immer über https, auch über QR-Code und Telegram-Links.')}</small></span>
+        <label class="switch"><input type="checkbox" id="tls-only" ${st.httpsOnly ? 'checked' : ''} ${!st.httpsOnly && trust === false ? 'disabled' : ''} aria-label="${esc('http auf https umleiten')}"><span></span></label></div>
+      ${!st.httpsOnly && trust === false ? `<p class="help" style="margin:0">${esc('Erst dieses Gerät einrichten (rechts) – sonst sperrst du dich mit einer Warnung aus.')}</p>` : ''}
+      <details class="more"><summary>Was ausgenommen ist</summary><p class="help" style="margin:0">${esc('Das Display der Box bleibt bei http, und über Port 8200 ist die App immer per http erreichbar. Auf Geräten ohne das Zertifikat warnt der Browser.')}</p></details></section>`,
     custom
       ? ''
-      : `<section class="card"><h2>${esc('Diesem Gerät die Box bekannt machen')}</h2>
-      <p class="help">${esc('Einmal pro Handy oder Computer: das Zertifikat der Box installieren. Danach warnt der Browser bei https nicht mehr, und auf Android lässt sich die App wie eine echte App installieren. Es gilt nur für Adressen im Heimnetz – für andere Webseiten taugt es nicht.')}</p>
-      <div class="btns"><a class="btn primary" href="${API}/tls/ca.crt" download>${icon('save', 18)}${esc('Zertifikat laden')}</a></div>
-      <details class="howto"><summary><b>Android</b></summary><ol>
-        <li>${esc('„Zertifikat laden“ tippen – die Datei landet in „Downloads“.')}</li>
-        <li>${esc('Einstellungen › Sicherheit › Weitere Einstellungen › Verschlüsselung & Anmeldedaten › Zertifikat installieren › CA-Zertifikat (je nach Handy leicht anders benannt), den Hinweis bestätigen und die Datei wählen.')}</li>
-        <li>${esc('In Chrome die App über https öffnen und im Menü „App installieren“ wählen.')}</li></ol></details>
-      <details class="howto"><summary><b>iPhone / iPad</b></summary><ol>
-        <li>${esc('In Safari „Zertifikat laden“ tippen und „Zulassen“.')}</li>
-        <li>${esc('Einstellungen › Allgemein › VPN und Geräteverwaltung › das MuPiBox-Profil › Installieren.')}</li>
-        <li>${esc('Einstellungen › Allgemein › Info › Zertifikatsvertrauenseinstellungen › das MuPiBox-Zertifikat einschalten.')}</li>
-        <li>${esc('Die App über https in Safari öffnen › Teilen › „Zum Home-Bildschirm“.')}</li></ol></details></section>`,
-    `<section class="card"><h2>${esc('Nur sichere Verbindung')}</h2>
-      <div class="row"><span class="lbl"><b>${esc('http auf https umleiten')}</b><small>${esc('Die App und das Admin-Interface öffnen sich dann immer über https, auch QR-Code und Telegram-Links. Vorher auf allen Geräten das Zertifikat installieren, sonst warnt dort der Browser. Das Display der Box ist ausgenommen, und über Port 8200 bleibt die App immer per http erreichbar.')}</small></span>
-        <label class="switch"><input type="checkbox" id="tls-only" ${st.httpsOnly ? 'checked' : ''} aria-label="${esc('http auf https umleiten')}"><span></span></label></div></section>`,
-    `<section class="card"><h2>${esc('Adresse für Links')}</h2>
-      <p class="help">${esc('Unter welchem Namen QR-Code und Telegram-Links die Box nennen – z. B. der Name eines eigenen Zertifikats. Leer = die IP-Adresse der Box.')}</p>
-      <div class="field"><input class="input mono" id="tls-host" value="${esc(st.linkHost)}" placeholder="${esc(st.boxNames?.[0] ?? '')}" spellcheck="false" autocomplete="off" ${NO_PW_MANAGER}></div>
+      : `<section class="card" data-col="2"><h2>${esc('Diesem Gerät die Box bekannt machen')}</h2><p class="help">${esc('Einmal pro Handy oder Computer. Es gilt nur für Adressen im Heimnetz.')}</p>
+      <ol class="tls-steps">
+        ${step(1, !!trust, 'Zertifikat laden', `<div class="btns"><a class="btn${trust ? '' : ' primary'}" href="${API}/tls/ca.crt" download>${icon('save', 18)}${esc('Zertifikat laden')}</a></div>`)}
+        ${step(2, !!trust, 'Auf dem Gerät installieren', TLS_GUIDES.map(([id, name, lines]) => `<details class="howto"${id === platform && !trust ? ' open' : ''}><summary><b>${esc(name)}</b>${id === platform ? ' <span class="chip">dieses Gerät</span>' : ''}</summary><ol>${lines.map((l) => `<li>${esc(l)}</li>`).join('')}</ol></details>`).join(''))}
+        ${step(3, !!trust && onHttps, 'Über https öffnen', trust && onHttps ? '<small>Erledigt.</small>' : `<div class="btns"><a class="btn" href="${esc(httpsApp)}">${icon('lock', 18)}${esc('Über https öffnen')}</a></div>`)}
+      </ol></section>`,
+    `<section class="card" data-col="2"><h2>${esc('Adresse für Links')}</h2>
+      <p class="help">${esc('Unter welchem Namen QR-Code und Telegram-Links die Box nennen. Leer = die IP-Adresse der Box.')}</p>
+      ${names.length ? `<div class="pills small">${names.map((n) => `<button type="button" data-host="${esc(n)}" aria-selected="${n === st.linkHost}" translate="no">${esc(n)}</button>`).join('')}</div>` : ''}
+      <div class="field"><input class="input mono" id="tls-host" value="${esc(st.linkHost)}" placeholder="${esc(st.boxNames?.[0] ?? '')}" spellcheck="false" ${NO_PW_MANAGER}><small id="tls-host-warn" class="err" hidden>${esc('Diese Adresse deckt das Zertifikat nicht ab – der Browser wird warnen.')}</small></div>
       <div class="btns"><button class="btn" id="tls-host-save">Speichern</button></div></section>`,
-    `<section class="card"><h2>${esc('Eigenes Zertifikat')}</h2>
-      <p class="help">${esc('Für Fortgeschrittene: ein Zertifikat für einen eigenen Namen (z. B. von Let’s Encrypt) samt Zwischenzertifikaten und der Schlüssel, beides im PEM-Format, der Schlüssel ohne Passwort. Die Box prüft es vorher und erinnert vor dem Ablauf. Der Schlüssel wird nie wieder angezeigt.')}</p>
-      <div class="field"><label for="tls-crt">${esc('Zertifikat (PEM)')}</label><textarea class="input mono" id="tls-crt" rows="4" spellcheck="false" placeholder="-----BEGIN CERTIFICATE-----"></textarea><input type="file" id="tls-crt-file" accept=".pem,.crt,.cer,.txt" hidden><button class="btn" data-file="tls-crt">${esc('Datei wählen')}</button></div>
-      <div class="field"><label for="tls-key">${esc('Schlüssel (PEM)')}</label><textarea class="input mono" id="tls-key" rows="4" spellcheck="false" placeholder="-----BEGIN PRIVATE KEY-----" ${NO_PW_MANAGER}></textarea><input type="file" id="tls-key-file" accept=".pem,.key,.txt" hidden><button class="btn" data-file="tls-key">${esc('Datei wählen')}</button></div>
-      <div class="btns">${custom ? `<button class="btn" id="tls-box">${esc('Zurück zum Zertifikat der Box')}</button>` : ''}<button class="btn primary" id="tls-upload">${esc('Hochladen')}</button></div></section>`,
+    `<section class="card wide"><details class="more plain"${custom ? ' open' : ''}><summary>${esc('Eigenes Zertifikat (für Fortgeschrittene)')}</summary>
+      <p class="help">${esc('Ein Zertifikat für einen eigenen Namen (z. B. von Let’s Encrypt) samt Zwischenzertifikaten und der Schlüssel ohne Passwort, beides im PEM-Format. Der Schlüssel wird nie wieder angezeigt.')}</p>
+      <div class="pair">
+        <div class="field"><label>${esc('Zertifikat (PEM)')}</label><button type="button" class="drop" data-file="tls-crt">${icon('doc', 20)}<span id="tls-crt-name">${esc('Datei wählen oder hierher ziehen')}</span></button><input type="file" id="tls-crt-file" accept=".pem,.crt,.cer,.txt" hidden><textarea class="input mono" id="tls-crt" rows="4" spellcheck="false" placeholder="-----BEGIN CERTIFICATE-----" hidden></textarea></div>
+        <div class="field"><label>${esc('Schlüssel (PEM)')}</label><button type="button" class="drop" data-file="tls-key">${icon('lock', 20)}<span id="tls-key-name">${esc('Datei wählen oder hierher ziehen')}</span></button><input type="file" id="tls-key-file" accept=".pem,.key,.txt" hidden><textarea class="input mono" id="tls-key" rows="4" spellcheck="false" placeholder="-----BEGIN PRIVATE KEY-----" ${NO_PW_MANAGER} hidden></textarea></div>
+      </div>
+      <div class="btns"><button class="btn" id="tls-paste">${esc('Text einfügen statt Datei')}</button>${custom ? `<button class="btn" id="tls-box">${esc('Zurück zum Zertifikat der Box')}</button>` : ''}<button class="btn primary" id="tls-upload">${esc('Hochladen')}</button></div></details></section>`,
   ]
 }
 
@@ -5800,6 +6739,40 @@ function mountTls(root, page) {
       if (currentPage()?.id === page.id) renderPage(page, false)
     })
   }
+  // a name of the certificate as the address; a typed one it does not hold: said at once
+  const hostWarn = () => {
+    const v = $('#tls-host', root).value.trim()
+    $('#tls-host-warn', root).hidden = !v || !st.cert || st.cert.names.includes(v)
+  }
+  for (const b of root.querySelectorAll('[data-host]')) {
+    b.onclick = () => {
+      $('#tls-host', root).value = b.dataset.host
+      for (const x of root.querySelectorAll('[data-host]')) x.setAttribute('aria-selected', String(x === b))
+      hostWarn()
+    }
+  }
+  $('#tls-host', root).addEventListener('input', hostWarn)
+  hostWarn()
+  $('#tls-paste', root).onclick = (e) => {
+    for (const id of ['tls-crt', 'tls-key']) $(`#${id}`, root).hidden = false
+    e.target.hidden = true
+  }
+  for (const b of root.querySelectorAll('.drop[data-file]')) {
+    const take = async (f) => {
+      if (!f || f.size >= 65536) return
+      $(`#${b.dataset.file}`, root).value = await f.text()
+      $(`#${b.dataset.file}-name`, root).textContent = f.name
+      b.classList.add('chosen')
+    }
+    b.ondragover = (e) => e.preventDefault()
+    b.ondrop = (e) => {
+      e.preventDefault()
+      take(e.dataTransfer?.files?.[0])
+    }
+    const input = $(`#${b.dataset.file}-file`, root)
+    input.onchange = () => take(input.files?.[0])
+  }
+  for (const b of root.querySelectorAll('.drop[data-file]')) b.onclick = () => $(`#${b.dataset.file}-file`, root).click()
   $('#tls-only', root).onchange = async (e) => {
     const on = e.target.checked
     if (on && !(await ask('Nur sichere Verbindung', 'Auf Geräten ohne das Zertifikat der Box warnt der Browser danach bei jedem Aufruf. Einschalten?', 'Einschalten'))) {
@@ -5819,15 +6792,6 @@ function mountTls(root, page) {
     if (!r.ok) return toast(r.body?.error === 'invalid_host' ? 'Das ist kein gültiger Name' : 'Nicht gespeichert', 'info')
     toast('Gespeichert')
     again()
-  }
-  for (const b of root.querySelectorAll('[data-file]')) {
-    const area = $(`#${b.dataset.file}`, root)
-    const input = $(`#${b.dataset.file}-file`, root)
-    b.onclick = () => input.click()
-    input.onchange = async () => {
-      const f = input.files?.[0]
-      if (f && f.size < 65536) area.value = await f.text()
-    }
   }
   $('#tls-upload', root).onclick = async () => {
     const cert = $('#tls-crt', root).value.trim()
@@ -5850,6 +6814,379 @@ function mountTls(root, page) {
 }
 
 /* Einstellungen › System */
+
+/* Einstellungen › System: its pages in four groups, a short state beside some (version, health, update) */
+
+const SYS_GROUPS = [
+  ['Die Box', ['ueber', 'zustand', 'updates', 'backup']],
+  ['Betrieb', ['neustart', 'protokolle', 'systemopt']],
+  ['Für Fortgeschrittene', ['browser', 'experten']],
+  ['Allgemein', ['sprache', 'rechtliches']],
+]
+
+function systemTop() {
+  return SYS_GROUPS.map(([title, ids]) => {
+    const rows = ids
+      .map((id) => state.pages.get(id))
+      .filter(Boolean)
+      .map((p) => navRow(p.id, p.title, p.description, p.icon, `<span class="nav-badge" id="sysb-${p.id}"></span>`))
+      .join('')
+    return `<section class="card nav-card"><div class="group-title">${esc(title)}</div><div class="navlist">${rows}</div></section>`
+  })
+}
+
+// the states come after the page: each from its own request, none holds up the others
+function mountSystem(root) {
+  const put = (id, html) => {
+    const el = $(`#sysb-${id}`, root)
+    if (el) el.innerHTML = html
+  }
+  api(`${API}/version`).then((r) => r.body?.version && put('ueber', `<span translate="no">${esc(r.body.version)}</span>`))
+  api(`${API}/health`).then((r) => {
+    const checks = r.body?.checks
+    if (!Array.isArray(checks)) return
+    const bad = checks.filter((c) => c.status === 'error').length
+    const warn = checks.filter((c) => c.status === 'warn').length
+    put('zustand', bad ? `<span class="dot bad"></span>${bad === 1 ? 'Ein Problem' : `${bad} Probleme`}` : warn ? `<span class="dot warn"></span>${warn === 1 ? 'Ein Hinweis' : `${warn} Hinweise`}` : '<span class="dot ok"></span>OK')
+  })
+  api(`${API}/updates`).then((r) => {
+    if (r.body?.job?.phase === 'running') put('updates', '<span class="chip">läuft …</span>')
+    else if (r.body?.update) put('updates', `<span class="chip ok">${esc(`${r.body.update.version} verfügbar`)}</span>`)
+  })
+}
+
+/* Einstellungen › Audio › Sprachausgabe: the voice (Piper on the box, Google, silent), the voices per language, the
+   automatic announcements and the parents' ones (speech.ts, eltern/speech-routes.ts) */
+
+const speech = { data: null, lang: null, voices: {}, licenses: {}, showAll: false, poll: null }
+const SPEECH_QUALITY = { x_low: 'sehr niedrig', low: 'niedrig', medium: 'mittel', high: 'hoch' }
+const SPEECH_LEVELS = [
+  [0.4, 'leise'],
+  [0.7, 'mittel'],
+  [1, 'wie die Musik'],
+]
+const fmtMB = (bytes) => `${Math.max(1, Math.round(bytes / 1e6)).toLocaleString(LOCALE)} MB`
+
+async function loadSpeech() {
+  const r = await api(`${API}/speech${speech.lang ? `?lang=${speech.lang}` : ''}`)
+  if (!r.ok) throw new Error(`speech ${r.status}`)
+  speech.data = r.body
+  speech.lang ??= r.body.boxLanguage
+  if (!speech.voices[speech.lang]) {
+    const v = await api(`${API}/speech/voices?lang=${speech.lang}`)
+    speech.voices[speech.lang] = v.ok ? v.body.voices : []
+  }
+}
+
+// the voice the box speaks a language with: the chosen one if loaded, else the first loaded one
+const speechActive = (lang) => {
+  const d = speech.data
+  const loaded = d.installed[lang] ?? []
+  return loaded.includes(d.config.voices[lang]) ? d.config.voices[lang] : loaded[0] ?? null
+}
+
+function speechTop() {
+  const d = speech.data
+  const c = d.config
+  const box = d.boxLanguage
+  const active = d.active
+  // (thorsten_emotional → Thorsten Emotional)
+  const voiceName = (key) => (key ? key.split('-')[1].replace(/_/g, ' ').replace(/(^|\s)\p{L}/gu, (c) => c.toUpperCase()) : '')
+  const sw = (id, label, help, on, extra = '') =>
+    `<div class="row"><span class="lbl"><b>${esc(label)}</b>${help ? `<small>${esc(help)}</small>` : ''}</span><label class="switch"><input type="checkbox" id="${id}" ${on ? 'checked' : ''} ${extra} aria-label="${esc(label)}"><span></span></label></div>`
+  const choice = (id, label, help, badge = '') =>
+    `<button type="button" class="choice${c.engine === id ? ' on' : ''}" data-engine="${id}" aria-pressed="${c.engine === id}"><span class="radio"></span><span class="lbl"><b>${esc(label)}</b><small>${esc(help)}</small></span>${badge}</button>`
+  const status =
+    c.engine === 'off'
+      ? `<span class="dot"></span><span>Die Box spricht nicht – keine Ansagen, keine vorgelesenen Namen.</span>`
+      : c.engine === 'piper' && active
+        ? `<span class="dot ok"></span><span>Die Box spricht mit <b translate="no">${esc(voiceName(active))}</b> – ohne Internet.</span>`
+        : c.engine === 'piper'
+          ? `<span class="dot warn"></span><span>Für die Sprache der Box ist noch keine Stimme geladen – unten eine laden. ${c.fallback === 'google' ? 'Bis dahin spricht Google.' : 'Bis dahin bleibt die Box stumm.'}</span>`
+          : `<span class="dot ok"></span><span>Die Box spricht mit Google – dafür braucht sie Internet.</span>`
+  // the voices of the language chosen in the list
+  const lang = speech.lang
+  const list = speech.voices[lang] ?? []
+  const job = d.job
+  const shown = speech.showAll ? list : list.slice(0, 8)
+  const activeHere = speechActive(lang)
+  // (the country only where a language has several: en GB / US, pt PT / BR)
+  const regions = new Set(list.map((v) => v.region)).size > 1
+  const voiceRow = (v) => {
+    const running = job?.state === 'running' && job.key === v.key
+    const lic = speech.licenses[v.key]
+    const right = running
+      ? `<span class="chip">${esc(`lädt … ${job.total ? Math.round((job.bytes / job.total) * 100) : 0} %`)}</span>`
+      : v.key === activeHere
+        ? `<span class="chip ok">aktiv</span><button class="btn danger sm" data-v-rm="${esc(v.key)}">Löschen</button>`
+        : v.installed
+          ? `<button class="btn sm" data-v-use="${esc(v.key)}">Verwenden</button><button class="btn danger sm" data-v-rm="${esc(v.key)}">Löschen</button>`
+          : `<button class="btn sm" data-v-get="${esc(v.key)}" ${job?.state === 'running' ? 'disabled' : ''}>${icon('save', 14)}Laden</button>`
+    return `<div class="entry voice"><button type="button" class="icon-btn soft" data-v-hear="${esc(v.key)}" aria-label="Anhören">${icon('vol', 16)}</button>
+      <span class="lbl"><b translate="no">${esc(voiceName(v.key))}</b><small>${esc([`Qualität ${SPEECH_QUALITY[v.quality] ?? v.quality}`, fmtMB(v.size), regions ? v.region : ''].filter(Boolean).join(' · '))}${v.quality === 'high' ? ` · <span class="slow">${esc('langsam: einige Sekunden je Name')}</span>` : ''}${lic?.license && !/^see /i.test(lic.license) ? ` · <span translate="no">${esc(lic.license.replace(/^https?:\/\/creativecommons\.org\/licenses\/([a-z-]+)\/([\d.]+)\/?$/i, (_m, k, n) => `CC ${k.toUpperCase()} ${n}`))}</span>` : ''}</small></span>${right}</div>`
+  }
+  const langOptions = Object.entries(LANGS)
+    .map(([code, name]) => {
+      const n = d.installed[code]?.length ?? 0
+      return `<option value="${code}"${code === lang ? ' selected' : ''}>${esc(name)}${n ? ` · ${n} ✓` : ''}${code === box ? ' ★' : ''}</option>`
+    })
+    .join('')
+  const t = d.texts
+  const text = (id, value, hint) =>
+    `<div class="field"><div class="field-pick"><input class="input" id="${id}" value="${esc(value)}" maxlength="300" ${NO_PW_MANAGER}><button type="button" class="btn sm" data-sp-test="${id}">${icon('vol', 14)}Probe</button></div>${hint ? `<small>${esc(hint)}</small>` : ''}</div>`
+  return [
+    `<section class="card" data-col="1"><div class="card-head"><h2>Stimme</h2><span class="chip ${c.engine === 'off' ? '' : 'ok'}">${c.engine === 'piper' && active ? 'offline' : c.engine === 'off' ? 'stumm' : 'online'}</span></div>
+      <div class="status-line">${status}</div>
+      <div class="choices">
+        ${choice('piper', 'Piper – auf der Box', 'Natürliche Stimmen, ohne Internet. Jede Stimme wird einmal geladen (etwa 20–120 MB).', '<span class="chip">empfohlen</span>')}
+        ${choice('google', 'Google – online', 'Braucht Internet; der Text geht dafür einmal an Google.')}
+        ${choice('off', 'Stumm', 'Keine Ansagen, keine vorgelesenen Namen.')}
+      </div>
+      ${c.engine === 'piper' ? `<div class="field"><label>Ohne geladene Stimme für die Sprache der Box</label><div class="seg" id="sp-fallback"><button aria-pressed="${c.fallback === 'google'}" data-v="google">Google nehmen</button><button aria-pressed="${c.fallback === 'off'}" data-v="off">Stumm bleiben</button></div></div>` : ''}
+      <div class="field"><label for="sp-speak">Die Box spricht</label><select class="input" id="sp-speak" translate="no">${Object.entries(LANGS).map(([code, name]) => `<option value="${code}"${code === box ? ' selected' : ''}>${esc(name)}</option>`).join('')}</select>
+        <small>Für Ansagen, Durchsagen und „Namen vorlesen“ am Display.</small></div></section>`,
+    `<section class="card" data-col="1"><div class="card-head"><h2>Stimmen</h2><span class="chip">${esc(`${fmtMB(d.bytes)} belegt`)}</span></div>
+      <div class="field"><label for="sp-lang">Sprache</label><select class="input" id="sp-lang" translate="no">${langOptions}</select></div>
+      ${list.length ? `<div class="rows">${shown.map(voiceRow).join('')}</div>` : '<p class="help" style="margin:0">Die Liste der Stimmen ließ sich nicht laden (keine Verbindung zu Hugging Face?).</p>'}
+      ${list.length > shown.length ? `<button class="btn" id="sp-all">${esc(`Alle ${list.length} Stimmen zeigen`)}</button>` : ''}
+      ${speechTry(d, lang, activeHere, voiceName)}
+      ${job?.state === 'failed' ? `<div class="note warn">${icon('info', 18)}<span>${esc('Die Stimme ließ sich nicht laden. Bitte noch einmal versuchen.')}</span></div>` : ''}
+      <p class="help" style="margin:0">${esc(`Stimmen von Piper (rhasspy/piper-voices); die Lizenz steht bei jeder Stimme. ${d.free != null ? `Noch ${(d.free / 1e9).toLocaleString(LOCALE, { maximumFractionDigits: 1 })} GB frei.` : ''}`)}</p><audio id="sp-audio" hidden></audio></section>`,
+    `<section class="card" data-col="2"><div class="card-head"><h2>Automatische Ansagen</h2><span class="chip" translate="no">${esc(LANGS[box] ?? box)}</span></div><p class="help">${esc('Die Box sagt selbst etwas, während etwas läuft.')}</p>
+      ${sw('sp-rest', 'Restzeit ansagen', 'Bevor die Spielzeit für heute endet.', c.rest.on)}
+      <div class="dep" data-dep-id="sp-rest"${c.rest.on ? '' : ' hidden'}><div class="field"><label>Wie lange vorher</label><div class="seg" id="sp-rest-min">${[2, 5, 10, 15].map((m) => `<button aria-pressed="${c.rest.minutes === m}" data-v="${m}">${m} min</button>`).join('')}</div></div>
+        ${text('sp-t-rest', t.rest, '{min} setzt die Box ein.')}</div>
+      ${sw('sp-bed', 'Ruhezeit ansagen', 'Wenn eine Ruhezeit beginnt, z. B. die Schlafenszeit.', c.bedtime.on)}
+      <div class="dep" data-dep-id="sp-bed"${c.bedtime.on ? '' : ' hidden'}>${text('sp-t-bedtime', t.bedtime, '{name} ist der Name der Ruhezeit.')}</div>
+      ${sw('sp-sleep', 'Ende des Schlaftimers ansagen', 'Eine Minute bevor der Schlaftimer die Wiedergabe beendet.', c.sleepEnd.on)}
+      <div class="dep" data-dep-id="sp-sleep"${c.sleepEnd.on ? '' : ' hidden'}>${text('sp-t-sleepEnd', t.sleepEnd, '')}</div>
+      <div class="field"><label>Lautstärke der Ansagen</label><div class="seg" id="sp-level">${SPEECH_LEVELS.map(([v, l]) => `<button aria-pressed="${c.level === v}" data-v="${v}">${esc(l)}</button>`).join('')}</div><small>Nie lauter als die Box gerade ist (Hörschutz).</small></div></section>`,
+    `<section class="card" data-col="2"><div class="card-head"><h2>Eltern-Durchsagen</h2><span class="chips"><span class="chip" translate="no">${esc(LANGS[box] ?? box)}</span><span class="chip ${c.parents.on ? 'ok' : ''}">${c.parents.on ? 'an' : 'aus'}</span></span></div>
+      <p class="help">${esc('Vom Handy etwas auf der Box sagen lassen: über „Durchsage“ auf der Startseite oder per Telegram (/sag Text).')}</p>
+      ${sw('sp-parents', 'Durchsagen erlauben', '', c.parents.on)}
+      <div class="rows" id="sp-templates">${t.templates.map((x, i) => `<div class="entry"><span class="avatar">${icon('vol', 16)}</span><span class="lbl"><b>${esc(x)}</b></span><button class="btn sm primary" data-tpl-say="${i}">Jetzt</button><button class="btn sm" data-tpl-rm="${i}">Entfernen</button></div>`).join('')}</div>
+      <div class="field-pick"><input class="input" id="sp-tpl-new" maxlength="300" placeholder="${esc('Neue Vorlage, z. B. „Oma ist da!“')}" ${NO_PW_MANAGER}><button type="button" class="btn" id="sp-tpl-add">${icon('plus', 16)}Hinzufügen</button></div>
+      ${sw('sp-gong', 'Gong vorher', 'Ein kurzer Ton, damit das Kind aufhorcht.', c.parents.gong)}
+      ${sw('sp-pause', 'Wiedergabe anhalten und danach weiter', 'Sonst wird die Musik während der Durchsage nur leiser.', c.parents.pause)}</section>`,
+  ]
+}
+
+// Trying a voice on the box itself: a sentence (changeable) with one of the loaded voices of the language chosen above
+function speechTry(d, lang, activeHere, voiceName) {
+  const loaded = d.installed[lang] ?? []
+  if (!loaded.length) return `<p class="help" style="margin:0">${esc('Zum Anhören auf der Box erst eine Stimme laden. Die Hörprobe am Handy (Lautsprecher-Knopf) geht auch so.')}</p>`
+  const quality = (key) => SPEECH_QUALITY[key.slice(key.lastIndexOf('-') + 1)] ?? ''
+  return `<div class="speech-try"><div class="field"><label for="sp-try-text">Probe auf der Box</label><textarea class="input" id="sp-try-text" rows="2" maxlength="300">${esc(d.hello ?? '')}</textarea></div>
+    <div class="field-pick"><select class="input" id="sp-try-voice" aria-label="Stimme">${loaded.map((k) => `<option value="${esc(k)}"${k === activeHere ? ' selected' : ''} translate="no">${esc(`${voiceName(k)} · ${tr(quality(k))}`)}</option>`).join('')}</select>
+    <button type="button" class="btn primary" id="sp-try">${icon('vol', 16)}Auf der Box anhören</button></div></div>`
+}
+
+async function speechSave(body, done = 'Gespeichert') {
+  const r = await api(`${API}/speech`, { method: 'POST', body })
+  toast(r.ok ? done : 'Nicht gespeichert', r.ok ? 'ok' : 'info')
+  return r.ok
+}
+
+function mountSpeech(root, page) {
+  const d = speech.data
+  const again = async () => {
+    await loadSpeech().catch(() => undefined)
+    if (currentPage()?.id === page.id) renderPage(page, false)
+  }
+  for (const b of root.querySelectorAll('[data-engine]')) {
+    b.onclick = async () => {
+      if (b.dataset.engine === d.config.engine) return
+      if (await speechSave({ engine: b.dataset.engine })) again()
+    }
+  }
+  const seg = (id, fn) => {
+    const el = $(`#${id}`, root)
+    if (!el) return
+    el.onclick = async (e) => {
+      const b = e.target.closest('button')
+      if (!b || b.getAttribute('aria-pressed') === 'true') return
+      for (const x of el.children) x.setAttribute('aria-pressed', String(x === b))
+      await fn(b.dataset.v)
+    }
+  }
+  seg('sp-fallback', (v) => speechSave({ fallback: v }).then(again))
+  seg('sp-rest-min', (v) => speechSave({ rest: { minutes: Number(v) } }))
+  seg('sp-level', (v) => speechSave({ level: Number(v) }))
+  // switches (and what belongs to them)
+  for (const [id, body] of [
+    ['sp-rest', (on) => ({ rest: { on } })],
+    ['sp-bed', (on) => ({ bedtime: { on } })],
+    ['sp-sleep', (on) => ({ sleepEnd: { on } })],
+    ['sp-parents', (on) => ({ parents: { on } })],
+    ['sp-gong', (on) => ({ parents: { gong: on } })],
+    ['sp-pause', (on) => ({ parents: { pause: on } })],
+  ]) {
+    const el = $(`#${id}`, root)
+    el.onchange = async () => {
+      const dep = $(`[data-dep-id="${id}"]`, root)
+      if (dep) dep.hidden = !el.checked
+      if (!(await speechSave(body(el.checked)))) el.checked = !el.checked
+      if (id === 'sp-parents') again()
+    }
+  }
+  // the texts (of the box's language), saved when left; a sample of each on the box
+  for (const k of ['rest', 'bedtime', 'sleepEnd']) {
+    const el = $(`#sp-t-${k}`, root)
+    el.onchange = () => speechSave({ lang: d.boxLanguage, texts: { [k]: el.value } })
+  }
+  for (const b of root.querySelectorAll('[data-sp-test]')) {
+    b.onclick = async () => {
+      const text = $(`#${b.dataset.spTest}`, root).value.replace('{min}', '5').replace('{name}', 'Schlafenszeit')
+      const r = await api(`${API}/speech/say`, { method: 'POST', body: { text, test: true } })
+      toast(r.ok ? 'Die Box spricht …' : r.body?.error === 'speech_off' ? 'Die Box ist auf stumm gestellt' : 'Das ging nicht', r.ok ? 'ok' : 'info')
+    }
+  }
+  // the templates
+  const templates = [...d.texts.templates]
+  const saveTemplates = () => speechSave({ lang: d.boxLanguage, templates }).then(again)
+  for (const b of root.querySelectorAll('[data-tpl-rm]')) {
+    b.onclick = () => {
+      templates.splice(Number(b.dataset.tplRm), 1)
+      saveTemplates()
+    }
+  }
+  for (const b of root.querySelectorAll('[data-tpl-say]')) b.onclick = () => speechSay(templates[Number(b.dataset.tplSay)])
+  $('#sp-tpl-add', root).onclick = () => {
+    const v = $('#sp-tpl-new', root).value.trim()
+    if (!v) return
+    templates.push(v)
+    saveTemplates()
+  }
+  // a sentence with one loaded voice, on the box
+  $('#sp-try', root)?.addEventListener('click', async () => {
+    const text = $('#sp-try-text', root).value.trim()
+    if (!text) return toast('Bitte einen Text eingeben', 'info')
+    const r = await api(`${API}/speech/say`, { method: 'POST', body: { text, test: true, voice: $('#sp-try-voice', root).value } })
+    toast(r.ok ? 'Die Box spricht …' : 'Das ging nicht', r.ok ? 'ok' : 'info')
+  })
+  // the voices: the language of the list, listen (on this phone), load, use, delete
+  $('#sp-lang', root).onchange = async (e) => {
+    speech.lang = e.target.value
+    speech.showAll = false
+    await again()
+  }
+  $('#sp-all', root)?.addEventListener('click', () => {
+    speech.showAll = true
+    renderPage(page, false)
+  })
+  const audio = $('#sp-audio', root)
+  for (const b of root.querySelectorAll('[data-v-hear]')) {
+    b.onclick = () => {
+      audio.src = `${API}/speech/sample?key=${encodeURIComponent(b.dataset.vHear)}`
+      audio.play().catch(() => toast('Die Hörprobe ließ sich nicht abspielen', 'info'))
+    }
+  }
+  for (const b of root.querySelectorAll('[data-v-get]')) {
+    b.onclick = async () => {
+      const r = await api(`${API}/speech/voice/install`, { method: 'POST', body: { key: b.dataset.vGet } })
+      if (!r.ok) return toast('Gerade lädt schon eine Stimme', 'info')
+      toast(existsPiper() ? 'Die Stimme wird geladen …' : 'Piper und die Stimme werden geladen …')
+      await again()
+    }
+  }
+  // the language the box speaks (the reading-out language of the display too): the player starts again with it
+  const speakIn = async (code) => {
+    const r = await api(`${API}/display-options`, { method: 'POST', body: { ttsLanguage: code === 'nb' ? 'no' : code } })
+    toast(r.ok ? `Die Box spricht jetzt ${LANGS[code] ?? code}` : 'Nicht gespeichert', r.ok ? 'ok' : 'info')
+    return r.ok
+  }
+  $('#sp-speak', root).onchange = async (e) => {
+    if (await speakIn(e.target.value)) {
+      speech.lang = e.target.value
+      again()
+    }
+  }
+  for (const b of root.querySelectorAll('[data-v-use]')) {
+    b.onclick = async () => {
+      if (!(await speechSave({ voice: { lang: speech.lang, key: b.dataset.vUse } }, 'Stimme gewählt'))) return
+      // a voice of another language: the box to speak that language too? (else it stays with the old one)
+      if (speech.lang !== d.boxLanguage && (await ask('Sprache der Box', `Die Box spricht gerade ${LANGS[d.boxLanguage] ?? d.boxLanguage}. Soll sie ab jetzt ${LANGS[speech.lang] ?? speech.lang} sprechen – Ansagen, Durchsagen und vorgelesene Namen?`, 'Umstellen'))) await speakIn(speech.lang)
+      again()
+    }
+  }
+  for (const b of root.querySelectorAll('[data-v-rm]')) {
+    b.onclick = () =>
+      confirmSheet('Löschen', 'Diese Stimme von der Box löschen? Sie lässt sich jederzeit wieder laden.', async () => {
+        const r = await api(`${API}/speech/voice/remove`, { method: 'POST', body: { key: b.dataset.vRm } })
+        toast(r.ok ? 'Gelöscht' : 'Das ging nicht', r.ok ? 'ok' : 'info')
+        speech.voices = {}
+        again()
+      })
+  }
+  // a voice loading: its progress every 2 s, the list again when it is there
+  if (d.job?.state === 'running') {
+    every(2000, async () => {
+      const r = await api(`${API}/speech/job`)
+      const job = r.body?.job
+      if (!job) return
+      if (job.state !== 'running') {
+        toast(job.state === 'done' ? 'Die Stimme ist geladen' : 'Die Stimme ließ sich nicht laden', job.state === 'done' ? 'ok' : 'info')
+        speech.voices = {}
+        // (the first voice of the box's language: taken at once)
+        if (job.state === 'done' && d.config.engine !== 'piper' && !speechActive(d.boxLanguage)) await api(`${API}/speech`, { method: 'POST', body: { engine: 'piper' } })
+        return again()
+      }
+      d.job = job
+      const chip = root.querySelector('.entry.voice .chip:not(.ok)')
+      if (chip) chip.textContent = `lädt … ${job.total ? Math.round((job.bytes / job.total) * 100) : 0} %`
+    })
+  }
+  // the licences of the voices shown (their model cards), one after the other
+  // (drawn again only when a new one came: else the drawing would start this again, without end)
+  ;(async () => {
+    let fetched = 0
+    for (const v of (speech.voices[speech.lang] ?? []).slice(0, speech.showAll ? 50 : 8)) {
+      if (speech.licenses[v.key] || currentPage()?.id !== page.id) continue
+      const r = await api(`${API}/speech/license?key=${encodeURIComponent(v.key)}`)
+      speech.licenses[v.key] = r.body ?? {}
+      fetched++
+    }
+    if (fetched && currentPage()?.id === page.id) {
+      const y = window.scrollY
+      renderPage(page, false)
+      window.scrollTo(0, y)
+    }
+  })()
+}
+// (Piper itself is on the box once any voice is)
+const existsPiper = () => Object.values(speech.data?.installed ?? {}).some((l) => l.length)
+
+// A text said on the box now (a template or the parents' own)
+async function speechSay(text) {
+  const r = await api(`${API}/speech/say`, { method: 'POST', body: { text } })
+  toast(r.ok ? 'Wird durchgesagt …' : r.body?.error === 'announcements_off' ? 'Durchsagen sind ausgeschaltet' : r.body?.error === 'speech_off' ? 'Die Box ist auf stumm gestellt' : 'Das ging nicht', r.ok ? 'ok' : 'info')
+  return r.ok
+}
+
+// Start › "Durchsage": the templates and an own text - until the speech is set up, its page instead
+async function saySheet() {
+  const r = await api(`${API}/speech`)
+  if (!r.ok || !r.body?.configured) {
+    toast('Erst die Sprachausgabe einrichten', 'info')
+    return go('sprachausgabe')
+  }
+  const templates = r.body.texts?.templates ?? []
+  openSheet(
+    `<h2>Durchsage</h2><p class="help" style="margin:0">${esc(r.body.config.parents.pause ? 'Die Box sagt es sofort – die Musik hält dafür kurz an.' : 'Die Box sagt es sofort – die Musik wird dafür leiser.')}</p>
+     ${templates.length ? `<div class="say-grid">${templates.map((t, i) => `<button type="button" class="say-tile" data-say="${i}">${icon('vol', 18)}<span>${esc(t)}</span></button>`).join('')}</div>` : ''}
+     <div class="field"><label for="say-text">Oder eigener Text</label><textarea class="input" id="say-text" rows="2" maxlength="300" placeholder="${esc('z. B. „Papa kommt gleich hoch.“')}"></textarea></div>
+     <div class="btns"><button class="btn primary" id="say-go">${icon('vol', 18)}Jetzt durchsagen</button><button class="btn" data-close>Schließen</button></div>`,
+    (sheet, close) => {
+      sheet.querySelector('[data-close]').onclick = close
+      for (const b of sheet.querySelectorAll('[data-say]')) b.onclick = async () => (await speechSay(templates[Number(b.dataset.say)])) && close()
+      sheet.querySelector('#say-go').onclick = async () => {
+        const text = sheet.querySelector('#say-text').value.trim()
+        if (!text) return toast('Bitte einen Text eingeben', 'info')
+        if (await speechSay(text)) close()
+      }
+    },
+  )
+}
 
 const sys = { info: null, version: '', news: null, bs: null, logs: null, logSel: 'log:server-error', logGrep: '', logText: '', logAuto: false, debug: null, browser: null, range: 1 }
 
@@ -5912,17 +7249,19 @@ function aboutTop() {
   const used = disk.total ? Math.round(((disk.total - disk.free) / disk.total) * 100) : null
   const row = (k, v) => (v ? `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>` : '')
   return [
+    // (on a wide screen: MuPiBox on the left over two rows, the name and the support beside it, then the history and
+    // the news across the whole width)
+    `<section class="card about-main"><h2>MuPiBox</h2><dl class="kv">${row('Version', sys.version)}${row('Hostname', i.hostname)}${row('Läuft seit', i.uptime_seconds != null ? fmtUptime(i.uptime_seconds) : '')}${row('CPU-Last', i.load_1 != null ? `${i.load_1.toLocaleString(LOCALE)} (${i.cpu_count} Kerne)` : '')}${row('Temperatur', i.cpu_temp_c != null ? `${Math.round(i.cpu_temp_c)} °C` : '')}${row('Arbeitsspeicher', i.mem_total ? `${formatBytes(i.mem_total - i.mem_free)} von ${formatBytes(i.mem_total)}` : '')}</dl>
+      ${used != null ? `<div class="bar"><div class="slider-head"><b>SD-Karte</b><span class="value-pill">${used} %</span></div><div class="track"><i style="--w:${used}%"></i></div><small>${formatBytes(disk.free)} frei von ${formatBytes(disk.total)}</small></div>` : ''}</section>`,
     `<section class="card"><h2>Name der Box</h2><p class="help">Steht auf dem Startbild und oben in der App.</p>
       <div class="field"><label for="ab-name">Name der Box (höchstens ${max} Zeichen)</label><input class="input" id="ab-name" maxlength="${max}" value="${esc(sys.bs?.current?.boxName ?? '')}" placeholder="${esc(sys.bs?.screens?.defaultName ?? 'MuPiBox')}"></div>
       <div class="btns"><button class="btn primary" id="ab-save">Speichern</button></div></section>`,
-    `<section class="card"><h2>MuPiBox</h2><dl class="kv">${row('Version', sys.version)}${row('Hostname', i.hostname)}${row('Läuft seit', i.uptime_seconds != null ? fmtUptime(i.uptime_seconds) : '')}${row('CPU-Last', i.load_1 != null ? `${i.load_1.toLocaleString(LOCALE)} (${i.cpu_count} Kerne)` : '')}${row('Temperatur', i.cpu_temp_c != null ? `${Math.round(i.cpu_temp_c)} °C` : '')}${row('Arbeitsspeicher', i.mem_total ? `${formatBytes(i.mem_total - i.mem_free)} von ${formatBytes(i.mem_total)}` : '')}</dl>
-      ${used != null ? `<div class="bar"><div class="slider-head"><b>SD-Karte</b><span class="value-pill">${used} %</span></div><div class="track"><i style="--w:${used}%"></i></div><small>${formatBytes(disk.free)} frei von ${formatBytes(disk.total)}</small></div>` : ''}</section>`,
+    `<section class="card"><h2>Support</h2><p class="help">Für Hilfe im Discord: ein Zip mit Bibliothek, Einstellungen (ohne Passwörter, Tokens und Konten), Netz- und Systemstand.</p>
+      <div class="btns"><a class="btn" href="${API}/support-info" download>${icon('save', 18)}Support-Infos herunterladen</a></div></section>`,
     `<section class="card wide"><div class="hist-head"><h2>Verlauf</h2><div class="pills small" id="ab-range">${[1, 6, 24].map((h) => `<button aria-selected="${sys.range === h}" data-h="${h}">${h} h</button>`).join('')}</div></div>
       <div class="hist-grid" id="ab-charts"><div class="loading"><p>Lade …</p></div></div>
       <p class="help" style="margin:0"><span id="ab-since"></span> Einmal pro Minute gemessen, nur im Arbeitsspeicher der Box – nach einem Neustart beginnt der Verlauf neu.</p></section>`,
-    `<section class="card"><h2>Neuigkeiten</h2><pre class="news" id="ab-news">${esc(sys.news ? newsText(sys.news) : tr('Lade …'))}</pre></section>`,
-    `<section class="card"><h2>Support</h2><p class="help">Für Hilfe im Discord: ein Zip mit Bibliothek, Einstellungen (ohne Passwörter, Tokens und Konten), Netz- und Systemstand.</p>
-      <div class="btns"><a class="btn" href="${API}/support-info" download>${icon('save', 18)}Support-Infos herunterladen</a></div></section>`,
+    `<section class="card wide"><h2>Neuigkeiten</h2><pre class="news" id="ab-news">${esc(sys.news ? newsText(sys.news) : tr('Lade …'))}</pre></section>`,
   ]
 }
 
@@ -6024,9 +7363,12 @@ function restartTop() {
     ['services', 'sync', 'Dienste neu starten', 'Player und Server der Box; die App ist dabei kurz nicht erreichbar.'],
     ['apply', 'gear', 'Einstellungen übernehmen', 'Schreibt alle Einstellungen neu in die Dienste und startet das Display neu (wie „Update settings“ im Admin-Interface).'],
   ]
+  // (both across the whole width; on a wide screen their entries in two columns - no small card beside a long one)
   return [
-    `<section class="card"><h2>Box</h2><div class="btns"><button class="btn" id="rs-reboot">${icon('sync', 18)}Neu starten</button><button class="btn danger" id="rs-off">${icon('power', 18)}Ausschalten</button></div></section>`,
-    `<section class="card"><h2>Display & Dienste</h2><div class="rows">${rows
+    `<section class="card wide"><h2>Box</h2><div class="rows two-col">
+      <div class="entry"><span class="avatar">${icon('sync', 16)}</span><span class="lbl"><b>Neu starten</b><small>Dauert etwa eine Minute; die Wiedergabe endet.</small></span><button class="btn sm" id="rs-reboot">Neu starten</button></div>
+      <div class="entry"><span class="avatar">${icon('power', 16)}</span><span class="lbl"><b>Ausschalten</b><small>Wieder einschalten geht nur über den Taster an der Box.</small></span><button class="btn danger sm" id="rs-off">Ausschalten</button></div></div></section>`,
+    `<section class="card wide"><h2>Display & Dienste</h2><div class="rows two-col">${rows
       .map(([id, ic, t, s]) => `<div class="entry"><span class="avatar">${icon(ic, 16)}</span><span class="lbl"><b>${t}</b><small>${s}</small></span><button class="btn sm" data-rs="${id}">${id === 'apply' ? 'Übernehmen' : 'Neu starten'}</button></div>`)
       .join('')}</div></section>`,
   ]
@@ -6058,6 +7400,192 @@ function mountRestart(root) {
   }
 }
 
+/* Zustand der Box */
+
+async function loadHealth() {
+  const r = await api(`${API}/health`)
+  if (!r.ok) throw new Error(`health ${r.status}`)
+  sys.health = r.body
+}
+
+// per check: its name, its value when all is well, what a hint means, and where to fix it (a page of the app)
+function healthRow(c) {
+  const v = c.value
+  const names = {
+    storage: 'Speicherplatz',
+    temperature: 'Temperatur',
+    power: 'Stromversorgung',
+    sdcard: 'SD-Karte',
+    memory: 'Arbeitsspeicher',
+    services: 'Dienste der Box',
+    internet: 'Internet',
+    nas: 'NAS',
+    spotify: 'Spotify-Anmeldung',
+    certificate: 'Zertifikat (HTTPS)',
+    podcasts: 'Gespeicherte Podcast-Folgen',
+  }
+  const okText = {
+    storage: `${v} frei`,
+    temperature: v,
+    power: 'Keine Unterspannung',
+    sdcard: 'Keine Fehler',
+    memory: `${v} frei`,
+    services: 'Alle laufen',
+    internet: 'Verbunden',
+    nas: `Erreichbar (${v})`,
+    spotify: `Noch ${v} Tage gültig`,
+    certificate: `Noch ${v} Tage gültig`,
+    // ("<count> · <size>")
+    podcasts: /^0\b/.test(v) ? 'Keine' : v.startsWith('1 ') ? `1 Folge · ${v.split(' · ')[1] ?? ''}` : `${v.split(' · ')[0]} Folgen · ${v.split(' · ')[1] ?? ''}`,
+  }
+  const hints = {
+    storage_low: `Nur noch ${v} frei – gespeicherte Folgen oder nicht mehr gebrauchte Medien löschen.`,
+    too_hot: `${v} – die Box wird sehr warm. Nicht in die Sonne stellen, die Lüftung frei halten.`,
+    undervoltage_now: 'Gerade Unterspannung – Netzteil oder Kabel liefern zu wenig Strom.',
+    throttled_now: 'Der Prozessor ist gerade gebremst (zu warm oder zu wenig Strom).',
+    undervoltage_since_boot: 'Seit dem Start gab es Unterspannung – Netzteil und Kabel prüfen.',
+    sd_readonly: 'Die SD-Karte ist schreibgeschützt, die Box kann nichts speichern. Neu starten; bleibt es so, ist die Karte wohl defekt.',
+    sd_errors: `${v} Fehler der SD-Karte seit dem Start – sie könnte bald ausfallen. Am besten ein Backup machen.`,
+    memory_low: `Nur noch ${v} frei – ein Neustart der Box hilft.`,
+    services_down: `Gestoppt: ${v}. Ein Neustart der Box hilft meist.`,
+    offline: 'Keine Verbindung ins Internet – Spotify, Podcasts und Radio spielen nicht.',
+    nas_address: 'Die Adresse des NAS ist ungültig.',
+    nas_unreachable: `${v} antwortet nicht – ist das NAS an und im selben Netz?`,
+    spotify_refused: 'Spotify hat die Anmeldung abgelehnt – bitte neu anmelden.',
+    spotify_unknown: 'Seit wann die Anmeldung besteht, ist unbekannt – einmal neu anmelden, dann erinnert die Box rechtzeitig.',
+    spotify_soon: `Läuft in ${v} Tagen ab – bitte neu anmelden.`,
+    certificate_soon: Number(v) < 0 ? 'Abgelaufen – bitte ein neues hochladen.' : `Läuft in ${v} Tagen ab – bitte ein neues hochladen.`,
+  }
+  const fix = {
+    sd_errors: 'backup',
+    memory_low: 'neustart',
+    services_down: 'neustart',
+    offline: 'wlan',
+    nas_address: 'nas',
+    nas_unreachable: 'nas',
+    spotify_refused: 'spzugang',
+    spotify_unknown: 'spzugang',
+    spotify_soon: 'spzugang',
+    certificate_soon: 'https',
+  }
+  const icons = { storage: 'save', temperature: 'fan', power: 'plug', sdcard: 'chip', memory: 'chip', services: 'server', internet: 'wifi', nas: 'folder', spotify: 'sync', certificate: 'lock', podcasts: 'music' }
+  const chip = { ok: '<span class="chip ok">OK</span>', warn: '<span class="chip warn">Hinweis</span>', error: '<span class="chip danger">Problem</span>', info: '' }[c.status] ?? ''
+  const text = c.hint ? hints[c.hint] ?? c.hint : c.status === 'ok' || c.id === 'podcasts' ? okText[c.id] : v
+  // (a button to the page that fixes it, where there is one)
+  const target = c.hint && fix[c.hint] && state.pages.has(fix[c.hint]) ? fix[c.hint] : ''
+  return `<div class="entry health-row"><span class="avatar">${icon(icons[c.id] ?? 'info', 16)}</span><span class="lbl"><b>${names[c.id] ?? esc(c.id)}</b><small>${esc(text ?? '')}</small>${target ? `<button class="btn sm" data-go="${target}">Öffnen</button>` : ''}</span>${chip}</div>`
+}
+
+function uptimeText(s) {
+  const d = Math.floor(s / 86400)
+  const h = Math.floor((s % 86400) / 3600)
+  const m = Math.floor((s % 3600) / 60)
+  return d ? `${d} Tage ${h} h` : h ? `${h} h ${m} min` : `${m} min`
+}
+
+function healthTop() {
+  const h = sys.health
+  const problems = h.checks.filter((c) => c.status === 'error').length
+  const warnings = h.checks.filter((c) => c.status === 'warn').length
+  // (each count a chip of its own: whole texts to translate)
+  const chips = [
+    problems ? `<span class="chip danger">${problems === 1 ? 'Ein Problem' : `${problems} Probleme`}</span>` : '',
+    warnings ? `<span class="chip warn">${warnings === 1 ? 'Ein Hinweis' : `${warnings} Hinweise`}</span>` : '',
+    problems || warnings ? '' : '<span class="chip ok">OK</span>',
+  ].join('')
+  return [
+    `<section class="card wide"><div class="sp-head"><h2>${problems || warnings ? 'Bitte ansehen' : 'Alles in Ordnung'}</h2><div class="chips">${chips}</div></div>
+      <p class="help"><span>Läuft seit</span> <span>${uptimeText(h.uptime)}</span>${h.version ? ` · <span>Version</span> <span translate="no">${esc(h.version)}</span>` : ''}</p>
+      <div class="rows">${h.checks.map(healthRow).join('')}</div>
+      <div class="btns"><button class="btn" id="hl-refresh">Neu prüfen</button></div></section>`,
+  ]
+}
+
+function mountHealth(root, page) {
+  for (const el of root.querySelectorAll('[data-go]')) el.onclick = () => go(el.dataset.go)
+  $('#hl-refresh', root).onclick = async (e) => {
+    e.target.disabled = true
+    await loadHealth().catch(() => undefined)
+    if (currentPage()?.id === page.id) renderPage(page, false)
+    toast('Neu geprüft')
+  }
+}
+
+/* Rechtliches */
+
+// The services the box talks to, what for, and their own terms
+const LEGAL_SERVICES = [
+  ['Spotify', 'Anmeldung, Wiedergabe, Suche, Smart-Sync, Cover', 'https://www.spotify.com/legal/end-user-agreement/'],
+  ['ARD Sounds (ARD Audiothek)', 'Suche und Folgen von ARD-Sendungen', 'https://www.ardsounds.de/nutzungsbedingungen/'],
+  ['Apple (iTunes Search, Apple Podcasts)', 'Podcast-Suche, Vorschläge, Cover-Suche', 'https://www.apple.com/legal/internet-services/itunes/'],
+  ['Deezer', 'Cover-Suche', 'https://www.deezer.com/legal/cgu'],
+  ['radio-browser.info', 'Radiosender-Suche', 'https://www.radio-browser.info/'],
+  ['Google', 'Gesprochene Ansagen (wenn Google gewählt ist)', 'https://policies.google.com/terms'],
+  ['Hugging Face', 'Piper-Stimmen und Hörproben (Sprachausgabe)', 'https://huggingface.co/terms-of-service'],
+  ['Telegram', 'Eltern-Bot (wenn eingerichtet)', 'https://telegram.org/tos'],
+  ['GitHub', 'Updates, Neuigkeiten, das Programm Piper', 'https://docs.github.com/site-policy/github-terms/github-terms-of-service'],
+]
+
+async function loadLegal() {
+  const [license, version] = await Promise.all([fetch('legal/LICENSE.md', { cache: 'no-cache' }).catch(() => null), api(`${API}/version`)])
+  sys.legalLicense = license?.ok ? await license.text() : ''
+  sys.version = version.body?.version ?? sys.version ?? ''
+}
+
+function legalTop() {
+  const text = sys.legalLicense || ''
+  const name = text.split('\n').map((l) => l.trim()).find(Boolean) ?? ''
+  const copyright = /^\s*Copyright\b.*$/m.exec(text)?.[0].trim() ?? ''
+  const link = (href, label, cls = 'btn') => `<a class="${cls}" href="${esc(href)}" target="_blank" rel="noopener">${icon('ext', 16)}${esc(label)}</a>`
+  return [
+    `<section class="card"><h2>MuPiBox</h2><p class="help">Ein freies Open-Source-Projekt für Musikboxen für Kinder.</p>
+      ${spKv([
+        ['Version', sys.version || '–'],
+        copyright && ['Copyright', copyright.replace(/^Copyright\s*(\(c\)|©)?\s*/i, '')],
+      ])}
+      <div class="btns">${link('https://github.com/splitti/MuPiBox', 'Projekt auf GitHub')}${link('https://mupibox.de', 'mupibox.de')}</div></section>`,
+    // (its own license and the third parties in one card: beside "MuPiBox" of about the same height on a wide screen)
+    `<section class="card"><h2>Lizenzen</h2>
+      <h3 class="legal-h">Lizenz</h3><p class="help">${esc(name ? `MuPiBox steht unter der ${name}.` : 'Die Lizenz ließ sich nicht laden.')}</p>
+      ${text ? `<details class="legal"><summary>Lizenztext anzeigen</summary><pre class="logview legal-text" translate="no">${esc(text)}</pre></details>` : ''}
+      <h3 class="legal-h">Open Source &amp; Drittanbieter</h3><p class="help">MuPiBox nutzt Software, Schriften und Dienste anderer Projekte. Jede Komponente behält ihre eigene Lizenz; die Liste nennt sie und enthält die Lizenztexte.</p>
+      <details class="legal" id="lg-notices"><summary>Drittanbieter-Hinweise anzeigen</summary><pre class="logview legal-text" translate="no">${esc(tr('Lade …'))}</pre></details></section>`,
+    `<section class="card"><h2>Datenschutz</h2>
+      <p class="help">Alles, was die Box über ihre Nutzung weiß, bleibt auf ihr: Bibliothek, Einstellungen, der Hör-Verlauf der letzten 90 Tage und wo Folgen zuletzt gehört wurden. MuPiBox erhebt keine Nutzungsstatistik und zeigt keine Werbung.</p>
+      <p class="help">Nach außen geht nur, was ein Dienst für seine Aufgabe braucht:</p>
+      <ul class="legal-list">
+        <li>Spotify: die Anmeldung und was abgespielt, gesucht oder synchronisiert wird.</li>
+        <li>Podcast- und Radiosender: der Abruf der eingetragenen Feeds und Streams.</li>
+        <li>Suchen (Apple, ARD, radio-browser.info, Deezer, bei der Cover-Suche auch Spotify): der Suchbegriff und die gewählte Sprache; bei der automatischen Cover-Suche (wenn eingeschaltet) der Name des Ordners.</li>
+        <li>Google: der Text einer gesprochenen Ansage, einmal; die Ansage bleibt danach auf der Box.</li>
+        <li>Telegram (nur mit eingerichtetem Bot): die Nachrichten des Bots, bei „Wiedergabe melden“ auch Titel und ein Bildschirmfoto.</li>
+        <li>GitHub: die Prüfung auf Updates, die Neuigkeiten und die Updates selbst; beim ersten Laden einer Stimme das Programm Piper.</li>
+        <li>Hugging Face (nur mit Piper): die Liste der Stimmen, eine gewählte Stimme und ihre Hörprobe. Was die Box sagt, bleibt auf der Box.</li>
+        <li>Das Admin-Interface lädt Bibliotheken von öffentlichen Servern (jQuery, jsDelivr, cdnjs); dabei sehen diese die Adresse des Browsers.</li>
+      </ul>
+      <p class="help">Für diese Dienste gelten deren eigene Bedingungen und Datenschutzhinweise.</p></section>`,
+    `<section class="card"><h2>Externe Dienste</h2><div class="rows">${LEGAL_SERVICES.map(
+      ([name, what, href]) => `<div class="entry"><span class="lbl"><b translate="no">${esc(name)}</b><small>${esc(what)}</small></span>${link(href, 'Bedingungen', 'btn sm')}</div>`,
+    ).join('')}</div></section>`,
+    `<section class="card wide"><h2>Unabhängigkeit</h2><p class="help">MuPiBox ist ein unabhängiges Projekt. Es ist nicht mit Spotify, der ARD, Apple, Deezer, Google, Telegram oder anderen hier genannten Anbietern verbunden und wird von ihnen weder unterstützt noch autorisiert. Alle genannten Marken gehören ihren jeweiligen Inhabern.</p></section>`,
+  ]
+}
+
+function mountLegal(root) {
+  // (the notices are long: loaded only when opened)
+  const notices = $('#lg-notices', root)
+  notices?.addEventListener(
+    'toggle',
+    async () => {
+      if (!notices.open) return
+      const r = await fetch('legal/THIRD_PARTY_NOTICES.md', { cache: 'no-cache' }).catch(() => null)
+      const pre = notices.querySelector('pre')
+      if (pre) pre.textContent = r?.ok ? await r.text() : tr('Die Hinweise ließen sich nicht laden.')
+    },
+    { once: true },
+  )
+}
+
 /* Protokolle */
 
 async function loadLogs() {
@@ -6070,14 +7598,22 @@ async function loadLogs() {
 function logsTop() {
   const l = sys.logs
   const opt = (v, t) => `<option value="${esc(v)}"${v === sys.logSel ? ' selected' : ''}>${esc(t)}</option>`
+  // (a wide screen: the logs and services as a list on the left - the services with their state - and the log at
+  // full height on the right; a phone: the choice as a menu, the log below)
+  const word = { active: 'läuft', failed: 'Fehler', inactive: 'gestoppt', activating: 'startet' }
+  const item = (value, label, st) =>
+    `<button class="lg-item" data-lg="${esc(value)}" aria-current="${value === sys.logSel}">${st ? `<i class="dot st-${esc(st)}" title="${esc(word[st] ?? st)}"></i>` : '<i class="dot"></i>'}<span translate="no">${esc(label)}</span></button>`
+  const list = `<nav class="lg-list" aria-label="Logs und Dienste"><small>Logs</small>${l.logs.map((k) => item(`log:${k}`, `${k}.log`)).join('')}<small>Dienste</small>${l.services
+    .map((k) => item(`service:${k}`, k, l.states?.[k] ?? ''))
+    .join('')}</nav>`
   return [
-    `<section class="card wide"><h2>Protokoll</h2>
-      <div class="rule-times stack-phone"><div class="field"><label for="lg-sel">Log oder Dienst</label><select class="input" id="lg-sel"><optgroup label="Logs">${l.logs.map((k) => opt(`log:${k}`, `${k}.log`)).join('')}</optgroup><optgroup label="Dienste (Status)">${l.services.map((k) => opt(`service:${k}`, k)).join('')}</optgroup></select></div>
+    `<section class="card wide lg-card"><h2>Protokoll</h2><div class="lg-split"><aside class="lg-side">${list}
+      <div class="row lg-debug"><span class="lbl"><b>Ausführliches Player-Log</b><small>Schreibt viel mehr ins spotify-control-Log (Player startet neu). Nach der Fehlersuche wieder aus.</small></span>
+      <label class="switch"><input type="checkbox" id="lg-debug" ${sys.debug ? 'checked' : ''} aria-label="Ausführliches Player-Log"><span></span></label></div></aside>
+      <div class="lg-main"><div class="rule-times stack-phone"><div class="field lg-pick"><label for="lg-sel">Log oder Dienst</label><select class="input" id="lg-sel"><optgroup label="Logs">${l.logs.map((k) => opt(`log:${k}`, `${k}.log`)).join('')}</optgroup><optgroup label="Dienste (Status)">${l.services.map((k) => opt(`service:${k}`, k)).join('')}</optgroup></select></div>
         <div class="field"><label for="lg-grep">Suche</label><input class="input" id="lg-grep" type="search" value="${esc(sys.logGrep)}" placeholder="z. B. error" autocomplete="off"></div></div>
       <div class="btns"><button class="btn" id="lg-refresh">Aktualisieren</button><button class="btn" id="lg-auto" aria-pressed="${sys.logAuto}">${sys.logAuto ? 'Anhalten' : 'Mitlaufen'}</button><button class="btn" id="lg-dl">Herunterladen</button></div>
-      <pre class="logview" id="lg-view">${esc(tr('Lade …'))}</pre></section>`,
-    `<section class="card"><h2>Fehlersuche</h2><div class="row"><span class="lbl"><b>Ausführliches Player-Log</b><small>Schreibt viel mehr ins spotify-control-Log (Player startet neu). Nach der Fehlersuche wieder aus.</small></span>
-      <label class="switch"><input type="checkbox" id="lg-debug" ${sys.debug ? 'checked' : ''} aria-label="Ausführliches Player-Log"><span></span></label></div></section>`,
+      <pre class="logview" id="lg-view">${esc(tr('Lade …'))}</pre></div></div></section>`,
   ]
 }
 
@@ -6096,11 +7632,15 @@ async function showLog() {
 
 function mountLogs(root) {
   sys.logShown = false
-  $('#lg-sel', root).onchange = (e) => {
-    sys.logSel = e.target.value
+  const pick = (value) => {
+    sys.logSel = value
     sys.logShown = false
+    $('#lg-sel', root).value = value
+    for (const b of root.querySelectorAll('[data-lg]')) b.setAttribute('aria-current', String(b.dataset.lg === value))
     showLog()
   }
+  $('#lg-sel', root).onchange = (e) => pick(e.target.value)
+  for (const b of root.querySelectorAll('[data-lg]')) b.onclick = () => pick(b.dataset.lg)
   let t = null
   $('#lg-grep', root).addEventListener('input', (e) => {
     sys.logGrep = e.target.value
@@ -6146,9 +7686,11 @@ async function loadBrowser() {
 /* Sprache */
 
 async function loadLanguage() {
-  const r = await api(`${API}/bootscreen`)
+  const [r, o] = await Promise.all([api(`${API}/bootscreen`), api(`${API}/display-options`)])
   if (!r.ok) throw new Error(`bootscreen ${r.status}`)
   sys.bs = r.body
+  // (the languages the box can speak: a new box language is its speaking language too, where there is one)
+  sys.ttsLanguages = (o.body?.ttsLanguages ?? []).map((l) => l.code)
   const cur = r.body.current.bootscreenLanguage || 'en'
   state.values.set('boxLang', r.body.languages[cur]?.name ?? cur)
   const pref = getLangPref()
@@ -6414,16 +7956,18 @@ function expertsTop() {
     `<section class="card"><h2>Hostname</h2><p class="help">Der Name der Box im Netzwerk (z. B. http://mupibox/). Buchstaben, Ziffern und „-“.</p>
       <div class="field"><label for="ex-host">Hostname</label><input class="input mono" id="ex-host" maxlength="63" value="${esc(adm.host)}" autocomplete="off"></div>
       <div class="btns"><button class="btn primary" id="ex-hostsave">Speichern</button></div></section>`,
+    // (beside the host name: both short)
+    `<section class="card"><h2>Weitere Werkzeuge</h2><div class="navlist">${navRow('ext:dietpi', 'DietPi-Dashboard', 'Systemverwaltung von DietPi (Port 5252)', 'ext')}${navRow('ext:admin', 'Bisheriges Admin-Interface', 'Port 80', 'ext')}</div></section>`,
     `<section class="card wide"><h2>Konfiguration direkt bearbeiten</h2>
       <div class="note warn">${icon('info', 18)}<span>Fehler hier können die Box lahmlegen. Nur ändern, was du kennst – vorher ein Backup ziehen.</span></div>
       <div class="field"><label for="ex-file">Datei</label><select class="input" id="ex-file">${adm.json.keys.map((k) => `<option value="${k}"${k === adm.json.key ? ' selected' : ''}>${esc(JSON_LABEL[k] ?? k)}</option>`).join('')}</select></div>
       <textarea class="input json-edit" id="ex-json" spellcheck="false">${esc(adm.json.text)}</textarea>
       <p class="help" id="ex-jsonmsg" style="margin:0"></p>
       <div class="btns"><button class="btn danger" id="ex-jsonsave">Speichern</button><button class="btn" id="ex-jsonreload">Neu laden</button></div></section>`,
-    `<section class="card"><h2>Zurücksetzen</h2><div class="rows">${resets
+    // (last, across the whole width and set apart: what cannot be undone; on a wide screen the three side by side)
+    `<section class="card wide danger-zone"><h2>Zurücksetzen</h2><p class="help">Lässt sich nicht rückgängig machen – vorher ein Backup ziehen.</p><div class="rows three-col">${resets
       .map(([id, t, s]) => `<div class="entry"><span class="lbl"><b>${t}</b><small>${s}</small></span><button class="btn danger sm" data-reset="${id}">Zurücksetzen</button></div>`)
       .join('')}</div></section>`,
-    `<div class="card nav-card"><div class="navlist">${navRow('ext:dietpi', 'DietPi-Dashboard', 'Systemverwaltung von DietPi (Port 5252)', 'ext')}${navRow('ext:admin', 'Bisheriges Admin-Interface', 'Port 80', 'ext')}</div></div>`,
   ]
 }
 
@@ -6612,9 +8156,10 @@ function updatesTop() {
       ${i?.update ? `<div class="note">${icon('sync', 18)}<span>Neue Version ${esc(i.update.version)} verfügbar.</span></div>` : ''}
       ${rows || `<p class="help">Die Versionen des offiziellen Repositorys ließen sich nicht laden (keine Internetverbindung?).</p>`}
       <p class="help" style="margin:0">Aus dem offiziellen MuPiBox-Repository (splitti/MuPiBox). Die Box ist dabei 10–30 Minuten nicht nutzbar und startet danach von selbst neu. Einstellungen und Bibliothek bleiben erhalten und werden vorher zusätzlich auf der Box gesichert.</p></section>`,
-    `<section class="card"><h2>Betriebssystem</h2><p class="help">Aktualisiert die Pakete des Systems (apt). Dauert auf älteren Raspberry Pis bis zu 30 Minuten; die Box läuft dabei weiter. Danach neu starten.</p>
-      <div class="btns"><button class="btn" data-upd="os" ${busy ? 'disabled' : ''}>Betriebssystem aktualisieren</button></div></section>`,
-    `<div class="card nav-card"><div class="navlist">${navRow('backup', 'Backup', 'Vorher herunterladen', 'save')}</div></div>`,
+    // (the system and the backup one below the other: beside the long MuPiBox card on a wide screen, no gap between)
+    `<div class="col-stack"><section class="card"><h2>Betriebssystem</h2><p class="help">Aktualisiert die Pakete des Systems (apt). Dauert auf älteren Raspberry Pis bis zu 30 Minuten; die Box läuft dabei weiter. Danach neu starten.</p>
+      <div class="btns"><button class="btn" data-upd="os" ${busy ? 'disabled' : ''}>Betriebssystem aktualisieren</button></div></section>
+      <div class="card nav-card"><div class="navlist">${navRow('backup', 'Backup', 'Vorher herunterladen', 'save')}</div></div></div>`,
   ]
 }
 
@@ -6871,7 +8416,108 @@ const CONTROLLERS = {
       drawSearch()
     },
   },
+  podsuche: {
+    load: loadServices,
+    top: podTop,
+    sections: () => [],
+    mount(root) {
+      const q = $('#pod-q', root)
+      // (switched off: only the way to switch it on)
+      if (!q) return $('#pod-services', root)?.addEventListener('click', () => go('g-dienste'))
+      q.addEventListener('input', () => {
+        pod.q = q.value
+        // (the field emptied: the suggestions again)
+        if (!pod.q.trim() && pod.result) {
+          pod.result = null
+          loadPodSuggestions()
+        }
+      })
+      q.addEventListener('keydown', (e) => e.key === 'Enter' && doPodSearch())
+      $('#pod-lang', root).onchange = (e) => {
+        pod.lang = e.target.value
+        try {
+          localStorage.setItem('mupi-pod-lang', pod.lang)
+        } catch {
+          // (private mode: for this visit)
+        }
+        if (pod.q.trim().length >= 2) doPodSearch()
+        else loadPodSuggestions()
+      }
+      $('#pod-kids', root).onclick = (e) => {
+        const b = e.target.closest('button')
+        if (!b) return
+        pod.kids = b.dataset.v === '1'
+        for (const x of b.parentElement.children) x.setAttribute('aria-pressed', String(x === b))
+        if (pod.q.trim().length >= 2) doPodSearch()
+      }
+      $('#pod-go', root).onclick = doPodSearch
+      if (pod.result) drawPod()
+      else loadPodSuggestions()
+    },
+  },
+  radiosuche: {
+    load: loadServices,
+    top: radioTop,
+    sections: () => [],
+    mount(root) {
+      const q = $('#radio-q', root)
+      // (switched off: only the way to switch it on)
+      if (!q) return $('#radio-services', root)?.addEventListener('click', () => go('g-dienste'))
+      q.addEventListener('input', () => {
+        radio.q = q.value
+        if (!radio.q.trim() && radio.result) {
+          radio.result = null
+          loadRadioSuggestions()
+        }
+      })
+      q.addEventListener('keydown', (e) => e.key === 'Enter' && doRadioSearch())
+      $('#radio-lang', root).onchange = (e) => {
+        pod.lang = e.target.value
+        try {
+          localStorage.setItem('mupi-pod-lang', pod.lang)
+        } catch {
+          // (private mode: for this visit)
+        }
+        if (radio.q.trim().length >= 2) doRadioSearch()
+        else loadRadioSuggestions()
+      }
+      $('#radio-kids', root).onclick = (e) => {
+        const b = e.target.closest('button')
+        if (!b) return
+        radio.kids = b.dataset.v === '1'
+        for (const x of b.parentElement.children) x.setAttribute('aria-pressed', String(x === b))
+        if (radio.q.trim().length >= 2) doRadioSearch()
+      }
+      $('#radio-go', root).onclick = doRadioSearch
+      if (radio.result) drawRadio()
+      else loadRadioSuggestions()
+    },
+  },
+  'g-dienste': {
+    async load() {
+      svc.at = 0
+      await loadServices()
+      state.values.set('svcPod', svc.podcasts)
+      state.values.set('svcRadio', svc.radio)
+    },
+    async change(key, v) {
+      const field = { svcPod: 'podcastSearch', svcRadio: 'radioSearch' }[key]
+      if (!field) return
+      const r = await api(`${API}/sources`, { method: 'POST', body: { [field]: !!v } })
+      if (!r.ok) return toast('Nicht gespeichert', 'info')
+      setSources(r.body)
+      toast('Gespeichert')
+    },
+  },
   link: {
+    // (without a Spotify login no Spotify kinds: a podcast is the first choice then)
+    async load() {
+      await loadServices()
+      if (!svc.spotify && String(state.values.get('lType') ?? 'Spotify-Link').startsWith('Spotify')) {
+        state.values.set('lType', 'Podcast (RSS)')
+        state.values.set('lCat', 'Radio & Podcasts')
+      }
+    },
     // the fields that fit the kind of link (as the box's own add page)
     sections: (page) => {
       const type = state.values.get('lType') ?? 'Spotify-Link'
@@ -6891,11 +8537,18 @@ const CONTROLLERS = {
       return page.sections.map((sec) => ({
         ...sec,
         items: sec.items.filter(keep).map((it) =>
-          it.key === 'lUrl'
-            ? { ...it, label: type === 'Spotify-Suche' ? 'Suchbegriff' : 'Link', placeholder: type === 'Spotify-Suche' ? 'z. B. Benjamin Blümchen Folge 1' : 'https://…' }
-            : it.key === 'lLabel' && type === 'Spotify-Suche'
-              ? { ...it, label: 'Name der Kachel' }
-              : it,
+          it.key === 'lType' && !svc.spotify
+            ? { ...it, options: it.options.filter((o) => !o.startsWith('Spotify')) }
+            : it.key === 'lUrl'
+              ? {
+                  ...it,
+                  label: type === 'Spotify-Suche' ? 'Suchbegriff' : 'Link',
+                  placeholder: type === 'Spotify-Suche' ? 'z. B. Benjamin Blümchen Folge 1' : 'https://…',
+                  ...(svc.spotify ? {} : { help: 'Radio: auch eine .m3u- oder .pls-Datei – die Box liest die Stream-Adresse daraus. Podcast: die Adresse des Feeds.' }),
+                }
+              : it.key === 'lLabel' && type === 'Spotify-Suche'
+                ? { ...it, label: 'Name der Kachel' }
+                : it,
         ),
       }))
     },
@@ -7016,17 +8669,72 @@ const CONTROLLERS = {
   displaytexte: { load: loadDisplayTexts, top: textsTop, sections: () => [], ownNav: true, mount: mountTexts },
   displaysettings: {
     load: loadDisplaySettings,
-    sections: (page) =>
-      page.sections.map((sec) => ({
-        ...sec,
-        items: sec.items.map((it) => {
-          if (it.key === 'bright') return { ...it, min: 5, disabled: disp.opts?.brightness == null, help: disp.opts?.brightness == null ? 'Dieses Display lässt sich nicht dimmen.' : 'Bleibt auch nach einem Neustart.' }
-          if (it.key === 'dispOff') return { ...it, help: '0 = nie ausschalten.' }
-          return it
-        }),
-      })),
+    // what works at once (brightness, switching off) | what the display takes after a restart (rotation, resolution)
+    sections: (page) => {
+      const it = (key, over) => schemaItem(page, key, over)
+      const custom = !RES_PRESETS.some(([, x, y]) => x === Number(state.values.get('resX')) && y === Number(state.values.get('resY')))
+      state.values.set('resCustom', custom)
+      state.values.set('resPreset', custom ? 'Eigene …' : `${state.values.get('resX')} × ${state.values.get('resY')}`)
+      return [
+        {
+          title: 'Helligkeit & Ausschalten',
+          help: 'Gilt sofort.',
+          items: [
+            it('bright', { min: 5, disabled: disp.opts?.brightness == null, help: disp.opts?.brightness == null ? 'Dieses Display lässt sich nicht dimmen.' : '' }),
+            it('dispOff', { stops: DISPLAY_OFF_STOPS, help: '' }),
+          ],
+        },
+        {
+          title: 'Abends dunkler',
+          badge: state.values.get('ndOn') ? (disp.opts?.nightDim?.dimmed ? { text: 'gerade gedimmt', kind: 'ok' } : { text: 'an', kind: 'ok' }) : { text: 'aus' },
+          items: [
+            { type: 'toggle', key: 'ndOn', label: 'Abends dunkler', help: 'Das Display wird abends dunkler und morgens wieder normal hell.', disabled: disp.opts?.brightness == null },
+            { type: 'pair', keep: true, dep: 'ndOn', items: [{ type: 'text', kind: 'time', key: 'ndFrom', label: 'Ab' }, { type: 'text', kind: 'time', key: 'ndTo', label: 'Bis' }] },
+            { type: 'slider', key: 'ndLevel', label: 'Helligkeit am Abend', min: 5, max: 100, step: 5, unit: ' %', dep: 'ndOn', help: 'Nie heller als die normale Helligkeit.' },
+            { type: 'slider', key: 'ndFade', label: 'Sanft abdunkeln über', stops: [0, 15, 30, 60], unit: ' min', zero: 'Sofort', dep: 'ndOn' },
+            { type: 'toggle', key: 'ndQuiet', label: 'Auch während der Ruhezeiten', help: 'Zum Beispiel zur Schlafenszeit, auch wenn sie außerhalb der Uhrzeiten liegt.', dep: 'ndOn' },
+          ],
+        },
+        {
+          title: 'Drehung',
+          help: 'Gilt nach einem Neustart der Box.',
+          items: [
+            { type: 'html', html: `<div class="field"><label>Display am HDMI-Anschluss</label>${rotTiles('hdmiRot', HDMI_ROT)}</div>` },
+            {
+              type: 'html',
+              html: `<details class="more"><summary>Display am Flachbandkabel (DSI/LCD)</summary><div class="field"><label>LCD-Drehung</label>${rotTiles('lcdRot', LCD_ROT)}</div>
+                <div class="field"><label>Display-LCD-Drehung</label>${rotTiles('dlcdRot', LCD_ROT)}</div></details>`,
+            },
+          ],
+        },
+        {
+          title: 'Auflösung',
+          help: 'Das Display startet damit gleich neu.',
+          items: [
+            { type: 'select', label: 'Größe', key: 'resPreset', options: [...RES_PRESETS.map(([l]) => l), 'Eigene …'] },
+            { type: 'pair', dep: 'resCustom', keep: true, items: [it('resX', { label: 'Breite', unit: 'px' }), it('resY', { label: 'Höhe', unit: 'px' })] },
+            { type: 'buttons', buttons: [['Auflösung übernehmen', 'primary', 'toast:Gespeichert']] },
+          ],
+        },
+      ]
+    },
+    mount(root, page) {
+      for (const b of root.querySelectorAll('[data-rot-key]')) {
+        b.onclick = () => {
+          const key = b.dataset.rotKey
+          for (const x of root.querySelectorAll(`[data-rot-key="${key}"]`)) x.setAttribute('aria-pressed', String(x === b))
+          state.values.set(key, b.dataset.rot)
+          commitChange(page, key, b.dataset.rot, shownValues.get(key))
+        }
+      }
+    },
     async change(key, v) {
       if (key === 'bright') return saveDisplayOptions({ brightness: v }, `Helligkeit ${v} %`)
+      if (['ndOn', 'ndFrom', 'ndTo', 'ndLevel', 'ndFade', 'ndQuiet'].includes(key)) {
+        const nightDim = { enabled: !!state.values.get('ndOn'), from: String(state.values.get('ndFrom')), to: String(state.values.get('ndTo')), level: Number(state.values.get('ndLevel')), fade: Number(state.values.get('ndFade')), withQuiet: !!state.values.get('ndQuiet') }
+        if (nightDim.from === nightDim.to) return toast('Beginn und Ende brauchen verschiedene Uhrzeiten', 'info')
+        return saveDisplayOptions({ nightDim }, key === 'ndOn' ? (nightDim.enabled ? `Abends dunkler: ${nightDim.from}–${nightDim.to} Uhr` : 'Abends dunkler ist aus') : 'Gespeichert')
+      }
       if (key === 'dispOff') {
         const r = await api(`${API}/power-config`, { method: 'POST', body: { idleDisplayOff: Number(v) } })
         if (!r.ok) return toast('Nicht gespeichert', 'info')
@@ -7035,10 +8743,20 @@ const CONTROLLERS = {
         return toast(`${Number(v) === 0 ? 'Display bleibt an' : `Display aus nach ${v} min`}. ${rl.body?.ok ? 'Das Display lädt neu.' : ''}`.trim())
       }
       const rot = { hdmiRot: ['display_hdmi_rotate', HDMI_ROT], lcdRot: ['lcd_rotate', LCD_ROT], dlcdRot: ['display_lcd_rotate', LCD_ROT] }[key]
-      if (rot) return saveDisplayOptions({ rotation: { [rot[0]]: rotValue(rot[1], v) } }, 'Drehung gespeichert')
+      if (rot) return saveDisplayOptions({ rotation: { [rot[0]]: rotValue(rot[1], v) } }, 'Drehung gespeichert – gilt nach einem Neustart')
+      if (key === 'resPreset') {
+        const p = RES_PRESETS.find(([l]) => l === v)
+        if (p) {
+          state.values.set('resX', String(p[1]))
+          state.values.set('resY', String(p[2]))
+        }
+        state.values.set('resCustom', !p)
+        const pair = $('[data-dep="resCustom"]')
+        if (pair) pair.hidden = !!p
+      }
     },
     byLabel: {
-      async Speichern() {
+      async 'Auflösung übernehmen'() {
         const resX = Number(state.values.get('resX'))
         const resY = Number(state.values.get('resY'))
         if (!Number.isInteger(resX) || !Number.isInteger(resY) || resX < 200 || resY < 200) return toast('Bitte Breite und Höhe in Pixeln eintragen', 'info')
@@ -7050,19 +8768,60 @@ const CONTROLLERS = {
   },
   bedienung: {
     load: loadControls,
-    sections: (page) =>
-      page.sections.map((sec) => ({
-        ...sec,
-        items: sec.items.map((it) =>
-          it.key === 'setTimer'
-            ? { ...it, help: 'So lange drückt man auf die Status-Symbole oben, bis die Einstellungen der Box aufgehen.' }
-            : it.key === 'listTimer'
-              ? { ...it, help: 'So lange drückt man auf ein Cover, bis die Titelliste aufgeht.' }
-              : it,
-        ),
-      })),
+    // the tabs of the display (switched on = shown), how long to hold, where it goes on, podcasts
+    sections: (page) => {
+      const it = (key, over) => schemaItem(page, key, over)
+      const shown = TAB_KEYS.filter(([k]) => !state.values.get(k))
+      for (const [k, show] of TAB_KEYS) state.values.set(show, !state.values.get(k))
+      const setTimer = Number(state.values.get('setTimer'))
+      return [
+        {
+          title: 'Reiter auf dem Display',
+          help: 'Die sichtbaren Reiter teilen sich die Breite. Mindestens einer bleibt.',
+          items: [
+            { type: 'html', html: `<div class="tab-prev" aria-hidden="true">${shown.map(([, , l]) => `<span>${esc(l)}</span>`).join('')}</div>` },
+            ...TAB_KEYS.map(([k, show, label]) => ({ type: 'toggle', key: show, label, disabled: shown.length === 1 && !state.values.get(k) })),
+          ],
+        },
+        {
+          title: 'Haltezeiten',
+          items: [
+            it('listTimer', { help: 'So lange drückt man auf ein Cover, bis die Titelliste aufgeht.' }),
+            it('setTimer', { help: 'So lange drückt man auf die Status-Symbole oben, bis die Einstellungen der Box aufgehen.' }),
+            ...(setTimer < 3 ? [{ type: 'warn', text: 'So kurz kommen Kinder leicht in die Einstellungen.' }] : []),
+          ],
+        },
+        {
+          title: 'Weiterhören',
+          items: [
+            { type: 'stepper', key: 'resume', label: 'Einträge unter „Fortsetzen“', help: 'So viele zuletzt gehörte Titel bietet das Display zum Weiterhören an.', min: 1, max: 99 },
+            it('epResume', { label: 'Podcast-Folgen an der letzten Stelle weiterhören' }),
+            it('epDays', { dep: 'epResume' }),
+          ],
+        },
+        {
+          title: 'Podcasts',
+          help: 'Was neu ist und wie weit gehört – auf dem Display und in der App.',
+          items: [it('epNew'), it('epNewDays', { dep: 'epNew' }), it('epProgress')],
+        },
+      ]
+    },
     async change(key, v, page) {
       const cats = { hideA: 'audiobook', hideM: 'music', hideN: 'nas', hideO: 'other' }
+      // (a tab switched on: not hidden)
+      const tab = TAB_KEYS.find(([, show]) => show === key)
+      if (tab) {
+        state.values.set(tab[0], !v)
+        const hidden = Object.entries(cats).filter(([k]) => state.values.get(k)).map(([, c]) => c)
+        const ok = await saveDisplayOptions({ hiddenCategories: hidden })
+        renderPage(page, false)
+        return ok
+      }
+      if (key === 'setTimer') {
+        const r = await saveDisplayOptions({ settingsAccessTimer: v }, `Einstellungen nach ${fmtSec(v)}`)
+        renderPage(page, false)
+        return r
+      }
       if (key in cats) {
         const hidden = Object.entries(cats).filter(([k]) => state.values.get(k)).map(([, c]) => c)
         if (hidden.length === 4) {
@@ -7075,6 +8834,18 @@ const CONTROLLERS = {
       if (key === 'resume') return saveDisplayOptions({ resume: v }, `${v} Fortsetzen-Einträge`)
       if (key === 'listTimer') return saveDisplayOptions({ listviewTimer: v }, `Titelliste nach ${fmtSec(v)}`)
       if (key === 'setTimer') return saveDisplayOptions({ settingsAccessTimer: v }, `Einstellungen nach ${fmtSec(v)}`)
+      if (key === 'epResume') return saveDisplayOptions({ episodeResume: !!v }, v ? 'Folgen gehen an der letzten Stelle weiter' : 'Folgen beginnen immer von vorn')
+      if (key === 'epDays') {
+        const days = EP_DAYS.find(([l]) => l === v)?.[1]
+        if (days === undefined) return
+        return saveDisplayOptions({ episodeResumeDays: days })
+      }
+      if (key === 'epNew') return saveDisplayOptions({ newEpisodes: !!v })
+      if (key === 'epNewDays') {
+        const days = Number.parseInt(String(v), 10)
+        if ([3, 7, 14].includes(days)) return saveDisplayOptions({ newEpisodeDays: days })
+      }
+      if (key === 'epProgress') return saveDisplayOptions({ episodeProgress: !!v })
     },
   },
   displaylive: { top: liveTop, sections: () => [], mount: mountLive },
@@ -7083,11 +8854,21 @@ const CONTROLLERS = {
     sections: (page) =>
       withoutSave(page).map((sec) => ({
         ...sec,
-        items: sec.items.map((it) =>
+        items: sec.items.flatMap((it) =>
           it.key === 'vol'
-            ? { ...it, help: `Höchstens ${state.values.get('volMax')} % (Hörschutz).` }
+            ? {
+                ...it,
+                help:
+                  hw.audio?.bluetooth && state.values.get('volBtOn')
+                    ? `Höchstens ${state.values.get('volBtMax')} % – gerade mit Bluetooth-Kopfhörer oder -Lautsprecher.`
+                    : `Höchstens ${state.values.get('volMax')} % (Hörschutz).`,
+              }
             : it.key === 'volMax'
-              ? { ...it, help: 'Lauter geht es auch am Display und per Telegram nicht.' }
+              ? [
+                  { ...it, help: 'Lauter geht es auch am Display und per Telegram nicht.' },
+                  { type: 'toggle', key: 'volBtOn', label: 'Eigene Grenze mit Bluetooth', help: 'Für Kopfhörer: gilt, solange Kopfhörer oder ein Lautsprecher per Bluetooth verbunden sind.' },
+                  { type: 'slider', key: 'volBtMax', label: 'Maximum mit Bluetooth', min: 10, max: 100, step: 5, unit: ' %', dep: 'volBtOn', help: 'Ist die Box beim Verbinden lauter, geht sie gleich auf diesen Wert herunter.' },
+                ]
               : it.key === 'volStart'
                 ? // (never above the maximum; only with a fixed start value)
                   { ...it, max: Number(state.values.get('volMax')) || it.max, disabled: !state.values.get('volFix'), help: '' }
@@ -7107,7 +8888,7 @@ const CONTROLLERS = {
         }
         return toast(`Lautstärke ${v} %`)
       }
-      const body = key === 'volMax' ? { maxVolume: v } : key === 'volFix' ? { startupVolume: v ? Number(state.values.get('volStart')) : null } : key === 'volStart' && state.values.get('volFix') ? { startupVolume: v } : null
+      const body = key === 'volBtOn' ? { btMaxVolume: v ? Number(state.values.get('volBtMax')) : null } : key === 'volBtMax' ? (state.values.get('volBtOn') ? { btMaxVolume: v } : null) : key === 'volMax' ? { maxVolume: v } : key === 'volFix' ? { startupVolume: v ? Number(state.values.get('volStart')) : null } : key === 'volStart' && state.values.get('volFix') ? { startupVolume: v } : null
       if (!body) return
       const r = await api(`${API}/audio/config`, { method: 'POST', body })
       if (!r.ok) return toast('Nicht gespeichert', 'info')
@@ -7173,6 +8954,7 @@ const CONTROLLERS = {
     },
   },
   bluetooth: { load: loadBluetooth, top: btTop, sections: () => [], mount: mountBluetooth },
+  sprachausgabe: { load: loadSpeech, top: speechTop, sections: () => [], mount: mountSpeech },
   akku: {
     load: loadBattery,
     top: batteryTop,
@@ -7188,19 +8970,72 @@ const CONTROLLERS = {
   },
   mupihat: {
     load: loadHat,
-    sections: (page) =>
-      page.sections.map((sec) => ({
-        ...sec,
-        items: sec.items
-          .map((it) => {
-            if (it.key === 'battery') return { ...it, options: hw.data.mupihat.batteries.map(batteryLabel), help: 'Die Spannungen darunter gehören zu diesem Profil.' }
-            if (it.key === 'hatOn') return { ...it, help: 'Umschalten stellt auch die Soundkarte um und startet die Box neu.' }
-            if (it.type === 'warn') return { ...it, text: 'Vorsicht: Die Werte ändern das gewählte Profil. Ein zu hoher Ladeschluss (VREG) schadet dem Akku; das Abschalten muss unter der Warnung liegen. Die Werte gelten, sobald der MuPiHAT-Dienst neu startet (passiert beim Speichern).' }
-            if (it.key === 'vreg') return { ...it, help: 'Leer = Standard des Lade-Chips.' }
-            return it
-          })
-          .filter((it) => it.key !== 'hatOn' || true),
-      })),
+    // the HAT and its battery (with what it reads now) | the charge curve as a chart | when it warns and switches off,
+    // how full it charges - checked while typing
+    sections: (page) => {
+      const it = (key, over) => schemaItem(page, key, over)
+      const field = (key, label, sub) => it(key, { label, sub, help: '' })
+      return [
+        {
+          title: 'MuPiHAT',
+          col: 1,
+          items: [
+            it('hatOn', { help: 'Umschalten stellt auch die Soundkarte um und startet die Box neu.' }),
+            it('battery', { options: hw.data.mupihat.batteries.map(batteryLabel), help: 'Die Spannungen gehören zu diesem Profil.' }),
+            { type: 'html', html: hatNowLine() },
+          ],
+        },
+        {
+          title: 'Ladekurve',
+          help: 'Welche Spannung welchem Ladestand entspricht (mV). Die Werte steigen von „Leer“ nach „Voll“.',
+          col: 2,
+          items: [
+            { type: 'html', html: `<div class="hat-chart" id="hat-chart">${hatChart()}</div>` },
+            { type: 'pair', cls: 'grid5', items: [field('v0', 'Leer', 'v_0'), field('v25', '25 %', 'v_25'), field('v50', '50 %', 'v_50'), field('v75', '75 %', 'v_75'), field('v100', 'Voll', 'v_100')] },
+          ],
+        },
+        {
+          title: 'Schwellen',
+          col: 1,
+          items: [
+            { type: 'pair', keep: true, items: [field('thWarn', 'Warnung ab', 'th_warning'), field('thShut', 'Abschalten bei', 'th_shutdown')] },
+            { type: 'html', html: '<small class="help-line">In mV. Abschalten muss unter der Warnung liegen.</small>' },
+          ],
+        },
+        {
+          title: 'Laden',
+          col: 1,
+          items: [it('vreg', { label: 'Ladeschluss', sub: 'VREG', unit: 'mV', help: 'Leer = Standard des Lade-Chips. Bei zwei Zellen in Reihe höchstens 8400 mV (4,2 V je Zelle) – höher schadet dem Akku.' })],
+        },
+        { bar: true, items: [{ type: 'buttons', buttons: [['Profil speichern', 'primary', 'toast:Gespeichert']] }] },
+      ]
+    },
+    mount(root) {
+      const check = () => {
+        const errs = hatProfileErrors()
+        for (const [key] of PROFILE_KEYS) {
+          const input = $(`#k-${key}`, root)
+          if (!input) continue
+          input.classList.toggle('bad', !!errs[key])
+          const field = input.closest('.field')
+          let msg = field.querySelector('small.err')
+          if (errs[key] && !msg) {
+            msg = document.createElement('small')
+            msg.className = 'err'
+            field.appendChild(msg)
+          }
+          if (msg) {
+            if (errs[key]) msg.textContent = errs[key]
+            else msg.remove()
+          }
+        }
+        const save = root.querySelector('[data-label="Profil speichern"]')
+        if (save) save.disabled = Object.keys(errs).length > 0
+        $('#hat-chart', root).innerHTML = hatChart()
+      }
+      for (const [key] of PROFILE_KEYS) $(`#k-${key}`, root)?.addEventListener('input', check)
+      check()
+    },
     async change(key, v, page) {
       if (key === 'hatOn') {
         if (!(await ask(v ? 'MuPiHAT einschalten' : 'MuPiHAT ausschalten', `Die Box stellt die Soundkarte um (${v ? 'MAX98357A' : 'Onboard 3,5 mm'}) und startet gleich neu.`, v ? 'Einschalten' : 'Ausschalten'))) {
@@ -7378,23 +9213,46 @@ const CONTROLLERS = {
   telegram: { load: loadTelegram, top: tgTop, sections: () => [], mount: mountTelegram },
   mqtt: {
     load: loadMqtt,
-    sections: (page) =>
-      page.sections.map((sec) => ({
-        ...sec,
-        items: sec.items.map((it) =>
-          it.key === 'mqPw'
-            ? { ...it, kind: 'password', placeholder: net.mqtt?.hasPassword ? 'gespeichert – leer lassen = behalten' : '', help: '' }
-            : it.key === 'mqttOn'
-              ? { ...it, help: net.mqtt?.running ? 'Der Dienst läuft.' : 'Der Dienst läuft nicht.' }
-              : it.key === 'mqTopic'
-                ? { ...it, help: 'Die Themen der Box beginnen mit Topic/Client-ID.' }
-                : it,
-        ),
-      })),
+    // the connection (broker and login), the box's names in MQTT, how often, Home Assistant - saved together
+    sections: (page) => {
+      const it = (key, over) => schemaItem(page, key, over)
+      const on = state.values.get('mqttOn')
+      const running = net.mqtt?.running
+      return [
+        {
+          title: 'Verbindung',
+          badge: on ? (running ? { text: 'verbunden', kind: 'ok' } : { text: 'nicht verbunden', kind: 'warn' }) : { text: 'aus' },
+          col: 1,
+          items: [
+            it('mqttOn', { help: 'Meldet Zustand, Wiedergabe und Werte der Box an einen MQTT-Broker.' }),
+            { type: 'pair', cols: '2fr 1fr', keep: true, dim: 'mqttOn', items: [it('mqBroker', { placeholder: 'z. B. 192.168.1.10' }), it('mqPort')] },
+            { type: 'pair', dim: 'mqttOn', items: [it('mqUser'), it('mqPw', { kind: 'password', placeholder: net.mqtt?.hasPassword ? 'gespeichert' : '', help: '' })] },
+          ],
+        },
+        {
+          title: 'Name & Topic',
+          col: 1,
+          items: [
+            it('mqName', { dim: 'mqttOn' }),
+            it('mqTopic', { dim: 'mqttOn', help: mqttTopicPreview(), helpId: 'mq-preview' }),
+            it('mqClient', { dim: 'mqttOn' }),
+          ],
+        },
+        { ...page.sections[1], col: 2 },
+        { title: 'Home Assistant', col: 2, items: [it('haOn', { help: 'Die Box erscheint in Home Assistant von selbst als Gerät.' }), it('haTopic', { dep: 'haOn' })] },
+        { bar: true, items: [{ type: 'buttons', buttons: [['Speichern', 'primary', 'toast:Gespeichert']] }] },
+      ]
+    },
+    mount(root) {
+      // the topics as they come out, while typing
+      for (const k of ['mqTopic', 'mqClient']) $(`#k-${k}`, root)?.addEventListener('input', () => ($('#mq-preview', root).textContent = mqttTopicPreview()))
+    },
     byLabel: {
       async Speichern(_a, _l, page) {
         const body = Object.fromEntries(MQTT_KEYS.map(([key, field]) => [field, state.values.get(key)]))
         for (const f of ['port', 'refresh', 'refreshIdle', 'timeout']) body[f] = Number(body[f])
+        // (still switched off with the template's example: it stays in the configuration)
+        if (!String(body.broker ?? '').trim() && !body.active && net.mqtt?.broker === MQTT_EXAMPLE_BROKER) body.broker = MQTT_EXAMPLE_BROKER
         const pw = String(state.values.get('mqPw') ?? '')
         if (pw) body.password = pw
         const r = await api(`${API}/mqtt`, { method: 'POST', body })
@@ -7412,25 +9270,37 @@ const CONTROLLERS = {
   wled: { load: loadWled, top: wledTop, sections: () => [], mount: mountWled },
   passwort: { load: loadAuthState, top: securityTop, sections: () => [], mount: mountSecurity },
   https: { load: loadTls, top: tlsTop, sections: () => [], mount: mountTls },
+  'g-system': { top: systemTop, sections: () => [], ownNav: true, mount: mountSystem },
   ueber: { load: loadAbout, top: aboutTop, sections: () => [], mount: mountAbout },
   neustart: { top: restartTop, sections: () => [], mount: mountRestart },
+  zustand: { load: loadHealth, top: healthTop, sections: () => [], mount: mountHealth },
+  rechtliches: { load: loadLegal, top: legalTop, sections: () => [], mount: mountLegal },
   protokolle: { load: loadLogs, top: logsTop, sections: () => [], mount: mountLogs },
   browser: {
     load: loadBrowser,
-    sections: (page) => [
-      ...page.sections.map((sec) => ({
-        ...sec,
-        help: 'Gilt nach einem Neustart des Displays (Knopf unten).',
-        items: sec.items.map((it) =>
+    // two cards by topic (about the same height side by side), below them the button with what it does, across the width
+    sections: (page) => {
+      const items = page.sections
+        .flatMap((sec) => sec.items)
+        .map((it) =>
           it.key === 'kiosk'
             ? { ...it, help: 'Aus = mit Fensterrahmen, nur zum Testen.' }
             : it.key === 'chromeDebug'
               ? { ...it, help: 'Schreibt ein ausführliches Log des Browsers; nach der Fehlersuche wieder aus.' }
               : it,
-        ),
-      })),
-      { title: '', help: '', items: [{ type: 'buttons', buttons: [['Übernehmen und Display neu starten', 'primary', 'apply']] }] },
-    ],
+        )
+      const pick = (keys) => items.filter((it) => keys.includes(it.key))
+      return [
+        { title: 'Darstellung', help: '', items: pick(['gpu', 'smooth', 'kiosk']) },
+        { title: 'Speicher & Fehlersuche', help: '', items: pick(['cache', 'chromeDebug']) },
+        {
+          title: '',
+          help: 'Die Änderungen gelten nach einem Neustart des Displays.',
+          wide: true,
+          items: [{ type: 'buttons', buttons: [['Übernehmen und Display neu starten', 'primary', 'apply']] }],
+        },
+      ]
+    },
     async change(key, v) {
       const body = { gpu: { gpu: v }, smooth: { smooth: v }, kiosk: { kiosk: v }, chromeDebug: { debug: v }, cache: { cachesize: String(v).replace(/\s*MB$/, '') } }[key]
       if (!body) return
@@ -7473,6 +9343,9 @@ const CONTROLLERS = {
       if (!code) return
       const r = await api(`${API}/box-language`, { method: 'POST', body: { code } })
       toast(r.ok ? `Sprache der Box: ${v} – das Startbild wird neu erzeugt` : 'Nicht gespeichert', r.ok ? 'ok' : 'info')
+      // the box speaks it too (announcements, names read out) - where Google or Piper have it
+      const tts = code.split('-')[0] === 'nb' ? 'no' : code.split('-')[0]
+      if (r.ok && (sys.ttsLanguages ?? []).includes(tts)) await api(`${API}/display-options`, { method: 'POST', body: { ttsLanguage: tts } })
     },
   },
   systemopt: {
@@ -7780,10 +9653,33 @@ function openDay(el, page) {
   )
 }
 
-function openAdd() {
+// Which services the box has: Spotify signed in (Dienste › Spotify), ARD Sounds switched on (Dienste). Adding offers
+// only those - a Spotify search without a Spotify login only ends in an error.
+// podcasts: the podcast search (Apple's directory, for German with the ARD Audiothek); available: the languages it
+// offers ({code, name})
+const svc = { spotify: true, podcasts: true, radio: true, available: [], at: 0 }
+async function loadServices() {
+  if (Date.now() - svc.at < 30_000) return svc
+  const [access, sources] = await Promise.all([api(`${API}/spotify-access`), api(`${API}/sources`)])
+  // (the box not answering: everything is offered, as before)
+  if (access.ok) svc.spotify = !!access.body?.connected
+  if (sources.ok) setSources(sources.body)
+  svc.at = Date.now()
+  return svc
+}
+function setSources(b) {
+  svc.podcasts = b.podcastSearch !== false
+  svc.radio = b.radioSearch !== false
+  if (Array.isArray(b.available)) svc.available = b.available
+}
+
+async function openAdd() {
+  await loadServices()
   const ways = [
-    ['suche', 'search', 'Auf Spotify suchen', 'Hörspiele, Alben und Künstler finden'],
-    ['link', 'link', 'Link einfügen', 'Spotify-Link, Radiosender oder Podcast'],
+    ...(svc.spotify ? [['suche', 'search', 'Auf Spotify suchen', 'Hörspiele, Alben und Künstler finden']] : []),
+    ...(svc.podcasts ? [['podsuche', 'globe', 'Podcasts suchen', 'Kinderpodcasts und Hörspiele in vielen Sprachen']] : []),
+    ...(svc.radio ? [['radiosuche', 'vol', 'Radiosender suchen', 'Kinderradio und Sender aus vielen Ländern']] : []),
+    ['link', 'link', 'Link einfügen', svc.spotify ? 'Spotify-Link, Radiosender oder Podcast' : 'Radiosender oder Podcast'],
     ['upload', 'up', 'Vom Gerät hochladen', 'Titel oder ganze Ordner auf die SD-Karte'],
   ]
   openSheet(`<h2>Was möchtest du hinzufügen?</h2><div class="navlist">${ways.map(([id, ic, t, s]) => navRow(id, t, s, ic)).join('')}</div>`, (sheet, close) => {

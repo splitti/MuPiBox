@@ -5,4 +5,6 @@ export interface Artist {
   albumCount: string
   cover: string
   coverMedia: Media
+  // A podcast with a new episode (a dot on its tile)
+  hasNew?: boolean
 }
