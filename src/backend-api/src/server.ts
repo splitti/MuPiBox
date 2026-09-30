@@ -875,7 +875,19 @@ function emptyRssFeed(): any {
  * Returns the feed that should be served (freshly fetched one, or the untouched
  * previous cache if nothing changed).
  */
-async function refreshRssCache(rssUrl: string, cacheKey: string): Promise<any> {
+// One fetch per feed at a time: the display, the app, the offline sync and the warm-up asking for the same feed
+// (with no cache yet) share it instead of each downloading and writing it
+const rssRefreshRuns = new Map<string, Promise<any>>()
+function refreshRssCache(rssUrl: string, cacheKey: string): Promise<any> {
+  let running = rssRefreshRuns.get(cacheKey)
+  if (!running) {
+    running = refreshRssCacheNow(rssUrl, cacheKey).finally(() => rssRefreshRuns.delete(cacheKey))
+    rssRefreshRuns.set(cacheKey, running)
+  }
+  return running
+}
+
+async function refreshRssCacheNow(rssUrl: string, cacheKey: string): Promise<any> {
   const cacheFile = rssCacheFilePath(cacheKey)
   let previousFeed: any = null
   if (fs.existsSync(cacheFile)) {
@@ -1024,7 +1036,8 @@ const podcastOffline = new PodcastOffline({
         .filter((e) => e.type === 'rss' && typeof e.id === 'string')
         .map((e) => ({ feed: e.id as string, keep: Math.max(0, Math.min(MAX_KEEP, Number(e.offline) || 0)) }))
     } catch {
-      return []
+      // (not readable right now - being written, or broken: the sync leaves the files alone)
+      return null
     }
   },
   changed: () => undefined,

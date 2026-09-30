@@ -2043,10 +2043,13 @@ function resumeNasAt(trackNr, progressPct) {
       return
     }
     if (trackNr > 1) {
-      // (the 'metadata' handler adds 1 at the track change - see jumpToTrack)
-      currentMeta.currentTracknr = trackNr - 1
       player.exec('pt_step', [trackNr - 1])
-      atPlaybackStart(seekInTrack)
+      // (the 'metadata' handler adds 1 at each track change - see jumpToTrack. Set at the start of the target track,
+      // not before the step: the first track's metadata answer arrives after this start and would count one on top)
+      atPlaybackStart(() => {
+        currentMeta.currentTracknr = trackNr - 1
+        seekInTrack()
+      })
     } else seekInTrack()
   })
 }
@@ -2182,8 +2185,8 @@ function startEpisode(url) {
   episodeResumedAt = Date.now()
   return target
 }
-// The episode mplayer plays: { url, generation (of the playback), retries }. A stop, another start or a block
-// changes playbackGeneration - then its end is no broken connection.
+// The episode mplayer plays: { url, generation (of the playback), retries, endedAt (where it ended before) }. A stop,
+// another start or a block changes playbackGeneration - then its end is no broken connection.
 let episodeRun = null
 function reconnectEpisode() {
   const run = episodeRun
@@ -2191,6 +2194,13 @@ function reconnectEpisode() {
   const pos = Number(currentMeta.positionSeconds) || 0
   const len = episodeLength()
   if (!(len > 60) || pos < 5 || pos >= len - 30 || run.retries >= 3 || isPlaybackBlocked()) return false
+  // Opened again and ended at the same place: that is the real end (a feed that gives the episode as longer than it
+  // is) - not opened a third time, and the episode counts as heard
+  if (run.endedAt !== undefined && Math.abs(pos - run.endedAt) < 10) {
+    noteEpisodeDone(run.url, pos)
+    return false
+  }
+  run.endedAt = pos
   run.retries++
   const target = Math.max(0, pos - 3)
   console.warn(`${now()}: [Spotify Control] Episode ended at ${Math.round(pos)}s of ${Math.round(len)}s - opened again (${run.retries}/3)`)
@@ -2246,6 +2256,13 @@ function noteEpisodePosition(seconds) {
   if (all[playingEpisode] && episodeKey(playingEpisode) !== playingEpisode) delete all[playingEpisode] // (the entry of before the keys)
   all[episodeKey(playingEpisode)] = { pos: done ? 0 : Math.round(seconds), len: Math.round(len), at: Date.now(), done }
   episodePositionsDirty = true
+}
+// An episode heard to its end although its feed gave it as longer (see reconnectEpisode): its real length is where it ended
+function noteEpisodeDone(url, seconds) {
+  const all = loadEpisodePositions()
+  all[episodeKey(url)] = { pos: 0, len: Math.round(seconds), at: Date.now(), done: true }
+  episodePositionsDirty = true
+  saveEpisodePositions()
 }
 
 // A podcast episode kept on the SD card (backend-api podcast-offline.ts): <sha1 of its address>.<ext> in this folder.

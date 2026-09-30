@@ -52,8 +52,11 @@ export interface OfflineDeps {
   openRemote: (url: string, signal: AbortSignal) => Promise<Response>
   /** A podcast's episodes, newest first (from the feed cache), or null when it cannot be read now */
   episodes: (feed: string) => Promise<{ url: string; title: string }[] | null>
-  /** Every podcast of the library and how many of its newest episodes to keep */
-  feeds: () => Promise<{ feed: string; keep: number }[]>
+  /**
+   * Every podcast of the library and how many of its newest episodes to keep, or null when the library cannot be
+   * read now (then nothing is removed: an empty list would mean "no podcast any more" and delete every file)
+   */
+  feeds: () => Promise<{ feed: string; keep: number }[] | null>
   /** Something was added or removed (the display reads its lists again) */
   changed: () => void
 }
@@ -88,7 +91,7 @@ export const offlineName = (url: string) => {
 
 export class PodcastOffline {
   private files: Record<string, OfflineFile> = {}
-  private loaded = false
+  private loading: Promise<void> | null = null
   private queue: Job[] = []
   private current: (Job & { done: number; total: number }) | null = null
   private abort: AbortController | null = null
@@ -101,9 +104,15 @@ export class PodcastOffline {
     return path.join(this.deps.dir, 'index.json')
   }
 
-  private async load(): Promise<void> {
-    if (this.loaded) return
-    this.loaded = true
+  // (read once; every caller waits for that same read - requests at the start, e.g. the display asking for all
+  // podcasts at once, saw an empty list until it was done)
+  private load(): Promise<void> {
+    // (a failed save of the tidied list keeps what was read: the next save writes it)
+    this.loading ??= this.readIndex().catch(() => undefined)
+    return this.loading
+  }
+
+  private async readIndex(): Promise<void> {
     try {
       const data = JSON.parse(await readFile(this.indexFile, 'utf8')) as { files?: Record<string, OfflineFile> }
       this.files = data.files && typeof data.files === 'object' ? data.files : {}
@@ -311,6 +320,7 @@ export class PodcastOffline {
     try {
       await this.load()
       const feeds = await this.deps.feeds()
+      if (!feeds) return
       const inLibrary = new Set(feeds.map((f) => f.feed))
       for (const f of Object.values(this.files)) if (!inLibrary.has(f.feed)) await this.remove(f.url)
       for (const { feed, keep } of feeds) {
