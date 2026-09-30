@@ -509,12 +509,20 @@ function piperWorker(key: string): PiperWorker {
   return w
 }
 
-// The names made with voices not in use (another voice chosen, a voice only tried): deleted, the voices themselves
-// stay loaded. Chosen again, a voice's names are made again in the background.
+// The names made with voices not in use for a week (another voice chosen, a voice only tried): deleted, the voices
+// themselves stay loaded. Switching back and forth keeps them; a voice chosen again gets its names made again.
+// (.chosen in a voice's folder: when it was last the chosen one; without it the folder's own time - a test's)
+const UNUSED_MS = 7 * 24 * 3600e3
 async function clearUnusedNames(sp: SpeechConfig, active: string): Promise<void> {
   const keep = new Set([active, ...Object.values(sp.voices)])
+  for (const voice of keep) {
+    await fsp.mkdir(`${CACHE_DIR}/${voice}`, { recursive: true }).catch(() => undefined)
+    await fsp.writeFile(`${CACHE_DIR}/${voice}/.chosen`, '').catch(() => undefined)
+  }
   for (const dir of await fsp.readdir(CACHE_DIR).catch(() => [] as string[])) {
     if (keep.has(dir) || workers.get(dir)?.busy) continue
+    const at = (await fsp.stat(`${CACHE_DIR}/${dir}/.chosen`).catch(() => fsp.stat(`${CACHE_DIR}/${dir}`)).catch(() => null))?.mtimeMs ?? 0
+    if (Date.now() - at < UNUSED_MS) continue
     await fsp.rm(`${CACHE_DIR}/${dir}`, { recursive: true, force: true }).catch(() => undefined)
   }
 }

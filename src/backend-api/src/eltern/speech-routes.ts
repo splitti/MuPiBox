@@ -36,7 +36,15 @@ const MAX_SAY = 300
 
 export function registerSpeechRoutes(router: Router, deps: SpeechDeps): void {
   // a new voice (or another chosen): the library's names made with it in the background
-  const prepare = () => prepareNames(deps.getMupiboxConfig)
+  // (2 minutes after the voice was last chosen or loaded: clicking through the voices starts nothing yet)
+  let prepareTimer: NodeJS.Timeout | null = null
+  const prepare = async () => {
+    if (prepareTimer) clearTimeout(prepareTimer)
+    prepareTimer = setTimeout(() => {
+      prepareTimer = null
+      void prepareNames(deps.getMupiboxConfig).catch(() => undefined)
+    }, 2 * 60e3)
+  }
   onVoiceInstalled(prepare)
   const langParam = (v: unknown) => (typeof v === 'string' && v in SPEECH_LANGS ? v : null)
 
