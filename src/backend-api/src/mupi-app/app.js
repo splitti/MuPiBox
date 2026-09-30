@@ -6463,6 +6463,77 @@ function mountHealth(root, page) {
   }
 }
 
+/* Rechtliches */
+
+// The services the box talks to, what for, and their own terms
+const LEGAL_SERVICES = [
+  ['Spotify', 'Anmeldung, Wiedergabe, Suche, Smart-Sync, Cover', 'https://www.spotify.com/legal/end-user-agreement/'],
+  ['ARD Sounds (ARD Audiothek)', 'Suche und Folgen von ARD-Sendungen', 'https://www.ardsounds.de/nutzungsbedingungen/'],
+  ['Apple (iTunes Search, Apple Podcasts)', 'Podcast-Suche, Vorschläge, Cover-Suche', 'https://www.apple.com/legal/internet-services/itunes/'],
+  ['Deezer', 'Cover-Suche', 'https://www.deezer.com/legal/cgu'],
+  ['radio-browser.info', 'Radiosender-Suche', 'https://www.radio-browser.info/'],
+  ['Google', 'Gesprochene Ansagen', 'https://policies.google.com/terms'],
+  ['Telegram', 'Eltern-Bot (wenn eingerichtet)', 'https://telegram.org/tos'],
+  ['GitHub', 'Updates und Neuigkeiten', 'https://docs.github.com/site-policy/github-terms/github-terms-of-service'],
+]
+
+async function loadLegal() {
+  const [license, version] = await Promise.all([fetch('legal/LICENSE.md', { cache: 'no-cache' }).catch(() => null), api(`${API}/version`)])
+  sys.legalLicense = license?.ok ? await license.text() : ''
+  sys.version = version.body?.version ?? sys.version ?? ''
+}
+
+function legalTop() {
+  const text = sys.legalLicense || ''
+  const name = text.split('\n').map((l) => l.trim()).find(Boolean) ?? ''
+  const copyright = /^\s*Copyright\b.*$/m.exec(text)?.[0].trim() ?? ''
+  const link = (href, label, cls = 'btn') => `<a class="${cls}" href="${esc(href)}" target="_blank" rel="noopener">${icon('ext', 16)}${esc(label)}</a>`
+  return [
+    `<section class="card"><h2>MuPiBox</h2><p class="help">Ein freies Open-Source-Projekt für Musikboxen für Kinder.</p>
+      ${spKv([
+        ['Version', sys.version || '–'],
+        copyright && ['Copyright', copyright.replace(/^Copyright\s*(\(c\)|©)?\s*/i, '')],
+      ])}
+      <div class="btns">${link('https://github.com/splitti/MuPiBox', 'Projekt auf GitHub')}${link('https://mupibox.de', 'mupibox.de')}</div></section>`,
+    `<section class="card"><h2>Lizenz</h2><p class="help">${esc(name ? `MuPiBox steht unter der ${name}.` : 'Die Lizenz ließ sich nicht laden.')}</p>
+      ${text ? `<details class="legal"><summary>Lizenztext anzeigen</summary><pre class="logview legal-text" translate="no">${esc(text)}</pre></details>` : ''}</section>`,
+    `<section class="card"><h2>Open Source &amp; Drittanbieter</h2><p class="help">MuPiBox nutzt Software, Schriften und Dienste anderer Projekte. Jede Komponente behält ihre eigene Lizenz; die Liste nennt sie und enthält die Lizenztexte.</p>
+      <details class="legal" id="lg-notices"><summary>Drittanbieter-Hinweise anzeigen</summary><pre class="logview legal-text" translate="no">${esc(tr('Lade …'))}</pre></details></section>`,
+    `<section class="card"><h2>Datenschutz</h2>
+      <p class="help">Alles, was die Box über ihre Nutzung weiß, bleibt auf ihr: Bibliothek, Einstellungen, der Hör-Verlauf der letzten 90 Tage und wo Folgen zuletzt gehört wurden. MuPiBox erhebt keine Nutzungsstatistik und zeigt keine Werbung.</p>
+      <p class="help">Nach außen geht nur, was ein Dienst für seine Aufgabe braucht:</p>
+      <ul class="legal-list">
+        <li>Spotify: die Anmeldung und was abgespielt, gesucht oder synchronisiert wird.</li>
+        <li>Podcast- und Radiosender: der Abruf der eingetragenen Feeds und Streams.</li>
+        <li>Suchen (Apple, ARD, radio-browser.info, Deezer): der Suchbegriff und die gewählte Sprache; bei der automatischen Cover-Suche (wenn eingeschaltet) der Name des Ordners.</li>
+        <li>Google: der Text einer gesprochenen Ansage, einmal; die Ansage bleibt danach auf der Box.</li>
+        <li>Telegram (nur mit eingerichtetem Bot): die Nachrichten des Bots, bei „Wiedergabe melden“ auch Titel und ein Bildschirmfoto.</li>
+        <li>GitHub: die Prüfung auf Updates, die Neuigkeiten und die Updates selbst.</li>
+        <li>Das Admin-Interface lädt Bibliotheken von öffentlichen Servern (jQuery, jsDelivr, cdnjs); dabei sehen diese die Adresse des Browsers.</li>
+      </ul>
+      <p class="help">Für diese Dienste gelten deren eigene Bedingungen und Datenschutzhinweise.</p></section>`,
+    `<section class="card"><h2>Externe Dienste</h2><div class="rows">${LEGAL_SERVICES.map(
+      ([name, what, href]) => `<div class="entry"><span class="lbl"><b translate="no">${esc(name)}</b><small>${esc(what)}</small></span>${link(href, 'Bedingungen', 'btn sm')}</div>`,
+    ).join('')}</div></section>`,
+    `<section class="card"><h2>Unabhängigkeit</h2><p class="help">MuPiBox ist ein unabhängiges Projekt. Es ist nicht mit Spotify, der ARD, Apple, Deezer, Google, Telegram oder anderen hier genannten Anbietern verbunden und wird von ihnen weder unterstützt noch autorisiert. Alle genannten Marken gehören ihren jeweiligen Inhabern.</p></section>`,
+  ]
+}
+
+function mountLegal(root) {
+  // (the notices are long: loaded only when opened)
+  const notices = $('#lg-notices', root)
+  notices?.addEventListener(
+    'toggle',
+    async () => {
+      if (!notices.open) return
+      const r = await fetch('legal/THIRD_PARTY_NOTICES.md', { cache: 'no-cache' }).catch(() => null)
+      const pre = notices.querySelector('pre')
+      if (pre) pre.textContent = r?.ok ? await r.text() : tr('Die Hinweise ließen sich nicht laden.')
+    },
+    { once: true },
+  )
+}
+
 /* Protokolle */
 
 async function loadLogs() {
@@ -7940,6 +8011,7 @@ const CONTROLLERS = {
   ueber: { load: loadAbout, top: aboutTop, sections: () => [], mount: mountAbout },
   neustart: { top: restartTop, sections: () => [], mount: mountRestart },
   zustand: { load: loadHealth, top: healthTop, sections: () => [], mount: mountHealth },
+  rechtliches: { load: loadLegal, top: legalTop, sections: () => [], mount: mountLegal },
   protokolle: { load: loadLogs, top: logsTop, sections: () => [], mount: mountLogs },
   browser: {
     load: loadBrowser,

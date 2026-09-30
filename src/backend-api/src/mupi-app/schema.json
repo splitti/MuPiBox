@@ -83,7 +83,7 @@
    "id": "g-system",
    "title": "System",
    "icon": "gear",
-   "description": "Über, Zustand, Updates, Backup, Neustart, Protokolle, Experten, Sprache"
+   "description": "Über, Zustand, Rechtliches, Updates, Backup, Neustart, Protokolle, Experten, Sprache"
   }
  ],
  "pages": [
@@ -3928,6 +3928,16 @@
    "sections": []
   },
   {
+   "id": "rechtliches",
+   "slug": "legal",
+   "area": "einstellungen",
+   "parent": "g-system",
+   "title": "Rechtliches",
+   "description": "Lizenz, Open Source, Datenschutz, externe Dienste",
+   "icon": "doc",
+   "sections": []
+  },
+  {
    "id": "updates",
    "slug": "updates",
    "area": "einstellungen",
@@ -6215,6 +6225,31 @@
    "l": "Speicherplatz",
    "where": "System › Zustand der Box",
    "id": "zustand"
+  },
+  {
+   "l": "Rechtliches",
+   "where": "System › Rechtliches",
+   "id": "rechtliches"
+  },
+  {
+   "l": "Lizenz",
+   "where": "System › Rechtliches",
+   "id": "rechtliches"
+  },
+  {
+   "l": "Datenschutz",
+   "where": "System › Rechtliches",
+   "id": "rechtliches"
+  },
+  {
+   "l": "Drittanbieter-Hinweise",
+   "where": "System › Rechtliches",
+   "id": "rechtliches"
+  },
+  {
+   "l": "Open Source",
+   "where": "System › Rechtliches",
+   "id": "rechtliches"
   },
   {
    "l": "Name der Box",

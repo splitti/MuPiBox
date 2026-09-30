@@ -776,3 +776,10 @@ textarea.input { min-height: 88px; resize: vertical; font-size: 12px; }
 .ard-head small { color: var(--mp-muted); }
 .ard-synopsis { color: var(--mp-muted); font-size: 14px; line-height: 1.45; margin: 0; }
 .health-row .lbl .btn { align-self: flex-start; margin-top: 6px; }
+
+/* Rechtliches: license and notices to open, the list of what leaves the box */
+details.legal { margin-top: 10px; }
+details.legal > summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
+details.legal .legal-text { height: auto; max-height: 60vh; margin-top: 8px; }
+.legal-list { margin: 0 0 10px; padding-left: 20px; color: var(--mp-muted); font-size: 13px; display: flex; flex-direction: column; gap: 4px; }
+.card .btns a { text-decoration: none; }
