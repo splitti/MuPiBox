@@ -108,8 +108,6 @@ RUN mv $mupisrc/bin/fbv/fbv_64 /usr/bin/fbv
 RUN chmod 755 /usr/bin/fbv
 
 # TODO: Copy media files.
-# RUN mv -f $mupisrc/config/templates/splash.txt /boot/splash.txt
-# RUN wget https://gitlab.com/DarkElvenAngel/initramfs-splash/-/raw/master/boot/initramfs.img -O /boot/initramfs.img
 # RUN cp $mupisrc/media/images/goodbye.png /home/dietpi/MuPiBox/sysmedia/images/goodbye.png
 # RUN mv -f $mupisrc/media/images/splash.png /boot/splash.png
 # RUN cp $mupisrc/media/images/MuPiLogo.jpg /home/dietpi/MuPiBox/sysmedia/images/MuPiLogo.jpg

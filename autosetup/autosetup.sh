@@ -333,8 +333,6 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 
 	echo -e "XXX\n${STEP}\nCopy media files... \nXXX"
 	before=$(date +%s)
-	mv -f ${MUPI_SRC}/config/templates/splash.txt /boot/splash.txt >&3 2>&3
-	wget https://gitlab.com/DarkElvenAngel/initramfs-splash/-/raw/master/boot/initramfs.img -O "${BOOT_DIR}/initramfs.img" >&3 2>&3
 	cp ${MUPI_SRC}/media/images/goodbye.png /home/dietpi/MuPiBox/sysmedia/images/goodbye.png >&3 2>&3
 	mv -f ${MUPI_SRC}/media/images/splash.png /boot/splash.png >&3 2>&3
 	cp ${MUPI_SRC}/media/images/MuPiLogo.jpg /home/dietpi/MuPiBox/sysmedia/images/MuPiLogo.jpg >&3 2>&3

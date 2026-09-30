@@ -371,12 +371,6 @@ const STATIC = {
       'Telegram bot and serial access',
     ],
     [
-      'initramfs-splash',
-      'boot picture during start (autosetup), from gitlab.com/DarkElvenAngel/initramfs-splash',
-      'TODO: license to be checked',
-      'https://gitlab.com/DarkElvenAngel/initramfs-splash',
-    ],
-    [
       'noVNC',
       'only when remote control is switched on (git clone to /usr/share/novnc)',
       'MPL-2.0 (parts under other licenses)',

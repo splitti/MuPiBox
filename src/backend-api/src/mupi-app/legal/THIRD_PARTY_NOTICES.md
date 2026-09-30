@@ -192,7 +192,6 @@ The installer makes the box fetch these from their own sources; MuPiBox does not
 | pm2 | npm, global (autosetup) | AGPL-3.0 | https://github.com/Unitech/pm2 - runs the backend and the player as separate processes |
 | @ionic/cli | npm, global (autosetup) | MIT | https://github.com/ionic-team/ionic-cli |
 | requests, pyserial, telepot | Python packages from PyPI (autosetup) | Apache-2.0, BSD-3-Clause, MIT | Telegram bot and serial access |
-| initramfs-splash | boot picture during start (autosetup), from gitlab.com/DarkElvenAngel/initramfs-splash | TODO: license to be checked | https://gitlab.com/DarkElvenAngel/initramfs-splash |
 | noVNC | only when remote control is switched on (git clone to /usr/share/novnc) | MPL-2.0 (parts under other licenses) | https://github.com/novnc/noVNC |
 
 ### Loaded at runtime from CDNs (admin interface)

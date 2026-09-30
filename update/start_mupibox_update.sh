@@ -632,8 +632,11 @@ rm -f /tmp/mupibox-update-failed
 	echo -e "XXX\n${STEP}\nCopy some media files... \nXXX"
 	# Splash and Media
 	before=$(date +%s)
-	#mv ${MUPI_SRC}/config/templates/splash.txt /boot/splash.txt >&3 2>&3
-	wget https://gitlab.com/DarkElvenAngel/initramfs-splash/-/raw/master/boot/initramfs.img -O /boot/initramfs.img >&3 2>&3
+	# initramfs-splash is not used (config.txt does not load it; the start pictures come from fbv, splash_screen.sh):
+	# its image and settings file go, unless the box's config.txt loads it after all
+	if ! grep -q '^initramfs' /boot/config.txt 2>/dev/null; then
+		rm -f /boot/initramfs.img /boot/splash.txt >&3 2>&3
+	fi
 	cp ${MUPI_SRC}/media/images/goodbye.png /home/dietpi/MuPiBox/sysmedia/images/goodbye.png >&3 2>&3
 	#mv ${MUPI_SRC}/media/images/splash.png /boot/splash.png >&3 2>&3
 	#cp ${MUPI_SRC}/media/images/MuPiLogo.jpg /home/dietpi/MuPiBox/sysmedia/images/MuPiLogo.jpg >&3 2>&3
@@ -805,12 +808,6 @@ rm -f /tmp/mupibox-update-failed
 	  echo "dtoverlay=pwm,pin=${LED_PIN},func=4" | tee -a /boot/config.txt >&3 2>&3
 	fi
 
-	#if grep -q '^initramfs initramfs.img' /boot/config.txt; then
-	#  echo -e "initramfs initramfs.img already set"
-	#else
-	#  echo '' | tee -a /boot/config.txt >&3 2>&3
-	#  echo 'initramfs initramfs.img' | tee -a /boot/config.txt >&3 2>&3
-	#fi
 	usermod -aG dialout dietpi >&3 2>&3
 	after=$(date +%s)
 	echo -e "## Set environment	##  finished after $((after - $before)) seconds" >&3 2>&3
