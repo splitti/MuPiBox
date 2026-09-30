@@ -6778,7 +6778,7 @@ function speechTop() {
           ? `<button class="btn sm" data-v-use="${esc(v.key)}">Verwenden</button><button class="btn danger sm" data-v-rm="${esc(v.key)}">Löschen</button>`
           : `<button class="btn sm" data-v-get="${esc(v.key)}" ${job?.state === 'running' ? 'disabled' : ''}>${icon('save', 14)}Laden</button>`
     return `<div class="entry voice"><button type="button" class="icon-btn soft" data-v-hear="${esc(v.key)}" aria-label="Anhören">${icon('vol', 16)}</button>
-      <span class="lbl"><b translate="no">${esc(voiceName(v.key))}</b><small>${esc([`Qualität ${SPEECH_QUALITY[v.quality] ?? v.quality}`, fmtMB(v.size), regions ? v.region : ''].filter(Boolean).join(' · '))}${lic?.license && !/^see /i.test(lic.license) ? ` · <span translate="no">${esc(lic.license.replace(/^https?:\/\/creativecommons\.org\/licenses\/([a-z-]+)\/([\d.]+)\/?$/i, (_m, k, n) => `CC ${k.toUpperCase()} ${n}`))}</span>` : ''}</small></span>${right}</div>`
+      <span class="lbl"><b translate="no">${esc(voiceName(v.key))}</b><small>${esc([`Qualität ${SPEECH_QUALITY[v.quality] ?? v.quality}`, fmtMB(v.size), regions ? v.region : ''].filter(Boolean).join(' · '))}${v.quality === 'high' ? ` · <span class="slow">${esc('langsam: einige Sekunden je Name')}</span>` : ''}${lic?.license && !/^see /i.test(lic.license) ? ` · <span translate="no">${esc(lic.license.replace(/^https?:\/\/creativecommons\.org\/licenses\/([a-z-]+)\/([\d.]+)\/?$/i, (_m, k, n) => `CC ${k.toUpperCase()} ${n}`))}</span>` : ''}</small></span>${right}</div>`
   }
   const langOptions = Object.entries(LANGS)
     .map(([code, name]) => {

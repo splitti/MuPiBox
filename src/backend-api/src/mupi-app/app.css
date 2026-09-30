@@ -963,3 +963,4 @@ textarea[hidden] { display: none; }
 .speech-try .field-pick select { flex: 1; min-width: 0; }
 .speech-try textarea.input { min-height: 0; height: 64px; }
 .speech-try textarea.input, .sheet #say-text { font-family: inherit; }
+.entry.voice .slow { color: var(--mp-warn); }

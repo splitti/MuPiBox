@@ -15,6 +15,8 @@ import {
   installVoice,
   installedVoices,
   listVoices,
+  onVoiceInstalled,
+  prepareNames,
   parseSpeech,
   piperWav,
   removeVoice,
@@ -33,6 +35,9 @@ export interface SpeechDeps {
 const MAX_SAY = 300
 
 export function registerSpeechRoutes(router: Router, deps: SpeechDeps): void {
+  // a new voice (or another chosen): the library's names made with it in the background
+  const prepare = () => prepareNames(deps.getMupiboxConfig)
+  onVoiceInstalled(prepare)
   const langParam = (v: unknown) => (typeof v === 'string' && v in SPEECH_LANGS ? v : null)
 
   /** GET /api/app/speech - the setting, the voice the box speaks with now, the texts of a language (?lang=, else
@@ -127,6 +132,8 @@ export function registerSpeechRoutes(router: Router, deps: SpeechDeps): void {
       cfg.mupibox = { ...((cfg.mupibox as Record<string, unknown>) ?? {}), speech: next }
     })
     res.json({ ok: true })
+    const body = (req.body ?? {}) as Record<string, unknown>
+    if (body.engine !== undefined || body.voice !== undefined) void prepare().catch(() => undefined)
   })
 
   // a text to say now (the parents: a template or their own; a test of a text or a voice)

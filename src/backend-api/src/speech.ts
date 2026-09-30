@@ -334,6 +334,11 @@ export interface VoiceJob {
 }
 let voiceJob: VoiceJob | null = null
 export const currentVoiceJob = (): VoiceJob | null => voiceJob
+// (what runs when a voice is there: the names made in advance, see speech-routes.ts)
+let afterInstall: (() => Promise<void>) | null = null
+export const onVoiceInstalled = (fn: () => Promise<void>): void => {
+  afterInstall = fn
+}
 
 /** Loads a voice (and Piper, the first time) in the background; the app follows it with currentVoiceJob(). */
 export async function installVoice(key: string): Promise<boolean> {
@@ -352,6 +357,7 @@ export async function installVoice(key: string): Promise<boolean> {
       await download(`${HF}/${json}`, `${voiceFile(key)}.json`)
       await download(`${HF}/${onnx}`, voiceFile(key), (n) => (job.bytes = n))
       job.state = 'done'
+      if (afterInstall) void afterInstall().catch(() => undefined)
     } catch (err) {
       job.state = 'failed'
       job.error = (err as Error).message
@@ -365,6 +371,8 @@ export async function installVoice(key: string): Promise<boolean> {
 /** Deletes a voice (and what was said with it). */
 export async function removeVoice(key: string): Promise<void> {
   if (!VOICE_KEY.test(key)) return
+  workers.get(key)?.stop()
+  workers.delete(key)
   await fsp.rm(voiceFile(key), { force: true })
   await fsp.rm(`${voiceFile(key)}.json`, { force: true })
   await fsp.rm(`${CACHE_DIR}/${key}`, { recursive: true, force: true })
@@ -390,13 +398,131 @@ export async function activeVoice(sp: SpeechConfig, lang: string): Promise<strin
 }
 
 /** A text as a WAV of a Piper voice (kept: the same text is not worked out again). */
-export async function piperWav(text: string, key: string): Promise<string | null> {
-  const dir = `${CACHE_DIR}/${key}`
-  const file = `${dir}/${createHash('sha1').update(text).digest('hex').slice(0, 16)}.wav`
+export async function piperWav(text: string, key: string, background = false): Promise<string | null> {
+  const file = piperCacheFile(text, key)
   if (existsSync(file)) return file
-  await fsp.mkdir(dir, { recursive: true })
-  const r = await run(PIPER_BIN, ['--model', voiceFile(key), '--output_file', file], 60000, text)
-  return r.ok && existsSync(file) ? file : null
+  await fsp.mkdir(path.dirname(file), { recursive: true })
+  return (await piperWorker(key).say(text, file, background)) ? file : null
+}
+
+const piperCacheFile = (text: string, key: string) => `${CACHE_DIR}/${key}/${createHash('sha1').update(text).digest('hex').slice(0, 16)}.wav`
+
+/**
+ * A Piper that stays loaded: loading a voice takes 1-2 s on a Pi 4, speaking a name then well under a second. One
+ * text after the other (the display's names before the ones made in advance); it ends after 10 minutes without work,
+ * and its memory is free again.
+ */
+class PiperWorker {
+  private child: import('node:child_process').ChildProcessWithoutNullStreams | null = null
+  private jobs: { text: string; file: string; done: (ok: boolean) => void }[] = []
+  private current: { file: string; done: (ok: boolean) => void; timer: NodeJS.Timeout } | null = null
+  private idle: NodeJS.Timeout | null = null
+  private out = ''
+
+  constructor(readonly key: string) {}
+
+  say(text: string, file: string, background: boolean): Promise<boolean> {
+    return new Promise((done) => {
+      const job = { text: text.replace(/\s+/g, ' '), file, done }
+      if (background) this.jobs.push(job)
+      else this.jobs.unshift(job)
+      this.next()
+    })
+  }
+
+  stop(): void {
+    this.child?.kill()
+    this.child = null
+  }
+
+  private start(): void {
+    const child = spawn('nice', ['-n', '5', PIPER_BIN, '--model', voiceFile(this.key), '--json-input', '--output_dir', CACHE_DIR], { stdio: 'pipe' })
+    this.child = child
+    this.out = ''
+    // (Piper names each file it wrote on a line of its own)
+    child.stdout.on('data', (c: Buffer) => {
+      this.out += c.toString()
+      let nl = this.out.indexOf('\n')
+      while (nl >= 0) {
+        const line = this.out.slice(0, nl).trim()
+        this.out = this.out.slice(nl + 1)
+        if (this.current && line === this.current.file) this.finish(existsSync(line))
+        nl = this.out.indexOf('\n')
+      }
+    })
+    child.stderr.on('data', () => undefined)
+    child.on('exit', () => {
+      if (this.child === child) this.child = null
+      if (this.current) this.finish(false)
+    })
+    child.on('error', () => undefined)
+  }
+
+  private finish(ok: boolean): void {
+    if (!this.current) return
+    clearTimeout(this.current.timer)
+    this.current.done(ok)
+    this.current = null
+    this.next()
+  }
+
+  private next(): void {
+    if (this.current) return
+    const job = this.jobs.shift()
+    if (this.idle) clearTimeout(this.idle)
+    if (!job) {
+      this.idle = setTimeout(() => this.stop(), 10 * 60e3)
+      return
+    }
+    if (!this.child) this.start()
+    // (a text that hangs: Piper again for the next one)
+    this.current = { file: job.file, done: job.done, timer: setTimeout(() => this.stop(), 30000) }
+    this.child?.stdin.write(`${JSON.stringify({ text: job.text, output_file: job.file })}\n`)
+  }
+}
+
+const workers = new Map<string, PiperWorker>()
+function piperWorker(key: string): PiperWorker {
+  let w = workers.get(key)
+  if (!w) {
+    // (one voice loaded at a time: the others end)
+    for (const [k, other] of workers) {
+      other.stop()
+      workers.delete(k)
+    }
+    w = new PiperWorker(key)
+    workers.set(key, w)
+  }
+  return w
+}
+
+// The names the display reads out (the library's artists and albums), made in advance in the background: then they
+// come as fast as before with Google's saved files. Once after the start, after a voice was loaded or chosen, and
+// every 6 hours for what came new.
+const LIBRARY_FILE = '/home/dietpi/.mupibox/Sonos-Kids-Controller-master/server/config/data.json'
+let preparing = false
+export async function prepareNames(getConfig: () => unknown): Promise<void> {
+  if (preparing) return
+  const cfg = getConfig()
+  const sp = speechOf(cfg)
+  if (sp.engine !== 'piper') return
+  const voice = await activeVoice(sp, boxLanguage(cfg))
+  if (!voice) return
+  preparing = true
+  try {
+    const list = JSON.parse(await fsp.readFile(LIBRARY_FILE, 'utf8').catch(() => '[]')) as { artist?: unknown; title?: unknown }[]
+    // (as the player gets them: a "/" becomes a space, see spotify-control.js)
+    const names = [...new Set(list.flatMap((e) => [e.artist, e.title]).filter((n): n is string => typeof n === 'string' && n.trim() !== '').map((n) => n.replace(/\//g, ' ')))]
+    let made = 0
+    for (const name of names.slice(0, 3000)) {
+      if (existsSync(piperCacheFile(name, voice))) continue
+      if (speechOf(getConfig()).engine !== 'piper') break
+      if (await piperWav(name, voice, true)) made++
+    }
+    if (made) console.log(`${new Date().toLocaleString()}: [speech] ${made} names made in advance with ${voice}`)
+  } finally {
+    preparing = false
+  }
 }
 
 /** A text as an MP3 of Google's voice (online; at most 200 characters, as translate_tts takes it). */
@@ -584,7 +710,9 @@ async function tick(getConfig: () => unknown): Promise<void> {
   }
 }
 
-/** Every 15 seconds, from the start of the server. */
+/** Every 15 seconds, from the start of the server; the names made in advance after a minute and every 6 hours. */
 export function startSpeech(getConfig: () => unknown): void {
   setInterval(() => void tick(getConfig).catch(() => undefined), 15000).unref()
+  setTimeout(() => void prepareNames(getConfig).catch(() => undefined), 60000).unref()
+  setInterval(() => void prepareNames(getConfig).catch(() => undefined), 6 * 3600e3).unref()
 }
