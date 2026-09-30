@@ -49,6 +49,7 @@
 </ul>
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>Evening dimming (Settings &gt; Display): from / until, brightness in the evening, dimming gradually over up to 60 minutes, optionally also during quiet hours.</li>
+<li id='linews' class='linews'>Own pictures for the start, the goodbye and the empty battery (Settings &gt; Appearance &gt; Boot screens &gt; "Own pictures"): a photo or logo from the phone or PC, fitted to the display (fill or show whole); the console takes its colour, so nothing flashes. The design stays for the maintenance screens and every picture without an own one.</li>
 <li id='linews' class='linews'>Rotation as tiles, the usual resolutions to choose from, "Display off after" in fixed steps.</li>
 <li id='linews' class='linews'>Shutting down no longer shows texts of the console between the goodbye pictures.</li>
 <li id='linews' class='linews'>Themes Super Mario and Steampunk: new name fonts (Titan One, Rye) under a free licence. The unused initramfs splash screen is removed by the update.</li>

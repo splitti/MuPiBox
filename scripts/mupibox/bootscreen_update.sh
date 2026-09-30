@@ -34,6 +34,23 @@ else
 	/usr/bin/jq -r '.bootscreens[] | "\(.id) \(.baseColor)"' "${BS_DIR}/bootscreens.json" > "${OUT}/colors.txt"
 	BOOT="${DEFAULT}"
 fi
+# Own pictures (web app › Startbilder › "Eigene Bilder", mupibox.bootscreenCustom): instead of the design's of the same
+# kind, in every scene; the start picture's edge colour for the console and the browser's start. The design's pictures
+# stay for what has no own one and for the maintenance screens.
+CUSTOM="/home/dietpi/MuPiBox/sysmedia/images/bootscreen-custom"
+[ "$(/usr/bin/jq -r '.mupibox.bootscreenCustom // false' "${CONFIG}")" = "true" ] || CUSTOM="/nonexistent"
+for KIND in splash goodbye battery; do
+	[ -f "${CUSTOM}/${KIND}.png" ] || continue
+	for PIC in "${OUT}/${KIND}"-*.png; do
+		[ -f "${PIC}" ] && cp "${CUSTOM}/${KIND}.png" "${PIC}"
+	done
+done
+if [ -f "${CUSTOM}/splash.png" ]; then
+	C=$(tr -dc '0-9A-Fa-f' < "${CUSTOM}/color" 2>/dev/null | head -c 6)
+	if [ ${#C} -eq 6 ] && [ -f "${OUT}/colors.txt" ]; then
+		awk -v c="#${C}" '{print $1, c}' "${OUT}/colors.txt" > "${OUT}/colors.tmp" && mv "${OUT}/colors.tmp" "${OUT}/colors.txt"
+	fi
+fi
 chown -R dietpi:dietpi "${OUT}"
 
 [ -n "${BOOT}" ] && [ "${BOOT}" != "null" ] || BOOT="${DEFAULT}"

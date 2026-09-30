@@ -302,7 +302,7 @@ function registerCoverChoiceRoutes(router: Router, deps: ChoiceDeps, address: (n
   })
 }
 
-async function readBody(req: Request, max: number): Promise<Buffer | undefined> {
+export async function readBody(req: Request, max: number): Promise<Buffer | undefined> {
   const chunks: Buffer[] = []
   let size = 0
   try {

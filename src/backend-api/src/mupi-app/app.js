@@ -5193,11 +5193,146 @@ function mountCustom(root, page) {
 
 /* Start- und Wartungsbilder: the scenes with the box name / texts laid over them as the box puts them in */
 
+/* Startbilder › Eigene Bilder: a photo or logo instead of the design's start, goodbye and empty-battery picture. The
+   app fits it to the display (fill: cut at the edges; whole: a border in the colour of the picture's edge) and sends a
+   PNG of the display's size; the box puts it in place (eltern/bootscreen-custom.ts, bootscreen_update.sh). */
+
+const BS_OWN = [
+  ['splash', 'Start'],
+  ['goodbye', 'Tschüss'],
+  ['battery', 'Akku leer'],
+]
+
+// The average colour of a picture's edge (the border of a small copy)
+function edgeColor(src) {
+  const k = 32
+  const c = document.createElement('canvas')
+  c.width = k
+  c.height = k
+  const g = c.getContext('2d', { willReadFrequently: true })
+  g.drawImage(src, 0, 0, k, k)
+  const d = g.getImageData(0, 0, k, k).data
+  const sum = [0, 0, 0]
+  let n = 0
+  for (let y = 0; y < k; y++) {
+    for (let x = 0; x < k; x++) {
+      if (x > 0 && y > 0 && x < k - 1 && y < k - 1) continue
+      const i = (y * k + x) * 4
+      sum[0] += d[i]
+      sum[1] += d[i + 1]
+      sum[2] += d[i + 2]
+      n++
+    }
+  }
+  return sum.map((v) => Math.round(v / n).toString(16).padStart(2, '0')).join('')
+}
+
+// A chosen file as the display's picture: {blob (PNG W × H), color (its edge, rrggbb)}
+async function ownBootPicture(file, W, H, fit) {
+  const url = URL.createObjectURL(file)
+  try {
+    const img = await new Promise((ok, no) => {
+      const i = new Image()
+      i.onload = () => ok(i)
+      i.onerror = no
+      i.src = url
+    })
+    const c = document.createElement('canvas')
+    c.width = W
+    c.height = H
+    const g = c.getContext('2d')
+    g.fillStyle = `#${edgeColor(img)}`
+    g.fillRect(0, 0, W, H)
+    const s = fit === 'contain' ? Math.min(W / img.naturalWidth, H / img.naturalHeight) : Math.max(W / img.naturalWidth, H / img.naturalHeight)
+    const w = img.naturalWidth * s
+    const h = img.naturalHeight * s
+    g.imageSmoothingQuality = 'high'
+    g.drawImage(img, (W - w) / 2, (H - h) / 2, w, h)
+    const blob = await new Promise((ok) => c.toBlob(ok, 'image/png'))
+    return { blob, color: edgeColor(c) }
+  } finally {
+    URL.revokeObjectURL(url)
+  }
+}
+
+function bsOwnCard() {
+  const own = disp.bsOwn
+  if (!own) return ''
+  // (an empty place shows the design's picture it keeps: the design chosen before, with "random" the standard one)
+  const design = disp.bsBase === 'random' || !disp.bsBase ? disp.bs.screens.defaultBootscreen : disp.bsBase
+  const baseName = bsLabel(disp.bsById?.[design] ?? { id: design })
+  const slot = ([kind, label]) => {
+    const at = own.pictures[kind]
+    return `<div class="own-slot"><b>${esc(label)}</b>
+      <div class="own-prev" style="aspect-ratio:${own.width} / ${own.height}">${at ? `<img src="${API}/bootscreen/custom/${kind}.png?t=${Math.round(at)}" alt="">` : `<img src="${bsScene(design, kind === 'splash' ? 'scene' : kind)}" alt="" class="design"><span class="own-tag">${esc('Design')}</span>`}</div>
+      <div class="btns"><button class="btn sm${at ? '' : ' primary'}" data-own-pick="${kind}">${icon('image', 16)}${at ? 'Anderes Bild' : 'Bild wählen'}</button>${at ? `<button class="btn sm danger" data-own-rm="${kind}">Entfernen</button>` : ''}</div>
+      <input type="file" accept="image/*" hidden data-own-file="${kind}"></div>`
+  }
+  return `<section class="card wide" id="bs-own"${disp.bsSel === 'custom' ? '' : ' hidden'}><h2>Eigene Bilder</h2>
+    <p class="help">${esc(`Statt des Designs ein eigenes Bild, z. B. ein Foto oder ein Logo. Die Box passt es an das Display an (${own.width} × ${own.height}).`)}</p>
+    <div class="field"><label>Anpassen</label><div class="seg" id="bs-fit"><button aria-pressed="${disp.bsFit !== 'contain'}" data-v="cover">Ausfüllen</button><button aria-pressed="${disp.bsFit === 'contain'}" data-v="contain">Ganz zeigen</button></div>
+      <small>Ausfüllen schneidet am Rand ab, „Ganz zeigen“ lässt einen Rand in der Farbe des Bildrands.</small></div>
+    <div class="own-grid">${BS_OWN.map(slot).join('')}</div>
+    <p class="help" style="margin:0">${esc(`Ohne eigenes Bild und für die Wartungsbilder (Update, WLAN) gilt das Design „${baseName}“.`)} ${esc('Zu sehen ab dem nächsten Start bzw. beim nächsten Ausschalten.')}</p></section>`
+}
+
+function mountBsOwn(root, page) {
+  const again = async () => {
+    const r = await api(`${API}/bootscreen/custom`)
+    if (r.ok) disp.bsOwn = r.body
+    if (currentPage()?.id === page.id) renderPage(page, false)
+  }
+  const fit = $('#bs-fit', root)
+  if (fit) {
+    fit.onclick = (e) => {
+      const b = e.target.closest('button')
+      if (!b) return
+      disp.bsFit = b.dataset.v
+      for (const x of fit.children) x.setAttribute('aria-pressed', String(x === b))
+    }
+  }
+  for (const b of root.querySelectorAll('[data-own-pick]')) {
+    const input = $(`[data-own-file="${b.dataset.ownPick}"]`, root)
+    b.onclick = () => input.click()
+    input.onchange = async () => {
+      const file = input.files?.[0]
+      if (!file) return
+      b.disabled = true
+      try {
+        const { blob, color } = await ownBootPicture(file, disp.bsOwn.width, disp.bsOwn.height, disp.bsFit)
+        const r = await fetch(`${API}/bootscreen/custom?kind=${b.dataset.ownPick}&color=${color}`, {
+          method: 'PUT',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'image/png', 'x-mupibox-csrf': state.csrf },
+          body: blob,
+        }).catch(() => null)
+        toast(r?.ok ? 'Gespeichert – ab dem nächsten Mal zu sehen' : r?.status === 413 ? 'Das Bild ist zu groß' : 'Nicht gespeichert', r?.ok ? 'ok' : 'info')
+        if (r?.ok) disp.bsSel = 'custom'
+      } catch {
+        toast('Dieses Bild lässt sich nicht öffnen', 'info')
+      }
+      b.disabled = false
+      again()
+    }
+  }
+  for (const b of root.querySelectorAll('[data-own-rm]')) {
+    b.onclick = () =>
+      confirmSheet('Entfernen', 'Das eigene Bild entfernen? Dann gilt wieder das Bild des Designs.', async () => {
+        const r = await api(`${API}/bootscreen/custom/remove`, { method: 'POST', body: { kind: b.dataset.ownRm } })
+        toast(r.ok ? 'Entfernt' : 'Das ging nicht', r.ok ? 'ok' : 'info')
+        again()
+      })
+  }
+}
+
 async function loadBootscreens() {
-  const r = await api(`${API}/bootscreen`)
+  const [r, own] = await Promise.all([api(`${API}/bootscreen`), api(`${API}/bootscreen/custom`)])
   if (!r.ok) throw new Error(`bootscreen ${r.status}`)
   disp.bs = r.body
+  disp.bsOwn = own.ok ? own.body : null
   disp.bsSel = r.body.current.bootscreen || r.body.screens.defaultBootscreen
+  // (the design the own pictures keep for what has none)
+  disp.bsBase = r.body.current.base || r.body.screens.defaultBootscreen
   disp.bsMaint = r.body.current.maintenanceScreen || 'same'
   disp.bsKind = BS_KINDS.some(([k]) => k === disp.bsKind) ? disp.bsKind : 'update'
 }
@@ -5266,6 +5401,7 @@ function bootTop() {
     `<div class="card nav-card"><div class="navlist">${navRow('ueber', 'Name der Box', current.boxName || screens.defaultName || 'MuPiBox', 'text')}${navRow('sprache', 'Sprache der Box', languages[current.bootscreenLanguage]?.name ?? current.bootscreenLanguage, 'globe')}</div></div>`,
     `<section class="card wide"><h2>Startbild</h2><p class="help">${screens.bootscreens.length} Szenen zur Auswahl – oder bei jedem Start eine zufällige. Der Name der Box steht auf dem Bild.</p>
       <div class="bs-grid" id="bs-grid">
+        <button class="bs-tile" data-id="custom" aria-pressed="${disp.bsSel === 'custom'}"><span class="bs-thumb bs-random">${disp.bsOwn?.pictures?.splash ? `<img src="${API}/bootscreen/custom/splash.png?t=${Math.round(disp.bsOwn.pictures.splash)}" alt="">` : icon('image', 28)}</span><span class="bs-cap">Eigene Bilder</span></button>
         <button class="bs-tile" data-id="random" aria-pressed="${disp.bsSel === 'random'}"><span class="bs-thumb bs-random">${icon('sync', 28)}</span><span class="bs-cap">Jeden Start zufällig</span></button>
         ${screens.bootscreens
           .map(
@@ -5273,6 +5409,7 @@ function bootTop() {
               <span class="bs-cap">${esc(bsLabel(b))}${b.id === screens.defaultBootscreen ? ' (Standard)' : ''}</span></button>`,
           )
           .join('')}</div></section>`,
+    bsOwnCard(),
     `<section class="card wide"><h2>Wartungsbild & Vorschau</h2><p class="help">Bei Update, Installation, neuem WLAN, beim Ausschalten und bei leerem Akku.</p>
       <div class="rule-times stack-phone"><div class="field"><label for="bs-maint">Wartungsbild</label><select class="input" id="bs-maint">${opt('same', 'Wie das Startbild', disp.bsMaint)}${screens.bootscreens.map((b) => opt(b.id, bsLabel(b), disp.bsMaint)).join('')}</select></div>
         <div class="field"><label for="bs-kind">Vorschau</label><select class="input" id="bs-kind">${BS_KINDS.map(([v, l]) => opt(v, l, disp.bsKind)).join('')}</select></div></div>
@@ -5287,13 +5424,19 @@ function bsUpdate(root) {
   const s = disp.bs.screens
   const byId = disp.bsById
   for (const t of root.querySelectorAll('.bs-tile')) t.setAttribute('aria-pressed', String(t.dataset.id === disp.bsSel))
-  const shown = byId[disp.bsSel] ?? s.bootscreens[0]
+  const custom = disp.bsSel === 'custom'
+  const shown = byId[custom ? disp.bsBase : disp.bsSel] ?? byId[s.defaultBootscreen] ?? s.bootscreens[0]
+  const own = $('#bs-own', root)
+  if (own) own.hidden = !custom
   const kind = disp.bsKind
   const off = !MAINT_KINDS.includes(kind)
   const mb = off || disp.bsMaint === 'same' ? shown : byId[disp.bsMaint] ?? shown
   const boot = $('#bs-boot', root)
   const maint = $('#bs-mprev', root)
-  boot.querySelector('img').src = bsScene(shown.id, 'scene')
+  // (the own start picture as it is, without the name on it)
+  const ownSplash = custom && disp.bsOwn?.pictures?.splash
+  boot.querySelector('img').src = ownSplash ? `${API}/bootscreen/custom/splash.png?t=${Math.round(ownSplash)}` : bsScene(shown.id, 'scene')
+  boot.querySelector('.bs-text').hidden = !!ownSplash
   maint.querySelector('img').src = bsScene(mb.id, off ? kind : 'maintenance')
   $('#bs-mtitle', root).textContent = off ? 'Beim Ausschalten' : 'Wartungsbild'
   bsPlaceName(boot.querySelector('.bs-text'), shown, boot.clientWidth || 400)
@@ -5301,7 +5444,8 @@ function bsUpdate(root) {
   for (const el of root.querySelectorAll('#bs-grid [data-bs-name]')) bsPlaceName(el, byId[el.dataset.bsName], el.parentElement.clientWidth || 130)
 }
 
-function mountBoot(root) {
+function mountBoot(root, page) {
+  mountBsOwn(root, page)
   for (const t of root.querySelectorAll('.bs-tile')) {
     t.onclick = () => {
       disp.bsSel = t.dataset.id
@@ -5320,6 +5464,7 @@ function mountBoot(root) {
     const r = await api(`${API}/bootscreen`, { method: 'POST', body: { bootscreen: disp.bsSel, maintenanceScreen: disp.bsMaint } })
     if (!r.ok) return toast('Nicht gespeichert', 'info')
     disp.bs.current = r.body.current
+    disp.bsBase = r.body.current.base || disp.bs.screens.defaultBootscreen
     toast('Gespeichert – die Bilder werden erzeugt')
   }
   bsUpdate(root)

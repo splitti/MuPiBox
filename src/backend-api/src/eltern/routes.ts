@@ -47,6 +47,7 @@ import { ipRateLimit, localNetworkOnly, parseCookie, requireCsrf, requireSession
 import { registerCustomCoverRoutes } from './covers'
 import { registerDisplayRoutes } from './display'
 import { registerSpeechRoutes } from './speech-routes'
+import { registerCustomBootRoutes } from './bootscreen-custom'
 import { registerHardwareRoutes } from './hardware'
 import { registerServicesRoutes } from './services'
 import { registerSystemRoutes } from './system'
@@ -360,6 +361,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   if (deps.localLibrary) registerLocalUploadRoutes(router, deps.localLibrary)
   registerDisplayRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerSpeechRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
+  registerCustomBootRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerHardwareRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerServicesRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerSystemRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
@@ -2149,10 +2151,12 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     const maint = typeof mb.maintenanceScreen === 'string' && ids.includes(mb.maintenanceScreen) ? mb.maintenanceScreen : 'same'
     const languages = readDisplayLanguages()
     const lang = typeof mb.bootscreenLanguage === 'string' && languages[mb.bootscreenLanguage] ? mb.bootscreenLanguage : 'en'
+    // own pictures chosen ("custom"): the design stays what the pictures without an own one come from
+    const custom = mb.bootscreenCustom === true
     res.json({
       screens,
       languages,
-      current: { bootscreen: boot, maintenanceScreen: maint, boxName: typeof mb.boxName === 'string' ? mb.boxName : '', bootscreenLanguage: lang },
+      current: { bootscreen: custom ? 'custom' : boot, base: boot, maintenanceScreen: maint, boxName: typeof mb.boxName === 'string' ? mb.boxName : '', bootscreenLanguage: lang },
     })
   })
 
@@ -2170,6 +2174,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     }
     const body = (req.body ?? {}) as Record<string, unknown>
     const ids = bootscreenIds(screens)
+    // "custom": the own pictures (bootscreen-custom.ts) - the design stays as it is, for what has no own picture
+    const custom = body.bootscreen === 'custom'
     let boot = typeof body.bootscreen === 'string' ? body.bootscreen : ''
     if (boot !== 'random' && !ids.includes(boot)) boot = ''
     if (boot === screens.defaultBootscreen) boot = ''
@@ -2186,7 +2192,10 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     const has = (key: string) => body[key] !== undefined
     await deps.updateMupiboxConfig((c) => {
       const m = ((c.mupibox as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>
-      if (has('bootscreen')) m.bootscreen = boot
+      if (has('bootscreen')) {
+        m.bootscreenCustom = custom
+        if (!custom) m.bootscreen = boot
+      }
       if (has('maintenanceScreen')) m.maintenanceScreen = maint
       if (has('boxName')) m.boxName = name
       if (has('bootscreenLanguage')) m.bootscreenLanguage = lang
@@ -2201,7 +2210,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     res.json({
       ok: true,
       current: {
-        bootscreen: has('bootscreen') ? boot : str('bootscreen', ''),
+        bootscreen: saved.bootscreenCustom === true ? 'custom' : str('bootscreen', ''),
+        base: str('bootscreen', ''),
         maintenanceScreen: has('maintenanceScreen') ? maint : str('maintenanceScreen', 'same'),
         boxName: has('boxName') ? name : str('boxName', ''),
         bootscreenLanguage: has('bootscreenLanguage') ? lang : str('bootscreenLanguage', 'en'),

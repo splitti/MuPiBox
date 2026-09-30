@@ -964,3 +964,16 @@ textarea[hidden] { display: none; }
 .speech-try textarea.input { min-height: 0; height: 64px; }
 .speech-try textarea.input, .sheet #say-text { font-family: inherit; }
 .entry.voice .slow { color: var(--mp-warn); }
+/* Startbilder › Eigene Bilder */
+.own-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 700px) { .own-grid { grid-template-columns: minmax(0, 1fr); } }
+.own-slot { display: flex; flex-direction: column; gap: 8px; }
+.own-prev { width: 100%; border-radius: var(--mp-r); overflow: hidden; background: var(--mp-chip); display: grid; place-items: center; border: 1px solid var(--mp-border); }
+.own-prev img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.own-prev span { font-size: 13px; color: var(--mp-muted); }
+.own-slot .btns { margin: 0; }
+.own-prev { position: relative; }
+.own-prev img.design { opacity: .55; }
+.own-prev .own-tag { position: absolute; left: 8px; top: 8px; padding: 2px 8px; border-radius: 8px; background: var(--mp-surface); font-size: 12px; font-weight: 700; color: var(--mp-muted); }
+.card[hidden] { display: none; }
+.bs-thumb.bs-random img { width: 100%; height: 100%; object-fit: cover; }
