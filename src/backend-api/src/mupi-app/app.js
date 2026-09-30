@@ -6798,7 +6798,8 @@ function speechTop() {
         ${choice('off', 'Stumm', 'Keine Ansagen, keine vorgelesenen Namen.')}
       </div>
       ${c.engine === 'piper' ? `<div class="field"><label>Ohne geladene Stimme für die Sprache der Box</label><div class="seg" id="sp-fallback"><button aria-pressed="${c.fallback === 'google'}" data-v="google">Google nehmen</button><button aria-pressed="${c.fallback === 'off'}" data-v="off">Stumm bleiben</button></div></div>` : ''}
-      <p class="help" style="margin:0">Die Box spricht in ihrer Sprache: <b translate="no">${esc(LANGS[box] ?? box)}</b> (unter System › Sprache). Das gilt auch für „Namen vorlesen“ am Display.</p></section>`,
+      <div class="field"><label for="sp-speak">Die Box spricht</label><select class="input" id="sp-speak" translate="no">${Object.entries(LANGS).map(([code, name]) => `<option value="${code}"${code === box ? ' selected' : ''}>${esc(name)}</option>`).join('')}</select>
+        <small>Für Ansagen, Durchsagen und „Namen vorlesen“ am Display.</small></div></section>`,
     `<section class="card" data-col="1"><div class="card-head"><h2>Stimmen</h2><span class="chip">${esc(`${fmtMB(d.bytes)} belegt`)}</span></div>
       <div class="field"><label for="sp-lang">Sprache</label><select class="input" id="sp-lang" translate="no">${langOptions}</select></div>
       ${list.length ? `<div class="rows">${shown.map(voiceRow).join('')}</div>` : '<p class="help" style="margin:0">Die Liste der Stimmen ließ sich nicht laden (keine Verbindung zu Hugging Face?).</p>'}
@@ -6806,7 +6807,7 @@ function speechTop() {
       ${speechTry(d, lang, activeHere, voiceName)}
       ${job?.state === 'failed' ? `<div class="note warn">${icon('info', 18)}<span>${esc('Die Stimme ließ sich nicht laden. Bitte noch einmal versuchen.')}</span></div>` : ''}
       <p class="help" style="margin:0">${esc(`Stimmen von Piper (rhasspy/piper-voices); die Lizenz steht bei jeder Stimme. ${d.free != null ? `Noch ${(d.free / 1e9).toLocaleString(LOCALE, { maximumFractionDigits: 1 })} GB frei.` : ''}`)}</p><audio id="sp-audio" hidden></audio></section>`,
-    `<section class="card" data-col="2"><h2>Automatische Ansagen</h2><p class="help">${esc('Die Box sagt selbst etwas – in ihrer Sprache, während etwas läuft.')}</p>
+    `<section class="card" data-col="2"><div class="card-head"><h2>Automatische Ansagen</h2><span class="chip" translate="no">${esc(LANGS[box] ?? box)}</span></div><p class="help">${esc('Die Box sagt selbst etwas, während etwas läuft.')}</p>
       ${sw('sp-rest', 'Restzeit ansagen', 'Bevor die Spielzeit für heute endet.', c.rest.on)}
       <div class="dep" data-dep-id="sp-rest"${c.rest.on ? '' : ' hidden'}><div class="field"><label>Wie lange vorher</label><div class="seg" id="sp-rest-min">${[2, 5, 10, 15].map((m) => `<button aria-pressed="${c.rest.minutes === m}" data-v="${m}">${m} min</button>`).join('')}</div></div>
         ${text('sp-t-rest', t.rest, '{min} setzt die Box ein.')}</div>
@@ -6815,7 +6816,7 @@ function speechTop() {
       ${sw('sp-sleep', 'Ende des Schlaftimers ansagen', 'Eine Minute bevor der Schlaftimer die Wiedergabe beendet.', c.sleepEnd.on)}
       <div class="dep" data-dep-id="sp-sleep"${c.sleepEnd.on ? '' : ' hidden'}>${text('sp-t-sleepEnd', t.sleepEnd, '')}</div>
       <div class="field"><label>Lautstärke der Ansagen</label><div class="seg" id="sp-level">${SPEECH_LEVELS.map(([v, l]) => `<button aria-pressed="${c.level === v}" data-v="${v}">${esc(l)}</button>`).join('')}</div><small>Nie lauter als die Box gerade ist (Hörschutz).</small></div></section>`,
-    `<section class="card" data-col="2"><div class="card-head"><h2>Eltern-Durchsagen</h2><span class="chip ${c.parents.on ? 'ok' : ''}">${c.parents.on ? 'an' : 'aus'}</span></div>
+    `<section class="card" data-col="2"><div class="card-head"><h2>Eltern-Durchsagen</h2><span class="chips"><span class="chip" translate="no">${esc(LANGS[box] ?? box)}</span><span class="chip ${c.parents.on ? 'ok' : ''}">${c.parents.on ? 'an' : 'aus'}</span></span></div>
       <p class="help">${esc('Vom Handy etwas auf der Box sagen lassen: über „Durchsage“ auf der Startseite oder per Telegram (/sag Text).')}</p>
       ${sw('sp-parents', 'Durchsagen erlauben', '', c.parents.on)}
       <div class="rows" id="sp-templates">${t.templates.map((x, i) => `<div class="entry"><span class="avatar">${icon('vol', 16)}</span><span class="lbl"><b>${esc(x)}</b></span><button class="btn sm primary" data-tpl-say="${i}">Jetzt</button><button class="btn sm" data-tpl-rm="${i}">Entfernen</button></div>`).join('')}</div>
@@ -6943,9 +6944,24 @@ function mountSpeech(root, page) {
       await again()
     }
   }
+  // the language the box speaks (the reading-out language of the display too): the player starts again with it
+  const speakIn = async (code) => {
+    const r = await api(`${API}/display-options`, { method: 'POST', body: { ttsLanguage: code === 'nb' ? 'no' : code } })
+    toast(r.ok ? `Die Box spricht jetzt ${LANGS[code] ?? code}` : 'Nicht gespeichert', r.ok ? 'ok' : 'info')
+    return r.ok
+  }
+  $('#sp-speak', root).onchange = async (e) => {
+    if (await speakIn(e.target.value)) {
+      speech.lang = e.target.value
+      again()
+    }
+  }
   for (const b of root.querySelectorAll('[data-v-use]')) {
     b.onclick = async () => {
-      if (await speechSave({ voice: { lang: speech.lang, key: b.dataset.vUse } }, 'Stimme gewählt')) again()
+      if (!(await speechSave({ voice: { lang: speech.lang, key: b.dataset.vUse } }, 'Stimme gewählt'))) return
+      // a voice of another language: the box to speak that language too? (else it stays with the old one)
+      if (speech.lang !== d.boxLanguage && (await ask('Sprache der Box', `Die Box spricht gerade ${LANGS[d.boxLanguage] ?? d.boxLanguage}. Soll sie ab jetzt ${LANGS[speech.lang] ?? speech.lang} sprechen – Ansagen, Durchsagen und vorgelesene Namen?`, 'Umstellen'))) await speakIn(speech.lang)
+      again()
     }
   }
   for (const b of root.querySelectorAll('[data-v-rm]')) {
@@ -7525,9 +7541,11 @@ async function loadBrowser() {
 /* Sprache */
 
 async function loadLanguage() {
-  const r = await api(`${API}/bootscreen`)
+  const [r, o] = await Promise.all([api(`${API}/bootscreen`), api(`${API}/display-options`)])
   if (!r.ok) throw new Error(`bootscreen ${r.status}`)
   sys.bs = r.body
+  // (the languages the box can speak: a new box language is its speaking language too, where there is one)
+  sys.ttsLanguages = (o.body?.ttsLanguages ?? []).map((l) => l.code)
   const cur = r.body.current.bootscreenLanguage || 'en'
   state.values.set('boxLang', r.body.languages[cur]?.name ?? cur)
   const pref = getLangPref()
@@ -9180,6 +9198,9 @@ const CONTROLLERS = {
       if (!code) return
       const r = await api(`${API}/box-language`, { method: 'POST', body: { code } })
       toast(r.ok ? `Sprache der Box: ${v} – das Startbild wird neu erzeugt` : 'Nicht gespeichert', r.ok ? 'ok' : 'info')
+      // the box speaks it too (announcements, names read out) - where Google or Piper have it
+      const tts = code.split('-')[0] === 'nb' ? 'no' : code.split('-')[0]
+      if (r.ok && (sys.ttsLanguages ?? []).includes(tts)) await api(`${API}/display-options`, { method: 'POST', body: { ttsLanguage: tts } })
     },
   },
   systemopt: {

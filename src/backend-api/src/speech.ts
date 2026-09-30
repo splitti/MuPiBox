@@ -702,7 +702,9 @@ export async function announce(getConfig: () => unknown, text: string, opts: { g
 
 /** The language the box speaks in (mupibox.ttsLanguage, as the names it reads out). */
 export function boxLanguage(cfg: unknown): string {
-  const l = (cfg as { mupibox?: { ttsLanguage?: unknown } } | undefined)?.mupibox?.ttsLanguage
+  // (Google names Norwegian "no", the app "nb")
+  const raw = (cfg as { mupibox?: { ttsLanguage?: unknown } } | undefined)?.mupibox?.ttsLanguage
+  const l = raw === 'no' ? 'nb' : raw
   return typeof l === 'string' && l in SPEECH_LANGS ? l : 'de'
 }
 
