@@ -1858,7 +1858,10 @@ function libTop() {
     `<div class="lib-tiles wide" id="lib-tiles"></div>`,
     `<div class="search wide">${icon('search')}<input class="input" id="lib-q" type="search" placeholder="In der Bibliothek suchen" autocomplete="off" value="${esc(lib.q)}"></div>`,
     `<div class="pills wide" id="lib-cat">${[['all', 'Alle'], ...CATS.map(([c]) => [c, CAT_SHORT[c]]), ['nas', 'NAS']].map(([id, t]) => `<button aria-selected="${lib.cat === id}" data-v="${id}">${t}</button>`).join('')}</div>`,
-    `<div class="pills small wide" id="lib-src">${LIB_SOURCES.map(([id, t]) => `<button aria-selected="${lib.src === id}" data-v="${id}">${t}</button>`).join('')}</div>`,
+    // (ARD Sounds only when the library has a show of it)
+    `<div class="pills small wide" id="lib-src">${LIB_SOURCES.filter(([id]) => id !== 'ard' || lib.src === 'ard' || !lib.items || lib.items.some(isArdEntry))
+      .map(([id, t]) => `<button aria-selected="${lib.src === id}" data-v="${id}">${t}</button>`)
+      .join('')}</div>`,
     `<p class="help wide lib-count" id="lib-count"></p>`,
     `<section class="card wide lib-card"><div class="rows lib-list" id="lib-list"><div class="loading"><p>Lade …</p></div></div></section>`,
   ]
@@ -2837,6 +2840,12 @@ async function addFromSearch(r, btn) {
 const ard = { q: '', kids: true, cat: 'audiobook', result: null, list: null }
 
 function ardTop() {
+  if (!svc.ard) {
+    return [
+      `<section class="card wide"><p class="help" style="margin:0">${esc('Die ARD Audiothek ist ausgeschaltet. Einschalten unter Einstellungen › Dienste.')}</p>
+        <div class="btns"><button class="btn primary" id="ard-services">Dienste öffnen</button></div></section>`,
+    ]
+  }
   return [
     `<section class="card wide">
       <p class="help" style="margin:0">${esc('Kostenlose Hörspiele, Geschichten und Kinderpodcasts der ARD – ohne Konto. Eine Sendung kommt wie ein Podcast auf die Box, neue Folgen erscheinen von selbst.')}</p>
@@ -3025,6 +3034,7 @@ async function addLink(page) {
       const id = address.startsWith('https://') ? address.replace('https://', 'http://') : address
       // a link to a show on ardsounds.de / ardaudiothek.de: taken as the show of ARD Sounds (its page is no feed)
       const ardLink = type !== 'Radio-Stream' && /^https:\/\/(www\.)?(ardsounds|ardaudiothek)\.de\/sendung\//i.test(url)
+      if (ardLink && !(await loadServices()).ard) return toast('Die ARD Audiothek ist ausgeschaltet (Einstellungen › Dienste).', 'info')
       const ardId = ardLink ? (await api(`${API}/ard/resolve`, { method: 'POST', body: { url } })).body?.id : null
       if (ardLink && !ardId) return toast('Diese Sendung kennt die ARD Audiothek nicht – ist der Link richtig?', 'info')
       if (type === 'Radio-Stream') Object.assign(body, { type: 'radio', id, artist: label || 'Radio', title: title || 'Stream' })
@@ -7066,10 +7076,13 @@ const CONTROLLERS = {
     },
   },
   ard: {
+    load: loadServices,
     top: ardTop,
     sections: () => [],
     mount(root) {
       const q = $('#ard-q', root)
+      // (switched off: only the way to switch it on)
+      if (!q) return $('#ard-services', root)?.addEventListener('click', () => go('g-dienste'))
       q.addEventListener('input', () => {
         ard.q = q.value
         // (the field emptied: the children's shows again)
@@ -7091,7 +7104,29 @@ const CONTROLLERS = {
       else loadArdKids()
     },
   },
+  'g-dienste': {
+    async load() {
+      svc.at = 0
+      await loadServices()
+      state.values.set('svcArd', svc.ard)
+    },
+    async change(key, v) {
+      if (key !== 'svcArd') return
+      const r = await api(`${API}/ard/enabled`, { method: 'POST', body: { enabled: !!v } })
+      if (!r.ok) return toast('Nicht gespeichert', 'info')
+      svc.ard = !!v
+      toast(v ? 'ARD Audiothek wird beim Hinzufügen angeboten' : 'ARD Audiothek ausgeschaltet')
+    },
+  },
   link: {
+    // (without a Spotify login no Spotify kinds: a podcast is the first choice then)
+    async load() {
+      await loadServices()
+      if (!svc.spotify && String(state.values.get('lType') ?? 'Spotify-Link').startsWith('Spotify')) {
+        state.values.set('lType', 'Podcast (RSS)')
+        state.values.set('lCat', 'Radio & Podcasts')
+      }
+    },
     // the fields that fit the kind of link (as the box's own add page)
     sections: (page) => {
       const type = state.values.get('lType') ?? 'Spotify-Link'
@@ -7111,11 +7146,18 @@ const CONTROLLERS = {
       return page.sections.map((sec) => ({
         ...sec,
         items: sec.items.filter(keep).map((it) =>
-          it.key === 'lUrl'
-            ? { ...it, label: type === 'Spotify-Suche' ? 'Suchbegriff' : 'Link', placeholder: type === 'Spotify-Suche' ? 'z. B. Benjamin Blümchen Folge 1' : 'https://…' }
-            : it.key === 'lLabel' && type === 'Spotify-Suche'
-              ? { ...it, label: 'Name der Kachel' }
-              : it,
+          it.key === 'lType' && !svc.spotify
+            ? { ...it, options: it.options.filter((o) => !o.startsWith('Spotify')) }
+            : it.key === 'lUrl'
+              ? {
+                  ...it,
+                  label: type === 'Spotify-Suche' ? 'Suchbegriff' : 'Link',
+                  placeholder: type === 'Spotify-Suche' ? 'z. B. Benjamin Blümchen Folge 1' : 'https://…',
+                  ...(svc.spotify ? {} : { help: 'Radio: auch eine .m3u- oder .pls-Datei – die Box liest die Stream-Adresse daraus. Podcast: die Adresse des Feeds.' }),
+                }
+              : it.key === 'lLabel' && type === 'Spotify-Suche'
+                ? { ...it, label: 'Name der Kachel' }
+                : it,
         ),
       }))
     },
@@ -8006,11 +8048,25 @@ function openDay(el, page) {
   )
 }
 
-function openAdd() {
+// Which services the box has: Spotify signed in (Dienste › Spotify), ARD Sounds switched on (Dienste). Adding offers
+// only those - a Spotify search without a Spotify login only ends in an error.
+const svc = { spotify: true, ard: true, at: 0 }
+async function loadServices() {
+  if (Date.now() - svc.at < 30_000) return svc
+  const [access, ard] = await Promise.all([api(`${API}/spotify-access`), api(`${API}/ard/enabled`)])
+  // (the box not answering: everything is offered, as before)
+  if (access.ok) svc.spotify = !!access.body?.connected
+  if (ard.ok) svc.ard = ard.body?.enabled !== false
+  svc.at = Date.now()
+  return svc
+}
+
+async function openAdd() {
+  await loadServices()
   const ways = [
-    ['suche', 'search', 'Auf Spotify suchen', 'Hörspiele, Alben und Künstler finden'],
-    ['ard', 'phones', 'In der ARD Audiothek suchen', 'Kostenlose Hörspiele und Kinderpodcasts'],
-    ['link', 'link', 'Link einfügen', 'Spotify-Link, Radiosender oder Podcast'],
+    ...(svc.spotify ? [['suche', 'search', 'Auf Spotify suchen', 'Hörspiele, Alben und Künstler finden']] : []),
+    ...(svc.ard ? [['ard', 'phones', 'In der ARD Audiothek suchen', 'Kostenlose Hörspiele und Kinderpodcasts']] : []),
+    ['link', 'link', 'Link einfügen', svc.spotify ? 'Spotify-Link, Radiosender oder Podcast' : 'Radiosender oder Podcast'],
     ['upload', 'up', 'Vom Gerät hochladen', 'Titel oder ganze Ordner auf die SD-Karte'],
   ]
   openSheet(`<h2>Was möchtest du hinzufügen?</h2><div class="navlist">${ways.map(([id, ic, t, s]) => navRow(id, t, s, ic)).join('')}</div>`, (sheet, close) => {

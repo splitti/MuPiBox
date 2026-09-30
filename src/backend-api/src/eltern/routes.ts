@@ -342,7 +342,12 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   registerUpdateRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig })
   registerSpotifyConnectRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerTlsRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
-  registerPodcastRoutes(router, { activeDataPath: deps.activeDataPath, podcastOffline: deps.podcastOffline })
+  registerPodcastRoutes(router, {
+    activeDataPath: deps.activeDataPath,
+    podcastOffline: deps.podcastOffline,
+    getMupiboxConfig: deps.getMupiboxConfig,
+    updateMupiboxConfig: deps.updateMupiboxConfig,
+  })
   registerCustomCoverRoutes(router, {
     dir: '/home/dietpi/MuPiBox/media/cover',
     host: () => String((deps.getMupiboxConfig()?.mupibox as { host?: string } | undefined)?.host || os.hostname()),

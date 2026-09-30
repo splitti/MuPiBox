@@ -6,7 +6,8 @@
 // /podcast-offline/sync then brings the files in line at once instead of at the next hourly run.
 
 import { promises as fsp } from 'node:fs'
-import type { Router } from 'express'
+import type { RequestHandler, Router } from 'express'
+import type { MupiboxConfig } from '../models/mupibox-config.model'
 import { ardKidsShows, ardSearch, ardShow, ardShowIdFromUrl, type ArdShow } from '../ard-sounds'
 import { MAX_KEEP, type PodcastOffline } from '../podcast-offline'
 import { requireCsrf, requireSession } from './middleware'
@@ -14,14 +15,41 @@ import { requireCsrf, requireSession } from './middleware'
 export interface PodcastRouteDeps {
   activeDataPath: string
   podcastOffline?: PodcastOffline
+  getMupiboxConfig: () => MupiboxConfig | undefined
+  updateMupiboxConfig: (mutate: (cfg: Record<string, unknown>) => void) => Promise<void>
 }
+
+// ARD Sounds can be switched off (Dienste; mupibox.ardSounds, on unless false) - e.g. a box abroad, for which German
+// children's plays are no use: then it is not offered for adding. Shows added before stay in the library and play.
+export const ardSoundsOn = (cfg: MupiboxConfig | undefined) => (cfg?.mupibox as Record<string, unknown> | undefined)?.ardSounds !== false
 
 const KIDS_TTL_MS = 60 * 60 * 1000
 let kidsCache: { at: number; shows: ArdShow[] } | null = null
 
 export function registerPodcastRoutes(router: Router, deps: PodcastRouteDeps): void {
+  const ardOn: RequestHandler = (_req, res, next) => {
+    if (ardSoundsOn(deps.getMupiboxConfig())) return next()
+    res.status(403).json({ error: 'ard_disabled' })
+  }
+
+  /** GET /api/app/ard/enabled - whether ARD Sounds is offered; POST {enabled} switches it */
+  router.get('/ard/enabled', requireSession, (_req, res) => {
+    res.json({ enabled: ardSoundsOn(deps.getMupiboxConfig()) })
+  })
+  router.post('/ard/enabled', requireSession, requireCsrf, async (req, res) => {
+    const enabled = (req.body as { enabled?: unknown } | undefined)?.enabled
+    if (typeof enabled !== 'boolean') {
+      res.status(400).json({ error: 'enabled must be true or false' })
+      return
+    }
+    await deps.updateMupiboxConfig((cfg) => {
+      cfg.mupibox = { ...((cfg.mupibox as Record<string, unknown>) ?? {}), ardSounds: enabled }
+    })
+    res.json({ enabled })
+  })
+
   /** GET /api/app/ard/search?q=…&kids=1 - shows of ARD Sounds for a search term (kids=1: for children only) */
-  router.get('/ard/search', requireSession, async (req, res) => {
+  router.get('/ard/search', requireSession, ardOn, async (req, res) => {
     const q = String(req.query.q ?? '').trim()
     if (q.length < 2 || q.length > 100) {
       res.status(400).json({ error: 'invalid_query' })
@@ -36,7 +64,7 @@ export function registerPodcastRoutes(router: Router, deps: PodcastRouteDeps): v
   })
 
   /** GET /api/app/ard/kids - the ARD's children's shows (kept for an hour) */
-  router.get('/ard/kids', requireSession, async (_req, res) => {
+  router.get('/ard/kids', requireSession, ardOn, async (_req, res) => {
     try {
       if (!kidsCache || Date.now() - kidsCache.at > KIDS_TTL_MS) kidsCache = { at: Date.now(), shows: await ardKidsShows() }
       res.json({ shows: kidsCache.shows })
@@ -47,7 +75,7 @@ export function registerPodcastRoutes(router: Router, deps: PodcastRouteDeps): v
   })
 
   /** GET /api/app/ard/show?id=… - a show and its 10 newest episodes (for the details before adding it) */
-  router.get('/ard/show', requireSession, async (req, res) => {
+  router.get('/ard/show', requireSession, ardOn, async (req, res) => {
     try {
       const found = await ardShow(String(req.query.id ?? ''), 10)
       if (!found) {
@@ -62,7 +90,7 @@ export function registerPodcastRoutes(router: Router, deps: PodcastRouteDeps): v
   })
 
   /** POST /api/app/ard/resolve {url} - the show id behind a link to it on ardsounds.de / ardaudiothek.de */
-  router.post('/ard/resolve', requireSession, requireCsrf, async (req, res) => {
+  router.post('/ard/resolve', requireSession, requireCsrf, ardOn, async (req, res) => {
     const url = String((req.body as { url?: unknown } | undefined)?.url ?? '')
     try {
       const id = url.length < 500 ? await ardShowIdFromUrl(url) : null

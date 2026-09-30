@@ -71,7 +71,7 @@
    "id": "g-dienste",
    "title": "Dienste",
    "icon": "plug",
-   "description": "Spotify, NAS · Telegram, MQTT, WLED"
+   "description": "Spotify, NAS, ARD · Telegram, MQTT, WLED"
   },
   {
    "id": "g-sicherheit",
@@ -4681,7 +4681,7 @@
    "area": "einstellungen",
    "parent": "einstellungen",
    "title": "Dienste",
-   "description": "Spotify, NAS · Telegram, MQTT, WLED",
+   "description": "Spotify, NAS, ARD · Telegram, MQTT, WLED",
    "icon": "plug",
    "sections": [
     {
@@ -4699,6 +4699,13 @@
        "label": "NAS",
        "target": "nas",
        "subtitle": "Anmeldung, freigegebene Ordner, Profile · Bibliothek › NAS"
+      },
+      {
+       "type": "toggle",
+       "label": "ARD Audiothek",
+       "key": "svcArd",
+       "default": true,
+       "help": "Kostenlose Hörspiele und Kinderpodcasts der ARD (deutschsprachig). Aus: wird beim Hinzufügen nicht mehr angeboten; schon hinzugefügte Sendungen bleiben."
       }
      ]
     },
@@ -6362,6 +6369,11 @@
   },
   {
    "l": "Dienste",
+   "where": "Dienste",
+   "id": "g-dienste"
+  },
+  {
+   "l": "ARD Audiothek",
    "where": "Dienste",
    "id": "g-dienste"
   },
