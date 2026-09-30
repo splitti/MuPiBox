@@ -525,7 +525,9 @@ rm -f /tmp/mupibox-update-failed
 	mv ${MUPI_SRC}/themes/pikachu/pikachu-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/pikachu/pikachu-bg.jpg >&3 2>&3
 
 	#MARIO
-	mv ${MUPI_SRC}/themes/supermario/NewSuperMarioFontU.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/supermario/NewSuperMarioFontU.ttf >&3 2>&3
+	mv ${MUPI_SRC}/themes/supermario/TitanOne-Regular.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/supermario/TitanOne-Regular.ttf >&3 2>&3
+
+	mv ${MUPI_SRC}/themes/supermario/OFL-TitanOne.txt /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/supermario/OFL-TitanOne.txt >&3 2>&3
 	mv ${MUPI_SRC}/themes/supermario/supermario-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/supermario/supermario-bg.jpg >&3 2>&3
 	
 	#DINOSAUR
@@ -546,7 +548,11 @@ rm -f /tmp/mupibox-update-failed
 
 	#STEAMPUNK
 	mv ${MUPI_SRC}/themes/steampunk/steampunk-bg.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/steampunk-bg.jpg >&3 2>&3
-	mv ${MUPI_SRC}/themes/steampunk/akaPosse.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/akaPosse.ttf >&3 2>&3
+	mv ${MUPI_SRC}/themes/steampunk/Rye-Regular.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/Rye-Regular.ttf >&3 2>&3
+
+	mv ${MUPI_SRC}/themes/steampunk/OFL-Rye.txt /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/OFL-Rye.txt >&3 2>&3
+	# the name fonts these themes had before (their licenses do not allow passing them on as part of MuPiBox)
+	rm -f /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/supermario/NewSuperMarioFontU.ttf /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/akaPosse.ttf >&3 2>&3
 	mv ${MUPI_SRC}/themes/steampunk/steampunk-gear.png /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/steampunk-gear.png >&3 2>&3
 	mv ${MUPI_SRC}/themes/steampunk/steampunk-header.jpg /home/dietpi/.mupibox/Sonos-Kids-Controller-master/www/theme-data/steampunk/steampunk-header.jpg >&3 2>&3
 

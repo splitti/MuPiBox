@@ -4,7 +4,7 @@
    der App an der Markierung unten einsetzen. Alle alten Regeln dieses Themes entfallen. */
 
 @font-face { font-family: "Fredoka"; src: url("/theme-data/_fonts/Fredoka-Variable.ttf") format("truetype"); font-weight: 300 700; font-display: block; }
-@font-face { font-family: "Shadow of Xizor"; src: url("/theme-data/steampunk/akaPosse.ttf") format("truetype"); font-display: block; }
+@font-face { font-family: "Rye"; src: url("/theme-data/steampunk/Rye-Regular.ttf") format("truetype"); font-display: block; }
 
 :root {
   --km-night: #2A1A10;
@@ -29,7 +29,7 @@
   --km-spring: cubic-bezier(.3, 1.4, .6, 1);
   --km-ease: cubic-bezier(.2, .7, .2, 1);
   --ion-font-family: "Fredoka", sans-serif;
-  --km-name-font: "Shadow of Xizor", "Fredoka", sans-serif;
+  --km-name-font: "Rye", "Fredoka", sans-serif;
   --km-name-size: 25px;
 }
 

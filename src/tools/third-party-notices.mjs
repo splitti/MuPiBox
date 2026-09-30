@@ -203,78 +203,78 @@ if (CHECK) {
 // The parts that are not npm packages of the bundles, kept by hand. "TODO:" marks what the project still has to clear.
 // ------------------------------------------------------------------------------------------------------------------
 
-// What the fonts' pages on dafont.com say (checked 2026-09-30): dafont's "100% Free" allows use, also commercial, but
-// is no license text that grants passing the file on; recreations of a game's or film's lettering carry the rights of
-// that game or film besides. A font not listed here is "not cleared".
+// The license of each theme font, from the font file itself (its name table: copyright, license) and its page on
+// dafont.com or Google Fonts (checked 2026-09-30). dafont's "100% Free" allows use, also commercial; where the file
+// has only a copyright and no license of its own, that page is all there is. A font not listed here is "not cleared".
 const THEME_FONT_LICENSES = {
-  'akaPosse.ttf': [
-    'Aka Posse by akaType',
-    'dafont "100% Free"; no license text on redistribution',
-    'https://www.dafont.com/akaposse.font',
-  ],
   'BerlinSmallCaps.ttf': [
     'Berlin Small Caps by Manfred Klein',
-    'dafont "100% Free"; no license text on redistribution',
+    'dafont "100% Free"; the file names only the copyright',
     'https://www.dafont.com/berlin-small-caps.font',
   ],
   'IntensaFuente.ttf': [
     'Intensa Fuente by Edumorcel',
-    'dafont "100% Free"; fan font after the film "Inside Out" - TODO: clear or replace',
+    'dafont "100% Free"; the file has no license of its own',
     'https://www.dafont.com/intensa-fuente.font',
   ],
   'KOMIKND_.ttf': [
-    'Komikandy by Apostrophic Labs',
-    'dafont "100% Free"; the foundry\'s terms forbid repackaging without permission - TODO: ask or replace',
+    'Komikandy by Link Olsson & Apostrophic Lab',
+    'Apostrophic Labs freeware: use in any context; not to be modified for re-release, nor sold (passed on unmodified here)',
     'https://www.dafont.com/komikandy.font',
   ],
   'LT_Crafted.otf': [
-    'LT Crafted by LyonsType',
-    'dafont "100% Free"; no license text on redistribution',
+    'LT Crafted by Dan P. Lyons (LyonsType)',
+    'dafont "100% Free"; the file names only the copyright',
     'https://www.dafont.com/lt-crafted.font',
   ],
   'MagnoliaScript.otf': [
-    'Magnolia Script by Jovanny Lemonad',
+    'Magnolia Script by Tanya Cherkiz & Jovanny Lemonad',
     'dafont "Public domain / GPL / OFL"',
     'https://www.dafont.com/magnolia-script.font',
   ],
   'Nasa21.ttf': [
-    'Nasa21 by USE-Mediengestaltung',
-    'dafont "100% Free"; author: free to use for every purpose',
+    'Nasa21 by Leonhard Katschner (USE-Mediengestaltung)',
+    'dafont "100% Free"; the author: free to use for every purpose',
     'https://www.dafont.com/nasa21.font',
-  ],
-  'NewSuperMarioFontU.ttf': [
-    'New Super Mario Font U by Michael B.',
-    'dafont "100% Free"; recreation of the lettering of Nintendo\'s game - TODO: replace',
-    'https://www.dafont.com/new-super-mario-font-u.font',
   ],
   'odstemplikBold.otf': [
     'Odstemplik by gluk',
-    'dafont "Public domain / GPL / OFL"',
+    'SIL Open Font License 1.1 (in the file)',
     'https://www.dafont.com/odstemplik.font',
   ],
   'Pixolletta8px.ttf': [
     'Pixolletta8px by Neuland_Ink',
-    'dafont "100% Free"; no license text on redistribution',
+    'dafont "100% Free"; the file names only the author',
     'https://www.dafont.com/pixolletta8px.font',
   ],
   'PokemonXandY.ttf': [
-    'Pokemon X and Y by TheLouster115',
-    'dafont "100% Free"; recreation of the lettering of the Pokémon games - TODO: replace',
-    'https://www.dafont.com/pokemon-x-and-y.font',
+    'Pokemon X and Y by TheLouster115 (made with FontStruct)',
+    'Creative Commons Attribution-ShareAlike 3.0 (in the file)',
+    'https://creativecommons.org/licenses/by-sa/3.0/',
+  ],
+  'Rye-Regular.ttf': [
+    'Rye by Sorkin Type Co',
+    'SIL Open Font License 1.1 (OFL-Rye.txt next to it)',
+    'https://fonts.google.com/specimen/Rye',
   ],
   'snaphand-v1-free.ttf': [
-    'SnapHand by InkyType',
-    'dafont "100% Free"; no license text on redistribution',
-    'https://www.dafont.com/snaphand.font',
+    'SnapHand by Nini Prower / Inkyotter Design',
+    'Creative Commons Attribution-ShareAlike 4.0 (in the file)',
+    'https://creativecommons.org/licenses/by-sa/4.0/',
   ],
   'Starjedi.ttf': [
-    'Star Jedi by Boba Fonts',
-    'dafont "100% Free"; recreation of the Star Wars lettering - TODO: replace',
+    'Star Jedi by Davide Canavero (Boba Fonts)',
+    'dafont "100% Free"; the file names only the copyright',
     'https://www.dafont.com/star-jedi.font',
   ],
+  'TitanOne-Regular.ttf': [
+    'Titan One by Rodrigo Fuenzalida',
+    'SIL Open Font License 1.1 (OFL-TitanOne.txt next to it)',
+    'https://fonts.google.com/specimen/Titan+One',
+  ],
   'ylee_Mortal_Heart.ttf': [
-    'ylee Mortal Heart, Immortal Memory by Y Lee',
-    'dafont "100% Free"; author: free for commercial and non-commercial use',
+    'ylee Mortal Heart, Immortal Memory by Yosep Lee',
+    'dafont "100% Free"; the author: free for commercial and non-commercial use',
     'https://www.dafont.com/ylee-mhim.font',
   ],
 }
@@ -304,10 +304,10 @@ function themeFonts() {
       return [
         known ? `${known[0]} (\`${file}\`)` : `Font \`${file}\``,
         `theme${themes.length > 1 ? 's' : ''} ${themes.map((t) => `\`${t}\``).join(', ')}`,
-        licensed
-          ? 'see the license file next to it'
-          : known
-            ? known[1]
+        known
+          ? known[1]
+          : licensed
+            ? 'see the license file next to it'
             : 'TODO: unclear - to be cleared, replaced or removed',
         known ? known[2] : '',
       ]
