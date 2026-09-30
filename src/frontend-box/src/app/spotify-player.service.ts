@@ -68,6 +68,11 @@ export class SpotifyPlayerService {
   // Cached online state from NetworkService
   private isOnline = false
 
+  // When Spotify last listed this player among the account's devices (see deviceKnownToSpotify)
+  private deviceCheckedAt = 0
+  private readonly DEVICE_CHECK_FRESH_MS = 60000 // a start within a minute of a check needs no second one
+  private readonly DEVICE_CHECK_EVERY_MS = 180000 // also every 3 minutes: starts from the web app or Telegram find it connected
+
   constructor(
     private http: HttpClient,
     @Inject(DOCUMENT) private document: Document,
@@ -80,6 +85,7 @@ export class SpotifyPlayerService {
     })
 
     this.setupNetworkMonitoring()
+    this.setupDeviceCheck()
   }
 
   /**
@@ -266,8 +272,9 @@ export class SpotifyPlayerService {
    * Prevents parallel calls and implements timeout protection.
    */
   async ensurePlayerReady(): Promise<boolean> {
-    // If player is already ready, return immediately without waiting for any ongoing recovery
-    if (this.isPlayerReady()) {
+    // If player is already ready, return immediately without waiting for any ongoing recovery (when Spotify was
+    // seen to know the device a moment ago - else it is checked first, see _ensurePlayerReadyInternal)
+    if (this.isPlayerReady() && Date.now() - this.deviceCheckedAt < this.DEVICE_CHECK_FRESH_MS) {
       this.logService.log('[Spotify SDK] Player already ready, returning immediately')
       return true
     }
@@ -308,10 +315,14 @@ export class SpotifyPlayerService {
     this.logService.log('[Spotify SDK] ensurePlayerReady() called, state:', this.sdkState)
 
     try {
-      // Already ready
+      // Already ready - as far as the player knows: it can lose its connection to Spotify without saying so (no
+      // not_ready; Spotify's list of devices was empty and every start went nowhere). Spotify is asked first.
       if (this.isPlayerReady()) {
-        this.logService.log('[Spotify SDK] Player already ready')
-        return true
+        if ((await this.deviceKnownToSpotify()) !== false) {
+          this.logService.log('[Spotify SDK] Player already ready')
+          return true
+        }
+        await this.reconnectPlayer()
       }
 
       // Can't do anything without network
@@ -655,6 +666,65 @@ export class SpotifyPlayerService {
           this.logService.error('[Spotify SDK] Error during network recovery:', error)
         })
       })
+  }
+
+  /**
+   * Whether Spotify lists this player among the account's devices: true or false, null when that could not be
+   * asked (offline, token, timeout) - then nothing is changed on a guess.
+   */
+  private async deviceKnownToSpotify(): Promise<boolean | null> {
+    const id = this.deviceId
+    if (!id || !this.isOnline) return null
+    try {
+      const tokenRes = await fetch(`${environment.backend.playerUrl}/spotify/token`, { signal: AbortSignal.timeout(4000) })
+      const token = (await tokenRes.text()).trim()
+      if (!tokenRes.ok || !token) return null
+      const res = await fetch('https://api.spotify.com/v1/me/player/devices', {
+        headers: { Authorization: `Bearer ${token}` },
+        signal: AbortSignal.timeout(4000),
+      })
+      if (!res.ok) return null
+      const body = (await res.json()) as { devices?: { id?: string }[] }
+      const known = (body.devices ?? []).some((d) => d.id === id)
+      if (known) this.deviceCheckedAt = Date.now()
+      else this.logService.warn('[Spotify SDK] Spotify does not list this player any more:', id)
+      return known
+    } catch {
+      return null
+    }
+  }
+
+  /**
+   * The player's connection to Spotify is gone although it did not say so: it disconnects, and ensurePlayerReady
+   * connects it again (a new "ready" reports the device to the box's player).
+   */
+  private async reconnectPlayer(): Promise<void> {
+    this.logService.warn('[Spotify SDK] Reconnecting the player')
+    try {
+      this.player?.disconnect()
+    } catch {
+      // gone anyway
+    }
+    this.deviceId = null
+    this.deviceCheckedAt = 0
+    this.sdkState = 'loaded'
+    this.isConnected$.next(false)
+  }
+
+  /**
+   * Every few minutes: is the player still known to Spotify? Else it connects again - before a start from the web
+   * app or Telegram, which does not come through ensurePlayerReady here, goes nowhere.
+   */
+  private setupDeviceCheck(): void {
+    if (!this.shouldUsePlayer()) return
+    setInterval(() => {
+      if (!this.isPlayerReady() || this.ensurePlayerReadyPromise) return
+      if (Date.now() - this.deviceCheckedAt < this.DEVICE_CHECK_FRESH_MS) return
+      this.deviceKnownToSpotify().then((known) => {
+        if (known !== false || this.ensurePlayerReadyPromise) return
+        this.reconnectPlayer().then(() => this.ensurePlayerReady())
+      })
+    }, this.DEVICE_CHECK_EVERY_MS)
   }
 
   // ============================================================================
