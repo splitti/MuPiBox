@@ -165,20 +165,20 @@ the packages in the bundles.
 | Baloo 2 font | kids' themes (`themes/_fonts`) | SIL Open Font License 1.1 | `OFL-Baloo2.txt` next to the font |
 | fbv (framebuffer image viewer) | boot and shutdown pictures, prebuilt in `bin/fbv` | GPL-2.0 | TODO: add the source offer / link to the source of the exact version |
 | led_control | power LED, compiled on the box from `scripts/led/led_control.c` | MuPiBox project code |  |
-| Font `akaPosse.ttf` | theme `steampunk` | TODO: unclear - to be cleared, replaced or removed |  |
-| Font `BerlinSmallCaps.ttf` | theme `dinosaur` | TODO: unclear - to be cleared, replaced or removed |  |
-| Font `IntensaFuente.ttf` | theme `spiderman` | TODO: unclear - to be cleared, replaced or removed |  |
-| Font `KOMIKND_.ttf` | theme `lines` | TODO: unclear - to be cleared, replaced or removed |  |
-| Font `LT_Crafted.otf` | theme `forms` | TODO: unclear - to be cleared, replaced or removed |  |
-| Font `MagnoliaScript.otf` | themes `axolotl`, `unicorn` | TODO: unclear - to be cleared, replaced or removed |  |
-| Font `Nasa21.ttf` | themes `earth`, `enterprise` | TODO: unclear - to be cleared, replaced or removed |  |
-| Font `NewSuperMarioFontU.ttf` | theme `supermario` | TODO: unclear - to be cleared, replaced or removed |  |
-| Font `odstemplikBold.otf` | theme `fantasybutterflies` | TODO: unclear - to be cleared, replaced or removed |  |
-| Font `Pixolletta8px.ttf` | theme `matrix` | TODO: unclear - to be cleared, replaced or removed |  |
-| Font `PokemonXandY.ttf` | theme `pikachu` | TODO: unclear - to be cleared, replaced or removed |  |
-| Font `snaphand-v1-free.ttf` | theme `comic` | TODO: unclear - to be cleared, replaced or removed |  |
-| Font `Starjedi.ttf` | theme `clone-wars` | TODO: unclear - to be cleared, replaced or removed |  |
-| Font `ylee_Mortal_Heart.ttf` | theme `mystic` | TODO: unclear - to be cleared, replaced or removed |  |
+| Aka Posse by akaType (`akaPosse.ttf`) | theme `steampunk` | dafont "100% Free"; no license text on redistribution | https://www.dafont.com/akaposse.font |
+| Berlin Small Caps by Manfred Klein (`BerlinSmallCaps.ttf`) | theme `dinosaur` | dafont "100% Free"; no license text on redistribution | https://www.dafont.com/berlin-small-caps.font |
+| Intensa Fuente by Edumorcel (`IntensaFuente.ttf`) | theme `spiderman` | dafont "100% Free"; fan font after the film "Inside Out" - TODO: clear or replace | https://www.dafont.com/intensa-fuente.font |
+| Komikandy by Apostrophic Labs (`KOMIKND_.ttf`) | theme `lines` | dafont "100% Free"; the foundry's terms forbid repackaging without permission - TODO: ask or replace | https://www.dafont.com/komikandy.font |
+| LT Crafted by LyonsType (`LT_Crafted.otf`) | theme `forms` | dafont "100% Free"; no license text on redistribution | https://www.dafont.com/lt-crafted.font |
+| Magnolia Script by Jovanny Lemonad (`MagnoliaScript.otf`) | themes `axolotl`, `unicorn` | dafont "Public domain / GPL / OFL" | https://www.dafont.com/magnolia-script.font |
+| Nasa21 by USE-Mediengestaltung (`Nasa21.ttf`) | themes `earth`, `enterprise` | dafont "100% Free"; author: free to use for every purpose | https://www.dafont.com/nasa21.font |
+| New Super Mario Font U by Michael B. (`NewSuperMarioFontU.ttf`) | theme `supermario` | dafont "100% Free"; recreation of the lettering of Nintendo's game - TODO: replace | https://www.dafont.com/new-super-mario-font-u.font |
+| Odstemplik by gluk (`odstemplikBold.otf`) | theme `fantasybutterflies` | dafont "Public domain / GPL / OFL" | https://www.dafont.com/odstemplik.font |
+| Pixolletta8px by Neuland_Ink (`Pixolletta8px.ttf`) | theme `matrix` | dafont "100% Free"; no license text on redistribution | https://www.dafont.com/pixolletta8px.font |
+| Pokemon X and Y by TheLouster115 (`PokemonXandY.ttf`) | theme `pikachu` | dafont "100% Free"; recreation of the lettering of the Pokémon games - TODO: replace | https://www.dafont.com/pokemon-x-and-y.font |
+| SnapHand by InkyType (`snaphand-v1-free.ttf`) | theme `comic` | dafont "100% Free"; no license text on redistribution | https://www.dafont.com/snaphand.font |
+| Star Jedi by Boba Fonts (`Starjedi.ttf`) | theme `clone-wars` | dafont "100% Free"; recreation of the Star Wars lettering - TODO: replace | https://www.dafont.com/star-jedi.font |
+| ylee Mortal Heart, Immortal Memory by Y Lee (`ylee_Mortal_Heart.ttf`) | theme `mystic` | dafont "100% Free"; author: free for commercial and non-commercial use | https://www.dafont.com/ylee-mhim.font |
 | Sounds (`media/sound/*.wav`) | start, shutdown and battery sounds | TODO: origin and license to be cleared |  |
 
 ## B. Downloaded by the installer or updater (not part of the MuPiBox packages)

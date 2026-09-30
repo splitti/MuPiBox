@@ -203,8 +203,85 @@ if (CHECK) {
 // The parts that are not npm packages of the bundles, kept by hand. "TODO:" marks what the project still has to clear.
 // ------------------------------------------------------------------------------------------------------------------
 
+// What the fonts' pages on dafont.com say (checked 2026-09-30): dafont's "100% Free" allows use, also commercial, but
+// is no license text that grants passing the file on; recreations of a game's or film's lettering carry the rights of
+// that game or film besides. A font not listed here is "not cleared".
+const THEME_FONT_LICENSES = {
+  'akaPosse.ttf': [
+    'Aka Posse by akaType',
+    'dafont "100% Free"; no license text on redistribution',
+    'https://www.dafont.com/akaposse.font',
+  ],
+  'BerlinSmallCaps.ttf': [
+    'Berlin Small Caps by Manfred Klein',
+    'dafont "100% Free"; no license text on redistribution',
+    'https://www.dafont.com/berlin-small-caps.font',
+  ],
+  'IntensaFuente.ttf': [
+    'Intensa Fuente by Edumorcel',
+    'dafont "100% Free"; fan font after the film "Inside Out" - TODO: clear or replace',
+    'https://www.dafont.com/intensa-fuente.font',
+  ],
+  'KOMIKND_.ttf': [
+    'Komikandy by Apostrophic Labs',
+    'dafont "100% Free"; the foundry\'s terms forbid repackaging without permission - TODO: ask or replace',
+    'https://www.dafont.com/komikandy.font',
+  ],
+  'LT_Crafted.otf': [
+    'LT Crafted by LyonsType',
+    'dafont "100% Free"; no license text on redistribution',
+    'https://www.dafont.com/lt-crafted.font',
+  ],
+  'MagnoliaScript.otf': [
+    'Magnolia Script by Jovanny Lemonad',
+    'dafont "Public domain / GPL / OFL"',
+    'https://www.dafont.com/magnolia-script.font',
+  ],
+  'Nasa21.ttf': [
+    'Nasa21 by USE-Mediengestaltung',
+    'dafont "100% Free"; author: free to use for every purpose',
+    'https://www.dafont.com/nasa21.font',
+  ],
+  'NewSuperMarioFontU.ttf': [
+    'New Super Mario Font U by Michael B.',
+    'dafont "100% Free"; recreation of the lettering of Nintendo\'s game - TODO: replace',
+    'https://www.dafont.com/new-super-mario-font-u.font',
+  ],
+  'odstemplikBold.otf': [
+    'Odstemplik by gluk',
+    'dafont "Public domain / GPL / OFL"',
+    'https://www.dafont.com/odstemplik.font',
+  ],
+  'Pixolletta8px.ttf': [
+    'Pixolletta8px by Neuland_Ink',
+    'dafont "100% Free"; no license text on redistribution',
+    'https://www.dafont.com/pixolletta8px.font',
+  ],
+  'PokemonXandY.ttf': [
+    'Pokemon X and Y by TheLouster115',
+    'dafont "100% Free"; recreation of the lettering of the Pokémon games - TODO: replace',
+    'https://www.dafont.com/pokemon-x-and-y.font',
+  ],
+  'snaphand-v1-free.ttf': [
+    'SnapHand by InkyType',
+    'dafont "100% Free"; no license text on redistribution',
+    'https://www.dafont.com/snaphand.font',
+  ],
+  'Starjedi.ttf': [
+    'Star Jedi by Boba Fonts',
+    'dafont "100% Free"; recreation of the Star Wars lettering - TODO: replace',
+    'https://www.dafont.com/star-jedi.font',
+  ],
+  'ylee_Mortal_Heart.ttf': [
+    'ylee Mortal Heart, Immortal Memory by Y Lee',
+    'dafont "100% Free"; author: free for commercial and non-commercial use',
+    'https://www.dafont.com/ylee-mhim.font',
+  ],
+}
+
 // The fonts the themes bring along (themes/<theme>/*.ttf|otf|woff2): one with its license text next to it (OFL-*.txt,
-// LICENSE*) is named with it; the others are listed as not cleared, one row per font file, with the themes using it
+// LICENSE*) is named with it, one of the list above with what its page says; the others are listed as not cleared -
+// one row per font file, with the themes using it
 function themeFonts() {
   const dir = path.join(ROOT, 'themes')
   if (!exists(dir)) return []
@@ -222,12 +299,19 @@ function themeFonts() {
   }
   return [...byFont.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([file, { themes, licensed }]) => [
-      `Font \`${file}\``,
-      `theme${themes.length > 1 ? 's' : ''} ${themes.map((t) => `\`${t}\``).join(', ')}`,
-      licensed ? 'see the license file next to it' : 'TODO: unclear - to be cleared, replaced or removed',
-      '',
-    ])
+    .map(([file, { themes, licensed }]) => {
+      const known = THEME_FONT_LICENSES[file]
+      return [
+        known ? `${known[0]} (\`${file}\`)` : `Font \`${file}\``,
+        `theme${themes.length > 1 ? 's' : ''} ${themes.map((t) => `\`${t}\``).join(', ')}`,
+        licensed
+          ? 'see the license file next to it'
+          : known
+            ? known[1]
+            : 'TODO: unclear - to be cleared, replaced or removed',
+        known ? known[2] : '',
+      ]
+    })
 }
 
 const STATIC = {
