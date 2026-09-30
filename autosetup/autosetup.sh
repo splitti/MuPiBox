@@ -676,11 +676,6 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 	###############################################################################################
 
 	echo -e "XXX\n100\nInstallation complete, please reboot the system... \nXXX"
-	OS=$(grep -E '^(VERSION_CODENAME)=' /etc/os-release)
-	OS=${OS:17}
-	CPU=$(cat /proc/cpuinfo | grep Serial | cut -d ":" -f2 | sed 's/^ //')
-	ARCH=$(uname -m)
-	curl -X POST https://mupibox.de/mupi/ct.php -H "Content-Type: application/x-www-form-urlencoded" -d key1=${CPU} -d key2="Classic Installation" -d key3="${VERSION_LONG}" -d key4="${ARCH}" -d key5="${OS}" >&3 2>&3
 	rm -Rf ${MUPI_SRC} >&3 2>&3
 	mv ${LOG} /boot/autosetup.log > /dev/null 2>&3
 	sleep 5

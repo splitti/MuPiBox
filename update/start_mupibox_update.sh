@@ -980,9 +980,6 @@ rm -f /tmp/mupibox-update-failed
 	sudo -H -u dietpi bash -c "cd /home/dietpi/.mupibox/spotifycontroller-main && if pm2 describe spotify-control >/dev/null 2>&1; then pm2 restart spotify-control; else pm2 start spotify-control.js --name spotify-control; fi" >&3 2>&3
 	sudo -H -u dietpi bash -c "pm2 save" >&3 2>&3
 
-	CPU=$(cat /proc/cpuinfo | grep Serial | cut -d ":" -f2 | sed 's/^ //') >&3 2>&3
-	curl -X POST https://mupibox.de/mupi/ct.php -H "Content-Type: application/x-www-form-urlencoded" -d key1=${CPU} -d key2=Update -d key3="${VERSION_LONG}" -d key4="${ARCH}" -d key5="${OS}" >&3 2>&3
-
 	###############################################################################################
 	echo -e "XXX\n100\nInstallation complete, please reboot the system... \nXXX"	
 	rm -R ${MUPI_SRC} >&3 2>&3
