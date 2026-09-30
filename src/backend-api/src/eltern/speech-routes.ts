@@ -23,6 +23,7 @@ import {
   sampleUrl,
   speechOf,
   speechTexts,
+  voiceCatalogKnown,
   voiceLicense,
 } from '../speech'
 import { requireCsrf, requireSession } from './middleware'
@@ -85,7 +86,8 @@ export function registerSpeechRoutes(router: Router, deps: SpeechDeps): void {
       res.status(400).json({ error: 'invalid lang' })
       return
     }
-    res.json({ voices: await listVoices(lang) })
+    // (known: the list of Piper's voices could be read - without, an empty list says nothing about the language)
+    res.json({ voices: await listVoices(lang), known: await voiceCatalogKnown() })
   })
 
   /** GET /api/app/speech/license?key= - where a voice's recordings come from and their licence (its model card). */

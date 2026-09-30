@@ -8,7 +8,7 @@
 <li id='linews' class='linews'><b>New episodes and progress on the display:</b> a dot marks new episodes, a bar shows how far an episode was heard and a tick marks finished ones (both switchable).</li>
 <li id='linews' class='linews'><b>Gentle end:</b> sleep timer, end of the playtime and start of a quiet time fade the sound out over 20 seconds instead of stopping hard.</li>
 <li id='linews' class='linews'><b>Box health at a glance</b> and a <b>weekly summary</b> in Telegram on Sunday evening.</li>
-<li id='linews' class='linews'><b>Natural voices on the box:</b> Piper speaks offline with voices for all 17 languages – names on the display, announcements of the remaining playtime, bedtime and the end of the sleep timer, and announcements from the parents ("Dinner is ready!") from the web app or Telegram.</li>
+<li id='linews' class='linews'><b>Natural voices on the box:</b> Piper speaks offline with voices for all 17 languages plus Arabic, Chinese and Hindi (Japanese through Google) – names on the display, announcements of the remaining playtime, bedtime and the end of the sleep timer, and announcements from the parents ("Dinner is ready!") from the web app or Telegram.</li>
 <li id='linews' class='linews'><b>Evening dimming:</b> the display gets darker in the evening (and during quiet hours, if you like) and bright again in the morning.</li>
 <li id='linews' class='linews'><b>Own volume limit for Bluetooth headphones</b>, and a <b>tidier web app</b>: settings pages in two columns without gaps, with more in them (charge curve, signed-in devices, test message …).</li>
 </ul>
@@ -41,7 +41,8 @@
 </ul>
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>New page Settings &gt; Audio &gt; Speech output: Piper on the box (offline, recommended), Google (online) or silent. Without a Piper voice for the box's language Google or silence takes over, as chosen. The choice also applies to reading names aloud on the display.</li>
-<li id='linews' class='linews'>Voices for all 17 languages (Piper voices from Hugging Face): listen to a sample on the phone, download, use, delete, and try any downloaded voice on the box itself. Quality, size and licence are shown; Piper itself is downloaded with the first voice.</li>
+<li id='linews' class='linews'>Voices for all 17 languages plus Arabic, Chinese and Hindi (Piper voices from Hugging Face; Japanese and Piper voices the box cannot play are left out, Google speaks those languages): listen to a sample on the phone, download, use, delete, and try any downloaded voice on the box itself. Quality, size and licence are shown; Piper itself is downloaded with the first voice.</li>
+<li id='linews' class='linews'>The separate page Appearance &gt; Read aloud is gone: the switch for reading names aloud is now under Appearance &gt; View below the cover flow it belongs to, the language under Audio &gt; Speech output ("The box speaks").</li>
 <li id='linews' class='linews'>The names of the library are prepared in the background (after choosing a voice and whenever the library changes), so the display reads them without delay.</li>
 <li id='linews' class='linews'>Automatic announcements: the remaining playtime 2–15 minutes before its end, the start of a quiet time and the end of the sleep timer – with your own texts and a volume of their own (never above the box's volume).</li>
 <li id='linews' class='linews'>Parents' announcements: templates and your own text, from the start page ("Announcement") or Telegram (/say text), with a gong, and playback paused and continued afterwards (or only quieter).</li>
