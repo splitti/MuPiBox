@@ -49,6 +49,7 @@ import { acquireLock, releaseLock, staleReason } from './file-lock'
 import { coverHidden } from './hidden-covers'
 import { OnlineCovers } from './online-covers'
 import { ardFeed, isArdFeed } from './ard-sounds'
+import { isEpisodePick } from './episode-pick'
 import { episodeKey, MAX_KEEP, type OfflineEpisode, PodcastOffline } from './podcast-offline'
 import { setFeedHeadReader } from './podcast-search'
 import { EpisodeState, episodeStateSettings } from './episode-state'
@@ -1044,10 +1045,14 @@ const podcastOffline = new PodcastOffline({
   episodes: feedEpisodes,
   feeds: async () => {
     try {
-      const data = JSON.parse(await readFile(dataFile, 'utf8')) as { type?: string; id?: unknown; offline?: unknown }[]
+      const data = JSON.parse(await readFile(dataFile, 'utf8')) as { type?: string; id?: unknown; offline?: unknown; episodePick?: unknown }[]
       return data
         .filter((e) => e.type === 'rss' && typeof e.id === 'string')
-        .map((e) => ({ feed: e.id as string, keep: Math.max(0, Math.min(MAX_KEEP, Number(e.offline) || 0)) }))
+        .map((e) => ({
+          feed: e.id as string,
+          keep: Math.max(0, Math.min(MAX_KEEP, Number(e.offline) || 0)),
+          ...(isEpisodePick(e.episodePick) ? { pick: e.episodePick } : {}),
+        }))
     } catch {
       // (not readable right now - being written, or broken: the sync leaves the files alone)
       return null

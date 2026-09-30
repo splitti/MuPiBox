@@ -2232,10 +2232,81 @@ function entryPlayFields(item) {
   const part = item.aPartOfAll === true
   return `<div class="field"><label for="e-sort">Sortierung</label><select class="input" id="e-sort">${opts}</select></div>
     ${item.type === 'spotify' ? `<div class="row"><span class="lbl"><b>Zufällig abspielen</b></span><label class="switch"><input type="checkbox" id="e-shuffle" ${item.shuffle ? 'checked' : ''} aria-label="Zufällig abspielen"><span></span></label></div>` : ''}
-    <div class="field"><label>Nur einen Teil (Nr. von – bis, leer = alle)</label><div class="rule-times"><input class="input" id="e-from" type="number" min="1" inputmode="numeric" value="${part ? esc(item.aPartOfAllMin ?? 1) : ''}" placeholder="von" aria-label="von"><input class="input" id="e-to" type="number" min="1" inputmode="numeric" value="${part ? esc(item.aPartOfAllMax ?? '') : ''}" placeholder="bis" aria-label="bis"></div></div>`
+    ${
+      item.type === 'rss'
+        ? episodePickFields('e', item)
+        : `<div class="field"><label>Nur einen Teil (Nr. von – bis, leer = alle)</label><div class="rule-times"><input class="input" id="e-from" type="number" min="1" inputmode="numeric" value="${part ? esc(item.aPartOfAllMin ?? 1) : ''}" placeholder="von" aria-label="von"><input class="input" id="e-to" type="number" min="1" inputmode="numeric" value="${part ? esc(item.aPartOfAllMax ?? '') : ''}" placeholder="bis" aria-label="bis"></div></div>`
+    }`
 }
 
-// How many of a podcast's newest episodes stay on the SD card (entry field "offline"; see podcast-offline.ts)
+// Which episodes of a podcast come on the box (entry field "episodePick", see ../episode-pick.ts): counted by date,
+// episode 1 is the oldest the feed has. The display, the lists here and the SD card follow it.
+const EPISODE_PICKS = [
+  ['', 'Alle Folgen'],
+  ['newest:10', 'Die 10 neuesten'],
+  ['newest:20', 'Die 20 neuesten'],
+  ['newest:50', 'Die 50 neuesten'],
+  ['oldest:10', 'Die ersten 10'],
+  ['oldest:20', 'Die ersten 20'],
+  ['oldest:50', 'Die ersten 50'],
+  ['range', 'Eigener Bereich …'],
+]
+
+// The chosen ones of a list that is newest first, in its order (as pickEpisodes of ../episode-pick.ts)
+function pickEpisodes(newestFirst, pick) {
+  const n = newestFirst.length
+  let m = /^(newest|oldest):(\d+)$/.exec(pick ?? '')
+  if (m) return m[1] === 'newest' ? newestFirst.slice(0, Number(m[2])) : newestFirst.slice(Math.max(0, n - Number(m[2])))
+  m = /^range:(\d+)-(\d+)$/.exec(pick ?? '')
+  if (!m) return newestFirst
+  const from = Math.min(Number(m[1]), Number(m[2]))
+  const to = Math.max(Number(m[1]), Number(m[2]))
+  return newestFirst.slice(Math.max(0, n - to), Math.max(0, n - from + 1))
+}
+
+// The choice's fields (p: the prefix of their ids). An entry with a part as before ("Nur einen Teil", counted in the
+// feed's order) keeps it until another choice is made.
+function episodePickFields(p, item) {
+  const pick = typeof item.episodePick === 'string' ? item.episodePick : ''
+  const range = /^range:(\d+)-(\d+)$/.exec(pick)
+  const other = /^(newest|oldest):(\d+)$/.exec(pick)
+  const legacy = !pick && item.aPartOfAll === true
+  const opts = [
+    ...(legacy ? [['legacy', `Wie bisher (Nr. ${item.aPartOfAllMin ?? 1} – ${item.aPartOfAllMax ?? '…'} im Feed)`]] : []),
+    ...EPISODE_PICKS,
+    ...(other && !EPISODE_PICKS.some(([v]) => v === pick) ? [[pick, other[1] === 'newest' ? `Die ${other[2]} neuesten` : `Die ersten ${other[2]}`]] : []),
+  ]
+  const chosen = legacy ? 'legacy' : range ? 'range' : pick
+  return `<div class="field"><label for="${p}-pick">Welche Folgen auf die Box</label><select class="input" id="${p}-pick">${opts
+    .map(([v, l]) => `<option value="${v}"${v === chosen ? ' selected' : ''}>${esc(l)}</option>`)
+    .join('')}</select></div>
+    <div class="field" id="${p}-range"${range ? '' : ' hidden'}><label>Folge von – bis</label><div class="rule-times"><input class="input" id="${p}-from" type="number" min="1" inputmode="numeric" value="${range ? range[1] : ''}" placeholder="von" aria-label="von"><input class="input" id="${p}-to" type="number" min="1" inputmode="numeric" value="${range ? range[2] : ''}" placeholder="bis" aria-label="bis"></div>
+      <small>Gezählt nach Datum: Folge 1 ist die älteste.</small></div>`
+}
+
+// The choice as its fields say it: '' (all), 'legacy', 'newest:N' …, or null (a range that does not fit)
+function episodePickOf(sheet, p) {
+  const v = sheet.querySelector(`#${p}-pick`).value
+  if (v !== 'range') return v
+  const from = Number(sheet.querySelector(`#${p}-from`).value) || 0
+  const to = Number(sheet.querySelector(`#${p}-to`).value) || 0
+  return from >= 1 && to >= from && to <= 99999 ? `range:${from}-${to}` : null
+}
+
+// A change of the choice: the range's fields shown or not, then `changed`
+function wireEpisodePick(sheet, p, changed) {
+  const select = sheet.querySelector(`#${p}-pick`)
+  select.addEventListener('change', () => {
+    sheet.querySelector(`#${p}-range`).hidden = select.value !== 'range'
+    changed()
+  })
+  for (const k of ['from', 'to']) sheet.querySelector(`#${p}-${k}`).addEventListener('input', changed)
+}
+
+const BAD_RANGE = 'Bitte beide Nummern eintragen (ab 1, die zweite nicht kleiner als die erste)'
+
+// How many of a podcast's newest episodes stay on the SD card (entry field "offline"; see podcast-offline.ts); with a
+// choice of episodes the newest of the chosen ones - or all of them (at most 50, as the box keeps)
 const OFFLINE_KEEP = [
   [0, 'Aus'],
   [1, 'Die neueste Folge'],
@@ -2244,13 +2315,22 @@ const OFFLINE_KEEP = [
   [10, 'Die 10 neuesten Folgen'],
   [20, 'Die 20 neuesten Folgen'],
 ]
+const OFFLINE_ALL_PICKED = 50
+
+function offlineOptions(keep, picked) {
+  const opts = [...OFFLINE_KEEP, ...(picked ? [[OFFLINE_ALL_PICKED, 'Die gewählten Folgen (höchstens 50)']] : [])]
+  if (!opts.some(([n]) => n === keep)) opts.push([keep, `Die ${keep} neuesten Folgen`])
+  return opts.map(([n, l]) => `<option value="${n}"${n === keep ? ' selected' : ''}>${esc(l)}</option>`).join('')
+}
+
+// The SD card's choice again after the choice of episodes changed (what was chosen there stays)
+function refreshOfflineOptions(select, picked) {
+  if (select) select.innerHTML = offlineOptions(Number(select.value) || 0, picked)
+}
 
 function offlineField(item) {
   const keep = Number(item.offline) || 0
-  const opts = [...OFFLINE_KEEP, ...(OFFLINE_KEEP.some(([n]) => n === keep) ? [] : [[keep, `Die ${keep} neuesten Folgen`]])]
-  return `<div class="field"><label for="e-offline">Auf der Box speichern (ohne Internet hören)</label><select class="input" id="e-offline">${opts
-    .map(([n, l]) => `<option value="${n}"${n === keep ? ' selected' : ''}>${esc(l)}</option>`)
-    .join('')}</select></div>
+  return `<div class="field"><label for="e-offline">Auf der Box speichern (ohne Internet hören)</label><select class="input" id="e-offline">${offlineOptions(keep, !!item.episodePick)}</select></div>
     <p class="help" id="e-offline-status" style="margin:0">${esc('Neue Folgen kommen von selbst, ältere gehen wieder. Einzelne Folgen merkst du dir unter Hören.')}</p>${
       String(item.id ?? '').startsWith('ard:')
         ? `<p class="help" style="margin:0">${esc('Nur Folgen, die die ARD zum Herunterladen freigibt. Nimmt die ARD eine Folge aus ihrem Angebot, wird sie auch auf der Box gelöscht.')}</p>`
@@ -2343,6 +2423,11 @@ function openEntrySheet(item, back = null) {
       sheet.querySelector('[data-back]')?.addEventListener('click', back?.open)
       if (wholeArtist) loadArtistAlbums(item, sheet.querySelector('#e-albums'))
       if (item.type === 'rss') loadOfflineStatus(item.id, sheet.querySelector('#e-offline-status'))
+      if (playOptions && item.type === 'rss') {
+        wireEpisodePick(sheet, 'e', () =>
+          refreshOfflineOptions(sheet.querySelector('#e-offline'), !['', 'legacy'].includes(sheet.querySelector('#e-pick').value)),
+        )
+      }
       // A chosen picture lands among the own pictures and is saved into the entry right away (the picker takes the
       // sheet's place, what was typed here and not saved yet stays as it was on the box)
       for (const b of sheet.querySelectorAll('[data-pick]')) {
@@ -2386,9 +2471,19 @@ function openEntrySheet(item, back = null) {
           else delete updated.sorting
           const shuffle = sheet.querySelector('#e-shuffle')
           if (shuffle) updated.shuffle = shuffle.checked
-          const from = Number(sheet.querySelector('#e-from').value) || 0
-          const to = Number(sheet.querySelector('#e-to').value) || 0
-          if (from || to) {
+          const pick = item.type === 'rss' ? episodePickOf(sheet, 'e') : undefined
+          const from = Number(sheet.querySelector('#e-from')?.value) || 0
+          const to = Number(sheet.querySelector('#e-to')?.value) || 0
+          if (pick === null) return toast(BAD_RANGE, 'info')
+          if (pick === 'legacy') {
+            // (the part as before stays)
+          } else if (pick !== undefined) {
+            if (pick) updated.episodePick = pick
+            else delete updated.episodePick
+            updated.aPartOfAll = false
+            delete updated.aPartOfAllMin
+            delete updated.aPartOfAllMax
+          } else if (from || to) {
             if ((to && to < (from || 1)) || from < 0) return toast('Der Bereich passt nicht (von 1 an, „bis“ nicht vor „von“)', 'info')
             Object.assign(updated, { aPartOfAll: true, aPartOfAllMin: from || 1 })
             if (to) updated.aPartOfAllMax = to
@@ -3136,21 +3231,87 @@ async function openPodShow(s) {
   const have = Array.isArray(data.body) && data.body.some((it) => it?.type === 'rss' && same(it.id))
   openSheet(
     `<div class="ard-head">${s.image ? `<img src="${esc(s.image)}" alt="">` : ''}<span class="lbl"><h2 translate="no" style="margin:0">${esc(s.title)}</h2><small translate="no">${esc([s.author, s.genre].filter(Boolean).join(' · '))}</small></span></div>
-     <div class="section-label" style="margin:0">${esc('Neueste Folgen')}</div><div id="pod-eps"><p class="help">Lade die Folgen …</p></div>
      ${
        have
-         ? `<p class="help" style="margin:0">${esc('Schon in der Bibliothek.')}</p><div class="btns"><button class="btn" data-close>Schließen</button></div>`
+         ? `<div class="section-label" style="margin:0">${esc('Neueste Folgen')}</div><div id="pod-eps"><p class="help">Lade die Folgen …</p></div>
+            <p class="help" style="margin:0">${esc('Schon in der Bibliothek.')}</p><div class="btns"><button class="btn" data-close>Schließen</button></div>`
          : `<div class="field"><label for="pod-cat">Hinzufügen als</label>${catSelect('pod-cat', 'audiobook', false)}</div>
-            <div class="field"><label for="pod-off">Auf der Box speichern (ohne Internet hören)</label><select class="input" id="pod-off">${OFFLINE_KEEP.map(([n, l]) => `<option value="${n}">${esc(l)}</option>`).join('')}</select></div>
+            ${episodePickFields('pod', {})}
+            <div class="field"><label for="pod-sort">Reihenfolge auf der Box</label><select class="input" id="pod-sort"><option value="${SORT_VALUES[4]}">Neueste zuerst</option><option value="${SORT_VALUES[3]}">Älteste zuerst</option></select></div>
+            <div class="section-label" style="margin:0">${esc('Folgen auf der Box')}</div><div id="pod-eps"><p class="help">Lade die Folgen …</p></div>
+            <div class="field"><label for="pod-off">Auf der Box speichern (ohne Internet hören)</label><select class="input" id="pod-off">${offlineOptions(0, false)}</select></div>
             <div class="btns"><button class="btn" data-close>Abbrechen</button><button class="btn primary" data-add>${icon('plus', 18)}Hinzufügen</button></div>`
      }`,
     async (sheet, close) => {
       for (const b of sheet.querySelectorAll('[data-close]')) b.onclick = close
+      // the feed's episodes, newest first (by date; without one in the feed's order), numbered by date: 1 = the oldest
+      let episodes = null
+      const preview = () => {
+        const box = sheet.querySelector('#pod-eps')
+        if (!box?.isConnected || !episodes) return
+        if (!episodes.length) {
+          box.innerHTML = `<p class="help">${esc('Die Folgen ließen sich nicht laden.')}</p>`
+          return
+        }
+        const row = (e, out) =>
+          `<div class="entry${out ? ' out' : ''}"><span class="lbl"><b translate="no">${esc(e.title)}</b><small>${esc([`Folge ${e.no}`, e.when ? new Date(e.when).toLocaleDateString(LOCALE) : '', durationText(e.duration)].filter(Boolean).join(' · '))}</small></span></div>`
+        if (have) {
+          box.innerHTML = `<div class="rows">${episodes.slice(0, 5).map((e) => row(e, false)).join('')}</div>`
+          return
+        }
+        const pick = episodePickOf(sheet, 'pod')
+        if (pick === null) {
+          box.innerHTML = `<p class="help">${esc(BAD_RANGE)}</p>`
+          return
+        }
+        // in the box's order: the chosen ones (the first few), then the next ones that are not on the box, greyed
+        const asc = sheet.querySelector('#pod-sort').value === SORT_VALUES[3]
+        const chosen = new Set(pickEpisodes(episodes, pick))
+        const ordered = asc ? [...episodes].reverse() : episodes
+        const inBox = ordered.filter((e) => chosen.has(e))
+        const lastAt = ordered.indexOf(inBox[inBox.length - 1])
+        const outside = [...ordered.slice(lastAt + 1), ...ordered.slice(0, lastAt + 1)].filter((e) => !chosen.has(e))
+        const n = episodes.length
+        box.innerHTML = `<p class="help" style="margin:0"><b>${esc(inBox.length === n ? `Alle ${n} Folgen kommen auf die Box` : `${inBox.length} von ${n} Folgen kommen auf die Box`)}</b></p>
+          <div class="rows">${inBox
+            .slice(0, 4)
+            .map((e) => row(e, false))
+            .join('')}${inBox.length > 4 ? `<p class="help" style="margin:4px 0">${esc(`… und ${inBox.length - 4} weitere`)}</p>` : ''}${outside
+            .slice(0, 2)
+            .map((e) => row(e, true))
+            .join('')}</div>${outside.length ? `<p class="help" style="margin:0">${esc(`Grau: nicht auf der Box (${outside.length} Folgen)`)}</p>` : ''}`
+      }
+      if (!have) {
+        // "the first N" and a range read from the oldest on, the newest N from the newest - until the order is chosen
+        let sortTouched = false
+        sheet.querySelector('#pod-sort').addEventListener('change', () => {
+          sortTouched = true
+          preview()
+        })
+        wireEpisodePick(sheet, 'pod', () => {
+          const v = sheet.querySelector('#pod-pick').value
+          if (!sortTouched) sheet.querySelector('#pod-sort').value = /^(oldest|range)/.test(v) ? SORT_VALUES[3] : SORT_VALUES[4]
+          refreshOfflineOptions(sheet.querySelector('#pod-off'), v !== '')
+          preview()
+        })
+      }
       sheet.querySelector('[data-add]')?.addEventListener('click', async (e) => {
         const btn = e.currentTarget
+        const pick = episodePickOf(sheet, 'pod')
+        if (pick === null) return toast(BAD_RANGE, 'info')
         btn.disabled = true
         const keep = Number(sheet.querySelector('#pod-off').value) || 0
-        const body = { type: 'rss', id: s.feedUrl, artist: s.title, category: sheet.querySelector('#pod-cat').value, source: 'manual', ...(keep ? { offline: keep } : {}) }
+        const asc = sheet.querySelector('#pod-sort').value === SORT_VALUES[3]
+        const body = {
+          type: 'rss',
+          id: s.feedUrl,
+          artist: s.title,
+          category: sheet.querySelector('#pod-cat').value,
+          source: 'manual',
+          ...(pick ? { episodePick: pick } : {}),
+          ...(asc ? { sorting: SORT_VALUES[3] } : {}),
+          ...(keep ? { offline: keep } : {}),
+        }
         const r = await api('/api/add', { method: 'POST', body })
         btn.disabled = false
         if (!libWriteOk(r)) return
@@ -3166,15 +3327,15 @@ async function openPodShow(s) {
       if (!box?.isConnected) return
       const raw = r.body?.rss?.channel?.item
       const text = (v) => (typeof v === 'string' ? v : (v?._cdata ?? v?._text ?? ''))
-      const eps = (Array.isArray(raw) ? raw : raw ? [raw] : []).filter((it) => it?.enclosure?._attributes?.url).slice(0, 5)
-      box.innerHTML = eps.length
-        ? `<div class="rows">${eps
-            .map((it) => {
-              const when = Date.parse(text(it.pubDate))
-              return `<div class="entry"><span class="lbl"><b translate="no">${esc(text(it.title) || 'Folge')}</b><small>${esc([Number.isFinite(when) ? new Date(when).toLocaleDateString(LOCALE) : '', durationText(text(it['itunes:duration']))].filter(Boolean).join(' · '))}</small></span></div>`
-            })
-            .join('')}</div>`
-        : `<p class="help">${esc('Die Folgen ließen sich nicht laden.')}</p>`
+      const list = (Array.isArray(raw) ? raw : raw ? [raw] : [])
+        .filter((it) => it?.enclosure?._attributes?.url)
+        .map((it, i) => {
+          const when = Date.parse(text(it.pubDate))
+          return { title: text(it.title) || 'Folge', when: Number.isFinite(when) ? when : null, duration: text(it['itunes:duration']), i }
+        })
+        .sort((a, b) => (a.when !== null && b.when !== null && a.when !== b.when ? b.when - a.when : a.i - b.i))
+      episodes = list.map((e, i) => ({ ...e, no: list.length - i }))
+      preview()
     },
   )
 }

@@ -4,13 +4,15 @@ import { mkdir, readFile, readdir, rename, rm, stat, statfs, writeFile } from 'n
 import path from 'node:path'
 import { Readable, Transform } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
+import { pickEpisodes } from './episode-pick'
 
 /**
  * Podcast episodes kept on the SD card, to be heard without internet (in the car, on holiday) - for any podcast,
  * the ARD Sounds shows among them.
  *
- * Per podcast (its library entry, field "offline"): the newest N episodes are kept, the next ones come as they
- * appear and the ones that drop out of the newest N go again. Single episodes can be kept as well ("pinned"); those
+ * Per podcast (its library entry, field "offline"): the newest N episodes are kept (of the ones chosen for the box,
+ * field "episodePick", see episode-pick.ts), the next ones come as they appear and the ones that drop out of the
+ * newest N go again. Single episodes can be kept as well ("pinned"); those
  * stay until they are deleted. All of a podcast's files go when the podcast leaves the library.
  *
  * A file is named after the SHA-1 of the episode's key (<sha1>.<ext>, see episodeKey): the player looks for it by the
@@ -79,10 +81,11 @@ export interface OfflineDeps {
   /** A podcast's episodes, newest first (from the feed cache), or null when it cannot be read now */
   episodes: (feed: string) => Promise<OfflineEpisode[] | null>
   /**
-   * Every podcast of the library and how many of its newest episodes to keep, or null when the library cannot be
-   * read now (then nothing is removed: an empty list would mean "no podcast any more" and delete every file)
+   * Every podcast of the library, how many of its newest episodes to keep and its choice of episodes, or null when
+   * the library cannot be read now (then nothing is removed: an empty list would mean "no podcast any more" and
+   * delete every file)
    */
-  feeds: () => Promise<{ feed: string; keep: number }[] | null>
+  feeds: () => Promise<{ feed: string; keep: number; pick?: string }[] | null>
   /** Something was added or removed (the display reads its lists again) */
   changed: () => void
 }
@@ -341,14 +344,15 @@ export class PodcastOffline {
   }
 
   /**
-   * One podcast as its setting says: its newest `keep` episodes that may be kept there (the missing ones queued), the
-   * others that came that way deleted. Pinned ones stay - unless their source no longer releases them.
+   * One podcast as its setting says: its newest `keep` episodes (of the chosen ones, `pick`) that may be kept there
+   * (the missing ones queued), the others that came that way deleted. Pinned ones stay - unless their source no
+   * longer releases them.
    */
-  async syncFeed(feed: string, keep: number): Promise<void> {
+  async syncFeed(feed: string, keep: number, pick?: string): Promise<void> {
     await this.load()
     const episodes = await this.deps.episodes(feed)
     if (!episodes) return // (feed not readable now: nothing is deleted on that basis)
-    const wanted = episodes.filter((e) => mayKeep(e)).slice(0, Math.max(0, Math.min(keep, MAX_KEEP)))
+    const wanted = pickEpisodes(episodes, pick).filter((e) => mayKeep(e)).slice(0, Math.max(0, Math.min(keep, MAX_KEEP)))
     const wantedKeys = new Set(wanted.map((e) => episodeKey(e.url)))
     for (const e of wanted) await this.add(e, feed, false)
     this.queue = this.queue.filter((j) => j.feed !== feed || j.pinned || wantedKeys.has(episodeKey(j.url)))
@@ -380,9 +384,9 @@ export class PodcastOffline {
       if (!feeds) return
       const inLibrary = new Set(feeds.map((f) => f.feed))
       for (const f of Object.values(this.files)) if (!inLibrary.has(f.feed)) await this.remove(f.url)
-      for (const { feed, keep } of feeds) {
+      for (const { feed, keep, pick } of feeds) {
         const has = Object.values(this.files).some((f) => f.feed === feed)
-        if (keep > 0 || has) await this.syncFeed(feed, keep).catch(() => undefined)
+        if (keep > 0 || has) await this.syncFeed(feed, keep, pick).catch(() => undefined)
       }
       await this.cleanStrays()
     } finally {

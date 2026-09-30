@@ -61,6 +61,7 @@ import { registerHealthRoutes } from './health'
 import { playlogSummary } from './playlog'
 import { weeklySummaryOn } from './weekly-summary'
 import { isArdFeed } from '../ard-sounds'
+import { pickEpisodes } from '../episode-pick'
 import { episodeKey, mayKeep, type PodcastOffline } from '../podcast-offline'
 import { pbkdf2Sync, randomBytes } from 'node:crypto'
 import { localOnly } from '../request-guard'
@@ -1737,11 +1738,13 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       res.status(404).json({ error: 'item_not_found' })
       return
     }
-    const episodes = await rssEpisodes(item.id)
-    if (!episodes) {
+    const all = await rssEpisodes(item.id)
+    if (!all) {
       res.status(502).json({ error: 'feed_unavailable' })
       return
     }
+    // (only the chosen ones - the box shows no others; total: how many the feed has)
+    const episodes = pickEpisodes(all, item.episodePick)
     // (saved: on the SD card - it plays without internet too; pos/len/done: where it was left, from the player's
     // episode-positions.json next to the library)
     const saved = deps.podcastOffline ? await deps.podcastOffline.list(item.id) : {}
@@ -1758,6 +1761,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
         const p = positions[key] ?? positions[e.url]
         return { ...e, saved: !!saved[key], ...(p ? { pos: p.pos ?? 0, len: p.len ?? 0, done: !!p.done } : {}) }
       }),
+      total: all.length,
     })
   })
 
@@ -1844,7 +1848,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
         // As a tap on the box's episode list: the newest episode (by its date) - read from the feed as the display
         // reads it (/api/rssfeed/cached, the box's own address).
         const feed = String(item.id ?? '')
-        const episodes = await rssEpisodes(feed)
+        const all = await rssEpisodes(feed)
+        const episodes = all ? pickEpisodes(all, item.episodePick) : null
         // (a chosen one only when it is one of this feed's episodes)
         const episode = typeof body.episode === 'string' && body.episode ? episodes?.find((e) => e.url === body.episode) : episodes?.[0]
         if (!episode) {

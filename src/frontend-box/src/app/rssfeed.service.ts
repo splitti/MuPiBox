@@ -3,6 +3,7 @@ import { Injectable } from '@angular/core'
 import { type Observable, of } from 'rxjs'
 import { catchError, map, mergeAll, toArray } from 'rxjs/operators'
 import { environment } from 'src/environments/environment'
+import { newestFirst, pickEpisodes } from './episode-pick'
 import type { CategoryType, Media } from './media'
 import type { RssFeed } from './rssfeed'
 import { ExtraDataMedia, Utils } from './utils'
@@ -47,6 +48,13 @@ export class RssFeedService {
       }),
       mergeAll(),
       toArray(),
+      // (with a choice of episodes only a chosen one is "new" - the tile's dot is not for one the box does not show)
+      map((episodes) => {
+        if (!extraDataSource?.episodePick) return episodes
+        const chosen = new Set(pickEpisodes(newestFirst(episodes), extraDataSource.episodePick))
+        for (const e of episodes) if (!chosen.has(e)) e.episodeNew = false
+        return episodes
+      }),
       // LOW-7: previously a feed-fetch error rejected the observable, so
       // upstream callers got an error and the medialist crashed. Return
       // an empty array on error so the page just shows "no episodes" and

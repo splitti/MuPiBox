@@ -31,6 +31,8 @@ export interface Media {
   aPartOfAll?: boolean
   aPartOfAllMin?: number
   aPartOfAllMax?: number
+  /** a podcast's choice of episodes: 'newest:N', 'oldest:N' or 'range:A-B' (see episode-pick.ts) */
+  episodePick?: string
   sorting?: MediaSorting
   duration?: string
   spotify_url?: string
