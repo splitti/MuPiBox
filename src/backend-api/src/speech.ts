@@ -422,6 +422,7 @@ class PiperWorker {
   constructor(readonly key: string) {}
 
   say(text: string, file: string, background: boolean): Promise<boolean> {
+    this.lastUsed = Date.now()
     return new Promise((done) => {
       const job = { text: text.replace(/\s+/g, ' '), file, done }
       if (background) this.jobs.push(job)
@@ -433,7 +434,16 @@ class PiperWorker {
   stop(): void {
     this.child?.kill()
     this.child = null
+    // (what was still waiting is not said: whoever waits for it hears so)
+    for (const job of this.jobs.splice(0)) job.done(false)
   }
+
+  /** Whether it has a text to say now or waiting. */
+  get busy(): boolean {
+    return !!this.current || this.jobs.length > 0
+  }
+
+  lastUsed = Date.now()
 
   private start(): void {
     const child = spawn('nice', ['-n', '5', PIPER_BIN, '--model', voiceFile(this.key), '--json-input', '--output_dir', CACHE_DIR], { stdio: 'pipe' })
@@ -485,10 +495,13 @@ const workers = new Map<string, PiperWorker>()
 function piperWorker(key: string): PiperWorker {
   let w = workers.get(key)
   if (!w) {
-    // (one voice loaded at a time: the others end)
-    for (const [k, other] of workers) {
-      other.stop()
-      workers.delete(k)
+    // Two voices loaded at most (the box's and one being tried, e.g.): the one used longest ago ends - never one that
+    // still has a text to say (a test broke off the names made in advance, and the other way round)
+    const idle = [...workers.values()].filter((x) => !x.busy).sort((a, b) => a.lastUsed - b.lastUsed)
+    while (workers.size >= 2 && idle.length) {
+      const old = idle.shift() as PiperWorker
+      old.stop()
+      workers.delete(old.key)
     }
     w = new PiperWorker(key)
     workers.set(key, w)
