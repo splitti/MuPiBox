@@ -913,11 +913,14 @@ function finalizePlaytimeBlock(reason) {
   console.log(`${new Date().toLocaleString()}: [Playtime] Finalizing block (${reason})`)
   playtimeState.state = 'blocked'
   playtimeState.graceEndsAt = null
-  try {
-    stop()
-  } catch (e) {
-    console.error(`${new Date().toLocaleString()}: [Playtime] Error stopping playback:`, e)
-  }
+  // (faded out, not cut: see fadeOutThen)
+  fadeOutThen(() => {
+    try {
+      stop()
+    } catch (e) {
+      console.error(`${new Date().toLocaleString()}: [Playtime] Error stopping playback:`, e)
+    }
+  })
   writePlaytimeCheckpoint()
   // Notify parents that today's listening time is up. telegram_send_message.py
   // loops over all configured chatIds, so both Family group and individual DMs
@@ -944,11 +947,13 @@ function finalizeQuietHoursBlock(reason) {
       (e) => e && console.error(`${new Date().toLocaleString()}: [QuietHours] Telegram message failed: ${e.message}`),
     )
   }
-  try {
-    stop()
-  } catch (e) {
-    console.error(`${new Date().toLocaleString()}: [QuietHours] Error stopping playback:`, e)
-  }
+  fadeOutThen(() => {
+    try {
+      stop()
+    } catch (e) {
+      console.error(`${new Date().toLocaleString()}: [QuietHours] Error stopping playback:`, e)
+    }
+  })
 }
 
 // Spotify: the player does not get track events from it, so while a limit is in its grace period the playback
@@ -2233,7 +2238,8 @@ function noteEpisodePosition(seconds) {
   continueEpisodeSeek(seconds)
   // (not while it is still on its way: the beginning would overwrite the position)
   if (pendingEpisodeSeek) return
-  if (!playingEpisode || currentMeta.currentType !== 'rss' || !episodeResumeOn() || !(seconds > 0)) return
+  // (noted also with going on switched off: an episode once started is no longer "new", see backend-api episode-state.ts)
+  if (!playingEpisode || currentMeta.currentType !== 'rss' || !(seconds > 0)) return
   const len = episodeLength()
   const done = len > 60 && seconds >= len - 30
   const all = loadEpisodePositions()
@@ -2500,6 +2506,44 @@ async function setVolume(volume, step = 5) {
   })
 
   return _volumeOpQueue
+}
+
+// Ends playback gently: the box's volume (amixer Master - every source, Spotify too) goes down over FADE_OUT_MS,
+// then `done` runs (the stop) and the volume is set back - silently, for the next playback. The end of the playing
+// time and of a quiet time came as a hard cut before.
+const FADE_OUT_MS = 20_000
+const FADE_OUT_STEPS = 40
+let fadingOut = false
+function fadeOutThen(done) {
+  if (fadingOut) return
+  fadingOut = true
+  _volumeOpQueue = _volumeOpQueue.then(async () => {
+    let start = Number.NaN
+    try {
+      const { stdout } = await _execAsync("/usr/bin/amixer sget Master | grep 'Right:'")
+      start = Number.parseInt(stdout.split('[')[1].split('%')[0], 10)
+    } catch {
+      // not readable: stopped at once
+    }
+    const nothingToFade = !Number.isFinite(start) || start <= 0 || !isActuallyPlaying()
+    if (!nothingToFade) {
+      log.debug(`${now()}: [Spotify Control] Fading out from ${start}% over ${FADE_OUT_MS / 1000}s`)
+      for (let i = 1; i <= FADE_OUT_STEPS; i++) {
+        await new Promise((r) => setTimeout(r, FADE_OUT_MS / FADE_OUT_STEPS))
+        await _execAsync(`/usr/bin/amixer sset Master ${Math.round(start * (1 - i / FADE_OUT_STEPS))}%`).catch(() => undefined)
+      }
+    }
+    try {
+      done()
+    } finally {
+      if (!nothingToFade) {
+        // (a moment after the stop, so nothing plays at the old volume any more)
+        await new Promise((r) => setTimeout(r, 1500))
+        await _execAsync(`/usr/bin/amixer sset Master ${start}%`).catch(() => undefined)
+      }
+      fadingOut = false
+    }
+  })
 }
 
 async function transferPlayback(id) {

@@ -83,7 +83,7 @@
    "id": "g-system",
    "title": "System",
    "icon": "gear",
-   "description": "Über, Updates, Backup, Neustart, Protokolle, Experten, Sprache"
+   "description": "Über, Zustand, Updates, Backup, Neustart, Protokolle, Experten, Sprache"
   }
  ],
  "pages": [
@@ -391,7 +391,7 @@
      ]
     },
     {
-     "title": "Top-Künstler (7 Tage)",
+     "title": "Meistgehört (7 Tage)",
      "help": "",
      "items": [
       {
@@ -2276,8 +2276,8 @@
      ]
     },
     {
-     "title": "Podcasts weiterhören",
-     "help": "Jede angespielte Folge merkt sich die Stelle, an der aufgehört wurde – auch ohne Fortsetzen-Kachel, auch in der App. Zu Ende gehörte Folgen beginnen wieder von vorn.",
+     "title": "Podcasts",
+     "help": "Wo eine Folge aufgehört wurde, was neu ist und wie weit gehört – auf dem Display und in der App.",
      "items": [
       {
        "type": "toggle",
@@ -2297,6 +2297,31 @@
         "1 Jahr",
         "Unbegrenzt"
        ]
+      },
+      {
+       "type": "toggle",
+       "label": "Neue Folgen markieren",
+       "key": "epNew",
+       "default": true,
+       "help": "Ein Punkt auf dem Podcast und der neuen Folge. Nur Folgen, die nach dem Hinzufügen erschienen sind; weg, sobald die Folge angespielt wurde oder die Zeit um ist."
+      },
+      {
+       "type": "select",
+       "label": "Als neu markieren für",
+       "key": "epNewDays",
+       "default": "7 Tage",
+       "options": [
+        "3 Tage",
+        "7 Tage",
+        "14 Tage"
+       ]
+      },
+      {
+       "type": "toggle",
+       "label": "Hörstand auf dem Display zeigen",
+       "key": "epProgress",
+       "default": true,
+       "help": "Ein Balken bei angefangenen Folgen, ein Haken bei zu Ende gehörten."
       }
      ]
     }
@@ -3363,6 +3388,13 @@
        "help": "Aus: nur Wichtiges (Hörzeit aufgebraucht, Ruhezeit, Akku fast leer, Start und Ausschalten). An: zusätzlich jeder Titel mit Bildschirmfoto, Pause, Stopp, Weiter."
       },
       {
+       "type": "toggle",
+       "label": "Wochenrückblick",
+       "key": "tgWeek",
+       "default": true,
+       "help": "Sonntagabend: wie lange und was die Woche über gehört wurde."
+      },
+      {
        "type": "kv",
        "rows": [
         [
@@ -3884,6 +3916,16 @@
      ]
     }
    ]
+  },
+  {
+   "id": "zustand",
+   "slug": "health",
+   "area": "einstellungen",
+   "parent": "g-system",
+   "title": "Zustand der Box",
+   "description": "Speicher, Temperatur, Strom, SD-Karte, Dienste, Anmeldungen",
+   "icon": "bulb",
+   "sections": []
   },
   {
    "id": "updates",
@@ -4945,7 +4987,7 @@
    "id": "verlauf"
   },
   {
-   "l": "Top-Künstler (7 Tage)",
+   "l": "Meistgehört (7 Tage)",
    "where": "Hören › Hör-Verlauf",
    "id": "verlauf"
   },
@@ -5540,7 +5582,7 @@
    "id": "bedienung"
   },
   {
-   "l": "Podcasts weiterhören",
+   "l": "Podcasts",
    "where": "Display & Bedienung › Bedienung am Display",
    "id": "bedienung"
   },
@@ -5551,6 +5593,16 @@
   },
   {
    "l": "Stelle merken für",
+   "where": "Display & Bedienung › Bedienung am Display",
+   "id": "bedienung"
+  },
+  {
+   "l": "Neue Folgen markieren",
+   "where": "Display & Bedienung › Bedienung am Display",
+   "id": "bedienung"
+  },
+  {
+   "l": "Hörstand auf dem Display zeigen",
    "where": "Display & Bedienung › Bedienung am Display",
    "id": "bedienung"
   },
@@ -5925,6 +5977,11 @@
    "id": "telegram"
   },
   {
+   "l": "Wochenrückblick",
+   "where": "Dienste › Telegram",
+   "id": "telegram"
+  },
+  {
    "l": "Neuen Token setzen (leer = unverändert)",
    "where": "Dienste › Telegram",
    "id": "telegram"
@@ -6133,6 +6190,31 @@
    "l": "Über die Box",
    "where": "System › Über die Box",
    "id": "ueber"
+  },
+  {
+   "l": "Zustand der Box",
+   "where": "System › Zustand der Box",
+   "id": "zustand"
+  },
+  {
+   "l": "Temperatur",
+   "where": "System › Zustand der Box",
+   "id": "zustand"
+  },
+  {
+   "l": "Unterspannung",
+   "where": "System › Zustand der Box",
+   "id": "zustand"
+  },
+  {
+   "l": "SD-Karte",
+   "where": "System › Zustand der Box",
+   "id": "zustand"
+  },
+  {
+   "l": "Speicherplatz",
+   "where": "System › Zustand der Box",
+   "id": "zustand"
   },
   {
    "l": "Name der Box",

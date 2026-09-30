@@ -52,6 +52,9 @@ import { registerSpotifyConnectRoutes } from './spotify-connect'
 import { registerTlsRoutes, tlsOf } from './tls'
 import { type LocalLibraryDeps, registerLocalUploadRoutes } from './upload'
 import { registerPodcastRoutes } from './podcasts'
+import { registerHealthRoutes } from './health'
+import { playlogSummary } from './playlog'
+import { weeklySummaryOn } from './weekly-summary'
 import { episodeKey, type PodcastOffline } from '../podcast-offline'
 import { randomBytes } from 'node:crypto'
 import { localOnly } from '../request-guard'
@@ -264,7 +267,7 @@ const adminTickets = new Map<string, number>()
 // The box's name as the browser uses it, without a port: Spotify's redirect address is https://<box>/…, through the
 // web server on port 443 (as the admin interface's https://<box>/spotify.php) - Spotify takes no http addresses any
 // more except 127.0.0.1, so http://<box>:8200 was refused after the login
-type RssEpisode = { url: string; title: string; date: string | null; duration: string; cover: string; show: string }
+type RssEpisode = { url: string; title: string; date: string | null; duration: string; cover: string; show: string; isNew: boolean }
 
 // The episodes of a podcast feed, newest first (by date; without dates in the feed's order), from the feed as the
 // display reads it (xml-js: a text is {_text} or {_cdata}, one item comes as an object instead of a list), or null.
@@ -302,6 +305,8 @@ async function rssEpisodes(feed: string): Promise<RssEpisode[] | null> {
         duration: text(it['itunes:duration']),
         cover: proxied(typeof image === 'string' && image ? image : showPicture),
         show,
+        // (new: see episode-state.ts, set by /api/rssfeed/cached)
+        isNew: it._new === true,
         // (no date: the order of the feed, the first one being the newest as usual)
         at: Number.isFinite(when) ? when : -i,
       })
@@ -342,6 +347,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   registerUpdateRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig })
   registerSpotifyConnectRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerTlsRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
+  registerHealthRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig })
   registerPodcastRoutes(router, {
     activeDataPath: deps.activeDataPath,
     podcastOffline: deps.podcastOffline,
@@ -1857,132 +1863,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       res.status(400).json({ error: 'range must be today or week' })
       return
     }
-    const now = new Date()
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-    // The week: today and the six days before, from midnight on - the same days as the bars below (the last 168 hours
-    // counted plays in the total that no bar showed). setDate keeps the days right across a clock change.
-    const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6)
-    const cutoffMs = range === 'today' ? todayStart.getTime() : weekStart.getTime()
-
-    let raw = ''
-    try {
-      // Bewusst asynchron: die Datei liegt im MB-Bereich, und readFileSync
-      // hätte den einzigen Thread des Backends blockiert -- also auch
-      // Wiedergabesteuerung und Display-Sync, während jemand den
-      // Hör-Verlauf öffnet.
-      raw = await fsp.readFile('/home/dietpi/.mupibox/play_log.jsonl', 'utf8')
-    } catch {
-      // file may not exist yet — return empty result
-    }
-    type Entry = {
-      ts: string
-      event: 'start' | 'stop'
-      source?: string
-      title?: string
-      artist?: string
-      album?: string
-      duration_seconds?: number
-    }
-    const entries: Entry[] = []
-    for (const ln of raw.split('\n')) {
-      if (!ln) continue
-      try {
-        const e = JSON.parse(ln) as Entry
-        if (Date.parse(e.ts) >= cutoffMs) entries.push(e)
-      } catch {
-        /* skip malformed line */
-      }
-    }
-
-    type Play = { tsMs: number; source: string; title: string; artist: string; album: string; duration: number }
-    const plays: Play[] = []
-    let pending: { tsMs: number; source: string; title: string; artist: string; album: string } | null = null
-    // A start without a stop (box switched off, backend killed): how long it really played is unknown.
-    // Counting it up to the next start put hours of a switched-off box on the history, so it counts at
-    // most this long.
-    const ORPHAN_MAX_S = 10 * 60
-    const orphanSeconds = (fromMs: number, toMs: number) =>
-      Math.min(ORPHAN_MAX_S, Math.max(0, Math.round((toMs - fromMs) / 1000)))
-    for (const e of entries) {
-      if (e.event === 'start') {
-        if (pending !== null) {
-          plays.push({ ...pending, duration: orphanSeconds(pending.tsMs, Date.parse(e.ts)) })
-        }
-        pending = {
-          tsMs: Date.parse(e.ts),
-          source: e.source ?? '',
-          title: e.title ?? '',
-          artist: e.artist ?? '',
-          album: e.album ?? '',
-        }
-      } else if (e.event === 'stop' && pending !== null) {
-        plays.push({ ...pending, duration: e.duration_seconds ?? 0 })
-        pending = null
-      }
-    }
-    if (pending !== null) {
-      // Currently still playing (the poller times exactly this start) — count up to now so today's
-      // number reflects reality. Otherwise it's a start left over from before a restart.
-      const running = deps.currentPlayLogStart?.()
-      const isRunning = running != null && Math.abs(running - pending.tsMs) < 2000
-      const duration = isRunning
-        ? Math.max(0, Math.round((Date.now() - pending.tsMs) / 1000))
-        : orphanSeconds(pending.tsMs, Date.now())
-      plays.push({ ...pending, duration })
-    }
-
-    const totalSeconds = plays.reduce((s, p) => s + p.duration, 0)
-    const totalMinutes = Math.round(totalSeconds / 60)
-    const trackCount = plays.length
-
-    const artistMap = new Map<string, { name: string; seconds: number; count: number }>()
-    for (const p of plays) {
-      // (no artist, e.g. a radio stream or a local file without tags: an empty name, the app words it)
-      const key = p.artist || ''
-      const cur = artistMap.get(key) ?? { name: key, seconds: 0, count: 0 }
-      cur.seconds += p.duration
-      cur.count += 1
-      artistMap.set(key, cur)
-    }
-    const topArtists = [...artistMap.values()]
-      .sort((a, b) => b.seconds - a.seconds)
-      .slice(0, 5)
-      .map((a) => ({ name: a.name, minutes: Math.round(a.seconds / 60), count: a.count }))
-
-    const titleMap = new Map<string, { title: string; artist: string; seconds: number; count: number }>()
-    for (const p of plays) {
-      const key = `${p.artist}|${p.title}`
-      const cur = titleMap.get(key) ?? { title: p.title, artist: p.artist, seconds: 0, count: 0 }
-      cur.seconds += p.duration
-      cur.count += 1
-      titleMap.set(key, cur)
-    }
-    const topTitles = [...titleMap.values()]
-      .sort((a, b) => b.seconds - a.seconds)
-      .slice(0, 5)
-      .map((t) => ({ title: t.title, artist: t.artist, minutes: Math.round(t.seconds / 60), count: t.count }))
-
-    const dateKey = (d: Date): string =>
-      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-    const timeline: Array<{ date: string; minutes: number }> = []
-    if (range === 'today') {
-      timeline.push({ date: dateKey(todayStart), minutes: totalMinutes })
-    } else {
-      const dayBuckets = new Map<string, number>()
-      for (let i = 6; i >= 0; i--) {
-        dayBuckets.set(dateKey(new Date(now.getFullYear(), now.getMonth(), now.getDate() - i)), 0)
-      }
-      for (const p of plays) {
-        const d = new Date(p.tsMs)
-        const key = dateKey(new Date(d.getFullYear(), d.getMonth(), d.getDate()))
-        if (dayBuckets.has(key)) dayBuckets.set(key, (dayBuckets.get(key) ?? 0) + p.duration / 60)
-      }
-      for (const [date, mins] of dayBuckets) {
-        timeline.push({ date, minutes: Math.round(mins) })
-      }
-    }
-
-    res.json({ range, totalMinutes, trackCount, topArtists, topTitles, timeline })
+    res.json(await playlogSummary(range, deps.currentPlayLogStart))
   })
 
   /**
@@ -2520,6 +2401,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     res.json({
       active: tg.active === true,
       notifyPlayback: tg.notifyPlayback === true,
+      weeklySummary: weeklySummaryOn(cfg),
       token_configured: typeof tg.token === 'string' && tg.token.length > 0,
       chatIds,
     })
@@ -2533,7 +2415,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
    * is restarted afterwards to apply changes immediately.
    */
   router.post('/telegram-config', requireSession, requireCsrf, async (req, res) => {
-    const body = (req.body ?? {}) as { active?: unknown; notifyPlayback?: unknown; token?: unknown; chatIds?: unknown }
+    const body = (req.body ?? {}) as { active?: unknown; notifyPlayback?: unknown; weeklySummary?: unknown; token?: unknown; chatIds?: unknown }
     let validatedChats: Array<{ id: string; label: string }> | undefined
     if (body.chatIds !== undefined) {
       if (!Array.isArray(body.chatIds)) {
@@ -2586,6 +2468,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       if (typeof body.active === 'boolean') tg.active = body.active
       // playback messages (every start, track, pause, stop): off unless the parents turn them on
       if (typeof body.notifyPlayback === 'boolean') tg.notifyPlayback = body.notifyPlayback
+      // the week in a message on Sunday evening (weekly-summary.ts): on unless switched off
+      if (typeof body.weeklySummary === 'boolean') tg.weeklySummary = body.weeklySummary
       if (validatedChats !== undefined) tg.chatId = validatedChats
       if (newToken !== undefined) tg.token = newToken
       cfg.telegram = tg

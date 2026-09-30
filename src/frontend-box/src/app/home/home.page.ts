@@ -203,6 +203,7 @@ export class HomePage extends SwiperIonicEventsHelper {
           imgSrc: this.artworkService.getArtistArtwork(artist.coverMedia),
           data: artist,
           kind: 'artist' as const,
+          isNew: artist.hasNew === true,
         }
       })
     })

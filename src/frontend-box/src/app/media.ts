@@ -69,6 +69,11 @@ export interface Media {
   // back-filled lazily by the backend with synthetic stamps preserving
   // file order.
   lastPlayedAt?: number
+  // A podcast episode's state (backend-api episode-state.ts, sent with the feed): new since it came out, how far it
+  // was heard (percent) and heard to its end. Only what the parents switched on (Bedienung am Display) is set.
+  episodeNew?: boolean
+  episodeProgress?: number
+  episodeDone?: boolean
 
   // ─── Phase 14a — Smart-Sync data layer ────────────────────────────────
   // `source` discriminates user-curated entries from those pulled in by

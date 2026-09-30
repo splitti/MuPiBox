@@ -36,6 +36,7 @@ import type { RunSyncDeps } from './spotify-sync/state-machine'
 import { buildElternLandingHandler, createElternApiRouter } from './eltern/routes'
 import { startSpotifyLoginWatch } from './eltern/spotify-auth-age'
 import { startTlsWatch } from './eltern/tls'
+import { startWeeklySummary } from './eltern/weekly-summary'
 import { startBucketCleanup, parseCookie } from './eltern/middleware'
 import { SESSION_COOKIE, validateSession } from './eltern/auth'
 import { type IncomingMessage, request as httpRequest } from 'node:http'
@@ -48,6 +49,7 @@ import { OnlineCovers } from './online-covers'
 import { ardFeed, isArdFeed } from './ard-sounds'
 import { episodeKey, MAX_KEEP, PodcastOffline } from './podcast-offline'
 import { setFeedHeadReader } from './podcast-search'
+import { EpisodeState, episodeStateSettings } from './episode-state'
 import { browserGuard, corsOptionsFor, isAllowedHost, isLoopback, localOnly, localOrElternSession, PROXY_PORT, setConfiguredHosts, viaProxy } from './request-guard'
 
 // Force IPv4 for DNS lookups to avoid EAI_AGAIN errors on Raspberry Pi
@@ -1091,6 +1093,11 @@ app.get('/api/rssfeed/episode-duration', async (req, res) => {
   res.json({ seconds: feedDurations.byKey.get(episodeKey(url)) ?? 0 })
 })
 
+// "New" and how far heard at a podcast's episodes (episode-state.ts)
+const episodeState = new EpisodeState(configBasePath, () =>
+  episodeStateSettings(getMupiboxConfigSync()?.mupibox as Record<string, unknown> | undefined),
+)
+
 app.get('/api/rssfeed/cached', async (req, res) => {
   const rssUrl = req.query.url
   if (typeof rssUrl !== 'string') {
@@ -1103,11 +1110,10 @@ app.get('/api/rssfeed/cached', async (req, res) => {
 
   if (fs.existsSync(cacheFile)) {
     try {
-      // The cache file already is the JSON answer - send it as it is (no parse / stringify).
+      // (with each episode's state for the display: new, how far heard - see episode-state.ts)
       const cached = await readFile(cacheFile)
       const offlineView = await offlineFeedView(rssUrl, cached)
-      if (offlineView) res.json(offlineView)
-      else res.type('application/json').send(cached)
+      res.json(episodeState.annotateFeed(rssUrl, offlineView ?? JSON.parse(cached.toString('utf8'))))
       // Refresh in the background for next time; don't make the caller wait for it.
       const due = Date.now() - (rssLastRefresh.get(cacheKey) ?? 0) > rssRefreshIntervalMs
       if (due && !rssRefreshing.has(cacheKey)) {
@@ -1133,7 +1139,8 @@ app.get('/api/rssfeed/cached', async (req, res) => {
     const refresh = refreshRssCache(rssUrl, cacheKey)
     refresh.catch(() => undefined)
     const feed = await Promise.race([refresh, new Promise((resolve) => setTimeout(() => resolve(null), rssFetchTimeoutMs))])
-    res.json(feed ?? emptyRssFeed())
+    // (a copy: the feed object is the cache's, written again when its cover arrives)
+    res.json(feed ? episodeState.annotateFeed(rssUrl, JSON.parse(JSON.stringify(feed))) : emptyRssFeed())
   } catch (error) {
     console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] RSS fetch failed: ${error}`)
     // Respond with a valid-but-empty feed rather than an HTTP error: the frontend
@@ -8112,6 +8119,7 @@ if (!testServe) {
   // The Spotify login's 6 months: reminders before the end, a message when Spotify refused it (eltern/spotify-auth-age.ts)
   startSpotifyLoginWatch({ getMupiboxConfig: getMupiboxConfigSync, updateMupiboxConfig })
   startTlsWatch({ getMupiboxConfig: getMupiboxConfigSync, updateMupiboxConfig })
+  startWeeklySummary({ getMupiboxConfig: getMupiboxConfigSync, updateMupiboxConfig, currentPlayLogStart })
   setConfiguredHosts(() => {
     const linkHost = (getMupiboxConfigSync()?.tls as { linkHost?: unknown } | undefined)?.linkHost
     return typeof linkHost === 'string' && linkHost !== '' ? [linkHost.toLowerCase()] : []

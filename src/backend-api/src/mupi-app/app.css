@@ -774,3 +774,4 @@ textarea.input { min-height: 88px; resize: vertical; font-size: 12px; }
 .ard-head .lbl { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .ard-head small { color: var(--mp-muted); }
 .ard-synopsis { color: var(--mp-muted); font-size: 14px; line-height: 1.45; margin: 0; }
+.health-row .lbl .btn { align-self: flex-start; margin-top: 6px; }

@@ -1695,6 +1695,7 @@ function durationText(v) {
 
 // How far an episode was heard (the player remembers it, see Bedienung am Display › Podcasts weiterhören)
 function heardText(e) {
+  if (e.isNew) return 'Neu'
   if (e.done) return 'gehört'
   if (!(e.pos > 0)) return ''
   const left = e.len > e.pos ? Math.max(1, Math.round((e.len - e.pos) / 60)) : 0
@@ -5379,6 +5380,9 @@ async function loadControls() {
   state.values.set('setTimer', o.settingsAccessTimer)
   state.values.set('epResume', o.episodeResume !== false)
   state.values.set('epDays', EP_DAYS.find(([, d]) => d === o.episodeResumeDays)?.[0] ?? `${o.episodeResumeDays} Tage`)
+  state.values.set('epNew', o.newEpisodes !== false)
+  state.values.set('epNewDays', `${o.newEpisodeDays ?? 7} Tage`)
+  state.values.set('epProgress', o.episodeProgress !== false)
 }
 
 // How long a podcast episode's position is remembered (mupibox.episodeResumeDays; 0: without end)
@@ -5851,6 +5855,7 @@ function tgTop() {
     `<section class="card"><h2>Eltern-Bot</h2>
       ${sw('tg-on', 'Bot aktiv', 'Steuern und Nachfragen per Telegram (/status, /extend, /quietnow …).', t.active)}
       ${sw('tg-report', 'Wiedergabe melden', 'Schickt jeden Start, Titel und Stopp – meist zu viel.', t.notifyPlayback)}
+      ${sw('tg-week', 'Wochenrückblick', 'Sonntagabend: wie lange und was die Woche über gehört wurde.', t.weeklySummary)}
       <dl class="kv"><div><dt>Bot-Token</dt><dd>${t.token_configured ? '✓ Eingerichtet' : 'Fehlt'}</dd></div></dl>
       <div class="field"><label for="tg-token">Neuen Token setzen (leer = unverändert)</label><div class="input-wrap"><input class="input mono has-eye" id="tg-token" type="password" autocomplete="off" placeholder="123456789:AA…"><button type="button" class="eye" data-eye aria-label="Anzeigen">${icon('eye', 18)}</button></div></div>
       <p class="help" style="margin:0">Den Token bekommst du bei @BotFather in Telegram (/newbot).</p></section>`,
@@ -5870,6 +5875,7 @@ function mountTelegram(root, page) {
   const redraw = () => currentPage()?.id === page.id && renderPage(page, false)
   $('#tg-on', root).onchange = (e) => (net.tg.active = e.target.checked)
   $('#tg-report', root).onchange = (e) => (net.tg.notifyPlayback = e.target.checked)
+  $('#tg-week', root).onchange = (e) => (net.tg.weeklySummary = e.target.checked)
   for (const b of root.querySelectorAll('[data-tgrm]')) {
     b.onclick = () => {
       net.tg.chatIds.splice(Number(b.dataset.tgrm), 1)
@@ -5914,7 +5920,7 @@ function mountTelegram(root, page) {
   $('#tg-save', root).onclick = async () => {
     const token = $('#tg-token', root).value.trim()
     if (token && !/^\d{6,12}:[A-Za-z0-9_-]{30,50}$/.test(token)) return toast('Der Token sieht nicht richtig aus (Zahl:Buchstaben)', 'info')
-    const body = { active: net.tg.active, notifyPlayback: net.tg.notifyPlayback, chatIds: net.tg.chatIds, ...(token ? { token } : {}) }
+    const body = { active: net.tg.active, notifyPlayback: net.tg.notifyPlayback, weeklySummary: net.tg.weeklySummary, chatIds: net.tg.chatIds, ...(token ? { token } : {}) }
     const r = await api(`${API}/telegram-config`, { method: 'POST', body })
     if (!r.ok) {
       const why = {
@@ -6435,6 +6441,117 @@ function mountRestart(root) {
         toast(r.ok ? done : 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
       })
     }
+  }
+}
+
+/* Zustand der Box */
+
+async function loadHealth() {
+  const r = await api(`${API}/health`)
+  if (!r.ok) throw new Error(`health ${r.status}`)
+  sys.health = r.body
+}
+
+// per check: its name, its value when all is well, what a hint means, and where to fix it (a page of the app)
+function healthRow(c) {
+  const v = c.value
+  const names = {
+    storage: 'Speicherplatz',
+    temperature: 'Temperatur',
+    power: 'Stromversorgung',
+    sdcard: 'SD-Karte',
+    memory: 'Arbeitsspeicher',
+    services: 'Dienste der Box',
+    internet: 'Internet',
+    nas: 'NAS',
+    spotify: 'Spotify-Anmeldung',
+    certificate: 'Zertifikat (HTTPS)',
+    podcasts: 'Gespeicherte Podcast-Folgen',
+  }
+  const okText = {
+    storage: `${v} frei`,
+    temperature: v,
+    power: 'Keine Unterspannung',
+    sdcard: 'Keine Fehler',
+    memory: `${v} frei`,
+    services: 'Alle laufen',
+    internet: 'Verbunden',
+    nas: `Erreichbar (${v})`,
+    spotify: `Noch ${v} Tage gültig`,
+    certificate: `Noch ${v} Tage gültig`,
+    // ("<count> · <size>")
+    podcasts: /^0\b/.test(v) ? 'Keine' : v.startsWith('1 ') ? `1 Folge · ${v.split(' · ')[1] ?? ''}` : `${v.split(' · ')[0]} Folgen · ${v.split(' · ')[1] ?? ''}`,
+  }
+  const hints = {
+    storage_low: `Nur noch ${v} frei – gespeicherte Folgen oder nicht mehr gebrauchte Medien löschen.`,
+    too_hot: `${v} – die Box wird sehr warm. Nicht in die Sonne stellen, die Lüftung frei halten.`,
+    undervoltage_now: 'Gerade Unterspannung – Netzteil oder Kabel liefern zu wenig Strom.',
+    throttled_now: 'Der Prozessor ist gerade gebremst (zu warm oder zu wenig Strom).',
+    undervoltage_since_boot: 'Seit dem Start gab es Unterspannung – Netzteil und Kabel prüfen.',
+    sd_readonly: 'Die SD-Karte ist schreibgeschützt, die Box kann nichts speichern. Neu starten; bleibt es so, ist die Karte wohl defekt.',
+    sd_errors: `${v} Fehler der SD-Karte seit dem Start – sie könnte bald ausfallen. Am besten ein Backup machen.`,
+    memory_low: `Nur noch ${v} frei – ein Neustart der Box hilft.`,
+    services_down: `Gestoppt: ${v}. Ein Neustart der Box hilft meist.`,
+    offline: 'Keine Verbindung ins Internet – Spotify, Podcasts und Radio spielen nicht.',
+    nas_address: 'Die Adresse des NAS ist ungültig.',
+    nas_unreachable: `${v} antwortet nicht – ist das NAS an und im selben Netz?`,
+    spotify_refused: 'Spotify hat die Anmeldung abgelehnt – bitte neu anmelden.',
+    spotify_unknown: 'Seit wann die Anmeldung besteht, ist unbekannt – einmal neu anmelden, dann erinnert die Box rechtzeitig.',
+    spotify_soon: `Läuft in ${v} Tagen ab – bitte neu anmelden.`,
+    certificate_soon: Number(v) < 0 ? 'Abgelaufen – bitte ein neues hochladen.' : `Läuft in ${v} Tagen ab – bitte ein neues hochladen.`,
+  }
+  const fix = {
+    sd_errors: 'backup',
+    memory_low: 'neustart',
+    services_down: 'neustart',
+    offline: 'wlan',
+    nas_address: 'nas',
+    nas_unreachable: 'nas',
+    spotify_refused: 'spzugang',
+    spotify_unknown: 'spzugang',
+    spotify_soon: 'spzugang',
+    certificate_soon: 'https',
+  }
+  const icons = { storage: 'save', temperature: 'fan', power: 'plug', sdcard: 'chip', memory: 'chip', services: 'server', internet: 'wifi', nas: 'folder', spotify: 'sync', certificate: 'lock', podcasts: 'music' }
+  const chip = { ok: '<span class="chip ok">OK</span>', warn: '<span class="chip warn">Hinweis</span>', error: '<span class="chip danger">Problem</span>', info: '' }[c.status] ?? ''
+  const text = c.hint ? hints[c.hint] ?? c.hint : c.status === 'ok' || c.id === 'podcasts' ? okText[c.id] : v
+  // (a button to the page that fixes it, where there is one)
+  const target = c.hint && fix[c.hint] && state.pages.has(fix[c.hint]) ? fix[c.hint] : ''
+  return `<div class="entry health-row"><span class="avatar">${icon(icons[c.id] ?? 'info', 16)}</span><span class="lbl"><b>${names[c.id] ?? esc(c.id)}</b><small>${esc(text ?? '')}</small>${target ? `<button class="btn sm" data-go="${target}">Öffnen</button>` : ''}</span>${chip}</div>`
+}
+
+function uptimeText(s) {
+  const d = Math.floor(s / 86400)
+  const h = Math.floor((s % 86400) / 3600)
+  const m = Math.floor((s % 3600) / 60)
+  return d ? `${d} Tage ${h} h` : h ? `${h} h ${m} min` : `${m} min`
+}
+
+function healthTop() {
+  const h = sys.health
+  const problems = h.checks.filter((c) => c.status === 'error').length
+  const warnings = h.checks.filter((c) => c.status === 'warn').length
+  // (each count a chip of its own: whole texts to translate)
+  const chips = [
+    problems ? `<span class="chip danger">${problems === 1 ? 'Ein Problem' : `${problems} Probleme`}</span>` : '',
+    warnings ? `<span class="chip warn">${warnings === 1 ? 'Ein Hinweis' : `${warnings} Hinweise`}</span>` : '',
+    problems || warnings ? '' : '<span class="chip ok">OK</span>',
+  ].join('')
+  return [
+    `<section class="card wide"><div class="sp-head"><h2>${problems || warnings ? 'Bitte ansehen' : 'Alles in Ordnung'}</h2><div class="chips">${chips}</div></div>
+      <p class="help"><span>Läuft seit</span> <span>${uptimeText(h.uptime)}</span>${h.version ? ` · <span>Version</span> <span translate="no">${esc(h.version)}</span>` : ''}</p>
+      <div class="rows">${h.checks.map(healthRow).join('')}</div>
+      <div class="btns"><button class="btn" id="hl-refresh">Neu prüfen</button></div></section>`,
+  ]
+}
+
+function mountHealth(root, page) {
+  for (const el of root.querySelectorAll('[data-go]')) el.onclick = () => go(el.dataset.go)
+  $('#hl-refresh', root).onclick = async (e) => {
+    e.target.disabled = true
+    await loadHealth().catch(() => undefined)
+    if (currentPage()?.id === page.id) renderPage(page, false)
+    toast('Neu geprüft')
   }
 }
 
@@ -7569,6 +7686,12 @@ const CONTROLLERS = {
         if (days === undefined) return
         return saveDisplayOptions({ episodeResumeDays: days })
       }
+      if (key === 'epNew') return saveDisplayOptions({ newEpisodes: !!v })
+      if (key === 'epNewDays') {
+        const days = Number.parseInt(String(v), 10)
+        if ([3, 7, 14].includes(days)) return saveDisplayOptions({ newEpisodeDays: days })
+      }
+      if (key === 'epProgress') return saveDisplayOptions({ episodeProgress: !!v })
     },
   },
   displaylive: { top: liveTop, sections: () => [], mount: mountLive },
@@ -7908,6 +8031,7 @@ const CONTROLLERS = {
   https: { load: loadTls, top: tlsTop, sections: () => [], mount: mountTls },
   ueber: { load: loadAbout, top: aboutTop, sections: () => [], mount: mountAbout },
   neustart: { top: restartTop, sections: () => [], mount: mountRestart },
+  zustand: { load: loadHealth, top: healthTop, sections: () => [], mount: mountHealth },
   protokolle: { load: loadLogs, top: logsTop, sections: () => [], mount: mountLogs },
   browser: {
     load: loadBrowser,
