@@ -752,6 +752,7 @@ input[type="range"]:disabled { opacity: .4; cursor: default; }
 .steps-list { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 14px; }
 .steps-list li b { display: block; }
 .steps-list li small { display: block; color: var(--mp-muted); margin: 2px 0 8px; }
+.steps-list li .field + .btns { margin-top: 10px; }
 /* the remote control embedded in the "Display live" page */
 .vnc-frame { display: flex; flex-direction: column; gap: 10px; }
 .vnc-frame iframe { width: 100%; aspect-ratio: 1024 / 600; border: 0; border-radius: var(--mp-r-sm); background: #000; }
