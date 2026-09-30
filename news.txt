@@ -1,3 +1,34 @@
+<h3>DEV 5.0.5 - changes compared to 5.0.4</h3>
+<b>Highlights</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'><b>Choose the episodes of a podcast:</b> all, the newest or the first 10 / 20 / 50, or an own range – already when adding, with a preview of what ends up on the box.</li>
+<li id='linews' class='linews'><b>Speech output in 21 languages:</b> Arabic, Chinese and Hindi now with Piper voices on the box, Japanese through Google.</li>
+<li id='linews' class='linews'><b>No more white screen after an update:</b> the display loads again by itself when the app did not come up.</li>
+</ul>
+<b>Podcasts</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Which episodes of a podcast go on the box: all, the newest 10 / 20 / 50, the first 10 / 20 / 50 or an own range (counted by date, episode 1 is the oldest), with the order (newest or oldest first). Set when adding from the podcast search or later when editing; a preview shows which episodes end up on the box.</li>
+<li id='linews' class='linews'>The choice applies everywhere: the display, the episode lists of the web app, playing from the phone and the SD card, which can keep exactly the chosen episodes. The "new" dot only shows for chosen episodes.</li>
+</ul>
+<b>Speech output</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>The box also speaks Arabic, Chinese, Hindi and Japanese (announcements, messages from the parents, names on the display), with texts of their own. Before, these languages fell back to German.</li>
+<li id='linews' class='linews'>Only Piper voices the box can play are offered (some newer Chinese and Japanese voices need a newer Piper); without a voice the page says so, and Google speaks the language.</li>
+<li id='linews' class='linews'>The page Appearance &gt; Read aloud is gone: the switch for reading names aloud is under Appearance &gt; View below the cover flow it belongs to, the language under Audio &gt; Speech output ("The box speaks").</li>
+</ul>
+<b>Display</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>When the app has not come up 25 seconds after the page loaded (e.g. the box's server restarted during an update from the console), the display loads the page again – at most three times in five minutes.</li>
+</ul>
+<b>Legal</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>The third-party notices also name Piper and its voices, which the box downloads itself when speech output is set up.</li>
+</ul>
 <h3>DEV 5.0.4 - changes compared to 5.0.3</h3>
 <b>Highlights</b>
 </ul>
@@ -8,7 +39,7 @@
 <li id='linews' class='linews'><b>New episodes and progress on the display:</b> a dot marks new episodes, a bar shows how far an episode was heard and a tick marks finished ones (both switchable).</li>
 <li id='linews' class='linews'><b>Gentle end:</b> sleep timer, end of the playtime and start of a quiet time fade the sound out over 20 seconds instead of stopping hard.</li>
 <li id='linews' class='linews'><b>Box health at a glance</b> and a <b>weekly summary</b> in Telegram on Sunday evening.</li>
-<li id='linews' class='linews'><b>Natural voices on the box:</b> Piper speaks offline with voices for all 17 languages plus Arabic, Chinese and Hindi (Japanese through Google) – names on the display, announcements of the remaining playtime, bedtime and the end of the sleep timer, and announcements from the parents ("Dinner is ready!") from the web app or Telegram.</li>
+<li id='linews' class='linews'><b>Natural voices on the box:</b> Piper speaks offline with voices for all 17 languages – names on the display, announcements of the remaining playtime, bedtime and the end of the sleep timer, and announcements from the parents ("Dinner is ready!") from the web app or Telegram.</li>
 <li id='linews' class='linews'><b>Evening dimming:</b> the display gets darker in the evening (and during quiet hours, if you like) and bright again in the morning.</li>
 <li id='linews' class='linews'><b>Own volume limit for Bluetooth headphones</b>, and a <b>tidier web app</b>: settings pages in two columns without gaps, with more in them (charge curve, signed-in devices, test message …).</li>
 </ul>
@@ -20,7 +51,6 @@
 <li id='linews' class='linews'>Radio station search (radio-browser.info) with suggestions of kids' stations for the chosen language.</li>
 <li id='linews' class='linews'>Podcast and radio search can be switched off under Settings &gt; Services; adding content only offers services that are set up (Spotify only when signed in).</li>
 <li id='linews' class='linews'>Episodes on the SD card: per podcast "Off" or the newest 1, 3, 5, 10 or 20 episodes; single episodes can be saved or removed by hand. Saved episodes play without internet.</li>
-<li id='linews' class='linews'>Choose which episodes of a podcast go on the box: all, the newest 10 / 20 / 50, the first 10 / 20 / 50 or an own range (counted by date, episode 1 is the oldest), with the order (newest or oldest first). Already when adding, a preview shows which episodes end up on the box. The SD card can keep exactly the chosen episodes.</li>
 <li id='linews' class='linews'>ARD Audiothek: an episode is only saved when the ARD itself releases it for download (from the ARD's download address); all others are streamed only and show a lock. Saved ARD episodes are deleted when their time online at the ARD ends.</li>
 <li id='linews' class='linews'>Every episode keeps its own position (Settings &gt; Controls on the display &gt; Podcasts): on, and kept for 1 month to unlimited. The app shows how far each episode was heard.</li>
 <li id='linews' class='linews'>New episodes are marked on the display and in the app for 3, 7 or 14 days (only episodes that appeared after the podcast was added; gone once played). Started episodes show a progress bar, finished ones a tick.</li>
@@ -41,8 +71,7 @@
 </ul>
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>New page Settings &gt; Audio &gt; Speech output: Piper on the box (offline, recommended), Google (online) or silent. Without a Piper voice for the box's language Google or silence takes over, as chosen. The choice also applies to reading names aloud on the display.</li>
-<li id='linews' class='linews'>Voices for all 17 languages plus Arabic, Chinese and Hindi (Piper voices from Hugging Face; Japanese and Piper voices the box cannot play are left out, Google speaks those languages): listen to a sample on the phone, download, use, delete, and try any downloaded voice on the box itself. Quality, size and licence are shown; Piper itself is downloaded with the first voice.</li>
-<li id='linews' class='linews'>The separate page Appearance &gt; Read aloud is gone: the switch for reading names aloud is now under Appearance &gt; View below the cover flow it belongs to, the language under Audio &gt; Speech output ("The box speaks").</li>
+<li id='linews' class='linews'>Voices for all 17 languages (Piper voices from Hugging Face): listen to a sample on the phone, download, use, delete, and try any downloaded voice on the box itself. Quality, size and licence are shown; Piper itself is downloaded with the first voice.</li>
 <li id='linews' class='linews'>The names of the library are prepared in the background (after choosing a voice and whenever the library changes), so the display reads them without delay.</li>
 <li id='linews' class='linews'>Automatic announcements: the remaining playtime 2–15 minutes before its end, the start of a quiet time and the end of the sleep timer – with your own texts and a volume of their own (never above the box's volume).</li>
 <li id='linews' class='linews'>Parents' announcements: templates and your own text, from the start page ("Announcement") or Telegram (/say text), with a gong, and playback paused and continued afterwards (or only quieter).</li>
