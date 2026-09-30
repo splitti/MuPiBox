@@ -181,6 +181,37 @@ the packages in the bundles.
 | ylee Mortal Heart, Immortal Memory by Yosep Lee (`ylee_Mortal_Heart.ttf`) | theme `mystic` | dafont "100% Free"; the author: free for commercial and non-commercial use | https://www.dafont.com/ylee-mhim.font |
 | Sounds (`media/sound/*.wav`) | start, shutdown and battery sounds | TODO: origin and license to be cleared |  |
 
+### A.3 Pictures of the themes
+
+From each theme's list of sources (`themes/<theme>/Readme.md`). The mascots and cover placeholders of the themes
+are MuPiBox project artwork.
+
+| Picture | Theme | License | Source |
+| --- | --- | --- | --- |
+| Background | `axolotl` | Pixabay Content License | https://pixabay.com/de/illustrations/ai-generiert-axolotl-wasserlebewesen-8023603/ |
+| Background | `clone-wars` | Pixabay Content License | https://pixabay.com/de/photos/storm-troopers-patrouillieren-4653796/ |
+| Image | `comic` | Pexels License | https://www.pexels.com/de-de/foto/bunt-amerikanisch-abdeckungen-wallpaper-7809123/ |
+| Background | `dinosaur` | Pixabay Content License | https://pixabay.com/de/illustrations/pr%C3%A4historisch-dinosaurier-jura-8384136/ |
+| Image | `earth` | Pixabay Content License | https://pixabay.com/users/piro4d-2707530/?utm_source=link-attribution&utm_medium=referral&utm_campaign=image&utm_content=1990298 |
+| Background | `enterprise` | Pixabay Content License | https://pixabay.com/de/illustrations/star-trek-star-trek-unternehmen-7737321/ |
+| Background | `fantasybutterflies` | Pixabay Content License | https://pixabay.com/photos/fantasy-butterflies-mushrooms-2049567/ |
+| Image | `forms` | Pexels License | https://www.pexels.com/de-de/foto/gelbe-schwarze-und-lila-farbige-papiere-2457284/ |
+| Image | `lines` | Pixabay Content License | https://pixabay.com/vectors/background-lines-shapes-1789175/ |
+| Background | `matrix` | Pixabay Content License | https://pixabay.com/vectors/matrix-background-wallpaper-5361690/ |
+| Background | `mystic` | Pixabay Content License | https://pixabay.com/de/photos/wald-m%C3%A4dchen-b%C3%A4ume-nebel-laterne-3833973/ |
+| Background | `pikachu` | Pixabay Content License | https://pixabay.com/de/illustrations/ai-generiert-pikachu-pok%C3%A9mon-7988263/ |
+| Image | `spiderman` | Pixabay Content License | https://pixabay.com/de/illustrations/spiderman-superheld-wunder-8091331/ |
+| Background | `steampunk` | Pixabay Content License | https://pixabay.com/illustrations/automobile-map-of-the-world-writing-3236000/ |
+| Gear | `steampunk` | Pixabay Content License | https://pixabay.com/illustrations/gear-steampunk-rust-mechanism-6531453/ |
+| Header-/Button-Background | `steampunk` | Pixabay Content License | https://pixabay.com/illustrations/steampunk-gears-clock-brass-rust-5175260/ |
+| Background | `supermario` | Pixabay Content License | https://pixabay.com/de/illustrations/ai-generiert-super-mario-spiel-8049946/ |
+| Background | `unicorn` | Pixabay Content License | https://pixabay.com/de/illustrations/einhorn-magie-fantasie-pferd-wei%C3%9F-8296426/ |
+
+Some older themes are named after, or show, characters and vehicles of others (Super Mario, Pokémon, Star Wars,
+Marvel, Star Trek, Wall-E). These names, characters and trademarks belong to their owners; a picture's license
+(e.g. the Pixabay Content License) covers the picture, not the rights in what it shows. MuPiBox is not affiliated
+with or endorsed by these owners.
+
 ## B. Downloaded by the installer or updater (not part of the MuPiBox packages)
 
 The installer makes the box fetch these from their own sources; MuPiBox does not redistribute them.

@@ -282,6 +282,32 @@ const THEME_FONT_LICENSES = {
 // The fonts the themes bring along (themes/<theme>/*.ttf|otf|woff2): one with its license text next to it (OFL-*.txt,
 // LICENSE*) is named with it, one of the list above with what its page says; the others are listed as not cleared -
 // one row per font file, with the themes using it
+// The pictures the themes name in their Readme.md ("Background: <url>", "Image: <url>", …; the "Font:" line is the
+// font's, see themeFonts), with the license of the site they come from
+const PICTURE_LICENSES = [
+  [/(^|\.)pixabay\.com$/, 'Pixabay Content License'],
+  [/(^|\.)pexels\.com$/, 'Pexels License'],
+]
+function themePictures() {
+  const dir = path.join(ROOT, 'themes')
+  if (!exists(dir)) return []
+  const rows = []
+  for (const theme of fs.readdirSync(dir).sort()) {
+    const readme = path.join(dir, theme, 'Readme.md')
+    if (!exists(readme)) continue
+    for (const line of fs.readFileSync(readme, 'utf8').split(/\r?\n/)) {
+      const m = /^\s*([^:#][^:]*):\s*(https?:\/\/\S+)/.exec(line)
+      if (!m || /^font$/i.test(m[1].trim())) continue
+      // (a link written as HTML in the Readme: &amp; for &)
+      const url = m[2].replace(/&amp;/g, '&')
+      const host = new URL(url).hostname
+      const license = PICTURE_LICENSES.find(([re]) => re.test(host))?.[1] ?? 'TODO: license of this picture'
+      rows.push([m[1].trim(), `\`${theme}\``, license, url])
+    }
+  }
+  return rows
+}
+
 function themeFonts() {
   const dir = path.join(ROOT, 'themes')
   if (!exists(dir)) return []
@@ -462,6 +488,18 @@ const md = [
   '### A.2 Fonts, programs and media in the repository',
   '',
   table(['Component', 'Use', 'License', 'Notes'], STATIC.shipped),
+  '',
+  '### A.3 Pictures of the themes',
+  '',
+  "From each theme's list of sources (`themes/<theme>/Readme.md`). The mascots and cover placeholders of the themes",
+  'are MuPiBox project artwork.',
+  '',
+  table(['Picture', 'Theme', 'License', 'Source'], themePictures()),
+  '',
+  'Some older themes are named after, or show, characters and vehicles of others (Super Mario, Pokémon, Star Wars,',
+  "Marvel, Star Trek, Wall-E). These names, characters and trademarks belong to their owners; a picture's license",
+  '(e.g. the Pixabay Content License) covers the picture, not the rights in what it shows. MuPiBox is not affiliated',
+  'with or endorsed by these owners.',
   '',
   '## B. Downloaded by the installer or updater (not part of the MuPiBox packages)',
   '',
