@@ -180,10 +180,31 @@ export function parseSpeech(body: unknown, current: SpeechConfig): SpeechConfig 
 }
 
 /** The texts of a language: the parents' own, else the language's defaults (English for a language without). */
-export function speechTexts(sp: SpeechConfig, lang: string): SpeechTexts & { templates: string[] } {
+// A sentence to try a voice with, per language
+export const SPEECH_HELLO: Record<string, string> = {
+  de: 'Hallo! Ich bin deine MuPiBox. Schön, dass du da bist.',
+  en: 'Hello! I am your MuPiBox. Nice to have you here.',
+  fr: 'Bonjour ! Je suis ta MuPiBox. Contente que tu sois là.',
+  es: '¡Hola! Soy tu MuPiBox. Qué bien que estés aquí.',
+  it: 'Ciao! Sono la tua MuPiBox. Che bello che tu sia qui.',
+  nl: 'Hallo! Ik ben je MuPiBox. Fijn dat je er bent.',
+  da: 'Hej! Jeg er din MuPiBox. Dejligt, at du er her.',
+  sv: 'Hej! Jag är din MuPiBox. Vad roligt att du är här.',
+  nb: 'Hei! Jeg er din MuPiBox. Så fint at du er her.',
+  fi: 'Hei! Olen sinun MuPiBoxisi. Kiva, että olet täällä.',
+  pl: 'Cześć! Jestem twoim MuPiBoxem. Fajnie, że jesteś.',
+  cs: 'Ahoj! Jsem tvůj MuPiBox. Jsem rád, že jsi tady.',
+  tr: 'Merhaba! Ben senin MuPiBox’ınım. İyi ki buradasın.',
+  pt: 'Olá! Sou a tua MuPiBox. Que bom que estás aqui.',
+  el: 'Γεια σου! Είμαι το MuPiBox σου. Χαίρομαι που είσαι εδώ.',
+  ru: 'Привет! Я твой MuPiBox. Как хорошо, что ты здесь.',
+  uk: 'Привіт! Я твій MuPiBox. Як добре, що ти тут.',
+}
+
+export function speechTexts(sp: SpeechConfig, lang: string): SpeechTexts & { templates: string[]; hello: string } {
   const def = SPEECH_DEFAULTS[lang] ?? SPEECH_DEFAULTS.en
   const own = sp.texts[lang] ?? {}
-  return { rest: own.rest || def.rest, bedtime: own.bedtime || def.bedtime, sleepEnd: own.sleepEnd || def.sleepEnd, templates: sp.templates[lang] ?? def.templates }
+  return { rest: own.rest || def.rest, bedtime: own.bedtime || def.bedtime, sleepEnd: own.sleepEnd || def.sleepEnd, templates: sp.templates[lang] ?? def.templates, hello: SPEECH_HELLO[lang] ?? SPEECH_HELLO.en }
 }
 
 /* ---------- the voices ---------- */
@@ -488,11 +509,12 @@ let queue: Promise<unknown> = Promise.resolve()
  * Says a text on the box now (one after the other): gong, the music paused (or quieter), the text, the music again.
  * false when there is nothing to say it with (stumm, no voice and no Google).
  */
-export async function announce(getConfig: () => unknown, text: string, opts: { gong?: boolean; pause?: boolean } = {}): Promise<boolean> {
+export async function announce(getConfig: () => unknown, text: string, opts: { gong?: boolean; pause?: boolean; voice?: string } = {}): Promise<boolean> {
   const cfg = getConfig()
   const sp = speechOf(cfg)
   const lang = boxLanguage(cfg)
-  const file = await speechFile(sp, text.slice(0, MAX_TEXT), lang)
+  // (a test of one loaded voice: that one, whatever the box speaks with otherwise)
+  const file = opts.voice ? (VOICE_KEY.test(opts.voice) && existsSync(voiceFile(opts.voice)) && existsSync(PIPER_BIN) ? await piperWav(text.slice(0, MAX_TEXT), opts.voice) : null) : await speechFile(sp, text.slice(0, MAX_TEXT), lang)
   if (!file) return false
   queue = queue.then(async () => {
     const wasPlaying = await playingNow()

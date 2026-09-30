@@ -6803,6 +6803,7 @@ function speechTop() {
       <div class="field"><label for="sp-lang">Sprache</label><select class="input" id="sp-lang" translate="no">${langOptions}</select></div>
       ${list.length ? `<div class="rows">${shown.map(voiceRow).join('')}</div>` : '<p class="help" style="margin:0">Die Liste der Stimmen ließ sich nicht laden (keine Verbindung zu Hugging Face?).</p>'}
       ${list.length > shown.length ? `<button class="btn" id="sp-all">${esc(`Alle ${list.length} Stimmen zeigen`)}</button>` : ''}
+      ${speechTry(d, lang, activeHere, voiceName)}
       ${job?.state === 'failed' ? `<div class="note warn">${icon('info', 18)}<span>${esc('Die Stimme ließ sich nicht laden. Bitte noch einmal versuchen.')}</span></div>` : ''}
       <p class="help" style="margin:0">${esc(`Stimmen von Piper (rhasspy/piper-voices); die Lizenz steht bei jeder Stimme. ${d.free != null ? `Noch ${(d.free / 1e9).toLocaleString(LOCALE, { maximumFractionDigits: 1 })} GB frei.` : ''}`)}</p><audio id="sp-audio" hidden></audio></section>`,
     `<section class="card" data-col="2"><h2>Automatische Ansagen</h2><p class="help">${esc('Die Box sagt selbst etwas – in ihrer Sprache, während etwas läuft.')}</p>
@@ -6822,6 +6823,16 @@ function speechTop() {
       ${sw('sp-gong', 'Gong vorher', 'Ein kurzer Ton, damit das Kind aufhorcht.', c.parents.gong)}
       ${sw('sp-pause', 'Wiedergabe anhalten und danach weiter', 'Sonst wird die Musik während der Durchsage nur leiser.', c.parents.pause)}</section>`,
   ]
+}
+
+// Trying a voice on the box itself: a sentence (changeable) with one of the loaded voices of the language chosen above
+function speechTry(d, lang, activeHere, voiceName) {
+  const loaded = d.installed[lang] ?? []
+  if (!loaded.length) return `<p class="help" style="margin:0">${esc('Zum Anhören auf der Box erst eine Stimme laden. Die Hörprobe am Handy (Lautsprecher-Knopf) geht auch so.')}</p>`
+  const quality = (key) => SPEECH_QUALITY[key.slice(key.lastIndexOf('-') + 1)] ?? ''
+  return `<div class="speech-try"><div class="field"><label for="sp-try-text">Probe auf der Box</label><textarea class="input" id="sp-try-text" rows="2" maxlength="300">${esc(d.hello ?? '')}</textarea></div>
+    <div class="field-pick"><select class="input" id="sp-try-voice" aria-label="Stimme">${loaded.map((k) => `<option value="${esc(k)}"${k === activeHere ? ' selected' : ''} translate="no">${esc(`${voiceName(k)} · ${tr(quality(k))}`)}</option>`).join('')}</select>
+    <button type="button" class="btn primary" id="sp-try">${icon('vol', 16)}Auf der Box anhören</button></div></div>`
 }
 
 async function speechSave(body, done = 'Gespeichert') {
@@ -6900,6 +6911,13 @@ function mountSpeech(root, page) {
     templates.push(v)
     saveTemplates()
   }
+  // a sentence with one loaded voice, on the box
+  $('#sp-try', root)?.addEventListener('click', async () => {
+    const text = $('#sp-try-text', root).value.trim()
+    if (!text) return toast('Bitte einen Text eingeben', 'info')
+    const r = await api(`${API}/speech/say`, { method: 'POST', body: { text, test: true, voice: $('#sp-try-voice', root).value } })
+    toast(r.ok ? 'Die Box spricht …' : 'Das ging nicht', r.ok ? 'ok' : 'info')
+  })
   // the voices: the language of the list, listen (on this phone), load, use, delete
   $('#sp-lang', root).onchange = async (e) => {
     speech.lang = e.target.value

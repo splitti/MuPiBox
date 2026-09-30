@@ -959,3 +959,7 @@ textarea[hidden] { display: none; }
 .quick { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @media (min-width: 700px) { .quick { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 [data-dep-id][hidden] { display: none; }
+.speech-try { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: var(--mp-r); background: var(--mp-primary-soft); }
+.speech-try .field-pick select { flex: 1; min-width: 0; }
+.speech-try textarea.input { min-height: 0; height: 64px; }
+.speech-try textarea.input, .sheet #say-text { font-family: inherit; }

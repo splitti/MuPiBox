@@ -54,7 +54,9 @@ export function registerSpeechRoutes(router: Router, deps: SpeechDeps): void {
       config: { engine: sp.engine, fallback: sp.fallback, voices: sp.voices, rest: sp.rest, bedtime: sp.bedtime, sleepEnd: sp.sleepEnd, level: sp.level, parents: sp.parents },
       boxLanguage: box,
       lang,
-      texts: speechTexts(sp, lang),
+      // (the announcements' texts: the box's language; the sentence to try a voice with: the language of the list)
+      texts: speechTexts(sp, box),
+      hello: speechTexts(sp, lang).hello,
       active,
       installed: installed.byLang,
       bytes: installed.bytes,
@@ -128,14 +130,14 @@ export function registerSpeechRoutes(router: Router, deps: SpeechDeps): void {
   })
 
   // a text to say now (the parents: a template or their own; a test of a text or a voice)
-  const say = async (text: unknown, res: import('express').Response, opts: { gong?: boolean; pause?: boolean } = {}) => {
+  const say = async (text: unknown, res: import('express').Response, opts: { gong?: boolean; pause?: boolean; voice?: string } = {}) => {
     const t = typeof text === 'string' ? text.replace(/\s+/g, ' ').trim() : ''
     if (!t || t.length > MAX_SAY) {
       res.status(400).json({ error: 'invalid text' })
       return
     }
     const sp = speechOf(deps.getMupiboxConfig())
-    if (sp.engine === 'off') {
+    if (sp.engine === 'off' && !opts.voice) {
       res.status(409).json({ error: 'speech_off' })
       return
     }
@@ -148,13 +150,14 @@ export function registerSpeechRoutes(router: Router, deps: SpeechDeps): void {
 
   /** POST /api/app/speech/say {text, test?} - the box says it now (test: a sample of a text, without gong). */
   router.post('/speech/say', requireSession, requireCsrf, async (req, res) => {
-    const body = (req.body ?? {}) as { text?: unknown; test?: unknown }
+    const body = (req.body ?? {}) as { text?: unknown; test?: unknown; voice?: unknown }
     const sp = speechOf(deps.getMupiboxConfig())
     if (body.test !== true && !sp.parents.on) {
       res.status(409).json({ error: 'announcements_off' })
       return
     }
-    await say(body.text, res, body.test === true ? { gong: false, pause: false } : {})
+    // (test: a text, or one loaded voice - voice: its key)
+    await say(body.text, res, body.test === true ? { gong: false, pause: false, ...(typeof body.voice === 'string' ? { voice: body.voice } : {}) } : {})
   })
 
   /** POST /api/app/speech/say-local {text} - from the box itself: Telegram's /sag. */
