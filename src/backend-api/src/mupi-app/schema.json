@@ -2650,6 +2650,16 @@
    ]
   },
   {
+   "id": "sprachausgabe",
+   "slug": "speech",
+   "area": "einstellungen",
+   "parent": "g-audio",
+   "title": "Sprachausgabe",
+   "description": "Stimmen, Ansagen, Eltern-Durchsagen",
+   "icon": "vol",
+   "sections": []
+  },
+  {
    "id": "akku",
    "slug": "battery",
    "area": "einstellungen",
@@ -4620,7 +4630,7 @@
    "area": "einstellungen",
    "parent": "einstellungen",
    "title": "Audio",
-   "description": "Lautstärke, Soundkarte, Drehregler, Bluetooth",
+   "description": "Lautstärke, Soundkarte, Drehregler, Bluetooth, Sprachausgabe",
    "icon": "vol",
    "sections": [
     {
@@ -4650,6 +4660,12 @@
        "label": "Bluetooth",
        "target": "bluetooth",
        "subtitle": "Kopfhörer & Lautsprecher"
+      },
+      {
+       "type": "nav",
+       "label": "Sprachausgabe",
+       "target": "sprachausgabe",
+       "subtitle": "Stimmen, Ansagen, Eltern-Durchsagen"
       }
      ]
     }

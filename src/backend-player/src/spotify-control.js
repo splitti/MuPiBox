@@ -2064,6 +2064,32 @@ function resumeNasAt(trackNr, progressPct) {
   })
 }
 
+// A name read out with the voice chosen in the app (Sprachausgabe): a Piper voice on the box, Google as before, or
+// nothing at all (stumm). The backend works the Piper sound out (speech.ts).
+async function sayName(text) {
+  try {
+    const r = await fetch('http://127.0.0.1:8200/api/app/speech/render', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+      signal: AbortSignal.timeout(20000),
+    })
+    const b = await r.json()
+    if (b.off) return
+    if (b.file) {
+      writeplayerstatePlay()
+      player.play(b.file)
+      player.setVolume(volumeStart)
+      return
+    }
+  } catch (err) {
+    log.debug(`${now()}: [Spotify Control] Piper not asked: ${err?.message || err}`)
+  }
+  const filename = `/home/dietpi/MuPiBox/tts_files/${text}.mp3`
+  if (fs.existsSync(filename)) playFile(text)
+  else downloadTTS(text)
+}
+
 function playFile(playedFile) {
   const playedTitel = `${playedFile}.mp3`
   log.debug(`${now()}: [Spotify Control] Starting currentMeta.playing:${playedTitel}`)
@@ -2728,6 +2754,11 @@ app.get('/state', (_req, res) => {
 
 // The display reports its Spotify device (the Web Playback SDK in the kiosk) when it connects. Starts that
 // don't come from the display (/current/..., e.g. the parents' web app or Telegram) play there.
+// Whether something plays now (the backend's announcements pause it and go on afterwards, speech.ts)
+app.get('/playing', (_req, res) => {
+  res.json({ playing: isActuallyPlaying() })
+})
+
 // Which device the display reported (the app's page "Zugangsdaten" asks Spotify whether it still knows it)
 app.get('/display/spotify-device', (_req, res) => {
   res.json({ id: displaySpotifyDevice })
@@ -2933,18 +2964,7 @@ app.use((req, res) => {
     nameTTS = decodeURIComponent(nameTTS)
     nameTTS = nameTTS.replace(/\//g, ' ')
     log.debug(`${now()}: [Spotify Control] Say: ${nameTTS}`)
-    const filename = `/home/dietpi/MuPiBox/tts_files/${nameTTS}.mp3`
-    try {
-      if (fs.existsSync(filename)) {
-        console.log('The file exists.')
-        playFile(nameTTS)
-      } else {
-        console.log('The file does not exist.')
-        downloadTTS(nameTTS)
-      }
-    } catch (err) {
-      console.error(err)
-    }
+    sayName(nameTTS).catch((err) => console.error(err))
   }
 
   if (hasDirSegment(command, 'deletelocal')) {

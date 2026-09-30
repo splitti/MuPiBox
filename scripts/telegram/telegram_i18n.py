@@ -139,6 +139,10 @@ TEXTS = {
     'n_quiet_started': {'de': 'Ruhezeit gestartet', 'en': 'Quiet time started'},
     'n_quiet_started_label': {'de': 'Ruhezeit gestartet: {label}', 'en': 'Quiet time started: {label}'},
     'n_battery': {'de': 'Der MuPiBox-Akku steht bei {soc}', 'en': 'The MuPiBox battery is at {soc}'},
+    'usage_say': {'de': 'Nutzung: /sag Text – die Box sagt den Text sofort.', 'en': 'Usage: /say text – the box says the text right away.'},
+    'say_ok': {'de': '📢 Wird durchgesagt.', 'en': '📢 Announcing it now.'},
+    'say_off': {'de': 'Durchsagen sind ausgeschaltet (App › Einstellungen › Audio › Sprachausgabe).', 'en': 'Announcements are switched off (app › Settings › Audio › Speech).'},
+    'say_silent': {'de': 'Die Box ist auf stumm gestellt (App › Einstellungen › Audio › Sprachausgabe).', 'en': 'The box is set to silent (app › Settings › Audio › Speech).'},
     'n_test': {'de': '✅ MuPiBox: Testnachricht – der Bot ist richtig eingerichtet.', 'en': '✅ MuPiBox: test message – the bot is set up correctly.'},
     'n_battery_stale': {'de': '⚠️ Die MuPiBox liest den Akku seit {mins} Minuten nicht mehr aus – auch ein Neustart des MuPiHAT-Dienstes hat nicht geholfen.\n\nBitte die Box neu starten.', 'en': '⚠️ The MuPiBox has not read its battery for {mins} minutes – restarting the MuPiHAT service did not help either.\n\nPlease restart the box.'},
     'n_battery_not_charging': {'de': '🔌 Der MuPiBox-Akku lädt nicht ({soc}), obwohl das Netzteil steckt.\n\nBitte das Netzteil an der Box kurz abziehen und wieder anstecken.', 'en': '🔌 The MuPiBox battery is not charging ({soc}) although the power supply is plugged in.\n\nPlease unplug the power supply from the box for a moment and plug it in again.'},
@@ -166,6 +170,7 @@ TEXTS['commands'] = {
         '<code><b>/release</b> <i>[Minuten, Standard 60]</i></code>\n<i>alle Sperren für N Minuten aufheben</i>\n\n'
         '<code><b>/quietnow</b> <i>[Minuten, Standard 60]</i></code>\n<i>Wiedergabe für N Minuten sperren</i>\n\n'
         '<code><b>/limit set</b> <i>&lt;Tag&gt; &lt;Minuten&gt;</i></code>\n<i>Spielzeit-Limit für einen Wochentag (mon..sun, 0..1440)</i>\n\n'
+        '<code><b>/sag</b> <i>Text</i></code>\n<i>Durchsage: die Box sagt den Text sofort</i>\n\n'
         '<b>MuPiBox-App:</b>\n'
         '<code><b>/login</b></code> – Login-Link zur MuPiBox-App\n\n'
         '<b>Smart-Sync:</b>\n'
@@ -187,6 +192,7 @@ TEXTS['commands'] = {
         '<code><b>/release</b> <i>[minutes, default 60]</i></code>\n<i>lift all blocks for N minutes</i>\n\n'
         '<code><b>/quietnow</b> <i>[minutes, default 60]</i></code>\n<i>block playback for N minutes</i>\n\n'
         '<code><b>/limit set</b> <i>&lt;day&gt; &lt;minutes&gt;</i></code>\n<i>playtime limit for one weekday (mon..sun, 0..1440)</i>\n\n'
+        '<code><b>/say</b> <i>text</i></code>\n<i>announcement: the box says the text right away</i>\n\n'
         '<b>MuPiBox app:</b>\n'
         '<code><b>/login</b></code> – login link to the MuPiBox app\n\n'
         '<b>Smart-Sync:</b>\n'

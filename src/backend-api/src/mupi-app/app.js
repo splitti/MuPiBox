@@ -861,6 +861,7 @@ function startSkeleton() {
         <button class="qbtn accent" id="q-plus">${icon('plus', 22)}<span>+15 min</span></button>
         <button class="qbtn blue" id="q-quiet">${icon('moon', 22)}<span id="q-quiet-label">Ruhe sofort</span></button>
         <button class="qbtn" id="q-sleep">${icon('time', 22)}<span id="q-sleep-label">Schlaftimer</span></button>
+        <button class="qbtn" id="q-say">${icon('vol', 22)}<span>Durchsage</span></button>
       </div>
     </div>`,
     `<div class="update-note" id="update-note"></div>`,
@@ -918,6 +919,7 @@ function mountStart(root) {
     })
   }
   $('#q-sleep', root).onclick = () => sleepSheet(root)
+  $('#q-say', root).onclick = () => saySheet()
 }
 
 async function loadNow(root) {
@@ -6132,6 +6134,7 @@ const TG_COMMANDS = [
   ['/quietnow 60', 'Wiedergabe für eine Weile sperren'],
   ['/pause', 'Wiedergabe anhalten'],
   ['/vol 40', 'Lautstärke setzen (0–100)'],
+  ['/sag Text', 'Durchsage: die Box sagt den Text'],
   ['/login', 'Link zu dieser App'],
   ['/command', 'alle Befehle'],
 ]
@@ -6707,6 +6710,305 @@ function mountSystem(root) {
   })
 }
 
+/* Einstellungen › Audio › Sprachausgabe: the voice (Piper on the box, Google, silent), the voices per language, the
+   automatic announcements and the parents' ones (speech.ts, eltern/speech-routes.ts) */
+
+const speech = { data: null, lang: null, voices: {}, licenses: {}, showAll: false, poll: null }
+const SPEECH_QUALITY = { x_low: 'sehr niedrig', low: 'niedrig', medium: 'mittel', high: 'hoch' }
+const SPEECH_LEVELS = [
+  [0.4, 'leise'],
+  [0.7, 'mittel'],
+  [1, 'wie die Musik'],
+]
+const fmtMB = (bytes) => `${Math.max(1, Math.round(bytes / 1e6)).toLocaleString(LOCALE)} MB`
+
+async function loadSpeech() {
+  const r = await api(`${API}/speech${speech.lang ? `?lang=${speech.lang}` : ''}`)
+  if (!r.ok) throw new Error(`speech ${r.status}`)
+  speech.data = r.body
+  speech.lang ??= r.body.boxLanguage
+  if (!speech.voices[speech.lang]) {
+    const v = await api(`${API}/speech/voices?lang=${speech.lang}`)
+    speech.voices[speech.lang] = v.ok ? v.body.voices : []
+  }
+}
+
+// the voice the box speaks a language with: the chosen one if loaded, else the first loaded one
+const speechActive = (lang) => {
+  const d = speech.data
+  const loaded = d.installed[lang] ?? []
+  return loaded.includes(d.config.voices[lang]) ? d.config.voices[lang] : loaded[0] ?? null
+}
+
+function speechTop() {
+  const d = speech.data
+  const c = d.config
+  const box = d.boxLanguage
+  const active = d.active
+  // (thorsten_emotional → Thorsten Emotional)
+  const voiceName = (key) => (key ? key.split('-')[1].replace(/_/g, ' ').replace(/(^|\s)\p{L}/gu, (c) => c.toUpperCase()) : '')
+  const sw = (id, label, help, on, extra = '') =>
+    `<div class="row"><span class="lbl"><b>${esc(label)}</b>${help ? `<small>${esc(help)}</small>` : ''}</span><label class="switch"><input type="checkbox" id="${id}" ${on ? 'checked' : ''} ${extra} aria-label="${esc(label)}"><span></span></label></div>`
+  const choice = (id, label, help, badge = '') =>
+    `<button type="button" class="choice${c.engine === id ? ' on' : ''}" data-engine="${id}" aria-pressed="${c.engine === id}"><span class="radio"></span><span class="lbl"><b>${esc(label)}</b><small>${esc(help)}</small></span>${badge}</button>`
+  const status =
+    c.engine === 'off'
+      ? `<span class="dot"></span><span>Die Box spricht nicht – keine Ansagen, keine vorgelesenen Namen.</span>`
+      : c.engine === 'piper' && active
+        ? `<span class="dot ok"></span><span>Die Box spricht mit <b translate="no">${esc(voiceName(active))}</b> – ohne Internet.</span>`
+        : c.engine === 'piper'
+          ? `<span class="dot warn"></span><span>Für die Sprache der Box ist noch keine Stimme geladen – unten eine laden. ${c.fallback === 'google' ? 'Bis dahin spricht Google.' : 'Bis dahin bleibt die Box stumm.'}</span>`
+          : `<span class="dot ok"></span><span>Die Box spricht mit Google – dafür braucht sie Internet.</span>`
+  // the voices of the language chosen in the list
+  const lang = speech.lang
+  const list = speech.voices[lang] ?? []
+  const job = d.job
+  const shown = speech.showAll ? list : list.slice(0, 8)
+  const activeHere = speechActive(lang)
+  // (the country only where a language has several: en GB / US, pt PT / BR)
+  const regions = new Set(list.map((v) => v.region)).size > 1
+  const voiceRow = (v) => {
+    const running = job?.state === 'running' && job.key === v.key
+    const lic = speech.licenses[v.key]
+    const right = running
+      ? `<span class="chip">${esc(`lädt … ${job.total ? Math.round((job.bytes / job.total) * 100) : 0} %`)}</span>`
+      : v.key === activeHere
+        ? `<span class="chip ok">aktiv</span><button class="btn danger sm" data-v-rm="${esc(v.key)}">Löschen</button>`
+        : v.installed
+          ? `<button class="btn sm" data-v-use="${esc(v.key)}">Verwenden</button><button class="btn danger sm" data-v-rm="${esc(v.key)}">Löschen</button>`
+          : `<button class="btn sm" data-v-get="${esc(v.key)}" ${job?.state === 'running' ? 'disabled' : ''}>${icon('save', 14)}Laden</button>`
+    return `<div class="entry voice"><button type="button" class="icon-btn soft" data-v-hear="${esc(v.key)}" aria-label="Anhören">${icon('vol', 16)}</button>
+      <span class="lbl"><b translate="no">${esc(voiceName(v.key))}</b><small>${esc([`Qualität ${SPEECH_QUALITY[v.quality] ?? v.quality}`, fmtMB(v.size), regions ? v.region : ''].filter(Boolean).join(' · '))}${lic?.license && !/^see /i.test(lic.license) ? ` · <span translate="no">${esc(lic.license.replace(/^https?:\/\/creativecommons\.org\/licenses\/([a-z-]+)\/([\d.]+)\/?$/i, (_m, k, n) => `CC ${k.toUpperCase()} ${n}`))}</span>` : ''}</small></span>${right}</div>`
+  }
+  const langOptions = Object.entries(LANGS)
+    .map(([code, name]) => {
+      const n = d.installed[code]?.length ?? 0
+      return `<option value="${code}"${code === lang ? ' selected' : ''}>${esc(name)}${n ? ` · ${n} ✓` : ''}${code === box ? ' ★' : ''}</option>`
+    })
+    .join('')
+  const t = d.texts
+  const text = (id, value, hint) =>
+    `<div class="field"><div class="field-pick"><input class="input" id="${id}" value="${esc(value)}" maxlength="300" ${NO_PW_MANAGER}><button type="button" class="btn sm" data-sp-test="${id}">${icon('vol', 14)}Probe</button></div>${hint ? `<small>${esc(hint)}</small>` : ''}</div>`
+  return [
+    `<section class="card" data-col="1"><div class="card-head"><h2>Stimme</h2><span class="chip ${c.engine === 'off' ? '' : 'ok'}">${c.engine === 'piper' && active ? 'offline' : c.engine === 'off' ? 'stumm' : 'online'}</span></div>
+      <div class="status-line">${status}</div>
+      <div class="choices">
+        ${choice('piper', 'Piper – auf der Box', 'Natürliche Stimmen, ohne Internet. Jede Stimme wird einmal geladen (etwa 20–120 MB).', '<span class="chip">empfohlen</span>')}
+        ${choice('google', 'Google – online', 'Braucht Internet; der Text geht dafür einmal an Google.')}
+        ${choice('off', 'Stumm', 'Keine Ansagen, keine vorgelesenen Namen.')}
+      </div>
+      ${c.engine === 'piper' ? `<div class="field"><label>Ohne geladene Stimme für die Sprache der Box</label><div class="seg" id="sp-fallback"><button aria-pressed="${c.fallback === 'google'}" data-v="google">Google nehmen</button><button aria-pressed="${c.fallback === 'off'}" data-v="off">Stumm bleiben</button></div></div>` : ''}
+      <p class="help" style="margin:0">Die Box spricht in ihrer Sprache: <b translate="no">${esc(LANGS[box] ?? box)}</b> (unter System › Sprache). Das gilt auch für „Namen vorlesen“ am Display.</p></section>`,
+    `<section class="card" data-col="1"><div class="card-head"><h2>Stimmen</h2><span class="chip">${esc(`${fmtMB(d.bytes)} belegt`)}</span></div>
+      <div class="field"><label for="sp-lang">Sprache</label><select class="input" id="sp-lang" translate="no">${langOptions}</select></div>
+      ${list.length ? `<div class="rows">${shown.map(voiceRow).join('')}</div>` : '<p class="help" style="margin:0">Die Liste der Stimmen ließ sich nicht laden (keine Verbindung zu Hugging Face?).</p>'}
+      ${list.length > shown.length ? `<button class="btn" id="sp-all">${esc(`Alle ${list.length} Stimmen zeigen`)}</button>` : ''}
+      ${job?.state === 'failed' ? `<div class="note warn">${icon('info', 18)}<span>${esc('Die Stimme ließ sich nicht laden. Bitte noch einmal versuchen.')}</span></div>` : ''}
+      <p class="help" style="margin:0">${esc(`Stimmen von Piper (rhasspy/piper-voices); die Lizenz steht bei jeder Stimme. ${d.free != null ? `Noch ${(d.free / 1e9).toLocaleString(LOCALE, { maximumFractionDigits: 1 })} GB frei.` : ''}`)}</p><audio id="sp-audio" hidden></audio></section>`,
+    `<section class="card" data-col="2"><h2>Automatische Ansagen</h2><p class="help">${esc('Die Box sagt selbst etwas – in ihrer Sprache, während etwas läuft.')}</p>
+      ${sw('sp-rest', 'Restzeit ansagen', 'Bevor die Spielzeit für heute endet.', c.rest.on)}
+      <div class="dep" data-dep-id="sp-rest"${c.rest.on ? '' : ' hidden'}><div class="field"><label>Wie lange vorher</label><div class="seg" id="sp-rest-min">${[2, 5, 10, 15].map((m) => `<button aria-pressed="${c.rest.minutes === m}" data-v="${m}">${m} min</button>`).join('')}</div></div>
+        ${text('sp-t-rest', t.rest, '{min} setzt die Box ein.')}</div>
+      ${sw('sp-bed', 'Ruhezeit ansagen', 'Wenn eine Ruhezeit beginnt, z. B. die Schlafenszeit.', c.bedtime.on)}
+      <div class="dep" data-dep-id="sp-bed"${c.bedtime.on ? '' : ' hidden'}>${text('sp-t-bedtime', t.bedtime, '{name} ist der Name der Ruhezeit.')}</div>
+      ${sw('sp-sleep', 'Ende des Schlaftimers ansagen', 'Eine Minute bevor der Schlaftimer die Wiedergabe beendet.', c.sleepEnd.on)}
+      <div class="dep" data-dep-id="sp-sleep"${c.sleepEnd.on ? '' : ' hidden'}>${text('sp-t-sleepEnd', t.sleepEnd, '')}</div>
+      <div class="field"><label>Lautstärke der Ansagen</label><div class="seg" id="sp-level">${SPEECH_LEVELS.map(([v, l]) => `<button aria-pressed="${c.level === v}" data-v="${v}">${esc(l)}</button>`).join('')}</div><small>Nie lauter als die Box gerade ist (Hörschutz).</small></div></section>`,
+    `<section class="card" data-col="2"><div class="card-head"><h2>Eltern-Durchsagen</h2><span class="chip ${c.parents.on ? 'ok' : ''}">${c.parents.on ? 'an' : 'aus'}</span></div>
+      <p class="help">${esc('Vom Handy etwas auf der Box sagen lassen: über „Durchsage“ auf der Startseite oder per Telegram (/sag Text).')}</p>
+      ${sw('sp-parents', 'Durchsagen erlauben', '', c.parents.on)}
+      <div class="rows" id="sp-templates">${t.templates.map((x, i) => `<div class="entry"><span class="avatar">${icon('vol', 16)}</span><span class="lbl"><b>${esc(x)}</b></span><button class="btn sm primary" data-tpl-say="${i}">Jetzt</button><button class="btn sm" data-tpl-rm="${i}">Entfernen</button></div>`).join('')}</div>
+      <div class="field-pick"><input class="input" id="sp-tpl-new" maxlength="300" placeholder="${esc('Neue Vorlage, z. B. „Oma ist da!“')}" ${NO_PW_MANAGER}><button type="button" class="btn" id="sp-tpl-add">${icon('plus', 16)}Hinzufügen</button></div>
+      ${sw('sp-gong', 'Gong vorher', 'Ein kurzer Ton, damit das Kind aufhorcht.', c.parents.gong)}
+      ${sw('sp-pause', 'Wiedergabe anhalten und danach weiter', 'Sonst wird die Musik während der Durchsage nur leiser.', c.parents.pause)}</section>`,
+  ]
+}
+
+async function speechSave(body, done = 'Gespeichert') {
+  const r = await api(`${API}/speech`, { method: 'POST', body })
+  toast(r.ok ? done : 'Nicht gespeichert', r.ok ? 'ok' : 'info')
+  return r.ok
+}
+
+function mountSpeech(root, page) {
+  const d = speech.data
+  const again = async () => {
+    await loadSpeech().catch(() => undefined)
+    if (currentPage()?.id === page.id) renderPage(page, false)
+  }
+  for (const b of root.querySelectorAll('[data-engine]')) {
+    b.onclick = async () => {
+      if (b.dataset.engine === d.config.engine) return
+      if (await speechSave({ engine: b.dataset.engine })) again()
+    }
+  }
+  const seg = (id, fn) => {
+    const el = $(`#${id}`, root)
+    if (!el) return
+    el.onclick = async (e) => {
+      const b = e.target.closest('button')
+      if (!b || b.getAttribute('aria-pressed') === 'true') return
+      for (const x of el.children) x.setAttribute('aria-pressed', String(x === b))
+      await fn(b.dataset.v)
+    }
+  }
+  seg('sp-fallback', (v) => speechSave({ fallback: v }).then(again))
+  seg('sp-rest-min', (v) => speechSave({ rest: { minutes: Number(v) } }))
+  seg('sp-level', (v) => speechSave({ level: Number(v) }))
+  // switches (and what belongs to them)
+  for (const [id, body] of [
+    ['sp-rest', (on) => ({ rest: { on } })],
+    ['sp-bed', (on) => ({ bedtime: { on } })],
+    ['sp-sleep', (on) => ({ sleepEnd: { on } })],
+    ['sp-parents', (on) => ({ parents: { on } })],
+    ['sp-gong', (on) => ({ parents: { gong: on } })],
+    ['sp-pause', (on) => ({ parents: { pause: on } })],
+  ]) {
+    const el = $(`#${id}`, root)
+    el.onchange = async () => {
+      const dep = $(`[data-dep-id="${id}"]`, root)
+      if (dep) dep.hidden = !el.checked
+      if (!(await speechSave(body(el.checked)))) el.checked = !el.checked
+      if (id === 'sp-parents') again()
+    }
+  }
+  // the texts (of the box's language), saved when left; a sample of each on the box
+  for (const k of ['rest', 'bedtime', 'sleepEnd']) {
+    const el = $(`#sp-t-${k}`, root)
+    el.onchange = () => speechSave({ lang: d.boxLanguage, texts: { [k]: el.value } })
+  }
+  for (const b of root.querySelectorAll('[data-sp-test]')) {
+    b.onclick = async () => {
+      const text = $(`#${b.dataset.spTest}`, root).value.replace('{min}', '5').replace('{name}', 'Schlafenszeit')
+      const r = await api(`${API}/speech/say`, { method: 'POST', body: { text, test: true } })
+      toast(r.ok ? 'Die Box spricht …' : r.body?.error === 'speech_off' ? 'Die Box ist auf stumm gestellt' : 'Das ging nicht', r.ok ? 'ok' : 'info')
+    }
+  }
+  // the templates
+  const templates = [...d.texts.templates]
+  const saveTemplates = () => speechSave({ lang: d.boxLanguage, templates }).then(again)
+  for (const b of root.querySelectorAll('[data-tpl-rm]')) {
+    b.onclick = () => {
+      templates.splice(Number(b.dataset.tplRm), 1)
+      saveTemplates()
+    }
+  }
+  for (const b of root.querySelectorAll('[data-tpl-say]')) b.onclick = () => speechSay(templates[Number(b.dataset.tplSay)])
+  $('#sp-tpl-add', root).onclick = () => {
+    const v = $('#sp-tpl-new', root).value.trim()
+    if (!v) return
+    templates.push(v)
+    saveTemplates()
+  }
+  // the voices: the language of the list, listen (on this phone), load, use, delete
+  $('#sp-lang', root).onchange = async (e) => {
+    speech.lang = e.target.value
+    speech.showAll = false
+    await again()
+  }
+  $('#sp-all', root)?.addEventListener('click', () => {
+    speech.showAll = true
+    renderPage(page, false)
+  })
+  const audio = $('#sp-audio', root)
+  for (const b of root.querySelectorAll('[data-v-hear]')) {
+    b.onclick = () => {
+      audio.src = `${API}/speech/sample?key=${encodeURIComponent(b.dataset.vHear)}`
+      audio.play().catch(() => toast('Die Hörprobe ließ sich nicht abspielen', 'info'))
+    }
+  }
+  for (const b of root.querySelectorAll('[data-v-get]')) {
+    b.onclick = async () => {
+      const r = await api(`${API}/speech/voice/install`, { method: 'POST', body: { key: b.dataset.vGet } })
+      if (!r.ok) return toast('Gerade lädt schon eine Stimme', 'info')
+      toast(existsPiper() ? 'Die Stimme wird geladen …' : 'Piper und die Stimme werden geladen …')
+      await again()
+    }
+  }
+  for (const b of root.querySelectorAll('[data-v-use]')) {
+    b.onclick = async () => {
+      if (await speechSave({ voice: { lang: speech.lang, key: b.dataset.vUse } }, 'Stimme gewählt')) again()
+    }
+  }
+  for (const b of root.querySelectorAll('[data-v-rm]')) {
+    b.onclick = () =>
+      confirmSheet('Löschen', 'Diese Stimme von der Box löschen? Sie lässt sich jederzeit wieder laden.', async () => {
+        const r = await api(`${API}/speech/voice/remove`, { method: 'POST', body: { key: b.dataset.vRm } })
+        toast(r.ok ? 'Gelöscht' : 'Das ging nicht', r.ok ? 'ok' : 'info')
+        speech.voices = {}
+        again()
+      })
+  }
+  // a voice loading: its progress every 2 s, the list again when it is there
+  if (d.job?.state === 'running') {
+    every(2000, async () => {
+      const r = await api(`${API}/speech/job`)
+      const job = r.body?.job
+      if (!job) return
+      if (job.state !== 'running') {
+        toast(job.state === 'done' ? 'Die Stimme ist geladen' : 'Die Stimme ließ sich nicht laden', job.state === 'done' ? 'ok' : 'info')
+        speech.voices = {}
+        // (the first voice of the box's language: taken at once)
+        if (job.state === 'done' && d.config.engine !== 'piper' && !speechActive(d.boxLanguage)) await api(`${API}/speech`, { method: 'POST', body: { engine: 'piper' } })
+        return again()
+      }
+      d.job = job
+      const chip = root.querySelector('.entry.voice .chip:not(.ok)')
+      if (chip) chip.textContent = `lädt … ${job.total ? Math.round((job.bytes / job.total) * 100) : 0} %`
+    })
+  }
+  // the licences of the voices shown (their model cards), one after the other
+  // (drawn again only when a new one came: else the drawing would start this again, without end)
+  ;(async () => {
+    let fetched = 0
+    for (const v of (speech.voices[speech.lang] ?? []).slice(0, speech.showAll ? 50 : 8)) {
+      if (speech.licenses[v.key] || currentPage()?.id !== page.id) continue
+      const r = await api(`${API}/speech/license?key=${encodeURIComponent(v.key)}`)
+      speech.licenses[v.key] = r.body ?? {}
+      fetched++
+    }
+    if (fetched && currentPage()?.id === page.id) {
+      const y = window.scrollY
+      renderPage(page, false)
+      window.scrollTo(0, y)
+    }
+  })()
+}
+// (Piper itself is on the box once any voice is)
+const existsPiper = () => Object.values(speech.data?.installed ?? {}).some((l) => l.length)
+
+// A text said on the box now (a template or the parents' own)
+async function speechSay(text) {
+  const r = await api(`${API}/speech/say`, { method: 'POST', body: { text } })
+  toast(r.ok ? 'Wird durchgesagt …' : r.body?.error === 'announcements_off' ? 'Durchsagen sind ausgeschaltet' : r.body?.error === 'speech_off' ? 'Die Box ist auf stumm gestellt' : 'Das ging nicht', r.ok ? 'ok' : 'info')
+  return r.ok
+}
+
+// Start › "Durchsage": the templates and an own text - until the speech is set up, its page instead
+async function saySheet() {
+  const r = await api(`${API}/speech`)
+  if (!r.ok || !r.body?.configured) {
+    toast('Erst die Sprachausgabe einrichten', 'info')
+    return go('sprachausgabe')
+  }
+  const templates = r.body.texts?.templates ?? []
+  openSheet(
+    `<h2>Durchsage</h2><p class="help" style="margin:0">${esc(r.body.config.parents.pause ? 'Die Box sagt es sofort – die Musik hält dafür kurz an.' : 'Die Box sagt es sofort – die Musik wird dafür leiser.')}</p>
+     ${templates.length ? `<div class="say-grid">${templates.map((t, i) => `<button type="button" class="say-tile" data-say="${i}">${icon('vol', 18)}<span>${esc(t)}</span></button>`).join('')}</div>` : ''}
+     <div class="field"><label for="say-text">Oder eigener Text</label><textarea class="input" id="say-text" rows="2" maxlength="300" placeholder="${esc('z. B. „Papa kommt gleich hoch.“')}"></textarea></div>
+     <div class="btns"><button class="btn primary" id="say-go">${icon('vol', 18)}Jetzt durchsagen</button><button class="btn" data-close>Schließen</button></div>`,
+    (sheet, close) => {
+      sheet.querySelector('[data-close]').onclick = close
+      for (const b of sheet.querySelectorAll('[data-say]')) b.onclick = async () => (await speechSay(templates[Number(b.dataset.say)])) && close()
+      sheet.querySelector('#say-go').onclick = async () => {
+        const text = sheet.querySelector('#say-text').value.trim()
+        if (!text) return toast('Bitte einen Text eingeben', 'info')
+        if (await speechSay(text)) close()
+      }
+    },
+  )
+}
+
 const sys = { info: null, version: '', news: null, bs: null, logs: null, logSel: 'log:server-error', logGrep: '', logText: '', logAuto: false, debug: null, browser: null, range: 1 }
 
 const fmtUptime = (s) => {
@@ -7039,9 +7341,10 @@ const LEGAL_SERVICES = [
   ['Apple (iTunes Search, Apple Podcasts)', 'Podcast-Suche, Vorschläge, Cover-Suche', 'https://www.apple.com/legal/internet-services/itunes/'],
   ['Deezer', 'Cover-Suche', 'https://www.deezer.com/legal/cgu'],
   ['radio-browser.info', 'Radiosender-Suche', 'https://www.radio-browser.info/'],
-  ['Google', 'Gesprochene Ansagen', 'https://policies.google.com/terms'],
+  ['Google', 'Gesprochene Ansagen (wenn Google gewählt ist)', 'https://policies.google.com/terms'],
+  ['Hugging Face', 'Piper-Stimmen und Hörproben (Sprachausgabe)', 'https://huggingface.co/terms-of-service'],
   ['Telegram', 'Eltern-Bot (wenn eingerichtet)', 'https://telegram.org/tos'],
-  ['GitHub', 'Updates und Neuigkeiten', 'https://docs.github.com/site-policy/github-terms/github-terms-of-service'],
+  ['GitHub', 'Updates, Neuigkeiten, das Programm Piper', 'https://docs.github.com/site-policy/github-terms/github-terms-of-service'],
 ]
 
 async function loadLegal() {
@@ -7077,7 +7380,8 @@ function legalTop() {
         <li>Suchen (Apple, ARD, radio-browser.info, Deezer, bei der Cover-Suche auch Spotify): der Suchbegriff und die gewählte Sprache; bei der automatischen Cover-Suche (wenn eingeschaltet) der Name des Ordners.</li>
         <li>Google: der Text einer gesprochenen Ansage, einmal; die Ansage bleibt danach auf der Box.</li>
         <li>Telegram (nur mit eingerichtetem Bot): die Nachrichten des Bots, bei „Wiedergabe melden“ auch Titel und ein Bildschirmfoto.</li>
-        <li>GitHub: die Prüfung auf Updates, die Neuigkeiten und die Updates selbst.</li>
+        <li>GitHub: die Prüfung auf Updates, die Neuigkeiten und die Updates selbst; beim ersten Laden einer Stimme das Programm Piper.</li>
+        <li>Hugging Face (nur mit Piper): die Liste der Stimmen, eine gewählte Stimme und ihre Hörprobe. Was die Box sagt, bleibt auf der Box.</li>
         <li>Das Admin-Interface lädt Bibliotheken von öffentlichen Servern (jQuery, jsDelivr, cdnjs); dabei sehen diese die Adresse des Browsers.</li>
       </ul>
       <p class="help">Für diese Dienste gelten deren eigene Bedingungen und Datenschutzhinweise.</p></section>`,
@@ -8469,6 +8773,7 @@ const CONTROLLERS = {
     },
   },
   bluetooth: { load: loadBluetooth, top: btTop, sections: () => [], mount: mountBluetooth },
+  sprachausgabe: { load: loadSpeech, top: speechTop, sections: () => [], mount: mountSpeech },
   akku: {
     load: loadBattery,
     top: batteryTop,

@@ -46,6 +46,7 @@ import {
 import { ipRateLimit, localNetworkOnly, parseCookie, requireCsrf, requireSession } from './middleware'
 import { registerCustomCoverRoutes } from './covers'
 import { registerDisplayRoutes } from './display'
+import { registerSpeechRoutes } from './speech-routes'
 import { registerHardwareRoutes } from './hardware'
 import { registerServicesRoutes } from './services'
 import { registerSystemRoutes } from './system'
@@ -358,6 +359,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
 
   if (deps.localLibrary) registerLocalUploadRoutes(router, deps.localLibrary)
   registerDisplayRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
+  registerSpeechRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerHardwareRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerServicesRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerSystemRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
