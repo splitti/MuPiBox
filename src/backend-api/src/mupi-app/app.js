@@ -2255,9 +2255,9 @@ const EPISODE_PICKS = [
 // The chosen ones of a list that is newest first, in its order (as pickEpisodes of ../episode-pick.ts)
 function pickEpisodes(newestFirst, pick) {
   const n = newestFirst.length
-  let m = /^(newest|oldest):(\d+)$/.exec(pick ?? '')
+  let m = /^(newest|oldest):(\d{1,4})$/.exec(pick ?? '')
   if (m) return m[1] === 'newest' ? newestFirst.slice(0, Number(m[2])) : newestFirst.slice(Math.max(0, n - Number(m[2])))
-  m = /^range:(\d+)-(\d+)$/.exec(pick ?? '')
+  m = /^range:(\d{1,5})-(\d{1,5})$/.exec(pick ?? '')
   if (!m) return newestFirst
   const from = Math.min(Number(m[1]), Number(m[2]))
   const to = Math.max(Number(m[1]), Number(m[2]))
@@ -2290,7 +2290,7 @@ function episodePickOf(sheet, p) {
   if (v !== 'range') return v
   const from = Number(sheet.querySelector(`#${p}-from`).value) || 0
   const to = Number(sheet.querySelector(`#${p}-to`).value) || 0
-  return from >= 1 && to >= from && to <= 99999 ? `range:${from}-${to}` : null
+  return Number.isInteger(from) && Number.isInteger(to) && from >= 1 && to >= from && to <= 99999 ? `range:${from}-${to}` : null
 }
 
 // A change of the choice: the range's fields shown or not, then `changed`
@@ -2507,7 +2507,9 @@ function openEntrySheet(item, back = null) {
         close()
         toast('Gespeichert')
         // (the episodes on the SD card follow the setting now, not only at the next hourly round)
-        if (item.type === 'rss' && keep !== (Number(item.offline) || 0)) api(`${API}/podcast-offline/sync`, { method: 'POST', body: { feed: updated.id } })
+        // (the choice of episodes too: other episodes to keep)
+        const changedKeep = keep !== (Number(item.offline) || 0) || (updated.episodePick ?? '') !== (item.episodePick ?? '')
+        if (item.type === 'rss' && changedKeep) api(`${API}/podcast-offline/sync`, { method: 'POST', body: { feed: updated.id } })
         libReload()
       }
       sheet.querySelector('[data-del]')?.addEventListener('click', () => {
@@ -3333,7 +3335,8 @@ async function openPodShow(s) {
           const when = Date.parse(text(it.pubDate))
           return { title: text(it.title) || 'Folge', when: Number.isFinite(when) ? when : null, duration: text(it['itunes:duration']), i }
         })
-        .sort((a, b) => (a.when !== null && b.when !== null && a.when !== b.when ? b.when - a.when : a.i - b.i))
+        // (as the box counts: one without a date after all dated ones, in the feed's order)
+        .sort((a, b) => (b.when ?? -b.i) - (a.when ?? -a.i))
       episodes = list.map((e, i) => ({ ...e, no: list.length - i }))
       preview()
     },

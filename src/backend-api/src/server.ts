@@ -1085,6 +1085,8 @@ async function offlineFeedView(feed: string, cached: Buffer): Promise<unknown | 
   const raw = parsed?.rss?.channel?.item
   const items = (Array.isArray(raw) ? raw : raw ? [raw] : []) as any[]
   parsed.rss.channel.item = items.filter((it) => files[episodeKey(String(it?.enclosure?._attributes?.url ?? ''))])
+  // (only the episodes on the card - the chosen ones already: readers do not apply a choice of episodes again)
+  parsed.rss._offline = true
   return parsed
 }
 
@@ -3353,6 +3355,8 @@ app.post('/api/add', (req, res) => {
     // entries untouched. The Spotify-sync service (Phase 14b) sets
     // source='spotify-sync' on its own writes and bypasses /api/add.
     const newEntry = { source: 'manual', ...req.body }
+    // (a podcast's choice of episodes only in its form - see episode-pick.ts)
+    if ('episodePick' in newEntry && !isEpisodePick(newEntry.episodePick)) delete newEntry.episodePick
     if (newEntry.source !== 'manual' && newEntry.source !== 'spotify-sync') {
       newEntry.source = 'manual'
     }
@@ -3667,6 +3671,8 @@ app.post('/api/edit', (req, res) => {
     res.status(400).send('data missing')
     return
   }
+  // (a podcast's choice of episodes only in its form - see episode-pick.ts)
+  if ('episodePick' in entry && !isEpisodePick(entry.episodePick)) delete entry.episodePick
   const lockResult = acquireLock(dataLock, '/api/edit')
   if (lockResult === 'locked') {
     console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] /api/edit data.json is locked`)

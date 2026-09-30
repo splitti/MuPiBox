@@ -287,7 +287,9 @@ type RssEpisode = { url: string; title: string; date: string | null; duration: s
 // The episodes of a podcast feed, newest first (by date; without dates in the feed's order), from the feed as the
 // display reads it (xml-js: a text is {_text} or {_cdata}, one item comes as an object instead of a list), or null.
 // cover: the episode's picture, else the show's, through the box's picture proxy (a local copy is /rss-covers/…).
-async function rssEpisodes(feed: string): Promise<RssEpisode[] | null> {
+// offlineView: the box is offline and the feed holds only the episodes on the SD card (server.ts offlineFeedView) -
+// those are the chosen ones already, a choice of episodes is not applied to them again.
+async function rssEpisodes(feed: string): Promise<(RssEpisode[] & { offlineView?: boolean }) | null> {
   const text = (v: unknown): string => {
     if (typeof v === 'string') return v
     const o = v as { _text?: unknown; _cdata?: unknown } | undefined
@@ -302,7 +304,8 @@ async function rssEpisodes(feed: string): Promise<RssEpisode[] | null> {
   try {
     const r = await fetch(`http://127.0.0.1:8200/api/rssfeed/cached?url=${encodeURIComponent(feed)}`, { signal: AbortSignal.timeout(15000) })
     if (!r.ok) return null
-    const channel = ((await r.json()) as { rss?: { channel?: Record<string, unknown> } }).rss?.channel
+    const body = (await r.json()) as { rss?: { channel?: Record<string, unknown>; _offline?: unknown } }
+    const channel = body.rss?.channel
     const raw = channel?.item
     const items = (Array.isArray(raw) ? raw : raw ? [raw] : []) as Record<string, unknown>[]
     const show = text(channel?.title)
@@ -334,7 +337,8 @@ async function rssEpisodes(feed: string): Promise<RssEpisode[] | null> {
         at: Number.isFinite(when) ? when : -i,
       })
     }
-    return list.sort((x, y) => y.at - x.at).map(({ at: _at, ...e }) => e)
+    const sorted = list.sort((x, y) => y.at - x.at).map(({ at: _at, ...e }) => e)
+    return body.rss?._offline === true ? Object.assign(sorted, { offlineView: true }) : sorted
   } catch {
     return null
   }
@@ -1744,7 +1748,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       return
     }
     // (only the chosen ones - the box shows no others; total: how many the feed has)
-    const episodes = pickEpisodes(all, item.episodePick)
+    const episodes = all.offlineView ? all : pickEpisodes(all, item.episodePick)
     // (saved: on the SD card - it plays without internet too; pos/len/done: where it was left, from the player's
     // episode-positions.json next to the library)
     const saved = deps.podcastOffline ? await deps.podcastOffline.list(item.id) : {}
@@ -1849,7 +1853,7 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
         // reads it (/api/rssfeed/cached, the box's own address).
         const feed = String(item.id ?? '')
         const all = await rssEpisodes(feed)
-        const episodes = all ? pickEpisodes(all, item.episodePick) : null
+        const episodes = all && !all.offlineView ? pickEpisodes(all, item.episodePick) : all
         // (a chosen one only when it is one of this feed's episodes)
         const episode = typeof body.episode === 'string' && body.episode ? episodes?.find((e) => e.url === body.episode) : episodes?.[0]
         if (!episode) {

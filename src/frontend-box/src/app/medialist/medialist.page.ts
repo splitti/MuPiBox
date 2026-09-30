@@ -185,7 +185,8 @@ export class MedialistPage extends SwiperIonicEventsHelper {
           // semantics for both categories, no offsetByOne flag needed.
           const slicePart = (media: Media[]): Media[] => {
             // a podcast's choice of episodes (web app: the newest / oldest N, episodes A to B - counted by date)
-            if (artist.coverMedia?.type === 'rss' && artist.coverMedia.episodePick) {
+            // (offline the box gives only the episodes on the SD card: the chosen ones already)
+            if (artist.coverMedia?.type === 'rss' && artist.coverMedia.episodePick && !media.some((m) => m.offlineView)) {
               return pickEpisodes(newestFirst(media), artist.coverMedia.episodePick)
             }
             if (!artist.coverMedia?.aPartOfAll) return media

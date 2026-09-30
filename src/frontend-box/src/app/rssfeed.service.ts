@@ -41,6 +41,7 @@ export class RssFeedService {
             episodeNew: item._new === true,
             episodeProgress: typeof item._pct === 'number' ? item._pct : undefined,
             episodeDone: item._done === true,
+            ...(response.rss?._offline === true ? { offlineView: true } : {}),
           }
           Utils.copyExtraMediaData(extraDataSource, media)
           return media
@@ -50,7 +51,7 @@ export class RssFeedService {
       toArray(),
       // (with a choice of episodes only a chosen one is "new" - the tile's dot is not for one the box does not show)
       map((episodes) => {
-        if (!extraDataSource?.episodePick) return episodes
+        if (!extraDataSource?.episodePick || episodes.some((e) => e.offlineView)) return episodes
         const chosen = new Set(pickEpisodes(newestFirst(episodes), extraDataSource.episodePick))
         for (const e of episodes) if (!chosen.has(e)) e.episodeNew = false
         return episodes

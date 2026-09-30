@@ -249,6 +249,8 @@ async function loadCatalog(): Promise<NonNullable<typeof catalog>> {
   } catch (err) {
     // (offline: the copy on the box)
     if (!catalog) catalog = JSON.parse(await fsp.readFile(CATALOG_FILE, 'utf8').catch(() => '{}'))
+    // (tried again in 5 minutes, not at every request - each attempt can wait 15 s)
+    catalogAt = Date.now() - 24 * 3600e3 + 5 * 60e3
     console.warn(`${new Date().toLocaleString()}: [speech] voices list: ${(err as Error).message}`)
   }
   return catalog ?? {}
