@@ -79,7 +79,9 @@ async function boot() {
     setTimeout(() => toast(back.has('spotify_connected') ? 'Mit Spotify verbunden' : `Spotify-Anmeldung fehlgeschlagen (${back.get('spotify_error')})`, back.has('spotify_connected') ? 'ok' : 'info'), 300)
   }
   loadBoxName()
-  window.addEventListener('hashchange', route)
+  // (back and forward: popstate; an address typed or a link with #/…: hashchange)
+  window.addEventListener('popstate', routeIfMoved)
+  window.addEventListener('hashchange', routeIfMoved)
   refreshOnReturn()
   route()
 }
@@ -138,8 +140,10 @@ function currentPage() {
 function go(id) {
   // (an address outside the app, e.g. "Erweiterte Einstellungen": whoever wired the click)
   if (String(id).startsWith('ext:')) return openExternal(id.slice(4))
-  if (location.hash !== hashOf(id)) location.hash = hashOf(id)
-  else route()
+  // (the address by pushState, then drawn: setting location.hash made the app on the iPhone's home screen load itself
+  // again after every change of page - "Verbinde mit der Box …" - while Safari and Chrome only fired hashchange)
+  if (location.hash !== hashOf(id)) history.pushState(null, '', hashOf(id))
+  route()
 }
 function areaOf(page) {
   let p = page
@@ -183,11 +187,18 @@ function backTarget(page) {
   return trail.length >= 2 && trail.at(-1) === page.id ? trail.at(-2) : page.parent || 'start'
 }
 
+// The address drawn last: a step back fires popstate and hashchange - drawn once
+let routedHash = null
+function routeIfMoved() {
+  if (location.hash !== routedHash) route()
+}
+
 function route() {
   const page = currentPage()
   noteTrail(page)
   // an old or unknown address: the page's own one in the address bar (no extra step back)
   if (location.hash && location.hash !== hashOf(page.id)) history.replaceState(null, '', hashOf(page.id))
+  routedHash = location.hash
   stopPageTimers()
   closeSheet() // (a sheet belongs to the page it was opened on)
   renderChrome(page)
