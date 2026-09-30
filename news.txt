@@ -28,6 +28,8 @@
 <li id='linews' class='linews'>Continuing podcast episodes and NAS albums starts at the saved position without an audible beginning.</li>
 <li id='linews' class='linews'>Long podcast episodes: the display no longer returns to the overview after pauses, and a dropped connection is opened again at the same position.</li>
 <li id='linews' class='linews'>Sleep timer, end of the playtime and start of a quiet time fade out over 20 seconds; the volume is back afterwards (also when the sleep timer is stopped while fading).</li>
+<li id='linews' class='linews'>Spotify: librespot is gone. The display's player is the box's device in the Spotify app on the phone (choose it under "Devices" and play from the phone); the update removes librespot and its cache, which frees up to several GB on the SD card. New installations get Widevine again, which the display's player needs.</li>
+<li id='linews' class='linews'>Telegram "Report playback" now also reports Spotify tracks played on the display.</li>
 </ul>
 <b>Web app</b>
 </ul>

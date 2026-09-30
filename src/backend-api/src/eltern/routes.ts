@@ -48,7 +48,6 @@ import { registerSystemRoutes } from './system'
 import { registerAdminRoutes } from './admin'
 import { registerNetworkRoutes } from './network'
 import { registerUpdateRoutes } from './updates'
-import { registerSpotifyConnectRoutes } from './spotify-connect'
 import { registerTlsRoutes, tlsOf } from './tls'
 import { type LocalLibraryDeps, registerLocalUploadRoutes } from './upload'
 import { registerPodcastRoutes } from './podcasts'
@@ -354,7 +353,6 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   registerAdminRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig, serverDir: process.cwd() })
   registerNetworkRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerUpdateRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig })
-  registerSpotifyConnectRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerTlsRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerHealthRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig })
   registerPodcastRoutes(router, {

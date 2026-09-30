@@ -281,10 +281,9 @@ export function registerSystemRoutes(router: Router, deps: SystemDeps): void {
       }
       const osRelease = (await fsp.readFile('/etc/os-release', 'utf8').catch(() => '')).match(/^PRETTY_NAME=.*$/m)?.[0] ?? ''
       const model = (await fsp.readFile('/sys/firmware/devicetree/base/model', 'utf8').catch(() => '')).replace(/\0/g, '')
-      const lib = await run('librespot', ['--version'], 5000)
       const jq = await run('jq', ['--version'], 5000)
       const version = String((deps.getMupiboxConfig()?.mupibox as Record<string, unknown> | undefined)?.version ?? '')
-      await fsp.writeFile(`${dir}/mupi.info`, [osRelease, model, os.hostname(), os.arch(), `MuPiBox ${version}`, lib.stdout.trim(), jq.stdout.trim()].join('\n'))
+      await fsp.writeFile(`${dir}/mupi.info`, [osRelease, model, os.hostname(), os.arch(), `MuPiBox ${version}`, jq.stdout.trim()].join('\n'))
       const zip = `${dir}.zip`
       const z = await run('sh', ['-c', `cd '${dir}' && zip -q -r '${zip}' .`], 30000)
       if (!z.ok) {

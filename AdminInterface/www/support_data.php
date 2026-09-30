@@ -30,8 +30,6 @@ $command = "echo $(hostname -I) >> /tmp/support/mupi.info";
 exec( $command );
 $command = "echo $(uname -m) >> /tmp/support/mupi.info";
 exec( $command );
-$command = "echo $(librespot --version) >> /tmp/support/mupi.info";
-exec( $command );
 $command = "echo $(jq --version) >> /tmp/support/mupi.info";
 exec( $command );
 $command = "sudo chmod -R 777 /tmp/support/support";

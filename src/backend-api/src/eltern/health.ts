@@ -110,7 +110,7 @@ async function services(): Promise<HealthCheck> {
   const units = failed.stdout
     .split('\n')
     .map((l) => l.trim().split(/\s+/)[0])
-    .filter((u) => u && /^(mupi|lighttpd|spotifyd|librespot)/.test(u))
+    .filter((u) => u && /^(mupi|lighttpd)/.test(u))
   const all = [...down, ...units]
   return all.length
     ? { id: 'services', status: 'error', value: all.join(', '), hint: 'services_down' }

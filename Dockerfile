@@ -104,9 +104,8 @@ RUN ln -s /etc/mupibox/mupiboxconfig.json /home/dietpi/.mupibox/spotifycontrolle
 RUN npm install
 
 # Copy binaries.
-RUN mv $mupisrc/bin/librespot/0.6.0/librespot-64bit /usr/bin/librespot
 RUN mv $mupisrc/bin/fbv/fbv_64 /usr/bin/fbv
-RUN chmod 755 /usr/bin/fbv /usr/bin/librespot
+RUN chmod 755 /usr/bin/fbv
 
 # TODO: Copy media files.
 # RUN mv -f $mupisrc/config/templates/splash.txt /boot/splash.txt

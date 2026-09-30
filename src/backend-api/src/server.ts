@@ -1934,7 +1934,7 @@ let lastPlayStartTs: number | null = null
 let lastPlayMeta: { source: string; title: string; artist: string; album: string } | null = null
 
 async function fetchCurrentPlayerState(): Promise<
-  { fingerprint: string | null; meta: typeof lastPlayMeta } | null
+  { fingerprint: string | null; meta: typeof lastPlayMeta; player?: string } | null
 > {
   try {
     const localRes = await fetch(`${PLAYER_HOST}/local`, { signal: AbortSignal.timeout(4000) })
@@ -1972,7 +1972,7 @@ async function fetchCurrentPlayerState(): Promise<
     }
     if (!title) return { fingerprint: null, meta: null }
     const fingerprint = `${source}|${artist}|${album}|${title}`
-    return { fingerprint, meta: { source, title, artist, album } }
+    return { fingerprint, meta: { source, title, artist, album }, player }
   } catch {
     return null
   }
@@ -2078,7 +2078,22 @@ async function tickPlayLog(): Promise<void> {
     lastPlayStartTs = now
     lastPlayMeta = state.meta
     lastPlaySeenTs = now
+    if (state.player === 'spotify') notifySpotifyTrack()
   }
+}
+
+// A new Spotify track in Telegram ("Wiedergabe melden"): the display's player (Web Playback SDK) plays Spotify and
+// sends no events of its own - the message came from librespot's onevent hook before, i.e. only for playback
+// through librespot. Sent from here now, where the history notices the track; the script checks the setting too.
+function notifySpotifyTrack(): void {
+  const tg = (getMupiboxConfigSync()?.telegram as Record<string, unknown> | undefined) ?? {}
+  if (tg.active !== true || tg.notifyPlayback !== true) return
+  execFile(
+    '/usr/bin/python3',
+    ['/usr/local/bin/mupibox/telegram_Track_Spotify.py'],
+    { env: { ...process.env, PLAYER_EVENT: 'playing', POSITION_MS: '0' }, timeout: 60_000 },
+    () => undefined,
+  )
 }
 
 function startPlayLogPoller(): void {
