@@ -136,10 +136,11 @@ export async function playlogSummary(
     for (const p of plays) {
       const d = new Date(p.tsMs)
       const key = dateKey(new Date(d.getFullYear(), d.getMonth(), d.getDate()))
-      if (dayBuckets.has(key)) dayBuckets.set(key, (dayBuckets.get(key) ?? 0) + p.duration / 60)
+      if (dayBuckets.has(key)) dayBuckets.set(key, (dayBuckets.get(key) ?? 0) + p.duration)
     }
-    for (const [date, mins] of dayBuckets) {
-      timeline.push({ date, minutes: Math.round(mins) })
+    for (const [date, secs] of dayBuckets) {
+      // (seconds summed, rounded once: summed minute fractions gave 3.4999 = 3 where "today" said 4)
+      timeline.push({ date, minutes: Math.round(secs / 60) })
     }
   }
 

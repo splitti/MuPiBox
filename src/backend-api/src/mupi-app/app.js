@@ -487,6 +487,14 @@ function renderItem(it) {
       return `<div class="bar"><div class="slider-head"><b>${esc(it.label)}</b><span class="value-pill">${esc(it.value ?? '')}</span></div><div class="track"><i></i></div></div>`
     case 'chart': {
       const max = Math.max(1, ...it.vals)
+      // (with its values: each above its bar, as the battery's chart - the bars alone gave no scale)
+      if (it.shown)
+        return `<div class="chart vals" style="--n:${it.vals.length}">${it.vals
+          .map(
+            (v, i) =>
+              `<div class="col${i === it.vals.length - 1 ? ' today' : ''}"><div class="bar-area"><b translate="no">${esc(it.shown[i] ?? '')}</b><i style="height:calc((100% - 18px) * ${v / max})"></i></div><span>${esc(it.labels?.[i] ?? '')}</span></div>`,
+          )
+          .join('')}</div>`
       return `<div class="chart" style="--n:${it.vals.length}">${it.vals
         .map((v, i) => `<div class="col${i === it.vals.length - 1 ? ' today' : ''}"><i style="height:${(v / max) * 100}%"></i>${esc(it.labels?.[i] ?? '')}</div>`)
         .join('')}</div>`
@@ -1441,7 +1449,13 @@ function historySections(page) {
       ...secWeek,
       items: tl.length
         ? [
-            { type: 'chart', vals: tl.map((d) => d.minutes), labels: tl.map((d) => DAY_SHORT[(new Date(`${d.date}T12:00`).getDay() + 6) % 7]) },
+            {
+              type: 'chart',
+              vals: tl.map((d) => d.minutes),
+              // (short enough for a narrow bar: "45 min", from an hour on "2:05 h")
+              shown: tl.map((d) => (d.minutes < 60 ? `${d.minutes} min` : `${Math.floor(d.minutes / 60)}:${String(d.minutes % 60).padStart(2, '0')} h`)),
+              labels: tl.map((d) => DAY_SHORT[(new Date(`${d.date}T12:00`).getDay() + 6) % 7]),
+            },
             { type: 'note', text: `Insgesamt ${w.totalMinutes ?? 0} Minuten in ${w.trackCount ?? 0} Titeln.` },
           ]
         : [noData],
