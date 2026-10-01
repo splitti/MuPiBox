@@ -6093,6 +6093,11 @@ function mountBluetooth(root, page) {
     const d = hw.bt.devices[Number(b.dataset.btRm)]
     b.onclick = () =>
       confirmSheet('Entfernen', `„${d.name}“ entfernen? Zum erneuten Verbinden muss es wieder gekoppelt werden.`, async () => {
+        // (at once: the row greyed out and its buttons off, until the list comes again)
+        const row = b.closest('.entry')
+        row?.classList.add('out')
+        for (const x of row?.querySelectorAll('button') ?? []) x.disabled = true
+        toast('Wird entfernt …')
         const r = await api(`${API}/bluetooth/remove`, { method: 'POST', body: { mac: d.mac } })
         again(r.ok ? 'Entfernt' : 'Das Gerät ließ sich nicht entfernen', r.ok ? 'ok' : 'info')
       })

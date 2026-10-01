@@ -1,8 +1,5 @@
 #!/bin/bash
 #
+# Bluetooth off (app, admin interface): bluetoothctl's own command waits until the controller is off.
 
-coproc bluetoothctl
-echo -e "power off\n" >&${COPROC[1]}
-echo -e 'exit' >&${COPROC[1]}
-ouput=$(cat <&${COPROC[0]})
-echo $output
+/usr/bin/bluetoothctl power off

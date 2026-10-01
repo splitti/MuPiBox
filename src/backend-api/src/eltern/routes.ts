@@ -2522,18 +2522,23 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     })
   }
 
-  /** POST /api/app/bluetooth/remove  — {mac} → remove_bt.sh + bt restart. */
+  /** POST /api/app/bluetooth/remove  — {mac}: disconnected, untrusted and removed (bluetoothctl). */
   router.post('/bluetooth/remove', requireSession, requireCsrf, noController, async (req, res) => {
     const mac = String((req.body as { mac?: unknown } | undefined)?.mac ?? '').trim()
     if (!BT_MAC_RE.test(mac)) {
       res.status(400).json({ error: 'invalid MAC' })
       return
     }
-    const r = await execCapture('sudo', ['-u', 'dietpi', '/usr/local/bin/mupibox/remove_bt.sh', mac], 15000)
-    await execCapture('sudo', ['-u', 'dietpi', '/usr/local/bin/mupibox/stop_bt.sh'], 15000)
-    await execCapture('sudo', ['-u', 'dietpi', '/usr/local/bin/mupibox/start_bt.sh'], 15000)
-    // (a device the controller did not let go is an error the app shows, not "removed")
-    res.status(r.ok ? 200 : 500).json({ ok: r.ok })
+    // bluetoothctl's own commands, one at a time (they wait for their answer). Before, remove_bt.sh slept 4 s and then
+    // stop_bt.sh / start_bt.sh switched the radio off and at once on again - the "on" came while the "off" was still
+    // going and failed: after every removal Bluetooth stayed off.
+    const ctl = (...args: string[]) => execCapture('sudo', ['-u', 'dietpi', 'bluetoothctl', ...args], 10000)
+    await ctl('disconnect', mac)
+    await ctl('untrust', mac)
+    const r = await ctl('remove', mac)
+    // (gone, or it was not known at all: removed either way; a device the controller did not let go is an error)
+    const gone = !/Paired:\s*yes/i.test((await ctl('info', mac)).stdout)
+    res.status(gone ? 200 : 500).json({ ok: gone, detail: gone ? undefined : r.stdout.trim().slice(0, 200) })
   })
 
   /** POST /api/app/bluetooth/autoconnect  — {enable:boolean}. */
