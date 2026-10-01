@@ -398,13 +398,24 @@ app.use('/api/player', (req, res) => {
 // them again in the background when data.json changed or they are old. They are kept here as well, so a display
 // that starts (or is reloaded) has them from the first tap. Only the display writes them; one file on the SD,
 // written when a list was made again (not on every switch).
-const homeCacheFile = path.join(process.cwd(), 'cache', 'home-lists.json')
+// In server/config, which the update keeps and puts back: in cache/ it was gone after every update, and a big library
+// (many Spotify entries) was made from scratch at the first tap - minutes of loading dots.
+const homeCacheFile = path.join(configBasePath, 'home-lists.json')
+const homeCacheFileBefore = path.join(process.cwd(), 'cache', 'home-lists.json')
 const homeCacheCategories = ['audiobook', 'music', 'other']
 let homeCache: Record<string, { version: string; at: number; media: unknown[] }> = {}
-try {
-  homeCache = JSON.parse(fs.readFileSync(homeCacheFile, 'utf8'))
-} catch {
-  // none yet
+for (const file of [homeCacheFile, homeCacheFileBefore]) {
+  try {
+    homeCache = JSON.parse(fs.readFileSync(file, 'utf8'))
+    // (from the place of before: moved over at once, so the next update keeps it already)
+    if (file === homeCacheFileBefore) {
+      fs.writeFileSync(homeCacheFile, JSON.stringify(homeCache))
+      fs.rmSync(homeCacheFileBefore, { force: true })
+    }
+    break
+  } catch {
+    // none yet (there)
+  }
 }
 let homeCacheWrite: Promise<void> = Promise.resolve()
 

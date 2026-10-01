@@ -7,7 +7,13 @@
 <b>Covers</b>
 </ul>
 <ul id='ulnews' class='ulnews'>
-<li id='linews' class='linews'>Only one of cover and artist cover set: it is used for both - an entry without a cover of its own shows the artist's picture on its tile, in the resume list and in the player (the artist tile already took the cover).</li>
+<li id='linews' class='linews'>Only one of cover and artist cover set: it is used for both - an entry without a cover of its own shows the artist's picture on its tile, in the resume list, in the player and at "Now playing" in the app (the artist tile already took the cover).</li>
+</ul>
+<b>Display</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>A category with a big library shows what is there after a few seconds, the rest follows - before, it showed only loading dots until every Spotify entry was looked up (minutes after an update), and after a minute the page was even loaded again, which started it over.</li>
+<li id='linews' class='linews'>The lists of the categories the box keeps survive an update (now in server/config, which the update keeps) - the first tap after an update no longer makes them from scratch.</li>
 </ul>
 <b>Network</b>
 </ul>

@@ -10,8 +10,10 @@ import {
   from,
   iif,
   interval,
+  merge,
   Observable,
   of,
+  ReplaySubject,
   Subject,
   type Subscription,
   throwError,
@@ -28,9 +30,11 @@ import {
   mergeAll,
   mergeMap,
   retry,
+  share,
   shareReplay,
   startWith,
   switchMap,
+  takeUntil,
   take,
   tap,
   timeout,
@@ -757,6 +761,16 @@ export class MediaService {
       .subscribe()
   }
 
+  // A part of the home page's list: as it comes - or, when it is not there after PARTIAL_AFTER_MS, empty first and then
+  // itself (replayed: a kept list comes at once, before the second subscription of merge below)
+  private static readonly PARTIAL_AFTER_MS = 4000
+  private shownAfter(source: Observable<Media[]>): Observable<Media[]> {
+    return defer(() => {
+      const shared = source.pipe(share({ connector: () => new ReplaySubject<Media[]>(1), resetOnRefCountZero: true }))
+      return merge(timer(MediaService.PARTIAL_AFTER_MS).pipe(map(() => [] as Media[]), takeUntil(shared)), shared)
+    })
+  }
+
   private fetchMedia(category: CategoryType, onlyArtist?: string, showKept = false): Observable<Media[]> {
     if (category === 'nas') {
       // NAS media is fetched live from the NAS on every call (never cached
@@ -798,7 +812,15 @@ export class MediaService {
         startWith(this.nasInCategory.get(category) ?? []),
         distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
       )
-      // combineLatest: the data.json part may come twice (kept list, then the new one), each time with the folders
+      // combineLatest: the data.json part may come twice (kept list, then the new one), each time with the folders.
+      // Home page (showKept): a part not there after a few seconds is shown empty first, the rest follows - a big
+      // library made from scratch (after an update: many Spotify entries) showed only loading dots for minutes, and
+      // after a minute the page was even loaded again (LoadingComponent), which started it all over.
+      if (showKept) {
+        return combineLatest([this.shownAfter(dataMedia), this.shownAfter(localFolders), nasFolders]).pipe(
+          map(([data, local, nas]) => [...data.filter((item) => item.type !== 'library'), ...local, ...nas]),
+        )
+      }
       return combineLatest([dataMedia, localFolders, nasFolders]).pipe(
         map(([data, local, nas]) => [...data.filter((item) => item.type !== 'library'), ...local, ...nas]),
       )
@@ -984,10 +1006,10 @@ export class MediaService {
       mergeAll(), // merge everything together
       toArray(), // convert to array
       map((media) => {
-        // add dummy image for missing covers
+        // add dummy image for missing covers (the artist's picture first, when only that one is set - as on the tiles)
         return media.map((currentMedia) => {
           if (!currentMedia.cover) {
-            currentMedia.cover = '../assets/images/nocover_mupi.png'
+            currentMedia.cover = currentMedia.artistcover || '../assets/images/nocover_mupi.png'
           }
           return currentMedia
         })
