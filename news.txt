@@ -12,6 +12,7 @@
 </ul>
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>Pin cards to the start page: every card with a heading has a pin. Some cards come as a whole card you can use right on the start page (charge curve, announcements, headphones), all others as a link that opens the page at that card. Order, card or link, and unpinning under Start &gt; Pinned &gt; Arrange. The pins are kept in the box, so every phone shows the same. Idea and first version by Andreas (Lippsson).</li>
+<li id='linews' class='linews'>Bluetooth: the list of paired devices no longer shows devices a search found nearby (phones, watches and trackers without a name appeared there for a few minutes). "Connect automatically" finds the paired devices again on Debian 12 (bluetoothctl 5.66 no longer knows "paired-devices" - no device was connected at the start).</li>
 </ul>
 <b>Podcasts</b>
 </ul>

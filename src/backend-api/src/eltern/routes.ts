@@ -2440,6 +2440,9 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       }
       for (const d of parsed) {
         const info = await execCapture('sudo', ['-u', 'dietpi', 'bluetoothctl', 'info', d.mac])
+        // (only paired ones: "devices" also names what a search found nearby - phones, watches, trackers with
+        // changing addresses - for some minutes after it, and they showed up here as "paired" without a name)
+        if (!/Paired:\s*yes/i.test(info.stdout)) continue
         devices.push({ ...d, connected: /Connected:\s*yes/i.test(info.stdout) })
       }
     }
