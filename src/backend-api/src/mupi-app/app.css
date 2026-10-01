@@ -1011,3 +1011,12 @@ textarea[hidden] { display: none; }
 .out-seg button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 0; }
 .out-seg button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .spin.sm { width: 14px; height: 14px; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; display: inline-block; animation: mp-spin .9s linear infinite; }
+
+/* WLAN › Gespeicherte Netze: up to three buttons per network - on a phone in a line of their own below the name */
+.wifi-net { flex-wrap: wrap; }
+.wifi-net .wifi-acts { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+@media (max-width: 560px) {
+  .wifi-net .wifi-acts { flex-basis: 100%; justify-content: flex-end; }
+}
+/* the address form of a network: its hints below the fields, not on them */
+#wa-fields .help, #wa-dhcp { margin: 10px 0 0; }

@@ -33,7 +33,7 @@ import { SpotifyMediaInfo } from './services/spotify-media-info.service'
 import { createSpotifySyncRouter } from './spotify-sync/routes'
 import { startScheduler } from './spotify-sync/scheduler'
 import type { RunSyncDeps } from './spotify-sync/state-machine'
-import { buildElternLandingHandler, createElternApiRouter } from './eltern/routes'
+import { buildElternLandingHandler, createElternApiRouter, registerDisplayNetworkRoutes } from './eltern/routes'
 import { startSpotifyLoginWatch } from './eltern/spotify-auth-age'
 import { startTlsWatch } from './eltern/tls'
 import { startWeeklySummary } from './eltern/weekly-summary'
@@ -3048,6 +3048,7 @@ function saveEthernetConfig(next: EthernetConfig): Promise<void> {
 }
 
 const IPV4_PATTERN = /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/
+const LINK_LOCAL_LAN = '169.254.10.10'
 
 app.get('/api/network/ethernet', async (_req, res) => {
   try {
@@ -3058,9 +3059,13 @@ app.get('/api/network/ethernet', async (_req, res) => {
     }
     let currentIp: string | undefined
     let currentGateway: string | undefined
+    // the fixed second address for a PC plugged straight in (config/network/mupibox-linklocal) - not the address
+    let directIp: string | undefined
     try {
       const { stdout } = await execFileAsync('ip', ['-4', 'addr', 'show', parsed.iface])
-      currentIp = /inet (\S+)\//.exec(stdout)?.[1]
+      const all = [...stdout.matchAll(/inet (\S+)\//g)].map((m) => m[1])
+      currentIp = all.find((a) => a !== LINK_LOCAL_LAN)
+      directIp = all.find((a) => a === LINK_LOCAL_LAN)
     } catch {
       // interface down or unknown
     }
@@ -3087,6 +3092,7 @@ app.get('/api/network/ethernet', async (_req, res) => {
       currentIp,
       currentIpv6: ipv6AddressesOf(parsed.iface),
       currentGateway,
+      directIp,
       linkUp,
       // switched off (POST /power): stays down, also after a restart
       off: fs.existsSync(LAN_OFF_FILE),
@@ -3105,10 +3111,12 @@ app.post('/api/network/ethernet', localOrElternSession, async (req, res) => {
     const gateway = String(req.body?.gateway ?? '').trim()
     const dns = String(req.body?.dns ?? '').trim()
     if (!dhcp) {
+      // (the router is optional: a PC plugged straight into the box is none - without it the box sets no default route
+      // over the cable, and the internet stays with the WiFi; with one, all its traffic would go to the PC)
       const required: [string, string][] = [
         ['Static IP', ip],
         ['Static mask', mask],
-        ['Static gateway', gateway],
+        ...(gateway ? [['Static gateway', gateway] as [string, string]] : []),
       ]
       for (const [label, value] of required) {
         if (!IPV4_PATTERN.test(value)) {
@@ -3162,6 +3170,10 @@ app.post('/api/network/ethernet/power', localOrElternSession, async (req, res) =
     res.status(500).send('error')
   }
 })
+
+// The display's WiFi page: a fixed address per WiFi network (/api/wifi/static*), fetching the address anew
+// (/api/network/dhcp/renew) - see eltern/wifi-static.ts and eltern/network.ts
+registerDisplayNetworkRoutes(app, localOrElternSession)
 
 // Restarts the ethernet interface so a saved config takes effect, mirroring the WiFi "Restart" button.
 app.post('/api/network/ethernet/restart', localOrElternSession, async (_req, res) => {

@@ -196,25 +196,21 @@ export function registerNetworkRoutes(router: Router, deps: NetworkDeps): void {
    * again - it was all of them before, and then only the WiFi was started again (409: it gets no address by DHCP).
    */
   router.post('/dhcp/renew', requireSession, requireCsrf, async (req, res) => {
-    const lan = (req.body as { lan?: unknown } | undefined)?.lan
-    // (an adapter of the system - also without an address, so not by os.networkInterfaces)
-    const known = typeof lan === 'string' && /^(eth|en)[\w.-]{0,12}$/.test(lan) && (await fsp.stat(`/sys/class/net/${lan}`).catch(() => null))
-    if (lan !== undefined && !known) {
-      res.status(400).json({ error: 'invalid_interface' })
-      return
-    }
-    const iface = typeof lan === 'string' ? lan : await wifiIface()
-    if (!/^[\w.-]{1,15}$/.test(iface)) {
-      res.status(400).json({ error: 'invalid_interface' })
-      return
-    }
-    const pid = `/run/dhclient.${iface}.pid`
-    if (!(await exists(pid))) {
-      res.status(409).json({ error: 'no_dhcp' })
-      return
-    }
-    const files = `-pf ${pid} -lf /var/lib/dhcp/dhclient.${iface}.leases`
-    detached(`sleep 1; sudo dhclient -4 -r -v ${files} ${iface}; sudo dhclient -4 -v -i ${files} -I -df /var/lib/dhcp/dhclient6.${iface}.leases ${iface}`)
-    res.json({ ok: true })
+    const r = await renewDhcp((req.body as { lan?: unknown } | undefined)?.lan)
+    res.status(r.status).json(r.body)
   })
+}
+
+/** The address of the WiFi (lan: of that cable adapter) fetched anew - for the app and the display (see server.ts) */
+export async function renewDhcp(lan: unknown): Promise<{ status: number; body: Record<string, unknown> }> {
+  // (an adapter of the system - also without an address, so not by os.networkInterfaces)
+  const known = typeof lan === 'string' && /^(eth|en)[\w.-]{0,12}$/.test(lan) && (await fsp.stat(`/sys/class/net/${lan}`).catch(() => null))
+  if (lan !== undefined && !known) return { status: 400, body: { error: 'invalid_interface' } }
+  const iface = typeof lan === 'string' ? lan : await wifiIface()
+  if (!/^[\w.-]{1,15}$/.test(iface)) return { status: 400, body: { error: 'invalid_interface' } }
+  const pid = `/run/dhclient.${iface}.pid`
+  if (!(await exists(pid))) return { status: 409, body: { error: 'no_dhcp' } }
+  const files = `-pf ${pid} -lf /var/lib/dhcp/dhclient.${iface}.leases`
+  detached(`sleep 1; sudo dhclient -4 -r -v ${files} ${iface}; sudo dhclient -4 -v -i ${files} -I -df /var/lib/dhcp/dhclient6.${iface}.leases ${iface}`)
+  return { status: 200, body: { ok: true } }
 }

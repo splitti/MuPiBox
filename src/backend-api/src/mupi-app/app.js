@@ -6355,9 +6355,117 @@ const net = { status: null, scan: null, scanning: false, saved: null, shares: nu
 /* WLAN */
 
 async function loadWlan() {
-  const [st, saved] = await Promise.all([api('/api/network'), api(`${API}/wifi/saved`)])
+  const [st, saved, fixed] = await Promise.all([api('/api/network'), api(`${API}/wifi/saved`), api(`${API}/wifi/static`)])
   net.status = st.ok ? st.body : null
   net.saved = saved.ok ? saved.body?.networks ?? [] : null
+  // (the networks with a fixed address, by name - see eltern/wifi-static.ts; reverted: one the box took back to DHCP)
+  net.fixed = fixed.ok ? fixed.body?.networks ?? {} : {}
+  net.reverted = fixed.ok ? fixed.body?.reverted ?? null : null
+}
+
+// Gespeicherte Netze › Adresse: DHCP or a fixed address for this network (the box's address in it)
+const WIFI_STATIC_ERRORS = {
+  ip: 'Die IP-Adresse stimmt nicht (Form 192.168.1.50)',
+  mask: 'Die Netzmaske stimmt nicht (z. B. 255.255.255.0)',
+  gateway: 'Die Adresse des Routers stimmt nicht',
+  dns: 'Die Adresse des DNS-Servers stimmt nicht',
+  subnet: 'Adresse und Router liegen nicht im selben Netz',
+  same: 'Die Adresse ist die des Routers',
+  host: 'Diese Adresse ist im Netz reserviert – bitte eine andere',
+}
+// The checks of the test before saving (see test in eltern/wifi-static.ts): [text when fine, text when not]
+const WIFI_TESTS = {
+  network: ['Router und Adressbereich wie im Netz jetzt', 'Router oder Adressbereich anders als im Netz jetzt – Tippfehler?'],
+  own: ['Die Adresse hat die Box gerade selbst', ''],
+  free: ['Die Adresse ist frei', 'Die Adresse nutzt schon ein anderes Gerät'],
+  router: ['Der Router antwortet unter der neuen Adresse', 'Der Router antwortet unter der neuen Adresse nicht'],
+  dns: ['Der DNS-Server antwortet', 'Der DNS-Server antwortet nicht'],
+}
+const wifiTestHtml = (checks) =>
+  `<div class="rows">${checks
+    .map((c) => `<div class="entry"><span class="chip ${c.ok ? 'ok' : 'warn'}">${c.ok ? '✓' : c.warn ? '!' : '✗'}</span><span class="lbl">${esc(WIFI_TESTS[c.id]?.[c.ok ? 0 : 1] ?? c.id)}</span></div>`)
+    .join('')}</div>`
+
+function openWifiAddress(w, page) {
+  const fixed = net.fixed?.[w.ssid]
+  const s = net.status ?? {}
+  // (a suggestion from now: in the network the box is in, the address and router it has from DHCP)
+  const pre = fixed ?? (w.active ? { ip: s.ip, mask: s.subnet, gateway: s.gateway, dns: String(s.dns ?? '').split(/\s+/)[0] } : {})
+  let mode = fixed && !fixed.paused ? 'Statisch' : 'DHCP'
+  // the values last tested and whether all was fine (saving asks again when not)
+  let tested = null
+  const field = (k, label, placeholder, v) =>
+    `<div class="field"><label for="wa-${k}">${esc(label)}</label><div class="input-wrap"><input class="input mono" id="wa-${k}" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="${esc(placeholder)}" value="${esc(v ?? '')}"></div></div>`
+  const when = w.active ? 'Die Box wechselt danach gleich auf diese Adresse, die WLAN-Verbindung bleibt bestehen.' : 'Gilt, sobald die Box sich das nächste Mal mit diesem Netz verbindet.'
+  openSheet(
+    `<h2 translate="no">${esc(w.ssid)}</h2>
+     <div class="field"><label>${esc('Adresse beziehen')}</label><div class="seg" id="wa-mode">${['DHCP', 'Statisch'].map((o) => `<button aria-pressed="${o === mode}" data-v="${o}">${esc(o)}</button>`).join('')}</div></div>
+     <div id="wa-fields"${mode === 'DHCP' ? ' hidden' : ''}>
+       ${field('ip', 'IP-Adresse', 'z. B. 192.168.1.50', pre.ip)}${field('mask', 'Netzmaske', '255.255.255.0', pre.mask || '255.255.255.0')}
+       ${field('gw', 'Router (Gateway)', 'z. B. 192.168.1.1', pre.gateway)}${field('dns', 'DNS-Server (optional)', 'leer = der Router', pre.dns && pre.dns !== pre.gateway ? pre.dns : '')}
+       <p class="help">${esc(when)} ${esc('Erreicht sie damit ihren Router nicht, nimmt sie wieder DHCP und behält die Werte hier zum Korrigieren.')}</p>
+       <p class="help">${esc('Die Adresse sollte außerhalb des Bereichs liegen, den der Router selbst vergibt – oder im Router für die Box reserviert sein.')}</p>
+       ${w.active ? `<div class="btns"><button class="btn" data-test>${icon('check', 16)}${esc('Testen')}</button></div><div id="wa-test"></div>` : `<p class="help">${esc('Testen geht nur im Netz, in dem die Box gerade ist.')}</p>`}
+     </div>
+     <p class="help" id="wa-dhcp"${mode === 'DHCP' ? '' : ' hidden'}>${esc(fixed?.paused ? `Die Adresse kommt vom Router. Die feste Adresse ${fixed.ip} ist pausiert – „Statisch" wählen, um sie zu korrigieren und neu zu probieren.` : 'Die Adresse kommt vom Router.')}</p>
+     <div class="btns"><button class="btn primary" data-save>${esc('Speichern')}</button><button class="btn" data-close>${esc('Abbrechen')}</button></div>`,
+    (sheet, close) => {
+      sheet.querySelector('[data-close]').onclick = close
+      for (const b of sheet.querySelectorAll('#wa-mode button')) {
+        b.onclick = () => {
+          mode = b.dataset.v
+          for (const x of sheet.querySelectorAll('#wa-mode button')) x.setAttribute('aria-pressed', String(x === b))
+          sheet.querySelector('#wa-fields').hidden = mode === 'DHCP'
+          sheet.querySelector('#wa-dhcp').hidden = mode !== 'DHCP'
+        }
+      }
+      const val = (k) => sheet.querySelector(`#wa-${k}`).value.trim()
+      const values = () => ({ ssid: w.ssid, ip: val('ip'), mask: val('mask'), gateway: val('gw'), dns: val('dns') })
+      // the test: its list in the sheet; true when all is fine
+      const runTest = async () => {
+        const body = values()
+        const box = sheet.querySelector('#wa-test')
+        box.innerHTML = `<p class="help">${esc('Wird getestet – die Verbindung bleibt dabei bestehen …')}</p>`
+        const r = await api(`${API}/wifi/static/test`, { method: 'POST', body })
+        if (!r.ok) {
+          box.innerHTML = `<p class="help">${esc(WIFI_STATIC_ERRORS[r.body?.field] ?? (r.status === 409 ? 'Die Box ändert gerade die Adresse – gleich noch einmal' : 'Der Test ließ sich nicht ausführen'))}</p>`
+          tested = null
+          return null
+        }
+        box.innerHTML = wifiTestHtml(r.body.checks ?? [])
+        tested = { key: JSON.stringify(body), ok: (r.body.checks ?? []).every((c) => c.ok) }
+        return tested.ok
+      }
+      const testBtn = sheet.querySelector('[data-test]')
+      if (testBtn) testBtn.onclick = runTest
+      sheet.querySelector('[data-save]').onclick = async () => {
+        const body = mode === 'DHCP' ? { ssid: w.ssid, dhcp: true } : values()
+        if (mode === 'DHCP' && !fixed) return close()
+        if (w.active && mode !== 'DHCP') {
+          // (in the network the box is in: tested first - with these values - and asked again when something failed)
+          const ok = tested?.key === JSON.stringify(body) ? tested.ok : await runTest()
+          if (ok === null) return
+          if (!ok && !(await ask('Trotzdem speichern?', 'Beim Test ist etwas nicht gut gegangen (siehe Liste). Erreicht die Box mit der neuen Adresse ihren Router nicht, nimmt sie nach etwa 30 Sekunden wieder DHCP.', 'Trotzdem speichern'))) return
+        }
+        if (w.active) {
+          const text = mode === 'DHCP' ? 'Die Box holt sich ihre Adresse wieder vom Router. Die App ist danach eventuell unter einer anderen Adresse erreichbar.' : `Die Box wechselt auf ${body.ip}. Erreicht sie dort ihren Router nicht, nimmt sie nach etwa 30 Sekunden wieder DHCP.`
+          if (!(await ask('Adresse ändern?', text, 'Ändern'))) return
+        }
+        const r = await api(`${API}/wifi/static`, { method: 'POST', body })
+        if (!r.ok) return toast(WIFI_STATIC_ERRORS[r.body?.field] ?? (r.status === 409 ? 'Die Box ändert gerade die Adresse – gleich noch einmal' : 'Nicht gespeichert'), 'info')
+        close()
+        if (r.body?.active && mode !== 'DHCP') {
+          toast(`Gespeichert – die Box ist gleich unter ${body.ip} erreichbar`)
+          // (the app opened by the old address: on to the new one)
+          if (s.ip && location.hostname === s.ip && body.ip !== s.ip) setTimeout(() => location.assign(location.href.replace(s.ip, body.ip)), 9000)
+          return
+        }
+        toast(r.body?.active ? 'Gespeichert – die Box holt sich ihre Adresse vom Router' : 'Gespeichert')
+        await loadWlan().catch(() => undefined)
+        if (currentPage()?.id === page.id) renderPage(page, false)
+      }
+    },
+  )
 }
 
 const signalWord = (dbm) => (dbm >= -55 ? 'sehr gut' : dbm >= -67 ? 'gut' : dbm >= -75 ? 'mittel' : 'schwach')
@@ -6384,14 +6492,20 @@ function wlanTop() {
       <dl class="kv">${row('IP-Adresse', n.ip)}${(Array.isArray(n.ipv6) ? n.ipv6 : []).map((a) => row('IPv6-Adresse', a)).join('')}</dl>
       <details class="more"><summary>Details</summary><dl class="kv">${row('Signal', n.wifisignal)}${row('Gateway', n.gateway)}${row('DNS', n.dns)}${row('MAC', n.mac)}</dl></details></section>`,
     `<section class="card" data-col="1"><h2>Gespeicherte Netze</h2>${
+      net.reverted
+        ? `<div class="note warn">${icon('info', 18)}<span>${esc(`Mit der festen Adresse hat die Box im Netz „${net.reverted.ssid}“ ihren Router nicht erreicht. Dort holt sie sich ihre Adresse jetzt wieder vom Router (DHCP).`)}</span><button class="btn sm" id="w-rev-ok">OK</button></div>`
+        : ''
+    }${
       net.saved
         ? net.saved.length
           ? `<div class="rows">${net.saved
               .map((w, i) => {
                 const sig = inRange.get(w.ssid)
                 const where = w.active ? 'verbunden' : sig !== undefined ? `in Reichweite · ${signalWord(sig)}` : net.scan ? 'nicht in Reichweite' : ''
-                return `<div class="entry"><span class="avatar">${icon('wifi', 16)}</span><span class="lbl"><b translate="no">${esc(w.ssid)}</b>${where ? `<small>${sig !== undefined && !w.active ? signalBars(sig) : ''} ${esc(where)}</small>` : ''}</span>
-                  ${w.active ? '<span class="chip ok">aktiv</span>' : `<button class="btn sm" data-wpw="${i}">Passwort</button><button class="btn danger sm" data-wrm="${i}">Entfernen</button>`}</div>`
+                const fixed = net.fixed?.[w.ssid]
+                // (the buttons in a group of their own: on a phone it goes below the name, see .wifi-net)
+                return `<div class="entry wifi-net"><span class="avatar">${icon('wifi', 16)}</span><span class="lbl"><b translate="no">${esc(w.ssid)}</b>${where ? `<small>${sig !== undefined && !w.active ? signalBars(sig) : ''} ${esc(where)}</small>` : ''}${fixed ? `<small>${esc(fixed.paused ? `feste Adresse ${fixed.ip} pausiert` : `feste Adresse ${fixed.ip}`)}</small>` : ''}</span>
+                  <span class="wifi-acts">${w.active ? '<span class="chip ok">aktiv</span>' : ''}<button class="btn sm" data-wip="${i}">Adresse</button>${w.active ? '' : `<button class="btn sm" data-wpw="${i}">Passwort</button><button class="btn danger sm" data-wrm="${i}">Entfernen</button>`}</span></div>`
               })
               .join('')}</div><p class="help" style="margin:0">Das verbundene Netz lässt sich nicht entfernen – die Box wäre sonst offline.</p>`
           : '<p class="help" style="margin:0">Keine.</p>'
@@ -6456,6 +6570,15 @@ function mountWlan(root, page) {
     }
   }
   // a saved network's new password (the router got a new one)
+  for (const b of root.querySelectorAll('[data-wip]')) b.onclick = () => openWifiAddress(net.saved[Number(b.dataset.wip)], page)
+  const revOk = $('#w-rev-ok', root)
+  if (revOk) {
+    revOk.onclick = async () => {
+      await api(`${API}/wifi/static/seen`, { method: 'POST' })
+      net.reverted = null
+      renderPage(page, false)
+    }
+  }
   for (const b of root.querySelectorAll('[data-wpw]')) {
     b.onclick = () => {
       const w = net.saved[Number(b.dataset.wpw)]
@@ -7976,7 +8099,7 @@ const POWER_LABEL = { 0: 'Aus', 1: 'Minimal', 2: 'Maximal' }
 const LAN_FIELDS = [
   ['lanIp', 'ip', 'IP-Adresse', 'z. B. 192.168.1.50'],
   ['lanMask', 'mask', 'Netzmaske', '255.255.255.0'],
-  ['lanGw', 'gateway', 'Router (Gateway)', 'z. B. 192.168.1.1'],
+  ['lanGw', 'gateway', 'Router (optional)', 'leer = PC direkt am Kabel'],
   ['lanDns', 'dns', 'DNS-Server (optional)', 'leer = der Router'],
 ]
 const netDriver = () => nopt.opts?.drivers?.find((d) => d.id === nopt.drv)
@@ -8055,7 +8178,7 @@ function dhcpItems(which) {
 function lanSections() {
   const l = nopt.lan
   if (!l) return [{ title: 'LAN', items: [{ type: 'note', text: 'Diese Box hat keinen LAN-Anschluss, oder er ließ sich nicht lesen.' }] }]
-  const now = [['Adresse', l.currentIp ?? '–'], ...(l.currentIpv6 ?? []).map((a) => ['IPv6-Adresse', a]), ['Router', l.currentGateway ?? '–']]
+  const now = [['Adresse', l.currentIp ?? '–'], ...(l.currentIpv6 ?? []).map((a) => ['IPv6-Adresse', a]), ['Router', l.currentGateway ?? '–'], ...(l.directIp ? [['Direkt am PC', l.directIp]] : [])]
   const lan = [
     { type: 'toggle', label: 'LAN an', key: 'lanOn', help: l.off ? 'Ausgeschaltet – bleibt aus, bis es hier wieder eingeschaltet wird.' : 'Mit Kabel hat LAN Vorrang vor dem WLAN.' },
     { type: 'kv', rows: now },
@@ -8065,6 +8188,8 @@ function lanSections() {
     for (const [key, , label, placeholder] of LAN_FIELDS) lan.push({ type: 'text', label, key, placeholder })
   }
   lan.push({ type: 'buttons', buttons: [['Speichern', 'primary', 'lansave'], ['LAN neu starten', 'ghost', 'lanrestart']] })
+  // (the fixed second address of the cable, config/network/mupibox-linklocal)
+  if (l.directIp) lan.push({ type: 'note', text: `Ein PC direkt am Kabel (ohne Router) erreicht die Box ohne jede Einstellung unter http://${l.directIp}/app.` })
   const sections = [{ title: `LAN (${l.interface})`, help: l.currentIp || l.off ? 'Der Kabelanschluss der Box.' : 'Der Kabelanschluss der Box. Im Moment ohne Verbindung – steckt ein Kabel?', items: lan }]
   // (with a fixed address as saved: no DHCP)
   if (l.dhcp) sections.push({ title: 'Adresse (DHCP)', items: dhcpItems('lan') })
@@ -8137,8 +8262,12 @@ async function saveLan(page) {
   const dhcp = state.values.get('lanMode') !== 'Statisch'
   const body = { dhcp }
   for (const [key, field] of LAN_FIELDS) body[field] = dhcp ? '' : String(state.values.get(key) ?? '').trim()
-  // (a typo in a fixed address makes the box unreachable over the cable: asked first, with the address)
-  if (!dhcp && !(await ask('Feste Adresse', `Die Box ist über das Kabel danach unter ${body.ip || '?'} erreichbar – die LAN-Verbindung startet dafür neu. Übernehmen?`, 'Übernehmen'))) return
+  // (a typo in a fixed address makes the box unreachable over the cable: asked first, with the address; without a
+  // router - a PC plugged straight in - the internet stays with the WiFi)
+  const text = body.gateway
+    ? `Die Box ist über das Kabel danach unter ${body.ip || '?'} erreichbar – die LAN-Verbindung startet dafür neu. Übernehmen?`
+    : `Ohne Router ist die Box über das Kabel nur aus diesem Netz erreichbar, unter ${body.ip || '?'} – etwa von einem PC direkt am Kabel. Ins Internet geht sie weiter über das WLAN. Die LAN-Verbindung startet dafür neu. Übernehmen?`
+  if (!dhcp && !(await ask('Feste Adresse', text, 'Übernehmen'))) return
   const r = await api('/api/network/ethernet', { method: 'POST', body })
   if (!r.ok) return toast(LAN_ERROR[r.text] ?? 'Nicht gespeichert', 'info')
   // the new config only takes effect with the port taken down and up

@@ -326,6 +326,142 @@ ion-content.wifi-content::part(scroll) {
     }
 }
 
+// WiFi | LAN in the title: the LAN settings also when the cable is not the link in use. Same look as the mode toggle.
+.view-toggle {
+    display: inline-flex;
+    vertical-align: middle;
+    border: 1px solid var(--ion-color-primary, #2dd6c7);
+    border-radius: 6px;
+    overflow: hidden;
+
+    button {
+        background: transparent;
+        color: var(--ion-color-primary, #2dd6c7);
+        border: 0;
+        padding: 6px 16px;
+        font: inherit;
+        font-size: 17px;
+
+        & + button {
+            border-left: 1px solid var(--ion-color-primary, #2dd6c7);
+        }
+
+        &.on {
+            background: var(--ion-color-primary, #2dd6c7);
+            color: #000;
+            font-weight: 600;
+        }
+    }
+}
+
+// "Renew address" in the status card, next to the address
+.status-card .renew-button {
+    align-self: center;
+    margin: 0;
+}
+
+// a network with a fixed address (and a paused one)
+.fixed-text {
+    color: var(--ion-color-warning, #ffc409);
+}
+
+// The box took a fixed address back to DHCP: the note above the status card
+.reverted-note {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    padding: 10px 14px;
+    border: 1px solid var(--ion-color-warning, #ffc409);
+    border-radius: 8px;
+    background: rgba(255, 196, 9, 0.12);
+    font-size: 14px;
+
+    span {
+        flex: 1;
+    }
+
+    b {
+        color: var(--ion-color-warning, #ffc409);
+    }
+}
+
+// The address form of a saved WiFi network (the LAN form's layout, see .lan-config)
+.address-form {
+    .address-top {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 8px;
+    }
+
+    .address-hint {
+        font-size: 14px;
+        opacity: 0.7;
+    }
+
+    .address-dhcp {
+        font-size: 16px;
+        opacity: 0.85;
+        margin: 24px 0;
+    }
+
+    .address-note {
+        margin: 8px 0 0;
+        font-size: 14px;
+        color: var(--ion-color-warning, #ffc409);
+    }
+
+    // the test's checks where the keypad is
+    .address-checks {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 15px;
+
+        .checks-title {
+            opacity: 0.7;
+        }
+
+        .check {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            background: #16202a;
+            border-radius: 6px;
+            padding: 8px 10px;
+        }
+
+        .mark {
+            flex: none;
+            width: 22px;
+            height: 22px;
+            border-radius: 11px;
+            display: grid;
+            place-items: center;
+            font-weight: 700;
+            background: var(--ion-color-danger, #eb445a);
+            color: #fff;
+
+            &.ok {
+                background: var(--ion-color-success, #2dd36f);
+                color: #000;
+            }
+
+            &.warn {
+                background: var(--ion-color-warning, #ffc409);
+                color: #000;
+            }
+        }
+
+        .checks-hint {
+            font-size: 13px;
+            opacity: 0.6;
+        }
+    }
+}
+
 // Onscreen keyboard for the Static IP/Mask/Gateway/DNS fields (same styling as the WiFi add page's keyboard).
 // simple-keyboard renders its buttons straight into the DOM (not through Angular), so this page's normal
 // encapsulated styles never reach them - ::ng-deep is needed here, unlike the WiFi add page which turns

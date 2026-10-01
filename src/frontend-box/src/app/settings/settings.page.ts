@@ -63,7 +63,7 @@ export class SettingsPage {
     // ("Add media" is gone: the library is kept in the app now - the parents' web app below)
     const out: SettingsMenuEntry[] = [
       {
-        name: 'WiFi settings',
+        name: 'Network settings',
         imgSrc: of('../../assets/wifi.svg'),
         data: 'wifi',
       },

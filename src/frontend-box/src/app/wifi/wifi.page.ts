@@ -25,7 +25,42 @@ import Keyboard from 'simple-keyboard'
 import { MediaService } from '../media.service'
 import { PlayerCmds, PlayerService } from '../player.service'
 import { WifiService } from '../wifi.service'
-import type { EthernetConfig, NetworkLink, OnboardWifiStatus, WifiBandChoice, WifiNetwork, WifiStatus } from '../wifi-network'
+import type {
+  EthernetConfig,
+  NetworkLink,
+  OnboardWifiStatus,
+  WifiBandChoice,
+  WifiNetwork,
+  WifiStaticAddress,
+  WifiStaticCheck,
+  WifiStatus,
+} from '../wifi-network'
+
+/** The address form of a saved WiFi network: DHCP or a fixed address (see backend eltern/wifi-static.ts) */
+interface AddressForm extends WifiStaticAddress {
+  ssid: string
+  /** the network the box is in now: only there the test runs and saving switches at once */
+  active: boolean
+  dhcp: boolean
+}
+
+// The checks of the test before saving: [text when fine, text when not]
+const ADDRESS_CHECKS: Record<string, [string, string]> = {
+  network: ['Router and range as in the network now', 'Router or range differ from the network now - a typo?'],
+  own: ['The box has this address right now', ''],
+  free: ['The address is free', 'Another device already uses this address'],
+  router: ['The router answers the new address', 'The router does not answer the new address'],
+  dns: ['The DNS server answers', 'The DNS server does not answer'],
+}
+const ADDRESS_ERRORS: Record<string, string> = {
+  ip: 'The IP address is not valid (like 192.168.1.50).',
+  mask: 'The mask is not valid (like 255.255.255.0).',
+  gateway: 'The router address is not valid.',
+  dns: 'The DNS server address is not valid.',
+  subnet: 'Address and router are not in the same network.',
+  same: 'The address is the router’s.',
+  host: 'This address is reserved in the network - please choose another one.',
+}
 
 @Component({
   selector: 'app-wifi',
@@ -89,9 +124,29 @@ export class WifiPage {
   // adapter screen.
   protected linkType = signal<'wifi' | 'ethernet' | 'none' | null>(null)
   private linkPolling?: Subscription
+  // WiFi or LAN chosen at the top (null: the link in use, as before) - the LAN settings without the cable in use too
+  protected chosenView = signal<'wifi' | 'lan' | null>(null)
+  protected view = computed(() => this.chosenView() ?? (this.linkType() === 'ethernet' ? 'lan' : 'wifi'))
+  // The address form of a saved WiFi network (null: the list), the test's checks (null: the keypad is shown)
+  protected address = signal<AddressForm | null>(null)
+  protected addressChecks = signal<WifiStaticCheck[] | null>(null)
+  protected addressBusy = signal(false)
+  protected addressNote = signal('')
+  private addressTested: { key: string; ok: boolean } | null = null
+  // The networks with a fixed address by name, and the one the box last took back to DHCP
+  protected fixed = signal<Record<string, WifiStaticAddress>>({})
+  protected reverted = signal<{ ssid: string } | null>(null)
+  protected readonly addressChecksText = ADDRESS_CHECKS
+  // the network the box is in now has a fixed address (no "Renew address" then)
+  protected fixedNow = computed(() => {
+    const f = this.fixed()[this.card().name]
+    return !!f && !f.paused
+  })
   // The Static IP/Mask/Gateway/DNS form is laid out to fit one screen exactly (fields + keypad side by
   // side), so the page's own scrolling is turned off only while it is shown.
-  protected showStaticLayout = computed(() => this.linkType() === 'ethernet' && !this.lanDhcp())
+  protected showStaticLayout = computed(
+    () => (this.view() === 'lan' && !this.address() && !this.lanDhcp()) || (!!this.address() && !this.address()?.dhcp && !this.addressChecks()),
+  )
   protected ethernet = signal<EthernetConfig | null>(null)
   protected ethernetLoading = signal(true)
   protected ethernetSaving = signal(false)
@@ -137,6 +192,7 @@ export class WifiPage {
 
   ionViewWillEnter() {
     this.loadNetworks()
+    this.loadFixed()
     this.statusPolling = timer(0, 3000)
       .pipe(switchMap(() => this.wifiService.getStatus().pipe(catchError(() => EMPTY))))
       .subscribe((status) => this.status.set(status))
@@ -269,6 +325,12 @@ export class WifiPage {
   }
 
   private applyLanField(name: string | undefined, value: string) {
+    // (the address form of a WiFi network has its own fields)
+    const field = { wa_ip: 'ip', wa_mask: 'mask', wa_gateway: 'gateway', wa_dns: 'dns' }[name ?? ''] as keyof WifiStaticAddress | undefined
+    if (field) {
+      this.address.update((a) => (a ? { ...a, [field]: value } : a))
+      return
+    }
     switch (name) {
       case 'lan_ip':
         this.lanIp.set(value)
@@ -286,6 +348,13 @@ export class WifiPage {
   }
 
   protected lanFocusChanged(event: any) {
+    // (the test's list stands where the keypad is: a tap into a field brings the keypad back)
+    if (this.addressChecks()) {
+      this.addressChecks.set(null)
+      const target = event.target
+      setTimeout(() => this.lanFocusChanged({ target }), 60)
+      return
+    }
     this.ensureLanKeyboard()
     this.lanSelectedInput = event.target
     this.lanKeyboard?.setOptions({ inputName: event.target.name })
@@ -295,6 +364,146 @@ export class WifiPage {
   protected lanInputChanged(event: any) {
     this.lanKeyboard?.setInput(event.target.value ?? '', event.target.name)
     this.applyLanField(event.target.name, event.target.value ?? '')
+  }
+
+  // WiFi or LAN at the top: the LAN settings also when the cable is not the link in use (set up before plugging in)
+  protected chooseView(view: 'wifi' | 'lan') {
+    this.chosenView.set(view)
+    if (view === 'lan' && !this.ethernet()) this.loadEthernetConfig()
+  }
+
+  /** The saved networks with a fixed address, and the note of one taken back to DHCP */
+  protected loadFixed() {
+    this.wifiService
+      .getWifiStatic()
+      .pipe(catchError(() => EMPTY))
+      .subscribe((state) => {
+        this.fixed.set(state.networks ?? {})
+        this.reverted.set(state.reverted ?? null)
+      })
+  }
+
+  /** "Renew address": the address fetched anew from the router - the WiFi's, or (lan) the cable's */
+  async renewAddressButtonPressed(lan?: string) {
+    const alert = await this.alertController.create({
+      cssClass: 'alert',
+      header: 'Renew address',
+      message: `The box gets its ${lan ? 'LAN' : 'WiFi'} address anew from the router. The connection is gone for a moment.`,
+      buttons: [{ text: 'Renew', handler: () => this.wifiService.renewAddress(lan).pipe(catchError(() => EMPTY)).subscribe() }, { text: 'Cancel' }],
+    })
+    await alert.present()
+  }
+
+  /** The address form of a saved network: its fixed address (also a paused one), else - in the network the box is in -
+   * the address it has from DHCP now as a start, so mostly only the last number is changed */
+  protected openAddress(network: WifiNetwork, staticMode?: boolean) {
+    const fixed = this.fixed()[network.ssid]
+    const stored = this.network()
+    const now = network.current ? { ip: this.card().ip, mask: stored?.subnet ?? '', gateway: this.card().gateway, dns: '' } : null
+    const start = fixed ?? now ?? { ip: '', mask: '255.255.255.0', gateway: '', dns: '' }
+    this.addressTested = null
+    this.addressChecks.set(null)
+    this.addressNote.set('')
+    this.address.set({
+      ssid: network.ssid,
+      active: !!network.current,
+      dhcp: staticMode ? false : !fixed || !!fixed.paused,
+      ip: start.ip === '—' ? '' : start.ip,
+      mask: start.mask,
+      gateway: start.gateway === '—' ? '' : start.gateway,
+      dns: start.dns ?? '',
+    })
+  }
+
+  protected setAddressMode(dhcp: boolean) {
+    this.address.update((a) => (a ? { ...a, dhcp } : a))
+    this.addressChecks.set(null)
+  }
+
+  protected closeAddress() {
+    this.address.set(null)
+    this.addressChecks.set(null)
+  }
+
+  private addressValues(a: AddressForm): WifiStaticAddress {
+    return { ip: a.ip.trim(), mask: a.mask.trim(), gateway: a.gateway.trim(), dns: a.dns.trim() }
+  }
+
+  /** The test before saving (in the network the box is in): its checks where the keypad was; true when all is fine */
+  protected testAddress(): Promise<boolean | null> {
+    const a = this.address()
+    if (!a) return Promise.resolve(null)
+    const values = this.addressValues(a)
+    this.addressBusy.set(true)
+    this.addressNote.set('Testing - the connection stays as it is …')
+    return new Promise((resolve) => {
+      this.wifiService.testWifiStatic(a.ssid, values).subscribe({
+        next: (r) => {
+          this.addressBusy.set(false)
+          this.addressNote.set('')
+          const ok = r.checks.every((c) => c.ok)
+          this.addressTested = { key: JSON.stringify(values), ok }
+          this.addressChecks.set(r.checks)
+          resolve(ok)
+        },
+        error: (e) => {
+          this.addressBusy.set(false)
+          this.addressNote.set(ADDRESS_ERRORS[e?.error?.field] ?? (e?.status === 409 ? 'The box is changing its address right now - try again in a moment.' : 'The test could not run.'))
+          resolve(null)
+        },
+      })
+    })
+  }
+
+  private async ask(header: string, message: string, ok: string): Promise<boolean> {
+    const alert = await this.alertController.create({ cssClass: 'alert', header, message, buttons: [{ text: 'Cancel', role: 'cancel' }, { text: ok, role: 'confirm' }] })
+    await alert.present()
+    return (await alert.onDidDismiss()).role === 'confirm'
+  }
+
+  /** Saving: in the network the box is in, tested first (with these values) and asked again when something failed */
+  protected async saveAddress() {
+    const a = this.address()
+    if (!a) return
+    const fixed = this.fixed()[a.ssid]
+    if (a.dhcp && !fixed) return this.closeAddress()
+    const values = this.addressValues(a)
+    if (a.active && !a.dhcp) {
+      const ok = this.addressTested?.key === JSON.stringify(values) ? this.addressTested.ok : await this.testAddress()
+      if (ok === null) return
+      if (!ok && !(await this.ask('Save anyway?', 'Something failed in the test (see the list). If the box does not reach its router with the new address, it goes back to DHCP after about 30 seconds.', 'Save anyway'))) return
+    }
+    if (a.active) {
+      const text = a.dhcp
+        ? `The box gets its address in “${a.ssid}” from the router again. The connection is gone for a moment.`
+        : `The box switches to ${values.ip} in “${a.ssid}”. If it does not reach its router there, it goes back to DHCP after about 30 seconds and keeps the values here to correct them.`
+      if (!(await this.ask('Change the address?', text, 'Change'))) return
+    }
+    this.addressBusy.set(true)
+    this.wifiService.setWifiStatic(a.ssid, a.dhcp ? 'dhcp' : values).subscribe({
+      next: () => {
+        this.addressBusy.set(false)
+        this.closeAddress()
+        this.loadFixed()
+      },
+      error: (e) => {
+        this.addressBusy.set(false)
+        this.addressNote.set(ADDRESS_ERRORS[e?.error?.field] ?? (e?.status === 409 ? 'The box is changing its address right now - try again in a moment.' : 'Could not save.'))
+      },
+    })
+  }
+
+  /** The note "back to DHCP": read (OK), or the form opened with the paused values to correct them */
+  protected revertedOk() {
+    this.wifiService.seenWifiStatic().pipe(catchError(() => EMPTY)).subscribe(() => this.reverted.set(null))
+  }
+
+  protected revertedCorrect() {
+    const r = this.reverted()
+    if (!r) return
+    const network = this.networks().find((n) => n.ssid === r.ssid) ?? ({ ssid: r.ssid, current: this.card().name === r.ssid } as WifiNetwork)
+    this.revertedOk()
+    this.openAddress(network, true)
   }
 
   // Scans for networks in range (takes a few seconds) and merges them with the saved ones.

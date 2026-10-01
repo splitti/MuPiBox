@@ -55,6 +55,8 @@ export interface EthernetConfig {
   /** The live address/gateway, may differ from ip/gateway right after a config change until restart. */
   currentIp?: string
   currentGateway?: string
+  /** The fixed second address of the cable for a PC plugged straight in (169.254.10.10), when it is set. */
+  directIp?: string
   /** Whether the port itself is administratively up (see /api/network/ethernet/power). */
   linkUp?: boolean
 }
@@ -64,4 +66,26 @@ export interface OnboardWifiStatus {
   /** False when the box has no onboard WiFi adapter at all. */
   available: boolean
   enabled: boolean
+}
+
+/** A fixed address for one saved WiFi network (see backend eltern/wifi-static.ts); paused: taken back to DHCP. */
+export interface WifiStaticAddress {
+  ip: string
+  mask: string
+  gateway: string
+  dns: string
+  paused?: boolean
+}
+
+/** GET /api/wifi/static: the networks with a fixed address by name, and the one last taken back to DHCP */
+export interface WifiStaticState {
+  networks: Record<string, WifiStaticAddress>
+  reverted?: { ssid: string; at: number }
+}
+
+/** One check of the test before saving a fixed address (network, own, free, router, dns) */
+export interface WifiStaticCheck {
+  id: string
+  ok: boolean
+  warn?: boolean
 }

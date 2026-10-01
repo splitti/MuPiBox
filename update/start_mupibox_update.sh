@@ -764,6 +764,13 @@ rm -f /tmp/mupibox-update-failed
 		cp -f ${MUPI_SRC}/config/udev/99-mupibox-eth.rules /etc/udev/rules.d/99-mupibox-eth.rules >&3 2>&3
 		udevadm control --reload >&3 2>&3
 	fi
+	# the cable connection's fixed second address 169.254.10.10, for a PC plugged straight into the box (see the file)
+	if [ -f ${MUPI_SRC}/config/network/mupibox-linklocal ]; then
+		install -m 755 ${MUPI_SRC}/config/network/mupibox-linklocal /etc/network/if-up.d/mupibox-linklocal >&3 2>&3
+		for dev in /sys/class/net/eth* /sys/class/net/en*; do
+			[ -e "$dev" ] && IFACE=$(basename "$dev") /etc/network/if-up.d/mupibox-linklocal >&3 2>&3
+		done
+	fi
 	systemctl daemon-reload >&3 2>&3
 	# remote display: a VNC that is running keeps its old settings (open to the network) until it starts again
 	systemctl try-restart mupi_vnc.service mupi_novnc.service >&3 2>&3

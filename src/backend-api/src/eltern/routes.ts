@@ -15,7 +15,7 @@ import { execFile, execFileSync, spawn } from 'node:child_process'
 import { promises as fsp, readdirSync, readFileSync } from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
-import { type Request, Router } from 'express'
+import { type Request, type RequestHandler, Router } from 'express'
 import QRCode from 'qrcode'
 import type { MupiboxConfig } from '../models/mupibox-config.model'
 import {
@@ -50,11 +50,12 @@ import { registerSpeechRoutes } from './speech-routes'
 import { registerCustomBootRoutes } from './bootscreen-custom'
 import { registerFeedHostRoutes } from './feed-hosts'
 import { registerPinnedCardRoutes } from './pinned-cards'
+import { dropStatic, registerWifiStaticRoutes, startWifiStaticWatch } from './wifi-static'
 import { registerHardwareRoutes } from './hardware'
 import { registerServicesRoutes } from './services'
 import { registerSystemRoutes } from './system'
 import { registerAdminRoutes } from './admin'
-import { registerNetworkRoutes } from './network'
+import { registerNetworkRoutes, renewDhcp } from './network'
 import { registerUpdateRoutes } from './updates'
 import { registerTlsRoutes, tlsOf } from './tls'
 import { type LocalLibraryDeps, registerLocalUploadRoutes } from './upload'
@@ -235,7 +236,7 @@ async function clearSpotifyCache(): Promise<boolean> {
 // mupi_wifi_iface.sh). These routes had wlan0 hard-coded: with a USB adapter the scan, the list
 // of saved networks and "remove" looked at the wrong adapter. Asked at most every 3 s.
 let wifiIfaceCache: { name: string; at: number } | undefined
-function wifiIface(): string {
+export function wifiIface(): string {
   if (wifiIfaceCache && Date.now() - wifiIfaceCache.at < 3000) {
     return wifiIfaceCache.name
   }
@@ -354,6 +355,19 @@ function spotifyHost(req: Request): string | undefined {
   return host.replace(/:\d+$/, '')
 }
 
+/**
+ * The network routes of the display's WiFi page (its admin area): a fixed address per WiFi network and fetching the
+ * address anew - as the app's /api/app/wifi/static* and /dhcp/renew, under /api (guard: the display itself, or the
+ * app with its session).
+ */
+export function registerDisplayNetworkRoutes(app: Router, guard: RequestHandler): void {
+  registerWifiStaticRoutes(app, { wifiIface }, { prefix: '/api', read: [guard], write: [guard] })
+  app.post('/api/network/dhcp/renew', guard, async (req, res) => {
+    const r = await renewDhcp((req.body as { lan?: unknown } | undefined)?.lan)
+    res.status(r.status).json(r.body)
+  })
+}
+
 export function createElternApiRouter(deps: ElternRouterDeps): Router {
   const router = Router()
   // (a new password ends the sessions issued under the old one)
@@ -373,6 +387,9 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
   registerCustomBootRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerFeedHostRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerPinnedCardRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
+  // (a fixed address per WiFi network, and the watch that takes a wrong one back to DHCP)
+  registerWifiStaticRoutes(router, { wifiIface })
+  startWifiStaticWatch({ wifiIface })
   registerHardwareRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerServicesRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
   registerSystemRoutes(router, { getMupiboxConfig: deps.getMupiboxConfig, updateMupiboxConfig: deps.updateMupiboxConfig })
@@ -1551,6 +1568,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
             res.status(500).json({ error: `save_config failed: ${saveErr?.message ?? saveOut.trim()}` })
             return
           }
+          // (its fixed address, if it had one, goes with it)
+          void dropStatic(wifiIface(), ssid).catch(() => undefined)
           res.json({ ok: true })
         })
       })

@@ -1,0 +1,22 @@
+#!/bin/sh
+# MuPiBox (/etc/network/if-up.d/mupibox-linklocal): the cable connection always has a second, fixed address of its own,
+# 169.254.10.10 (link-local). A PC plugged straight into the box - no router, no DHCP - gives itself a 169.254.x.x
+# address and reaches the box at http://169.254.10.10/app, with nothing to set up. In a home network nobody uses these
+# addresses, so it is in no one's way there. Labelled <adapter>:ll, so that the DHCP client, which clears only the
+# addresses of its own label, leaves it. Run by ifupdown after every "up" of an adapter (DHCP or static alike).
+
+case "$IFACE" in
+	eth*|en*) ;;
+	*) exit 0 ;;
+esac
+[ -z "$ADDRFAM" ] || [ "$ADDRFAM" = "inet" ] || exit 0
+
+ADDR=169.254.10.10
+ip -4 addr show dev "$IFACE" 2>/dev/null | grep -q " $ADDR/" && exit 0
+# (a label is at most 15 characters, the adapter's name and ":ll")
+if [ ${#IFACE} -le 12 ]; then
+	ip -4 addr add "$ADDR/16" dev "$IFACE" scope link label "$IFACE:ll" 2>/dev/null || true
+else
+	ip -4 addr add "$ADDR/16" dev "$IFACE" scope link 2>/dev/null || true
+fi
+exit 0

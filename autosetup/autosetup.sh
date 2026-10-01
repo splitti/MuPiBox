@@ -593,6 +593,8 @@ rm -Rf /home/dietpi/mupibox.zip /home/dietpi/MuPiBox-* >&3 2>&3
 	# LAN takes over from WiFi again on carrier loss/return of the ethernet cable (same script)
 	cp -f ${MUPI_SRC}/config/udev/99-mupibox-eth.rules /etc/udev/rules.d/99-mupibox-eth.rules >&3 2>&3
 	udevadm control --reload >&3 2>&3
+	# the cable connection's fixed second address 169.254.10.10, for a PC plugged straight into the box (see the file)
+	[ -f ${MUPI_SRC}/config/network/mupibox-linklocal ] && install -m 755 ${MUPI_SRC}/config/network/mupibox-linklocal /etc/network/if-up.d/mupibox-linklocal >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/mupi_mqtt.service /etc/systemd/system/mupi_mqtt.service >&3 2>&3
 	mv -f ${MUPI_SRC}/config/services/mupi_rotary.service /etc/systemd/system/mupi_rotary.service >&3 2>&3
 	# LAN without waiting at boot, and an address at once when a cable is plugged in (see scripts/mupibox/mupi_ethernet.sh).

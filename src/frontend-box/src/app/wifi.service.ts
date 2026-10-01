@@ -9,6 +9,9 @@ import type {
   WifiBandChoice,
   WifiConfiguredNetwork,
   WifiNetwork,
+  WifiStaticAddress,
+  WifiStaticCheck,
+  WifiStaticState,
   WifiStatus,
 } from './wifi-network'
 
@@ -77,5 +80,31 @@ export class WifiService {
 
   public setOnboardWifi(enabled: boolean): Observable<string> {
     return this.http.post(`${environment.backend.apiUrl}/network/onboard-wifi`, { enabled }, { responseType: 'text' })
+  }
+
+  /** The saved WiFi networks with a fixed address (and the one last taken back to DHCP). */
+  public getWifiStatic(): Observable<WifiStaticState> {
+    return this.http.get<WifiStaticState>(`${environment.backend.apiUrl}/wifi/static`)
+  }
+
+  /** The test before saving a fixed address - only in the network the box is in ({active: false}: no checks). */
+  public testWifiStatic(ssid: string, address: WifiStaticAddress): Observable<{ active: boolean; checks: WifiStaticCheck[] }> {
+    return this.http.post<{ active: boolean; checks: WifiStaticCheck[] }>(`${environment.backend.apiUrl}/wifi/static/test`, { ssid, ...address })
+  }
+
+  /** A fixed address for the network (or, with 'dhcp', DHCP again). */
+  public setWifiStatic(ssid: string, address: WifiStaticAddress | 'dhcp'): Observable<{ ok: boolean; active: boolean }> {
+    const body = address === 'dhcp' ? { ssid, dhcp: true } : { ssid, ...address }
+    return this.http.post<{ ok: boolean; active: boolean }>(`${environment.backend.apiUrl}/wifi/static`, body)
+  }
+
+  /** The note "back to DHCP" read. */
+  public seenWifiStatic(): Observable<unknown> {
+    return this.http.post(`${environment.backend.apiUrl}/wifi/static/seen`, {})
+  }
+
+  /** The address fetched anew from the router: the WiFi's, or with lan that cable adapter's. */
+  public renewAddress(lan?: string): Observable<unknown> {
+    return this.http.post(`${environment.backend.apiUrl}/network/dhcp/renew`, lan ? { lan } : {})
   }
 }
