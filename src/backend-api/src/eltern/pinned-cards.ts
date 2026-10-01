@@ -23,15 +23,19 @@ export interface PinnedCard {
 const MAX_PINNED = 30
 const ID = /^[a-z0-9][a-z0-9-]{0,63}$/
 
-// Cards that moved to another page (or were renamed): a pin of the old place points to the new one.
-// 5.0.7: Netzwerk-Optionen split up - WLAN hardware and the watchdog to WLAN, the cable to its own page LAN.
-const MOVED: Record<string, [string, string]> = {
+// Cards that moved to another page (or were renamed): a pin of the old place points to the new one (null: the card
+// is gone). 5.0.7: Netzwerk-Optionen split up - WLAN hardware, the watchdog and DHCP to WLAN, the cable to its own
+// page LAN; "Fernsteuerung per IP" is gone (nothing read its value any more).
+const MOVED: Record<string, [string, string] | null> = {
   'wlanopt:wlan-hardware': ['wlan', 'wlan-hardware'],
   'wlanopt:verbindung': ['wlan', 'wlan-wachter'],
+  'wlanopt:fernsteuerung-per-ip': null,
 }
-function movedPin(page: string, card: string): [string, string] {
-  if (page === 'wlanopt' && card.startsWith('lan-')) return ['lan', card]
-  return MOVED[`${page}:${card}`] ?? [page, card]
+function movedPin(page: string, card: string): [string, string] | null {
+  const key = `${page}:${card}`
+  if (key in MOVED) return MOVED[key]
+  if (page === 'wlanopt') return card.startsWith('lan-') ? ['lan', card] : ['wlan', 'adresse-dhcp']
+  return [page, card]
 }
 
 function cleanPin(v: unknown): PinnedCard | null {
@@ -39,7 +43,9 @@ function cleanPin(v: unknown): PinnedCard | null {
   if (!p || typeof p !== 'object') return null
   if (typeof p.page !== 'string' || !ID.test(p.page) || typeof p.card !== 'string' || !ID.test(p.card)) return null
   const title = typeof p.title === 'string' ? p.title.trim().slice(0, 80) : ''
-  const [page, card] = movedPin(p.page, p.card)
+  const moved = movedPin(p.page, p.card)
+  if (!moved) return null
+  const [page, card] = moved
   return { page, card, title, view: p.view === 'link' ? 'link' : 'card' }
 }
 

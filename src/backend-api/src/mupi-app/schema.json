@@ -65,7 +65,7 @@
    "id": "g-netz",
    "title": "Netzwerk",
    "icon": "wifi",
-   "description": "WLAN, LAN, Erweitert, Freigaben"
+   "description": "WLAN, LAN, Freigaben"
   },
   {
    "id": "g-dienste",
@@ -3037,7 +3037,7 @@
    "area": "einstellungen",
    "parent": "g-netz",
    "title": "WLAN",
-   "description": "Verbindung, Netze, Hardware, Wächter",
+   "description": "Verbindung, Netze, Adresse, Hardware, Wächter",
    "icon": "wifi",
    "sections": [
     {
@@ -3213,6 +3213,29 @@
      ]
     },
     {
+     "title": "Adresse (DHCP)",
+     "help": "",
+     "items": [
+      {
+       "type": "toggle",
+       "label": "DHCP-Timeout",
+       "key": "dhcpTo",
+       "default": true,
+       "help": "Beim Start nicht ewig auf eine IP-Adresse warten."
+      },
+      {
+       "type": "buttons",
+       "buttons": [
+        [
+         "Adresse neu holen",
+         "ghost",
+         "toast:Wird neu geholt"
+        ]
+       ]
+      }
+     ]
+    },
+    {
      "title": "WLAN-Hardware",
      "help": "",
      "items": [
@@ -3282,20 +3305,9 @@
        ]
       }
      ]
-    }
-   ]
-  },
-  {
-   "id": "wlanopt",
-   "slug": "network-options",
-   "area": "einstellungen",
-   "parent": "g-netz",
-   "title": "Erweitert",
-   "description": "DHCP, Fernsteuerung per IP",
-   "icon": "sliders",
-   "sections": [
+    },
     {
-     "title": "Adresse vom Router (DHCP)",
+     "title": "Adresse (DHCP)",
      "help": "",
      "items": [
       {
@@ -3309,23 +3321,11 @@
        "type": "buttons",
        "buttons": [
         [
-         "DHCP erneuern",
+         "Adresse neu holen",
          "ghost",
-         "toast:Erneuert"
+         "toast:Wird neu geholt"
         ]
        ]
-      }
-     ]
-    },
-    {
-     "title": "Fernsteuerung per IP",
-     "help": "Falls die Box sich über den Hostnamen nicht richtig erreicht, stattdessen die IP-Adresse verwenden.",
-     "items": [
-      {
-       "type": "toggle",
-       "label": "Backend-Steuerung per IP",
-       "key": "ipCtl",
-       "default": false
       }
      ]
     }
@@ -4715,7 +4715,7 @@
    "area": "einstellungen",
    "parent": "einstellungen",
    "title": "Netzwerk",
-   "description": "WLAN, LAN, Erweitert, Freigaben",
+   "description": "WLAN, LAN, Freigaben",
    "icon": "wifi",
    "sections": [
     {
@@ -4726,19 +4726,13 @@
        "type": "nav",
        "label": "WLAN",
        "target": "wlan",
-       "subtitle": "Verbindung, Netze, Hardware, Wächter"
+       "subtitle": "Verbindung, Netze, Adresse, Hardware, Wächter"
       },
       {
        "type": "nav",
        "label": "LAN",
        "target": "lan",
        "subtitle": "Kabelanschluss, Adresse, DHCP oder fest"
-      },
-      {
-       "type": "nav",
-       "label": "Erweitert",
-       "target": "wlanopt",
-       "subtitle": "DHCP, Fernsteuerung per IP"
       },
       {
        "type": "nav",
@@ -5920,11 +5914,6 @@
    "id": "wlan"
   },
   {
-   "l": "Erweitert",
-   "where": "Netzwerk › Erweitert",
-   "id": "wlanopt"
-  },
-  {
    "l": "WLAN-Hardware",
    "where": "Netzwerk › WLAN",
    "id": "wlan"
@@ -5945,14 +5934,14 @@
    "id": "wlan"
   },
   {
-   "l": "Adresse vom Router (DHCP)",
-   "where": "Netzwerk › Erweitert",
-   "id": "wlanopt"
+   "l": "Adresse (DHCP)",
+   "where": "Netzwerk › WLAN",
+   "id": "wlan"
   },
   {
    "l": "DHCP-Timeout",
-   "where": "Netzwerk › Erweitert",
-   "id": "wlanopt"
+   "where": "Netzwerk › WLAN",
+   "id": "wlan"
   },
   {
    "l": "WLAN-Wächter (DietPi-WiFi-Monitor)",
@@ -6000,24 +5989,24 @@
    "id": "lan"
   },
   {
-   "l": "Fernsteuerung per IP",
-   "where": "Netzwerk › Erweitert",
-   "id": "wlanopt"
+   "l": "DHCP-Timeout",
+   "where": "Netzwerk › LAN",
+   "id": "lan"
   },
   {
-   "l": "Backend-Steuerung per IP",
-   "where": "Netzwerk › Erweitert",
-   "id": "wlanopt"
-  },
-  {
-   "l": "Netzwerk-Optionen",
-   "where": "Netzwerk › Erweitert",
-   "id": "wlanopt"
+   "l": "Adresse neu holen",
+   "where": "Netzwerk › LAN",
+   "id": "lan"
   },
   {
    "l": "DHCP erneuern",
-   "where": "Netzwerk › Erweitert",
-   "id": "wlanopt"
+   "where": "Netzwerk › WLAN",
+   "id": "wlan"
+  },
+  {
+   "l": "Adresse neu holen",
+   "where": "Netzwerk › WLAN",
+   "id": "wlan"
   },
   {
    "l": "Freigaben & Fernzugriff",

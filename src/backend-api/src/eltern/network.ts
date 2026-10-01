@@ -1,7 +1,7 @@
 // Network options of the app (the admin interface's network.php and admin.php): onboard WiFi at boot, USB WiFi
-// drivers and their power saving, DHCP timeout, WiFi watchdog, "best connection", restarting WiFi, renewing DHCP,
-// control by IP. The LAN itself (on/off, DHCP/static) has its routes in server.ts (/api/network/ethernet*), the
-// onboard radio's quick switch too (/api/network/onboard-wifi). The driver scripts are loaded from the official
+// drivers and their power saving, DHCP timeout, WiFi watchdog, "best connection", restarting WiFi, renewing DHCP
+// (WiFi or LAN), control by IP. The LAN itself (on/off, DHCP/static) has its routes in server.ts (/api/network/ethernet*),
+// the onboard radio's quick switch too (/api/network/onboard-wifi). The driver scripts are loaded from the official
 // repository each time (as the admin interface and the updates do): they fetch the drivers from the internet anyway,
 // and stay current without a new version of the box.
 
@@ -190,9 +190,31 @@ export function registerNetworkRoutes(router: Router, deps: NetworkDeps): void {
     detached(`sleep 1; sudo service ifup@${iface} stop; sudo service ifup@${iface} start`)
     res.json({ ok: true })
   })
-  router.post('/dhcp/renew', requireSession, requireCsrf, async (_req, res) => {
-    const iface = await wifiIface()
-    detached(`sleep 1; sudo dhclient -r; sudo service ifup@${iface} stop; sudo service ifup@${iface} start; sudo dhclient`)
+  /**
+   * POST /api/app/dhcp/renew {lan?: 'eth0'} - the address of one connection fetched anew from the router: the WiFi's,
+   * or with lan the cable's. Only that connection's DHCP client (as ifupdown runs it) gives its address back and asks
+   * again - it was all of them before, and then only the WiFi was started again (409: it gets no address by DHCP).
+   */
+  router.post('/dhcp/renew', requireSession, requireCsrf, async (req, res) => {
+    const lan = (req.body as { lan?: unknown } | undefined)?.lan
+    // (an adapter of the system - also without an address, so not by os.networkInterfaces)
+    const known = typeof lan === 'string' && /^(eth|en)[\w.-]{0,12}$/.test(lan) && (await fsp.stat(`/sys/class/net/${lan}`).catch(() => null))
+    if (lan !== undefined && !known) {
+      res.status(400).json({ error: 'invalid_interface' })
+      return
+    }
+    const iface = typeof lan === 'string' ? lan : await wifiIface()
+    if (!/^[\w.-]{1,15}$/.test(iface)) {
+      res.status(400).json({ error: 'invalid_interface' })
+      return
+    }
+    const pid = `/run/dhclient.${iface}.pid`
+    if (!(await exists(pid))) {
+      res.status(409).json({ error: 'no_dhcp' })
+      return
+    }
+    const files = `-pf ${pid} -lf /var/lib/dhcp/dhclient.${iface}.leases`
+    detached(`sleep 1; sudo dhclient -4 -r -v ${files} ${iface}; sudo dhclient -4 -v -i ${files} -I -df /var/lib/dhcp/dhclient6.${iface}.leases ${iface}`)
     res.json({ ok: true })
   })
 }

@@ -13,7 +13,9 @@
 </ul>
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>The WiFi page shows the box's IPv6 address too, when it has one.</li>
-<li id='linews' class='linews'>Network settings rearranged: WiFi now also holds its hardware (onboard WiFi, USB driver) and the watchdog; the cable has a page of its own, LAN; "Network options" became "Advanced" (DHCP, remote control via IP). Cards pinned to the start page follow to their new place.</li>
+<li id='linews' class='linews'>Network settings rearranged: WiFi now also holds its hardware (onboard WiFi, USB driver), the watchdog and its address (DHCP); the cable has a page of its own, LAN. "Network options" are gone. Cards pinned to the start page follow to their new place.</li>
+<li id='linews' class='linews'>"Get a new address" on the WiFi and on the LAN page renews only that connection's address (before: all of them were released, but only the WiFi was started again). The DHCP timeout is on both pages - one value for both.</li>
+<li id='linews' class='linews'>The switch "Remote control via IP" is gone from the app: nothing read its value any more (the display always reaches the player on the box itself).</li>
 </ul>
 <h3>DEV 5.0.6 - changes compared to 5.0.5</h3>
 <b>Player</b>

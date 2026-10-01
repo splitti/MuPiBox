@@ -7991,7 +7991,6 @@ async function loadNetOptions() {
   v.set('dhcpTo', r.body.dhcpTimeout)
   v.set('wMon', r.body.wifiMonitor)
   v.set('wBest', r.body.bestConnection)
-  v.set('ipCtl', r.body.ipControl)
   v.set('usbDrv', nopt.drv)
   v.set('usbPm', POWER_LABEL[netDriver()?.power] ?? 'Standard')
   if (nopt.lan) {
@@ -8037,7 +8036,18 @@ function wlanNetSections() {
         { type: 'buttons', buttons: [['WLAN neu starten', 'ghost', 'wifirestart']] },
       ],
     },
+    { title: 'Adresse (DHCP)', col: 2, items: dhcpItems('wifi') },
     { title: 'WLAN-Hardware', col: 2, items: hardware },
+  ]
+}
+
+// The address from the router, on the pages WLAN and LAN: the timeout at the start (one value for both - a line of
+// dhclient.conf) and fetching the address anew (only that connection's)
+const DHCP_TIMEOUT_HELP = 'Beim Start höchstens 10 Sekunden auf eine Adresse warten – gilt für WLAN und LAN.'
+function dhcpItems(which) {
+  return [
+    { type: 'toggle', label: 'DHCP-Timeout', key: 'dhcpTo', help: DHCP_TIMEOUT_HELP },
+    { type: 'buttons', buttons: [['Adresse neu holen', 'ghost', which === 'lan' ? 'dhcprenewlan' : 'dhcprenew']] },
   ]
 }
 
@@ -8055,25 +8065,10 @@ function lanSections() {
     for (const [key, , label, placeholder] of LAN_FIELDS) lan.push({ type: 'text', label, key, placeholder })
   }
   lan.push({ type: 'buttons', buttons: [['Speichern', 'primary', 'lansave'], ['LAN neu starten', 'ghost', 'lanrestart']] })
-  return [{ title: `LAN (${l.interface})`, help: l.currentIp || l.off ? 'Der Kabelanschluss der Box.' : 'Der Kabelanschluss der Box. Im Moment ohne Verbindung – steckt ein Kabel?', items: lan }]
-}
-
-// Netzwerk › Erweitert: what is for WLAN and LAN alike
-function netAdvancedSections() {
-  return [
-    {
-      title: 'Adresse vom Router (DHCP)',
-      items: [
-        { type: 'toggle', label: 'DHCP-Timeout', key: 'dhcpTo', help: 'Beim Start höchstens 10 Sekunden auf eine IP-Adresse warten.' },
-        { type: 'buttons', buttons: [['DHCP erneuern', 'ghost', 'dhcprenew']] },
-      ],
-    },
-    {
-      title: 'Fernsteuerung per IP',
-      help: 'Falls die Box sich über den Hostnamen nicht richtig erreicht, stattdessen die IP-Adresse verwenden.',
-      items: [{ type: 'toggle', label: 'Backend-Steuerung per IP', key: 'ipCtl', help: 'Der Server startet dafür kurz neu.' }],
-    },
-  ]
+  const sections = [{ title: `LAN (${l.interface})`, help: l.currentIp || l.off ? 'Der Kabelanschluss der Box.' : 'Der Kabelanschluss der Box. Im Moment ohne Verbindung – steckt ein Kabel?', items: lan }]
+  // (with a fixed address as saved: no DHCP)
+  if (l.dhcp) sections.push({ title: 'Adresse (DHCP)', items: dhcpItems('lan') })
+  return sections
 }
 
 // while a driver is built or removed: its state every 5 s, the page again when it is done
@@ -8091,7 +8086,7 @@ function pollDriverJob(page) {
   })
 }
 
-const NET_OPTION = { wOnboard: 'onboard', dhcpTo: 'dhcpTimeout', wMon: 'wifiMonitor', wBest: 'bestConnection', ipCtl: 'ipControl' }
+const NET_OPTION = { wOnboard: 'onboard', dhcpTo: 'dhcpTimeout', wMon: 'wifiMonitor', wBest: 'bestConnection' }
 
 async function changeNetOption(key, v, page) {
   const back = async () => {
@@ -8127,7 +8122,7 @@ async function changeNetOption(key, v, page) {
     return back()
   }
   if (r.body?.rebootNeeded) rebootHint('Eingeschaltet.')
-  else toast(key === 'ipCtl' ? 'Gespeichert – der Server startet neu' : 'Gespeichert')
+  else toast('Gespeichert')
   if (key === 'wOnboard') back()
 }
 
@@ -8155,11 +8150,19 @@ async function saveLan(page) {
   }, 5000)
 }
 
-// Netzwerk › Erweitert (the page "wlanopt" - its id kept, for pins and links); its options and actions serve the
-// pages WLAN and LAN too (see wlanCtrl, lanCtrl)
+// The address of the WiFi (lan: of the cable) fetched anew from the router (see dhcp/renew in eltern/network.ts)
+async function renewAddress(lan) {
+  const text = lan
+    ? 'Die Box holt sich ihre Adresse am Kabel neu vom Router. Die Verbindung ist dabei für einen Moment weg.'
+    : 'Die Box holt sich ihre Adresse im WLAN neu vom Router. Die Verbindung ist dabei für einen Moment weg.'
+  if (!(await ask('Adresse neu holen?', text, 'Neu holen'))) return
+  const r = await api(`${API}/dhcp/renew`, { method: 'POST', body: lan ? { lan } : {} })
+  toast(r.ok ? 'Wird neu geholt' : r.status === 409 ? 'Hier gibt es gerade keine Adresse per DHCP' : 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
+}
+
+// The options and actions of the network pages WLAN and LAN (see wlanCtrl, lanCtrl)
 const netOptionsCtrl = {
   load: loadNetOptions,
-  sections: netAdvancedSections,
   change: changeNetOption,
   act: {
     async driver(_arg, _label, page) {
@@ -8183,11 +8186,8 @@ const netOptionsCtrl = {
       const r = await api(`${API}/wifi/restart`, { method: 'POST' })
       toast(r.ok ? 'WLAN startet neu' : 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
     },
-    async dhcprenew() {
-      if (!(await ask('DHCP erneuern?', 'Die Box holt sich ihre Adresse neu vom Router. Die Verbindung ist für einen Moment weg.', 'Erneuern'))) return
-      const r = await api(`${API}/dhcp/renew`, { method: 'POST' })
-      toast(r.ok ? 'Wird erneuert' : 'Das hat nicht geklappt', r.ok ? 'ok' : 'info')
-    },
+    dhcprenew: () => renewAddress(),
+    dhcprenewlan: () => renewAddress(nopt.lan?.interface),
     lansave: (_arg, _label, page) => saveLan(page),
     async lanrestart() {
       const r = await api('/api/network/ethernet/restart', { method: 'POST' })
@@ -9692,7 +9692,6 @@ const CONTROLLERS = {
       else toast('Gespeichert')
     },
   },
-  wlanopt: netOptionsCtrl,
   experten: { load: loadExperts, top: expertsTop, sections: () => [], ownNav: true, mount: mountExperts },
   backup: { top: backupTop, sections: () => [], mount: mountBackup },
   updates: { load: loadUpdates, top: updatesTop, sections: () => [], ownNav: true, mount: mountUpdates },
