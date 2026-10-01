@@ -1,3 +1,24 @@
+<h3>DEV 5.0.6 - changes compared to 5.0.5</h3>
+<b>Player</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>A new playback starts unpaused and without the picture of the one before: after a pause, a title started next showed the play button on the display while it played, and a local album could show the picture of a podcast episode played before it.</li>
+</ul>
+<b>Web app</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Pinned cards on the start page: the parts of a whole card (e.g. the announcement templates and "Own text …") have the usual spacing.</li>
+<li id='linews' class='linews'>The app is back in the update package: after the update to 5.0.5 the app (port 80, /app) was missing and stayed a white page.</li>
+</ul>
+<b>Installation and system</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>The update stops before anything is replaced if its package lacks the app, instead of leaving the box without it.</li>
+<li id='linews' class='linews'>The web server is restarted after the update and the installation instead of only reloaded, so the new certificate and the app on port 80 work at once and not only after the next restart.</li>
+<li id='linews' class='linews'>xdotool is installed: the display fills the whole screen and the goodbye picture shows in front of it.</li>
+<li id='linews' class='linews'>The installation creates a simple certificate when the installed version has none of its own yet, so the web server starts.</li>
+<li id='linews' class='linews'>The update restarts a running remote display (VNC), so it is reachable through the app only at once and not only after the next restart.</li>
+</ul>
 <h3>DEV 5.0.5 - changes compared to 5.0.4</h3>
 <b>Highlights</b>
 </ul>
@@ -9,16 +30,6 @@
 <li id='linews' class='linews'><b>Pin cards to the start page</b> – as a whole card (e.g. the charge curve or the announcements) or as a link.</li>
 <li id='linews' class='linews'><b>Listen with:</b> switch between the box and Bluetooth headphones right on the display or in the web app.</li>
 </ul>
-<b>Web app</b>
-</ul>
-<ul id='ulnews' class='ulnews'>
-<li id='linews' class='linews'>Pin cards to the start page: every card with a heading has a pin. Some cards come as a whole card you can use right on the start page (charge curve, announcements, headphones), all others as a link that opens the page at that card. Order, card or link, and unpinning under Start &gt; Pinned &gt; Arrange. The pins are kept in the box, so every phone shows the same. Idea and first version by Andreas (Lippsson).</li>
-<li id='linews' class='linews'>Bluetooth: the list of paired devices no longer shows devices a search found nearby (phones, watches and trackers without a name appeared there for a few minutes). "Connect automatically" finds the paired devices again on Debian 12 (bluetoothctl 5.66 no longer knows "paired-devices" - no device was connected at the start).</li>
-<li id='linews' class='linews'>Bluetooth: removing a device no longer leaves Bluetooth switched off (it was switched off and at once on again, which failed), takes a moment instead of several seconds and shows at once that it is being removed.</li>
-<li id='linews' class='linews'><b>Listen with:</b> a tap on the volume at the top of the display's player chooses between the box's speaker and a paired Bluetooth device (headphones, speaker) - it connects the device, plays only there and keeps each output's own volume (a device connected the first time is not louder than the box). Not found: said on the display. The same choice is in the web app's "Now playing". Can be switched off for the display under Controls on the display. Only shown when a Bluetooth device is paired.</li>
-<li id='linews' class='linews'>The box's sound card comes back by itself when it dropped out of PulseAudio (seen after headphones were disconnected: nothing was audible until a restart).</li>
-<li id='linews' class='linews'>Children's themes: the volume and the track number at the top of the player are on one line again (the track number sat 2 px lower).</li>
-</ul>
 <b>Podcasts</b>
 </ul>
 <ul id='ulnews' class='ulnews'>
@@ -29,6 +40,14 @@
 <li id='linews' class='linews'>Podcast servers in your own network (e.g. Pinepods, Audiobookshelf): the box fetches no addresses of the home network by itself, so nobody can use it as a detour to other devices. When a feed of the home network is added, the web app asks once whether to allow that server (host and port only); the list is under Settings &gt; Services &gt; Servers in the home network. The box itself and loopback addresses are never allowed.</li>
 <li id='linews' class='linews'>Feeds whose address has its own query (e.g. ?api_key=…&amp;podcast_id=5, as Pinepods uses) are read completely on the display – before, everything from the "&amp;" on was lost and the display showed another feed.</li>
 </ul>
+<b>Listening and Bluetooth</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'><b>Listen with:</b> a tap on the volume at the top of the display's player chooses between the box's speaker and a paired Bluetooth device (headphones, speaker) - it connects the device, plays only there and keeps each output's own volume (a device connected the first time is not louder than the box). Not found: said on the display. The same choice is in the web app's "Now playing". Can be switched off for the display under Controls on the display. Only shown when a Bluetooth device is paired.</li>
+<li id='linews' class='linews'>The box's sound card comes back by itself when it dropped out of PulseAudio (seen after headphones were disconnected: nothing was audible until a restart).</li>
+<li id='linews' class='linews'>Bluetooth: the list of paired devices no longer shows devices a search found nearby (phones, watches and trackers without a name appeared there for a few minutes). "Connect automatically" finds the paired devices again on Debian 12 (bluetoothctl 5.66 no longer knows "paired-devices" - no device was connected at the start).</li>
+<li id='linews' class='linews'>Bluetooth: removing a device no longer leaves Bluetooth switched off (it was switched off and at once on again, which failed), takes a moment instead of several seconds and shows at once that it is being removed.</li>
+</ul>
 <b>Speech output</b>
 </ul>
 <ul id='ulnews' class='ulnews'>
@@ -36,10 +55,16 @@
 <li id='linews' class='linews'>Only Piper voices the box can play are offered (some newer Chinese and Japanese voices need a newer Piper); without a voice the page says so, and Google speaks the language.</li>
 <li id='linews' class='linews'>The page Appearance &gt; Read aloud is gone: the switch for reading names aloud is under Appearance &gt; View below the cover flow it belongs to, the language under Audio &gt; Speech output ("The box speaks").</li>
 </ul>
+<b>Web app</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>Pin cards to the start page: every card with a heading has a pin. Some cards come as a whole card you can use right on the start page (charge curve, announcements, headphones), all others as a link that opens the page at that card. Order, card or link, and unpinning under Start &gt; Pinned &gt; Arrange. The pins are kept in the box, so every phone shows the same. Idea and first version by Andreas (Lippsson).</li>
+</ul>
 <b>Display</b>
 </ul>
 <ul id='ulnews' class='ulnews'>
 <li id='linews' class='linews'>When the app has not come up 25 seconds after the page loaded (e.g. the box's server restarted during an update from the console), the display loads the page again – at most three times in five minutes.</li>
+<li id='linews' class='linews'>Children's themes: the volume and the track number at the top of the player are on one line again (the track number sat 2 px lower).</li>
 </ul>
 <b>Installation and system</b>
 </ul>

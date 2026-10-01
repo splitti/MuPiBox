@@ -88,7 +88,7 @@ if [ "$RELEASE" != "dev" ]; then
   packages2install="lighttpd-mod-openssl gpiod git libasound2 mplayer pulseaudio-module-bluetooth pip id3tool bluez zip rrdtool scrot net-tools wireless-tools autoconf automake bc build-essential python3-gpiozero python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt libgles2-mesa mesa-utils libsdl2-dev preload python3-smbus2 pigpio libjson-c-dev i2c-tools libi2c-dev python3-smbus python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask python3-pil librsvg2-bin feh"
 else
   # libwidevinecdm0 stays: the display plays Spotify through the Web Playback SDK in Chromium, which needs Widevine
-  packages2install="lighttpd-mod-openssl gpiod git libasound2 mplayer pulseaudio-module-bluetooth pip bluez zip rrdtool scrot net-tools wireless-tools bc build-essential python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt libgles2-mesa preload python3-smbus2 pigpio libjson-c-dev libi2c-dev python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask python3-pil librsvg2-bin feh"
+  packages2install="lighttpd-mod-openssl gpiod git libasound2 mplayer pulseaudio-module-bluetooth pip bluez zip rrdtool scrot net-tools wireless-tools bc build-essential python3-rpi.gpio python3-lgpio python3-serial python3-requests python3-paho-mqtt libgles2-mesa preload python3-smbus2 pigpio libjson-c-dev libi2c-dev python3-alsaaudio python3-netifaces libwidevinecdm0 python3-flask python3-pil librsvg2-bin feh xdotool"
 fi
 packages2remove="jq"
 STEP=0
@@ -376,6 +376,10 @@ rm -f /tmp/mupibox-update-failed
 	# clean abort instead of a half-installed box.
 	[ -d "${MUPI_SRC}" ] || fail_update "Expected source directory ${MUPI_SRC} not found after unzip"
 	[ -s "${MUPI_SRC}/bin/nodejs/deploy.zip" ] || fail_update "Backend deploy.zip missing or empty in update package"
+	# a version with the app (its source in the package) must have it in deploy.zip too - else the box is left without it
+	if [ -d "${MUPI_SRC}/src/backend-api/src/mupi-app" ]; then
+		unzip -l "${MUPI_SRC}/bin/nodejs/deploy.zip" 2>/dev/null | grep -q " mupi-app/index.html$" || fail_update "The app (mupi-app) is missing in deploy.zip of the update package"
+	fi
 
 	# Everything the update copies must be there before anything is replaced. If not, stop here:
 	# a half update (admin interface removed, scripts missing) is worse than no update.
@@ -761,6 +765,8 @@ rm -f /tmp/mupibox-update-failed
 		udevadm control --reload >&3 2>&3
 	fi
 	systemctl daemon-reload >&3 2>&3
+	# remote display: a VNC that is running keeps its old settings (open to the network) until it starts again
+	systemctl try-restart mupi_vnc.service mupi_novnc.service >&3 2>&3
 	if systemctl list-unit-files dietpi-wifi-monitor.service 2>/dev/null | grep -q dietpi-wifi-monitor; then
 		systemctl restart dietpi-wifi-monitor.service >&3 2>&3
 	fi
@@ -916,7 +922,8 @@ rm -f /tmp/mupibox-update-failed
 	cp -f ${MUPI_SRC}/config/lighttpd/90-mupibox-app.conf /etc/lighttpd/conf-enabled/90-mupibox-app.conf >&3 2>&3
 	lighty-enable-mod proxy  >&3 2>&3
 	lighty-enable-mod ssl  >&3 2>&3
-	service lighttpd force-reload  >&3 2>&3
+	# restart, not reload: new modules and the new certificate (root only) are only taken over by a new start
+	systemctl restart lighttpd >&3 2>&3
 	after=$(date +%s)
 	echo -e "## Network optimization ##  finished after $((after - $before)) seconds" >&3 2>&3
 	STEP=$(($STEP + 1))
