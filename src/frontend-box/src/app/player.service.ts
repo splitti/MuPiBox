@@ -272,7 +272,7 @@ export class PlayerService {
   // The picture of a radio station / podcast episode for the player's status (spotify-control.js ?cover=): the parents'
   // app shows it at "Läuft gerade". The box's own API as a path (the box's address here is localhost, not the phone's).
   private coverQuery(media: Media): string {
-    const cover = (media.cover ?? '').replace(/^https?:\/\/[^/]+(?=\/api\/)/, '')
+    const cover = (media.cover || media.artistcover || '').replace(/^https?:\/\/[^/]+(?=\/api\/)/, '')
     return cover ? `?cover=${encodeURIComponent(cover)}` : ''
   }
 

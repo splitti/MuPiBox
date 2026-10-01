@@ -1870,7 +1870,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
         const title = String(item.title ?? 'Radio')
         const artist = String(item.artist ?? '')
         url = `radio/${enc(id)}/${enc(title)}:title:artist:${enc(artist)}`
-        cover = ownCover(item.cover_override) || ownCover(item.cover)
+        // (only the artist's picture set: that one - as on the tiles)
+        cover = ownCover(item.cover_override) || ownCover(item.cover) || ownCover(item.artistcover_override) || ownCover(item.artistcover)
         break
       }
       case 'rss': {

@@ -557,7 +557,7 @@ export class MediaService {
             standalonePlaylistsData.push({
               name: currentMedia.title || (currentMedia.type === 'radio' ? 'Radio' : 'Unknown Playlist'),
               albumCount: '1', // Playlists have 1 "album" (themselves)
-              cover: currentMedia.cover || '../assets/images/nocover_mupi.png',
+              cover: currentMedia.cover || currentMedia.artistcover || '../assets/images/nocover_mupi.png',
               coverMedia: currentMedia,
             })
           } else if (currentMedia.artist) {

@@ -246,9 +246,10 @@ export class ExternalPlaybackNavigatorService {
           ),
       )
       const own = siblings.find((entry) => (media.type === 'nas' ? entry.nasPath : entry.libraryPath) === folderPath)
-      if (own?.cover) {
-        media.cover = own.cover
-        media.artistcover = own.artistcover
+      // (only one of the two pictures set: it is used for both, as on the tiles - see ArtworkService)
+      if (own?.cover || own?.artistcover) {
+        media.cover = own.cover || own.artistcover
+        media.artistcover = own.artistcover || own.cover
       }
     }
     const extras: NavigationExtras = { state: { externalPlayback: true } }
