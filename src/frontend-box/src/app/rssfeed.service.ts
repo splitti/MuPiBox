@@ -18,7 +18,8 @@ export class RssFeedService {
   constructor(private http: HttpClient) {}
 
   getRssFeed(id: string, category: CategoryType, index: number, extraDataSource: ExtraDataMedia): Observable<Media[]> {
-    this.url = `${environment.backend.apiUrl}/rssfeed/cached?url=${id}`
+    // (encoded: a feed address with its own query - "?api_key=…&podcast_id=5" - lost everything from the "&" on)
+    this.url = `${environment.backend.apiUrl}/rssfeed/cached?url=${encodeURIComponent(id)}`
     return this.http.get(this.url).pipe(
       map((response: RssFeed) => {
         return response.rss.channel.item.map((item) => {

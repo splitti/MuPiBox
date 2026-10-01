@@ -5,6 +5,7 @@
 <li id='linews' class='linews'><b>Choose the episodes of a podcast:</b> all, the newest or the first 10 / 20 / 50, or an own range – already when adding, with a preview of what ends up on the box.</li>
 <li id='linews' class='linews'><b>Speech output in 21 languages:</b> Arabic, Chinese and Hindi now with Piper voices on the box, Japanese through Google.</li>
 <li id='linews' class='linews'><b>No more white screen after an update:</b> the display loads again by itself when the app did not come up.</li>
+<li id='linews' class='linews'><b>Podcast servers in your own network</b> such as Pinepods or Audiobookshelf can be added: the web app asks once to allow the server.</li>
 </ul>
 <b>Podcasts</b>
 </ul>
@@ -12,6 +13,8 @@
 <li id='linews' class='linews'>Which episodes of a podcast go on the box: all, the newest 10 / 20 / 50, the first 10 / 20 / 50 or an own range (counted by date, episode 1 is the oldest), with the order (newest or oldest first). Set when adding from the podcast search or later when editing; a preview shows which episodes end up on the box.</li>
 <li id='linews' class='linews'>The choice applies everywhere: the display, the episode lists of the web app, playing from the phone and the SD card, which can keep exactly the chosen episodes. The "new" dot only shows for chosen episodes.</li>
 <li id='linews' class='linews'>Editing a podcast on the display keeps its choice of episodes and how many episodes stay on the SD card (the setting for the SD card used to get lost there).</li>
+<li id='linews' class='linews'>Podcast servers in your own network (e.g. Pinepods, Audiobookshelf): the box fetches no addresses of the home network by itself, so nobody can use it as a detour to other devices. When a feed of the home network is added, the web app asks once whether to allow that server (host and port only); the list is under Settings &gt; Services &gt; Servers in the home network. The box itself and loopback addresses are never allowed.</li>
+<li id='linews' class='linews'>Feeds whose address has its own query (e.g. ?api_key=…&amp;podcast_id=5, as Pinepods uses) are read completely on the display – before, everything from the "&amp;" on was lost and the display showed another feed.</li>
 </ul>
 <b>Speech output</b>
 </ul>

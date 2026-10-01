@@ -50,6 +50,7 @@ import { coverHidden } from './hidden-covers'
 import { OnlineCovers } from './online-covers'
 import { ardFeed, isArdFeed } from './ard-sounds'
 import { isEpisodePick } from './episode-pick'
+import { feedHostKey, feedHostsOf, isPrivateHost, neverFetched } from './lan-feeds'
 import { episodeKey, MAX_KEEP, type OfflineEpisode, PodcastOffline } from './podcast-offline'
 import { setFeedHeadReader } from './podcast-search'
 import { EpisodeState, episodeStateSettings } from './episode-state'
@@ -462,36 +463,7 @@ if (productionServe) {
 //      check fast and simple, but we DO block raw IP literals.
 //   3. Hard timeout (10s) + max-content-length (5 MB) — RSS feeds are
 //      small text, anything bigger is either misconfigured or hostile.
-const PRIVATE_IP_REGEXES = [
-  /^127\./,
-  /^10\./,
-  /^192\.168\./,
-  /^172\.(1[6-9]|2\d|3[0-1])\./, // 172.16.0.0/12
-  /^169\.254\./, // link-local
-  /^0\./,
-  /^::1$/,
-  /^::ffff:127\./i,
-  /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./, // 100.64.0.0/10 (carrier-grade NAT)
-  /^fe[89ab][0-9a-f]:/i, // IPv6 link-local fe80::/10
-  /^f[cd][0-9a-f]{2}:/i, // IPv6 unique local fc00::/7 (was only the literal prefixes fc00:/fd00:)
-]
-const isPrivateHost = (host: string): boolean => {
-  // Strip brackets from IPv6 literals
-  let h = host.replace(/^\[|\]$/g, '').toLowerCase()
-  // IPv4-mapped IPv6 (::ffff:10.0.0.1) is checked as the IPv4 address it maps to - also in the form the URL parser
-  // writes it (::ffff:a00:1), as NAT64 (64:ff9b::a00:1) or IPv4-compatible (::a00:1): these passed as "public" before
-  h = h.replace(/^(?:::ffff:|64:ff9b::|::)(\d+\.\d+\.\d+\.\d+)$/, '$1')
-  const hex = /^(?:::ffff:|64:ff9b::|::)([0-9a-f]{1,4}):([0-9a-f]{1,4})$/.exec(h)
-  if (hex) {
-    const hi = Number.parseInt(hex[1], 16)
-    const lo = Number.parseInt(hex[2], 16)
-    h = `${hi >> 8}.${hi & 255}.${lo >> 8}.${lo & 255}`
-  }
-  // any other form of these prefixes is nothing a feed lives on
-  if (/^(::ffff:|64:ff9b:)/.test(h)) return true
-  if (h === 'localhost' || h.endsWith('.localhost') || h === '0.0.0.0' || h === '::') return true
-  return PRIVATE_IP_REGEXES.some((r) => r.test(h))
-}
+// (the private addresses: lan-feeds.ts isPrivateHost - with the servers of the home network the parents allowed)
 
 // Single guard for EVERY server-side fetch of a caller-supplied URL. The rules
 // used to live inline in /api/rssfeed only, and the RSS episode-image proxy
@@ -509,10 +481,15 @@ const checkRemoteUrl = (raw: string): RemoteUrlCheck => {
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
     return { error: 'Only http(s) URLs are allowed', status: 400 }
   }
-  if (isPrivateHost(parsed.hostname)) {
+  if (isPrivateHost(parsed.hostname) && !lanFeedAllowed(parsed)) {
     return { error: 'Private / loopback hosts are not allowed', status: 403 }
   }
   return { url: parsed }
+}
+
+// A server of the home network the parents allowed for feeds (lan-feeds.ts) - never the box itself or loopback
+function lanFeedAllowed(url: URL): boolean {
+  return !neverFetched(url.hostname) && feedHostsOf(getMupiboxConfigSync()).includes(feedHostKey(url))
 }
 
 // Episode artwork is a few hundred KB; anything past this is either broken or
@@ -556,10 +533,12 @@ class RemoteFetchError extends Error {
 
 // The address a connection really goes to is checked as well: fetch() looked the name up once more after the check
 // above, so a DNS answer that changed in between (rebinding) could still lead to 127.0.0.1 or the LAN.
-const guardedLookup: net.LookupFunction = (hostname, options, callback) => {
+// (an allowed server of the home network: its private addresses are fine, the box's own and loopback never)
+const guardedLookupFor = (lanAllowed: boolean): net.LookupFunction => (hostname, options, callback) => {
   dns.lookup(hostname, { ...options, all: true, verbatim: true }, (err, addresses) => {
     const list = (addresses ?? []) as dns.LookupAddress[]
-    if (!err && (list.length === 0 || list.some((a) => isPrivateHost(a.address)))) {
+    const refused = (a: dns.LookupAddress) => (lanAllowed ? neverFetched(a.address) : isPrivateHost(a.address))
+    if (!err && (list.length === 0 || list.some(refused))) {
       err = new Error(`${hostname} resolves to a private / loopback address`) as NodeJS.ErrnoException
     }
     if (err) return callback(err, '', 0)
@@ -568,12 +547,12 @@ const guardedLookup: net.LookupFunction = (hostname, options, callback) => {
   })
 }
 
-// A GET as fetch() does it, but over a connection made with guardedLookup; redirects are not followed (the caller
+// A GET as fetch() does it, but over a connection made with guardedLookupFor; redirects are not followed (the caller
 // checks every hop). No Accept-Encoding: the body comes as it is.
-function fetchPinned(url: URL, signal: AbortSignal): Promise<Response> {
+function fetchPinned(url: URL, signal: AbortSignal, lanAllowed = false): Promise<Response> {
   return new Promise((resolve, reject) => {
     const request = url.protocol === 'https:' ? https.request : httpRequest
-    const req = request(url, { method: 'GET', lookup: guardedLookup, signal, headers: { 'user-agent': 'MuPiBox', accept: '*/*' } }, (res) => {
+    const req = request(url, { method: 'GET', lookup: guardedLookupFor(lanAllowed), signal, headers: { 'user-agent': 'MuPiBox', accept: '*/*' } }, (res) => {
       const headers = new Headers()
       for (const [name, value] of Object.entries(res.headers)) {
         if (value !== undefined) headers.set(name, Array.isArray(value) ? value.join(', ') : value)
@@ -635,10 +614,11 @@ async function openRemote(raw: string, signal: AbortSignal): Promise<Response> {
     }
     const hostname = checked.url.hostname.replace(/^\[|\]$/g, '')
     const addresses = await dns.promises.lookup(hostname, { all: true, verbatim: true })
-    if (addresses.length === 0 || addresses.some((a) => isPrivateHost(a.address))) {
+    const lanAllowed = lanFeedAllowed(checked.url)
+    if (addresses.length === 0 || addresses.some((a) => (lanAllowed ? neverFetched(a.address) : isPrivateHost(a.address)))) {
       throw new RemoteFetchError(`${hostname} resolves to a private / loopback address`, 403)
     }
-    const response = await fetchPinned(checked.url, signal)
+    const response = await fetchPinned(checked.url, signal, lanAllowed)
     if (response.status >= 300 && response.status < 400) {
       const location = response.headers.get('location')
       await response.body?.cancel()

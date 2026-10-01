@@ -2457,6 +2457,7 @@ function openEntrySheet(item, back = null) {
             sheet.querySelector('#e-id').focus()
             return toast('Bitte eine Adresse eintragen, die mit http:// oder https:// beginnt.', 'info')
           }
+          if (item.type === 'rss' && address !== item.id && !(await allowLanFeed(address))) return
         }
         const updated = { ...item }
         for (const [k] of fields) {
@@ -3490,6 +3491,27 @@ function linkExtras(body, kind) {
   return ''
 }
 
+// A feed in the home network (e.g. Pinepods on 192.168.…): the box fetches no address there unless its server is
+// allowed (see lan-feeds.ts) - asked once per server. True when the feed may be added.
+async function allowLanFeed(url) {
+  const r = await api(`${API}/feed-hosts/check`, { method: 'POST', body: { url } })
+  if (!r.ok || !r.body?.lan || r.body.allowed) return true
+  if (r.body.never) {
+    toast('Diese Adresse ist die Box selbst – von dort holt sie keine Feeds.', 'info')
+    return false
+  }
+  const host = r.body.host
+  const ok = await ask(
+    'Server im Heimnetz',
+    `Der Feed liegt im Heimnetz (${host}). Adressen im Heimnetz ruft die Box sonst nicht ab, damit niemand sie als Umweg zu anderen Geräten nutzen kann. Diesen Server für Feeds erlauben? Das gilt nur für ${host}; ansehen und entfernen unter Einstellungen › Dienste.`,
+    'Erlauben',
+  )
+  if (!ok) return false
+  const a = await api(`${API}/feed-hosts`, { method: 'POST', body: { url, allow: true } })
+  if (!a.ok) toast(a.body?.error === 'too_many' ? 'Es sind schon 20 Server erlaubt' : 'Nicht gespeichert', 'info')
+  return a.ok
+}
+
 async function addLink(page) {
   const type = state.values.get('lType') ?? 'Spotify-Link'
   const url = String(state.values.get('lUrl') ?? '').trim()
@@ -3539,6 +3561,7 @@ async function addLink(page) {
       const ardLink = type !== 'Radio-Stream' && /^https:\/\/(www\.)?(ardsounds|ardaudiothek)\.de\/sendung\//i.test(url)
       const ardId = ardLink ? (await api(`${API}/ard/resolve`, { method: 'POST', body: { url } })).body?.id : null
       if (ardLink && !ardId) return toast('Diese Sendung kennt die ARD Audiothek nicht – ist der Link richtig?', 'info')
+      if (type !== 'Radio-Stream' && !ardLink && !(await allowLanFeed(id))) return
       if (type === 'Radio-Stream') Object.assign(body, { type: 'radio', id, artist: label || 'Radio', title: title || 'Stream' })
       else Object.assign(body, { type: 'rss', id: ardId ? `ard:${ardId}` : id, artist: label || 'Podcast' })
     }
@@ -8656,6 +8679,44 @@ const CONTROLLERS = {
       await loadServices()
       state.values.set('svcPod', svc.podcasts)
       state.values.set('svcRadio', svc.radio)
+      const h = await api(`${API}/feed-hosts`)
+      svc.feedHosts = h.ok ? (h.body?.hosts ?? []) : []
+    },
+    // the podcast servers of the home network the box may fetch feeds from (see allowLanFeed)
+    sections: (page) => [
+      ...page.sections,
+      {
+        title: 'Server im Heimnetz',
+        help: 'Podcast-Server im eigenen Netz, z. B. Pinepods oder Audiobookshelf. Andere Adressen im Heimnetz ruft die Box nicht ab. Ein Feed im Heimnetz fragt beim Hinzufügen selbst danach.',
+        items: [
+          {
+            type: 'html',
+            html: `${
+              svc.feedHosts?.length
+                ? `<div class="rows">${svc.feedHosts.map((h, i) => `<div class="entry"><span class="avatar">${icon('server', 16)}</span><span class="lbl"><b translate="no">${esc(h)}</b></span><button class="btn sm" data-fh-rm="${i}">Entfernen</button></div>`).join('')}</div>`
+                : `<p class="help" style="margin:0">${esc('Noch keiner erlaubt.')}</p>`
+            }
+            <div class="field-pick"><input class="input" id="fh-new" placeholder="${esc('z. B. 192.168.1.20:8040')}" autocomplete="off" spellcheck="false" translate="no" ${NO_PW_MANAGER}><button type="button" class="btn" id="fh-add">${icon('plus', 16)}Erlauben</button></div>`,
+          },
+        ],
+      },
+    ],
+    mount(root, page) {
+      const save = async (body, done) => {
+        const r = await api(`${API}/feed-hosts`, { method: 'POST', body })
+        if (!r.ok) return toast(r.body?.error === 'never_allowed' ? 'Das ist die Box selbst – nicht möglich' : r.body?.error === 'too_many' ? 'Es sind schon 20 Server erlaubt' : 'Die Adresse passt nicht', 'info')
+        svc.feedHosts = r.body.hosts
+        toast(done)
+        renderPage(page, false)
+      }
+      for (const b of root.querySelectorAll('[data-fh-rm]')) b.onclick = () => save({ host: svc.feedHosts[Number(b.dataset.fhRm)], allow: false }, 'Entfernt')
+      const add = () => {
+        const v = $('#fh-new', root).value.trim()
+        if (!v) return toast('Bitte eine Adresse eintragen', 'info')
+        save({ url: /^https?:\/\//i.test(v) ? v : `http://${v}`, allow: true }, 'Erlaubt')
+      }
+      $('#fh-add', root).onclick = add
+      $('#fh-new', root).onkeydown = (e) => e.key === 'Enter' && add()
     },
     async change(key, v) {
       const field = { svcPod: 'podcastSearch', svcRadio: 'radioSearch' }[key]
