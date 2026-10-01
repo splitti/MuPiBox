@@ -8188,8 +8188,8 @@ function lanSections() {
     for (const [key, , label, placeholder] of LAN_FIELDS) lan.push({ type: 'text', label, key, placeholder })
   }
   lan.push({ type: 'buttons', buttons: [['Speichern', 'primary', 'lansave'], ['LAN neu starten', 'ghost', 'lanrestart']] })
-  // (the fixed second address of the cable, config/network/mupibox-linklocal)
-  if (l.directIp) lan.push({ type: 'note', text: `Ein PC direkt am Kabel (ohne Router) erreicht die Box ohne jede Einstellung unter http://${l.directIp}/app.` })
+  // (the fixed second address of the cable, config/network/mupibox-linklocal - set once a cable is in, so said always)
+  lan.push({ type: 'note', text: `Ein PC direkt am Kabel (ohne Router) erreicht die Box ohne jede Einstellung unter http://${l.directIp ?? '169.254.10.10'}/app.` })
   const sections = [{ title: `LAN (${l.interface})`, help: l.currentIp || l.off ? 'Der Kabelanschluss der Box.' : 'Der Kabelanschluss der Box. Im Moment ohne Verbindung – steckt ein Kabel?', items: lan }]
   // (with a fixed address as saved: no DHCP)
   if (l.dhcp) sections.push({ title: 'Adresse (DHCP)', items: dhcpItems('lan') })
