@@ -51,6 +51,7 @@ import { OnlineCovers } from './online-covers'
 import { ardFeed, isArdFeed } from './ard-sounds'
 import { isEpisodePick } from './episode-pick'
 import { feedHostKey, feedHostsOf, isPrivateHost, neverFetched } from './lan-feeds'
+import { decodeWpaSsid } from './wpa-ssid'
 import { registerAudioOutputRoutes, startAudioWatch } from './audio-output'
 import { episodeKey, MAX_KEEP, type OfflineEpisode, PodcastOffline } from './podcast-offline'
 import { setFeedHeadReader } from './podcast-search'
@@ -915,6 +916,31 @@ function refreshRssCache(rssUrl: string, cacheKey: string): Promise<any> {
   return running
 }
 
+// (a file of its own first, then renamed: the feed's file was written in place - by the refresh and, a moment later,
+// by the cover download - and a power cut left half a file, an empty podcast until the next refresh)
+let rssCacheWriteSeq = 0
+async function writeRssCacheFile(cacheFile: string, feed: unknown): Promise<void> {
+  const tmp = `${cacheFile}.${process.pid}.${++rssCacheWriteSeq}.tmp`
+  await writeFile(tmp, JSON.stringify(feed), 'utf8')
+  await rename(tmp, cacheFile)
+}
+
+// The full parser only for a feed the fast one does not understand (no <item>) - and only for a small one: xml-js on
+// a text of many MB blocked the whole backend for a long time and took hundreds of MB on a Pi 3
+const RSS_FULL_PARSE_MAX_BYTES = 2_000_000
+function parseRssFull(xml: string): any {
+  if (xml.length > RSS_FULL_PARSE_MAX_BYTES) throw new Error(`feed too large for the full parser (${xml.length} bytes)`)
+  return JSON.parse(
+    xmlparser.xml2json(
+      xml.replace(/<(description|content:encoded|itunes:summary|itunes:subtitle)(\s[^>]*)?>[\s\S]*?<\/\1>/g, ''),
+      {
+        compact: true,
+        nativeType: true,
+      },
+    ),
+  )
+}
+
 async function refreshRssCacheNow(rssUrl: string, cacheKey: string): Promise<any> {
   const cacheFile = rssCacheFilePath(cacheKey)
   let previousFeed: any = null
@@ -933,14 +959,7 @@ async function refreshRssCacheNow(rssUrl: string, cacheKey: string): Promise<any
   } else {
     // Checked on every hop and capped while streaming (this path had no URL check at all, see fetchRemote)
     const xml = (await fetchRemote(rssUrl, { maxBytes: RSS_MAX_BYTES, timeoutMs: rssRefreshTimeoutMs })).body.toString('utf8')
-    feed =
-      parseRssFeedFast(xml) ??
-      JSON.parse(
-        xmlparser.xml2json(
-          xml.replace(/<(description|content:encoded|itunes:summary|itunes:subtitle)(\s[^>]*)?>[\s\S]*?<\/\1>/g, ''),
-          { compact: true, nativeType: true },
-        ),
-      )
+    feed = parseRssFeedFast(xml) ?? parseRssFull(xml)
   }
 
   const hasNewEpisode = latestEpisodeFingerprint(feed) !== latestEpisodeFingerprint(previousFeed)
@@ -967,7 +986,7 @@ async function refreshRssCacheNow(rssUrl: string, cacheKey: string): Promise<any
   }
 
   await mkdir(rssCacheDataDir, { recursive: true })
-  await writeFile(cacheFile, JSON.stringify(feed), 'utf8')
+  await writeRssCacheFile(cacheFile, feed)
   void warmRssEpisodeCovers(feed, 12)
 
   if (remoteCoverUrl) {
@@ -977,7 +996,7 @@ async function refreshRssCacheNow(rssUrl: string, cacheKey: string): Promise<any
           return
         }
         feed.rss.channel.image.url = { _text: localCoverUrl }
-        await writeFile(cacheFile, JSON.stringify(feed), 'utf8')
+        await writeRssCacheFile(cacheFile, feed)
       })
       .catch((error) => {
         console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] Failed to refresh RSS cover in background: ${error}`)
@@ -2207,6 +2226,8 @@ function trimBatteryLog(): void {
         /* skip malformed */
       }
     }
+    // (nothing expired: nothing written - the whole file of ~2 MB went to the card every hour before)
+    if (kept.length === raw.split('\n').filter(Boolean).length) return
     const tmp = `${BATTERY_LOG_PATH}.tmp.${process.pid}`
     fs.writeFileSync(tmp, kept.length ? `${kept.join('\n')}\n` : '', 'utf8')
     fs.renameSync(tmp, BATTERY_LOG_PATH)
@@ -2790,21 +2811,6 @@ app.get('/api/wifi/status', async (_req, res) => {
 })
 
 // wpa_cli prints SSIDs with non-ASCII / special bytes as \xNN escapes.
-function decodeWpaSsid(raw: string): string {
-  const bytes: number[] = []
-  for (let i = 0; i < raw.length; i++) {
-    if (raw[i] === '\\' && raw[i + 1] === 'x' && /^[0-9a-fA-F]{2}$/.test(raw.slice(i + 2, i + 4))) {
-      bytes.push(Number.parseInt(raw.slice(i + 2, i + 4), 16))
-      i += 3
-    } else if (raw[i] === '\\' && raw[i + 1] === '\\') {
-      bytes.push(0x5c)
-      i += 1
-    } else {
-      bytes.push(...Buffer.from(raw[i]))
-    }
-  }
-  return Buffer.from(bytes).toString('utf8')
-}
 
 interface WifiScanEntry {
   signalDbm: number
@@ -3003,9 +3009,10 @@ function parseEthernetStanza(text: string): (EthernetConfig & { blockStart: numb
   const blockStart = ifaceMatch.index
   const rest = text.slice(blockStart + ifaceMatch[0].length)
   // (the resolver line of a static stanza belongs to it too - else it stayed behind as a stray line at every save)
-  const bodyMatch = /^((?:\n[ \t]*#?[ \t]*(?:(?:address|netmask|gateway|dns-nameservers)[ \t]+\S+|up printf 'nameserver %s\\n' \S+ > \/etc\/resolv\.conf))*)/.exec(rest)
+  const bodyMatch = /^((?:\n[ \t]*#?[ \t]*(?:(?:address|netmask|gateway|dns-nameservers)[ \t]+\S+|up printf 'nameserver %s\\n' \S+(?:[ \t]+\S+)* > \/etc\/resolv\.conf))*)/.exec(rest)
   const body = bodyMatch?.[0] ?? ''
-  const field = (name: string) => new RegExp(`^[ \t]*#?[ \t]*${name}[ \t]+(\\S+)`, 'm').exec(body)?.[1] ?? ''
+  // (dns-nameservers may name several servers - all of them kept, as written)
+  const field = (name: string) => new RegExp(`^[ \t]*#?[ \t]*${name}[ \t]+(\\S+(?:[ \t]+\\S+)*)`, 'm').exec(body)?.[1]?.trim() ?? ''
   return {
     iface: ifaceMatch[1],
     dhcp: ifaceMatch[2] === 'dhcp',
@@ -3026,7 +3033,8 @@ function renderEthernetStanza(cfg: EthernetConfig): string {
   // Kept but commented out under dhcp, same as DietPi does, so a later switch to static recalls it.
   if (cfg.dns) lines.push(`${cfg.dhcp ? '#' : ''}dns-nameservers ${cfg.dns}`)
   // (dns-nameservers alone does nothing on the box - there is no resolvconf; the resolver is written when the cable
-  // comes up, as the WiFi does it for a fixed address. cfg.dns is a checked IPv4 address.)
+  // comes up, as the WiFi does it for a fixed address. cfg.dns is one to three checked IPv4 addresses - printf
+  // repeats its format for each of them, a line per server.)
   if (!cfg.dhcp && cfg.dns) lines.push(`up printf 'nameserver %s\\n' ${cfg.dns} > /etc/resolv.conf`)
   return lines.join('\n')
 }
@@ -3117,11 +3125,18 @@ app.get('/api/network/ethernet', async (_req, res) => {
 
 app.post('/api/network/ethernet', localOrElternSession, async (req, res) => {
   try {
-    const dhcp = Boolean(req.body?.dhcp)
+    // (the string 'false' is DHCP off, not on)
+    const dhcp = req.body?.dhcp === true || req.body?.dhcp === 'true' || req.body?.dhcp === 1 || req.body?.dhcp === '1'
     const ip = String(req.body?.ip ?? '').trim()
     const mask = String(req.body?.mask ?? '').trim()
     const gateway = String(req.body?.gateway ?? '').trim()
-    const dns = String(req.body?.dns ?? '').trim()
+    // (several DNS servers, separated by spaces - as dietpi-config writes them - are kept as they are)
+    const dns = String(req.body?.dns ?? '')
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 3)
+      .join(' ')
     // Every field given is checked - under DHCP too: the stanza keeps the static values (DietPi's way, a later switch
     // to static recalls them), and one not checked there could carry a line break, which made a line of its own in
     // /etc/network/interfaces - run as root at the next ifup. The router is optional: a PC plugged straight into the
@@ -3133,7 +3148,7 @@ app.post('/api/network/ethernet', localOrElternSession, async (req, res) => {
       ['Static DNS', dns],
     ]
     for (const [label, value] of given) {
-      if (value && !IPV4_PATTERN.test(value)) {
+      if (value && !value.split(' ').every((v) => IPV4_PATTERN.test(v))) {
         res.status(400).send(`${label} is not a valid IPv4 address`)
         return
       }
@@ -3373,14 +3388,20 @@ app.post('/api/wifi/configured/:id/band', async (req, res) => {
 
 app.post('/api/wifi/configured/:id/password', async (req, res) => {
   const id = Number.parseInt(req.params.id, 10)
-  const password: string = req.body?.password ?? ''
+  const password: string = typeof req.body?.password === 'string' ? req.body.password : ''
   if (Number.isNaN(id) || password.length < 8 || password.length > 63) {
     res.status(400).send('invalid request')
     return
   }
 
   try {
-    await execFileAsync('sudo', ['wpa_cli', '-i', await wifiInterface(), 'set_network', String(id), 'psk', `"${password}"`])
+    // The key worked out here as wpa_passphrase does, from the network's name: no character of the password can
+    // break the command (a quote in it ended the quoted value before)
+    const rawSsid = (await execFileAsync('sudo', ['wpa_cli', '-i', await wifiInterface(), 'get_network', String(id), 'ssid'])).stdout.trim()
+    const ssid = rawSsid.startsWith('"') ? Buffer.from(decodeWpaSsid(rawSsid.slice(1, -1)), 'utf8') : Buffer.from(rawSsid, 'hex')
+    if (ssid.length === 0 || ssid.length > 32) throw new Error(`network ${id}: ssid not readable (${rawSsid})`)
+    const psk = crypto.pbkdf2Sync(password, ssid, 4096, 32, 'sha1').toString('hex')
+    await execFileAsync('sudo', ['wpa_cli', '-i', await wifiInterface(), 'set_network', String(id), 'psk', psk])
     await execFileAsync('sudo', ['wpa_cli', '-i', await wifiInterface(), 'enable_network', String(id)])
     await wifiSaveConfig(await wifiInterface())
     console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] Updated password for wifi network ${id}`)
@@ -3408,6 +3429,13 @@ app.post('/api/add', (req, res) => {
       console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] ${error}`)
       releaseLock(dataLock, '/api/add')
       res.status(200).send('error')
+      return
+    }
+    // (a data.json that is not a list: said, not thrown - a throw in this callback ended the server, pm2 started it
+    // again, and the next attempt did the same)
+    if (!Array.isArray(data)) {
+      releaseLock(dataLock, '/api/add')
+      res.status(500).send('data.json is not a list')
       return
     }
     // Phase 14a: stamp every Add-Page / Telegram / Admin entry with
@@ -3703,6 +3731,11 @@ app.post('/api/delete', (req, res) => {
       res.status(200).send('error')
       return
     }
+    if (!Array.isArray(data)) {
+      releaseLock(dataLock, '/api/delete')
+      res.status(500).send('data.json is not a list')
+      return
+    }
     const problem = libraryIndexProblem(data, req.body?.index, req.body?.original)
     if (problem) {
       releaseLock(dataLock, '/api/delete')
@@ -3749,6 +3782,11 @@ app.post('/api/edit', (req, res) => {
       console.log(`${new Date().toLocaleString()}: [MuPiBox-Server] ${error}`)
       releaseLock(dataLock, '/api/edit')
       res.status(200).send('error')
+      return
+    }
+    if (!Array.isArray(data)) {
+      releaseLock(dataLock, '/api/edit')
+      res.status(500).send('data.json is not a list')
       return
     }
     const problem = libraryIndexProblem(data, req.body.index, req.body.original)
@@ -5797,6 +5835,17 @@ app.post('/api/nas/login', localOrElternSession, async (req, res) => {
   }
 
   const base = nasResolveBase(address, Boolean(useHttps))
+  // (the box itself is no NAS: its own services got the requests with the NAS's login otherwise)
+  let nasHost = ''
+  try {
+    nasHost = new URL(base).hostname.replace(/^\[|\]$/g, '')
+  } catch {
+    nasHost = ''
+  }
+  if (!nasHost || neverFetched(nasHost)) {
+    res.status(400).json({ success: false, error: 'address is not a NAS address.' })
+    return
+  }
   // A certificate fingerprint the parents confirmed in the admin interface (SHA-256, "AB:CD:..."): only for https.
   const fingerprint =
     base.startsWith('https:') && typeof certFingerprint === 'string' && /^([0-9A-F]{2}:){31}[0-9A-F]{2}$/i.test(certFingerprint)

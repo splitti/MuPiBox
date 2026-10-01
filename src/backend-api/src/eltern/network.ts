@@ -120,7 +120,7 @@ export function registerNetworkRoutes(router: Router, deps: NetworkDeps): void {
   /** POST /api/app/usb-wifi-power {driver, level} - power saving of a USB WiFi driver (0 off, 1 minimal, 2 max). */
   router.post('/usb-wifi-power', requireSession, requireCsrf, async (req, res) => {
     const { driver, level } = (req.body ?? {}) as { driver?: unknown; level?: unknown }
-    const d = DRIVERS[String(driver)]
+    const d = Object.hasOwn(DRIVERS, String(driver)) ? DRIVERS[String(driver)] : undefined
     if (!d || !['0', '1', '2'].includes(String(level))) {
       res.status(400).json({ error: 'invalid driver or level' })
       return
@@ -145,7 +145,7 @@ export function registerNetworkRoutes(router: Router, deps: NetworkDeps): void {
    */
   router.post('/usb-wifi-driver', requireSession, requireCsrf, async (req, res) => {
     const { driver, action } = (req.body ?? {}) as { driver?: unknown; action?: unknown }
-    const d = DRIVERS[String(driver)]
+    const d = Object.hasOwn(DRIVERS, String(driver)) ? DRIVERS[String(driver)] : undefined
     if (!d || (action !== 'install' && action !== 'remove')) {
       res.status(400).json({ error: 'invalid driver or action' })
       return

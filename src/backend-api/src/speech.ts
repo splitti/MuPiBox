@@ -502,6 +502,8 @@ class PiperWorker {
 
   private start(): void {
     const child = spawn('nice', ['-n', '5', PIPER_BIN, '--model', voiceFile(this.key), '--json-input', '--output_dir', CACHE_DIR], { stdio: 'pipe' })
+    // (Piper gone before a write drained: EPIPE on stdin - without a listener an error of the stream ended the server)
+    child.stdin.on('error', () => undefined)
     this.child = child
     this.out = ''
     // (Piper names each file it wrote on a line of its own)

@@ -895,6 +895,7 @@
  "Die Box ist auf stumm gestellt": "Устройство переведено в беззвучный режим",
  "Die Box ist gerade darüber verbunden.": "Устройство сейчас подключено через это.",
  "Die Box ist gerade nicht erreichbar.": "Устройство сейчас недоступно.",
+ "Die Box ist gerade nicht in diesem Netz – nichts zu testen. Die Adresse gilt, sobald sie wieder drin ist.": "Устройство сейчас не в этой сети – проверять нечего. Адрес начнёт действовать, как только оно снова в ней окажется.",
  "Die Box ist gerade über das eingebaute WLAN verbunden. Ohne LAN-Kabel oder USB-WLAN ist sie danach nicht mehr erreichbar.": "Устройство сейчас подключено через встроенный Wi-Fi. Без LAN-кабеля или USB-адаптера Wi-Fi оно станет недоступно.",
  "Die Box ist nicht beim NAS angemeldet.": "Устройство не выполнило вход на NAS.",
  "Die Box ist ruhig.": "Устройство молчит.",

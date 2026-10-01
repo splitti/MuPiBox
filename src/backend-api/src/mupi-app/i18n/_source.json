@@ -895,6 +895,7 @@
  "Die Box ist auf stumm gestellt",
  "Die Box ist gerade darüber verbunden.",
  "Die Box ist gerade nicht erreichbar.",
+ "Die Box ist gerade nicht in diesem Netz – nichts zu testen. Die Adresse gilt, sobald sie wieder drin ist.",
  "Die Box ist gerade über das eingebaute WLAN verbunden. Ohne LAN-Kabel oder USB-WLAN ist sie danach nicht mehr erreichbar.",
  "Die Box ist nicht beim NAS angemeldet.",
  "Die Box ist ruhig.",

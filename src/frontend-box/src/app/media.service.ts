@@ -461,7 +461,13 @@ export class MediaService {
       return hit.media.pipe(copy)
     }
     // shareReplay: a second caller during the first load waits for it instead of loading twice
+    // (a lookup that failed meanwhile - Spotify blocking requests, a timeout - leaves the list short or empty; it is
+    // shown, but not kept: the next tap loads it anew instead of showing the gap for ten minutes)
+    const failuresBefore = this.spotifyService.failures
     const media = this.loadMediaFromArtist(artist, category).pipe(
+      tap(() => {
+        if (this.spotifyService.failures !== failuresBefore) this.artistMediaCache.delete(key)
+      }),
       catchError((error) => {
         this.artistMediaCache.delete(key) // don't keep a failed load
         throw error
@@ -662,7 +668,8 @@ export class MediaService {
   private static readonly HOME_LIST_CATEGORIES: CategoryType[] = ['audiobook', 'music', 'other']
   private homeLists = new Map<CategoryType, { version: string; at: number; media: Media[] }>()
   private homeListsLoaded$?: Observable<void>
-  private homeListRuns = new Map<CategoryType, Observable<Media[]>>()
+  // (keyed by category and data.json version: a run for an older version does not stand in for the new one)
+  private homeListRuns = new Map<string, Observable<Media[]>>()
   private homeListsWarming?: Subscription
 
   // the lists the box kept (once per start of the display)
@@ -680,7 +687,12 @@ export class MediaService {
               }
             }
           }),
-          catchError(() => of(undefined)),
+          catchError(() => {
+            // (not answered this time - the backend still starting: asked again at the next chance, else every
+            // category was made from scratch for the whole session)
+            this.homeListsLoaded$ = undefined
+            return of(undefined)
+          }),
           shareReplay({ bufferSize: 1, refCount: false }),
         )
     }
@@ -694,7 +706,8 @@ export class MediaService {
 
   // made again from data.json (one run per category at a time), then kept here and on the box
   private remakeHomeList(category: CategoryType, version: string): Observable<Media[]> {
-    let run = this.homeListRuns.get(category)
+    const runKey = `${category}|${version}`
+    let run = this.homeListRuns.get(runKey)
     if (!run) {
       // (a lookup that failed meanwhile - Spotify blocking requests, a timeout: the list has placeholders or lacks
       // entries. Shown, but not kept as the current one: it is made again at the next chance, see SpotifyService.failures)
@@ -707,10 +720,10 @@ export class MediaService {
             this.http.put(`${this.getApiBackendUrl()}/home-lists/${category}`, { version, media }).subscribe({ error: () => undefined })
           }
         }),
-        finalize(() => this.homeListRuns.delete(category)),
+        finalize(() => this.homeListRuns.delete(runKey)),
         shareReplay({ bufferSize: 1, refCount: false }),
       )
-      this.homeListRuns.set(category, run)
+      this.homeListRuns.set(runKey, run)
     }
     return run
   }
@@ -782,12 +795,14 @@ export class MediaService {
       // below entirely - the backend already returns ready-to-use Media[].
       // The backend answers 503 while marked folders cannot be read (NAS not reachable yet, e.g. right after
       // boot before the network is up): try again a few times instead of showing an empty tab for good.
-      // (About 40 s in all: a list that loads for a minute makes the loading component reload the page.)
+      // (50 s in all at most: a list that loads for a minute makes the loading component reload the page - and an
+      // attempt at a NAS that is asleep takes the backend's 15 s login timeout each)
       return defer(() => {
         this.nasUnavailable.set(false)
         return this.http.get<Media[]>(`${this.getApiBackendUrl()}/nas/artists?category=nas`)
       }).pipe(
         retry({ count: 8, delay: () => timer(5000) }),
+        timeout(50_000),
         catchError(() => {
           this.nasUnavailable.set(true)
           return of([] as Media[])

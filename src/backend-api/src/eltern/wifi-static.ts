@@ -23,6 +23,7 @@ import dns from 'node:dns'
 import { promises as fsp } from 'node:fs'
 import net from 'node:net'
 import type { RequestHandler, Router } from 'express'
+import { decodeWpaSsid } from '../wpa-ssid'
 import { requireCsrf, requireSession } from './middleware'
 
 export interface WifiStatic {
@@ -159,7 +160,8 @@ const cli = (iface: string, ...args: string[]) => run('sudo', ['/usr/sbin/wpa_cl
 async function networkOf(iface: string, ssid: string): Promise<{ id: string; active: boolean } | null> {
   for (const ln of (await cli(iface, 'list_networks')).stdout.split('\n')) {
     const parts = ln.split('\t')
-    if (ln.startsWith('network id') || parts[1] !== ssid || !/^\d+$/.test(parts[0])) continue
+    // (wpa_cli prints a name with an umlaut as \xNN per byte - the app sends the name as written)
+    if (ln.startsWith('network id') || decodeWpaSsid(parts[1] ?? '') !== ssid || !/^\d+$/.test(parts[0])) continue
     return { id: parts[0], active: (parts[3] ?? '').includes('[CURRENT]') }
   }
   return null
@@ -189,6 +191,9 @@ async function switchTo(iface: string, entry: Entry | null): Promise<boolean> {
         // (the DHCP client stopped without giving the address back - the same address may stay, nothing in between)
         `dhclient -4 -x ${dh} ${iface} 2>/dev/null`,
         `ip -4 addr flush dev ${iface} scope global`,
+        // (a second WiFi adapter in the same network - USB and onboard - got the same address through the shared
+        // profile: taken off the other one, this one has it)
+        `for o in /sys/class/net/wl*; do o=\${o##*/}; [ "$o" = "${iface}" ] || ip -4 addr del ${entry.ip}/${prefixOf(entry.mask)} dev "$o" 2>/dev/null; done`,
         `ip -4 addr add ${entry.ip}/${prefixOf(entry.mask)} dev ${iface}`,
         `ip -4 route replace default via ${entry.gateway} dev ${iface}`,
         `printf 'nameserver %s\\n' ${entry.dns || entry.gateway} > /etc/resolv.conf`,
@@ -257,12 +262,16 @@ async function checkAfterSaving(iface: string, entry: Entry): Promise<void> {
 }
 
 let misses = 0
+let missesFor = ''
 async function watch(iface: string): Promise<void> {
   const status = (await cli(iface, 'status')).stdout
   const idStr = /^id_str=(mupi_[0-9a-f]{10})$/m.exec(status)?.[1]
-  if (!/^wpa_state=COMPLETED$/m.test(status) || !idStr) {
+  // (a moment without connection counts neither way: DietPi's watchdog starts the WiFi anew every ~40 s while the
+  // router is not reached, and a tick in that gap wiped the count before - the third miss never came)
+  if (!/^wpa_state=COMPLETED$/m.test(status) || !idStr) return
+  if (idStr !== missesFor) {
+    missesFor = idStr
     misses = 0
-    return
   }
   const entry = (await readStatic()).get(idStr)
   if (!entry) {
@@ -407,38 +416,66 @@ export function registerWifiStaticRoutes(router: Router, deps: WifiStaticDeps, a
       res.status(409).json({ error: 'busy' })
       return
     }
-    const id = idStrOf(ssid)
-    let entry: Entry | undefined
-    if (body.dhcp !== true) {
-      const s = { ip: body.ip, mask: body.mask, gateway: body.gateway, dns: body.dns ?? '' }
-      const problem = checkStatic(s)
-      if (problem) {
-        res.status(400).json({ error: 'invalid', field: problem })
+    // (taken from here on: the watch, the test and a second save stay out while the file and the id_str change; the
+    // check after saving takes it over - it is let go here only on the paths without it)
+    busy = true
+    let handedOver = false
+    try {
+      const id = idStrOf(ssid)
+      let entry: Entry | undefined
+      if (body.dhcp !== true) {
+        const s = { ip: body.ip, mask: body.mask, gateway: body.gateway, dns: body.dns ?? '' }
+        const problem = checkStatic(s)
+        if (problem) {
+          res.status(400).json({ error: 'invalid', field: problem })
+          return
+        }
+        entry = { ssid, id, ip: s.ip as string, mask: s.mask as string, gateway: s.gateway as string, dns: s.dns as string, paused: false }
+      }
+      // (read, changed, written and the id_str set as one step - see serialized)
+      const saved = await serialized(async () => {
+        const all = await readStatic()
+        // (a fixed address in use now - a paused one is DHCP already, nothing to switch)
+        const wasFixed = !!all.get(id) && !all.get(id)?.paused
+        if (entry) all.set(id, entry)
+        else if (all.has(id)) all.delete(id)
+        else return { ok: true, wasFixed }
+        let ok = await writeStatic([...all.values()])
+        if (ok && !(await setIdStr(iface, n.id, entry ? id : ''))) {
+          // (the file says "fixed", wpa_supplicant does not know it: the box would run DHCP while the app shows the
+          // address as in use - kept paused instead, as after a failed check, so both say the same)
+          ok = false
+          if (entry) {
+            all.set(id, { ...entry, paused: true })
+            await writeStatic([...all.values()])
+          }
+        }
+        return { ok, wasFixed }
+      })
+      if (!saved.ok) {
+        res.status(500).json({ error: 'not_saved' })
         return
       }
-      entry = { ssid, id, ip: s.ip as string, mask: s.mask as string, gateway: s.gateway as string, dns: s.dns as string, paused: false }
+      const wasFixed = saved.wasFixed
+      if (reverted?.ssid === ssid) reverted = null
+      res.json({ ok: true, active: n.active })
+      // (after the answer has gone out: the connection is gone for a moment)
+      if (n.active && entry) {
+        handedOver = true
+        void checkAfterSaving(iface, entry).catch(() => undefined)
+      } else if (n.active && wasFixed) {
+        handedOver = true
+        setTimeout(() => {
+          void switchTo(iface, null)
+            .catch(() => undefined)
+            .finally(() => {
+              busy = false
+            })
+        }, 1000).unref()
+      }
+    } finally {
+      if (!handedOver) busy = false
     }
-    // (read, changed, written and the id_str set as one step - see serialized)
-    const saved = await serialized(async () => {
-      const all = await readStatic()
-      // (a fixed address in use now - a paused one is DHCP already, nothing to switch)
-      const wasFixed = !!all.get(id) && !all.get(id)?.paused
-      if (entry) all.set(id, entry)
-      else if (all.has(id)) all.delete(id)
-      else return { ok: true, wasFixed }
-      const ok = (await writeStatic([...all.values()])) && (await setIdStr(iface, n.id, entry ? id : ''))
-      return { ok, wasFixed }
-    })
-    if (!saved.ok) {
-      res.status(500).json({ error: 'not_saved' })
-      return
-    }
-    const wasFixed = saved.wasFixed
-    if (reverted?.ssid === ssid) reverted = null
-    res.json({ ok: true, active: n.active })
-    // (after the answer has gone out: the connection is gone for a moment)
-    if (n.active && entry) void checkAfterSaving(iface, entry).catch(() => undefined)
-    else if (n.active && wasFixed) setTimeout(() => void switchTo(iface, null), 1000).unref()
   })
 
   /** POST /api/app/wifi/static/seen - the note "back to DHCP" read */

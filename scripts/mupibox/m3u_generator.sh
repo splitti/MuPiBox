@@ -29,7 +29,10 @@ if ! ( set -C; : > "${DATA_LOCK}" ) 2>/dev/null; then
     exit
 else
 	HOLD_LOCK=1
-	( while [ -f "${DATA_LOCK}" ]; do sleep 10; touch -c "${DATA_LOCK}"; done ) &
+	# (the keeper ends with this script - killed outright, its trap does not run, and a keeper on its own touched the
+	# lock for ever: the box's own library changes were "locked" until a restart)
+	PARENT=$$
+	( while [ -f "${DATA_LOCK}" ] && kill -0 "${PARENT}" 2>/dev/null; do sleep 10; touch -c "${DATA_LOCK}"; done ) &
 	LOCK_KEEPER=$!
 	# (ended early: the lock goes, but only while it is still this run's)
 	trap 'kill ${LOCK_KEEPER} 2>/dev/null; [ -n "${HOLD_LOCK}" ] && rm -f "${DATA_LOCK}"' EXIT

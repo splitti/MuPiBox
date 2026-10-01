@@ -6432,6 +6432,12 @@ function openWifiAddress(w, page) {
           tested = null
           return null
         }
+        if (r.body?.active === false) {
+          // (the box left this network meanwhile: nothing was tested - saved without the switch, see the backend)
+          box.innerHTML = `<p class="help">${esc('Die Box ist gerade nicht in diesem Netz – nichts zu testen. Die Adresse gilt, sobald sie wieder drin ist.')}</p>`
+          tested = null
+          return true
+        }
         box.innerHTML = wifiTestHtml(r.body.checks ?? [])
         tested = { key: JSON.stringify(body), ok: (r.body.checks ?? []).every((c) => c.ok) }
         return tested.ok
@@ -6458,9 +6464,10 @@ function openWifiAddress(w, page) {
           toast(`Gespeichert – die Box ist gleich unter ${body.ip} erreichbar`)
           // (the app opened by the old address: on to the new one)
           if (s.ip && location.hostname === s.ip && body.ip !== s.ip) setTimeout(() => location.assign(location.href.replace(s.ip, body.ip)), 9000)
-          return
+        } else {
+          toast(r.body?.active ? 'Gespeichert – die Box holt sich ihre Adresse vom Router' : 'Gespeichert')
         }
-        toast(r.body?.active ? 'Gespeichert – die Box holt sich ihre Adresse vom Router' : 'Gespeichert')
+        // (the list shows the saved address at once - also for the network the box is in)
         await loadWlan().catch(() => undefined)
         if (currentPage()?.id === page.id) renderPage(page, false)
       }

@@ -895,6 +895,7 @@
  "Die Box ist auf stumm gestellt": "Box jest wyciszony",
  "Die Box ist gerade darüber verbunden.": "Box jest właśnie przez to połączony.",
  "Die Box ist gerade nicht erreichbar.": "Box jest teraz niedostępny.",
+ "Die Box ist gerade nicht in diesem Netz – nichts zu testen. Die Adresse gilt, sobald sie wieder drin ist.": "Box nie jest teraz w tej sieci – nie ma czego testować. Adres zacznie obowiązywać, gdy tylko znów się w niej znajdzie.",
  "Die Box ist gerade über das eingebaute WLAN verbunden. Ohne LAN-Kabel oder USB-WLAN ist sie danach nicht mehr erreichbar.": "Box jest właśnie połączony przez wbudowane Wi-Fi. Bez kabla LAN lub Wi-Fi USB będzie potem niedostępny.",
  "Die Box ist nicht beim NAS angemeldet.": "Box nie jest zalogowany w NAS.",
  "Die Box ist ruhig.": "Box jest cicho.",

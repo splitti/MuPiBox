@@ -73,7 +73,7 @@ export function registerServicesRoutes(router: Router, deps: ServicesDeps): void
   /** POST /api/app/shares {name, on} - switches a share in the background (installs it first when missing). */
   router.post('/shares', requireSession, requireCsrf, async (req, res) => {
     const { name, on } = (req.body ?? {}) as { name?: unknown; on?: unknown }
-    const share = typeof name === 'string' ? SHARES[name] : undefined
+    const share = typeof name === 'string' && Object.hasOwn(SHARES, name) ? SHARES[name] : undefined
     if (!share || typeof on !== 'boolean') {
       res.status(400).json({ error: 'name must be samba, ftp or vnc; on true or false' })
       return

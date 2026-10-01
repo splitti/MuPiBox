@@ -270,6 +270,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
   listViewTimerMs = 2500
   listFontFamily = ''
   private longPressTimer: ReturnType<typeof setTimeout> | undefined
+  private shuffleTimer: ReturnType<typeof setTimeout> | undefined
 
   constructor(
     private logService: LogService,
@@ -533,9 +534,9 @@ export class PlayerPage implements OnInit, AfterViewInit {
     this.updateProgress()
 
     if (this.media?.shuffle && !this.isExternalPlayback) {
-      setTimeout(() => {
+      this.shuffleTimer = setTimeout(() => {
         this.playerService.sendCmd(PlayerCmds.SHUFFLEON)
-        setTimeout(() => {
+        this.shuffleTimer = setTimeout(() => {
           this.skipNext()
         }, 1000)
       }, 5000)
@@ -543,6 +544,9 @@ export class PlayerPage implements OnInit, AfterViewInit {
   }
 
   ionViewWillLeave() {
+    // (left within the first seconds: shuffle must not be switched on after the page is gone - the next audiobook
+    // played in random order then)
+    clearTimeout(this.shuffleTimer)
     clearTimeout(this.longPressTimer)
     clearInterval(this.outputTimer)
     this.outputOpen.set(false)

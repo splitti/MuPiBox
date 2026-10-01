@@ -107,9 +107,14 @@ export class CoverCacheService {
     const filePath = path.join(this.cacheDir, `${imageId}.jpg`)
     try {
       const buf = await fsPromises.readFile(filePath)
-      // Touch mtime asynchronously for LRU-by-mtime ordering, don't wait
-      const now = new Date()
-      fsPromises.utimes(filePath, now, now).catch(() => {})
+      // Touch mtime asynchronously for LRU-by-mtime ordering, don't wait - at most once an hour per picture (every
+      // view was a write to the card)
+      const now = Date.now()
+      if ((this.touched.get(imageId) ?? 0) < now - 3600_000) {
+        if (this.touched.size > 5000) this.touched.clear()
+        this.touched.set(imageId, now)
+        fsPromises.utimes(filePath, new Date(now), new Date(now)).catch(() => {})
+      }
       this.memCachePut(imageId, buf)
       this.stats.sdHits++
       return buf
@@ -149,10 +154,16 @@ export class CoverCacheService {
       const buf = Buffer.from(arrayBuf)
 
       // Persist to SD (fire-and-forget — the response can already start
-      // serving from RAM while the write completes).
-      fsPromises.writeFile(filePath, buf).catch((err) => {
-        console.error(`cover-cache SD write error for ${imageId}:`, err)
-      })
+      // serving from RAM while the write completes). To a file of its own first, then renamed: a power cut mid-write
+      // left a cut-off picture that was served from the card from then on.
+      const tmpPath = `${filePath}.${process.pid}.${Date.now()}.tmp`
+      fsPromises
+        .writeFile(tmpPath, buf)
+        .then(() => fsPromises.rename(tmpPath, filePath))
+        .catch((err) => {
+          console.error(`cover-cache SD write error for ${imageId}:`, err)
+          fsPromises.rm(tmpPath, { force: true }).catch(() => {})
+        })
       this.memCachePut(imageId, buf)
       this.stats.cdnHits++
       // Prune in background -- no need to block the response.
@@ -183,7 +194,17 @@ export class CoverCacheService {
     }
   }
 
-  private async pruneIfNeeded(): Promise<void> {
+  private touched = new Map<string, number>()
+  // (one prune at a time: a burst of misses - a new artist's page - started a readdir with 2000 stats for each)
+  private pruning?: Promise<void>
+  private pruneIfNeeded(): Promise<void> {
+    this.pruning ??= this.pruneNow().finally(() => {
+      this.pruning = undefined
+    })
+    return this.pruning
+  }
+
+  private async pruneNow(): Promise<void> {
     try {
       const files = await fsPromises.readdir(this.cacheDir)
       if (files.length <= CoverCacheService.MAX_FILES) return

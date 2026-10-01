@@ -69,12 +69,18 @@ fail_update() {
 	local msg=$1
 	echo "## UPDATE ABORTED: ${msg}" >&3 2>&3
 	echo "## (no destructive operation performed yet — your installation is intact)" >&3 2>&3
-	# (the box's programs are stopped before the backup of the user data: started again, so the box goes on running)
+	# (the box's programs are stopped before the backup of the user data: started again, so the box goes on running;
+	# the idle shutdown too, it was stopped for the update)
 	sudo -H -u dietpi bash -c "pm2 start server; pm2 start spotify-control" >&3 2>&3
+	service mupi_idle_shutdown start >&3 2>&3
+	# (the exit below ends only the part in the progress bar - the script after it reads this and ends with an error
+	# too, so a caller - the admin interface, curl | bash - sees it failed instead of "Update finished")
+	echo "Update aborted: ${msg}" > /tmp/mupibox-update-failed
 	# Surface to dialog/whiptail so the user actually sees the failure
 	echo -e "XXX\n100\nUpdate aborted: ${msg}\nXXX"
 	exit 1
 }
+rm -f /tmp/mupibox-update-failed
 service mupi_idle_shutdown stop
 # 2026-09-20: no longer installed (nothing in MuPiBox uses them any more):
 #   id3tool - only the ID3 converter used it; that converter was removed from the admin
@@ -761,13 +767,15 @@ rm -f /tmp/mupibox-update-failed
 		mkdir -p /etc/systemd/system/dietpi-wifi-monitor.service.d >&3 2>&3
 		cp -f ${MUPI_SRC}/config/services/dietpi-wifi-monitor-override.conf /etc/systemd/system/dietpi-wifi-monitor.service.d/override.conf >&3 2>&3
 	fi
-	# USB WiFi adapter preferred, onboard WiFi as fallback (see scripts/mupibox/mupi_wifi_select.sh): only versions that ship it
-	if [ "$RELEASE" = "dev" ] && [ -f ${MUPI_SRC}/config/udev/99-mupibox-wifi.rules ]; then
+	# USB WiFi adapter preferred, onboard WiFi as fallback (see scripts/mupibox/mupi_wifi_select.sh): every version
+	# that ships the script (the rules were only set up for dev versions - a release got the script, but no rule,
+	# and the cable's switch between LAN and WiFi did nothing there)
+	if [ -x /usr/local/bin/mupibox/mupi_wifi_select.sh ] && [ -f ${MUPI_SRC}/config/udev/99-mupibox-wifi.rules ]; then
 		cp -f ${MUPI_SRC}/config/udev/99-mupibox-wifi.rules /etc/udev/rules.d/99-mupibox-wifi.rules >&3 2>&3
 		udevadm control --reload >&3 2>&3
 	fi
-	# LAN takes over from WiFi again on carrier loss/return of the ethernet cable (same script): only versions that ship it
-	if [ "$RELEASE" = "dev" ] && [ -f ${MUPI_SRC}/config/udev/99-mupibox-eth.rules ]; then
+	# LAN takes over from WiFi again on carrier loss/return of the ethernet cable (same script)
+	if [ -x /usr/local/bin/mupibox/mupi_wifi_select.sh ] && [ -f ${MUPI_SRC}/config/udev/99-mupibox-eth.rules ]; then
 		cp -f ${MUPI_SRC}/config/udev/99-mupibox-eth.rules /etc/udev/rules.d/99-mupibox-eth.rules >&3 2>&3
 		udevadm control --reload >&3 2>&3
 	fi
@@ -775,7 +783,8 @@ rm -f /tmp/mupibox-update-failed
 	# remote display: a VNC that is running keeps its old settings (open to the network) until it starts again
 	systemctl try-restart mupi_vnc.service mupi_novnc.service >&3 2>&3
 	if systemctl list-unit-files dietpi-wifi-monitor.service 2>/dev/null | grep -q dietpi-wifi-monitor; then
-		systemctl restart dietpi-wifi-monitor.service >&3 2>&3
+		# (try-restart: one the parents switched off in the app stays off)
+		systemctl try-restart dietpi-wifi-monitor.service >&3 2>&3
 	fi
 	systemctl enable mupi_check_internet.service >&3 2>&3
 	systemctl start mupi_check_internet.service >&3 2>&3
@@ -1035,6 +1044,12 @@ if [ -f /tmp/mupibox-update-failed ]; then
 	rm -rf ${PREFLIGHT_DIR}
 	echo "Update FAILED: the MuPiBox archive could not be downloaded completely (see ${LOG})."
 	echo "Nothing was replaced. Please check the network connection and run the update again."
+	exit 1
+fi
+if [ -f /tmp/mupibox-update-failed ]; then
+	cat /tmp/mupibox-update-failed
+	rm -f /tmp/mupibox-update-failed
+	echo "Nothing was replaced - your installation is as it was (see ${LOG})."
 	exit 1
 fi
 if [ -f /tmp/mupibox-restore-failed ]; then

@@ -141,12 +141,26 @@ export class PodcastOffline {
     return this.loading
   }
 
+  // The list could not be read although it is there (cut off after a power cut): nothing in the folder is tidied away
+  // then - with an empty list every kept episode counted as a stray and was deleted, the pinned ones too
+  private indexBroken = false
+
   private async readIndex(): Promise<void> {
+    let raw: string | undefined
     try {
-      const data = JSON.parse(await readFile(this.indexFile, 'utf8')) as { files?: Record<string, OfflineFile> }
-      this.files = data.files && typeof data.files === 'object' ? data.files : {}
+      raw = await readFile(this.indexFile, 'utf8')
     } catch {
+      raw = undefined // (none yet)
+    }
+    try {
+      const data = raw === undefined ? {} : (JSON.parse(raw) as { files?: Record<string, OfflineFile> })
+      this.files = data.files && typeof data.files === 'object' ? data.files : {}
+    } catch (e) {
       this.files = {}
+      this.indexBroken = true
+      console.error(
+        `${new Date().toLocaleString()}: [MuPiBox-Server] podcast offline list unreadable - the kept episodes stay in the folder, nothing is tidied: ${e}`,
+      )
     }
     let changed = false
     for (const [k, f] of Object.entries(this.files)) {
@@ -404,6 +418,7 @@ export class PodcastOffline {
 
   // Files in the folder that the list does not know (a crash between writing and noting it): gone
   private async cleanStrays(): Promise<void> {
+    if (this.indexBroken) return
     const names = await readdir(this.deps.dir).catch(() => [] as string[])
     for (const name of names) {
       // (the list as it is now, not as it was before readdir: a download finished meanwhile is in it already; the

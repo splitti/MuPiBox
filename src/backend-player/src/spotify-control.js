@@ -891,8 +891,16 @@ function writePlaytimeCheckpoint() {
     dayKey: playtimeState.dayKey,
     usedSeconds: playtimeState.usedSeconds,
   }
-  fs.writeFile(PLAYTIME_CHECKPOINT_PATH, JSON.stringify(payload), (err) => {
-    if (err) log.error(`${new Date().toLocaleString()}: [Playtime] Failed to write checkpoint:`, err)
+  // (a file of its own first, then renamed: a power cut mid-write left half a file, and the day's count began at 0)
+  const tmp = `${PLAYTIME_CHECKPOINT_PATH}.tmp`
+  fs.writeFile(tmp, JSON.stringify(payload), (err) => {
+    if (err) {
+      log.error(`${new Date().toLocaleString()}: [Playtime] Failed to write checkpoint:`, err)
+      return
+    }
+    fs.rename(tmp, PLAYTIME_CHECKPOINT_PATH, (e) => {
+      if (e) log.error(`${new Date().toLocaleString()}: [Playtime] Failed to write checkpoint:`, e)
+    })
   })
   playtimeLastCheckpointAt = Date.now()
   playtimeLastCheckpointSeconds = playtimeState.usedSeconds
@@ -1504,6 +1512,16 @@ function transferPlaybackToActiveDevice() {
   )
 }
 
+// (mplayer's playing flag comes from the poll once a second: a second /pause or /play within that second - the
+// display and the app, Telegram, an announcement - toggled mplayer twice, and the music went on)
+let mplayerToggleAt = 0
+function mplayerToggle() {
+  if (Date.now() - mplayerToggleAt < 1200) return false
+  mplayerToggleAt = Date.now()
+  player.playPause()
+  return true
+}
+
 function pause() {
   if (telegramPlaybackNotices())
     cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Pause"')
@@ -1519,12 +1537,13 @@ function pause() {
         writeplayerstatePause()
       },
       (err) => {
+        // (not paused after all: the music goes on, and so does the counting of the playtime)
+        currentMeta.pause = false
         handleSpotifyError(err, 'pause')
       },
     )
   } else if (currentMeta.currentPlayer === 'mplayer') {
-    if (currentMeta.playing) {
-      player.playPause()
+    if (currentMeta.playing && mplayerToggle()) {
       //currentMeta.playing = false;
       writeplayerstatePause()
     }
@@ -1629,8 +1648,7 @@ function play() {
       cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_send_message.py "Continue playing"')
     //if (hasConfiguredTelegram()) cmdCall('/usr/bin/python3 /usr/local/bin/mupibox/telegram_Track_Spotify.py');
   } else if (currentMeta.currentPlayer === 'mplayer') {
-    if (!currentMeta.playing) {
-      player.playPause()
+    if (!currentMeta.playing && mplayerToggle()) {
       currentMeta.pause = false
       //currentMeta.playing = true;
       writeplayerstatePlay()

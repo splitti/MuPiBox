@@ -440,6 +440,14 @@ export class WifiPage {
       this.wifiService.testWifiStatic(a.ssid, values).subscribe({
         next: (r) => {
           this.addressBusy.set(false)
+          if (r.active === false) {
+            // (the box left this network meanwhile: nothing was tested - saved without the switch, see the backend)
+            this.addressNote.set('The box is not in this network right now - nothing to test; the address is used the next time it joins.')
+            this.addressTested = null
+            this.addressChecks.set(null)
+            resolve(true)
+            return
+          }
           this.addressNote.set('')
           const ok = r.checks.every((c) => c.ok)
           this.addressTested = { key: JSON.stringify(values), ok }

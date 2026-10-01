@@ -895,6 +895,7 @@
  "Die Box ist auf stumm gestellt": "Бокс переведено в беззвучний режим",
  "Die Box ist gerade darüber verbunden.": "Бокс зараз підключений через це.",
  "Die Box ist gerade nicht erreichbar.": "Бокс зараз недоступний.",
+ "Die Box ist gerade nicht in diesem Netz – nichts zu testen. Die Adresse gilt, sobald sie wieder drin ist.": "Бокс зараз не в цій мережі – нема чого перевіряти. Адреса діятиме, щойно він знову в ній опиниться.",
  "Die Box ist gerade über das eingebaute WLAN verbunden. Ohne LAN-Kabel oder USB-WLAN ist sie danach nicht mehr erreichbar.": "Бокс зараз підключений через вбудований Wi-Fi. Без кабелю LAN або USB-Wi-Fi він після цього стане недоступним.",
  "Die Box ist nicht beim NAS angemeldet.": "Бокс не увійшов на NAS.",
  "Die Box ist ruhig.": "На боксі зараз тихо.",

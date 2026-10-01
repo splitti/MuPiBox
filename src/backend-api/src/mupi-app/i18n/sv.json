@@ -895,6 +895,7 @@
  "Die Box ist auf stumm gestellt": "Boxen är inställd på tyst",
  "Die Box ist gerade darüber verbunden.": "Boxen är ansluten via detta just nu.",
  "Die Box ist gerade nicht erreichbar.": "Boxen är inte nåbar just nu.",
+ "Die Box ist gerade nicht in diesem Netz – nichts zu testen. Die Adresse gilt, sobald sie wieder drin ist.": "Boxen är inte i det här nätverket just nu – inget att testa. Adressen gäller så snart den är med igen.",
  "Die Box ist gerade über das eingebaute WLAN verbunden. Ohne LAN-Kabel oder USB-WLAN ist sie danach nicht mehr erreichbar.": "Boxen är just nu ansluten via det inbyggda Wi-Fi:et. Utan LAN-kabel eller USB-Wi-Fi är den inte längre nåbar efteråt.",
  "Die Box ist nicht beim NAS angemeldet.": "Boxen är inte inloggad på NAS:et.",
  "Die Box ist ruhig.": "Boxen är tyst.",

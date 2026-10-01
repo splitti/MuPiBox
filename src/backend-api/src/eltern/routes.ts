@@ -51,6 +51,7 @@ import { registerCustomBootRoutes } from './bootscreen-custom'
 import { registerFeedHostRoutes } from './feed-hosts'
 import { registerPinnedCardRoutes } from './pinned-cards'
 import { dropStatic, registerWifiStaticRoutes, startWifiStaticWatch } from './wifi-static'
+import { decodeWpaSsid } from '../wpa-ssid'
 import { registerHardwareRoutes } from './hardware'
 import { registerServicesRoutes } from './services'
 import { registerSystemRoutes } from './system'
@@ -1499,7 +1500,8 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
     let active = false
     for (const ln of (await cli(['list_networks'])).split('\n')) {
       const parts = ln.split('\t')
-      if (ln.startsWith('network id') || parts[1] !== ssid) continue
+      // (wpa_cli prints a name with an umlaut as \xNN per byte)
+      if (ln.startsWith('network id') || decodeWpaSsid(parts[1] ?? '') !== ssid) continue
       id = parts[0]
       active = (parts[3] ?? '').includes('[CURRENT]')
       break
