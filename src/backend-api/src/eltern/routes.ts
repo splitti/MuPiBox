@@ -291,7 +291,8 @@ type RssEpisode = { url: string; title: string; date: string | null; duration: s
 // cover: the episode's picture, else the show's, through the box's picture proxy (a local copy is /rss-covers/…).
 // offlineView: the box is offline and the feed holds only the episodes on the SD card (server.ts offlineFeedView) -
 // those are the chosen ones already, a choice of episodes is not applied to them again.
-async function rssEpisodes(feed: string): Promise<(RssEpisode[] & { offlineView?: boolean }) | null> {
+// failure: why the box could not read the feed (server.ts feedFailureOf), then without episodes.
+async function rssEpisodes(feed: string): Promise<(RssEpisode[] & { offlineView?: boolean; failure?: string }) | null> {
   const text = (v: unknown): string => {
     if (typeof v === 'string') return v
     const o = v as { _text?: unknown; _cdata?: unknown } | undefined
@@ -306,7 +307,8 @@ async function rssEpisodes(feed: string): Promise<(RssEpisode[] & { offlineView?
   try {
     const r = await fetch(`http://127.0.0.1:8200/api/rssfeed/cached?url=${encodeURIComponent(feed)}`, { signal: AbortSignal.timeout(15000) })
     if (!r.ok) return null
-    const body = (await r.json()) as { rss?: { channel?: Record<string, unknown>; _offline?: unknown } }
+    const body = (await r.json()) as { rss?: { channel?: Record<string, unknown>; _offline?: unknown; _error?: unknown } }
+    if (typeof body.rss?._error === 'string') return Object.assign([] as RssEpisode[], { failure: body.rss._error })
     const channel = body.rss?.channel
     const raw = channel?.item
     const items = (Array.isArray(raw) ? raw : raw ? [raw] : []) as Record<string, unknown>[]
@@ -1747,8 +1749,9 @@ export function createElternApiRouter(deps: ElternRouterDeps): Router {
       return
     }
     const all = await rssEpisodes(item.id)
-    if (!all) {
-      res.status(502).json({ error: 'feed_unavailable' })
+    if (!all || all.failure) {
+      // (reason: why - the app says it instead of "no episodes", see server.ts feedFailureOf)
+      res.status(502).json({ error: 'feed_unavailable', ...(all?.failure ? { reason: all.failure } : {}) })
       return
     }
     // (only the chosen ones - the box shows no others; total: how many the feed has)

@@ -848,8 +848,40 @@ const rssRefreshing = new Set<string>()
 /** A minimal, well-formed empty feed, used as a last-resort fallback so a single
  * unreachable podcast never breaks the whole category listing (the frontend
  * merges all podcasts' feeds into one Observable with no per-item error handling). */
-function emptyRssFeed(): any {
-  return { rss: { channel: { title: { _text: '' }, image: { url: { _text: '' } }, item: [] } } }
+function emptyRssFeed(failure?: FeedFailure): any {
+  return { rss: { channel: { title: { _text: '' }, image: { url: { _text: '' } }, item: [] }, ...(failure ? { _error: failure } : {}) } }
+}
+
+/** Why a feed could not be read - for the app's message instead of "no episodes" (the display ignores it): its server's
+ * name is not known, the server is not reached, a server of the home network that is not allowed (lan-feeds.ts), an
+ * error answer, no feed in the answer, or still loading (slower than rssFetchTimeoutMs, it goes on in the background).
+ * ipv6_only: the name has only an IPv6 address and the box none of its own - the system does not even give that
+ * address out then (getaddrinfo: "not found"), so a server reached only over IPv6 looked like a wrong address. */
+type FeedFailure = 'not_found' | 'ipv6_only' | 'unreachable' | 'blocked' | 'http' | 'invalid' | 'slow'
+
+// The last failure of a feed without a cache (by its cache key), until it is fetched once
+const rssLastFailure = new Map<string, FeedFailure>()
+
+async function feedFailureFor(error: unknown, rssUrl: string): Promise<FeedFailure> {
+  const failure = feedFailureOf(error)
+  if (failure !== 'not_found') return failure
+  try {
+    const host = new URL(rssUrl).hostname.replace(/^\[|\]$/g, '')
+    const v6 = await Promise.race([dns.promises.resolve6(host), new Promise<string[]>((resolve) => setTimeout(() => resolve([]), 3000))])
+    return v6.length ? 'ipv6_only' : failure
+  } catch {
+    return failure
+  }
+}
+function feedFailureOf(error: unknown): FeedFailure {
+  // (fetch() - the ARD's shows - has the system's code in its cause)
+  const e = error as { code?: unknown; cause?: { code?: unknown } } | null
+  const code = String(e?.code ?? e?.cause?.code ?? '')
+  if (code === 'ENOTFOUND' || code === 'EAI_AGAIN' || code === 'EAI_NONAME') return 'not_found'
+  if (/^(ECONNREFUSED|ECONNRESET|EHOSTUNREACH|ENETUNREACH|EHOSTDOWN|ETIMEDOUT|EADDRNOTAVAIL)$/.test(code)) return 'unreachable'
+  if ((error as Error | null)?.name === 'TimeoutError' || (error as Error | null)?.name === 'AbortError') return 'unreachable'
+  if (error instanceof RemoteFetchError) return error.status === 403 ? 'blocked' : error.status === 502 ? 'http' : 'invalid'
+  return 'invalid'
 }
 
 /**
@@ -1155,17 +1187,26 @@ app.get('/api/rssfeed/cached', async (req, res) => {
   // every visit gave up after the same 5 s).
   try {
     const refresh = refreshRssCache(rssUrl, cacheKey)
-    refresh.catch(() => undefined)
+    refresh.then(
+      () => rssLastFailure.delete(cacheKey),
+      async (error) => {
+        const failure = await feedFailureFor(error, rssUrl)
+        // (a few hundred at most - the oldest goes first)
+        if (rssLastFailure.size >= 200 && !rssLastFailure.has(cacheKey)) rssLastFailure.delete(rssLastFailure.keys().next().value as string)
+        rssLastFailure.set(cacheKey, failure)
+      },
+    )
     const feed = await Promise.race([refresh, new Promise((resolve) => setTimeout(() => resolve(null), rssFetchTimeoutMs))])
     // (a copy: the feed object is the cache's, written again when its cover arrives)
-    res.json(feed ? episodeState.annotateFeed(rssUrl, JSON.parse(JSON.stringify(feed))) : emptyRssFeed())
+    // (not there yet: why it failed the last time - a server that never answers was "still loading" at every visit)
+    res.json(feed ? episodeState.annotateFeed(rssUrl, JSON.parse(JSON.stringify(feed))) : emptyRssFeed(rssLastFailure.get(cacheKey) ?? 'slow'))
   } catch (error) {
     console.error(`${new Date().toLocaleString()}: [MuPiBox-Server] RSS fetch failed: ${error}`)
     // Respond with a valid-but-empty feed rather than an HTTP error: the frontend
     // merges every podcast's feed into one Observable with no per-item error
     // handling, so a single unreachable/slow feed would otherwise blank the whole
-    // category listing instead of just this one tile.
-    res.json(emptyRssFeed())
+    // category listing instead of just this one tile. (_error: why, for the app)
+    res.json(emptyRssFeed(await feedFailureFor(error, rssUrl)))
   }
 })
 

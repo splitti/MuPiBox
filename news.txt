@@ -1,3 +1,9 @@
+<h3>DEV 5.0.7 - changes compared to 5.0.6</h3>
+<b>Podcasts</b>
+</ul>
+<ul id='ulnews' class='ulnews'>
+<li id='linews' class='linews'>When the box cannot read a podcast's feed, the app says why instead of "No episodes found": server not found, reachable over IPv6 only (the box has no IPv6), not reachable, a server in the home network that is not allowed yet (with a button to allow it), an error answer, or no feed at the address.</li>
+</ul>
 <h3>DEV 5.0.6 - changes compared to 5.0.5</h3>
 <b>Player</b>
 </ul>

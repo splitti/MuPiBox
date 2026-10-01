@@ -1896,6 +1896,17 @@ function heardText(e) {
   return left ? `noch ${left} min` : 'Angefangen'
 }
 
+// Why a podcast's feed could not be read (reason of /library/episodes, see feedFailureOf in server.ts)
+const FEED_FAILURES = {
+  not_found: 'Server nicht gefunden: Die Box kennt den Namen dieses Servers nicht. Stimmt die Adresse?',
+  ipv6_only: 'Der Server ist nur über IPv6 erreichbar, die Box hat aber kein IPv6. Trag eine IPv4-Adresse des Servers ein – im Heimnetz z. B. 192.168.…',
+  unreachable: 'Server nicht erreichbar: Er antwortet der Box nicht. Ist er an und aus dem Netz der Box erreichbar?',
+  blocked: 'Der Server liegt im Heimnetz. Die Box ruft ihn erst ab, wenn du ihn erlaubst.',
+  http: 'Der Server hat mit einem Fehler geantwortet. Stimmt die Adresse?',
+  invalid: 'Unter dieser Adresse liegt kein Podcast-Feed, den die Box lesen kann.',
+  slow: 'Der Feed lädt noch. Öffne ihn gleich noch einmal.',
+}
+
 // The episodes of a podcast (newest first, from its feed as the box reads it); a tap plays one on the box
 async function openEpisodes(t) {
   let shown = 40
@@ -1909,7 +1920,18 @@ async function openEpisodes(t) {
       const r = await api(`${API}/library/episodes?index=${t.index}`)
       if (!box.isConnected) return
       if (!r.ok) {
-        box.innerHTML = `<p class="help">${esc('Die Folgen ließen sich nicht laden.')}</p>`
+        // (why the box could not read the feed - see feedFailureOf in server.ts; a server of the home network that is
+        // not allowed yet can be allowed right here)
+        const reason = r.body?.reason
+        box.innerHTML = `<p class="help">${esc(FEED_FAILURES[reason] ?? 'Die Folgen ließen sich nicht laden.')}</p>`
+        if (reason === 'blocked') {
+          sheet.querySelector('[data-close]').insertAdjacentHTML('beforebegin', `<button class="btn primary" data-allow>${esc('Erlauben')}</button>`)
+          sheet.querySelector('[data-allow]').onclick = async () => {
+            if (!(await allowLanFeed(t.ident?.id))) return
+            close()
+            openEpisodes(t)
+          }
+        }
         return
       }
       episodes = r.body?.episodes ?? []
