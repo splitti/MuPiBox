@@ -27,6 +27,13 @@ export const DEFAULT_DISPLAY_TEXTS = {
   offlineLabel: 'No connection',
   // title of the resume page (km themes; the other themes keep "Resume")
   resumeTitle: 'Continue listening',
+  outputTitle: 'Listen with',
+  outputBox: 'Box',
+  outputBoxSub: 'Speaker',
+  outputConnected: 'connected',
+  outputOff: 'off',
+  outputConnecting: 'switching on …',
+  outputNotFound: 'Not found – is it switched on?',
 }
 export type DisplayTextKey = keyof typeof DEFAULT_DISPLAY_TEXTS
 type TextSet = Partial<Record<DisplayTextKey, string>>

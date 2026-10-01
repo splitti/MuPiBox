@@ -59,7 +59,8 @@
       }
     </ion-title>
     <ion-title class="toolbar-tracknumber" slot="end">
-      <div class="km-vol">@if (km()) {<ion-icon name="volume-medium"></ion-icon>{{local?.volume}} %} @else { {{local?.volume}}% }</div>
+      <!-- the volume, with where the box plays: a tap chooses speaker or Bluetooth ("Hören mit", see openOutput) -->
+      <div class="km-vol" [class.out-tap]="outputChoosable()" (click)="openOutput()">@if (km()) {<ion-icon [name]="outputOnBluetooth() ? 'headset' : 'volume-medium'"></ion-icon>{{local?.volume}} %} @else { @if (outputOnBluetooth()) {<ion-icon name="headset"></ion-icon>}{{local?.volume}}% }</div>
       @if (media.type ==='library' || media.type ==='nas') {
         <div>{{local?.currentTracknr}}/{{local?.totalTracks}}</div>
       } @else {
@@ -264,3 +265,35 @@
   </ion-grid>
   }
 </ion-content>
+
+<!-- "Hören mit": the box or a paired Bluetooth device, one tile each (see chooseOutput) -->
+@if (outputOpen()) {
+  <div class="out-dim" (click)="closeOutput()">
+    <div class="out-panel" (click)="$event.stopPropagation()">
+      <h2>{{ displayTexts.text('outputTitle') }}</h2>
+      <button class="out-close" (click)="closeOutput()" aria-label="close"><ion-icon name="close"></ion-icon></button>
+      <div class="out-tiles" [style.--out-cols]="(output()?.devices?.length ?? 0) > 1 ? 3 : 2">
+        <button class="out-tile" [class.on]="output()?.current === 'box'" (click)="chooseOutput('box')">
+          @if (output()?.current === 'box') {<span class="out-check"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span>}
+          @if (outputBusy() === 'box') {<span class="out-spin"></span>} @else {
+            <svg class="out-icon" viewBox="0 0 24 24"><path class="fill" d="M4 9h3.5L12 5v14l-4.5-4H4z" /><path d="M16 9.5a3.5 3.5 0 0 1 0 5M18.5 7a7 7 0 0 1 0 10" /></svg>
+          }
+          <b>{{ displayTexts.text('outputBox') }}</b><small>{{ displayTexts.text('outputBoxSub') }}</small>
+        </button>
+        @for (d of output()?.devices ?? []; track d.mac) {
+          <button class="out-tile" [class.on]="output()?.current === d.mac" (click)="chooseOutput(d.mac)">
+            @if (output()?.current === d.mac) {<span class="out-check"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span>}
+            @if (outputBusy() === d.mac) {<span class="out-spin"></span>} @else if (d.kind === 'speaker') {
+              <svg class="out-icon" viewBox="0 0 24 24"><rect x="6" y="3" width="12" height="18" rx="3" /><circle cx="12" cy="14" r="3" /><circle class="fill" cx="12" cy="7.5" r="1" /></svg>
+            } @else {
+              <svg class="out-icon" viewBox="0 0 24 24"><path d="M4 15v-3a8 8 0 0 1 16 0v3" /><path class="fill" d="M4 15h3v6H5a1 1 0 0 1-1-1zM20 15h-3v6h2a1 1 0 0 0 1-1z" /></svg>
+            }
+            <b translate="no">{{ d.name }}</b>
+            <small>{{ outputBusy() === d.mac ? displayTexts.text('outputConnecting') : d.connected ? displayTexts.text('outputConnected') : displayTexts.text('outputOff') }}</small>
+          </button>
+        }
+      </div>
+      @if (outputNotFound()) {<div class="out-toast">{{ displayTexts.text('outputNotFound') }}</div>}
+    </div>
+  </div>
+}

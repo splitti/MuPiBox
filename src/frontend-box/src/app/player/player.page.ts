@@ -1,6 +1,6 @@
 import { AsyncPipe } from '@angular/common'
 import { HttpClient } from '@angular/common/http'
-import { AfterViewInit, Component, DestroyRef, ElementRef, inject, OnInit, ViewChild } from '@angular/core'
+import { AfterViewInit, Component, DestroyRef, ElementRef, inject, OnInit, signal, ViewChild } from '@angular/core'
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop'
 import { FormsModule } from '@angular/forms'
 import { ActivatedRoute, Router } from '@angular/router'
@@ -28,6 +28,7 @@ import { addIcons } from 'ionicons'
 import {
   arrowBackOutline,
   close,
+  headset,
   pause,
   play,
   playBack,
@@ -59,6 +60,13 @@ import { PlayerCmds, PlayerService } from '../player.service'
 import type { PlaytimePlayState } from '../playtime.model'
 import { PlaytimeService } from '../playtime.service'
 import { SpotifyService } from '../spotify.service'
+
+/** Where the box plays (backend-api audio-output.ts): current is 'box' or a device's address */
+export interface AudioOutputState {
+  current: string
+  devices: { mac: string; name: string; kind: 'headphones' | 'speaker'; connected: boolean }[]
+  display: boolean
+}
 
 export interface TrackListEntry {
   position: number
@@ -110,6 +118,62 @@ export class PlayerPage implements OnInit, AfterViewInit {
   private readonly kmTheme = inject(KmThemeService)
   protected readonly km = this.kmTheme.isKm
   protected readonly displayTexts = inject(DisplayTextsService)
+
+  // "Hören mit": the box's speaker or a paired Bluetooth device (backend-api audio-output.ts). A tap on the volume opens
+  // the choice - only when a device is paired and the parents did not switch it off (display options, outputPicker).
+  protected readonly output = signal<AudioOutputState | null>(null)
+  protected readonly outputOpen = signal(false)
+  protected readonly outputBusy = signal<string | null>(null)
+  protected readonly outputNotFound = signal(false)
+  private outputTimer: ReturnType<typeof setInterval> | undefined
+  protected outputChoosable(): boolean {
+    const o = this.output()
+    return !!o?.display && o.devices.length > 0
+  }
+  protected outputOnBluetooth(): boolean {
+    const o = this.output()
+    return !!o && o.current !== 'box'
+  }
+  private loadOutput(): void {
+    this.http.get<AudioOutputState>(`${environment.backend.apiUrl}/audio-output`).subscribe({
+      next: (o) => this.output.set(o),
+      error: () => undefined,
+    })
+  }
+  protected openOutput(): void {
+    if (!this.outputChoosable()) return
+    this.outputNotFound.set(false)
+    this.loadOutput()
+    this.outputOpen.set(true)
+  }
+  protected closeOutput(): void {
+    if (!this.outputBusy()) this.outputOpen.set(false)
+  }
+  protected chooseOutput(target: string): void {
+    if (this.outputBusy()) return
+    if (target === this.output()?.current) {
+      this.outputOpen.set(false)
+      return
+    }
+    this.outputBusy.set(target)
+    this.outputNotFound.set(false)
+    this.http.post(`${environment.backend.apiUrl}/audio-output`, { target }).subscribe({
+      next: () => {
+        this.outputBusy.set(null)
+        this.outputOpen.set(false)
+        this.loadOutput()
+      },
+      error: (e: { status?: number }) => {
+        this.outputBusy.set(null)
+        // (the device did not answer - not on, or out of reach: said in the choice, which stays open)
+        if (e?.status === 504) {
+          this.outputNotFound.set(true)
+          setTimeout(() => this.outputNotFound.set(false), 5000)
+        }
+        this.loadOutput()
+      },
+    })
+  }
 
   /** The cover as shown: km themes show their placeholder instead of the default bear (and for a cover that does not load) */
   protected shownCover(): string {
@@ -253,6 +317,7 @@ export class PlayerPage implements OnInit, AfterViewInit {
       playForward,
       volumeMedium,
       close,
+      headset,
     })
   }
 
@@ -441,6 +506,10 @@ export class PlayerPage implements OnInit, AfterViewInit {
 
   async ionViewWillEnter() {
     this.updateProgression = true
+    // (the output as it is now - also changed from the web app or by headphones switched off)
+    this.loadOutput()
+    clearInterval(this.outputTimer)
+    this.outputTimer = setInterval(() => this.loadOutput(), 15000)
     if (this.resumePlay) {
       await this.resumePlayback()
     } else if (!this.isExternalPlayback) {
@@ -470,6 +539,8 @@ export class PlayerPage implements OnInit, AfterViewInit {
 
   ionViewWillLeave() {
     clearTimeout(this.longPressTimer)
+    clearInterval(this.outputTimer)
+    this.outputOpen.set(false)
     this.showTrackList = false
     // Left only because something else was started from the phone and the page opens again for it: the
     // player already switched, so no STOP (it would stop the new playback) and no resume save (the progress

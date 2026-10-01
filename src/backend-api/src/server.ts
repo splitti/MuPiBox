@@ -51,6 +51,7 @@ import { OnlineCovers } from './online-covers'
 import { ardFeed, isArdFeed } from './ard-sounds'
 import { isEpisodePick } from './episode-pick'
 import { feedHostKey, feedHostsOf, isPrivateHost, neverFetched } from './lan-feeds'
+import { registerAudioOutputRoutes, startAudioWatch } from './audio-output'
 import { episodeKey, MAX_KEEP, type OfflineEpisode, PodcastOffline } from './podcast-offline'
 import { setFeedHeadReader } from './podcast-search'
 import { EpisodeState, episodeStateSettings } from './episode-state'
@@ -1041,6 +1042,10 @@ const podcastOffline = new PodcastOffline({
   changed: () => undefined,
 })
 podcastOffline.start()
+
+// Where the box plays: speaker or Bluetooth ("Hören mit" on the display, the web app's output row; audio-output.ts)
+registerAudioOutputRoutes(app, { guard: localOrElternSession, getMupiboxConfig: () => getMupiboxConfigSync() })
+startAudioWatch()
 
 // Whether the box has no internet right now (network.json, written every minute by get_network.sh)
 let offlineCheck = { at: 0, offline: false }

@@ -7,6 +7,7 @@
 <li id='linews' class='linews'><b>No more white screen after an update:</b> the display loads again by itself when the app did not come up.</li>
 <li id='linews' class='linews'><b>Podcast servers in your own network</b> such as Pinepods or Audiobookshelf can be added: the web app asks once to allow the server.</li>
 <li id='linews' class='linews'><b>Pin cards to the start page</b> – as a whole card (e.g. the charge curve or the announcements) or as a link.</li>
+<li id='linews' class='linews'><b>Listen with:</b> switch between the box and Bluetooth headphones right on the display or in the web app.</li>
 </ul>
 <b>Web app</b>
 </ul>
@@ -14,6 +15,9 @@
 <li id='linews' class='linews'>Pin cards to the start page: every card with a heading has a pin. Some cards come as a whole card you can use right on the start page (charge curve, announcements, headphones), all others as a link that opens the page at that card. Order, card or link, and unpinning under Start &gt; Pinned &gt; Arrange. The pins are kept in the box, so every phone shows the same. Idea and first version by Andreas (Lippsson).</li>
 <li id='linews' class='linews'>Bluetooth: the list of paired devices no longer shows devices a search found nearby (phones, watches and trackers without a name appeared there for a few minutes). "Connect automatically" finds the paired devices again on Debian 12 (bluetoothctl 5.66 no longer knows "paired-devices" - no device was connected at the start).</li>
 <li id='linews' class='linews'>Bluetooth: removing a device no longer leaves Bluetooth switched off (it was switched off and at once on again, which failed), takes a moment instead of several seconds and shows at once that it is being removed.</li>
+<li id='linews' class='linews'><b>Listen with:</b> a tap on the volume at the top of the display's player chooses between the box's speaker and a paired Bluetooth device (headphones, speaker) - it connects the device, plays only there and keeps each output's own volume (a device connected the first time is not louder than the box). Not found: said on the display. The same choice is in the web app's "Now playing". Can be switched off for the display under Controls on the display. Only shown when a Bluetooth device is paired.</li>
+<li id='linews' class='linews'>The box's sound card comes back by itself when it dropped out of PulseAudio (seen after headphones were disconnected: nothing was audible until a restart).</li>
+<li id='linews' class='linews'>Children's themes: the volume and the track number at the top of the player are on one line again (the track number sat 2 px lower).</li>
 </ul>
 <b>Podcasts</b>
 </ul>

@@ -1002,3 +1002,11 @@ textarea[hidden] { display: none; }
 .card.pin-flash { box-shadow: 0 0 0 3px var(--mp-accent); transition: box-shadow .4s; }
 .pin-row .lbl .seg.sm { margin-top: 6px; max-width: 280px; }
 .pin-row .lbl .seg.sm button { padding: 6px 10px; font-size: 13px; }
+
+/* "Jetzt läuft": where the box plays (see outputRow) */
+.out-row { display: flex; align-items: center; gap: 12px; }
+.out-label { font-size: 13px; color: var(--mp-muted); font-weight: 600; }
+.out-seg { flex: 1; min-width: 0; }
+.out-seg button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 0; }
+.out-seg button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.spin.sm { width: 14px; height: 14px; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; display: inline-block; animation: mp-spin .9s linear infinite; }

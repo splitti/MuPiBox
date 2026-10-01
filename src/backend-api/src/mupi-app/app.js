@@ -898,6 +898,12 @@ function statusSoon(root) {
 
 function mountStart(root) {
   drawPins(root)
+  loadOutput(root)
+  every(15000, () => loadOutput(root))
+  root.addEventListener('click', (e) => {
+    const b = e.target.closest?.('[data-out]')
+    if (b) chooseOutput(root, b.dataset.out)
+  })
   loadNow(root)
   loadStatus(root)
   loadVolumeCap(root)
@@ -1007,8 +1013,41 @@ async function playbackAction(root, action) {
   setTimeout(() => loadNow(root), 600)
 }
 
+// Where the box plays (backend-api audio-output.ts), for the row above the volume: kept here, the card is drawn anew
+// every few seconds (see loadNow); read again every 15 s and after a change
+const outState = { data: null, busy: null }
+
+function outputRow() {
+  const o = outState.data
+  if (!o?.devices?.length) return ''
+  const btn = (target, ic, label) =>
+    `<button data-out="${esc(target)}" aria-pressed="${o.current === target}" ${outState.busy ? 'disabled' : ''}>${outState.busy === target ? '<span class="spin sm"></span>' : icon(ic, 16)}<span translate="${target === 'box' ? 'yes' : 'no'}">${esc(label)}</span></button>`
+  return `<div class="out-row"><span class="out-label">Ausgabe</span><div class="seg out-seg">${btn('box', 'vol', 'Lautsprecher')}${o.devices.map((d) => btn(d.mac, 'phones', d.name)).join('')}</div></div>`
+}
+
+async function loadOutput(root) {
+  const r = await api('/api/audio-output')
+  if (!r.ok) return
+  outState.data = r.body
+  const row = $('#out-slot', root)
+  if (row) row.innerHTML = outputRow()
+}
+
+// A tap on an output: the box switches (connecting a device takes some seconds)
+async function chooseOutput(root, target) {
+  if (outState.busy || outState.data?.current === target) return
+  outState.busy = target
+  const slot = $('#out-slot', root)
+  if (slot) slot.innerHTML = outputRow()
+  const r = await api('/api/audio-output', { method: 'POST', body: { target } })
+  outState.busy = null
+  const name = target === 'box' ? tr('Lautsprecher') : (outState.data?.devices ?? []).find((d) => d.mac === target)?.name ?? ''
+  toast(r.ok ? `${tr('Ausgabe')}: ${name}` : r.status === 504 ? `${name}: ${tr('nicht gefunden – ist es an?')}` : 'Das ging nicht', r.ok ? 'ok' : 'info')
+  await loadOutput(root)
+}
+
 function volumeRow() {
-  return `<div class="now-vol">${icon('vol', 20)}<div class="vol-wrap"><input type="range" id="vol" min="0" max="100" step="1" value="0" aria-label="Lautstärke"><i class="vol-cap" hidden></i></div><span class="value-pill" id="vol-out">–</span></div>`
+  return `<div id="out-slot">${outputRow()}</div><div class="now-vol">${icon('vol', 20)}<div class="vol-wrap"><input type="range" id="vol" min="0" max="100" step="1" value="0" aria-label="Lautstärke"><i class="vol-cap" hidden></i></div><span class="value-pill" id="vol-out">–</span></div>`
 }
 
 async function loadVolumeCap(root) {
@@ -5816,6 +5855,7 @@ async function loadControls() {
   state.values.set('listTimer', o.listviewTimer)
   state.values.set('setTimer', o.settingsAccessTimer)
   state.values.set('epResume', o.episodeResume !== false)
+  state.values.set('outPick', o.outputPicker !== false)
   state.values.set('epDays', EP_DAYS.find(([, d]) => d === o.episodeResumeDays)?.[0] ?? `${o.episodeResumeDays} Tage`)
   state.values.set('epNew', o.newEpisodes !== false)
   state.values.set('epNewDays', `${o.newEpisodeDays ?? 7} Tage`)
@@ -9005,6 +9045,17 @@ const CONTROLLERS = {
           help: 'Was neu ist und wie weit gehört – auf dem Display und in der App.',
           items: [it('epNew'), it('epNewDays', { dep: 'epNew' }), it('epProgress')],
         },
+        {
+          title: 'Kopfhörer',
+          items: [
+            {
+              type: 'toggle',
+              key: 'outPick',
+              label: 'Box oder Kopfhörer am Display wählen',
+              help: 'Ein Tipp auf die Lautstärke oben im Player öffnet „Hören mit“ – nur wenn ein Bluetooth-Gerät gekoppelt ist. In der App geht es immer.',
+            },
+          ],
+        },
       ]
     },
     async change(key, v, page) {
@@ -9035,6 +9086,7 @@ const CONTROLLERS = {
       if (key === 'resume') return saveDisplayOptions({ resume: v }, `${v} Fortsetzen-Einträge`)
       if (key === 'listTimer') return saveDisplayOptions({ listviewTimer: v }, `Titelliste nach ${fmtSec(v)}`)
       if (key === 'setTimer') return saveDisplayOptions({ settingsAccessTimer: v }, `Einstellungen nach ${fmtSec(v)}`)
+      if (key === 'outPick') return saveDisplayOptions({ outputPicker: !!v }, v ? 'Kinder können am Display umschalten' : 'Umschalten nur in der App')
       if (key === 'epResume') return saveDisplayOptions({ episodeResume: !!v }, v ? 'Folgen gehen an der letzten Stelle weiter' : 'Folgen beginnen immer von vorn')
       if (key === 'epDays') {
         const days = EP_DAYS.find(([l]) => l === v)?.[1]
