@@ -2886,6 +2886,15 @@ app.use((req, res) => {
     return
   }
 
+  // A new playback starts unpaused and without the picture of the one before: a "pause" of the playback before stayed
+  // set (the display showed the play button while the new one played), and a local or NAS album kept the episode
+  // picture of a podcast played before it (radio and podcasts set their own below, Spotify brings its own).
+  const newMedia = command.name.includes('spotify:') || ['library', 'nas', 'radio', 'rss'].some((segment) => hasDirSegment(command, segment))
+  if (newMedia) {
+    currentMeta.pause = false
+    if (hasDirSegment(command, 'library') || hasDirSegment(command, 'nas')) currentMeta.cover = triggerCover
+  }
+
   /*this is the first command to be received. It always includes the device id encoded in between two /*/
   /*check this if we need to transfer the playback to a new device*/
   if (command.name.includes('spotify:')) {

@@ -18,6 +18,7 @@
 <li id='linews' class='linews'><b>Listen with:</b> a tap on the volume at the top of the display's player chooses between the box's speaker and a paired Bluetooth device (headphones, speaker) - it connects the device, plays only there and keeps each output's own volume (a device connected the first time is not louder than the box). Not found: said on the display. The same choice is in the web app's "Now playing". Can be switched off for the display under Controls on the display. Only shown when a Bluetooth device is paired.</li>
 <li id='linews' class='linews'>The box's sound card comes back by itself when it dropped out of PulseAudio (seen after headphones were disconnected: nothing was audible until a restart).</li>
 <li id='linews' class='linews'>Children's themes: the volume and the track number at the top of the player are on one line again (the track number sat 2 px lower).</li>
+<li id='linews' class='linews'>A new playback starts unpaused and without the picture of the one before: after a pause, a title started next showed the play button on the display while it played, and a local album could show the picture of a podcast episode played before it.</li>
 </ul>
 <b>Podcasts</b>
 </ul>
