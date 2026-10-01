@@ -10141,7 +10141,7 @@ boot().catch((err) => {
  * translation comes later), not by the heading shown. Idea and first version: Andreas (Lippsson), wowa1990/MuPiBox#11.
  */
 
-const pins = { list: null, loading: null, jump: null }
+const pins = { list: null, jump: null }
 const pinSlug = (s) =>
   String(s)
     .toLowerCase()
@@ -10152,22 +10152,20 @@ const pinSlug = (s) =>
     .slice(0, 64)
 const pinKey = (p) => `${p.page}:${p.card}`
 
-function pinsReady() {
-  pins.loading ??= api(`${API}/pinned-cards`).then((r) => {
-    pins.list = r.ok && Array.isArray(r.body?.items) ? r.body.items : []
-  })
-  return pins.loading
+// The list as the box has it now - read before it is shown or changed: another phone (or another window) may have
+// changed it, and a list kept since the app was opened undid that when it was saved whole
+async function pinsFetch() {
+  const r = await api(`${API}/pinned-cards`)
+  if (r.ok && Array.isArray(r.body?.items)) pins.list = r.body.items
+  else pins.list ??= []
+  return pins.list
 }
 
-async function pinsSave(list) {
-  const before = pins.list
-  pins.list = list
-  const r = await api(`${API}/pinned-cards`, { method: 'POST', body: { items: list } })
-  if (r.ok) pins.list = r.body.items
-  else {
-    pins.list = before
-    toast('Nicht gespeichert', 'info')
-  }
+// A change, made by the box on its list (see pinned-cards.ts): {add: pin}, {remove: {page, card}} or {items} (order)
+async function pinsChange(body) {
+  const r = await api(`${API}/pinned-cards`, { method: 'POST', body })
+  if (r.ok && Array.isArray(r.body?.items)) pins.list = r.body.items
+  else toast('Nicht gespeichert', 'info')
   return r.ok
 }
 
@@ -10265,7 +10263,7 @@ function pinInject(main, page) {
     b.onclick = () => pinToggle(p)
     head.appendChild(b)
   }
-  pinsReady().then(() => main.isConnected && pinButtons(main))
+  pinsFetch().then(() => main.isConnected && pinButtons(main))
   const want = pins.jump
   if (want && want.page === page.id) {
     pins.jump = null
@@ -10292,18 +10290,17 @@ function pinButtons(root) {
 
 // A tap on a pin: off when it is pinned; else on - a card with a version of its own asks how
 async function pinToggle(p) {
-  await pinsReady()
-  const list = pins.list ?? []
+  const list = await pinsFetch()
   const done = (msg) => {
     pinButtons(document)
     toast(msg, 'ok')
   }
   if (list.some((x) => pinKey(x) === pinKey(p))) {
-    if (await pinsSave(list.filter((x) => pinKey(x) !== pinKey(p)))) done('Von der Startseite gelöst')
+    if (await pinsChange({ remove: { page: p.page, card: p.card } })) done('Von der Startseite gelöst')
     return
   }
   if (!LIVE_CARDS[pinKey(p)]) {
-    if (await pinsSave([...list, { ...p, view: 'link' }])) done('Auf der Startseite – als Verknüpfung')
+    if (await pinsChange({ add: { ...p, view: 'link' } })) done('Auf der Startseite – als Verknüpfung')
     return
   }
   openSheet(
@@ -10328,7 +10325,7 @@ async function pinToggle(p) {
       sheet.querySelector('[data-close]').onclick = close
       sheet.querySelector('[data-ok]').onclick = async () => {
         close()
-        if (await pinsSave([...(pins.list ?? []), { ...p, view }])) done(view === 'card' ? 'Auf der Startseite – als ganze Karte' : 'Auf der Startseite – als Verknüpfung')
+        if (await pinsChange({ add: { ...p, view } })) done(view === 'card' ? 'Auf der Startseite – als ganze Karte' : 'Auf der Startseite – als Verknüpfung')
       }
     },
   )
@@ -10344,7 +10341,7 @@ function pinWhere(p) {
 // Start: the whole cards in two columns as the player and the tiles above (on a phone one, in the order chosen),
 // the links below
 async function drawPins(root) {
-  await pinsReady()
+  await pinsFetch()
   const box = $('#pins', root)
   if (!box?.isConnected) return
   const list = (pins.list ?? []).filter((p) => state.pages.has(p.page))
@@ -10375,7 +10372,8 @@ async function drawPins(root) {
   for (const b of box.querySelectorAll('[data-pin-go]')) b.onclick = () => pinGo(list.find((p) => pinKey(p) === b.dataset.pinGo))
   for (const b of box.querySelectorAll('[data-unpin]')) {
     b.onclick = async () => {
-      if (await pinsSave((pins.list ?? []).filter((p) => pinKey(p) !== b.dataset.unpin))) {
+      const [page, card] = b.dataset.unpin.split(':')
+      if (await pinsChange({ remove: { page, card } })) {
         toast('Von der Startseite gelöst', 'ok')
         drawPins(root)
       }
@@ -10399,7 +10397,8 @@ async function drawPins(root) {
 }
 
 // The order of the pinned cards, card or link, taking one off
-function pinArrange(root) {
+async function pinArrange(root) {
+  await pinsFetch()
   const draw = (sheet) => {
     const list = pins.list ?? []
     sheet.querySelector('#pin-rows').innerHTML = list.length
@@ -10415,14 +10414,15 @@ function pinArrange(root) {
           })
           .join('')
       : `<p class="help" style="margin:0">${esc(tr('Nichts angepinnt.'))}</p>`
+    // (order and view: the whole list, read when the sheet opened and after every change; taking one off: by itself)
     const change = async (next) => {
-      if (await pinsSave(next)) draw(sheet)
+      if (await pinsChange(next)) draw(sheet)
     }
     for (const s of sheet.querySelectorAll('[data-view-of]')) {
       s.onclick = (e) => {
         const btn = e.target.closest('button')
         if (!btn) return
-        change((pins.list ?? []).map((p, i) => (i === Number(s.dataset.viewOf) ? { ...p, view: btn.dataset.v } : p)))
+        change({ items: (pins.list ?? []).map((p, i) => (i === Number(s.dataset.viewOf) ? { ...p, view: btn.dataset.v } : p)) })
       }
     }
     for (const b of sheet.querySelectorAll('[data-up]')) {
@@ -10432,10 +10432,15 @@ function pinArrange(root) {
         const moved = next[i]
         next[i] = next[i - 1]
         next[i - 1] = moved
-        change(next)
+        change({ items: next })
       }
     }
-    for (const b of sheet.querySelectorAll('[data-rm]')) b.onclick = () => change((pins.list ?? []).filter((_p, i) => i !== Number(b.dataset.rm)))
+    for (const b of sheet.querySelectorAll('[data-rm]')) {
+      b.onclick = () => {
+        const p = (pins.list ?? [])[Number(b.dataset.rm)]
+        if (p) change({ remove: { page: p.page, card: p.card } })
+      }
+    }
   }
   openSheet(
     `<h2>Angepinnt</h2><p class="help" style="margin:0">${esc('Ganze Karten stehen oben, Verknüpfungen darunter. Neues heftest du mit dem Pin oben rechts an einer Karte an.')}</p><div class="rows" id="pin-rows"></div><div class="btns"><button class="btn primary" data-close>Fertig</button></div>`,

@@ -49,17 +49,38 @@ export function registerPinnedCardRoutes(router: Router, deps: PinnedCardsDeps):
     res.json({ items: pinnedCardsOf(deps.getMupiboxConfig()) })
   })
 
-  /** POST /api/app/pinned-cards {items} - the whole list (order, view) as the app has it now */
+  /**
+   * POST /api/app/pinned-cards - a change, made on the list as the box has it (another phone may have changed it
+   * meanwhile - the whole list from an app open for a while undid that):
+   *   {add: {page, card, title, view}}  pinned (at the end; again: its view and title changed)
+   *   {remove: {page, card}}            taken off
+   *   {items}                           the whole list (order, views) - after the app read it just before
+   */
   router.post('/pinned-cards', requireSession, requireCsrf, async (req, res) => {
-    const items = (req.body as { items?: unknown } | undefined)?.items
-    if (!Array.isArray(items) || items.length > MAX_PINNED) {
+    const body = (req.body as { add?: unknown; remove?: unknown; items?: unknown } | undefined) ?? {}
+    const add = body.add !== undefined ? cleanPin(body.add) : null
+    const remove = body.remove as { page?: unknown; card?: unknown } | undefined
+    if (body.add !== undefined && !add) {
+      res.status(400).json({ error: 'invalid_pin' })
+      return
+    }
+    if (body.items !== undefined && (!Array.isArray(body.items) || body.items.length > MAX_PINNED)) {
       res.status(400).json({ error: 'invalid_items' })
       return
     }
-    const clean = pinnedCardsOf({ mupibox: { pinnedCards: items } })
+    let result: PinnedCard[] = []
     await deps.updateMupiboxConfig((cfg) => {
-      cfg.mupibox = { ...((cfg.mupibox as Record<string, unknown>) ?? {}), pinnedCards: clean }
+      let list = pinnedCardsOf(cfg)
+      if (Array.isArray(body.items)) list = pinnedCardsOf({ mupibox: { pinnedCards: body.items } })
+      if (remove && typeof remove === 'object') list = list.filter((p) => !(p.page === remove.page && p.card === remove.card))
+      if (add) {
+        const at = list.findIndex((p) => p.page === add.page && p.card === add.card)
+        if (at >= 0) list[at] = add
+        else if (list.length < MAX_PINNED) list.push(add)
+      }
+      result = list
+      cfg.mupibox = { ...((cfg.mupibox as Record<string, unknown>) ?? {}), pinnedCards: list }
     })
-    res.json({ items: clean })
+    res.json({ items: result })
   })
 }
